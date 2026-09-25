@@ -1,19 +1,20 @@
-import ganache from "ganache";
 import {
   createPublicClient,
   createWalletClient,
-  custom,
   defineChain,
-  isHex,
+  http,
   keccak256,
   stringToBytes,
 } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { describe, expect, it } from "vitest";
-import { compileSticker } from "../scripts/compile.js";
+import { afterEach, describe, expect, it } from "vitest";
 import { createStickerSealer } from "../src/seal-sticker.js";
+import {
+  readFoundryArtifact,
+  startAnvil,
+  type AnvilInstance,
+} from "./helpers/foundry.js";
 
-const artifact = compileSticker();
+const artifact = readFoundryArtifact("StickerNFT", "StickerNFT");
 const chain = defineChain({
   id: 4801,
   name: "Local World Chain Sepolia",
@@ -24,23 +25,22 @@ const stickerId = "sticker-123";
 const stickerKey = keccak256(stringToBytes(stickerId));
 const contentHash = keccak256(stringToBytes("sealed-sticker-bytes"));
 const metadataUri = "ipfs://bafybeigdyrzt5sticker/metadata.json";
+const activeAnvils: AnvilInstance[] = [];
+
+afterEach(async () => {
+  await Promise.all(activeAnvils.splice(0).map(({ close }) => close()));
+});
 
 async function setup() {
-  const provider = ganache.provider({
-    chain: { chainId: 4801 },
-    logging: { quiet: true },
-    wallet: { totalAccounts: 4 },
-  });
-  const publicClient = createPublicClient({ chain, transport: custom(provider) });
-  const accounts = Object.values(provider.getInitialAccounts()).map(({ secretKey }) => {
-    if (!isHex(secretKey)) throw new Error("Local chain returned an invalid private key");
-    return privateKeyToAccount(secretKey);
-  });
+  const anvil = await startAnvil(chain.id);
+  activeAnvils.push(anvil);
+  const publicClient = createPublicClient({ chain, transport: http(anvil.rpcUrl) });
+  const accounts = anvil.accounts;
   const [admin, artist, recipient, stranger] = accounts;
   if (!admin || !artist || !recipient || !stranger) {
     throw new Error("Local chain did not create the required test accounts");
   }
-  const walletClient = createWalletClient({ chain, transport: custom(provider), account: admin });
+  const walletClient = createWalletClient({ chain, transport: http(anvil.rpcUrl), account: admin });
   const deploymentHash = await walletClient.deployContract({
     abi: artifact.abi,
     bytecode: artifact.bytecode,

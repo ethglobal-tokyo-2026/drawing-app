@@ -13,11 +13,13 @@
   },
   "scripts": {
     "build": "pnpm generate-types",
-    "compile": "tsx scripts/compile.ts",
+    "compile": "forge build",
     "generate-types": "pnpm compile && wagmi generate",
-    "lint": "oxlint .",
+    "lint": "oxlint src test wagmi.config.ts",
     "start:auth": "tsx src/start-auth-server.ts",
-    "test": "vitest run",
+    "test": "pnpm test:contracts && pnpm test:backend",
+    "test:backend": "vitest run",
+    "test:contracts": "forge test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -27,9 +29,7 @@
   "devDependencies": {
     "@wagmi/cli": "2.2.0",
     "@types/node": "24.13.3",
-    "ganache": "7.9.2",
     "oxlint": "1.81.0",
-    "solc": "0.8.37",
     "tsx": "4.20.6",
     "typescript": "6.0.2",
     "vitest": "4.1.0"

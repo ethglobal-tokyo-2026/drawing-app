@@ -39,8 +39,8 @@ contract StickerNFT is ERC721, AccessControl {
         string calldata stickerURI
     ) external onlyRole(SEALER_ROLE) returns (uint256 tokenId) {
         if (
-            artist == address(0) || stickerId == bytes32(0) ||
-            contentHash == bytes32(0) || bytes(stickerURI).length == 0
+            artist == address(0) || stickerId == bytes32(0) || contentHash == bytes32(0)
+                || bytes(stickerURI).length == 0
         ) revert InvalidSticker();
         if (tokenIdForSticker[stickerId] != 0) revert StickerAlreadySealed(stickerId);
 
@@ -60,7 +60,10 @@ contract StickerNFT is ERC721, AccessControl {
     }
 
     function supportsInterface(bytes4 interfaceId)
-        public view override(ERC721, AccessControl) returns (bool)
+        public
+        view
+        override(ERC721, AccessControl)
+        returns (bool)
     {
         return super.supportsInterface(interfaceId);
     }

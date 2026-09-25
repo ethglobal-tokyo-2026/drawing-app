@@ -99,7 +99,7 @@ export function createGiftAuthorizer({
   findArtistSmartWallet,
   now = () => Math.floor(Date.now() / 1000),
 }: {
-  signer: PrivateKeyAccount;
+  signer: Pick<PrivateKeyAccount, "signTypedData">;
   chainId: number;
   escrowContract: Address;
   findGift: (giftId: Hex) => Promise<PendingGiftRecord | null>;
