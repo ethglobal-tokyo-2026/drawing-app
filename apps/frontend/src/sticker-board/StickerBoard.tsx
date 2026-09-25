@@ -5,6 +5,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import { Key } from "../controls/controls";
 import { DrawIcon } from "../icons/DrawIcon";
 import { useIdentity } from "../identity/useIdentity";
 import { formatClock, formatNo } from "../stickers/format";
@@ -306,6 +307,23 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         {!!stickers?.length && (
           <div className="board-hint fine">Drag to move · pinch to resize</div>
         )}
+      </div>
+
+      {/* A new artist's first visit: the key hops inside a pulse ring, under a first-sticker hint. */}
+      <div className={`board-draw ${stickers?.length === 0 ? "first-visit" : ""}`}>
+        {stickers?.length === 0 && (
+          <div className="draw-hint" id="draw-hint" role="note">
+            Make your first sticker
+          </div>
+        )}
+        <Key
+          size="sm"
+          icon={<DrawIcon size={20} />}
+          onPress={onDraw}
+          aria-describedby={stickers?.length === 0 ? "draw-hint" : undefined}
+        >
+          Draw
+        </Key>
       </div>
 
       {open && (

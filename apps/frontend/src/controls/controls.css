@@ -264,7 +264,8 @@
 
 /* Drop in 70ms, bottom out 0.5px further and settle back in 120ms, then creep 0.4px over 900ms. */
 [data-press="down"] > .key-face,
-[data-press="down"] > .label-face {
+[data-press="down"] > .label-face,
+[data-press="down"] > .tab-face {
   animation: press-down 1090ms forwards;
 }
 
@@ -288,7 +289,8 @@
 
 /* Released inside: pop 1.4px past rest and spring home. */
 [data-press="pop"] > .key-face,
-[data-press="pop"] > .label-face {
+[data-press="pop"] > .label-face,
+[data-press="pop"] > .tab-face {
   animation: press-pop 340ms;
 }
 
@@ -308,7 +310,8 @@
 
 /* Slid off, scrolled, blurred or cancelled: spring back up about 0.7px past rest. */
 [data-press="lift"] > .key-face,
-[data-press="lift"] > .label-face {
+[data-press="lift"] > .label-face,
+[data-press="lift"] > .tab-face {
   animation: press-lift 380ms;
 }
 

@@ -8,7 +8,7 @@ import "./App.css";
 export default function App() {
   const drawingScreen = useRef<DrawingScreenHandle>(null);
   // The sticker board is home.
-  const [view, setView] = useState<Tab>("board");
+  const [view, setView] = useState<Tab | "draw">("board");
   // Set from the seal until the next sticker starts; the board lands it with a "stick" animation.
   const [sealedId, setSealedId] = useState<string>();
 
@@ -19,7 +19,7 @@ export default function App() {
   };
 
   return (
-    <div className="phone">
+    <div className={`phone ${view === "draw" ? "tabs-tucked" : ""}`}>
       <div className="card">
         <DrawingScreen
           ref={drawingScreen}
@@ -32,11 +32,12 @@ export default function App() {
         {view === "explore" && <ExploreScreen />}
       </div>
       <TabBar
-        active={view}
+        // Drawing starts from your board, so My board stays current behind the draw screen.
+        active={view === "draw" ? "board" : view}
+        tucked={view === "draw"}
         onChange={(tab) => {
           drawingScreen.current?.closeDrawers();
-          if (tab === "draw") openDrawing();
-          else setView(tab);
+          setView(tab);
         }}
       />
     </div>
