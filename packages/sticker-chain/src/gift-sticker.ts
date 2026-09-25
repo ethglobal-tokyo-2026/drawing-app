@@ -6,20 +6,13 @@ import {
   isAddress,
   isHex,
   keccak256,
-  parseAbi,
   type Address,
   type Hex,
 } from "viem";
 import type { PrivateKeyAccount } from "viem/accounts";
+import { stickerNftAbi } from "./generated/contracts.js";
 
-const stickerTransferAbi = parseAbi([
-  "function safeTransferFrom(address from, address to, uint256 tokenId, bytes data)",
-]);
-
-export const stickerGiftEscrowAbi = parseAbi([
-  "function claimGift(bytes32 giftId, address recipient, uint256 authorizationDeadline, bytes authorization)",
-  "function rejectGift(bytes32 giftId, uint256 authorizationDeadline, bytes authorization)",
-]);
+export { stickerGiftEscrowAbi } from "./generated/contracts.js";
 
 interface PendingGiftRecord {
   giftId: Hex;
@@ -91,7 +84,7 @@ export function prepareGiftTransfer({
   return {
     to: stickerContract,
     data: encodeFunctionData({
-      abi: stickerTransferAbi,
+      abi: stickerNftAbi,
       functionName: "safeTransferFrom",
       args: [sender, escrowContract, tokenId, stageData],
     }),

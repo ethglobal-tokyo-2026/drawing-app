@@ -5,14 +5,16 @@
   "type": "module",
   "exports": {
     "./auth-http": "./src/auth-http.ts",
+    "./contracts": "./src/generated/contracts.ts",
     "./gift-sticker": "./src/gift-sticker.ts",
     "./line": "./src/line.ts",
     "./line-privy-jwt": "./src/line-privy-jwt.ts",
     "./seal-sticker": "./src/seal-sticker.ts"
   },
   "scripts": {
-    "build": "tsx scripts/compile.ts",
+    "build": "pnpm generate-types",
     "compile": "tsx scripts/compile.ts",
+    "generate-types": "pnpm compile && wagmi generate",
     "lint": "oxlint .",
     "start:auth": "tsx src/start-auth-server.ts",
     "test": "vitest run",
@@ -23,6 +25,7 @@
     "viem": "2.56.9"
   },
   "devDependencies": {
+    "@wagmi/cli": "2.2.0",
     "@types/node": "24.13.3",
     "ganache": "7.9.2",
     "oxlint": "1.81.0",
