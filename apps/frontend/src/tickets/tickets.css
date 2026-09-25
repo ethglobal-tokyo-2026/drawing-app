@@ -5,65 +5,85 @@
 }
 
 .ticket-row {
-  position: relative;
   display: flex;
   justify-content: center;
   gap: 10px;
   padding: 14px 8px 6px;
 }
 
-.ticket {
+.ticket-row.small {
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.ticket-row.large .ticket {
   width: 78px;
   height: 48px;
 }
 
-.ticket path {
+.ticket-row.small .ticket {
+  width: 44px;
+  height: 27px;
+}
+
+.ticket > path {
   fill: var(--liner-lift);
   stroke: var(--rule-strong);
   stroke-width: 2;
 }
 
-.ticket line {
+.ticket > line {
   stroke: var(--rule-strong);
   stroke-width: 2;
   stroke-dasharray: 3 4;
 }
 
-.ticket.filled path {
+.ticket.filled > path {
   fill: var(--seal);
   stroke: var(--seal-deep);
 }
 
-.ticket.filled line {
+.ticket.filled > line {
   stroke: var(--seal-deep);
 }
 
-.ticket.filled {
+.ticket-row.large .ticket.filled {
   animation: stick 0.5s var(--ease-peel) backwards;
 }
 
-.ticket.filled:nth-child(2) {
+.ticket-row.large .ticket.filled:nth-child(2) {
   animation-delay: 0.1s;
 }
 
-.ticket.filled:nth-child(3) {
+.ticket-row.large .ticket.filled:nth-child(3) {
   animation-delay: 0.2s;
 }
 
-.refill-badge {
-  position: absolute;
-  top: 0;
-  right: 2px;
-  display: grid;
-  place-items: center;
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  background: var(--seal);
-  box-shadow: var(--shadow-label);
-  font-family: var(--font-display);
-  font-size: 16px;
+/* The kiss-cut a sticker leaves on its backing: a 1px graphite line, dashed on large stubs. */
+.ticket-ghost path {
+  fill: none;
+  stroke: var(--ink-soft);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  animation: fade 700ms var(--ease-out) backwards;
+}
+
+.ticket-row.large .ticket-ghost path {
+  stroke-dasharray: 3 3;
+}
+
+/* A printed line: bold Ink time, graphite countdown, tabular figures. */
+.refill-line {
+  margin: 0;
+  color: var(--graphite);
+  font-size: 15px;
   font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.refill-line b {
+  color: var(--ink);
+  font-weight: 700;
 }
 
 .card-title {

@@ -80,3 +80,20 @@
 .detail-actions .label {
   flex: 1;
 }
+
+.peel-confirm {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* A can't-undo failure: Ink text marked with a tomato edge; lips never set text. */
+.peel-error {
+  align-self: stretch;
+  margin: 0;
+  padding: 6px 10px;
+  border-left: 3px solid var(--tomato);
+  background: var(--liner-lift);
+  font-size: 13px;
+}

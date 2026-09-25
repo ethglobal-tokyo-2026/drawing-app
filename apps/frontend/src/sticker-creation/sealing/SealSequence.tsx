@@ -4,6 +4,7 @@ import { DrawIcon } from "../../icons/DrawIcon";
 import { StickerBoardIcon } from "../../icons/StickerBoardIcon";
 import { formatClock, formatDay, formatNo } from "../../stickers/format";
 import type { StickerRecord } from "../../stickers/stickerStorage";
+import { TicketStubs } from "../../tickets/TicketStubs";
 import type { StickerImages } from "./makeSticker";
 import "../../styles/result-card.css";
 import "./SealSequence.css";
@@ -22,11 +23,20 @@ interface Props {
   images: StickerImages;
   record: StickerRecord;
   ticketsLeft: number;
+  /** Free tickets used today, for the stubs. */
+  usedToday: number;
   onKeepDrawing: () => void;
   onBoard: () => void;
 }
 
-export function SealSequence({ images, record, ticketsLeft, onKeepDrawing, onBoard }: Props) {
+export function SealSequence({
+  images,
+  record,
+  ticketsLeft,
+  usedToday,
+  onKeepDrawing,
+  onBoard,
+}: Props) {
   const [step, setStep] = useState(0);
   const { stage, label } = STEPS[step];
 
@@ -79,6 +89,7 @@ export function SealSequence({ images, record, ticketsLeft, onKeepDrawing, onBoa
             <div className="result-meta fine">
               {formatNo(record.no)} · {formatClock(record.timeUsed)} · {formatDay(record.createdAt)}
             </div>
+            <TicketStubs used={usedToday} />
             <div className="tickets-left fine">
               {ticketsLeft === 0
                 ? "No tickets left today"

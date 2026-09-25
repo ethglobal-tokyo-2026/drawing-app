@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { IS_MOCK_PAYMENT, payForTickets } from "../payments/sui";
 import { Key, Label, QuietLink } from "../controls/controls";
 import { DrawIcon } from "../icons/DrawIcon";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { TicketIcon } from "../icons/TicketIcon";
-import { TICKET_PACK } from "./config";
+import { FREE_TICKETS_PER_DAY, TICKET_PACK } from "./config";
+import { TicketStubs } from "./TicketStubs";
 import "../styles/result-card.css";
 import "./tickets.css";
 
@@ -17,20 +18,27 @@ interface Props {
   onBoard: () => void;
 }
 
-const clock = (d: Date) => `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+const clock = (d: Date) => d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
-/** A paper ticket: outlined when used up, yellow when fresh. */
-function Ticket({ filled, tilt }: { filled: boolean; tilt: number }) {
+/** "in 6h 56m", rounded up so it never reads "in 0m" before the refill. */
+function countdown(to: Date, now: Date) {
+  const minutes = Math.max(1, Math.ceil((to.getTime() - now.getTime()) / 60_000));
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h ? `in ${h}h ${m}m` : `in ${m}m`;
+}
+
+/** A printed refill line, never the timer dot's look. */
+function RefillLine({ refillAt }: { refillAt: Date }) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
   return (
-    <svg
-      className={`ticket ${filled ? "filled" : ""}`}
-      viewBox="0 0 104 64"
-      style={{ rotate: `${tilt}deg` }}
-      aria-hidden
-    >
-      <path d="M6 4h92a2 2 0 0 1 2 2v18a8 8 0 0 0 0 16v18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V40a8 8 0 0 0 0-16V6a2 2 0 0 1 2-2Z" />
-      <line x1="34" y1="10" x2="34" y2="54" />
-    </svg>
+    <p className="refill-line">
+      <b>New tickets at {clock(refillAt)},</b> <span>{countdown(refillAt, now)}</span>
+    </p>
   );
 }
 
@@ -52,27 +60,14 @@ export function OutOfTickets({ refillAt, onTicketsBought, onStartDrawing, onBoar
     }
   };
 
-  const tickets = (filled: boolean) => (
-    <div className="ticket-row">
-      <Ticket filled={filled} tilt={-4} />
-      <Ticket filled={filled} tilt={1} />
-      <Ticket filled={filled} tilt={3} />
-      {!filled && <span className="refill-badge">{clock(refillAt)}</span>}
-    </div>
-  );
-
   return (
     <div className="result-backdrop">
       <div className="result-card" role="dialog" aria-label="Out of tickets">
         {step === "out" && (
           <>
-            {tickets(false)}
+            <TicketStubs used={FREE_TICKETS_PER_DAY} large />
             <h2 className="card-title">Out of tickets for today</h2>
-            <p className="card-sub">
-              Everyone gets 3 drawing tickets a day.
-              <br />
-              Yours refill at {clock(refillAt)}.
-            </p>
+            <RefillLine refillAt={refillAt} />
             <div className="perforation" />
             <Key icon={<TicketIcon size={20} />} onPress={() => setStep("approve")}>
               Get more tickets with Sui
@@ -131,7 +126,7 @@ export function OutOfTickets({ refillAt, onTicketsBought, onStartDrawing, onBoar
 
         {step === "done" && (
           <>
-            {tickets(true)}
+            <TicketStubs used={0} filled large />
             <h2 className="card-title">{TICKET_PACK.tickets} tickets added</h2>
             <p className="card-sub">
               Paid {TICKET_PACK.priceSui} SUI

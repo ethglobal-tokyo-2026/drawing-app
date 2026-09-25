@@ -7,11 +7,23 @@ interface SizeSliderProps {
   previewSize: number;
   previewColor: string;
   onChange: (v: number) => void;
+  /** A finger on the rail holds the clock. */
+  onActiveChange: (active: boolean) => void;
 }
 
 /** Vertical brush-size slider: big dot on top, small at the bottom. */
-export function SizeSlider({ value, previewSize, previewColor, onChange }: SizeSliderProps) {
-  const [active, setActive] = useState(false);
+export function SizeSlider({
+  value,
+  previewSize,
+  previewColor,
+  onChange,
+  onActiveChange,
+}: SizeSliderProps) {
+  const [active, setActiveState] = useState(false);
+  const setActive = (on: boolean) => {
+    setActiveState(on);
+    onActiveChange(on);
+  };
   const drag = useDrag(
     (_, fy) => onChange(1 - fy),
     () => setActive(false),
@@ -48,6 +60,9 @@ export function SizeSlider({ value, previewSize, previewColor, onChange }: SizeS
         )}
       </div>
       <span className="size-cap small" />
+      <span className="size-value" aria-hidden>
+        {Math.round(previewSize)}px
+      </span>
     </div>
   );
 }

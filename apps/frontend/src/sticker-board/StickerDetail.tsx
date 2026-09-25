@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Label, QuietLink } from "../controls/controls";
 import { formatClock, formatDay, formatNo } from "../stickers/format";
 import { deleteSticker } from "../stickers/stickerStorage";
@@ -18,10 +19,19 @@ export function StickerDetail({ sticker, onClose, onPeeledOff }: Props) {
     a.click();
   };
 
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const peelOff = async () => {
-    if (!confirm(`Peel off ${formatNo(sticker.no)}? This can’t be undone.`)) return;
-    await deleteSticker(sticker.id);
-    onPeeledOff(sticker.id);
+    try {
+      await deleteSticker(sticker.id);
+      onPeeledOff(sticker.id);
+    } catch (e) {
+      console.error(`Peeling off ${formatNo(sticker.no)} failed`, e);
+      setError(
+        `Couldn’t peel off ${formatNo(sticker.no)}: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   };
 
   return (
@@ -43,13 +53,39 @@ export function StickerDetail({ sticker, onClose, onPeeledOff }: Props) {
           Drawn in {formatClock(sticker.timeUsed)} · {formatDay(sticker.createdAt)}
         </div>
         <div className="perforation" />
-        <div className="detail-actions">
-          <Label onPress={download}>Download</Label>
-          <Label hue="tomato" onPress={() => void peelOff()}>
-            Peel off
-          </Label>
-        </div>
-        <QuietLink onPress={onClose}>Close</QuietLink>
+        {confirming ? (
+          <>
+            <p className="peel-confirm">Peel off {formatNo(sticker.no)}? This can’t be undone.</p>
+            {error && (
+              <p className="peel-error" role="alert">
+                {error}
+              </p>
+            )}
+            <div className="detail-actions">
+              <Label hue="tomato" onPress={() => void peelOff()}>
+                Peel off for good
+              </Label>
+            </div>
+            <QuietLink
+              onPress={() => {
+                setConfirming(false);
+                setError(null);
+              }}
+            >
+              Keep it
+            </QuietLink>
+          </>
+        ) : (
+          <>
+            <div className="detail-actions">
+              <Label onPress={download}>Download</Label>
+              <Label hue="tomato" onPress={() => setConfirming(true)}>
+                Peel off
+              </Label>
+            </div>
+            <QuietLink onPress={onClose}>Close</QuietLink>
+          </>
+        )}
       </div>
     </div>
   );

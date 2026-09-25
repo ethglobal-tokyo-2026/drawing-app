@@ -51,7 +51,7 @@ export function ToolPill({ tool, color, drawer, disabled, onTool, onDrawer }: Pr
       <button
         className={`tool ${drawer === "smooth" ? "open" : ""}`}
         onClick={() => toggle("smooth")}
-        aria-label="Smoothness"
+        aria-label="Smoothing"
         disabled={disabled}
       >
         <WaveIcon weight={drawer === "smooth" ? "fill" : "bold"} />

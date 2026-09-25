@@ -217,29 +217,35 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     return () => board.removeEventListener("wheel", onWheel);
   }, []);
 
+  const newestUrl = stickers?.reduce<BoardSticker | undefined>(
+    (a, s) => (!a || s.createdAt > a.createdAt ? s : a),
+    undefined,
+  )?.url;
+  const avatarUrl = me.pictureUrl ?? newestUrl;
+
   return (
     <div className="board">
       <button
-        className={`name-tag ${profileOpen ? "open" : ""}`}
+        className={`board-header ${profileOpen ? "open" : ""}`}
         onClick={() => setProfileOpen((v) => !v)}
         aria-expanded={profileOpen}
-        aria-label="Open your profile"
+        aria-label={`@${me.handle}, open your profile`}
       >
-        <span className="name-label">おなまえ</span>
-        <span className="name-value">@{me.handle}</span>
-        <span className="name-line" />
+        <span className="photo-sticker" aria-hidden>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="" className={me.pictureUrl ? "photo" : ""} />
+          ) : (
+            me.handle[0]?.toUpperCase()
+          )}
+        </span>
+        <span className="board-name">@{me.handle}</span>
       </button>
 
       {profileOpen && (
         <div className="profile-backdrop" onClick={() => setProfileOpen(false)}>
           <ProfileCard
             made={stickers?.length ?? 0}
-            avatarUrl={
-              stickers?.reduce<BoardSticker | undefined>(
-                (a, s) => (!a || s.createdAt > a.createdAt ? s : a),
-                undefined,
-              )?.url
-            }
+            avatarUrl={newestUrl}
             onClose={() => setProfileOpen(false)}
           />
         </div>

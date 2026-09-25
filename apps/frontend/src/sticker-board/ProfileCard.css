@@ -1,15 +1,10 @@
 /* ---------- Profile card ---------- */
 
-.name-tag.open {
-  border-color: var(--pink);
-  background: var(--liner-lift);
-}
-
 .profile-backdrop {
   position: absolute;
   inset: 0;
   z-index: 35;
-  padding: 92px 12px 12px;
+  padding: 68px 12px 12px;
   background: rgb(28 24 36 / 18%);
   animation: fade 0.2s;
 }

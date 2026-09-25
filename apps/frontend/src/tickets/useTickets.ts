@@ -55,5 +55,11 @@ export function useTickets() {
     setState(next);
   }, []);
 
-  return { left: ticketsLeft(state), refillAt: nextRefill(new Date()), use, add };
+  return {
+    left: ticketsLeft(state),
+    usedFree: state.usedFree,
+    refillAt: nextRefill(new Date()),
+    use,
+    add,
+  };
 }
