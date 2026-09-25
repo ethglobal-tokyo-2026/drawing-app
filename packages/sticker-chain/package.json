@@ -1,0 +1,36 @@
+{
+  "name": "@drawing-app/sticker-chain",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    "./auth-http": "./src/auth-http.ts",
+    "./line": "./src/line.ts",
+    "./line-privy-jwt": "./src/line-privy-jwt.ts",
+    "./seal-sticker": "./src/seal-sticker.ts"
+  },
+  "scripts": {
+    "build": "tsx scripts/compile.ts",
+    "compile": "tsx scripts/compile.ts",
+    "lint": "oxlint .",
+    "start:auth": "tsx src/start-auth-server.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "5.0.2",
+    "viem": "2.56.9"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "ganache": "7.9.2",
+    "oxlint": "1.81.0",
+    "solc": "0.8.37",
+    "tsx": "4.20.6",
+    "typescript": "6.0.2",
+    "vitest": "4.1.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
