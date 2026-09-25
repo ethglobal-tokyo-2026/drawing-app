@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./auth-http": "./src/auth-http.ts",
+    "./gift-sticker": "./src/gift-sticker.ts",
     "./line": "./src/line.ts",
     "./line-privy-jwt": "./src/line-privy-jwt.ts",
     "./seal-sticker": "./src/seal-sticker.ts"

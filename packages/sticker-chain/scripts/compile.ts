@@ -5,8 +5,6 @@ import solc from "solc";
 import type { Abi } from "viem";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const contractPath = "contracts/StickerNFT.sol";
-
 interface SolcOutput {
   contracts?: Record<string, Record<string, {
     abi: Abi;
@@ -15,7 +13,7 @@ interface SolcOutput {
   errors?: Array<{ severity: string; formattedMessage: string }>;
 }
 
-export function compileSticker() {
+function compileContract(contractPath: string, contractName: string) {
   const source = readFileSync(path.join(root, contractPath), "utf8");
   const input = {
     language: "Solidity",
@@ -41,15 +39,29 @@ export function compileSticker() {
   if (errors.length > 0) {
     throw new Error(errors.map(({ formattedMessage }) => formattedMessage).join("\n"));
   }
-  const compiled = output.contracts?.[contractPath]?.StickerNFT;
-  if (!compiled) throw new Error("Solidity compiler returned no StickerNFT artifact");
+  const compiled = output.contracts?.[contractPath]?.[contractName];
+  if (!compiled) throw new Error(`Solidity compiler returned no ${contractName} artifact`);
   return { abi: compiled.abi, bytecode: `0x${compiled.evm.bytecode.object}` as const };
 }
 
+export function compileSticker() {
+  return compileContract("contracts/StickerNFT.sol", "StickerNFT");
+}
+
+export function compileGiftEscrow() {
+  return compileContract("contracts/StickerGiftEscrow.sol", "StickerGiftEscrow");
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const artifact = compileSticker();
-  const outputPath = path.join(root, "dist", "StickerNFT.json");
-  mkdirSync(path.dirname(outputPath), { recursive: true });
-  writeFileSync(outputPath, JSON.stringify(artifact, null, 2));
-  process.stdout.write(`Compiled StickerNFT to ${outputPath}\n`);
+  const artifacts = [
+    { name: "StickerNFT", artifact: compileSticker() },
+    { name: "StickerGiftEscrow", artifact: compileGiftEscrow() },
+  ];
+  const outputDirectory = path.join(root, "dist");
+  mkdirSync(outputDirectory, { recursive: true });
+  for (const { name, artifact } of artifacts) {
+    const outputPath = path.join(outputDirectory, `${name}.json`);
+    writeFileSync(outputPath, JSON.stringify(artifact, null, 2));
+    process.stdout.write(`Compiled ${name} to ${outputPath}\n`);
+  }
 }
