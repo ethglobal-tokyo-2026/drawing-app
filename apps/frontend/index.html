@@ -11,11 +11,29 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Fetched early and applied when they arrive, so the fonts never block the first paint. -->
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@75..125,200..900&family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap"
+      onload="
+        this.onload = null;
+        this.rel = 'stylesheet';
+      "
+    />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@75..125,200..900&family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap"
+      />
+    </noscript>
+    <!-- Archivo serves the screens that predate the design tokens; it goes with the last of them. -->
     <link
       href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <meta name="theme-color" content="#f2f2f7" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#F2F1F6" />
     <title>Draw</title>
   </head>
   <body>
