@@ -167,6 +167,11 @@ Avoid hyperspecific tests or writing tests as a knee jerk reaction. Think about 
 pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
 
 - `apps/frontend` — Vite + React + TypeScript
+  - `src/app` — app shell: tab bar and screen switching
+  - `src/sticker-creation` — the drawing screen: canvas engine (`canvas/`), tools and drawers (`tools/`), sealing (`sealing/`)
+  - `src/sticker-board` — the sticker board, sticker detail, profile card and placement
+  - `src/tickets`, `src/stickers` (local sticker storage and display formatting), `src/line` (LIFF), `src/identity`, `src/payments`
+  - `src/icons` — one icon per file; `src/styles` — CSS shared across features
 - `packages/db` — Drizzle schema and typed database client (`@drawing-app/db`)
 - `packages/*` — shared workspace packages
 
@@ -176,9 +181,9 @@ pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
 - Tests are **vitest**
 - Monorepo tech is turborepo
 - Frontend is **Vite** + **React**
-- Linting is **oxlint**
+- Lint is **oxlint**, type-aware (`pnpm lint`); format is **oxfmt** (`pnpm format`). A pre-commit hook runs both on staged files. Don't downgrade a rule for a file in `.oxlintrc.json` to get a commit through; fix the code
 - Drizzle for typed database clients, on SQLite via better-sqlite3
-- `pnpm check` runs lint and typecheck across the workspace; `pnpm check:full` also runs the production build
+- `pnpm check` runs lint, typecheck, tests and the format check; `pnpm check:full` adds the production build and a knip report of unused code
 - `pnpm db:push` syncs the local database (`data/drawing-app.db`) to the schema; drizzle-kit exits 0 even when it fails, so read its output
 
 ### Git

@@ -1,6 +1,8 @@
 packages:
   - apps/*
   - packages/*
+# Minutes. Gives the registry time to pull a compromised release before it is installed.
+minimumReleaseAge: 4320
 allowBuilds:
   better-sqlite3: true
   # esbuild's postinstall only optimizes its CLI; drizzle-kit uses the JS API, which works without it.

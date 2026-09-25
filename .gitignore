@@ -134,6 +134,27 @@ dist
 # Local SQLite database
 /data/
 
+# Sui Move builds (Move.lock and Published.toml stay tracked)
+contracts/**/build/
+contracts/**/traces/
+contracts/**/.trace
+Pub.*.toml
+*.keystore
+
+# Foundry / Hardhat builds; broadcast logs can record RPC URLs with API keys
+contracts/**/cache/
+contracts/**/broadcast/
+contracts/**/artifacts/
+contracts/**/typechain-types/
+contracts/**/.gas-snapshot
+
+# macOS
+.DS_Store
+
+# Claude worktrees and the impeccable hook cache
+.claude/worktrees/
+.impeccable/hook.cache.json
+
 # yarn v3
 .pnp.*
 .yarn/*

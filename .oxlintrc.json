@@ -1,0 +1,41 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "oxc"],
+  "options": { "typeAware": true },
+  // oxlint defaults correctness to "warn", and lint-staged hides the output of passing tasks,
+  // so correctness findings would never be seen on commit.
+  "categories": { "correctness": "error" },
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }],
+
+    // Setting an options object drops the default `^_` ignore patterns, so they are restated.
+    "no-unused-vars": [
+      "error",
+      {
+        "fix": { "imports": "safe-fix", "variables": "off" },
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+
+    // Typing escape hatches: `any`, unchecked narrowing, and compiler suppression.
+    "typescript/no-explicit-any": "error",
+    "typescript/no-unsafe-argument": "error",
+    "typescript/no-unsafe-assignment": "error",
+    "typescript/no-unsafe-call": "error",
+    "typescript/no-unsafe-member-access": "error",
+    "typescript/no-unsafe-return": "error",
+    "typescript/no-unsafe-type-assertion": "error",
+    "typescript/no-non-null-assertion": "error",
+    "typescript/ban-ts-comment": [
+      "error",
+      { "ts-expect-error": true, "ts-ignore": true, "ts-nocheck": true }
+    ],
+    "typescript/no-unsafe-function-type": "error",
+    "typescript/no-empty-object-type": "error",
+    "typescript/use-unknown-in-catch-callback-variable": "error",
+    // Method members get bivariant parameter checks; property members are checked strictly.
+    "typescript/method-signature-style": ["error", "property"]
+  }
+}

@@ -1,32 +1,32 @@
-import { blob, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { blob, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 /** Where a sticker sits on its sticker board. */
 export interface Placement {
   /** Center, as fractions of board width and height. */
-  x: number
-  y: number
+  x: number;
+  y: number;
   /** Width as a fraction of board width. */
-  scale: number
+  scale: number;
   /** Stacking order; higher is on top. */
-  z: number
+  z: number;
 }
 
-export const stickers = sqliteTable('stickers', {
-  id: text('id').primaryKey(),
+export const stickers = sqliteTable("stickers", {
+  id: text("id").primaryKey(),
   /** Running number shown as NO.0001. */
-  no: integer('no').notNull().unique(),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  no: integer("no").notNull().unique(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   /** Seconds spent drawing. */
-  timeUsed: integer('time_used').notNull(),
+  timeUsed: integer("time_used").notNull(),
   /** The sealed sticker, PNG-encoded. */
-  png: blob('png', { mode: 'buffer' }).notNull(),
-  width: integer('width').notNull(),
-  height: integer('height').notNull(),
+  png: blob("png", { mode: "buffer" }).notNull(),
+  width: integer("width").notNull(),
+  height: integer("height").notNull(),
   /** Degrees, so each sticker sits on the board a little crooked. */
-  rotation: integer('rotation').notNull(),
+  rotation: integer("rotation").notNull(),
   /** Null until the sticker is first placed on the board. */
-  placement: text('placement', { mode: 'json' }).$type<Placement>(),
-})
+  placement: text("placement", { mode: "json" }).$type<Placement>(),
+});
 
-export type Sticker = typeof stickers.$inferSelect
-export type NewSticker = typeof stickers.$inferInsert
+export type Sticker = typeof stickers.$inferSelect;
+export type NewSticker = typeof stickers.$inferInsert;

@@ -1,2 +1,2 @@
-export { databasePath, openDb, type Db } from './client.ts'
-export * from './schema.ts'
+export { databasePath, openDb, type Db } from "./client.ts";
+export * from "./schema.ts";

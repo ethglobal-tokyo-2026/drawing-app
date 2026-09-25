@@ -1,0 +1,193 @@
+/* ---------- Sticker board ---------- */
+
+.board {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 10px 10px;
+  background: #efeef3;
+}
+
+.name-tag {
+  position: relative;
+  z-index: 40;
+  border: 2px solid transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  min-width: 170px;
+  padding: 8px 16px 12px;
+  background: #fff;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.name-label {
+  color: #77757f;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+}
+
+.name-value {
+  font-family: "Archivo Black", "Archivo", sans-serif;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.name-line {
+  position: relative;
+  height: 1.5px;
+  margin-top: 4px;
+  background: var(--ink);
+}
+
+.name-line::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  top: -3.5px;
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  background: #fff;
+}
+
+.board-frame {
+  position: relative;
+  flex: 1;
+  margin: 10px 0 0;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 0 solid #a9a7b3;
+  pointer-events: none;
+}
+
+.corner.tl {
+  top: 0;
+  left: 0;
+  border-width: 1.5px 0 0 1.5px;
+}
+
+.corner.tr {
+  top: 0;
+  right: 0;
+  border-width: 1.5px 1.5px 0 0;
+}
+
+.corner.bl {
+  bottom: 0;
+  left: 0;
+  border-width: 0 0 1.5px 1.5px;
+}
+
+.corner.br {
+  bottom: 0;
+  right: 0;
+  border-width: 0 1.5px 1.5px 0;
+}
+
+.free-sticker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  cursor: grab;
+  touch-action: none;
+  will-change: transform;
+}
+
+.free-sticker:active {
+  cursor: grabbing;
+}
+
+.free-sticker img {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.16)) drop-shadow(0 8px 14px rgba(0, 0, 0, 0.08));
+  -webkit-user-drag: none;
+}
+
+.free-sticker.fresh img {
+  animation: stick 0.6s 0.2s cubic-bezier(0.3, 1.6, 0.5, 1) backwards;
+}
+
+.board-hint {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  color: #77757f;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.board-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+/* A dashed, sticker-shaped spot waiting for the first sticker. */
+.empty-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: min(280px, 82%);
+  aspect-ratio: 1.2;
+  padding: 0;
+  border: 1.5px dashed #9d9ba6;
+  border-radius: 50% 48% 50% 47% / 52% 50% 48% 50%;
+  background: #f5f4f8;
+  color: var(--ink);
+  text-align: center;
+  cursor: pointer;
+}
+
+.empty-slot:active {
+  transform: scale(0.98);
+}
+
+.empty-icon {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  margin-bottom: 2px;
+  border-radius: 50%;
+  background: var(--yellow);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+.empty-title {
+  font-family: "Archivo Black", "Archivo", sans-serif;
+  font-size: 20px;
+  line-height: 1.15;
+}
+
+.empty-sub {
+  color: #77757f;
+  font-size: 14px;
+  line-height: 1.45;
+}

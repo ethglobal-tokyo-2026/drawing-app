@@ -1,0 +1,3 @@
+lint-staged
+# Report only: unused code must never block a commit, including when knip itself fails.
+knip || true

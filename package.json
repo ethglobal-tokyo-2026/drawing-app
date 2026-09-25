@@ -6,12 +6,32 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "check": "turbo run lint typecheck",
-    "check:full": "turbo run lint typecheck build",
-    "db:push": "pnpm --filter @drawing-app/db db:push"
+    "test": "turbo run test",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "knip": "knip --no-exit-code",
+    "check": "turbo run lint typecheck test && oxfmt --check",
+    "check:full": "pnpm check && turbo run build && knip --no-exit-code",
+    "db:push": "pnpm --filter @drawing-app/db db:push",
+    "prepare": "husky"
   },
-  "packageManager": "pnpm@12.5.1",
   "devDependencies": {
-    "turbo": "^2.11.3"
-  }
+    "husky": "^9.1.7",
+    "knip": "^6.37.0",
+    "lint-staged": "^17.5.1",
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0",
+    "oxlint-tsgolint": "^7.0.2002",
+    "turbo": "^2.11.2",
+    "typescript": "~7.0.2"
+  },
+  "lint-staged": {
+    "*.{js,jsx,mjs,cjs,ts,tsx,mts,cts}": [
+      "oxlint --type-check --fix",
+      "oxlint --type-check",
+      "oxfmt --no-error-on-unmatched-pattern"
+    ],
+    "!(*.{js,jsx,mjs,cjs,ts,tsx,mts,cts})": "oxfmt --no-error-on-unmatched-pattern"
+  },
+  "packageManager": "pnpm@12.5.1"
 }
