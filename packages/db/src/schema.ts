@@ -15,7 +15,7 @@ import {
 // Every screen reads this database. Where World Chain holds the owner of record (the sticker NFT
 // and the gift escrow), the columns marked "chain mirror" cache it, and chain_jobs tracks the
 // transactions that keep the two in step. The few actions that need chain state first (giving
-// needs the mint; a regift needs the last claim) check these mirrors.
+// needs the mint, sending needs the deposit, and a regift needs the last claim) check these mirrors.
 
 /** A CHECK that a column holds one of a closed set of values. */
 const oneOf = (column: AnySQLiteColumn, values: readonly string[]): SQL =>
@@ -318,7 +318,7 @@ export const gifts = sqliteTable(
       .notNull()
       .references(() => users.id),
     sentVia: text("sent_via", { enum: giftRoutes }).notNull(),
-    /** Known at send for a handle gift; set by the accept for a LINE chat gift. */
+    /** Known at packing for a handle gift; set by the accept for a LINE chat gift. */
     recipientId: text("recipient_id").references(() => users.id),
     /**
      * keccak256 of the one-time claim token. The token itself lives only in the card's link; the
