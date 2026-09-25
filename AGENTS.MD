@@ -167,6 +167,7 @@ Avoid hyperspecific tests or writing tests as a knee jerk reaction. Think about 
 pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
 
 - `apps/frontend` — Vite + React + TypeScript
+- `packages/db` — Drizzle schema and typed database client (`@drawing-app/db`)
 - `packages/*` — shared workspace packages
 
 ### Toolchain
@@ -176,8 +177,9 @@ pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
 - Monorepo tech is turborepo
 - Frontend is **Vite** + **React**
 - Linting is **oxlint**
-- Drizzle for typed database clients
+- Drizzle for typed database clients, on SQLite via better-sqlite3
 - `pnpm check` runs lint and typecheck across the workspace; `pnpm check:full` also runs the production build
+- `pnpm db:push` syncs the local database (`data/drawing-app.db`) to the schema; drizzle-kit exits 0 even when it fails, so read its output
 
 ### Git
 

@@ -7,7 +7,8 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "check": "turbo run lint typecheck",
-    "check:full": "turbo run lint typecheck build"
+    "check:full": "turbo run lint typecheck build",
+    "db:push": "pnpm --filter @drawing-app/db db:push"
   },
   "packageManager": "pnpm@12.5.1",
   "devDependencies": {

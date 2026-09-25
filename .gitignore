@@ -131,6 +131,9 @@ dist
 # Turborepo
 .turbo
 
+# Local SQLite database
+/data/
+
 # yarn v3
 .pnp.*
 .yarn/*
