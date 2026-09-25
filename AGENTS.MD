@@ -137,8 +137,6 @@ Avoid hyperspecific tests or writing tests as a knee jerk reaction. Think about 
 - Docs are not free to build and maintain. You should err on the side of creating them when in doubt, but if something isn't going to be useful as a durable record for known work or the near future, it.
 - If you see minor errors/issues in a doc you're working on, you can fix it on the fly unless it requires deep research to correct.
 - If the user makes a very significant change to the specs for planned work, related work in the associated plan should be reviewed and updated
-- Avoid prose and preambles in documentation, communicate the key information clearly and succinctly- If you see minor errors/issues in a doc you're working on, you can fix it on the fly unless it requires deep research to correct.
-- If the user makes a very significant change to the specs for planned work, related work in the associated plan should be reviewed and updated
 - Avoid prose and preambles in documentation, communicate the key information clearly and succinctly
 
 ### Memory
@@ -166,12 +164,20 @@ Avoid hyperspecific tests or writing tests as a knee jerk reaction. Think about 
 
 ### Architecture
 
+pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
+
+- `apps/frontend` — Vite + React + TypeScript
+- `packages/*` — shared workspace packages
+
 ### Toolchain
 
 - Runtime is **pnpm**
 - Tests are **vitest**
 - Monorepo tech is turborepo
+- Frontend is **Vite** + **React**
+- Linting is **oxlint**
 - Drizzle for typed database clients
+- `pnpm check` runs lint and typecheck across the workspace; `pnpm check:full` also runs the production build
 
 ### Git
 

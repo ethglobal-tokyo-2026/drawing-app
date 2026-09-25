@@ -1,0 +1,16 @@
+{
+  "name": "drawing-app",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "check": "turbo run lint typecheck",
+    "check:full": "turbo run lint typecheck build"
+  },
+  "packageManager": "pnpm@12.5.1",
+  "devDependencies": {
+    "turbo": "^2.11.3"
+  }
+}
