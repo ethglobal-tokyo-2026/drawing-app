@@ -155,6 +155,9 @@ contracts/**/.gas-snapshot
 .claude/worktrees/
 .impeccable/hook.cache.json
 
+# Sticker chain Foundry cache
+packages/sticker-chain/cache/
+
 # yarn v3
 .pnp.*
 .yarn/*

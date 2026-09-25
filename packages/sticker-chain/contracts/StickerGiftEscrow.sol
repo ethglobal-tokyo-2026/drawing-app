@@ -11,12 +11,10 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 /// @notice Holds a sticker after Giving until the recipient accepts or rejects it.
 contract StickerGiftEscrow is AccessControl, EIP712, IERC721Receiver, ReentrancyGuard {
     bytes32 public constant CLAIM_SIGNER_ROLE = keccak256("CLAIM_SIGNER_ROLE");
-    bytes32 public constant CLAIM_TYPEHASH = keccak256(
-        "GiftClaim(bytes32 giftId,address recipient,uint256 authorizationDeadline)"
-    );
-    bytes32 public constant REJECT_TYPEHASH = keccak256(
-        "GiftReject(bytes32 giftId,uint256 authorizationDeadline)"
-    );
+    bytes32 public constant CLAIM_TYPEHASH =
+        keccak256("GiftClaim(bytes32 giftId,address recipient,uint256 authorizationDeadline)");
+    bytes32 public constant REJECT_TYPEHASH =
+        keccak256("GiftReject(bytes32 giftId,uint256 authorizationDeadline)");
 
     enum GiftStatus {
         Missing,
@@ -46,16 +44,10 @@ contract StickerGiftEscrow is AccessControl, EIP712, IERC721Receiver, Reentrancy
         bytes32 claimCommitment,
         uint64 expiresAt
     );
-    event GiftClaimed(
-        bytes32 indexed giftId,
-        uint256 indexed tokenId,
-        address indexed recipient
-    );
+    event GiftClaimed(bytes32 indexed giftId, uint256 indexed tokenId, address indexed recipient);
     event GiftRejected(bytes32 indexed giftId, uint256 indexed tokenId, address indexed sender);
     event ExpiredGiftReturned(
-        bytes32 indexed giftId,
-        uint256 indexed tokenId,
-        address indexed sender
+        bytes32 indexed giftId, uint256 indexed tokenId, address indexed sender
     );
 
     error AuthorizationExpired();
@@ -80,14 +72,15 @@ contract StickerGiftEscrow is AccessControl, EIP712, IERC721Receiver, Reentrancy
 
     /// @dev data must encode (bytes32 giftId, bytes32 claimCommitment, uint64 expiresAt).
     function onERC721Received(address, address from, uint256 tokenId, bytes calldata data)
-        external returns (bytes4)
+        external
+        returns (bytes4)
     {
         if (msg.sender != address(sticker)) revert UnsupportedSticker(msg.sender);
         (bytes32 giftId, bytes32 claimCommitment, uint64 expiresAt) =
             abi.decode(data, (bytes32, bytes32, uint64));
         if (
-            from == address(0) || giftId == bytes32(0) || claimCommitment == bytes32(0) ||
-            expiresAt <= block.timestamp
+            from == address(0) || giftId == bytes32(0) || claimCommitment == bytes32(0)
+                || expiresAt <= block.timestamp
         ) revert InvalidGift();
         if (gifts[giftId].status != GiftStatus.Missing) revert GiftAlreadyExists(giftId);
         if (pendingGiftForToken[tokenId] != bytes32(0)) revert StickerAlreadyPending(tokenId);
@@ -116,12 +109,9 @@ contract StickerGiftEscrow is AccessControl, EIP712, IERC721Receiver, Reentrancy
         if (block.timestamp > gift.expiresAt || block.timestamp > authorizationDeadline) {
             revert AuthorizationExpired();
         }
-        bytes32 digest = _hashTypedDataV4(keccak256(abi.encode(
-            CLAIM_TYPEHASH,
-            giftId,
-            recipient,
-            authorizationDeadline
-        )));
+        bytes32 digest = _hashTypedDataV4(
+            keccak256(abi.encode(CLAIM_TYPEHASH, giftId, recipient, authorizationDeadline))
+        );
         if (!hasRole(CLAIM_SIGNER_ROLE, ECDSA.recover(digest, authorization))) {
             revert InvalidSigner();
         }
@@ -133,20 +123,16 @@ contract StickerGiftEscrow is AccessControl, EIP712, IERC721Receiver, Reentrancy
         emit GiftClaimed(giftId, gift.tokenId, recipient);
     }
 
-    function rejectGift(
-        bytes32 giftId,
-        uint256 authorizationDeadline,
-        bytes calldata authorization
-    ) external nonReentrant {
+    function rejectGift(bytes32 giftId, uint256 authorizationDeadline, bytes calldata authorization)
+        external
+        nonReentrant
+    {
         Gift storage gift = _pendingGift(giftId);
         if (block.timestamp > gift.expiresAt || block.timestamp > authorizationDeadline) {
             revert AuthorizationExpired();
         }
-        bytes32 digest = _hashTypedDataV4(keccak256(abi.encode(
-            REJECT_TYPEHASH,
-            giftId,
-            authorizationDeadline
-        )));
+        bytes32 digest =
+            _hashTypedDataV4(keccak256(abi.encode(REJECT_TYPEHASH, giftId, authorizationDeadline)));
         if (!hasRole(CLAIM_SIGNER_ROLE, ECDSA.recover(digest, authorization))) {
             revert InvalidSigner();
         }
@@ -173,8 +159,12 @@ contract StickerGiftEscrow is AccessControl, EIP712, IERC721Receiver, Reentrancy
     }
 
     function supportsInterface(bytes4 interfaceId)
-        public view override(AccessControl) returns (bool)
+        public
+        view
+        override(AccessControl)
+        returns (bool)
     {
-        return interfaceId == type(IERC721Receiver).interfaceId || super.supportsInterface(interfaceId);
+        return interfaceId == type(IERC721Receiver).interfaceId
+            || super.supportsInterface(interfaceId);
     }
 }

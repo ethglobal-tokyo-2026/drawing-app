@@ -1,26 +1,28 @@
-import ganache from "ganache";
 import {
   createPublicClient,
+  createTestClient,
   createWalletClient,
-  custom,
   defineChain,
   getAddress,
-  isHex,
+  http,
   keccak256,
   stringToBytes,
   type Hex,
 } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { describe, expect, it } from "vitest";
-import { compileGiftEscrow, compileSticker } from "../scripts/compile.js";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   createGiftAuthorizer,
   createGiftClaim,
   prepareGiftTransfer,
 } from "../src/gift-sticker.js";
+import {
+  readFoundryArtifact,
+  startAnvil,
+  type AnvilInstance,
+} from "./helpers/foundry.js";
 
-const stickerArtifact = compileSticker();
-const escrowArtifact = compileGiftEscrow();
+const stickerArtifact = readFoundryArtifact("StickerNFT", "StickerNFT");
+const escrowArtifact = readFoundryArtifact("StickerGiftEscrow", "StickerGiftEscrow");
 const chain = defineChain({
   id: 4801,
   name: "Local World Chain Sepolia",
@@ -28,23 +30,24 @@ const chain = defineChain({
   rpcUrls: { default: { http: ["http://localhost"] } },
 });
 const contentHash = keccak256(stringToBytes("sealed-sticker-bytes"));
+const activeAnvils: AnvilInstance[] = [];
+
+afterEach(async () => {
+  await Promise.all(activeAnvils.splice(0).map(({ close }) => close()));
+});
 
 async function setup() {
-  const provider = ganache.provider({
-    chain: { chainId: chain.id },
-    logging: { quiet: true },
-    wallet: { totalAccounts: 6 },
-  });
-  const publicClient = createPublicClient({ chain, transport: custom(provider) });
-  const accounts = Object.values(provider.getInitialAccounts()).map(({ secretKey }) => {
-    if (!isHex(secretKey)) throw new Error("Local chain returned an invalid private key");
-    return privateKeyToAccount(secretKey);
-  });
+  const anvil = await startAnvil(chain.id);
+  activeAnvils.push(anvil);
+  const transport = http(anvil.rpcUrl);
+  const publicClient = createPublicClient({ chain, transport });
+  const testClient = createTestClient({ chain, mode: "anvil", transport });
+  const accounts = anvil.accounts;
   const [admin, artist, recipient, claimSigner, stranger, relayer] = accounts;
   if (!admin || !artist || !recipient || !claimSigner || !stranger || !relayer) {
     throw new Error("Local chain did not create the required test accounts");
   }
-  const walletClient = createWalletClient({ chain, transport: custom(provider), account: admin });
+  const walletClient = createWalletClient({ chain, transport, account: admin });
   const stickerDeployment = await walletClient.deployContract({
     abi: stickerArtifact.abi,
     bytecode: stickerArtifact.bytecode,
@@ -74,8 +77,8 @@ async function setup() {
   });
   await publicClient.waitForTransactionReceipt({ hash: mintHash });
   return {
-    provider,
     publicClient,
+    testClient,
     walletClient,
     stickerAddress: stickerReceipt.contractAddress,
     escrowAddress: escrowReceipt.contractAddress,
@@ -296,8 +299,8 @@ describe("StickerGiftEscrow", () => {
     const expiredContext = await setup();
     const expiredAt = Math.floor(Date.now() / 1000) + 60;
     const expiredClaim = await stageGift(expiredContext, expiredAt);
-    await expiredContext.provider.request({ method: "evm_increaseTime", params: [120] });
-    await expiredContext.provider.request({ method: "evm_mine", params: [] });
+    await expiredContext.testClient.increaseTime({ seconds: 120 });
+    await expiredContext.testClient.mine({ blocks: 1 });
     const returnHash = await expiredContext.walletClient.writeContract({
       address: expiredContext.escrowAddress,
       abi: escrowArtifact.abi,
