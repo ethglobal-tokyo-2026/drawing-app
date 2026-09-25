@@ -171,7 +171,8 @@ pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
   - `src/sticker-creation` — the drawing screen: canvas engine (`canvas/`), tools and drawers (`tools/`), sealing (`sealing/`)
   - `src/sticker-board` — the sticker board, sticker detail, profile card and placement
   - `src/tickets`, `src/stickers` (local sticker storage and display formatting), `src/line` (LIFF), `src/identity`, `src/payments`
-  - `src/icons` — one icon per file; `src/styles` — CSS shared across features
+  - `src/icons` — one icon per file, all rendered from published Phosphor / Material Symbols SVGs; `src/styles` — design tokens (`base.css`) and CSS shared across features
+  - `src/controls` — the key, label stock and quiet link, and the one press they share (`usePress`)
 - `packages/db` — Drizzle schema and typed database client (`@drawing-app/db`)
 - `packages/*` — shared workspace packages
 
@@ -233,4 +234,3 @@ calls.
 - Never state a measured number (timings, disk usage, item counts, magic constants) unless you produced it from a command run in this session. Paste the exact command and its output next to the claim.
 - If a constant or threshold cannot be derived, say "unverified guess" explicitly instead of presenting it as calibrated.
 - Before concluding a feature/behavior is absent, confirm your search covered non-source files (index.html, bundled/vendored assets, minified dist) — grep excludes are the usual reason for a false negative.
-
