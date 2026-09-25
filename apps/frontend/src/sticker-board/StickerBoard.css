@@ -227,49 +227,16 @@
   padding: 24px;
 }
 
-/* A dashed, sticker-shaped spot waiting for the first sticker. */
+/* A dashed, sticker-shaped spot waiting for the first sticker. The Draw key is the way in. */
 .empty-slot {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: min(280px, 82%);
-  aspect-ratio: 1.2;
-  padding: 0;
-  border: 1.5px dashed var(--rule-strong);
-  border-radius: 50% 48% 50% 47% / 52% 50% 48% 50%;
-  background: var(--liner-lift);
-  color: var(--ink);
-  text-align: center;
-  cursor: pointer;
-}
-
-.empty-slot:active {
-  transform: scale(0.98);
-}
-
-.empty-icon {
   display: grid;
   place-items: center;
-  width: 54px;
-  height: 54px;
-  margin-bottom: 2px;
-  border-radius: 50%;
-  background: var(--seal);
-  box-shadow: var(--shadow-label);
-}
-
-.empty-title {
-  font-size: 20px;
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -0.012em;
-  font-variation-settings: var(--wdth-title);
-}
-
-.empty-sub {
+  width: min(280px, 82%);
+  aspect-ratio: 1.2;
+  border: 2px dashed var(--rule-strong);
+  border-radius: 50% 48% 50% 47% / 52% 50% 48% 50%;
   color: var(--graphite);
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 15px;
+  line-height: 1.42;
+  text-align: center;
 }

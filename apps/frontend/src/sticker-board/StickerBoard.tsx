@@ -260,21 +260,11 @@ export function StickerBoard({ freshId, onDraw }: Props) {
 
         {stickers?.length === 0 && (
           <div className="board-empty">
-            <button className="empty-slot" onClick={onDraw}>
-              <span className="empty-icon">
-                <DrawIcon size={26} />
-              </span>
-              <span className="empty-title">
-                Draw your
-                <br />
-                first sticker
-              </span>
-              <span className="empty-sub">
-                Stickers you make
-                <br />
-                or receive land here.
-              </span>
-            </button>
+            <div className="empty-slot">
+              Stickers you make
+              <br />
+              or receive land here.
+            </div>
           </div>
         )}
 
