@@ -5,7 +5,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { SmallBrushIcon } from "../icons/SmallBrushIcon";
+import { DrawIcon } from "../icons/DrawIcon";
 import { useIdentity } from "../identity/useIdentity";
 import { formatClock, formatNo } from "../stickers/format";
 import { listStickers, updatePlacement, type Placement } from "../stickers/stickerStorage";
@@ -261,7 +261,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           <div className="board-empty">
             <button className="empty-slot" onClick={onDraw}>
               <span className="empty-icon">
-                <SmallBrushIcon />
+                <DrawIcon />
               </span>
               <span className="empty-title">
                 Draw your

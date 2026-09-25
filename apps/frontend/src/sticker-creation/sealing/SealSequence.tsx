@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from "react";
-import { SmallBrushIcon } from "../../icons/SmallBrushIcon";
-import { StickerIcon } from "../../icons/StickerIcon";
+import { DrawIcon } from "../../icons/DrawIcon";
+import { StickerBoardIcon } from "../../icons/StickerBoardIcon";
 import { formatClock, formatDay, formatNo } from "../../stickers/format";
 import type { StickerRecord } from "../../stickers/stickerStorage";
 import type { StickerImages } from "./makeSticker";
@@ -85,10 +85,10 @@ export function SealSequence({ images, record, ticketsLeft, onKeepDrawing, onBoa
             </div>
             <div className="perforation" />
             <button className="keep-btn" onClick={onKeepDrawing}>
-              <SmallBrushIcon /> Keep drawing
+              <DrawIcon /> Keep drawing
             </button>
             <button className="board-btn" onClick={onBoard}>
-              <StickerIcon /> Go to sticker board
+              <StickerBoardIcon size={18} /> Go to sticker board
             </button>
           </div>
         </div>

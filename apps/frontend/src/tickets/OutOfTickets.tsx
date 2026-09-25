@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { IS_MOCK_PAYMENT, payForTickets } from "../payments/sui";
-import { StickerIcon } from "../icons/StickerIcon";
-import { TicketIcon } from "../icons/TicketIcon";
+import { Ticket as TicketIcon } from "@phosphor-icons/react";
+import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { TICKET_PACK } from "./config";
 import "../styles/result-card.css";
 import "./tickets.css";
@@ -73,10 +73,10 @@ export function OutOfTickets({ refillAt, onTicketsBought, onStartDrawing, onBoar
             </p>
             <div className="perforation" />
             <button className="keep-btn" onClick={() => setStep("approve")}>
-              <TicketIcon /> Get more tickets with Sui
+              <TicketIcon size={20} /> Get more tickets with Sui
             </button>
             <button className="board-btn" onClick={onBoard}>
-              <StickerIcon /> Go to sticker board
+              <StickerBoardIcon size={18} /> Go to sticker board
             </button>
           </>
         )}

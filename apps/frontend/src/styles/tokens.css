@@ -1,0 +1,118 @@
+/* Tokens: the sticker world's shared names. Contract tokens first, verbatim;
+   everything below them derives from those. Owner: foundation. */
+
+:root {
+  --liner: #f2f1f6;
+  --ink: #1c1824;
+  --graphite: #6e6878;
+  --canvas: #ffffff;
+  --seal: #ffd93b;
+  --aqua: #38d3dc;
+  --pink: #ff4f9a;
+  --grape: #9b7bff;
+  --tomato: #ff5a36;
+  --font-ui: "Mona Sans", system-ui, sans-serif;
+  --font-puffy: "Dela Gothic One", var(--font-ui);
+  --r-label: 6px;
+  --tilt: -4deg;
+  --gutter: 12px;
+  --ease-peel: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --t-peel: 280ms;
+  --t-stick: 220ms;
+  --t-press: 60ms;
+  --t-pop: 200ms;
+  --t-tidy: 400ms;
+
+  /* Type stacks beyond the contract */
+  --font-jp: "Zen Kaku Gothic New", "Hiragino Sans", "Hiragino Kaku Gothic ProN", var(--font-ui);
+  --font-native:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Hiragino Sans", system-ui,
+    sans-serif; /* iOS and LINE's own chrome */
+
+  /* Mona Sans width axis: UI 100, titles 112, fine print 87.5 (75 read too small at 11px on a phone), big figures 125 (counts, stats) */
+  --w-ui: 100%;
+  --w-title: 112%;
+  --w-fine: 87.5%;
+  --w-figure: 125%;
+  --fs-fine: 11px; /* the floor on a 390 px phone: fine print, caps metadata and hints never go smaller */
+
+  /* Ink and graphite at the strengths the world names */
+  --rule: rgba(28, 24, 36, 0.14); /* hairline kiss-cut rule */
+  --rule-strong: rgba(28, 24, 36, 0.26);
+  --ink-soft: rgba(28, 24, 36, 0.62);
+  --grid-peek: rgba(
+    110,
+    104,
+    120,
+    0.04
+  ); /* the backing grid showing through where a sticker was peeled */
+
+  /* Paper stock */
+  --liner-deep: #e5e3ec; /* pressed label, binder cover */
+  --liner-lift: #f8f7fb; /* a label lifted off the liner */
+
+  /* Flat fields mixed toward the liner (inactive tabs, quiet chips) */
+  --seal-soft: color-mix(in srgb, var(--seal) 42%, var(--liner));
+  --aqua-soft: color-mix(in srgb, var(--aqua) 38%, var(--liner));
+  --pink-soft: color-mix(in srgb, var(--pink) 30%, var(--liner));
+  --grape-soft: color-mix(in srgb, var(--grape) 34%, var(--liner));
+  --tomato-soft: color-mix(in srgb, var(--tomato) 30%, var(--liner));
+
+  /* One light, top-left: every shadow falls down and to the right */
+  --shadow-label: 0 1px 0 rgba(28, 24, 36, 0.1), 1px 2px 3px rgba(28, 24, 36, 0.08);
+  --shadow-lift: 1px 3px 4px rgba(28, 24, 36, 0.12), 3px 10px 22px rgba(28, 24, 36, 0.14);
+  --shadow-sheet: 0 -1px 0 rgba(28, 24, 36, 0.06), 2px -8px 28px rgba(28, 24, 36, 0.12);
+  --shadow-device: 2px 18px 40px rgba(28, 24, 36, 0.2), 1px 4px 10px rgba(28, 24, 36, 0.14);
+  --sticker-cut: drop-shadow(0 0 0.5px rgba(28, 24, 36, 0.55)); /* the kiss-cut groove */
+  --sticker-cast: drop-shadow(1px 2px 1.5px rgba(28, 24, 36, 0.16))
+    drop-shadow(2px 6px 8px rgba(28, 24, 36, 0.1));
+
+  /* Motion beyond the contract */
+  --t-turn: 500ms;
+  --ease-turn: cubic-bezier(0.3, 0.7, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* exponential ease-out */
+  --ease-spring: cubic-bezier(0.34, 1.7, 0.5, 1); /* press release, springs past 1.03 */
+
+  /* The phone: iPhone 13/14 viewport, LINE's LIFF header, index tabs */
+  --ph-w: 390px;
+  --ph-h: 844px;
+  --ph-status: 47px;
+  --ph-liff: 56px;
+  --ph-tabs: 84px;
+  --ph-safe: 34px;
+  --ph-radius: 47px;
+  --ph-bezel: 11px;
+
+  /* Layers inside a phone */
+  --z-screen: 1;
+  --z-tabs: 20;
+  --z-header: 30;
+  --z-sheet: 40;
+  --z-toast: 60;
+  --z-banner: 70;
+  --z-status: 80;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-peel: 1ms;
+    --t-stick: 1ms;
+    --t-press: 1ms;
+    --t-pop: 1ms;
+    --t-tidy: 1ms;
+    --t-turn: 1ms;
+  }
+}
+
+/* Colors the design names but draws inline: each coded hue's deep partner (a key's lip), label stock's lip,
+   the ink key's lip, and the maker print on backing paper. */
+:root {
+  --seal-deep: #d9a300;
+  --aqua-deep: #1c9ea8;
+  --pink-deep: #cc2a72;
+  --grape-deep: #6d4fd6;
+  --tomato-deep: #c63c1e;
+  --label-deep: #d3d0dc;
+  --ink-deep: #07060a;
+  --liner-print: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='1000'%3E%3Cdefs%3E%3Cpattern id='p' width='236' height='46' patternUnits='userSpaceOnUse' patternTransform='rotate(-30)'%3E%3Ctext x='0' y='30' font-family='Helvetica Neue,Hiragino Sans,Arial,sans-serif' font-size='12' font-weight='700' letter-spacing='2.4' fill='%236E6878' fill-opacity='.07'%3ESEAL %C2%B7 %E3%82%B7%E3%83%BC%E3%83%AB %C2%B7 %3C/text%3E%3C/pattern%3E%3C/defs%3E%3Crect width='600' height='1000' fill='url(%23p)'/%3E%3C/svg%3E");
+}

@@ -1,7 +1,4 @@
-import { BrushIcon } from "../../icons/BrushIcon";
-import { BucketIcon } from "../../icons/BucketIcon";
-import { EraserIcon } from "../../icons/EraserIcon";
-import { WaveIcon } from "../../icons/WaveIcon";
+import { Eraser, PaintBrush, PaintBucket, WaveSine, type Icon } from "@phosphor-icons/react";
 import type { Tool } from "../canvas/types";
 
 export type Drawer = "color" | "smooth" | null;
@@ -15,10 +12,10 @@ interface Props {
   onDrawer: (drawer: Drawer) => void;
 }
 
-const TOOLS: { tool: Tool; label: string; Icon: () => React.ReactNode }[] = [
-  { tool: "brush", label: "Brush", Icon: BrushIcon },
-  { tool: "eraser", label: "Eraser", Icon: EraserIcon },
-  { tool: "bucket", label: "Fill", Icon: BucketIcon },
+const TOOLS: { tool: Tool; label: string; Icon: Icon }[] = [
+  { tool: "brush", label: "Brush", Icon: PaintBrush },
+  { tool: "eraser", label: "Eraser", Icon: Eraser },
+  { tool: "bucket", label: "Fill", Icon: PaintBucket },
 ];
 
 export function ToolPill({ tool, color, drawer, disabled, onTool, onDrawer }: Props) {
@@ -33,7 +30,7 @@ export function ToolPill({ tool, color, drawer, disabled, onTool, onDrawer }: Pr
           aria-label={label}
           disabled={disabled}
         >
-          <Icon />
+          <Icon size={22} weight={tool === t ? "fill" : "bold"} />
         </button>
       ))}
       <button
@@ -50,7 +47,7 @@ export function ToolPill({ tool, color, drawer, disabled, onTool, onDrawer }: Pr
         aria-label="Smoothness"
         disabled={disabled}
       >
-        <WaveIcon />
+        <WaveSine size={22} />
       </button>
     </div>
   );
