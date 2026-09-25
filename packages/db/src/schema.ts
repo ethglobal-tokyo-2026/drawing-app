@@ -1,6 +1,7 @@
 import { sql, type SQL } from "drizzle-orm";
 import {
   check,
+  foreignKey,
   index,
   integer,
   primaryKey,
@@ -11,9 +12,10 @@ import {
   type AnySQLiteColumn,
 } from "drizzle-orm/sqlite-core";
 
-// This database is the source of truth for every screen. Where World Chain holds the owner of
-// record (the sticker NFT and the gift escrow), the columns marked "chain mirror" cache it, and
-// chain_jobs tracks the transactions that keep the two in step. Screens never wait for the chain.
+// Every screen reads this database. Where World Chain holds the owner of record (the sticker NFT
+// and the gift escrow), the columns marked "chain mirror" cache it, and chain_jobs tracks the
+// transactions that keep the two in step. The few actions that need chain state first (giving
+// needs the mint; a regift needs the last claim) check these mirrors.
 
 /** A CHECK that a column holds one of a closed set of values. */
 const oneOf = (column: AnySQLiteColumn, values: readonly string[]): SQL =>
@@ -35,13 +37,13 @@ export const users = sqliteTable(
     id: text("id").primaryKey(),
     /** Unique, ENS-normalized (ENSIP-15); Japanese works. Null until the name label is stuck on. */
     handle: text("handle").unique(),
-    /** IANA zone. Ticket days and streak days turn over at 4:00 here. */
+    /** IANA zone, taken from the device at sign-up. Ticket days and streak days turn over at 4:00 here. */
     timeZone: text("time_zone").notNull().default("Asia/Tokyo"),
     termsAcceptedAt: integer("terms_accepted_at", { mode: "timestamp_ms" }),
     termsVersion: text("terms_version"),
-    /** The Privy user (did:privy:…) holding this person's wallets; set once Privy has seen them. */
+    /** The Privy user (did:privy:…) holding this person's wallets; cleared on withdrawal. */
     privyUserId: text("privy_user_id").unique(),
-    /** Cached from seal days, because a missed day lowers the streak instead of resetting it. */
+    /** The streak as of `streak_day`; readers apply the decay for days missed since. */
     streakCurrent: integer("streak_current").notNull().default(0),
     streakBest: integer("streak_best").notNull().default(0),
     /** The last ticket day the streak counted (YYYY-MM-DD). */
@@ -50,7 +52,7 @@ export const users = sqliteTable(
       .notNull()
       .default(false),
     createdAt: createdAt(),
-    /** Set on withdrawal: the LINE data is deleted and the stickers keep their artist. */
+    /** Set on withdrawal: the LINE data goes, and the stickers keep their artist. */
     withdrawnAt: integer("withdrawn_at", { mode: "timestamp_ms" }),
   },
   (t) => [
@@ -71,11 +73,12 @@ export const lineAccounts = sqliteTable("line_accounts", {
   refreshedAt: integer("refreshed_at", { mode: "timestamp_ms" }).notNull(),
 });
 
-export const walletKinds = ["smart_account", "signer"] as const;
+/** The chain package's names for the two Privy wallets. */
+export const walletKinds = ["smart_account", "signer_eoa"] as const;
 
 /**
  * Addresses of the Privy wallets a person controls. Stickers are minted to and claimed by the
- * smart account, never the signer.
+ * smart account, never the signer. Withdrawal deletes these rows.
  */
 export const wallets = sqliteTable(
   "wallets",
@@ -120,25 +123,28 @@ export const stickers = sqliteTable(
       .notNull()
       .references(() => users.id),
     sealedAt: integer("sealed_at", { mode: "timestamp_ms" }).notNull(),
-    /** Seconds on the drawing clock, which pauses, so it's the client's figure. */
+    /** Seconds on the drawing clock, which pauses, so it's the app's figure. 0 if sealed in the first second. */
     timeSpentS: integer("time_spent_s").notNull(),
     width: integer("width").notNull(),
     height: integer("height").notNull(),
     /** The cut line as an SVG path in image pixels: sheet packing, ticket stub outlines, glue ghosts. */
     outline: text("outline").notNull(),
-    /** keccak256 of the sealed PNG; names its file. Chain mirror: StickerNFT.contentHashOf. */
-    contentHash: text("content_hash").notNull().unique(),
-    /** Immutable metadata JSON. Chain mirror: StickerNFT.tokenURI. */
+    /** keccak256 of the sealed PNG; names its file, which identical drawings share. Chain mirror: StickerNFT.contentHashOf. */
+    contentHash: text("content_hash").notNull(),
+    /** Immutable metadata JSON, available before the mint. Chain mirror: StickerNFT.tokenURI. */
     metadataUri: text("metadata_uri").notNull(),
     /** uint256 as a decimal string, assigned by the contract when the mint confirms. Chain mirror. */
     tokenId: text("token_id").unique(),
     mintedAt: integer("minted_at", { mode: "timestamp_ms" }),
   },
   (t) => [
+    // The target of the keys that tie a ticket's and a gratitude's artist to the sticker's own.
+    uniqueIndex("stickers_id_artist").on(t.id, t.artistId),
     index("stickers_owner").on(t.ownerId),
     index("stickers_artist").on(t.artistId, t.sealedAt),
     index("stickers_sealed").on(t.sealedAt),
-    check("stickers_time_spent", sql`${t.timeSpentS} between 1 and 300`),
+    index("stickers_content_hash").on(t.contentHash),
+    check("stickers_time_spent", sql`${t.timeSpentS} between 0 and 300`),
     check("stickers_size", sql`${t.width} > 0 and ${t.height} > 0`),
     check("stickers_content_hash", isBytes32(t.contentHash)),
     check("stickers_minted", sql`(${t.tokenId} is null) = (${t.mintedAt} is null)`),
@@ -149,7 +155,8 @@ export const ticketSources = ["free", "paid"] as const;
 
 /**
  * A spent drawing ticket. It's spent at the first stroke and linked to the sticker at seal; an
- * abandoned drawing keeps its ticket spent with no sticker.
+ * abandoned drawing keeps its ticket spent with no sticker. A paid use needs a confirmed
+ * purchase with tickets left, which the spending transaction checks.
  */
 export const ticketUses = sqliteTable(
   "ticket_uses",
@@ -164,11 +171,15 @@ export const ticketUses = sqliteTable(
     seq: integer("seq").notNull(),
     source: text("source", { enum: ticketSources }).notNull(),
     startedAt: integer("started_at", { mode: "timestamp_ms" }).notNull(),
-    stickerId: text("sticker_id")
-      .unique()
-      .references(() => stickers.id),
+    stickerId: text("sticker_id").unique(),
   },
   (t) => [
+    // The sticker a ticket became was drawn by the ticket's owner.
+    foreignKey({
+      name: "ticket_uses_sticker_artist",
+      columns: [t.stickerId, t.userId],
+      foreignColumns: [stickers.id, stickers.artistId],
+    }),
     uniqueIndex("ticket_uses_day_seq").on(t.userId, t.ticketDay, t.seq),
     check("ticket_uses_source", oneOf(t.source, ticketSources)),
     // Three free tickets a day, enforced where a race can't slip past it.
@@ -179,9 +190,40 @@ export const ticketUses = sqliteTable(
   ],
 );
 
+export const purchaseStatuses = ["pending", "confirmed", "failed"] as const;
+
+/** Tickets bought with Sui. The tickets count only once the server has verified the payment. */
+export const ticketPurchases = sqliteTable(
+  "ticket_purchases",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id),
+    tickets: integer("tickets").notNull(),
+    /** The price in MIST, as a decimal string. */
+    priceMist: text("price_mist").notNull(),
+    /** The Sui transaction digest. */
+    txDigest: text("tx_digest").notNull().unique(),
+    status: text("status", { enum: purchaseStatuses }).notNull().default("pending"),
+    createdAt: createdAt(),
+    confirmedAt: integer("confirmed_at", { mode: "timestamp_ms" }),
+  },
+  (t) => [
+    index("ticket_purchases_user").on(t.userId, t.status),
+    check("ticket_purchases_tickets", sql`${t.tickets} > 0`),
+    check("ticket_purchases_status", oneOf(t.status, purchaseStatuses)),
+    check(
+      "ticket_purchases_confirmed",
+      sql`(${t.status} = 'confirmed') = (${t.confirmedAt} is not null)`,
+    ),
+  ],
+);
+
 /**
  * A sticker's permanent spot in its holder's sticker tray. Sheets are packed from `seq`, so a
- * given sticker's spot stays blank and a sticker given back returns to it.
+ * given sticker's spot stays blank. A sticker given back keeps its row, spot and arrival date,
+ * and its `seen_at` clears so it shows NEW again.
  */
 export const stickerArrivals = sqliteTable(
   "sticker_arrivals",
@@ -206,18 +248,15 @@ export const stickerArrivals = sqliteTable(
 
 /**
  * Where a sticker sits on a person's sticker board. It outlives giving: the giver's placement
- * becomes the glue ghost while the receiver gets a placement of their own.
+ * becomes the glue ghost while the receiver gets a placement of their own. Only a sticker that
+ * arrived in the person's tray can be placed.
  */
 export const boardPlacements = sqliteTable(
   "board_placements",
   {
     /** The board's owner; each person has one sticker board. */
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id),
-    stickerId: text("sticker_id")
-      .notNull()
-      .references(() => stickers.id),
+    userId: text("user_id").notNull(),
+    stickerId: text("sticker_id").notNull(),
     /** False when the sticker is back in the sticker tray. */
     onBoard: integer("on_board", { mode: "boolean" }).notNull(),
     /** Center, as fractions of the board's field. */
@@ -231,6 +270,11 @@ export const boardPlacements = sqliteTable(
   },
   (t) => [
     primaryKey({ columns: [t.userId, t.stickerId] }),
+    foreignKey({
+      name: "board_placements_arrival",
+      columns: [t.userId, t.stickerId],
+      foreignColumns: [stickerArrivals.userId, stickerArrivals.stickerId],
+    }),
     index("board_placements_sticker").on(t.stickerId),
     check("board_placements_position", sql`${t.x} between 0 and 1 and ${t.y} between 0 and 1`),
     check("board_placements_scale", sql`${t.scale} > 0 and ${t.scale} <= 1`),
@@ -239,7 +283,14 @@ export const boardPlacements = sqliteTable(
 
 // ------------------------------------------------------------------ giving and receiving
 
-export const giftStates = ["packed", "sent", "accepted", "taken_out", "returned"] as const;
+export const giftStates = [
+  "packed",
+  "sent",
+  "accepted",
+  "taken_out",
+  "voided",
+  "returned",
+] as const;
 /** StickerGiftEscrow's GiftStatus, verbatim. */
 export const escrowStatuses = [
   "missing",
@@ -252,7 +303,8 @@ export const giftRoutes = ["line_chat", "handle"] as const;
 
 /**
  * One Giving of one sticker. Packing puts the sticker into the escrow; the card goes out through
- * LINE's one-friend picker (or straight to a handle); accepting claims it for the receiver.
+ * LINE's one-friend picker (or straight to a handle) once the deposit is in; accepting claims it
+ * for the receiver.
  */
 export const gifts = sqliteTable(
   "gifts",
@@ -270,7 +322,7 @@ export const gifts = sqliteTable(
     recipientId: text("recipient_id").references(() => users.id),
     /**
      * keccak256 of the one-time claim token. The token itself lives only in the card's link; the
-     * escrow holds this same commitment. Accept looks the gift up by it.
+     * escrow holds this same commitment. A LINE chat gift's accept looks the gift up by it.
      */
     claimCommitment: text("claim_commitment").notNull().unique(),
     state: text("state", { enum: giftStates }).notNull(),
@@ -280,21 +332,28 @@ export const gifts = sqliteTable(
     expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
     createdAt: createdAt(),
-    /** LINE's picker reported the card sent. */
+    /** The card went out: LINE's picker reported it sent, or the server delivered a handle gift. */
     sharedAt: integer("shared_at", { mode: "timestamp_ms" }),
+    /** Kept when an accepted gift later returns after expiry, as a record of the accept. */
     acceptedAt: integer("accepted_at", { mode: "timestamp_ms" }),
-    /** Taken out of the bag, or returned after expiry. */
+    /** The giver saw the accept news in the app ("Bob accepted your sticker ♡"). */
+    acceptSeenAt: integer("accept_seen_at", { mode: "timestamp_ms" }),
+    /** Taken out of the bag, voided, or returned after expiry. */
     closedAt: integer("closed_at", { mode: "timestamp_ms" }),
   },
   (t) => [
-    // One open gift per sticker.
-    uniqueIndex("gifts_open_sticker")
+    // One gift per sticker at a time: while it's open, and while the escrow still holds the NFT
+    // (a claim, reject or return that hasn't landed), since the escrow refuses a second deposit.
+    uniqueIndex("gifts_one_at_a_time")
       .on(t.stickerId)
-      .where(sql`${t.state} in ('packed', 'sent')`),
+      .where(sql`${t.state} in ('packed', 'sent') or ${t.escrowStatus} = 'pending'`),
+    // The target of gratitude's key, which ties its sticker and people to the gift's.
+    uniqueIndex("gifts_parties").on(t.id, t.stickerId, t.recipientId, t.giverId),
     uniqueIndex("gifts_idempotency").on(t.giverId, t.idempotencyKey),
     index("gifts_giver").on(t.giverId, t.state),
     index("gifts_recipient").on(t.recipientId, t.state),
     index("gifts_trail").on(t.stickerId, t.acceptedAt),
+    index("gifts_accepted").on(t.acceptedAt),
     check("gifts_id", isBytes32(t.id)),
     check("gifts_claim_commitment", isBytes32(t.claimCommitment)),
     check("gifts_state", oneOf(t.state, giftStates)),
@@ -305,15 +364,26 @@ export const gifts = sqliteTable(
       "gifts_handle_has_recipient",
       sql`${t.sentVia} <> 'handle' or ${t.recipientId} is not null`,
     ),
+    // What the escrow can hold in each state. A card can't be sent or accepted before the deposit is in.
+    check(
+      "gifts_escrow_matches_state",
+      sql`(${t.state} = 'packed' and ${t.escrowStatus} in ('missing', 'pending'))
+        or (${t.state} = 'sent' and ${t.escrowStatus} = 'pending')
+        or (${t.state} = 'accepted' and ${t.escrowStatus} in ('pending', 'claimed'))
+        or (${t.state} in ('taken_out', 'voided') and ${t.escrowStatus} in ('missing', 'pending', 'rejected'))
+        or (${t.state} = 'returned' and ${t.escrowStatus} = 'expired_returned')`,
+    ),
     check(
       "gifts_accepted",
-      sql`(${t.state} = 'accepted') = (${t.acceptedAt} is not null) and (${t.state} <> 'accepted' or ${t.recipientId} is not null)`,
+      sql`(${t.state} <> 'accepted' or (${t.acceptedAt} is not null and ${t.recipientId} is not null))
+        and (${t.acceptedAt} is null or ${t.state} in ('accepted', 'returned'))`,
     ),
-    check("gifts_shared", sql`${t.state} not in ('sent', 'accepted') or ${t.sharedAt} is not null`),
+    check("gifts_sent", sql`${t.state} <> 'sent' or ${t.sharedAt} is not null`),
     check(
       "gifts_closed",
-      sql`(${t.state} in ('taken_out', 'returned')) = (${t.closedAt} is not null)`,
+      sql`(${t.state} in ('taken_out', 'voided', 'returned')) = (${t.closedAt} is not null)`,
     ),
+    check("gifts_accept_seen", sql`${t.acceptSeenAt} is null or ${t.acceptedAt} is not null`),
   ],
 );
 
@@ -325,6 +395,7 @@ export const openOutcomes = [
   "own_gift",
   "blocked_group",
   "already_opened",
+  "not_ready",
   "gone",
 ] as const;
 
@@ -338,7 +409,7 @@ export const giftOpens = sqliteTable(
       .references(() => gifts.id),
     /** Null when the card was opened before signing in. */
     userId: text("user_id").references(() => users.id),
-    /** Reported by the page, so a hint for blocking group chats, never proof. */
+    /** Reported by the page, so a hint for refusing group and multi-person chats, never proof. */
     contextType: text("context_type", { enum: openContexts }).notNull(),
     outcome: text("outcome", { enum: openOutcomes }).notNull(),
     createdAt: createdAt(),
@@ -363,25 +434,19 @@ export const gratitude = sqliteTable(
   "gratitude",
   {
     id: text("id").primaryKey(),
-    giftId: text("gift_id")
-      .notNull()
-      .unique()
-      .references(() => gifts.id),
+    giftId: text("gift_id").notNull().unique(),
     /** Copied from the gift, for per-sticker glow and trail queries. */
-    stickerId: text("sticker_id")
-      .notNull()
-      .references(() => stickers.id),
+    stickerId: text("sticker_id").notNull(),
     /** The receiver, who plays the mini-game. */
-    fromUserId: text("from_user_id")
-      .notNull()
-      .references(() => users.id),
+    fromUserId: text("from_user_id").notNull(),
     /** The giver. */
-    toUserId: text("to_user_id")
-      .notNull()
-      .references(() => users.id),
-    /** The sticker's artist, when the giver isn't the artist. */
-    artistUserId: text("artist_user_id").references(() => users.id),
+    toUserId: text("to_user_id").notNull(),
+    /** The sticker's artist, when the artist is neither the giver nor the receiver. */
+    artistUserId: text("artist_user_id"),
+    /** The method the combo ended in; a tap combo can commit to stroke or shake midway. */
     method: text("method", { enum: gratitudeMethods }).notNull(),
+    /** Where in `eventTimes` the combo committed to stroke or shake: 0 when it started there, null for taps only. */
+    switchedAtEvent: integer("switched_at_event"),
     /** Counted taps, passes or reversals: the hits. */
     events: integer("events").notNull(),
     /** The replayed gratitude, multiplier included. */
@@ -404,10 +469,23 @@ export const gratitude = sqliteTable(
     seenByGiverAt: integer("seen_by_giver_at", { mode: "timestamp_ms" }),
   },
   (t) => [
+    // The sticker and both people are the gift's own.
+    foreignKey({
+      name: "gratitude_gift_parties",
+      columns: [t.giftId, t.stickerId, t.fromUserId, t.toUserId],
+      foreignColumns: [gifts.id, gifts.stickerId, gifts.recipientId, gifts.giverId],
+    }),
+    // The artist is the sticker's own.
+    foreignKey({
+      name: "gratitude_sticker_artist",
+      columns: [t.stickerId, t.artistUserId],
+      foreignColumns: [stickers.id, stickers.artistId],
+    }),
     index("gratitude_to").on(t.toUserId, t.recordedAt),
     index("gratitude_artist").on(t.artistUserId, t.recordedAt),
     index("gratitude_from").on(t.fromUserId, t.recordedAt),
     index("gratitude_sticker").on(t.stickerId),
+    index("gratitude_recorded").on(t.recordedAt),
     index("gratitude_unseen")
       .on(t.toUserId)
       .where(sql`${t.seenByGiverAt} is null`),
@@ -417,11 +495,21 @@ export const gratitude = sqliteTable(
       "gratitude_split",
       sql`${t.toAmount} + ${t.artistAmount} = ${t.total} and ${t.toAmount} >= 0 and ${t.artistAmount} >= 0`,
     ),
-    check("gratitude_artist", sql`${t.artistUserId} is not null or ${t.artistAmount} = 0`),
+    // The artist's fifth goes only to an artist who is neither side of this hand-off.
+    check(
+      "gratitude_artist_amount",
+      sql`(${t.artistUserId} is null and ${t.artistAmount} = 0)
+        or (${t.artistUserId} is not null and ${t.artistUserId} <> ${t.fromUserId} and ${t.artistUserId} <> ${t.toUserId})`,
+    ),
     check("gratitude_not_self", sql`${t.fromUserId} <> ${t.toUserId}`),
     check(
       "gratitude_events",
       sql`${t.events} between 1 and 120 and json_array_length(${t.eventTimes}) = ${t.events}`,
+    ),
+    check(
+      "gratitude_switch",
+      sql`(${t.method} = 'tap') = (${t.switchedAtEvent} is null)
+        and (${t.switchedAtEvent} is null or ${t.switchedAtEvent} between 0 and ${t.events} - 1)`,
     ),
     check("gratitude_tier", sql`${t.peakTier} between 0 and 4`),
     check("gratitude_mult", sql`${t.peakMult} between 1 and 8`),
@@ -432,11 +520,13 @@ export const gratitude = sqliteTable(
 // ------------------------------------------------------------------ outboxes
 
 export const noticeKinds = ["gift_accepted", "gratitude", "gratitude_digest"] as const;
-export const noticeStatuses = ["queued", "sent", "failed"] as const;
+export const noticeStatuses = ["queued", "sent", "failed", "cancelled"] as const;
 
 /**
- * Official account pushes through the Messaging API, written in the same transaction as the change
- * they announce. A 200 from LINE doesn't prove delivery, so the app shows the same news in-app.
+ * Official account pushes through the Messaging API. A push for one event is written in the same
+ * transaction as the change it announces; a digest is written when its window closes. Retries
+ * stop after 24 hours, the retry key's lifetime. A 200 from LINE doesn't prove delivery, so the
+ * app shows the same news in-app.
  */
 export const lineNotices = sqliteTable(
   "line_notices",
@@ -474,11 +564,20 @@ export const chainJobKinds = [
   "reject",
   "return_expired",
 ] as const;
-export const chainJobStatuses = ["queued", "submitted", "confirmed", "failed"] as const;
+export const chainJobStatuses = [
+  "queued",
+  "submitted",
+  "confirmed",
+  "failed",
+  "cancelled",
+] as const;
 
 /**
  * World Chain transactions the server sends or watches: minting at seal, confirming the giver's
- * escrow deposit, claiming at accept, returning a sticker taken out of the bag or left past expiry.
+ * escrow deposit, claiming at accept, and rejecting (take-out, or a deposit that didn't match).
+ * A sticker's or a gift's jobs run in the order they were queued: each waits while an earlier
+ * one for the same sticker or gift hasn't confirmed. A mint or claim also waits until the
+ * person's smart account exists.
  */
 export const chainJobs = sqliteTable(
   "chain_jobs",
@@ -493,7 +592,6 @@ export const chainJobs = sqliteTable(
     /** A transaction or user operation hash; the giver's own deposit is reported by the app. */
     txHash: text("tx_hash"),
     attempts: integer("attempts").notNull().default(0),
-    /** A claim waits here until the receiver's smart account exists. */
     runAfter: integer("run_after", { mode: "timestamp_ms" }).notNull(),
     lastError: text("last_error"),
     createdAt: createdAt(),
@@ -501,6 +599,8 @@ export const chainJobs = sqliteTable(
   },
   (t) => [
     index("chain_jobs_due").on(t.status, t.runAfter),
+    index("chain_jobs_sticker").on(t.stickerId),
+    index("chain_jobs_gift").on(t.giftId),
     check("chain_jobs_kind", oneOf(t.kind, chainJobKinds)),
     check("chain_jobs_status", oneOf(t.status, chainJobStatuses)),
     check(
