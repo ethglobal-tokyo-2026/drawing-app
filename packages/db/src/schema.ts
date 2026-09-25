@@ -124,10 +124,10 @@ export const stickers = sqliteTable(
       .references(() => users.id),
     sealedAt: integer("sealed_at", { mode: "timestamp_ms" }).notNull(),
     /** Seconds on the drawing clock, which pauses, so it's the app's figure. 0 if sealed in the first second. */
-    timeSpentS: integer("time_spent_s").notNull(),
+    timeUsed: integer("time_used").notNull(),
     width: integer("width").notNull(),
     height: integer("height").notNull(),
-    /** The cut line as an SVG path in image pixels: sheet packing, ticket stub outlines, glue ghosts. */
+    /** The cut line as an SVG path in image pixels: sheet packing, ticket stub outlines, and the outline a given sticker leaves on the board. */
     outline: text("outline").notNull(),
     /** keccak256 of the sealed PNG; names its file, which identical drawings share. Chain mirror: StickerNFT.contentHashOf. */
     contentHash: text("content_hash").notNull(),
@@ -144,7 +144,7 @@ export const stickers = sqliteTable(
     index("stickers_artist").on(t.artistId, t.sealedAt),
     index("stickers_sealed").on(t.sealedAt),
     index("stickers_content_hash").on(t.contentHash),
-    check("stickers_time_spent", sql`${t.timeSpentS} between 0 and 300`),
+    check("stickers_time_used", sql`${t.timeUsed} between 0 and 300`),
     check("stickers_size", sql`${t.width} > 0 and ${t.height} > 0`),
     check("stickers_content_hash", isBytes32(t.contentHash)),
     check("stickers_minted", sql`(${t.tokenId} is null) = (${t.mintedAt} is null)`),
@@ -237,7 +237,7 @@ export const stickerArrivals = sqliteTable(
     seq: integer("seq").notNull(),
     /** At seal for your own stickers, at accept for gifts. */
     arrivedAt: integer("arrived_at", { mode: "timestamp_ms" }).notNull(),
-    /** When its sheet was open as the pouch zipped shut; clears the NEW dot. */
+    /** When its sheet was open as the tray closed; clears the NEW dot. */
     seenAt: integer("seen_at", { mode: "timestamp_ms" }),
   },
   (t) => [
@@ -248,7 +248,7 @@ export const stickerArrivals = sqliteTable(
 
 /**
  * Where a sticker sits on a person's sticker board. It outlives giving: the giver's placement
- * becomes the glue ghost while the receiver gets a placement of their own. Only a sticker that
+ * becomes the outline left on the giver's board while the receiver gets a placement of their own. Only a sticker that
  * arrived in the person's tray can be placed.
  */
 export const boardPlacements = sqliteTable(
@@ -264,7 +264,8 @@ export const boardPlacements = sqliteTable(
     y: real("y").notNull(),
     /** The sticker's long side as a fraction of the board's width. */
     scale: real("scale").notNull(),
-    rotationDeg: real("rotation_deg").notNull(),
+    /** Degrees, set by the rotate knob. */
+    rotation: real("rotation").notNull(),
     z: integer("z").notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
   },
@@ -283,13 +284,18 @@ export const boardPlacements = sqliteTable(
 
 // ------------------------------------------------------------------ giving and receiving
 
-export const giftStates = [
-  "packed",
-  "sent",
-  "accepted",
+export const giftStates = ["packed", "sent", "accepted", "not_sent", "returned"] as const;
+/** Why a gift message never left, so the sticker is back: the app's four, then the server's own. */
+export const notSentReasons = [
+  "picker_cancelled",
+  "send_failed",
   "taken_out",
-  "voided",
-  "returned",
+  /** Still packed when the same sticker was packed again, e.g. after the app closed mid-send. */
+  "abandoned",
+  /** The giver's escrow deposit never landed. */
+  "deposit_failed",
+  /** The deposit landed but didn't match the gift, so the escrow sends it back. */
+  "deposit_mismatch",
 ] as const;
 /** StickerGiftEscrow's GiftStatus, verbatim. */
 export const escrowStatuses = [
@@ -302,9 +308,10 @@ export const escrowStatuses = [
 export const giftRoutes = ["line_chat", "handle"] as const;
 
 /**
- * One Giving of one sticker. Packing puts the sticker into the escrow; the card goes out through
- * LINE's one-friend picker (or straight to a handle) once the deposit is in; accepting claims it
- * for the receiver.
+ * One Giving of one sticker. Packing puts the sticker into the escrow; the gift message goes out
+ * through LINE's one-friend picker (or straight to a handle) once the deposit is in; accepting
+ * claims it for the receiver. Closed as `not_sent` when the message never left, and `returned`
+ * when the escrow sent the sticker back after all.
  */
 export const gifts = sqliteTable(
   "gifts",
@@ -321,24 +328,30 @@ export const gifts = sqliteTable(
     /** Known at packing for a handle gift; set by the accept for a LINE chat gift. */
     recipientId: text("recipient_id").references(() => users.id),
     /**
-     * keccak256 of the one-time claim token. The token itself lives only in the card's link; the
+     * keccak256 of the one-time claim token. The token itself lives only in the gift link; the
      * escrow holds this same commitment. A LINE chat gift's accept looks the gift up by it.
      */
     claimCommitment: text("claim_commitment").notNull().unique(),
     state: text("state", { enum: giftStates }).notNull(),
+    notSentReason: text("not_sent_reason", { enum: notSentReasons }),
+    /** Why sending failed, in LINE's words. */
+    sendError: text("send_error"),
     /** Chain mirror: StickerGiftEscrow.gifts(id).status. */
     escrowStatus: text("escrow_status", { enum: escrowStatuses }).notNull().default("missing"),
     /** The escrow's expiry: after it, anyone can send the sticker back to the giver. */
     expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
-    createdAt: createdAt(),
-    /** The card went out: LINE's picker reported it sent, or the server delivered a handle gift. */
-    sharedAt: integer("shared_at", { mode: "timestamp_ms" }),
-    /** Kept when an accepted gift later returns after expiry, as a record of the accept. */
+    /** When the sticker went into the bag. */
+    packedAt: integer("packed_at", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    /** The message went out: LINE's picker reported it sent, or the server delivered a handle gift. */
+    sentAt: integer("sent_at", { mode: "timestamp_ms" }),
+    /** Kept when an accepted gift later returns, as a record of the accept. */
     acceptedAt: integer("accepted_at", { mode: "timestamp_ms" }),
     /** The giver saw the accept news in the app ("Bob accepted your sticker ♡"). */
     acceptSeenAt: integer("accept_seen_at", { mode: "timestamp_ms" }),
-    /** Taken out of the bag, voided, or returned after expiry. */
+    /** Closed as not sent, or returned. */
     closedAt: integer("closed_at", { mode: "timestamp_ms" }),
   },
   (t) => [
@@ -352,11 +365,12 @@ export const gifts = sqliteTable(
     uniqueIndex("gifts_idempotency").on(t.giverId, t.idempotencyKey),
     index("gifts_giver").on(t.giverId, t.state),
     index("gifts_recipient").on(t.recipientId, t.state),
-    index("gifts_trail").on(t.stickerId, t.acceptedAt),
+    index("gifts_transfer_trail").on(t.stickerId, t.acceptedAt),
     index("gifts_accepted").on(t.acceptedAt),
     check("gifts_id", isBytes32(t.id)),
     check("gifts_claim_commitment", isBytes32(t.claimCommitment)),
     check("gifts_state", oneOf(t.state, giftStates)),
+    check("gifts_not_sent_reason", oneOf(t.notSentReason, notSentReasons)),
     check("gifts_escrow_status", oneOf(t.escrowStatus, escrowStatuses)),
     check("gifts_sent_via", oneOf(t.sentVia, giftRoutes)),
     check("gifts_not_to_self", sql`${t.recipientId} is null or ${t.recipientId} <> ${t.giverId}`),
@@ -364,30 +378,36 @@ export const gifts = sqliteTable(
       "gifts_handle_has_recipient",
       sql`${t.sentVia} <> 'handle' or ${t.recipientId} is not null`,
     ),
-    // What the escrow can hold in each state. A card can't be sent or accepted before the deposit is in.
+    // What the escrow can hold in each state. A message can't be sent or accepted before the deposit is in.
     check(
       "gifts_escrow_matches_state",
       sql`(${t.state} = 'packed' and ${t.escrowStatus} in ('missing', 'pending'))
         or (${t.state} = 'sent' and ${t.escrowStatus} = 'pending')
         or (${t.state} = 'accepted' and ${t.escrowStatus} in ('pending', 'claimed'))
-        or (${t.state} in ('taken_out', 'voided') and ${t.escrowStatus} in ('missing', 'pending', 'rejected'))
-        or (${t.state} = 'returned' and ${t.escrowStatus} = 'expired_returned')`,
+        or (${t.state} = 'not_sent' and ${t.escrowStatus} in ('missing', 'pending', 'rejected'))
+        or (${t.state} = 'returned' and ${t.escrowStatus} in ('pending', 'rejected', 'expired_returned'))`,
+    ),
+    check(
+      "gifts_not_sent",
+      sql`(${t.state} = 'not_sent') = (${t.notSentReason} is not null)
+        and (${t.sendError} is null or ${t.state} = 'not_sent')
+        and (${t.state} <> 'not_sent' or ${t.sentAt} is null)`,
     ),
     check(
       "gifts_accepted",
       sql`(${t.state} <> 'accepted' or (${t.acceptedAt} is not null and ${t.recipientId} is not null))
         and (${t.acceptedAt} is null or ${t.state} in ('accepted', 'returned'))`,
     ),
-    check("gifts_sent", sql`${t.state} <> 'sent' or ${t.sharedAt} is not null`),
+    check("gifts_sent", sql`${t.state} <> 'sent' or ${t.sentAt} is not null`),
     check(
       "gifts_closed",
-      sql`(${t.state} in ('taken_out', 'voided', 'returned')) = (${t.closedAt} is not null)`,
+      sql`(${t.state} in ('not_sent', 'returned')) = (${t.closedAt} is not null)`,
     ),
     check("gifts_accept_seen", sql`${t.acceptSeenAt} is null or ${t.acceptedAt} is not null`),
   ],
 );
 
-/** LIFF's getContext().type when the card was opened. */
+/** LIFF's getContext().type when the gift link was opened. */
 export const openContexts = ["utou", "room", "group", "square_chat", "external", "none"] as const;
 export const openOutcomes = [
   "accepted",
@@ -399,7 +419,7 @@ export const openOutcomes = [
   "gone",
 ] as const;
 
-/** Every open of a gift card, including refused ones: shows why a card didn't work. */
+/** Every open of a gift link, including refused ones: shows why a link didn't work. */
 export const giftOpens = sqliteTable(
   "gift_opens",
   {
@@ -407,7 +427,7 @@ export const giftOpens = sqliteTable(
     giftId: text("gift_id")
       .notNull()
       .references(() => gifts.id),
-    /** Null when the card was opened before signing in. */
+    /** Null when the link was opened before signing in. */
     userId: text("user_id").references(() => users.id),
     /** Reported by the page, so a hint for refusing group and multi-person chats, never proof. */
     contextType: text("context_type", { enum: openContexts }).notNull(),
@@ -435,7 +455,7 @@ export const gratitude = sqliteTable(
   {
     id: text("id").primaryKey(),
     giftId: text("gift_id").notNull().unique(),
-    /** Copied from the gift, for per-sticker glow and trail queries. */
+    /** Copied from the gift, for per-sticker glow and Transfer Trail queries. */
     stickerId: text("sticker_id").notNull(),
     /** The receiver, who plays the mini-game. */
     fromUserId: text("from_user_id").notNull(),
@@ -447,7 +467,7 @@ export const gratitude = sqliteTable(
     method: text("method", { enum: gratitudeMethods }).notNull(),
     /** Where in `eventTimes` the combo committed to stroke or shake: 0 when it started there, null for taps only. */
     switchedAtEvent: integer("switched_at_event"),
-    /** Counted taps, passes or reversals: the hits. */
+    /** Counted taps, passes or reversals. */
     events: integer("events").notNull(),
     /** The replayed gratitude, multiplier included. */
     total: integer("total").notNull(),
@@ -495,7 +515,7 @@ export const gratitude = sqliteTable(
       "gratitude_split",
       sql`${t.toAmount} + ${t.artistAmount} = ${t.total} and ${t.toAmount} >= 0 and ${t.artistAmount} >= 0`,
     ),
-    // The artist's fifth goes only to an artist who is neither side of this hand-off.
+    // The artist's share goes only to an artist who is neither the giver nor the receiver.
     check(
       "gratitude_artist_amount",
       sql`(${t.artistUserId} is null and ${t.artistAmount} = 0)
@@ -574,7 +594,7 @@ export const chainJobStatuses = [
 
 /**
  * World Chain transactions the server sends or watches: minting at seal, confirming the giver's
- * escrow deposit, claiming at accept, and rejecting (take-out, or a deposit that didn't match).
+ * escrow deposit, claiming at accept, and rejecting (a gift closed after its deposit landed).
  * A sticker's or a gift's jobs run in the order they were queued: each waits while an earlier
  * one for the same sticker or gift hasn't confirmed. A mint or claim also waits until the
  * person's smart account exists.
