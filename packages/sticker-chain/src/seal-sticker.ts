@@ -78,12 +78,15 @@ export function createStickerSealer({
     sticker: SealedSticker,
     artistWallet: Address,
   ) {
-    const tokenId = requireBigInt(await publicClient.readContract({
-      address: contractAddress,
-      abi,
-      functionName: "tokenIdForSticker",
-      args: [stickerKey],
-    }), "tokenIdForSticker");
+    const tokenId = requireBigInt(
+      await publicClient.readContract({
+        address: contractAddress,
+        abi,
+        functionName: "tokenIdForSticker",
+        args: [stickerKey],
+      }),
+      "tokenIdForSticker",
+    );
     if (tokenId === 0n) return null;
     const [artist, contentHash, metadataUri] = await Promise.all([
       publicClient.readContract({
@@ -107,7 +110,8 @@ export function createStickerSealer({
     ]);
     if (
       requireAddress(artist, "artistOf").toLowerCase() !== artistWallet.toLowerCase() ||
-      requireHex(contentHash, "contentHashOf").toLowerCase() !== sticker.contentHash.toLowerCase() ||
+      requireHex(contentHash, "contentHashOf").toLowerCase() !==
+        sticker.contentHash.toLowerCase() ||
       requireString(metadataUri, "tokenURI") !== sticker.metadataUri
     ) {
       throw new Error("On-chain sticker conflicts with sealed sticker data");
@@ -124,7 +128,12 @@ export function createStickerSealer({
   }) {
     if (!artistId || !stickerId) throw new Error("Artist and sticker are required");
     const sticker = await findSticker(stickerId);
-    if (!sticker || sticker.id !== stickerId || sticker.artistId !== artistId || !sticker.sealedAt) {
+    if (
+      !sticker ||
+      sticker.id !== stickerId ||
+      sticker.artistId !== artistId ||
+      !sticker.sealedAt
+    ) {
       throw new Error("Sticker is not sealed for this artist");
     }
     if (!isHex(sticker.contentHash) || sticker.contentHash.length !== 66 || !sticker.metadataUri) {
@@ -132,7 +141,8 @@ export function createStickerSealer({
     }
     const walletRecord = await findArtistSmartWallet(artistId);
     if (
-      walletRecord?.kind !== "smart_account" || walletRecord.chainId !== 4801 ||
+      walletRecord?.kind !== "smart_account" ||
+      walletRecord.chainId !== 4801 ||
       !isAddress(walletRecord.address)
     ) {
       throw new Error("Artist World Chain smart wallet is unavailable");

@@ -1,3 +1,4 @@
+import { Label, QuietLink } from "../controls/controls";
 import { formatClock, formatDay, formatNo } from "../stickers/format";
 import { deleteSticker } from "../stickers/stickerStorage";
 import type { BoardSticker } from "./boardSticker";
@@ -38,21 +39,17 @@ export function StickerDetail({ sticker, onClose, onPeeledOff }: Props) {
           style={{ rotate: `${sticker.rotation}deg` }}
         />
         <h2>{formatNo(sticker.no)}</h2>
-        <div className="result-meta">
+        <div className="result-meta fine">
           Drawn in {formatClock(sticker.timeUsed)} · {formatDay(sticker.createdAt)}
         </div>
         <div className="perforation" />
         <div className="detail-actions">
-          <button className="board-btn" onClick={download}>
-            Download
-          </button>
-          <button className="board-btn danger" onClick={peelOff}>
+          <Label onPress={download}>Download</Label>
+          <Label hue="tomato" onPress={() => void peelOff()}>
             Peel off
-          </button>
+          </Label>
         </div>
-        <button className="board-btn" onClick={onClose}>
-          Close
-        </button>
+        <QuietLink onPress={onClose}>Close</QuietLink>
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ import {
   useState,
   type Ref,
 } from "react";
+import { Key } from "../controls/controls";
 import { CheckIcon } from "../icons/CheckIcon";
 import { RedoIcon } from "../icons/RedoIcon";
 import { UndoIcon } from "../icons/UndoIcon";
@@ -269,7 +270,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
             disabled={!history.canUndo || locked}
             aria-label="Undo"
           >
-            <UndoIcon />
+            <UndoIcon size={24} />
           </button>
           <button
             className="square-btn"
@@ -277,7 +278,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
             disabled={!history.canRedo || locked}
             aria-label="Redo"
           >
-            <RedoIcon />
+            <RedoIcon size={24} />
           </button>
         </div>
         <div className="seal-area">
@@ -292,14 +293,14 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
               </span>
             )
           )}
-          <button
-            className={`seal-btn ${phase === "armed" || phase === "timeup" ? "armed" : ""}`}
-            onClick={onTick}
+          <Key
+            size="round"
+            className={phase === "armed" || phase === "timeup" ? "armed" : ""}
+            onPress={onTick}
             disabled={phase === "sealing" || phase === "sealed"}
             aria-label="Finish drawing"
-          >
-            <CheckIcon />
-          </button>
+            icon={<CheckIcon size={26} />}
+          />
         </div>
       </div>
 

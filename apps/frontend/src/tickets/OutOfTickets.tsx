@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { IS_MOCK_PAYMENT, payForTickets } from "../payments/sui";
-import { StickerIcon } from "../icons/StickerIcon";
+import { Key, Label, QuietLink } from "../controls/controls";
+import { DrawIcon } from "../icons/DrawIcon";
+import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { TicketIcon } from "../icons/TicketIcon";
 import { TICKET_PACK } from "./config";
 import "../styles/result-card.css";
@@ -61,7 +63,7 @@ export function OutOfTickets({ refillAt, onTicketsBought, onStartDrawing, onBoar
 
   return (
     <div className="result-backdrop">
-      <div className="result-card tickets-card" role="dialog" aria-label="Out of tickets">
+      <div className="result-card" role="dialog" aria-label="Out of tickets">
         {step === "out" && (
           <>
             {tickets(false)}
@@ -72,12 +74,12 @@ export function OutOfTickets({ refillAt, onTicketsBought, onStartDrawing, onBoar
               Yours refill at {clock(refillAt)}.
             </p>
             <div className="perforation" />
-            <button className="keep-btn" onClick={() => setStep("approve")}>
-              <TicketIcon /> Get more tickets with Sui
-            </button>
-            <button className="board-btn" onClick={onBoard}>
-              <StickerIcon /> Go to sticker board
-            </button>
+            <Key icon={<TicketIcon size={20} />} onPress={() => setStep("approve")}>
+              Get more tickets with Sui
+            </Key>
+            <Label icon={<StickerBoardIcon size={20} />} onPress={onBoard}>
+              Go to sticker board
+            </Label>
           </>
         )}
 
@@ -95,7 +97,7 @@ export function OutOfTickets({ refillAt, onTicketsBought, onStartDrawing, onBoar
               <div>
                 <b>Approve payment</b>
                 <div className="muted small">
-                  {IS_MOCK_PAYMENT ? "Mock wallet · no real SUI is sent" : "Sui wallet"}
+                  {IS_MOCK_PAYMENT ? "Mock payment · no real SUI is sent" : "Pay with Sui"}
                 </div>
               </div>
             </div>
@@ -114,22 +116,16 @@ export function OutOfTickets({ refillAt, onTicketsBought, onStartDrawing, onBoar
               </div>
             </dl>
             <div className="perforation" />
-            <button className="keep-btn" onClick={pay} disabled={step === "paying"}>
-              {step === "paying" ? (
-                <>
-                  <span className="spinner" /> Confirming on Sui…
-                </>
-              ) : (
-                <>Approve {TICKET_PACK.priceSui} SUI</>
-              )}
-            </button>
-            <button
-              className="board-btn"
-              onClick={() => setStep("out")}
+            <Key
+              onPress={() => void pay()}
               disabled={step === "paying"}
+              icon={step === "paying" && <span className="spinner" />}
             >
+              {step === "paying" ? "Confirming on Sui…" : `Approve ${TICKET_PACK.priceSui} SUI`}
+            </Key>
+            <QuietLink onPress={() => setStep("out")} disabled={step === "paying"}>
               Cancel
-            </button>
+            </QuietLink>
           </>
         )}
 
@@ -140,14 +136,14 @@ export function OutOfTickets({ refillAt, onTicketsBought, onStartDrawing, onBoar
             <p className="card-sub">
               Paid {TICKET_PACK.priceSui} SUI
               <br />
-              <span className="digest">
+              <span className="fine">
                 tx {digest.slice(0, 6)}…{digest.slice(-4)}
               </span>
             </p>
             <div className="perforation" />
-            <button className="keep-btn" onClick={onStartDrawing}>
+            <Key icon={<DrawIcon size={20} />} onPress={onStartDrawing}>
               Start drawing
-            </button>
+            </Key>
           </>
         )}
 
@@ -156,12 +152,8 @@ export function OutOfTickets({ refillAt, onTicketsBought, onStartDrawing, onBoar
             <h2 className="card-title">Payment didn’t go through</h2>
             <p className="card-sub">{error}</p>
             <div className="perforation" />
-            <button className="keep-btn" onClick={pay}>
-              Try again
-            </button>
-            <button className="board-btn" onClick={() => setStep("out")}>
-              Back
-            </button>
+            <Key onPress={() => void pay()}>Try again</Key>
+            <QuietLink onPress={() => setStep("out")}>Back</QuietLink>
           </>
         )}
       </div>

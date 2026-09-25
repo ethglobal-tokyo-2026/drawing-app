@@ -1,9 +1,7 @@
 /* ---------- Tickets ---------- */
 
 .tickets-left {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
+  color: var(--graphite);
 }
 
 .ticket-row {
@@ -20,28 +18,28 @@
 }
 
 .ticket path {
-  fill: #f7f7f9;
-  stroke: #c9c8d0;
+  fill: var(--liner-lift);
+  stroke: var(--rule-strong);
   stroke-width: 2;
 }
 
 .ticket line {
-  stroke: #c9c8d0;
+  stroke: var(--rule-strong);
   stroke-width: 2;
   stroke-dasharray: 3 4;
 }
 
 .ticket.filled path {
-  fill: var(--yellow);
-  stroke: var(--yellow-deep);
+  fill: var(--seal);
+  stroke: var(--seal-deep);
 }
 
 .ticket.filled line {
-  stroke: #b8962a;
+  stroke: var(--seal-deep);
 }
 
 .ticket.filled {
-  animation: stick 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) backwards;
+  animation: stick 0.5s var(--ease-peel) backwards;
 }
 
 .ticket.filled:nth-child(2) {
@@ -61,31 +59,24 @@
   width: 58px;
   height: 58px;
   border-radius: 50%;
-  background: var(--yellow);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
-  font-family: "Archivo Black", "Archivo", sans-serif;
+  background: var(--seal);
+  box-shadow: var(--shadow-label);
+  font-family: var(--font-display);
   font-size: 16px;
   font-variant-numeric: tabular-nums;
 }
 
 .card-title {
   margin: 6px 0 0;
-  font-family: "Archivo Black", "Archivo", sans-serif;
-  font-size: 21px;
   text-align: center;
 }
 
 .card-sub {
   margin: 0;
-  color: #77757f;
-  font-size: 14px;
+  color: var(--graphite);
+  font-size: 15px;
   line-height: 1.45;
   text-align: center;
-}
-
-.digest {
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 12px;
 }
 
 .wallet-head {
@@ -96,6 +87,7 @@
   padding: 4px 2px;
 }
 
+/* Sui's brand mark keeps its own color; brand marks aren't world colors. */
 .sui-mark {
   display: grid;
   place-items: center;
@@ -109,9 +101,10 @@
   align-self: stretch;
   margin: 0;
   padding: 4px 14px;
-  background: #fff;
-  border: 1px solid var(--line);
+  background: var(--liner-lift);
+  border: 1px solid var(--rule-kiss);
   border-radius: 12px;
+  box-shadow: var(--shadow-label);
 }
 
 .pay-rows div {
@@ -121,11 +114,11 @@
 }
 
 .pay-rows div + div {
-  border-top: 1px solid #f0f0f3;
+  border-top: 1px solid var(--rule-kiss);
 }
 
 .pay-rows dt {
-  color: var(--muted);
+  color: var(--graphite);
 }
 
 .pay-rows dd {
@@ -136,7 +129,7 @@
 .spinner {
   width: 18px;
   height: 18px;
-  border: 3px solid rgba(28, 27, 41, 0.25);
+  border: 3px solid rgb(28 24 36 / 25%);
   border-top-color: var(--ink);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -146,14 +139,4 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-.tickets-card .card-title {
-  font-size: 19px;
-  white-space: nowrap;
-}
-
-.tickets-card .keep-btn {
-  font-size: 17px;
-  white-space: nowrap;
 }

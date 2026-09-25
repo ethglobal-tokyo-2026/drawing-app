@@ -6,12 +6,28 @@ import type { Abi } from "viem";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 interface SolcOutput {
-  contracts?: Record<string, Record<string, {
-    abi: Abi;
-    evm: { bytecode: { object: string } };
-  }>>;
+  contracts?: Record<
+    string,
+    Record<
+      string,
+      {
+        abi: Abi;
+        evm: { bytecode: { object: string } };
+      }
+    >
+  >;
   errors?: Array<{ severity: string; formattedMessage: string }>;
 }
+
+type SolcCompile = (
+  input: string,
+  callbacks: { import: (importPath: string) => { contents: string } | { error: string } },
+) => string;
+
+// solc types `compile` and its output as `any`; these guards give them a shape at the boundary.
+const isSolcCompile = (value: unknown): value is SolcCompile => typeof value === "function";
+const isSolcOutput = (value: unknown): value is SolcOutput =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
 function compileContract(contractPath: string, contractName: string) {
   const source = readFileSync(path.join(root, contractPath), "utf8");
@@ -24,17 +40,22 @@ function compileContract(contractPath: string, contractName: string) {
       outputSelection: { "*": { "*": ["abi", "evm.bytecode.object"] } },
     },
   };
-  const output = JSON.parse(solc.compile(JSON.stringify(input), {
-    import: (importPath: string) => {
-      if (!importPath.startsWith("@openzeppelin/contracts/")) {
-        return { error: `Import denied: ${importPath}` };
-      }
-      const dependencyPath = path.join(root, "node_modules", importPath);
-      return existsSync(dependencyPath)
-        ? { contents: readFileSync(dependencyPath, "utf8") }
-        : { error: `Import not found: ${importPath}` };
-    },
-  })) as SolcOutput;
+  const compile: unknown = solc.compile;
+  if (!isSolcCompile(compile)) throw new Error("solc does not expose compile()");
+  const output: unknown = JSON.parse(
+    compile(JSON.stringify(input), {
+      import: (importPath: string) => {
+        if (!importPath.startsWith("@openzeppelin/contracts/")) {
+          return { error: `Import denied: ${importPath}` };
+        }
+        const dependencyPath = path.join(root, "node_modules", importPath);
+        return existsSync(dependencyPath)
+          ? { contents: readFileSync(dependencyPath, "utf8") }
+          : { error: `Import not found: ${importPath}` };
+      },
+    }),
+  );
+  if (!isSolcOutput(output)) throw new Error("solc returned output that is not a JSON object");
   const errors = (output.errors ?? []).filter(({ severity }) => severity === "error");
   if (errors.length > 0) {
     throw new Error(errors.map(({ formattedMessage }) => formattedMessage).join("\n"));

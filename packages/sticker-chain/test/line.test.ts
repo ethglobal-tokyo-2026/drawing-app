@@ -36,10 +36,11 @@ describe("LINE ID token verification", () => {
     });
     const expired = createLineVerifier({
       channelId,
-      fetchImpl: async () => Response.json({
-        ...validClaims,
-        exp: Math.floor(Date.now() / 1000) - 1,
-      }),
+      fetchImpl: async () =>
+        Response.json({
+          ...validClaims,
+          exp: Math.floor(Date.now() / 1000) - 1,
+        }),
     });
     const rejected = createLineVerifier({
       channelId,

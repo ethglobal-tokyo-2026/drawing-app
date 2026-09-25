@@ -21,7 +21,7 @@ export function SmoothnessDrawer(p: SmoothnessDrawerProps) {
       <HSlider
         label="Smoothness"
         value={p.value / 100}
-        background="linear-gradient(90deg, #e5e5ea, #f6d84c)"
+        background="linear-gradient(90deg, var(--liner-deep), var(--seal))"
         onChange={(v) => p.onChange(Math.round(v * 100))}
       />
       <div className="hint">

@@ -7,10 +7,10 @@
   display: flex;
   flex-direction: column;
   padding: max(8px, env(safe-area-inset-top)) 8px 0;
-  background: var(--bg);
+  background: var(--liner);
 }
 
-/* On a desktop with a mouse, show it inside a phone-sized frame. */
+/* On a desktop with a mouse, show it inside a phone-sized frame. The frame is a device mock, not the world. */
 @media (hover: hover) and (pointer: fine) and (min-width: 500px) {
   #root {
     display: grid;
@@ -37,7 +37,7 @@
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  background: var(--card);
-  border: 1px solid var(--line);
+  background: var(--liner);
+  border: 1px solid var(--rule-kiss);
   border-radius: 6px;
 }

@@ -2,6 +2,7 @@ import { BrushIcon } from "../../icons/BrushIcon";
 import { BucketIcon } from "../../icons/BucketIcon";
 import { EraserIcon } from "../../icons/EraserIcon";
 import { WaveIcon } from "../../icons/WaveIcon";
+import type { IconProps, IconWeight } from "../../icons/IconSvg";
 import type { Tool } from "../canvas/types";
 
 export type Drawer = "color" | "smooth" | null;
@@ -15,7 +16,9 @@ interface Props {
   onDrawer: (drawer: Drawer) => void;
 }
 
-const TOOLS: { tool: Tool; label: string; Icon: () => React.ReactNode }[] = [
+type ToolIcon = (props: IconProps & { weight?: IconWeight }) => React.ReactNode;
+
+const TOOLS: { tool: Tool; label: string; Icon: ToolIcon }[] = [
   { tool: "brush", label: "Brush", Icon: BrushIcon },
   { tool: "eraser", label: "Eraser", Icon: EraserIcon },
   { tool: "bucket", label: "Fill", Icon: BucketIcon },
@@ -33,7 +36,8 @@ export function ToolPill({ tool, color, drawer, disabled, onTool, onDrawer }: Pr
           aria-label={label}
           disabled={disabled}
         >
-          <Icon />
+          {/* The current tool takes the fill weight. */}
+          <Icon weight={tool === t ? "fill" : "bold"} />
         </button>
       ))}
       <button
@@ -50,7 +54,7 @@ export function ToolPill({ tool, color, drawer, disabled, onTool, onDrawer }: Pr
         aria-label="Smoothness"
         disabled={disabled}
       >
-        <WaveIcon />
+        <WaveIcon weight={drawer === "smooth" ? "fill" : "bold"} />
       </button>
     </div>
   );

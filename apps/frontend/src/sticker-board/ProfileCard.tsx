@@ -1,5 +1,6 @@
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
+import { Label, QuietLink } from "../controls/controls";
 import { CloseIcon } from "../icons/CloseIcon";
 import { CopyIcon } from "../icons/CopyIcon";
 import { QrIcon } from "../icons/QrIcon";
@@ -53,7 +54,7 @@ export function ProfileCard({ made, avatarUrl, onClose }: Props) {
       type: "svg",
       margin: 1,
       errorCorrectionLevel: "M",
-      color: { dark: "#1c1b29", light: "#ffffff" },
+      color: { dark: "#1c1824", light: "#ffffff" },
     }).then(setQr, () => setToast("Couldn’t make a QR code"));
   }, [showQr, qr, url]);
 
@@ -113,7 +114,7 @@ export function ProfileCard({ made, avatarUrl, onClose }: Props) {
           <div>
             <dt>Board address</dt>
             <dd>
-              <span className="mono">{me.boardAddress}</span>
+              <span className="board-address">{me.boardAddress}</span>
               <button
                 className="icon-only"
                 aria-label="Copy board address"
@@ -148,17 +149,17 @@ export function ProfileCard({ made, avatarUrl, onClose }: Props) {
             <dd>
               {me.line.status === "ready" ? (
                 <>
-                  <span className="line-dot" /> Connected
+                  Connected
                   {!me.line.inClient && (
-                    <button className="text-btn" onClick={lineLogout}>
+                    <QuietLink className="line-logout" onPress={lineLogout}>
                       Log out
-                    </button>
+                    </QuietLink>
                   )}
                 </>
               ) : me.line.status === "logged-out" ? (
-                <button className="line-login" onClick={lineLogin}>
+                <Label small onPress={lineLogin}>
                   Log in with LINE
-                </button>
+                </Label>
               ) : me.line.status === "loading" ? (
                 <span className="soft">Connecting…</span>
               ) : me.line.status === "error" ? (
@@ -172,15 +173,24 @@ export function ProfileCard({ made, avatarUrl, onClose }: Props) {
       )}
 
       <div className="profile-actions">
-        <button className="share-btn" onClick={share}>
-          <ShareIcon /> Share my board
-        </button>
-        <button className="qr-btn" onClick={() => setShowQr((v) => !v)} aria-pressed={showQr}>
-          <QrIcon /> {showQr ? "Details" : "QR code"}
-        </button>
+        <Label small hue="aqua" icon={<ShareIcon size={18} />} onPress={() => void share()}>
+          Share my board
+        </Label>
+        <Label
+          small
+          icon={<QrIcon size={18} />}
+          onPress={() => setShowQr((v) => !v)}
+          aria-pressed={showQr}
+        >
+          {showQr ? "Details" : "QR code"}
+        </Label>
       </div>
 
-      {toast && <div className="toast">{toast}</div>}
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
+        </div>
+      )}
     </div>
   );
 }

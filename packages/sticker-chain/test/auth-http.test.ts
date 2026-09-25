@@ -11,7 +11,7 @@ afterEach(async () => {
   const server = activeServer;
   activeServer = undefined;
   await new Promise<void>((resolve, reject) => {
-    server.close((error) => error ? reject(error) : resolve());
+    server.close((error) => (error ? reject(error) : resolve()));
   });
 });
 
@@ -65,7 +65,9 @@ describe("LINE authentication HTTP server", () => {
     const providerError = new Error("provider details");
     const issuer: LinePrivyJwtIssuer = {
       jwks: { keys: [] },
-      issue: async () => { throw providerError; },
+      issue: async () => {
+        throw providerError;
+      },
     };
     const url = await startServer(issuer, errors);
     const response = await fetch(`${url}/v1/auth/privy-jwt`, {

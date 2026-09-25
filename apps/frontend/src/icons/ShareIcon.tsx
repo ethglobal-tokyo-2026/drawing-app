@@ -1,10 +1,4 @@
-import { IconSvg } from "./IconSvg";
+import bold from "@phosphor-icons/core/bold/share-network-bold.svg?raw";
+import { IconSvg, type IconProps } from "./IconSvg";
 
-export const ShareIcon = () => (
-  <IconSvg size={18}>
-    <circle cx="18" cy="5" r="2.5" />
-    <circle cx="6" cy="12" r="2.5" />
-    <circle cx="18" cy="19" r="2.5" />
-    <path d="m8.2 10.8 7.6-4.5M8.2 13.2l7.6 4.5" />
-  </IconSvg>
-);
+export const ShareIcon = ({ size }: IconProps) => <IconSvg svg={bold} size={size} />;

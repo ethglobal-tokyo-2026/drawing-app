@@ -10,13 +10,23 @@
   justify-content: center;
   gap: 18px;
   container-type: size;
-  background: #fff;
-  transition: background 0.5s;
+  background: var(--canvas);
   animation: fade 0.25s;
 }
 
-.seal-seq:not(.stage-cut) {
-  background: #efeff3;
+/* The white drawing sheet gives way to the liner once the piece is cut free. */
+.seal-seq::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--liner);
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-out);
+}
+
+.seal-seq:not(.stage-cut)::before {
+  opacity: 1;
 }
 
 @keyframes fade {
@@ -62,7 +72,7 @@
 }
 
 .cut-guide {
-  stroke: #c9c7d4;
+  stroke: var(--rule-strong);
   stroke-width: 1.5;
   stroke-dasharray: 4 5;
 }
@@ -72,7 +82,7 @@
   stroke-width: 2.5;
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  animation: trace 1.3s cubic-bezier(0.5, 0, 0.3, 1) forwards;
+  animation: trace 1.3s var(--ease-out) forwards;
 }
 
 @keyframes trace {
@@ -96,14 +106,12 @@
 }
 
 .sticker-lift {
-  transition:
-    transform 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2),
-    filter 0.6s;
+  transition: transform 0.6s var(--ease-peel);
 }
 
 .seal-seq:not(.stage-cut) .sticker-lift {
   transform: translateY(-3%) scale(1.03);
-  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.18));
+  filter: var(--kiss-cut) var(--sticker-cast);
 }
 
 /* Dome: resin pours on, with a light sweep across it. */
@@ -145,11 +153,12 @@
   opacity: 0;
   -webkit-mask: var(--shape) center / contain no-repeat;
   mask: var(--shape) center / contain no-repeat;
-  background: #e9e8f0
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='44'><path d='M0 .5H120M.5 0V44' stroke='%23d9d7e4' stroke-width='1'/><text x='6' y='28' font-family='Archivo,Arial,sans-serif' font-size='13' font-weight='700' fill='%23b9b6c9' transform='rotate(-18 60 22)'>SEAL · シール ·</text></svg>");
+  /* Backing paper with the faint diagonal maker print, never a grid. */
+  background: var(--liner-deep)
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='44'><text x='6' y='28' font-family='Mona Sans,system-ui,sans-serif' font-size='13' font-weight='700' fill='%231c1824' fill-opacity='.14' transform='rotate(-18 60 22)'>SEAL · シール ·</text></svg>");
   transition:
-    opacity 0.4s,
-    transform 0.6s;
+    opacity 0.4s var(--ease-out),
+    transform 0.6s var(--ease-peel);
 }
 
 .stage-dome .backing {
@@ -164,8 +173,8 @@
 
 .stage-peel .sticker-lift,
 .stage-done .sticker-lift {
-  transform: perspective(700px) translateY(-8%) rotateX(12deg) rotate(-4deg) scale(1.04);
-  filter: drop-shadow(0 18px 18px rgba(0, 0, 0, 0.22));
+  transform: perspective(700px) translateY(-8%) rotateX(11deg) rotate(-4deg) scale(1.04);
+  filter: var(--kiss-cut) var(--peeling);
 }
 
 .seal-caption {
@@ -173,10 +182,6 @@
   z-index: 1;
   /* Clear the backing sheet, which slides down during the peel. */
   margin-top: 12cqh;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  color: var(--graphite);
   animation: fade 0.3s;
 }

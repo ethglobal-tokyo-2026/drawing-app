@@ -1,8 +1,4 @@
-import {
-  createPublicKey,
-  generateKeyPairSync,
-  verify,
-} from "node:crypto";
+import { createPublicKey, generateKeyPairSync, verify } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { createLinePrivyJwtIssuer } from "../src/line-privy-jwt.js";
 
@@ -23,6 +19,12 @@ function parseJsonObject(value: string) {
     throw new Error("Expected a JSON object");
   }
   return parsed;
+}
+
+function firstJwk<T>(keys: T[]): T {
+  const [key] = keys;
+  if (!key) throw new Error("Issuer published no JWKS keys");
+  return key;
 }
 
 describe("LINE to Privy JWT", () => {
@@ -51,15 +53,17 @@ describe("LINE to Privy JWT", () => {
     expect(header).toEqual({ alg: "ES256", typ: "JWT", kid: baseOptions.keyId });
     expect(Reflect.get(payload, "sub")).toBe(subject);
     expect(Number(Reflect.get(payload, "exp")) - Number(Reflect.get(payload, "iat"))).toBe(300);
-    expect(verify(
-      "sha256",
-      Buffer.from(`${headerPart}.${payloadPart}`),
-      {
-        key: createPublicKey({ key: issuer.jwks.keys[0]!, format: "jwk" }),
-        dsaEncoding: "ieee-p1363",
-      },
-      Buffer.from(signaturePart, "base64url"),
-    )).toBe(true);
+    expect(
+      verify(
+        "sha256",
+        Buffer.from(`${headerPart}.${payloadPart}`),
+        {
+          key: createPublicKey({ key: firstJwk(issuer.jwks.keys), format: "jwk" }),
+          dsaEncoding: "ieee-p1363",
+        },
+        Buffer.from(signaturePart, "base64url"),
+      ),
+    ).toBe(true);
   });
 
   it("creates a stable channel-scoped identity", async () => {
@@ -74,14 +78,17 @@ describe("LINE to Privy JWT", () => {
     await expect(first.issue("first")).resolves.toMatchObject({
       subject: (await first.issue("second")).subject,
     });
-    expect((await otherChannel.issue("first")).subject)
-      .not.toBe((await first.issue("first")).subject);
+    expect((await otherChannel.issue("first")).subject).not.toBe(
+      (await first.issue("first")).subject,
+    );
   });
 
   it("does not issue a token when LINE rejects authentication", async () => {
     const issuer = createLinePrivyJwtIssuer({
       ...baseOptions,
-      verifyLineIdToken: async () => { throw new Error("LINE rejected token"); },
+      verifyLineIdToken: async () => {
+        throw new Error("LINE rejected token");
+      },
     });
     await expect(issuer.issue("rejected-token")).rejects.toThrow("LINE rejected token");
   });

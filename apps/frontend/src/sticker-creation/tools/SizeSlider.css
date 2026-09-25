@@ -13,7 +13,7 @@
 
 .size-cap {
   border-radius: 50%;
-  background: #c4c3cc;
+  background: var(--rule-strong);
 }
 
 .size-cap.big {
@@ -42,7 +42,7 @@
   width: 3px;
   margin-left: -1.5px;
   border-radius: 2px;
-  background: #dcdbe2;
+  background: var(--liner-deep);
 }
 
 .size-thumb {
@@ -53,10 +53,10 @@
   width: 28px;
   height: 28px;
   margin-top: -14px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--rule-strong);
+  border-radius: 6px;
+  background: var(--liner-lift);
+  box-shadow: var(--shadow-label);
 }
 
 .size-thumb span {
@@ -74,7 +74,7 @@
   margin-top: calc(var(--d) / -2);
   border-radius: 50%;
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.25),
-    0 2px 8px rgba(0, 0, 0, 0.15);
+    0 0 0 1px var(--rule-strong),
+    var(--shadow-label);
   pointer-events: none;
 }

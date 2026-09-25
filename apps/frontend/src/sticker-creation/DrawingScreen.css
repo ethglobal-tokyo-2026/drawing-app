@@ -23,33 +23,33 @@
   align-items: flex-end;
 }
 
+/* The timer is a dot badge: puffy numerals on Seal Yellow. */
 .timer {
   display: grid;
   place-items: center;
-  width: 50px;
-  height: 50px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background: var(--yellow);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-  font-family: "Archivo Black", "Archivo", sans-serif;
+  background: var(--seal);
+  box-shadow: var(--shadow-label);
+  font-family: var(--font-display);
   font-size: 15px;
   letter-spacing: -0.3px;
   font-variant-numeric: tabular-nums;
 }
 
 .timer.low {
-  animation: pulse 1s ease-in-out infinite;
+  animation: pulse 1s var(--ease-out) infinite;
 }
 
 .timer.done {
-  background: #ececf0;
-  color: var(--muted);
+  background: var(--liner-deep);
+  color: var(--graphite);
 }
 
 @keyframes pulse {
   50% {
     transform: scale(1.08);
-    background: #ffcf3f;
   }
 }
 
@@ -57,17 +57,19 @@
   display: flex;
   gap: 2px;
   padding: 3px;
-  background: var(--pill);
-  border: 1px solid var(--line);
+  background: var(--liner-lift);
+  border: 1px solid var(--rule-kiss);
   border-radius: 10px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-label);
 }
 
 .tool-pill.disabled {
   opacity: 0.5;
 }
 
+/* Flat 38px tiles, padded to a 44px touch target. */
 .tool {
+  position: relative;
   display: grid;
   place-items: center;
   width: 38px;
@@ -79,9 +81,15 @@
   color: var(--ink);
 }
 
+.tool::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+
 .tool.on {
   background: var(--ink);
-  color: #fff;
+  color: var(--liner);
 }
 
 .tool.open {
@@ -97,8 +105,8 @@
   height: 26px;
   border-radius: 50%;
   box-shadow:
-    0 0 0 2px #fff,
-    0 0 0 3px #d4d4da;
+    0 0 0 2px var(--canvas),
+    0 0 0 3px var(--rule-strong);
 }
 
 /* ---------- Bottom controls ---------- */
@@ -108,27 +116,27 @@
   gap: 10px;
 }
 
+/* Undo and redo are flat tiles: a label resting on the page, pressing 1px. */
 .square-btn {
   display: grid;
   place-items: center;
   width: 44px;
   height: 44px;
   padding: 0;
-  border: 1px solid var(--line);
+  border: 1px solid var(--rule-kiss);
   border-radius: 8px;
-  background: #f7f7f9;
-  box-shadow: 0 3px 0 #dcdbe2;
+  background: var(--liner-lift);
+  color: var(--ink);
+  box-shadow: var(--shadow-label);
 }
 
 .square-btn:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 #dcdbe2;
+  transform: translateY(1px);
 }
 
 .square-btn:disabled {
-  color: #c9c8d0;
-  background: #fafafb;
-  border-color: #efeff2;
+  color: var(--graphite);
+  background: var(--liner-deep);
   box-shadow: none;
   cursor: default;
 }
@@ -139,16 +147,17 @@
   gap: 10px;
 }
 
+/* A label-stock chip stuck beside the seal check. */
 .seal-hint {
   padding: 8px 12px;
-  border: 1px solid var(--line);
+  border: 1px solid rgb(28 24 36 / 30%);
   border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 3px 0 #e2e2e8;
+  background: var(--liner-lift);
+  box-shadow: var(--shadow-label);
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
   white-space: nowrap;
-  animation: slide-in 0.18s ease-out;
+  animation: slide-in 0.18s var(--ease-out);
 }
 
 @keyframes slide-in {
@@ -158,32 +167,13 @@
   }
 }
 
-.seal-btn {
-  display: grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  padding: 0;
-  border: 3px solid #fff;
-  border-radius: 50%;
-  background: linear-gradient(180deg, #f9e06a, var(--yellow-deep));
-  color: var(--ink);
-  box-shadow:
-    0 0 0 1px #e6e4ea,
-    0 6px 14px rgba(0, 0, 0, 0.15);
-  transition: box-shadow 0.15s;
+/* An armed seal check breathes until the second tap. */
+.key.armed {
+  animation: breathe 900ms var(--ease-out) infinite;
 }
 
-.seal-btn.armed {
-  box-shadow:
-    0 0 0 3px var(--ink),
-    0 6px 14px rgba(0, 0, 0, 0.2);
-}
-
-.seal-btn:active:not(:disabled) {
-  transform: scale(0.95);
-}
-
-.seal-btn:disabled {
-  cursor: default;
+@keyframes breathe {
+  50% {
+    transform: scale(1.08);
+  }
 }

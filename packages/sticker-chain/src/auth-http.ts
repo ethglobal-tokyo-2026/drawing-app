@@ -32,7 +32,8 @@ async function readJson(request: IncomingMessage) {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error("JSON body must be an object");
   }
-  return { idToken: Reflect.get(parsed, "idToken") };
+  const idToken: unknown = Reflect.get(parsed, "idToken");
+  return { idToken };
 }
 
 export function createAuthHttpServer({

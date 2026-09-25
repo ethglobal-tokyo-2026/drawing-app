@@ -1,10 +1,4 @@
-import {
-  createHash,
-  createPrivateKey,
-  createPublicKey,
-  sign,
-  type JsonWebKey,
-} from "node:crypto";
+import { createHash, createPrivateKey, createPublicKey, sign, type JsonWebKey } from "node:crypto";
 
 function encode(value: object) {
   return Buffer.from(JSON.stringify(value)).toString("base64url");

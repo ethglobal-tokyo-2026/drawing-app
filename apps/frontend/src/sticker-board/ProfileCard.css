@@ -1,8 +1,8 @@
 /* ---------- Profile card ---------- */
 
 .name-tag.open {
-  border-color: #ee6aa0;
-  background: #f4f3f7;
+  border-color: var(--pink);
+  background: var(--liner-lift);
 }
 
 .profile-backdrop {
@@ -10,18 +10,18 @@
   inset: 0;
   z-index: 35;
   padding: 92px 12px 12px;
-  background: rgba(60, 58, 72, 0.18);
+  background: rgb(28 24 36 / 18%);
   animation: fade 0.2s;
 }
 
 .profile-card {
   position: relative;
   padding: 14px 14px 12px;
-  background: #fff;
-  border: 1px solid var(--line);
+  background: var(--liner-lift);
+  border: 1px solid var(--rule-kiss);
   border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14);
-  animation: drop-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+  box-shadow: var(--shadow-lift);
+  animation: drop-in 0.22s var(--ease-out);
 }
 
 @keyframes drop-in {
@@ -45,21 +45,25 @@
   width: 58px;
   height: 58px;
   overflow: hidden;
-  border: 3px solid #fff;
+  border: 3px solid var(--canvas);
   border-radius: 50%;
-  background: var(--yellow);
+  background: var(--seal);
   box-shadow:
-    0 0 0 1px #e2e0e8,
-    0 0 18px rgba(238, 106, 160, 0.45);
-  font-family: "Archivo Black", "Archivo", sans-serif;
+    0 0 0 1px var(--rule-kiss),
+    0 0 18px color-mix(in srgb, var(--pink) 45%, transparent);
   font-size: 24px;
+  font-weight: 800;
 }
 
 .avatar img {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  background: #fff;
+  background: var(--canvas);
+}
+
+.avatar img.photo {
+  object-fit: cover;
 }
 
 .profile-names {
@@ -70,25 +74,28 @@
 }
 
 .profile-names b {
-  font-family: "Archivo Black", "Archivo", sans-serif;
-  font-size: 24px;
+  font-size: 22px;
+  font-weight: 800;
   line-height: 1.1;
+  letter-spacing: -0.012em;
+  font-variation-settings: var(--wdth-title);
 }
 
 .profile-names span {
-  color: #77757f;
+  color: var(--graphite);
   font-size: 15px;
 }
 
+/* A flat 44px tile. */
 .round-close {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: #e9e8ef;
+  background: var(--liner-deep);
 }
 
 .profile-rows {
@@ -102,19 +109,20 @@
   gap: 8px;
   min-height: 48px;
   padding: 6px 2px;
-  border-top: 1px solid #e6e5eb;
+  border-top: 1px solid var(--rule-kiss);
 }
 
 .profile-rows div:last-child {
-  border-bottom: 1px solid #e6e5eb;
+  border-bottom: 1px solid var(--rule-kiss);
 }
 
 .profile-rows dt {
-  color: #77757f;
+  color: var(--graphite);
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 650;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
+  font-variation-settings: var(--wdth-fine);
 }
 
 .profile-rows dd {
@@ -130,16 +138,18 @@
 }
 
 .profile-rows .soft {
-  color: #8a8894;
+  color: var(--ink-soft);
   line-height: 1.3;
 }
 
-.mono {
+.board-address {
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
 }
 
+/* A 30px glyph with a 44px touch target. */
 .icon-only {
+  position: relative;
   display: grid;
   place-items: center;
   width: 30px;
@@ -148,7 +158,18 @@
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: #77757f;
+  color: var(--graphite);
+}
+
+.icon-only::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+}
+
+.line-logout {
+  margin-left: 8px;
+  font-size: 13px;
 }
 
 .profile-actions {
@@ -157,51 +178,24 @@
   padding-top: 12px;
 }
 
-.share-btn,
-.qr-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 38px;
-  padding: 0 14px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 700;
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.08);
-}
-
-.share-btn {
-  border: 1px solid #4fbcc7;
-  background: #6fd0da;
-}
-
-.qr-btn {
-  border: 1px solid #d6d5dd;
-  background: #f7f7f9;
-}
-
-.share-btn:active,
-.qr-btn:active {
-  transform: translateY(1px);
-}
-
 .qr-view {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
   padding: 14px 0 6px;
-  border-top: 1px solid #e6e5eb;
-  border-bottom: 1px solid #e6e5eb;
+  border-top: 1px solid var(--rule-kiss);
+  border-bottom: 1px solid var(--rule-kiss);
 }
 
+/* White so the code scans, like white label stock. */
 .qr {
   width: 188px;
   height: 188px;
   padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #fff;
+  border: 1px solid var(--rule-kiss);
+  border-radius: 8px;
+  background: var(--canvas);
 }
 
 .qr svg {
@@ -211,59 +205,33 @@
 }
 
 .qr.loading {
-  background: #f4f3f7;
+  background: var(--liner-deep);
 }
 
 .qr-caption {
   font-weight: 700;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .toast {
   position: absolute;
   left: 50%;
-  bottom: -46px;
-  transform: translateX(-50%);
-  padding: 8px 14px;
-  border-radius: 20px;
-  background: var(--ink);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
-  animation: fade 0.2s;
-}
-
-/* ---------- LINE ---------- */
-
-.avatar img.photo {
-  object-fit: cover;
-}
-
-.line-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #06c755;
-}
-
-.line-login {
-  height: 32px;
-  padding: 0 12px;
-  border: none;
+  bottom: -50px;
+  padding: 11px 16px 12px;
   border-radius: 6px;
-  background: #06c755;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
+  background: var(--ink);
+  color: var(--liner);
+  box-shadow: var(--shadow-lift);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  translate: -50% 0;
+  animation: toast-in 0.2s var(--ease-out);
 }
 
-.text-btn {
-  margin-left: 8px;
-  padding: 0;
-  border: none;
-  background: none;
-  color: #77757f;
-  font-size: 13px;
-  text-decoration: underline;
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
 }
