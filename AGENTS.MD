@@ -187,7 +187,8 @@ pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
   - `src/identity` — who the person is: the LINE profile, and the Privy sign-in, which trades LINE's ID token at the auth server for a Privy JWT (Privy's SDK loads only after the board)
   - `src/tickets`, `src/stickers` (local sticker storage, display formatting, and the sticker's material: the figure, its live resin and the shared light), `src/payments`
   - `src/icons` — one icon per file; `src/styles` — CSS shared across features
-- `packages/db` — Drizzle schema and typed database client (`@drawing-app/db`)
+- `packages/db` — Drizzle schema (`src/schema/`), migrations (`drizzle/`) and typed database client (`@drawing-app/db`)
+- `apps/api` — the REST API (`@drawing-app/api`): Hono on Node 24. `createApp(deps)` in `src/app.ts`, one router per route group in `src/routes/`, and every outside service behind `AppDeps` (`src/deps.ts`). `pnpm --filter @drawing-app/api dev:api` runs it on port 8788, reading `apps/api/.env` (`SESSION_SECRET` of 32+ characters, `LINE_CHANNEL_ID`, `IMAGE_DIR`, `CDN_BASE_URL`); it stays out of `pnpm dev` until the app calls it
 - `docs/database-schema-and-rest-api.md` — the planned database schema and REST API, for UI work until they're built; delete it then and point here at `packages/db` and the API
 - `packages/*` — shared workspace packages
 - `deploy/` — `./deploy/deploy.sh` builds the frontend and the LINE → Privy auth server (`packages/sticker-chain`), publishes both behind the LIFF app's endpoint, then checks the box and the public URL serve them; the box's login and the chat menu switch's secrets go in the gitignored `deploy/.env`, and the auth server's signing key stays on the box. `deploy/line/` holds the returning-user chat menu and `create-returning-menu.sh`, which makes it in LINE; a menu's image can't be replaced, so a new image means a new menu and a new ID in `deploy/sticker-auth.env`
@@ -201,7 +202,7 @@ pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
 - Lint is **oxlint**, type-aware (`pnpm lint`); format is **oxfmt** (`pnpm format`). A pre-commit hook runs both on staged files. Don't downgrade a rule for a file in `.oxlintrc.json` to get a commit through; fix the code
 - Drizzle for typed database clients, on SQLite via better-sqlite3
 - `pnpm check` runs lint, typecheck, tests and the format check; `pnpm check:full` adds the production build and a knip report of unused code
-- `pnpm db:push` syncs the local database (`data/drawing-app.db`) to the schema; drizzle-kit exits 0 even when it fails, so read its output
+- `pnpm db:migrate` applies `packages/db/drizzle/` to the local database (`data/drawing-app.db`). After a schema change, `pnpm --filter @drawing-app/db db:generate` writes the migration; a new table's `updated_at` trigger goes in a custom migration (`drizzle-kit generate --custom`), from `updatedAtTriggerStatements`
 
 ### Git
 
