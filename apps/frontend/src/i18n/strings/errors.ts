@@ -163,6 +163,11 @@ export const errors = {
   },
   /** Any screen, when a request has no valid session (the cookie expired, or the account was deleted), through errorMessage/errorReason */
   signed_out: { en: "You're signed out.", ja: "ログアウトしています。" },
+  /** Drawing screen, the seal key's chip, and Giving and Receiving: a chain action waited 15 s for the Sepolia account that holds the stickers and Privy never readied it (made by the app itself, shown through errorReason) */
+  smart_account_not_ready: {
+    en: "Your board address is taking too long to get ready. Try again.",
+    ja: "ボードアドレスの準備に時間がかかっています。もう一度お試しください。",
+  },
   /** Sticker detail: loading where it's been (GET /api/stickers/:stickerId), in “Couldn’t load where it’s been…”, or Giving: packing it (POST /api/gifts), in “couldn’t be packed”, through errorReason */
   sticker_not_found: { en: "This sticker isn't here.", ja: "このシールは見つかりませんでした。" },
   /** Your sticker board: saving where a sticker sits after you move it (PATCH /api/sticker-boards/me/sticker-placements/:stickerId) when it never reached you, in “Couldn’t save where … sits” through errorReason */
