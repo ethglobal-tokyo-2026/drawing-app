@@ -100,6 +100,7 @@ export const stickers = sqliteTable(
     id: text("id").primaryKey(),
     /** The running number shown as No.0147, counted across everyone at seal. */
     number: integer("number").notNull().unique(),
+    /** The Original Artist. */
     artistId: text("artist_id")
       .notNull()
       .references(() => users.id),
@@ -375,8 +376,8 @@ export const gratitude = sqliteTable(
     /** 0–4: ありがと, 照れ, ドキドキ, オーバーヒート, 昇天. */
     peakTier: integer("peak_tier").notNull(),
     /**
-     * The artist's 20%, out of the giver's part, when the giver isn't the sticker's artist; otherwise
-     * 0. Stored, so changing the share never rewrites history.
+     * The Original Artist's 20%, out of the giver's part, when the Original Artist is neither the
+     * giver nor the receiver; otherwise 0. Stored, so changing the share never rewrites history.
      */
     originalArtistGratitudeShare: integer("original_artist_gratitude_share").notNull(),
     /** GAME_CONFIG's version, which the server replayed with; every version stays in code for replays. */

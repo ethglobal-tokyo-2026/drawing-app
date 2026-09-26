@@ -225,7 +225,7 @@ sequenceDiagram
 - **Recording:**
   - The receiver's app keeps the record until it lands and resends it on the next open.
   - The same idempotency key gets the stored record back. A second combo for the same gift is refused (409).
-- **Split:** the Original Artist Gratitude Share, 20% of the total out of the giver's part, goes to the artist when the giver isn't the sticker's artist (item 50). Decision 15 covers a receiver who drew it.
+- **Split:** the Original Artist Gratitude Share, 20% of the total out of the giver's part, goes to the Original Artist only when they're neither the giver nor the receiver (item 50). Gratitude to the Original Artist is 100% theirs, and gratitude from them, after a sticker comes back to them, is 100% the giver's.
 - **On chain:** gratitude doesn't touch the chain. The on-chain ledger is later (the gratitude plan's §5.5).
 
 ### 8. Paid tickets and withdrawal
@@ -377,7 +377,7 @@ Screens:
 | ----------------- | ------------------ | ------------------------------------ | -------------------------------------------------------------------------------------- |
 | `id`              | text PK            | Seal                                 | Server UUID. On chain the sticker key is keccak256 of it                               |
 | `number`          | int, unique        | Seal, as the highest so far plus one | Shown as "No.0147". Today the app numbers stickers on the device                       |
-| `artist_id`       | → users            | Seal                                 |                                                                                        |
+| `artist_id`       | → users            | Seal                                 | The Original Artist                                                                    |
 | `owner_id`        | → users            | Seal (the artist), then each receive | The owner of record as a person, a few seconds ahead of the chain while a claim lands  |
 | `time_used`       | int, 0–180         | Seal                                 | Seconds on the drawing clock, which pauses. The 3-minute timer; see Changes needed     |
 | `width`, `height` | int                | Seal                                 | Of the sticker image. The mask and resin masks share them                              |
@@ -505,20 +505,20 @@ Screens:
 - the stat board's gratitude receipt and bests, and Explore's weekly leaderboards;
 - the Official account's notice.
 
-| Column                            | Type                     | Set when                                                             | Notes                                                                                                                                            |
-| --------------------------------- | ------------------------ | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `gift_id`                         | text PK → gifts          | Recorded                                                             | One gratitude per received gift, sent by its receiver (item 33). The giver, receiver and sticker come from the gift                              |
-| `idempotency_key`                 | text, unique             | Recorded                                                             | Made on the device at the first hit                                                                                                              |
-| `method`                          | `tap`, `stroke`, `shake` | Recorded                                                             | The method it ended in. Inspired is tap; Magic is stroke or shake                                                                                |
-| `hits`                            | int, 1–120               | Recorded                                                             | Hits: counted taps, stroke passes or shake reversals. One tap that sends is 1. Best combo                                                        |
-| `total`                           | int                      | Recorded                                                             | The server's replayed total, multiplier included                                                                                                 |
-| `peak_mult`, `peak_tier`          | real 1–8, int 0–4        | Recorded                                                             | Tiers: ありがと, 照れ, ドキドキ, オーバーヒート, 昇天                                                                                            |
-| `original_artist_gratitude_share` | int, 0–total             | Recorded                                                             | The Original Artist Gratitude Share: 20% when the giver isn't the sticker's artist, else 0 (decision 15). The giver's part is `total` minus this |
-| `game_config_version`             | text                     | Recorded                                                             | `GAME_CONFIG`'s version (`gameConfig.ts`). Every version stays in code for good, for replays                                                     |
-| `replay`                          | blob                     | Recorded                                                             | Gzipped JSON; see below                                                                                                                          |
-| `seen_by_giver_at`                | int, null                | The giver finishes watching the replay                               | Drives the pink tag                                                                                                                              |
-| `pushed_to_giver_at`              | int, null                | Its push, or the digest that included it, goes out or is given up on |                                                                                                                                                  |
-| `created_at`                      | int                      | Recorded                                                             | Weekly leaderboards; most thanks in a day                                                                                                        |
+| Column                            | Type                     | Set when                                                             | Notes                                                                                                                                                   |
+| --------------------------------- | ------------------------ | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gift_id`                         | text PK → gifts          | Recorded                                                             | One gratitude per received gift, sent by its receiver (item 33). The giver, receiver and sticker come from the gift                                     |
+| `idempotency_key`                 | text, unique             | Recorded                                                             | Made on the device at the first hit                                                                                                                     |
+| `method`                          | `tap`, `stroke`, `shake` | Recorded                                                             | The method it ended in. Inspired is tap; Magic is stroke or shake                                                                                       |
+| `hits`                            | int, 1–120               | Recorded                                                             | Hits: counted taps, stroke passes or shake reversals. One tap that sends is 1. Best combo                                                               |
+| `total`                           | int                      | Recorded                                                             | The server's replayed total, multiplier included                                                                                                        |
+| `peak_mult`, `peak_tier`          | real 1–8, int 0–4        | Recorded                                                             | Tiers: ありがと, 照れ, ドキドキ, オーバーヒート, 昇天                                                                                                   |
+| `original_artist_gratitude_share` | int, 0–total             | Recorded                                                             | The Original Artist Gratitude Share: 20% when the Original Artist is neither the giver nor the receiver, else 0. The giver's part is `total` minus this |
+| `game_config_version`             | text                     | Recorded                                                             | `GAME_CONFIG`'s version (`gameConfig.ts`). Every version stays in code for good, for replays                                                            |
+| `replay`                          | blob                     | Recorded                                                             | Gzipped JSON; see below                                                                                                                                 |
+| `seen_by_giver_at`                | int, null                | The giver finishes watching the replay                               | Drives the pink tag                                                                                                                                     |
+| `pushed_to_giver_at`              | int, null                | Its push, or the digest that included it, goes out or is given up on |                                                                                                                                                         |
+| `created_at`                      | int                      | Recorded                                                             | Weekly leaderboards; most thanks in a day                                                                                                               |
 
 ## Replay and timelapse storage
 
@@ -584,7 +584,7 @@ Screens:
   - The app's own rule (`userStats.ts`): a ticket day with a sealed sticker adds one; a missed day takes one away, but never below one; today isn't missed until it's over.
   - The server runs it over the person's `stickers.created_at` in their zone (`stickers_artist`). "Longest streak" is the best it has been.
 - **Stat board:**
-  - Made is your stickers as artist.
+  - Made is the stickers you're the Original Artist of.
   - Received and given are your `received` gifts, to and from you.
   - Gratitude rows:
     - **Inspired:** `total − original_artist_gratitude_share` from tap combos on gifts you gave.
@@ -600,7 +600,7 @@ Screens:
   - search by handle.
 - **Boards:**
   - **Glow:** a sticker's gratitude totals.
-  - **Foil:** the artist isn't the board's owner (item 46).
+  - **Foil:** the Original Artist isn't the board's owner (item 46).
   - **Given sticker silhouette:** your placements of stickers you no longer hold.
   - A sticker with a `sent` gift leaves its giver's board; a `packed` one stays.
 - **Sticker tray:**
@@ -673,7 +673,7 @@ No routes are implemented; this is their shape.
 | Route                                    | What it does                                                                                                      | Called from                                                                           | Tables                                                                |
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | `POST /api/stickers`                     | Seal: the five images, outline, size, time used, the ticket and the timelapse. Returns the sticker and its number | `DrawingScreen`'s seal step, before `SealCeremony` plays                              | `stickers`, `ticket_uses`, `sticker_placements`, `sticker_timelapses` |
-| `GET /api/stickers/:stickerId`           | The sticker detail: artist, who holds it, the Transfer Trail with each gratitude                                  | `StickerDetail`, opened from the board, `StickerToolbar` and `GivenStickerSilhouette` | `stickers`, `users`, `gifts`, `gratitude`                             |
+| `GET /api/stickers/:stickerId`           | The sticker detail: the Original Artist, who holds it, the Transfer Trail with each gratitude                     | `StickerDetail`, opened from the board, `StickerToolbar` and `GivenStickerSilhouette` | `stickers`, `users`, `gifts`, `gratitude`                             |
 | `GET /api/stickers/:stickerId/timelapse` | The timelapse's ops                                                                                               | The timelapse (not built)                                                             | `sticker_timelapses`                                                  |
 
 Images are static files named by content hash, not routes. `StickerFigure`, `PlacedSticker` and `LiveResin` read them.
@@ -735,6 +735,8 @@ Images are static files named by content hash, not routes. `StickerFigure`, `Pla
 - **Storage:** replays as one gzipped JSON blob each, and a timelapse for every sticker.
 - **Chain:** no indexer for the demo.
 - **Timer:** the drawing timer is 3 minutes.
+- **The Original Artist Gratitude Share** goes to the Original Artist only when they're neither the giver nor the receiver. Gratitude to the Original Artist is 100% theirs; gratitude from them, after a sticker comes back to them, is 100% the giver's.
+- **Original Artist** joins the vocabulary: the person who created a given sticker, named in full where "artist" alone would be ambiguous.
 
 ## Decisions for you (defaults in bold)
 
@@ -777,16 +779,13 @@ Images are static files named by content hash, not routes. `StickerFigure`, `Pla
     - Or an app-picked or artist-typed name.
 13. **Withdrawal.** LINE's policy requires deleting their LINE data.
     - **LINE data and the smart wallet address go at once, and pushes to them stop.**
-    - **Their stickers keep their artist, and past Transfer Trails keep their entries, shown without a name.**
+    - **Their stickers keep them as the Original Artist, and past Transfer Trails keep their entries, shown without a name.**
     - **Gifts still in their bag are taken out, with a reject if deposited. Messages they already sent keep working, since a claim needs only our authorization and the receiver's smart wallet.**
     - **Their handle stays reserved.**
     - **Keep the Privy user. Signing in again with the same LINE account starts a new person, and the stickers still in that smart wallet come back to them.** Or delete the Privy user, which leaves those stickers out of reach for good.
 14. **Paid tickets while the Sui payment is a mock.**
     - **Record mock purchases as verified, at most one pack a day, until the payment is real. Then the server checks each digest on Sui.**
     - Or no paid tickets until the payment is real.
-15. **The Original Artist Gratitude Share when the receiver drew the sticker.** AGENTS.MD gives the artist 20% whenever the giver isn't the artist. When a sticker comes back to the person who drew it, that means 20% of their own thanks goes to themselves.
-    - **None in that case: the giver gets the whole total.**
-    - Or follow the definition as written.
 
 ## Changes needed elsewhere
 
@@ -829,7 +828,8 @@ These are proposals; this branch changes only `packages/db` and this doc.
 
 **The app** (`apps/frontend`):
 
-- **Timer:** `SESSION_MS` becomes 3 minutes. `session.ts` and PRODUCT.md (2026-09-22, "Every drawing is a 5-minute session") say 5.
+- **Timer:** done on branch `design/three-minute-timer` (533a4f2, from local `main`, not merged): `SESSION_MS` is 3 minutes, and the clock's tests and comments say 3:00. PRODUCT.md in the design drafts (2026-09-22, "Every drawing is a 5-minute session") still says 5.
+- **Vocabulary:** Original Artist is added on branch `vocab/original-artist` (08c7a8f, not merged). The Original Artist Gratitude Share's definition still says the share applies "when the giver isn't the sticker's artist", without the receiver case above.
 - **Sign-in:** `LineGate` calls `POST /api/session` and shows the handle prompt when asked. `useIdentity` takes the handle from the server instead of the LINE name.
 - **Drawing screen:** the first stroke calls `POST /api/tickets/spend`.
 - **Sealing:**
@@ -855,6 +855,7 @@ These are proposals; this branch changes only `packages/db` and this doc.
 - `GratitudeResult` gains what the replay needs: each touch's position and whether it counted, stroke paths, shake reversals with their direction, the random seed and the intensity.
 - `tuningVersion` becomes `gameConfigVersion`, as the design offers, and part 2 records the gift instead of `stickerId`.
 - Its note that the draft needs `sent` among its end reasons is done: the end reason lives in the replay.
+- Part 3's server check computes the Original Artist Gratitude Share by the rule above.
 
 ## Validation
 
@@ -915,7 +916,7 @@ These are proposals; this branch changes only `packages/db` and this doc.
 
 ## Vocabulary
 
-- **From AGENTS.MD:** Sticker, Ticket, Seal, Packaging, Giving, Receiving, Gratitude, Mini-game, Sticker Board, Stat board, User Stats, Sticker tray, Sticker sheet, Gift Message, Gift Claim Token, Transfer Trail, Hits, Original Artist Gratitude Share, Login Channel, Official account, Messaging API.
+- **From AGENTS.MD:** Sticker, Ticket, Seal, Packaging, Giving, Receiving, Gratitude, Mini-game, Sticker Board, Stat board, User Stats, Sticker tray, Sticker sheet, Gift Message, Gift Claim Token, Transfer Trail, Hits, Original Artist (on `vocab/original-artist`), Original Artist Gratitude Share, Login Channel, Official account, Messaging API.
 - **Your code names:** GivenStickerSilhouette, UsedStickerSilhouette, PendingGiftsNotificationBadge, ReceiveGiftDialog.
 - **The app's names:** the placement's fields, the tray's `here`, `used` and `given`, and the gift states `packed` and `sent`.
 - **Code names:** "sticker placement" (`sticker_placements`, `StickerPlacement`), from your note on the route.
