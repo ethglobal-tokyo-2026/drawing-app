@@ -20,7 +20,9 @@ import { useLight } from "../stickers/light";
 import { playStick } from "../stickers/stick";
 import { updatePlacement, type Placement, type StickerRecord } from "../stickers/stickerStorage";
 import { releaseStickerUrls } from "../stickers/stickerUrls";
-import { ticketDay } from "../tickets/tickets";
+import { TicketCounts } from "../tickets/TicketCount";
+import { describeTickets, ticketDay } from "../tickets/tickets";
+import { useTicketState } from "../tickets/useTickets";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
@@ -153,6 +155,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   /** The board is turned over to its stat board. */
   const [turned, setTurned] = useState(false);
   const me = useIdentity();
+  const tickets = useTicketState();
   const gifts = useStickerGifts();
   const giftSender = useGiftSender();
   const reduced = useReducedMotion();
@@ -231,7 +234,9 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const givenSilhouettes = (stickers ?? []).flatMap((s) => {
     const gift = gifts.get(s.id);
     const mask = s.urls.mask;
-    return gift?.state === "sent" && mask ? [{ sticker: s, mask, sentAt: gift.sentAt }] : [];
+    return gift?.state === "sent" && mask
+      ? [{ sticker: s, mask, sentAt: gift.sentAt, to: gift.to }]
+      : [];
   });
   const field = useMemo(() => size && fieldOf(size.W, size.H), [size]);
   const landedNow = useCallback(() => setLandingId(undefined), []);
@@ -380,8 +385,14 @@ export function StickerBoard({ freshId, onDraw }: Props) {
 
       {/* The slot carries the first-sticker hop and ring, so the key keeps its own lip and press. */}
       <span ref={drawSlot} className={`board-draw ${firstVisit ? "is-fresh" : ""}`}>
-        <Key size="compact" icon={<DrawIcon />} onClick={onDraw} aria-label="Draw a new sticker">
+        <Key
+          size="compact"
+          icon={<DrawIcon />}
+          onClick={onDraw}
+          aria-label={`Draw a new sticker: you have ${describeTickets(tickets)}`}
+        >
           Draw
+          <TicketCounts state={tickets} className="ticket-counts--on-key" />
         </Key>
       </span>
       {firstVisit && (

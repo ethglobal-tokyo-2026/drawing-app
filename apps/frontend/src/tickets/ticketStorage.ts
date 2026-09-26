@@ -1,4 +1,3 @@
-import { FREE_TICKETS_PER_DAY } from "./config";
 import type { TicketState, TicketUse } from "./tickets";
 
 const KEY = "draw.tickets";
@@ -12,26 +11,17 @@ function parseUse(v: unknown): TicketUse | null {
   return typeof v.stickerId === "string" ? { stickerId: v.stickerId } : null;
 }
 
-/**
- * Checks a stored ticket state and moves the count-only `{ day, usedFree, paid }`
- * shape onto uses that carry no sticker. Null when it can't be trusted.
- */
+/** Checks a stored ticket state. Null when it can't be trusted. */
 export function parseStoredTickets(raw: unknown): TicketState | null {
   if (typeof raw !== "object" || raw === null) return null;
-  if (!("day" in raw) || !isDay(raw.day) || !("paid" in raw) || !isCount(raw.paid)) return null;
-  if ("uses" in raw) {
-    if (!Array.isArray(raw.uses)) return null;
-    const stored: unknown[] = raw.uses;
-    const uses = stored.map(parseUse);
-    return uses.every((u): u is TicketUse => u !== null)
-      ? { day: raw.day, uses, paid: raw.paid }
-      : null;
-  }
-  if ("usedFree" in raw && isCount(raw.usedFree) && raw.usedFree <= FREE_TICKETS_PER_DAY) {
-    const uses = Array.from({ length: raw.usedFree }, (): TicketUse => ({}));
-    return { day: raw.day, uses, paid: raw.paid };
-  }
-  return null;
+  if (!("day" in raw) || !isDay(raw.day) || !("reserve" in raw) || !isCount(raw.reserve))
+    return null;
+  if (!("uses" in raw) || !Array.isArray(raw.uses)) return null;
+  const stored: unknown[] = raw.uses;
+  const uses = stored.map(parseUse);
+  return uses.every((u): u is TicketUse => u !== null)
+    ? { day: raw.day, uses, reserve: raw.reserve }
+    : null;
 }
 
 // Tickets live in localStorage. When it's blocked, they're kept in memory so

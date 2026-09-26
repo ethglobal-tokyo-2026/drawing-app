@@ -1,4 +1,4 @@
-/* ---------- Index tabs: My board and Explore, label stock on the Liner strip ---------- */
+/* ---------- Index tabs: My board, Explore and Shop, label stock on the Liner strip ---------- */
 
 .tabs {
   display: flex;
@@ -39,6 +39,10 @@
 
 .tab-explore {
   --c: var(--aqua);
+}
+
+.tab-shop {
+  --c: var(--grape);
 }
 
 .tab svg {

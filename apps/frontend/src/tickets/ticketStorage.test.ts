@@ -3,16 +3,8 @@ import { parseStoredTickets } from "./ticketStorage";
 
 describe("parseStoredTickets", () => {
   it("reads back what was stored", () => {
-    const state = { day: "2026-09-24", uses: [{}, { stickerId: "sunset" }], paid: 2 };
+    const state = { day: "2026-09-24", uses: [{}, { stickerId: "sunset" }], reserve: 2 };
     expect(parseStoredTickets(JSON.parse(JSON.stringify(state)))).toEqual(state);
-  });
-
-  it("moves the count-only shape onto uses that carry no sticker", () => {
-    expect(parseStoredTickets({ day: "2026-09-24", usedFree: 2, paid: 1 })).toEqual({
-      day: "2026-09-24",
-      uses: [{}, {}],
-      paid: 1,
-    });
   });
 
   it("rejects values it can't trust", () => {
@@ -22,14 +14,13 @@ describe("parseStoredTickets", () => {
       "3",
       [],
       { day, uses: [] },
-      { day: "yesterday", uses: [], paid: 0 },
-      { day, uses: [], paid: -1 },
-      { day, uses: [], paid: 1.5 },
-      { day, uses: {}, paid: 0 },
-      { day, uses: [{ stickerId: 7 }], paid: 0 },
-      { day, uses: [null], paid: 0 },
-      { day, usedFree: -1, paid: 0 },
-      { day, usedFree: 1e9, paid: 0 },
+      { day, uses: [], paid: 0 },
+      { day: "yesterday", uses: [], reserve: 0 },
+      { day, uses: [], reserve: -1 },
+      { day, uses: [], reserve: 1.5 },
+      { day, uses: {}, reserve: 0 },
+      { day, uses: [{ stickerId: 7 }], reserve: 0 },
+      { day, uses: [null], reserve: 0 },
     ])
       expect(parseStoredTickets(unreadable), JSON.stringify(unreadable)).toBeNull();
   });

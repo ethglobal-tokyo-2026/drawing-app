@@ -31,6 +31,10 @@ interface Props {
   position: string;
   /** What the keys do to it, which changes once it's selected. */
   hintId: string;
+  /** Drawn by someone other than the board's owner: it wears foil. */
+  foil?: boolean;
+  /** Its gratitude glow, from 0 (none) to 1 (brightest). */
+  glow?: number;
 }
 
 const CORNERS = ["nw", "ne", "sw", "se"] as const;
@@ -54,6 +58,8 @@ export const PlacedSticker = memo(function PlacedSticker({
   tabbable,
   position,
   hintId,
+  foil = false,
+  glow = 0,
 }: Props) {
   const lift = useRef<HTMLDivElement>(null);
   const fold = useFold(sticker.id, sticker.urls.mask, curled);
@@ -83,6 +89,8 @@ export const PlacedSticker = memo(function PlacedSticker({
     held === "drag" && "is-dragging",
     held === "handle" && "is-handling",
     landing && "is-landing",
+    foil && "is-foiled",
+    glow > 0 && "is-glowing",
   ];
   return (
     <div
@@ -94,7 +102,13 @@ export const PlacedSticker = memo(function PlacedSticker({
       tabIndex={tabbable ? 0 : -1}
       aria-label={`${formatNo(sticker.no)}, drawn in ${spokenDuration(sticker.timeUsed)}, ${position}`}
       aria-describedby={hintId}
-      style={{ width: box.w, height: box.h, transform: box.transform, zIndex: 10 + stack }}
+      style={{
+        width: box.w,
+        height: box.h,
+        transform: box.transform,
+        zIndex: 10 + stack,
+        ...(glow > 0 && { "--glow": glow.toFixed(2) }),
+      }}
     >
       <div className="placed-sticker__lift" ref={lift}>
         <StickerFigure

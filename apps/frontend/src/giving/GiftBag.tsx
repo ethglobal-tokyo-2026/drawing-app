@@ -5,8 +5,10 @@ import "./GiftBag.css";
 
 interface Props {
   stickerUrl: string;
-  /** The giver's handle, printed on the tag. */
+  /** The giver's handle, printed on the tag when the recipient isn't known. */
   fromHandle: string;
+  /** The recipient chosen in the app, printed on the tag in place of the giver. */
+  toHandle?: string;
   /** Open: the sticker peeks out of the mouth. Sealed: sent, pressed shut, with the seal on. */
   state: "open" | "sealed";
   /** Drop: the sticker falls into the open bag. Take out: it lifts back out. */
@@ -16,8 +18,8 @@ interface Props {
 }
 
 /** The frosted gift bag. It has no zipper: it seals with a tear tape, only once the send succeeds. */
-export function GiftBag({ stickerUrl, fromHandle, state, motion, sealedAt }: Props) {
-  const tag = giftTag(fromHandle);
+export function GiftBag({ stickerUrl, fromHandle, toHandle, state, motion, sealedAt }: Props) {
+  const tag = giftTag(fromHandle, toHandle);
   const name = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
     const el = name.current;

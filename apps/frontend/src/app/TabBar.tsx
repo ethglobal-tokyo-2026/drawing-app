@@ -1,11 +1,11 @@
-import { CaretUp, Eyes } from "@phosphor-icons/react";
+import { CaretUp, Eyes, Storefront } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { useIdentity } from "../identity/useIdentity";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import "./TabBar.css";
 
-export type Tab = "board" | "explore";
+export type Tab = "board" | "explore" | "shop";
 
 /** Tabs brought back over a screen that tucks them away go again after this long untouched. */
 const IDLE_MS = 4000;
@@ -131,13 +131,22 @@ export function TabBar({ active, tucked, onChange }: Props) {
           <Eyes size={20} weight={active === "explore" ? "fill" : "bold"} />
           <span>Explore</span>
         </button>
+        <button
+          className="tab tab-shop"
+          data-press
+          aria-current={current("shop")}
+          onClick={() => onChange("shop")}
+        >
+          <Storefront size={20} weight={active === "shop" ? "fill" : "bold"} />
+          <span>Shop</span>
+        </button>
       </nav>
       {tucked && (
         <button
           ref={grabber}
           type="button"
           className={`tab-grabber ${grabbed ? "" : "is-pull-tab"} ${peeking ? "is-hidden" : ""}`}
-          aria-label="Show the My board and Explore tabs"
+          aria-label="Show the My board, Explore and Shop tabs"
           aria-expanded={peeking}
           tabIndex={peeking ? -1 : undefined}
           onPointerDown={(e) => {

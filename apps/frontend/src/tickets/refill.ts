@@ -19,5 +19,5 @@ export function msUntilRefillLineChanges(msLeft: number): number {
 
 const timeOfDay = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" });
 
-/** "4:00 AM", in the person's own time zone. */
+/** "12:00 AM", in the person’s own time zone. */
 export const formatRefillTime = (at: Date) => timeOfDay.format(at);

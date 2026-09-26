@@ -1,19 +1,22 @@
 import { useCallback, useSyncExternalStore } from "react";
 import { readTickets, subscribeTickets, writeTickets } from "./ticketStorage";
 import {
-  addPaid,
+  addReserve,
   current,
+  dailyLeft,
   linkSticker,
+  nextKind,
   nextRefill,
   refund,
   spend,
   ticketsLeft,
   type SpentTicket,
+  type TicketKind,
   type TicketState,
 } from "./tickets";
 
 /**
- * Today's tickets. The 4:00 refill is read at render time instead of pushed by a
+ * Today's tickets. The midnight refill is read at render time instead of pushed by a
  * timer, so an open out-of-tickets card can turn over in place; everything else
  * sees the new tickets on its next render.
  */
@@ -26,19 +29,20 @@ export function pickUpRefill(): void {
   writeTickets(current(readTickets(), new Date()));
 }
 
+/** Adds bought reserve tickets. */
+export function addReserveTickets(n: number): void {
+  writeTickets(addReserve(current(readTickets(), new Date()), n));
+}
+
 export function useTickets() {
   const state = useTicketState();
 
-  /** Spends a ticket; null when there are none left. */
-  const use = useCallback((): SpentTicket | null => {
-    const next = spend(current(readTickets(), new Date()));
+  /** Spends a ticket of the kind the person agreed to; null when the next ticket isn't that kind. */
+  const use = useCallback((kind: TicketKind): SpentTicket | null => {
+    const next = spend(current(readTickets(), new Date()), kind);
     if (!next) return null;
     writeTickets(next.state);
     return next.spent;
-  }, []);
-
-  const add = useCallback((n: number) => {
-    writeTickets(addPaid(current(readTickets(), new Date()), n));
   }, []);
 
   /** Records the sticker a spent ticket became. */
@@ -55,9 +59,11 @@ export function useTickets() {
 
   return {
     left: ticketsLeft(state),
+    dailyLeft: dailyLeft(state),
+    reserveLeft: state.reserve,
+    nextKind: nextKind(state),
     refillAt: nextRefill(new Date()),
     use,
-    add,
     linkSticker: linkToSticker,
     giveBack,
   };

@@ -10,9 +10,10 @@ import {
 } from "react";
 import { useIdentity } from "../identity/useIdentity";
 import { addSticker, type StickerRecord } from "../stickers/stickerStorage";
-import { OutOfTickets, type OutOfTicketsStep } from "../tickets/OutOfTickets";
+import { OutOfTickets } from "../tickets/OutOfTickets";
 import { StartDrawing } from "../tickets/StartDrawing";
-import type { SpentTicket } from "../tickets/tickets";
+import type { SpentTicket, TicketKind } from "../tickets/tickets";
+import { TicketShop } from "../tickets/TicketShop";
 import { useTickets } from "../tickets/useTickets";
 import { useToast } from "../ui/useToast";
 import { sizePx } from "./canvas/brush";
@@ -119,8 +120,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // The sealed sticker's layers are let go when a fresh sheet replaces it.
   const lastSealed = useRef<Sealed | null>(null);
   const [sealProblem, setSealProblem] = useState<string | null>(null);
-  // The out-of-tickets card's first step while it's up, or null.
-  const [paywallOpen, setPaywallOpen] = useState<OutOfTicketsStep | null>(null);
+  // The out-of-tickets card or the ticket shop, over a fresh sheet, or null.
+  const [overlay, setOverlay] = useState<"out" | "shop" | null>(null);
+  // The kind of ticket the person agreed to spend, for the start's spend-ticket effect.
+  const spendKind = useRef<TicketKind>("daily");
   // The session's ticket: spent at Start, or before a reload it was kept across.
   const ticket = useRef<SpentTicket | null>(null);
   const [keeper] = useState(() => new SessionKeeper());
@@ -143,8 +146,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   function run(effect: SessionEffect) {
     switch (effect) {
       case "spend-ticket":
-        ticket.current = tickets.use();
-        if (!ticket.current) console.error("Start was tapped with no ticket left to spend");
+        ticket.current = tickets.use(spendKind.current);
+        if (!ticket.current)
+          console.error(`Start was tapped with no ${spendKind.current} ticket next to spend`);
         keeper.start(ticket.current);
         return;
       case "start-clock":
@@ -239,9 +243,18 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     onNewSticker();
   };
 
-  /** Keep drawing and the Draw after a purchase already chose to spend a ticket, so they skip the ask. */
-  const startRightAway = () => {
-    if (tickets.left > 0) send({ type: "start" });
+  const start = (kind: TicketKind) => {
+    spendKind.current = kind;
+    send({ type: "start" });
+  };
+
+  /**
+   * Keep drawing already chose to spend a daily ticket, so it skips the ask; a reserve ticket is always
+   * asked for. Draw right after a purchase chose to spend either.
+   */
+  const startRightAway = ({ reserve }: { reserve: boolean }) => {
+    const kind = tickets.nextKind;
+    if (kind === "daily" || (kind === "reserve" && reserve)) start(kind);
   };
 
   useImperativeHandle(ref, () => ({ startNewSticker, closeDrawers: () => setPanel(null) }));
@@ -336,8 +349,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // Out of tickets: the card comes up as Draw opens on a fresh sheet, and stays until the person picks
   // a way on, even if tickets come back meanwhile.
   const fresh = session.phase === "blank" && !restoring;
-  if (active && fresh && tickets.left === 0 && !paywallOpen) setPaywallOpen("out");
-  const paywall = active && fresh && paywallOpen !== null;
+  if (active && fresh && tickets.left === 0 && !overlay) setOverlay("out");
+  const paywall = active && fresh && overlay !== null;
   // A fresh sheet asks before a ticket is spent, and takes no ink until then.
   const asking = active && fresh && !paywall;
   const sealing = session.phase === "sealing" || session.phase === "sealed";
@@ -476,12 +489,11 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           handle={me.handle}
           onKeepDrawing={() => {
             startNewSticker();
-            startRightAway();
+            startRightAway({ reserve: false });
           }}
           onBoard={onGoToBoard}
-          // A fresh sheet with no tickets left brings up the out-of-tickets card, here at its Sui purchase.
-          onGetTickets={() => {
-            setPaywallOpen("approve");
+          onShop={() => {
+            setOverlay("shop");
             startNewSticker();
           }}
         />
@@ -490,23 +502,34 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         <StartDrawing
           minutes={SESSION_MS / 60_000}
           note={pickedUp && pickedUp !== "restored" ? LOST[pickedUp] : null}
-          onStart={() => send({ type: "start" })}
+          onStart={start}
+          onShop={() => setOverlay("shop")}
           onBoard={onGoToBoard}
         />
       )}
-      {paywall && (
+      {paywall && overlay === "out" && (
         <OutOfTickets
           refillAt={tickets.refillAt}
-          firstStep={paywallOpen}
-          onTicketsBought={tickets.add}
+          onShop={() => setOverlay("shop")}
           onStartDrawing={() => {
-            setPaywallOpen(null);
-            startRightAway();
+            setOverlay(null);
+            startRightAway({ reserve: false });
           }}
           onBoard={() => {
-            setPaywallOpen(null);
+            setOverlay(null);
             onGoToBoard();
           }}
+        />
+      )}
+      {/* Leaving the shop with no tickets brings the out-of-tickets card back; with some, the start screen. */}
+      {paywall && overlay === "shop" && (
+        <TicketShop
+          layout="card"
+          onDraw={() => {
+            setOverlay(null);
+            startRightAway({ reserve: true });
+          }}
+          onClose={() => setOverlay(null)}
         />
       )}
     </div>

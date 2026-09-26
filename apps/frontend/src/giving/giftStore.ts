@@ -20,10 +20,13 @@ interface GiftFields {
   stickerId: string;
   /** When the sticker went into the bag. */
   packedAt: number;
+  /** The artist it was given to in the app. Absent when it went through LINE's picker. */
+  to?: string;
 }
 
 export type GiftRecord =
-  /** In the bag, not sent yet: LINE's picker is about to open or is open. */
+  /** In the bag, not sent yet: LINE's picker is about to open or is open. Sent: through LINE's
+   * picker, or straight to an artist in the app (`to`). */
   | (GiftFields & { state: "packed" })
   | (GiftFields & { state: "sent"; sentAt: number })
   /** The gift message never left, so the sticker is back. `error` says why sending failed. */
@@ -38,7 +41,9 @@ function readGift(v: unknown): GiftRecord | string {
   if (!("id" in v) || !isText(v.id)) return "no id";
   if (!("stickerId" in v) || !isText(v.stickerId)) return "no stickerId";
   if (!("packedAt" in v) || typeof v.packedAt !== "number") return "no packedAt";
-  const gift = { id: v.id, stickerId: v.stickerId, packedAt: v.packedAt };
+  const to = "to" in v ? v.to : undefined;
+  if (to !== undefined && !isText(to)) return "a recipient that isn't a handle";
+  const gift = { id: v.id, stickerId: v.stickerId, packedAt: v.packedAt, ...(to && { to }) };
   const state = "state" in v ? v.state : undefined;
   if (state === "packed") return { ...gift, state };
   if (state === "sent") {
@@ -147,7 +152,8 @@ export function deviceGiftStore(): GiftStore {
 
 export type StickerGiftStatus =
   | { giftId: string; state: "packed"; packedAt: number }
-  | { giftId: string; state: "sent"; packedAt: number; sentAt: number };
+  /** `to` is the artist it was given to in the app; LINE's picker never says who. */
+  | { giftId: string; state: "sent"; packedAt: number; sentAt: number; to?: string };
 
 /** Each sticker's open or sent gift. A sticker whose gifts all went unsent has no entry. */
 export function giftStatusBySticker(
@@ -159,7 +165,13 @@ export function giftStatusBySticker(
     status.set(
       r.stickerId,
       r.state === "sent"
-        ? { giftId: r.id, state: "sent", packedAt: r.packedAt, sentAt: r.sentAt }
+        ? {
+            giftId: r.id,
+            state: "sent",
+            packedAt: r.packedAt,
+            sentAt: r.sentAt,
+            ...(r.to && { to: r.to }),
+          }
         : { giftId: r.id, state: "packed", packedAt: r.packedAt },
     );
   }

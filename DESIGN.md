@@ -281,7 +281,7 @@ The palette is Liner and Ink, plus five candy-bright coded fields, each with one
 
 ### Primary
 
-- **Seal Yellow** (seal-yellow): "Now". The default key (Keep drawing, the seal check, Draw on your board), the draw screen's timer dot, the streak leaf's band on the cork back, NEW dots, and text selection. It's the most common field in the app.
+- **Seal Yellow** (seal-yellow): "Now". The default key (Keep drawing, the seal check, Draw on your board), daily tickets, the draw screen's timer dot, the streak leaf's band on the cork back, NEW dots, and text selection. It's the most common field in the app.
 
 ### Secondary
 
@@ -290,7 +290,7 @@ The palette is Liner and Ink, plus five candy-bright coded fields, each with one
 
 ### Tertiary
 
-- **Grape** (grape): received, and offers. The Accept key on a gift, the Send offer key, Offer for it on someone else's board, the pouch's Gifts folder tab, received-piece marks, and the ruled lines of the notebook scrap on the cork back.
+- **Grape** (grape): received, offers, and reserve tickets. The Accept key on a gift, the ticket shop's Pay key and picked pack, the Use a reserve ticket key, the Shop tab, the Send offer key, Offer for it on someone else's board, the pouch's Gifts folder tab, received-piece marks, and the ruled lines of the notebook scrap on the cork back.
 - **Tomato** (tomato): can't undo. Stopped states, warnings and Take the original. It's never a key.
 - **Foil** (foil-pink, foil-peach, foil-lemon, foil-aqua, foil-sky, foil-lilac): six iridescent bands, one 96px period, that flow along a sticker's foil band and turn in the ring round the artist chip's picture. It isn't a fill color. It's a material worn only by a sticker drawn by someone other than the board's owner. It has no green.
 
@@ -422,7 +422,7 @@ A cartoon keycap: the screen's one primary act.
 - **Disabled:** sunk flush with the page, with no lip and no ink: a Liner Deep face and a graphite label. Enabling springs it up out of the page.
 - **Hover and focus:** hover shades the face 6% toward Ink. Focus draws a 2px Ink outline at a 3px offset.
 - **Visiting:** on someone else's board, a Soda Aqua compact Give key sits in Draw's slot, and it's that board's one key.
-- **Where it goes:** Keep drawing, Get more tickets with Sui, Give, Send in LINE, Accept, Send gratitude, Send offer, the seal check, Draw on your board and Give on someone else's. A can't-undo act never gets the key.
+- **Where it goes:** Keep drawing, Pay in the ticket shop, Use a reserve ticket, Give, Send in LINE, Accept, Send gratitude, Send offer, the seal check, Draw on your board and Give on someone else's. A can't-undo act never gets the key.
 
 ### Label stock
 
@@ -494,7 +494,17 @@ The canvas is just for drawing.
 
 ### Out of tickets
 
-Three empty ticket stubs say "used up" without a number. Each used ticket keeps a faint kiss-cut outline of the sticker it became (a 1px graphite line at 62%, dashed on the large stubs), fading in over 700ms: the cut line a sticker leaves on its backing. The small stubs on the seal screen carry the same outlines. Under the title, a printed refill line reads "New tickets at 4:00 AM," in bold Ink followed by the countdown ("in 6h 56m") in Graphite, in tabular figures. It never borrows the timer dot's look: no dot, no color field, no tilt, no Dela numerals. Then the perforation, the Sui key and Go to sticker board. The card doesn't restate the three-a-day rule.
+Three empty ticket stubs say "used up" without a number. Each used ticket keeps a faint kiss-cut outline of the sticker it became (a 1px graphite line at 62%, dashed on the large stubs), fading in over 700ms: the cut line a sticker leaves on its backing. The small stubs on the seal screen carry the same outlines. Under the stubs, the reserve count: a Grape ticket mark × count. Under the title, a printed refill line reads "New daily tickets at 12:00 AM," in bold Ink followed by the countdown ("in 6h 56m") in Graphite, in tabular figures. It never borrows the timer dot's look: no dot, no color field, no tilt, no Dela numerals. Then the perforation, Go to sticker board as the key and Shop for tickets with Sui on label stock. The card doesn't restate the three-a-day rule.
+
+With daily tickets gone but reserve ones left, the start screen asks "Use a reserve ticket?" instead, with a Grape key and the ticket shop on label stock.
+
+### Ticket counts
+
+Every Draw key carries daily and reserve tickets left after its label, on a Liner Lift chip: a small ticket mark in Seal Yellow or Grape with an Ink edge, then ×count in Figure type. A zero count is an empty backing mark in Ink Soft.
+
+### Ticket shop
+
+The out-of-tickets card's stock. The wallet's SUI balance sits in a Liner Lift well with its yen value in Graphite. Packs are label rows: a Grape ticket mark, the name, a Pink sale sticker at the house tilt ("−40%"), and the price stacked right (struck-through full price, yen in bold, SUI in Graphite). The picked pack is stuck on in Grape Soft with a Grape ring. Fine print under the packs gives the SUI/JPY rate. The smallest pack is picked to start.
 
 ### Stickers
 
