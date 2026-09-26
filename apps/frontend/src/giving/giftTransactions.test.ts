@@ -8,7 +8,7 @@ vi.mock("viem", async (importOriginal) => ({
 }));
 vi.mock("../identity/smartWallet", () => ({ waitForSmartWallet: async () => wallet }));
 
-import { giftTransactions } from "./giftTransactions";
+import { giftTransactions, GiftTransactionUnconfirmedError } from "./giftTransactions";
 
 const giftId = `0x${"cd".repeat(32)}` as const;
 const hash = `0x${"ab".repeat(32)}` as const;
@@ -28,7 +28,7 @@ describe("Sepolia smart account Giving transactions", () => {
     chain.waitForTransactionReceipt.mockRejectedValueOnce(new Error("Receipt timeout"));
     const submitted = vi.fn();
     await expect(giftTransactions.deposit(giftId, transfer, submitted)).rejects.toThrow(
-      "Receipt timeout",
+      "could not be confirmed",
     );
     expect(submitted).toHaveBeenCalledWith(hash);
     await expect(giftTransactions.deposit(giftId, transfer, submitted, hash)).resolves.toBe(hash);
@@ -42,6 +42,33 @@ describe("Sepolia smart account Giving transactions", () => {
     expect(wallet.sendTransaction).not.toHaveBeenCalled();
   });
 
+  it("checks escrow after Privy times out before treating a deposit as failed", async () => {
+    const providerError = new Error("request timed out with api key secret-value");
+    wallet.sendTransaction.mockRejectedValue(providerError);
+    chain.readContract
+      .mockResolvedValueOnce([address, address, 1n, giftId, 1n, 0])
+      .mockResolvedValueOnce([address, address, 1n, giftId, 1n, 1]);
+    const submitted = vi.fn();
+
+    await expect(giftTransactions.deposit(giftId, transfer, submitted)).resolves.toBeNull();
+    expect(wallet.sendTransaction).toHaveBeenCalledTimes(1);
+    expect(submitted).not.toHaveBeenCalled();
+  });
+
+  it("keeps an uncertain Privy failure safe for the Giving screen", async () => {
+    wallet.sendTransaction.mockRejectedValue(new Error("api key secret-value"));
+    const submitted = vi.fn();
+    const failure: unknown = await giftTransactions.deposit(giftId, transfer, submitted).then(
+      () => null,
+      (error: unknown) => error,
+    );
+
+    expect(failure).toBeInstanceOf(GiftTransactionUnconfirmedError);
+    expect(String(failure)).toContain("could not be confirmed");
+    expect(String(failure)).not.toContain("secret-value");
+    expect(submitted).not.toHaveBeenCalled();
+  });
+
   it("refuses a reverted deposit", async () => {
     chain.waitForTransactionReceipt.mockResolvedValue({ status: "reverted" });
     await expect(giftTransactions.deposit(giftId, transfer, vi.fn())).rejects.toThrow("reverted");
@@ -51,5 +78,15 @@ describe("Sepolia smart account Giving transactions", () => {
     chain.readContract.mockResolvedValue([address, address, 1n, giftId, 1n, 2]);
     await expect(giftTransactions.takeOut(giftId)).rejects.toThrow("already been received");
     expect(wallet.sendTransaction).not.toHaveBeenCalled();
+  });
+
+  it("recognizes a take-out that landed after Privy timed out", async () => {
+    chain.readContract
+      .mockResolvedValueOnce([address, address, 1n, giftId, 1n, 1])
+      .mockResolvedValueOnce([address, address, 1n, giftId, 1n, 3]);
+    wallet.sendTransaction.mockRejectedValue(new Error("api key secret-value"));
+
+    await expect(giftTransactions.takeOut(giftId)).resolves.toBeUndefined();
+    expect(wallet.sendTransaction).toHaveBeenCalledTimes(1);
   });
 });

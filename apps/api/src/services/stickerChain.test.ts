@@ -15,6 +15,8 @@ const rpc = vi.hoisted(() => ({
   readContract: vi.fn(),
   simulateContract: vi.fn(),
   getContractEvents: vi.fn(),
+  getBlockNumber: vi.fn(),
+  getCode: vi.fn(),
   waitForTransactionReceipt: vi.fn(),
   writeContract: vi.fn(),
 }));
@@ -104,6 +106,8 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(captureDiagnostic);
   rpc.writeContract.mockResolvedValue(TX);
   rpc.waitForTransactionReceipt.mockResolvedValue({ status: "success" });
+  rpc.getBlockNumber.mockResolvedValue(31n);
+  rpc.getCode.mockResolvedValue("0x1234");
 });
 
 afterEach(() => vi.restoreAllMocks());
@@ -122,8 +126,9 @@ describe("the RPC transport", () => {
 describe("Sepolia sticker adapter", () => {
   it("mints to the artist's smart wallet and recovers an existing mint without sending another", async () => {
     let minted = false;
-    rpc.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
-      if (functionName === "tokenIdForSticker") return minted ? 1n : 0n;
+    rpc.readContract.mockImplementation(async ({ functionName, blockNumber }) => {
+      if (functionName === "tokenIdForSticker")
+        return blockNumber === undefined ? (minted ? 1n : 0n) : blockNumber >= 20n ? 1n : 0n;
       if (functionName === "artistOf") return ALICE;
       if (functionName === "contentHashOf") return CONTENT;
       if (functionName === "tokenURI") return METADATA;
@@ -145,6 +150,9 @@ describe("Sepolia sticker adapter", () => {
 
     await expect(chain.mint(sticker)).resolves.toEqual({ tokenId: "1", txHash: TX });
     await expect(chain.mint(sticker)).resolves.toEqual({ tokenId: "1", txHash: TX });
+    expect(rpc.getContractEvents).toHaveBeenCalledWith(
+      expect.objectContaining({ eventName: "StickerSealed", fromBlock: 20n, toBlock: 20n }),
+    );
 
     expect(rpc.writeContract).toHaveBeenCalledOnce();
     expect(rpc.simulateContract).toHaveBeenCalledWith(
@@ -229,9 +237,12 @@ describe("Sepolia sticker adapter", () => {
   });
 
   it("recovers a landed claim after a receipt timeout, but rejects a claim won by another wallet", async () => {
-    rpc.readContract.mockResolvedValue(escrowGift(1));
+    let claimed = false;
+    rpc.readContract.mockImplementation(async ({ blockNumber }) =>
+      escrowGift(blockNumber === undefined ? (claimed ? 2 : 1) : blockNumber >= 24n ? 2 : 1),
+    );
     rpc.waitForTransactionReceipt.mockImplementation(async () => {
-      rpc.readContract.mockResolvedValue(escrowGift(2));
+      claimed = true;
       throw new Error("Receipt timeout");
     });
     rpc.getContractEvents.mockResolvedValue([{ transactionHash: TX }]);
@@ -241,6 +252,9 @@ describe("Sepolia sticker adapter", () => {
       claimed: true,
       txHash: TX,
     });
+    expect(rpc.getContractEvents).toHaveBeenCalledWith(
+      expect.objectContaining({ eventName: "GiftClaimed", fromBlock: 24n, toBlock: 24n }),
+    );
     rpc.readContract.mockResolvedValue(escrowGift(2, ALICE));
     await expect(chain.giftChain.claimGift(claimInput)).resolves.toEqual({ claimed: false });
     expect(rpc.writeContract).toHaveBeenCalledOnce();
