@@ -11,7 +11,7 @@ import { queueNaming } from "../ens/naming.ts";
 import type { AppDeps } from "../deps.ts";
 import { diagnosticStep, failureCause, logFailure, logInfo } from "../diagnostics.ts";
 import { keccak256 } from "../keccak256.ts";
-import { stickerImagesSchema, type StickerImages } from "../shapes.ts";
+import { stickerPngsSchema, type StickerPngKind } from "../shapes.ts";
 import {
   loadStickers,
   stickerPlacementSchema,
@@ -35,7 +35,7 @@ export type SealRefusal =
   | { status: 409; error: "ticket_already_used"; detail: string }
   | { status: 503; error: "mint_failed"; detail: string };
 
-type StickerPngs = Record<keyof StickerImages, Uint8Array>;
+type StickerPngs = Record<StickerPngKind, Uint8Array>;
 
 const invalid = (detail: string): SealRefusal => ({
   status: 400,
@@ -64,7 +64,7 @@ function pngSize(bytes: Uint8Array): { width: number; height: number } | null {
 
 /** Each image must be a PNG, and the sticker PNG and its mask the sticker's size. */
 function checkImages(pngs: StickerPngs, { width, height }: SealForm): SealRefusal | null {
-  for (const part of stickerImagesSchema.keyof().options) {
+  for (const part of stickerPngsSchema.keyof().options) {
     const size = pngSize(pngs[part]);
     if (!size) return invalid(`${part}: not a PNG`);
     // spec and rim are band-sized and flat is sheet-sized, so only these two match the sticker.

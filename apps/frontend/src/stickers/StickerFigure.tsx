@@ -67,7 +67,7 @@ export function StickerFigure({
   ].filter(Boolean);
   return (
     <span ref={ref} className={classes.join(" ")} style={style}>
-      {mask && foil && <StickerFoil size={foil} no={no} turn={turn} />}
+      {mask && foil && <StickerFoil size={foil} no={no} turn={turn} mask={urls.foil} />}
       {mask && <span className="sticker-figure__spot" aria-hidden="true" />}
       <img
         ref={

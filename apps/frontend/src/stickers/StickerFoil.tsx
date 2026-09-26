@@ -11,15 +11,18 @@ interface Props {
   no: number;
   /** Degrees the sticker is turned on screen, which the glint undoes so the light falls alike on all. */
   turn?: number;
+  /** The band's mask, made on the server; without one, the band is dilated from `--m` here. */
+  mask?: string;
 }
 
 /**
- * Holo foil round a sticker someone other than the board's owner drew: its silhouette, which the
- * container sets as `--m`, dilated into a band just past the white edge, with bands of light
- * flowing along it and a glint where the app's one light falls, which holds where the last tilt left
- * it. It goes under the image.
+ * Holo foil round a sticker someone other than the board's owner drew: its silhouette grown into a
+ * band just past the white edge, with bands of light flowing along it and a glint where the app's
+ * one light falls, which holds where the last tilt left it. The band's shape is the server's mask
+ * when the sticker has one, else the silhouette the container sets as `--m`, dilated in CSS. It goes
+ * under the image.
  */
-export function StickerFoil({ size, no, turn = 0 }: Props) {
+export function StickerFoil({ size, no, turn = 0, mask }: Props) {
   const foil = useRef<HTMLSpanElement>(null);
   // Shown after the light last moved, it starts where the light is, like every foil already shown.
   useLayoutEffect(() => {
@@ -28,8 +31,12 @@ export function StickerFoil({ size, no, turn = 0 }: Props) {
   return (
     <span
       ref={foil}
-      className={`sticker-foil sticker-foil--${size}`}
-      style={{ "--foil-i": no, "--foil-turn": turn }}
+      className={`sticker-foil sticker-foil--${size}${mask ? " sticker-foil--baked" : ""}`}
+      style={{
+        "--foil-i": no,
+        "--foil-turn": turn,
+        ...(mask && { "--foil-mask": `url("${mask}")` }),
+      }}
       aria-hidden="true"
     >
       <span className="sticker-foil__band">

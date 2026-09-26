@@ -1,7 +1,13 @@
 import type { Db } from "@drawing-app/db";
 import type { LocalAccount } from "viem";
 import { z } from "zod";
-import type { EscrowStatus, EscrowTransfer, StickerImages, TicketShop } from "./shapes.ts";
+import type {
+  EscrowStatus,
+  EscrowTransfer,
+  StickerImages,
+  StickerPngKind,
+  TicketShop,
+} from "./shapes.ts";
 
 /** Everything the routes reach beyond the request. server.ts builds the real ones; tests pass fakes. */
 export interface AppDeps {
@@ -56,8 +62,11 @@ export interface LineVerifier {
 }
 
 export interface ImageStore {
-  /** Saves a sticker's five PNGs under the content hash of its sticker PNG, keeping any already there. */
-  save: (contentHash: string, pngs: Record<keyof StickerImages, Uint8Array>) => Promise<void>;
+  /**
+   * Saves a sticker's five PNGs under the content hash of its sticker PNG, and the WebP files made
+   * from them, keeping any already there.
+   */
+  save: (contentHash: string, pngs: Record<StickerPngKind, Uint8Array>) => Promise<void>;
   /** Where the CDN serves them. */
   urls: (contentHash: string) => StickerImages;
 }

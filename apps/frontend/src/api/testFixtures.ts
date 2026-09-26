@@ -40,14 +40,18 @@ export const markupLikePerson: Person = {
 
 const ART_PX = 224;
 
-/** Every image of a test sticker, at one URL. */
-const imagesOf = (url: string): Sticker["images"] => ({
-  png: url,
-  mask: url,
-  spec: url,
-  rim: url,
-  flat: url,
-});
+/** Every PNG of a test sticker at one URL, and every WebP file at another. */
+const imagesOf = (url: string): Sticker["images"] => {
+  const webp = url.replace(/\.png$/, ".webp");
+  return {
+    png: url,
+    mask: url,
+    spec: url,
+    rim: url,
+    flat: url,
+    webp: { sticker: webp, mask: webp, spec: webp, rim: webp, foil: webp },
+  };
+};
 let made = 0;
 
 export function sticker(overrides: Partial<Sticker> = {}): Sticker {

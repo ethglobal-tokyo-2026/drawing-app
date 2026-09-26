@@ -43,7 +43,7 @@ export const toPerson = (p: Person): PersonView => ({
   ...(p.ensName && { ensName: p.ensName }),
 });
 
-/** An empty image URL is an image the sticker doesn't have. */
+/** Shown from its WebP copies, a fraction of its PNGs' bytes. An empty URL is an image it doesn't have. */
 export const toSticker = (s: Sticker): StickerView => ({
   id: s.id,
   no: s.number,
@@ -53,10 +53,11 @@ export const toSticker = (s: Sticker): StickerView => ({
   height: s.height,
   outline: s.outline,
   urls: {
-    png: s.images.png,
-    ...(s.images.mask && { mask: s.images.mask }),
-    ...(s.images.spec && { spec: s.images.spec }),
-    ...(s.images.rim && { rim: s.images.rim }),
+    png: s.images.webp.sticker,
+    ...(s.images.webp.mask && { mask: s.images.webp.mask }),
+    ...(s.images.webp.spec && { spec: s.images.webp.spec }),
+    ...(s.images.webp.rim && { rim: s.images.webp.rim }),
+    ...(s.images.webp.foil && { foil: s.images.webp.foil }),
   },
   sealedAt: toMs(s.sealedAt),
   ...(s.ensName && { ensName: s.ensName }),

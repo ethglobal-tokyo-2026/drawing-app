@@ -30,7 +30,7 @@ import { devIdToken } from "../services/devSignIn.ts";
 import { createDiskImageStore } from "../services/imageStore.ts";
 import { createPrivySmartWallets } from "../services/privySmartWallets.ts";
 import { createStickerChain } from "../services/stickerChain.ts";
-import { meSchema, stickerImagesSchema } from "../shapes.ts";
+import { meSchema, stickerPngsSchema } from "../shapes.ts";
 import { sealResponseSchema } from "../stickers/seal.ts";
 import { pngFile, sealFormData, sealParts } from "../stickers/testPngs.ts";
 import { createTestApp } from "../testing/createTestApp.ts";
@@ -140,7 +140,7 @@ describe("Sealing through the REST API and NFT contract", () => {
               width: "1",
               height: "1",
               ...Object.fromEntries(
-                stickerImagesSchema.keyof().options.map((kind) => [kind, pngFile(png, kind)]),
+                stickerPngsSchema.keyof().options.map((kind) => [kind, pngFile(png, kind)]),
               ),
             }),
           ),
@@ -187,10 +187,16 @@ describe("Sealing through the REST API and NFT contract", () => {
       expect(JSON.parse(await readFile(join(imageDir, `${sticker.id}.json`), "utf8"))).toEqual(
         metadata,
       );
-      for (const image of Object.values(sticker.images)) {
+      const { webp, ...pngs } = sticker.images;
+      for (const image of Object.values(pngs)) {
         const imageResponse = await app.request(image);
         expect(imageResponse.status).toBe(200);
         expect(new Uint8Array(await imageResponse.arrayBuffer())).toEqual(png);
+      }
+      for (const image of Object.values(webp)) {
+        const imageResponse = await app.request(image);
+        expect(imageResponse.status).toBe(200);
+        expect(imageResponse.headers.get("content-type")).toBe("image/webp");
       }
 
       // Model a server restart after the chain receipt but before its database update.
