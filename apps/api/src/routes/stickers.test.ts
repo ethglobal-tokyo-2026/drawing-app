@@ -112,6 +112,25 @@ describe("POST /api/stickers", () => {
     expect(row?.metadataUri).toBe(new URL(`${sticker.id}.json`, sticker.images.png).href);
   });
 
+  it("seals an NSFW sticker for an adult, and refuses anyone else before storing a file", async () => {
+    const adultId = insertUser(test.db, { ageVerifiedAt: test.clock.now() });
+    expect((await seal(adultId, { nsfw: "true" })).sticker).toMatchObject({
+      nsfw: true,
+      artist: { ageStatus: "adult" },
+    });
+    expect((await seal(adultId)).sticker.nsfw).toBe(false);
+
+    const unverifiedId = insertUser(test.db);
+    const ticketUseId = spendTicket(unverifiedId);
+    const png = testPng(STICKER_SIZE.width, STICKER_SIZE.height, "nsfw");
+    const parts = sealParts(ticketUseId, { nsfw: "true", png: pngFile(png, "png") });
+    expect(await refusal(await postSeal(unverifiedId, sealFormData(parts)))).toMatchObject({
+      status: 403,
+      error: "adults_only",
+    });
+    expect(test.images.saved.has(keccak256(png))).toBe(false);
+  });
+
   it("numbers seals across everyone, one after another", async () => {
     const first = await seal(insertUser(test.db));
     const second = await seal(insertUser(test.db));

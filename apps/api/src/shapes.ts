@@ -23,6 +23,17 @@ const positiveInt = z.number().int().positive();
 const userRow = createSelectSchema(users);
 type UserRow = typeof users.$inferSelect;
 
+/**
+ * A person's Age status. Age verification is the only source, and it can prove only adults, so the
+ * server says adult or unknown; minor is for a source that can prove it.
+ */
+const ageStatusSchema = z.enum(["adult", "minor", "unknown"]);
+export type AgeStatus = z.infer<typeof ageStatusSchema>;
+
+/** Adult once age verification has proven it. */
+export const ageStatusOf = (user: Pick<UserRow, "ageVerifiedAt">): AgeStatus =>
+  user.ageVerifiedAt === null ? "unknown" : "adult";
+
 /** Anyone, as other signed-in people see them. */
 export const personSchema = userRow
   .pick({
@@ -34,6 +45,8 @@ export const personSchema = userRow
   .extend({
     /** <label>.croquis.eth, which resolves from the moment they have a label. */
     ensName: z.string().nullable(),
+    /** Only an adult marks, sees plainly or receives NSFW stickers. */
+    ageStatus: ageStatusSchema,
   });
 export type Person = z.infer<typeof personSchema>;
 
@@ -44,12 +57,17 @@ export const toPerson = ({
   lineDisplayName,
   linePictureUrl,
   ensLabel,
-}: Pick<UserRow, "id" | "handle" | "lineDisplayName" | "linePictureUrl" | "ensLabel">): Person => ({
+  ageVerifiedAt,
+}: Pick<
+  UserRow,
+  "id" | "handle" | "lineDisplayName" | "linePictureUrl" | "ensLabel" | "ageVerifiedAt"
+>): Person => ({
   id,
   handle,
   lineDisplayName,
   linePictureUrl,
   ensName: ensLabel === null ? null : personEnsName(ensLabel),
+  ageStatus: ageStatusOf({ ageVerifiedAt }),
 });
 
 /** You. */

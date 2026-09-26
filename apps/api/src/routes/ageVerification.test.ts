@@ -88,9 +88,10 @@ describe("sending the proof", () => {
   it("marks you verified once World checks it, with the proof sent to World as the app gave it", async () => {
     const { test, worldId, signIn, sendProof } = await setUp();
     const headers = await signIn();
-    expect((await meIn(await sendProof(headers))).ageVerifiedAt).toBe(
-      test.clock.now().toISOString(),
-    );
+    expect(await meIn(await sendProof(headers))).toMatchObject({
+      ageVerifiedAt: test.clock.now().toISOString(),
+      ageStatus: "adult",
+    });
     expect(worldId?.proofs).toEqual([ageProof()]);
   });
 

@@ -99,6 +99,7 @@ export function sealUpload(ticketUseId: number) {
     rim: pngFile(images.rim, "rim"),
     flat: pngFile(images.flat, "flat"),
     timelapse: new File([testTimelapse()], "timelapse.json.gz", { type: "application/gzip" }),
+    nsfw: "false",
   } satisfies z.input<typeof sealForm>;
 }
 
