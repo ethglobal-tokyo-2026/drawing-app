@@ -2,7 +2,7 @@ import { gifts, stickerPlacements, stickers, users, type Db } from "@drawing-app
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import type { ImageStore } from "../deps.ts";
-import { personSchema, toPerson } from "../shapes.ts";
+import { isoTimeSchema, personSchema, toIsoTime, toPerson } from "../shapes.ts";
 import {
   giftSchema,
   placementSchema,
@@ -25,6 +25,8 @@ export const boardStickerSchema = stickerPlacementSchema.extend({
   sticker: stickerSchema,
   /** False: given away; a GivenStickerSilhouette, and an empty spot in the sticker tray. */
   held: z.boolean(),
+  /** Set when `held` is false: the silhouette's "→ @bob". */
+  givenTo: z.object({ receiver: personSchema, receivedAt: isoTimeSchema }).nullable(),
   openGift: z.object({ id: giftSchema.shape.id, status: openGiftStatusSchema }).nullable(),
 });
 export type BoardSticker = z.infer<typeof boardStickerSchema>;
@@ -62,6 +64,32 @@ function openGiftsOf(db: Db, ownerId: string) {
   return open;
 }
 
+/** Who received each of `stickerIds` from the owner, the last time it left them. */
+function givenToOf(db: Db, ownerId: string, stickerIds: string[]) {
+  const givenTo = new Map<string, BoardSticker["givenTo"]>();
+  if (stickerIds.length === 0) return givenTo;
+  const rows = db
+    .select({ stickerId: gifts.stickerId, receivedAt: gifts.receivedAt, receiver: users })
+    .from(gifts)
+    .innerJoin(users, eq(users.id, gifts.receiverId))
+    .where(
+      and(
+        eq(gifts.giverId, ownerId),
+        eq(gifts.status, "received"),
+        inArray(gifts.stickerId, stickerIds),
+      ),
+    )
+    .orderBy(asc(gifts.receivedAt))
+    .all();
+  // Oldest first, so a sticker given more than once keeps its latest receiver.
+  for (const { stickerId, receivedAt, receiver } of rows) {
+    if (receivedAt) {
+      givenTo.set(stickerId, { receiver: toPerson(receiver), receivedAt: toIsoTime(receivedAt) });
+    }
+  }
+  return givenTo;
+}
+
 /**
  * A Sticker Board in sticker tray order. Your own lists every sticker that reached you, with NEW and
  * your open gifts; anyone else's lists only the stickers on it, since the bag and NEW are the owner's.
@@ -87,15 +115,23 @@ export function loadStickerBoard(
     .orderBy(asc(stickerPlacements.createdAt), asc(stickerPlacements.stickerId))
     .all();
   const openGifts = own ? openGiftsOf(db, owner.id) : new Map<string, BoardSticker["openGift"]>();
+  const givenAway = rows.filter(({ sticker }) => sticker.ownerId !== owner.id);
+  const givenTo = givenToOf(
+    db,
+    owner.id,
+    givenAway.map(({ sticker }) => sticker.id),
+  );
   return {
     owner: toPerson(owner),
     boardStickers: rows.map(({ placement, sticker, artist }) => {
       const stickerPlacement = toStickerPlacement(placement);
+      const held = sticker.ownerId === owner.id;
       return {
         ...stickerPlacement,
         seenAt: own ? stickerPlacement.seenAt : null,
         sticker: toSticker(sticker, artist, urls),
-        held: sticker.ownerId === owner.id,
+        held,
+        givenTo: held ? null : (givenTo.get(sticker.id) ?? null),
         openGift: openGifts.get(sticker.id) ?? null,
       };
     }),

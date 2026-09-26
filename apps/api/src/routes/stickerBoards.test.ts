@@ -89,8 +89,10 @@ const placementOf = (userId: string, stickerId: string) =>
 const seal = (artistId: string) => insertSealedSticker(test.db, artistId);
 
 /** `giverId` gives `stickerId` to `receiverId`: packed, then received. */
-const give = (stickerId: string, giverId: string, receiverId: string) =>
-  receiveGift(test.db, packGift(test.db, stickerId, giverId), receiverId);
+const give = (stickerId: string, giverId: string, receiverId: string, receivedAt?: Date) =>
+  receiveGift(test.db, packGift(test.db, stickerId, giverId), receiverId, receivedAt);
+
+const minuteAfter = (at: Date) => new Date(at.getTime() + MINUTE_MS);
 
 /** `giverId` gives `stickerId` to `receiverId`, who thanks them with `combo`. */
 const giveAndThank = (
@@ -176,7 +178,8 @@ describe("GET /api/sticker-boards/:userId", () => {
         .where(placementOf(friend, stickerId))
         .run();
     }
-    give(givenAway, friend, insertUser(test.db));
+    const receiver = insertUser(test.db);
+    give(givenAway, friend, receiver);
 
     const board = await boardOf(me, friend);
     expect(board.owner.id).toBe(friend);
@@ -187,6 +190,35 @@ describe("GET /api/sticker-boards/:userId", () => {
     const stickers = byStickerId(board.boardStickers);
     expect(stickers.get(onBoard)).toMatchObject({ held: true, openGift: null, seenAt: null });
     expect(stickers.get(givenAway)).toMatchObject({ held: false, openGift: null, seenAt: null });
+    expect(stickers.get(givenAway)?.givenTo?.receiver.id).toBe(receiver);
+  });
+
+  it("names who received a sticker given away, the last time it left the board's owner", async () => {
+    const me = insertUser(test.db);
+    const friend = insertUser(test.db);
+    const other = insertUser(test.db);
+    const cameBack = seal(me);
+    give(cameBack, me, friend);
+    give(cameBack, friend, me);
+    const givenAgain = seal(me);
+    const firstGivenAt = FIRST_ARRIVAL;
+    const backAt = minuteAfter(firstGivenAt);
+    const givenAgainAt = minuteAfter(backAt);
+    give(givenAgain, me, friend, firstGivenAt);
+    give(givenAgain, friend, me, backAt);
+    give(givenAgain, me, other, givenAgainAt);
+
+    const mine = byStickerId((await boardOf(me, "me")).boardStickers);
+    expect(mine.get(cameBack)).toMatchObject({ held: true, givenTo: null });
+    expect(mine.get(givenAgain)?.givenTo).toMatchObject({
+      receiver: { id: other },
+      receivedAt: givenAgainAt.toISOString(),
+    });
+    const friends = byStickerId((await boardOf(friend, "me")).boardStickers);
+    expect(friends.get(givenAgain)?.givenTo).toMatchObject({
+      receiver: { id: me },
+      receivedAt: backAt.toISOString(),
+    });
   });
 
   it("refuses a person who doesn't exist, for their board and their stats", async () => {

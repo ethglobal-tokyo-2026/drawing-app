@@ -1,11 +1,12 @@
 import { MAX_TIME_USED_S, stickers, stickerTimelapses, ticketUses } from "@drawing-app/db";
-import { insertUser } from "@drawing-app/db/testing";
+import { insertUser, packGift } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { errorBodySchema } from "../errors.ts";
 import { keccak256 } from "../keccak256.ts";
 import { sealResponseSchema } from "../stickers/seal.ts";
 import { MAX_SEAL_BYTES } from "../stickers/sealForm.ts";
+import { stickerDetailSchema } from "../stickers/stickerDetail.ts";
 import {
   pngFile,
   sealFormData,
@@ -18,7 +19,9 @@ import {
 } from "../stickers/testPngs.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { fakeMint } from "../testing/fakes.ts";
+import { insertGratitude, insertSealedSticker, receiveGift } from "../testing/rows.ts";
 
+const HOUR_MS = 60 * 60 * 1000;
 /** The ticket day the tests' tickets are spent on. */
 const TICKET_DAY = "2026-09-26";
 /** A ticket use nobody spent. */
@@ -207,12 +210,80 @@ describe("POST /api/stickers", () => {
     });
     expect(allStickers()).toEqual([]);
   });
+});
 
-  it("needs a session", async () => {
-    const response = await test.app.request("/api/stickers", {
+const getSticker = async (viewerId: string, stickerId: string) =>
+  test.app.request(`/api/stickers/${stickerId}`, { headers: await test.signInAs(viewerId) });
+
+describe("GET /api/stickers/:stickerId", () => {
+  it("shows who holds it now, its Original Artist, and its received gifts newest first", async () => {
+    const artistId = insertUser(test.db);
+    const firstReceiverId = insertUser(test.db);
+    const ownerId = insertUser(test.db);
+    const stickerId = insertSealedSticker(test.db, artistId);
+    const later = new Date();
+    const earlier = new Date(later.getTime() - HOUR_MS);
+    const first = receiveGift(
+      test.db,
+      packGift(test.db, stickerId, artistId),
+      firstReceiverId,
+      earlier,
+    );
+    const second = receiveGift(
+      test.db,
+      packGift(test.db, stickerId, firstReceiverId),
+      ownerId,
+      later,
+    );
+    const thanks = insertGratitude(test.db, second.id);
+    // Received, but the escrow returned it when the claim didn't land before the expiry.
+    packGift(test.db, stickerId, ownerId, {
+      status: "returned",
+      escrowStatus: "expired_returned",
+      receiverId: insertUser(test.db),
+      receivedAt: later,
+      returnedAt: later,
+    });
+
+    const response = await getSticker(insertUser(test.db), stickerId);
+    expect(response.status).toBe(200);
+    const { sticker, owner, transferTrail } = stickerDetailSchema.parse(await response.json());
+    expect(sticker).toMatchObject({ id: stickerId, artist: { id: artistId } });
+    expect(owner.id).toBe(ownerId);
+    expect(transferTrail).toMatchObject([
+      {
+        giftId: second.id,
+        giver: { id: firstReceiverId },
+        receiver: { id: ownerId },
+        receivedAt: later.toISOString(),
+        gratitude: { giftId: second.id, recordedAt: thanks.createdAt.toISOString() },
+      },
+      {
+        giftId: first.id,
+        giver: { id: artistId },
+        receiver: { id: firstReceiverId },
+        receivedAt: earlier.toISOString(),
+        gratitude: null,
+      },
+    ]);
+  });
+
+  it("refuses an unknown sticker with sticker_not_found", async () => {
+    const response = await getSticker(insertUser(test.db), "no-such-sticker");
+    expect(await refusal(response)).toMatchObject({ status: 404, error: "sticker_not_found" });
+  });
+});
+
+describe("the sticker routes", () => {
+  it("need a session", async () => {
+    const sealing = await test.app.request("/api/stickers", {
       method: "POST",
       body: sealFormData(sealParts(UNKNOWN_TICKET_USE_ID)),
     });
-    expect(await refusal(response)).toEqual({ status: 401, error: "signed_out" });
+    const stickerId = insertSealedSticker(test.db, insertUser(test.db));
+    const reading = await test.app.request(`/api/stickers/${stickerId}`);
+    for (const response of [sealing, reading]) {
+      expect(await refusal(response)).toEqual({ status: 401, error: "signed_out" });
+    }
   });
 });
