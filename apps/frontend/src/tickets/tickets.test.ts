@@ -1,54 +1,82 @@
 import { describe, expect, it } from "vitest";
+import { FREE_TICKETS_PER_DAY as FREE, REFILL_HOUR } from "./config";
 import {
   addPaid,
-  consume,
   current,
+  dailyTickets,
+  linkSticker,
   nextRefill,
+  spend,
   ticketDay,
   ticketsLeft,
+  type SpentTicket,
   type TicketState,
 } from "./tickets";
 
-// Local-time dates; REFILL_HOUR is 4.
+// Local-time dates.
 const at = (d: number, h: number, m = 0) => new Date(2026, 8, d, h, m);
 
 /** Spends a ticket that the test expects to be there. */
-const spend = (s: TicketState): TicketState => {
-  const next = consume(s);
+const spendOne = (s: TicketState): { state: TicketState; spent: SpentTicket } => {
+  const next = spend(s);
   if (!next) throw new Error("expected a ticket to spend");
   return next;
 };
 
+const spendMany = (s: TicketState, n: number): TicketState => {
+  for (let i = 0; i < n; i++) s = spendOne(s).state;
+  return s;
+};
+
 describe("tickets", () => {
-  it("starts each ticket day at 4:00, not midnight", () => {
-    expect(ticketDay(at(24, 3, 59))).toBe("2026-09-23");
-    expect(ticketDay(at(24, 4, 0))).toBe("2026-09-24");
-  });
-
-  it("gives 3 free tickets a day, then runs out", () => {
-    let s = current(null, at(24, 10));
-    for (let i = 0; i < 3; i++) s = spend(s);
-    expect(ticketsLeft(s)).toBe(0);
-    expect(consume(s)).toBeNull();
-  });
-
-  it("refills free tickets after 4:00 but keeps bought ones", () => {
-    let s = current(null, at(24, 22));
-    for (let i = 0; i < 3; i++) s = spend(s);
-    s = addPaid(s, 3);
-    s = spend(s); // uses a paid one: 2 paid left
-    expect(ticketsLeft(current(s, at(25, 3)))).toBe(2);
-    expect(ticketsLeft(current(s, at(25, 4)))).toBe(5);
-  });
-
-  it("uses free tickets before bought ones", () => {
-    const s = spend(addPaid(current(null, at(24, 10)), 3));
-    expect(s.usedFree).toBe(1);
-    expect(s.paid).toBe(3);
+  it("starts each ticket day at the refill hour, not midnight", () => {
+    expect(ticketDay(at(24, REFILL_HOUR - 1, 59))).toBe("2026-09-23");
+    expect(ticketDay(at(24, REFILL_HOUR))).toBe("2026-09-24");
   });
 
   it("finds the next refill time", () => {
-    expect(nextRefill(at(24, 22)).getTime()).toBe(at(25, 4).getTime());
-    expect(nextRefill(at(24, 2)).getTime()).toBe(at(24, 4).getTime());
+    expect(nextRefill(at(24, 22))).toEqual(at(25, REFILL_HOUR));
+    expect(nextRefill(at(24, REFILL_HOUR - 1))).toEqual(at(24, REFILL_HOUR));
+    expect(nextRefill(at(24, REFILL_HOUR))).toEqual(at(25, REFILL_HOUR));
+  });
+
+  it("spends free tickets before bought ones, then runs out", () => {
+    let s = spendMany(addPaid(current(null, at(24, 10)), 1), FREE);
+    expect(s.paid).toBe(1);
+    expect(ticketsLeft(s)).toBe(1);
+    s = spendOne(s).state;
+    expect(ticketsLeft(s)).toBe(0);
+    expect(spend(s)).toBeNull();
+  });
+
+  it("refills free tickets at the refill hour but keeps bought ones", () => {
+    let s = spendMany(addPaid(current(null, at(24, 22)), 3), FREE + 1);
+    expect(ticketsLeft(current(s, at(25, REFILL_HOUR - 1)))).toBe(2);
+    s = current(s, at(25, REFILL_HOUR));
+    expect(ticketsLeft(s)).toBe(FREE + 2);
+    expect(dailyTickets(s).some((t) => t.used)).toBe(false);
+  });
+
+  it("links a spent ticket to the sticker it became; an abandoned drawing keeps none", () => {
+    const abandoned = spendOne(current(null, at(24, 10)));
+    const sealed = spendOne(abandoned.state);
+    const [first, second, ...rest] = dailyTickets(
+      linkSticker(sealed.state, sealed.spent, "sunset"),
+    );
+    expect(first).toEqual({ used: true });
+    expect(second).toEqual({ used: true, stickerId: "sunset" });
+    expect(rest.some((t) => t.used)).toBe(false);
+  });
+
+  it("doesn't link a ticket spent before the refill to the new day's tickets", () => {
+    const { state, spent } = spendOne(current(null, at(24, REFILL_HOUR - 1, 58)));
+    const nextDay = spendOne(current(state, at(24, REFILL_HOUR, 2))).state;
+    expect(linkSticker(nextDay, spent, "late")).toEqual(nextDay);
+  });
+
+  it("shows only the day's free tickets, even after bought ones are used", () => {
+    const s = spendMany(addPaid(current(null, at(24, 10)), 2), FREE + 2);
+    expect(dailyTickets(s)).toHaveLength(FREE);
+    expect(dailyTickets(s).every((t) => t.used)).toBe(true);
   });
 });

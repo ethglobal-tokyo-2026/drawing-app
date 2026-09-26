@@ -5,10 +5,13 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { SmallBrushIcon } from "../icons/SmallBrushIcon";
+import { useStickerGifts } from "../giving/useStickerGifts";
+import { DrawIcon } from "../icons/DrawIcon";
 import { useIdentity } from "../identity/useIdentity";
 import { formatClock, formatNo } from "../stickers/format";
 import { listStickers, updatePlacement, type Placement } from "../stickers/stickerStorage";
+import { Key } from "../ui/Key";
+import { PhotoSticker } from "../ui/PhotoSticker";
 import type { BoardSticker } from "./boardSticker";
 import { autoPlace, clamp, MAX_SCALE, MIN_SCALE } from "./placement";
 import { ProfileCard } from "./ProfileCard";
@@ -53,6 +56,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const [open, setOpen] = useState<BoardSticker | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const me = useIdentity();
+  const gifts = useStickerGifts();
   const gesture = useRef<Gesture | null>(null);
   const stickersRef = useRef<BoardSticker[]>([]);
   useLayoutEffect(() => {
@@ -216,17 +220,22 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     return () => board.removeEventListener("wheel", onWheel);
   }, []);
 
+  // Until the first sticker, Draw says where to start.
+  const fresh = stickers?.length === 0;
+  // A sticker given away leaves the board.
+  const onBoard = stickers?.filter((s) => gifts.get(s.id)?.state !== "sent");
+
   return (
     <div className="board">
       <button
-        className={`name-tag ${profileOpen ? "open" : ""}`}
+        className="board-who"
         onClick={() => setProfileOpen((v) => !v)}
         aria-expanded={profileOpen}
-        aria-label="Open your profile"
+        aria-haspopup="dialog"
+        aria-label={`${me.displayName}: open your profile`}
       >
-        <span className="name-label">おなまえ</span>
-        <span className="name-value">@{me.handle}</span>
-        <span className="name-line" />
+        <PhotoSticker src={me.pictureUrl} name={me.displayName} size={42} />
+        <span className="board-who-name">{me.displayName}</span>
       </button>
 
       {profileOpen && (
@@ -252,33 +261,15 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         onPointerUp={onPointerEnd}
         onPointerCancel={onPointerEnd}
       >
-        <span className="corner tl" />
-        <span className="corner tr" />
-        <span className="corner bl" />
-        <span className="corner br" />
-
-        {stickers?.length === 0 && (
-          <div className="board-empty">
-            <button className="empty-slot" onClick={onDraw}>
-              <span className="empty-icon">
-                <SmallBrushIcon />
-              </span>
-              <span className="empty-title">
-                Draw your
-                <br />
-                first sticker
-              </span>
-              <span className="empty-sub">
-                Stickers you make
-                <br />
-                or receive land here.
-              </span>
-            </button>
+        {fresh && (
+          <div className="board-blank">
+            <span className="board-blank-cut" aria-hidden />
+            <span className="board-blank-note">Stickers you make or receive land here.</span>
           </div>
         )}
 
         {size.w > 0 &&
-          stickers?.map((s) => {
+          onBoard?.map((s) => {
             const p = s.placement;
             return (
               <div
@@ -302,9 +293,19 @@ export function StickerBoard({ freshId, onDraw }: Props) {
               </div>
             );
           })}
-
-        {!!stickers?.length && <div className="board-hint">Drag to move · pinch to resize</div>}
       </div>
+
+      {/* The slot carries the first-sticker hop and ring, so the key keeps its own lip and press. */}
+      <span className={`board-draw ${fresh ? "is-fresh" : ""}`}>
+        <Key size="compact" icon={<DrawIcon />} onClick={onDraw} aria-label="Draw a new sticker">
+          Draw
+        </Key>
+      </span>
+      {fresh && (
+        <span className="board-nudge" aria-hidden>
+          Make your first sticker
+        </span>
+      )}
 
       {open && (
         <StickerDetail

@@ -1,159 +1,131 @@
-/* ---------- Tickets ---------- */
-
+/* The sealed card's ticket line; it goes when that card shows TicketStubs. */
 .tickets-left {
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
 }
 
-.ticket-row {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  padding: 14px 8px 6px;
-}
-
-.ticket {
-  width: 78px;
-  height: 48px;
-}
-
-.ticket path {
-  fill: #f7f7f9;
-  stroke: #c9c8d0;
-  stroke-width: 2;
-}
-
-.ticket line {
-  stroke: #c9c8d0;
-  stroke-width: 2;
-  stroke-dasharray: 3 4;
-}
-
-.ticket.filled path {
-  fill: var(--yellow);
-  stroke: var(--yellow-deep);
-}
-
-.ticket.filled line {
-  stroke: #b8962a;
-}
-
-.ticket.filled {
-  animation: stick 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) backwards;
-}
-
-.ticket.filled:nth-child(2) {
-  animation-delay: 0.1s;
-}
-
-.ticket.filled:nth-child(3) {
-  animation-delay: 0.2s;
-}
-
-.refill-badge {
+/* Out of tickets (OutOfTickets.tsx): a liner card risen over the canvas, behind an Ink scrim. */
+.out-of-tickets {
   position: absolute;
-  top: 0;
-  right: 2px;
-  display: grid;
-  place-items: center;
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  background: var(--yellow);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
-  font-family: "Archivo Black", "Archivo", sans-serif;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  padding: 14px;
+}
+
+.out-of-tickets__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 24, 36, 0.46);
+  animation: out-of-tickets-fade 320ms var(--ease-out) both;
+}
+
+.out-of-tickets__card {
+  --card-pad: 18px;
+  position: relative;
+  width: 100%;
+  padding: 6px var(--card-pad) 18px;
+  background: var(--liner);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.7),
+    0 1px 0 rgba(28, 24, 36, 0.06),
+    2px 10px 30px rgba(28, 24, 36, 0.28),
+    1px 3px 8px rgba(28, 24, 36, 0.14);
+  text-align: center;
+  animation:
+    out-of-tickets-rise 460ms var(--ease-out) both,
+    out-of-tickets-fade 320ms var(--ease-out) both;
+}
+
+/* The card holds focus only while it has no enabled control (mid-payment). */
+.out-of-tickets__card:focus {
+  outline: none;
+}
+
+.out-of-tickets__art {
+  height: 112px;
+  margin: 0 calc(-1 * var(--card-pad)) 8px;
+}
+
+.out-of-tickets__title {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.1;
+  font-weight: 800;
+  font-stretch: var(--w-title);
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.out-of-tickets__title--top {
+  margin-top: 18px;
+}
+
+/* A printed line, never the drawing clock's look: no dot, no color field, no tilt, no Dela numerals. */
+.out-of-tickets__line {
+  margin: 8px 0 0;
   font-size: 16px;
+  line-height: 1.35;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
+  text-wrap: balance;
 }
 
-.card-title {
-  margin: 6px 0 0;
-  font-family: "Archivo Black", "Archivo", sans-serif;
-  font-size: 21px;
-  text-align: center;
-}
-
-.card-sub {
-  margin: 0;
-  color: #77757f;
-  font-size: 14px;
-  line-height: 1.45;
-  text-align: center;
-}
-
-.digest {
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 12px;
-}
-
-.wallet-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  align-self: stretch;
-  padding: 4px 2px;
-}
-
-.sui-mark {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: #4da2ff;
-}
-
-.pay-rows {
-  align-self: stretch;
-  margin: 0;
-  padding: 4px 14px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-}
-
-.pay-rows div {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px 0;
-}
-
-.pay-rows div + div {
-  border-top: 1px solid #f0f0f3;
-}
-
-.pay-rows dt {
-  color: var(--muted);
-}
-
-.pay-rows dd {
-  margin: 0;
+.out-of-tickets__line strong {
   font-weight: 700;
 }
 
-.spinner {
-  width: 18px;
-  height: 18px;
-  border: 3px solid rgba(28, 27, 41, 0.25);
-  border-top-color: var(--ink);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+.out-of-tickets__quiet {
+  font-weight: 600;
+  color: var(--graphite);
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+/* The countdown wraps as a unit. */
+.out-of-tickets__countdown {
+  white-space: nowrap;
+}
+
+.out-of-tickets__note {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--graphite);
+}
+
+.out-of-tickets__card .tear-line {
+  margin-top: 16px;
+}
+
+.out-of-tickets__key {
+  width: 100%;
+}
+
+.out-of-tickets__card > .label-btn:not(.label-btn--quiet) {
+  margin-top: 10px;
+}
+
+.out-of-tickets__quiet-link {
+  margin-top: 8px;
+}
+
+@keyframes out-of-tickets-fade {
+  from {
+    opacity: 0;
   }
 }
 
-.tickets-card .card-title {
-  font-size: 19px;
-  white-space: nowrap;
+@keyframes out-of-tickets-rise {
+  from {
+    transform: translateY(56px);
+  }
 }
 
-.tickets-card .keep-btn {
-  font-size: 17px;
-  white-space: nowrap;
+@media (prefers-reduced-motion: reduce) {
+  .out-of-tickets__scrim,
+  .out-of-tickets__card {
+    animation-duration: 1ms;
+  }
 }

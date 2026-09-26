@@ -1,0 +1,21 @@
+/* ---------- Photo sticker: a LINE picture stuck on like a purikura sticker ---------- */
+
+.photo-sticker {
+  display: inline-block;
+  flex: none;
+  width: var(--size);
+  height: var(--size);
+  border: calc(var(--size) * 0.06) solid var(--canvas);
+  border-radius: 50%;
+  object-fit: cover;
+  transform: rotate(var(--tilt));
+  filter: var(--sticker-cut) var(--sticker-cast);
+}
+
+.photo-sticker-letter {
+  display: inline-grid;
+  place-items: center;
+  background: var(--liner-deep);
+  color: var(--ink);
+  font: 400 calc(var(--size) * 0.42) / 1 var(--font-puffy);
+}

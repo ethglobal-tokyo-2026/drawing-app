@@ -1,0 +1,360 @@
+/* Two materials, one press (ui/press.ts).
+   .key        the key: the screen's one primary act, a cartoon keycap. An ink outline over a deep lip;
+               it travels 4.5px of its 6px lip. No gloss, no highlight, ever.
+   .label-btn  label stock: a printed label on 3px of paper that travels 2px, with no ink outline.
+   One construction for both: the box includes the lip (a transparent bottom border), ::before is the
+   face and ::after the base (lip, outline, cast shadow). The press moves the element down and the base
+   up, so the lip compresses under the face without its outline thinning. Don't restyle ::before or
+   ::after, or add a pressed transform, anywhere else. */
+
+.key,
+.label-btn {
+  position: relative;
+  isolation: isolate;
+  appearance: none;
+  margin: 0;
+  background: none;
+  border: 0;
+  border-bottom: var(--lip) solid transparent;
+  border-radius: var(--r-box, var(--r));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  /* Enabling a sunk (disabled) button springs it up. */
+  transition: translate 360ms var(--ease-spring);
+}
+
+.key::before,
+.key::after,
+.label-btn::before,
+.label-btn::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border-radius: var(--r);
+}
+
+/* The face. */
+.key::before {
+  inset: 0;
+  z-index: -1;
+  background-color: var(--face);
+  border: var(--line) solid var(--edge);
+}
+
+/* The face, and the touch target: transparent bands reach --hit above and below, so a small label
+   still takes a 44px touch. */
+.label-btn::before {
+  inset: calc(-1 * var(--hit)) 0 calc(-1 * (var(--hit) + var(--lip)));
+  z-index: -1;
+  pointer-events: auto;
+  border: 0 solid transparent;
+  border-width: var(--hit) 0 calc(var(--hit) + var(--lip));
+  border-radius: var(--r) / calc(var(--r) + var(--hit)) calc(var(--r) + var(--hit))
+    calc(var(--r) + var(--hit) + var(--lip)) calc(var(--r) + var(--hit) + var(--lip));
+  background-color: var(--face);
+  background-clip: padding-box;
+  box-shadow: inset 0 0 0 var(--line) var(--edge);
+}
+
+/* The base. */
+.key::after,
+.label-btn::after {
+  left: 0;
+  right: 0;
+  top: var(--lip);
+  bottom: calc(-1 * var(--lip));
+  z-index: -2;
+  background: var(--deep);
+  border: var(--line) solid var(--edge);
+  box-shadow: var(--cast);
+  transition:
+    translate 360ms var(--ease-spring),
+    opacity 200ms linear;
+}
+
+.key svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+.label-btn svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+/* The key: one per screen. */
+.key {
+  --face: var(--seal);
+  --deep: var(--seal-deep);
+  --edge: var(--ink);
+  --line: 2.5px;
+  --lip: 6px;
+  --r: 16px;
+  --press-travel: 4.5px;
+  --cast: 0 1px 0 rgba(28, 24, 36, 0.1), 2px 6px 12px -3px rgba(28, 24, 36, 0.24);
+  min-height: calc(60px + var(--lip));
+  padding: 0 30px;
+  gap: 8px;
+  font: 400 20px/1 var(--font-puffy);
+  letter-spacing: 0.01em;
+  /* A drag that starts on a key tracks the finger; it never starts a page bounce. */
+  touch-action: none;
+}
+
+.key--seal {
+  --face: var(--seal);
+  --deep: var(--seal-deep);
+}
+
+.key--aqua {
+  --face: var(--aqua);
+  --deep: var(--aqua-deep);
+}
+
+.key--pink {
+  --face: var(--pink);
+  --deep: var(--pink-deep);
+}
+
+.key--grape {
+  --face: var(--grape);
+  --deep: var(--grape-deep);
+}
+
+.key--lg {
+  --r: 18px;
+  min-height: calc(68px + var(--lip));
+  padding: 0 34px;
+  font-size: 23px;
+}
+
+/* A key that floats over content (the board's Draw): same lip and travel, so it feels the same. */
+.key--compact {
+  --r: 14px;
+  min-height: calc(48px + var(--lip));
+  padding: 0 20px 0 18px;
+  font-size: 17px;
+}
+
+/* The seal check: a round arcade key. */
+.key--round {
+  --r: 50%;
+  --r-box: calc(var(--size, 96px) / 2);
+  width: var(--size, 96px);
+  height: calc(var(--size, 96px) + var(--lip));
+  min-height: 0;
+  padding: 0;
+}
+
+.key:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* Label stock. */
+.label-btn {
+  --face: var(--liner-lift);
+  --deep: var(--label-deep);
+  --edge: rgba(28, 24, 36, 0.3);
+  --line: 1px;
+  --lip: 3px;
+  --r: 8px;
+  --press-travel: 2px;
+  --hit: 0px;
+  --cast: 0 1px 0 rgba(28, 24, 36, 0.06), 1px 3px 5px -2px rgba(28, 24, 36, 0.16);
+  min-height: calc(44px + var(--lip));
+  padding: 0 16px;
+  gap: 8px;
+  font: 700 15px/1.1 var(--font-ui);
+  font-stretch: var(--w-ui);
+  letter-spacing: 0.004em;
+  /* A scroll that starts here cancels the press, as on iOS. */
+  touch-action: manipulation;
+}
+
+.label-btn--seal {
+  --face: var(--seal);
+  --deep: var(--seal-deep);
+  --edge: rgba(28, 24, 36, 0.22);
+}
+
+.label-btn--aqua {
+  --face: var(--aqua);
+  --deep: var(--aqua-deep);
+  --edge: rgba(28, 24, 36, 0.22);
+}
+
+.label-btn--pink {
+  --face: var(--pink);
+  --deep: var(--pink-deep);
+  --edge: rgba(28, 24, 36, 0.22);
+}
+
+.label-btn--grape {
+  --face: var(--grape);
+  --deep: var(--grape-deep);
+  --edge: rgba(28, 24, 36, 0.22);
+}
+
+.label-btn--tomato {
+  --face: var(--tomato);
+  --deep: var(--tomato-deep);
+  --edge: rgba(28, 24, 36, 0.22);
+}
+
+.label-btn--ink {
+  --face: var(--ink);
+  --deep: var(--ink-deep);
+  --edge: var(--ink);
+  color: var(--liner);
+}
+
+/* 35px to see, 45px to touch. */
+.label-btn--sm {
+  --hit: 5px;
+  min-height: calc(32px + var(--lip));
+  padding: 0 12px;
+  font-size: 13px;
+  gap: 6px;
+}
+
+.label-btn--block {
+  display: flex;
+  width: 100%;
+}
+
+.label-btn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.label-btn--ink:focus-visible {
+  outline-color: var(--seal);
+}
+
+/* The quiet link under a key: text on the page, with no stock, lip or travel. */
+.label-btn--quiet {
+  --lip: 0px;
+  min-height: 32px;
+  padding: 0 2px;
+  border-radius: 2px;
+  color: var(--graphite);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(110, 104, 120, 0.45);
+}
+
+.label-btn--quiet::after {
+  display: none;
+}
+
+/* No stock, only the touch: 32px of text, 46px to touch. */
+.label-btn--quiet::before {
+  inset: -7px -4px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  box-shadow: none;
+}
+
+.label-btn--quiet:active {
+  color: var(--ink);
+  text-decoration-color: var(--ink);
+}
+
+@media (hover: hover) {
+  .key:hover::before,
+  .label-btn:not(.label-btn--quiet):hover::before {
+    background-color: color-mix(in srgb, var(--face) 94%, var(--ink));
+  }
+
+  .label-btn--ink:hover::before {
+    background-color: #2c2736;
+  }
+
+  .label-btn--quiet:hover {
+    color: var(--ink);
+    text-decoration-color: var(--ink);
+  }
+}
+
+/* Label stock travels only 2px, so while it's held its face also takes a little shade. */
+.label-btn[data-press-state="down"]::before {
+  background-color: color-mix(in srgb, var(--face) 90%, var(--ink));
+}
+
+.label-btn--ink[data-press-state="down"]::before {
+  background-color: #2c2736;
+}
+
+/* Disabled: sunk flush into the page, with no lip, ink or shadow; enabling springs it up. */
+.key:disabled,
+.key[aria-disabled="true"],
+.label-btn:disabled,
+.label-btn[aria-disabled="true"] {
+  --face: var(--liner-deep);
+  --edge: rgba(110, 104, 120, 0.34);
+  cursor: not-allowed;
+  color: var(--graphite);
+  translate: 0 var(--lip);
+}
+
+.key:disabled,
+.key[aria-disabled="true"] {
+  --line: 2px;
+}
+
+.key:disabled::after,
+.key[aria-disabled="true"]::after,
+.label-btn:disabled::after,
+.label-btn[aria-disabled="true"]::after {
+  opacity: 0;
+}
+
+.label-btn--quiet:disabled,
+.label-btn--quiet[aria-disabled="true"] {
+  translate: none;
+  text-decoration-color: rgba(110, 104, 120, 0.3);
+}
+
+/* Without the press installed, :active still presses. */
+html:not([data-press-ready]) :is(.key, .label-btn:not(.label-btn--quiet)):not(:disabled):active {
+  translate: 0 var(--press-travel);
+  transition: translate 70ms var(--ease-out);
+}
+
+html:not([data-press-ready])
+  :is(.key, .label-btn:not(.label-btn--quiet)):not(:disabled):active::after {
+  translate: 0 calc(-1 * var(--press-travel));
+  transition: translate 70ms var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .key {
+    --press-travel: 2.25px;
+  }
+
+  .label-btn {
+    --press-travel: 1px;
+  }
+
+  .key,
+  .label-btn,
+  .key::after,
+  .label-btn::after {
+    transition: none;
+  }
+}

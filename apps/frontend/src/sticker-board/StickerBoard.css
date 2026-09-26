@@ -1,103 +1,78 @@
 /* ---------- Sticker board ---------- */
 
+/* Backing paper: a fine grain, and the maker print barely there. */
 .board {
   position: absolute;
   inset: 0;
   z-index: 25;
   display: flex;
   flex-direction: column;
-  padding: 12px 10px 10px;
-  background: #efeef3;
+  overflow: hidden;
+  background-color: var(--liner);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .43 0 0 0 0 .41 0 0 0 0 .47 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* The page tucks under LINE's header. */
+  box-shadow: inset 0 10px 14px -12px rgba(28, 24, 36, 0.22);
 }
 
-.name-tag {
-  position: relative;
-  z-index: 40;
-  border: 2px solid transparent;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  align-self: flex-start;
-  display: flex;
-  flex-direction: column;
-  min-width: 170px;
-  padding: 8px 16px 12px;
-  background: #fff;
-  border-radius: 6px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-}
-
-.name-label {
-  color: #77757f;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.25em;
-}
-
-.name-value {
-  font-family: "Archivo Black", "Archivo", sans-serif;
-  font-size: 22px;
-  line-height: 1.2;
-}
-
-.name-line {
-  position: relative;
-  height: 1.5px;
-  margin-top: 4px;
-  background: var(--ink);
-}
-
-.name-line::after {
+.board::before {
   content: "";
   position: absolute;
-  right: 4px;
-  top: -3.5px;
-  width: 7px;
-  height: 7px;
-  border: 1.5px solid var(--ink);
-  border-radius: 50%;
-  background: #fff;
+  inset: 0;
+  background: var(--liner-print);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* Header: your picture and name. Above the profile backdrop, so a second tap closes the card. */
+.board-who {
+  position: relative;
+  z-index: 40;
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 62%;
+  min-height: 48px;
+  margin: 12px 0 0 14px;
+  padding: 4px 8px 4px 2px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  text-align: left;
+  transition: transform 160ms var(--ease-out);
+}
+
+.board-who:hover {
+  transform: translateY(-1px);
+}
+
+.board-who:active {
+  transform: translateY(1px);
+}
+
+.board-who:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.board-who-name {
+  min-width: 0;
+  overflow: hidden;
+  font: 800 18px/1.15 var(--font-ui);
+  font-stretch: var(--w-title);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .board-frame {
   position: relative;
   flex: 1;
-  margin: 10px 0 0;
+  margin: 4px 12px 14px;
   overflow: hidden;
   touch-action: none;
-}
-
-.corner {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  border: 0 solid #a9a7b3;
-  pointer-events: none;
-}
-
-.corner.tl {
-  top: 0;
-  left: 0;
-  border-width: 1.5px 0 0 1.5px;
-}
-
-.corner.tr {
-  top: 0;
-  right: 0;
-  border-width: 1.5px 1.5px 0 0;
-}
-
-.corner.bl {
-  bottom: 0;
-  left: 0;
-  border-width: 0 0 1.5px 1.5px;
-}
-
-.corner.br {
-  bottom: 0;
-  right: 0;
-  border-width: 0 1.5px 1.5px 0;
+  /* Stickers stack among themselves, under Draw and the overlays. */
+  isolation: isolate;
 }
 
 .free-sticker {
@@ -126,68 +101,138 @@
   animation: stick 0.6s 0.2s cubic-bezier(0.3, 1.6, 0.5, 1) backwards;
 }
 
-.board-hint {
+/* The empty board: a quiet die-cut spot. Draw is the way in. */
+.board-blank {
   position: absolute;
-  left: 12px;
-  bottom: 10px;
-  color: #77757f;
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  left: 50%;
+  top: 42%;
+  display: grid;
+  place-items: center;
+  width: 236px;
+  height: 196px;
+  padding: 0 34px;
+  transform: translate(-50%, -50%);
+  text-align: center;
   pointer-events: none;
 }
 
-.board-empty {
+.board-blank-cut {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 24px;
+  border: 1.5px dashed rgba(110, 104, 120, 0.62);
+  border-radius: 52% 48% 46% 54% / 50% 56% 44% 50%;
+  background: rgba(248, 247, 251, 0.72);
 }
 
-/* A dashed, sticker-shaped spot waiting for the first sticker. */
-.empty-slot {
+.board-blank-note {
+  position: relative;
+  max-width: 22ch;
+  color: var(--graphite);
+  font: 500 13.5px/1.4 var(--font-ui);
+  text-wrap: balance;
+}
+
+/* Draw: the board's one key, floating over the stickers at the lower left. */
+.board-draw {
+  position: absolute;
+  z-index: 20;
+  left: 14px;
+  bottom: 14px;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: min(280px, 82%);
-  aspect-ratio: 1.2;
-  padding: 0;
-  border: 1.5px dashed #9d9ba6;
-  border-radius: 50% 48% 50% 47% / 52% 50% 48% 50%;
-  background: #f5f4f8;
-  color: var(--ink);
-  text-align: center;
-  cursor: pointer;
+  border-radius: 19px;
 }
 
-.empty-slot:active {
-  transform: scale(0.98);
+/* A new artist's first visit: the key hops and a ring pulses round it. */
+.board-draw.is-fresh {
+  animation: board-hop 1.8s var(--ease-out) 0.5s 4;
 }
 
-.empty-icon {
-  display: grid;
-  place-items: center;
-  width: 54px;
-  height: 54px;
-  margin-bottom: 2px;
-  border-radius: 50%;
-  background: var(--yellow);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+.board-draw.is-fresh::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: inherit;
+  box-shadow:
+    0 0 0 2.5px var(--seal),
+    0 0 0 3.5px rgba(28, 24, 36, 0.12);
+  opacity: 0;
+  pointer-events: none;
+  animation: board-ring 1.8s var(--ease-out) 0.5s 4 both;
 }
 
-.empty-title {
-  font-family: "Archivo Black", "Archivo", sans-serif;
-  font-size: 20px;
-  line-height: 1.15;
+@keyframes board-hop {
+  0%,
+  34%,
+  100% {
+    transform: none;
+  }
+  12% {
+    transform: translateY(-4px) rotate(-2deg);
+  }
+  22% {
+    transform: translateY(0) rotate(1deg);
+  }
 }
 
-.empty-sub {
-  color: #77757f;
-  font-size: 14px;
-  line-height: 1.45;
+@keyframes board-ring {
+  0% {
+    opacity: 0.95;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.28);
+  }
+}
+
+.board-nudge {
+  position: absolute;
+  z-index: 20;
+  left: 14px;
+  bottom: calc(14px + 70px);
+  padding: 8px 12px 9px;
+  border-radius: var(--r-label);
+  background: var(--ink);
+  box-shadow: var(--shadow-lift);
+  color: var(--liner);
+  font: 600 13.5px/1.2 var(--font-ui);
+  white-space: nowrap;
+  pointer-events: none;
+  transform-origin: 28px 100%;
+  animation: board-nudge-pop var(--t-pop) var(--ease-peel) 0.35s both;
+}
+
+.board-nudge::after {
+  content: "";
+  position: absolute;
+  left: 22px;
+  top: 100%;
+  border: 7px solid transparent;
+  border-top-color: var(--ink);
+}
+
+@keyframes board-nudge-pop {
+  0% {
+    transform: scale(0) rotate(0);
+  }
+  70% {
+    transform: scale(1.15) rotate(var(--tilt));
+  }
+  100% {
+    transform: scale(1) rotate(var(--tilt));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-draw.is-fresh {
+    animation: none;
+  }
+  .board-draw.is-fresh::after {
+    animation: none;
+    opacity: 0.95;
+  }
+  .board-nudge {
+    animation: none;
+    transform: rotate(var(--tilt));
+  }
 }

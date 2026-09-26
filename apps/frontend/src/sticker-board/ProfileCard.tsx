@@ -1,12 +1,10 @@
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
-import { CloseIcon } from "../icons/CloseIcon";
-import { CopyIcon } from "../icons/CopyIcon";
-import { QrIcon } from "../icons/QrIcon";
-import { ShareIcon } from "../icons/ShareIcon";
+import { Copy, QrCode, ShareNetwork, X } from "@phosphor-icons/react";
 import { boardUrl, firstSeen } from "../identity/profile";
 import { useIdentity } from "../identity/useIdentity";
-import { lineLogin, lineLogout, shareOnLine } from "../line/liff";
+import { lineLogout, shareOnLine } from "../line/liff";
+import { SendTestMessage } from "../line/SendTestMessage";
 import { formatDay } from "../stickers/format";
 import "./ProfileCard.css";
 
@@ -33,7 +31,7 @@ export function ProfileCard({ made, avatarUrl, onClose }: Props) {
   const [qr, setQr] = useState<string | null>(null);
   const [showQr, setShowQr] = useState(false);
   const me = useIdentity();
-  const url = boardUrl();
+  const url = boardUrl(me.handle);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -95,7 +93,7 @@ export function ProfileCard({ made, avatarUrl, onClose }: Props) {
           <span>{me.displayName}</span>
         </div>
         <button className="round-close" onClick={onClose} aria-label="Close">
-          <CloseIcon />
+          <X size={18} />
         </button>
       </div>
 
@@ -121,7 +119,7 @@ export function ProfileCard({ made, avatarUrl, onClose }: Props) {
                   setToast((await copy(me.boardAddress)) ? "Address copied" : "Couldn’t copy")
                 }
               >
-                <CopyIcon />
+                <Copy size={16} />
               </button>
             </dd>
           </div>
@@ -146,25 +144,11 @@ export function ProfileCard({ made, avatarUrl, onClose }: Props) {
           <div>
             <dt>LINE</dt>
             <dd>
-              {me.line.status === "ready" ? (
-                <>
-                  <span className="line-dot" /> Connected
-                  {!me.line.inClient && (
-                    <button className="text-btn" onClick={lineLogout}>
-                      Log out
-                    </button>
-                  )}
-                </>
-              ) : me.line.status === "logged-out" ? (
-                <button className="line-login" onClick={lineLogin}>
-                  Log in with LINE
+              <span className="line-dot" /> Connected
+              {!me.inClient && (
+                <button className="text-btn" onClick={lineLogout}>
+                  Log out
                 </button>
-              ) : me.line.status === "loading" ? (
-                <span className="soft">Connecting…</span>
-              ) : me.line.status === "error" ? (
-                <span className="soft">Unavailable ({me.line.message})</span>
-              ) : (
-                <span className="soft">Not configured</span>
               )}
             </dd>
           </div>
@@ -173,12 +157,14 @@ export function ProfileCard({ made, avatarUrl, onClose }: Props) {
 
       <div className="profile-actions">
         <button className="share-btn" onClick={share}>
-          <ShareIcon /> Share my board
+          <ShareNetwork size={18} /> Share my board
         </button>
         <button className="qr-btn" onClick={() => setShowQr((v) => !v)} aria-pressed={showQr}>
-          <QrIcon /> {showQr ? "Details" : "QR code"}
+          <QrCode size={18} /> {showQr ? "Details" : "QR code"}
         </button>
       </div>
+
+      <SendTestMessage senderName={me.displayName} />
 
       {toast && <div className="toast">{toast}</div>}
     </div>

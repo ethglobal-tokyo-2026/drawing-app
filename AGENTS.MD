@@ -170,10 +170,12 @@ pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
   - `src/app` — app shell: tab bar and screen switching
   - `src/sticker-creation` — the drawing screen: canvas engine (`canvas/`), tools and drawers (`tools/`), sealing (`sealing/`)
   - `src/sticker-board` — the sticker board, sticker detail, profile card and placement
-  - `src/tickets`, `src/stickers` (local sticker storage and display formatting), `src/line` (LIFF), `src/identity`, `src/payments`
+  - `src/line` — LIFF: starts before the app renders and holds it until LINE has logged the person in; on the dev server LIFF Mock stands in for LINE (`apps/frontend/.env.example` switches it off)
+  - `src/tickets`, `src/stickers` (local sticker storage and display formatting), `src/identity`, `src/payments`
   - `src/icons` — one icon per file; `src/styles` — CSS shared across features
 - `packages/db` — Drizzle schema and typed database client (`@drawing-app/db`)
 - `packages/*` — shared workspace packages
+- `deploy/` — `./deploy/deploy.sh` builds the frontend and publishes it to the LIFF app's endpoint, then checks the box and the public URL serve that build; the box's login goes in the gitignored `deploy/.env`
 
 ### Toolchain
 

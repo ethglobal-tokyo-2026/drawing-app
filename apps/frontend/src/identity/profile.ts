@@ -1,15 +1,6 @@
-/**
- * Placeholder identity until real accounts (ENS) exist. Everything the
- * profile card shows about "who you are" comes from here.
- */
-export const PROFILE = {
-  username: "alice",
-  displayName: "Alice Sato",
-  boardAddress: "alice.sketch.eth",
-};
-
 /** Link shared for the board (placeholder until boards are public). */
-export const boardUrl = () => `${location.origin}${location.pathname}?board=${PROFILE.username}`;
+export const boardUrl = (handle: string) =>
+  `${location.origin}${location.pathname}?board=${encodeURIComponent(handle)}`;
 
 const FIRST_SEEN_KEY = "draw.firstSeen";
 

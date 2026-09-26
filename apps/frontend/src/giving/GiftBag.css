@@ -1,0 +1,438 @@
+/* The gift bag: a frosted sleeve with no zipper. Packed, the sticker peeks out of the open mouth;
+   sealed (only once the send succeeded), it has settled in, the mouth is pressed shut, and a clear film
+   band with an aqua tear tape runs across it, the tape's loose end sticking out as the pull tab.
+   The parts share one sleeve box (--sx, --sy, --sw, --sh) inside the stage. */
+
+.gift-bag {
+  --sx: 52px;
+  --sy: 88px;
+  --sw: 196px;
+  --sh: 222px;
+  position: relative;
+  width: 300px;
+  height: 322px;
+  margin: 0 auto 6px;
+}
+
+.gift-bag__part {
+  position: absolute;
+  left: var(--sx);
+  top: var(--sy);
+  width: var(--sw);
+  height: var(--sh);
+  border-radius: 5px 5px 14px 14px;
+  pointer-events: none;
+}
+
+.gift-bag__back {
+  background: linear-gradient(180deg, #f9fafd, #e6eaf3);
+  box-shadow:
+    0 16px 28px -14px rgba(28, 24, 36, 0.42),
+    0 2px 4px rgba(28, 24, 36, 0.1);
+}
+
+/* The sticker is its own layer, so it can drop in and settle while the frost blurs what's inside. */
+.gift-bag__sticker {
+  position: absolute;
+  left: 75px;
+  top: 124px;
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+  pointer-events: none;
+  filter: var(--sticker-cut) var(--sticker-cast);
+  transition:
+    transform 560ms var(--ease-peel),
+    opacity 300ms ease;
+}
+
+.gift-bag__front {
+  background:
+    url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E"),
+    linear-gradient(172deg, rgba(255, 255, 255, 0.6), rgba(232, 240, 252, 0.44));
+  -webkit-backdrop-filter: blur(11px) saturate(1.15);
+  backdrop-filter: blur(11px) saturate(1.15);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.85),
+    inset 0 -10px 18px -12px rgba(28, 24, 36, 0.22);
+}
+
+.gift-bag__streak {
+  background: linear-gradient(
+    118deg,
+    transparent 34%,
+    rgba(255, 255, 255, 0.6) 41%,
+    rgba(255, 255, 255, 0.1) 48%,
+    transparent 55%
+  );
+}
+
+/* The mouth: a heat-seal seam when shut. Its open look (the dark inside between the back and front
+   edges) is a layer that fades, so sealing can press it shut. */
+.gift-bag__mouth {
+  height: 12px;
+  border-radius: 5px 5px 0 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.95) 0 2px,
+    rgba(28, 24, 36, 0.12) 2px 3px,
+    transparent 3px 8px,
+    rgba(28, 24, 36, 0.1) 8px 9px,
+    transparent 9px
+  );
+  transform-origin: 50% 0;
+}
+
+.gift-bag__mouth::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 -2px;
+  border-radius: 5px 5px 0 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.96) 0 2px,
+    #3a3346 3px,
+    rgba(58, 51, 70, 0.5) 7px,
+    rgba(255, 255, 255, 0.92) 9px 11px,
+    transparent 11px
+  );
+  opacity: 0;
+  transition: opacity 220ms var(--ease-out);
+}
+
+/* Packed: in the open bag, peeking out of the mouth. */
+.gift-bag[data-state="open"] .gift-bag__sticker {
+  transform: translateY(-96px) rotate(-3deg);
+}
+
+.gift-bag[data-state="open"] .gift-bag__mouth::after {
+  opacity: 1;
+}
+
+.gift-bag.is-dropping .gift-bag__sticker {
+  animation: gift-bag-drop 640ms var(--ease-peel) both;
+}
+
+@keyframes gift-bag-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-300px) rotate(8deg) scale(1.12);
+  }
+  35% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-96px) rotate(-3deg);
+  }
+}
+
+.gift-bag.is-taking-out .gift-bag__sticker {
+  opacity: 0;
+  transform: translateY(-320px) rotate(5deg);
+}
+
+/* Sealed on send: the sticker settles in, the mouth presses shut, then the seal goes on. */
+.gift-bag[data-state="sealed"] .gift-bag__sticker {
+  transform: translateY(6px);
+}
+
+.gift-bag[data-state="sealed"] .gift-bag__mouth {
+  animation: gift-bag-press-shut 300ms var(--ease-out) 300ms both;
+}
+
+@keyframes gift-bag-press-shut {
+  from {
+    transform: scaleY(1.9);
+  }
+}
+
+.gift-seal {
+  transition:
+    transform 360ms var(--ease-spring) 560ms,
+    opacity 180ms var(--ease-out) 560ms;
+}
+
+.gift-bag[data-state="open"] .gift-seal {
+  opacity: 0;
+  transform: translate(-40px, -16px) rotate(-5deg);
+  transition: none;
+}
+
+/* The seal, built like a konbini wrapper's tear strip: a clear film band heat-sealed across the mouth,
+   an aqua tear tape through it printed with arrows and the date, and the tape's loose end sticking out
+   past the bag's left edge as the pull tab. */
+.gift-seal {
+  --tape-h: 12px;
+  --lobe-w: 49px;
+  --lobe-h: 28px;
+  --neck: 7px;
+  top: calc(var(--sy) + 2px);
+  height: 22px;
+  border-radius: 0;
+}
+
+.gift-seal__clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.gift-seal__film {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.9),
+    rgba(226, 236, 250, 0.72) 55%,
+    rgba(255, 255, 255, 0.84)
+  );
+  box-shadow:
+    inset 0 1px 0 #fff,
+    inset 0 -1px 0 rgba(28, 24, 36, 0.14),
+    0 1px 2px rgba(28, 24, 36, 0.16);
+}
+
+.gift-seal__tape {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: var(--tape-h);
+  margin-top: calc(var(--tape-h) / -2);
+  overflow: hidden;
+  background: var(--aqua);
+  box-shadow: inset 0 -1px 0 rgba(28, 24, 36, 0.22);
+}
+
+/* Width 75 on purpose: the tape is too narrow for more. */
+.gift-seal__print {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding-left: 5px;
+  white-space: nowrap;
+  font-family: var(--font-ui);
+  font-stretch: 75%;
+  font-weight: 700;
+  font-size: var(--fs-fine);
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.gift-seal__print svg {
+  flex: none;
+}
+
+.gift-seal__print > span {
+  margin-right: 13px;
+}
+
+.gift-seal__print b {
+  font-weight: 800;
+}
+
+/* The pull tab: a narrow neck leaves the film at the bag's edge and widens into a lobe, tipped up off
+   the page, with grip ribs across its free end and PULL printed on it. */
+.gift-seal__tab {
+  position: absolute;
+  z-index: 2;
+  right: calc(100% - 2px);
+  top: 50%;
+  width: calc(var(--lobe-w) + var(--neck));
+  height: var(--lobe-h);
+  margin-top: calc(var(--lobe-h) / -2);
+  color: var(--ink);
+}
+
+.gift-seal__neck {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: calc(var(--neck) + 6px);
+  height: var(--tape-h);
+  margin-top: calc(var(--tape-h) / -2);
+  background: var(--aqua);
+  box-shadow:
+    inset 0 -1px 0 rgba(28, 24, 36, 0.22),
+    0 2px 3px -1px rgba(28, 24, 36, 0.3);
+}
+
+.gift-seal__lobe {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--lobe-w);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 5px 0 calc(var(--lobe-h) * 0.24);
+  border-radius: calc(var(--lobe-h) / 2) 6px 6px calc(var(--lobe-h) / 2);
+  background: var(--aqua);
+  box-shadow:
+    inset 0 -1.5px 0 rgba(28, 24, 36, 0.2),
+    0 1px 1.5px rgba(28, 24, 36, 0.24),
+    0 6px 9px -4px rgba(28, 24, 36, 0.42);
+  font-family: var(--font-ui);
+  font-stretch: 75%;
+  font-weight: 800;
+  font-size: var(--fs-fine);
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transform-origin: 100% 50%;
+  transform: rotate(-6deg);
+}
+
+.gift-seal__ribs {
+  flex: none;
+  width: 11px;
+  height: 13px;
+  color: var(--aqua-deep);
+}
+
+/* The tag: a luggage tag on a short string, printed, never typed. Its string end sits at (--tx, --ty)
+   in stage coordinates. */
+.gift-bag__tag {
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  border-radius: 0;
+}
+
+.gift-tag {
+  --tx: 70px;
+  --ty: 128px;
+  --ts: 0.9;
+  --tr: -7deg;
+  position: absolute;
+  left: calc(var(--tx) - 9px);
+  top: calc(var(--ty) - 3px);
+  width: 184px;
+  height: 104px;
+  transform: rotate(var(--tr)) scale(var(--ts));
+  transform-origin: 9px 3px;
+  filter: drop-shadow(0 2px 2px rgba(28, 24, 36, 0.12));
+}
+
+.gift-tag__shape {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.gift-tag__string {
+  fill: none;
+  stroke: var(--ink);
+  stroke-opacity: 0.7;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.gift-tag__shadow {
+  fill: var(--ink);
+  fill-opacity: 0.16;
+}
+
+.gift-tag__card {
+  fill: var(--canvas);
+  stroke: rgba(28, 24, 36, 0.24);
+  stroke-width: 1;
+}
+
+.gift-tag__ring {
+  fill: none;
+  stroke: var(--aqua);
+  stroke-width: 4.2;
+}
+
+.gift-tag__hole {
+  fill: var(--liner);
+  stroke: rgba(28, 24, 36, 0.3);
+  stroke-width: 0.8;
+}
+
+.gift-tag__rule {
+  fill: none;
+  stroke: var(--graphite);
+  stroke-opacity: 0.45;
+  stroke-width: 1.2;
+  stroke-dasharray: 1.5 4;
+  stroke-linecap: round;
+}
+
+/* Tags are drawn at 0.86 to 1.25 scale: the label never lands under 11px on screen. */
+.gift-tag__label {
+  position: absolute;
+  left: 58px;
+  top: 25px;
+  font-stretch: var(--w-fine);
+  font-weight: 700;
+  font-size: 13px;
+  line-height: 1.2;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--graphite);
+}
+
+.gift-tag__name {
+  position: absolute;
+  left: 56px;
+  right: 14px;
+  top: 42px;
+  height: 40px;
+  font-family: var(--font-ui);
+  font-weight: 800;
+  font-stretch: var(--w-ui);
+  font-size: 32px;
+  line-height: 40px;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Reduced motion: no drop, no press and no spring; the seal fades on. */
+@media (prefers-reduced-motion: reduce) {
+  .gift-bag__sticker {
+    transition: opacity 150ms linear;
+  }
+
+  .gift-bag.is-dropping .gift-bag__sticker {
+    animation: gift-bag-fade-in 150ms linear both;
+  }
+
+  .gift-bag.is-taking-out .gift-bag__sticker {
+    transform: translateY(-96px) rotate(-3deg);
+  }
+
+  .gift-bag[data-state="sealed"] .gift-bag__mouth {
+    animation: none;
+  }
+
+  .gift-seal {
+    transition: opacity 200ms linear;
+  }
+
+  .gift-bag[data-state="open"] .gift-seal {
+    transform: none;
+  }
+}
+
+@keyframes gift-bag-fade-in {
+  from {
+    opacity: 0;
+  }
+}

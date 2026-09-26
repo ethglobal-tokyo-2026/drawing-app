@@ -1,6 +1,6 @@
 export interface StickerRecord {
   id: string;
-  /** Running number shown as NO.0001. */
+  /** Running number shown as No.0001. */
   no: number;
   createdAt: number;
   /** Seconds spent drawing. */
@@ -8,6 +8,8 @@ export interface StickerRecord {
   blob: Blob;
   width: number;
   height: number;
+  /** SVG path of the cut line, in image pixels. Older stickers don't have one. */
+  outline?: string;
   /** Degrees, so each sticker sits on the board a little crooked. */
   rotation: number;
   /** Where it sits on the board, once placed or moved. */
@@ -77,6 +79,14 @@ export async function addSticker(
   return record;
 }
 
+/** Undefined when there's no such sticker (for example, it was deleted). */
+export async function getSticker(id: string): Promise<StickerRecord | undefined> {
+  const record: unknown = await run("readonly", (s) => s.get(id));
+  if (record === undefined || isStickerRecord(record)) return record;
+  console.error(`Stored sticker ${id} is unreadable`);
+  return undefined;
+}
+
 export const deleteSticker = (id: string) => run("readwrite", (s) => s.delete(id));
 
 export async function updatePlacement(id: string, placement: Placement): Promise<void> {
@@ -97,7 +107,7 @@ const isPlacement = (v: unknown): v is Placement =>
   typeof v.z === "number";
 
 // IndexedDB hands back untyped values, so records are checked on the way out.
-const isStickerRecord = (v: unknown): v is StickerRecord =>
+export const isStickerRecord = (v: unknown): v is StickerRecord =>
   typeof v === "object" &&
   v !== null &&
   "id" in v &&
@@ -116,4 +126,5 @@ const isStickerRecord = (v: unknown): v is StickerRecord =>
   typeof v.height === "number" &&
   "rotation" in v &&
   typeof v.rotation === "number" &&
+  (!("outline" in v) || v.outline === undefined || typeof v.outline === "string") &&
   (!("placement" in v) || v.placement === undefined || isPlacement(v.placement));

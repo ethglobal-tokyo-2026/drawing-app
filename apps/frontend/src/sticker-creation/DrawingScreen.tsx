@@ -7,9 +7,7 @@ import {
   useState,
   type Ref,
 } from "react";
-import { CheckIcon } from "../icons/CheckIcon";
-import { RedoIcon } from "../icons/RedoIcon";
-import { UndoIcon } from "../icons/UndoIcon";
+import { ArrowClockwise, ArrowCounterClockwise, CheckFat } from "@phosphor-icons/react";
 import { addSticker, type StickerRecord } from "../stickers/stickerStorage";
 import { OutOfTickets } from "../tickets/OutOfTickets";
 import { useTickets } from "../tickets/useTickets";
@@ -178,7 +176,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         blob: images.domeBlob,
         width: images.width,
         height: images.height,
+        outline: images.outline,
       });
+      tickets.linkSticker(record.id);
       setSealed({ images, record });
       setPhase("sealed");
       onSealed(record.id);
@@ -269,7 +269,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
             disabled={!history.canUndo || locked}
             aria-label="Undo"
           >
-            <UndoIcon />
+            <ArrowCounterClockwise size={24} />
           </button>
           <button
             className="square-btn"
@@ -277,7 +277,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
             disabled={!history.canRedo || locked}
             aria-label="Redo"
           >
-            <RedoIcon />
+            <ArrowClockwise size={24} />
           </button>
         </div>
         <div className="seal-area">
@@ -298,7 +298,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
             disabled={phase === "sealing" || phase === "sealed"}
             aria-label="Finish drawing"
           >
-            <CheckIcon />
+            <CheckFat size={30} weight="fill" />
           </button>
         </div>
       </div>

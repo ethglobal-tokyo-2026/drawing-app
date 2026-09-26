@@ -7,8 +7,8 @@ import "./App.css";
 
 export default function App() {
   const drawingScreen = useRef<DrawingScreenHandle>(null);
-  // The sticker board is home.
-  const [view, setView] = useState<Tab>("board");
+  // The sticker board is home. Draw is the board's key, not a tab.
+  const [view, setView] = useState<Tab | "draw">("board");
   // Set from the seal until the next sticker starts; the board lands it with a "stick" animation.
   const [sealedId, setSealedId] = useState<string>();
 
@@ -20,7 +20,7 @@ export default function App() {
 
   return (
     <div className="phone">
-      <div className="card">
+      <div className="screen">
         <DrawingScreen
           ref={drawingScreen}
           active={view === "draw"}
@@ -32,11 +32,10 @@ export default function App() {
         {view === "explore" && <ExploreScreen />}
       </div>
       <TabBar
-        active={view}
+        active={view === "draw" ? undefined : view}
         onChange={(tab) => {
           drawingScreen.current?.closeDrawers();
-          if (tab === "draw") openDrawing();
-          else setView(tab);
+          setView(tab);
         }}
       />
     </div>

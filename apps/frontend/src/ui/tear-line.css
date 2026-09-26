@@ -1,0 +1,7 @@
+/* Set --card-pad to the card's side padding so the line runs edge to edge. */
+.tear-line {
+  height: 10px;
+  margin: 14px calc(-1 * var(--card-pad, 18px));
+  background: radial-gradient(circle, rgba(28, 24, 36, 0.16) 1.4px, #0000 1.9px) 0 50% / 9px 4px
+    repeat-x;
+}
