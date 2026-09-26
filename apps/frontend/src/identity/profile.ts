@@ -1,6 +1,6 @@
 const FIRST_SEEN_KEY = "draw.firstSeen";
 
-/** When this browser first opened the app ("On the app since"). */
+/** When this browser first opened the app. */
 export function firstSeen(): number {
   try {
     const saved = Number(localStorage.getItem(FIRST_SEEN_KEY));

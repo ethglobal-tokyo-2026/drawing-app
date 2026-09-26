@@ -25,7 +25,7 @@ import { LabelButton } from "../../ui/LabelButton";
 import { PhotoSticker } from "../../ui/PhotoSticker";
 import { QuietLink } from "../../ui/QuietLink";
 import { useReducedMotion } from "../../ui/useReducedMotion";
-import { streakOf } from "./userStats";
+import { joinedAt, streakOf } from "./userStats";
 import "./stat-board.css";
 
 export interface StatBoardHandle {
@@ -83,7 +83,7 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
   const me = useIdentity();
   const reduced = useReducedMotion();
   const cork = useRef<HTMLDivElement>(null);
-  const [since] = useState(() => formatDay(firstSeen()));
+  const [firstVisit] = useState(firstSeen);
   const id = useId();
 
   useImperativeHandle(
@@ -107,6 +107,7 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
       ticketDay(now),
     );
   const given = stickers && stickers.filter((s) => gifts.get(s.id)?.state === "sent").length;
+  const since = formatDay(joinedAt(firstVisit, stickers ?? []));
   const stamps = [
     { label: "made", count: stickers && stickers.length, hue: "var(--seal)" },
     { label: "received", count: 0, hue: "var(--grape)" },
