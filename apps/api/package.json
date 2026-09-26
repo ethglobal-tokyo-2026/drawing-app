@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./client": "./src/client.ts"
+    "./client": "./src/client.ts",
+    "./dev-sign-in": "./src/services/devSignIn.ts"
   },
   "scripts": {
     "build": "node scripts/build.ts",
