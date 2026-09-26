@@ -1,4 +1,4 @@
-import { Clock, Heart } from "@phosphor-icons/react";
+import { Clock, GratitudeIcon } from "../icons";
 import { useRef } from "react";
 import type { PersonView, StickerView } from "../api/views";
 import { Trans, useTranslation } from "../i18n/react";
@@ -59,7 +59,7 @@ export function SendGratitudeSheet({ sticker, giver, onSend, onLater }: Props) {
           </div>
         </div>
         <div className="send-gratitude-sheet__acts">
-          <Key tone="pink" size="lg" icon={<Heart weight="fill" />} onClick={onSend}>
+          <Key tone="pink" size="lg" icon={<GratitudeIcon />} onClick={onSend}>
             {t(($) => $.receiving.sendGratitude.send)}
           </Key>
           <QuietLink onClick={onLater}>

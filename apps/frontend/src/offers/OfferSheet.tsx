@@ -1,4 +1,3 @@
-import { ArrowsLeftRight, ChatCircleDots, Heart, PaperPlaneTilt, X } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { PersonView } from "../api/views";
 import { formatCount } from "../i18n/format";
@@ -10,7 +9,14 @@ import { LabelButton } from "../ui/LabelButton";
 // resets come after its margins wherever this loads.
 import "../giving/Giving.css";
 import { StickerPicker } from "../giving/StickerPicker";
-import { StickerBoardIcon } from "../icons/StickerBoardIcon";
+import {
+  ArrowsLeftRight,
+  ChatCircleDots,
+  GratitudeIcon,
+  PaperPlaneTilt,
+  StickerBoardIcon,
+  X,
+} from "../icons";
 import { Sheet } from "../ui/Sheet";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
@@ -23,9 +29,9 @@ import "./offers.css";
 type OfferKind = "ask" | "swap" | "gratitude";
 
 const KINDS: { id: OfferKind; icon: ReactNode }[] = [
-  { id: "ask", icon: <ChatCircleDots size={18} weight="fill" /> },
+  { id: "ask", icon: <ChatCircleDots size={18} /> },
   { id: "swap", icon: <ArrowsLeftRight size={18} /> },
-  { id: "gratitude", icon: <Heart size={18} /> },
+  { id: "gratitude", icon: <GratitudeIcon size={18} weight="bold" /> },
 ];
 
 const GRATITUDE_AMOUNTS = [100, 250, 500];

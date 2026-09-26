@@ -1,4 +1,4 @@
-import { Check } from "@phosphor-icons/react";
+import { Check } from "../icons";
 import { formatNo } from "../stickers/format";
 import type { KeptSticker } from "../stickers/useKeptStickers";
 import "./give-sheet.css";

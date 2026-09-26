@@ -1,4 +1,4 @@
-import { ArrowRight, HandPointing } from "@phosphor-icons/react";
+import { ArrowRight, HandPointing } from "../icons";
 import { Fragment, useLayoutEffect, useRef, type DOMAttributes } from "react";
 import { i18next } from "../i18n/i18n";
 import { Trans, useTranslation } from "../i18n/react";

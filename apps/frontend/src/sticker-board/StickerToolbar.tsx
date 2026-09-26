@@ -1,4 +1,4 @@
-import { Eye, Gift, TrayArrowDown } from "@phosphor-icons/react";
+import { GiveIcon, RemoveIcon, ViewIcon } from "../icons";
 import { useEffectEvent, useLayoutEffect, useRef } from "react";
 import type { PersonView } from "../api/views";
 import { useTranslation } from "../i18n/react";
@@ -103,14 +103,14 @@ export function StickerToolbar({
       )}
       <div className="sticker-toolbar__acts">
         {give && (
-          <LabelButton tone="aqua" size="sm" icon={<Gift size={18} aria-hidden />} onClick={onGive}>
+          <LabelButton tone="aqua" size="sm" icon={<GiveIcon size={18} />} onClick={onGive}>
             {t(($) => $.stickerBoard.toolbar.give)}
           </LabelButton>
         )}
-        <LabelButton size="sm" icon={<Eye size={18} aria-hidden />} onClick={onView}>
+        <LabelButton size="sm" icon={<ViewIcon size={18} />} onClick={onView}>
           {t(($) => $.stickerBoard.toolbar.view)}
         </LabelButton>
-        <LabelButton size="sm" icon={<TrayArrowDown size={18} aria-hidden />} onClick={onRemove}>
+        <LabelButton size="sm" icon={<RemoveIcon size={18} />} onClick={onRemove}>
           {t(($) => $.stickerBoard.toolbar.remove)}
         </LabelButton>
       </div>

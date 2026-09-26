@@ -1,11 +1,4 @@
-import {
-  Circle,
-  Eraser,
-  PaintBrush,
-  PaintBucket,
-  WaveSine,
-  type Icon,
-} from "@phosphor-icons/react";
+import { Circle, Eraser, PaintBrush, PaintBucket, WaveSine, type Icon } from "../../icons";
 import { useState, type KeyboardEvent } from "react";
 import { useTranslation } from "../../i18n/react";
 import type { Tool } from "../canvas/ops";

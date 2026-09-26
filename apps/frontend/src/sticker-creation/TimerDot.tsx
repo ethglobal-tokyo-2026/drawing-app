@@ -1,4 +1,4 @@
-import { ArrowBendLeftUp, Pause } from "@phosphor-icons/react";
+import { ArrowBendLeftUp, Pause } from "../icons";
 import {
   useEffect,
   useId,

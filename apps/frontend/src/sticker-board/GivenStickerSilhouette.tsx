@@ -1,4 +1,4 @@
-import { ArrowRight } from "@phosphor-icons/react";
+import { ArrowRight } from "../icons";
 import { useLayoutEffect, useRef } from "react";
 import { useTranslation } from "../i18n/react";
 import { formatHandle, formatMonthDay, formatNo } from "../stickers/format";
