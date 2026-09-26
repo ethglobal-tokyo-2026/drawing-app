@@ -5,6 +5,8 @@ export const api = {
     opening: "Opening your sticker board…",
     failed: "Couldn’t sign you in",
     tryAgain: "Try again",
+    reconnect: "Reconnect with LINE",
+    reconnecting: "Reconnecting with LINE…",
   },
   /** Asks for a handle when your LINE name is already someone's, before the app opens. */
   handle: {

@@ -115,7 +115,7 @@ export interface ApiClient {
 }
 
 /** Codes the app makes itself: no answer, and no LINE ID token to sign in with. */
-type ClientErrorCode = "network" | "no_line_token";
+type ClientErrorCode = "network" | "no_line_token" | "line_reconnect_failed";
 export type ErrorCode = ApiErrorCode | ClientErrorCode;
 
 /** A refused or failed request: the HTTP status and the REST doc's error body. Status 0 is no answer. */
