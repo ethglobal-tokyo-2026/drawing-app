@@ -78,7 +78,7 @@
     },
     {
       "files": ["apps/frontend/src/receiving/**"],
-      "rules": { "react/jsx-no-literals": "off" }
+      "rules": { "react/jsx-no-literals": "error" }
     },
     {
       "files": ["apps/frontend/src/sticker-board/**"],
