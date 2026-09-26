@@ -20,6 +20,13 @@ What the server stores and serves. `packages/db` holds the schema and `apps/api`
 - **Ticket shop:** packs of 1, 3, 5 or 10 for ¥100, ¥270, ¥375 or ¥600, shown with their discount off ¥100 each. Prices are in yen and paid in JPYC (one JPYC is one yen) from the person's Privy Sui wallet, through the payment contract's `pay` into its vault. The wallet pays gas in SUI.
 - **Draw keys** show daily and reserve tickets left, each as its ticket mark × count. Daily tickets are Seal Yellow, reserve tickets Grape.
 
+### Chat menu
+
+- **The menu under the Official Account's chat** in LINE. LINE can't vary one menu's image per person, so each language has one menu per thing the Draw key can show: 3, 2 or 1 daily tickets left, reserve tickets only, or none, plus a plain one with no count. `deploy/line/menus.json` maps them to LINE's rich menu IDs, with `default`, the menu for people with none of their own.
+- **Linking:** the API links each person's menu for their language and tickets when the app opens (`POST /api/line-menu`), and in the background after each spend or purchase, which never waits on LINE or fails because of it. One person's links run in turn, each reading the count when it runs. `DELETE /api/me` unlinks, so LINE shows the default menu. A menu missing from the map falls back to the language's plain one, then to linking nothing.
+- **Midnight, Tokyo time:** one LINE batch, keyed to the new ticket day so a retry resumes it, moves each language's other menus onto its 3 menu. Once LINE reports it done, everyone who spent a ticket since midnight is linked to their count again, since the batch also moved a spend linked while it ran. At boot, the API runs the day's batch if it hasn't (`chat_menu_batches`).
+- **Off** without the Messaging API channel's ID and secret, or under dev sign-in: nothing is linked.
+
 ### Sealing
 
 - In Sepolia mode, Sealing waits for the NFT mint to the Original Artist's Privy smart account. Mock mode leaves the sticker unminted for local UI work.
@@ -180,6 +187,18 @@ Inserted when the start screen's button spends a ticket.
 - Reserve tickets left = verified purchases' `tickets` minus `reserve` uses. They carry over from day to day.
 - A purchase counts only if its transaction emitted the payment contract's `PaymentReceived` into the ticket vault, with the buyer's reference (`tickets:<user id>`) and at least the pack's price in JPYC.
 
+### `chat_menu_batches`: one row per ticket day's chat menu batch
+
+Inserted when LINE takes the day's midnight batch, or when the API gives up on it.
+
+| Column            | Type       | Values                     | Set when             | Meaning                                                                                           |
+| ----------------- | ---------- | -------------------------- | -------------------- | ------------------------------------------------------------------------------------------------- |
+| `ticket_day`      | text, PK   | `YYYY-MM-DD`, Tokyo time   | insert               | the day the batch opened; also its `resumeRequestKey` at LINE                                     |
+| `line_request_id` | text, null | LINE's `x-line-request-id` | LINE takes the batch | how LINE reports its progress; null only for a batch LINE never took                              |
+| `status`          | text       | `sent`, `done`, `failed`   | each step            | `done`: LINE finished it and the day's spenders were linked again; `failed`: given up for the day |
+
+- A day with no row hasn't had its batch, so the API runs it at boot; a `sent` one is looked up by its request ID instead of sent again.
+
 ### `sticker_placements`: one row per person and sticker that has reached them
 
 Inserted when a sticker first reaches someone: at seal for the Original Artist, when they receive it for anyone else. It stays after they give the sticker away.
@@ -220,6 +239,7 @@ Inserted at Packaging.
 | `reject_tx_hash`     | text, null         |                                                                 | the server sends `rejectGift`             |                                     |
 | `return_tx_hash`     | text, null         |                                                                 | the server sends `returnExpiredGift`      |                                     |
 | `pushed_to_giver_at` | int (ms), null     |                                                                 | the "received your sticker" push goes out |                                     |
+| `for_user_id`        | text, null         | added in place: no foreign key or check                         | Packaging, or the first preview           | who it waits for; see below         |
 
 | `status`    | Means                                             | Giver sees                                  | Whoever opens the link sees        |
 | ----------- | ------------------------------------------------- | ------------------------------------------- | ---------------------------------- |
@@ -400,9 +420,8 @@ interface UserStats {
   received: number;
   given: number;
   gratitude: {
-    inspired: number; // your part of tap combos on gifts you gave
-    magic: number; // your part of stroke and shake combos
-    asOriginalArtist: number; // Original Artist Gratitude Shares
+    direct: number; // your part of the combos on gifts you gave: each total less any Original Artist Gratitude Share
+    residual: number; // your Original Artist Gratitude Shares
     total: number;
   };
   bests: { bestCombo: number; mostGratitudeInADay: number; longestStreak: number };
@@ -443,15 +462,33 @@ interface TimelapseV1 {
 
 ### Session and you
 
-| Route                          | Request                                                                                         | Response                                         | Errors                                                                    |
-| ------------------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------- |
-| `POST /api/session`            | `{ idToken: string; timeZone: string; language: "en" \| "ja" }`: token from `liff.getIDToken()` | 200 `{ me: Me }`, and sets the cookie            | 401 `line_token_invalid` or `line_token_expired`                          |
-| `GET /api/me`                  | Optional `x-line-user-id` header: current LIFF profile's user ID                                | 200 `{ me: Me }`, with `Cache-Control: no-store` | 401 `signed_out` if the session is absent or belongs to another LINE user |
-| `POST /api/me/handle`          | `{ handle: string }`: 1–32 characters after trimming, no `@`                                    | 200 `{ me: Me }`                                 | 400 `handle_invalid`; 409 `handle_taken`                                  |
-| `POST /api/me/language-choice` | `{ languageChoice: "en" \| "ja" \| null }`: Settings' language; null follows LINE's             | 200 `{ me: Me }`                                 | 400 `invalid_request`                                                     |
-| `DELETE /api/me`               | none                                                                                            | 204, and clears the cookie                       |                                                                           |
+| Route                          | Request                                                                                         | Response                                          | Errors                                                                    |
+| ------------------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------- |
+| `POST /api/session`            | `{ idToken: string; timeZone: string; language: "en" \| "ja" }`: token from `liff.getIDToken()` | 200 `{ me: Me }`, and sets the cookie             | 401 `line_token_invalid` or `line_token_expired`                          |
+| `GET /api/me`                  | Optional `x-line-user-id` header: current LIFF profile's user ID                                | 200 `{ me: Me }`, with `Cache-Control: no-store`  | 401 `signed_out` if the session is absent or belongs to another LINE user |
+| `POST /api/me/handle`          | `{ handle: string }`: 1–32 characters after trimming, no `@`                                    | 200 `{ me: Me }`                                  | 400 `handle_invalid`; 409 `handle_taken`                                  |
+| `POST /api/me/language-choice` | `{ languageChoice: "en" \| "ja" \| null }`: Settings' language; null follows LINE's             | 200 `{ me: Me }`                                  | 400 `invalid_request`                                                     |
+| `DELETE /api/me`               | none                                                                                            | 204, clears the cookie, and unlinks the chat menu |                                                                           |
 
 The frontend first resumes the signed-cookie session using `GET /api/me` with the current LINE user ID. That header only restricts session reuse; it cannot authenticate a user. Only `401 signed_out` starts a new token exchange. Network failures keep a normal retry; missing or rejected LINE credentials offer an explicit reconnect that preserves the current page, including Gift Message links. Privy sign-in uses the same reconnect action when its LINE credentials are rejected.
+
+### Chat menu
+
+| Route                 | Request | Response                         | Errors                                               |
+| --------------------- | ------- | -------------------------------- | ---------------------------------------------------- |
+| `POST /api/line-menu` | none    | 200 `{ chatMenu: ChatMenuLink }` | 502 `line_unavailable`: LINE failed or didn't answer |
+
+The app calls it once per open, after sign-in. Spends and purchases relink the menu themselves.
+
+```ts
+/** Which of a language's chat menus: by what its Draw key shows, or plain, with no count. */
+type ChatMenu = "plain" | "3" | "2" | "1" | "reserve" | "none";
+
+type ChatMenuLink =
+  | { status: "linked"; menu: ChatMenu } // LINE shows it
+  | { status: "not_a_friend"; menu: ChatMenu } // linked, but LINE shows the default menu: not a friend, or blocked
+  | { status: "off"; reason: "not_configured" | "dev_sign_in" | "no_menu" }; // nothing linked
+```
 
 ### Tickets
 
@@ -461,6 +498,8 @@ The frontend first resumes the signed-cookie session using `GET /api/me` with th
 | `POST /api/tickets/spend`    | `{ kind: "daily" \| "reserve" }`: the kind the start screen offered | 201 `{ ticketUse: { id: number; ticketDay: string; dayIndex: number; kind: "daily" \| "reserve"; spentAt: IsoTime }; tickets: Tickets }` | 409 `no_tickets_left`; 409 `ticket_kind_changed` when the next ticket is the other kind                                                         |
 | `GET /api/ticket-shop`       | none                                                                | 200 `{ shop: TicketShop }`                                                                                                               |                                                                                                                                                 |
 | `POST /api/ticket-purchases` | `{ tickets: 1 \| 3 \| 5 \| 10; txDigest: string }`                  | 201 `{ tickets: Tickets }`                                                                                                               | 400 `pack_unknown`; 402 `payment_short`; 403 `payment_not_yours`; 409 `payment_already_counted`; 422 `payment_not_found`; 502 `sui_unavailable` |
+
+After a spend or a purchase commits, the chat menu is linked for the new count in the background (Chat menu, above).
 
 ### Stickers
 
@@ -513,19 +552,19 @@ interface BoardSticker extends StickerPlacement {
   sticker: Sticker;
   held: boolean; // false: given away; show a GivenStickerSilhouette, and an empty spot in the tray
   givenTo: { receiver: Person; receivedAt: IsoTime } | null; // set when held is false: the silhouette's "→ @bob"
-  openGift: { id: string; status: "packed" | "sent" } | null;
+  openGift: { id: string; status: "packed" | "sent"; for: Person | null } | null; // for: who it waits for
 }
 ```
 
 ### Giving
 
-| Route                              | Request                                                                        | Response                                                                                                                                                                | Errors                                                                                          |
-| ---------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `POST /api/gifts`                  | `{ stickerId: string }`                                                        | 201 `{ gift: Gift; giftClaimToken: string; escrowTransfer: EscrowTransfer \| null }`; or 200 with `giftClaimToken: null` when the sticker already has a gift in the bag | 403 `not_yours`; 404 `sticker_not_found`; 409 `not_minted`, `gift_in_transit`                   |
-| `POST /api/gifts/:giftId/deposit`  | `{ txHash: string }`: the escrow transfer's transaction or user operation hash | 200 `{ gift: Gift }`, `escrowStatus` `pending` once checked                                                                                                             | 403 `not_yours`; 404 `gift_not_found`; 409 `deposit_not_landed` (retry), `deposit_mismatch`     |
-| `POST /api/gifts/:giftId/shared`   | `{ outcome: "sent" \| "cancelled" }`: the picker's result                      | 200 `{ gift: Gift }`: `sent` moves it to `sent`; `cancelled` leaves it `packed`                                                                                         | 403 `not_yours`; 404 `gift_not_found`; 409 `not_deposited`, `gift_closed`                       |
-| `POST /api/gifts/:giftId/take-out` | none                                                                           | 200 `{ gift: Gift }`, status `taken_out` and escrow status `rejected`                                                                                                   | 403 `not_yours`; 404 `gift_not_found`; 409 `already_received`, `gift_closed`, `gift_in_transit` |
-| `GET /api/gifts/pending`           | none                                                                           | 200 `{ gifts: Array<{ gift: Gift; sticker: Sticker }> }`: your `packed` and `sent` gifts, newest first                                                                  |                                                                                                 |
+| Route                              | Request                                                                        | Response                                                                                                                                                                | Errors                                                                                                      |
+| ---------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `POST /api/gifts`                  | `{ stickerId: string; forUserId?: string }`                                    | 201 `{ gift: Gift; giftClaimToken: string; escrowTransfer: EscrowTransfer \| null }`; or 200 with `giftClaimToken: null` when the sticker already has a gift in the bag | 403 `not_yours`, `own_gift`; 404 `sticker_not_found`, `user_not_found`; 409 `not_minted`, `gift_in_transit` |
+| `POST /api/gifts/:giftId/deposit`  | `{ txHash: string }`: the escrow transfer's transaction or user operation hash | 200 `{ gift: Gift }`, `escrowStatus` `pending` once checked                                                                                                             | 403 `not_yours`; 404 `gift_not_found`; 409 `deposit_not_landed` (retry), `deposit_mismatch`                 |
+| `POST /api/gifts/:giftId/shared`   | `{ outcome: "sent" \| "cancelled" }`: the picker's result                      | 200 `{ gift: Gift }`: `sent` moves it to `sent`; `cancelled` leaves it `packed`                                                                                         | 403 `not_yours`; 404 `gift_not_found`; 409 `not_deposited`, `gift_closed`                                   |
+| `POST /api/gifts/:giftId/take-out` | none                                                                           | 200 `{ gift: Gift }`, status `taken_out` and escrow status `rejected`                                                                                                   | 403 `not_yours`; 404 `gift_not_found`; 409 `already_received`, `gift_closed`, `take_out_not_landed`         |
+| `GET /api/gifts/pending`           | none                                                                           | 200 `{ gifts: Array<{ gift: Gift; sticker: Sticker; for: Person \| null }> }`: your `packed` and `sent` gifts, newest first; `for` is who each waits for                |                                                                                                             |
 
 ```ts
 /** Send it from the giver's smart wallet to move the sticker into the escrow. */
@@ -547,6 +586,12 @@ interface EscrowTransfer {
 | `POST /api/gifts/receive` | `{ giftClaimToken: string; liffContextType: "utou" \| "room" \| "group" \| "square_chat" \| "external" \| "none" }`, from `liff.getContext().type` | 200 `{ gift: Gift; sticker: Sticker; stickerPlacement: StickerPlacement }`                                                                                      | 403 `group_chat` (room, group or square_chat), `own_gift`; 404 `gift_not_found`; 409 `already_received`, `taken_back`, `not_deposited`; 410 `gift_expired`, `gift_returned` |
 
 - In Sepolia mode, Receiving signs and submits `claimGift`, waits for it to land, stores its transaction hash, and only then transfers ownership in the database. A retry reconciles a claim that landed before its database update.
+
+**Gifts waiting for you** (a stopgap, until smart account permissions can authorize the receiver on chain):
+
+- `gifts.for_user_id` is who a gift waits for: the person the giver picked in the app (giving from their board sends `forUserId`), or else the first person whose preview finds it receivable. It never changes after that.
+- `GET /api/gifts/for-you`: 200 `{ gifts: Array<{ gift: Gift; sticker: Sticker; giver: Person }> }`, the `sent`, deposited, unexpired gifts waiting for you, newest first.
+- `POST /api/gifts/:giftId/receive`: no body. Receives a gift waiting for you without its Gift Claim Token, with Receiving's checks and answers; 404 `gift_not_found` for a gift waiting for someone else. The claim signer's `authorizeClaimForNamedRecipient` signs it without the token, so the token's holder is no longer the only one who can receive it.
 
 ```ts
 type ReceiveRefusal =

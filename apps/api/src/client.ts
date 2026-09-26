@@ -22,12 +22,14 @@ export type ApiErrorCode =
 export { MAX_TIMELAPSE_BYTES } from "./stickers/timelapseLimit.ts";
 
 // The contract's shapes, for the app's screens: each is the type its route's schema checks.
+export type { ChatMenu, ChatMenuLink } from "./chatMenu/menus.ts";
 export type { ErrorBody } from "./errors.ts";
 export type { ActivityEntry, Explore } from "./explore/explore.ts";
 export type { LeaderboardRow } from "./explore/leaderboards.ts";
 export type { PackagedGift, PendingGifts } from "./gifts/packaging.ts";
 export type {
   GiftPreview,
+  GiftsForYou,
   LiffContextType,
   OpenGiftBody,
   ReceivedGift,

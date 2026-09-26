@@ -28,6 +28,7 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 | ticket / daily / reserve           | チケット / 無償チケット / 有償チケット | Gacha's words for free and bought; 無償チケットから先に使われます (ad0ll, 2026-09-27) |
 | ticket shop                        | チケットショップ                       |                                                                                       |
 | Original Artist                    | 作者                                   |                                                                                       |
+| Direct / Residual (gratitude)      | 直接 / 作者として                      | The stat board's receipt rows; never a money word such as 印税                        |
 | artist (someone who draws)         | アーティスト                           |                                                                                       |
 | Transfer Trail                     | 来歴                                   | Provenance: who held it, and how it passed hand to hand (ad0ll, 2026-09-27)           |
 | Explore / My board                 | さがす / マイボード                    | The tab labels                                                                        |

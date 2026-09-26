@@ -14,7 +14,14 @@ const supplied = parseEnv(readFileSync(0, "utf8"));
 for (const [key, value] of Object.entries(supplied)) {
   if (value) values[key] = value;
 }
-values.PRIVY_APP_SECRET ||= readEnv(authPath).PRIVY_APP_SECRET ?? "";
+const authSecrets = readEnv(authPath);
+values.PRIVY_APP_SECRET ||= authSecrets.PRIVY_APP_SECRET ?? "";
+// The chat menu's Messaging API channel, optional: without it the API links no chat menu. The auth
+// service's secrets held it before the API linked chat menus, so it's taken from there, as a pair.
+const lineChannel = ["LINE_MESSAGING_CHANNEL_ID", "LINE_MESSAGING_CHANNEL_SECRET"];
+if (lineChannel.every((key) => !values[key]) && lineChannel.every((key) => authSecrets[key])) {
+  for (const key of lineChannel) values[key] = authSecrets[key];
+}
 values.STICKER_CHAIN_MODE = "sepolia";
 const required = [
   "ETHEREUM_SEPOLIA_RPC_URL",
@@ -43,6 +50,14 @@ for (const key of [
 }
 for (const key of ["STICKER_SEALER_PRIVATE_KEY", "ENS_GATEWAY_PRIVATE_KEY"]) {
   if (!/^0x[0-9a-fA-F]{64}$/.test(values[key] ?? "")) throw new Error(`Invalid ${key}`);
+}
+const lineChannelId = values.LINE_MESSAGING_CHANNEL_ID ?? "";
+const lineChannelSecret = values.LINE_MESSAGING_CHANNEL_SECRET ?? "";
+if (lineChannelId || lineChannelSecret) {
+  if (!/^\d+$/.test(lineChannelId)) throw new Error("Missing or invalid LINE_MESSAGING_CHANNEL_ID");
+  if (!/^[0-9a-f]{32}$/.test(lineChannelSecret)) {
+    throw new Error("Missing or invalid LINE_MESSAGING_CHANNEL_SECRET");
+  }
 }
 // One URL, or several separated by commas, which the API tries in turn.
 const rpcUrls = (values.ETHEREUM_SEPOLIA_RPC_URL ?? "")

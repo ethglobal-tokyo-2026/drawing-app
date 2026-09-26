@@ -122,6 +122,8 @@ export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
     markGratitudeSeen: unanswered("markGratitudeSeen"),
     explore: unanswered("explore"),
     searchUsers: () => Promise.resolve([]),
+    giftsForYou: () => Promise.resolve({ gifts: [] }),
+    receiveGiftForYou: unanswered("receiveGiftForYou"),
     personByEnsLabel: (label) =>
       Promise.reject(new ApiError(404, { error: "user_not_found", detail: label })),
     ...overrides,

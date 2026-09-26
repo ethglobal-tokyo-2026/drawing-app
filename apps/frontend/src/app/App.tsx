@@ -1,12 +1,17 @@
 import type { Person } from "@drawing-app/api/client";
-import { Suspense, useEffect, useRef, useState, type CSSProperties } from "react";
+import { Suspense, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
 import { resendPendingGratitude } from "../gratitude/gratitudeOutbox";
 import { useTranslation } from "../i18n/react";
 import { StickerBoard } from "../sticker-board/StickerBoard";
-import { DrawingScreen, type DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
-import { lazyWithPreload, usePreloadWhenIdle } from "../ui/lazyWithPreload";
+import type { DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
+import { noteBootMilestone } from "../performance/bootMilestones";
+import { markBoardComplete, usePreloadAfterBoard } from "../sticker-board/boardComplete";
+import { forgetBoardUnlessFor } from "../sticker-board/lastBoard";
+import { lazyWithPreload } from "../ui/lazyWithPreload";
 import { MotionPermissionCard } from "./MotionPermissionCard";
+import type { GiftFrom } from "../receiving/ReceiveGiftDialog";
 import { openedFrom, type View } from "./openedView";
 import { changeScreen } from "./screenTransition";
 import { ShopScreen } from "./ShopScreen";
@@ -14,11 +19,17 @@ import { TabBar } from "./TabBar";
 import { useFocusLoop } from "./useFocusLoop";
 import "./App.css";
 
-// Explore is a tab away, so its code loads once the app is idle.
+// Explore is a tab away, so its code loads once the board is complete.
 const ExploreScreen = lazyWithPreload("Explore", () =>
   import("../explore/ExploreScreen").then((m) => m.ExploreScreen),
 );
-const OPENED_FROM_TABS = [ExploreScreen];
+// The drawing screen loads once the board is complete too, or at once when Draw opens it first.
+// Mounted, it stays under the other screens, so a sticker in progress survives a tab change, and it
+// picks up a sheet kept across a reload as it mounts.
+const DrawingScreen = lazyWithPreload("the drawing screen", () =>
+  import("../sticker-creation/DrawingScreen").then((m) => m.DrawingScreen),
+);
+const AFTER_THE_BOARD = [ExploreScreen, DrawingScreen];
 // Someone else's sticker board opens from Explore, so its code loads once Explore is open.
 const ArtistBoard = lazyWithPreload("someone else's sticker board", () =>
   import("../sticker-board/ArtistBoard").then((m) => m.ArtistBoard),
@@ -33,18 +44,39 @@ const GIFT_LOADING: CSSProperties = {
   zIndex: "var(--z-sheet)",
   background: "var(--liner)",
 };
+const DRAWING_LOADING: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  background: "var(--liner)",
+};
+
+/** The drawing screen's place while its code loads: plain Liner, and one line for screen readers. */
+function DrawingScreenLoading() {
+  const { t } = useTranslation();
+  return (
+    <div style={DRAWING_LOADING}>
+      <p className="visually-hidden" role="status">
+        {t(($) => $.app.drawingLoading)}
+      </p>
+    </div>
+  );
+}
 
 export default function App() {
   const { t } = useTranslation();
   const api = useApi();
+  const me = useMe();
   const phone = useRef<HTMLDivElement>(null);
   const drawingScreen = useRef<DrawingScreenHandle>(null);
   // The sticker board is home. Draw is the board's key, not a tab. A chat menu link opens its own
   // screen; a gift message's link opens its gift over the board.
   const [opened] = useState(() => openedFrom(location.pathname));
   const [view, setView] = useState<View>(opened.view);
-  // Held in memory while ReceiveGiftDialog is open over the board.
-  const [giftClaimToken, setGiftClaimToken] = useState(opened.giftClaimToken);
+  // The gift ReceiveGiftDialog shows over the board: a gift message's link's token, held in memory
+  // while it's open, or a gift waiting for you, opened from the board's badge.
+  const [giftOpening, setGiftOpening] = useState<GiftFrom | undefined>(() =>
+    opened.giftClaimToken ? { giftClaimToken: opened.giftClaimToken } : undefined,
+  );
   // Set from the seal until the next sticker starts, when Draw starts a new one.
   const [sealedId, setSealedId] = useState<string>();
   // The sticker that last arrived, sealed or received; the board lands it with a "stick" animation.
@@ -54,7 +86,18 @@ export default function App() {
   // Someone else's sticker board, opened from Explore over it, so Explore keeps its search and scroll.
   const [visiting, setVisiting] = useState<Person>();
   const drawing = view === "draw";
-  usePreloadWhenIdle(OPENED_FROM_TABS);
+  const afterTheBoard = usePreloadAfterBoard(AFTER_THE_BOARD);
+  // Draw opened the drawing screen, so it stays mounted from then on.
+  const [drewHere, setDrewHere] = useState(drawing);
+  if (drawing && !drewHere) setDrewHere(true);
+
+  // The app renders once you're signed in to the server, and a board this phone kept for someone
+  // else goes. Opened on another screen, there's no board to wait for.
+  useLayoutEffect(() => {
+    noteBootMilestone("signed in");
+    forgetBoardUnlessFor(me.id);
+    if (opened.view !== "board") markBoardComplete();
+  }, [opened, me.id]);
 
   useEffect(() => {
     if (view === "explore") void ArtistBoard.preload();
@@ -67,8 +110,8 @@ export default function App() {
 
   useEffect(() => {
     // While a gift is open, its dialog names the page.
-    if (!giftClaimToken) document.title = t(($) => $.app.pageTitles[view]);
-  }, [view, giftClaimToken, t]);
+    if (!giftOpening) document.title = t(($) => $.app.pageTitles[view]);
+  }, [view, giftOpening, t]);
 
   // Once opened, a link's path goes, so a reload after moving on doesn't jump back to it, and a
   // reload with a gift open lands on the board: the gift message opens it again.
@@ -92,18 +135,28 @@ export default function App() {
   return (
     <div ref={phone} className={`phone ${drawing ? "has-tucked-tabs" : ""}`}>
       <div className="screen">
-        <DrawingScreen
-          ref={drawingScreen}
-          active={drawing}
-          onSealed={(id) => {
-            setSealedId(id);
-            setFreshId(id);
-          }}
-          onNewSticker={() => setSealedId(undefined)}
-          onGoToBoard={() => setView("board")}
-        />
+        {(afterTheBoard || drewHere) && (
+          // Draw tapped before its code is in holds on plain Liner for the moment it takes.
+          <Suspense fallback={drawing ? <DrawingScreenLoading /> : null}>
+            <DrawingScreen
+              ref={drawingScreen}
+              active={drawing}
+              onSealed={(id) => {
+                setSealedId(id);
+                setFreshId(id);
+              }}
+              onNewSticker={() => setSealedId(undefined)}
+              onGoToBoard={() => setView("board")}
+            />
+          </Suspense>
+        )}
         {view === "board" && (
-          <StickerBoard key={boardLoads} freshId={freshId} onDraw={openDrawing} />
+          <StickerBoard
+            key={boardLoads}
+            freshId={freshId}
+            onDraw={openDrawing}
+            onOpenGift={(gift) => setGiftOpening({ gift })}
+          />
         )}
         {/* Each in its own boundary, so Explore stays up while an artist's board loads over it. */}
         {view === "explore" && (
@@ -138,13 +191,13 @@ export default function App() {
         }}
       />
       <MotionPermissionCard />
-      {giftClaimToken && (
+      {giftOpening && (
         // Liner while ReceiveGiftDialog's code loads, so the board doesn't show first.
         <Suspense fallback={<div style={GIFT_LOADING} />}>
           <ReceiveGiftDialog
-            giftClaimToken={giftClaimToken}
+            from={giftOpening}
             onClose={(receivedId) => {
-              setGiftClaimToken(undefined);
+              setGiftOpening(undefined);
               if (!receivedId) return;
               setFreshId(receivedId);
               setBoardLoads((n) => n + 1);

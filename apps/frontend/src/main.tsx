@@ -9,6 +9,7 @@ import { ApiRoot } from "./api/ApiRoot";
 import App from "./app/App.tsx";
 import { followLanguageOnPage, startInLineLanguage } from "./i18n/pageLanguage";
 import { PrivySignIn } from "./identity/PrivySignIn";
+import { ChatMenuLink } from "./line/chatMenu";
 import { initLine } from "./line/liff";
 import { LineGate } from "./line/LineGate";
 import { startPerformanceRecorderAtBoot } from "./performance/performanceRecorder";
@@ -52,6 +53,7 @@ createRoot(root).render(
         <LineGate>
           <ApiRoot>
             <App />
+            <ChatMenuLink />
             <PrivySignIn />
           </ApiRoot>
         </LineGate>

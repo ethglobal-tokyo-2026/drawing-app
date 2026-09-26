@@ -47,7 +47,7 @@ export const errors = {
     en: "This gift wasn't opened in time.",
     ja: "このギフトは、期限内にひらかれませんでした。",
   },
-  /** Giving, In the bag: packing a sticker (POST /api/gifts) that's already in another open gift, or taking a gift out (POST …/take-out) before the escrow's take-out lands, in “couldn’t be packed” or “couldn’t be taken out” through errorReason */
+  /** Giving, In the bag: packing a sticker (POST /api/gifts) that's already in another open gift, in “couldn’t be packed” through errorReason */
   gift_in_transit: {
     en: "This sticker is already on its way in a gift.",
     ja: "このシールは、すでにギフトとして贈られている途中です。",
@@ -108,6 +108,11 @@ export const errors = {
   line_token_expired: {
     en: "Your LINE sign-in token has expired. Reconnect with LINE to continue.",
     ja: "LINEのログイン情報の有効期限が切れました。LINEで再ログインしてください。",
+  },
+  /** Wherever errorMessage shows a refusal of POST /api/line-menu: LINE failed or didn't answer when the app's server linked your chat menu. The developer slip's Chat menu row shows the code instead */
+  line_unavailable: {
+    en: "LINE didn't answer, so the menu under your chat hasn't changed yet.",
+    ja: "LINEから応答がありません。トークのメニューはまだ変わっていません。",
   },
   /** Drawing screen, after tapping the check to seal: the seal chip's reason when the sticker saved but its NFT mint wasn't confirmed (POST /api/stickers), through errorReason */
   mint_failed: {
@@ -182,6 +187,11 @@ export const errors = {
   },
   /** Receiving: opening a gift message's link (POST /api/gifts/preview or /receive) after the giver took the gift back; the Receive gift dialog shows its own “took this one back” screen instead */
   taken_back: { en: "The giver took this gift back.", ja: "贈り主がこのギフトを取り消しました。" },
+  /** Giving, In the bag: confirming a take-out (POST /api/gifts/:giftId/take-out) before the escrow confirms it, through errorReason */
+  take_out_not_landed: {
+    en: "Taking this sticker out hasn't been confirmed yet. Wait a moment, then try again.",
+    ja: "シールを取り出せたか、まだ確認できていません。少し待ってから、もう一度お試しください。",
+  },
   /** Drawing screen, after tapping the check to seal: the seal chip's reason when the drawing's ticket already became a sticker (POST /api/stickers), through errorReason */
   ticket_already_used: {
     en: "That ticket was already used.",

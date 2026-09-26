@@ -116,7 +116,8 @@
   transform: scale(1.045);
 }
 
-.placed-sticker.is-dragging .sticker-figure__img {
+/* A foil sticker casts it from its band's outer edge. */
+.placed-sticker.is-dragging :is(.sticker-figure__img, .sticker-foil__cast) {
   filter: var(--sticker-cut) drop-shadow(3px 8px 6px rgba(28, 24, 36, 0.18))
     drop-shadow(8px 20px 20px rgba(28, 24, 36, 0.15));
 }
@@ -344,12 +345,17 @@
   gap: 6px;
 }
 
-/* Gifts on their way sit in the header, opposite your name, above the sticker tray's pull. */
-.board-pending {
+/* Gifts for you, then gifts on their way, sit in the header opposite your name, above the sticker
+   tray's pull. */
+.board-gifts {
   position: absolute;
   z-index: 800;
   right: 12px;
   top: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
 }
 
 /* A 36px face on its lip. */

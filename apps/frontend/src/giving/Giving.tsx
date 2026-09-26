@@ -48,6 +48,8 @@ interface Props {
   liffId: string;
   /** Closes Giving; `sent` is true once the sticker has gone. */
   onClose: (sent: boolean) => void;
+  /** Who the giver picked in the app, from their board: the gift waits on that person's board. */
+  forUserId?: string;
 }
 
 /** Motion timings, in step with GiftBag.css: normal, then reduced. */
@@ -65,7 +67,7 @@ const screenOf = (state: GiveFlowState): Screen =>
 type View = Screen | "cantFind";
 
 /** Giving a sticker through a LINE chat: the give sheet, the gift bag, and the seal on send. */
-export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) {
+export function Giving({ sticker, fromHandle, sender, liffId, onClose, forUserId }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const motion = reduced ? 1 : 0;
@@ -79,6 +81,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
       liffId,
       // The sealed bag, never the sticker; the gift message drops it where the app isn't on HTTPS.
       heroUrl: new URL(heroPng, location.origin).href,
+      ...(forUserId && { forUserId }),
     }),
     pickerDelayMs: PICKER_DELAY[motion],
     takeOutMs: TAKE_OUT[motion],
@@ -86,7 +89,8 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
   const screen = screenOf(state);
   const [cantFind, setCantFind] = useState(false);
   const view: View = screen === "sheet" && cantFind ? "cantFind" : screen;
-  const busy = state.step === "picking" || state.step === "takingOut";
+  const preparing = state.step === "packed" || state.step === "preparing";
+  const busy = preparing || state.step === "picking" || state.step === "takingOut";
 
   const close = () => {
     if (!busy) onClose(state.step === "sent");
@@ -94,7 +98,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
 
   const root = useRef<HTMLDivElement>(null);
   useFocusTrap(root, { onEscape: () => (view === "cantFind" ? setCantFind(false) : close()) });
-  // While LINE's picker is up it can't close, so Back leaves it where it is.
+  // Wallet confirmation and LINE's picker keep the gift open until their outcome is known.
   useBackToClose(true, () => {
     close();
     return !busy;
@@ -199,7 +203,11 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
     );
   } else {
     const unsent = state.step === "notSent" || state.step === "failed";
-    title = unsent ? t(($) => $.giving.inTheBag.notSent) : t(($) => $.giving.inTheBag.title);
+    title = preparing
+      ? t(($) => $.giving.preparing.title)
+      : unsent
+        ? t(($) => $.giving.inTheBag.notSent)
+        : t(($) => $.giving.inTheBag.title);
     const couldntRecord = (reason: string) => t(($) => $.giving.inTheBag.couldntRecord, { reason });
     const problem =
       state.step === "failed"
@@ -213,8 +221,12 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
         <header className="giving__head">
           <h2 className="giving__title">{title}</h2>
         </header>
-        <p className="giving__sub">
-          {unsent ? t(($) => $.giving.inTheBag.notSentLead) : t(($) => $.giving.inTheBag.lead)}
+        <p className="giving__sub" role={preparing ? "status" : undefined}>
+          {preparing
+            ? t(($) => $.giving.preparing.lead)
+            : unsent
+              ? t(($) => $.giving.inTheBag.notSentLead)
+              : t(($) => $.giving.inTheBag.lead)}
         </p>
         {problem.filter(Boolean).map((line) => (
           <p key={String(line)} className="giving__problem" role="alert">
@@ -230,7 +242,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
             disabled={busy}
             data-autofocus
           >
-            {t(($) => $.giving.inTheBag.send)}
+            {preparing ? t(($) => $.giving.preparing.button) : t(($) => $.giving.inTheBag.send)}
           </Key>
           <QuietLink onClick={() => flow?.takeOut()} disabled={busy}>
             <ArrowUUpLeft /> {t(($) => $.giving.inTheBag.takeOut)}

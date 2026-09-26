@@ -1,6 +1,7 @@
 import type { Db } from "@drawing-app/db";
 import type { LocalAccount } from "viem";
 import { z } from "zod";
+import type { ChatMenuLink } from "./chatMenu/menus.ts";
 import type { EscrowStatus, EscrowTransfer, StickerImages, TicketShop } from "./shapes.ts";
 
 /** Everything the routes reach beyond the request. server.ts builds the real ones; tests pass fakes. */
@@ -20,6 +21,23 @@ export interface AppDeps {
   ens: EnsDeps | null;
   ticketPayments: TicketPayments;
   serverLog: ServerLog;
+  /** Off without the Messaging API channel, or under dev sign-in: every call then does nothing. */
+  lineChatMenu: LineChatMenu;
+}
+
+/**
+ * Links each person's chat menu, under the Official Account's chat in LINE, to the one for their
+ * language and tickets. Calls for one person run in turn, each reading their tickets when it runs.
+ */
+export interface LineChatMenu {
+  /** Links the person's menu and says what LINE shows; null once the account is gone. Rejects when LINE fails. */
+  link: (userId: string) => Promise<ChatMenuLink | null>;
+  /** Links the person's menu after a spend or a purchase commits. Never rejects: a failure is logged. */
+  relink: (userId: string) => Promise<void>;
+  /** Unlinks a deleted account's menu, so LINE shows the default one. Never rejects. */
+  unlink: (userId: string, lineUserId: string) => Promise<void>;
+  /** Settles once every call made so far has. */
+  idle: () => Promise<void>;
 }
 
 /** The server's whole log as text, newest line first. Rejects when the log can't be read. */
@@ -118,10 +136,13 @@ export interface GiftChain {
     expiresAt: Date;
   }) => EscrowTransfer;
   readEscrowGift: (giftId: string) => Promise<EscrowGift>;
-  /** Claims a pending gift for the recipient's smart wallet and waits for it to land. */
+  /**
+   * Claims a pending gift for the recipient's smart wallet and waits for it to land. Without a Gift
+   * Claim Token, the recipient must be the person the gift waits for (gifts.for_user_id).
+   */
   claimGift: (gift: {
     giftId: string;
-    giftClaimToken: string;
+    giftClaimToken: string | null;
     recipientId: string;
   }) => Promise<{ claimed: true; txHash: string } | { claimed: false }>;
 }

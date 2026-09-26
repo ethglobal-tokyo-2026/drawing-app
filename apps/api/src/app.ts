@@ -7,6 +7,7 @@ import { ensRoutes } from "./routes/ens.ts";
 import { exploreRoutes } from "./routes/explore.ts";
 import { giftRoutes } from "./routes/gifts.ts";
 import { gratitudeRoutes } from "./routes/gratitude.ts";
+import { lineMenuRoutes } from "./routes/lineMenu.ts";
 import { sessionRoutes } from "./routes/session.ts";
 import { stickerBoardRoutes } from "./routes/stickerBoards.ts";
 import { stickerRoutes } from "./routes/stickers.ts";
@@ -31,6 +32,8 @@ export function createApp(deps: AppDeps) {
       .use(except([isSignIn, isEnsGateway], requireSession(deps)))
       // /session and /me
       .route("/", sessionRoutes(deps))
+      // /line-menu
+      .route("/", lineMenuRoutes(deps))
       // /tickets and /ticket-purchases
       .route("/", ticketRoutes(deps))
       .route("/stickers", stickerRoutes(deps))

@@ -21,8 +21,12 @@ import {
 const noAccount = (c: Context<AppEnv>) =>
   apiError(c, 401, "signed_out", `Person ${c.var.userId} has no account`);
 
-/** Tickets: the day's tickets, spending one, the ticket shop, and buying its packs with JPYC. */
-export const ticketRoutes = ({ db, clock, ticketPayments }: AppDeps) =>
+/**
+ * Tickets: the day's tickets, spending one, the ticket shop, and buying its packs with JPYC. Once a
+ * spend or a purchase commits, the chat menu's Draw key catches up in the background: LINE never
+ * holds up the answer or fails it.
+ */
+export const ticketRoutes = ({ db, clock, ticketPayments, lineChatMenu }: AppDeps) =>
   new Hono<AppEnv>()
     .get("/tickets", (c) => {
       const holder = ticketHolder(db, c.var.userId);
@@ -32,7 +36,7 @@ export const ticketRoutes = ({ db, clock, ticketPayments }: AppDeps) =>
     .post("/tickets/spend", validate("json", spendRequestSchema), (c) => {
       const { kind } = c.req.valid("json");
       const now = clock.now();
-      return db.transaction(
+      const spent = db.transaction(
         (tx) => {
           const holder = ticketHolder(tx, c.var.userId);
           if (!holder) return noAccount(c);
@@ -70,6 +74,8 @@ export const ticketRoutes = ({ db, clock, ticketPayments }: AppDeps) =>
         },
         { behavior: "immediate" },
       );
+      if (spent.status === 201) void lineChatMenu.relink(c.var.userId);
+      return spent;
     })
     .get("/ticket-shop", (c) =>
       c.json({ shop: ticketShop(ticketPayments.target, c.var.userId) }, 200),
@@ -139,7 +145,7 @@ export const ticketRoutes = ({ db, clock, ticketPayments }: AppDeps) =>
         );
       }
       const now = clock.now();
-      return db.transaction(
+      const bought = db.transaction(
         (tx) => {
           const holder = ticketHolder(tx, c.var.userId);
           if (!holder) return noAccount(c);
@@ -159,4 +165,6 @@ export const ticketRoutes = ({ db, clock, ticketPayments }: AppDeps) =>
         },
         { behavior: "immediate" },
       );
+      if (bought.status === 201) void lineChatMenu.relink(c.var.userId);
+      return bought;
     });

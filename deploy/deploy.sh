@@ -4,7 +4,7 @@
 #
 #   ./deploy/deploy.sh
 #
-# deploy/.env (gitignored, see .env.example) names the box and holds the optional chat menu secrets. HAProxy
+# deploy/.env (gitignored, see .env.example) names the box and holds the API's secrets. HAProxy
 # serves DEPLOY_URL: deploy/serve.py on 127.0.0.1:3003 (deploy/sticker-board.service) serves the app, and the
 # auth server on 127.0.0.1:8787 (deploy/sticker-auth.service) answers /v1/auth/ and /.well-known/jwks.json.
 set -euo pipefail
@@ -80,18 +80,8 @@ auth_changed+="$(rsync -ai "$ROOT/deploy/sticker-auth.service" "$TARGET:$AUTH_DI
 auth_changed+="$(ssh "$TARGET" "test -s '$AUTH_DIR/signing-key.pem' || { umask 077 \
   && openssl ecparam -name prime256v1 -genkey -noout | openssl pkcs8 -topk8 -nocrypt -out '$AUTH_DIR/signing-key.pem' \
   && echo 'made a signing key'; }")"
-# Chat menu switching's secrets go to the box over ssh's stdin, never on a command line, and replace
-# secrets.env (mode 600) only when they changed.
-if [ -n "${PRIVY_APP_SECRET:-}" ] && [ -n "${LINE_MESSAGING_CHANNEL_ID:-}" ] && [ -n "${LINE_MESSAGING_CHANNEL_SECRET:-}" ]; then
-  printf 'PRIVY_APP_SECRET=%s\nLINE_MESSAGING_CHANNEL_ID=%s\nLINE_MESSAGING_CHANNEL_SECRET=%s\n' \
-    "$PRIVY_APP_SECRET" "$LINE_MESSAGING_CHANNEL_ID" "$LINE_MESSAGING_CHANNEL_SECRET" \
-    | ssh "$TARGET" "umask 077 && cat > '$AUTH_DIR/secrets.env.new'"
-  auth_changed+="$(ssh "$TARGET" "if cmp -s '$AUTH_DIR/secrets.env.new' '$AUTH_DIR/secrets.env'; \
-    then rm '$AUTH_DIR/secrets.env.new'; \
-    else mv '$AUTH_DIR/secrets.env.new' '$AUTH_DIR/secrets.env' && echo 'installed secrets.env'; fi")"
-else
-  echo "· chat menu switching stays off: deploy/.env lacks PRIVY_APP_SECRET, LINE_MESSAGING_CHANNEL_ID or LINE_MESSAGING_CHANNEL_SECRET"
-fi
+# The auth server needs no secrets.env now that the REST API links chat menus; deploy-api.sh installs
+# the Messaging API channel's secrets for the API.
 if [ -n "$auth_changed" ]; then
   ssh "$TARGET" "sudo install -m 644 '$AUTH_DIR/sticker-auth.service' /etc/systemd/system/sticker-auth.service \
     && sudo systemctl daemon-reload && sudo systemctl enable -q sticker-auth && sudo systemctl restart sticker-auth"

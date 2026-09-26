@@ -3,7 +3,7 @@ import type { Section } from "../catalog";
 export const stickerBoard = {
   /** A name under croquis.eth, which opens in the ENS app. */
   ensName: {
-    /** Sticker detail, under the title, and the stat board's name card: screen readers' name for the croquis.eth name's link, which opens it in the ENS app; {{name}} is the whole name */
+    /** Sticker detail, under the title, and the stat board's label-maker tape: screen readers' name for the croquis.eth name's link, which opens it in the ENS app; {{name}} is the whole name */
     open: { en: "Open {{name}} in the ENS app", ja: "{{name}}をENSアプリでひらく" },
   },
   /** The Sticker Board's cork back: your own, or someone else's. */
@@ -20,29 +20,10 @@ export const stickerBoard = {
     gratitude: {
       /** Stat board: the heading of the Gratitude receipt, the paper under the pink pushpin */
       title: { en: "Gratitude received", ja: "受け取った感謝" },
-      inspired: {
-        /** Stat board, Gratitude receipt: the Inspired row's name, beside its amount */
-        label: { en: "Inspired", ja: "インスパイア" },
-        /** Stat board, Gratitude receipt: the Inspired row's one-line reason, under its name */
-        reason: { en: "Gratitude for stickers they gave.", ja: "贈ったシールへの感謝です。" },
-      },
-      magic: {
-        /** Stat board, Gratitude receipt: the Magic row's name, beside its amount */
-        label: { en: "Magic", ja: "マジック" },
-        /** Stat board, Gratitude receipt: the Magic row's one-line reason, under its name */
-        reason: { en: "Gratitude sent a special way.", ja: "特別な方法で送られた感謝です。" },
-      },
-      asOriginalArtist: {
-        /** Stat board, Gratitude receipt: the name of the row for the Original Artist Gratitude Share, beside its amount */
-        label: { en: "Original Artist", ja: "作者" },
-        /** Stat board, Gratitude receipt: the Original Artist row's one-line reason, under its name */
-        reason: {
-          en: "A share of the gratitude when a sticker they drew is given on.",
-          ja: "かいたシールが、ほかの人どうしで贈られたときの感謝の一部です。",
-        },
-      },
-      /** Stat board, Gratitude receipt: in place of the rows while the User Stats load or when they fail to */
-      didntLoad: { en: "Gratitude didn’t load.", ja: "感謝を読み込めませんでした。" },
+      /** Stat board, Gratitude receipt: the row for gratitude sent for stickers they gave, beside its amount */
+      direct: { en: "Direct", ja: "直接" },
+      /** Stat board, Gratitude receipt: the row for the Original Artist Gratitude Share, from stickers they drew that others gave on, beside its amount */
+      residual: { en: "Residual", ja: "作者として" },
       /** Your stat board, Gratitude receipt: in place of the rows before you've received any gratitude */
       noneYetOwn: {
         en: "No gratitude yet. It arrives when someone you give a sticker to sends you some for it.",
@@ -67,13 +48,6 @@ export const stickerBoard = {
       days_other: { en: "{{days}} days", ja: "{{days}}日" },
       /** Stat board, Bests scrap: the Best combo row's label */
       bestCombo: { en: "Best combo", ja: "最高コンボ" },
-      /** Stat board, Bests scrap: the small note under Best combo */
-      bestComboNote: {
-        en: "Most hits in one gratitude combo",
-        ja: "1回の感謝コンボでの最多ヒット",
-      },
-      /** Stat board, Bests scrap: the Best combo figure, the hits in that combo, such as "×64" */
-      combo: { en: "×{{hits}}", ja: "×{{hits}}" },
       /** Stat board, Bests scrap: the Most gratitude in a day row's label */
       mostGratitudeInADay: { en: "Most gratitude in a day", ja: "1日の最多感謝" },
       /** Stat board, Bests scrap: in place of a best that has no figure yet */
@@ -92,27 +66,8 @@ export const stickerBoard = {
       days_other: { en: "days", ja: "日" },
       /** Stat board, Streak leaf: in place of the day count while there's no streak */
       notStarted: { en: "Not started", ja: "まだこれから" },
-      /** Stat board, Streak leaf: the rule under a running streak; {{time}} is when the day turns over, such as "0:00" */
-      rule: {
-        en: "Miss a day and it goes back to zero. Days turn over at {{time}}.",
-        ja: "1日でも休むと0に戻ります。日付は{{time}}に切り替わります。",
-      },
-      /** Your stat board, Streak leaf: the note under Not started */
-      startOwn: {
-        en: "Draw a sticker today to start one.",
-        ja: "今日シールをかくと、連続日数のカウントが始まります。",
-      },
-      /** Someone else's stat board, Streak leaf: the note under Not started */
-      start: {
-        en: "It starts the first day they draw.",
-        ja: "シールをかいた日からカウントが始まります。",
-      },
     },
-    /** Your stat board, Streak leaf: the note in place of the streak rule while your User Stats load */
-    didntLoadOwn: { en: "Your stats didn’t load.", ja: "記録を読み込めませんでした。" },
-    /** Someone else's stat board, Streak leaf: the note in place of the streak rule while their User Stats load */
-    didntLoad: { en: "Their stats didn’t load.", ja: "記録を読み込めませんでした。" },
-    /** Your stat board, Streak leaf: the note in place of the streak rule when your User Stats fail to load, with the reason */
+    /** Your stat board, Gratitude receipt: in place of its rows when your User Stats fail to load, with the reason */
     didntLoadOwnBecause: {
       en: "Your stats didn’t load: {{reason}}",
       ja: "記録を読み込めませんでした：{{reason}}",
@@ -278,14 +233,14 @@ export const stickerBoard = {
   board: {
     /** Your sticker board, top left: screen readers' name for the button with your photo and name, which turns the board over to your stat board */
     yourStats: { en: "{{name}}: your stats", ja: "{{name}}：あなたの記録" },
-    /** Your sticker board: the Draw key's visible label, beside your ticket counts */
+    /** Your sticker board: the Draw key's visible label; your tickets tuck behind the key's right end */
     draw: { en: "Draw", ja: "かく" },
-    /** Your sticker board: screen readers' name for the Draw key while your ticket counts haven't loaded */
+    /** Your sticker board: screen readers' name for the Draw key while your tickets haven't loaded */
     drawLabel: { en: "Draw a new sticker", ja: "新しいシールをかく" },
-    /** Your sticker board: screen readers' name for the Draw key; {{tickets}} is the ticket summary, such as "2 daily tickets and 5 reserve tickets" */
+    /** Your sticker board: screen readers' name for the Draw key; {{tickets}} names the tickets the next drawing can use, such as "2 daily tickets left" or "no tickets until 12:00 AM" */
     drawLabelWithTickets: {
-      en: "Draw a new sticker: you have {{tickets}}",
-      ja: "新しいシールをかく：手持ちは{{tickets}}",
+      en: "Draw a new sticker: {{tickets}}",
+      ja: "新しいシールをかく：{{tickets}}",
     },
     /** Your sticker board with no stickers yet: the nudge beside the Draw key (hidden from screen readers) */
     firstSticker: { en: "Make your first sticker", ja: "はじめてのシールをつくろう" },
@@ -531,7 +486,7 @@ export const stickerBoard = {
     title: { en: "{{name}}'s sticker board", ja: "{{name}}さんのシールボード" },
     /** Someone else's sticker board: screen readers' name for the button with their photo and name, which turns the board over to their stat board */
     theirStats: { en: "{{name}}: their stats", ja: "{{name}}さんの記録" },
-    /** Someone else's stat board, Streak leaf: the note in place of the streak rule when their User Stats fail to load, with the reason */
+    /** Someone else's stat board, Gratitude receipt: in place of its rows when their User Stats fail to load, with the reason */
     statsDidntLoad: {
       en: "Their stats didn’t load: {{reason}}",
       ja: "記録を読み込めませんでした：{{reason}}",
