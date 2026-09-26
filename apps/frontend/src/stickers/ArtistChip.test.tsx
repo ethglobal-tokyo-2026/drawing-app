@@ -38,6 +38,12 @@ describe("ArtistChip", () => {
     expect(note.textContent).toBe(`Artist ${ken.name}`);
   });
 
+  it("shows the artist's first letter where they have no picture", () => {
+    const note = noteOf(<ArtistChip artist={{ ...ken, name: " kenji" }} plain />);
+    expect(note.querySelector("img")).toBeNull();
+    expect(note.querySelector(".artist-chip__letter")?.getAttribute("data-letter")).toBe("K");
+  });
+
   it("wears the foil ring on a board, and the plain one off a board has only the white edge", () => {
     const withPicture = { ...ken, pictureUrl: "https://profile.line-scdn.test/ken" };
     const ring = (note: Element) => note.querySelector(".artist-chip__ring");

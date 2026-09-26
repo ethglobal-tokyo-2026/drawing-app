@@ -14,14 +14,19 @@ interface Props {
   plain?: boolean;
 }
 
+// LINE names often start with an emoji; a grapheme keeps flags and joined emoji whole.
+const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+
 /**
  * Who drew a sticker someone else drew: their picture wearing the sticker's language, a white edge
- * inside a turning foil ring (just the white edge when plain), then their handle.
+ * inside a turning foil ring (just the white edge when plain), then their handle. Without a picture,
+ * their LINE name's first letter stands in, as on a photo sticker.
  */
 export function ArtistChip({ artist, variant = "artist", bare = false, plain = false }: Props) {
   const { t } = useTranslation();
   // Until the handle prompt is answered, their LINE name stands in.
   const name = artist.handle === null ? artist.name : formatHandle(artist.handle);
+  const [initial] = graphemes.segment(artist.name.trim());
   const classes = [
     "artist-chip",
     `artist-chip--${variant}`,
@@ -39,7 +44,11 @@ export function ArtistChip({ artist, variant = "artist", bare = false, plain = f
         {artist.pictureUrl ? (
           <img className="artist-chip__face" src={artist.pictureUrl} alt="" draggable={false} />
         ) : (
-          <span className="artist-chip__face" />
+          <span
+            className="artist-chip__face artist-chip__letter"
+            data-letter={initial?.segment.toUpperCase()}
+            aria-hidden="true"
+          />
         )}
       </span>
       <span className="artist-chip__text">

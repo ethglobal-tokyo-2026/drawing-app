@@ -59,6 +59,19 @@
   box-shadow: 0 0 0 2px var(--canvas);
 }
 
+/* No picture: their first letter on the paper, in the photo sticker's puffy capital, at the 11px floor.
+   It's drawn, not text, so the chip still reads as its caption and handle. */
+.artist-chip__letter {
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+  font: 400 11px/1 var(--font-puffy);
+}
+
+.artist-chip__letter::before {
+  content: attr(data-letter);
+}
+
 .artist-chip__text {
   display: flex;
   align-items: baseline;
@@ -93,6 +106,10 @@
   height: 26px;
 }
 
+.artist-chip--artist .artist-chip__letter {
+  font-size: 12px;
+}
+
 .artist-chip--artist .artist-chip__text {
   display: grid;
   gap: 2px;
@@ -121,6 +138,22 @@
     0 0 0 2px var(--canvas),
     0 0 0 2.5px var(--rule-strong),
     1px 2px 3px rgba(28, 24, 36, 0.14);
+}
+
+/* A sheet has the room, so the whole handle shows, up to the longest (32 characters), running onto a
+   second line rather than being cut short. */
+.artist-chip--plain {
+  height: auto;
+  min-height: 40px;
+  max-width: 100%;
+  padding-block: 4px;
+}
+
+.artist-chip--plain .artist-chip__name {
+  max-width: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 /* In a toolbar, whose surface is the pill. */

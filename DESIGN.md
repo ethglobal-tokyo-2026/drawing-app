@@ -568,12 +568,12 @@ The one card that sells reserve tickets, in the out-of-tickets card's stock. The
 
 ### Artist chip
 
-Who drew a foil sticker: a Liner Lift pill (40px) with the artist's LINE picture in a white edge inside a turning foil ring, then a fine-print ARTIST caption over "@name" (760, 14px). A one-line "By @name" variant is for tight spaces. The copy is "artist" or "By", never "from".
+Who drew a foil sticker: a Liner Lift pill (40px) with the artist's LINE picture in a white edge inside a turning foil ring, then a fine-print ARTIST caption over "@name" (760, 14px). Without a picture, their first letter stands in on the paper, in the photo sticker's puffy capital (12px, and 11px in the By variant), never a blank disc. A one-line "By @name" variant is for tight spaces. The copy is "artist" or "By", never "from".
 
 - **First load:** when a board opens, each foil sticker's chip pops in at its top-left corner, top to bottom 80ms apart, holds about 2s and fades (3.2s in all), in one layer above every sticker and the name header. It happens once per opening. Reduced motion shows and hides it without the pop.
 - **Tapped:** the chip heads the selected sticker's menu, above its actions, until you deselect.
 - **Detail:** under the big sticker, the chip leads the fine print. Your own stickers never get a chip.
-- **Plain:** off a board, where foil never shows (Explore's lifted sticker), the chip has no ring: the picture keeps its white edge, cut from the pill by a kiss-cut, and casts a small shadow.
+- **Plain:** off a board, where foil never shows (Explore's lifted sticker), the chip has no ring: the picture keeps its white edge, cut from the pill by a kiss-cut, and casts a small shadow. With a sheet's width to use, it shows the whole handle, up to the longest (32 characters), running onto a second line rather than cut short.
 
 ### Explore
 
