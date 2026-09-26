@@ -84,7 +84,7 @@ Each has a recommendation. "Go with the recommendations" settles all of them; na
 27. **Start Privy after the board settles**, or at once for a gift link, a seal, a gift or a receive. Its comment already says it "loads once the board is up and never delays it", but it starts with the board and delays the stickers by up to 3.4 s. The chat menu switch and the Sui wallet setup then happen a few seconds later. _Recommend._
 28. **WebP sticker images, made on the server** at sealing (WebKit can't encode WebP from a canvas, so the phone can't). The PNGs stay the originals for the content hash and the chain. One sticker's four images went from 260 KB to 43 KB. _Recommend WebP now_; AVIF is 40% smaller again but slower to encode and needs iOS 16.
 29. **Keep the last board on the phone**, so the next open paints your stickers before the network answers. It can be one refresh out of date. _Recommend._
-30. **The foil's timed glint.** DESIGN.md says a white glint sweeps each foil every 4.2 s. Since Favio's efae4ef it sweeps only when the phone tilts, which needs motion permission most iPhones never grant, so most people never see it. _Recommend_ bringing the timed glint back and keeping the tilt sweep as an extra, after asking Favio.
+30. **The foil's glint: settled by Favio.** The research found the glint swept only when the phone tilted, which needs motion permission most iPhones never grant. After the research, Favio's 753aa9f made it read the shared light: it rests at the top left before any tilt and holds where the last tilt left it, so every phone shows it. _Recommend_ keeping his design and looking at it on the iPhone. The foil's other fixes (W3) should be built with Favio, who is working in that code.
 31. **A CDN in Japan** for the app's files and sticker images, once the app has a real domain instead of sslip.io. The round trip to Germany is 265 ms from here; a Tokyo edge would be 10–30 ms. _Recommend later_, and not moving the box, since the data lives only there.
 
 ## Fix now: bugs that need no decision
@@ -180,7 +180,7 @@ Your items: first opening your sticker board takes five to seven seconds; the fo
   - **Foil:**
     - Reveal each sticker whole, once its image, mask, spec and rim have decoded (S–M).
     - Bake the band's mask on the server: one crisp mask of even width instead of nine copies (M).
-    - Bring back the timed glint (S).
+    - The glint: done differently by Favio's 753aa9f (decision 30); check it on the iPhone.
     - Add a fine, still diffraction grating the bands flow under, so they glitter instead of crawling, and cast the shadow from the band's outer edge, so the dark groove goes (M).
   - **Measure on the phone:** add boot milestones and a frame summary to the performance recorder, so you can copy a real report from LINE on your iPhone (S). Measure the foil's cost there before trading any motion for speed: you reverted an unmeasured "hold still" in d758892.
 - **Expected results:** warm opens from about 2.5–3 s to 1.0–1.3 s; cold opens from 5–8 s to 2.5–3 s. These are estimates until the phone reports.
@@ -291,7 +291,7 @@ After decisions 6, 7, 11 and 15:
 
 1. **Before any build.**
    - Land PR #10 (`i18n/handoff`, 71+ frontend files). It now also carries the sticker board's, Explore's and the tickets' text (`i18n/sticker-board`, `i18n/explore` and `i18n/tickets` were merged into it). Almost every workstream edits the same files for text.
-   - Tell Favio about W4 (his Shop changes) and the glint (his efae4ef), and Spencer about the dev sealing fix and the "wallet" copy (his sponsored-account code).
+   - Tell Favio about W4 (his Shop changes) and the foil work in W3 (his 753aa9f is in the same files), and Spencer about the dev sealing fix and the "wallet" copy (his sponsored-account code).
    - Run `git fetch` and look at open PRs again, since both teammates merge too.
 2. **Foundations**, each small and committed early so the lanes can start:
    - the dev sealing fix;
