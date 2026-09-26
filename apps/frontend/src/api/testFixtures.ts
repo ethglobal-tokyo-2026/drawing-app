@@ -15,6 +15,7 @@ const person = (handle: string, lineDisplayName: string): Person => ({
   lineDisplayName,
   linePictureUrl: null,
   ensName: `${handle}.croquis.eth`,
+  ageStatus: "adult",
 });
 
 export const people = {
@@ -36,6 +37,7 @@ export const markupLikePerson: Person = {
   lineDisplayName: MARKUP_LIKE_NAME,
   linePictureUrl: null,
   ensName: null,
+  ageStatus: "adult",
 };
 
 const ART_PX = 224;
@@ -72,6 +74,7 @@ export function sticker(overrides: Partial<Sticker> = {}): Sticker {
     mintTxHash: null,
     sealedAt: "2026-09-23T11:52:00.000Z",
     ensName: null,
+    nsfw: false,
     ...overrides,
   };
 }

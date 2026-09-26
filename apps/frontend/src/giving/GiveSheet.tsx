@@ -1,7 +1,7 @@
 import { GiveIcon, X } from "../icons";
 import { Suspense, useRef, useState } from "react";
 import { useMe } from "../api/meContext";
-import { ageStatusOf } from "../identity/ageStatus";
+import type { AgeStatus } from "@drawing-app/api/client";
 import { useTranslation } from "../i18n/react";
 import { LIFF_ID } from "../line/liff";
 import { formatHandle, formatNo } from "../stickers/format";
@@ -26,6 +26,8 @@ interface Props {
   to: string;
   /** The board's owner: the gift waits on their board as well as in the LINE chat. */
   toId: string;
+  /** The board's owner's age status: an NSFW sticker goes only to an adult. */
+  toAgeStatus: AgeStatus;
   onClose: () => void;
 }
 
@@ -33,14 +35,13 @@ interface Props {
  * Giving from someone else's board: pick one of yours, then it goes into a gift bag and out through
  * a LINE chat, as every gift does.
  */
-export function GiveSheet({ to, toId, onClose }: Props) {
+export function GiveSheet({ to, toId, toAgeStatus, onClose }: Props) {
   const { t } = useTranslation();
   const { stickers, error: loadError } = useKeptStickers();
   const [picked, setPicked] = useState<string | null>(null);
   const [giving, setGiving] = useState<KeptSticker | null>(null);
   const pickedSticker = stickers?.find((s) => s.id === picked);
   const me = useMe();
-  const recipientAge = ageStatusOf({ handle: to });
   const sender = useGiftSender();
   const root = useRef<HTMLDivElement>(null);
   useBackToClose(!giving, onClose);
@@ -95,10 +96,10 @@ export function GiveSheet({ to, toId, onClose }: Props) {
               picked={picked}
               onPick={setPicked}
               label={t(($) => $.giving.giveSheet.yourStickers)}
-              blocked={(s) => !canGiveTo(s, recipientAge)}
+              blocked={(s) => !canGiveTo(s, toAgeStatus)}
             />
           )}
-          {stickers?.some((s) => !canGiveTo(s, recipientAge)) && (
+          {stickers?.some((s) => !canGiveTo(s, toAgeStatus)) && (
             <p className="fine giving__nsfw-note">{t(($) => $.giving.nsfw.adultsOnly, { name })}</p>
           )}
           {!sender && (

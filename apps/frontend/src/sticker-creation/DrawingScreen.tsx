@@ -9,7 +9,6 @@ import {
   type Ref,
 } from "react";
 import { useMyAgeStatus } from "../identity/useMyAgeStatus";
-import { markNsfwSticker } from "../stickers/nsfwDemo";
 import type { Sticker } from "@drawing-app/api/client";
 import { ApiError, apiError } from "../api/apiClient";
 import { useMe } from "../api/meContext";
@@ -312,7 +311,6 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         ...(timelapse && { timelapse }),
         nsfw: nsfw.current,
       });
-      if (nsfw.current) markNsfwSticker(sealedSticker.id);
       ticket.current = null;
       keeper.wipe();
       // The used ticket's stub now carries this sticker's outline.

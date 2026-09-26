@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { PersonView } from "../api/views";
 import { artistShareLine, defaultOpenRow, toTrailRows, type TrailRow } from "./trailRows";
 
-const who = (id: string): PersonView => ({ id, handle: id, name: id });
+const who = (id: string): PersonView => ({ id, handle: id, name: id, ageStatus: "adult" });
 const [me, mika, ken] = [who("me"), who("mika"), who("ken")];
 
 const row = (
@@ -55,6 +55,7 @@ describe("the Transfer Trail", () => {
       lineDisplayName: id,
       linePictureUrl: null,
       ensName: null,
+      ageStatus: "adult",
     });
     const entry = (seenByGiverAt: string | null): TransferTrailEntry => ({
       giftId: "g",

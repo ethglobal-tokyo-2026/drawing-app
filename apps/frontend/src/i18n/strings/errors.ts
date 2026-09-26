@@ -20,6 +20,11 @@ export const errors = {
     en: "Couldn't reconnect with LINE. Try again, or reopen the app from LINE.",
     ja: "LINEで再ログインできませんでした。もう一度試すか、LINEからアプリをひらき直してください。",
   },
+  /** Drawing screen, Giving and Receiving: sealing an 18+ sticker (POST /api/stickers) when you aren't a verified adult, giving one from a board (POST /api/gifts) to someone who isn't, or receiving one (POST /api/gifts/receive) when you aren't; in the seal chip, “couldn’t be packed” or the gift's refusal, through errorMessage/errorReason */
+  adults_only: {
+    en: "Only adults verified with World ID can seal, give or receive 18+ stickers.",
+    ja: "18+のシールは、World IDで年齢確認した成人だけが仕上げたり、贈ったり、受け取ったりできます。",
+  },
   /** Your stat board, Age verification paper: sending World App's proof (POST /api/me/age-verification) when it isn't an Orb-verified World ID's, or came from World's other environment, in “Your age couldn’t be verified” through errorReason */
   age_not_proven: {
     en: "This World ID isn't verified at an Orb.",

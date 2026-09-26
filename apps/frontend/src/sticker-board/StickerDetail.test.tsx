@@ -30,7 +30,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 /** Midday, so the day reads the same in every time zone. */
 const day = (d: number) => new Date(2026, 8, d, 12).getTime();
 
-const you = { id: "me", handle: "alice", name: "Alice" };
+const you = { id: "me", handle: "alice", name: "Alice", ageStatus: "adult" as const };
 const sticker = (
   no: number,
   createdAt: number,
@@ -173,7 +173,12 @@ describe("StickerDetail", () => {
   });
 
   it("says who received a given sticker, and when, and offers no Give", () => {
-    const receiver = { id: "artist-bob", handle: "bob", name: "Bob Tanaka" };
+    const receiver = {
+      id: "artist-bob",
+      handle: "bob",
+      name: "Bob Tanaka",
+      ageStatus: "adult" as const,
+    };
     const given = sticker(133, day(14), {
       held: false,
       givenTo: { receiver, receivedAt: day(23) },
@@ -243,7 +248,17 @@ describe("StickerDetail", () => {
     });
     // Drawn by @mika, so the artist's share comes out of @ken's part.
     const byMika = stickers.map((s) =>
-      s.id === "s-133" ? { ...s, artist: { id: people.mika.id, handle: "mika", name: "Mika" } } : s,
+      s.id === "s-133"
+        ? {
+            ...s,
+            artist: {
+              id: people.mika.id,
+              handle: "mika",
+              name: "Mika",
+              ageStatus: "adult" as const,
+            },
+          }
+        : s,
     );
     open(
       { stickers: byMika, ownerId: "me" },

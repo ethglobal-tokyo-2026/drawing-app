@@ -44,10 +44,7 @@ interface SealRequest {
   flat: Blob;
   /** The gzipped TimelapseV1; a seal without one still seals. */
   timelapse?: Blob;
-  /**
-   * Seals an NSFW sticker. The seal form has no field for it until the API stores it, so httpApi
-   * doesn't send it yet, and the NSFW demo keeps it on this device instead.
-   */
+  /** Seals an NSFW sticker, which the server takes only from an adult. */
   nsfw: boolean;
 }
 

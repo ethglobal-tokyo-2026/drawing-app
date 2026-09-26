@@ -35,7 +35,7 @@ const sticker = (
   outline: "M10.0 10.0L90.0 10.0L90.0 70.0L10.0 70.0Z",
   urls: { png: `${id}.png`, mask: `${id}-mask.png` },
   placement: { on, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 },
-  artist: { id: "me", handle: "you", name: "You" },
+  artist: { id: "me", handle: "you", name: "You", ageStatus: "adult" },
   held: true,
   givenTo: null,
   openGift: null,

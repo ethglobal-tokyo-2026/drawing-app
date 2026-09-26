@@ -206,6 +206,7 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
             spec: png(request.spec, "spec.png"),
             rim: png(request.rim, "rim.png"),
             flat: png(request.flat, "flat.png"),
+            nsfw: request.nsfw ? "true" : "false",
             ...(request.timelapse && {
               timelapse: new File([request.timelapse], "timelapse.json.gz", {
                 type: "application/gzip",

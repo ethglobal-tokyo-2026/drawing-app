@@ -1,12 +1,8 @@
 import { useContext } from "react";
 import { MeContext } from "../api/meContext";
-import { readNsfwDemo } from "../stickers/nsfwDemo";
-import { ageStatusOf, type AgeStatus } from "./ageStatus";
+import type { AgeStatus } from "@drawing-app/api/client";
 
-/** Your age status: the developer slip's override, or your own as others see it. */
+/** Your age status, from your age verification; unknown outside a session. */
 export function useMyAgeStatus(): AgeStatus {
-  const me = useContext(MeContext);
-  const override = readNsfwDemo().myAgeStatus;
-  if (override) return override;
-  return me ? ageStatusOf(me) : "unknown";
+  return useContext(MeContext)?.ageStatus ?? "unknown";
 }

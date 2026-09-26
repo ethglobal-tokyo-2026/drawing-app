@@ -61,7 +61,12 @@ afterEach(() => {
 
 describe("GivenStickerSilhouette", () => {
   it("names who received it, and when", () => {
-    const receiver = { id: "artist-bob", handle: "bob", name: "Bob Tanaka" };
+    const receiver = {
+      id: "artist-bob",
+      handle: "bob",
+      name: "Bob Tanaka",
+      ageStatus: "adult" as const,
+    };
     expect(draw({ givenTo: { receiver, receivedAt: sept23 } })).toEqual({
       label: "No.0147, given to @bob on 9.23. Open it",
       caption: "No.0147@bob",

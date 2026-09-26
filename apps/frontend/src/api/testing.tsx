@@ -18,6 +18,7 @@ export const TEST_OWNER: Person = {
   lineDisplayName: "You",
   linePictureUrl: null,
   ensName: "you.croquis.eth",
+  ageStatus: "adult",
 };
 
 /** You in tests. */

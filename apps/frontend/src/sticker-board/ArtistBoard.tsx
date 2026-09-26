@@ -383,6 +383,7 @@ export function ArtistBoard({ person, onBack }: Props) {
         <GiveSheet
           to={person.handle ?? owner.name}
           toId={person.id}
+          toAgeStatus={person.ageStatus}
           onClose={() => setGiving(false)}
         />
       )}

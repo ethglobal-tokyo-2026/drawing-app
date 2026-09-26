@@ -1,6 +1,6 @@
 # NSFW stickers: frontend plan
 
-Frontend only. Branch `feat/nsfw-stickers`. The backend part (World ID verification, `stickers.nsfw`, age status on people, refusals in the API) is separate; until it lands, the frontend reads both from one demo module, so swapping to the API touches only `toSticker`/`toPerson` and deletes that module.
+The frontend, on the API: `stickers.nsfw`, `ageStatus` on people from age verification (adult once an Orb-verified World ID proves it, otherwise unknown), and `adults_only` refusals at seal, packaging for someone and receiving.
 
 ## Decisions
 
@@ -17,27 +17,16 @@ Frontend only. Branch `feat/nsfw-stickers`. The backend part (World ID verificat
 
 NSFW sticker, Age status, Pink foil.
 
-## Demo stand-ins
+## Remaining
 
-- `src/stickers/nsfwDemo.ts`, one localStorage key (`draw.nsfwDemo`): `myAgeStatus` override, `stickerIds` sealed as NSFW on this device, `stickerNos` marked in the developer slip (a private window doesn't share storage with the window that sealed).
-- `src/identity/ageStatus.ts`: `AgeStatus`, `ageStatusOf(person)` from a table by handle (`bob: "minor"`, default `adult`); `identity/useMyAgeStatus.ts`: slip override, else `ageStatusOf(me)`.
-- `toSticker` sets `StickerView.nsfw` from `isNsfwSticker`. Age status is read with `ageStatusOf` where it's needed (`GiveSheet`, `OfferSheet`), not stored on `PersonView`. Both read when data maps, so slip changes reload the page.
-- `SealRequest.nsfw` exists, but `httpApi` can't send it until the seal form has the field; the demo records the sticker after the seal instead.
-
-## Backend contract
-
-- Seal form: `nsfw` (`"true"`/`"false"`); refuse it from anyone not adult.
-- Sticker shape: `nsfw: boolean`. Person shape: `ageStatus: "adult" | "minor" | "unknown"`; `Me` too.
-- Receive refusal `adults_only` (preview and receive), for an NSFW gift to anyone not adult; `packageGift` with `forUserId` refuses the same.
-- Serve a pre-blurred image to viewers who aren't adult.
-- Then: `toSticker`/`ageStatusOf`/`useMyAgeStatus` read the API, `httpApi` sends `nsfw`, the frontend `adults_only` check goes, and `nsfwDemo.ts` and `NsfwDemoControls` are deleted.
+- Serve a pre-blurred image to viewers who aren't adult. The blur is CSS, so the full image still reaches the device. A sticker's images are public by content hash, and the NFT's metadata names them, so this needs a decision on how public an NSFW sticker's images are, not only a second URL.
 
 ## Tasks
 
 ### 1. Data and rules
 
 - [x] Vocabulary rows in AGENTS.md
-- [x] `nsfwDemo.ts`, `ageStatus.ts` as above
+- [x] `nsfw` and `ageStatus` from the API (`toSticker`, `toPerson`, `useMyAgeStatus`)
 - [x] `nsfw` on `StickerView`, `BoardSticker` (`toBoardSticker`), `KeptSticker` (`useKeptStickers`); fixtures
 - [x] `src/stickers/nsfw.ts`: `veiledFor`, `canGiveTo`; tested through `StickerPicker.test.tsx` and `receiveFlow.test.ts`
 
@@ -62,7 +51,7 @@ NSFW sticker, Age status, Pink foil.
 - [x] `GiftBag` gains `nsfw`: pink replaces `--aqua` on the tape, lobe and loop; pink tint on `.gift-bag__front`'s frost; bikini emboss as an inline SVG on the front at low opacity; `stickerUrl` and the film's `insideUrl` dropped once sealed
 - [x] `Giving` passes `nsfw`; its give sheet adds a fine line: only adults verified with World ID can open it
 - [x] Gift message hero: `gift-message-hero-nsfw.png` (the pink sealed bag), picked in `Giving`
-- [x] `StickerPicker` gains `blocked(sticker)`: those tiles disabled with "18+"; `GiveSheet` and `OfferSheet` pass `!canGiveTo(s, ageStatusOf(recipient))` and show why. Test: an NSFW sticker can't be picked for a minor
+- [x] `StickerPicker` gains `blocked(sticker)`: those tiles disabled with "18+"; `GiveSheet` and `OfferSheet` pass `!canGiveTo(s, recipient's ageStatus)` and show why. Test: an NSFW sticker can't be picked for someone not adult
 
 ### 5. Receiving (`src/receiving`)
 
@@ -70,28 +59,19 @@ NSFW sticker, Age status, Pink foil.
 - [x] Not adult → frontend refusal kind `adults_only` beside `needs_server` in `receiveFlow.ts`, decided on `previewed`; `refusals.ts` screen with the pink sealed bag and a new `adults-only` `GiftStamp`; action `backToLine`, which reads as the board when opened from it. Test in `receiveFlow.test.ts`
 - [x] `GiftsForYouBadge`: an 18+ mark on its bag when the newest gift is NSFW (the badge is already pink)
 
-### 6. Developer slip (`sticker-board/stat-board`)
-
-- [x] `NsfwDemoControls` beside `GratitudeDemoControls` in `StatBoard`: "My age status" (default / adult / minor / unknown) and "NSFW sticker Nos." field; saving reloads the page
-
 ### 7. Strings (`src/i18n/strings`, both languages, `glossary.md` for Japanese, one `/** … */` per string)
 
 - [x] `stickerCreation`: toggle label, its assistive name, sealed card's mark
 - [x] `stickers`: "18+" mark, veiled sticker's assistive label
 - [x] `giving`: give sheet's fine line, picker's blocked reason, NSFW bag's picture words, the `adults-only` stamp
 - [x] `receiving`: `adultsOnly` refusal title and line
-- [x] `stickerBoard.developer`: the slip's controls (English only)
 
 ### 8. Finish
 
-- [x] Demo: `?as=alice` marks and seals a sticker, places it; `?as=bob` (private window, No. entered in the slip) opens alice's board: blurred with pink foil; bob's slip set to adult: seen plainly
-- [x] Alice gives from carol's board; carol as minor gets the refusal, as adult unpackages it from the pink bag and accepts
-- [x] Alice gives from bob's board: the NSFW sticker is blocked while bob is a minor
+- [ ] On the API: `?as=alice` verified at an Orb seals an 18+ sticker; `?as=bob` unverified sees it blurred, can't be picked for, and gets the adults-only refusal
 - [x] Frontend lint, typecheck, tests, format (`sticker-chain`'s tests need `forge`, not installed here)
 - [ ] Reduced motion and Japanese, checked on a phone
 
 ## Out of scope
 
-- World ID sign-in and verification (backend part)
-- A pre-blurred image for viewers who aren't adult (backend part)
 - A viewer setting to hide or show NSFW

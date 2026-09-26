@@ -239,15 +239,6 @@ export const stickerBoard = {
       fullEffects: { en: "Full effects" },
       showFrameTimes: { en: "Show frame times" },
     },
-    nsfwDemo: {
-      title: { en: "NSFW stickers" },
-      age: { en: "My age status" },
-      ageDemo: { en: "From the demo's people (bob is a minor)" },
-      nos: { en: "NSFW sticker Nos. in this window" },
-      nosNote: { en: "Stickers sealed as 18+ here count too ({{count}} so far)." },
-      nosInvalid: { en: "Sticker Nos. are whole numbers, split by commas" },
-      save: { en: "Save and reload" },
-    },
     performance: {
       title: { en: "Performance" },
       record: { en: "Record performance" },

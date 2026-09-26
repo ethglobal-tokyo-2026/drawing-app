@@ -26,7 +26,7 @@ const kept = (no: number, nsfw: boolean): KeptSticker => ({
   nsfw,
 });
 
-const pickFor = (recipient: "adult" | "minor") => {
+const pickFor = (recipient: "adult" | "unknown") => {
   act(() =>
     root.render(
       <StickerPicker
@@ -54,8 +54,8 @@ afterEach(() => {
 });
 
 describe("StickerPicker", () => {
-  it("won't pick an NSFW sticker for a minor, but picks their others", () => {
-    pickFor("minor");
+  it("won't pick an NSFW sticker for someone not verified adult, but picks their others", () => {
+    pickFor("unknown");
     expect(onPick.mock.calls).toEqual([["s-1"]]);
   });
 
