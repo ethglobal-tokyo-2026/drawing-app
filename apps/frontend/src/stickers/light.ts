@@ -1,9 +1,11 @@
+import { useEffect } from "react";
 import { sheenIn, sweepSheen } from "./resinSheen";
 
 /**
  * The app's one light: `--lx` and `--ly` (-1 to 1) on the root follow the pointer, or the phone's
  * tilt where the browser shares it. Every moving highlight reads them, and rests in the middle
- * without them.
+ * without them. The tilt is listened for only while a screen with stickers holds the light, so the
+ * motion sensor rests everywhere else.
  */
 
 const REDUCED = "(prefers-reduced-motion: reduce)";
@@ -18,6 +20,10 @@ const SWEEP_TILT = 9;
 const SWEEP_PAUSE_MS = 1400;
 
 const clamp11 = (v: number) => (v < -1 ? -1 : v > 1 ? 1 : v);
+
+/** The installed light's tilt listener, on while any screen with stickers holds the light. */
+let tilt: { on: () => void; off: () => void } | null = null;
+let holders = 0;
 
 /** Sweeps a sheen across each live resin big enough to see on screen. */
 function sweepVisible(doc: Document, win: Window) {
@@ -87,15 +93,38 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
   // The light never asks for the tilt: where a browser wants permission first (iOS), no tilt
   // arrives until something else has asked, and the pointer alone moves the light.
   const passive = { passive: true };
+  const ownTilt = {
+    on: () => win.addEventListener("deviceorientation", fromTilt, passive),
+    off: () => {
+      win.removeEventListener("deviceorientation", fromTilt);
+      // A tilt from before the sensor rested isn't a change to sweep for.
+      lastGamma = null;
+    },
+  };
+  tilt = ownTilt;
+  if (holders > 0) ownTilt.on();
   win.addEventListener("pointermove", fromPointer, passive);
   win.addEventListener("pointerdown", fromPointer, passive);
-  win.addEventListener("deviceorientation", fromTilt, passive);
   reduced.addEventListener("change", onMotionSetting);
   return () => {
     win.removeEventListener("pointermove", fromPointer);
     win.removeEventListener("pointerdown", fromPointer);
-    win.removeEventListener("deviceorientation", fromTilt);
+    ownTilt.off();
+    if (tilt === ownTilt) tilt = null;
     reduced.removeEventListener("change", onMotionSetting);
     win.cancelAnimationFrame(frame);
   };
+}
+
+/** Holds the light for a screen with stickers; returns what releases it. */
+export function acquireLight(): () => void {
+  if (holders++ === 0) tilt?.on();
+  return () => {
+    if (--holders === 0) tilt?.off();
+  };
+}
+
+/** Holds the light while the calling screen shows its stickers. */
+export function useLight(showing = true) {
+  useEffect(() => (showing ? acquireLight() : undefined), [showing]);
 }

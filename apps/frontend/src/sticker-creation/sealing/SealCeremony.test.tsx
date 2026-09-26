@@ -3,7 +3,8 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StickerRecord } from "../../stickers/stickerStorage";
-import { ticketDay } from "../../tickets/tickets";
+import { formatRefillTime } from "../../tickets/refill";
+import { nextRefill, ticketDay } from "../../tickets/tickets";
 import type { SealedSticker } from "./makeSticker";
 import { SealCeremony } from "./SealCeremony";
 import { TOTAL } from "./sealTimeline";
@@ -58,7 +59,7 @@ const record: StickerRecord = {
 
 const onKeepDrawing = vi.fn();
 const onBoard = vi.fn();
-const onGetTickets = vi.fn();
+const onShop = vi.fn();
 
 let host: HTMLDivElement;
 let root: Root;
@@ -66,7 +67,7 @@ let root: Root;
 /** Opens the ceremony with `used` of the day's three tickets used. */
 async function seal(used: number) {
   const uses = Array.from({ length: used }, () => ({}));
-  localStorage.setItem("draw.tickets", JSON.stringify({ day: ticketDay(NOW), uses, paid: 0 }));
+  localStorage.setItem("draw.tickets", JSON.stringify({ day: ticketDay(NOW), uses, reserve: 0 }));
   // Async, so the ticket stubs' outlines settle inside it.
   await act(async () =>
     root.render(
@@ -77,7 +78,7 @@ async function seal(used: number) {
         handle="alice"
         onKeepDrawing={onKeepDrawing}
         onBoard={onBoard}
-        onGetTickets={onGetTickets}
+        onShop={onShop}
       />,
     ),
   );
@@ -156,13 +157,13 @@ describe("SealCeremony", () => {
     expect(action).toHaveBeenCalledOnce();
   });
 
-  it("leads to the sticker board and Sui on the last ticket", async () => {
+  it("leads to the sticker board and the ticket shop on the last ticket", async () => {
     await seal(1);
     playThrough();
     expect(button("Keep drawing")).toBeTruthy();
     expect(button("Go to sticker board").classList.contains("label-btn")).toBe(true);
     expect(host.querySelector('[role="img"]')?.getAttribute("aria-label")).toBe(
-      "2 tickets left today",
+      "2 daily tickets left today",
     );
     act(() => root.unmount());
     root = createRoot(host);
@@ -170,9 +171,11 @@ describe("SealCeremony", () => {
     await seal(3);
     playThrough();
     expect(button("Go to sticker board").classList.contains("key")).toBe(true);
-    act(() => button("Get more tickets with Sui").click());
+    act(() => button("Shop for tickets with Sui").click());
     wait(1000);
-    expect(onGetTickets).toHaveBeenCalledOnce();
-    expect(host.textContent).toContain("That was today’s last ticket · new ones at 4:00 AM");
+    expect(onShop).toHaveBeenCalledOnce();
+    expect(host.textContent).toContain(
+      `That was today’s last ticket · new ones at ${formatRefillTime(nextRefill(NOW))}`,
+    );
   });
 });

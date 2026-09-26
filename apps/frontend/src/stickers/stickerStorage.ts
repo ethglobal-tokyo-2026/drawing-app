@@ -70,6 +70,16 @@ async function run<T>(
   });
 }
 
+/** A stored record's number, even when the rest of the record can't be read; 0 without one. */
+const storedNo = (v: unknown): number =>
+  typeof v === "object" &&
+  v !== null &&
+  "no" in v &&
+  Number.isInteger(v.no) &&
+  typeof v.no === "number"
+    ? v.no
+    : 0;
+
 /** Newest first. */
 export async function listStickers(): Promise<StickerRecord[]> {
   const all: unknown[] = await run("readonly", (s) => s.getAll());
@@ -80,12 +90,14 @@ export async function listStickers(): Promise<StickerRecord[]> {
 }
 
 export async function addSticker(data: Omit<StickerRecord, "id" | "no">): Promise<StickerRecord> {
-  const existing = await listStickers().catch(() => []);
+  // Numbered from every stored record, readable or not, so a new sticker never reuses a number.
+  // If the store can't be read, the seal fails and says so rather than restarting at No.0001.
+  const all: unknown[] = await run("readonly", (s) => s.getAll());
   const record: StickerRecord = {
     ...data,
     // crypto.randomUUID is missing on plain-http LAN origins (phone testing).
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
-    no: existing.reduce((m, s) => Math.max(m, s.no), 0) + 1,
+    no: all.reduce((m: number, v) => Math.max(m, storedNo(v)), 0) + 1,
   };
   await run("readwrite", (s) => s.put(record));
   return record;
@@ -170,6 +182,12 @@ export function readSticker(v: unknown): StickerRecord | undefined {
   if (mask !== undefined && !(mask instanceof Blob)) return undefined;
   if (resin !== undefined && !isResin(resin)) return undefined;
   if (flat !== undefined && !(flat instanceof Blob)) return undefined;
+  if (placement !== undefined && !isPlacement(placement)) {
+    console.error(
+      `Sticker No.${v.no}'s saved spot can't be read, so it gets a fresh one`,
+      placement,
+    );
+  }
   return {
     id: v.id,
     no: v.no,

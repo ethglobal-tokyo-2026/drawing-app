@@ -8,11 +8,13 @@ import {
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
-import { formatClock, formatDay, formatHandle, formatNo } from "../stickers/format";
+import { Duration } from "../stickers/Duration";
+import { formatDay, formatHandle, formatNo } from "../stickers/format";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
 import { Sheet } from "../ui/Sheet";
+import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { giftMessageHeroUrl } from "./config";
@@ -81,6 +83,11 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
 
   const root = useRef<HTMLDivElement>(null);
   useFocusTrap(root, { onEscape: close });
+  // While LINE's picker is up it can't close, so Back leaves it where it is.
+  useBackToClose(true, () => {
+    close();
+    return !busy;
+  });
 
   // Each new screen slides in, except the first, which comes up with the sheet.
   const [shownScreen, setShownScreen] = useState(screen);
@@ -151,8 +158,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
         {bag(sealed ? "sealed" : "open", state.sentAt)}
         <h2 className="giving__title">{title}</h2>
         <p className="giving__sub">
-          It’s in your LINE chat now, and the message opens once. When they accept, you’ll see who
-          opened it.
+          It’s in your LINE chat now. Its outline stays on your board, where it sat.
         </p>
         {state.recordError && (
           <p className="giving__problem" role="alert">
@@ -183,16 +189,8 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
           : [];
     content = (
       <>
+        {/* Take it out is the quiet link under the key, its one control. */}
         <header className="giving__head">
-          <button
-            type="button"
-            className="giving__icon-btn giving__icon-btn--back"
-            onClick={() => flow?.takeOut()}
-            disabled={busy}
-            aria-label="Take it out"
-          >
-            <ArrowUUpLeft size={20} />
-          </button>
           <h2 className="giving__title">{title}</h2>
         </header>
         <p className="giving__sub">
@@ -237,8 +235,8 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
           />
         )}
         <p className="fine giving__meta">
-          {formatNo(sticker.no)} · {formatClock(sticker.timeUsed)} · {formatDay(sticker.createdAt)}{" "}
-          · {formatHandle(fromHandle)}
+          {formatNo(sticker.no)} · <Duration seconds={sticker.timeUsed} /> ·{" "}
+          {formatDay(sticker.createdAt)} · {formatHandle(fromHandle)}
         </p>
       </div>
       <div className="giving__scrim" onClick={close} />

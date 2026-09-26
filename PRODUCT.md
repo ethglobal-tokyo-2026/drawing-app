@@ -103,7 +103,7 @@ You can hand someone a physical drawing, but no existing system makes a _digital
 - **Wallets are invisible and made for you** **[inferred]**. A LINE account doesn't come with a usable wallet. LINE's own wallet products have closed or merged into Unifi, an opt-in wallet on a different chain. So the app's server creates each artist's wallet on first open, tied to their LINE ID, and handles every transaction. Nobody sees a wallet, a key or a signature prompt.
 - **Notices go through the app's LINE Official Account** **[inferred]**; ad0ll was fine either way. It's the only way to reach someone outside the app, because LINE's browser has no web push. The same account's chat carries a Draw · Explore · You menu, which is how people come back daily. Pending gifts and offers also show inside the app.
 - **Navigation** (from the sketch): three tabs, **DRAW · Explore · You**.
-- **Sponsors** (backend only; never surfaced in consumer copy): ENS gives each artist a sub-registry that resolves their sketchbook, and transfers update it. Sui/Walrus or Filecoin for file storage. Worldcoin is undecided.
+- **Sponsors** (backend only; never surfaced in consumer copy): ENS gives each artist a sub-registry that resolves their sketchbook, and transfers update it. Sui/Walrus or Filecoin for file storage.
 - **Open, and not to be invented as settled:** what the sketch's "inspired" and "magic" gratitude categories measure; how the leaderboard is scoped; what happens to gratitude offered for a piece; LIFF app or MINI App channel; the product name.
 
 ## Brand Commitments
@@ -143,11 +143,14 @@ ad0ll's hand-drawn sketch (a photo in the 2026-09-22 conversation; the file is n
   - Stickers you make, and stickers you receive, land on the board by default.
 - **Gratitude per sticker shows as a subtle glow,** not a number. Where a user's own data lives (profile, totals) is open.
 - **Stickers have ENS v2 names** under the artist's name.
-- **Tickets.** Everyone gets **3 drawing tickets a day**. These replace the earlier daily limit.
+- **Tickets.** Everyone gets **3 daily tickets a day**, refilled at midnight JST; unused ones expire. **Reserve tickets** are bought with Sui, have no limit and never expire. Daily tickets are spent first.
   - After sealing, an animated dialog shows the sticker being sealed.
-  - It offers **Keep drawing** (spends a ticket) or **Go to sticker board**.
-  - An **out-of-tickets** dialog appears when all three are used.
-  - **Buying more tickets with Sui** is display only for now, with no technical scope.
+  - It offers **Keep drawing** (spends a daily ticket) or **Go to sticker board**.
+  - With no daily tickets left, drawing asks before spending a reserve ticket, or offers the **ticket shop**.
+  - An **out-of-tickets** dialog appears when daily and reserve tickets are all used.
+  - **Ticket shop:** packs of 1, 3, 5 and 10 for ¥100, ¥270 (10% off), ¥375 (25% off) and ¥600 (40% off), paid in SUI at the 5-minute average SUI/JPY price. It shows the wallet's SUI balance in SUI and yen. The payment is a mock for now.
+  - Every Draw key shows daily and reserve tickets left as ticket mark × count.
+  - A **Shop** tab signals a Sui-backed in-app store; tickets are the only item for now.
 - **On-chain copy is allowed in the hackathon build** (for example, in the seal dialog). The real app would hide the complexity.
 - **Gift delivery: no take-back and no grace window.**
   - Prevent mistakes at send time: the one-friend picker, a gift tag naming who it's for, accepting blocked when opened in a group chat, and each card works once.

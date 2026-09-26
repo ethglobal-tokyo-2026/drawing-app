@@ -8,6 +8,7 @@ import {
 } from "react";
 import { InkEngine, type InkEvents, type InkSettings } from "./inkEngine";
 import { InkSurface } from "./inkSurface";
+import type { Op } from "./ops";
 import "./DrawingCanvas.css";
 
 export interface DrawingCanvasHandle {
@@ -15,6 +16,10 @@ export interface DrawingCanvasHandle {
   redo: () => void;
   /** A fresh sheet, with nothing to undo. */
   reset: () => void;
+  /** A sheet with these ops on it, as a drawing picked up after a reload has. */
+  load: (ops: readonly Op[]) => void;
+  /** The ops on the ink, oldest first. */
+  ops: () => readonly Op[];
   /** Ends a stroke in progress as if the pointer lifted. */
   finishStroke: () => void;
   /** A copy of the ink, transparent where nothing is drawn, to read pixels from. */
@@ -78,6 +83,8 @@ export function DrawingCanvas({ ref, settings, ...events }: Props) {
       undo: () => ink.current?.engine.undo(),
       redo: () => ink.current?.engine.redo(),
       reset: () => ink.current?.engine.reset(),
+      load: (ops) => ink.current?.engine.load(ops),
+      ops: () => ink.current?.engine.ops ?? [],
       finishStroke: () => ink.current?.engine.finishStroke(),
       inkForReading: () => ink.current?.surface.copyForReading() ?? null,
     }),

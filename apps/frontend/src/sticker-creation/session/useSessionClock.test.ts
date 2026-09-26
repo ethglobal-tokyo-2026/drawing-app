@@ -40,10 +40,10 @@ function setup({ started = true } = {}) {
 }
 
 describe("SessionClock", () => {
-  it("waits at 5:00 until the first stroke starts it", () => {
+  it("waits at 3:00 until the first stroke starts it", () => {
     const { clock, counted } = setup({ started: false });
     expect(counted(5000)).toBe(0);
-    expect(clock.getView().secondsLeft).toBe(300);
+    expect(clock.getView().secondsLeft).toBe(SESSION_MS / 1000);
     clock.start();
     expect(counted(1000)).toBe(1000);
   });
@@ -58,6 +58,15 @@ describe("SessionClock", () => {
       expect(counted(500)).toBe(500);
       expect(clock.getView().held).toBeNull();
     }
+  });
+
+  it("shows no hold while it waits for the first stroke", () => {
+    const { clock } = setup({ started: false });
+    clock.setHolds({ ...NO_HOLDS, away: true });
+    clock.setHidden(true);
+    expect(clock.getView()).toMatchObject({ held: null, waiting: true });
+    clock.start();
+    expect(clock.getView()).toMatchObject({ held: "hidden", waiting: false });
   });
 
   it("holds while the page is hidden and resumes 420ms after it returns", () => {
@@ -97,6 +106,24 @@ describe("SessionClock", () => {
     expect(onTimeUp).toHaveBeenCalledOnce();
   });
 
+  it("picks a kept drawing back up with the time it had drawn", () => {
+    const { clock, counted } = setup({ started: false });
+    clock.restore(SESSION_MS - 30_000);
+    expect(clock.getView().secondsLeft).toBe(30);
+    expect(counted(1000)).toBe(1000);
+  });
+
+  it("calls time on a kept drawing whose time had run out once it runs again", () => {
+    const { clock, onTimeUp, advance } = setup({ started: false });
+    clock.setHolds({ ...NO_HOLDS, paused: true });
+    clock.restore(SESSION_MS);
+    advance(1000);
+    expect(onTimeUp).not.toHaveBeenCalled();
+    clock.setHolds(NO_HOLDS);
+    advance(16);
+    expect(onTimeUp).toHaveBeenCalledOnce();
+  });
+
   it("freezes while sealing and runs on if the seal fails", () => {
     const { clock, counted } = setup();
     counted(1000);
@@ -106,11 +133,11 @@ describe("SessionClock", () => {
     expect(counted(500)).toBe(500);
   });
 
-  it("goes back to 5:00 on a fresh sheet", () => {
+  it("goes back to 3:00 on a fresh sheet", () => {
     const { clock, counted } = setup();
     counted(20_000);
     clock.reset();
-    expect(clock.getView().secondsLeft).toBe(300);
+    expect(clock.getView().secondsLeft).toBe(SESSION_MS / 1000);
     expect(counted(1000)).toBe(0);
   });
 });

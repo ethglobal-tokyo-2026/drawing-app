@@ -6,7 +6,10 @@ import {
   type User,
   type WalletWithMetadata,
 } from "@privy-io/react-auth";
+import { SmartWalletsProvider } from "@privy-io/react-auth/smart-wallets";
 import { useEffect } from "react";
+import { sepolia } from "viem/chains";
+import { requestReturningMenu } from "../line/chatMenu";
 import {
   fetchPrivyJwt,
   onPrivyError,
@@ -15,18 +18,28 @@ import {
   setPrivyStatus,
   usePrivyStatus,
 } from "./privy";
+import { SponsorshipCheck } from "./SponsorshipCheck";
 
 // The Ethereum wallet Privy itself made, as opposed to one the person connected.
 const isPrivysWallet = (a: User["linkedAccounts"][number]): a is WalletWithMetadata =>
-  a.type === "wallet" && a.walletClientType === "privy" && a.chainType === "ethereum";
+  a.type === "wallet" &&
+  (a.walletClientType === "privy" || a.walletClientType === "privy-v2") &&
+  a.chainType === "ethereum";
 
-const signedIn = (user: User) =>
+const smartAccountOf = (user: User) =>
+  user.linkedAccounts.find((account) => account.type === "smart_wallet")?.address ??
+  user.smartWallet?.address;
+
+const signedIn = (user: User) => {
   setPrivyStatus({
     state: "signed-in",
     userId: user.id,
     wallet: user.linkedAccounts.find(isPrivysWallet)?.address,
-    smartAccount: user.smartWallet?.address,
+    smartAccount: smartAccountOf(user),
   });
+  // Having a Privy account is what makes someone returning, so their chat menu switches now.
+  void requestReturningMenu();
+};
 
 const onAuthenticated = ({ user }: { user: User }) => signedIn(user);
 
@@ -64,8 +77,14 @@ function SyncLineToPrivy() {
 /** Signs the LINE user in to Privy, with no screen of its own. */
 export default function PrivySession() {
   return (
-    <PrivyProvider appId={PRIVY_APP_ID}>
-      <SyncLineToPrivy />
+    <PrivyProvider
+      appId={PRIVY_APP_ID}
+      config={{ defaultChain: sepolia, supportedChains: [sepolia] }}
+    >
+      <SmartWalletsProvider>
+        <SyncLineToPrivy />
+        <SponsorshipCheck />
+      </SmartWalletsProvider>
     </PrivyProvider>
   );
 }

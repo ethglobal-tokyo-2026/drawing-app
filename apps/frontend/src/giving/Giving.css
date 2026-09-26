@@ -69,7 +69,8 @@
   animation: giving-fade-in var(--t-peel) var(--ease-out);
 }
 
-.giving .bottom-sheet {
+.giving .bottom-sheet,
+.bottom-sheet.giving__sheet {
   max-height: calc(100% - 28px);
   overflow-y: auto;
   scrollbar-width: none;
@@ -141,11 +142,6 @@
   content: "";
   position: absolute;
   inset: -3px;
-}
-
-.giving__icon-btn--back {
-  margin-left: -10px;
-  color: var(--ink);
 }
 
 .giving__icon-btn:focus-visible,

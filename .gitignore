@@ -151,9 +151,12 @@ contracts/**/.gas-snapshot
 # macOS
 .DS_Store
 
-# Claude worktrees and the impeccable hook cache
+# Claude worktrees, Playwright's scratch folder, and impeccable's caches and critique snapshots
 .claude/worktrees/
-.impeccable/hook.cache.json
+.playwright-mcp/
+**/.impeccable/hook.cache.json
+**/.impeccable/critique/
+**/.impeccable/live/
 
 # Sticker chain Foundry cache
 packages/sticker-chain/cache/
@@ -175,3 +178,6 @@ vite.config.ts.timestamp-*
 .serena
 .claude/.headroom*
 .claude/settings.local.json
+
+# npm lockfiles: the workspace installs with pnpm (pnpm-lock.yaml)
+package-lock.json

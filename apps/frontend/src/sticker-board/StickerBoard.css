@@ -94,6 +94,24 @@
     opacity 170ms linear;
 }
 
+/* Foil: a sticker drawn by someone other than the board's owner wears a holo band past its edge. */
+.placed-sticker.is-foiled .sticker-figure__img {
+  filter: drop-shadow(3px 0 0 #ff8fd0) drop-shadow(-3px 0 0 #7fe0ff) drop-shadow(0 3px 0 #ffe27a)
+    drop-shadow(0 -3px 0 #b69cff) var(--sticker-cut) var(--sticker-cast);
+}
+
+/* Gratitude glows behind a sticker, warming from pink toward amber as more thanks arrive. */
+.placed-sticker.is-glowing .placed-sticker__lift {
+  filter: drop-shadow(
+    0 0 calc(6px + 12px * var(--glow))
+      color-mix(
+        in srgb,
+        color-mix(in srgb, #ff7eb6, #ffb13b calc(var(--glow) * 60%)) calc(var(--glow) * 90%),
+        transparent
+      )
+  );
+}
+
 /* In your hand it rides above everything on the board. */
 .placed-sticker.is-dragging {
   cursor: grabbing;
@@ -132,6 +150,11 @@
 .placed-sticker:focus-visible .placed-sticker__frame {
   opacity: 1;
   border-color: var(--ink);
+}
+
+/* Focus alone doesn't select, so its ring is the bare frame; the handles and knob come with selection. */
+.placed-sticker:not(.is-selected) :is(.placed-sticker__handle, .placed-sticker__rotate) {
+  display: none;
 }
 
 .placed-sticker.is-handling .placed-sticker__frame {
@@ -301,10 +324,11 @@
   flex: none;
 }
 
-/* The selected sticker's toolbar: label stock on a lifted strip, beside the sticker. */
+/* The selected sticker's toolbar: label stock on a lifted strip, beside the sticker. It's placed
+   clear of Draw, and stacks above it in case they ever meet, so a press on Give never lands on Draw. */
 .sticker-toolbar {
   position: absolute;
-  z-index: 950;
+  z-index: 960;
   left: 0;
   top: 0;
   display: flex;
@@ -337,11 +361,12 @@
   background: rgba(255, 255, 255, 0.62);
 }
 
-/* The empty board: a quiet die-cut spot in the middle of the field. Draw is the way in. */
+/* The empty board: a quiet die-cut spot in the field, where the first sticker lands. Draw is the
+   way in. The board places it on that sticker's spot. */
 .board-blank {
   position: absolute;
-  left: calc(50% - 12px);
-  top: calc(86px + (100% - 86px - 16px) * 0.42);
+  left: 50%;
+  top: 50%;
   display: grid;
   place-items: center;
   width: 236px;
@@ -373,6 +398,15 @@
   color: var(--graphite);
   font: 500 13.5px/1.4 var(--font-ui);
   text-wrap: balance;
+}
+
+/* What the browser said, under the plain sentence, selectable for a bug report. */
+.board-problem-reason {
+  position: relative;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* A spot that didn't save stays in view, over the board and above Draw, until a save of it succeeds. */

@@ -43,6 +43,15 @@
   margin: 0 calc(-1 * var(--card-pad)) 8px;
 }
 
+/* The reserve count under the day's stubs. */
+.out-of-tickets__reserve {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin: -2px 0 10px;
+}
+
 .out-of-tickets__title {
   margin: 0;
   font-size: 26px;
@@ -86,6 +95,7 @@
   font-size: 13px;
   line-height: 1.4;
   color: var(--graphite);
+  text-wrap: balance;
 }
 
 .out-of-tickets__card .tear-line {

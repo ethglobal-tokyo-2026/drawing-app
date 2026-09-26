@@ -41,7 +41,9 @@
   background: var(--liner);
 }
 
-/* With the tabs tucked away, the screen runs down to the grabber's strip above the home indicator. */
+/* With the tabs tucked away, the screen runs down to the grabber's strip above the home indicator:
+   the grabber's 44px touch band starts 20px up and reaches over the screen's own foot margin, never
+   the sheet. */
 .phone.has-tucked-tabs .screen {
-  margin-bottom: var(--ph-safe);
+  margin-bottom: 50px;
 }

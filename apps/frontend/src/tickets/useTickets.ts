@@ -1,18 +1,22 @@
-import { useCallback, useRef, useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import { readTickets, subscribeTickets, writeTickets } from "./ticketStorage";
 import {
-  addPaid,
+  addReserve,
   current,
+  dailyLeft,
   linkSticker,
+  nextKind,
   nextRefill,
+  refund,
   spend,
   ticketsLeft,
   type SpentTicket,
+  type TicketKind,
   type TicketState,
 } from "./tickets";
 
 /**
- * Today's tickets. The 4:00 refill is read at render time instead of pushed by a
+ * Today's tickets. The midnight refill is read at render time instead of pushed by a
  * timer, so an open out-of-tickets card can turn over in place; everything else
  * sees the new tickets on its next render.
  */
@@ -25,35 +29,42 @@ export function pickUpRefill(): void {
   writeTickets(current(readTickets(), new Date()));
 }
 
+/** Adds bought reserve tickets. */
+export function addReserveTickets(n: number): void {
+  writeTickets(addReserve(current(readTickets(), new Date()), n));
+}
+
 export function useTickets() {
   const state = useTicketState();
-  const spent = useRef<SpentTicket | null>(null);
 
-  /** Spends a ticket; false when there are none left. */
-  const use = useCallback((): boolean => {
-    const next = spend(current(readTickets(), new Date()));
-    if (!next) return false;
+  /** Spends a ticket of the kind the person agreed to; null when the next ticket isn't that kind. */
+  const use = useCallback((kind: TicketKind): SpentTicket | null => {
+    const next = spend(current(readTickets(), new Date()), kind);
+    if (!next) return null;
     writeTickets(next.state);
-    spent.current = next.spent;
-    return true;
+    return next.spent;
   }, []);
 
-  const add = useCallback((n: number) => {
-    writeTickets(addPaid(current(readTickets(), new Date()), n));
+  /** Records the sticker a spent ticket became. */
+  const linkToSticker = useCallback((spent: SpentTicket, stickerId: string) => {
+    writeTickets(linkSticker(current(readTickets(), new Date()), spent, stickerId));
   }, []);
 
-  /** Records the sticker that the last spent ticket became. */
-  const linkToSticker = useCallback((stickerId: string) => {
-    if (!spent.current) return;
-    writeTickets(linkSticker(current(readTickets(), new Date()), spent.current, stickerId));
-    spent.current = null;
+  /** Gives back a spent ticket whose drawing was lost; false when there was nothing to give back. */
+  const giveBack = useCallback((spent: SpentTicket): boolean => {
+    const next = refund(current(readTickets(), new Date()), spent);
+    if (next) writeTickets(next);
+    return next !== null;
   }, []);
 
   return {
     left: ticketsLeft(state),
+    dailyLeft: dailyLeft(state),
+    reserveLeft: state.reserve,
+    nextKind: nextKind(state),
     refillAt: nextRefill(new Date()),
     use,
-    add,
     linkSticker: linkToSticker,
+    giveBack,
   };
 }

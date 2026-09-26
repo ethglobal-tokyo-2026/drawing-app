@@ -1,12 +1,14 @@
-import { Ticket } from "@phosphor-icons/react";
+import { Storefront } from "@phosphor-icons/react";
 import { useEffect, useId, useRef, type RefObject } from "react";
 import { DrawIcon } from "../../icons/DrawIcon";
 import { StickerBoardIcon } from "../../icons/StickerBoardIcon";
-import { formatClock, formatDay, formatHandle, formatNo } from "../../stickers/format";
+import { Duration } from "../../stickers/Duration";
+import { formatDay, formatHandle, formatNo } from "../../stickers/format";
 import type { StickerRecord } from "../../stickers/stickerStorage";
 import { formatRefillTime } from "../../tickets/refill";
+import { TicketCount } from "../../tickets/TicketCount";
 import { TicketStubs } from "../../tickets/TicketStubs";
-import { nextRefill, ticketsLeft } from "../../tickets/tickets";
+import { dailyLeft, nextRefill, ticketsLeft } from "../../tickets/tickets";
 import { useDailyTicketStubs } from "../../tickets/useTicketStubs";
 import { useTicketState } from "../../tickets/useTickets";
 import { Key } from "../../ui/Key";
@@ -27,14 +29,14 @@ interface Props {
   slotRef: RefObject<HTMLDivElement | null>;
   onKeepDrawing: () => void;
   onBoard: () => void;
-  /** The last ticket's way to more: the out-of-tickets card's Sui purchase. */
-  onGetTickets: () => void;
+  /** The last ticket's way to more: the ticket shop. */
+  onShop: () => void;
 }
 
 /**
  * The backing card the sticker lands on: its slot, "Sealed", the fine print, then the way on. With
- * tickets left, the key keeps drawing; on the last one, the key goes to the sticker board and Sui
- * waits on label stock under it. Every line carries `data-card-line`, which the ceremony fades up.
+ * tickets left, the key keeps drawing; on the last one, the key goes to the sticker board and the
+ * ticket shop waits on label stock under it. Every line carries `data-card-line`, which the ceremony fades up.
  */
 export function SealedCard({
   record,
@@ -44,15 +46,16 @@ export function SealedCard({
   slotRef,
   onKeepDrawing,
   onBoard,
-  onGetTickets,
+  onShop,
 }: Props) {
   const titleId = useId();
   const tickets = useTicketState();
-  const daily = useDailyTicketStubs(tickets);
-  const left = ticketsLeft(tickets);
-  const last = left === 0;
+  const dailyStubs = useDailyTicketStubs(tickets);
+  const daily = dailyLeft(tickets);
+  const last = ticketsLeft(tickets) === 0;
+  const refillTime = formatRefillTime(nextRefill(new Date()));
   // Fresh tickets first, then the used ones in the order they were used.
-  const stubs = [...daily.filter((s) => !s.used), ...daily.filter((s) => s.used)];
+  const stubs = [...dailyStubs.filter((s) => !s.used), ...dailyStubs.filter((s) => s.used)];
 
   const chosen = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -81,8 +84,8 @@ export function SealedCard({
         Sealed
       </h2>
       <p className="fine sealed-card__fine" data-card-line>
-        {formatNo(record.no)} · {formatClock(record.timeUsed)} · {formatDay(record.createdAt)} ·{" "}
-        {formatHandle(handle)}
+        {formatNo(record.no)} · <Duration seconds={record.timeUsed} /> ·{" "}
+        {formatDay(record.createdAt)} · {formatHandle(handle)}
       </p>
       <div data-card-line>
         <TearLine />
@@ -107,20 +110,26 @@ export function SealedCard({
         </Key>
       )}
       <div className="sealed-card__tickets" data-card-line>
-        <TicketStubs
-          size="small"
-          stubs={stubs}
-          label={last ? undefined : `${left} ${left === 1 ? "ticket" : "tickets"} left today`}
-        />
-        {last && (
-          <p>
-            That was today’s last ticket · new ones at {formatRefillTime(nextRefill(new Date()))}
-          </p>
+        <div className="sealed-card__ticket-row">
+          <TicketStubs
+            size="small"
+            stubs={stubs}
+            label={`${daily} daily ${daily === 1 ? "ticket" : "tickets"} left today`}
+          />
+          <span className="visually-hidden">
+            {tickets.reserve} reserve {tickets.reserve === 1 ? "ticket" : "tickets"}
+          </span>
+          <TicketCount kind="reserve" count={tickets.reserve} />
+        </div>
+        {last ? (
+          <p>That was today’s last ticket · new ones at {refillTime}</p>
+        ) : (
+          daily === 0 && <p>That was today’s last daily ticket · new ones at {refillTime}</p>
         )}
       </div>
       {last ? (
-        <LabelButton block icon={<Ticket />} data-card-line onClick={act(onGetTickets)}>
-          Get more tickets with Sui
+        <LabelButton block icon={<Storefront />} data-card-line onClick={act(onShop)}>
+          Shop for tickets with Sui
         </LabelButton>
       ) : (
         <LabelButton block icon={<StickerBoardIcon />} data-card-line onClick={act(onBoard)}>

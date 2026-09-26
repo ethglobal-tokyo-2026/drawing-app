@@ -31,10 +31,14 @@ function Board(props: Omit<Options, "stage">) {
   useBoardGestures({ ...props, stage });
   return (
     <div ref={stage} className="board-stage">
-      <div className="placed-sticker" data-sticker-id="a" tabIndex={0} />
+      {props.stickers.map((s) => (
+        <div key={s.id} className="placed-sticker" data-sticker-id={s.id} tabIndex={0} />
+      ))}
     </div>
   );
 }
+
+const noTray: RefObject<StickerTrayHandle | null> = { current: null };
 
 let host: HTMLDivElement;
 let root: Root;
@@ -88,7 +92,7 @@ describe("useBoardGestures", () => {
           stickers={[sticker]}
           field={fieldOf(390, 657)}
           size={{ W: 390, H: 657 }}
-          selected={null}
+          selected="a"
           reduced
           tray={tray}
           onSelect={() => {}}
@@ -115,5 +119,54 @@ describe("useBoardGestures", () => {
 
     expect(boardDrop).toHaveBeenCalledTimes(1);
     expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it("goes between stickers on focus alone, and moves one only once it's selected", () => {
+    const onSelect = vi.fn();
+    const onCommit = vi.fn();
+    const stickers = [
+      sticker,
+      { ...sticker, id: "b", placement: { ...sticker.placement, x: 0.8 } },
+    ];
+    const render = (selected: string | null) =>
+      act(() =>
+        root.render(
+          <Board
+            stickers={stickers}
+            field={fieldOf(390, 657)}
+            size={{ W: 390, H: 657 }}
+            selected={selected}
+            reduced
+            tray={noTray}
+            onSelect={onSelect}
+            onOpen={() => {}}
+            onCommit={onCommit}
+            onRemove={() => {}}
+          />,
+        ),
+      );
+    const el = (id: string) => host.querySelector<HTMLElement>(`[data-sticker-id="${id}"]`);
+    const press = (key: string) =>
+      act(() => {
+        document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+      });
+
+    render(null);
+    act(() => el("a")?.focus());
+    press("ArrowRight");
+    expect(document.activeElement).toBe(el("b"));
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(onCommit).not.toHaveBeenCalled();
+
+    press("Enter");
+    expect(onSelect).toHaveBeenLastCalledWith("b");
+    render("b");
+    press("ArrowLeft");
+    expect(document.activeElement).toBe(el("b"));
+    expect(onCommit).toHaveBeenCalledOnce();
+
+    press("Escape");
+    expect(onSelect).toHaveBeenLastCalledWith(null);
+    expect(document.activeElement).toBe(el("b"));
   });
 });

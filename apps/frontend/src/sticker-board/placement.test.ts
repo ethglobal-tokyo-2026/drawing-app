@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { Placement } from "../stickers/stickerStorage";
-import { fieldOf, freeSpot, knobHidden, nextZ, sizeOf, toFrac, toolbarSpot } from "./placement";
+import {
+  FIRST_SPOT,
+  fieldOf,
+  freeSpot,
+  knobHidden,
+  nextZ,
+  sizeOf,
+  toFrac,
+  toolbarSpot,
+} from "./placement";
 
 const at = (x: number, y: number): Placement => ({ on: true, x, y, s: 0.3, r: 0, z: 1 });
 
@@ -10,6 +19,10 @@ describe("placement", () => {
     const spot = freeSpot(taken);
     for (const t of taken)
       expect(Math.hypot(spot.x - t.x, (spot.y - t.y) * 1.4)).toBeGreaterThan(0.3);
+  });
+
+  it("lands the first sticker on the empty board's dashed spot", () => {
+    expect(freeSpot([])).toMatchObject(FIRST_SPOT);
   });
 
   it("gives the same spot for the same board", () => {
@@ -37,7 +50,26 @@ describe("placement", () => {
     expect(right.left + bar.w).toBeLessThanOrEqual(board.W - 40);
     // With the knob hanging below, the toolbar clears the knob's far edge.
     const knobEdge = sticker.y + sticker.h / 2 + 42.5 + 14;
-    expect(toolbarSpot(sticker, board, bar, true).top).toBeGreaterThan(knobEdge);
+    expect(toolbarSpot(sticker, board, bar, { knobBelow: true }).top).toBeGreaterThan(knobEdge);
+  });
+
+  it("keeps the toolbar clear of Draw wherever the sticker sits, however big it is", () => {
+    const board = { W: 390, H: 776 };
+    const bar = { w: 290, h: 46 };
+    const draw = { left: 14, top: 708, right: 132, bottom: 762 };
+    const meetsDraw = ({ left, top }: { left: number; top: number }) =>
+      left < draw.right && left + bar.w > draw.left && top < draw.bottom && top + bar.h > draw.top;
+    for (const size of [60, 130, 260])
+      for (let y = 100; y <= 740; y += 20)
+        for (let x = 40; x <= 340; x += 30) {
+          const sticker = { x, y, w: size, h: size * 0.8, r: 0 };
+          expect(meetsDraw(toolbarSpot(sticker, board, bar, { clearOf: draw }))).toBe(false);
+        }
+    // Low on the board, it goes over the sticker rather than onto Draw.
+    const low = { x: 250, y: 600, w: 130, h: 100, r: 0 };
+    expect(toolbarSpot(low, board, bar, { clearOf: draw }).top + bar.h).toBeLessThan(
+      low.y - low.h / 2,
+    );
   });
 
   it("finds the knob out of reach off the board's top or under the name, and nowhere else", () => {

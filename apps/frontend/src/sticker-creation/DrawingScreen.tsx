@@ -10,17 +10,22 @@ import {
 } from "react";
 import { useIdentity } from "../identity/useIdentity";
 import { addSticker, type StickerRecord } from "../stickers/stickerStorage";
-import { OutOfTickets, type OutOfTicketsStep } from "../tickets/OutOfTickets";
+import { OutOfTickets } from "../tickets/OutOfTickets";
+import { StartDrawing } from "../tickets/StartDrawing";
+import type { SpentTicket, TicketKind } from "../tickets/tickets";
+import { TicketShop } from "../tickets/TicketShop";
 import { useTickets } from "../tickets/useTickets";
 import { useToast } from "../ui/useToast";
 import { sizePx } from "./canvas/brush";
 import { DrawingCanvas, type DrawingCanvasHandle } from "./canvas/DrawingCanvas";
+import { isFirstVisit } from "./drawVisits";
 import { lazyRadius } from "./canvas/lazyBrush";
 import type { Op, Tool } from "./canvas/ops";
 import { SealKey } from "./SealKey";
 import { makeSticker, type SealedSticker } from "./sealing/makeSticker";
 import { SealCeremony } from "./sealing/SealCeremony";
 import type { Box } from "./sealing/sealTimeline";
+import { loadKeptSession, SessionKeeper, type KeptSession } from "./session/keptSession";
 import {
   ARM_WINDOW_MS,
   FRESH_SESSION,
@@ -51,6 +56,16 @@ const afterPaint = () =>
   new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve)));
 const reason = (error: unknown) =>
   error instanceof Error && error.message ? error.message : String(error);
+
+/** What the label under the timer says while the clock waits for the first stroke. */
+const STARTS = "Starts when you draw";
+/** What the label under the timer says over a drawing kept across a reload. */
+const PICKED_UP = "Picked up where you left off";
+/** What the start card says when a drawing kept across a reload can't be read back. */
+const LOST = {
+  lost: "Couldn’t pick up where you left off.",
+  refunded: "Couldn’t pick up where you left off, so your ticket is back.",
+};
 
 interface Sealed {
   sticker: SealedSticker;
@@ -105,8 +120,18 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // The sealed sticker's layers are let go when a fresh sheet replaces it.
   const lastSealed = useRef<Sealed | null>(null);
   const [sealProblem, setSealProblem] = useState<string | null>(null);
-  // The out-of-tickets card's first step while it's up, or null.
-  const [paywallOpen, setPaywallOpen] = useState<OutOfTicketsStep | null>(null);
+  // The out-of-tickets card or the ticket shop, over a fresh sheet, or null.
+  const [overlay, setOverlay] = useState<"out" | "shop" | null>(null);
+  // The kind of ticket the person agreed to spend, for the start's spend-ticket effect.
+  const spendKind = useRef<TicketKind>("daily");
+  // The session's ticket: spent at Start, or before a reload it was kept across.
+  const ticket = useRef<SpentTicket | null>(null);
+  const [keeper] = useState(() => new SessionKeeper());
+  // Until a session kept across a reload is back, or known lost, Draw doesn't ask for a ticket.
+  const [restoring, setRestoring] = useState(true);
+  const [pickedUp, setPickedUp] = useState<"restored" | keyof typeof LOST | null>(null);
+  // A tap on the waiting timer puts "Starts when you draw" under it, until the first stroke.
+  const [startsNote, setStartsNote] = useState(false);
 
   const clock = useSessionClock(() => send({ type: "time-up" }));
 
@@ -121,7 +146,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   function run(effect: SessionEffect) {
     switch (effect) {
       case "spend-ticket":
-        if (!tickets.use()) console.error("The first stroke landed with no ticket left to spend");
+        ticket.current = tickets.use(spendKind.current);
+        if (!ticket.current)
+          console.error(`Start was tapped with no ${spendKind.current} ticket next to spend`);
+        keeper.start(ticket.current);
         return;
       case "start-clock":
         clock.start();
@@ -136,6 +164,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       case "reset-sheet":
         canvas.current?.reset();
         clock.reset();
+        keeper.wipe();
+        ticket.current = null;
+        setPickedUp(null);
         setPaused(false);
         setPanel(null);
         lastSealed.current?.sticker.dispose();
@@ -192,7 +223,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         resin: { spec: sticker.spec, rim: sticker.rim },
         flat: sticker.flat,
       });
-      tickets.linkSticker(record.id);
+      if (ticket.current) tickets.linkSticker(ticket.current, record.id);
+      ticket.current = null;
+      keeper.wipe();
       lastSealed.current = { sticker, record, sheet };
       setSealed(lastSealed.current);
       send({ type: "sealed" });
@@ -210,7 +243,90 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     onNewSticker();
   };
 
+  const start = (kind: TicketKind) => {
+    spendKind.current = kind;
+    send({ type: "start" });
+  };
+
+  /**
+   * Keep drawing already chose to spend a daily ticket, so it skips the ask; a reserve ticket is always
+   * asked for. Draw right after a purchase chose to spend either.
+   */
+  const startRightAway = ({ reserve }: { reserve: boolean }) => {
+    const kind = tickets.nextKind;
+    if (kind === "daily" || (kind === "reserve" && reserve)) start(kind);
+  };
+
   useImperativeHandle(ref, () => ({ startNewSticker, closeDrawers: () => setPanel(null) }));
+
+  /** Keeps the session on this device while it's in progress, so a reload doesn't lose it. */
+  const keepProgress = () => {
+    const { phase } = latest.current;
+    if (phase === "drawing" || phase === "armed")
+      keeper.save(canvas.current?.ops() ?? [], clock.elapsed);
+  };
+  const keepOnHide = useEffectEvent(keepProgress);
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") keepOnHide();
+    };
+    const onPageHide = () => keepOnHide();
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", onPageHide);
+    };
+  }, []);
+
+  // A session kept across a reload comes back without asking for another ticket, a drawing on it
+  // paused; one that can't be read gives its ticket back.
+  const pickUp = useEffectEvent((kept: KeptSession) => {
+    setRestoring(false);
+    if (kept.status === "none") return;
+    if (kept.status === "found") {
+      // Nothing drawn and no time counted: Start spent the ticket and the clock still waits.
+      const drawn = kept.ops.length > 0 || kept.elapsedMs > 0;
+      canvas.current?.load(kept.ops);
+      keeper.resume(kept.ticket, kept.ops);
+      ticket.current = kept.ticket;
+      send({ type: "restored", drawn });
+      if (!drawn) return;
+      clock.restore(kept.elapsedMs);
+      setPaused(true);
+      setPickedUp("restored");
+      return;
+    }
+    console.error("The drawing in progress couldn't be picked up after a reload", kept.error);
+    const refunded = kept.ticket !== null && tickets.giveBack(kept.ticket);
+    keeper.wipe();
+    setPickedUp(refunded ? "refunded" : "lost");
+  });
+  useEffect(() => {
+    let cancelled = false;
+    void loadKeptSession().then((kept) => {
+      if (!cancelled) pickUp(kept);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // "Picked up" stays until the clock runs again; word of a lost drawing, until the next one starts.
+  if (pickedUp === "restored" && !paused) setPickedUp(null);
+  if (pickedUp && pickedUp !== "restored" && session.phase !== "blank") setPickedUp(null);
+  const waiting = session.phase === "blank" || session.phase === "primed";
+  if (startsNote && !waiting) setStartsNote(false);
+
+  // Before the first stroke there's nothing to pause: a tap on the timer says when it starts.
+  const onTimerTap = () => {
+    if (!clock.getView().waiting) {
+      setPaused((p) => !p);
+      return;
+    }
+    setPickedUp(null);
+    setStartsNote(true);
+  };
 
   // Every hold stops the clock: the person's pause, the board covering the screen, a tool in hand.
   useEffect(() => {
@@ -232,11 +348,18 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
 
   // Out of tickets: the card comes up as Draw opens on a fresh sheet, and stays until the person picks
   // a way on, even if tickets come back meanwhile.
-  const fresh = session.phase === "blank";
-  if (active && fresh && tickets.left === 0 && !paywallOpen) setPaywallOpen("out");
-  const paywall = active && fresh && paywallOpen !== null;
+  const fresh = session.phase === "blank" && !restoring;
+  if (active && fresh && tickets.left === 0 && !overlay) setOverlay("out");
+  const paywall = active && fresh && overlay !== null;
+  // A fresh sheet asks before a ticket is spent, and takes no ink until then.
+  const asking = active && fresh && !paywall;
   const sealing = session.phase === "sealing" || session.phase === "sealed";
-  const locked = !active || paywall || sealing;
+  // Until Start, and while a kept session loads, the sheet takes no ink.
+  const locked = !active || session.phase === "blank" || sealing;
+
+  // On the first few visits, a started sheet says the timer waits for the first stroke, which peels it off.
+  const startsLabel = startsNote || (active && session.phase === "primed" && isFirstVisit());
+  const timerNote = pickedUp === "restored" ? PICKED_UP : startsLabel ? STARTS : null;
 
   const sizeKey = tool === "eraser" ? "eraser" : "brush";
   const setSize = (value: number) => setSizes((s) => ({ ...s, [sizeKey]: value }));
@@ -288,11 +411,12 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           armed: session.phase === "armed",
           sessionMs: () => clock.elapsed,
         }}
-        onHistory={(canUndo, canRedo) =>
+        onHistory={(canUndo, canRedo) => {
           setHistory((h) =>
             h.canUndo === canUndo && h.canRedo === canRedo ? h : { canUndo, canRedo },
-          )
-        }
+          );
+          keepProgress();
+        }}
         onCommit={(op: Op) => {
           if (sealProblem) setSealProblem(null);
           send({ type: "ink" });
@@ -303,7 +427,13 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         onDisarm={() => send({ type: "canvas-touch" })}
       />
       <div className="drawing-top">
-        <TimerDot ref={timer} clock={clock} paused={paused} onToggle={() => setPaused((p) => !p)} />
+        <TimerDot
+          ref={timer}
+          clock={clock}
+          paused={paused}
+          note={active ? timerNote : null}
+          onToggle={onTimerTap}
+        />
         <ToolStrip
           tool={tool}
           panel={panel}
@@ -357,25 +487,49 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           record={sealed.record}
           sheet={sealed.sheet}
           handle={me.handle}
-          onKeepDrawing={startNewSticker}
+          onKeepDrawing={() => {
+            startNewSticker();
+            startRightAway({ reserve: false });
+          }}
           onBoard={onGoToBoard}
-          // A fresh sheet with no tickets left brings up the out-of-tickets card, here at its Sui purchase.
-          onGetTickets={() => {
-            setPaywallOpen("approve");
+          onShop={() => {
+            setOverlay("shop");
             startNewSticker();
           }}
         />
       )}
-      {paywall && (
+      {asking && (
+        <StartDrawing
+          minutes={SESSION_MS / 60_000}
+          note={pickedUp && pickedUp !== "restored" ? LOST[pickedUp] : null}
+          onStart={start}
+          onShop={() => setOverlay("shop")}
+          onBoard={onGoToBoard}
+        />
+      )}
+      {paywall && overlay === "out" && (
         <OutOfTickets
           refillAt={tickets.refillAt}
-          firstStep={paywallOpen}
-          onTicketsBought={tickets.add}
-          onStartDrawing={() => setPaywallOpen(null)}
+          onShop={() => setOverlay("shop")}
+          onStartDrawing={() => {
+            setOverlay(null);
+            startRightAway({ reserve: false });
+          }}
           onBoard={() => {
-            setPaywallOpen(null);
+            setOverlay(null);
             onGoToBoard();
           }}
+        />
+      )}
+      {/* Leaving the shop with no tickets brings the out-of-tickets card back; with some, the start screen. */}
+      {paywall && overlay === "shop" && (
+        <TicketShop
+          layout="card"
+          onDraw={() => {
+            setOverlay(null);
+            startRightAway({ reserve: true });
+          }}
+          onClose={() => setOverlay(null)}
         />
       )}
     </div>
