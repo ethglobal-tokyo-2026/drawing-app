@@ -43,6 +43,8 @@ What the server will store and serve, so UI work and mocks can line up with it w
 ### Receiving
 
 - The Gift Message's link carries the Gift Claim Token. The first person to receive gets the sticker; a forwarded link fails for everyone after.
+- **Seeing it first:** opening the link previews the gift. For an open the gift can be received from, the preview includes the sticker, so the torn bag shows it before Accept; Accept receives it.
+- **The terms line:** Accept carries it, so receiving sets `terms_accepted_at` when it's unset.
 - **Refused:**
   - opens from a group, a multi-person chat or an OpenChat;
   - your own gift;
@@ -478,6 +480,7 @@ interface TransferTrailEntry {
 interface BoardSticker extends StickerPlacement {
   sticker: Sticker;
   held: boolean; // false: given away; show a GivenStickerSilhouette, and an empty spot in the tray
+  givenTo: { receiver: Person; receivedAt: IsoTime } | null; // set when held is false: the silhouette's "→ @bob"
   openGift: { id: string; status: "packed" | "sent" } | null;
 }
 ```
@@ -506,13 +509,14 @@ interface EscrowTransfer {
 
 ### Receiving
 
-| Route                     | Request                                                                                                                                            | Response                                                                                                             | Errors                                                                                                                                                                      |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /api/gifts/preview` | `{ giftClaimToken: string }`                                                                                                                       | 200 `{ giver: Person; expiresAt: IsoTime; receivable: boolean; refusal: ReceiveRefusal \| null }`; never the sticker | 404 `gift_not_found`                                                                                                                                                        |
-| `POST /api/gifts/receive` | `{ giftClaimToken: string; liffContextType: "utou" \| "room" \| "group" \| "square_chat" \| "external" \| "none" }`, from `liff.getContext().type` | 200 `{ gift: Gift; sticker: Sticker; stickerPlacement: StickerPlacement }`                                           | 403 `group_chat` (room, group or square_chat), `own_gift`; 404 `gift_not_found`; 409 `already_received`, `taken_back`, `not_deposited`; 410 `gift_expired`, `gift_returned` |
+| Route                     | Request                                                                                                                                            | Response                                                                                                                                                        | Errors                                                                                                                                                                      |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/gifts/preview` | `{ giftClaimToken: string; liffContextType: "utou" \| "room" \| "group" \| "square_chat" \| "external" \| "none" }`, as `receive` takes it         | 200 `{ giver: Person; expiresAt: IsoTime; receivable: boolean; refusal: ReceiveRefusal \| null; sticker: Sticker \| null }`: the sticker only when `receivable` | 404 `gift_not_found`                                                                                                                                                        |
+| `POST /api/gifts/receive` | `{ giftClaimToken: string; liffContextType: "utou" \| "room" \| "group" \| "square_chat" \| "external" \| "none" }`, from `liff.getContext().type` | 200 `{ gift: Gift; sticker: Sticker; stickerPlacement: StickerPlacement }`                                                                                      | 403 `group_chat` (room, group or square_chat), `own_gift`; 404 `gift_not_found`; 409 `already_received`, `taken_back`, `not_deposited`; 410 `gift_expired`, `gift_returned` |
 
 ```ts
 type ReceiveRefusal =
+  | "group_chat" // room, group or square_chat
   | "own_gift"
   | "already_received"
   | "taken_back"

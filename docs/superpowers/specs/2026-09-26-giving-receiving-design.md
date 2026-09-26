@@ -1,6 +1,6 @@
-# Giving, Receiving and the stat board: design
+# Giving and Receiving: design
 
-2026-09-26, against `main` at d56d561. The rest of the gift experience (the receiver's side, the giver's side after sending), real User Stats on the stat board, and foil on stickers someone else drew, built from the design drafts on a data layer shaped like the planned REST API.
+2026-09-26, against `main` at d56d561. The rest of the gift experience: the receiver's side, the giver's side after sending, the entry to the gratitude Mini-game, and foil on stickers someone else drew. Built from the design drafts on a data layer shaped like the planned REST API.
 
 **Sources.** `DESIGN` = the design drafts' `drawing-app/` directory (`ethglobal-tokyo-2026-design-drafts`, checked out beside this repo); `P` = `DESIGN/prototype`.
 
@@ -13,20 +13,22 @@
 
 ## Decisions
 
-1. **Scope.** In: Receiving, the giving flow's remaining LINE-chat parts, real User Stats on the stat board, and foil with the artist chip. Out: everything listed under "Not in this work".
+1. **Scope.** In: Receiving, the giving flow's remaining LINE-chat parts, the gift message, foil with the artist chip, and Send gratitude's entry to the Mini-game. Out: everything listed under "Not in this work". The stat board's User Stats have their own spec, `2026-09-26-stat-board-user-stats-design.md`.
 2. **LINE chats only.** No gifts by handle: no handle search, no Recent row, no "For @name" tag, no Give on someone else's board.
 3. **Receiving happens at Accept.** The receiver sees the sticker first: the preview returns it for a 1:1 open of a gift that can still be received, so the torn bag reveals it before Accept.
 4. **A data layer shaped like the REST routes** (`src/api/`), with a device client for the deployed app until the server exists and a mock for the dev server and tests.
 5. **Fixtures run only on the dev server and in tests.** The build drops them.
 6. **A sent gift leaves the board and waits in the PendingGiftsNotificationBadge.** Its GivenStickerSilhouette appears once it's received, naming the receiver. Until the server exists nobody can receive, so on the deployed app sent gifts stay on their way.
-7. **The streak follows the server's rule:** a missed day resets it to 0.
-8. **A gift link on the deployed app says gifts can't be opened yet**, until the server exists.
+7. **A gift link on the deployed app says gifts can't be opened yet**, until the server exists.
+8. **Send gratitude opens a placeholder** until the Mini-game (`design/gratitude-mini-game`) merges: the data the Mini-game will get, shown as it is.
+9. **The terms line links placeholder pages** until the real Terms of Use and Privacy Policy are written.
 
 ## Not in this work
 
 - Explore, other people's Sticker Boards and their stat boards.
 - Gifts by handle; the handle prompt ("Whose sticker board is this?").
-- The Send gratitude sheet after Accept, the replay and the pink tag: parts 2 and 3 of `2026-09-26-gratitude-mini-game-design.md`.
+- The Mini-game itself, recording a combo (`POST /api/gratitude`), the replay and the pink tag: `2026-09-26-gratitude-mini-game-design.md`.
+- The stat board's User Stats: `2026-09-26-stat-board-user-stats-design.md`.
 - Taking back a sent gift, and what the giver sees when a gift returns after 7 days: the REST doc marks both "not designed".
 - The Official account's pushes ("Bob accepted your sticker ♡" in LINE): server work.
 - The Transfer Trail on the sticker detail.
@@ -46,21 +48,21 @@
 
 **The routes this work calls** (the REST doc's "REST API" section; two change, under "Changes to the REST doc"):
 
-| `ApiClient` method     | Route                                                        | Called from                                    |
-| ---------------------- | ------------------------------------------------------------ | ---------------------------------------------- |
-| `stickerBoard`         | `GET /api/sticker-boards/me`                                 | `StickerBoard`, `StickerTray`, `StickerDetail` |
-| `saveStickerPlacement` | `PATCH /api/sticker-boards/me/sticker-placements/:stickerId` | the board's gestures, Remove, the tray         |
-| `markTraySeen`         | `POST /api/sticker-boards/me/sticker-tray/seen`              | `StickerTray`                                  |
-| `userStats`            | `GET /api/sticker-boards/me/user-stats`                      | `StatBoard`                                    |
-| `pendingGifts`         | `GET /api/gifts/pending`                                     | PendingGiftsNotificationBadge                  |
-| `previewGift`          | `POST /api/gifts/preview`                                    | ReceiveGiftDialog                              |
-| `receiveGift`          | `POST /api/gifts/receive`                                    | ReceiveGiftDialog's Accept                     |
+| `ApiClient` method     | Route                                                        | Called from                                                |
+| ---------------------- | ------------------------------------------------------------ | ---------------------------------------------------------- |
+| `stickerBoard`         | `GET /api/sticker-boards/me`                                 | `StickerBoard`, `StickerTray`, `StickerDetail`             |
+| `saveStickerPlacement` | `PATCH /api/sticker-boards/me/sticker-placements/:stickerId` | the board's gestures, Remove, the tray                     |
+| `markTraySeen`         | `POST /api/sticker-boards/me/sticker-tray/seen`              | `StickerTray`                                              |
+| `stickerDetail`        | `GET /api/stickers/:stickerId`                               | `StickerDetail`: whether you've thanked a received sticker |
+| `pendingGifts`         | `GET /api/gifts/pending`                                     | PendingGiftsNotificationBadge                              |
+| `previewGift`          | `POST /api/gifts/preview`                                    | ReceiveGiftDialog                                          |
+| `receiveGift`          | `POST /api/gifts/receive`                                    | ReceiveGiftDialog's Accept                                 |
 
 **Errors.** Every method rejects with an `ApiError`: the HTTP status and the REST doc's `ErrorBody` (`error`, the stable snake_case code screens switch on, and `detail`). Screens say what failed where the action was, with Try again, and log it. A request that never gets an answer is status 0, `network`. `deviceApi`'s preview and receive reject with 501 `needs_server`.
 
 **The three clients over time:**
 
-- **`deviceApi`** (the build, until the server exists): IndexedDB stickers, localStorage gifts and NEW marks, through the code that reads them today. Its User Stats are what this device knows (under "The stat board"); anything that needs a receive is 0.
+- **`deviceApi`** (the build, until the server exists): IndexedDB stickers, localStorage gifts and NEW marks, through the code that reads them today. A sticker's detail is its own record, with an empty Transfer Trail.
 - **`mockApi`** (the dev server, and every UI test): `deviceApi` plus fixtures. Loaded by a dynamic import under `import.meta.env.DEV`, so the build drops it; `VITE_API_MOCK=off` uses `deviceApi` on the dev server, as `VITE_LIFF_MOCK=off` does for LINE.
 - **The Hono client**, once the routes exist, replaces `deviceApi`; device storage goes with it.
 
@@ -77,62 +79,6 @@
 - **Back:** the dialog is an overlay on the critique cleanup's Back stack (B4), which marks its entries in `history.state` and never changes the path. LINE's Back and Android's close it, as the Not now link does. No second history mechanism.
 - **The context:** the preview and the receive send `liff.getContext()?.type`: `utou`, `room`, `group`, `square_chat`, `external` or `none` (`@liff/store` 2.31.0). The server refuses `group`, `room` and `square_chat`. A null context is sent as `none`.
 - **The dev server:** LIFF Mock ignores `liff.state`, and Vite serves `index.html` for any path, so fixtures open directly at `http://localhost:5173/g/{fixture token}`. LIFF Mock reports a `group` context by default; `initMock` in `line/liff.ts` sets `utou`, so a fixture opens as a 1:1 chat unless it names another context.
-
-## The stat board
-
-`StatBoard` draws User Stats from `userStats`, in place of today's `stickers` and `gifts` props. The papers, the turn and the layout stay as they are.
-
-**Props:**
-
-```ts
-interface Props {
-  /** Whose board: the name card. From `stickerBoard`'s `owner`. */
-  person: PersonView;
-  /** The REST doc's `UserStats`, mapped; null while loading; the error when the load failed. */
-  stats: UserStatsView | ApiError | null;
-  onRetry: () => void;
-  onFlipBack: () => void;
-  flipBackRef: Ref<HTMLButtonElement>;
-  ref?: Ref<StatBoardHandle>;
-}
-```
-
-**What each paper shows:**
-
-| Paper                      | Shows                                                                                           | From                                                               |
-| -------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| The name card              | Picture, LINE name, "@alice · name and picture from LINE"                                       | `person`                                                           |
-| The receipt                | "@ALICE" and today's date on top; one row per kind above 0, each with its dot and reason; TOTAL | `gratitude`                                                        |
-| The calendar leaf          | The streak in days, and its rule                                                                | `streak`                                                           |
-| The notebook scrap (Bests) | Longest streak, Best combo as a hit counter, Most thanks in a day; "None yet" for each at 0     | `bests.longestStreak`, `bests.bestCombo`, `bests.mostThanksInADay` |
-| The stamps                 | Made, received, given                                                                           | `made`, `received`, `given`                                        |
-| The label-maker tape       | "Since 2026.08.12"                                                                              | `since`                                                            |
-
-**The receipt's rows** (reasons from `P/screens/sketchbook.js:436-438`):
-
-| Row           | Dot   | Reason                                             | Amount                                                                                                   |
-| ------------- | ----- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Inspired      | pink  | "Thanks for stickers you gave."                    | `inspired`: your part of tap combos on gifts you gave                                                    |
-| Magic         | grape | "Thanks sent a special way."                       | `magic`: your part of stroke and shake combos                                                            |
-| As the artist | aqua  | "Came to you when others passed on your stickers." | `asOriginalArtist`: Original Artist Gratitude Shares from gifts of stickers you drew, given on by others |
-
-A row at 0 is left off. With every row at 0, the receipt reads "No gratitude yet. It arrives when someone you give a sticker to thanks you for it." over a TOTAL of 0. The Daily row is gone (the REST doc: only the Mini-game makes gratitude).
-
-**The streak's rule**, under the server's reset (proposed copy):
-
-- With a streak: "Miss a day and it starts over. Days turn over at 4:00 AM."
-- Without one: "Not started", then "Draw a sticker today to start one."
-
-**Other changes from today's stat board:**
-
-- **The receipt's rows** get the drafts' styles: a 9px dot, the name at 700 14px, the reason at 12px Graphite indented 16px (`P/screens/sketchbook.css:530-535`).
-- **Best combo** is a `HitCounter` (`ui/HitCounter.tsx`, new, 20px here): Figure numerals leaning 11°, HITS in small caps, three pink speed lines off the left, no × (DESIGN.md "Hit counter", `P/css/components.css:356-365`).
-- **Flip back** takes Phosphor's arrow-counter-clockwise, as in the drafts.
-- **No ENS tape:** there's no ENS name until ENS lands.
-- **Loading:** the papers show "–" (read as "not known") until the stats arrive.
-- **A failed load** stays on the receipt as a line saying what failed, with Try again as small label stock. The drafts' toast and automatic flip back would make the error vanish.
-
-**`deviceApi`'s User Stats:** `made` is the stickers on this device; `received` and `given` are 0, since nothing can be received without the server; `streak` and `bests.longestStreak` come from seal days under the reset rule; gratitude, `bestCombo` and `mostThanksInADay` are 0; `since` is the earlier of the first visit and the oldest sticker.
 
 ## Foil and the artist chip
 
@@ -289,9 +235,25 @@ On the dev server, `/g/demo` opens a gift from a fixture friend that can be rece
 
 `VITE_GIFT_MESSAGE_HERO_URL` and `giving/config.ts` go.
 
+## Send gratitude: the Mini-game's entry
+
+Two ways in, both for a sticker you received and haven't thanked:
+
+- **The sheet after landing** (the drafts' `receive-landed`): once a received sticker has stuck to the board, a sheet rises with the giver's 60px photo sticker, "Send @alice gratitude?", and "It's on your board. @alice drew it in 4m 52s, and thanks never expires." When someone else drew it: "It's on your board, from @alice. Thanks never expires." Then **Send gratitude**, the sheet's one key (pink, Phosphor's heart, fill), and **Later**, a quiet link with Phosphor's clock. It shows once, for the gift just received.
+- **The sticker's detail:** a received sticker you haven't thanked has Send gratitude as its key, with Give as label stock under it (`P/screens/piece.js` `owes`). "Haven't thanked" is the Transfer Trail's newest entry to you with no gratitude, from `stickerDetail`.
+
+Both open the Mini-game with the gift, the sticker and its giver, as `GratitudeMiniGame` takes them (`sticker`, `giver`, `onEnd`, `onClose`; `2026-09-26-gratitude-mini-game.md`), plus the gift's ID. Until `design/gratitude-mini-game` merges, `gratitude/GratitudeMiniGamePlaceholder.tsx` stands in: over the whole phone, "The gratitude Mini-game is being built", then those props as formatted JSON, and Close. Swapping in the Mini-game is one import. Recording the combo is the Mini-game's.
+
+## The Terms and Privacy Policy placeholders
+
+The terms line links two static pages, `apps/frontend/public/terms.html` and `privacy.html`, opened inside LINE (`liff.openWindow`, `external: false`). Each opens with a Seal Yellow label reading "Placeholder: the real Terms of Use aren't written yet" (or "the real Privacy Policy"), in the world's type on the Liner:
+
+- **Terms:** the GNU Manifesto, verbatim from https://www.gnu.org/gnu/manifesto.en.html, with its copyright and permission notice, which allow verbatim copies.
+- **Privacy Policy:** the "I'd just like to interject for a moment" GNU/Linux copypasta, labeled as an internet copypasta that's often attributed to Richard Stallman as a joke. It isn't his words, and nothing on the page says it is.
+
 ## Changes to the REST doc
 
-Proposed; `docs/database-schema-and-rest-api.md` takes them once this spec is approved, and `contract.ts` follows the doc.
+Approved on 2026-09-26 and made in `docs/database-schema-and-rest-api.md`; `contract.ts` follows the doc.
 
 1. **`POST /api/gifts/preview` returns the sticker for a 1:1 open**, so the receiver sees it before Accept (decision 3):
    - The request adds `liffContextType`, as `receive` has.
@@ -299,7 +261,6 @@ Proposed; `docs/database-schema-and-rest-api.md` takes them once this spec is ap
    - `ReceiveRefusal` adds `group_chat`, since the preview now knows the context.
 2. **`BoardSticker` adds `givenTo: { receiver: Person; receivedAt: IsoTime } | null`**, set when `held` is false, for the GivenStickerSilhouette's "→ @bob" and the giver's notice.
 3. **`POST /api/gifts/receive` sets `terms_accepted_at`** when it's unset: Accept carries the terms line.
-4. **`bests.mostThanksInADay`** counts the person's ticket days, from 4:00 in their zone, as the streak does.
 
 ## Testing
 
@@ -308,36 +269,37 @@ Proposed; `docs/database-schema-and-rest-api.md` takes them once this spec is ap
   - The dialog's flow: each preview outcome picks its screen; Accept goes busy, then received; a failed Accept shows its line and retries; a refused Accept moves to its refusal.
   - The refusal screens, one per REST doc error code. The codes are the server's contract, so the test names them.
   - The contract mappings: ISO times to milliseconds, the placement's fields, an empty image URL as none, and `held`, `openGift` and `givenTo` choosing the board, the badge or the silhouette.
-  - `deviceApi`'s User Stats: the streak's reset, the counts, `since`.
   - `openedView.ts`: `/g/{token}` opens the dialog with that token.
   - `friendPicker.ts`: the any-chat option asks for LINE's full picker.
   - `giftMessage.ts`: the texts, and a hero only at an HTTPS URL.
 - **UI (happy-dom), rendered from fixtures:**
   - ReceiveGiftDialog: every screen's title; the slider tears it and brings up Accept; Accept calls `receiveGift` once and closes with the sticker's ID.
-  - StatBoard: filled stats hide the rows at 0; empty stats show the empty lines; a failed load shows what failed, with Try again.
+  - The Send gratitude sheet and the detail's key open the placeholder with the sticker, its giver and the gift.
   - PendingGiftsNotificationBadge: one gift and several; a tap opens the newest.
   - GivenStickerSilhouette names its receiver; "Can't find them?" opens the full picker and goes back.
-- **Shared helpers**, written before the suites: fixture builders (`person()`, `sticker()`, `boardSticker()`, `gift()`, `userStats()`) and a render that puts a component under `ApiProvider` with a mock client.
+- **Shared helpers**, written before the suites: fixture builders (`person()`, `sticker()`, `boardSticker()`, `gift()`) and a render that puts a component under `ApiProvider` with a mock client.
 - **Looks:** 390 × 844 screenshots, plus 360 and 430 where layout changes, beside the drafts' renders in `DESIGN/.impeccable/review/screens-local/`, with every difference listed.
 - **Before merging:** the frontend's lint, typecheck, tests and format check; the build; and a search of `dist/` for a fixture's name, which must find nothing.
 
 ## Build order
 
-Implementation branches from `main` after the critique cleanup's branches merge (the cleanup's coordinator says when). Streams run in parallel worktrees, each owning its files; only the coordinator (this session) edits files two streams need.
+Streams run in parallel worktrees, each owning its files; only the coordinator (this session) edits files two streams need. The Board data stream starts once the critique cleanup's bundle split and review fixes are on `main`, since they touch `StickerBoard.tsx`; the others start now.
 
-| Wave | Stream      | Owns                                                                                                                                                                                                                                                        |
-| ---- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0    | Coordinator | `src/api/` (the contract, the client, `useApiQuery`, `deviceApi`'s reads, the mock's frame, fixture builders and fixture stickers), `ApiProvider` in `main.tsx`, `VITE_API_MOCK` in `env.d.ts` and `.env.example`, the REST doc's changes                   |
-| 1    | Receiving   | `src/receiving/`, `GiftBag`'s receive additions, `api/mock/receiving.ts`, the gift path in `app/openedView.ts`, LIFF Mock's context in `line/liff.ts`                                                                                                       |
-| 1    | Giving      | `giving/` ("Can't find them?", PendingGiftsNotificationBadge, the giver's notice, the gift message and its hero, the sent copy), `line/friendPicker.ts`, `api/mock/giving.ts`                                                                               |
-| 1    | Stat board  | `sticker-board/stat-board/`, `ui/HitCounter.tsx`, `deviceApi`'s User Stats, `api/mock/stats.ts`                                                                                                                                                             |
-| 1    | Foil        | `stickers/StickerFoil.*`, `stickers/ArtistChip.*`, `StickerFigure`'s foil, the first-load chip layer                                                                                                                                                        |
-| 1    | Board data  | `StickerBoard`'s load and saves through the client, `boardSticker.ts`'s mapping, the tray's NEW through `markTraySeen`, `GivenStickerSilhouette`'s receiver, the detail's "On its way" and "You gave it to", `api/mock/board.ts`                            |
-| 2    | Coordinator | Mounting the badge, the notice, the chip layer and a received sticker's landing on the board; foil and the chip on the board, the toolbar, the detail and the tray's sheets; screenshots; a code review of the whole change; the checks; squashing; merging |
+| Wave | Stream      | Owns                                                                                                                                                                                                                                                 |
+| ---- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0    | Coordinator | `src/api/` (the contract, the client, `useApiQuery`, `deviceApi`, the mock's frame, fixture builders and fixture stickers), `ApiProvider` in `main.tsx`, `VITE_API_MOCK`, `gratitude/GratitudeMiniGamePlaceholder.tsx`, the REST doc's changes       |
+| 1    | Receiving   | `src/receiving/` (the dialog, the pull tab, the refusals, the Send gratitude sheet), `GiftBag`'s receive additions, `api/mock/receiving.ts`, the gift path in `app/openedView.ts`, LIFF Mock's context in `line/liff.ts`, the placeholder pages      |
+| 1    | Giving      | `giving/` ("Can't find them?", PendingGiftsNotificationBadge, the giver's notice, the gift message and its hero, the sent copy), `line/friendPicker.ts`, `api/mock/giving.ts`                                                                        |
+| 1    | Foil        | `stickers/StickerFoil.*`, `stickers/ArtistChip.*`, `StickerFigure`'s foil, the first-load chip layer                                                                                                                                                 |
+| 1    | Board data  | `StickerBoard`'s load and saves through the client, `boardSticker.ts`'s mapping, the tray's NEW through `markTraySeen`, `GivenStickerSilhouette`'s receiver, the detail's "On its way", "You gave it to" and Send gratitude, `api/mock/board.ts`     |
+| 2    | Coordinator | Mounting the badge, the notice, the chip layer, the Send gratitude sheet and a received sticker's landing; foil and the chip on the board, the toolbar, the detail and the tray's sheets; screenshots; a code review; the checks; squashing; merging |
 
 Each wave-1 stream builds and tests its components alone, from fixtures, and reports its branch to the coordinator; nothing merges to `main` until wave 2 passes.
 
-## Open questions
+## Checking "Not friends in LINE yet?" on a phone
 
-1. **The Terms and Privacy Policy** have no pages yet. Until they do, the terms line names them without links.
-2. **"Not friends in LINE yet?"** needs a check on a phone: `line.me/R/nv/addFriends` through `liff.openWindow`.
+Not a blocker. After a deploy, on an iPhone (and an Android phone if one's handy):
+
+1. Open the app from the Official account's chat, give a sticker, tap "Can't find them?", then "Not friends in LINE yet?".
+2. LINE's Add friends screen should open inside LINE, not in a browser. Close it and come back: the app should still show the "Can't find them?" sheet.
+3. If it opens a browser tab or does nothing, say which; the fix is the `external` flag on `liff.openWindow`.
