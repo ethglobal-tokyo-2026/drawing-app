@@ -31,25 +31,25 @@ colors:
   cork: "#CFA476"
 typography:
   display:
-    fontFamily: "Dela Gothic One, Mona Sans, system-ui, sans-serif"
+    fontFamily: "Dela Gothic One, Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "20px"
     fontWeight: 400
     lineHeight: 1
     letterSpacing: "0.01em"
   display-lg:
-    fontFamily: "Dela Gothic One, Mona Sans, system-ui, sans-serif"
+    fontFamily: "Dela Gothic One, Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "23px"
     fontWeight: 400
     lineHeight: 1
     letterSpacing: "0.01em"
   display-sm:
-    fontFamily: "Dela Gothic One, Mona Sans, system-ui, sans-serif"
+    fontFamily: "Dela Gothic One, Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "17px"
     fontWeight: 400
     lineHeight: 1
     letterSpacing: "0.01em"
   figure:
-    fontFamily: "Mona Sans, system-ui, sans-serif"
+    fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "44px"
     fontWeight: 900
     lineHeight: 0.95
@@ -57,34 +57,34 @@ typography:
     fontFeature: "tnum"
     fontVariation: "'wdth' 125"
   headline:
-    fontFamily: "Mona Sans, system-ui, sans-serif"
+    fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "26px"
     fontWeight: 800
     lineHeight: 1.08
     letterSpacing: "-0.015em"
     fontVariation: "'wdth' 112"
   title:
-    fontFamily: "Mona Sans, system-ui, sans-serif"
+    fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "22px"
     fontWeight: 800
     lineHeight: 1.1
     letterSpacing: "-0.012em"
     fontVariation: "'wdth' 112"
   body:
-    fontFamily: "Mona Sans, system-ui, sans-serif"
+    fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "15px"
     fontWeight: 400
     lineHeight: 1.42
     fontVariation: "'wdth' 100"
   label:
-    fontFamily: "Mona Sans, system-ui, sans-serif"
+    fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "15px"
     fontWeight: 700
     lineHeight: 1.1
     letterSpacing: "0.004em"
     fontVariation: "'wdth' 100"
   fine:
-    fontFamily: "Mona Sans, system-ui, sans-serif"
+    fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "11px"
     fontWeight: 650
     lineHeight: 1.3
@@ -333,7 +333,7 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 ## Typography
 
 **Display Font:** Dela Gothic One (with Mona Sans fallback)
-**Body Font:** Mona Sans, a variable font with a width axis (with system-ui fallback)
+**Body Font:** Mona Sans, a variable font with a width axis (with Zen Kaku Gothic New for Japanese, then system-ui)
 **Japanese:** Zen Kaku Gothic New (with Hiragino Sans fallback)
 **Platform chrome:** the native system stack (-apple-system, SF Pro Text, Hiragino Sans), used only inside mocked LINE and iOS UI.
 
