@@ -3,15 +3,22 @@ import type { Section } from "../catalog";
 export const line = {
   /** The screen that holds the app until LINE has logged the person in. */
   gate: {
+    /** LINE sign-in screen, while LINE (LIFF) starts up as the app opens: the status line */
     opening: { en: "Opening your sticker board…", ja: "シールボードをひらいています…" },
+    /** LINE sign-in screen, in a browser outside LINE before LINE Login: the heading */
     title: { en: "Your sticker board", ja: "あなたのシールボード" },
+    /** LINE sign-in screen, in a browser outside LINE before LINE Login: the line under the heading */
     lead: { en: "It opens with your LINE account.", ja: "LINEアカウントでひらきます。" },
+    /** LINE sign-in screen, in a browser outside LINE: the button that starts LINE Login */
     logIn: { en: "Log in with LINE", ja: "LINEでログイン" },
+    /** LINE sign-in screen, when LINE (LIFF) fails to start or doesn't start in time: the heading */
     didntStart: { en: "LINE didn’t start", ja: "LINEが起動しませんでした" },
+    /** LINE sign-in screen, when LINE (LIFF) fails to start: the line under the heading, above Try again and LINE's reason in fine print */
     didntStartLead: {
       en: "Your sticker board opens once it does. Check your connection, then try again.",
       ja: "起動すると、シールボードがひらきます。接続を確認して、もう一度お試しください。",
     },
+    /** LINE sign-in screen, when LINE (LIFF) fails to start: the button that reloads the page */
     tryAgain: { en: "Try again", ja: "もう一度" },
   },
   /** The developer slip's LINE details and test message. Never translated. */

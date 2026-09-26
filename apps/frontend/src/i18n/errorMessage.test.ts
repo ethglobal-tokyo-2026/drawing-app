@@ -7,12 +7,11 @@ import { errors } from "./strings/errors";
 afterEach(() => i18next.changeLanguage("en"));
 
 describe("an error's message", () => {
-  it("is its code's message in the app's language, falling back to English", async () => {
+  it("is its code's message in the app's language", async () => {
+    const error = new ApiError(409, { error: "handle_taken" });
+    expect(errorMessage(error)).toBe(errors.handle_taken.en);
     await i18next.changeLanguage("ja");
-    expect(errorMessage(new ApiError(404, { error: "sticker_not_found" }))).toBe(
-      errors.sticker_not_found.ja,
-    );
-    expect(errorMessage(new ApiError(409, { error: "handle_taken" }))).toBe(errors.handle_taken.en);
+    expect(errorMessage(error)).toBe(errors.handle_taken.ja);
   });
 
   it("names a code the catalog doesn't have, and keeps the server's detail in fine print", () => {

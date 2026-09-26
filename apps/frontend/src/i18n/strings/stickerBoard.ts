@@ -7,115 +7,230 @@ export const stickerBoard = {
   },
   /** The Sticker Board's cork back: your own, or someone else's. */
   statBoard: {
-    label: { en: "{{name}}’s stats" },
+    /** Stat board (a sticker board's cork back, yours or someone else's): screen readers' name for the dialog; {{name}} is the board owner's LINE name */
+    label: { en: "{{name}}’s stats", ja: "{{name}}さんの記録" },
     /** A figure whose source didn't load: a dash on screen, words for screen readers. */
-    notKnown: { mark: { en: "–" }, spoken: { en: "not known" } },
+    notKnown: {
+      /** Stat board: the dash in place of a figure whose data didn't load (hidden from screen readers) */
+      mark: { en: "–", ja: "–" },
+      /** Stat board: what screen readers say in place of a figure whose data didn't load */
+      spoken: { en: "not known", ja: "不明" },
+    },
     gratitude: {
-      title: { en: "Gratitude received" },
-      inspired: { label: { en: "Inspired" }, reason: { en: "Gratitude for stickers they gave." } },
-      magic: { label: { en: "Magic" }, reason: { en: "Gratitude sent a special way." } },
-      asOriginalArtist: {
-        label: { en: "Original Artist" },
-        reason: { en: "A share of the gratitude when a sticker they drew is given on." },
+      /** Stat board: the heading of the Gratitude receipt, the paper under the pink pushpin */
+      title: { en: "Gratitude received", ja: "受け取った感謝" },
+      inspired: {
+        /** Stat board, Gratitude receipt: the Inspired row's name, beside its amount */
+        label: { en: "Inspired", ja: "インスパイア" },
+        /** Stat board, Gratitude receipt: the Inspired row's one-line reason, under its name */
+        reason: { en: "Gratitude for stickers they gave.", ja: "贈ったシールへの感謝です。" },
       },
-      didntLoad: { en: "Gratitude didn’t load." },
+      magic: {
+        /** Stat board, Gratitude receipt: the Magic row's name, beside its amount */
+        label: { en: "Magic", ja: "マジック" },
+        /** Stat board, Gratitude receipt: the Magic row's one-line reason, under its name */
+        reason: { en: "Gratitude sent a special way.", ja: "特別な方法で送られた感謝です。" },
+      },
+      asOriginalArtist: {
+        /** Stat board, Gratitude receipt: the name of the row for the Original Artist Gratitude Share, beside its amount */
+        label: { en: "Original Artist", ja: "作者" },
+        /** Stat board, Gratitude receipt: the Original Artist row's one-line reason, under its name */
+        reason: {
+          en: "A share of the gratitude when a sticker they drew is given on.",
+          ja: "かいたシールが、ほかの人どうしで贈られたときの感謝の一部です。",
+        },
+      },
+      /** Stat board, Gratitude receipt: in place of the rows while the User Stats load or when they fail to */
+      didntLoad: { en: "Gratitude didn’t load.", ja: "感謝を読み込めませんでした。" },
+      /** Your stat board, Gratitude receipt: in place of the rows before you've received any gratitude */
       noneYetOwn: {
         en: "No gratitude yet. It arrives when someone you give a sticker to sends you some for it.",
+        ja: "まだ感謝はありません。シールを贈った相手が感謝を送ると、ここに届きます。",
       },
+      /** Someone else's stat board, Gratitude receipt: in place of the rows before they've received any gratitude */
       noneYet: {
         en: "No gratitude yet. It arrives when someone sends gratitude for a sticker they gave them.",
+        ja: "まだ感謝はありません。贈ったシールに相手が感謝を送ると、ここに届きます。",
       },
-      total: { en: "Total" },
+      /** Stat board, Gratitude receipt: the label of the total line at its foot */
+      total: { en: "Total", ja: "合計" },
     },
     bests: {
-      title: { en: "Bests" },
-      longestStreak: { en: "Longest streak" },
-      /** `days` is the count, grouped. */
+      /** Stat board: the heading of the Bests scrap */
+      title: { en: "Bests", ja: "自己ベスト" },
+      /** Stat board, Bests scrap: the Longest streak row's label */
+      longestStreak: { en: "Longest streak", ja: "最長連続日数" },
+      /** Stat board, Bests scrap: the Longest streak figure when it's one day; {{days}} is the count */
       days_one: { en: "{{days}} day" },
-      days_other: { en: "{{days}} days" },
-      bestCombo: { en: "Best combo" },
-      bestComboNote: { en: "Most hits in one gratitude combo" },
-      /** `hits` is the count, grouped. */
-      combo: { en: "×{{hits}}" },
-      mostGratitudeInADay: { en: "Most gratitude in a day" },
-      noneYet: { en: "None yet" },
+      /** Stat board, Bests scrap: the Longest streak figure, such as "12 days"; {{days}} is the count */
+      days_other: { en: "{{days}} days", ja: "{{days}}日" },
+      /** Stat board, Bests scrap: the Best combo row's label */
+      bestCombo: { en: "Best combo", ja: "最高コンボ" },
+      /** Stat board, Bests scrap: the small note under Best combo */
+      bestComboNote: {
+        en: "Most hits in one gratitude combo",
+        ja: "1回の感謝コンボでの最多ヒット",
+      },
+      /** Stat board, Bests scrap: the Best combo figure, the hits in that combo, such as "×64" */
+      combo: { en: "×{{hits}}", ja: "×{{hits}}" },
+      /** Stat board, Bests scrap: the Most gratitude in a day row's label */
+      mostGratitudeInADay: { en: "Most gratitude in a day", ja: "1日の最多感謝" },
+      /** Stat board, Bests scrap: in place of a best that has no figure yet */
+      noneYet: { en: "None yet", ja: "まだなし" },
     },
-    /** The day they joined, on label-maker tape. */
-    since: { en: "Since {{day}}" },
-    sinceSpoken: { en: "On the app since {{day}}" },
+    /** Stat board: the label-maker tape with the day they joined, such as "Since 2026.09.01" (hidden from screen readers) */
+    since: { en: "Since {{day}}", ja: "{{day}}から" },
+    /** Stat board: what screen readers say for the label-maker tape with the day they joined */
+    sinceSpoken: { en: "On the app since {{day}}", ja: "{{day}}からクロッキーを使っています" },
     streak: {
-      title: { en: "Streak" },
-      /** Under the day count. */
+      /** Stat board: the heading of the Streak leaf, over the day count */
+      title: { en: "Streak", ja: "連続日数" },
+      /** Stat board, Streak leaf: the word under the day count when it's 1 */
       days_one: { en: "day" },
-      days_other: { en: "days" },
-      notStarted: { en: "Not started" },
-      rule: { en: "Miss a day and it goes back to zero. Days turn over at {{time}}." },
-      startOwn: { en: "Draw a sticker today to start one." },
-      start: { en: "It starts the first day they draw." },
+      /** Stat board, Streak leaf: the word under the day count, such as "12" over "days" */
+      days_other: { en: "days", ja: "日" },
+      /** Stat board, Streak leaf: in place of the day count while there's no streak */
+      notStarted: { en: "Not started", ja: "まだこれから" },
+      /** Stat board, Streak leaf: the rule under a running streak; {{time}} is when the day turns over, such as "0:00" */
+      rule: {
+        en: "Miss a day and it goes back to zero. Days turn over at {{time}}.",
+        ja: "1日でも休むと0に戻ります。日付は{{time}}に切り替わります。",
+      },
+      /** Your stat board, Streak leaf: the note under Not started */
+      startOwn: {
+        en: "Draw a sticker today to start one.",
+        ja: "今日シールをかくと、連続日数のカウントが始まります。",
+      },
+      /** Someone else's stat board, Streak leaf: the note under Not started */
+      start: {
+        en: "It starts the first day they draw.",
+        ja: "シールをかいた日からカウントが始まります。",
+      },
     },
-    didntLoadOwn: { en: "Your stats didn’t load." },
-    didntLoad: { en: "Their stats didn’t load." },
-    didntLoadOwnBecause: { en: "Your stats didn’t load: {{reason}}" },
+    /** Your stat board, Streak leaf: the note in place of the streak rule while your User Stats load */
+    didntLoadOwn: { en: "Your stats didn’t load.", ja: "記録を読み込めませんでした。" },
+    /** Someone else's stat board, Streak leaf: the note in place of the streak rule while their User Stats load */
+    didntLoad: { en: "Their stats didn’t load.", ja: "記録を読み込めませんでした。" },
+    /** Your stat board, Streak leaf: the note in place of the streak rule when your User Stats fail to load, with the reason */
+    didntLoadOwnBecause: {
+      en: "Your stats didn’t load: {{reason}}",
+      ja: "記録を読み込めませんでした：{{reason}}",
+    },
     stamps: {
-      label: { en: "Stickers" },
-      made: { en: "made" },
-      received: { en: "received" },
-      given: { en: "given" },
+      /** Stat board: screen readers' name for the three stamps that count stickers made, received and given */
+      label: { en: "Stickers", ja: "シール" },
+      /** Stat board: the word under the count on the stamp for stickers made */
+      made: { en: "made", ja: "つくった" },
+      /** Stat board: the word under the count on the stamp for stickers received */
+      received: { en: "received", ja: "受け取った" },
+      /** Stat board: the word under the count on the stamp for stickers given */
+      given: { en: "given", ja: "贈った" },
     },
-    flipBack: { en: "Flip back" },
-    logOut: { en: "Log out of LINE" },
+    /** Stat board: the Flip back button, which turns the board back over to its stickers */
+    flipBack: { en: "Flip back", ja: "表に戻す" },
+    /** Your stat board, opened outside LINE's app: the button under Flip back that logs out of LINE */
+    logOut: { en: "Log out of LINE", ja: "LINEからログアウト" },
   },
   /** Your addresses as QR codes on the cork, and the dialog that holds one up. */
   addresses: {
     ethereum: {
-      caption: { en: "Board address" },
-      network: { en: "Ethereum Sepolia" },
-      open: { en: "Show your board address as a QR code" },
-      loading: { en: "Getting your board address…" },
-      didntLoad: { en: "Board address didn’t load" },
-      title: { en: "Your board address" },
-      qrCode: { en: "QR code of your board address" },
-      note: { en: "Your stickers are kept at this address on Ethereum Sepolia." },
-      copied: { en: "Board address copied" },
-      notCopied: { en: "Couldn’t copy the board address" },
-      viewOnExplorer: { en: "View on Etherscan" },
-      viewOnExplorerLabel: { en: "View your board address on Etherscan" },
+      /** Your stat board: the caption on the board address's QR code paper */
+      caption: { en: "Board address", ja: "ボードアドレス" },
+      /** Your stat board: the network's name under the board address paper's caption */
+      network: { en: "Ethereum Sepolia", ja: "Ethereum Sepolia" },
+      /** Your stat board: screen readers' name for the board address paper, a button that holds its QR code up in the address dialog */
+      open: { en: "Show your board address as a QR code", ja: "ボードアドレスをQRコードで表示" },
+      /** Your stat board: on the board address paper while the address loads */
+      loading: { en: "Getting your board address…", ja: "ボードアドレスを取得しています…" },
+      /** Your stat board: on the board address paper when the address didn't load, over Try again */
+      didntLoad: { en: "Board address didn’t load", ja: "ボードアドレスを読み込めませんでした" },
+      /** Address dialog for the board address: its heading, under the large QR code */
+      title: { en: "Your board address", ja: "あなたのボードアドレス" },
+      /** Address dialog for the board address: screen readers' name for the large QR code */
+      qrCode: { en: "QR code of your board address", ja: "ボードアドレスのQRコード" },
+      /** Address dialog for the board address: the note under the address */
+      note: {
+        en: "Your stickers are kept at this address on Ethereum Sepolia.",
+        ja: "あなたのシールは、Ethereum Sepoliaのこのアドレスに保管されています。",
+      },
+      /** Address dialog for the board address: the toast after Copy address copies it */
+      copied: { en: "Board address copied", ja: "ボードアドレスをコピーしました" },
+      /** Address dialog for the board address: the toast when Copy address can't copy it */
+      notCopied: {
+        en: "Couldn’t copy the board address",
+        ja: "ボードアドレスをコピーできませんでした",
+      },
+      /** Address dialog for the board address: the link under Copy address that opens the address on Etherscan */
+      viewOnExplorer: { en: "View on Etherscan", ja: "Etherscanで見る" },
+      /** Address dialog for the board address: screen readers' name for the Etherscan link */
+      viewOnExplorerLabel: {
+        en: "View your board address on Etherscan",
+        ja: "ボードアドレスをEtherscanで見る",
+      },
     },
     sui: {
-      caption: { en: "Sui address" },
-      network: { en: "Sui Testnet" },
-      open: { en: "Show your Sui address as a QR code" },
-      loading: { en: "Getting your Sui address…" },
-      didntLoad: { en: "Sui address didn’t load" },
-      title: { en: "Your Sui address" },
-      qrCode: { en: "QR code of your Sui address" },
-      note: { en: "Your address on Sui Testnet." },
-      copied: { en: "Sui address copied" },
-      notCopied: { en: "Couldn’t copy the Sui address" },
-      viewOnExplorer: { en: "View on Suiscan" },
-      viewOnExplorerLabel: { en: "View your Sui address on Suiscan" },
+      /** Your stat board: the caption on the Sui address's QR code paper */
+      caption: { en: "Sui address", ja: "Suiアドレス" },
+      /** Your stat board: the network's name under the Sui address paper's caption */
+      network: { en: "Sui Testnet", ja: "Sui Testnet" },
+      /** Your stat board: screen readers' name for the Sui address paper, a button that holds its QR code up in the address dialog */
+      open: { en: "Show your Sui address as a QR code", ja: "SuiアドレスをQRコードで表示" },
+      /** Your stat board: on the Sui address paper while the address loads */
+      loading: { en: "Getting your Sui address…", ja: "Suiアドレスを取得しています…" },
+      /** Your stat board: on the Sui address paper when the address didn't load, over Try again */
+      didntLoad: { en: "Sui address didn’t load", ja: "Suiアドレスを読み込めませんでした" },
+      /** Address dialog for the Sui address: its heading, under the large QR code */
+      title: { en: "Your Sui address", ja: "あなたのSuiアドレス" },
+      /** Address dialog for the Sui address: screen readers' name for the large QR code */
+      qrCode: { en: "QR code of your Sui address", ja: "SuiアドレスのQRコード" },
+      /** Address dialog for the Sui address: the note under the address */
+      note: { en: "Your address on Sui Testnet.", ja: "Sui Testnetでのあなたのアドレスです。" },
+      /** Address dialog for the Sui address: the toast after Copy address copies it */
+      copied: { en: "Sui address copied", ja: "Suiアドレスをコピーしました" },
+      /** Address dialog for the Sui address: the toast when Copy address can't copy it */
+      notCopied: { en: "Couldn’t copy the Sui address", ja: "Suiアドレスをコピーできませんでした" },
+      /** Address dialog for the Sui address: the link under Copy address that opens the address on Suiscan */
+      viewOnExplorer: { en: "View on Suiscan", ja: "Suiscanで見る" },
+      /** Address dialog for the Sui address: screen readers' name for the Suiscan link */
+      viewOnExplorerLabel: {
+        en: "View your Sui address on Suiscan",
+        ja: "SuiアドレスをSuiscanで見る",
+      },
     },
-    tryAgain: { en: "Try again" },
-    close: { en: "Close" },
-    copy: { en: "Copy address" },
+    /** Your stat board: the link on an address paper whose address didn't load */
+    tryAgain: { en: "Try again", ja: "もう一度" },
+    /** Address dialog: screen readers' name for the X button that puts the paper back on the cork */
+    close: { en: "Close", ja: "閉じる" },
+    /** Address dialog: the Copy address button under the card */
+    copy: { en: "Copy address", ja: "アドレスをコピー" },
   },
   /** The Settings note, the last paper on your cork back. */
   settings: {
+    /** Your stat board: the title of the Settings note, the last paper on the cork, which peeks up from the cork's foot until it's scrolled into view */
     title: { en: "Settings", ja: "設定" },
     language: {
+      /** Settings note: the heading over the language choices */
       title: { en: "Language", ja: "言語" },
-      /** `language` is LINE's, named in its own language. */
+      /** Settings note: the first language choice, which follows LINE's language; {{language}} is that language's own name, such as "日本語" */
       sameAsLine: { en: "Same as LINE ({{language}})", ja: "LINEと同じ（{{language}}）" },
       /** Each language is named in its own language. */
-      names: { en: { en: "English", ja: "English" }, ja: { en: "日本語", ja: "日本語" } },
+      names: {
+        /** Settings note: the English choice, named in English; also LINE's language in Same as LINE */
+        en: { en: "English", ja: "English" },
+        /** Settings note: the Japanese choice, named in Japanese; also LINE's language in Same as LINE */
+        ja: { en: "日本語", ja: "日本語" },
+      },
+      /** Settings note: the status line while a language choice saves, which screen readers announce */
       saving: { en: "Saving…", ja: "保存しています…" },
+      /** Settings note: the alert when the language choice didn't save to your account, with the reason */
       notSaved: {
         en: "Your language couldn’t be saved, so it hasn’t changed: {{reason}}",
         ja: "言語を保存できなかったため、変更していません：{{reason}}",
       },
+      /** Settings note: the alert when the language saved to your account but this phone couldn't keep it for the next start, with the reason */
       notKept: {
         en: "Your language is saved, but this phone couldn’t keep it ({{reason}}). It changes the next time you open the app.",
-        ja: "言語は保存しましたが、この端末に記録できませんでした（{{reason}}）。次にアプリをひらいたときに切り替わります。",
+        ja: "言語は保存しましたが、この端末には残せませんでした（{{reason}}）。次にアプリをひらいたときに切り替わります。",
       },
     },
   },
@@ -156,151 +271,294 @@ export const stickerBoard = {
       report: { en: "Performance report" },
     },
   },
-  tryAgain: { en: "Try again" },
+  /** Retry button after a failure: your sticker board's load error and its unsaved-positions alert, the sticker detail's failed check, and someone else's sticker board that didn't load */
+  tryAgain: { en: "Try again", ja: "もう一度" },
   /** Your own sticker board. */
   board: {
-    /** Your name, which turns the board over to its stat board. */
-    yourStats: { en: "{{name}}: your stats" },
-    draw: { en: "Draw" },
-    drawLabel: { en: "Draw a new sticker" },
-    /** `tickets` says how many tickets you have. */
-    drawLabelWithTickets: { en: "Draw a new sticker: you have {{tickets}}" },
-    /** Beside Draw until the first sticker. */
-    firstSticker: { en: "Make your first sticker" },
-    /** Names the stickers' area for assistive tech. */
-    label: { en: "Sticker board" },
-    /** Read out for a focused sticker, then for the selected one. */
-    focusHint: { en: "Enter selects it. Arrow keys go to the other stickers." },
+    /** Your sticker board, top left: screen readers' name for the button with your photo and name, which turns the board over to your stat board */
+    yourStats: { en: "{{name}}: your stats", ja: "{{name}}：あなたの記録" },
+    /** Your sticker board: the Draw key's visible label, beside your ticket counts */
+    draw: { en: "Draw", ja: "かく" },
+    /** Your sticker board: screen readers' name for the Draw key while your ticket counts haven't loaded */
+    drawLabel: { en: "Draw a new sticker", ja: "新しいシールをかく" },
+    /** Your sticker board: screen readers' name for the Draw key; {{tickets}} is the ticket summary, such as "2 daily tickets and 5 reserve tickets" */
+    drawLabelWithTickets: {
+      en: "Draw a new sticker: you have {{tickets}}",
+      ja: "新しいシールをかく：手持ちは{{tickets}}",
+    },
+    /** Your sticker board with no stickers yet: the nudge beside the Draw key (hidden from screen readers) */
+    firstSticker: { en: "Make your first sticker", ja: "はじめてのシールをつくろう" },
+    /** Your sticker board: screen readers' name for the region that holds your stickers */
+    label: { en: "Sticker board", ja: "シールボード" },
+    /** Your sticker board: read out by screen readers when keyboard focus lands on a sticker */
+    focusHint: {
+      en: "Enter selects it. Arrow keys go to the other stickers.",
+      ja: "Enterキーで選択します。矢印キーでほかのシールに移動します。",
+    },
+    /** Your sticker board: read out by screen readers for the selected sticker, listing its keyboard controls */
     selectedHint: {
       en: "Selected. Enter opens it, and Tab reaches its toolbar. Arrow keys move it, [ and ] turn it, minus and plus resize it, Delete takes it off the board, and Escape lets go of it.",
+      ja: "選択中です。Enterキーでひらき、Tabキーでツールバーに移動します。矢印キーで動かし、[キーと]キーで回し、マイナスキーとプラスキーで大きさを変え、Deleteキーでボードからはがし、Escapeキーで選択を解除します。",
     },
-    /** In the empty board's dashed spot. */
-    blank: { en: "Stickers you make or receive land here." },
-    didntLoad: { en: "Your stickers didn’t load." },
-    /** `stickers` lists their numbers; `reasons`, why. */
+    /** Your empty sticker board: the note in the dashed spot where the first sticker lands */
+    blank: {
+      en: "Stickers you make or receive land here.",
+      ja: "つくったシールや受け取ったシールは、ここに貼られます。",
+    },
+    /** Your sticker board, when your stickers fail to load: the alert in the dashed spot, above the reason and Try again */
+    didntLoad: { en: "Your stickers didn’t load.", ja: "シールを読み込めませんでした。" },
+    /** Your sticker board: the alert when one moved sticker's new position didn't save; {{stickers}} is its number, {{reasons}} why */
     unsaved_one: { en: "Couldn’t save where {{stickers}} sits: {{reasons}}" },
-    unsaved_other: { en: "Couldn’t save where {{stickers}} sit: {{reasons}}" },
+    /** Your sticker board: the alert when moved stickers' new positions didn't save; {{stickers}} lists their numbers, {{reasons}} why */
+    unsaved_other: {
+      en: "Couldn’t save where {{stickers}} sit: {{reasons}}",
+      ja: "{{stickers}}の位置を保存できませんでした：{{reasons}}",
+    },
   },
   /** A sticker on a board, as screen readers name it: "3 of 6" is its place in reading order. */
   placedSticker: {
-    roleDescription: { en: "sticker" },
-    label: { en: "{{no}}, drawn in {{duration}}, {{position}} of {{setSize}}" },
-    /** Drawn by someone other than the board's owner. */
-    labelBy: { en: "{{no}}, drawn in {{duration}}, by {{artist}}, {{position}} of {{setSize}}" },
+    /** Any sticker board: screen readers' role name for each sticker on it, read after its label */
+    roleDescription: { en: "sticker", ja: "シール" },
+    /** Any sticker board: screen readers' name for a sticker the board's owner drew; {{position}} of {{setSize}} is its place in reading order */
+    label: {
+      en: "{{no}}, drawn in {{duration}}, {{position}} of {{setSize}}",
+      ja: "{{no}}、制作時間{{duration}}、{{setSize}}枚中{{position}}枚目",
+    },
+    /** Any sticker board: screen readers' name for a sticker someone other than the board's owner drew; {{artist}} is its Original Artist */
+    labelBy: {
+      en: "{{no}}, drawn in {{duration}}, by {{artist}}, {{position}} of {{setSize}}",
+      ja: "{{no}}、制作時間{{duration}}、作者：{{artist}}、{{setSize}}枚中{{position}}枚目",
+    },
   },
   /** Where a sticker you gave sat on your board. */
   givenStickerSilhouette: {
-    /** Who has it, when it went through LINE's friend picker, which never says who was picked. */
-    aFriend: { en: "a friend" },
-    label: { en: "{{no}}, given to {{recipient}} on {{day}}. Open it" },
-    labelToAFriend: { en: "{{no}}, given to a friend on {{day}}. Open it" },
+    /** Your sticker board: the caption under a given sticker's silhouette ("No.0012 → a friend") when it went through LINE's friend picker, which never says who was picked */
+    aFriend: { en: "a friend", ja: "友だち" },
+    /** Your sticker board: screen readers' name for a given sticker's silhouette, a button that opens the sticker among the stickers you gave */
+    label: {
+      en: "{{no}}, given to {{recipient}} on {{day}}. Open it",
+      ja: "{{no}}、{{day}}に{{recipient}}さんへ贈ったシールをひらく",
+    },
+    /** Your sticker board: screen readers' name for a given sticker's silhouette when it went through LINE's friend picker; the button opens the sticker */
+    labelToAFriend: {
+      en: "{{no}}, given to a friend on {{day}}. Open it",
+      ja: "{{no}}、{{day}}に友だちへ贈ったシールをひらく",
+    },
   },
   /** Beside the selected sticker on the board. */
   toolbar: {
-    give: { en: "Give" },
-    view: { en: "View" },
-    remove: { en: "Remove" },
+    /** Your sticker board, a sticker selected: the toolbar's Give key, which starts giving it through LINE */
+    give: { en: "Give", ja: "贈る" },
+    /** Your sticker board, a sticker selected: the toolbar's View key, which opens its sticker detail */
+    view: { en: "View", ja: "見る" },
+    /** Your sticker board, a sticker selected: the toolbar's Remove key, which takes it off the board and back into the sticker tray */
+    remove: { en: "Remove", ja: "はがす" },
   },
   /** The sticker tray, zipped down the board's right edge. */
   tray: {
-    /** The Zipper's pull, which opens the tray. */
-    zipper: { en: "Your stickers" },
-    sheets: { en: "Your sticker sheets" },
-    /** Names the folder tabs, which pick the stickers shown. */
-    tabs: { en: "Show" },
+    /** Your sticker board: screen readers' name for the Zipper's pull down the right edge, which opens the sticker tray */
+    zipper: { en: "Your stickers", ja: "手持ちのシール" },
+    /** Sticker tray: screen readers' name for the stack of sticker sheets */
+    sheets: { en: "Your sticker sheets", ja: "手持ちのシールシート" },
+    /** Sticker tray: screen readers' name for the folder tabs (All, Mine, Gifts), which pick the stickers shown; the tabs show once the tray holds a gift */
+    tabs: { en: "Show", ja: "表示するシール" },
     filters: {
-      all: { en: "All" },
-      mine: { en: "Mine" },
-      gifts: { en: "Gifts" },
+      /** Sticker tray: the folder tab that shows every sticker */
+      all: { en: "All", ja: "すべて" },
+      /** Sticker tray: the folder tab that shows only the stickers you drew */
+      mine: { en: "Mine", ja: "自作" },
+      /** Sticker tray: the folder tab that shows only the stickers you received */
+      gifts: { en: "Gifts", ja: "ギフト" },
     },
-    /** On a sticker the open tray hasn't shown before. */
-    new: { en: "NEW" },
+    /** Sticker tray: the badge on a sticker the open tray hasn't shown before (hidden from screen readers) */
+    new: { en: "NEW", ja: "NEW" },
     slot: {
-      /** Out on the board, so its used sticker silhouette holds its spot. */
-      used: { en: "{{no}}, on your board. Show it" },
-      onSheet: { en: "{{no}}. Drag it onto your board, or tap to stick it on" },
-      newOnSheet: { en: "{{no}}, new. Drag it onto your board, or tap to stick it on" },
+      /** Sticker tray: screen readers' name for a used sticker silhouette, whose sticker is on the board; a tap makes that sticker pulse there */
+      used: {
+        en: "{{no}}, on your board. Show it",
+        ja: "{{no}}、ボードに貼ってあります。ボードで見る",
+      },
+      /** Sticker tray: screen readers' name for a sticker on a sheet, which can be dragged onto the board or tapped to stick on */
+      onSheet: {
+        en: "{{no}}. Drag it onto your board, or tap to stick it on",
+        ja: "{{no}}。ボードへドラッグするか、タップすると貼れます",
+      },
+      /** Sticker tray: screen readers' name for a sticker on a sheet that the tray hasn't shown before */
+      newOnSheet: {
+        en: "{{no}}, new. Drag it onto your board, or tap to stick it on",
+        ja: "{{no}}、新着。ボードへドラッグするか、タップすると貼れます",
+      },
     },
-    /** The button for the sheets past the ones that show behind the front sheet. */
+    /** Sticker tray: screen readers' name for the +1 button under the stack, which spreads every sheet out over the board */
     moreSheets_one: { en: "{{count}} more sheet. Spread every sheet out" },
-    moreSheets_other: { en: "{{count}} more sheets. Spread every sheet out" },
-    /** A sheet behind the front one, or laid out in the spread; `dates` is when its stickers came. */
-    sheet: { en: "Sheet {{number}}, {{dates}}. Bring it to the front" },
-    sheetInFront: { en: "Sheet {{number}}, {{dates}}, in front now. Bring it to the front" },
-    /** On a sheet pulled out over the board. */
-    putBack: { en: "Put this sheet back in the tray" },
+    /** Sticker tray: screen readers' name for the +N button under the stack, which spreads every sheet out over the board */
+    moreSheets_other: {
+      en: "{{count}} more sheets. Spread every sheet out",
+      ja: "ほかに{{count}}枚のシート。すべてのシートを広げる",
+    },
+    /** Sticker tray: screen readers' name for a sheet behind the front one, or one laid out in the spread; {{dates}} is when its stickers came, such as "9.20–9.23" */
+    sheet: {
+      en: "Sheet {{number}}, {{dates}}. Bring it to the front",
+      ja: "シート{{number}}、{{dates}}。手前に出す",
+    },
+    /** Sticker tray, sheets spread over the board: screen readers' name for the sheet that's in front now */
+    sheetInFront: {
+      en: "Sheet {{number}}, {{dates}}, in front now. Bring it to the front",
+      ja: "シート{{number}}、{{dates}}、いま手前にあります。手前に出す",
+    },
+    /** Sticker tray: screen readers' name for the X on a sheet pulled out over the board */
+    putBack: { en: "Put this sheet back in the tray", ja: "このシートをシールトレイに戻す" },
   },
   /** One sticker large, paging through the rest. */
   detail: {
-    /** Names it for assistive tech when it has no sticker to show. */
-    label: { en: "Sticker" },
-    back: { en: "Sticker board" },
-    yourStickers: { en: "Your stickers" },
-    stickersYouGave: { en: "Stickers you gave" },
-    previous: { en: "Previous sticker" },
-    next: { en: "Next sticker" },
-    count: { en: "{{position}} / {{setSize}}" },
-    countSpoken: { en: "{{no}}, {{position}} of {{setSize}}" },
-    /** "sticker" stands in for its name, which no data carries yet; `<no/>` is its number. */
-    title: { en: "sticker <no/>" },
-    by: { en: "by {{artist}}" },
-    /** `<duration/>` is how long it took to draw. */
-    drawnIn: { en: "· drawn in <duration/>" },
-    sealedOn: { en: "· {{day}}" },
-    youGaveIt: { en: "You gave it to {{receiver}} · {{day}}" },
-    /** Sent, it waits for its friend. */
-    onItsWay: { en: "On its way" },
-    onItsWayTo: { en: "On its way to {{receiver}}" },
-    sendGratitude: { en: "Send gratitude" },
-    give: { en: "Give" },
+    /** Sticker detail: screen readers' name for the screen when it has no sticker to show */
+    label: { en: "Sticker", ja: "シール" },
+    /** Sticker detail: the back button at the top, with the sticker board icon */
+    back: { en: "Sticker board", ja: "シールボード" },
+    /** Sticker detail, opened from a sticker you hold: screen readers' name for the strip of sticker thumbnails at the top */
+    yourStickers: { en: "Your stickers", ja: "手持ちのシール" },
+    /** Sticker detail, opened from a given sticker's silhouette: screen readers' name for the strip of thumbnails of the stickers you gave */
+    stickersYouGave: { en: "Stickers you gave", ja: "贈ったシール" },
+    /** Sticker detail: screen readers' name for the left arrow under the sticker, which pages to the previous one */
+    previous: { en: "Previous sticker", ja: "前のシール" },
+    /** Sticker detail: screen readers' name for the right arrow under the sticker, which pages to the next one */
+    next: { en: "Next sticker", ja: "次のシール" },
+    /** Sticker detail: the page count between the arrows, such as "3 / 6" (hidden from screen readers) */
+    count: { en: "{{position}} / {{setSize}}", ja: "{{position}} / {{setSize}}" },
+    /** Sticker detail: what screen readers announce after paging, naming the sticker and its place */
+    countSpoken: {
+      en: "{{no}}, {{position}} of {{setSize}}",
+      ja: "{{no}}、{{setSize}}枚中{{position}}枚目",
+    },
+    /** Sticker detail: the sticker's heading under the pager; <no/> is its number, such as "No.0012" */
+    title: { en: "sticker <no/>", ja: "シール<no/>" },
+    /** Sticker detail, a sticker the board's owner drew: the fine print naming its Original Artist, first on the line */
+    by: { en: "by {{artist}}", ja: "作者：{{artist}}" },
+    /** Sticker detail: the fine print after the artist, with how long it took to draw, such as "4m 52s" */
+    drawnIn: { en: "· drawn in <duration/>", ja: "・制作時間<duration/>" },
+    /** Sticker detail: the fine print ending the artist line, the day it was sealed, such as "2026.09.23" */
+    sealedOn: { en: "· {{day}}", ja: "・{{day}}" },
+    /** Sticker detail, a sticker you gave: the fine print naming who received it and when, until its Transfer Trail loads */
+    youGaveIt: {
+      en: "You gave it to {{receiver}} · {{day}}",
+      ja: "{{receiver}}さんに贈りました・{{day}}",
+    },
+    /** Sticker detail, a sticker you've sent that hasn't been received: shown in place of Give, beside its sleeve */
+    onItsWay: { en: "On its way", ja: "お届け中" },
+    /** Sticker detail, a sticker you've sent to someone in the app that hasn't been received: shown in place of Give, beside its sleeve */
+    onItsWayTo: { en: "On its way to {{receiver}}", ja: "{{receiver}}さんへお届け中" },
+    /** Sticker detail, a sticker you received and haven't sent gratitude for: the pink key that opens the Gratitude Mini-game */
+    sendGratitude: { en: "Send gratitude", ja: "感謝を送る" },
+    /** Sticker detail, a sticker you hold: the Give key, or the smaller Give button under Send gratitude */
+    give: { en: "Give", ja: "贈る" },
+    /** Sticker detail: the alert when its Transfer Trail and gratitude check fail to load, before Try again */
     checkFailed: {
       en: "Couldn’t load where it’s been, or whether you’ve sent gratitude for it: {{reason}}",
+      ja: "来歴と、感謝を送ったかどうかを読み込めませんでした：{{reason}}",
     },
-    none: { en: "No sticker here yet." },
+    /** Sticker detail: in place of the sticker when there's none to show */
+    none: { en: "No sticker here yet.", ja: "まだシールがありません。" },
   },
   /** Where a sticker has been: one row per time it was given, newest first. */
   transferTrail: {
-    label: { en: "Where it’s been" },
+    /** Sticker detail: screen readers' name for the Transfer Trail section under the sticker */
+    label: { en: "Where it’s been", ja: "来歴" },
     /** A row: `<giver/>` and `<receiver/>` are their names, and `<at>` holds the day. */
     handOff: {
-      between: { en: "<giver/> gave it to <receiver/><at> · {{day}}</at>" },
-      byYou: { en: "<b>You</b> gave it to <receiver/><at> · {{day}}</at>" },
-      toYou: { en: "<giver/> gave it to <b>you</b><at> · {{day}}</at>" },
+      /** Transfer Trail: a row for a gift between two other people; <at> holds the day, such as "9.23" */
+      between: {
+        en: "<giver/> gave it to <receiver/><at> · {{day}}</at>",
+        ja: "<giver/>さんが<receiver/>さんに贈りました<at>・{{day}}</at>",
+      },
+      /** Transfer Trail: a row for a gift you gave; <at> holds the day */
+      byYou: {
+        en: "<b>You</b> gave it to <receiver/><at> · {{day}}</at>",
+        ja: "<b>あなた</b>が<receiver/>さんに贈りました<at>・{{day}}</at>",
+      },
+      /** Transfer Trail: a row for a gift you received; <at> holds the day */
+      toYou: {
+        en: "<giver/> gave it to <b>you</b><at> · {{day}}</at>",
+        ja: "<giver/>さんが<b>あなた</b>に贈りました<at>・{{day}}</at>",
+      },
     },
-    /** A closed row's Gratitude; `<hidden>` is for screen readers only. */
-    amount: { en: "{{amount}}<hidden> gratitude</hidden>" },
-    /** Who the open row's Gratitude came from. */
-    fromYou: { en: "From you" },
-    from: { en: "From {{name}}" },
-    replay: { en: "Replay" },
-    replayYours: { en: "Play the replay of your {{amount}} gratitude" },
-    replayTheirs: { en: "Play the replay of {{name}}’s {{amount}} gratitude" },
+    /** Transfer Trail: a closed row's gratitude amount beside a heart; the <hidden> words are for screen readers only */
+    amount: { en: "{{amount}}<hidden> gratitude</hidden>", ja: "<hidden>感謝</hidden>{{amount}}" },
+    /** Transfer Trail, the open row: under the gratitude total, when you sent it */
+    fromYou: { en: "From you", ja: "あなたから" },
+    /** Transfer Trail, the open row: under the gratitude total, naming who sent it */
+    from: { en: "From {{name}}", ja: "{{name}}さんから" },
+    /** Transfer Trail, the open row: the Replay button beside the gratitude total (not shown yet: nothing plays replays) */
+    replay: { en: "Replay", ja: "リプレイ" },
+    /** Transfer Trail, the open row: screen readers' name for Replay when you sent the gratitude (not shown yet) */
+    replayYours: {
+      en: "Play the replay of your {{amount}} gratitude",
+      ja: "あなたが送った感謝{{amount}}のリプレイを再生",
+    },
+    /** Transfer Trail, the open row: screen readers' name for Replay when someone else sent the gratitude (not shown yet) */
+    replayTheirs: {
+      en: "Play the replay of {{name}}’s {{amount}} gratitude",
+      ja: "{{name}}さんが送った感謝{{amount}}のリプレイを再生",
+    },
     /** The Original Artist Gratitude Share, out of the giver's part. Never money words. */
     artistShare: {
-      youDrewIt: { en: "{{share}} of it came to you, its artist" },
-      youGaveIt: { en: "{{kept}} came to you · {{share}} to {{artist}}, its artist" },
-      between: { en: "{{kept}} to {{giver}} · {{share}} to {{artist}}, its artist" },
+      /** Transfer Trail, the open row of a sticker you drew that others passed on: the fine print for your Original Artist Gratitude Share */
+      youDrewIt: {
+        en: "{{share}} of it came to you, its artist",
+        ja: "このうち{{share}}が、作者のあなたに届きました",
+      },
+      /** Transfer Trail, the open row of a gift you gave of someone else's sticker: the fine print splitting its gratitude between you and its Original Artist */
+      youGaveIt: {
+        en: "{{kept}} came to you · {{share}} to {{artist}}, its artist",
+        ja: "{{kept}}はあなたに・{{share}}は作者の{{artist}}さんに",
+      },
+      /** Transfer Trail, the open row of a gift between others: the fine print splitting its gratitude between the giver and the Original Artist */
+      between: {
+        en: "{{kept}} to {{giver}} · {{share}} to {{artist}}, its artist",
+        ja: "{{kept}}は{{giver}}さんに・{{share}}は作者の{{artist}}さんに",
+      },
     },
+    /** Transfer Trail: the fold under the newest row, holding one earlier gift; a tap unfolds it */
     earlierGifts_one: { en: "{{count}} earlier gift" },
-    earlierGifts_other: { en: "{{count}} earlier gifts" },
+    /** Transfer Trail: the fold under the newest row, holding the earlier gifts; a tap unfolds them */
+    earlierGifts_other: { en: "{{count}} earlier gifts", ja: "それより前のギフト{{count}}件" },
   },
   /** Someone else's sticker board, opened from Explore. */
   artistBoard: {
-    /** LINE's header, and the board's name for assistive tech. */
-    title: { en: "{{name}}'s sticker board" },
-    theirStats: { en: "{{name}}: their stats" },
-    statsDidntLoad: { en: "Their stats didn’t load: {{reason}}" },
-    /** Read out for a focused sticker. */
-    hint: { en: "Enter opens its menu: view it, or offer for it" },
-    blank: { en: "{{name}} hasn’t stuck anything up yet." },
-    didntLoad: { en: "Couldn’t load {{name}}’s board: {{reason}}" },
-    /** Back to Explore. */
-    explore: { en: "Explore" },
-    view: { en: "View" },
-    offer: { en: "Offer for it" },
-    give: { en: "Give" },
-    /** A sticker opened from it: `<duration/>` is how long it took, `<artist/>` who drew it. */
-    drawnIn: { en: "Drawn in <duration/> · <artist/>" },
-    close: { en: "Close" },
+    /** Someone else's sticker board, opened from Explore: LINE's header, and screen readers' name for the board */
+    title: { en: "{{name}}'s sticker board", ja: "{{name}}さんのシールボード" },
+    /** Someone else's sticker board: screen readers' name for the button with their photo and name, which turns the board over to their stat board */
+    theirStats: { en: "{{name}}: their stats", ja: "{{name}}さんの記録" },
+    /** Someone else's stat board, Streak leaf: the note in place of the streak rule when their User Stats fail to load, with the reason */
+    statsDidntLoad: {
+      en: "Their stats didn’t load: {{reason}}",
+      ja: "記録を読み込めませんでした：{{reason}}",
+    },
+    /** Someone else's sticker board: read out by screen readers when keyboard focus lands on a sticker */
+    hint: {
+      en: "Enter opens its menu: view it, or offer for it",
+      ja: "Enterキーでメニューをひらきます。シールを見たり、オファーしたりできます。",
+    },
+    /** Someone else's empty sticker board: the note in the dashed spot */
+    blank: {
+      en: "{{name}} hasn’t stuck anything up yet.",
+      ja: "{{name}}さんはまだ何も貼っていません。",
+    },
+    /** Someone else's sticker board, when it fails to load: the alert above Try again */
+    didntLoad: {
+      en: "Couldn’t load {{name}}’s board: {{reason}}",
+      ja: "{{name}}さんのシールボードを読み込めませんでした：{{reason}}",
+    },
+    /** Someone else's sticker board: the back chip at the top that returns to Explore */
+    explore: { en: "Explore", ja: "さがす" },
+    /** Someone else's sticker board, a sticker tapped: the menu's View button, which opens it large */
+    view: { en: "View", ja: "見る" },
+    /** Someone else's sticker board, a sticker tapped: the menu's Offer for it button, which opens an offer for that sticker */
+    offer: { en: "Offer for it", ja: "オファーする" },
+    /** Someone else's sticker board: the Give key in Draw's place, which gives them one of your stickers */
+    give: { en: "Give", ja: "贈る" },
+    /** Someone else's sticker board, a sticker opened large: the fine print under its number; <duration/> is how long it took to draw, <artist/> its Original Artist */
+    drawnIn: { en: "Drawn in <duration/> · <artist/>", ja: "制作時間<duration/>・<artist/>" },
+    /** Someone else's sticker board, a sticker opened large: the Close link under it */
+    close: { en: "Close", ja: "閉じる" },
   },
 } as const satisfies Section;
