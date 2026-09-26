@@ -290,7 +290,7 @@ After decisions 6, 7, 11 and 15:
 ## Build order
 
 1. **Before any build.**
-   - Land PR #10 (`i18n/handoff`, 71 frontend files) and `i18n/sticker-board`, and build on `i18n/explore`. Almost every workstream edits the same files for text.
+   - Land PR #10 (`i18n/handoff`, 71+ frontend files). It now also carries the sticker board's, Explore's and the tickets' text (`i18n/sticker-board`, `i18n/explore` and `i18n/tickets` were merged into it). Almost every workstream edits the same files for text.
    - Tell Favio about W4 (his Shop changes) and the glint (his efae4ef), and Spencer about the dev sealing fix and the "wallet" copy (his sponsored-account code).
    - Run `git fetch` and look at open PRs again, since both teammates merge too.
 2. **Foundations**, each small and committed early so the lanes can start:
