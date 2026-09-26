@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { AuthError, AUTH_FAILURE_STATUS, authFailureOf } from "./auth-error.js";
 import type { LinePrivyJwtIssuer } from "./line-privy-jwt.js";
 
 interface Logger {
@@ -22,19 +23,28 @@ function sendJson(
 // The route takes LINE's ID token.
 async function readIdToken(request: IncomingMessage) {
   if (!request.headers["content-type"]?.startsWith("application/json")) {
-    throw new Error("JSON content type is required");
+    throw new AuthError({ code: "invalid_request", reason: "content_type_required" });
   }
   let body = "";
   for await (const chunk of request) {
     body += String(chunk);
-    if (body.length > 8000) throw new Error("Request body exceeds 8000 bytes");
+    if (Buffer.byteLength(body) > 8000) {
+      throw new AuthError({ code: "invalid_request", reason: "body_too_large" });
+    }
   }
-  const parsed: unknown = JSON.parse(body);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    throw new AuthError({ code: "invalid_request", reason: "invalid_json" });
+  }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("JSON body must be an object");
+    throw new AuthError({ code: "invalid_request", reason: "invalid_body" });
   }
   const idToken: unknown = Reflect.get(parsed, "idToken");
-  if (typeof idToken !== "string") throw new Error("idToken is required");
+  if (typeof idToken !== "string") {
+    throw new AuthError({ code: "invalid_request", reason: "id_token_required" });
+  }
   return idToken;
 }
 
@@ -58,8 +68,9 @@ export function createAuthHttpServer({
       const { jwt, expiresAt } = await issuer.issue(await readIdToken(request));
       sendJson(response, 200, { jwt, expiresAt });
     } catch (error) {
-      logger.error("LINE authentication failed", { error });
-      sendJson(response, 401, { error: "line_auth_failed" });
+      const failure = authFailureOf(error);
+      logger.error("Privy JWT issuance failed", { error: failure });
+      sendJson(response, AUTH_FAILURE_STATUS[failure.code], { error: failure.code });
     }
   }
 

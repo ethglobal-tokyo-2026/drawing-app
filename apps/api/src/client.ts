@@ -56,7 +56,7 @@ export type { TicketKind, TicketUse } from "./tickets/tickets.ts";
 export type { Gift, Gratitude, Placement, Sticker, StickerPlacement } from "./views.ts";
 
 /**
- * The REST API's typed client, from its routes' own types: `createApiClient().me.$get()` calls
+ * The REST API's typed client, from its routes' own types: `createApiClient().me.$get({ header: {} })` calls
  * GET /api/me. `baseUrl` is the origin that serves /api; the app's own, behind a proxy, by default.
  */
 export const createApiClient = (baseUrl = "/") => hc<AppType>(baseUrl).api;
