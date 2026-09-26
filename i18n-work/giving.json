@@ -4,7 +4,7 @@
     "ja": "贈り主"
   },
   "giving.tag.for": {
-    "where": "The gift tag's small label over the recipient's handle, on the gift bag of a gift given to someone chosen in the app (\"For @bob\")",
+    "where": "The gift tag's small label over the recipient's handle, for a gift given to someone chosen in the app (\"For @bob\"); no screen names a recipient yet, so it isn't shown",
     "ja": "贈り先"
   },
   "giving.giftMessage.altText": {
@@ -85,7 +85,7 @@
   },
   "giving.cantFind.lead": {
     "where": "Giving's \"Can't find them?\" screen: the line under its title, on who LINE's friend picker leaves out",
-    "ja": "LINEのリストには、アプリとの共有をオフにしている人と、数分以内に追加した友だちは表示されません。"
+    "ja": "LINEの一覧には、アプリとの共有をオフにしている人と、ここ数分で追加した友だちは表示されません。"
   },
   "giving.cantFind.notFriends": {
     "where": "Giving's \"Can't find them?\" screen: the bold title of the row that opens LINE's Add friends screen",
@@ -98,5 +98,152 @@
   "giving.cantFind.addFriendsDidntOpen": {
     "where": "Giving's \"Can't find them?\" screen: an alert when tapping \"Not friends in LINE yet?\" fails to open LINE's Add friends screen",
     "ja": "LINEの友だち追加画面がひらきませんでした：{{reason}}"
+  },
+  "giving.inTheBag.title": {
+    "where": "Giving, once the sticker drops into the open gift bag: the sheet's title while LINE's friend picker opens and is up",
+    "ja": "ギフト袋に入れました"
+  },
+  "giving.inTheBag.lead": {
+    "where": "Giving, with the sticker in the open gift bag: the line under \"In the bag\"",
+    "ja": "送ると袋に封がされます。LINEで相手とのトークを選んでください。最初にひらいた人が受け取れます。"
+  },
+  "giving.inTheBag.notSent": {
+    "where": "Giving, after LINE's friend picker closed without sending, or a step failed: the sheet's title over the open gift bag",
+    "ja": "まだ送っていません"
+  },
+  "giving.inTheBag.notSentLead": {
+    "where": "Giving's \"Not sent yet\" screen: the line under its title",
+    "ja": "封をしないまま、まだ袋の中にあります。もう一度トークを選ぶか、取り出してください。"
+  },
+  "giving.inTheBag.send": {
+    "where": "Giving, with the sticker in the open gift bag: the aqua key that opens LINE's friend picker (again)",
+    "ja": "LINEで送る"
+  },
+  "giving.inTheBag.takeOut": {
+    "where": "Giving, with the sticker in the open gift bag: the quiet link under Send in LINE that lifts it back out, back to the first screen",
+    "ja": "取り出す"
+  },
+  "giving.inTheBag.couldntPack": {
+    "where": "Giving's \"Not sent yet\" screen: an alert when the app's server couldn't pack the gift, with why",
+    "ja": "{{no}}をギフト袋に入れられませんでした：{{reason}}"
+  },
+  "giving.inTheBag.wasntSent": {
+    "where": "Giving's \"Not sent yet\" screen: an alert when LINE's friend picker failed to send the Gift Message, with why",
+    "ja": "{{no}}を送れませんでした：{{reason}}"
+  },
+  "giving.inTheBag.couldntTakeOut": {
+    "where": "Giving's \"Not sent yet\" screen: an alert when Take it out failed, with why",
+    "ja": "{{no}}を取り出せませんでした：{{reason}}"
+  },
+  "giving.inTheBag.couldntRecord": {
+    "where": "Giving's \"Not sent yet\" screen: an alert when the app's server couldn't record a cancelled or failed send, with why",
+    "ja": "アプリのサーバーに記録できませんでした：{{reason}}"
+  },
+  "giving.sent.title": {
+    "where": "Giving, once the Gift Message went out through LINE: the title under the gift bag as it seals",
+    "ja": "封をして送りました"
+  },
+  "giving.sent.lead": {
+    "where": "Giving's \"Sealed and sent\" screen: the line under its title",
+    "ja": "ギフトメッセージをLINEのトークに送りました。ひらけるのは一度だけです。受け取られたら、誰が受け取ったかがわかります。"
+  },
+  "giving.sent.couldntRecord": {
+    "where": "Giving's \"Sealed and sent\" screen: an alert when the Gift Message went out but the app's server couldn't record it, with why",
+    "ja": "LINEでは送れましたが、アプリのサーバーに記録できませんでした：{{reason}}"
+  },
+  "giving.giftBag.pictured.open": {
+    "where": "The gift bag's picture named for assistive tech: in Giving, with the sticker in the open bag",
+    "ja": "口のあいたギフト袋に入ったシール"
+  },
+  "giving.giftBag.pictured.sealed": {
+    "where": "The gift bag's picture named for assistive tech, sealed: Giving's \"Sealed and sent\" screen, and a gift that can't be received yet or here",
+    "ja": "封をしたギフト袋"
+  },
+  "giving.giftBag.pictured.torn": {
+    "where": "The gift bag's picture named for assistive tech: in the gift a recipient opens, once they've torn it open",
+    "ja": "破って開けたギフト袋"
+  },
+  "giving.giftBag.pictured.opened": {
+    "where": "The gift bag's picture named for assistive tech: a gift that can't be received because it was already opened, taken back or returned",
+    "ja": "口があいて空になったギフト袋"
+  },
+  "giving.giftBag.tagged": {
+    "where": "The gift bag's picture named for assistive tech, with its tag's words after the bag's (\"…, tagged From @alice\")",
+    "ja": "{{pictured}}、タグに「{{label}} {{name}}」"
+  },
+  "giving.giftBag.taggedAndStamped": {
+    "where": "The gift bag's picture named for assistive tech, with its tag's words and the rubber stamp on the tag, on a gift that can't be received",
+    "ja": "{{pictured}}、タグに「{{label}} {{name}}」、はんこに「{{stamp}}」"
+  },
+  "giving.giftBag.sealed": {
+    "where": "The gift bag: printed again and again along the aqua tear tape, with the day it was sealed (\"SEALED 9.23\")",
+    "ja": "<b>封印</b> {{date}}"
+  },
+  "giving.giftBag.pullTab": {
+    "where": "The gift a recipient opens: the pull tab's name for assistive tech, as a slider",
+    "ja": "つまみを引いてギフトをひらく"
+  },
+  "giving.giftBag.pull": {
+    "where": "The gift bag: printed on the pull tab, beside its grip ribs",
+    "ja": "引く"
+  },
+  "giving.giftBag.stamps.one-to-one.small": {
+    "where": "The rubber stamp on the tag of a gift opened in a group chat: its small top line, over \"1:1 chat\"",
+    "ja": "ひらけるのは"
+  },
+  "giving.giftBag.stamps.one-to-one.big": {
+    "where": "The rubber stamp on the tag of a gift opened in a group chat: its big words, under \"Opens only in\"",
+    "ja": "1:1トーク"
+  },
+  "giving.giftBag.stamps.opened.big": {
+    "where": "The rubber stamp on the tag of a gift someone already opened",
+    "ja": "開封済み"
+  },
+  "giving.giftBag.stamps.taken-back.big": {
+    "where": "The rubber stamp on the tag of a gift its giver took back before anyone received it",
+    "ja": "取り消し"
+  },
+  "giving.giftBag.stamps.returned.big": {
+    "where": "The rubber stamp on the tag of a gift that went back to its giver, unopened in time",
+    "ja": "返送済み"
+  },
+  "giving.receivedNotice.title": {
+    "where": "The giver's received notice, over the whole phone on their sticker board once someone received their gift: its title",
+    "ja": "{{name}}があなたのシールを受け取りました♡"
+  },
+  "giving.receivedNotice.lead": {
+    "where": "The giver's received notice: the line under its title",
+    "ja": "いまは{{name}}のシールボードにあります。"
+  },
+  "giving.receivedNotice.caption": {
+    "where": "The giver's received notice: the caption beside the sticker's silhouette, the receiver and the day they received it",
+    "ja": "{{name}} · {{date}}"
+  },
+  "giving.pendingGifts.onTheirWay_one": {
+    "where": "The pending gifts badge on your own sticker board: its fine print, with one gift sent and not yet received"
+  },
+  "giving.pendingGifts.onTheirWay_other": {
+    "where": "The pending gifts badge on your own sticker board: its fine print, with gifts sent and not yet received",
+    "ja": "お届け中"
+  },
+  "giving.pendingGifts.andMore": {
+    "where": "The pending gifts badge on your own sticker board: the line under \"On their way\", the newest gift's number and how many more",
+    "ja": "{{no}}ほか{{count}}枚"
+  },
+  "giving.pendingGifts.to": {
+    "where": "The pending gifts badge on your own sticker board: the line under \"On its way\" naming who one gift given in the app went to; no screen names a recipient yet, so it isn't shown",
+    "ja": "{{name}}へ"
+  },
+  "giving.pendingGifts.label.one": {
+    "where": "The pending gifts badge on your own sticker board: its name for assistive tech, with one gift on its way",
+    "ja": "お届け中のギフト：{{no}}"
+  },
+  "giving.pendingGifts.label.oneTo": {
+    "where": "The pending gifts badge on your own sticker board: its name for assistive tech, with one gift given to someone in the app; no screen names a recipient yet, so it isn't shown",
+    "ja": "お届け中のギフト：{{name}}への{{no}}"
+  },
+  "giving.pendingGifts.label.several": {
+    "where": "The pending gifts badge on your own sticker board: its name for assistive tech, with several gifts on their way",
+    "ja": "お届け中のギフト：{{count}}件"
   }
 }
