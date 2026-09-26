@@ -9,6 +9,7 @@ import {
   stringToBytes,
   type Hex,
 } from "viem";
+import { sepolia } from "viem/chains";
 import { afterEach, describe, expect, it } from "vitest";
 import { createGiftAuthorizer, createGiftClaim, prepareGiftTransfer } from "../src/gift-sticker.js";
 import { readFoundryArtifact, startAnvil, type AnvilInstance } from "./helpers/foundry.js";
@@ -16,8 +17,8 @@ import { readFoundryArtifact, startAnvil, type AnvilInstance } from "./helpers/f
 const stickerArtifact = readFoundryArtifact("StickerNFT", "StickerNFT");
 const escrowArtifact = readFoundryArtifact("StickerGiftEscrow", "StickerGiftEscrow");
 const chain = defineChain({
-  id: 4801,
-  name: "Local World Chain Sepolia",
+  id: sepolia.id,
+  name: "Local Ethereum Sepolia",
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
   rpcUrls: { default: { http: ["http://localhost"] } },
 });

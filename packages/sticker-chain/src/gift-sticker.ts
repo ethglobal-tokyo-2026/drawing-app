@@ -145,7 +145,7 @@ export function createGiftAuthorizer({
         recipientWallet.chainId !== chainId ||
         !isAddress(recipientWallet.address)
       ) {
-        throw new Error("Recipient World Chain smart wallet is unavailable");
+        throw new Error("Recipient Ethereum smart wallet is unavailable on the configured chain");
       }
       const authorizationDeadline = Math.min(gift.expiresAt, now() + 300);
       const authorization = await signer.signTypedData({
