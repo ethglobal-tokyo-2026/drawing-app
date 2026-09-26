@@ -215,29 +215,29 @@ export const tickets = {
       en: "Paying needs LINE’s sign-in, which LIFF Mock skips.",
       ja: "支払いにはLINEでのサインインが必要ですが、LIFF Mockでは省略されます。",
     },
-    /** Reserve ticket checkout, under the pay key: your ENS name, which opens your ticket purchases read from Sui */
-    purchases: {
-      /** Reserve ticket checkout: screen-reader name of the ENS name button; `name` is your ENS name or short Sui address */
-      show: { en: "Ticket purchases by {{name}}", ja: "{{name}}のチケット購入履歴" },
-      /** Reserve ticket checkout, purchases list: screen-reader status while Sui is read */
-      reading: {
-        en: "Reading your ticket purchases from Sui…",
-        ja: "Suiからチケット購入履歴を読み込んでいます…",
-      },
-      /** Reserve ticket checkout, purchases list: when Sui couldn't be read; `reason` is Sui's own words */
-      problem: {
-        en: "Couldn’t read your ticket purchases from Sui ({{reason}}).",
-        ja: "Suiからチケット購入履歴を読み込めませんでした（{{reason}}）。",
-      },
-      /** Reserve ticket checkout, purchases list: when you've never bought a pack */
-      none: { en: "No ticket purchases yet.", ja: "チケットの購入履歴はまだありません。" },
-      /** Reserve ticket checkout, purchases list: the link under the list that reads the next, older page */
-      more: { en: "Older purchases", ja: "以前の購入" },
-      /** Reserve ticket checkout, purchases list: screen-reader name of a row, which opens it on Suiscan; `digest` is the transaction's ID */
-      open: {
-        en: "Open the payment {{digest}} on Suiscan",
-        ja: "支払い{{digest}}をSuiscanで開く",
-      },
+  },
+  /** Shop, under the reserve tickets, and reserve ticket checkout, under the Pay key: your ENS name, which opens your ticket purchases read from Sui */
+  purchases: {
+    /** Shop and reserve ticket checkout: screen-reader name of the ENS name button; `name` is your ENS name or short Sui address */
+    show: { en: "Ticket purchases by {{name}}", ja: "{{name}}のチケット購入履歴" },
+    /** Shop and reserve ticket checkout, purchases list: screen-reader status while Sui is read */
+    reading: {
+      en: "Reading your ticket purchases from Sui…",
+      ja: "Suiからチケット購入履歴を読み込んでいます…",
+    },
+    /** Shop and reserve ticket checkout, purchases list: when Sui couldn't be read; `reason` is Sui's own words */
+    problem: {
+      en: "Couldn’t read your ticket purchases from Sui ({{reason}}).",
+      ja: "Suiからチケット購入履歴を読み込めませんでした（{{reason}}）。",
+    },
+    /** Shop and reserve ticket checkout, purchases list: when you've never bought a pack */
+    none: { en: "No ticket purchases yet.", ja: "チケットの購入履歴はまだありません。" },
+    /** Shop and reserve ticket checkout, purchases list: the link under the list that reads the next, older page */
+    more: { en: "Older purchases", ja: "以前の購入" },
+    /** Shop and reserve ticket checkout, purchases list: screen-reader name of a row, which opens it on Suiscan; `digest` is the transaction's ID */
+    open: {
+      en: "Open the payment {{digest}} on Suiscan",
+      ja: "支払い{{digest}}をSuiscanで開く",
     },
   },
 } as const satisfies Section;
