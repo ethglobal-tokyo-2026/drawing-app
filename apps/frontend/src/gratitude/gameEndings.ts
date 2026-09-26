@@ -10,7 +10,7 @@ import type { MiniHeartLayer } from "./miniHeartLayer";
 import type { HeartBox, MiniHeartPhysics } from "./miniHeartPhysics";
 import type { ParticleEffects } from "./particleEffects";
 import type { TierBackground } from "./tierBackground";
-import { TIER_NAMES } from "./tierNames";
+import { shownGloss, TIER_NAMES } from "./tierNames";
 import type { Lettering } from "./tierSlamAndPopIns";
 
 /** What the endings play on: the engine's parts, its play clock and the screen's elements. */
@@ -161,7 +161,7 @@ export async function playAscension(parts: EndingParts, total: number): Promise<
   background.ascend(true, parts.intensity);
   await parts.wait(240);
   const { jp, en } = TIER_NAMES[4];
-  lettering.slamTierName(jp, en);
+  lettering.slamTierName(jp, shownGloss(en));
   lettering.showPopInWord("climax", parts.heartBox());
   await parts.wait(380);
   lettering.showPopInWord("climax", parts.heartBox());

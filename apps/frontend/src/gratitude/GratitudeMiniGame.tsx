@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import type { RecordGratitude, ReplayV1 } from "@drawing-app/api/client";
 import { useApi } from "../api/useApi";
 import { formatCount } from "../i18n/format";
+import { useTranslation } from "../i18n/react";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
@@ -17,7 +18,7 @@ import type { ComboRecord } from "./combo";
 import { newIdempotencyKey, sendGratitude } from "./gratitudeOutbox";
 import { loadLetteringFonts } from "./letteringFonts";
 import { mountMiniGameEngine, type MiniGameEngine } from "./miniGameEngine";
-import { TIER_NAMES } from "./tierNames";
+import { shownGloss, TIER_NAMES } from "./tierNames";
 import "./gratitude-mini-game.css";
 
 /** A finished combo and the sticker its gratitude is for: what the app keeps. */
@@ -99,6 +100,7 @@ export function GratitudeMiniGame({
   onEnd,
   onClose,
 }: Props) {
+  const { t } = useTranslation();
   const api = useApi();
   const reduced = useReducedMotion();
   const [ending, setEnding] = useState<{ caught: boolean; record: ComboRecord } | null>(null);
@@ -201,11 +203,11 @@ export function GratitudeMiniGame({
   // LINE's header shows the page title.
   useEffect(() => {
     const was = document.title;
-    document.title = "Send gratitude";
+    document.title = t(($) => $.gratitude.title);
     return () => {
       document.title = was;
     };
-  }, []);
+  }, [t]);
 
   const leave = () => {
     restorePhone.current();
@@ -224,19 +226,23 @@ export function GratitudeMiniGame({
   }, [ending]);
 
   const tier = ending ? TIER_NAMES[ending.record.peakTier] : null;
+  const tierGloss = tier ? shownGloss(tier.en) : "";
   const screen = (
     <div
       className="gr"
       ref={root}
       role="dialog"
       aria-modal="true"
-      aria-label="Send gratitude"
+      aria-label={t(($) => $.gratitude.title)}
       tabIndex={-1}
     >
       <div className="gr-page" ref={page}>
         <div className="gr-ground" ref={ground} aria-hidden="true" />
         <div className="gr-top">
-          <figure className="gr-piece" aria-label={`Sticker ${formatNo(sticker.no)}`}>
+          <figure
+            className="gr-piece"
+            aria-label={t(($) => $.gratitude.sticker, { no: formatNo(sticker.no) })}
+          >
             <StickerFigure
               className="gr-piece-art"
               urls={sticker.urls}
@@ -253,25 +259,34 @@ export function GratitudeMiniGame({
             </span>
           </div>
           <div className="gr-from">
-            <p className="fine">From</p>
+            <p className="fine">{t(($) => $.gratitude.from)}</p>
             <p className="gr-from-name">{handle}</p>
             <p className="fine">
-              {formatNo(sticker.no)} · <Duration seconds={sticker.timeUsed} /> ·{" "}
+              {formatNo(sticker.no)}
+              {" · "}
+              <Duration seconds={sticker.timeUsed} />
+              {" · "}
               {formatDay(sticker.createdAt)}
             </p>
           </div>
-          <button type="button" className="gr-close" aria-label="Close" data-press onClick={close}>
+          <button
+            type="button"
+            className="gr-close"
+            aria-label={t(($) => $.gratitude.close)}
+            data-press
+            onClick={close}
+          >
             <X />
           </button>
         </div>
         <div className="gr-hud" ref={hud} aria-hidden />
         <div className="gr-stage" ref={stage} />
         <p className="gr-hint" ref={hint}>
-          Tap the heart
+          {t(($) => $.gratitude.hint)}
         </p>
       </div>
       <div className="gr-fuu" ref={fuu} aria-hidden>
-        <span>fuu…</span>
+        <span>{t(($) => $.gratitude.sigh)}</span>
         <Wind />
       </div>
       <p className="gr-sr" ref={live} aria-live="polite" />
@@ -280,7 +295,7 @@ export function GratitudeMiniGame({
           ref={receipt}
           className="gr-receipt is-on"
           data-kind={ending.caught ? "combo" : "sent"}
-          aria-label="Gratitude sent"
+          aria-label={t(($) => $.gratitude.receipt.label)}
         >
           <div className="gr-rc-row">
             <div className="gr-rc-photo">
@@ -296,28 +311,37 @@ export function GratitudeMiniGame({
                 <>
                   <p className="gr-rc-figure">
                     {formatCount(ending.record.total)}
-                    <small aria-hidden="true"> ♡</small>
+                    <small aria-hidden="true">{" ♡"}</small>
                   </p>
-                  <p className="gr-rc-head">gratitude to {handle}</p>
+                  <p className="gr-rc-head">
+                    {t(($) => $.gratitude.receipt.gratitudeTo, { handle })}
+                  </p>
                   <p className="gr-rc-sub fine">
-                    best ×{ending.record.peakMult.toFixed(1)} · {formatCount(ending.record.hits)}{" "}
-                    hits{"\n"}
-                    {tier.jp} {tier.en}
+                    {t(($) => $.gratitude.receipt.best, {
+                      multiplier: ending.record.peakMult.toFixed(1),
+                      hits: formatCount(ending.record.hits),
+                    })}
+                    {"\n"}
+                    {tier.jp}
+                    {tierGloss && ` ${tierGloss}`}
                   </p>
                 </>
               ) : (
                 <>
                   <p className="gr-rc-head">
-                    Sent to {handle} <span aria-hidden="true">♡</span>
+                    {t(($) => $.gratitude.receipt.sentTo, { handle })}{" "}
+                    <span aria-hidden="true">{"♡"}</span>
                   </p>
-                  <p className="gr-rc-sub fine">For {formatNo(sticker.no)}</p>
+                  <p className="gr-rc-sub fine">
+                    {t(($) => $.gratitude.receipt.forSticker, { no: formatNo(sticker.no) })}
+                  </p>
                 </>
               )}
             </div>
           </div>
           <div className="gr-rc-actions">
             <LabelButton block icon={<StickerBoardIcon />} onClick={leave}>
-              Back to your board
+              {t(($) => $.gratitude.receipt.backToBoard)}
             </LabelButton>
           </div>
         </section>
@@ -325,9 +349,9 @@ export function GratitudeMiniGame({
       {/* In plain words: the engine and the gratitude outbox log what went wrong to the console. */}
       {(failed || refused) && (
         <p className="gr-failure" role="alert">
-          {failed && "The game stopped. Close it and send your gratitude again."}
+          {failed && t(($) => $.gratitude.failures.stopped)}
           {failed && refused && <br />}
-          {refused && `Your gratitude didn't reach ${handle}. Close this and send it again.`}
+          {refused && t(($) => $.gratitude.failures.refused, { handle })}
         </p>
       )}
     </div>
