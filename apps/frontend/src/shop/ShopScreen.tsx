@@ -7,6 +7,7 @@ import type { BrushKind } from "./brushSamples";
 import { ComingSoonShelf } from "./ComingSoonShelf";
 import { FinishPreview, type BackingFoil, type Laminate } from "./FinishPreview";
 import { ReserveTicketsHero } from "./ReserveTicketsHero";
+import { ShopTicketPurchases } from "./ShopTicketPurchases";
 import { useShopSticker, type ShopSticker } from "./shopSticker";
 import "./ShopScreen.css";
 
@@ -17,8 +18,9 @@ const BRUSHES: readonly BrushKind[] = ["brush", "marker", "fineliner", "pixelPen
 const BACKING_FOILS: readonly BackingFoil[] = ["holo", "gold", "silver", "roseGold"];
 
 /**
- * The Shop: reserve tickets, the one thing on sale, then shelves of what's coming, each led by what
- * you have now. The reserve tickets section's key opens the reserve ticket checkout.
+ * The Shop: reserve tickets, the one thing on sale, and your purchases of them, then shelves of
+ * what's coming, each led by what you have now. The reserve tickets section's key opens the reserve
+ * ticket checkout.
  */
 export function ShopScreen({ onBuyReserveTickets }: { onBuyReserveTickets: () => void }) {
   const { t } = useTranslation();
@@ -33,6 +35,7 @@ export function ShopScreen({ onBuyReserveTickets }: { onBuyReserveTickets: () =>
     <div className="shop">
       <h1 className="shop__title">{t(($) => $.shop.title)}</h1>
       <ReserveTicketsHero onBuy={onBuyReserveTickets} />
+      <ShopTicketPurchases />
       <ComingSoonShelf
         title={t(($) => $.shop.shelves.laminates.title)}
         lead={t(($) => $.shop.shelves.laminates.lead)}
