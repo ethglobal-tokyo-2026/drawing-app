@@ -14,6 +14,7 @@ import { retryPrivySignIn, usePrivyStatus, type PrivyStatus } from "../../identi
 import { PrivyAccount } from "../../identity/PrivyAccount";
 import { firstSeen } from "../../identity/profile";
 import { useIdentity } from "../../identity/useIdentity";
+import { LineDetails } from "../../line/LineDetails";
 import { lineLogout } from "../../line/liff";
 import { SendTestMessage } from "../../line/SendTestMessage";
 import { formatDay, formatHandle } from "../../stickers/format";
@@ -293,6 +294,7 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
               LINE and Privy
             </h3>
             <SendTestMessage senderName={me.displayName} />
+            <LineDetails />
             <PrivyLine />
             <PrivyAccount />
             {/* Outside LINE's app it's the only way to switch LINE accounts. */}
