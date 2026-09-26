@@ -6,6 +6,8 @@ const liff = vi.hoisted(() => ({
   getDecodedIDToken: vi.fn<() => { exp: number } | null>(),
 }));
 vi.mock("@line/liff", () => ({ default: liff }));
+// As in a build: with LIFF Mock on, as on the dev server by default, Privy stays off.
+vi.stubEnv("VITE_LIFF_MOCK", "off");
 
 const { fetchPrivyJwt, privyStatus, retryPrivySignIn } = await import("./privy");
 
@@ -96,6 +98,19 @@ describe("trading LINE's ID token for a Privy JWT", () => {
     expect(await fetchPrivyJwt()).toBeUndefined();
     expect(failureReason()).toContain("expired");
     expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe("under LIFF Mock", () => {
+  afterEach(() => {
+    vi.stubEnv("VITE_LIFF_MOCK", "off");
+  });
+
+  it("stays off, since the auth server only takes LINE's own ID tokens", async () => {
+    vi.stubEnv("VITE_LIFF_MOCK", "");
+    vi.resetModules();
+    const privy = await import("./privy");
+    expect(privy.privyStatus()).toEqual({ state: "off" });
   });
 });
 
