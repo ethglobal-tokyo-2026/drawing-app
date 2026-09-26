@@ -1,4 +1,4 @@
-import { seededRandom } from "./seededRandom";
+import { seededRandom } from "../ui/seededRandom";
 
 /**
  * The big heart as six SVGs of one size, stacked body, flush, pale, gloss, ink, face. Face goes last
@@ -70,24 +70,46 @@ const HEART_MIDDLE: Point = [120, 120];
 const MINI_D =
   "M20 35.5C18.6 34.4 3.5 25.2 3.5 14.2C3.5 8.4 7.9 4 13.3 4C16.2 4 18.6 5.4 20 7.8C21.4 5.4 23.8 4 26.7 4C32.1 4 36.5 8.4 36.5 14.2C36.5 25.2 21.4 34.4 20 35.5Z";
 
-/** `count` points round the outline, spread evenly over its curves by parameter. */
+/** Steps per curve when measuring the outline as a polyline: enough that the steps hug the curves. */
+const OUTLINE_STEPS_PER_CURVE = 64;
+
+/** The outline at `u`, which runs one unit per curve from the tip, and its direction there. */
+function outlineAt(u: number) {
+  const k = Math.min(Math.floor(u), HEART_CURVES.length - 1);
+  const t = u - k;
+  const s = 1 - t;
+  const from = k === 0 ? HEART_START : HEART_CURVES[k - 1][2];
+  const [c1, c2, to] = HEART_CURVES[k];
+  const at = (j: 0 | 1) =>
+    s * s * s * from[j] + 3 * s * s * t * c1[j] + 3 * s * t * t * c2[j] + t * t * t * to[j];
+  const slope = (j: 0 | 1) =>
+    3 * (s * s * (c1[j] - from[j]) + 2 * s * t * (c2[j] - c1[j]) + t * t * (to[j] - c2[j]));
+  return { x: at(0), y: at(1), dx: slope(0), dy: slope(1) };
+}
+
+/**
+ * `count` points evenly spaced along the outline, as `getPointAtLength` spaces them. Spreading them
+ * by parameter would crowd the short curves, so the outline is measured as a polyline and walked.
+ */
 export function heartOutline(count: number): OutlinePoint[] {
+  let last = { x: HEART_START[0], y: HEART_START[1], along: 0 };
+  const steps = [last];
+  for (let i = 1; i <= HEART_CURVES.length * OUTLINE_STEPS_PER_CURVE; i++) {
+    const { x, y } = outlineAt(i / OUTLINE_STEPS_PER_CURVE);
+    last = { x, y, along: last.along + Math.hypot(x - last.x, y - last.y) };
+    steps.push(last);
+  }
   const points: OutlinePoint[] = [];
-  for (let i = 0; i < count; i++) {
-    const u = (i * HEART_CURVES.length) / count;
-    const k = Math.floor(u);
-    const t = u - k;
-    const s = 1 - t;
-    const from = k === 0 ? HEART_START : HEART_CURVES[k - 1][2];
-    const [c1, c2, to] = HEART_CURVES[k];
-    const at = (j: 0 | 1) =>
-      s * s * s * from[j] + 3 * s * s * t * c1[j] + 3 * s * t * t * c2[j] + t * t * t * to[j];
-    const slope = (j: 0 | 1) =>
-      3 * (s * s * (c1[j] - from[j]) + 2 * s * t * (c2[j] - c1[j]) + t * t * (to[j] - c2[j]));
-    const x = at(0);
-    const y = at(1);
-    const dx = slope(0);
-    const dy = slope(1);
+  let i = 0;
+  for (let n = 0; n < count; n++) {
+    const along = (n * last.along) / count;
+    while (steps[i + 1].along <= along) i++;
+    const a = steps[i];
+    const b = steps[i + 1];
+    const f = (along - a.along) / (b.along - a.along);
+    const x = a.x + (b.x - a.x) * f;
+    const y = a.y + (b.y - a.y) * f;
+    const { dx, dy } = outlineAt((i + f) / OUTLINE_STEPS_PER_CURVE);
     const length = Math.hypot(dx, dy);
     let nx = dy / length;
     let ny = -dx / length;
