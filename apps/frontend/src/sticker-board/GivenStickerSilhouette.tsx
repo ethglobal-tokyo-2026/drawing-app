@@ -40,7 +40,7 @@ export function GivenStickerSilhouette({
     if (!el) return;
     const nudge = keepOnBoard(box.x, el.offsetWidth / 2, boardWidth);
     el.style.setProperty("--nudge", `${nudge.toFixed(1)}px`);
-  });
+  }, [box.x, boardWidth, sticker.no, recipient]);
 
   return (
     <button
