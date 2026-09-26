@@ -18,12 +18,12 @@ describe("the app's API client", () => {
   ])(
     "%s",
     async (_, liffMock, waits) => {
-      // ApiRoot picks its client as it loads.
+      // The app picks its client as serverClients loads.
       vi.stubEnv("VITE_LIFF_MOCK", liffMock);
       vi.resetModules();
       const { withSmartWallet } = await import("./smartWalletApi");
       vi.mocked(withSmartWallet).mockClear();
-      await import("./ApiRoot");
+      await import("./serverClients");
       expect(vi.mocked(withSmartWallet).mock.calls.length > 0).toBe(waits);
     },
     FRESH_IMPORT_TIMEOUT_MS,

@@ -75,6 +75,7 @@ import {
   markBoardComplete,
   usePreloadAfterBoard,
 } from "./boardComplete";
+import { markChipsPlayed } from "./boardSettled";
 import { keepBoard, keptBoardFor } from "./lastBoard";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
@@ -581,6 +582,12 @@ export function StickerBoard({ freshId, onDraw, onOpenGift }: Props) {
     ? readingOrder(onBoard.map((s) => ({ id: s.id, ...toPx(field, s.placement) })))
     : [];
   const inOrder = order.flatMap((id) => onBoard.filter((s) => s.id === id));
+  // Privy's SDK waits for the first-load chips too (whenBoardSettled), so its wallet frame doesn't
+  // stutter them.
+  const chipsOver = failed || (stickers !== null && field !== null && chips.length === 0);
+  useEffect(() => {
+    if (chipsOver) markChipsPlayed();
+  }, [chipsOver]);
   // The stickers' one Tab stop: the one last focused, else the selected one, else the first.
   const tabbable = [tabStop, selected].find((id) => id && order.includes(id)) ?? order[0];
   const chosen = onBoard.find((s) => s.id === selected);

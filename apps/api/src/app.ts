@@ -15,7 +15,9 @@ import { ticketRoutes } from "./routes/tickets.ts";
 import { requireSession, type AppEnv } from "./session.ts";
 import { requestDiagnostics } from "./requestDiagnostics.ts";
 
-const isSignIn = (c: Context) => c.req.method === "POST" && c.req.path === "/api/session";
+/** Signing in, and signing out, which clears whatever cookie is there, live or not. */
+const isSignInOrOut = (c: Context) =>
+  (c.req.method === "POST" || c.req.method === "DELETE") && c.req.path === "/api/session";
 /** ENS clients call the gateway with no session. */
 const isEnsGateway = (c: Context) =>
   c.req.method === "GET" && c.req.path.startsWith("/api/ens/gateway/");
@@ -29,7 +31,7 @@ export function createApp(deps: AppDeps) {
     new Hono<AppEnv>()
       .basePath("/api")
       .use(requestDiagnostics)
-      .use(except([isSignIn, isEnsGateway], requireSession(deps)))
+      .use(except([isSignInOrOut, isEnsGateway], requireSession(deps)))
       // /session and /me
       .route("/", sessionRoutes(deps))
       // /line-menu

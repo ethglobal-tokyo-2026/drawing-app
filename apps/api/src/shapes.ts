@@ -54,6 +54,11 @@ export const toPerson = ({
 
 /** You. */
 export const meSchema = personSchema.extend({
+  /**
+   * LINE's `sub` for your account. The app opens on a lasting session only when it's the LINE user
+   * LIFF logged in. Yours alone: Person leaves it out.
+   */
+  lineUserId: userRow.shape.lineUserId,
   timeZone: userRow.shape.timeZone,
   language: userRow.shape.language,
   /** Settings' language; null follows LINE's. */
@@ -74,6 +79,7 @@ export const toMe = (
   counts: Pick<Me, "newStickerCount" | "unseenGratitudeCount">,
 ): Me => ({
   ...toPerson(user),
+  lineUserId: user.lineUserId,
   timeZone: user.timeZone,
   language: user.language,
   languageChoice: user.languageChoice,

@@ -4,7 +4,9 @@ import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
 import { resendPendingGratitude } from "../gratitude/gratitudeOutbox";
 import { useTranslation } from "../i18n/react";
+import { startPrivy } from "../identity/privyStart";
 import { ShopScreen } from "../shop/ShopScreen";
+import { whenBoardSettled } from "../sticker-board/boardSettled";
 import { StickerBoard } from "../sticker-board/StickerBoard";
 import type { DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
 import { noteBootMilestone } from "../performance/bootMilestones";
@@ -110,6 +112,14 @@ export default function App() {
   useEffect(() => {
     void resendPendingGratitude(api);
   }, [api]);
+
+  // Privy's SDK waits for the board to settle, so it doesn't hold up the stickers. A gift needs
+  // it at once, and any other screen has no board to wait for.
+  useEffect(() => {
+    if (giftOpening) startPrivy("gift-link");
+    else if (view !== "board") startPrivy("elsewhere");
+    else void whenBoardSettled().then(() => startPrivy("board-settled"));
+  }, [giftOpening, view]);
 
   useEffect(() => {
     // While a gift is open, its dialog names the page.

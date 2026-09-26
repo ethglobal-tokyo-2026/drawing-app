@@ -118,6 +118,11 @@ export const sessionRoutes = (deps: AppDeps) =>
       await setSessionCookie(c, deps.sessionSecret, user.id);
       return c.json({ me: meOf(deps.db, user) }, 200);
     })
+    // Logging out of LINE ends the session too, so a browser handed to someone else holds none.
+    .delete("/session", (c) => {
+      clearSessionCookie(c);
+      return c.body(null, 204);
+    })
     .get("/me", validate("header", meHeaders), (c) => {
       c.header("Cache-Control", "no-store");
       const user = liveUser(deps.db, c.var.userId);
