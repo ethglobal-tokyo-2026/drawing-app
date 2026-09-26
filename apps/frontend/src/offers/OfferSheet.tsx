@@ -1,3 +1,5 @@
+import { ageStatusOf } from "../identity/ageStatus";
+import { canGiveTo } from "../stickers/nsfw";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { PersonView } from "../api/views";
 import { formatCount } from "../i18n/format";
@@ -153,6 +155,7 @@ export function OfferSheet({ sticker, holder, onClose }: Props) {
                       onPick={setSwapFor}
                       label={t(($) => $.offers.swap.picker)}
                       compact
+                      blocked={(s) => !canGiveTo(s, ageStatusOf(holder))}
                     />
                   )
                 ))}

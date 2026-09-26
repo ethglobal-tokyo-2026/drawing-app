@@ -11,13 +11,16 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { toPerson } from "../api/views";
+import { toPerson, toSticker } from "../api/views";
+import { useMyAgeStatus } from "../identity/useMyAgeStatus";
 import { currentLanguage } from "../i18n/i18n";
 import { Trans, useTranslation } from "../i18n/react";
 import { handleOf } from "../sticker-board/boardSticker";
 import { hash, type Shape } from "../sticker-board/tray/sheetPacking";
 import { knownShape } from "../sticker-board/tray/stickerShape";
 import { formatNo } from "../stickers/format";
+import { veiledFor } from "../stickers/nsfw";
+import "../stickers/nsfw-img.css";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { REVEAL, revealOnLoad } from "../ui/reveal";
 import { useReducedMotion } from "../ui/useReducedMotion";
@@ -211,6 +214,9 @@ function PileSticker({
   onLift: () => void;
 }) {
   const { sticker } = laid.pile;
+  const myAge = useMyAgeStatus();
+  const view = toSticker(sticker);
+  const nsfw = view.nsfw ? ` nsfw-img${veiledFor(view, myAge) ? " is-veiled" : ""}` : "";
   return (
     <li
       className="pile-sticker"
@@ -225,7 +231,7 @@ function PileSticker({
           <span className="pile-sticker__art">
             {falling && (
               <img
-                className="pile-sticker__air"
+                className={`pile-sticker__air${nsfw}`}
                 src={sticker.images.webp.sticker}
                 alt=""
                 draggable={false}
@@ -233,7 +239,7 @@ function PileSticker({
             )}
             <img
               ref={revealOnLoad}
-              className="pile-sticker__image reveal-img"
+              className={`pile-sticker__image reveal-img${nsfw}`}
               src={sticker.images.webp.sticker}
               alt=""
               draggable={false}

@@ -44,6 +44,11 @@ interface SealRequest {
   flat: Blob;
   /** The gzipped TimelapseV1; a seal without one still seals. */
   timelapse?: Blob;
+  /**
+   * Seals an NSFW sticker. The seal form has no field for it until the API stores it, so httpApi
+   * doesn't send it yet, and the NSFW demo keeps it on this device instead.
+   */
+  nsfw: boolean;
 }
 
 /** Opening a Gift Message's link: its token as the link carries it, which the client checks. */

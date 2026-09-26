@@ -9,6 +9,8 @@ import {
   useRef,
   useState,
 } from "react";
+import { useMyAgeStatus } from "../identity/useMyAgeStatus";
+import { veiledFor } from "../stickers/nsfw";
 import { flushSync } from "react-dom";
 import { apiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
@@ -213,6 +215,7 @@ const viewOf = (s: BoardStickerView): StickerView => ({
   timeUsed: s.timeUsed,
   width: s.width,
   height: s.height,
+  nsfw: s.nsfw,
   outline: s.outline ?? "",
   urls: s.urls,
   sealedAt: s.createdAt,
@@ -281,6 +284,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift }: Props) {
   const me = useIdentity();
   const giftSender = useGiftSender();
   const reduced = useReducedMotion();
+  const myAge = useMyAgeStatus();
   const hints = useId();
   const idle = usePreloadAfterBoard(OPENED_FROM_BOARD);
   // The gratitude mini-game covers the board, so the tilt and its sheen sweeps rest while it plays.
@@ -709,6 +713,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift }: Props) {
                 setSize={order.length}
                 hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
                 foil={byOther(s)}
+                veiled={veiledFor(s, myAge)}
                 by={byOther(s) ? printedArtist(s) : undefined}
               />
               {/* Right after its sticker, so Tab reaches it next. */}

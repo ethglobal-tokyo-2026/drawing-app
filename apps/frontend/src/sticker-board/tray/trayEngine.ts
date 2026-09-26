@@ -29,6 +29,8 @@ export interface TraySticker extends TraySlot {
   urls: Pick<StickerUrls, "png" | "mask" | "foil">;
   /** Drawn by someone else: a received gift. */
   gift: boolean;
+  /** An NSFW sticker: it wears pink foil, whoever drew it. */
+  nsfw: boolean;
   /** Shown in the open tray before, so it isn't NEW. */
   seen: boolean;
 }
@@ -542,14 +544,13 @@ export function createTrayEngine(
     );
     // A used sticker silhouette shows no sticker, so it loads none.
     if (s.state !== "used") {
-      // Drawn by someone else, it wears the sheet's foil under its image, as StickerFoil draws it.
-      if (s.gift && s.urls.mask) {
+      // Drawn by someone else, or NSFW, it wears the sheet's foil under its image, as StickerFoil
+      // draws it.
+      if ((s.gift || s.nsfw) && s.urls.mask) {
         const foil = decorative(
           make(
             "span",
-            s.urls.foil
-              ? "sticker-foil sticker-foil--sheet sticker-foil--baked"
-              : "sticker-foil sticker-foil--sheet",
+            `sticker-foil sticker-foil--sheet sticker-foil--${s.nsfw ? "pink" : "holo"}${s.urls.foil ? " sticker-foil--baked" : ""}`,
             make("span", "sticker-foil__cast"),
             make(
               "span",

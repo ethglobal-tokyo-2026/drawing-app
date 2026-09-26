@@ -18,6 +18,7 @@ import { GiftBag } from "../giving/GiftBag";
 import { Trans, useTranslation } from "../i18n/react";
 import { ArrowSquareOut, HandHeart, StickerBoardIcon, X } from "../icons";
 import { useIdentity } from "../identity/useIdentity";
+import { useMyAgeStatus } from "../identity/useMyAgeStatus";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
@@ -78,6 +79,7 @@ export function ReceiveGiftDialog({ from, onClose }: Props) {
   const { t } = useTranslation();
   const api = useApi();
   const me = useIdentity();
+  const age = useMyAgeStatus();
   const reduced = useReducedMotion();
   const motion = reduced ? 1 : 0;
   useLight();
@@ -113,7 +115,7 @@ export function ReceiveGiftDialog({ from, onClose }: Props) {
     let current = true;
     previewing.current.answer.then(
       (preview) => {
-        if (current) dispatch({ type: "previewed", preview });
+        if (current) dispatch({ type: "previewed", preview, viewer: age });
       },
       (error: unknown) => {
         if (!current) return;
@@ -125,7 +127,7 @@ export function ReceiveGiftDialog({ from, onClose }: Props) {
     return () => {
       current = false;
     };
-  }, [api, opening, attempt]);
+  }, [api, opening, attempt, age]);
 
   // The reveal plays out from the snap: the stage glides up with the sheet, then the sticker rises.
   const [reveal, setReveal] = useState<"snapped" | "rising" | "out">("snapped");
@@ -331,6 +333,7 @@ function Gift({
           stickerUrl={reveal === "out" ? undefined : sticker.urls.png}
           fromHandle={giver.handle ?? undefined}
           sealedAt={preview.expiresAt - GIFT_WAIT_MS}
+          nsfw={sticker.nsfw}
           tear={pull.tear}
           pullTab={sealed ? pull.pullTab : undefined}
         />
@@ -342,6 +345,7 @@ function Gift({
                 width={sticker.width}
                 height={sticker.height}
                 foil="detail"
+                nsfw={sticker.nsfw}
                 no={sticker.no}
               />
             </span>
@@ -445,6 +449,7 @@ function Refusal({ end, giverHandle, leave, onLeave, onBoard, onTryAgain }: Refu
             size="receive"
             state={end.bag.state}
             stamp={end.bag.stamp}
+            nsfw={end.bag.nsfw}
             fromHandle={giverHandle}
           />
         )}

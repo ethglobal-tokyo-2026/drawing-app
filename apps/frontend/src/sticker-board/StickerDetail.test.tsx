@@ -43,6 +43,7 @@ const sticker = (
   timeUsed: 292,
   width: 120,
   height: 100,
+  nsfw: false,
   urls: { png: `blob:${no}` },
   placement: { on: true, x: 0.5, y: 0.5, s: 0.3, r: 0, z: no },
   artist: you,

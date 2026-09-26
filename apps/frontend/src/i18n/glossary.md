@@ -37,6 +37,9 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 | LINE friend / chat                 | 友だち / トーク                        | LINE's own words                                                                      |
 | Official Account                   | 公式アカウント                         |                                                                                       |
 | Terms / Privacy Policy             | 利用規約 / プライバシーポリシー        |                                                                                       |
+| NSFW sticker / 18+                 | 成人向けシール / 18+                   | The toggle at sealing reads 18+ in both languages                                     |
+| adult (Age status)                 | 成人                                   | "Verified adult": 年齢確認済みの成人                                                  |
+| World ID                           | World ID                               | Never translated                                                                      |
 
 ## Style
 

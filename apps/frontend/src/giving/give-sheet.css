@@ -63,6 +63,28 @@
   filter: var(--sticker-cut) var(--sticker-cast);
 }
 
+.pick img.nsfw-img {
+  filter: var(--sticker-cut) drop-shadow(0 0 1.5px var(--foil-rose))
+    drop-shadow(0 0 3px var(--foil-blush));
+}
+
+/* An NSFW sticker that can't go to this recipient: faded, with the 18+ mark. */
+.pick.is-blocked img {
+  opacity: 0.45;
+}
+
+.pick-mark {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  translate: -50% 0;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--pink);
+  color: #fff;
+  font: 800 10px/1 var(--font-ui);
+}
+
 .sticker-picker.compact {
   grid-template-columns: repeat(5, 1fr);
 }

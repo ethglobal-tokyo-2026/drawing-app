@@ -49,7 +49,14 @@ function giftsApi() {
 
 /** Opens Giving for a sticker, as `fromHandle`; returns the sticker. */
 const open = (stickerId: string, fromHandle = "alice", api = giftsApi()) => {
-  const given = { id: stickerId, no: 147, timeUsed: 292, createdAt: Date.now(), url: "blob:x" };
+  const given = {
+    id: stickerId,
+    no: 147,
+    timeUsed: 292,
+    createdAt: Date.now(),
+    url: "blob:x",
+    nsfw: false,
+  };
   view = renderWithApi(
     <Giving
       sticker={given}

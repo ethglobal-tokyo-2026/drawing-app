@@ -1,0 +1,40 @@
+/* ---------- The NSFW stickers demo, on the developer slip ---------- */
+
+.nsfw-demo {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--rule-strong);
+}
+
+.nsfw-demo__h {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+
+.nsfw-demo__field {
+  display: grid;
+  gap: 6px;
+  font: 600 15px/1.2 var(--font-ui);
+}
+
+.nsfw-demo__field :is(select, input) {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1.5px solid var(--rule-strong);
+  border-radius: 8px;
+  background: var(--canvas);
+  color: var(--ink);
+  font: 500 15px/1.2 var(--font-ui);
+}
+
+.nsfw-demo__note {
+  margin: -2px 0 0;
+}
+
+.nsfw-demo :focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}

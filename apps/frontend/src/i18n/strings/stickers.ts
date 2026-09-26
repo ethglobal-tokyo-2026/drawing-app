@@ -30,6 +30,16 @@ export const stickers = {
     /** Artist chip, one-line form for tight rows: before the Original Artist's name, as in By @alice */
     by: { en: "By", ja: "作者" },
   },
+  /** An NSFW sticker, which only adults see plainly. */
+  nsfw: {
+    /** Over an NSFW sticker that's blurred because you aren't verified as an adult, on a sticker board, Explore, and the give and offer sheets' pickers: the small mark in its middle */
+    mark: { en: "18+", ja: "18+" },
+    /** Screen readers only: an NSFW sticker that's blurred because you aren't verified as an adult, wherever the 18+ mark shows */
+    veiled: {
+      en: "Blurred: for adults only",
+      ja: "ぼかし表示：成人向け",
+    },
+  },
   /** The stickers the give and offer sheets pick from. */
   keptStickers: {
     /** Give sheet, and the offer sheet with Swap chosen: alert when your stickers fail to load; {{reason}} is the error message */

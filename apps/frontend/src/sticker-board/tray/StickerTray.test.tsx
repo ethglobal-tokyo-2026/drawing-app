@@ -28,6 +28,7 @@ const sticker = (
   arrivedAt,
   seenAt: null,
   timeUsed: 120,
+  nsfw: false,
   width: 100,
   height: 80,
   // A stored cut line, so its shape is known without reading an image.

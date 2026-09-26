@@ -1,9 +1,12 @@
-import { describe, expect, it } from "vitest";
+// @vitest-environment happy-dom
+import { afterEach, describe, expect, it } from "vitest";
 import { ApiError } from "../api/apiClient";
 import type { GiftPreview, ReceivedGift } from "@drawing-app/api/client";
 import { people, sticker } from "../api/testFixtures";
 import { toMs, toPerson, toSticker } from "../api/views";
 import { errorReason } from "../i18n/errorMessage";
+import type { AgeStatus } from "../identity/ageStatus";
+import { markNsfwSticker } from "../stickers/nsfwDemo";
 import { receiveFlow, type ReceiveEvent, type ReceiveScreen } from "./receiveFlow";
 
 const giver = people.mika;
@@ -42,11 +45,17 @@ const received: ReceivedGift = {
   },
 };
 
+afterEach(() => localStorage.clear());
+
 /** Plays events from the opening screen. */
 const play = (...events: ReceiveEvent[]): ReceiveScreen =>
   events.reduce(receiveFlow, { step: "opening" });
 
-const previewed = (p = preview()): ReceiveEvent => ({ type: "previewed", preview: p });
+const previewed = (p = preview(), viewer: AgeStatus = "adult"): ReceiveEvent => ({
+  type: "previewed",
+  preview: p,
+  viewer,
+});
 const failed = (status: number, error: string, detail?: string) =>
   new ApiError(status, { error, ...(detail && { detail }) });
 
@@ -100,6 +109,21 @@ describe("opening a gift", () => {
       step: "failed",
       message: errorReason(error),
     });
+  });
+
+  it("refuses an NSFW sticker to anyone not adult, naming the giver, and opens it for an adult", () => {
+    const nsfw = sticker();
+    markNsfwSticker(nsfw.id);
+    const gift = preview({ sticker: nsfw });
+    for (const viewer of ["minor", "unknown"] as const) {
+      expect(play(previewed(gift, viewer))).toEqual({
+        step: "refused",
+        refusal: "adults_only",
+        giver: toPerson(giver),
+      });
+    }
+    expect(play(previewed(gift, "adult"))).toMatchObject({ step: "sealed" });
+    expect(play(previewed(preview(), "minor"))).toMatchObject({ step: "sealed" });
   });
 
   it("opens the gift again on Try again", () => {
