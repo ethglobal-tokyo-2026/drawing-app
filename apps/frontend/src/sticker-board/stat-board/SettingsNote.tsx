@@ -6,6 +6,7 @@ import { errorReason } from "../../i18n/errorMessage";
 import { keepChosenLanguage, type Language } from "../../i18n/language";
 import { lineLanguage } from "../../i18n/pageLanguage";
 import { useTranslation } from "../../i18n/react";
+import { useReducedMotion } from "../../ui/useReducedMotion";
 import "./settings-note.css";
 
 /** A language, or null to follow LINE's. */
@@ -14,7 +15,7 @@ type Choice = Language | null;
 const CHOICES: readonly Choice[] = [null, "en", "ja"];
 
 /** How much of the paper under its title peeks above the cork's foot, in px. */
-const PEEK_UNDER_TITLE = 14;
+const PEEK_UNDER_TITLE = 10;
 
 type Status =
   | { step: "idle" }
@@ -25,22 +26,39 @@ const reason = (error: unknown) => (error instanceof Error ? error.message : Str
 
 /**
  * Sticks the note to the cork's foot with only its title showing, until it scrolls into view: CSS
- * tucks it down by the rest of its height, measured here whenever that changes.
+ * tucks it down by the rest of its height, measured here whenever that changes. A sticky box keeps
+ * clear of its scroller's padding, so the tuck reaches through the cork's too.
+ *
+ * Returns `reveal`, which scrolls the cork to its end, where the whole note shows. A tap on the tucked
+ * note uses it, and so does focus, which the browser's own scrolling can't bring out of a tuck.
  */
 function usePeek(note: RefObject<HTMLElement | null>, title: RefObject<HTMLElement | null>) {
+  const reduced = useReducedMotion();
   useLayoutEffect(() => {
     const paper = note.current;
     const heading = title.current;
     if (!paper || !heading) return;
     const tuck = () => {
+      const cork = paper.parentElement;
+      const padding = cork ? parseFloat(getComputedStyle(cork).paddingBottom) || 0 : 0;
       const shown = heading.offsetTop + heading.offsetHeight + PEEK_UNDER_TITLE;
-      paper.style.setProperty("--settings-tuck", `${Math.max(0, paper.offsetHeight - shown)}px`);
+      const tucked = Math.max(0, paper.offsetHeight - shown + padding);
+      paper.style.setProperty("--settings-tuck", `${tucked}px`);
     };
     tuck();
     const resized = new ResizeObserver(tuck);
     resized.observe(paper);
     return () => resized.disconnect();
   }, [note, title]);
+
+  return () => {
+    const paper = note.current;
+    const cork = paper?.parentElement;
+    // Tucked, or partly scrolled in, the note's foot is below the cork's.
+    if (!paper || !cork) return;
+    if (paper.getBoundingClientRect().bottom <= cork.getBoundingClientRect().bottom + 1) return;
+    cork.scrollTo({ top: cork.scrollHeight, behavior: reduced ? "auto" : "smooth" });
+  };
 }
 
 /**
@@ -57,7 +75,7 @@ export function SettingsNote({ restart = () => location.reload() }: { restart?: 
   const title = useRef<HTMLHeadingElement>(null);
   const [saved, setSaved] = useState<Choice>(me.languageChoice);
   const [status, setStatus] = useState<Status>({ step: "idle" });
-  usePeek(note, title);
+  const reveal = usePeek(note, title);
 
   const choose = async (choice: Choice) => {
     if (status.step === "saving") return;
@@ -93,7 +111,13 @@ export function SettingsNote({ restart = () => location.reload() }: { restart?: 
   const checked = status.step === "saving" ? status.choice : saved;
 
   return (
-    <section ref={note} className="stat-board__note settings-note" aria-labelledby={`${id}-title`}>
+    <section
+      ref={note}
+      className="stat-board__note settings-note"
+      aria-labelledby={`${id}-title`}
+      onClick={reveal}
+      onFocus={reveal}
+    >
       <div className="stat-board__paper">
         <h3 ref={title} className="settings-note__title" id={`${id}-title`}>
           {t(($) => $.stickerBoard.settings.title)}
