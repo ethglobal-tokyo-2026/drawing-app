@@ -6,33 +6,45 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { useTranslation } from "../../i18n/react";
 import { useLight } from "../../stickers/light";
 import { LiveResin } from "../../stickers/LiveResin";
 import { sweepSheen } from "../../stickers/resinSheen";
 import type { Sticker } from "@drawing-app/api/client";
 import { useReducedMotion } from "../../ui/useReducedMotion";
-import { makeCutLine, paintDim, paintUsedStickerSilhouette } from "./ceremonyPaint";
+import { makeCutLine, paintDim, paintUsedStickerSilhouette, type Cutter } from "./ceremonyPaint";
 import type { SealedSticker } from "./makeSticker";
 import { SealedCard } from "./SealedCard";
 import {
   ceremonyTime,
+  cutterAt,
   flight,
+  HOLD,
+  LEAVE_MS,
   sealFrame,
+  stopAt,
   T,
   TOTAL,
   type Box,
+  type Flight,
   type SealFrame,
 } from "./sealTimeline";
 import "./SealCeremony.css";
 
-/** How long the ceremony takes to fade when the drawing screen comes back. */
-const LEAVE_MS = 260;
+/** Once the seal is recorded, the cutter fades as the resin starts to pour. */
+const CUTTER_FADE_MS = 160;
+/** Its fresh cut grows behind it as it gets going. */
+const TRAIL_GROW_MS = 700;
+/** A frame after a hitch moves the ceremony on by at most this, so a hitch slows it rather than skipping it. */
+const MAX_FRAME_MS = 64;
+/** Until the card is there, the sticker stays on its backing: nothing flies before the seal is recorded. */
+const ON_BACKING: Flight = { peel: { x: 0, y: 0 }, dx: 0, dy: 0, scale: 1 };
 
 interface Props {
   sticker: SealedSticker;
-  /** The sticker as the server sealed it. */
-  sealed: Sticker;
+  /** The sticker as the server sealed it; null while the seal is on its way, and the ceremony waits at the cut. */
+  sealed: Sticker | null;
+  /** The seal failed: the ceremony fades back to the drawing. */
+  failed: boolean;
   /** The sheet the sticker was cut from, in the ceremony's own pixels. */
   sheet: Box;
   handle: string;
@@ -78,27 +90,31 @@ function need<E extends Element>(el: E | null, what: string): E {
 
 /**
  * The seal ceremony, over the drawing screen: the cut runs around the ink, clear resin pours and
- * domes, the sticker peels off its backing and lands on the sealed card. One animation-frame loop
- * writes each frame of the timeline straight to the canvases, images and transforms; React only
- * hears that it's done. A tap, Enter, Space or Escape skips to the end; reduced motion starts there.
+ * domes, the sticker peels off its backing and lands on the sealed card. It starts as soon as the
+ * sticker is cut, then waits at the cut, the cutter still running round it pass after pass, until
+ * the server has sealed the sticker: only then does the resin pour. One animation-frame loop writes
+ * each frame of the timeline straight to the canvases, images and transforms; React only hears that
+ * it's done. A tap, Enter, Space or Escape skips to the wait, or to the end once sealed; reduced
+ * motion starts there. A failed seal fades back to the drawing.
  */
 export function SealCeremony({
   sticker,
   sealed,
+  failed,
   sheet,
   handle,
   onKeepDrawing,
   onBoard,
   onShop,
 }: Props) {
-  const { t } = useTranslation();
   const reduced = useReducedMotion();
   useLight();
-  // Read as the ceremony starts, so the language isn't one of the things that restart it.
-  const sealingStatus = useEffectEvent(() => t(($) => $.stickerCreation.sealCeremony.sealing));
+  // Read by the frame loop, so the seal's answer isn't one of the things that restart it.
+  const isSealed = useEffectEvent(() => sealed !== null);
   const [done, setDone] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const skip = useRef<() => void>(() => {});
+  const wake = useRef<() => void>(() => {});
   const root = useRef<HTMLDivElement>(null);
   const card = useRef<HTMLElement>(null);
   const slot = useRef<HTMLDivElement>(null);
@@ -128,32 +144,55 @@ export function SealCeremony({
       specFace: el<HTMLElement>(".live-resin__spec > b"),
       rim: el<HTMLElement>(".live-resin__rim"),
       sheen: el<HTMLElement>(".live-resin__sheen > b"),
-      status: el<HTMLElement>(".seal-ceremony__status"),
     };
-    const cardEl = need(card.current, "card");
-    const slotEl = need(slot.current, "card's slot");
-    const lines = [...cardEl.querySelectorAll<HTMLElement>("[data-card-line]")];
 
     const size = { w: host.offsetWidth, h: host.offsetHeight };
     const r = Math.min(devicePixelRatio || 1, 2);
     paintDim(parts.dim, size, box, sticker.maskImage, r);
     paintUsedStickerSilhouette(parts.usedStickerSilhouette, box, sticker.maskImage, r);
-    const drawCut = makeCutLine(parts.cut, size, contour, r);
+    const cutLine = makeCutLine(parts.cut, size, contour, r);
 
-    const path = flight(box, body, {
-      x: cardEl.offsetLeft + slotEl.offsetLeft,
-      y: cardEl.offsetTop + slotEl.offsetTop,
-      w: slotEl.offsetWidth,
-      h: slotEl.offsetHeight,
-    });
+    // The card comes with the sealed sticker, so the flight to its slot is measured once it's there.
+    let path: Flight | null = null;
+    let cardEl: HTMLElement | null = null;
+    let lines: HTMLElement[] = [];
+    const cardReady = () => {
+      if (path) return true;
+      const c = card.current;
+      const s = slot.current;
+      if (!c || !s) return false;
+      cardEl = c;
+      lines = [...c.querySelectorAll<HTMLElement>("[data-card-line]")];
+      path = flight(box, body, {
+        x: c.offsetLeft + s.offsetLeft,
+        y: c.offsetTop + s.offsetTop,
+        w: s.offsetWidth,
+        h: s.offsetHeight,
+      });
+      return true;
+    };
+    const recorded = () => isSealed() && cardReady();
 
     const opacity = (node: HTMLElement, v: number) => (node.style.opacity = String(v));
+    let t = 0;
+    // How long the cutter has been running round the finished cut.
+    let waited = 0;
     let swept = false;
     let ended = false;
     let stopKeys = () => {};
-    const show = (t: number) => {
-      const f: SealFrame = sealFrame(t, path, lines.length);
-      drawCut(f.cut.progress, f.cut.alpha);
+    const cutter = (): Cutter | null => {
+      if (reduced || t < HOLD) return null;
+      const alpha = 1 - Math.min(1, (t - HOLD) / CUTTER_FADE_MS);
+      if (alpha <= 0) return null;
+      return {
+        at: cutterAt(waited, cutLine.length),
+        trail: Math.min(1, waited / TRAIL_GROW_MS),
+        alpha,
+      };
+    };
+    const show = () => {
+      const f: SealFrame = sealFrame(t, path ?? ON_BACKING, lines.length);
+      cutLine.draw(f.cut.progress, f.cut.alpha, cutter());
       opacity(parts.dim, f.dim);
       opacity(parts.veil, f.veil);
       opacity(parts.plain, f.plain);
@@ -172,12 +211,14 @@ export function SealCeremony({
       parts.shadow.style.transform = `translate(${s.x}px, ${s.y}px) rotate(${s.rotate}deg) scale(${s.scale})`;
       host.toggleAttribute("data-lifted", f.lifted);
       opacity(parts.usedStickerSilhouette, f.usedStickerSilhouette);
-      opacity(cardEl, f.card.opacity);
-      cardEl.style.transform = f.card.y ? `translateY(${f.card.y}px)` : "";
-      lines.forEach((node, i) => {
-        opacity(node, f.items[i].opacity);
-        node.style.transform = f.items[i].y ? `translateY(${f.items[i].y}px)` : "";
-      });
+      if (cardEl) {
+        opacity(cardEl, f.card.opacity);
+        cardEl.style.transform = f.card.y ? `translateY(${f.card.y}px)` : "";
+        lines.forEach((node, i) => {
+          opacity(node, f.items[i].opacity);
+          node.style.transform = f.items[i].y ? `translateY(${f.items[i].y}px)` : "";
+        });
+      }
       // It sticks with a sheen, unless it was skipped past.
       if (!swept && t >= T.land && t < TOTAL - 1 && !reduced) {
         swept = true;
@@ -191,21 +232,24 @@ export function SealCeremony({
     };
 
     let raf = 0;
-    let start: number | null = null;
-    let skipped = false;
+    let last: number | null = null;
     const tick = (now: number) => {
-      // Said a frame after the status line exists, so screen readers hear the change.
-      if (start === null) parts.status.textContent = sealingStatus();
-      start ??= now;
-      const t = ceremonyTime(now - start, { skipped, reduced });
-      show(t);
-      if (t < TOTAL) raf = requestAnimationFrame(tick);
+      raf = 0;
+      const dt = last === null ? 0 : Math.min(MAX_FRAME_MS, now - last);
+      last = now;
+      if (t >= HOLD) waited += dt;
+      t = ceremonyTime(t, dt, { recorded: recorded(), reduced });
+      show();
+      // Under reduced motion nothing moves while it waits: the next frame comes with the seal.
+      if (t < TOTAL && !(reduced && t === HOLD)) raf = requestAnimationFrame(tick);
+    };
+    wake.current = () => {
+      if (!raf && !ended) raf = requestAnimationFrame(tick);
     };
     skip.current = () => {
       if (ended) return;
-      skipped = true;
-      cancelAnimationFrame(raf);
-      show(TOTAL);
+      t = stopAt(recorded());
+      show();
     };
     // The keys that would press a button skip, as a tap does.
     const onKey = (e: KeyboardEvent) => {
@@ -215,14 +259,18 @@ export function SealCeremony({
     };
     document.addEventListener("keydown", onKey);
     stopKeys = () => document.removeEventListener("keydown", onKey);
-    if (reduced) show(TOTAL);
-    else raf = requestAnimationFrame(tick);
+    raf = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(raf);
       stopKeys();
       host.removeAttribute("data-lifted");
     };
   }, [sticker, sheet, reduced]);
+
+  // The seal is recorded: the ceremony goes on from its wait.
+  useEffect(() => {
+    if (sealed) wake.current();
+  }, [sealed]);
 
   const leaveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(leaveTimer.current), []);
@@ -242,14 +290,13 @@ export function SealCeremony({
   return (
     <div
       ref={root}
-      className={`seal-ceremony ${leaving ? "is-leaving" : ""}`}
+      className={`seal-ceremony ${leaving || failed ? "is-leaving" : ""}`}
       onPointerDown={(e) => {
-        if (done) return;
+        if (done || failed) return;
         e.preventDefault();
         skip.current();
       }}
     >
-      <p className="seal-ceremony__status visually-hidden" role="status" />
       <canvas className="seal-ceremony__dim" aria-hidden="true" />
       <canvas
         className="seal-ceremony__used-sticker-silhouette"
@@ -258,16 +305,18 @@ export function SealCeremony({
       />
       <span className="seal-ceremony__veil" aria-hidden="true" />
       <canvas className="seal-ceremony__cut" aria-hidden="true" />
-      <SealedCard
-        sealed={sealed}
-        handle={handle}
-        done={done}
-        cardRef={card}
-        slotRef={slot}
-        onKeepDrawing={leave(onKeepDrawing)}
-        onBoard={onBoard}
-        onShop={leave(onShop)}
-      />
+      {sealed && (
+        <SealedCard
+          sealed={sealed}
+          handle={handle}
+          done={done}
+          cardRef={card}
+          slotRef={slot}
+          onKeepDrawing={leave(onKeepDrawing)}
+          onBoard={onBoard}
+          onShop={leave(onShop)}
+        />
+      )}
       <img
         className="seal-ceremony__shadow"
         style={boxStyle(box)}
