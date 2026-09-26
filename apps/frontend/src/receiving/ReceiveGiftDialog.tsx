@@ -19,6 +19,7 @@ import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { useIdentity } from "../identity/useIdentity";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
+import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
@@ -62,6 +63,7 @@ export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
   const me = useIdentity();
   const reduced = useReducedMotion();
   const motion = reduced ? 1 : 0;
+  useLight();
   const [screen, dispatch] = useReducer(receiveFlow, { step: "opening" });
   const [attempt, setAttempt] = useState(0);
   // LINE says which chat opened the link; the server refuses group chats.

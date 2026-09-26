@@ -8,8 +8,20 @@ let uninstall = () => {};
 const tiltListeners = new Set<EventListenerOrEventListenerObject>();
 /** The light's holds a test hasn't released, released after it. */
 const held = new Set<() => void>();
+/** A sticker's live resin, which reads the light. */
+let resin: HTMLElement;
 
-const lightAt = () => [root.style.getPropertyValue("--lx"), root.style.getPropertyValue("--ly")];
+const addResin = () => {
+  const el = document.createElement("span");
+  el.className = "live-resin";
+  document.body.append(el);
+  return el;
+};
+const lightOn = (el: HTMLElement) => [
+  el.style.getPropertyValue("--lx"),
+  el.style.getPropertyValue("--ly"),
+];
+const lightAt = () => lightOn(resin);
 const pointAt = (x: number, y: number) =>
   window.dispatchEvent(new PointerEvent("pointermove", { clientX: x, clientY: y }));
 const tiltTo = (gamma: number, beta: number) =>
@@ -26,8 +38,7 @@ const showScreen = () => {
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance"] });
-  root.style.removeProperty("--lx");
-  root.style.removeProperty("--ly");
+  resin = addResin();
   const add = window.addEventListener.bind(window);
   const remove = window.removeEventListener.bind(window);
   vi.spyOn(window, "addEventListener").mockImplementation((type, listener, options) => {
@@ -45,29 +56,61 @@ afterEach(() => {
   held.clear();
   uninstall();
   tiltListeners.clear();
+  document.body.replaceChildren();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.useRealTimers();
 });
 
 describe("the shared light", () => {
-  it("follows the pointer to the window's edge", () => {
+  it("follows the pointer to the window's edge on the resins, never the root", () => {
     uninstall = installLight(root);
+    showScreen();
     pointAt(window.innerWidth, window.innerHeight / 2);
     vi.advanceTimersByTime(16);
     expect(lightAt()).toEqual(["1.000", "0.000"]);
+    expect(lightOn(root)).toEqual(["", ""]);
+  });
+
+  it("ignores the pointer while no screen shows stickers", () => {
+    uninstall = installLight(root);
+    pointAt(window.innerWidth, 0);
+    vi.advanceTimersByTime(100);
+    expect(lightAt()).toEqual(["", ""]);
   });
 
   it("writes once for moves that come close together, with the later position", () => {
     uninstall = installLight(root);
+    showScreen();
     pointAt(0, 0);
     vi.advanceTimersByTime(16);
-    const writes = vi.spyOn(root.style, "setProperty");
+    const writes = vi.spyOn(resin.style, "setProperty");
     pointAt(window.innerWidth / 4, 0);
     vi.advanceTimersByTime(16);
     pointAt(window.innerWidth, 0);
     vi.advanceTimersByTime(100);
     expect(writes.mock.calls.filter(([name]) => name === "--lx")).toEqual([["--lx", "1.000"]]);
+  });
+
+  it("keeps still for the hand's tremor", () => {
+    uninstall = installLight(root);
+    showScreen();
+    tiltTo(16, 40);
+    vi.advanceTimersByTime(100);
+    const writes = vi.spyOn(resin.style, "setProperty");
+    tiltTo(16.2, 40.2);
+    vi.advanceTimersByTime(100);
+    expect(writes).not.toHaveBeenCalled();
+  });
+
+  it("starts a newly shown screen's resins where the light already is", () => {
+    uninstall = installLight(root);
+    showScreen();
+    tiltTo(32, 40);
+    vi.advanceTimersByTime(100);
+    const detail = addResin();
+    showScreen();
+    expect(lightOn(detail)).toEqual(["1.000", "0.000"]);
   });
 
   it("follows the phone's tilt on a screen with stickers, even in a browser that can also ask", () => {
@@ -114,6 +157,7 @@ describe("the shared light", () => {
     // A query that always matches stands in for the reduced-motion setting.
     vi.spyOn(window, "matchMedia").mockReturnValue(window.matchMedia("all"));
     uninstall = installLight(root);
+    showScreen();
     pointAt(window.innerWidth, 0);
     vi.advanceTimersByTime(100);
     expect(lightAt()).toEqual(["", ""]);
