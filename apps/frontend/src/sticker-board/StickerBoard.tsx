@@ -247,7 +247,8 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const reduced = useReducedMotion();
   const hints = useId();
   const idle = usePreloadWhenIdle(OPENED_FROM_BOARD);
-  useLight(!turned);
+  // The gratitude mini-game covers the board, so the tilt and its sheen sweeps rest while it plays.
+  useLight(!turned && !gratitudeFor);
 
   const save = useCallback(
     (sticker: Pick<BoardSticker, "id" | "no">, placement: Placement) => {
