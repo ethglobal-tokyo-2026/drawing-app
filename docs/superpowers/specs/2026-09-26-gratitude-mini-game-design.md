@@ -23,20 +23,20 @@
 
 ## The rules
 
-| Phase     | What happens                                                                                                                                                                                   |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ready     | The heart breathes. "Tap the heart" sits under it                                                                                                                                              |
-| first tap | On release, on the heart, not a drag (under 12px of travel), held under 0.8s: 1 hit, 10 gratitude at ×1. The heart winds up toward the giver's picture → sending                               |
-| sending   | A touch-down within 0.92s of the first tap (a 0.8s catch window plus 0.12s grace) catches the heart → running, and that touch is a hit. No catch: the heart flies to the giver → ended, `sent` |
-| running   | Every touch-down on the heart is a hit if the rate limit allows it: 16 a second, bursts of 4. Touches past the limit still animate but add nothing. Touches off the heart count for nothing    |
-| ended     | The result goes to the app before any ending plays                                                                                                                                             |
+| Phase     | What happens                                                                                                                                                                                              |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ready     | The heart breathes. "Tap the heart" sits under it                                                                                                                                                         |
+| first tap | On release, on the heart, not a drag (under 12px of travel), held under 0.8s: 1 hit, 10 gratitude at ×1. The heart winds up toward the giver's picture → sending                                          |
+| sending   | A touch-down within 0.92s of the first tap (a 0.8s catch window plus 0.12s grace) catches the heart → running, and that touch is a hit. No catch: the heart flies to the giver → ended, as a one-tap send |
+| running   | Every touch-down on the heart is a hit if the rate limit allows it: 16 a second, bursts of 4. Touches past the limit still animate but add nothing. Touches off the heart count for nothing               |
+| ended     | The result goes to the app before any ending plays                                                                                                                                                        |
 
 **The bar**
 
 - It fills to 1.0 on the catch, and the combo clock starts at 0.
 - It drains at 0.36 × 2^(t / 1.6) of the bar a second, where t is the combo clock.
 - Hit n adds 0.20 + 0.10 × 0.93^(n − 3) of the bar, for n ≥ 3 (the catch is hit 2). The bar never goes above 1.
-- When the bar empties the combo ends (`empty`). 8s after the first hit it ends (`cap`), a safety stop that play doesn't reach.
+- When the bar empties the combo ends. 8s after the first hit it ends anyway, a safety stop that play doesn't reach.
 - **On screen:** the seconds you'd have left if you stopped now, T × log2(1 + bar × ln 2 / (T × drain)) with T = 1.6s. The fill is those seconds over the 1.8s a full bar lasts at the catch. It sinks for everyone as the drain speeds up, and every hit bumps it back up. It runs hot under 30% and blinks under 12%, as in `P`. Each hit shows its "+0.2s" tick.
 
 **The multiplier**
@@ -46,13 +46,16 @@
 - Between hits, m moves toward the target as target + (m − target) × e^(−k·Δt), with k = 6 rising and 2.5 falling. The target changes only when a hit arrives or drops out of the last second.
 - A hit is worth round(10 × m) gratitude.
 
-**Tiers**, by the gratitude total, never dropping within a combo: ありがと 1 · 照れ 90 · ドキドキ 320 · オーバーヒート 1,100 · 昇天 3,000.
+**Tiers**, by the gratitude total, never dropping within a combo: ありがと 1 · 照れ 100 · ドキドキ 320 · オーバーヒート 1,100 · 昇天 3,000.
+
+- ありがと's face and slam wait for the catch. A one-tap send never shows them.
+- 照れ, the second face, comes on the 7th tap, or the 8th when tapping calmly (3 or fewer a second), and on the 5th stroke or shake (simulated, 2026-09-26).
 
 **Hitstop:** a tier-up pauses the combo clock and every animation for 0.06s; the 昇天 climax pauses them for 0.14s.
 
-**Ends:** `sent` (one tap), `empty`, `cap`, `hidden` (the page is hidden mid-combo, which ends it at once), `closed` (the X during sending or running).
+**How it ends:** a one-tap send, the bar running out, the 8s safety stop, the page going hidden mid-combo (which ends it at once), or the X during sending or running. The result doesn't record which: a gratitude exists or it doesn't, and its hit times and duration are all a replay needs.
 
-**Replayable.** The rules compute the drain and the multiplier exactly between hits, never stepped per frame. The same hit times, method switch and config version always give the same total, peak and end. The server's replayed `total` (part 3) and the replay animation (part 2) rely on this.
+**Replayable.** The rules compute the drain and the multiplier exactly between hits, never stepped per frame. The same hit times, method switch and config version always give the same total and peak tier. A replay stops at `durationMs`. The server's replayed `total` (part 3) and the replay animation (part 2) rely on this.
 
 **Simulated** (2026-09-26): steady tapping with gaps jittered by ±22%, medians of 400 runs, without hitstop.
 
@@ -80,14 +83,13 @@ interface GratitudeResult {
   hitTimes: number[];
   /** From the first hit to the end; the receipt shows it in seconds. */
   durationMs: number;
-  endReason: "sent" | "empty" | "cap" | "hidden" | "closed";
   /** Gratitude, multiplier included. */
   total: number;
   peakMult: number;
   /** 0–4: ありがと, 照れ, ドキドキ, オーバーヒート, 昇天. */
   peakTier: 0 | 1 | 2 | 3 | 4;
   /** GAME_CONFIG's version, so a replay runs with the numbers the combo had. */
-  tuningVersion: string;
+  gameConfigVersion: string;
 }
 ```
 
@@ -164,7 +166,7 @@ Stroke and shake work as in `P`, with this spec's timing.
   - With motion allowed, the heart sways with the wrist and tilts with the phone's roll, and shaking jiggles it.
   - At 4 reversals "Keep shaking!" shows, and at 11 a corner lifts.
   - At 16 the heart comes loose ("ポンッ") and ricochets off the walls, denting them and, from ドキドキ up, knocking mini hearts off.
-- **Weights:** a fast pass counts as 2.4 hits and a reversal as 1.5, toward the bar, the cadence and the gratitude. Each still adds one to the hit count n, and to `hits`. Both weights are first guesses, tuned on the phone. They stay fixed per method, because a replay knows only where the combo switched. `P`'s speed-based weights would need a weight stored for every hit.
+- **Weights:** a fast pass and a reversal each count as 1.5 hits, toward the bar, the cadence and the gratitude, so 照れ comes on the 5th of either. Each still adds one to the hit count n, and to `hits`. The weight is tuned on the phone. They stay fixed per method, because a replay knows only where the combo switched. `P`'s speed-based weights would need a weight stored for every hit.
 - **Speed limits,** the same guard as the tap limit: at most 10 passes and 14 reversals a second count, with bursts of 4. Hard stroking or shaking stays under them; only a script or a phone rattling on a table reaches them.
 - **No mixing:** once a combo commits to stroke or shake, other input is ignored until it ends.
 - **The motion ask:**
@@ -230,12 +232,13 @@ Paths are under `apps/frontend/src/gratitude/` unless they name another folder.
 
 - **Unit (vitest):**
   - **The combo:**
-    - One tap with no catch ends `sent`; a catch inside the window starts the bar.
+    - One tap with no catch ends as a one-tap send; a catch inside the window starts the bar.
+    - 照れ doesn't arrive before the 7th tap at any steady speed.
     - Faster steady tapping lasts longer and reaches a higher tier and total.
     - Hits over 16 a second (beyond the burst) don't count, and tiers never drop.
     - The 8s stop holds, and hiding the page ends the combo with its result.
     - A result's `hitTimes` has one entry per hit, and its `durationMs` stays within 8,000.
-    - Replaying a result's hit times through a fresh combo gives the same total, peak tier and end, however the frames fell.
+    - Replaying a result's hit times through a fresh combo gives the same total and peak tier, however the frames fell.
   - **Touch input:** a touch-down just outside the heart's resting area isn't a hit, and one inside it is.
   - **The mini-heart physics:** a spray falls, bounces, settles into the pile and fades. A tap shoves nearby hearts away, and the live cap holds.
   - **The detectors (B):** five fast passes unlock and four don't; a slow pass or a pause breaks the streak; jolts without rhythm don't count.
@@ -253,4 +256,4 @@ Paths are under `apps/frontend/src/gratitude/` unless they name another folder.
 - **Part 2:** the Send gratitude sheet after Accept, one stored gratitude per gift, and the replay when a thanked sticker is reopened.
 - **Part 3:** the giver's pink tag, replay card and warmer glow, the LINE notice, and the server's check.
 - **The stand-in plan** (`docs/superpowers/plans/2026-09-25-gratitude-heart-stand-in.md`) is deleted when this spec's implementation plan lands. Its recording contract lives on in the draft schema's `gratitude` table.
-- **The draft schema** has every column the result needs, and its limits fit: 1–120 hits (a combo tops out near 100), 8,000ms, tiers 0–4, multiplier 1–8. It needs `sent` added to its end reasons, because here one tap sends; the draft follows the stand-in's rule that the first tap starts the combo. If it renames `tuning_version` to match `gameConfig.ts`, the result follows.
+- **The draft schema** has every column the result needs, and its limits fit: 1–120 hits (a combo tops out near 100), 8,000ms, tiers 0–4, multiplier 1–8. Its `end_reason` column and `comboEndReasons` list can go, since nothing reads them. Its `tuning_version` becomes `game_config_version`, to match `gameConfig.ts` (agreed 2026-09-26).

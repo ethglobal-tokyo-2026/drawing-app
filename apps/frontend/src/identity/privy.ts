@@ -45,6 +45,24 @@ export function retryPrivySignIn() {
   setPrivyStatus({ state: "signing-in" });
 }
 
+// Privy makes a new user's wallet right after sign-in, and signs out if its wallet frame is still starting.
+// Waiting for useWallets().ready makes that rarer, not impossible; by a second try the frame is up.
+const WALLET_FRAME_RACE = "User must be authenticated before creating a Privy wallet";
+const RACE_RETRY_MS = 1000;
+// Spent once per page load, so a race that keeps happening ends on the failure instead of a loop.
+let retriedRace = false;
+
+/** Privy's error after it took the JWT: one retry for the wallet-frame race, otherwise the failure. */
+export function onPrivyError(error: Error) {
+  if (error.message.includes(WALLET_FRAME_RACE) && !retriedRace) {
+    retriedRace = true;
+    console.warn("Privy signed out while making the wallet; signing in again", error);
+    setTimeout(retryPrivySignIn, RACE_RETRY_MS);
+    return;
+  }
+  setPrivyStatus({ state: "failed", reason: `Privy refused the sign-in: ${error.message}` });
+}
+
 function fail(reason: string): undefined {
   console.error(`Privy sign-in failed: ${reason}`);
   setPrivyStatus({ state: "failed", reason });

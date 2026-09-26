@@ -98,3 +98,39 @@ describe("trading LINE's ID token for a Privy JWT", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+describe("Privy's errors after the JWT is accepted", () => {
+  const WALLET_FRAME_RACE = "User must be authenticated before creating a Privy wallet";
+
+  // Each test needs the one retry unspent, so each gets its own copy of the module.
+  const freshPrivy = async () => {
+    vi.resetModules();
+    return import("./privy");
+  };
+
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("signs in again once when Privy signs out while its wallet frame starts", async () => {
+    const privy = await freshPrivy();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    privy.setPrivyStatus({ state: "failed", reason: "Privy signed you out" });
+    privy.onPrivyError(new Error(WALLET_FRAME_RACE));
+    vi.advanceTimersByTime(1000);
+    expect(privy.privyStatus()).toEqual({ state: "signing-in" });
+
+    privy.onPrivyError(new Error(WALLET_FRAME_RACE));
+    vi.advanceTimersByTime(1000);
+    expect(privy.privyStatus()).toMatchObject({ state: "failed" });
+  });
+
+  it("shows any other error as the failure, without retrying", async () => {
+    const privy = await freshPrivy();
+    privy.onPrivyError(new Error("Invalid JWT"));
+    vi.advanceTimersByTime(1000);
+    expect(privy.privyStatus()).toEqual({
+      state: "failed",
+      reason: "Privy refused the sign-in: Invalid JWT",
+    });
+  });
+});

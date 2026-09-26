@@ -1,5 +1,12 @@
-import { PrivyProvider, useSubscribeToJwtAuthWithFlag } from "@privy-io/react-auth";
-import { fetchPrivyJwt, PRIVY_APP_ID, privyStatus, setPrivyStatus, usePrivyStatus } from "./privy";
+import { PrivyProvider, useSubscribeToJwtAuthWithFlag, useWallets } from "@privy-io/react-auth";
+import {
+  fetchPrivyJwt,
+  onPrivyError,
+  PRIVY_APP_ID,
+  privyStatus,
+  setPrivyStatus,
+  usePrivyStatus,
+} from "./privy";
 
 const onAuthenticated = ({ user }: { user: { id: string } }) =>
   setPrivyStatus({ state: "signed-in", userId: user.id });
@@ -11,21 +18,20 @@ const onUnauthenticated = () => {
   }
 };
 
-const onError = (error: Error) =>
-  setPrivyStatus({ state: "failed", reason: `Privy refused the sign-in: ${error.message}` });
-
 function SyncLineToPrivy() {
   const failed = usePrivyStatus().state === "failed";
+  const walletsReady = useWallets().ready;
   useSubscribeToJwtAuthWithFlag({
     // After a failure the SDK re-syncs over and over on its own, so syncing waits for Try again.
     enabled: !failed,
     // Rendered only inside LineGate, so LINE has always logged the person in by now.
     isAuthenticated: true,
-    isLoading: false,
+    // Privy makes the wallet right after sign-in, and signs out again if its wallet frame isn't up yet.
+    isLoading: !walletsReady,
     getExternalJwt: fetchPrivyJwt,
     onAuthenticated,
     onUnauthenticated,
-    onError,
+    onError: onPrivyError,
   });
   return null;
 }
