@@ -88,3 +88,9 @@ button {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* Japanese: no small kana or closing bracket starts a line, and lines break at phrases where the browser can. */
+:lang(ja) {
+  line-break: strict;
+  word-break: auto-phrase;
+}

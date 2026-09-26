@@ -11,7 +11,7 @@
   --pink: #ff4f9a;
   --grape: #9b7bff;
   --tomato: #ff5a36;
-  --font-ui: "Mona Sans", system-ui, sans-serif;
+  --font-ui: "Mona Sans", "Zen Kaku Gothic New", system-ui, sans-serif;
   --font-puffy: "Dela Gothic One", var(--font-ui);
   --r-label: 6px;
   --tilt: -4deg;
