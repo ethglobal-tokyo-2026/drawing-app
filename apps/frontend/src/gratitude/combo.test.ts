@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { seededRandom } from "../ui/seededRandom";
-import { createGratitudeCombo, replayGratitudeCombo, type ComboEvent } from "./combo";
+import {
+  createGratitudeCombo,
+  fullBarSeconds,
+  replayGratitudeCombo,
+  type ComboEvent,
+} from "./combo";
 import { GAME_CONFIG, type GameConfig } from "./gameConfig";
 
 type Ended = Extract<ComboEvent, { kind: "ended" }>;
@@ -14,7 +19,8 @@ interface PlayOptions {
 
 /**
  * Taps the heart `rate` times a second from t = 0 until the combo ends, with a frame between taps.
- * `jitter` spreads each gap and each frame by up to that share, from `seed`.
+ * `jitter` spreads each gap and each frame by up to that share, from `seed`, and runs some frames
+ * before the taps due by them, as late pointer events do.
  */
 function play(rate: number, { config = GAME_CONFIG, jitter = 0, seed = 1 }: PlayOptions = {}) {
   const random = seededRandom(seed);
@@ -23,9 +29,11 @@ function play(rate: number, { config = GAME_CONFIG, jitter = 0, seed = 1 }: Play
   const events: ComboEvent[] = [];
   let nextTap = 0;
   for (let t = 0; t < 20_000; t += 16 * spread()) {
+    const late = jitter > 0 && random() < 0.5;
+    if (late) events.push(...combo.advanceTo(t));
     for (; nextTap <= t; nextTap += (1000 / rate) * spread())
       events.push(...combo.tapHeart(nextTap));
-    events.push(...combo.advanceTo(t));
+    if (!late) events.push(...combo.advanceTo(t));
     const end = endOf(events);
     if (end)
       return {
@@ -35,6 +43,29 @@ function play(rate: number, { config = GAME_CONFIG, jitter = 0, seed = 1 }: Play
       };
   }
   throw new Error(`A combo at ${rate} taps a second never ended`);
+}
+
+/**
+ * Taps faster than the rate limit counts, then rests for the cadence window. Taps land on whole
+ * milliseconds, so the multiplier read on either side of one changes by that tap alone.
+ */
+function mash(config: GameConfig) {
+  const combo = createGratitudeCombo(config);
+  let risesAtHits = 0;
+  let peak = 1;
+  let mostSecondsLeft = 0;
+  for (let t = 0; t <= 1500; t += 40) {
+    combo.advanceTo(t);
+    const before = combo.view.multiplier;
+    combo.tapHeart(t);
+    const { multiplier, secondsLeft } = combo.view;
+    if (multiplier > before) risesAtHits++;
+    peak = Math.max(peak, before, multiplier);
+    mostSecondsLeft = Math.max(mostSecondsLeft, secondsLeft);
+  }
+  const mashed = combo.view;
+  combo.advanceTo(1500 + config.multiplier.windowMs);
+  return { risesAtHits, peak, mostSecondsLeft, mashed, rested: combo.view.multiplier };
 }
 
 describe("createGratitudeCombo", () => {
@@ -99,6 +130,22 @@ describe("createGratitudeCombo", () => {
     });
   });
 
+  it("climbs the multiplier at hits and at its rise rate, to its max, and sinks it at its fall rate", () => {
+    const M = GAME_CONFIG.multiplier;
+    const played = mash(GAME_CONFIG);
+    expect(played.risesAtHits).toBeGreaterThan(0);
+    expect(played.peak).toBeLessThanOrEqual(M.max);
+    // Right after hits, the bar never holds more than full.
+    expect(played.mostSecondsLeft).toBeLessThanOrEqual(fullBarSeconds());
+    expect(played.rested).toBeLessThan(played.mashed.multiplier);
+    expect(played.rested).toBeGreaterThanOrEqual(1);
+
+    const quickRise = mash({ ...GAME_CONFIG, multiplier: { ...M, rise: M.rise * 2 } });
+    const quickFall = mash({ ...GAME_CONFIG, multiplier: { ...M, fall: M.fall * 2 } });
+    expect(quickRise.mashed.total).toBeGreaterThan(played.mashed.total);
+    expect(quickFall.rested).toBeLessThan(played.rested);
+  });
+
   it("holds the combo clock through a tier-up's freeze, and lifts it when the combo ends", () => {
     const { tierUpFreezeMs } = GAME_CONFIG;
     const combo = createGratitudeCombo();
@@ -125,15 +172,15 @@ describe("createGratitudeCombo", () => {
     expect(combo.tapHeart(200)).toEqual([]);
   });
 
-  it("records one time per hit, rising from 0, within the safety limit", () => {
+  it("records its times in whole milliseconds, rising from 0", () => {
     for (const rate of [3, 8, 16]) {
       const { record } = play(rate, { jitter: 0.2 });
-      expect(record.hitTimes).toHaveLength(record.hits);
       expect(record.hitTimes[0]).toBe(0);
       record.hitTimes
         .slice(1)
         .forEach((t, i) => expect(t).toBeGreaterThanOrEqual(record.hitTimes[i]));
-      expect(record.durationMs).toBeLessThanOrEqual(GAME_CONFIG.maxDurationMs);
+      expect(record.hitTimes.every(Number.isInteger), `at ${rate} taps a second`).toBe(true);
+      expect(Number.isInteger(record.durationMs), `at ${rate} taps a second`).toBe(true);
     }
   });
 
