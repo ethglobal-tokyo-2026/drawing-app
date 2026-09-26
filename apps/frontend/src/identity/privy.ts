@@ -76,7 +76,8 @@ function fail(reason: string): undefined {
   return undefined;
 }
 
-const field = (body: unknown, key: string): unknown =>
+/** A field of a JSON answer whose shape isn't checked yet. */
+export const jsonField = (body: unknown, key: string): unknown =>
   body && typeof body === "object" ? Reflect.get(body, key) : undefined;
 
 /**
@@ -103,13 +104,13 @@ export async function fetchPrivyJwt(): Promise<string | undefined> {
     });
     const body: unknown = await response.json().catch(() => null);
     if (!response.ok) {
-      const error = field(body, "error");
+      const error = jsonField(body, "error");
       return fail(
         `the auth server refused LINE’s token: HTTP ${response.status}${typeof error === "string" ? ` ${error}` : ""}`,
       );
     }
-    const jwt = field(body, "jwt");
-    const expiresAt = field(body, "expiresAt");
+    const jwt = jsonField(body, "jwt");
+    const expiresAt = jsonField(body, "expiresAt");
     if (typeof jwt !== "string" || !jwt || typeof expiresAt !== "number") {
       return fail("the auth server answered without a JWT");
     }
