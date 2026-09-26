@@ -5,11 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { LineTokenInvalidError, type LineProfile } from "../deps.ts";
 import { errorBodySchema } from "../errors.ts";
+import { devIdToken } from "../services/devSignIn.ts";
 import { HANDLE_MAX_LENGTH } from "../session/handles.ts";
 import { SESSION_COOKIE } from "../session.ts";
 import { meSchema } from "../shapes.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
-import { fakeLineIdToken, fakeSmartWallets } from "../testing/fakes.ts";
+import { fakeSmartWallets } from "../testing/fakes.ts";
 import { insertGratitude, insertSealedSticker, receiveGift } from "../testing/rows.ts";
 import { ID_TOKEN_MAX_LENGTH } from "./session.ts";
 
@@ -41,7 +42,7 @@ const call = (method: string, path: string, headers: Record<string, string> = {}
   });
 
 const signIn = (profile: LineProfile, timeZone = DEVICE_ZONE) =>
-  call("POST", "/api/session", {}, { idToken: fakeLineIdToken(profile), timeZone });
+  call("POST", "/api/session", {}, { idToken: devIdToken(profile), timeZone });
 
 /** The Cookie header that sends back the session a response set. */
 function sessionCookie(response: Response) {
@@ -113,7 +114,7 @@ describe("signing in", () => {
   });
 
   it("refuses an unknown zone, and an ID token that's empty or too long", async () => {
-    const idToken = fakeLineIdToken(ALICE);
+    const idToken = devIdToken(ALICE);
     const bodies = [
       { idToken, timeZone: "Mars/Olympus_Mons" },
       { idToken: "", timeZone: DEVICE_ZONE },

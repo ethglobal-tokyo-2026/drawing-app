@@ -1,19 +1,16 @@
-import {
-  LineTokenInvalidError,
-  lineProfileSchema,
-  type EscrowGift,
-  type GiftChain,
-  type Ids,
-  type ImageStore,
-  type LineProfile,
-  type LineVerifier,
-  type Mint,
-  type MintedToken,
-  type SmartWallets,
-  type SuiPayments,
-  type SuiPrice,
+import type {
+  EscrowGift,
+  GiftChain,
+  Ids,
+  ImageStore,
+  Mint,
+  MintedToken,
+  SmartWallets,
+  SuiPayments,
+  SuiPrice,
 } from "../deps.ts";
 import { keccak256 } from "../keccak256.ts";
+import { createDevLineVerifier } from "../services/devSignIn.ts";
 import { stickerImageUrls } from "../services/imageStore.ts";
 import type { StickerImages } from "../shapes.ts";
 
@@ -44,33 +41,8 @@ export function sequentialIds() {
   } satisfies Ids;
 }
 
-const FAKE_ID_TOKEN = "fake-line-id-token:";
-
-/** An ID token the fake LINE verifier accepts as naming `profile`. */
-export const fakeLineIdToken = (profile: LineProfile) => FAKE_ID_TOKEN + JSON.stringify(profile);
-
-const parseJson = (text: string): unknown => {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
-  }
-};
-
-/** Accepts tokens from fakeLineIdToken, and refuses anything else as LINE would. */
-export function fakeLineVerifier() {
-  return {
-    verifyIdToken: (idToken) => {
-      const claims = idToken.startsWith(FAKE_ID_TOKEN)
-        ? parseJson(idToken.slice(FAKE_ID_TOKEN.length))
-        : undefined;
-      const profile = lineProfileSchema.safeParse(claims);
-      return profile.success
-        ? Promise.resolve(profile.data)
-        : Promise.reject(new LineTokenInvalidError(`Not a fake LINE ID token: ${idToken}`));
-    },
-  } satisfies LineVerifier;
-}
+/** LINE, as dev sign-in stands in for it: devIdToken's tokens name their profile, and any other is refused. */
+export const fakeLineVerifier = createDevLineVerifier;
 
 /** Keeps saved images in memory, by content hash; like the disk store, the first save stays. */
 export function fakeImageStore(cdnBaseUrl = "https://cdn.test") {

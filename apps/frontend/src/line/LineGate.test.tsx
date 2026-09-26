@@ -39,6 +39,7 @@ const settle = () => act(() => vi.advanceTimersByTimeAsync(0));
 
 beforeEach(() => {
   vi.useFakeTimers();
+  vi.stubEnv("VITE_LIFF_MOCK", "off");
   vi.spyOn(console, "error").mockImplementation(() => {});
   host = document.createElement("div");
   document.body.append(host);
