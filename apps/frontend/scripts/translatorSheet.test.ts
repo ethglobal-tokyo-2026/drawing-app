@@ -1,7 +1,7 @@
-import { cpSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { en } from "../src/i18n/en";
 import { ja } from "../src/i18n/ja";
 import {
@@ -20,6 +20,7 @@ const quiet = { log: () => {}, error: () => {} };
 /** Exports the real catalogs with some Japanese cells filled in, and imports that into a copy of ja/. */
 const exportThenImport = (japanese: Record<string, string> = {}) => {
   const dir = mkdtempSync(path.join(tmpdir(), "translator-sheet-"));
+  onTestFinished(() => rmSync(dir, { recursive: true }));
   const copy = path.join(dir, "ja");
   cpSync(jaDir, copy, { recursive: true });
   const rows = sheetRows(en, ja).map((row) => ({

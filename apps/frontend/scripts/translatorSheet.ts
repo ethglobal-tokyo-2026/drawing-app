@@ -19,7 +19,7 @@ export interface SheetRow {
 }
 
 /** A row as the import reads it back: the notes are only for the translator. */
-export type SheetEntry = Omit<SheetRow, "notes">;
+type SheetEntry = Omit<SheetRow, "notes">;
 
 const COLUMNS = { key: "key", english: "English", japanese: "Japanese", notes: "Notes" } as const;
 
@@ -169,7 +169,7 @@ const parseCsv = (text: string): string[][] => {
 };
 
 /** A translator's sheet as a spreadsheet saved it: each row's key, English and Japanese. */
-export const readSheet = (bytes: Uint8Array): SheetEntry[] => {
+const readSheet = (bytes: Uint8Array): SheetEntry[] => {
   let text: string;
   try {
     // Fatal, so a sheet saved in another encoding stops here rather than garbling the Japanese.
@@ -250,7 +250,7 @@ const nest = (
 };
 
 /** A section whose Japanese the sheet changes, with the keys it adds, changes and removes. */
-export interface SectionChange {
+interface SectionChange {
   section: string;
   japanese: Catalog;
   added: string[];
@@ -270,7 +270,7 @@ export interface ImportPlan {
  * What a sheet does to the Japanese catalog. An empty cell falls back to English; a key the sheet
  * doesn't have, such as English added since the export, keeps its Japanese.
  */
-export const planImport = (en: Catalog, ja: Catalog, rows: readonly SheetEntry[]): ImportPlan => {
+const planImport = (en: Catalog, ja: Catalog, rows: readonly SheetEntry[]): ImportPlan => {
   const english = strings(en);
   const current = strings(ja);
   const sheet = new Map<string, string>();
@@ -330,7 +330,7 @@ const literal = (catalog: Catalog): string => {
 };
 
 /** A Japanese section's file, before oxfmt formats it. */
-export const renderSection = (section: string, japanese: Catalog) =>
+const renderSection = (section: string, japanese: Catalog) =>
   [
     `import type { Translation } from "../catalog";`,
     `import type { ${section} as english } from "../en/${section}";`,
