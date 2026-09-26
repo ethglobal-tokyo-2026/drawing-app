@@ -16,6 +16,13 @@ i18next
     initAsync: false,
     // React escapes what it renders, and LINE's messages are plain text.
     interpolation: { escapeValue: false },
+    // Types can't catch a call that passes no variables at all: tests fail on it, and the app logs it.
+    missingInterpolationHandler: (text: string, match: RegExpExecArray) => {
+      const problem = `"${text}" was given no ${match[0]}`;
+      if (import.meta.env.MODE === "test") throw new Error(problem);
+      console.error(problem);
+      return match[0];
+    },
   })
   .catch((error: unknown) => console.error("i18next didn't start", error));
 

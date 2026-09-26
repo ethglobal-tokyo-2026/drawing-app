@@ -30,7 +30,7 @@ async function openApp() {
   await act(async () => {
     root.render(
       <LineGate>
-        <p>{"board"}</p>
+        <p>board</p>
       </LineGate>,
     );
   });
