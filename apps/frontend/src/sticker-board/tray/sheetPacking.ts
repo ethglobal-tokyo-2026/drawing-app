@@ -125,7 +125,8 @@ const DEFAULTS: Omit<Resolved, "sheet" | "margin"> = {
   max: Infinity,
 };
 
-function hash(str: string) {
+/** FNV-1a: a string as a 32-bit seed. */
+export function hash(str: string) {
   let h = 2166136261 >>> 0;
   for (let i = 0; i < str.length; i++) {
     h ^= str.charCodeAt(i);
@@ -300,7 +301,7 @@ export function outline(shape: Shape, item: Pick<PackedItem, "x" | "y" | "r" | "
 }
 
 /** A turned, scaled cut centered on 0, 0: the highest and lowest points of each pixel column. */
-interface Profile {
+export interface Profile {
   /** The first column's x. */
   j0: number;
   /** The number of columns. */
@@ -317,7 +318,7 @@ interface Profile {
 
 const profiles = new WeakMap<Shape, Map<string, Profile>>();
 
-function profileOf(sh: Shape, bw: number, bh: number, deg: number, flip: boolean): Profile {
+export function profileOf(sh: Shape, bw: number, bh: number, deg: number, flip: boolean): Profile {
   let per = profiles.get(sh);
   if (!per) {
     per = new Map();
