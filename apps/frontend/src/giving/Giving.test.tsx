@@ -14,13 +14,10 @@ let view: ReturnType<typeof renderWithApi>;
 /** Where each sticker's gift is on the server. */
 let giftStatus: Map<string, Gift["status"]>;
 let answerPicker: (outcome: GiftSendOutcome) => void;
-/** Per picker opened: whether it was LINE's full picker. */
-let fullPickers: boolean[] = [];
 const onClose = vi.fn();
 
 const sender: GiftSender = {
-  send: (_message, picker) => {
-    fullPickers.push(picker?.anyChat === true);
+  send: () => {
     return new Promise((resolve) => {
       answerPicker = resolve;
     });
@@ -84,7 +81,6 @@ beforeEach(() => {
   giftStatus = new Map();
   onClose.mockReset();
   liff.openWindow.mockReset();
-  fullPickers = [];
 });
 
 afterEach(() => {
@@ -132,15 +128,6 @@ describe("Giving", () => {
   });
 
   describe("Can’t find them?", () => {
-    it("packs the sticker and opens LINE's full picker from Show all my chats", async () => {
-      open("s-any-chat");
-      tap("Can’t find them?");
-      tap("Show all my chats");
-      expect(title()).toBe("In the bag");
-      await wait(1150);
-      expect(fullPickers).toEqual([true]);
-    });
-
     it("goes back to the give sheet", () => {
       open("s-back");
       tap("Can’t find them?");

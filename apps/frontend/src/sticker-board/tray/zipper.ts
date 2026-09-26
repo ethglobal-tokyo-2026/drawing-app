@@ -291,8 +291,8 @@ const SHAKE: readonly (readonly [number, number])[] = [
 const SHAKE_MS = 85;
 /** One motion sample swings the pull, jiggles the slider sideways and stutters it along the track. */
 const NUDGE = { swingX: 24, swingY: 4, jiggle: 4.2, stutter: 2.6 };
-/** Motion under this, in m/s², is the hand's tremor or a tap on the screen, and is ignored. */
-const MOTION_MIN = 2.5;
+/** Motion under this, in m/s², is the hand's tremor and is ignored. */
+const MOTION_MIN = 0.7;
 /** Where the browser reports acceleration only with gravity, a slow average stands in for gravity. */
 const GRAVITY_SMOOTHING = 0.9;
 
