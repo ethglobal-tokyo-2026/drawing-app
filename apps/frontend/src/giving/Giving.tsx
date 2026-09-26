@@ -152,8 +152,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
         {bag(sealed ? "sealed" : "open", state.sentAt)}
         <h2 className="giving__title">{title}</h2>
         <p className="giving__sub">
-          It’s in your LINE chat now, and the message opens once. When they accept, you’ll see who
-          opened it.
+          It’s in your LINE chat now. Its outline stays on your board, where it sat.
         </p>
         {state.recordError && (
           <p className="giving__problem" role="alert">
@@ -184,16 +183,8 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
           : [];
     content = (
       <>
+        {/* Take it out is the quiet link under the key, its one control. */}
         <header className="giving__head">
-          <button
-            type="button"
-            className="giving__icon-btn giving__icon-btn--back"
-            onClick={() => flow?.takeOut()}
-            disabled={busy}
-            aria-label="Take it out"
-          >
-            <ArrowUUpLeft size={20} />
-          </button>
           <h2 className="giving__title">{title}</h2>
         </header>
         <p className="giving__sub">
