@@ -3,12 +3,16 @@ import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from 
 import { createPortal } from "react-dom";
 import type { StickerGiftStatus } from "../giving/giftStore";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
-import { formatClock, formatDay, formatHandle, formatNo } from "../stickers/format";
+import { Duration } from "../stickers/Duration";
+import { formatDay, formatHandle, formatNo } from "../stickers/format";
+import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { Key } from "../ui/Key";
+import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import type { BoardSticker } from "./boardSticker";
+import { useDetailLift } from "./detailLift";
 import { swipeLock, swipeTo } from "./detailPaging";
 import "./sticker-detail.css";
 
@@ -28,6 +32,8 @@ interface Props {
   onGive?: (sticker: BoardSticker) => void;
   /** Where focus goes once it closes, when that isn't back to what opened it. */
   returnFocus?: () => HTMLElement | null;
+  /** Where a sticker sits on the board, which it lifts off from and sticks back onto. */
+  originOf?: (id: string) => HTMLElement | null;
 }
 
 interface Swipe {
@@ -54,8 +60,10 @@ export function StickerDetail({
   onClose,
   onGive,
   returnFocus,
+  originOf,
 }: Props) {
   const reduced = useReducedMotion();
+  useLight();
   const [shownId, setShownId] = useState(startId);
   const index = Math.max(
     0,
@@ -71,7 +79,16 @@ export function StickerDetail({
   /** The side the next sticker enters from: 1 from the right, -1 from the left. */
   const enterFrom = useRef(0);
 
-  useFocusTrap(root, { onEscape: onClose, returnFocus });
+  const close = useDetailLift({
+    root,
+    sticker,
+    originOf,
+    given: mode === "given",
+    reduced,
+    onClose,
+  });
+  useBackToClose(true, close);
+  useFocusTrap(root, { onEscape: close, returnFocus });
 
   // LINE's header shows the page title.
   const no = sticker?.no;
@@ -159,7 +176,7 @@ export function StickerDetail({
       className="sticker-detail"
       role="dialog"
       aria-modal="true"
-      aria-label="Sticker"
+      aria-label={sticker ? formatNo(sticker.no) : "Sticker"}
       tabIndex={-1}
       onKeyDown={(e) => {
         if (e.altKey || e.ctrlKey || e.metaKey) return;
@@ -168,7 +185,7 @@ export function StickerDetail({
       }}
     >
       <header className="sticker-detail__top">
-        <button type="button" className="sticker-detail__back" onClick={onClose}>
+        <button type="button" className="sticker-detail__back" onClick={close}>
           <StickerBoardIcon size={18} />
           <span>Sticker board</span>
         </button>
@@ -247,8 +264,7 @@ export function StickerDetail({
               <p className="fine sticker-detail__fine-print">
                 <span className="sticker-detail__by">by {formatHandle(handle)}</span>{" "}
                 <span>
-                  · <span className="visually-hidden">drawn in </span>
-                  {formatClock(sticker.timeUsed)}
+                  · drawn in <Duration seconds={sticker.timeUsed} />
                 </span>{" "}
                 <span>· {formatDay(sticker.createdAt)}</span>
               </p>

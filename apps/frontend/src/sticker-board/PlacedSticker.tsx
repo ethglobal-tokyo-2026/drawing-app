@@ -1,6 +1,6 @@
 import { ArrowClockwise } from "@phosphor-icons/react";
 import { memo, useEffectEvent, useLayoutEffect, useRef } from "react";
-import { formatClock, formatNo } from "../stickers/format";
+import { formatNo, spokenDuration } from "../stickers/format";
 import { useFold } from "../stickers/liftedCorner";
 import { playStick } from "../stickers/stick";
 import { StickerFigure } from "../stickers/StickerFigure";
@@ -25,6 +25,12 @@ interface Props {
   landing: boolean;
   onLanded: () => void;
   reduced: boolean;
+  /** Whether it's the stickers' one Tab stop. */
+  tabbable: boolean;
+  /** Its place in reading order, as a screen reader says it: "3 of 6". */
+  position: string;
+  /** What the keys do to it, which changes once it's selected. */
+  hintId: string;
   /** Drawn by someone other than the board's owner: it wears foil. */
   foil?: boolean;
   /** Its gratitude glow, from 0 (none) to 1 (brightest). */
@@ -32,8 +38,6 @@ interface Props {
 }
 
 const CORNERS = ["nw", "ne", "sw", "se"] as const;
-const SELECTED_HINT =
-  "selected. Enter opens it, Delete removes it from the board, arrow keys move it, [ and ] turn it, minus and plus resize it";
 
 /**
  * A sticker at its placement on the board. Memoized: a gesture's start and end re-render the board,
@@ -51,6 +55,9 @@ export const PlacedSticker = memo(function PlacedSticker({
   landing,
   onLanded,
   reduced,
+  tabbable,
+  position,
+  hintId,
   foil = false,
   glow = 0,
 }: Props) {
@@ -85,15 +92,16 @@ export const PlacedSticker = memo(function PlacedSticker({
     foil && "is-foiled",
     glow > 0 && "is-glowing",
   ];
-  const label = `${formatNo(sticker.no)}, drawn in ${formatClock(sticker.timeUsed)}`;
   return (
     <div
       className={classes.filter(Boolean).join(" ")}
       data-sticker-id={sticker.id}
       role="button"
       aria-roledescription="sticker"
-      tabIndex={0}
-      aria-label={selected ? `${label}, ${SELECTED_HINT}` : label}
+      aria-pressed={selected}
+      tabIndex={tabbable ? 0 : -1}
+      aria-label={`${formatNo(sticker.no)}, drawn in ${spokenDuration(sticker.timeUsed)}, ${position}`}
+      aria-describedby={hintId}
       style={{
         width: box.w,
         height: box.h,

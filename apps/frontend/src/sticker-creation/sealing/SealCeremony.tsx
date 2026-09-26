@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useLight } from "../../stickers/light";
 import { LiveResin } from "../../stickers/LiveResin";
 import { sweepSheen } from "../../stickers/resinSheen";
 import type { StickerRecord } from "../../stickers/stickerStorage";
@@ -82,6 +83,7 @@ export function SealCeremony({
   onGetTickets,
 }: Props) {
   const reduced = useReducedMotion();
+  useLight();
   const [done, setDone] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const skip = useRef<() => void>(() => {});

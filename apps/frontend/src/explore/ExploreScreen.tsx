@@ -7,7 +7,8 @@ import { ARTISTS, artistByHandle, latestArt, type Artist } from "../artists/demo
 import { LabelButton } from "../ui/LabelButton";
 import { useToast } from "../ui/useToast";
 import { useIdentity } from "../identity/useIdentity";
-import { formatClock, formatNo } from "../stickers/format";
+import { Duration } from "../stickers/Duration";
+import { formatNo } from "../stickers/format";
 import { deviceGiftStore, giftStatusBySticker } from "../giving/giftStore";
 import { listStickers } from "../stickers/stickerStorage";
 import {
@@ -249,7 +250,7 @@ function FeedPost({ item, me, open }: { item: FeedItem; me: RowArtist; open: (wh
       </Pressable>
       <ArtistArt art={latestArt(artist)} className="feed-art" />
       <p className="fine muted feed-meta">
-        {formatNo(item.no)} · {formatClock(item.timeUsed)} · @{artist.handle}
+        {formatNo(item.no)} · <Duration seconds={item.timeUsed} /> · @{artist.handle}
       </p>
     </article>
   );

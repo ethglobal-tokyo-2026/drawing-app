@@ -1,4 +1,4 @@
-import { QrCode, ShareNetwork } from "@phosphor-icons/react";
+import { SignOut } from "@phosphor-icons/react";
 import { useState, type Ref } from "react";
 import type { StickerGiftStatus } from "../../giving/giftStore";
 import { retryPrivySignIn, usePrivyStatus, type PrivyStatus } from "../../identity/privy";
@@ -14,11 +14,14 @@ import { nextRefill, ticketDay } from "../../tickets/tickets";
 import { LabelButton } from "../../ui/LabelButton";
 import { PhotoSticker } from "../../ui/PhotoSticker";
 import { QuietLink } from "../../ui/QuietLink";
-import { useToast } from "../../ui/useToast";
-import { BoardQrSheet } from "./BoardQrSheet";
-import { shareBoard } from "./shareBoard";
 import { StatCork, type CorkFigures, type StatCorkHandle } from "./StatCork";
-import { streakOf } from "./userStats";
+import { joinedAt, streakOf } from "./userStats";
+
+// The developer slip, LINE's and Privy's details for testing them from the board. The dev server shows
+// it unless `.env` says "off"; a build shows it only when it's "on".
+const DEV_SLIP = import.meta.env.VITE_DEV_SLIP
+  ? import.meta.env.VITE_DEV_SLIP === "on"
+  : import.meta.env.DEV;
 
 export type StatBoardHandle = StatCorkHandle;
 
@@ -37,9 +40,7 @@ interface Props {
  */
 export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Props) {
   const me = useIdentity();
-  const toast = useToast();
-  const [qrOpen, setQrOpen] = useState(false);
-  const [since] = useState(() => firstSeen());
+  const [firstVisit] = useState(firstSeen);
 
   const now = new Date();
   const streak =
@@ -64,37 +65,30 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
     stamps: { made: stickers && stickers.length, received: 0, given },
     bestCombo: null,
     mostThanksInADay: null,
-    since,
+    since: joinedAt(firstVisit, stickers ?? []),
   };
 
   return (
-    <>
-      <StatCork
-        ref={ref}
-        figures={figures}
-        onFlipBack={onFlipBack}
-        flipBackRef={flipBackRef}
-        onEscape={() => {
-          if (!qrOpen) return false;
-          setQrOpen(false);
-          return true;
-        }}
-        controls={
-          <>
-            <LabelButton
-              tone="aqua"
-              size="sm"
-              icon={<ShareNetwork />}
-              onClick={() => void shareBoard(me, toast)}
-            >
-              Share my board
-            </LabelButton>
-            <LabelButton size="sm" icon={<QrCode />} onClick={() => setQrOpen(true)}>
-              QR code
-            </LabelButton>
-          </>
-        }
-      >
+    <StatCork
+      ref={ref}
+      figures={figures}
+      onFlipBack={onFlipBack}
+      flipBackRef={flipBackRef}
+      afterFlipBack={
+        // Outside LINE's app it's the only way to switch LINE accounts, so it's never behind the dev flag.
+        !me.inClient && (
+          <LabelButton
+            size="sm"
+            icon={<SignOut />}
+            className="stat-board__logout"
+            onClick={lineLogout}
+          >
+            Log out of LINE
+          </LabelButton>
+        )
+      }
+    >
+      {DEV_SLIP && (
         <section className="stat-board__note stat-board__slip" aria-label="LINE and Privy">
           <div className="stat-board__paper">
             <h3 className="fine stat-board__slip-h">LINE and Privy</h3>
@@ -102,18 +96,11 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
             <LineDetails />
             <PrivyLine />
             <PrivyAccount />
-            {/* Outside LINE's app it's the only way to switch LINE accounts. */}
-            {!me.inClient && (
-              <QuietLink className="stat-board__logout" onClick={lineLogout}>
-                Log out of LINE
-              </QuietLink>
-            )}
           </div>
           <i className="stat-board__washi" aria-hidden />
         </section>
-      </StatCork>
-      <BoardQrSheet open={qrOpen} onClose={() => setQrOpen(false)} />
-    </>
+      )}
+    </StatCork>
   );
 }
 
@@ -135,7 +122,7 @@ function PrivyLine() {
   const privy = usePrivyStatus();
   return (
     <div className="stat-board__privy">
-      <p className="fine">{privyText(privy)}</p>
+      <p className="stat-board__privy-status">{privyText(privy)}</p>
       {privy.state === "failed" && <QuietLink onClick={retryPrivySignIn}>Try again</QuietLink>}
     </div>
   );

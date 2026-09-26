@@ -187,7 +187,7 @@ pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
 - `packages/db` — Drizzle schema and typed database client (`@drawing-app/db`)
 - `docs/database-schema-and-rest-api.md` — the planned database schema and REST API, for UI work until they're built; delete it then and point here at `packages/db` and the API
 - `packages/*` — shared workspace packages
-- `deploy/` — `./deploy/deploy.sh` builds the frontend and the LINE → Privy auth server (`packages/sticker-chain`), publishes both behind the LIFF app's endpoint, then checks the box and the public URL serve them; the box's login goes in the gitignored `deploy/.env`, and the auth server's signing key stays on the box
+- `deploy/` — `./deploy/deploy.sh` builds the frontend and the LINE → Privy auth server (`packages/sticker-chain`), publishes both behind the LIFF app's endpoint, then checks the box and the public URL serve them; the box's login and the chat menu switch's secrets go in the gitignored `deploy/.env`, and the auth server's signing key stays on the box. `deploy/line/` holds the returning-user chat menu and `create-returning-menu.sh`, which makes it in LINE; a menu's image can't be replaced, so a new image means a new menu and a new ID in `deploy/sticker-auth.env`
 
 ### Toolchain
 

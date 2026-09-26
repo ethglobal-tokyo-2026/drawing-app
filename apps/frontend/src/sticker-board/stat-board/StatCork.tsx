@@ -48,8 +48,8 @@ interface Props {
   flipBackRef: Ref<HTMLButtonElement>;
   /** Escape closes this first when it returns true, before flipping back. */
   onEscape?: () => boolean;
-  /** Labels above Flip back, such as sharing your own board. */
-  controls?: ReactNode;
+  /** Labels under Flip back, such as logging out of LINE on your own board. */
+  afterFlipBack?: ReactNode;
   /** Paper pinned below the stats, such as your LINE and Privy details. */
   children?: ReactNode;
   ref?: Ref<StatCorkHandle>;
@@ -100,7 +100,7 @@ export function StatCork({
   onFlipBack,
   flipBackRef,
   onEscape,
-  controls,
+  afterFlipBack,
   children,
   ref,
 }: Props) {
@@ -132,10 +132,14 @@ export function StatCork({
     if (e.target instanceof Element && !e.target.closest(ON_CORK)) onFlipBack();
   };
 
-  // A tap on a note's paper nudges it; its controls press without moving it.
+  // A tap on a note's paper nudges it. Its controls press, and its selectable text selects, without
+  // moving it.
   const nudge = (e: PointerEvent<HTMLDivElement>) => {
-    if (reduced || !(e.target instanceof Element) || e.target.closest("button")) return;
-    const note = e.target.closest(".stat-board__note");
+    const target = e.target;
+    if (reduced || !(target instanceof Element) || target.closest("button, a")) return;
+    const style = getComputedStyle(target);
+    if ((style.userSelect || style.getPropertyValue("-webkit-user-select")) === "text") return;
+    const note = target.closest(".stat-board__note");
     const paper = note?.querySelector(":scope > .stat-board__paper");
     if (note && paper) swing(paper, note.classList.contains("stat-board__scrap") ? 0.45 : 0.6);
   };
@@ -322,7 +326,6 @@ export function StatCork({
               ))}
             </div>
 
-            {controls && <div className="stat-board__share">{controls}</div>}
             <LabelButton
               ref={flipBackRef}
               size="sm"
@@ -332,6 +335,7 @@ export function StatCork({
             >
               Flip back
             </LabelButton>
+            {afterFlipBack}
           </div>
         </div>
 

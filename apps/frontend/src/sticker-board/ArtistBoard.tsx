@@ -1,5 +1,14 @@
 import { CaretLeft, Eye, Gift, Handshake } from "@phosphor-icons/react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent,
+} from "react";
 import { ArtistAvatarArt } from "../artists/ArtistAvatarArt";
 import { ART_SIZE, avatarUrl, stickerArtUrl } from "../artists/artUrl";
 import {
@@ -10,7 +19,8 @@ import {
 } from "../artists/demoArtists";
 import { GiveSheet } from "../giving/GiveSheet";
 import { OfferSheet } from "../offers/OfferSheet";
-import { formatClock, formatHandle, formatNo } from "../stickers/format";
+import { Duration } from "../stickers/Duration";
+import { formatHandle, formatNo } from "../stickers/format";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
@@ -98,7 +108,7 @@ function StickerView({
         />
         <h2>{formatNo(sticker.no)}</h2>
         <div className="visit-view-meta fine">
-          Drawn in {formatClock(sticker.timeUsed)} · {formatHandle(sticker.by ?? owner)}
+          Drawn in <Duration seconds={sticker.timeUsed} /> · {formatHandle(sticker.by ?? owner)}
         </div>
         {sticker.by && <ArtistChip handle={sticker.by} />}
         <div className="visit-view-perf" />
@@ -135,6 +145,7 @@ const figuresOf = (artist: Artist): CorkFigures => {
  */
 export function ArtistBoard({ artist, onBack }: Props) {
   const reduced = useReducedMotion();
+  const hint = useId();
   const face = useRef<HTMLDivElement>(null);
   const nameButton = useRef<HTMLButtonElement>(null);
   const flipBack = useRef<HTMLButtonElement>(null);
@@ -195,10 +206,17 @@ export function ArtistBoard({ artist, onBack }: Props) {
     setTurned(over);
   };
 
-  const onStageClick = (e: MouseEvent<HTMLDivElement>) => {
-    const el = e.target instanceof Element ? e.target.closest("[data-sticker-id]") : null;
+  const toggleMenu = (target: EventTarget) => {
+    const el = target instanceof Element ? target.closest("[data-sticker-id]") : null;
     const i = el ? stickers.findIndex((s) => s.id === el.getAttribute("data-sticker-id")) : -1;
     setSelected(i < 0 || i === selected ? null : i);
+  };
+  const onStageClick = (e: MouseEvent<HTMLDivElement>) => toggleMenu(e.target);
+  // Read only, so every sticker is a Tab stop and Enter or Space opens its menu.
+  const onStageKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    e.preventDefault();
+    toggleMenu(e.target);
   };
 
   const menuSpot = (s: ArtistBoardSticker) => {
@@ -218,7 +236,11 @@ export function ArtistBoard({ artist, onBack }: Props) {
         role="region"
         aria-label={`${formatHandle(artist.handle)}'s sticker board`}
         onClick={onStageClick}
+        onKeyDown={onStageKeyDown}
       >
+        <span id={hint} hidden>
+          Enter opens its menu: view it, or offer for it
+        </span>
         {artist.board.length === 0 && (
           <div className="board-blank">
             <span className="board-blank-cut" aria-hidden />
@@ -242,6 +264,9 @@ export function ArtistBoard({ artist, onBack }: Props) {
               landing={false}
               onLanded={() => {}}
               reduced={reduced}
+              tabbable
+              position={`${i + 1} of ${stickers.length}`}
+              hintId={hint}
               foil={Boolean(artist.board[i].by)}
               glow={Math.min(artist.board[i].gratitude / FULL_GLOW, 1)}
             />

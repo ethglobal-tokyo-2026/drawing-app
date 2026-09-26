@@ -1,3 +1,11 @@
+/**
+ * When you joined, as far as this browser can tell: the earlier of its first visit and your oldest
+ * sticker, since the visit's record can be newer than stickers already on the board.
+ */
+export function joinedAt(firstVisit: number, stickers: readonly { createdAt: number }[]): number {
+  return stickers.reduce((earliest, sticker) => Math.min(earliest, sticker.createdAt), firstVisit);
+}
+
 export interface Streak {
   current: number;
   /** The highest the streak has been. */

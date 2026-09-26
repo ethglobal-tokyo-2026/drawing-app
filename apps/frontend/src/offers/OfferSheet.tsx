@@ -8,7 +8,8 @@ import { StickerPicker } from "../giving/StickerPicker";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Sheet } from "../ui/Sheet";
 import { useFocusTrap } from "../ui/useFocusTrap";
-import { formatClock, formatDay, formatNo } from "../stickers/format";
+import { Duration } from "../stickers/Duration";
+import { formatDay, formatNo } from "../stickers/format";
 import { useKeptStickers } from "../stickers/useKeptStickers";
 import "../giving/give-sheet.css";
 import "./offers.css";
@@ -103,7 +104,7 @@ export function OfferSheet({ sticker, holder, onClose }: Props) {
               <div className="offer-subject">
                 <ArtistArt art={sticker.art} className="offer-art" />
                 <p className="fine sheet-fine">
-                  {formatNo(sticker.no)} · {formatClock(sticker.timeUsed)} ·{" "}
+                  {formatNo(sticker.no)} · <Duration seconds={sticker.timeUsed} /> ·{" "}
                   {formatDay(sticker.sealedAt)}
                   <br />
                   By @{sticker.by ?? handle} · @{handle} holds it

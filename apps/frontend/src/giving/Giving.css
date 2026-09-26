@@ -144,11 +144,6 @@
   inset: -3px;
 }
 
-.giving__icon-btn--back {
-  margin-left: -10px;
-  color: var(--ink);
-}
-
 .giving__icon-btn:focus-visible,
 .giving__row:focus-visible {
   outline: 2px solid var(--ink);

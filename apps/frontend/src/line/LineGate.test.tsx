@@ -70,10 +70,10 @@ describe("LineGate", () => {
     expect(host.textContent).toContain("Log in with LINE");
   });
 
-  it("ends a start LINE never answers on the error screen, not a blank page", async () => {
+  it("says it's opening while LINE starts, and ends a start LINE never answers on the error screen", async () => {
     liff.init.mockReturnValue(new Promise(() => {}));
     await openApp();
-    expect(host.textContent).toBe("");
+    expect(host.querySelector('[role="status"]')?.textContent).toBeTruthy();
     await act(() => vi.advanceTimersByTimeAsync(60_000));
     expect(host.textContent).toContain("LINE didn’t start");
     expect(host.textContent).toContain("Try again");

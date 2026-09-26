@@ -94,6 +94,16 @@ describe("History", () => {
     expect(history.canUndo || history.canRedo).toBe(false);
   });
 
+  it("loads kept ops in place of the sheet, with nothing to redo, and undoes through them", () => {
+    const { surface, history } = setup([stroke("x"), stroke("y")], 5);
+    history.undo();
+    history.load([stroke("a"), fill("b"), stroke("c")]);
+    expect(surface.drawn).toEqual(["a", "b", "c"]);
+    expect(history.canRedo).toBe(false);
+    history.undo();
+    expect(surface.drawn).toEqual(["a", "b"]);
+  });
+
   it("repaints every op after a resize", () => {
     const { surface, history } = setup(strokes(7), 5);
     surface.restore(null);

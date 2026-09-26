@@ -1,22 +1,50 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { installLight } from "./light";
+import { acquireLight, installLight } from "./light";
 
 const root = document.documentElement;
 let uninstall = () => {};
+/** The tilt listeners on the window: the phone's motion sensor runs while there are any. */
+const tiltListeners = new Set<EventListenerOrEventListenerObject>();
+/** The light's holds a test hasn't released, released after it. */
+const held = new Set<() => void>();
 
 const lightAt = () => [root.style.getPropertyValue("--lx"), root.style.getPropertyValue("--ly")];
 const pointAt = (x: number, y: number) =>
   window.dispatchEvent(new PointerEvent("pointermove", { clientX: x, clientY: y }));
+const tiltTo = (gamma: number, beta: number) =>
+  window.dispatchEvent(Object.assign(new Event("deviceorientation"), { gamma, beta }));
+/** A screen with stickers showing: it holds the light, and returns what closes it. */
+const showScreen = () => {
+  const release = acquireLight();
+  held.add(release);
+  return () => {
+    held.delete(release);
+    release();
+  };
+};
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance"] });
   root.style.removeProperty("--lx");
   root.style.removeProperty("--ly");
+  const add = window.addEventListener.bind(window);
+  const remove = window.removeEventListener.bind(window);
+  vi.spyOn(window, "addEventListener").mockImplementation((type, listener, options) => {
+    if (type === "deviceorientation") tiltListeners.add(listener);
+    add(type, listener, options);
+  });
+  vi.spyOn(window, "removeEventListener").mockImplementation((type, listener, options) => {
+    if (type === "deviceorientation") tiltListeners.delete(listener);
+    remove(type, listener, options);
+  });
 });
 
 afterEach(() => {
+  held.forEach((release) => release());
+  held.clear();
   uninstall();
+  tiltListeners.clear();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.useRealTimers();
@@ -42,7 +70,7 @@ describe("the shared light", () => {
     expect(writes.mock.calls.filter(([name]) => name === "--lx")).toEqual([["--lx", "1.000"]]);
   });
 
-  it("follows the phone's tilt where the browser shares it, even one that can also ask", () => {
+  it("follows the phone's tilt on a screen with stickers, even in a browser that can also ask", () => {
     // Chrome has requestPermission too, and grants it without asking.
     vi.stubGlobal(
       "DeviceOrientationEvent",
@@ -51,8 +79,34 @@ describe("the shared light", () => {
       },
     );
     uninstall = installLight(root);
-    window.dispatchEvent(Object.assign(new Event("deviceorientation"), { gamma: 32, beta: 40 }));
+    showScreen();
+    tiltTo(32, 40);
     vi.advanceTimersByTime(16);
+    expect(lightAt()).toEqual(["1.000", "0.000"]);
+  });
+
+  it("leaves the motion sensor off while no screen shows stickers", () => {
+    uninstall = installLight(root);
+    tiltTo(32, 40);
+    vi.advanceTimersByTime(16);
+    expect(lightAt()).toEqual(["", ""]);
+    expect(tiltListeners.size).toBe(0);
+  });
+
+  it("stops listening for the tilt when the last screen with stickers goes", () => {
+    uninstall = installLight(root);
+    const closeBoard = showScreen();
+    const closeDetail = showScreen();
+    closeDetail();
+    expect(tiltListeners.size).toBe(1);
+    tiltTo(32, 40);
+    vi.advanceTimersByTime(16);
+    expect(lightAt()).toEqual(["1.000", "0.000"]);
+
+    closeBoard();
+    expect(tiltListeners.size).toBe(0);
+    tiltTo(-32, 40);
+    vi.advanceTimersByTime(100);
     expect(lightAt()).toEqual(["1.000", "0.000"]);
   });
 

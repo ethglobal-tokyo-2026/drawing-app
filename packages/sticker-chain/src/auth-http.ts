@@ -1,9 +1,17 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { LineMenuSwitchError, type LineMenuFailure, type SwitchLineMenu } from "./line-menu.js";
 import type { LinePrivyJwtIssuer } from "./line-privy-jwt.js";
 
-interface ErrorLogger {
+interface Logger {
+  info: (message: string) => void;
   error: (message: string, details: { error: unknown }) => void;
 }
+
+const LINE_MENU_FAILURE_STATUS: Record<LineMenuFailure, number> = {
+  line_auth_failed: 401,
+  privy_lookup_failed: 502,
+  line_menu_link_failed: 502,
+};
 
 function sendJson(
   response: ServerResponse,
@@ -19,7 +27,7 @@ function sendJson(
   response.end(JSON.stringify(body));
 }
 
-async function readJson(request: IncomingMessage) {
+async function readIdToken(request: IncomingMessage) {
   if (!request.headers["content-type"]?.startsWith("application/json")) {
     throw new Error("JSON content type is required");
   }
@@ -33,26 +41,66 @@ async function readJson(request: IncomingMessage) {
     throw new Error("JSON body must be an object");
   }
   const idToken: unknown = Reflect.get(parsed, "idToken");
-  return { idToken };
+  if (typeof idToken !== "string") throw new Error("idToken is required");
+  return idToken;
 }
 
 export function createAuthHttpServer({
   issuer,
+  switchLineMenu,
   appOrigin,
   logger = console,
 }: {
   issuer: LinePrivyJwtIssuer;
+  /** Absent when the server lacks the menu switch's credentials or menu ID. */
+  switchLineMenu?: SwitchLineMenu;
   appOrigin: string;
-  logger?: ErrorLogger;
+  logger?: Logger;
 }) {
   if (!appOrigin) throw new Error("APP_ORIGIN is required");
+
+  async function answerPrivyJwt(request: IncomingMessage, response: ServerResponse) {
+    try {
+      const { jwt, expiresAt } = await issuer.issue(await readIdToken(request));
+      sendJson(response, 200, { jwt, expiresAt });
+    } catch (error) {
+      logger.error("LINE authentication failed", { error });
+      sendJson(response, 401, { error: "line_auth_failed" });
+    }
+  }
+
+  async function answerLineMenu(request: IncomingMessage, response: ServerResponse) {
+    if (!switchLineMenu) {
+      sendJson(response, 503, { error: "menu_switching_off" });
+      return;
+    }
+    try {
+      const outcome = await switchLineMenu(await readIdToken(request));
+      logger.info(
+        `LINE chat menu: ${outcome.menu === "returning" ? "returning" : `new, ${outcome.reason}`}`,
+      );
+      sendJson(response, 200, outcome);
+    } catch (error) {
+      logger.error("LINE chat menu switch failed", { error });
+      // A request without a readable ID token fails LINE authentication, as it does for privy-jwt.
+      const failure = error instanceof LineMenuSwitchError ? error.failure : "line_auth_failed";
+      sendJson(response, LINE_MENU_FAILURE_STATUS[failure], { error: failure });
+    }
+  }
+
+  const postRoutes = new Map([
+    ["/v1/auth/privy-jwt", answerPrivyJwt],
+    ["/v1/auth/line-menu", answerLineMenu],
+  ]);
+
   return createServer(async (request, response) => {
     const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
     if (request.method === "GET" && pathname === "/.well-known/jwks.json") {
       sendJson(response, 200, issuer.jwks, { "cache-control": "public, max-age=300" });
       return;
     }
-    if (request.method !== "POST" || pathname !== "/v1/auth/privy-jwt") {
+    const answer = request.method === "POST" ? postRoutes.get(pathname) : undefined;
+    if (!answer) {
       sendJson(response, 404, { error: "not_found" });
       return;
     }
@@ -60,14 +108,6 @@ export function createAuthHttpServer({
       sendJson(response, 403, { error: "origin_not_allowed" });
       return;
     }
-    try {
-      const { idToken } = await readJson(request);
-      if (typeof idToken !== "string") throw new Error("idToken is required");
-      const { jwt, expiresAt } = await issuer.issue(idToken);
-      sendJson(response, 200, { jwt, expiresAt });
-    } catch (error) {
-      logger.error("LINE authentication failed", { error });
-      sendJson(response, 401, { error: "line_auth_failed" });
-    }
+    await answer(request, response);
   });
 }

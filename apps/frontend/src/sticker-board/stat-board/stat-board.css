@@ -80,18 +80,16 @@
   display: none;
 }
 
-/* The stats fill the first screen, as in the drafts, so Flip back rides at its foot; the LINE and
-   Privy slip waits below. */
+/* The stats are pinned up together, so Flip back ends the right column level with the left one's
+   foot rather than across a stretch of bare cork. */
 .stat-board__stats {
   display: grid;
-  /* The right column keeps the room its labels need; a narrow phone takes it from the left. */
-  grid-template-columns: minmax(0, 206px) minmax(144px, 1fr);
-  grid-template-rows: auto 1fr;
+  /* The right column keeps the stamps' width; a narrow phone takes the rest from the left. */
+  grid-template-columns: minmax(0, 206px) minmax(138px, 1fr);
   grid-template-areas:
     "who who"
     "a b";
   gap: 16px 12px;
-  min-height: 100%;
 }
 
 .stat-board__col {
@@ -558,10 +556,27 @@
   white-space: nowrap;
 }
 
-/* A narrow phone's left column: each best sits under its name rather than squeezing it. */
-@container (max-width: 157px) {
+/* A column narrower than the drafts' keeps each best's name on one line: its value moves under it,
+   at the right, only when the two don't fit side by side. */
+@container (max-width: 205px) {
   .stat-board__scrap-rows > div {
-    grid-template-columns: minmax(0, 1fr);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+  }
+
+  .stat-board__scrap-rows dt {
+    flex: 1 1 auto;
+    min-width: auto;
+  }
+
+  /* Best combo's note wraps in the room its name leaves, rather than widening the name. */
+  .stat-board__scrap-rows dt small {
+    contain: inline-size;
+  }
+
+  .stat-board__scrap-rows dd {
+    margin-left: auto;
   }
 }
 
@@ -651,39 +666,23 @@
   }
 }
 
-/* What you can do with your board, and the way back, as label stock on the cork. */
-.stat-board__share {
-  display: grid;
-  justify-items: stretch;
-  gap: 10px;
-  width: 100%;
-  margin-top: 2px;
-}
-
-.stat-board__share .label-btn {
-  padding: 0 8px;
-}
-
-.stat-board__share .label-btn,
-.stat-board__flip-back {
-  gap: 8px;
-}
-
+/* The way back, as label stock on the cork. */
 .stat-board__flip-back {
   align-self: stretch;
+  gap: 8px;
   margin-top: auto;
 }
 
-/* LINE and Privy, for testing them from the board: a slip taped across the foot of the cork. */
+/* The developer slip: LINE's and Privy's details, on a slip taped across the foot of the cork. */
 .stat-board__slip {
-  margin-top: 30px;
+  margin-top: 28px;
   transform: rotate(-0.6deg);
 }
 
 .stat-board__slip > .stat-board__paper {
   display: grid;
   gap: 10px;
-  padding: 18px 16px 14px;
+  padding: 18px 16px 16px;
   clip-path: polygon(
     0 3px,
     8% 0,
@@ -720,26 +719,27 @@
 
 /* Far enough below Try again that their touch bands don't overlap. */
 .stat-board__logout {
-  justify-self: start;
-  margin-top: 4px;
+  align-self: stretch;
+  gap: 8px;
+  margin-top: 8px;
 }
 
+/* Privy's sign-in starts its own part of the slip, as a sentence with Try again after a failure. */
 .stat-board__privy {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   column-gap: 12px;
-  padding-top: 10px;
-  border-top: 1px dashed rgba(28, 24, 36, 0.3);
+  padding-top: 12px;
+  border-top: 1px dashed var(--rule-strong);
 }
 
-/* Privy's user ID is case-sensitive and a failure's reason can be long: both keep their case, wrap,
-   and can be copied into a report. */
-.stat-board__privy .fine {
+/* A failure's reason can be long: it wraps, and can be copied into a report. */
+.stat-board__privy-status {
   flex: 1 1 100%;
   margin: 0;
-  letter-spacing: 0.02em;
-  text-transform: none;
+  font: 500 14px/1.4 var(--font-ui);
+  font-stretch: var(--w-ui);
   overflow-wrap: anywhere;
   -webkit-user-select: text;
   user-select: text;

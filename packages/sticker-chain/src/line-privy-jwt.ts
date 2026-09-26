@@ -4,6 +4,12 @@ function encode(value: object) {
   return Buffer.from(JSON.stringify(value)).toString("base64url");
 }
 
+/** A LINE user's Privy user ID: scoped to the Login Channel, and never the raw LINE user ID. */
+export function privySubject(channelId: string, lineUserId: string): string {
+  const digest = createHash("sha256").update(channelId).update("\0").update(lineUserId);
+  return `line_${digest.digest("base64url")}`;
+}
+
 interface LinePrivyJwtIssuerOptions {
   verifyLineIdToken: (idToken: string) => Promise<{ sub: string }>;
   channelId: string;
@@ -50,11 +56,7 @@ export function createLinePrivyJwtIssuer({
   async function issue(lineIdToken: string) {
     const { sub } = await verifyLineIdToken(lineIdToken);
     if (!sub) throw new Error("LINE verification returned no user");
-    const subject = `line_${createHash("sha256")
-      .update(channelId)
-      .update("\0")
-      .update(sub)
-      .digest("base64url")}`;
+    const subject = privySubject(channelId, sub);
     const issuedAt = now();
     const header = { alg: "ES256", typ: "JWT", kid: keyId };
     const payload = {
