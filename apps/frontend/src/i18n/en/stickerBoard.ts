@@ -9,4 +9,10 @@ export const stickerBoard = {
       notKept: "The choice couldn't be kept: {{reason}}",
     },
   },
+  /** Beside the selected sticker on the board. */
+  toolbar: {
+    give: "Give",
+    view: "View",
+    remove: "Remove",
+  },
 } as const;
