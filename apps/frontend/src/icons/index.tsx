@@ -6,6 +6,7 @@ import {
   Handshake,
   Heart,
   Tag,
+  Ticket,
   TrayArrowDown,
   type IconProps,
 } from "@phosphor-icons/react";
@@ -39,6 +40,10 @@ export const ViewIcon = (props: IconProps) => <Eye aria-hidden focusable="false"
 export const OfferIcon = (props: IconProps) => (
   <Handshake aria-hidden focusable="false" {...props} />
 );
+/** Buying reserve tickets: every button that opens the reserve ticket checkout. */
+export const BuyTicketsIcon = (props: IconProps) => (
+  <Ticket aria-hidden focusable="false" {...props} />
+);
 /** Remove: a sticker off the board and back into the tray. */
 export const RemoveIcon = (props: IconProps) => (
   <TrayArrowDown aria-hidden focusable="false" {...props} />
@@ -53,6 +58,7 @@ export {
   ArrowSquareOut,
   ArrowsLeftRight,
   ArrowUUpLeft,
+  At,
   CaretDown,
   CaretLeft,
   CaretRight,
@@ -62,6 +68,7 @@ export {
   CheckFat,
   Circle,
   Clock,
+  Copy,
   Eraser,
   HandHeart,
   HandPointing,
@@ -71,7 +78,9 @@ export {
   Pause,
   Play,
   Question,
+  SignOut,
   SkipForward,
+  StarFour,
   Sticker,
   Stop,
   Vibrate,
