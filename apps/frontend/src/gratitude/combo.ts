@@ -191,7 +191,8 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
         tier: shownTier,
         secondsLeft,
         barFill: Math.min(1, secondsLeft / fullBar),
-        frozen: latest < frozenUntil,
+        // An ended combo's clock never moves again, so a freeze it ended inside would never lift.
+        frozen: phase !== "ended" && latest < frozenUntil,
       };
     },
 

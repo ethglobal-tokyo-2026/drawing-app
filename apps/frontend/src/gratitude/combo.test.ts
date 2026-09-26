@@ -112,6 +112,26 @@ describe("createGratitudeCombo", () => {
     });
   });
 
+  it("holds the combo clock through a tier-up's freeze, and lifts it when the combo ends", () => {
+    const { tierUpFreezeMs } = GAME_CONFIG;
+    const combo = createGratitudeCombo();
+    combo.tapHeart(0);
+    // The catch brings ありがと, a tier-up.
+    combo.tapHeart(300);
+    const { secondsLeft } = combo.view;
+    combo.advanceTo(300 + tierUpFreezeMs - 1);
+    expect(combo.view).toMatchObject({ frozen: true, secondsLeft });
+    combo.advanceTo(300 + tierUpFreezeMs + 100);
+    expect(combo.view.frozen).toBe(false);
+    expect(combo.view.secondsLeft).toBeLessThan(secondsLeft);
+
+    const endedInFreeze = createGratitudeCombo();
+    endedInFreeze.tapHeart(0);
+    endedInFreeze.tapHeart(300);
+    endedInFreeze.endCombo(300 + tierUpFreezeMs / 2);
+    expect(endedInFreeze.view).toMatchObject({ phase: "ended", frozen: false });
+  });
+
   it("ends without a record when closed before the first tap", () => {
     const combo = createGratitudeCombo();
     expect(combo.endCombo(100)).toEqual([]);
