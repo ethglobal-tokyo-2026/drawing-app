@@ -1,0 +1,445 @@
+/* ---------- Explore ---------- */
+
+.explore .muted {
+  color: var(--graphite);
+}
+
+.explore {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 16px 16px 28px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--liner);
+}
+
+/* White label stock with an aqua halo: the search sits on the page like a stuck-on label. */
+.artist-search {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 6px;
+  background: var(--canvas);
+  box-shadow: 0 0 0 4px var(--aqua-soft);
+}
+
+.artist-search:focus-within {
+  border-color: var(--aqua-deep);
+}
+
+.artist-search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.artist-search input::placeholder {
+  color: var(--graphite);
+}
+
+.artist-search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+.explore-section {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-head h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.012em;
+  font-stretch: var(--w-title);
+}
+
+.section-head .fine {
+  margin-left: auto;
+}
+
+/* A seal dot badge: today's date stuck on beside the title. */
+.date-badge {
+  padding: 3px 7px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--seal);
+  font-family: var(--font-puffy);
+  font-size: 12px;
+  line-height: 1;
+  rotate: -3deg;
+}
+
+/* ---------- Today's stickers ---------- */
+
+/* A strip that bleeds off the right edge, so there's always more to swipe. */
+.todays-stickers {
+  display: flex;
+  gap: 14px;
+  margin: 0 -16px 0 0;
+  padding: 14px 16px 12px 16px;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border: 1px solid var(--rule);
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+  background: var(--canvas);
+  box-shadow: var(--shadow-label);
+}
+
+.todays-stickers::-webkit-scrollbar {
+  display: none;
+}
+
+.today-sticker {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.today-art {
+  width: 72px;
+  height: 72px;
+}
+
+.todays-stickers li:nth-child(odd) .today-art {
+  rotate: -4deg;
+}
+
+.todays-stickers li:nth-child(even) .today-art {
+  rotate: 3deg;
+}
+
+.todays-stickers .fine {
+  color: var(--ink-soft);
+}
+
+/* ---------- This week ---------- */
+
+.leaderboard-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 8px;
+  background: var(--liner-deep);
+}
+
+.leaderboard-tabs button {
+  flex: 1;
+  height: 34px;
+  padding: 0 4px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--graphite);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+
+.leaderboard-tabs button.selected {
+  background: var(--pink);
+  color: var(--ink);
+  box-shadow: var(--shadow-label);
+}
+
+.leaderboard {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--liner-lift);
+  box-shadow: var(--shadow-label);
+}
+
+/* Rows, today's stickers and feed heads press 1px like a tile and open that artist's board. */
+.pressable {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  text-align: left;
+  touch-action: manipulation;
+}
+
+.artist-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 63px;
+  padding: 6px 16px 6px 14px;
+}
+
+.leaderboard li + li,
+.search-results li + li {
+  border-top: 1px solid var(--rule);
+}
+
+.leaderboard li.me {
+  background: var(--pink-soft);
+}
+
+.rank {
+  width: 24px;
+  flex: none;
+  text-align: center;
+  color: var(--graphite);
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+li.me .rank {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.row-art {
+  flex: none;
+  width: 44px;
+  height: 44px;
+}
+
+.row-names {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.row-names b {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.row-names span,
+.row-names b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-names span {
+  color: var(--graphite);
+  font-size: 13px;
+}
+
+.figure {
+  flex: none;
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 0.95;
+  font-variant-numeric: tabular-nums;
+  font-stretch: var(--w-figure);
+}
+
+.figure small {
+  margin-left: 3px;
+  color: var(--graphite);
+  font-size: 12px;
+  font-weight: 700;
+  font-stretch: var(--w-ui);
+}
+
+/* Ranks skipped between the top five and yours. */
+.rank-gap {
+  display: grid;
+  place-items: center;
+  height: 22px;
+  border-top: 1px solid var(--rule);
+  color: var(--graphite);
+  font-size: 11px;
+  letter-spacing: 0.3em;
+}
+
+.rank-gap::before {
+  content: "•••";
+}
+
+/* ---------- Search ---------- */
+
+.search-clear {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-right: -6px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--liner-deep);
+  color: var(--ink);
+}
+
+/* A 44px touch target around the 32px disc. */
+.search-clear::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+
+.results-count {
+  margin: 0 0 -6px;
+}
+
+.search-results {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-bottom: 1px solid var(--rule);
+}
+
+.search-results .artist-row {
+  padding: 10px 0;
+}
+
+.result-avatar {
+  width: 44px;
+  height: 44px;
+}
+
+.row-names mark {
+  padding: 0 1px;
+  border-radius: 3px;
+  background: var(--aqua-soft);
+  color: inherit;
+}
+
+.result-stickers {
+  flex: none;
+  display: flex;
+  align-items: center;
+}
+
+.result-sticker {
+  width: 32px;
+  height: 32px;
+}
+
+.result-sticker + .result-sticker {
+  margin-left: -8px;
+}
+
+.result-sticker:nth-child(2) {
+  rotate: 8deg;
+}
+
+.result-sticker:nth-child(3) {
+  rotate: -6deg;
+}
+
+.search-empty {
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.search-empty h2 {
+  margin: 8px 0 0;
+  font-size: 23px;
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  font-stretch: var(--w-title);
+}
+
+.search-empty p:not(.fine) {
+  max-width: 44ch;
+  font-size: 14px;
+  margin: 0;
+  color: var(--graphite);
+}
+
+.demo-note {
+  margin: 14px 0 0;
+}
+
+/* ---------- Feed ---------- */
+
+.feed {
+  gap: 0;
+}
+
+.feed-post {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18px 0 20px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.feed-head {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+
+.feed-head p {
+  flex: 1;
+  margin: 0;
+  font-size: 15px;
+}
+
+.feed-head b {
+  font-weight: 800;
+}
+
+/* The artist's picture in a pink ring. */
+.feed-avatar {
+  width: 34px;
+  height: 34px;
+  box-shadow:
+    0 0 0 1.5px var(--pink),
+    var(--shadow-label);
+}
+
+.feed-art {
+  width: 112px;
+  height: 112px;
+  margin: 16px 0 12px;
+  rotate: -3deg;
+}
+
+.feed-meta {
+  margin: 0;
+}

@@ -231,7 +231,9 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const givenSilhouettes = (stickers ?? []).flatMap((s) => {
     const gift = gifts.get(s.id);
     const mask = s.urls.mask;
-    return gift?.state === "sent" && mask ? [{ sticker: s, mask, sentAt: gift.sentAt }] : [];
+    return gift?.state === "sent" && mask
+      ? [{ sticker: s, mask, sentAt: gift.sentAt, to: gift.to }]
+      : [];
   });
   const field = useMemo(() => size && fieldOf(size.W, size.H), [size]);
   const landedNow = useCallback(() => setLandingId(undefined), []);

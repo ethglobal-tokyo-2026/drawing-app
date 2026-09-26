@@ -94,6 +94,24 @@
     opacity 170ms linear;
 }
 
+/* Foil: a sticker drawn by someone other than the board's owner wears a holo band past its edge. */
+.placed-sticker.is-foiled .sticker-figure__img {
+  filter: drop-shadow(3px 0 0 #ff8fd0) drop-shadow(-3px 0 0 #7fe0ff) drop-shadow(0 3px 0 #ffe27a)
+    drop-shadow(0 -3px 0 #b69cff) var(--sticker-cut) var(--sticker-cast);
+}
+
+/* Gratitude glows behind a sticker, warming from pink toward amber as more thanks arrive. */
+.placed-sticker.is-glowing .placed-sticker__lift {
+  filter: drop-shadow(
+    0 0 calc(6px + 12px * var(--glow))
+      color-mix(
+        in srgb,
+        color-mix(in srgb, #ff7eb6, #ffb13b calc(var(--glow) * 60%)) calc(var(--glow) * 90%),
+        transparent
+      )
+  );
+}
+
 /* In your hand it rides above everything on the board. */
 .placed-sticker.is-dragging {
   cursor: grabbing;
