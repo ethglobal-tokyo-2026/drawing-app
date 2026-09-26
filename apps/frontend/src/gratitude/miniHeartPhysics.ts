@@ -34,6 +34,14 @@ export interface MiniHeart {
   resting: boolean;
 }
 
+/** A stroke pass as it throws: the run end to end, where the thumb turned, and its speed in px/ms. */
+export interface StrokeThrow {
+  dx: number;
+  dy: number;
+  end: { x: number; y: number };
+  speed: number;
+}
+
 /**
  * Mini hearts, sweat and 昇天's rain in one world of circles. They bounce off the floor, the walls,
  * the HUD's underside and each other, settle into a heap along the bottom, and sleep there until a
@@ -43,6 +51,7 @@ export interface MiniHeartPhysics {
   readonly hearts: readonly MiniHeart[];
   setBounds: (bounds: PileBounds) => void;
   sprayFromTap: (x: number, y: number, heart: HeartBox, count: number) => void;
+  flingAlongStroke: (pass: StrokeThrow, count: number) => void;
   sweatFromHeart: (heart: HeartBox) => void;
   rainFromTop: () => void;
   shoveAwayFrom: (x: number, y: number) => void;
@@ -58,6 +67,8 @@ const RAIN_HIT = 0.36;
 /** The spatial hash's cell in px, and the stride that packs a cell's column and row into one key. */
 const CELL = 28;
 const CELL_STRIDE = 4096;
+/** A stroke's throw: its speed times `share`, kept within min–max px/s, within `aimDeg` of its direction. */
+const STROKE_THROW = { share: 0.6, min: 320, max: 1000, aimDeg: 12 };
 /** s one spray fans out before its hearts can knock into each other. */
 const FAN_OUT_S = 0.4;
 /** s held up and slow before a heart settles. */
@@ -401,6 +412,23 @@ export function createMiniHeartPhysics(bounds: PileBounds, random: () => number)
         const sy = y + (random() - 0.5) * 6;
         const angle = base + (random() - 0.5) * 2 * spray;
         throwMini(sx, sy, angle, lerp(MINI.speed[0], MINI.speed[1], random()), batch);
+      }
+    },
+    // From where the thumb turned, along the run it just made, as fast as it went.
+    flingAlongStroke: (pass, count) => {
+      const base = Math.atan2(pass.dy, pass.dx);
+      const aim = (STROKE_THROW.aimDeg * Math.PI) / 180;
+      const speed = clamp(
+        pass.speed * 1000 * STROKE_THROW.share,
+        STROKE_THROW.min,
+        STROKE_THROW.max,
+      );
+      const batch = nextBatch++;
+      for (let i = 0; i < count; i++) {
+        const sx = pass.end.x + (random() - 0.5) * 6;
+        const sy = pass.end.y + (random() - 0.5) * 6;
+        const angle = base + (random() - 0.5) * 2 * aim;
+        throwMini(sx, sy, angle, speed * lerp(0.88, 1.08, random()), batch);
       }
     },
     // A drop swells on the heart's edge, lets go and falls into the heap.

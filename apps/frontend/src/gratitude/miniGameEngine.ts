@@ -1,19 +1,27 @@
 import { seededRandom } from "../ui/seededRandom";
-import { createGratitudeCombo, type ComboEvent, type ComboRecord, type Tier } from "./combo";
+import {
+  createGratitudeCombo,
+  type ComboEvent,
+  type ComboRecord,
+  type Method,
+  type Tier,
+} from "./combo";
 import { createComboHud } from "./comboHud";
+import { EASE_OUT, EASE_SPRING, clamp } from "./easing";
 import { createFrameTimeReadout } from "./frameTimeReadout";
 import { FEEL_CONFIG, GAME_CONFIG } from "./gameConfig";
 import { flyHeartToGiver, playAscension, sighAndTidy, type EndingParts } from "./gameEndings";
-import { bigHeartLayers, SOUL_SVG } from "./heartArt";
+import { bigHeartLayers, HAND_SWIPE_SVG, SOUL_SVG } from "./heartArt";
 import { heartFaceFor, type HeartFace } from "./heartFaces";
 import { createHeartMotion, type HeartLayout } from "./heartMotion";
 import { createMiniHeartLayer } from "./miniHeartLayer";
 import { createMiniHeartPhysics, type HeartBox } from "./miniHeartPhysics";
 import { createParticleEffects } from "./particleEffects";
+import { createStrokeDetector } from "./strokeDetector";
 import { createTierBackground } from "./tierBackground";
 import { TIER_NAMES } from "./tierNames";
 import { createLettering } from "./tierSlamAndPopIns";
-import { listenForTouches } from "./touchInput";
+import { isOnHeart, listenForTouches, type HeartArea } from "./touchInput";
 
 /** The screen's parts that React renders; the engine fills and moves them. */
 export interface MiniGameParts {
@@ -52,6 +60,9 @@ export interface MiniGameEngine {
   destroy: () => void;
 }
 
+/** A hit's press, by how it was made. */
+const SQUASH_BY_METHOD: Record<Method, number> = { tap: 3.3, stroke: 1.6, shake: 1.2 };
+
 /** The screen's size when it has none yet, as in a test's DOM. */
 const FALLBACK = { width: 390, height: 741 };
 /** The top and the HUD sit above the heart. */
@@ -59,7 +70,32 @@ const TOP = 176;
 const HUD_TOP = 172;
 const HUD_HEIGHT = 80;
 
+/** The tips: what to do, said only once the person is trying, and held this long in s. */
+const TIPS = {
+  stroke: { text: "Stroke it back and forth, fast", icon: HAND_SWIPE_SVG, holdS: 6 },
+};
+type TipKind = keyof typeof TIPS;
+/** ms a stroke finger counts as moving after its latest move. */
+const THUMB_RECENT_MS = 250;
+/** ms between writes of the heart's light while a thumb holds it, which the CSS glides between. */
+const LIGHT_MS = 45;
+
 let mounts = 0;
+
+/** Cancelling an animation rejects its `finished`: browsers mark that handled, happy-dom doesn't. */
+function animate(
+  el: HTMLElement,
+  frames: Keyframe[],
+  options: KeyframeAnimationOptions,
+): Animation {
+  const animation = el.animate(frames, options);
+  void animation.finished.catch(rethrowUnlessCancelled);
+  return animation;
+}
+
+function rethrowUnlessCancelled(error: unknown) {
+  if (!(error instanceof Error && error.name === "AbortError")) throw error;
+}
 
 /**
  * The gratitude mini-game on one animation-frame loop: touches and keys go to the combo's rules,
@@ -77,13 +113,16 @@ export function mountMiniGameEngine(
   const { intensity } = options;
   let reduced = options.reduced;
 
-  // The stage's layers, back to front: stamps, 昇天's rain, the heart, mini hearts, the soul, effects, lettering.
+  // The stage's layers, back to front: the thumb's glow, speed lines, stamps, 昇天's rain, the heart,
+  // mini hearts, the soul, effects, lettering.
   const layer = (className: string) => {
     const el = document.createElement("div");
     el.className = className;
     parts.stage.append(el);
     return el;
   };
+  const thumbGlow = layer("gr-thumb-glow");
+  const linesLayer = layer("gr-layer");
   const stampsLayer = layer("gr-layer");
   const behind = layer("gr-layer");
   const anchor = layer("gr-heart-anchor");
@@ -109,12 +148,21 @@ export function mountMiniGameEngine(
   const background = createTierBackground(ground, () => reduced);
   const lettering = createLettering(captions, { intensity, random });
   const effects = createParticleEffects(
-    { stamps: stampsLayer, effects: effectsLayer },
+    { stamps: stampsLayer, effects: effectsLayer, lines: linesLayer },
     { reduced: () => reduced, random },
   );
   const miniHearts = createMiniHeartLayer({ front, behind });
   const physics = createMiniHeartPhysics({ ...FALLBACK, ceiling: TOP + HUD_HEIGHT }, random);
   const readout = options.showFrameTimes ? createFrameTimeReadout(root) : null;
+
+  const tip = document.createElement("p");
+  tip.className = "gr-tip";
+  tip.setAttribute("aria-hidden", "true");
+  const tipIcon = document.createElement("span");
+  tipIcon.className = "gr-tip-ic";
+  const tipText = document.createElement("span");
+  tip.append(tipIcon, tipText);
+  page.append(tip);
 
   // Layout, read when the screen mounts or resizes, never per frame.
   let size = { ...FALLBACK };
@@ -148,6 +196,7 @@ export function mountMiniGameEngine(
     body.style.width = `${L.width}px`;
     parts.hud.style.setProperty("--hud-top", `${HUD_TOP}px`);
     hint.style.top = `${L.rest.y + L.height * 0.5 + 22}px`;
+    tip.style.top = `${L.rest.y + L.height * 0.5 + 16}px`;
     root.style.setProperty("--rc-top", `${Math.max(TOP + HUD_HEIGHT - 10, L.rest.y - 110)}px`);
     background.setLayout(size.width, size.height, { x: L.rest.x, y: L.rest.y, height: L.height });
     lettering.setLayout(size.width, size.height, TOP + HUD_HEIGHT);
@@ -163,6 +212,12 @@ export function mountMiniGameEngine(
   resizes?.observe(root);
 
   const heartBox = (): HeartBox => ({ x: L.rest.x, y: L.rest.y, width: L.width, height: L.height });
+  const heartArea = (): HeartArea => ({
+    cx: L.rest.x,
+    cy: L.rest.y,
+    width: L.width,
+    height: L.height,
+  });
   /** Where the heart was last drawn. */
   let heartAt = { ...L.rest };
   const say = (text: string) => {
@@ -176,8 +231,10 @@ export function mountMiniGameEngine(
 
   let face = heartFaceFor(null, intensity, 0);
   let forced: Partial<HeartFace> | null = null;
+  /** A face shown for a moment over the tier's, until performance.now() passes `until`. */
+  let flash: { face: HeartFace["face"]; until: number } | null = null;
   const writeFace = () => {
-    const f = { ...face, ...forced };
+    const f = { ...face, ...(flash ? { face: flash.face } : null), ...forced };
     body.dataset.face = f.face;
     body.dataset.blush = String(f.blush);
     body.dataset.sweat = f.sweat ? "1" : "0";
@@ -246,6 +303,7 @@ export function mountMiniGameEngine(
 
   async function end(record: ComboRecord, caught: boolean, hidden: boolean) {
     ending = true;
+    stopHints();
     root.dataset.phase = "ending";
     try {
       options.onRecord(record);
@@ -267,37 +325,46 @@ export function mountMiniGameEngine(
     root.dataset.phase = "running";
     root.dataset.hud = "on";
     hud.show(true);
-    say("Caught it. Keep tapping before the bar runs out.");
+    // A stroke or shake that starts the combo announces itself.
+    if (combo.view.method === "tap") say("Caught it. Keep tapping before the bar runs out.");
   };
 
   const onTierUp = (tier: Tier) => {
     root.dataset.tier = String(tier);
-    background.show(tier, intensity);
+    background.show(tier, intensity, combo.view.method);
     if (!reduced) heart.punch(0.035 * (0.6 + intensity));
     lettering.slamTierName(TIER_NAMES[tier].jp, TIER_NAMES[tier].en);
     if (tier === 2) effects.burst(5, L.rest);
   };
 
+  /** Mini hearts a spray, a fling or a knock throws: more as the multiplier climbs. */
+  const throwCount = () => Math.min(3, 1 + Math.floor((combo.view.multiplier - 1) / 3));
+
   const onHit = (secondsAdded: number, x: number, y: number, tierUp: boolean) => {
     const view = combo.view;
+    const { method } = view;
+    const tapped = method === "tap";
     const tier = view.tier ?? 0;
     const hits = view.hits;
     const box = heartBox();
-    heart.squash(3.3);
+    heart.squash(SQUASH_BY_METHOD[method]);
     hud.hit(secondsAdded);
-    effects.stamp(x, y);
+    if (tapped) effects.stamp(x, y);
     effects.rise(1 + (tier >= 2 ? Math.round(intensity * 1.5) : 0), box);
     const every = tier >= 2 ? 2 : 3;
-    if (!tierUp && hits % every === 0) lettering.showPopInWord(tier, box);
+    if (!tierUp && hits % every === 0) {
+      // A stroke or a shake draws on its own words some of the time.
+      lettering.showPopInWord(!tapped && random() < 0.3 ? method : tier, box);
+    }
     if (tier === 0 && hits % 2 === 0) effects.glint(box);
     if (tier === 1 && hits % 4 === 0) effects.bead(box);
     if (tier >= 2 && !reduced) heart.shake(tier >= 3 ? 5 * intensity : 2 * intensity);
     if (tier === 2 && hits % 5 === 0) effects.burst(2, L.rest);
     if (tier >= 3 && hits % 2 === 0) effects.steam(Math.max(1, Math.round(intensity * 2)), box);
-    if (tier >= 3 && hits % 2 === 1) physics.rainFromTop();
-    if (!reduced && physics.hearts.length > 0) physics.shoveAwayFrom(x, y);
-    if (tier >= FEEL_CONFIG.miniHearts.fromTier && !reduced) {
-      physics.sprayFromTap(x, y, box, Math.min(3, 1 + Math.floor((view.multiplier - 1) / 3)));
+    if (tier >= 3 && hits % 2 === 1 && method !== "stroke") physics.rainFromTop();
+    if (tapped && !reduced && physics.hearts.length > 0) physics.shoveAwayFrom(x, y);
+    if (tapped && tier >= FEEL_CONFIG.miniHearts.fromTier && !reduced) {
+      physics.sprayFromTap(x, y, box, throwCount());
     }
     if (tier === 4 && hits % 3 === 0) effects.glint(box);
     if (play - lastAnnounce > 1.6) {
@@ -318,6 +385,180 @@ export function mountMiniGameEngine(
       else void end(e.record, e.caught, hidden);
     }
     showFace();
+  };
+
+  // The tip: what to do, said only once the person is trying.
+  let tipShown: TipKind | null = null;
+  let tipUntil = 0;
+  let tipPulsedAt = -Infinity;
+  let tipAnimation: Animation | null = null;
+  const showTip = (kind: TipKind) => {
+    const fresh = tipShown !== kind;
+    tipShown = kind;
+    tipUntil = wall + TIPS[kind].holdS;
+    if (fresh) {
+      tipIcon.innerHTML = TIPS[kind].icon;
+      tipText.textContent = TIPS[kind].text;
+      tip.dataset.kind = kind;
+      root.dataset.tip = "on";
+      say(TIPS[kind].text);
+    } else if (wall - tipPulsedAt < 0.7) return;
+    tipPulsedAt = wall;
+    tipAnimation?.cancel();
+    tipAnimation = null;
+    tip.style.opacity = "1";
+    if (reduced) return;
+    tipAnimation = animate(
+      tip,
+      fresh
+        ? [
+            { transform: "rotate(-2deg) scale(.55)", opacity: 0, easing: EASE_SPRING },
+            { offset: 0.6, transform: "rotate(-2deg) scale(1)", opacity: 1 },
+            { transform: "rotate(-2deg) scale(1)", opacity: 1 },
+          ]
+        : [
+            { transform: "rotate(-2deg) scale(1.08)", easing: EASE_OUT },
+            { transform: "rotate(-2deg) scale(1)" },
+          ],
+      { duration: fresh ? 420 : 220 },
+    );
+  };
+  const hideTip = () => {
+    if (!tipShown) return;
+    tipShown = null;
+    root.dataset.tip = "off";
+    tipAnimation?.cancel();
+    tip.style.opacity = "0";
+    tipAnimation = reduced
+      ? null
+      : animate(tip, [{ opacity: 1 }, { opacity: 0 }], { duration: 220, easing: EASE_OUT });
+  };
+
+  // Stroking: one finger at a time, anywhere on the screen. Before the unlock a drag on the heart
+  // pulls it and counts as a try; five fast passes in a row commit the combo to stroking.
+  const strokes = createStrokeDetector(FEEL_CONFIG.stroke);
+  let stroke: {
+    onHeart: boolean;
+    from: { x: number; y: number };
+    last: { x: number; y: number };
+    /** px the finger has travelled. */
+    travel: number;
+    /** Recent samples, for the thumb's velocity. */
+    samples: { x: number; y: number; t: number }[];
+    /** Where the current run began: where the finger went down, then where it last turned. */
+    runFrom: { x: number; y: number };
+  } | null = null;
+  let strokeTries = 0;
+  /** The thumb's smoothed speed in px/ms, and the stroke's axis in degrees. */
+  let strokeSpeed = 0;
+  let strokeAngle = 90;
+  let lastMoveAt = -Infinity;
+  let lastLinesAt = -Infinity;
+  let lightAt = -Infinity;
+  let lightOwned = false;
+
+  const velocity = (samples: readonly { x: number; y: number; t: number }[]) => {
+    if (samples.length < 2) return { x: 0, y: 0, speed: 0 };
+    const a = samples[Math.max(0, samples.length - 5)];
+    const b = samples[samples.length - 1];
+    const ms = Math.max(8, b.t - a.t);
+    const x = (b.x - a.x) / ms;
+    const y = (b.y - a.y) / ms;
+    return { x, y, speed: Math.hypot(x, y) };
+  };
+
+  const unlockStroke = (t: number, x: number, y: number) => {
+    const events = combo.commitTo("stroke", t);
+    if (!events.some((e) => e.kind === "hit")) return;
+    hideTip();
+    heart.pullTo(0, null);
+    // The combo's own look first, so the unlock's slam is the one that shows.
+    handle(events, x, y);
+    background.show(combo.view.tier, intensity, "stroke");
+    lettering.slamTierName("!?", "");
+    flash = { face: "wide", until: performance.now() + 700 };
+    writeFace();
+    if (!reduced) heart.punch(0.05);
+    endingParts.freeze(80);
+    say("Stroke unlocked.");
+  };
+
+  const onStrokeStart = (t: number, x: number, y: number) => {
+    if (!running || ending || combo.view.method === "shake") return;
+    strokes.fingerDown(x, y, t);
+    stroke = {
+      onHeart: isOnHeart(x, y, heartArea()),
+      from: { x, y },
+      last: { x, y },
+      travel: 0,
+      samples: [{ x, y, t }],
+      runFrom: { x, y },
+    };
+  };
+
+  const onStrokeMove = (t: number, x: number, y: number) => {
+    const s = stroke;
+    if (!s || !running || ending || combo.view.method === "shake") return;
+    s.travel += Math.hypot(x - s.last.x, y - s.last.y);
+    s.last = { x, y };
+    lastMoveAt = t;
+    s.samples.push({ x, y, t });
+    while (s.samples.length > 3 && t - s.samples[0].t > 180) s.samples.shift();
+    const v = velocity(s.samples);
+    strokeSpeed += (v.speed - strokeSpeed) * 0.35;
+    const pass = strokes.fingerMove(x, y, t);
+    if (pass) s.runFrom = pass.end;
+    // The stretch and the speed field follow the run, at any angle.
+    const rx = x - s.runFrom.x;
+    const ry = y - s.runFrom.y;
+    if (Math.hypot(rx, ry) > 10) strokeAngle = (Math.atan2(ry, rx) * 180) / Math.PI;
+    else if (v.speed > 0.05) strokeAngle = (Math.atan2(v.y, v.x) * 180) / Math.PI;
+
+    if (combo.view.method === "stroke") {
+      effects.streamLines(x, y, v);
+      if (!pass?.fast) return;
+      handle(combo.countStrokePass(t), x, y);
+      const tier = combo.view.tier ?? 0;
+      if (tier >= FEEL_CONFIG.miniHearts.fromTier && !reduced) {
+        physics.flingAlongStroke(pass, throwCount());
+      }
+      return;
+    }
+    if (s.onHeart) {
+      const dx = x - s.from.x;
+      const dy = y - s.from.y;
+      const d = Math.hypot(dx, dy);
+      heart.pullTo(d, d > 8 ? (Math.atan2(dy, dx) * 180) / Math.PI : null);
+      // A hard or fast drag throws speed lines.
+      const fast = v.speed > 0.9;
+      if ((fast || d > 100) && !reduced && t - lastLinesAt > (fast ? 50 : 90)) {
+        lastLinesAt = t;
+        effects.streamLines(x, y, fast ? v : { x: dx / d, y: dy / d, speed: 0.9 });
+      }
+      // Trying again: the tip stays.
+      if (tipShown === "stroke") tipUntil = Math.max(tipUntil, wall + 4);
+    }
+    if (pass?.fast && pass.fastStreak >= FEEL_CONFIG.stroke.unlockPasses) unlockStroke(t, x, y);
+  };
+
+  const onStrokeEnd = () => {
+    const s = stroke;
+    stroke = null;
+    strokes.fingerUp();
+    heart.pullTo(0, null);
+    // A drag on the heart that didn't unlock stroking is a try; enough of them, and the tip says how.
+    if (!s?.onHeart || s.travel < FEEL_CONFIG.stroke.tryTravelPx) return;
+    if (!running || ending || combo.view.method !== "tap" || combo.view.phase === "ended") return;
+    strokeTries++;
+    if (strokeTries >= FEEL_CONFIG.stroke.triesForTip) showTip("stroke");
+  };
+
+  /** The combo is over: nothing more is hinted at or held. */
+  const stopHints = () => {
+    hideTip();
+    stroke = null;
+    heart.pullTo(0, null);
+    background.setSpeedField(0, strokeAngle);
   };
 
   const firstTap = (t: number, x: number, y: number) => {
@@ -355,6 +596,9 @@ export function mountMiniGameEngine(
       onHeartTap: (t, x, y) => {
         if (running && !ending && combo.view.phase === "ready") firstTap(t, x, y);
       },
+      onStrokeStart,
+      onStrokeMove,
+      onStrokeEnd,
     },
   );
 
@@ -428,13 +672,47 @@ export function mountMiniGameEngine(
 
       const sendingProgress =
         view.phase === "sending" ? Math.min(1, (now - sendingSince) / FEEL_CONFIG.windUpMs) : 0;
+      if (flash && now >= flash.until) {
+        flash = null;
+        writeFace();
+      }
+      if (tipShown && wall > tipUntil) hideTip();
+
+      // A thumb holding the heart, or stroking once stroke is unlocked: the heart leans to it,
+      // its light follows it and a glow sits under it.
+      const stroking = view.method === "stroke";
+      const thumb = stroke && !ending && (stroking || stroke.onHeart) ? stroke.last : null;
+      const thumbRecent = stroke !== null && now - lastMoveAt < THUMB_RECENT_MS;
       const f = heart.step(dt, real, {
         phase: view.phase,
         tier: view.tier,
         intensity,
         reduced,
         sendingProgress,
+        leanToward: thumb ? { x: thumb.x, degrees: stroking ? 7 : 3 } : null,
+        strokeStretch: stroking && thumbRecent ? { speed: strokeSpeed, angle: strokeAngle } : null,
       });
+      if (stroking) {
+        const field = thumbRecent ? Math.min(1, strokeSpeed / 1.1) * (0.2 + 0.4 * intensity) : 0;
+        background.setSpeedField(field, strokeAngle);
+      }
+      if (thumb) {
+        thumbGlow.style.opacity = stroking ? "0.9" : "0.4";
+        thumbGlow.style.transform = `translate(${thumb.x.toFixed(1)}px, ${thumb.y.toFixed(1)}px)`;
+        if (now - lightAt > LIGHT_MS) {
+          lightAt = now;
+          lightOwned = true;
+          root.style.setProperty("--lx", clamp((thumb.x / size.width) * 2 - 1, -1, 1).toFixed(3));
+          root.style.setProperty("--ly", clamp((thumb.y / size.height) * 2 - 1, -1, 1).toFixed(3));
+        }
+      } else {
+        if (thumbGlow.style.opacity !== "0") thumbGlow.style.opacity = "0";
+        if (lightOwned) {
+          lightOwned = false;
+          root.style.removeProperty("--lx");
+          root.style.removeProperty("--ly");
+        }
+      }
       heartAt = f;
       page.style.transform = f.page;
       anchor.style.transform = f.anchor;
@@ -479,6 +757,10 @@ export function mountMiniGameEngine(
       window.removeEventListener("pagehide", onPageHide);
       resizes?.disconnect();
       readout?.destroy();
+      tipAnimation?.cancel();
+      tip.remove();
+      root.style.removeProperty("--lx");
+      root.style.removeProperty("--ly");
       lettering.clear();
       effects.tidy();
       miniHearts.clear();
@@ -487,7 +769,7 @@ export function mountMiniGameEngine(
       parts.hud.replaceChildren();
       ground.replaceChildren();
       page.style.transform = "";
-      for (const key of ["phase", "tier", "hud", "reduced"]) delete root.dataset[key];
+      for (const key of ["phase", "tier", "hud", "reduced", "tip"]) delete root.dataset[key];
     },
   };
 }

@@ -281,6 +281,24 @@ export const SOUL_SVG: string = `<svg ${XMLNS} viewBox="0 0 74 92" aria-hidden="
 
 export const HAZE_WAVE_SVG: string = `<svg ${XMLNS} viewBox="0 0 390 40" preserveAspectRatio="none" aria-hidden="true" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="2.2" stroke-linecap="round"><path d="M-10 22c26-14 52 14 78 0s52-14 78 0 52 14 78 0 52-14 78 0 52 14 78 0 52-14 78 0"/></svg>`;
 
+/** Phosphor's hand-swipe-right (bold): the stroke tip. */
+export const HAND_SWIPE_SVG: string = `<svg ${XMLNS} viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M220,148v36c0,13.85-1.63,26.52-4.58,35.68a12,12,0,0,1-22.84-7.36c2.14-6.65,3.42-17.24,3.42-28.32V148a8,8,0,0,0-16,0v4a12,12,0,0,1-24,0V132a8,8,0,0,0-16,0v12a12,12,0,0,1-24,0V76a8,8,0,0,0-16,0V184a12,12,0,0,1-22.18,6.34l-18.68-30-.21-.34A8,8,0,0,0,45,167.92L70.27,209.8a12,12,0,0,1-20.56,12.39l-25.31-42-.12-.2A32,32,0,0,1,76,142.83V76a32,32,0,0,1,64,0v25a32,32,0,0,1,36.78,17A32,32,0,0,1,220,148ZM252.48,47.51l-32-32a12,12,0,0,0-17,17L215,44H172a12,12,0,0,0,0,24h43L203.51,79.51a12,12,0,1,0,17,17l32-32A12,12,0,0,0,252.48,47.51Z"/></svg>`;
+
+/** Speed lines for the stroke's ground, drawn along x; the ground turns them to the stroke's axis. */
+export function speedFieldSvg(seed: number): string {
+  const random = seededRandom(seed);
+  let d = "";
+  for (let i = 0; i < 84; i++) {
+    const y = random() * 1100;
+    const x = random() * 1100 - 250;
+    const length = 140 + random() * 460;
+    const half = (0.8 + random() * 2.8) / 2;
+    const mid = (x + length / 2).toFixed(0);
+    d += `M${x.toFixed(0)} ${y.toFixed(1)}L${mid} ${(y - half).toFixed(1)}L${(x + length).toFixed(0)} ${y.toFixed(1)}L${mid} ${(y + half).toFixed(1)}Z`;
+  }
+  return `<svg ${XMLNS} viewBox="0 0 1100 1100" aria-hidden="true"><path d="${d}" fill="${INK}"/></svg>`;
+}
+
 /** Manga focus lines (集中線) closing in on (cx, cy), past the corners of a width × height screen. */
 export function focusLinesSvg(
   width: number,

@@ -1,6 +1,6 @@
-import type { Tier } from "./combo";
+import type { Method, Tier } from "./combo";
 import { clamp } from "./easing";
-import { focusLinesSvg, HAZE_WAVE_SVG } from "./heartArt";
+import { focusLinesSvg, HAZE_WAVE_SVG, speedFieldSvg } from "./heartArt";
 
 export interface TierBackground {
   setLayout: (
@@ -8,7 +8,10 @@ export interface TierBackground {
     height: number,
     heart: { x: number; y: number; height: number },
   ) => void;
-  show: (tier: Tier | null, intensity: number) => void;
+  /** Stroking has its own speed lines, so the focus lines keep out of its way. */
+  show: (tier: Tier | null, intensity: number, method: Method) => void;
+  /** The stroke's speed lines, turned to its axis in degrees. */
+  setSpeedField: (opacity: number, angle: number) => void;
   /** `real`: wall-clock seconds since the last frame. */
   step: (real: number) => void;
   /** 昇天's climax: the light beams and the white-out take the ground over. */
@@ -22,6 +25,7 @@ const FOCUS_SEEDS = [4242, 7777];
 const FOCUS_FPS = 8;
 const RAYS_DEG_PER_S = 6;
 const FLASH = { opacity: 0.7, seconds: 0.32 };
+const SPEED_FIELD_SEED = 31;
 
 const layer = (className: string) => {
   const el = document.createElement("div");
@@ -43,6 +47,9 @@ export function createTierBackground(ground: HTMLElement, reduced: () => boolean
   const blush = layer("gr-bg gr-bg-blush");
   const focus = layer("gr-focus");
   focus.dataset.v = "0";
+  const speedField = layer("gr-speedfield");
+  speedField.innerHTML = speedFieldSvg(SPEED_FIELD_SEED);
+  const speedLines = speedField.firstElementChild;
   const haze = layer("gr-bg gr-haze");
   haze.setAttribute("aria-hidden", "true");
   // Rising puffs and two waves, as many as the stylesheet places and times.
@@ -62,13 +69,14 @@ export function createTierBackground(ground: HTMLElement, reduced: () => boolean
   flashCover.style.background = "#fff";
   flashCover.style.zIndex = "30";
   flashCover.style.opacity = "0";
-  ground.append(blush, focus, haze, beam, white, flashCover);
+  ground.append(blush, focus, speedField, haze, beam, white, flashCover);
 
   let clock = 0;
   let focusOn = false;
   let beamOn = false;
   /** Seconds of the flash still to fade. */
   let flashLeft = 0;
+  let speedFieldShown = { opacity: "", angle: "" };
 
   return {
     setLayout(width, height, heart) {
@@ -82,17 +90,28 @@ export function createTierBackground(ground: HTMLElement, reduced: () => boolean
       rays.style.top = `${heart.y - heart.height * 0.9}px`;
     },
 
-    show(tier, intensity) {
+    show(tier, intensity, method) {
       const t = tier ?? -1;
       const still = reduced();
       setOpacity(blush, t >= 1 ? 0.45 + 0.45 * intensity : 0);
-      focusOn = setOpacity(
-        focus,
-        t === 2 ? 0.2 + 0.3 * intensity : t === 3 ? 0.34 + 0.36 * intensity : 0,
-      );
+      const focusShare = t === 2 ? 0.2 + 0.3 * intensity : t === 3 ? 0.34 + 0.36 * intensity : 0;
+      focusOn = setOpacity(focus, method === "stroke" ? 0 : focusShare);
       setOpacity(haze, t >= 3 && !still ? 0.45 + 0.5 * intensity : 0);
       beamOn = setOpacity(beam, t >= 4 && !still ? 0.4 + 0.35 * intensity : 0);
       setOpacity(white, t >= 4 ? 0.3 + 0.35 * intensity : 0);
+    },
+
+    setSpeedField(opacity, angle) {
+      // Written every frame of a stroke, so only a change touches the style.
+      const shown = {
+        opacity: opacity > 0 ? clamp(opacity, 0, 1).toFixed(3) : "0",
+        angle: angle.toFixed(1),
+      };
+      if (shown.opacity !== speedFieldShown.opacity) speedField.style.opacity = shown.opacity;
+      if (shown.angle !== speedFieldShown.angle && speedLines instanceof SVGElement) {
+        speedLines.style.transform = `rotate(${shown.angle}deg)`;
+      }
+      speedFieldShown = shown;
     },
 
     step(real) {
@@ -129,7 +148,8 @@ export function createTierBackground(ground: HTMLElement, reduced: () => boolean
     },
 
     hideAll() {
-      for (const el of [blush, focus, haze, beam, white]) setOpacity(el, 0);
+      for (const el of [blush, focus, speedField, haze, beam, white]) setOpacity(el, 0);
+      speedFieldShown = { opacity: "0", angle: speedFieldShown.angle };
       focusOn = false;
       beamOn = false;
     },

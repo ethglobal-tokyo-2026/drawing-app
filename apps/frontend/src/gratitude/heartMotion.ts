@@ -30,6 +30,10 @@ export interface HeartMotionState {
   reduced: boolean;
   /** How much of the catch window has passed, from 0 to 1. */
   sendingProgress: number;
+  /** A thumb holding the heart: it leans toward the thumb's x, by up to `degrees`. */
+  leanToward: { x: number; degrees: number } | null;
+  /** Stroking: it stretches along the stroke, `angle` in degrees, with the thumb's speed in px/ms. */
+  strokeStretch: { speed: number; angle: number } | null;
 }
 
 export interface HeartMotion {
@@ -40,6 +44,8 @@ export interface HeartMotion {
   shake: (amplitude: number) => void;
   /** Swells the page by `amount`, dying away. */
   punch: (amount: number) => void;
+  /** A drag on the heart pulls it `px` along `angle` degrees on a spring; 0 lets go. */
+  pullTo: (px: number, angle: number | null) => void;
   /** Resolves as the heart lands in the giver's picture. */
   flyToGiver: () => Promise<void>;
   goLimp: () => void;
@@ -93,6 +99,19 @@ const TREMOR_DEG = 1.4;
 const WIND_UP = { stretch: 0.07, leanDeg: 8 };
 /** How fast the stretch settles on its target, a second. */
 const STRETCH_RATE = 12;
+/** A drag's pull: a loose spring, so letting go overshoots into a squash and wobbles out. */
+const PULL = {
+  stiffness: 420,
+  damping: 0.3,
+  reducedDamping: 1,
+  maxPx: 160,
+  stretch: 0.13,
+  reduced: 0.05,
+};
+/** Stroking stretches it with the thumb's speed, up to `max`. */
+const STROKE_STRETCH = { perSpeed: 0.16, max: 0.26 };
+/** It leans toward a holding thumb this fast, a second. */
+const LEAN_RATE = 8;
 /** 昇天: it droops where it is, over play time, so the climax's freeze holds it too. */
 const LIMP = { seconds: 0.5, leanDeg: 9, sag: 0.08 };
 /** How fast the shake and the punch die away, a second. */
@@ -128,6 +147,8 @@ export function createHeartMotion(layout: HeartLayout, random: () => number): He
   const pos = { x: layout.rest.x, y: layout.rest.y, vx: 0, vy: 0 };
   const press = { depth: 0, speed: 0 };
   const stretch = { scale: 1, angle: 0 };
+  const pull = { px: 0, speed: 0, target: 0, angle: 90 };
+  let lean = 0;
   /** Until the first frame, a new layout places the heart instead of springing it across. */
   let placed = false;
   let shakeAmplitude = 0;
@@ -161,6 +182,11 @@ export function createHeartMotion(layout: HeartLayout, random: () => number): He
 
     punch(amount) {
       punchAmount = amount;
+    },
+
+    pullTo(px, angle) {
+      pull.target = Math.min(PULL.maxPx, px);
+      if (angle !== null) pull.angle = angle;
     },
 
     flyToGiver() {
@@ -248,17 +274,50 @@ export function createHeartMotion(layout: HeartLayout, random: () => number): He
         sy *= b;
       }
 
+      const leanTarget = state.leanToward
+        ? clamp((state.leanToward.x - pos.x) / 160, -1, 1) * state.leanToward.degrees
+        : 0;
+      lean += (leanTarget - lean) * Math.min(1, real * LEAN_RATE);
+      rotate += lean;
+
+      const r = Math.min(real, 1 / 30);
+      if (r > 0) {
+        const damping =
+          2 * Math.sqrt(PULL.stiffness) * (state.reduced ? PULL.reducedDamping : PULL.damping);
+        for (let i = 0; i < 2; i++) {
+          pull.speed +=
+            (-(pull.px - pull.target) * PULL.stiffness - pull.speed * damping) * (r / 2);
+          pull.px += pull.speed * (r / 2);
+        }
+        if (!pull.target && Math.abs(pull.px) < 0.05 && Math.abs(pull.speed) < 0.5) {
+          pull.px = pull.speed = 0;
+        }
+      }
       if (!flight) {
+        const pulled = pull.px !== 0 || pull.target !== 0;
         let target = 1;
-        if (state.phase === "sending") {
+        let angle = stretch.angle;
+        if (state.strokeStretch) {
+          target =
+            1 + Math.min(STROKE_STRETCH.max, state.strokeStretch.speed * STROKE_STRETCH.perSpeed);
+          angle = state.strokeStretch.angle;
+        } else if (pulled) {
+          target = 1 + (state.reduced ? PULL.reduced : PULL.stretch) * Math.tanh(pull.px / 100);
+          angle = pull.angle;
+        } else if (state.phase === "sending") {
           const k = easeInOutSine(clamp(state.sendingProgress, 0, 1));
           target = 1 + WIND_UP.stretch * k;
           rotate -= WIND_UP.leanDeg * k;
-          if (target !== 1) {
-            stretch.angle = degrees(Math.atan2(L.giver.y - L.rest.y, L.giver.x - L.rest.x));
-          }
+          angle = degrees(Math.atan2(L.giver.y - L.rest.y, L.giver.x - L.rest.x));
         }
-        stretch.scale += (target - stretch.scale) * Math.min(1, real * STRETCH_RATE);
+        // The pull's spring already carries the motion; anything else eases to its stretch.
+        if (pulled) {
+          stretch.scale = target;
+          stretch.angle = angle;
+        } else {
+          stretch.scale += (target - stretch.scale) * Math.min(1, real * STRETCH_RATE);
+          if (target !== 1) stretch.angle = angle;
+        }
       }
 
       if (tier >= TREMOR_FROM && limpFrom === null && !state.reduced) {
