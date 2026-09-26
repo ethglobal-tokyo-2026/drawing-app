@@ -7,7 +7,7 @@ import type {
 } from "@drawing-app/api/client";
 import { At, X } from "@phosphor-icons/react";
 import type { TFunction } from "i18next";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import { useMe } from "../api/meContext";
 import { useApiQuery, type Query } from "../api/useApiQuery";
 import { toPerson } from "../api/views";
@@ -21,6 +21,8 @@ import { PhotoSticker } from "../ui/PhotoSticker";
 import "./ExploreScreen.css";
 
 interface Props {
+  /** A name's link opened the app: <boardOf>.croquis.eth's Sticker Board opens once it's found. */
+  boardOf?: string;
   onOpenArtist: (person: Person) => void;
   onOpenMyBoard: () => void;
 }
@@ -372,7 +374,26 @@ function Today({ explore, meId, open }: { explore: Explore; meId: string; open: 
   );
 }
 
-export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
+/** Finds whoever a name's link names and opens their board, once; says so when there's nobody. */
+function OpenBoardOf({ label, open }: { label: string; open: Open }) {
+  const { t } = useTranslation();
+  const person = useApiQuery(`ens-person/${label}`, (api) => api.personByEnsLabel(label));
+  const opened = useRef(false);
+  const openPerson = useEffectEvent(open);
+  useEffect(() => {
+    if (person.state !== "ready" || opened.current) return;
+    opened.current = true;
+    openPerson(person.data);
+  }, [person]);
+  return (
+    <Failed
+      title={t(($) => $.explore.failed.ensName, { name: `${label}.croquis.eth` })}
+      query={person}
+    />
+  );
+}
+
+export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
   const { t } = useTranslation();
   const me = useMe();
   const [query, setQuery] = useState("");
@@ -387,6 +408,7 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
 
   return (
     <div className="explore">
+      {boardOf && <OpenBoardOf label={boardOf} open={open} />}
       <label className="artist-search">
         <At size={20} />
         <input

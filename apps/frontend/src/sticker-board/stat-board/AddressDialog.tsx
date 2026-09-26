@@ -1,17 +1,9 @@
-import liff from "@line/liff";
 import { ArrowSquareOut, Copy, X } from "@phosphor-icons/react";
-import {
-  useEffectEvent,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type MouseEvent,
-  type RefObject,
-} from "react";
+import { useEffectEvent, useId, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "../../i18n/react";
 import { etherscanAddressUrl, suiscanAccountUrl } from "../../identity/explorers";
+import { openLinkInLine } from "../../line/openLink";
 import { LabelButton } from "../../ui/LabelButton";
 import { QrCode } from "../../ui/QrCode";
 import { useBackToClose } from "../../ui/useBackToClose";
@@ -312,11 +304,6 @@ export function AddressDialog({ chain, address, from, onClose }: Props) {
   };
 
   // Inside LINE's app, the explorer opens in LINE's own browser rather than leaving LINE.
-  const openInLine = (e: MouseEvent<HTMLAnchorElement>) => {
-    if (!liff.isInClient()) return;
-    e.preventDefault();
-    liff.openWindow({ url: e.currentTarget.href, external: false });
-  };
 
   // Resolved once, so the dialog never moves between the page and the phone, which would remount it.
   const [phone] = useState(() => document.querySelector<HTMLElement>(".phone"));
@@ -391,7 +378,7 @@ export function AddressDialog({ chain, address, from, onClose }: Props) {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={t(($) => $.stickerBoard.addresses[chain].viewOnExplorerLabel)}
-              onClick={openInLine}
+              onClick={openLinkInLine}
             >
               <ArrowSquareOut />
               {t(($) => $.stickerBoard.addresses[chain].viewOnExplorer)}

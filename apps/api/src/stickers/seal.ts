@@ -7,6 +7,7 @@ import {
 } from "@drawing-app/db";
 import { and, eq, max } from "drizzle-orm";
 import { z } from "zod";
+import { queueNaming } from "../ens/naming.ts";
 import type { AppDeps } from "../deps.ts";
 import { diagnosticStep, failureCause, logFailure, logInfo } from "../diagnostics.ts";
 import { keccak256 } from "../keccak256.ts";
@@ -171,6 +172,7 @@ export async function sealSticker(
     logInfo("sticker.seal.retry", { stickerId: ticket.stickerId, userId });
     const refused = await mintSticker(deps, ticket.stickerId);
     if (refused) return { refused };
+    queueNaming(deps, userId);
     return { sealed: sealedSticker(deps, userId, ticket.stickerId), created: false };
   }
 
@@ -234,5 +236,6 @@ export async function sealSticker(
   logInfo("sticker.seal.saved", { stickerId, userId });
   const mintRefusal = await mintSticker(deps, stickerId);
   if (mintRefusal) return { refused: mintRefusal };
+  queueNaming(deps, userId);
   return { sealed: sealedSticker(deps, userId, stickerId), created: true };
 }

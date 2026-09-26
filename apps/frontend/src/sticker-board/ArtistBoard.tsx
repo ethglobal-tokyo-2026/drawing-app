@@ -212,6 +212,7 @@ export function ArtistBoard({ person, onBack }: Props) {
   const figures: CorkFigures = {
     name: owner.name,
     handle: person.handle ?? owner.name,
+    ensName: person.ensName,
     picture: <PhotoSticker src={owner.pictureUrl} name={owner.name} size={42} />,
     own: false,
     ...statFigures(stats.state === "ready" ? stats.data : null, false, new Date()),

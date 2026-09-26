@@ -244,6 +244,12 @@
   overflow-wrap: anywhere;
 }
 
+.sticker-detail__ens a {
+  color: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
 /* The line people read: caps kept, but at full width and 12px, wrapping between facts. */
 .sticker-detail__fine-print {
   margin: 5px 0 0;

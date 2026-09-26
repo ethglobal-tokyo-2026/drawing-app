@@ -23,6 +23,7 @@ import {
   startAnvil,
   type AnvilInstance,
 } from "./helpers/foundry.js";
+import { deployCroquisStack } from "./helpers/croquis.js";
 
 const stickerArtifact = readFoundryArtifact("StickerNFT", "StickerNFT");
 const escrowArtifact = readFoundryArtifact("StickerGiftEscrow", "StickerGiftEscrow");
@@ -62,13 +63,15 @@ async function setup() {
   });
   const stickerReceipt = await publicClient.waitForTransactionReceipt({ hash: stickerDeployment });
   if (!stickerReceipt.contractAddress) throw new Error("Sticker deployment returned no address");
-  const escrowDeployment = await walletClient.deployContract({
-    abi: escrowArtifact.abi,
-    bytecode: escrowArtifact.bytecode,
-    args: [stickerReceipt.contractAddress, admin.address, claimSigner.address],
+  const croquis = await deployCroquisStack({
+    publicClient,
+    walletClient,
+    account: admin,
+    chain,
+    sticker: stickerReceipt.contractAddress,
+    relayer: claimSigner.address,
+    gatewaySigner: claimSigner.address,
   });
-  const escrowReceipt = await publicClient.waitForTransactionReceipt({ hash: escrowDeployment });
-  if (!escrowReceipt.contractAddress) throw new Error("Escrow deployment returned no address");
   const mintHash = await walletClient.writeContract({
     address: stickerReceipt.contractAddress,
     abi: stickerArtifact.abi,
@@ -88,7 +91,7 @@ async function setup() {
     testClient,
     walletClient,
     stickerAddress: stickerReceipt.contractAddress,
-    escrowAddress: escrowReceipt.contractAddress,
+    escrowAddress: croquis.escrow,
     admin,
     artist,
     recipient,

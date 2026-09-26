@@ -5,6 +5,7 @@ import {
   giftClaimTokenMatches,
   prepareGiftTransfer,
 } from "@drawing-app/sticker-chain/gift-sticker";
+import { createCroquisNames } from "@drawing-app/sticker-chain/croquis-names";
 import { createStickerSealer } from "@drawing-app/sticker-chain/seal-sticker";
 import {
   createPublicClient,
@@ -21,7 +22,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
-import type { GiftChain, Mint, SmartWallets } from "../deps.ts";
+import type { GiftChain, Mint, NameWriter, SmartWallets } from "../deps.ts";
 import { diagnosticStep, logFailure, logInfo } from "../diagnostics.ts";
 import type { DiskImageStore } from "./imageStore.ts";
 
@@ -51,6 +52,7 @@ export function createStickerChain({
   rpcUrl,
   stickerContract,
   escrowContract,
+  namesContract,
   sealerPrivateKey,
   smartWallets,
   images,
@@ -58,10 +60,11 @@ export function createStickerChain({
   rpcUrl: string;
   stickerContract: string;
   escrowContract: string;
+  namesContract: string;
   sealerPrivateKey: Hex;
   smartWallets: SmartWallets;
   images: DiskImageStore;
-}): { mint: Mint; giftChain: GiftChain } {
+}): { mint: Mint; giftChain: GiftChain; nameWriter: NameWriter } {
   const stickerAddress = address(stickerContract, "STICKER_NFT_ADDRESS");
   const escrowAddress = address(escrowContract, "STICKER_GIFT_ESCROW_ADDRESS");
   // Minting and Receiving share the relayer; concurrent requests need distinct nonces.
@@ -327,5 +330,23 @@ export function createStickerChain({
     },
   };
 
-  return { mint, giftChain };
+  const croquisNames = createCroquisNames({
+    publicClient,
+    walletClient,
+    account: sealerAccount,
+    namesAddress: address(namesContract, "CROQUIS_NAMES_ADDRESS"),
+    onProgress: ({ stage, phase, txHash, error }) => {
+      const fields = { chainId: sepolia.id, contractAddress: namesContract, txHash };
+      if (phase === "failed") logFailure(`chain.ens.${stage}.failed`, error, fields);
+      else logInfo(`chain.ens.${stage}.${phase}`, fields);
+    },
+  });
+  const nameWriter: NameWriter = {
+    ensurePersonName: (person, label, records) =>
+      croquisNames.ensurePersonName(address(person, "Person"), label, records),
+    ensureStickerName: (tokenId, label) => croquisNames.ensureStickerName(BigInt(tokenId), label),
+    setAvatar: (person, avatar) => croquisNames.setAvatar(address(person, "Person"), avatar),
+  };
+
+  return { mint, giftChain, nameWriter };
 }

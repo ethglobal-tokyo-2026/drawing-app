@@ -40,8 +40,15 @@
     {
       "idx": 5,
       "version": "6",
-      "when": 1790432113745,
-      "tag": "0005_users_language_choice",
+      "when": 1790433905727,
+      "tag": "0005_ens_names",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790439372979,
+      "tag": "0006_users_language_choice",
       "breakpoints": true
     }
   ]

@@ -19,6 +19,9 @@ function setup(t) {
     `STICKER_NFT_ADDRESS=0x${"1".repeat(40)}`,
     `STICKER_GIFT_ESCROW_ADDRESS=0x${"2".repeat(40)}`,
     `STICKER_SEALER_PRIVATE_KEY=0x${"3".repeat(64)}`,
+    `CROQUIS_NAMES_ADDRESS=0x${"4".repeat(40)}`,
+    `CROQUIS_RESOLVER_ADDRESS=0x${"5".repeat(40)}`,
+    `ENS_GATEWAY_PRIVATE_KEY=0x${"6".repeat(64)}`,
     "PRIVY_APP_ID=test-app",
   ].join("\n");
   /** @param {string} value @param {string} [mode] */

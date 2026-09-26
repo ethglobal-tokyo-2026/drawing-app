@@ -32,6 +32,8 @@ export interface GivenTo {
 export interface BoardStickerView extends Omit<BoardSticker, "blob"> {
   /** The Original Artist. */
   artist: PersonView;
+  /** <number>.<artist>.croquis.eth, once it's onchain. */
+  ensName?: string;
   /** False once it's been given away and received. */
   held: boolean;
   /** Set when `held` is false. */
@@ -66,6 +68,7 @@ export function toBoardSticker(b: ApiBoardSticker): UnplacedBoardSticker {
     urls: s.urls,
     placement: b.placement && toRecordPlacement(b.placement),
     artist: s.artist,
+    ...(s.ensName && { ensName: s.ensName }),
     held: b.held,
     givenTo: b.givenTo && {
       receiver: toPerson(b.givenTo.receiver),

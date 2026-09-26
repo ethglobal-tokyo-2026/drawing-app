@@ -59,6 +59,8 @@ export const explore = {
   failed: {
     explore: "Couldn’t load Explore",
     searchResults: "Couldn’t load search results",
+    /** A name's link that nobody holds, or that didn't load. */
+    ensName: "Couldn’t load {{name}}",
     tryAgain: "Try again",
   },
 } as const;

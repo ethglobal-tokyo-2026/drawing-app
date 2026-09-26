@@ -1,4 +1,8 @@
 export const stickerBoard = {
+  /** A name under croquis.eth, which opens in the ENS app. */
+  ensName: {
+    open: "Open {{name}} in the ENS app",
+  },
   /** The Sticker Board's cork back: your own, or someone else's. */
   statBoard: {
     label: "{{name}}’s stats",
