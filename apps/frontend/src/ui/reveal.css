@@ -1,0 +1,30 @@
+/* Content that arrives after a load rises into place instead of popping in. */
+.reveal {
+  animation: reveal-in 220ms var(--ease-out) both;
+}
+
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* A picture, or a sticker with all its layers, holds back until its image has loaded, then fades in. */
+.reveal-img {
+  transition: opacity 240ms var(--ease-out);
+}
+
+.reveal-img:not([data-loaded]) {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    animation: none;
+  }
+
+  .reveal-img {
+    transition: none;
+  }
+}

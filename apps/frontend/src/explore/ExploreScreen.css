@@ -241,6 +241,10 @@ li.me .rank {
   flex-direction: column;
 }
 
+.row-names.is-loading {
+  gap: 6px;
+}
+
 .row-names b {
   font-size: 16px;
   font-weight: 800;
