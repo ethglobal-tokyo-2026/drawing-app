@@ -1,10 +1,9 @@
-import { Ticket } from "@phosphor-icons/react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
 import { errorReason } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
-import { DrawIcon } from "../icons/DrawIcon";
+import { BuyTicketsIcon, DrawIcon } from "../icons";
 import { usePrivyStatus } from "../identity/privy";
 import { useSuiWalletFailure } from "../identity/suiWallet";
 import type { JpycPayment } from "../payments/jpyc";
@@ -195,7 +194,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
         >
           {t(($) => $.tickets.draw)}
         </Key>
-        <LabelButton block icon={<Ticket />} onClick={() => setStep("choose")}>
+        <LabelButton block icon={<BuyTicketsIcon />} onClick={() => setStep("choose")}>
           {t(($) => $.tickets.checkout.buyMore)}
         </LabelButton>
         {close}
@@ -214,7 +213,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
         <Key
           className="out-of-tickets__key"
           tone="blue"
-          icon={<Ticket />}
+          icon={<BuyTicketsIcon />}
           onClick={() => setStep("choose")}
         >
           {t(($) => $.tickets.checkout.backToPacks)}
@@ -318,7 +317,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
         <Key
           className="out-of-tickets__key"
           tone="blue"
-          icon={<Ticket />}
+          icon={<BuyTicketsIcon />}
           disabled={!pack || !shop || !sui.address || short || paying}
           onClick={() => pack && shop && void pay(pack, shop.payment)}
         >
