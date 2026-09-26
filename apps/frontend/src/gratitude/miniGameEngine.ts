@@ -150,6 +150,8 @@ export function mountMiniGameEngine(
   const art = bigHeartLayers(`h${mount}`);
   body.innerHTML = `<div class="gr-heart-layers" aria-hidden="true">${art.body}${art.flush}${art.pale}${art.gloss}${art.ink}${art.face}</div>`;
   const ink = body.querySelector(".h-ink");
+  // Only the heart's gloss reads the light, so a thumb's light goes on it, not on the whole game.
+  const gloss = body.querySelector<SVGElement>(".h-gloss");
   const button = document.createElement("button");
   button.type = "button";
   button.className = "gr-heart-btn";
@@ -939,13 +941,16 @@ export function mountMiniGameEngine(
         if (now - lightAt > LIGHT_MS) {
           lightAt = now;
           lightOwned = true;
-          root.style.setProperty("--lx", clamp((thumb.x / size.width) * 2 - 1, -1, 1).toFixed(3));
-          root.style.setProperty("--ly", clamp((thumb.y / size.height) * 2 - 1, -1, 1).toFixed(3));
+          gloss?.style.setProperty("--lx", clamp((thumb.x / size.width) * 2 - 1, -1, 1).toFixed(3));
+          gloss?.style.setProperty(
+            "--ly",
+            clamp((thumb.y / size.height) * 2 - 1, -1, 1).toFixed(3),
+          );
         }
       } else if (lightOwned) {
         lightOwned = false;
-        root.style.removeProperty("--lx");
-        root.style.removeProperty("--ly");
+        gloss?.style.removeProperty("--lx");
+        gloss?.style.removeProperty("--ly");
       }
       heartAt = { x: f.x, y: f.y, scale: f.scale };
       page.style.transform = f.page;
@@ -1026,8 +1031,6 @@ export function mountMiniGameEngine(
       readout?.destroy();
       tipAnimation?.cancel();
       tip.remove();
-      root.style.removeProperty("--lx");
-      root.style.removeProperty("--ly");
       lettering.clear();
       effects.tidy();
       miniHearts.clear();
