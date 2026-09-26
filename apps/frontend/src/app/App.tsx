@@ -4,6 +4,7 @@ import { ArtistBoard } from "../sticker-board/ArtistBoard";
 import { StickerBoard } from "../sticker-board/StickerBoard";
 import { DrawingScreen, type DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
 import { ExploreScreen } from "../explore/ExploreScreen";
+import { MotionPermissionCard } from "./MotionPermissionCard";
 import { viewFromPath, type View } from "./openedView";
 import { ShopScreen } from "./ShopScreen";
 import { TabBar } from "./TabBar";
@@ -80,6 +81,7 @@ export default function App() {
           setVisiting(undefined);
         }}
       />
+      <MotionPermissionCard />
     </div>
   );
 }
