@@ -19,7 +19,7 @@ import {
   usePrivyStatus,
 } from "./privy";
 import { SponsorshipCheck } from "./SponsorshipCheck";
-import { SmartWalletBridge } from "./smartWallet";
+import { SmartWalletBridge } from "./SmartWalletBridge";
 
 // The Ethereum wallet Privy itself made, as opposed to one the person connected.
 const isPrivysWallet = (a: User["linkedAccounts"][number]): a is WalletWithMetadata =>

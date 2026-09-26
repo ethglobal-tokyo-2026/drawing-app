@@ -1,21 +1,20 @@
 import { SignOut } from "@phosphor-icons/react";
-import { useState, type Ref } from "react";
-import type { StickerGiftStatus } from "../../giving/giftStore";
+import type { Ref } from "react";
 import { retryPrivySignIn, usePrivyStatus, type PrivyStatus } from "../../identity/privy";
 import { PrivyAccount } from "../../identity/PrivyAccount";
-import { firstSeen } from "../../identity/profile";
 import { useIdentity } from "../../identity/useIdentity";
 import { LineDetails } from "../../line/LineDetails";
 import { lineLogout } from "../../line/liff";
 import { SendTestMessage } from "../../line/SendTestMessage";
-import type { StickerRecord } from "../../stickers/stickerStorage";
-import { formatRefillTime } from "../../tickets/refill";
-import { nextRefill, ticketDay } from "../../tickets/tickets";
 import { LabelButton } from "../../ui/LabelButton";
 import { PhotoSticker } from "../../ui/PhotoSticker";
 import { QuietLink } from "../../ui/QuietLink";
+import { useMe } from "../../api/meContext";
+import { useApiQuery } from "../../api/useApiQuery";
+import { GratitudeDemoControls } from "./GratitudeDemoControls";
+import { PerformanceRecorderControls } from "./PerformanceRecorderControls";
 import { StatCork, type CorkFigures, type StatCorkHandle } from "./StatCork";
-import { joinedAt, streakOf } from "./userStats";
+import { statFigures } from "./statFigures";
 
 // The developer slip, LINE's and Privy's details for testing them from the board. The dev server shows
 // it unless `.env` says "off"; a build shows it only when it's "on".
@@ -26,47 +25,30 @@ const DEV_SLIP = import.meta.env.VITE_DEV_SLIP
 export type StatBoardHandle = StatCorkHandle;
 
 interface Props {
-  /** Null when they didn't load, so nothing drawn from them can be known. */
-  stickers: readonly StickerRecord[] | null;
-  gifts: ReadonlyMap<string, StickerGiftStatus>;
   onFlipBack: () => void;
   flipBackRef: Ref<HTMLButtonElement>;
+  /** Opens the gratitude mini-game for the newest sticker, from the developer slip; null with none. */
+  onTryGratitudeMiniGame: (() => void) | null;
   ref?: Ref<StatBoardHandle>;
 }
 
-/**
- * Your stat board: the Sticker Board's back, with your User Stats pinned on the cork. Gratitude
- * and received stickers show their empty values until receiving and gratitude exist.
- */
-export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Props) {
+/** Your stat board: the Sticker Board's back, with your User Stats pinned on the cork. */
+export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref }: Props) {
   const me = useIdentity();
-  const [firstVisit] = useState(firstSeen);
-
-  const now = new Date();
-  const streak =
-    stickers &&
-    streakOf(
-      stickers.map((s) => ticketDay(new Date(s.createdAt))),
-      ticketDay(now),
-    );
-  const given = stickers && stickers.filter((s) => gifts.get(s.id)?.state === "sent").length;
+  const account = useMe();
+  // Loaded each time the board mounts, so a turn after drawing or giving shows the new counts.
+  const stats = useApiQuery("user-stats/me", (api) => api.userStats());
 
   const figures: CorkFigures = {
     name: me.displayName,
-    handle: me.handle,
+    handle: account.handle ?? me.displayName,
     picture: <PhotoSticker src={me.pictureUrl} name={me.displayName} size={42} />,
     own: true,
-    streak,
-    streakRule: !streak
-      ? "Your stickers didn’t load."
-      : streak.current > 0
-        ? `Miss a day and it drops by one, not back to zero. Days turn over at ${formatRefillTime(nextRefill(now))}.`
-        : "Draw a sticker today to start one. Miss a day later and it drops by one.",
-    stamps: { made: stickers && stickers.length, received: 0, given },
-    bestCombo: null,
-    mostThanksInADay: null,
-    since: joinedAt(firstVisit, stickers ?? []),
+    ...statFigures(stats.state === "ready" ? stats.data : null, true, new Date()),
+    since: Date.parse(stats.state === "ready" ? stats.data.since : account.createdAt),
   };
+  if (stats.state === "failed")
+    figures.streakRule = `Your stats didn’t load: ${stats.error.message}`;
 
   return (
     <StatCork
@@ -89,13 +71,15 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
       }
     >
       {DEV_SLIP && (
-        <section className="stat-board__note stat-board__slip" aria-label="LINE and Privy">
+        <section className="stat-board__note stat-board__slip" aria-label="Developer tools">
           <div className="stat-board__paper">
             <h3 className="fine stat-board__slip-h">LINE and Privy</h3>
             <SendTestMessage senderName={me.displayName} />
             <LineDetails />
             <PrivyLine />
             <PrivyAccount />
+            <GratitudeDemoControls onTry={onTryGratitudeMiniGame} />
+            <PerformanceRecorderControls />
           </div>
           <i className="stat-board__washi" aria-hidden />
         </section>
@@ -112,8 +96,6 @@ function privyText(privy: PrivyStatus): string {
       return "Signing in to Privy…";
     case "failed":
       return `Privy sign-in failed: ${privy.reason}`;
-    case "off":
-      return `Privy is off: ${privy.reason}`;
   }
 }
 

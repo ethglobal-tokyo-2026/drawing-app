@@ -24,8 +24,6 @@ export interface SealedSticker {
   pad: number;
   /** The ink canvas's width, which `place` and `contour` are measured against. */
   inkWidth: number;
-  /** The ink canvas's height. */
-  inkHeight: number;
   /** Where the image sits over the ink, in ink pixels. */
   place: Rect;
   /** The cut line, closed, in ink pixels. */
@@ -152,7 +150,6 @@ export async function makeSticker(ink: HTMLCanvasElement): Promise<SealedSticker
     height,
     pad: layers.pad,
     inkWidth,
-    inkHeight,
     place,
     contour,
     layers: urls,

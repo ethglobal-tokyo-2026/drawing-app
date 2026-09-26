@@ -1,8 +1,6 @@
 import { useLine } from "../line/liff";
 
 export interface Identity {
-  /** Shown after "@" until people pick handles. */
-  handle: string;
   displayName: string;
   pictureUrl?: string;
   /** Inside the LINE app, rather than a browser logged in through LINE Login. */
@@ -17,7 +15,6 @@ export function useIdentity(): Identity {
   }
   const name = line.profile.displayName;
   return {
-    handle: name,
     displayName: name,
     pictureUrl: line.profile.pictureUrl,
     inClient: line.inClient,

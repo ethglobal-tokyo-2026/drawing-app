@@ -34,7 +34,7 @@
 .seal-ceremony__tint,
 .seal-ceremony__gloss,
 .seal-ceremony__pour,
-.seal-ceremony__piece :is(.live-resin__lens, .live-resin__spec, .live-resin__rim) {
+.seal-ceremony__sticker :is(.live-resin__lens, .live-resin__spec, .live-resin__rim) {
   opacity: 0;
 }
 
@@ -54,7 +54,7 @@
 
 /* The cast shadow is the sticker's sibling, so it stays flat on the sheet while the sticker tilts. */
 .seal-ceremony__shadow,
-.seal-ceremony__piece {
+.seal-ceremony__sticker {
   position: absolute;
   display: block;
   pointer-events: none;
@@ -62,7 +62,7 @@
   will-change: transform;
 }
 
-.seal-ceremony__piece img {
+.seal-ceremony__sticker img {
   position: absolute;
   inset: 0;
   display: block;

@@ -1,18 +1,20 @@
 /**
- * The sticker tray: a zipped pocket down the Sticker Board's right edge, opened by its Zipper.
+ * The sticker tray: zipped down the Sticker Board's right edge, opened by its Zipper.
  * Inside, a stack of loose sticker sheets holds every sticker you've had, in arrival order, each in
  * its packed spot: a used sticker silhouette where one is out on the board, a blank where one was
  * given. You page the stack, pull a sheet out over the board, spread every sheet out, peel stickers
  * onto the board and put them back. Everything is in board pixels, in the board's stacking context.
  */
+import { timeOurWork } from "../../performance/performanceRecorder";
 import { formatNo } from "../../stickers/format";
 import type { StickerUrls } from "../../stickers/stickerUrls";
 import { ticketDay } from "../../tickets/tickets";
 import { packSheets, type PackedItem, type Shape } from "./sheetPacking";
 import { knownShape, stickerShape } from "./stickerShape";
-import { countVisit, readSeen, saveSeen } from "./traySeen";
+import { countVisit } from "./traySeen";
 import { newSlots, type TraySlot } from "./traySlots";
 import { createZipper, type Zipper } from "./zipper";
+import "../../stickers/sticker-foil.css";
 import "./sticker-tray.css";
 
 /** A sticker as the sticker tray holds it: its slot, and what it's drawn from. */
@@ -25,6 +27,8 @@ export interface TraySticker extends TraySlot {
   urls: Pick<StickerUrls, "png" | "mask">;
   /** Drawn by someone else: a received gift. */
   gift: boolean;
+  /** Shown in the open tray before, so it isn't NEW. */
+  seen: boolean;
 }
 
 interface Point {
@@ -291,7 +295,16 @@ function windowOf(doc: Document): Window & typeof globalThis {
 
 export function createTrayEngine(
   board: HTMLElement,
-  { slots: read, api }: { slots: () => readonly TraySticker[]; api: TrayBoard },
+  {
+    slots: read,
+    api,
+    markSeen,
+  }: {
+    slots: () => readonly TraySticker[];
+    api: TrayBoard;
+    /** Stickers the open tray showed that it hadn't before, once it zips shut. */
+    markSeen: (ids: readonly string[]) => void;
+  },
 ): TrayEngine {
   const doc = board.ownerDocument;
   const win = windowOf(doc);
@@ -406,7 +419,8 @@ export function createTrayEngine(
     shown: new Set(),
     pulled: null,
   };
-  const seen = readSeen();
+  /** Shown in the open tray: the stickers' own marks, and this visit's. */
+  const seen = new Set<string>();
   let model = modelOf(read());
   /** The stack's window is on show: the tray open, opening, or pulled to a crack. */
   let onShow = false;
@@ -416,6 +430,7 @@ export function createTrayEngine(
   let orderedFor = 0;
 
   function modelOf(list: readonly TraySticker[]) {
+    for (const s of list) if (s.seen) seen.add(s.id);
     const slots: Slot[] = list.map((s) => ({ ...s }));
     return { slots, count: Math.max(1, ...slots.map((s) => s.sheet + 1)) };
   }
@@ -524,6 +539,23 @@ export function createTrayEngine(
     );
     // A used sticker silhouette shows no sticker, so it loads none.
     if (s.state !== "used") {
+      // Drawn by someone else, it wears the sheet's foil under its image, as StickerFoil draws it.
+      if (s.gift && s.urls.mask) {
+        const foil = decorative(
+          make(
+            "span",
+            "sticker-foil sticker-foil--sheet",
+            make(
+              "span",
+              "sticker-foil__band",
+              make("i", "sticker-foil__sheen"),
+              make("i", "sticker-foil__glint"),
+            ),
+          ),
+        );
+        foil.style.setProperty("--foil-i", String(s.no));
+        fit.append(foil);
+      }
       const img = make("img", "tray__img");
       img.src = s.urls.png;
       img.alt = "";
@@ -719,18 +751,13 @@ export function createTrayEngine(
   });
   zip.on("closed", () => {
     // What was on show in the open tray is no longer new.
-    let changed = false;
-    for (const id of ui.shown)
-      if (!seen.has(id)) {
-        seen.add(id);
-        changed = true;
-      }
+    const fresh = [...ui.shown].filter((id) => !seen.has(id));
     ui.shown.clear();
-    if (changed) {
-      saveSeen(seen);
-      renderStack();
-      updateBadge();
-    }
+    if (fresh.length === 0) return;
+    for (const id of fresh) seen.add(id);
+    markSeen(fresh);
+    renderStack();
+    updateBadge();
   });
   // A hand on the pull decides for itself.
   zip.on("grab", () => {
@@ -1443,7 +1470,8 @@ export function createTrayEngine(
     // The tray gets out of the way: its mouth sags to a crack, still unzipped.
     zip.relax(CRACK);
     pk.startX = pk.r.x;
-    const loop = () => {
+    // Made once for the peel, so no frame makes a closure.
+    const follow = () => {
       if (pk.target) {
         const was = pk.x;
         pk.x = lerp(pk.x, pk.target.x, 0.34);
@@ -1458,6 +1486,7 @@ export function createTrayEngine(
       }
       pk.raf = win.requestAnimationFrame(loop);
     };
+    const loop = () => timeOurWork("sticker tray", follow);
     pk.raf = win.requestAnimationFrame(loop);
   }
   function movePeel(g: Gesture, pt: Point) {

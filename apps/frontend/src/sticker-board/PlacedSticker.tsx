@@ -33,6 +33,8 @@ interface Props {
   hintId: string;
   /** Drawn by someone other than the board's owner: it wears foil. */
   foil?: boolean;
+  /** Who drew it, as printed, when that isn't the board's owner: its label names them. */
+  by?: string;
   /** Its gratitude glow, from 0 (none) to 1 (brightest). */
   glow?: number;
 }
@@ -59,6 +61,7 @@ export const PlacedSticker = memo(function PlacedSticker({
   position,
   hintId,
   foil = false,
+  by,
   glow = 0,
 }: Props) {
   const lift = useRef<HTMLDivElement>(null);
@@ -89,7 +92,6 @@ export const PlacedSticker = memo(function PlacedSticker({
     held === "drag" && "is-dragging",
     held === "handle" && "is-handling",
     landing && "is-landing",
-    foil && "is-foiled",
     glow > 0 && "is-glowing",
   ];
   return (
@@ -100,7 +102,7 @@ export const PlacedSticker = memo(function PlacedSticker({
       aria-roledescription="sticker"
       aria-pressed={selected}
       tabIndex={tabbable ? 0 : -1}
-      aria-label={`${formatNo(sticker.no)}, drawn in ${spokenDuration(sticker.timeUsed)}, ${position}`}
+      aria-label={`${formatNo(sticker.no)}, drawn in ${spokenDuration(sticker.timeUsed)}${by ? `, by ${by}` : ""}, ${position}`}
       aria-describedby={hintId}
       style={{
         width: box.w,
@@ -116,6 +118,8 @@ export const PlacedSticker = memo(function PlacedSticker({
           width={sticker.width}
           height={sticker.height}
           fold={fold}
+          foil={foil ? "board" : undefined}
+          no={sticker.no}
         />
       </div>
       {/* A clear frame, four corners to resize and a knob on a stem to turn. */}

@@ -94,13 +94,7 @@
     opacity 170ms linear;
 }
 
-/* Foil: a sticker drawn by someone other than the board's owner wears a holo band past its edge. */
-.placed-sticker.is-foiled .sticker-figure__img {
-  filter: drop-shadow(3px 0 0 #ff8fd0) drop-shadow(-3px 0 0 #7fe0ff) drop-shadow(0 3px 0 #ffe27a)
-    drop-shadow(0 -3px 0 #b69cff) var(--sticker-cut) var(--sticker-cast);
-}
-
-/* Gratitude glows behind a sticker, warming from pink toward amber as more thanks arrive. */
+/* Gratitude glows behind a sticker, warming from pink toward amber as more gratitude arrives. */
 .placed-sticker.is-glowing .placed-sticker__lift {
   filter: drop-shadow(
     0 0 calc(6px + 12px * var(--glow))
@@ -331,14 +325,31 @@
   z-index: 960;
   left: 0;
   top: 0;
+  /* Rows, not a wrapping line: iOS Safari sizes a wrapping flex box as if nothing wrapped, which made
+     it too wide to fit on the board. Stacked, it's as wide as its widest row. */
   display: flex;
+  flex-direction: column;
   gap: 6px;
+  width: max-content;
   padding: 5px;
   border-radius: 10px;
   background: var(--liner-lift);
   box-shadow:
     inset 0 0 0 1px var(--rule),
     var(--shadow-lift);
+}
+
+.sticker-toolbar__acts {
+  display: flex;
+  gap: 6px;
+}
+
+/* Gifts on their way sit in the header, opposite your name, above the sticker tray's pull. */
+.board-pending {
+  position: absolute;
+  z-index: 800;
+  right: 12px;
+  top: 12px;
 }
 
 /* A 36px face on its lip. */

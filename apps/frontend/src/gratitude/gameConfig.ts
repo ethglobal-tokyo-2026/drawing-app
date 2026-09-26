@@ -15,9 +15,13 @@ export interface GameConfig {
   gainFloor: number;
   gainAboveFloor: number;
   gainDecay: number;
-  /** Taps a second that count, beyond a burst of `burst`. */
+  /** Hits a second that count for each method, beyond a burst of `burst`. */
   tapsPerSecond: number;
+  passesPerSecond: number;
+  reversalsPerSecond: number;
   burst: number;
+  /** A stroke pass or a shake reversal counts as this many hits, except as a combo's first hit. */
+  methodWeight: number;
   /** The multiplier's target is 1 + perHit × (hits in the last window − freeHits), up to max. */
   multiplier: {
     windowMs: number;
@@ -47,7 +51,10 @@ export const GAME_CONFIG = {
   gainAboveFloor: 0.1,
   gainDecay: 0.93,
   tapsPerSecond: 16,
+  passesPerSecond: 10,
+  reversalsPerSecond: 14,
   burst: 4,
+  methodWeight: 1.5,
   multiplier: {
     windowMs: 1000,
     freeHits: 2,
@@ -67,12 +74,56 @@ export const FEEL_CONFIG = {
   intensity: { everyday: 0.7, full: 1 },
   /** 昇天's climax holds everything this long before the soul rises. */
   climaxFreezeMs: 140,
+  /** px between the foot of the ending's "fuu…" and the top of the heart's resting box. */
+  sighAboveHeartPx: 24,
   /** Shares of the heart's half-width and half-height: how far past the middle of each side of its
    * resting box a touch still counts, on the ellipse through the box's edges grown by this much. */
   heartReach: 0.07,
   /** A first tap lifts before it travels `tapSlopPx` or is held `tapHoldMs`. */
   tapSlopPx: 12,
   tapHoldMs: 800,
+  /** A click on the heart this soon after a finger, a mouse or a key lets go of it is that press's
+   * own click, which the press has already counted. */
+  clickAfterPressMs: 600,
+  /** The sent heart winds up toward the giver over the catch window, then holds through its grace. */
+  windUpMs: 800,
+  /** A thumb stroking back and forth, anywhere on the screen: PJ's PHYS and StrokeDetector. */
+  stroke: {
+    minRunPx: 40,
+    fastPxPerMs: 0.38,
+    turnPx: 12,
+    pauseMs: 900,
+    unlockPasses: 5,
+    /** A drag on the heart this long is a try at stroking it; after three, the tip says how. */
+    tryTravelPx: 40,
+    triesForTip: 3,
+    /** With reduced motion a committed stroke stretches the heart by this share at most. */
+    reducedStretch: 0.04,
+    /** Speed lines stream past a thumb at most once per `fastMs` when it moves faster than
+     * `fastPxPerMs`, and once per `slowMs` otherwise. */
+    lines: { fastPxPerMs: 0.9, fastMs: 50, slowMs: 90 },
+    /** The ground's speed field is written again only once its opacity moves by `opacityStep` or its
+     * angle by `angleStepDeg`. */
+    speedField: { opacityStep: 0.03, angleStepDeg: 3 },
+  },
+  /** Shaking the phone, or twisting it with the wrist, in a rhythm: PJ's PHYS and ShakeDetector. */
+  shake: {
+    deadZone: 6,
+    minPeak: 11,
+    minGapMs: 60,
+    maxGapMs: 480,
+    resetMs: 650,
+    /**
+     * A wrist twist turning the phone this fast, in °/s, peaks like a shake at `minPeak`. The turning
+     * rate is scaled by `minPeak / twistPeakDegPerS` into the shake's units, so the dead zone is
+     * `deadZone / minPeak` of it: a brisk twist reaches several hundred °/s, while tilting the phone
+     * to read it, walking or setting it down stays well under 150.
+     */
+    twistPeakDegPerS: 300,
+    keepShakingAt: 4,
+    cornerAt: 11,
+    unlockAt: 16,
+  },
   /** Mini hearts: sprayed by taps from ドキドキ up, sweated off the heart, and 昇天's rain. */
   miniHearts: {
     fromTier: 2,
@@ -119,5 +170,13 @@ export const FEEL_CONFIG = {
     bead: [0.35, 0.6],
     rainGravity: 1500,
     rainMax: 24,
+  },
+  /** Pop-in words land round the heart, never on it. */
+  popIns: {
+    /** Words keep out of the heart's box drawn in by this share at each side, about where its outline runs. */
+    heartInset: 0.1,
+    /** A word that fits no free slot shrinks a step at a time, to this at the least. */
+    minScale: 0.7,
+    scaleStep: 0.1,
   },
 } as const;

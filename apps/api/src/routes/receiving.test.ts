@@ -206,6 +206,23 @@ describe("POST /api/gifts/receive", () => {
     expect(test.giftRow(gift.id)).toMatchObject({ status: "packed", escrowStatus: "pending" });
     expect(ownerOf(test, gift.stickerId)).toBe(giverId);
   });
+
+  it("does not give database ownership to a second recipient after another wallet claimed", async () => {
+    const test = await createGiftsTestApp({ escrowChain: true });
+    const { giverId, gift, giftClaimToken } = await giftToOpen(test);
+    test.landDeposit(gift.id);
+    const receiverId = insertUser(test.db);
+    await previewOf(await preview(test, receiverId, giftClaimToken));
+    await test.giftChain.claimGift({ giftId: gift.id, giftClaimToken, recipientId: receiverId });
+
+    const loser = await receive(test, insertUser(test.db), giftClaimToken);
+    expect(loser.status).toBe(409);
+    expect(await loser.json()).toMatchObject({ error: "already_received" });
+    expect(ownerOf(test, gift.stickerId)).toBe(giverId);
+
+    await receivedOf(await receive(test, receiverId, giftClaimToken));
+    expect(ownerOf(test, gift.stickerId)).toBe(receiverId);
+  });
 });
 
 describe("Receiving refuses", () => {

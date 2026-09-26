@@ -1,6 +1,5 @@
 import { useImperativeHandle, useLayoutEffect, useRef, type Ref } from "react";
-import type { StickerGiftStatus } from "../../giving/giftStore";
-import type { BoardSticker } from "../boardSticker";
+import type { BoardStickerView } from "../boardSticker";
 import {
   createTrayEngine,
   type TrayBoard,
@@ -26,29 +25,29 @@ export interface StickerTrayHandle {
 interface Props {
   /** The board it runs down the right edge of. */
   board: HTMLElement | null;
-  stickers: readonly BoardSticker[];
-  gifts: ReadonlyMap<string, StickerGiftStatus>;
+  stickers: readonly BoardStickerView[];
+  /** The board's owner: a sticker someone else drew is a gift. */
+  ownerId: string;
   api: TrayBoard;
+  /** Stickers the open tray showed, which are NEW no longer. */
+  onSeen: (ids: readonly string[]) => void;
   ref?: Ref<StickerTrayHandle>;
 }
 
 /** Every sticker in its slot, with what the tray draws it from. */
-function trayStickers(
-  stickers: readonly BoardSticker[],
-  gifts: ReadonlyMap<string, StickerGiftStatus>,
-): TraySticker[] {
+function trayStickers(stickers: readonly BoardStickerView[], ownerId: string): TraySticker[] {
   const byId = new Map(stickers.map((s) => [s.id, s]));
-  return traySlots(stickers, gifts).flatMap((slot) => {
+  return traySlots(stickers).flatMap((slot) => {
     const s = byId.get(slot.id);
     if (!s) return [];
-    // Every sticker here is your own until stickers can be received.
     const sticker: TraySticker = {
       ...slot,
       no: s.no,
       width: s.width,
       height: s.height,
       urls: s.urls,
-      gift: false,
+      gift: s.artist.id !== ownerId,
+      seen: s.seenAt !== null,
     };
     if (s.outline !== undefined) sticker.outline = s.outline;
     return [sticker];
@@ -56,17 +55,17 @@ function trayStickers(
 }
 
 /** The sticker tray on the board: its engine, fed the board's stickers and asked through `ref`. */
-export function StickerTray({ board, stickers, gifts, api, ref }: Props) {
+export function StickerTray({ board, stickers, ownerId, api, onSeen, ref }: Props) {
   const engine = useRef<TrayEngine | null>(null);
-  const latest = useRef({ stickers, gifts, api });
+  const latest = useRef({ stickers, ownerId, api, onSeen });
   useLayoutEffect(() => {
-    latest.current = { stickers, gifts, api };
+    latest.current = { stickers, ownerId, api, onSeen };
   });
 
   // Before the engine's own effect, so a new engine doesn't redraw what it has just drawn.
   useLayoutEffect(() => {
     engine.current?.refresh();
-  }, [stickers, gifts]);
+  }, [stickers]);
 
   useLayoutEffect(() => {
     if (!board) return;
@@ -79,8 +78,12 @@ export function StickerTray({ board, stickers, gifts, api, ref }: Props) {
       pulse: (id) => latest.current.api.pulse(id),
     };
     const tray = createTrayEngine(board, {
-      slots: () => trayStickers(latest.current.stickers, latest.current.gifts),
+      slots: () => {
+        const { stickers: list, ownerId: owner } = latest.current;
+        return trayStickers(list, owner);
+      },
       api: side,
+      markSeen: (ids) => latest.current.onSeen(ids),
     });
     engine.current = tray;
     return () => {

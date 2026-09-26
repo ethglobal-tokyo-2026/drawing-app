@@ -1,0 +1,39 @@
+/* ---------- The gratitude mini-game's demo entry, on the developer slip ---------- */
+
+.gratitude-demo {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--rule-strong);
+}
+
+.gratitude-demo__h {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+
+.gratitude-demo__note {
+  margin: -2px 0 0;
+}
+
+.gratitude-demo__switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font: 600 15px/1.2 var(--font-ui);
+}
+
+.gratitude-demo__switch input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--ink);
+}
+
+.gratitude-demo :focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}

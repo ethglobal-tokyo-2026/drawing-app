@@ -9,14 +9,15 @@ import { useFocusTrap } from "../ui/useFocusTrap";
 import { formatRefillTime } from "./refill";
 import { TicketCount } from "./TicketCount";
 import { TicketStubs } from "./TicketStubs";
-import { dailyLeft, nextRefill, type TicketKind } from "./tickets";
-import { useDailyTicketStubs } from "./useTicketStubs";
-import { useTicketState } from "./useTickets";
+import { dailyTickets, nextRefill, type TicketKind, type Tickets } from "./tickets";
 import "./tickets.css";
 
 interface Props {
+  tickets: Tickets;
   /** How long the drawing timer runs, for the card's line. */
   minutes: number;
+  /** A ticket is being spent: Start waits for it. */
+  busy?: boolean;
   /** Said under the line, such as what became of a drawing a reload interrupted; null for nothing. */
   note: string | null;
   /** Spend a ticket of this kind on this sheet. */
@@ -34,10 +35,17 @@ const count = (n: number, kind: TicketKind) => `${n} ${kind} ${n === 1 ? "ticket
  * With daily tickets left it spends one; once they're gone it asks before spending a reserve ticket,
  * with the ticket shop as the other way on. It shares the out-of-tickets card's look.
  */
-export function StartDrawing({ minutes, note, onStart, onShop, onBoard }: Props) {
-  const state = useTicketState();
-  const stubs = useDailyTicketStubs(state);
-  const daily = dailyLeft(state);
+export function StartDrawing({
+  tickets,
+  minutes,
+  busy = false,
+  note,
+  onStart,
+  onShop,
+  onBoard,
+}: Props) {
+  const stubs = dailyTickets(tickets);
+  const daily = tickets.dailyLeft;
   const reserveAsk = daily === 0;
   const card = useRef<HTMLElement>(null);
   const id = useId();
@@ -61,7 +69,7 @@ export function StartDrawing({ minutes, note, onStart, onShop, onBoard }: Props)
       >
         <TicketStubs className="out-of-tickets__art" size="large" stubs={stubs} />
         <p className="out-of-tickets__reserve">
-          <TicketCount kind="reserve" count={state.reserve} />
+          <TicketCount kind="reserve" count={tickets.reserveLeft} />
           <span className="fine">Reserve</span>
         </p>
         <h2 className="out-of-tickets__title" id={`${id}-title`}>
@@ -71,7 +79,7 @@ export function StartDrawing({ minutes, note, onStart, onShop, onBoard }: Props)
           {reserveAsk ? (
             <>
               <strong>
-                Today’s daily tickets are used. You have {count(state.reserve, "reserve")}.
+                Today’s daily tickets are used. You have {count(tickets.reserveLeft, "reserve")}.
               </strong>{" "}
               <span className="out-of-tickets__quiet">
                 New daily tickets at {formatRefillTime(nextRefill(new Date()))}.
@@ -98,6 +106,7 @@ export function StartDrawing({ minutes, note, onStart, onShop, onBoard }: Props)
               className="out-of-tickets__key"
               tone="grape"
               icon={<DrawIcon />}
+              disabled={busy}
               onClick={() => onStart("reserve")}
             >
               Use a reserve ticket
@@ -107,7 +116,12 @@ export function StartDrawing({ minutes, note, onStart, onShop, onBoard }: Props)
             </LabelButton>
           </>
         ) : (
-          <Key className="out-of-tickets__key" icon={<DrawIcon />} onClick={() => onStart("daily")}>
+          <Key
+            className="out-of-tickets__key"
+            icon={<DrawIcon />}
+            disabled={busy}
+            onClick={() => onStart("daily")}
+          >
             Start drawing
           </Key>
         )}

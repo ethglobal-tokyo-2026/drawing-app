@@ -49,7 +49,6 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root.unmount());
   host.remove();
-  vi.unstubAllEnvs();
   vi.restoreAllMocks();
   vi.useRealTimers();
 });

@@ -46,7 +46,7 @@ export function unseenGratitude(
   urls: (contentHash: string) => StickerImages,
 ): UnseenGratitude {
   const rows = db
-    .select({ thanks: gratitude, stickerId: gifts.stickerId, receiver: users })
+    .select({ combo: gratitude, stickerId: gifts.stickerId, receiver: users })
     .from(gratitude)
     .innerJoin(gifts, eq(gifts.id, gratitude.giftId))
     .innerJoin(users, eq(users.id, gifts.receiverId))
@@ -60,41 +60,41 @@ export function unseenGratitude(
     urls,
   );
   return {
-    unseen: rows.map(({ thanks, stickerId, receiver }) => {
+    unseen: rows.map(({ combo, stickerId, receiver }) => {
       const sticker = stickersById.get(stickerId);
       if (!sticker) {
-        throw new Error(`Gift ${thanks.giftId}'s sticker ${stickerId} has no stickers row`);
+        throw new Error(`Gift ${combo.giftId}'s sticker ${stickerId} has no stickers row`);
       }
-      return { gratitude: toGratitude(thanks), sticker, receiver: toPerson(receiver) };
+      return { gratitude: toGratitude(combo), sticker, receiver: toPerson(receiver) };
     }),
   };
 }
 
-/** A gift's gratitude and who gave the gift; undefined when nobody has thanked it. */
+/** A gift's gratitude and who gave the gift; undefined when nobody has sent gratitude for it. */
 export const gratitudeWithGiver = (db: Db, giftId: string) =>
   db
-    .select({ thanks: gratitude, giverId: gifts.giverId })
+    .select({ combo: gratitude, giverId: gifts.giverId })
     .from(gratitude)
     .innerJoin(gifts, eq(gifts.id, gratitude.giftId))
     .where(eq(gratitude.giftId, giftId))
     .get();
 
 /** Marks gratitude watched by its giver at `now`. Watching it again keeps the first time. */
-export function markSeen(db: Db, thanks: typeof gratitude.$inferSelect, now: Date): Gratitude {
-  if (thanks.seenByGiverAt !== null) return toGratitude(thanks);
-  db.update(gratitude).set({ seenByGiverAt: now }).where(eq(gratitude.giftId, thanks.giftId)).run();
-  return toGratitude({ ...thanks, seenByGiverAt: now });
+export function markSeen(db: Db, combo: typeof gratitude.$inferSelect, now: Date): Gratitude {
+  if (combo.seenByGiverAt !== null) return toGratitude(combo);
+  db.update(gratitude).set({ seenByGiverAt: now }).where(eq(gratitude.giftId, combo.giftId)).run();
+  return toGratitude({ ...combo, seenByGiverAt: now });
 }
 
 /**
  * A gift's gratitude with its replay, and who gave and received the gift; null when nobody has
- * thanked it. Any signed-in person may read it.
+ * sent gratitude for it. Any signed-in person may read it.
  */
 export function gratitudeWithReplay(db: Db, giftId: string): GratitudeWithReplay | null {
   const giverUsers = alias(users, "giver");
   const receiverUsers = alias(users, "receiver");
   const row = db
-    .select({ thanks: gratitude, giver: giverUsers, receiver: receiverUsers })
+    .select({ combo: gratitude, giver: giverUsers, receiver: receiverUsers })
     .from(gratitude)
     .innerJoin(gifts, eq(gifts.id, gratitude.giftId))
     .innerJoin(giverUsers, eq(giverUsers.id, gifts.giverId))
@@ -103,8 +103,8 @@ export function gratitudeWithReplay(db: Db, giftId: string): GratitudeWithReplay
     .get();
   if (!row) return null;
   return {
-    gratitude: toGratitude(row.thanks),
-    replay: gunzipReplay(row.thanks.replay),
+    gratitude: toGratitude(row.combo),
+    replay: gunzipReplay(row.combo.replay),
     giver: toPerson(row.giver),
     receiver: toPerson(row.receiver),
   };

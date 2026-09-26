@@ -13,6 +13,7 @@ import {
   isAddress,
   isHex,
   keccak256,
+  nonceManager,
   stringToBytes,
   type Address,
   type Hex,
@@ -51,7 +52,8 @@ export function createStickerChain({
 }): { mint: Mint; giftChain: GiftChain } {
   const stickerAddress = address(stickerContract, "STICKER_NFT_ADDRESS");
   const escrowAddress = address(escrowContract, "STICKER_GIFT_ESCROW_ADDRESS");
-  const sealerAccount = privateKeyToAccount(sealerPrivateKey);
+  // Minting and Receiving share the relayer; concurrent requests need distinct nonces.
+  const sealerAccount = privateKeyToAccount(sealerPrivateKey, { nonceManager });
   const transport = http(rpcUrl);
   const publicClient = createPublicClient({ chain: sepolia, transport });
   const walletClient = createWalletClient({ chain: sepolia, transport, account: sealerAccount });
@@ -204,12 +206,12 @@ export function createStickerChain({
 
       const existing = await reconcileClaim();
       if (existing) return existing;
-      const authorized = await authorizer.authorizeClaim({
-        giftId: id,
-        giftClaimToken: token,
-        recipientArtistId: recipientId,
-      });
       try {
+        const authorized = await authorizer.authorizeClaim({
+          giftId: id,
+          giftClaimToken: token,
+          recipientArtistId: recipientId,
+        });
         const txHash = await walletClient.writeContract({
           address: escrowAddress,
           abi: stickerGiftEscrowAbi,

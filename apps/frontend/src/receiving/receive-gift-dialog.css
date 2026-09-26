@@ -1,0 +1,332 @@
+/* ReceiveGiftDialog: over the whole phone, tabs included. The sealed bag sits low on its stage;
+   once the gift is unpackaged, the stage glides up with the sheet, then the bag drops away and the
+   sticker rises out of it. The stage's geometry is GiftBag's receive size. */
+
+.receive-gift {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-sheet);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--liner);
+  color: var(--ink);
+}
+
+.receive-gift__title {
+  flex: 1;
+  margin: 0;
+  font-weight: 800;
+  font-stretch: var(--w-title);
+  font-size: 26px;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.receive-gift__head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 22px 0;
+}
+
+.receive-gift__stage {
+  position: relative;
+  flex: none;
+  height: 330px;
+  margin-top: 4px;
+  overflow: hidden;
+  touch-action: none;
+  transform: translateY(92px);
+  transition: transform 520ms var(--ease-peel);
+}
+
+.receive-gift.is-rising .receive-gift__stage {
+  transform: none;
+}
+
+.receive-gift.is-out .receive-gift__stage {
+  -webkit-mask-image: linear-gradient(#000 78%, transparent);
+  mask-image: linear-gradient(#000 78%, transparent);
+}
+
+/* Opening: the bag's outline, still, where the bag will be. */
+.receive-gift__outline {
+  position: absolute;
+  left: max(64px, calc(50% - 125px));
+  top: 24px;
+  width: 250px;
+  height: 278px;
+  border: 1.5px dashed var(--rule-strong);
+  border-radius: 5px 5px 14px 14px;
+}
+
+.receive-gift .gift-bag {
+  transition:
+    transform 640ms var(--ease-out),
+    opacity 300ms ease;
+}
+
+.receive-gift.is-out .gift-bag {
+  transform: translateY(178px);
+}
+
+/* The sticker out of the bag, where it sat inside, above the frost. */
+.receive-gift__figure {
+  position: absolute;
+  z-index: 7;
+  left: calc(max(64px, calc(50% - 125px)) + 25px);
+  top: 62px;
+  display: grid;
+  place-items: center;
+  width: 200px;
+  height: 200px;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 720ms var(--ease-out),
+    visibility 0s;
+}
+
+.receive-gift__figure > span {
+  display: block;
+}
+
+.receive-gift.is-out .receive-gift__figure {
+  visibility: visible;
+  transform: translateY(-52px);
+}
+
+/* A gloss sweep across it once it's out. */
+.receive-gift.is-out .receive-gift__figure .sticker-figure__sweep {
+  animation: receive-gift-gloss 560ms linear 460ms both;
+}
+
+.receive-gift.is-out .receive-gift__figure .sticker-figure__sweep i {
+  animation: receive-gift-gloss-band 560ms ease-out 460ms both;
+}
+
+@keyframes receive-gift-gloss {
+  0% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes receive-gift-gloss-band {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(210%);
+  }
+}
+
+/* Receiving: the sticker lifts a little off the page while the receive is out. */
+.receive-gift__figure .sticker-figure__img {
+  transition: filter var(--t-peel) var(--ease-peel);
+}
+
+.receive-gift.is-receiving .receive-gift__figure {
+  transform: translateY(-58px) scale(1.02);
+}
+
+.receive-gift.is-receiving .receive-gift__figure .sticker-figure__img {
+  filter: var(--sticker-cut) drop-shadow(8px 22px 14px rgba(28, 24, 36, 0.18));
+}
+
+.receive-gift__hint {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: 530px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  text-align: center;
+  transition: opacity 240ms ease;
+}
+
+.receive-gift__hint b {
+  font-size: 17px;
+  font-weight: 750;
+}
+
+.receive-gift__hint span {
+  font-size: 14px;
+  color: var(--graphite);
+}
+
+.receive-gift.is-rising .receive-gift__hint {
+  opacity: 0;
+}
+
+/* The Accept sheet rises under the sticker. */
+.receive-gift__sheet.bottom-sheet {
+  padding-bottom: 30px;
+  text-align: center;
+  animation-duration: 440ms;
+}
+
+.receive-gift__for {
+  margin: 2px 0 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.receive-gift__for b {
+  font-weight: 800;
+}
+
+.receive-gift__fine {
+  margin: 6px 0 0;
+}
+
+.receive-gift__acts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding-top: 14px;
+}
+
+.receive-gift__acts .key {
+  min-width: 232px;
+  max-width: 100%;
+}
+
+.receive-gift__terms {
+  max-width: 34ch;
+  margin: 8px auto 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--graphite);
+}
+
+.receive-gift__terms a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* A failed Accept stays above the key until Accept tries again; it never vanishes as a toast. */
+.receive-gift__problem {
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-label);
+  background: var(--tomato-soft);
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+  overflow-wrap: anywhere;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Received: the copy fades, the sheet drops and the bag falls, then the board shows. */
+.receive-gift.is-received :is(.receive-gift__head, .receive-gift__copy, .receive-gift__acts) {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease;
+}
+
+.receive-gift.is-received .receive-gift__sheet {
+  transform: translateY(105%);
+  transition: transform 440ms var(--ease-peel);
+}
+
+.receive-gift.is-received .gift-bag {
+  opacity: 0;
+  transform: translateY(420px);
+}
+
+/* A gift that can't be received here: the heading on top, the bag as a prop, the way on below. */
+.receive-gift__end-head {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 26px 26px 0;
+}
+
+.receive-gift__end-head .receive-gift__title {
+  font-size: 28px;
+}
+
+.receive-gift__sub {
+  max-width: 34ch;
+  margin: 0;
+  color: var(--graphite);
+  font-size: 15px;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.receive-gift__prop {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.receive-gift__end-acts {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0 24px 34px;
+}
+
+/* Reduced motion: the snap and the reveal are a 150ms fade. */
+@media (prefers-reduced-motion: reduce) {
+  .receive-gift__stage,
+  .receive-gift__figure,
+  .receive-gift .gift-bag,
+  .receive-gift__hint {
+    transition: opacity 150ms linear;
+  }
+
+  .receive-gift.is-out .gift-bag {
+    opacity: 0;
+    transform: none;
+  }
+
+  .receive-gift.is-out .receive-gift__figure {
+    animation: receive-gift-fade-in 150ms linear;
+  }
+
+  .receive-gift.is-out .receive-gift__figure .sticker-figure__sweep,
+  .receive-gift.is-out .receive-gift__figure .sticker-figure__sweep i {
+    animation: none;
+  }
+
+  .receive-gift__sheet.bottom-sheet {
+    animation: receive-gift-fade-in 150ms linear;
+  }
+
+  .receive-gift.is-received .receive-gift__sheet {
+    opacity: 0;
+    transform: none;
+    transition: opacity 150ms linear;
+  }
+}
+
+@keyframes receive-gift-fade-in {
+  from {
+    opacity: 0;
+  }
+}

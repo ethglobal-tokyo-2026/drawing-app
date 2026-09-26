@@ -113,3 +113,9 @@
   margin-top: 6px;
   rotate: -4deg;
 }
+
+/* A sealed sticker's image: its own cut, edge and cast are in the PNG. */
+.sticker-image {
+  display: block;
+  object-fit: contain;
+}

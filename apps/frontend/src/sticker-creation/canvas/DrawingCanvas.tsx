@@ -24,21 +24,27 @@ export interface DrawingCanvasHandle {
   finishStroke: () => void;
   /** A copy of the ink, transparent where nothing is drawn, to read pixels from. */
   inkForReading: () => HTMLCanvasElement | null;
+  /** Device pixels per sheet pixel: the ink canvas's density. */
+  inkDensity: () => number;
 }
 
 interface Props extends InkEvents {
   ref?: Ref<DrawingCanvasHandle>;
   settings: InkSettings;
+  /** The drawing screen shows, not covered by another screen. */
+  active: boolean;
 }
 
 /**
  * The white sheet and the ink on it. Pointer input goes straight to the ink engine and never through
  * React state; the engine reads the settings as each pointer lands and reports back through the events.
  */
-export function DrawingCanvas({ ref, settings, ...events }: Props) {
+export function DrawingCanvas({ ref, settings, active, ...events }: Props) {
   const sheetRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ink = useRef<{ engine: InkEngine; surface: InkSurface } | null>(null);
+  const showing = useRef(active);
+  const measureAgain = useRef<(() => void) | null>(null);
 
   const onHistory = useEffectEvent(events.onHistory);
   const onCommit = useEffectEvent(events.onCommit);
@@ -62,16 +68,30 @@ export function DrawingCanvas({ ref, settings, ...events }: Props) {
     ink.current = { engine, surface };
     const detach = engine.attach(sheet);
     const observer = new ResizeObserver(([entry]) => {
+      if (!showing.current) return;
       const { width, height } = entry.contentRect;
       if (surface.resize(width, height, devicePixelRatio)) engine.resized();
     });
     observer.observe(sheet);
+    // Observing afresh reports the sheet's size at the next frame, even when it hasn't changed.
+    measureAgain.current = () => {
+      observer.unobserve(sheet);
+      observer.observe(sheet);
+    };
     return () => {
       observer.disconnect();
+      measureAgain.current = null;
       detach();
       ink.current = null;
     };
   }, []);
+
+  // Covered, the sheet changes height with the tab bar, and resizing the ink replays the whole
+  // drawing. So the ink keeps its size until the drawing screen shows again, then measures.
+  useLayoutEffect(() => {
+    showing.current = active;
+    if (active) measureAgain.current?.();
+  }, [active]);
 
   useLayoutEffect(() => {
     if (ink.current) ink.current.engine.settings = settings;
@@ -87,6 +107,7 @@ export function DrawingCanvas({ ref, settings, ...events }: Props) {
       ops: () => ink.current?.engine.ops ?? [],
       finishStroke: () => ink.current?.engine.finishStroke(),
       inkForReading: () => ink.current?.surface.copyForReading() ?? null,
+      inkDensity: () => ink.current?.surface.density ?? 1,
     }),
     [],
   );

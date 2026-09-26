@@ -2,7 +2,7 @@
 import { act, createRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { BoardSticker } from "../boardSticker";
+import type { BoardStickerView } from "../boardSticker";
 import { StickerTray, type StickerTrayHandle } from "./StickerTray";
 import type { TrayBoard } from "./trayEngine";
 
@@ -16,18 +16,29 @@ let board: HTMLDivElement;
 let root: Root;
 const tray = createRef<StickerTrayHandle>();
 
-const sticker = (id: string, createdAt: number, on: boolean): BoardSticker => ({
+const sticker = (
+  id: string,
+  arrivedAt: number,
+  on: boolean,
+  extra: Partial<BoardStickerView> = {},
+): BoardStickerView => ({
   id,
-  no: createdAt,
-  createdAt,
+  no: 1,
+  createdAt: arrivedAt,
+  arrivedAt,
+  seenAt: null,
   timeUsed: 120,
-  blob: new Blob(),
   width: 100,
   height: 80,
   // A stored cut line, so its shape is known without reading an image.
   outline: "M10.0 10.0L90.0 10.0L90.0 70.0L10.0 70.0Z",
   urls: { png: `${id}.png`, mask: `${id}-mask.png` },
   placement: { on, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 },
+  artist: { id: "me", handle: "you", name: "You" },
+  held: true,
+  givenTo: null,
+  openGift: null,
+  ...extra,
 });
 const api: TrayBoard = {
   stickerRect: () => null,
@@ -36,18 +47,27 @@ const api: TrayBoard = {
   remove: () => {},
   pulse: () => {},
 };
-const render = (stickers: BoardSticker[], side: Partial<TrayBoard> = {}) =>
+const render = (
+  stickers: BoardStickerView[],
+  side: Partial<TrayBoard> = {},
+  onSeen: (ids: readonly string[]) => void = () => {},
+) =>
   act(() =>
     root.render(
       <StickerTray
         ref={tray}
         board={board}
         stickers={stickers}
-        gifts={new Map()}
+        ownerId="me"
         api={{ ...api, ...side }}
+        onSeen={onSeen}
       />,
     ),
   );
+const openAndShut = async () => {
+  await act(async () => void (await tray.current?.open()));
+  await act(async () => void (await tray.current?.close()));
+};
 const slotOf = (id: string) => board.querySelector(`.tray__slot[data-id="${id}"]`);
 const stateOf = (id: string) => slotOf(id)?.getAttribute("data-state");
 
@@ -103,5 +123,15 @@ describe("StickerTray", () => {
     expect(await again).toBe(false);
     expect(await first).toBe(true);
     expect(remove).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports what the open tray showed as seen once it shuts, once", async () => {
+    const onSeen = vi.fn();
+    const now = Date.now();
+    render([sticker("new", now, false), sticker("seen", now, false, { seenAt: now })], {}, onSeen);
+    await openAndShut();
+    expect(onSeen).toHaveBeenCalledExactlyOnceWith(["new"]);
+    await openAndShut();
+    expect(onSeen).toHaveBeenCalledTimes(1);
   });
 });

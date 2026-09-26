@@ -8,7 +8,7 @@ export const LIFF_ID =
   (import.meta.env.DEV && import.meta.env.VITE_LIFF_ID) || "2011732197-P98cxGpu";
 
 /** LIFF Mock answers for LINE on the dev server unless `.env` switches it off; builds always use LINE. */
-export const liffMockActive = import.meta.env.DEV && import.meta.env.VITE_LIFF_MOCK !== "off";
+const liffMockActive = import.meta.env.DEV && import.meta.env.VITE_LIFF_MOCK !== "off";
 
 interface LineProfile {
   userId: string;
@@ -83,9 +83,29 @@ export function describeLiffError(error: unknown): string {
 
 const hasMock = (l: object): l is { $mock: LiffMockApi } => "$mock" in l;
 
-/** On localhost LIFF Mock answers for LINE, logged in as its stand-in user as if inside LINE. */
+const MOCK_PERSON_KEY = "draw.liffMockAs";
+/** LIFF Mock's own stand-in user. */
+const MOCK_DEFAULT_NAME = "brown";
+
+/**
+ * Who LIFF Mock signs in as: `?as=<name>`, kept for the tab so in-app navigation keeps them, or LIFF
+ * Mock's own Brown. A name in any letter case is one person, with one LINE user ID.
+ */
+export function mockPerson(search: string, tab: Pick<Storage, "getItem" | "setItem">) {
+  const asked = new URLSearchParams(search).get("as")?.trim().toLowerCase();
+  if (asked) tab.setItem(MOCK_PERSON_KEY, asked);
+  const name = asked || tab.getItem(MOCK_PERSON_KEY) || MOCK_DEFAULT_NAME;
+  return { sub: `dev-${name}`, name: name.charAt(0).toUpperCase() + name.slice(1) };
+}
+
+/** On localhost LIFF Mock answers for LINE, logged in as mockPerson as if inside LINE. */
 async function initMock() {
-  const { LiffMockPlugin } = await import("@line/liff-mock");
+  // Only this path loads dev sign-in, so the build, which drops it, never ships a dev ID token.
+  const [{ LiffMockPlugin }, { devIdToken }] = await Promise.all([
+    import("@line/liff-mock"),
+    import("@drawing-app/api/dev-sign-in"),
+  ]);
+  const person = mockPerson(location.search, sessionStorage);
   liff.use(new LiffMockPlugin());
   // liff.init's type doesn't declare the plugin's `mock` option.
   const config: Parameters<typeof liff.init>[0] & LiffMockConfig = { liffId: LIFF_ID, mock: true };
@@ -100,6 +120,11 @@ async function initMock() {
     isInClient: true,
     isApiAvailable: true,
     shareTargetPicker: { status: "success" },
+    // LIFF Mock reports a group chat; a gift link opens as it would from a 1:1 chat.
+    getContext: data.getContext && { ...data.getContext, type: "utou", utouId: "mock-utou" },
+    // The REST API trusts a dev ID token only with DEV_SIGN_IN=on.
+    getIDToken: devIdToken(person),
+    getProfile: { userId: person.sub, displayName: person.name },
   }));
   Object.assign(window, { liffMock: mocked.$mock });
   // The mock's profile calls need a login call first, as a real browser would.
@@ -120,6 +145,11 @@ const subscribe = (l: () => void) => {
   listeners.add(l);
   return () => listeners.delete(l);
 };
+
+/** The ID token that signs you in to the app's server, or null before LINE is ready. */
+export function lineIdToken(): string | null {
+  return state.status === "ready" ? liff.getIDToken() : null;
+}
 
 export function useLine(): LineState {
   return useSyncExternalStore(subscribe, () => state);

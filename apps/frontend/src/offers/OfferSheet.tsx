@@ -1,7 +1,7 @@
 import { ArrowsLeftRight, ChatCircleDots, Heart, PaperPlaneTilt, X } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ArtistArt } from "../artists/ArtistArt";
-import type { Artist, ArtistBoardSticker } from "../artists/demoArtists";
+import type { PersonView } from "../api/views";
+import type { BoardStickerView } from "../sticker-board/boardSticker";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 // Giving.css goes first, even ahead of the give-sheet.css StickerPicker brings, so the sheet's
@@ -45,9 +45,9 @@ const KINDS: { id: OfferKind; title: string; note: (holder: string) => string; i
 const GRATITUDE_AMOUNTS = [100, 250, 500];
 
 interface Props {
-  sticker: ArtistBoardSticker;
+  sticker: BoardStickerView;
   /** Whose board it's on: they hold it and answer the offer. */
-  holder: Artist;
+  holder: PersonView;
   onClose: () => void;
 }
 
@@ -58,7 +58,7 @@ export function OfferSheet({ sticker, holder, onClose }: Props) {
   const [amount, setAmount] = useState(GRATITUDE_AMOUNTS[0]);
   const [sent, setSent] = useState(false);
   const { stickers, error } = useKeptStickers();
-  const handle = holder.handle;
+  const handle = holder.handle ?? holder.name;
   const root = useRef<HTMLDivElement>(null);
   useBackToClose(true, onClose);
   useFocusTrap(root, { onEscape: onClose });
@@ -81,7 +81,7 @@ export function OfferSheet({ sticker, holder, onClose }: Props) {
           {sent ? (
             <div className="giving__sent" role="status">
               <span className="offer-sent-art">
-                <ArtistArt art={sticker.art} />
+                <img src={sticker.urls.png} alt="" className="sticker-image" />
               </span>
               <h2 className="giving__title">Offer sent to @{handle}</h2>
               <p className="giving__sub">
@@ -107,12 +107,12 @@ export function OfferSheet({ sticker, holder, onClose }: Props) {
               </header>
 
               <div className="offer-subject">
-                <ArtistArt art={sticker.art} className="offer-art" />
+                <img src={sticker.urls.png} alt="" className="sticker-image offer-art" />
                 <p className="fine sheet-fine">
                   {formatNo(sticker.no)} · <Duration seconds={sticker.timeUsed} /> ·{" "}
-                  {formatDay(sticker.sealedAt)}
+                  {formatDay(sticker.createdAt)}
                   <br />
-                  By @{sticker.by ?? handle} · @{handle} holds it
+                  By @{sticker.artist.handle ?? sticker.artist.name} · @{handle} holds it
                 </p>
               </div>
 

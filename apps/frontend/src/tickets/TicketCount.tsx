@@ -1,5 +1,5 @@
 import { ticketPath } from "./ticketShape";
-import { dailyLeft, type TicketKind, type TicketState } from "./tickets";
+import type { TicketKind, Tickets } from "./tickets";
 import "./TicketCount.css";
 
 const MARK = { w: 18, h: 12, corner: 2.5, notch: 2.5 };
@@ -24,11 +24,11 @@ export function TicketCount({ kind, count }: { kind: TicketKind; count?: number 
 }
 
 /** Daily and reserve tickets left, side by side: what every Draw key carries. */
-export function TicketCounts({ state, className }: { state: TicketState; className?: string }) {
+export function TicketCounts({ state, className }: { state: Tickets; className?: string }) {
   return (
     <span className={["ticket-counts", className].filter(Boolean).join(" ")} aria-hidden>
-      <TicketCount kind="daily" count={dailyLeft(state)} />
-      <TicketCount kind="reserve" count={state.reserve} />
+      <TicketCount kind="daily" count={state.dailyLeft} />
+      <TicketCount kind="reserve" count={state.reserveLeft} />
     </span>
   );
 }

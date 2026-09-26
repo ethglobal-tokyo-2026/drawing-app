@@ -2,7 +2,7 @@
 
 2026-09-26, split out of `2026-09-26-giving-receiving-design.md`, which builds the data layer this uses (`src/api/`). Not scheduled: someone may be working on the stat board now. Before building it, check `sticker-board/stat-board/` on `main` against this.
 
-**Sources.** `DESIGN` = the design drafts' `drawing-app/` directory; `P` = `DESIGN/prototype`. `DESIGN/DESIGN.md` "The cork back" and "Hit counter", `DESIGN/research/stats-flip-brief.md` and `hits-brief.md`, `P/screens/sketchbook.js` (the cork back), `P/css/components.css` (the hit counter), `docs/database-schema-and-rest-api.md` ("User Stats", `GET /api/sticker-boards/:userId/user-stats`).
+**Sources.** `DESIGN` = the design drafts' `drawing-app/` directory; `P` = `DESIGN/prototype`. `DESIGN/DESIGN.md` "The cork back" and "Hit counter", `DESIGN/research/stats-flip-brief.md` and `hits-brief.md`, `P/screens/sketchbook.js` (the stat board), `P/css/components.css` (the hit counter), `docs/database-schema-and-rest-api.md` ("User Stats", `GET /api/sticker-boards/:userId/user-stats`).
 
 **Needs:** the giving and receiving spec's `ApiClient`, with a `userStats` method for `GET /api/sticker-boards/me/user-stats`, and its `deviceApi` and mock.
 
@@ -27,24 +27,24 @@ interface Props {
 
 **What each paper shows:**
 
-| Paper                      | Shows                                                                                           | From                                                               |
-| -------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| The name card              | Picture, LINE name, "@alice · name and picture from LINE"                                       | `person`                                                           |
-| The receipt                | "@ALICE" and today's date on top; one row per kind above 0, each with its dot and reason; TOTAL | `gratitude`                                                        |
-| The calendar leaf          | The streak in days, and its rule                                                                | `streak`                                                           |
-| The notebook scrap (Bests) | Longest streak, Best combo as a hit counter, Most thanks in a day; "None yet" for each at 0     | `bests.longestStreak`, `bests.bestCombo`, `bests.mostThanksInADay` |
-| The stamps                 | Made, received, given                                                                           | `made`, `received`, `given`                                        |
-| The label-maker tape       | "Since 2026.08.12"                                                                              | `since`                                                            |
+| Paper | Shows | From |
+| -------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ ---|
+| The name card | Picture, LINE name, "@alice · name and picture from LINE" | `person` |
+| The receipt | "@ALICE" and today's date on top; one row per kind above 0, each with its dot and reason; TOTAL | `gratitude` |
+| The calendar leaf | The streak in days, and its rule | `streak` |
+| The notebook scrap (Bests) | Longest streak, Best combo as a hit counter, Most gratitude in a day; "None yet" for each at 0 | `bests.longestStreak`, `bests.bestCombo`, `bests.mostGratitudeInADay` |
+| The stamps | Made, received, given | `made`, `received`, `given` |
+| The label-maker tape | "Since 2026.08.12" | `since` |
 
 **The receipt's rows** (reasons from `P/screens/sketchbook.js:436-438`):
 
 | Row           | Dot   | Reason                                             | Amount                                                                                                   |
 | ------------- | ----- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Inspired      | pink  | "Thanks for stickers you gave."                    | `inspired`: your part of tap combos on gifts you gave                                                    |
-| Magic         | grape | "Thanks sent a special way."                       | `magic`: your part of stroke and shake combos                                                            |
+| Inspired      | pink  | "Gratitude for stickers you gave."                 | `inspired`: your part of tap combos on gifts you gave                                                    |
+| Magic         | grape | "Gratitude sent a special way."                    | `magic`: your part of stroke and shake combos                                                            |
 | As the artist | aqua  | "Came to you when others passed on your stickers." | `asOriginalArtist`: Original Artist Gratitude Shares from gifts of stickers you drew, given on by others |
 
-A row at 0 is left off. With every row at 0, the receipt reads "No gratitude yet. It arrives when someone you give a sticker to thanks you for it." over a TOTAL of 0. The Daily row is gone (the REST doc: only the Mini-game makes gratitude).
+A row at 0 is left off. With every row at 0, the receipt reads "No gratitude yet. It arrives when someone you give a sticker to sends you gratitude for it." over a TOTAL of 0. The Daily row is gone (the REST doc: only the Mini-game makes gratitude).
 
 **The streak's rule**, under the server's reset (proposed copy):
 
@@ -60,8 +60,8 @@ A row at 0 is left off. With every row at 0, the receipt reads "No gratitude yet
 - **Loading:** the papers show "–" (read as "not known") until the stats arrive.
 - **A failed load** stays on the receipt as a line saying what failed, with Try again as small label stock. The drafts' toast and automatic flip back would make the error vanish.
 
-**`deviceApi`'s User Stats:** `made` is the stickers on this device; `received` and `given` are 0, since nothing can be received without the server; `streak` and `bests.longestStreak` come from seal days under the reset rule; gratitude, `bestCombo` and `mostThanksInADay` are 0; `since` is the earlier of the first visit and the oldest sticker.
+**`deviceApi`'s User Stats:** `made` is the stickers on this device; `received` and `given` are 0, since nothing can be received without the server; `streak` and `bests.longestStreak` come from seal days under the reset rule; gratitude, `bestCombo` and `mostGratitudeInADay` are 0; `since` is the earlier of the first visit and the oldest sticker.
 
 ## A change to the REST doc
 
-`bests.mostThanksInADay` counts the person's ticket days, from 4:00 in their zone, as the streak does. Proposed; not yet in the doc.
+`bests.mostGratitudeInADay` counts the person's ticket days, from 4:00 in their zone, as the streak does. Proposed; not yet in the doc.

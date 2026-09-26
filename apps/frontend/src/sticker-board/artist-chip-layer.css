@@ -1,0 +1,46 @@
+/* The artists of the board's foil stickers, named as it opens: one layer over every sticker and the
+   header, under the toolbar, that the pointer passes through. */
+.artist-chip-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 900;
+  pointer-events: none;
+}
+
+/* Each greets in turn, top to bottom, holds, then fades as it rises. */
+.artist-chip-layer__chip {
+  position: absolute;
+  animation: artist-chip-flash 3.2s var(--ease-out) both;
+  animation-delay: calc(300ms + var(--i, 0) * 80ms);
+}
+
+/* All at once, without the pop, then a fade. */
+.artist-chip-layer.is-reduced .artist-chip-layer__chip {
+  animation: artist-chip-flash-still 3.2s linear both;
+}
+
+@keyframes artist-chip-flash {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.9);
+  }
+  9%,
+  72% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes artist-chip-flash-still {
+  0%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

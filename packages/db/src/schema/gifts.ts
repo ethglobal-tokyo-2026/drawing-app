@@ -65,7 +65,13 @@ export const gifts = sqliteTable(
     rejectTxHash: text("reject_tx_hash"),
     /** Our relayer's returnExpiredGift, set when sent. */
     returnTxHash: text("return_tx_hash"),
-    /** The Official account's "Bob accepted your sticker ♡" push went out, or was given up on. */
+    /**
+     * The Official account's "Bob accepted your sticker ♡" push went out, or was given up on.
+     * Every push sends an X-Line-Retry-Key, a UUID made from what it announces (here the gift ID
+     * and "received"), so no two pushes share a key and a retry reuses it. LINE answers a repeat
+     * with 409, which counts as sent, and keeps a key 24 hours, so after 24 hours the worker stops
+     * retrying and sets this anyway.
+     */
     pushedToGiverAt: integer("pushed_to_giver_at", { mode: "timestamp_ms" }),
     ...timestamps(),
   },

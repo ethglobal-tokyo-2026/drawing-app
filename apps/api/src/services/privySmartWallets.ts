@@ -1,25 +1,15 @@
 import { users, type Db } from "@drawing-app/db";
 import { privySubject } from "@drawing-app/sticker-chain/line-privy-jwt";
+import { APIError, NotFoundError, PrivyClient, type User } from "@privy-io/node";
 import { eq } from "drizzle-orm";
 import { isAddress } from "viem";
 import type { SmartWallets } from "../deps.ts";
 
-const PRIVY_LOOKUP_URL = "https://api.privy.io/v1/users/custom_auth/id";
-
-const field = (value: unknown, key: string): unknown =>
-  value && typeof value === "object" ? Reflect.get(value, key) : undefined;
-
-function smartWalletAddress(body: unknown): string | null {
-  const direct = field(field(body, "smart_wallet"), "address");
-  if (typeof direct === "string" && isAddress(direct)) return direct.toLowerCase();
-  const accounts = field(body, "linked_accounts");
-  if (!Array.isArray(accounts)) return null;
-  for (const account of accounts) {
-    if (field(account, "type") !== "smart_wallet") continue;
-    const address = field(account, "address");
-    if (typeof address === "string" && isAddress(address)) return address.toLowerCase();
-  }
-  return null;
+function smartWalletAddress(user: User): string | null {
+  const wallet = user.linked_accounts.find(
+    (account) => account.type === "smart_wallet" && isAddress(account.address),
+  );
+  return wallet?.type === "smart_wallet" ? wallet.address.toLowerCase() : null;
 }
 
 export function createPrivySmartWallets({
@@ -38,7 +28,14 @@ export function createPrivySmartWallets({
   if (!lineChannelId || !privyAppId || !privyAppSecret) {
     throw new Error("Privy smart-wallet lookup configuration is incomplete");
   }
-  const authorization = `Basic ${Buffer.from(`${privyAppId}:${privyAppSecret}`).toString("base64")}`;
+  const privy = new PrivyClient({
+    appId: privyAppId,
+    appSecret: privyAppSecret,
+    fetch: fetchImpl,
+    timeout: 5_000,
+    // Let the next Sealing/Receiving attempt retry without extending the API's lookup deadline.
+    maxRetries: 0,
+  });
   return {
     addressFor: async (userId) => {
       const user = db
@@ -48,22 +45,19 @@ export function createPrivySmartWallets({
         .get();
       if (!user?.lineUserId) return null;
       if (user.smartAccountAddress) return user.smartAccountAddress;
-      const response = await fetchImpl(PRIVY_LOOKUP_URL, {
-        method: "POST",
-        headers: {
-          authorization,
-          "privy-app-id": privyAppId,
-          "content-type": "application/json",
-          "user-agent": "sticker-api/1",
-        },
-        body: JSON.stringify({
+      let privyUser: User;
+      try {
+        privyUser = await privy.users().getByCustomAuthID({
           custom_user_id: privySubject(lineChannelId, user.lineUserId),
-        }),
-        signal: AbortSignal.timeout(5_000),
-      });
-      if (response.status === 404) return null;
-      if (!response.ok) throw new Error(`Privy user lookup failed with HTTP ${response.status}`);
-      const address = smartWalletAddress(await response.json());
+        });
+      } catch (error) {
+        if (error instanceof NotFoundError) return null;
+        if (error instanceof APIError && error.status !== undefined) {
+          throw new Error(`Privy user lookup failed with HTTP ${error.status}`);
+        }
+        throw error;
+      }
+      const address = smartWalletAddress(privyUser);
       if (!address) return null;
       db.update(users).set({ smartAccountAddress: address }).where(eq(users.id, userId)).run();
       return address;

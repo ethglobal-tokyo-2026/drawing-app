@@ -17,7 +17,12 @@ import {
   prepareGiftTakeOut,
   prepareGiftTransfer,
 } from "../src/gift-sticker.js";
-import { readFoundryArtifact, startAnvil, type AnvilInstance } from "./helpers/foundry.js";
+import {
+  anvilPollingInterval,
+  readFoundryArtifact,
+  startAnvil,
+  type AnvilInstance,
+} from "./helpers/foundry.js";
 
 const stickerArtifact = readFoundryArtifact("StickerNFT", "StickerNFT");
 const escrowArtifact = readFoundryArtifact("StickerGiftEscrow", "StickerGiftEscrow");
@@ -38,7 +43,11 @@ async function setup() {
   const anvil = await startAnvil(chain.id);
   activeAnvils.push(anvil);
   const transport = http(anvil.rpcUrl);
-  const publicClient = createPublicClient({ chain, transport });
+  const publicClient = createPublicClient({
+    chain,
+    transport,
+    pollingInterval: anvilPollingInterval,
+  });
   const testClient = createTestClient({ chain, mode: "anvil", transport });
   const accounts = anvil.accounts;
   const [admin, artist, recipient, claimSigner, stranger, relayer] = accounts;
@@ -150,6 +159,31 @@ function createAuthorizer(
 }
 
 describe("StickerGiftEscrow", () => {
+  it("lets only the sender take a pending sticker out", async () => {
+    const context = await setup();
+    const claim = await stageGift(context, Math.floor(Date.now() / 1000) + 3600);
+    const takeOut = prepareGiftTakeOut({
+      escrowContract: context.escrowAddress,
+      giftId: claim.giftId,
+    });
+    await expect(
+      context.walletClient.sendTransaction({ ...takeOut, account: context.stranger, chain }),
+    ).rejects.toThrow();
+    const hash = await context.walletClient.sendTransaction({
+      ...takeOut,
+      account: context.artist,
+      chain,
+    });
+    await context.publicClient.waitForTransactionReceipt({ hash });
+    await expect(
+      context.publicClient.readContract({
+        address: context.stickerAddress,
+        abi: stickerArtifact.abi,
+        functionName: "ownerOf",
+        args: [1n],
+      }),
+    ).resolves.toBe(context.artist.address);
+  }, 20_000);
   it("stages a gift before the recipient has a smart account", async () => {
     const context = await setup();
     const expiresAt = Math.floor(Date.now() / 1000) + 3600;
@@ -329,37 +363,4 @@ describe("StickerGiftEscrow", () => {
       }),
     ).resolves.toBe(expiredContext.artist.address);
   }, 30_000);
-
-  it("lets only the sender take a pending sticker out", async () => {
-    const context = await setup();
-    const expiresAt = Math.floor(Date.now() / 1000) + 3600;
-    const claim = await stageGift(context, expiresAt);
-    const takeOut = prepareGiftTakeOut({
-      escrowContract: context.escrowAddress,
-      giftId: claim.giftId,
-    });
-
-    await expect(
-      context.walletClient.sendTransaction({
-        ...takeOut,
-        account: context.stranger,
-        chain,
-      }),
-    ).rejects.toThrow();
-
-    const hash = await context.walletClient.sendTransaction({
-      ...takeOut,
-      account: context.artist,
-      chain,
-    });
-    await context.publicClient.waitForTransactionReceipt({ hash });
-    await expect(
-      context.publicClient.readContract({
-        address: context.stickerAddress,
-        abi: stickerArtifact.abi,
-        functionName: "ownerOf",
-        args: [1n],
-      }),
-    ).resolves.toBe(context.artist.address);
-  }, 20_000);
 });

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy Policy</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@75..125,200..900&display=swap"
+    />
+    <style>
+      body {
+        margin: 0;
+        padding: 24px 20px 40px;
+        background: #f2f1f6;
+        color: #1c1824;
+        font:
+          400 15px/1.5 "Mona Sans",
+          system-ui,
+          sans-serif;
+      }
+      main {
+        max-width: 38em;
+        margin: 0 auto;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 26px;
+        font-weight: 800;
+        font-stretch: 112%;
+        line-height: 1.1;
+      }
+      a {
+        color: inherit;
+      }
+      video {
+        display: block;
+        width: 100%;
+        height: auto;
+        margin-top: 20px;
+        border-radius: 10px;
+        background: #1c1824;
+        /* The picture is already in blocks; scaling keeps their edges hard. */
+        image-rendering: pixelated;
+      }
+      .back {
+        display: inline-block;
+        margin-top: 24px;
+        color: #6e6878;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Privacy Policy</h1>
+      <video
+        src="/rick-roll.mp4"
+        poster="/rick-roll.jpg"
+        width="1024"
+        height="768"
+        loop
+        playsinline
+        preload="auto"
+        aria-label="A man dancing, in coarse pixels and inverted colors"
+      ></video>
+      <a class="back" href="/">Back to the app</a>
+    </main>
+    <script>
+      // With sound where the browser allows it before a tap, muted where it doesn't; the first tap
+      // anywhere then turns the sound on.
+      const video = document.querySelector("video");
+      const report = (error) => console.error("The video didn't play", error);
+      video.play().catch((error) => {
+        if (error.name !== "NotAllowedError") return report(error);
+        video.muted = true;
+        video.play().catch(report);
+      });
+      const unmute = () => {
+        removeEventListener("touchend", unmute);
+        removeEventListener("click", unmute);
+        video.muted = false;
+        video.play().catch(report);
+      };
+      // iOS sends no click to the page for a tap on something that isn't clickable, so touchend too.
+      addEventListener("touchend", unmute);
+      addEventListener("click", unmute);
+    </script>
+  </body>
+</html>

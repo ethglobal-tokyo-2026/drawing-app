@@ -1,101 +1,53 @@
-import { At, PaperPlaneTilt, X } from "@phosphor-icons/react";
-import { Fragment, useEffect, useState, type ReactNode } from "react";
-import type { ArtKey } from "../artists/art";
-import { ArtistArt } from "../artists/ArtistArt";
-import { ArtistAvatarArt } from "../artists/ArtistAvatarArt";
-import { ARTISTS, artistByHandle, latestArt, type Artist } from "../artists/demoArtists";
-import { LabelButton } from "../ui/LabelButton";
-import { useToast } from "../ui/useToast";
-import { useIdentity } from "../identity/useIdentity";
+import type {
+  ActivityEntry,
+  Explore,
+  LeaderboardRow,
+  Person,
+  Sticker,
+} from "@drawing-app/api/client";
+import { At, X } from "@phosphor-icons/react";
+import { useEffect, useState, type ReactNode } from "react";
+import { useMe } from "../api/meContext";
+import { useApiQuery, type Query } from "../api/useApiQuery";
+import { toPerson } from "../api/views";
 import { Duration } from "../stickers/Duration";
-import { formatNo } from "../stickers/format";
-import { deviceGiftStore, giftStatusBySticker } from "../giving/giftStore";
-import { listStickers } from "../stickers/stickerStorage";
-import {
-  FEED,
-  LEADERBOARDS,
-  ME,
-  THIS_WEEK,
-  TODAYS_STICKERS,
-  type FeedItem,
-  type Leaderboard,
-  type Standing,
-  type Who,
-} from "./exploreData";
+import { formatHandle, formatNo } from "../stickers/format";
+import { LabelButton } from "../ui/LabelButton";
+import { PhotoSticker } from "../ui/PhotoSticker";
 import "./ExploreScreen.css";
 
 interface Props {
-  onOpenArtist: (handle: string) => void;
+  onOpenArtist: (person: Person) => void;
   onOpenMyBoard: () => void;
 }
 
 /** Days turn over at 4:00, so 2:00 still belongs to yesterday. */
 const DAY_TURNOVER_MS = 4 * 60 * 60 * 1000;
+/** Search waits for a pause in typing before it asks the server. */
+const SEARCH_AFTER_MS = 250;
 
 const todayBadge = () => {
   const d = new Date(Date.now() - DAY_TURNOVER_MS);
   return `${d.getMonth() + 1}.${d.getDate()}`;
 };
 
-const ago = (minutes: number) =>
-  minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} hr`;
-
-/** Someone as an Explore row shows them: a demo artist, or you with your newest sticker. */
-interface RowArtist {
-  handle: string;
-  displayName: string;
-  art: ArtKey;
-  stickerUrl?: string;
-  artist?: Artist;
+function ago(at: string): string {
+  const minutes = Math.max(0, Math.floor((Date.now() - Date.parse(at)) / 60_000));
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  return hours < 24 ? `${hours} hr` : `${Math.floor(hours / 24)} d`;
 }
 
-function useMe(): RowArtist {
-  const me = useIdentity();
-  const [stickerUrl, setStickerUrl] = useState<string>();
+type Leaderboard = "mostGratitude" | "bestCombo" | "longestStreak";
 
-  useEffect(() => {
-    let url: string | undefined;
-    let cancelled = false;
-    listStickers().then(
-      (records) => {
-        const given = giftStatusBySticker(deviceGiftStore().list());
-        const newest = records.find((r) => !given.has(r.id));
-        if (cancelled || !newest) return;
-        url = URL.createObjectURL(newest.blob);
-        setStickerUrl(url);
-      },
-      (error: unknown) => console.error("Your newest sticker failed to load for Explore", error),
-    );
-    return () => {
-      cancelled = true;
-      if (url) URL.revokeObjectURL(url);
-    };
-  }, []);
+const LEADERBOARDS: { id: Leaderboard; label: string }[] = [
+  { id: "mostGratitude", label: "Most gratitude" },
+  { id: "bestCombo", label: "Best combo" },
+  { id: "longestStreak", label: "Longest streak" },
+];
 
-  return { handle: me.handle, displayName: me.displayName, art: "sunset", stickerUrl };
-}
-
-const asRow = (artist: Artist): RowArtist => ({
-  handle: artist.handle,
-  displayName: artist.displayName,
-  art: latestArt(artist),
-  artist,
-});
-
-function lookup(who: Who, me: RowArtist, where: string): RowArtist | undefined {
-  if (who === ME) return me;
-  const artist = artistByHandle.get(who);
-  if (!artist) console.error(`${where} names an unknown artist, @${who}`);
-  return artist && asRow(artist);
-}
-
-function StickerArt({ row, className }: { row: RowArtist; className: string }) {
-  return row.stickerUrl ? (
-    <img src={row.stickerUrl} alt="" className={`artist-art ${className}`} />
-  ) : (
-    <ArtistArt art={row.art} className={className} />
-  );
-}
+/** Opens someone's sticker board: yours, or theirs. */
+type Open = (person: Person) => void;
 
 /** A tappable area that opens someone's sticker board; `data-press` gives it the shared press. */
 function Pressable({
@@ -122,32 +74,43 @@ function Pressable({
   );
 }
 
-function ArtistRow({
-  row,
-  isMe,
+const boardLabel = (person: Person, meId: string) =>
+  person.id === meId
+    ? "Your sticker board"
+    : `${formatHandle(person.handle ?? "")}'s sticker board`;
+
+function Avatar({ person, size }: { person: Person; size: number }) {
+  const view = toPerson(person);
+  return <PhotoSticker src={view.pictureUrl} name={view.name} size={size} />;
+}
+
+function PersonRow({
+  person,
+  meId,
   lead,
   name,
   trail,
-  onOpen,
+  open,
 }: {
-  row: RowArtist;
-  isMe: boolean;
+  person: Person;
+  meId: string;
   lead: ReactNode;
   name?: ReactNode;
   trail?: ReactNode;
-  onOpen: () => void;
+  open: Open;
 }) {
+  const isMe = person.id === meId;
   return (
     <li className={isMe ? "me" : ""}>
       <Pressable
         className="artist-row"
-        onClick={onOpen}
-        label={isMe ? "Your sticker board" : `@${row.handle}'s sticker board`}
+        onClick={() => open(person)}
+        label={boardLabel(person, meId)}
       >
         {lead}
         <span className="row-names">
-          <b>{name ?? `@${row.handle}`}</b>
-          <span>{isMe ? "You" : row.displayName}</span>
+          <b>{name ?? formatHandle(person.handle ?? "")}</b>
+          <span>{isMe ? "You" : toPerson(person).name}</span>
         </span>
         {trail}
       </Pressable>
@@ -156,8 +119,8 @@ function ArtistRow({
 }
 
 function Figure({ board, value }: { board: Leaderboard; value: number }) {
-  if (board === "best-combo") return <span className="figure">×{value}</span>;
-  if (board === "longest-streak")
+  if (board === "bestCombo") return <span className="figure">×{value}</span>;
+  if (board === "longestStreak")
     return (
       <span className="figure">
         {value}
@@ -167,32 +130,17 @@ function Figure({ board, value }: { board: Leaderboard; value: number }) {
   return <span className="figure">{value.toLocaleString("en-US")}</span>;
 }
 
-function ThisWeek({ me, open }: { me: RowArtist; open: (who: Who) => void }) {
-  const [board, setBoard] = useState<Leaderboard>("most-thanked");
-  const standings = THIS_WEEK[board];
-
-  const row = (s: Standing, i: number) => {
-    const r = lookup(s.who, me, "A leaderboard row");
-    if (!r) return null;
-    const gap = i > 0 && s.rank > standings[i - 1].rank + 1;
-    return (
-      <Fragment key={`${board}-${s.rank}`}>
-        {gap && <li className="rank-gap" aria-hidden />}
-        <ArtistRow
-          row={r}
-          isMe={s.who === ME}
-          onOpen={() => open(s.who)}
-          lead={
-            <>
-              <span className="rank">{s.rank}</span>
-              <StickerArt row={r} className="row-art" />
-            </>
-          }
-          trail={<Figure board={board} value={s.value} />}
-        />
-      </Fragment>
-    );
-  };
+function ThisWeek({
+  leaderboards,
+  meId,
+  open,
+}: {
+  leaderboards: Explore["leaderboards"];
+  meId: string;
+  open: Open;
+}) {
+  const [board, setBoard] = useState<Leaderboard>("mostGratitude");
+  const rows: LeaderboardRow[] = leaderboards[board];
 
   return (
     <section className="explore-section">
@@ -215,29 +163,47 @@ function ThisWeek({ me, open }: { me: RowArtist; open: (who: Who) => void }) {
         ))}
       </div>
       <ol className="leaderboard" role="tabpanel">
-        {standings.map(row)}
+        {rows.length === 0 && <li className="fine muted">No one is on it yet this week.</li>}
+        {rows.map((row, i) => (
+          <PersonRow
+            key={row.person.id}
+            person={row.person}
+            meId={meId}
+            open={open}
+            lead={
+              <>
+                <span className="rank">{i + 1}</span>
+                <Avatar person={row.person} size={40} />
+              </>
+            }
+            trail={<Figure board={board} value={row.value} />}
+          />
+        ))}
       </ol>
     </section>
   );
 }
 
-function FeedPost({ item, me, open }: { item: FeedItem; me: RowArtist; open: (who: Who) => void }) {
-  const artist = artistByHandle.get(item.who);
-  if (!artist) {
-    console.error(`A feed post names an unknown artist, @${item.who}`);
-    return null;
-  }
-  const to = item.kind === "gave" ? (item.to === me.handle ? "you" : `@${item.to}`) : null;
+const StickerImage = ({ sticker, className }: { sticker: Sticker; className: string }) => (
+  <img src={sticker.images.png} alt="" className={`sticker-image ${className}`} />
+);
+
+function FeedPost({ entry, meId, open }: { entry: ActivityEntry; meId: string; open: Open }) {
+  const who = entry.type === "sealed" ? entry.sticker.artist : entry.giver;
+  const to =
+    entry.type === "received"
+      ? entry.receiver.id === meId
+        ? "you"
+        : formatHandle(entry.receiver.handle ?? "")
+      : null;
   return (
     <article className="feed-post">
-      <Pressable
-        className="feed-head"
-        onClick={() => open(item.who)}
-        label={`@${artist.handle}'s sticker board`}
-      >
-        <ArtistAvatarArt avatar={artist.avatar} className="feed-avatar" />
+      <Pressable className="feed-head" onClick={() => open(who)} label={boardLabel(who, meId)}>
+        <span className="feed-avatar">
+          <Avatar person={who} size={36} />
+        </span>
         <p>
-          <b>@{artist.handle}</b>{" "}
+          <b>{formatHandle(who.handle ?? "")}</b>{" "}
           {to ? (
             <>
               gave a sticker to <b>{to}</b>
@@ -246,102 +212,129 @@ function FeedPost({ item, me, open }: { item: FeedItem; me: RowArtist; open: (wh
             "made a sticker"
           )}
         </p>
-        <span className="fine muted">{ago(item.minutesAgo)}</span>
+        <span className="fine muted">{ago(entry.at)}</span>
       </Pressable>
-      <ArtistArt art={latestArt(artist)} className="feed-art" />
+      <StickerImage sticker={entry.sticker} className="feed-art" />
       <p className="fine muted feed-meta">
-        {formatNo(item.no)} · <Duration seconds={item.timeUsed} /> · @{artist.handle}
+        {formatNo(entry.sticker.number)} · <Duration seconds={entry.sticker.timeUsed} /> ·{" "}
+        {formatHandle(entry.sticker.artist.handle ?? "")}
       </p>
     </article>
   );
 }
 
-const DemoNote = () => (
-  <p className="fine muted demo-note">Demo material · artists, stickers and figures are authored</p>
-);
+/** What didn't load and why, with a way to ask again. */
+function Failed({ what, query }: { what: string; query: Query<unknown> }) {
+  if (query.state !== "failed") return null;
+  return (
+    <section className="explore-section" role="alert">
+      <h2>Couldn’t load {what}</h2>
+      <p className="fine muted">{query.error.message}</p>
+      <LabelButton size="sm" onClick={query.retry}>
+        Try again
+      </LabelButton>
+    </section>
+  );
+}
 
-/** Handles are exact, so search matches from the start of one; results run A to Z. */
-function SearchResults({
-  query,
-  me,
-  open,
-}: {
-  query: string;
-  me: RowArtist;
-  open: (who: Who) => void;
-}) {
-  const toast = useToast();
-  const q = query.toLowerCase();
-  const people: { row: RowArtist; who: Who }[] = [
-    { row: me, who: ME },
-    ...ARTISTS.map((a) => ({ row: asRow(a), who: a.handle })),
-  ];
-  const matches = people
-    .filter((p) => p.row.handle.toLowerCase().startsWith(q))
-    .sort((a, b) => a.row.handle.localeCompare(b.row.handle));
+/** Handles starting with the search first, then ones containing it, A to Z, as the server sorts. */
+function SearchResults({ query, meId, open }: { query: string; meId: string; open: Open }) {
+  const results = useApiQuery(`users?handle=${query}`, (api) => api.searchUsers(query));
+  if (results.state === "loading") return <p className="fine muted results-count">Searching…</p>;
+  if (results.state === "failed") return <Failed what="search results" query={results} />;
+  const people = results.data;
 
-  if (!matches.length)
+  if (!people.length)
     return (
       <section className="explore-section search-empty">
         <h2>No one here is @{query} yet</h2>
         <p>
           Handles are exact, so check the spelling with them. If they’re your LINE friend, give them
-          a sticker in your chat: accepting it brings them in.
+          a sticker from your board in a LINE chat: receiving it brings them in.
         </p>
-        <LabelButton
-          size="sm"
-          tone="aqua"
-          icon={<PaperPlaneTilt size={18} />}
-          onClick={() => toast("Giving in a LINE chat isn’t built yet")}
-        >
-          Give in a LINE chat
-        </LabelButton>
-        <DemoNote />
       </section>
     );
 
   return (
     <section className="explore-section">
       <p className="fine muted results-count">
-        {matches.length} {matches.length === 1 ? "artist" : "artists"} · A to Z
+        {people.length} {people.length === 1 ? "artist" : "artists"}
       </p>
       <ul className="search-results">
-        {matches.map(({ row, who }) => (
-          <ArtistRow
-            key={row.handle}
-            row={row}
-            isMe={who === ME}
-            onOpen={() => open(who)}
-            name={
-              <>
-                @<mark>{row.handle.slice(0, query.length)}</mark>
-                {row.handle.slice(query.length)}
-              </>
-            }
-            lead={
-              row.artist ? (
-                <ArtistAvatarArt avatar={row.artist.avatar} className="result-avatar" />
-              ) : (
-                <StickerArt row={row} className="result-avatar" />
-              )
-            }
-            trail={
-              row.artist && (
-                <span className="result-stickers" aria-hidden>
-                  {row.artist.board
-                    .filter((s) => !s.by)
-                    .slice(0, 3)
-                    .map((s) => (
-                      <ArtistArt key={s.no} art={s.art} className="result-sticker" />
-                    ))}
+        {people.map((person) => {
+          const handle = person.handle ?? "";
+          const at = handle.toLowerCase().indexOf(query.toLowerCase());
+          return (
+            <PersonRow
+              key={person.id}
+              person={person}
+              meId={meId}
+              open={open}
+              name={
+                at < 0 ? (
+                  formatHandle(handle)
+                ) : (
+                  <>
+                    @{handle.slice(0, at)}
+                    <mark>{handle.slice(at, at + query.length)}</mark>
+                    {handle.slice(at + query.length)}
+                  </>
+                )
+              }
+              lead={
+                <span className="result-avatar">
+                  <Avatar person={person} size={40} />
                 </span>
-              )
-            }
+              }
+            />
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function Today({ explore, meId, open }: { explore: Explore; meId: string; open: Open }) {
+  return (
+    <>
+      <section className="explore-section">
+        <header className="section-head">
+          <h2>Today’s stickers</h2>
+          <span className="date-badge">{todayBadge()}</span>
+        </header>
+        {explore.todaysStickers.length === 0 ? (
+          <p className="fine muted">No one has sealed a sticker yet today.</p>
+        ) : (
+          <ul className="todays-stickers">
+            {explore.todaysStickers.map((sticker) => (
+              <li key={sticker.id}>
+                <Pressable
+                  className="today-sticker"
+                  onClick={() => open(sticker.artist)}
+                  label={boardLabel(sticker.artist, meId)}
+                >
+                  <StickerImage sticker={sticker} className="today-art" />
+                  <span className="fine">{formatHandle(sticker.artist.handle ?? "")}</span>
+                </Pressable>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <ThisWeek leaderboards={explore.leaderboards} meId={meId} open={open} />
+
+      <section className="explore-section feed">
+        {explore.activity.map((entry) => (
+          <FeedPost
+            key={`${entry.type}-${entry.sticker.id}-${entry.at}`}
+            entry={entry}
+            meId={meId}
+            open={open}
           />
         ))}
-      </ul>
-      <DemoNote />
-    </section>
+      </section>
+    </>
   );
 }
 
@@ -349,7 +342,13 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
   const me = useMe();
   const [query, setQuery] = useState("");
   const q = query.trim().replace(/^@/, "");
-  const open = (who: Who) => (who === ME ? onOpenMyBoard() : onOpenArtist(who));
+  const [searched, setSearched] = useState(q);
+  useEffect(() => {
+    const id = setTimeout(() => setSearched(q), SEARCH_AFTER_MS);
+    return () => clearTimeout(id);
+  }, [q]);
+  const explore = useApiQuery("explore", (api) => api.explore());
+  const open: Open = (person) => (person.id === me.id ? onOpenMyBoard() : onOpenArtist(person));
 
   return (
     <div className="explore">
@@ -378,43 +377,13 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
       </label>
 
       {q ? (
-        <SearchResults query={q} me={me} open={open} />
+        searched && <SearchResults query={searched} meId={me.id} open={open} />
+      ) : explore.state === "ready" ? (
+        <Today explore={explore.data} meId={me.id} open={open} />
+      ) : explore.state === "failed" ? (
+        <Failed what="Explore" query={explore} />
       ) : (
-        <>
-          <section className="explore-section">
-            <header className="section-head">
-              <h2>Today’s stickers</h2>
-              <span className="date-badge">{todayBadge()}</span>
-            </header>
-            <ul className="todays-stickers">
-              {TODAYS_STICKERS.map((who) => {
-                const r = lookup(who, me, "Today's stickers");
-                if (!r) return null;
-                return (
-                  <li key={r.handle}>
-                    <Pressable
-                      className="today-sticker"
-                      onClick={() => open(who)}
-                      label={who === ME ? "Your sticker board" : `@${r.handle}'s sticker board`}
-                    >
-                      <StickerArt row={r} className="today-art" />
-                      <span className="fine">@{r.handle}</span>
-                    </Pressable>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-
-          <ThisWeek me={me} open={open} />
-
-          <section className="explore-section feed">
-            {FEED.map((item) => (
-              <FeedPost key={item.no} item={item} me={me} open={open} />
-            ))}
-            <DemoNote />
-          </section>
-        </>
+        <p className="fine muted results-count">Loading…</p>
       )}
     </div>
   );

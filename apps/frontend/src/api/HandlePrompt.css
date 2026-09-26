@@ -1,0 +1,49 @@
+/* ---------- The handle prompt, on the bare paper before the app opens ---------- */
+
+.handle-prompt__form {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: min(320px, 100%);
+}
+
+/* White label stock with an aqua halo, like Explore's search. */
+.handle-prompt__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-label);
+  background: var(--canvas);
+  box-shadow: 0 0 0 4px var(--aqua-soft);
+}
+
+.handle-prompt__field:focus-within {
+  border-color: var(--aqua-deep);
+}
+
+.handle-prompt__field input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--ink);
+  font: 500 16px var(--font-ui);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* A problem stays until the next try; it never vanishes as a toast. */
+.handle-prompt__problem {
+  min-height: 1.4em;
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  text-wrap: pretty;
+}

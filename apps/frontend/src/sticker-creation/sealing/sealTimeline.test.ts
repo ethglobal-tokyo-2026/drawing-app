@@ -18,12 +18,12 @@ describe("sealTimeline", () => {
     ["the gloss follows", (f) => f.gloss, T.rise0 + 80, T.rise1 + 80],
     ["the specular gathers", (f) => f.spec.scale, T.form0, T.form1],
     ["the rim light comes up", (f) => f.rim, T.form0 + 90, T.form1 + 40],
-    ["the sticker peels up", (f) => f.piece.rotateX, T.peel0, T.peel1],
+    ["the sticker peels up", (f) => f.sticker.rotateX, T.peel0, T.peel1],
     ["the cut line fades", (f) => f.cut.alpha, T.peel0, T.peel0 + 220],
     ["the dim clears", (f) => f.dim, T.peel0, T.peel0 + 320],
     ["the veil rises", (f) => f.veil, T.card0, T.card1],
     ["the card slides up", (f) => f.card.y, T.card0, T.card1],
-    ["the sticker flies to the card", (f) => f.piece.x, T.move0, T.move1],
+    ["the sticker flies to the card", (f) => f.sticker.x, T.move0, T.move1],
     ["the used sticker silhouette goes", (f) => f.usedStickerSilhouette, T.card1, T.card1 + 260],
     ["the card's first line fades up", (f) => f.items[0].y, T.txt0, T.txt0 + 240],
     ["its second line follows", (f) => f.items[1].y, T.txt0 + 40, T.txt0 + 280],
@@ -36,7 +36,7 @@ describe("sealTimeline", () => {
   });
 
   it("lands the sticker in the middle of the slot, fitted to it", () => {
-    const end = frameAt(TOTAL).piece;
+    const end = frameAt(TOTAL).sticker;
     expect(box.x + box.w / 2 + end.x).toBeCloseTo(slot.x + slot.w / 2);
     expect(box.y + box.h / 2 + end.y).toBeCloseTo(slot.y + slot.h / 2);
     expect(body.w * end.scale).toBeLessThanOrEqual(slot.w);
@@ -46,7 +46,7 @@ describe("sealTimeline", () => {
   it("overshoots as it lands, then settles", () => {
     // A small sticker grows into the slot, so only the landing's bounce can take it past its size.
     const small = flight({ x: 120, y: 200, w: 130, h: 110 }, { w: 118, h: 100 }, slot);
-    const scaleAt = (t: number) => sealFrame(t, small, 3).piece.scale;
+    const scaleAt = (t: number) => sealFrame(t, small, 3).sticker.scale;
     expect(scaleAt(T.land)).toBeGreaterThan(scaleAt(TOTAL));
   });
 

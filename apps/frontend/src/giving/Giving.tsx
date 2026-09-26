@@ -2,13 +2,14 @@ import {
   ArrowUUpLeft,
   CaretRight,
   PaperPlaneTilt,
+  Question,
   Sticker as StickerGlyph,
   X,
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useApi } from "../api/useApi";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
-import { liffMockActive } from "../line/liff";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
 import { Key } from "../ui/Key";
@@ -18,13 +19,12 @@ import { Sheet } from "../ui/Sheet";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import { giftMessageHeroUrl } from "./config";
-import { createApiGiftBackend } from "./apiGiftBackend";
+import { CantFindThem } from "./CantFindThem";
 import { GiftBag } from "./GiftBag";
 import type { GiftSender } from "./giftSender";
-import { deviceGiftStore } from "./giftStore";
 import type { GiveFlowState } from "./giveFlow";
-import { createLocalGiftBackend } from "./localGiftBackend";
+import heroPng from "./gift-message-hero.png";
+import { createApiGiftBackend } from "./giftBackend";
 import { useGiveFlow } from "./useGiveFlow";
 import "./Giving.css";
 
@@ -60,21 +60,30 @@ type Screen = "sheet" | "bag" | "sent";
 const screenOf = (state: GiveFlowState): Screen =>
   state.step === "sheet" ? "sheet" : state.step === "sent" ? "sent" : "bag";
 
+/** What the sheet shows: a screen, or "Can’t find them?" in the give sheet's place. */
+type View = Screen | "cantFind";
+
 /** Giving a sticker through a LINE chat: the give sheet, the gift bag, and the seal on send. */
 export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) {
   const reduced = useReducedMotion();
   const motion = reduced ? 1 : 0;
-  const store = deviceGiftStore();
+  const api = useApi();
   const { state, flow } = useGiveFlow(() => ({
     sticker,
     sender,
-    backend: liffMockActive
-      ? createLocalGiftBackend({ store, fromHandle, liffId, heroUrl: giftMessageHeroUrl })
-      : createApiGiftBackend({ store, fromHandle, liffId, heroUrl: giftMessageHeroUrl }),
+    backend: createApiGiftBackend({
+      api,
+      fromHandle,
+      liffId,
+      // The sealed bag, never the sticker; the gift message drops it where the app isn't on HTTPS.
+      heroUrl: new URL(heroPng, location.origin).href,
+    }),
     pickerDelayMs: PICKER_DELAY[motion],
     takeOutMs: TAKE_OUT[motion],
   }));
   const screen = screenOf(state);
+  const [cantFind, setCantFind] = useState(false);
+  const view: View = screen === "sheet" && cantFind ? "cantFind" : screen;
   const busy = state.step === "picking" || state.step === "takingOut";
 
   const close = () => {
@@ -82,24 +91,26 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
   };
 
   const root = useRef<HTMLDivElement>(null);
-  useFocusTrap(root, { onEscape: close });
+  useFocusTrap(root, { onEscape: () => (view === "cantFind" ? setCantFind(false) : close()) });
   // While LINE's picker is up it can't close, so Back leaves it where it is.
   useBackToClose(true, () => {
     close();
     return !busy;
   });
+  // Back on "Can’t find them?" returns to the give sheet, as its back button does.
+  useBackToClose(view === "cantFind", () => setCantFind(false));
 
-  // Each new screen slides in, except the first, which comes up with the sheet.
-  const [shownScreen, setShownScreen] = useState(screen);
+  // Each new view slides in, except the first, which comes up with the sheet.
+  const [shownView, setShownView] = useState(view);
   const [slideIn, setSlideIn] = useState(false);
-  if (shownScreen !== screen) {
-    setShownScreen(screen);
+  if (shownView !== view) {
+    setShownView(view);
     setSlideIn(true);
   }
   const body = useRef<HTMLDivElement>(null);
   useEffect(() => {
     body.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus();
-  }, [screen]);
+  }, [view]);
 
   const [sealed, setSealed] = useState(false);
   useEffect(() => {
@@ -120,7 +131,10 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
 
   let title: string;
   let content: ReactNode;
-  if (state.step === "sheet") {
+  if (view === "cantFind") {
+    title = "Can’t find them?";
+    content = <CantFindThem onBack={() => setCantFind(false)} />;
+  } else if (state.step === "sheet") {
     title = `Give ${formatNo(sticker.no)}`;
     content = (
       <>
@@ -132,7 +146,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
         </header>
         <button
           type="button"
-          className="giving__row"
+          className="giving__row giving__row--aqua"
           data-press
           data-autofocus
           onClick={() => flow?.chooseLineChat()}
@@ -142,10 +156,13 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
           </span>
           <span className="giving__row-text">
             <b>Send in a LINE chat</b>
-            <small>Pick one friend. It goes only to them.</small>
+            <small>Pick your chat with them. The first to open it gets it.</small>
           </span>
           <CaretRight className="giving__row-chev" size={20} />
         </button>
+        <QuietLink className="giving__cant-find" onClick={() => setCantFind(true)}>
+          <Question /> Can’t find them?
+        </QuietLink>
         <p className="giving__leaves">
           <StickerGlyph size={16} /> It comes off your board and into a gift bag.
         </p>
@@ -158,11 +175,12 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
         {bag(sealed ? "sealed" : "open", state.sentAt)}
         <h2 className="giving__title">{title}</h2>
         <p className="giving__sub">
-          It’s in your LINE chat now. Its outline stays on your board, where it sat.
+          It’s in your LINE chat now, and the gift message opens once. When they receive it, you’ll
+          see who did.
         </p>
         {state.recordError && (
           <p className="giving__problem" role="alert">
-            It went out in LINE, but this device couldn’t record it: {state.recordError}
+            It went out in LINE, but the app’s server couldn’t record it: {state.recordError}
           </p>
         )}
         <LabelButton
@@ -182,10 +200,10 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
       state.step === "failed"
         ? [
             state.error,
-            state.recordError && `This device couldn’t record that: ${state.recordError}`,
+            state.recordError && `The app’s server couldn’t record that: ${state.recordError}`,
           ]
         : state.step === "notSent" && state.recordError
-          ? [`This device couldn’t record that: ${state.recordError}`]
+          ? [`The app’s server couldn’t record that: ${state.recordError}`]
           : [];
     content = (
       <>
@@ -195,8 +213,8 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
         </header>
         <p className="giving__sub">
           {unsent
-            ? "It’s still in the bag, unsealed. Pick a friend again, or take it out."
-            : "It seals when it’s sent. Pick one friend in LINE: the message goes only to your chat with them."}
+            ? "It’s still in the bag, unsealed. Pick a chat again, or take it out."
+            : "It seals when it’s sent. Pick your chat with them in LINE: whoever opens it first gets it."}
         </p>
         {problem.filter(Boolean).map((line) => (
           <p key={String(line)} className="giving__problem" role="alert">
@@ -225,7 +243,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
   const phone = document.querySelector<HTMLElement>(".phone");
   const giving = (
     <div className="giving" ref={root} tabIndex={-1}>
-      <div className="giving__piece" aria-hidden="true">
+      <div className="giving__sticker" aria-hidden="true">
         {screen === "sheet" ? (
           <img className="giving__figure" src={sticker.url} alt="" draggable={false} />
         ) : (
@@ -241,7 +259,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
       </div>
       <div className="giving__scrim" onClick={close} />
       <Sheet label={title} onClose={close}>
-        <div key={screen} ref={body} className={`giving__body ${slideIn ? "is-in" : ""}`}>
+        <div key={view} ref={body} className={`giving__body ${slideIn ? "is-in" : ""}`}>
           {content}
         </div>
       </Sheet>

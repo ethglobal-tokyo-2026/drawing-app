@@ -92,8 +92,8 @@ const give = (stickerId: string, giverId: string, receiverId: string, receivedAt
 
 const minuteAfter = (at: Date) => new Date(at.getTime() + MINUTE_MS);
 
-/** `giverId` gives `stickerId` to `receiverId`, who thanks them with `combo`. */
-const giveAndThank = (
+/** `giverId` gives `stickerId` to `receiverId`, who sends gratitude as `combo`. */
+const giveAndSendGratitude = (
   stickerId: string,
   giverId: string,
   receiverId: string,
@@ -310,7 +310,7 @@ describe("GET /api/sticker-boards/:userId/user-stats", () => {
       received: 0,
       given: 0,
       gratitude: { inspired: 0, magic: 0, asOriginalArtist: 0, total: 0 },
-      bests: { bestCombo: 0, mostThanksInADay: 0, longestStreak: 0 },
+      bests: { bestCombo: 0, mostGratitudeInADay: 0, longestStreak: 0 },
       streak: 0,
     });
   });
@@ -344,12 +344,12 @@ describe("GET /api/sticker-boards/:userId/user-stats", () => {
   it("split gratitude into the giver's part by method and the Original Artist's share", async () => {
     const artist = insertUser(test.db);
     const giver = insertUser(test.db);
-    const thanker = insertUser(test.db);
+    const receiver = insertUser(test.db);
     const drawn = seal(artist);
     give(drawn, artist, giver);
-    giveAndThank(drawn, giver, thanker, SHARED_TAP);
-    giveAndThank(seal(giver), giver, thanker, STROKE);
-    giveAndThank(seal(giver), giver, thanker, SHAKE);
+    giveAndSendGratitude(drawn, giver, receiver, SHARED_TAP);
+    giveAndSendGratitude(seal(giver), giver, receiver, STROKE);
+    giveAndSendGratitude(seal(giver), giver, receiver, SHAKE);
 
     const inspired = SHARED_TAP.total - SHARED_TAP.originalArtistGratitudeShare;
     const magic = STROKE.total + SHAKE.total;
@@ -366,20 +366,20 @@ describe("GET /api/sticker-boards/:userId/user-stats", () => {
       asOriginalArtist: share,
       total: share,
     });
-    expect((await statsOf(giver, thanker)).gratitude.total).toBe(0);
+    expect((await statsOf(giver, receiver)).gratitude.total).toBe(0);
   });
 
   it("take bestCombo from the combos the person sent", async () => {
     const me = insertUser(test.db);
     const friend = insertUser(test.db);
-    giveAndThank(seal(friend), friend, me, { hits: FEW_HITS });
-    giveAndThank(seal(friend), friend, me, { hits: MORE_HITS });
-    giveAndThank(seal(me), me, friend, { hits: MAX_HITS });
+    giveAndSendGratitude(seal(friend), friend, me, { hits: FEW_HITS });
+    giveAndSendGratitude(seal(friend), friend, me, { hits: MORE_HITS });
+    giveAndSendGratitude(seal(me), me, friend, { hits: MAX_HITS });
     expect((await statsOf(me, "me")).bests.bestCombo).toBe(MORE_HITS);
     expect((await statsOf(me, friend)).bests.bestCombo).toBe(MAX_HITS);
   });
 
-  it("add up the person's part of a ticket day's thanks, Tokyo time", async () => {
+  it("add up the person's part of a ticket day's gratitude, Tokyo time", async () => {
     const me = insertUser(test.db);
     const artist = insertUser(test.db);
     const friend = insertUser(test.db);
@@ -389,17 +389,20 @@ describe("GET /api/sticker-boards/:userId/user-stats", () => {
     // The day's first moment: my share, as the Original Artist of a sticker a friend passed on.
     const mine = seal(me);
     give(mine, me, friend);
-    giveAndThank(mine, friend, artist, { ...SHARED_TAP, createdAt: tokyoTicketDayStart(day) });
+    giveAndSendGratitude(mine, friend, artist, {
+      ...SHARED_TAP,
+      createdAt: tokyoTicketDayStart(day),
+    });
     // Its last hour, a UTC date later than its first moment: my part of a sticker I passed on.
     const theirs = seal(artist);
     give(theirs, artist, me);
     const lastHour = new Date(nextDayStart.getTime() - HOUR_MS);
-    giveAndThank(theirs, me, friend, { ...SHARED_TAP, createdAt: lastHour });
-    giveAndThank(seal(me), me, friend, { ...OWN_TAP, createdAt: nextDayStart });
+    giveAndSendGratitude(theirs, me, friend, { ...SHARED_TAP, createdAt: lastHour });
+    giveAndSendGratitude(seal(me), me, friend, { ...OWN_TAP, createdAt: nextDayStart });
 
     const share = SHARED_TAP.originalArtistGratitudeShare;
     const giversPart = SHARED_TAP.total - share;
-    expect((await statsOf(me, "me")).bests.mostThanksInADay).toBe(share + giversPart);
+    expect((await statsOf(me, "me")).bests.mostGratitudeInADay).toBe(share + giversPart);
   });
 
   it("count the streak over seal days, and keep the longest after a missed day", async () => {

@@ -1,4 +1,4 @@
-/* The sticker tray: a zipped pink canvas pocket down the board's right edge, holding a stack of loose
+/* The sticker tray: pink canvas zipped down the board's right edge, holding a stack of loose
    sticker sheets, a sticker in each kiss-cut slot and a used sticker silhouette wherever one is out
    on the board. Paper hints only, no grid. trayEngine.ts places everything; motion is transform and
    opacity only. */
@@ -483,6 +483,7 @@
 
 /* A used sticker silhouette shows no sticker. */
 .tray__slot[data-state="peeling"] .tray__img,
+.tray__slot[data-state="peeling"] .sticker-foil,
 .tray__slot[data-state="used"] .tray__img {
   opacity: 0;
 }

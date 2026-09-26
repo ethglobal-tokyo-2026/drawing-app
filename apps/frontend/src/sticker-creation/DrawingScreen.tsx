@@ -8,13 +8,15 @@ import {
   type PointerEvent as ReactPointerEvent,
   type Ref,
 } from "react";
-import { useIdentity } from "../identity/useIdentity";
-import { liffMockActive } from "../line/liff";
-import { addSticker, type StickerRecord } from "../stickers/stickerStorage";
+import type { Sticker } from "@drawing-app/api/client";
+import { apiError } from "../api/apiClient";
+import { useMe } from "../api/meContext";
+import { useApi } from "../api/useApi";
 import { OutOfTickets } from "../tickets/OutOfTickets";
 import { StartDrawing } from "../tickets/StartDrawing";
-import { spentTicketKind, type SpentTicket, type TicketKind } from "../tickets/tickets";
+import { nextKind, ticketsLeft, type TicketKind } from "../tickets/tickets";
 import { TicketShop } from "../tickets/TicketShop";
+import { TicketsNotLoaded } from "../tickets/TicketsNotLoaded";
 import { useTickets } from "../tickets/useTickets";
 import { useToast } from "../ui/useToast";
 import { sizePx } from "./canvas/brush";
@@ -24,9 +26,9 @@ import { lazyRadius } from "./canvas/lazyBrush";
 import type { Op, Tool } from "./canvas/ops";
 import { SealKey } from "./SealKey";
 import { makeSticker, type SealedSticker } from "./sealing/makeSticker";
-import { reserveServerTicket, sealStickerThroughApi } from "./sealing/sealStickerApi";
 import { SealCeremony } from "./sealing/SealCeremony";
 import type { Box } from "./sealing/sealTimeline";
+import { encodeTimelapse, gzipTimelapse } from "./sealing/timelapse";
 import { loadKeptSession, SessionKeeper, type KeptSession } from "./session/keptSession";
 import {
   ARM_WINDOW_MS,
@@ -64,14 +66,14 @@ const STARTS = "Starts when you draw";
 /** What the label under the timer says over a drawing kept across a reload. */
 const PICKED_UP = "Picked up where you left off";
 /** What the start card says when a drawing kept across a reload can't be read back. */
-const LOST = {
-  lost: "Couldn’t pick up where you left off.",
-  refunded: "Couldn’t pick up where you left off, so your ticket is back.",
-};
+const LOST = "Couldn’t pick up where you left off.";
+/** What the label under the timer says when that drawing's ticket carries over to a fresh sheet. */
+const CARRIED = "Couldn’t pick up your drawing, so its ticket carries over";
 
 interface Sealed {
   sticker: SealedSticker;
-  record: StickerRecord;
+  /** The sticker as the server sealed it. */
+  sealed: Sticker;
   /** Where the sheet sat in the drawing screen when it was sealed. */
   sheet: Box;
 }
@@ -100,8 +102,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const root = useRef<HTMLDivElement>(null);
   const canvas = useRef<DrawingCanvasHandle>(null);
   const timer = useRef<TimerDotHandle>(null);
+  const api = useApi();
   const tickets = useTickets();
-  const me = useIdentity();
+  const me = useMe();
   const toast = useToast();
   const colorSheetId = useId();
   const smoothingBarId = useId();
@@ -124,14 +127,15 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const [sealProblem, setSealProblem] = useState<string | null>(null);
   // The out-of-tickets card or the ticket shop, over a fresh sheet, or null.
   const [overlay, setOverlay] = useState<"out" | "shop" | null>(null);
-  // The kind of ticket the person agreed to spend, for the start's spend-ticket effect.
-  const spendKind = useRef<TicketKind>("daily");
-  // The session's ticket: spent at Start, or before a reload it was kept across.
-  const ticket = useRef<SpentTicket | null>(null);
+  // A ticket is being spent on the server; Start waits for it.
+  const [spending, setSpending] = useState(false);
+  const [startProblem, setStartProblem] = useState<string | null>(null);
+  // The session's ticket use, as the server numbers it: spent at Start, or before a reload.
+  const ticket = useRef<number | null>(null);
   const [keeper] = useState(() => new SessionKeeper());
   // Until a session kept across a reload is back, or known lost, Draw doesn't ask for a ticket.
   const [restoring, setRestoring] = useState(true);
-  const [pickedUp, setPickedUp] = useState<"restored" | keyof typeof LOST | null>(null);
+  const [pickedUp, setPickedUp] = useState<"restored" | "lost" | "carried" | null>(null);
   // A tap on the waiting timer puts "Starts when you draw" under it, until the first stroke.
   const [startsNote, setStartsNote] = useState(false);
 
@@ -147,10 +151,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
 
   function run(effect: SessionEffect) {
     switch (effect) {
-      case "spend-ticket":
-        ticket.current = tickets.use(spendKind.current);
-        if (!ticket.current)
-          console.error(`Start was tapped with no ${spendKind.current} ticket next to spend`);
+      case "keep-session":
         keeper.start(ticket.current);
         return;
       case "start-clock":
@@ -175,6 +176,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         lastSealed.current = null;
         setSealed(null);
         setSealProblem(null);
+        setStartProblem(null);
         return;
     }
   }
@@ -192,11 +194,22 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     };
   }
 
+  /** How the sticker was drawn, gzipped; null when it can't be made, and the sticker seals without it. */
+  async function timelapseOf(sticker: SealedSticker, ink: HTMLCanvasElement) {
+    try {
+      const ops = canvas.current?.ops() ?? [];
+      const density = canvas.current?.inkDensity() ?? 1;
+      return await gzipTimelapse(encodeTimelapse({ ops, ink, place: sticker.place, density }));
+    } catch (error) {
+      console.error("The timelapse couldn’t be made, so the sticker seals without it", error);
+      return null;
+    }
+  }
+
   async function seal() {
     setPanel(null);
     canvas.current?.finishStroke();
     const ink = canvas.current?.inkForReading() ?? null;
-    const ops = [...(canvas.current?.ops() ?? [])];
     const timeUsed = Math.min(SESSION_MS / 1000, Math.max(1, Math.round(clock.elapsed / 1000)));
     let sticker: SealedSticker | null = null;
     try {
@@ -215,57 +228,29 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         }
         return;
       }
-      let assigned: { id: string; no: number } | undefined;
-      let chain:
-        | {
-            createdAt: number;
-            contentHash: string;
-            tokenId: string;
-            mintTxHash: string;
-          }
-        | undefined;
-      if (!liffMockActive) {
-        if (!ticket.current) throw new Error("The drawing has no ticket");
-        const reserved = await reserveServerTicket(ticket.current, spentTicketKind(ticket.current));
-        ticket.current = reserved;
-        // Keep the API ticket before the upload, so retrying after a reload cannot spend another.
-        keeper.resume(reserved, ops);
-        keeper.save(ops, clock.elapsed);
-        const minted = await sealStickerThroughApi({
-          ticket: reserved,
-          timeUsed,
-          sticker,
-          ops,
-        });
-        assigned = { id: minted.id, no: minted.no };
-        chain = minted;
-      }
-      const record = await addSticker(
-        {
-          createdAt: chain?.createdAt ?? Date.now(),
-          timeUsed,
-          ...(chain && {
-            contentHash: chain.contentHash,
-            tokenId: chain.tokenId,
-            mintTxHash: chain.mintTxHash,
-          }),
-          blob: sticker.png,
-          width: sticker.width,
-          height: sticker.height,
-          outline: sticker.outline,
-          mask: sticker.mask,
-          resin: { spec: sticker.spec, rim: sticker.rim },
-          flat: sticker.flat,
-        },
-        assigned,
-      );
-      if (ticket.current) tickets.linkSticker(ticket.current, record.id);
+      if (ticket.current === null) throw new Error("this sheet has no ticket to seal it on");
+      const timelapse = ink && (await timelapseOf(sticker, ink));
+      const { sticker: sealedSticker } = await api.seal({
+        ticketUseId: ticket.current,
+        timeUsed,
+        width: sticker.width,
+        height: sticker.height,
+        outline: sticker.outline,
+        png: sticker.png,
+        mask: sticker.mask,
+        spec: sticker.spec,
+        rim: sticker.rim,
+        flat: sticker.flat,
+        ...(timelapse && { timelapse }),
+      });
       ticket.current = null;
       keeper.wipe();
-      lastSealed.current = { sticker, record, sheet };
+      // The used ticket's stub now carries this sticker's outline.
+      tickets.refresh();
+      lastSealed.current = { sticker, sealed: sealedSticker, sheet };
       setSealed(lastSealed.current);
       send({ type: "sealed" });
-      onSealed(record.id);
+      onSealed(sealedSticker.id);
     } catch (error) {
       sticker?.dispose();
       console.error("Sealing the sticker failed", error);
@@ -280,8 +265,23 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   };
 
   const start = (kind: TicketKind) => {
-    spendKind.current = kind;
-    send({ type: "start" });
+    if (spending) return;
+    setSpending(true);
+    setStartProblem(null);
+    tickets.spend(kind).then(
+      (use) => {
+        setSpending(false);
+        ticket.current = use.id;
+        send({ type: "start" });
+      },
+      (error: unknown) => {
+        const failure = apiError(error);
+        console.error(`Spending a ${kind} ticket failed`, failure);
+        setSpending(false);
+        setStartProblem(`Couldn’t use a ticket (${failure.message}).`);
+        tickets.refresh();
+      },
+    );
   };
 
   /**
@@ -289,7 +289,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
    * asked for. Draw right after a purchase chose to spend either.
    */
   const startRightAway = ({ reserve }: { reserve: boolean }) => {
-    const kind = tickets.nextKind;
+    const kind = tickets.tickets && nextKind(tickets.tickets);
     if (kind === "daily" || (kind === "reserve" && reserve)) start(kind);
   };
 
@@ -334,9 +334,16 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       return;
     }
     console.error("The drawing in progress couldn't be picked up after a reload", kept.error);
-    const refunded = kept.ticket !== null && tickets.giveBack(kept.ticket);
+    // Its ticket never became a sticker, so a fresh sheet seals on it without spending another.
+    if (kept.ticket !== null) {
+      ticket.current = kept.ticket;
+      keeper.start(kept.ticket);
+      send({ type: "restored", drawn: false });
+      setPickedUp("carried");
+      return;
+    }
     keeper.wipe();
-    setPickedUp(refunded ? "refunded" : "lost");
+    setPickedUp("lost");
   });
   useEffect(() => {
     let cancelled = false;
@@ -348,10 +355,12 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     };
   }, []);
 
-  // "Picked up" stays until the clock runs again; word of a lost drawing, until the next one starts.
-  if (pickedUp === "restored" && !paused) setPickedUp(null);
-  if (pickedUp && pickedUp !== "restored" && session.phase !== "blank") setPickedUp(null);
+  // "Picked up" stays until the clock runs again; word of a lost drawing, until the next one starts;
+  // a carried-over ticket's, until the first stroke.
   const waiting = session.phase === "blank" || session.phase === "primed";
+  if (pickedUp === "restored" && !paused) setPickedUp(null);
+  if (pickedUp === "lost" && session.phase !== "blank") setPickedUp(null);
+  if (pickedUp === "carried" && !waiting) setPickedUp(null);
   if (startsNote && !waiting) setStartsNote(false);
 
   // Before the first stroke there's nothing to pause: a tap on the timer says when it starts.
@@ -385,7 +394,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // Out of tickets: the card comes up as Draw opens on a fresh sheet, and stays until the person picks
   // a way on, even if tickets come back meanwhile.
   const fresh = session.phase === "blank" && !restoring;
-  if (active && fresh && tickets.left === 0 && !overlay) setOverlay("out");
+  const loaded = tickets.tickets;
+  if (active && fresh && loaded && ticketsLeft(loaded) === 0 && !overlay) setOverlay("out");
   const paywall = active && fresh && overlay !== null;
   // A fresh sheet asks before a ticket is spent, and takes no ink until then.
   const asking = active && fresh && !paywall;
@@ -395,7 +405,14 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
 
   // On the first few visits, a started sheet says the timer waits for the first stroke, which peels it off.
   const startsLabel = startsNote || (active && session.phase === "primed" && isFirstVisit());
-  const timerNote = pickedUp === "restored" ? PICKED_UP : startsLabel ? STARTS : null;
+  const timerNote =
+    pickedUp === "restored"
+      ? PICKED_UP
+      : pickedUp === "carried"
+        ? CARRIED
+        : startsLabel
+          ? STARTS
+          : null;
 
   const sizeKey = tool === "eraser" ? "eraser" : "brush";
   const setSize = (value: number) => setSizes((s) => ({ ...s, [sizeKey]: value }));
@@ -436,6 +453,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     >
       <DrawingCanvas
         ref={canvas}
+        active={active}
         settings={{
           tool,
           color,
@@ -518,11 +536,11 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       />
       {sealed && active && (
         <SealCeremony
-          key={sealed.record.id}
+          key={sealed.sealed.id}
           sticker={sealed.sticker}
-          record={sealed.record}
+          sealed={sealed.sealed}
           sheet={sealed.sheet}
-          handle={me.handle}
+          handle={me.handle ?? ""}
           onKeepDrawing={() => {
             startNewSticker();
             startRightAway({ reserve: false });
@@ -534,18 +552,23 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           }}
         />
       )}
-      {asking && (
+      {asking && !loaded && (
+        <TicketsNotLoaded error={tickets.error} onRetry={tickets.refresh} onBoard={onGoToBoard} />
+      )}
+      {asking && loaded && (
         <StartDrawing
+          tickets={loaded}
           minutes={SESSION_MS / 60_000}
-          note={pickedUp && pickedUp !== "restored" ? LOST[pickedUp] : null}
+          busy={spending}
+          note={startProblem ?? (pickedUp === "lost" ? LOST : null)}
           onStart={start}
           onShop={() => setOverlay("shop")}
           onBoard={onGoToBoard}
         />
       )}
-      {paywall && overlay === "out" && (
+      {paywall && loaded && overlay === "out" && (
         <OutOfTickets
-          refillAt={tickets.refillAt}
+          tickets={loaded}
           onShop={() => setOverlay("shop")}
           onStartDrawing={() => {
             setOverlay(null);

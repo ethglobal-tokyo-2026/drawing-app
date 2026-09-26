@@ -227,6 +227,9 @@ export async function takeOut(
 > {
   const before = ownGift(db.select().from(gifts).where(eq(gifts.id, giftId)).get(), userId, giftId);
   if (before.refusal !== null) return before;
+  if (before.gift.status === "taken_out" && before.gift.escrowStatus === "rejected") return before;
+  if (before.gift.status === "returned" && before.gift.escrowStatus === "expired_returned")
+    return before;
   if (before.gift.status === "received") {
     return refuse("already_received", `Gift ${giftId} was already received`);
   }
@@ -234,7 +237,7 @@ export async function takeOut(
     return closed(before.gift);
   }
 
-  let escrowStatus: GiftRow["escrowStatus"] | undefined;
+  let escrowStatus: "rejected" | "expired_returned" = "rejected";
   if (giftChain) {
     if (before.gift.escrowStatus === "rejected") {
       escrowStatus = "rejected";
@@ -243,13 +246,13 @@ export async function takeOut(
       if (escrow.status === "claimed") {
         return refuse("already_received", `Gift ${giftId} was already received`);
       }
-      if (escrow.status !== "rejected") {
+      if (escrow.status !== "rejected" && escrow.status !== "expired_returned") {
         return refuse(
           "gift_in_transit",
           `Gift ${giftId}'s take-out has not landed in the escrow yet`,
         );
       }
-      escrowStatus = "rejected";
+      escrowStatus = escrow.status;
     }
   }
 
@@ -262,6 +265,8 @@ export async function takeOut(
       );
       if (owned.refusal !== null) return owned;
       const { gift } = owned;
+      if (gift.status === "taken_out" && gift.escrowStatus === "rejected") return owned;
+      if (gift.status === "returned" && gift.escrowStatus === "expired_returned") return owned;
       if (gift.status === "received") {
         return refuse("already_received", `Gift ${giftId} was already received`);
       }
@@ -269,10 +274,11 @@ export async function takeOut(
       const takenOut = tx
         .update(gifts)
         .set({
-          status: "taken_out",
-          takenOutAt: clock.now(),
+          status: escrowStatus === "expired_returned" ? "returned" : "taken_out",
+          takenOutAt: escrowStatus === "expired_returned" ? undefined : clock.now(),
+          returnedAt: escrowStatus === "expired_returned" ? clock.now() : undefined,
           // The mock chain's reject lands at once, so the sticker can be given again.
-          escrowStatus: giftChain ? escrowStatus : "rejected",
+          escrowStatus,
         })
         .where(eq(gifts.id, giftId))
         .returning()

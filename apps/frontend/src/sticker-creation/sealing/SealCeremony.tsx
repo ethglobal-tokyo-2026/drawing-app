@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from
 import { useLight } from "../../stickers/light";
 import { LiveResin } from "../../stickers/LiveResin";
 import { sweepSheen } from "../../stickers/resinSheen";
-import type { StickerRecord } from "../../stickers/stickerStorage";
+import type { Sticker } from "@drawing-app/api/client";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 import { makeCutLine, paintDim, paintUsedStickerSilhouette } from "./ceremonyPaint";
 import type { SealedSticker } from "./makeSticker";
@@ -23,7 +23,8 @@ const LEAVE_MS = 260;
 
 interface Props {
   sticker: SealedSticker;
-  record: StickerRecord;
+  /** The sticker as the server sealed it. */
+  sealed: Sticker;
   /** The sheet the sticker was cut from, in the ceremony's own pixels. */
   sheet: Box;
   handle: string;
@@ -75,7 +76,7 @@ function need<E extends Element>(el: E | null, what: string): E {
  */
 export function SealCeremony({
   sticker,
-  record,
+  sealed,
   sheet,
   handle,
   onKeepDrawing,
@@ -105,7 +106,7 @@ export function SealCeremony({
       veil: el<HTMLElement>(".seal-ceremony__veil"),
       cut: el<HTMLCanvasElement>(".seal-ceremony__cut"),
       shadow: el<HTMLElement>(".seal-ceremony__shadow"),
-      piece: el<HTMLElement>(".seal-ceremony__piece"),
+      sticker: el<HTMLElement>(".seal-ceremony__sticker"),
       plain: el<HTMLElement>(".seal-ceremony__plain"),
       tint: el<HTMLElement>(".seal-ceremony__tint"),
       gloss: el<HTMLElement>(".seal-ceremony__gloss"),
@@ -153,8 +154,8 @@ export function SealCeremony({
       opacity(parts.spec, f.spec.opacity);
       parts.specFace.style.scale = String(f.spec.scale);
       opacity(parts.rim, f.rim);
-      const p = f.piece;
-      parts.piece.style.transform = `perspective(1000px) translate(${p.x}px, ${p.y}px) rotate(${p.rotate}deg) rotateX(${p.rotateX}deg) rotateY(${p.rotateY}deg) scale(${p.scale})`;
+      const p = f.sticker;
+      parts.sticker.style.transform = `perspective(1000px) translate(${p.x}px, ${p.y}px) rotate(${p.rotate}deg) rotateX(${p.rotateX}deg) rotateY(${p.rotateY}deg) scale(${p.scale})`;
       const s = f.shadow;
       opacity(parts.shadow, s.opacity);
       parts.shadow.style.transform = `translate(${s.x}px, ${s.y}px) rotate(${s.rotate}deg) scale(${s.scale})`;
@@ -247,7 +248,7 @@ export function SealCeremony({
       <span className="seal-ceremony__veil" aria-hidden="true" />
       <canvas className="seal-ceremony__cut" aria-hidden="true" />
       <SealedCard
-        record={record}
+        sealed={sealed}
         handle={handle}
         done={done}
         cardRef={card}
@@ -263,7 +264,7 @@ export function SealCeremony({
         alt=""
         decoding="sync"
       />
-      <div className="seal-ceremony__piece" style={resin} aria-hidden="true">
+      <div className="seal-ceremony__sticker" style={resin} aria-hidden="true">
         <img className="seal-ceremony__plain" src={layers.plain} alt="" decoding="sync" />
         <img className="seal-ceremony__tint" src={layers.tint} alt="" decoding="sync" />
         <img className="seal-ceremony__gloss" src={layers.gloss} alt="" decoding="sync" />

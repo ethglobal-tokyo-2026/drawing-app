@@ -1,0 +1,15 @@
+/* ---------- The one motion ask, in a sheet after sign-in ---------- */
+
+.motion-card {
+  display: grid;
+  gap: 14px;
+}
+
+.motion-card__text {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.motion-card .label-btn--quiet {
+  justify-self: center;
+}
