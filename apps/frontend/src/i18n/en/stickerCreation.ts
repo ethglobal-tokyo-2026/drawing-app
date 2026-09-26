@@ -140,11 +140,8 @@ export const stickerCreation = {
     finePrint: "{{no}} · <duration/> · {{day}} · <handle/>",
     keepDrawing: "Keep drawing",
     goToStickerBoard: "Go to sticker board",
-    shopForTickets: "Shop for tickets",
-    dailyTicketsLeft_one: "{{count}} daily ticket left today",
-    dailyTicketsLeft_other: "{{count}} daily tickets left today",
-    reserveTickets_one: "{{count}} reserve ticket",
-    reserveTickets_other: "{{count}} reserve tickets",
+    /** Opens the reserve ticket checkout. */
+    buyReserveTickets: "Buy reserve tickets",
     lastTicket: "That was today’s last ticket · new ones at {{time}}",
     lastDailyTicket: "That was today’s last daily ticket · new ones at {{time}}",
   },

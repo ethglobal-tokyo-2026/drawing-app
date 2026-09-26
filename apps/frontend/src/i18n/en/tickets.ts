@@ -1,13 +1,20 @@
 export const tickets = {
-  /** Beside a ticket mark: how many of that kind are left. */
+  /** On a ticket, or beside one: how many of that kind are left. */
   count: "×{{count}}",
-  /** Both counts in words, for screen readers: "2 daily tickets and 5 reserve tickets". */
+  /**
+   * The tickets the next drawing can use, in words for screen readers: "2 daily tickets left", "2 daily tickets and
+   * 5 reserve tickets left". A kind with none left isn't named.
+   */
   summary: {
-    dailyAndReserve: "{{daily}} and {{reserve}}",
+    /** `tickets` is one kind's count, such as "2 daily tickets". */
+    left: "{{tickets}} left",
+    dailyAndReserve: "{{daily}} and {{reserve}} left",
     daily_one: "{{count}} daily ticket",
     daily_other: "{{count}} daily tickets",
     reserve_one: "{{count}} reserve ticket",
     reserve_other: "{{count}} reserve tickets",
+    /** Neither kind is left; `time` is when the daily tickets come back, such as "12:00 AM". */
+    none: "no tickets until {{time}}",
   },
   /** How long until the refill, in whole minutes rounded down. */
   refillIn: {
@@ -19,9 +26,10 @@ export const tickets = {
   /** Beside the reserve count on the cards. */
   reserve: "Reserve",
   draw: "Draw",
-  /** The Draw key's name for assistive tech; `tickets` is the summary. */
-  drawWithTickets: "Draw: you have {{tickets}}",
-  shopForTickets: "Shop for tickets",
+  /** The Draw key's name for assistive tech; `tickets` is the summary, such as "2 daily tickets left". */
+  drawWithTickets: "Draw: {{tickets}}",
+  /** Opens the reserve ticket checkout. */
+  buyReserveTickets: "Buy reserve tickets",
   goToStickerBoard: "Go to sticker board",
   notNow: "Not now",
   tryAgain: "Try again",
@@ -35,12 +43,15 @@ export const tickets = {
       timer: "Your {{minutes}}-minute timer starts with your first stroke.",
       start: "Start drawing",
     },
-    /** Once they're used, a reserve ticket is spent only when asked. */
+    /** Once they're used, a reserve ticket is spent only when asked. The ticket's badge shows the count. */
     reserve: {
       title: "Use a reserve ticket?",
-      left_one: "Today’s daily tickets are used. You have {{count}} reserve ticket.",
-      left_other: "Today’s daily tickets are used. You have {{count}} reserve tickets.",
-      refillAt: "New daily tickets at {{time}}.",
+      used: "Today’s daily tickets are used.",
+      /** The line's quiet half: when the daily tickets come back. */
+      refillAt: "New ones at {{time}}.",
+      /** For screen readers, who can't see the count on the ticket's badge. */
+      left_one: "You have {{count}} reserve ticket.",
+      left_other: "You have {{count}} reserve tickets.",
       use: "Use a reserve ticket",
     },
   },

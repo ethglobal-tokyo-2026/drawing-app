@@ -30,6 +30,11 @@
   gap: 6px;
 }
 
+/* The one ticket a card is about, at the house tilt. */
+.ticket-stubs--hero .ticket-stub {
+  rotate: var(--tilt);
+}
+
 /* One ticket: its backing, and while it's fresh, its face lying on the backing. */
 .ticket-stub {
   position: relative;
@@ -38,7 +43,7 @@
   filter: drop-shadow(0 1px 0 rgba(28, 24, 36, 0.1)) drop-shadow(1px 2px 3px rgba(28, 24, 36, 0.08));
 }
 
-.ticket-stub svg {
+.ticket-stub > svg {
   display: block;
   overflow: visible;
 }
@@ -65,17 +70,33 @@
   stroke-width: 1;
 }
 
-/* The face: ticket stock in its kind's color. */
+/* The face: ticket stock in its kind's color. A daily ticket is matte paper with a hairline edge. */
 .ticket-stub__face .ticket-stub__paper {
   fill: var(--seal);
 }
 
-.ticket-stub--reserve .ticket-stub__face .ticket-stub__paper {
-  fill: var(--grape);
-}
-
 .ticket-stub__face .ticket-stub__edge {
   stroke: rgba(28, 24, 36, 0.22);
+}
+
+/* A reserve ticket is bought, and looks it: Blue under the stickers' resin, with a full Ink outline. */
+.ticket-stub--reserve .ticket-stub__face .ticket-stub__paper {
+  fill: var(--blue);
+}
+
+.ticket-stub--reserve .ticket-stub__face .ticket-stub__edge {
+  stroke: var(--ink);
+  stroke-width: var(--edge);
+  stroke-linejoin: round;
+}
+
+.ticket-stubs--hero .ticket-stub,
+.ticket-stubs--large .ticket-stub {
+  --star-edge: 1.75px;
+}
+
+.ticket-stubs--small .ticket-stub {
+  --star-edge: 1.25px;
 }
 
 .ticket-stub__perf {
@@ -85,8 +106,42 @@
   stroke-dasharray: 0 3.6;
 }
 
+.ticket-stubs--hero .ticket-stub__perf {
+  stroke-width: 2;
+  stroke-dasharray: 0 4.4;
+}
+
 .ticket-stub__glyph {
   color: var(--ink);
+}
+
+/* How many the ticket stands for: a dot badge in its kind's hue, stuck over its top-right corner. It rides the
+   ticket's own turn, which is already the house tilt. */
+.ticket-stub__badge {
+  position: absolute;
+  z-index: 1;
+  right: -30px;
+  top: -20px;
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 9px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--seal);
+  color: var(--ink);
+  font: 400 15px/1 var(--font-puffy);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    1px 2px 3px rgba(28, 24, 36, 0.16);
+}
+
+.ticket-stub__badge--reserve {
+  background: var(--blue);
 }
 
 /* The cut line a sticker leaves on its backing, fading in once it's read. */

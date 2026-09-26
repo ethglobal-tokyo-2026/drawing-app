@@ -36,7 +36,7 @@ import { LIFF_ID } from "../line/liff";
 import { formatHandle, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { playStick } from "../stickers/stick";
-import { TicketCounts } from "../tickets/TicketCount";
+import { DrawKeyTickets } from "../tickets/DrawKeyTickets";
 import { describeTickets, ticketDay } from "../tickets/tickets";
 import { useTickets } from "../tickets/useTickets";
 import { Key } from "../ui/Key";
@@ -553,7 +553,8 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         </div>
       )}
 
-      {/* The slot carries the first-sticker hop and ring, so the key keeps its own lip and press. */}
+      {/* The slot carries the first-sticker hop and ring, so the key keeps its own lip and press. The tickets
+          tuck behind the key's right end, in the slot beside it, so they hop along but never press. */}
       <span ref={drawSlot} className={`board-draw ${firstVisit ? "is-fresh" : ""}`}>
         <Key
           size="compact"
@@ -568,8 +569,8 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           }
         >
           {t(($) => $.stickerBoard.board.draw)}
-          {tickets && <TicketCounts state={tickets} className="ticket-counts--on-key" />}
         </Key>
+        {tickets && <DrawKeyTickets tickets={tickets} />}
       </span>
       {firstVisit && (
         <span className="board-nudge" aria-hidden>

@@ -1,0 +1,59 @@
+/* A reserve ticket's resin and star (ReserveResin.tsx). Tickets aren't controls, so the No Gloss Rule leaves them
+   be: this is the stickers' own baked resin, lit from the one top-left light. */
+
+.resin-coat__light {
+  stop-color: #fff;
+}
+
+/* The print pools darker at the foot, where the resin is deepest. */
+.resin-coat__pool {
+  stop-color: var(--blue-deep);
+}
+
+.resin-coat__rim {
+  fill: none;
+  stroke: #fff;
+  stroke-opacity: 0.9;
+}
+
+/* White, with an Ink edge laid outside Phosphor's path, never over it. --star-edge is the edge's width on screen. */
+.reserve-star svg {
+  overflow: visible;
+}
+
+.reserve-star path {
+  fill: #fff;
+  stroke: var(--ink);
+  stroke-width: calc(var(--star-edge, 1.5px) * 2);
+  stroke-linejoin: round;
+  paint-order: stroke;
+  vector-effect: non-scaling-stroke;
+}
+
+.reserve-star__body {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Once, as the ticket first shows: stuck on with a twist, a little past its size, then home. */
+.reserve-star__body.is-popping {
+  animation: reserve-star-pop var(--t-peel) var(--ease-peel) var(--star-delay, 0ms) both;
+}
+
+@keyframes reserve-star-pop {
+  0% {
+    transform: scale(0) rotate(-50deg);
+  }
+  65% {
+    transform: scale(1.22) rotate(8deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reserve-star__body.is-popping {
+    animation: none;
+  }
+}

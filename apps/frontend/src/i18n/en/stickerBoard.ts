@@ -147,8 +147,8 @@ export const stickerBoard = {
     yourStats: "{{name}}: your stats",
     draw: "Draw",
     drawLabel: "Draw a new sticker",
-    /** `tickets` says how many tickets you have. */
-    drawLabelWithTickets: "Draw a new sticker: you have {{tickets}}",
+    /** `tickets` names the tickets the next drawing can use, such as "2 daily tickets left" or "no tickets until 12:00 AM". */
+    drawLabelWithTickets: "Draw a new sticker: {{tickets}}",
     /** Beside Draw until the first sticker. */
     firstSticker: "Make your first sticker",
     /** Names the stickers' area for assistive tech. */
