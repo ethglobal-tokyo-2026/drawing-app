@@ -1,4 +1,5 @@
 import type { PersonView, StickerView } from "../api/views";
+import { useTranslation } from "../i18n/react";
 import { formatHandle, formatNo } from "../stickers/format";
 import "./pending-gifts-badge.css";
 
@@ -20,15 +21,23 @@ const nameOf = (p: PersonView) => (p.handle ? formatHandle(p.handle) : p.name);
 
 /** Your gifts on their way, in clear film. With none on their way, nothing shows. */
 export function PendingGiftsNotificationBadge({ gifts, onOpen }: Props) {
+  const { t } = useTranslation();
   const [newest, next] = gifts;
   if (!newest) return null;
   const no = formatNo(newest.sticker.no);
-  const several = gifts.length > 1;
+  const count = gifts.length;
+  const several = count > 1;
   const to = newest.to && nameOf(newest.to);
-  const line = several ? `${no} and ${gifts.length - 1} more` : to ? `to ${to}` : no;
+  const line = several
+    ? t(($) => $.giving.pendingGifts.andMore, { no, count: count - 1 })
+    : to
+      ? t(($) => $.giving.pendingGifts.to, { name: to })
+      : no;
   const label = several
-    ? `${gifts.length} gifts on their way`
-    : `Gifts on their way: ${no}${to ? ` to ${to}` : ""}`;
+    ? t(($) => $.giving.pendingGifts.label.several, { count })
+    : to
+      ? t(($) => $.giving.pendingGifts.label.oneTo, { no, name: to })
+      : t(($) => $.giving.pendingGifts.label.one, { no });
   // The back sleeve comes first, so the newest's lies on top.
   const sleeves = next ? [next, newest] : [newest];
 
@@ -52,7 +61,7 @@ export function PendingGiftsNotificationBadge({ gifts, onOpen }: Props) {
       </span>
       <span className="pending-gifts-badge__text" aria-hidden="true">
         <span className="fine pending-gifts-badge__fine">
-          {several ? "On their way" : "On its way"}
+          {t(($) => $.giving.pendingGifts.onTheirWay, { count })}
         </span>
         <span className="pending-gifts-badge__line">{line}</span>
       </span>
