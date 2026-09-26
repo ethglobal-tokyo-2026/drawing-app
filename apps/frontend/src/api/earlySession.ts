@@ -1,5 +1,5 @@
 import type { Me, StickerBoard, Tickets } from "@drawing-app/api/client";
-import type { ApiClient } from "./apiClient";
+import { ApiError, type ApiClient } from "./apiClient";
 import type { SessionApi } from "./httpApi";
 
 /**
@@ -10,7 +10,7 @@ const FRESH_MS = 5_000;
 
 /** The session the cookie already holds, asked for as the app started, and what SessionGate makes of it. */
 export interface EarlySession {
-  /** You, as the cookie signs you in; null without a live session, or without an answer. */
+  /** You, as the cookie signs you in; null without a live session. A failed check rejects. */
   me: Promise<Me | null>;
   /** LINE's user is the cookie's, so the first screen may use the early answers, once each. */
   accept: (me: Me) => void;
@@ -42,10 +42,17 @@ export function openEarly(
   api: ApiClient,
   { board: withBoard, now = Date.now }: { board: boolean; now?: () => number },
 ): EarlyOpening {
-  const me = session.me().then(
-    (answer) => answer.me,
-    // 401 signed_out, the usual answer on a first visit, or no answer: SessionGate signs in with LINE.
-    () => null,
+  const me = quiet(
+    session.me().then(
+      (answer) => answer.me,
+      (error: unknown) => {
+        if (error instanceof ApiError && error.status === 401 && error.code === "signed_out") {
+          return null;
+        }
+        // A temporary failure says nothing about the cookie; SessionGate can retry the check.
+        throw error;
+      },
+    ),
   );
   let board = withBoard ? quiet(api.stickerBoard()) : undefined;
   let tickets: Promise<Tickets> | undefined = quiet(api.tickets());

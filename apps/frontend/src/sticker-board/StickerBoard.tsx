@@ -119,6 +119,8 @@ interface Props {
   onDraw: () => void;
   /** Opens a gift waiting for you, to unpackage and accept as its gift message would. */
   onOpenGift: (gift: GiftForYou) => void;
+  /** A closed Receiving dialog refreshes waiting gifts without reloading the sticker board. */
+  giftClosures?: number;
 }
 
 /** Stickers that have landed this session. */
@@ -225,7 +227,7 @@ const viewOf = (s: BoardStickerView): StickerView => ({
  * board's demo has none. */
 type GratitudeFor = { sticker: BoardSticker; giver: ReturnType<typeof asGiver>; giftId?: string };
 
-export function StickerBoard({ freshId, onDraw, onOpenGift }: Props) {
+export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: Props) {
   const { t, i18n } = useTranslation();
   const stage = useRef<HTMLDivElement>(null);
   /** The board's face, which the sticker tray runs down the right edge of. */
@@ -350,8 +352,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift }: Props) {
   }, [failed]);
 
   const pending = useApiQuery("pending-gifts", (client) => client.pendingGifts());
-  // Loaded with every board opening, so a gift just received has left it.
-  const forYou = useApiQuery("gifts-for-you", (client) => client.giftsForYou());
+  // A preview can make a gift wait here even when the person chooses Not now.
+  const forYou = useApiQuery(`gifts-for-you:${giftClosures}`, (client) => client.giftsForYou());
   const waiting = forYou.state === "ready" ? forYou.data.gifts : [];
   const onTheirWay =
     pending.state === "ready"

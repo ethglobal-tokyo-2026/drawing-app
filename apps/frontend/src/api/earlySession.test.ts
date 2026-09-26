@@ -50,6 +50,15 @@ describe("the early session", () => {
     expect(server.stickerBoard).not.toHaveBeenCalled();
   });
 
+  it.each([new ApiError(0, { error: "network" }), new ApiError(503, { error: "internal_error" })])(
+    "preserves a failed session check instead of reporting a signed-out cookie",
+    async (error) => {
+      const session = { ...cookieFor(TEST_ME), me: () => Promise.reject(error) };
+      const early = openEarly(session, emptyApi(), { board: false });
+      await expect(early.me).rejects.toBe(error);
+    },
+  );
+
   it("gives nothing before SessionGate accepts it", () => {
     const { early } = opening();
     expect(early.takeBoard()).toBeUndefined();

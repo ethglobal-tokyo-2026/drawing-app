@@ -86,6 +86,8 @@ export default function App() {
   const [freshId, setFreshId] = useState<string>();
   // A received gift mounts the board again, so it loads with the sticker on it.
   const [boardLoads, setBoardLoads] = useState(0);
+  // Previewing can assign a gift to this person even when they leave it for later.
+  const [giftClosures, setGiftClosures] = useState(0);
   // Someone else's sticker board, opened from Explore over it, so Explore keeps its search and scroll.
   const [visiting, setVisiting] = useState<Person>();
   // The reserve ticket checkout, opened from the Shop over the whole phone, tabs and all.
@@ -167,6 +169,7 @@ export default function App() {
           <StickerBoard
             key={boardLoads}
             freshId={freshId}
+            giftClosures={giftClosures}
             onDraw={openDrawing}
             onOpenGift={(gift) => setGiftOpening({ gift })}
           />
@@ -220,6 +223,7 @@ export default function App() {
             from={giftOpening}
             onClose={(receivedId) => {
               setGiftOpening(undefined);
+              setGiftClosures((n) => n + 1);
               if (!receivedId) return;
               setFreshId(receivedId);
               setBoardLoads((n) => n + 1);

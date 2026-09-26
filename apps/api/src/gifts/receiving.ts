@@ -1,8 +1,9 @@
 import { gifts, stickerPlacements, stickers, users, type Db } from "@drawing-app/db";
-import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { queueNaming } from "../ens/naming.ts";
 import type { AppDeps } from "../deps.ts";
+import { logInfo } from "../diagnostics.ts";
 import { keccak256 } from "../keccak256.ts";
 import { ageStatusOf, isoTimeSchema, personSchema, toIsoTime, toPerson } from "../shapes.ts";
 import {
@@ -173,6 +174,45 @@ export type Receiving =
   | Refusal<ReceiveRefusal | "gift_not_found">
   | { refusal: null; received: ReceivedGift };
 
+/** A lost HTTP response must not repeat the claim or change a placement the recipient already used. */
+function recordedReceive({ db, images }: AppDeps, userId: string, gift: GiftRow): Receiving | null {
+  if (gift.status !== "received" || gift.receiverId !== userId || gift.escrowStatus !== "claimed") {
+    return null;
+  }
+  const sticker = loadStickers(db, [gift.stickerId], images.urls).get(gift.stickerId);
+  if (!sticker) throw new Error(`Gift ${gift.id}'s sticker ${gift.stickerId} is missing`);
+  // A later Giving must not look like a new arrival from this old receipt.
+  if (sticker.ownerId !== userId) return null;
+  const inAnotherGift = db
+    .select({ id: gifts.id })
+    .from(gifts)
+    .where(
+      and(
+        eq(gifts.stickerId, gift.stickerId),
+        or(inArray(gifts.status, ["packed", "sent"]), eq(gifts.escrowStatus, "pending")),
+      ),
+    )
+    .get();
+  if (inAnotherGift) return null;
+  const placement = db
+    .select()
+    .from(stickerPlacements)
+    .where(
+      and(eq(stickerPlacements.userId, userId), eq(stickerPlacements.stickerId, gift.stickerId)),
+    )
+    .get();
+  if (!placement) throw new Error(`Gift ${gift.id}'s received sticker placement is missing`);
+  logInfo("gift.receive.recovered", {
+    giftId: gift.id,
+    userId,
+    txHash: gift.claimTxHash ?? undefined,
+  });
+  return {
+    refusal: null,
+    received: { gift: toGift(gift), sticker, stickerPlacement: toStickerPlacement(placement) },
+  };
+}
+
 /** Accept: the first person to receive gets the sticker, on their board. */
 export async function receiveGift(
   deps: AppDeps,
@@ -232,8 +272,30 @@ export async function receiveGiftForYou(
   return receiveOpened(deps, userId, gift, "none", null);
 }
 
+const receivingNow = new WeakMap<AppDeps["db"], Map<string, Promise<Receiving>>>();
+
+/** Overlapping requests for the same recipient share the claim, not just its eventual DB result. */
+function receiveOpened(
+  deps: AppDeps,
+  userId: string,
+  opened: GiftRow,
+  liffContextType: LiffContextType,
+  giftClaimToken: OpenGiftBody["giftClaimToken"] | null,
+): Promise<Receiving> {
+  const active = receivingNow.get(deps.db) ?? new Map<string, Promise<Receiving>>();
+  receivingNow.set(deps.db, active);
+  const key = `${opened.id}/${userId}`;
+  const pending = active.get(key);
+  if (pending) return pending;
+  const receiving = completeReceive(deps, userId, opened, liffContextType, giftClaimToken).finally(
+    () => active.delete(key),
+  );
+  active.set(key, receiving);
+  return receiving;
+}
+
 /** Receives an opened gift for this person; without its token, they're who it waits for. */
-async function receiveOpened(
+async function completeReceive(
   deps: AppDeps,
   userId: string,
   opened: GiftRow,
@@ -243,7 +305,11 @@ async function receiveOpened(
   const { db, clock, giftChain, images } = deps;
   const now = clock.now();
   const beforeClaim = receiveRefusal(db, opened, userId, liffContextType, now);
-  if (beforeClaim) return beforeClaim;
+  if (beforeClaim) {
+    return beforeClaim.refusal === "already_received"
+      ? (recordedReceive(deps, userId, opened) ?? beforeClaim)
+      : beforeClaim;
+  }
 
   let claimTxHash: string | undefined;
   if (giftChain) {
@@ -300,7 +366,14 @@ async function receiveOpened(
     },
     { behavior: "immediate" },
   );
-  if (receiving.refusal !== null) return receiving;
+  if (receiving.refusal !== null) {
+    // Another request can finish while this request waits for the chain.
+    if (receiving.refusal === "already_received") {
+      const gift = db.select().from(gifts).where(eq(gifts.id, opened.id)).get();
+      if (gift) return recordedReceive(deps, userId, gift) ?? receiving;
+    }
+    return receiving;
+  }
   queueNaming(deps, userId);
   const { gift, placement } = receiving;
   const sticker = loadStickers(db, [gift.stickerId], images.urls).get(gift.stickerId);

@@ -41,6 +41,22 @@ const answer = (sealed: Sticker) => ({
 });
 
 describe("REST actions that require a smart account", () => {
+  it("waits for Privy before accepting a gift from the board", async () => {
+    const receiveGiftForYou = vi
+      .fn<ApiClient["receiveGiftForYou"]>()
+      .mockRejectedValue(new Error("gift expired"));
+    const api = withSmartWallet(emptyApi({ receiveGiftForYou }));
+    const giftId = `0x${"cd".repeat(32)}`;
+    const result = expect(api.receiveGiftForYou(giftId)).rejects.toThrow("gift expired");
+    try {
+      expect(receiveGiftForYou).not.toHaveBeenCalled();
+    } finally {
+      ready();
+      await result;
+    }
+    expect(receiveGiftForYou).toHaveBeenCalledWith(giftId);
+  });
+
   it("waits for Privy before asking the server to receive a Sticker", async () => {
     const receiveGift = vi
       .fn<ApiClient["receiveGift"]>()

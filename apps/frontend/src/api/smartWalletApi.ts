@@ -26,5 +26,9 @@ export function withSmartWallet(api: ApiClient): ApiClient {
       await waitForSmartWallet();
       return api.receiveGift(request);
     },
+    receiveGiftForYou: async (giftId) => {
+      await waitForSmartWallet();
+      return api.receiveGiftForYou(giftId);
+    },
   };
 }

@@ -93,7 +93,13 @@ export function SessionGate({
       if (current && outOfDate(me, claims())) {
         signIn().then(
           (signedIn) => {
-            if (current) setState({ step: "ready", me: signedIn.me });
+            if (!current) return;
+            // A handle chosen while the profile request was in flight is newer than its answer.
+            setState((state) =>
+              state.step === "ready" && state.me === me
+                ? { step: "ready", me: signedIn.me }
+                : state,
+            );
           },
           (error: unknown) =>
             console.warn("Bringing LINE's profile to your account failed", apiError(error)),
@@ -103,10 +109,16 @@ export function SessionGate({
     };
     const signingIn = (async (): Promise<Me | null> => {
       const lineUser = currentLineUserId();
-      if (early) {
+      if (early && attempt === 0) {
         // Asked as the app started, before LINE's user was known, so checked here: nothing of
         // another person's reaches the screen.
-        const cookies = await early.me;
+        let cookies: Me | null;
+        try {
+          cookies = await early.me;
+        } catch (error) {
+          early.drop();
+          throw error;
+        }
         if (cookies && lineUser && cookies.lineUserId === lineUser) {
           early.accept(cookies);
           return resumed(cookies);
@@ -114,6 +126,7 @@ export function SessionGate({
         early.drop();
       } else if (lineUser) {
         try {
+          // Retries check the cookie again; the early answer may predate a completed sign-in.
           // The server matches the session to LINE's user.
           return await resumed((await session.me(lineUser)).me);
         } catch (error) {

@@ -610,6 +610,7 @@ interface EscrowTransfer {
 | `POST /api/gifts/receive` | `{ giftClaimToken: string; liffContextType: "utou" \| "room" \| "group" \| "square_chat" \| "external" \| "none" }`, from `liff.getContext().type` | 200 `{ gift: Gift; sticker: Sticker; stickerPlacement: StickerPlacement }`                                                                                      | 403 `group_chat` (room, group or square_chat), `own_gift`, `adults_only`; 404 `gift_not_found`; 409 `already_received`, `taken_back`, `not_deposited`; 410 `gift_expired`, `gift_returned` |
 
 - In Sepolia mode, Receiving signs and submits `claimGift`, waits for it to land, stores its transaction hash, and only then transfers ownership in the database. A retry reconciles a claim that landed before its database update.
+- If the success response is lost, the same recipient can retry Accept and get the stored receipt and current placement without another claim. This works only while they still own the Sticker and it is not in another open Gift; other recipients still get `already_received`.
 
 **Gifts waiting for you** (a stopgap, until smart account permissions can authorize the receiver on chain):
 

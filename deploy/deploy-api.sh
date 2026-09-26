@@ -35,9 +35,19 @@ AUTH_DIR="${DEPLOY_AUTH_DIR:-/srv/sticker-auth}"
 URL="${DEPLOY_URL:-https://sticker.195-201-8-147.sslip.io}"
 STAGE="$(mktemp -d)"
 REMOTE_STAGE=""
+RESUME_API=false
 cleanup() {
+  local status=$?
+  if [ "$RESUME_API" = true ]; then
+    echo "→ restoring drawing-api after interrupted image preparation" >&2
+    ssh "$TARGET" "sudo systemctl start drawing-api" || {
+      echo "✗ drawing-api could not be restored; run sudo systemctl start drawing-api on the box" >&2
+      status=1
+    }
+  fi
   rm -rf "$STAGE"
   if [ -n "$REMOTE_STAGE" ]; then ssh "$TARGET" "rm -rf '$REMOTE_STAGE'"; fi
+  exit "$status"
 }
 trap cleanup EXIT
 
@@ -83,7 +93,28 @@ if [ -n "$changed" ]; then
   ssh "$TARGET" "cd '$DIR/server' && PATH=/usr/local/lib/nodejs/node-24/bin:\$PATH \
     /usr/local/lib/nodejs/node-24/bin/npm install --omit=dev --no-audit --no-fund --loglevel=error"
 fi
-changed+="$(rsync -ci "$ROOT/apps/api/dist/server.mjs" "$TARGET:$DIR/server/server.mjs")"
+# Keep the new API out of the active path until every existing sticker has the images it advertises.
+rsync -c "$ROOT/apps/api/dist/server.mjs" "$TARGET:$REMOTE_STAGE/server.mjs"
+rsync -c "$ROOT/apps/api/dist/backfill-sticker-webp.mjs" "$TARGET:$DIR/server/backfill-sticker-webp.mjs"
+# Stop new PNG-only seals from arriving during the scan. A failed conversion restarts the old API.
+if ssh "$TARGET" "sudo systemctl is-active --quiet drawing-api"; then
+  RESUME_API=true
+  ssh "$TARGET" "sudo systemctl stop drawing-api"
+else
+  api_status=$?
+  if [ "$api_status" -ne 3 ] && [ "$api_status" -ne 4 ]; then
+    echo "✗ could not determine whether drawing-api is running; image preparation was not started" >&2
+    exit 1
+  fi
+fi
+echo "→ preparing existing sticker images before publishing the API"
+if ! ssh "$TARGET" "cd '$DIR/server' && IMAGE_DIR='$DIR/images' timeout 300s \
+  /usr/local/lib/nodejs/node-24/bin/node backfill-sticker-webp.mjs"; then
+  echo "✗ sticker image preparation failed; the new API has not been published" >&2
+  exit 1
+fi
+changed+="$(ssh "$TARGET" "if ! cmp -s '$REMOTE_STAGE/server.mjs' '$DIR/server/server.mjs'; then \
+  mv '$REMOTE_STAGE/server.mjs' '$DIR/server/server.mjs' && echo 'updated server'; fi")"
 changed+="$(rsync -rci --delete "$ROOT/packages/db/drizzle/" "$TARGET:$DIR/drizzle/")"
 changed+="$(rsync -ci "$ROOT/deploy/drawing-api.env" "$TARGET:$DIR/api.env")"
 changed+="$(rsync -ci "$ROOT/deploy/drawing-api.service" "$TARGET:$DIR/")"
@@ -95,10 +126,11 @@ fi
 changed+="$(ssh "$TARGET" "test -s '$DIR/secrets.env' || { umask 077 \
   && printf 'SESSION_SECRET=%s\n' \"\$(openssl rand -hex 32)\" > '$DIR/secrets.env' && echo 'made a session secret'; }")"
 changed+="$(chain_config | ssh "$TARGET" "node '$REMOTE_STAGE/install-chain-env.mjs' '$DIR/chain.env' '$AUTH_DIR/secrets.env' install")"
-if [ -n "$changed" ]; then
+if [ -n "$changed" ] || [ "$RESUME_API" = true ]; then
   ssh "$TARGET" "sudo install -m 644 '$DIR/drawing-api.service' /etc/systemd/system/drawing-api.service \
     && sudo systemctl daemon-reload && sudo systemctl enable -q drawing-api && sudo systemctl restart drawing-api"
   echo "↻ restarted drawing-api"
+  RESUME_API=false
   sleep 2
 fi
 
