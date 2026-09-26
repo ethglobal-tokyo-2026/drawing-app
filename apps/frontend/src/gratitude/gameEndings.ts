@@ -1,4 +1,5 @@
 import { formatCount } from "../i18n/format";
+import { i18next } from "../i18n/i18n";
 import { notePerformance } from "../performance/performanceRecorder";
 import type { ComboHud } from "./comboHud";
 import { EASE_OUT, EASE_PEEL, clamp, easeInOutSine, lerp } from "./easing";
@@ -105,7 +106,12 @@ function hitGiver(parts: EndingParts, total: number) {
     );
   }
   parts.effects.burst(6, parts.giverPoint());
-  parts.say(`Sent ${formatCount(total)} gratitude to ${parts.giverHandle}.`);
+  parts.say(
+    i18next.t(($) => $.gratitude.announcements.sent, {
+      total: formatCount(total),
+      handle: parts.giverHandle,
+    }),
+  );
 }
 
 /**
