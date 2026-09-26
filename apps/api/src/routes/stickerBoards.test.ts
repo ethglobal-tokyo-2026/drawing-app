@@ -151,8 +151,12 @@ describe("GET /api/sticker-boards/:userId", () => {
       held: true,
       openGift: null,
     });
-    expect(stickers.get(packed)?.openGift).toEqual({ id: packedGiftId, status: "packed" });
-    expect(stickers.get(sent)?.openGift).toEqual({ id: sentGiftId, status: "sent" });
+    expect(stickers.get(packed)?.openGift).toEqual({
+      id: packedGiftId,
+      status: "packed",
+      for: null,
+    });
+    expect(stickers.get(sent)?.openGift).toEqual({ id: sentGiftId, status: "sent", for: null });
     expect(stickers.get(given)).toMatchObject({ held: false, openGift: null });
     expect(stickers.get(received)).toMatchObject({ held: true, openGift: null });
   });

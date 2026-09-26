@@ -14,7 +14,14 @@ import {
   takeOut,
   type Refusal,
 } from "../gifts/packaging.ts";
-import { openGiftBodySchema, previewGift, receiveGift } from "../gifts/receiving.ts";
+import {
+  giftsForYou,
+  openGiftBodySchema,
+  previewGift,
+  receiveGift,
+  receiveGiftForYou,
+  type Receiving,
+} from "../gifts/receiving.ts";
 import type { AppEnv } from "../session.ts";
 import { bytes32Schema } from "../shapes.ts";
 import { toGift } from "../views.ts";
@@ -23,6 +30,7 @@ import { toGift } from "../views.ts";
 const REFUSAL_STATUS = {
   sticker_not_found: 404,
   gift_not_found: 404,
+  user_not_found: 404,
   not_yours: 403,
   not_minted: 409,
   gift_in_transit: 409,
@@ -46,6 +54,17 @@ const refused = <Code extends keyof typeof REFUSAL_STATUS>(
 
 const giftParamSchema = z.object({ giftId: bytes32Schema });
 
+/** A Receiving's answer: the sticker on the receiver's board, or why not. */
+function received(c: Context<AppEnv>, receiving: Receiving) {
+  if (receiving.refusal !== null) return refused(c, receiving);
+  logInfo("gift.receive.recorded", {
+    giftId: receiving.received.gift.id,
+    stickerId: receiving.received.sticker.id,
+    userId: c.var.userId,
+  });
+  return c.json(receiving.received, 200);
+}
+
 /** Giving and Receiving. */
 export const giftRoutes = (deps: AppDeps) =>
   new Hono<AppEnv>()
@@ -59,20 +78,25 @@ export const giftRoutes = (deps: AppDeps) =>
       const receiving = await diagnosticStep("gift.receive", { userId: c.var.userId }, () =>
         receiveGift(deps, c.var.userId, c.req.valid("json")),
       );
-      if (receiving.refusal !== null) return refused(c, receiving);
-      logInfo("gift.receive.recorded", {
-        giftId: receiving.received.gift.id,
-        stickerId: receiving.received.sticker.id,
-        userId: c.var.userId,
-      });
-      return c.json(receiving.received, 200);
+      return received(c, receiving);
+    })
+    .get("/for-you", (c) => c.json(giftsForYou(deps, c.var.userId), 200))
+    .post("/:giftId/receive", validate("param", giftParamSchema), async (c) => {
+      const giftId = c.req.valid("param").giftId;
+      const receiving = await diagnosticStep(
+        "gift.receive_for_you",
+        { giftId, userId: c.var.userId },
+        () => receiveGiftForYou(deps, c.var.userId, giftId),
+      );
+      return received(c, receiving);
     })
     .post("/", validate("json", packageBodySchema), async (c) => {
-      const stickerId = c.req.valid("json").stickerId;
+      const body = c.req.valid("json");
+      const stickerId = body.stickerId;
       const packaging = await diagnosticStep(
         "gift.package",
         { stickerId, userId: c.var.userId },
-        () => packageGift(deps, c.var.userId, stickerId),
+        () => packageGift(deps, c.var.userId, body),
       );
       if (packaging.refusal !== null) return refused(c, packaging);
       logInfo("gift.package.ready", { stickerId, giftId: packaging.packaged.gift.id });

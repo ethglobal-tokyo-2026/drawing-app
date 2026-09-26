@@ -239,6 +239,7 @@ Inserted at Packaging.
 | `reject_tx_hash`     | text, null         |                                                                 | the server sends `rejectGift`             |                                     |
 | `return_tx_hash`     | text, null         |                                                                 | the server sends `returnExpiredGift`      |                                     |
 | `pushed_to_giver_at` | int (ms), null     |                                                                 | the "received your sticker" push goes out |                                     |
+| `for_user_id`        | text, null         | added in place: no foreign key or check                         | Packaging, or the first preview           | who it waits for; see below         |
 
 | `status`    | Means                                             | Giver sees                                  | Whoever opens the link sees        |
 | ----------- | ------------------------------------------------- | ------------------------------------------- | ---------------------------------- |
@@ -551,19 +552,19 @@ interface BoardSticker extends StickerPlacement {
   sticker: Sticker;
   held: boolean; // false: given away; show a GivenStickerSilhouette, and an empty spot in the tray
   givenTo: { receiver: Person; receivedAt: IsoTime } | null; // set when held is false: the silhouette's "→ @bob"
-  openGift: { id: string; status: "packed" | "sent" } | null;
+  openGift: { id: string; status: "packed" | "sent"; for: Person | null } | null; // for: who it waits for
 }
 ```
 
 ### Giving
 
-| Route                              | Request                                                                        | Response                                                                                                                                                                | Errors                                                                                              |
-| ---------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `POST /api/gifts`                  | `{ stickerId: string }`                                                        | 201 `{ gift: Gift; giftClaimToken: string; escrowTransfer: EscrowTransfer \| null }`; or 200 with `giftClaimToken: null` when the sticker already has a gift in the bag | 403 `not_yours`; 404 `sticker_not_found`; 409 `not_minted`, `gift_in_transit`                       |
-| `POST /api/gifts/:giftId/deposit`  | `{ txHash: string }`: the escrow transfer's transaction or user operation hash | 200 `{ gift: Gift }`, `escrowStatus` `pending` once checked                                                                                                             | 403 `not_yours`; 404 `gift_not_found`; 409 `deposit_not_landed` (retry), `deposit_mismatch`         |
-| `POST /api/gifts/:giftId/shared`   | `{ outcome: "sent" \| "cancelled" }`: the picker's result                      | 200 `{ gift: Gift }`: `sent` moves it to `sent`; `cancelled` leaves it `packed`                                                                                         | 403 `not_yours`; 404 `gift_not_found`; 409 `not_deposited`, `gift_closed`                           |
-| `POST /api/gifts/:giftId/take-out` | none                                                                           | 200 `{ gift: Gift }`, status `taken_out` and escrow status `rejected`                                                                                                   | 403 `not_yours`; 404 `gift_not_found`; 409 `already_received`, `gift_closed`, `take_out_not_landed` |
-| `GET /api/gifts/pending`           | none                                                                           | 200 `{ gifts: Array<{ gift: Gift; sticker: Sticker }> }`: your `packed` and `sent` gifts, newest first                                                                  |                                                                                                     |
+| Route                              | Request                                                                        | Response                                                                                                                                                                | Errors                                                                                                      |
+| ---------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `POST /api/gifts`                  | `{ stickerId: string; forUserId?: string }`                                    | 201 `{ gift: Gift; giftClaimToken: string; escrowTransfer: EscrowTransfer \| null }`; or 200 with `giftClaimToken: null` when the sticker already has a gift in the bag | 403 `not_yours`, `own_gift`; 404 `sticker_not_found`, `user_not_found`; 409 `not_minted`, `gift_in_transit` |
+| `POST /api/gifts/:giftId/deposit`  | `{ txHash: string }`: the escrow transfer's transaction or user operation hash | 200 `{ gift: Gift }`, `escrowStatus` `pending` once checked                                                                                                             | 403 `not_yours`; 404 `gift_not_found`; 409 `deposit_not_landed` (retry), `deposit_mismatch`                 |
+| `POST /api/gifts/:giftId/shared`   | `{ outcome: "sent" \| "cancelled" }`: the picker's result                      | 200 `{ gift: Gift }`: `sent` moves it to `sent`; `cancelled` leaves it `packed`                                                                                         | 403 `not_yours`; 404 `gift_not_found`; 409 `not_deposited`, `gift_closed`                                   |
+| `POST /api/gifts/:giftId/take-out` | none                                                                           | 200 `{ gift: Gift }`, status `taken_out` and escrow status `rejected`                                                                                                   | 403 `not_yours`; 404 `gift_not_found`; 409 `already_received`, `gift_closed`, `take_out_not_landed`         |
+| `GET /api/gifts/pending`           | none                                                                           | 200 `{ gifts: Array<{ gift: Gift; sticker: Sticker; for: Person \| null }> }`: your `packed` and `sent` gifts, newest first; `for` is who each waits for                |                                                                                                             |
 
 ```ts
 /** Send it from the giver's smart wallet to move the sticker into the escrow. */
@@ -585,6 +586,12 @@ interface EscrowTransfer {
 | `POST /api/gifts/receive` | `{ giftClaimToken: string; liffContextType: "utou" \| "room" \| "group" \| "square_chat" \| "external" \| "none" }`, from `liff.getContext().type` | 200 `{ gift: Gift; sticker: Sticker; stickerPlacement: StickerPlacement }`                                                                                      | 403 `group_chat` (room, group or square_chat), `own_gift`; 404 `gift_not_found`; 409 `already_received`, `taken_back`, `not_deposited`; 410 `gift_expired`, `gift_returned` |
 
 - In Sepolia mode, Receiving signs and submits `claimGift`, waits for it to land, stores its transaction hash, and only then transfers ownership in the database. A retry reconciles a claim that landed before its database update.
+
+**Gifts waiting for you** (a stopgap, until smart account permissions can authorize the receiver on chain):
+
+- `gifts.for_user_id` is who a gift waits for: the person the giver picked in the app (giving from their board sends `forUserId`), or else the first person whose preview finds it receivable. It never changes after that.
+- `GET /api/gifts/for-you`: 200 `{ gifts: Array<{ gift: Gift; sticker: Sticker; giver: Person }> }`, the `sent`, deposited, unexpired gifts waiting for you, newest first.
+- `POST /api/gifts/:giftId/receive`: no body. Receives a gift waiting for you without its Gift Claim Token, with Receiving's checks and answers; 404 `gift_not_found` for a gift waiting for someone else. The claim signer's `authorizeClaimForNamedRecipient` signs it without the token, so the token's holder is no longer the only one who can receive it.
 
 ```ts
 type ReceiveRefusal =

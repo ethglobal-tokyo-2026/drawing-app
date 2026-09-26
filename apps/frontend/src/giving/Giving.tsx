@@ -48,6 +48,8 @@ interface Props {
   liffId: string;
   /** Closes Giving; `sent` is true once the sticker has gone. */
   onClose: (sent: boolean) => void;
+  /** Who the giver picked in the app, from their board: the gift waits on that person's board. */
+  forUserId?: string;
 }
 
 /** Motion timings, in step with GiftBag.css: normal, then reduced. */
@@ -65,7 +67,7 @@ const screenOf = (state: GiveFlowState): Screen =>
 type View = Screen | "cantFind";
 
 /** Giving a sticker through a LINE chat: the give sheet, the gift bag, and the seal on send. */
-export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) {
+export function Giving({ sticker, fromHandle, sender, liffId, onClose, forUserId }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const motion = reduced ? 1 : 0;
@@ -79,6 +81,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
       liffId,
       // The sealed bag, never the sticker; the gift message drops it where the app isn't on HTTPS.
       heroUrl: new URL(heroPng, location.origin).href,
+      ...(forUserId && { forUserId }),
     }),
     pickerDelayMs: PICKER_DELAY[motion],
     takeOutMs: TAKE_OUT[motion],

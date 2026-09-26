@@ -5,7 +5,13 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import type { AppDeps, GiftChain, GiftClaim } from "../deps.ts";
 import { keccak256 } from "../keccak256.ts";
-import { bytes32Schema, escrowTransferSchema, type EscrowTransfer } from "../shapes.ts";
+import {
+  bytes32Schema,
+  escrowTransferSchema,
+  personSchema,
+  toPerson,
+  type EscrowTransfer,
+} from "../shapes.ts";
 import { giftSchema, loadStickers, stickerSchema, toGift } from "../views.ts";
 
 export type GiftRow = typeof gifts.$inferSelect;
@@ -27,7 +33,12 @@ export type GiftStep<Code extends string> = { refusal: null; gift: GiftRow } | R
 /** A Gift Claim Token: `0x` and 64 lowercase hex digits, typed for keccak256. */
 export const giftClaimTokenSchema = z.templateLiteral(["0x", z.string().regex(/^[0-9a-f]{64}$/)]);
 
-export const packageBodySchema = createInsertSchema(gifts).pick({ stickerId: true });
+/** A sticker to give; `forUserId` when the giver picked who it's for in the app. */
+export const packageBodySchema = createInsertSchema(gifts).pick({
+  stickerId: true,
+  forUserId: true,
+});
+type PackageBody = z.infer<typeof packageBodySchema>;
 
 export const packagedGiftSchema = z.object({
   gift: giftSchema,
@@ -44,7 +55,14 @@ export const sharedBodySchema = z.object({ outcome: z.enum(["sent", "cancelled"]
 type SharedOutcome = z.infer<typeof sharedBodySchema>["outcome"];
 
 export const pendingGiftsSchema = z.object({
-  gifts: z.array(z.object({ gift: giftSchema, sticker: stickerSchema })),
+  gifts: z.array(
+    z.object({
+      gift: giftSchema,
+      sticker: stickerSchema,
+      /** Who it waits for: the person picked in the app, or who first opened its link. */
+      for: personSchema.nullable(),
+    }),
+  ),
 });
 export type PendingGifts = z.infer<typeof pendingGiftsSchema>;
 
@@ -93,14 +111,21 @@ function escrowTransferFor(
 }
 
 export type Packaging =
-  | Refusal<"sticker_not_found" | "not_yours" | "gift_in_transit" | "not_minted">
+  | Refusal<
+      | "sticker_not_found"
+      | "not_yours"
+      | "gift_in_transit"
+      | "not_minted"
+      | "user_not_found"
+      | "own_gift"
+    >
   | { refusal: null; created: boolean; packaged: PackagedGift };
 
 /** Packaging: a new gift of a sticker you hold, or the one already in the bag. */
 export async function packageGift(
   deps: AppDeps,
   userId: string,
-  stickerId: string,
+  { stickerId, forUserId = null }: PackageBody,
 ): Promise<Packaging> {
   const { db, clock, giftChain } = deps;
   const sender = giftChain ? await smartWalletOf(deps, userId) : null;
@@ -111,6 +136,11 @@ export async function packageGift(
       if (!sticker) return refuse("sticker_not_found", `There's no sticker ${stickerId}`);
       if (sticker.ownerId !== userId) {
         return refuse("not_yours", `Sticker ${stickerId} is held by someone else`);
+      }
+      // gifts.for_user_id carries no foreign key or check, so it's checked here.
+      if (forUserId === userId) return refuse("own_gift", "A gift can't be for its own giver");
+      if (forUserId !== null && !tx.select().from(users).where(eq(users.id, forUserId)).get()) {
+        return refuse("user_not_found", `There's no person ${forUserId} to give it to`);
       }
       // gifts_one_per_sticker's condition: at most one gift of a sticker is open.
       const open = tx
@@ -124,6 +154,10 @@ export async function packageGift(
         )
         .get();
       if (open?.status === "packed" && open.giverId === userId) {
+        // Still in the bag: it's for whoever the giver picked this time.
+        if (open.forUserId !== forUserId) {
+          tx.update(gifts).set({ forUserId }).where(eq(gifts.id, open.id)).run();
+        }
         const escrowTransfer =
           giftChain && open.escrowStatus === "missing"
             ? escrowTransferFor(giftChain, open, sticker.tokenId, sender)
@@ -147,6 +181,7 @@ export async function packageGift(
           id: claim.giftId,
           stickerId,
           giverId: userId,
+          forUserId,
           claimCommitment: claim.claimCommitment,
           expiresAt: new Date(now.getTime() + GIFT_EXPIRY_MS),
           // The mock chain's deposit counts as landed at once.
@@ -294,21 +329,22 @@ export async function takeOut(
 /** Your gifts in the bag or on their way, newest first, each with its sticker. */
 export function pendingGifts({ db, images }: AppDeps, userId: string): PendingGifts {
   const rows = db
-    .select()
+    .select({ gift: gifts, for: users })
     .from(gifts)
+    .leftJoin(users, eq(users.id, gifts.forUserId))
     .where(and(eq(gifts.giverId, userId), inArray(gifts.status, ["packed", "sent"])))
     .orderBy(desc(gifts.createdAt))
     .all();
   const stickersById = loadStickers(
     db,
-    rows.map((gift) => gift.stickerId),
+    rows.map(({ gift }) => gift.stickerId),
     images.urls,
   );
   return {
-    gifts: rows.map((gift) => {
+    gifts: rows.map(({ gift, for: forUser }) => {
       const sticker = stickersById.get(gift.stickerId);
       if (!sticker) throw new Error(`Gift ${gift.id}'s sticker ${gift.stickerId} is missing`);
-      return { gift: toGift(gift), sticker };
+      return { gift: toGift(gift), sticker, for: forUser ? toPerson(forUser) : null };
     }),
   };
 }

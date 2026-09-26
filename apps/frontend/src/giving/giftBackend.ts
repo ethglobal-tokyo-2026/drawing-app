@@ -54,6 +54,8 @@ interface ApiGiftBackendOptions {
   liffId: string;
   heroUrl?: string;
   transactions?: GiftTransactions;
+  /** Who the giver picked in the app, so the gift waits on their board too. */
+  forUserId?: string;
 }
 
 // The raw claim token lives only until the page closes. The server remains authoritative for gifts.
@@ -94,6 +96,7 @@ export function createApiGiftBackend({
   liffId,
   heroUrl,
   transactions = giftTransactions,
+  forUserId,
 }: ApiGiftBackendOptions): GiftBackend {
   const packing = packaging.get(api) ?? new Map<string, Promise<PackedGift>>();
   packaging.set(api, packing);
@@ -146,7 +149,7 @@ export function createApiGiftBackend({
     return operation;
   };
   const pack = async (sticker: GiftSticker): Promise<PackedGift> => {
-    let packaged = await api.packageGift(sticker.id);
+    let packaged = await api.packageGift(sticker.id, forUserId);
     try {
       // Already in the bag from an earlier visit: its Gift Claim Token left with that page, so the
       // gift comes out and goes back in with a new one.
@@ -170,7 +173,7 @@ export function createApiGiftBackend({
           packaged.gift.id,
           packaged.escrowTransfer !== null || Boolean(import.meta.env.VITE_STICKER_ESCROW_ADDRESS),
         );
-        packaged = await api.packageGift(sticker.id);
+        packaged = await api.packageGift(sticker.id, forUserId);
       }
       const { gift, giftClaimToken, escrowTransfer } = packaged;
       const previous = attempts.get(gift.id);

@@ -241,13 +241,13 @@ export const giving = {
     onTheirWay_other: { en: "On their way", ja: "お届け中" },
     /** The pending gifts badge on your own sticker board: the line under "On their way", the newest gift's number and how many more */
     andMore: { en: "{{no}} and {{count}} more", ja: "{{no}}ほか{{count}}枚" },
-    /** The pending gifts badge on your own sticker board: the line under "On its way" naming who one gift given in the app went to; no screen names a recipient yet, so it isn't shown */
+    /** The pending gifts badge on your own sticker board: the line under "On its way" naming who one gift waits for: the person picked in the app, or whoever first opened its link */
     to: { en: "to {{name}}", ja: "{{name}}へ" },
     /** Names the badge for assistive tech. */
     label: {
       /** The pending gifts badge on your own sticker board: its name for assistive tech, with one gift on its way */
       one: { en: "Gifts on their way: {{no}}", ja: "お届け中のギフト：{{no}}" },
-      /** The pending gifts badge on your own sticker board: its name for assistive tech, with one gift given to someone in the app; no screen names a recipient yet, so it isn't shown */
+      /** The pending gifts badge on your own sticker board: its name for assistive tech, with one gift that waits for someone: the person picked in the app, or whoever first opened its link */
       oneTo: {
         en: "Gifts on their way: {{no}} to {{name}}",
         ja: "お届け中のギフト：{{name}}への{{no}}",
