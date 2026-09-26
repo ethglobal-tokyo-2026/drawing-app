@@ -290,8 +290,8 @@ const SHAKE: readonly (readonly [number, number])[] = [
 const SHAKE_MS = 85;
 /** One motion sample swings the pull, jiggles the slider sideways and stutters it along the track. */
 const NUDGE = { swingX: 24, swingY: 4, jiggle: 4.2, stutter: 2.6 };
-/** Motion under this, in m/s², is the hand's tremor and is ignored. */
-const MOTION_MIN = 0.7;
+/** Motion under this, in m/s², is the hand's tremor or a tap on the screen, and is ignored. */
+const MOTION_MIN = 2.5;
 /** Where the browser reports acceleration only with gravity, a slow average stands in for gravity. */
 const GRAVITY_SMOOTHING = 0.9;
 
@@ -908,7 +908,8 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
       near(st.spread, st.sv, spreadTarget(), 0.002) &&
       near(st.flip, st.fv, flipTarget(), 0.003) &&
       Math.abs(st.lv) < 0.01 &&
-      near(st.swing, st.swv, 0, 0.06) &&
+      // The pull's swing rings on for seconds below anything the eye can see.
+      near(st.swing, st.swv, 0, 0.5) &&
       near(st.stut, st.stv, 0, 0.02) &&
       near(st.jx, st.jxv, 0, 0.02) &&
       st.rip === 0
