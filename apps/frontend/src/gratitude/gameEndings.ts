@@ -64,36 +64,55 @@ function rethrowUnlessCancelled(error: unknown) {
   if (!(error instanceof Error && error.name === "AbortError")) throw error;
 }
 
-/** The giver's picture squashes as the heart lands in it and takes its heart dot. */
-function hitGiver(parts: EndingParts) {
-  // Unlike the dot, the picture's holder is upright: the sticker inside it carries the tilt.
-  animate(
-    parts.giverPhoto,
-    [
-      { transform: "scale(1)" },
-      { offset: 0.25, transform: "scale(1.16, .88)" },
-      { offset: 0.6, transform: "scale(.96, 1.04)" },
-      { transform: "scale(1)" },
-    ],
-    { duration: 360, easing: EASE_PEEL },
-  );
-  animate(
-    parts.giverDot,
-    [
-      { transform: `scale(0) ${TILT}`, opacity: 1 },
-      { offset: 0.6, transform: `scale(1.15) ${TILT}`, opacity: 1 },
-      { transform: `scale(1) ${TILT}`, opacity: 1 },
-    ],
-    { duration: 220, easing: EASE_PEEL, fill: "forwards" },
-  );
+/**
+ * The giver's picture squashes as the heart lands in it and takes its heart dot, and the live region
+ * says the gratitude sent. With reduced motion the picture holds still and the dot fades in.
+ */
+function hitGiver(parts: EndingParts, total: number) {
+  if (parts.reduced()) {
+    animate(
+      parts.giverDot,
+      [
+        { transform: `scale(1) ${TILT}`, opacity: 0 },
+        { transform: `scale(1) ${TILT}`, opacity: 1 },
+      ],
+      { duration: 220, easing: EASE_OUT, fill: "forwards" },
+    );
+  } else {
+    // Unlike the dot, the picture's holder is upright: the sticker inside it carries the tilt.
+    animate(
+      parts.giverPhoto,
+      [
+        { transform: "scale(1)" },
+        { offset: 0.25, transform: "scale(1.16, .88)" },
+        { offset: 0.6, transform: "scale(.96, 1.04)" },
+        { transform: "scale(1)" },
+      ],
+      { duration: 360, easing: EASE_PEEL },
+    );
+    animate(
+      parts.giverDot,
+      [
+        { transform: `scale(0) ${TILT}`, opacity: 1 },
+        { offset: 0.6, transform: `scale(1.15) ${TILT}`, opacity: 1 },
+        { transform: `scale(1) ${TILT}`, opacity: 1 },
+      ],
+      { duration: 220, easing: EASE_PEEL, fill: "forwards" },
+    );
+  }
   parts.effects.burst(6, parts.giverPoint());
-  parts.say(`Sent to ${parts.giverHandle}.`);
+  parts.say(`Sent ${total.toLocaleString("en-US")} gratitude to ${parts.giverHandle}.`);
 }
 
-/** The heart flies into the giver's picture, or fades out with reduced motion, and the picture takes it. */
-export async function flyHeartToGiver(parts: EndingParts): Promise<void> {
+/**
+ * The heart flies into the giver's picture, or fades out with reduced motion, and the picture takes
+ * it. `total`: the combo's gratitude, which the live region says.
+ */
+export async function flyHeartToGiver(parts: EndingParts, total: number): Promise<void> {
+  // The finger stamps go with the heart, rather than hang where it was.
+  parts.effects.tidy();
   await parts.heart.flyToGiver();
-  hitGiver(parts);
+  hitGiver(parts, total);
 }
 
 /** The soul drifts up from the heart to the giver's picture, weaving less as it nears. */
@@ -116,8 +135,11 @@ function riseSoul(parts: EndingParts) {
   animate(parts.soul, frames, { duration: SOUL_RISE_MS, easing: "linear", fill: "both" });
 }
 
-/** 昇天's climax: a flash, the heart goes limp and pale, 昇天 slams in, and its soul rises to the giver. */
-export async function playAscension(parts: EndingParts): Promise<void> {
+/**
+ * 昇天's climax: a flash, the heart goes limp and pale, 昇天 slams in, and its soul rises to the giver.
+ * `total` as for flyHeartToGiver.
+ */
+export async function playAscension(parts: EndingParts, total: number): Promise<void> {
   const { background, heart, lettering } = parts;
   parts.freeze(FEEL_CONFIG.climaxFreezeMs);
   background.flash();
@@ -133,26 +155,40 @@ export async function playAscension(parts: EndingParts): Promise<void> {
   lettering.showPopInWord(4, parts.heartBox());
   riseSoul(parts);
   await parts.wait(SOUL_RISE_MS);
-  hitGiver(parts);
+  hitGiver(parts, total);
   background.ascend(false, parts.intensity);
   await parts.wait(250);
 }
 
-/** "fuu…" for a moment, then the stamps, the mini hearts, the ground and the heart clear away. */
+/**
+ * "fuu…" drifts up for a moment, or fades in place with reduced motion, then the stamps, the mini
+ * hearts, the ground and the heart clear away.
+ */
 export async function sighAndTidy(parts: EndingParts): Promise<void> {
-  // Beside where the heart was, and clear of the screen's edges.
-  const x = clamp(parts.heartPoint().x - 60, 16, parts.screenWidth() - 150);
-  const y = parts.heartBox().y - 18;
+  // Over where the heart rested, clear of its pale art and of the screen's edges.
+  const box = parts.heartBox();
+  const width = parts.fuu.offsetWidth || 120;
+  const height = parts.fuu.offsetHeight || 32;
+  const x = clamp(box.x - width / 2, 16, parts.screenWidth() - width - 16);
+  const y = box.y - box.height / 2 - FEEL_CONFIG.sighAboveHeartPx - height;
   const at = (dx: number, dy: number, scale: number) =>
     `translate(${(x + dx).toFixed(1)}px,${(y + dy).toFixed(1)}px) scale(${scale})`;
+  const still = at(0, 0, 1);
   animate(
     parts.fuu,
-    [
-      { transform: at(0, 0, 0.9), opacity: 0 },
-      { offset: 0.25, transform: at(0, -6, 1), opacity: 1 },
-      { offset: 0.7, transform: at(6, -14, 1), opacity: 1 },
-      { transform: at(12, -26, 1.02), opacity: 0 },
-    ],
+    parts.reduced()
+      ? [
+          { transform: still, opacity: 0 },
+          { offset: 0.25, transform: still, opacity: 1 },
+          { offset: 0.7, transform: still, opacity: 1 },
+          { transform: still, opacity: 0 },
+        ]
+      : [
+          { transform: at(0, 0, 0.9), opacity: 0 },
+          { offset: 0.25, transform: at(0, -6, 1), opacity: 1 },
+          { offset: 0.7, transform: at(6, -14, 1), opacity: 1 },
+          { transform: at(12, -26, 1.02), opacity: 0 },
+        ],
     { duration: SIGH_MS, easing: EASE_OUT, fill: "both" },
   );
   await parts.wait(SIGH_MS);
