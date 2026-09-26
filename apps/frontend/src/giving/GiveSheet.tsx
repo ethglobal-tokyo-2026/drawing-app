@@ -11,6 +11,9 @@ import { useIdentity } from "../identity/useIdentity";
 import { deviceGiftStore } from "./giftStore";
 import { useKeptStickers, type KeptSticker } from "../stickers/useKeptStickers";
 import { GiftBag } from "./GiftBag";
+// Giving.css goes first, even ahead of the give-sheet.css StickerPicker brings, so the sheet's
+// resets come after its margins wherever this loads.
+import "./Giving.css";
 import { StickerPicker } from "./StickerPicker";
 import "./give-sheet.css";
 

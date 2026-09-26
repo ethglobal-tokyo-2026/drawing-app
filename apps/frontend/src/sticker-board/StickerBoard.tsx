@@ -1,5 +1,6 @@
 import {
   Fragment,
+  Suspense,
   useCallback,
   useEffect,
   useId,
@@ -9,7 +10,6 @@ import {
   useState,
 } from "react";
 import { flushSync } from "react-dom";
-import { Giving } from "../giving/Giving";
 import { useGiftSender } from "../giving/useGiftSender";
 import { useStickerGifts } from "../giving/useStickerGifts";
 import { DrawIcon } from "../icons/DrawIcon";
@@ -25,6 +25,7 @@ import { describeTickets, ticketDay } from "../tickets/tickets";
 import { useTicketState } from "../tickets/useTickets";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
+import { lazyWithPreload, usePreloadWhenIdle } from "../ui/lazyWithPreload";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useReducedMotion } from "../ui/useReducedMotion";
@@ -45,14 +46,28 @@ import {
   type Box,
 } from "./placement";
 import { BoardFlip } from "./stat-board/BoardFlip";
-import { StatBoard, type StatBoardHandle } from "./stat-board/StatBoard";
-import { StickerDetail } from "./StickerDetail";
+import type { StatBoardHandle } from "./stat-board/StatBoard";
 import { readingOrder } from "./stickerOrder";
 import { StickerToolbar } from "./StickerToolbar";
-import { StickerTray, type StickerTrayHandle } from "./tray/StickerTray";
+import type { StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
 import { useBoardGestures } from "./useBoardGestures";
 import "./StickerBoard.css";
+
+// The Zipper shows on the board at rest, so the sticker tray's code starts loading with the board's.
+const StickerTray = lazyWithPreload("the sticker tray", () =>
+  import("./tray/StickerTray").then((m) => m.StickerTray),
+);
+void StickerTray.preload();
+// Opened from the board, so their code loads once it's up.
+const StickerDetail = lazyWithPreload("the sticker detail", () =>
+  import("./StickerDetail").then((m) => m.StickerDetail),
+);
+const Giving = lazyWithPreload("Giving", () => import("../giving/Giving").then((m) => m.Giving));
+const StatBoard = lazyWithPreload("the stat board", () =>
+  import("./stat-board/StatBoard").then((m) => m.StatBoard),
+);
+const OPENED_FROM_BOARD = [StickerDetail, Giving, StatBoard];
 
 interface Props {
   /** The sticker that was just sealed; it lands on the board the first time the board shows it. */
@@ -154,12 +169,15 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const [giving, setGiving] = useState<BoardSticker | null>(null);
   /** The board is turned over to its stat board. */
   const [turned, setTurned] = useState(false);
+  /** The board has turned over before, so its stat board stays mounted for every turn after. */
+  const [wasTurned, setWasTurned] = useState(false);
   const me = useIdentity();
   const tickets = useTicketState();
   const gifts = useStickerGifts();
   const giftSender = useGiftSender();
   const reduced = useReducedMotion();
   const hints = useId();
+  const idle = usePreloadWhenIdle(OPENED_FROM_BOARD);
   useLight(!turned);
 
   const save = useCallback((sticker: Pick<StickerRecord, "id" | "no">, placement: Placement) => {
@@ -267,7 +285,9 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   // Turning over lets go of the selected sticker, so the board comes back without a stray toolbar.
   const turn = (over: boolean) => {
     setTurned(over);
-    if (over) select(null);
+    if (!over) return;
+    setWasTurned(true);
+    select(null);
   };
   // Back turns the stat board back over, as LINE's Back does on any overlay.
   useBackToClose(turned, () => turn(false));
@@ -472,7 +492,9 @@ export function StickerBoard({ freshId, onDraw }: Props) {
       </div>
 
       {stickers && (
-        <StickerTray ref={tray} board={face} stickers={stickers} gifts={gifts} api={trayBoard} />
+        <Suspense fallback={null}>
+          <StickerTray ref={tray} board={face} stickers={stickers} gifts={gifts} api={trayBoard} />
+        </Suspense>
       )}
 
       {loadError && (
@@ -509,53 +531,57 @@ export function StickerBoard({ freshId, onDraw }: Props) {
       )}
 
       {giving && giftSender && (
-        <Giving
-          sticker={{ ...giving, url: giving.urls.png }}
-          fromHandle={me.handle}
-          sender={giftSender}
-          liffId={LIFF_ID}
-          onClose={(sent) => {
-            setGiving(null);
-            // Given, it has left the board.
-            if (sent) setSelected(null);
-          }}
-        />
+        <Suspense fallback={null}>
+          <Giving
+            sticker={{ ...giving, url: giving.urls.png }}
+            fromHandle={me.handle}
+            sender={giftSender}
+            liffId={LIFF_ID}
+            onClose={(sent) => {
+              setGiving(null);
+              // Given, it has left the board.
+              if (sent) setSelected(null);
+            }}
+          />
+        </Suspense>
       )}
 
       {open && (
-        <StickerDetail
-          // In the order they arrived, as the board loads them.
-          stickers={(stickers ?? []).filter((s) =>
-            open.mode === "given"
-              ? gifts.get(s.id)?.state === "sent"
-              : gifts.get(s.id)?.state !== "sent",
-          )}
-          startId={open.id}
-          mode={open.mode}
-          handle={me.handle}
-          // It lifts off from where the sticker sits: on the board, or its given sticker silhouette.
-          originOf={(id) =>
-            stickerEl(id)?.querySelector<HTMLElement>(
-              ".placed-sticker__lift, .given-sticker-silhouette__art",
-            ) ?? null
-          }
-          gifts={gifts}
-          onClose={() => setOpen(null)}
-          // Back to the sticker it opened from: on the board, or its given sticker silhouette.
-          returnFocus={() =>
-            stage.current?.querySelector<HTMLElement>(
-              `[data-sticker-id="${CSS.escape(open.id)}"]`,
-            ) ?? null
-          }
-          onGive={
-            giftSender
-              ? (s) => {
-                  setOpen(null);
-                  setGiving(s);
-                }
-              : undefined
-          }
-        />
+        <Suspense fallback={null}>
+          <StickerDetail
+            // In the order they arrived, as the board loads them.
+            stickers={(stickers ?? []).filter((s) =>
+              open.mode === "given"
+                ? gifts.get(s.id)?.state === "sent"
+                : gifts.get(s.id)?.state !== "sent",
+            )}
+            startId={open.id}
+            mode={open.mode}
+            handle={me.handle}
+            // It lifts off from where the sticker sits: on the board, or its given sticker silhouette.
+            originOf={(id) =>
+              stickerEl(id)?.querySelector<HTMLElement>(
+                ".placed-sticker__lift, .given-sticker-silhouette__art",
+              ) ?? null
+            }
+            gifts={gifts}
+            onClose={() => setOpen(null)}
+            // Back to the sticker it opened from: on the board, or its given sticker silhouette.
+            returnFocus={() =>
+              stage.current?.querySelector<HTMLElement>(
+                `[data-sticker-id="${CSS.escape(open.id)}"]`,
+              ) ?? null
+            }
+            onGive={
+              giftSender
+                ? (s) => {
+                    setOpen(null);
+                    setGiving(s);
+                  }
+                : undefined
+            }
+          />
+        </Suspense>
       )}
     </div>
   );
@@ -571,13 +597,18 @@ export function StickerBoard({ freshId, onDraw }: Props) {
       backFocus={flipBack}
       front={front}
       back={
-        <StatBoard
-          ref={statBoard}
-          stickers={loadError ? null : (stickers ?? [])}
-          gifts={gifts}
-          onFlipBack={() => turn(false)}
-          flipBackRef={flipBack}
-        />
+        // Mounted once the board is idle, or as it first turns over, and kept from then on.
+        (idle || wasTurned) && (
+          <Suspense fallback={null}>
+            <StatBoard
+              ref={statBoard}
+              stickers={loadError ? null : (stickers ?? [])}
+              gifts={gifts}
+              onFlipBack={() => turn(false)}
+              flipBackRef={flipBack}
+            />
+          </Suspense>
+        )
       }
     />
   );

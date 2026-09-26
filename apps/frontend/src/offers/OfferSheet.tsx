@@ -4,6 +4,9 @@ import { ArtistArt } from "../artists/ArtistArt";
 import type { Artist, ArtistBoardSticker } from "../artists/demoArtists";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
+// Giving.css goes first, even ahead of the give-sheet.css StickerPicker brings, so the sheet's
+// resets come after its margins wherever this loads.
+import "../giving/Giving.css";
 import { StickerPicker } from "../giving/StickerPicker";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Sheet } from "../ui/Sheet";

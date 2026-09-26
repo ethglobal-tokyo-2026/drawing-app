@@ -1,14 +1,23 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { artistByHandle } from "../artists/demoArtists";
-import { ArtistBoard } from "../sticker-board/ArtistBoard";
 import { StickerBoard } from "../sticker-board/StickerBoard";
 import { DrawingScreen, type DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
-import { ExploreScreen } from "../explore/ExploreScreen";
+import { lazyWithPreload, usePreloadWhenIdle } from "../ui/lazyWithPreload";
 import { viewFromPath, type View } from "./openedView";
 import { ShopScreen } from "./ShopScreen";
 import { TabBar } from "./TabBar";
 import { useFocusLoop } from "./useFocusLoop";
 import "./App.css";
+
+// Explore is a tab away, so its code loads once the app is idle.
+const ExploreScreen = lazyWithPreload("Explore", () =>
+  import("../explore/ExploreScreen").then((m) => m.ExploreScreen),
+);
+const OPENED_FROM_TABS = [ExploreScreen];
+// Someone else's sticker board opens from Explore, so its code loads once Explore is open.
+const ArtistBoard = lazyWithPreload("someone else's sticker board", () =>
+  import("../sticker-board/ArtistBoard").then((m) => m.ArtistBoard),
+);
 
 /** LINE's header shows the page title. */
 const TITLES: Record<View, string> = {
@@ -29,6 +38,11 @@ export default function App() {
   const [visiting, setVisiting] = useState<string>();
   const visitedArtist = visiting ? artistByHandle.get(visiting) : undefined;
   const drawing = view === "draw";
+  usePreloadWhenIdle(OPENED_FROM_TABS);
+
+  useEffect(() => {
+    if (view === "explore") void ArtistBoard.preload();
+  }, [view]);
 
   useEffect(() => {
     document.title = TITLES[view];
@@ -63,11 +77,16 @@ export default function App() {
           onGoToBoard={() => setView("board")}
         />
         {view === "board" && <StickerBoard freshId={sealedId} onDraw={openDrawing} />}
+        {/* Each in its own boundary, so Explore stays up while an artist's board loads over it. */}
         {view === "explore" && (
-          <ExploreScreen onOpenArtist={setVisiting} onOpenMyBoard={() => setView("board")} />
+          <Suspense fallback={null}>
+            <ExploreScreen onOpenArtist={setVisiting} onOpenMyBoard={() => setView("board")} />
+          </Suspense>
         )}
         {view === "explore" && visitedArtist && (
-          <ArtistBoard artist={visitedArtist} onBack={() => setVisiting(undefined)} />
+          <Suspense fallback={null}>
+            <ArtistBoard artist={visitedArtist} onBack={() => setVisiting(undefined)} />
+          </Suspense>
         )}
         {view === "shop" && <ShopScreen onDraw={openDrawing} />}
       </div>

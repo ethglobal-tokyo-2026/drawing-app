@@ -21,6 +21,17 @@ void initLine();
 installPress();
 installLight(document.documentElement);
 
+// A deploy deletes the old build's chunks, so a page still on it reloads onto the new build before
+// opening what it hadn't loaded. Once per missing chunk: one still missing after that is a broken build.
+const RELOADED_FOR = "draw.reloadedFor";
+window.addEventListener("vite:preloadError", (event) => {
+  const missing = event.payload.message;
+  if (sessionStorage.getItem(RELOADED_FOR) === missing) return;
+  sessionStorage.setItem(RELOADED_FOR, missing);
+  event.preventDefault();
+  location.reload();
+});
+
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element #root is missing from index.html");
 
