@@ -61,6 +61,10 @@ export interface MintRequest {
   artistId: string;
   contentHash: string;
   metadataUri: string;
+  number?: number;
+  sealedAt?: Date;
+  width?: number;
+  height?: number;
 }
 
 export interface MintedToken {
@@ -104,7 +108,7 @@ export interface GiftChain {
 }
 
 export interface SmartWallets {
-  /** The person's smart wallet on World Chain, lowercase; null while they have none. */
+  /** The person's Ethereum Sepolia smart wallet, lowercase; null while they have none. */
   addressFor: (userId: string) => Promise<string | null>;
 }
 

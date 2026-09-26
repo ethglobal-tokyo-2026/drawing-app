@@ -217,7 +217,8 @@ const isSpentTicket = (v: unknown): v is SpentTicket =>
   "day" in v &&
   typeof v.day === "string" &&
   "index" in v &&
-  isCount(v.index);
+  isCount(v.index) &&
+  (!("serverId" in v) || v.serverId === undefined || isCount(v.serverId));
 
 /** Null when no drawing is in progress. */
 function readRecord(): SessionRecord | "unreadable" | null {

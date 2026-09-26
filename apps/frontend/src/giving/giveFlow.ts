@@ -117,15 +117,6 @@ export function createGiveFlow({
     }
   };
 
-  const putBack = (a: Attempt) => {
-    if (!a.open) return;
-    a.open = false;
-    void a.gift.then(
-      (packed) => record("taking it out", () => backend.markNotSent(packed.giftId, "taken_out")),
-      (error: unknown) => report(`${which} couldn’t be packed`, error),
-    );
-  };
-
   const openPicker = async () => {
     if (state.step !== "packed" && state.step !== "notSent" && state.step !== "failed") return;
     clearTimer();
@@ -138,21 +129,17 @@ export function createGiveFlow({
     try {
       outcome = await sender.send(packed.message);
     } catch (error) {
-      a.open = false;
       report(`${which} wasn’t sent`, error);
-      const recordError = await record("the failure", () =>
-        backend.markNotSent(packed.giftId, "send_failed", describe(error)),
-      );
-      set({ step: "failed", error: `${which} wasn’t sent: ${describe(error)}`, recordError });
+      set({ step: "failed", error: `${which} wasn’t sent: ${describe(error)}` });
       return;
     }
-    a.open = false;
     if (outcome === "sent") {
-      const recordError = await record("the send", () => backend.markSent(packed.giftId));
+      a.open = false;
+      const recordError = await record("the send", () => backend.markShared(packed.giftId, "sent"));
       set({ step: "sent", sentAt: now(), recordError });
     } else {
       const recordError = await record("the cancel", () =>
-        backend.markNotSent(packed.giftId, "picker_cancelled"),
+        backend.markShared(packed.giftId, "cancelled"),
       );
       set({ step: "notSent", recordError });
     }
@@ -174,14 +161,28 @@ export function createGiveFlow({
     sendInLine: () => void openPicker(),
     takeOut: () => {
       if (state.step !== "packed" && state.step !== "notSent" && state.step !== "failed") return;
-      if (attempt) putBack(attempt);
-      attempt = null;
+      const a = attempt;
+      if (!a?.open) {
+        attempt = null;
+        set({ step: "sheet" });
+        return;
+      }
       set({ step: "takingOut" });
-      after(takeOutMs, () => set({ step: "sheet" }));
+      void packedGift(a).then(async (packed) => {
+        if (!packed) return;
+        try {
+          await backend.takeOut(packed.giftId);
+          a.open = false;
+          attempt = null;
+          after(takeOutMs, () => set({ step: "sheet" }));
+        } catch (error) {
+          report(`${which} couldn’t be taken out`, error);
+          set({ step: "failed", error: `${which} couldn’t be taken out: ${describe(error)}` });
+        }
+      });
     },
     dispose: () => {
       clearTimer();
-      if (state.step === "packed" && attempt) putBack(attempt);
       disposed = true;
       listeners.clear();
     },

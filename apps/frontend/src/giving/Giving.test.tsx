@@ -97,11 +97,12 @@ describe("Giving", () => {
     await wait(0);
     expect(title()).toBe("Not sent yet");
     expect(document.querySelector(".gift-bag")?.getAttribute("data-state")).toBe("open");
-    expect(giftOf("s-cancelled")).toBeUndefined();
+    expect(giftOf("s-cancelled")).toBe("packed");
 
     tap("Take it out");
     await wait(400);
     expect(title()).toBe("Give No.0147");
+    expect(giftOf("s-cancelled")).toBeUndefined();
     expect(onClose).not.toHaveBeenCalled();
   });
 });

@@ -27,6 +27,7 @@ const sticker: SealedSticker = {
   height: 100,
   pad: 6,
   inkWidth: 748,
+  inkHeight: 880,
   place: { x: 100, y: 200, w: 480, h: 400 },
   contour: [
     [130, 230],

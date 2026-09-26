@@ -5,6 +5,10 @@ export interface StickerRecord {
   createdAt: number;
   /** Seconds spent drawing. */
   timeUsed: number;
+  /** The NFT fields are absent only on stickers sealed before the REST API integration. */
+  contentHash?: string;
+  tokenId?: string;
+  mintTxHash?: string;
   blob: Blob;
   width: number;
   height: number;
@@ -89,15 +93,18 @@ export async function listStickers(): Promise<StickerRecord[]> {
   return records.sort((a, b) => b.createdAt - a.createdAt);
 }
 
-export async function addSticker(data: Omit<StickerRecord, "id" | "no">): Promise<StickerRecord> {
+export async function addSticker(
+  data: Omit<StickerRecord, "id" | "no">,
+  assigned?: Pick<StickerRecord, "id" | "no">,
+): Promise<StickerRecord> {
   // Numbered from every stored record, readable or not, so a new sticker never reuses a number.
   // If the store can't be read, the seal fails and says so rather than restarting at No.0001.
   const all: unknown[] = await run("readonly", (s) => s.getAll());
   const record: StickerRecord = {
     ...data,
     // crypto.randomUUID is missing on plain-http LAN origins (phone testing).
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
-    no: all.reduce((m: number, v) => Math.max(m, storedNo(v)), 0) + 1,
+    id: assigned?.id ?? Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+    no: assigned?.no ?? all.reduce((m: number, v) => Math.max(m, storedNo(v)), 0) + 1,
   };
   await run("readwrite", (s) => s.put(record));
   return record;
@@ -125,7 +132,19 @@ type Stored = Pick<
   StickerRecord,
   "id" | "no" | "createdAt" | "timeUsed" | "blob" | "width" | "height"
 > &
-  Partial<Record<"outline" | "mask" | "resin" | "flat" | "placement", unknown>>;
+  Partial<
+    Record<
+      | "contentHash"
+      | "tokenId"
+      | "mintTxHash"
+      | "outline"
+      | "mask"
+      | "resin"
+      | "flat"
+      | "placement",
+      unknown
+    >
+  >;
 
 const isStored = (v: unknown): v is Stored =>
   typeof v === "object" &&
@@ -177,7 +196,10 @@ const isPlacement = (v: unknown): v is Placement =>
  */
 export function readSticker(v: unknown): StickerRecord | undefined {
   if (!isStored(v)) return undefined;
-  const { outline, mask, resin, flat, placement } = v;
+  const { contentHash, tokenId, mintTxHash, outline, mask, resin, flat, placement } = v;
+  if (contentHash !== undefined && typeof contentHash !== "string") return undefined;
+  if (tokenId !== undefined && typeof tokenId !== "string") return undefined;
+  if (mintTxHash !== undefined && typeof mintTxHash !== "string") return undefined;
   if (outline !== undefined && typeof outline !== "string") return undefined;
   if (mask !== undefined && !(mask instanceof Blob)) return undefined;
   if (resin !== undefined && !isResin(resin)) return undefined;
@@ -193,6 +215,9 @@ export function readSticker(v: unknown): StickerRecord | undefined {
     no: v.no,
     createdAt: v.createdAt,
     timeUsed: v.timeUsed,
+    ...(contentHash !== undefined && { contentHash }),
+    ...(tokenId !== undefined && { tokenId }),
+    ...(mintTxHash !== undefined && { mintTxHash }),
     blob: v.blob,
     width: v.width,
     height: v.height,

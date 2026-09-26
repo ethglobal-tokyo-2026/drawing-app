@@ -22,6 +22,14 @@ interface GiftFields {
   packedAt: number;
   /** The artist it was given to in the app. Absent when it went through LINE's picker. */
   to?: string;
+  /** Kept only on this device; the API returns it once, for the LINE gift link. */
+  claimToken?: string;
+  /** This gift uses StickerGiftEscrow rather than the API's mock-chain path. */
+  escrowed?: boolean;
+  /** Set after the sponsored deposit lands, so a retry only asks the API to verify it. */
+  depositTxHash?: string;
+  /** Set after the sponsored take-out lands, so a retry only settles the API record. */
+  takenOutOnChain?: boolean;
 }
 
 export type GiftRecord =
@@ -43,7 +51,26 @@ function readGift(v: unknown): GiftRecord | string {
   if (!("packedAt" in v) || typeof v.packedAt !== "number") return "no packedAt";
   const to = "to" in v ? v.to : undefined;
   if (to !== undefined && !isText(to)) return "a recipient that isn't a handle";
-  const gift = { id: v.id, stickerId: v.stickerId, packedAt: v.packedAt, ...(to && { to }) };
+  const claimToken = "claimToken" in v ? v.claimToken : undefined;
+  if (claimToken !== undefined && !isText(claimToken)) return "an invalid gift claim token";
+  const depositTxHash = "depositTxHash" in v ? v.depositTxHash : undefined;
+  if (depositTxHash !== undefined && !isText(depositTxHash)) return "an invalid deposit hash";
+  const escrowed = "escrowed" in v ? v.escrowed : undefined;
+  if (escrowed !== undefined && typeof escrowed !== "boolean") return "an invalid escrow flag";
+  const takenOutOnChain = "takenOutOnChain" in v ? v.takenOutOnChain : undefined;
+  if (takenOutOnChain !== undefined && typeof takenOutOnChain !== "boolean") {
+    return "an invalid take-out flag";
+  }
+  const gift = {
+    id: v.id,
+    stickerId: v.stickerId,
+    packedAt: v.packedAt,
+    ...(to && { to }),
+    ...(claimToken && { claimToken }),
+    ...(escrowed !== undefined && { escrowed }),
+    ...(depositTxHash && { depositTxHash }),
+    ...(takenOutOnChain !== undefined && { takenOutOnChain }),
+  };
   const state = "state" in v ? v.state : undefined;
   if (state === "packed") return { ...gift, state };
   if (state === "sent") {

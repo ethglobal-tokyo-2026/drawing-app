@@ -218,11 +218,41 @@ export function reportShared(
 }
 
 /** Takes a gift back before anyone receives it, from the bag or after sending. */
-export function takeOut(
+export async function takeOut(
   { db, clock, giftChain }: AppDeps,
   userId: string,
   giftId: string,
-): GiftStep<"gift_not_found" | "not_yours" | "already_received" | "gift_closed"> {
+): Promise<
+  GiftStep<"gift_not_found" | "not_yours" | "already_received" | "gift_closed" | "gift_in_transit">
+> {
+  const before = ownGift(db.select().from(gifts).where(eq(gifts.id, giftId)).get(), userId, giftId);
+  if (before.refusal !== null) return before;
+  if (before.gift.status === "received") {
+    return refuse("already_received", `Gift ${giftId} was already received`);
+  }
+  if (before.gift.status !== "packed" && before.gift.status !== "sent") {
+    return closed(before.gift);
+  }
+
+  let escrowStatus: GiftRow["escrowStatus"] | undefined;
+  if (giftChain) {
+    if (before.gift.escrowStatus === "rejected") {
+      escrowStatus = "rejected";
+    } else {
+      const escrow = await giftChain.readEscrowGift(giftId);
+      if (escrow.status === "claimed") {
+        return refuse("already_received", `Gift ${giftId} was already received`);
+      }
+      if (escrow.status !== "rejected") {
+        return refuse(
+          "gift_in_transit",
+          `Gift ${giftId}'s take-out has not landed in the escrow yet`,
+        );
+      }
+      escrowStatus = "rejected";
+    }
+  }
+
   return db.transaction(
     (tx) => {
       const owned = ownGift(
@@ -242,7 +272,7 @@ export function takeOut(
           status: "taken_out",
           takenOutAt: clock.now(),
           // The mock chain's reject lands at once, so the sticker can be given again.
-          escrowStatus: giftChain ? undefined : "rejected",
+          escrowStatus: giftChain ? escrowStatus : "rejected",
         })
         .where(eq(gifts.id, giftId))
         .returning()

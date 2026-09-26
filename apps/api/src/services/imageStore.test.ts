@@ -51,4 +51,15 @@ describe("the disk image store", () => {
     const store = createDiskImageStore(imageDir, "https://cdn.test");
     await expect(store.save("../escape", pngs)).rejects.toThrow(/content hash/);
   });
+
+  it("writes immutable NFT metadata under the sticker id", async () => {
+    const store = createDiskImageStore(imageDir, "https://cdn.test");
+    const stickerId = "00000000-0000-4000-8000-000000000001";
+    await store.saveMetadata(stickerId, { name: "First" });
+    await store.saveMetadata(stickerId, { name: "Changed" });
+    expect(JSON.parse(readFileSync(join(imageDir, `${stickerId}.json`), "utf8"))).toEqual({
+      name: "First",
+    });
+    await expect(store.saveMetadata("../escape", {})).rejects.toThrow(/sticker id/);
+  });
 });

@@ -53,24 +53,29 @@ export function createLocalGiftBackend({
         }
       }
       const giftId = toHex(randomBytes(32));
+      const claimToken = toHex(randomBytes(32));
       const message = buildGiftMessage({
         liffId,
-        giftClaimToken: toHex(randomBytes(32)),
+        giftClaimToken: claimToken,
         fromHandle,
         timeUsed: sticker.timeUsed,
         heroUrl,
       });
-      store.put({ id: giftId, stickerId: sticker.id, state: "packed", packedAt });
+      store.put({ id: giftId, stickerId: sticker.id, state: "packed", packedAt, claimToken });
       return { giftId, message };
     },
-    markSent: async (giftId) => settle(giftId, (r) => ({ ...r, state: "sent", sentAt: now() })),
-    markNotSent: async (giftId, reason, error) =>
+    markShared: async (giftId, outcome) => {
+      const record = store.get(giftId);
+      if (!record) throw new Error(`Gift ${giftId} isn't on this device`);
+      if (outcome === "cancelled") return;
+      settle(giftId, (r) => ({ ...r, state: "sent", sentAt: now() }));
+    },
+    takeOut: async (giftId) =>
       settle(giftId, (r) => ({
         ...r,
         state: "not_sent",
         closedAt: now(),
-        reason,
-        ...(error !== undefined && { error }),
+        reason: "taken_out",
       })),
   };
 }

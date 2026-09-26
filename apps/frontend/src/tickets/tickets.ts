@@ -20,7 +20,12 @@ export interface TicketState {
 export interface SpentTicket {
   day: string;
   index: number;
+  /** The REST API's ticket use, once this drawing has reserved it. */
+  serverId?: number;
 }
+
+export const spentTicketKind = (spent: SpentTicket): TicketKind =>
+  spent.index < DAILY_TICKETS_PER_DAY ? "daily" : "reserve";
 
 /** One of the day's daily tickets. */
 export type DailyTicket = { used: false } | { used: true; stickerId?: string };

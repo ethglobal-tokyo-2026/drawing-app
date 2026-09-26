@@ -80,7 +80,7 @@ function checkTicket(
   db: Pick<Db, "select">,
   ticketUseId: number,
   userId: string,
-): SealRefusal | null {
+): { stickerId: string | null } | SealRefusal {
   const ticket = db
     .select({ userId: ticketUses.userId, stickerId: ticketUses.stickerId })
     .from(ticketUses)
@@ -93,11 +93,7 @@ function checkTicket(
     const detail = `Ticket use ${ticketUseId} is someone else's`;
     return { status: 403, error: "ticket_not_yours", detail };
   }
-  if (ticket.stickerId !== null) {
-    const detail = `Ticket use ${ticketUseId} already became sticker ${ticket.stickerId}`;
-    return { status: 409, error: "ticket_already_used", detail };
-  }
-  return null;
+  return { stickerId: ticket.stickerId };
 }
 
 const bytesOf = async (file: File) => new Uint8Array(await file.arrayBuffer());
@@ -113,6 +109,28 @@ async function mintOrNull(mint: Mint, request: MintRequest): Promise<MintedToken
     console.error(`Minting sticker ${request.stickerId} failed; it stays unminted:`, error);
     return null;
   }
+}
+
+async function mintSticker(deps: AppDeps, stickerId: string): Promise<void> {
+  const sticker = deps.db.select().from(stickers).where(eq(stickers.id, stickerId)).get();
+  if (!sticker) throw new Error(`Sticker ${stickerId} is missing before its mint`);
+  if (sticker.tokenId !== null && sticker.mintTxHash !== null) return;
+  const minted = await mintOrNull(deps.mint, {
+    stickerId,
+    artistId: sticker.artistId,
+    contentHash: sticker.contentHash,
+    metadataUri: sticker.metadataUri,
+    number: sticker.number,
+    sealedAt: sticker.createdAt,
+    width: sticker.width,
+    height: sticker.height,
+  });
+  if (!minted) return;
+  deps.db
+    .update(stickers)
+    .set({ tokenId: minted.tokenId, mintTxHash: minted.txHash })
+    .where(eq(stickers.id, stickerId))
+    .run();
 }
 
 function sealedSticker({ db, images }: AppDeps, userId: string, stickerId: string): SealResponse {
@@ -136,10 +154,14 @@ export async function sealSticker(
   deps: AppDeps,
   userId: string,
   form: SealForm,
-): Promise<{ sealed: SealResponse } | { refused: SealRefusal }> {
+): Promise<{ sealed: SealResponse; created: boolean } | { refused: SealRefusal }> {
   // Checked before any file is stored, and again where the rows are written.
-  const ticketRefusal = checkTicket(deps.db, form.ticketUseId, userId);
-  if (ticketRefusal) return { refused: ticketRefusal };
+  const ticket = checkTicket(deps.db, form.ticketUseId, userId);
+  if (!("stickerId" in ticket)) return { refused: ticket };
+  if (ticket.stickerId !== null) {
+    await mintSticker(deps, ticket.stickerId);
+    return { sealed: sealedSticker(deps, userId, ticket.stickerId), created: false };
+  }
 
   const pngs: StickerPngs = {
     png: await bytesOf(form.png),
@@ -162,8 +184,12 @@ export async function sealSticker(
   const metadataUri = new URL(`${stickerId}.json`, deps.images.urls(contentHash).png).href;
   const refused = deps.db.transaction(
     (tx) => {
-      const refusal = checkTicket(tx, form.ticketUseId, userId);
-      if (refusal) return refusal;
+      const checked = checkTicket(tx, form.ticketUseId, userId);
+      if (!("stickerId" in checked)) return checked;
+      if (checked.stickerId !== null) {
+        const detail = `Ticket use ${form.ticketUseId} already became sticker ${checked.stickerId}`;
+        return { status: 409, error: "ticket_already_used", detail } satisfies SealRefusal;
+      }
       const last = tx
         .select({ number: max(stickers.number) })
         .from(stickers)
@@ -192,18 +218,6 @@ export async function sealSticker(
   );
   if (refused) return { refused };
 
-  const minted = await mintOrNull(deps.mint, {
-    stickerId,
-    artistId: userId,
-    contentHash,
-    metadataUri,
-  });
-  if (minted) {
-    deps.db
-      .update(stickers)
-      .set({ tokenId: minted.tokenId, mintTxHash: minted.txHash })
-      .where(eq(stickers.id, stickerId))
-      .run();
-  }
-  return { sealed: sealedSticker(deps, userId, stickerId) };
+  await mintSticker(deps, stickerId);
+  return { sealed: sealedSticker(deps, userId, stickerId), created: true };
 }

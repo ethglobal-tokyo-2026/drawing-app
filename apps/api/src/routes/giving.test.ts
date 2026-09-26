@@ -216,6 +216,29 @@ describe("Taking out", () => {
       error: "gift_closed",
     });
   });
+
+  it("confirms the escrow return before closing a chain gift, then lets the sticker be given again", async () => {
+    const test = await createGiftsTestApp({ escrowChain: true });
+    const { giverId, gift } = await packagedGift(test);
+    test.landDeposit(gift.id);
+    await giftOf(await deposit(test, giverId, gift.id));
+
+    expect(await refusalOf(await takeOut(test, giverId, gift.id))).toMatchObject({
+      status: 409,
+      error: "gift_in_transit",
+    });
+    const escrow = await test.giftChain.readEscrowGift(gift.id);
+    test.giftChain.escrow.set(gift.id, { ...escrow, status: "rejected" });
+
+    expect(await giftOf(await takeOut(test, giverId, gift.id))).toMatchObject({
+      status: "taken_out",
+      escrowStatus: "rejected",
+    });
+    expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({
+      status: 201,
+      gift: { status: "packed" },
+    });
+  });
 });
 
 describe("A gift's routes", () => {

@@ -110,28 +110,25 @@ describe("giving through a LINE chat", () => {
     expect(t.status()?.state).toBe("sent");
   });
 
-  it("puts the sticker back when the picker is cancelled", async () => {
+  it("keeps the sticker in its bag when the picker is cancelled", async () => {
     const t = setup();
     await openPicker(t);
     t.picker().resolve("cancelled");
     await wait();
     expect(t.step()).toBe("notSent");
-    expect(t.status()).toBeUndefined();
-    expect(t.notSent().reason).toBe("picker_cancelled");
+    expect(t.status()?.state).toBe("packed");
   });
 
-  it("shows what failed when the picker fails, and keeps the error for review", async () => {
+  it("shows what failed when the picker fails, and keeps the gift packed", async () => {
     const t = setup();
     await openPicker(t);
     t.picker().reject(new Error("EXCEPTION_IN_SUBWINDOW: the picker closed"));
     await wait();
     expect(t.failure()).toMatch(/No\.0147.*EXCEPTION_IN_SUBWINDOW/);
-    expect(t.status()).toBeUndefined();
-    expect(t.notSent().reason).toBe("send_failed");
-    expect(t.notSent().error).toContain("EXCEPTION_IN_SUBWINDOW");
+    expect(t.status()?.state).toBe("packed");
   });
 
-  it("sends again with a new gift, straight away, after a cancel", async () => {
+  it("sends the same packed gift again, straight away, after a cancel", async () => {
     const t = setup();
     await openPicker(t);
     t.picker().resolve("cancelled");
@@ -141,8 +138,8 @@ describe("giving through a LINE chat", () => {
     await wait();
     expect(t.step()).toBe("picking");
     expect(t.messages).toHaveLength(2);
-    expect(t.messages[1]).not.toEqual(t.messages[0]);
-    expect(t.store.list().map((r) => r.state)).toEqual(["not_sent", "packed"]);
+    expect(t.messages[1]).toEqual(t.messages[0]);
+    expect(t.store.list().map((r) => r.state)).toEqual(["packed"]);
   });
 
   it("opens the picker once, at once, when Send in LINE beats the timer", async () => {
@@ -177,8 +174,8 @@ describe("giving through a LINE chat", () => {
     const t = setup({
       backend: {
         pack: () => Promise.reject(new Error("storage is full")),
-        markSent: () => Promise.resolve(),
-        markNotSent: () => Promise.resolve(),
+        markShared: () => Promise.resolve(),
+        takeOut: () => Promise.resolve(),
       },
     });
     t.flow.chooseLineChat();
@@ -196,12 +193,12 @@ describe("giving through a LINE chat", () => {
     expect(t.status()?.state).toBe("sent");
   });
 
-  it("puts the sticker back when the flow closes before the picker opens", async () => {
+  it("leaves the sticker packed when the flow closes before the picker opens", async () => {
     const t = setup();
     t.flow.chooseLineChat();
     t.flow.dispose();
     await wait(PICKER_DELAY * 2);
     expect(t.messages).toHaveLength(0);
-    expect(t.status()).toBeUndefined();
+    expect(t.status()?.state).toBe("packed");
   });
 });

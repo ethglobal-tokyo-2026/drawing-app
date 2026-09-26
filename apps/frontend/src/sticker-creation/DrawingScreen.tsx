@@ -9,10 +9,11 @@ import {
   type Ref,
 } from "react";
 import { useIdentity } from "../identity/useIdentity";
+import { liffMockActive } from "../line/liff";
 import { addSticker, type StickerRecord } from "../stickers/stickerStorage";
 import { OutOfTickets } from "../tickets/OutOfTickets";
 import { StartDrawing } from "../tickets/StartDrawing";
-import type { SpentTicket, TicketKind } from "../tickets/tickets";
+import { spentTicketKind, type SpentTicket, type TicketKind } from "../tickets/tickets";
 import { TicketShop } from "../tickets/TicketShop";
 import { useTickets } from "../tickets/useTickets";
 import { useToast } from "../ui/useToast";
@@ -23,6 +24,7 @@ import { lazyRadius } from "./canvas/lazyBrush";
 import type { Op, Tool } from "./canvas/ops";
 import { SealKey } from "./SealKey";
 import { makeSticker, type SealedSticker } from "./sealing/makeSticker";
+import { reserveServerTicket, sealStickerThroughApi } from "./sealing/sealStickerApi";
 import { SealCeremony } from "./sealing/SealCeremony";
 import type { Box } from "./sealing/sealTimeline";
 import { loadKeptSession, SessionKeeper, type KeptSession } from "./session/keptSession";
@@ -194,6 +196,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     setPanel(null);
     canvas.current?.finishStroke();
     const ink = canvas.current?.inkForReading() ?? null;
+    const ops = [...(canvas.current?.ops() ?? [])];
     const timeUsed = Math.min(SESSION_MS / 1000, Math.max(1, Math.round(clock.elapsed / 1000)));
     let sticker: SealedSticker | null = null;
     try {
@@ -212,17 +215,50 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         }
         return;
       }
-      const record = await addSticker({
-        createdAt: Date.now(),
-        timeUsed,
-        blob: sticker.png,
-        width: sticker.width,
-        height: sticker.height,
-        outline: sticker.outline,
-        mask: sticker.mask,
-        resin: { spec: sticker.spec, rim: sticker.rim },
-        flat: sticker.flat,
-      });
+      let assigned: { id: string; no: number } | undefined;
+      let chain:
+        | {
+            createdAt: number;
+            contentHash: string;
+            tokenId: string;
+            mintTxHash: string;
+          }
+        | undefined;
+      if (!liffMockActive) {
+        if (!ticket.current) throw new Error("The drawing has no ticket");
+        const reserved = await reserveServerTicket(ticket.current, spentTicketKind(ticket.current));
+        ticket.current = reserved;
+        // Keep the API ticket before the upload, so retrying after a reload cannot spend another.
+        keeper.resume(reserved, ops);
+        keeper.save(ops, clock.elapsed);
+        const minted = await sealStickerThroughApi({
+          ticket: reserved,
+          timeUsed,
+          sticker,
+          ops,
+        });
+        assigned = { id: minted.id, no: minted.no };
+        chain = minted;
+      }
+      const record = await addSticker(
+        {
+          createdAt: chain?.createdAt ?? Date.now(),
+          timeUsed,
+          ...(chain && {
+            contentHash: chain.contentHash,
+            tokenId: chain.tokenId,
+            mintTxHash: chain.mintTxHash,
+          }),
+          blob: sticker.png,
+          width: sticker.width,
+          height: sticker.height,
+          outline: sticker.outline,
+          mask: sticker.mask,
+          resin: { spec: sticker.spec, rim: sticker.rim },
+          flat: sticker.flat,
+        },
+        assigned,
+      );
       if (ticket.current) tickets.linkSticker(ticket.current, record.id);
       ticket.current = null;
       keeper.wipe();

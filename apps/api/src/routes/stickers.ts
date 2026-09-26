@@ -22,6 +22,6 @@ export const stickerRoutes = (deps: AppDeps) =>
         const { status, error, detail } = outcome.refused;
         return apiError(c, status, error, detail);
       }
-      return c.json(outcome.sealed, 201);
+      return c.json(outcome.sealed, outcome.created ? 201 : 200);
     },
   );

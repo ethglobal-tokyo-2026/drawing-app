@@ -35,15 +35,17 @@ describe("local gift backend", () => {
   it("won't pack a sticker that was already sent", async () => {
     const { backend } = setup();
     const gift = await backend.pack(sticker("s1"));
-    await backend.markSent(gift.giftId);
+    await backend.markShared(gift.giftId, "sent");
     await expect(backend.pack(sticker("s1"))).rejects.toThrow(/already/);
   });
 
-  it("settles a gift once", async () => {
+  it("keeps a cancelled gift packed until it is sent or taken out", async () => {
     const { store, backend } = setup();
     const gift = await backend.pack(sticker("s1"));
-    await backend.markNotSent(gift.giftId, "send_failed", "picker crashed");
-    expect(store.get(gift.giftId)).toMatchObject({ state: "not_sent", error: "picker crashed" });
-    await expect(backend.markSent(gift.giftId)).rejects.toThrow(/closed/);
+    await backend.markShared(gift.giftId, "cancelled");
+    expect(store.get(gift.giftId)).toMatchObject({ state: "packed" });
+    await backend.takeOut(gift.giftId);
+    expect(store.get(gift.giftId)).toMatchObject({ state: "not_sent", reason: "taken_out" });
+    await expect(backend.markShared(gift.giftId, "sent")).rejects.toThrow(/closed/);
   });
 });

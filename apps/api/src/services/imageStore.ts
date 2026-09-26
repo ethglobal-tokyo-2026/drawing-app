@@ -40,8 +40,13 @@ async function writeIfAbsent(path: string, bytes: Uint8Array) {
   }
 }
 
+export interface DiskImageStore extends ImageStore {
+  /** Writes the immutable metadata file whose URL is the NFT's tokenURI. */
+  saveMetadata: (stickerId: string, metadata: object) => Promise<void>;
+}
+
 /** Writes sticker images into the folder the CDN serves. */
-export function createDiskImageStore(imageDir: string, cdnBaseUrl: string): ImageStore {
+export function createDiskImageStore(imageDir: string, cdnBaseUrl: string): DiskImageStore {
   mkdirSync(imageDir, { recursive: true });
   return {
     save: async (contentHash, pngs) => {
@@ -54,5 +59,12 @@ export function createDiskImageStore(imageDir: string, cdnBaseUrl: string): Imag
       );
     },
     urls: (contentHash) => stickerImageUrls(cdnBaseUrl, contentHash),
+    saveMetadata: async (stickerId, metadata) => {
+      if (!/^[0-9a-f-]{36}$/i.test(stickerId)) throw new Error(`Not a sticker id: ${stickerId}`);
+      await writeIfAbsent(
+        join(imageDir, `${stickerId}.json`),
+        new TextEncoder().encode(JSON.stringify(metadata)),
+      );
+    },
   };
 }

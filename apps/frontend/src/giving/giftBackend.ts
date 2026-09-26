@@ -1,5 +1,4 @@
 import type { GiftMessage } from "./giftMessage";
-import type { NotSentReason } from "./giftStore";
 
 /** The sticker a gift carries. */
 export interface GiftSticker {
@@ -18,9 +17,8 @@ export interface PackedGift {
 
 /**
  * Where gifts are made and settled. localGiftBackend.ts keeps them on this device until an API
- * client takes its place. The escrow transfer (sticker-chain's prepareGiftTransfer, sent by the
- * artist's smart account) belongs in pack or in markSent; which one is still open, because in pack
- * a cancelled picker leaves the sticker in escrow.
+ * client takes its place. The API backend sends the escrow transfer from the artist's smart account
+ * while packing, before LINE's picker opens.
  */
 export interface GiftBackend {
   /**
@@ -29,8 +27,8 @@ export interface GiftBackend {
    * token in the link.
    */
   pack: (sticker: GiftSticker) => Promise<PackedGift>;
-  /** LINE reported the gift message sent. API: POST /api/gifts/:id/shared. */
-  markSent: (giftId: string) => Promise<void>;
-  /** The gift message never left, so the sticker is back. API: POST /api/gifts/:id/shared { cancelled }. */
-  markNotSent: (giftId: string, reason: NotSentReason, error?: string) => Promise<void>;
+  /** Records LINE's picker outcome. A cancellation leaves the sticker in its gift bag. */
+  markShared: (giftId: string, outcome: "sent" | "cancelled") => Promise<void>;
+  /** Returns the sticker from its gift bag to the sender. */
+  takeOut: (giftId: string) => Promise<void>;
 }

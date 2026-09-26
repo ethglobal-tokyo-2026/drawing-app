@@ -8,6 +8,7 @@ import {
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
+import { liffMockActive } from "../line/liff";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
 import { Key } from "../ui/Key";
@@ -18,6 +19,7 @@ import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { giftMessageHeroUrl } from "./config";
+import { createApiGiftBackend } from "./apiGiftBackend";
 import { GiftBag } from "./GiftBag";
 import type { GiftSender } from "./giftSender";
 import { deviceGiftStore } from "./giftStore";
@@ -62,15 +64,13 @@ const screenOf = (state: GiveFlowState): Screen =>
 export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) {
   const reduced = useReducedMotion();
   const motion = reduced ? 1 : 0;
+  const store = deviceGiftStore();
   const { state, flow } = useGiveFlow(() => ({
     sticker,
     sender,
-    backend: createLocalGiftBackend({
-      store: deviceGiftStore(),
-      fromHandle,
-      liffId,
-      heroUrl: giftMessageHeroUrl,
-    }),
+    backend: liffMockActive
+      ? createLocalGiftBackend({ store, fromHandle, liffId, heroUrl: giftMessageHeroUrl })
+      : createApiGiftBackend({ store, fromHandle, liffId, heroUrl: giftMessageHeroUrl }),
     pickerDelayMs: PICKER_DELAY[motion],
     takeOutMs: TAKE_OUT[motion],
   }));
