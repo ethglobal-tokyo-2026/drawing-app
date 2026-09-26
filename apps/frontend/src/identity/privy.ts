@@ -13,6 +13,8 @@ export type PrivyStatus =
       wallet?: string;
       /** Once smart wallets are on: the account that holds the person's stickers. */
       smartAccount?: string;
+      /** The Sui address, which MakeSuiWallet asks Privy for once the Ethereum one exists. */
+      suiWallet?: string;
     }
   | { state: "failed"; reason: string };
 
