@@ -1,4 +1,3 @@
-import { ArrowUUpLeft } from "@phosphor-icons/react";
 import {
   useId,
   useImperativeHandle,
@@ -12,7 +11,7 @@ import {
 } from "react";
 import { formatCount } from "../../i18n/format";
 import { useTranslation } from "../../i18n/react";
-import { GratitudeIcon, StreakIcon } from "../../icons";
+import { ArrowUUpLeft, GratitudeIcon, StreakIcon } from "../../icons";
 import { EnsNameLink } from "../../identity/EnsNameLink";
 import { formatDay, formatHandle } from "../../stickers/format";
 import { HitCounter } from "../../ui/HitCounter";
@@ -170,7 +169,7 @@ export function StatCork({
               <i className="stat-board__pin stat-board__pin--pink" aria-hidden />
               <div className="stat-board__paper">
                 <p className="fine stat-board__receipt-top" aria-hidden>
-                  <span>{formatHandle(f.handle)}</span>
+                  <span className="handle">{formatHandle(f.handle)}</span>
                   <span>{formatDay(printedAt)}</span>
                 </p>
                 <h3 className="fine stat-board__receipt-h" id={`${id}-gratitude`}>

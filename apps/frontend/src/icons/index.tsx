@@ -78,6 +78,7 @@ export {
   Pause,
   Play,
   Question,
+  SealCheck,
   SignOut,
   SkipForward,
   StarFour,
