@@ -7,7 +7,6 @@
 
 .motion-card__text {
   margin: 0;
-  font: 600 16px/1.35 var(--font-ui);
   text-wrap: pretty;
 }
 

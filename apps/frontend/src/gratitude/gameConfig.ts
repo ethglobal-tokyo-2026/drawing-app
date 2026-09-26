@@ -74,12 +74,17 @@ export const FEEL_CONFIG = {
   intensity: { everyday: 0.7, full: 1 },
   /** 昇天's climax holds everything this long before the soul rises. */
   climaxFreezeMs: 140,
+  /** px between the foot of the ending's "fuu…" and the top of the heart's resting box. */
+  sighAboveHeartPx: 24,
   /** Shares of the heart's half-width and half-height: how far past the middle of each side of its
    * resting box a touch still counts, on the ellipse through the box's edges grown by this much. */
   heartReach: 0.07,
   /** A first tap lifts before it travels `tapSlopPx` or is held `tapHoldMs`. */
   tapSlopPx: 12,
   tapHoldMs: 800,
+  /** A click on the heart this soon after a finger, a mouse or a key lets go of it is that press's
+   * own click, which the press has already counted. */
+  clickAfterPressMs: 600,
   /** The sent heart winds up toward the giver over the catch window, then holds through its grace. */
   windUpMs: 800,
   /** A thumb stroking back and forth, anywhere on the screen: PJ's PHYS and StrokeDetector. */

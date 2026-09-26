@@ -60,6 +60,8 @@ export interface MiniGameOptions {
 export interface MiniGameEngine {
   /** The screen is closing: a combo in play ends and is recorded. */
   close: () => void;
+  /** Focus goes to the heart, as the screen opens. */
+  focusHeart: () => void;
   setReduced: (reduced: boolean) => void;
   destroy: () => void;
 }
@@ -124,9 +126,10 @@ export function mountMiniGameEngine(
 
   // The stage's layers, back to front: the thumb's glow, speed lines, stamps, 昇天's rain, the heart,
   // mini hearts, the soul, effects, lettering.
-  const layer = (className: string) => {
+  const layer = (className: string, decorative = true) => {
     const el = document.createElement("div");
     el.className = className;
+    if (decorative) el.setAttribute("aria-hidden", "true");
     parts.stage.append(el);
     return el;
   };
@@ -134,7 +137,8 @@ export function mountMiniGameEngine(
   const linesLayer = layer("gr-layer");
   const stampsLayer = layer("gr-layer");
   const behind = layer("gr-layer");
-  const anchor = layer("gr-heart-anchor");
+  // The heart's anchor holds its button, so assistive tech keeps it.
+  const anchor = layer("gr-heart-anchor", false);
   const front = layer("gr-layer");
   const soul = layer("gr-soul");
   const effectsLayer = layer("gr-layer");
@@ -144,7 +148,7 @@ export function mountMiniGameEngine(
   const body = document.createElement("div");
   body.className = "gr-heart-body";
   const art = bigHeartLayers(`h${mount}`);
-  body.innerHTML = `<div class="gr-heart-layers">${art.body}${art.flush}${art.pale}${art.gloss}${art.ink}${art.face}</div>`;
+  body.innerHTML = `<div class="gr-heart-layers" aria-hidden="true">${art.body}${art.flush}${art.pale}${art.gloss}${art.ink}${art.face}</div>`;
   const ink = body.querySelector(".h-ink");
   const button = document.createElement("button");
   button.type = "button";
@@ -155,7 +159,7 @@ export function mountMiniGameEngine(
 
   const hud = createComboHud(parts.hud, { reduced: () => reduced, random });
   const background = createTierBackground(ground, page, () => reduced);
-  const lettering = createLettering(captions, { intensity, random });
+  const lettering = createLettering(captions, { intensity, random, reduced: () => reduced });
   const effects = createParticleEffects(
     { stamps: stampsLayer, effects: effectsLayer, lines: linesLayer },
     { reduced: () => reduced, random },
@@ -327,6 +331,8 @@ export function mountMiniGameEngine(
     ending = true;
     stopHints();
     root.dataset.phase = "ending";
+    // The heart leaves: nothing can tap it, and focus can't stay on it.
+    button.disabled = true;
     try {
       options.onRecord(record, recorder.finish(ended));
     } catch (error) {
@@ -334,10 +340,10 @@ export function mountMiniGameEngine(
       console.error("Keeping the gratitude failed; the ending plays on", error);
     }
     if (hidden) return finish(caught, record);
-    if (!caught) await flyHeartToGiver(endingParts);
+    if (!caught) await flyHeartToGiver(endingParts, record.total);
     else {
-      if (combo.view.tier === 4 && !reduced) await playAscension(endingParts);
-      else await flyHeartToGiver(endingParts);
+      if (combo.view.tier === 4 && !reduced) await playAscension(endingParts, record.total);
+      else await flyHeartToGiver(endingParts, record.total);
       await sighAndTidy(endingParts);
     }
     finish(caught, record);
@@ -347,7 +353,8 @@ export function mountMiniGameEngine(
     root.dataset.phase = "running";
     root.dataset.hud = "on";
     hud.show(true);
-    // A stroke or shake that starts the combo announces itself.
+    // The catch's words stand before the score's; a stroke or shake that starts the combo says its own.
+    lastAnnounce = play;
     if (combo.view.method === "tap") say("Caught it. Keep tapping before the bar runs out.");
   };
 
@@ -357,6 +364,12 @@ export function mountMiniGameEngine(
     if (!reduced) heart.punch(0.035 * (0.6 + intensity));
     lettering.slamTierName(TIER_NAMES[tier].jp, TIER_NAMES[tier].en);
     if (tier === 2) effects.burst(5, L.rest);
+    // ありがと comes with the catch, whose words it leaves; each tier after it is said by name.
+    if (tier > 0) {
+      const { en } = TIER_NAMES[tier];
+      lastAnnounce = play;
+      say(`${en.charAt(0).toUpperCase()}${en.slice(1)}.`);
+    }
   };
 
   /** Mini hearts a spray, a fling or a knock throws: more as the multiplier climbs. */
@@ -383,7 +396,7 @@ export function mountMiniGameEngine(
     if (tier >= 2 && !reduced) heart.shake(tier >= 3 ? 5 * intensity : 2 * intensity);
     if (tier === 2 && hits % 5 === 0) effects.burst(2, L.rest);
     if (tier >= 3 && hits % 2 === 0) effects.steam(Math.max(1, Math.round(intensity * 2)), box);
-    if (tier >= 3 && hits % 2 === 1 && method !== "stroke") physics.rainFromTop();
+    if (tier >= 3 && hits % 2 === 1 && method !== "stroke" && !reduced) physics.rainFromTop();
     if (tapped && !reduced && physics.hearts.length > 0) physics.shoveAwayFrom(x, y);
     if (tapped && tier >= FEEL_CONFIG.miniHearts.fromTier && !reduced) {
       physics.sprayFromTap(x, y, box, throwCount());
@@ -694,22 +707,64 @@ export function mountMiniGameEngine(
     },
   );
 
-  const onKey = (e: KeyboardEvent) => {
-    if (e.key !== "Enter" && e.key !== " ") return;
-    e.preventDefault();
+  /**
+   * A tap with no finger on the heart, from a key or a click, lands on the heart's middle: the first
+   * tap while it's ready, a tap after that. performance.now keeps it on the loop's clock.
+   */
+  const tapMiddle = () => {
     if (!running || ending) return;
-    // Keyboard taps land on the heart's middle; performance.now keeps them on the loop's clock.
     const x = L.rest.x;
     const y = L.rest.y + 10;
     const phase = combo.view.phase;
-    if (phase === "ready" && !e.repeat) {
+    if (phase === "ready") {
       heart.squash(3.6);
       firstTap(performance.now(), x, y);
     } else if (phase === "sending" || phase === "running") {
       handle(tapHeart(performance.now(), x, y), x, y);
     }
   };
+
+  // A finger, a mouse or a key on the heart makes its own taps, and the browser's click after it is
+  // no second tap. A press counts from its down on the heart to `clickAfterPressMs` past its lift.
+  const pressing = new Set<number | "key">();
+  let pressLiftedAt = -Infinity;
+  const lifted = (id: number | "key") => {
+    if (pressing.delete(id)) pressLiftedAt = performance.now();
+  };
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    e.preventDefault();
+    pressing.add("key");
+    // A held key's repeats are no taps.
+    if (!e.repeat) tapMiddle();
+  };
+  const onKeyUp = (e: KeyboardEvent) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    e.preventDefault();
+    lifted("key");
+  };
+  const onPointerDown = (e: PointerEvent) => {
+    // A gesture starts with its primary pointer, so no press from an earlier one is still down.
+    if (e.isPrimary) pressing.clear();
+    pressing.add(e.pointerId);
+  };
+  const onPointerLift = (e: PointerEvent) => lifted(e.pointerId);
+  // A key let go after focus has left the heart never reaches it.
+  const onBlur = () => lifted("key");
+  // Voice Control, Switch Control and screen readers tap the heart with a click alone.
+  const onClick = () => {
+    if (pressing.size > 0) return;
+    if (performance.now() - pressLiftedAt < FEEL_CONFIG.clickAfterPressMs) return;
+    tapMiddle();
+  };
   button.addEventListener("keydown", onKey);
+  button.addEventListener("keyup", onKeyUp);
+  button.addEventListener("pointerdown", onPointerDown);
+  button.addEventListener("click", onClick);
+  button.addEventListener("blur", onBlur);
+  // A pointer can lift anywhere: off the heart, and off the stage.
+  window.addEventListener("pointerup", onPointerLift, true);
+  window.addEventListener("pointercancel", onPointerLift, true);
   // touch-action stops panning and zooming; this also keeps WebKit from bouncing the page mid-mash.
   const holdStill = (e: TouchEvent) => e.preventDefault();
   parts.stage.addEventListener("touchmove", holdStill, { passive: false });
@@ -837,6 +892,7 @@ export function mountMiniGameEngine(
 
   return {
     close: () => endNow(false),
+    focusHeart: () => button.focus({ preventScroll: true }),
     setReduced: (next) => {
       reduced = next;
       root.dataset.reduced = next ? "1" : "0";
@@ -849,6 +905,12 @@ export function mountMiniGameEngine(
       stopMotion();
       background.destroy();
       button.removeEventListener("keydown", onKey);
+      button.removeEventListener("keyup", onKeyUp);
+      button.removeEventListener("pointerdown", onPointerDown);
+      button.removeEventListener("click", onClick);
+      button.removeEventListener("blur", onBlur);
+      window.removeEventListener("pointerup", onPointerLift, true);
+      window.removeEventListener("pointercancel", onPointerLift, true);
       parts.stage.removeEventListener("touchmove", holdStill);
       document.removeEventListener("visibilitychange", onHidden);
       window.removeEventListener("pagehide", onPageHide);

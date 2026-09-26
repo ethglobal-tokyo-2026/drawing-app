@@ -153,15 +153,80 @@ describe("GratitudeMiniGame", () => {
     expect(onEnd).toHaveBeenCalledTimes(1);
   });
 
-  it("says so when the server refuses the gratitude", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
+  it("says so in plain words when the server refuses the gratitude, and logs why", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     recordGratitude.mockRejectedValue(new ApiError(409, { error: "gratitude_already_recorded" }));
     open({ giftId: "g1" });
     tapOnce();
     await play(3000);
-    expect(document.querySelector(".gr-failure")?.textContent).toContain(
-      "gratitude_already_recorded",
+    const failure = document.querySelector(".gr-failure")?.textContent;
+    expect(failure).toBe("Your gratitude didn't reach @alice. Close this and send it again.");
+    expect(logged).toHaveBeenCalled();
+  });
+
+  it("says the gratitude sent as the heart reaches the giver", async () => {
+    open();
+    tapOnce();
+    await play(3000);
+    const total = onEnd.mock.calls[0]?.[0].total ?? 0;
+    expect(total).toBeGreaterThan(0);
+    expect(document.querySelector(".gr-sr")?.textContent).toBe(
+      `Sent ${total.toLocaleString("en-US")} gratitude to @alice.`,
     );
+  });
+
+  it("opens with focus on the heart, and gives it to the receipt once the heart has gone", async () => {
+    open();
+    expect(document.activeElement).toBe(heart());
+    tapOnce();
+    await play(3000);
+    expect(heart().disabled).toBe(true);
+    expect(document.activeElement?.textContent).toContain("Back to your board");
+    expect(document.activeElement?.closest(".gr-receipt")).not.toBeNull();
+  });
+
+  it("gives a caught combo's length in hits on the receipt, not its seconds or method", async () => {
+    open();
+    tapOnce();
+    await play(100);
+    tapOnce();
+    await play(100);
+    tapOnce();
+    await play(8000);
+    const { hits } = onEnd.mock.calls[0]?.[0] ?? { hits: 0 };
+    expect(hits).toBe(3);
+    const sub = document.querySelector(".gr-rc-sub")?.textContent ?? "";
+    expect(sub).toContain("3 hits");
+    expect(sub).not.toMatch(/\d\.\ds|\btap\b/);
+  });
+
+  it("is modal: the rest of the phone goes inert while it's open, and only what it made inert comes back", () => {
+    const phone = document.createElement("div");
+    phone.className = "phone";
+    const board = phone.appendChild(document.createElement("div"));
+    const tabs = phone.appendChild(document.createElement("nav"));
+    tabs.setAttribute("inert", "");
+    document.body.append(phone);
+    try {
+      open();
+      const dialog = document.querySelector('[role="dialog"]');
+      expect(dialog?.getAttribute("aria-modal")).toBe("true");
+      expect(dialog?.parentElement).toBe(phone);
+      expect(board.hasAttribute("inert")).toBe(true);
+      act(() => document.querySelector<HTMLButtonElement>(".gr-close")?.click());
+      expect(board.hasAttribute("inert")).toBe(false);
+      expect(tabs.hasAttribute("inert")).toBe(true);
+
+      // A fresh screen, unmounted without its X.
+      act(() => root.render(null));
+      open();
+      expect(board.hasAttribute("inert")).toBe(true);
+      act(() => root.render(null));
+      expect(board.hasAttribute("inert")).toBe(false);
+      expect(tabs.hasAttribute("inert")).toBe(true);
+    } finally {
+      phone.remove();
+    }
   });
 
   it("closes without a result before any tap", () => {

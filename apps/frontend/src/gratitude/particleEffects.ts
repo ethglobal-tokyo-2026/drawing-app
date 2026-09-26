@@ -53,10 +53,18 @@ interface Stamp extends Sprite {
 function makeSprite(url: string): HTMLDivElement {
   const el = document.createElement("div");
   el.className = "gr-p";
+  el.setAttribute("aria-hidden", "true");
   const img = document.createElement("img");
   img.src = url;
   img.alt = "";
   el.append(img);
+  return el;
+}
+
+function makeLine(): HTMLDivElement {
+  const el = document.createElement("div");
+  el.className = "gr-line";
+  el.setAttribute("aria-hidden", "true");
   return el;
 }
 
@@ -109,6 +117,20 @@ export function createParticleEffects(
     sprite.animation = animate(sprite.el, frames, { duration, easing, fill: "both" });
   }
 
+  /** With reduced motion: the sprite fades in and out where it starts, with no travel, spin or spring. */
+  function fadeInPlace(sprite: Sprite, transform: string, duration: number, peak = 1) {
+    fly(
+      sprite,
+      [
+        { transform, opacity: 0 },
+        { offset: 0.3, transform, opacity: peak },
+        { transform, opacity: 0 },
+      ],
+      duration,
+      EASE_OUT,
+    );
+  }
+
   /** Plays a stamp's way out, then takes it off the page to be reused. */
   function retire(stamp: Stamp, frames: Keyframe[], timing: KeyframeAnimationOptions) {
     stamp.animation?.cancel();
@@ -146,7 +168,8 @@ export function createParticleEffects(
       stamps.push(stamp);
       const oldest = stamps.length > STAMPS ? stamps.shift() : undefined;
       if (oldest) {
-        retire(oldest, [{ opacity: 1 }, { opacity: 0, transform: `${oldest.base} scale(.4)` }], {
+        const shrink = reduced() ? {} : { transform: `${oldest.base} scale(.4)` };
+        retire(oldest, [{ opacity: 1 }, { opacity: 0, ...shrink }], {
           duration: 160,
           fill: "forwards",
         });
@@ -204,6 +227,10 @@ export function createParticleEffects(
       const s = 16 + random() * 14;
       const sprite = particle("glint", s);
       const spot = at(x - s / 2, y - s / 2);
+      if (reduced()) {
+        fadeInPlace(sprite, spot, 520);
+        return;
+      }
       fly(
         sprite,
         [
@@ -222,6 +249,10 @@ export function createParticleEffects(
         const x = heart.x + side * heart.width * (0.22 + random() * 0.12) - s / 2;
         const y = heart.y - heart.height * 0.44 - s / 2;
         const sprite = particle("puff", s);
+        if (reduced()) {
+          fadeInPlace(sprite, at(x, y), 900, 0.95);
+          continue;
+        }
         const dx = side * (18 + random() * 30);
         const dy = -(50 + random() * 50);
         fly(
@@ -245,6 +276,10 @@ export function createParticleEffects(
       const x = heart.x + side * heart.width * 0.4;
       const y = heart.y - heart.height * 0.2;
       const sprite = particle("bead", 13);
+      if (reduced()) {
+        fadeInPlace(sprite, `${at(x, y)} rotate(${side * 30}deg)`, 700);
+        return;
+      }
       fly(
         sprite,
         [
@@ -268,6 +303,11 @@ export function createParticleEffects(
         const d = 50 + random() * 40;
         const x = from.x - s / 2;
         const y = from.y - s / 2;
+        if (reduced()) {
+          // The ring shows where it would have spread to halfway, and holds still.
+          fadeInPlace(sprite, at(x + Math.cos(a) * d * 0.5, y + Math.sin(a) * d * 0.5), 520);
+          continue;
+        }
         fly(
           sprite,
           [
@@ -288,9 +328,7 @@ export function createParticleEffects(
       const dy = Math.sin(angle);
       for (let i = 0; i < count; i++) {
         const line = (lines.length >= LINES ? lines.shift() : undefined) ?? {
-          el: layers.lines.appendChild(
-            Object.assign(document.createElement("div"), { className: "gr-line" }),
-          ),
+          el: layers.lines.appendChild(makeLine()),
           animation: null,
         };
         lines.push(line);
@@ -320,13 +358,19 @@ export function createParticleEffects(
       const leaving = stamps.splice(0);
       // A crowd of stamps takes no longer to leave than a few: the stagger tightens.
       const stagger = leaving.length > 0 ? Math.min(28, 330 / leaving.length) : 0;
+      const still = reduced();
       leaving.forEach((stamp, i) =>
         retire(
           stamp,
-          [
-            { transform: stamp.base, opacity: 1 },
-            { transform: `${stamp.base} translateY(-10px) rotate(12deg) scale(.2)`, opacity: 0 },
-          ],
+          still
+            ? [{ opacity: 1 }, { opacity: 0 }]
+            : [
+                { transform: stamp.base, opacity: 1 },
+                {
+                  transform: `${stamp.base} translateY(-10px) rotate(12deg) scale(.2)`,
+                  opacity: 0,
+                },
+              ],
           { duration: 200, delay: i * stagger, fill: "forwards", easing: EASE_PEEL },
         ),
       );

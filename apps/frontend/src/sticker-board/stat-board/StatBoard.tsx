@@ -99,7 +99,7 @@ export function StatBoard({
       }
     >
       {DEV_SLIP && (
-        <section className="stat-board__note stat-board__slip" aria-label="LINE and Privy">
+        <section className="stat-board__note stat-board__slip" aria-label="Developer tools">
           <div className="stat-board__paper">
             <h3 className="fine stat-board__slip-h">LINE and Privy</h3>
             <SendTestMessage senderName={me.displayName} />

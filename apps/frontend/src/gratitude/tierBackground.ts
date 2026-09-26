@@ -38,9 +38,11 @@ const DENTS = 6;
 /** How fast the corner follows its lift, a second. */
 const CORNER_RATE = 10;
 
+/** A decorative layer: none of it is for screen readers. */
 const layer = (className: string) => {
   const el = document.createElement("div");
   el.className = className;
+  el.setAttribute("aria-hidden", "true");
   return el;
 };
 
@@ -50,10 +52,6 @@ const setOpacity = (el: HTMLElement, value: number) => {
   return value > 0;
 };
 
-/**
- * The ground behind the heart, escalating with the tier: the calm liner, a warm blush, 集中線 focus
- * lines, heat haze, then 昇天's light beams and white-out. Each layer fades in and out on its own.
- */
 /** Cancelling an animation rejects its `finished`: browsers mark that handled, happy-dom doesn't. */
 function animate(
   el: HTMLElement,
@@ -70,8 +68,12 @@ function rethrowUnlessCancelled(error: unknown) {
 }
 
 /**
- * `front` takes what sits over the heart: the peeling corner, the dents and the shake marks, which
- * the stylesheet shows while the screen's `data-shaking` is on.
+ * The ground behind the heart, escalating with the tier: the calm liner, a warm blush, 集中線 focus
+ * lines, heat haze, then 昇天's light beams and white-out. Each layer fades in and out on its own,
+ * and the stylesheet keeps them all out of the header's band.
+ *
+ * `front` takes what sits over the heart: the peeling corner, the dents, the shake marks, which the
+ * stylesheet shows while the screen's `data-shaking` is on, and 昇天's flash.
  */
 export function createTierBackground(
   ground: HTMLElement,
@@ -85,7 +87,6 @@ export function createTierBackground(
   speedField.innerHTML = speedFieldSvg(SPEED_FIELD_SEED);
   const speedLines = speedField.firstElementChild;
   const haze = layer("gr-bg gr-haze");
-  haze.setAttribute("aria-hidden", "true");
   // Rising puffs and two waves, as many as the stylesheet places and times.
   for (let i = 0; i < 6; i++) haze.append(document.createElement("i"));
   for (let i = 0; i < 2; i++) {
@@ -98,12 +99,10 @@ export function createTierBackground(
   const shaft = layer("gr-beam-shaft");
   beam.append(rays, shaft);
   const white = layer("gr-bg gr-white");
-  // The ground isn't a stacking context, so this covers the whole page: the heart and the HUD too.
-  const flashCover = layer("gr-layer");
-  flashCover.style.background = "#fff";
-  flashCover.style.zIndex = "30";
-  flashCover.style.opacity = "0";
-  ground.append(blush, focus, speedField, haze, beam, white, flashCover);
+  ground.append(blush, focus, speedField, haze, beam, white);
+  // In front, not in the ground, whose mask would keep it under the header: it covers the whole
+  // page, the heart and the HUD too.
+  const flashCover = layer("gr-flash");
 
   const cornerUnder = layer("gr-corner-under");
   const cornerFlap = layer("gr-corner-flapwrap");
@@ -112,9 +111,8 @@ export function createTierBackground(
   corner.append(cornerUnder, cornerFlap);
   const dentLayer = layer("gr-layer");
   const shakeMarks = layer("gr-shakemarks");
-  shakeMarks.setAttribute("aria-hidden", "true");
   shakeMarks.innerHTML = VIBRATE_SVG + VIBRATE_SVG;
-  front.append(corner, dentLayer, shakeMarks);
+  front.append(corner, dentLayer, shakeMarks, flashCover);
   const dents: { el: HTMLElement; animation: Animation | null }[] = [];
   let screen = { width: 390, height: 741 };
   let cornerLift = 0;
@@ -212,7 +210,7 @@ export function createTierBackground(
 
     destroy() {
       for (const dent of dents) dent.animation?.cancel();
-      for (const el of [corner, dentLayer, shakeMarks]) el.remove();
+      for (const el of [corner, dentLayer, shakeMarks, flashCover]) el.remove();
     },
 
     liftCorner(amount) {

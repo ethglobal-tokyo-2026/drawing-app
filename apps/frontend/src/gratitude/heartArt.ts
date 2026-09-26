@@ -256,20 +256,23 @@ export function bigHeartLayers(uid: string): HeartLayers {
   };
 }
 
-export function miniHeartSvg(fill: string): string {
-  return `<svg ${XMLNS} viewBox="0 0 40 40"><path d="${MINI_D}" fill="${fill}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/><ellipse cx="13" cy="13" rx="3.4" ry="2.4" fill="#fff" opacity=".7"/></svg>`;
+/** A size in px, for art drawn into a canvas: an SVG without one has no size of its own to draw at. */
+const sized = (px?: number) => (px ? ` width="${px}" height="${px}"` : "");
+
+export function miniHeartSvg(fill: string, px?: number): string {
+  return `<svg ${XMLNS} viewBox="0 0 40 40"${sized(px)} aria-hidden="true"><path d="${MINI_D}" fill="${fill}" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/><ellipse cx="13" cy="13" rx="3.4" ry="2.4" fill="#fff" opacity=".7"/></svg>`;
 }
 
 /** A finger stamp. Its shadow is drawn in because art that repeats carries no CSS filter. */
-export function stampHeartSvg(): string {
-  return `<svg ${XMLNS} viewBox="-4 -4 48 48"><path d="${MINI_D}" transform="translate(1 2)" fill="${INK}" stroke="${INK}" stroke-width="8" stroke-linejoin="round" opacity=".16"/><path d="${MINI_D}" fill="#fff" stroke="#fff" stroke-width="8" stroke-linejoin="round"/><path d="${MINI_D}" fill="${PINK}"/><ellipse cx="13" cy="12.5" rx="4.2" ry="2.8" transform="rotate(-30 13 12.5)" fill="#fff" opacity=".75"/></svg>`;
+export function stampHeartSvg(px?: number): string {
+  return `<svg ${XMLNS} viewBox="-4 -4 48 48"${sized(px)} aria-hidden="true"><path d="${MINI_D}" transform="translate(1 2)" fill="${INK}" stroke="${INK}" stroke-width="8" stroke-linejoin="round" opacity=".16"/><path d="${MINI_D}" fill="#fff" stroke="#fff" stroke-width="8" stroke-linejoin="round"/><path d="${MINI_D}" fill="${PINK}"/><ellipse cx="13" cy="12.5" rx="4.2" ry="2.8" transform="rotate(-30 13 12.5)" fill="#fff" opacity=".75"/></svg>`;
 }
 
-export const GLINT_SVG: string = `<svg ${XMLNS} viewBox="0 0 40 40"><path d="M20 2C21.6 14 26 18.4 38 20C26 21.6 21.6 26 20 38C18.4 26 14 21.6 2 20C14 18.4 18.4 14 20 2Z" fill="#fff" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/></svg>`;
+export const GLINT_SVG: string = `<svg ${XMLNS} viewBox="0 0 40 40" aria-hidden="true"><path d="M20 2C21.6 14 26 18.4 38 20C26 21.6 21.6 26 20 38C18.4 26 14 21.6 2 20C14 18.4 18.4 14 20 2Z" fill="#fff" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/></svg>`;
 
-export const PUFF_SVG: string = `<svg ${XMLNS} viewBox="0 0 44 36"><path d="M11 31C4.6 31 2.4 24.4 6.6 21.4C4.6 15 10.6 10.6 15.8 13.6C17.8 6.8 27.6 6.4 29.8 13C35 11 40.4 15.6 38.2 21C42.4 23.6 39.6 31 33.6 31Z" fill="#fff" stroke="rgba(110,104,120,.55)" stroke-width="2" stroke-linejoin="round"/></svg>`;
+export const PUFF_SVG: string = `<svg ${XMLNS} viewBox="0 0 44 36" aria-hidden="true"><path d="M11 31C4.6 31 2.4 24.4 6.6 21.4C4.6 15 10.6 10.6 15.8 13.6C17.8 6.8 27.6 6.4 29.8 13C35 11 40.4 15.6 38.2 21C42.4 23.6 39.6 31 33.6 31Z" fill="#fff" stroke="rgba(110,104,120,.55)" stroke-width="2" stroke-linejoin="round"/></svg>`;
 
-export const BEAD_SVG: string = `<svg ${XMLNS} viewBox="0 0 24 30"><path d="M12 2C17 9 20 13.6 20 18A8 8 0 0 1 4 18C4 13.6 7 9 12 2Z" fill="#D5F6F8" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/></svg>`;
+export const BEAD_SVG: string = `<svg ${XMLNS} viewBox="0 0 24 30" aria-hidden="true"><path d="M12 2C17 9 20 13.6 20 18A8 8 0 0 1 4 18C4 13.6 7 9 12 2Z" fill="#D5F6F8" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/></svg>`;
 
 export const SOUL_SVG: string = `<svg ${XMLNS} viewBox="0 0 74 92" aria-hidden="true">
   <circle cx="37" cy="56" r="30" fill="#fff" opacity=".5"/>
@@ -324,7 +327,7 @@ export function focusLinesSvg(
     const spread = ((0.12 + random() * 0.8) * Math.PI) / 180;
     d += `M${at(inner, angle)}L${at(outer, angle - spread)}L${at(outer, angle + spread)}Z`;
   }
-  return `<svg ${XMLNS} viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" style="left:0;top:0"><path d="${d}" fill="${INK}"/></svg>`;
+  return `<svg ${XMLNS} viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" style="left:0;top:0" aria-hidden="true"><path d="${d}" fill="${INK}"/></svg>`;
 }
 
 export function svgDataUrl(svg: string): string {
