@@ -16,6 +16,8 @@ interface Props {
   foil?: FoilSize;
   /** The sticker's No., which staggers its foil's light against its neighbors'. */
   no?: number;
+  /** Degrees it's turned on screen, which its foil's glint undoes. */
+  turn?: number;
   className?: string;
   ref?: Ref<HTMLSpanElement>;
 }
@@ -28,7 +30,17 @@ const cssUrl = (url: string) => `url("${url}")`;
  * plays when it sticks. The parts shaped by the silhouette need the sticker's mask; without one it's
  * the image alone.
  */
-export function StickerFigure({ urls, width, height, fold, foil, no = 0, className, ref }: Props) {
+export function StickerFigure({
+  urls,
+  width,
+  height,
+  fold,
+  foil,
+  no = 0,
+  turn = 0,
+  className,
+  ref,
+}: Props) {
   const { mask, spec, rim } = urls;
   const style: CSSProperties = {
     "--ar": (width / height).toFixed(4),
@@ -46,7 +58,7 @@ export function StickerFigure({ urls, width, height, fold, foil, no = 0, classNa
   const classes = ["sticker-figure", mask && fold && "is-curled", className].filter(Boolean);
   return (
     <span ref={ref} className={classes.join(" ")} style={style}>
-      {mask && foil && <StickerFoil size={foil} no={no} />}
+      {mask && foil && <StickerFoil size={foil} no={no} turn={turn} />}
       {mask && <span className="sticker-figure__spot" aria-hidden="true" />}
       <img className="sticker-figure__img" src={urls.png} alt="" draggable={false} />
       {mask && (
