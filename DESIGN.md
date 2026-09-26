@@ -539,7 +539,7 @@ Spending a ticket peels it, the house verb. On the press, the ticket being spent
 The tickets your next drawing can use tuck behind the Draw key's right end, like tickets slid behind a keycap. They're paper on the page, not part of the key: 14px of each hides under the key, they sit centered on its 48px face at -3°, and the key's cast shadow falls on them. They take no taps and don't press; the key sinks over them. By the Ticket Rule:
 
 - **Daily tickets left:** one Seal Yellow ticket, 30px tall, with ×count in Figure type (850, 13px). Tickets this small carry a 1.5px Ink outline, both kinds.
-- **Reserve tickets held too:** the reserve ticket sits behind it, 8px higher and fanned 2° further, printed ×count past the daily ticket's end, its star on its corner.
+- **Reserve tickets held too:** the reserve ticket fans out past the daily one's end like the next card in a hand: its own 16px end tucks under the daily ticket's notch, and the rest shows whole, 5px higher and turned 3° further, printed ×count, its star on its corner. It never hides behind the daily ticket as a sliver.
 - **Daily tickets used:** the reserve ticket alone, in front.
 - **Neither:** the used backing (Liner Lift, a dashed 26% edge) printed with the refill time in fine print, Graphite.
 

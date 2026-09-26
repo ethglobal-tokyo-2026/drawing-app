@@ -41,7 +41,7 @@ function useWidth<T extends HTMLElement>() {
 interface TicketProps {
   kind: "daily" | "reserve" | "backing";
   print: string;
-  /** The reserve ticket behind the daily one: it sits higher, printed past the daily one's end. */
+  /** The reserve ticket behind the daily one: fanned out past the daily one's end, its own end tucked under it. */
   behind?: boolean;
   pop?: boolean;
   style?: CSSProperties;
