@@ -1,4 +1,5 @@
 import { formatTimeOfDay } from "../i18n/format";
+import { i18next } from "../i18n/i18n";
 
 const MINUTE = 60_000;
 
@@ -7,11 +8,16 @@ const MINUTE = 60_000;
  * "in 6h" on the hour and "in under a minute" at the end, in whole minutes rounded down.
  */
 export function formatRefillIn(msLeft: number): string {
-  if (msLeft < MINUTE) return "in under a minute";
-  const minutes = Math.floor(msLeft / MINUTE);
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return `in ${h && m ? `${h}h ${m}m` : h ? `${h}h` : `${m}m`}`;
+  if (msLeft < MINUTE) return i18next.t(($) => $.tickets.refillIn.underAMinute);
+  const whole = Math.floor(msLeft / MINUTE);
+  const hours = Math.floor(whole / 60);
+  const minutes = whole % 60;
+  if (hours && minutes) {
+    return i18next.t(($) => $.tickets.refillIn.hoursAndMinutes, { hours, minutes });
+  }
+  return hours
+    ? i18next.t(($) => $.tickets.refillIn.hours, { hours })
+    : i18next.t(($) => $.tickets.refillIn.minutes, { minutes });
 }
 
 /** How long until formatRefillIn reads differently; in the last minute, that's the refill itself. */
