@@ -27,10 +27,13 @@ describe("REST actions that require a smart account", () => {
     expect(receiveGift).toHaveBeenCalledWith(opening);
   });
 
-  it("keeps Sealing retryable when images are saved but minting failed", async () => {
+  it.each([
+    { tokenId: null, mintTxHash: null },
+    { tokenId: "1", mintTxHash: null },
+  ])("keeps Sealing retryable without mint confirmation: %j", async (confirmation) => {
     ready();
     const seal = vi.fn<ApiClient["seal"]>();
-    const unminted = sticker();
+    const unminted = sticker(confirmation);
     seal.mockResolvedValue({
       sticker: unminted,
       stickerPlacement: {

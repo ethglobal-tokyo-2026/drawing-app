@@ -14,6 +14,12 @@ This package contains the first backend and contract boundaries for sealing stic
 
 The API persists application records and sticker assets. Privy smart-wallet sponsorship is configured separately.
 
+## Sealing confirmation
+
+`POST /api/stickers` saves the drawing and uses the authenticated artist's Privy smart account as the mint recipient. The funded sealer signs `sealSticker`; the artist does not sign or pay mint gas. Before returning success, the backend waits for the receipt and verifies the NFT data and the mint's ERC-721 `Transfer` event to the artist.
+
+If minting cannot be confirmed, the live API returns `503 mint_failed`. The saved drawing and its ticket remain available for a retry on the same ticket. A retry reconciles an existing NFT instead of creating another. The frontend only completes Sealing once both a token ID and mint transaction hash are returned.
+
 ## Giving and receiving
 
 `createGiftClaim` generates an opaque gift ID and one-time gift claim token. Persist only the claim commitment with the pending gift and put the gift claim token in the gift message's link.
@@ -32,9 +38,12 @@ The escrow never receives approval for stickers that remain in an artist's walle
 git submodule update --init --recursive
 pnpm --filter @drawing-app/sticker-chain test
 pnpm --filter @drawing-app/sticker-chain generate-types
+pnpm --filter @drawing-app/api exec vitest run src/routes/stickers.chain.test.ts
 ```
 
 Install Foundry before running these commands. `forge test` covers the contracts, while the TypeScript integration tests run against Anvil and consume the same Forge artifacts. Wagmi CLI reads the artifacts in `out/` and generates typed ABIs in `src/generated/contracts.ts`; application code imports these instead of maintaining handwritten ABI fragments. Configure Privy Custom Authentication with the deployed app's `/.well-known/jwks.json`, use `sub` as the user ID claim, and keep the P-256 private key outside the repository.
+
+The API chain integration test submits PNGs through Sealing, checks on-chain ownership and public metadata, and recovers a mint whose database update was lost. It uses local Anvil and mocked identity providers; it does not validate production LINE or Privy configuration.
 
 ## Deploy to Ethereum Sepolia
 

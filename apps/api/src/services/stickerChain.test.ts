@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { keccak256, type Hex } from "viem";
+import {
+  encodeAbiParameters,
+  encodeEventTopics,
+  erc721Abi,
+  keccak256,
+  zeroAddress,
+  type Hex,
+} from "viem";
 import { createStickerChain } from "./stickerChain.ts";
 import { stickerImageUrls } from "./imageStore.ts";
 
@@ -17,8 +24,8 @@ vi.mock("viem", async (original) => ({
 }));
 
 const hex = (value: string): Hex => `0x${value.repeat(64)}`;
-const ALICE = `0x${"a".repeat(40)}`;
-const BOB = `0x${"b".repeat(40)}`;
+const ALICE: Hex = `0x${"a".repeat(40)}`;
+const BOB: Hex = `0x${"b".repeat(40)}`;
 const NFT = `0x${"c".repeat(40)}`;
 const ESCROW = `0x${"d".repeat(40)}`;
 const TX = hex("1");
@@ -27,6 +34,23 @@ const GIFT_ID = hex("3");
 const CONTENT = hex("4");
 const STICKER_ID = "00000000-0000-4000-8000-000000000001";
 const METADATA = `https://images.test/${STICKER_ID}.json`;
+
+function mintReceipt(to: Hex = ALICE) {
+  return {
+    status: "success",
+    logs: [
+      {
+        address: NFT,
+        topics: encodeEventTopics({
+          abi: erc721Abi,
+          eventName: "Transfer",
+          args: { from: zeroAddress, to, tokenId: 1n },
+        }),
+        data: encodeAbiParameters([], []),
+      },
+    ],
+  };
+}
 
 function adapter() {
   const saveMetadata = vi.fn(async () => {});
@@ -74,7 +98,7 @@ describe("Sepolia sticker adapter", () => {
     rpc.simulateContract.mockImplementation(async (request: object) => ({ request }));
     rpc.waitForTransactionReceipt.mockImplementation(async () => {
       minted = true;
-      return { status: "success" };
+      return mintReceipt();
     });
     rpc.getContractEvents.mockResolvedValue([{ transactionHash: TX }]);
     const chain = adapter();
@@ -120,6 +144,30 @@ describe("Sepolia sticker adapter", () => {
       }),
     );
     expect(rpc.waitForTransactionReceipt).toHaveBeenCalledWith({ hash: TX });
+  });
+
+  it("does not confirm a mint whose receipt names a different recipient", async () => {
+    let minted = false;
+    rpc.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
+      if (functionName === "tokenIdForSticker") return minted ? 1n : 0n;
+      if (functionName === "artistOf") return ALICE;
+      if (functionName === "contentHashOf") return CONTENT;
+      if (functionName === "tokenURI") return METADATA;
+      throw new Error(`Unexpected read ${functionName}`);
+    });
+    rpc.simulateContract.mockImplementation(async (request: object) => ({ request }));
+    rpc.waitForTransactionReceipt.mockImplementation(async () => {
+      minted = true;
+      return mintReceipt(BOB);
+    });
+    await expect(
+      adapter().mint({
+        stickerId: STICKER_ID,
+        artistId: "alice",
+        contentHash: CONTENT,
+        metadataUri: METADATA,
+      }),
+    ).rejects.toThrow("Mint receipt does not confirm the artist received the sticker");
   });
 
   it("recovers a landed claim after a receipt timeout, but rejects a claim won by another wallet", async () => {

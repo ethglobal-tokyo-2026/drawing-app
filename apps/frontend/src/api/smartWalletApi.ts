@@ -8,7 +8,7 @@ export function withSmartWallet(api: ApiClient): ApiClient {
     seal: async (request) => {
       await waitForSmartWallet();
       const sealed = await api.seal(request);
-      if (sealed.sticker.tokenId === null) {
+      if (sealed.sticker.tokenId === null || sealed.sticker.mintTxHash === null) {
         throw new Error(
           "Your sticker could not be added to your wallet yet. Please try Sealing again.",
         );

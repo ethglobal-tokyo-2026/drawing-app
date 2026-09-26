@@ -23,6 +23,7 @@ const envSchema = z.object({
   IMAGE_DIR: z.string().min(1),
   CDN_BASE_URL: z.url(),
   PORT: z.coerce.number().int().positive().default(8788),
+  STICKER_CHAIN_MODE: z.enum(["mock", "sepolia"]),
   // Empty is how .env switches off what .env.example switches on.
   DEV_SIGN_IN: z.enum(["on", "off", ""]).optional(),
 });
@@ -94,10 +95,8 @@ const deps: AppDeps = {
   clock: { now: () => new Date() },
   ids: { uuid: () => randomUUID() },
   line: chooseLineVerifier(env.DEV_SIGN_IN, createLineVerifier(env.LINE_CHANNEL_ID)),
-  images: createDiskImageStore(env.IMAGE_DIR, env.CDN_BASE_URL),
-  mint: mintStub,
-  giftChain: null,
-  smartWallets: noSmartWallets,
+  images,
+  ...chain,
   sui: mockSuiPayments,
   suiPrice: () => Promise.resolve(MOCK_SUI_YEN),
 };
