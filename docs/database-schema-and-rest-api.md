@@ -22,7 +22,7 @@ What the server will store and serve, so UI work and mocks can line up with it w
 
 ### Sealing
 
-- Sealing waits for the mint. Until Privy smart wallets are set up, the mint step is a stub: a dev toast, and a comment where the minting logic goes.
+- In Sepolia mode, Sealing waits for the NFT mint to the Original Artist's Privy smart account. Mock mode leaves the sticker unminted for local UI work.
 - A sticker's number (No.0147) is separate from its NFT token ID. The sticker detail links to the token on Sepolia Etherscan.
 
 ### Sticker Board and sticker tray
@@ -521,7 +521,7 @@ interface EscrowTransfer {
 ```
 
 - **The Gift Claim Token** comes back once, from the 201. Keep it on the device until the Gift Message is sent, and build the message's link from it: `https://liff.line.me/{liffId}/g/{giftClaimToken}`. If it's lost while the gift is in the bag, take the gift out and package again.
-- **While minting is a stub,** `escrowTransfer` is null and the deposit counts as landed at once, so Giving works end to end, as the mock Sui purchase does.
+- **In mock chain mode,** `escrowTransfer` is null and the deposit counts as landed at once. Sepolia mode returns the transfer the giver's sponsored smart account submits.
 - **`gift_closed`:** the gift was already received, taken back or returned.
 
 ### Receiving
@@ -530,6 +530,8 @@ interface EscrowTransfer {
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `POST /api/gifts/preview` | `{ giftClaimToken: string; liffContextType: "utou" \| "room" \| "group" \| "square_chat" \| "external" \| "none" }`, as `receive` takes it         | 200 `{ giver: Person; expiresAt: IsoTime; receivable: boolean; refusal: ReceiveRefusal \| null; sticker: Sticker \| null }`: the sticker only when `receivable` | 404 `gift_not_found`                                                                                                                                                        |
 | `POST /api/gifts/receive` | `{ giftClaimToken: string; liffContextType: "utou" \| "room" \| "group" \| "square_chat" \| "external" \| "none" }`, from `liff.getContext().type` | 200 `{ gift: Gift; sticker: Sticker; stickerPlacement: StickerPlacement }`                                                                                      | 403 `group_chat` (room, group or square_chat), `own_gift`; 404 `gift_not_found`; 409 `already_received`, `taken_back`, `not_deposited`; 410 `gift_expired`, `gift_returned` |
+
+- In Sepolia mode, Receiving signs and submits `claimGift`, waits for it to land, stores its transaction hash, and only then transfers ownership in the database. A retry reconciles a claim that landed before its database update.
 
 ```ts
 type ReceiveRefusal =

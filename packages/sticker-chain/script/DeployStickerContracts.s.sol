@@ -11,7 +11,7 @@ contract DeployStickerContracts is Script {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
         address sealer = vm.addr(vm.envUint("STICKER_SEALER_PRIVATE_KEY"));
-        address claimSigner = vm.envOr("STICKER_CLAIM_SIGNER_ADDRESS", sealer);
+        address claimSigner = sealer;
 
         vm.startBroadcast(deployerPrivateKey);
 

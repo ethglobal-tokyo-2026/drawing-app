@@ -20,7 +20,7 @@ The package does not persist application records, configure Privy, or fund a pay
 
 `prepareGiftTransfer` creates the transaction that the artist's sponsored smart account sends while Giving. It transfers the sticker directly into the escrow with the gift ID, claim commitment, and expiration encoded in the ERC-721 receiver data. The recipient does not need an account at this point.
 
-After the recipient authenticates with LINE, resolve their Ethereum Sepolia smart account and call `authorizeClaim`. The authorization binds the gift ID, recipient smart account, escrow contract, chain ID, and a deadline. Any relayer can submit it, but the escrow accepts only signatures from `CLAIM_SIGNER_ROLE`. Rejection uses the same restricted authorization pattern, while anyone can return an expired gift to its sender.
+After the recipient authenticates with LINE, the API resolves their Ethereum Sepolia smart account, calls `authorizeClaim`, and relays `claimGift`. The authorization binds the gift ID, recipient smart account, escrow contract, chain ID, and a deadline. The escrow accepts only signatures from `CLAIM_SIGNER_ROLE`. Rejection uses the same restricted authorization pattern, while anyone can return an expired gift to its sender.
 
 The escrow never receives approval for stickers that remain in an artist's wallet and cannot transfer them. Raw LINE IDs and gift claim tokens are not stored onchain.
 
@@ -34,17 +34,14 @@ pnpm --filter @drawing-app/sticker-chain generate-types
 
 ## Deploy to Ethereum Sepolia
 
-The deployment account remains the contracts' administrator. `STICKER_SEALER_ADDRESS` receives
-permission to mint sealed stickers, and `STICKER_CLAIM_SIGNER_ADDRESS` receives permission to
-authorize receiving and rejecting gifts. Use separate managed accounts for those roles when
-possible.
+The deployment account remains the contracts' administrator. The account derived from
+`STICKER_SEALER_PRIVATE_KEY` receives permission to mint sealed stickers, authorize Receiving, and
+relay claims.
 
 ```sh
 export ETHEREUM_SEPOLIA_RPC_URL=https://your-sepolia-rpc.example
 export DEPLOYER_PRIVATE_KEY=0x...
 export STICKER_SEALER_PRIVATE_KEY=0x...
-# Optional until real onchain Receiving is enabled; defaults to the sealer address.
-export STICKER_CLAIM_SIGNER_ADDRESS=0x...
 
 forge script script/DeployStickerContracts.s.sol:DeployStickerContracts \
   --rpc-url "$ETHEREUM_SEPOLIA_RPC_URL" \

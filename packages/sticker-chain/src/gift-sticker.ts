@@ -31,7 +31,7 @@ function requireBytes32(value: string, field: string): asserts value is Hex {
   if (!isHex(value) || value.length !== 66) throw new Error(`${field} must be 32 bytes`);
 }
 
-function giftClaimTokenMatches(giftClaimToken: Hex, commitment: Hex) {
+export function giftClaimTokenMatches(giftClaimToken: Hex, commitment: Hex) {
   requireBytes32(giftClaimToken, "Gift claim token");
   requireBytes32(commitment, "Claim commitment");
   return timingSafeEqual(
