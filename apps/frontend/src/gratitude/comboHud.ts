@@ -2,6 +2,7 @@ import { formatCount } from "../i18n/format";
 import { i18next } from "../i18n/i18n";
 import { fullBarSeconds } from "./combo";
 import { EASE_OUT, EASE_PEEL, clamp } from "./easing";
+import { HEART_SVG } from "./heartArt";
 
 /** The combo as the HUD draws it. */
 export interface HudView {
@@ -100,7 +101,9 @@ export function createComboHud(
   );
   const row = element("div", "gr-timer", track, element("span", "gr-timer-s", seconds, unit));
   const amountNumber = document.createTextNode("0");
-  const amount = element("div", "gr-amount", element("b", "", amountNumber), element("i", "", "♡"));
+  const heart = element("i", "");
+  heart.innerHTML = HEART_SVG;
+  const amount = element("div", "gr-amount", element("b", "", amountNumber), heart);
   const multNumber = document.createTextNode("1.0");
   const multiplier = element(
     "div",

@@ -287,6 +287,9 @@ export const HAZE_WAVE_SVG: string = `<svg ${XMLNS} viewBox="0 0 390 40" preserv
 /** Phosphor's hand-swipe-right (bold): the stroke tip. */
 export const HAND_SWIPE_SVG: string = `<svg ${XMLNS} viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M220,148v36c0,13.85-1.63,26.52-4.58,35.68a12,12,0,0,1-22.84-7.36c2.14-6.65,3.42-17.24,3.42-28.32V148a8,8,0,0,0-16,0v4a12,12,0,0,1-24,0V132a8,8,0,0,0-16,0v12a12,12,0,0,1-24,0V76a8,8,0,0,0-16,0V184a12,12,0,0,1-22.18,6.34l-18.68-30-.21-.34A8,8,0,0,0,45,167.92L70.27,209.8a12,12,0,0,1-20.56,12.39l-25.31-42-.12-.2A32,32,0,0,1,76,142.83V76a32,32,0,0,1,64,0v25a32,32,0,0,1,36.78,17A32,32,0,0,1,220,148ZM252.48,47.51l-32-32a12,12,0,0,0-17,17L215,44H172a12,12,0,0,0,0,24h43L203.51,79.51a12,12,0,1,0,17,17l32-32A12,12,0,0,0,252.48,47.51Z"/></svg>`;
 
+/** Phosphor's heart (fill), the app's Gratitude icon: the mark after the HUD's gratitude amount. */
+export const HEART_SVG: string = `<svg ${XMLNS} viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M240,102c0,70-103.79,126.66-108.21,129a8,8,0,0,1-7.58,0C119.79,228.66,16,172,16,102A62.07,62.07,0,0,1,78,40c20.65,0,38.73,8.88,50,23.89C139.27,48.88,157.35,40,178,40A62.07,62.07,0,0,1,240,102Z"/></svg>`;
+
 /** Phosphor's vibrate (fill): the shake tip and the shake marks. */
 export const VIBRATE_SVG: string = `<svg ${XMLNS} viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M184,56V200a24,24,0,0,1-24,24H96a24,24,0,0,1-24-24V56A24,24,0,0,1,96,32h64A24,24,0,0,1,184,56Zm24,24a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,208,80Zm32,16a8,8,0,0,0-8,8v48a8,8,0,0,0,16,0V104A8,8,0,0,0,240,96ZM48,80a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,48,80ZM16,96a8,8,0,0,0-8,8v48a8,8,0,0,0,16,0V104A8,8,0,0,0,16,96Z"/></svg>`;
 

@@ -1,5 +1,5 @@
-/* "@bob received your sticker ♡": over the whole phone, the heading on top, the prop filling the
-   middle and the one way out at the foot. */
+/* "@bob received your sticker", and a heart: over the whole phone, the heading on top, the prop filling
+   the middle and the one way out at the foot. */
 .gift-received-notice {
   position: absolute;
   inset: 0;
@@ -27,6 +27,16 @@
   line-height: 1.08;
   letter-spacing: -0.02em;
   text-wrap: balance;
+  /* A handle can run to 32 characters, wider than the screen at this size. */
+  overflow-wrap: anywhere;
+}
+
+/* Gratitude's heart after the last word, sitting on the line like a glyph. */
+.gift-received-notice__heart {
+  width: 0.82em;
+  height: 0.82em;
+  vertical-align: -0.06em;
+  color: var(--pink);
 }
 
 .gift-received-notice__sub {

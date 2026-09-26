@@ -1,11 +1,10 @@
-import { Heart, Wind, X } from "@phosphor-icons/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { RecordGratitude, ReplayV1 } from "@drawing-app/api/client";
 import { useApi } from "../api/useApi";
 import { formatCount } from "../i18n/format";
 import { Trans, useTranslation } from "../i18n/react";
-import { StickerBoardIcon } from "../icons/StickerBoardIcon";
+import { GratitudeIcon, StickerBoardIcon, Wind, X } from "../icons";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
 import { StickerFigure } from "../stickers/StickerFigure";
@@ -254,7 +253,7 @@ export function GratitudeMiniGame({
             <PhotoSticker src={giver.pictureUrl} name={giver.displayName} size={56} />
             <span className="gr-photo-dot" ref={dot} aria-hidden>
               <span className="gr-dot">
-                <Heart weight="fill" />
+                <GratitudeIcon />
               </span>
             </span>
           </div>
@@ -304,14 +303,14 @@ export function GratitudeMiniGame({
               <PhotoSticker src={giver.pictureUrl} name={giver.displayName} size={58} />
               <span className="gr-photo-dot" aria-hidden>
                 <span className="gr-dot">
-                  <Heart weight="fill" />
+                  <GratitudeIcon />
                 </span>
               </span>
             </div>
             <div className="gr-rc-text">
               <p className="gr-rc-figure">
                 {formatCount(ended.total)}
-                <small aria-hidden="true">{" ♡"}</small>
+                <GratitudeIcon />
               </p>
               <p className="gr-rc-head">{t(($) => $.gratitude.receipt.gratitudeTo, { handle })}</p>
               <p className="gr-rc-sub fine">

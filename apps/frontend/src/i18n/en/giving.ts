@@ -88,7 +88,8 @@ export const giving = {
   },
   /** The giver's moment once a gift is received. */
   receivedNotice: {
-    title: "{{name}} received your sticker ♡",
+    /** The Gratitude heart follows it. */
+    title: "{{name}} received your sticker",
     lead: "It’s on {{name}}’s sticker board now.",
     /** Beside the sticker's silhouette: who has it now, and since when. */
     caption: "{{name}} · {{date}}",
