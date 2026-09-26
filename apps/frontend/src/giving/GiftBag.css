@@ -1,7 +1,14 @@
 /* The gift bag: a frosted sleeve with no zipper. Packed, the sticker peeks out of the open mouth;
    sealed (only once the send succeeded), it has settled in, the mouth is pressed shut, and a clear film
    band with an aqua tear tape runs across it, the tape's loose end sticking out as the pull tab.
-   The parts share one sleeve box (--sx, --sy, --sw, --sh) inside the stage. */
+   The parts share one sleeve box (--sx, --sy, --sw, --sh) inside the stage. --gift-tear (0 to 1)
+   is how far the tape has torn out; registered, so the hint's loop can move it. */
+
+@property --gift-tear {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
 
 .gift-bag {
   --sx: 52px;
@@ -193,6 +200,67 @@
     0 1px 2px rgba(28, 24, 36, 0.16);
 }
 
+/* Where the tape has torn out, the film is split along its line onto the bag's pale inside wall, in
+   the upper film's shadow, with the top edge of the sticker's paper sleeve standing inside. */
+.gift-seal__gap {
+  --zigzag: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 16' preserveAspectRatio='none'%3E%3Cpath d='M0 1.4 1.5 0 3 1.2 4.5.3 6 1.4V14.6L4.5 16 3 14.8 1.5 15.7 0 14.6Z'/%3E%3C/svg%3E")
+    0 0 / 6px 100% repeat-x;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: var(--tape-h);
+  margin-top: calc(var(--tape-h) / -2);
+  background: rgba(255, 255, 255, 0.97);
+  -webkit-mask: var(--zigzag);
+  mask: var(--zigzag);
+  opacity: min(1, var(--gift-tear) * 40);
+}
+
+.gift-seal__gap::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 1.5px;
+  bottom: 1.5px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(28, 24, 36, 0.34),
+      rgba(28, 24, 36, 0.08) 45%,
+      rgba(28, 24, 36, 0) 70%
+    ),
+    linear-gradient(180deg, #d4d0dd, #eae8f0);
+  -webkit-mask: var(--zigzag);
+  mask: var(--zigzag);
+}
+
+.gift-seal__sleeve {
+  position: absolute;
+  left: 4%;
+  right: 6%;
+  bottom: 1.5px;
+  height: 42%;
+  overflow: hidden;
+  border-radius: 1.5px 1.5px 0 0;
+  background: linear-gradient(180deg, #fff, #f5f3f9);
+  box-shadow: 0 -1px 2px rgba(28, 24, 36, 0.24);
+  transform: rotate(-0.35deg);
+}
+
+/* Warmed where the sticker's colors show through the paper. */
+.gift-seal__sleeve::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  background: var(--inside, none) 50% 40% / 140% auto no-repeat;
+  filter: blur(4px) saturate(1.3);
+  opacity: 0.38;
+}
+
+/* The tape slides out of the clip from the tab's side as it tears, while its print holds still, so
+   the tape shortens behind the tab. */
 .gift-seal__tape {
   position: absolute;
   left: 0;
@@ -203,6 +271,7 @@
   overflow: hidden;
   background: var(--aqua);
   box-shadow: inset 0 -1px 0 rgba(28, 24, 36, 0.22);
+  transform: translateX(calc(var(--gift-tear) * var(--sw)));
 }
 
 /* Width 75 on purpose: the tape is too narrow for more. */
@@ -225,6 +294,7 @@
   text-transform: uppercase;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
+  transform: translateX(calc(var(--gift-tear) * var(--sw) * -1));
 }
 
 .gift-seal__print svg {
@@ -250,6 +320,64 @@
   height: var(--lobe-h);
   margin-top: calc(var(--lobe-h) / -2);
   color: var(--ink);
+  transform: translateX(calc(var(--gift-tear) * var(--sw)));
+}
+
+/* The tab as a slider the receiver pulls: a finger-sized target over the lobe. */
+.gift-seal__grip {
+  position: absolute;
+  z-index: 1;
+  inset: -9px -4px -9px -10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
+}
+
+.gift-seal__grip:active {
+  cursor: grabbing;
+}
+
+.gift-seal__grip:focus-visible {
+  outline: none;
+}
+
+.gift-seal__grip:focus-visible ~ .gift-seal__lobe {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* The tape that has torn out hangs from the tab in a loop, longer the further it's pulled. */
+.gift-seal__loop {
+  position: absolute;
+  right: 3px;
+  top: calc(50% + var(--tape-h) / 2 - 4px);
+  width: 72px;
+  height: 48px;
+  overflow: visible;
+  pointer-events: none;
+  opacity: clamp(0, (var(--gift-tear) - 0.16) * 12, 1);
+}
+
+.gift-seal__loop path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 100px 200px;
+  stroke-dashoffset: calc((1 - clamp(0, (var(--gift-tear) - 0.06) * 1.3, 1)) * 100px);
+}
+
+.gift-seal__loop-edge {
+  stroke: var(--aqua-deep);
+  stroke-width: 13;
+}
+
+.gift-seal__loop-body {
+  stroke: var(--aqua);
+  stroke-width: 10.5;
 }
 
 .gift-seal__neck {
@@ -289,7 +417,11 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   transform-origin: 100% 50%;
-  transform: rotate(-6deg);
+  /* Tipped up off the page, and pulled level over the tear's first quarter. */
+  transform: rotate(calc(-6deg + min(1, var(--gift-tear) * 4) * 6deg));
+  transition:
+    box-shadow 160ms var(--ease-out),
+    scale 160ms var(--ease-out);
 }
 
 .gift-seal__ribs {
@@ -404,8 +536,230 @@
   text-overflow: ellipsis;
 }
 
-/* Reduced motion: no drop, no press and no spring; the seal fades on. */
+/* A rubber stamp inked onto the tag, worn at the edges. */
+.gift-stamp {
+  position: absolute;
+  right: -22px;
+  top: 58px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 8px;
+  border: 2px solid currentColor;
+  border-radius: 5px;
+  box-shadow:
+    inset 0 0 0 2px #fff,
+    inset 0 0 0 3px currentColor;
+  color: var(--graphite);
+  font-family: var(--font-ui);
+  font-stretch: 75%;
+  line-height: 1;
+  text-transform: uppercase;
+  transform: rotate(-11deg);
+  opacity: 0.92;
+  -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.4 2.3'/%3E%3C/filter%3E%3Crect width='90' height='90' filter='url(%23n)'/%3E%3C/svg%3E")
+    0 0 / 90px 90px;
+  mask: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.4 2.3'/%3E%3C/filter%3E%3Crect width='90' height='90' filter='url(%23n)'/%3E%3C/svg%3E")
+    0 0 / 90px 90px;
+}
+
+.gift-stamp span {
+  font-stretch: var(--w-fine);
+  font-size: var(--fs-fine);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.gift-stamp b {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.gift-stamp--grape {
+  color: color-mix(in srgb, var(--grape) 76%, var(--ink));
+}
+
+.gift-stamp--ink {
+  color: var(--ink);
+}
+
+/* Receive: the larger bag a gift is opened from, centered across its stage but never so far left
+   that the pull tab or the hint's finger leaves it. */
+.gift-bag--receive {
+  --sw: 250px;
+  --sh: 278px;
+  --sx: max(64px, calc(50% - var(--sw) / 2));
+  --sy: 24px;
+  width: 100%;
+  height: 330px;
+  margin: 0;
+}
+
+.gift-bag--receive .gift-seal {
+  --tape-h: 14px;
+  --lobe-w: 52px;
+  --lobe-h: 32px;
+  --neck: 8px;
+  height: 26px;
+}
+
+/* The tag's box spans the stage, so its place can follow the centered sleeve. */
+.gift-bag--receive .gift-bag__tag {
+  width: 100%;
+  height: 100%;
+}
+
+.gift-bag--receive .gift-tag {
+  --tx: calc(var(--sx) + 22px);
+  --ty: 110px;
+  --ts: 1;
+}
+
+.gift-bag--receive[data-state] .gift-bag__sticker {
+  left: calc(var(--sx) + 25px);
+  top: 62px;
+  width: 200px;
+  height: 200px;
+  transform: none;
+}
+
+/* The receiver's bag arrives sealed; it never presses shut on their screen. */
+.gift-bag--receive .gift-bag__mouth {
+  animation: none;
+}
+
+/* Torn: the tab snaps free and flies off, the split film falls away, and the mouth opens. Opened:
+   open and empty. */
+.gift-bag[data-state="torn"] .gift-seal__tab {
+  opacity: 0;
+  transform: translate(calc(var(--sw) + 80px), -120px) rotate(-40deg);
+  transition:
+    transform 440ms var(--ease-out),
+    opacity 340ms var(--ease-out) 90ms;
+}
+
+.gift-bag[data-state="torn"] :is(.gift-seal__film, .gift-seal__gap) {
+  opacity: 0;
+  transition: opacity 200ms var(--ease-out) 140ms;
+}
+
+.gift-bag:is([data-state="torn"], [data-state="opened"]) .gift-bag__mouth::after {
+  opacity: 1;
+}
+
+/* Taken in the fingers, the lobe comes up off the page; held, the frost thins a little. */
+.gift-bag[data-grip] .gift-seal__lobe {
+  scale: 1.06;
+  box-shadow:
+    inset 0 -1.5px 0 rgba(28, 24, 36, 0.2),
+    0 1px 1.5px rgba(28, 24, 36, 0.2),
+    0 12px 16px -6px rgba(28, 24, 36, 0.46);
+}
+
+.gift-bag[data-grip="hold"] .gift-bag__front {
+  opacity: 0.88;
+}
+
+/* The tear front advances in ticks; each shivers the strip a hair. */
+.gift-bag[data-shiver="a"] .gift-seal {
+  animation: gift-tick-a 80ms linear;
+}
+
+.gift-bag[data-shiver="b"] .gift-seal {
+  animation: gift-tick-b 80ms linear;
+}
+
+@keyframes gift-tick-a {
+  50% {
+    translate: 0 0.7px;
+  }
+}
+
+@keyframes gift-tick-b {
+  50% {
+    translate: 0 0.7px;
+  }
+}
+
+/* The hint: a finger takes the tab and pulls a little, the strip tears a little, then it lets go. */
+.gift-bag.is-hinting {
+  animation: gift-tear-hint 2.8s var(--ease-peel) infinite;
+}
+
+.gift-bag__finger {
+  position: absolute;
+  z-index: 12;
+  left: calc(var(--sx) - 64px);
+  top: calc(var(--sy) + 19px);
+  color: var(--ink);
+  opacity: 0;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 4px rgba(28, 24, 36, 0.3));
+  animation: gift-finger-pull 2.8s var(--ease-peel) infinite;
+}
+
+@keyframes gift-tear-hint {
+  0%,
+  22% {
+    --gift-tear: 0;
+  }
+  56% {
+    --gift-tear: 0.16;
+  }
+  72%,
+  100% {
+    --gift-tear: 0;
+  }
+}
+
+@keyframes gift-finger-pull {
+  0% {
+    opacity: 0;
+    transform: translate(-8px, 20px) rotate(-12deg);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(-12deg);
+  }
+  22% {
+    transform: translate(0, 3px) rotate(-12deg) scale(0.94);
+  }
+  56% {
+    opacity: 1;
+    transform: translate(40px, 3px) rotate(-12deg) scale(0.94);
+  }
+  72%,
+  100% {
+    opacity: 0;
+    transform: translate(48px, -8px) rotate(-12deg);
+  }
+}
+
+/* Reduced motion: no drop, no press and no spring; the seal fades on. Pulled open, there's no loop
+   and no hint, and the tab and the film fade rather than fly. */
 @media (prefers-reduced-motion: reduce) {
+  .gift-seal__loop {
+    display: none;
+  }
+
+  .gift-bag.is-hinting,
+  .gift-bag__finger {
+    animation: none;
+  }
+
+  .gift-bag[data-state="torn"] .gift-seal__tab {
+    transform: translateX(var(--sw));
+    transition: opacity 150ms linear;
+  }
+
+  .gift-bag[data-state="torn"] :is(.gift-seal__film, .gift-seal__gap) {
+    transition: opacity 150ms linear;
+  }
+
   .gift-bag__sticker {
     transition: opacity 150ms linear;
   }
