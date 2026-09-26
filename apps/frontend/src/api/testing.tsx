@@ -19,7 +19,8 @@ export const TEST_OWNER: Person = {
   linePictureUrl: null,
 };
 
-const TEST_ME: Me = {
+/** You in tests. */
+export const TEST_ME: Me = {
   ...TEST_OWNER,
   timeZone: "Asia/Tokyo",
   language: "en",
