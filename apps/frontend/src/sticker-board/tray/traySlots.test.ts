@@ -1,22 +1,27 @@
 import { describe, expect, it } from "vitest";
-import type { StickerGiftStatus } from "../../giving/stickerGifts";
+import type { BoardStickerView } from "../boardSticker";
 import { newSlots, traySlots } from "./traySlots";
 
-const sticker = (id: string, arrivedAt: number, on?: boolean, more = {}) => ({
+const sticker = (
+  id: string,
+  arrivedAt: number,
+  on = false,
+  gift: Partial<Pick<BoardStickerView, "held" | "openGift">> = {},
+) => ({
   id,
   no: arrivedAt,
   arrivedAt,
-  seen: false,
+  placement: { on, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 },
   held: true,
-  placement: on === undefined ? undefined : { on },
-  ...more,
+  openGift: null,
+  ...gift,
 });
-const sent: StickerGiftStatus = { giftId: "x", state: "sent", packedAt: 1, sentAt: 2 };
-const packed: StickerGiftStatus = { giftId: "y", state: "packed", packedAt: 1 };
+const sent = { openGift: { id: "x", status: "sent" as const } };
+const packed = { openGift: { id: "y", status: "packed" as const } };
 
 describe("traySlots", () => {
   it("keeps each sticker's slot for good, in arrival order", () => {
-    const slots = traySlots([sticker("b", 2), sticker("a", 1), sticker("c", 3)], new Map());
+    const slots = traySlots([sticker("b", 2), sticker("a", 1), sticker("c", 3)]);
     expect(slots.map((s) => s.id)).toEqual(["a", "b", "c"]);
     expect(slots.map((s) => [s.sheet, s.slot])).toEqual([
       [0, 0],
@@ -25,38 +30,27 @@ describe("traySlots", () => {
     ]);
   });
 
-  it("marks stickers out on the board, given away, or here", () => {
-    const gifts = new Map<string, StickerGiftStatus>([
-      ["g", sent],
-      ["bagged", packed],
+  it("marks stickers out on the board, on their way or received, or here", () => {
+    const slots = traySlots([
+      sticker("on", 1, true),
+      sticker("sent", 2, true, sent),
+      sticker("received", 3, true, { held: false }),
+      sticker("here", 4),
+      sticker("bagged", 5, false, packed),
     ]);
-    const slots = traySlots(
-      [
-        sticker("on", 1, true),
-        sticker("g", 2, true),
-        sticker("here", 3, false),
-        sticker("bagged", 4, false),
-        sticker("received by someone", 5, false, { held: false }),
-      ],
-      gifts,
-    );
-    expect(slots.map((s) => s.state)).toEqual(["used", "given", "here", "here", "given"]);
+    expect(slots.map((s) => s.state)).toEqual(["used", "given", "given", "here", "here"]);
   });
 });
 
 describe("newSlots", () => {
   it("marks as new what's in the tray, arrived today and hasn't been seen", () => {
-    const slots = traySlots(
-      [
-        sticker("old", 1, false),
-        sticker("seen", 2, false),
-        sticker("seen before", 2, false, { seen: true }),
-        sticker("given", 2, false),
-        sticker("on the board", 2, true),
-        sticker("new", 2, false),
-      ],
-      new Map([["given", sent]]),
-    );
+    const slots = traySlots([
+      sticker("old", 1),
+      sticker("seen", 2),
+      sticker("given", 2, false, sent),
+      sticker("on the board", 2, true),
+      sticker("new", 2),
+    ]);
     const isNew = newSlots(slots, {
       today: "2026-09-26",
       dayOf: (t) => (t === 2 ? "2026-09-26" : "2026-09-25"),

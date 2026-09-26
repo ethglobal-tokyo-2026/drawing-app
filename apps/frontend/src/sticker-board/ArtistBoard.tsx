@@ -14,6 +14,7 @@ import { useApiQuery } from "../api/useApiQuery";
 import { toPerson, type PersonView } from "../api/views";
 import { GiveSheet } from "../giving/GiveSheet";
 import { OfferSheet } from "../offers/OfferSheet";
+import { ArtistChip } from "../stickers/ArtistChip";
 import { Duration } from "../stickers/Duration";
 import { formatHandle, formatNo } from "../stickers/format";
 import { StickerFigure } from "../stickers/StickerFigure";
@@ -24,7 +25,7 @@ import { QuietLink } from "../ui/QuietLink";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import { toBoardSticker, type BoardSticker } from "./boardSticker";
+import { toBoardSticker, type BoardStickerView } from "./boardSticker";
 import { fieldOf, toPx, type Field } from "./placement";
 import { PlacedSticker } from "./PlacedSticker";
 import { BoardFlip } from "./stat-board/BoardFlip";
@@ -41,35 +42,22 @@ interface Props {
 /** The sticker menu's width, for keeping it on the board. */
 const MENU_W = 250;
 
+/** Their handle, or their LINE name until they've picked one. */
+const artistName = (artist: PersonView) =>
+  artist.handle ? formatHandle(artist.handle) : artist.name;
+
 /** Someone else's board has no sticker tray, so its field runs to the right inset too. */
 const visitField = (w: number, h: number): Field => {
   const f = fieldOf(w, h);
   return { ...f, w: w - 2 * f.left };
 };
 
-/** Who drew a foil sticker: their picture in a foil ring, over "ARTIST @name". */
-function ArtistChip({ artist }: { artist: PersonView }) {
-  return (
-    <span className="artist-chip">
-      <span className="chip-ring">
-        <span className="chip-avatar">
-          <PhotoSticker src={artist.pictureUrl} name={artist.name} size={28} />
-        </span>
-      </span>
-      <span className="chip-text">
-        <span className="fine">Artist</span>
-        <b>{artist.handle ? formatHandle(artist.handle) : artist.name}</b>
-      </span>
-    </span>
-  );
-}
-
 function StickerView({
   sticker,
   owner,
   onClose,
 }: {
-  sticker: BoardSticker;
+  sticker: BoardStickerView;
   owner: PersonView;
   onClose: () => void;
 }) {
@@ -96,8 +84,7 @@ function StickerView({
         />
         <h2>{formatNo(sticker.no)}</h2>
         <div className="visit-view-meta fine">
-          Drawn in <Duration seconds={sticker.timeUsed} /> ·{" "}
-          {sticker.artist.handle ? formatHandle(sticker.artist.handle) : sticker.artist.name}
+          Drawn in <Duration seconds={sticker.timeUsed} /> · {artistName(sticker.artist)}
         </div>
         {!drawnByOwner && <ArtistChip artist={sticker.artist} />}
         <div className="visit-view-perf" />
@@ -125,9 +112,9 @@ export function ArtistBoard({ person, onBack }: Props) {
   const [size, setSize] = useState<{ W: number; H: number } | null>(null);
   const [turned, setTurned] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
-  const [viewing, setViewing] = useState<BoardSticker | null>(null);
+  const [viewing, setViewing] = useState<BoardStickerView | null>(null);
   const [giving, setGiving] = useState(false);
-  const [offering, setOffering] = useState<BoardSticker | null>(null);
+  const [offering, setOffering] = useState<BoardStickerView | null>(null);
 
   // What they hold and have stuck on, bottom of the stack first.
   const stickers = useMemo(
@@ -198,7 +185,7 @@ export function ArtistBoard({ person, onBack }: Props) {
     toggleMenu(e.target);
   };
 
-  const menuSpot = (s: BoardSticker) => {
+  const menuSpot = (s: BoardStickerView) => {
     if (!field || !size) return undefined;
     const c = toPx(field, s.placement);
     const half = (s.placement.s * size.W) / 2;
@@ -266,6 +253,7 @@ export function ArtistBoard({ person, onBack }: Props) {
               position={`${i + 1} of ${stickers.length}`}
               hintId={hint}
               foil={s.artist.id !== person.id}
+              by={s.artist.id !== person.id ? artistName(s.artist) : undefined}
             />
           ))}
       </div>

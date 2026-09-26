@@ -67,6 +67,7 @@ export function createApiGiftBackend({
         liffId,
         giftClaimToken,
         fromHandle,
+        no: sticker.no,
         timeUsed: sticker.timeUsed,
         heroUrl,
       });

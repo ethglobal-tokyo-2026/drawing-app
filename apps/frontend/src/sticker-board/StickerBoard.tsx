@@ -10,16 +10,28 @@ import {
   useState,
 } from "react";
 import { flushSync } from "react-dom";
+import { apiError, type ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
 import { useApiQuery } from "../api/useApiQuery";
-import { toApiPlacement, type PersonView } from "../api/views";
+import {
+  toApiPlacement,
+  toPerson,
+  toSticker,
+  type PersonView,
+  type StickerView,
+} from "../api/views";
+import { GiftReceivedNotice } from "../giving/GiftReceivedNotice";
+import { markNoticed, newestUnnoticed } from "../giving/noticedGifts";
+import { PendingGiftsNotificationBadge } from "../giving/PendingGiftsNotificationBadge";
 import { useGiftSender } from "../giving/useGiftSender";
-import { giftStatusBySticker, type StickerGiftStatus } from "../giving/stickerGifts";
+import { FEEL_CONFIG } from "../gratitude/gameConfig";
+import { GratitudeMiniGame } from "../gratitude/GratitudeMiniGame";
+import { readMiniGameDemoSettings } from "../gratitude/miniGameDemoSettings";
 import { DrawIcon } from "../icons/DrawIcon";
 import { useMe } from "../api/meContext";
 import { useIdentity } from "../identity/useIdentity";
 import { LIFF_ID } from "../line/liff";
-import { formatNo } from "../stickers/format";
+import { formatHandle, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { playStick } from "../stickers/stick";
 import { TicketCounts } from "../tickets/TicketCount";
@@ -32,7 +44,13 @@ import { PhotoSticker } from "../ui/PhotoSticker";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { normalizeTurn } from "./boardGesture";
-import { placeUnplaced, toBoardSticker, type BoardSticker } from "./boardSticker";
+import {
+  onItsWay,
+  placeUnplaced,
+  toBoardSticker,
+  type BoardSticker,
+  type BoardStickerView,
+} from "./boardSticker";
 import { PlacedSticker } from "./PlacedSticker";
 import { GivenStickerSilhouette } from "./GivenStickerSilhouette";
 import {
@@ -52,6 +70,8 @@ import { BoardFlip } from "./stat-board/BoardFlip";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
 import { readingOrder } from "./stickerOrder";
 import { StickerToolbar } from "./StickerToolbar";
+import { SendGratitudeSheet } from "../receiving/SendGratitudeSheet";
+import { ArtistChipLayer } from "./ArtistChipLayer";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
 import { useBoardGestures } from "./useBoardGestures";
@@ -67,10 +87,6 @@ const StickerDetail = lazyWithPreload("the sticker detail", () =>
   import("./StickerDetail").then((m) => m.StickerDetail),
 );
 const Giving = lazyWithPreload("Giving", () => import("../giving/Giving").then((m) => m.Giving));
-// Opened from a received sticker's detail.
-const GratitudeMiniGamePlaceholder = lazyWithPreload("the gratitude Mini-game", () =>
-  import("../gratitude/GratitudeMiniGamePlaceholder").then((m) => m.GratitudeMiniGamePlaceholder),
-);
 const StatBoard = lazyWithPreload("the stat board", () =>
   import("./stat-board/StatBoard").then((m) => m.StatBoard),
 );
@@ -125,8 +141,12 @@ const kept = (was: Box | null, now: Box) =>
     ? was
     : now;
 
-const reasonOf = (error: unknown) =>
-  error instanceof Error && error.message ? error.message : String(error);
+const reasonOf = (error: ApiError) => error.detail ?? error.code;
+
+interface LoadedBoard {
+  owner: PersonView;
+  stickers: BoardStickerView[];
+}
 
 /** "No.0001", "No.0001 and No.0002", "No.0001, No.0002 and No.0003". */
 const listed = (names: readonly string[]) =>
@@ -150,6 +170,33 @@ const stackOf = (stickers: readonly BoardSticker[]) =>
       .map((s, i) => [s.id, i]),
   );
 
+/** Received stickers already asked about gratitude this session, so the question comes once. */
+const askedForGratitude = new Set<string>();
+
+/** Someone as the gratitude Mini-game names them. */
+const asGiver = (p: PersonView) => ({
+  handle: p.handle ?? p.name,
+  displayName: p.name,
+  ...(p.pictureUrl && { pictureUrl: p.pictureUrl }),
+});
+
+/** A board sticker as the gift screens draw it. */
+const viewOf = (s: BoardStickerView): StickerView => ({
+  id: s.id,
+  no: s.no,
+  artist: s.artist,
+  timeUsed: s.timeUsed,
+  width: s.width,
+  height: s.height,
+  outline: s.outline ?? "",
+  urls: s.urls,
+  sealedAt: s.createdAt,
+});
+
+/** Gratitude being sent: for a received gift when `giftId` is set, which records it; the stat
+ * board's demo has none. */
+type GratitudeFor = { sticker: BoardSticker; giver: ReturnType<typeof asGiver>; giftId?: string };
+
 export function StickerBoard({ freshId, onDraw }: Props) {
   const stage = useRef<HTMLDivElement>(null);
   /** The board's face, which the sticker tray runs down the right edge of. */
@@ -160,10 +207,15 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const flipBack = useRef<HTMLButtonElement>(null);
   const statBoard = useRef<StatBoardHandle>(null);
   const api = useApi();
-  const board = useApiQuery("sticker-board", (client) => client.stickerBoard());
-  // The board's own copy, which moves as stickers do; the next load replaces it.
-  const [stickers, setStickers] = useState<BoardSticker[] | null>(null);
-  const [loadedFrom, setLoadedFrom] = useState<object | null>(null);
+  const [stickers, setStickers] = useState<BoardStickerView[] | null>(null);
+  /** The load the stickers came from, and whose board it is: a sticker someone else drew wears foil. */
+  const [adopted, setAdopted] = useState<LoadedBoard | null>(null);
+  const owner = adopted?.owner ?? null;
+  /** The stickers as last drawn, for a reload to keep the spots the board has given them. */
+  const latestStickers = useRef(stickers);
+  useLayoutEffect(() => {
+    latestStickers.current = stickers;
+  });
   /** Stickers whose spot didn't save, and why; each goes once a save of it succeeds. */
   const [unsaved, setUnsaved] = useState<ReadonlyMap<string, string>>(() => new Map());
   const [size, setSize] = useState<{ W: number; H: number } | null>(null);
@@ -178,24 +230,21 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   /** The sticker the detail shows, among your stickers or among the ones you gave. */
   const [open, setOpen] = useState<{ id: string; mode: "yours" | "given" } | null>(null);
   const [giving, setGiving] = useState<BoardSticker | null>(null);
-  /** A received sticker being thanked, with its gift and giver. */
-  const [thanking, setThanking] = useState<{
-    giftId: string;
-    sticker: BoardSticker;
-    giver: PersonView;
-  } | null>(null);
   /** The board is turned over to its stat board. */
   const [turned, setTurned] = useState(false);
   /** The board has turned over before, so its stat board stays mounted for every turn after. */
   const [wasTurned, setWasTurned] = useState(false);
   const { tickets } = useTickets();
+  /** The sticker the gratitude mini-game is open for, from the stat board's developer slip. */
+  const [gratitudeFor, setGratitudeFor] = useState<GratitudeFor | null>(null);
+  /** A received gift's notice, closed: the silhouettes say the rest. */
+  const [noticeClosed, setNoticeClosed] = useState(false);
+  /** A sticker that just reached you, and its giver, while it has no gratitude yet. */
+  const [owed, setOwed] = useState<{ gift: { id: string }; giver: PersonView } | null>(null);
+  /** The first-load artist chips have played, or a sticker was selected, which clears them. */
+  const [chipsDone, setChipsDone] = useState(false);
   const me = useIdentity();
   const account = useMe();
-  const pending = useApiQuery("gifts/pending", (client) => client.pendingGifts());
-  const gifts = useMemo<ReadonlyMap<string, StickerGiftStatus>>(
-    () => (pending.state === "ready" ? giftStatusBySticker(pending.data) : new Map()),
-    [pending],
-  );
   const giftSender = useGiftSender();
   const reduced = useReducedMotion();
   const hints = useId();
@@ -213,29 +262,84 @@ export function StickerBoard({ freshId, onDraw }: Props) {
             return next;
           }),
         (error: unknown) => {
-          console.error(`Saving where ${formatNo(sticker.no)} sits failed`, error);
-          setUnsaved((was) => new Map(was).set(sticker.id, reasonOf(error)));
+          const failure = apiError(error);
+          console.error(`Saving where ${formatNo(sticker.no)} sits failed`, failure);
+          setUnsaved((was) => new Map(was).set(sticker.id, reasonOf(failure)));
         },
       );
     },
     [api],
   );
 
-  // The board mounts anew on every visit, so its load is its refresh. Each answer replaces the
-  // board's copy, and a sticker without a spot gets one, saved so it stays there.
-  const [newlyPlaced, setNewlyPlaced] = useState<readonly BoardSticker[]>([]);
-  if (board.state === "ready" && board.data !== loadedFrom) {
-    const placed: BoardSticker[] = [];
-    setLoadedFrom(board.data);
-    setStickers(placeUnplaced(board.data.boardStickers.map(toBoardSticker), (s) => placed.push(s)));
-    setNewlyPlaced(placed);
+  // The board mounts anew on every visit, so its load is its refresh. A sticker the board has never
+  // placed gets a spot as it loads, saved so it stays there.
+  const board = useApiQuery("sticker-board", async (client): Promise<LoadedBoard> => {
+    const data = await client.stickerBoard();
+    const { stickers: list, placed } = placeUnplaced(
+      data.boardStickers.map(toBoardSticker),
+      latestStickers.current ?? [],
+    );
+    for (const s of placed) save(s, s.placement);
+    return { owner: toPerson(data.owner), stickers: list };
+  });
+  const loaded = board.state === "ready" ? board.data : null;
+  if (loaded && loaded !== adopted) {
+    setAdopted(loaded);
+    // Moves made while it loaded stay.
+    setStickers(placeUnplaced(loaded.stickers, stickers ?? []).stickers);
   }
+
+  const pending = useApiQuery("pending-gifts", (client) => client.pendingGifts());
+  const onTheirWay =
+    pending.state === "ready"
+      ? pending.data.gifts
+          .filter((p) => p.gift.status === "sent")
+          .map((p) => ({ giftId: p.gift.id, sticker: toSticker(p.sticker) }))
+      : [];
+
+  // Once per board opening: the newest gift someone received since this device last said so.
+  const receivedGifts = (adopted?.stickers ?? []).flatMap((s) =>
+    !s.held && s.givenTo
+      ? [
+          {
+            stickerId: s.id,
+            receivedAt: s.givenTo.receivedAt,
+            sticker: viewOf(s),
+            receiver: s.givenTo.receiver,
+            ...(s.urls.mask && { mask: s.urls.mask }),
+          },
+        ]
+      : [],
+  );
+  const notice = noticeClosed ? null : newestUnnoticed(receivedGifts);
+
+  // A sticker that just reached you asks about gratitude, when its newest gift to you has none.
   useEffect(() => {
-    for (const s of newlyPlaced) save(s, s.placement);
-  }, [newlyPlaced, save]);
-  const loadError = board.state === "failed" ? board.error.message : null;
-  // You, as the API names you: the board's owner.
-  const viewerId = board.state === "ready" ? board.data.owner.id : null;
+    if (!freshId || askedForGratitude.has(freshId)) return;
+    let current = true;
+    api.stickerDetail(freshId).then(
+      (detail) => {
+        const [entry] = detail.transferTrail;
+        if (current && entry && entry.receiver.id === detail.owner.id && !entry.gratitude)
+          setOwed({ gift: { id: entry.giftId }, giver: toPerson(entry.giver) });
+      },
+      (error: unknown) =>
+        console.error(`Checking whether ${freshId} has gratitude failed`, apiError(error)),
+    );
+    return () => {
+      current = false;
+    };
+  }, [api, freshId]);
+
+  // The open sticker tray's NEW marks, which the tray takes off at once.
+  const markSeen = (ids: readonly string[]) => {
+    api.markTraySeen(ids).catch((error: unknown) => {
+      console.error(
+        `Saving that the sticker tray showed ${ids.join(", ")} failed, so they show NEW again next time`,
+        apiError(error),
+      );
+    });
+  };
 
   useLayoutEffect(() => {
     const el = stage.current;
@@ -264,28 +368,37 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     if (landingId) landed.add(landingId);
   }, [landingId]);
 
-  // A sticker given away, or on its way, has left the board.
-  const away = (s: BoardSticker) => !s.held || gifts.get(s.id)?.state === "sent";
-  const onBoard = (stickers ?? []).filter((s) => s.placement.on && !away(s));
-  // It leaves its given sticker silhouette where it sat. On its way, it keeps one until the
-  // pending gifts badge can hold it.
+  // A sticker on its way has left the board for the badge.
+  const onBoard = (stickers ?? []).filter((s) => s.placement.on && s.held && !onItsWay(s));
+  // The gratitude mini-game's demo always sends gratitude for whichever sticker landed most recently.
+  const newest = onBoard.reduce<BoardSticker | null>(
+    (latest, s) => (!latest || s.createdAt > latest.createdAt ? s : latest),
+    null,
+  );
+  // Received, it leaves its given sticker silhouette where it sat, naming who has it.
   const givenSilhouettes = (stickers ?? []).flatMap((s) => {
     const mask = s.urls.mask;
-    if (!mask) return [];
-    if (s.givenTo)
-      return [
-        {
-          sticker: s,
-          mask,
-          sentAt: s.givenTo.receivedAt,
-          to: s.givenTo.receiver.handle ?? undefined,
-        },
-      ];
-    const gift = gifts.get(s.id);
-    return gift?.state === "sent" ? [{ sticker: s, mask, sentAt: gift.sentAt }] : [];
+    return !s.held && s.givenTo && mask ? [{ sticker: s, mask, givenTo: s.givenTo }] : [];
   });
   const field = useMemo(() => size && fieldOf(size.W, size.H), [size]);
   const landedNow = useCallback(() => setLandingId(undefined), []);
+  /** Drawn by someone other than the board's owner: it wears foil and names its artist. */
+  const byOther = (s: BoardStickerView) => owner !== null && s.artist.id !== owner.id;
+  const printedArtist = (s: BoardStickerView) =>
+    s.artist.handle ? formatHandle(s.artist.handle) : s.artist.name;
+  // A received sticker landing names its artist alone; otherwise every foil sticker does, once.
+  const landingByOther = onBoard.find((s) => s.id === landingId && byOther(s));
+  const chips =
+    chipsDone || !field || !size
+      ? []
+      : onBoard
+          .filter((s) => byOther(s) && (!landingByOther || s.id === landingByOther.id))
+          .map((s) => ({
+            id: s.id,
+            artist: s.artist,
+            box: stickerBox(field, size.W, s.placement, s),
+          }));
+  const freshSticker = freshId ? stickers?.find((s) => s.id === freshId) : undefined;
 
   const setPlacement = (id: string, placement: Placement) =>
     setStickers((list) => list?.map((s) => (s.id === id ? { ...s, placement } : s)) ?? null);
@@ -293,6 +406,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   // Selecting raises a sticker above the rest; the raise is saved with its next move.
   const select = (id: string | null) => {
     setSelected(id);
+    if (id) setChipsDone(true);
     if (!id || !stickers) return;
     settled.add(id);
     const sticker = stickers.find((s) => s.id === id);
@@ -393,14 +507,6 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           { duration: 520, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
         );
     },
-    markSeen: (ids) => {
-      const was = new Set(ids);
-      setStickers((list) => list?.map((s) => (was.has(s.id) ? { ...s, seen: true } : s)) ?? null);
-      // The tray has already dropped NEW; a failed save only brings it back on the next visit.
-      api.markTraySeen(ids).catch((error: unknown) => {
-        console.error(`Saving that stickers ${ids.join(", ")} were seen in the tray failed`, error);
-      });
-    },
   };
   const stack = stackOf(onBoard);
   // Screen readers and the arrow keys take the stickers in reading order, which is the DOM's too.
@@ -438,6 +544,15 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         <PhotoSticker src={me.pictureUrl} name={me.displayName} size={42} />
         <span className="board-who-name">{me.displayName}</span>
       </button>
+
+      {onTheirWay.length > 0 && (
+        <div className="board-pending">
+          <PendingGiftsNotificationBadge
+            gifts={onTheirWay}
+            onOpen={(id) => setOpen({ id, mode: "yours" })}
+          />
+        </div>
+      )}
 
       {/* The slot carries the first-sticker hop and ring, so the key keeps its own lip and press. */}
       <span ref={drawSlot} className={`board-draw ${firstVisit ? "is-fresh" : ""}`}>
@@ -484,7 +599,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
               {...o}
               field={field}
               boardWidth={size.W}
-              onOpen={() => setOpen({ id: o.sticker.id, mode: o.sticker.held ? "yours" : "given" })}
+              onOpen={() => setOpen({ id: o.sticker.id, mode: "given" })}
             />
           ))}
         {field &&
@@ -506,6 +621,8 @@ export function StickerBoard({ freshId, onDraw }: Props) {
                 tabbable={s.id === tabbable}
                 position={`${order.indexOf(s.id) + 1} of ${order.length}`}
                 hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
+                foil={byOther(s)}
+                by={byOther(s) ? printedArtist(s) : undefined}
               />
               {/* Right after its sticker, so Tab reaches it next. */}
               {s.id === selected && !hold && (
@@ -519,6 +636,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
                   onGive={() => setGiving(s)}
                   onView={() => setOpen({ id: s.id, mode: "yours" })}
                   onRemove={() => stow(s.id)}
+                  {...(byOther(s) && { artist: s.artist })}
                   onEscape={() =>
                     stage.current
                       ?.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(s.id)}"]`)
@@ -531,30 +649,34 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           ))}
       </div>
 
-      {stickers && (
+      {chips.length > 0 && size && (
+        <ArtistChipLayer
+          chips={chips}
+          board={size}
+          onDone={() => setChipsDone(true)}
+          reduced={reduced}
+        />
+      )}
+
+      {stickers && owner && (
         <Suspense fallback={null}>
           <StickerTray
             ref={tray}
             board={face}
             stickers={stickers}
-            gifts={gifts}
-            ownerId={viewerId}
+            ownerId={owner.id}
             api={trayBoard}
+            onSeen={markSeen}
           />
         </Suspense>
       )}
 
-      {loadError && (
+      {board.state === "failed" && (
         <div className="board-blank board-problem" role="alert" style={blankStyle}>
           <span className="board-blank-cut" aria-hidden />
           <span className="board-blank-note">Your stickers didn’t load.</span>
-          <span className="fine board-problem-reason">{loadError}</span>
-          <LabelButton
-            size="sm"
-            onClick={() => {
-              if (board.state === "failed") board.retry();
-            }}
-          >
+          <span className="fine board-problem-reason">{reasonOf(board.error)}</span>
+          <LabelButton size="sm" onClick={board.retry}>
             Try again
           </LabelButton>
         </div>
@@ -598,20 +720,75 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         </Suspense>
       )}
 
-      {open && viewerId && (
+      {notice && (
+        <GiftReceivedNotice
+          sticker={notice.sticker}
+          receiver={notice.receiver}
+          receivedAt={notice.receivedAt}
+          {...(notice.mask && { mask: notice.mask })}
+          onClose={() => {
+            markNoticed(receivedGifts);
+            setNoticeClosed(true);
+          }}
+        />
+      )}
+
+      {owed && freshSticker && !landingId && !askedForGratitude.has(freshSticker.id) && (
+        <SendGratitudeSheet
+          gift={owed.gift}
+          sticker={viewOf(freshSticker)}
+          giver={owed.giver}
+          onSend={() => {
+            askedForGratitude.add(freshSticker.id);
+            setOwed(null);
+            setGratitudeFor({
+              sticker: freshSticker,
+              giver: asGiver(owed.giver),
+              giftId: owed.gift.id,
+            });
+          }}
+          onLater={() => {
+            askedForGratitude.add(freshSticker.id);
+            setOwed(null);
+          }}
+        />
+      )}
+
+      {gratitudeFor && (
+        <GratitudeMiniGame
+          sticker={gratitudeFor.sticker}
+          giver={gratitudeFor.giver}
+          {...(gratitudeFor.giftId && { giftId: gratitudeFor.giftId })}
+          intensity={
+            readMiniGameDemoSettings().fullEffects
+              ? FEEL_CONFIG.intensity.full
+              : FEEL_CONFIG.intensity.everyday
+          }
+          showFrameTimes={readMiniGameDemoSettings().showFrameTimes}
+          onClose={() => setGratitudeFor(null)}
+        />
+      )}
+
+      {open && (
         <Suspense fallback={null}>
           <StickerDetail
             // In the order they arrived, as the board loads them.
             stickers={(stickers ?? []).filter((s) => (open.mode === "given") !== s.held)}
             startId={open.id}
             mode={open.mode}
-            viewerId={viewerId}
             // It lifts off from where the sticker sits: on the board, or its given sticker silhouette.
             originOf={(id) =>
               stickerEl(id)?.querySelector<HTMLElement>(
                 ".placed-sticker__lift, .given-sticker-silhouette__art",
               ) ?? null
             }
+            {...(owner && { ownerId: owner.id })}
+            onSendGratitude={(gift, sticker, giver) => {
+              const s = stickers?.find((x) => x.id === sticker.id);
+              if (!s) return;
+              setOpen(null);
+              setGratitudeFor({ sticker: s, giver: asGiver(giver), giftId: gift.id });
+            }}
             onClose={() => setOpen(null)}
             // Back to the sticker it opened from: on the board, or its given sticker silhouette.
             returnFocus={() =>
@@ -627,32 +804,6 @@ export function StickerBoard({ freshId, onDraw }: Props) {
                   }
                 : undefined
             }
-            onSendGratitude={(gift, sticker, giver) =>
-              setThanking({ giftId: gift.id, sticker, giver })
-            }
-          />
-        </Suspense>
-      )}
-
-      {thanking && (
-        <Suspense fallback={null}>
-          <GratitudeMiniGamePlaceholder
-            giftId={thanking.giftId}
-            sticker={{
-              id: thanking.sticker.id,
-              no: thanking.sticker.no,
-              timeUsed: thanking.sticker.timeUsed,
-              createdAt: thanking.sticker.createdAt,
-              urls: thanking.sticker.urls,
-              width: thanking.sticker.width,
-              height: thanking.sticker.height,
-            }}
-            giver={{
-              handle: thanking.giver.handle ?? thanking.giver.name,
-              displayName: thanking.giver.name,
-              ...(thanking.giver.pictureUrl && { pictureUrl: thanking.giver.pictureUrl }),
-            }}
-            onClose={() => setThanking(null)}
           />
         </Suspense>
       )}
@@ -673,7 +824,24 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         // Mounted once the board is idle, or as it first turns over, and kept from then on.
         (idle || wasTurned) && (
           <Suspense fallback={null}>
-            <StatBoard ref={statBoard} onFlipBack={() => turn(false)} flipBackRef={flipBack} />
+            <StatBoard
+              ref={statBoard}
+              onFlipBack={() => turn(false)}
+              flipBackRef={flipBack}
+              onTryGratitudeMiniGame={
+                newest
+                  ? () =>
+                      setGratitudeFor({
+                        sticker: newest,
+                        giver: {
+                          handle: account.handle ?? me.displayName,
+                          displayName: me.displayName,
+                          pictureUrl: me.pictureUrl,
+                        },
+                      })
+                  : null
+              }
+            />
           </Suspense>
         )
       }

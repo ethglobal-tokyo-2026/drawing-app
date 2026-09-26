@@ -5,8 +5,7 @@ export const formatDay = (t: number) => {
   const d = new Date(t);
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 };
-
-/** "9.23": a day within the recent past, where the year goes without saying. */
+/** A day in the short form a caption has room for: "9.23". */
 export const formatMonthDay = (t: number) => {
   const d = new Date(t);
   return `${d.getMonth() + 1}.${d.getDate()}`;

@@ -1,22 +1,24 @@
 import { CaretLeft, CaretRight, Gift, Heart } from "@phosphor-icons/react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
+import type { StickerDetail as StickerDetailResponse } from "@drawing-app/api/client";
 import { useApiQuery } from "../api/useApiQuery";
-import type { PersonView } from "../api/views";
+import { toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Duration } from "../stickers/Duration";
-import { formatDay, formatHandle, formatNo } from "../stickers/format";
+import { formatDay, formatHandle, formatMonthDay, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
+import { ArtistChip } from "../stickers/ArtistChip";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
+import { QuietLink } from "../ui/QuietLink";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import type { BoardSticker } from "./boardSticker";
+import { handleOf, onItsWay, type BoardStickerView } from "./boardSticker";
 import { useDetailLift } from "./detailLift";
 import { swipeLock, swipeTo } from "./detailPaging";
-import { owedGratitude } from "./owedGratitude";
 import { TakeTheOriginal } from "./TakeTheOriginal";
 import { TransferTrail } from "./TransferTrail";
 import { toTrailRows } from "./trailRows";
@@ -24,22 +26,25 @@ import "./sticker-detail.css";
 
 interface Props {
   /** The stickers it pages through, in order. */
-  stickers: readonly BoardSticker[];
+  stickers: readonly BoardStickerView[];
   /** The sticker it opens at. */
   startId: string;
   /** Your stickers, or the ones you gave, which it only shows. */
   mode: "yours" | "given";
   onClose: () => void;
   /** Give, where LINE's picker can send the sticker; without it there's no key. */
-  onGive?: (sticker: BoardSticker) => void;
-  /** Thanks the giver of a received sticker you haven't thanked; without it there's no key. */
-  onSendGratitude?: (gift: { id: string }, sticker: BoardSticker, giver: PersonView) => void;
-  /** Who's looking: the Transfer Trail reads them as "you". */
-  viewerId: string;
+  onGive?: (sticker: BoardStickerView) => void;
+  /** Gratitude for a received sticker; without it the detail doesn't check whether any is owed. */
+  onSendGratitude?: (gift: { id: string }, sticker: StickerView, giver: PersonView) => void;
   /** Where focus goes once it closes, when that isn't back to what opened it. */
   returnFocus?: () => HTMLElement | null;
   /** Where a sticker sits on the board, which it lifts off from and sticks back onto. */
   originOf?: (id: string) => HTMLElement | null;
+  /**
+   * The board's owner, who's looking: a sticker someone else drew wears foil and names its Original
+   * Artist, and the Transfer Trail reads the owner as "you".
+   */
+  ownerId?: string;
 }
 
 interface Swipe {
@@ -54,7 +59,7 @@ interface Swipe {
  * The sticker's .eth name, as the prototype shapes it: `{name}.{artist}.sketch.eth`. A stand-in
  * built from its number and artist until the chain gives stickers their names.
  */
-function placeholderEnsName(sticker: BoardSticker): string {
+function placeholderEnsName(sticker: BoardStickerView): string {
   const label = (v: string) =>
     v
       .toLowerCase()
@@ -66,6 +71,14 @@ function placeholderEnsName(sticker: BoardSticker): string {
 
 /** The --ease-out curve, spelled out: Web Animations can't read CSS variables. */
 const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
+
+/** The gift you owe gratitude for: the sticker's newest gift to you, while that has no gratitude. */
+function owedGratitude({ sticker, owner, transferTrail }: StickerDetailResponse) {
+  const toYou = transferTrail.find((entry) => entry.receiver.id === owner.id);
+  return toYou && toYou.gratitude === null
+    ? { gift: { id: toYou.giftId }, sticker: toSticker(sticker), giver: toPerson(toYou.giver) }
+    : null;
+}
 
 /**
  * One sticker large on the liner, a strip of the rest down the left edge, its fine print and Give.
@@ -80,7 +93,7 @@ export function StickerDetail({
   onSendGratitude,
   returnFocus,
   originOf,
-  viewerId,
+  ownerId,
 }: Props) {
   const reduced = useReducedMotion();
   useLight();
@@ -89,17 +102,19 @@ export function StickerDetail({
     0,
     stickers.findIndex((s) => s.id === shownId),
   );
-  const sticker: BoardSticker | undefined = stickers[index];
+  const sticker: BoardStickerView | undefined = stickers[index];
   const last = stickers.length - 1;
-  // Whether you've thanked a sticker you hold is on its Transfer Trail, which only its detail has.
-  // Its Transfer Trail, and whether you've thanked a sticker you hold, come with its detail.
+  // Its Transfer Trail, and whether you owe gratitude for a sticker you hold, come with its detail.
   const shownStickerId = sticker?.id ?? null;
   const detail = useApiQuery(`sticker-detail:${shownStickerId ?? "none"}`, (api) =>
     shownStickerId ? api.stickerDetail(shownStickerId) : Promise.resolve(null),
   );
   const loaded = detail.state === "ready" ? detail.data : null;
-  const owed = mode === "yours" && sticker?.held && loaded ? owedGratitude(loaded) : null;
   const trail = useMemo(() => (loaded ? toTrailRows(loaded.transferTrail) : []), [loaded]);
+  const owed =
+    mode === "yours" && onSendGratitude && sticker && !onItsWay(sticker) && loaded
+      ? owedGratitude(loaded)
+      : null;
 
   const root = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLElement>(null);
@@ -199,11 +214,7 @@ export function StickerDetail({
       });
   };
 
-  const onItsWay = sticker?.openGift?.status === "sent";
-  const sendGratitude =
-    sticker && owed && onSendGratitude
-      ? () => onSendGratitude({ id: owed.giftId }, sticker, owed.giver)
-      : null;
+  const byOther = Boolean(ownerId && sticker && sticker.artist.id !== ownerId);
   const page = (
     <div
       ref={root}
@@ -260,6 +271,8 @@ export function StickerDetail({
                   urls={sticker.urls}
                   width={sticker.width}
                   height={sticker.height}
+                  foil={byOther ? "detail" : undefined}
+                  no={sticker.no}
                 />
               </div>
             </div>
@@ -300,78 +313,85 @@ export function StickerDetail({
               </h2>
               <p className="sticker-detail__ens">{placeholderEnsName(sticker)}</p>
               <p className="fine sticker-detail__fine-print">
-                <span className="sticker-detail__by">
-                  by {formatHandle(sticker.artist.handle ?? sticker.artist.name)}
-                </span>{" "}
+                {byOther ? (
+                  <ArtistChip artist={sticker.artist} />
+                ) : (
+                  <span className="sticker-detail__by">by {handleOf(sticker.artist)}</span>
+                )}{" "}
                 <span>
                   · drawn in <Duration seconds={sticker.timeUsed} />
                 </span>{" "}
                 <span>· {formatDay(sticker.createdAt)}</span>
               </p>
-              {sticker.givenTo && trail.length === 0 && (
+              {/* The Transfer Trail says it too, once it's in. */}
+              {mode === "given" && sticker.givenTo && trail.length === 0 && (
                 <p className="fine sticker-detail__fine-print">
-                  You gave it to{" "}
-                  {formatHandle(sticker.givenTo.receiver.handle ?? sticker.givenTo.receiver.name)} ·{" "}
-                  {formatDay(sticker.givenTo.receivedAt)}
+                  You gave it to {handleOf(sticker.givenTo.receiver)} ·{" "}
+                  {formatMonthDay(sticker.givenTo.receivedAt)}
                 </p>
               )}
             </section>
 
-            {mode === "yours" && !onItsWay && (sendGratitude || onGive) && (
-              <div className={`sticker-detail__acts ${sendGratitude ? "is-stacked" : ""}`}>
-                {sendGratitude ? (
-                  <>
-                    <Key
-                      tone="pink"
-                      icon={<Heart weight="fill" aria-hidden />}
-                      onClick={sendGratitude}
+            {mode === "yours" &&
+              (onItsWay(sticker) ? (
+                <div className="sticker-detail__acts">
+                  {/* Sent, it waits for its friend: nothing to give until it comes back. */}
+                  <p className="sticker-detail__on-its-way">
+                    <span className="sticker-detail__sleeve" aria-hidden="true">
+                      <img src={sticker.urls.png} alt="" draggable={false} />
+                    </span>
+                    <span>
+                      On its way
+                      {sticker.openGift?.to && ` to ${formatHandle(sticker.openGift.to)}`}
+                    </span>
+                  </p>
+                </div>
+              ) : owed && onSendGratitude ? (
+                // Gratitude comes first; Give stays within reach as label stock.
+                <div className="sticker-detail__acts sticker-detail__acts--stack">
+                  <Key
+                    tone="pink"
+                    icon={<Heart weight="fill" aria-hidden />}
+                    onClick={() => onSendGratitude(owed.gift, owed.sticker, owed.giver)}
+                  >
+                    Send gratitude
+                  </Key>
+                  {onGive && (
+                    <LabelButton
+                      size="sm"
+                      icon={<Gift size={18} aria-hidden />}
+                      onClick={() => onGive(sticker)}
                     >
-                      Send gratitude
-                    </Key>
-                    {onGive && (
-                      <LabelButton
-                        block
-                        icon={<Gift aria-hidden />}
-                        onClick={() => onGive(sticker)}
-                      >
-                        Give
-                      </LabelButton>
-                    )}
-                  </>
-                ) : (
-                  onGive && (
+                      Give
+                    </LabelButton>
+                  )}
+                </div>
+              ) : (
+                onGive && (
+                  <div className="sticker-detail__acts">
                     <Key tone="aqua" icon={<Gift aria-hidden />} onClick={() => onGive(sticker)}>
                       Give
                     </Key>
-                  )
-                )}
-              </div>
-            )}
-            {detail.state === "failed" ? (
-              <p className="fine sticker-detail__fine-print sticker-detail__problem" role="alert">
-                Where it’s been didn’t load ({detail.error.message}).{" "}
-                <button type="button" onClick={detail.retry}>
-                  Try again
-                </button>
+                  </div>
+                )
+              ))}
+            {detail.state === "failed" && (
+              <p className="fine sticker-detail__check-failed" role="alert">
+                Couldn’t load where it’s been, or whether you’ve sent gratitude for it:{" "}
+                {detail.error.detail ?? detail.error.code}{" "}
+                <QuietLink onClick={detail.retry}>Try again</QuietLink>
               </p>
-            ) : (
+            )}
+            {trail.length > 0 && ownerId && (
               // Mounted once its rows are in, so the open row is picked from them.
-              trail.length > 0 && (
-                <TransferTrail
-                  key={sticker.id}
-                  rows={trail}
-                  viewerId={viewerId}
-                  artist={sticker.artist}
-                />
-              )
+              <TransferTrail
+                key={sticker.id}
+                rows={trail}
+                viewerId={ownerId}
+                artist={sticker.artist}
+              />
             )}
-            {mode === "yours" && onItsWay && (
-              <div className="sticker-detail__on-its-way">
-                <span className="sticker-detail__sleeve" aria-hidden />
-                <span>On its way</span>
-              </div>
-            )}
-            {mode === "yours" && sticker.held && !onItsWay && (
+            {mode === "yours" && sticker.held && !onItsWay(sticker) && (
               <TakeTheOriginal key={sticker.id} sticker={sticker} />
             )}
           </>

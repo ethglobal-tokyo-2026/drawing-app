@@ -7,17 +7,24 @@ import { gift } from "../api/testFixtures";
 import type { GiftSender, GiftSendOutcome } from "./giftSender";
 import { Giving } from "./Giving";
 
+const liff = vi.hoisted(() => ({ openWindow: vi.fn() }));
+vi.mock("@line/liff", () => ({ default: liff }));
+
 let view: ReturnType<typeof renderWithApi>;
 /** Where each sticker's gift is on the server. */
 let giftStatus: Map<string, Gift["status"]>;
 let answerPicker: (outcome: GiftSendOutcome) => void;
+/** Per picker opened: whether it was LINE's full picker. */
+let fullPickers: boolean[] = [];
 const onClose = vi.fn();
 
 const sender: GiftSender = {
-  send: () =>
-    new Promise((resolve) => {
+  send: (_message, picker) => {
+    fullPickers.push(picker?.anyChat === true);
+    return new Promise((resolve) => {
       answerPicker = resolve;
-    }),
+    });
+  },
 };
 
 const token = `0x${"ab".repeat(32)}`;
@@ -57,10 +64,11 @@ const open = (stickerId: string) => {
 };
 
 const title = () => document.querySelector(".giving__title")?.textContent;
+/** Taps the button named `label`, or the one whose text includes it. */
 const tap = (label: string) =>
   act(() => {
-    const target = [...document.querySelectorAll("button")].find((b) =>
-      b.textContent?.includes(label),
+    const target = [...document.querySelectorAll("button")].find(
+      (b) => b.getAttribute("aria-label") === label || b.textContent?.includes(label),
     );
     if (!target) throw new Error(`no "${label}" on screen; the title is "${title()}"`);
     target.click();
@@ -75,6 +83,8 @@ beforeEach(() => {
   vi.useFakeTimers();
   giftStatus = new Map();
   onClose.mockReset();
+  liff.openWindow.mockReset();
+  fullPickers = [];
 });
 
 afterEach(() => {
@@ -119,5 +129,35 @@ describe("Giving", () => {
     expect(giftOf("s-cancelled")).toBe("taken_out");
     expect(title()).toBe("Give No.0147");
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  describe("Can’t find them?", () => {
+    it("packs the sticker and opens LINE's full picker from Show all my chats", async () => {
+      open("s-any-chat");
+      tap("Can’t find them?");
+      tap("Show all my chats");
+      expect(title()).toBe("In the bag");
+      await wait(1150);
+      expect(fullPickers).toEqual([true]);
+    });
+
+    it("goes back to the give sheet", () => {
+      open("s-back");
+      tap("Can’t find them?");
+      expect(title()).toBe("Can’t find them?");
+      tap("Back");
+      expect(title()).toBe("Give No.0147");
+    });
+
+    it("opens LINE's Add friends outside the app, and stays for when they come back", () => {
+      open("s-add-friends");
+      tap("Can’t find them?");
+      tap("Not friends in LINE yet?");
+      expect(liff.openWindow).toHaveBeenCalledExactlyOnceWith({
+        url: "https://line.me/R/nv/addFriends",
+        external: true,
+      });
+      expect(title()).toBe("Can’t find them?");
+    });
   });
 });

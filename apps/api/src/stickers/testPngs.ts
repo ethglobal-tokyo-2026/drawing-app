@@ -69,8 +69,8 @@ export const pngFile = (bytes: Uint8Array<ArrayBuffer>, name: string) =>
 /** The seal's multipart parts, by name; undefined leaves a part out. */
 export type SealParts = Record<keyof z.input<typeof sealForm>, string | File | undefined>;
 
-/** A seal that passes every check, on ticket use `ticketUseId`, with `overrides` over it. */
-export function sealParts(ticketUseId: number, overrides: Partial<SealParts> = {}): SealParts {
+/** A seal that passes every check, on ticket use `ticketUseId`: the form the typed client uploads. */
+export function sealUpload(ticketUseId: number) {
   const images = sealImages();
   return {
     ticketUseId: String(ticketUseId),
@@ -84,9 +84,14 @@ export function sealParts(ticketUseId: number, overrides: Partial<SealParts> = {
     rim: pngFile(images.rim, "rim"),
     flat: pngFile(images.flat, "flat"),
     timelapse: new File([testTimelapse()], "timelapse.json.gz", { type: "application/gzip" }),
-    ...overrides,
-  };
+  } satisfies z.input<typeof sealForm>;
 }
+
+/** A seal that passes every check, on ticket use `ticketUseId`, with `overrides` over it. */
+export const sealParts = (ticketUseId: number, overrides: Partial<SealParts> = {}): SealParts => ({
+  ...sealUpload(ticketUseId),
+  ...overrides,
+});
 
 export function sealFormData(parts: SealParts): FormData {
   const form = new FormData();

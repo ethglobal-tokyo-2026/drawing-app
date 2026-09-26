@@ -11,6 +11,7 @@ import { PhotoSticker } from "../../ui/PhotoSticker";
 import { QuietLink } from "../../ui/QuietLink";
 import { useMe } from "../../api/meContext";
 import { useApiQuery } from "../../api/useApiQuery";
+import { GratitudeDemoControls } from "./GratitudeDemoControls";
 import { StatCork, type CorkFigures, type StatCorkHandle } from "./StatCork";
 import { statFigures } from "./statFigures";
 
@@ -25,11 +26,13 @@ export type StatBoardHandle = StatCorkHandle;
 interface Props {
   onFlipBack: () => void;
   flipBackRef: Ref<HTMLButtonElement>;
+  /** Opens the gratitude mini-game for the newest sticker, from the developer slip; null with none. */
+  onTryGratitudeMiniGame: (() => void) | null;
   ref?: Ref<StatBoardHandle>;
 }
 
 /** Your stat board: the Sticker Board's back, with your User Stats pinned on the cork. */
-export function StatBoard({ onFlipBack, flipBackRef, ref }: Props) {
+export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref }: Props) {
   const me = useIdentity();
   const account = useMe();
   // Loaded each time the board mounts, so a turn after drawing or giving shows the new counts.
@@ -74,6 +77,7 @@ export function StatBoard({ onFlipBack, flipBackRef, ref }: Props) {
             <LineDetails />
             <PrivyLine />
             <PrivyAccount />
+            <GratitudeDemoControls onTry={onTryGratitudeMiniGame} />
           </div>
           <i className="stat-board__washi" aria-hidden />
         </section>

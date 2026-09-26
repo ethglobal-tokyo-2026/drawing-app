@@ -13,6 +13,7 @@ import { knownShape, stickerShape } from "./stickerShape";
 import { countVisit } from "./traySeen";
 import { newSlots, type TraySlot } from "./traySlots";
 import { createZipper, type Zipper } from "./zipper";
+import "../../stickers/sticker-foil.css";
 import "./sticker-tray.css";
 
 /** A sticker as the sticker tray holds it: its slot, and what it's drawn from. */
@@ -25,6 +26,8 @@ export interface TraySticker extends TraySlot {
   urls: Pick<StickerUrls, "png" | "mask">;
   /** Drawn by someone else: a received gift. */
   gift: boolean;
+  /** Shown in the open tray before, so it isn't NEW. */
+  seen: boolean;
 }
 
 interface Point {
@@ -54,8 +57,6 @@ export interface TrayBoard {
   remove: (id: string) => void;
   /** Shows where a sticker is on the board. */
   pulse: (id: string) => void;
-  /** These were on show when the tray zipped shut, so they're no longer NEW. */
-  markSeen: (ids: readonly string[]) => void;
 }
 
 /**
@@ -293,7 +294,16 @@ function windowOf(doc: Document): Window & typeof globalThis {
 
 export function createTrayEngine(
   board: HTMLElement,
-  { slots: read, api }: { slots: () => readonly TraySticker[]; api: TrayBoard },
+  {
+    slots: read,
+    api,
+    markSeen,
+  }: {
+    slots: () => readonly TraySticker[];
+    api: TrayBoard;
+    /** Stickers the open tray showed that it hadn't before, once it zips shut. */
+    markSeen: (ids: readonly string[]) => void;
+  },
 ): TrayEngine {
   const doc = board.ownerDocument;
   const win = windowOf(doc);
@@ -408,7 +418,7 @@ export function createTrayEngine(
     shown: new Set(),
     pulled: null,
   };
-  /** Seen on this visit; the board's stickers carry what was seen before. */
+  /** Shown in the open tray: the stickers' own marks, and this visit's. */
   const seen = new Set<string>();
   let model = modelOf(read());
   /** The stack's window is on show: the tray open, opening, or pulled to a crack. */
@@ -419,6 +429,7 @@ export function createTrayEngine(
   let orderedFor = 0;
 
   function modelOf(list: readonly TraySticker[]) {
+    for (const s of list) if (s.seen) seen.add(s.id);
     const slots: Slot[] = list.map((s) => ({ ...s }));
     return { slots, count: Math.max(1, ...slots.map((s) => s.sheet + 1)) };
   }
@@ -527,6 +538,23 @@ export function createTrayEngine(
     );
     // A used sticker silhouette shows no sticker, so it loads none.
     if (s.state !== "used") {
+      // Drawn by someone else, it wears the sheet's foil under its image, as StickerFoil draws it.
+      if (s.gift && s.urls.mask) {
+        const foil = decorative(
+          make(
+            "span",
+            "sticker-foil sticker-foil--sheet",
+            make(
+              "span",
+              "sticker-foil__band",
+              make("i", "sticker-foil__sheen"),
+              make("i", "sticker-foil__glint"),
+            ),
+          ),
+        );
+        foil.style.setProperty("--foil-i", String(s.no));
+        fit.append(foil);
+      }
       const img = make("img", "tray__img");
       img.src = s.urls.png;
       img.alt = "";
@@ -722,14 +750,13 @@ export function createTrayEngine(
   });
   zip.on("closed", () => {
     // What was on show in the open tray is no longer new.
-    const newlySeen = [...ui.shown].filter((id) => !seen.has(id));
+    const fresh = [...ui.shown].filter((id) => !seen.has(id));
     ui.shown.clear();
-    if (newlySeen.length > 0) {
-      newlySeen.forEach((id) => seen.add(id));
-      api.markSeen(newlySeen);
-      renderStack();
-      updateBadge();
-    }
+    if (fresh.length === 0) return;
+    for (const id of fresh) seen.add(id);
+    markSeen(fresh);
+    renderStack();
+    updateBadge();
   });
   // A hand on the pull decides for itself.
   zip.on("grab", () => {

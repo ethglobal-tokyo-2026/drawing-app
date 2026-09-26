@@ -1,4 +1,4 @@
-import { seededRandom } from "./seededRandom";
+import { seededRandom } from "../ui/seededRandom";
 
 /**
  * The big heart as six SVGs of one size, stacked body, flush, pale, gloss, ink, face. Face goes last
@@ -70,24 +70,46 @@ const HEART_MIDDLE: Point = [120, 120];
 const MINI_D =
   "M20 35.5C18.6 34.4 3.5 25.2 3.5 14.2C3.5 8.4 7.9 4 13.3 4C16.2 4 18.6 5.4 20 7.8C21.4 5.4 23.8 4 26.7 4C32.1 4 36.5 8.4 36.5 14.2C36.5 25.2 21.4 34.4 20 35.5Z";
 
-/** `count` points round the outline, spread evenly over its curves by parameter. */
+/** Steps per curve when measuring the outline as a polyline: enough that the steps hug the curves. */
+const OUTLINE_STEPS_PER_CURVE = 64;
+
+/** The outline at `u`, which runs one unit per curve from the tip, and its direction there. */
+function outlineAt(u: number) {
+  const k = Math.min(Math.floor(u), HEART_CURVES.length - 1);
+  const t = u - k;
+  const s = 1 - t;
+  const from = k === 0 ? HEART_START : HEART_CURVES[k - 1][2];
+  const [c1, c2, to] = HEART_CURVES[k];
+  const at = (j: 0 | 1) =>
+    s * s * s * from[j] + 3 * s * s * t * c1[j] + 3 * s * t * t * c2[j] + t * t * t * to[j];
+  const slope = (j: 0 | 1) =>
+    3 * (s * s * (c1[j] - from[j]) + 2 * s * t * (c2[j] - c1[j]) + t * t * (to[j] - c2[j]));
+  return { x: at(0), y: at(1), dx: slope(0), dy: slope(1) };
+}
+
+/**
+ * `count` points evenly spaced along the outline, as `getPointAtLength` spaces them. Spreading them
+ * by parameter would crowd the short curves, so the outline is measured as a polyline and walked.
+ */
 export function heartOutline(count: number): OutlinePoint[] {
+  let last = { x: HEART_START[0], y: HEART_START[1], along: 0 };
+  const steps = [last];
+  for (let i = 1; i <= HEART_CURVES.length * OUTLINE_STEPS_PER_CURVE; i++) {
+    const { x, y } = outlineAt(i / OUTLINE_STEPS_PER_CURVE);
+    last = { x, y, along: last.along + Math.hypot(x - last.x, y - last.y) };
+    steps.push(last);
+  }
   const points: OutlinePoint[] = [];
-  for (let i = 0; i < count; i++) {
-    const u = (i * HEART_CURVES.length) / count;
-    const k = Math.floor(u);
-    const t = u - k;
-    const s = 1 - t;
-    const from = k === 0 ? HEART_START : HEART_CURVES[k - 1][2];
-    const [c1, c2, to] = HEART_CURVES[k];
-    const at = (j: 0 | 1) =>
-      s * s * s * from[j] + 3 * s * s * t * c1[j] + 3 * s * t * t * c2[j] + t * t * t * to[j];
-    const slope = (j: 0 | 1) =>
-      3 * (s * s * (c1[j] - from[j]) + 2 * s * t * (c2[j] - c1[j]) + t * t * (to[j] - c2[j]));
-    const x = at(0);
-    const y = at(1);
-    const dx = slope(0);
-    const dy = slope(1);
+  let i = 0;
+  for (let n = 0; n < count; n++) {
+    const along = (n * last.along) / count;
+    while (steps[i + 1].along <= along) i++;
+    const a = steps[i];
+    const b = steps[i + 1];
+    const f = (along - a.along) / (b.along - a.along);
+    const x = a.x + (b.x - a.x) * f;
+    const y = a.y + (b.y - a.y) * f;
+    const { dx, dy } = outlineAt((i + f) / OUTLINE_STEPS_PER_CURVE);
     const length = Math.hypot(dx, dy);
     let nx = dy / length;
     let ny = -dx / length;
@@ -258,6 +280,30 @@ export const SOUL_SVG: string = `<svg ${XMLNS} viewBox="0 0 74 92" aria-hidden="
 </svg>`;
 
 export const HAZE_WAVE_SVG: string = `<svg ${XMLNS} viewBox="0 0 390 40" preserveAspectRatio="none" aria-hidden="true" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="2.2" stroke-linecap="round"><path d="M-10 22c26-14 52 14 78 0s52-14 78 0 52 14 78 0 52-14 78 0 52 14 78 0 52-14 78 0"/></svg>`;
+
+/** Phosphor's hand-swipe-right (bold): the stroke tip. */
+export const HAND_SWIPE_SVG: string = `<svg ${XMLNS} viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M220,148v36c0,13.85-1.63,26.52-4.58,35.68a12,12,0,0,1-22.84-7.36c2.14-6.65,3.42-17.24,3.42-28.32V148a8,8,0,0,0-16,0v4a12,12,0,0,1-24,0V132a8,8,0,0,0-16,0v12a12,12,0,0,1-24,0V76a8,8,0,0,0-16,0V184a12,12,0,0,1-22.18,6.34l-18.68-30-.21-.34A8,8,0,0,0,45,167.92L70.27,209.8a12,12,0,0,1-20.56,12.39l-25.31-42-.12-.2A32,32,0,0,1,76,142.83V76a32,32,0,0,1,64,0v25a32,32,0,0,1,36.78,17A32,32,0,0,1,220,148ZM252.48,47.51l-32-32a12,12,0,0,0-17,17L215,44H172a12,12,0,0,0,0,24h43L203.51,79.51a12,12,0,1,0,17,17l32-32A12,12,0,0,0,252.48,47.51Z"/></svg>`;
+
+/** Phosphor's vibrate (fill): the shake tip and the shake marks. */
+export const VIBRATE_SVG: string = `<svg ${XMLNS} viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="M184,56V200a24,24,0,0,1-24,24H96a24,24,0,0,1-24-24V56A24,24,0,0,1,96,32h64A24,24,0,0,1,184,56Zm24,24a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,208,80Zm32,16a8,8,0,0,0-8,8v48a8,8,0,0,0,16,0V104A8,8,0,0,0,240,96ZM48,80a8,8,0,0,0-8,8v80a8,8,0,0,0,16,0V88A8,8,0,0,0,48,80ZM16,96a8,8,0,0,0-8,8v48a8,8,0,0,0,16,0V104A8,8,0,0,0,16,96Z"/></svg>`;
+
+/** A dent where the loose heart hit an edge of the screen, drawn for the top edge. */
+export const DENT_SVG: string = `<svg ${XMLNS} viewBox="0 0 84 22" aria-hidden="true"><path d="M0 0Q42 30 84 0Z" fill="#C9C4D6"/><path d="M4 0Q42 22 80 0" fill="rgba(28,24,36,.10)"/><path d="M0 0Q42 30 84 0" fill="none" stroke="rgba(28,24,36,.55)" stroke-width="1.6"/><path d="M7 1.5Q42 23 77 1.5" fill="none" stroke="rgba(255,255,255,.95)" stroke-width="1.3"/><path d="M26 12L19 22M58 12L65 22M42 15.5L42 24" stroke="rgba(28,24,36,.16)" stroke-width="1"/></svg>`;
+
+/** Speed lines for the stroke's ground, drawn along x; the ground turns them to the stroke's axis. */
+export function speedFieldSvg(seed: number): string {
+  const random = seededRandom(seed);
+  let d = "";
+  for (let i = 0; i < 84; i++) {
+    const y = random() * 1100;
+    const x = random() * 1100 - 250;
+    const length = 140 + random() * 460;
+    const half = (0.8 + random() * 2.8) / 2;
+    const mid = (x + length / 2).toFixed(0);
+    d += `M${x.toFixed(0)} ${y.toFixed(1)}L${mid} ${(y - half).toFixed(1)}L${(x + length).toFixed(0)} ${y.toFixed(1)}L${mid} ${(y + half).toFixed(1)}Z`;
+  }
+  return `<svg ${XMLNS} viewBox="0 0 1100 1100" aria-hidden="true"><path d="${d}" fill="${INK}"/></svg>`;
+}
 
 /** Manga focus lines (集中線) closing in on (cx, cy), past the corners of a width × height screen. */
 export function focusLinesSvg(

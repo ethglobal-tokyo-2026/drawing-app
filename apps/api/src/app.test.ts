@@ -1,10 +1,16 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { users } from "@drawing-app/db";
 import { insertUser } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { createServer, STICKER_IMAGES_PATH } from "./app.ts";
 import { errorBodySchema, validate } from "./errors.ts";
+import { keccak256 } from "./keccak256.ts";
+import { createDiskImageStore } from "./services/imageStore.ts";
 import { setSessionCookie, type AppEnv } from "./session.ts";
 import { createTestApp, type TestApp } from "./testing/createTestApp.ts";
 
@@ -116,5 +122,34 @@ describe("errors", () => {
     const response = await test.app.request("/api/probe/failure", { headers: await signedIn() });
     expect(await refusal(response)).toEqual({ status: 500, error: "internal_error" });
     expect(log).toHaveBeenCalledWith(expect.stringContaining("/api/probe/failure"), probeFailure);
+  });
+});
+
+describe("sticker images", () => {
+  let imageDir: string;
+  beforeEach(() => {
+    imageDir = mkdtempSync(join(tmpdir(), "drawing-app-images-"));
+  });
+  afterEach(() => {
+    rmSync(imageDir, { recursive: true });
+  });
+
+  const get = (path: string) => createServer(test.deps, imageDir).request(path);
+
+  it("are served where their URLs point, without a session, cached for good", async () => {
+    const png = new Uint8Array([1, 2, 3]);
+    const store = createDiskImageStore(imageDir, `https://sticker.test${STICKER_IMAGES_PATH}`);
+    const contentHash = keccak256(png);
+    await store.save(contentHash, { png, mask: png, spec: png, rim: png, flat: png });
+    const response = await get(new URL(store.urls(contentHash).png).pathname);
+    expect(response.status).toBe(200);
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(png);
+    expect(response.headers.get("cache-control")).toContain("immutable");
+  });
+
+  it("answer a name with no image with 404, not the session check, and uncached", async () => {
+    const response = await get(`${STICKER_IMAGES_PATH}/${keccak256(new Uint8Array([9]))}.png`);
+    expect(response.headers.get("cache-control")).toBeNull();
+    expect(await refusal(response)).toMatchObject({ status: 404, error: "image_not_found" });
   });
 });

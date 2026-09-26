@@ -20,4 +20,13 @@ describe("heartOutline", () => {
       expect(gap).toBeLessThan(12);
     }
   });
+
+  it("spaces its points evenly along the outline", () => {
+    const points = heartOutline(72);
+    const gaps = points.map((p, i) => {
+      const next = points[(i + 1) % points.length];
+      return Math.hypot(next.x - p.x, next.y - p.y);
+    });
+    expect(Math.max(...gaps)).toBeLessThan(Math.min(...gaps) * 1.1);
+  });
 });

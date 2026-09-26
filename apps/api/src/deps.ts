@@ -109,7 +109,7 @@ export interface GiftChain {
 }
 
 export interface SmartWallets {
-  /** The person's smart wallet on World Chain, lowercase; null while they have none. */
+  /** The person's smart wallet on Ethereum Sepolia, lowercase; null while they have none. */
   addressFor: (userId: string) => Promise<string | null>;
 }
 

@@ -2,6 +2,7 @@ import {
   ArrowUUpLeft,
   CaretRight,
   PaperPlaneTilt,
+  Question,
   Sticker as StickerGlyph,
   X,
 } from "@phosphor-icons/react";
@@ -18,10 +19,11 @@ import { Sheet } from "../ui/Sheet";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import { giftMessageHeroUrl } from "./config";
+import { CantFindThem } from "./CantFindThem";
 import { GiftBag } from "./GiftBag";
 import type { GiftSender } from "./giftSender";
 import type { GiveFlowState } from "./giveFlow";
+import heroPng from "./gift-message-hero.png";
 import { createApiGiftBackend } from "./giftBackend";
 import { useGiveFlow } from "./useGiveFlow";
 import "./Giving.css";
@@ -58,6 +60,9 @@ type Screen = "sheet" | "bag" | "sent";
 const screenOf = (state: GiveFlowState): Screen =>
   state.step === "sheet" ? "sheet" : state.step === "sent" ? "sent" : "bag";
 
+/** What the sheet shows: a screen, or "Can’t find them?" in the give sheet's place. */
+type View = Screen | "cantFind";
+
 /** Giving a sticker through a LINE chat: the give sheet, the gift bag, and the seal on send. */
 export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) {
   const reduced = useReducedMotion();
@@ -70,12 +75,15 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
       api,
       fromHandle,
       liffId,
-      heroUrl: giftMessageHeroUrl,
+      // The sealed bag, never the sticker; the gift message drops it where the app isn't on HTTPS.
+      heroUrl: new URL(heroPng, location.origin).href,
     }),
     pickerDelayMs: PICKER_DELAY[motion],
     takeOutMs: TAKE_OUT[motion],
   }));
   const screen = screenOf(state);
+  const [cantFind, setCantFind] = useState(false);
+  const view: View = screen === "sheet" && cantFind ? "cantFind" : screen;
   const busy = state.step === "picking" || state.step === "takingOut";
 
   const close = () => {
@@ -83,24 +91,26 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
   };
 
   const root = useRef<HTMLDivElement>(null);
-  useFocusTrap(root, { onEscape: close });
+  useFocusTrap(root, { onEscape: () => (view === "cantFind" ? setCantFind(false) : close()) });
   // While LINE's picker is up it can't close, so Back leaves it where it is.
   useBackToClose(true, () => {
     close();
     return !busy;
   });
+  // Back on "Can’t find them?" returns to the give sheet, as its back button does.
+  useBackToClose(view === "cantFind", () => setCantFind(false));
 
-  // Each new screen slides in, except the first, which comes up with the sheet.
-  const [shownScreen, setShownScreen] = useState(screen);
+  // Each new view slides in, except the first, which comes up with the sheet.
+  const [shownView, setShownView] = useState(view);
   const [slideIn, setSlideIn] = useState(false);
-  if (shownScreen !== screen) {
-    setShownScreen(screen);
+  if (shownView !== view) {
+    setShownView(view);
     setSlideIn(true);
   }
   const body = useRef<HTMLDivElement>(null);
   useEffect(() => {
     body.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus();
-  }, [screen]);
+  }, [view]);
 
   const [sealed, setSealed] = useState(false);
   useEffect(() => {
@@ -121,7 +131,18 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
 
   let title: string;
   let content: ReactNode;
-  if (state.step === "sheet") {
+  if (view === "cantFind") {
+    title = "Can’t find them?";
+    content = (
+      <CantFindThem
+        onBack={() => setCantFind(false)}
+        onShowAllChats={() => {
+          setCantFind(false);
+          flow?.chooseLineChat({ anyChat: true });
+        }}
+      />
+    );
+  } else if (state.step === "sheet") {
     title = `Give ${formatNo(sticker.no)}`;
     content = (
       <>
@@ -133,7 +154,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
         </header>
         <button
           type="button"
-          className="giving__row"
+          className="giving__row giving__row--aqua"
           data-press
           data-autofocus
           onClick={() => flow?.chooseLineChat()}
@@ -147,6 +168,9 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
           </span>
           <CaretRight className="giving__row-chev" size={20} />
         </button>
+        <QuietLink className="giving__cant-find" onClick={() => setCantFind(true)}>
+          <Question /> Can’t find them?
+        </QuietLink>
         <p className="giving__leaves">
           <StickerGlyph size={16} /> It comes off your board and into a gift bag.
         </p>
@@ -159,7 +183,8 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
         {bag(sealed ? "sealed" : "open", state.sentAt)}
         <h2 className="giving__title">{title}</h2>
         <p className="giving__sub">
-          It’s in your LINE chat now. Its outline stays on your board, where it sat.
+          It’s in your LINE chat now, and the gift message opens once. When they accept it, you’ll
+          see who did.
         </p>
         {state.recordError && (
           <p className="giving__problem" role="alert">
@@ -242,7 +267,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
       </div>
       <div className="giving__scrim" onClick={close} />
       <Sheet label={title} onClose={close}>
-        <div key={screen} ref={body} className={`giving__body ${slideIn ? "is-in" : ""}`}>
+        <div key={view} ref={body} className={`giving__body ${slideIn ? "is-in" : ""}`}>
           {content}
         </div>
       </Sheet>

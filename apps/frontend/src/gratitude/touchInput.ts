@@ -25,6 +25,12 @@ export interface TouchHandlers {
   onHeartDown: (t: number, x: number, y: number) => void;
   /** A finger lifted off the heart without dragging or holding: the first tap. */
   onHeartTap: (t: number, x: number, y: number) => void;
+  /** A finger dragged past the slop, anywhere, with no stroke under way: where and when it went down. */
+  onStrokeStart: (t: number, x: number, y: number) => void;
+  /** The stroke finger moved, from the move that started the stroke on. */
+  onStrokeMove: (t: number, x: number, y: number) => void;
+  /** The stroke finger lifted. */
+  onStrokeEnd: () => void;
 }
 
 export interface TouchOptions {
@@ -42,38 +48,61 @@ interface Grab {
   x: number;
   y: number;
   t: number;
+  onHeart: boolean;
   dragged: boolean;
 }
 
-/** Reports touches on the heart until the returned function is called. Every finger counts. */
+/**
+ * Reports touches until the returned function is called. Every finger on the heart counts; one
+ * finger at a time strokes, the first to drag, wherever it went down.
+ */
 export function listenForTouches(
   stage: HTMLElement,
   options: TouchOptions,
   handlers: TouchHandlers,
 ): () => void {
   const grabs = new Map<number, Grab>();
+  let strokeFinger: number | null = null;
 
   const onDown = (e: PointerEvent) => {
     if (e.button > 0) return;
     const { x, y } = options.toStage(e);
-    if (!isOnHeart(x, y, options.heartArea())) return;
+    const onHeart = isOnHeart(x, y, options.heartArea());
+    grabs.set(e.pointerId, { x, y, t: e.timeStamp, onHeart, dragged: false });
+    if (!onHeart) return;
     e.preventDefault();
-    grabs.set(e.pointerId, { x, y, t: e.timeStamp, dragged: false });
     handlers.onHeartDown(e.timeStamp, x, y);
   };
   const onMove = (e: PointerEvent) => {
     const grab = grabs.get(e.pointerId);
-    if (!grab || grab.dragged) return;
+    if (!grab) return;
     const { x, y } = options.toStage(e);
-    if (Math.hypot(x - grab.x, y - grab.y) >= options.tapSlopPx) grab.dragged = true;
+    if (!grab.dragged && Math.hypot(x - grab.x, y - grab.y) >= options.tapSlopPx) {
+      grab.dragged = true;
+      if (strokeFinger === null) {
+        strokeFinger = e.pointerId;
+        handlers.onStrokeStart(grab.t, grab.x, grab.y);
+      }
+    }
+    if (e.pointerId === strokeFinger) handlers.onStrokeMove(e.timeStamp, x, y);
   };
-  const onUp = (e: PointerEvent) => {
+  const lift = (e: PointerEvent) => {
     const grab = grabs.get(e.pointerId);
     grabs.delete(e.pointerId);
-    if (!grab || grab.dragged || e.timeStamp - grab.t >= options.tapHoldMs) return;
+    if (e.pointerId === strokeFinger) {
+      strokeFinger = null;
+      handlers.onStrokeEnd();
+    }
+    return grab;
+  };
+  const onUp = (e: PointerEvent) => {
+    const grab = lift(e);
+    if (!grab?.onHeart || grab.dragged || e.timeStamp - grab.t >= options.tapHoldMs) return;
     handlers.onHeartTap(e.timeStamp, grab.x, grab.y);
   };
-  const onCancel = (e: PointerEvent) => grabs.delete(e.pointerId);
+  const onCancel = (e: PointerEvent) => {
+    lift(e);
+  };
 
   stage.addEventListener("pointerdown", onDown);
   stage.addEventListener("pointermove", onMove);

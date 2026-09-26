@@ -1,7 +1,7 @@
 import { ArrowsLeftRight, ChatCircleDots, Heart, PaperPlaneTilt, X } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { PersonView } from "../api/views";
-import type { BoardSticker } from "../sticker-board/boardSticker";
+import type { BoardStickerView } from "../sticker-board/boardSticker";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 // Giving.css goes first, even ahead of the give-sheet.css StickerPicker brings, so the sheet's
@@ -45,7 +45,7 @@ const KINDS: { id: OfferKind; title: string; note: (holder: string) => string; i
 const GRATITUDE_AMOUNTS = [100, 250, 500];
 
 interface Props {
-  sticker: BoardSticker;
+  sticker: BoardStickerView;
   /** Whose board it's on: they hold it and answer the offer. */
   holder: PersonView;
   onClose: () => void;

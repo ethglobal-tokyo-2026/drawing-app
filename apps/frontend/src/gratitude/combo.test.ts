@@ -124,10 +124,48 @@ describe("createGratitudeCombo", () => {
   it("ends at once, with its result, when the page goes hidden", () => {
     const combo = createGratitudeCombo();
     [0, 200, 400].forEach((t) => combo.tapHeart(t));
-    expect(endOf(combo.endCombo(500))).toMatchObject({
+    expect(endOf(combo.endCombo(500, "hidden"))).toMatchObject({
       caught: true,
+      reason: "hidden",
       record: { hits: 3, durationMs: 500 },
     });
+  });
+
+  it("says why it ended: sent, empty, cap, or the caller's hidden or closed", () => {
+    const sent = createGratitudeCombo();
+    sent.tapHeart(5000);
+    expect(endOf(sent.advanceTo(5000 + GAME_CONFIG.catchWindowMs))).toMatchObject({
+      reason: "sent",
+      startedAt: 5000,
+    });
+    expect(endOf(play(5).events)?.reason).toBe("empty");
+    const slowDrain: GameConfig = { ...GAME_CONFIG, drainStart: 0.001 };
+    expect(endOf(play(10, { config: slowDrain }).events)?.reason).toBe("cap");
+    const closed = createGratitudeCombo();
+    closed.tapHeart(0);
+    expect(endOf(closed.endCombo(400, "closed"))).toMatchObject({
+      reason: "closed",
+      caught: false,
+    });
+  });
+
+  it("keeps a rule's reason when the rule ended it before the caller did", () => {
+    const combo = createGratitudeCombo();
+    combo.tapHeart(0);
+    expect(endOf(combo.endCombo(GAME_CONFIG.catchWindowMs + 500, "hidden"))).toMatchObject({
+      reason: "sent",
+      record: { durationMs: GAME_CONFIG.catchWindowMs },
+    });
+  });
+
+  it("gives each hit and rate-limited touch its time in the record", () => {
+    const combo = createGratitudeCombo();
+    const events = [1000, 1100, 1105, 1110, 1115, 1120, 1125].flatMap((t) => combo.tapHeart(t));
+    const timed = events.flatMap((e) => (e.kind === "hit" || e.kind === "limited" ? [e] : []));
+    expect(timed.some((e) => e.kind === "limited")).toBe(true);
+    const end = endOf(combo.endCombo(1200, "closed"));
+    expect(timed.filter((e) => e.kind === "hit").map((e) => e.at)).toEqual(end?.record.hitTimes);
+    expect(timed.map((e) => e.at)).toEqual([0, 100, 105, 110, 115, 120, 125]);
   });
 
   it("climbs the multiplier at hits and at its rise rate, to its max, and sinks it at its fall rate", () => {
@@ -162,13 +200,13 @@ describe("createGratitudeCombo", () => {
     const endedInFreeze = createGratitudeCombo();
     endedInFreeze.tapHeart(0);
     endedInFreeze.tapHeart(300);
-    endedInFreeze.endCombo(300 + tierUpFreezeMs / 2);
+    endedInFreeze.endCombo(300 + tierUpFreezeMs / 2, "closed");
     expect(endedInFreeze.view).toMatchObject({ phase: "ended", frozen: false });
   });
 
   it("ends without a record when closed before the first tap", () => {
     const combo = createGratitudeCombo();
-    expect(combo.endCombo(100)).toEqual([]);
+    expect(combo.endCombo(100, "closed")).toEqual([]);
     expect(combo.tapHeart(200)).toEqual([]);
   });
 
@@ -201,6 +239,76 @@ describe("replayGratitudeCombo", () => {
     for (const seed of [1, 2, 3, 4, 5]) {
       const { record } = play(4 + seed * 2, { jitter: 0.4, seed });
       expect(replayGratitudeCombo(record), `seed ${seed}`).toEqual(record);
+    }
+  });
+});
+
+/** Unlocks `method` at t = 0, then feeds it `rate` times a second until the combo ends. */
+function playMethod(method: "stroke" | "shake", rate: number) {
+  const combo = createGratitudeCombo();
+  const count = method === "stroke" ? combo.countStrokePass : combo.countShakeReversal;
+  const events = combo.commitTo(method, 0);
+  let next = 1000 / rate;
+  for (let t = 0; t < 20_000; t += 16) {
+    for (; next <= t; next += 1000 / rate) events.push(...count(next));
+    events.push(...combo.advanceTo(t));
+    const end = endOf(events);
+    if (end) return { record: end.record, events };
+  }
+  throw new Error(`A ${method} combo at ${rate} a second never ended`);
+}
+
+describe("strokes and shakes", () => {
+  it("starts the bar at once when stroke unlocks before any tap", () => {
+    const combo = createGratitudeCombo();
+    expect(combo.commitTo("stroke", 0).map((e) => e.kind)).toEqual(["caught", "hit", "tier"]);
+    expect(combo.view).toMatchObject({ phase: "running", method: "stroke", barFill: 1 });
+  });
+
+  it("brings 照れ on the 5th stroke or shake", () => {
+    for (const method of ["stroke", "shake"] as const) {
+      for (const rate of [5, 8]) {
+        let hits = 0;
+        for (const e of playMethod(method, rate).events) {
+          if (e.kind === "hit") hits++;
+          if (e.kind === "tier" && e.tier === 1) expect(hits, `${method} at ${rate}`).toBe(5);
+        }
+      }
+    }
+  });
+
+  it("ignores taps once committed to stroke, and strokes before it", () => {
+    const combo = createGratitudeCombo();
+    expect(combo.countStrokePass(0)).toEqual([]);
+    combo.tapHeart(0);
+    combo.tapHeart(200);
+    combo.commitTo("stroke", 400);
+    expect(combo.tapHeart(500)).toEqual([]);
+    expect(combo.view.hits).toBe(3);
+  });
+
+  it("counts no more passes a second than the stroke limit allows", () => {
+    const { record } = playMethod("stroke", 40);
+    for (const start of record.hitTimes) {
+      const inOneSecond = record.hitTimes.filter((t) => t >= start && t < start + 1000).length;
+      expect(inOneSecond).toBeLessThanOrEqual(GAME_CONFIG.passesPerSecond + GAME_CONFIG.burst);
+    }
+  });
+
+  it("replays combos that started in stroke or shake, or switched to one from taps", () => {
+    const combo = createGratitudeCombo();
+    const events = [0, 180, 360, 540].flatMap((t) => combo.tapHeart(t));
+    events.push(...combo.commitTo("stroke", 700));
+    for (let t = 820; !endOf(events) && t < 20_000; t += 125) {
+      events.push(...combo.countStrokePass(t), ...combo.advanceTo(t));
+    }
+    const switched = endOf(events)?.record;
+    expect(switched).toMatchObject({ method: "stroke", switchedAtHit: 4 });
+    if (!switched) throw new Error("The combo never ended");
+    const records = [switched, playMethod("stroke", 8).record, playMethod("shake", 8).record];
+    for (const record of records) {
+      const label = `${record.method} from hit ${record.switchedAtHit}`;
+      expect(replayGratitudeCombo(record), label).toEqual(record);
     }
   });
 });

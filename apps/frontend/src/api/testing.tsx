@@ -1,4 +1,4 @@
-import type { Me, Person, Tickets } from "@drawing-app/api/client";
+import type { Gratitude, Me, Person, RecordGratitude, Tickets } from "@drawing-app/api/client";
 import { act, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { ApiError, type ApiClient } from "./apiClient";
@@ -12,7 +12,7 @@ declare global {
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 /** The board's owner in tests: you. */
-const TEST_OWNER: Person = {
+export const TEST_OWNER: Person = {
   id: "me",
   handle: "you",
   lineDisplayName: "You",
@@ -38,6 +38,45 @@ export const FRESH_TICKETS: Tickets = {
   usedToday: [],
 };
 
+/** A one-tap combo's POST /api/gratitude body; `overrides` replace any of its fields. */
+export const recordGratitudeBody = (overrides: Partial<RecordGratitude> = {}): RecordGratitude => ({
+  idempotencyKey: "0f6c1a52-3d4b-4e8a-9c21-5b7d8e9f0a13",
+  giftId: "g1",
+  method: "tap",
+  hits: 1,
+  total: 1,
+  peakMult: 1,
+  peakTier: 0,
+  gameConfigVersion: "test",
+  replay: {
+    v: 1,
+    seed: 1,
+    intensity: 0.7,
+    stage: [390, 741],
+    durationMs: 0,
+    endReason: "sent",
+    switchedAtHit: null,
+    hits: [0, 5000, 5000, 1],
+    strokes: [],
+    shakes: [],
+  },
+  ...overrides,
+});
+
+/** The gratitude the server records from a combo, with no Original Artist Gratitude Share. */
+export const gratitudeOf = (body: RecordGratitude): Gratitude => ({
+  giftId: body.giftId,
+  method: body.method,
+  hits: body.hits,
+  total: body.total,
+  peakMult: body.peakMult,
+  peakTier: body.peakTier,
+  originalArtistGratitudeShare: 0,
+  gameConfigVersion: body.gameConfigVersion,
+  recordedAt: new Date(0).toISOString(),
+  seenByGiverAt: null,
+});
+
 /** A method a test didn't give: it fails, saying which. */
 const unanswered = (method: string) => () =>
   Promise.reject(
@@ -45,8 +84,9 @@ const unanswered = (method: string) => () =>
   );
 
 /**
- * A client with nothing on the board, no gifts, and fresh tickets; `overrides` replace any of its
- * methods. Methods that change something answer only when a test gives them.
+ * A client with nothing on the board, no gifts, and fresh tickets, that records any gratitude;
+ * `overrides` replace any of its methods. Other methods that change something answer only when a
+ * test gives them.
  */
 export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
   return {
@@ -69,7 +109,7 @@ export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
     pendingGifts: () => Promise.resolve({ gifts: [] }),
     previewGift: unanswered("previewGift"),
     receiveGift: unanswered("receiveGift"),
-    recordGratitude: unanswered("recordGratitude"),
+    recordGratitude: (body) => Promise.resolve(gratitudeOf(body)),
     unseenGratitude: () => Promise.resolve({ unseen: [] }),
     gratitude: unanswered("gratitude"),
     markGratitudeSeen: unanswered("markGratitudeSeen"),

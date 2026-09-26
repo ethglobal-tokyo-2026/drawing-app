@@ -1,37 +1,58 @@
 import { describe, expect, it } from "vitest";
 import { boardSticker, people, sticker } from "../api/testFixtures";
+import { toApiPlacement, toPerson, toRecordPlacement } from "../api/views";
 import { placeUnplaced, toBoardSticker } from "./boardSticker";
 
-const spot = { onBoard: true, x: 0.3, y: 0.4, scale: 0.25, rotation: -6, z: 4 };
-
-describe("board stickers", () => {
-  it("maps the API's board sticker to what the board draws", () => {
-    const b = toBoardSticker(
+describe("toBoardSticker", () => {
+  it("draws the API's board sticker with the app's names and milliseconds", () => {
+    const placement = { onBoard: false, x: 0.3, y: 0.6, scale: 0.25, rotation: -8, z: 4 };
+    const view = toBoardSticker(
       boardSticker({
-        sticker: sticker({ id: "s1", number: 147, sealedAt: "2026-09-20T03:00:00.000Z" }),
-        placement: spot,
+        sticker: sticker({ number: 147, artist: people.ken, outline: "" }),
+        placement,
         held: false,
-        givenTo: { receiver: people.bob, receivedAt: "2026-09-23T03:00:00.000Z" },
+        givenTo: { receiver: people.bob, receivedAt: "2026-09-23T11:52:00.000Z" },
+        seenAt: "2026-09-23T12:00:00.000Z",
+        arrivedAt: "2026-09-22T09:00:00.000Z",
       }),
     );
-    expect(b).toMatchObject({
-      id: "s1",
-      no: 147,
-      createdAt: Date.UTC(2026, 8, 20, 3),
-      placement: { on: true, x: 0.3, y: 0.4, s: 0.25, r: -6, z: 4 },
-      held: false,
-      givenTo: { receiver: { handle: "bob" }, receivedAt: Date.UTC(2026, 8, 23, 3) },
+    expect(view.no).toBe(147);
+    expect(view.placement).toEqual({ on: false, x: 0.3, y: 0.6, s: 0.25, r: -8, z: 4 });
+    expect(view.placement && toApiPlacement(view.placement)).toEqual(placement);
+    expect(view.artist).toEqual(toPerson(people.ken));
+    expect(view.givenTo).toEqual({
+      receiver: toPerson(people.bob),
+      receivedAt: Date.UTC(2026, 8, 23, 11, 52),
     });
+    expect([view.seenAt, view.arrivedAt]).toEqual([
+      Date.UTC(2026, 8, 23, 12),
+      Date.UTC(2026, 8, 22, 9),
+    ]);
+    expect(view).not.toHaveProperty("outline");
+  });
+});
+
+describe("placeUnplaced", () => {
+  it("gives each unplaced sticker its own free spot on top, once, and lists it for saving", () => {
+    const at = { onBoard: true, x: 0.5, y: 0.5, scale: 0.3, rotation: 0, z: 3 };
+    const list = [boardSticker({ placement: at }), boardSticker(), boardSticker()].map(
+      toBoardSticker,
+    );
+    const { stickers, placed } = placeUnplaced(list);
+    expect(stickers[0].placement).toEqual(toRecordPlacement(at));
+    expect(placed.map((s) => s.id)).toEqual([list[1].id, list[2].id]);
+    const [a, b] = placed.map((s) => s.placement);
+    expect([a.x, a.y]).not.toEqual([b.x, b.y]);
+    expect(a.on && b.on).toBe(true);
+    expect(Math.min(a.z, b.z)).toBeGreaterThan(at.z);
+    expect(placeUnplaced(stickers).placed).toEqual([]);
   });
 
-  it("gives unplaced stickers a spot on top, once, and keeps the placed ones where they are", () => {
-    const placed = toBoardSticker(boardSticker({ placement: spot }));
-    const loose = toBoardSticker(boardSticker());
-    const kept: string[] = [];
-    const [a, b] = placeUnplaced([placed, loose], (s) => kept.push(s.id));
-    expect(a?.placement).toEqual(placed.placement);
-    expect(b?.placement.on).toBe(true);
-    expect(b?.placement.z).toBeGreaterThan(spot.z);
-    expect(kept).toEqual([loose.id]);
+  it("keeps the spots the board already gave its stickers over a reload's", () => {
+    const [moved] = placeUnplaced([toBoardSticker(boardSticker())]).stickers;
+    const nudged = { ...moved, placement: { ...moved.placement, x: 0.2, r: 12 } };
+    const { stickers, placed } = placeUnplaced([{ ...moved, placement: null }], [nudged]);
+    expect(stickers[0].placement).toEqual(nudged.placement);
+    expect(placed).toEqual([]);
   });
 });

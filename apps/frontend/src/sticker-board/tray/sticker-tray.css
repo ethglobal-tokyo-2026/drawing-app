@@ -483,6 +483,7 @@
 
 /* A used sticker silhouette shows no sticker. */
 .tray__slot[data-state="peeling"] .tray__img,
+.tray__slot[data-state="peeling"] .sticker-foil,
 .tray__slot[data-state="used"] .tray__img {
   opacity: 0;
 }
