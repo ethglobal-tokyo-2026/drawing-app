@@ -9,6 +9,10 @@ import App from "./app/App.tsx";
 import { PrivySignIn } from "./identity/PrivySignIn";
 import { initLine } from "./line/liff";
 import { LineGate } from "./line/LineGate";
+import {
+  readPerformanceRecorderSetting,
+  startPerformanceRecorder,
+} from "./performance/performanceRecorder";
 import { installLight } from "./stickers/light";
 import { installPress } from "./ui/press";
 import { ToastProvider } from "./ui/ToastProvider";
@@ -18,6 +22,8 @@ const ICON_DEFAULTS: IconProps = { weight: "bold" };
 
 // LIFF starts first, since it reads the address bar as it starts; LineGate holds the app until it settles.
 void initLine();
+// From boot while it's on, so the app's own start is in the recording.
+if (readPerformanceRecorderSetting()) startPerformanceRecorder();
 installPress();
 installLight(document.documentElement);
 
