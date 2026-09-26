@@ -7,10 +7,12 @@ export const giving = {
     /** The gift tag's small label over the recipient's handle, for a gift given to someone chosen in the app ("For @bob"); no screen names a recipient yet, so it isn't shown */
     for: { en: "For", ja: "贈り先" },
   },
+  /** Giving's "Not sent yet" screen: the reason in “couldn’t be packed” when the chain didn't confirm the sticker's move into the gift bag in time; Send in LINE checks again */
   depositUnconfirmed: {
     en: "The Sticker transfer could not be confirmed. Tap Send in LINE to check the gift again.",
     ja: "シールの転送を確認できませんでした。LINEで送るをタップしてギフトの状態を再確認してください。",
   },
+  /** Giving's "Not sent yet" screen: the reason in “couldn’t be taken out” when the chain didn't confirm the sticker left the gift bag in time */
   takeOutUnconfirmed: {
     en: "Taking out the Sticker could not be confirmed. Check the gift in the app before trying again.",
     ja: "シールを取り出せたか確認できませんでした。再試行する前にアプリでギフトの状態を確認してください。",

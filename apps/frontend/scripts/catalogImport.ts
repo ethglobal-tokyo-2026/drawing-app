@@ -248,7 +248,7 @@ export const importFile = (
   for (const { section, change, text = section.text } of rewrites) {
     const { added, changed, removed, commented } = change;
     report.log(
-      `Writing ${path.relative(process.cwd(), section.file)}: ${added.length} added, ${changed.length} changed, ${removed.length} removed, ${commented.length} comments set`,
+      `Writing ${path.relative(process.cwd(), section.file)}: ${added.length} added, ${changed.length} changed, ${removed.length} removed, ${count(commented.length, "comment")} set`,
     );
     for (const key of added) report.log(`  added    ${key}`);
     for (const key of changed) report.log(`  changed  ${key}`);

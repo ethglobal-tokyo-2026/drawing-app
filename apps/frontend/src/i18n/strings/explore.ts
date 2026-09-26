@@ -109,8 +109,8 @@ export const explore = {
     explore: { en: "Couldn’t load Explore", ja: "「さがす」を読み込めませんでした" },
     /** Explore tab, when a search fails to load: the heading of the error, over the reason and a Try again button */
     searchResults: { en: "Couldn’t load search results", ja: "検索結果を読み込めませんでした" },
-    /** A name's link that nobody holds, or that didn't load. */
-    ensName: { en: "Couldn’t load {{name}}" },
+    /** Explore, opened from a croquis.eth name's link: the heading of the error when nobody holds the name or their board didn't load; {{name}} is the whole name, such as alice.croquis.eth */
+    ensName: { en: "Couldn’t load {{name}}", ja: "{{name}}を読み込めませんでした" },
     /** Explore tab, when it or a search fails to load: the small button under the error's reason that asks again */
     tryAgain: { en: "Try again", ja: "もう一度" },
   },

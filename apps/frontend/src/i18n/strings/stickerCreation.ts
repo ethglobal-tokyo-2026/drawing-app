@@ -53,7 +53,7 @@ export const stickerCreation = {
       pickedUp: { en: "Picked up where you left off", ja: "続きから再開しました" },
       /** Drawing screen, top left: the white label under the timer when a reload couldn't bring back your drawing, so a fresh sheet uses the same ticket, until the first stroke; also announced; the label never wraps by itself */
       ticketCarriesOver: {
-        en: "Couldn’t pick up your drawing, so its ticket carries over",
+        en: "Couldn’t pick up your drawing,\nso its ticket carries over",
         ja: "続きから再開できなかったので、\nチケットはそのまま使えます",
       },
     },

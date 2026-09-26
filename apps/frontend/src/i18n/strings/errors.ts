@@ -20,6 +20,7 @@ export const errors = {
     en: "This gift was already opened.",
     ja: "このギフトは、すでにひらかれています。",
   },
+  /** Not shown in the app: the ENS gateway's answer to an outside ENS app looking up a croquis.eth name, when this server has no ENS set up */
   ens_not_configured: {
     en: "Names aren't set up on this server yet.",
     ja: "このサーバーでは、まだ名前が使えません。",
@@ -178,10 +179,12 @@ export const errors = {
     en: "This sticker was sealed without its timelapse.",
     ja: "このシールは、タイムラプスなしで仕上げられました。",
   },
+  /** Not shown in the app: the ENS gateway's answer to an outside ENS app that asks through a resolver other than croquis.eth's */
   unknown_resolver: {
     en: "That name belongs to another app.",
     ja: "この名前は別のアプリのものです。",
   },
+  /** Not shown in the app: the ENS gateway's answer to an outside ENS app whose name lookup it can't read or doesn't answer */
   unsupported_request: {
     en: "That name lookup isn't one this app answers.",
     ja: "この名前の問い合わせには答えられません。",
