@@ -1,12 +1,17 @@
 // @vitest-environment happy-dom
-import type { TicketQuote, Tickets } from "@drawing-app/api/client";
+import type { Tickets, TicketShop as Shop } from "@drawing-app/api/client";
 import { act, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyApi, FRESH_TICKETS, renderWithApi } from "../api/testing";
+import { setPrivyStatus } from "../identity/privy";
+import { getJpycBalance, payForTickets } from "../payments/jpyc";
 import { OutOfTickets } from "./OutOfTickets";
 import { StartDrawing } from "./StartDrawing";
 import { TicketShop } from "./TicketShop";
 import { useTickets } from "./useTickets";
+
+vi.mock("../payments/jpyc", () => ({ getJpycBalance: vi.fn(), payForTickets: vi.fn() }));
+vi.mock("../identity/suiSigner", () => ({ waitForSuiSigner: () => Promise.resolve({}) }));
 
 const onBoard = vi.fn();
 const onShop = vi.fn();
@@ -129,21 +134,37 @@ describe("StartDrawing", () => {
   });
 });
 
-/** Today's prices for two packs, at 300 yen a SUI. */
-const QUOTE: TicketQuote = {
-  suiYen: "300",
-  quotedAt: EVENING.toISOString(),
-  expiresAt: new Date(EVENING.getTime() + 60_000).toISOString(),
+const SUI_WALLET = `0x${"1".repeat(64)}`;
+const TX_DIGEST = "D".repeat(44);
+/** 1 JPYC in base units. */
+const JPYC = 1_000_000n;
+
+/** Two packs, paid in a made-up JPYC. */
+const SHOP: Shop = {
   packs: [
-    { tickets: 1, priceYen: 100, discountPercent: 0, priceMist: "333333334" },
-    { tickets: 3, priceYen: 270, discountPercent: 10, priceMist: "900000000" },
+    { tickets: 1, priceYen: 100, discountPercent: 0, priceJpyc: String(100n * JPYC) },
+    { tickets: 3, priceYen: 270, discountPercent: 10, priceJpyc: String(270n * JPYC) },
   ],
+  payment: {
+    network: "testnet",
+    coinType: `0x${"a".repeat(64)}::jpy_coin::JPY_COIN`,
+    decimals: 6,
+    paymentPackage: `0x${"b".repeat(64)}`,
+    vault: `0x${"c".repeat(64)}`,
+    reference: "tickets:me",
+  },
 };
 
 describe("TicketShop", () => {
-  it("outlines the balance and the packs until the wallet and today's prices are in", async () => {
+  beforeEach(() => {
+    setPrivyStatus({ state: "signed-in", userId: "privy-me", suiWallet: SUI_WALLET });
+    vi.mocked(getJpycBalance).mockResolvedValue(1000n * JPYC);
+    vi.mocked(payForTickets).mockResolvedValue(TX_DIGEST);
+  });
+
+  it("outlines the balance and the packs until the wallet and the shop are in", async () => {
     const api = emptyApi({
-      ticketQuote: () => new Promise((resolve) => setTimeout(() => resolve(QUOTE), 1000)),
+      ticketShop: () => new Promise((resolve) => setTimeout(() => resolve(SHOP), 1000)),
     });
     await render(<TicketShop layout="page" onDraw={onDraw} />, api);
     const skeletons = () => document.querySelectorAll(".skeleton").length;
@@ -153,14 +174,14 @@ describe("TicketShop", () => {
     );
     await settle(3000);
     expect(skeletons()).toBe(0);
-    expect(buttonNamed("3 tickets")).toBeDefined();
+    expect(document.querySelector(".ticket-shop__wallet strong")?.textContent).toBe("￥1,000");
   });
 
-  it("buys the chosen pack with SUI at the quote, and shows the tickets the server added", async () => {
+  it("pays the chosen pack's JPYC from the Sui wallet, and shows the tickets the server added", async () => {
     const bought = vi.fn(() => Promise.resolve(tickets(3, 4)));
     const api = emptyApi({
       tickets: () => Promise.resolve(tickets(3, 1)),
-      ticketQuote: () => Promise.resolve(QUOTE),
+      ticketShop: () => Promise.resolve(SHOP),
       buyTickets: bought,
     });
     await render(<TicketShop layout="card" onDraw={onDraw} onClose={onBoard} />, api);
@@ -169,11 +190,36 @@ describe("TicketShop", () => {
     click("Pay");
     await settle(2000);
     expect(title()).toBe("3 reserve tickets added");
-    expect(bought).toHaveBeenCalledWith(
-      expect.objectContaining({ tickets: 3, paidMist: "900000000" }),
-    );
+    expect(payForTickets).toHaveBeenCalledWith(expect.anything(), SHOP.payment, 270n * JPYC);
+    expect(bought).toHaveBeenCalledWith({ tickets: 3, txDigest: TX_DIGEST });
     expect(buttonNamed("Draw")?.getAttribute("aria-label")).toContain("4 reserve tickets");
     click("Draw");
     expect(onDraw).toHaveBeenCalledOnce();
+  });
+
+  it("won't pay a pack the wallet's JPYC can't cover", async () => {
+    vi.mocked(getJpycBalance).mockResolvedValue(150n * JPYC);
+    await render(
+      <TicketShop layout="page" onDraw={onDraw} />,
+      emptyApi({ ticketShop: () => Promise.resolve(SHOP) }),
+    );
+    await settle(500);
+    click("3 tickets");
+    expect(buttonNamed("Not enough JPYC")?.disabled).toBe(true);
+    expect(payForTickets).not.toHaveBeenCalled();
+  });
+
+  it("names the payment that went through when the server didn't add its tickets", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const api = emptyApi({
+      ticketShop: () => Promise.resolve(SHOP),
+      buyTickets: () => Promise.reject(new Error("sui_unavailable")),
+    });
+    await render(<TicketShop layout="page" onDraw={onDraw} />, api);
+    await settle(500);
+    click("Pay");
+    await settle(500);
+    expect(title()).toBe("Payment didn’t go through");
+    expect(document.querySelector("[role=alert]")?.textContent).toContain(TX_DIGEST);
   });
 });
