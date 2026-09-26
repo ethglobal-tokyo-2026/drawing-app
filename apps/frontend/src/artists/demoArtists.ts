@@ -1,4 +1,4 @@
-import type { ArtKey } from "./ArtistArt";
+import type { ArtKey } from "./art";
 
 /**
  * Authored demo artists until other people's profiles, stickers and figures come from the
@@ -7,7 +7,7 @@ import type { ArtKey } from "./ArtistArt";
 
 export interface ArtistAvatar {
   art: ArtKey;
-  /** The field behind the art, as a CSS color. */
+  /** The field behind the art, as a hex color: it's also drawn into an image, where CSS variables don't reach. */
   bg: string;
 }
 
@@ -96,7 +96,7 @@ export const ARTISTS: Artist[] = [
   artist(
     "mika",
     "Mika Hoshino",
-    { art: "girl", bg: "var(--pink-soft)" },
+    { art: "girl", bg: "#f6c0da" },
     {
       gratitude: { daily: 2340, inspired: 3105, magic: 767 },
       streakDays: 38,
@@ -192,7 +192,7 @@ export const ARTISTS: Artist[] = [
   artist(
     "ken",
     "Ken Mori",
-    { art: "lightning", bg: "var(--seal-soft)" },
+    { art: "lightning", bg: "#f8e7a8" },
     plainStats({
       gratitude: { daily: 1210, inspired: 980, magic: 140 },
       streakDays: 24,
@@ -207,7 +207,7 @@ export const ARTISTS: Artist[] = [
   artist(
     "ゆず",
     "Yuzu Kato",
-    { art: "onigiri", bg: "var(--liner-deep)" },
+    { art: "onigiri", bg: "#e5e3ec" },
     plainStats({
       gratitude: { daily: 420, inspired: 180, magic: 0 },
       streakDays: 6,
@@ -219,7 +219,7 @@ export const ARTISTS: Artist[] = [
   artist(
     "natsu",
     "Natsuki Ono",
-    { art: "jellyfish", bg: "var(--grape-soft)" },
+    { art: "jellyfish", bg: "#d4c9f9" },
     plainStats({
       gratitude: { daily: 880, inspired: 520, magic: 122 },
       streakDays: 41,
@@ -234,7 +234,7 @@ export const ARTISTS: Artist[] = [
   artist(
     "aoi",
     "Aoi Takeda",
-    { art: "fox", bg: "var(--seal-soft)" },
+    { art: "fox", bg: "#f8e7a8" },
     plainStats({
       gratitude: { daily: 700, inspired: 480, magic: 129 },
       streakDays: 12,
@@ -249,7 +249,7 @@ export const ARTISTS: Artist[] = [
   artist(
     "hina",
     "Hina Sakamoto",
-    { art: "ghost", bg: "var(--liner-deep)" },
+    { art: "ghost", bg: "#e5e3ec" },
     plainStats({
       gratitude: { daily: 660, inspired: 410, magic: 118 },
       streakDays: 27,
@@ -264,7 +264,7 @@ export const ARTISTS: Artist[] = [
   artist(
     "kaede",
     "Kaede Shimizu",
-    { art: "planet", bg: "var(--grape-soft)" },
+    { art: "planet", bg: "#d4c9f9" },
     plainStats({
       gratitude: { daily: 560, inspired: 330, magic: 74 },
       streakDays: 9,
@@ -279,7 +279,7 @@ export const ARTISTS: Artist[] = [
   artist(
     "ren",
     "Ren Kuroda",
-    { art: "daruma", bg: "var(--pink-soft)" },
+    { art: "daruma", bg: "#f6c0da" },
     plainStats({
       gratitude: { daily: 610, inspired: 240, magic: 30 },
       streakDays: 30,
@@ -306,7 +306,7 @@ export const ARTISTS: Artist[] = [
   artist(
     "mimi",
     "Mimi Kato",
-    { art: "bunny", bg: "var(--pink-soft)" },
+    { art: "bunny", bg: "#f6c0da" },
     plainStats({
       gratitude: { daily: 380, inspired: 460, magic: 40 },
       streakDays: 11,
@@ -333,7 +333,7 @@ export const ARTISTS: Artist[] = [
   artist(
     "yui",
     "Yui Ogawa",
-    { art: "girl", bg: "var(--seal-soft)" },
+    { art: "girl", bg: "#f8e7a8" },
     plainStats({
       gratitude: { daily: 520, inspired: 610, magic: 88 },
       streakDays: 16,
@@ -347,7 +347,7 @@ export const ARTISTS: Artist[] = [
   artist(
     "bob",
     "Bob Tanaka",
-    { art: "boy", bg: "var(--aqua-soft)" },
+    { art: "boy", bg: "#abe6ec" },
     plainStats({
       received: 1,
       bests: { longestStreak: null, bestCombo: 64, mostThanksInADay: null },

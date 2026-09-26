@@ -1,94 +1,121 @@
-import { useEffect, useState } from "react";
-import { listStickers } from "../stickers/stickerStorage";
-import { FREE_TICKETS_PER_DAY } from "./config";
-import { ticketDay } from "./tickets";
+import { useMemo } from "react";
+import { DrawIcon } from "../icons/DrawIcon";
+import { fitOutline, type Box } from "./stubOutline";
+import "./TicketStubs.css";
 
-interface Outline {
-  d: string;
-  width: number;
-  height: number;
-}
-
-const TILTS = [-4, 1, 3];
-const STUB_PATH =
-  "M6 4h92a2 2 0 0 1 2 2v18a8 8 0 0 0 0 16v18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V40a8 8 0 0 0 0-16V6a2 2 0 0 1 2-2Z";
-
-/** Cut lines of the stickers made on today's tickets, oldest first; null where none was kept. */
-function useTodaysOutlines() {
-  const [outlines, setOutlines] = useState<(Outline | null)[]>([]);
-  useEffect(() => {
-    let cancelled = false;
-    const today = ticketDay(new Date());
-    listStickers().then(
-      (records) => {
-        if (cancelled) return;
-        setOutlines(
-          records
-            .filter((r) => ticketDay(new Date(r.createdAt)) === today)
-            .reverse()
-            .map((r) => (r.outline ? { d: r.outline, width: r.width, height: r.height } : null)),
-        );
-      },
-      (error: unknown) => console.error("Ticket stubs couldn't load today's stickers", error),
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-  return outlines;
+export interface TicketStub {
+  /** A used ticket is the empty backing it left; a fresh one is Seal Yellow ticket stock. */
+  used: boolean;
+  /** The cut outline of the sticker a used ticket became: an SVG path in any units, fitted to the stub. */
+  outline?: string;
 }
 
 interface Props {
-  /** Free tickets used today. */
-  used: number;
-  /** Fresh stubs after a purchase: all filled, no outlines. */
-  filled?: boolean;
-  large?: boolean;
+  stubs: readonly TicketStub[];
+  /** "large": the out-of-tickets card's tossed stubs. "small": the strip under the sealed card's key. */
+  size: "large" | "small";
+  /** What the row says, such as "2 of 3 tickets left today". Without it the row is decorative and hidden from screen readers. */
+  label?: string;
+  className?: string;
+}
+
+interface Geometry {
+  w: number;
+  h: number;
+  corner: number;
+  notch: number;
+  /** Where the perforation divides the stub from the body. */
+  perf: number;
+  /** Where a used ticket's sticker outline sits. */
+  outline: Box;
+  glyph: number;
+}
+
+const GEOMETRY: Record<Props["size"], Geometry> = {
+  large: {
+    w: 88,
+    h: 56,
+    corner: 6,
+    notch: 8,
+    perf: 26,
+    outline: { x: 32, y: 7, w: 46, h: 42 },
+    glyph: 22,
+  },
+  small: {
+    w: 40,
+    h: 25,
+    corner: 3.5,
+    notch: 3.5,
+    perf: 12,
+    outline: { x: 15, y: 3.5, w: 20, h: 18 },
+    glyph: 12,
+  },
+};
+
+/** A ticket's silhouette: rounded corners with a round notch in each end. */
+function ticketPath({ w, h, corner: c, notch: n }: Geometry): string {
+  const m = h / 2;
+  return [
+    `M${c} 0H${w - c}A${c} ${c} 0 0 1 ${w} ${c}`,
+    `V${m - n}A${n} ${n} 0 0 0 ${w} ${m + n}`,
+    `V${h - c}A${c} ${c} 0 0 1 ${w - c} ${h}`,
+    `H${c}A${c} ${c} 0 0 1 0 ${h - c}`,
+    `V${m + n}A${n} ${n} 0 0 0 0 ${m - n}`,
+    `V${c}A${c} ${c} 0 0 1 ${c} 0Z`,
+  ].join("");
+}
+
+function Stub({ stub, geometry }: { stub: TicketStub; geometry: Geometry }) {
+  const { w, h, perf, glyph, notch } = geometry;
+  const shape = useMemo(() => ticketPath(geometry), [geometry]);
+  const outline = useMemo(
+    () => (stub.used && stub.outline ? fitOutline(stub.outline, geometry.outline) : ""),
+    [stub.used, stub.outline, geometry],
+  );
+  const bodyCenter = (perf + w - notch) / 2;
+
+  return (
+    <svg
+      className={`ticket-stub ${stub.used ? "is-used" : "is-fresh"}`}
+      viewBox={`0 0 ${w} ${h}`}
+      width={w}
+      height={h}
+      aria-hidden
+      focusable="false"
+    >
+      <path className="ticket-stub__face" d={shape} />
+      <line className="ticket-stub__perf" x1={perf} y1={h * 0.12} x2={perf} y2={h * 0.88} />
+      <path className="ticket-stub__edge" d={shape} />
+      {stub.used ? (
+        outline && <path className="ticket-stub__outline" d={outline} />
+      ) : (
+        // A fresh ticket is printed with the Draw mark, the act it's spent on.
+        <g
+          className="ticket-stub__glyph"
+          transform={`translate(${bodyCenter - glyph / 2} ${(h - glyph) / 2})`}
+        >
+          <DrawIcon size={glyph} />
+        </g>
+      )}
+    </svg>
+  );
 }
 
 /**
- * Today's drawing tickets. A used ticket is an empty stub that keeps a faint kiss-cut
- * outline of the sticker it became: the cut line a sticker leaves on its backing.
+ * Drawing tickets as paper stubs: fresh ones are Seal Yellow ticket stock, used ones the empty backing
+ * they left, carrying the kiss-cut outline of the sticker each became.
  */
-export function TicketStubs({ used, filled = false, large = false }: Props) {
-  const outlines = useTodaysOutlines();
-  const left = Math.max(0, FREE_TICKETS_PER_DAY - used);
+export function TicketStubs({ stubs, size, label, className }: Props) {
+  const geometry = GEOMETRY[size];
+  const a11y = label ? { role: "img", "aria-label": label } : { "aria-hidden": true };
   return (
     <div
-      className={`ticket-row ${large ? "large" : "small"}`}
-      role="img"
-      aria-label={
-        filled ? "Fresh tickets" : `${left} of ${FREE_TICKETS_PER_DAY} free tickets left today`
-      }
+      className={["ticket-stubs", `ticket-stubs--${size}`, className].filter(Boolean).join(" ")}
+      {...a11y}
     >
-      {TILTS.slice(0, FREE_TICKETS_PER_DAY).map((tilt, i) => {
-        const isUsed = !filled && i < used;
-        const outline = isUsed ? outlines[i] : null;
-        return (
-          <svg
-            key={i}
-            className={`ticket ${isUsed ? "used" : "filled"}`}
-            viewBox="0 0 104 64"
-            style={{ rotate: `${tilt}deg` }}
-            aria-hidden
-          >
-            <path d={STUB_PATH} />
-            <line x1="34" y1="10" x2="34" y2="54" />
-            {outline && (
-              <svg
-                className="ticket-ghost"
-                x="42"
-                y="8"
-                width="52"
-                height="48"
-                viewBox={`0 0 ${outline.width} ${outline.height}`}
-              >
-                <path d={outline.d} />
-              </svg>
-            )}
-          </svg>
-        );
-      })}
+      {stubs.map((stub, i) => (
+        <Stub key={i} stub={stub} geometry={geometry} />
+      ))}
     </div>
   );
 }

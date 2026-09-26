@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { artistByHandle } from "../artists/demoArtists";
 import { ArtistBoard } from "../sticker-board/ArtistBoard";
 import { StickerBoard } from "../sticker-board/StickerBoard";
@@ -7,15 +7,29 @@ import { ExploreScreen } from "../explore/ExploreScreen";
 import { TabBar, type Tab } from "./TabBar";
 import "./App.css";
 
+type View = Tab | "draw";
+
+/** LINE's header shows the page title. */
+const TITLES: Record<View, string> = {
+  board: "Your sticker board",
+  explore: "Explore",
+  draw: "Draw",
+};
+
 export default function App() {
   const drawingScreen = useRef<DrawingScreenHandle>(null);
-  // The sticker board is home.
-  const [view, setView] = useState<Tab | "draw">("board");
+  // The sticker board is home. Draw is the board's key, not a tab.
+  const [view, setView] = useState<View>("board");
   // Set from the seal until the next sticker starts; the board lands it with a "stick" animation.
   const [sealedId, setSealedId] = useState<string>();
   // Someone else's sticker board, opened from Explore over it, so Explore keeps its search and scroll.
   const [visiting, setVisiting] = useState<string>();
   const visitedArtist = visiting ? artistByHandle.get(visiting) : undefined;
+  const drawing = view === "draw";
+
+  useEffect(() => {
+    document.title = TITLES[view];
+  }, [view]);
 
   // After a seal, Draw starts a new sticker; otherwise it resumes the one in progress.
   const openDrawing = () => {
@@ -23,12 +37,13 @@ export default function App() {
     setView("draw");
   };
 
+  // The drawing screen tucks the tabs away so the sheet gets the room.
   return (
-    <div className={`phone ${view === "draw" ? "tabs-tucked" : ""}`}>
-      <div className="card">
+    <div className={`phone ${drawing ? "has-tucked-tabs" : ""}`}>
+      <div className="screen">
         <DrawingScreen
           ref={drawingScreen}
-          active={view === "draw"}
+          active={drawing}
           onSealed={setSealedId}
           onNewSticker={() => setSealedId(undefined)}
           onGoToBoard={() => setView("board")}
@@ -42,9 +57,8 @@ export default function App() {
         )}
       </div>
       <TabBar
-        // Drawing starts from your board, so My board stays current behind the draw screen.
-        active={view === "draw" ? "board" : view}
-        tucked={view === "draw"}
+        active={drawing ? undefined : view}
+        tucked={drawing}
         onChange={(tab) => {
           drawingScreen.current?.closeDrawers();
           setView(tab);

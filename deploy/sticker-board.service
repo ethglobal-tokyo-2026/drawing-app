@@ -1,0 +1,34 @@
+# sticker-board.service: serves the built web app on 127.0.0.1:3003 for HAProxy.
+# deploy/deploy.sh copies it to /etc/systemd/system/ and restarts it whenever it or serve.py changes.
+[Unit]
+Description=Sticker Board web app (static files)
+After=network.target
+
+[Service]
+Type=simple
+User=bawler
+Group=bawler
+ExecStart=/usr/bin/python3 /srv/sticker-board/serve.py --port 3003 --dir /srv/sticker-board/site
+Restart=always
+RestartSec=3
+
+MemoryMax=256M
+TasksMax=64
+
+# Sandboxing: it only reads the site directory.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sticker-board
+
+[Install]
+WantedBy=multi-user.target

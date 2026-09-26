@@ -31,21 +31,21 @@ function requireBytes32(value: string, field: string): asserts value is Hex {
   if (!isHex(value) || value.length !== 66) throw new Error(`${field} must be 32 bytes`);
 }
 
-function claimTokenMatches(token: Hex, commitment: Hex) {
-  requireBytes32(token, "Claim token");
+function giftClaimTokenMatches(giftClaimToken: Hex, commitment: Hex) {
+  requireBytes32(giftClaimToken, "Gift claim token");
   requireBytes32(commitment, "Claim commitment");
   return timingSafeEqual(
-    Buffer.from(keccak256(token).slice(2), "hex"),
+    Buffer.from(keccak256(giftClaimToken).slice(2), "hex"),
     Buffer.from(commitment.slice(2), "hex"),
   );
 }
 
 export function createGiftClaim(randomBytesImpl: (size: number) => Uint8Array = randomBytes) {
   const giftId = bytesToHex(randomBytesImpl(32));
-  const claimToken = bytesToHex(randomBytesImpl(32));
+  const giftClaimToken = bytesToHex(randomBytesImpl(32));
   requireBytes32(giftId, "Gift ID");
-  requireBytes32(claimToken, "Claim token");
-  return { giftId, claimToken, claimCommitment: keccak256(claimToken) };
+  requireBytes32(giftClaimToken, "Gift claim token");
+  return { giftId, giftClaimToken, claimCommitment: keccak256(giftClaimToken) };
 }
 
 export function prepareGiftTransfer({
@@ -114,14 +114,14 @@ export function createGiftAuthorizer({
     verifyingContract: escrowContract,
   } as const;
 
-  async function requirePendingGift(giftId: Hex, claimToken: Hex) {
+  async function requirePendingGift(giftId: Hex, giftClaimToken: Hex) {
     requireBytes32(giftId, "Gift ID");
     const gift = await findGift(giftId);
     if (!gift || gift.giftId !== giftId || gift.status !== "pending") {
       throw new Error("Gift is not pending");
     }
     if (gift.expiresAt <= now()) throw new Error("Gift has expired");
-    if (!claimTokenMatches(claimToken, gift.claimCommitment)) {
+    if (!giftClaimTokenMatches(giftClaimToken, gift.claimCommitment)) {
       throw new Error("Gift claim token is invalid");
     }
     return gift;
@@ -130,14 +130,14 @@ export function createGiftAuthorizer({
   return {
     async authorizeClaim({
       giftId,
-      claimToken,
+      giftClaimToken,
       recipientArtistId,
     }: {
       giftId: Hex;
-      claimToken: Hex;
+      giftClaimToken: Hex;
       recipientArtistId: string;
     }) {
-      const gift = await requirePendingGift(giftId, claimToken);
+      const gift = await requirePendingGift(giftId, giftClaimToken);
       if (!recipientArtistId) throw new Error("Recipient artist is required");
       const recipientWallet = await findArtistSmartWallet(recipientArtistId);
       if (
@@ -167,8 +167,8 @@ export function createGiftAuthorizer({
       return { authorization, authorizationDeadline, recipient: recipientWallet.address };
     },
 
-    async authorizeRejection({ giftId, claimToken }: { giftId: Hex; claimToken: Hex }) {
-      const gift = await requirePendingGift(giftId, claimToken);
+    async authorizeRejection({ giftId, giftClaimToken }: { giftId: Hex; giftClaimToken: Hex }) {
+      const gift = await requirePendingGift(giftId, giftClaimToken);
       const authorizationDeadline = Math.min(gift.expiresAt, now() + 300);
       const authorization = await signer.signTypedData({
         domain,

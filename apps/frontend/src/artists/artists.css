@@ -5,7 +5,7 @@
   display: block;
   object-fit: contain;
   filter: drop-shadow(2px 0 0 var(--canvas)) drop-shadow(-2px 0 0 var(--canvas))
-    drop-shadow(0 2px 0 var(--canvas)) drop-shadow(0 -2px 0 var(--canvas)) var(--kiss-cut)
+    drop-shadow(0 2px 0 var(--canvas)) drop-shadow(0 -2px 0 var(--canvas)) var(--sticker-cut)
     var(--sticker-cast);
 }
 
@@ -18,7 +18,7 @@
   border: 2px solid var(--canvas);
   border-radius: 50%;
   box-shadow:
-    0 0 0 1px var(--rule-kiss),
+    0 0 0 1px var(--rule),
     var(--shadow-label);
 }
 

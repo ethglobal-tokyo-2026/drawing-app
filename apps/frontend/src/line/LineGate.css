@@ -1,0 +1,31 @@
+/* ---------- Before LINE has logged the person in ---------- */
+
+.line-gate {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  padding: 32px;
+  background: var(--liner);
+  text-align: center;
+}
+
+.line-gate h1 {
+  margin: 0;
+  font-size: 26px;
+}
+
+.line-gate p {
+  max-width: 30ch;
+  margin: 0 0 12px;
+  color: var(--graphite);
+}
+
+/* Selectable, so the reason can be copied into a report. */
+.line-gate-error {
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+}

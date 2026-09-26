@@ -1,18 +1,16 @@
-import { useState, type ReactNode } from "react";
+import { ArrowsLeftRight, ChatCircleDots, Heart, PaperPlaneTilt, X } from "@phosphor-icons/react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ArtistArt } from "../artists/ArtistArt";
 import type { Artist, ArtistBoardSticker } from "../artists/demoArtists";
-import { Key, Label } from "../controls/controls";
+import { Key } from "../ui/Key";
+import { LabelButton } from "../ui/LabelButton";
 import { StickerPicker } from "../giving/StickerPicker";
-import { ChatDotsIcon } from "../icons/ChatDotsIcon";
-import { CloseIcon } from "../icons/CloseIcon";
-import { HeartIcon } from "../icons/HeartIcon";
-import { PaperPlaneIcon } from "../icons/PaperPlaneIcon";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
-import { SwapIcon } from "../icons/SwapIcon";
-import { Sheet } from "../sticker-creation/tools/Sheet";
+import { Sheet } from "../ui/Sheet";
+import { useFocusTrap } from "../ui/useFocusTrap";
 import { formatClock, formatDay, formatNo } from "../stickers/format";
 import { useKeptStickers } from "../stickers/useKeptStickers";
-import "../giving/giving.css";
+import "../giving/give-sheet.css";
 import "./offers.css";
 
 type OfferKind = "ask" | "swap" | "gratitude";
@@ -23,19 +21,19 @@ const KINDS: { id: OfferKind; title: string; note: (holder: string) => string; i
       id: "ask",
       title: "Ask for it",
       note: (holder) => `A plain request. @${holder} can say yes or no.`,
-      icon: <ChatDotsIcon size={18} />,
+      icon: <ChatCircleDots size={18} weight="fill" />,
     },
     {
       id: "swap",
       title: "Swap one of yours",
       note: () => "Pick one of your stickers to trade for it.",
-      icon: <SwapIcon size={18} />,
+      icon: <ArrowsLeftRight size={18} />,
     },
     {
       id: "gratitude",
       title: "Offer gratitude",
       note: () => "Give some of your gratitude for it.",
-      icon: <HeartIcon size={18} />,
+      icon: <Heart size={18} />,
     },
   ];
 
@@ -56,38 +54,55 @@ export function OfferSheet({ sticker, holder, onClose }: Props) {
   const [sent, setSent] = useState(false);
   const { stickers, error } = useKeptStickers();
   const handle = holder.handle;
+  const root = useRef<HTMLDivElement>(null);
+  useFocusTrap(root, { onEscape: onClose });
+  // The confirmation replaces the key that had focus, so focus moves to its way back.
+  const back = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (sent) back.current?.focus();
+  }, [sent]);
   const ready = kind !== "swap" || swapFor !== null;
 
   return (
-    <div className="sheet-scrim" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()}>
-        <Sheet onClose={onClose}>
+    <div className="board-sheet-layer" ref={root} tabIndex={-1}>
+      <div className="giving__scrim" onClick={onClose} />
+      <Sheet
+        label={`Offer for ${formatNo(sticker.no)}`}
+        onClose={onClose}
+        className="giving__sheet"
+      >
+        <div className="board-sheet-body">
           {sent ? (
-            <div className="gift-sent" role="status">
+            <div className="giving__sent" role="status">
               <span className="offer-sent-art">
                 <ArtistArt art={sticker.art} />
               </span>
-              <h2>Offer sent to @{handle}</h2>
-              <p className="sheet-note">
+              <h2 className="giving__title">Offer sent to @{handle}</h2>
+              <p className="giving__sub">
                 Nothing moves until @{handle} says yes. You’ll hear about it in LINE.
               </p>
-              <p className="fine muted">Demo material · offers aren’t sent anywhere yet</p>
-              <Label icon={<StickerBoardIcon size={18} />} onPress={onClose}>
+              <p className="fine sheet-fine">Demo material · offers aren’t sent anywhere yet</p>
+              <LabelButton ref={back} icon={<StickerBoardIcon size={18} />} onClick={onClose}>
                 Back to @{handle}’s board
-              </Label>
+              </LabelButton>
             </div>
           ) : (
             <>
-              <div className="sheet-head">
-                <h2>Offer for {formatNo(sticker.no)}</h2>
-                <button className="round-close" onClick={onClose} aria-label="Close">
-                  <CloseIcon />
+              <header className="giving__head">
+                <h2 className="giving__title">Offer for {formatNo(sticker.no)}</h2>
+                <button
+                  type="button"
+                  className="giving__icon-btn"
+                  onClick={onClose}
+                  aria-label="Close"
+                >
+                  <X size={20} />
                 </button>
-              </div>
+              </header>
 
               <div className="offer-subject">
                 <ArtistArt art={sticker.art} className="offer-art" />
-                <p className="fine muted">
+                <p className="fine sheet-fine">
                   {formatNo(sticker.no)} · {formatClock(sticker.timeUsed)} ·{" "}
                   {formatDay(sticker.sealedAt)}
                   <br />
@@ -117,7 +132,7 @@ export function OfferSheet({ sticker, holder, onClose }: Props) {
 
               {kind === "swap" &&
                 (error ? (
-                  <p className="sheet-error" role="alert">
+                  <p className="giving__problem" role="alert">
                     {error}
                   </p>
                 ) : stickers?.length === 0 ? (
@@ -155,22 +170,22 @@ export function OfferSheet({ sticker, holder, onClose }: Props) {
                 </div>
               )}
 
-              <div className="sheet-foot">
+              <div className="giving__acts">
                 <Key
                   size="md"
-                  hue="grape"
-                  icon={<PaperPlaneIcon size={22} />}
-                  onPress={() => setSent(true)}
+                  tone="grape"
+                  icon={<PaperPlaneTilt size={22} />}
+                  onClick={() => setSent(true)}
                   disabled={!ready}
                 >
                   Send offer
                 </Key>
-                <p className="sheet-hint">Nothing moves until @{handle} says yes.</p>
+                <p className="giving__leaves">Nothing moves until @{handle} says yes.</p>
               </div>
             </>
           )}
-        </Sheet>
-      </div>
+        </div>
+      </Sheet>
     </div>
   );
 }

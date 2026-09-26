@@ -1,0 +1,282 @@
+/* Giving: the give sheet over the sticker, the gift bag while it's packed, and "Sealed and sent". */
+
+.giving {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-sheet);
+  overflow: hidden;
+  background: var(--liner);
+  color: var(--ink);
+}
+
+/* The sticker being given, above the sheet. Once it's in the bag, its silhouette stays behind. */
+.giving__piece {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 20px;
+}
+
+.giving__figure {
+  width: 206px;
+  height: 206px;
+  object-fit: contain;
+  transform: rotate(-3deg);
+  filter: var(--sticker-cut) var(--sticker-cast);
+}
+
+.giving__given-sticker-silhouette {
+  position: relative;
+  width: 206px;
+  height: 206px;
+  transform: rotate(-3deg);
+}
+
+/* The silhouette, hatched at 45° in faint graphite, with a hairline where the cut was. */
+.giving__given-sticker-silhouette::before,
+.giving__given-sticker-silhouette::after {
+  content: "";
+  position: absolute;
+  -webkit-mask: var(--src) center / contain no-repeat;
+  mask: var(--src) center / contain no-repeat;
+}
+
+.giving__given-sticker-silhouette::before {
+  inset: -2px;
+  background: var(--rule-strong);
+}
+
+.giving__given-sticker-silhouette::after {
+  inset: 0;
+  background: repeating-linear-gradient(45deg, rgba(110, 104, 120, 0.16) 0 1px, transparent 1px 6px)
+    var(--liner);
+}
+
+.giving__meta {
+  margin: 12px 0 0;
+  font-size: 12px;
+}
+
+.giving__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-sheet);
+  background: rgba(28, 24, 36, 0.36);
+  animation: giving-fade-in var(--t-peel) var(--ease-out);
+}
+
+.giving .bottom-sheet,
+.bottom-sheet.giving__sheet {
+  max-height: calc(100% - 28px);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.giving__body.is-in {
+  animation: giving-body-in 320ms var(--ease-peel);
+}
+
+@keyframes giving-body-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@keyframes giving-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.giving__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  margin: 2px 0 14px;
+}
+
+.giving__head .giving__title {
+  flex: 1;
+}
+
+.giving__title {
+  margin: 0;
+  font-weight: 800;
+  font-stretch: var(--w-title);
+  font-size: 26px;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.giving__sub {
+  margin: 0;
+  color: var(--graphite);
+  font-size: 15px;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+/* A header icon: a flat tile, with a 44px touch. */
+.giving__icon-btn {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--graphite);
+}
+
+.giving__icon-btn::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+}
+
+.giving__icon-btn--back {
+  margin-left: -10px;
+  color: var(--ink);
+}
+
+.giving__icon-btn:focus-visible,
+.giving__row:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) {
+  .giving__icon-btn:hover {
+    background: rgba(28, 24, 36, 0.06);
+    color: var(--ink);
+  }
+}
+
+/* "Send in a LINE chat": the way to give, on the aqua that means giving. */
+.giving__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 68px;
+  margin: 0;
+  padding: 12px 10px 12px 12px;
+  border: 0;
+  border-radius: var(--r-label);
+  text-align: left;
+  background: var(--aqua);
+  box-shadow:
+    inset 0 0 0 1px rgba(28, 24, 36, 0.2),
+    0 1px 1.5px rgba(28, 24, 36, 0.25);
+}
+
+@media (hover: hover) {
+  .giving__row:hover {
+    background: color-mix(in srgb, var(--aqua) 92%, #fff);
+  }
+}
+
+.giving__row-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.giving__row-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.giving__row-text b {
+  display: block;
+  font-size: 17px;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+.giving__row-text small {
+  display: block;
+  margin-top: 3px;
+  font-size: 14px;
+  line-height: 1.35;
+  color: rgba(28, 24, 36, 0.78);
+}
+
+.giving__row-chev {
+  flex: none;
+  color: rgba(28, 24, 36, 0.78);
+}
+
+.giving__leaves {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 18px 0 0;
+  font-size: 13.5px;
+  color: var(--graphite);
+}
+
+.giving__acts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.giving__acts .key {
+  min-width: 232px;
+  max-width: 100%;
+}
+
+.giving__sent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 4px;
+  text-align: center;
+}
+
+.giving__sent .giving__sub {
+  max-width: 32ch;
+}
+
+.giving__sent .label-btn {
+  margin-top: 10px;
+}
+
+/* A problem stays on the sheet until the person moves on; it never vanishes as a toast. */
+.giving__problem {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--r-label);
+  background: var(--tomato-soft);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .giving__body.is-in {
+    animation: giving-fade-in 150ms linear;
+  }
+}

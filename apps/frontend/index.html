@@ -11,12 +11,25 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Fetched early and applied when they arrive, so the fonts never block the first paint. -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Mona+Sans:wdth,wght@75..125,200..900&family=Zen+Kaku+Gothic+New:wght@700&display=swap"
-      rel="stylesheet"
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@75..125,200..900&family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap"
+      onload="
+        this.onload = null;
+        this.rel = 'stylesheet';
+      "
     />
-    <meta name="theme-color" content="#f2f1f6" />
-    <title>Draw</title>
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@75..125,200..900&family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap"
+      />
+    </noscript>
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#F2F1F6" />
+    <title>Sticker Board</title>
   </head>
   <body>
     <div id="root"></div>

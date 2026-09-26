@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { hexToHsv, hexToRgba, hsvToHex } from "./color";
+import { hexToHsv, hexToRgb, hsvToHex } from "./color";
 
 describe("color", () => {
-  it("parses hex", () => {
-    expect(hexToRgba("#ff8000")).toEqual([255, 128, 0, 255]);
-    expect(hexToRgba("#fff")).toEqual([255, 255, 255, 255]);
+  it("reads hex channels", () => {
+    expect(hexToRgb("#FF8000")).toEqual([255, 128, 0]);
+    expect(hexToRgb("#1c1824")).toEqual([28, 24, 36]);
   });
 
   it("round-trips through HSV", () => {
-    for (const hex of ["#1c1b29", "#ec6341", "#3d6ef1", "#ffffff", "#000000", "#66d0d6"]) {
+    for (const hex of ["#1C1824", "#FF5A36", "#3B3F8F", "#FFFFFF", "#000000", "#38D3DC"]) {
       expect(hsvToHex(hexToHsv(hex))).toBe(hex);
     }
   });

@@ -1,0 +1,71 @@
+import {
+  PrivyProvider,
+  usePrivy,
+  useSubscribeToJwtAuthWithFlag,
+  useWallets,
+  type User,
+  type WalletWithMetadata,
+} from "@privy-io/react-auth";
+import { useEffect } from "react";
+import {
+  fetchPrivyJwt,
+  onPrivyError,
+  PRIVY_APP_ID,
+  privyStatus,
+  setPrivyStatus,
+  usePrivyStatus,
+} from "./privy";
+
+// The Ethereum wallet Privy itself made, as opposed to one the person connected.
+const isPrivysWallet = (a: User["linkedAccounts"][number]): a is WalletWithMetadata =>
+  a.type === "wallet" && a.walletClientType === "privy" && a.chainType === "ethereum";
+
+const signedIn = (user: User) =>
+  setPrivyStatus({
+    state: "signed-in",
+    userId: user.id,
+    wallet: user.linkedAccounts.find(isPrivysWallet)?.address,
+    smartAccount: user.smartWallet?.address,
+  });
+
+const onAuthenticated = ({ user }: { user: User }) => signedIn(user);
+
+// A failed exchange has already put its reason in the status, which beats a generic one.
+const onUnauthenticated = () => {
+  if (privyStatus().state !== "failed") {
+    setPrivyStatus({ state: "failed", reason: "Privy signed you out" });
+  }
+};
+
+function SyncLineToPrivy() {
+  const failed = usePrivyStatus().state === "failed";
+  const walletsReady = useWallets().ready;
+  useSubscribeToJwtAuthWithFlag({
+    // After a failure the SDK re-syncs over and over on its own, so syncing waits for Try again.
+    enabled: !failed,
+    // Rendered only inside LineGate, so LINE has always logged the person in by now.
+    isAuthenticated: true,
+    // Privy makes the wallet right after sign-in, and signs out again if its wallet frame isn't up yet.
+    isLoading: !walletsReady,
+    getExternalJwt: fetchPrivyJwt,
+    onAuthenticated,
+    onUnauthenticated,
+    onError: onPrivyError,
+  });
+
+  // The wallet is made just after sign-in, so its address arrives in a later update of the user.
+  const { authenticated, user } = usePrivy();
+  useEffect(() => {
+    if (authenticated && user) signedIn(user);
+  }, [authenticated, user]);
+  return null;
+}
+
+/** Signs the LINE user in to Privy, with no screen of its own. */
+export default function PrivySession() {
+  return (
+    <PrivyProvider appId={PRIVY_APP_ID}>
+      <SyncLineToPrivy />
+    </PrivyProvider>
+  );
+}

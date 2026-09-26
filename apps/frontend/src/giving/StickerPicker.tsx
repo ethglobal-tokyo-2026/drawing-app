@@ -1,7 +1,7 @@
-import { SelectedIcon } from "../icons/SelectedIcon";
+import { Check } from "@phosphor-icons/react";
 import { formatNo } from "../stickers/format";
 import type { KeptSticker } from "../stickers/useKeptStickers";
-import "./giving.css";
+import "./give-sheet.css";
 
 interface Props {
   stickers: KeptSticker[];
@@ -33,7 +33,7 @@ export function StickerPicker({ stickers, picked, onPick, label, compact = false
           <span className="fine">{formatNo(s.no)}</span>
           {picked === s.id && (
             <span className="pick-check" aria-hidden>
-              <SelectedIcon size={12} />
+              <Check size={12} />
             </span>
           )}
         </button>

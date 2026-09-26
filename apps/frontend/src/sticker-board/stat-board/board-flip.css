@@ -1,0 +1,79 @@
+/* ---------- The turn: the Sticker Board turns on its long axis over the Ink table to its stat board ---------- */
+
+/* Over the drawing screen, which stays mounted underneath. */
+.board-turn {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  overflow: hidden;
+  perspective: 1500px;
+  perspective-origin: 50% 42%;
+  background: var(--ink);
+}
+
+.board-flip {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+}
+
+/* The side the board rests on; while it turns, the running animation holds the transform. */
+.board-turn.is-turned .board-flip {
+  transform: rotateY(180deg);
+}
+
+/* Each face is its own stacking context, so nothing on one shows through the other. */
+.board-front,
+.board-rear {
+  position: absolute;
+  inset: 0;
+  isolation: isolate;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.board-front[inert],
+.board-rear[inert] {
+  pointer-events: none;
+}
+
+.board-rear {
+  overflow: hidden;
+  transform: rotateY(180deg);
+}
+
+/* Each face darkens as it turns away from the top-left light. */
+.board-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 999;
+  pointer-events: none;
+  background: #120e17;
+  opacity: 0;
+}
+
+/* Reduced motion: the faces crossfade in place. */
+.board-turn.is-calm .board-flip,
+.board-turn.is-calm.is-turned .board-flip {
+  transform: none;
+}
+
+.board-turn.is-calm .board-rear {
+  z-index: 2;
+  transform: none;
+  opacity: 0;
+  transition: opacity 180ms linear;
+}
+
+.board-turn.is-calm.is-turned .board-rear {
+  opacity: 1;
+}
+
+.board-turn.is-calm .board-front {
+  transition: opacity 180ms linear;
+}
+
+.board-turn.is-calm.is-turned .board-front {
+  opacity: 0;
+}

@@ -1,0 +1,805 @@
+/* The sticker tray: a zipped pink canvas pocket down the board's right edge, holding a stack of loose
+   sticker sheets, a sticker in each kiss-cut slot and a used sticker silhouette wherever one is out
+   on the board. Paper hints only, no grid. trayEngine.ts places everything; motion is transform and
+   opacity only. */
+
+.tray {
+  /* The tray's material: a pink canvas edge, a lighter tape so the pull is the one strong pink, a
+     soft lining. Candy colors, no gloss; ink only in thin lines. */
+  --tray-canvas: #f9b3d1;
+  --tray-tape: #ffa6cd;
+  --tray-lining: #fbe3ee;
+  --tray-edge:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.12) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(0deg, rgba(120, 20, 70, 0.06) 0 1px, transparent 1px 3px),
+    var(--tray-canvas);
+  --tray-edge-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.4), -0.5px 0 0 rgba(120, 20, 70, 0.3);
+  --tray-weave: rgba(255, 255, 255, 0.55);
+  --tray-deep: rgba(150, 30, 90, 0.22);
+  --tray-mat: #f6d6e4;
+  --tray-top: 64px;
+  --tray-col: 205px;
+  position: absolute;
+  inset: 0;
+  /* In the board's own stacking context: over its stickers and header, under a sticker in hand. */
+  z-index: 970;
+  pointer-events: none;
+}
+
+.tray * {
+  box-sizing: border-box;
+}
+
+.tray .zip {
+  --zip-tape: var(--tray-tape);
+  --zip-weave: rgba(255, 255, 255, 0.2);
+  --zip-selvedge: rgba(255, 255, 255, 0.3);
+  --zip-stitch: rgba(255, 255, 255, 0.85);
+  --zip-tooth: #ffffff;
+  --zip-tooth-lit: #ffffff;
+  --zip-tooth-shade: #ebdde8;
+  --zip-tooth-rim: rgba(150, 40, 95, 0.42);
+  --zip-lining: var(--tray-lining);
+  /* The lip's shadow on a light fabric: a blush, not a smudge. */
+  --zip-lining-deep: color-mix(in srgb, var(--tray-lining) 90%, #8a3a66);
+}
+
+/* ---------- The tray's edge, where the right tape is sewn on ---------- */
+
+.tray__cover {
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  top: var(--tray-top);
+  bottom: 0;
+  width: 24px;
+  border-radius: 10px 0 0 0;
+  background: var(--tray-edge);
+  box-shadow: var(--tray-edge-shadow);
+}
+
+.tray__col {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  top: var(--tray-top);
+  bottom: 0;
+  width: var(--tray-col);
+  pointer-events: none;
+}
+
+/* ---------- The window the stack shows through, clipped to the mouth by transforms ---------- */
+
+.tray__w1,
+.tray__w2 {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Shut, the stack isn't drawn or reachable: it skips style and paint while the board repaints, and
+   its stickers can't take focus. */
+.tray__w1.is-shut {
+  opacity: 0;
+  content-visibility: hidden;
+}
+
+.tray__c1,
+.tray__c2 {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Where a sheet goes down into the tray, it's in the tray's shadow. */
+.tray__deep {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  height: 26px;
+  pointer-events: none;
+}
+
+.tray__deep--top {
+  top: 0;
+  background: linear-gradient(to bottom, var(--tray-deep), transparent);
+}
+
+.tray__deep--bot {
+  bottom: 0;
+  background: linear-gradient(to top, var(--tray-deep), transparent);
+}
+
+/* The lining you see into: soft fabric, a hint of weave. */
+.tray__fabric {
+  position: absolute;
+  left: -240px;
+  top: 0;
+  width: 640px;
+  height: 100%;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(90deg, var(--tray-weave) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(0deg, rgba(28, 24, 36, 0.028) 0 1px, transparent 1px 3px),
+    var(--tray-lining);
+}
+
+/* The stack: the front sheet, the strips of the sheets under it, and its depth. */
+.tray__stack {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 156px;
+  height: 436px;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
+}
+
+/* ---------- A loose sheet: a tear strip to grip at the top, its dates on its foot ---------- */
+
+/* Insets and turns pivot on its foot. */
+.tray__sheet {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 156px;
+  height: 364px;
+  transform-origin: 50% 100%;
+}
+
+.tray__paper {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--liner-lift);
+  box-shadow:
+    0 0 0 0.5px rgba(28, 24, 36, 0.18),
+    1px 2px 3px rgba(28, 24, 36, 0.16),
+    3px 8px 18px rgba(28, 24, 36, 0.14);
+}
+
+.tray__sheet:not(.is-top) .tray__paper {
+  box-shadow:
+    0 0 0 0.5px rgba(28, 24, 36, 0.2),
+    0 2px 3px rgba(28, 24, 36, 0.1);
+}
+
+/* The grip: a band above a perforation row, with a firmer run of holes at its middle. */
+.tray__tear {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 24px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(28, 24, 36, 0.035), rgba(28, 24, 36, 0) 80%);
+}
+
+.tray__tear::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 21px;
+  height: 3px;
+  background: radial-gradient(circle, rgba(28, 24, 36, 0.2) 0 1.2px, transparent 1.5px) 0 50% / 7px
+    3px repeat-x;
+}
+
+.tray__tear::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 9px;
+  width: 44px;
+  height: 5px;
+  margin-left: -22px;
+  border-radius: 3px;
+  background: radial-gradient(circle, rgba(28, 24, 36, 0.5) 0 1.3px, transparent 1.6px) 0 50% / 7px
+    5px repeat-x;
+}
+
+/* The sheet's bottom margin with its dates and number printed on it: all of a sheet that shows
+   under the one in front. */
+.tray__foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px 0 9px;
+  /* The paper's cut edge catching the light. */
+  box-shadow:
+    inset 0 -1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1.5px 0 rgba(28, 24, 36, 0.05);
+}
+
+.tray__foot .fine {
+  position: relative;
+  font-size: var(--fs-fine);
+  line-height: 1;
+  letter-spacing: 0.05em;
+  color: #5f5a69;
+  white-space: nowrap;
+}
+
+.tray__sheet:not(.is-top) .tray__foot {
+  cursor: pointer;
+}
+
+/* The soft shadow the sheet in front casts onto this edge. */
+.tray__sheet:not(.is-top) .tray__foot::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 8px;
+  pointer-events: none;
+  background: linear-gradient(
+    rgba(28, 24, 36, 0.2),
+    rgba(28, 24, 36, 0.07) 45%,
+    rgba(28, 24, 36, 0)
+  );
+}
+
+.tray__foot:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
+}
+
+.tray__foot:active {
+  background: rgba(28, 24, 36, 0.07);
+}
+
+.tray__shade {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: rgba(28, 24, 36, 0.12);
+}
+
+/* Further back, a shade darker. Each level is also a little narrower, so its dates are set a touch
+   larger to land on the fine-print floor. */
+.tray__sheet[data-depth="1"] .tray__shade {
+  opacity: 0.3;
+}
+
+.tray__sheet[data-depth="2"] .tray__shade {
+  opacity: 0.6;
+}
+
+.tray__sheet[data-depth="3"] .tray__shade {
+  opacity: 0.9;
+}
+
+.tray__sheet[data-depth="1"] .tray__foot .fine {
+  font-size: calc(var(--fs-fine) / 0.975);
+}
+
+.tray__sheet[data-depth="2"] .tray__foot .fine {
+  font-size: calc(var(--fs-fine) / 0.95);
+}
+
+.tray__sheet[data-depth="3"] .tray__foot .fine {
+  font-size: calc(var(--fs-fine) / 0.925);
+}
+
+/* The rest of the stack: a button, its depth, that spreads every sheet out. */
+.tray__depth {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  height: 22px;
+  margin: 0 0 0 -30px;
+  padding: 0 9px 0 7px;
+  border: 0;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 11px;
+  cursor: pointer;
+  color: var(--ink);
+  background: var(--liner-lift);
+  box-shadow:
+    0 0 0 0.5px rgba(28, 24, 36, 0.22),
+    0 1px 0 rgba(28, 24, 36, 0.1),
+    1px 2px 3px rgba(28, 24, 36, 0.12);
+  font: 700 var(--fs-fine) / 1 var(--font-ui);
+  font-stretch: var(--w-ui);
+  letter-spacing: 0.02em;
+  pointer-events: auto;
+}
+
+/* A thumb's reach. */
+.tray__depth::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  right: -6px;
+  top: -11px;
+  bottom: -11px;
+}
+
+.tray__depth:active {
+  transform: translateY(1px);
+}
+
+.tray__depth:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.tray__ic {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
+/* ---------- One sheet pulled out over the board, with its X ---------- */
+
+.tray__pulled {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 156px;
+  height: 364px;
+  transform-origin: 50% 40%;
+}
+
+.tray__pulled .tray__paper {
+  box-shadow:
+    0 0 0 0.5px rgba(28, 24, 36, 0.18),
+    3px 7px 8px rgba(28, 24, 36, 0.16),
+    8px 18px 30px rgba(28, 24, 36, 0.18);
+}
+
+/* Out and hovering, its paper and stickers take the finger; the layer it rides in doesn't. */
+.tray__pulled.is-out {
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+/* Top left: back into the tray. */
+.tray__x {
+  position: absolute;
+  left: -12px;
+  top: -12px;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--ink);
+  pointer-events: auto;
+  background: var(--liner-lift);
+  box-shadow:
+    0 0 0 0.5px rgba(28, 24, 36, 0.26),
+    1px 2px 3px rgba(28, 24, 36, 0.18);
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 160ms linear,
+    transform var(--t-pop) var(--ease-spring);
+}
+
+/* A thumb's reach. */
+.tray__x::before {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+}
+
+.tray__x .tray__ic {
+  width: 15px;
+  height: 15px;
+}
+
+.tray__pulled.is-out .tray__x {
+  opacity: 1;
+  transform: none;
+}
+
+.tray__x:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* ---------- A slot: a sticker, its used sticker silhouette, or plain paper ---------- */
+
+.tray__slot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 72px;
+  height: 84px;
+  margin: -42px 0 0 -36px;
+  padding: 0;
+  border: 0;
+  background: none;
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  cursor: grab;
+  touch-action: none;
+  transform: translate(var(--x), var(--y)) rotate(var(--r));
+  transition: opacity 200ms linear;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tray__slot[data-state="used"] {
+  cursor: pointer;
+}
+
+.tray__slot:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+  border-radius: 10px;
+}
+
+.tray__slot.is-out {
+  opacity: 0.2;
+}
+
+.tray__fit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.tray__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 0 0.5px rgba(28, 24, 36, 0.55))
+    drop-shadow(0.4px 0.8px 0.5px rgba(28, 24, 36, 0.18));
+}
+
+/* A used sticker silhouette shows no sticker. */
+.tray__slot[data-state="peeling"] .tray__img,
+.tray__slot[data-state="used"] .tray__img {
+  opacity: 0;
+}
+
+/* A dot badge, stuck on by the same hand as every other. */
+.tray__new {
+  position: absolute;
+  right: -9px;
+  top: -8px;
+  z-index: 2;
+  display: inline-grid;
+  place-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--seal);
+  color: var(--ink);
+  white-space: nowrap;
+  font: 400 var(--fs-fine) / 1 var(--font-puffy);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  transform: rotate(var(--tilt));
+  box-shadow:
+    inset 0 0 0 1px rgba(28, 24, 36, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    1px 2px 3px rgba(28, 24, 36, 0.16);
+  pointer-events: none;
+}
+
+/* A used sticker silhouette: the kiss-cut outline with plain backing paper inside, a hair of shadow
+   on its top-left inside edge. */
+.tray__used-sticker-silhouette-wrap {
+  position: absolute;
+  inset: 0;
+  filter: drop-shadow(0 0 0.5px rgba(28, 24, 36, 0.9)) drop-shadow(0 0 0.3px rgba(28, 24, 36, 0.5));
+  opacity: 0;
+}
+
+.tray__slot[data-state="used"] .tray__used-sticker-silhouette-wrap,
+.tray__slot[data-state="peeling"] .tray__used-sticker-silhouette-wrap {
+  opacity: 1;
+}
+
+/* The face stock's cut edge throws a hair of shadow into the used sticker silhouette, top left. */
+.tray__used-sticker-silhouette {
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 24, 36, 0.38);
+  -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
+  mask: var(--m) 0 0 / 100% 100% no-repeat;
+}
+
+.tray__used-sticker-silhouette i {
+  position: absolute;
+  inset: 0;
+  transform: translate(1.3px, 1.6px);
+  background:
+    var(--liner-print) -20px -14px / 420px 700px,
+    #e8e5ee;
+}
+
+/* The used sticker silhouette a returning sticker belongs in: its cut line breathes in ink. */
+.tray__used-sticker-silhouette-ring {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: var(--ink);
+  transform: scale(1.12);
+  -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
+  mask: var(--m) 0 0 / 100% 100% no-repeat;
+}
+
+.tray__slot.is-target .tray__used-sticker-silhouette-ring {
+  animation: tray-used-sticker-silhouette-ring 820ms var(--ease-out) infinite alternate;
+}
+
+@keyframes tray-used-sticker-silhouette-ring {
+  from {
+    opacity: 0.16;
+    transform: scale(1.07);
+  }
+  to {
+    opacity: 0.62;
+    transform: scale(1.14);
+  }
+}
+
+/* ---------- The folder tabs, standing up from the stack's top edge inside the tray ---------- */
+
+.tray__tabs {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 156px;
+  height: 0;
+  display: flex;
+  gap: 3px;
+  padding-left: 8px;
+  pointer-events: auto;
+}
+
+.tray__tabs[hidden] {
+  display: none;
+}
+
+.tray__tab {
+  --tab: var(--liner-lift);
+  position: relative;
+  width: 46px;
+  height: 24px;
+  margin: -24px 0 0;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  display: grid;
+  place-items: center;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+  pointer-events: auto;
+  font: 700 var(--fs-fine) / 1 var(--font-ui);
+  font-stretch: var(--w-ui);
+  letter-spacing: 0.02em;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Label stock cut as a folder tab. */
+.tray__tab::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 7px 7px 0 0;
+  background: color-mix(in srgb, var(--tab) 42%, var(--liner-lift));
+  box-shadow: inset 0 0 0 0.5px rgba(28, 24, 36, 0.2);
+  transform-origin: 50% 100%;
+  transform: scaleY(0.8);
+  transition: transform var(--t-stick) var(--ease-out);
+}
+
+/* A thumb's reach. */
+.tray__tab::after {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  top: -12px;
+  bottom: -8px;
+}
+
+.tray__tab span {
+  transform: translateY(2px);
+  transition: transform var(--t-stick) var(--ease-out);
+  pointer-events: none;
+}
+
+.tray__tab[data-filter="all"] {
+  --tab: #ffffff;
+}
+
+.tray__tab[data-filter="mine"] {
+  --tab: var(--pink);
+}
+
+.tray__tab[data-filter="gifts"] {
+  --tab: var(--grape);
+}
+
+.tray__tab[aria-selected="true"]::before {
+  transform: none;
+  background: var(--tab);
+  box-shadow:
+    inset 0 0 0 0.5px rgba(28, 24, 36, 0.22),
+    0 -1px 2px rgba(28, 24, 36, 0.12);
+}
+
+.tray__tab[data-filter="all"][aria-selected="true"]::before {
+  background: var(--liner-lift);
+}
+
+.tray__tab[aria-selected="true"] span {
+  transform: none;
+}
+
+.tray__tab:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+  border-radius: 6px;
+}
+
+/* ---------- A sticker in hand, and its shadow on the board where it will land ---------- */
+
+.tray__land {
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  pointer-events: none;
+  filter: blur(4px);
+}
+
+.tray__land i {
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 24, 36, 0.2);
+  -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
+  mask: var(--m) 0 0 / 100% 100% no-repeat;
+}
+
+.tray__fly {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+}
+
+.tray__flyer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  perspective: 520px;
+}
+
+.tray__curl {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.tray__flyer img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  filter: var(--sticker-cut) drop-shadow(3px 7px 5px rgba(28, 24, 36, 0.2))
+    drop-shadow(8px 16px 18px rgba(28, 24, 36, 0.14));
+}
+
+.tray__flyer.is-flat img {
+  filter: drop-shadow(0 0 0.5px rgba(28, 24, 36, 0.55))
+    drop-shadow(0.4px 0.8px 0.5px rgba(28, 24, 36, 0.18));
+}
+
+/* ---------- The spread: every sheet laid out on the tray's lining ---------- */
+
+.tray__spread {
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  pointer-events: none;
+}
+
+.tray__spread.is-on {
+  pointer-events: auto;
+}
+
+/* Every sheet laid out on the tray's own material. */
+.tray__mat {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background:
+    repeating-linear-gradient(90deg, var(--tray-weave) 0 1px, transparent 1px 3px), var(--tray-mat);
+}
+
+.tray__cell {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 156px;
+  height: 364px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  appearance: none;
+  transform-origin: 0 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tray__cell .tray__sheet {
+  pointer-events: none;
+}
+
+/* A spread sheet is drawn smaller: its dates stay at the fine-print floor. */
+.tray__cell .tray__foot .fine {
+  font-size: calc(var(--fs-fine) / var(--k, 1));
+}
+
+.tray__cell:focus-visible {
+  outline: 3px solid var(--seal);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.tray__cell.is-here .tray__paper {
+  box-shadow:
+    0 0 0 2.5px var(--liner-lift),
+    0 0 0 4px rgba(255, 255, 255, 0.35),
+    1px 2px 3px rgba(4, 2, 8, 0.34),
+    3px 10px 22px rgba(4, 2, 8, 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tray__slot,
+  .tray__tab::before,
+  .tray__tab span {
+    transition: none;
+  }
+
+  .tray__slot.is-target .tray__used-sticker-silhouette-ring {
+    animation: none;
+    opacity: 0.5;
+  }
+}

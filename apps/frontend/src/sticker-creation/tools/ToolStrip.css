@@ -1,0 +1,64 @@
+/* One flat label strip. The current tool is reversed out of Ink and takes the fill weight. */
+.tool-strip {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--liner-lift);
+  border-radius: var(--r-label);
+  box-shadow:
+    inset 0 0 0 1px var(--rule),
+    var(--shadow-label);
+}
+
+/* 38px keeps the row tight; the invisible margin in ::after brings each touch target to 44px. */
+.tool-tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink);
+  transition:
+    transform var(--t-press) linear,
+    background-color 120ms var(--ease-out);
+}
+
+.tool-tile::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+}
+
+.tool-tile svg {
+  display: block;
+}
+
+.tool-tile:active {
+  transform: translateY(1px);
+}
+
+.tool-tile[aria-pressed="true"],
+.tool-tile[aria-expanded="true"]:not(.tool-color) {
+  background: var(--ink);
+  color: var(--liner-lift);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* The color control is the color itself: a dot inked in it, on a thin label ring. */
+.tool-color-dot {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--draw-color);
+  box-shadow: 0 0 0 1px rgba(28, 24, 36, 0.28);
+}
+
+.tool-color[aria-expanded="true"] .tool-color-dot {
+  box-shadow: 0 0 0 2px var(--ink);
+}

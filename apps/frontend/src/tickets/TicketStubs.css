@@ -1,0 +1,92 @@
+/* Drawing tickets as paper stubs (TicketStubs.tsx): fresh ones are Seal Yellow ticket stock, used ones
+   the backing they left, with the kiss-cut outline of the sticker each became. They're paper lying on
+   the page, lit from the top left like every label. */
+
+.ticket-stubs {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ticket-stubs--large {
+  gap: 10px;
+}
+
+/* Tossed down by one hand, at small turns. */
+.ticket-stubs--large .ticket-stub:nth-child(3n + 1) {
+  rotate: -6deg;
+}
+
+.ticket-stubs--large .ticket-stub:nth-child(3n + 2) {
+  rotate: 2deg;
+  translate: 0 -5px;
+}
+
+.ticket-stubs--large .ticket-stub:nth-child(3n + 3) {
+  rotate: 7deg;
+}
+
+.ticket-stubs--small {
+  gap: 6px;
+}
+
+.ticket-stub {
+  flex: none;
+  overflow: visible;
+  filter: drop-shadow(0 1px 0 rgba(28, 24, 36, 0.1)) drop-shadow(1px 2px 3px rgba(28, 24, 36, 0.08));
+}
+
+.ticket-stub__face {
+  fill: var(--seal);
+}
+
+.ticket-stub.is-used .ticket-stub__face {
+  fill: var(--liner-lift);
+}
+
+.ticket-stub__edge {
+  fill: none;
+  stroke: rgba(28, 24, 36, 0.22);
+  stroke-width: 1;
+}
+
+.ticket-stub.is-used .ticket-stub__edge {
+  stroke: var(--rule-strong);
+}
+
+.ticket-stub__perf {
+  stroke: rgba(28, 24, 36, 0.34);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-dasharray: 0 3.6;
+}
+
+.ticket-stub__glyph {
+  color: var(--ink);
+}
+
+/* The cut line a sticker leaves on its backing, fading in once it's read. */
+.ticket-stub__outline {
+  fill: none;
+  stroke: rgba(110, 104, 120, 0.62);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  animation: ticket-stub-outline-in 700ms var(--ease-out) both;
+}
+
+.ticket-stubs--large .ticket-stub__outline {
+  stroke-width: 1.25;
+  stroke-dasharray: 3 2.4;
+}
+
+@keyframes ticket-stub-outline-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticket-stub__outline {
+    animation: none;
+  }
+}

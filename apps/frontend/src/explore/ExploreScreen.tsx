@@ -1,16 +1,15 @@
+import { At, PaperPlaneTilt, X } from "@phosphor-icons/react";
 import { Fragment, useEffect, useState, type ReactNode } from "react";
-import { ArtistArt, type ArtKey } from "../artists/ArtistArt";
+import type { ArtKey } from "../artists/art";
+import { ArtistArt } from "../artists/ArtistArt";
 import { ArtistAvatarArt } from "../artists/ArtistAvatarArt";
 import { ARTISTS, artistByHandle, latestArt, type Artist } from "../artists/demoArtists";
-import { Label } from "../controls/controls";
-import { usePress } from "../controls/usePress";
-import { useToast } from "../controls/useToast";
-import { AtIcon } from "../icons/AtIcon";
-import { CloseIcon } from "../icons/CloseIcon";
-import { PaperPlaneIcon } from "../icons/PaperPlaneIcon";
+import { LabelButton } from "../ui/LabelButton";
+import { useToast } from "../ui/useToast";
 import { useIdentity } from "../identity/useIdentity";
 import { formatClock, formatNo } from "../stickers/format";
-import { listKeptStickers } from "../stickers/stickerStorage";
+import { deviceGiftStore, giftStatusBySticker } from "../giving/giftStore";
+import { listStickers } from "../stickers/stickerStorage";
 import {
   FEED,
   LEADERBOARDS,
@@ -56,8 +55,10 @@ function useMe(): RowArtist {
   useEffect(() => {
     let url: string | undefined;
     let cancelled = false;
-    listKeptStickers().then(
-      ([newest]) => {
+    listStickers().then(
+      (records) => {
+        const given = giftStatusBySticker(deviceGiftStore().list());
+        const newest = records.find((r) => !given.has(r.id));
         if (cancelled || !newest) return;
         url = URL.createObjectURL(newest.blob);
         setStickerUrl(url);
@@ -95,21 +96,26 @@ function StickerArt({ row, className }: { row: RowArtist; className: string }) {
   );
 }
 
-/** A tappable area that opens someone's sticker board; it presses like a tile. */
+/** A tappable area that opens someone's sticker board; `data-press` gives it the shared press. */
 function Pressable({
-  onPress,
+  onClick,
   className,
   label,
   children,
 }: {
-  onPress: () => void;
+  onClick: () => void;
   className: string;
   label: string;
   children: ReactNode;
 }) {
-  const { handlers } = usePress(onPress);
   return (
-    <button type="button" className={`pressable ${className}`} aria-label={label} {...handlers}>
+    <button
+      type="button"
+      className={`pressable ${className}`}
+      aria-label={label}
+      data-press
+      onClick={onClick}
+    >
       {children}
     </button>
   );
@@ -134,7 +140,7 @@ function ArtistRow({
     <li className={isMe ? "me" : ""}>
       <Pressable
         className="artist-row"
-        onPress={onOpen}
+        onClick={onOpen}
         label={isMe ? "Your sticker board" : `@${row.handle}'s sticker board`}
       >
         {lead}
@@ -225,7 +231,7 @@ function FeedPost({ item, me, open }: { item: FeedItem; me: RowArtist; open: (wh
     <article className="feed-post">
       <Pressable
         className="feed-head"
-        onPress={() => open(item.who)}
+        onClick={() => open(item.who)}
         label={`@${artist.handle}'s sticker board`}
       >
         <ArtistAvatarArt avatar={artist.avatar} className="feed-avatar" />
@@ -281,16 +287,15 @@ function SearchResults({
           Handles are exact, so check the spelling with them. If they’re your LINE friend, give them
           a sticker in your chat: accepting it brings them in.
         </p>
-        <Label
-          small
-          hue="aqua"
-          icon={<PaperPlaneIcon size={18} />}
-          onPress={() => toast.show("Giving in a LINE chat isn’t built yet")}
+        <LabelButton
+          size="sm"
+          tone="aqua"
+          icon={<PaperPlaneTilt size={18} />}
+          onClick={() => toast("Giving in a LINE chat isn’t built yet")}
         >
           Give in a LINE chat
-        </Label>
+        </LabelButton>
         <DemoNote />
-        {toast.node}
       </section>
     );
 
@@ -348,7 +353,7 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
   return (
     <div className="explore">
       <label className="artist-search">
-        <AtIcon size={20} />
+        <At size={20} />
         <input
           type="search"
           placeholder="search artists"
@@ -366,7 +371,7 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
             aria-label="Clear search"
             onClick={() => setQuery("")}
           >
-            <CloseIcon size={16} />
+            <X size={16} />
           </button>
         )}
       </label>
@@ -388,7 +393,7 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
                   <li key={r.handle}>
                     <Pressable
                       className="today-sticker"
-                      onPress={() => open(who)}
+                      onClick={() => open(who)}
                       label={who === ME ? "Your sticker board" : `@${r.handle}'s sticker board`}
                     >
                       <StickerArt row={r} className="today-art" />

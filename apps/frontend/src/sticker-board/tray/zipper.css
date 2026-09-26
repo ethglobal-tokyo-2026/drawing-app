@@ -1,0 +1,400 @@
+/* The sticker tray's Zipper. zipper.ts places every part each frame; this file only draws them.
+   Matte plastic lit by the app's one light from the top left: an edge highlight and a contact shadow,
+   no gloss. Motion is transform and opacity only. */
+
+.zip {
+  --zip-tape: #1c1824;
+  --zip-weave: rgba(255, 255, 255, 0.05);
+  --zip-selvedge: rgba(255, 255, 255, 0.08);
+  --zip-stitch: rgba(242, 241, 246, 0.34);
+  --zip-tooth: #eeecf3;
+  --zip-tooth-lit: #ffffff;
+  --zip-tooth-shade: #c3bed1;
+  --zip-tooth-rim: rgba(28, 24, 36, 0.5);
+  /* The slider: matte painted metal, the chain's own color. */
+  --zip-body: #e4e1ea;
+  --zip-body-lit: #ffffff;
+  --zip-body-deep: #a9a2b8;
+  --zip-body-rim: rgba(28, 24, 36, 0.5);
+  /* The pull is Bonbon Pink: the tray is yours. */
+  --zip-slider: #ff4f9a;
+  --zip-slider-lit: #ff8ebf;
+  --zip-slider-deep: #d2367d;
+  --zip-slider-rim: rgba(96, 12, 52, 0.5);
+  --zip-lining: #2a2434;
+  --zip-lining-deep: #110e16;
+  --zip-pitch: 12px;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.zip * {
+  box-sizing: border-box;
+}
+
+.zip__layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+}
+
+.zip__lining {
+  z-index: 1;
+}
+
+/* What the open mouth shows: over the lining, under the teeth. */
+.zip__slot {
+  z-index: 2;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.zip__row {
+  z-index: 3;
+}
+
+.zip__stops {
+  z-index: 4;
+}
+
+.zip__slider {
+  z-index: 6;
+}
+
+/* ---------- The mouth's lining: a sliver for each stretch of track, scaled across ---------- */
+
+.zip__sliver {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100px;
+  height: 5px;
+  margin-top: -2.5px;
+  opacity: 0;
+  transform-origin: 0 50%;
+  background: linear-gradient(
+    to right,
+    var(--zip-lining-deep) 0,
+    var(--zip-lining) 26%,
+    var(--zip-lining) 88%,
+    color-mix(in srgb, var(--zip-lining) 92%, var(--zip-lining-deep))
+  );
+}
+
+/* ---------- A segment: one tooth and its slice of tape ----------
+   Anchored where the chain's center line runs when shut, so moving a row moves its segments whole. */
+
+.zip__seg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+}
+
+/* Each slice overlaps its neighbors, so a tight bend never shows a notch. */
+.zip__tape {
+  position: absolute;
+  top: calc(var(--zip-pitch) / -2 - 2px);
+  height: calc(var(--zip-pitch) + 4px);
+  width: 13.5px;
+  background-color: var(--zip-tape);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--zip-weave) 0 1px,
+    transparent 1px 2px
+  );
+}
+
+.zip__seg--a .zip__tape {
+  left: -15px;
+  box-shadow: inset 1px 0 0 var(--zip-selvedge);
+}
+
+.zip__seg--b .zip__tape {
+  left: 1.5px;
+  box-shadow: inset -1px 0 0 var(--zip-selvedge);
+}
+
+/* The stitch line where the tape is sewn to the tray. */
+.zip__tape::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1.3px;
+  background: repeating-linear-gradient(to bottom, var(--zip-stitch) 0 3.4px, transparent 3.4px 6px)
+    0 2px;
+}
+
+.zip__seg--a .zip__tape::before {
+  left: 3.4px;
+}
+
+.zip__seg--b .zip__tape::before {
+  right: 3.4px;
+}
+
+/* Each tooth's head reaches past the chain's center line, into the gap between two of the other
+   row's. */
+.zip__tooth {
+  position: absolute;
+  top: -2.9px;
+  width: 10px;
+  height: 5.8px;
+  background: linear-gradient(
+    to bottom,
+    var(--zip-tooth-lit) 0 0.9px,
+    var(--zip-tooth) 1.7px 56%,
+    var(--zip-tooth-shade) 100%
+  );
+  box-shadow:
+    0 0 0 0.5px var(--zip-tooth-rim),
+    0.7px 1.2px 1.1px rgba(8, 6, 12, 0.6);
+}
+
+.zip__tooth::before,
+.zip__tooth::after {
+  content: "";
+  position: absolute;
+}
+
+/* Row a is on the left: its head, toward the chain's center, is the rounder end. */
+.zip__seg--a .zip__tooth {
+  left: -7px;
+  border-radius: 1px 3px 3px 1px;
+}
+
+.zip__seg--b .zip__tooth {
+  left: -3px;
+  border-radius: 3px 1px 1px 3px;
+}
+
+/* The molded step where the tooth grips its tape, and the hollow in its head that takes the other
+   row's hook. */
+.zip__seg--a .zip__tooth::before {
+  left: 2.4px;
+  top: 0.9px;
+  bottom: 0.9px;
+  width: 0.8px;
+  background: rgba(28, 24, 36, 0.22);
+}
+
+.zip__seg--b .zip__tooth::before {
+  right: 2.4px;
+  top: 0.9px;
+  bottom: 0.9px;
+  width: 0.8px;
+  background: rgba(28, 24, 36, 0.22);
+}
+
+.zip__seg--a .zip__tooth::after {
+  right: 1.1px;
+  top: 1.8px;
+  width: 2px;
+  height: 2.2px;
+  border-radius: 1.1px;
+  background: rgba(28, 24, 36, 0.15);
+}
+
+.zip__seg--b .zip__tooth::after {
+  left: 1.1px;
+  top: 1.8px;
+  width: 2px;
+  height: 2.2px;
+  border-radius: 1.1px;
+  background: rgba(28, 24, 36, 0.15);
+}
+
+/* ---------- Stops ---------- */
+
+.zip__stop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--zip-tooth-lit) 0 0.9px,
+    var(--zip-tooth) 1.6px 55%,
+    var(--zip-tooth-shade)
+  );
+  box-shadow:
+    0 0 0 0.5px var(--zip-tooth-rim),
+    0.8px 1.4px 1.3px rgba(8, 6, 12, 0.55);
+}
+
+.zip__stop--top {
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 1.6px;
+}
+
+.zip__stop--bottom {
+  width: 17px;
+  height: 6.5px;
+  margin: -3.25px 0 0 -8.5px;
+  border-radius: 2px;
+}
+
+.zip__stop::after {
+  content: "";
+  position: absolute;
+  inset: 1.4px;
+  border-radius: 1px;
+  box-shadow: inset 0.5px 0.5px 0 rgba(28, 24, 36, 0.14);
+}
+
+/* ---------- The slider and its pull ----------
+   The button is the grab area: it covers the body and the pull whichever way the pull lies, at least
+   a full touch target. */
+
+.zip__slider {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  pointer-events: auto;
+  cursor: grab;
+  touch-action: none;
+  outline: none;
+  color: inherit;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.zip__slider::before {
+  content: "";
+  position: absolute;
+  left: -27px;
+  top: -58px;
+  width: 54px;
+  height: 116px;
+  border-radius: 27px;
+}
+
+.zip.is-dragging .zip__slider {
+  cursor: grabbing;
+}
+
+.zip__part {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+}
+
+.zip__body {
+  position: absolute;
+  left: -12px;
+  top: -17px;
+  width: 24px;
+  height: 34px;
+  overflow: visible;
+  filter: drop-shadow(0.6px 1.1px 0.6px rgba(8, 6, 12, 0.5))
+    drop-shadow(1.2px 3px 3px rgba(8, 6, 12, 0.3));
+}
+
+.zip__pull {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  perspective: 240px;
+}
+
+.zip__flop {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+}
+
+/* Hangs down from its hinge. */
+.zip__tab {
+  position: absolute;
+  left: -11px;
+  top: -5px;
+  width: 22px;
+  height: 55px;
+  overflow: visible;
+  transform-origin: 11px 5px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* The same part seen from behind once it flops over. */
+.zip__tab--back {
+  transform: rotateY(180deg);
+}
+
+/* The pull's shadow on the tape: it stretches and fades as the pull lifts. */
+.zip__tabshadow {
+  position: absolute;
+  left: -9.5px;
+  top: 0;
+  width: 19px;
+  height: 48px;
+  border-radius: 10px;
+  background: rgba(6, 4, 10, 0.66);
+  filter: blur(1.5px);
+  transform-origin: 9.5px 0;
+  opacity: 0.55;
+}
+
+/* NEW: something inside you haven't seen; a dot stuck on the pull's corner. */
+.zip__pip {
+  position: absolute;
+  left: 4px;
+  top: 42px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--seal);
+  box-shadow:
+    inset 0 0 0 1px rgba(28, 24, 36, 0.34),
+    1px 1.5px 2px rgba(8, 6, 12, 0.45);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0.6px);
+}
+
+.zip__pip[hidden] {
+  display: none;
+}
+
+/* Keyboard focus: a ring around the body. */
+.zip__ring {
+  position: absolute;
+  left: -17px;
+  top: -22px;
+  width: 34px;
+  height: 44px;
+  border-radius: 12px;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 2px var(--seal),
+    0 0 0 3.5px var(--ink);
+}
+
+.zip__slider:focus-visible .zip__ring {
+  opacity: 1;
+}

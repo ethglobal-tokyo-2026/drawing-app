@@ -4,58 +4,24 @@
   position: absolute;
   inset: 0;
   z-index: 26;
-  perspective: 1400px;
-  background: var(--ink);
 }
 
-/* The turn: lift to 0.92, turn on the vertical axis over the Ink table, land with a small overshoot. */
-.flipper {
-  position: absolute;
-  inset: 0;
-  transform-style: preserve-3d;
-  transition: transform 640ms var(--ease-peel);
+/* Read only: selecting shows the clear frame, never the handles to resize or turn. */
+.board.visit .placed-sticker {
+  cursor: pointer;
 }
 
-.flipper.turned {
-  transform: rotateY(180deg);
+.board.visit .placed-sticker__handle,
+.board.visit .placed-sticker__rotate {
+  display: none;
 }
 
-.face {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-
-.face.back {
-  transform: rotateY(180deg);
-}
-
-/* Mid-turn, each face shrinks toward the table. */
-.flipper.turned .face.front,
-.flipper:not(.turned) .face.back {
-  animation: turn-lift 640ms var(--ease-out);
-}
-
-@keyframes turn-lift {
-  40% {
-    scale: 0.92;
-  }
-}
-
-.artist-board-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-/* The Explore back chip: a 32px Liner Lift pill with a caret, 44px to touch. */
+/* The Explore back chip: a 32px Liner Lift pill with a caret, beside the name, 44px to touch. */
 .explore-chip {
-  --travel: 1px;
-  position: relative;
-  flex: none;
+  position: absolute;
+  z-index: 800;
+  top: 20px;
+  right: 14px;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -76,105 +42,22 @@
   inset: -6px -2px;
 }
 
-.explore-chip[data-press="down"] {
-  animation: press-down 1090ms forwards;
-}
-
-.explore-chip[data-press="pop"] {
-  animation: press-pop 340ms;
-}
-
-.explore-chip[data-press="lift"] {
-  animation: press-lift 380ms;
-}
-
-.photo-sticker svg {
-  width: 100%;
-  height: 100%;
-}
-
-.board-frame.read-only {
-  touch-action: manipulation;
-}
-
-.visit-sticker {
-  position: absolute;
-  padding: 0;
-  border: none;
-  background: none;
-  transition: scale 200ms var(--ease-out);
-}
-
-/* Selected: a clear frame 10px outside the sticker, with 10px corners and no handles. */
-.visit-sticker.selected::before {
-  content: "";
-  position: absolute;
-  inset: -10px;
-  border: 1.5px solid rgb(28 24 36 / 50%);
-  border-radius: 10px;
-  background: rgb(255 255 255 / 35%);
-}
-
-/* ---------- Sticker art on a board: foil and glow ---------- */
-
-/* Gratitude warms from faint pink toward amber, brighter with more thanks. */
-.board-art {
-  position: relative;
-  display: block;
-  filter: drop-shadow(
-    0 0 calc(6px + 12px * var(--glow, 0))
-      color-mix(
-        in srgb,
-        color-mix(in srgb, #ff7eb6, #ffb13b calc(var(--glow, 0) * 60%)) calc(var(--glow, 0) * 90%),
-        transparent
-      )
-  );
-}
-
-.board-art .artist-art {
-  width: 100%;
-  height: auto;
-}
-
-/* The foil band: the silhouette dilated past the white edge in six flowing hues. */
-.board-art .foil-band {
-  position: absolute;
-  inset: 0;
-  filter: drop-shadow(5px 0 0 #ff8fd0) drop-shadow(-5px 0 0 #7fe0ff) drop-shadow(0 5px 0 #ffe27a)
-    drop-shadow(0 -5px 0 #b69cff) drop-shadow(3px 3px 0 #8cf5c0) drop-shadow(-3px -3px 0 #ffb27a);
-  animation: foil-flow 7s linear infinite;
-}
-
-@keyframes foil-flow {
-  to {
-    filter: drop-shadow(5px 0 0 #ff8fd0) drop-shadow(-5px 0 0 #7fe0ff) drop-shadow(0 5px 0 #ffe27a)
-      drop-shadow(0 -5px 0 #b69cff) drop-shadow(3px 3px 0 #8cf5c0) drop-shadow(-3px -3px 0 #ffb27a)
-      hue-rotate(360deg);
-  }
-}
-
-.view-art {
-  width: min(200px, 56%);
-  margin: 6px 0;
-  rotate: -3deg;
-}
-
 /* ---------- Sticker menu ---------- */
 
 .sticker-menu {
   position: absolute;
-  z-index: 100;
+  z-index: 960;
   display: flex;
   flex-direction: column;
   gap: 10px;
   width: max-content;
   max-width: calc(100% - 16px);
   padding: 10px;
-  border: 1px solid var(--rule-kiss);
+  border: 1px solid var(--rule);
   border-radius: 10px;
   background: var(--liner);
   box-shadow: var(--shadow-lift);
-  animation: drop-in 0.2s var(--ease-out);
+  animation: menu-in 0.2s var(--ease-out);
 }
 
 .sticker-menu-actions {
@@ -196,13 +79,13 @@
   gap: 8px;
   height: 40px;
   padding: 0 14px 0 4px;
-  border: 1px solid var(--rule-kiss);
+  border: 1px solid var(--rule);
   border-radius: 999px;
   background: var(--liner-lift);
   box-shadow: var(--shadow-label);
 }
 
-.result-card .artist-chip {
+.visit-view .artist-chip {
   align-self: center;
 }
 
@@ -243,4 +126,68 @@
 .chip-text b {
   font-size: 14px;
   font-weight: 760;
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+}
+
+/* ---------- Viewing one of their stickers ---------- */
+
+.visit-view-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-sheet);
+  display: flex;
+  align-items: flex-end;
+  padding: 10px;
+  background: rgb(28 24 36 / 45%);
+  animation: scrim-in 0.3s;
+}
+
+.visit-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 18px 20px 24px;
+  border-radius: 16px;
+  background: var(--liner);
+  box-shadow: var(--shadow-sheet);
+}
+
+.visit-view h2 {
+  margin: 4px 0 0;
+  font-size: 23px;
+  font-weight: 800;
+  line-height: 1.08;
+  font-stretch: var(--w-title);
+}
+
+.visit-view-meta {
+  color: var(--graphite);
+}
+
+.visit-view-perf {
+  align-self: stretch;
+  margin: 6px -20px;
+  border-top: 3px dotted var(--rule-strong);
+}
+
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.visit-view-art {
+  width: min(200px, 56%);
+  aspect-ratio: 1;
+  height: auto;
+  margin: 6px 0;
+  rotate: -3deg;
 }

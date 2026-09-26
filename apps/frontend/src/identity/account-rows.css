@@ -1,0 +1,43 @@
+/* ---------- Account details on the stat board's LINE and Privy slip: LINE's, then Privy's ---------- */
+
+.account-rows {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+/* The label over the value, and Copy beside the value. */
+.account-rows__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: 12px;
+}
+
+.account-rows__row dt {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.account-rows__row dd {
+  margin: 0;
+}
+
+/* IDs and addresses are case-sensitive and long: shown whole, wrapping anywhere, and selectable. */
+.account-rows__value {
+  min-width: 0;
+  font:
+    600 12.5px/1.35 ui-monospace,
+    "SF Mono",
+    Menlo,
+    monospace;
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.account-rows__value a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

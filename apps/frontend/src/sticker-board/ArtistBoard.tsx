@@ -1,19 +1,27 @@
-import { useEffect, useState } from "react";
-import { ArtistArt } from "../artists/ArtistArt";
+import { CaretLeft, Eye, Gift, Handshake } from "@phosphor-icons/react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { ArtistAvatarArt } from "../artists/ArtistAvatarArt";
-import { artistByHandle, type Artist, type ArtistBoardSticker } from "../artists/demoArtists";
-import { Key, Label, QuietLink } from "../controls/controls";
-import { usePress } from "../controls/usePress";
-import { CaretLeftIcon } from "../icons/CaretLeftIcon";
-import { EyeIcon } from "../icons/EyeIcon";
-import { GiftIcon } from "../icons/GiftIcon";
-import { HandshakeIcon } from "../icons/HandshakeIcon";
+import { ART_SIZE, avatarUrl, stickerArtUrl } from "../artists/artUrl";
+import {
+  artistByHandle,
+  gratitudeTotal,
+  type Artist,
+  type ArtistBoardSticker,
+} from "../artists/demoArtists";
 import { GiveSheet } from "../giving/GiveSheet";
 import { OfferSheet } from "../offers/OfferSheet";
-import { formatClock, formatNo } from "../stickers/format";
-import { CorkBack } from "./CorkBack";
-import "../styles/result-card.css";
-import "./StickerBoard.css";
+import { formatClock, formatHandle, formatNo } from "../stickers/format";
+import { StickerFigure } from "../stickers/StickerFigure";
+import { Key } from "../ui/Key";
+import { LabelButton } from "../ui/LabelButton";
+import { PhotoSticker } from "../ui/PhotoSticker";
+import { QuietLink } from "../ui/QuietLink";
+import { useReducedMotion } from "../ui/useReducedMotion";
+import type { BoardSticker } from "./boardSticker";
+import { fieldOf, toPx, type Field } from "./placement";
+import { PlacedSticker } from "./PlacedSticker";
+import { BoardFlip } from "./stat-board/BoardFlip";
+import { StatCork, type CorkFigures, type StatCorkHandle } from "./stat-board/StatCork";
 import "./ArtistBoard.css";
 
 interface Props {
@@ -23,25 +31,27 @@ interface Props {
 
 /** Gratitude at which a sticker's glow is at its brightest. */
 const FULL_GLOW = 900;
+/** The sticker menu's width, for keeping it on the board. */
+const MENU_W = 250;
 
-/** A sticker as it sits on someone else's board: foil when someone else drew it, a glow for thanks. */
-function BoardArt({
-  sticker,
-  className = "",
-}: {
-  sticker: ArtistBoardSticker;
-  className?: string;
-}) {
-  return (
-    <span
-      className={`board-art ${sticker.by ? "foiled" : ""} ${className}`}
-      style={{ "--glow": Math.min(sticker.gratitude / FULL_GLOW, 1) }}
-    >
-      {sticker.by && <ArtistArt art={sticker.art} className="foil-band" />}
-      <ArtistArt art={sticker.art} />
-    </span>
-  );
-}
+/** A demo sticker as the board's parts take it: an image of its art, where it was stuck. */
+const asBoardSticker = (owner: string, s: ArtistBoardSticker, z: number): BoardSticker => ({
+  id: `${owner}-${s.no}`,
+  no: s.no,
+  createdAt: s.sealedAt,
+  timeUsed: s.timeUsed,
+  blob: new Blob(),
+  width: ART_SIZE,
+  height: ART_SIZE,
+  urls: { png: stickerArtUrl(s.art) },
+  placement: { on: true, x: s.x, y: s.y, s: s.scale, r: s.rotation, z },
+});
+
+/** Someone else's board has no sticker tray, so its field runs to the right inset too. */
+const visitField = (w: number, h: number): Field => {
+  const f = fieldOf(w, h);
+  return { ...f, w: w - 2 * f.left };
+};
 
 /** Who drew a foil sticker: their picture in a foil ring, over "ARTIST @name". */
 function ArtistChip({ handle }: { handle: string }) {
@@ -57,7 +67,7 @@ function ArtistChip({ handle }: { handle: string }) {
       </span>
       <span className="chip-text">
         <span className="fine">Artist</span>
-        <b>@{handle}</b>
+        <b>{formatHandle(handle)}</b>
       </span>
     </span>
   );
@@ -73,187 +83,259 @@ function StickerView({
   onClose: () => void;
 }) {
   return (
-    <div className="result-backdrop" onClick={onClose}>
+    <div className="visit-view-backdrop" onClick={onClose}>
       <div
-        className="result-card"
+        className="visit-view"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label={formatNo(sticker.no)}
       >
-        <BoardArt sticker={sticker} className="view-art" />
+        <StickerFigure
+          urls={{ png: stickerArtUrl(sticker.art) }}
+          width={ART_SIZE}
+          height={ART_SIZE}
+          className="visit-view-art"
+        />
         <h2>{formatNo(sticker.no)}</h2>
-        <div className="result-meta fine">
-          Drawn in {formatClock(sticker.timeUsed)} · @{sticker.by ?? owner}
+        <div className="visit-view-meta fine">
+          Drawn in {formatClock(sticker.timeUsed)} · {formatHandle(sticker.by ?? owner)}
         </div>
         {sticker.by && <ArtistChip handle={sticker.by} />}
-        <div className="perforation" />
-        <QuietLink onPress={onClose}>Close</QuietLink>
+        <div className="visit-view-perf" />
+        <QuietLink onClick={onClose}>Close</QuietLink>
       </div>
     </div>
   );
 }
 
-function ExploreChip({ onBack }: { onBack: () => void }) {
-  const { handlers } = usePress(onBack);
-  return (
-    <button type="button" className="explore-chip" {...handlers}>
-      <CaretLeftIcon size={14} />
-      Explore
-    </button>
-  );
-}
+const figuresOf = (artist: Artist): CorkFigures => {
+  const { stats } = artist;
+  return {
+    name: artist.displayName,
+    handle: artist.handle,
+    picture: <PhotoSticker src={avatarUrl(artist.avatar)} name={artist.displayName} size={42} />,
+    own: false,
+    gratitude: gratitudeTotal(stats) > 0 ? stats.gratitude : undefined,
+    streak: { current: stats.streakDays, best: stats.bests.longestStreak ?? 0 },
+    streakRule:
+      stats.streakDays > 0
+        ? "Miss a day and it drops by one, not back to zero. Days turn over at 4:00."
+        : "It starts the first day they draw. Miss a day later and it drops by one.",
+    stamps: { made: stats.made, received: stats.received, given: stats.given },
+    bestCombo: stats.bests.bestCombo,
+    mostThanksInADay: stats.bests.mostThanksInADay,
+    since: stats.since,
+    address: artist.boardAddress,
+  };
+};
 
-/** Someone else's sticker board, read only, opened from Explore. Their name turns it over. */
+/**
+ * Someone else's Sticker Board, read only, opened from Explore. Their stickers sit where they
+ * stuck them, foil on the ones someone else drew; their name turns it over to their stat board.
+ */
 export function ArtistBoard({ artist, onBack }: Props) {
+  const reduced = useReducedMotion();
+  const face = useRef<HTMLDivElement>(null);
+  const nameButton = useRef<HTMLButtonElement>(null);
+  const flipBack = useRef<HTMLButtonElement>(null);
+  const cork = useRef<StatCorkHandle>(null);
+  const [size, setSize] = useState<{ W: number; H: number } | null>(null);
   const [turned, setTurned] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const [viewing, setViewing] = useState<ArtistBoardSticker | null>(null);
   const [giving, setGiving] = useState(false);
   const [offering, setOffering] = useState<ArtistBoardSticker | null>(null);
+
+  const stickers = useMemo(
+    () => artist.board.map((s, i) => asBoardSticker(artist.handle, s, i + 1)),
+    [artist],
+  );
+  const field = size && visitField(size.W, size.H);
   const menuSticker = selected === null ? null : artist.board[selected];
+
+  useLayoutEffect(() => {
+    const el = face.current;
+    if (!el) return;
+    const measure = () =>
+      setSize((was) =>
+        was?.W === el.clientWidth && was.H === el.clientHeight
+          ? was
+          : { W: el.clientWidth, H: el.clientHeight },
+      );
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    measure();
+    return () => observer.disconnect();
+  }, []);
 
   // LINE's header shows the page title.
   useEffect(() => {
     const previous = document.title;
-    document.title = `@${artist.handle}'s sticker board`;
+    document.title = `${formatHandle(artist.handle)}'s sticker board`;
     return () => {
       document.title = previous;
     };
   }, [artist.handle]);
 
+  // The stat board and the give and offer sheets handle their own Escape; on the front it closes
+  // the sticker view, then the sticker menu.
   useEffect(() => {
+    if (turned || giving || offering) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (giving) setGiving(false);
-      else if (offering) setOffering(null);
-      else if (turned) setTurned(false);
+      if (viewing) setViewing(null);
       else setSelected(null);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [turned, giving, offering]);
+  }, [turned, giving, offering, viewing]);
 
-  const turn = () => {
+  const turn = (over: boolean) => {
     setSelected(null);
-    setTurned((t) => !t);
+    setTurned(over);
   };
+
+  const onStageClick = (e: MouseEvent<HTMLDivElement>) => {
+    const el = e.target instanceof Element ? e.target.closest("[data-sticker-id]") : null;
+    const i = el ? stickers.findIndex((s) => s.id === el.getAttribute("data-sticker-id")) : -1;
+    setSelected(i < 0 || i === selected ? null : i);
+  };
+
+  const menuSpot = (s: ArtistBoardSticker) => {
+    if (!field || !size) return undefined;
+    const c = toPx(field, s);
+    const half = (s.scale * size.W) / 2;
+    return {
+      left: Math.min(Math.max(8, c.x - MENU_W / 2), size.W - MENU_W - 8),
+      top: s.y > 0.6 ? c.y - half - 136 : c.y + half + 12,
+    };
+  };
+
+  const front = (
+    <div className="board visit" ref={face}>
+      <div
+        className="board-stage"
+        role="region"
+        aria-label={`${formatHandle(artist.handle)}'s sticker board`}
+        onClick={onStageClick}
+      >
+        {artist.board.length === 0 && (
+          <div className="board-blank">
+            <span className="board-blank-cut" aria-hidden />
+            <span className="board-blank-note">
+              {formatHandle(artist.handle)} hasn’t stuck anything up yet.
+            </span>
+          </div>
+        )}
+        {field &&
+          size &&
+          stickers.map((s, i) => (
+            <PlacedSticker
+              key={s.id}
+              sticker={s}
+              field={field}
+              boardWidth={size.W}
+              stack={i === selected ? stickers.length : i}
+              curled={false}
+              selected={i === selected}
+              knobBelow={false}
+              landing={false}
+              onLanded={() => {}}
+              reduced={reduced}
+              foil={Boolean(artist.board[i].by)}
+              glow={Math.min(artist.board[i].gratitude / FULL_GLOW, 1)}
+            />
+          ))}
+      </div>
+
+      <button
+        type="button"
+        ref={nameButton}
+        className="board-who"
+        onClick={() => turn(!turned)}
+        aria-expanded={turned}
+        aria-haspopup="dialog"
+        aria-label={`${artist.displayName}: their stats`}
+      >
+        <PhotoSticker src={avatarUrl(artist.avatar)} name={artist.displayName} size={42} />
+        <span className="board-who-name">{artist.displayName}</span>
+      </button>
+      <button type="button" className="explore-chip" data-press onClick={onBack}>
+        <CaretLeft size={14} />
+        Explore
+      </button>
+
+      {menuSticker && (
+        <div
+          className="sticker-menu"
+          style={menuSpot(menuSticker)}
+          role="menu"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {menuSticker.by && <ArtistChip handle={menuSticker.by} />}
+          <div className="sticker-menu-actions">
+            <LabelButton
+              size="sm"
+              icon={<Eye />}
+              onClick={() => {
+                setViewing(menuSticker);
+                setSelected(null);
+              }}
+            >
+              View
+            </LabelButton>
+            <LabelButton
+              size="sm"
+              tone="grape"
+              icon={<Handshake />}
+              onClick={() => {
+                setOffering(menuSticker);
+                setSelected(null);
+              }}
+            >
+              Offer for it
+            </LabelButton>
+          </div>
+        </div>
+      )}
+
+      {/* Give takes Draw's slot as the board's one key. */}
+      <span className="board-draw">
+        <Key
+          size="compact"
+          tone="aqua"
+          icon={<Gift />}
+          onClick={() => {
+            setSelected(null);
+            setGiving(true);
+          }}
+        >
+          Give
+        </Key>
+      </span>
+    </div>
+  );
 
   return (
     <div className="artist-board">
-      <div className={`flipper ${turned ? "turned" : ""}`}>
-        <div className="face front" inert={turned}>
-          <div className="board">
-            <div className="artist-board-head">
-              <button
-                className="board-header"
-                onClick={turn}
-                aria-label={`${artist.displayName}, turn the board over for their stats`}
-              >
-                <span className="photo-sticker" style={{ background: artist.avatar.bg }}>
-                  <ArtistArt art={artist.avatar.art} />
-                </span>
-                <span className="board-name">{artist.displayName}</span>
-              </button>
-              <ExploreChip onBack={onBack} />
-            </div>
-
-            <div className="board-frame read-only" onClick={() => setSelected(null)}>
-              <span className="corner tl" />
-              <span className="corner tr" />
-              <span className="corner bl" />
-              <span className="corner br" />
-
-              {artist.board.length === 0 && (
-                <div className="board-empty">
-                  <div className="empty-slot">
-                    @{artist.handle} hasn’t
-                    <br />
-                    stuck anything up yet.
-                  </div>
-                </div>
-              )}
-
-              {artist.board.map((s, i) => (
-                <button
-                  key={s.no}
-                  type="button"
-                  className={`visit-sticker ${selected === i ? "selected" : ""}`}
-                  style={{
-                    left: `${s.x * 100}%`,
-                    top: `${s.y * 100}%`,
-                    width: `${s.scale * 100}%`,
-                    zIndex: selected === i ? artist.board.length + 1 : i + 1,
-                    transform: `translate(-50%, -50%) rotate(${s.rotation}deg)`,
-                  }}
-                  aria-label={`${formatNo(s.no)}${s.by ? `, by @${s.by}` : ""}`}
-                  aria-expanded={selected === i}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelected(selected === i ? null : i);
-                  }}
-                >
-                  <BoardArt sticker={s} />
-                </button>
-              ))}
-
-              {menuSticker && (
-                <div
-                  className="sticker-menu"
-                  style={{
-                    left: `clamp(8px, calc(${menuSticker.x * 100}% - 125px), calc(100% - 258px))`,
-                    top: `calc(${menuSticker.y * 100}% + ${menuSticker.y > 0.6 ? "-196px" : "48px"})`,
-                  }}
-                  role="menu"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {menuSticker.by && <ArtistChip handle={menuSticker.by} />}
-                  <div className="sticker-menu-actions">
-                    <Label
-                      small
-                      icon={<EyeIcon size={18} />}
-                      onPress={() => {
-                        setViewing(menuSticker);
-                        setSelected(null);
-                      }}
-                    >
-                      View
-                    </Label>
-                    <Label
-                      small
-                      hue="grape"
-                      icon={<HandshakeIcon size={18} />}
-                      onPress={() => {
-                        setOffering(menuSticker);
-                        setSelected(null);
-                      }}
-                    >
-                      Offer for it
-                    </Label>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="board-draw">
-              <Key
-                size="sm"
-                hue="aqua"
-                icon={<GiftIcon size={20} />}
-                onPress={() => {
-                  setSelected(null);
-                  setGiving(true);
-                }}
-              >
-                Give
-              </Key>
-            </div>
-          </div>
-        </div>
-
-        <div className="face back" inert={!turned}>
-          <CorkBack artist={artist} onFlipBack={() => setTurned(false)} />
-        </div>
-      </div>
+      <BoardFlip
+        turned={turned}
+        onTurnedChange={turn}
+        onTurnEnd={(over) => {
+          if (over) cork.current?.settle();
+        }}
+        frontFocus={nameButton}
+        backFocus={flipBack}
+        front={front}
+        back={
+          <StatCork
+            ref={cork}
+            figures={figuresOf(artist)}
+            onFlipBack={() => turn(false)}
+            flipBackRef={flipBack}
+          />
+        }
+      />
 
       {viewing && (
         <StickerView sticker={viewing} owner={artist.handle} onClose={() => setViewing(null)} />

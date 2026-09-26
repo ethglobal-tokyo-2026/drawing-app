@@ -15,13 +15,13 @@ The package does not deploy the contracts, persist application records, upload s
 
 ## Giving and receiving
 
-`createGiftClaim` generates an opaque gift ID and one-time claim token. Persist only the claim commitment with the pending gift and put the claim token in the LINE gift link.
+`createGiftClaim` generates an opaque gift ID and one-time gift claim token. Persist only the claim commitment with the pending gift and put the gift claim token in the gift message's link.
 
 `prepareGiftTransfer` creates the transaction that the artist's sponsored smart account sends while Giving. It transfers the sticker directly into the escrow with the gift ID, claim commitment, and expiration encoded in the ERC-721 receiver data. The recipient does not need an account at this point.
 
 After the recipient authenticates with LINE, resolve their World Chain smart account and call `authorizeClaim`. The authorization binds the gift ID, recipient smart account, escrow contract, chain ID, and a deadline. Any relayer can submit it, but the escrow accepts only signatures from `CLAIM_SIGNER_ROLE`. Rejection uses the same restricted authorization pattern, while anyone can return an expired gift to its sender.
 
-The escrow never receives approval for stickers that remain in an artist's wallet and cannot transfer them. Raw LINE IDs and claim tokens are not stored onchain.
+The escrow never receives approval for stickers that remain in an artist's wallet and cannot transfer them. Raw LINE IDs and gift claim tokens are not stored onchain.
 
 ## Commands
 

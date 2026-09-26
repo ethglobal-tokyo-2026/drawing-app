@@ -1,5 +1,9 @@
 /* ---------- Explore ---------- */
 
+.explore .muted {
+  color: var(--graphite);
+}
+
 .explore {
   position: absolute;
   inset: 0;
@@ -74,7 +78,7 @@
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: -0.012em;
-  font-variation-settings: var(--wdth-title);
+  font-stretch: var(--w-title);
 }
 
 .section-head .fine {
@@ -87,7 +91,7 @@
   border: 1.5px solid var(--ink);
   border-radius: 999px;
   background: var(--seal);
-  font-family: var(--font-display);
+  font-family: var(--font-puffy);
   font-size: 12px;
   line-height: 1;
   rotate: -3deg;
@@ -104,11 +108,11 @@
   list-style: none;
   overflow-x: auto;
   scrollbar-width: none;
-  border: 1px solid var(--rule-kiss);
+  border: 1px solid var(--rule);
   border-right: none;
   border-radius: 10px 0 0 10px;
   background: var(--canvas);
-  box-shadow: var(--shadow-label-base);
+  box-shadow: var(--shadow-label);
 }
 
 .todays-stickers::-webkit-scrollbar {
@@ -175,33 +179,20 @@
   padding: 0;
   list-style: none;
   overflow: hidden;
-  border: 1px solid var(--rule-kiss);
+  border: 1px solid var(--rule);
   border-radius: 10px;
   background: var(--liner-lift);
-  box-shadow: var(--shadow-label-base);
+  box-shadow: var(--shadow-label);
 }
 
 /* Rows, today's stickers and feed heads press 1px like a tile and open that artist's board. */
 .pressable {
-  --travel: 1px;
   padding: 0;
   border: none;
   background: none;
   color: inherit;
   text-align: left;
   touch-action: manipulation;
-}
-
-.pressable[data-press="down"] {
-  animation: press-down 1090ms forwards;
-}
-
-.pressable[data-press="pop"] {
-  animation: press-pop 340ms;
-}
-
-.pressable[data-press="lift"] {
-  animation: press-lift 380ms;
 }
 
 .artist-row {
@@ -213,13 +204,9 @@
   padding: 6px 16px 6px 14px;
 }
 
-.artist-row[data-press="down"] {
-  background: color-mix(in srgb, var(--liner-lift) 92%, var(--ink));
-}
-
 .leaderboard li + li,
 .search-results li + li {
-  border-top: 1px solid var(--rule-kiss);
+  border-top: 1px solid var(--rule);
 }
 
 .leaderboard li.me {
@@ -278,7 +265,7 @@ li.me .rank {
   font-weight: 900;
   line-height: 0.95;
   font-variant-numeric: tabular-nums;
-  font-variation-settings: var(--wdth-figure);
+  font-stretch: var(--w-figure);
 }
 
 .figure small {
@@ -286,7 +273,7 @@ li.me .rank {
   color: var(--graphite);
   font-size: 12px;
   font-weight: 700;
-  font-variation-settings: var(--wdth-ui);
+  font-stretch: var(--w-ui);
 }
 
 /* Ranks skipped between the top five and yours. */
@@ -294,7 +281,7 @@ li.me .rank {
   display: grid;
   place-items: center;
   height: 22px;
-  border-top: 1px solid var(--rule-kiss);
+  border-top: 1px solid var(--rule);
   color: var(--graphite);
   font-size: 11px;
   letter-spacing: 0.3em;
@@ -336,7 +323,7 @@ li.me .rank {
   margin: 0;
   padding: 0;
   list-style: none;
-  border-bottom: 1px solid var(--rule-kiss);
+  border-bottom: 1px solid var(--rule);
 }
 
 .search-results .artist-row {
@@ -391,7 +378,7 @@ li.me .rank {
   letter-spacing: -0.015em;
   text-wrap: balance;
   overflow-wrap: anywhere;
-  font-variation-settings: var(--wdth-title);
+  font-stretch: var(--w-title);
 }
 
 .search-empty p:not(.fine) {
@@ -416,7 +403,7 @@ li.me .rank {
   flex-direction: column;
   align-items: center;
   padding: 18px 0 20px;
-  border-bottom: 1px solid var(--rule-kiss);
+  border-bottom: 1px solid var(--rule);
 }
 
 .feed-head {

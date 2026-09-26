@@ -1,48 +1,61 @@
-import { HSlider } from "./HSlider";
+import { useEffect, useEffectEvent, useId, useRef } from "react";
+import "./SmoothingBar.css";
 
 interface Props {
-  value: number; // 0..100
-  pressure: boolean;
-  fingerDraws: boolean;
+  id: string;
+  open: boolean;
+  /** 0 (Raw) to 100 (Smooth). */
+  value: number;
   onChange: (value: number) => void;
-  onPressure: (on: boolean) => void;
-  onFingerDraws: (on: boolean) => void;
 }
 
-/** A compact label-stock bar under the tools; its title shows only while it's open. */
-export function SmoothingBar(p: Props) {
+/**
+ * Smoothing: a compact bar under the tools, Raw to Smooth. Smoothing has no standard icon, so its name
+ * shows here, and only while the bar is open. The track redraws as the thumb moves; the value lands
+ * once the thumb is let go.
+ */
+export function SmoothingBar({ id, open, value, onChange }: Props) {
+  const titleId = useId();
+  const range = useRef<HTMLInputElement>(null);
+  const commit = useEffectEvent(onChange);
+
+  useEffect(() => {
+    const input = range.current;
+    if (!input) return;
+    const onCommit = () => commit(input.valueAsNumber);
+    // The native change event fires on release, where React's onChange fires on every step.
+    input.addEventListener("change", onCommit);
+    return () => input.removeEventListener("change", onCommit);
+  }, []);
+
   return (
-    <div className="smoothing-bar" role="group" aria-label="Smoothing">
-      <div className="smoothing-title">Smoothing</div>
-      <div className="smoothing-row">
-        <span className="fine">Raw</span>
-        <HSlider
-          label="Smoothing"
-          value={p.value / 100}
-          background="linear-gradient(90deg, var(--liner-deep), var(--seal))"
-          onChange={(v) => p.onChange(Math.round(v * 100))}
-        />
-        <span className="fine">Smooth</span>
-      </div>
-      <div className="smoothing-options">
-        <button
-          type="button"
-          className={`chip ${p.pressure ? "on" : ""}`}
-          aria-pressed={p.pressure}
-          onClick={() => p.onPressure(!p.pressure)}
-        >
-          Pen pressure
-        </button>
-        <button
-          type="button"
-          className={`chip ${p.fingerDraws ? "on" : ""}`}
-          aria-pressed={p.fingerDraws}
-          onClick={() => p.onFingerDraws(!p.fingerDraws)}
-        >
-          Draw with finger
-        </button>
-      </div>
-      <p className="smoothing-hint fine">Two-finger tap undo · three-finger tap redo</p>
+    <div
+      id={id}
+      className={`smoothing-bar ${open ? "is-open" : ""}`}
+      role="group"
+      aria-labelledby={titleId}
+    >
+      <span className="smoothing-title" id={titleId}>
+        Smoothing
+      </span>
+      <span className="smoothing-end" aria-hidden="true">
+        Raw
+      </span>
+      <input
+        ref={range}
+        className="smoothing-range"
+        type="range"
+        min={0}
+        max={100}
+        step={1}
+        defaultValue={value}
+        aria-label="Smoothing"
+        style={{ "--p": `${value}%` }}
+        onInput={(e) => e.currentTarget.style.setProperty("--p", `${e.currentTarget.value}%`)}
+      />
+      <span className="smoothing-end" aria-hidden="true">
+        Smooth
+      </span>
     </div>
   );
 }

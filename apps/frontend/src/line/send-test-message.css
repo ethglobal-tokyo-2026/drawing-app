@@ -1,0 +1,16 @@
+/* ---------- Send a test message (stat board) ---------- */
+
+.test-message {
+  display: grid;
+  gap: 6px;
+}
+
+.test-message-status {
+  margin: 0;
+  color: var(--graphite);
+  font-size: 13px;
+  line-height: 1.35;
+  /* Selectable, so a failure's reason can be copied into a report. */
+  -webkit-user-select: text;
+  user-select: text;
+}

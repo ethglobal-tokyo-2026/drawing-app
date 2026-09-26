@@ -1,337 +1,520 @@
 import {
+  Fragment,
+  useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
-  type PointerEvent as ReactPointerEvent,
 } from "react";
-import { Key } from "../controls/controls";
+import { flushSync } from "react-dom";
+import { Giving } from "../giving/Giving";
+import { useGiftSender } from "../giving/useGiftSender";
+import { useStickerGifts } from "../giving/useStickerGifts";
 import { DrawIcon } from "../icons/DrawIcon";
 import { useIdentity } from "../identity/useIdentity";
-import { formatClock, formatNo } from "../stickers/format";
-import { listKeptStickers, updatePlacement, type Placement } from "../stickers/stickerStorage";
-import type { BoardSticker } from "./boardSticker";
-import { autoPlace, clamp, MAX_SCALE, MIN_SCALE } from "./placement";
-import { ProfileCard } from "./ProfileCard";
+import { LIFF_ID } from "../line/liff";
+import { formatNo } from "../stickers/format";
+import { playStick } from "../stickers/stick";
+import { updatePlacement, type Placement, type StickerRecord } from "../stickers/stickerStorage";
+import { releaseStickerUrls } from "../stickers/stickerUrls";
+import { ticketDay } from "../tickets/tickets";
+import { Key } from "../ui/Key";
+import { LabelButton } from "../ui/LabelButton";
+import { PhotoSticker } from "../ui/PhotoSticker";
+import { useReducedMotion } from "../ui/useReducedMotion";
+import { normalizeTurn } from "./boardGesture";
+import { loadBoardStickers, type BoardSticker } from "./boardSticker";
+import { PlacedSticker } from "./PlacedSticker";
+import { GivenStickerSilhouette } from "./GivenStickerSilhouette";
+import { fieldOf, freeSpot, knobHidden, nextZ, sizeOf, stickerBox, toFrac } from "./placement";
+import { BoardFlip } from "./stat-board/BoardFlip";
+import { StatBoard, type StatBoardHandle } from "./stat-board/StatBoard";
 import { StickerDetail } from "./StickerDetail";
+import { StickerToolbar } from "./StickerToolbar";
+import { StickerTray, type StickerTrayHandle } from "./tray/StickerTray";
+import type { TrayBoard } from "./tray/trayEngine";
+import { useBoardGestures } from "./useBoardGestures";
 import "./StickerBoard.css";
 
 interface Props {
-  /** The sticker that was just sealed; it lands with a "stick" animation. */
+  /** The sticker that was just sealed; it lands on the board the first time the board shows it. */
   freshId?: string;
   onDraw: () => void;
 }
 
-interface Gesture {
-  id: string;
-  pointers: Map<number, { x: number; y: number }>;
-  /** Snapshot taken whenever the finger count changes. */
-  start: { placement: Placement; pointers: Map<number, { x: number; y: number }> };
-  moved: boolean;
+/** Stickers that have landed this session. */
+const landed = new Set<string>();
+/** Stickers touched this session, which press their lifted corner down. */
+const settled = new Set<string>();
+
+/**
+ * The newest of today's stickers that hasn't been touched: it has a lifted corner, which passes to
+ * the next-newest once it's touched.
+ */
+function curledToday(stickers: readonly BoardSticker[], now: Date) {
+  const today = ticketDay(now);
+  let newest: BoardSticker | undefined;
+  for (const s of stickers)
+    if (
+      !settled.has(s.id) &&
+      ticketDay(new Date(s.createdAt)) === today &&
+      (!newest || s.createdAt > newest.createdAt)
+    )
+      newest = s;
+  return newest?.id;
 }
 
-const TAP_SLOP = 6;
+const round4 = (v: number) => Number(v.toFixed(4));
 
-const centroid = (pts: Map<number, { x: number; y: number }>) => {
-  let x = 0;
-  let y = 0;
-  for (const p of pts.values()) {
-    x += p.x;
-    y += p.y;
-  }
-  return { x: x / pts.size, y: y / pts.size };
-};
+const reasonOf = (error: unknown) =>
+  error instanceof Error && error.message ? error.message : String(error);
 
-const spread = (pts: Map<number, { x: number; y: number }>) => {
-  const [a, b] = [...pts.values()];
-  return b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
-};
+/** "No.0001", "No.0001 and No.0002", "No.0001, No.0002 and No.0003". */
+const listed = (names: readonly string[]) =>
+  names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+
+/** The stacking order that keeps a sticker on top: its own when it's there already. */
+function zOnTop(stickers: readonly BoardSticker[], id: string) {
+  const own = stickers.find((s) => s.id === id)?.placement.z ?? 0;
+  const top = nextZ(stickers.filter((s) => s.id !== id).map((s) => s.placement));
+  return own >= top ? own : top;
+}
+
+/**
+ * Each sticker's place in the stack, from the bottom. The board stacks by rank rather than by the
+ * stored order, which only grows, so stickers always stay under the header and the toolbar.
+ */
+const stackOf = (stickers: readonly BoardSticker[]) =>
+  new Map(
+    [...stickers]
+      .sort((a, b) => a.placement.z - b.placement.z || a.createdAt - b.createdAt)
+      .map((s, i) => [s.id, i]),
+  );
 
 export function StickerBoard({ freshId, onDraw }: Props) {
-  const boardRef = useRef<HTMLDivElement>(null);
+  const stage = useRef<HTMLDivElement>(null);
+  /** The board's face, which the sticker tray runs down the right edge of. */
+  const [face, setFace] = useState<HTMLDivElement | null>(null);
+  const tray = useRef<StickerTrayHandle>(null);
+  const nameButton = useRef<HTMLButtonElement>(null);
+  const flipBack = useRef<HTMLButtonElement>(null);
+  const statBoard = useRef<StatBoardHandle>(null);
   const [stickers, setStickers] = useState<BoardSticker[] | null>(null);
-  const [size, setSize] = useState({ w: 0, h: 0 });
-  const [open, setOpen] = useState<BoardSticker | null>(null);
-  const [profileOpen, setProfileOpen] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  /** Stickers whose spot didn't save, and why; each goes once a save of it succeeds. */
+  const [unsaved, setUnsaved] = useState<ReadonlyMap<string, string>>(() => new Map());
+  const [size, setSize] = useState<{ W: number; H: number } | null>(null);
+  /** The name button's box on the board, which a sticker's knob must stay clear of. */
+  const [name, setName] = useState<{
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+  } | null>(null);
+  const [landingId, setLandingId] = useState(() =>
+    freshId && !landed.has(freshId) ? freshId : undefined,
+  );
+  const [selected, setSelected] = useState<string | null>(null);
+  /** The sticker the detail shows, among your stickers or among the ones you gave. */
+  const [open, setOpen] = useState<{ id: string; mode: "yours" | "given" } | null>(null);
+  const [giving, setGiving] = useState<BoardSticker | null>(null);
+  /** The board is turned over to its stat board. */
+  const [turned, setTurned] = useState(false);
   const me = useIdentity();
-  const gesture = useRef<Gesture | null>(null);
-  const stickersRef = useRef<BoardSticker[]>([]);
-  useLayoutEffect(() => {
-    stickersRef.current = stickers ?? [];
-  });
+  const gifts = useStickerGifts();
+  const giftSender = useGiftSender();
+  const reduced = useReducedMotion();
 
+  const save = useCallback((sticker: Pick<StickerRecord, "id" | "no">, placement: Placement) => {
+    updatePlacement(sticker.id, placement).then(
+      () =>
+        setUnsaved((was) => {
+          if (!was.has(sticker.id)) return was;
+          const next = new Map(was);
+          next.delete(sticker.id);
+          return next;
+        }),
+      (error: unknown) => {
+        console.error(`Saving where ${formatNo(sticker.no)} sits failed`, error);
+        setUnsaved((was) => new Map(was).set(sticker.id, reasonOf(error)));
+      },
+    );
+  }, []);
+
+  // The board mounts anew on every visit, so this load is its refresh.
   useEffect(() => {
     let cancelled = false;
-    let urls: string[] = [];
-    listKeptStickers().then(
-      (records) => {
-        if (cancelled) return;
-        // Oldest first, so newer stickers stack on top by default.
-        const placed: BoardSticker[] = [];
-        records.reverse().forEach((r, i) => {
-          const placement =
-            r.placement ??
-            autoPlace(
-              r.id,
-              placed.map((p) => p.placement),
-              i + 1,
-            );
-          // Save first-time spots so they don't shift when others move.
-          if (!r.placement) void updatePlacement(r.id, placement);
-          placed.push({ ...r, url: URL.createObjectURL(r.blob), placement });
-        });
-        urls = placed.map((p) => p.url);
-        setStickers(placed);
+    let loaded: BoardSticker[] = [];
+    loadBoardStickers(save).then(
+      (list) => {
+        loaded = list;
+        if (cancelled) list.forEach((s) => releaseStickerUrls(s.urls));
+        else setStickers(list);
       },
       (error: unknown) => {
         console.error("Stickers failed to load", error);
-        if (!cancelled) setStickers([]);
+        if (!cancelled) setLoadError(reasonOf(error));
       },
     );
     return () => {
       cancelled = true;
-      urls.forEach((u) => URL.revokeObjectURL(u));
+      loaded.forEach((s) => releaseStickerUrls(s.urls));
     };
-  }, []);
+  }, [attempt, save]);
 
   useLayoutEffect(() => {
-    const board = boardRef.current;
-    if (!board) return;
-    const measure = () => setSize({ w: board.clientWidth, h: board.clientHeight });
+    const el = stage.current;
+    const who = nameButton.current;
+    if (!el || !who) return;
+    const measure = () => {
+      setSize((was) =>
+        was?.W === el.clientWidth && was.H === el.clientHeight
+          ? was
+          : { W: el.clientWidth, H: el.clientHeight },
+      );
+      const box = {
+        left: who.offsetLeft,
+        top: who.offsetTop,
+        right: who.offsetLeft + who.offsetWidth,
+        bottom: who.offsetTop + who.offsetHeight,
+      };
+      setName((was) =>
+        was?.left === box.left &&
+        was.top === box.top &&
+        was.right === box.right &&
+        was.bottom === box.bottom
+          ? was
+          : box,
+      );
+    };
+    // The name's width follows the person's name, which arrives after the board.
     const observer = new ResizeObserver(measure);
-    observer.observe(board);
+    observer.observe(el);
+    observer.observe(who);
     measure();
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (landingId) landed.add(landingId);
+  }, [landingId]);
+
+  // A sticker given away has left the board.
+  const onBoard = (stickers ?? []).filter(
+    (s) => s.placement.on && gifts.get(s.id)?.state !== "sent",
+  );
+  // Given away, it leaves its given sticker silhouette where it sat.
+  const givenSilhouettes = (stickers ?? []).flatMap((s) => {
+    const gift = gifts.get(s.id);
+    const mask = s.urls.mask;
+    return gift?.state === "sent" && mask
+      ? [{ sticker: s, mask, sentAt: gift.sentAt, to: gift.to }]
+      : [];
+  });
+  const field = useMemo(() => size && fieldOf(size.W, size.H), [size]);
+  const landedNow = useCallback(() => setLandingId(undefined), []);
+
   const setPlacement = (id: string, placement: Placement) =>
     setStickers((list) => list?.map((s) => (s.id === id ? { ...s, placement } : s)) ?? null);
 
-  const placementOf = (id: string) => stickersRef.current.find((s) => s.id === id)?.placement;
-
-  const rebase = (g: Gesture) => {
-    const placement = placementOf(g.id);
-    if (!placement) return;
-    g.start = { placement, pointers: new Map(g.pointers) };
+  // Selecting raises a sticker above the rest; the raise is saved with its next move.
+  const select = (id: string | null) => {
+    setSelected(id);
+    if (!id || !stickers) return;
+    settled.add(id);
+    const sticker = stickers.find((s) => s.id === id);
+    const z = zOnTop(stickers, id);
+    if (sticker && z !== sticker.placement.z) setPlacement(id, { ...sticker.placement, z });
   };
 
-  const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    const g = gesture.current;
-    if (g) {
-      // A second finger anywhere on the board pinches the held sticker.
-      if (g.pointers.size >= 2) return;
-      g.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      g.moved = true;
-      rebase(g);
-      e.currentTarget.setPointerCapture(e.pointerId);
-      return;
-    }
-    if (!(e.target instanceof Element)) return;
-    const el = e.target.closest<HTMLElement>("[data-sticker]");
-    if (!el) return;
-    const id = el.dataset.sticker;
-    if (!id) return;
-    const current = placementOf(id);
-    if (!current) return;
-    e.preventDefault();
-    const topZ = Math.max(0, ...stickersRef.current.map((s) => s.placement.z));
-    const placement = current.z === topZ ? current : { ...current, z: topZ + 1 };
-    setPlacement(id, placement);
-    stickersRef.current = stickersRef.current.map((s) => (s.id === id ? { ...s, placement } : s));
-    const pointers = new Map([[e.pointerId, { x: e.clientX, y: e.clientY }]]);
-    gesture.current = {
-      id,
-      pointers,
-      start: { placement, pointers: new Map(pointers) },
-      moved: false,
-    };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
-
-  const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
-    const g = gesture.current;
-    if (!g || !g.pointers.has(e.pointerId) || !size.w) return;
-    g.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    const from = centroid(g.start.pointers);
-    const to = centroid(g.pointers);
-    if (!g.moved && Math.hypot(to.x - from.x, to.y - from.y) < TAP_SLOP) return;
-    g.moved = true;
-    const s = g.start.placement;
-    const ratio =
-      g.pointers.size === 2 && spread(g.start.pointers) > 0
-        ? spread(g.pointers) / spread(g.start.pointers)
-        : 1;
-    setPlacement(g.id, {
-      ...s,
-      x: clamp(s.x + (to.x - from.x) / size.w, 0.02, 0.98),
-      y: clamp(s.y + (to.y - from.y) / size.h, 0.02, 0.98),
-      scale: clamp(s.scale * ratio, MIN_SCALE, MAX_SCALE),
-    });
-  };
-
-  const onPointerEnd = (e: ReactPointerEvent<HTMLDivElement>) => {
-    const g = gesture.current;
-    if (!g || !g.pointers.delete(e.pointerId)) return;
-    if (g.pointers.size > 0) {
-      // Lifting one finger of a pinch continues as a drag.
-      rebase(g);
-      return;
-    }
-    gesture.current = null;
-    const sticker = stickersRef.current.find((s) => s.id === g.id);
+  // Back into the sticker tray: off the board, with its spot kept for when it comes back out.
+  const removeFromBoard = (id: string) => {
+    const sticker = stickers?.find((s) => s.id === id);
     if (!sticker) return;
-    if (!g.moved && e.type === "pointerup") setOpen(sticker);
-    else void updatePlacement(sticker.id, sticker.placement);
+    if (selected === id) setSelected(null);
+    const placement = { ...sticker.placement, on: false };
+    setPlacement(id, placement);
+    save(sticker, placement);
   };
 
-  // Desktop: scroll (or trackpad-pinch) over a sticker to resize it.
-  const wheelSave = useRef(0);
-  useEffect(() => {
-    const board = boardRef.current;
-    if (!board) return;
-    const onWheel = (e: WheelEvent) => {
-      if (!(e.target instanceof Element)) return;
-      const el = e.target.closest<HTMLElement>("[data-sticker]");
-      if (!el) return;
-      e.preventDefault();
-      const id = el.dataset.sticker;
-      if (!id) return;
-      const p = stickersRef.current.find((s) => s.id === id)?.placement;
-      if (!p) return;
-      const next = {
-        ...p,
-        scale: clamp(
-          p.scale * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.002)),
-          MIN_SCALE,
-          MAX_SCALE,
-        ),
+  // Turning over lets go of the selected sticker, so the board comes back without a stray toolbar.
+  const turn = (over: boolean) => {
+    setTurned(over);
+    if (over) select(null);
+  };
+
+  const { hold, stow } = useBoardGestures({
+    stage,
+    stickers: onBoard,
+    field,
+    size,
+    selected,
+    reduced,
+    tray,
+    onSelect: select,
+    onOpen: (id) => setOpen({ id, mode: "yours" }),
+    onCommit: (id, placement) => {
+      const sticker = stickers?.find((s) => s.id === id);
+      if (!stickers || !sticker) return;
+      const moved = { ...placement, z: zOnTop(stickers, id) };
+      setPlacement(id, moved);
+      save(sticker, moved);
+    },
+    onRemove: removeFromBoard,
+  });
+  const stickerEl = (id: string) =>
+    stage.current?.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`) ?? null;
+  // What the sticker tray asks of the board, all in board pixels.
+  const trayBoard: TrayBoard = {
+    stickerRect: (id) => {
+      const s = onBoard.find((x) => x.id === id);
+      if (!s || !field || !size) return null;
+      const { x, y, w, h } = stickerBox(field, size.W, s.placement, s);
+      return { x, y, w, h, r: s.placement.r };
+    },
+    sizeFor: (id) => {
+      const s = stickers?.find((x) => x.id === id);
+      return s && size ? sizeOf(size.W, s.placement.s, s) : { w: 0, h: 0 };
+    },
+    place: (id, at) => {
+      const sticker = stickers?.find((s) => s.id === id);
+      if (!stickers || !sticker || !field) return Promise.resolve(null);
+      const spot = at
+        ? { ...toFrac(field, at), s: sticker.placement.s, r: normalizeTurn(at.r) }
+        : freeSpot(onBoard.map((s) => s.placement));
+      const placement: Placement = {
+        on: true,
+        x: round4(spot.x),
+        y: round4(spot.y),
+        s: spot.s,
+        r: spot.r,
+        z: zOnTop(stickers, id),
       };
-      stickersRef.current = stickersRef.current.map((s) =>
-        s.id === id ? { ...s, placement: next } : s,
-      );
-      setPlacement(id, next);
-      window.clearTimeout(wheelSave.current);
-      wheelSave.current = window.setTimeout(() => void updatePlacement(id, next), 300);
-    };
-    board.addEventListener("wheel", onWheel, { passive: false });
-    return () => board.removeEventListener("wheel", onWheel);
-  }, []);
+      // Drawn at once, so the tray can hand the sticker over where it lands.
+      flushSync(() => setPlacement(id, placement));
+      save(sticker, placement);
+      const el = stickerEl(id);
+      // Dropped, it presses flat; a tapped sticker's landing is the tray's to play.
+      const lift = el?.querySelector<HTMLElement>(".placed-sticker__lift");
+      if (at && lift) void playStick(lift, { reduced });
+      return Promise.resolve(el);
+    },
+    remove: removeFromBoard,
+    pulse: (id) => {
+      const lift = stickerEl(id)?.querySelector<HTMLElement>(".placed-sticker__lift");
+      if (!lift) return;
+      if (reduced)
+        lift.animate([{ opacity: 1 }, { opacity: 0.4 }, { opacity: 1 }], { duration: 400 });
+      else
+        lift.animate(
+          [
+            { transform: "scale(1)" },
+            { transform: "scale(1.12) rotate(-2deg)", offset: 0.34 },
+            { transform: "scale(0.98)", offset: 0.7 },
+            { transform: "scale(1)" },
+          ],
+          { duration: 520, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
+        );
+    },
+  };
+  const stack = stackOf(onBoard);
+  const chosen = onBoard.find((s) => s.id === selected);
+  const chosenBox = chosen && field && size && stickerBox(field, size.W, chosen.placement, chosen);
+  // Where the knob would sit off the board or under the name, it hangs below the sticker.
+  const knobBelow = Boolean(
+    chosen && chosenBox && name && knobHidden({ ...chosenBox, r: chosen.placement.r }, name),
+  );
+  const curled = curledToday(onBoard, new Date());
+  // Until the first sticker, Draw says where to start.
+  const firstVisit = stickers?.length === 0;
+  const unsavedStickers = (stickers ?? []).filter((s) => unsaved.has(s.id));
 
-  const newestUrl = stickers?.reduce<BoardSticker | undefined>(
-    (a, s) => (!a || s.createdAt > a.createdAt ? s : a),
-    undefined,
-  )?.url;
-  const avatarUrl = me.pictureUrl ?? newestUrl;
+  const front = (
+    <div className="board" ref={setFace}>
+      <div className="board-stage" ref={stage} role="region" aria-label="Sticker board">
+        {stickers && onBoard.length === 0 && givenSilhouettes.length === 0 && (
+          <div className="board-blank">
+            <span className="board-blank-cut" aria-hidden />
+            <span className="board-blank-note">Stickers you make or receive land here.</span>
+          </div>
+        )}
+        {field &&
+          size &&
+          givenSilhouettes.map((o) => (
+            <GivenStickerSilhouette
+              key={o.sticker.id}
+              {...o}
+              field={field}
+              boardWidth={size.W}
+              onOpen={() => setOpen({ id: o.sticker.id, mode: "given" })}
+            />
+          ))}
+        {field &&
+          size &&
+          onBoard.map((s) => (
+            <Fragment key={s.id}>
+              <PlacedSticker
+                sticker={s}
+                field={field}
+                boardWidth={size.W}
+                stack={stack.get(s.id) ?? 0}
+                curled={s.id === curled}
+                selected={s.id === selected}
+                knobBelow={s.id === selected && knobBelow}
+                held={hold?.id === s.id ? hold.kind : undefined}
+                landing={s.id === landingId}
+                onLanded={landedNow}
+                reduced={reduced}
+              />
+              {/* Right after its sticker, so Tab reaches it next. */}
+              {s.id === selected && !hold && (
+                <StickerToolbar
+                  sticker={{ ...stickerBox(field, size.W, s.placement, s), r: s.placement.r }}
+                  board={size}
+                  knobBelow={knobBelow}
+                  give={giftSender !== null}
+                  onGive={() => setGiving(s)}
+                  onView={() => setOpen({ id: s.id, mode: "yours" })}
+                  onRemove={() => stow(s.id)}
+                  onEscape={() =>
+                    stage.current
+                      ?.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(s.id)}"]`)
+                      ?.focus()
+                  }
+                  reduced={reduced}
+                />
+              )}
+            </Fragment>
+          ))}
+      </div>
 
-  return (
-    <div className="board">
-      <button
-        className={`board-header ${profileOpen ? "open" : ""}`}
-        onClick={() => setProfileOpen((v) => !v)}
-        aria-expanded={profileOpen}
-        aria-label={`@${me.handle}, open your profile`}
-      >
-        <span className="photo-sticker" aria-hidden>
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="" className={me.pictureUrl ? "photo" : ""} />
-          ) : (
-            me.handle[0]?.toUpperCase()
-          )}
-        </span>
-        <span className="board-name">@{me.handle}</span>
-      </button>
+      {stickers && (
+        <StickerTray ref={tray} board={face} stickers={stickers} gifts={gifts} api={trayBoard} />
+      )}
 
-      {profileOpen && (
-        <div className="profile-backdrop" onClick={() => setProfileOpen(false)}>
-          <ProfileCard
-            made={stickers?.length ?? 0}
-            avatarUrl={newestUrl}
-            onClose={() => setProfileOpen(false)}
-          />
+      {loadError && (
+        <div className="board-blank board-problem" role="alert">
+          <span className="board-blank-cut" aria-hidden />
+          <span className="board-blank-note">Your stickers didn’t load: {loadError}</span>
+          <LabelButton
+            size="sm"
+            onClick={() => {
+              setLoadError(null);
+              setAttempt((n) => n + 1);
+            }}
+          >
+            Try again
+          </LabelButton>
         </div>
       )}
 
-      <div
-        className="board-frame"
-        ref={boardRef}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerEnd}
-        onPointerCancel={onPointerEnd}
+      {unsavedStickers.length > 0 && (
+        <div className="board-unsaved" role="alert">
+          <p className="board-unsaved-note">
+            Couldn’t save where {listed(unsavedStickers.map((s) => formatNo(s.no)))}{" "}
+            {unsavedStickers.length === 1 ? "sits" : "sit"}:{" "}
+            {[...new Set(unsavedStickers.map((s) => unsaved.get(s.id)))].join("; ")}
+          </p>
+          <LabelButton
+            size="sm"
+            onClick={() => unsavedStickers.forEach((s) => save(s, s.placement))}
+          >
+            Try again
+          </LabelButton>
+        </div>
+      )}
+
+      <button
+        ref={nameButton}
+        className="board-who"
+        onClick={() => turn(!turned)}
+        aria-expanded={turned}
+        aria-haspopup="dialog"
+        aria-label={`${me.displayName}: your stats`}
       >
-        <span className="corner tl" />
-        <span className="corner tr" />
-        <span className="corner bl" />
-        <span className="corner br" />
+        <PhotoSticker src={me.pictureUrl} name={me.displayName} size={42} />
+        <span className="board-who-name">{me.displayName}</span>
+      </button>
 
-        {stickers?.length === 0 && (
-          <div className="board-empty">
-            <div className="empty-slot">
-              Stickers you make
-              <br />
-              or receive land here.
-            </div>
-          </div>
-        )}
-
-        {size.w > 0 &&
-          stickers?.map((s) => {
-            const p = s.placement;
-            return (
-              <div
-                key={s.id}
-                data-sticker={s.id}
-                className={`free-sticker ${s.id === freshId ? "fresh" : ""}`}
-                style={{
-                  width: p.scale * size.w,
-                  zIndex: p.z,
-                  transform: `translate(${p.x * size.w}px, ${p.y * size.h}px) translate(-50%, -50%) rotate(${s.rotation}deg)`,
-                }}
-                role="button"
-                aria-label={`${formatNo(s.no)}, drawn in ${formatClock(s.timeUsed)}`}
-              >
-                <img
-                  src={s.url}
-                  alt=""
-                  draggable={false}
-                  style={{ aspectRatio: `${s.width} / ${s.height}` }}
-                />
-              </div>
-            );
-          })}
-
-        {!!stickers?.length && (
-          <div className="board-hint fine">Drag to move · pinch to resize</div>
-        )}
-      </div>
-
-      {/* A new artist's first visit: the key hops inside a pulse ring, under a first-sticker hint. */}
-      <div className={`board-draw ${stickers?.length === 0 ? "first-visit" : ""}`}>
-        {stickers?.length === 0 && (
-          <div className="draw-hint" id="draw-hint" role="note">
-            Make your first sticker
-          </div>
-        )}
-        <Key
-          size="sm"
-          icon={<DrawIcon size={20} />}
-          onPress={onDraw}
-          aria-describedby={stickers?.length === 0 ? "draw-hint" : undefined}
-        >
+      {/* The slot carries the first-sticker hop and ring, so the key keeps its own lip and press. */}
+      <span className={`board-draw ${firstVisit ? "is-fresh" : ""}`}>
+        <Key size="compact" icon={<DrawIcon />} onClick={onDraw} aria-label="Draw a new sticker">
           Draw
         </Key>
-      </div>
+      </span>
+      {firstVisit && (
+        <span className="board-nudge" aria-hidden>
+          Make your first sticker
+        </span>
+      )}
 
-      {open && (
-        <StickerDetail
-          sticker={open}
-          onClose={() => setOpen(null)}
-          onPeeledOff={(id) => {
-            setOpen(null);
-            setStickers((list) => list?.filter((x) => x.id !== id) ?? null);
+      {giving && giftSender && (
+        <Giving
+          sticker={{ ...giving, url: giving.urls.png }}
+          fromHandle={me.handle}
+          sender={giftSender}
+          liffId={LIFF_ID}
+          onClose={(sent) => {
+            setGiving(null);
+            // Given, it has left the board.
+            if (sent) setSelected(null);
           }}
         />
       )}
+
+      {open && (
+        <StickerDetail
+          // In the order they arrived, as the board loads them.
+          stickers={(stickers ?? []).filter((s) =>
+            open.mode === "given"
+              ? gifts.get(s.id)?.state === "sent"
+              : gifts.get(s.id)?.state !== "sent",
+          )}
+          startId={open.id}
+          mode={open.mode}
+          handle={me.handle}
+          gifts={gifts}
+          onClose={() => setOpen(null)}
+          // Back to the sticker it opened from: on the board, or its given sticker silhouette.
+          returnFocus={() =>
+            stage.current?.querySelector<HTMLElement>(
+              `[data-sticker-id="${CSS.escape(open.id)}"]`,
+            ) ?? null
+          }
+          onGive={
+            giftSender
+              ? (s) => {
+                  setOpen(null);
+                  setGiving(s);
+                }
+              : undefined
+          }
+        />
+      )}
     </div>
+  );
+
+  return (
+    <BoardFlip
+      turned={turned}
+      onTurnedChange={turn}
+      onTurnEnd={(over) => {
+        if (over) statBoard.current?.settle();
+      }}
+      frontFocus={nameButton}
+      backFocus={flipBack}
+      front={front}
+      back={
+        <StatBoard
+          ref={statBoard}
+          stickers={loadError ? null : (stickers ?? [])}
+          gifts={gifts}
+          onFlipBack={() => turn(false)}
+          flipBackRef={flipBack}
+        />
+      }
+    />
   );
 }

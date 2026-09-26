@@ -9,5 +9,9 @@ allowBuilds:
   esbuild: false
   bufferutil: false
   utf-8-validate: false
+  # Privy's SDK brings these in. AppKit's postinstall only compares AppKit versions; keccak's builds an
+  # optional native addon, and the browser uses its JavaScript version either way.
+  "@reown/appkit": false
+  keccak: false
 minimumReleaseAgeExclude:
   - viem@2.56.9

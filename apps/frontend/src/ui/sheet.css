@@ -1,0 +1,75 @@
+.bottom-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-sheet);
+  padding: 0 20px 24px;
+  border-radius: 16px 16px 0 0;
+  background: var(--liner);
+  box-shadow: var(--shadow-sheet);
+  animation: bottom-sheet-in var(--t-peel) var(--ease-peel);
+}
+
+@keyframes bottom-sheet-in {
+  from {
+    transform: translateY(104%);
+  }
+}
+
+/* A sheet that stays mounted slides back down, from wherever a drag left it, before it goes. */
+.bottom-sheet.is-leaving {
+  animation: bottom-sheet-out var(--t-peel) var(--ease-peel) forwards;
+  pointer-events: none;
+}
+
+@keyframes bottom-sheet-out {
+  from {
+    transform: translateY(var(--leave-from, 0px));
+  }
+  to {
+    transform: translateY(104%);
+  }
+}
+
+/* The perforation row, and the grab: a firmer run of holes at the center. */
+.perf {
+  position: relative;
+  display: block;
+  width: calc(100% + 40px);
+  height: 26px;
+  margin: 0 -20px 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: grab;
+  touch-action: none;
+}
+
+.perf::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 12px;
+  height: 3px;
+  background: radial-gradient(circle, rgba(28, 24, 36, 0.2) 0 1.3px, transparent 1.6px) 0 50% / 8px
+    3px repeat-x;
+}
+
+.perf::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  width: 48px;
+  height: 3px;
+  margin-left: -24px;
+  background: radial-gradient(circle, rgba(28, 24, 36, 0.62) 0 1.5px, transparent 1.8px) 0 50% / 8px
+    3px repeat-x;
+}
+
+.perf:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: -4px;
+}

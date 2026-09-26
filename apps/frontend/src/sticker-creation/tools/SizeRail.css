@@ -1,0 +1,129 @@
+.size-rail {
+  position: absolute;
+  left: 0;
+  top: 104px;
+  z-index: 3;
+  width: 40px;
+  height: 222px;
+  touch-action: none;
+  cursor: ns-resize;
+  transition: opacity var(--t-pop) var(--ease-out);
+}
+
+.size-track {
+  position: absolute;
+  left: 19px;
+  top: 18px;
+  bottom: 44px;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--liner-deep);
+  box-shadow: inset 0 0 0 1px var(--rule);
+}
+
+/* Flush with the thumb's left edge and as wide as it, growing right for two digits. The number is a
+   CSS counter, so a drag redraws it with the thumb. */
+.size-num {
+  position: absolute;
+  left: 7px;
+  bottom: 4px;
+  min-width: 28px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 5px;
+  background: var(--liner-lift);
+  box-shadow: inset 0 0 0 1px var(--rule);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  counter-reset: size var(--px);
+  transform-origin: 0 100%;
+  transition: transform 120ms var(--ease-out);
+  pointer-events: none;
+}
+
+.size-num::before {
+  content: counter(size);
+}
+
+.size-num::after {
+  content: "px";
+  margin-left: 1px;
+  font-size: var(--fs-fine);
+  font-weight: 600;
+  color: var(--graphite);
+}
+
+.size-rail.is-active .size-num {
+  transform: scale(1.1);
+}
+
+.size-thumb {
+  position: absolute;
+  left: 7px;
+  top: calc(18px + (1 - var(--v)) * (100% - 62px) - 14px);
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--liner-lift);
+  box-shadow:
+    inset 0 0 0 1px var(--rule-strong),
+    var(--shadow-label);
+  transition: transform 120ms var(--ease-out);
+}
+
+.size-rail.is-active .size-thumb,
+.size-rail:focus-visible .size-thumb {
+  transform: scale(1.1);
+}
+
+.size-tip {
+  width: var(--tip);
+  height: var(--tip);
+  max-width: 22px;
+  max-height: 22px;
+  border-radius: 50%;
+  background: var(--draw-color);
+  box-shadow: 0 0 0 1px rgba(28, 24, 36, 0.22);
+}
+
+.size-rail.is-eraser .size-tip {
+  background: var(--canvas);
+  box-shadow: 0 0 0 1px rgba(28, 24, 36, 0.45);
+}
+
+.size-ghost {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  z-index: 5;
+  width: var(--d);
+  height: var(--d);
+  border-radius: 50%;
+  background: var(--draw-color);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.9),
+    0 0 0 2px rgba(28, 24, 36, 0.18);
+  transform: translate(-50%, -50%) scale(0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 140ms var(--ease-out),
+    transform 140ms var(--ease-out);
+}
+
+.size-ghost.is-eraser {
+  background: var(--canvas);
+  box-shadow: 0 0 0 1px rgba(28, 24, 36, 0.5);
+}
+
+.size-ghost.is-on {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}

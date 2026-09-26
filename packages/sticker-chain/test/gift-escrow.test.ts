@@ -181,7 +181,7 @@ describe("StickerGiftEscrow", () => {
     const authorizer = createAuthorizer(context, claim.giftId, claim.claimCommitment, expiresAt);
     const authorized = await authorizer.authorizeClaim({
       giftId: claim.giftId,
-      claimToken: claim.claimToken,
+      giftClaimToken: claim.giftClaimToken,
       recipientArtistId: "recipient-artist",
     });
     const hash = await context.walletClient.writeContract({
@@ -217,7 +217,7 @@ describe("StickerGiftEscrow", () => {
     ).resolves.toBe(`0x${"00".repeat(32)}`);
   }, 20_000);
 
-  it("rejects invalid claim tokens, signer authorizations, and signer EOAs", async () => {
+  it("rejects invalid gift claim tokens, signer authorizations, and signer EOAs", async () => {
     const context = await setup();
     const expiresAt = Math.floor(Date.now() / 1000) + 3600;
     const claim = await stageGift(context, expiresAt);
@@ -225,14 +225,14 @@ describe("StickerGiftEscrow", () => {
     await expect(
       authorizer.authorizeClaim({
         giftId: claim.giftId,
-        claimToken: `0x${"ff".repeat(32)}`,
+        giftClaimToken: `0x${"ff".repeat(32)}`,
         recipientArtistId: "recipient-artist",
       }),
-    ).rejects.toThrow("claim token is invalid");
+    ).rejects.toThrow("Gift claim token is invalid");
     await expect(
       authorizer.authorizeClaim({
         giftId: claim.giftId,
-        claimToken: claim.claimToken,
+        giftClaimToken: claim.giftClaimToken,
         recipientArtistId: "recipient-with-signer-only",
       }),
     ).rejects.toThrow("smart wallet is unavailable");
@@ -245,7 +245,7 @@ describe("StickerGiftEscrow", () => {
       context.stranger,
     ).authorizeClaim({
       giftId: claim.giftId,
-      claimToken: claim.claimToken,
+      giftClaimToken: claim.giftClaimToken,
       recipientArtistId: "recipient-artist",
     });
     await expect(
@@ -276,7 +276,7 @@ describe("StickerGiftEscrow", () => {
       rejectedExpiresAt,
     ).authorizeRejection({
       giftId: rejectedClaim.giftId,
-      claimToken: rejectedClaim.claimToken,
+      giftClaimToken: rejectedClaim.giftClaimToken,
     });
     const rejectionHash = await rejectedContext.walletClient.writeContract({
       address: rejectedContext.escrowAddress,

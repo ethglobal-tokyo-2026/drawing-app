@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { listKeptStickers, type StickerRecord } from "./stickerStorage";
+import { deviceGiftStore, giftStatusBySticker } from "../giving/giftStore";
+import { listStickers, type StickerRecord } from "./stickerStorage";
 
 export interface KeptSticker extends StickerRecord {
   url: string;
 }
 
-/** Your stickers still on your board, newest first, each with an object URL for its image. */
+/** Your stickers not packed or sent as gifts, newest first, each with an object URL for its image. */
 export function useKeptStickers() {
   const [stickers, setStickers] = useState<KeptSticker[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -13,10 +14,13 @@ export function useKeptStickers() {
   useEffect(() => {
     let cancelled = false;
     let urls: string[] = [];
-    listKeptStickers().then(
+    listStickers().then(
       (records) => {
         if (cancelled) return;
-        const kept = records.map((r) => ({ ...r, url: URL.createObjectURL(r.blob) }));
+        const given = giftStatusBySticker(deviceGiftStore().list());
+        const kept = records
+          .filter((r) => !given.has(r.id))
+          .map((r) => ({ ...r, url: URL.createObjectURL(r.blob) }));
         urls = kept.map((k) => k.url);
         setStickers(kept);
       },
