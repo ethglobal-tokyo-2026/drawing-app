@@ -31,6 +31,11 @@ interface Props {
   label?: string;
   /** A reserve ticket's star pops in, once: the ticket was just bought, or has just come to the front. */
   pop?: boolean;
+  /**
+   * Which reserve tickets wear their star: "every" one (the default), or only the "front" one, the last in `stubs`,
+   * for tickets overlapped in a fan, where a star behind would peek out past the ticket over it.
+   */
+  stars?: "every" | "front";
   /** The ticket being spent, by its place in `stubs`, and how far the spend has got. */
   spending?: { index: number; state: Spend } | null;
   className?: string;
@@ -94,11 +99,14 @@ function Stub({
   stub,
   geometry,
   pop,
+  star: starred,
   spend,
 }: {
   stub: TicketStub;
   geometry: Geometry;
   pop: boolean;
+  /** Whether a reserve ticket wears its star. */
+  star: boolean;
   spend: Spend | null;
 }) {
   const { t } = useTranslation();
@@ -154,7 +162,7 @@ function Stub({
           >
             <DrawIcon size={glyph} />
           </g>
-          {reserve && <ReserveStar x={starX} y={star * 0.1} size={star} pop={pop} />}
+          {reserve && starred && <ReserveStar x={starX} y={star * 0.1} size={star} pop={pop} />}
         </svg>
       )}
       {count !== undefined && count > 0 && (
@@ -174,7 +182,15 @@ function Stub({
  * carrying the kiss-cut outline of the sticker each became. Daily tickets are matte Seal Yellow stock; reserve
  * tickets are Blue, in the stickers' resin with an Ink outline and a star.
  */
-export function TicketStubs({ stubs, size, label, pop = false, spending, className }: Props) {
+export function TicketStubs({
+  stubs,
+  size,
+  label,
+  pop = false,
+  stars = "every",
+  spending,
+  className,
+}: Props) {
   const geometry = GEOMETRY[size];
   const a11y = label ? { role: "img", "aria-label": label } : { "aria-hidden": true };
   return (
@@ -188,6 +204,7 @@ export function TicketStubs({ stubs, size, label, pop = false, spending, classNa
           stub={stub}
           geometry={geometry}
           pop={pop}
+          star={stars === "every" || i === stubs.length - 1}
           spend={spending?.index === i ? spending.state : null}
         />
       ))}

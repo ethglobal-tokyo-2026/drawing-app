@@ -33,7 +33,7 @@ export function ReserveTicketsHero({ onBuy }: { onBuy: () => void }) {
 
   return (
     <section className="reserve-hero" aria-labelledby={`${id}-title`}>
-      <TicketStubs className="reserve-hero__fan" size="large" stubs={FAN} />
+      <TicketStubs className="reserve-hero__fan" size="large" stubs={FAN} stars="front" />
       {held > 0 && (
         <p className="reserve-hero__held">
           <span aria-hidden="true">
