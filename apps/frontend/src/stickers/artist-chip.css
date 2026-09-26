@@ -1,6 +1,6 @@
 /* The artist chip: a Liner Lift pill, sized to what it says, never stretched. Its picture sits in a
    ring of the foil's colors whose light turns, by transform only, and holds still under reduced
-   motion. The copy says "artist" or "By", never "from". */
+   motion; off a board the chip is plain, with no ring. The copy says "artist" or "By", never "from". */
 .artist-chip {
   position: relative;
   display: inline-flex;
@@ -32,8 +32,7 @@
   overflow: hidden;
 }
 
-.artist-chip__picture::before {
-  content: "";
+.artist-chip__ring {
   position: absolute;
   inset: -4px;
   z-index: -1;
@@ -111,6 +110,19 @@
   font: 760 14px/1.1 var(--font-ui);
 }
 
+/* Off a board: no foil, so the picture is a photo sticker on the pill, its white edge cut from the
+   pale Liner Lift by a kiss-cut, casting its own shadow past the ring's clip. */
+.artist-chip--plain .artist-chip__picture {
+  overflow: visible;
+}
+
+.artist-chip--plain .artist-chip__face {
+  box-shadow:
+    0 0 0 2px var(--canvas),
+    0 0 0 2.5px var(--rule-strong),
+    1px 2px 3px rgba(28, 24, 36, 0.14);
+}
+
 /* In a toolbar, whose surface is the pill. */
 .artist-chip--bare {
   height: auto;
@@ -134,7 +146,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .artist-chip__picture::before,
+  .artist-chip__ring,
   .artist-chip--bare {
     animation: none;
   }
