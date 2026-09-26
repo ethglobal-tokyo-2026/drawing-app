@@ -9,7 +9,6 @@ import {
 import { SmartWalletsProvider } from "@privy-io/react-auth/smart-wallets";
 import { useEffect } from "react";
 import { sepolia } from "viem/chains";
-import { requestReturningMenu } from "../line/chatMenu";
 import {
   fetchPrivyJwt,
   onPrivyError,
@@ -44,8 +43,6 @@ const signedIn = (user: User) => {
     smartAccount: smartAccountOf(user),
     suiWallet: privysWallet(user, "sui"),
   });
-  // Having a Privy account is what makes someone returning, so their chat menu switches now.
-  void requestReturningMenu();
 };
 
 const onAuthenticated = ({ user }: { user: User }) => signedIn(user);

@@ -44,11 +44,24 @@ export const line = {
     },
     chatMenu: {
       label: "Chat menu",
-      waiting: "Switches after the Privy sign-in",
-      returning: "Draw · My board · Explore",
+      waiting: "Links after sign-in",
+      /** The menu linked for this open, by what its Draw key shows. */
+      menus: {
+        plain: "Draw · My board · Explore, with no count",
+        "3": "Draw with 3 daily tickets left",
+        "2": "Draw with 2 daily tickets left",
+        "1": "Draw with 1 daily ticket left",
+        reserve: "Draw with reserve tickets",
+        none: "Draw with no tickets left",
+      },
       notAFriend: "Open Sticker Board: add the official account as a friend to switch",
-      notSignedUp: "Open Sticker Board: not signed up yet",
-      failed: "Didn’t switch: {{reason}}",
+      /** Why the server linked nothing. */
+      off: {
+        not_configured: "Off: the server has no Messaging API channel",
+        dev_sign_in: "Off under dev sign-in",
+        no_menu: "Off: no chat menu in this language yet",
+      },
+      failed: "Didn’t link: {{reason}}",
     },
     permissions: "Permissions",
     idToken: {

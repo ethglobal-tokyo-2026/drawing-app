@@ -23,6 +23,7 @@ export const errors = {
   internal_error: "The app's server ran into a problem.",
   invalid_request: "The app sent something the server couldn't read.",
   line_token_invalid: "LINE didn't confirm who you are.",
+  line_unavailable: "LINE didn't answer, so the menu under your chat hasn't changed yet.",
   mint_failed:
     "Your sticker is saved, but it couldn't be sealed on-chain. Try again; it won't use another ticket.",
   no_tickets_left: "You're out of tickets.",

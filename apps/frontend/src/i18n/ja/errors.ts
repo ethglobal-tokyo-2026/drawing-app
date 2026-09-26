@@ -10,4 +10,5 @@ export const errors: Translation<typeof english> = {
   payment_not_yours: "この支払いは別の人のチケットのものです。",
   sui_unavailable:
     "Suiから応答がありません。チケットはまだ追加されていません。もう一度お試しください。",
+  line_unavailable: "LINEから応答がありません。トークのメニューはまだ変わっていません。",
 };
