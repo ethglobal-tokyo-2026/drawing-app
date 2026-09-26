@@ -160,7 +160,7 @@ export function StickerDetail({
       className="sticker-detail"
       role="dialog"
       aria-modal="true"
-      aria-label="Sticker"
+      aria-label={sticker ? formatNo(sticker.no) : "Sticker"}
       tabIndex={-1}
       onKeyDown={(e) => {
         if (e.altKey || e.ctrlKey || e.metaKey) return;

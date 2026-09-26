@@ -14,6 +14,7 @@ import {
 } from "./boardGesture";
 import type { BoardSticker } from "./boardSticker";
 import { clampS, sizeOf, toFrac, toPx, transformAt, type Field } from "./placement";
+import { focusStep } from "./stickerOrder";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 
 interface Options {
@@ -70,6 +71,9 @@ const round = (v: number, places: number) => Number(v.toFixed(places));
  * The board's pointer and key input. A held sticker's transform is written straight to its element
  * on every move; the board hears about it only when a gesture starts, when it's let go, and when a
  * sticker is tapped or keyed. `stow` is Remove: the sticker rides back into the sticker tray.
+ *
+ * The stickers take one Tab stop, `tabStop`, the one last focused. Focus alone doesn't select: the
+ * arrow keys go between stickers until Enter or Space selects one, then they move it; Escape lets go.
  */
 export function useBoardGestures(options: Options) {
   const latest = useRef(options);
@@ -78,6 +82,7 @@ export function useBoardGestures(options: Options) {
   });
   const gesture = useRef<Gesture | null>(null);
   const [hold, setHold] = useState<Hold | null>(null);
+  const [tabStop, setTabStop] = useState<string | null>(null);
   const stowing = useRef<(id: string) => void>(() => {});
 
   useEffect(() => {
@@ -237,15 +242,14 @@ export function useBoardGestures(options: Options) {
     };
     stowing.current = (id) => void stow(id);
 
-    /** Set while a pointer focuses the sticker it picked, which it has selected already. */
-    let pointerFocus = false;
     /** A sticker a pointer picked: selected, and focused so the arrow keys reach it, with no ring. */
     const pick = (id: string, el: HTMLElement) => {
       if (latest.current.selected !== id) latest.current.onSelect(id);
-      pointerFocus = true;
       el.focus({ preventScroll: true, focusVisible: false });
-      pointerFocus = false;
     };
+
+    const focusSticker = (id: string) =>
+      stage.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`)?.focus();
 
     const onDown = (e: PointerEvent) => {
       const { field, selected } = latest.current;
@@ -400,12 +404,23 @@ export function useBoardGestures(options: Options) {
         return;
       }
       if (e.key === "Escape") {
-        // The tray's spread, or the tray, goes before the sticker is let go of.
+        // The tray's spread, or the tray, goes before the sticker is let go of; focus stays on it.
         if (latest.current.tray.current?.escape()) {
           e.preventDefault();
           return;
         }
         if (selected) latest.current.onSelect(null);
+        return;
+      }
+      if (selected !== sticker.id) {
+        const points = latest.current.stickers.map((s) => ({
+          id: s.id,
+          ...toPx(field, s.placement),
+        }));
+        const next = focusStep(points, sticker.id, e.key);
+        if (next === undefined) return;
+        e.preventDefault();
+        focusSticker(next);
         return;
       }
       if (e.key === "Delete" || e.key === "Backspace") {
@@ -423,15 +438,14 @@ export function useBoardGestures(options: Options) {
         next = { ...b, s: clampS(b.s * (e.key === "-" ? KEY_SHRINK : KEY_GROW)) };
       if (!next) return;
       e.preventDefault();
-      if (selected !== sticker.id) latest.current.onSelect(sticker.id);
       commit(el, sticker, next);
     };
 
-    // Tabbing to a sticker selects it; a pointer selects the sticker it picks itself.
+    // The sticker last focused, by any means, is the one Tab comes back to.
     const onFocus = (e: FocusEvent) => {
-      if (pointerFocus || !(e.target instanceof Element) || gesture.current) return;
+      if (!(e.target instanceof Element)) return;
       const id = e.target.closest<HTMLElement>(".placed-sticker")?.dataset.stickerId;
-      if (id && !leaving.has(id) && latest.current.selected !== id) latest.current.onSelect(id);
+      if (id) setTabStop(id);
     };
 
     stage.addEventListener("pointerdown", onDown);
@@ -452,5 +466,5 @@ export function useBoardGestures(options: Options) {
   }, [options.stage]);
 
   const stow = useCallback((id: string) => stowing.current(id), []);
-  return { hold, stow };
+  return { hold, stow, tabStop };
 }

@@ -4,6 +4,8 @@ import { LabelButton } from "../ui/LabelButton";
 import { toolbarSpot, type Box } from "./placement";
 
 interface Props {
+  /** Names the toolbar after its sticker. */
+  label: string;
   /** The selected sticker's box on the board, in board pixels, and its turn. */
   sticker: { x: number; y: number; w: number; h: number; r: number };
   board: { W: number; H: number };
@@ -27,6 +29,7 @@ interface Props {
 
 /** Give, View and Remove for the selected sticker, beside it on the board. */
 export function StickerToolbar({
+  label,
   sticker,
   board,
   knobBelow,
@@ -71,7 +74,7 @@ export function StickerToolbar({
       ref={ref}
       className="sticker-toolbar"
       role="toolbar"
-      aria-label="Sticker"
+      aria-label={label}
       onKeyDown={(e) => {
         if (e.key === "Escape") onEscape();
       }}
