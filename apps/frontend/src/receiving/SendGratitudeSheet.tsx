@@ -46,8 +46,11 @@ export function SendGratitudeSheet({ sticker, giver, onSend, onLater }: Props) {
               {giver.id === sticker.artist.id ? (
                 <Trans
                   i18nKey={($) => $.receiving.sendGratitude.lineFromOriginalArtist}
-                  values={{ name: who }}
-                  components={{ duration: <Duration seconds={sticker.timeUsed} /> }}
+                  components={{
+                    // A name is a component's text, not a value: Trans would read markup in a value.
+                    name: <>{who}</>,
+                    duration: <Duration seconds={sticker.timeUsed} />,
+                  }}
                 />
               ) : (
                 t(($) => $.receiving.sendGratitude.line, { name: who })

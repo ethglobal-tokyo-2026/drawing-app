@@ -9,17 +9,18 @@ export const receiving = {
     pullTabHint: "<b>Pull the tab to open it</b><span>or double-tap, or press and hold</span>",
     /** Names the Accept sheet for assistive tech. */
     acceptSheet: "Accept this sticker",
-    /** Names the person opening it. */
-    forYou: "This sticker is for you, <b>{{name}}</b>.",
-    /** The sticker's number, drawing time, seal day and Original Artist. */
-    finePrint: "{{no}} · <duration/> · {{day}} · by {{artist}}",
+    /** Names the person opening it: `<name/>` is their LINE name, in bold. */
+    forYou: "This sticker is for you, <name/>.",
+    /** The sticker's number, drawing time, seal day and Original Artist, `<artist/>`. */
+    finePrint: "{{no}} · <duration/> · {{day}} · by <artist/>",
     notReceived: "{{no}} wasn’t received. {{reason}} Tap Accept to try again.",
     accept: "Accept",
     accepting: "Accepting…",
     notNow: "Not now",
   },
+  /** Under Accept: `<name/>` is the giver. */
   termsLine:
-    "Receiving it shows {{name}} your LINE name and picture. You agree to the <terms>Terms</terms> and <privacy>Privacy Policy</privacy>.",
+    "Receiving it shows <name/> your LINE name and picture. You agree to the <terms>Terms</terms> and <privacy>Privacy Policy</privacy>.",
   /**
    * A gift that can't be received here: a title and one line, by refusal. The `_unknownGiver`
    * text is for a refusal that came without the giver, so it says "the giver".
@@ -79,9 +80,9 @@ export const receiving = {
   sendGratitude: {
     title: "Send {{name}} gratitude?",
     line: "It’s on your board, from {{name}}. Gratitude never expires.",
-    /** When the giver is the sticker's Original Artist. */
+    /** When the giver, `<name/>`, is the sticker's Original Artist. */
     lineFromOriginalArtist:
-      "It’s on your board. {{name}} drew it in <duration/>, and gratitude never expires.",
+      "It’s on your board. <name/> drew it in <duration/>, and gratitude never expires.",
     send: "Send gratitude",
     later: "Later",
   },

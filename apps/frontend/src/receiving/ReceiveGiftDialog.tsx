@@ -332,19 +332,20 @@ function Gift({
             <p className="receive-gift__for">
               <Trans
                 i18nKey={($) => $.receiving.gift.forYou}
-                values={{ name: opener }}
-                components={{ b: <b /> }}
+                components={{
+                  // Names are components' text, not values: Trans would read markup in a value.
+                  name: <b>{opener}</b>,
+                }}
               />
             </p>
             <p className="fine receive-gift__fine">
               <Trans
                 i18nKey={($) => $.receiving.gift.finePrint}
-                values={{
-                  no: formatNo(sticker.no),
-                  day: formatDay(sticker.sealedAt),
-                  artist: printed(sticker.artist),
+                values={{ no: formatNo(sticker.no), day: formatDay(sticker.sealedAt) }}
+                components={{
+                  duration: <Duration seconds={sticker.timeUsed} />,
+                  artist: <>{printed(sticker.artist)}</>,
                 }}
-                components={{ duration: <Duration seconds={sticker.timeUsed} /> }}
               />
             </p>
           </div>
@@ -374,8 +375,8 @@ function Gift({
             <p className="receive-gift__terms">
               <Trans
                 i18nKey={($) => $.receiving.termsLine}
-                values={{ name: printed(giver) }}
                 components={{
+                  name: <>{printed(giver)}</>,
                   terms: <a href={t(($) => $.pages.terms)} onClick={openPage} />,
                   privacy: <a href={t(($) => $.pages.privacy)} onClick={openPage} />,
                 }}
