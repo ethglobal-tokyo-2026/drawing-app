@@ -1,5 +1,5 @@
 import type { ApiError } from "../api/apiClient";
-import type { GiftPreviewResponse, ReceiveGiftResponse, ReceiveRefusal } from "../api/contract";
+import type { GiftPreview, ReceivedGift, ReceiveRefusal } from "@drawing-app/api/client";
 import { toMs, toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
 
 /** Why a gift can't be received here: the REST doc's refusals, plus a link to no gift and no server. */
@@ -22,14 +22,14 @@ export type ReceiveScreen =
   | { step: "failed"; message: string };
 
 export type ReceiveEvent =
-  | { type: "previewed"; preview: GiftPreviewResponse }
+  | { type: "previewed"; preview: GiftPreview }
   | { type: "previewFailed"; error: ApiError }
   /** Try again, after a refusal that may pass or a failed preview. */
   | { type: "retry" }
   /** The pull tab snapped: the sticker is unpackaged. */
   | { type: "unpackaged" }
   | { type: "receive" }
-  | { type: "received"; response: ReceiveGiftResponse }
+  | { type: "received"; response: ReceivedGift }
   | { type: "receiveFailed"; error: ApiError };
 
 // A record, so the compiler keeps it to RefusalKind's members, all of them.
@@ -47,13 +47,7 @@ const REFUSAL_KINDS: Record<RefusalKind, true> = {
 
 const isRefusal = (code: string): code is RefusalKind => Object.hasOwn(REFUSAL_KINDS, code);
 
-function opened({
-  giver,
-  expiresAt,
-  receivable,
-  refusal,
-  sticker,
-}: GiftPreviewResponse): ReceiveScreen {
+function opened({ giver, expiresAt, receivable, refusal, sticker }: GiftPreview): ReceiveScreen {
   if (receivable && sticker) {
     return {
       step: "sealed",

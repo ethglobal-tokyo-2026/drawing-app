@@ -9,7 +9,12 @@ import {
 import { sepolia } from "viem/chains";
 import { afterEach, describe, expect, it } from "vitest";
 import { createStickerSealer } from "../src/seal-sticker.js";
-import { readFoundryArtifact, startAnvil, type AnvilInstance } from "./helpers/foundry.js";
+import {
+  anvilPollingInterval,
+  readFoundryArtifact,
+  startAnvil,
+  type AnvilInstance,
+} from "./helpers/foundry.js";
 
 const artifact = readFoundryArtifact("StickerNFT", "StickerNFT");
 const chain = defineChain({
@@ -31,7 +36,11 @@ afterEach(async () => {
 async function setup() {
   const anvil = await startAnvil(chain.id);
   activeAnvils.push(anvil);
-  const publicClient = createPublicClient({ chain, transport: http(anvil.rpcUrl) });
+  const publicClient = createPublicClient({
+    chain,
+    transport: http(anvil.rpcUrl),
+    pollingInterval: anvilPollingInterval,
+  });
   const accounts = anvil.accounts;
   const [admin, artist, recipient, stranger] = accounts;
   if (!admin || !artist || !recipient || !stranger) {

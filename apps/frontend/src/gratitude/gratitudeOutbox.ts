@@ -1,5 +1,5 @@
 import { apiError, type ApiClient, type ApiError } from "../api/apiClient";
-import type { RecordGratitude } from "../api/contract";
+import type { RecordGratitude } from "@drawing-app/api/client";
 
 /** Finished combos the server hasn't recorded yet. */
 const PENDING_KEY = "draw.gratitude.pending";

@@ -12,7 +12,7 @@ Group=bawler
 WorkingDirectory=/srv/drawing-api
 EnvironmentFile=/srv/drawing-api/api.env
 EnvironmentFile=/srv/drawing-api/secrets.env
-ExecStart=/usr/bin/node /srv/drawing-api/server/server.mjs
+ExecStart=/usr/local/lib/nodejs/node-24/bin/node /srv/drawing-api/server/server.mjs
 Restart=always
 RestartSec=3
 

@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { Placement } from "../stickers/stickerStorage";
 import {
   FIRST_SPOT,
   fieldOf,
@@ -9,6 +8,7 @@ import {
   sizeOf,
   toFrac,
   toolbarSpot,
+  type Placement,
 } from "./placement";
 
 const at = (x: number, y: number): Placement => ({ on: true, x, y, s: 0.3, r: 0, z: 1 });

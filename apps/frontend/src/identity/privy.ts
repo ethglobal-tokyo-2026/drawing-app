@@ -1,12 +1,10 @@
 import liff from "@line/liff";
 import { useSyncExternalStore } from "react";
-import { liffMockActive } from "../line/liff";
 
 // The Privy app. It isn't secret: Privy's SDK sends it with every request.
 export const PRIVY_APP_ID = "cmuh4s0lz01fn0cl143lomlzj";
 
 export type PrivyStatus =
-  | { state: "off"; reason: string }
   | { state: "signing-in" }
   | {
       state: "signed-in";
@@ -18,9 +16,7 @@ export type PrivyStatus =
     }
   | { state: "failed"; reason: string };
 
-let status: PrivyStatus = liffMockActive
-  ? { state: "off", reason: "LIFF Mock’s test user has no real LINE ID token" }
-  : { state: "signing-in" };
+let status: PrivyStatus = { state: "signing-in" };
 const listeners = new Set<() => void>();
 
 export function setPrivyStatus(next: PrivyStatus) {

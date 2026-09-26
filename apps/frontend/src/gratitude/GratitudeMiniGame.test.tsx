@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { ApiProvider } from "../api/ApiProvider";
-import { gratitudeOf } from "../api/mock/gratitude";
+import { gratitudeOf } from "../api/testing";
 import { emptyApi } from "../api/testing";
 import { GratitudeMiniGame, type GratitudeResult } from "./GratitudeMiniGame";
 
@@ -75,9 +75,7 @@ beforeEach(() => {
     value: { ready: Promise.resolve() },
     configurable: true,
   });
-  recordGratitude.mockImplementation((body) =>
-    Promise.resolve({ gratitude: gratitudeOf(body, 0) }),
-  );
+  recordGratitude.mockImplementation((body) => Promise.resolve(gratitudeOf(body)));
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);

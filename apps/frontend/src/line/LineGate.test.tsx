@@ -39,7 +39,6 @@ const settle = () => act(() => vi.advanceTimersByTimeAsync(0));
 
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.stubEnv("VITE_LIFF_MOCK", "off");
   vi.spyOn(console, "error").mockImplementation(() => {});
   host = document.createElement("div");
   document.body.append(host);
@@ -49,7 +48,6 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root.unmount());
   host.remove();
-  vi.unstubAllEnvs();
   vi.restoreAllMocks();
   vi.useRealTimers();
 });

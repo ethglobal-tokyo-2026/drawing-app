@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { people, sticker } from "./mock/fixtures";
+import { people, sticker } from "./testFixtures";
 import { toPerson, toSticker } from "./views";
 
 describe("toSticker", () => {
