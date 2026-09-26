@@ -12,6 +12,7 @@ import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import type { BoardSticker } from "./boardSticker";
+import { useDetailLift } from "./detailLift";
 import { swipeLock, swipeTo } from "./detailPaging";
 import "./sticker-detail.css";
 
@@ -31,6 +32,8 @@ interface Props {
   onGive?: (sticker: BoardSticker) => void;
   /** Where focus goes once it closes, when that isn't back to what opened it. */
   returnFocus?: () => HTMLElement | null;
+  /** Where a sticker sits on the board, which it lifts off from and sticks back onto. */
+  originOf?: (id: string) => HTMLElement | null;
 }
 
 interface Swipe {
@@ -57,10 +60,10 @@ export function StickerDetail({
   onClose,
   onGive,
   returnFocus,
+  originOf,
 }: Props) {
   const reduced = useReducedMotion();
   useLight();
-  useBackToClose(true, onClose);
   const [shownId, setShownId] = useState(startId);
   const index = Math.max(
     0,
@@ -76,7 +79,16 @@ export function StickerDetail({
   /** The side the next sticker enters from: 1 from the right, -1 from the left. */
   const enterFrom = useRef(0);
 
-  useFocusTrap(root, { onEscape: onClose, returnFocus });
+  const close = useDetailLift({
+    root,
+    sticker,
+    originOf,
+    given: mode === "given",
+    reduced,
+    onClose,
+  });
+  useBackToClose(true, close);
+  useFocusTrap(root, { onEscape: close, returnFocus });
 
   // LINE's header shows the page title.
   const no = sticker?.no;
@@ -173,7 +185,7 @@ export function StickerDetail({
       }}
     >
       <header className="sticker-detail__top">
-        <button type="button" className="sticker-detail__back" onClick={onClose}>
+        <button type="button" className="sticker-detail__back" onClick={close}>
           <StickerBoardIcon size={18} />
           <span>Sticker board</span>
         </button>
