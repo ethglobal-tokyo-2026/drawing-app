@@ -5,8 +5,8 @@ import { STRIDE, type FillOp, type Op, type StrokeOp } from "../../sticker-creat
 import { paintStroke } from "../../sticker-creation/canvas/paintStroke";
 import { decodeTimelapse, encodeTimelapse } from "../../sticker-creation/sealing/timelapse";
 import { notePerformance } from "../../performance/performanceRecorder";
-import type { FrameSource } from "../../ui/frameSource";
 import { contextOf, forgetContexts, madeContexts, type FakeContext } from "./testCanvas";
+import { handFrames } from "./testTimelapse";
 import { MAX_FRAME_MS, createTimelapsePlayer } from "./timelapsePlayer";
 import { scheduleTimelapse, type ScheduledStroke } from "./timelapseSchedule";
 
@@ -38,31 +38,6 @@ const steady = (ms: number, step = 16) =>
   Array.from({ length: Math.floor(ms / step) + 1 }, (_, i) => i * step);
 const pointCount = (op: StrokeOp) => op.pts.length / STRIDE;
 
-/** Frames a test hands out: `advance(ms)` runs one every `step` ms, up to `ms` later. */
-function fakeFrames() {
-  let time = 1_000;
-  let pending: ((t: number) => void) | null = null;
-  const frames: FrameSource = {
-    now: () => time,
-    request(frame) {
-      pending = frame;
-      return () => {
-        if (pending === frame) pending = null;
-      };
-    },
-  };
-  const advance = (ms: number, step = 16) => {
-    const end = time + ms;
-    while (time < end) {
-      time = Math.min(end, time + step);
-      const frame = pending;
-      pending = null;
-      frame?.(time);
-    }
-  };
-  return { frames, advance, waiting: () => pending !== null };
-}
-
 const sameObject = (a: object, b: object | undefined) => a === b;
 
 function setup(ops: Op[], { reduced = false } = {}) {
@@ -73,14 +48,14 @@ function setup(ops: Op[], { reduced = false } = {}) {
     density: 1,
   });
   const canvas = document.createElement("canvas");
-  const clock = fakeFrames();
+  const clock = handFrames();
   const player = createTimelapsePlayer({
     timelapse,
     canvas,
     width: BOX.width,
     image: { width: PLACE.w, height: PLACE.h },
     reduced,
-    frames: clock.frames,
+    frames: clock.source,
   });
   const display = contextOf(canvas);
   const schedule = scheduleTimelapse(decodeTimelapse(timelapse).ops, { reduced });
