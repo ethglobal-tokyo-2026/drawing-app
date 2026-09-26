@@ -244,19 +244,27 @@ export function StatCork({
                       <small>{t(($) => $.stickerBoard.statBoard.bests.bestComboNote)}</small>
                     </dt>
                     <dd>
-                      {f.bestCombo === null
-                        ? t(($) => $.stickerBoard.statBoard.bests.noneYet)
-                        : t(($) => $.stickerBoard.statBoard.bests.combo, {
-                            hits: formatCount(f.bestCombo),
-                          })}
+                      {f.bestCombo === null ? (
+                        <Unknown />
+                      ) : f.bestCombo > 0 ? (
+                        t(($) => $.stickerBoard.statBoard.bests.combo, {
+                          hits: formatCount(f.bestCombo),
+                        })
+                      ) : (
+                        t(($) => $.stickerBoard.statBoard.bests.noneYet)
+                      )}
                     </dd>
                   </div>
                   <div>
                     <dt>{t(($) => $.stickerBoard.statBoard.bests.mostGratitudeInADay)}</dt>
                     <dd>
-                      {f.mostGratitudeInADay === null
-                        ? t(($) => $.stickerBoard.statBoard.bests.noneYet)
-                        : formatCount(f.mostGratitudeInADay)}
+                      {f.mostGratitudeInADay === null ? (
+                        <Unknown />
+                      ) : f.mostGratitudeInADay > 0 ? (
+                        formatCount(f.mostGratitudeInADay)
+                      ) : (
+                        t(($) => $.stickerBoard.statBoard.bests.noneYet)
+                      )}
                     </dd>
                   </div>
                 </dl>

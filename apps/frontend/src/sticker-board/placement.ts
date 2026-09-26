@@ -1,3 +1,5 @@
+import { seededRandom } from "../ui/seededRandom";
+
 /** Where a sticker sits on its board. */
 export interface Placement {
   /** False while the sticker waits in the sticker tray; its last spot is kept. */
@@ -166,20 +168,71 @@ const SPOTS = [
 /** Where the empty board's dashed spot sits: the first sticker's spot. */
 export const FIRST_SPOT = { x: SPOTS[0][0], y: SPOTS[0][1] };
 
-/** Where a new sticker goes: the spot farthest from every sticker already on the board. */
+/** How many spots are laid out for new stickers. */
+export const LAID_OUT_SPOTS = SPOTS.length;
+
+/** A laid-out spot is taken once a sticker's center sits this near it. */
+export const TAKEN_WITHIN = 0.15;
+
+/** Seeded spots tried for a new sticker once every laid-out spot is taken; the clearest wins. */
+const SEEDED_TRIES = 24;
+
+type Spot = readonly [x: number, y: number, s: number, r: number];
+
+const span = (i: 0 | 1 | 2 | 3) => {
+  const values = SPOTS.map((spot) => spot[i]);
+  return [Math.min(...values), Math.max(...values)] as const;
+};
+
+/**
+ * The laid-out spots' bounds for x, y, s and r: seeded spots stay inside them, as calm and as clear
+ * of the header and Draw.
+ */
+export const SPOT_BOUNDS = { x: span(0), y: span(1), s: span(2), r: span(3) };
+
+/** How far a spot is from the nearest sticker. Height counts for more, since the field is taller. */
+const clearance = (x: number, y: number, taken: readonly Placement[]) =>
+  taken.length ? Math.min(...taken.map((t) => Math.hypot(x - t.x, (y - t.y) * 1.4))) : 1;
+
+/** The spot farthest from every sticker; the first wins a tie. */
+function clearest(spots: readonly Spot[], taken: readonly Placement[]) {
+  let spot = spots[0];
+  let score = -1;
+  for (const s of spots) {
+    const c = clearance(s[0], s[1], taken);
+    if (c > score) [spot, score] = [s, c];
+  }
+  return { spot, score };
+}
+
+/**
+ * Seeded spots inside the laid-out ones' bounds, seeded by how many stickers the board holds: the
+ * same board always tries the same spots, and each sticker added to it tries new ones.
+ */
+function seededSpots(count: number): Spot[] {
+  const random = seededRandom(count);
+  const within = ([lo, hi]: readonly [number, number], places: number) =>
+    Number((lo + random() * (hi - lo)).toFixed(places));
+  const { x, y, s, r } = SPOT_BOUNDS;
+  return Array.from({ length: SEEDED_TRIES }, () => [
+    within(x, 4),
+    within(y, 4),
+    within(s, 2),
+    within(r, 0),
+  ]);
+}
+
+/**
+ * Where a new sticker goes: the laid-out spot farthest from every sticker already on the board. Once
+ * each of those is taken, the clearest of a few seeded spots, so stickers that arrive together each
+ * get their own instead of stacking on one.
+ */
 export function freeSpot(taken: readonly Placement[]): Pick<Placement, "x" | "y" | "s" | "r"> {
-  let best: (typeof SPOTS)[number] = SPOTS[0];
-  let bestScore = -1;
-  for (const spot of SPOTS) {
-    const [x, y] = spot;
-    // Height counts for more, since the field is taller than it is wide.
-    const score = taken.length
-      ? Math.min(...taken.map((t) => Math.hypot(x - t.x, (y - t.y) * 1.4)))
-      : 1;
-    if (score > bestScore) {
-      best = spot;
-      bestScore = score;
-    }
+  const laidOut = clearest(SPOTS, taken);
+  let best = laidOut.spot;
+  if (laidOut.score < TAKEN_WITHIN) {
+    const seeded = clearest(seededSpots(taken.length), taken);
+    if (seeded.score > laidOut.score) best = seeded.spot;
   }
   const [x, y, s, r] = best;
   return { x, y, s, r };

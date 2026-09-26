@@ -456,7 +456,7 @@ Round flat stickers stuck at -4°: a 26px pill in a coded hue with Ink puffy num
 
 ### Index tabs
 
-Two tabs cut from label stock, side by side on the Liner strip: My board (pink) and Explore (aqua), each up to 176px wide and 46px tall with a 6px radius. Draw isn't a tab; the board has its own Draw key. An inactive tab is an outline (a 26% Ink edge) with graphite text; the current tab is stuck on in its full hue with Ink text, lifted 2px with a lift shadow. Each tab presses 1.5px through the shared press. Current is shown by fill and lift only, never by weight or case. My board's icon is the person's own LINE picture as a 24px photo sticker, the same whether current or not; Explore's is Phosphor's eyes, bold at rest and fill when current. On screens where the tabs hide, the whole strip slides away behind the grabber described in Layout.
+Three tabs cut from label stock, side by side on the Liner strip: My board (pink), Explore (aqua) and Shop (grape), each up to 176px wide and 46px tall with a 6px radius. Draw isn't a tab; the board has its own Draw key. An inactive tab is an outline (a 26% Ink edge) with graphite text; the current tab is stuck on in its full hue with Ink text, lifted 2px with a lift shadow. Each tab presses 1.5px through the shared press. Current is shown by fill and lift only, never by weight or case. My board's icon is the person's own LINE picture as a 24px photo sticker, the same whether current or not; Explore's is Phosphor's eyes and Shop's is Phosphor's storefront, both bold at rest and fill when current. On screens where the tabs hide, the whole strip slides away behind the grabber described in Layout.
 
 ### Board header
 
@@ -598,10 +598,11 @@ An Ink slip with Liner text (600, 14px) and 6px corners on the lift shadow. It r
 
 ### Icons
 
-Every icon comes from one registry, copied byte for byte from the published SVGs: Phosphor Icons (MIT, @phosphor-icons/core 2.1.1), plus one Material Symbols glyph. The app's own controls use bold; fill marks an active or primary state, such as the current tool or the current tab; the mocked LINE and iOS screens use regular. The same action always gets the same icon (Give is gift, View is eye, Offer is handshake, Remove is tray-arrow-down). Brand marks (LINE's logo, from Simple Icons, CC0) and illustrations (the heart, stickers, avatars, pins, tape, stamps, zipper parts) are not icons.
+Every icon comes from one registry: Phosphor Icons (MIT) as `@phosphor-icons/react` 2.1.10 renders them, plus one Material Symbols glyph copied byte for byte from its published SVG. The app's own controls use bold; fill marks an active or primary state, such as the current tool or the current tab; the mocked LINE and iOS screens use regular. The same action always gets the same icon (Give is gift, View is eye, Offer is handshake, Remove is tray-arrow-down). Brand marks (LINE's logo, from Simple Icons, CC0) and illustrations (the heart, stickers, avatars, pins, tape, stamps, zipper parts) are not icons.
 
 - **My board:** the tab shows the person's own LINE picture as a photo sticker. The rich menu's My board tile uses Phosphor's smiley-sticker (fill), since the rich menu is one image for everyone and can't show each person's picture.
 - **Explore:** Phosphor's eyes, on the tab (bold, fill when current) and the rich menu tile (fill).
+- **Shop:** Phosphor's storefront, on the tab (bold, fill when current) and the keys that open the Shop.
 - **Sticker board:** one composed entry, Phosphor's square with Phosphor's sticker set at 64%, turned -12° and masked, in bold and fill only. It marks the board itself (Go to sticker board) and stands in on the My board tab when a person has no LINE picture.
 
 **The Never Hand-Drawn Rule.** Icons are never drawn by hand and published paths are never edited. If Phosphor doesn't have it, choose a different Phosphor icon or compose published paths by transform.
