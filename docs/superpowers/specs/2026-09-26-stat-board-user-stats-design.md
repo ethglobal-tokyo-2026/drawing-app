@@ -29,7 +29,7 @@ interface Props {
 
 | Paper | Shows | From |
 | -------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ ---|
-| The name card | Picture, LINE name, "@alice · name and picture from LINE" | `person` |
+| The name card | Picture, LINE name, "@alice" | `person` |
 | The receipt | "@ALICE" and today's date on top; one row per kind above 0, each with its dot and reason; TOTAL | `gratitude` |
 | The calendar leaf | The streak in days, and its rule | `streak` |
 | The notebook scrap (Bests) | Longest streak, Best combo as a hit counter, Most gratitude in a day; "None yet" for each at 0 | `bests.longestStreak`, `bests.bestCombo`, `bests.mostGratitudeInADay` |
