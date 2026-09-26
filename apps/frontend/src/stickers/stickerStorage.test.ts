@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readSticker } from "./stickerStorage";
 
 const base = {
@@ -44,6 +44,13 @@ describe("readSticker", () => {
     });
     expect(read?.id).toBe("a");
     expect(read?.placement).toBeUndefined();
+  });
+
+  it("says so when a saved spot can't be read", () => {
+    const report = vi.spyOn(console, "error").mockImplementation(() => {});
+    readSticker({ ...base, placement: { x: "left" } });
+    expect(report).toHaveBeenCalledOnce();
+    report.mockRestore();
   });
 
   it("takes the resin's masks as blobs and nothing else", () => {
