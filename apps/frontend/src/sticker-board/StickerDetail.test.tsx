@@ -218,7 +218,7 @@ describe("StickerDetail", () => {
   });
 
   it("shows where it's been, the most recent gratitude open with its artist's share", async () => {
-    const thanked = trailEntry({
+    const withGratitude = trailEntry({
       giftId: "g-2",
       giver: people.ken,
       receiver: me,
@@ -228,13 +228,16 @@ describe("StickerDetail", () => {
         originalArtistGratitudeShare: 589,
       }),
     });
-    // Drawn by @mika, so her share comes out of @ken's part.
+    // Drawn by @mika, so the artist's share comes out of @ken's part.
     const byMika = stickers.map((s) =>
       s.id === "s-133" ? { ...s, artist: { id: people.mika.id, handle: "mika", name: "Mika" } } : s,
     );
     open(
       { stickers: byMika, ownerId: "me" },
-      withTrail([thanked, trailEntry({ giftId: "g-1", giver: people.mika, receiver: people.ken })]),
+      withTrail([
+        withGratitude,
+        trailEntry({ giftId: "g-1", giver: people.mika, receiver: people.ken }),
+      ]),
     );
     await settle();
     expect(rows()).toHaveLength(2);

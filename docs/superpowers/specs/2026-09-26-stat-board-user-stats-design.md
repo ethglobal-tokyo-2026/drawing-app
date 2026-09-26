@@ -27,14 +27,14 @@ interface Props {
 
 **What each paper shows:**
 
-| Paper                      | Shows                                                                                           | From                                                               |
-| -------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| The name card              | Picture, LINE name, "@alice · name and picture from LINE"                                       | `person`                                                           |
-| The receipt                | "@ALICE" and today's date on top; one row per kind above 0, each with its dot and reason; TOTAL | `gratitude`                                                        |
-| The calendar leaf          | The streak in days, and its rule                                                                | `streak`                                                           |
-| The notebook scrap (Bests) | Longest streak, Best combo as a hit counter, Most gratitude in a day; "None yet" for each at 0  | `bests.longestStreak`, `bests.bestCombo`, `bests.mostThanksInADay` |
-| The stamps                 | Made, received, given                                                                           | `made`, `received`, `given`                                        |
-| The label-maker tape       | "Since 2026.08.12"                                                                              | `since`                                                            |
+| Paper | Shows | From |
+| -------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ ---|
+| The name card | Picture, LINE name, "@alice · name and picture from LINE" | `person` |
+| The receipt | "@ALICE" and today's date on top; one row per kind above 0, each with its dot and reason; TOTAL | `gratitude` |
+| The calendar leaf | The streak in days, and its rule | `streak` |
+| The notebook scrap (Bests) | Longest streak, Best combo as a hit counter, Most gratitude in a day; "None yet" for each at 0 | `bests.longestStreak`, `bests.bestCombo`, `bests.mostGratitudeInADay` |
+| The stamps | Made, received, given | `made`, `received`, `given` |
+| The label-maker tape | "Since 2026.08.12" | `since` |
 
 **The receipt's rows** (reasons from `P/screens/sketchbook.js:436-438`):
 
@@ -60,8 +60,8 @@ A row at 0 is left off. With every row at 0, the receipt reads "No gratitude yet
 - **Loading:** the papers show "–" (read as "not known") until the stats arrive.
 - **A failed load** stays on the receipt as a line saying what failed, with Try again as small label stock. The drafts' toast and automatic flip back would make the error vanish.
 
-**`deviceApi`'s User Stats:** `made` is the stickers on this device; `received` and `given` are 0, since nothing can be received without the server; `streak` and `bests.longestStreak` come from seal days under the reset rule; gratitude, `bestCombo` and `mostThanksInADay` are 0; `since` is the earlier of the first visit and the oldest sticker.
+**`deviceApi`'s User Stats:** `made` is the stickers on this device; `received` and `given` are 0, since nothing can be received without the server; `streak` and `bests.longestStreak` come from seal days under the reset rule; gratitude, `bestCombo` and `mostGratitudeInADay` are 0; `since` is the earlier of the first visit and the oldest sticker.
 
 ## A change to the REST doc
 
-`bests.mostThanksInADay` counts the person's ticket days, from 4:00 in their zone, as the streak does. Proposed; not yet in the doc.
+`bests.mostGratitudeInADay` counts the person's ticket days, from 4:00 in their zone, as the streak does. Proposed; not yet in the doc.

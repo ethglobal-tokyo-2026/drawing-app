@@ -400,7 +400,7 @@ Stickers and the gratitude heart also respond to the app's one moving light. The
 
 **The One Light Rule.** There's one light for the whole app. Static shadows fall down and to the right from the top-left light, and every moving highlight (the sticker specular and sheen, the heart's gloss) reads the shared light variables. Don't add a second light source. The foil is the one light that runs on its own clock: its bands flow on a 7s loop and a white glint sweeps it every 4.2s, staggered per sticker, so a foil sticker still shimmers when no one touches the phone. It holds still under reduced motion.
 
-**The Neutral Shadow Rule.** Shadows are Ink alpha, never tinted. The one exception is the cork back: paper, stamps and pins cast a cork-brown throw (rgba(58,36,16,…)) over an Ink contact line, because a shadow on cork is darker cork. The only colored light in the world is a sticker's gratitude glow, warming from faint pink toward amber as more thanks arrive.
+**The Neutral Shadow Rule.** Shadows are Ink alpha, never tinted. The one exception is the cork back: paper, stamps and pins cast a cork-brown throw (rgba(58,36,16,…)) over an Ink contact line, because a shadow on cork is darker cork. The only colored light in the world is a sticker's gratitude glow, warming from faint pink toward amber as more gratitude arrives.
 
 **The No Gloss Rule.** Controls have no gloss, highlight line or sheen: keys, labels, tabs, the zipper and the gift's tear tape are lit flat, with an edge and a contact shadow at most.
 
@@ -512,7 +512,7 @@ The out-of-tickets card's stock. The wallet's SUI balance sits in a Liner Lift w
 - **Baked resin:** the gloss is baked into the image, with the print darker and more saturated where resin pools at the edge, a refraction band inside the cut edge, a rim light and a meniscus at the foot.
 - **Live resin:** on stickers that are showing, a live layer adds a specular along the top edge, a rim light and a sheen that sweeps when the sticker is placed, dragged or tilted.
 - **Foil:** a sticker drawn by someone other than the board's owner wears a holo foil band just outside its white edge: 5px on the board, 6px on the detail's big sticker, 3px on pouch sheets. It's the silhouette dilated, so it follows the cut. The six foil bands flow along it and a white glint sweeps across; holes hide it; it's decorative, and the sticker's own label names the artist. The seal ceremony adds nothing: a freshly sealed sticker is yours and plain.
-- **Glow:** gratitude shows on a sticker as a soft glow behind it, warmer and brighter with more thanks.
+- **Glow:** gratitude shows on a sticker as a soft glow behind it, warmer and brighter with more gratitude.
 - **Peel and stick:** a sticker peels with a 3D lift toward the top right and sticks with a short settle from 1.06 scale.
 
 ### Artist chip
@@ -565,7 +565,7 @@ A frosted bag with no zipper. Packing drops the sticker into the open bag, peeki
 
 A sticker's detail shows where it has been, one quiet row per hand-off, newest first, replacing any separate provenance line.
 
-- **One open row:** the most recent thanks opens by default: a Liner Lift card with a pink outline, the amount in Figure type at 27px beside a pink heart dot, who it's from, and the screen's only Replay button. While you still owe thanks for the newest gift, none opens: Send gratitude is the call.
+- **One open row:** the most recent gratitude opens by default: a Liner Lift card with a pink outline, the amount in Figure type at 27px beside a pink heart dot, who it's from, and the screen's only Replay button. While you still owe gratitude for the newest gift, none opens: Send gratitude is the call.
 - **Closed rows:** a sentence ("@mika gave it to @ken · 9.18") and a trailing amount with a caret, as one full-width 44px tap target. Tapping one opens it and closes the other. The viewer reads as "you". Names are Ink and bold; "gave it to" and the day are Graphite. The artist is named once, in the by-line, so rows carry no artist tag.
 - **The artist's fifth:** when the giver isn't the artist, the open row adds one line under a hairline rule: "2,357 to @ken · 590 to @mika, its artist", or "590 of it came to you, its artist". Copy never uses money words.
 - **Calm at length:** past the newest gift, the rest fold into one "N earlier gifts" control, with a caret, directly under it.

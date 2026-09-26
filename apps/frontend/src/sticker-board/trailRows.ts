@@ -7,7 +7,7 @@ export interface TrailRow {
   giver: PersonView;
   receiver: PersonView;
   receivedAt: number;
-  /** The receiver's thanks to the giver; null until it's sent. */
+  /** The receiver's gratitude to the giver; null until it's sent. */
   gratitude: {
     total: number;
     /** The Original Artist Gratitude Share, out of the giver's part. */
@@ -31,8 +31,8 @@ export const toTrailRows = (trail: readonly TransferTrailEntry[]): TrailRow[] =>
   }));
 
 /**
- * The row open by default: the most recent thanks. None while you still owe thanks for the newest
- * gift, since Send gratitude is then the screen's call.
+ * The row open by default: the most recent gratitude. None while you still owe gratitude for the
+ * newest gift, since Send gratitude is then the screen's call.
  */
 export function defaultOpenRow(rows: readonly TrailRow[], viewerId: string): string | null {
   const newest = rows[0];

@@ -16,7 +16,7 @@ A phone web app that runs inside LINE, in LINE's **LIFF browser** (ad0ll's answe
 
 ## Stack
 
-Static HTML/CSS: a **board** showing every screen side by side in phone frames under LINE's header, at full visual fidelity rather than grey boxes. ad0ll's answer was "Static wireframe board", and later instructions ask for designs that "all look really, really good." This reading was stated in the 2026-09-22 shape round and not corrected. The canvas is live so a judge can actually draw, and the give and thanks flows are interactive.
+Static HTML/CSS: a **board** showing every screen side by side in phone frames under LINE's header, at full visual fidelity rather than grey boxes. ad0ll's answer was "Static wireframe board", and later instructions ask for designs that "all look really, really good." This reading was stated in the 2026-09-22 shape round and not corrected. The canvas is live so a judge can actually draw, and the giving and gratitude flows are interactive.
 
 ## Users
 
@@ -28,7 +28,7 @@ Static HTML/CSS: a **board** showing every screen side by side in phone frames u
 - **Friend-first artists (the default):** draw, feel good, share with friends.
 - **Gamer artists:** also want to win. They farm gratitude in a dopamine-driven, arcade-style clout layer that people only see if they choose to take part.
 
-How to balance the two: there's no separate layer or mode (ad0ll, 2026-09-24). The gratitude combo escalates only when you push it, so friends who tap a few times get a warm thank-you, and people who mash reach the wild upper tiers. Figures such as total gratitude and streak live in each person's stats dialog, and leaderboards live in Explore.
+How to balance the two: there's no separate layer or mode (ad0ll, 2026-09-24). The gratitude combo escalates only when you push it, so friends who tap a few times send warm gratitude, and people who mash reach the wild upper tiers. Figures such as total gratitude and streak live in each person's stats dialog, and leaderboards live in Explore.
 
 These artists are **suspicious of crypto and money in an art app.** ad0ll, an artist, writes that they would read financial rewards or visible NFTs as "a racket" and would not use the app. If they wanted to be paid, they'd use Skeb, Patreon, or Fanbox.
 
@@ -76,7 +76,7 @@ You can hand someone a physical drawing, but no existing system makes a _digital
 - **Sketchbook drilldown:** full screen, swiping left and right between pieces. Shows the artist, date created, and date you got it; a special mark when the artist still owns their own piece; and its trade history. The owner can **take the original file**, which destroys the piece (the spec's "burn").
 - **Profile:** username, avatar, and sketchbook address. A top hero with Edit (own profile) and **Give** (someone else's). Two tabs: **Feed** (emulate Bluesky or Twitter: text posts, attached drawings, deep links and embeds to posts and drawings) and **Sketchbook**. On someone else's Sketchbook, each piece has an **Offer** button to request it.
 - **Offers:** a plain request, a swap for one of your own drawings, or **gratitude** (ad0ll, 2026-09-22, reversing the earlier "gratitude is never offered"). **No USDC anywhere.**
-- **Gratitude is clout, never money** (ad0ll, 2026-09-22). It's never convertible to money, but kept on-chain. It can now be offered for a piece. What happens to offered gratitude when an offer is accepted is **open**: whether it moves to the owner or is used up, and whether spending it lowers your rank. You earn it by drawing daily and keeping streaks, and from the thanks window when someone receives your piece. It ranks you on a leaderboard that brings attention to your work. The sketch breaks a total down into daily streak, inspired, and magic. What "inspired" and "magic" measure is undefined.
+- **Gratitude is clout, never money** (ad0ll, 2026-09-22). It's never convertible to money, but kept on-chain. It can now be offered for a piece. What happens to offered gratitude when an offer is accepted is **open**: whether it moves to the owner or is used up, and whether spending it lowers your rank. You earn it by drawing daily and keeping streaks, and from the gratitude Mini-game when someone receives your piece. It ranks you on a leaderboard that brings attention to your work. The sketch breaks a total down into daily streak, inspired, and magic. What "inspired" and "magic" measure is undefined.
 - **Global feed:** drawing activity across the app ("User drew [piece]", "User gave [piece] to User"). **User search.**
 - **Sketchbooks are public** (ad0ll, 2026-09-22). Profiles, Sketchbooks and pieces can be viewed without logging in, including by judges who don't use LINE. LINE Login is asked for only when someone acts: draws, gives, offers or accepts.
 - **Every artist picks a unique handle** (@alice). LINE display names aren't unique, so the handle is what people search for.
