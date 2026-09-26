@@ -104,6 +104,28 @@
       "files": ["apps/frontend/src/ui/**"],
       "rules": { "react/jsx-no-literals": "error" }
     },
+    // Icons come from the registry, where an icon with a meaning goes by it, so it's the same everywhere.
+    {
+      "files": ["apps/frontend/src/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@phosphor-icons/react",
+                "message": "Import icons from src/icons (apps/frontend/src/icons/index.tsx), never from Phosphor."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    // The registry itself, and main.tsx's IconContext, which sets every icon's defaults.
+    {
+      "files": ["apps/frontend/src/icons/**", "apps/frontend/src/main.tsx"],
+      "rules": { "no-restricted-imports": "off" }
+    },
     // Last, so it wins over the folders above: tests render stand-in text that nobody sees.
     {
       "files": ["apps/frontend/src/**/*.test.tsx"],

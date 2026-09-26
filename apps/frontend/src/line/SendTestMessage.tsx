@@ -1,7 +1,7 @@
 import liff from "@line/liff";
-import { PaperPlaneTilt } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useTranslation } from "../i18n/react";
+import { PaperPlaneTilt } from "../icons";
 import { LabelButton } from "../ui/LabelButton";
 import { canOpenPicker, sendInLineChat } from "./friendPicker";
 import "./send-test-message.css";
