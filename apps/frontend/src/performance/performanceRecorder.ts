@@ -51,6 +51,11 @@ export interface PerformanceLog {
   frame: (now: number) => void;
   /** The page went hidden, so the interval across it is no frame. */
   pageHidden: () => void;
+  /**
+   * Recording stops. The slow frames still waiting take the events they have, since no more are
+   * coming, and the time until it starts again is no frame.
+   */
+  pause: () => void;
   note: (event: TimelineEvent) => void;
   /** Our own script time, counted in the frame in progress. */
   addOurWork: (label: string, ms: number) => void;
@@ -171,6 +176,12 @@ export function createPerformanceLog(now: number): PerformanceLog {
     pageHidden: () => {
       hidden = true;
     },
+    pause: () => {
+      settle();
+      last = null;
+      hidden = false;
+      ours = null;
+    },
     note,
     addOurWork: (label, ms) => {
       ours ??= {};
@@ -287,8 +298,12 @@ export function startPerformanceRecorderAtBoot(): void {
 }
 
 export function stopPerformanceRecorder(): void {
-  stopRecording?.();
+  if (!stopRecording) return;
+  stopRecording();
   stopRecording = null;
+  // Else a start without Clear would count the time off as a frame, and the new observers' buffered
+  // entries would reach the slow frames still waiting a second time.
+  log?.pause();
 }
 
 /** Empties the recording; a running recorder records on from now. */
@@ -467,7 +482,11 @@ function startListening(log: PerformanceLog, stops: (() => void)[]): void {
     });
     const init = { ...options, type };
     observer.observe(init);
-    stops.push(() => observer.disconnect());
+    stops.push(() => {
+      // What the browser has queued but not yet delivered still counts.
+      for (const entry of observer.takeRecords()) take(entry);
+      observer.disconnect();
+    });
   };
   observe("resource", { buffered: true }, (entry) => {
     if (!isResource(entry)) return;

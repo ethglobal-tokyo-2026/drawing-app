@@ -276,6 +276,38 @@ describe("the recorder on the page", () => {
     ]);
   });
 
+  it("counts no frame across the time it was off, and lists no event twice after it starts again", () => {
+    const fetch = {
+      entryType: "resource",
+      name: "https://api.example.com/v1/me",
+      startTime: 300,
+      duration: 30,
+      responseEnd: 330,
+      toJSON: () => ({}),
+    };
+    // Like a real observer's `buffered: true`, each start hands over what the page already had.
+    let deliver: Deliver = () => {};
+    stubObservers(["resource"], (observed) => {
+      deliver = observed;
+    });
+    startPerformanceRecorder();
+    for (let t = 0; t <= 320; t += 16) frameAt(t);
+    deliver([fetch]);
+    frameAt(400);
+    stopPerformanceRecorder();
+
+    clock = 60_400;
+    startPerformanceRecorder();
+    deliver([fetch]);
+    for (let t = 60_400; t <= 62_000; t += 16) frameAt(t);
+
+    const recording = readPerformanceRecording();
+    expect(recording?.summary).toMatchObject({ slow: 1, worst: { ms: 80 } });
+    const [slow, ...others] = recording?.slowFrames ?? [];
+    expect(slow.events.filter((e) => e.kind === "network")).toHaveLength(1);
+    expect(others).toEqual([]);
+  });
+
   it("starts and stops at once from the switch, and keeps the setting for the next start", () => {
     setPerformanceRecorder(true);
     expect(queued).not.toBeNull();
