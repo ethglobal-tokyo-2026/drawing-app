@@ -333,6 +333,33 @@ describe("the recorder on the page", () => {
     expect(others).toEqual([]);
   });
 
+  it("skips the time the page was hidden, even when a frame comes after it went hidden", () => {
+    let visibility: DocumentVisibilityState = "visible";
+    vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility);
+    startPerformanceRecorder();
+    for (let t = 0; t <= 320; t += 16) frameAt(t);
+    visibility = "hidden";
+    document.dispatchEvent(new Event("visibilitychange"));
+    frameAt(336);
+    visibility = "visible";
+    clock = 60_336;
+    document.dispatchEvent(new Event("visibilitychange"));
+    for (let t = 60_352; t <= 61_000; t += 16) frameAt(t);
+    expect(readPerformanceRecording()?.summary).toMatchObject({ slow: 0, worst: { ms: 16 } });
+  });
+
+  it("notes a keydown with no key, as Android's autofill sends", () => {
+    startPerformanceRecorder();
+    for (let t = 0; t <= 320; t += 16) frameAt(t);
+    clock = 330;
+    window.dispatchEvent(new Event("keydown"));
+    frameAt(400);
+    const [slow] = readPerformanceRecording()?.slowFrames ?? [];
+    expect(slow.events.map((e) => `${e.kind}: ${e.detail}`)).toContain(
+      "key: Unidentified on the page",
+    );
+  });
+
   it("starts and stops at once from the switch, and keeps the setting for the next start", () => {
     setPerformanceRecorder(true);
     expect(queued).not.toBeNull();

@@ -49,7 +49,7 @@ export interface PerformanceSummary {
 export interface PerformanceLog {
   /** A frame began at `now`: the interval since the one before is judged. */
   frame: (now: number) => void;
-  /** The page went hidden, so the interval across it is no frame. */
+  /** The page went hidden or came back, so the interval to the next frame is no frame. */
   pageHidden: () => void;
   /**
    * Recording stops. The slow frames still waiting take the events they have, since no more are
@@ -448,14 +448,16 @@ function startListening(log: PerformanceLog, stops: (() => void)[]): void {
   const onTap = (e: PointerEvent) => note("tap", `${e.type} ${describeTarget(e.target)}`);
   hear("pointerdown", onTap);
   hear("pointerup", onTap);
-  // Only named keys: what someone types stays theirs.
-  hear("keydown", (e) =>
-    note("key", `${e.key.length === 1 ? "a character" : e.key} on ${describeTarget(e.target)}`),
-  );
+  // Only named keys: what someone types stays theirs. Android's autofill sends a keydown with no key.
+  hear("keydown", (e) => {
+    const key = typeof e.key === "string" ? e.key : "Unidentified";
+    note("key", `${key.length === 1 ? "a character" : key} on ${describeTarget(e.target)}`);
+  });
   hear("resize", () => note("resize", `${innerWidth}×${innerHeight}`));
 
+  // Coming back too: a frame can come after the page goes hidden, and take the skip with it.
   const onVisibility = () => {
-    if (document.visibilityState === "hidden") log.pageHidden();
+    log.pageHidden();
     note("visibility", document.visibilityState);
   };
   document.addEventListener("visibilitychange", onVisibility);
