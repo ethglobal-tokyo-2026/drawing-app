@@ -27,16 +27,15 @@ export interface StatCorkHandle {
 export interface CorkFigures {
   name: string;
   handle: string;
-  /** <label>.croquis.eth, under the handle. */
+  /** <label>.croquis.eth, on label-maker tape. */
   ensName: string | null;
-  /** Their picture, stuck on beside the name card. */
-  picture: ReactNode;
-  /** Your own board: pink washi on the name card, and "you" in the notes. */
+  /** Your own board, which the notes address as "you". */
   own: boolean;
+  /** Why the figures didn't load, printed on the receipt; null while they load and once they have. */
+  failure: string | null;
   /** Null when it didn't load; zeros read as "No gratitude yet". */
   gratitude: { inspired: number; magic: number; asOriginalArtist: number; total: number } | null;
   streak: { current: number; best: number } | null;
-  streakRule: string;
   stamps: { made: number | null; received: number | null; given: number | null };
   bestCombo: number | null;
   mostGratitudeInADay: number | null;
@@ -79,8 +78,7 @@ const STAMPS = [
 ] as const;
 
 // Things stuck on the cork; a tap anywhere else is on bare cork.
-const ON_CORK =
-  ".stat-board__note, .stat-board__stamp, .stat-board__tape, .stat-board__who, button";
+const ON_CORK = ".stat-board__note, .stat-board__stamp, .stat-board__tape, a, button";
 
 /** A paper hanging from its pin or tape swings and settles; `k` scales the swing and turns it. */
 function swing(paper: Element, k: number, delay = 0) {
@@ -161,19 +159,6 @@ export function StatCork({
     >
       <div className="stat-board__cork" ref={cork} onClick={onCorkClick} onPointerDown={nudge}>
         <div className="stat-board__stats">
-          <div className="stat-board__who">
-            {f.picture}
-            <div className="stat-board__namecard">
-              <i
-                className={`stat-board__washi ${f.own ? "stat-board__washi--pink" : ""}`}
-                aria-hidden
-              />
-              <h2 className="stat-board__name">{f.name}</h2>
-              <p className="fine stat-board__handle">{formatHandle(f.handle)}</p>
-              {f.ensName && <EnsNameLink className="fine stat-board__ens" name={f.ensName} />}
-            </div>
-          </div>
-
           <div className="stat-board__col stat-board__col--a">
             <section
               className="stat-board__note stat-board__receipt"
@@ -204,7 +189,7 @@ export function StatCork({
                 ) : (
                   <p className="stat-board__receipt-none">
                     {!f.gratitude
-                      ? t(($) => $.stickerBoard.statBoard.gratitude.didntLoad)
+                      ? f.failure
                       : f.own
                         ? t(($) => $.stickerBoard.statBoard.gratitude.noneYetOwn)
                         : t(($) => $.stickerBoard.statBoard.gratitude.noneYet)}
@@ -239,10 +224,7 @@ export function StatCork({
                     </dd>
                   </div>
                   <div>
-                    <dt>
-                      {t(($) => $.stickerBoard.statBoard.bests.bestCombo)}
-                      <small>{t(($) => $.stickerBoard.statBoard.bests.bestComboNote)}</small>
-                    </dt>
+                    <dt>{t(($) => $.stickerBoard.statBoard.bests.bestCombo)}</dt>
                     <dd>
                       {f.bestCombo === null ? (
                         <Unknown />
@@ -282,6 +264,13 @@ export function StatCork({
                 </span>
               </p>
             )}
+            {f.ensName && (
+              <EnsNameLink className="stat-board__ens" name={f.ensName}>
+                <span className="stat-board__tape stat-board__tape--ens">
+                  <span className="stat-board__tape-text">{f.ensName}</span>
+                </span>
+              </EnsNameLink>
+            )}
           </div>
 
           <div className="stat-board__col stat-board__col--b">
@@ -309,7 +298,6 @@ export function StatCork({
                     <b>{t(($) => $.stickerBoard.statBoard.streak.notStarted)}</b>
                   </p>
                 )}
-                <p className="stat-board__leaf-rule">{f.streakRule}</p>
               </div>
             </section>
 

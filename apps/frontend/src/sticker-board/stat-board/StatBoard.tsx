@@ -11,7 +11,6 @@ import { LineDetails } from "../../line/LineDetails";
 import { lineLogout } from "../../line/liff";
 import { SendTestMessage } from "../../line/SendTestMessage";
 import { LabelButton } from "../../ui/LabelButton";
-import { PhotoSticker } from "../../ui/PhotoSticker";
 import { QuietLink } from "../../ui/QuietLink";
 import { AddressDialog } from "./AddressDialog";
 import { AddressPapers } from "./AddressPapers";
@@ -50,16 +49,16 @@ export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref
     name: me.displayName,
     handle: account.handle ?? me.displayName,
     ensName: account.ensName,
-    picture: <PhotoSticker src={me.pictureUrl} name={me.displayName} size={42} />,
     own: true,
-    ...statFigures(stats.state === "ready" ? stats.data : null, true, new Date()),
+    failure:
+      stats.state === "failed"
+        ? t(($) => $.stickerBoard.statBoard.didntLoadOwnBecause, {
+            reason: errorReason(stats.error),
+          })
+        : null,
+    ...statFigures(stats.state === "ready" ? stats.data : null),
     since: Date.parse(stats.state === "ready" ? stats.data.since : account.createdAt),
   };
-  if (stats.state === "failed") {
-    figures.streakRule = t(($) => $.stickerBoard.statBoard.didntLoadOwnBecause, {
-      reason: errorReason(stats.error),
-    });
-  }
 
   const board = useBoardAddress();
   const sui = useSuiAddress();

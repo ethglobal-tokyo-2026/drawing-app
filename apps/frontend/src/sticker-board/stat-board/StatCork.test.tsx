@@ -33,10 +33,10 @@ const render = (stats: UserStats | null) =>
           name: "Mika",
           handle: "mika",
           ensName: null,
-          picture: null,
           own: false,
+          failure: null,
           since: null,
-          ...statFigures(stats, false, new Date("2026-09-27T12:00:00Z")),
+          ...statFigures(stats),
         }}
         onFlipBack={() => {}}
         flipBackRef={null}

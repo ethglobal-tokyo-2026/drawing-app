@@ -16,7 +16,6 @@ export const stickerBoard = {
         label: "Original Artist",
         reason: "A share of the gratitude when a sticker they drew is given on.",
       },
-      didntLoad: "Gratitude didn’t load.",
       noneYetOwn:
         "No gratitude yet. It arrives when someone you give a sticker to sends you some for it.",
       noneYet:
@@ -30,7 +29,6 @@ export const stickerBoard = {
       days_one: "{{days}} day",
       days_other: "{{days}} days",
       bestCombo: "Best combo",
-      bestComboNote: "Most hits in one gratitude combo",
       /** `hits` is the count, grouped. */
       combo: "×{{hits}}",
       mostGratitudeInADay: "Most gratitude in a day",
@@ -45,12 +43,8 @@ export const stickerBoard = {
       days_one: "day",
       days_other: "days",
       notStarted: "Not started",
-      rule: "Miss a day and it goes back to zero. Days turn over at {{time}}.",
-      startOwn: "Draw a sticker today to start one.",
-      start: "It starts the first day they draw.",
     },
-    didntLoadOwn: "Your stats didn’t load.",
-    didntLoad: "Their stats didn’t load.",
+    /** On the receipt, in place of its rows. */
     didntLoadOwnBecause: "Your stats didn’t load: {{reason}}",
     stamps: { label: "Stickers", made: "made", received: "received", given: "given" },
     flipBack: "Flip back",
