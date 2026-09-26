@@ -548,6 +548,7 @@ export function createTrayEngine(
           make(
             "span",
             "sticker-foil sticker-foil--sheet",
+            make("span", "sticker-foil__cast"),
             make(
               "span",
               "sticker-foil__band",

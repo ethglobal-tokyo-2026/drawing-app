@@ -109,6 +109,11 @@ export const errors = {
     en: "Your LINE sign-in token has expired. Reconnect with LINE to continue.",
     ja: "LINEのログイン情報の有効期限が切れました。LINEで再ログインしてください。",
   },
+  /** Wherever errorMessage shows a refusal of POST /api/line-menu: LINE failed or didn't answer when the app's server linked your chat menu. The developer slip's Chat menu row shows the code instead */
+  line_unavailable: {
+    en: "LINE didn't answer, so the menu under your chat hasn't changed yet.",
+    ja: "LINEから応答がありません。トークのメニューはまだ変わっていません。",
+  },
   /** Drawing screen, after tapping the check to seal: the seal chip's reason when the sticker saved but its NFT mint wasn't confirmed (POST /api/stickers), through errorReason */
   mint_failed: {
     en: "Your sticker is saved, but it couldn't be sealed on-chain. Try again; it won't use another ticket.",

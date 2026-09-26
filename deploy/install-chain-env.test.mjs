@@ -55,6 +55,30 @@ await test("reuses remote Privy credentials without replacing other chain values
   assert.equal(run("").stdout, "");
 });
 
+const LINE_CHANNEL = `LINE_MESSAGING_CHANNEL_ID=2000000001\nLINE_MESSAGING_CHANNEL_SECRET=${"ab".repeat(16)}\n`;
+
+await test("takes the chat menu's Messaging API channel from the auth service's secrets, as a pair", (t) => {
+  const { chain, auth, input, run } = setup(t);
+  writeFileSync(auth, `PRIVY_APP_SECRET=server-secret\n${LINE_CHANNEL}`);
+  const installed = run(input);
+  assert.equal(installed.status, 0, installed.stderr);
+  const config = parseEnv(readFileSync(chain, "utf8"));
+  const channel = parseEnv(LINE_CHANNEL);
+  assert.equal(config.LINE_MESSAGING_CHANNEL_ID, channel.LINE_MESSAGING_CHANNEL_ID);
+  assert.equal(config.LINE_MESSAGING_CHANNEL_SECRET, channel.LINE_MESSAGING_CHANNEL_SECRET);
+  assert.ok(!installed.stdout.includes(channel.LINE_MESSAGING_CHANNEL_SECRET ?? "?"));
+});
+
+await test("installs no chat menu channel without one, and refuses half of one", (t) => {
+  const { chain, input, run } = setup(t);
+  const without = run(`${input}\nPRIVY_APP_SECRET=s\n`);
+  assert.equal(without.status, 0, without.stderr);
+  assert.equal(parseEnv(readFileSync(chain, "utf8")).LINE_MESSAGING_CHANNEL_ID, undefined);
+  const half = run(`${input}\nPRIVY_APP_SECRET=s\nLINE_MESSAGING_CHANNEL_ID=2000000001\n`, "check");
+  assert.notEqual(half.status, 0);
+  assert.match(half.stderr, /Missing or invalid LINE_MESSAGING_CHANNEL_SECRET/);
+});
+
 await test("missing Privy credentials abort before installing a file", (t) => {
   const { chain, input, run } = setup(t);
   const result = run(input);

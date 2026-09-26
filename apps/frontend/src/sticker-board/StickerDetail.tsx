@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { StickerDetail as StickerDetailResponse } from "@drawing-app/api/client";
 import { useApiQuery } from "../api/useApiQuery";
@@ -19,8 +19,8 @@ import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { handleOf, onItsWay, type BoardStickerView } from "./boardSticker";
-import { useDetailLift } from "./detailLift";
-import { swipeLock, swipeTo } from "./detailPaging";
+import { useDetailLift, type LiftView } from "./detailLift";
+import { useSwipePaging } from "./detailPaging";
 import { TransferTrail } from "./TransferTrail";
 import { toTrailRows } from "./trailRows";
 import "./sticker-detail.css";
@@ -48,16 +48,37 @@ interface Props {
   ownerId?: string;
 }
 
-interface Swipe {
-  pointerId: number;
-  x: number;
-  y: number;
-  dx: number;
-  lock: ReturnType<typeof swipeLock>;
-}
-
 /** The --ease-out curve, spelled out: Web Animations can't read CSS variables. */
 const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
+
+/** The ground fades in, the strip slides in from the left, then the fine print and Give rise. */
+function enterAround(detail: HTMLElement): Animation[] {
+  const fill = "both";
+  const animations = [
+    detail.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: EASE_OUT, fill }),
+  ];
+  const enter = (part: Element, from: string, duration: number, delay: number) =>
+    animations.push(
+      part.animate(
+        [
+          { transform: from, opacity: 0 },
+          { transform: "none", opacity: 1 },
+        ],
+        { duration, delay, easing: EASE_OUT, fill },
+      ),
+    );
+  const strip = detail.querySelector(".sticker-detail__strip");
+  if (strip) enter(strip, "translateX(-12px)", 200, 40);
+  for (const part of detail.querySelectorAll(".sticker-detail__meta, .sticker-detail__acts"))
+    enter(part, "translateY(8px)", 160, 120);
+  return animations;
+}
+
+/** The detail covers the board, so a sticker's spot needs no ghost while it's lifted. */
+const DETAIL: LiftView = {
+  figureOf: (detail) => detail.querySelector<HTMLElement>(".sticker-detail__slide .sticker-figure"),
+  enter: enterAround,
+};
 
 /** The gift you owe gratitude for: the sticker's newest gift to you, while that has no gratitude. */
 function owedGratitude({ sticker, owner, transferTrail }: StickerDetailResponse) {
@@ -106,17 +127,18 @@ export function StickerDetail({
 
   const root = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLElement>(null);
-  const slide = useRef<HTMLDivElement>(null);
-  const swipe = useRef<Swipe | null>(null);
-  /** The side the next sticker enters from: 1 from the right, -1 from the left. */
-  const enterFrom = useRef(0);
 
   const close = useDetailLift({
     root,
-    sticker,
-    originOf,
-    // A sticker given away, or on its way, lifts out of its given sticker silhouette.
-    given: sticker ? !sticker.held || sticker.openGift?.status === "sent" : mode === "given",
+    shownId: sticker?.id,
+    originOf: (id) => {
+      const el = originOf?.(id);
+      const s = stickers.find((x) => x.id === id);
+      if (!el || !s) return null;
+      // A sticker given away, or on its way, lifts out of its given sticker silhouette.
+      return { el, turn: s.placement.r, given: !s.held || s.openGift?.status === "sent" };
+    },
+    into: DETAIL,
     reduced,
     onClose,
   });
@@ -134,14 +156,21 @@ export function StickerDetail({
     };
   }, [no]);
 
-  const go = (next: number) => {
-    const target = stickers[next];
-    if (!target || next === index) return;
-    enterFrom.current = Math.sign(next - index);
-    setShownId(target.id);
-  };
+  const {
+    slide,
+    page: go,
+    stage,
+  } = useSwipePaging({
+    index,
+    count: stickers.length,
+    reduced,
+    onPage: (next) => {
+      const target = stickers[next];
+      if (target) setShownId(target.id);
+    },
+  });
 
-  // The shown sticker's thumb scrolls to the strip's middle, and the sticker enters from its side.
+  // The shown sticker's thumb scrolls to the strip's middle.
   useLayoutEffect(() => {
     const nav = strip.current;
     const current = nav?.querySelector<HTMLElement>('[aria-current="true"]');
@@ -150,57 +179,7 @@ export function StickerDetail({
         0,
         current.offsetTop - nav.clientHeight / 2 + current.offsetHeight / 2,
       );
-
-    const side = enterFrom.current;
-    enterFrom.current = 0;
-    if (!side || reduced) return;
-    slide.current?.animate(
-      [
-        { transform: `translateX(${side * 60}px) rotate(${side * 2}deg)`, opacity: 0 },
-        { transform: "none", opacity: 1 },
-      ],
-      { duration: 260, easing: EASE_OUT },
-    );
-  }, [shownId, reduced]);
-
-  // A second finger doesn't restart a swipe. The same pointer pressing again means its last press
-  // was let go off the stage, where a mouse isn't captured, so that one is over.
-  const startSwipe = (e: PointerEvent<HTMLDivElement>) => {
-    if (e.button > 0 || (swipe.current && swipe.current.pointerId !== e.pointerId)) return;
-    swipe.current = { pointerId: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, lock: null };
-  };
-
-  const followSwipe = (e: PointerEvent<HTMLDivElement>) => {
-    const s = swipe.current;
-    if (!s || e.pointerId !== s.pointerId) return;
-    const dx = e.clientX - s.x;
-    if (!s.lock) {
-      s.lock = swipeLock({ dx, dy: e.clientY - s.y });
-      if (s.lock === "swipe") e.currentTarget.setPointerCapture(e.pointerId);
-    }
-    if (s.lock !== "swipe") return;
-    s.dx = dx;
-    if (!reduced && slide.current)
-      slide.current.style.transform = `translateX(${dx * 0.7}px) rotate(${dx * 0.02}deg)`;
-  };
-
-  // A cancelled swipe springs back rather than paging: the browser or the system took the touch.
-  const endSwipe = (e: PointerEvent<HTMLDivElement>, pages: boolean) => {
-    const s = swipe.current;
-    if (!s || e.pointerId !== s.pointerId) return;
-    swipe.current = null;
-    const el = slide.current;
-    if (s.lock !== "swipe" || !el) return;
-    const followed = el.style.transform;
-    el.style.transform = "";
-    const next = pages ? swipeTo({ dx: s.dx, index, count: stickers.length }) : index;
-    if (next !== index) go(next);
-    else if (followed && !reduced)
-      el.animate([{ transform: followed }, { transform: "none" }], {
-        duration: 220,
-        easing: EASE_OUT,
-      });
-  };
+  }, [shownId]);
 
   const byOther = Boolean(ownerId && sticker && sticker.artist.id !== ownerId);
   const page = (
@@ -250,13 +229,7 @@ export function StickerDetail({
       <div className="sticker-detail__main">
         {sticker ? (
           <>
-            <div
-              className="sticker-detail__stage"
-              onPointerDown={startSwipe}
-              onPointerMove={followSwipe}
-              onPointerUp={(e) => endSwipe(e, true)}
-              onPointerCancel={(e) => endSwipe(e, false)}
-            >
+            <div className="sticker-detail__stage" {...stage}>
               <div ref={slide} className="sticker-detail__slide">
                 <StickerFigure
                   key={sticker.id}

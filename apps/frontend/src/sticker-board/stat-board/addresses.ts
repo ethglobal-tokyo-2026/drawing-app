@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { getAddress } from "viem";
 import { retryPrivySignIn, usePrivyStatus } from "../../identity/privy";
 import { useSuiWalletFailure } from "../../identity/suiWallet";
+import { checksumAddress } from "./checksumAddress";
 
 /** How long Privy may take to make an address after its sign-in before it counts as failed. */
 const ARRIVE_MS = 15_000;
@@ -40,7 +40,7 @@ export function useBoardAddress(): ChainAddress {
   const address = privy.state === "signed-in" ? privy.smartAccount : undefined;
   const late = useLate(privy.state === "signed-in" && !address, "The board address");
   if (privy.state === "failed" || late) return { state: "failed", retry: retryPrivySignIn };
-  if (address) return { state: "ready", address: getAddress(address) };
+  if (address) return { state: "ready", address: checksumAddress(address) };
   return { state: "loading" };
 }
 

@@ -8,6 +8,7 @@ import {
   readPerformanceSummary,
   setPerformanceRecorder,
 } from "../../performance/performanceRecorder";
+import { readBootMilestones } from "../../performance/bootMilestones";
 import { formatPerformanceReport, formatSummaryLine } from "../../performance/performanceReport";
 import { useTranslation } from "../../i18n/react";
 import { LabelButton } from "../../ui/LabelButton";
@@ -87,6 +88,7 @@ export function PerformanceRecorderControls() {
       ...recording,
       takenAt: new Date(),
       device: describeDevice(),
+      start: readBootMilestones(),
     });
     setCopied(false);
     setProblem(null);

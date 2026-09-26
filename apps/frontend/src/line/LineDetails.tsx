@@ -1,3 +1,4 @@
+import type { ChatMenuLink } from "@drawing-app/api/client";
 import liff from "@line/liff";
 import type { TFunction } from "i18next";
 import { useEffect, useState } from "react";
@@ -28,18 +29,25 @@ function useLineLookup<T>(ask: () => Promise<T>): Lookup<T> {
   return lookup;
 }
 
+function linkText(link: ChatMenuLink, t: TFunction): string {
+  switch (link.status) {
+    case "linked":
+      return t(($) => $.line.developer.chatMenu.menus[link.menu]);
+    case "not_a_friend":
+      return t(($) => $.line.developer.chatMenu.notAFriend);
+    case "off":
+      return t(($) => $.line.developer.chatMenu.off[link.reason]);
+  }
+}
+
 function chatMenuText(menu: ChatMenuStatus, t: TFunction): string {
   switch (menu.state) {
     case "waiting":
       return t(($) => $.line.developer.chatMenu.waiting);
-    case "switching":
+    case "linking":
       return t(($) => $.line.developer.checking);
-    case "returning":
-      return t(($) => $.line.developer.chatMenu.returning);
-    case "new":
-      return menu.reason === "not_a_friend"
-        ? t(($) => $.line.developer.chatMenu.notAFriend)
-        : t(($) => $.line.developer.chatMenu.notSignedUp);
+    case "answered":
+      return linkText(menu.link, t);
     case "failed":
       return t(($) => $.line.developer.chatMenu.failed, { reason: menu.reason });
   }
