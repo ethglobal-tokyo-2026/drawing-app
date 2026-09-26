@@ -42,6 +42,8 @@
   --rule: rgba(28, 24, 36, 0.14); /* hairline kiss-cut rule */
   --rule-strong: rgba(28, 24, 36, 0.26);
   --ink-soft: rgba(28, 24, 36, 0.62);
+  /* Graphite for fine text on Liner Deep, where Graphite itself reads only 4.2:1; this reads 5.0:1. */
+  --graphite-on-deep: #635d6d;
   --grid-peek: rgba(
     110,
     104,
