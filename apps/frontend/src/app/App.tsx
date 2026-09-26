@@ -2,11 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { StickerBoard } from "../sticker-board/StickerBoard";
 import { DrawingScreen, type DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
 import { ExploreScreen } from "./ExploreScreen";
-import { TabBar, type Tab } from "./TabBar";
+import { viewFromPath, type View } from "./openedView";
+import { TabBar } from "./TabBar";
 import { useFocusLoop } from "./useFocusLoop";
 import "./App.css";
-
-type View = Tab | "draw";
 
 /** LINE's header shows the page title. */
 const TITLES: Record<View, string> = {
@@ -18,8 +17,8 @@ const TITLES: Record<View, string> = {
 export default function App() {
   const phone = useRef<HTMLDivElement>(null);
   const drawingScreen = useRef<DrawingScreenHandle>(null);
-  // The sticker board is home. Draw is the board's key, not a tab.
-  const [view, setView] = useState<View>("board");
+  // The sticker board is home. Draw is the board's key, not a tab. A chat menu link opens its own screen.
+  const [view, setView] = useState<View>(() => viewFromPath(location.pathname));
   // Set from the seal until the next sticker starts; the board lands it with a "stick" animation.
   const [sealedId, setSealedId] = useState<string>();
   const drawing = view === "draw";
@@ -27,6 +26,14 @@ export default function App() {
   useEffect(() => {
     document.title = TITLES[view];
   }, [view]);
+
+  // Once opened, a menu link's path goes, so a reload after moving on doesn't jump back to it.
+  useEffect(() => {
+    if (viewFromPath(location.pathname) === "board") return;
+    const url = new URL(location.href);
+    url.pathname = "/";
+    history.replaceState(history.state, "", url);
+  }, []);
 
   // While drawing, the drawing screen's controls and the grabber are all there is to focus.
   useFocusLoop(phone, drawing);

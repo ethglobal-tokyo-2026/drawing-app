@@ -7,21 +7,26 @@ import "./LineGate.css";
 export function LineGate({ children }: { children: ReactNode }) {
   const line = useLine();
   if (line.status === "ready") return children;
-  // LIFF usually settles within a second; the bare Liner page stands in until then.
-  if (line.status === "loading") return null;
   return (
-    <main className="line-gate">
-      {line.status === "logged-out" ? (
+    <main className="line-gate" aria-busy={line.status === "loading"}>
+      {line.status === "loading" ? (
+        <p className="fine line-gate__opening" role="status">
+          Opening your sticker board…
+        </p>
+      ) : line.status === "logged-out" ? (
         <>
           <h1 className="title-label">Your sticker board</h1>
-          <p>It opens with your LINE account.</p>
+          <p className="line-gate__lead">It opens with your LINE account.</p>
           <Key onClick={lineLogin}>Log in with LINE</Key>
         </>
       ) : (
         <>
           <h1 className="title-label">LINE didn’t start</h1>
-          <p className="line-gate-error">{line.message}</p>
+          <p className="line-gate__lead">
+            Your sticker board opens once it does. Check your connection, then try again.
+          </p>
           <Key onClick={() => location.reload()}>Try again</Key>
+          <p className="fine line-gate__reason">{line.message}</p>
         </>
       )}
     </main>
