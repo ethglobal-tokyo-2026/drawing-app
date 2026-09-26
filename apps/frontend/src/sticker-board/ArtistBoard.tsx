@@ -26,6 +26,8 @@ import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { QuietLink } from "../ui/QuietLink";
+import { useBackToClose } from "../ui/useBackToClose";
+import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import type { BoardSticker } from "./boardSticker";
 import { fieldOf, toPx, type Field } from "./placement";
@@ -92,12 +94,18 @@ function StickerView({
   owner: string;
   onClose: () => void;
 }) {
+  const root = useRef<HTMLDivElement>(null);
+  useBackToClose(true, onClose);
+  useFocusTrap(root, { onEscape: onClose });
   return (
     <div className="visit-view-backdrop" onClick={onClose}>
       <div
+        ref={root}
+        tabIndex={-1}
         className="visit-view"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
+        aria-modal="true"
         aria-label={formatNo(sticker.no)}
       >
         <StickerFigure
@@ -205,6 +213,8 @@ export function ArtistBoard({ artist, onBack }: Props) {
     setSelected(null);
     setTurned(over);
   };
+  // Back turns the stat board to its front, as on your own board.
+  useBackToClose(turned, () => turn(false));
 
   const toggleMenu = (target: EventTarget) => {
     const el = target instanceof Element ? target.closest("[data-sticker-id]") : null;
