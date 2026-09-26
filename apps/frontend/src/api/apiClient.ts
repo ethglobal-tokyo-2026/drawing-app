@@ -36,6 +36,8 @@ interface SealRequest {
   spec: Blob;
   rim: Blob;
   flat: Blob;
+  /** The gzipped TimelapseV1; a seal without one still seals. */
+  timelapse?: Blob;
 }
 
 /** Opening a Gift Message's link: its token as the link carries it, which the client checks. */

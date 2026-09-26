@@ -420,7 +420,7 @@ interface ReplayV1 {
 /** How a sticker was drawn: the ink canvas's ops, in order. Points are x, y and width in tenths of a pixel, plus ms, each as the change from the point before. */
 interface TimelapseV1 {
   v: 1;
-  ink: [width: number, height: number]; // the ink canvas, px
+  ink: [width: number, height: number]; // the sheet, in sheet pixels: the ops' space, whatever the screen's density
   place: [x: number, y: number, width: number, height: number]; // where the sticker image sits on it
   ops: Array<
     | ["brush" | "eraser", color: string, startMs: number, points: number[]]
