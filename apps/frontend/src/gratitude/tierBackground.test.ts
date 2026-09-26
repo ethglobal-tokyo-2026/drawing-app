@@ -81,4 +81,28 @@ describe("createTierBackground", () => {
     expect(corner.style.bottom).toBe("0px");
     expect(corner.style.top).toBe("auto");
   });
+
+  it("writes the speed lines only when their opacity or angle changes enough to see", () => {
+    const { ground, background, find } = setUp();
+    const field = find(ground, ".gr-speedfield");
+    const lines = find(field, "svg");
+    const shown = () => [field.style.opacity, lines.style.transform];
+
+    background.setSpeedField(0.5, 30);
+    expect(shown()).toEqual(["0.500", "rotate(30.0deg)"]);
+    background.setSpeedField(0.51, 30.6);
+    expect(shown()).toEqual(["0.500", "rotate(30.0deg)"]);
+    background.setSpeedField(0.53, 31.2);
+    expect(shown()).toEqual(["0.530", "rotate(31.2deg)"]);
+    // Across ±180° the short way round: 0.6° apart, not 359.4°.
+    background.setSpeedField(0.53, 179.6);
+    background.setSpeedField(0.53, -179.8);
+    expect(shown()).toEqual(["0.530", "rotate(179.6deg)"]);
+    // Hiding is always written, however small the step.
+    background.setSpeedField(0.01, 179.6);
+    background.setSpeedField(0, 179.6);
+    expect(shown()[0]).toBe("0");
+    background.setSpeedField(0.5, 90);
+    expect(shown()).toEqual(["0.500", "rotate(90.0deg)"]);
+  });
 });
