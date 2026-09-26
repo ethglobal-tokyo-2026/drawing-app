@@ -81,3 +81,7 @@ export function describeTickets(t: Tickets): string {
     ? i18next.t(($) => $.tickets.summary.dailyAndReserve, { daily, reserve })
     : i18next.t(($) => $.tickets.summary.left, { tickets: daily });
 }
+
+/** The ticket a spend takes from a row of stubs: the last fresh one, which the spend turns into a used one where it lies. */
+export const spentIndex = (stubs: readonly { used: boolean }[]) =>
+  stubs.findLastIndex((s) => !s.used);

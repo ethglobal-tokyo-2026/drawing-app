@@ -86,7 +86,7 @@ export function StartDrawing({
             onLeft?.();
         }}
       >
-        <TicketArt view={view} pop />
+        <TicketArt view={view} pop spend={leaving ? "peel" : busy ? "lift" : null} />
         <h2 className="out-of-tickets__title" id={`${id}-title`}>
           {reserveAsk
             ? t(($) => $.tickets.startDrawing.reserve.title)

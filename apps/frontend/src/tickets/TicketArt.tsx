@@ -1,6 +1,6 @@
 import { useTranslation } from "../i18n/react";
-import type { TicketView } from "./tickets";
-import { TicketStubs } from "./TicketStubs";
+import { spentIndex, type TicketView } from "./tickets";
+import { TicketStubs, type Spend } from "./TicketStubs";
 
 /**
  * A ticket card's art, by the one rule (ticketView): while daily tickets are left, the day's stubs, with any reserve
@@ -8,7 +8,16 @@ import { TicketStubs } from "./TicketStubs";
  * count on a badge; with nothing left, the used day. Decorative, apart from the reserve count: the card's line says
  * the rest.
  */
-export function TicketArt({ view, pop = false }: { view: TicketView; pop?: boolean }) {
+export function TicketArt({
+  view,
+  pop = false,
+  spend = null,
+}: {
+  view: TicketView;
+  pop?: boolean;
+  /** A ticket from the art is being spent: the reserve ticket, or the last fresh daily stub. */
+  spend?: Spend | null;
+}) {
   const { t } = useTranslation();
   if (view.show === "reserve") {
     return (
@@ -17,12 +26,18 @@ export function TicketArt({ view, pop = false }: { view: TicketView; pop?: boole
         size="hero"
         stubs={[{ used: false, kind: "reserve", count: view.reserve }]}
         pop={pop}
+        spending={spend && { index: 0, state: spend }}
       />
     );
   }
   return (
     <>
-      <TicketStubs className="out-of-tickets__art" size="large" stubs={view.stubs} />
+      <TicketStubs
+        className="out-of-tickets__art"
+        size="large"
+        stubs={view.stubs}
+        spending={spend && { index: spentIndex(view.stubs), state: spend }}
+      />
       {view.show === "daily" && view.reserve > 0 && (
         <div className="out-of-tickets__reserve">
           <TicketStubs size="small" stubs={[{ used: false, kind: "reserve" }]} />

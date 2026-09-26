@@ -31,6 +31,8 @@ interface Props {
   label?: string;
   /** A reserve ticket's star pops in, once: the ticket was just bought, or has just come to the front. */
   pop?: boolean;
+  /** The ticket being spent, by its place in `stubs`, and how far the spend has got. */
+  spending?: { index: number; state: Spend } | null;
   className?: string;
 }
 
@@ -85,7 +87,20 @@ const GEOMETRY: Record<Size, Geometry> = {
   },
 };
 
-function Stub({ stub, geometry, pop }: { stub: TicketStub; geometry: Geometry; pop: boolean }) {
+/** How far a spend has got: the face lifts while it's on its way, and peels off its backing once it's done. */
+export type Spend = "lift" | "peel";
+
+function Stub({
+  stub,
+  geometry,
+  pop,
+  spend,
+}: {
+  stub: TicketStub;
+  geometry: Geometry;
+  pop: boolean;
+  spend: Spend | null;
+}) {
   const { t } = useTranslation();
   const { w, h, perf, glyph, notch, edge, star } = geometry;
   const shape = useMemo(() => ticketPath(geometry), [geometry]);
@@ -101,9 +116,19 @@ function Stub({ stub, geometry, pop }: { stub: TicketStub; geometry: Geometry; p
     <line className="ticket-stub__perf" x1={perf} y1={h * 0.12} x2={perf} y2={h * 0.88} />
   );
 
+  // The peeled ticket leaves the pack one smaller; a zero never shows.
+  const count = stub.count !== undefined && spend === "peel" ? stub.count - 1 : stub.count;
+  const classes = [
+    "ticket-stub",
+    `ticket-stub--${kind}`,
+    stub.used ? "is-used" : "is-fresh",
+    spend === "lift" && "is-lifted",
+    spend === "peel" && "is-peeling",
+  ];
+
   return (
     <span
-      className={`ticket-stub ticket-stub--${kind} ${stub.used ? "is-used" : "is-fresh"}`}
+      className={classes.filter(Boolean).join(" ")}
       style={reserve ? { "--edge": `${edge}px` } : undefined}
     >
       {/* The backing: what a ticket leaves once it's used, with the kiss-cut outline of the sticker it became. */}
@@ -130,9 +155,12 @@ function Stub({ stub, geometry, pop }: { stub: TicketStub; geometry: Geometry; p
           {reserve && <ReserveStar x={w - star * 0.22} y={star * 0.14} size={star} pop={pop} />}
         </svg>
       )}
-      {stub.count !== undefined && (
-        <span className={`ticket-stub__badge ticket-stub__badge--${kind}`}>
-          {t(($) => $.tickets.count, { count: stub.count })}
+      {count !== undefined && count > 0 && (
+        <span
+          key={count}
+          className={`ticket-stub__badge ticket-stub__badge--${kind} ${spend === "peel" ? "is-ticked" : ""}`}
+        >
+          {t(($) => $.tickets.count, { count })}
         </span>
       )}
     </span>
@@ -144,7 +172,7 @@ function Stub({ stub, geometry, pop }: { stub: TicketStub; geometry: Geometry; p
  * carrying the kiss-cut outline of the sticker each became. Daily tickets are matte Seal Yellow stock; reserve
  * tickets are Blue, in the stickers' resin with an Ink outline and a star.
  */
-export function TicketStubs({ stubs, size, label, pop = false, className }: Props) {
+export function TicketStubs({ stubs, size, label, pop = false, spending, className }: Props) {
   const geometry = GEOMETRY[size];
   const a11y = label ? { role: "img", "aria-label": label } : { "aria-hidden": true };
   return (
@@ -153,7 +181,13 @@ export function TicketStubs({ stubs, size, label, pop = false, className }: Prop
       {...a11y}
     >
       {stubs.map((stub, i) => (
-        <Stub key={i} stub={stub} geometry={geometry} pop={pop} />
+        <Stub
+          key={i}
+          stub={stub}
+          geometry={geometry}
+          pop={pop}
+          spend={spending?.index === i ? spending.state : null}
+        />
       ))}
     </div>
   );

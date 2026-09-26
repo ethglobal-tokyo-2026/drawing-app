@@ -6,7 +6,13 @@ import { formatDay, formatHandle, formatNo } from "../../stickers/format";
 import type { Sticker } from "@drawing-app/api/client";
 import { formatRefillTime } from "../../tickets/refill";
 import { TicketStubs } from "../../tickets/TicketStubs";
-import { describeTickets, nextRefill, ticketView, type Tickets } from "../../tickets/tickets";
+import {
+  describeTickets,
+  nextRefill,
+  spentIndex,
+  ticketView,
+  type Tickets,
+} from "../../tickets/tickets";
 import { useTickets } from "../../tickets/useTickets";
 import { Key } from "../../ui/Key";
 import { LabelButton } from "../../ui/LabelButton";
@@ -37,7 +43,7 @@ interface Props {
  * as one reserve ticket and its count, or that reserve ticket alone once the daily ones are used. Under them, a line
  * when this sticker used the day's last daily ticket, or the last ticket of all.
  */
-function TicketRow({ tickets }: { tickets: Tickets }) {
+function TicketRow({ tickets, peel }: { tickets: Tickets; peel: boolean }) {
   const { t } = useTranslation();
   const view = ticketView(tickets);
   const refillTime = formatRefillTime(nextRefill(new Date()));
@@ -46,7 +52,13 @@ function TicketRow({ tickets }: { tickets: Tickets }) {
   return (
     <div className="sealed-card__tickets" data-card-line>
       <div className="sealed-card__ticket-row" role="img" aria-label={describeTickets(tickets)}>
-        {view.show !== "reserve" && <TicketStubs size="small" stubs={view.stubs} />}
+        {view.show !== "reserve" && (
+          <TicketStubs
+            size="small"
+            stubs={view.stubs}
+            spending={peel ? { index: spentIndex(view.stubs), state: "peel" } : null}
+          />
+        )}
         {view.reserve > 0 && (
           <span className="sealed-card__reserve">
             <TicketStubs size="small" stubs={[{ used: false, kind: "reserve" }]} />
@@ -153,7 +165,8 @@ export function SealedCard({
           {t(($) => $.stickerCreation.sealedCard.keepDrawing)}
         </Key>
       )}
-      {tickets && <TicketRow tickets={tickets} />}
+      {/* Keep drawing spends the next daily ticket: it peels off as the card leaves. */}
+      {tickets && <TicketRow tickets={tickets} peel={leaving && !last} />}
       {last ? (
         <LabelButton block icon={<ShopIcon />} data-card-line onClick={act(onShop, { now: true })}>
           {t(($) => $.stickerCreation.sealedCard.buyReserveTickets)}
