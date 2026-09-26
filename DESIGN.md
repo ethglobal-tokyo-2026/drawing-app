@@ -18,6 +18,10 @@ colors:
   pink-deep: "#CC2A72"
   grape-deep: "#6D4FD6"
   tomato-deep: "#C63C1E"
+  blue: "#298DFF"
+  blue-deep: "#1B65CC"
+  tangerine: "#FF9B3D"
+  tangerine-deep: "#CC6A12"
   label-lip: "#D3D0DC"
   tray-canvas: "#F9B3D1"
   tray-tape: "#FFA6CD"
@@ -281,22 +285,24 @@ The palette is Liner and Ink, plus five candy-bright coded fields, each with one
 
 ### Primary
 
-- **Seal Yellow** (seal-yellow): "Now". The default key (Keep drawing, the seal check, Draw on your board), daily tickets, the draw screen's timer dot, the streak leaf's band on the cork back, NEW dots, and text selection. It's the most common field in the app.
+- **Seal Yellow** (seal-yellow): "Now". The default key (Keep drawing, the seal check, Draw on your board), daily tickets, the draw screen's timer dot, the made stamp on the cork back, NEW dots, and text selection. It's the most common field in the app.
 
 ### Secondary
 
 - **Soda Aqua** (soda-aqua): giving. The Give key (including where Draw sits on someone else's board), the Explore tab, the gift bag's tear tape and its pull tab, and viewer hints mixed toward Liner.
-- **Bonbon Pink** (bonbon-pink): gratitude, and you. The Send gratitude key, the heart and its mini hearts, the My board tab, the tray's zip pull and its Mine folder tab, the open trail row's outline, the selected leaderboard tab, and on the cork back the receipt's pushpin and your name's washi strip.
+- **Bonbon Pink** (bonbon-pink): gratitude, and you. The Send gratitude key, the heart and its mini hearts, the My board tab, the tray's zip pull and its Mine folder tab, the open trail row's outline, the selected leaderboard tab, and on the cork back the receipt's pushpin and heart, and the hit counter's speed lines.
 
 ### Tertiary
 
-- **Grape** (grape): received, offers, and reserve tickets. The Accept key on a gift, the ticket shop's Pay key and picked pack, the Use a reserve ticket key, the Shop tab, the Send offer key, Offer for it on someone else's board, the tray's Gifts folder tab, received-sticker marks, and the ruled lines of the notebook scrap on the cork back.
+- **Grape** (grape): received, and offers. The Accept key on a gift, the Send offer key, Offer for it on someone else's board, the tray's Gifts folder tab, received-sticker marks, and the received stamp on the cork back.
+- **Blue** (blue): the Shop and reserve tickets. The Shop tab, the Pay key and picked pack, reserve tickets, and the Use a reserve ticket key. Opposite daily tickets' yellow, so the two kinds of ticket can't be confused.
+- **Tangerine** (tangerine): the streak. The streak leaf's band on the cork back, with the Fire icon, and the streak's figures elsewhere.
 - **Tomato** (tomato): can't undo. Stopped states and warnings. It's never a key.
 - **Foil** (foil-pink, foil-peach, foil-lemon, foil-aqua, foil-sky, foil-lilac): six iridescent bands, one 96px period, that flow along a sticker's foil band and turn in the ring round the artist chip's picture. It isn't a fill color. It's a material worn only by a sticker drawn by someone other than the board's owner. It has no green.
 
 ### Lips (deep partners)
 
-- **Seal Deep, Aqua Deep, Pink Deep, Grape Deep, Tomato Deep** (seal-deep, aqua-deep, pink-deep, grape-deep, tomato-deep): the front wall under a coded key or label. They never appear as fields or text.
+- **Seal Deep, Aqua Deep, Pink Deep, Grape Deep, Tomato Deep, Blue Deep, Tangerine Deep** (seal-deep, aqua-deep, pink-deep, grape-deep, tomato-deep, blue-deep, tangerine-deep): the front wall under a coded key or label. They never appear as fields or text.
 - **Label Lip** (label-lip): the 3px paper edge under plain Liner Lift label stock.
 
 ### The tray
@@ -324,7 +330,7 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 
 **The Ink-On-Color Rule.** Every flat coded field carries Ink text, never white. White on pink reads at 3.1:1; Ink reads at 5.7:1.
 
-**The One Meaning Rule.** Each hue means one thing: yellow is now, aqua is giving, pink is gratitude and you, grape is received, and tomato is can't-undo. Don't pick a hue for looks.
+**The One Meaning Rule.** Each hue means one thing: yellow is now, aqua is giving, pink is gratitude and you, grape is received and offers, blue is the Shop and reserve tickets, tangerine is the streak, and tomato is can't-undo. Don't pick a hue for looks.
 
 **The Other Hand Rule.** Foil appears only on a sticker drawn by someone other than the board's owner (on your tray's sheets, someone other than you). Your own stickers keep the plain white die-cut edge; the pearl rim is retired. Surfaces that aren't a board (Explore's feed, the leaderboard) show no foil. It's never a rarity grade.
 
@@ -344,7 +350,7 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 - **Display** (400, 20px; 23px on the large key, 17px on the compact key; line-height 1): the key's label. It also sets dot badges (12–19px), the gratitude multiplier (×8.0), the giver's gratitude tag, and the outlined 袋文字 tier captions (46px, pink inside white inside ink).
 - **Figure** (900, 26px on the cork back's stamps and 27px in the open trail row, up to 52px on the gratitude receipt and 58px on the streak leaf; line-height about 0.95, width 125, tabular): gratitude amounts in the combo, the receipt and the sticker's trail, the counts pinned on the cork back (the receipt's TOTAL at 30px), and the hit counter (23px on the leaderboard, 20px in the cork back's Bests).
 - **Headline** (800, 26px, line-height 1.08, width 112, balanced wrap): screen and dialog titles such as "Sealed on-chain" and "Out of tickets for today".
-- **Title** (800, 18–22px, line-height 1.1, width 112): sheet titles, the board header's name, and the name card and notebook scrap heading on the cork back (18px).
+- **Title** (800, 18–22px, line-height 1.1, width 112): sheet titles, the board header's name, and the notebook scrap and Settings headings on the cork back (18px).
 - **Body** (400–500, 15px, line-height 1.42–1.5, width 100): running text. Notes cap at 28–44ch. Supporting notes drop to 13px.
 - **Label** (700, 15px, or 13px on small buttons, width 100): buttons, tabs and chips, in sentence case at one weight.
 - **Fine** (650, 11px, uppercase, +0.07em, width 87.5, tabular): metadata lines such as "No.0147 · 4:52 · 2026.09.23 · @alice", sheet date ranges in the tray, captions and hints.
@@ -373,7 +379,7 @@ Every screen is a 390 × 844 iPhone viewport. From top to bottom there's a 47px 
 
 The spacing rhythm steps in 4px units, and 12px is the house gutter. Tabs sit on a 12px inset with an 8px gap, and sheets pad 18–20px on the sides and 24px at the foot. Controls anchor to the thumb zone. The key sits low, usually bottom right or centered at a sheet's foot, with any secondary label or quiet link directly beneath it.
 
-The sticker board is free-form, not a grid. Stickers sit wherever they were dropped, at their own size and slight rotation. The board's header is your avatar and name at the top left; the compact Draw key floats at the lower left; the sticker tray runs down the right edge from under the header (y 64) to the foot and opens across half the screen. Someone else's board keeps the same layout with the tray gone, so the field runs to the right inset; Give takes Draw's slot, and a small Explore back chip sits beside the name. The cork back is a two-column grid (206px and the rest, 16 × 12px gaps) under the person's picture and name card, with Flip back at the foot of the right column in the thumb's reach. No surface shows grid paper: paper is hinted by the liner stock and the faint diagonal "SEAL · シール" maker print, never a full grid.
+The sticker board is free-form, not a grid. Stickers sit wherever they were dropped, at their own size and slight rotation. The board's header is your avatar and name at the top left; the compact Draw key floats at the lower left; the sticker tray runs down the right edge from under the header (y 64) to the foot and opens across half the screen. Someone else's board keeps the same layout with the tray gone, so the field runs to the right inset; Give takes Draw's slot, and a small Explore back chip sits beside the name. The cork back is a two-column grid (206px and the rest, 16 × 12px gaps), with Flip back at the foot of the right column in the thumb's reach. No surface shows grid paper: paper is hinted by the liner stock and the faint diagonal "SEAL · シール" maker print, never a full grid.
 
 The gallery around the phones (a sticky flow index, a 260px story column beside rows of scaled phone frames, and a viewer with a 300px strip) collapses to one column at 1100px and stacks the viewer at 760px. Each phone's caption is a plain annotation: the element, where it is in parentheses, and what was just done to it and what that shows, with a quiet step number the gallery adds. It belongs to the design review, not the app.
 
@@ -467,15 +473,16 @@ Your avatar (a 42px photo sticker at -4°) and your name (800, 18px, width 112) 
 The board's back, where a person's figures are pinned up as paper. It's the only place stats live.
 
 - **The turn:** 640ms. The board lifts to 0.92 scale, turns on its vertical axis over the Ink table, with each face darkening as it turns from the top-left light, and lands with a small overshoot. A tap mid-turn reverses it. Reduced motion crossfades the faces in 180ms. The tray and Draw are fixed to the front and turn away with it; the front takes no taps while turned.
-- **The person:** their photo sticker and their name on a Liner Lift card held by washi (pink on your own board), where the header sits on the front.
-- **Gratitude:** a printed receipt pinned with a pink pushpin, one row per kind (Daily, Inspired, Magic, and As the artist when above 0), each with a colored dot and a one-line plain-words reason, and the total as its TOTAL line.
-- **Streak:** a torn-off calendar leaf with a Seal Yellow band, the day count in Figure type and the rule beneath.
+- **No person card:** the front's header already names them, and the receipt prints their @handle.
+- **Gratitude:** a printed receipt pinned with a pink pushpin, headed "Gratitude received" beside a pink heart with an ink line. Its rows are plain line items in Ink, Direct and Residual, with no dots and no reason lines; a row at 0 is left off, so a friend-first artist sees Direct alone. The total is its TOTAL line. When the stats don't load, the receipt says why in place of its rows.
+- **Streak:** a torn-off calendar leaf with a Tangerine band, the Fire icon before STREAK under the pin, and the day count in Figure type. No rule copy.
 - **Stickers:** made, received and given as three postage stamps stuck on at small turns, each printed on its hue with an Ink rule.
-- **Bests:** a torn notebook scrap with grape rules, held by washi. Best combo on it is the hit counter.
-- **About:** the ENS name and the joined date on Ink label-maker tape with raised letters; the ENS strip copies the name.
+- **Bests:** a torn notebook scrap ruled in Ink at 14%, held by washi. Best combo on it is the hit counter, with no note.
+- **About:** the joined date and the ENS name, each on its own strip of Ink label-maker tape with raised letters; the ENS strip opens the name in the ENS app.
 - **Controls:** Flip back is label stock at the foot of the right column. Bare cork, Escape and LINE's Back also flip back. Your own back adds Share my board (aqua label) and QR code. The back has no key.
 - **Settings:** your own back's last paper, a clean-cut index card taped at both top corners, its Title-type heading over an Ink rule. Until it scrolls into view its heading peeks above the cork's foot; a tap or focus scrolls it in. Language is ruled 44px radio rows (Same as LINE, English, 日本語) with an Ink dot in a ring for the pick; a failed save shows its reason on Tomato Soft.
-- **Empty values** read in words: "No gratitude yet", "Not started", "None yet".
+- **Developer slip:** LINE's and Privy's details on a torn-top slip, lying collapsed under the cork's end, after Settings, in every build that has it. Pulling up past the end meets iOS's rubber band: the cork and its papers ride up together as the slip's top shows, and past 150px of travel the release brings it out and the cork glides up to it; short of that it settles back. Only a touch that starts at the end pulls, and the cork doesn't bounce there. A visually hidden "Developer tools" button, shown as label tape when focused, brings it out for keyboards and screen readers. Reduced motion: nothing moves, and it fades in. It goes back under once the board rests on its front.
+- **Empty values** read in words: "No gratitude yet", "Not started", "None yet" (a best at 0).
 
 ### Someone else's board
 
@@ -643,7 +650,7 @@ The LINE chat, the Gift Message, consent, share picker, Add friends screen and i
 - **Don't** put a zipper on anything but the tray. The gift bag tears open along its tape.
 - **Don't** put stats in a sheet or a big-number card; they live on the cork back as paper.
 - **Don't** show grid paper anywhere; hint paper with liner stock and the faint maker print.
-- **Don't** describe gratitude with money words (royalty, earn, reward, cut, share, %). It flows "to" people.
+- **Don't** describe gratitude with money words (royalty, earn, reward, cut, share, %). It flows "to" people. "Residual", the receipt's name for the Original Artist Gratitude Share, is the one allowed exception (ad0ll, 2026-09-26).
 - **Don't** hand-draw an icon or edit a published path. Brand marks and illustrations are the only exceptions.
 - **Don't** use Canvas white as a page ground. It's for drawing surfaces and white label stock.
 - **Don't** use NFT, crypto, token, wallet, mint or similar words in visible copy. The one exception is "Sealed on-chain" with the sticker's ENS name.
