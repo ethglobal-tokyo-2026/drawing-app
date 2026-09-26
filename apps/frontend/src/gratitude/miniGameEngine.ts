@@ -1,3 +1,4 @@
+import type { ReplayV1 } from "../api/contract";
 import { seededRandom } from "../ui/seededRandom";
 import {
   createGratitudeCombo,
@@ -18,6 +19,7 @@ import { createMiniHeartLayer } from "./miniHeartLayer";
 import { createMiniHeartPhysics, type HeartBox } from "./miniHeartPhysics";
 import { createParticleEffects } from "./particleEffects";
 import { listenToPhoneMotion } from "./phoneMotion";
+import { createReplayRecorder } from "./replayRecorder";
 import { createShakeDetector, type ShakeReversal } from "./shakeDetector";
 import { createStrokeDetector } from "./strokeDetector";
 import { createTierBackground } from "./tierBackground";
@@ -47,8 +49,8 @@ export interface MiniGameOptions {
   intensity: number;
   reduced: boolean;
   showFrameTimes: boolean;
-  /** The finished combo, before its ending plays. */
-  onRecord: (record: ComboRecord) => void;
+  /** The finished combo and its replay, before its ending plays. */
+  onRecord: (record: ComboRecord, replay: ReplayV1) => void;
   /** The ending has played, or the page went hidden: time for the receipt. */
   onFinished: (ending: { caught: boolean; record: ComboRecord }) => void;
   /** The frame loop failed and stopped. */
@@ -61,6 +63,8 @@ export interface MiniGameEngine {
   setReduced: (reduced: boolean) => void;
   destroy: () => void;
 }
+
+type Ended = Extract<ComboEvent, { kind: "ended" }>;
 
 /** A hit's press, by how it was made. */
 const SQUASH_BY_METHOD: Record<Method, number> = { tap: 3.3, stroke: 1.6, shake: 1.2 };
@@ -111,9 +115,11 @@ export function mountMiniGameEngine(
 ): MiniGameEngine {
   const { root, page, ground, hint, live, giverPhoto, giverDot, fuu } = parts;
   const mount = ++mounts;
-  const random = seededRandom(0xa11ce + mount * 7);
+  const seed = (0xa11ce + mount * 7) >>> 0;
+  const random = seededRandom(seed);
   const combo = createGratitudeCombo(GAME_CONFIG);
   const { intensity } = options;
+  const recorder = createReplayRecorder({ seed, intensity, ...FALLBACK });
   let reduced = options.reduced;
 
   // The stage's layers, back to front: the thumb's glow, speed lines, stamps, 昇天's rain, the heart,
@@ -203,6 +209,7 @@ export function mountMiniGameEngine(
       width: root.clientWidth || FALLBACK.width,
       height: root.clientHeight || FALLBACK.height,
     };
+    recorder.resize(size.width, size.height);
     const box = root.getBoundingClientRect();
     rect = { left: box.left, top: box.top, scale: box.width / size.width || 1 };
     L = layoutFor(size.width, size.height);
@@ -315,12 +322,13 @@ export function mountMiniGameEngine(
     options.onFinished({ caught, record });
   };
 
-  async function end(record: ComboRecord, caught: boolean, hidden: boolean) {
+  async function end(ended: Ended, hidden: boolean) {
+    const { record, caught } = ended;
     ending = true;
     stopHints();
     root.dataset.phase = "ending";
     try {
-      options.onRecord(record);
+      options.onRecord(record, recorder.finish(ended));
     } catch (error) {
       // The record is the app's to keep; its failure shouldn't strand the person mid-ending.
       console.error("Keeping the gratitude failed; the ending plays on", error);
@@ -396,7 +404,7 @@ export function mountMiniGameEngine(
         heart.squash(3.3);
         effects.stamp(x, y);
       } else if (e.kind === "tier") onTierUp(e.tier);
-      else void end(e.record, e.caught, hidden);
+      else void end(e, hidden);
     }
     showFace();
   };
@@ -483,7 +491,8 @@ export function mountMiniGameEngine(
 
   const unlockStroke = (t: number, x: number, y: number) => {
     const events = combo.commitTo("stroke", t);
-    if (!events.some((e) => e.kind === "hit")) return;
+    // No hit: the combo had already ended, and that end still plays.
+    if (!events.some((e) => e.kind === "hit")) return handle(events, x, y);
     hideTip();
     heart.pullTo(0, null);
     // The combo's own look first, so the unlock's slam is the one that shows.
@@ -500,6 +509,7 @@ export function mountMiniGameEngine(
   const onStrokeStart = (t: number, x: number, y: number) => {
     if (!running || ending || combo.view.method === "shake") return;
     strokes.fingerDown(x, y, t);
+    recorder.strokeStart(t, x, y);
     stroke = {
       onHeart: isOnHeart(x, y, heartArea()),
       from: { x, y },
@@ -521,6 +531,7 @@ export function mountMiniGameEngine(
     const v = velocity(s.samples);
     strokeSpeed += (v.speed - strokeSpeed) * 0.35;
     const pass = strokes.fingerMove(x, y, t);
+    recorder.strokeMove(t, x, y, pass?.fast === true);
     if (pass) s.runFrom = pass.end;
     // The stretch and the speed field follow the run, at any angle.
     const rx = x - s.runFrom.x;
@@ -559,6 +570,7 @@ export function mountMiniGameEngine(
     const s = stroke;
     stroke = null;
     strokes.fingerUp();
+    recorder.strokeEnd();
     heart.pullTo(0, null);
     // A drag on the heart that didn't unlock stroking is a try; enough of them, and the tip says how.
     if (!s?.onHeart || s.travel < FEEL_CONFIG.stroke.tryTravelPx) return;
@@ -573,9 +585,14 @@ export function mountMiniGameEngine(
   /** performance.now() until which the shake marks show. */
   let shakingUntil = 0;
 
+  /** The way a reversal went along its axis: 1 or −1. */
+  const directionOf = (reversal: ShakeReversal) => reversal.direction.x || reversal.direction.y;
+
   const unlockShake = (t: number, reversal: ShakeReversal) => {
     const events = combo.commitTo("shake", t);
-    if (!events.some((e) => e.kind === "hit")) return;
+    recorder.shake(directionOf(reversal), events);
+    // No hit: the combo had already ended, and that end still plays.
+    if (!events.some((e) => e.kind === "hit")) return handle(events, heartAt.x, heartAt.y);
     hideTip();
     background.liftCorner(0);
     shakingUntil = t + FEEL_CONFIG.shake.resetMs;
@@ -607,7 +624,9 @@ export function mountMiniGameEngine(
       shakingUntil = t + FEEL_CONFIG.shake.resetMs;
       if (reduced) heart.jiggle();
       else heart.kickLoose(reversal.direction, reversal.strength);
-      handle(combo.countShakeReversal(t), heartAt.x, heartAt.y);
+      const events = combo.countShakeReversal(t);
+      recorder.shake(directionOf(reversal), events);
+      handle(events, heartAt.x, heartAt.y);
       return;
     }
     heart.jiggle();
@@ -627,8 +646,15 @@ export function mountMiniGameEngine(
     shakingUntil = 0;
   };
 
-  const firstTap = (t: number, x: number, y: number) => {
+  /** A touch on the heart, or a key, goes to the combo, and the replay keeps it if the combo heard it. */
+  const tapHeart = (t: number, x: number, y: number) => {
     const events = combo.tapHeart(t);
+    recorder.touch(x, y, events);
+    return events;
+  };
+
+  const firstTap = (t: number, x: number, y: number) => {
+    const events = tapHeart(t, x, y);
     if (!events.some((e) => e.kind === "hit")) return;
     sendingSince = t;
     root.dataset.phase = "sending";
@@ -657,7 +683,7 @@ export function mountMiniGameEngine(
         if (!running || ending) return;
         const phase = combo.view.phase;
         if (phase === "ready") heart.squash(3.6);
-        else if (phase === "sending" || phase === "running") handle(combo.tapHeart(t), x, y);
+        else if (phase === "sending" || phase === "running") handle(tapHeart(t, x, y), x, y);
       },
       onHeartTap: (t, x, y) => {
         if (running && !ending && combo.view.phase === "ready") firstTap(t, x, y);
@@ -680,7 +706,7 @@ export function mountMiniGameEngine(
       heart.squash(3.6);
       firstTap(performance.now(), x, y);
     } else if (phase === "sending" || phase === "running") {
-      handle(combo.tapHeart(performance.now()), x, y);
+      handle(tapHeart(performance.now(), x, y), x, y);
     }
   };
   button.addEventListener("keydown", onKey);
