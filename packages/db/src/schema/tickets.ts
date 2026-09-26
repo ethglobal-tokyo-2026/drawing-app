@@ -1,8 +1,11 @@
 import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
-import { timestamps } from "./columns.ts";
+import { literal, timestamps } from "./columns.ts";
+import { DAILY_TICKETS_PER_DAY } from "./limits.ts";
 import { stickers } from "./stickers.ts";
 import { users } from "./users.ts";
+
+export const ticketKinds = ["daily", "reserve"] as const;
 
 /**
  * A spent ticket: inserted when the start screen's button spends it, linked to its sticker at seal.
@@ -15,10 +18,12 @@ export const ticketUses = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id),
-    /** YYYY-MM-DD in the person's zone, turning over at 4:00. */
+    /** YYYY-MM-DD, Tokyo time: ticket days run midnight to midnight there, for everyone. */
     ticketDay: text("ticket_day").notNull(),
-    /** Order within the day, from 0. The day's free tickets go first. */
+    /** Order within the day, from 0. */
     dayIndex: integer("day_index").notNull(),
+    /** Daily tickets are always spent first, so a day's first uses are daily and the rest reserve. */
+    kind: text("kind", { enum: ticketKinds }).notNull(),
     stickerId: text("sticker_id")
       .unique()
       .references(() => stickers.id),
@@ -27,10 +32,14 @@ export const ticketUses = sqliteTable(
   (t) => [
     uniqueIndex("ticket_uses_day").on(t.userId, t.ticketDay, t.dayIndex),
     check("ticket_uses_day_index", sql`${t.dayIndex} >= 0`),
+    check(
+      "ticket_uses_kind",
+      sql`${t.kind} = case when ${t.dayIndex} < ${literal(DAILY_TICKETS_PER_DAY)} then 'daily' else 'reserve' end`,
+    ),
   ],
 );
 
-/** A pack of tickets bought with Sui. Its tickets count once verified_at is set. */
+/** A pack of reserve tickets bought with SUI. Its tickets count once verified_at is set. */
 export const ticketPurchases = sqliteTable(
   "ticket_purchases",
   {

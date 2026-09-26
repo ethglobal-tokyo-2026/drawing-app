@@ -1,4 +1,4 @@
-import { ticketPurchases, ticketUses } from "@drawing-app/db";
+import { DAILY_TICKETS_PER_DAY, ticketPurchases, ticketUses } from "@drawing-app/db";
 import { bytes32, insertUser } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,15 +8,12 @@ import { ticketsSchema } from "../shapes.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { fakeSuiPayments } from "../testing/fakes.ts";
 import { insertSealedSticker } from "../testing/rows.ts";
-import { nextTicketDayStart, ticketDay } from "../ticketDays.ts";
-import { FREE_TICKETS_PER_DAY, TICKET_PACKS, ticketUseSchema } from "../tickets/tickets.ts";
+import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
+import { TICKET_PACKS, ticketUseSchema, type TicketKind } from "../tickets/tickets.ts";
 
 const ticketsBodySchema = z.object({ tickets: ticketsSchema });
 const spendBodySchema = z.object({ ticketUse: ticketUseSchema, tickets: ticketsSchema });
 
-const TOKYO = "Asia/Tokyo";
-/** Its 4:00 comes at another moment than Tokyo's, so a test can tell the person's zone is used. */
-const NEW_YORK = "America/New_York";
 /** A sealed sticker's cut, for the ticket stubs. */
 const SEALED_CUT = { outline: "M0 0H4V2Z", width: 4, height: 2 };
 
@@ -43,10 +40,10 @@ let test: TestApp;
 let headers: Headers;
 let userId: string;
 
-/** A fresh app, and a person in Tokyo signed in to it. */
+/** A fresh app, and a person signed in to it. */
 async function start(overrides: Parameters<typeof createTestApp>[0] = {}) {
   test = await createTestApp(overrides);
-  userId = insertUser(test.db, { timeZone: TOKYO });
+  userId = insertUser(test.db);
   headers = await test.signInAs(userId);
 }
 
@@ -61,20 +58,24 @@ const getTickets = async (as: Headers = headers) => {
   return ticketsBodySchema.parse(await response.json()).tickets;
 };
 
-const spend = (as: Headers = headers) =>
-  test.app.request("/api/tickets/spend", { method: "POST", headers: as });
+const spend = (kind: TicketKind, as: Headers = headers) =>
+  test.app.request("/api/tickets/spend", {
+    method: "POST",
+    headers: { ...as, "content-type": "application/json" },
+    body: JSON.stringify({ kind }),
+  });
 
-/** Spends a ticket, which must be granted. */
-async function spendTicket(as: Headers = headers) {
-  const response = await spend(as);
+/** Spends a ticket of `kind`, which must be granted. */
+async function spendTicket(kind: TicketKind, as: Headers = headers) {
+  const response = await spend(kind, as);
   expect(response.status).toBe(201);
   return spendBodySchema.parse(await response.json());
 }
 
-/** Spends `times` tickets, each of which must be granted, and returns the answers in order. */
-async function spendTickets(times: number, as: Headers = headers) {
+/** Spends `times` tickets of `kind`, each of which must be granted, and returns the answers in order. */
+async function spendTickets(kind: TicketKind, times: number, as: Headers = headers) {
   const answers = [];
-  for (let spent = 0; spent < times; spent++) answers.push(await spendTicket(as));
+  for (let spent = 0; spent < times; spent++) answers.push(await spendTicket(kind, as));
   return answers;
 }
 
@@ -105,49 +106,52 @@ const purchaseOf = (txDigest: string) =>
   test.db.select().from(ticketPurchases).where(eq(ticketPurchases.txDigest, txDigest)).get();
 
 describe("tickets", () => {
-  it("give a new person the day's free tickets, the packs, and a refill at 4:00 in their zone", async () => {
+  it("give a new person the day's daily tickets, and a refill at the next midnight, Tokyo time", async () => {
     const now = test.clock.now();
     expect(await getTickets()).toEqual({
-      ticketDay: ticketDay(now, TOKYO),
-      freePerDay: FREE_TICKETS_PER_DAY,
-      freeLeft: FREE_TICKETS_PER_DAY,
-      paidLeft: 0,
-      nextRefillAt: nextTicketDayStart(now, TOKYO).toISOString(),
+      ticketDay: tokyoTicketDay(now),
+      dailyPerDay: DAILY_TICKETS_PER_DAY,
+      dailyLeft: DAILY_TICKETS_PER_DAY,
+      reserveLeft: 0,
+      nextRefillAt: nextTokyoTicketDayStart(now).toISOString(),
       usedToday: [],
-      packs: TICKET_PACKS,
     });
   });
 
-  it("spend the day's free tickets in order, then refuse with no_tickets_left", async () => {
-    const answers = await spendTickets(FREE_TICKETS_PER_DAY);
+  it("spend the day's daily tickets in order, then refuse with no_tickets_left", async () => {
+    const answers = await spendTickets("daily", DAILY_TICKETS_PER_DAY);
     answers.forEach(({ ticketUse, tickets }, dayIndex) => {
-      expect(ticketUse).toMatchObject({ dayIndex, ticketDay: tickets.ticketDay });
-      expect(tickets.freeLeft).toBe(FREE_TICKETS_PER_DAY - (dayIndex + 1));
+      expect(ticketUse).toMatchObject({ dayIndex, kind: "daily", ticketDay: tickets.ticketDay });
+      expect(tickets.dailyLeft).toBe(DAILY_TICKETS_PER_DAY - (dayIndex + 1));
       expect(tickets.usedToday.map((use) => use.id)).toEqual(
         answers.slice(0, dayIndex + 1).map((answer) => answer.ticketUse.id),
       );
     });
-    expect(await refusal(await spend())).toMatchObject({ status: 409, error: "no_tickets_left" });
-    expect(ticketUseCount()).toBe(FREE_TICKETS_PER_DAY);
+    for (const kind of ["daily", "reserve"] as const) {
+      expect(await refusal(await spend(kind))).toMatchObject({
+        status: 409,
+        error: "no_tickets_left",
+      });
+    }
+    expect(ticketUseCount()).toBe(DAILY_TICKETS_PER_DAY);
   });
 
-  it("turn the day over at 4:00 in the person's own zone", async () => {
-    const newYorker = await test.signInAs(insertUser(test.db, { timeZone: NEW_YORK }));
-    const answers = await spendTickets(FREE_TICKETS_PER_DAY, newYorker);
+  it("turn the day over at midnight, Tokyo time", async () => {
+    const answers = await spendTickets("daily", DAILY_TICKETS_PER_DAY);
     const { nextRefillAt, ticketDay: spentDay } = answers[answers.length - 1].tickets;
-    expect(nextRefillAt).toBe(nextTicketDayStart(test.clock.now(), NEW_YORK).toISOString());
+    expect(nextRefillAt).toBe(nextTokyoTicketDayStart(test.clock.now()).toISOString());
 
     test.clock.set(new Date(Date.parse(nextRefillAt) - 1));
-    expect(await getTickets(newYorker)).toMatchObject({ ticketDay: spentDay, freeLeft: 0 });
+    expect(await getTickets()).toMatchObject({ ticketDay: spentDay, dailyLeft: 0 });
 
     test.clock.set(new Date(nextRefillAt));
-    const refilled = await getTickets(newYorker);
-    expect(refilled).toMatchObject({ freeLeft: FREE_TICKETS_PER_DAY, usedToday: [] });
+    const refilled = await getTickets();
+    expect(refilled).toMatchObject({ dailyLeft: DAILY_TICKETS_PER_DAY, usedToday: [] });
     expect(refilled.ticketDay).not.toBe(spentDay);
   });
 
   it("show the sticker each of today's tickets became, and null for one not sealed", async () => {
-    const [sealed, abandoned] = await spendTickets(FREE_TICKETS_PER_DAY);
+    const [sealed, abandoned] = await spendTickets("daily", DAILY_TICKETS_PER_DAY);
     const stickerId = insertSealedSticker(test.db, userId, SEALED_CUT);
     test.db
       .update(ticketUses)
@@ -162,27 +166,47 @@ describe("tickets", () => {
     expect(usedToday.find((use) => use.id === abandoned.ticketUse.id)?.sticker).toBeNull();
   });
 
-  it("take paid tickets once the free ones are spent, and carry the rest into the next day", async () => {
+  it("spend reserve tickets once the daily ones are gone, and carry the rest into the next day", async () => {
     await buyPack(PACK);
-    await spendTickets(FREE_TICKETS_PER_DAY);
-    const firstPaid = await spendTicket();
+    await spendTickets("daily", DAILY_TICKETS_PER_DAY);
+    const firstReserve = await spendTicket("reserve");
     const carried = PACK.tickets - 1;
-    expect(firstPaid.ticketUse.dayIndex).toBe(FREE_TICKETS_PER_DAY);
-    expect(firstPaid.tickets).toMatchObject({ freeLeft: 0, paidLeft: carried });
+    expect(firstReserve.ticketUse).toMatchObject({
+      dayIndex: DAILY_TICKETS_PER_DAY,
+      kind: "reserve",
+    });
+    expect(firstReserve.tickets).toMatchObject({ dailyLeft: 0, reserveLeft: carried });
 
-    test.clock.set(new Date(firstPaid.tickets.nextRefillAt));
-    expect(await getTickets()).toMatchObject({ freeLeft: FREE_TICKETS_PER_DAY, paidLeft: carried });
-    const nextDay = await spendTickets(FREE_TICKETS_PER_DAY + carried);
-    expect(nextDay[nextDay.length - 1].tickets).toMatchObject({ freeLeft: 0, paidLeft: 0 });
-    expect(await refusal(await spend())).toMatchObject({ status: 409, error: "no_tickets_left" });
+    test.clock.set(new Date(firstReserve.tickets.nextRefillAt));
+    expect(await getTickets()).toMatchObject({
+      dailyLeft: DAILY_TICKETS_PER_DAY,
+      reserveLeft: carried,
+    });
+    await spendTickets("daily", DAILY_TICKETS_PER_DAY);
+    const nextDay = await spendTickets("reserve", carried);
+    expect(nextDay[nextDay.length - 1].tickets).toMatchObject({ dailyLeft: 0, reserveLeft: 0 });
+    expect(await refusal(await spend("reserve"))).toMatchObject({
+      status: 409,
+      error: "no_tickets_left",
+    });
+  });
+
+  it("refuse the other kind than the next ticket with ticket_kind_changed, spending nothing", async () => {
+    await buyPack(PACK);
+    const kindChanged = { status: 409, error: "ticket_kind_changed" };
+    expect(await refusal(await spend("reserve"))).toMatchObject(kindChanged);
+    await spendTickets("daily", DAILY_TICKETS_PER_DAY);
+    expect(await refusal(await spend("daily"))).toMatchObject(kindChanged);
+    expect(ticketUseCount()).toBe(DAILY_TICKETS_PER_DAY);
+    expect((await getTickets()).reserveLeft).toBe(PACK.tickets);
   });
 
   it("add each pack's tickets, recording the pack's price and the verified payment", async () => {
-    let paidLeft = 0;
+    let reserveLeft = 0;
     for (const pack of TICKET_PACKS) {
       const txDigest = newTxDigest();
-      paidLeft += pack.tickets;
-      expect((await buyPack(pack, txDigest)).paidLeft).toBe(paidLeft);
+      reserveLeft += pack.tickets;
+      expect((await buyPack(pack, txDigest)).reserveLeft).toBe(reserveLeft);
       expect(purchaseOf(txDigest)).toMatchObject({
         userId,
         priceYen: pack.priceYen,
@@ -200,8 +224,8 @@ describe("tickets", () => {
       const again = await buy({ tickets: PACK.tickets, txDigest, paidMist: PAID_MIST }, as);
       expect(await refusal(again)).toMatchObject({ status: 409, error: "payment_already_counted" });
     }
-    expect((await getTickets()).paidLeft).toBe(PACK.tickets);
-    expect((await getTickets(someoneElse)).paidLeft).toBe(0);
+    expect((await getTickets()).reserveLeft).toBe(PACK.tickets);
+    expect((await getTickets(someoneElse)).reserveLeft).toBe(0);
   });
 
   it("refuse a count that isn't a pack, and a digest that isn't Sui's", async () => {
@@ -215,7 +239,7 @@ describe("tickets", () => {
       const malformed = await buy({ tickets: PACK.tickets, txDigest, paidMist: PAID_MIST });
       expect(await refusal(malformed)).toMatchObject({ status: 400, error: "invalid_request" });
     }
-    expect((await getTickets()).paidLeft).toBe(0);
+    expect((await getTickets()).reserveLeft).toBe(0);
   });
 
   it("count no tickets for a payment Sui doesn't verify, and log it", async () => {
@@ -226,14 +250,14 @@ describe("tickets", () => {
     expect(await refusal(response)).toMatchObject({ status: 500, error: "internal_error" });
     expect(log).toHaveBeenCalledWith(expect.stringContaining(txDigest));
     expect(purchaseOf(txDigest)).toBeUndefined();
-    expect((await getTickets()).paidLeft).toBe(0);
+    expect((await getTickets()).reserveLeft).toBe(0);
   });
 
   it("refuse every route without a session", async () => {
     const txDigest = newTxDigest();
     for (const response of [
       await test.app.request("/api/tickets"),
-      await spend({}),
+      await spend("daily", {}),
       await buy({ tickets: PACK.tickets, txDigest, paidMist: PAID_MIST }, {}),
     ]) {
       expect(await refusal(response)).toMatchObject({ status: 401, error: "signed_out" });

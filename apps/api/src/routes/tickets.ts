@@ -1,13 +1,14 @@
-import { ticketPurchases, ticketUses } from "@drawing-app/db";
+import { DAILY_TICKETS_PER_DAY, ticketPurchases, ticketUses } from "@drawing-app/db";
 import { Hono, type Context } from "hono";
 import type { AppDeps } from "../deps.ts";
 import { apiError, validate } from "../errors.ts";
 import type { AppEnv } from "../session.ts";
 import {
-  FREE_TICKETS_PER_DAY,
   paymentCounted,
+  spendRequestSchema,
   TICKET_PACKS,
   ticketHolder,
+  ticketKindAt,
   ticketPurchaseRequestSchema,
   ticketsOf,
   toTicketUse,
@@ -23,31 +24,46 @@ export const ticketRoutes = ({ db, clock, sui }: AppDeps) =>
     .get("/tickets", (c) => {
       const holder = ticketHolder(db, c.var.userId);
       if (!holder) return noAccount(c);
-      return c.json({ tickets: ticketsOf(db, holder, clock.now()) }, 200);
+      return c.json({ tickets: ticketsOf(db, holder.id, clock.now()) }, 200);
     })
-    .post("/tickets/spend", (c) => {
+    .post("/tickets/spend", validate("json", spendRequestSchema), (c) => {
+      const { kind } = c.req.valid("json");
       const now = clock.now();
       return db.transaction(
         (tx) => {
           const holder = ticketHolder(tx, c.var.userId);
           if (!holder) return noAccount(c);
-          const { ticketDay, freeLeft, paidLeft, usedToday } = ticketsOf(tx, holder, now);
-          if (freeLeft === 0 && paidLeft === 0) {
+          const { ticketDay, dailyLeft, reserveLeft, usedToday } = ticketsOf(tx, holder.id, now);
+          if (dailyLeft === 0 && reserveLeft === 0) {
             return apiError(
               c,
               409,
               "no_tickets_left",
-              `All ${FREE_TICKETS_PER_DAY} free tickets for ${ticketDay} are spent, and no paid ones are left`,
+              `All ${DAILY_TICKETS_PER_DAY} daily tickets for ${ticketDay} are spent, and no reserve tickets are left`,
             );
           }
-          // Today's free tickets go first: the index counts up, and the unique day index stops a
-          // double tap spending two.
+          // Daily tickets go first, so the day's next index decides the kind. The start screen asks
+          // before spending a reserve ticket, so it must never get the other kind than it offered.
+          const dayIndex = usedToday.length;
+          const next = ticketKindAt(dayIndex);
+          if (kind !== next) {
+            return apiError(
+              c,
+              409,
+              "ticket_kind_changed",
+              `kind: the next ticket is a ${next} ticket, not a ${kind} one`,
+            );
+          }
+          // The unique day index stops a double tap spending two.
           const use = tx
             .insert(ticketUses)
-            .values({ userId: holder.id, ticketDay, dayIndex: usedToday.length })
+            .values({ userId: holder.id, ticketDay, dayIndex, kind })
             .returning()
             .get();
-          return c.json({ ticketUse: toTicketUse(use), tickets: ticketsOf(tx, holder, now) }, 201);
+          return c.json(
+            { ticketUse: toTicketUse(use), tickets: ticketsOf(tx, holder.id, now) },
+            201,
+          );
         },
         { behavior: "immediate" },
       );
@@ -89,7 +105,7 @@ export const ticketRoutes = ({ db, clock, sui }: AppDeps) =>
               verifiedAt: now,
             })
             .run();
-          return c.json({ tickets: ticketsOf(tx, holder, now) }, 201);
+          return c.json({ tickets: ticketsOf(tx, holder.id, now) }, 201);
         },
         { behavior: "immediate" },
       );

@@ -20,6 +20,7 @@ import {
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { fakeMint } from "../testing/fakes.ts";
 import { insertGratitude, insertSealedSticker, receiveGift } from "../testing/rows.ts";
+import { ticketKindAt } from "../tickets/tickets.ts";
 
 const HOUR_MS = 60 * 60 * 1000;
 /** The ticket day the tests' tickets are spent on. */
@@ -38,9 +39,10 @@ afterEach(() => {
 let ticketsSpent = 0;
 /** Spends one of the person's tickets straight into ticket_uses, and returns its id. */
 function spendTicket(userId: string): number {
+  const dayIndex = ticketsSpent++;
   const use = test.db
     .insert(ticketUses)
-    .values({ userId, ticketDay: TICKET_DAY, dayIndex: ticketsSpent++ })
+    .values({ userId, ticketDay: TICKET_DAY, dayIndex, kind: ticketKindAt(dayIndex) })
     .returning({ id: ticketUses.id })
     .get();
   return use.id;

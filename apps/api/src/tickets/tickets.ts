@@ -1,41 +1,46 @@
-import { stickers, ticketPurchases, ticketUses, users, type Db } from "@drawing-app/db";
-import { and, asc, count, eq, gte, isNotNull, sum } from "drizzle-orm";
+import {
+  DAILY_TICKETS_PER_DAY,
+  stickers,
+  ticketPurchases,
+  ticketUses,
+  users,
+  type Db,
+} from "@drawing-app/db";
+import { and, asc, count, eq, isNotNull, sum } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { isoTimeSchema, toIsoTime, type Tickets } from "../shapes.ts";
-import { nextTicketDayStart, ticketDay } from "../ticketDays.ts";
+import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
 
-/** Free tickets each ticket day. A day's first uses take them, so `day_index` tells free from paid. */
-export const FREE_TICKETS_PER_DAY = 3;
-
-/** The packs of paid tickets on sale, paid in SUI. Paid tickets carry over from day to day. */
+/** The ticket shop's packs of reserve tickets, paid in SUI. */
 export const TICKET_PACKS = [
   { tickets: 1, priceYen: 100 },
   { tickets: 3, priceYen: 270 },
-  { tickets: 5, priceYen: 350 },
-  { tickets: 10, priceYen: 500 },
-] as const satisfies ReadonlyArray<Tickets["packs"][number]>;
+  { tickets: 5, priceYen: 375 },
+  { tickets: 10, priceYen: 600 },
+] as const;
 
 /** The database, or a transaction on it. */
 type DbOrTx = Db | Parameters<Parameters<Db["transaction"]>[0]>[0];
 
-type TicketHolder = Pick<typeof users.$inferSelect, "id" | "timeZone">;
+export type TicketKind = (typeof ticketUses.$inferSelect)["kind"];
 
-/** The signed-in person's id and zone; undefined if they have no account. */
-export const ticketHolder = (db: DbOrTx, userId: string): TicketHolder | undefined =>
-  db
-    .select({ id: users.id, timeZone: users.timeZone })
-    .from(users)
-    .where(eq(users.id, userId))
-    .get();
+/** The kind the day's use at `dayIndex` spends: daily tickets always go first. */
+export const ticketKindAt = (dayIndex: number): TicketKind =>
+  dayIndex < DAILY_TICKETS_PER_DAY ? "daily" : "reserve";
 
-/** The person's tickets at `now`: today's free ones in their zone, and every paid one left. */
-export function ticketsOf(db: DbOrTx, holder: TicketHolder, now: Date): Tickets {
-  const day = ticketDay(now, holder.timeZone);
+/** The signed-in person's account; undefined if they have none. */
+export const ticketHolder = (db: DbOrTx, userId: string) =>
+  db.select({ id: users.id }).from(users).where(eq(users.id, userId)).get();
+
+/** The person's tickets at `now`: today's daily ones, Tokyo time, and every reserve one left. */
+export function ticketsOf(db: DbOrTx, userId: string, now: Date): Tickets {
+  const day = tokyoTicketDay(now);
   const usedToday = db
     .select({
       id: ticketUses.id,
       dayIndex: ticketUses.dayIndex,
+      kind: ticketUses.kind,
       sticker: {
         id: stickers.id,
         outline: stickers.outline,
@@ -45,36 +50,39 @@ export function ticketsOf(db: DbOrTx, holder: TicketHolder, now: Date): Tickets 
     })
     .from(ticketUses)
     .leftJoin(stickers, eq(stickers.id, ticketUses.stickerId))
-    .where(and(eq(ticketUses.userId, holder.id), eq(ticketUses.ticketDay, day)))
+    .where(and(eq(ticketUses.userId, userId), eq(ticketUses.ticketDay, day)))
     .orderBy(asc(ticketUses.dayIndex))
     .all();
   const bought = db
     .select({ tickets: sum(ticketPurchases.tickets) })
     .from(ticketPurchases)
-    .where(and(eq(ticketPurchases.userId, holder.id), isNotNull(ticketPurchases.verifiedAt)))
+    .where(and(eq(ticketPurchases.userId, userId), isNotNull(ticketPurchases.verifiedAt)))
     .get();
-  const paidUses = db
+  const reserveUses = db
     .select({ n: count() })
     .from(ticketUses)
-    .where(and(eq(ticketUses.userId, holder.id), gte(ticketUses.dayIndex, FREE_TICKETS_PER_DAY)))
+    .where(and(eq(ticketUses.userId, userId), eq(ticketUses.kind, "reserve")))
     .get();
+  const dailyUsed = usedToday.filter((use) => use.kind === "daily").length;
   return {
     ticketDay: day,
-    freePerDay: FREE_TICKETS_PER_DAY,
-    freeLeft: Math.max(0, FREE_TICKETS_PER_DAY - usedToday.length),
-    paidLeft: Math.max(0, Number(bought?.tickets ?? 0) - (paidUses?.n ?? 0)),
-    nextRefillAt: toIsoTime(nextTicketDayStart(now, holder.timeZone)),
+    dailyPerDay: DAILY_TICKETS_PER_DAY,
+    dailyLeft: Math.max(0, DAILY_TICKETS_PER_DAY - dailyUsed),
+    reserveLeft: Math.max(0, Number(bought?.tickets ?? 0) - (reserveUses?.n ?? 0)),
+    nextRefillAt: toIsoTime(nextTokyoTicketDayStart(now)),
     usedToday,
-    packs: [...TICKET_PACKS],
   };
 }
+
+/** Spending a ticket: the kind the start screen offered. */
+export const spendRequestSchema = createInsertSchema(ticketUses).pick({ kind: true });
 
 /** A spent ticket, as spending answers it. */
 export const ticketUseSchema = createSelectSchema(ticketUses, {
   ticketDay: z.iso.date(),
   dayIndex: (schema) => schema.nonnegative(),
 })
-  .pick({ id: true, ticketDay: true, dayIndex: true })
+  .pick({ id: true, ticketDay: true, dayIndex: true, kind: true })
   .extend({ spentAt: isoTimeSchema });
 export type TicketUse = z.infer<typeof ticketUseSchema>;
 
@@ -82,6 +90,7 @@ export const toTicketUse = (use: typeof ticketUses.$inferSelect): TicketUse => (
   id: use.id,
   ticketDay: use.ticketDay,
   dayIndex: use.dayIndex,
+  kind: use.kind,
   spentAt: toIsoTime(use.createdAt),
 });
 

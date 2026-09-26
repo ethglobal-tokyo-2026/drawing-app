@@ -1,4 +1,7 @@
-/** The hour a ticket day turns over, on the person's own clock. */
+/**
+ * The hour the zone-based days below turn over: Explore's day and week. Tickets use the Tokyo
+ * ticket day at the bottom, which turns over at midnight.
+ */
 export const TICKET_DAY_START_HOUR = 4;
 
 /** `timeZone`'s wall clock at `at`, to the second. */
@@ -60,3 +63,17 @@ export function ticketDayStart(day: string, timeZone: string): Date {
 /** When the ticket day after `at`'s begins: the next refill of free tickets. */
 export const nextTicketDayStart = (at: Date, timeZone: string): Date =>
   ticketDayStart(addDays(ticketDay(at, timeZone), 1), timeZone);
+
+/** Ticket days run midnight to midnight, Tokyo time, for everyone. Japan keeps no daylight saving time. */
+const TOKYO_UTC_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+/** The ticket day `at` falls in: its `YYYY-MM-DD` in Tokyo. */
+export const tokyoTicketDay = (at: Date): string => dayKey(at.getTime() + TOKYO_UTC_OFFSET_MS);
+
+/** When `day` begins: its midnight, Tokyo time. */
+export const tokyoTicketDayStart = (day: string): Date =>
+  new Date(Date.parse(day) - TOKYO_UTC_OFFSET_MS);
+
+/** When the ticket day after `at`'s begins: the next midnight, Tokyo time, when daily tickets refill. */
+export const nextTokyoTicketDayStart = (at: Date): Date =>
+  tokyoTicketDayStart(addDays(tokyoTicketDay(at), 1));

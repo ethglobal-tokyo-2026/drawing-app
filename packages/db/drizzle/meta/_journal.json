@@ -15,6 +15,13 @@
       "when": 1790393260978,
       "tag": "0001_updated_at_triggers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790400916790,
+      "tag": "0002_daily_and_reserve_tickets",
+      "breakpoints": true
     }
   ]
 }
