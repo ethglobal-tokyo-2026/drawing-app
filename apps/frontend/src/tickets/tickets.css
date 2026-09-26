@@ -47,8 +47,8 @@
 
 /* The one reserve ticket the reserve ask is about, with room above it for its count's badge. */
 .out-of-tickets__art--hero {
-  height: 132px;
-  padding-top: 16px;
+  height: 138px;
+  padding-top: 22px;
 }
 
 /* Reserve tickets held behind the day's stubs: one small reserve ticket, ×count and the caption. */
