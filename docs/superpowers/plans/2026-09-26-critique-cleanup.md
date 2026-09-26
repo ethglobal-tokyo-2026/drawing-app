@@ -91,6 +91,8 @@ Another branch changes the session to 3 minutes, so no new code or copy assumes 
 - [x] C2 Ignore `.playwright-mcp/`, the detector's caches and critique snapshots.
 - [ ] C3 After Board merges, split the bundle: lazy-load the tray, the detail, the stat board, Giving and the LIFF SDK. The entry chunk is over Vite's 500 kB warning.
 - [ ] C4 Push. The whole-app critique isn't re-run yet (owner, 2026-09-26).
+- [ ] C5 Critique and code-review the sticker board and `stickers/` once the three streams have merged, and fix what they find on a branch.
+- [ ] C6 Clean up: remove merged, finished worktrees and branches (asking each owner first for work that isn't this plan's), this plan, and the scratch files.
 
 ## Detail "lift off the board"
 
