@@ -44,7 +44,7 @@ What the server will store and serve, so UI work and mocks can line up with it w
 ### Receiving
 
 - The Gift Message's link carries the Gift Claim Token. The first person to receive gets the sticker; a forwarded link fails for everyone after.
-- **Seeing it first:** opening the link previews the gift. For an open the gift can be received from, the preview includes the sticker, so the torn bag shows it before Accept; Accept receives it.
+- **Seeing it first:** opening the link previews the gift. For an open the gift can be received from, the preview includes the sticker, so unpackaging shows it before Accept; Accept receives it.
 - **The terms line:** Accept carries it, so receiving sets `terms_accepted_at` when it's unset.
 - **Refused:**
   - opens from a group, a multi-person chat or an OpenChat;
@@ -214,7 +214,7 @@ Inserted at Packaging.
 | `claim_tx_hash`      | text, null         |                                                                 | the server sends `claimGift`              |                                     |
 | `reject_tx_hash`     | text, null         |                                                                 | the server sends `rejectGift`             |                                     |
 | `return_tx_hash`     | text, null         |                                                                 | the server sends `returnExpiredGift`      |                                     |
-| `pushed_to_giver_at` | int (ms), null     |                                                                 | the "accepted your sticker" push goes out |                                     |
+| `pushed_to_giver_at` | int (ms), null     |                                                                 | the "received your sticker" push goes out |                                     |
 
 | `status`    | Means                                             | Giver sees                                  | Whoever opens the link sees        |
 | ----------- | ------------------------------------------------- | ------------------------------------------- | ---------------------------------- |
@@ -236,13 +236,13 @@ Inserted at Packaging.
 - Nothing is sent or received before the deposit (`escrow_status` `pending`).
 - A gift can't be received by its giver.
 
-### `gratitude`: one row per received gift that was thanked
+### `gratitude`: one row per received gift that gratitude was sent for
 
 Inserted when the receiver's Mini-game combo is recorded.
 
 | Column                            | Type             | Values                           | Set when                                | Meaning                                                                 |
 | --------------------------------- | ---------------- | -------------------------------- | --------------------------------------- | ----------------------------------------------------------------------- |
-| `gift_id`                         | text, PK → gifts |                                  | recorded                                | the received gift it thanks; one gratitude per gift                     |
+| `gift_id`                         | text, PK → gifts |                                  | recorded                                | the received gift it's for; one gratitude per gift                      |
 | `idempotency_key`                 | text             | UUID; unique                     | recorded                                | made on the device at the first hit                                     |
 | `method`                          | text             | `tap`, `stroke`, `shake`         | recorded                                | the method the combo ended in                                           |
 | `hits`                            | int              | 1–120                            | recorded                                | counted taps, stroke passes or shake reversals                          |
@@ -407,7 +407,7 @@ Both are JSON with a version field. The replay travels as JSON; the server gzips
 interface ReplayV1 {
   v: 1;
   seed: number; // pop-in lines and particles
-  intensity: number; // 0–1, the thanker's setting
+  intensity: number; // 0–1, the receiver's setting
   stage: [width: number, height: number]; // px
   durationMs: number; // 0–8000
   endReason: "sent" | "empty" | "cap" | "hidden" | "closed";
@@ -449,7 +449,7 @@ interface TimelapseV1 {
 
 ### Stickers
 
-**`POST /api/stickers`** seals a drawing. The request is `multipart/form-data`:
+**`POST /api/stickers`** seals a sticker. The request is `multipart/form-data`:
 
 | Part          | Type                     | Values                                    |
 | ------------- | ------------------------ | ----------------------------------------- |

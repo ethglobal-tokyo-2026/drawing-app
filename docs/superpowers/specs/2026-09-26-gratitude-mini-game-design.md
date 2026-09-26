@@ -1,6 +1,6 @@
 # Gratitude mini-game: design
 
-2026-09-26. Part 1 of gratitude: the thanker's (Gratitude) Mini-game, as designed, with the combo timing from PRODUCT.md. Built tap-first as a demo (phase A), then stroke, shake and the motion ask (phase B).
+2026-09-26. Part 1 of gratitude: the receiver's (Gratitude) Mini-game, as designed, with the combo timing from PRODUCT.md. Built tap-first as a demo (phase A), then stroke, shake and the motion ask (phase B).
 
 **Sources.** `DESIGN` = the design drafts' `drawing-app/` directory (`ethglobal-tokyo-2026-design-drafts`, checked out beside this repo). `P` = `DESIGN/prototype`.
 
@@ -11,7 +11,7 @@
 
 ## Decisions
 
-1. **Part 1 is the thanker's side only.** Part 2 (receiving) adds the Send gratitude sheet after Accept, one stored gratitude per gift and the replay. Part 3 adds the giver's side, the LINE notice and the server's check.
+1. **Part 1 is the receiver's side only.** Part 2 (receiving) adds the Send gratitude sheet after Accept, one stored gratitude per gift and the replay. Part 3 adds the giver's side, the LINE notice and the server's check.
 2. **The drain speeds up** (PRODUCT.md line 52), so every combo ends by about 6 s. This replaces `P`'s constant drain, under which a two-thumb masher went on for about 11 s and 20 or more taps a second never ended. The tier thresholds move to fit.
 3. **One tap sends; a second tap within the catch window starts the combo**, as in DESIGN.md and `P`.
 4. **Tap first.** Phase A is the tap demo. Phase B adds stroke, shake and the motion ask.
@@ -71,7 +71,7 @@
 
 ```ts
 interface GratitudeResult {
-  /** The sticker it thanks. Part 2 records the gift instead. */
+  /** The sticker the gratitude is for. Part 2 records the gift instead. */
   stickerId: string;
   /** The method the combo ended in. */
   method: "tap" | "stroke" | "shake";
@@ -254,7 +254,7 @@ Paths are under `apps/frontend/src/gratitude/` unless they name another folder.
 ## Later
 
 - Condensation at オーバーヒート and clouds at 昇天.
-- **Part 2:** the Send gratitude sheet after Accept, one stored gratitude per gift, and the replay when a thanked sticker is reopened.
+- **Part 2:** the Send gratitude sheet after Accept, one stored gratitude per gift, and the replay when a sticker you sent gratitude for is reopened.
 - **Part 3:** the giver's pink tag, replay card and warmer glow, the LINE notice, and the server's check.
 - **The stand-in plan** (`docs/superpowers/plans/2026-09-25-gratitude-heart-stand-in.md`) is deleted when this spec's implementation plan lands. Its recording contract lives on in the draft schema's `gratitude` table.
 - **The draft schema** has every column the result needs, and its limits fit: 1–120 hits (a combo tops out near 100), 8,000ms, tiers 0–4, multiplier 1–8. Its `end_reason` column and `comboEndReasons` list can go, since nothing reads them. Its `tuning_version` becomes `game_config_version`, to match `gameConfig.ts` (agreed 2026-09-26).

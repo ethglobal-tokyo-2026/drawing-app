@@ -8,7 +8,7 @@ How the (Gratitude) Mini-game works, for whoever changes or tunes it. The code i
 
 ## What it is
 
-After receiving a sticker, the thanker taps, strokes or shakes a heart to make gratitude for the sticker's giver. Each counted tap, stroke pass or shake reversal is one hit. One tap sends a plain thank-you. A second tap within the catch window starts a combo.
+After receiving a sticker, the receiver taps, strokes or shakes a heart to make gratitude for the sticker's giver. Each counted tap, stroke pass or shake reversal is one hit. One tap sends plain gratitude. A second tap within the catch window starts a combo.
 
 **Where it opens today:** "Try the gratitude mini-game", on the stat board's developer slip, opens it for your newest sticker on the board, with you as the giver. With no stickers it's disabled and says "Draw a sticker first". The dev server always shows the slip, and a build shows it only with `VITE_DEV_SLIP=on`, which `deploy/deploy.sh` sets. Two switches, kept on the device, sit beside it: Full effects and Show frame times. Nothing stores the result yet.
 
