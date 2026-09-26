@@ -474,6 +474,7 @@ The board's back, where a person's figures are pinned up as paper. It's the only
 - **Bests:** a torn notebook scrap with grape rules, held by washi. Best combo on it is the hit counter.
 - **About:** the ENS name and the joined date on Ink label-maker tape with raised letters; the ENS strip copies the name.
 - **Controls:** Flip back is label stock at the foot of the right column. Bare cork, Escape and LINE's Back also flip back. Your own back adds Share my board (aqua label) and QR code. The back has no key.
+- **Settings:** your own back's last paper, a clean-cut index card taped at both top corners, its Title-type heading over an Ink rule. Until it scrolls into view its heading peeks above the cork's foot; a tap or focus scrolls it in. Language is ruled 44px radio rows (Same as LINE, English, 日本語) with an Ink dot in a ring for the pick; a failed save shows its reason on Tomato Soft.
 - **Empty values** read in words: "No gratitude yet", "Not started", "None yet".
 
 ### Someone else's board
