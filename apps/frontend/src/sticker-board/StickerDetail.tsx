@@ -139,7 +139,7 @@ export function StickerDetail({
       const el = originOf?.(id);
       const s = stickers.find((x) => x.id === id);
       if (!el || !s) return null;
-      // A sticker given away, or on its way, lifts out of its given sticker silhouette.
+      // A given sticker fades in out of its blank spot in the sticker tray, which stays.
       return { el, turn: s.placement.r, given: !s.held || s.openGift?.status === "sent" };
     },
     into: DETAIL,

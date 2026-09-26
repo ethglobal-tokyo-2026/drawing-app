@@ -47,6 +47,7 @@ const api: TrayBoard = {
   place: () => Promise.resolve(null),
   remove: () => {},
   pulse: () => {},
+  openGiven: () => {},
 };
 const render = (
   stickers: BoardStickerView[],
@@ -124,6 +125,29 @@ describe("StickerTray", () => {
     expect(await again).toBe(false);
     expect(await first).toBe(true);
     expect(remove).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves a given sticker's blank spot, a button that opens it among the stickers you gave", async () => {
+    const openGiven = vi.fn();
+    const bob = { id: "bob", handle: "bob", name: "Bob", ageStatus: "adult" as const };
+    render(
+      [
+        sticker("given", 1, false, { held: false, givenTo: { receiver: bob, receivedAt: 2 } }),
+        sticker("sent", 3, false, { openGift: { id: "g", status: "sent" } }),
+      ],
+      { openGiven },
+    );
+    await act(async () => void (await tray.current?.open()));
+    const spot = board.querySelector<HTMLElement>('.tray__slot[data-id="given"]');
+    expect(spot?.getAttribute("aria-label")).toBe("No.0001, given to @bob. Open it");
+    // Blank: nothing of the sticker shows, and it takes the shared press.
+    expect(spot?.children).toHaveLength(0);
+    expect(spot?.getAttribute("data-press")).toBe("");
+    // A sticker on its way leaves nothing to tap: the pending gifts badge holds it.
+    expect(slotOf("sent")).toBeNull();
+
+    act(() => spot?.click());
+    expect(openGiven).toHaveBeenCalledExactlyOnceWith("given");
   });
 
   it("reports what the open tray showed as seen once it shuts, once", async () => {

@@ -362,6 +362,11 @@ export const stickerBoard = {
         en: "{{no}}, new. Drag it onto your board, or tap to stick it on",
         ja: "{{no}}、新着。ボードへドラッグするか、タップすると貼れます",
       },
+      /** Sticker tray: screen readers' name for the blank spot a sticker you gave left on its sheet, a button that opens it among the stickers you gave; {{recipient}} is who received it, such as "@bob" */
+      given: {
+        en: "{{no}}, given to {{recipient}}. Open it",
+        ja: "{{no}}、{{recipient}}さんへ贈ったシールをひらく",
+      },
     },
     /** Sticker tray: screen readers' name for the +1 button under the stack, which spreads every sheet out over the board */
     moreSheets_one: { en: "{{count}} more sheet. Spread every sheet out" },
@@ -391,7 +396,7 @@ export const stickerBoard = {
     back: { en: "Sticker board", ja: "シールボード" },
     /** Sticker detail, opened from a sticker you hold: screen readers' name for the strip of sticker thumbnails at the top */
     yourStickers: { en: "Your stickers", ja: "手持ちのシール" },
-    /** Sticker detail, among the stickers you gave: screen readers' name for the strip of thumbnails of the stickers you gave */
+    /** Sticker detail, opened from a given sticker's blank spot in the sticker tray: screen readers' name for the strip of thumbnails of the stickers you gave */
     stickersYouGave: { en: "Stickers you gave", ja: "贈ったシール" },
     /** Sticker detail: screen readers' name for the left arrow under the sticker, which pages to the previous one */
     previous: { en: "Previous sticker", ja: "前のシール" },

@@ -1,5 +1,5 @@
 import { useImperativeHandle, useLayoutEffect, useRef, type Ref } from "react";
-import type { BoardStickerView } from "../boardSticker";
+import { handleOf, type BoardStickerView } from "../boardSticker";
 import {
   createTrayEngine,
   type TrayBoard,
@@ -51,6 +51,7 @@ function trayStickers(stickers: readonly BoardStickerView[], ownerId: string): T
       seen: s.seenAt !== null,
     };
     if (s.outline !== undefined) sticker.outline = s.outline;
+    if (!s.held && s.givenTo) sticker.givenTo = handleOf(s.givenTo.receiver);
     return [sticker];
   });
 }
@@ -77,6 +78,7 @@ export function StickerTray({ board, stickers, ownerId, api, onSeen, ref }: Prop
       place: (id, at) => latest.current.api.place(id, at),
       remove: (id) => latest.current.api.remove(id),
       pulse: (id) => latest.current.api.pulse(id),
+      openGiven: (id) => latest.current.api.openGiven(id),
     };
     const tray = createTrayEngine(board, {
       slots: () => {
