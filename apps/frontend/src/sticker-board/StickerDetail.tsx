@@ -270,7 +270,8 @@ export function StickerDetail({
               </p>
               {mode === "given" && gift?.state === "sent" && (
                 <p className="fine sticker-detail__fine-print">
-                  Given to a friend on {formatDay(gift.sentAt)}
+                  Given to {gift.to ? formatHandle(gift.to) : "a friend"} on{" "}
+                  {formatDay(gift.sentAt)}
                 </p>
               )}
             </section>

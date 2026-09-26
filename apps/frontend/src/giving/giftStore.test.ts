@@ -15,6 +15,15 @@ describe("gift store", () => {
     expect(createGiftStore(storage).list()).toEqual([packed("g1", "s1")]);
   });
 
+  it("keeps the recipient of a gift given to an artist in the app, for the board to name", () => {
+    const storage = memoryStorage();
+    const given: GiftRecord = { ...packed("g1", "s1"), state: "sent", sentAt: 2, to: "mika" };
+    createGiftStore(storage).put(given);
+    const reloaded = createGiftStore(storage).list();
+    expect(reloaded).toEqual([given]);
+    expect(giftStatusBySticker(reloaded).get("s1")).toMatchObject({ state: "sent", to: "mika" });
+  });
+
   it("skips unreadable gifts, says which, and leaves them in storage for review", () => {
     const storage = memoryStorage({
       "draw.gift.broken": "{not json",

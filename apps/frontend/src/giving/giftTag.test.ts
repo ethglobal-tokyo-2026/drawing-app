@@ -6,6 +6,10 @@ describe("giftTag", () => {
     expect(giftTag("alice")).toEqual({ label: "From", name: "@alice" });
     expect(giftTag("@alice")).toEqual(giftTag("alice"));
   });
+
+  it("names the recipient instead when the gift went to an artist in the app", () => {
+    expect(giftTag("alice", "mika")).toEqual({ label: "For", name: "@mika" });
+  });
 });
 
 describe("sealDate", () => {
