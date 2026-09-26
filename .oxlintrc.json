@@ -70,7 +70,7 @@
     },
     {
       "files": ["apps/frontend/src/line/**"],
-      "rules": { "react/jsx-no-literals": "off" }
+      "rules": { "react/jsx-no-literals": "error" }
     },
     {
       "files": ["apps/frontend/src/offers/**"],
