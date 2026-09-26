@@ -9,6 +9,8 @@ import {
 import { GAME_CONFIG, type GameConfig } from "./gameConfig";
 
 type Ended = Extract<ComboEvent, { kind: "ended" }>;
+/** How long one tap's combo lasts: a full bar, held through the tier-up its ありがと brings. */
+const oneTapMs = () => fullBarSeconds() * 1000 + GAME_CONFIG.tierUpFreezeMs;
 const endOf = (events: readonly ComboEvent[]) => events.find((e): e is Ended => e.kind === "ended");
 
 interface PlayOptions {
@@ -69,27 +71,22 @@ function mash(config: GameConfig) {
 }
 
 describe("createGratitudeCombo", () => {
-  it("sends with one tap when no second tap catches the heart", () => {
+  it("starts the bar, full, on the first tap", () => {
     const combo = createGratitudeCombo();
-    combo.tapHeart(5000);
-    expect(combo.advanceTo(5000 + GAME_CONFIG.catchWindowMs - 1)).toEqual([]);
-    const end = endOf(combo.advanceTo(5000 + GAME_CONFIG.catchWindowMs));
-    expect(end).toMatchObject({
-      caught: false,
-      record: {
-        hits: 1,
-        hitTimes: [0],
-        durationMs: GAME_CONFIG.catchWindowMs,
-        total: GAME_CONFIG.gratitudePerHit,
-      },
-    });
+    expect(combo.tapHeart(0).map((e) => e.kind)).toEqual(["started", "hit", "tier"]);
+    expect(combo.view).toMatchObject({ phase: "running", tier: 0, barFill: 1 });
   });
 
-  it("starts the bar, full, when a second tap catches the heart", () => {
+  it("waits a full bar after one tap for the next, and sends that tap's gratitude if none comes", () => {
     const combo = createGratitudeCombo();
-    combo.tapHeart(0);
-    expect(combo.tapHeart(300).map((e) => e.kind)).toEqual(["caught", "hit", "tier"]);
-    expect(combo.view).toMatchObject({ phase: "running", tier: 0, barFill: 1 });
+    combo.tapHeart(5000);
+    expect(endOf(combo.advanceTo(5000 + oneTapMs() - 50))).toBeUndefined();
+    const end = endOf(combo.advanceTo(5000 + oneTapMs() + 50));
+    expect(end).toMatchObject({
+      reason: "empty",
+      record: { hits: 1, hitTimes: [0], total: GAME_CONFIG.gratitudePerHit },
+    });
+    expect(end?.record.durationMs).toBeCloseTo(oneTapMs(), -1);
   });
 
   it("lasts longer and reaches a higher tier and total the faster the taps", () => {
@@ -125,17 +122,16 @@ describe("createGratitudeCombo", () => {
     const combo = createGratitudeCombo();
     [0, 200, 400].forEach((t) => combo.tapHeart(t));
     expect(endOf(combo.endCombo(500, "hidden"))).toMatchObject({
-      caught: true,
       reason: "hidden",
       record: { hits: 3, durationMs: 500 },
     });
   });
 
-  it("says why it ended: sent, empty, cap, or the caller's hidden or closed", () => {
-    const sent = createGratitudeCombo();
-    sent.tapHeart(5000);
-    expect(endOf(sent.advanceTo(5000 + GAME_CONFIG.catchWindowMs))).toMatchObject({
-      reason: "sent",
+  it("says why it ended: empty, cap, or the caller's hidden or closed", () => {
+    const empty = createGratitudeCombo();
+    empty.tapHeart(5000);
+    expect(endOf(empty.advanceTo(5000 + oneTapMs() + 50))).toMatchObject({
+      reason: "empty",
       startedAt: 5000,
     });
     expect(endOf(play(5).events)?.reason).toBe("empty");
@@ -143,19 +139,15 @@ describe("createGratitudeCombo", () => {
     expect(endOf(play(10, { config: slowDrain }).events)?.reason).toBe("cap");
     const closed = createGratitudeCombo();
     closed.tapHeart(0);
-    expect(endOf(closed.endCombo(400, "closed"))).toMatchObject({
-      reason: "closed",
-      caught: false,
-    });
+    expect(endOf(closed.endCombo(400, "closed"))?.reason).toBe("closed");
   });
 
   it("keeps a rule's reason when the rule ended it before the caller did", () => {
     const combo = createGratitudeCombo();
     combo.tapHeart(0);
-    expect(endOf(combo.endCombo(GAME_CONFIG.catchWindowMs + 500, "hidden"))).toMatchObject({
-      reason: "sent",
-      record: { durationMs: GAME_CONFIG.catchWindowMs },
-    });
+    const end = endOf(combo.endCombo(oneTapMs() + 500, "hidden"));
+    expect(end?.reason).toBe("empty");
+    expect(end?.record.durationMs).toBeCloseTo(oneTapMs(), -1);
   });
 
   it("gives each hit and rate-limited touch its time in the record", () => {
@@ -187,20 +179,18 @@ describe("createGratitudeCombo", () => {
   it("holds the combo clock through a tier-up's freeze, and lifts it when the combo ends", () => {
     const { tierUpFreezeMs } = GAME_CONFIG;
     const combo = createGratitudeCombo();
+    // The first tap brings ありがと, a tier-up.
     combo.tapHeart(0);
-    // The catch brings ありがと, a tier-up.
-    combo.tapHeart(300);
     const { secondsLeft } = combo.view;
-    combo.advanceTo(300 + tierUpFreezeMs - 1);
+    combo.advanceTo(tierUpFreezeMs - 1);
     expect(combo.view).toMatchObject({ frozen: true, secondsLeft });
-    combo.advanceTo(300 + tierUpFreezeMs + 100);
+    combo.advanceTo(tierUpFreezeMs + 100);
     expect(combo.view.frozen).toBe(false);
     expect(combo.view.secondsLeft).toBeLessThan(secondsLeft);
 
     const endedInFreeze = createGratitudeCombo();
     endedInFreeze.tapHeart(0);
-    endedInFreeze.tapHeart(300);
-    endedInFreeze.endCombo(300 + tierUpFreezeMs / 2, "closed");
+    endedInFreeze.endCombo(tierUpFreezeMs / 2, "closed");
     expect(endedInFreeze.view).toMatchObject({ phase: "ended", frozen: false });
   });
 
@@ -261,7 +251,7 @@ function playMethod(method: "stroke" | "shake", rate: number) {
 describe("strokes and shakes", () => {
   it("starts the bar at once when stroke unlocks before any tap", () => {
     const combo = createGratitudeCombo();
-    expect(combo.commitTo("stroke", 0).map((e) => e.kind)).toEqual(["caught", "hit", "tier"]);
+    expect(combo.commitTo("stroke", 0).map((e) => e.kind)).toEqual(["started", "hit", "tier"]);
     expect(combo.view).toMatchObject({ phase: "running", method: "stroke", barFill: 1 });
   });
 

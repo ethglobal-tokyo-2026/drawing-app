@@ -849,6 +849,7 @@
   left: 0;
   right: 0;
   margin: 0;
+  padding: 0 16px;
   text-align: center;
   pointer-events: none;
   font-size: 21px;
@@ -1130,13 +1131,13 @@
   display: flex;
   margin-top: 18px;
 }
-.gr-receipt[data-kind="combo"] .gr-rc-row {
+.gr-receipt .gr-rc-row {
   align-items: flex-start;
 }
-.gr-receipt[data-kind="combo"] .gr-rc-figure {
+.gr-receipt .gr-rc-figure {
   display: block;
 }
-.gr-receipt[data-kind="combo"] .gr-rc-head {
+.gr-receipt .gr-rc-head {
   margin-top: 6px;
   font-size: 19px;
 }
