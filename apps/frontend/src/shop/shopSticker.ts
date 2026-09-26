@@ -17,7 +17,7 @@ export interface ShopSticker {
 }
 
 /** A cat drawn and sealed with the app's own brush, fill and cut, for artists with no sticker yet. */
-export const SAMPLE_STICKER: ShopSticker = {
+const SAMPLE_STICKER: ShopSticker = {
   urls: { png: samplePng, mask: sampleMask, spec: sampleSpec, rim: sampleRim },
   width: 374,
   height: 384,
@@ -25,7 +25,7 @@ export const SAMPLE_STICKER: ShopSticker = {
 };
 
 /** The newest sticker you drew and still hold, with the mask its finishes need; null when there's none. */
-export function newestOwnSticker(board: StickerBoard): ShopSticker | null {
+function newestOwnSticker(board: StickerBoard): ShopSticker | null {
   let newest: (ShopSticker & { sealedAt: number }) | null = null;
   for (const b of board.boardStickers) {
     if (!b.held || b.sticker.artist.id !== board.owner.id) continue;

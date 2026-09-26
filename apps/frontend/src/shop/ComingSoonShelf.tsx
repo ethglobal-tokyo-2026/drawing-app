@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from "react";
 import { useTranslation } from "../i18n/react";
 
-export interface ShelfItem {
+interface ShelfItem {
   id: string;
   name: string;
   /** The item shown on its swatch. */
