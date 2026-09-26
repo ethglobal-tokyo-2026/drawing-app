@@ -1,4 +1,5 @@
 import { formatHandle } from "../stickers/format";
+import { isNsfwSticker } from "../stickers/nsfwDemo";
 import type { Placement as RecordPlacement } from "../sticker-board/placement";
 import type { StickerUrls } from "../stickers/stickerUrls";
 import type { IsoTime, Person, Placement, Sticker } from "@drawing-app/api/client";
@@ -31,6 +32,8 @@ export interface StickerView {
   sealedAt: number;
   /** <number>.<artist>.croquis.eth, once it's onchain. */
   ensName?: string;
+  /** An NSFW sticker: pink foil, and blurred for anyone not adult. */
+  nsfw: boolean;
 }
 
 export const toMs = (t: IsoTime): number => Date.parse(t);
@@ -60,6 +63,7 @@ export const toSticker = (s: Sticker): StickerView => ({
   },
   sealedAt: toMs(s.sealedAt),
   ...(s.ensName && { ensName: s.ensName }),
+  nsfw: isNsfwSticker(s),
 });
 
 /** The app's placement names: `on`, `s` and `r` for `onBoard`, `scale` and `rotation`. */

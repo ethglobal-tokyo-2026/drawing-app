@@ -37,6 +37,18 @@
   text-wrap: balance;
 }
 
+/* An NSFW sticker's mark beside "Sealed". */
+.sealed-card__nsfw {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--pink);
+  color: #fff;
+  font: 800 13px/1 var(--font-ui);
+  vertical-align: middle;
+}
+
 /* A long name wraps the line evenly rather than leaving an orphan. */
 .sealed-card__fine {
   margin: 9px 0 0;

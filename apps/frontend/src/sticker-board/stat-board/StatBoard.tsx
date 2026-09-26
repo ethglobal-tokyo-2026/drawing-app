@@ -17,6 +17,7 @@ import { AddressPapers } from "./AddressPapers";
 import { useBoardAddress, useSuiAddress, type Chain } from "./addresses";
 import { DeveloperSlip } from "./DeveloperSlip";
 import { GratitudeDemoControls } from "./GratitudeDemoControls";
+import { NsfwDemoControls } from "./NsfwDemoControls";
 import { PerformanceRecorderControls } from "./PerformanceRecorderControls";
 import { SettingsNote } from "./SettingsNote";
 import { StatCork, type CorkFigures, type StatCorkHandle } from "./StatCork";
@@ -109,6 +110,7 @@ export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref
             <PrivyLine />
             <PrivyAccount />
             <GratitudeDemoControls onTry={onTryGratitudeMiniGame} />
+            <NsfwDemoControls />
             <PerformanceRecorderControls />
           </DeveloperSlip>
         )}

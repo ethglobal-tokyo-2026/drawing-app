@@ -88,3 +88,52 @@
   );
   transform: translateX(-110%);
 }
+
+/* An NSFW sticker's pink gloss: a faint pink sheen over the image, inside its cut. */
+.sticker-figure__gloss {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
+  mask: var(--m) 0 0 / 100% 100% no-repeat;
+  background: linear-gradient(
+    150deg,
+    rgba(255, 92, 159, 0.22),
+    rgba(255, 225, 238, 0.08) 45%,
+    rgba(255, 61, 140, 0.18)
+  );
+  mix-blend-mode: soft-light;
+}
+
+/* Veiled, for a viewer who isn't adult: the image blurs inside its cut, so the outline and the foil
+   stay sharp around it, and an 18+ mark sits in the middle. */
+.sticker-figure.is-veiled {
+  container-type: inline-size;
+}
+
+.sticker-figure.is-veiled .sticker-figure__img {
+  -webkit-mask: var(--m, none) 0 0 / 100% 100% no-repeat;
+  mask: var(--m, none) 0 0 / 100% 100% no-repeat;
+  filter: blur(clamp(6px, 9cqi, 18px)) saturate(0.7);
+}
+
+.sticker-figure__veil {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  -webkit-mask: var(--m, none) 0 0 / 100% 100% no-repeat;
+  mask: var(--m, none) 0 0 / 100% 100% no-repeat;
+  background: rgba(255, 240, 246, 0.42);
+}
+
+.sticker-figure__veil b {
+  padding: 0.2em 0.55em;
+  border-radius: 999px;
+  background: var(--pink);
+  color: #fff;
+  font: 800 clamp(9px, 13cqi, 22px) / 1 var(--font-ui);
+  letter-spacing: 0.04em;
+  box-shadow: 0 1px 0 var(--pink-deep);
+}

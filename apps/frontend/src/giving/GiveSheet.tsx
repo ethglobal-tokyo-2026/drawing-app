@@ -1,9 +1,11 @@
 import { Gift, X } from "@phosphor-icons/react";
 import { Suspense, useRef, useState } from "react";
 import { useMe } from "../api/meContext";
+import { ageStatusOf } from "../identity/ageStatus";
 import { useTranslation } from "../i18n/react";
 import { LIFF_ID } from "../line/liff";
 import { formatHandle, formatNo } from "../stickers/format";
+import { canGiveTo } from "../stickers/nsfw";
 import { useKeptStickers, type KeptSticker } from "../stickers/useKeptStickers";
 import { Key } from "../ui/Key";
 import { lazyWithPreload } from "../ui/lazyWithPreload";
@@ -38,6 +40,7 @@ export function GiveSheet({ to, toId, onClose }: Props) {
   const [giving, setGiving] = useState<KeptSticker | null>(null);
   const pickedSticker = stickers?.find((s) => s.id === picked);
   const me = useMe();
+  const recipientAge = ageStatusOf({ handle: to });
   const sender = useGiftSender();
   const root = useRef<HTMLDivElement>(null);
   useBackToClose(!giving, onClose);
@@ -92,7 +95,11 @@ export function GiveSheet({ to, toId, onClose }: Props) {
               picked={picked}
               onPick={setPicked}
               label={t(($) => $.giving.giveSheet.yourStickers)}
+              blocked={(s) => !canGiveTo(s, recipientAge)}
             />
+          )}
+          {stickers?.some((s) => !canGiveTo(s, recipientAge)) && (
+            <p className="fine giving__nsfw-note">{t(($) => $.giving.nsfw.adultsOnly, { name })}</p>
           )}
           {!sender && (
             <p className="giving__problem" role="alert">

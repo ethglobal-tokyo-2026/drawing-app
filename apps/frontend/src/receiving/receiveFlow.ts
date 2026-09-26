@@ -2,10 +2,15 @@ import type { ApiError } from "../api/apiClient";
 import type { GiftPreview, ReceivedGift, ReceiveRefusal } from "@drawing-app/api/client";
 import { toMs, toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
 import { errorReason } from "../i18n/errorMessage";
+import type { AgeStatus } from "../identity/ageStatus";
+import { canGiveTo } from "../stickers/nsfw";
 import { i18next } from "../i18n/i18n";
 
-/** Why a gift can't be received here: the REST doc's refusals, plus a link to no gift and no server. */
-export type RefusalKind = ReceiveRefusal | "gift_not_found" | "needs_server";
+/**
+ * Why a gift can't be received here: the REST doc's refusals, plus a link to no gift, no server, and
+ * an NSFW sticker for someone whose age status isn't adult.
+ */
+export type RefusalKind = ReceiveRefusal | "gift_not_found" | "needs_server" | "adults_only";
 
 /** A receivable preview, mapped: `sticker` is set, since only a receivable preview has one. */
 export interface GiftPreviewView {
@@ -27,7 +32,8 @@ export type ReceiveScreen =
   | { step: "failed"; message: string };
 
 export type ReceiveEvent =
-  | { type: "previewed"; preview: GiftPreview }
+  /** `viewer` is the opener's age status, which an NSFW sticker needs to be adult. */
+  | { type: "previewed"; preview: GiftPreview; viewer: AgeStatus }
   | { type: "previewFailed"; error: ApiError }
   /** Try again, after a refusal that may pass or a failed preview. */
   | { type: "retry" }
@@ -48,15 +54,23 @@ const REFUSAL_KINDS: Record<RefusalKind, true> = {
   not_deposited: true,
   gift_not_found: true,
   needs_server: true,
+  adults_only: true,
 };
 
 const isRefusal = (code: string): code is RefusalKind => Object.hasOwn(REFUSAL_KINDS, code);
 
-function opened({ giver, expiresAt, receivable, refusal, sticker }: GiftPreview): ReceiveScreen {
+function opened(
+  { giver, expiresAt, receivable, refusal, sticker }: GiftPreview,
+  viewer: AgeStatus,
+): ReceiveScreen {
   if (receivable && sticker) {
+    const view = toSticker(sticker);
+    if (!canGiveTo(view, viewer)) {
+      return { step: "refused", refusal: "adults_only", giver: toPerson(giver) };
+    }
     return {
       step: "sealed",
-      preview: { giver: toPerson(giver), sticker: toSticker(sticker), expiresAt: toMs(expiresAt) },
+      preview: { giver: toPerson(giver), sticker: view, expiresAt: toMs(expiresAt) },
     };
   }
   if (!receivable && refusal) return { step: "refused", refusal, giver: toPerson(giver) };
@@ -72,7 +86,7 @@ function opened({ giver, expiresAt, receivable, refusal, sticker }: GiftPreview)
 export function receiveFlow(screen: ReceiveScreen, event: ReceiveEvent): ReceiveScreen {
   switch (event.type) {
     case "previewed":
-      return screen.step === "opening" ? opened(event.preview) : screen;
+      return screen.step === "opening" ? opened(event.preview, event.viewer) : screen;
     case "previewFailed":
       if (screen.step !== "opening") return screen;
       return isRefusal(event.error.code)

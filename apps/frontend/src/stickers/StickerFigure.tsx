@@ -1,4 +1,5 @@
 import type { CSSProperties, Ref } from "react";
+import { useTranslation } from "../i18n/react";
 import type { Fold } from "./liftedCorner";
 import { LiveResin } from "./LiveResin";
 import { StickerFoil, type FoilSize } from "./StickerFoil";
@@ -15,6 +16,10 @@ interface Props {
   fold?: Fold | null;
   /** Holo foil, for a sticker someone other than the board's owner drew, sized for where it shows. */
   foil?: FoilSize;
+  /** An NSFW sticker: pink foil in place of holo, at `foil`'s size or the board's, and a pink gloss. */
+  nsfw?: boolean;
+  /** Blurred inside its cut, for a viewer who isn't adult; its outline and foil stay sharp. */
+  veiled?: boolean;
   /** The sticker's No., which staggers its foil's light against its neighbors'. */
   no?: number;
   /** Degrees it's turned on screen, which its foil's glint undoes. */
@@ -28,7 +33,7 @@ interface Props {
 const cssUrl = (url: string) => `url("${url}")`;
 
 /**
- * A sticker as material, filling its box: its foil when someone else drew it, the image with its
+ * A sticker as material, filling its box: its foil when someone else drew it or it's NSFW, the image with its
  * kiss-cut and cast shadow, live resin under the one light, a lifted corner, and the gloss sweep that
  * plays when it sticks. The parts shaped by the silhouette need the sticker's mask; without one it's
  * the image alone.
@@ -39,13 +44,17 @@ export function StickerFigure({
   height,
   fold,
   foil,
+  nsfw = false,
+  veiled = false,
   no = 0,
   turn = 0,
   reveal = false,
   className,
   ref,
 }: Props) {
+  const { t } = useTranslation();
   const { mask, spec, rim } = urls;
+  const foilSize = foil ?? (nsfw ? "board" : undefined);
   const style: CSSProperties = {
     "--ar": (width / height).toFixed(4),
     ...(mask && { "--m": cssUrl(mask) }),
@@ -62,12 +71,16 @@ export function StickerFigure({
   const classes = [
     "sticker-figure",
     mask && fold && "is-curled",
+    nsfw && "is-nsfw",
+    veiled && "is-veiled",
     reveal && "reveal-img",
     className,
   ].filter(Boolean);
   return (
     <span ref={ref} className={classes.join(" ")} style={style}>
-      {mask && foil && <StickerFoil size={foil} no={no} turn={turn} />}
+      {mask && foilSize && (
+        <StickerFoil size={foilSize} no={no} turn={turn} tone={nsfw ? "pink" : "holo"} />
+      )}
       {mask && <span className="sticker-figure__spot" aria-hidden="true" />}
       <img
         ref={
@@ -78,6 +91,14 @@ export function StickerFigure({
         alt=""
         draggable={false}
       />
+      {mask && nsfw && <span className="sticker-figure__gloss" aria-hidden="true" />}
+      {veiled && (
+        <span className="sticker-figure__veil">
+          <b role="img" aria-label={t(($) => $.stickers.nsfw.veiled)}>
+            {t(($) => $.stickers.nsfw.mark)}
+          </b>
+        </span>
+      )}
       {mask && (
         <>
           <LiveResin highlights={Boolean(spec && rim)} />

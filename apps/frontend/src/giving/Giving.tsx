@@ -25,8 +25,10 @@ import { GiftBag } from "./GiftBag";
 import type { GiftSender } from "./giftSender";
 import type { GiveFlowState } from "./giveFlow";
 import heroPng from "./gift-message-hero.png";
+import nsfwHeroPng from "./gift-message-hero-nsfw.png";
 import { createApiGiftBackend } from "./giftBackend";
 import { useGiveFlow } from "./useGiveFlow";
+import "../stickers/nsfw-img.css";
 import "./Giving.css";
 
 /** The sticker being given, as the board holds it. */
@@ -37,6 +39,8 @@ interface GivingSticker {
   createdAt: number;
   /** Its image, as an object URL. */
   url: string;
+  /** An NSFW sticker: it goes in the pink bag, and only an adult can open it. */
+  nsfw: boolean;
 }
 
 interface Props {
@@ -80,7 +84,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose, forUserId
       fromHandle,
       liffId,
       // The sealed bag, never the sticker; the gift message drops it where the app isn't on HTTPS.
-      heroUrl: new URL(heroPng, location.origin).href,
+      heroUrl: new URL(sticker.nsfw ? nsfwHeroPng : heroPng, location.origin).href,
       ...(forUserId && { forUserId }),
     }),
     pickerDelayMs: PICKER_DELAY[motion],
@@ -132,6 +136,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose, forUserId
       state={bagState}
       motion={state.step === "packed" ? "drop" : state.step === "takingOut" ? "takeOut" : undefined}
       sealedAt={sealedAt}
+      nsfw={sticker.nsfw}
     />
   );
 
@@ -177,6 +182,9 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose, forUserId
         <p className="giving__leaves">
           <StickerGlyph size={16} /> {t(($) => $.giving.sheet.leaves)}
         </p>
+        {sticker.nsfw && (
+          <p className="fine giving__nsfw-note">{t(($) => $.giving.nsfw.whoCanOpen)}</p>
+        )}
       </>
     );
   } else if (state.step === "sent") {
@@ -257,7 +265,12 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose, forUserId
     <div className="giving" ref={root} tabIndex={-1}>
       <div className="giving__sticker" aria-hidden="true">
         {screen === "sheet" ? (
-          <img className="giving__figure" src={sticker.url} alt="" draggable={false} />
+          <img
+            className={`giving__figure ${sticker.nsfw ? "nsfw-img" : ""}`}
+            src={sticker.url}
+            alt=""
+            draggable={false}
+          />
         ) : (
           <span
             className="giving__given-sticker-silhouette"

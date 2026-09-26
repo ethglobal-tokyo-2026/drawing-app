@@ -20,6 +20,7 @@ const sticker = (id: string): BoardStickerView => ({
   timeUsed: 60,
   width: 600,
   height: 600,
+  nsfw: false,
   outline: "M0 0L600 0L600 600Z",
   urls: { png: `/api/images/${id}.png`, mask: `/api/images/${id}-mask.png` },
   placement: { on: true, x: 0.5, y: 0.5, s: 1, r: 0, z: 1 },

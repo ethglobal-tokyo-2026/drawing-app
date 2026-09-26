@@ -1,4 +1,6 @@
 import { CaretLeft, Eye, Gift, Handshake } from "@phosphor-icons/react";
+import { useMyAgeStatus } from "../identity/useMyAgeStatus";
+import { veiledFor } from "../stickers/nsfw";
 import {
   useEffect,
   useId,
@@ -66,6 +68,7 @@ function StickerView({
 }) {
   const { t } = useTranslation();
   const drawnByOwner = sticker.artist.id === owner.id;
+  const myAge = useMyAgeStatus();
   const root = useRef<HTMLDivElement>(null);
   useBackToClose(true, onClose);
   useFocusTrap(root, { onEscape: onClose });
@@ -84,6 +87,8 @@ function StickerView({
           urls={sticker.urls}
           width={sticker.width}
           height={sticker.height}
+          nsfw={sticker.nsfw}
+          veiled={veiledFor(sticker, myAge)}
           className="visit-view-art"
         />
         <h2>{formatNo(sticker.no)}</h2>
@@ -112,6 +117,7 @@ function StickerView({
 export function ArtistBoard({ person, onBack }: Props) {
   const { t } = useTranslation();
   const owner = toPerson(person);
+  const myAge = useMyAgeStatus();
   const handle = person.handle ? formatHandle(person.handle) : owner.name;
   const title = t(($) => $.stickerBoard.artistBoard.title, { name: handle });
   const board = useApiQuery(`sticker-board/${person.id}`, (api) => api.stickerBoard(person.id));
@@ -277,6 +283,7 @@ export function ArtistBoard({ person, onBack }: Props) {
               setSize={stickers.length}
               hintId={hint}
               foil={s.artist.id !== person.id}
+              veiled={veiledFor(s, myAge)}
               by={s.artist.id !== person.id ? artistName(s.artist) : undefined}
             />
           ))}

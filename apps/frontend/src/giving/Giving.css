@@ -29,6 +29,11 @@
   filter: var(--sticker-cut) var(--sticker-cast);
 }
 
+.giving__figure.nsfw-img {
+  filter: var(--sticker-cut) drop-shadow(0 0 2px var(--foil-rose))
+    drop-shadow(0 0 5px var(--foil-blush));
+}
+
 .giving__given-sticker-silhouette {
   position: relative;
   width: 206px;
@@ -295,6 +300,12 @@
 }
 
 /* A problem stays on the sheet until the person moves on; it never vanishes as a toast. */
+/* Who can open an NSFW sticker's gift, or why it can't go to this person. */
+.giving__nsfw-note {
+  margin: 8px 0 0;
+  color: var(--pink-deep);
+}
+
 .giving__problem {
   margin: 12px 0 0;
   padding: 10px 12px;

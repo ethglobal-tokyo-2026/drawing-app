@@ -60,6 +60,24 @@ export const giving = {
     /** The give sheet on someone else's sticker board: its key, disabled, until you pick a sticker */
     pick: { en: "Pick a sticker", ja: "シールを選ぶ" },
   },
+  /** Giving an NSFW sticker, which only adults can receive. */
+  nsfw: {
+    /** The give sheet on someone else's sticker board, and the offer sheet's swap picker: said by assistive tech on an NSFW sticker that can't be picked because they aren't verified as an adult */
+    blocked: {
+      en: "for adults only, can’t be given to them",
+      ja: "成人向けのため、この人には贈れません",
+    },
+    /** The give sheet on someone else's sticker board: fine print under the grid when some of your stickers are NSFW and {{name}} isn't verified as an adult */
+    adultsOnly: {
+      en: "18+ stickers can only go to adults verified with World ID, and {{name}} isn’t.",
+      ja: "18+のシールは、World IDで年齢確認済みの成人にだけ贈れます。{{name}}はまだ確認されていません。",
+    },
+    /** Giving's first screen, for an NSFW sticker: fine print on who can open the gift */
+    whoCanOpen: {
+      en: "18+ sticker: only an adult verified with World ID can open this gift.",
+      ja: "18+のシール：World IDで年齢確認済みの成人だけがこのギフトをひらけます。",
+    },
+  },
   /** Giving: the sticker's fine print over the sheet, its number, drawing time, seal day and the giver's handle */
   meta: {
     en: "{{no}} · <duration/> · {{day}} · <name/>",
@@ -180,6 +198,8 @@ export const giving = {
       /** The gift bag's picture named for assistive tech: a gift that can't be received because it was already opened, taken back or returned */
       opened: { en: "The gift bag, open and empty", ja: "口があいて空になったギフト袋" },
     },
+    /** The gift bag's picture named for assistive tech, for an NSFW sticker's pink bag: {{pictured}} is the bag's state, as above */
+    nsfw: { en: "{{pictured}}, pink, marked 18+", ja: "{{pictured}}（ピンク、18+）" },
     /** The gift bag's picture named for assistive tech, with its tag's words after the bag's ("…, tagged From @alice") */
     tagged: {
       en: "{{pictured}}, tagged {{label}} {{name}}",
@@ -215,6 +235,10 @@ export const giving = {
       returned: {
         /** The rubber stamp on the tag of a gift that went back to its giver, unopened in time */
         big: { en: "Returned", ja: "返送済み" },
+      },
+      "adults-only": {
+        /** The rubber stamp on the tag of an NSFW sticker's gift, opened by someone not verified as an adult */
+        big: { en: "18+ only", ja: "18歳以上" },
       },
     },
   },

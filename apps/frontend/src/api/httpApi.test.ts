@@ -126,6 +126,7 @@ describe("sealing", () => {
     spec: new Blob(["spec"]),
     rim: new Blob(["rim"]),
     flat: new Blob(["flat"]),
+    nsfw: false,
   };
 
   /** The multipart body the seal sent. */

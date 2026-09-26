@@ -10,12 +10,15 @@ import type { TFunction } from "i18next";
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import { useMe } from "../api/meContext";
 import { useApiQuery, type Query } from "../api/useApiQuery";
-import { toPerson } from "../api/views";
+import { toPerson, toSticker } from "../api/views";
+import { useMyAgeStatus } from "../identity/useMyAgeStatus";
 import { errorReason } from "../i18n/errorMessage";
 import { formatCount } from "../i18n/format";
 import { Trans, useTranslation } from "../i18n/react";
 import { Duration } from "../stickers/Duration";
 import { formatHandle, formatMonthDay, formatNo } from "../stickers/format";
+import { veiledFor } from "../stickers/nsfw";
+import "../stickers/nsfw-img.css";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { REVEAL, revealOnLoad } from "../ui/reveal";
@@ -209,14 +212,19 @@ function ThisWeek({
   );
 }
 
-const StickerImage = ({ sticker, className }: { sticker: Sticker; className: string }) => (
-  <img
-    ref={revealOnLoad}
-    src={sticker.images.png}
-    alt=""
-    className={`sticker-image reveal-img ${className}`}
-  />
-);
+function StickerImage({ sticker, className }: { sticker: Sticker; className: string }) {
+  const myAge = useMyAgeStatus();
+  const view = toSticker(sticker);
+  const nsfw = view.nsfw ? `nsfw-img ${veiledFor(view, myAge) ? "is-veiled" : ""}` : "";
+  return (
+    <img
+      ref={revealOnLoad}
+      src={sticker.images.png}
+      alt=""
+      className={`sticker-image reveal-img ${nsfw} ${className}`}
+    />
+  );
+}
 
 /** What happened, as one sentence with its people in bold. */
 function FeedLine({ entry, meId }: { entry: ActivityEntry; meId: string }) {
