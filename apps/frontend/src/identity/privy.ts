@@ -8,7 +8,14 @@ export const PRIVY_APP_ID = "cmuh4s0lz01fn0cl143lomlzj";
 export type PrivyStatus =
   | { state: "off"; reason: string }
   | { state: "signing-in" }
-  | { state: "signed-in"; userId: string }
+  | {
+      state: "signed-in";
+      userId: string;
+      /** The Ethereum address Privy made at sign-in; it signs for the smart account. */
+      wallet?: string;
+      /** Once smart wallets are on: the account that holds the person's stickers. */
+      smartAccount?: string;
+    }
   | { state: "failed"; reason: string };
 
 let status: PrivyStatus = liffMockActive

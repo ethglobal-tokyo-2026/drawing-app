@@ -1,4 +1,12 @@
-import { PrivyProvider, useSubscribeToJwtAuthWithFlag, useWallets } from "@privy-io/react-auth";
+import {
+  PrivyProvider,
+  usePrivy,
+  useSubscribeToJwtAuthWithFlag,
+  useWallets,
+  type User,
+  type WalletWithMetadata,
+} from "@privy-io/react-auth";
+import { useEffect } from "react";
 import {
   fetchPrivyJwt,
   onPrivyError,
@@ -8,8 +16,19 @@ import {
   usePrivyStatus,
 } from "./privy";
 
-const onAuthenticated = ({ user }: { user: { id: string } }) =>
-  setPrivyStatus({ state: "signed-in", userId: user.id });
+// The Ethereum wallet Privy itself made, as opposed to one the person connected.
+const isPrivysWallet = (a: User["linkedAccounts"][number]): a is WalletWithMetadata =>
+  a.type === "wallet" && a.walletClientType === "privy" && a.chainType === "ethereum";
+
+const signedIn = (user: User) =>
+  setPrivyStatus({
+    state: "signed-in",
+    userId: user.id,
+    wallet: user.linkedAccounts.find(isPrivysWallet)?.address,
+    smartAccount: user.smartWallet?.address,
+  });
+
+const onAuthenticated = ({ user }: { user: User }) => signedIn(user);
 
 // A failed exchange has already put its reason in the status, which beats a generic one.
 const onUnauthenticated = () => {
@@ -33,6 +52,12 @@ function SyncLineToPrivy() {
     onUnauthenticated,
     onError: onPrivyError,
   });
+
+  // The wallet is made just after sign-in, so its address arrives in a later update of the user.
+  const { authenticated, user } = usePrivy();
+  useEffect(() => {
+    if (authenticated && user) signedIn(user);
+  }, [authenticated, user]);
   return null;
 }
 

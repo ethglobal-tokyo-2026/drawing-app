@@ -11,6 +11,7 @@ import {
 } from "react";
 import type { StickerGiftStatus } from "../../giving/giftStore";
 import { retryPrivySignIn, usePrivyStatus, type PrivyStatus } from "../../identity/privy";
+import { WalletLine } from "../../identity/WalletLine";
 import { firstSeen } from "../../identity/profile";
 import { useIdentity } from "../../identity/useIdentity";
 import { lineLogout } from "../../line/liff";
@@ -293,6 +294,7 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
             </h3>
             <SendTestMessage senderName={me.displayName} />
             <PrivyLine />
+            <WalletLine />
             {/* Outside LINE's app it's the only way to switch LINE accounts. */}
             {!me.inClient && (
               <QuietLink className="stat-board__logout" onClick={lineLogout}>
