@@ -5,19 +5,29 @@
    under a fine, still grating, so the band glitters rather than crawls; the glint follows the app's
    one light (light.ts). Both move by transform only and hold still under reduced motion. */
 .sticker-foil {
-  /* Nine copies of the silhouette at the image's size, which together dilate it: the center, four
-     sides and four diagonals. The band and its cast share them. */
-  --foil-d: calc(var(--foil-w) * 0.71);
+  /* Seventeen copies of the silhouette at the image's size, which together dilate it: the center, and
+     sixteen a band's width away, every 22.5°, so the band keeps an even width round curves and
+     points, where eight left lumps. The band and its cast share them. They're painted once, not
+     per frame. */
   --foil-s: calc(100% - var(--foil-w) * 2);
   --foil-copies:
-    var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m);
+    var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m),
+    var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m);
   --foil-at:
-    var(--foil-w) var(--foil-w), calc(var(--foil-w) * 2) var(--foil-w), 0 var(--foil-w),
-    var(--foil-w) 0, var(--foil-w) calc(var(--foil-w) * 2),
-    calc(var(--foil-w) + var(--foil-d)) calc(var(--foil-w) + var(--foil-d)),
-    calc(var(--foil-w) - var(--foil-d)) calc(var(--foil-w) + var(--foil-d)),
-    calc(var(--foil-w) + var(--foil-d)) calc(var(--foil-w) - var(--foil-d)),
-    calc(var(--foil-w) - var(--foil-d)) calc(var(--foil-w) - var(--foil-d));
+    var(--foil-w) var(--foil-w), calc(var(--foil-w) * 2) var(--foil-w),
+    calc(var(--foil-w) * 1.9239) calc(var(--foil-w) * 1.3827),
+    calc(var(--foil-w) * 1.7071) calc(var(--foil-w) * 1.7071),
+    calc(var(--foil-w) * 1.3827) calc(var(--foil-w) * 1.9239),
+    var(--foil-w) calc(var(--foil-w) * 2),
+    calc(var(--foil-w) * 0.6173) calc(var(--foil-w) * 1.9239),
+    calc(var(--foil-w) * 0.2929) calc(var(--foil-w) * 1.7071),
+    calc(var(--foil-w) * 0.0761) calc(var(--foil-w) * 1.3827), 0 var(--foil-w),
+    calc(var(--foil-w) * 0.0761) calc(var(--foil-w) * 0.6173),
+    calc(var(--foil-w) * 0.2929) calc(var(--foil-w) * 0.2929),
+    calc(var(--foil-w) * 0.6173) calc(var(--foil-w) * 0.0761), var(--foil-w) 0,
+    calc(var(--foil-w) * 1.3827) calc(var(--foil-w) * 0.0761),
+    calc(var(--foil-w) * 1.7071) calc(var(--foil-w) * 0.2929),
+    calc(var(--foil-w) * 1.9239) calc(var(--foil-w) * 0.6173);
   position: absolute;
   inset: 0;
   pointer-events: none;
