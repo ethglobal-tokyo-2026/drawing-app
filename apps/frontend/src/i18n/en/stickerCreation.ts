@@ -126,6 +126,8 @@ export const stickerCreation = {
   /** The backing card the sticker lands on. */
   sealedCard: {
     title: "Sealed",
+    /** The sticker's number, its drawing time, the day it was sealed and its artist's handle. */
+    finePrint: "{{no}} · <duration/> · {{day}} · {{handle}}",
     keepDrawing: "Keep drawing",
     goToStickerBoard: "Go to sticker board",
     shopForTickets: "Shop for tickets",
