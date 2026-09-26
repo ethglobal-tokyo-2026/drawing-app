@@ -70,15 +70,23 @@ const ceremony = (answer: Sticker | null, { handle = "alice", failed = false } =
   />
 );
 
-/** Opens the ceremony as `handle`, with `used` of the day's three tickets used. */
-async function seal(used: number, handle = "alice", answer: Sticker | null = sealed) {
-  const usedToday = Array.from({ length: used }, (_, i) => ({
+/**
+ * Opens the ceremony as `handle`, with `used` of the day's three tickets used, then `reserve.used`
+ * reserve tickets, and `reserve.left` still held.
+ */
+async function seal(
+  used: number,
+  handle = "alice",
+  answer: Sticker | null = sealed,
+  reserve = { used: 0, left: 0 },
+) {
+  const usedToday = Array.from({ length: used + reserve.used }, (_, i) => ({
     id: i + 1,
     dayIndex: i,
-    kind: "daily" as const,
+    kind: i < used ? ("daily" as const) : ("reserve" as const),
     sticker: null,
   }));
-  const tickets = { ...FRESH_TICKETS, dailyLeft: 3 - used, usedToday };
+  const tickets = { ...FRESH_TICKETS, dailyLeft: 3 - used, reserveLeft: reserve.left, usedToday };
   view = renderWithApi(
     ceremony(answer, { handle }),
     emptyApi({ tickets: () => Promise.resolve(tickets) }),
@@ -181,6 +189,20 @@ describe("SealCeremony", () => {
     expect(host.textContent).toContain(
       `That was today’s last ticket · new ones at ${formatRefillTime(nextRefill(NOW))}`,
     );
+  });
+
+  it("says the day's last daily ticket is gone only when this sticker used it", async () => {
+    const lastDaily = `That was today’s last daily ticket · new ones at ${formatRefillTime(nextRefill(NOW))}`;
+    await seal(3, "alice", sealed, { used: 0, left: 2 });
+    playThrough();
+    expect(host.textContent).toContain(lastDaily);
+    view?.unmount();
+
+    // A reserve ticket sealed this one: the daily tickets were already gone.
+    await seal(3, "alice", sealed, { used: 1, left: 1 });
+    playThrough();
+    expect(button("Keep drawing")).toBeTruthy();
+    expect(host.textContent).not.toContain("last daily ticket");
   });
 
   it("waits at the cut while the seal is on its way, then peels onto the card", async () => {
