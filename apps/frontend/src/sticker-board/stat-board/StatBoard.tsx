@@ -61,6 +61,12 @@ const figure = (n: number | null) => (n === null ? <Unknown /> : num(n));
 const ON_CORK =
   ".stat-board__note, .stat-board__stamp, .stat-board__tape, .stat-board__who, button";
 
+// The developer slip, LINE's and Privy's details for testing them from the board. The dev server shows
+// it unless `.env` says "off"; a build shows it only when it's "on".
+const DEV_SLIP = import.meta.env.VITE_DEV_SLIP
+  ? import.meta.env.VITE_DEV_SLIP === "on"
+  : import.meta.env.DEV;
+
 /** A paper hanging from its pin or tape swings and settles; `k` scales the swing and turns it. */
 function swing(paper: Element, k: number, delay = 0) {
   paper.animate(
@@ -118,10 +124,14 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
     if (e.target instanceof Element && !e.target.closest(ON_CORK)) onFlipBack();
   };
 
-  // A tap on a note's paper nudges it; its controls press without moving it.
+  // A tap on a note's paper nudges it. Its controls press, and its selectable text selects, without
+  // moving it.
   const nudge = (e: PointerEvent<HTMLDivElement>) => {
-    if (reduced || !(e.target instanceof Element) || e.target.closest("button")) return;
-    const note = e.target.closest(".stat-board__note");
+    const target = e.target;
+    if (reduced || !(target instanceof Element) || target.closest("button, a")) return;
+    const style = getComputedStyle(target);
+    if ((style.userSelect || style.getPropertyValue("-webkit-user-select")) === "text") return;
+    const note = target.closest(".stat-board__note");
     const paper = note?.querySelector(":scope > .stat-board__paper");
     if (note && paper) swing(paper, note.classList.contains("stat-board__scrap") ? 0.45 : 0.6);
   };
@@ -270,24 +280,26 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
           </div>
         </div>
 
-        <section className="stat-board__note stat-board__slip" aria-labelledby={`${id}-line`}>
-          <div className="stat-board__paper">
-            <h3 className="fine stat-board__slip-h" id={`${id}-line`}>
-              LINE and Privy
-            </h3>
-            <SendTestMessage senderName={me.displayName} />
-            <LineDetails />
-            <PrivyLine />
-            <PrivyAccount />
-            {/* Outside LINE's app it's the only way to switch LINE accounts. */}
-            {!me.inClient && (
-              <QuietLink className="stat-board__logout" onClick={lineLogout}>
-                Log out of LINE
-              </QuietLink>
-            )}
-          </div>
-          <i className="stat-board__washi" aria-hidden />
-        </section>
+        {DEV_SLIP && (
+          <section className="stat-board__note stat-board__slip" aria-labelledby={`${id}-line`}>
+            <div className="stat-board__paper">
+              <h3 className="fine stat-board__slip-h" id={`${id}-line`}>
+                LINE and Privy
+              </h3>
+              <SendTestMessage senderName={me.displayName} />
+              <LineDetails />
+              <PrivyLine />
+              <PrivyAccount />
+              {/* Outside LINE's app it's the only way to switch LINE accounts. */}
+              {!me.inClient && (
+                <QuietLink className="stat-board__logout" onClick={lineLogout}>
+                  Log out of LINE
+                </QuietLink>
+              )}
+            </div>
+            <i className="stat-board__washi" aria-hidden />
+          </section>
+        )}
       </div>
     </div>
   );
@@ -311,7 +323,7 @@ function PrivyLine() {
   const privy = usePrivyStatus();
   return (
     <div className="stat-board__privy">
-      <p className="fine">{privyText(privy)}</p>
+      <p className="stat-board__privy-status">{privyText(privy)}</p>
       {privy.state === "failed" && <QuietLink onClick={retryPrivySignIn}>Try again</QuietLink>}
     </div>
   );

@@ -614,16 +614,16 @@
   margin-top: auto;
 }
 
-/* LINE and Privy, for testing them from the board: a slip taped across the foot of the cork. */
+/* The developer slip: LINE's and Privy's details, on a slip taped across the foot of the cork. */
 .stat-board__slip {
-  margin-top: 30px;
+  margin-top: 28px;
   transform: rotate(-0.6deg);
 }
 
 .stat-board__slip > .stat-board__paper {
   display: grid;
   gap: 10px;
-  padding: 18px 16px 14px;
+  padding: 18px 16px 16px;
   clip-path: polygon(
     0 3px,
     8% 0,
@@ -664,22 +664,22 @@
   margin-top: 4px;
 }
 
+/* Privy's sign-in starts its own part of the slip, as a sentence with Try again after a failure. */
 .stat-board__privy {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   column-gap: 12px;
-  padding-top: 10px;
-  border-top: 1px dashed rgba(28, 24, 36, 0.3);
+  padding-top: 12px;
+  border-top: 1px dashed var(--rule-strong);
 }
 
-/* Privy's user ID is case-sensitive and a failure's reason can be long: both keep their case, wrap,
-   and can be copied into a report. */
-.stat-board__privy .fine {
+/* A failure's reason can be long: it wraps, and can be copied into a report. */
+.stat-board__privy-status {
   flex: 1 1 100%;
   margin: 0;
-  letter-spacing: 0.02em;
-  text-transform: none;
+  font: 500 14px/1.4 var(--font-ui);
+  font-stretch: var(--w-ui);
   overflow-wrap: anywhere;
   -webkit-user-select: text;
   user-select: text;

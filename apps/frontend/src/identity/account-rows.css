@@ -1,21 +1,28 @@
-/* ---------- Account details on the stat board's LINE and Privy slip: LINE's, then Privy's ---------- */
+/* ---------- Account details on the stat board's developer slip: LINE's, then Privy's ---------- */
 
+/* Printed like the cork's other paper: each detail's name in fine print over its value, the rows
+   ruled apart with the kiss-cut hairline. */
 .account-rows {
   display: grid;
-  gap: 10px;
   margin: 0;
 }
 
-/* The label over the value, and Copy beside the value. */
+/* The name over the value, and Copy at the right of both. */
 .account-rows__row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "label copy"
+    "value copy";
   align-items: center;
   column-gap: 12px;
+  row-gap: 1px;
+  padding: 8px 0;
+  border-top: 1px solid var(--rule);
 }
 
 .account-rows__row dt {
-  grid-column: 1 / -1;
+  grid-area: label;
   margin: 0;
 }
 
@@ -25,19 +32,35 @@
 
 /* IDs and addresses are case-sensitive and long: shown whole, wrapping anywhere, and selectable. */
 .account-rows__value {
+  grid-area: value;
   min-width: 0;
-  font:
-    600 12.5px/1.35 ui-monospace,
-    "SF Mono",
-    Menlo,
-    monospace;
+  font: 600 14px/1.35 var(--font-ui);
+  font-stretch: var(--w-ui);
+  font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
   -webkit-user-select: text;
   user-select: text;
 }
 
 .account-rows__value a {
-  color: var(--ink);
+  color: inherit;
   text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--rule-strong);
   text-underline-offset: 3px;
+}
+
+.account-rows__value a:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.account-rows__copy {
+  grid-area: copy;
+}
+
+/* Copy at the small labels' size, so it doesn't outweigh the value it copies. */
+.account-rows__copy .label-btn--quiet {
+  font-size: 13px;
 }
