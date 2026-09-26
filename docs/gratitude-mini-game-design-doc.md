@@ -16,25 +16,31 @@ After receiving a sticker, the receiver taps, strokes or shakes a heart to make 
 
 Under `apps/frontend/src/gratitude/` unless a path says otherwise.
 
-| File                                                     | Owns                                                                                                                   |
-| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `gameConfig.ts`                                          | `GAME_CONFIG` and `FEEL_CONFIG`                                                                                        |
-| `combo.ts`                                               | The rules, with no DOM or clock: `createGratitudeCombo`, `replayGratitudeCombo`, `fullBarSeconds`                      |
-| `touchInput.ts`                                          | Pointer events: `isOnHeart`, and `listenForTouches` for taps on the heart and the stroke finger                        |
-| `strokeDetector.ts`, `shakeDetector.ts`                  | Fast passes anywhere on the screen; rhythmic reversals of the phone                                                    |
-| `phoneMotion.ts`                                         | The phone's motion samples with gravity taken out, for the shake detector                                              |
-| `miniGameEngine.ts`                                      | The one frame loop: sends input to the rules, turns the rules' events into effects, draws every layer                  |
-| `GratitudeMiniGame.tsx`, `gratitude-mini-game.css`       | The screen: the sticker and giver, the HUD's place, the stage, the receipt; mounts the engine and passes on the result |
-| `heartMotion.ts`, `heartFaces.ts`, `heartArt.ts`         | The heart's motion, its face for each tier and intensity, and the art                                                  |
-| `comboHud.ts`                                            | The bar with its seconds and ticks, the amount, the multiplier sticker                                                 |
-| `tierSlamAndPopIns.ts`, `popInWords.ts`, `tierNames.ts`  | Tier-name slams and pop-in words in outlined 袋文字; the words; the tier names and glosses                             |
-| `particleEffects.ts`                                     | Finger stamps, rising ♡, glints, steam, sweat beads, bursts                                                            |
-| `miniHeartPhysics.ts`, `miniHeartLayer.ts`               | Mini hearts: their physics, and drawing them from a fixed set of elements                                              |
-| `tierBackground.ts`                                      | The ground behind the heart, by tier                                                                                   |
-| `gameEndings.ts`                                         | The endings: the flight to the giver, 昇天's climax, the sigh and tidy                                                 |
-| `frameTimeReadout.ts`, `miniGameDemoSettings.ts`         | The frame-time readout; the demo's switches                                                                            |
-| `ui/motionPermission.ts`, `app/MotionPermissionCard.tsx` | The app's one motion answer; the ask after sign-in                                                                     |
-| `sticker-board/stat-board/GratitudeDemoControls.tsx`     | The demo's button and switches on the developer slip                                                                   |
+| File                                                                     | Owns                                                                                                                     |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| `gameConfig.ts`                                                          | `GAME_CONFIG` and `FEEL_CONFIG`                                                                                          |
+| `combo.ts`                                                               | The rules, with no DOM or clock: `createGratitudeCombo`, `replayGratitudeCombo`, `fullBarSeconds`                        |
+| `touchInput.ts`                                                          | Pointer events: `isOnHeart`, and `listenForTouches` for taps on the heart and the stroke finger                          |
+| `strokeDetector.ts`, `shakeDetector.ts`                                  | Fast passes anywhere on the screen; rhythmic reversals of the phone                                                      |
+| `phoneMotion.ts`                                                         | The phone's motion samples with gravity taken out, for the shake detector                                                |
+| `miniGameEngine.ts`                                                      | The one frame loop: sends input to the rules, turns the rules' events into effects, draws every layer                    |
+| `GratitudeMiniGame.tsx`, `gratitude-mini-game.css`                       | The screen: the sticker and giver, the HUD's place, the stage, the receipt; mounts the engine and passes on the result   |
+| `heartMotion.ts`, `heartFaces.ts`, `heartArt.ts`                         | The heart's motion, its face for each tier and intensity, and the art                                                    |
+| `comboHud.ts`                                                            | The bar with its seconds and ticks, the amount, the multiplier sticker                                                   |
+| `tierSlamAndPopIns.ts`, `popInWords.ts`, `tierNames.ts`                  | Tier-name slams and pop-in words in outlined 袋文字; the words; the tier names and glosses                               |
+| `particleEffects.ts`                                                     | Finger stamps, rising ♡, glints, steam, sweat beads, bursts                                                              |
+| `miniHeartPhysics.ts`, `miniHeartLayer.ts`                               | Mini hearts: their physics, and drawing them from a fixed set of elements                                                |
+| `tierBackground.ts`                                                      | The ground behind the heart, by tier                                                                                     |
+| `gameEndings.ts`                                                         | The endings: the flight to the giver, 昇天's climax, the sigh and tidy                                                   |
+| `frameTimeReadout.ts`, `miniGameDemoSettings.ts`                         | The frame-time readout; the demo's switches                                                                              |
+| `replayRecorder.ts`                                                      | The replay: the touches, stroke samples and passes, and reversals a combo was played with                                |
+| `stageLayout.ts`                                                         | Where the heart rests on a stage, under the live screen's top band and HUD or a replay's HUD                             |
+| `webAnimations.ts`                                                       | Web Animations that keep pace with a replay's clock                                                                      |
+| `replay/replayFeed.ts`, `replay/replayInput.ts`, `replay/replayClock.ts` | A replay's inputs moved onto the replay's stage; handing them to the engine; the replay's clock, sped up for long combos |
+| `replay/mountGratitudeReplay.ts`, `replay/useGratitudeReplay.ts`         | The engine in replay mode on a card's stage; loading, stopping and marking a replay watched                              |
+| `replay/ReplayStage.tsx`, `sticker-board/TransferTrail.tsx`              | The stage that eases open in the Transfer Trail's open row; Replay and Stop                                              |
+| `ui/motionPermission.ts`, `app/MotionPermissionCard.tsx`                 | The app's one motion answer; the ask after sign-in                                                                       |
+| `sticker-board/stat-board/GratitudeDemoControls.tsx`                     | The demo's button and switches on the developer slip                                                                     |
 
 ## Phases
 
@@ -169,6 +175,17 @@ Every hit squashes the heart, stamps under the finger and sends up a ♡. The hi
 - **The record** (`ComboRecord`, and `GratitudeResult` with the sticker's ID added) holds what the draft schema's `gratitude` table stores: `method` (the one it ended in), `switchedAtHit`, `hits`, `hitTimes`, `durationMs`, `total`, `peakMult` (to hundredths), `peakTier` and `gameConfigVersion`. The hit times, the switch and the version are all a recount needs. The record doesn't say how the combo ended: gratitude exists or it doesn't.
 - **The replay** (`ReplayV1`, sent with the record; `replayRecorder.ts` builds it) keeps what the record leaves out, to check a combo or play it back: every touch on the heart with whether it counted, each stroke's path sampled a few dozen times a second, every shake reversal from the switch on, the effects' seed and intensity, the stage's size, the length, and how the combo ended (`sent`, `empty`, `cap`, `hidden` or `closed`). Positions are stored relative to the stage, and each time and position after the first as the change from the one before. Each stroke also lists which of its samples ended a fast pass (`strokePasses`), so a stroke combo replays exactly; one recorded before that field existed is recovered only approximately, by running the stroke detector over the samples again. The trail's card plays it back (`gratitude/replay/`).
 - **Change `G.version` whenever a rule number changes**, so an old record replays with the numbers it was played with. `FEEL_CONFIG` changes need no new version.
+
+## Playing a replay
+
+What a person sees is in DESIGN.md's Gratitude replay. How it runs:
+
+- **The same engine.** `mountGratitudeReplay` runs `miniGameEngine.ts` in replay mode: no listeners, recorder, tips or live region, and the heart takes no taps. `replayFeed.ts` turns the replay into inputs, each where it was relative to the heart, in heart widths from its middle. `replayInput.ts` hands them to the engine's own handlers as its clock reaches them, so the rules, the detectors and the effects run as they did live. The effects draw from the replay's seed, each from its own stream, so a combo looks the same however the frames fall.
+- **Speed.** `replaySpeed`: real time up to `REPLAY_REAL_TIME_MS`, and a longer combo sped up to take that long, at most `MAX_REPLAY_SPEED` times as fast. Web Animations keep pace through `webAnimations.ts`; CSS transitions run at real time. The first hit comes a moment in, so the heart rests first.
+- **Scale.** The lettering, particles, mini hearts, the loose heart's kicks and the screen shake scale by the stage's width over 390, with fewer mini hearts in play. The physics runs in the live game's pixels.
+- **The figures.** A replay ends on the stored combo's total, hits and tier. If its own count comes out different, the HUD shows the stored figures and a console warning names the gift. A replay shows no English glosses.
+- **Stopping.** `useGratitudeReplay` stops it on Stop, Escape, another gift or the card going, and removes its stage. It hears Escape on the document while a replay plays, because Safari doesn't focus a clicked button. Off screen, the replay's clock pauses.
+- **Watched.** As the heart lands, the giver's replay marks the gratitude watched (`POST /api/gratitude/:giftId/seen`) while `seenByGiverAt` is null.
 
 ## Effects and motion
 
