@@ -25,7 +25,7 @@ export interface TimelapsePlayerOptions {
   canvas: HTMLCanvasElement;
   /** The sticker figure's width, CSS px: the canvas covers the figure's box exactly. */
   width: number;
-  /** The sealed image's size, px: estimates the drawing's density when the timelapse has none. */
+  /** The sealed image's size, px: estimates the sticker's density when the timelapse has none. */
   image: { width: number; height: number };
   reduced: boolean;
   frames?: FrameSource;

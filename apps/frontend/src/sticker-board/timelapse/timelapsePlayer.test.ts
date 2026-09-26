@@ -217,7 +217,7 @@ describe("the timelapse player's fills", () => {
   /** The middle of a pixel at density 1, as the timelapse stores a tap. */
   const TAP = { x: 40.5, y: 50.5 };
   /** A line, a fill, and a line over it. */
-  const drawing = (): Op[] => {
+  const sticker = (): Op[] => {
     const fill: FillOp = { tool: "fill", color: "#ff0000", ...TAP, T: 500 };
     return [stroke(0, steady(300)), fill, stroke(800, steady(300))];
   };
@@ -233,7 +233,7 @@ describe("the timelapse player's fills", () => {
       .filter((canvas) => canvas.width > 0 || canvas.height > 0);
 
   it("reveals a fill inside a circle growing from its tap, then whole", async () => {
-    const { display, player, start, advance, schedule } = setup(drawing());
+    const { display, player, start, advance, schedule } = setup(sticker());
     await player.prepare();
     const { playing } = await start();
     advance(schedule.length + 32);
@@ -250,7 +250,7 @@ describe("the timelapse player's fills", () => {
   });
 
   it("notes how long preparing its fills took, for the performance recorder", async () => {
-    const { player } = setup(drawing());
+    const { player } = setup(sticker());
     await player.prepare();
     expect(notePerformance).toHaveBeenCalledWith(
       "timelapse",
@@ -259,7 +259,7 @@ describe("the timelapse player's fills", () => {
   });
 
   it("reveals fills whole at once under reduced motion", async () => {
-    const { display, player, start, advance, schedule } = setup(drawing(), { reduced: true });
+    const { display, player, start, advance, schedule } = setup(sticker(), { reduced: true });
     await player.prepare();
     const { playing } = await start();
     advance(schedule.length + 32);
@@ -269,7 +269,7 @@ describe("the timelapse player's fills", () => {
   });
 
   it("reveals its fills whole at once from when reduced motion is turned on mid-play", async () => {
-    const { display, player, start, advance, schedule } = setup(drawing());
+    const { display, player, start, advance, schedule } = setup(sticker());
     await player.prepare();
     const { playing } = await start();
     advance(32);
@@ -281,7 +281,7 @@ describe("the timelapse player's fills", () => {
   });
 
   it("reveals the fills still to come whole on skip", async () => {
-    const { display, player, start, advance } = setup(drawing());
+    const { display, player, start, advance } = setup(sticker());
     await player.prepare();
     const { playing } = await start();
     advance(32);
@@ -292,7 +292,7 @@ describe("the timelapse player's fills", () => {
   });
 
   it("lets go of every canvas it made once done, keeping the display's", async () => {
-    const { canvas, player, start, advance, schedule } = setup(drawing());
+    const { canvas, player, start, advance, schedule } = setup(sticker());
     await player.prepare();
     const { playing } = await start();
     advance(schedule.length + 32);
@@ -301,7 +301,7 @@ describe("the timelapse player's fills", () => {
   });
 
   it("lets go of every canvas it made when stopped mid-reveal", async () => {
-    const { canvas, display, player, start, advance } = setup(drawing());
+    const { canvas, display, player, start, advance } = setup(sticker());
     await player.prepare();
     await start();
     for (let frames = 0; clips(display).length === 0 && frames < 1_000; frames++) advance(16);
@@ -310,7 +310,7 @@ describe("the timelapse player's fills", () => {
   });
 
   it("ends the prepare pass when stopped while preparing, and play finishes stopped", async () => {
-    const { canvas, player } = setup(drawing());
+    const { canvas, player } = setup(sticker());
     const preparing = player.prepare();
     player.stop();
     await expect(preparing).resolves.toBeUndefined();
@@ -322,7 +322,7 @@ describe("the timelapse player's fills", () => {
     vi.spyOn(InkSurface.prototype, "apply").mockImplementation((op) => {
       if (op.tool === "fill") throw new Error("out of memory");
     });
-    const { player } = setup(drawing());
+    const { player } = setup(sticker());
     const failure = "Preparing the timelapse's fill 1 of 1 failed: out of memory";
     await expect(player.prepare()).rejects.toThrow(failure);
     await expect(player.play()).rejects.toThrow(failure);

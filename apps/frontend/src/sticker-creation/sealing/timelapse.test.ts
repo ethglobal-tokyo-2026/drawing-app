@@ -61,7 +61,7 @@ describe("the timelapse", () => {
     },
   );
 
-  it("records the drawing's density, so fills can flood as they did", () => {
+  it("records the density the sticker was drawn at, so fills can flood as they did", () => {
     expect(encodeTimelapse(input).density).toBe(DENSITY);
   });
 
