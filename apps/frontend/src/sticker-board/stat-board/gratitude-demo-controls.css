@@ -32,3 +32,8 @@
   margin: 0;
   accent-color: var(--ink);
 }
+
+.gratitude-demo :focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}

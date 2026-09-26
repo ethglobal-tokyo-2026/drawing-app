@@ -1,5 +1,5 @@
 import { Heart } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
   readMiniGameDemoSettings,
   saveMiniGameDemoSettings,
@@ -16,6 +16,7 @@ interface Props {
 /** The gratitude mini-game's demo entry, on the stat board's developer slip. */
 export function GratitudeDemoControls({ onTry }: Props) {
   const [settings, setSettings] = useState(readMiniGameDemoSettings);
+  const id = useId();
 
   const change = (next: MiniGameDemoSettings) => {
     setSettings(next);
@@ -25,14 +26,23 @@ export function GratitudeDemoControls({ onTry }: Props) {
   return (
     <div className="gratitude-demo">
       <h3 className="fine gratitude-demo__h">Gratitude mini-game</h3>
-      <LabelButton block icon={<Heart />} disabled={!onTry} onClick={onTry ?? undefined}>
+      <LabelButton
+        block
+        icon={<Heart />}
+        disabled={!onTry}
+        aria-describedby={onTry ? undefined : `${id}-note`}
+        onClick={onTry ?? undefined}
+      >
         Try the gratitude mini-game
       </LabelButton>
-      {!onTry && <p className="fine gratitude-demo__note">Draw a sticker first</p>}
+      {!onTry && (
+        <p id={`${id}-note`} className="fine gratitude-demo__note">
+          Draw a sticker first
+        </p>
+      )}
       <label className="gratitude-demo__switch">
         <input
           type="checkbox"
-          role="switch"
           checked={settings.fullEffects}
           onChange={(e) => change({ ...settings, fullEffects: e.target.checked })}
         />
@@ -41,7 +51,6 @@ export function GratitudeDemoControls({ onTry }: Props) {
       <label className="gratitude-demo__switch">
         <input
           type="checkbox"
-          role="switch"
           checked={settings.showFrameTimes}
           onChange={(e) => change({ ...settings, showFrameTimes: e.target.checked })}
         />
