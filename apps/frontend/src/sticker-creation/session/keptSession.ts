@@ -80,6 +80,11 @@ export function firstChanged(written: readonly Op[], ops: readonly Op[]): number
   return i;
 }
 
+/** The color a kept drawing was last drawn in, which it picks back up in; null when nothing was drawn. */
+export function keptColor(ops: readonly Op[]): string | null {
+  return ops.findLast((op) => op.tool !== "eraser")?.color ?? null;
+}
+
 /** Keeps the session in progress on this device as it changes. */
 export class SessionKeeper {
   private ticket: number | null = null;

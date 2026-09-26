@@ -1,8 +1,20 @@
 import { describe, expect, it } from "vitest";
 import type { Op } from "../canvas/ops";
-import { firstChanged } from "./keptSession";
+import { firstChanged, keptColor } from "./keptSession";
 
 const stroke = (color: string): Op => ({ tool: "brush", color, pts: [], T: 0 });
+
+describe("keptColor", () => {
+  it("picks a drawing back up in the color it was last drawn in", () => {
+    const fill: Op = { tool: "fill", x: 0, y: 0, color: "#00868B", T: 0 };
+    const erase: Op = { tool: "eraser", color: "#E8484F", pts: [], T: 0 };
+    expect(keptColor([stroke("#1478C8"), stroke("#B4299A")])).toBe("#B4299A");
+    // A fill counts; the eraser doesn't draw in a color.
+    expect(keptColor([stroke("#1478C8"), fill, erase])).toBe("#00868B");
+    // Nothing drawn: it keeps the color a fresh sheet starts in.
+    expect(keptColor([])).toBeNull();
+  });
+});
 
 describe("firstChanged", () => {
   it("starts a save at the first op that isn't the one written there last", () => {
