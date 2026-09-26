@@ -27,7 +27,17 @@ import { normalizeTurn } from "./boardGesture";
 import { loadBoardStickers, type BoardSticker } from "./boardSticker";
 import { PlacedSticker } from "./PlacedSticker";
 import { GivenStickerSilhouette } from "./GivenStickerSilhouette";
-import { fieldOf, freeSpot, knobHidden, nextZ, sizeOf, stickerBox, toFrac } from "./placement";
+import {
+  FIRST_SPOT,
+  fieldOf,
+  freeSpot,
+  knobHidden,
+  nextZ,
+  sizeOf,
+  stickerBox,
+  toFrac,
+  toPx,
+} from "./placement";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import { StatBoard, type StatBoardHandle } from "./stat-board/StatBoard";
 import { StickerDetail } from "./StickerDetail";
@@ -325,6 +335,9 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     chosen && chosenBox && name && knobHidden({ ...chosenBox, r: chosen.placement.r }, name),
   );
   const curled = curledToday(onBoard, new Date());
+  // The empty board's dashed spot, where the first sticker lands; a load error shows in it too.
+  const blankAt = field && toPx(field, FIRST_SPOT);
+  const blankStyle = blankAt ? { left: blankAt.x, top: blankAt.y } : undefined;
   // Until the first sticker, Draw says where to start.
   const firstVisit = stickers?.length === 0;
   const unsavedStickers = (stickers ?? []).filter((s) => unsaved.has(s.id));
@@ -333,7 +346,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     <div className="board" ref={setFace}>
       <div className="board-stage" ref={stage} role="region" aria-label="Sticker board">
         {stickers && onBoard.length === 0 && givenSilhouettes.length === 0 && (
-          <div className="board-blank">
+          <div className="board-blank" style={blankStyle}>
             <span className="board-blank-cut" aria-hidden />
             <span className="board-blank-note">Stickers you make or receive land here.</span>
           </div>
@@ -393,7 +406,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
       )}
 
       {loadError && (
-        <div className="board-blank board-problem" role="alert">
+        <div className="board-blank board-problem" role="alert" style={blankStyle}>
           <span className="board-blank-cut" aria-hidden />
           <span className="board-blank-note">Your stickers didn’t load.</span>
           <span className="fine board-problem-reason">{loadError}</span>

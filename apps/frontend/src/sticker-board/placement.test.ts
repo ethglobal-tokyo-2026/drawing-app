@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import type { Placement } from "../stickers/stickerStorage";
-import { fieldOf, freeSpot, knobHidden, nextZ, sizeOf, toFrac, toolbarSpot } from "./placement";
+import {
+  FIRST_SPOT,
+  fieldOf,
+  freeSpot,
+  knobHidden,
+  nextZ,
+  sizeOf,
+  toFrac,
+  toolbarSpot,
+} from "./placement";
 
 const at = (x: number, y: number): Placement => ({ on: true, x, y, s: 0.3, r: 0, z: 1 });
 
@@ -10,6 +19,10 @@ describe("placement", () => {
     const spot = freeSpot(taken);
     for (const t of taken)
       expect(Math.hypot(spot.x - t.x, (spot.y - t.y) * 1.4)).toBeGreaterThan(0.3);
+  });
+
+  it("lands the first sticker on the empty board's dashed spot", () => {
+    expect(freeSpot([])).toMatchObject(FIRST_SPOT);
   });
 
   it("gives the same spot for the same board", () => {

@@ -337,11 +337,12 @@
   background: rgba(255, 255, 255, 0.62);
 }
 
-/* The empty board: a quiet die-cut spot in the middle of the field. Draw is the way in. */
+/* The empty board: a quiet die-cut spot in the field, where the first sticker lands. Draw is the
+   way in. The board places it on that sticker's spot. */
 .board-blank {
   position: absolute;
-  left: calc(50% - 12px);
-  top: calc(86px + (100% - 86px - 16px) * 0.42);
+  left: 50%;
+  top: 50%;
   display: grid;
   place-items: center;
   width: 236px;

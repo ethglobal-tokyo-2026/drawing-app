@@ -118,15 +118,21 @@ export function keepOnBoard(x: number, halfWidth: number, boardWidth: number) {
   return Math.max(0, 4 - (x - halfWidth)) - Math.max(0, past);
 }
 
-/** Spots for new stickers, as x, y, s and r: calm, and clear of the header and Draw. */
+/**
+ * Spots for new stickers, as x, y, s and r: calm, and clear of the header and Draw. The empty board
+ * shows the first as a dashed spot, so the first sticker lands in it.
+ */
 const SPOTS = [
+  [0.5, 0.42, 0.36, 2],
   [0.72, 0.8, 0.34, 3],
   [0.28, 0.8, 0.32, -4],
-  [0.5, 0.45, 0.36, 2],
   [0.26, 0.4, 0.3, -3],
   [0.75, 0.3, 0.3, 5],
   [0.5, 0.15, 0.3, -6],
 ] as const;
+
+/** Where the empty board's dashed spot sits: the first sticker's spot. */
+export const FIRST_SPOT = { x: SPOTS[0][0], y: SPOTS[0][1] };
 
 /** Where a new sticker goes: the spot farthest from every sticker already on the board. */
 export function freeSpot(taken: readonly Placement[]): Pick<Placement, "x" | "y" | "s" | "r"> {
