@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
+import { i18next } from "../i18n/i18n";
 import { ApiError } from "./apiClient";
 import type { Me } from "@drawing-app/api/client";
 import type { SessionApi } from "./httpApi";
@@ -15,6 +16,7 @@ const me: Me = {
   lineDisplayName: "Alice",
   linePictureUrl: null,
   timeZone: "Asia/Tokyo",
+  language: "en",
   createdAt: "2026-09-26T00:00:00.000Z",
   needsHandle: false,
   newStickerCount: 0,
@@ -67,7 +69,11 @@ const submit = (host: HTMLElement) =>
   });
 
 describe("SessionGate", () => {
-  it("signs in with LINE's token and your zone, then opens the app as you", async () => {
+  it("signs in with LINE's token, your zone and the app's language, then opens the app as you", async () => {
+    await i18next.changeLanguage("ja");
+    onTestFinished(async () => {
+      await i18next.changeLanguage("en");
+    });
     const signIn = vi.fn(() => Promise.resolve({ me }));
     const host = render(session({ signIn }));
     expect(host.textContent).not.toContain("Board");
@@ -75,6 +81,7 @@ describe("SessionGate", () => {
     expect(signIn).toHaveBeenCalledWith({
       idToken: "token",
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      language: "ja",
     });
     expect(host.textContent).toContain("Board of @alice");
   });

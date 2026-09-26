@@ -41,8 +41,8 @@ const call = (method: string, path: string, headers: Record<string, string> = {}
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 
-const signIn = (profile: LineProfile, timeZone = DEVICE_ZONE) =>
-  call("POST", "/api/session", {}, { idToken: devIdToken(profile), timeZone });
+const signIn = (profile: LineProfile, timeZone = DEVICE_ZONE, language = "en") =>
+  call("POST", "/api/session", {}, { idToken: devIdToken(profile), timeZone, language });
 
 /** The Cookie header that sends back the session a response set. */
 function sessionCookie(response: Response) {
@@ -99,6 +99,11 @@ describe("signing in", () => {
     });
   });
 
+  it("keeps the app's language, and takes a returning sign-in's new one", async () => {
+    expect((await meIn(await signIn(ALICE, DEVICE_ZONE, "ja"))).language).toBe("ja");
+    expect((await meIn(await signIn(ALICE, DEVICE_ZONE, "en"))).language).toBe("en");
+  });
+
   it("refuses an ID token LINE refuses with no session, and logs LINE's reason instead of sending it", async () => {
     const reason = "IdToken expired.";
     test = await createTestApp({
@@ -113,12 +118,13 @@ describe("signing in", () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining(reason));
   });
 
-  it("refuses an unknown zone, and an ID token that's empty or too long", async () => {
-    const idToken = devIdToken(ALICE);
+  it("refuses an unknown zone or language, and an ID token that's empty or too long", async () => {
+    const valid = { idToken: devIdToken(ALICE), timeZone: DEVICE_ZONE, language: "en" };
     const bodies = [
-      { idToken, timeZone: "Mars/Olympus_Mons" },
-      { idToken: "", timeZone: DEVICE_ZONE },
-      { idToken: "x".repeat(ID_TOKEN_MAX_LENGTH + 1), timeZone: DEVICE_ZONE },
+      { ...valid, timeZone: "Mars/Olympus_Mons" },
+      { ...valid, language: "fr" },
+      { ...valid, idToken: "" },
+      { ...valid, idToken: "x".repeat(ID_TOKEN_MAX_LENGTH + 1) },
     ];
     for (const body of bodies) {
       expect(await refusal(await call("POST", "/api/session", {}, body))).toMatchObject({

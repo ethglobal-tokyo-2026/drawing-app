@@ -8,6 +8,7 @@ const me = {
   lineDisplayName: "Alice",
   linePictureUrl: null,
   timeZone: "Asia/Tokyo",
+  language: "en",
   createdAt: "2026-09-26T00:00:00.000Z",
   needsHandle: false,
   newStickerCount: 0,
@@ -32,19 +33,18 @@ const refusalOf = (promise: Promise<unknown>) =>
   );
 
 describe("the session client", () => {
-  it("signs in with the token and zone, on this origin with the cookie", async () => {
+  it("signs in with the token, zone and language, on this origin with the cookie", async () => {
     const fetch = answering(200, { me });
     const session = createSessionApi(createServerClient(fetch));
-    await expect(session.signIn({ idToken: "t", timeZone: "Asia/Tokyo" })).resolves.toEqual({
-      me,
-    });
+    const request = { idToken: "t", timeZone: "Asia/Tokyo", language: "ja" } as const;
+    await expect(session.signIn(request)).resolves.toEqual({ me });
     const [input, init] = fetch.mock.calls[0] ?? [];
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input?.url;
     expect(url).toMatch(/\/api\/session$/);
     expect(init?.method).toBe("POST");
     expect(init?.credentials).toBe("same-origin");
     const body = typeof init?.body === "string" ? init.body : "";
-    expect(JSON.parse(body)).toEqual({ idToken: "t", timeZone: "Asia/Tokyo" });
+    expect(JSON.parse(body)).toEqual(request);
   });
 
   it("turns the server's refusal into an ApiError with its code", async () => {

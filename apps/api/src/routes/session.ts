@@ -31,7 +31,7 @@ const userInput = createInsertSchema(users, {
 });
 
 const signInBody = userInput
-  .pick({ timeZone: true })
+  .pick({ timeZone: true, language: true })
   .required()
   .extend({ idToken: z.string().min(1).max(ID_TOKEN_MAX_LENGTH) });
 
@@ -69,7 +69,7 @@ async function lineProfileOf(line: LineVerifier, idToken: string) {
 export const sessionRoutes = (deps: AppDeps) =>
   new Hono<AppEnv>()
     .post("/session", validate("json", signInBody), async (c) => {
-      const { idToken, timeZone } = c.req.valid("json");
+      const { idToken, timeZone, language } = c.req.valid("json");
       const profile = await lineProfileOf(deps.line, idToken);
       if (!profile) return apiError(c, 401, "line_token_invalid", "LINE refused the ID token");
       const lineProfile = {
@@ -81,7 +81,7 @@ export const sessionRoutes = (deps: AppDeps) =>
           // A deleted account has no line_user_id, so signing in again makes a new person.
           const returning = tx
             .update(users)
-            .set(lineProfile)
+            .set({ ...lineProfile, language })
             .where(eq(users.lineUserId, profile.sub))
             .returning()
             .get();
@@ -94,6 +94,7 @@ export const sessionRoutes = (deps: AppDeps) =>
               lineUserId: profile.sub,
               ...lineProfile,
               timeZone,
+              language,
               handle: handle !== null && !isHandleTaken(tx, handle) ? handle : null,
             })
             .returning()

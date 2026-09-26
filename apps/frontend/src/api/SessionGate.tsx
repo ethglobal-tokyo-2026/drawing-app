@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { currentLanguage } from "../i18n/i18n";
 import { lineIdToken } from "../line/liff";
 import { Key } from "../ui/Key";
 import { ApiError, apiError } from "./apiClient";
@@ -50,6 +51,7 @@ export function SessionGate({
       return session.signIn({
         idToken: token,
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        language: currentLanguage(),
       });
     })();
     signingIn.then(
