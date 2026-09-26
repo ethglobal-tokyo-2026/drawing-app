@@ -12,6 +12,7 @@
  * Coordinates: `a` runs along the track from the rest end at the top down to the far end at `L`; `c`
  * runs across from the chain's center line, negative toward the board.
  */
+import { timeOurWork } from "../../performance/performanceRecorder";
 import "./zipper.css";
 
 type ZipperState = "rest" | "drag" | "run" | "hint";
@@ -796,14 +797,16 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
     raf = win.requestAnimationFrame(loop);
   };
   function loop(t: number) {
-    raf = 0;
-    const dt = Math.min(MAX_FRAME_S, Math.max(0, (t - last) / 1000));
-    last = t;
-    const n = Math.max(1, Math.ceil(dt * SUBSTEPS_PER_S));
-    for (let i = 0; i < n; i++) step(dt / n);
-    render();
-    if (!still()) raf = win.requestAnimationFrame(loop);
-    else settle();
+    timeOurWork("zipper", () => {
+      raf = 0;
+      const dt = Math.min(MAX_FRAME_S, Math.max(0, (t - last) / 1000));
+      last = t;
+      const n = Math.max(1, Math.ceil(dt * SUBSTEPS_PER_S));
+      for (let i = 0; i < n; i++) step(dt / n);
+      render();
+      if (!still()) raf = win.requestAnimationFrame(loop);
+      else settle();
+    });
   }
   /** The slider hits a stop: the pull jumps and swings on its hinge. */
   function knock(v: number, atFar: boolean) {
