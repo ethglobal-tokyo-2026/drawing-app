@@ -26,20 +26,22 @@
 - **Comments** follow AGENTS.MD: why, not what; no task numbers, phases or "ported from" notes.
 - **Checks**, from the worktree root: `pnpm --filter frontend lint`, `pnpm --filter frontend typecheck`, `pnpm --filter frontend exec vitest run <files>`, `pnpm exec oxfmt --check apps/frontend`. Before a task is done: its tests pass and `pnpm check` passes.
 - **Worktree:** `.claude/worktrees/gratitude-mini-game` on `design/gratitude-mini-game`, from `main`. Tasks in the same wave run in parallel in it: commit with explicit pathspecs (`git commit -m "…" -- <paths>`); if `index.lock` exists, wait and retry. The branch is squashed before merging.
+- **Checks in a parallel wave:** another task's files may be half-written, so check only your own: `pnpm --filter frontend exec vitest run <your tests>` and `pnpm --filter frontend exec oxlint --type-check <your files>`, plus `pnpm --filter frontend typecheck`, where an error in a file you don't own is someone else's work in progress (report it, don't touch it). The controller runs `pnpm check` after each wave.
 
 ## Waves
 
-| Wave | Tasks                                                               | Needs    |
-| ---- | ------------------------------------------------------------------- | -------- |
-| A-1  | A1 rules · A2 touch input · A3 art and words · A5 styles            | —        |
-| A-2  | A4 mini hearts · A6 heart and ground · A7 HUD, lettering, particles | A1, A3   |
-| A-3  | A8 endings, frame times, engine                                     | A-2      |
-| A-4  | A9 the screen                                                       | A8       |
-| A-5  | A10 the hidden test menu                                            | A9       |
-| A-6  | A11 verify the tap demo                                             | all of A |
-| B-1  | B1 detectors · B2 combo: strokes and shakes · B3 motion permission  | A11      |
-| B-2  | B4 stroke on screen · B5 shake on screen                            | B-1      |
-| B-3  | B6 verify, then tidy up                                             | B-2      |
+| Wave | Tasks                                                               | Needs                                           |
+| ---- | ------------------------------------------------------------------- | ----------------------------------------------- |
+| A-1  | A1 rules · A2 touch input · A3 art and words · A5 styles            | —                                               |
+| A-2  | A4 mini hearts · A6 heart and ground · A7 HUD, lettering, particles | A1, A3; A7 also A4, whose `HeartBox` it imports |
+| A-3  | A8 endings, frame times, engine                                     | A-2                                             |
+| A-4  | A9 the screen                                                       | A8                                              |
+| A-5  | A10 the hidden test menu                                            | A9                                              |
+| A-6  | A11 verify the tap demo                                             | all of A                                        |
+| B-1  | B1 detectors · B2 combo: strokes and shakes · B3 motion permission  | A11                                             |
+| B-2  | B4 stroke on screen · B5 shake on screen                            | B-1                                             |
+| B-3  | B6 verify, then tidy up                                             | B-2                                             |
+| B-4  | B7 the durable design doc                                           | B6                                              |
 
 ## The contract between tasks
 
@@ -330,6 +332,7 @@ export declare function sighAndTidy(parts: EndingParts): Promise<void>;
 | `G/strokeDetector.ts`, `G/shakeDetector.ts` (+test)                                                                                                                         | B1     |
 | `apps/frontend/src/ui/motionPermission.ts` (+test), `apps/frontend/src/app/MotionPermissionCard.tsx`, `…/motion-permission-card.css`, `…/App.tsx`                           | B3     |
 | `G/phoneMotion.ts`                                                                                                                                                          | B5     |
+| `docs/gratitude-mini-game-design-doc.md`, `AGENTS.MD`                                                                                                                       | B7     |
 
 ---
 
@@ -3716,6 +3719,41 @@ Nothing else changes for the Zipper or the light. Both already listen without as
   - shake from start to ricochet
 - [ ] **Step 4:** Report as in A11.
 
+### Task B7: The durable design doc
+
+**Files:** Create `docs/gratitude-mini-game-design-doc.md`. Modify `AGENTS.MD`.
+
+- [ ] **Step 1: Write the doc:** how the game works as built, for whoever changes or tunes it next.
+  - **No hardcoded numbers.** Name the fields in `gameConfig.ts` (`GAME_CONFIG`, `FEEL_CONFIG`), and write every formula with those names.
+  - **What it is:** the (Gratitude) Mini-game, in AGENTS.MD's vocabulary; where it opens today; the files, and what each owns.
+  - **Phases:** ready, sending, running and ended. For each: what starts it, what ends it, and what shows. A one-tap send never shows a face or the bar, and the first face waits for the catch.
+  - **Input methods:**
+    - Tap: on the heart's resting area. The first tap counts on release and later ones at touch-down, and every finger counts.
+    - Stroke: fast passes anywhere on the screen, the streak that unlocks it, and the tip after tries.
+    - Shake: rhythmic reversals, the unlock, and its need for motion permission.
+    - All of them: no mixing, lift to tap, and a speed limit per method.
+  - **Scoring:** gratitude per hit, the multiplier's target and how it chases it, and the method weights with the first-hit exception, as formulas.
+  - **The bar:**
+    - it fills at the catch or at an unlock
+    - the drain doubles over time
+    - each hit adds a gain, and the bar never goes past full
+    - the seconds-left display and its scale
+    - the ends: empty, the safety stop, hidden and closed
+  - **Tiers and faces:** reached by the total and never dropping; the tier-up freeze; what each tier adds to the heart and the ground, in words.
+  - **Replay and the record:**
+    - state is computed in closed form between events, so a replay gives the same record
+    - hit times are whole milliseconds
+    - what the result records, and why: the draft schema's `gratitude` table
+    - `GAME_CONFIG.version` changes whenever a rule number does
+  - **Effects and motion:** the intensity dial and where it's set. The motion permission: asked once after sign-in on iPhones, and what declining turns off.
+  - **Tuning:** where to change what, and which tests pin the design's intent.
+- [ ] **Step 2: Check it against the code and AGENTS.MD's "Docs" rules.**
+  - Every formula matches `combo.ts`.
+  - Current state only: no history or research journal, and concise.
+  - No personal details, American English, no banned words.
+- [ ] **Step 3:** In `AGENTS.MD`'s architecture list, point the `src/gratitude` entry at the doc.
+- [ ] **Step 4: Commit** `docs: describe how the gratitude mini-game works`.
+
 ## After merging
 
-AGENTS.MD's post-merge rule applies: delete this plan and SPEC. Carry into durable docs only what the next parts need, such as the result's fields for part 2.
+AGENTS.MD's post-merge rule applies: delete this plan and SPEC. `docs/gratitude-mini-game-design-doc.md` is the durable record; part 2 takes the result's fields from it.
