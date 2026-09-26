@@ -51,6 +51,7 @@ export const explore = {
     caption: "{{number}} · <duration/> · <artist/>",
     /** How long ago, in its largest whole unit. */
     ago: {
+      justNow: "just now",
       minutes: "{{minutes}} min",
       hours: "{{hours}} hr",
       days: "{{days}} d",
