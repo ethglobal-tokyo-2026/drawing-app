@@ -333,5 +333,9 @@ describe("SealCeremony", () => {
     expect(shownText(".sealed-card__fine")).toBe(
       `${formatNo(sealed.number)} · ${formatDuration(sealed.timeUsed)} · ${formatDay(NOW.getTime())} · @${MARKUP_LIKE_NAME}`,
     );
+    // The handle keeps its own case in the fine print's capitals.
+    expect(host.querySelector(".sealed-card__fine .handle")?.textContent).toBe(
+      `@${MARKUP_LIKE_NAME}`,
+    );
   });
 });

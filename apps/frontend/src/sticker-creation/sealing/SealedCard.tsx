@@ -138,8 +138,9 @@ export function SealedCard({
           values={{ no: formatNo(sealed.number), day: formatDay(Date.parse(sealed.sealedAt)) }}
           components={{
             duration: <Duration seconds={sealed.timeUsed} />,
-            // A handle is a component's text, not a value: Trans would read markup in a value.
-            handle: <>{formatHandle(handle)}</>,
+            // A handle is a component's text, not a value: Trans would read markup in a value. It
+            // keeps its own case in the fine print's capitals.
+            handle: <span className="handle">{formatHandle(handle)}</span>,
           }}
         />
       </p>
