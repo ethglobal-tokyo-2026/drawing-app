@@ -14,10 +14,11 @@ What the server will store and serve, so UI work and mocks can line up with it w
 
 ### Tickets
 
-- Three free tickets per ticket day. A ticket day turns over at 4:00 in the person's time zone, taken from the device at sign-up.
-- **Start screen:** drawing starts from a screen that shows the tickets left and a button that spends one (`StartDrawing`). The 3-minute clock then waits for the first stroke. Keep drawing on the sealed card, and Draw after buying tickets, spend one without asking.
-- **Paid tickets:** packs of 1, 3, 5 or 10 for ¥100, ¥270, ¥350 or ¥500, paid in SUI. The payment is a mock for now. There's no daily limit, and paid tickets don't expire.
-- **Follow-up:** the UI for holding many paid tickets (the ticket stubs, the out-of-tickets card) needs design.
+- **Daily tickets:** three free ones per ticket day. A ticket day runs midnight to midnight, Tokyo time, for everyone; unused daily tickets expire with it.
+- **Reserve tickets:** bought with SUI, no limit, never expire. Daily tickets are always spent first.
+- **Start screen:** drawing starts from a screen that shows the tickets left and a button that spends one (`StartDrawing`). The 3-minute clock then waits for the first stroke. Keep drawing on the sealed card spends a daily ticket without asking; with none left, the start screen asks before spending a reserve ticket, or offers the ticket shop. Draw right after a purchase spends one without asking.
+- **Ticket shop:** packs of 1, 3, 5 or 10 for ¥100, ¥270, ¥375 or ¥600, shown with their discount off ¥100 each. Prices are in yen and paid in SUI, converted at the server's 5-minute time-weighted average SUI/JPY price. The payment is a mock for now.
+- **Draw keys** show daily and reserve tickets left, each as its ticket mark × count. Daily tickets are Seal Yellow, reserve tickets Grape.
 
 ### Sealing
 
@@ -73,17 +74,18 @@ What the server will store and serve, so UI work and mocks can line up with it w
 
 ## Limits and constants
 
-| Name                              | Value                                                   |
-| --------------------------------- | ------------------------------------------------------- |
-| Drawing clock (`MAX_TIME_USED_S`) | 180 s                                                   |
-| Free tickets                      | 3 per ticket day; the day turns over at 4:00 local time |
-| Ticket packs                      | 1, 3, 5, 10 tickets for ¥100, ¥270, ¥350, ¥500          |
-| Gift expiry (`GIFT_EXPIRY_MS`)    | 7 days after Packaging                                  |
-| Hits per combo (`MAX_HITS`)       | 1–120                                                   |
-| Gratitude multiplier              | 1–8                                                     |
-| Gratitude tiers                   | 0–4: ありがと, 照れ, ドキドキ, オーバーヒート, 昇天     |
-| Original Artist Gratitude Share   | 20% of a combo's total                                  |
-| Explore's day and week            | from 4:00 and from Monday 4:00, Tokyo time              |
+| Name                              | Value                                                        |
+| --------------------------------- | ------------------------------------------------------------ |
+| Drawing clock (`MAX_TIME_USED_S`) | 180 s                                                        |
+| Daily tickets                     | 3 per ticket day; the day turns over at midnight, Tokyo time |
+| Ticket packs                      | 1, 3, 5, 10 tickets for ¥100, ¥270, ¥375, ¥600               |
+| SUI/JPY price                     | 5-minute time-weighted average; a quote holds for 60 s       |
+| Gift expiry (`GIFT_EXPIRY_MS`)    | 7 days after Packaging                                       |
+| Hits per combo (`MAX_HITS`)       | 1–120                                                        |
+| Gratitude multiplier              | 1–8                                                          |
+| Gratitude tiers                   | 0–4: ありがと, 照れ, ドキドキ, オーバーヒート, 昇天          |
+| Original Artist Gratitude Share   | 20% of a combo's total                                       |
+| Explore's day and week            | from 4:00 and from Monday 4:00, Tokyo time                   |
 
 ## Tables
 
@@ -95,17 +97,16 @@ What the server will store and serve, so UI work and mocks can line up with it w
 
 Inserted at the first sign-in.
 
-| Column                  | Type           | Values                          | Set when                                                       | Meaning                                                      |
-| ----------------------- | -------------- | ------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------ |
-| `id`                    | text, PK       | UUID                            | first sign-in                                                  |                                                              |
-| `line_user_id`          | text, null     | LINE's `sub`; unique            | first sign-in; cleared on account deletion                     | finds a returning person; the Official account's push target |
-| `line_display_name`     | text, null     | LINE name                       | every sign-in; cleared on account deletion                     | how others see them                                          |
-| `line_picture_url`      | text, null     | https URL                       | every sign-in; cleared on account deletion                     |                                                              |
-| `handle`                | text, null     | unique ignoring letter case     | first sign-in (the LINE name, when free), or the handle prompt | printed as `@handle`                                         |
-| `time_zone`             | text           | IANA zone; default `Asia/Tokyo` | first sign-in                                                  | ticket days turn over at 4:00 here                           |
-| `smart_account_address` | text, null     | `0x` + 40 hex; unique           | the first time the server needs it, from Privy                 | where stickers are minted and claimed                        |
-| `terms_accepted_at`     | int (ms), null |                                 | the first action that carries the terms line                   |                                                              |
-| `deleted_at`            | int (ms), null |                                 | account deletion                                               |                                                              |
+| Column                  | Type           | Values                      | Set when                                                       | Meaning                                                      |
+| ----------------------- | -------------- | --------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------ |
+| `id`                    | text, PK       | UUID                        | first sign-in                                                  |                                                              |
+| `line_user_id`          | text, null     | LINE's `sub`; unique        | first sign-in; cleared on account deletion                     | finds a returning person; the Official account's push target |
+| `line_display_name`     | text, null     | LINE name                   | every sign-in; cleared on account deletion                     | how others see them                                          |
+| `line_picture_url`      | text, null     | https URL                   | every sign-in; cleared on account deletion                     |                                                              |
+| `handle`                | text, null     | unique ignoring letter case | first sign-in (the LINE name, when free), or the handle prompt | printed as `@handle`                                         |
+| `smart_account_address` | text, null     | `0x` + 40 hex; unique       | the first time the server needs it, from Privy                 | where stickers are minted and claimed                        |
+| `terms_accepted_at`     | int (ms), null |                             | the first action that carries the terms line                   |                                                              |
+| `deleted_at`            | int (ms), null |                             | account deletion                                               |                                                              |
 
 - A live account has `line_user_id` and `line_display_name`; a deleted one has none of the LINE columns.
 - `created_at` is the stat board's "Since".
@@ -144,13 +145,14 @@ Inserted with the sticker at seal; its own table so board reads never load it.
 
 Inserted when the start screen's button spends a ticket.
 
-| Column       | Type                  | Values                                       | Set when | Meaning                                      |
-| ------------ | --------------------- | -------------------------------------------- | -------- | -------------------------------------------- |
-| `id`         | int, PK               | auto                                         | spend    |                                              |
-| `user_id`    | text → users          |                                              | spend    |                                              |
-| `ticket_day` | text                  | `YYYY-MM-DD` in the person's zone, from 4:00 | spend    |                                              |
-| `day_index`  | int                   | 0, 1, 2… : 0–2 are the free ones             | spend    | order within the day                         |
-| `sticker_id` | text, null → stickers | unique                                       | seal     | null for good when the drawing was abandoned |
+| Column       | Type                  | Values                   | Set when | Meaning                                      |
+| ------------ | --------------------- | ------------------------ | -------- | -------------------------------------------- |
+| `id`         | int, PK               | auto                     | spend    |                                              |
+| `user_id`    | text → users          |                          | spend    |                                              |
+| `ticket_day` | text                  | `YYYY-MM-DD`, Tokyo time | spend    |                                              |
+| `day_index`  | int                   | 0, 1, 2…                 | spend    | order within the day                         |
+| `kind`       | text                  | `daily`, `reserve`       | spend    | daily for `day_index` 0–2, reserve after     |
+| `sticker_id` | text, null → stickers | unique                   | seal     | null for good when the drawing was abandoned |
 
 - `(user_id, ticket_day, day_index)` is unique, so a double tap can't spend two tickets.
 - `created_at` is when the ticket was spent.
@@ -162,12 +164,14 @@ Inserted when the start screen's button spends a ticket.
 | `id`          | int, PK        | auto               | purchase                                           |                              |
 | `user_id`     | text → users   |                    | purchase                                           |                              |
 | `tickets`     | int            | 1, 3, 5, 10        | purchase                                           | the pack                     |
-| `price_yen`   | int            | 100, 270, 350, 500 | purchase                                           |                              |
+| `price_yen`   | int            | 100, 270, 375, 600 | purchase                                           |                              |
+| `sui_yen`     | text           | decimal            | purchase                                           | the quote's SUI/JPY price    |
 | `paid_mist`   | text           | decimal MIST       | purchase                                           | what the Sui payment carried |
 | `tx_digest`   | text           | Sui digest; unique | purchase                                           | one payment counts once      |
 | `verified_at` | int (ms), null |                    | the server checks it on Sui (at once for the mock) | its tickets count from then  |
 
-- Paid tickets left = verified purchases' `tickets` minus uses with `day_index` 3 or more. They carry over from day to day.
+- Reserve tickets left = verified purchases' `tickets` minus `reserve` uses. They carry over from day to day.
+- A purchase counts only if `paid_mist` covers the pack at a quote the server issued within the last 60 s.
 
 ### `sticker_placements`: one row per person and sticker that has reached them
 
@@ -283,7 +287,6 @@ interface Person {
 
 /** You. */
 interface Me extends Person {
-  timeZone: string;
   createdAt: IsoTime; // the stat board's "Since"
   needsHandle: boolean; // true until the handle prompt is answered
   newStickerCount: number; // NEW in your sticker tray
@@ -352,17 +355,29 @@ interface Gratitude {
 }
 
 interface Tickets {
-  ticketDay: string; // "YYYY-MM-DD", from 4:00 in your zone
-  freePerDay: number;
-  freeLeft: number;
-  paidLeft: number;
-  nextRefillAt: IsoTime;
+  ticketDay: string; // "YYYY-MM-DD", Tokyo time
+  dailyPerDay: number;
+  dailyLeft: number;
+  reserveLeft: number;
+  nextRefillAt: IsoTime; // the next midnight, Tokyo time
   usedToday: Array<{
     id: number;
     dayIndex: number;
+    kind: "daily" | "reserve";
     sticker: { id: string; outline: string; width: number; height: number } | null; // for the ticket stubs
   }>;
-  packs: Array<{ tickets: 1 | 3 | 5 | 10; priceYen: number }>;
+}
+
+interface TicketQuote {
+  suiYen: string; // decimal: yen per SUI, 5-minute time-weighted average
+  quotedAt: IsoTime;
+  expiresAt: IsoTime; // 60 s after quotedAt
+  packs: Array<{
+    tickets: 1 | 3 | 5 | 10;
+    priceYen: number;
+    discountPercent: number; // off ¥100 per ticket: 0, 10, 25, 40
+    priceMist: string; // decimal MIST, rounded up
+  }>;
 }
 
 interface UserStats {
@@ -414,20 +429,21 @@ interface TimelapseV1 {
 
 ### Session and you
 
-| Route                 | Request                                                                                                                                                                         | Response                              | Errors                                   |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | ---------------------------------------- |
-| `POST /api/session`   | `{ idToken: string; timeZone: string }`: `idToken` from `liff.getIDToken()`; `timeZone` from `Intl.DateTimeFormat().resolvedOptions().timeZone`, used at the first sign-in only | 200 `{ me: Me }`, and sets the cookie | 401 `line_token_invalid`                 |
-| `GET /api/me`         | none                                                                                                                                                                            | 200 `{ me: Me }`                      |                                          |
-| `POST /api/me/handle` | `{ handle: string }`: 1–32 characters after trimming, no `@`                                                                                                                    | 200 `{ me: Me }`                      | 400 `handle_invalid`; 409 `handle_taken` |
-| `DELETE /api/me`      | none                                                                                                                                                                            | 204, and clears the cookie            |                                          |
+| Route                 | Request                                                      | Response                              | Errors                                   |
+| --------------------- | ------------------------------------------------------------ | ------------------------------------- | ---------------------------------------- |
+| `POST /api/session`   | `{ idToken: string }`: from `liff.getIDToken()`              | 200 `{ me: Me }`, and sets the cookie | 401 `line_token_invalid`                 |
+| `GET /api/me`         | none                                                         | 200 `{ me: Me }`                      |                                          |
+| `POST /api/me/handle` | `{ handle: string }`: 1–32 characters after trimming, no `@` | 200 `{ me: Me }`                      | 400 `handle_invalid`; 409 `handle_taken` |
+| `DELETE /api/me`      | none                                                         | 204, and clears the cookie            |                                          |
 
 ### Tickets
 
-| Route                        | Request                                                              | Response                                                                                                     | Errors                                            |
-| ---------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- |
-| `GET /api/tickets`           | none                                                                 | 200 `{ tickets: Tickets }`                                                                                   |                                                   |
-| `POST /api/tickets/spend`    | none: the start screen's button                                      | 201 `{ ticketUse: { id: number; ticketDay: string; dayIndex: number; spentAt: IsoTime }; tickets: Tickets }` | 409 `no_tickets_left`                             |
-| `POST /api/ticket-purchases` | `{ tickets: 1 \| 3 \| 5 \| 10; txDigest: string; paidMist: string }` | 201 `{ tickets: Tickets }`                                                                                   | 400 `pack_unknown`; 409 `payment_already_counted` |
+| Route                        | Request                                                              | Response                                                                                                                                 | Errors                                                                                  |
+| ---------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `GET /api/tickets`           | none                                                                 | 200 `{ tickets: Tickets }`                                                                                                               |                                                                                         |
+| `POST /api/tickets/spend`    | `{ kind: "daily" \| "reserve" }`: the kind the start screen offered  | 201 `{ ticketUse: { id: number; ticketDay: string; dayIndex: number; kind: "daily" \| "reserve"; spentAt: IsoTime }; tickets: Tickets }` | 409 `no_tickets_left`; 409 `ticket_kind_changed` when the next ticket is the other kind |
+| `GET /api/ticket-quote`      | none                                                                 | 200 `{ quote: TicketQuote }`                                                                                                             | 503 `sui_price_unavailable`                                                             |
+| `POST /api/ticket-purchases` | `{ tickets: 1 \| 3 \| 5 \| 10; txDigest: string; paidMist: string }` | 201 `{ tickets: Tickets }`                                                                                                               | 400 `pack_unknown`; 402 `payment_short`; 409 `payment_already_counted`                  |
 
 ### Stickers
 

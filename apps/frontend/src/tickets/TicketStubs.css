@@ -1,4 +1,4 @@
-/* Drawing tickets as paper stubs (TicketStubs.tsx): fresh ones are Seal Yellow ticket stock, used ones
+/* Drawing tickets as paper stubs (TicketStubs.tsx): fresh ones are ticket stock in their kind's color, used ones
    the backing they left, with the kiss-cut outline of the sticker each became. They're paper lying on
    the page, lit from the top left like every label. */
 
@@ -38,6 +38,10 @@
 
 .ticket-stub__face {
   fill: var(--seal);
+}
+
+.ticket-stub--reserve .ticket-stub__face {
+  fill: var(--grape);
 }
 
 .ticket-stub.is-used .ticket-stub__face {

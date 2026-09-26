@@ -298,8 +298,6 @@ export const users = sqliteTable(
      * otherwise from the handle prompt; null only until the prompt is answered.
      */
     handle: text("handle"),
-    /** IANA zone from the device at the first sign-in. Ticket days turn over at 4:00 here. */
-    timeZone: text("time_zone").notNull().default("Asia/Tokyo"),
     /**
      * The Privy smart wallet on World Chain, lowercase. Stickers are minted and claimed to it, and it
      * maps chain events back to a person. Set from Privy the first time the server needs it.
@@ -607,7 +605,10 @@ beforeEach(async () => {
 describe("tickets", () => {
   it("spends each ticket slot of a day once, so a double tap can't spend two", () => {
     const spend = () =>
-      db.insert(ticketUses).values({ userId, ticketDay: "2026-09-26", dayIndex: 0 }).run();
+      db
+        .insert(ticketUses)
+        .values({ userId, ticketDay: "2026-09-26", dayIndex: 0, kind: "daily" })
+        .run();
     spend();
     expect(refusal(spend)).toMatch(/UNIQUE constraint failed: ticket_uses/);
   });
@@ -616,7 +617,14 @@ describe("tickets", () => {
     const record = () =>
       db
         .insert(ticketPurchases)
-        .values({ userId, tickets: 1, priceYen: 100, paidMist: "1", txDigest: "digest" })
+        .values({
+          userId,
+          tickets: 1,
+          priceYen: 100,
+          suiYen: "300",
+          paidMist: "1",
+          txDigest: "digest",
+        })
         .run();
     record();
     expect(refusal(record)).toMatch(/ticket_purchases.tx_digest/);
@@ -651,10 +659,12 @@ export const ticketUses = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id),
-    /** YYYY-MM-DD in the person's zone, turning over at 4:00. */
+    /** YYYY-MM-DD, Tokyo time, turning over at midnight. */
     ticketDay: text("ticket_day").notNull(),
-    /** Order within the day, from 0. The day's free tickets go first. */
+    /** Order within the day, from 0. The day's daily tickets go first. */
     dayIndex: integer("day_index").notNull(),
+    /** Daily for day_index 0–2, reserve after. */
+    kind: text("kind", { enum: ["daily", "reserve"] }).notNull(),
     stickerId: text("sticker_id")
       .unique()
       .references(() => stickers.id),
@@ -663,6 +673,7 @@ export const ticketUses = sqliteTable(
   (t) => [
     uniqueIndex("ticket_uses_day").on(t.userId, t.ticketDay, t.dayIndex),
     check("ticket_uses_day_index", sql`${t.dayIndex} >= 0`),
+    check("ticket_uses_kind", sql`${t.kind} in ('daily', 'reserve')`),
   ],
 );
 
@@ -677,6 +688,8 @@ export const ticketPurchases = sqliteTable(
     tickets: integer("tickets").notNull(),
     /** The pack's price in yen. */
     priceYen: integer("price_yen").notNull(),
+    /** The quote's SUI/JPY price, as decimal text. */
+    suiYen: text("sui_yen").notNull(),
     /** What the Sui payment carried, in MIST, as decimal text. */
     paidMist: text("paid_mist").notNull(),
     /** The Sui transaction digest; one payment counts once. */
