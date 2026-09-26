@@ -585,6 +585,13 @@ One experience for everyone, on plain Liner, once per hand-off.
 - **After 昇天:** condensation fogs the glass in from the edges over 1.2s and clears on its own.
 - **After:** the receipt shows the amount, the best multiplier and the combo's length. The giver sees a pink tag on the board's edge; tapping it replays the combo in 3s. The sticker's trail opens the same replay.
 
+### Loading
+
+- **Skeletons:** while a screen loads, it shows its own layout in outline, never a "Loading…" line: blocks of pressed Liner (Liner Deep) with a slow white shine passing over them, real headings and tab labels where they're fixed. Explore outlines Today's stickers, the leaderboard and the feed; the ticket shop its balance and pack rows; the sticker board faint die-cut shapes where stickers usually sit. A screen reader hears one status line ("Loading Explore").
+- **Reveal:** loaded content rises 6px into place and fades in over 220ms. A picture (a sticker, a photo sticker) holds back until its image has loaded, then fades in whole, never half-drawn.
+- **Tabs:** a tab's screen opens from the paper: a Liner veil over it fades away in 160ms.
+- **Reduced motion:** no shine, no rise, no fades.
+
 ### Toast
 
 An Ink slip with Liner text (600, 14px) and 6px corners on the lift shadow. It rises 10px in and sinks out.

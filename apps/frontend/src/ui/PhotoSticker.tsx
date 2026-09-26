@@ -1,3 +1,4 @@
+import { revealOnLoad } from "./reveal";
 import "./photo-sticker.css";
 
 interface Props {
@@ -15,7 +16,14 @@ export function PhotoSticker({ src, name, size }: Props) {
   const style = { "--size": `${size}px` };
   const [first] = graphemes.segment(name.trim());
   return src ? (
-    <img className="photo-sticker" src={src} alt="" draggable={false} style={style} />
+    <img
+      ref={revealOnLoad}
+      className="photo-sticker reveal-img"
+      src={src}
+      alt=""
+      draggable={false}
+      style={style}
+    />
   ) : (
     <span className="photo-sticker photo-sticker-letter" aria-hidden style={style}>
       {first?.segment.toUpperCase()}
