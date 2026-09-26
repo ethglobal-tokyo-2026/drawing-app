@@ -149,7 +149,7 @@ Ink drawn outside the final cut never shows: the cut is exactly what was kept.
 
 During playback, a fill's snapshot is revealed inside a circle growing from the tap point over the fill's beat. Strokes after it keep painting on top.
 
-- **Density.** The drawing's density isn't recorded today. From now on the encoder adds `density` to `TimelapseV1` (an optional field; the encoder already receives it), and fill taps are stored to 0.01px instead of 0.1, so a fill seeds the exact pixel. For older timelapses, `d0` is estimated as `sticker.width / place.w` when the image wasn't scaled down, else 3. A wrong estimate can flood a slightly different region; the ending's fade to the real sticker covers it.
+- **Density.** The density a sticker was drawn at wasn't recorded at first. From now on the encoder adds `density` to `TimelapseV1` (an optional field; the encoder already receives it), and each fill tap is stored as the middle of the pixel it seeded at that density, so a fill seeds the same pixel when it plays. For older timelapses, `d0` is estimated as `sticker.width / place.w` when the image wasn't scaled down, else 3. A wrong estimate can flood a slightly different region; the ending's fade to the real sticker covers it.
 - **If the prepare pass is too slow on a phone**, it moves to a worker (OffscreenCanvas; `paintStroke` takes the wider context type, `floodFill` runs as is), with the main thread as the fallback, as `makeSticker` does.
 
 **Time.** A pure `timelapseSchedule.ts`, tested like `sealTimeline`, maps the drawing's time to playback time.
@@ -194,7 +194,7 @@ It fans out after a small shared commit. Each lane gets its own worktree, a firs
 **Foundation (one commit, first):**
 
 - API: `hasTimelapse` on the sticker detail; `density` (optional) on `TimelapseV1`; `strokePasses` (optional) on `ReplayV1`.
-- App: `decodeTimelapse` with its round-trip test; `density` and 0.01px fill taps in the encoder; `seenByGiverAt` kept on `TrailRow`; `InkSurface.fill` releases its copy; `MAX_DPR` exported.
+- App: `decodeTimelapse` with its round-trip test; `density` and fill taps at the middle of their seeded pixel in the encoder; `seenByGiverAt` kept on `TrailRow`; `InkSurface.fill` releases its copy; `MAX_DPR` exported.
 - The two players' interfaces, as typed stubs, so the UI lanes and the engine lanes build against them at once: `createTimelapsePlayer` (prepare, play, skip, stop) and `mountGratitudeReplay` (finished, stop, setReduced). The implementation plan fixes their exact signatures.
 
 **Lanes, in parallel:**
