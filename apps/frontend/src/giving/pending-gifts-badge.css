@@ -1,4 +1,4 @@
-/* PendingGiftsNotificationBadge: gifts on their way, in a clear-film pocket with one white streak.
+/* PendingGiftsNotificationBadge: gifts on their way, in clear film with one white streak.
    No zipper teeth: the zipper is the sticker tray's alone. */
 .pending-gifts-badge {
   display: flex;
@@ -103,7 +103,7 @@
   text-overflow: ellipsis;
 }
 
-/* Width 75 on purpose: the pocket is too tight for more. */
+/* Width 75 on purpose: the clear film is too tight for more. */
 .pending-gifts-badge__fine {
   font-stretch: 75%;
   color: #56505f;

@@ -95,7 +95,7 @@ export interface ReplayV1 {
   v: 1;
   /** Pop-in lines and particles. */
   seed: number;
-  /** 0–1, the thanker's setting. */
+  /** 0–1, set by the person sending gratitude. */
   intensity: number;
   /** Pixels. */
   stage: [width: number, height: number];

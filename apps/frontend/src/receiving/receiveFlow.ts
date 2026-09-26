@@ -16,7 +16,7 @@ export interface GiftPreviewView {
 export type ReceiveScreen =
   | { step: "opening" }
   | { step: "sealed"; preview: GiftPreviewView }
-  | { step: "torn"; preview: GiftPreviewView; accepting: boolean; failed?: string }
+  | { step: "unpackaged"; preview: GiftPreviewView; receiving: boolean; failed?: string }
   | { step: "received"; stickerId: string }
   | { step: "refused"; refusal: RefusalKind; giver: PersonView | null }
   | { step: "failed"; message: string };
@@ -26,11 +26,11 @@ export type ReceiveEvent =
   | { type: "previewFailed"; error: ApiError }
   /** Try again, after a refusal that may pass or a failed preview. */
   | { type: "retry" }
-  /** The pull tab tore free. */
-  | { type: "tore" }
-  | { type: "accept" }
+  /** The pull tab snapped: the sticker is unpackaged. */
+  | { type: "unpackaged" }
+  | { type: "receive" }
   | { type: "received"; response: ReceiveGiftResponse }
-  | { type: "acceptFailed"; error: ApiError };
+  | { type: "receiveFailed"; error: ApiError };
 
 // A record, so the compiler keeps it to RefusalKind's members, all of them.
 const REFUSAL_KINDS: Record<RefusalKind, true> = {
@@ -81,22 +81,27 @@ export function receiveFlow(screen: ReceiveScreen, event: ReceiveEvent): Receive
         : { step: "failed", message: event.error.message };
     case "retry":
       return screen.step === "refused" || screen.step === "failed" ? { step: "opening" } : screen;
-    case "tore":
+    case "unpackaged":
       return screen.step === "sealed"
-        ? { step: "torn", preview: screen.preview, accepting: false }
+        ? { step: "unpackaged", preview: screen.preview, receiving: false }
         : screen;
-    case "accept":
-      return screen.step === "torn" && !screen.accepting
-        ? { step: "torn", preview: screen.preview, accepting: true }
+    case "receive":
+      return screen.step === "unpackaged" && !screen.receiving
+        ? { step: "unpackaged", preview: screen.preview, receiving: true }
         : screen;
     case "received":
-      return screen.step === "torn" && screen.accepting
+      return screen.step === "unpackaged" && screen.receiving
         ? { step: "received", stickerId: event.response.sticker.id }
         : screen;
-    case "acceptFailed":
-      if (screen.step !== "torn" || !screen.accepting) return screen;
+    case "receiveFailed":
+      if (screen.step !== "unpackaged" || !screen.receiving) return screen;
       return isRefusal(event.error.code)
         ? { step: "refused", refusal: event.error.code, giver: screen.preview.giver }
-        : { step: "torn", preview: screen.preview, accepting: false, failed: event.error.message };
+        : {
+            step: "unpackaged",
+            preview: screen.preview,
+            receiving: false,
+            failed: event.error.message,
+          };
   }
 }

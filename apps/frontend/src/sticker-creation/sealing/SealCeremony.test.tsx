@@ -136,7 +136,7 @@ describe("SealCeremony", () => {
     expect(card()?.hasAttribute("inert")).toBe(true);
     act(skip);
     expect(card()?.hasAttribute("inert")).toBe(false);
-    expect(host.querySelector<HTMLElement>(".seal-ceremony__piece")?.style.transform).toContain(
+    expect(host.querySelector<HTMLElement>(".seal-ceremony__sticker")?.style.transform).toContain(
       "rotate(-2deg)",
     );
   });

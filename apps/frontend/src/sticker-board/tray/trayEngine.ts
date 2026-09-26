@@ -1,5 +1,5 @@
 /**
- * The sticker tray: a zipped pocket down the Sticker Board's right edge, opened by its Zipper.
+ * The sticker tray: zipped down the Sticker Board's right edge, opened by its Zipper.
  * Inside, a stack of loose sticker sheets holds every sticker you've had, in arrival order, each in
  * its packed spot: a used sticker silhouette where one is out on the board, a blank where one was
  * given. You page the stack, pull a sheet out over the board, spread every sheet out, peel stickers

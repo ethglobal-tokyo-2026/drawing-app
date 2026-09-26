@@ -10,7 +10,7 @@
 }
 
 /* The sticker being given, above the sheet. Once it's in the bag, its silhouette stays behind. */
-.giving__piece {
+.giving__sticker {
   position: absolute;
   left: 0;
   right: 0;

@@ -85,8 +85,8 @@ const press = (name: string) =>
     target.click();
   });
 
-/** Opens a receivable gift and tears it open from the keyboard, up to Accept. */
-async function tearOpen(receiveGift: ApiClient["receiveGift"]) {
+/** Opens a receivable gift and unpackages it from the keyboard, up to Accept. */
+async function unpackage(receiveGift: ApiClient["receiveGift"]) {
   open({ previewGift: () => Promise.resolve(receivable), receiveGift });
   await settle();
   const slider = document.querySelector<HTMLElement>("[role=slider]");
@@ -145,9 +145,9 @@ describe("ReceiveGiftDialog", () => {
     },
   );
 
-  it("tears open on the slider's End key and brings up Accept", async () => {
+  it("unpackages on the slider's End key and brings up Accept", async () => {
     const receiveGift = vi.fn(() => Promise.resolve(received));
-    await tearOpen(receiveGift);
+    await unpackage(receiveGift);
     expect(document.querySelector("[role=slider]")).toBeNull();
     expect(button("Accept")).toBeDefined();
     expect(receiveGift).not.toHaveBeenCalled();
@@ -155,7 +155,7 @@ describe("ReceiveGiftDialog", () => {
 
   it("receives the gift once on Accept and closes with its sticker", async () => {
     const receiveGift = vi.fn(() => Promise.resolve(received));
-    await tearOpen(receiveGift);
+    await unpackage(receiveGift);
     press("Accept");
     await act(async () => button("Accepting…")?.click());
     await settle();
@@ -170,7 +170,7 @@ describe("ReceiveGiftDialog", () => {
       .fn<ApiClient["receiveGift"]>()
       .mockRejectedValueOnce(new ApiError(0, { error: "network", detail: "Failed to fetch" }))
       .mockResolvedValueOnce(received);
-    await tearOpen(receiveGift);
+    await unpackage(receiveGift);
     press("Accept");
     await settle();
     const problem = document.querySelector('[role="alert"]')?.textContent;
@@ -187,7 +187,7 @@ describe("ReceiveGiftDialog", () => {
 
   it("closes on Not now without receiving it", async () => {
     const receiveGift = vi.fn(() => Promise.resolve(received));
-    await tearOpen(receiveGift);
+    await unpackage(receiveGift);
     press("Not now");
     expect(onClose).toHaveBeenCalledWith();
     expect(receiveGift).not.toHaveBeenCalled();

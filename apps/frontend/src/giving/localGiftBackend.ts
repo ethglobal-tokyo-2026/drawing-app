@@ -22,7 +22,7 @@ type PackedRecord = Extract<GiftRecord, { state: "packed" }>;
 /**
  * Makes gifts on this device. Gift IDs and gift claim tokens take createGiftClaim's format (32
  * random bytes as 0x-hex) so links keep their shape when the server issues them; there's no claim
- * commitment, because nothing here can accept a gift yet.
+ * commitment, because nothing here can receive a gift yet.
  */
 export function createLocalGiftBackend({
   store,

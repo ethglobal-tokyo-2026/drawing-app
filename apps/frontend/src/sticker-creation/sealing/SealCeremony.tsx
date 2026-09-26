@@ -105,7 +105,7 @@ export function SealCeremony({
       veil: el<HTMLElement>(".seal-ceremony__veil"),
       cut: el<HTMLCanvasElement>(".seal-ceremony__cut"),
       shadow: el<HTMLElement>(".seal-ceremony__shadow"),
-      piece: el<HTMLElement>(".seal-ceremony__piece"),
+      sticker: el<HTMLElement>(".seal-ceremony__sticker"),
       plain: el<HTMLElement>(".seal-ceremony__plain"),
       tint: el<HTMLElement>(".seal-ceremony__tint"),
       gloss: el<HTMLElement>(".seal-ceremony__gloss"),
@@ -153,8 +153,8 @@ export function SealCeremony({
       opacity(parts.spec, f.spec.opacity);
       parts.specFace.style.scale = String(f.spec.scale);
       opacity(parts.rim, f.rim);
-      const p = f.piece;
-      parts.piece.style.transform = `perspective(1000px) translate(${p.x}px, ${p.y}px) rotate(${p.rotate}deg) rotateX(${p.rotateX}deg) rotateY(${p.rotateY}deg) scale(${p.scale})`;
+      const p = f.sticker;
+      parts.sticker.style.transform = `perspective(1000px) translate(${p.x}px, ${p.y}px) rotate(${p.rotate}deg) rotateX(${p.rotateX}deg) rotateY(${p.rotateY}deg) scale(${p.scale})`;
       const s = f.shadow;
       opacity(parts.shadow, s.opacity);
       parts.shadow.style.transform = `translate(${s.x}px, ${s.y}px) rotate(${s.rotate}deg) scale(${s.scale})`;
@@ -263,7 +263,7 @@ export function SealCeremony({
         alt=""
         decoding="sync"
       />
-      <div className="seal-ceremony__piece" style={resin} aria-hidden="true">
+      <div className="seal-ceremony__sticker" style={resin} aria-hidden="true">
         <img className="seal-ceremony__plain" src={layers.plain} alt="" decoding="sync" />
         <img className="seal-ceremony__tint" src={layers.tint} alt="" decoding="sync" />
         <img className="seal-ceremony__gloss" src={layers.gloss} alt="" decoding="sync" />
