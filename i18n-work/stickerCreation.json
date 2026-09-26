@@ -1,0 +1,340 @@
+{
+  "stickerCreation.canvas": {
+    "where": "Drawing screen: the white sheet you draw on, named for screen readers",
+    "ja": "キャンバス"
+  },
+  "stickerCreation.timer.label": {
+    "where": "Drawing screen, top left: the timer dot's name for screen readers before the first stroke starts the clock",
+    "ja": "タイマー"
+  },
+  "stickerCreation.timer.pause": {
+    "where": "Drawing screen, top left: the timer dot's name for screen readers while the clock runs; a tap pauses it",
+    "ja": "タイマーを一時停止"
+  },
+  "stickerCreation.timer.resume": {
+    "where": "Drawing screen, top left: the timer dot's name for screen readers after you paused it; a tap resumes it",
+    "ja": "タイマーを再開"
+  },
+  "stickerCreation.timer.paused": {
+    "where": "Drawing screen, top left: the small white tag with a pause icon that hangs off the timer dot whenever the clock is stopped; hidden from screen readers",
+    "ja": "一時停止"
+  },
+  "stickerCreation.timer.status.running": {
+    "where": "Drawing screen, top left: read by screen readers after the timer dot's name while the clock runs; {{time}} is minutes:seconds, such as 4:32",
+    "ja": "残り{{time}}"
+  },
+  "stickerCreation.timer.status.waiting": {
+    "where": "Drawing screen, top left: read by screen readers after the timer dot's name before the first stroke starts the clock",
+    "ja": "残り{{time}}、かき始めるとスタート"
+  },
+  "stickerCreation.timer.status.paused": {
+    "where": "Drawing screen, top left: read by screen readers after the timer dot's name while the clock is stopped by a tap on the timer, by the app going to the background, or by another screen covering the drawing screen",
+    "ja": "残り{{time}}、一時停止中"
+  },
+  "stickerCreation.timer.status.color": {
+    "where": "Drawing screen, top left: read by screen readers after the timer dot's name while the color sheet is open, which stops the clock",
+    "ja": "残り{{time}}、色を選んでいる間は一時停止中"
+  },
+  "stickerCreation.timer.status.smoothing": {
+    "where": "Drawing screen, top left: read by screen readers after the timer dot's name while the smoothing bar is open, which stops the clock",
+    "ja": "残り{{time}}、手ぶれ補正を調整している間は一時停止中"
+  },
+  "stickerCreation.timer.status.size": {
+    "where": "Drawing screen, top left: read by screen readers after the timer dot's name while a finger is on the size rail, which stops the clock",
+    "ja": "残り{{time}}、ブラシのサイズを調整している間は一時停止中"
+  },
+  "stickerCreation.timer.note.tapToKeepDrawing": {
+    "where": "Drawing screen, top left: the white label under the timer for a few seconds when you draw on a paused sheet, also announced; the label never wraps by itself, so the line break is where it wraps",
+    "ja": "タイマーをタップすると\n続きをかけます。"
+  },
+  "stickerCreation.timer.note.startsWhenYouDraw": {
+    "where": "Drawing screen, top left: the white label under the timer after Start on your first few visits, or when you tap the timer before the first stroke; also announced",
+    "ja": "かき始めるとスタート"
+  },
+  "stickerCreation.timer.note.pickedUp": {
+    "where": "Drawing screen, top left: the white label under the timer when a reload brings back your drawing in progress, paused, until the clock runs again; also announced",
+    "ja": "続きから再開しました"
+  },
+  "stickerCreation.timer.note.ticketCarriesOver": {
+    "where": "Drawing screen, top left: the white label under the timer when a reload couldn't bring back your drawing, so a fresh sheet uses the same ticket, until the first stroke; also announced; the label never wraps by itself",
+    "ja": "続きから再開できなかったので、\nチケットはそのまま使えます"
+  },
+  "stickerCreation.startNote.lost": {
+    "where": "Drawing screen, the start card that asks before a ticket is spent: a note under its line when a reload couldn't bring back your drawing in progress",
+    "ja": "前回の続きから再開できませんでした。"
+  },
+  "stickerCreation.startNote.ticketFailed": {
+    "where": "Drawing screen, the start card that asks before a ticket is spent: a note under its line when tapping Start couldn't spend the ticket; {{reason}} is the server's error message",
+    "ja": "チケットを使えませんでした。{{reason}}"
+  },
+  "stickerCreation.seal.label": {
+    "where": "Drawing screen, bottom right: the seal key's name for screen readers until its first tap arms it; the key shows a check mark",
+    "ja": "仕上げ：2回タップ"
+  },
+  "stickerCreation.seal.tapAgain": {
+    "where": "Drawing screen, bottom right: the chip beside the seal key after its first tap, announced to screen readers and the key's name until the second tap, which seals",
+    "ja": "もう一度タップで仕上げ"
+  },
+  "stickerCreation.seal.empty": {
+    "where": "Drawing screen, bottom right: the chip beside the seal key, announced, when it's tapped but everything drawn was erased or undone",
+    "ja": "キャンバスが真っ白なので、仕上げるものがありません。"
+  },
+  "stickerCreation.seal.emptyAtTimeUp": {
+    "where": "Drawing screen: a toast when time runs out after everything drawn was erased or undone; the sheet then resets",
+    "ja": "時間切れです。キャンバスが真っ白だったので、何も仕上がりませんでした。"
+  },
+  "stickerCreation.seal.failed": {
+    "where": "Drawing screen, bottom right: the chip beside the seal key, announced, when the server refused or didn't answer the seal; {{reason}} is the server's error message; the check is the seal key's icon",
+    "ja": "仕上げられませんでした。{{reason}}チェックをタップして、もう一度お試しください。"
+  },
+  "stickerCreation.seal.failedHere": {
+    "where": "Drawing screen, bottom right: the chip beside the seal key, announced, when sealing failed on the phone before the server was asked; {{reason}} is a technical message that stays English",
+    "ja": "仕上げられませんでした（{{reason}}）。チェックをタップして、もう一度お試しください。"
+  },
+  "stickerCreation.tools.label": {
+    "where": "Drawing screen, top right: the tool strip's name for screen readers",
+    "ja": "ツール"
+  },
+  "stickerCreation.tools.brush": {
+    "where": "Drawing screen, top right: the brush tile in the tool strip, named for screen readers",
+    "ja": "ブラシ"
+  },
+  "stickerCreation.tools.eraser": {
+    "where": "Drawing screen, top right: the eraser tile in the tool strip, named for screen readers",
+    "ja": "消しゴム"
+  },
+  "stickerCreation.tools.fill": {
+    "where": "Drawing screen, top right: the paint bucket tile in the tool strip, named for screen readers",
+    "ja": "塗りつぶし"
+  },
+  "stickerCreation.tools.color": {
+    "where": "Drawing screen, top right: the color tile in the tool strip, which opens the color sheet, named for screen readers",
+    "ja": "カラー"
+  },
+  "stickerCreation.tools.smoothing": {
+    "where": "Drawing screen, top right: the smoothing tile's name for screen readers, the title of the smoothing bar it opens, and that bar's slider's name",
+    "ja": "手ぶれ補正"
+  },
+  "stickerCreation.colorSheet.title": {
+    "where": "Color sheet, which slides up over the drawing screen from the color tile: its heading, and its name for screen readers",
+    "ja": "カラー"
+  },
+  "stickerCreation.colorSheet.recent": {
+    "where": "Color sheet: the small label to the left of the row of recently used colors, 50px wide; hidden from screen readers",
+    "ja": "最近"
+  },
+  "stickerCreation.colorSheet.recentColors": {
+    "where": "Color sheet: the row of recently used colors, named for screen readers",
+    "ja": "最近使った色"
+  },
+  "stickerCreation.colorSheet.swatches": {
+    "where": "Color sheet: the grid of 30 preset colors, named for screen readers",
+    "ja": "パレット"
+  },
+  "stickerCreation.colorSheet.huePad": {
+    "where": "Color sheet: the hue and saturation pad, named for screen readers",
+    "ja": "色相と彩度"
+  },
+  "stickerCreation.colorSheet.huePadValue": {
+    "where": "Color sheet: read by screen readers as the hue and saturation pad moves; {{hue}} is 0 to 359 and {{saturation}} 0 to 100",
+    "ja": "色相{{hue}}度、彩度{{saturation}}%"
+  },
+  "stickerCreation.colorSheet.brightness": {
+    "where": "Color sheet: the brightness bar under the pad, named for screen readers",
+    "ja": "明るさ"
+  },
+  "stickerCreation.colorSheet.swatchNames.ink": {
+    "where": "Color sheet: screen readers' name for the Ink preset color, #1C1824, a violet near-black",
+    "ja": "墨色"
+  },
+  "stickerCreation.colorSheet.swatchNames.charcoal": {
+    "where": "Color sheet: screen readers' name for the Charcoal preset color, #4A4453, a dark gray",
+    "ja": "チャコール"
+  },
+  "stickerCreation.colorSheet.swatchNames.graphite": {
+    "where": "Color sheet: screen readers' name for the Graphite preset color, #6E6878, a mid gray",
+    "ja": "グラファイト"
+  },
+  "stickerCreation.colorSheet.swatchNames.stone": {
+    "where": "Color sheet: screen readers' name for the Stone preset color, #A39E93, a warm light gray",
+    "ja": "ストーン"
+  },
+  "stickerCreation.colorSheet.swatchNames.sand": {
+    "where": "Color sheet: screen readers' name for the Sand preset color, #D9D4CB, a pale gray beige",
+    "ja": "砂色"
+  },
+  "stickerCreation.colorSheet.swatchNames.white": {
+    "where": "Color sheet: screen readers' name for the White preset color, #FFFFFF",
+    "ja": "白"
+  },
+  "stickerCreation.colorSheet.swatchNames.cream": {
+    "where": "Color sheet: screen readers' name for the Cream preset color, #FFF1D6",
+    "ja": "クリーム"
+  },
+  "stickerCreation.colorSheet.swatchNames.peach": {
+    "where": "Color sheet: screen readers' name for the Peach preset color, #FFE0C7, a pale skin tone",
+    "ja": "ピーチ"
+  },
+  "stickerCreation.colorSheet.swatchNames.tan": {
+    "where": "Color sheet: screen readers' name for the Tan preset color, #E8B48C, a tanned skin tone",
+    "ja": "小麦色"
+  },
+  "stickerCreation.colorSheet.swatchNames.brown": {
+    "where": "Color sheet: screen readers' name for the Brown preset color, #9A6444",
+    "ja": "茶色"
+  },
+  "stickerCreation.colorSheet.swatchNames.yellow": {
+    "where": "Color sheet: screen readers' name for the Yellow preset color, #FFD93B",
+    "ja": "黄色"
+  },
+  "stickerCreation.colorSheet.swatchNames.amber": {
+    "where": "Color sheet: screen readers' name for the Amber preset color, #FFB547, a golden orange",
+    "ja": "琥珀色"
+  },
+  "stickerCreation.colorSheet.swatchNames.apricot": {
+    "where": "Color sheet: screen readers' name for the Apricot preset color, #F7A541",
+    "ja": "アプリコット"
+  },
+  "stickerCreation.colorSheet.swatchNames.orange": {
+    "where": "Color sheet: screen readers' name for the Orange preset color, #FF7A45",
+    "ja": "オレンジ"
+  },
+  "stickerCreation.colorSheet.swatchNames.tomato": {
+    "where": "Color sheet: screen readers' name for the Tomato preset color, #FF5A36, a red orange",
+    "ja": "朱色"
+  },
+  "stickerCreation.colorSheet.swatchNames.red": {
+    "where": "Color sheet: screen readers' name for the Red preset color, #E8484F",
+    "ja": "赤"
+  },
+  "stickerCreation.colorSheet.swatchNames.brick": {
+    "where": "Color sheet: screen readers' name for the Brick preset color, #B8472E",
+    "ja": "レンガ色"
+  },
+  "stickerCreation.colorSheet.swatchNames.chestnut": {
+    "where": "Color sheet: screen readers' name for the Chestnut preset color, #7A4A2E",
+    "ja": "栗色"
+  },
+  "stickerCreation.colorSheet.swatchNames.caramel": {
+    "where": "Color sheet: screen readers' name for the Caramel preset color, #C58A4A",
+    "ja": "キャラメル"
+  },
+  "stickerCreation.colorSheet.swatchNames.cocoa": {
+    "where": "Color sheet: screen readers' name for the Cocoa preset color, #4A2F25, a dark brown",
+    "ja": "ココア"
+  },
+  "stickerCreation.colorSheet.swatchNames.blush": {
+    "where": "Color sheet: screen readers' name for the Blush preset color, #FFB8C9, a soft pink",
+    "ja": "桜色"
+  },
+  "stickerCreation.colorSheet.swatchNames.salmon": {
+    "where": "Color sheet: screen readers' name for the Salmon preset color, #FF9E9E",
+    "ja": "サーモンピンク"
+  },
+  "stickerCreation.colorSheet.swatchNames.pink": {
+    "where": "Color sheet: screen readers' name for the Pink preset color, #FF4F9A, a hot pink",
+    "ja": "ピンク"
+  },
+  "stickerCreation.colorSheet.swatchNames.lilac": {
+    "where": "Color sheet: screen readers' name for the Lilac preset color, #CDBEFF, a pale purple",
+    "ja": "藤色"
+  },
+  "stickerCreation.colorSheet.swatchNames.grape": {
+    "where": "Color sheet: screen readers' name for the Grape preset color, #9B7BFF, a violet",
+    "ja": "紫"
+  },
+  "stickerCreation.colorSheet.swatchNames.navy": {
+    "where": "Color sheet: screen readers' name for the Navy preset color, #3B3F8F, the color a first session starts with",
+    "ja": "紺色"
+  },
+  "stickerCreation.colorSheet.swatchNames.blue": {
+    "where": "Color sheet: screen readers' name for the Blue preset color, #2F6BFF",
+    "ja": "青"
+  },
+  "stickerCreation.colorSheet.swatchNames.sky": {
+    "where": "Color sheet: screen readers' name for the Sky preset color, #7CC6FF, a light blue",
+    "ja": "空色"
+  },
+  "stickerCreation.colorSheet.swatchNames.aqua": {
+    "where": "Color sheet: screen readers' name for the Aqua preset color, #38D3DC, a turquoise",
+    "ja": "アクア"
+  },
+  "stickerCreation.colorSheet.swatchNames.ice": {
+    "where": "Color sheet: screen readers' name for the Ice preset color, #BDEFF2, a pale aqua",
+    "ja": "水色"
+  },
+  "stickerCreation.sizeRail.brush": {
+    "where": "Drawing screen, left edge: the size rail's name for screen readers while the brush or the fill is in hand",
+    "ja": "ブラシのサイズ"
+  },
+  "stickerCreation.sizeRail.eraser": {
+    "where": "Drawing screen, left edge: the size rail's name for screen readers while the eraser is in hand",
+    "ja": "消しゴムのサイズ"
+  },
+  "stickerCreation.sizeRail.value": {
+    "where": "Drawing screen, left edge: read by screen readers as the size rail moves; {{size}} is 1 to 48; the number shown on the rail doesn't use this text",
+    "ja": "{{size}}ピクセル"
+  },
+  "stickerCreation.smoothingBar.raw": {
+    "where": "Smoothing bar, under the tool strip: the small label at the slider's left end, no smoothing; hidden from screen readers",
+    "ja": "弱"
+  },
+  "stickerCreation.smoothingBar.smooth": {
+    "where": "Smoothing bar, under the tool strip: the small label at the slider's right end, the most smoothing; hidden from screen readers",
+    "ja": "強"
+  },
+  "stickerCreation.history.undo": {
+    "where": "Drawing screen, bottom left: the undo tile, named for screen readers",
+    "ja": "元に戻す"
+  },
+  "stickerCreation.history.redo": {
+    "where": "Drawing screen, bottom left: the redo tile, named for screen readers",
+    "ja": "やり直す"
+  },
+  "stickerCreation.sealCeremony.sealing": {
+    "where": "Drawing screen: announced to screen readers as the seal ceremony starts, while the sticker is cut out, domed with resin and peeled onto the sealed card",
+    "ja": "シールを仕上げています"
+  },
+  "stickerCreation.sealedCard.title": {
+    "where": "Sealed card, the backing card the new sticker lands on at the end of the seal ceremony: its title, under the sticker",
+    "ja": "仕上がりました"
+  },
+  "stickerCreation.sealedCard.finePrint": {
+    "where": "Sealed card: the fine print under the title; {{no}} is the sticker's number (No.0012), <duration/> its drawing time (3分12秒), {{day}} the day it was sealed (2026.09.27) and <handle/> your @handle",
+    "ja": "{{no}}・<duration/>・{{day}}・<handle/>"
+  },
+  "stickerCreation.sealedCard.keepDrawing": {
+    "where": "Sealed card: the main key while you have tickets left; it opens a fresh sheet for the next sticker",
+    "ja": "もう1枚かく"
+  },
+  "stickerCreation.sealedCard.goToStickerBoard": {
+    "where": "Sealed card: the button at the bottom while you have tickets left, or the main key after your last ticket; it goes to your sticker board",
+    "ja": "シールボードへ"
+  },
+  "stickerCreation.sealedCard.shopForTickets": {
+    "where": "Sealed card: the button at the bottom after your last ticket; it opens the ticket shop",
+    "ja": "チケットを買う"
+  },
+  "stickerCreation.sealedCard.dailyTicketsLeft_one": {
+    "where": "Sealed card: the row of daily ticket stubs, named for screen readers with how many daily tickets are left today (one)"
+  },
+  "stickerCreation.sealedCard.dailyTicketsLeft_other": {
+    "where": "Sealed card: the row of daily ticket stubs, named for screen readers with how many daily tickets are left today",
+    "ja": "今日の無償チケットは残り{{count}}枚"
+  },
+  "stickerCreation.sealedCard.reserveTickets_one": {
+    "where": "Sealed card: the reserve ticket count beside the stubs, read by screen readers (one)"
+  },
+  "stickerCreation.sealedCard.reserveTickets_other": {
+    "where": "Sealed card: the reserve ticket count beside the stubs, read by screen readers",
+    "ja": "有償チケット{{count}}枚"
+  },
+  "stickerCreation.sealedCard.lastTicket": {
+    "where": "Sealed card: the line under the tickets after you used your last ticket of either kind; {{time}} is when daily tickets refill (0:00 in Japanese)",
+    "ja": "これが今日最後のチケットでした。{{time}}に新しい無償チケットが届きます"
+  },
+  "stickerCreation.sealedCard.lastDailyTicket": {
+    "where": "Sealed card: the line under the tickets after the day's last daily ticket, while reserve tickets remain; {{time}} is when daily tickets refill (0:00 in Japanese)",
+    "ja": "これが今日最後の無償チケットでした。{{time}}に新しい無償チケットが届きます"
+  }
+}

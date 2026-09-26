@@ -1,0 +1,216 @@
+{
+  "tickets.count": {
+    "where": "Ticket marks on the Draw keys, the ticket cards and the sealed card: how many of that kind are left, printed after the mark",
+    "ja": "×{{count}}"
+  },
+  "tickets.summary.dailyAndReserve": {
+    "where": "Screen-reader name of a Draw key (sticker board, refilled out-of-tickets card, ticket shop after a purchase): joins the two ticket counts",
+    "ja": "{{daily}}と{{reserve}}"
+  },
+  "tickets.summary.daily_one": {
+    "where": "Screen-reader name of a Draw key: the daily ticket count, when one is left"
+  },
+  "tickets.summary.daily_other": {
+    "where": "Screen-reader name of a Draw key: the daily ticket count",
+    "ja": "無償チケット{{count}}枚"
+  },
+  "tickets.summary.reserve_one": {
+    "where": "Screen-reader name of a Draw key: the reserve ticket count, when one is left"
+  },
+  "tickets.summary.reserve_other": {
+    "where": "Screen-reader name of a Draw key: the reserve ticket count",
+    "ja": "有償チケット{{count}}枚"
+  },
+  "tickets.refillIn.underAMinute": {
+    "where": "Out-of-tickets card: the countdown after the refill time, in the last minute before new daily tickets arrive",
+    "ja": "まもなく"
+  },
+  "tickets.refillIn.hoursAndMinutes": {
+    "where": "Out-of-tickets card: the countdown after the refill time, such as \"in 6h 56m\"",
+    "ja": "あと{{hours}}時間{{minutes}}分"
+  },
+  "tickets.refillIn.hours": {
+    "where": "Out-of-tickets card: the countdown after the refill time, on the hour, such as \"in 6h\"",
+    "ja": "あと{{hours}}時間"
+  },
+  "tickets.refillIn.minutes": {
+    "where": "Out-of-tickets card: the countdown after the refill time, in the last hour, such as \"in 42m\"",
+    "ja": "あと{{minutes}}分"
+  },
+  "tickets.reserve": {
+    "where": "Start card and out-of-tickets card: the small label beside the reserve ticket count, under the daily ticket stubs",
+    "ja": "有償"
+  },
+  "tickets.draw": {
+    "where": "The Draw key on the out-of-tickets card once the refill brings tickets back, and in the ticket shop (card or Shop tab) after a purchase",
+    "ja": "かく"
+  },
+  "tickets.drawWithTickets": {
+    "where": "Screen-reader name of that Draw key (refilled out-of-tickets card, ticket shop after a purchase); `tickets` is both counts in words",
+    "ja": "かく：{{tickets}}があります"
+  },
+  "tickets.shopForTickets": {
+    "where": "Start card when only reserve tickets are left, and the out-of-tickets card: the button under the key that opens the ticket shop",
+    "ja": "チケットを買う"
+  },
+  "tickets.goToStickerBoard": {
+    "where": "Out-of-tickets card (the main key, or the button under Draw once refilled) and the card shown while tickets load: goes back to the sticker board",
+    "ja": "シールボードへ"
+  },
+  "tickets.notNow": {
+    "where": "Quiet link at the foot of the start card, the tickets-didn't-load card and the ticket shop's card: closes the card without spending or buying",
+    "ja": "あとで"
+  },
+  "tickets.tryAgain": {
+    "where": "Key on the card when tickets didn't load, and the link after the ticket shop's balance or price problem: tries again",
+    "ja": "もう一度"
+  },
+  "tickets.startDrawing.daily.title": {
+    "where": "Start card on the drawing screen, before a fresh sheet, while daily tickets are left: the title asking to spend one",
+    "ja": "チケットを使ってかきますか？"
+  },
+  "tickets.startDrawing.daily.left_one": {
+    "where": "Start card, daily ticket variant: the bold line under the title, when one daily ticket is left"
+  },
+  "tickets.startDrawing.daily.left_other": {
+    "where": "Start card, daily ticket variant: the bold line under the title saying how many daily tickets are left",
+    "ja": "無償チケットは残り{{count}}枚です。"
+  },
+  "tickets.startDrawing.daily.timer": {
+    "where": "Start card, daily ticket variant: the quiet line after the count, about the drawing timer",
+    "ja": "最初のひと筆で{{minutes}}分のタイマーが始まります。"
+  },
+  "tickets.startDrawing.daily.start": {
+    "where": "Start card, daily ticket variant: the key that spends a daily ticket and opens the sheet",
+    "ja": "かき始める"
+  },
+  "tickets.startDrawing.reserve.title": {
+    "where": "Start card on the drawing screen once today's daily tickets are used: the title asking before a reserve ticket is spent",
+    "ja": "有償チケットを使いますか？"
+  },
+  "tickets.startDrawing.reserve.left_one": {
+    "where": "Start card, reserve ticket variant: the bold line under the title, when one reserve ticket is left"
+  },
+  "tickets.startDrawing.reserve.left_other": {
+    "where": "Start card, reserve ticket variant: the bold line under the title saying the daily tickets are gone and how many reserve tickets are left",
+    "ja": "今日の無償チケットは使い切りました。有償チケットは{{count}}枚あります。"
+  },
+  "tickets.startDrawing.reserve.refillAt": {
+    "where": "Start card, reserve ticket variant: the quiet line after the count, saying when new daily tickets arrive (midnight in Tokyo, in the person's own time)",
+    "ja": "{{time}}に新しい無償チケットが届きます。"
+  },
+  "tickets.startDrawing.reserve.use": {
+    "where": "Start card, reserve ticket variant: the grape key that spends a reserve ticket and opens the sheet",
+    "ja": "有償チケットを使う"
+  },
+  "tickets.outOfTickets.title": {
+    "where": "Out-of-tickets card on the drawing screen, when both daily and reserve tickets are used up: the title",
+    "ja": "今日はもうチケットがありません"
+  },
+  "tickets.outOfTickets.refillLine": {
+    "where": "Out-of-tickets card: the line under the title, when new daily tickets arrive (bold) and the countdown to it (quiet)",
+    "ja": "<strong>{{time}}に新しい無償チケットが届きます</strong><countdown>（{{countdown}}）</countdown>"
+  },
+  "tickets.outOfTickets.refilled": {
+    "where": "Out-of-tickets card: the title once the refill brings tickets back while it's open, as the card turns over",
+    "ja": "新しいチケットが届きました"
+  },
+  "tickets.notLoaded.checking": {
+    "where": "Drawing screen, in the start card's place: the title while your tickets load",
+    "ja": "チケットを確認しています…"
+  },
+  "tickets.notLoaded.couldntLoad": {
+    "where": "Drawing screen, in the start card's place: the title when your tickets didn't load, above the reason",
+    "ja": "チケットを読み込めませんでした"
+  },
+  "tickets.shop.title": {
+    "where": "Ticket shop, as a card over the drawing screen or as the Shop tab: the title",
+    "ja": "チケットショップ"
+  },
+  "tickets.shop.lead": {
+    "where": "Ticket shop: the bold line under the title",
+    "ja": "有償チケットに有効期限はありません。"
+  },
+  "tickets.shop.balance": {
+    "where": "Ticket shop: the small label on the wallet row, beside the balance shown in yen",
+    "ja": "残高"
+  },
+  "tickets.shop.readingBalance": {
+    "where": "Ticket shop: the wallet row while the balance loads",
+    "ja": "残高を確認しています…"
+  },
+  "tickets.shop.balanceProblem": {
+    "where": "Ticket shop: the wallet row when the balance couldn't be read, before a Try again link; `reason` is the wallet's own words",
+    "ja": "残高を確認できませんでした（{{reason}}）。"
+  },
+  "tickets.shop.gettingPrices": {
+    "where": "Ticket shop: in the packs' place while today's prices load",
+    "ja": "今日の価格を確認しています…"
+  },
+  "tickets.shop.pricesProblem": {
+    "where": "Ticket shop: in the packs' place when today's prices couldn't be fetched, before a Try again link",
+    "ja": "今日の価格を確認できませんでした：{{reason}}"
+  },
+  "tickets.shop.packs": {
+    "where": "Ticket shop: screen-reader name of the group of pack buttons",
+    "ja": "チケットパック"
+  },
+  "tickets.shop.pack_one": {
+    "where": "Ticket shop: a pack button's name, for the one-ticket pack"
+  },
+  "tickets.shop.pack_other": {
+    "where": "Ticket shop: a pack button's name, such as \"3 tickets\"",
+    "ja": "チケット{{count}}枚"
+  },
+  "tickets.shop.discount": {
+    "where": "Ticket shop: the pink sale sticker on a discounted pack button",
+    "ja": "{{percent}}%オフ"
+  },
+  "tickets.shop.was": {
+    "where": "Ticket shop: screen-reader text for a discounted pack's struck-through full price",
+    "ja": "通常価格{{price}}"
+  },
+  "tickets.shop.pay": {
+    "where": "Ticket shop: the grape pay key, before a pack's price is known",
+    "ja": "支払う"
+  },
+  "tickets.shop.payPrice": {
+    "where": "Ticket shop: the grape pay key, with the chosen pack's price",
+    "ja": "{{price}}を支払う"
+  },
+  "tickets.shop.paying": {
+    "where": "Ticket shop: the pay key while the payment goes through",
+    "ja": "支払い中…"
+  },
+  "tickets.shop.notEnoughYen": {
+    "where": "Ticket shop: the pay key, disabled, when the balance is less than the chosen pack's price",
+    "ja": "残高不足"
+  },
+  "tickets.shop.added_one": {
+    "where": "Ticket shop after a purchase: the title, when one reserve ticket was added"
+  },
+  "tickets.shop.added_other": {
+    "where": "Ticket shop after a purchase: the title saying how many reserve tickets were added",
+    "ja": "有償チケットを{{count}}枚追加しました"
+  },
+  "tickets.shop.paid": {
+    "where": "Ticket shop after a purchase: the quiet line under the title with the price paid",
+    "ja": "{{price}}を支払いました。"
+  },
+  "tickets.shop.buyMore": {
+    "where": "Ticket shop after a purchase: the button under Draw that goes back to the packs",
+    "ja": "チケットをもっと買う"
+  },
+  "tickets.shop.paymentFailed": {
+    "where": "Ticket shop when a payment fails: the title, above the reason",
+    "ja": "支払いが完了しませんでした"
+  },
+  "tickets.shop.paidButNotAdded": {
+    "where": "Ticket shop when a payment fails after the money moved: the line under the title; `digest` is the transaction's ID, `reason` the error",
+    "ja": "支払いは完了しました（{{digest}}）が、チケットは追加されませんでした：{{reason}}"
+  },
+  "tickets.shop.backToShop": {
+    "where": "Ticket shop when a payment fails: the key that goes back to the packs",
+    "ja": "ショップに戻る"
+  }
+}
