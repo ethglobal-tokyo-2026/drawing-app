@@ -1,0 +1,118 @@
+/* ---------- Settings: an index card taped across the foot of your cork back ---------- */
+
+/* Until it scrolls into view it sticks to the cork's foot, tucked down so only its title peeks up
+   (SettingsNote measures the tuck). It's the last paper, so it rides over the ones above it. */
+.stat-board__note.settings-note {
+  position: sticky;
+  z-index: 1;
+  bottom: calc(-1 * var(--settings-tuck, 0px));
+  margin-top: 30px;
+  transform: rotate(0.4deg);
+}
+
+/* A card's clean-cut edge, not a torn one. */
+.settings-note > .stat-board__paper {
+  padding: 16px 16px 8px;
+  border-radius: 3px;
+}
+
+.settings-note__title {
+  margin: 0;
+  padding-bottom: 10px;
+  border-bottom: 1.5px solid var(--ink);
+  font: 800 18px/1.1 var(--font-ui);
+  font-stretch: var(--w-title);
+  letter-spacing: -0.01em;
+}
+
+.settings-note__setting {
+  min-width: 0;
+  margin: 0;
+  padding: 12px 0 0;
+  border: 0;
+}
+
+/* Floated, the legend sits in the card like a heading rather than set into a border. */
+.settings-note__legend {
+  float: left;
+  width: 100%;
+  padding: 0 0 2px;
+  color: var(--ink);
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+
+/* A ruled row per choice, the whole row its touch target. */
+.settings-note__option {
+  display: flex;
+  clear: both;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  border-bottom: 1px dashed var(--rule);
+  font: 650 15px/1.25 var(--font-ui);
+  touch-action: manipulation;
+}
+
+.settings-note__option:last-of-type {
+  border-bottom: 0;
+}
+
+.settings-note__option input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  border: 1.5px solid var(--rule-strong);
+  border-radius: 50%;
+  background: var(--canvas);
+  appearance: none;
+}
+
+.settings-note__option input:checked {
+  border-color: var(--ink);
+  background: radial-gradient(circle, var(--ink) 0 5px, var(--canvas) 5.5px);
+}
+
+.settings-note__option input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.settings-note__status {
+  margin: 0;
+}
+
+.settings-note__status:empty {
+  display: none;
+}
+
+/* A failure's reason can be long: it wraps, and can be copied into a report. */
+.settings-note__problem {
+  margin: 6px 0 8px;
+  padding: 10px 12px;
+  border-radius: var(--r-label);
+  background: var(--tomato-soft);
+  color: var(--ink);
+  font: 500 13px/1.4 var(--font-ui);
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Washi across both top corners. */
+.settings-note > .settings-note__washi {
+  top: -6px;
+  width: 54px;
+  height: 18px;
+}
+
+.settings-note > .settings-note__washi--start {
+  left: -12px;
+  transform: rotate(-31deg);
+}
+
+.settings-note > .settings-note__washi--end {
+  right: -12px;
+  transform: rotate(27deg);
+}

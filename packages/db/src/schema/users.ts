@@ -39,6 +39,8 @@ export const users = sqliteTable(
     language: text("language", { enum: ["en", "ja"] })
       .notNull()
       .default("en"),
+    /** The language picked in Settings, which the app starts in on every device; null follows LINE's. */
+    languageChoice: text("language_choice", { enum: ["en", "ja"] }),
   },
   (t) => [
     uniqueIndex("users_handle").on(sql`lower(${t.handle})`),

@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { errorMessage } from "../i18n/errorMessage";
 import { currentLanguage } from "../i18n/i18n";
+import { followAccountLanguage } from "../i18n/pageLanguage";
 import { useTranslation } from "../i18n/react";
 import { lineIdToken } from "../line/liff";
 import { Key } from "../ui/Key";
@@ -20,7 +21,8 @@ type Session =
 
 /**
  * Signs you in to the app's server with LINE's ID token, inside LineGate, and holds the app until it
- * has. A first sign-in whose LINE name is someone's handle asks for another before the app opens.
+ * has and it's in your account's language. A first sign-in whose LINE name is someone's handle asks
+ * for another before the app opens.
  */
 export function SessionGate({
   session,
@@ -51,11 +53,14 @@ export function SessionGate({
           detail: "LINE gave no ID token, though it's logged in",
         });
       }
-      return session.signIn({
+      const signedIn = await session.signIn({
         idToken: token,
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         language: currentLanguage(),
       });
+      // Before the app opens, so it opens in the account's language.
+      await followAccountLanguage(signedIn.me.languageChoice);
+      return signedIn;
     })();
     signingIn.then(
       ({ me }) => {
