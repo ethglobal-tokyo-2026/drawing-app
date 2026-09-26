@@ -11,6 +11,7 @@ import {
 import { useIdentity } from "../identity/useIdentity";
 import { addSticker, type StickerRecord } from "../stickers/stickerStorage";
 import { OutOfTickets, type OutOfTicketsStep } from "../tickets/OutOfTickets";
+import { StartDrawing } from "../tickets/StartDrawing";
 import { useTickets } from "../tickets/useTickets";
 import { useToast } from "../ui/useToast";
 import { sizePx } from "./canvas/brush";
@@ -121,7 +122,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   function run(effect: SessionEffect) {
     switch (effect) {
       case "spend-ticket":
-        if (!tickets.use()) console.error("The first stroke landed with no ticket left to spend");
+        if (!tickets.use()) console.error("Start was tapped with no ticket left to spend");
         return;
       case "start-clock":
         clock.start();
@@ -210,6 +211,11 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     onNewSticker();
   };
 
+  /** Keep drawing and the Draw after a purchase already chose to spend a ticket, so they skip the ask. */
+  const startRightAway = () => {
+    if (tickets.left > 0) send({ type: "start" });
+  };
+
   useImperativeHandle(ref, () => ({ startNewSticker, closeDrawers: () => setPanel(null) }));
 
   // Every hold stops the clock: the person's pause, the board covering the screen, a tool in hand.
@@ -235,8 +241,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const fresh = session.phase === "blank";
   if (active && fresh && tickets.left === 0 && !paywallOpen) setPaywallOpen("out");
   const paywall = active && fresh && paywallOpen !== null;
+  // A fresh sheet asks before a ticket is spent, and takes no ink until then.
+  const asking = active && fresh && !paywall;
   const sealing = session.phase === "sealing" || session.phase === "sealed";
-  const locked = !active || paywall || sealing;
+  const locked = !active || fresh || sealing;
 
   const sizeKey = tool === "eraser" ? "eraser" : "brush";
   const setSize = (value: number) => setSizes((s) => ({ ...s, [sizeKey]: value }));
@@ -357,7 +365,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           record={sealed.record}
           sheet={sealed.sheet}
           handle={me.handle}
-          onKeepDrawing={startNewSticker}
+          onKeepDrawing={() => {
+            startNewSticker();
+            startRightAway();
+          }}
           onBoard={onGoToBoard}
           // A fresh sheet with no tickets left brings up the out-of-tickets card, here at its Sui purchase.
           onGetTickets={() => {
@@ -366,12 +377,22 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           }}
         />
       )}
+      {asking && (
+        <StartDrawing
+          minutes={SESSION_MS / 60_000}
+          onStart={() => send({ type: "start" })}
+          onBoard={onGoToBoard}
+        />
+      )}
       {paywall && (
         <OutOfTickets
           refillAt={tickets.refillAt}
           firstStep={paywallOpen}
           onTicketsBought={tickets.add}
-          onStartDrawing={() => setPaywallOpen(null)}
+          onStartDrawing={() => {
+            setPaywallOpen(null);
+            startRightAway();
+          }}
           onBoard={() => {
             setPaywallOpen(null);
             onGoToBoard();

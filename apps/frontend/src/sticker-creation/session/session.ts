@@ -1,14 +1,15 @@
-/** A sticker gets five minutes of drawing. */
-export const SESSION_MS = 5 * 60_000;
+/** A sticker gets three minutes of drawing. */
+export const SESSION_MS = 3 * 60_000;
 /** After the first tap on the seal key, a second tap within this long seals. */
 export const ARM_WINDOW_MS = 2_500;
 
 /**
- * blank: nothing drawn; the clock waits at 5:00.
- * drawing: the first stroke or fill spent a ticket and started the clock.
+ * blank: a fresh sheet asks before a ticket is spent; the sheet takes no ink yet.
+ * primed: Start spent a ticket; the clock waits at 3:00 for the first stroke.
+ * drawing: the first stroke or fill started the clock.
  * armed: the seal key took its first tap. sealing: building the sticker. sealed: done.
  */
-type Phase = "blank" | "drawing" | "armed" | "sealing" | "sealed";
+type Phase = "blank" | "primed" | "drawing" | "armed" | "sealing" | "sealed";
 
 export interface Session {
   phase: Phase;
@@ -19,6 +20,8 @@ export interface Session {
 export const FRESH_SESSION: Session = { phase: "blank", armedAt: 0 };
 
 export type SessionEvent =
+  /** The person chose to spend a ticket on this sheet. */
+  | { type: "start" }
   /** A stroke or fill landed on the sheet. */
   | { type: "ink" }
   | { type: "seal-tap"; now: number; hasInk: boolean }
@@ -36,7 +39,7 @@ export type SessionEffect =
   /** Stop the clock and build the sticker. */
   | "seal"
   | "resume-clock"
-  /** Clear the sheet and set the clock back to 5:00. */
+  /** Clear the sheet and set the clock back to 3:00. */
   | "reset-sheet";
 
 type Result = { session: Session; effects: SessionEffect[] };
@@ -50,8 +53,10 @@ export function transition(session: Session, event: SessionEvent): Result {
   const { phase } = session;
   const unchanged = { session, effects: [] };
   switch (event.type) {
+    case "start":
+      return phase === "blank" ? to("primed", ["spend-ticket"]) : unchanged;
     case "ink":
-      return phase === "blank" ? to("drawing", ["spend-ticket", "start-clock"]) : unchanged;
+      return phase === "primed" ? to("drawing", ["start-clock"]) : unchanged;
     case "seal-tap":
       if (phase === "armed" && event.now - session.armedAt < ARM_WINDOW_MS)
         return to("sealing", ["seal"]);
