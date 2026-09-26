@@ -1,6 +1,7 @@
 /* Holo foil: the sticker's silhouette dilated into a band just past its white edge. Its box is the
    image's, so a lifted corner clips it along the same fold; the band spills past that box by its width.
-   The light moves by transform only, on its own clock, and holds still under reduced motion. */
+   The bands flow on their own clock; the glint follows the app's one light (light.ts). Both move by
+   transform only and hold still under reduced motion. */
 .sticker-foil {
   position: absolute;
   inset: 0;
@@ -65,20 +66,29 @@
   animation-delay: calc(var(--foil-i, 0) * -2.3s);
 }
 
-/* A white glint, out of sight until a tilt of the phone sweeps it across (light.ts). */
+/* A white glint where the light falls on the band: the top-left until the light first moves, then
+   wherever the last tilt or pointer left it. Its frame undoes the sticker's turn, so the light moves
+   the same way across every sticker. */
 .sticker-foil__glint {
   position: absolute;
-  top: -40%;
-  bottom: -40%;
-  left: -60%;
-  width: 45%;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0),
-    rgba(255, 255, 255, 0.92) 50%,
+  inset: -50%;
+  rotate: calc(var(--foil-turn, 0) * -1deg);
+}
+
+.sticker-foil__glint::before {
+  content: "";
+  position: absolute;
+  inset: 35%;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgba(255, 255, 255, 0.95),
+    rgba(255, 255, 255, 0.5) 45%,
     rgba(255, 255, 255, 0)
   );
-  transform: skewX(-18deg);
+  /* From the middle to the band's edge as the light goes from 0 to ±1. */
+  translate: calc(var(--lx, -0.6) * 83%) calc(var(--ly, -0.6) * 83%);
+  transition: translate 280ms var(--ease-out);
 }
 
 @keyframes sticker-foil-flow {
@@ -92,7 +102,7 @@
     animation: none;
   }
 
-  .sticker-foil__glint {
-    display: none;
+  .sticker-foil__glint::before {
+    transition: none;
   }
 }

@@ -86,6 +86,20 @@ function errorCauses(error: unknown) {
   return causes;
 }
 
+/** Longer causes are cut here, so the answer stays one line. */
+const CAUSE_MAX_LENGTH = 160;
+
+/**
+ * Why a failure happened, in the words of its innermost cause that says (an RPC's "rate limit
+ * exceeded"), masked as the log is, so the person's own error can carry it.
+ */
+export function failureCause(error: unknown): string {
+  const causes = errorCauses(error);
+  const said = causes.findLast((cause) => cause.details) ?? causes.at(-1);
+  const words = (said?.details ?? said?.message ?? "no reason given").replace(/\s+/g, " ").trim();
+  return words.length > CAUSE_MAX_LENGTH ? `${words.slice(0, CAUSE_MAX_LENGTH - 1)}…` : words;
+}
+
 const fieldNames = [
   "stickerId",
   "giftId",

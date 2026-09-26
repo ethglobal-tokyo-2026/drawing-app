@@ -134,6 +134,7 @@ export const PlacedSticker = memo(function PlacedSticker({
           fold={fold}
           foil={foil ? "board" : undefined}
           no={sticker.no}
+          turn={sticker.placement.r}
         />
       </div>
       {/* A clear frame, four corners to resize and a knob on a stem to turn. */}
