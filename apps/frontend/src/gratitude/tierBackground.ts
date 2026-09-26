@@ -113,6 +113,9 @@ export function createTierBackground(
   cornerFlap.append(layer("gr-corner-flap"));
   const corner = layer("gr-corner");
   corner.append(cornerUnder, cornerFlap);
+  // The stylesheet peels the top right, where the close button sits over the lifted corner and
+  // hides nearly all of it. Mirrored, it peels the bottom right, where nothing covers it.
+  Object.assign(corner.style, { top: "auto", bottom: "0", transform: "scaleY(-1)" });
   const dentLayer = layer("gr-layer");
   const shakeMarks = layer("gr-shakemarks");
   shakeMarks.innerHTML = VIBRATE_SVG + VIBRATE_SVG;

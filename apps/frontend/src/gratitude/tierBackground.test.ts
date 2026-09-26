@@ -74,4 +74,11 @@ describe("createTierBackground", () => {
     background.dent("right", 300);
     expect(place()).toBe("translate(390px,300px) rotate(90deg)");
   });
+
+  it("peels the corner where the close button doesn't cover it", () => {
+    const { front, find } = setUp();
+    const corner = find(front, ".gr-corner");
+    expect(corner.style.bottom).toBe("0px");
+    expect(corner.style.top).toBe("auto");
+  });
 });
