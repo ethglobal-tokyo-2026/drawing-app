@@ -260,10 +260,30 @@ export function setPerformanceRecorder(on: boolean): void {
   else localStorage.removeItem(SETTING);
 }
 
+/** Throws, with nothing left running, when it can't start. */
 export function startPerformanceRecorder(): void {
   if (stopRecording) return;
-  log ??= createPerformanceLog(performance.now());
-  stopRecording = listen(log);
+  const recording = log ?? createPerformanceLog(performance.now());
+  stopRecording = listen(recording);
+  log = recording;
+}
+
+/**
+ * At the app's start: records from boot while the setting is on. It never throws, so the app renders
+ * whatever happens; a recorder that can't start logs why and turns its setting off.
+ */
+export function startPerformanceRecorderAtBoot(): void {
+  if (!readPerformanceRecorderSetting()) return;
+  try {
+    startPerformanceRecorder();
+  } catch (error) {
+    console.error("The performance recorder couldn't start, so its setting is now off", error);
+    try {
+      localStorage.removeItem(SETTING);
+    } catch (removing) {
+      console.error("The performance recorder's setting couldn't be removed", removing);
+    }
+  }
 }
 
 export function stopPerformanceRecorder(): void {
@@ -368,9 +388,26 @@ function describeSlowInput(input: PerformanceEventTiming): string {
   return `${input.name} ${ms(input.duration)}: waited ${ms(waited)}, handlers ${ms(handled)}, then ${ms(painted)} to paint, on ${describeTarget(input.target)}`;
 }
 
-/** Everything the recorder hears on the page; returns what stops it all. */
+/**
+ * Everything the recorder hears on the page; returns what stops it all. When any of it can't start,
+ * what did start stops before the error goes on.
+ */
 function listen(log: PerformanceLog): () => void {
   const stops: (() => void)[] = [];
+  const stopAll = () => {
+    for (const stop of stops.splice(0)) stop();
+  };
+  try {
+    startListening(log, stops);
+  } catch (error) {
+    stopAll();
+    throw error;
+  }
+  return stopAll;
+}
+
+/** Starts the loop, the listeners and the observers, adding what stops each to `stops` as it starts. */
+function startListening(log: PerformanceLog, stops: (() => void)[]): void {
   const note = (kind: string, detail: string, at = performance.now(), duration = 0) =>
     log.note({ at, ms: duration, kind, detail });
 
@@ -447,8 +484,4 @@ function listen(log: PerformanceLog): () => void {
       note("slow input", describeSlowInput(entry), entry.startTime, entry.duration);
     }
   });
-
-  return () => {
-    for (const stop of stops.splice(0)) stop();
-  };
 }

@@ -4,12 +4,14 @@ import {
   clearPerformanceRecording,
   createPerformanceLog,
   describeLongFrame,
+  isPerformanceRecorderOn,
   notePerformance,
   readPerformanceRecorderSetting,
   readPerformanceRecording,
   setPerformanceRecorder,
   SLOW_FRAMES_KEPT,
   startPerformanceRecorder,
+  startPerformanceRecorderAtBoot,
   stopPerformanceRecorder,
   timeOurWork,
   type LongAnimationFrame,
@@ -30,6 +32,33 @@ function framesFor(log: PerformanceLog) {
     }
     return t;
   };
+}
+
+type Deliver = (entries: PerformanceEntry[]) => void;
+
+/** PerformanceObserver for `types`, whose `observe` runs `observing` with what delivers it entries. */
+function stubObservers(types: string[], observing: (deliver: Deliver) => void = () => {}) {
+  vi.stubGlobal(
+    "PerformanceObserver",
+    class {
+      static supportedEntryTypes = types;
+      readonly deliver: Deliver;
+      constructor(callback: PerformanceObserverCallback) {
+        this.deliver = (entries) =>
+          callback(
+            { getEntries: () => entries, getEntriesByName: () => [], getEntriesByType: () => [] },
+            this,
+          );
+      }
+      observe() {
+        observing(this.deliver);
+      }
+      disconnect() {}
+      takeRecords() {
+        return [];
+      }
+    },
+  );
 }
 
 describe("the performance log", () => {
@@ -224,25 +253,10 @@ describe("the recorder on the page", () => {
     vi.spyOn(URL, "parse").mockImplementation(() => {
       throw new TypeError("URL.parse is not a function");
     });
-    let deliver = (_entries: PerformanceEntry[]) => {};
-    vi.stubGlobal(
-      "PerformanceObserver",
-      class {
-        static supportedEntryTypes = ["resource"];
-        constructor(callback: PerformanceObserverCallback) {
-          deliver = (entries) =>
-            callback(
-              { getEntries: () => entries, getEntriesByName: () => [], getEntriesByType: () => [] },
-              this,
-            );
-        }
-        observe() {}
-        disconnect() {}
-        takeRecords() {
-          return [];
-        }
-      },
-    );
+    let deliver: Deliver = () => {};
+    stubObservers(["resource"], (observed) => {
+      deliver = observed;
+    });
     const fetched = (name: string) => ({
       entryType: "resource",
       name,
@@ -269,5 +283,38 @@ describe("the recorder on the page", () => {
     setPerformanceRecorder(false);
     expect(queued).toBeNull();
     expect(readPerformanceRecorderSetting()).toBe(false);
+  });
+
+  it("stops all it started when it can't start, and stays off", () => {
+    stubObservers(["resource"], () => {
+      throw new TypeError("observe failed");
+    });
+    const listens = vi.spyOn(window, "addEventListener");
+    const unlistens = vi.spyOn(window, "removeEventListener");
+    const onDocument = vi.spyOn(document, "addEventListener");
+    const offDocument = vi.spyOn(document, "removeEventListener");
+    expect(() => startPerformanceRecorder()).toThrow("observe failed");
+
+    expect(isPerformanceRecorderOn()).toBe(false);
+    expect(queued).toBeNull();
+    const types = (calls: unknown[][]) =>
+      calls.map(([type]) => String(type)).sort((a, b) => a.localeCompare(b));
+    expect(listens).toHaveBeenCalled();
+    expect(types(unlistens.mock.calls)).toEqual(types(listens.mock.calls));
+    expect(types(offDocument.mock.calls)).toEqual(types(onDocument.mock.calls));
+    expect(readPerformanceRecording()).toBeNull();
+  });
+
+  it("lets the app render when it can't start at boot, and turns its setting off", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    stubObservers(["resource"], () => {
+      throw new TypeError("observe failed");
+    });
+    localStorage.setItem("draw.performanceRecorder", "on");
+
+    expect(() => startPerformanceRecorderAtBoot()).not.toThrow();
+    expect(isPerformanceRecorderOn()).toBe(false);
+    expect(readPerformanceRecorderSetting()).toBe(false);
+    expect(logged).toHaveBeenCalledWith(expect.any(String), expect.any(TypeError));
   });
 });

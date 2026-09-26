@@ -38,14 +38,19 @@ export function PerformanceRecorderControls() {
   }, [on]);
 
   const toggle = (next: boolean) => {
-    setOn(next);
     setProblem(null);
     try {
       setPerformanceRecorder(next);
     } catch (error) {
-      console.error("The performance recorder's setting couldn't be kept", error);
-      setProblem(`Recording is ${next ? "on" : "off"} until the app restarts: ${reason(error)}`);
+      console.error("The performance recorder's switch failed", error);
+      // Either it switched and only its setting wasn't kept, or it couldn't switch at all.
+      setProblem(
+        isPerformanceRecorderOn() === next
+          ? `Recording is ${next ? "on" : "off"} until the app restarts: ${reason(error)}`
+          : `Recording couldn't ${next ? "start" : "stop"}: ${reason(error)}`,
+      );
     }
+    setOn(isPerformanceRecorderOn());
     setSummary(readPerformanceSummary());
   };
 
