@@ -1,4 +1,17 @@
-import type { Placement } from "../stickers/stickerStorage";
+/** Where a sticker sits on its board. */
+export interface Placement {
+  /** False while the sticker waits in the sticker tray; its last spot is kept. */
+  on: boolean;
+  /** Center, as fractions of the board's field. */
+  x: number;
+  y: number;
+  /** Long side, as a fraction of the board's width. */
+  s: number;
+  /** Clockwise, in degrees. */
+  r: number;
+  /** Stacking order; higher is on top. */
+  z: number;
+}
 
 /** The board's field: where stickers sit, under the header band, clear of the sticker tray's edge. */
 export interface Field {

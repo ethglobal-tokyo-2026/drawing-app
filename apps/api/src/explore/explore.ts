@@ -23,7 +23,7 @@ const activityEntrySchema = z.discriminatedUnion("type", [
     receiver: personSchema,
   }),
 ]);
-type ActivityEntry = z.infer<typeof activityEntrySchema>;
+export type ActivityEntry = z.infer<typeof activityEntrySchema>;
 
 export const exploreSchema = z.object({
   /** Sealed since today began on Explore's clock, newest first. */

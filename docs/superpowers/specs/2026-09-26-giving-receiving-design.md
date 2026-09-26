@@ -27,7 +27,7 @@
 
 - Explore, other people's Sticker Boards and their stat boards.
 - Gifts by handle; the handle prompt ("Whose sticker board is this?").
-- The Mini-game itself, recording a combo (`POST /api/gratitude`), the replay and the pink tag: `2026-09-26-gratitude-mini-game-design.md`.
+- The Mini-game itself, recording a combo (`POST /api/gratitude`) and the replay: `docs/gratitude-mini-game-design-doc.md`. The pink tag: DESIGN.md.
 - The stat board's User Stats: `2026-09-26-stat-board-user-stats-design.md`.
 - Taking back a sent gift, and what the giver sees when a gift returns after 7 days: the REST doc marks both "not designed".
 - The Official account's pushes ("Bob received your sticker ♡" in LINE): server work.
@@ -242,7 +242,7 @@ Two ways in, both for a sticker you received and haven't sent gratitude for:
 - **The sheet after landing** (the drafts' `receive-landed`): once a received sticker has stuck to the board, a sheet rises with the giver's 60px photo sticker, "Send @alice gratitude?", and "It's on your board. @alice drew it in 4m 52s, and gratitude never expires." When someone else drew it: "It's on your board, from @alice. Gratitude never expires." Then **Send gratitude**, the sheet's one key (pink, Phosphor's heart, fill), and **Later**, a quiet link with Phosphor's clock. It shows once, for the gift just received.
 - **The sticker's detail:** a received sticker you haven't sent gratitude for has Send gratitude as its key, with Give as label stock under it (`P/screens/piece.js` `owes`). You haven't when the Transfer Trail's newest entry to you, from `stickerDetail`, has no gratitude.
 
-Both open the Mini-game with the gift, the sticker and its giver, as `GratitudeMiniGame` takes them (`sticker`, `giver`, `onEnd`, `onClose`; `2026-09-26-gratitude-mini-game.md`), plus the gift's ID. Until `design/gratitude-mini-game` merges, `gratitude/GratitudeMiniGamePlaceholder.tsx` stands in: over the whole phone, "The gratitude Mini-game is being built", then those props as formatted JSON, and Close. Swapping in the Mini-game is one import. Recording the combo is the Mini-game's.
+Both open the Mini-game with the gift, the sticker and its giver, as `GratitudeMiniGame` takes them (`sticker`, `giver`, `onEnd`, `onClose`; `apps/frontend/src/gratitude/GratitudeMiniGame.tsx`), plus the gift's ID. Until `design/gratitude-mini-game` merges, `gratitude/GratitudeMiniGamePlaceholder.tsx` stands in: over the whole phone, "The gratitude Mini-game is being built", then those props as formatted JSON, and Close. Swapping in the Mini-game is one import. Recording the combo is the Mini-game's.
 
 ## The Terms and Privacy Policy placeholders
 

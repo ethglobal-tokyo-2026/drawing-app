@@ -1,4 +1,4 @@
-import type { TransferTrailEntry } from "../api/contract";
+import type { TransferTrailEntry } from "@drawing-app/api/client";
 import { toMs, toPerson, type PersonView } from "../api/views";
 
 /** One hand-off on a sticker's Transfer Trail, as its detail shows it. */

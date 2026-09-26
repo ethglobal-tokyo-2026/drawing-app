@@ -1,40 +1,39 @@
-import { useEffect, useState } from "react";
-import { deviceGiftStore, giftStatusBySticker } from "../giving/giftStore";
-import { listStickers, type StickerRecord } from "./stickerStorage";
+import { useApiQuery } from "../api/useApiQuery";
+import { toSticker } from "../api/views";
 
-export interface KeptSticker extends StickerRecord {
+export interface KeptSticker {
+  id: string;
+  no: number;
+  /** When it was sealed, in milliseconds. */
+  createdAt: number;
+  timeUsed: number;
+  width: number;
+  height: number;
+  /** Its image. */
   url: string;
 }
 
-/** Your stickers not packed or sent as gifts, newest first, each with an object URL for its image. */
+/** Your stickers not packed or sent as gifts, newest first. */
 export function useKeptStickers() {
-  const [stickers, setStickers] = useState<KeptSticker[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    let urls: string[] = [];
-    listStickers().then(
-      (records) => {
-        if (cancelled) return;
-        const given = giftStatusBySticker(deviceGiftStore().list());
-        const kept = records
-          .filter((r) => !given.has(r.id))
-          .map((r) => ({ ...r, url: URL.createObjectURL(r.blob) }));
-        urls = kept.map((k) => k.url);
-        setStickers(kept);
-      },
-      (e: unknown) => {
-        console.error("Your stickers failed to load", e);
-        if (!cancelled)
-          setError(`Couldn’t load your stickers: ${e instanceof Error ? e.message : String(e)}`);
-      },
-    );
-    return () => {
-      cancelled = true;
-      urls.forEach((u) => URL.revokeObjectURL(u));
-    };
-  }, []);
-
-  return { stickers, error };
+  const board = useApiQuery("sticker-board/me", (api) => api.stickerBoard());
+  if (board.state === "loading") return { stickers: null, error: null };
+  if (board.state === "failed") {
+    return { stickers: null, error: `Couldn’t load your stickers: ${board.error.message}` };
+  }
+  const stickers = board.data.boardStickers
+    .filter((b) => b.held && !b.openGift)
+    .map((b): KeptSticker => {
+      const s = toSticker(b.sticker);
+      return {
+        id: s.id,
+        no: s.no,
+        createdAt: s.sealedAt,
+        timeUsed: s.timeUsed,
+        width: s.width,
+        height: s.height,
+        url: s.urls.png,
+      };
+    })
+    .reverse();
+  return { stickers, error: null };
 }

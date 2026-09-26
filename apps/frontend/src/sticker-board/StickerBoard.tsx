@@ -13,25 +13,30 @@ import { flushSync } from "react-dom";
 import { apiError, type ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
 import { useApiQuery } from "../api/useApiQuery";
-import { toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
+import {
+  toApiPlacement,
+  toPerson,
+  toSticker,
+  type PersonView,
+  type StickerView,
+} from "../api/views";
 import { GiftReceivedNotice } from "../giving/GiftReceivedNotice";
 import { markNoticed, newestUnnoticed } from "../giving/noticedGifts";
 import { PendingGiftsNotificationBadge } from "../giving/PendingGiftsNotificationBadge";
 import { useGiftSender } from "../giving/useGiftSender";
-import { useStickerGifts } from "../giving/useStickerGifts";
 import { FEEL_CONFIG } from "../gratitude/gameConfig";
 import { GratitudeMiniGame } from "../gratitude/GratitudeMiniGame";
 import { readMiniGameDemoSettings } from "../gratitude/miniGameDemoSettings";
 import { DrawIcon } from "../icons/DrawIcon";
+import { useMe } from "../api/meContext";
 import { useIdentity } from "../identity/useIdentity";
 import { LIFF_ID } from "../line/liff";
 import { formatHandle, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { playStick } from "../stickers/stick";
-import type { Placement } from "../stickers/stickerStorage";
 import { TicketCounts } from "../tickets/TicketCount";
 import { describeTickets, ticketDay } from "../tickets/tickets";
-import { useTicketState } from "../tickets/useTickets";
+import { useTickets } from "../tickets/useTickets";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { lazyWithPreload, usePreloadWhenIdle } from "../ui/lazyWithPreload";
@@ -42,7 +47,6 @@ import { normalizeTurn } from "./boardGesture";
 import {
   onItsWay,
   placeUnplaced,
-  toApiPlacement,
   toBoardSticker,
   type BoardSticker,
   type BoardStickerView,
@@ -60,6 +64,7 @@ import {
   toFrac,
   toPx,
   type Box,
+  type Placement,
 } from "./placement";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
@@ -137,9 +142,6 @@ const kept = (was: Box | null, now: Box) =>
     : now;
 
 const reasonOf = (error: ApiError) => error.detail ?? error.code;
-
-/** The stat board reads records' dates, never their images. */
-const NO_IMAGE = new Blob();
 
 interface LoadedBoard {
   owner: PersonView;
@@ -232,6 +234,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const [turned, setTurned] = useState(false);
   /** The board has turned over before, so its stat board stays mounted for every turn after. */
   const [wasTurned, setWasTurned] = useState(false);
+  const { tickets } = useTickets();
   /** The sticker the gratitude mini-game is open for, from the stat board's developer slip. */
   const [gratitudeFor, setGratitudeFor] = useState<GratitudeFor | null>(null);
   /** A received gift's notice, closed: the silhouettes say the rest. */
@@ -241,8 +244,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   /** The first-load artist chips have played, or a sticker was selected, which clears them. */
   const [chipsDone, setChipsDone] = useState(false);
   const me = useIdentity();
-  const tickets = useTicketState();
-  const gifts = useStickerGifts();
+  const account = useMe();
   const giftSender = useGiftSender();
   const reduced = useReducedMotion();
   const hints = useId();
@@ -559,10 +561,14 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           size="compact"
           icon={<DrawIcon />}
           onClick={onDraw}
-          aria-label={`Draw a new sticker: you have ${describeTickets(tickets)}`}
+          aria-label={
+            tickets
+              ? `Draw a new sticker: you have ${describeTickets(tickets)}`
+              : "Draw a new sticker"
+          }
         >
           Draw
-          <TicketCounts state={tickets} className="ticket-counts--on-key" />
+          {tickets && <TicketCounts state={tickets} className="ticket-counts--on-key" />}
         </Key>
       </span>
       {firstVisit && (
@@ -697,27 +703,19 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         <Suspense fallback={null}>
           <Giving
             sticker={{ ...giving, url: giving.urls.png }}
-            fromHandle={me.handle}
+            fromHandle={account.handle ?? me.displayName}
             sender={giftSender}
             liffId={LIFF_ID}
             onClose={(sent) => {
               setGiving(null);
-              if (!sent) return;
-              // Sent, it leaves the board at once, as this device's gift record says, and the reload
-              // confirms where it is.
-              setSelected(null);
-              const gift = gifts.get(giving.id);
-              if (gift?.state === "sent")
-                setStickers(
-                  (list) =>
-                    list?.map((s) =>
-                      s.id === giving.id
-                        ? { ...s, openGift: { id: gift.giftId, status: "sent" } }
-                        : s,
-                    ) ?? null,
-                );
-              if (board.state === "ready") board.refresh();
+              // Given, it has left the board, and the board loads where its gift is.
+              if (sent) {
+                setSelected(null);
+                if (board.state === "ready") board.refresh();
+              }
+              // The bag's gift may have been packed, sent or taken out.
               if (pending.state === "ready") pending.refresh();
+              else if (pending.state === "failed") pending.retry();
             }}
           />
         </Suspense>
@@ -776,14 +774,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         <Suspense fallback={null}>
           <StickerDetail
             // In the order they arrived, as the board loads them.
-            stickers={(stickers ?? [])
-              .filter((s) => (open.mode === "given" ? !s.held : s.held))
-              .map((s) => {
-                const gift = gifts.get(s.id);
-                return gift?.state === "sent" && gift.to && s.openGift
-                  ? { ...s, openGift: { ...s.openGift, to: gift.to } }
-                  : s;
-              })}
+            stickers={(stickers ?? []).filter((s) => (open.mode === "given") !== s.held)}
             startId={open.id}
             mode={open.mode}
             // It lifts off from where the sticker sits: on the board, or its given sticker silhouette.
@@ -836,15 +827,6 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           <Suspense fallback={null}>
             <StatBoard
               ref={statBoard}
-              // Your own stickers, as it counted when every sticker here was one you drew.
-              stickers={
-                board.state === "failed"
-                  ? null
-                  : (stickers ?? [])
-                      .filter((s) => s.artist.id === owner?.id)
-                      .map((s) => ({ ...s, blob: NO_IMAGE }))
-              }
-              gifts={gifts}
               onFlipBack={() => turn(false)}
               flipBackRef={flipBack}
               onTryGratitudeMiniGame={
@@ -853,7 +835,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
                       setGratitudeFor({
                         sticker: newest,
                         giver: {
-                          handle: me.handle,
+                          handle: account.handle ?? me.displayName,
                           displayName: me.displayName,
                           pictureUrl: me.pictureUrl,
                         },

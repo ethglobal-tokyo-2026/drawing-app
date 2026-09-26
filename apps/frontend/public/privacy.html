@@ -25,15 +25,6 @@
         max-width: 38em;
         margin: 0 auto;
       }
-      .placeholder {
-        display: inline-block;
-        margin: 0 0 20px;
-        padding: 6px 10px;
-        border-radius: 6px;
-        background: #ffd93b;
-        font-weight: 700;
-        transform: rotate(-1.5deg);
-      }
       h1 {
         margin: 0 0 12px;
         font-size: 26px;
@@ -44,20 +35,13 @@
       a {
         color: inherit;
       }
-      .boat {
-        margin: 20px 0 0;
-      }
-      .boat img {
+      #broadcast {
         display: block;
         width: 100%;
         height: auto;
-        border-radius: 12px;
-      }
-      .boat figcaption {
-        margin-top: 12px;
-        font-size: 22px;
-        font-weight: 800;
-        font-stretch: 112%;
+        margin-top: 20px;
+        border-radius: 10px;
+        background: #1c1824;
       }
       .back {
         display: inline-block;
@@ -68,18 +52,37 @@
   </head>
   <body>
     <main>
-      <p class="placeholder">Placeholder: the real Privacy Policy isn&rsquo;t written yet</p>
       <h1>Privacy Policy</h1>
-      <figure class="boat">
-        <img
-          src="/nice-boat.jpg"
-          width="1024"
-          height="576"
-          alt="A ferry crossing a still Norwegian fjord, under a notice that the scheduled program has been changed"
-        />
-        <figcaption>Nice boat.</figcaption>
-      </figure>
+      <video
+        id="broadcast"
+        src="/nice-boat.mp4"
+        poster="/nice-boat.jpg"
+        width="960"
+        height="540"
+        loop
+        playsinline
+        controls
+        preload="auto"
+        aria-label="A ferry crossing a still Norwegian fjord to Air on the G String, under a notice that the scheduled program has been changed"
+      ></video>
       <a class="back" href="/">Back to the app</a>
     </main>
+    <script>
+      // With sound where the browser allows it, muted where it doesn't; the first tap anywhere but
+      // the video, whose own controls handle their taps, brings the sound back.
+      const broadcast = document.getElementById("broadcast");
+      const report = (error) => console.error("The broadcast didn't play", error);
+      broadcast.play().catch((error) => {
+        if (error.name !== "NotAllowedError") return report(error);
+        broadcast.muted = true;
+        broadcast.play().catch(report);
+      });
+      const unmute = (event) => {
+        if (event.target === broadcast) return;
+        broadcast.muted = false;
+        removeEventListener("click", unmute);
+      };
+      addEventListener("click", unmute);
+    </script>
   </body>
 </html>

@@ -1,10 +1,3 @@
-/**
- * People, stickers and gifts for the dev server's mock and for tests, drawn from Explore's demo
- * artists so the dev server shows one cast. All of it is made up.
- */
-import type { ArtKey } from "../../artists/art";
-import { avatarUrl, stickerArtUrl } from "../../artists/artUrl";
-import { artistByHandle } from "../../artists/demoArtists";
 import type {
   BoardSticker,
   Gift,
@@ -12,35 +5,33 @@ import type {
   Person,
   Sticker,
   TransferTrailEntry,
-} from "../contract";
+} from "@drawing-app/api/client";
 
-/** A demo artist as the API describes a person. */
-function demoPerson(handle: string): Person {
-  const artist = artistByHandle.get(handle);
-  if (!artist) throw new Error(`No demo artist @${handle}`);
-  return {
-    id: `artist-${handle}`,
-    handle,
-    lineDisplayName: artist.displayName,
-    linePictureUrl: avatarUrl(artist.avatar),
-  };
-}
+/** People, stickers and gifts for tests, in the API's shapes. All of it is made up. */
+
+const person = (handle: string, lineDisplayName: string): Person => ({
+  id: `user-${handle}`,
+  handle,
+  lineDisplayName,
+  linePictureUrl: null,
+});
 
 export const people = {
-  mika: demoPerson("mika"),
-  ken: demoPerson("ken"),
-  bob: demoPerson("bob"),
+  mika: person("mika", "Mika Hoshino"),
+  ken: person("ken", "Ken Mori"),
+  bob: person("bob", "Bob Tanaka"),
 };
 
-/** The size stickerArtUrl draws a demo sticker at. */
 const ART_PX = 224;
 
-/** A demo sticker's images: its art, with its own white die-cut edge, doubles as its mask. */
-export function imagesOf(art: ArtKey): Sticker["images"] {
-  const url = stickerArtUrl(art);
-  return { png: url, mask: url, spec: "", rim: "", flat: url };
-}
-
+/** Every image of a test sticker, at one URL. */
+const imagesOf = (url: string): Sticker["images"] => ({
+  png: url,
+  mask: url,
+  spec: url,
+  rim: url,
+  flat: url,
+});
 let made = 0;
 
 export function sticker(overrides: Partial<Sticker> = {}): Sticker {
@@ -56,7 +47,7 @@ export function sticker(overrides: Partial<Sticker> = {}): Sticker {
     // Point pairs only, as the seal writes a cut line and the sticker tray reads one.
     outline: `M0 0L${ART_PX} 0L${ART_PX} ${ART_PX}L0 ${ART_PX}Z`,
     contentHash: `0x${made.toString(16).padStart(64, "0")}`,
-    images: imagesOf("sunset"),
+    images: imagesOf(`https://cdn.test/${made}.png`),
     tokenId: null,
     mintTxHash: null,
     sealedAt: "2026-09-23T11:52:00.000Z",

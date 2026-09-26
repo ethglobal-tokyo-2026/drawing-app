@@ -1,36 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { DAILY_TICKETS_PER_DAY as DAILY } from "./config";
-import {
-  addReserve,
-  current,
-  dailyLeft,
-  dailyTickets,
-  linkSticker,
-  nextKind,
-  nextRefill,
-  refund,
-  spend,
-  ticketDay,
-  ticketsLeft,
-  type SpentTicket,
-  type TicketState,
-} from "./tickets";
+import { FRESH_TICKETS } from "../api/testing";
+import { dailyTickets, nextKind, nextRefill, ticketDay, type Tickets } from "./tickets";
 
 /** A moment in UTC; Tokyo is 9 hours ahead, so 15:00 UTC is Tokyo's midnight. */
 const utc = (d: number, h: number, m = 0) => new Date(Date.UTC(2026, 8, d, h, m));
 
-/** Spends the next ticket, which the test expects to be there. */
-const spendOne = (s: TicketState): { state: TicketState; spent: SpentTicket } => {
-  const kind = nextKind(s);
-  const next = kind && spend(s, kind);
-  if (!next) throw new Error("expected a ticket to spend");
-  return next;
-};
-
-const spendMany = (s: TicketState, n: number): TicketState => {
-  for (let i = 0; i < n; i++) s = spendOne(s).state;
-  return s;
-};
+type Use = Tickets["usedToday"][number];
+const use = (dayIndex: number, kind: Use["kind"], outline?: string): Use => ({
+  id: dayIndex + 1,
+  dayIndex,
+  kind,
+  sticker: outline ? { id: `s-${dayIndex}`, outline, width: 10, height: 10 } : null,
+});
 
 describe("tickets", () => {
   it("starts each ticket day at midnight in Tokyo, wherever the device is", () => {
@@ -45,60 +26,23 @@ describe("tickets", () => {
   });
 
   it("spends daily tickets before reserve ones, then runs out", () => {
-    let s = addReserve(current(null, utc(24, 1)), 1);
-    expect(spend(s, "reserve")).toBeNull();
-    s = spendMany(s, DAILY);
-    expect(dailyLeft(s)).toBe(0);
-    expect(spend(s, "daily")).toBeNull();
-    s = spendOne(s).state;
-    expect(s.reserve).toBe(0);
-    expect(ticketsLeft(s)).toBe(0);
-    expect(nextKind(s)).toBeNull();
+    expect(nextKind({ ...FRESH_TICKETS, reserveLeft: 2 })).toBe("daily");
+    expect(nextKind({ ...FRESH_TICKETS, dailyLeft: 0, reserveLeft: 2 })).toBe("reserve");
+    expect(nextKind({ ...FRESH_TICKETS, dailyLeft: 0, reserveLeft: 0 })).toBeNull();
   });
 
-  it("refills daily tickets at Tokyo midnight but keeps reserve ones", () => {
-    let s = spendMany(addReserve(current(null, utc(24, 10)), 3), DAILY + 1);
-    expect(ticketsLeft(current(s, utc(24, 14, 59)))).toBe(2);
-    s = current(s, utc(24, 15));
-    expect(ticketsLeft(s)).toBe(DAILY + 2);
-    expect(dailyTickets(s).some((t) => t.used)).toBe(false);
+  it("stubs the day's daily tickets in order, each used one with the outline it became", () => {
+    const stubs = dailyTickets({
+      ...FRESH_TICKETS,
+      dailyLeft: 1,
+      usedToday: [use(0, "daily", "M0 0L1 1Z"), use(1, "daily")],
+    });
+    expect(stubs).toEqual([{ used: true, outline: "M0 0L1 1Z" }, { used: true }, { used: false }]);
   });
 
-  it("links a spent ticket to the sticker it became; an abandoned drawing keeps none", () => {
-    const abandoned = spendOne(current(null, utc(24, 1)));
-    const sealed = spendOne(abandoned.state);
-    const [first, second, ...rest] = dailyTickets(
-      linkSticker(sealed.state, sealed.spent, "sunset"),
-    );
-    expect(first).toEqual({ used: true });
-    expect(second).toEqual({ used: true, stickerId: "sunset" });
-    expect(rest.some((t) => t.used)).toBe(false);
-  });
-
-  it("doesn't link a ticket spent before the refill to the new day's tickets", () => {
-    const { state, spent } = spendOne(current(null, utc(24, 14, 58)));
-    const nextDay = spendOne(current(state, utc(24, 15, 2))).state;
-    expect(linkSticker(nextDay, spent, "late")).toEqual(nextDay);
-  });
-
-  it("gives back a lost drawing's ticket, daily or reserve, but not one that became a sticker", () => {
-    const daily = spendOne(current(null, utc(24, 1)));
-    const dailyBack = refund(daily.state, daily.spent);
-    expect(dailyBack && ticketsLeft(dailyBack)).toBe(DAILY);
-    const reserve = spendOne(spendMany(addReserve(current(null, utc(24, 1)), 1), DAILY));
-    const reserveBack = refund(reserve.state, reserve.spent);
-    expect(reserveBack && ticketsLeft(reserveBack)).toBe(1);
-    expect(refund(linkSticker(daily.state, daily.spent, "sunset"), daily.spent)).toBeNull();
-  });
-
-  it("gives nothing back for a ticket spent before the refill", () => {
-    const { state, spent } = spendOne(current(null, utc(24, 14, 58)));
-    expect(refund(current(state, utc(24, 15, 2)), spent)).toBeNull();
-  });
-
-  it("shows only the day's daily tickets, even after reserve ones are used", () => {
-    const s = spendMany(addReserve(current(null, utc(24, 1)), 2), DAILY + 2);
-    expect(dailyTickets(s)).toHaveLength(DAILY);
-    expect(dailyTickets(s).every((t) => t.used)).toBe(true);
+  it("leaves reserve tickets off the daily stubs", () => {
+    const usedToday = [0, 1, 2].map((i) => use(i, "daily")).concat(use(3, "reserve", "M0 0Z"));
+    const stubs = dailyTickets({ ...FRESH_TICKETS, dailyLeft: 0, usedToday });
+    expect(stubs).toEqual([{ used: true }, { used: true }, { used: true }]);
   });
 });

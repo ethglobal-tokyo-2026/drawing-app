@@ -22,6 +22,8 @@ The package does not deploy the contracts, persist application records, upload s
 
 After the recipient authenticates with LINE, resolve their Ethereum Sepolia smart account and call `authorizeClaim`. The authorization binds the gift ID, recipient smart account, escrow contract, chain ID, and a deadline. Any relayer can submit it, but the escrow accepts only signatures from `CLAIM_SIGNER_ROLE`. Rejection uses the same restricted authorization pattern, while anyone can return an expired gift to its sender.
 
+The application keeps only the claim commitment, so it has a gift claim token only during the request that carries it. `authorizeClaim` and `authorizeRejection` both require that token, so the application can't authorize a claim that waits for a new recipient's smart account, a retried claim, or any rejection, since a take-back request carries only the gift ID. Before a relayer claims or rejects outside that request, change both to authorize by gift ID, checked against the application's own record of the receive or take-back.
+
 The escrow never receives approval for stickers that remain in an artist's wallet and cannot transfer them. Raw LINE IDs and gift claim tokens are not stored onchain.
 
 ## Commands

@@ -9,14 +9,12 @@ import { useFocusTrap } from "../ui/useFocusTrap";
 import { formatRefillIn, formatRefillTime, msUntilRefillLineChanges } from "./refill";
 import { TicketCount, TicketCounts } from "./TicketCount";
 import { TicketStubs } from "./TicketStubs";
-import { describeTickets, ticketsLeft } from "./tickets";
-import { useDailyTicketStubs } from "./useTicketStubs";
-import { pickUpRefill, useTicketState } from "./useTickets";
+import { dailyTickets, describeTickets, ticketsLeft, type Tickets } from "./tickets";
 import "./tickets.css";
 
 interface Props {
-  /** When the day's daily tickets come back. */
-  refillAt: Date;
+  /** Live: the card turns over when the refill brings tickets back. */
+  tickets: Tickets;
   /** Open the ticket shop. */
   onShop: () => void;
   /** Draw, once there are tickets again. */
@@ -26,8 +24,8 @@ interface Props {
 }
 
 /** Counts down to the refill the card opened with, waking only when the refill line would change. */
-function useRefillCountdown(refillAt: Date) {
-  const [at] = useState(refillAt);
+function useRefillCountdown(refillAt: string) {
+  const [at] = useState(() => new Date(refillAt));
   const [now, setNow] = useState(() => Date.now());
   const msLeft = at.getTime() - now;
   useEffect(() => {
@@ -43,22 +41,14 @@ function useRefillCountdown(refillAt: Date) {
  * free path leads: the key goes to the sticker board and the ticket shop is label stock under it. If
  * tickets come back while it's open, it turns over in place and the key becomes Draw.
  */
-export function OutOfTickets({ refillAt, onShop, onStartDrawing, onBoard }: Props) {
-  const { at, msLeft } = useRefillCountdown(refillAt);
-  const state = useTicketState();
-  const stubs = useDailyTicketStubs(state);
+export function OutOfTickets({ tickets: state, onShop, onStartDrawing, onBoard }: Props) {
+  const { at, msLeft } = useRefillCountdown(state.nextRefillAt);
+  const stubs = dailyTickets(state);
   const card = useRef<HTMLElement>(null);
   const id = useId();
   const refilled = ticketsLeft(state) > 0;
 
-  // Once the card has turned over, leaving it takes the refill along, so the host sees the new tickets.
-  const toBoard = refilled
-    ? () => {
-        pickUpRefill();
-        onBoard();
-      }
-    : onBoard;
-  useFocusTrap(card, { onEscape: toBoard });
+  useFocusTrap(card, { onEscape: onBoard });
 
   // Each view's first control takes focus, so focus never drops out of the card when its controls change.
   useEffect(() => {
@@ -80,7 +70,7 @@ export function OutOfTickets({ refillAt, onShop, onStartDrawing, onBoard }: Prop
       >
         <TicketStubs className="out-of-tickets__art" size="large" stubs={stubs} />
         <p className="out-of-tickets__reserve">
-          <TicketCount kind="reserve" count={state.reserve} />
+          <TicketCount kind="reserve" count={state.reserveLeft} />
           <span className="fine">Reserve</span>
         </p>
         {/* One title element for both, so screen readers hear it turn over. */}
@@ -101,10 +91,7 @@ export function OutOfTickets({ refillAt, onShop, onStartDrawing, onBoard }: Prop
             className="out-of-tickets__key"
             icon={<DrawIcon />}
             aria-label={`Draw: you have ${describeTickets(state)}`}
-            onClick={() => {
-              pickUpRefill();
-              onStartDrawing();
-            }}
+            onClick={onStartDrawing}
           >
             Draw
             <TicketCounts state={state} className="ticket-counts--on-key" />
@@ -115,7 +102,7 @@ export function OutOfTickets({ refillAt, onShop, onStartDrawing, onBoard }: Prop
           </Key>
         )}
         {refilled ? (
-          <LabelButton block icon={<StickerBoardIcon />} onClick={toBoard}>
+          <LabelButton block icon={<StickerBoardIcon />} onClick={onBoard}>
             Go to sticker board
           </LabelButton>
         ) : (

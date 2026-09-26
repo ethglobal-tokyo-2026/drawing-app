@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { Person } from "../api/contract";
-import { gift, people, sticker } from "../api/mock/fixtures";
+import type { Person } from "@drawing-app/api/client";
+import { gift, people, sticker } from "../api/testFixtures";
 import { renderWithApi } from "../api/testing";
 import { toPerson, toSticker } from "../api/views";
 import { formatDuration } from "../stickers/format";
@@ -50,11 +50,15 @@ describe("SendGratitudeSheet", () => {
   });
 
   it("names and pictures the giver, not the artist, when someone else drew it", () => {
-    const { host, title, line } = open(people.ken, people.mika);
+    const ken = { ...people.ken, linePictureUrl: "https://profile.line-scdn.net/ken" };
+    const { host, title, line } = open(ken, {
+      ...people.mika,
+      linePictureUrl: "https://profile.line-scdn.net/mika",
+    });
     expect(title).toContain("@ken");
     expect(line).toContain("from @ken");
     expect(line).not.toContain("drew");
-    expect(host.querySelector("img")?.getAttribute("src")).toBe(people.ken.linePictureUrl);
+    expect(host.querySelector("img")?.getAttribute("src")).toBe(ken.linePictureUrl);
   });
 
   it("sends gratitude from its key, and leaves it for later from Later or its perforation", () => {

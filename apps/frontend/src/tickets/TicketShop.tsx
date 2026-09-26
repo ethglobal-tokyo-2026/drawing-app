@@ -1,5 +1,7 @@
+import type { TicketQuote } from "@drawing-app/api/client";
 import { Ticket } from "@phosphor-icons/react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useApi } from "../api/useApi";
 import { DrawIcon } from "../icons/DrawIcon";
 import { getSuiBalance, IS_MOCK_PAYMENT, payForTickets } from "../payments/sui";
 import { Key } from "../ui/Key";
@@ -10,10 +12,9 @@ import { useFocusTrap } from "../ui/useFocusTrap";
 import { TICKET_PRICE_YEN } from "./config";
 import { formatSui, formatYen, yenForMist } from "./prices";
 import { TicketCount, TicketCounts } from "./TicketCount";
-import { fetchTicketQuote, recordTicketPurchase, type TicketQuote } from "./ticketShopApi";
 import { describeTickets } from "./tickets";
 import { TicketStubs } from "./TicketStubs";
-import { useTicketState } from "./useTickets";
+import { useTickets } from "./useTickets";
 import "./tickets.css";
 import "./TicketShop.css";
 
@@ -36,13 +37,14 @@ const tickets = (n: number) => `${n} ${n === 1 ? "ticket" : "tickets"}`;
 
 /** The shop's SUI price quote, fetched again as each one expires. */
 function useTicketQuote() {
+  const api = useApi();
   const [quote, setQuote] = useState<TicketQuote | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let live = true;
-    fetchTicketQuote().then(
+    api.ticketQuote().then(
       (q) => {
         if (!live) return;
         setQuote(q);
@@ -56,7 +58,7 @@ function useTicketQuote() {
     return () => {
       live = false;
     };
-  }, [attempt]);
+  }, [api, attempt]);
 
   useEffect(() => {
     if (!quote) return;
@@ -107,7 +109,8 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
   const [error, setError] = useState("");
   const { quote, error: quoteError, retry } = useTicketQuote();
   const wallet = useSuiBalance();
-  const state = useTicketState();
+  const api = useApi();
+  const { tickets: state, set: setTickets } = useTickets();
   const card = useRef<HTMLElement>(null);
   const id = useId();
 
@@ -119,7 +122,9 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
     let digest: string | null = null;
     try {
       ({ digest } = await payForTickets(BigInt(p.priceMist)));
-      await recordTicketPurchase({ tickets: p.tickets, txDigest: digest, paidMist: p.priceMist });
+      setTickets(
+        await api.buyTickets({ tickets: p.tickets, txDigest: digest, paidMist: p.priceMist }),
+      );
       setBought(p);
       setStep("done");
     } catch (e) {
@@ -183,11 +188,11 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
         <Key
           className="out-of-tickets__key"
           icon={<DrawIcon />}
-          aria-label={`Draw: you have ${describeTickets(state)}`}
+          aria-label={state ? `Draw: you have ${describeTickets(state)}` : "Draw"}
           onClick={onDraw}
         >
           Draw
-          <TicketCounts state={state} className="ticket-counts--on-key" />
+          {state && <TicketCounts state={state} className="ticket-counts--on-key" />}
         </Key>
         <LabelButton block icon={<Ticket />} onClick={() => setStep("choose")}>
           Buy more tickets
