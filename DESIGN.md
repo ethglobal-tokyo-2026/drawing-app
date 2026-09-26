@@ -359,7 +359,6 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 - the zip pocket's "From …" line, which has to fit two names in one chip
 - the gift bag's tear tape ("SEALED 9.23") and the PULL on its tab
 - the rubber date stamp on the gift tag
-- the caption and badge on LINE's rich menu
 
 Nothing else is set at 75.
 
@@ -609,6 +608,15 @@ Every icon comes from one registry: Phosphor Icons (MIT) as `@phosphor-icons/rea
 **The Never Hand-Drawn Rule.** Icons are never drawn by hand and published paths are never edited. If Phosphor doesn't have it, choose a different Phosphor icon or compose published paths by transform.
 
 **The Draw Exception.** Every Draw action (the board's Draw key, Keep drawing, and the rich menu's Draw tile) uses Material Symbols' `draw` (Apache-2.0, weight 700, filled). It's the one icon from outside Phosphor, because its pencil mid-squiggle says "draw", where every Phosphor pencil says "edit". The brush tool keeps Phosphor's paint-brush; it's a drawing tool, not the Draw action.
+
+### Chat menu
+
+The official account's menu under its chat in LINE, drawn as the board foot. LINE shows the 2500 × 843 image 390 wide, so it's drawn at 390 × 131.5 from the app's own tokens, key and label stock (`deploy/line/returning-menu.html`), and `pnpm --filter frontend chat-menus` renders every version.
+
+- **Returning:** the Draw key (Seal Yellow, Phosphor's pencil-simple-line in fill) sits in the left 1409px, Draw's tap area. My board and Explore are pink and aqua label stock stacked on the right, 10px apart, with smiley-sticker and compass in bold. The house gutter runs round the edges and between the columns.
+- **Tickets:** LINE can't vary an image per person, so each ticket state is its own menu, linked person by person. The tickets tuck 16px behind the key's right end, as on the app's Draw key: a Seal Yellow ticket ×3, ×2 or ×1; the blue reserve ticket, with no count, once only reserve tickets are left; and at none, the used backing printed with Tokyo's midnight (12:00 AM, or 0:00). The key keeps one width (136px) in every ticket state, so only the tickets change; the plain menu has no tickets, and its key fills the area. It shows counts, never the three-a-day rule.
+- **New people:** one large key across the image, Japanese over English (シールボードをひらく, Open Sticker Board), since it can't know their language, with the sticker board icon as tall as both lines (30px). It uses the greeting's words.
+- **Words:** the app's own (Draw, My board and Explore; かく, マイボード and さがす). Each tap area's screen-reader label says what the image shows, in at most 20 characters ("Draw, 2 tickets left").
 
 ### Mocked platform screens
 
