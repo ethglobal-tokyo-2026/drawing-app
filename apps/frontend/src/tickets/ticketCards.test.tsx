@@ -336,6 +336,6 @@ describe("ReserveTicketCheckout", () => {
     expect(title()).toBe("Payment didn’t go through");
     expect(document.querySelector("[role=alert]")?.textContent).toContain(TX_DIGEST);
     click("Back to the packs");
-    expect(title()).toBe("Reserve tickets");
+    expect(title()).toBe("Pick a pack");
   });
 });

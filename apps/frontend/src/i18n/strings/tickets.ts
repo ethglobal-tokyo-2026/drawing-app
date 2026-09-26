@@ -112,8 +112,8 @@ export const tickets = {
   },
   /** The reserve ticket checkout: the card that sells reserve ticket packs. */
   checkout: {
-    /** Reserve ticket checkout, over the Shop or the drawing screen: the title */
-    title: { en: "Reserve tickets", ja: "有償チケット" },
+    /** Reserve ticket checkout, over the Shop or the drawing screen: the title, over the packs (over the Shop, its reserve tickets headline shows just above) */
+    title: { en: "Pick a pack", ja: "パックを選んでください" },
     /** Reserve ticket checkout: the bold line under the title */
     lead: { en: "Reserve tickets never expire.", ja: "有償チケットに有効期限はありません。" },
     /** Reserve ticket checkout: the small label on the wallet row, beside your JPYC balance shown in yen */
