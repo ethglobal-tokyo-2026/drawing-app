@@ -12,7 +12,7 @@ import {
 } from "react";
 import { formatCount } from "../../i18n/format";
 import { useTranslation } from "../../i18n/react";
-import { GratitudeIcon } from "../../icons";
+import { GratitudeIcon, StreakIcon } from "../../icons";
 import { EnsNameLink } from "../../identity/EnsNameLink";
 import { formatDay, formatHandle } from "../../stickers/format";
 import { HitCounter } from "../../ui/HitCounter";
@@ -276,6 +276,7 @@ export function StatCork({
               <i className="stat-board__pin" aria-hidden />
               <div className="stat-board__paper">
                 <h3 className="fine stat-board__leaf-band" id={`${id}-streak`}>
+                  <StreakIcon size={13} />
                   {t(($) => $.stickerBoard.statBoard.streak.title)}
                 </h3>
                 {!f.streak ? (

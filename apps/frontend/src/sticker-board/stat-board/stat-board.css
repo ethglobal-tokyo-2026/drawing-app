@@ -279,7 +279,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* The streak: a day-calendar leaf torn off its pad, in the daily yellow. */
+/* The streak: a day-calendar leaf torn off its pad, its band in the streak's tangerine. */
 .stat-board__leaf {
   width: 100%;
   max-width: 138px;
@@ -308,13 +308,23 @@
   );
 }
 
+/* The streak's fire before STREAK, centered together on the band, under the pin rather than through it. */
 .stat-board__leaf-band {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   margin: 0;
-  padding: 10px 0 6px;
-  background: var(--seal);
+  padding: 14px 0 6px;
+  background: var(--tangerine);
   color: var(--ink);
   font-weight: 750;
   letter-spacing: 0.16em;
+}
+
+.stat-board__leaf-band svg {
+  flex: none;
+  margin-top: -1px;
 }
 
 .stat-board__leaf-n {
@@ -430,8 +440,8 @@
 .stat-board__scrap > .stat-board__paper {
   padding: 16px 14px 12px;
   background:
-    repeating-linear-gradient(to bottom, transparent 0 23px, rgba(155, 123, 255, 0.22) 23px 24px) 0
-      6px / 100% 100%,
+    repeating-linear-gradient(to bottom, transparent 0 23px, var(--rule) 23px 24px) 0 6px / 100%
+      100%,
     var(--liner-lift);
   transform-origin: 92% 0;
   clip-path: polygon(
