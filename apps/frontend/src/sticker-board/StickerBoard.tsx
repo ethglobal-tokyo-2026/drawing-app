@@ -12,7 +12,7 @@ import {
 import { flushSync } from "react-dom";
 import { useApi } from "../api/useApi";
 import { useApiQuery } from "../api/useApiQuery";
-import { toApiPlacement } from "../api/views";
+import { toApiPlacement, type PersonView } from "../api/views";
 import { useGiftSender } from "../giving/useGiftSender";
 import { useStickerGifts } from "../giving/useStickerGifts";
 import { DrawIcon } from "../icons/DrawIcon";
@@ -66,6 +66,10 @@ const StickerDetail = lazyWithPreload("the sticker detail", () =>
   import("./StickerDetail").then((m) => m.StickerDetail),
 );
 const Giving = lazyWithPreload("Giving", () => import("../giving/Giving").then((m) => m.Giving));
+// Opened from a received sticker's detail.
+const GratitudeMiniGamePlaceholder = lazyWithPreload("the gratitude Mini-game", () =>
+  import("../gratitude/GratitudeMiniGamePlaceholder").then((m) => m.GratitudeMiniGamePlaceholder),
+);
 const StatBoard = lazyWithPreload("the stat board", () =>
   import("./stat-board/StatBoard").then((m) => m.StatBoard),
 );
@@ -173,6 +177,12 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   /** The sticker the detail shows, among your stickers or among the ones you gave. */
   const [open, setOpen] = useState<{ id: string; mode: "yours" | "given" } | null>(null);
   const [giving, setGiving] = useState<BoardSticker | null>(null);
+  /** A received sticker being thanked, with its gift and giver. */
+  const [thanking, setThanking] = useState<{
+    giftId: string;
+    sticker: BoardSticker;
+    giver: PersonView;
+  } | null>(null);
   /** The board is turned over to its stat board. */
   const [turned, setTurned] = useState(false);
   /** The board has turned over before, so its stat board stays mounted for every turn after. */
@@ -246,17 +256,25 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     if (landingId) landed.add(landingId);
   }, [landingId]);
 
-  // A sticker given away has left the board.
-  const onBoard = (stickers ?? []).filter(
-    (s) => s.placement.on && gifts.get(s.id)?.state !== "sent",
-  );
-  // Given away, it leaves its given sticker silhouette where it sat.
+  // A sticker given away, or on its way, has left the board.
+  const away = (s: BoardSticker) => !s.held || gifts.get(s.id)?.state === "sent";
+  const onBoard = (stickers ?? []).filter((s) => s.placement.on && !away(s));
+  // It leaves its given sticker silhouette where it sat. On its way, it keeps one until the
+  // pending gifts badge can hold it.
   const givenSilhouettes = (stickers ?? []).flatMap((s) => {
-    const gift = gifts.get(s.id);
     const mask = s.urls.mask;
-    return gift?.state === "sent" && mask
-      ? [{ sticker: s, mask, sentAt: gift.sentAt, to: gift.to }]
-      : [];
+    if (!mask) return [];
+    if (s.givenTo)
+      return [
+        {
+          sticker: s,
+          mask,
+          sentAt: s.givenTo.receivedAt,
+          to: s.givenTo.receiver.handle ?? undefined,
+        },
+      ];
+    const gift = gifts.get(s.id);
+    return gift?.state === "sent" ? [{ sticker: s, mask, sentAt: gift.sentAt, to: gift.to }] : [];
   });
   const field = useMemo(() => size && fieldOf(size.W, size.H), [size]);
   const landedNow = useCallback(() => setLandingId(undefined), []);
@@ -446,7 +464,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
               {...o}
               field={field}
               boardWidth={size.W}
-              onOpen={() => setOpen({ id: o.sticker.id, mode: "given" })}
+              onOpen={() => setOpen({ id: o.sticker.id, mode: o.sticker.held ? "yours" : "given" })}
             />
           ))}
         {field &&
@@ -554,21 +572,15 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         <Suspense fallback={null}>
           <StickerDetail
             // In the order they arrived, as the board loads them.
-            stickers={(stickers ?? []).filter((s) =>
-              open.mode === "given"
-                ? gifts.get(s.id)?.state === "sent"
-                : gifts.get(s.id)?.state !== "sent",
-            )}
+            stickers={(stickers ?? []).filter((s) => (open.mode === "given") !== s.held)}
             startId={open.id}
             mode={open.mode}
-            handle={me.handle}
             // It lifts off from where the sticker sits: on the board, or its given sticker silhouette.
             originOf={(id) =>
               stickerEl(id)?.querySelector<HTMLElement>(
                 ".placed-sticker__lift, .given-sticker-silhouette__art",
               ) ?? null
             }
-            gifts={gifts}
             onClose={() => setOpen(null)}
             // Back to the sticker it opened from: on the board, or its given sticker silhouette.
             returnFocus={() =>
@@ -584,6 +596,32 @@ export function StickerBoard({ freshId, onDraw }: Props) {
                   }
                 : undefined
             }
+            onSendGratitude={(gift, sticker, giver) =>
+              setThanking({ giftId: gift.id, sticker, giver })
+            }
+          />
+        </Suspense>
+      )}
+
+      {thanking && (
+        <Suspense fallback={null}>
+          <GratitudeMiniGamePlaceholder
+            giftId={thanking.giftId}
+            sticker={{
+              id: thanking.sticker.id,
+              no: thanking.sticker.no,
+              timeUsed: thanking.sticker.timeUsed,
+              createdAt: thanking.sticker.createdAt,
+              urls: thanking.sticker.urls,
+              width: thanking.sticker.width,
+              height: thanking.sticker.height,
+            }}
+            giver={{
+              handle: thanking.giver.handle ?? thanking.giver.name,
+              displayName: thanking.giver.name,
+              ...(thanking.giver.pictureUrl && { pictureUrl: thanking.giver.pictureUrl }),
+            }}
+            onClose={() => setThanking(null)}
           />
         </Suspense>
       )}

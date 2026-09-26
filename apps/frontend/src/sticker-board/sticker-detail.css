@@ -253,6 +253,55 @@
   padding-inline: 18px;
 }
 
+/* Send gratitude over Give: the key, then Give on label stock under it. */
+.sticker-detail__acts.is-stacked {
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* A sticker on its way: its frosted sleeve on a Liner Lift note, in place of Give. */
+.sticker-detail__on-its-way {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--liner-lift);
+  box-shadow:
+    inset 0 0 0 1px var(--rule),
+    var(--shadow-label);
+  font-weight: 750;
+  font-size: 15px;
+}
+
+.sticker-detail__sleeve {
+  position: relative;
+  flex: none;
+  width: 40px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--liner-deep);
+  box-shadow: inset 0 0 0 1px var(--rule-strong);
+}
+
+.sticker-detail__sleeve img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: blur(4px);
+  opacity: 0.55;
+}
+
+/* The frost over it: the sleeve shows the sticker's colors, never the sticker. */
+.sticker-detail__sleeve::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.4));
+}
+
 .sticker-detail__none {
   margin: 24px 0 0;
   color: var(--graphite);

@@ -2,6 +2,11 @@
 import { act, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ApiClient } from "../api/apiClient";
+import { ApiProvider } from "../api/ApiProvider";
+import type { StickerDetailResponse } from "../api/contract";
+import { people, sticker as apiSticker, trailEntry } from "../api/mock/fixtures";
+import { emptyApi } from "../api/testing";
 import type { BoardSticker } from "./boardSticker";
 import { StickerDetail } from "./StickerDetail";
 import { yoursHeld } from "./testBoardSticker";
@@ -31,22 +36,41 @@ let host: HTMLDivElement;
 let root: Root;
 const onClose = vi.fn();
 const onGive = vi.fn();
+const onSendGratitude = vi.fn();
 
-const open = (props: Partial<ComponentProps<typeof StickerDetail>> = {}) =>
+const open = (
+  props: Partial<ComponentProps<typeof StickerDetail>> = {},
+  api: ApiClient = emptyApi(),
+) =>
   act(() =>
     root.render(
-      <StickerDetail
-        stickers={stickers}
-        startId="s-133"
-        mode="yours"
-        handle="alice"
-        gifts={new Map()}
-        onClose={onClose}
-        onGive={onGive}
-        {...props}
-      />,
+      <ApiProvider client={api}>
+        <StickerDetail
+          stickers={stickers}
+          startId="s-133"
+          mode="yours"
+          onClose={onClose}
+          onGive={onGive}
+          onSendGratitude={onSendGratitude}
+          {...props}
+        />
+      </ApiProvider>,
     ),
   );
+
+/** A client whose sticker details have Transfer Trails: `trail` for s-133, empty for the rest. */
+const withTrail = (trail: StickerDetailResponse["transferTrail"]) =>
+  emptyApi({
+    stickerDetail: (id) =>
+      Promise.resolve({
+        sticker: apiSticker({ id, number: 133 }),
+        owner: me,
+        transferTrail: id === "s-133" ? trail : [],
+      }),
+  });
+const me = { id: "me", handle: "me", lineDisplayName: "Me", linePictureUrl: null };
+const settle = () => act(async () => {});
+const acts = () => document.querySelector(".sticker-detail__acts")?.textContent;
 
 const heading = () => document.querySelector("h2")?.textContent;
 const button = (name: string) =>
@@ -72,6 +96,7 @@ beforeEach(() => {
   root = createRoot(host);
   onClose.mockReset();
   onGive.mockReset();
+  onSendGratitude.mockReset();
 });
 
 afterEach(() => {
@@ -95,13 +120,65 @@ describe("StickerDetail", () => {
     expect(onGive).toHaveBeenCalledExactlyOnceWith(stickers[1]);
   });
 
-  it("says when a given sticker went, and offers no Give", () => {
-    const gifts = new Map([
-      ["s-133", { giftId: "g-133", state: "sent" as const, packedAt: day(23), sentAt: day(23) }],
-    ]);
-    open({ mode: "given", gifts });
-    expect(document.querySelector(".sticker-detail__meta")?.textContent).toContain("2026.09.23");
+  it("says who received a given sticker and when, and offers no Give", () => {
+    const given = stickers.map((s) =>
+      s.id === "s-133"
+        ? {
+            ...s,
+            held: false,
+            givenTo: { receiver: { id: "bob", handle: "bob", name: "Bob" }, receivedAt: day(23) },
+          }
+        : s,
+    );
+    open({ mode: "given", stickers: given });
+    expect(document.querySelector(".sticker-detail__meta")?.textContent).toContain(
+      "You gave it to @bob · 2026.09.23",
+    );
     expect(button("Give")).toBeUndefined();
+  });
+
+  it("shows a sticker on its way in place of Give", () => {
+    const sent = stickers.map((s) =>
+      s.id === "s-133" ? { ...s, openGift: { id: "g-133", status: "sent" as const } } : s,
+    );
+    open({ stickers: sent });
+    expect(document.querySelector(".sticker-detail__on-its-way")?.textContent).toBe("On its way");
+    expect(button("Give")).toBeUndefined();
+  });
+
+  it("leads with Send gratitude for a received sticker you haven't thanked", async () => {
+    open({}, withTrail([trailEntry({ giftId: "g-1", giver: people.mika, receiver: me })]));
+    await settle();
+    expect(acts()).toBe("Send gratitudeGive");
+    press("Send gratitude");
+    expect(onSendGratitude).toHaveBeenCalledExactlyOnceWith(
+      { id: "g-1" },
+      stickers[1],
+      expect.objectContaining({ handle: "mika" }),
+    );
+  });
+
+  it("offers only Give once it's thanked, or when the last gift wasn't to you", async () => {
+    const thanked = trailEntry({ giftId: "g-1", receiver: me });
+    thanked.gratitude = {
+      giftId: "g-1",
+      method: "tap",
+      hits: 12,
+      total: 300,
+      peakMult: 2,
+      peakTier: 1,
+      originalArtistGratitudeShare: 0,
+      gameConfigVersion: "1",
+      recordedAt: "2026-09-24T00:00:00.000Z",
+      seenByGiverAt: null,
+    };
+    open({}, withTrail([thanked]));
+    await settle();
+    expect(acts()).toBe("Give");
+    act(() => root.render(null));
+    open({}, withTrail([trailEntry({ giftId: "g-2", giver: me, receiver: people.bob })]));
+    await settle();
+    expect(acts()).toBe("Give");
   });
 
   it("titles LINE's header with the shown sticker, and puts the title back when it closes", () => {

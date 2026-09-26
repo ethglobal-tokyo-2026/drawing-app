@@ -1,19 +1,22 @@
-import { CaretLeft, CaretRight, Gift } from "@phosphor-icons/react";
+import { CaretLeft, CaretRight, Gift, Heart } from "@phosphor-icons/react";
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
-import type { StickerGiftStatus } from "../giving/giftStore";
+import { useApiQuery } from "../api/useApiQuery";
+import type { PersonView } from "../api/views";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { Key } from "../ui/Key";
+import { LabelButton } from "../ui/LabelButton";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import type { BoardSticker } from "./boardSticker";
 import { useDetailLift } from "./detailLift";
 import { swipeLock, swipeTo } from "./detailPaging";
+import { owedGratitude } from "./owedGratitude";
 import "./sticker-detail.css";
 
 interface Props {
@@ -23,13 +26,11 @@ interface Props {
   startId: string;
   /** Your stickers, or the ones you gave, which it only shows. */
   mode: "yours" | "given";
-  /** Who drew them, for the fine print: you, until stickers can be received. */
-  handle: string;
-  /** When each given sticker went. */
-  gifts: ReadonlyMap<string, StickerGiftStatus>;
   onClose: () => void;
   /** Give, where LINE's picker can send the sticker; without it there's no key. */
   onGive?: (sticker: BoardSticker) => void;
+  /** Thanks the giver of a received sticker you haven't thanked; without it there's no key. */
+  onSendGratitude?: (gift: { id: string }, sticker: BoardSticker, giver: PersonView) => void;
   /** Where focus goes once it closes, when that isn't back to what opened it. */
   returnFocus?: () => HTMLElement | null;
   /** Where a sticker sits on the board, which it lifts off from and sticks back onto. */
@@ -55,10 +56,9 @@ export function StickerDetail({
   stickers,
   startId,
   mode,
-  handle,
-  gifts,
   onClose,
   onGive,
+  onSendGratitude,
   returnFocus,
   originOf,
 }: Props) {
@@ -71,6 +71,12 @@ export function StickerDetail({
   );
   const sticker: BoardSticker | undefined = stickers[index];
   const last = stickers.length - 1;
+  // Whether you've thanked a sticker you hold is on its Transfer Trail, which only its detail has.
+  const heldId = mode === "yours" && sticker?.held ? sticker.id : null;
+  const detail = useApiQuery(`sticker-detail:${heldId ?? "none"}`, (api) =>
+    heldId ? api.stickerDetail(heldId) : Promise.resolve(null),
+  );
+  const owed = detail.state === "ready" && detail.data ? owedGratitude(detail.data) : null;
 
   const root = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLElement>(null);
@@ -83,7 +89,8 @@ export function StickerDetail({
     root,
     sticker,
     originOf,
-    given: mode === "given",
+    // A sticker given away, or on its way, lifts out of its given sticker silhouette.
+    given: sticker ? !sticker.held || sticker.openGift?.status === "sent" : mode === "given",
     reduced,
     onClose,
   });
@@ -169,8 +176,12 @@ export function StickerDetail({
       });
   };
 
-  const gift = sticker && gifts.get(sticker.id);
-  const detail = (
+  const onItsWay = sticker?.openGift?.status === "sent";
+  const sendGratitude =
+    sticker && owed && onSendGratitude
+      ? () => onSendGratitude({ id: owed.giftId }, sticker, owed.giver)
+      : null;
+  const page = (
     <div
       ref={root}
       className="sticker-detail"
@@ -262,25 +273,59 @@ export function StickerDetail({
             <section className="sticker-detail__meta">
               <h2 className="title-label sticker-detail__title">{formatNo(sticker.no)}</h2>
               <p className="fine sticker-detail__fine-print">
-                <span className="sticker-detail__by">by {formatHandle(handle)}</span>{" "}
+                <span className="sticker-detail__by">
+                  by {formatHandle(sticker.artist.handle ?? sticker.artist.name)}
+                </span>{" "}
                 <span>
                   · drawn in <Duration seconds={sticker.timeUsed} />
                 </span>{" "}
                 <span>· {formatDay(sticker.createdAt)}</span>
               </p>
-              {mode === "given" && gift?.state === "sent" && (
+              {sticker.givenTo && (
                 <p className="fine sticker-detail__fine-print">
-                  Given to {gift.to ? formatHandle(gift.to) : "a friend"} on{" "}
-                  {formatDay(gift.sentAt)}
+                  You gave it to{" "}
+                  {formatHandle(sticker.givenTo.receiver.handle ?? sticker.givenTo.receiver.name)} ·{" "}
+                  {formatDay(sticker.givenTo.receivedAt)}
                 </p>
               )}
             </section>
 
-            {mode === "yours" && onGive && (
-              <div className="sticker-detail__acts">
-                <Key tone="aqua" icon={<Gift aria-hidden />} onClick={() => onGive(sticker)}>
-                  Give
-                </Key>
+            {mode === "yours" && onItsWay && (
+              <div className="sticker-detail__on-its-way">
+                <span className="sticker-detail__sleeve" aria-hidden>
+                  <img src={sticker.urls.png} alt="" draggable={false} />
+                </span>
+                <span>On its way</span>
+              </div>
+            )}
+            {mode === "yours" && !onItsWay && (sendGratitude || onGive) && (
+              <div className={`sticker-detail__acts ${sendGratitude ? "is-stacked" : ""}`}>
+                {sendGratitude ? (
+                  <>
+                    <Key
+                      tone="pink"
+                      icon={<Heart weight="fill" aria-hidden />}
+                      onClick={sendGratitude}
+                    >
+                      Send gratitude
+                    </Key>
+                    {onGive && (
+                      <LabelButton
+                        block
+                        icon={<Gift aria-hidden />}
+                        onClick={() => onGive(sticker)}
+                      >
+                        Give
+                      </LabelButton>
+                    )}
+                  </>
+                ) : (
+                  onGive && (
+                    <Key tone="aqua" icon={<Gift aria-hidden />} onClick={() => onGive(sticker)}>
+                      Give
+                    </Key>
+                  )
+                )}
               </div>
             )}
           </>
@@ -292,5 +337,5 @@ export function StickerDetail({
   );
   // Over the whole phone, tabs included, as the Giving flow is.
   const phone = document.querySelector<HTMLElement>(".phone");
-  return phone ? createPortal(detail, phone) : detail;
+  return phone ? createPortal(page, phone) : page;
 }

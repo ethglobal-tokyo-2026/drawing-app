@@ -5,7 +5,7 @@
 import type { ArtKey } from "../../artists/art";
 import { avatarUrl, stickerArtUrl } from "../../artists/artUrl";
 import { artistByHandle } from "../../artists/demoArtists";
-import type { BoardSticker, Gift, Person, Sticker } from "../contract";
+import type { BoardSticker, Gift, Person, Sticker, TransferTrailEntry } from "../contract";
 
 /** A demo artist as the API describes a person. */
 function demoPerson(handle: string): Person {
@@ -86,6 +86,17 @@ export function gift(overrides: Partial<Gift> = {}): Gift {
     takenOutAt: null,
     receivedAt: null,
     returnedAt: null,
+    ...overrides,
+  };
+}
+
+export function trailEntry(
+  overrides: Partial<TransferTrailEntry> & Pick<TransferTrailEntry, "giftId" | "receiver">,
+): TransferTrailEntry {
+  return {
+    giver: people.mika,
+    receivedAt: "2026-09-23T12:05:00.000Z",
+    gratitude: null,
     ...overrides,
   };
 }
