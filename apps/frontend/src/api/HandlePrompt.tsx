@@ -18,7 +18,7 @@ interface Props {
   onChosen: (me: Me) => void;
 }
 
-/** A save that failed, kept as the error rather than words, so the words follow the app's language. */
+/** A failed save, kept as its error so the words follow the app's language. */
 interface FailedSave {
   handle: string;
   error: ApiError;
