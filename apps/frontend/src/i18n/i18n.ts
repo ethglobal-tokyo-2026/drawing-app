@@ -7,7 +7,7 @@ import { readChosenLanguage, type Language } from "./language";
 i18next
   .use(initReactI18next)
   .init({
-    // The developer slip's choice, or English; main.tsx then applies LINE's language.
+    // The person's choice as this device keeps it, or English; main.tsx then applies LINE's language.
     lng: readChosenLanguage() ?? "en",
     fallbackLng: "en",
     supportedLngs: ["en", "ja"],
