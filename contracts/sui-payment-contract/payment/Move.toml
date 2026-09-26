@@ -1,0 +1,6 @@
+[package]
+name = "payment"
+edition = "2024"
+
+[dependencies]
+jpy_coin = { local = "../jpy_coin" }

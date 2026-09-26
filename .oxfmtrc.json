@@ -1,4 +1,8 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["**/src/generated/**", "packages/sticker-chain/lib/**"]
+  "ignorePatterns": [
+    "**/src/generated/**",
+    "packages/sticker-chain/lib/**",
+    "contracts/sui-payment-contract/**"
+  ]
 }
