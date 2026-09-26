@@ -123,11 +123,13 @@
   cursor: grab;
 }
 
+/* On a layer of its own, so a swipe moves the figure without repainting it. */
 .sticker-detail__slide {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
+  will-change: transform;
 }
 
 /* Its own shape, inside a 216px square. */

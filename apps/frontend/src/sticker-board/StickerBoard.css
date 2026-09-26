@@ -85,6 +85,12 @@
   will-change: transform;
 }
 
+/* On the board the specular holds still: swaying under every sticker's mask would keep the board
+   repainting. The sticker's detail keeps the sway. */
+.placed-sticker .live-resin__spec > b {
+  animation: none;
+}
+
 .placed-sticker__lift {
   position: absolute;
   inset: 0;

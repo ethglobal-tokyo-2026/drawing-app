@@ -22,6 +22,7 @@ import { OfferSheet } from "../offers/OfferSheet";
 import { ArtistChip } from "../stickers/ArtistChip";
 import { Duration } from "../stickers/Duration";
 import { formatHandle, formatNo } from "../stickers/format";
+import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
@@ -162,6 +163,7 @@ export function ArtistBoard({ artist, onBack }: Props) {
   const [viewing, setViewing] = useState<ArtistBoardSticker | null>(null);
   const [giving, setGiving] = useState(false);
   const [offering, setOffering] = useState<ArtistBoardSticker | null>(null);
+  useLight(!turned);
 
   const stickers = useMemo(
     () => artist.board.map((s, i) => asBoardSticker(artist.handle, s, i + 1)),
