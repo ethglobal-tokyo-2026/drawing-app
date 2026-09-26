@@ -175,7 +175,7 @@ Stroke and shake work as in `P`, with this spec's timing.
   - The answer is stored. Declining leaves shake, the light's tilt and the Zipper's swing off, and nothing asks again.
   - If motion was allowed but none arrives in the first second of a later launch, the card comes back.
   - An error from `requestPermission` counts as not allowed and is logged.
-  - The sticker tray plan's T4 changes to read `motionPermission`.
+  - The Zipper and the light need no change: both already listen without asking, and on iOS their events start once motion is allowed.
   - Touch works either way: the Zipper's pull still drags and taps, and the light follows a finger. Motion adds the pull's swing, the light's tilt and shake.
 
 ## Files
