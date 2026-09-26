@@ -8,5 +8,19 @@ export const identity = {
       copied: "{{label}} copied",
       failed: "Couldn’t copy the {{label}}",
     },
+    privyId: "Privy ID",
+    boardAddress: "Board address",
+    signInAddress: "Sign-in address",
+    suiAddress: {
+      label: "Sui address",
+      /** In place of the address, when Privy couldn't make the Sui wallet. */
+      failed: "Privy couldn’t make it: {{reason}}",
+    },
+    /** An address's link, which opens it on its chain's explorer. */
+    onExplorer: "{{label}} {{address}} on {{explorer}}",
+    explorer: {
+      etherscan: "Etherscan, Ethereum Sepolia’s explorer",
+      suiscan: "Suiscan, Sui Testnet’s explorer",
+    },
   },
 } as const;
