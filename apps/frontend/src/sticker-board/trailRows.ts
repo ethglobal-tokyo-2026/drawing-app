@@ -1,6 +1,8 @@
 import type { TransferTrailEntry } from "@drawing-app/api/client";
 import { toMs, toPerson, type PersonView } from "../api/views";
 import { formatCount } from "../i18n/format";
+import { i18next } from "../i18n/i18n";
+import { handleOf } from "./boardSticker";
 
 /** One hand-off on a sticker's Transfer Trail, as its detail shows it. */
 export interface TrailRow {
@@ -41,10 +43,6 @@ export function defaultOpenRow(rows: readonly TrailRow[], viewerId: string): str
   return rows.find((r) => r.gratitude)?.giftId ?? null;
 }
 
-/** How someone reads on the trail: "you" for the viewer, their handle for anyone else. */
-export const trailName = (p: PersonView, viewerId: string) =>
-  p.id === viewerId ? "you" : p.handle ? `@${p.handle.replace(/^@+/, "")}` : p.name;
-
 /**
  * The open row's line for the Original Artist Gratitude Share, when the giver isn't the artist:
  * "2,357 to @ken · 590 to @mika, its artist", or "590 of it came to you, its artist". Never money
@@ -57,11 +55,14 @@ export function artistShareLine(
 ): string | null {
   const g = row.gratitude;
   if (!g || g.artistShare <= 0 || row.giver.id === artist.id) return null;
-  if (artist.id === viewerId) return `${formatCount(g.artistShare)} of it came to you, its artist`;
-  const kept = formatCount(g.total - g.artistShare);
-  const giverPart =
-    row.giver.id === viewerId
-      ? `${kept} came to you`
-      : `${kept} to ${trailName(row.giver, viewerId)}`;
-  return `${giverPart} · ${formatCount(g.artistShare)} to ${trailName(artist, viewerId)}, its artist`;
+  const share = formatCount(g.artistShare);
+  if (artist.id === viewerId)
+    return i18next.t(($) => $.stickerBoard.transferTrail.artistShare.toYou, { share });
+  const split = { kept: formatCount(g.total - g.artistShare), share, artist: handleOf(artist) };
+  return row.giver.id === viewerId
+    ? i18next.t(($) => $.stickerBoard.transferTrail.artistShare.fromYou, split)
+    : i18next.t(($) => $.stickerBoard.transferTrail.artistShare.between, {
+        ...split,
+        giver: handleOf(row.giver),
+      });
 }
