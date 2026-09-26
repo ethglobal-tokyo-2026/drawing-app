@@ -308,6 +308,43 @@ describe("the recorder on the page", () => {
     ]);
   });
 
+  it("notes one slow input per tap or key press, and leaves out hover and mouse events", () => {
+    // Hover and mouse compatibility events fire once per element under the finger: 16 seconds of
+    // taps once made a report of 205,000 characters.
+    let deliver: Deliver = () => {};
+    stubObservers(["event"], (observed) => {
+      deliver = observed;
+    });
+    const input = (name: string, interactionId: number) => ({
+      entryType: "event",
+      name,
+      interactionId,
+      startTime: 300,
+      processingStart: 305,
+      processingEnd: 306,
+      duration: 96,
+      target: null,
+      toJSON: () => ({}),
+    });
+    startPerformanceRecorder();
+    for (let t = 0; t <= 320; t += 16) frameAt(t);
+    deliver([
+      ...["pointerover", "pointerenter", "pointerleave", "mouseover", "mousedown"].map((name) =>
+        input(name, 0),
+      ),
+      input("pointerdown", 7),
+      input("pointerup", 7),
+      input("click", 7),
+      input("keydown", 9),
+    ]);
+    frameAt(400);
+
+    const [slow] = readPerformanceRecording()?.slowFrames ?? [];
+    expect(
+      slow.events.filter((e) => e.kind === "slow input").map((e) => e.detail.split(" ")[0]),
+    ).toEqual(["pointerdown", "keydown"]);
+  });
+
   it("counts no frame across the time it was off, and lists no event twice after it starts again", () => {
     const fetch = {
       entryType: "resource",
