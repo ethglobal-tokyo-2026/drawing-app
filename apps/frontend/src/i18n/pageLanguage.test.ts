@@ -1,9 +1,25 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import type { Window as HappyWindow } from "happy-dom";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { i18next } from "./i18n";
+import { JAPANESE_FONT_CSS } from "./japaneseFont";
 import { followLanguageOnPage } from "./pageLanguage";
 
-afterEach(() => i18next.changeLanguage("en"));
+const japaneseFontLinks = () =>
+  [...document.head.querySelectorAll("link")].filter((l) => l.href === JAPANESE_FONT_CSS);
+
+const isHappyDom = (w: object): w is Pick<HappyWindow, "happyDOM"> => "happyDOM" in w;
+
+// The Japanese face is a stylesheet on Google Fonts, which the tests never fetch.
+beforeAll(() => {
+  if (!isHappyDom(window)) throw new Error("These tests run in happy-dom");
+  window.happyDOM.settings.disableCSSFileLoading = true;
+});
+
+afterEach(async () => {
+  await i18next.changeLanguage("en");
+  for (const link of japaneseFontLinks()) link.remove();
+});
 
 describe("the page's language", () => {
   it("follows the app's: <html lang>, the title and LIFF's own text", async () => {
@@ -15,5 +31,14 @@ describe("the page's language", () => {
     expect(document.documentElement.lang).toBe("ja");
     expect(document.title).toBe("クロッキー");
     expect(setLiffLanguage).toHaveBeenLastCalledWith("ja");
+  });
+
+  it("asks for the Japanese face only once the app is in Japanese, and only once", async () => {
+    followLanguageOnPage(() => Promise.resolve());
+    expect(japaneseFontLinks()).toHaveLength(0);
+    await i18next.changeLanguage("ja");
+    await i18next.changeLanguage("en");
+    await i18next.changeLanguage("ja");
+    expect(japaneseFontLinks()).toHaveLength(1);
   });
 });
