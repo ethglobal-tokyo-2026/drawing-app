@@ -18,14 +18,18 @@ import {
   setPrivyStatus,
   usePrivyStatus,
 } from "./privy";
+import { MakeSuiWallet } from "./MakeSuiWallet";
 import { SponsorshipCheck } from "./SponsorshipCheck";
 import { SmartWalletBridge } from "./SmartWalletBridge";
 
-// The Ethereum wallet Privy itself made, as opposed to one the person connected.
-const isPrivysWallet = (a: User["linkedAccounts"][number]): a is WalletWithMetadata =>
-  a.type === "wallet" &&
-  (a.walletClientType === "privy" || a.walletClientType === "privy-v2") &&
-  a.chainType === "ethereum";
+// The address of the wallet Privy itself made on a chain, as opposed to one the person connected.
+const privysWallet = (user: User, chainType: "ethereum" | "sui") =>
+  user.linkedAccounts.find(
+    (a): a is WalletWithMetadata =>
+      a.type === "wallet" &&
+      (a.walletClientType === "privy" || a.walletClientType === "privy-v2") &&
+      a.chainType === chainType,
+  )?.address;
 
 const smartAccountOf = (user: User) =>
   user.linkedAccounts.find((account) => account.type === "smart_wallet")?.address ??
@@ -35,8 +39,9 @@ const signedIn = (user: User) => {
   setPrivyStatus({
     state: "signed-in",
     userId: user.id,
-    wallet: user.linkedAccounts.find(isPrivysWallet)?.address,
+    wallet: privysWallet(user, "ethereum"),
     smartAccount: smartAccountOf(user),
+    suiWallet: privysWallet(user, "sui"),
   });
   // Having a Privy account is what makes someone returning, so their chat menu switches now.
   void requestReturningMenu();
@@ -84,6 +89,7 @@ export default function PrivySession() {
     >
       <SmartWalletsProvider>
         <SyncLineToPrivy />
+        <MakeSuiWallet />
         <SmartWalletBridge />
         <SponsorshipCheck />
       </SmartWalletsProvider>
