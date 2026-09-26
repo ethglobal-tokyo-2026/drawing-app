@@ -1,12 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type Ref,
-} from "react";
+import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { Key } from "../controls/controls";
 import { ArrowBendLeftUpIcon } from "../icons/ArrowBendLeftUpIcon";
 import { CheckIcon } from "../icons/CheckIcon";
@@ -14,6 +6,7 @@ import { RedoIcon } from "../icons/RedoIcon";
 import { UndoIcon } from "../icons/UndoIcon";
 import { addSticker, type StickerRecord } from "../stickers/stickerStorage";
 import { OutOfTickets } from "../tickets/OutOfTickets";
+import { StartDrawing } from "../tickets/StartDrawing";
 import { useTickets } from "../tickets/useTickets";
 import { DrawingCanvas, type CanvasHandle } from "./canvas/DrawingCanvas";
 import type { Tool } from "./canvas/types";
@@ -27,7 +20,7 @@ import { ToolPill, type Drawer } from "./tools/ToolPill";
 import { useShortcuts } from "./useShortcuts";
 import "./DrawingScreen.css";
 
-const DURATION_S = 5 * 60;
+const DURATION_S = 3 * 60;
 const MAX_SIZE = 60;
 const ARM_TIMEOUT_MS = 2500;
 /** How long the paused hint stays stuck on before it peels off. */
@@ -38,8 +31,8 @@ const sizeFromSlider = (v: number) => Math.round(1 + (MAX_SIZE - 1) * v * v);
 const sliderFromSize = (s: number) => Math.sqrt((s - 1) / (MAX_SIZE - 1));
 
 /**
- * ready (nothing drawn; the first stroke spends a ticket and starts the
- * clock) → drawing → armed (first tick tap) → sealing (building the sticker)
+ * ready (asks to spend a ticket; Start spends it and starts the clock)
+ * → drawing → armed (first tick tap) → sealing (building the sticker)
  * → sealed (animation + result). When the clock runs out it becomes timeup,
  * where a single tap seals.
  */
@@ -103,12 +96,13 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const canvas = useRef<CanvasHandle>(null);
   const [tool, setTool] = useState<Tool>("brush");
   const [sizes, setSizes] = useState({ brush: 6, eraser: 24 });
-  const [color, setColor] = useState("#1c1b29");
+  // Indigo, not black: every tool icon is Ink, so a black brush color would read as another icon.
+  const [color, setColor] = useState("#3a3c86");
   const [recent, setRecent] = useState([
+    "#3a3c86",
     "#1c1b29",
     "#ec6341",
     "#f1b555",
-    "#3a3c86",
     "#8cc2f7",
     "#f4b6c6",
   ]);
@@ -137,7 +131,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const phase: Phase =
     left === 0 && (storedPhase === "drawing" || storedPhase === "armed") ? "timeup" : storedPhase;
   const paywall = active && phase === "ready" && (tickets.left === 0 || holdPaywall);
-  const locked = paywall || phase === "timeup" || phase === "sealing" || phase === "sealed";
+  const startCard = active && phase === "ready" && !paywall && !sealed;
+  const locked =
+    phase === "ready" || phase === "timeup" || phase === "sealing" || phase === "sealed";
   const drawer = locked ? null : openDrawer;
   const canPause = clockPhase && left > 0;
   // While paused by a tap the canvas takes no marks; tools can still switch.
@@ -162,23 +158,18 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     return () => clearTimeout(id);
   }, [phase]);
 
-  // The first stroke of a sticker spends a ticket and starts the clock.
-  const startRef = useRef({ phase: storedPhase, tickets, restart });
-  useLayoutEffect(() => {
-    startRef.current = { phase: storedPhase, tickets, restart };
-  });
   const onHistoryChange = useCallback((canUndo: boolean, canRedo: boolean) => {
     setHistory({ canUndo, canRedo });
-    const { phase: p, tickets: t, restart: r } = startRef.current;
-    if (p === "ready" && canUndo) {
-      startRef.current.phase = "drawing";
-      t.use();
-      r();
-      setPhase("drawing");
-    } else {
-      setPhase((cur) => (cur === "armed" ? "drawing" : cur));
-    }
+    setPhase((cur) => (cur === "armed" ? "drawing" : cur));
   }, []);
+
+  /** Spends a ticket and starts the clock. With none left, the out-of-tickets card shows instead. */
+  const startDrawing = () => {
+    if (!tickets.use()) return;
+    restart();
+    setUserPaused(false);
+    setPhase("drawing");
+  };
 
   // Like most tablet apps: once a pen shows up, fingers stop drawing (palm
   // rejection) but still do gestures. The toggle turns finger drawing back on.
@@ -402,7 +393,21 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           record={sealed.record}
           ticketsLeft={tickets.left}
           usedToday={tickets.usedFree}
-          onKeepDrawing={startNewSticker}
+          // Keep drawing already means "spend a ticket", so it starts without asking again.
+          onKeepDrawing={() => {
+            startNewSticker();
+            startDrawing();
+          }}
+          onBoard={onGoToBoard}
+        />
+      )}
+
+      {startCard && (
+        <StartDrawing
+          ticketsLeft={tickets.left}
+          usedToday={tickets.usedFree}
+          minutes={DURATION_S / 60}
+          onStart={startDrawing}
           onBoard={onGoToBoard}
         />
       )}
@@ -414,7 +419,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
             setHoldPaywall(true);
             tickets.add(n);
           }}
-          onStartDrawing={() => setHoldPaywall(false)}
+          onStartDrawing={() => {
+            setHoldPaywall(false);
+            startDrawing();
+          }}
           onBoard={() => {
             setHoldPaywall(false);
             onGoToBoard();
