@@ -84,11 +84,11 @@ Another branch changes the session to 3 minutes, so no new code or copy assumes 
 
 ## Coordinator
 
-- [ ] C1 Commit `.impeccable/config.json`:
+- [x] C1 Commit `.impeccable/config.json`:
   - drop the stale `cubic-bezier(0.3, 1.6, 0.5, 1)`;
   - add the spring curve without leading zeros and Mona Sans;
   - write the reasons neutrally.
-- [ ] C2 Ignore `.playwright-mcp/`, the detector's caches and critique snapshots.
+- [x] C2 Ignore `.playwright-mcp/`, the detector's caches and critique snapshots.
 - [ ] C3 After Board merges, split the bundle: lazy-load the tray, the detail, the stat board, Giving and the LIFF SDK. The entry chunk is over Vite's 500 kB warning.
 - [ ] C4 Re-run the critique, then push.
 
