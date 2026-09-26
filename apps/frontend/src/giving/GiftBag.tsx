@@ -1,5 +1,7 @@
 import { ArrowRight, HandPointing } from "@phosphor-icons/react";
 import { Fragment, useLayoutEffect, useRef, type DOMAttributes } from "react";
+import { i18next } from "../i18n/i18n";
+import { useTranslation } from "../i18n/react";
 import { giftTag, sealDate, type GiftTag } from "./giftTag";
 import "./GiftBag.css";
 
@@ -64,7 +66,7 @@ function describeBag(state: Props["state"], tag: GiftTag | null, stamp?: GiftSta
   const stamped = stamp && [STAMPS[stamp].small, STAMPS[stamp].big].filter(Boolean).join(" ");
   return [
     PICTURED[state],
-    tag && `tagged ${tag.label} ${tag.name}`,
+    tag && `tagged ${i18next.t(($) => $.giving.tag[tag.label])} ${tag.name}`,
     stamped && `stamped ${stamped}`,
   ]
     .filter(Boolean)
@@ -84,6 +86,7 @@ export function GiftBag({
   stamp,
   pullTab,
 }: Props) {
+  const { t } = useTranslation();
   const tag = fromHandle || toHandle ? giftTag(fromHandle ?? "", toHandle) : null;
   const name = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
@@ -132,7 +135,7 @@ export function GiftBag({
         <span className="gift-bag__part gift-bag__tag" aria-hidden={pullTab ? true : undefined}>
           <span className="gift-tag">
             <TagShape />
-            <span className="gift-tag__label">{tag.label}</span>
+            <span className="gift-tag__label">{t(($) => $.giving.tag[tag.label])}</span>
             <span className="gift-tag__name" ref={name}>
               {tag.name}
             </span>

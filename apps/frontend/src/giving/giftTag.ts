@@ -5,14 +5,15 @@ import { formatHandle } from "../stickers/format";
  * gift sent through it names its giver; one given to an artist in the app names its recipient.
  */
 export interface GiftTag {
-  label: "From" | "For";
+  /** A key of the catalog's `giving.tag`. */
+  label: "from" | "for";
   name: string;
 }
 
 export const giftTag = (fromHandle: string, toHandle?: string): GiftTag =>
   toHandle
-    ? { label: "For", name: formatHandle(toHandle) }
-    : { label: "From", name: formatHandle(fromHandle) };
+    ? { label: "for", name: formatHandle(toHandle) }
+    : { label: "from", name: formatHandle(fromHandle) };
 
 /** The date printed on the tear tape: "SEALED 9.23". */
 export const sealDate = (at: number): string => {

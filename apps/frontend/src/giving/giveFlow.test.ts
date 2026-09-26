@@ -36,6 +36,7 @@ function fakeBackend() {
           fromHandle: "alice",
           no: sticker.no,
           timeUsed: sticker.timeUsed,
+          language: "en",
         }),
       });
     },
