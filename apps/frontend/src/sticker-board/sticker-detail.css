@@ -253,6 +253,23 @@
   padding-inline: 18px;
 }
 
+/* Send gratitude across the page, with Give as label stock under it. */
+.sticker-detail__acts--stack {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.sticker-detail__acts--stack .key {
+  flex: none;
+  align-self: stretch;
+}
+
+.sticker-detail__check-failed {
+  margin: 12px 0 0;
+  color: var(--graphite);
+}
+
 /* A sent sticker's note, on a label lifted off the liner: its sleeve, then "On its way". */
 .sticker-detail__on-its-way {
   display: flex;

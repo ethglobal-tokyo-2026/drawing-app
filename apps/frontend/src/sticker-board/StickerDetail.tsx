@@ -1,12 +1,17 @@
-import { CaretLeft, CaretRight, Gift } from "@phosphor-icons/react";
+import { CaretLeft, CaretRight, Gift, Heart } from "@phosphor-icons/react";
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
+import type { StickerDetailResponse } from "../api/contract";
+import { useApiQuery } from "../api/useApiQuery";
+import { toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatMonthDay, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { Key } from "../ui/Key";
+import { LabelButton } from "../ui/LabelButton";
+import { QuietLink } from "../ui/QuietLink";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
@@ -25,6 +30,8 @@ interface Props {
   onClose: () => void;
   /** Give, where LINE's picker can send the sticker; without it there's no key. */
   onGive?: (sticker: BoardStickerView) => void;
+  /** Thanks for a received sticker; without it the detail doesn't check whether you owe any. */
+  onSendGratitude?: (gift: { id: string }, sticker: StickerView, giver: PersonView) => void;
   /** Where focus goes once it closes, when that isn't back to what opened it. */
   returnFocus?: () => HTMLElement | null;
   /** Where a sticker sits on the board, which it lifts off from and sticks back onto. */
@@ -42,6 +49,14 @@ interface Swipe {
 /** The --ease-out curve, spelled out: Web Animations can't read CSS variables. */
 const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 
+/** The thanks you owe for a sticker: its newest gift to you, while that has no gratitude. */
+function owedThanks({ sticker, owner, transferTrail }: StickerDetailResponse) {
+  const toYou = transferTrail.find((entry) => entry.receiver.id === owner.id);
+  return toYou && toYou.gratitude === null
+    ? { gift: { id: toYou.giftId }, sticker: toSticker(sticker), giver: toPerson(toYou.giver) }
+    : null;
+}
+
 /**
  * One sticker large on the liner, a strip of the rest down the left edge, its fine print and Give.
  * Swipes on the sticker, the strip, the pager and the arrow keys page between them.
@@ -52,6 +67,7 @@ export function StickerDetail({
   mode,
   onClose,
   onGive,
+  onSendGratitude,
   returnFocus,
   originOf,
 }: Props) {
@@ -64,6 +80,14 @@ export function StickerDetail({
   );
   const sticker: BoardStickerView | undefined = stickers[index];
   const last = stickers.length - 1;
+
+  // A sticker you hold may be one someone gave you and you haven't thanked yet.
+  const checkId =
+    mode === "yours" && onSendGratitude && sticker && !onItsWay(sticker) ? sticker.id : null;
+  const thanks = useApiQuery(`sticker-detail:${checkId}`, (client) =>
+    checkId === null ? Promise.resolve(null) : client.stickerDetail(checkId).then(owedThanks),
+  );
+  const owed = thanks.state === "ready" ? thanks.data : null;
 
   const root = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLElement>(null);
@@ -279,6 +303,26 @@ export function StickerDetail({
                     On its way
                   </p>
                 </div>
+              ) : owed && onSendGratitude ? (
+                // Thanks come first; Give stays within reach as label stock.
+                <div className="sticker-detail__acts sticker-detail__acts--stack">
+                  <Key
+                    tone="pink"
+                    icon={<Heart weight="fill" aria-hidden />}
+                    onClick={() => onSendGratitude(owed.gift, owed.sticker, owed.giver)}
+                  >
+                    Send gratitude
+                  </Key>
+                  {onGive && (
+                    <LabelButton
+                      size="sm"
+                      icon={<Gift size={18} aria-hidden />}
+                      onClick={() => onGive(sticker)}
+                    >
+                      Give
+                    </LabelButton>
+                  )}
+                </div>
               ) : (
                 onGive && (
                   <div className="sticker-detail__acts">
@@ -288,6 +332,13 @@ export function StickerDetail({
                   </div>
                 )
               ))}
+            {thanks.state === "failed" && (
+              <p className="fine sticker-detail__check-failed" role="alert">
+                Couldn’t check whether you’ve sent gratitude for it:{" "}
+                {thanks.error.detail ?? thanks.error.code}{" "}
+                <QuietLink onClick={thanks.retry}>Try again</QuietLink>
+              </p>
+            )}
           </>
         ) : (
           <p className="sticker-detail__none">No sticker here yet.</p>

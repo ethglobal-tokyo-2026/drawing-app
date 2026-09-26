@@ -2,6 +2,12 @@
 import { act, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ApiClient } from "../api/apiClient";
+import { ApiProvider } from "../api/ApiProvider";
+import type { Gratitude } from "../api/contract";
+import { people, sticker as apiSticker } from "../api/mock/fixtures";
+import { emptyApi, TEST_OWNER } from "../api/testing";
+import { toPerson, toSticker } from "../api/views";
 import type { BoardStickerView } from "./boardSticker";
 import { StickerDetail } from "./StickerDetail";
 
@@ -42,19 +48,44 @@ let root: Root;
 const onClose = vi.fn();
 const onGive = vi.fn();
 
-const open = (props: Partial<ComponentProps<typeof StickerDetail>> = {}) =>
+const open = (
+  props: Partial<ComponentProps<typeof StickerDetail>> = {},
+  client: ApiClient = emptyApi(),
+) =>
   act(() =>
     root.render(
-      <StickerDetail
-        stickers={stickers}
-        startId="s-133"
-        mode="yours"
-        onClose={onClose}
-        onGive={onGive}
-        {...props}
-      />,
+      <ApiProvider client={client}>
+        <StickerDetail
+          stickers={stickers}
+          startId="s-133"
+          mode="yours"
+          onClose={onClose}
+          onGive={onGive}
+          {...props}
+        />
+      </ApiProvider>,
     ),
   );
+/** Lets the detail's check of the Transfer Trail answer. */
+const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+
+/** A sticker @ken drew, received from @mika, thanked or not. */
+function received(gratitude: Gratitude | null) {
+  const drawn = apiSticker({ id: "s-133", artist: people.ken, ownerId: TEST_OWNER.id });
+  const entry = {
+    giftId: "gift-133",
+    giver: people.mika,
+    receiver: TEST_OWNER,
+    receivedAt: "2026-09-23T12:00:00.000Z",
+    gratitude,
+  };
+  const client = emptyApi({
+    stickerDetail: () =>
+      Promise.resolve({ sticker: drawn, owner: TEST_OWNER, transferTrail: [entry] }),
+  });
+  return { drawn, client };
+}
+const giveIsTheKey = () => button("Give")?.classList.contains("key");
 
 const heading = () => document.querySelector("h2")?.textContent;
 const button = (name: string) =>
@@ -126,6 +157,39 @@ describe("StickerDetail", () => {
     open({ stickers: [packed] });
     press("Give");
     expect(onGive).toHaveBeenCalledExactlyOnceWith(packed);
+  });
+
+  it("offers Send gratitude over Give for a received sticker you haven't thanked", async () => {
+    const onSendGratitude = vi.fn();
+    const { drawn, client } = received(null);
+    open({ onSendGratitude }, client);
+    await settle();
+    expect(giveIsTheKey()).toBe(false);
+    press("Send gratitude");
+    expect(onSendGratitude).toHaveBeenCalledExactlyOnceWith(
+      { id: "gift-133" },
+      toSticker(drawn),
+      toPerson(people.mika),
+    );
+  });
+
+  it("keeps Give as the key once you've thanked", async () => {
+    const thanked: Gratitude = {
+      giftId: "gift-133",
+      method: "tap",
+      hits: 64,
+      total: 320,
+      peakMult: 3,
+      peakTier: 2,
+      originalArtistGratitudeShare: 64,
+      gameConfigVersion: "v1",
+      recordedAt: "2026-09-23T12:05:00.000Z",
+      seenByGiverAt: null,
+    };
+    open({ onSendGratitude: vi.fn() }, received(thanked).client);
+    await settle();
+    expect(button("Send gratitude")).toBeUndefined();
+    expect(giveIsTheKey()).toBe(true);
   });
 
   it("titles LINE's header with the shown sticker, and puts the title back when it closes", () => {
