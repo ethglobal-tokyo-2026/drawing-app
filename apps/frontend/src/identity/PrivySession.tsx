@@ -21,6 +21,7 @@ import {
 import { MakeSuiWallet } from "./MakeSuiWallet";
 import { SponsorshipCheck } from "./SponsorshipCheck";
 import { SmartWalletBridge } from "./SmartWalletBridge";
+import { SuiWalletBridge } from "./SuiWalletBridge";
 
 // The address of the wallet Privy itself made on a chain, as opposed to one the person connected.
 const privysWallet = (user: User, chainType: "ethereum" | "sui") =>
@@ -91,6 +92,7 @@ export default function PrivySession() {
         <SyncLineToPrivy />
         <MakeSuiWallet />
         <SmartWalletBridge />
+        <SuiWalletBridge />
         <SponsorshipCheck />
       </SmartWalletsProvider>
     </PrivyProvider>

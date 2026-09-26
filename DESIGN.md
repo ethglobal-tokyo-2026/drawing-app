@@ -504,7 +504,7 @@ Every Draw key carries daily and reserve tickets left after its label, on a Line
 
 ### Ticket shop
 
-The out-of-tickets card's stock. The balance sits in a Liner Lift well in yen, worth its SUI at the quote. Packs are label rows: a Grape ticket mark, the name, a Pink sale sticker at the house tilt ("−40%"), and the price stacked right (struck-through full price, yen in bold). The picked pack is stuck on in Grape Soft with a Grape ring. Every amount shows in yen; SUI never shows. The smallest pack is picked to start.
+The out-of-tickets card's stock. The balance sits in a Liner Lift well in yen: the Sui wallet's JPYC, one yen each. Packs are label rows: a Grape ticket mark, the name, a Pink sale sticker at the house tilt ("−40%"), and the price stacked right (struck-through full price, yen in bold). The picked pack is stuck on in Grape Soft with a Grape ring. Every amount shows in yen; SUI never shows. The smallest pack is picked to start.
 
 ### Stickers
 
