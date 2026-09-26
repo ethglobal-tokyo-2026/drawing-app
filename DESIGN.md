@@ -454,7 +454,7 @@ One press for every key and label, and anything marked pressable.
 
 ### Touch targets
 
-Every key is at least 54px tall. A label's face carries invisible bands above and below it (5px on the small label, so 35px to see and 45px to touch), and the press measures its slide-off slop from that touch edge. A quiet link's touch area reaches 7px above and below and 4px to each side. Sticker handles, tray folder tabs, the sheet stack's +N button, a floating sheet's X, the zip pull and drawing tools all pad to 44px.
+Every key is at least 54px tall. A label's face carries invisible bands above and below it (5px on the small label, so 35px to see and 45px to touch), and the press measures its slide-off slop from that touch edge. A quiet link's touch area reaches 7px above and below and 4px to each side. Explore's sliding tabs carry the same bands, reaching across the gap between tabs too: the view switch is 38px to see and the leaderboard tabs 34px, and both are 44px to touch. Sticker handles, tray folder tabs, the sheet stack's +N button, a floating sheet's X, the zip pull and drawing tools all pad to 44px.
 
 ### Dot badges
 

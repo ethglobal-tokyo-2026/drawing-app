@@ -113,7 +113,10 @@
   transition: transform 260ms var(--ease-out);
 }
 
+/* 34px to see and 44px to touch: invisible bands reach --hit above and below the face, as on a small
+   label, and across the gap to the next tab; the press measures its slop from their edge. */
 .sliding-tabs button {
+  --hit: 5px;
   position: relative;
   min-width: 0;
   height: 34px;
@@ -121,12 +124,18 @@
   border: none;
   border-radius: 6px;
   background: none;
-  color: var(--graphite);
+  color: var(--graphite-on-deep);
   font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
   touch-action: manipulation;
   transition: color 140ms linear;
+}
+
+.sliding-tabs button::before {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--hit)) -2px;
 }
 
 .sliding-tabs button.selected {
@@ -143,7 +152,9 @@
   background: var(--aqua);
 }
 
+/* 38px to see, 44px to touch. */
 .view-switch button {
+  --hit: 3px;
   height: 38px;
   font-size: 15px;
 }
