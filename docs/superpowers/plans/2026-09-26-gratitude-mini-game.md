@@ -340,9 +340,11 @@ export declare function sighAndTidy(parts: EndingParts): Promise<void>;
 
 ### Task A1: The rules
 
+After review, the repository's `G/combo.ts`, `G/gameConfig.ts` and `G/combo.test.ts` supersede the code shown here.
+
 **Files:** Create `G/gameConfig.ts`, `G/combo.ts`, `G/combo.test.ts`.
 
-- [ ] **Step 1: Write the failing tests** in `G/combo.test.ts`:
+- [x] **Step 1: Write the failing tests** in `G/combo.test.ts`:
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -497,9 +499,9 @@ describe("createGratitudeCombo", () => {
 });
 ```
 
-- [ ] **Step 2: Run them and see them fail.** `pnpm --filter frontend exec vitest run src/gratitude/combo.test.ts`. Expected: FAIL, the modules don't exist.
+- [x] **Step 2: Run them and see them fail.** `pnpm --filter frontend exec vitest run src/gratitude/combo.test.ts`. Expected: FAIL, the modules don't exist.
 
-- [ ] **Step 3: Write `G/gameConfig.ts`:**
+- [x] **Step 3: Write `G/gameConfig.ts`:**
 
 ```ts
 /** The mini-game's rules as numbers. A finished combo records `version`, so a replay runs with the
@@ -624,7 +626,7 @@ export const FEEL_CONFIG = {
 };
 ```
 
-- [ ] **Step 4: Write `G/combo.ts`:**
+- [x] **Step 4: Write `G/combo.ts`:**
 
 ```ts
 import { GAME_CONFIG, type GameConfig } from "./gameConfig";
@@ -902,14 +904,16 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
 }
 ```
 
-- [ ] **Step 5: Run the tests.** Expected: PASS, all of them.
-- [ ] **Step 6: Checks, then commit** `feat: add the gratitude mini-game's rules`.
+- [x] **Step 5: Run the tests.** Expected: PASS, all of them.
+- [x] **Step 6: Checks, then commit** `feat: add the gratitude mini-game's rules`.
 
 ### Task A2: Touch input
 
+After review, the repository's `G/touchInput.ts` and `G/touchInput.test.ts` supersede the code shown here.
+
 **Files:** Create `G/touchInput.ts`, `G/touchInput.test.ts`.
 
-- [ ] **Step 1: Write the failing tests:**
+- [x] **Step 1: Write the failing tests:**
 
 ```ts
 // @vitest-environment happy-dom
@@ -996,8 +1000,8 @@ describe("listenForTouches", () => {
 });
 ```
 
-- [ ] **Step 2: Run them and see them fail.**
-- [ ] **Step 3: Write `G/touchInput.ts`:**
+- [x] **Step 2: Run them and see them fail.**
+- [x] **Step 3: Write `G/touchInput.ts`:**
 
 ```ts
 /** The heart's resting box, in the stage's own pixels. */
@@ -1087,8 +1091,8 @@ export function listenForTouches(
 }
 ```
 
-- [ ] **Step 4: Run the tests.** Expected: PASS.
-- [ ] **Step 5: Checks, then commit** `feat: tell taps on the gratitude heart from drags and holds`.
+- [x] **Step 4: Run the tests.** Expected: PASS.
+- [x] **Step 5: Checks, then commit** `feat: tell taps on the gratitude heart from drags and holds`.
 
 ### Task A3: The art and the words
 
@@ -2975,20 +2979,6 @@ function playMethod(method: "stroke" | "shake", rate: number) {
   throw new Error(`A ${method} combo at ${rate} a second never ended`);
 }
 
-/** Feeds a record's hits to a fresh combo the way they were made: taps, then its method from the switch. */
-function replayMixed(record: ComboRecord): ComboRecord | undefined {
-  const combo = createGratitudeCombo();
-  const events = record.hitTimes.flatMap((t, i) => {
-    if (record.switchedAtHit === null || i < record.switchedAtHit) return combo.tapHeart(t);
-    if (record.method === "tap") throw new Error("A switch needs stroke or shake");
-    if (i === record.switchedAtHit) return combo.commitTo(record.method, t);
-    return record.method === "stroke" ? combo.countStrokePass(t) : combo.countShakeReversal(t);
-  });
-  events.push(...combo.advanceTo(record.durationMs + 0.5));
-  if (!endOf(events)) events.push(...combo.endCombo(record.durationMs));
-  return endOf(events)?.record;
-}
-
 describe("strokes and shakes", () => {
   it("starts the bar at once when stroke unlocks before any tap", () => {
     const combo = createGratitudeCombo();
@@ -3026,23 +3016,27 @@ describe("strokes and shakes", () => {
     }
   });
 
-  it("replays a combo that switched from taps to strokes", () => {
+  it("replays combos that started in stroke or shake, or switched to one from taps", () => {
     const combo = createGratitudeCombo();
     const events = [0, 180, 360, 540].flatMap((t) => combo.tapHeart(t));
     events.push(...combo.commitTo("stroke", 700));
     for (let t = 820; !endOf(events) && t < 20_000; t += 125) {
       events.push(...combo.countStrokePass(t), ...combo.advanceTo(t));
     }
-    const record = endOf(events)?.record;
-    expect(record).toMatchObject({ method: "stroke", switchedAtHit: 4 });
-    if (!record) throw new Error("The combo never ended");
-    expect(replayMixed(record)).toEqual(record);
+    const switched = endOf(events)?.record;
+    expect(switched).toMatchObject({ method: "stroke", switchedAtHit: 4 });
+    if (!switched) throw new Error("The combo never ended");
+    const records = [switched, playMethod("stroke", 8).record, playMethod("shake", 8).record];
+    for (const record of records) {
+      const label = `${record.method} from hit ${record.switchedAtHit}`;
+      expect(replayGratitudeCombo(record), label).toEqual(record);
+    }
   });
 });
 ```
 
 - [ ] **Step 2: Run them and see them fail.**
-- [ ] **Step 3: Extend `GameConfig`.** In the interface, replace the `tapsPerSecond` and `burst` lines with:
+- [ ] **Step 3: Extend `GameConfig`.** In the interface, replace the `tapsPerSecond` and `burst` lines and their comment with:
 
 ```ts
 /** Hits a second that count for each method, beyond a burst of `burst`. */
@@ -3128,20 +3122,30 @@ export interface GratitudeCombo {
   endCombo: (t: number) => ComboEvent[];
 }
 
-export function tierFor(total: number, starts: GameConfig["tierStarts"]): Tier {
-  if (total >= starts[4]) return 4;
-  if (total >= starts[3]) return 3;
-  if (total >= starts[2]) return 2;
-  if (total >= starts[1]) return 1;
+function tierFor(total: number, starts: GameConfig["tierStarts"]): Tier {
+  if (total >= starts[3]) return 4;
+  if (total >= starts[2]) return 3;
+  if (total >= starts[1]) return 2;
+  if (total >= starts[0]) return 1;
   return 0;
 }
 
 type Pending = { t: number; kind: "sendEnd" | "cadence" | "empty" | "cap" };
 
+/** The bar's drain in closed form, one curve for the rules and the HUD's scale so they agree exactly. */
+function barDrain(config: GameConfig) {
+  const T = config.drainDoublingS;
+  /** Bars drained between combo seconds a and b: K × (2^(b/T) − 2^(a/T)). */
+  const K = (config.drainStart * T) / Math.LN2;
+  const grow = (comboS: number) => 2 ** (comboS / T);
+  /** Seconds a bar lasts from combo second `comboS` with no more hits. */
+  const lasts = (bar: number, comboS: number) => T * Math.log2(bar / K + grow(comboS)) - comboS;
+  return { K, grow, lasts };
+}
+
 /** Seconds a full bar lasts from the catch with no more hits: the HUD's scale. */
 export function fullBarSeconds(config: GameConfig = GAME_CONFIG): number {
-  const T = config.drainDoublingS;
-  return T * Math.log2(1 + Math.LN2 / (T * config.drainStart));
+  return barDrain(config).lasts(1, 0);
 }
 
 /**
@@ -3152,13 +3156,8 @@ export function fullBarSeconds(config: GameConfig = GAME_CONFIG): number {
  */
 export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): GratitudeCombo {
   const M = config.multiplier;
-  const T = config.drainDoublingS;
-  /** Bars drained between combo seconds a and b: K × (2^(b/T) − 2^(a/T)). */
-  const K = (config.drainStart * T) / Math.LN2;
-  const grow = (comboS: number) => 2 ** (comboS / T);
-  /** Seconds a bar lasts from combo second `comboS` with no more hits. */
-  const lasts = (bar: number, comboS: number) => T * Math.log2(bar / K + grow(comboS)) - comboS;
-  const fullBar = fullBarSeconds(config);
+  const { K, grow, lasts } = barDrain(config);
+  const fullBar = lasts(1, 0);
   const perSecond: Record<Method, number> = {
     tap: config.tapsPerSecond,
     stroke: config.passesPerSecond,
@@ -3333,7 +3332,8 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
         tier: shownTier,
         secondsLeft,
         barFill: Math.min(1, secondsLeft / fullBar),
-        frozen: latest < frozenUntil,
+        // An ended combo's clock never moves again, so a freeze it ended inside would never lift.
+        frozen: phase !== "ended" && latest < frozenUntil,
       };
     },
 
@@ -3371,6 +3371,32 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
       return events;
     },
   };
+}
+
+/**
+ * A record's hits played again through a fresh combo, the way they were made: taps, then from
+ * `switchedAtHit` its passes or reversals. The rules are closed-form between events, so a record
+ * replays to itself under the config it was played with.
+ */
+export function replayGratitudeCombo(
+  record: ComboRecord,
+  config: GameConfig = GAME_CONFIG,
+): ComboRecord {
+  if (record.hitTimes.length === 0) throw new Error("A gratitude record with no hits can't replay");
+  const { method, switchedAtHit } = record;
+  const combo = createGratitudeCombo(config);
+  const events = record.hitTimes.flatMap((t, i) => {
+    if (switchedAtHit === null || i < switchedAtHit) return combo.tapHeart(t);
+    if (method === "tap")
+      throw new Error(`A gratitude record switched at hit ${i} but ends in taps`);
+    if (i === switchedAtHit) return combo.commitTo(method, t);
+    return method === "stroke" ? combo.countStrokePass(t) : combo.countShakeReversal(t);
+  });
+  // durationMs is rounded, so a bar that ran out may have ended up to half a millisecond after it.
+  events.push(...combo.advanceTo(record.durationMs + 0.5));
+  if (combo.view.phase !== "ended") events.push(...combo.endCombo(record.durationMs));
+  for (const e of events) if (e.kind === "ended") return e.record;
+  throw new Error(`Replaying a gratitude record of ${record.hits} hits gave no record`);
 }
 ```
 
