@@ -106,13 +106,20 @@ export const FEEL_CONFIG = {
      * angle by `angleStepDeg`. */
     speedField: { opacityStep: 0.03, angleStepDeg: 3 },
   },
-  /** Shaking the phone in a rhythm: PJ's PHYS and ShakeDetector. */
+  /** Shaking the phone, or twisting it with the wrist, in a rhythm: PJ's PHYS and ShakeDetector. */
   shake: {
     deadZone: 6,
     minPeak: 11,
     minGapMs: 60,
     maxGapMs: 480,
     resetMs: 650,
+    /**
+     * A wrist twist turning the phone this fast, in °/s, peaks like a shake at `minPeak`. The turning
+     * rate is scaled by `minPeak / twistPeakDegPerS` into the shake's units, so the dead zone is
+     * `deadZone / minPeak` of it: a brisk twist reaches several hundred °/s, while tilting the phone
+     * to read it, walking or setting it down stays well under 150.
+     */
+    twistPeakDegPerS: 300,
     keepShakingAt: 4,
     cornerAt: 11,
     unlockAt: 16,

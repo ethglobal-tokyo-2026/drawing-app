@@ -1,8 +1,15 @@
+import { FEEL_CONFIG } from "./gameConfig";
+
 /**
- * One motion sample: the phone's sideways and vertical acceleration with gravity taken out, in
- * m/s², gravity's sideways pull (the phone's roll) where the phone reports it, and the time in ms.
- * Each has the spec's sign on every platform: a push toward the phone's right is +x, and the pull
- * is positive with the phone's right edge up.
+ * One motion sample: the phone's sideways and vertical motion in m/s², gravity's sideways pull (the
+ * phone's roll) where the phone reports it, and the time in ms. The motion is the acceleration with
+ * gravity taken out; sideways, it's the stronger of that and a twist of the wrist, scaled into the
+ * same units, so a twist and the push it gives the phone count as one motion.
+ *
+ * Each has the spec's sign on every platform: a push toward the phone's right is +x, and the pull is
+ * positive with the phone's right edge up. A twist about the phone's long axis that turns its screen
+ * to the right is +x, like the push it gives a phone held in the palm; a twist about another axis
+ * keeps the sign the last twist had.
  */
 export type MotionSample = (ax: number, ay: number, gx: number | null, t: number) => void;
 
@@ -19,6 +26,10 @@ const STANDARD_GRAVITY = 9.80665;
  * it, and past that takes the spec's sign too.
  */
 const SIGN_CHECK = { still: 1.5, agree: 0.7, samples: 3, waitMs: 500 };
+
+const { deadZone, minPeak, twistPeakDegPerS } = FEEL_CONFIG.shake;
+/** m/s² for each °/s of twist: a twist at `twistPeakDegPerS` peaks at `minPeak`. */
+const TWIST_SCALE = minPeak / twistPeakDegPerS;
 
 interface Vector {
   x: number;
@@ -83,6 +94,24 @@ export function listenToPhoneMotion(onSample: MotionSample): () => void {
   /** An orientation has come since the last motion sample, for the sign check. */
   let freshTilt = false;
   let firstAt: number | null = null;
+  /** The axis the wrist twists the phone about, a unit vector: its long axis until a clear turn. */
+  const axis: Vector = { x: 0, y: 1, z: 0 };
+
+  /**
+   * The twist about `axis`, in the shake's units. A turn past the dead zone moves the axis onto its
+   * own, kept pointing the way it did, so twisting back and forth flips the sign at each turn
+   * however the phone is held.
+   */
+  const twistOf = (turn: Vector) => {
+    const speed = Math.hypot(turn.x, turn.y, turn.z);
+    if (speed * TWIST_SCALE > deadZone) {
+      const k = (dot(turn, axis) < 0 ? -1 : 1) / speed;
+      axis.x = turn.x * k;
+      axis.y = turn.y * k;
+      axis.z = turn.z * k;
+    }
+    return dot(turn, axis) * TWIST_SCALE;
+  };
 
   const onTilt = (e: DeviceOrientationEvent) => {
     if (e.beta === null || e.gamma === null) return;
@@ -115,6 +144,8 @@ export function listenToPhoneMotion(onSample: MotionSample): () => void {
     firstAt ??= e.timeStamp;
     const s = sign ?? 1;
     const turn = turnOf(e.rotationRate);
+    const twist = turn ? twistOf(turn) : 0;
+    const sideways = s * linear.x;
     // A phone with a gyroscope fuses its orientation from it, so the orientation keeps a shake's
     // jerk out with no lag. Otherwise the pull is the gravity estimate low-passed twice, and its
     // sign is the platform's.
@@ -124,7 +155,12 @@ export function listenToPhoneMotion(onSample: MotionSample): () => void {
         : pull !== null && (sign !== null || e.timeStamp - firstAt >= SIGN_CHECK.waitMs)
           ? s * pull
           : null;
-    onSample(s * linear.x, s * linear.y, gx, e.timeStamp);
+    onSample(
+      Math.abs(twist) > Math.abs(sideways) ? twist : sideways,
+      s * linear.y,
+      gx,
+      e.timeStamp,
+    );
   };
   window.addEventListener("devicemotion", onMotion);
   window.addEventListener("deviceorientation", onTilt, { passive: true });

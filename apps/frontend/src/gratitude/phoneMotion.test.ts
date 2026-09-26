@@ -57,6 +57,29 @@ const SHAKE = motion((s) => ({
   twisted: 0,
 }));
 
+/**
+ * A wrist twisting the phone about its long axis at `hz`, `peak` °/s at its fastest. The phone's
+ * middle sits `reach` m in front of the forearm's axis, so the twist also pushes it sideways, and
+ * pulls it toward the axis.
+ */
+const twist = (hz: number, peak: number, { reach = 0, from = 1200, until = 2800 } = {}) =>
+  motion(
+    (s) => {
+      const w = 2 * Math.PI * hz;
+      const rate = rad(peak) * Math.sin(w * s);
+      return {
+        a: { x: reach * rad(peak) * w * Math.cos(w * s), y: 0, z: -reach * rate ** 2 },
+        turn: { x: 0, y: peak * Math.sin(w * s), z: 0 },
+        twisted: (peak / w) * (1 - Math.cos(w * s)),
+      };
+    },
+    { from, until },
+  );
+
+/** The moments the phone turns back: a twist's turning rate crossing zero, `hz` from `from`. */
+const turnsOf = (hz: number, from = 1200) =>
+  Array.from({ length: 40 }, (_, k) => from + ((k + 1) * 500) / hz);
+
 const times = (v: Vector, k: number) => ({ x: v.x * k, y: v.y * k, z: v.z * k });
 /** Rounds away float dust and −0, which a flipped sign leaves. */
 const tidy = (v: number | null) => (v === null ? null : Math.round(v * 1e9) / 1e9 + 0);
@@ -173,5 +196,82 @@ describe("listenToPhoneMotion", () => {
     const [first] = reversals(play(1, { orientation: false }, atOnce));
     // The push flips a quarter turn after the phone turns back, 57 ms at 4.4 Hz.
     expect((first?.t ?? Infinity) - 1000).toBeLessThan(1000 / 4.4 / 2 + 1000 / 4.4 / 4 + 16);
+  });
+});
+
+describe("a wrist twist", () => {
+  const { keepShakingAt, unlockAt, twistPeakDegPerS } = FEEL_CONFIG.shake;
+
+  it("reaches the tip and the unlock at 3 Hz and 500°/s, each reversal soon after its turn", () => {
+    const counted = reversals(play(1, {}, twist(3, 500, { until: 4400 })));
+    expect(counted.map((r) => r.run)).toEqual(counted.map((_, i) => i + 1));
+    expect(counted.length).toBeGreaterThanOrEqual(unlockAt);
+    expect(counted.some((r) => r.run === keepShakingAt)).toBe(true);
+    // Six turns a second: the unlock comes about unlockAt / 6 seconds in.
+    const unlock = counted.find((r) => r.run === unlockAt);
+    expect(((unlock?.t ?? Infinity) - 1200) / 1000).toBeCloseTo(unlockAt / 6, 0);
+    // Counted within 40 ms of the phone turning back: the twist's rate crossing the dead zone.
+    const turns = turnsOf(3);
+    for (const { t } of counted) {
+      const turn = Math.max(...turns.filter((at) => at <= t));
+      expect(t - turn).toBeLessThan(40);
+    }
+  });
+
+  it.each([
+    ["about its long axis", { x: 0, y: 1, z: 0 }],
+    ["about its short axis", { x: 1, y: 0, z: 0 }],
+    ["about the screen's normal", { x: 0, y: 0, z: 1 }],
+    ["about a slant between the long axis and the screen's back", { x: 0, y: 0.7, z: -0.7 }],
+  ])("counts %s", (_, along) => {
+    const size = Math.hypot(along.x, along.y, along.z);
+    const turned = twist(3, 500).map((m) => ({
+      ...m,
+      turn: times(along, m.turn.y / size),
+      twisted: 0,
+    }));
+    const counted = reversals(play(1, {}, turned));
+    expect(counted.map((r) => r.run)).toEqual(counted.map((_, i) => i + 1));
+    expect(counted.length).toBeGreaterThanOrEqual(9);
+  });
+
+  it("never counts turning under 150°/s: tilting to read, a wiggle, or a slow wave", () => {
+    for (const hz of [0.8, 1.5, 3, 4.5]) {
+      expect(reversals(play(1, {}, twist(hz, 149)))).toEqual([]);
+    }
+    // Tilting 40° toward the eyes over half a second, and back.
+    const read = motion((s) => {
+      const rate = s < 1 ? 40 * Math.PI * Math.sin(2 * Math.PI * s) : 0;
+      return { a: STILL, turn: { x: rate, y: 0, z: 0 }, twisted: 0 };
+    });
+    expect(reversals(play(1, {}, read))).toEqual([]);
+    // A twist at the threshold counts: the scale ties it to the shake's peak.
+    expect(reversals(play(1, {}, twist(3, twistPeakDegPerS * 1.1))).length).toBeGreaterThan(5);
+  });
+
+  it.each([
+    ["in front of", 0.1],
+    ["behind", -0.1],
+  ])("counts once for each reversal with the phone %s the forearm's axis", (_, reach) => {
+    const alone = reversals(play(1, {}, twist(3, 500)));
+    const pushOnly = twist(3, 500, { reach }).map((m) => ({ ...m, turn: STILL }));
+    // The push by itself is a hard enough shake to count...
+    expect(reversals(play(1, {}, pushOnly)).length).toBeGreaterThan(5);
+    // ...and with the twist that causes it, the motion counts as often as the twist alone.
+    const both = reversals(play(1, {}, twist(3, 500, { reach })));
+    expect(both.length).toBe(alone.length);
+    const gaps = both.slice(1).map((r, i) => r.t - (both[i]?.t ?? 0));
+    for (const gap of gaps) expect(gap).toBeGreaterThan(1000 / 3 / 2 - 40);
+  });
+
+  it("gives the same samples whichever sign the platform reports", () => {
+    for (const reach of [0, 0.1]) {
+      const moments = twist(3, 500, { reach });
+      for (const linear of [true, false]) {
+        const spec = play(1, { linear }, moments);
+        expect(play(-1, { linear }, moments)).toEqual(spec);
+        expect(reversals(spec).length).toBeGreaterThan(8);
+      }
+    }
   });
 });
