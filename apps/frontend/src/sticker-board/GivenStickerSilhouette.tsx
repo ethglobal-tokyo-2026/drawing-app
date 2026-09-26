@@ -1,5 +1,6 @@
 import { ArrowRight } from "@phosphor-icons/react";
 import { useLayoutEffect, useRef } from "react";
+import { useTranslation } from "../i18n/react";
 import { formatHandle, formatMonthDay, formatNo } from "../stickers/format";
 import { handleOf, type BoardSticker, type GivenTo } from "./boardSticker";
 import { keepOnBoard, stickerBox, type Field } from "./placement";
@@ -35,10 +36,16 @@ export function GivenStickerSilhouette({
   onOpen,
   ...where
 }: Props) {
+  const { t } = useTranslation();
   const [recipient, day] =
     "givenTo" in where
       ? [handleOf(where.givenTo.receiver), where.givenTo.receivedAt]
-      : [where.to ? formatHandle(where.to) : "a friend", where.sentAt];
+      : [where.to ? formatHandle(where.to) : null, where.sentAt];
+  const given = { no: formatNo(sticker.no), day: formatMonthDay(day) };
+  const label = recipient
+    ? t(($) => $.stickerBoard.givenStickerSilhouette.label, { ...given, recipient })
+    : t(($) => $.stickerBoard.givenStickerSilhouette.labelToAFriend, given);
+  const to = recipient ?? t(($) => $.stickerBoard.givenStickerSilhouette.aFriend);
   const caption = useRef<HTMLSpanElement>(null);
   const box = stickerBox(field, boardWidth, sticker.placement, sticker);
 
@@ -48,14 +55,14 @@ export function GivenStickerSilhouette({
     if (!el) return;
     const nudge = keepOnBoard(box.x, el.offsetWidth / 2, boardWidth);
     el.style.setProperty("--nudge", `${nudge.toFixed(1)}px`);
-  }, [box.x, boardWidth, sticker.no, recipient]);
+  }, [box.x, boardWidth, sticker.no, to]);
 
   return (
     <button
       type="button"
       className="given-sticker-silhouette"
       data-sticker-id={sticker.id}
-      aria-label={`${formatNo(sticker.no)}, given to ${recipient} on ${formatMonthDay(day)}. Open it`}
+      aria-label={label}
       onClick={onOpen}
       style={{
         width: box.w,
@@ -69,7 +76,7 @@ export function GivenStickerSilhouette({
       <span ref={caption} className="fine given-sticker-silhouette__caption" aria-hidden="true">
         {formatNo(sticker.no)}
         <ArrowRight size={12} />
-        {recipient}
+        {to}
       </span>
     </button>
   );
