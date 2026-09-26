@@ -6,7 +6,9 @@ import { ApiError, type ApiClient } from "../api/apiClient";
 import { ApiProvider } from "../api/ApiProvider";
 import { gratitudeOf } from "../api/testing";
 import { emptyApi } from "../api/testing";
+import { i18next } from "../i18n/i18n";
 import { GratitudeMiniGame, type GratitudeResult } from "./GratitudeMiniGame";
+import { TIER_NAMES } from "./tierNames";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -238,5 +240,21 @@ describe("GratitudeMiniGame", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(onEnd).not.toHaveBeenCalled();
     expect(recordGratitude).not.toHaveBeenCalled();
+  });
+});
+
+describe("GratitudeMiniGame in Japanese", () => {
+  afterEach(() => i18next.changeLanguage("en"));
+
+  it("names a caught combo's peak tier on the receipt with no gloss", async () => {
+    await i18next.changeLanguage("ja");
+    open();
+    tapOnce();
+    await play(100);
+    tapOnce();
+    await play(8000);
+    const peakTier = onEnd.mock.calls[0]?.[0].peakTier ?? 0;
+    const sub = document.querySelector(".gr-rc-sub")?.textContent ?? "";
+    expect(sub.split("\n").at(-1)).toBe(TIER_NAMES[peakTier].jp);
   });
 });

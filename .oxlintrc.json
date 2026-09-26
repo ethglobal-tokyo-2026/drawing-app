@@ -62,7 +62,7 @@
     },
     {
       "files": ["apps/frontend/src/gratitude/**"],
-      "rules": { "react/jsx-no-literals": "off" }
+      "rules": { "react/jsx-no-literals": "error" }
     },
     {
       "files": ["apps/frontend/src/identity/**"],

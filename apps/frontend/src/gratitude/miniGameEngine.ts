@@ -1,5 +1,6 @@
 import type { ReplayV1 } from "@drawing-app/api/client";
 import { formatCount } from "../i18n/format";
+import { i18next } from "../i18n/i18n";
 import {
   isPerformanceRecorderOn,
   notePerformance,
@@ -29,7 +30,7 @@ import { createReplayRecorder } from "./replayRecorder";
 import { createShakeDetector, type ShakeReversal } from "./shakeDetector";
 import { createStrokeDetector } from "./strokeDetector";
 import { createTierBackground } from "./tierBackground";
-import { TIER_NAMES } from "./tierNames";
+import { shownGloss, TIER_NAMES } from "./tierNames";
 import { createLettering } from "./tierSlamAndPopIns";
 import { isOnHeart, listenForTouches, type HeartArea } from "./touchInput";
 
@@ -86,8 +87,8 @@ const HUD_HEIGHT = 80;
 
 /** The tips: what to do, said only once the person is trying, and held this long in s. */
 const TIPS = {
-  stroke: { text: "Stroke it back and forth, fast", icon: HAND_SWIPE_SVG, holdS: 6 },
-  shake: { text: "Keep shaking!", icon: VIBRATE_SVG, holdS: 2.4 },
+  stroke: { icon: HAND_SWIPE_SVG, holdS: 6 },
+  shake: { icon: VIBRATE_SVG, holdS: 2.4 },
 };
 type TipKind = keyof typeof TIPS;
 /** ms a stroke finger counts as moving after its latest move. */
@@ -161,7 +162,10 @@ export function mountMiniGameEngine(
   const button = document.createElement("button");
   button.type = "button";
   button.className = "gr-heart-btn";
-  button.setAttribute("aria-label", `Send gratitude to ${options.giverHandle}`);
+  button.setAttribute(
+    "aria-label",
+    i18next.t(($) => $.gratitude.heart, { handle: options.giverHandle }),
+  );
   body.append(button);
   anchor.append(body);
 
@@ -393,7 +397,7 @@ export function mountMiniGameEngine(
     hud.show(true);
     // The catch's words stand before the score's; a stroke or shake that starts the combo says its own.
     lastAnnounce = play;
-    if (combo.view.method === "tap") say("Caught it. Keep tapping before the bar runs out.");
+    if (combo.view.method === "tap") say(i18next.t(($) => $.gratitude.announcements.caught));
   };
 
   const onTierUp = (tier: Tier) => {
@@ -401,13 +405,15 @@ export function mountMiniGameEngine(
     root.dataset.tier = String(tier);
     background.show(tier, intensity, combo.view.method);
     if (!reduced) heart.punch(0.035 * (0.6 + intensity));
-    lettering.slamTierName(TIER_NAMES[tier].jp, TIER_NAMES[tier].en);
+    const { jp, en } = TIER_NAMES[tier];
+    const tierGloss = shownGloss(en);
+    lettering.slamTierName(jp, tierGloss);
     if (tier === 2) effects.burst(5, heartAt);
-    // ありがと comes with the catch, whose words it leaves; each tier after it is said by name.
+    // ありがと comes with the catch, whose words it leaves; each tier after it is said by name: its
+    // gloss where the app shows one, otherwise the word itself.
     if (tier > 0) {
-      const { en } = TIER_NAMES[tier];
       lastAnnounce = play;
-      say(`${en.charAt(0).toUpperCase()}${en.slice(1)}.`);
+      say(tierGloss ? `${tierGloss.charAt(0).toUpperCase()}${tierGloss.slice(1)}.` : jp);
     }
   };
 
@@ -457,7 +463,12 @@ export function mountMiniGameEngine(
     if (tier === 4 && hits % 3 === 0) effects.glint(box);
     if (play - lastAnnounce > 1.6) {
       lastAnnounce = play;
-      say(`${formatCount(view.total)} gratitude, times ${view.multiplier.toFixed(1)}`);
+      say(
+        i18next.t(($) => $.gratitude.announcements.total, {
+          total: formatCount(view.total),
+          multiplier: view.multiplier.toFixed(1),
+        }),
+      );
     }
   };
 
@@ -489,11 +500,12 @@ export function mountMiniGameEngine(
     tipShown = kind;
     tipUntil = wall + TIPS[kind].holdS;
     if (fresh) {
+      const text = i18next.t(($) => $.gratitude.tips[kind]);
       tipIcon.innerHTML = TIPS[kind].icon;
-      tipText.textContent = TIPS[kind].text;
+      tipText.textContent = text;
       tip.dataset.kind = kind;
       root.dataset.tip = "on";
-      say(TIPS[kind].text);
+      say(text);
     } else if (wall - tipPulsedAt < 0.7) return;
     tipPulsedAt = wall;
     tipAnimation?.cancel();
@@ -621,7 +633,7 @@ export function mountMiniGameEngine(
     writeFace();
     if (!reduced) heart.punch(0.05);
     endingParts.freeze(80);
-    say("Stroke unlocked.");
+    say(i18next.t(($) => $.gratitude.announcements.strokeUnlocked));
   };
 
   const onStrokeStart = (t: number, x: number, y: number) => {
@@ -730,12 +742,16 @@ export function mountMiniGameEngine(
       heart.comeLoose();
       heart.kickLoose(reversal.direction, reversal.strength);
     }
-    lettering.slamTierName("ポンッ", "*pop*");
+    lettering.slamTierName("ポンッ", shownGloss("*pop*"));
     flash = { face: "wide", until: performance.now() + 600 };
     writeFace();
     effects.burst(8, heartAt);
     // With reduced motion the heart stays put.
-    say(reduced ? "Shake unlocked." : "The heart is loose.");
+    say(
+      reduced
+        ? i18next.t(($) => $.gratitude.announcements.shakeUnlocked)
+        : i18next.t(($) => $.gratitude.announcements.heartLoose),
+    );
   };
 
   const onMotion = (ax: number, ay: number, gx: number | null, t: number) => {
