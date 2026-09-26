@@ -92,7 +92,7 @@ export function StartDrawing({
             ? t(($) => $.tickets.startDrawing.reserve.title)
             : t(($) => $.tickets.startDrawing.daily.title)}
         </h2>
-        <p className="out-of-tickets__line" id={`${id}-line`}>
+        <p className="out-of-tickets__line out-of-tickets__line--stacked" id={`${id}-line`}>
           {reserveAsk ? (
             <>
               <strong>{t(($) => $.tickets.startDrawing.reserve.used)}</strong>{" "}
