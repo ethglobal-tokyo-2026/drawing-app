@@ -3,7 +3,12 @@ import { bytes32, insertUser } from "@drawing-app/db/testing";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { giftClaimTokenSchema } from "../gifts/packaging.ts";
-import { giftPreviewSchema, receivedGiftSchema, type ReceiveRefusal } from "../gifts/receiving.ts";
+import {
+  giftPreviewSchema,
+  receivedGiftSchema,
+  receiveGiftForYou,
+  type ReceiveRefusal,
+} from "../gifts/receiving.ts";
 import { createGiftsTestApp, giftOf, refusalOf, type GiftsTestApp } from "../gifts/testGifts.ts";
 
 /** A spot on the board, as a drag leaves it. */
@@ -112,10 +117,83 @@ describe("POST /api/gifts/receive", () => {
     const { gift, giftClaimToken } = await giftToOpen(test);
     const first = insertUser(test.db);
     await receivedOf(await receive(test, first, giftClaimToken));
-    for (const userId of [insertUser(test.db), first]) {
-      await expectRefused(test, userId, giftClaimToken, 409, "already_received");
-    }
+    await expectRefused(test, insertUser(test.db), giftClaimToken, 409, "already_received");
     expect(ownerOf(test, gift.stickerId)).toBe(first);
+  });
+
+  it.each(["link", "board"])(
+    "recovers a completed receive through the %s without repeating the claim or resetting placement",
+    async (entry) => {
+      const test = await createGiftsTestApp({ escrowChain: true });
+      const { gift, giftClaimToken } = await giftToOpen(test);
+      test.landDeposit(gift.id);
+      const receiverId = insertUser(test.db);
+      await previewOf(await preview(test, receiverId, giftClaimToken));
+      const claims = vi.spyOn(test.giftChain, "claimGift");
+      const accept = () =>
+        entry === "link"
+          ? receive(test, receiverId, giftClaimToken)
+          : test.post(receiverId, `/${gift.id}/receive`);
+      const first = await receivedOf(await accept());
+      test.clock.advance(GIFT_EXPIRY_MS);
+      const placement = test.db
+        .update(stickerPlacements)
+        .set({ ...SPOT, seenAt: test.clock.now() })
+        .where(
+          and(
+            eq(stickerPlacements.userId, receiverId),
+            eq(stickerPlacements.stickerId, gift.stickerId),
+          ),
+        )
+        .returning()
+        .get();
+      const recorded = test.giftRow(gift.id);
+      const retried = await receivedOf(await accept());
+      expect(retried.gift).toEqual(first.gift);
+      expect(retried.stickerPlacement).toMatchObject({
+        placement: SPOT,
+        seenAt: placement.seenAt?.toISOString(),
+      });
+      expect(test.giftRow(gift.id)).toEqual(recorded);
+      expect(claims).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("shares overlapping Accept requests by the same recipient", async () => {
+    const test = await createGiftsTestApp({ escrowChain: true });
+    const { gift, giftClaimToken } = await giftToOpen(test);
+    test.landDeposit(gift.id);
+    const receiverId = insertUser(test.db);
+    await previewOf(await preview(test, receiverId, giftClaimToken));
+    const claim = test.giftChain.claimGift;
+    const finishClaim = vi.fn<() => void>();
+    const pending = new Promise<void>((resolve) => finishClaim.mockImplementation(resolve));
+    const claims = vi.spyOn(test.giftChain, "claimGift").mockImplementation(async (request) => {
+      await pending;
+      return claim(request);
+    });
+    const first = receiveGiftForYou(test.deps, receiverId, gift.id);
+    const retry = receiveGiftForYou(test.deps, receiverId, gift.id);
+    finishClaim();
+    const results = await Promise.all([first, retry]);
+    expect(results[0]).toMatchObject({ refusal: null, received: { gift: { receiverId } } });
+    expect(results[1]).toEqual(results[0]);
+    expect(claims).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not restore an old receipt after its sticker has been given again", async () => {
+    const test = await createGiftsTestApp();
+    const { gift, giftClaimToken } = await giftToOpen(test);
+    const receiverId = insertUser(test.db);
+    await receivedOf(await receive(test, receiverId, giftClaimToken));
+    const next = await test.packageSticker(receiverId, gift.stickerId);
+    await expectRefused(test, receiverId, giftClaimToken, 409, "already_received");
+    const nextReceiver = insertUser(test.db);
+    await receivedOf(
+      await receive(test, nextReceiver, giftClaimTokenSchema.parse(next.giftClaimToken)),
+    );
+    await expectRefused(test, receiverId, giftClaimToken, 409, "already_received");
+    expect(ownerOf(test, gift.stickerId)).toBe(nextReceiver);
   });
 
   it("returns a sticker coming back to its old spot in the tray, NEW again", async () => {
