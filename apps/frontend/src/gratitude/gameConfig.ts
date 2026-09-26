@@ -73,6 +73,8 @@ export const FEEL_CONFIG = {
   /** A first tap lifts before it travels `tapSlopPx` or is held `tapHoldMs`. */
   tapSlopPx: 12,
   tapHoldMs: 800,
+  /** The sent heart winds up toward the giver over the catch window, then holds through its grace. */
+  windUpMs: 800,
   /** Mini hearts: sprayed by taps from ドキドキ up, sweated off the heart, and 昇天's rain. */
   miniHearts: {
     fromTier: 2,
