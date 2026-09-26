@@ -1,6 +1,6 @@
 import { useEffectEvent, useLayoutEffect, useRef, type RefObject } from "react";
 import { playStick } from "../stickers/stick";
-import type { BoardSticker } from "./boardSticker";
+import "./detail-lift.css";
 
 // Motion tokens spelled out: Web Animations can't read CSS variables.
 /** --t-peel: the flight off the board. */
@@ -9,15 +9,38 @@ const PEEL_MS = 280;
 const EASE_PEEL = [0.2, 0.7, 0.2, 1] as const;
 /** --t-stick: the flight back, which is the opening played backward. */
 const STICK_MS = 220;
-/** --ease-out, for the rest of the detail coming in around the sticker. */
+/** --ease-out, for a spot fading to or from its ghost. */
 const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 /** On its way the sticker rises and turns toward you, most at this share of the flight's time. */
 const LIFT = { at: 0.35, rise: -8, turnY: -11, perspective: 900 };
 /** A given sticker fades in out of its silhouette over this share of the flight. */
 const GIVEN_FADE = 0.4;
-/** Under reduced motion the detail and the board crossfade. */
+/** Under reduced motion the view and what it lifts off crossfade; so does a ghost moving spots. */
 const CROSSFADE_MS = 150;
+
+/** Where a sticker sits before it lifts: its lift on the board, its spot in Explore's pile. */
+export interface LiftOrigin {
+  /** The sticker where it sits. The flight leaves from its box, as laid out before its turn. */
+  el: HTMLElement;
+  /** Its turn there, in degrees. */
+  turn: number;
+  /** It sits as its given sticker silhouette, which stays: the sticker fades in out of it. */
+  given?: boolean;
+}
+
+/** The view a sticker lifts into: the board's sticker detail, Explore's lifted sticker. */
+export interface LiftView {
+  /** The shown sticker's figure, where the flight lands. */
+  figureOf: (view: HTMLElement) => HTMLElement | null;
+  /** The rest of the view coming in around the sticker. Closing plays it backward. */
+  enter: (view: HTMLElement) => Animation[];
+  /**
+   * The opacity the sticker's spot keeps while it's lifted, for a view that leaves the spot in
+   * sight: a ghost of where it goes back. Without one the spot is empty only while the sticker flies.
+   */
+  ghost?: number;
+}
 
 /** A box on screen by its center, with its size before any turn. */
 interface Spot {
@@ -27,23 +50,13 @@ interface Spot {
   h: number;
 }
 
-/** Everything that moves as the detail opens. Closing plays it backward. */
+/** Everything that moves as the view opens. Closing plays it backward. */
 interface Flight {
   animations: Animation[];
-  /** The copy of the detail's sticker that flies, over the board and the detail. */
+  /** The copy of the view's sticker that flies, over the view and what it lifts off. */
   flyer: HTMLElement | null;
-  /** The sticker on the board, hidden while its copy flies. */
-  boardCopy: HTMLElement | null;
-  hide: Animation | null;
-}
-
-interface Takeoff {
-  /** Where the sticker sits: its lift on the board, or its given sticker silhouette. */
-  origin: HTMLElement | null;
-  /** Its turn there. */
-  turn: number;
-  given: boolean;
-  reduced: boolean;
+  /** The sticker's spot while it's away: empty, or down to its ghost. */
+  away: { el: HTMLElement; fade: Animation } | null;
 }
 
 const spotOf = (el: HTMLElement): Spot => {
@@ -110,7 +123,7 @@ export function splitEasing(
 const LIFT_EASING = splitEasing(EASE_PEEL, LIFT.at);
 
 /**
- * The flyer's frames from the sticker's spot and turn to its place in the detail, along --ease-peel.
+ * The flyer's frames from the sticker's spot and turn to its place in the view, along --ease-peel.
  * Each frame lists the same functions, so each one tweens on its own.
  */
 function flightFrames(from: Spot, to: Spot, turn: number): Keyframe[] {
@@ -132,13 +145,13 @@ function flightFrames(from: Spot, to: Spot, turn: number): Keyframe[] {
   ];
 }
 
-/** A copy of the detail's sticker, on top of it, beside the detail so the detail's fade and clip pass it by. */
-function makeFlyer(detail: HTMLElement, figure: HTMLElement, to: Spot) {
+/** A copy of the view's sticker, on top of it, beside the view so the view's fade and clip pass it by. */
+function makeFlyer(view: HTMLElement, figure: HTMLElement, to: Spot) {
   const flyer = document.createElement("div");
-  flyer.className = "sticker-detail__flyer";
+  flyer.className = "detail-lift__flyer";
   flyer.setAttribute("aria-hidden", "true");
   flyer.append(figure.cloneNode(true));
-  detail.after(flyer);
+  view.after(flyer);
   // Where a left and top of 0 put it, whatever the borders and padding of what holds it.
   const zero = flyer.getBoundingClientRect();
   flyer.style.left = `${to.x - to.w / 2 - zero.left}px`;
@@ -148,132 +161,154 @@ function makeFlyer(detail: HTMLElement, figure: HTMLElement, to: Spot) {
   return flyer;
 }
 
-function takeOff(detail: HTMLElement, { origin, turn, given, reduced }: Takeoff): Flight {
+function takeOff(
+  view: HTMLElement,
+  into: LiftView,
+  origin: LiftOrigin | null,
+  reduced: boolean,
+): Flight {
   const fill = "both";
-  const none = { flyer: null, boardCopy: null, hide: null };
-  if (reduced)
-    return {
-      animations: [
-        detail.animate([{ opacity: 0 }, { opacity: 1 }], { duration: CROSSFADE_MS, fill }),
-      ],
-      ...none,
-    };
+  // A given sticker's silhouette stays where it is; any other spot empties while the sticker's away.
+  const leaves = origin && !origin.given ? origin.el : null;
+  const left = into.ghost ?? 0;
+  if (reduced) {
+    const animations = [
+      view.animate([{ opacity: 0 }, { opacity: 1 }], { duration: CROSSFADE_MS, fill }),
+    ];
+    const fade =
+      leaves && into.ghost !== undefined
+        ? leaves.animate([{ opacity: 1 }, { opacity: left }], { duration: CROSSFADE_MS, fill })
+        : null;
+    if (!leaves || !fade) return { animations, flyer: null, away: null };
+    animations.push(fade);
+    return { animations, flyer: null, away: { el: leaves, fade } };
+  }
 
-  // The ground fades in, the strip slides in from the left, then the fine print and Give rise.
-  const animations = [
-    detail.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: EASE_OUT, fill }),
-  ];
-  const enter = (part: Element, from: string, duration: number, delay: number) =>
-    animations.push(
-      part.animate(
-        [
-          { transform: from, opacity: 0 },
-          { transform: "none", opacity: 1 },
-        ],
-        { duration, delay, easing: EASE_OUT, fill },
-      ),
-    );
-  const strip = detail.querySelector(".sticker-detail__strip");
-  if (strip) enter(strip, "translateX(-12px)", 200, 40);
-  for (const part of detail.querySelectorAll(".sticker-detail__meta, .sticker-detail__acts"))
-    enter(part, "translateY(8px)", 160, 120);
+  // Measured before anything moves, so the flight lands where the figure comes to rest.
+  const figure = into.figureOf(view);
+  const to = figure && spotOf(figure);
+  const from = origin && spotOf(origin.el);
+  const animations = into.enter(view);
+  if (!origin || !figure || !from || !to?.w || !to.h)
+    return { animations, flyer: null, away: null };
 
-  const figure = detail.querySelector<HTMLElement>(".sticker-detail__slide .sticker-figure");
-  if (!origin || !figure) return { animations, ...none };
-  const from = spotOf(origin);
-  const to = spotOf(figure);
-  if (!to.w || !to.h) return { animations, ...none };
-
-  const flyer = makeFlyer(detail, figure, to);
+  const flyer = makeFlyer(view, figure, to);
   animations.push(
-    flyer.animate(flightFrames(from, to, turn), { duration: PEEL_MS, fill }),
+    flyer.animate(flightFrames(from, to, origin.turn), { duration: PEEL_MS, fill }),
     figure.animate([{ opacity: 0 }, { opacity: 0 }], { duration: PEEL_MS, fill }),
   );
-  if (given) {
+  if (!leaves) {
     animations.push(
       flyer.animate([{ opacity: 0 }, { opacity: 1, offset: GIVEN_FADE }, { opacity: 1 }], {
         duration: PEEL_MS,
         fill,
       }),
     );
-    return { animations, flyer, boardCopy: null, hide: null };
+    return { animations, flyer, away: null };
   }
-  const hide = origin.animate([{ opacity: 0 }, { opacity: 0 }], { duration: PEEL_MS, fill });
-  animations.push(hide);
-  return { animations, flyer, boardCopy: origin, hide };
+  const fade = leaves.animate([{ opacity: left }, { opacity: left }], { duration: PEEL_MS, fill });
+  animations.push(fade);
+  return { animations, flyer, away: { el: leaves, fade } };
 }
 
 interface Options {
+  /** The view, which the flyer goes beside. */
   root: RefObject<HTMLElement | null>;
-  /** The sticker the detail shows. */
-  sticker: BoardSticker | undefined;
-  /** Where a sticker sits on the board: its lift, or its given sticker silhouette. */
-  originOf: ((id: string) => HTMLElement | null) | undefined;
-  given: boolean;
+  /** The sticker it shows. Paging to another lands a flight in progress at once. */
+  shownId: string | undefined;
+  /** Where a sticker sits, which it lifts off from and sticks back onto; null where it isn't shown. */
+  originOf: (id: string) => LiftOrigin | null;
+  into: LiftView;
   reduced: boolean;
   onClose: () => void;
 }
 
 /**
- * The detail lifts its sticker off the board: a copy flies from the sticker's spot and turn to its
- * place in the detail, while the rest of the detail comes in around it. Returns the detail's close,
- * which plays that backward to wherever the shown sticker sits, sticks it down there, then calls
- * `onClose`. A sticker that isn't on the board just fades. The detail takes input throughout.
+ * A view lifts its sticker off where it sits: a copy flies from the sticker's spot and turn to its
+ * place in the view, while the rest of the view comes in around it. Returns the view's close, which
+ * plays that backward to wherever the shown sticker sits, sticks it down there, then calls `onClose`.
+ * A sticker that isn't shown anywhere just fades. The view takes input throughout.
  */
-export function useDetailLift({ root, sticker, originOf, given, reduced, onClose }: Options) {
+export function useDetailLift({ root, shownId, originOf, into, reduced, onClose }: Options) {
   /** The opening while it plays, then the closing. */
   const flight = useRef<Flight | null>(null);
   const closing = useRef(false);
+  /** The shown sticker's spot, held at its ghost once the sticker has landed in the view. */
+  const ghosted = useRef<{ el: HTMLElement; fade: Animation } | null>(null);
 
-  const takeOffFrom = (detail: HTMLElement) =>
-    takeOff(detail, {
-      origin: sticker ? (originOf?.(sticker.id) ?? null) : null,
-      turn: sticker?.placement.r ?? 0,
-      given,
-      reduced,
-    });
+  const takeOffFrom = (view: HTMLElement) =>
+    takeOff(view, into, shownId === undefined ? null : originOf(shownId), reduced);
   const open = useEffectEvent(takeOffFrom);
 
-  // Before the first paint, so the detail never shows before it lifts off.
+  /** The sticker landed in the view: the flight ends, and a view with a ghost keeps the spot at it. */
+  const land = useEffectEvent((opening: Flight) => {
+    const hold = into.ghost !== undefined ? opening.away : null;
+    for (const a of opening.animations) if (a !== hold?.fade) a.cancel();
+    opening.flyer?.remove();
+    ghosted.current = hold;
+  });
+
+  /** Paged: only the shown sticker is away, so the last one's spot fills back in and the new one's fades. */
+  const moveGhost = useEffectEvent((from: HTMLElement | null, id: string | undefined) => {
+    const ghost = into.ghost;
+    if (ghost === undefined) return;
+    const timing = { duration: CROSSFADE_MS, easing: EASE_OUT };
+    from?.animate([{ opacity: ghost }, { opacity: 1 }], timing);
+    const origin = id === undefined ? null : originOf(id);
+    if (!origin || origin.given) return;
+    const fade = origin.el.animate([{ opacity: 1 }, { opacity: ghost }], {
+      ...timing,
+      fill: "forwards",
+    });
+    ghosted.current = { el: origin.el, fade };
+  });
+
+  // Before the first paint, so the view never shows before it lifts off.
   useLayoutEffect(() => {
-    const detail = root.current;
-    if (!detail) return;
-    const opening = open(detail);
+    const view = root.current;
+    if (!view) return;
+    const opening = open(view);
     flight.current = opening;
     void settled(opening.animations).then(() => {
       if (flight.current !== opening || closing.current) return;
-      stop(opening);
+      land(opening);
       flight.current = null;
     });
     return () => {
       if (flight.current) stop(flight.current);
       flight.current = null;
+      ghosted.current?.fade.cancel();
+      ghosted.current = null;
     };
   }, [root]);
 
   // Paged mid-flight, the sticker in flight isn't the one shown any more: it lands at once.
-  const shownId = sticker?.id;
   const shown = useRef(shownId);
   useLayoutEffect(() => {
     if (shown.current === shownId) return;
     shown.current = shownId;
+    if (closing.current) return;
     const opening = flight.current;
-    if (!opening || closing.current) return;
-    stop(opening);
+    if (opening) stop(opening);
     flight.current = null;
+    const was = opening?.away ?? ghosted.current;
+    ghosted.current?.fade.cancel();
+    ghosted.current = null;
+    moveGhost(was?.el ?? null, shownId);
   }, [shownId]);
 
   return () => {
-    const detail = root.current;
+    const view = root.current;
     if (closing.current) return;
     closing.current = true;
-    if (!detail) {
+    if (!view) {
+      ghosted.current?.fade.cancel();
       onClose();
       return;
     }
-    // A tap during the flight back reaches the board it's uncovering.
-    detail.style.setProperty("pointer-events", "none");
-    const back = flight.current ?? takeOffFrom(detail);
+    // A tap during the flight back reaches what it's uncovering.
+    view.style.setProperty("pointer-events", "none");
+    const back = flight.current ?? takeOffFrom(view);
     flight.current = back;
     for (const a of back.animations) {
       a.updatePlaybackRate(reduced ? 1 : PEEL_MS / STICK_MS);
@@ -282,8 +317,10 @@ export function useDetailLift({ root, sticker, originOf, given, reduced, onClose
     void settled(back.animations).then(() => {
       if (flight.current !== back) return;
       back.flyer?.remove();
-      back.hide?.cancel();
-      if (back.boardCopy) void playStick(back.boardCopy, { reduced });
+      back.away?.fade.cancel();
+      ghosted.current?.fade.cancel();
+      ghosted.current = null;
+      if (back.flyer && back.away) void playStick(back.away.el, { reduced });
       onClose();
     });
   };
