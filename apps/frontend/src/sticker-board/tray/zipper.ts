@@ -12,6 +12,7 @@
  * Coordinates: `a` runs along the track from the rest end at the top down to the far end at `L`; `c`
  * runs across from the chain's center line, negative toward the board.
  */
+import { i18next } from "../../i18n/i18n";
 import { timeOurWork } from "../../performance/performanceRecorder";
 import "./zipper.css";
 
@@ -32,7 +33,7 @@ export interface ZipperOptions {
   threshold?: number;
   /** Released faster than this toward open or shut, in travels per second, it runs that way. */
   flick?: number;
-  /** The slider's accessible name. */
+  /** The slider's accessible name; the sticker tray's by default. */
   label?: string;
   /** Where the slider starts, from shut to open. */
   progress?: number;
@@ -153,11 +154,10 @@ const DEFAULTS = {
   maxGap: 170,
   threshold: 0.25,
   flick: 1.6,
-  label: "Your stickers",
   progress: 0,
   haptics: true,
   motion: true,
-} satisfies Required<Omit<ZipperOptions, "chainAt">>;
+} satisfies Required<Omit<ZipperOptions, "chainAt" | "label">>;
 
 type ReleaseRule = Pick<Required<ZipperOptions>, "threshold" | "flick">;
 
@@ -576,7 +576,7 @@ function windowOf(doc: Document): Window & typeof globalThis {
 export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zipper {
   const doc = host.ownerDocument;
   const win = windowOf(doc);
-  const o = { ...DEFAULTS, ...options };
+  const o = { ...DEFAULTS, label: i18next.t(($) => $.stickerBoard.tray.zipper), ...options };
   const id = ++uid;
   const reducedMotion = win.matchMedia(REDUCED_MOTION);
   const reduced = () => reducedMotion.matches;
