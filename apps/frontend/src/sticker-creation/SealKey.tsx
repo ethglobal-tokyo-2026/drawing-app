@@ -1,5 +1,6 @@
 import { CheckFat } from "@phosphor-icons/react";
 import { useState } from "react";
+import { useTranslation } from "../i18n/react";
 import { Key } from "../ui/Key";
 import "./SealKey.css";
 
@@ -17,7 +18,9 @@ interface Props {
  * arms it and a chip asks for the second, which seals.
  */
 export function SealKey({ shown, armed, problem, onTap }: Props) {
-  const chip = armed ? "Tap again to seal" : problem;
+  const { t } = useTranslation();
+  const tapAgain = t(($) => $.stickerCreation.seal.tapAgain);
+  const chip = armed ? tapAgain : problem;
   // The chip keeps its words while it fades out.
   const [words, setWords] = useState(chip);
   if (chip && chip !== words) setWords(chip);
@@ -34,7 +37,7 @@ export function SealKey({ shown, armed, problem, onTap }: Props) {
         className={`seal-key ${shown ? "is-shown" : ""} ${armed ? "is-armed" : ""}`}
         style={{ "--size": "58px" }}
         icon={<CheckFat weight="fill" />}
-        aria-label={armed ? "Tap again to seal" : "Seal: tap twice"}
+        aria-label={armed ? tapAgain : t(($) => $.stickerCreation.seal.label)}
         onClick={onTap}
       />
     </>
