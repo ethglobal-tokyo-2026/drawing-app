@@ -67,6 +67,7 @@ import {
   type Box,
   type Placement,
 } from "./placement";
+import { BoardLoading } from "./BoardLoading";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
 import { readingOrder } from "./stickerOrder";
@@ -585,6 +586,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           Selected. Enter opens it, and Tab reaches its toolbar. Arrow keys move it, [ and ] turn
           it, minus and plus resize it, Delete takes it off the board, and Escape lets go of it.
         </span>
+        {!stickers && board.state === "loading" && <BoardLoading />}
         {stickers && onBoard.length === 0 && givenSilhouettes.length === 0 && (
           <div className="board-blank" style={blankStyle}>
             <span className="board-blank-cut" aria-hidden />

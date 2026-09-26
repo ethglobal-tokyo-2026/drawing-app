@@ -15,6 +15,8 @@ import { Duration } from "../stickers/Duration";
 import { formatHandle, formatNo } from "../stickers/format";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
+import { REVEAL, revealOnLoad } from "../ui/reveal";
+import { Skeleton } from "../ui/Skeleton";
 import "./ExploreScreen.css";
 
 interface Props {
@@ -146,7 +148,7 @@ function ThisWeek({
   const rows: LeaderboardRow[] = leaderboards[board];
 
   return (
-    <section className="explore-section">
+    <section className={`${REVEAL} explore-section`}>
       <header className="section-head">
         <h2>This week</h2>
         <span className="fine muted">Resets Monday 4:00</span>
@@ -188,7 +190,12 @@ function ThisWeek({
 }
 
 const StickerImage = ({ sticker, className }: { sticker: Sticker; className: string }) => (
-  <img src={sticker.images.png} alt="" className={`sticker-image ${className}`} />
+  <img
+    ref={revealOnLoad}
+    src={sticker.images.png}
+    alt=""
+    className={`sticker-image reveal-img ${className}`}
+  />
 );
 
 function FeedPost({ entry, meId, open }: { entry: ActivityEntry; meId: string; open: Open }) {
@@ -226,6 +233,75 @@ function FeedPost({ entry, meId, open }: { entry: ActivityEntry; meId: string; o
   );
 }
 
+/** Rows of a person list while it loads: a rank or nothing, a photo, a name and a handle. */
+function PersonRowsLoading({ rows, ranked }: { rows: number; ranked: boolean }) {
+  return Array.from({ length: rows }, (_, i) => (
+    <li key={i}>
+      <div className="artist-row">
+        {ranked && <Skeleton className="rank" width={16} height={14} />}
+        <Skeleton width={40} height={40} round />
+        <span className="row-names is-loading">
+          <Skeleton width="45%" height={13} />
+          <Skeleton width="30%" height={10} />
+        </span>
+      </div>
+    </li>
+  ));
+}
+
+/** Explore's own sections in outline while it loads, so nothing jumps as they fill in. */
+function TodayLoading() {
+  return (
+    <>
+      <p className="visually-hidden" role="status">
+        Loading Explore
+      </p>
+      <section className="explore-section" aria-hidden="true">
+        <header className="section-head">
+          <h2>Today’s stickers</h2>
+          <span className="date-badge">{todayBadge()}</span>
+        </header>
+        <ul className="todays-stickers">
+          {Array.from({ length: 5 }, (_, i) => (
+            <li key={i} className="today-sticker">
+              <Skeleton className="today-art" width={72} height={72} />
+              <Skeleton width={52} height={10} />
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section className="explore-section" aria-hidden="true">
+        <header className="section-head">
+          <h2>This week</h2>
+          <span className="fine muted">Resets Monday 4:00</span>
+        </header>
+        <div className="leaderboard-tabs">
+          {LEADERBOARDS.map((b, i) => (
+            <button key={b.id} type="button" className={i === 0 ? "selected" : ""} disabled>
+              {b.label}
+            </button>
+          ))}
+        </div>
+        <ol className="leaderboard">
+          <PersonRowsLoading rows={3} ranked />
+        </ol>
+      </section>
+      <section className="explore-section feed" aria-hidden="true">
+        {Array.from({ length: 2 }, (_, i) => (
+          <div key={i} className="feed-post">
+            <div className="feed-head">
+              <Skeleton width={36} height={36} round />
+              <Skeleton width="55%" height={13} />
+            </div>
+            <Skeleton className="feed-art" width={112} height={112} />
+            <Skeleton width={150} height={10} />
+          </div>
+        ))}
+      </section>
+    </>
+  );
+}
+
 /** What didn't load and why, with a way to ask again. */
 function Failed({ what, query }: { what: string; query: Query<unknown> }) {
   if (query.state !== "failed") return null;
@@ -243,13 +319,23 @@ function Failed({ what, query }: { what: string; query: Query<unknown> }) {
 /** Handles starting with the search first, then ones containing it, A to Z, as the server sorts. */
 function SearchResults({ query, meId, open }: { query: string; meId: string; open: Open }) {
   const results = useApiQuery(`users?handle=${query}`, (api) => api.searchUsers(query));
-  if (results.state === "loading") return <p className="fine muted results-count">Searching…</p>;
+  if (results.state === "loading")
+    return (
+      <section className="explore-section">
+        <p className="visually-hidden" role="status">
+          Searching
+        </p>
+        <ul className="search-results" aria-hidden="true">
+          <PersonRowsLoading rows={3} ranked={false} />
+        </ul>
+      </section>
+    );
   if (results.state === "failed") return <Failed what="search results" query={results} />;
   const people = results.data;
 
   if (!people.length)
     return (
-      <section className="explore-section search-empty">
+      <section className={`${REVEAL} explore-section search-empty`}>
         <h2>No one here is @{query} yet</h2>
         <p>
           Handles are exact, so check the spelling with them. If they’re your LINE friend, give them
@@ -259,7 +345,7 @@ function SearchResults({ query, meId, open }: { query: string; meId: string; ope
     );
 
   return (
-    <section className="explore-section">
+    <section className={`${REVEAL} explore-section`}>
       <p className="fine muted results-count">
         {people.length} {people.length === 1 ? "artist" : "artists"}
       </p>
@@ -300,7 +386,7 @@ function SearchResults({ query, meId, open }: { query: string; meId: string; ope
 function Today({ explore, meId, open }: { explore: Explore; meId: string; open: Open }) {
   return (
     <>
-      <section className="explore-section">
+      <section className={`${REVEAL} explore-section`}>
         <header className="section-head">
           <h2>Today’s stickers</h2>
           <span className="date-badge">{todayBadge()}</span>
@@ -327,7 +413,7 @@ function Today({ explore, meId, open }: { explore: Explore; meId: string; open: 
 
       <ThisWeek leaderboards={explore.leaderboards} meId={meId} open={open} />
 
-      <section className="explore-section feed">
+      <section className={`${REVEAL} explore-section feed`}>
         {explore.activity.map((entry) => (
           <FeedPost
             key={`${entry.type}-${entry.sticker.id}-${entry.at}`}
@@ -400,7 +486,7 @@ export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
       ) : explore.state === "failed" ? (
         <Failed what="Explore" query={explore} />
       ) : (
-        <p className="fine muted results-count">Loading…</p>
+        <TodayLoading />
       )}
     </div>
   );

@@ -7,6 +7,8 @@ import { getSuiBalance, IS_MOCK_PAYMENT, payForTickets } from "../payments/sui";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
+import { REVEAL } from "../ui/reveal";
+import { Skeleton } from "../ui/Skeleton";
 import { TearLine } from "../ui/TearLine";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { TICKET_PRICE_YEN } from "./config";
@@ -34,6 +36,8 @@ interface Props {
 const reason = (error: unknown) =>
   error instanceof Error && error.message ? error.message : String(error);
 const tickets = (n: number) => `${n} ${n === 1 ? "ticket" : "tickets"}`;
+/** One outline row per pack the shop sells, while today's prices load. */
+const PACKS_LOADING = [1, 2, 3, 4];
 
 /** The shop's SUI price quote, fetched again as each one expires. */
 function useTicketQuote() {
@@ -234,9 +238,16 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
               <QuietLink onClick={wallet.refresh}>Try again</QuietLink>
             </span>
           ) : wallet.balance === null || !quote ? (
-            <span className="out-of-tickets__quiet">Reading your balance…</span>
+            <span className="ticket-shop__loading">
+              <span className="visually-hidden" role="status">
+                Reading your balance
+              </span>
+              <Skeleton width={84} height={18} />
+            </span>
           ) : (
-            <strong>{formatYen(yenForMist(wallet.balance, quote.suiYen))}</strong>
+            <strong className={REVEAL}>
+              {formatYen(yenForMist(wallet.balance, quote.suiYen))}
+            </strong>
           )}
         </div>
         {quoteError ? (
@@ -245,9 +256,22 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
             <QuietLink onClick={retry}>Try again</QuietLink>
           </p>
         ) : !quote ? (
-          <p className="ticket-shop__problem out-of-tickets__quiet">Getting today’s prices…</p>
+          <div className="ticket-shop__packs">
+            <p className="visually-hidden" role="status">
+              Getting today’s prices
+            </p>
+            {/* The packs' own rows in outline, so nothing jumps as the prices come in. */}
+            {PACKS_LOADING.map((n) => (
+              <div key={n} className="ticket-shop__pack" aria-hidden="true">
+                <Skeleton width={24} height={16} />
+                <Skeleton width={72} height={14} />
+                <span />
+                <Skeleton width={56} height={18} />
+              </div>
+            ))}
+          </div>
         ) : (
-          <div className="ticket-shop__packs" role="group" aria-label="Ticket packs">
+          <div className={`${REVEAL} ticket-shop__packs`} role="group" aria-label="Ticket packs">
             {quote.packs.map((p) => (
               <button
                 key={p.tickets}

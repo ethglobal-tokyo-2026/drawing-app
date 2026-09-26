@@ -121,6 +121,8 @@ export const PlacedSticker = memo(function PlacedSticker({
           foil={foil ? "board" : undefined}
           no={sticker.no}
           turn={sticker.placement.r}
+          // A landing sticker's stick animation shows it arrive; it isn't held back as well.
+          reveal={!landing}
         />
       </div>
       {/* A clear frame, four corners to resize and a knob on a stem to turn. */}

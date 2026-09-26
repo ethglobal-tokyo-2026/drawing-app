@@ -3,6 +3,7 @@ import type { Fold } from "./liftedCorner";
 import { LiveResin } from "./LiveResin";
 import { StickerFoil, type FoilSize } from "./StickerFoil";
 import type { StickerUrls } from "./stickerUrls";
+import { revealOnLoad } from "../ui/reveal";
 import "./sticker-figure.css";
 
 interface Props {
@@ -18,6 +19,8 @@ interface Props {
   no?: number;
   /** Degrees it's turned on screen, which its foil's glint undoes. */
   turn?: number;
+  /** Held back, every layer, until its image has loaded, then faded in. */
+  reveal?: boolean;
   className?: string;
   ref?: Ref<HTMLSpanElement>;
 }
@@ -38,6 +41,7 @@ export function StickerFigure({
   foil,
   no = 0,
   turn = 0,
+  reveal = false,
   className,
   ref,
 }: Props) {
@@ -55,12 +59,25 @@ export function StickerFigure({
       "--refl": fold.refl,
     }),
   };
-  const classes = ["sticker-figure", mask && fold && "is-curled", className].filter(Boolean);
+  const classes = [
+    "sticker-figure",
+    mask && fold && "is-curled",
+    reveal && "reveal-img",
+    className,
+  ].filter(Boolean);
   return (
     <span ref={ref} className={classes.join(" ")} style={style}>
       {mask && foil && <StickerFoil size={foil} no={no} turn={turn} />}
       {mask && <span className="sticker-figure__spot" aria-hidden="true" />}
-      <img className="sticker-figure__img" src={urls.png} alt="" draggable={false} />
+      <img
+        ref={
+          reveal ? (img) => revealOnLoad(img, img?.closest(".sticker-figure") ?? null) : undefined
+        }
+        className="sticker-figure__img"
+        src={urls.png}
+        alt=""
+        draggable={false}
+      />
       {mask && (
         <>
           <LiveResin highlights={Boolean(spec && rim)} />
