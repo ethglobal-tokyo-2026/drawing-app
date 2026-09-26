@@ -216,6 +216,7 @@ function PileSticker({
       className="pile-sticker"
       style={spotStyle(laid, height)}
       data-pile-id={sticker.id}
+      data-turn={laid.spot.r}
       data-falling={falling ?? undefined}
       data-lifted={lifted ? "" : undefined}
     >

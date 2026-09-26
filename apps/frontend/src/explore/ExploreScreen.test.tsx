@@ -144,15 +144,14 @@ describe("ExploreScreen's sticker pile", () => {
     expect(labelsOf(host, ".pile-sticker__button")[0]).toContain("by @<i>{{bob}}</i>,");
   });
 
-  it("opens the artist's board from a tapped sticker until the lifted view lands", async () => {
-    const onOpenArtist = vi.fn();
+  it("lifts a tapped sticker off the pile into a sheet", async () => {
     const drawn = sticker({ sealedAt: minutesAgo(5), artist: people.mika });
     const host = await openExplore(
       exploreWith([{ type: "sealed", at: drawn.sealedAt, sticker: drawn }]),
-      onOpenArtist,
     );
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
     act(() => host.querySelector<HTMLElement>(".pile-sticker__button")?.click());
-    expect(onOpenArtist.mock.calls).toEqual([[people.mika]]);
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
   });
 
   it("shows today's empty floor before anyone seals", async () => {

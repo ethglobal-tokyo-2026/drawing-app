@@ -23,7 +23,10 @@ import { PhotoSticker } from "../ui/PhotoSticker";
 import { REVEAL } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
 import { useReducedMotion } from "../ui/useReducedMotion";
+import { HitCounter } from "../ui/HitCounter";
+import { LiftedSticker } from "./LiftedSticker";
 import { dayBadge, exploreDay, pileDays, type PileSticker } from "./pileDays";
+import { pileOrigin } from "./pileOrigin";
 import { StickerPile } from "./StickerPile";
 import "./ExploreScreen.css";
 
@@ -129,9 +132,7 @@ function PersonRow({
 }
 
 function Figure({ board, value }: { board: Leaderboard; value: number }) {
-  const { t } = useTranslation();
-  if (board === "bestCombo")
-    return <span className="figure">{t(($) => $.explore.figure.hits, { hits: value })}</span>;
+  if (board === "bestCombo") return <HitCounter hits={value} size={23} className="figure" />;
   if (board === "longestStreak")
     return (
       <span className="figure">
@@ -516,13 +517,32 @@ function SearchResults({ query, meId, open }: { query: string; meId: string; ope
   );
 }
 
-/** The pile, once Explore has arrived. */
+/** The pile, once Explore has arrived; a tapped sticker lifts off it into a sheet. */
 function Stickers({ explore, meId, open }: { explore: Explore; meId: string; open: Open }) {
   const days = useMemo(() => pileDays(explore), [explore]);
-  // Lane W5b's LiftedSticker lifts the tapped sticker off the pile here. Until it lands, a tap
-  // opens its artist's sticker board, as the strip this replaces did.
-  const lift = (pile: PileSticker) => open(pile.sticker.artist);
-  return <StickerPile days={days} meId={meId} onLift={lift} />;
+  // Paging in the sheet runs in the pile's reading order: newest day, newest sticker first.
+  const order = useMemo(() => days.flatMap(({ stickers }) => stickers.toReversed()), [days]);
+  const [lifted, setLifted] = useState<number | null>(null);
+  const lift = (pile: PileSticker) =>
+    setLifted(order.findIndex((p) => p.sticker.id === pile.sticker.id));
+  return (
+    <>
+      <StickerPile days={days} meId={meId} onLift={lift} />
+      {lifted !== null && lifted >= 0 && (
+        <LiftedSticker
+          stickers={order}
+          index={lifted}
+          onIndexChange={setLifted}
+          onClose={() => setLifted(null)}
+          onGoToBoard={(artist) => {
+            setLifted(null);
+            open(artist);
+          }}
+          originOf={pileOrigin}
+        />
+      )}
+    </>
+  );
 }
 
 /** Finds whoever a name's link names and opens their board, once; says so when there's nobody. */

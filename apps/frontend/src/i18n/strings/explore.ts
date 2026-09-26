@@ -111,8 +111,6 @@ export const explore = {
   },
   /** A leaderboard row's figure. A unit in <small> is set small beside its number. */
   figure: {
-    /** Explore tab, Best combo leaderboard: the figure at the end of each row, that person's hits in their best combo */
-    hits: { en: "×{{hits}}", ja: "×{{hits}}" },
     /** Explore tab, Longest streak leaderboard: the figure at the end of a row whose streak is one day, the unit set small */
     streak_one: { en: "{{count}}<small>day</small>" },
     /** Explore tab, Longest streak leaderboard: the figure at the end of each row, that person's streak in days, the unit set small */
