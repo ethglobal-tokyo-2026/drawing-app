@@ -132,8 +132,9 @@
   will-change: transform;
 }
 
-/* Its own shape, inside a 216px square. */
-.sticker-detail__slide .sticker-figure {
+/* Its own shape, inside a 216px square; the timelapse's layer over it takes the same box. */
+.sticker-detail__slide .sticker-figure,
+.sticker-detail__slide .timelapse-layer {
   width: calc(216px * min(1, var(--ar)));
   max-width: 100%;
   height: auto;

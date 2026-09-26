@@ -6,13 +6,10 @@
   grid-area: 1 / 1;
 }
 
-/* White paper cut to the sticker's silhouette and sized as the figure is, so the figure's kiss-cut,
+/* White paper cut to the sticker's silhouette and sized with the figure, so the figure's kiss-cut,
    cast shadow and foil stay around the ink as it plays. Positioned, so it paints over the figure. */
 .timelapse-layer {
   position: relative;
-  width: calc(216px * min(1, var(--ar)));
-  max-width: 100%;
-  aspect-ratio: var(--ar);
   background: var(--canvas);
   -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
   mask: var(--m) 0 0 / 100% 100% no-repeat;
