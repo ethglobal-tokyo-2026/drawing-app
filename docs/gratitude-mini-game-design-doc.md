@@ -40,11 +40,11 @@ Under `apps/frontend/src/gratitude/` unless a path says otherwise.
 
 `combo.view.phase` is one of three.
 
-| Phase   | Starts                      | Ends                                                          | Shows                                                                                                                                                   |
-| ------- | --------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ready   | The screen opens            | The first tap, or a stroke or shake unlock → running          | The heart breathing, "Tap the heart as fast as you can!" under it. The HUD: a full bar reading `fullBarSeconds`, 0 and ×1.0. A touch squashes the heart |
-| running | The first tap, or an unlock | The bar empties; the safety stop; the page goes hidden; the X | The HUD, the tier's face and ground, every hit's effects                                                                                                |
-| ended   | Any end above               | —                                                             | The record goes to `onEnd` first, then the ending, then the receipt                                                                                     |
+| Phase   | Starts                      | Ends                                                          | Shows                                                                                                                                                                                                      |
+| ------- | --------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ready   | The screen opens            | The first tap, or a stroke or shake unlock → running          | The heart breathing, "Tap the heart / as fast as you can!" beating under it on two lines (still with reduced motion). The HUD: a full bar reading `fullBarSeconds`, 0 and ×1.0. A touch squashes the heart |
+| running | The first tap, or an unlock | The bar empties; the safety stop; the page goes hidden; the X | The HUD, the tier's face and ground, every hit's effects                                                                                                                                                   |
+| ended   | Any end above               | —                                                             | The record goes to `onEnd` first, then the ending, then the receipt                                                                                                                                        |
 
 - The bar shows from the start, so the combo is plain to see before the first tap. The first hit fills it and brings ありがと.
 - Endings: a combo below 昇天 flies the heart into the giver's picture. A combo at 昇天 plays the climax: a flash, the heart goes limp and pale, 昇天 slams and its soul rises to the giver. Then "fuu…" shows and everything tidies away before the receipt.
