@@ -16,7 +16,7 @@ import { toPerson } from "../api/views";
 import { errorReason } from "../i18n/errorMessage";
 import { formatCount } from "../i18n/format";
 import { Trans, useTranslation } from "../i18n/react";
-import { At, X } from "../icons";
+import { At, StreakIcon, X } from "../icons";
 import { formatHandle } from "../stickers/format";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
@@ -135,12 +135,15 @@ function Figure({ board, value }: { board: Leaderboard; value: number }) {
   if (board === "bestCombo") return <HitCounter hits={value} size={23} className="figure" />;
   if (board === "longestStreak")
     return (
-      <span className="figure">
-        <Trans
-          i18nKey={($) => $.explore.figure.streak}
-          count={value}
-          components={{ small: <small /> }}
-        />
+      <span className="figure figure--streak">
+        <StreakIcon size={17} />
+        <span>
+          <Trans
+            i18nKey={($) => $.explore.figure.streak}
+            count={value}
+            components={{ small: <small /> }}
+          />
+        </span>
       </span>
     );
   return <span className="figure">{formatCount(value)}</span>;
@@ -182,6 +185,7 @@ function SlidingTabs<T extends string>({
       className={`sliding-tabs ${className}`}
       role="tablist"
       aria-label={label}
+      data-selected={value}
       style={{ "--i": index, "--n": tabs.length } as CSSProperties}
       onKeyDown={(event) => {
         if (event.key === "ArrowRight") move(index + 1);

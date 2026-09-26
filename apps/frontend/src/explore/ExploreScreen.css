@@ -147,7 +147,8 @@
   outline-offset: 3px;
 }
 
-/* Explore's own hue for the view; pink for the leaderboards. */
+/* Explore's own hue for the view; pink for the leaderboards, and the streak's tangerine for Longest
+   streak. */
 .view-switch .sliding-tabs__label {
   background: var(--aqua);
 }
@@ -163,8 +164,24 @@
   background: var(--pink);
 }
 
+/* Tangerine is a second face over the pink, which fades in as the label slides to Longest streak. */
+.leaderboard-tabs .sliding-tabs__label::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--tangerine);
+  opacity: 0;
+  transition: opacity 260ms var(--ease-out);
+}
+
+.leaderboard-tabs[data-selected="longestStreak"] .sliding-tabs__label::after {
+  opacity: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .sliding-tabs__label {
+  .sliding-tabs__label,
+  .leaderboard-tabs .sliding-tabs__label::after {
     transition: none;
   }
 
@@ -295,6 +312,18 @@ li.me .rank {
   line-height: 0.95;
   font-variant-numeric: tabular-nums;
   font-stretch: var(--w-figure);
+}
+
+/* The streak's figure: its fire in the streak's tangerine, then the days in Ink. */
+.figure--streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.figure--streak svg {
+  flex: none;
+  color: var(--tangerine);
 }
 
 .figure small {
