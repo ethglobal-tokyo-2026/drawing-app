@@ -45,13 +45,13 @@
   background: #cfa476;
 }
 
-/* Each face darkens as it turns away from the top-left light. */
+/* Each face darkens toward the Ink table as it turns away from the top-left light. */
 .board-shade {
   position: absolute;
   inset: 0;
   z-index: 999;
   pointer-events: none;
-  background: #120e17;
+  background: var(--ink);
   opacity: 0;
 }
 

@@ -97,7 +97,7 @@
   width: 54%;
   height: 46%;
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(255, 112, 72, 0.36), rgba(255, 112, 72, 0));
+  background: radial-gradient(closest-side, rgba(255, 90, 54, 0.36), rgba(255, 90, 54, 0));
   animation: gr-haze 3.6s linear infinite paused;
 }
 .gr-haze i:nth-child(1) {
@@ -470,7 +470,7 @@
   min-width: 3.4em;
   text-align: right;
   white-space: nowrap;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1;
   font-weight: 900;
   font-stretch: var(--w-figure, 125%);
@@ -773,7 +773,7 @@
   left: 0;
   top: 0;
   height: 3px;
-  border-radius: 3px;
+  border-radius: 999px;
   transform-origin: 0 50%;
   background: linear-gradient(
     90deg,
@@ -853,7 +853,7 @@
   padding: 0 16px;
   text-align: center;
   pointer-events: none;
-  font-size: 21px;
+  font-size: 22px;
   line-height: 1.2;
   font-weight: 760;
   font-stretch: var(--w-title, 112%);
@@ -1234,7 +1234,7 @@
   margin-top: 6px;
 }
 .gr[data-mode="replay"] .gr-amount b {
-  font-size: 28px;
+  font-size: 27px;
 }
 .gr[data-mode="replay"] .gr-amount i {
   font-size: 17px;

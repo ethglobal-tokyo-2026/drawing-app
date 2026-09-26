@@ -186,12 +186,12 @@ components:
     textColor: "{colors.graphite}"
     typography: "{typography.label}"
     rounded: "{rounded.label}"
-    padding: "0 12px"
+    padding: "0 6px"
     height: "46px"
   index-tab-current:
     textColor: "{colors.ink}"
     rounded: "{rounded.label}"
-    padding: "0 12px"
+    padding: "0 6px"
     height: "46px"
   tray-folder-tab:
     backgroundColor: "{colors.liner-lift}"
@@ -321,7 +321,7 @@ The palette is Liner and Ink, plus five candy-bright coded fields, each with one
 - **Liner Deep** (liner-deep): a sunk (disabled) key or label, a pressed inactive tab, and the leaderboard tab track.
 - **Liner Lift** (liner-lift): a label lifted off the liner: label-stock faces, the paper on the cork back, the artist chip, the open trail row, the tray's loose sheets, and selected chips.
 - **Ink** (ink): all text on every field, the key's outline, the toast, the table under the board while it turns over, the label-maker tape on the cork back, the current drawing tool, and the ink button.
-- **Graphite** (graphite): secondary text, fine print, placeholders and quiet links. Ink-alpha steps carry hairlines: a kiss-cut rule at 14% and a stronger rule at 26%. Ink at 62% is the soft-text color.
+- **Graphite** (graphite): secondary text, fine print, placeholders and quiet links. It reads 4.8:1 on Liner and 5.0:1 on Liner Lift, but only 4.2:1 on Liner Deep, so fine text on Liner Deep, or on anything as dark (the clear film of gifts on their way), takes the darker `--graphite-on-deep` (#635D6D, 5.0:1 on Liner Deep). No other graphite is picked by hand. Ink-alpha steps carry hairlines: a kiss-cut rule at 14% and a stronger rule at 26%. Ink at 62% is the soft-text color.
 - **Canvas** (canvas): drawing surfaces, and white label stock. That's the drawing sheet, a sticker's white border, and the draw screen's two stuck-on labels (the PAUSED tag and the paused hint), which are white so they read as labels over any drawing.
 
 Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 30–42% depending on the hue. They keep the hue's meaning at rest volume.
@@ -347,12 +347,12 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 
 ### Hierarchy
 
-- **Display** (400, 20px; 23px on the large key, 17px on the compact key; line-height 1): the key's label. It also sets dot badges (12–19px), the gratitude multiplier (×8.0), the giver's gratitude tag, and the outlined 袋文字 tier captions (46px, pink inside white inside ink).
-- **Figure** (900, 26px on the cork back's stamps and 27px in the open trail row, up to 52px on the gratitude receipt and 58px on the streak leaf; line-height about 0.95, width 125, tabular): gratitude amounts in the combo, the receipt and the sticker's trail, the counts pinned on the cork back (the receipt's TOTAL at 30px), and the hit counter (23px on the leaderboard, 20px in the cork back's Bests).
-- **Headline** (800, 26px, line-height 1.08, width 112, balanced wrap): screen and dialog titles such as "Sealed on-chain" and "Out of tickets for today".
+- **Display** (400, 20px; 23px on the large key, 17px on the compact key; line-height 1): the key's label. It also sets dot badges (12–19px; the draw screen's timer dot at 13px), the gratitude multiplier (×8.0, 27px), the giver's gratitude tag, and the outlined 袋文字 tier captions (46px, pink inside white inside ink).
+- **Figure** (900, 26px on the cork back's stamps and 27px in the open trail row and its replay stage, up to 52px on the gratitude receipt and 58px on the streak leaf; line-height about 0.95, width 125, tabular): gratitude amounts in the combo, the receipt and the sticker's trail, the counts pinned on the cork back (the receipt's TOTAL at 30px), and the hit counter (23px on the leaderboard, 20px in the cork back's Bests).
+- **Headline** (800, 26px, line-height 1.08, width 112, balanced wrap): screen and dialog titles such as "Sealed on-chain" and "Out of tickets for today", the sticker detail's heading and the name printed on a gift's tag.
 - **Title** (800, 18–22px, line-height 1.1, width 112): sheet titles, the board header's name, and the notebook scrap and Settings headings on the cork back (18px).
-- **Body** (400–500, 15px, line-height 1.42–1.5, width 100): running text. Notes cap at 28–44ch. Supporting notes drop to 13px.
-- **Label** (700, 15px, or 13px on small buttons, width 100): buttons, tabs and chips, in sentence case at one weight.
+- **Body** (400–500, 15px, line-height 1.42–1.5, width 100): running text. Notes cap at 28–44ch. Supporting notes drop to 13px. Text never sits between the steps (12, 12.5, 13.5, 14 or 16px), except the toast's 14px and the 16px search field, which keeps iOS from zooming.
+- **Label** (700, 15px, or 13px on small buttons, the selected sticker's toolbar and the draw screen's white labels, width 100): buttons, tabs and chips, in sentence case at one weight.
 - **Fine** (650, 11px, uppercase, +0.07em, width 87.5, tabular): metadata lines such as "No.0147 · 4:52 · 2026.09.23 · @alice", sheet date ranges in the tray, captions and hints.
 - **JP caption** (700, 11px, +0.14em): the なまえ cap on the name label.
 
@@ -405,13 +405,13 @@ Stickers and the gratitude heart also respond to the app's one moving light. The
 
 **The One Light Rule.** There's one light for the whole app. Static shadows fall down and to the right from the top-left light, and every moving highlight (the sticker specular and sheen, the foil's glint, the heart's gloss) reads the shared light variables. Don't add a second light source. The foil's glint sits where the light falls, the same way on every sticker whatever its turn, and holds where the last tilt left it; before any tilt it rests top-left. Only the foil's bands run on their own clock, flowing on a 7s loop staggered per sticker, under a grating that never moves. They hold still under reduced motion.
 
-**The Neutral Shadow Rule.** Shadows are Ink alpha, never tinted. The one exception is the cork back: paper, stamps and pins cast a cork-brown throw (rgba(58,36,16,…)) over an Ink contact line, because a shadow on cork is darker cork. The only colored light in the world is a sticker's gratitude glow, warming from faint pink toward amber as more gratitude arrives.
+**The Neutral Shadow Rule.** Shadows are Ink alpha, never tinted. The one exception is the cork back: paper, stamps and pins cast a cork-brown throw (rgba(58,36,16,…)) over an Ink contact line, because a shadow on cork is darker cork. The only colored light in the world is a sticker's gratitude glow, warming from faint pink (#FF7EB6) toward amber (#FFB13B) as more gratitude arrives; those two hues belong to the glow alone.
 
 **The No Gloss Rule.** Controls have no gloss, highlight line or sheen: keys, labels, tabs, the zipper and the gift's tear tape are lit flat, with an edge and a contact shadow at most.
 
 ## Shapes
 
-Corners come from paper and cut stock. Label stock uses an 8px radius, and toasts, fields and index tabs 6px. The tray's folder tabs round only their top corners, where they stand up from the stack. Keys are 16px (18px large, 14px compact), which reads as a key, not a pill or a tile; the seal check is a round 58px key. Zip pockets use 10px, the open trail row 12px, bottom sheets 16–18px on their top corners, and the tray's loose sheets a paper-like 4px. Dot badges are pills tilted at -4°, as if one hand stuck them all. The same -4° tilt carries onto photo stickers and the gift's SEALED stamp.
+Corners come from paper and cut stock, and every control's corner is a step of the `rounded` scale. Label stock uses an 8px radius, as do the sticker detail's thumbnails and the board's name button, and toasts, fields and index tabs 6px. The draw screen's small parts take 6px too: the tool tiles (like the strip they sit in), the size rail's thumb and number, and the PAUSED tag. Slider tracks, the brightness bar and the combo's speed lines are pills. The tray's folder tabs round only their top corners, where they stand up from the stack. Keys are 16px (18px large, 14px compact), which reads as a key, not a pill or a tile; the seal check is a round 58px key, and the ring that pulses round Draw on a first visit stands 5px out, so its corners are 19px. Zip pockets use 10px, the open trail row 12px, bottom sheets 16–18px on their top corners, the Send gratitude sheet, floating clear of the edges, 16px all round, and the tray's loose sheets a paper-like 4px. Dot badges are pills tilted at -4°, as if one hand stuck them all. The same -4° tilt carries onto photo stickers and the gift's SEALED stamp.
 
 Stickers have no radius. Their outline is the artist's own stroke silhouette, offset by a white border and bounded by a kiss-cut groove. A given sticker leaves its silhouette on the board, hatched at 45° in faint graphite. A sticker out on the board leaves a kiss-cut hole in its tray sheet, and a used drawing ticket keeps a faint kiss-cut outline of the sticker it became. Sheets begin with a perforation row, a dotted line with a firmer run of holes at the center as the grab. Only the tray has a zipper; the gift bag closes with a clear film and an aqua tear tape whose tab sticks out past the bag's edge. Paper on the cork back has torn or cut edges of its own kind: a receipt's zigzag foot, a calendar leaf's and a notebook scrap's torn tops, a stamp's perforated edge, washi with torn ends, and slightly skewed label-maker tape. A selected sticker gets a clear frame with 10px corners, four 20px corner squares, and a round knob on a short stem above the top edge.
 
@@ -436,7 +436,7 @@ Everything that isn't the key: the same construction at a third of the depth, wi
 
 - **Shape:** a Liner Lift face with a 1px edge at 30% Ink, an 8px radius, and 44px of face over a 3px lip (32px on the small variant).
 - **Coded:** seal, aqua, pink, grape and tomato faces take their deep partner as the lip and a 22% edge. The ink variant has a near-black lip and Liner text.
-- **Held:** while held, the face also takes a 10% shade, since 2px of travel is small.
+- **Held:** while held, the face also takes a 10% shade, since 2px of travel is small. The ink variant can't shade toward Ink, so its hover and held face lift 8% toward Liner instead.
 - **Quiet link:** text with a 1px underline at a 3px offset, in Graphite, with no stock and no travel. It turns Ink on press. It's the way out under a key.
 - **Where it goes:** a secondary action beside or under a key (Go to sticker board, Give under Send gratitude), and coded actions in toolbars and rows (Give, View, Remove on a selected sticker). Three keys in a row would read as a keyboard.
 - **Not buttons:** drawing tools, undo and redo, and close, back and header icons stay flat tiles. Chips, filters, segments and radio rows are selectable labels whose selection is their feedback. Gestures (hold to tear, the gift's pull tab, the zip, grabbers, the heart, the tray's sheets) keep their own physics.
@@ -462,7 +462,7 @@ Round flat stickers stuck at -4°: a 26px pill in a coded hue with Ink puffy num
 
 ### Index tabs
 
-Three tabs cut from label stock, side by side on the Liner strip: My board (pink), Explore (aqua) and Shop (blue), each up to 176px wide and 46px tall with a 6px radius. Draw isn't a tab; the board has its own Draw key. An inactive tab is an outline (a 26% Ink edge) with graphite text; the current tab is stuck on in its full hue with Ink text, lifted 2px with a lift shadow. Each tab presses 1.5px through the shared press. Current is shown by fill and lift only, never by weight or case. The icons are Phosphor's smiley-sticker (My board, for everyone), compass (Explore) and tag (Shop), 20px, bold at rest and fill when current.
+Three tabs cut from label stock, side by side on the Liner strip: My board (pink), Explore (aqua) and Shop (blue). They're equal thirds of the strip, up to 176px each, 46px tall with a 6px radius. A label centers in its third and never widens its tab; the 6px padding keeps the longest, マイボード, inside the edge, and on phones narrower than 390px the icon sits 4px from its label instead of 8px. Draw isn't a tab; the board has its own Draw key. An inactive tab is an outline (a 26% Ink edge) with Graphite text (4.8:1 on Liner); the current tab is stuck on in its full hue with Ink text, lifted 2px with a lift shadow. Each tab presses 1.5px through the shared press. Current is shown by fill and lift only, never by weight or case. The icons are Phosphor's smiley-sticker (My board, for everyone), compass (Explore) and tag (Shop), 20px, bold at rest and fill when current.
 
 - **Sticking on:** the tapped tab fills with its hue in 140ms while it lifts 2px and settles from 1.04 to 1 (220ms, `--ease-peel`), the world's stick. The tab it leaves drops its lift and shadow in 140ms. The screen's own change is a separate cross-fade; the strip never moves with it.
 - **Reduced motion:** only the hue changes, in 120ms, with no lift travel and no settle.

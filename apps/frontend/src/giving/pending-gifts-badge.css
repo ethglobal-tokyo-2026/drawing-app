@@ -103,10 +103,11 @@
   text-overflow: ellipsis;
 }
 
-/* Width 75 on purpose: the clear film is too tight for more. */
+/* Width 75 on purpose: the clear film is too tight for more. Graphite reads only 4.6:1 on the film, and
+   less where the board's maker print shows through, so it takes the darker graphite. */
 .pending-gifts-badge__fine {
   font-stretch: 75%;
-  color: #56505f;
+  color: var(--graphite-on-deep);
 }
 
 .pending-gifts-badge__line {

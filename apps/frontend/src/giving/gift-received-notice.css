@@ -23,7 +23,7 @@
   margin: 0;
   font-weight: 800;
   font-stretch: var(--w-title);
-  font-size: 28px;
+  font-size: 26px;
   line-height: 1.08;
   letter-spacing: -0.02em;
   text-wrap: balance;
@@ -111,7 +111,7 @@
   transform: rotate(-3deg);
   font-stretch: var(--w-fine);
   font-weight: 700;
-  font-size: 12px;
+  font-size: var(--fs-fine);
   letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;

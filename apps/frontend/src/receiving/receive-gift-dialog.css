@@ -162,7 +162,7 @@
 }
 
 .receive-gift__hint span {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--graphite);
 }
 
@@ -207,7 +207,7 @@
 .receive-gift__terms {
   max-width: 34ch;
   margin: 8px auto 0;
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.45;
   color: var(--graphite);
 }
@@ -259,10 +259,6 @@
   flex-direction: column;
   gap: 8px;
   padding: 26px 26px 0;
-}
-
-.receive-gift__end-head .receive-gift__title {
-  font-size: 28px;
 }
 
 .receive-gift__sub {
