@@ -206,6 +206,8 @@ export function createTierBackground(
       for (const el of [blush, focus, speedField, haze, beam, white]) setOpacity(el, 0);
       speedFieldShown = { opacity: "0", angle: speedFieldShown.angle };
       cornerLift = 0;
+      focusOn = false;
+      beamOn = false;
     },
 
     destroy() {
@@ -243,8 +245,6 @@ export function createTierBackground(
         ],
         { duration: 1500, easing: EASE_PEEL, fill: "both" },
       );
-      focusOn = false;
-      beamOn = false;
     },
   };
 }
