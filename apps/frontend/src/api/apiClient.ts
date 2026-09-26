@@ -44,6 +44,8 @@ interface SealRequest {
   flat: Blob;
   /** The gzipped TimelapseV1; a seal without one still seals. */
   timelapse?: Blob;
+  /** Seals an NSFW sticker, which the server takes only from an adult. */
+  nsfw: boolean;
 }
 
 /** Opening a Gift Message's link: its token as the link carries it, which the client checks. */

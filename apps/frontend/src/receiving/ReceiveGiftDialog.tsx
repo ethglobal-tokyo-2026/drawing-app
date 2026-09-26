@@ -331,6 +331,7 @@ function Gift({
           stickerUrl={reveal === "out" ? undefined : sticker.urls.png}
           fromHandle={giver.handle ?? undefined}
           sealedAt={preview.expiresAt - GIFT_WAIT_MS}
+          nsfw={sticker.nsfw}
           tear={pull.tear}
           pullTab={sealed ? pull.pullTab : undefined}
         />
@@ -342,6 +343,7 @@ function Gift({
                 width={sticker.width}
                 height={sticker.height}
                 foil="detail"
+                nsfw={sticker.nsfw}
                 no={sticker.no}
               />
             </span>
@@ -445,6 +447,7 @@ function Refusal({ end, giverHandle, leave, onLeave, onBoard, onTryAgain }: Refu
             size="receive"
             state={end.bag.state}
             stamp={end.bag.stamp}
+            nsfw={end.bag.nsfw}
             fromHandle={giverHandle}
           />
         )}

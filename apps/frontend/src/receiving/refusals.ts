@@ -7,8 +7,8 @@ import type { RefusalKind } from "./receiveFlow";
 export interface EndScreen {
   title: string;
   line: string;
-  /** The bag as a prop, or none. */
-  bag: { state: "sealed" | "opened"; stamp?: GiftStamp } | null;
+  /** The bag as a prop, or none; `nsfw` is an NSFW sticker's pink bag. */
+  bag: { state: "sealed" | "opened"; stamp?: GiftStamp; nsfw?: boolean } | null;
   /** Back to LINE; the sticker board; or Try again, with the way back to LINE under it. */
   action: "backToLine" | "board" | "tryAgain";
 }
@@ -73,6 +73,13 @@ export function refusalScreen(kind: RefusalKind, giver: PersonView | null): EndS
         title: t(($) => $.receiving.refusals.giftNotFound.title),
         line: t(($) => $.receiving.refusals.giftNotFound.line),
         bag: null,
+        action: "backToLine",
+      };
+    case "adults_only":
+      return {
+        title: t(($) => $.receiving.refusals.adultsOnly.title),
+        line: t(($) => $.receiving.refusals.adultsOnly.line, giverOptions),
+        bag: { state: "sealed", stamp: "adults-only", nsfw: true },
         action: "backToLine",
       };
     case "needs_server":

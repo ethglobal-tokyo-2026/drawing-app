@@ -98,6 +98,16 @@ export const stickerCreation = {
       ja: "仕上げられませんでした（{{reason}}）。チェックをタップして、もう一度お試しください。",
     },
   },
+  /** The 18+ switch over the seal key, shown only to adults verified with World ID. */
+  nsfw: {
+    /** Drawing screen, bottom right, over the seal key: the switch's words; on, the sticker seals as 18+ */
+    mark: { en: "18+", ja: "18+" },
+    /** Drawing screen, bottom right, over the seal key: the 18+ switch's name for screen readers */
+    label: {
+      en: "18+: seal as sensitive content, blurred for anyone not verified as an adult",
+      ja: "18+：センシティブな内容として仕上げる（年齢確認済みの成人以外にはぼかして表示）",
+    },
+  },
   /** The tool strip's tiles, named for assistive tech. */
   tools: {
     /** Drawing screen, top right: the tool strip's name for screen readers */

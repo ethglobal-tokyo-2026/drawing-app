@@ -1,4 +1,6 @@
 import type { Person, Sticker } from "@drawing-app/api/client";
+import { useMyAgeStatus } from "../identity/useMyAgeStatus";
+import { veiledFor } from "../stickers/nsfw";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -109,6 +111,7 @@ export function LiftedSticker({
   const { t } = useTranslation();
   const me = useMe();
   const reduced = useReducedMotion();
+  const myAge = useMyAgeStatus();
   useLight();
   const root = useRef<HTMLDivElement>(null);
   const count = stickers.length;
@@ -176,6 +179,8 @@ export function LiftedSticker({
               urls={sticker.urls}
               width={sticker.width}
               height={sticker.height}
+              nsfw={sticker.nsfw}
+              veiled={veiledFor(sticker, myAge)}
               no={sticker.no}
             />
           </div>

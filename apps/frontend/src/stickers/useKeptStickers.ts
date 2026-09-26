@@ -13,6 +13,7 @@ export interface KeptSticker {
   height: number;
   /** Its image. */
   url: string;
+  nsfw: boolean;
 }
 
 /** Your stickers not packed or sent as gifts, newest first. */
@@ -36,6 +37,7 @@ export function useKeptStickers() {
         width: s.width,
         height: s.height,
         url: s.urls.png,
+        nsfw: s.nsfw,
       };
     })
     .reverse();

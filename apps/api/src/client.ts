@@ -40,6 +40,7 @@ export type { GratitudeWithReplay, UnseenGratitude } from "./gratitude/feed.ts";
 export type { RecordGratitude } from "./gratitude/record.ts";
 export type { ReplayV1 } from "./gratitude/replay.ts";
 export type {
+  AgeStatus,
   EscrowTransfer,
   GiftStatus,
   IsoTime,

@@ -249,6 +249,7 @@ export function StickerDetail({
                   width={sticker.width}
                   height={sticker.height}
                   foil={byOther ? "detail" : undefined}
+                  nsfw={sticker.nsfw}
                   no={sticker.no}
                 />
                 <TimelapseLayer timelapse={timelapse} />

@@ -20,6 +20,7 @@ const me: Me = {
   lineDisplayName: "Alice",
   linePictureUrl: null,
   ensName: "alice.croquis.eth",
+  ageStatus: "adult",
   lineUserId: "line-alice",
   timeZone: "Asia/Tokyo",
   language: "en",

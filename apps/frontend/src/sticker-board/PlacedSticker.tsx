@@ -35,6 +35,8 @@ interface Props {
   hintId: string;
   /** Drawn by someone other than the board's owner: it wears foil. */
   foil?: boolean;
+  /** An NSFW sticker the viewer isn't adult enough to see: blurred inside its cut. */
+  veiled?: boolean;
   /** Who drew it, as printed, when that isn't the board's owner: its label names them. */
   by?: string;
   /** Its gratitude glow, from 0 (none) to 1 (brightest). */
@@ -64,6 +66,7 @@ export const PlacedSticker = memo(function PlacedSticker({
   setSize,
   hintId,
   foil = false,
+  veiled = false,
   by,
   glow = 0,
 }: Props) {
@@ -112,11 +115,14 @@ export const PlacedSticker = memo(function PlacedSticker({
       aria-roledescription={t(($) => $.stickerBoard.placedSticker.roleDescription)}
       aria-pressed={selected}
       tabIndex={tabbable ? 0 : -1}
-      aria-label={
+      aria-label={[
         by
           ? t(($) => $.stickerBoard.placedSticker.labelBy, { ...named, artist: by })
-          : t(($) => $.stickerBoard.placedSticker.label, named)
-      }
+          : t(($) => $.stickerBoard.placedSticker.label, named),
+        veiled && t(($) => $.stickers.nsfw.veiled),
+      ]
+        .filter(Boolean)
+        .join(", ")}
       aria-describedby={hintId}
       style={{
         width: box.w,
@@ -133,6 +139,8 @@ export const PlacedSticker = memo(function PlacedSticker({
           height={sticker.height}
           fold={fold}
           foil={foil ? "board" : undefined}
+          nsfw={sticker.nsfw}
+          veiled={veiled}
           no={sticker.no}
           turn={sticker.placement.r}
           // A landing sticker's stick animation shows it arrive; it isn't held back as well.

@@ -40,6 +40,8 @@ export const stickers = sqliteTable(
     ...timestamps(),
     /** When CroquisNames confirmed the sticker's name, <number>.<artist's ens_label>.croquis.eth. */
     ensNamedAt: integer("ens_named_at", { mode: "timestamp_ms" }),
+    /** An NSFW sticker: its Original Artist, an adult, marked it for adults at seal. */
+    nsfw: integer("nsfw", { mode: "boolean" }).notNull().default(false),
   },
   (t) => [
     index("stickers_owner").on(t.ownerId),

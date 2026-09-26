@@ -1,6 +1,7 @@
 /* The gift bag: a frosted sleeve with no zipper. Packed, the sticker peeks out of the open mouth;
    sealed (only once the send succeeded), it has settled in, the mouth is pressed shut, and a clear film
-   band with an aqua tear tape runs across it, the tape's loose end sticking out as the pull tab.
+   band with an aqua tear tape runs across it, the tape's loose end sticking out as the pull tab. An
+   NSFW sticker's bag is pink: pink tape, pink frost and a faint bikini emboss.
    The parts share one sleeve box (--sx, --sy, --sw, --sh) inside the stage. --gift-tear (0 to 1)
    is how far the tape has torn out; registered, so it's 0 until a tear is given. */
 
@@ -11,6 +12,9 @@
 }
 
 .gift-bag {
+  --tape: var(--aqua);
+  --tape-deep: var(--aqua-deep);
+  --frost-tint: linear-gradient(172deg, rgba(255, 255, 255, 0.6), rgba(232, 240, 252, 0.44));
   --sx: 52px;
   --sy: 88px;
   --sw: 196px;
@@ -56,12 +60,49 @@
 .gift-bag__front {
   background:
     url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E"),
-    linear-gradient(172deg, rgba(255, 255, 255, 0.6), rgba(232, 240, 252, 0.44));
+    var(--frost-tint);
   -webkit-backdrop-filter: blur(11px) saturate(1.15);
   backdrop-filter: blur(11px) saturate(1.15);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.85),
     inset 0 -10px 18px -12px rgba(28, 24, 36, 0.22);
+}
+
+/* An NSFW sticker's bag: pink at a glance, since the sticker inside never shows until the pull. */
+.gift-bag--nsfw {
+  --tape: var(--pink);
+  --tape-deep: var(--pink-deep);
+  --frost-tint: linear-gradient(172deg, rgba(255, 238, 246, 0.66), rgba(255, 196, 222, 0.5));
+}
+
+.gift-bag--nsfw .gift-bag__back {
+  background: linear-gradient(180deg, #fff5f9, #ffd9e8);
+}
+
+/* A bikini pressed into the frost, under the tag: a light edge above and a shade below, so it reads as
+   embossed. */
+.gift-bag__emboss {
+  display: grid;
+  place-items: end center;
+  padding-bottom: 8%;
+}
+
+.gift-bag__emboss svg {
+  width: 50%;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+}
+
+.gift-bag__emboss-light {
+  stroke: rgba(255, 255, 255, 0.7);
+  transform: translate(-0.8px, -0.8px);
+}
+
+.gift-bag__emboss-shade {
+  stroke: rgba(204, 42, 114, 0.14);
+  transform: translate(0.8px, 0.8px);
 }
 
 .gift-bag__streak {
@@ -269,7 +310,7 @@
   height: var(--tape-h);
   margin-top: calc(var(--tape-h) / -2);
   overflow: hidden;
-  background: var(--aqua);
+  background: var(--tape);
   box-shadow: inset 0 -1px 0 rgba(28, 24, 36, 0.22);
   transform: translateX(calc(var(--gift-tear) * var(--sw)));
 }
@@ -371,12 +412,12 @@
 }
 
 .gift-seal__loop-edge {
-  stroke: var(--aqua-deep);
+  stroke: var(--tape-deep);
   stroke-width: 13;
 }
 
 .gift-seal__loop-body {
-  stroke: var(--aqua);
+  stroke: var(--tape);
   stroke-width: 10.5;
 }
 
@@ -387,7 +428,7 @@
   width: calc(var(--neck) + 6px);
   height: var(--tape-h);
   margin-top: calc(var(--tape-h) / -2);
-  background: var(--aqua);
+  background: var(--tape);
   box-shadow:
     inset 0 -1px 0 rgba(28, 24, 36, 0.22),
     0 2px 3px -1px rgba(28, 24, 36, 0.3);
@@ -404,7 +445,7 @@
   gap: 4px;
   padding: 0 5px 0 calc(var(--lobe-h) * 0.24);
   border-radius: calc(var(--lobe-h) / 2) 6px 6px calc(var(--lobe-h) / 2);
-  background: var(--aqua);
+  background: var(--tape);
   box-shadow:
     inset 0 -1.5px 0 rgba(28, 24, 36, 0.2),
     0 1px 1.5px rgba(28, 24, 36, 0.24),
@@ -428,7 +469,7 @@
   flex: none;
   width: 11px;
   height: 13px;
-  color: var(--aqua-deep);
+  color: var(--tape-deep);
 }
 
 /* The tag: a luggage tag on a short string, printed, never typed. Its string end sits at (--tx, --ty)
@@ -485,7 +526,7 @@
 
 .gift-tag__ring {
   fill: none;
-  stroke: var(--aqua);
+  stroke: var(--tape);
   stroke-width: 4.2;
 }
 
@@ -581,6 +622,10 @@
 
 .gift-stamp--grape {
   color: color-mix(in srgb, var(--grape) 76%, var(--ink));
+}
+
+.gift-stamp--pink {
+  color: var(--pink-deep);
 }
 
 .gift-stamp--ink {

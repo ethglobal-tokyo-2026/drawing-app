@@ -4,6 +4,7 @@ import { DrawIcon, ShopIcon, StickerBoardIcon } from "../../icons";
 import { Duration } from "../../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../../stickers/format";
 import type { Sticker } from "@drawing-app/api/client";
+import { toSticker } from "../../api/views";
 import { formatRefillTime } from "../../tickets/refill";
 import { TicketStubs } from "../../tickets/TicketStubs";
 import {
@@ -131,6 +132,9 @@ export function SealedCard({
       {/* "Sealed on-chain" and the sticker's name wait until the sticker has a chain record. */}
       <h2 id={titleId} className="sealed-card__title" data-card-line>
         {t(($) => $.stickerCreation.sealedCard.title)}
+        {toSticker(sealed).nsfw && (
+          <span className="sealed-card__nsfw">{t(($) => $.stickerCreation.nsfw.mark)}</span>
+        )}
       </h2>
       <p className="fine sealed-card__fine" data-card-line>
         <Trans

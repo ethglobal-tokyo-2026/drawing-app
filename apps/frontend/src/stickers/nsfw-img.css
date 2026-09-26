@@ -1,0 +1,9 @@
+/* An NSFW sticker drawn as a plain image, where no StickerFigure wears its foil: a pink edge, and
+   blurred when the viewer isn't adult. */
+.nsfw-img {
+  filter: drop-shadow(0 0 1.5px var(--foil-rose)) drop-shadow(0 0 3px var(--foil-blush));
+}
+
+.nsfw-img.is-veiled {
+  filter: blur(5px) saturate(0.7) drop-shadow(0 0 2px var(--foil-rose));
+}
