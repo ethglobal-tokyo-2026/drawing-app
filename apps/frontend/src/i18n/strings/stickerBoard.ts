@@ -278,14 +278,14 @@ export const stickerBoard = {
   board: {
     /** Your sticker board, top left: screen readers' name for the button with your photo and name, which turns the board over to your stat board */
     yourStats: { en: "{{name}}: your stats", ja: "{{name}}：あなたの記録" },
-    /** Your sticker board: the Draw key's visible label, beside your ticket counts */
+    /** Your sticker board: the Draw key's visible label; your tickets tuck behind the key's right end */
     draw: { en: "Draw", ja: "かく" },
-    /** Your sticker board: screen readers' name for the Draw key while your ticket counts haven't loaded */
+    /** Your sticker board: screen readers' name for the Draw key while your tickets haven't loaded */
     drawLabel: { en: "Draw a new sticker", ja: "新しいシールをかく" },
-    /** Your sticker board: screen readers' name for the Draw key; {{tickets}} is the ticket summary, such as "2 daily tickets and 5 reserve tickets" */
+    /** Your sticker board: screen readers' name for the Draw key; {{tickets}} names the tickets the next drawing can use, such as "2 daily tickets left" or "no tickets until 12:00 AM" */
     drawLabelWithTickets: {
-      en: "Draw a new sticker: you have {{tickets}}",
-      ja: "新しいシールをかく：手持ちは{{tickets}}",
+      en: "Draw a new sticker: {{tickets}}",
+      ja: "新しいシールをかく：{{tickets}}",
     },
     /** Your sticker board with no stickers yet: the nudge beside the Draw key (hidden from screen readers) */
     firstSticker: { en: "Make your first sticker", ja: "はじめてのシールをつくろう" },

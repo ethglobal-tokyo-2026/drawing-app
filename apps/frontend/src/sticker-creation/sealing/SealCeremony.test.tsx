@@ -170,20 +170,20 @@ describe("SealCeremony", () => {
     expect(action).toHaveBeenCalledOnce();
   });
 
-  it("leads to the sticker board and the ticket shop on the last ticket", async () => {
+  it("leads to the sticker board and reserve tickets on the last ticket", async () => {
     await seal(1);
     playThrough();
     expect(button("Keep drawing")).toBeTruthy();
     expect(button("Go to sticker board").classList.contains("label-btn")).toBe(true);
     expect(host.querySelector('[role="img"]')?.getAttribute("aria-label")).toBe(
-      "2 daily tickets left today",
+      "2 daily tickets left",
     );
     view?.unmount();
 
     await seal(3);
     playThrough();
     expect(button("Go to sticker board").classList.contains("key")).toBe(true);
-    act(() => button("Shop for tickets").click());
+    act(() => button("Buy reserve tickets").click());
     wait(1000);
     expect(onShop).toHaveBeenCalledOnce();
     expect(host.textContent).toContain(
@@ -196,6 +196,11 @@ describe("SealCeremony", () => {
     await seal(3, "alice", sealed, { used: 0, left: 2 });
     playThrough();
     expect(host.textContent).toContain(lastDaily);
+    // One reserve ticket in the daily slots' place, with its count.
+    expect(host.querySelectorAll(".ticket-stub")).toHaveLength(1);
+    expect(host.querySelector('[role="img"]')?.getAttribute("aria-label")).toBe(
+      "2 reserve tickets left",
+    );
     view?.unmount();
 
     // A reserve ticket sealed this one: the daily tickets were already gone.

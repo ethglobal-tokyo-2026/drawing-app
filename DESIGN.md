@@ -417,7 +417,7 @@ A cartoon keycap: the screen's one primary act.
 
 - **Construction:** a flat face in a coded hue with a 2.5px Ink outline, over a 6px front wall (the lip) in the hue's deep partner with its own ink outline. The layout box includes the lip, so nothing hangs outside it. The face is 60px tall (68 large, 48 compact), padded 30px, with a 20px Phosphor icon and an 8px gap before the label.
 - **Round:** the seal check, a 58px round key with Phosphor's check-fat (fill) at 26px. The first tap arms it: it breathes (scale to 1.08 and back every 900ms) and a label-stock chip beside it says "Tap again to seal". A second tap within 2.5s seals; otherwise it disarms. It's still the draw screen's only key.
-- **Compact:** Draw on your own board, a Seal Yellow compact key at the lower left over the stickers. On a new artist's first visit it hops and a pulse ring surrounds it, held by a wrapper so the key keeps its own lip.
+- **Compact:** Draw on your own board, a Seal Yellow compact key at the lower left over the stickers. It carries only its icon and "Draw"; its tickets tuck behind its right end (see The Draw key's tickets). On a new artist's first visit it hops and a pulse ring surrounds it, held by a wrapper so the key keeps its own lip; the tickets sit in the same wrapper, so they hop along.
 - **Disabled:** sunk flush with the page, with no lip and no ink: a Liner Deep face and a graphite label. Enabling springs it up out of the page.
 - **Hover and focus:** hover shades the face 6% toward Ink. Focus draws a 2px Ink outline at a 3px offset.
 - **Visiting:** on someone else's board, a Soda Aqua compact Give key sits in Draw's slot, and it's that board's one key.
@@ -493,15 +493,33 @@ The canvas is just for drawing.
 - **Foot:** flat undo and redo at the bottom left, the seal check at the bottom right. The canvas shows no ticket count.
 - **Sealing:** the ceremony starts as soon as the sticker is cut: the cut runs round the ink behind a Seal Yellow blade, and the paper around it dims. It then waits there while the server seals the sticker, which takes 10–30 s. The blade keeps running round the cut, pass after pass, trailing a heavier stroke of fresh cut. Only once the seal is recorded does the resin pour, the sticker peel off and the sealed card come up, so nothing that says "sealed" shows early. A white label at the foot, turned -2°, sticks on after 1 s: "Sealing your sticker…". At 10 s a fresh label is pressed over it adding "It can take up to half a minute.", and at 30 s "It's taking longer than usual." It peels off when the seal lands. A tap skips to the wait but can't pass it. A failed seal fades back to the drawing, and the seal chip says what went wrong. Under reduced motion the cut shows at once, the blade stays hidden and the label still shows.
 
+### Tickets
+
+**The Ticket Rule.** Every picture of tickets shows the tickets your next drawing can use, drawn from one helper (`ticketView`). While daily tickets are left they lead: the day's three stubs, fresh first and then the used ones newest first, so a spend turns a stub over where it lies; reserve tickets held show as one reserve ticket with its count. Once the daily tickets are used, the three slots go and one reserve ticket with its count takes their place; only the refill line says when daily tickets come back. With neither left, the used day shows. A zero never shows, and reserve tickets never fill daily slots.
+
+Tickets aren't controls: daily tickets are matte ticket stock; reserve tickets wear the stickers' resin, an Ink outline and a four-point star.
+
+- **Daily:** Seal Yellow stock with a 22% hairline edge, printed with the Draw mark.
+- **Reserve:** Blue stock under the stickers' baked resin: a highlight from the top-left light over its top third (white 62% fading to 12%, then a clean edge), a rim of light just inside its top edge, and the print pooling Blue Deep at the foot. A full Ink outline (1.5px small, 2px large), and Phosphor's four-point star (fill), white with an Ink edge, over its top-right corner. The star pops in once, on the peel curve, when a reserve ticket first shows on a surface (bought, or come to the front), and never loops; reduced motion shows it still. A count's dot badge takes the corner, and the star sits just short of it.
+- **Used:** the backing a ticket leaves: Liner Lift with a 26% edge and its perforation, carrying the kiss-cut outline of the sticker it became.
+- **Marks:** at 18px (the checkout's pack rows) a ticket is a mark with an Ink edge; the reserve mark keeps only its rim of light.
+
 ### Out of tickets
 
-Three empty ticket stubs say "used up" without a number. Each used ticket keeps a faint kiss-cut outline of the sticker it became (a 1px graphite line at 62%, dashed on the large stubs), fading in over 700ms: the cut line a sticker leaves on its backing. The small stubs on the seal screen carry the same outlines. Under the stubs, the reserve count: a Grape ticket mark × count. Under the title, a printed refill line reads "New daily tickets at 12:00 AM," in bold Ink followed by the countdown ("in 6h 56m") in Graphite, in tabular figures. It never borrows the timer dot's look: no dot, no color field, no tilt, no Dela numerals. Then the perforation, Go to sticker board as the key and Shop for tickets on label stock. The card doesn't restate the three-a-day rule.
+Three empty ticket stubs say "used up" without a number. Each used ticket keeps a faint kiss-cut outline of the sticker it became (a 1px graphite line at 62%, dashed on the large stubs), fading in over 700ms: the cut line a sticker leaves on its backing. The small stubs on the seal screen carry the same outlines. Under the title, a printed refill line reads "New daily tickets at 12:00 AM," in bold Ink followed by the countdown ("in 6h 56m") in Graphite, in tabular figures. It never borrows the timer dot's look: no dot, no color field, no tilt, no Dela numerals. Then the perforation, Go to sticker board as the key and Buy reserve tickets on label stock with the Shop's tag. The card doesn't restate the three-a-day rule. When the refill brings tickets back while it's open, it turns over in place and its key becomes a plain Draw.
 
-With daily tickets gone but reserve ones left, the start screen asks "Use a reserve ticket?" instead, with a Grape key and the ticket shop on label stock.
+The start screen shares the card. With daily tickets left, it shows the day's stubs and, when you hold reserve tickets, one small reserve ticket, ×count and RESERVE under them. With daily tickets gone but reserve ones left, it asks "Use a reserve ticket?" instead. Its art is that one ticket, large (148 × 90) at the house tilt, with the count on a Blue dot badge, and no daily stubs. The line says each fact once: "Today's daily tickets are used." in bold, then "New ones at 12:00 AM." in Graphite; screen readers also hear "You have 3 reserve tickets." Then a Blue key and Buy reserve tickets on label stock. The checkout's done step shows the same one reserve ticket, its badge on the new total.
 
-### Ticket counts
+### The Draw key's tickets
 
-Every Draw key carries daily and reserve tickets left after its label, on a Liner Lift chip: a small ticket mark in Seal Yellow or Grape with an Ink edge, then ×count in Figure type. A zero count is an empty backing mark in Ink Soft.
+The tickets your next drawing can use tuck behind the Draw key's right end, like tickets slid behind a keycap. They're paper on the page, not part of the key: 14px of each hides under the key, they sit centered on its 48px face at -3°, and the key's cast shadow falls on them. They take no taps and don't press; the key sinks over them. By the Ticket Rule:
+
+- **Daily tickets left:** one Seal Yellow ticket, 30px tall, with ×count in Figure type (850, 13px). Tickets this small carry a 1.5px Ink outline, both kinds.
+- **Reserve tickets held too:** the reserve ticket sits behind it, 8px higher and fanned 2° further, printed ×count past the daily ticket's end, its star on its corner.
+- **Daily tickets used:** the reserve ticket alone, in front.
+- **Neither:** the used backing (Liner Lift, a dashed 26% edge) printed with the refill time in fine print, Graphite.
+
+The key's name says what's left: "Draw a new sticker: 2 daily tickets and 5 reserve tickets left", or "…: no tickets until 12:00 AM". The star pops when the key first shows a reserve ticket in an app open, or when one is bought or comes to the front, not on every return to the board. Full-width Draw keys on the cards carry only their label; the card's art above shows the tickets.
 
 ### Ticket shop
 

@@ -1,19 +1,4 @@
-/* Ticket counts (TicketCount.tsx): a small ticket mark in its kind's color, then ×count. */
-.ticket-counts {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* On a Draw key, after its label: a paper chip, so a Seal Yellow mark still reads on the Seal Yellow key. */
-.ticket-counts--on-key {
-  margin-left: 6px;
-  padding: 4px 7px;
-  border-radius: 8px;
-  background: var(--liner-lift);
-  box-shadow: inset 0 0 0 1px var(--rule-strong);
-}
-
+/* A ticket count (TicketCount.tsx): a small ticket mark in its kind's color, then ×count. */
 .ticket-count {
   display: inline-flex;
   align-items: center;
@@ -39,14 +24,13 @@
 }
 
 .ticket-count--reserve path {
-  fill: var(--grape);
+  fill: var(--blue);
 }
 
-.ticket-count.is-empty {
-  color: var(--ink-soft);
-}
-
-.ticket-count.is-empty path {
-  fill: var(--liner-lift);
-  stroke: var(--rule-strong);
+/* The reserve ticket's resin, at mark size: only its rim of light from the top left. */
+.ticket-count__rim {
+  stroke: #fff;
+  stroke-width: 1;
+  stroke-linecap: round;
+  stroke-opacity: 0.85;
 }

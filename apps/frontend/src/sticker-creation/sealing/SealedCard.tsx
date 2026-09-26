@@ -1,15 +1,12 @@
-import { Storefront } from "@phosphor-icons/react";
 import { useEffect, useId, useRef, type RefObject } from "react";
 import { Trans, useTranslation } from "../../i18n/react";
-import { DrawIcon } from "../../icons/DrawIcon";
-import { StickerBoardIcon } from "../../icons/StickerBoardIcon";
+import { DrawIcon, ShopIcon, StickerBoardIcon } from "../../icons";
 import { Duration } from "../../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../../stickers/format";
 import type { Sticker } from "@drawing-app/api/client";
 import { formatRefillTime } from "../../tickets/refill";
-import { TicketCount } from "../../tickets/TicketCount";
 import { TicketStubs } from "../../tickets/TicketStubs";
-import { dailyTickets, nextRefill, ticketsLeft } from "../../tickets/tickets";
+import { describeTickets, nextRefill, ticketView, type Tickets } from "../../tickets/tickets";
 import { useTickets } from "../../tickets/useTickets";
 import { Key } from "../../ui/Key";
 import { LabelButton } from "../../ui/LabelButton";
@@ -29,14 +26,46 @@ interface Props {
   slotRef: RefObject<HTMLDivElement | null>;
   onKeepDrawing: () => void;
   onBoard: () => void;
-  /** The last ticket's way to more: the ticket shop. */
+  /** The last ticket's way to more: the reserve ticket checkout. */
   onShop: () => void;
 }
 
 /**
+ * The tickets the next drawing can use (ticketView), small, under the key: the day's stubs with any reserve tickets
+ * as one reserve ticket and its count, or that reserve ticket alone once the daily ones are used. Under them, a line
+ * when this sticker used the day's last daily ticket, or the last ticket of all.
+ */
+function TicketRow({ tickets }: { tickets: Tickets }) {
+  const { t } = useTranslation();
+  const view = ticketView(tickets);
+  const refillTime = formatRefillTime(nextRefill(new Date()));
+  // The ticket this sticker was drawn on is the day's latest.
+  const usedLastDaily = view.show === "reserve" && tickets.usedToday.at(-1)?.kind === "daily";
+  return (
+    <div className="sealed-card__tickets" data-card-line>
+      <div className="sealed-card__ticket-row" role="img" aria-label={describeTickets(tickets)}>
+        {view.show !== "reserve" && <TicketStubs size="small" stubs={view.stubs} />}
+        {view.reserve > 0 && (
+          <span className="sealed-card__reserve">
+            <TicketStubs size="small" stubs={[{ used: false, kind: "reserve" }]} />
+            {t(($) => $.tickets.count, { count: view.reserve })}
+          </span>
+        )}
+      </div>
+      {view.show === "none" && (
+        <p>{t(($) => $.stickerCreation.sealedCard.lastTicket, { time: refillTime })}</p>
+      )}
+      {usedLastDaily && (
+        <p>{t(($) => $.stickerCreation.sealedCard.lastDailyTicket, { time: refillTime })}</p>
+      )}
+    </div>
+  );
+}
+
+/**
  * The backing card the sticker lands on: its slot, "Sealed", the fine print, then the way on. With
- * tickets left, the key keeps drawing; on the last one, the key goes to the sticker board and the
- * ticket shop waits on label stock under it. Every line carries `data-card-line`, which the ceremony fades up.
+ * tickets left, the key keeps drawing; on the last one, the key goes to the sticker board and buying
+ * reserve tickets waits on label stock under it. Every line carries `data-card-line`, which the ceremony fades up.
  */
 export function SealedCard({
   sealed,
@@ -51,14 +80,7 @@ export function SealedCard({
   const { t } = useTranslation();
   const titleId = useId();
   const { tickets } = useTickets();
-  const dailyStubs = tickets ? dailyTickets(tickets) : [];
-  const daily = tickets?.dailyLeft ?? 0;
-  const last = tickets !== null && ticketsLeft(tickets) === 0;
-  // This sticker's ticket is the day's latest use, so after a reserve seal the daily tickets go unmentioned.
-  const lastDaily = daily === 0 && tickets?.usedToday.at(-1)?.kind === "daily";
-  const refillTime = formatRefillTime(nextRefill(new Date()));
-  // Fresh tickets first, then the used ones in the order they were used.
-  const stubs = [...dailyStubs.filter((s) => !s.used), ...dailyStubs.filter((s) => s.used)];
+  const last = tickets !== null && ticketView(tickets).show === "none";
 
   const chosen = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -119,33 +141,10 @@ export function SealedCard({
           {t(($) => $.stickerCreation.sealedCard.keepDrawing)}
         </Key>
       )}
-      {tickets && (
-        <div className="sealed-card__tickets" data-card-line>
-          <div className="sealed-card__ticket-row">
-            <TicketStubs
-              size="small"
-              stubs={stubs}
-              label={t(($) => $.stickerCreation.sealedCard.dailyTicketsLeft, { count: daily })}
-            />
-            <span className="visually-hidden">
-              {t(($) => $.stickerCreation.sealedCard.reserveTickets, {
-                count: tickets.reserveLeft,
-              })}
-            </span>
-            <TicketCount kind="reserve" count={tickets.reserveLeft} />
-          </div>
-          {last ? (
-            <p>{t(($) => $.stickerCreation.sealedCard.lastTicket, { time: refillTime })}</p>
-          ) : (
-            lastDaily && (
-              <p>{t(($) => $.stickerCreation.sealedCard.lastDailyTicket, { time: refillTime })}</p>
-            )
-          )}
-        </div>
-      )}
+      {tickets && <TicketRow tickets={tickets} />}
       {last ? (
-        <LabelButton block icon={<Storefront />} data-card-line onClick={act(onShop)}>
-          {t(($) => $.stickerCreation.sealedCard.shopForTickets)}
+        <LabelButton block icon={<ShopIcon />} data-card-line onClick={act(onShop)}>
+          {t(($) => $.stickerCreation.sealedCard.buyReserveTickets)}
         </LabelButton>
       ) : (
         <LabelButton block icon={<StickerBoardIcon />} data-card-line onClick={act(onBoard)}>
