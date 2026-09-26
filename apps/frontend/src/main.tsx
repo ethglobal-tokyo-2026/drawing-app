@@ -19,7 +19,7 @@ import { ToastProvider } from "./ui/ToastProvider";
 // The app's own controls use bold icons; fill marks an active or primary state.
 const ICON_DEFAULTS: IconProps = { weight: "bold" };
 
-// LINE's language, unless the developer slip chose one; LIFF answers both before it has started.
+// LINE's language, unless the person chose one; LIFF answers both before it has started.
 startInLineLanguage(liff.getAppLanguage());
 followLanguageOnPage((language) => liff.i18n.setLang(language));
 // LIFF starts before the app renders, since it reads the address bar as it starts; LineGate holds the

@@ -1,7 +1,7 @@
 import { ArrowRight, HandPointing } from "@phosphor-icons/react";
 import { Fragment, useLayoutEffect, useRef, type DOMAttributes } from "react";
 import { i18next } from "../i18n/i18n";
-import { useTranslation } from "../i18n/react";
+import { Trans, useTranslation } from "../i18n/react";
 import { giftTag, sealDate, type GiftTag } from "./giftTag";
 import "./GiftBag.css";
 
@@ -47,30 +47,35 @@ interface Props {
   pullTab?: PullTab;
 }
 
-const STAMPS: Record<GiftStamp, { small?: string; big: string; tone: "ink" | "grape" | "plain" }> =
-  {
-    "one-to-one": { small: "Opens only in", big: "1:1 chat", tone: "ink" },
-    opened: { big: "Opened", tone: "grape" },
-    "taken-back": { big: "Taken back", tone: "plain" },
-    returned: { big: "Returned", tone: "plain" },
-  };
-
-const PICTURED: Record<Props["state"], string> = {
-  open: "The sticker in an open gift bag",
-  sealed: "The gift bag, sealed",
-  torn: "The gift bag, torn open",
-  opened: "The gift bag, open and empty",
+const STAMP_TONES: Record<GiftStamp, "ink" | "grape" | "plain"> = {
+  "one-to-one": "ink",
+  opened: "grape",
+  "taken-back": "plain",
+  returned: "plain",
 };
 
+/** A stamp's words, top to bottom: the small line, on the one stamp that has it, then the big words. */
+function stampWords(stamp: GiftStamp): { small?: string; big: string } {
+  const big = i18next.t(($) => $.giving.giftBag.stamps[stamp].big);
+  return stamp === "one-to-one"
+    ? { small: i18next.t(($) => $.giving.giftBag.stamps["one-to-one"].small), big }
+    : { big };
+}
+
+/** The bag's picture in words. A stamp is inked on the tag, so without a tag there's none to read. */
 function describeBag(state: Props["state"], tag: GiftTag | null, stamp?: GiftStamp) {
-  const stamped = stamp && [STAMPS[stamp].small, STAMPS[stamp].big].filter(Boolean).join(" ");
-  return [
-    PICTURED[state],
-    tag && `tagged ${i18next.t(($) => $.giving.tag[tag.label])} ${tag.name}`,
-    stamped && `stamped ${stamped}`,
-  ]
-    .filter(Boolean)
-    .join(", ");
+  const pictured = i18next.t(($) => $.giving.giftBag.pictured[state]);
+  if (!tag) return pictured;
+  const label = i18next.t(($) => $.giving.tag[tag.label]);
+  if (!stamp) return i18next.t(($) => $.giving.giftBag.tagged, { pictured, label, name: tag.name });
+  const { small, big } = stampWords(stamp);
+  return i18next.t(($) => $.giving.giftBag.taggedAndStamped, {
+    pictured,
+    label,
+    name: tag.name,
+    // Read as it's printed, top to bottom.
+    stamp: small ? `${small} ${big}` : big,
+  });
 }
 
 /** The frosted gift bag. It has no zipper: it seals with a tear tape, only once the send succeeds. */
@@ -190,6 +195,7 @@ interface SealStripProps {
  * tape tears out, the film splits behind it onto the bag's inside.
  */
 function SealStrip({ date, insideUrl, tear, pullTab, hidden }: SealStripProps) {
+  const { t } = useTranslation();
   return (
     <span className="gift-bag__part gift-seal">
       <span className="gift-seal__clip" aria-hidden={hidden || undefined}>
@@ -206,7 +212,11 @@ function SealStrip({ date, insideUrl, tear, pullTab, hidden }: SealStripProps) {
               <Fragment key={i}>
                 <ArrowRight size={11} />
                 <span>
-                  <b>Sealed</b> {date}
+                  <Trans
+                    i18nKey={($) => $.giving.giftBag.sealed}
+                    values={{ date }}
+                    components={{ b: <b /> }}
+                  />
                 </span>
               </Fragment>
             ))}
@@ -219,7 +229,7 @@ function SealStrip({ date, insideUrl, tear, pullTab, hidden }: SealStripProps) {
             type="button"
             className="gift-seal__grip"
             role="slider"
-            aria-label="Pull the tab to open the gift"
+            aria-label={t(($) => $.giving.giftBag.pullTab)}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(tear * 100)}
@@ -237,7 +247,7 @@ function SealStrip({ date, insideUrl, tear, pullTab, hidden }: SealStripProps) {
             <rect x="4" width="2" height="13" rx="1" />
             <rect x="8" width="2" height="13" rx="1" />
           </svg>
-          <span>Pull</span>
+          <span>{t(($) => $.giving.giftBag.pull)}</span>
         </span>
       </span>
     </span>
@@ -246,9 +256,9 @@ function SealStrip({ date, insideUrl, tear, pullTab, hidden }: SealStripProps) {
 
 /** A rubber stamp inked onto the tag, worn at the edges. */
 function Stamp({ stamp }: { stamp: GiftStamp }) {
-  const { small, big, tone } = STAMPS[stamp];
+  const { small, big } = stampWords(stamp);
   return (
-    <span className={`gift-stamp gift-stamp--${tone}`}>
+    <span className={`gift-stamp gift-stamp--${STAMP_TONES[stamp]}`}>
       {small && <span>{small}</span>}
       <b>{big}</b>
     </span>

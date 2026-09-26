@@ -1,52 +1,58 @@
+import { i18next } from "../../i18n/i18n";
+
 /**
  * The color sheet's swatches, in rows of ten: inks, paper and skin; warms; pinks, purples and blues;
  * deep colors from orange round to plum.
+ * Each `name` is its key in the catalog's swatch names.
  */
 export const SWATCHES = [
-  { hex: "#1C1824", name: "Ink" },
-  { hex: "#4A4453", name: "Charcoal" },
-  { hex: "#6E6878", name: "Graphite" },
-  { hex: "#A39E93", name: "Stone" },
-  { hex: "#D9D4CB", name: "Sand" },
-  { hex: "#FFFFFF", name: "White" },
-  { hex: "#FFF1D6", name: "Cream" },
-  { hex: "#FFE0C7", name: "Peach" },
-  { hex: "#E8B48C", name: "Tan" },
-  { hex: "#9A6444", name: "Brown" },
-  { hex: "#FFD93B", name: "Yellow" },
-  { hex: "#FFB547", name: "Amber" },
-  { hex: "#F7A541", name: "Apricot" },
-  { hex: "#FF7A45", name: "Orange" },
-  { hex: "#FF5A36", name: "Tomato" },
-  { hex: "#E8484F", name: "Red" },
-  { hex: "#B8472E", name: "Brick" },
-  { hex: "#7A4A2E", name: "Chestnut" },
-  { hex: "#C58A4A", name: "Caramel" },
-  { hex: "#4A2F25", name: "Cocoa" },
-  { hex: "#FFB8C9", name: "Blush" },
-  { hex: "#FF9E9E", name: "Salmon" },
-  { hex: "#FF4F9A", name: "Pink" },
-  { hex: "#CDBEFF", name: "Lilac" },
-  { hex: "#9B7BFF", name: "Grape" },
-  { hex: "#3B3F8F", name: "Navy" },
-  { hex: "#2F6BFF", name: "Blue" },
-  { hex: "#7CC6FF", name: "Sky" },
-  { hex: "#38D3DC", name: "Aqua" },
-  { hex: "#BDEFF2", name: "Ice" },
-  { hex: "#D96A00", name: "Pumpkin" },
-  { hex: "#B07F00", name: "Ochre" },
-  { hex: "#4E9A1C", name: "Leaf" },
-  { hex: "#0E9A6E", name: "Green" },
-  { hex: "#1B6E47", name: "Forest" },
-  { hex: "#00868B", name: "Teal" },
-  { hex: "#1478C8", name: "Cerulean" },
-  { hex: "#6C3AC4", name: "Violet" },
-  { hex: "#B4299A", name: "Magenta" },
-  { hex: "#9C2067", name: "Plum" },
+  { hex: "#1C1824", name: "ink" },
+  { hex: "#4A4453", name: "charcoal" },
+  { hex: "#6E6878", name: "graphite" },
+  { hex: "#A39E93", name: "stone" },
+  { hex: "#D9D4CB", name: "sand" },
+  { hex: "#FFFFFF", name: "white" },
+  { hex: "#FFF1D6", name: "cream" },
+  { hex: "#FFE0C7", name: "peach" },
+  { hex: "#E8B48C", name: "tan" },
+  { hex: "#9A6444", name: "brown" },
+  { hex: "#FFD93B", name: "yellow" },
+  { hex: "#FFB547", name: "amber" },
+  { hex: "#F7A541", name: "apricot" },
+  { hex: "#FF7A45", name: "orange" },
+  { hex: "#FF5A36", name: "tomato" },
+  { hex: "#E8484F", name: "red" },
+  { hex: "#B8472E", name: "brick" },
+  { hex: "#7A4A2E", name: "chestnut" },
+  { hex: "#C58A4A", name: "caramel" },
+  { hex: "#4A2F25", name: "cocoa" },
+  { hex: "#FFB8C9", name: "blush" },
+  { hex: "#FF9E9E", name: "salmon" },
+  { hex: "#FF4F9A", name: "pink" },
+  { hex: "#CDBEFF", name: "lilac" },
+  { hex: "#9B7BFF", name: "grape" },
+  { hex: "#3B3F8F", name: "navy" },
+  { hex: "#2F6BFF", name: "blue" },
+  { hex: "#7CC6FF", name: "sky" },
+  { hex: "#38D3DC", name: "aqua" },
+  { hex: "#BDEFF2", name: "ice" },
+  { hex: "#D96A00", name: "pumpkin" },
+  { hex: "#B07F00", name: "ochre" },
+  { hex: "#4E9A1C", name: "leaf" },
+  { hex: "#0E9A6E", name: "green" },
+  { hex: "#1B6E47", name: "forest" },
+  { hex: "#00868B", name: "teal" },
+  { hex: "#1478C8", name: "cerulean" },
+  { hex: "#6C3AC4", name: "violet" },
+  { hex: "#B4299A", name: "magenta" },
+  { hex: "#9C2067", name: "plum" },
 ] as const;
 
-/** A swatch's name, or the hex of a color mixed on the pad. */
-export const colorName = (hex: string) => SWATCHES.find((s) => s.hex === hex)?.name ?? hex;
+/** A swatch's name in the app's language, or the hex of a color mixed on the pad. */
+export function colorName(hex: string): string {
+  const swatch = SWATCHES.find((s) => s.hex === hex);
+  return swatch ? i18next.t(($) => $.stickerCreation.colorSheet.swatchNames[swatch.name]) : hex;
+}
 
 /** A new drawing starts in a random one of these, so drawings don't all come out in the same color. */
 export const STARTING_COLORS = [

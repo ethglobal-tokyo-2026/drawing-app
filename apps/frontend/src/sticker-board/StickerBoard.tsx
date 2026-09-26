@@ -28,6 +28,7 @@ import { FEEL_CONFIG } from "../gratitude/gameConfig";
 import { GratitudeMiniGame } from "../gratitude/GratitudeMiniGame";
 import { readMiniGameDemoSettings } from "../gratitude/miniGameDemoSettings";
 import { errorReason } from "../i18n/errorMessage";
+import { useTranslation } from "../i18n/react";
 import { DrawIcon } from "../icons/DrawIcon";
 import { useMe } from "../api/meContext";
 import { useIdentity } from "../identity/useIdentity";
@@ -147,10 +148,6 @@ interface LoadedBoard {
   stickers: BoardStickerView[];
 }
 
-/** "No.0001", "No.0001 and No.0002", "No.0001, No.0002 and No.0003". */
-const listed = (names: readonly string[]) =>
-  names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
-
 /** The stacking order that keeps a sticker on top: its own when it's there already. */
 function zOnTop(stickers: readonly BoardSticker[], id: string) {
   const own = stickers.find((s) => s.id === id)?.placement.z ?? 0;
@@ -197,6 +194,7 @@ const viewOf = (s: BoardStickerView): StickerView => ({
 type GratitudeFor = { sticker: BoardSticker; giver: ReturnType<typeof asGiver>; giftId?: string };
 
 export function StickerBoard({ freshId, onDraw }: Props) {
+  const { t, i18n } = useTranslation();
   const stage = useRef<HTMLDivElement>(null);
   /** The board's face, which the sticker tray runs down the right edge of. */
   const [face, setFace] = useState<HTMLDivElement | null>(null);
@@ -539,7 +537,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         onClick={() => turn(!turned)}
         aria-expanded={turned}
         aria-haspopup="dialog"
-        aria-label={`${me.displayName}: your stats`}
+        aria-label={t(($) => $.stickerBoard.board.yourStats, { name: me.displayName })}
       >
         <PhotoSticker src={me.pictureUrl} name={me.displayName} size={42} />
         <span className="board-who-name">{me.displayName}</span>
@@ -562,33 +560,39 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           onClick={onDraw}
           aria-label={
             tickets
-              ? `Draw a new sticker: you have ${describeTickets(tickets)}`
-              : "Draw a new sticker"
+              ? t(($) => $.stickerBoard.board.drawLabelWithTickets, {
+                  tickets: describeTickets(tickets),
+                })
+              : t(($) => $.stickerBoard.board.drawLabel)
           }
         >
-          Draw
+          {t(($) => $.stickerBoard.board.draw)}
           {tickets && <TicketCounts state={tickets} className="ticket-counts--on-key" />}
         </Key>
       </span>
       {firstVisit && (
         <span className="board-nudge" aria-hidden>
-          Make your first sticker
+          {t(($) => $.stickerBoard.board.firstSticker)}
         </span>
       )}
 
-      <div className="board-stage" ref={stage} role="region" aria-label="Sticker board">
+      <div
+        className="board-stage"
+        ref={stage}
+        role="region"
+        aria-label={t(($) => $.stickerBoard.board.label)}
+      >
         {/* Descriptions only: hidden from reading, still read out for the sticker that names them. */}
         <span id={`${hints}-focus`} hidden>
-          Enter selects it. Arrow keys go to the other stickers.
+          {t(($) => $.stickerBoard.board.focusHint)}
         </span>
         <span id={`${hints}-selected`} hidden>
-          Selected. Enter opens it, and Tab reaches its toolbar. Arrow keys move it, [ and ] turn
-          it, minus and plus resize it, Delete takes it off the board, and Escape lets go of it.
+          {t(($) => $.stickerBoard.board.selectedHint)}
         </span>
         {stickers && onBoard.length === 0 && givenSilhouettes.length === 0 && (
           <div className="board-blank" style={blankStyle}>
             <span className="board-blank-cut" aria-hidden />
-            <span className="board-blank-note">Stickers you make or receive land here.</span>
+            <span className="board-blank-note">{t(($) => $.stickerBoard.board.blank)}</span>
           </div>
         )}
         {field &&
@@ -619,7 +623,8 @@ export function StickerBoard({ freshId, onDraw }: Props) {
                 onLanded={landedNow}
                 reduced={reduced}
                 tabbable={s.id === tabbable}
-                position={`${order.indexOf(s.id) + 1} of ${order.length}`}
+                position={order.indexOf(s.id) + 1}
+                setSize={order.length}
                 hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
                 foil={byOther(s)}
                 by={byOther(s) ? printedArtist(s) : undefined}
@@ -674,10 +679,10 @@ export function StickerBoard({ freshId, onDraw }: Props) {
       {board.state === "failed" && (
         <div className="board-blank board-problem" role="alert" style={blankStyle}>
           <span className="board-blank-cut" aria-hidden />
-          <span className="board-blank-note">Your stickers didn’t load.</span>
+          <span className="board-blank-note">{t(($) => $.stickerBoard.board.didntLoad)}</span>
           <span className="fine board-problem-reason">{errorReason(board.error)}</span>
           <LabelButton size="sm" onClick={board.retry}>
-            Try again
+            {t(($) => $.stickerBoard.tryAgain)}
           </LabelButton>
         </div>
       )}
@@ -685,15 +690,19 @@ export function StickerBoard({ freshId, onDraw }: Props) {
       {unsavedStickers.length > 0 && (
         <div className="board-unsaved" role="alert">
           <p className="board-unsaved-note">
-            Couldn’t save where {listed(unsavedStickers.map((s) => formatNo(s.no)))}{" "}
-            {unsavedStickers.length === 1 ? "sits" : "sit"}:{" "}
-            {[...new Set(unsavedStickers.map((s) => unsaved.get(s.id)))].join("; ")}
+            {t(($) => $.stickerBoard.board.unsaved, {
+              count: unsavedStickers.length,
+              stickers: new Intl.ListFormat(i18n.language).format(
+                unsavedStickers.map((s) => formatNo(s.no)),
+              ),
+              reasons: [...new Set(unsavedStickers.map((s) => unsaved.get(s.id)))].join("; "),
+            })}
           </p>
           <LabelButton
             size="sm"
             onClick={() => unsavedStickers.forEach((s) => save(s, s.placement))}
           >
-            Try again
+            {t(($) => $.stickerBoard.tryAgain)}
           </LabelButton>
         </div>
       )}

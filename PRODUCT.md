@@ -104,7 +104,8 @@ You can hand someone a physical drawing, but no existing system makes a _digital
 - **Notices go through the app's LINE Official Account** **[inferred]**; ad0ll was fine either way. It's the only way to reach someone outside the app, because LINE's browser has no web push. The same account's chat carries a Draw · Explore · You menu, which is how people come back daily. Pending gifts and offers also show inside the app.
 - **Navigation** (from the sketch): three tabs, **DRAW · Explore · You**.
 - **Sponsors** (backend only; never surfaced in consumer copy): ENS gives each artist a sub-registry that resolves their sticker board, and transfers update it. Sui/Walrus or Filecoin for file storage.
-- **Open, and not to be invented as settled:** what the sketch's "inspired" and "magic" gratitude categories measure; how the leaderboard is scoped; what happens to gratitude offered for a sticker; LIFF app or MINI App channel; the product name.
+- **Open, and not to be invented as settled:** what the sketch's "inspired" and "magic" gratitude categories measure; how the leaderboard is scoped; what happens to gratitude offered for a sticker; LIFF app or MINI App channel.
+- **The name is Croquis, クロッキー in Japanese** (ad0ll, 2026-09-26). A sticker board is a person's board of stickers, never the app.
 
 ## Brand Commitments
 

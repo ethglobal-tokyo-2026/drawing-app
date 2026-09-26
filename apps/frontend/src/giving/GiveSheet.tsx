@@ -1,8 +1,9 @@
 import { Gift, X } from "@phosphor-icons/react";
 import { Suspense, useRef, useState } from "react";
 import { useMe } from "../api/meContext";
+import { useTranslation } from "../i18n/react";
 import { LIFF_ID } from "../line/liff";
-import { formatNo } from "../stickers/format";
+import { formatHandle, formatNo } from "../stickers/format";
 import { useKeptStickers, type KeptSticker } from "../stickers/useKeptStickers";
 import { Key } from "../ui/Key";
 import { lazyWithPreload } from "../ui/lazyWithPreload";
@@ -29,6 +30,7 @@ interface Props {
  * a LINE chat, as every gift does.
  */
 export function GiveSheet({ to, onClose }: Props) {
+  const { t } = useTranslation();
   const { stickers, error: loadError } = useKeptStickers();
   const [picked, setPicked] = useState<string | null>(null);
   const [giving, setGiving] = useState<KeptSticker | null>(null);
@@ -53,18 +55,25 @@ export function GiveSheet({ to, onClose }: Props) {
     );
   }
 
+  const name = formatHandle(to);
+  const title = t(($) => $.giving.giveSheet.title, { name });
   return (
     <div className="board-sheet-layer" ref={root} tabIndex={-1}>
       <div className="giving__scrim" onClick={onClose} />
-      <Sheet label={`Give @${to} a sticker`} onClose={onClose} className="giving__sheet">
+      <Sheet label={title} onClose={onClose} className="giving__sheet">
         <div className="board-sheet-body">
           <header className="giving__head">
-            <h2 className="giving__title">Give @{to} a sticker</h2>
-            <button type="button" className="giving__icon-btn" onClick={onClose} aria-label="Close">
+            <h2 className="giving__title">{title}</h2>
+            <button
+              type="button"
+              className="giving__icon-btn"
+              onClick={onClose}
+              aria-label={t(($) => $.giving.close)}
+            >
               <X size={20} />
             </button>
           </header>
-          <p className="giving__sub">Pick one of yours, then send it to @{to} in a LINE chat.</p>
+          <p className="giving__sub">{t(($) => $.giving.giveSheet.lead, { name })}</p>
 
           {loadError && (
             <p className="giving__problem" role="alert">
@@ -72,21 +81,19 @@ export function GiveSheet({ to, onClose }: Props) {
             </p>
           )}
           {stickers?.length === 0 && (
-            <p className="sheet-empty">
-              You don’t have a sticker to give yet. Draw one on your board first.
-            </p>
+            <p className="sheet-empty">{t(($) => $.giving.giveSheet.none)}</p>
           )}
           {!!stickers?.length && (
             <StickerPicker
               stickers={stickers}
               picked={picked}
               onPick={setPicked}
-              label="Your stickers"
+              label={t(($) => $.giving.giveSheet.yourStickers)}
             />
           )}
           {!sender && (
             <p className="giving__problem" role="alert">
-              LINE’s friend picker isn’t available here, so gifts can’t be sent from this screen.
+              {t(($) => $.giving.giveSheet.noPicker)}
             </p>
           )}
 
@@ -98,7 +105,9 @@ export function GiveSheet({ to, onClose }: Props) {
               onClick={() => pickedSticker && setGiving(pickedSticker)}
               disabled={!pickedSticker || !sender}
             >
-              {pickedSticker ? `Give ${formatNo(pickedSticker.no)}` : "Pick a sticker"}
+              {pickedSticker
+                ? t(($) => $.giving.give, { no: formatNo(pickedSticker.no) })
+                : t(($) => $.giving.giveSheet.pick)}
             </Key>
           </div>
         </div>

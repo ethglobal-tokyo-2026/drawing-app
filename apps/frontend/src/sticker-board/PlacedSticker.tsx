@@ -1,5 +1,6 @@
 import { ArrowClockwise } from "@phosphor-icons/react";
 import { memo, useEffectEvent, useLayoutEffect, useRef } from "react";
+import { useTranslation } from "../i18n/react";
 import { formatNo, spokenDuration } from "../stickers/format";
 import { useFold } from "../stickers/liftedCorner";
 import { playStick } from "../stickers/stick";
@@ -27,8 +28,9 @@ interface Props {
   reduced: boolean;
   /** Whether it's the stickers' one Tab stop. */
   tabbable: boolean;
-  /** Its place in reading order, as a screen reader says it: "3 of 6". */
-  position: string;
+  /** Its place in reading order, from 1, among `setSize` stickers: a screen reader says "3 of 6". */
+  position: number;
+  setSize: number;
   /** What the keys do to it, which changes once it's selected. */
   hintId: string;
   /** Drawn by someone other than the board's owner: it wears foil. */
@@ -59,11 +61,13 @@ export const PlacedSticker = memo(function PlacedSticker({
   reduced,
   tabbable,
   position,
+  setSize,
   hintId,
   foil = false,
   by,
   glow = 0,
 }: Props) {
+  const { t } = useTranslation();
   const lift = useRef<HTMLDivElement>(null);
   const fold = useFold(sticker.id, sticker.urls.mask, curled);
   const box = stickerBox(field, boardWidth, sticker.placement, sticker);
@@ -94,15 +98,25 @@ export const PlacedSticker = memo(function PlacedSticker({
     landing && "is-landing",
     glow > 0 && "is-glowing",
   ];
+  const named = {
+    no: formatNo(sticker.no),
+    duration: spokenDuration(sticker.timeUsed),
+    position,
+    setSize,
+  };
   return (
     <div
       className={classes.filter(Boolean).join(" ")}
       data-sticker-id={sticker.id}
       role="button"
-      aria-roledescription="sticker"
+      aria-roledescription={t(($) => $.stickerBoard.placedSticker.roleDescription)}
       aria-pressed={selected}
       tabIndex={tabbable ? 0 : -1}
-      aria-label={`${formatNo(sticker.no)}, drawn in ${spokenDuration(sticker.timeUsed)}${by ? `, by ${by}` : ""}, ${position}`}
+      aria-label={
+        by
+          ? t(($) => $.stickerBoard.placedSticker.labelBy, { ...named, artist: by })
+          : t(($) => $.stickerBoard.placedSticker.label, named)
+      }
       aria-describedby={hintId}
       style={{
         width: box.w,

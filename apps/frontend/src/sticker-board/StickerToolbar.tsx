@@ -1,6 +1,7 @@
 import { Eye, Gift, TrayArrowDown } from "@phosphor-icons/react";
 import { useEffectEvent, useLayoutEffect, useRef } from "react";
 import type { PersonView } from "../api/views";
+import { useTranslation } from "../i18n/react";
 import { ArtistChip } from "../stickers/ArtistChip";
 import { LabelButton } from "../ui/LabelButton";
 import { toolbarSpot, type Box } from "./placement";
@@ -50,6 +51,7 @@ export function StickerToolbar({
   reduced,
   artist,
 }: Props) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
 
   // Placed once it's measured, before it's painted: its width follows the labels it shows.
@@ -102,14 +104,14 @@ export function StickerToolbar({
       <div className="sticker-toolbar__acts">
         {give && (
           <LabelButton tone="aqua" size="sm" icon={<Gift size={18} aria-hidden />} onClick={onGive}>
-            Give
+            {t(($) => $.stickerBoard.toolbar.give)}
           </LabelButton>
         )}
         <LabelButton size="sm" icon={<Eye size={18} aria-hidden />} onClick={onView}>
-          View
+          {t(($) => $.stickerBoard.toolbar.view)}
         </LabelButton>
         <LabelButton size="sm" icon={<TrayArrowDown size={18} aria-hidden />} onClick={onRemove}>
-          Remove
+          {t(($) => $.stickerBoard.toolbar.remove)}
         </LabelButton>
       </div>
     </div>

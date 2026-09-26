@@ -1,5 +1,6 @@
 import { Storefront } from "@phosphor-icons/react";
 import { useEffect, useId, useRef, type RefObject } from "react";
+import { Trans, useTranslation } from "../../i18n/react";
 import { DrawIcon } from "../../icons/DrawIcon";
 import { StickerBoardIcon } from "../../icons/StickerBoardIcon";
 import { Duration } from "../../stickers/Duration";
@@ -47,6 +48,7 @@ export function SealedCard({
   onBoard,
   onShop,
 }: Props) {
+  const { t } = useTranslation();
   const titleId = useId();
   const { tickets } = useTickets();
   const dailyStubs = tickets ? dailyTickets(tickets) : [];
@@ -80,11 +82,18 @@ export function SealedCard({
       <div ref={slotRef} className="sealed-card__slot" aria-hidden="true" />
       {/* "Sealed on-chain" and the sticker's name wait until the sticker has a chain record. */}
       <h2 id={titleId} className="sealed-card__title" data-card-line>
-        Sealed
+        {t(($) => $.stickerCreation.sealedCard.title)}
       </h2>
       <p className="fine sealed-card__fine" data-card-line>
-        {formatNo(sealed.number)} · <Duration seconds={sealed.timeUsed} /> ·{" "}
-        {formatDay(Date.parse(sealed.sealedAt))} · {formatHandle(handle)}
+        <Trans
+          i18nKey={($) => $.stickerCreation.sealedCard.finePrint}
+          values={{ no: formatNo(sealed.number), day: formatDay(Date.parse(sealed.sealedAt)) }}
+          components={{
+            duration: <Duration seconds={sealed.timeUsed} />,
+            // A handle is a component's text, not a value: Trans would read markup in a value.
+            handle: <>{formatHandle(handle)}</>,
+          }}
+        />
       </p>
       <div data-card-line>
         <TearLine />
@@ -96,7 +105,7 @@ export function SealedCard({
           data-card-line
           onClick={act(onBoard)}
         >
-          Go to sticker board
+          {t(($) => $.stickerCreation.sealedCard.goToStickerBoard)}
         </Key>
       ) : (
         <Key
@@ -105,7 +114,7 @@ export function SealedCard({
           data-card-line
           onClick={act(onKeepDrawing)}
         >
-          Keep drawing
+          {t(($) => $.stickerCreation.sealedCard.keepDrawing)}
         </Key>
       )}
       {tickets && (
@@ -114,27 +123,31 @@ export function SealedCard({
             <TicketStubs
               size="small"
               stubs={stubs}
-              label={`${daily} daily ${daily === 1 ? "ticket" : "tickets"} left today`}
+              label={t(($) => $.stickerCreation.sealedCard.dailyTicketsLeft, { count: daily })}
             />
             <span className="visually-hidden">
-              {tickets.reserveLeft} reserve {tickets.reserveLeft === 1 ? "ticket" : "tickets"}
+              {t(($) => $.stickerCreation.sealedCard.reserveTickets, {
+                count: tickets.reserveLeft,
+              })}
             </span>
             <TicketCount kind="reserve" count={tickets.reserveLeft} />
           </div>
           {last ? (
-            <p>That was today’s last ticket · new ones at {refillTime}</p>
+            <p>{t(($) => $.stickerCreation.sealedCard.lastTicket, { time: refillTime })}</p>
           ) : (
-            daily === 0 && <p>That was today’s last daily ticket · new ones at {refillTime}</p>
+            daily === 0 && (
+              <p>{t(($) => $.stickerCreation.sealedCard.lastDailyTicket, { time: refillTime })}</p>
+            )
           )}
         </div>
       )}
       {last ? (
         <LabelButton block icon={<Storefront />} data-card-line onClick={act(onShop)}>
-          Shop for tickets
+          {t(($) => $.stickerCreation.sealedCard.shopForTickets)}
         </LabelButton>
       ) : (
         <LabelButton block icon={<StickerBoardIcon />} data-card-line onClick={act(onBoard)}>
-          Go to sticker board
+          {t(($) => $.stickerCreation.sealedCard.goToStickerBoard)}
         </LabelButton>
       )}
     </section>

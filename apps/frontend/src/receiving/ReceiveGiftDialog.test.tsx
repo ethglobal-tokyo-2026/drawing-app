@@ -3,28 +3,26 @@ import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import type { GiftPreview, ReceivedGift, ReceiveRefusal } from "@drawing-app/api/client";
-import { people, sticker } from "../api/testFixtures";
-import { emptyApi, renderWithApi } from "../api/testing";
+import { MARKUP_LIKE_NAME, markupLikePerson, people, sticker } from "../api/testFixtures";
+import { emptyApi, renderWithApi, shownText } from "../api/testing";
 import { toPerson } from "../api/views";
 import { i18next } from "../i18n/i18n";
+import { formatDay, formatDuration, formatNo } from "../stickers/format";
 import { PULL } from "./pullTab";
 import type { RefusalKind } from "./receiveFlow";
 import { refusalScreen } from "./refusals";
 import { ReceiveGiftDialog } from "./ReceiveGiftDialog";
 
-// LINE as a 1:1 chat inside LINE's app.
+// LINE as a 1:1 chat inside LINE's app, logged in as `profile`: the person opening the gift.
 const liff = vi.hoisted(() => ({
   getContext: vi.fn(() => ({ type: "utou" })),
   closeWindow: vi.fn(),
   openWindow: vi.fn(),
 }));
+const profile = vi.hoisted(() => ({ userId: "U1", displayName: "" }));
 vi.mock("@line/liff", () => ({ default: liff }));
 vi.mock("../line/liff", () => ({
-  useLine: () => ({
-    status: "ready",
-    profile: { userId: "U1", displayName: "Bob Tanaka" },
-    inClient: true,
-  }),
+  useLine: () => ({ status: "ready", profile, inClient: true }),
 }));
 
 // happy-dom has no font loading; every browser the app runs in does.
@@ -87,8 +85,8 @@ const press = (name: string) =>
   });
 
 /** Opens a receivable gift and unpackages it from the keyboard, up to Accept. */
-async function unpackage(receiveGift: ApiClient["receiveGift"]) {
-  open({ previewGift: () => Promise.resolve(receivable), receiveGift });
+async function unpackage(receiveGift: ApiClient["receiveGift"], preview = receivable) {
+  open({ previewGift: () => Promise.resolve(preview), receiveGift });
   await settle();
   const slider = document.querySelector<HTMLElement>("[role=slider]");
   if (!slider) throw new Error(`no pull tab; the heading is "${heading()}"`);
@@ -104,6 +102,7 @@ beforeEach(() => {
   });
   vi.spyOn(console, "error").mockImplementation(() => {});
   onClose.mockReset();
+  profile.displayName = "Bob Tanaka";
 });
 
 afterEach(() => {
@@ -192,6 +191,19 @@ describe("ReceiveGiftDialog", () => {
     press("Not now");
     expect(onClose).toHaveBeenCalledWith();
     expect(receiveGift).not.toHaveBeenCalled();
+  });
+
+  it("prints LINE names that read as markup as they are, in whole sentences", async () => {
+    profile.displayName = MARKUP_LIKE_NAME;
+    const drawn = sticker({ artist: markupLikePerson });
+    await unpackage(vi.fn(), { ...receivable, giver: markupLikePerson, sticker: drawn });
+    expect(shownText(".receive-gift__for")).toBe(`This sticker is for you, ${MARKUP_LIKE_NAME}.`);
+    expect(shownText(".receive-gift__fine")).toBe(
+      `${formatNo(drawn.number)} · ${formatDuration(drawn.timeUsed)} · ${formatDay(Date.parse(drawn.sealedAt))} · by ${MARKUP_LIKE_NAME}`,
+    );
+    expect(shownText(".receive-gift__terms")).toBe(
+      `Receiving it shows ${MARKUP_LIKE_NAME} your LINE name and picture. You agree to the Terms and Privacy Policy.`,
+    );
   });
 
   it("points the terms line's links at the /ja/ pages in Japanese", async () => {

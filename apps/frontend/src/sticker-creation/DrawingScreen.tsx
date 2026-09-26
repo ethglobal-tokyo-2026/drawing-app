@@ -9,9 +9,11 @@ import {
   type Ref,
 } from "react";
 import type { Sticker } from "@drawing-app/api/client";
-import { apiError } from "../api/apiClient";
+import { ApiError, apiError } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
+import { errorReason } from "../i18n/errorMessage";
+import { useTranslation } from "../i18n/react";
 import { OutOfTickets } from "../tickets/OutOfTickets";
 import { StartDrawing } from "../tickets/StartDrawing";
 import { nextKind, ticketsLeft, type TicketKind } from "../tickets/tickets";
@@ -61,15 +63,6 @@ const afterPaint = () =>
 const reason = (error: unknown) =>
   error instanceof Error && error.message ? error.message : String(error);
 
-/** What the label under the timer says while the clock waits for the first stroke. */
-const STARTS = "Starts when you draw";
-/** What the label under the timer says over a drawing kept across a reload. */
-const PICKED_UP = "Picked up where you left off";
-/** What the start card says when a drawing kept across a reload can't be read back. */
-const LOST = "Couldn’t pick up where you left off.";
-/** What the label under the timer says when that drawing's ticket carries over to a fresh sheet. */
-const CARRIED = "Couldn’t pick up your drawing, so its ticket carries over";
-
 interface Sealed {
   sticker: SealedSticker;
   /** The sticker as the server sealed it. */
@@ -99,6 +92,7 @@ interface Props {
  * right. It owns the session (tickets, the clock and the seal step); the ink engine owns the drawing.
  */
 export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard }: Props) {
+  const { t } = useTranslation();
   const root = useRef<HTMLDivElement>(null);
   const canvas = useRef<DrawingCanvasHandle>(null);
   const timer = useRef<TimerDotHandle>(null);
@@ -228,10 +222,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       if (!sticker) {
         // Everything drawn was erased or undone. At 0:00 the sheet is spent; before that, draw on.
         if (clock.elapsed >= SESSION_MS) {
-          toast("Time’s up. The sheet was empty, so nothing was sealed.");
+          toast(t(($) => $.stickerCreation.seal.emptyAtTimeUp));
           send({ type: "reset" });
         } else {
-          setSealProblem("The sheet is empty, so there’s nothing to seal.");
+          setSealProblem(t(($) => $.stickerCreation.seal.empty));
           send({ type: "seal-failed" });
         }
         return;
@@ -262,7 +256,11 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     } catch (error) {
       sticker?.dispose();
       console.error("Sealing the sticker failed", error);
-      setSealProblem(`Couldn’t seal (${reason(error)}). Tap the check to try again.`);
+      setSealProblem(
+        error instanceof ApiError
+          ? t(($) => $.stickerCreation.seal.failed, { reason: errorReason(error) })
+          : t(($) => $.stickerCreation.seal.failedHere, { reason: reason(error) }),
+      );
       send({ type: "seal-failed" });
     }
   }
@@ -286,7 +284,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         const failure = apiError(error);
         console.error(`Spending a ${kind} ticket failed`, failure);
         setSpending(false);
-        setStartProblem(`Couldn’t use a ticket (${failure.message}).`);
+        setStartProblem(
+          t(($) => $.stickerCreation.startNote.ticketFailed, { reason: errorReason(failure) }),
+        );
         tickets.refresh();
       },
     );
@@ -421,11 +421,11 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const startsLabel = startsNote || (active && session.phase === "primed" && isFirstVisit());
   const timerNote =
     pickedUp === "restored"
-      ? PICKED_UP
+      ? t(($) => $.stickerCreation.timer.note.pickedUp)
       : pickedUp === "carried"
-        ? CARRIED
+        ? t(($) => $.stickerCreation.timer.note.ticketCarriesOver)
         : startsLabel
-          ? STARTS
+          ? t(($) => $.stickerCreation.timer.note.startsWhenYouDraw)
           : null;
 
   const sizeKey = tool === "eraser" ? "eraser" : "brush";
@@ -574,7 +574,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           tickets={loaded}
           minutes={SESSION_MS / 60_000}
           busy={spending}
-          note={startProblem ?? (pickedUp === "lost" ? LOST : null)}
+          note={
+            startProblem ??
+            (pickedUp === "lost" ? t(($) => $.stickerCreation.startNote.lost) : null)
+          }
           onStart={start}
           onShop={() => setOverlay("shop")}
           onBoard={onGoToBoard}
