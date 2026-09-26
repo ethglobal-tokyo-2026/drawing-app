@@ -178,3 +178,6 @@ vite.config.ts.timestamp-*
 .serena
 .claude/.headroom*
 .claude/settings.local.json
+
+# npm lockfiles: the workspace installs with pnpm (pnpm-lock.yaml)
+package-lock.json
