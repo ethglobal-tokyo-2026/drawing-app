@@ -14,6 +14,7 @@ import { nextRefill, ticketDay } from "../../tickets/tickets";
 import { LabelButton } from "../../ui/LabelButton";
 import { PhotoSticker } from "../../ui/PhotoSticker";
 import { QuietLink } from "../../ui/QuietLink";
+import { GratitudeDemoControls } from "./GratitudeDemoControls";
 import { StatCork, type CorkFigures, type StatCorkHandle } from "./StatCork";
 import { joinedAt, streakOf } from "./userStats";
 
@@ -31,6 +32,8 @@ interface Props {
   gifts: ReadonlyMap<string, StickerGiftStatus>;
   onFlipBack: () => void;
   flipBackRef: Ref<HTMLButtonElement>;
+  /** Opens the gratitude mini-game for the newest sticker, from the developer slip; null with none. */
+  onTryGratitudeMiniGame: (() => void) | null;
   ref?: Ref<StatBoardHandle>;
 }
 
@@ -38,7 +41,14 @@ interface Props {
  * Your stat board: the Sticker Board's back, with your User Stats pinned on the cork. Gratitude
  * and received stickers show their empty values until receiving and gratitude exist.
  */
-export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Props) {
+export function StatBoard({
+  stickers,
+  gifts,
+  onFlipBack,
+  flipBackRef,
+  onTryGratitudeMiniGame,
+  ref,
+}: Props) {
   const me = useIdentity();
   const [firstVisit] = useState(firstSeen);
 
@@ -96,6 +106,7 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
             <LineDetails />
             <PrivyLine />
             <PrivyAccount />
+            <GratitudeDemoControls onTry={onTryGratitudeMiniGame} />
           </div>
           <i className="stat-board__washi" aria-hidden />
         </section>

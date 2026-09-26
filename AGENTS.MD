@@ -183,6 +183,7 @@ pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
   - `src/artists` — demo artists (profiles, stats, sticker boards) and their authored art, until the server serves other people
   - `src/giving` — Giving: the give sheet and gift bag, the gift message, and sending it through LINE's friend picker; the give sheet and sticker picker on someone else's board
   - `src/offers` — the offer sheet on someone else's board (ask, swap or offer gratitude)
+  - `src/gratitude` — the (Gratitude) Mini-game: its rules, input, effects and screen; how it plays, scores and records, and where to tune it, is in `docs/gratitude-mini-game-design-doc.md`
   - `src/line` — LIFF: starts before the app renders and holds it until LINE has logged the person in; on the dev server LIFF Mock stands in for LINE (`apps/frontend/.env.example` switches it off)
   - `src/identity` — who the person is: the LINE profile, and the Privy sign-in, which trades LINE's ID token at the auth server for a Privy JWT (Privy's SDK loads only after the board)
   - `src/tickets`, `src/stickers` (local sticker storage, display formatting, and the sticker's material: the figure, its live resin and the shared light), `src/payments`

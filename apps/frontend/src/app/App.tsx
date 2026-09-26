@@ -3,6 +3,7 @@ import { artistByHandle } from "../artists/demoArtists";
 import { StickerBoard } from "../sticker-board/StickerBoard";
 import { DrawingScreen, type DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
 import { lazyWithPreload, usePreloadWhenIdle } from "../ui/lazyWithPreload";
+import { MotionPermissionCard } from "./MotionPermissionCard";
 import { viewFromPath, type View } from "./openedView";
 import { ShopScreen } from "./ShopScreen";
 import { TabBar } from "./TabBar";
@@ -99,6 +100,7 @@ export default function App() {
           setVisiting(undefined);
         }}
       />
+      <MotionPermissionCard />
     </div>
   );
 }
