@@ -12,10 +12,11 @@
   filter: var(--sticker-cut) var(--sticker-cast);
 }
 
+/* No picture: the name's first letter, never under the 11px floor. */
 .photo-sticker-letter {
   display: inline-grid;
   place-items: center;
   background: var(--liner-deep);
   color: var(--ink);
-  font: 400 calc(var(--size) * 0.42) / 1 var(--font-puffy);
+  font: 400 max(var(--fs-fine), calc(var(--size) * 0.42)) / 1 var(--font-puffy);
 }
