@@ -61,6 +61,7 @@ const printed = (p: PersonView) => (p.handle ? formatHandle(p.handle) : p.name);
  * Accept, or the reason the gift can't be received here. On the Back stack, as Not now is.
  */
 export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
+  const { t } = useTranslation();
   const api = useApi();
   const me = useIdentity();
   const reduced = useReducedMotion();
@@ -135,7 +136,10 @@ export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
   const preview = screen.step === "sealed" || screen.step === "unpackaged" ? screen.preview : null;
   const [shownPreview, setShownPreview] = useState<GiftPreviewView | null>(null);
   if (preview && preview !== shownPreview) setShownPreview(preview);
-  const title = giver ? `A gift from ${printed(giver)}` : "A gift";
+  const title = t(($) => $.receiving.title, {
+    name: giver ? printed(giver) : "",
+    context: giver ? undefined : "unknownGiver",
+  });
   // LINE's header shows the page title; App names the page again once the dialog closes.
   useEffect(() => {
     document.title = title;
@@ -158,8 +162,8 @@ export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
 
   // Outside LINE's app there's no LINE window to close, so the way out is the board.
   const leave = me.inClient
-    ? { label: "Back to LINE", icon: <ArrowSquareOut /> }
-    : { label: "Go to my sticker board", icon: <StickerBoardIcon size={18} /> };
+    ? { label: t(($) => $.receiving.backToLine), icon: <ArrowSquareOut /> }
+    : { label: t(($) => $.receiving.goToStickerBoard), icon: <StickerBoardIcon size={18} /> };
   const backToLine = () => {
     // Outside LINE's app there's no window to close, so the board shows instead.
     if (me.inClient) liff.closeWindow();
@@ -284,7 +288,9 @@ function Gift({
     <>
       <header className="receive-gift__head">
         <PhotoSticker src={giver.pictureUrl} name={giver.name} size={46} />
-        <h1 className="receive-gift__title">{giver.name} sent you a sticker</h1>
+        <h1 className="receive-gift__title">
+          {t(($) => $.receiving.gift.title, { name: giver.name })}
+        </h1>
       </header>
       <div className="receive-gift__stage" {...(sealed ? pull.stage : {})}>
         <GiftBag
@@ -311,24 +317,44 @@ function Gift({
         )}
       </div>
       <p className="receive-gift__hint" aria-hidden={!sealed || undefined}>
-        <b>Pull the tab to open it</b>
-        <span>or double-tap, or press and hold</span>
+        <Trans
+          i18nKey={($) => $.receiving.gift.pullTabHint}
+          components={{ b: <b />, span: <span /> }}
+        />
       </p>
       {!sealed && reveal !== "snapped" && (
-        <Sheet label="Accept this sticker" onClose={onNotNow} className="receive-gift__sheet">
+        <Sheet
+          label={t(($) => $.receiving.gift.acceptSheet)}
+          onClose={onNotNow}
+          className="receive-gift__sheet"
+        >
           <div className="receive-gift__copy">
             <p className="receive-gift__for">
-              This sticker is for you, <b>{opener}</b>.
+              <Trans
+                i18nKey={($) => $.receiving.gift.forYou}
+                values={{ name: opener }}
+                components={{ b: <b /> }}
+              />
             </p>
             <p className="fine receive-gift__fine">
-              {formatNo(sticker.no)} · <Duration seconds={sticker.timeUsed} /> ·{" "}
-              {formatDay(sticker.sealedAt)} · by {printed(sticker.artist)}
+              <Trans
+                i18nKey={($) => $.receiving.gift.finePrint}
+                values={{
+                  no: formatNo(sticker.no),
+                  day: formatDay(sticker.sealedAt),
+                  artist: printed(sticker.artist),
+                }}
+                components={{ duration: <Duration seconds={sticker.timeUsed} /> }}
+              />
             </p>
           </div>
           <div className="receive-gift__acts">
             {failed && (
               <p className="receive-gift__problem" role="alert">
-                {formatNo(sticker.no)} wasn’t received: {failed}. Tap Accept to try again.
+                {t(($) => $.receiving.gift.notReceived, {
+                  no: formatNo(sticker.no),
+                  reason: failed,
+                })}
               </p>
             )}
             <Key
@@ -340,10 +366,10 @@ function Gift({
               aria-busy={receiving || undefined}
               data-autofocus
             >
-              {receiving ? "Accepting…" : "Accept"}
+              {receiving ? t(($) => $.receiving.gift.accepting) : t(($) => $.receiving.gift.accept)}
             </Key>
             <QuietLink onClick={onNotNow} disabled={receiving}>
-              <X /> Not now
+              <X /> {t(($) => $.receiving.gift.notNow)}
             </QuietLink>
             <p className="receive-gift__terms">
               <Trans
@@ -373,6 +399,7 @@ interface RefusalProps {
 
 /** A gift that can't be received here: why, the bag as it stands, and the one way on. */
 function Refusal({ end, giverHandle, leave, onLeave, onBoard, onTryAgain }: RefusalProps) {
+  const { t } = useTranslation();
   return (
     <>
       <header className="receive-gift__end-head">
@@ -393,7 +420,7 @@ function Refusal({ end, giverHandle, leave, onLeave, onBoard, onTryAgain }: Refu
         {end.action === "tryAgain" ? (
           <>
             <LabelButton block onClick={onTryAgain} data-autofocus>
-              Try again
+              {t(($) => $.receiving.tryAgain)}
             </LabelButton>
             <QuietLink onClick={onLeave}>
               {leave.icon} {leave.label}
@@ -401,7 +428,7 @@ function Refusal({ end, giverHandle, leave, onLeave, onBoard, onTryAgain }: Refu
           </>
         ) : end.action === "board" ? (
           <LabelButton block icon={<StickerBoardIcon size={18} />} onClick={onBoard} data-autofocus>
-            Go to my sticker board
+            {t(($) => $.receiving.goToStickerBoard)}
           </LabelButton>
         ) : (
           <LabelButton block icon={leave.icon} onClick={onLeave} data-autofocus>
