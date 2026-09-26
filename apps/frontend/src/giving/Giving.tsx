@@ -179,7 +179,8 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
         {bag(sealed ? "sealed" : "open", state.sentAt)}
         <h2 className="giving__title">{title}</h2>
         <p className="giving__sub">
-          It’s in your LINE chat now. Its outline stays on your board, where it sat.
+          It’s in your LINE chat now, and the gift message opens once. When they accept it, you’ll
+          see who did.
         </p>
         {state.recordError && (
           <p className="giving__problem" role="alert">
