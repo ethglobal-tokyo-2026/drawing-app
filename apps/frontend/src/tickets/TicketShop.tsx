@@ -179,11 +179,11 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
         <h2 className="out-of-tickets__title" id={`${id}-title`}>
           {bought.tickets} reserve {bought.tickets === 1 ? "ticket" : "tickets"} added
         </h2>
-        <p className="out-of-tickets__line out-of-tickets__quiet">
-          {IS_MOCK_PAYMENT
-            ? "Demo payment: no real SUI was charged."
-            : `Paid ${formatSui(BigInt(bought.priceMist))} SUI.`}
-        </p>
+        {!IS_MOCK_PAYMENT && (
+          <p className="out-of-tickets__line out-of-tickets__quiet">
+            Paid {formatSui(BigInt(bought.priceMist))} SUI.
+          </p>
+        )}
         <TearLine />
         <Key
           className="out-of-tickets__key"
@@ -224,8 +224,7 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
           Ticket shop
         </h2>
         <p className="out-of-tickets__line">
-          <strong>Reserve tickets never expire.</strong>{" "}
-          <span className="out-of-tickets__quiet">Daily tickets are always used first.</span>
+          <strong>Reserve tickets never expire.</strong>
         </p>
         <div className="ticket-shop__wallet">
           <span className="fine">Your SUI</span>
@@ -288,9 +287,6 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
               1 SUI ≈ {formatYen(Number(quote.suiYen))} · 5-minute average
             </p>
           </>
-        )}
-        {IS_MOCK_PAYMENT && (
-          <p className="out-of-tickets__note">Demo payment: no real SUI is charged.</p>
         )}
         <TearLine />
         <Key
