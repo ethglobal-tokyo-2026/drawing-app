@@ -1,4 +1,3 @@
-import { ArrowUUpLeft } from "@phosphor-icons/react";
 import {
   useId,
   useImperativeHandle,
@@ -12,7 +11,7 @@ import {
 } from "react";
 import { formatCount } from "../../i18n/format";
 import { useTranslation } from "../../i18n/react";
-import { GratitudeIcon, StreakIcon } from "../../icons";
+import { ArrowUUpLeft, GratitudeIcon, StreakIcon } from "../../icons";
 import { EnsNameLink } from "../../identity/EnsNameLink";
 import { formatDay, formatHandle } from "../../stickers/format";
 import { HitCounter } from "../../ui/HitCounter";

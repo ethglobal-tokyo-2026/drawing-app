@@ -1,10 +1,10 @@
-import { SignOut } from "@phosphor-icons/react";
 import { useRef, useState, type Ref } from "react";
 import { logOut } from "../../api/logOut";
 import { useMe } from "../../api/meContext";
 import { useApiQuery } from "../../api/useApiQuery";
 import { errorReason } from "../../i18n/errorMessage";
 import { useTranslation } from "../../i18n/react";
+import { SignOut } from "../../icons";
 import { retryPrivySignIn, usePrivyStatus, type PrivyStatus } from "../../identity/privy";
 import { PrivyAccount } from "../../identity/PrivyAccount";
 import { useIdentity } from "../../identity/useIdentity";
