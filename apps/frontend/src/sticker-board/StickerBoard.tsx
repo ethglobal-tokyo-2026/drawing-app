@@ -41,7 +41,7 @@ import { describeTickets, ticketDay } from "../tickets/tickets";
 import { useTickets } from "../tickets/useTickets";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
-import { lazyWithPreload, usePreloadWhenIdle } from "../ui/lazyWithPreload";
+import { lazyWithPreload } from "../ui/lazyWithPreload";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useReducedMotion } from "../ui/useReducedMotion";
@@ -68,7 +68,14 @@ import {
   type Box,
   type Placement,
 } from "./placement";
+import { noteBootMilestone } from "../performance/bootMilestones";
 import { BoardLoading } from "./BoardLoading";
+import {
+  followBoardAssembly,
+  markBoardComplete,
+  usePreloadAfterBoard,
+  type AssemblingSticker,
+} from "./boardComplete";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
 import { readingOrder } from "./stickerOrder";
@@ -85,16 +92,17 @@ const StickerTray = lazyWithPreload("the sticker tray", () =>
   import("./tray/StickerTray").then((m) => m.StickerTray),
 );
 void StickerTray.preload();
-// Opened from the board, so their code loads once it's up.
+// Opened from the board, so their code loads once the board is complete: nothing else downloads while
+// it assembles.
 const StickerDetail = lazyWithPreload("the sticker detail", () =>
   import("./StickerDetail").then((m) => m.StickerDetail),
 );
 const Giving = lazyWithPreload("Giving", () => import("../giving/Giving").then((m) => m.Giving));
+// Your name turns the board over from the moment it shows, so a touch on it starts the stat board's
+// code loading too.
 const StatBoard = lazyWithPreload("the stat board", () =>
   import("./stat-board/StatBoard").then((m) => m.StatBoard),
 );
-// Your name turns the board over from the moment it shows, so the stat board's code loads with the board's.
-void StatBoard.preload();
 const OPENED_FROM_BOARD = [StickerDetail, Giving, StatBoard];
 
 interface Props {
@@ -102,6 +110,16 @@ interface Props {
   freshId?: string;
   onDraw: () => void;
 }
+
+/** What the board's first assembly waits for: each sticker on it, and each given sticker's silhouette. */
+const assemblyOf = (stickers: readonly BoardStickerView[]): AssemblingSticker[] =>
+  stickers.flatMap((s) => {
+    if (s.placement.on && s.held && !onItsWay(s)) {
+      const { png, mask, spec, rim } = s.urls;
+      return [{ urls: [png, mask, spec, rim].filter((url) => url !== undefined) }];
+    }
+    return !s.held && s.givenTo && s.urls.mask ? [{ urls: [s.urls.mask] }] : [];
+  });
 
 /** Stickers that have landed this session. */
 const landed = new Set<string>();
@@ -246,7 +264,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const giftSender = useGiftSender();
   const reduced = useReducedMotion();
   const hints = useId();
-  const idle = usePreloadWhenIdle(OPENED_FROM_BOARD);
+  const idle = usePreloadAfterBoard(OPENED_FROM_BOARD);
   // The gratitude mini-game covers the board, so the tilt and its sheen sweeps rest while it plays.
   useLight(!turned && !gratitudeFor);
 
@@ -274,6 +292,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   // placed gets a spot as it loads, saved so it stays there.
   const board = useApiQuery("sticker-board", async (client): Promise<LoadedBoard> => {
     const data = await client.stickerBoard();
+    noteBootMilestone("board JSON", `${data.boardStickers.length} stickers`);
     const { stickers: list, placed } = placeUnplaced(
       data.boardStickers.map(toBoardSticker),
       latestStickers.current ?? [],
@@ -287,6 +306,15 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     // Moves made while it loaded stay.
     setStickers(placeUnplaced(loaded.stickers, stickers ?? []).stickers);
   }
+  // The first open's board completes once its stickers have all decoded; a board that didn't load
+  // has nothing more coming, so what waited for it goes ahead.
+  useEffect(() => {
+    if (adopted) followBoardAssembly(assemblyOf(adopted.stickers), { fresh: true });
+  }, [adopted]);
+  const failed = board.state === "failed";
+  useEffect(() => {
+    if (failed) markBoardComplete();
+  }, [failed]);
 
   const pending = useApiQuery("pending-gifts", (client) => client.pendingGifts());
   const onTheirWay =
@@ -536,6 +564,8 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         ref={nameButton}
         className="board-who"
         onClick={() => turn(!turned)}
+        onPointerDown={() => void StatBoard.preload()}
+        onFocus={() => void StatBoard.preload()}
         aria-expanded={turned}
         aria-haspopup="dialog"
         aria-label={t(($) => $.stickerBoard.board.yourStats, { name: me.displayName })}

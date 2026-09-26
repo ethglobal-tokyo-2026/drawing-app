@@ -1,11 +1,13 @@
 import type { Person } from "@drawing-app/api/client";
-import { Suspense, useEffect, useRef, useState, type CSSProperties } from "react";
+import { Suspense, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { useApi } from "../api/useApi";
 import { resendPendingGratitude } from "../gratitude/gratitudeOutbox";
 import { useTranslation } from "../i18n/react";
 import { StickerBoard } from "../sticker-board/StickerBoard";
 import { DrawingScreen, type DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
-import { lazyWithPreload, usePreloadWhenIdle } from "../ui/lazyWithPreload";
+import { noteBootMilestone } from "../performance/bootMilestones";
+import { markBoardComplete, usePreloadAfterBoard } from "../sticker-board/boardComplete";
+import { lazyWithPreload } from "../ui/lazyWithPreload";
 import { MotionPermissionCard } from "./MotionPermissionCard";
 import { openedFrom, type View } from "./openedView";
 import { changeScreen } from "./screenTransition";
@@ -14,7 +16,7 @@ import { TabBar } from "./TabBar";
 import { useFocusLoop } from "./useFocusLoop";
 import "./App.css";
 
-// Explore is a tab away, so its code loads once the app is idle.
+// Explore is a tab away, so its code loads once the board is complete.
 const ExploreScreen = lazyWithPreload("Explore", () =>
   import("../explore/ExploreScreen").then((m) => m.ExploreScreen),
 );
@@ -54,7 +56,14 @@ export default function App() {
   // Someone else's sticker board, opened from Explore over it, so Explore keeps its search and scroll.
   const [visiting, setVisiting] = useState<Person>();
   const drawing = view === "draw";
-  usePreloadWhenIdle(OPENED_FROM_TABS);
+  usePreloadAfterBoard(OPENED_FROM_TABS);
+
+  // The app renders once you're signed in to the server. Opened on another screen, there's no board
+  // to wait for.
+  useLayoutEffect(() => {
+    noteBootMilestone("signed in");
+    if (opened.view !== "board") markBoardComplete();
+  }, [opened]);
 
   useEffect(() => {
     if (view === "explore") void ArtistBoard.preload();
