@@ -1,6 +1,6 @@
 # Database schema and REST API (planned)
 
-What the server will store and serve, so UI work and mocks can line up with it while it's built. None of it exists yet: the app still keeps stickers, tickets and gifts on the device. This file is temporary: once `packages/db` holds the schema and the API routes exist, delete it and point AGENTS.MD at those instead.
+What the server stores and serves. `packages/db` holds the schema and `apps/api` the routes, and the app answers everything from them. This file is temporary: delete it and point AGENTS.MD at those once its rules live there.
 
 ## How it fits together
 

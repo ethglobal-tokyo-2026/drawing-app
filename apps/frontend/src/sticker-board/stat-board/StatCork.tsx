@@ -1,4 +1,4 @@
-import { ArrowUUpLeft, Copy } from "@phosphor-icons/react";
+import { ArrowUUpLeft } from "@phosphor-icons/react";
 import {
   useId,
   useImperativeHandle,
@@ -13,7 +13,6 @@ import {
 import { formatDay, formatHandle } from "../../stickers/format";
 import { LabelButton } from "../../ui/LabelButton";
 import { useReducedMotion } from "../../ui/useReducedMotion";
-import { useToast } from "../../ui/useToast";
 import "./stat-board.css";
 
 export interface StatCorkHandle {
@@ -29,17 +28,15 @@ export interface CorkFigures {
   picture: ReactNode;
   /** Your own board: pink washi on the name card, and "you" in the notes. */
   own: boolean;
-  /** Undefined until gratitude exists for them; zeros read as "No gratitude yet". */
-  gratitude?: { daily: number; inspired: number; magic: number };
+  /** Null when it didn't load; zeros read as "No gratitude yet". */
+  gratitude: { inspired: number; magic: number; asOriginalArtist: number; total: number } | null;
   streak: { current: number; best: number } | null;
   streakRule: string;
   stamps: { made: number | null; received: number | null; given: number | null };
   bestCombo: number | null;
   mostGratitudeInADay: number | null;
-  /** When they joined, as epoch ms. */
-  since: number;
-  /** Their board address, on label-maker tape that copies it. */
-  address?: string;
+  /** When they joined, as epoch ms; null until it's known. */
+  since: number | null;
 }
 
 interface Props {
@@ -71,9 +68,13 @@ function Unknown() {
 const figure = (n: number | null) => (n === null ? <Unknown /> : num(n));
 
 const GRATITUDE_KINDS = [
-  { key: "daily", label: "Daily", reason: "For drawing each day. A streak adds more." },
   { key: "inspired", label: "Inspired", reason: "Gratitude for stickers they gave." },
   { key: "magic", label: "Magic", reason: "Gratitude sent a special way." },
+  {
+    key: "asOriginalArtist",
+    label: "Original Artist",
+    reason: "A share of the gratitude when a sticker they drew is given on.",
+  },
 ] as const;
 
 // Things stuck on the cork; a tap anywhere else is on bare cork.
@@ -105,15 +106,12 @@ export function StatCork({
   ref,
 }: Props) {
   const reduced = useReducedMotion();
-  const toast = useToast();
   const cork = useRef<HTMLDivElement>(null);
   const id = useId();
   // The receipt is printed when the cork first shows.
   const [printedAt] = useState(() => Date.now());
-  const since = formatDay(f.since);
-  const gratitudeTotal = f.gratitude
-    ? f.gratitude.daily + f.gratitude.inspired + f.gratitude.magic
-    : 0;
+  const since = f.since === null ? null : formatDay(f.since);
+  const gratitudeTotal = f.gratitude?.total ?? 0;
 
   useImperativeHandle(
     ref,
@@ -148,16 +146,6 @@ export function StatCork({
     if (e.key !== "Escape") return;
     e.stopPropagation();
     if (!onEscape?.()) onFlipBack();
-  };
-
-  const copyAddress = async (address: string) => {
-    try {
-      await navigator.clipboard.writeText(address);
-      toast("Address copied");
-    } catch (error) {
-      console.error("Copying the board address failed", error);
-      toast("Couldn’t copy the address");
-    }
   };
 
   return (
@@ -214,14 +202,16 @@ export function StatCork({
                   </ul>
                 ) : (
                   <p className="stat-board__receipt-none">
-                    {f.own
-                      ? "No gratitude yet. It arrives when someone you give a sticker to sends you some for it."
-                      : "No gratitude yet. It arrives when someone sends gratitude for a sticker they gave them."}
+                    {!f.gratitude
+                      ? "Gratitude didn’t load."
+                      : f.own
+                        ? "No gratitude yet. It arrives when someone you give a sticker to sends you some for it."
+                        : "No gratitude yet. It arrives when someone sends gratitude for a sticker they gave them."}
                   </p>
                 )}
                 <p className="stat-board__receipt-total">
                   <span className="fine">Total</span>
-                  <b>{num(gratitudeTotal)}</b>
+                  <b>{f.gratitude ? num(gratitudeTotal) : <Unknown />}</b>
                 </p>
               </div>
             </section>
@@ -261,25 +251,14 @@ export function StatCork({
               <i className="stat-board__washi" aria-hidden />
             </section>
 
-            {f.address && (
-              <button
-                type="button"
-                className="stat-board__tape stat-board__tape--address"
-                onClick={() => f.address && void copyAddress(f.address)}
-                aria-label={`Copy ${f.address}`}
-              >
-                <span className="stat-board__tape-text">
-                  {f.address}
-                  <Copy size={13} />
+            {since && (
+              <p className="stat-board__tape">
+                <span className="visually-hidden">On the app since {since}</span>
+                <span className="stat-board__tape-text" aria-hidden>
+                  Since {since}
                 </span>
-              </button>
+              </p>
             )}
-            <p className="stat-board__tape">
-              <span className="visually-hidden">On the app since {since}</span>
-              <span className="stat-board__tape-text" aria-hidden>
-                Since {since}
-              </span>
-            </p>
           </div>
 
           <div className="stat-board__col stat-board__col--b">

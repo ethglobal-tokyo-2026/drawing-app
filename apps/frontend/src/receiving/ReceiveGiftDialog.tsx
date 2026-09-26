@@ -11,7 +11,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { apiError } from "../api/apiClient";
-import type { GiftClaimRequest, GiftPreviewResponse } from "../api/contract";
+import type { GiftPreview } from "@drawing-app/api/client";
+import type { GiftOpening } from "../api/apiClient";
 import { useApi } from "../api/useApi";
 import type { PersonView } from "../api/views";
 import { GiftBag } from "../giving/GiftBag";
@@ -67,7 +68,7 @@ export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
   const [screen, dispatch] = useReducer(receiveFlow, { step: "opening" });
   const [attempt, setAttempt] = useState(0);
   // LINE says which chat opened the link; the server refuses group chats.
-  const [claim] = useState<GiftClaimRequest>(() => ({
+  const [claim] = useState<GiftOpening>(() => ({
     giftClaimToken,
     liffContextType: liff.getContext()?.type ?? "none",
   }));
@@ -77,7 +78,7 @@ export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
   });
 
   // One preview per attempt, which StrictMode's second run of the effect shares.
-  const previewing = useRef<{ attempt: number; answer: Promise<GiftPreviewResponse> } | null>(null);
+  const previewing = useRef<{ attempt: number; answer: Promise<GiftPreview> } | null>(null);
   useEffect(() => {
     if (previewing.current?.attempt !== attempt) {
       previewing.current = { attempt, answer: api.previewGift(claim) };
@@ -159,7 +160,7 @@ export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
     ? { label: "Back to LINE", icon: <ArrowSquareOut /> }
     : { label: "Go to my sticker board", icon: <StickerBoardIcon size={18} /> };
   const backToLine = () => {
-    // LIFF Mock can't close its window, so on the dev server the board shows instead.
+    // Outside LINE's app there's no window to close, so the board shows instead.
     if (me.inClient) liff.closeWindow();
     onClose();
   };

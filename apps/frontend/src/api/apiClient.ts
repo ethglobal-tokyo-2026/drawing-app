@@ -1,35 +1,106 @@
 import type {
   ErrorBody,
-  GiftClaimRequest,
-  GiftPreviewResponse,
-  PendingGiftsResponse,
+  Explore,
+  Gift,
+  GiftPreview,
+  Gratitude,
+  GratitudeWithReplay,
+  OpenGiftBody,
+  PackagedGift,
+  PendingGifts,
+  Person,
   Placement,
-  ReceiveGiftResponse,
+  ReceivedGift,
   RecordGratitude,
-  RecordGratitudeResponse,
-  StickerBoardResponse,
-  StickerDetailResponse,
+  SealResponse,
+  StickerBoard,
+  StickerDetail,
   StickerPlacement,
-} from "./contract";
+  TicketKind,
+  TicketQuote,
+  Tickets,
+  TicketUse,
+  UnseenGratitude,
+  UserStats,
+} from "@drawing-app/api/client";
+
+/** POST /api/stickers's parts. */
+interface SealRequest {
+  ticketUseId: number;
+  timeUsed: number;
+  width: number;
+  height: number;
+  outline: string;
+  png: Blob;
+  mask: Blob;
+  spec: Blob;
+  rim: Blob;
+  flat: Blob;
+}
+
+/** Opening a Gift Message's link: its token as the link carries it, which the client checks. */
+export type GiftOpening = Omit<OpenGiftBody, "giftClaimToken"> & { giftClaimToken: string };
+
+/** A pack bought with a Sui payment. */
+interface TicketPurchase {
+  tickets: number;
+  txDigest: string;
+  paidMist: string;
+}
 
 /** The REST API, one method per route the app calls. */
 export interface ApiClient {
-  /** GET /api/sticker-boards/me */
-  stickerBoard: () => Promise<StickerBoardResponse>;
+  /** GET /api/sticker-boards/:userId; `me` for your own. */
+  stickerBoard: (userId?: string) => Promise<StickerBoard>;
+  /** GET /api/sticker-boards/:userId/user-stats */
+  userStats: (userId?: string) => Promise<UserStats>;
   /** PATCH /api/sticker-boards/me/sticker-placements/:stickerId */
   saveStickerPlacement: (stickerId: string, placement: Placement) => Promise<StickerPlacement>;
   /** POST /api/sticker-boards/me/sticker-tray/seen */
   markTraySeen: (stickerIds: readonly string[]) => Promise<{ newStickerCount: number }>;
+
+  /** POST /api/stickers: seals a drawing on the ticket it spent. */
+  seal: (request: SealRequest) => Promise<SealResponse>;
   /** GET /api/stickers/:stickerId */
-  stickerDetail: (stickerId: string) => Promise<StickerDetailResponse>;
+  stickerDetail: (stickerId: string) => Promise<StickerDetail>;
+
+  /** GET /api/tickets */
+  tickets: () => Promise<Tickets>;
+  /** POST /api/tickets/spend */
+  spendTicket: (kind: TicketKind) => Promise<{ ticketUse: TicketUse; tickets: Tickets }>;
+  /** GET /api/ticket-quote */
+  ticketQuote: () => Promise<TicketQuote>;
+  /** POST /api/ticket-purchases */
+  buyTickets: (purchase: TicketPurchase) => Promise<Tickets>;
+
+  /** POST /api/gifts: a new gift of the sticker, or the one already in the bag. */
+  packageGift: (stickerId: string) => Promise<PackagedGift>;
+  /** POST /api/gifts/:giftId/deposit */
+  reportDeposit: (giftId: string, txHash: string) => Promise<Gift>;
+  /** POST /api/gifts/:giftId/shared */
+  reportShared: (giftId: string, outcome: "sent" | "cancelled") => Promise<Gift>;
+  /** POST /api/gifts/:giftId/take-out */
+  takeOutGift: (giftId: string) => Promise<Gift>;
   /** GET /api/gifts/pending */
-  pendingGifts: () => Promise<PendingGiftsResponse>;
+  pendingGifts: () => Promise<PendingGifts>;
   /** POST /api/gifts/preview */
-  previewGift: (body: GiftClaimRequest) => Promise<GiftPreviewResponse>;
+  previewGift: (body: GiftOpening) => Promise<GiftPreview>;
   /** POST /api/gifts/receive */
-  receiveGift: (body: GiftClaimRequest) => Promise<ReceiveGiftResponse>;
-  /** POST /api/gratitude, with keepalive, so a combo that ends as the page goes away still lands. */
-  recordGratitude: (body: RecordGratitude) => Promise<RecordGratitudeResponse>;
+  receiveGift: (body: GiftOpening) => Promise<ReceivedGift>;
+
+  /** POST /api/gratitude, sent with keepalive so it lands as the page closes. */
+  recordGratitude: (combo: RecordGratitude) => Promise<Gratitude>;
+  /** GET /api/gratitude/unseen */
+  unseenGratitude: () => Promise<UnseenGratitude>;
+  /** GET /api/gratitude/:giftId */
+  gratitude: (giftId: string) => Promise<GratitudeWithReplay>;
+  /** POST /api/gratitude/:giftId/seen */
+  markGratitudeSeen: (giftId: string) => Promise<Gratitude>;
+
+  /** GET /api/explore */
+  explore: () => Promise<Explore>;
+  /** GET /api/users?handle= */
+  searchUsers: (handle: string) => Promise<Person[]>;
 }
 
 /** A refused or failed request: the HTTP status and the REST doc's error body. Status 0 is no answer. */
@@ -56,41 +127,3 @@ export const apiError = (error: unknown): ApiError =>
         error: "network",
         detail: error instanceof Error ? error.message : String(error),
       });
-
-/** How long a request may go unanswered before it counts as no answer. */
-const REQUEST_TIMEOUT_MS = 15_000;
-
-const isErrorBody = (value: unknown): value is ErrorBody =>
-  typeof value === "object" &&
-  value !== null &&
-  "error" in value &&
-  typeof value.error === "string";
-
-/** POSTs `body` as JSON to the app's server and returns its answer; a refusal or none throws an ApiError. */
-export async function postJson(
-  path: string,
-  body: unknown,
-  init: Pick<RequestInit, "keepalive"> = {},
-): Promise<unknown> {
-  let response: Response;
-  try {
-    response = await fetch(path, {
-      ...init,
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-  } catch (error) {
-    throw apiError(error);
-  }
-  // An answer that isn't JSON, like a static host's error page, still reports its status.
-  const answer: unknown = await response.json().catch(() => null);
-  if (response.ok) return answer;
-  throw new ApiError(
-    response.status,
-    isErrorBody(answer)
-      ? answer
-      : { error: "unexpected_response", detail: `HTTP ${response.status} ${response.statusText}` },
-  );
-}

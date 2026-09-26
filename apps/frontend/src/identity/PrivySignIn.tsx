@@ -1,5 +1,4 @@
 import { Component, lazy, Suspense, type ReactNode } from "react";
-import { liffMockActive } from "../line/liff";
 import { setPrivyStatus } from "./privy";
 
 // Privy's SDK is large, so it loads on its own once the board is up and never delays it.
@@ -26,9 +25,8 @@ class PrivyBoundary extends Component<{ children: ReactNode }, { failed: boolean
   }
 }
 
-/** Signs the person in to Privy once LINE has. Off under LIFF Mock, whose ID token is fake. */
+/** Signs the person in to Privy once LINE has. */
 export function PrivySignIn() {
-  if (liffMockActive) return null;
   return (
     <PrivyBoundary>
       <Suspense fallback={null}>

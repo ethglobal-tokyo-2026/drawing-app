@@ -1,7 +1,7 @@
 import { Heart, Wind, X } from "@phosphor-icons/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { RecordGratitude, ReplayV1 } from "../api/contract";
+import type { RecordGratitude, ReplayV1 } from "@drawing-app/api/client";
 import { useApi } from "../api/useApi";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Duration } from "../stickers/Duration";

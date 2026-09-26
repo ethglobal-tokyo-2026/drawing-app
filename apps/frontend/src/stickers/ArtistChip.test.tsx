@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { people } from "../api/mock/fixtures";
+import { people } from "../api/testFixtures";
 import { renderWithApi } from "../api/testing";
 import { toPerson } from "../api/views";
 import { ArtistChip } from "./ArtistChip";

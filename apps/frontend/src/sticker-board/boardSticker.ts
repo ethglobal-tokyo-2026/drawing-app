@@ -1,9 +1,8 @@
-import type { BoardSticker as ApiBoardSticker, Placement as ApiPlacement } from "../api/contract";
-import { toMs, toPerson, toSticker, type PersonView } from "../api/views";
+import type { BoardSticker as ApiBoardSticker } from "@drawing-app/api/client";
+import { toMs, toPerson, toRecordPlacement, toSticker, type PersonView } from "../api/views";
 import { formatHandle } from "../stickers/format";
-import type { Placement } from "../stickers/stickerStorage";
 import type { StickerUrls } from "../stickers/stickerUrls";
-import { freeSpot, nextZ } from "./placement";
+import { freeSpot, nextZ, type Placement } from "./placement";
 
 /** A sticker at its spot, as a Sticker Board's parts draw it. */
 export interface BoardSticker {
@@ -53,24 +52,6 @@ export type UnplacedBoardSticker = Omit<BoardStickerView, "placement"> & {
   placement: Placement | null;
 };
 
-export const fromApiPlacement = (p: ApiPlacement): Placement => ({
-  on: p.onBoard,
-  x: p.x,
-  y: p.y,
-  s: p.scale,
-  r: p.rotation,
-  z: p.z,
-});
-
-export const toApiPlacement = (p: Placement): ApiPlacement => ({
-  onBoard: p.on,
-  x: p.x,
-  y: p.y,
-  scale: p.s,
-  rotation: p.r,
-  z: p.z,
-});
-
 export function toBoardSticker(b: ApiBoardSticker): UnplacedBoardSticker {
   const s = toSticker(b.sticker);
   return {
@@ -83,7 +64,7 @@ export function toBoardSticker(b: ApiBoardSticker): UnplacedBoardSticker {
     // An empty cut line is one the sticker doesn't have.
     ...(s.outline && { outline: s.outline }),
     urls: s.urls,
-    placement: b.placement && fromApiPlacement(b.placement),
+    placement: b.placement && toRecordPlacement(b.placement),
     artist: s.artist,
     held: b.held,
     givenTo: b.givenTo && {

@@ -17,14 +17,14 @@ import { giftClaimTokenSchema, refuse, type GiftRow, type Refusal } from "./pack
 
 /** `liff.getContext().type`: where the Gift Message was opened. */
 const liffContextTypeSchema = z.enum(["utou", "room", "group", "square_chat", "external", "none"]);
-type LiffContextType = z.infer<typeof liffContextTypeSchema>;
+export type LiffContextType = z.infer<typeof liffContextTypeSchema>;
 
 /** The preview's body and the receive's. */
 export const openGiftBodySchema = z.object({
   giftClaimToken: giftClaimTokenSchema,
   liffContextType: liffContextTypeSchema,
 });
-type OpenGiftBody = z.infer<typeof openGiftBodySchema>;
+export type OpenGiftBody = z.infer<typeof openGiftBodySchema>;
 
 /** Why a gift can't be received, in the order they're checked. */
 export const receiveRefusalSchema = z.enum([

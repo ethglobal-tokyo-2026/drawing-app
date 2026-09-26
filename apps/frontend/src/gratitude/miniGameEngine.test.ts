@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReplayV1 } from "../api/contract";
+import type { ReplayV1 } from "@drawing-app/api/client";
 import type { ComboRecord } from "./combo";
 import { GAME_CONFIG } from "./gameConfig";
 import { mountMiniGameEngine, type MiniGameEngine } from "./miniGameEngine";
