@@ -214,7 +214,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     let sticker: SealedSticker | null = null;
     try {
       const sheet = sheetBox();
-      // The cut holds the main thread a moment: the key's pop and the tools stepping back paint first.
+      // Handing the ink to the sealing worker, or the whole cut where that can't run, holds the main
+      // thread a moment: the key's pop and the tools stepping back paint first.
       await afterPaint();
       sticker = ink && (await makeSticker(ink));
       if (!sticker) {
