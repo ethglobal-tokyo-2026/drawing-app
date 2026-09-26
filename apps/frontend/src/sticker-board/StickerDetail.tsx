@@ -64,7 +64,6 @@ export function StickerDetail({
 }: Props) {
   const reduced = useReducedMotion();
   useLight();
-  useBackToClose(true, onClose);
   const [shownId, setShownId] = useState(startId);
   const index = Math.max(
     0,
@@ -88,6 +87,7 @@ export function StickerDetail({
     reduced,
     onClose,
   });
+  useBackToClose(true, close);
   useFocusTrap(root, { onEscape: close, returnFocus });
 
   // LINE's header shows the page title.
