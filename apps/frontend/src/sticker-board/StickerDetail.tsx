@@ -181,6 +181,16 @@ export function StickerDetail({
     },
   });
 
+  // A page turn can take the focused control with it, as Timelapse waits for the next sticker's
+  // detail; the dialog then takes focus, since it holds the keys that page, wrap Tab and close.
+  const turned = useRef(shownId);
+  useLayoutEffect(() => {
+    if (turned.current === shownId) return;
+    turned.current = shownId;
+    const dialog = root.current;
+    if (dialog && !dialog.contains(document.activeElement)) dialog.focus({ preventScroll: true });
+  }, [shownId]);
+
   // The shown sticker's thumb scrolls to the strip's middle.
   useLayoutEffect(() => {
     const nav = strip.current;

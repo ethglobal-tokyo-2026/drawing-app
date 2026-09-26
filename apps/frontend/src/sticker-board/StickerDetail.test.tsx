@@ -365,6 +365,19 @@ describe("StickerDetail", () => {
       expect(layer()).toBeNull();
     });
 
+    it("keeps focus in the dialog when paging from Timelapse takes the button away", async () => {
+      open({ stickers: masked }, withTimelapse());
+      await settle();
+      act(() => timelapseButton()?.focus());
+      expect(document.activeElement).toBe(timelapseButton());
+      key("ArrowRight");
+      expect(heading()).toBe("No.0117");
+      expect(timelapseButton()).toBeNull();
+      expect(document.querySelector('[role="dialog"]')?.contains(document.activeElement)).toBe(
+        true,
+      );
+    });
+
     it("stops when Back closes the detail", async () => {
       const player = await playing();
       await act(async () => {
