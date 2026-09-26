@@ -494,6 +494,12 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           startId={open.id}
           mode={open.mode}
           handle={me.handle}
+          // It lifts off from where the sticker sits: on the board, or its given sticker silhouette.
+          originOf={(id) =>
+            stickerEl(id)?.querySelector<HTMLElement>(
+              ".placed-sticker__lift, .given-sticker-silhouette__art",
+            ) ?? null
+          }
           gifts={gifts}
           onClose={() => setOpen(null)}
           // Back to the sticker it opened from: on the board, or its given sticker silhouette.
