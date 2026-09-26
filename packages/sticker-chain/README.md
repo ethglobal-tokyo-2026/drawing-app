@@ -10,6 +10,7 @@ This package contains the first backend and contract boundaries for sealing stic
 - The original artist, content hash, and metadata URI remain immutable after later ownership transfers.
 - The backend reconciles repeat requests against the existing NFT instead of creating another NFT.
 - The LINE authentication server verifies the LIFF ID token with LINE before issuing a five-minute Privy Custom Auth JWT.
+- The same server switches a returning user's LINE chat menu: `POST /v1/auth/line-menu` verifies the ID token, looks the person up in Privy, and links the returning-user rich menu when they have an account.
 
 The package does not deploy the contracts, persist application records, upload sticker assets, configure Privy, or fund a paymaster.
 

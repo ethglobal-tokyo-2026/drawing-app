@@ -1,32 +1,6 @@
-import { once } from "node:events";
-import type { Server } from "node:http";
-import { afterEach, describe, expect, it } from "vitest";
-import { createAuthHttpServer } from "../src/auth-http.js";
+import { describe, expect, it } from "vitest";
 import type { LinePrivyJwtIssuer } from "../src/line-privy-jwt.js";
-
-let activeServer: Server | undefined;
-
-afterEach(async () => {
-  if (!activeServer) return;
-  const server = activeServer;
-  activeServer = undefined;
-  await new Promise<void>((resolve, reject) => {
-    server.close((error) => (error ? reject(error) : resolve()));
-  });
-});
-
-async function startServer(issuer: LinePrivyJwtIssuer, errors: unknown[]) {
-  activeServer = createAuthHttpServer({
-    issuer,
-    appOrigin: "https://drawing.example",
-    logger: { error: (_message, details) => errors.push(details.error) },
-  });
-  activeServer.listen(0, "127.0.0.1");
-  await once(activeServer, "listening");
-  const address = activeServer.address();
-  if (!address || typeof address === "string") throw new Error("Test server has no TCP address");
-  return `http://127.0.0.1:${address.port}`;
-}
+import { APP_ORIGIN, startAuthServer } from "./helpers/auth-server.js";
 
 describe("LINE authentication HTTP server", () => {
   it("serves public keys and restricts token issuance to the app origin", async () => {
@@ -37,7 +11,7 @@ describe("LINE authentication HTTP server", () => {
         return { jwt: "signed.jwt.here", subject: "line_subject", expiresAt: 123 };
       },
     };
-    const url = await startServer(issuer, []);
+    const { url } = await startAuthServer({ issuer });
 
     const keys = await fetch(`${url}/.well-known/jwks.json`);
     expect(keys.status).toBe(200);
@@ -45,7 +19,7 @@ describe("LINE authentication HTTP server", () => {
 
     const auth = await fetch(`${url}/v1/auth/privy-jwt`, {
       method: "POST",
-      headers: { origin: "https://drawing.example", "content-type": "application/json" },
+      headers: { origin: APP_ORIGIN, "content-type": "application/json" },
       body: JSON.stringify({ idToken: "verified-line-token" }),
     });
     expect(auth.status).toBe(200);
@@ -61,7 +35,6 @@ describe("LINE authentication HTTP server", () => {
   });
 
   it("returns a stable error and records provider failures", async () => {
-    const errors: unknown[] = [];
     const providerError = new Error("provider details");
     const issuer: LinePrivyJwtIssuer = {
       jwks: { keys: [] },
@@ -69,7 +42,7 @@ describe("LINE authentication HTTP server", () => {
         throw providerError;
       },
     };
-    const url = await startServer(issuer, errors);
+    const { url, errors } = await startAuthServer({ issuer });
     const response = await fetch(`${url}/v1/auth/privy-jwt`, {
       method: "POST",
       headers: { "content-type": "application/json" },
