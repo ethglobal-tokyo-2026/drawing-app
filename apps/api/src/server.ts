@@ -10,6 +10,7 @@ import type { AppDeps } from "./deps.ts";
 import { logInfo } from "./diagnostics.ts";
 import { chooseLineVerifier } from "./services/devSignIn.ts";
 import { createDiskImageStore } from "./services/imageStore.ts";
+import { journalLog } from "./services/journal.ts";
 import { createLineVerifier } from "./services/lineVerifier.ts";
 import { mintStub } from "./services/mint.ts";
 import { noSmartWallets } from "./services/smartWallets.ts";
@@ -105,6 +106,7 @@ const deps: AppDeps = {
   ...chain,
   sui: mockSuiPayments,
   suiPrice: () => Promise.resolve(MOCK_SUI_YEN),
+  serverLog: journalLog,
 };
 
 logInfo("api.configured", { mode: env.STICKER_CHAIN_MODE });

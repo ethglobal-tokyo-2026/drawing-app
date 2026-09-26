@@ -5,6 +5,7 @@ import type {
   ImageStore,
   Mint,
   MintedToken,
+  ServerLog,
   SmartWallets,
   SuiPayments,
   SuiPrice,
@@ -149,3 +150,9 @@ export const fakeSuiPrice =
   (yenPerSui: string | null): SuiPrice =>
   () =>
     Promise.resolve(yenPerSui);
+
+/** A server log that reads `text`. */
+export const fakeServerLog =
+  (text = ""): ServerLog =>
+  () =>
+    Promise.resolve(new Blob([text]).stream());

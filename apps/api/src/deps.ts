@@ -18,10 +18,14 @@ export interface AppDeps {
   sui: SuiPayments;
   /** The ticket shop quotes its packs at this price. */
   suiPrice: SuiPrice;
+  serverLog: ServerLog;
 }
 
 /** The 5-minute time-weighted average SUI/JPY price, as decimal yen per SUI; null while there's none. */
 export type SuiPrice = () => Promise<string | null>;
+
+/** The server's whole log as text, oldest line first. Rejects when the log can't be read. */
+export type ServerLog = () => Promise<ReadableStream<Uint8Array>>;
 
 export interface Clock {
   now: () => Date;

@@ -10,6 +10,7 @@ import {
   fakeClock,
   fakeImageStore,
   fakeLineVerifier,
+  fakeServerLog,
   fakeSuiPrice,
   sequentialIds,
 } from "./fakes.ts";
@@ -39,6 +40,7 @@ export async function createTestApp(
     smartWallets: noSmartWallets,
     sui: mockSuiPayments,
     suiPrice: fakeSuiPrice(TEST_SUI_YEN),
+    serverLog: fakeServerLog(),
     ...overrides,
   };
   return {

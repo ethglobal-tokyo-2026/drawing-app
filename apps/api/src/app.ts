@@ -49,7 +49,8 @@ const IMAGE_MAX_AGE_S = 365 * 24 * 60 * 60;
 
 /**
  * The REST API as the server runs it, with the sticker images in `imageDir` served in front of it,
- * public like a CDN's. A name with no image is a 404 there, never the API's session check.
+ * public like a CDN's. A name with no image is a 404 there, never the API's session check. The
+ * server log is in front of it too, public, since the agents troubleshooting the box have no session.
  */
 export function createServer(deps: AppDeps, imageDir: string) {
   const images = `${STICKER_IMAGES_PATH}/*`;
@@ -67,6 +68,9 @@ export function createServer(deps: AppDeps, imageDir: string) {
       }),
     )
     .get(images, (c) => apiError(c, 404, "image_not_found", `No sticker image at ${c.req.path}`))
+    .get("/api/logs", async (c) =>
+      c.body(await deps.serverLog(), 200, { "Content-Type": "text/plain; charset=utf-8" }),
+    )
     .route("/", createApp(deps))
     .onError(onError)
     .notFound(notFound);
