@@ -4,37 +4,37 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 
 ## Words
 
-| English                            | Japanese                                   | Notes                                       |
-| ---------------------------------- | ------------------------------------------ | ------------------------------------------- |
-| Croquis (the app)                  | クロッキー                                 |                                             |
-| sticker                            | シール                                     |                                             |
-| sticker board                      | シールボード                               | A person's board of stickers, never the app |
-| stat board (the board's cork back) | コルクボード                               |                                             |
-| User Stats                         | 記録                                       |                                             |
-| sticker tray                       | シールトレイ                               |                                             |
-| sticker sheet                      | シールシート                               |                                             |
-| Zipper                             | ファスナー                                 |                                             |
-| seal (a sticker)                   | 仕上げる                                   | The Seal key: 仕上げ. Sealed: 仕上がった    |
-| draw                               | かく                                       | In hiragana, as the Draw tab                |
-| gift / Gift Message                | ギフト / ギフトメッセージ                  |                                             |
-| give (a sticker)                   | 贈る                                       |                                             |
-| receive                            | 受け取る                                   |                                             |
-| gift bag                           | ギフト袋                                   |                                             |
-| pull tab                           | つまみ                                     | Only for opening a gift bag                 |
-| open (a gift, the app)             | ひらく                                     | In hiragana                                 |
-| Gratitude                          | 感謝                                       | "Send gratitude": 感謝を送る                |
-| (Gratitude) Mini-game              | 感謝ミニゲーム                             |                                             |
-| hits                               | ヒット                                     |                                             |
-| ticket / daily / reserve           | チケット / デイリーチケット / 予備チケット |                                             |
-| ticket shop                        | チケットショップ                           |                                             |
-| Original Artist                    | 作者                                       |                                             |
-| artist (someone who draws)         | アーティスト                               |                                             |
-| Transfer Trail                     | 受け渡し履歴                               |                                             |
-| Explore / My board                 | さがす / マイボード                        | The tab labels                              |
-| handle                             | ユーザー名                                 |                                             |
-| LINE friend / chat                 | 友だち / トーク                            | LINE's own words                            |
-| Official Account                   | 公式アカウント                             |                                             |
-| Terms / Privacy Policy             | 利用規約 / プライバシーポリシー            |                                             |
+| English                            | Japanese                               | Notes                                                                                       |
+| ---------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Croquis (the app)                  | クロッキー                             |                                                                                             |
+| sticker                            | シール                                 |                                                                                             |
+| sticker board                      | シールボード                           | A person's board of stickers, never the app                                                 |
+| stat board (the board's cork back) | コルクボード                           |                                                                                             |
+| User Stats                         | 記録                                   |                                                                                             |
+| sticker tray                       | シールトレイ                           |                                                                                             |
+| sticker sheet                      | シールシート                           |                                                                                             |
+| Zipper                             | ファスナー                             |                                                                                             |
+| seal (a sticker)                   | 仕上げる                               | The Seal key: 仕上げ. Sealed: 仕上がった                                                    |
+| draw                               | かく                                   | In hiragana, as the Draw tab                                                                |
+| gift / Gift Message                | ギフト / ギフトメッセージ              |                                                                                             |
+| give (a sticker)                   | 贈る                                   |                                                                                             |
+| receive                            | 受け取る                               |                                                                                             |
+| gift bag                           | ギフト袋                               |                                                                                             |
+| pull tab                           | つまみ                                 | Only for opening a gift bag                                                                 |
+| open (a gift, the app)             | ひらく                                 | In hiragana                                                                                 |
+| Gratitude                          | 感謝                                   | "Send gratitude": 感謝を送る                                                                |
+| (Gratitude) Mini-game              | 感謝ミニゲーム                         |                                                                                             |
+| hits                               | ヒット                                 |                                                                                             |
+| ticket / daily / reserve           | チケット / 無償チケット / 有償チケット | Gacha's words for free and bought; 無償チケットから先に使われます. Proposed, awaiting ad0ll |
+| ticket shop                        | チケットショップ                       |                                                                                             |
+| Original Artist                    | 作者                                   |                                                                                             |
+| artist (someone who draws)         | アーティスト                           |                                                                                             |
+| Transfer Trail                     | 来歴                                   | Provenance: who held it, and how it passed hand to hand. Proposed, awaiting ad0ll           |
+| Explore / My board                 | さがす / マイボード                    | The tab labels                                                                              |
+| handle                             | ユーザー名                             | X's word for the @handle; a display name is 名前                                            |
+| LINE friend / chat                 | 友だち / トーク                        | LINE's own words                                                                            |
+| Official Account                   | 公式アカウント                         |                                                                                             |
+| Terms / Privacy Policy             | 利用規約 / プライバシーポリシー        |                                                                                             |
 
 ## Style
 
