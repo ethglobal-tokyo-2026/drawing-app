@@ -302,3 +302,32 @@ describe("NFT request diagnostics", () => {
     expect(logs.error).not.toHaveBeenCalled();
   });
 });
+
+describe("a sticker's timelapse", () => {
+  const timelapse = {
+    v: 1,
+    ink: [390, 550],
+    place: [20, 30, 150, 112.5],
+    ops: [["brush", "#ff3366", 0, [100, 200, 60, 0]]],
+  };
+
+  it("reads how the sticker was drawn", async () => {
+    const fetch = answering(200, timelapse);
+    await expect(createHttpApi(createServerClient(fetch)).timelapse("s1")).resolves.toEqual(
+      timelapse,
+    );
+    const [input] = fetch.mock.calls[0] ?? [];
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input?.url;
+    expect(url).toMatch(/\/api\/stickers\/s1\/timelapse$/);
+  });
+
+  it("says when the sticker has none", async () => {
+    const api = createHttpApi(
+      createServerClient(answering(404, { error: "timelapse_not_found", detail: "s1" })),
+    );
+    expect(await refusalOf(api.timelapse("s1"))).toMatchObject({
+      status: 404,
+      code: "timelapse_not_found",
+    });
+  });
+});

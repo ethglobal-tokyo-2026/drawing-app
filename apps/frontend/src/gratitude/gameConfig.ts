@@ -4,14 +4,12 @@ export interface GameConfig {
   version: string;
   /** Gratitude a hit earns at ×1. */
   gratitudePerHit: number;
-  /** A touch on the heart this soon after the first tap catches it; otherwise the first tap sends. */
-  catchWindowMs: number;
   /** A combo ends this long after its first hit, whatever the bar says. */
   maxDurationMs: number;
-  /** The bar drains `drainStart` bars a second at the catch, doubling every `drainDoublingS`. */
+  /** The bar drains `drainStart` bars a second as it starts, doubling every `drainDoublingS`. */
   drainStart: number;
   drainDoublingS: number;
-  /** Hit n, from the third, adds gainFloor + gainAboveFloor × gainDecay^(n − 3) of the bar. */
+  /** Hit n, from the second, adds gainFloor + gainAboveFloor × gainDecay^(n − 2) of the bar. */
   gainFloor: number;
   gainAboveFloor: number;
   gainDecay: number;
@@ -41,9 +39,8 @@ export interface GameConfig {
 }
 
 export const GAME_CONFIG = {
-  version: "2026-09-26",
+  version: "2026-09-26.2",
   gratitudePerHit: 10,
-  catchWindowMs: 920,
   maxDurationMs: 8000,
   drainStart: 0.36,
   drainDoublingS: 1.6,
@@ -85,8 +82,6 @@ export const FEEL_CONFIG = {
   /** A click on the heart this soon after a finger, a mouse or a key lets go of it is that press's
    * own click, which the press has already counted. */
   clickAfterPressMs: 600,
-  /** The sent heart winds up toward the giver over the catch window, then holds through its grace. */
-  windUpMs: 800,
   /** A thumb stroking back and forth, anywhere on the screen: PJ's PHYS and StrokeDetector. */
   stroke: {
     minRunPx: 40,
@@ -94,6 +89,8 @@ export const FEEL_CONFIG = {
     turnPx: 12,
     pauseMs: 900,
     unlockPasses: 5,
+    /** Once a tap combo's bar is running, fewer passes unlock stroke, so it lands before the bar runs out. */
+    unlockPassesMidCombo: 2,
     /** A drag on the heart this long is a try at stroking it; after three, the tip says how. */
     tryTravelPx: 40,
     triesForTip: 3,
@@ -123,6 +120,8 @@ export const FEEL_CONFIG = {
     keepShakingAt: 4,
     cornerAt: 11,
     unlockAt: 16,
+    /** Once a tap combo's bar is running, fewer reversals unlock shake, so it lands before the bar runs out. */
+    unlockAtMidCombo: 6,
   },
   /** Mini hearts: sprayed by taps from ドキドキ up, sweated off the heart, and 昇天's rain. */
   miniHearts: {

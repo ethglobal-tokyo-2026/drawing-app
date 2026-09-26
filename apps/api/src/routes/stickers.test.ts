@@ -1,6 +1,7 @@
 import { MAX_TIME_USED_S, stickers, stickerTimelapses, ticketUses } from "@drawing-app/db";
 import { insertUser, packGift } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
+import { gzipSync } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { errorBodySchema } from "../errors.ts";
 import { keccak256 } from "../keccak256.ts";
@@ -13,10 +14,12 @@ import {
   sealImages,
   sealParts,
   STICKER_SIZE,
+  TEST_TIMELAPSE,
   testPng,
   testTimelapse,
   type SealParts,
 } from "../stickers/testPngs.ts";
+import { timelapseV1Schema } from "../stickers/timelapse.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { fakeGiftChain, fakeMint } from "../testing/fakes.ts";
 import { insertGratitude, insertSealedSticker, receiveGift } from "../testing/rows.ts";
@@ -345,6 +348,48 @@ describe("GET /api/stickers/:stickerId", () => {
   it("refuses an unknown sticker with sticker_not_found", async () => {
     const response = await getSticker(insertUser(test.db), "no-such-sticker");
     expect(await refusal(response)).toMatchObject({ status: 404, error: "sticker_not_found" });
+  });
+});
+
+describe("GET /api/stickers/:stickerId/timelapse", () => {
+  const getTimelapse = async (userId: string, stickerId: string) =>
+    test.app.request(`/api/stickers/${stickerId}/timelapse`, {
+      headers: await test.signInAs(userId),
+    });
+
+  it("answers how the sticker was drawn, as it was sealed, to anyone signed in", async () => {
+    const { sticker } = await seal(insertUser(test.db));
+    const response = await getTimelapse(insertUser(test.db), sticker.id);
+    expect(response.status).toBe(200);
+    expect(timelapseV1Schema.parse(await response.json())).toEqual(TEST_TIMELAPSE);
+  });
+
+  it("refuses a sticker sealed without one with timelapse_not_found", async () => {
+    const artistId = insertUser(test.db);
+    const { sticker } = await seal(artistId, { timelapse: undefined });
+    expect(await refusal(await getTimelapse(artistId, sticker.id))).toMatchObject({
+      status: 404,
+      error: "timelapse_not_found",
+    });
+  });
+
+  it("refuses an unknown sticker with sticker_not_found", async () => {
+    const response = await getTimelapse(insertUser(test.db), "no-such-sticker");
+    expect(await refusal(response)).toMatchObject({ status: 404, error: "sticker_not_found" });
+  });
+
+  it("fails loudly, naming the sticker, when what's stored isn't a timelapse", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const artistId = insertUser(test.db);
+    const notATimelapse = new File([gzipSync(JSON.stringify({ v: 1, ink: [1, 1] }))], "t.json.gz");
+    const { sticker } = await seal(artistId, { timelapse: notATimelapse });
+    expect(await refusal(await getTimelapse(artistId, sticker.id))).toMatchObject({
+      status: 500,
+      error: "internal_error",
+    });
+    expect(log).toHaveBeenCalledWith(
+      expect.stringContaining(`Sticker ${sticker.id}'s stored timelapse can't be read`),
+    );
   });
 });
 

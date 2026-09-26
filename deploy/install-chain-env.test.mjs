@@ -60,6 +60,20 @@ await test("missing Privy credentials abort before installing a file", (t) => {
   assert.equal(existsSync(chain), false);
 });
 
+await test("takes several RPC URLs separated by commas, and refuses a list with a bad one", (t) => {
+  const { input, run } = setup(t);
+  const list = "https://rpc.example/one, https://rpc.example/two";
+  const withList = `${input.replace("https://rpc.example/sepolia", list)}\nPRIVY_APP_SECRET=s\n`;
+  const accepted = run(withList, "check");
+  assert.equal(accepted.status, 0, accepted.stderr);
+  const refused = run(
+    withList.replace("https://rpc.example/two", "ftp://rpc.example/two"),
+    "check",
+  );
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.stderr, /Invalid ETHEREUM_SEPOLIA_RPC_URL/);
+});
+
 await test("an explicit invalid credential cannot erase an existing configuration", (t) => {
   const { chain, input, run } = setup(t);
   const initial = run(`${input}\nPRIVY_APP_SECRET=server-secret\n`);

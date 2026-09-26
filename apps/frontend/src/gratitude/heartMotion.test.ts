@@ -21,7 +21,6 @@ const RUNNING: HeartMotionState = {
   tier: 1,
   intensity: 0.7,
   reduced: false,
-  sendingProgress: 0,
   leanToward: null,
   strokeStretch: null,
 };
@@ -107,24 +106,6 @@ describe("createHeartMotion", () => {
     expect(loose.scale).toBeLessThan(0.7);
     expect(first.scale).toBeLessThanOrEqual(loose.scale);
     expect(anchorScale(first)).toBeLessThan(0.7);
-  });
-
-  it("winds up on a first tap straight after a drag, without a jump in its lean", () => {
-    const heart = heartWith();
-    heart.pullTo(90, 0);
-    run(heart, 0.3, { phase: "ready", tier: null });
-    heart.pullTo(0, null);
-    run(heart, 0.05, { phase: "ready", tier: null });
-    const frames = run(heart, 0.8, (s) => ({
-      phase: "sending",
-      tier: null,
-      sendingProgress: s / 0.8,
-    }));
-    const leans = frames.map(rotation);
-    for (let i = 1; i < leans.length; i++) {
-      expect(Math.abs(leans[i] - leans[i - 1])).toBeLessThan(1);
-    }
-    expect(leans.at(-1)).toBeLessThan(-7);
   });
 
   it("eases its tilt back upright once the wrist stops moving it", () => {
