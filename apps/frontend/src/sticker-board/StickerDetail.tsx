@@ -19,7 +19,6 @@ import { useReducedMotion } from "../ui/useReducedMotion";
 import { handleOf, onItsWay, type BoardStickerView } from "./boardSticker";
 import { useDetailLift } from "./detailLift";
 import { swipeLock, swipeTo } from "./detailPaging";
-import { TakeTheOriginal } from "./TakeTheOriginal";
 import { TransferTrail } from "./TransferTrail";
 import { toTrailRows } from "./trailRows";
 import "./sticker-detail.css";
@@ -390,9 +389,6 @@ export function StickerDetail({
                 viewerId={ownerId}
                 artist={sticker.artist}
               />
-            )}
-            {mode === "yours" && sticker.held && !onItsWay(sticker) && (
-              <TakeTheOriginal key={sticker.id} sticker={sticker} />
             )}
           </>
         ) : (

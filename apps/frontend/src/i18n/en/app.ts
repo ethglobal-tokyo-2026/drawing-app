@@ -19,10 +19,6 @@ export const app = {
     /** On the grabber until it's first used: where it goes. */
     grabber: "Board",
   },
-  shop: {
-    /** Under the ticket shop. */
-    moreSoon: "More things to buy with Sui are on the way.",
-  },
   motionPermission: {
     /** Names the sheet for assistive tech. */
     label: "Motion permission",
