@@ -4,7 +4,7 @@ export interface ShakeReversal {
   run: number;
   /** The way the phone moved, along its dominant axis. */
   direction: { x: number; y: number };
-  /** The peak acceleration since the last reversal, in m/s². */
+  /** The peak since the last reversal, in m/s², a wrist twist's scaled into them. */
   strength: number;
 }
 
@@ -21,7 +21,7 @@ export interface ShakeRules {
 }
 
 export interface ShakeDetector {
-  /** One sample, gravity taken out, in m/s². */
+  /** One sample in m/s²: gravity taken out, or a wrist twist scaled into the same units. */
   addMotionSample: (ax: number, ay: number, t: number) => ShakeReversal | null;
 }
 

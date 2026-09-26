@@ -1,0 +1,70 @@
+/* ---------- The performance recorder, on the developer slip ---------- */
+
+.performance-recorder {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--rule-strong);
+}
+
+.performance-recorder__h {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+
+.performance-recorder__note {
+  margin: -2px 0 0;
+}
+
+.performance-recorder__switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font: 600 15px/1.2 var(--font-ui);
+}
+
+.performance-recorder__switch input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--ink);
+}
+
+/* It changes each second: tabular figures keep it from jittering. */
+.performance-recorder__summary {
+  margin: 0;
+  font: 500 14px/1.4 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+}
+
+.performance-recorder__actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* A failure's reason can be long: it wraps, and can be copied into a report. */
+.performance-recorder__problem {
+  margin: 0;
+  font: 500 14px/1.4 var(--font-ui);
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.performance-recorder__report {
+  min-height: 180px;
+  font:
+    12px/1.4 ui-monospace,
+    monospace;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.performance-recorder :focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}

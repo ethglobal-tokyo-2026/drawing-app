@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A performance recorder on the stat board's developer slip that works inside LINE's in-app browser and says why frames drop, plus the two fixes the findings point at: the light writes only onto the elements that read it, and the board stops painting under the gratitude mini-game.
+**Goal:** A performance recorder on the stat board's developer slip that works inside LINE's in-app browser and says why frames drop, plus two fixes: the board stops painting under the gratitude mini-game, and the heart's thumb light stops restyling the whole game.
 
 **Architecture:** A pure frame log (`createPerformanceLog`, clock passed in) judges each requestAnimationFrame interval against the median of the last 120 and keeps the timeline around each slow one. A thin page layer feeds it: one rAF loop, window listeners, `document.fonts` and feature-checked PerformanceObservers, all started and stopped together. The app adds marks with `notePerformance` and times its per-frame callbacks with `timeOurWork`, both a single flag check while off. A pure formatter turns the recording into plain text for the slip's Copy report.
 
@@ -24,24 +24,24 @@
 
 - **Worktree:** `.claude/worktrees/gratitude-mini-game`, branch `design/gratitude-mini-game`. Lanes in one wave run in parallel in it, each owning only its files. An isolated subagent starts with `git switch -c perf/<lane> design/gratitude-mini-game` in its own worktree, and the controller cherry-picks its commits.
 - **Commits:** one per task, `git commit -m "<type>: <what>" -- <paths>`, with explicit paths and no trailers; a new file needs `git add <path>` first. Types: feat, fix, docs, refactor, test. If git reports an `index.lock`, wait and retry.
-- **The gratitude fix round:** other agents are editing `apps/frontend/src/gratitude/`. Before editing a file there, `git status --short apps/frontend/src/gratitude` must not list it; if it does, wait. Edits in those files are given by anchor text, not line numbers, because the lines move.
+- **Anchors:** the gratitude fix round and main's `perf/fixes` are merged, so these files are stable. Edits to existing files are given by anchor text against HEAD; if an anchor isn't there, stop and report.
 - **Checks in a wave**, your own files only: `pnpm --filter frontend exec vitest run <tests>`, `pnpm exec oxlint --type-aware --type-check <files>`, `pnpm exec oxfmt <files>`, and `pnpm --filter frontend typecheck`, where an error in a file you don't own is another lane's work in progress: report it, don't touch it. The full `pnpm check`, the code review and the smoke run happen once, in Task 10.
 - **Tests:** vitest. A DOM test opts in with `// @vitest-environment happy-dom` on its first line; happy-dom has no `document.fonts` and runs no Web Animations.
 - **Dev server:** `pnpm --filter frontend dev --port <port> --strictPort` (flags after `--` are ignored). It serves LIFF Mock and the API fixtures, so the board has stickers.
 
 ## Waves
 
-| Wave  | Lane                 | Tasks | Needs                                                  |
-| ----- | -------------------- | ----- | ------------------------------------------------------ |
-| 1     | R: the frame log     | 1 → 3 | —                                                      |
-| 1     | P: the report        | 2     | — (it imports only types from Task 1's file)           |
-| 1     | L: the light readers | 4     | — (its engine step waits for the fix round)            |
-| 1     | H: the board hidden  | 5     | — (waits for the fix round on `GratitudeMiniGame.tsx`) |
-| 2     | S: the slip and boot | 6     | 2, 3, 4                                                |
-| 2     | G: the game's marks  | 7     | 3, 4                                                   |
-| 2     | M: the light's marks | 8     | 3, 4                                                   |
-| 2     | T: tray and zipper   | 9     | 3                                                      |
-| Final | —                    | 10    | all                                                    |
+| Wave  | Lane                       | Tasks | Needs                                        |
+| ----- | -------------------------- | ----- | -------------------------------------------- |
+| 1     | R: the frame log           | 1 → 3 | —                                            |
+| 1     | P: the report              | 2     | — (it imports only types from Task 1's file) |
+| 1     | E: the heart's thumb light | 4     | —                                            |
+| 1     | H: the board hidden        | 5     | —                                            |
+| 2     | S: the slip and boot       | 6     | 2, 3                                         |
+| 2     | G: the game's marks        | 7     | 3, and 4 (the same engine file)              |
+| 2     | M: the light's marks       | 8     | 3                                            |
+| 2     | T: tray and zipper         | 9     | 3                                            |
+| Final | —                          | 10    | all                                          |
 
 ## Files
 
@@ -49,15 +49,13 @@
 | ---------------------------------------------------------------------------------------------------------------- | ---- |
 | Create `performance/performanceRecorder.ts`, `performance/performanceRecorder.test.ts`                           | 1, 3 |
 | Create `performance/performanceReport.ts`, `performance/performanceReport.test.ts`                               | 2    |
-| Modify `stickers/light.ts`, `stickers/light.test.ts`                                                             | 4, 8 |
-| Modify `stickers/LiveResin.tsx`, `stickers/live-resin.css` (comment)                                             | 4    |
 | Modify `gratitude/miniGameEngine.ts`                                                                             | 4, 7 |
-| Modify `gratitude/miniGameEngine.test.ts`                                                                        | 4    |
-| Modify `main.tsx`                                                                                                | 4, 6 |
+| Modify `gratitude/miniGameEngine.test.ts`, `gratitude/gratitude-mini-game.css` (a comment)                       | 4    |
 | Modify `gratitude/GratitudeMiniGame.tsx`, `gratitude/GratitudeMiniGame.test.tsx`                                 | 5    |
 | Create `sticker-board/stat-board/PerformanceRecorderControls.tsx`, its test, `performance-recorder-controls.css` | 6    |
-| Modify `sticker-board/stat-board/StatBoard.tsx`, and `AGENTS.MD` (repo root)                                     | 6    |
+| Modify `sticker-board/stat-board/StatBoard.tsx`, `main.tsx`, and `AGENTS.MD` (repo root)                         | 6    |
 | Modify `gratitude/tierSlamAndPopIns.ts`, `gratitude/gameEndings.ts`                                              | 7    |
+| Modify `stickers/light.ts`                                                                                       | 8    |
 | Modify `sticker-board/tray/trayEngine.ts`, `sticker-board/tray/zipper.ts`                                        | 9    |
 
 ---
@@ -453,8 +451,8 @@ const slowFrame: SlowFrame = {
   ours: { light: 0.5, gratitude: 11.9 },
   events: [
     { at: 64_990, ms: 0, kind: "tap", detail: 'pointerdown button "Send gratitude to @alice"' },
-    { at: 65_150, ms: 0, kind: "light", detail: "write to 3 readers" },
-    { at: 65_195, ms: 0, kind: "light", detail: "write to 3 readers" },
+    { at: 65_150, ms: 0, kind: "light", detail: "write to 3 resins" },
+    { at: 65_195, ms: 0, kind: "light", detail: "write to 3 resins" },
     { at: 65_210, ms: 0, kind: "gratitude", detail: "tier-up オーバーヒート" },
   ],
 };
@@ -488,7 +486,7 @@ describe("the performance report", () => {
         "1:04.2 Send gratitude: 184ms (typical 16.7ms)",
         "  ours 12.4ms: gratitude 11.9ms, light 0.5ms",
         '  -210ms tap: pointerdown button "Send gratitude to @alice"',
-        "  -50ms light: write to 3 readers ×2",
+        "  -50ms light: write to 3 resins ×2",
         "  +10ms gratitude: tier-up オーバーヒート",
       ].join("\n"),
     );
@@ -991,466 +989,52 @@ function listen(log: PerformanceLog): () => void {
 
 ---
 
-### Task 4: The light writes only onto its readers
+### Task 4: The heart's thumb light onto its gloss
 
-`light.ts` writes `--lx`/`--ly` onto the page root, which restyles every element for four rules. The readers, checked: `LiveResin.tsx` renders `.live-resin`, and `live-resin.css` reads the variables only in `.live-resin__lens > b`, `.live-resin__spec > b` and `.live-resin__rim > b`, all inside it (`SealCeremony.css` styles the same parts without reading them). The fourth is the heart's gloss, `.gr-heart-layers .h-gloss` in `gratitude-mini-game.css`.
+Main's light sets `--lx`/`--ly` only on live resin, and the board releases it while the game covers it, so in the game the heart's gloss (`.gr-heart-layers .h-gloss` in `gratitude-mini-game.css`) reads only the engine's own light. The engine writes that onto the game's root (`.gr`) while a thumb holds the heart, which restyles the whole game at up to 22 writes a second. It moves onto the gloss, the one element that reads it. Whether to keep this light at all is open question 1.
 
-The engine also writes the light, on the game's root (`.gr`), while a thumb holds the heart, which restyles the whole game at the light's beat. So the heart's reader is `.gr-heart-layers`, the gloss's parent, and the engine's thumb light moves onto the gloss itself: set there, it wins over the inherited light while the thumb holds, as it wins over the root's today.
+**Files:** Modify `apps/frontend/src/gratitude/miniGameEngine.ts`, `apps/frontend/src/gratitude/miniGameEngine.test.ts`, `apps/frontend/src/gratitude/gratitude-mini-game.css` (a comment).
 
-**Files:** Modify `apps/frontend/src/stickers/light.ts`, `apps/frontend/src/stickers/light.test.ts`, `apps/frontend/src/stickers/LiveResin.tsx`, `apps/frontend/src/stickers/live-resin.css`, `apps/frontend/src/main.tsx`, `apps/frontend/src/gratitude/miniGameEngine.ts`, `apps/frontend/src/gratitude/miniGameEngine.test.ts`.
-
-- [ ] **Step 1: Replace `light.test.ts`** with the failing tests:
+- [ ] **Step 1: Write the failing test.** In `miniGameEngine.test.ts`, add after `const REST = { x: 195, y: 440 };`:
 
 ```ts
-// @vitest-environment happy-dom
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { acquireLight, addLightReader, installLight } from "./light";
-
-let uninstall = () => {};
-/** The tilt listeners on the window: the phone's motion sensor runs while there are any. */
-const tiltListeners = new Set<EventListenerOrEventListenerObject>();
-/** The light's holds and readers a test hasn't released, released after it. */
-const held = new Set<() => void>();
-
-const lightOn = (el: HTMLElement) => [
-  el.style.getPropertyValue("--lx"),
-  el.style.getPropertyValue("--ly"),
-];
-const pointAt = (x: number, y: number) =>
-  window.dispatchEvent(new PointerEvent("pointermove", { clientX: x, clientY: y }));
-const tiltTo = (gamma: number, beta: number) =>
-  window.dispatchEvent(Object.assign(new Event("deviceorientation"), { gamma, beta }));
-const hold = (release: () => void) => {
-  held.add(release);
-  return () => {
-    held.delete(release);
-    release();
-  };
-};
-/** A screen with stickers showing: it holds the light, and returns what closes it. */
-const showScreen = () => hold(acquireLight());
-/** A sticker's live resin on screen, with the band its sheen sweeps. */
-const resinOnScreen = () => {
-  const el = document.body.appendChild(document.createElement("span"));
-  el.className = "live-resin";
-  el.innerHTML = '<i class="live-resin__sheen"><b></b></i>';
-  vi.spyOn(el, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 80, 80));
-  return el;
-};
-/** A live resin that reads the light. */
-const readingResin = () => {
-  const el = resinOnScreen();
-  hold(addLightReader(el));
-  return el;
-};
-/** Reduced motion, off until the returned function turns it on. */
-const reducedMotionSetting = () => {
-  const query = window.matchMedia("not all");
-  let on = false;
-  Object.defineProperty(query, "matches", { get: () => on });
-  vi.spyOn(window, "matchMedia").mockReturnValue(query);
-  return () => {
-    on = true;
-    query.dispatchEvent(new Event("change"));
-  };
-};
-
-beforeEach(() => {
-  vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame", "performance"] });
-  const add = window.addEventListener.bind(window);
-  const remove = window.removeEventListener.bind(window);
-  vi.spyOn(window, "addEventListener").mockImplementation((type, listener, options) => {
-    if (type === "deviceorientation") tiltListeners.add(listener);
-    add(type, listener, options);
-  });
-  vi.spyOn(window, "removeEventListener").mockImplementation((type, listener, options) => {
-    if (type === "deviceorientation") tiltListeners.delete(listener);
-    remove(type, listener, options);
-  });
-});
-
-afterEach(() => {
-  held.forEach((release) => release());
-  held.clear();
-  uninstall();
-  tiltListeners.clear();
-  document.body.replaceChildren();
-  vi.restoreAllMocks();
-  vi.unstubAllGlobals();
-  vi.useRealTimers();
-});
-
-describe("the shared light", () => {
-  it("follows the pointer to the window's edge, on its readers and nowhere else", () => {
-    const resin = readingResin();
-    const other = document.body.appendChild(document.createElement("span"));
-    uninstall = installLight();
-    pointAt(window.innerWidth, window.innerHeight / 2);
-    vi.advanceTimersByTime(16);
-    expect(lightOn(resin)).toEqual(["1.000", "0.000"]);
-    expect(lightOn(document.documentElement)).toEqual(["", ""]);
-    expect(lightOn(other)).toEqual(["", ""]);
-  });
-
-  it("writes once for moves that come close together, with the later position", () => {
-    const resin = readingResin();
-    uninstall = installLight();
-    pointAt(0, 0);
-    vi.advanceTimersByTime(16);
-    const writes = vi.spyOn(resin.style, "setProperty");
-    pointAt(window.innerWidth / 4, 0);
-    vi.advanceTimersByTime(16);
-    pointAt(window.innerWidth, 0);
-    vi.advanceTimersByTime(100);
-    expect(writes.mock.calls.filter(([name]) => name === "--lx")).toEqual([["--lx", "1.000"]]);
-  });
-
-  it("lights a reader that comes later at once, and stops lighting one that's gone", () => {
-    uninstall = installLight();
-    pointAt(window.innerWidth, 0);
-    vi.advanceTimersByTime(16);
-    const later = resinOnScreen();
-    const release = hold(addLightReader(later));
-    expect(lightOn(later)).toEqual(["1.000", "-1.000"]);
-    release();
-    pointAt(0, 0);
-    vi.advanceTimersByTime(100);
-    expect(lightOn(later)).toEqual(["1.000", "-1.000"]);
-  });
-
-  it("follows the phone's tilt on a screen with stickers, even in a browser that can also ask", () => {
-    // Chrome has requestPermission too, and grants it without asking.
-    vi.stubGlobal(
-      "DeviceOrientationEvent",
-      class {
-        static requestPermission = () => Promise.resolve("granted");
-      },
-    );
-    const resin = readingResin();
-    uninstall = installLight();
-    showScreen();
-    tiltTo(32, 40);
-    vi.advanceTimersByTime(16);
-    expect(lightOn(resin)).toEqual(["1.000", "0.000"]);
-  });
-
-  it("leaves the motion sensor off while no screen shows stickers", () => {
-    const resin = readingResin();
-    uninstall = installLight();
-    tiltTo(32, 40);
-    vi.advanceTimersByTime(16);
-    expect(lightOn(resin)).toEqual(["", ""]);
-    expect(tiltListeners.size).toBe(0);
-  });
-
-  it("stops listening for the tilt when the last screen with stickers goes", () => {
-    const resin = readingResin();
-    uninstall = installLight();
-    const closeBoard = showScreen();
-    const closeDetail = showScreen();
-    closeDetail();
-    expect(tiltListeners.size).toBe(1);
-    tiltTo(32, 40);
-    vi.advanceTimersByTime(16);
-    expect(lightOn(resin)).toEqual(["1.000", "0.000"]);
-
-    closeBoard();
-    expect(tiltListeners.size).toBe(0);
-    tiltTo(-32, 40);
-    vi.advanceTimersByTime(100);
-    expect(lightOn(resin)).toEqual(["1.000", "0.000"]);
-  });
-
-  it("sweeps a sheen across the resins that read it when the phone tilts far", () => {
-    const sweeps = vi.spyOn(Element.prototype, "animate").mockImplementation(() => new Animation());
-    const resin = readingResin();
-    resinOnScreen();
-    uninstall = installLight();
-    showScreen();
-    tiltTo(0, 40);
-    tiltTo(20, 40);
-    expect(sweeps.mock.contexts).toEqual([resin.querySelector(".live-resin__sheen > b")]);
-  });
-
-  it("stays in the middle under reduced motion", () => {
-    // A query that always matches stands in for the reduced-motion setting.
-    vi.spyOn(window, "matchMedia").mockReturnValue(window.matchMedia("all"));
-    const resin = readingResin();
-    uninstall = installLight();
-    pointAt(window.innerWidth, 0);
-    vi.advanceTimersByTime(100);
-    expect(lightOn(resin)).toEqual(["", ""]);
-  });
-
-  it("sets every reader back in the middle when reduced motion turns on", () => {
-    const turnOn = reducedMotionSetting();
-    const resin = readingResin();
-    uninstall = installLight();
-    pointAt(window.innerWidth, 0);
-    vi.advanceTimersByTime(16);
-    turnOn();
-    expect(lightOn(resin)).toEqual(["", ""]);
-  });
-});
+/** The heart's light, as its gloss reads it. */
+const glossLight = () =>
+  stage.querySelector<SVGElement>(".h-gloss")?.style.getPropertyValue("--lx") ?? "";
 ```
 
-- [ ] **Step 2: Run them to see them fail:** `pnpm --filter frontend exec vitest run src/stickers/light.test.ts`. Expected: FAIL, `addLightReader` isn't exported.
-
-- [ ] **Step 3: Replace `light.ts`:**
+In `"lets go of a drag on the heart as the heart comes loose"`, `expect(host.style.getPropertyValue("--lx")).not.toBe("");` becomes:
 
 ```ts
-import { useEffect, useLayoutEffect, type RefObject } from "react";
-import { sheenIn, sweepSheen } from "./resinSheen";
-
-/**
- * The app's one light: `--lx` and `--ly` (-1 to 1) follow the pointer, or the phone's tilt where the
- * browser shares it. They're written onto the light's readers, the elements whose highlights read
- * them, and never onto the root, where a change restyles every element on the page. A highlight
- * rests in the middle without them. The tilt is listened for only while a screen with stickers
- * holds the light, so the motion sensor rests everywhere else.
- */
-
-const REDUCED = "(prefers-reduced-motion: reduce)";
-/** The light is written at most this often; the highlights' transitions glide between writes. */
-const BEAT_MS = 45;
-/** Degrees of tilt that carry the light from the middle to an edge. */
-const TILT_RANGE = 32;
-/** How far back a phone leans when it's held to read, in degrees. */
-const HELD_BETA = 40;
-/** A tilt change this big sweeps a sheen across the stickers on screen, at most once a pause. */
-const SWEEP_TILT = 9;
-const SWEEP_PAUSE_MS = 1400;
-
-const clamp11 = (v: number) => (v < -1 ? -1 : v > 1 ? 1 : v);
-
-/** The installed light's tilt listener, on while any screen with stickers holds the light. */
-let tilt: { on: () => void; off: () => void } | null = null;
-let holders = 0;
-
-const readers = new Set<HTMLElement>();
-/** The light as last written, which a new reader takes at once; null while it rests in the middle. */
-let shining: { x: string; y: string } | null = null;
-
-function lightUp(reader: HTMLElement) {
-  if (shining) {
-    reader.style.setProperty("--lx", shining.x);
-    reader.style.setProperty("--ly", shining.y);
-  } else {
-    reader.style.removeProperty("--lx");
-    reader.style.removeProperty("--ly");
-  }
-}
-
-function shine(next: { x: string; y: string } | null) {
-  shining = next;
-  for (const reader of readers) lightUp(reader);
-}
-
-/** Sweeps a sheen across each live resin reader big enough to see on screen; returns how many it measured. */
-function sweepVisible(win: Window): number {
-  let measured = 0;
-  for (const reader of readers) {
-    const sheen = sheenIn(reader);
-    if (!sheen) continue;
-    measured++;
-    const r = reader.getBoundingClientRect();
-    if (r.width > 30 && r.bottom > 0 && r.top < win.innerHeight) sweepSheen(sheen);
-  }
-  return measured;
-}
-
-/** Writes the light onto an element whose styles read it; returns what stops that. */
-export function addLightReader(reader: HTMLElement): () => void {
-  readers.add(reader);
-  if (shining) lightUp(reader);
-  return () => {
-    readers.delete(reader);
-  };
-}
-
-/** Writes the light onto the element in `ref` while it's mounted, from before its first paint. */
-export function useLightReader(ref: RefObject<HTMLElement | null>) {
-  useLayoutEffect(() => {
-    const reader = ref.current;
-    return reader ? addLightReader(reader) : undefined;
-  }, [ref]);
-}
-
-/** Starts the light; returns what stops it. */
-export function installLight(win: typeof window = window): () => void {
-  const reduced = win.matchMedia(REDUCED);
-  let x = 0;
-  let y = 0;
-  let frame = 0;
-  let lastWrite = -Infinity;
-
-  const write = (now: number) => {
-    frame = 0;
-    if (now - lastWrite < BEAT_MS) {
-      frame = win.requestAnimationFrame(write);
-      return;
-    }
-    lastWrite = now;
-    shine({ x: x.toFixed(3), y: y.toFixed(3) });
-  };
-
-  const aim = (nx: number, ny: number) => {
-    if (reduced.matches) return;
-    x = clamp11(nx);
-    y = clamp11(ny);
-    if (!frame) frame = win.requestAnimationFrame(write);
-  };
-
-  const fromPointer = (e: PointerEvent) =>
-    aim((e.clientX / win.innerWidth) * 2 - 1, (e.clientY / win.innerHeight) * 2 - 1);
-
-  let lastGamma: number | null = null;
-  let lastSweep = -Infinity;
-  const fromTilt = (e: DeviceOrientationEvent) => {
-    if (e.gamma === null || e.beta === null) return;
-    aim(e.gamma / TILT_RANGE, (e.beta - HELD_BETA) / TILT_RANGE);
-    const now = win.performance.now();
-    if (
-      lastGamma !== null &&
-      Math.abs(e.gamma - lastGamma) > SWEEP_TILT &&
-      now - lastSweep > SWEEP_PAUSE_MS &&
-      !reduced.matches
-    ) {
-      lastSweep = now;
-      sweepVisible(win);
-    }
-    lastGamma = e.gamma;
-  };
-
-  // Turning reduced motion on sets the light back in the middle.
-  const onMotionSetting = () => {
-    if (!reduced.matches) return;
-    win.cancelAnimationFrame(frame);
-    frame = 0;
-    shine(null);
-  };
-
-  // The light never asks for the tilt: where a browser wants permission first (iOS), no tilt
-  // arrives until something else has asked, and the pointer alone moves the light.
-  const passive = { passive: true };
-  const ownTilt = {
-    on: () => win.addEventListener("deviceorientation", fromTilt, passive),
-    off: () => {
-      win.removeEventListener("deviceorientation", fromTilt);
-      // A tilt from before the sensor rested isn't a change to sweep for.
-      lastGamma = null;
-    },
-  };
-  tilt = ownTilt;
-  if (holders > 0) ownTilt.on();
-  win.addEventListener("pointermove", fromPointer, passive);
-  win.addEventListener("pointerdown", fromPointer, passive);
-  reduced.addEventListener("change", onMotionSetting);
-  return () => {
-    win.removeEventListener("pointermove", fromPointer);
-    win.removeEventListener("pointerdown", fromPointer);
-    ownTilt.off();
-    if (tilt === ownTilt) tilt = null;
-    reduced.removeEventListener("change", onMotionSetting);
-    win.cancelAnimationFrame(frame);
-    shine(null);
-  };
-}
-
-/** Holds the light for a screen with stickers; returns what releases it. */
-export function acquireLight(): () => void {
-  if (holders++ === 0) tilt?.on();
-  return () => {
-    if (--holders === 0) tilt?.off();
-  };
-}
-
-/** Holds the light while the calling screen shows its stickers. */
-export function useLight(showing = true) {
-  useEffect(() => (showing ? acquireLight() : undefined), [showing]);
-}
+expect(glossLight()).not.toBe("");
+expect(host.style.getPropertyValue("--lx")).toBe("");
 ```
 
-- [ ] **Step 4: The live resin reads it.** In `LiveResin.tsx`, add the imports and the ref:
+and its last line, `expect(host.style.getPropertyValue("--lx")).toBe("");`, becomes `expect(glossLight()).toBe("");`. In `"writes no speed field and no thumb light with reduced motion"`, both `expect(host.style.getPropertyValue("--lx")).toBe("");` become `expect(glossLight()).toBe("");`.
 
-```tsx
-import { useRef } from "react";
-import { useLightReader } from "./light";
-import "./live-resin.css";
-```
+- [ ] **Step 2: Run it to see it fail:** `pnpm --filter frontend exec vitest run src/gratitude/miniGameEngine.test.ts`. Expected: "lets go of a drag on the heart as the heart comes loose" FAILS, the gloss has no light.
 
-```tsx
-export function LiveResin({ highlights }: Props) {
-  const resin = useRef<HTMLSpanElement>(null);
-  useLightReader(resin);
-  return (
-    <span className="live-resin" ref={resin} aria-hidden="true">
-```
-
-In `live-resin.css`, the header comment's last sentence becomes: `The highlights read the shared light (--lx, --ly, -1 to 1), which the light writes onto .live-resin itself, and rest in the middle without one.`
-
-- [ ] **Step 5: `main.tsx`:** `installLight(document.documentElement);` becomes `installLight();`.
-
-- [ ] **Step 6: The heart's gloss** (wait for the fix round). In `gratitude/miniGameEngine.test.ts`, add `import { installLight } from "../stickers/light";` and this test inside `describe("mountMiniGameEngine")`:
-
-```ts
-it("lights the heart's gloss from the app's light while it's mounted, never the game's root", () => {
-  const uninstall = installLight();
-  const pointAt = (x: number) =>
-    window.dispatchEvent(new PointerEvent("pointermove", { clientX: x, clientY: 0 }));
-  try {
-    pointAt(window.innerWidth);
-    vi.advanceTimersByTime(100);
-    const layers = host.querySelector<HTMLElement>(".gr-heart-layers");
-    expect(layers?.style.getPropertyValue("--lx")).toBe("1.000");
-    expect(host.style.getPropertyValue("--lx")).toBe("");
-    engine.destroy();
-    pointAt(0);
-    vi.advanceTimersByTime(100);
-    expect(layers?.style.getPropertyValue("--lx")).toBe("1.000");
-  } finally {
-    uninstall();
-  }
-});
-```
-
-Run `pnpm --filter frontend exec vitest run src/gratitude/miniGameEngine.test.ts`. Expected: the new test FAILS (`--lx` is empty on the layers).
-
-- [ ] **Step 7: Edit `miniGameEngine.ts`:**
-  - Import: add `import { addLightReader } from "../stickers/light";` with the other `../` imports.
+- [ ] **Step 3: Edit `miniGameEngine.ts`:**
   - After `const ink = body.querySelector(".h-ink");` add:
 
 ```ts
-// The gloss reads the app's light through the heart's layers; a thumb on the heart writes its own
-// onto the gloss, which wins while it's there.
+// Only the heart's gloss reads the light, so a thumb's light goes on it, not on the whole game.
 const gloss = body.querySelector<SVGElement>(".h-gloss");
-const heartLayers = body.querySelector<HTMLElement>(".gr-heart-layers");
-const stopLighting = heartLayers ? addLightReader(heartLayers) : () => {};
 ```
 
-- In the frame's thumb branch, the two `root.style.setProperty("--lx", …)` / `("--ly", …)` calls become `gloss?.style.setProperty(…)` with the same arguments, and in its `else` branch the two `root.style.removeProperty("--lx")` / `("--ly")` become `gloss?.style.removeProperty(…)`.
-- In `destroy`, replace
+- In `frame`, under `// The heart's light follows the thumb, except with reduced motion.`, the two `root.style.setProperty("--lx", …)` / `("--ly", …)` calls become `gloss?.style.setProperty(…)` with the same arguments, and the two `root.style.removeProperty(…)` in its `else if (lightOwned)` branch become `gloss?.style.removeProperty(…)`.
+- In `destroy`, delete `root.style.removeProperty("--lx");` and `root.style.removeProperty("--ly");`: the gloss goes with `parts.stage.replaceChildren()`.
+- In `gratitude-mini-game.css`, the comment above `.gr-heart-layers .h-gloss` no longer holds, since the app's light doesn't reach the game. It becomes `/* the gloss follows a thumb on the heart, whose light the engine writes on it; translate glides between writes, with a slow sway to keep stills alive */`.
 
-```ts
-root.style.removeProperty("--lx");
-root.style.removeProperty("--ly");
-```
+- [ ] **Step 4: Run the tests:** same command. Expected: all pass. `rg -n -e 'root\.style\.\w+\("--l' apps/frontend/src/gratitude` finds nothing.
 
-with
-
-```ts
-stopLighting();
-```
-
-- [ ] **Step 8: Run** `pnpm --filter frontend exec vitest run src/stickers/light.test.ts src/gratitude/miniGameEngine.test.ts`. Expected: all pass. Then `rg -n -e '--l[xy]' --glob '*.ts' --glob '*.tsx' apps/frontend/src` lists only `stickers/light.ts`, its test, the engine's `gloss` lines and the engine test's checks: nothing writes the root.
-
-- [ ] **Step 9: Commit:** `git commit -m "fix: write the light only onto the elements that read it" -- apps/frontend/src/stickers/light.ts apps/frontend/src/stickers/light.test.ts apps/frontend/src/stickers/LiveResin.tsx apps/frontend/src/stickers/live-resin.css apps/frontend/src/main.tsx apps/frontend/src/gratitude/miniGameEngine.ts apps/frontend/src/gratitude/miniGameEngine.test.ts`.
+- [ ] **Step 5: Commit:** `git commit -m "fix: write the gratitude heart's thumb light on its gloss, not the whole game" -- apps/frontend/src/gratitude/miniGameEngine.ts apps/frontend/src/gratitude/miniGameEngine.test.ts apps/frontend/src/gratitude/gratitude-mini-game.css`.
 
 ---
 
 ### Task 5: The board hidden under the game
 
-`setPhoneAside` in `gratitude/GratitudeMiniGame.tsx` (committed in `50c737f`) makes the phone's other children `inert` in a layout effect as the game mounts, and takes off only the `inert` it added, both in `leave()` before `onClose()` and on unmount. This adds `visibility: hidden` to the same children and puts back each one's own inline visibility. Not `content-visibility`: it skips layout, so the board's ResizeObservers would see empty sizes.
+`setPhoneAside` in `gratitude/GratitudeMiniGame.tsx` makes the phone's other children `inert` in a layout effect as the game mounts, and takes off only the `inert` it added, both in `leave()` before `onClose()` and on unmount. This adds `visibility: hidden` to the same children and puts back each one's own inline visibility. Not `content-visibility`: it skips layout, so the board's ResizeObservers would see empty sizes.
 
 **Files:** Modify `apps/frontend/src/gratitude/GratitudeMiniGame.tsx`, `apps/frontend/src/gratitude/GratitudeMiniGame.test.tsx`.
 
@@ -1860,7 +1444,7 @@ if (readPerformanceRecorderSetting()) startPerformanceRecorder();
 
 Phase changes, tier-ups, slams, pop-ins, thrown mini hearts with their counts, and endings, plus the frame's script time. The slams and pop-ins are marked inside the lettering, so 昇天's slam and pop-ins in `gameEndings.ts` are caught too. No unit test: these are one-line marks, and Task 10 checks them in a real report.
 
-**Files:** Modify `apps/frontend/src/gratitude/miniGameEngine.ts`, `apps/frontend/src/gratitude/tierSlamAndPopIns.ts`, `apps/frontend/src/gratitude/gameEndings.ts`. Wait for the fix round.
+**Files:** Modify `apps/frontend/src/gratitude/miniGameEngine.ts`, `apps/frontend/src/gratitude/tierSlamAndPopIns.ts`, `apps/frontend/src/gratitude/gameEndings.ts`.
 
 - [ ] **Step 1: `miniGameEngine.ts`.** Add `import { notePerformance, timeOurWork } from "../performance/performanceRecorder";` with the other `../` imports, then:
   - After the mount's `root.dataset.reduced = reduced ? "1" : "0";` add `notePerformance("gratitude", "phase ready");`.
@@ -1940,9 +1524,9 @@ const drawFrame = (now: number) => {
 
 Move the body of the old `try { … }` into `drawFrame` as it is, then `pnpm exec oxfmt apps/frontend/src/gratitude/miniGameEngine.ts` fixes its indent.
 
-- [ ] **Step 2: `tierSlamAndPopIns.ts`.** Add the same import, then as the first line of `slamTierName(text, gloss) {`: ``notePerformance("gratitude", `slam ${text}`);``, and of `showPopInWord(bank, heart) {`: ``notePerformance("gratitude", `pop-in ${bank}`);``.
+- [ ] **Step 2: `tierSlamAndPopIns.ts`.** Add `import { notePerformance } from "../performance/performanceRecorder";`, then as the first line of `slamTierName(text, gloss) {`: ``notePerformance("gratitude", `slam ${text}`);``, and of `showPopInWord(bank, heart) {`: ``notePerformance("gratitude", `pop-in ${bank}`);``.
 
-- [ ] **Step 3: `gameEndings.ts`.** Add the same import, then as the first line of `flyHeartToGiver`: `notePerformance("gratitude", "ending: fly to the giver");`, of `playAscension`: `notePerformance("gratitude", "ending: 昇天");`, and of `sighAndTidy`: `notePerformance("gratitude", "ending: sigh");`.
+- [ ] **Step 3: `gameEndings.ts`.** Add `import { notePerformance } from "../performance/performanceRecorder";`, then as the first line of `flyHeartToGiver`: `notePerformance("gratitude", "ending: fly to the giver");`, of `playAscension`: `notePerformance("gratitude", "ending: 昇天");`, and of `sighAndTidy`: `notePerformance("gratitude", "ending: sigh");`.
 
 - [ ] **Step 4: Run** `pnpm --filter frontend exec vitest run src/gratitude`. Expected: all pass, unchanged. Then lint, format and typecheck.
 
@@ -1952,23 +1536,61 @@ Move the body of the old `try { … }` into `drawFrame` as it is, then `pnpm exe
 
 ### Task 8: The light's marks
 
+Against main's `stickers/light.ts`, which sets the light on every `.live-resin` it finds: on each write, and on `relight` when a screen takes the light.
+
 **Files:** Modify `apps/frontend/src/stickers/light.ts`.
 
-- [ ] **Step 1:** Add `import { notePerformance, timeOurWork } from "../performance/performanceRecorder";`. In `write`, the last line `shine({ x: x.toFixed(3), y: y.toFixed(3) });` becomes:
+- [ ] **Step 1:** Add `import { notePerformance, timeOurWork } from "../performance/performanceRecorder";`. Then:
+  - `sweepVisible` returns how many it measured:
 
 ```ts
-timeOurWork("light", () => shine({ x: x.toFixed(3), y: y.toFixed(3) }));
-notePerformance("light", `write to ${readers.size} readers`);
+/** Sweeps a sheen across each live resin big enough to see on screen; returns how many it measured. */
+function sweepVisible(doc: Document, win: Window): number {
+  const resins = doc.querySelectorAll(LIT);
+  for (const resin of resins) {
+    const r = resin.getBoundingClientRect();
+    const sheen = sheenIn(resin);
+    if (sheen && r.width > 30 && r.bottom > 0 && r.top < win.innerHeight) sweepSheen(sheen);
+  }
+  return resins.length;
+}
 ```
 
-In `fromTilt`, `sweepVisible(win);` becomes:
+- `setOnResins` returns how many it set, and `lightResins`, after it, times and marks a write:
 
 ```ts
-const measured = timeOurWork("light sweep", () => sweepVisible(win));
+/** Sets the light on every live resin, or clears it with null; returns how many. */
+const setOnResins = (lx: string | null, ly: string | null) => {
+  const resins = root.querySelectorAll<HTMLElement>(LIT);
+  for (const resin of resins) {
+    if (lx === null || ly === null) {
+      resin.style.removeProperty("--lx");
+      resin.style.removeProperty("--ly");
+    } else {
+      resin.style.setProperty("--lx", lx);
+      resin.style.setProperty("--ly", ly);
+    }
+  }
+  return resins.length;
+};
+
+/** Lights the resins from `at` as our work, and marks how many it lit. */
+const lightResins = (at: { x: number; y: number }, why: string) => {
+  const lit = timeOurWork("light", () => setOnResins(at.x.toFixed(3), at.y.toFixed(3)));
+  notePerformance("light", `${why} ${lit} resins`);
+};
+```
+
+- In `write`, `setOnResins(x.toFixed(3), y.toFixed(3));` becomes `lightResins(lit, "write to");`.
+- In `relight`, `if (lit && !reduced.matches) setOnResins(lit.x.toFixed(3), lit.y.toFixed(3));` becomes `if (lit && !reduced.matches) lightResins(lit, "relight");`.
+- In `fromTilt`, `sweepVisible(root.ownerDocument, win);` becomes:
+
+```ts
+const measured = timeOurWork("light sweep", () => sweepVisible(root.ownerDocument, win));
 notePerformance("light", `sweep measured ${measured} resins`);
 ```
 
-- [ ] **Step 2: Run** `pnpm --filter frontend exec vitest run src/stickers/light.test.ts`. Expected: all pass. Then lint, format and typecheck.
+- [ ] **Step 2: Run** `pnpm --filter frontend exec vitest run src/stickers/light.test.ts`. Expected: all pass, unchanged (the recorder is off in them). Then lint, format and typecheck.
 
 - [ ] **Step 3: Commit:** `git commit -m "feat: mark the light's writes and sweeps for the performance recorder" -- apps/frontend/src/stickers/light.ts`.
 
@@ -2034,8 +1656,12 @@ async (page) => {
     origin: "http://localhost:5199",
   });
   const cdp = await page.context().newCDPSession(page);
+  const turnOver = async () => {
+    await page.getByRole("button", { name: /: your stats$/ }).click();
+    await page.waitForTimeout(800);
+  };
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
-  await page.getByRole("button", { name: /: your stats$/ }).click();
+  await turnOver();
   await page.getByLabel("Full effects").check();
   await page.getByLabel("Record performance").check();
   await page.getByRole("button", { name: "Try the gratitude mini-game" }).click();
@@ -2050,21 +1676,30 @@ async (page) => {
   }
   await page.getByRole("button", { name: "Back to your board" }).click();
   await cdp.send("Emulation.setCPUThrottlingRate", { rate: 1 });
-  await page.mouse.move(300, 400);
+  // The board holds the light only with its front out.
+  await page.getByRole("button", { name: "Flip back" }).click();
+  await page.waitForTimeout(800);
+  await page.mouse.move(40, 300);
+  await page.mouse.move(300, 500);
   await page.waitForTimeout(200);
-  const light = await page.evaluate(() => ({
-    root: document.documentElement.style.getPropertyValue("--lx"),
-    resins: [...document.querySelectorAll(".live-resin")].filter(
-      (el) => el instanceof HTMLElement && el.style.getPropertyValue("--lx") !== "",
-    ).length,
-  }));
+  const light = await page.evaluate(() => {
+    const resins = [...document.querySelectorAll(".live-resin")];
+    return {
+      root: document.documentElement.style.getPropertyValue("--lx"),
+      resins: resins.length,
+      lit: resins.filter((el) => el instanceof HTMLElement && el.style.getPropertyValue("--lx"))
+        .length,
+    };
+  });
+  await turnOver();
   await page.getByRole("button", { name: "Copy report" }).click();
+  await page.getByText("Copied. Paste it into the chat.").waitFor();
   const report = await page.evaluate(() => navigator.clipboard.readText());
   return { underGame, light, report };
 };
 ```
 
-Pass when: `underGame` is true; `light.root` is `""` and `light.resins` is over 0; the report has the summary lines (`recorded ·`, `Typical frame`, `Slow frames by screen` with `Send gratitude`), at least one slow-frame line matching `/^\d+:\d\d\.\d .+: \d+ms \(typical/m` with an `ours` line naming `gratitude`, and `gratitude: tier-up`, `gratitude: slam`, `gratitude: spray` and `long frame` lines. Then turn Record performance off and check the summary line stops changing. Paste the report into the handback.
+Pass when: `underGame` is true; `light.root` is `""`, and `light.lit` equals `light.resins`, which is over 0; the report has the summary lines (`recorded ·`, `Typical frame`, `Slow frames by screen` with `Send gratitude`), at least one slow-frame line matching `/^\d+:\d\d\.\d .+: \d+ms \(typical/m` with an `ours` line naming `gratitude`, and `gratitude: tier-up`, `gratitude: slam`, `gratitude: spray` and `long frame` lines. Then turn Record performance off and check the summary line stops changing. Paste the report into the handback.
 
 - [ ] **Step 4: The owner's check on the phone:** the recording in "How to use it". Its report decides the next round.
 
@@ -2072,9 +1707,8 @@ Pass when: `underGame` is true; `light.root` is `""` and `light.resins` is over 
 
 ## Open questions
 
-1. **The engine's own light.** Besides the page root, the engine writes `--lx`/`--ly` onto the game's root while a thumb holds the heart. Task 4 moves that onto the gloss rather than removing it. On a phone the app's light already follows the same finger, so the thumb light could go entirely; that's the owner's call.
-2. **Paint, not style.** `visibility: hidden` stops the board painting, but its CSS animations (every resin's specular sway) still run. If the report still shows style and layout under the game, pausing the board's animations while the game covers it is the next step.
-3. **Descendants that set `visibility: visible`** still paint under a hidden parent: the seal key and the smoothing bar in the drawing screen, and the received gift's figure. None shows while a game opens, and the game's opaque liner covers them regardless.
-4. **The sweep still measures every mounted resin.** Task 4 drops the document query, not the measuring. The light's sweep mark reports how many it measured, so the recording shows whether that matters.
-5. **Unverified guesses:** the slow-input threshold (48ms to the next paint), the 30 fps band (28–40ms), the first interval's 30 fps pace, and whether LINE's WebView lets Copy report use the clipboard (the text box covers a refusal).
-6. **The Show frame times switch** and `frameTimeReadout.ts` overlap the recorder. AGENTS.MD's hard deprecation suggests removing them once the recorder has worked on the phone; not in this plan.
+1. **The heart's thumb light.** With main's light off in the game, the gloss's only light is the engine's, which follows a thumb on the heart. Task 4 moves it off the game's root onto the gloss. Whether to keep it at all is the owner's call.
+2. **Descendants that set `visibility: visible`** still paint under a hidden parent: the seal key and the smoothing bar in the drawing screen, and the received gift's figure. None shows while a game opens, and the game's opaque liner covers them regardless.
+3. **Every write and sweep queries the document.** Main's light runs `querySelectorAll(".live-resin")` on each write and each sweep, and the sweep measures every resin it finds. Task 8's marks give the counts, so the recording shows whether that matters.
+4. **Unverified guesses:** the slow-input threshold (48ms to the next paint), the 30 fps band (28–40ms), the first interval's 30 fps pace, and whether LINE's WebView lets Copy report use the clipboard (the text box covers a refusal).
+5. **The Show frame times switch** and `frameTimeReadout.ts` overlap the recorder. AGENTS.MD's hard deprecation suggests removing them once the recorder has worked on the phone; not in this plan.
