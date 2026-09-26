@@ -4,11 +4,12 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./client": "./src/client.ts"
+    "./client": "./src/client.ts",
+    "./dev-sign-in": "./src/services/devSignIn.ts"
   },
   "scripts": {
     "build": "node scripts/build.ts",
-    "dev": "node --watch --env-file-if-exists=.env src/server.ts",
+    "dev": "node --watch --env-file=.env.example --env-file-if-exists=.env src/server.ts",
     "start": "node src/server.ts",
     "test": "vitest run",
     "typecheck": "tsc",

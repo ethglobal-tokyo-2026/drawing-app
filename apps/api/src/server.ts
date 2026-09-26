@@ -7,6 +7,7 @@ import { isHex } from "viem";
 import { z } from "zod";
 import { createServer } from "./app.ts";
 import type { AppDeps } from "./deps.ts";
+import { chooseLineVerifier } from "./services/devSignIn.ts";
 import { createDiskImageStore } from "./services/imageStore.ts";
 import { createLineVerifier } from "./services/lineVerifier.ts";
 import { mintStub } from "./services/mint.ts";
@@ -22,7 +23,8 @@ const envSchema = z.object({
   IMAGE_DIR: z.string().min(1),
   CDN_BASE_URL: z.url(),
   PORT: z.coerce.number().int().positive().default(8788),
-  STICKER_CHAIN_MODE: z.enum(["mock", "sepolia"]),
+  // Empty is how .env switches off what .env.example switches on.
+  DEV_SIGN_IN: z.enum(["on", "off", ""]).optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -91,11 +93,11 @@ const deps: AppDeps = {
   sessionSecret: env.SESSION_SECRET,
   clock: { now: () => new Date() },
   ids: { uuid: () => randomUUID() },
-  line: createLineVerifier(env.LINE_CHANNEL_ID),
-  images,
-  mint: chain.mint,
-  giftChain: chain.giftChain,
-  smartWallets: chain.smartWallets,
+  line: chooseLineVerifier(env.DEV_SIGN_IN, createLineVerifier(env.LINE_CHANNEL_ID)),
+  images: createDiskImageStore(env.IMAGE_DIR, env.CDN_BASE_URL),
+  mint: mintStub,
+  giftChain: null,
+  smartWallets: noSmartWallets,
   sui: mockSuiPayments,
   suiPrice: () => Promise.resolve(MOCK_SUI_YEN),
 };
