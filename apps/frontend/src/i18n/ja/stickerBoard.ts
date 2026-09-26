@@ -2,6 +2,9 @@ import type { Translation } from "../catalog";
 import type { stickerBoard as english } from "../en/stickerBoard";
 
 export const stickerBoard: Translation<typeof english> = {
+  board: {
+    loading: "ステッカーを読み込んでいます",
+  },
   ensName: {
     open: "{{name}} を ENS アプリで開く",
   },
