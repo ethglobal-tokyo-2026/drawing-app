@@ -1,5 +1,4 @@
 import type { Explore, LeaderboardRow, Person } from "@drawing-app/api/client";
-import { At, X } from "@phosphor-icons/react";
 import type { TFunction } from "i18next";
 import {
   useEffect,
@@ -17,6 +16,7 @@ import { toPerson } from "../api/views";
 import { errorReason } from "../i18n/errorMessage";
 import { formatCount } from "../i18n/format";
 import { Trans, useTranslation } from "../i18n/react";
+import { At, X } from "../icons";
 import { formatHandle } from "../stickers/format";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
@@ -597,7 +597,7 @@ export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
     <div className="explore">
       {boardOf && <OpenBoardOf label={boardOf} open={open} />}
       <label className="artist-search">
-        <At size={20} />
+        <At size={20} aria-hidden />
         <input
           type="search"
           placeholder={t(($) => $.explore.search.placeholder)}
@@ -615,7 +615,7 @@ export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
             aria-label={t(($) => $.explore.search.clear)}
             onClick={() => setQuery("")}
           >
-            <X size={16} />
+            <X size={16} aria-hidden />
           </button>
         )}
       </label>
