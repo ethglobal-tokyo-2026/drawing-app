@@ -37,6 +37,7 @@ export const errors = {
   payment_short: "The payment was short.",
   replay_invalid: "The Gratitude replay couldn't be read.",
   signed_out: "You're signed out.",
+  smart_account_not_ready: "Your board address is taking too long to get ready. Try again.",
   sticker_not_found: "This sticker isn't here.",
   sticker_placement_not_found: "That sticker isn't on your sticker board.",
   sui_price_unavailable: "Today's prices aren't available right now.",

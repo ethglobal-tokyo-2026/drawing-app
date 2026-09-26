@@ -6,4 +6,6 @@ export const errors: Translation<typeof english> = {
   ens_not_configured: "このサーバーでは、まだ名前が使えません。",
   unknown_resolver: "この名前は別のアプリのものです。",
   unsupported_request: "この名前の問い合わせには答えられません。",
+  smart_account_not_ready:
+    "シールボードのアドレスの準備に時間がかかっています。もう一度お試しください。",
 };

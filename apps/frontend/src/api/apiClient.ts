@@ -115,8 +115,11 @@ export interface ApiClient {
   personByEnsLabel: (label: string) => Promise<Person>;
 }
 
-/** Codes the app makes itself: no answer, and no LINE ID token to sign in with. */
-type ClientErrorCode = "network" | "no_line_token";
+/**
+ * Codes the app makes itself: no answer, no LINE ID token to sign in with, and no smart account from
+ * Privy in time for a chain action.
+ */
+type ClientErrorCode = "network" | "no_line_token" | "smart_account_not_ready";
 export type ErrorCode = ApiErrorCode | ClientErrorCode;
 
 /** A refused or failed request: the HTTP status and the REST doc's error body. Status 0 is no answer. */
