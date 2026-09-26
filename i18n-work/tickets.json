@@ -42,7 +42,7 @@
     "ja": "有償"
   },
   "tickets.draw": {
-    "where": "The Draw key on the out-of-tickets card once the refill brings tickets back, and on the ticket shop's card after a purchase",
+    "where": "The Draw key on the out-of-tickets card once the refill brings tickets back, and in the ticket shop (card or Shop tab) after a purchase",
     "ja": "かく"
   },
   "tickets.drawWithTickets": {
