@@ -101,6 +101,22 @@ describe("the Zipper", () => {
     expect(swing()).toBe(0);
   });
 
+  it("leaves the chain as drawn while only the pull swings on after a run", async () => {
+    const swing = () => {
+      const pull = zip.el.querySelector<HTMLElement>(".zip__flop")?.style.transform ?? "";
+      return parseFloat(/rotate\((-?[\d.]+)deg\)/.exec(pull)?.[1] ?? "NaN");
+    };
+    void zip.open();
+    // The run and its knock have settled; the pull still swings from the knock.
+    await vi.advanceTimersByTimeAsync(2000);
+    let frames = 0;
+    zip.on("frame", () => frames++);
+    const before = swing();
+    await vi.advanceTimersByTimeAsync(300);
+    expect(swing()).not.toBeCloseTo(before, 1);
+    expect(frames).toBe(0);
+  });
+
   it("stops everything when destroyed and ignores later calls", async () => {
     void zip.open();
     zip.shake();
