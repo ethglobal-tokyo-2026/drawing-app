@@ -5,7 +5,14 @@
 import type { ArtKey } from "../../artists/art";
 import { avatarUrl, stickerArtUrl } from "../../artists/artUrl";
 import { artistByHandle } from "../../artists/demoArtists";
-import type { BoardSticker, Gift, Person, Sticker, TransferTrailEntry } from "../contract";
+import type {
+  BoardSticker,
+  Gift,
+  Gratitude,
+  Person,
+  Sticker,
+  TransferTrailEntry,
+} from "../contract";
 
 /** A demo artist as the API describes a person. */
 function demoPerson(handle: string): Person {
@@ -98,6 +105,22 @@ export function trailEntry(
     giver: people.mika,
     receivedAt: "2026-09-23T12:05:00.000Z",
     gratitude: null,
+    ...overrides,
+  };
+}
+
+export function gratitude(
+  overrides: Partial<Gratitude> & Pick<Gratitude, "giftId" | "total">,
+): Gratitude {
+  return {
+    method: "tap",
+    hits: 48,
+    peakMult: 4,
+    peakTier: 2,
+    originalArtistGratitudeShare: 0,
+    gameConfigVersion: "1",
+    recordedAt: "2026-09-23T12:10:00.000Z",
+    seenByGiverAt: null,
     ...overrides,
   };
 }

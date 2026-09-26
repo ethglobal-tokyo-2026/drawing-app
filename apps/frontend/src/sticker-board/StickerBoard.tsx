@@ -228,6 +228,8 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     for (const s of newlyPlaced) save(s, s.placement);
   }, [newlyPlaced, save]);
   const loadError = board.state === "failed" ? board.error.message : null;
+  // You, as the API names you: the board's owner.
+  const viewerId = board.state === "ready" ? board.data.owner.id : null;
 
   useLayoutEffect(() => {
     const el = stage.current;
@@ -568,13 +570,14 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         </Suspense>
       )}
 
-      {open && (
+      {open && viewerId && (
         <Suspense fallback={null}>
           <StickerDetail
             // In the order they arrived, as the board loads them.
             stickers={(stickers ?? []).filter((s) => (open.mode === "given") !== s.held)}
             startId={open.id}
             mode={open.mode}
+            viewerId={viewerId}
             // It lifts off from where the sticker sits: on the board, or its given sticker silhouette.
             originOf={(id) =>
               stickerEl(id)?.querySelector<HTMLElement>(

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "../api/apiClient";
 import { ApiProvider } from "../api/ApiProvider";
 import type { StickerDetailResponse } from "../api/contract";
-import { people, sticker as apiSticker, trailEntry } from "../api/mock/fixtures";
+import { gratitude, people, sticker as apiSticker, trailEntry } from "../api/mock/fixtures";
 import { emptyApi } from "../api/testing";
 import type { BoardSticker } from "./boardSticker";
 import { StickerDetail } from "./StickerDetail";
@@ -52,6 +52,7 @@ const open = (
           onClose={onClose}
           onGive={onGive}
           onSendGratitude={onSendGratitude}
+          viewerId="me"
           {...props}
         />
       </ApiProvider>,
@@ -71,6 +72,14 @@ const withTrail = (trail: StickerDetailResponse["transferTrail"]) =>
 const me = { id: "me", handle: "me", lineDisplayName: "Me", linePictureUrl: null };
 const settle = () => act(async () => {});
 const acts = () => document.querySelector(".sticker-detail__acts")?.textContent;
+const rows = () => [...document.querySelectorAll(".transfer-trail__row")];
+const openRow = () => document.querySelector(".transfer-trail__row.is-open")?.textContent;
+const closedRows = () =>
+  [
+    ...document.querySelectorAll<HTMLButtonElement>(
+      '.transfer-trail__row:not(.is-open) button[aria-expanded="false"]',
+    ),
+  ].filter((b) => !b.textContent?.includes("earlier"));
 
 const heading = () => document.querySelector("h2")?.textContent;
 const button = (name: string) =>
@@ -179,6 +188,47 @@ describe("StickerDetail", () => {
     open({}, withTrail([trailEntry({ giftId: "g-2", giver: me, receiver: people.bob })]));
     await settle();
     expect(acts()).toBe("Give");
+  });
+
+  it("shows where it's been, the most recent thanks open with its artist's share", async () => {
+    const thanked = trailEntry({
+      giftId: "g-2",
+      giver: people.ken,
+      receiver: me,
+      gratitude: gratitude({ giftId: "g-2", total: 2946, originalArtistGratitudeShare: 589 }),
+    });
+    // Drawn by @mika, so her share comes out of @ken's part.
+    const byMika = stickers.map((s) =>
+      s.id === "s-133" ? { ...s, artist: { id: people.mika.id, handle: "mika", name: "Mika" } } : s,
+    );
+    open(
+      { stickers: byMika },
+      withTrail([thanked, trailEntry({ giftId: "g-1", giver: people.mika, receiver: people.ken })]),
+    );
+    await settle();
+    expect(rows()).toHaveLength(2);
+    expect(openRow()).toContain("2,946");
+    expect(openRow()).toContain("From you");
+    expect(openRow()).toContain("2,357 to @ken · 589 to @mika, its artist");
+  });
+
+  it("opens a tapped row in place of the open one, and folds the rows after three", async () => {
+    const thanks = (n: number) =>
+      trailEntry({
+        giftId: `g-${n}`,
+        giver: people.ken,
+        receiver: people.bob,
+        gratitude: gratitude({ giftId: `g-${n}`, total: n * 100 }),
+      });
+    open({}, withTrail([5, 4, 3, 2, 1].map(thanks)));
+    await settle();
+    expect(rows()).toHaveLength(4);
+    expect(openRow()).toContain("500");
+    press("2 earlier gifts");
+    expect(rows()).toHaveLength(5);
+    act(() => closedRows()[0]?.click());
+    expect(openRow()).toContain("400");
+    expect(document.querySelectorAll(".transfer-trail__row.is-open")).toHaveLength(1);
   });
 
   it("titles LINE's header with the shown sticker, and puts the title back when it closes", () => {

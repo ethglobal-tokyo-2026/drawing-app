@@ -1,5 +1,5 @@
 import { CaretLeft, CaretRight, Gift, Heart } from "@phosphor-icons/react";
-import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { useApiQuery } from "../api/useApiQuery";
 import type { PersonView } from "../api/views";
@@ -17,6 +17,8 @@ import type { BoardSticker } from "./boardSticker";
 import { useDetailLift } from "./detailLift";
 import { swipeLock, swipeTo } from "./detailPaging";
 import { owedGratitude } from "./owedGratitude";
+import { TransferTrail } from "./TransferTrail";
+import { toTrailRows } from "./trailRows";
 import "./sticker-detail.css";
 
 interface Props {
@@ -31,6 +33,8 @@ interface Props {
   onGive?: (sticker: BoardSticker) => void;
   /** Thanks the giver of a received sticker you haven't thanked; without it there's no key. */
   onSendGratitude?: (gift: { id: string }, sticker: BoardSticker, giver: PersonView) => void;
+  /** Who's looking: the Transfer Trail reads them as "you". */
+  viewerId: string;
   /** Where focus goes once it closes, when that isn't back to what opened it. */
   returnFocus?: () => HTMLElement | null;
   /** Where a sticker sits on the board, which it lifts off from and sticks back onto. */
@@ -61,6 +65,7 @@ export function StickerDetail({
   onSendGratitude,
   returnFocus,
   originOf,
+  viewerId,
 }: Props) {
   const reduced = useReducedMotion();
   useLight();
@@ -72,11 +77,14 @@ export function StickerDetail({
   const sticker: BoardSticker | undefined = stickers[index];
   const last = stickers.length - 1;
   // Whether you've thanked a sticker you hold is on its Transfer Trail, which only its detail has.
-  const heldId = mode === "yours" && sticker?.held ? sticker.id : null;
-  const detail = useApiQuery(`sticker-detail:${heldId ?? "none"}`, (api) =>
-    heldId ? api.stickerDetail(heldId) : Promise.resolve(null),
+  // Its Transfer Trail, and whether you've thanked a sticker you hold, come with its detail.
+  const shownStickerId = sticker?.id ?? null;
+  const detail = useApiQuery(`sticker-detail:${shownStickerId ?? "none"}`, (api) =>
+    shownStickerId ? api.stickerDetail(shownStickerId) : Promise.resolve(null),
   );
-  const owed = detail.state === "ready" && detail.data ? owedGratitude(detail.data) : null;
+  const loaded = detail.state === "ready" ? detail.data : null;
+  const owed = mode === "yours" && sticker?.held && loaded ? owedGratitude(loaded) : null;
+  const trail = useMemo(() => (loaded ? toTrailRows(loaded.transferTrail) : []), [loaded]);
 
   const root = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLElement>(null);
@@ -281,7 +289,7 @@ export function StickerDetail({
                 </span>{" "}
                 <span>· {formatDay(sticker.createdAt)}</span>
               </p>
-              {sticker.givenTo && (
+              {sticker.givenTo && trail.length === 0 && (
                 <p className="fine sticker-detail__fine-print">
                   You gave it to{" "}
                   {formatHandle(sticker.givenTo.receiver.handle ?? sticker.givenTo.receiver.name)} ·{" "}
@@ -290,14 +298,6 @@ export function StickerDetail({
               )}
             </section>
 
-            {mode === "yours" && onItsWay && (
-              <div className="sticker-detail__on-its-way">
-                <span className="sticker-detail__sleeve" aria-hidden>
-                  <img src={sticker.urls.png} alt="" draggable={false} />
-                </span>
-                <span>On its way</span>
-              </div>
-            )}
             {mode === "yours" && !onItsWay && (sendGratitude || onGive) && (
               <div className={`sticker-detail__acts ${sendGratitude ? "is-stacked" : ""}`}>
                 {sendGratitude ? (
@@ -326,6 +326,32 @@ export function StickerDetail({
                     </Key>
                   )
                 )}
+              </div>
+            )}
+            {detail.state === "failed" ? (
+              <p className="fine sticker-detail__fine-print sticker-detail__problem" role="alert">
+                Where it’s been didn’t load ({detail.error.message}).{" "}
+                <button type="button" onClick={detail.retry}>
+                  Try again
+                </button>
+              </p>
+            ) : (
+              // Mounted once its rows are in, so the open row is picked from them.
+              trail.length > 0 && (
+                <TransferTrail
+                  key={sticker.id}
+                  rows={trail}
+                  viewerId={viewerId}
+                  artist={sticker.artist}
+                />
+              )
+            )}
+            {mode === "yours" && onItsWay && (
+              <div className="sticker-detail__on-its-way">
+                <span className="sticker-detail__sleeve" aria-hidden>
+                  <img src={sticker.urls.png} alt="" draggable={false} />
+                </span>
+                <span>On its way</span>
               </div>
             )}
           </>
