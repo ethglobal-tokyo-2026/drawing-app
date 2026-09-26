@@ -1,5 +1,5 @@
 import { MAX_TIME_USED_S } from "@drawing-app/db";
-import { crc32, gzipSync } from "node:zlib";
+import { crc32, deflateSync, gzipSync } from "node:zlib";
 import type { z } from "zod";
 import type { sealForm } from "./sealForm.ts";
 import type { TimelapseV1 } from "./timelapse.ts";
@@ -12,6 +12,7 @@ const COLOR_TYPE_RGBA = 6;
 const IHDR_BIT_DEPTH_AT = 8;
 const IHDR_COLOR_TYPE_AT = 9;
 const UINT32_BYTES = 4;
+const RGBA_BYTES = 4;
 
 /** A PNG chunk: its data's length, its type, the data, and the CRC of the type and data. */
 function chunk(type: string, data: Uint8Array): Buffer {
@@ -24,9 +25,8 @@ function chunk(type: string, data: Uint8Array): Buffer {
 }
 
 /**
- * PNG bytes of `width` × `height`: the signature, IHDR (8-bit RGBA) and IEND, with no pixels. Nothing
- * decodes them; sealing reads only the signature and IHDR. `comment` adds a tEXt chunk, for two PNGs
- * of one size with different bytes.
+ * A clear `width` × `height` PNG (8-bit RGBA), whole, since the disk image store decodes it to make
+ * its WebP files. `comment` adds a tEXt chunk, for two PNGs of one size with different bytes.
  */
 export function testPng(width: number, height: number, comment?: string): Uint8Array<ArrayBuffer> {
   const ihdr = Buffer.alloc(IHDR_BYTES);
@@ -35,11 +35,14 @@ export function testPng(width: number, height: number, comment?: string): Uint8A
   ihdr.writeUInt8(BIT_DEPTH, IHDR_BIT_DEPTH_AT);
   ihdr.writeUInt8(COLOR_TYPE_RGBA, IHDR_COLOR_TYPE_AT);
   const text = comment === undefined ? [] : [chunk("tEXt", Buffer.from(`Comment\0${comment}`))];
+  // Each row is its filter byte (0, none), then four zero bytes a pixel.
+  const pixels = deflateSync(Buffer.alloc((1 + width * RGBA_BYTES) * height));
   return new Uint8Array(
     Buffer.concat([
       Buffer.from(PNG_SIGNATURE),
       chunk("IHDR", ihdr),
       ...text,
+      chunk("IDAT", pixels),
       chunk("IEND", Buffer.alloc(0)),
     ]),
   );

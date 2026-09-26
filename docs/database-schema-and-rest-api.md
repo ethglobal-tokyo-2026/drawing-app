@@ -8,7 +8,7 @@ What the server stores and serves. `packages/db` holds the schema and `apps/api`
 - **Types:** request and response types derive from the tables through drizzle-zod. The app will call routes through Hono's typed client, so UI code gets its types from the server. Until then, the shapes below are the contract.
 - **Sign-in:** every screen needs LINE Login; there are no public pages. The server verifies LIFF's ID token and sets a session cookie.
 - **Chain:** Ethereum Sepolia is the owner of record for each sticker (`StickerNFT`) and each gift in transit (`StickerGiftEscrow`). The server keeps a small index of chain state, so screens don't wait for the chain except where noted below.
-- **Images:** five files per sticker on our CDN, named by the sticker PNG's content hash. The NFT's metadata is a JSON file on the same CDN. No IPFS.
+- **Images:** each sticker's five PNGs on our CDN, and the WebP files the app shows, named by the sticker PNG's content hash. The NFT's metadata is a JSON file on the same CDN. No IPFS.
 
 ## Rules that shape the UI
 
@@ -129,21 +129,21 @@ Inserted at the first sign-in.
 
 Inserted at seal. Everything but `owner_id` and the mint is fixed then.
 
-| Column         | Type           | Values                   | Set when                                      | Meaning                                                      |
-| -------------- | -------------- | ------------------------ | --------------------------------------------- | ------------------------------------------------------------ |
-| `id`           | text, PK       | UUID                     | seal                                          | the NFT's sticker key is keccak256 of it                     |
-| `number`       | int            | 1, 2, 3…; unique         | seal                                          | shown as No.0147                                             |
-| `artist_id`    | text → users   |                          | seal                                          | the Original Artist                                          |
-| `owner_id`     | text → users   |                          | seal (the Original Artist), then each receive | who holds it now                                             |
-| `time_used`    | int            | 0–180                    | seal                                          | seconds on the drawing clock                                 |
-| `width`        | int            | > 0                      | seal                                          | the sticker image's size in pixels; all five images share it |
-| `height`       | int            | > 0                      | seal                                          |                                                              |
-| `outline`      | text           | SVG path in image pixels | seal                                          | the cut line: ticket stubs, sheet packing, silhouettes       |
-| `content_hash` | text           | `0x` + 64 hex            | seal                                          | keccak256 of the sticker PNG; names its image files          |
-| `metadata_uri` | text           | CDN URL                  | seal                                          | the NFT's tokenURI                                           |
-| `token_id`     | text, null     | uint256; unique          | the mint lands                                | null while minting is a stub                                 |
-| `mint_tx_hash` | text, null     | `0x` + 64 hex            | with `token_id`                               | for the WorldScan link                                       |
-| `ens_named_at` | int (ms), null |                          | the sticker's name lands onchain              | `<number>.<artist's ens_label>.croquis.eth`                  |
+| Column         | Type           | Values                   | Set when                                      | Meaning                                                   |
+| -------------- | -------------- | ------------------------ | --------------------------------------------- | --------------------------------------------------------- |
+| `id`           | text, PK       | UUID                     | seal                                          | the NFT's sticker key is keccak256 of it                  |
+| `number`       | int            | 1, 2, 3…; unique         | seal                                          | shown as No.0147                                          |
+| `artist_id`    | text → users   |                          | seal                                          | the Original Artist                                       |
+| `owner_id`     | text → users   |                          | seal (the Original Artist), then each receive | who holds it now                                          |
+| `time_used`    | int            | 0–180                    | seal                                          | seconds on the drawing clock                              |
+| `width`        | int            | > 0                      | seal                                          | the sticker image's size in pixels, which its masks share |
+| `height`       | int            | > 0                      | seal                                          |                                                           |
+| `outline`      | text           | SVG path in image pixels | seal                                          | the cut line: ticket stubs, sheet packing, silhouettes    |
+| `content_hash` | text           | `0x` + 64 hex            | seal                                          | keccak256 of the sticker PNG; names its image files       |
+| `metadata_uri` | text           | CDN URL                  | seal                                          | the NFT's tokenURI                                        |
+| `token_id`     | text, null     | uint256; unique          | the mint lands                                | null while minting is a stub                              |
+| `mint_tx_hash` | text, null     | `0x` + 64 hex            | with `token_id`                               | for the WorldScan link                                    |
+| `ens_named_at` | int (ms), null |                          | the sticker's name lands onchain              | `<number>.<artist's ens_label>.croquis.eth`               |
 
 - `created_at` is the seal: the sealed card's date, "Today's stickers", streak days.
 
@@ -329,9 +329,18 @@ interface Sticker {
   timeUsed: number; // seconds, 0–180
   width: number;
   height: number;
-  outline: string; // SVG path in image pixels
+  outline: string; // SVG path in image pixels; simplified in boards and tickets, whole in the detail
   contentHash: string;
-  images: { png: string; mask: string; spec: string; rim: string; flat: string }; // CDN URLs
+  images: {
+    // CDN URLs. The PNGs it was sealed with:
+    png: string;
+    mask: string;
+    spec: string;
+    rim: string;
+    flat: string;
+    // What the app shows, made from them:
+    webp: { sticker: string; mask: string; spec: string; rim: string; foil: string };
+  };
   tokenId: string | null; // null while minting is a stub
   mintTxHash: string | null; // for the WorldScan link
   sealedAt: IsoTime;
@@ -393,7 +402,7 @@ interface Tickets {
     id: number;
     dayIndex: number;
     kind: "daily" | "reserve";
-    sticker: { id: string; outline: string; width: number; height: number } | null; // for the ticket stubs
+    sticker: { id: string; outline: string; width: number; height: number } | null; // for the ticket stubs; outline simplified
   }>;
 }
 
@@ -668,4 +677,7 @@ interface LeaderboardRow {
 
 ### Images
 
-Not routes: the URLs come in `Sticker.images`. Each sticker's five files are on the CDN, named by its content hash: `{contentHash}.png`, `.mask.png`, `.spec.png`, `.rim.png` and `.flat.png`. `StickerFigure`, `PlacedSticker` and `LiveResin` read them.
+Not routes: the URLs come in `Sticker.images`. Each sticker's files are on the CDN, named by its content hash, and never change once written.
+
+- The five PNGs it was sealed with: `{contentHash}.png`, `.mask.png`, `.spec.png`, `.rim.png` and `.flat.png`. The sticker PNG's hash names the sticker and its NFT.
+- The WebP files sealing makes from them, which the app shows: `{contentHash}.webp` (the sticker, lossy with alpha), `.mask.webp`, `.spec.webp` and `.rim.webp` (lossless), and `.foil.webp`, the foil band's mask: the silhouette grown by a distance transform, the image's size. `StickerFigure`, `StickerFoil`, `PlacedSticker`, `LiveResin` and the sticker tray read them.

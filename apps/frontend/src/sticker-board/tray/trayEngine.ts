@@ -26,7 +26,7 @@ export interface TraySticker extends TraySlot {
   width: number;
   height: number;
   outline?: string;
-  urls: Pick<StickerUrls, "png" | "mask">;
+  urls: Pick<StickerUrls, "png" | "mask" | "foil">;
   /** Drawn by someone else: a received gift. */
   gift: boolean;
   /** Shown in the open tray before, so it isn't NEW. */
@@ -547,7 +547,9 @@ export function createTrayEngine(
         const foil = decorative(
           make(
             "span",
-            "sticker-foil sticker-foil--sheet",
+            s.urls.foil
+              ? "sticker-foil sticker-foil--sheet sticker-foil--baked"
+              : "sticker-foil sticker-foil--sheet",
             make("span", "sticker-foil__cast"),
             make(
               "span",
@@ -558,6 +560,7 @@ export function createTrayEngine(
           ),
         );
         foil.style.setProperty("--foil-i", String(s.no));
+        if (s.urls.foil) foil.style.setProperty("--foil-mask", cssUrl(s.urls.foil));
         lightUp(foil);
         fit.append(foil);
       }

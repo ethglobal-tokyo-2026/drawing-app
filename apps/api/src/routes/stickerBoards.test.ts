@@ -6,6 +6,8 @@ import { z } from "zod";
 import { errorBodySchema } from "../errors.ts";
 import { userStatsSchema } from "../shapes.ts";
 import { MAX_SEEN_BATCH, stickerBoardSchema } from "../stickerBoards/board.ts";
+import { simplifiedOutline } from "../stickers/outline.ts";
+import { stickerDetailSchema } from "../stickers/stickerDetail.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { insertGratitude, insertSealedSticker, receiveGift } from "../testing/rows.ts";
 import { addDays, tokyoTicketDay, tokyoTicketDayStart } from "../ticketDays.ts";
@@ -159,6 +161,22 @@ describe("GET /api/sticker-boards/:userId", () => {
     expect(stickers.get(sent)?.openGift).toEqual({ id: sentGiftId, status: "sent", for: null });
     expect(stickers.get(given)).toMatchObject({ held: false, openGift: null });
     expect(stickers.get(received)).toMatchObject({ held: true, openGift: null });
+  });
+
+  it("sends each cut line simplified, where the sticker's detail sends it whole", async () => {
+    const me = insertUser(test.db);
+    // A circle as the seal stores a cut line: a point every 2 px.
+    const points = Array.from({ length: 800 }, (_, i) => {
+      const t = (i / 800) * Math.PI * 2;
+      return `${(300 + 250 * Math.cos(t)).toFixed(1)} ${(300 + 250 * Math.sin(t)).toFixed(1)}`;
+    });
+    const outline = `M${points.join("L")}Z`;
+    const stickerId = insertSealedSticker(test.db, me, { outline, width: 600, height: 600 });
+    const detail = await request(me, "GET", `/api/stickers/${stickerId}`);
+    expect((await okBody(detail, stickerDetailSchema)).sticker.outline).toBe(outline);
+    const [onBoard] = (await boardOf(me, "me")).boardStickers;
+    expect(onBoard?.sticker.outline).toBe(simplifiedOutline(outline, 600, 600));
+    expect(onBoard?.sticker.outline.length).toBeLessThan(outline.length / 4);
   });
 
   it("shows someone else only their on-board stickers, without their bag or NEW", async () => {

@@ -16,7 +16,7 @@ import type {
 import { keccak256 } from "../keccak256.ts";
 import { createDevLineVerifier } from "../services/devSignIn.ts";
 import { stickerImageUrls } from "../services/imageStore.ts";
-import type { StickerImages } from "../shapes.ts";
+import type { StickerPngKind } from "../shapes.ts";
 import { isHex, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { createNamingQueue } from "../ens/naming.ts";
@@ -53,7 +53,7 @@ export const fakeLineVerifier = createDevLineVerifier;
 
 /** Keeps saved images in memory, by content hash; like the disk store, the first save stays. */
 export function fakeImageStore(cdnBaseUrl = "https://cdn.test") {
-  const saved = new Map<string, Record<keyof StickerImages, Uint8Array>>();
+  const saved = new Map<string, Record<StickerPngKind, Uint8Array>>();
   const store: ImageStore = {
     save: (contentHash, pngs) => {
       if (!saved.has(contentHash)) saved.set(contentHash, pngs);

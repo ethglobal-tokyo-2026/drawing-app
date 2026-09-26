@@ -3,6 +3,7 @@ import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import type { ImageStore } from "../deps.ts";
 import { isoTimeSchema, personSchema, toIsoTime, toPerson } from "../shapes.ts";
+import { simplifiedOutline } from "../stickers/outline.ts";
 import {
   giftSchema,
   placementSchema,
@@ -22,6 +23,7 @@ export const MAX_SEEN_BATCH = 500;
 const openGiftStatusSchema = giftSchema.shape.status.extract(["packed", "sent"]);
 
 export const boardStickerSchema = stickerPlacementSchema.extend({
+  /** Its outline simplified, which is all a sticker sheet packs by; the sticker's detail has it whole. */
   sticker: stickerSchema,
   /** False: given away; a GivenStickerSilhouette, and an empty spot in the sticker tray. */
   held: z.boolean(),
@@ -139,7 +141,10 @@ export function loadStickerBoard(
       return {
         ...stickerPlacement,
         seenAt: own ? stickerPlacement.seenAt : null,
-        sticker: toSticker(sticker, artist, urls),
+        sticker: {
+          ...toSticker(sticker, artist, urls),
+          outline: simplifiedOutline(sticker.outline, sticker.width, sticker.height),
+        },
         held,
         givenTo: held ? null : (givenTo.get(sticker.id) ?? null),
         openGift: openGifts.get(sticker.id) ?? null,

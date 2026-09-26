@@ -23,7 +23,7 @@ const spendBodySchema = z.object({ ticketUse: ticketUseSchema, tickets: ticketsS
 const shopBodySchema = z.object({ shop: ticketShopSchema });
 
 /** A sealed sticker's cut, for the ticket stubs. */
-const SEALED_CUT = { outline: "M0 0H4V2Z", width: 4, height: 2 };
+const SEALED_CUT = { outline: "M0 0L4 0L4 2Z", width: 4, height: 2 };
 
 /** The pack after the single ticket: it has tickets to spare once one is spent. */
 const [, PACK] = TICKET_PACKS;

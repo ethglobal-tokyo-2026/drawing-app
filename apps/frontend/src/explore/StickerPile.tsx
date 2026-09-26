@@ -226,7 +226,7 @@ function PileSticker({
             {falling && (
               <img
                 className="pile-sticker__air"
-                src={sticker.images.png}
+                src={sticker.images.webp.sticker}
                 alt=""
                 draggable={false}
               />
@@ -234,7 +234,7 @@ function PileSticker({
             <img
               ref={revealOnLoad}
               className="pile-sticker__image reveal-img"
-              src={sticker.images.png}
+              src={sticker.images.webp.sticker}
               alt=""
               draggable={false}
               loading={falling ? "eager" : "lazy"}
