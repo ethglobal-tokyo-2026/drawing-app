@@ -130,18 +130,23 @@ describe("makeSticker", () => {
     expect(sticker?.maskImage).toMatchObject({ width: 0, height: 0 });
   });
 
-  it.each<[string, (worker: FakeWorker) => void, string]>([
-    [
-      "the cut fails there",
-      (w) => w.onmessage?.(answer({ ok: false, error: "Encoding a 3 × 2 layer as PNG failed" })),
-      "Encoding a 3 × 2 layer as PNG failed",
-    ],
-    ["its script doesn't load", (w) => w.onerror?.(new Event("error")), "script didn't load"],
-  ])("fails the seal, saying why, when %s, and stops the worker", async (_, fail, why) => {
+  it("fails the seal, saying why, when the cut fails in the worker, and stops the worker", async () => {
     const { sealing, worker } = await sealInWorker();
-    fail(worker);
-    await expect(sealing).rejects.toThrow(why);
+    worker.onmessage?.(answer({ ok: false, error: "Encoding a 3 × 2 layer as PNG failed" }));
+    await expect(sealing).rejects.toThrow("Encoding a 3 × 2 layer as PNG failed");
     expect(worker.stopped).toBe(true);
+  });
+
+  it("cuts on the main thread, and says so, when the worker's script doesn't load", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { sealing, worker } = await sealInWorker();
+    worker.onerror?.(new Event("error"));
+    await expect(sealing).resolves.toBeNull();
+    expect(worker.stopped).toBe(true);
+    expect(logged).toHaveBeenCalledWith(
+      "The sticker is cut on the main thread instead",
+      expect.objectContaining({ message: "The sealing worker's script didn't load" }),
+    );
   });
 
   it("gives up on a worker that never answers, and stops it", async () => {

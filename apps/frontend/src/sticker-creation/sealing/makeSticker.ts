@@ -74,6 +74,9 @@ const workerCanCut = () =>
   typeof OffscreenCanvas === "function" &&
   new OffscreenCanvas(1, 1).getContext("2d") !== null;
 
+/** The sealing worker's script didn't load. */
+class WorkerDidNotStart extends Error {}
+
 /** The cut in the sealing worker: this thread only snapshots the ink and hands it over. */
 async function cutInWorker(ink: HTMLCanvasElement): Promise<CutSticker | null> {
   const image = await createImageBitmap(ink);
@@ -89,7 +92,9 @@ async function cutInWorker(ink: HTMLCanvasElement): Promise<CutSticker | null> {
       // A script that didn't load reports a bare event, with no message.
       worker.onerror = (event) =>
         reject(
-          new Error(`The sealing worker failed: ${event.message || "its script didn't load"}`),
+          event.message
+            ? new Error(`The sealing worker failed: ${event.message}`)
+            : new WorkerDidNotStart("The sealing worker's script didn't load"),
         );
       worker.onmessageerror = () =>
         reject(new Error("The sealing worker's answer couldn't be read"));
@@ -123,12 +128,27 @@ function cutHere(ink: HTMLCanvasElement): Promise<CutSticker | null> {
 }
 
 /**
+ * The cut in the sealing worker, or on this thread when the worker's script won't load: a page open
+ * since before a deploy asks for the old build's worker, which the deploy removed. The seal goes on
+ * rather than failing, and the console says why it held the screen.
+ */
+async function cutInWorkerOrHere(ink: HTMLCanvasElement): Promise<CutSticker | null> {
+  try {
+    return await cutInWorker(ink);
+  } catch (error) {
+    if (!(error instanceof WorkerDidNotStart)) throw error;
+    console.error("The sticker is cut on the main thread instead", error);
+    return cutHere(ink);
+  }
+}
+
+/**
  * Cuts the sticker from a copy of the ink made for reading, which is read back once. Null when
  * there's no ink on it. The cut runs in the sealing worker where the browser can, so the screen
  * keeps moving.
  */
 export async function makeSticker(ink: HTMLCanvasElement): Promise<SealedSticker | null> {
-  const cut = workerCanCut() ? await cutInWorker(ink) : await cutHere(ink);
+  const cut = workerCanCut() ? await cutInWorkerOrHere(ink) : await cutHere(ink);
   if (!cut) return null;
   const { width, height, layers } = cut;
   const { canvas: maskImage, g } = blankCanvas(width, height);
