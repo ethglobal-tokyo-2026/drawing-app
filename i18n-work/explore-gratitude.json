@@ -1,0 +1,136 @@
+{
+  "explore.search.placeholder": {
+    "where": "Explore tab, top: placeholder text in the artist search field, beside its @ icon, until you type",
+    "ja": "アーティストをさがす"
+  },
+  "explore.search.label": {
+    "where": "Explore tab, top: screen readers' name for the artist search field",
+    "ja": "ユーザー名でアーティストをさがす"
+  },
+  "explore.search.clear": {
+    "where": "Explore tab, top: screen readers' name for the X button that appears in the search field once you've typed, and empties it",
+    "ja": "検索をクリア"
+  },
+  "explore.search.searching": {
+    "where": "Explore tab, while searching: fine print where the results will be, while the search is loading",
+    "ja": "検索中…"
+  },
+  "explore.search.artists_one": {
+    "where": "Explore tab, while searching: fine print over the results when one artist's handle matches"
+  },
+  "explore.search.artists_other": {
+    "where": "Explore tab, while searching: fine print over the results with how many artists' handles match",
+    "ja": "アーティスト{{count}}人"
+  },
+  "explore.search.notFound.title": {
+    "where": "Explore tab, after a search that matches no one: the heading, with the searched handle",
+    "ja": "{{handle}}さんはまだクロッキーにいません"
+  },
+  "explore.search.notFound.lead": {
+    "where": "Explore tab, after a search that matches no one: the paragraph under the heading, on checking the spelling or inviting a LINE friend with a sticker",
+    "ja": "ユーザー名はつづりが正確でないと見つかりません。本人に確認してください。LINEの友だちなら、シールボードからトークでシールを贈りましょう。受け取れば、その友だちもクロッキーに参加できます。"
+  },
+  "explore.loading": {
+    "where": "Explore tab, on opening it: fine print under the search field while today's stickers, the leaderboards and the activity feed load",
+    "ja": "読み込み中…"
+  },
+  "explore.you": {
+    "where": "Explore tab, a search result or leaderboard row that is you: under your handle, where other people's rows show their LINE name",
+    "ja": "あなた"
+  },
+  "explore.stickerBoard.yours": {
+    "where": "Explore tab: screen readers' name for anything of yours that opens your sticker board when tapped: your search result or leaderboard row, your sticker in Today's stickers, or your post's head in the activity feed",
+    "ja": "あなたのシールボード"
+  },
+  "explore.stickerBoard.theirs": {
+    "where": "Explore tab: screen readers' name for someone's search result or leaderboard row, their sticker in Today's stickers, or their post's head in the activity feed, which opens their sticker board when tapped",
+    "ja": "{{handle}}さんのシールボード"
+  },
+  "explore.today.title": {
+    "where": "Explore tab, below the search field: the heading of the first section, today's sealed stickers, beside a date badge",
+    "ja": "今日のシール"
+  },
+  "explore.today.none": {
+    "where": "Explore tab, Today's stickers section: fine print in place of the stickers when no one has sealed one today",
+    "ja": "今日はまだ誰もシールを仕上げていません。"
+  },
+  "explore.thisWeek.title": {
+    "where": "Explore tab: the heading of the leaderboards section, below Today's stickers",
+    "ja": "今週"
+  },
+  "explore.thisWeek.resets": {
+    "where": "Explore tab, leaderboards section: fine print beside the heading, when the week's leaderboards start over",
+    "ja": "月曜4:00にリセット"
+  },
+  "explore.thisWeek.leaderboards": {
+    "where": "Explore tab, leaderboards section: screen readers' name for the row of three leaderboard tabs",
+    "ja": "今週のランキング"
+  },
+  "explore.thisWeek.empty": {
+    "where": "Explore tab, leaderboards section: fine print in place of the rows when the chosen leaderboard has no one on it this week",
+    "ja": "今週はまだ誰もランクインしていません。"
+  },
+  "explore.leaderboards.mostGratitude": {
+    "where": "Explore tab, leaderboards section: the first tab, ranking people by the gratitude they earned this week",
+    "ja": "感謝の数"
+  },
+  "explore.leaderboards.bestCombo": {
+    "where": "Explore tab, leaderboards section: the second tab, ranking people by the most hits in one gratitude combo this week",
+    "ja": "最大コンボ"
+  },
+  "explore.leaderboards.longestStreak": {
+    "where": "Explore tab, leaderboards section: the third tab, ranking people by their current streak of days sealing a sticker",
+    "ja": "連続日数"
+  },
+  "explore.figure.hits": {
+    "where": "Explore tab, Best combo leaderboard: the figure at the end of each row, that person's hits in their best combo",
+    "ja": "×{{hits}}"
+  },
+  "explore.figure.streak_one": {
+    "where": "Explore tab, Longest streak leaderboard: the figure at the end of a row whose streak is one day, the unit set small"
+  },
+  "explore.figure.streak_other": {
+    "where": "Explore tab, Longest streak leaderboard: the figure at the end of each row, that person's streak in days, the unit set small",
+    "ja": "{{count}}<small>日</small>"
+  },
+  "explore.feed.sealed": {
+    "where": "Explore tab, activity feed: a post's line when someone sealed a sticker, their handle in bold",
+    "ja": "<artist/>さんがシールをつくりました"
+  },
+  "explore.feed.gave": {
+    "where": "Explore tab, activity feed: a post's line when someone gave a sticker to someone else, both handles in bold",
+    "ja": "<giver/>さんが<receiver/>さんにシールを贈りました"
+  },
+  "explore.feed.gaveYou": {
+    "where": "Explore tab, activity feed: a post's line when someone gave a sticker to you, their handle and \"you\" in bold",
+    "ja": "<giver/>さんが<b>あなた</b>にシールを贈りました"
+  },
+  "explore.feed.caption": {
+    "where": "Explore tab, activity feed: fine print under a post's sticker: its number, drawing time and artist's handle",
+    "ja": "{{number}}・<duration/>・<artist/>"
+  },
+  "explore.feed.ago.minutes": {
+    "where": "Explore tab, activity feed: fine print at the end of a post's head, how long ago it happened, under an hour",
+    "ja": "{{minutes}}分前"
+  },
+  "explore.feed.ago.hours": {
+    "where": "Explore tab, activity feed: fine print at the end of a post's head, how long ago it happened, from an hour to a day",
+    "ja": "{{hours}}時間前"
+  },
+  "explore.feed.ago.days": {
+    "where": "Explore tab, activity feed: fine print at the end of a post's head, how long ago it happened, a day or more",
+    "ja": "{{days}}日前"
+  },
+  "explore.failed.explore": {
+    "where": "Explore tab, when it fails to load: the heading of the error, over the reason and a Try again button",
+    "ja": "「さがす」を読み込めませんでした"
+  },
+  "explore.failed.searchResults": {
+    "where": "Explore tab, when a search fails to load: the heading of the error, over the reason and a Try again button",
+    "ja": "検索結果を読み込めませんでした"
+  },
+  "explore.failed.tryAgain": {
+    "where": "Explore tab, when it or a search fails to load: the small button under the error's reason that asks again",
+    "ja": "もう一度"
+  }
+}
