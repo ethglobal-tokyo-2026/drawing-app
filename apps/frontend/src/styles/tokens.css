@@ -71,6 +71,7 @@
   --t-turn: 500ms;
   --ease-turn: cubic-bezier(0.3, 0.7, 0.2, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* exponential ease-out */
+  --ease-soft: cubic-bezier(0.3, 0.7, 0.3, 1); /* gentle out, for a screen changing */
   --ease-spring: cubic-bezier(0.34, 1.7, 0.5, 1); /* press release, springs past 1.03 */
 
   /* The phone: iPhone 13/14 viewport, LINE's LIFF header, index tabs */

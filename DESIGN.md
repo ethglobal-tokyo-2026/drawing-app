@@ -589,8 +589,8 @@ One experience for everyone, on plain Liner, once per hand-off.
 
 - **Skeletons:** while a screen loads, it shows its own layout in outline, never a "Loading…" line: blocks of pressed Liner (Liner Deep) with a slow white shine passing over them, real headings and tab labels where they're fixed. Explore outlines Today's stickers, the leaderboard and the feed; the ticket shop its balance and pack rows; the sticker board faint die-cut shapes where stickers usually sit. A screen reader hears one status line ("Loading Explore").
 - **Reveal:** loaded content rises 6px into place and fades in over 220ms. A picture (a sticker, a photo sticker) holds back until its image has loaded, then fades in whole, never half-drawn.
-- **Tabs:** a tab's screen opens from the paper: a Liner veil over it fades away in 160ms.
-- **Reduced motion:** no shine, no rise, no fades.
+- **Tabs:** changing tabs cross-fades the screen over 300ms on a gentle ease: the old one fades out and sinks back a little as the new one fades in and settles up 8px from 98% size. The tab bar changes crisply around it. Browsers without View Transitions change at once.
+- **Reduced motion:** no shine and no rise; tabs cross-fade plainly in 150ms.
 
 ### Toast
 
