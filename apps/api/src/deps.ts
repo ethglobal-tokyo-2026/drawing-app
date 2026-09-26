@@ -22,7 +22,7 @@ export interface AppDeps {
   serverLog: ServerLog;
 }
 
-/** The server's whole log as text, oldest line first. Rejects when the log can't be read. */
+/** The server's whole log as text, newest line first. Rejects when the log can't be read. */
 export type ServerLog = () => Promise<ReadableStream<Uint8Array>>;
 
 export interface Clock {
