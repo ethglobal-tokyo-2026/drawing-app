@@ -167,6 +167,52 @@ describe("StartDrawing", () => {
     click("Buy reserve tickets");
     expect(onShop).toHaveBeenCalledOnce();
   });
+
+  it("keeps the key's face while the ticket is on its way: busy, not disabled", async () => {
+    await render(
+      <StartDrawing
+        tickets={tickets(1, 0)}
+        minutes={3}
+        busy
+        note={null}
+        onStart={onStart}
+        onShop={onShop}
+        onBoard={onBoard}
+      />,
+    );
+    const key = buttonNamed("Start drawing");
+    expect(key?.disabled).toBe(false);
+    expect(key?.getAttribute("aria-busy")).toBe("true");
+    // The press skips it, so a second tap doesn't press; start() ignores the click itself.
+    expect(key?.getAttribute("aria-disabled")).toBe("true");
+  });
+
+  it("drops away once the ticket is spent, then lets go", async () => {
+    const onLeft = vi.fn();
+    await render(
+      <StartDrawing
+        tickets={tickets(1, 0)}
+        minutes={3}
+        leaving
+        onLeft={onLeft}
+        note={null}
+        onStart={onStart}
+        onShop={onShop}
+        onBoard={onBoard}
+      />,
+    );
+    const root = document.querySelector(".out-of-tickets");
+    expect(root?.classList.contains("is-leaving")).toBe(true);
+    // The sheet under it takes the taps.
+    expect(root?.hasAttribute("inert")).toBe(true);
+    const card = document.querySelector(".out-of-tickets__card");
+    act(() => {
+      card?.dispatchEvent(
+        new AnimationEvent("animationend", { animationName: "out-of-tickets-drop", bubbles: true }),
+      );
+    });
+    expect(onLeft).toHaveBeenCalledOnce();
+  });
 });
 
 const SUI_WALLET = `0x${"1".repeat(64)}`;

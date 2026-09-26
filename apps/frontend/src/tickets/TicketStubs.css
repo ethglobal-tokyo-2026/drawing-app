@@ -164,8 +164,78 @@
   }
 }
 
+/* Spending a ticket peels its face off the backing, the house verb. It lifts at a corner while the
+   spend is on its way, settles back if the spend fails, and once it's done peels up and away,
+   leaving the used backing (or, for a reserve pack, one fewer on its badge). Transform and opacity only. */
+.ticket-stubs--small {
+  --lift: 0 -2px;
+  --peel-to: 5px -18px;
+  --peel-time: var(--t-stick);
+}
+
+.ticket-stubs--large {
+  --lift: 0 -4px;
+  --peel-to: 10px -36px;
+  --peel-time: var(--t-peel);
+}
+
+.ticket-stubs--hero {
+  --lift: 0 -5px;
+  --peel-to: 14px -48px;
+  --peel-time: var(--t-peel);
+}
+
+.ticket-stub__face {
+  transform-origin: 0 100%;
+  transition:
+    translate var(--t-stick) var(--ease-out),
+    rotate var(--t-stick) var(--ease-out);
+}
+
+.ticket-stub:is(.is-lifted, .is-peeling) .ticket-stub__backing {
+  visibility: visible;
+}
+
+.ticket-stub:is(.is-lifted, .is-peeling) .ticket-stub__face {
+  translate: var(--lift);
+  rotate: -3deg;
+}
+
+.ticket-stub.is-peeling .ticket-stub__face {
+  animation: ticket-stub-peel var(--peel-time) var(--ease-peel) forwards;
+}
+
+@keyframes ticket-stub-peel {
+  60% {
+    opacity: 1;
+    animation-timing-function: linear;
+  }
+  to {
+    translate: var(--peel-to);
+    rotate: -12deg;
+    opacity: 0;
+  }
+}
+
+/* The pack's count ticks down as its top ticket peels: the badge is stuck on again. */
+.ticket-stub__badge.is-ticked {
+  animation: ticket-stub-badge-tick var(--t-stick) var(--ease-out);
+}
+
+@keyframes ticket-stub-badge-tick {
+  from {
+    scale: 1.2;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ticket-stub__outline {
     animation: none;
+  }
+
+  /* No lift or travel: the face goes, and the backing shows, in one frame. */
+  .ticket-stub:is(.is-lifted, .is-peeling) .ticket-stub__face {
+    translate: none;
+    rotate: none;
   }
 }

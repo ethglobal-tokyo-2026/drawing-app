@@ -77,6 +77,19 @@
   }
 }
 
+/* As a ticket card leaves with no other card coming up, the strip's scrim clears with the card's own. */
+.phone.has-tucked-tabs:has(.out-of-tickets.is-leaving):not(
+    :has(.out-of-tickets:not(.is-leaving))
+  )::after {
+  animation: out-of-tickets-clear var(--t-stick) linear 120ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phone.has-tucked-tabs:has(.out-of-tickets.is-leaving)::after {
+    animation-delay: 0s;
+  }
+}
+
 /* Changing tabs (screenTransition.ts): the screen as it was fades out and sinks back a little while
    the next fades in and settles into place, slow and soft. The tab bar changes crisply around it. */
 .screen {

@@ -307,7 +307,7 @@
 
 /* Disabled: sunk flush into the page, with no lip, ink or shadow; enabling springs it up. */
 .key:disabled,
-.key[aria-disabled="true"],
+.key[aria-disabled="true"]:not([aria-busy="true"]),
 .label-btn:disabled,
 .label-btn[aria-disabled="true"] {
   --face: var(--liner-deep);
@@ -318,15 +318,21 @@
 }
 
 .key:disabled,
-.key[aria-disabled="true"] {
+.key[aria-disabled="true"]:not([aria-busy="true"]) {
   --line: 2px;
 }
 
 .key:disabled::after,
-.key[aria-disabled="true"]::after,
+.key[aria-disabled="true"]:not([aria-busy="true"])::after,
 .label-btn:disabled::after,
 .label-btn[aria-disabled="true"]::after {
   opacity: 0;
+}
+
+/* Busy: its act is under way. It keeps its face, lip and ink, and takes no second press, since the
+   press skips anything aria-disabled. */
+.key[aria-busy="true"] {
+  cursor: progress;
 }
 
 .label-btn--quiet:disabled,
