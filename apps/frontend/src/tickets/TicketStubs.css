@@ -30,32 +30,52 @@
   gap: 6px;
 }
 
+/* One ticket: its backing, and while it's fresh, its face lying on the backing. */
 .ticket-stub {
+  position: relative;
+  display: block;
   flex: none;
-  overflow: visible;
   filter: drop-shadow(0 1px 0 rgba(28, 24, 36, 0.1)) drop-shadow(1px 2px 3px rgba(28, 24, 36, 0.08));
 }
 
+.ticket-stub svg {
+  display: block;
+  overflow: visible;
+}
+
 .ticket-stub__face {
-  fill: var(--seal);
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
-.ticket-stub--reserve .ticket-stub__face {
-  fill: var(--grape);
+/* At rest the face covers its backing exactly, so the backing stays out of sight until the face lifts off it. */
+.ticket-stub.is-fresh .ticket-stub__backing {
+  visibility: hidden;
 }
 
-.ticket-stub.is-used .ticket-stub__face {
+/* The backing: the empty paper a used ticket leaves. */
+.ticket-stub__paper {
   fill: var(--liner-lift);
 }
 
 .ticket-stub__edge {
   fill: none;
-  stroke: rgba(28, 24, 36, 0.22);
+  stroke: var(--rule-strong);
   stroke-width: 1;
 }
 
-.ticket-stub.is-used .ticket-stub__edge {
-  stroke: var(--rule-strong);
+/* The face: ticket stock in its kind's color. */
+.ticket-stub__face .ticket-stub__paper {
+  fill: var(--seal);
+}
+
+.ticket-stub--reserve .ticket-stub__face .ticket-stub__paper {
+  fill: var(--grape);
+}
+
+.ticket-stub__face .ticket-stub__edge {
+  stroke: rgba(28, 24, 36, 0.22);
 }
 
 .ticket-stub__perf {

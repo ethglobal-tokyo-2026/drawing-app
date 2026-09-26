@@ -64,37 +64,44 @@ function Stub({ stub, geometry }: { stub: TicketStub; geometry: Geometry }) {
     [stub.used, stub.outline, geometry],
   );
   const bodyCenter = (perf + w - notch) / 2;
-
-  return (
-    <svg
-      className={`ticket-stub ticket-stub--${stub.kind ?? "daily"} ${stub.used ? "is-used" : "is-fresh"}`}
-      viewBox={`0 0 ${w} ${h}`}
-      width={w}
-      height={h}
-      aria-hidden
-      focusable="false"
-    >
-      <path className="ticket-stub__face" d={shape} />
+  const layer = { viewBox: `0 0 ${w} ${h}`, width: w, height: h, "aria-hidden": true } as const;
+  // Both layers are the same piece of paper: the silhouette, the perforation and the edge.
+  const paper = (
+    <>
+      <path className="ticket-stub__paper" d={shape} />
       <line className="ticket-stub__perf" x1={perf} y1={h * 0.12} x2={perf} y2={h * 0.88} />
       <path className="ticket-stub__edge" d={shape} />
-      {stub.used ? (
-        outline && <path className="ticket-stub__outline" d={outline} />
-      ) : (
-        // A fresh ticket is printed with the Draw mark, the act it's spent on.
-        <g
-          className="ticket-stub__glyph"
-          transform={`translate(${bodyCenter - glyph / 2} ${(h - glyph) / 2})`}
-        >
-          <DrawIcon size={glyph} />
-        </g>
+    </>
+  );
+
+  return (
+    <span
+      className={`ticket-stub ticket-stub--${stub.kind ?? "daily"} ${stub.used ? "is-used" : "is-fresh"}`}
+    >
+      {/* The backing: what a ticket leaves once it's used, with the kiss-cut outline of the sticker it became. */}
+      <svg className="ticket-stub__backing" {...layer} focusable="false">
+        {paper}
+        {outline && <path className="ticket-stub__outline" d={outline} />}
+      </svg>
+      {!stub.used && (
+        // A fresh ticket's face, printed with the Draw mark, the act it's spent on. Spending peels it off the backing.
+        <svg className="ticket-stub__face" {...layer} focusable="false">
+          {paper}
+          <g
+            className="ticket-stub__glyph"
+            transform={`translate(${bodyCenter - glyph / 2} ${(h - glyph) / 2})`}
+          >
+            <DrawIcon size={glyph} />
+          </g>
+        </svg>
       )}
-    </svg>
+    </span>
   );
 }
 
 /**
- * Drawing tickets as paper stubs: fresh ones are ticket stock (daily Seal Yellow, reserve Grape), used ones the empty backing
- * they left, carrying the kiss-cut outline of the sticker each became.
+ * Drawing tickets as paper stubs: fresh ones are ticket stock (daily Seal Yellow, reserve Grape) over a backing, used
+ * ones the empty backing they left, carrying the kiss-cut outline of the sticker each became.
  */
 export function TicketStubs({ stubs, size, label, className }: Props) {
   const geometry = GEOMETRY[size];
