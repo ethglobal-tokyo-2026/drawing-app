@@ -154,8 +154,8 @@
     "ja": "{{handle}}さんに感謝を送る"
   },
   "gratitude.hint": {
-    "where": "Gratitude Mini-game, before the first tap: the hint under the heart",
-    "ja": "できるだけ速くハートをタップ！"
+    "where": "Gratitude Mini-game, before the first tap: the hint under the heart, on two lines, beating like a game's start button",
+    "ja": "できるだけ速く<br/>ハートをタップ！"
   },
   "gratitude.tips.stroke": {
     "where": "Gratitude Mini-game, after three drags across the heart that didn't start stroking: a tip label with a swipe icon, also said to screen readers",
