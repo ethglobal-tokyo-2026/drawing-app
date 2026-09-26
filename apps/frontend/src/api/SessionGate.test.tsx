@@ -2,6 +2,7 @@
 import { act, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
+import { errorMessage } from "../i18n/errorMessage";
 import { currentLanguage, i18next } from "../i18n/i18n";
 import { keepChosenLanguage, readChosenLanguage } from "../i18n/language";
 import { ApiError } from "./apiClient";
@@ -111,13 +112,15 @@ describe("SessionGate", () => {
   );
 
   it("says why sign-in failed, and Try again signs in again", async () => {
+    const refusal = new ApiError(401, { error: "line_token_invalid" });
     const signIn = vi
       .fn<SessionApi["signIn"]>()
-      .mockRejectedValueOnce(new ApiError(401, { error: "line_token_invalid" }))
+      .mockRejectedValueOnce(refusal)
       .mockResolvedValueOnce({ me });
     const host = render(session({ signIn }));
     await settle();
     expect(host.textContent).toContain("Couldn’t sign you in");
+    expect(host.textContent).toContain(errorMessage(refusal));
     expect(host.textContent).toContain("line_token_invalid");
     act(() => host.querySelector("button")?.click());
     await settle();

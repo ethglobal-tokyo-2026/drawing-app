@@ -1,5 +1,6 @@
 import { Storefront } from "@phosphor-icons/react";
 import { useEffect, useId, useRef } from "react";
+import { useTranslation } from "../i18n/react";
 import { DrawIcon } from "../icons/DrawIcon";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
@@ -28,8 +29,6 @@ interface Props {
   onBoard: () => void;
 }
 
-const count = (n: number, kind: TicketKind) => `${n} ${kind} ${n === 1 ? "ticket" : "tickets"}`;
-
 /**
  * Asks before a ticket is spent on a fresh sheet, showing the day's daily stubs and the reserve count.
  * With daily tickets left it spends one; once they're gone it asks before spending a reserve ticket,
@@ -44,6 +43,7 @@ export function StartDrawing({
   onShop,
   onBoard,
 }: Props) {
+  const { t } = useTranslation();
   const stubs = dailyTickets(tickets);
   const daily = tickets.dailyLeft;
   const reserveAsk = daily === 0;
@@ -70,26 +70,30 @@ export function StartDrawing({
         <TicketStubs className="out-of-tickets__art" size="large" stubs={stubs} />
         <p className="out-of-tickets__reserve">
           <TicketCount kind="reserve" count={tickets.reserveLeft} />
-          <span className="fine">Reserve</span>
+          <span className="fine">{t(($) => $.tickets.reserve)}</span>
         </p>
         <h2 className="out-of-tickets__title" id={`${id}-title`}>
-          {reserveAsk ? "Use a reserve ticket?" : "Use a ticket to draw?"}
+          {reserveAsk
+            ? t(($) => $.tickets.startDrawing.reserve.title)
+            : t(($) => $.tickets.startDrawing.daily.title)}
         </h2>
         <p className="out-of-tickets__line" id={`${id}-line`}>
           {reserveAsk ? (
             <>
               <strong>
-                Today’s daily tickets are used. You have {count(tickets.reserveLeft, "reserve")}.
+                {t(($) => $.tickets.startDrawing.reserve.left, { count: tickets.reserveLeft })}
               </strong>{" "}
               <span className="out-of-tickets__quiet">
-                New daily tickets at {formatRefillTime(nextRefill(new Date()))}.
+                {t(($) => $.tickets.startDrawing.reserve.refillAt, {
+                  time: formatRefillTime(nextRefill(new Date())),
+                })}
               </span>
             </>
           ) : (
             <>
-              <strong>You have {count(daily, "daily")} left.</strong>{" "}
+              <strong>{t(($) => $.tickets.startDrawing.daily.left, { count: daily })}</strong>{" "}
               <span className="out-of-tickets__quiet">
-                Your {minutes}-minute timer starts with your first stroke.
+                {t(($) => $.tickets.startDrawing.daily.timer, { minutes })}
               </span>
             </>
           )}
@@ -109,10 +113,10 @@ export function StartDrawing({
               disabled={busy}
               onClick={() => onStart("reserve")}
             >
-              Use a reserve ticket
+              {t(($) => $.tickets.startDrawing.reserve.use)}
             </Key>
             <LabelButton block icon={<Storefront />} onClick={onShop}>
-              Shop for tickets
+              {t(($) => $.tickets.shopForTickets)}
             </LabelButton>
           </>
         ) : (
@@ -122,11 +126,11 @@ export function StartDrawing({
             disabled={busy}
             onClick={() => onStart("daily")}
           >
-            Start drawing
+            {t(($) => $.tickets.startDrawing.daily.start)}
           </Key>
         )}
         <QuietLink className="out-of-tickets__quiet-link" onClick={onBoard}>
-          Not now
+          {t(($) => $.tickets.notNow)}
         </QuietLink>
       </section>
     </div>

@@ -1,6 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { errorMessage } from "../i18n/errorMessage";
 import { currentLanguage } from "../i18n/i18n";
 import { followAccountLanguage } from "../i18n/pageLanguage";
+import { useTranslation } from "../i18n/react";
 import { lineIdToken } from "../line/liff";
 import { Key } from "../ui/Key";
 import { ApiError, apiError } from "./apiClient";
@@ -32,6 +34,7 @@ export function SessionGate({
   idToken?: () => string | null;
   children: ReactNode;
 }) {
+  const { t } = useTranslation();
   const [state, setState] = useState<Session>({ step: "signing-in" });
   const [attempt, setAttempt] = useState(0);
 
@@ -89,23 +92,19 @@ export function SessionGate({
     <main className="line-gate" aria-busy={state.step === "signing-in"}>
       {state.step === "signing-in" ? (
         <p className="fine line-gate__opening" role="status">
-          Opening your sticker board…
+          {t(($) => $.api.signIn.opening)}
         </p>
       ) : (
         <>
-          <h1 className="title-label">Couldn’t sign you in</h1>
-          <p className="line-gate__lead">
-            {state.error.code === "no_line_token"
-              ? "LINE didn’t give this app a way to sign you in."
-              : "Your sticker board opens once the app’s server answers. Check your connection, then try again."}
-          </p>
+          <h1 className="title-label">{t(($) => $.api.signIn.failed)}</h1>
+          <p className="line-gate__lead">{errorMessage(state.error)}</p>
           <Key
             onClick={() => {
               setState({ step: "signing-in" });
               setAttempt((n) => n + 1);
             }}
           >
-            Try again
+            {t(($) => $.api.signIn.tryAgain)}
           </Key>
           <p className="fine line-gate__reason">
             {state.error.status > 0 && `${state.error.status} · `}

@@ -125,6 +125,14 @@ export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
   };
 }
 
+/** The text `selector`'s first match shows on screen, without what only screen readers hear. */
+export function shownText(selector: string): string {
+  const shown = document.querySelector(selector)?.cloneNode(true);
+  if (!(shown instanceof Element)) throw new Error(`Nothing on screen matches ${selector}`);
+  shown.querySelectorAll(".visually-hidden").forEach((hidden) => hidden.remove());
+  return shown.textContent;
+}
+
 /** Renders `ui` as you, under an ApiProvider, in a fresh host. `unmount` removes both. */
 export function renderWithApi(ui: ReactNode, client: ApiClient = emptyApi(), me: Me = TEST_ME) {
   const host = document.createElement("div");

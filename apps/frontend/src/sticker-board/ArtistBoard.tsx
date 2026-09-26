@@ -13,6 +13,8 @@ import type { Person } from "@drawing-app/api/client";
 import { useApiQuery } from "../api/useApiQuery";
 import { toPerson, type PersonView } from "../api/views";
 import { GiveSheet } from "../giving/GiveSheet";
+import { errorReason } from "../i18n/errorMessage";
+import { Trans, useTranslation } from "../i18n/react";
 import { OfferSheet } from "../offers/OfferSheet";
 import { ArtistChip } from "../stickers/ArtistChip";
 import { Duration } from "../stickers/Duration";
@@ -62,6 +64,7 @@ function StickerView({
   owner: PersonView;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const drawnByOwner = sticker.artist.id === owner.id;
   const root = useRef<HTMLDivElement>(null);
   useBackToClose(true, onClose);
@@ -85,11 +88,18 @@ function StickerView({
         />
         <h2>{formatNo(sticker.no)}</h2>
         <div className="visit-view-meta fine">
-          Drawn in <Duration seconds={sticker.timeUsed} /> · {artistName(sticker.artist)}
+          {/* Their name is a component's text, which Trans never reads as markup. */}
+          <Trans
+            i18nKey={($) => $.stickerBoard.artistBoard.drawnIn}
+            components={{
+              duration: <Duration seconds={sticker.timeUsed} />,
+              artist: <>{artistName(sticker.artist)}</>,
+            }}
+          />
         </div>
         {!drawnByOwner && <ArtistChip artist={sticker.artist} />}
         <div className="visit-view-perf" />
-        <QuietLink onClick={onClose}>Close</QuietLink>
+        <QuietLink onClick={onClose}>{t(($) => $.stickerBoard.artistBoard.close)}</QuietLink>
       </div>
     </div>
   );
@@ -100,8 +110,10 @@ function StickerView({
  * stuck them, foil on the ones someone else drew; their name turns it over to their stat board.
  */
 export function ArtistBoard({ person, onBack }: Props) {
+  const { t } = useTranslation();
   const owner = toPerson(person);
   const handle = person.handle ? formatHandle(person.handle) : owner.name;
+  const title = t(($) => $.stickerBoard.artistBoard.title, { name: handle });
   const board = useApiQuery(`sticker-board/${person.id}`, (api) => api.stickerBoard(person.id));
   const stats = useApiQuery(`user-stats/${person.id}`, (api) => api.userStats(person.id));
   const reduced = useReducedMotion();
@@ -148,11 +160,11 @@ export function ArtistBoard({ person, onBack }: Props) {
   // LINE's header shows the page title.
   useEffect(() => {
     const previous = document.title;
-    document.title = `${handle}'s sticker board`;
+    document.title = title;
     return () => {
       document.title = previous;
     };
-  }, [handle]);
+  }, [title]);
 
   // The stat board and the give and offer sheets handle their own Escape; on the front it closes
   // the sticker view, then the sticker menu.
@@ -206,33 +218,40 @@ export function ArtistBoard({ person, onBack }: Props) {
     since: stats.state === "ready" ? Date.parse(stats.data.since) : null,
   };
   if (stats.state === "failed")
-    figures.streakRule = `Their stats didn’t load: ${stats.error.message}`;
+    figures.streakRule = t(($) => $.stickerBoard.artistBoard.statsDidntLoad, {
+      reason: errorReason(stats.error),
+    });
 
   const front = (
     <div className="board visit" ref={face}>
       <div
         className="board-stage"
         role="region"
-        aria-label={`${handle}'s sticker board`}
+        aria-label={title}
         onClick={onStageClick}
         onKeyDown={onStageKeyDown}
       >
         <span id={hint} hidden>
-          Enter opens its menu: view it, or offer for it
+          {t(($) => $.stickerBoard.artistBoard.hint)}
         </span>
         {board.state === "ready" && stickers.length === 0 && (
           <div className="board-blank">
             <span className="board-blank-cut" aria-hidden />
-            <span className="board-blank-note">{handle} hasn’t stuck anything up yet.</span>
+            <span className="board-blank-note">
+              {t(($) => $.stickerBoard.artistBoard.blank, { name: handle })}
+            </span>
           </div>
         )}
         {board.state === "failed" && (
           <div className="board-blank" role="alert">
             <span className="board-blank-note">
-              Couldn’t load {handle}’s board: {board.error.message}
+              {t(($) => $.stickerBoard.artistBoard.didntLoad, {
+                name: handle,
+                reason: errorReason(board.error),
+              })}
             </span>
             <LabelButton size="sm" onClick={board.retry}>
-              Try again
+              {t(($) => $.stickerBoard.tryAgain)}
             </LabelButton>
           </div>
         )}
@@ -252,7 +271,8 @@ export function ArtistBoard({ person, onBack }: Props) {
               onLanded={() => {}}
               reduced={reduced}
               tabbable
-              position={`${i + 1} of ${stickers.length}`}
+              position={i + 1}
+              setSize={stickers.length}
               hintId={hint}
               foil={s.artist.id !== person.id}
               by={s.artist.id !== person.id ? artistName(s.artist) : undefined}
@@ -267,14 +287,14 @@ export function ArtistBoard({ person, onBack }: Props) {
         onClick={() => turn(!turned)}
         aria-expanded={turned}
         aria-haspopup="dialog"
-        aria-label={`${owner.name}: their stats`}
+        aria-label={t(($) => $.stickerBoard.artistBoard.theirStats, { name: owner.name })}
       >
         <PhotoSticker src={owner.pictureUrl} name={owner.name} size={42} />
         <span className="board-who-name">{owner.name}</span>
       </button>
       <button type="button" className="explore-chip" data-press onClick={onBack}>
         <CaretLeft size={14} />
-        Explore
+        {t(($) => $.stickerBoard.artistBoard.explore)}
       </button>
 
       {menuSticker && (
@@ -294,7 +314,7 @@ export function ArtistBoard({ person, onBack }: Props) {
                 setSelected(null);
               }}
             >
-              View
+              {t(($) => $.stickerBoard.artistBoard.view)}
             </LabelButton>
             <LabelButton
               size="sm"
@@ -305,7 +325,7 @@ export function ArtistBoard({ person, onBack }: Props) {
                 setSelected(null);
               }}
             >
-              Offer for it
+              {t(($) => $.stickerBoard.artistBoard.offer)}
             </LabelButton>
           </div>
         </div>
@@ -322,7 +342,7 @@ export function ArtistBoard({ person, onBack }: Props) {
             setGiving(true);
           }}
         >
-          Give
+          {t(($) => $.stickerBoard.artistBoard.give)}
         </Key>
       </span>
     </div>

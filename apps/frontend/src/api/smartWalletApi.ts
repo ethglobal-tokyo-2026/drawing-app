@@ -1,5 +1,5 @@
 import { waitForSmartWallet } from "../identity/smartWallet";
-import type { ApiClient } from "./apiClient";
+import { ApiError, type ApiClient } from "./apiClient";
 
 /** The backend resolves the wallet from Privy; don't race its automatic creation at sign-in. */
 export function withSmartWallet(api: ApiClient): ApiClient {
@@ -9,9 +9,11 @@ export function withSmartWallet(api: ApiClient): ApiClient {
       await waitForSmartWallet();
       const sealed = await api.seal(request);
       if (sealed.sticker.tokenId === null || sealed.sticker.mintTxHash === null) {
-        throw new Error(
-          "Your sticker could not be added to your wallet yet. Please try Sealing again.",
-        );
+        // The server's own code for this, so the person reads its catalog message.
+        throw new ApiError(0, {
+          error: "mint_failed",
+          detail: `POST /api/stickers answered without a confirmed NFT for ${sealed.sticker.id}`,
+        });
       }
       return sealed;
     },

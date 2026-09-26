@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "../i18n/react";
 import { QuietLink } from "../ui/QuietLink";
 import { useToast } from "../ui/useToast";
 import "./account-rows.css";
@@ -13,15 +14,16 @@ interface Props {
 
 /** One row of account details inside a <dl className="account-rows">: the value in full, selectable. */
 export function AccountRow({ label, value, children, copyable = false }: Props) {
+  const { t } = useTranslation();
   const toast = useToast();
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(value);
-      toast(`${label} copied`);
+      toast(t(($) => $.identity.developer.copy.copied, { label }));
     } catch (error) {
       // The value stays selectable, so it can still be copied by hand.
       console.error(`Couldn't copy the ${label.toLowerCase()}`, error);
-      toast(`Couldn’t copy the ${label.toLowerCase()}`);
+      toast(t(($) => $.identity.developer.copy.failed, { label: label.toLowerCase() }));
     }
   };
   return (
@@ -30,8 +32,13 @@ export function AccountRow({ label, value, children, copyable = false }: Props) 
       <dd className="account-rows__value">{children ?? value}</dd>
       {copyable && (
         <dd className="account-rows__copy">
-          <QuietLink onClick={copy} aria-label={`Copy the ${label.toLowerCase()}`}>
-            Copy
+          <QuietLink
+            onClick={copy}
+            aria-label={t(($) => $.identity.developer.copy.ariaLabel, {
+              label: label.toLowerCase(),
+            })}
+          >
+            {t(($) => $.identity.developer.copy.button)}
           </QuietLink>
         </dd>
       )}
