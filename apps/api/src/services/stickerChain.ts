@@ -9,6 +9,7 @@ import { createStickerSealer } from "@drawing-app/sticker-chain/seal-sticker";
 import {
   createPublicClient,
   createWalletClient,
+  fallback,
   http,
   isAddress,
   isHex,
@@ -36,6 +37,16 @@ function bytes32(value: string, name: string): Hex {
   return value;
 }
 
+/**
+ * The RPC for one URL, or for several separated by commas, each tried in turn when the one before
+ * refuses: free RPCs each refuse something (Tenderly's public gateway rate-limits sending
+ * transactions; PublicNode's searches no more than 50,000 blocks for events).
+ */
+export function rpcTransport(rpcUrl: string) {
+  const urls = rpcUrl.split(",").map((url) => url.trim());
+  return urls.length > 1 ? fallback(urls.map((url) => http(url))) : http(rpcUrl.trim());
+}
+
 export function createStickerChain({
   rpcUrl,
   stickerContract,
@@ -55,7 +66,7 @@ export function createStickerChain({
   const escrowAddress = address(escrowContract, "STICKER_GIFT_ESCROW_ADDRESS");
   // Minting and Receiving share the relayer; concurrent requests need distinct nonces.
   const sealerAccount = privateKeyToAccount(sealerPrivateKey, { nonceManager });
-  const transport = http(rpcUrl);
+  const transport = rpcTransport(rpcUrl);
   const publicClient = createPublicClient({ chain: sepolia, transport });
   const walletClient = createWalletClient({ chain: sepolia, transport, account: sealerAccount });
 

@@ -35,8 +35,11 @@ for (const key of ["STICKER_NFT_ADDRESS", "STICKER_GIFT_ESCROW_ADDRESS"]) {
 }
 if (!/^0x[0-9a-fA-F]{64}$/.test(values.STICKER_SEALER_PRIVATE_KEY ?? ""))
   throw new Error("Invalid STICKER_SEALER_PRIVATE_KEY");
-const rpcUrl = URL.parse(values.ETHEREUM_SEPOLIA_RPC_URL ?? "");
-if (!rpcUrl || !["https:", "http:"].includes(rpcUrl.protocol))
+// One URL, or several separated by commas, which the API tries in turn.
+const rpcUrls = (values.ETHEREUM_SEPOLIA_RPC_URL ?? "")
+  .split(",")
+  .map((url) => URL.parse(url.trim()));
+if (!rpcUrls.every((url) => url && ["https:", "http:"].includes(url.protocol)))
   throw new Error("Invalid ETHEREUM_SEPOLIA_RPC_URL");
 if (mode === "check") {
   console.log("Sepolia configuration is complete");
