@@ -11,6 +11,7 @@ import { useMe } from "../api/meContext";
 import { useApiQuery, type Query } from "../api/useApiQuery";
 import { toPerson } from "../api/views";
 import { formatCount } from "../i18n/format";
+import { useTranslation } from "../i18n/react";
 import { Duration } from "../stickers/Duration";
 import { formatHandle, formatNo } from "../stickers/format";
 import { LabelButton } from "../ui/LabelButton";
@@ -41,11 +42,7 @@ function ago(at: string): string {
 
 type Leaderboard = "mostGratitude" | "bestCombo" | "longestStreak";
 
-const LEADERBOARDS: { id: Leaderboard; label: string }[] = [
-  { id: "mostGratitude", label: "Most gratitude" },
-  { id: "bestCombo", label: "Best combo" },
-  { id: "longestStreak", label: "Longest streak" },
-];
+const LEADERBOARDS: Leaderboard[] = ["mostGratitude", "bestCombo", "longestStreak"];
 
 /** Opens someone's sticker board: yours, or theirs. */
 type Open = (person: Person) => void;
@@ -140,31 +137,36 @@ function ThisWeek({
   meId: string;
   open: Open;
 }) {
+  const { t } = useTranslation();
   const [board, setBoard] = useState<Leaderboard>("mostGratitude");
   const rows: LeaderboardRow[] = leaderboards[board];
 
   return (
     <section className="explore-section">
       <header className="section-head">
-        <h2>This week</h2>
-        <span className="fine muted">Resets Monday 4:00</span>
+        <h2>{t(($) => $.explore.thisWeek.title)}</h2>
+        <span className="fine muted">{t(($) => $.explore.thisWeek.resets)}</span>
       </header>
-      <div className="leaderboard-tabs" role="tablist" aria-label="This week's leaderboards">
+      <div
+        className="leaderboard-tabs"
+        role="tablist"
+        aria-label={t(($) => $.explore.thisWeek.leaderboards)}
+      >
         {LEADERBOARDS.map((b) => (
           <button
-            key={b.id}
+            key={b}
             type="button"
             role="tab"
-            aria-selected={board === b.id}
-            className={board === b.id ? "selected" : ""}
-            onClick={() => setBoard(b.id)}
+            aria-selected={board === b}
+            className={board === b ? "selected" : ""}
+            onClick={() => setBoard(b)}
           >
-            {b.label}
+            {t(($) => $.explore.leaderboards[b])}
           </button>
         ))}
       </div>
       <ol className="leaderboard" role="tabpanel">
-        {rows.length === 0 && <li className="fine muted">No one is on it yet this week.</li>}
+        {rows.length === 0 && <li className="fine muted">{t(($) => $.explore.thisWeek.empty)}</li>}
         {rows.map((row, i) => (
           <PersonRow
             key={row.person.id}
@@ -296,15 +298,16 @@ function SearchResults({ query, meId, open }: { query: string; meId: string; ope
 }
 
 function Today({ explore, meId, open }: { explore: Explore; meId: string; open: Open }) {
+  const { t } = useTranslation();
   return (
     <>
       <section className="explore-section">
         <header className="section-head">
-          <h2>Today’s stickers</h2>
+          <h2>{t(($) => $.explore.today.title)}</h2>
           <span className="date-badge">{todayBadge()}</span>
         </header>
         {explore.todaysStickers.length === 0 ? (
-          <p className="fine muted">No one has sealed a sticker yet today.</p>
+          <p className="fine muted">{t(($) => $.explore.today.none)}</p>
         ) : (
           <ul className="todays-stickers">
             {explore.todaysStickers.map((sticker) => (
@@ -340,6 +343,7 @@ function Today({ explore, meId, open }: { explore: Explore; meId: string; open: 
 }
 
 export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
+  const { t } = useTranslation();
   const me = useMe();
   const [query, setQuery] = useState("");
   const q = query.trim().replace(/^@/, "");
@@ -357,8 +361,8 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
         <At size={20} />
         <input
           type="search"
-          placeholder="search artists"
-          aria-label="Search artists by handle"
+          placeholder={t(($) => $.explore.search.placeholder)}
+          aria-label={t(($) => $.explore.search.label)}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           autoCapitalize="off"
@@ -369,7 +373,7 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
           <button
             type="button"
             className="search-clear"
-            aria-label="Clear search"
+            aria-label={t(($) => $.explore.search.clear)}
             onClick={() => setQuery("")}
           >
             <X size={16} />
@@ -384,7 +388,7 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
       ) : explore.state === "failed" ? (
         <Failed what="Explore" query={explore} />
       ) : (
-        <p className="fine muted results-count">Loading…</p>
+        <p className="fine muted results-count">{t(($) => $.explore.loading)}</p>
       )}
     </div>
   );
