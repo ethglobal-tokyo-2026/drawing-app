@@ -279,7 +279,9 @@ export function StickerDetail({
             </div>
 
             <section className="sticker-detail__meta">
-              <h2 className="title-label sticker-detail__title">{formatNo(sticker.no)}</h2>
+              <h2 className="sticker-detail__title">
+                <span className="sticker-detail__no">{formatNo(sticker.no)}</span>
+              </h2>
               <p className="fine sticker-detail__fine-print">
                 <span className="sticker-detail__by">
                   by {formatHandle(sticker.artist.handle ?? sticker.artist.name)}
@@ -348,10 +350,11 @@ export function StickerDetail({
             )}
             {mode === "yours" && onItsWay && (
               <div className="sticker-detail__on-its-way">
-                <span className="sticker-detail__sleeve" aria-hidden>
-                  <img src={sticker.urls.png} alt="" draggable={false} />
+                <span className="sticker-detail__sleeve" aria-hidden />
+                <span>
+                  On its way
+                  {sticker.openGift?.to && ` to ${formatHandle(sticker.openGift.to)}`}
                 </span>
-                <span>On its way</span>
               </div>
             )}
           </>

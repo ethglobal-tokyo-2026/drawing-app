@@ -153,6 +153,14 @@ describe("StickerDetail", () => {
     open({ stickers: sent });
     expect(document.querySelector(".sticker-detail__on-its-way")?.textContent).toBe("On its way");
     expect(button("Give")).toBeUndefined();
+    act(() => root.render(null));
+    const toKen = sent.map((s) =>
+      s.openGift ? { ...s, openGift: { ...s.openGift, to: "ken" } } : s,
+    );
+    open({ stickers: toKen });
+    expect(document.querySelector(".sticker-detail__on-its-way")?.textContent).toBe(
+      "On its way to @ken",
+    );
   });
 
   it("leads with Send gratitude for a received sticker you haven't thanked", async () => {
@@ -212,7 +220,7 @@ describe("StickerDetail", () => {
     expect(openRow()).toContain("2,357 to @ken · 589 to @mika, its artist");
   });
 
-  it("opens a tapped row in place of the open one, and folds the rows after three", async () => {
+  it("folds the rows past the newest, and opens a tapped row in place of the open one", async () => {
     const thanks = (n: number) =>
       trailEntry({
         giftId: `g-${n}`,
@@ -222,9 +230,9 @@ describe("StickerDetail", () => {
       });
     open({}, withTrail([5, 4, 3, 2, 1].map(thanks)));
     await settle();
-    expect(rows()).toHaveLength(4);
+    expect(rows()).toHaveLength(2);
     expect(openRow()).toContain("500");
-    press("2 earlier gifts");
+    press("4 earlier gifts");
     expect(rows()).toHaveLength(5);
     act(() => closedRows()[0]?.click());
     expect(openRow()).toContain("400");

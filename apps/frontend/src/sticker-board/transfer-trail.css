@@ -36,17 +36,16 @@ button.transfer-trail__head:focus-visible {
   outline-offset: 2px;
 }
 
+/* The names carry the sentence; "gave it to" and the day read quieter. */
 .transfer-trail__say {
   flex: 1;
   min-width: 0;
+  color: var(--graphite);
 }
 
 .transfer-trail__say b {
+  color: var(--ink);
   font-weight: 750;
-}
-
-.transfer-trail__artist {
-  margin-left: 2px;
 }
 
 .transfer-trail__at {
@@ -130,11 +129,14 @@ button.transfer-trail__head:focus-visible {
   outline-offset: 2px;
 }
 
+/* The artist's share, under a rule across the card. */
 .transfer-trail__split {
-  margin: 8px 0 0;
-  font-size: var(--fs-fine);
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+  font-size: 13px;
   font-weight: 650;
-  color: var(--graphite);
+  color: var(--ink);
 }
 
 .transfer-trail__row--fold .transfer-trail__head {

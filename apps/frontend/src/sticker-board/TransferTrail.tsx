@@ -15,7 +15,7 @@ interface Props {
   rows: readonly TrailRow[];
   /** Who's looking, who reads as "you". */
   viewerId: string;
-  /** The Original Artist, who carries the ARTIST tag. */
+  /** The Original Artist, for the artist's share. */
   artist: PersonView;
   /** Plays a thanks' replay; without it there's no Replay button. */
   onReplay?: (giftId: string) => void;
@@ -26,7 +26,7 @@ const amount = (n: number) => n.toLocaleString("en-US");
 /**
  * Where a sticker has been: one row per hand-off, newest first. One row is open at a time, the
  * most recent thanks by default, with its amount and Replay; a thanked row opens with a tap.
- * After a few rows the rest fold into "N earlier gifts".
+ * Past the newest gift, the rest fold into "N earlier gifts".
  */
 export function TransferTrail({ rows, viewerId, artist, onReplay }: Props) {
   const [openId, setOpenId] = useState(() => defaultOpenRow(rows, viewerId));
@@ -35,16 +35,12 @@ export function TransferTrail({ rows, viewerId, artist, onReplay }: Props) {
   const shown = unfolded ? rows : rows.slice(0, TRAIL_SHOWN);
   const earlier = rows.length - shown.length;
 
+  // The artist is named once, in the detail's by-line, so the rows carry no artist tag.
   const name = (p: PersonView, leads = false) => {
     const n = trailName(p, viewerId);
-    return (
-      <b>
-        {leads && n === "you" ? "You" : n}
-        {p.id === artist.id && <span className="fine transfer-trail__artist"> Artist</span>}
-      </b>
-    );
+    return <b>{leads && n === "you" ? "You" : n}</b>;
   };
-  // "@mika ARTIST gave it to you · 9.23", with the giver's name leading the sentence.
+  // "@mika gave it to you · 9.23", with the giver's name leading the sentence.
   const sentence = (r: TrailRow) => (
     <span className="transfer-trail__say">
       {name(r.giver, true)} gave it to {name(r.receiver)}

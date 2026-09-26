@@ -24,8 +24,11 @@ export interface BoardSticker {
   held: boolean;
   /** Who received it, once it's given away. */
   givenTo: { receiver: PersonView; receivedAt: number } | null;
-  /** Its gift while packed or on its way. */
-  openGift: { id: string; status: "packed" | "sent" } | null;
+  /**
+   * Its gift while packed or on its way. `to` is known only for a gift given to an artist in the app;
+   * LINE's friend picker never says who was picked.
+   */
+  openGift: { id: string; status: "packed" | "sent"; to?: string } | null;
 }
 
 /** A board sticker as it comes from the API; its placement may not be settled yet. */

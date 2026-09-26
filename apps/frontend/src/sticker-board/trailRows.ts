@@ -15,8 +15,8 @@ export interface TrailRow {
   } | null;
 }
 
-/** The rows shown before the rest fold into "N earlier gifts". */
-export const TRAIL_SHOWN = 3;
+/** The rows shown before the rest fold into "N earlier gifts": the newest gift. */
+export const TRAIL_SHOWN = 1;
 
 export const toTrailRows = (trail: readonly TransferTrailEntry[]): TrailRow[] =>
   trail.map((e) => ({
@@ -46,7 +46,8 @@ export const trailName = (p: PersonView, viewerId: string) =>
 
 /**
  * The open row's line for the Original Artist Gratitude Share, when the giver isn't the artist:
- * "2,357 to @ken · 590 to @mika, its artist", or "590 came to you, its artist". Never money words.
+ * "2,357 to @ken · 590 to @mika, its artist", or "590 of it came to you, its artist". Never money
+ * words.
  */
 export function artistShareLine(
   row: TrailRow,
@@ -56,7 +57,7 @@ export function artistShareLine(
   const g = row.gratitude;
   if (!g || g.artistShare <= 0 || row.giver.id === artist.id) return null;
   const n = (v: number) => v.toLocaleString("en-US");
-  if (artist.id === viewerId) return `${n(g.artistShare)} came to you, its artist`;
+  if (artist.id === viewerId) return `${n(g.artistShare)} of it came to you, its artist`;
   const kept = n(g.total - g.artistShare);
   const giverPart =
     row.giver.id === viewerId

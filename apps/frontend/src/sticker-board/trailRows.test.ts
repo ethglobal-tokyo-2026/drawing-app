@@ -28,7 +28,7 @@ describe("the Transfer Trail", () => {
       "2,357 came to you · 589 to @mika, its artist",
     );
     expect(artistShareLine(row("g", ken, mika, thanks), me, "me")).toBe(
-      "589 came to you, its artist",
+      "589 of it came to you, its artist",
     );
   });
 

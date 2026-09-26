@@ -565,11 +565,13 @@ A frosted bag with no zipper. Packing drops the sticker into the open bag, peeki
 
 A sticker's detail shows where it has been, one quiet row per hand-off, newest first, replacing any separate provenance line.
 
-- **One open row:** the most recent thanks opens by default: a Liner Lift card with a pink outline, the amount in Figure type at 27px beside a pink heart dot, who it's from, and the screen's only Replay button.
-- **Closed rows:** a sentence ("@mika ARTIST gave it to @ken · 9.18") and a trailing amount with a caret, as one full-width 44px tap target. Tapping one opens it and closes the other. The viewer reads as "you"; the artist carries a quiet fine-print ARTIST tag.
-- **The artist's fifth:** when the giver isn't the artist, the open row adds one fine-print line: "2,357 to @ken · 590 to @mika, its artist", or "590 came to you, its artist". Copy never uses money words.
-- **Calm at length:** after three rows the rest fold into one "N earlier gifts" control, with a caret, directly under the rows shown.
+- **One open row:** the most recent thanks opens by default: a Liner Lift card with a pink outline, the amount in Figure type at 27px beside a pink heart dot, who it's from, and the screen's only Replay button. While you still owe thanks for the newest gift, none opens: Send gratitude is the call.
+- **Closed rows:** a sentence ("@mika gave it to @ken · 9.18") and a trailing amount with a caret, as one full-width 44px tap target. Tapping one opens it and closes the other. The viewer reads as "you". Names are Ink and bold; "gave it to" and the day are Graphite. The artist is named once, in the by-line, so rows carry no artist tag.
+- **The artist's fifth:** when the giver isn't the artist, the open row adds one line under a hairline rule: "2,357 to @ken · 590 to @mika, its artist", or "590 of it came to you, its artist". Copy never uses money words.
+- **Calm at length:** past the newest gift, the rest fold into one "N earlier gifts" control, with a caret, directly under it.
 - **Order:** when you can give the sticker, Give sits above the gratitude card (the open row); otherwise the actions stay below the trail.
+- **The number:** No.0147 sits on a Seal Yellow label at the house tilt, in Dela.
+- **On its way:** a Liner Lift note with the gift bag's frosted sleeve replaces Give: "On its way to @bob" when the gift went to an artist in the app, and "On its way" through LINE's picker, which never says who was picked.
 
 ### Gratitude
 

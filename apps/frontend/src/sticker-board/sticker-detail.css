@@ -211,8 +211,22 @@
 .sticker-detail__title {
   margin: 0;
   min-width: 0;
-  font-size: 31px;
-  overflow-wrap: anywhere;
+}
+
+/* The sticker's number: a Seal Yellow label stuck on at the house tilt. */
+.sticker-detail__no {
+  display: inline-block;
+  padding: 4px 12px 3px;
+  border-radius: 999px;
+  background: var(--seal);
+  box-shadow:
+    inset 0 0 0 1px rgba(28, 24, 36, 0.14),
+    var(--shadow-label);
+  font-family: var(--font-puffy);
+  font-weight: 400;
+  font-size: 20px;
+  line-height: 1.2;
+  rotate: var(--tilt);
 }
 
 /* The line people read: caps kept, but at full width and 12px, wrapping between facts. */
@@ -275,6 +289,7 @@
   font-size: 15px;
 }
 
+/* The gift bag's frosted sleeve, small: warm color under frost, never the sticker, and its open top. */
 .sticker-detail__sleeve {
   position: relative;
   flex: none;
@@ -282,24 +297,29 @@
   height: 48px;
   overflow: hidden;
   border-radius: 5px;
-  background: var(--liner-deep);
-  box-shadow: inset 0 0 0 1px var(--rule-strong);
+  background:
+    radial-gradient(circle at 35% 70%, #ff8a3d 0 30%, transparent 62%),
+    radial-gradient(circle at 70% 40%, #ff77b0 0 32%, transparent 66%), var(--liner-lift);
+  box-shadow:
+    inset 0 0 0 1px var(--rule-strong),
+    var(--shadow-label);
+  rotate: var(--tilt);
 }
 
-.sticker-detail__sleeve img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  filter: blur(4px);
-  opacity: 0.55;
-}
-
-/* The frost over it: the sleeve shows the sticker's colors, never the sticker. */
-.sticker-detail__sleeve::after {
+.sticker-detail__sleeve::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.4));
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.55));
+  backdrop-filter: blur(3px);
+}
+
+.sticker-detail__sleeve::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: var(--aqua-soft);
 }
 
 .sticker-detail__none {
