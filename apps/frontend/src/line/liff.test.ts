@@ -1,8 +1,7 @@
 // @vitest-environment happy-dom
-import liff from "@line/liff";
 import { createDevLineVerifier } from "@drawing-app/api/dev-sign-in";
-import { afterEach, describe, expect, it } from "vitest";
-import { initLine, mockPerson } from "./liff";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockPerson } from "./liff";
 
 /** A fresh tab's sessionStorage. */
 const newTab = () => {
@@ -15,6 +14,7 @@ const newTab = () => {
 
 afterEach(() => {
   sessionStorage.clear();
+  vi.unstubAllEnvs();
 });
 
 describe("LIFF Mock's person", () => {
@@ -39,6 +39,13 @@ describe("LIFF Mock's person", () => {
   });
 
   it("signs in to the REST API as the person LIFF Mock's profile names", async () => {
+    // LIFF Mock answers even where a real-LINE .env switches it off; the module reads that as it loads.
+    vi.stubEnv("VITE_LIFF_MOCK", "");
+    vi.resetModules();
+    const [{ default: liff }, { initLine }] = await Promise.all([
+      import("@line/liff"),
+      import("./liff"),
+    ]);
     history.replaceState(null, "", "/?as=alice");
     await initLine();
     const profile = await liff.getProfile();
