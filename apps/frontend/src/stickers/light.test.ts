@@ -153,6 +153,26 @@ describe("the shared light", () => {
     expect(lightAt()).toEqual(["1.000", "0.000"]);
   });
 
+  it("sweeps the foil's glint when the phone tilts, and never while it's held still", () => {
+    const foil = document.createElement("span");
+    foil.className = "sticker-foil";
+    const glint = document.createElement("i");
+    glint.className = "sticker-foil__glint";
+    foil.append(glint);
+    document.body.append(foil);
+    vi.spyOn(foil, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 100, 100));
+    const animate = vi.spyOn(glint, "animate").mockImplementation(() => new Animation());
+    uninstall = installLight(root);
+    showScreen();
+
+    tiltTo(0, 40);
+    tiltTo(4, 40);
+    expect(animate).not.toHaveBeenCalled();
+
+    tiltTo(20, 40);
+    expect(animate).toHaveBeenCalledTimes(1);
+  });
+
   it("stays in the middle under reduced motion", () => {
     // A query that always matches stands in for the reduced-motion setting.
     vi.spyOn(window, "matchMedia").mockReturnValue(window.matchMedia("all"));

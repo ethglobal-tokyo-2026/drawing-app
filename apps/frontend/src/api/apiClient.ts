@@ -36,6 +36,8 @@ interface SealRequest {
   spec: Blob;
   rim: Blob;
   flat: Blob;
+  /** The gzipped TimelapseV1; a seal without one still seals. */
+  timelapse?: Blob;
 }
 
 /** Opening a Gift Message's link: its token as the link carries it, which the client checks. */
@@ -76,7 +78,7 @@ export interface ApiClient {
   /** POST /api/gifts: a new gift of the sticker, or the one already in the bag. */
   packageGift: (stickerId: string) => Promise<PackagedGift>;
   /** POST /api/gifts/:giftId/deposit */
-  reportDeposit: (giftId: string, txHash: string) => Promise<Gift>;
+  reportDeposit: (giftId: string, txHash?: string) => Promise<Gift>;
   /** POST /api/gifts/:giftId/shared */
   reportShared: (giftId: string, outcome: "sent" | "cancelled") => Promise<Gift>;
   /** POST /api/gifts/:giftId/take-out */

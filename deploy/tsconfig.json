@@ -1,0 +1,10 @@
+{
+  "extends": "../packages/sticker-chain/tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "types": ["node"],
+    "typeRoots": ["../packages/sticker-chain/node_modules/@types"]
+  },
+  "include": ["*.mjs"]
+}

@@ -24,7 +24,10 @@ const STEP = 0.02;
 const TILT_RANGE = 32;
 /** How far back a phone leans when it's held to read, in degrees. */
 const HELD_BETA = 40;
-/** A tilt change this big sweeps a sheen across the stickers on screen, at most once a pause. */
+/**
+ * A tilt change this big sweeps a sheen across the stickers on screen, and a glint along their foil,
+ * at most once a pause.
+ */
 const SWEEP_TILT = 9;
 const SWEEP_PAUSE_MS = 1400;
 
@@ -34,15 +37,37 @@ const clamp11 = (v: number) => (v < -1 ? -1 : v > 1 ? 1 : v);
 let light: { on: () => void; off: () => void; relight: () => void } | null = null;
 let holders = 0;
 
-/** Sweeps a sheen across each live resin big enough to see on screen; returns how many it measured. */
+/** The foil whose glint a tilt sweeps; the glint rests out of sight until then. */
+const FOIL = ".sticker-foil";
+
+const onScreen = (el: Element, win: Window) => {
+  const r = el.getBoundingClientRect();
+  return r.width > 30 && r.bottom > 0 && r.top < win.innerHeight;
+};
+
+function sweepGlint(glint: Element) {
+  glint.animate(
+    [{ transform: "translateX(0) skewX(-18deg)" }, { transform: "translateX(460%) skewX(-18deg)" }],
+    { duration: 2000, easing: "cubic-bezier(0.45, 0.05, 0.25, 1)" },
+  );
+}
+
+/**
+ * Sweeps a sheen across each live resin, and a glint along each foil, big enough to see on screen;
+ * returns how many it measured.
+ */
 function sweepVisible(doc: Document, win: Window): number {
   const resins = doc.querySelectorAll(LIT);
   for (const resin of resins) {
-    const r = resin.getBoundingClientRect();
     const sheen = sheenIn(resin);
-    if (sheen && r.width > 30 && r.bottom > 0 && r.top < win.innerHeight) sweepSheen(sheen);
+    if (sheen && onScreen(resin, win)) sweepSheen(sheen);
   }
-  return resins.length;
+  const foils = doc.querySelectorAll(FOIL);
+  for (const foil of foils) {
+    const glint = foil.querySelector(".sticker-foil__glint");
+    if (glint && onScreen(foil, win)) sweepGlint(glint);
+  }
+  return resins.length + foils.length;
 }
 
 /** Starts the light; returns what stops it. */
@@ -122,7 +147,8 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     ) {
       lastSweep = now;
       const measured = timeOurWork("light sweep", sweep);
-      if (isPerformanceRecorderOn()) notePerformance("light", `sweep measured ${measured} resins`);
+      if (isPerformanceRecorderOn())
+        notePerformance("light", `sweep measured ${measured} resins and foils`);
     }
     lastGamma = e.gamma;
   };

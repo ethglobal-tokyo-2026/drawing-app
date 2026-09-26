@@ -2,6 +2,7 @@ import { hc } from "hono/client";
 import type { AppType } from "./app.ts";
 
 export type { AppType };
+export { MAX_TIMELAPSE_BYTES } from "./stickers/timelapseLimit.ts";
 
 // The contract's shapes, for the app's screens: each is the type its route's schema checks.
 export type { ErrorBody } from "./errors.ts";

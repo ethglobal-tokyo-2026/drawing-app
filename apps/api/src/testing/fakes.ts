@@ -13,6 +13,7 @@ import { keccak256 } from "../keccak256.ts";
 import { createDevLineVerifier } from "../services/devSignIn.ts";
 import { stickerImageUrls } from "../services/imageStore.ts";
 import type { StickerImages } from "../shapes.ts";
+import { isHex } from "viem";
 
 /** A made-up 32-byte hex value, the same for the same seed. */
 const fakeBytes32 = (seed: string) => keccak256(new TextEncoder().encode(seed));
@@ -87,6 +88,7 @@ const missingEscrowGift = (): EscrowGift => ({
  */
 export function fakeGiftChain() {
   const escrow = new Map<string, EscrowGift>();
+  const claimTransactions = new Map<string, string>();
   let claims = 0;
   const chain: GiftChain = {
     createGiftClaim: () => {
@@ -103,8 +105,33 @@ export function fakeGiftChain() {
       data: fakeBytes32(JSON.stringify(gift)),
     }),
     readEscrowGift: (giftId) => Promise.resolve(escrow.get(giftId) ?? missingEscrowGift()),
+    claimGift: ({ giftId, giftClaimToken, recipientId }) => {
+      const gift = escrow.get(giftId) ?? missingEscrowGift();
+      const recipient = fakeAddress(`smart wallet ${recipientId}`);
+      if (gift.status === "claimed") {
+        return Promise.resolve(
+          gift.recipient.toLowerCase() === recipient.toLowerCase()
+            ? {
+                claimed: true as const,
+                txHash: claimTransactions.get(giftId) ?? fakeBytes32(giftId),
+              }
+            : { claimed: false as const },
+        );
+      }
+      if (gift.status !== "pending") return Promise.reject(new Error("Gift is not pending"));
+      if (!isHex(giftClaimToken) || giftClaimToken.length !== 66) {
+        return Promise.reject(new Error("Gift claim token is invalid"));
+      }
+      if (keccak256(giftClaimToken).toLowerCase() !== gift.claimCommitment.toLowerCase()) {
+        return Promise.reject(new Error("Gift claim token is invalid"));
+      }
+      const txHash = fakeBytes32(`claim ${giftId}`);
+      claimTransactions.set(giftId, txHash);
+      escrow.set(giftId, { ...gift, recipient, status: "claimed" });
+      return Promise.resolve({ claimed: true as const, txHash });
+    },
   };
-  return { ...chain, escrow };
+  return { ...chain, escrow, claimTransactions };
 }
 
 /** Gives everyone a smart wallet, its address made from their user id. */
