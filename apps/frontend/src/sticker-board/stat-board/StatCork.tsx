@@ -166,10 +166,7 @@ export function StatCork({
                 aria-hidden
               />
               <h2 className="stat-board__name">{f.name}</h2>
-              <p className="fine stat-board__handle">
-                {formatHandle(f.handle)} ·{" "}
-                {f.own ? "name and picture from LINE" : "from their LINE profile"}
-              </p>
+              <p className="fine stat-board__handle">{formatHandle(f.handle)}</p>
             </div>
           </div>
 
