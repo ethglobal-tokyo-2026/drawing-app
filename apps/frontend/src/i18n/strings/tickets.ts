@@ -168,33 +168,43 @@ export const tickets = {
       en: "{{count}} reserve tickets added",
       ja: "有償チケットを{{count}}枚追加しました",
     },
-    /** Reserve ticket checkout after a purchase: the quiet line under the title with the price paid, in yen */
+    /** Reserve ticket checkout after a purchase, or once a payment kept on this phone gets its tickets: the quiet line under the title with the price paid, in yen */
     paid: { en: "Paid {{price}} in JPYC.", ja: "{{price}}をJPYCで支払いました。" },
     /** Reserve ticket checkout after a purchase: the button under Draw that goes back to the packs */
     buyMore: { en: "Buy more tickets", ja: "チケットをもっと買う" },
     /** Reserve ticket checkout when a payment fails: the title, above the reason */
     paymentFailed: { en: "Payment didn’t go through", ja: "支払いが完了しませんでした" },
-    /** When the payment went through but the server didn't add its tickets: asking the server again never pays again. */
+    /** When the payment went through but the server didn't add its tickets: asking the server again never pays again. The phone keeps the payment until they're added or refused for good, and the checkout opens on it. */
     notAdded: {
-      /** Reserve ticket checkout after paying, when the payment went through but the tickets weren't added: the title */
+      /** Reserve ticket checkout after paying, when the payment went through but the tickets weren't added, or as it opens while this phone keeps such a payment: the title */
       title: { en: "Tickets not added yet", ja: "チケットが未追加です" },
-      /** Reserve ticket checkout, tickets not added: the line under the title, in bold, then why in quiet type; `reason` is the server's or Sui's words */
+      /** Reserve ticket checkout, tickets not added: the line under the title, in bold, then why in quiet type; `reason` is the server's or Sui's words, and empty as it opens on a kept payment until asking again fails */
       line: {
         en: "<strong>Your payment went through. Adding the tickets again won’t charge you twice.</strong> <why>{{reason}}</why>",
         ja: "<strong>支払いは完了しています。チケットをもう一度追加しても、二重に請求されることはありません。</strong><why>{{reason}}</why>",
       },
       /** Reserve ticket checkout, tickets not added: the blue key that asks again for the tickets the payment bought */
       add: { en: "Add the tickets", ja: "チケットを追加する" },
-      /** Reserve ticket checkout, tickets not added: that key while it asks */
+      /** Reserve ticket checkout, tickets not added: that key while it asks, which it does at once as the checkout opens on a kept payment */
       adding: { en: "Adding…", ja: "追加中…" },
-      /** Reserve ticket checkout, tickets not added: fine print under the key naming the payment; `<id>` holds its Sui transaction ID, cut short on screen */
+      /** Reserve ticket checkout, tickets not added or refused: fine print under the key naming the payment; `<id>` holds its Sui transaction ID, cut short on screen */
       payment: { en: "Payment <id>{{digest}}</id>", ja: "支払い<id>{{digest}}</id>" },
-      /** Reserve ticket checkout, tickets not added: the small button beside the payment that copies its whole ID */
+      /** Reserve ticket checkout, tickets not added or refused: the small button beside the payment that copies its whole ID */
       copy: { en: "Copy", ja: "コピー" },
-      /** Reserve ticket checkout, tickets not added: that button once the ID is copied */
+      /** Reserve ticket checkout, tickets not added or refused: that button once the ID is copied */
       copied: { en: "Copied", ja: "コピー済み" },
     },
-    /** Reserve ticket checkout when a payment fails: the key that goes back to the packs */
+    /** When the server refused a payment's tickets for good: said once, and the phone stops keeping the payment. */
+    refused: {
+      /** Reserve ticket checkout, once, when the server refused for good to add the tickets a payment bought (after paying, after asking again, or as it opens on a kept payment refused since): the title */
+      title: { en: "Tickets can’t be added", ja: "チケットを追加できません" },
+      /** Reserve ticket checkout, tickets refused: the line under the title, in bold, then why in quiet type; `reason` is the server's words */
+      line: {
+        en: "<strong>Asking again won’t add them.</strong> <why>{{reason}}</why>",
+        ja: "<strong>もう一度追加しても、チケットは追加されません。</strong><why>{{reason}}</why>",
+      },
+    },
+    /** Reserve ticket checkout: the key that goes back to the packs when a payment fails or its tickets are refused, and the quiet link above Not now when its tickets weren't added */
     backToPacks: { en: "Back to the packs", ja: "パック選びに戻る" },
     /** Reserve ticket checkout: the wallet row, in the balance's place, when your Privy Sui wallet can't be used; `reason` is Privy's or the signer's own words */
     walletBroken: {

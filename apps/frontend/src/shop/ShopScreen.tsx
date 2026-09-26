@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "../i18n/react";
 import { useLight } from "../stickers/light";
+import { useAddUnaddedPurchases } from "../tickets/unaddedPurchases";
 import { Skeleton } from "../ui/Skeleton";
 import { BrushStrokeSample } from "./BrushStrokeSample";
 import type { BrushKind } from "./brushSamples";
@@ -24,6 +25,8 @@ export function ShopScreen({ onBuyReserveTickets }: { onBuyReserveTickets: () =>
   const { t } = useTranslation();
   const sticker = useShopSticker();
   useLight(sticker !== null);
+  // Paid packs whose tickets the server hadn't added are asked for again, so the count above is whole.
+  useAddUnaddedPurchases();
 
   // Until your sticker is in, its swatches stay in outline, so no stand-in shows first.
   const onSticker = (preview: (s: ShopSticker) => ReactNode) =>
