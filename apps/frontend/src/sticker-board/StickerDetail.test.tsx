@@ -356,10 +356,12 @@ describe("StickerDetail", () => {
       ["paging", () => press("Next sticker")],
       ["the Sticker board button", () => press("Sticker board")],
       ["Escape", () => key("Escape")],
-    ])("stops on %s, and leaves no layer behind", async (_, leave) => {
+    ])("stops on %s, lets go of its canvas, and leaves no layer behind", async (_, leave) => {
       const player = await playing();
       leave();
       expect(player.calls).toContain("stop");
+      const { canvas } = player.options;
+      expect([canvas.width, canvas.height]).toEqual([0, 0]);
       expect(layer()).toBeNull();
     });
 
