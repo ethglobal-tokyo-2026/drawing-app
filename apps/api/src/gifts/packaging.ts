@@ -218,11 +218,44 @@ export function reportShared(
 }
 
 /** Takes a gift back before anyone receives it, from the bag or after sending. */
-export function takeOut(
+export async function takeOut(
   { db, clock, giftChain }: AppDeps,
   userId: string,
   giftId: string,
-): GiftStep<"gift_not_found" | "not_yours" | "already_received" | "gift_closed"> {
+): Promise<
+  GiftStep<"gift_not_found" | "not_yours" | "already_received" | "gift_closed" | "gift_in_transit">
+> {
+  const before = ownGift(db.select().from(gifts).where(eq(gifts.id, giftId)).get(), userId, giftId);
+  if (before.refusal !== null) return before;
+  if (before.gift.status === "taken_out" && before.gift.escrowStatus === "rejected") return before;
+  if (before.gift.status === "returned" && before.gift.escrowStatus === "expired_returned")
+    return before;
+  if (before.gift.status === "received") {
+    return refuse("already_received", `Gift ${giftId} was already received`);
+  }
+  if (before.gift.status !== "packed" && before.gift.status !== "sent") {
+    return closed(before.gift);
+  }
+
+  let escrowStatus: "rejected" | "expired_returned" = "rejected";
+  if (giftChain) {
+    if (before.gift.escrowStatus === "rejected") {
+      escrowStatus = "rejected";
+    } else {
+      const escrow = await giftChain.readEscrowGift(giftId);
+      if (escrow.status === "claimed") {
+        return refuse("already_received", `Gift ${giftId} was already received`);
+      }
+      if (escrow.status !== "rejected" && escrow.status !== "expired_returned") {
+        return refuse(
+          "gift_in_transit",
+          `Gift ${giftId}'s take-out has not landed in the escrow yet`,
+        );
+      }
+      escrowStatus = escrow.status;
+    }
+  }
+
   return db.transaction(
     (tx) => {
       const owned = ownGift(
@@ -232,6 +265,8 @@ export function takeOut(
       );
       if (owned.refusal !== null) return owned;
       const { gift } = owned;
+      if (gift.status === "taken_out" && gift.escrowStatus === "rejected") return owned;
+      if (gift.status === "returned" && gift.escrowStatus === "expired_returned") return owned;
       if (gift.status === "received") {
         return refuse("already_received", `Gift ${giftId} was already received`);
       }
@@ -239,10 +274,11 @@ export function takeOut(
       const takenOut = tx
         .update(gifts)
         .set({
-          status: "taken_out",
-          takenOutAt: clock.now(),
+          status: escrowStatus === "expired_returned" ? "returned" : "taken_out",
+          takenOutAt: escrowStatus === "expired_returned" ? undefined : clock.now(),
+          returnedAt: escrowStatus === "expired_returned" ? clock.now() : undefined,
           // The mock chain's reject lands at once, so the sticker can be given again.
-          escrowStatus: giftChain ? undefined : "rejected",
+          escrowStatus,
         })
         .where(eq(gifts.id, giftId))
         .returning()

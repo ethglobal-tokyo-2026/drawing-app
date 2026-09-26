@@ -18,7 +18,7 @@ import {
   type SealParts,
 } from "../stickers/testPngs.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
-import { fakeMint } from "../testing/fakes.ts";
+import { fakeGiftChain, fakeMint } from "../testing/fakes.ts";
 import { insertGratitude, insertSealedSticker, receiveGift } from "../testing/rows.ts";
 import { ticketKindAt } from "../tickets/tickets.ts";
 
@@ -134,16 +134,90 @@ describe("POST /api/stickers", () => {
     expect(allStickers()).toMatchObject([minted]);
   });
 
-  it("leaves the sticker sealed and unminted when the mint fails, and logs it", async () => {
+  it("reports mint failure and retries the saved sticker on the same ticket", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const chainDown = new Error("The chain is down");
-    test = await createTestApp({ mint: () => Promise.reject(chainDown) });
-    const { sticker } = await seal(insertUser(test.db));
-    expect(sticker.tokenId).toBeNull();
-    expect(log).toHaveBeenCalledWith(expect.stringContaining(sticker.id), chainDown);
+    const mint = fakeMint();
+    let available = false;
+    test = await createTestApp({
+      mint: (request) => (available ? mint(request) : Promise.reject(chainDown)),
+    });
+    const artistId = insertUser(test.db);
+    const ticketUseId = spendTicket(artistId);
+    const failed = await postSeal(artistId, sealFormData(sealParts(ticketUseId)));
+    const [saved] = allStickers();
+    if (!saved) throw new Error("The failed mint lost the saved sticker");
+    const failedBody = await refusal(failed);
+    expect(failedBody).toMatchObject({
+      status: 503,
+      error: "mint_failed",
+    });
+    expect(failedBody.detail).toContain(saved.id);
+    expect(saved.tokenId).toBeNull();
+    expect(log).toHaveBeenCalledWith(expect.stringContaining(saved.id), chainDown);
+    expect(test.images.saved.get(saved.contentHash)).toEqual(sealImages());
+    expect(new Uint8Array(timelapseOf(saved.id)?.ops ?? [])).toEqual(testTimelapse());
+
+    const stillFailed = await postSeal(artistId, sealFormData(sealParts(ticketUseId)));
+    expect(await refusal(stillFailed)).toMatchObject({ status: 503, error: "mint_failed" });
+
+    available = true;
+    const retry = await postSeal(artistId, sealFormData(sealParts(ticketUseId)));
+    expect(retry.status).toBe(200);
+    const retried = sealResponseSchema.parse(await retry.json()).sticker;
+    expect(retried).toMatchObject({ id: saved.id, tokenId: "1" });
+    expect(allStickers()).toHaveLength(1);
+    expect(test.db.select().from(ticketUses).all()).toHaveLength(1);
   });
 
-  it("refuses a ticket that's someone else's, unknown or already sealed, and stores nothing", async () => {
+  it("refuses an unconfirmed mint in real chain mode instead of answering success", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    test = await createTestApp({ giftChain: fakeGiftChain(), mint: () => Promise.resolve(null) });
+    const artistId = insertUser(test.db);
+    const response = await postSeal(artistId, sealFormData(sealParts(spendTicket(artistId))));
+    expect(await refusal(response)).toMatchObject({ status: 503, error: "mint_failed" });
+    expect(log).toHaveBeenCalledWith(
+      expect.stringContaining("could not be confirmed"),
+      expect.any(Error),
+    );
+    expect(allStickers()).toMatchObject([{ tokenId: null, mintTxHash: null }]);
+  });
+
+  it("reconciles a mint after confirmation failed without creating another NFT", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const mint = fakeMint();
+    let confirmationAvailable = false;
+    const submit = vi.fn(async (request: Parameters<typeof mint>[0]) => {
+      const token = await mint(request);
+      if (!confirmationAvailable) throw new Error("Receipt request timed out");
+      return token;
+    });
+    test = await createTestApp({ mint: submit });
+    const artistId = insertUser(test.db);
+    const ticketUseId = spendTicket(artistId);
+    const failed = await postSeal(artistId, sealFormData(sealParts(ticketUseId)));
+    expect(await refusal(failed)).toMatchObject({ status: 503, error: "mint_failed" });
+    const submitted = submit.mock.calls[0]?.[0];
+    if (!submitted) throw new Error("No mint was submitted");
+
+    confirmationAvailable = true;
+    const retry = await postSeal(artistId, sealFormData(sealParts(ticketUseId)));
+    expect(retry.status).toBe(200);
+    const { sticker } = sealResponseSchema.parse(await retry.json());
+    expect(sticker).toMatchObject({
+      id: submitted.stickerId,
+      tokenId: mint.minted.get(submitted.stickerId)?.tokenId,
+      mintTxHash: mint.minted.get(submitted.stickerId)?.txHash,
+    });
+    expect(submit.mock.calls[1]?.[0]).toEqual(submitted);
+    expect(mint.minted.size).toBe(1);
+
+    const alreadyConfirmed = await postSeal(artistId, sealFormData(sealParts(ticketUseId)));
+    expect(alreadyConfirmed.status).toBe(200);
+    expect(submit).toHaveBeenCalledTimes(2);
+  });
+
+  it("refuses others' and unknown tickets, and answers an already sealed ticket without storing new images", async () => {
     const artistId = insertUser(test.db);
     const { ticketUseId: sealedTicket } = await seal(artistId);
     const before = allStickers();
@@ -161,10 +235,9 @@ describe("POST /api/stickers", () => {
       status: 404,
       error: "ticket_not_found",
     });
-    expect(await attempt(sealedTicket)).toMatchObject({
-      status: 409,
-      error: "ticket_already_used",
-    });
+    const repeated = await postSeal(artistId, sealFormData(sealParts(sealedTicket)));
+    expect(repeated.status).toBe(200);
+    expect(sealResponseSchema.parse(await repeated.json()).sticker.id).toBe(before[0]?.id);
     expect(allStickers()).toEqual(before);
     expect(test.images.saved.has(keccak256(refusedPng))).toBe(false);
   });

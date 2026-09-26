@@ -1,13 +1,17 @@
 import {
   isAddress,
   isHex,
+  erc721Abi,
   keccak256,
+  parseEventLogs,
   stringToBytes,
+  zeroAddress,
   type Abi,
   type Account,
   type Address,
   type Hex,
   type PublicClient,
+  type TransactionReceipt,
   type WalletClient,
 } from "viem";
 import { sepolia } from "viem/chains";
@@ -154,6 +158,7 @@ export function createStickerSealer({
     if (existing) return existing;
 
     let transactionHash: Hex | undefined;
+    let receipt: TransactionReceipt;
     try {
       const { request } = await publicClient.simulateContract({
         address: contractAddress,
@@ -163,7 +168,7 @@ export function createStickerSealer({
         account: sealerAccount,
       });
       transactionHash = await walletClient.writeContract(request);
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: transactionHash });
+      receipt = await publicClient.waitForTransactionReceipt({ hash: transactionHash });
       if (receipt.status !== "success") throw new Error("Sticker sealing transaction reverted");
     } catch (error) {
       const raced = await findOnChainSticker(stickerKey, sticker, walletRecord.address);
@@ -173,6 +178,16 @@ export function createStickerSealer({
 
     const minted = await findOnChainSticker(stickerKey, sticker, walletRecord.address);
     if (!minted) throw new Error("Sealing transaction succeeded without a sticker NFT");
+    // The mint receipt proves the initial recipient even if the artist later gives it away.
+    const transfers = parseEventLogs({ abi: erc721Abi, eventName: "Transfer", logs: receipt.logs });
+    const received = transfers.some(
+      (event) =>
+        event.address.toLowerCase() === contractAddress.toLowerCase() &&
+        event.args.from === zeroAddress &&
+        event.args.to.toLowerCase() === walletRecord.address.toLowerCase() &&
+        event.args.tokenId === minted.tokenId,
+    );
+    if (!received) throw new Error("Mint receipt does not confirm the artist received the sticker");
     return { tokenId: minted.tokenId, transactionHash, alreadySealed: false as const };
   };
 }
