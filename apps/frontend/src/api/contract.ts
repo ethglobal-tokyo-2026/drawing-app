@@ -87,6 +87,31 @@ export interface Gratitude {
   seenByGiverAt: IsoTime | null;
 }
 
+/**
+ * A gratitude combo, as played. Positions are 0–10000 of the stage; values that follow one another
+ * store the change from the one before.
+ */
+export interface ReplayV1 {
+  v: 1;
+  /** Pop-in lines and particles. */
+  seed: number;
+  /** 0–1, the thanker's setting. */
+  intensity: number;
+  /** Pixels. */
+  stage: [width: number, height: number];
+  /** 0–8000. */
+  durationMs: number;
+  endReason: "sent" | "empty" | "cap" | "hidden" | "closed";
+  /** Where a tap combo committed to stroke or shake. */
+  switchedAtHit: number | null;
+  /** Flat: [msSincePrevious, x, y, counted (0 | 1), …] for every touch. */
+  hits: number[];
+  /** One per stroke: [msSincePrevious, x, y, …] at about 30 Hz. */
+  strokes: number[][];
+  /** Flat: [msSincePrevious, direction (1 | -1), …]. */
+  shakes: number[];
+}
+
 export interface BoardSticker extends StickerPlacement {
   sticker: Sticker;
   /** False: given away; a GivenStickerSilhouette on the board, an empty spot in the tray. */
@@ -160,4 +185,25 @@ export interface ReceiveGiftResponse {
   gift: Gift;
   sticker: Sticker;
   stickerPlacement: StickerPlacement;
+}
+
+/** POST /api/gratitude: records a Mini-game combo. */
+export interface RecordGratitude {
+  /** A UUID made at the first hit. */
+  idempotencyKey: string;
+  giftId: string;
+  method: "tap" | "stroke" | "shake";
+  /** 1–120. */
+  hits: number;
+  total: number;
+  /** 1–8. */
+  peakMult: number;
+  peakTier: 0 | 1 | 2 | 3 | 4;
+  gameConfigVersion: string;
+  replay: ReplayV1;
+}
+
+/** 201 when recorded; 200 with the stored record when the same idempotencyKey comes again. */
+export interface RecordGratitudeResponse {
+  gratitude: Gratitude;
 }
