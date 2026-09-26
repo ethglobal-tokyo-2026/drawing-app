@@ -592,6 +592,8 @@ One experience for everyone, on plain Liner, once per hand-off.
 - **Reveal:** loaded content rises 6px into place and fades in over 220ms. A picture (a sticker, a photo sticker) holds back until its image has loaded, then fades in whole, never half-drawn.
 - **Tabs:** changing tabs cross-fades the screen over 300ms on a gentle ease: the old one fades out and sinks back a little as the new one fades in and settles up 8px from 98% size. The tab bar changes crisply around it. Browsers without View Transitions change at once.
 - **Reduced motion:** no shine and no rise; tabs cross-fade plainly in 150ms.
+- **The last board:** the sticker board a phone last showed is kept on it for the person signed in, so the next open draws those stickers at once, with no outlines, and swaps in the fresh board when it lands. It can be one refresh out of date.
+- **The board first:** while the board assembles, nothing else downloads. The stat board, the sticker detail, Giving, Explore, the Gratitude Mini-game and the drawing screen load once every sticker on the board has decoded and a quiet second has passed. Draw tapped before then opens the drawing screen on plain Liner for the moment its code takes.
 
 ### Toast
 
