@@ -25,8 +25,10 @@ export interface EndingParts {
   giverPoint: () => { x: number; y: number };
   fuu: HTMLElement;
   soul: HTMLElement;
-  /** The heart's resting box. */
+  /** The heart as last drawn: where it is, loose or not, at the size it's drawn. */
   heartBox: () => HeartBox;
+  /** The heart's resting box. */
+  restBox: () => HeartBox;
   /** The heart's middle as last drawn: in the giver's picture once it has flown there. */
   heartPoint: () => { x: number; y: number };
   screenWidth: () => number;
@@ -150,9 +152,9 @@ export async function playAscension(parts: EndingParts, total: number): Promise<
   await parts.wait(240);
   const { jp, en } = TIER_NAMES[4];
   lettering.slamTierName(jp, en);
-  lettering.showPopInWord(4, parts.heartBox());
+  lettering.showPopInWord("climax", parts.heartBox());
   await parts.wait(380);
-  lettering.showPopInWord(4, parts.heartBox());
+  lettering.showPopInWord("climax", parts.heartBox());
   riseSoul(parts);
   await parts.wait(SOUL_RISE_MS);
   hitGiver(parts, total);
@@ -166,7 +168,7 @@ export async function playAscension(parts: EndingParts, total: number): Promise<
  */
 export async function sighAndTidy(parts: EndingParts): Promise<void> {
   // Over where the heart rested, clear of its pale art and of the screen's edges.
-  const box = parts.heartBox();
+  const box = parts.restBox();
   const width = parts.fuu.offsetWidth || 120;
   const height = parts.fuu.offsetHeight || 32;
   const x = clamp(box.x - width / 2, 16, parts.screenWidth() - width - 16);

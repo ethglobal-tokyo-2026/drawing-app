@@ -198,8 +198,12 @@ export function mountMiniGameEngine(
   };
   let L = layoutFor(size.width, size.height);
   // A hard hit on an edge dents it and shakes the screen; from ドキドキ up it knocks mini hearts off.
+  // Once the combo has ended, nothing hits back.
   const onWallHit = (hit: WallHit) => {
-    background.dent(hit.edge, hit.edge === "top" || hit.edge === "bottom" ? hit.x : hit.y);
+    if (ending || combo.view.phase === "ended") return;
+    // Where it hit, along the edge and across it: the top wall is the HUD's underside.
+    const level = hit.edge === "top" || hit.edge === "bottom";
+    background.dent(hit.edge, level ? hit.x : hit.y, level ? hit.y : hit.x);
     heart.shake(Math.min(5, hit.speed / 260) * (0.4 + intensity * 0.6));
     if ((combo.view.tier ?? 0) >= FEEL_CONFIG.miniHearts.fromTier && !reduced) {
       const { normal } = hit;
@@ -236,15 +240,23 @@ export function mountMiniGameEngine(
       : null;
   resizes?.observe(root);
 
-  const heartBox = (): HeartBox => ({ x: L.rest.x, y: L.rest.y, width: L.width, height: L.height });
+  /** Where the heart was last drawn: its middle, and its size as a share of its resting size. */
+  let heartAt = { ...L.rest, scale: 1 };
+  /** The heart's resting box. */
+  const restBox = (): HeartBox => ({ x: L.rest.x, y: L.rest.y, width: L.width, height: L.height });
+  /** The heart as last drawn, loose or not: the effects that sit on it follow it. */
+  const heartBox = (): HeartBox => ({
+    x: heartAt.x,
+    y: heartAt.y,
+    width: L.width * heartAt.scale,
+    height: L.height * heartAt.scale,
+  });
   const heartArea = (): HeartArea => ({
     cx: L.rest.x,
     cy: L.rest.y,
     width: L.width,
     height: L.height,
   });
-  /** Where the heart was last drawn. */
-  let heartAt = { ...L.rest };
   const say = (text: string) => {
     live.textContent = text;
   };
@@ -306,6 +318,7 @@ export function mountMiniGameEngine(
     fuu,
     soul,
     heartBox,
+    restBox,
     heartPoint: () => heartAt,
     screenWidth: () => size.width,
     wait: (ms) => new Promise((resolve) => waits.push({ at: play + ms / 1000, resolve })),
@@ -367,7 +380,7 @@ export function mountMiniGameEngine(
     background.show(tier, intensity, combo.view.method);
     if (!reduced) heart.punch(0.035 * (0.6 + intensity));
     lettering.slamTierName(TIER_NAMES[tier].jp, TIER_NAMES[tier].en);
-    if (tier === 2) effects.burst(5, L.rest);
+    if (tier === 2) effects.burst(5, heartAt);
     // ありがと comes with the catch, whose words it leaves; each tier after it is said by name.
     if (tier > 0) {
       const { en } = TIER_NAMES[tier];
@@ -398,7 +411,7 @@ export function mountMiniGameEngine(
     if (tier === 0 && hits % 2 === 0) effects.glint(box);
     if (tier === 1 && hits % 4 === 0) effects.bead(box);
     if (tier >= 2 && !reduced) heart.shake(tier >= 3 ? 5 * intensity : 2 * intensity);
-    if (tier === 2 && hits % 5 === 0) effects.burst(2, L.rest);
+    if (tier === 2 && hits % 5 === 0) effects.burst(2, heartAt);
     if (tier >= 3 && hits % 2 === 0) effects.steam(Math.max(1, Math.round(intensity * 2)), box);
     if (tier >= 3 && hits % 2 === 1 && method !== "stroke" && !reduced) physics.rainFromTop();
     if (tapped && !reduced && physics.hearts.length > 0) physics.shoveAwayFrom(x, y);
@@ -418,8 +431,12 @@ export function mountMiniGameEngine(
       if (e.kind === "caught") onCaught();
       else if (e.kind === "hit") onHit(e.secondsAdded, x, y, tierUp);
       else if (e.kind === "limited") {
-        heart.squash(3.3);
-        effects.stamp(x, y);
+        // A tap past the limit still presses the heart; a stroke pass or shake reversal past it shows
+        // nothing, so it never looks like a hit.
+        if (combo.view.method === "tap") {
+          heart.squash(SQUASH_BY_METHOD.tap);
+          effects.stamp(x, y);
+        }
       } else if (e.kind === "tier") onTierUp(e.tier);
       else void end(e, hidden);
     }
@@ -495,6 +512,51 @@ export function mountMiniGameEngine(
   let lastLinesAt = -Infinity;
   let lightAt = -Infinity;
   let lightOwned = false;
+  /** The speed field as last written: its opacity, and its angle as an axis kept turning smoothly. */
+  let field = { opacity: 0, angle: 0 };
+
+  /** performance.now() at which a corner a shake lifted comes down, unless the shake keeps on: 0 when down. */
+  let cornerUntil = 0;
+  const lowerCorner = () => {
+    cornerUntil = 0;
+    background.liftCorner(0);
+  };
+
+  /** Speed lines past the thumb, no more often than FEEL_CONFIG's throttle lets them. */
+  const streamLinesAt = (
+    t: number,
+    x: number,
+    y: number,
+    v: { x: number; y: number; speed: number },
+  ) => {
+    const { fastPxPerMs, fastMs, slowMs } = FEEL_CONFIG.stroke.lines;
+    if (reduced || t - lastLinesAt <= (v.speed > fastPxPerMs ? fastMs : slowMs)) return;
+    lastLinesAt = t;
+    effects.streamLines(x, y, v);
+  };
+
+  /**
+   * The ground's speed field, written only when it changes enough to show. A stroke's angle turns
+   * half a turn at every pass, and its lines look the same that way round, so the field keeps to
+   * the axis nearest its last. With reduced motion it stays off.
+   */
+  const showSpeedField = (opacity: number, angle: number) => {
+    const next = reduced ? 0 : opacity;
+    const axis = field.angle + (((((angle - field.angle) % 180) + 270) % 180) - 90);
+    const { opacityStep, angleStepDeg } = FEEL_CONFIG.stroke.speedField;
+    const off = next === 0;
+    if (off && field.opacity === 0) return;
+    if (
+      !off &&
+      field.opacity !== 0 &&
+      Math.abs(next - field.opacity) < opacityStep &&
+      Math.abs(axis - field.angle) < angleStepDeg
+    ) {
+      return;
+    }
+    field = { opacity: next, angle: off ? field.angle : axis };
+    background.setSpeedField(field.opacity, field.angle);
+  };
 
   const velocity = (samples: readonly { x: number; y: number; t: number }[]) => {
     if (samples.length < 2) return { x: 0, y: 0, speed: 0 };
@@ -512,6 +574,9 @@ export function mountMiniGameEngine(
     if (!events.some((e) => e.kind === "hit")) return handle(events, x, y);
     hideTip();
     heart.pullTo(0, null);
+    // The wrist no longer moves the heart: its tilt eases back, and a lifted corner comes down.
+    heart.stopSway();
+    lowerCorner();
     // The combo's own look first, so the unlock's slam is the one that shows.
     handle(events, x, y);
     background.show(combo.view.tier, intensity, "stroke");
@@ -557,11 +622,14 @@ export function mountMiniGameEngine(
     else if (v.speed > 0.05) strokeAngle = (Math.atan2(v.y, v.x) * 180) / Math.PI;
 
     if (combo.view.method === "stroke") {
-      effects.streamLines(x, y, v);
+      streamLinesAt(t, x, y, v);
       if (!pass?.fast) return;
-      handle(combo.countStrokePass(t), x, y);
+      const events = combo.countStrokePass(t);
+      handle(events, x, y);
+      // Only a counted pass flings mini hearts.
+      const counted = events.some((e) => e.kind === "hit");
       const tier = combo.view.tier ?? 0;
-      if (tier >= FEEL_CONFIG.miniHearts.fromTier && !reduced) {
+      if (counted && tier >= FEEL_CONFIG.miniHearts.fromTier && !reduced) {
         physics.flingAlongStroke(pass, throwCount());
       }
       return;
@@ -572,11 +640,9 @@ export function mountMiniGameEngine(
       const d = Math.hypot(dx, dy);
       heart.pullTo(d, d > 8 ? (Math.atan2(dy, dx) * 180) / Math.PI : null);
       // A hard or fast drag throws speed lines.
-      const fast = v.speed > 0.9;
-      if ((fast || d > 100) && !reduced && t - lastLinesAt > (fast ? 50 : 90)) {
-        lastLinesAt = t;
-        effects.streamLines(x, y, fast ? v : { x: dx / d, y: dy / d, speed: 0.9 });
-      }
+      const { fastPxPerMs } = FEEL_CONFIG.stroke.lines;
+      if (v.speed > fastPxPerMs) streamLinesAt(t, x, y, v);
+      else if (d > 100) streamLinesAt(t, x, y, { x: dx / d, y: dy / d, speed: fastPxPerMs });
       // Trying again: the tip stays.
       if (tipShown === "stroke") tipUntil = Math.max(tipUntil, wall + 4);
     }
@@ -611,8 +677,15 @@ export function mountMiniGameEngine(
     // No hit: the combo had already ended, and that end still plays.
     if (!events.some((e) => e.kind === "hit")) return handle(events, heartAt.x, heartAt.y);
     hideTip();
-    background.liftCorner(0);
+    lowerCorner();
     shakingUntil = t + FEEL_CONFIG.shake.resetMs;
+    // A finger still dragging lets go of the heart: nothing leans to it, lights it or glows under it.
+    heart.pullTo(0, null);
+    if (stroke) {
+      stroke = null;
+      strokes.fingerUp();
+      recorder.strokeEnd();
+    }
     // The combo's own look first, so the unlock's slam is the one that shows.
     handle(events, heartAt.x, heartAt.y);
     if (!reduced) {
@@ -623,7 +696,8 @@ export function mountMiniGameEngine(
     flash = { face: "wide", until: performance.now() + 600 };
     writeFace();
     effects.burst(8, heartAt);
-    say("The heart is loose.");
+    // With reduced motion the heart stays put.
+    say(reduced ? "Shake unlocked." : "The heart is loose.");
   };
 
   const onMotion = (ax: number, ay: number, gx: number | null, t: number) => {
@@ -648,7 +722,11 @@ export function mountMiniGameEngine(
     }
     heart.jiggle();
     if (reversal.run >= FEEL_CONFIG.shake.keepShakingAt) showTip("shake");
-    if (reversal.run >= FEEL_CONFIG.shake.cornerAt) background.liftCorner(0.3);
+    if (reversal.run >= FEEL_CONFIG.shake.cornerAt) {
+      // It stays up while the shake keeps its rhythm, and comes down once the run lapses.
+      background.liftCorner(0.3);
+      cornerUntil = t + FEEL_CONFIG.shake.resetMs;
+    }
     if (reversal.run >= FEEL_CONFIG.shake.unlockAt) unlockShake(t, reversal);
   };
   const stopMotion = listenToPhoneMotion(onMotion);
@@ -658,8 +736,8 @@ export function mountMiniGameEngine(
     hideTip();
     stroke = null;
     heart.calm();
-    background.setSpeedField(0, strokeAngle);
-    background.liftCorner(0);
+    showSpeedField(0, strokeAngle);
+    lowerCorner();
     shakingUntil = 0;
   };
 
@@ -829,6 +907,8 @@ export function mountMiniGameEngine(
         writeFace();
       }
       if (tipShown && wall > tipUntil) hideTip();
+      // A shake given up: its run has lapsed, and the corner it lifted comes down.
+      if (cornerUntil && now >= cornerUntil) lowerCorner();
       const shakingNow = now < shakingUntil ? "1" : "0";
       if (root.dataset.shaking !== shakingNow) root.dataset.shaking = shakingNow;
 
@@ -847,27 +927,27 @@ export function mountMiniGameEngine(
         strokeStretch: stroking && thumbRecent ? { speed: strokeSpeed, angle: strokeAngle } : null,
       });
       if (stroking) {
-        const field = thumbRecent ? Math.min(1, strokeSpeed / 1.1) * (0.2 + 0.4 * intensity) : 0;
-        background.setSpeedField(field, strokeAngle);
+        const opacity = thumbRecent ? Math.min(1, strokeSpeed / 1.1) * (0.2 + 0.4 * intensity) : 0;
+        showSpeedField(opacity, strokeAngle);
       }
       if (thumb) {
         thumbGlow.style.opacity = stroking ? "0.9" : "0.4";
         thumbGlow.style.transform = `translate(${thumb.x.toFixed(1)}px, ${thumb.y.toFixed(1)}px)`;
+      } else if (thumbGlow.style.opacity !== "0") thumbGlow.style.opacity = "0";
+      // The heart's light follows the thumb, except with reduced motion.
+      if (thumb && !reduced) {
         if (now - lightAt > LIGHT_MS) {
           lightAt = now;
           lightOwned = true;
           root.style.setProperty("--lx", clamp((thumb.x / size.width) * 2 - 1, -1, 1).toFixed(3));
           root.style.setProperty("--ly", clamp((thumb.y / size.height) * 2 - 1, -1, 1).toFixed(3));
         }
-      } else {
-        if (thumbGlow.style.opacity !== "0") thumbGlow.style.opacity = "0";
-        if (lightOwned) {
-          lightOwned = false;
-          root.style.removeProperty("--lx");
-          root.style.removeProperty("--ly");
-        }
+      } else if (lightOwned) {
+        lightOwned = false;
+        root.style.removeProperty("--lx");
+        root.style.removeProperty("--ly");
       }
-      heartAt = f;
+      heartAt = { x: f.x, y: f.y, scale: f.scale };
       page.style.transform = f.page;
       anchor.style.transform = f.anchor;
       anchor.style.opacity = String(f.opacity);

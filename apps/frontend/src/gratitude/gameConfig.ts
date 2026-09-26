@@ -99,6 +99,12 @@ export const FEEL_CONFIG = {
     triesForTip: 3,
     /** With reduced motion a committed stroke stretches the heart by this share at most. */
     reducedStretch: 0.04,
+    /** Speed lines stream past a thumb at most once per `fastMs` when it moves faster than
+     * `fastPxPerMs`, and once per `slowMs` otherwise. */
+    lines: { fastPxPerMs: 0.9, fastMs: 50, slowMs: 90 },
+    /** The ground's speed field is written again only once its opacity moves by `opacityStep` or its
+     * angle by `angleStepDeg`. */
+    speedField: { opacityStep: 0.03, angleStepDeg: 3 },
   },
   /** Shaking the phone in a rhythm: PJ's PHYS and ShakeDetector. */
   shake: {
