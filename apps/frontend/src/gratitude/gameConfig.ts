@@ -75,6 +75,28 @@ export const FEEL_CONFIG = {
   tapHoldMs: 800,
   /** The sent heart winds up toward the giver over the catch window, then holds through its grace. */
   windUpMs: 800,
+  /** A thumb stroking back and forth, anywhere on the screen: PJ's PHYS and StrokeDetector. */
+  stroke: {
+    minRunPx: 40,
+    fastPxPerMs: 0.38,
+    turnPx: 12,
+    pauseMs: 900,
+    unlockPasses: 5,
+    /** A drag on the heart this long is a try at stroking it; after three, the tip says how. */
+    tryTravelPx: 40,
+    triesForTip: 3,
+  },
+  /** Shaking the phone in a rhythm: PJ's PHYS and ShakeDetector. */
+  shake: {
+    deadZone: 6,
+    minPeak: 11,
+    minGapMs: 60,
+    maxGapMs: 480,
+    resetMs: 650,
+    keepShakingAt: 4,
+    cornerAt: 11,
+    unlockAt: 16,
+  },
   /** Mini hearts: sprayed by taps from ドキドキ up, sweated off the heart, and 昇天's rain. */
   miniHearts: {
     fromTier: 2,
