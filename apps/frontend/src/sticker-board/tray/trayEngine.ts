@@ -10,7 +10,7 @@ import type { StickerUrls } from "../../stickers/stickerUrls";
 import { ticketDay } from "../../tickets/tickets";
 import { packSheets, type PackedItem, type Shape } from "./sheetPacking";
 import { knownShape, stickerShape } from "./stickerShape";
-import { countVisit, readSeen, saveSeen } from "./traySeen";
+import { countVisit } from "./traySeen";
 import { newSlots, type TraySlot } from "./traySlots";
 import { createZipper, type Zipper } from "./zipper";
 import "./sticker-tray.css";
@@ -54,6 +54,8 @@ export interface TrayBoard {
   remove: (id: string) => void;
   /** Shows where a sticker is on the board. */
   pulse: (id: string) => void;
+  /** These were on show when the tray zipped shut, so they're no longer NEW. */
+  markSeen: (ids: readonly string[]) => void;
 }
 
 /**
@@ -406,7 +408,8 @@ export function createTrayEngine(
     shown: new Set(),
     pulled: null,
   };
-  const seen = readSeen();
+  /** Seen on this visit; the board's stickers carry what was seen before. */
+  const seen = new Set<string>();
   let model = modelOf(read());
   /** The stack's window is on show: the tray open, opening, or pulled to a crack. */
   let onShow = false;
@@ -719,15 +722,11 @@ export function createTrayEngine(
   });
   zip.on("closed", () => {
     // What was on show in the open tray is no longer new.
-    let changed = false;
-    for (const id of ui.shown)
-      if (!seen.has(id)) {
-        seen.add(id);
-        changed = true;
-      }
+    const newlySeen = [...ui.shown].filter((id) => !seen.has(id));
     ui.shown.clear();
-    if (changed) {
-      saveSeen(seen);
+    if (newlySeen.length > 0) {
+      newlySeen.forEach((id) => seen.add(id));
+      api.markSeen(newlySeen);
       renderStack();
       updateBadge();
     }

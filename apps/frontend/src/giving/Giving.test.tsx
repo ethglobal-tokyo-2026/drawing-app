@@ -1,18 +1,15 @@
 // @vitest-environment happy-dom
+import type { Gift } from "@drawing-app/api/client";
 import { act } from "react";
-import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { emptyApi, renderWithApi } from "../api/testing";
+import { gift } from "../api/testFixtures";
 import type { GiftSender, GiftSendOutcome } from "./giftSender";
-import { deviceGiftStore, giftStatusBySticker } from "./giftStore";
 import { Giving } from "./Giving";
 
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
-let host: HTMLDivElement;
-let root: Root;
+let view: ReturnType<typeof renderWithApi>;
+/** Where each sticker's gift is on the server. */
+let giftStatus: Map<string, Gift["status"]>;
 let answerPicker: (outcome: GiftSendOutcome) => void;
 const onClose = vi.fn();
 
@@ -23,19 +20,41 @@ const sender: GiftSender = {
     }),
 };
 
-/** Opens Giving for a sticker of its own, so tests don't share gifts. */
-const open = (stickerId: string) =>
-  act(() =>
-    root.render(
-      <Giving
-        sticker={{ id: stickerId, no: 147, timeUsed: 292, createdAt: Date.now(), url: "blob:x" }}
-        fromHandle="alice"
-        sender={sender}
-        liffId="2011732197-P98cxGpu"
-        onClose={onClose}
-      />,
-    ),
+const token = `0x${"ab".repeat(32)}`;
+
+/** A server that packs one gift per sticker and records what LINE's picker did with it. */
+function giftsApi() {
+  const byGift = new Map<string, string>();
+  const settle = (giftId: string, status: Gift["status"]) => {
+    const stickerId = byGift.get(giftId) ?? "";
+    giftStatus.set(stickerId, status);
+    return Promise.resolve(gift({ id: giftId, stickerId, status }));
+  };
+  return emptyApi({
+    packageGift: (stickerId) => {
+      const packed = gift({ stickerId, status: "packed" });
+      byGift.set(packed.id, stickerId);
+      giftStatus.set(stickerId, "packed");
+      return Promise.resolve({ gift: packed, giftClaimToken: token, escrowTransfer: null });
+    },
+    reportShared: (giftId, outcome) => settle(giftId, outcome === "sent" ? "sent" : "packed"),
+    takeOutGift: (giftId) => settle(giftId, "taken_out"),
+  });
+}
+
+/** Opens Giving for a sticker. */
+const open = (stickerId: string) => {
+  view = renderWithApi(
+    <Giving
+      sticker={{ id: stickerId, no: 147, timeUsed: 292, createdAt: Date.now(), url: "blob:x" }}
+      fromHandle="alice"
+      sender={sender}
+      liffId="2011732197-P98cxGpu"
+      onClose={onClose}
+    />,
+    giftsApi(),
   );
+};
 
 const title = () => document.querySelector(".giving__title")?.textContent;
 const tap = (label: string) =>
@@ -47,23 +66,19 @@ const tap = (label: string) =>
     target.click();
   });
 const wait = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
-const giftOf = (stickerId: string) =>
-  giftStatusBySticker(deviceGiftStore().list()).get(stickerId)?.state;
+const giftOf = (stickerId: string) => giftStatus.get(stickerId);
 
 // happy-dom has no font loading; every browser the app runs in does.
 Object.defineProperty(document, "fonts", { value: { ready: Promise.resolve() } });
 
 beforeEach(() => {
   vi.useFakeTimers();
-  host = document.createElement("div");
-  document.body.append(host);
-  root = createRoot(host);
+  giftStatus = new Map();
   onClose.mockReset();
 });
 
 afterEach(() => {
-  act(() => root.unmount());
-  host.remove();
+  view.unmount();
   vi.useRealTimers();
 });
 
@@ -89,7 +104,7 @@ describe("Giving", () => {
     expect(onClose).toHaveBeenCalledWith(true);
   });
 
-  it("shows Not sent yet when the picker is cancelled, and takes the sticker out", async () => {
+  it("shows Not sent yet when the picker is cancelled, and Take it out puts the sticker back", async () => {
     open("s-cancelled");
     tap("Send in a LINE chat");
     await wait(1150);
@@ -97,10 +112,11 @@ describe("Giving", () => {
     await wait(0);
     expect(title()).toBe("Not sent yet");
     expect(document.querySelector(".gift-bag")?.getAttribute("data-state")).toBe("open");
-    expect(giftOf("s-cancelled")).toBeUndefined();
+    expect(giftOf("s-cancelled")).toBe("packed");
 
     tap("Take it out");
     await wait(400);
+    expect(giftOf("s-cancelled")).toBe("taken_out");
     expect(title()).toBe("Give No.0147");
     expect(onClose).not.toHaveBeenCalled();
   });

@@ -24,7 +24,7 @@ const tap = (now: number, hasInk = true) => ({ type: "seal-tap", now, hasInk }) 
 describe("transition", () => {
   it("spends a ticket only at Start, and starts the clock only at the first stroke", () => {
     expect(run(ink)).toEqual({ phase: "blank", effects: [] });
-    expect(run(start)).toEqual({ phase: "primed", effects: ["spend-ticket"] });
+    expect(run(start)).toEqual({ phase: "primed", effects: ["keep-session"] });
     expect(run(start, start)).toEqual({ phase: "primed", effects: [] });
     expect(run(start, ink)).toEqual({ phase: "drawing", effects: ["start-clock"] });
     expect(run(start, ink, ink)).toEqual({ phase: "drawing", effects: [] });

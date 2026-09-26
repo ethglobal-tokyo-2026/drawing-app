@@ -368,10 +368,7 @@ export function StickerDetail({
             {mode === "yours" && onItsWay && (
               <div className="sticker-detail__on-its-way">
                 <span className="sticker-detail__sleeve" aria-hidden />
-                <span>
-                  On its way
-                  {sticker.openGift?.to && ` to ${formatHandle(sticker.openGift.to)}`}
-                </span>
+                <span>On its way</span>
               </div>
             )}
             {mode === "yours" && sticker.held && !onItsWay && (

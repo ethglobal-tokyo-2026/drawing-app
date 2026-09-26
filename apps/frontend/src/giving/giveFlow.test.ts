@@ -1,10 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GiftBackend } from "./giftBackend";
-import type { GiftMessage } from "./giftMessage";
+import { buildGiftMessage, type GiftMessage } from "./giftMessage";
 import type { GiftSendOutcome } from "./giftSender";
-import { createGiftStore, giftStatusBySticker, memoryStorage } from "./giftStore";
 import { createGiveFlow } from "./giveFlow";
-import { createLocalGiftBackend } from "./localGiftBackend";
 
 const PICKER_DELAY = 1150;
 const TAKE_OUT = 380;
@@ -19,13 +17,45 @@ class Deferred<T> {
   });
 }
 
+type GiftState = "packed" | "sent" | "taken_out";
+
+/** The server's side of gifts: each packed gift and where it is. */
+function fakeBackend() {
+  const gifts = new Map<string, GiftState>();
+  let packed = 0;
+  const backend: GiftBackend = {
+    pack: (sticker) => {
+      packed += 1;
+      const giftId = `gift-${packed}`;
+      gifts.set(giftId, "packed");
+      return Promise.resolve({
+        giftId,
+        message: buildGiftMessage({
+          liffId: "123-abc",
+          giftClaimToken: `token${packed}`,
+          fromHandle: "alice",
+          timeUsed: sticker.timeUsed,
+        }),
+      });
+    },
+    markSent: async (giftId) => {
+      gifts.set(giftId, "sent");
+    },
+    markCancelled: () => Promise.resolve(),
+    takeOut: async (giftId) => {
+      gifts.set(giftId, "taken_out");
+    },
+  };
+  return { backend, states: () => [...gifts.values()] };
+}
+
 function setup({ backend }: { backend?: GiftBackend } = {}) {
-  const store = createGiftStore(memoryStorage());
+  const server = fakeBackend();
   const messages: GiftMessage[] = [];
   const pickers: Deferred<GiftSendOutcome>[] = [];
   const flow = createGiveFlow({
     sticker: { id: "s1", no: 147, timeUsed: 292 },
-    backend: backend ?? createLocalGiftBackend({ store, fromHandle: "alice", liffId: "123-abc" }),
+    backend: backend ?? server.backend,
     sender: {
       send: (message) => {
         messages.push(message);
@@ -46,23 +76,16 @@ function setup({ backend }: { backend?: GiftBackend } = {}) {
   };
   return {
     flow,
-    store,
     messages,
     picker,
     step: () => flow.getState().step,
-    status: () => giftStatusBySticker(store.list()).get("s1"),
+    /** Every gift the flow packed, and where each is now. */
+    gifts: server.states,
     /** What the flow says went wrong; fails the test when nothing did. */
     failure: () => {
       const state = flow.getState();
       if (state.step !== "failed") throw new Error(`expected a failure, got ${state.step}`);
       return state.error;
-    },
-    /** The first gift's record, closed without sending; fails the test otherwise. */
-    notSent: () => {
-      const [gift] = store.list();
-      if (gift?.state !== "not_sent")
-        throw new Error(`expected a gift not sent, got ${gift?.state}`);
-      return gift;
     },
   };
 }
@@ -90,7 +113,7 @@ describe("giving through a LINE chat", () => {
     t.flow.chooseLineChat();
     await wait(PICKER_DELAY - 1);
     expect(t.step()).toBe("packed");
-    expect(t.status()?.state).toBe("packed");
+    expect(t.gifts()).toEqual(["packed"]);
     expect(t.messages).toHaveLength(0);
 
     await wait(1);
@@ -107,31 +130,28 @@ describe("giving through a LINE chat", () => {
     t.picker().resolve("sent");
     await wait();
     expect(t.step()).toBe("sent");
-    expect(t.status()?.state).toBe("sent");
+    expect(t.gifts()).toEqual(["sent"]);
   });
 
-  it("puts the sticker back when the picker is cancelled", async () => {
+  it("keeps the gift in the bag when the picker is cancelled", async () => {
     const t = setup();
     await openPicker(t);
     t.picker().resolve("cancelled");
     await wait();
     expect(t.step()).toBe("notSent");
-    expect(t.status()).toBeUndefined();
-    expect(t.notSent().reason).toBe("picker_cancelled");
+    expect(t.gifts()).toEqual(["packed"]);
   });
 
-  it("shows what failed when the picker fails, and keeps the error for review", async () => {
+  it("shows what failed when the picker fails, and keeps the gift in the bag", async () => {
     const t = setup();
     await openPicker(t);
     t.picker().reject(new Error("EXCEPTION_IN_SUBWINDOW: the picker closed"));
     await wait();
     expect(t.failure()).toMatch(/No\.0147.*EXCEPTION_IN_SUBWINDOW/);
-    expect(t.status()).toBeUndefined();
-    expect(t.notSent().reason).toBe("send_failed");
-    expect(t.notSent().error).toContain("EXCEPTION_IN_SUBWINDOW");
+    expect(t.gifts()).toEqual(["packed"]);
   });
 
-  it("sends again with a new gift, straight away, after a cancel", async () => {
+  it("sends the same gift again, straight away, after a cancel", async () => {
     const t = setup();
     await openPicker(t);
     t.picker().resolve("cancelled");
@@ -141,8 +161,8 @@ describe("giving through a LINE chat", () => {
     await wait();
     expect(t.step()).toBe("picking");
     expect(t.messages).toHaveLength(2);
-    expect(t.messages[1]).not.toEqual(t.messages[0]);
-    expect(t.store.list().map((r) => r.state)).toEqual(["not_sent", "packed"]);
+    expect(t.messages[1]).toEqual(t.messages[0]);
+    expect(t.gifts()).toEqual(["packed"]);
   });
 
   it("opens the picker once, at once, when Send in LINE beats the timer", async () => {
@@ -169,21 +189,21 @@ describe("giving through a LINE chat", () => {
     expect(t.step()).toBe("sheet");
     await wait(PICKER_DELAY * 2);
     expect(t.messages).toHaveLength(0);
-    expect(t.status()).toBeUndefined();
-    expect(t.notSent().reason).toBe("taken_out");
+    expect(t.gifts()).toEqual(["taken_out"]);
   });
 
   it("says why when the sticker can't be packed, and doesn't open the picker", async () => {
     const t = setup({
       backend: {
-        pack: () => Promise.reject(new Error("storage is full")),
+        pack: () => Promise.reject(new Error("not_minted: No.0147 has no NFT yet")),
         markSent: () => Promise.resolve(),
-        markNotSent: () => Promise.resolve(),
+        markCancelled: () => Promise.resolve(),
+        takeOut: () => Promise.resolve(),
       },
     });
     t.flow.chooseLineChat();
     await wait(PICKER_DELAY * 2);
-    expect(t.failure()).toContain("storage is full");
+    expect(t.failure()).toContain("not_minted");
     expect(t.messages).toHaveLength(0);
   });
 
@@ -193,7 +213,7 @@ describe("giving through a LINE chat", () => {
     t.flow.dispose();
     t.picker().resolve("sent");
     await wait();
-    expect(t.status()?.state).toBe("sent");
+    expect(t.gifts()).toEqual(["sent"]);
   });
 
   it("puts the sticker back when the flow closes before the picker opens", async () => {
@@ -202,6 +222,16 @@ describe("giving through a LINE chat", () => {
     t.flow.dispose();
     await wait(PICKER_DELAY * 2);
     expect(t.messages).toHaveLength(0);
-    expect(t.status()).toBeUndefined();
+    expect(t.gifts()).toEqual(["taken_out"]);
+  });
+
+  it("puts the sticker back when the flow closes after a cancel", async () => {
+    const t = setup();
+    await openPicker(t);
+    t.picker().resolve("cancelled");
+    await wait();
+    t.flow.dispose();
+    await wait();
+    expect(t.gifts()).toEqual(["taken_out"]);
   });
 });

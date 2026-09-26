@@ -1,6 +1,6 @@
-import type { BoardSticker as ApiBoardSticker } from "../api/contract";
+import type { BoardSticker as ApiBoardSticker } from "@drawing-app/api/client";
 import { toMs, toPerson, toRecordPlacement, toSticker, type PersonView } from "../api/views";
-import type { Placement } from "../stickers/stickerStorage";
+import type { Placement } from "./placement";
 import type { StickerUrls } from "../stickers/stickerUrls";
 import { freeSpot, nextZ } from "./placement";
 
@@ -11,6 +11,10 @@ export interface BoardSticker {
   no: number;
   /** When it was sealed, in milliseconds. */
   createdAt: number;
+  /** When it reached you, in milliseconds: the sticker tray's order. */
+  arrivedAt: number;
+  /** Seen in the open sticker tray, so it isn't NEW. */
+  seen: boolean;
   timeUsed: number;
   width: number;
   height: number;
@@ -24,11 +28,8 @@ export interface BoardSticker {
   held: boolean;
   /** Who received it, once it's given away. */
   givenTo: { receiver: PersonView; receivedAt: number } | null;
-  /**
-   * Its gift while packed or on its way. `to` is known only for a gift given to an artist in the app;
-   * LINE's friend picker never says who was picked.
-   */
-  openGift: { id: string; status: "packed" | "sent"; to?: string } | null;
+  /** Its gift while packed or on its way; LINE's friend picker never says who was picked. */
+  openGift: { id: string; status: "packed" | "sent" } | null;
 }
 
 /** A board sticker as it comes from the API; its placement may not be settled yet. */
@@ -42,6 +43,8 @@ export function toBoardSticker(b: ApiBoardSticker): UnplacedBoardSticker {
     id: sticker.id,
     no: sticker.no,
     createdAt: sticker.sealedAt,
+    arrivedAt: toMs(b.arrivedAt),
+    seen: b.seenAt !== null,
     timeUsed: sticker.timeUsed,
     width: sticker.width,
     height: sticker.height,

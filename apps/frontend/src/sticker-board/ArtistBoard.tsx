@@ -9,14 +9,9 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent,
 } from "react";
-import { ArtistAvatarArt } from "../artists/ArtistAvatarArt";
-import { ART_SIZE, avatarUrl, stickerArtUrl } from "../artists/artUrl";
-import {
-  artistByHandle,
-  gratitudeTotal,
-  type Artist,
-  type ArtistBoardSticker,
-} from "../artists/demoArtists";
+import type { Person } from "@drawing-app/api/client";
+import { useApiQuery } from "../api/useApiQuery";
+import { toPerson, type PersonView } from "../api/views";
 import { GiveSheet } from "../giving/GiveSheet";
 import { OfferSheet } from "../offers/OfferSheet";
 import { Duration } from "../stickers/Duration";
@@ -29,38 +24,22 @@ import { QuietLink } from "../ui/QuietLink";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import type { BoardSticker } from "./boardSticker";
+import { toBoardSticker, type BoardSticker } from "./boardSticker";
 import { fieldOf, toPx, type Field } from "./placement";
 import { PlacedSticker } from "./PlacedSticker";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import { StatCork, type CorkFigures, type StatCorkHandle } from "./stat-board/StatCork";
+import { statFigures } from "./stat-board/statFigures";
 import "./ArtistBoard.css";
 
 interface Props {
-  artist: Artist;
+  /** Whose board it is, as Explore found them. */
+  person: Person;
   onBack: () => void;
 }
 
-/** Gratitude at which a sticker's glow is at its brightest. */
-const FULL_GLOW = 900;
 /** The sticker menu's width, for keeping it on the board. */
 const MENU_W = 250;
-
-/** A demo sticker as the board's parts take it: an image of its art, where it was stuck. */
-const asBoardSticker = (owner: string, s: ArtistBoardSticker, z: number): BoardSticker => ({
-  id: `${owner}-${s.no}`,
-  no: s.no,
-  createdAt: s.sealedAt,
-  timeUsed: s.timeUsed,
-  width: ART_SIZE,
-  height: ART_SIZE,
-  urls: { png: stickerArtUrl(s.art) },
-  placement: { on: true, x: s.x, y: s.y, s: s.scale, r: s.rotation, z },
-  artist: { id: s.by ?? owner, handle: s.by ?? owner, name: `@${s.by ?? owner}` },
-  held: true,
-  givenTo: null,
-  openGift: null,
-});
 
 /** Someone else's board has no sticker tray, so its field runs to the right inset too. */
 const visitField = (w: number, h: number): Field => {
@@ -69,20 +48,17 @@ const visitField = (w: number, h: number): Field => {
 };
 
 /** Who drew a foil sticker: their picture in a foil ring, over "ARTIST @name". */
-function ArtistChip({ handle }: { handle: string }) {
-  const artist = artistByHandle.get(handle);
+function ArtistChip({ artist }: { artist: PersonView }) {
   return (
     <span className="artist-chip">
       <span className="chip-ring">
-        {artist ? (
-          <ArtistAvatarArt avatar={artist.avatar} className="chip-avatar" />
-        ) : (
-          <span className="chip-avatar artist-avatar" />
-        )}
+        <span className="chip-avatar">
+          <PhotoSticker src={artist.pictureUrl} name={artist.name} size={28} />
+        </span>
       </span>
       <span className="chip-text">
         <span className="fine">Artist</span>
-        <b>{formatHandle(handle)}</b>
+        <b>{artist.handle ? formatHandle(artist.handle) : artist.name}</b>
       </span>
     </span>
   );
@@ -93,10 +69,11 @@ function StickerView({
   owner,
   onClose,
 }: {
-  sticker: ArtistBoardSticker;
-  owner: string;
+  sticker: BoardSticker;
+  owner: PersonView;
   onClose: () => void;
 }) {
+  const drawnByOwner = sticker.artist.id === owner.id;
   const root = useRef<HTMLDivElement>(null);
   useBackToClose(true, onClose);
   useFocusTrap(root, { onEscape: onClose });
@@ -112,16 +89,17 @@ function StickerView({
         aria-label={formatNo(sticker.no)}
       >
         <StickerFigure
-          urls={{ png: stickerArtUrl(sticker.art) }}
-          width={ART_SIZE}
-          height={ART_SIZE}
+          urls={sticker.urls}
+          width={sticker.width}
+          height={sticker.height}
           className="visit-view-art"
         />
         <h2>{formatNo(sticker.no)}</h2>
         <div className="visit-view-meta fine">
-          Drawn in <Duration seconds={sticker.timeUsed} /> · {formatHandle(sticker.by ?? owner)}
+          Drawn in <Duration seconds={sticker.timeUsed} /> ·{" "}
+          {sticker.artist.handle ? formatHandle(sticker.artist.handle) : sticker.artist.name}
         </div>
-        {sticker.by && <ArtistChip handle={sticker.by} />}
+        {!drawnByOwner && <ArtistChip artist={sticker.artist} />}
         <div className="visit-view-perf" />
         <QuietLink onClick={onClose}>Close</QuietLink>
       </div>
@@ -129,32 +107,15 @@ function StickerView({
   );
 }
 
-const figuresOf = (artist: Artist): CorkFigures => {
-  const { stats } = artist;
-  return {
-    name: artist.displayName,
-    handle: artist.handle,
-    picture: <PhotoSticker src={avatarUrl(artist.avatar)} name={artist.displayName} size={42} />,
-    own: false,
-    gratitude: gratitudeTotal(stats) > 0 ? stats.gratitude : undefined,
-    streak: { current: stats.streakDays, best: stats.bests.longestStreak ?? 0 },
-    streakRule:
-      stats.streakDays > 0
-        ? "Miss a day and it drops by one, not back to zero. Days turn over at 4:00."
-        : "It starts the first day they draw. Miss a day later and it drops by one.",
-    stamps: { made: stats.made, received: stats.received, given: stats.given },
-    bestCombo: stats.bests.bestCombo,
-    mostThanksInADay: stats.bests.mostThanksInADay,
-    since: stats.since,
-    address: artist.boardAddress,
-  };
-};
-
 /**
  * Someone else's Sticker Board, read only, opened from Explore. Their stickers sit where they
  * stuck them, foil on the ones someone else drew; their name turns it over to their stat board.
  */
-export function ArtistBoard({ artist, onBack }: Props) {
+export function ArtistBoard({ person, onBack }: Props) {
+  const owner = toPerson(person);
+  const handle = person.handle ? formatHandle(person.handle) : owner.name;
+  const board = useApiQuery(`sticker-board/${person.id}`, (api) => api.stickerBoard(person.id));
+  const stats = useApiQuery(`user-stats/${person.id}`, (api) => api.userStats(person.id));
   const reduced = useReducedMotion();
   const hint = useId();
   const face = useRef<HTMLDivElement>(null);
@@ -164,16 +125,21 @@ export function ArtistBoard({ artist, onBack }: Props) {
   const [size, setSize] = useState<{ W: number; H: number } | null>(null);
   const [turned, setTurned] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
-  const [viewing, setViewing] = useState<ArtistBoardSticker | null>(null);
+  const [viewing, setViewing] = useState<BoardSticker | null>(null);
   const [giving, setGiving] = useState(false);
-  const [offering, setOffering] = useState<ArtistBoardSticker | null>(null);
+  const [offering, setOffering] = useState<BoardSticker | null>(null);
 
+  // What they hold and have stuck on, bottom of the stack first.
   const stickers = useMemo(
-    () => artist.board.map((s, i) => asBoardSticker(artist.handle, s, i + 1)),
-    [artist],
+    () =>
+      (board.state === "ready" ? board.data.boardStickers : [])
+        .map(toBoardSticker)
+        .flatMap((s) => (s.held && s.placement?.on ? [{ ...s, placement: s.placement }] : []))
+        .sort((a, b) => a.placement.z - b.placement.z),
+    [board],
   );
   const field = size && visitField(size.W, size.H);
-  const menuSticker = selected === null ? null : artist.board[selected];
+  const menuSticker = selected === null ? null : stickers[selected];
 
   useLayoutEffect(() => {
     const el = face.current;
@@ -193,11 +159,11 @@ export function ArtistBoard({ artist, onBack }: Props) {
   // LINE's header shows the page title.
   useEffect(() => {
     const previous = document.title;
-    document.title = `${formatHandle(artist.handle)}'s sticker board`;
+    document.title = `${handle}'s sticker board`;
     return () => {
       document.title = previous;
     };
-  }, [artist.handle]);
+  }, [handle]);
 
   // The stat board and the give and offer sheets handle their own Escape; on the front it closes
   // the sticker view, then the sticker menu.
@@ -232,34 +198,53 @@ export function ArtistBoard({ artist, onBack }: Props) {
     toggleMenu(e.target);
   };
 
-  const menuSpot = (s: ArtistBoardSticker) => {
+  const menuSpot = (s: BoardSticker) => {
     if (!field || !size) return undefined;
-    const c = toPx(field, s);
-    const half = (s.scale * size.W) / 2;
+    const c = toPx(field, s.placement);
+    const half = (s.placement.s * size.W) / 2;
     return {
       left: Math.min(Math.max(8, c.x - MENU_W / 2), size.W - MENU_W - 8),
-      top: s.y > 0.6 ? c.y - half - 136 : c.y + half + 12,
+      top: s.placement.y > 0.6 ? c.y - half - 136 : c.y + half + 12,
     };
   };
+
+  const figures: CorkFigures = {
+    name: owner.name,
+    handle: person.handle ?? owner.name,
+    picture: <PhotoSticker src={owner.pictureUrl} name={owner.name} size={42} />,
+    own: false,
+    ...statFigures(stats.state === "ready" ? stats.data : null, false, new Date()),
+    since: stats.state === "ready" ? Date.parse(stats.data.since) : null,
+  };
+  if (stats.state === "failed")
+    figures.streakRule = `Their stats didn’t load: ${stats.error.message}`;
 
   const front = (
     <div className="board visit" ref={face}>
       <div
         className="board-stage"
         role="region"
-        aria-label={`${formatHandle(artist.handle)}'s sticker board`}
+        aria-label={`${handle}'s sticker board`}
         onClick={onStageClick}
         onKeyDown={onStageKeyDown}
       >
         <span id={hint} hidden>
           Enter opens its menu: view it, or offer for it
         </span>
-        {artist.board.length === 0 && (
+        {board.state === "ready" && stickers.length === 0 && (
           <div className="board-blank">
             <span className="board-blank-cut" aria-hidden />
+            <span className="board-blank-note">{handle} hasn’t stuck anything up yet.</span>
+          </div>
+        )}
+        {board.state === "failed" && (
+          <div className="board-blank" role="alert">
             <span className="board-blank-note">
-              {formatHandle(artist.handle)} hasn’t stuck anything up yet.
+              Couldn’t load {handle}’s board: {board.error.message}
             </span>
+            <LabelButton size="sm" onClick={board.retry}>
+              Try again
+            </LabelButton>
           </div>
         )}
         {field &&
@@ -280,8 +265,7 @@ export function ArtistBoard({ artist, onBack }: Props) {
               tabbable
               position={`${i + 1} of ${stickers.length}`}
               hintId={hint}
-              foil={Boolean(artist.board[i].by)}
-              glow={Math.min(artist.board[i].gratitude / FULL_GLOW, 1)}
+              foil={s.artist.id !== person.id}
             />
           ))}
       </div>
@@ -293,10 +277,10 @@ export function ArtistBoard({ artist, onBack }: Props) {
         onClick={() => turn(!turned)}
         aria-expanded={turned}
         aria-haspopup="dialog"
-        aria-label={`${artist.displayName}: their stats`}
+        aria-label={`${owner.name}: their stats`}
       >
-        <PhotoSticker src={avatarUrl(artist.avatar)} name={artist.displayName} size={42} />
-        <span className="board-who-name">{artist.displayName}</span>
+        <PhotoSticker src={owner.pictureUrl} name={owner.name} size={42} />
+        <span className="board-who-name">{owner.name}</span>
       </button>
       <button type="button" className="explore-chip" data-press onClick={onBack}>
         <CaretLeft size={14} />
@@ -310,7 +294,7 @@ export function ArtistBoard({ artist, onBack }: Props) {
           role="menu"
           onClick={(e) => e.stopPropagation()}
         >
-          {menuSticker.by && <ArtistChip handle={menuSticker.by} />}
+          {menuSticker.artist.id !== person.id && <ArtistChip artist={menuSticker.artist} />}
           <div className="sticker-menu-actions">
             <LabelButton
               size="sm"
@@ -368,19 +352,17 @@ export function ArtistBoard({ artist, onBack }: Props) {
         back={
           <StatCork
             ref={cork}
-            figures={figuresOf(artist)}
+            figures={figures}
             onFlipBack={() => turn(false)}
             flipBackRef={flipBack}
           />
         }
       />
 
-      {viewing && (
-        <StickerView sticker={viewing} owner={artist.handle} onClose={() => setViewing(null)} />
-      )}
-      {giving && <GiveSheet to={artist.handle} onClose={() => setGiving(false)} />}
+      {viewing && <StickerView sticker={viewing} owner={owner} onClose={() => setViewing(null)} />}
+      {giving && <GiveSheet to={person.handle ?? owner.name} onClose={() => setGiving(false)} />}
       {offering && (
-        <OfferSheet sticker={offering} holder={artist} onClose={() => setOffering(null)} />
+        <OfferSheet sticker={offering} holder={owner} onClose={() => setOffering(null)} />
       )}
     </div>
   );

@@ -1,4 +1,3 @@
-import type { SpentTicket } from "../../tickets/tickets";
 import { STRIDE, type Op } from "../canvas/ops";
 
 /*
@@ -6,7 +5,7 @@ import { STRIDE, type Op } from "../canvas/ops";
  * over. The ops live in IndexedDB, one record per op, so a stroke writes only itself. The ticket the
  * session spent and the time drawn live in localStorage: it writes at once, where an IndexedDB write
  * started as the page unloads never lands, and it can still be read when the ops can't, so a drawing
- * that can't be picked back up can always give its ticket back.
+ * that can't be picked back up can still carry its ticket over to the next sheet.
  */
 
 const DB_NAME = "drawing-session";
@@ -18,17 +17,17 @@ const RECORD_KEY = "draw.session";
 /** A kept session that hasn't loaded by then counts as lost, so Draw never waits on it for good. */
 const LOAD_TIMEOUT_MS = 5_000;
 
-/** The ticket the session spent, null when none was, and the time drawn. */
+/** The ticket use the session spent (the server's id), null when none was, and the time drawn. */
 interface SessionRecord {
-  ticket: SpentTicket | null;
+  ticket: number | null;
   elapsedMs: number;
 }
 
 export type KeptSession =
   | { status: "none" }
-  | { status: "found"; ops: Op[]; elapsedMs: number; ticket: SpentTicket | null }
+  | { status: "found"; ops: Op[]; elapsedMs: number; ticket: number | null }
   /** A drawing was in progress, but it can't be read back. */
-  | { status: "lost"; ticket: SpentTicket | null; error: unknown };
+  | { status: "lost"; ticket: number | null; error: unknown };
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
@@ -83,13 +82,13 @@ export function firstChanged(written: readonly Op[], ops: readonly Op[]): number
 
 /** Keeps the session in progress on this device as it changes. */
 export class SessionKeeper {
-  private ticket: SpentTicket | null = null;
+  private ticket: number | null = null;
   /** The ops as last written, by reference; null when a write failed and what landed is unknown. */
   private written: readonly Op[] | null = [];
   private reported = false;
 
   /** A new session: the ticket it spent, and nothing drawn yet. */
-  start(ticket: SpentTicket | null): void {
+  start(ticket: number | null): void {
     this.ticket = ticket;
     this.written = [];
     writeRecord({ ticket, elapsedMs: 0 });
@@ -102,7 +101,7 @@ export class SessionKeeper {
   }
 
   /** A session picked back up after a reload, whose ops are already kept. */
-  resume(ticket: SpentTicket | null, ops: readonly Op[]): void {
+  resume(ticket: number | null, ops: readonly Op[]): void {
     this.ticket = ticket;
     this.written = [...ops];
   }
@@ -211,13 +210,8 @@ function readOp(v: unknown): Op | undefined {
   return { tool, color, pts, T };
 }
 
-const isSpentTicket = (v: unknown): v is SpentTicket =>
-  typeof v === "object" &&
-  v !== null &&
-  "day" in v &&
-  typeof v.day === "string" &&
-  "index" in v &&
-  isCount(v.index);
+const isTicketUseId = (v: unknown): v is number =>
+  Number.isInteger(v) && typeof v === "number" && v > 0;
 
 /** Null when no drawing is in progress. */
 function readRecord(): SessionRecord | "unreadable" | null {
@@ -239,7 +233,7 @@ function readRecord(): SessionRecord | "unreadable" | null {
     typeof value === "object" &&
     value !== null &&
     "ticket" in value &&
-    (value.ticket === null || isSpentTicket(value.ticket)) &&
+    (value.ticket === null || isTicketUseId(value.ticket)) &&
     "elapsedMs" in value &&
     isFiniteNumber(value.elapsedMs)
   )

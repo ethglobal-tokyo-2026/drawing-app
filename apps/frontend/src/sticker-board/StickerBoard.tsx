@@ -14,17 +14,17 @@ import { useApi } from "../api/useApi";
 import { useApiQuery } from "../api/useApiQuery";
 import { toApiPlacement, type PersonView } from "../api/views";
 import { useGiftSender } from "../giving/useGiftSender";
-import { useStickerGifts } from "../giving/useStickerGifts";
+import { giftStatusBySticker, type StickerGiftStatus } from "../giving/stickerGifts";
 import { DrawIcon } from "../icons/DrawIcon";
+import { useMe } from "../api/meContext";
 import { useIdentity } from "../identity/useIdentity";
 import { LIFF_ID } from "../line/liff";
 import { formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { playStick } from "../stickers/stick";
-import type { Placement } from "../stickers/stickerStorage";
 import { TicketCounts } from "../tickets/TicketCount";
 import { describeTickets, ticketDay } from "../tickets/tickets";
-import { useTicketState } from "../tickets/useTickets";
+import { useTickets } from "../tickets/useTickets";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { lazyWithPreload, usePreloadWhenIdle } from "../ui/lazyWithPreload";
@@ -46,6 +46,7 @@ import {
   toFrac,
   toPx,
   type Box,
+  type Placement,
 } from "./placement";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
@@ -187,9 +188,14 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const [turned, setTurned] = useState(false);
   /** The board has turned over before, so its stat board stays mounted for every turn after. */
   const [wasTurned, setWasTurned] = useState(false);
+  const { tickets } = useTickets();
   const me = useIdentity();
-  const tickets = useTicketState();
-  const gifts = useStickerGifts();
+  const account = useMe();
+  const pending = useApiQuery("gifts/pending", (client) => client.pendingGifts());
+  const gifts = useMemo<ReadonlyMap<string, StickerGiftStatus>>(
+    () => (pending.state === "ready" ? giftStatusBySticker(pending.data) : new Map()),
+    [pending],
+  );
   const giftSender = useGiftSender();
   const reduced = useReducedMotion();
   const hints = useId();
@@ -276,7 +282,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         },
       ];
     const gift = gifts.get(s.id);
-    return gift?.state === "sent" ? [{ sticker: s, mask, sentAt: gift.sentAt, to: gift.to }] : [];
+    return gift?.state === "sent" ? [{ sticker: s, mask, sentAt: gift.sentAt }] : [];
   });
   const field = useMemo(() => size && fieldOf(size.W, size.H), [size]);
   const landedNow = useCallback(() => setLandingId(undefined), []);
@@ -387,6 +393,14 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           { duration: 520, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
         );
     },
+    markSeen: (ids) => {
+      const was = new Set(ids);
+      setStickers((list) => list?.map((s) => (was.has(s.id) ? { ...s, seen: true } : s)) ?? null);
+      // The tray has already dropped NEW; a failed save only brings it back on the next visit.
+      api.markTraySeen(ids).catch((error: unknown) => {
+        console.error(`Saving that stickers ${ids.join(", ")} were seen in the tray failed`, error);
+      });
+    },
   };
   const stack = stackOf(onBoard);
   // Screen readers and the arrow keys take the stickers in reading order, which is the DOM's too.
@@ -431,10 +445,14 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           size="compact"
           icon={<DrawIcon />}
           onClick={onDraw}
-          aria-label={`Draw a new sticker: you have ${describeTickets(tickets)}`}
+          aria-label={
+            tickets
+              ? `Draw a new sticker: you have ${describeTickets(tickets)}`
+              : "Draw a new sticker"
+          }
         >
           Draw
-          <TicketCounts state={tickets} className="ticket-counts--on-key" />
+          {tickets && <TicketCounts state={tickets} className="ticket-counts--on-key" />}
         </Key>
       </span>
       {firstVisit && (
@@ -515,7 +533,14 @@ export function StickerBoard({ freshId, onDraw }: Props) {
 
       {stickers && (
         <Suspense fallback={null}>
-          <StickerTray ref={tray} board={face} stickers={stickers} gifts={gifts} api={trayBoard} />
+          <StickerTray
+            ref={tray}
+            board={face}
+            stickers={stickers}
+            gifts={gifts}
+            ownerId={viewerId}
+            api={trayBoard}
+          />
         </Suspense>
       )}
 
@@ -555,7 +580,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         <Suspense fallback={null}>
           <Giving
             sticker={{ ...giving, url: giving.urls.png }}
-            fromHandle={me.handle}
+            fromHandle={account.handle ?? me.displayName}
             sender={giftSender}
             liffId={LIFF_ID}
             onClose={(sent) => {
@@ -565,6 +590,9 @@ export function StickerBoard({ freshId, onDraw }: Props) {
                 setSelected(null);
                 if (board.state === "ready") board.refresh();
               }
+              // The bag's gift may have been packed, sent or taken out.
+              if (pending.state === "ready") pending.refresh();
+              else if (pending.state === "failed") pending.retry();
             }}
           />
         </Suspense>
@@ -574,14 +602,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         <Suspense fallback={null}>
           <StickerDetail
             // In the order they arrived, as the board loads them.
-            stickers={(stickers ?? [])
-              .filter((s) => (open.mode === "given") !== s.held)
-              .map((s) => {
-                const gift = gifts.get(s.id);
-                return gift?.state === "sent" && gift.to && s.openGift
-                  ? { ...s, openGift: { ...s.openGift, to: gift.to } }
-                  : s;
-              })}
+            stickers={(stickers ?? []).filter((s) => (open.mode === "given") !== s.held)}
             startId={open.id}
             mode={open.mode}
             viewerId={viewerId}
@@ -652,13 +673,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         // Mounted once the board is idle, or as it first turns over, and kept from then on.
         (idle || wasTurned) && (
           <Suspense fallback={null}>
-            <StatBoard
-              ref={statBoard}
-              stickers={loadError ? null : (stickers ?? [])}
-              gifts={gifts}
-              onFlipBack={() => turn(false)}
-              flipBackRef={flipBack}
-            />
+            <StatBoard ref={statBoard} onFlipBack={() => turn(false)} flipBackRef={flipBack} />
           </Suspense>
         )
       }

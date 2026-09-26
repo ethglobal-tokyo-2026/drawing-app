@@ -1,14 +1,10 @@
 import liff from "@line/liff";
-import type { LiffMockApi, LiffMockConfig } from "@line/liff-mock";
 import { useSyncExternalStore } from "react";
 
 // The LIFF app on the Login channel. It isn't secret: every LIFF link carries it. `.env` can point the dev
 // server at another LIFF app, one whose endpoint is that server; builds ignore it, so a local .env never ships.
 export const LIFF_ID =
   (import.meta.env.DEV && import.meta.env.VITE_LIFF_ID) || "2011732197-P98cxGpu";
-
-/** LIFF Mock answers for LINE on the dev server unless `.env` switches it off; builds always use LINE. */
-export const liffMockActive = import.meta.env.DEV && import.meta.env.VITE_LIFF_MOCK !== "off";
 
 interface LineProfile {
   userId: string;
@@ -53,9 +49,7 @@ export async function initLine(): Promise<void> {
 }
 
 async function startLine(): Promise<LineState> {
-  // False in the build, which drops this branch and LIFF Mock with it.
-  if (liffMockActive) await initMock();
-  else await liff.init({ liffId: LIFF_ID });
+  await liff.init({ liffId: LIFF_ID });
   if (!liff.isLoggedIn()) return { status: "logged-out" };
   const profile = await liff.getProfile();
   return { status: "ready", profile, inClient: liff.isInClient() };
@@ -81,31 +75,6 @@ export function describeLiffError(error: unknown): string {
   return code ? `${code}: ${message}` : message;
 }
 
-const hasMock = (l: object): l is { $mock: LiffMockApi } => "$mock" in l;
-
-/** On localhost LIFF Mock answers for LINE, logged in as its stand-in user as if inside LINE. */
-async function initMock() {
-  const { LiffMockPlugin } = await import("@line/liff-mock");
-  liff.use(new LiffMockPlugin());
-  // liff.init's type doesn't declare the plugin's `mock` option.
-  const config: Parameters<typeof liff.init>[0] & LiffMockConfig = { liffId: LIFF_ID, mock: true };
-  await liff.init(config);
-  const mocked = liff;
-  if (!hasMock(mocked)) throw new Error("LIFF Mock didn't install");
-  // As inside LINE, the friend picker opens and sends. The console can change LINE's answers, e.g.
-  // `liffMock.set((d) => ({ ...d, shareTargetPicker: undefined }))` makes the next picker cancel.
-  mocked.$mock.set((data) => ({
-    ...data,
-    isLoggedIn: true,
-    isInClient: true,
-    isApiAvailable: true,
-    shareTargetPicker: { status: "success" },
-  }));
-  Object.assign(window, { liffMock: mocked.$mock });
-  // The mock's profile calls need a login call first, as a real browser would.
-  liff.login();
-}
-
 /** LINE Login, for a browser outside LINE. It comes back to this page. */
 export function lineLogin() {
   liff.login({ redirectUri: location.href });
@@ -120,6 +89,11 @@ const subscribe = (l: () => void) => {
   listeners.add(l);
   return () => listeners.delete(l);
 };
+
+/** The ID token that signs you in to the app's server, or null before LINE is ready. */
+export function lineIdToken(): string | null {
+  return state.status === "ready" ? liff.getIDToken() : null;
+}
 
 export function useLine(): LineState {
   return useSyncExternalStore(subscribe, () => state);

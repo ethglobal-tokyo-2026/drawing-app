@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from
 import { useLight } from "../../stickers/light";
 import { LiveResin } from "../../stickers/LiveResin";
 import { sweepSheen } from "../../stickers/resinSheen";
-import type { StickerRecord } from "../../stickers/stickerStorage";
+import type { Sticker } from "@drawing-app/api/client";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 import { makeCutLine, paintDim, paintUsedStickerSilhouette } from "./ceremonyPaint";
 import type { SealedSticker } from "./makeSticker";
@@ -23,7 +23,8 @@ const LEAVE_MS = 260;
 
 interface Props {
   sticker: SealedSticker;
-  record: StickerRecord;
+  /** The sticker as the server sealed it. */
+  sealed: Sticker;
   /** The sheet the sticker was cut from, in the ceremony's own pixels. */
   sheet: Box;
   handle: string;
@@ -75,7 +76,7 @@ function need<E extends Element>(el: E | null, what: string): E {
  */
 export function SealCeremony({
   sticker,
-  record,
+  sealed,
   sheet,
   handle,
   onKeepDrawing,
@@ -247,7 +248,7 @@ export function SealCeremony({
       <span className="seal-ceremony__veil" aria-hidden="true" />
       <canvas className="seal-ceremony__cut" aria-hidden="true" />
       <SealedCard
-        record={record}
+        sealed={sealed}
         handle={handle}
         done={done}
         cardRef={card}

@@ -21,6 +21,7 @@ const sticker = (id: string, createdAt: number, on: boolean): BoardSticker => ({
   id,
   no: createdAt,
   createdAt,
+  arrivedAt: createdAt,
   timeUsed: 120,
   ...yoursHeld,
   width: 100,
@@ -36,6 +37,7 @@ const api: TrayBoard = {
   place: () => Promise.resolve(null),
   remove: () => {},
   pulse: () => {},
+  markSeen: () => {},
 };
 const render = (stickers: BoardSticker[], side: Partial<TrayBoard> = {}) =>
   act(() =>
@@ -45,6 +47,7 @@ const render = (stickers: BoardSticker[], side: Partial<TrayBoard> = {}) =>
         board={board}
         stickers={stickers}
         gifts={new Map()}
+        ownerId="me"
         api={{ ...api, ...side }}
       />,
     ),

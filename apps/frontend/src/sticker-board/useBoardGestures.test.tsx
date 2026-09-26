@@ -19,6 +19,7 @@ const sticker: BoardSticker = {
   id: "a",
   no: 1,
   createdAt: 1,
+  arrivedAt: 1,
   timeUsed: 60,
   ...yoursHeld,
   width: 100,

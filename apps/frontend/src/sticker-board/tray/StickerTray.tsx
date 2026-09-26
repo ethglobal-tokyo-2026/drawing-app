@@ -1,5 +1,5 @@
 import { useImperativeHandle, useLayoutEffect, useRef, type Ref } from "react";
-import type { StickerGiftStatus } from "../../giving/giftStore";
+import type { StickerGiftStatus } from "../../giving/stickerGifts";
 import type { BoardSticker } from "../boardSticker";
 import {
   createTrayEngine,
@@ -28,6 +28,8 @@ interface Props {
   board: HTMLElement | null;
   stickers: readonly BoardSticker[];
   gifts: ReadonlyMap<string, StickerGiftStatus>;
+  /** The board's owner: you. A sticker someone else drew is a received gift. */
+  ownerId: string | null;
   api: TrayBoard;
   ref?: Ref<StickerTrayHandle>;
 }
@@ -36,19 +38,19 @@ interface Props {
 function trayStickers(
   stickers: readonly BoardSticker[],
   gifts: ReadonlyMap<string, StickerGiftStatus>,
+  ownerId: string | null,
 ): TraySticker[] {
   const byId = new Map(stickers.map((s) => [s.id, s]));
   return traySlots(stickers, gifts).flatMap((slot) => {
     const s = byId.get(slot.id);
     if (!s) return [];
-    // Every sticker here is your own until stickers can be received.
     const sticker: TraySticker = {
       ...slot,
       no: s.no,
       width: s.width,
       height: s.height,
       urls: s.urls,
-      gift: false,
+      gift: ownerId !== null && s.artist.id !== ownerId,
     };
     if (s.outline !== undefined) sticker.outline = s.outline;
     return [sticker];
@@ -56,17 +58,17 @@ function trayStickers(
 }
 
 /** The sticker tray on the board: its engine, fed the board's stickers and asked through `ref`. */
-export function StickerTray({ board, stickers, gifts, api, ref }: Props) {
+export function StickerTray({ board, stickers, gifts, ownerId, api, ref }: Props) {
   const engine = useRef<TrayEngine | null>(null);
-  const latest = useRef({ stickers, gifts, api });
+  const latest = useRef({ stickers, gifts, ownerId, api });
   useLayoutEffect(() => {
-    latest.current = { stickers, gifts, api };
+    latest.current = { stickers, gifts, ownerId, api };
   });
 
   // Before the engine's own effect, so a new engine doesn't redraw what it has just drawn.
   useLayoutEffect(() => {
     engine.current?.refresh();
-  }, [stickers, gifts]);
+  }, [stickers, gifts, ownerId]);
 
   useLayoutEffect(() => {
     if (!board) return;
@@ -77,9 +79,13 @@ export function StickerTray({ board, stickers, gifts, api, ref }: Props) {
       place: (id, at) => latest.current.api.place(id, at),
       remove: (id) => latest.current.api.remove(id),
       pulse: (id) => latest.current.api.pulse(id),
+      markSeen: (ids) => latest.current.api.markSeen(ids),
     };
     const tray = createTrayEngine(board, {
-      slots: () => trayStickers(latest.current.stickers, latest.current.gifts),
+      slots: () => {
+        const { stickers: all, gifts: open, ownerId: owner } = latest.current;
+        return trayStickers(all, open, owner);
+      },
       api: side,
     });
     engine.current = tray;

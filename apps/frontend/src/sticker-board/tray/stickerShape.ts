@@ -1,5 +1,5 @@
 import { context2d } from "../../sticker-creation/canvas/context2d";
-import type { StickerRecord } from "../../stickers/stickerStorage";
+import type { BoardSticker } from "../boardSticker";
 import type { StickerUrls } from "../../stickers/stickerUrls";
 import { boxShape, outlineShape, shapeFromMask, type Shape } from "./sheetPacking";
 
@@ -10,7 +10,7 @@ const TRACE_MIN = 8;
 /** The alpha at which a mask cell counts as inside the cut. */
 const INSIDE = 128;
 
-type ShapeSource = Pick<StickerRecord, "id" | "no" | "width" | "height" | "outline">;
+type ShapeSource = Pick<BoardSticker, "id" | "no" | "width" | "height" | "outline">;
 
 // By sticker: a sealed sticker's cut never changes.
 const known = new Map<string, Shape>();

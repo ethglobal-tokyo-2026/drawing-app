@@ -4,7 +4,7 @@ import type { GiftSender, GiftSendOutcome } from "./giftSender";
 
 /**
  * Giving through a LINE chat, from the give sheet to "Sealed and sent". `recordError` means
- * the step happened but this device couldn't record it; the gift may still read as packed.
+ * the step happened but the server couldn't record it; the gift may still read as packed.
  */
 export type GiveFlowState =
   | { step: "sheet" }
@@ -43,7 +43,10 @@ export interface GiveFlow {
   dispose: () => void;
 }
 
-/** One gift, from packing until it's sent or closed. */
+/**
+ * One gift, from packing until it's sent or taken out. A cancelled or failed picker leaves it in
+ * the bag, open, so Send in LINE sends the same gift.
+ */
 interface Attempt {
   gift: Promise<PackedGift>;
   open: boolean;
@@ -90,7 +93,7 @@ export function createGiveFlow({
       await write();
       return undefined;
     } catch (error) {
-      report(`${which}: ${what} couldn’t be recorded on this device`, error);
+      report(`${which}: ${what} couldn’t be recorded`, error);
       return describe(error);
     }
   };
@@ -121,7 +124,7 @@ export function createGiveFlow({
     if (!a.open) return;
     a.open = false;
     void a.gift.then(
-      (packed) => record("taking it out", () => backend.markNotSent(packed.giftId, "taken_out")),
+      (packed) => record("taking it out", () => backend.takeOut(packed.giftId)),
       (error: unknown) => report(`${which} couldn’t be packed`, error),
     );
   };
@@ -138,22 +141,17 @@ export function createGiveFlow({
     try {
       outcome = await sender.send(packed.message);
     } catch (error) {
-      a.open = false;
       report(`${which} wasn’t sent`, error);
-      const recordError = await record("the failure", () =>
-        backend.markNotSent(packed.giftId, "send_failed", describe(error)),
-      );
+      const recordError = await record("the failure", () => backend.markCancelled(packed.giftId));
       set({ step: "failed", error: `${which} wasn’t sent: ${describe(error)}`, recordError });
       return;
     }
-    a.open = false;
     if (outcome === "sent") {
+      a.open = false;
       const recordError = await record("the send", () => backend.markSent(packed.giftId));
       set({ step: "sent", sentAt: now(), recordError });
     } else {
-      const recordError = await record("the cancel", () =>
-        backend.markNotSent(packed.giftId, "picker_cancelled"),
-      );
+      const recordError = await record("the cancel", () => backend.markCancelled(packed.giftId));
       set({ step: "notSent", recordError });
     }
   };
@@ -181,7 +179,8 @@ export function createGiveFlow({
     },
     dispose: () => {
       clearTimer();
-      if (state.step === "packed" && attempt) putBack(attempt);
+      // Closing with the sticker still in the bag puts it back; one on LINE's picker records its outcome.
+      if (state.step !== "picking" && attempt) putBack(attempt);
       disposed = true;
       listeners.clear();
     },

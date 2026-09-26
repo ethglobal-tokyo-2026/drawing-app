@@ -1,5 +1,6 @@
-import type { GiftMessage } from "./giftMessage";
-import type { NotSentReason } from "./giftStore";
+import type { ApiClient } from "../api/apiClient";
+import { formatNo } from "../stickers/format";
+import { buildGiftMessage, type GiftMessage } from "./giftMessage";
 
 /** The sticker a gift carries. */
 export interface GiftSticker {
@@ -16,21 +17,63 @@ export interface PackedGift {
   message: GiftMessage;
 }
 
-/**
- * Where gifts are made and settled. localGiftBackend.ts keeps them on this device until an API
- * client takes its place. The escrow transfer (sticker-chain's prepareGiftTransfer, sent by the
- * artist's smart account) belongs in pack or in markSent; which one is still open, because in pack
- * a cancelled picker leaves the sticker in escrow.
- */
+/** Where gifts are made and settled. */
 export interface GiftBackend {
-  /**
-   * Puts the sticker in a new gift and returns the gift message that sends it. API: POST
-   * /api/gifts; the server runs createGiftClaim, keeps the claim commitment and puts the gift claim
-   * token in the link.
-   */
+  /** Puts the sticker in a gift and returns the gift message that sends it. */
   pack: (sticker: GiftSticker) => Promise<PackedGift>;
-  /** LINE reported the gift message sent. API: POST /api/gifts/:id/shared. */
+  /** LINE reported the gift message sent. */
   markSent: (giftId: string) => Promise<void>;
-  /** The gift message never left, so the sticker is back. API: POST /api/gifts/:id/shared { cancelled }. */
-  markNotSent: (giftId: string, reason: NotSentReason, error?: string) => Promise<void>;
+  /** The picker closed or failed without sending; the gift stays in the bag for another try. */
+  markCancelled: (giftId: string) => Promise<void>;
+  /** The sticker came back out of the bag. */
+  takeOut: (giftId: string) => Promise<void>;
+}
+
+interface ApiGiftBackendOptions {
+  api: ApiClient;
+  /** Printed on the gift message: "From @alice". */
+  fromHandle: string;
+  liffId: string;
+  heroUrl?: string;
+}
+
+/** Gifts on the app's server: packaging, LINE's outcome, and taking a gift back out. */
+export function createApiGiftBackend({
+  api,
+  fromHandle,
+  liffId,
+  heroUrl,
+}: ApiGiftBackendOptions): GiftBackend {
+  return {
+    pack: async (sticker) => {
+      let packaged = await api.packageGift(sticker.id);
+      // Already in the bag from an earlier visit: its Gift Claim Token left with that page, so the
+      // gift comes out and goes back in with a new one.
+      if (packaged.giftClaimToken === null) {
+        await api.takeOutGift(packaged.gift.id);
+        packaged = await api.packageGift(sticker.id);
+      }
+      const { gift, giftClaimToken, escrowTransfer } = packaged;
+      if (giftClaimToken === null) {
+        throw new Error(`${formatNo(sticker.no)} is in a gift the server gave no link for`);
+      }
+      if (escrowTransfer !== null) {
+        await api.takeOutGift(gift.id);
+        throw new Error(
+          "Sending a sticker into the escrow needs your smart wallet, which the app can't send from yet",
+        );
+      }
+      const message = buildGiftMessage({
+        liffId,
+        giftClaimToken,
+        fromHandle,
+        timeUsed: sticker.timeUsed,
+        heroUrl,
+      });
+      return { giftId: gift.id, message };
+    },
+    markSent: async (giftId) => void (await api.reportShared(giftId, "sent")),
+    markCancelled: async (giftId) => void (await api.reportShared(giftId, "cancelled")),
+    takeOut: async (giftId) => void (await api.takeOutGift(giftId)),
+  };
 }

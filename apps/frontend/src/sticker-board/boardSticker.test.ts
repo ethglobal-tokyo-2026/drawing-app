@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { boardSticker, people, sticker } from "../api/mock/fixtures";
+import { boardSticker, people, sticker } from "../api/testFixtures";
 import { placeUnplaced, toBoardSticker } from "./boardSticker";
 
 const spot = { onBoard: true, x: 0.3, y: 0.4, scale: 0.25, rotation: -6, z: 4 };

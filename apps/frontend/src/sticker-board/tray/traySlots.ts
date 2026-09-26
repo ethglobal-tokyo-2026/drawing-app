@@ -1,5 +1,5 @@
-import type { StickerGiftStatus } from "../../giving/giftStore";
-import type { StickerRecord } from "../../stickers/stickerStorage";
+import type { StickerGiftStatus } from "../../giving/stickerGifts";
+import type { BoardSticker } from "../boardSticker";
 
 /**
  * "here" in its spot, "used" out on the board (its used sticker silhouette shows), "given" away (its
@@ -10,8 +10,9 @@ type TraySlotState = "here" | "used" | "given";
 /** A sticker's permanent place in the sticker tray. */
 export interface TraySlot {
   id: string;
-  /** Every sticker here is your own, so it arrived when it was sealed. */
   arrivedAt: number;
+  /** Seen in the open tray on some visit, so it isn't NEW. */
+  seen: boolean;
   /** Its stand-in spot until every sticker's shape is known: packing moves it, never out of order. */
   sheet: number;
   slot: number;
@@ -26,23 +27,28 @@ const PER_SHEET = 6;
  * nothing after them shifts.
  */
 export function traySlots(
-  stickers: readonly Pick<StickerRecord, "id" | "no" | "createdAt" | "placement">[],
+  stickers: readonly (Pick<BoardSticker, "id" | "no" | "arrivedAt" | "seen" | "held"> & {
+    placement?: Pick<BoardSticker["placement"], "on">;
+  })[],
   gifts: ReadonlyMap<string, StickerGiftStatus>,
 ): TraySlot[] {
   return [...stickers]
-    .sort((a, b) => a.createdAt - b.createdAt || a.no - b.no)
+    .sort((a, b) => a.arrivedAt - b.arrivedAt || a.no - b.no)
     .map((s, n) => ({
       id: s.id,
-      arrivedAt: s.createdAt,
+      arrivedAt: s.arrivedAt,
+      seen: s.seen,
       sheet: Math.floor(n / PER_SHEET),
       slot: n % PER_SHEET,
-      state: gifts.get(s.id)?.state === "sent" ? "given" : s.placement?.on ? "used" : "here",
+      state:
+        !s.held || gifts.get(s.id)?.state === "sent" ? "given" : s.placement?.on ? "used" : "here",
     }));
 }
 
 /**
  * NEW: the stickers in the tray that arrived in today's ticket day and haven't been seen in the open
- * tray. One out on the board has been seen there, and its used sticker silhouette shows no sticker.
+ * tray, on this visit (`seen`) or before. One out on the board has been seen there, and its used
+ * sticker silhouette shows no sticker.
  */
 export function newSlots(
   slots: readonly TraySlot[],
@@ -59,7 +65,9 @@ export function newSlots(
 ): Set<string> {
   return new Set(
     slots
-      .filter((s) => s.state === "here" && !seen.has(s.id) && dayOf(s.arrivedAt) === today)
+      .filter(
+        (s) => s.state === "here" && !s.seen && !seen.has(s.id) && dayOf(s.arrivedAt) === today,
+      )
       .map((s) => s.id),
   );
 }

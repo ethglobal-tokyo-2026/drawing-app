@@ -1,5 +1,5 @@
+import type { Person } from "@drawing-app/api/client";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { artistByHandle } from "../artists/demoArtists";
 import { StickerBoard } from "../sticker-board/StickerBoard";
 import { DrawingScreen, type DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
 import { lazyWithPreload, usePreloadWhenIdle } from "../ui/lazyWithPreload";
@@ -35,8 +35,7 @@ export default function App() {
   // Set from the seal until the next sticker starts; the board lands it with a "stick" animation.
   const [sealedId, setSealedId] = useState<string>();
   // Someone else's sticker board, opened from Explore over it, so Explore keeps its search and scroll.
-  const [visiting, setVisiting] = useState<string>();
-  const visitedArtist = visiting ? artistByHandle.get(visiting) : undefined;
+  const [visiting, setVisiting] = useState<Person>();
   const drawing = view === "draw";
   usePreloadWhenIdle(OPENED_FROM_TABS);
 
@@ -83,9 +82,13 @@ export default function App() {
             <ExploreScreen onOpenArtist={setVisiting} onOpenMyBoard={() => setView("board")} />
           </Suspense>
         )}
-        {view === "explore" && visitedArtist && (
+        {view === "explore" && visiting && (
           <Suspense fallback={null}>
-            <ArtistBoard artist={visitedArtist} onBack={() => setVisiting(undefined)} />
+            <ArtistBoard
+              key={visiting.id}
+              person={visiting}
+              onBack={() => setVisiting(undefined)}
+            />
           </Suspense>
         )}
         {view === "shop" && <ShopScreen onDraw={openDrawing} />}

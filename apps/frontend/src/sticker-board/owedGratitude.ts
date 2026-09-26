@@ -1,4 +1,4 @@
-import type { StickerDetailResponse } from "../api/contract";
+import type { StickerDetail as StickerDetailResponse } from "@drawing-app/api/client";
 import { toPerson, type PersonView } from "../api/views";
 
 /**

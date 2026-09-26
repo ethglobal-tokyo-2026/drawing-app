@@ -1,18 +1,13 @@
 // @vitest-environment happy-dom
 import { act } from "react";
-import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { StickerRecord } from "../../stickers/stickerStorage";
+import { emptyApi, FRESH_TICKETS, renderWithApi } from "../../api/testing";
+import { sticker as apiSticker } from "../../api/testFixtures";
 import { formatRefillTime } from "../../tickets/refill";
-import { nextRefill, ticketDay } from "../../tickets/tickets";
+import { nextRefill } from "../../tickets/tickets";
 import type { SealedSticker } from "./makeSticker";
 import { SealCeremony } from "./SealCeremony";
 import { TOTAL } from "./sealTimeline";
-
-declare global {
-  var IS_REACT_ACT_ENVIRONMENT: boolean;
-}
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const NOW = new Date(2026, 8, 26, 21, 4);
 
@@ -47,41 +42,39 @@ const sticker: SealedSticker = {
   dispose: () => {},
 };
 
-const record: StickerRecord = {
-  id: "s1",
-  no: 147,
-  createdAt: NOW.getTime(),
-  timeUsed: 292,
-  blob: new Blob(),
-  width: 120,
-  height: 100,
-};
+const sealed = apiSticker({ number: 147, timeUsed: 292, sealedAt: NOW.toISOString() });
 
 const onKeepDrawing = vi.fn();
 const onBoard = vi.fn();
 const onShop = vi.fn();
 
+let view: ReturnType<typeof renderWithApi> | undefined;
 let host: HTMLDivElement;
-let root: Root;
 
 /** Opens the ceremony with `used` of the day's three tickets used. */
 async function seal(used: number) {
-  const uses = Array.from({ length: used }, () => ({}));
-  localStorage.setItem("draw.tickets", JSON.stringify({ day: ticketDay(NOW), uses, reserve: 0 }));
-  // Async, so the ticket stubs' outlines settle inside it.
-  await act(async () =>
-    root.render(
-      <SealCeremony
-        sticker={sticker}
-        record={record}
-        sheet={{ x: 8, y: 8, w: 374, h: 788 }}
-        handle="alice"
-        onKeepDrawing={onKeepDrawing}
-        onBoard={onBoard}
-        onShop={onShop}
-      />,
-    ),
+  const usedToday = Array.from({ length: used }, (_, i) => ({
+    id: i + 1,
+    dayIndex: i,
+    kind: "daily" as const,
+    sticker: null,
+  }));
+  const tickets = { ...FRESH_TICKETS, dailyLeft: 3 - used, usedToday };
+  view = renderWithApi(
+    <SealCeremony
+      sticker={sticker}
+      sealed={sealed}
+      sheet={{ x: 8, y: 8, w: 374, h: 788 }}
+      handle="alice"
+      onKeepDrawing={onKeepDrawing}
+      onBoard={onBoard}
+      onShop={onShop}
+    />,
+    emptyApi({ tickets: () => Promise.resolve(tickets) }),
   );
+  host = view.host;
+  // The tickets load before the card can show them.
+  await act(async () => {});
 }
 
 const button = (name: string) => {
@@ -104,15 +97,11 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation((message: unknown, ...rest: unknown[]) => {
     if (!String(message).startsWith("No 2D context")) report(message, ...rest);
   });
-  host = document.createElement("div");
-  document.body.append(host);
-  root = createRoot(host);
 });
 
 afterEach(() => {
-  act(() => root.unmount());
-  host.remove();
-  localStorage.clear();
+  view?.unmount();
+  view = undefined;
   vi.restoreAllMocks();
   vi.useRealTimers();
   vi.clearAllMocks();
@@ -165,8 +154,7 @@ describe("SealCeremony", () => {
     expect(host.querySelector('[role="img"]')?.getAttribute("aria-label")).toBe(
       "2 daily tickets left today",
     );
-    act(() => root.unmount());
-    root = createRoot(host);
+    view?.unmount();
 
     await seal(3);
     playThrough();

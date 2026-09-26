@@ -4,8 +4,8 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "../api/apiClient";
 import { ApiProvider } from "../api/ApiProvider";
-import type { StickerDetailResponse } from "../api/contract";
-import { gratitude, people, sticker as apiSticker, trailEntry } from "../api/mock/fixtures";
+import type { StickerDetail as StickerDetailResponse } from "@drawing-app/api/client";
+import { gratitude, people, sticker as apiSticker, trailEntry } from "../api/testFixtures";
 import { emptyApi } from "../api/testing";
 import type { BoardSticker } from "./boardSticker";
 import { StickerDetail } from "./StickerDetail";
@@ -23,6 +23,7 @@ const sticker = (no: number, createdAt: number): BoardSticker => ({
   id: `s-${no}`,
   no,
   createdAt,
+  arrivedAt: createdAt,
   timeUsed: 292,
   ...yoursHeld,
   width: 120,
@@ -153,14 +154,6 @@ describe("StickerDetail", () => {
     open({ stickers: sent });
     expect(document.querySelector(".sticker-detail__on-its-way")?.textContent).toBe("On its way");
     expect(button("Give")).toBeUndefined();
-    act(() => root.render(null));
-    const toKen = sent.map((s) =>
-      s.openGift ? { ...s, openGift: { ...s.openGift, to: "ken" } } : s,
-    );
-    open({ stickers: toKen });
-    expect(document.querySelector(".sticker-detail__on-its-way")?.textContent).toBe(
-      "On its way to @ken",
-    );
   });
 
   it("leads with Send gratitude for a received sticker you haven't thanked", async () => {
