@@ -8,6 +8,7 @@
 import { i18next } from "../../i18n/i18n";
 import { timeOurWork } from "../../performance/performanceRecorder";
 import { formatNo } from "../../stickers/format";
+import { lightUp } from "../../stickers/light";
 import type { StickerUrls } from "../../stickers/stickerUrls";
 import { ticketDay } from "../../tickets/tickets";
 import { packSheets, type PackedItem, type Shape } from "./sheetPacking";
@@ -556,6 +557,7 @@ export function createTrayEngine(
           ),
         );
         foil.style.setProperty("--foil-i", String(s.no));
+        lightUp(foil);
         fit.append(foil);
       }
       const img = make("img", "tray__img");

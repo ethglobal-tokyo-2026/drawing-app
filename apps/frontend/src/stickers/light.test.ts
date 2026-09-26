@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { acquireLight, installLight } from "./light";
+import { acquireLight, installLight, lightUp } from "./light";
 
 const root = document.documentElement;
 let uninstall = () => {};
@@ -153,24 +153,22 @@ describe("the shared light", () => {
     expect(lightAt()).toEqual(["1.000", "0.000"]);
   });
 
-  it("sweeps the foil's glint when the phone tilts, and never while it's held still", () => {
+  it("lights every foil's glint with the resins, and one shown later where the light already is", () => {
     const foil = document.createElement("span");
     foil.className = "sticker-foil";
-    const glint = document.createElement("i");
-    glint.className = "sticker-foil__glint";
-    foil.append(glint);
     document.body.append(foil);
-    vi.spyOn(foil, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 100, 100));
-    const animate = vi.spyOn(glint, "animate").mockImplementation(() => new Animation());
     uninstall = installLight(root);
     showScreen();
+    tiltTo(32, 40);
+    vi.advanceTimersByTime(16);
+    expect(lightOn(foil)).toEqual(["1.000", "0.000"]);
+    expect(lightOn(foil)).toEqual(lightAt());
 
-    tiltTo(0, 40);
-    tiltTo(4, 40);
-    expect(animate).not.toHaveBeenCalled();
-
-    tiltTo(20, 40);
-    expect(animate).toHaveBeenCalledTimes(1);
+    // Shown while the phone is still: no move comes to light it, so it starts from the light.
+    const later = document.createElement("span");
+    later.className = "sticker-foil";
+    lightUp(later);
+    expect(lightOn(later)).toEqual(lightAt());
   });
 
   it("stays in the middle under reduced motion", () => {

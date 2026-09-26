@@ -156,6 +156,7 @@ describe("POST /api/stickers", () => {
       error: "mint_failed",
     });
     expect(failedBody.detail).toContain(saved.id);
+    expect(failedBody.detail).toContain(`(${chainDown.message})`);
     expect(saved.tokenId).toBeNull();
     expect(log).toHaveBeenCalledWith(expect.stringContaining(`"stickerId":"${saved.id}"`));
     expect(log).toHaveBeenCalledWith(expect.stringContaining(chainDown.message));
