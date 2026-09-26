@@ -251,8 +251,12 @@ export function mountMiniGameEngine(
 
   root.dataset.phase = "ready";
   root.dataset.tier = "";
-  root.dataset.hud = "off";
   root.dataset.reduced = reduced ? "1" : "0";
+  // The HUD shows from the start: a full bar holding the catch window's seconds, until the first tap.
+  root.dataset.hud = "on";
+  hud.show(true);
+  /** The HUD as last drawn at ready, which holds still until the first tap. */
+  let readyDrawn = false;
 
   let face = heartFaceFor(null, intensity, 0);
   let forced: Partial<HeartFace> | null = null;
@@ -871,13 +875,37 @@ export function mountMiniGameEngine(
       if (face.ink && !reduced) ink?.setAttribute("data-v", String(Math.floor(wall * 12) % 3));
 
       background.step(real);
-      hud.step(real, {
-        total: view.total,
-        multiplier: view.multiplier,
-        secondsLeft: view.secondsLeft,
-        barFill: view.barFill,
-        running: view.phase === "running",
-      });
+      // Before the catch the bar is the catch window: full at ready, emptying once the heart is sent.
+      // From the catch it's the combo's own.
+      if (view.phase === "ready") {
+        if (!readyDrawn) {
+          readyDrawn = true;
+          hud.step(real, {
+            total: 0,
+            multiplier: 1,
+            secondsLeft: GAME_CONFIG.catchWindowMs / 1000,
+            barFill: 1,
+            running: false,
+          });
+        }
+      } else if (view.phase === "sending") {
+        const leftMs = Math.max(0, GAME_CONFIG.catchWindowMs - (now - sendingSince));
+        hud.step(real, {
+          total: view.total,
+          multiplier: view.multiplier,
+          secondsLeft: leftMs / 1000,
+          barFill: leftMs / GAME_CONFIG.catchWindowMs,
+          running: false,
+        });
+      } else {
+        hud.step(real, {
+          total: view.total,
+          multiplier: view.multiplier,
+          secondsLeft: view.secondsLeft,
+          barFill: view.barFill,
+          running: view.phase === "running",
+        });
+      }
 
       // Once the receipt is up and the pile has melted, nothing moves: the loop sleeps.
       if (root.dataset.phase === "done" && physics.hearts.length === 0 && !readout) {

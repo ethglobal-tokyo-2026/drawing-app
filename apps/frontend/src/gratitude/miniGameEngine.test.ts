@@ -228,3 +228,40 @@ describe("mountMiniGameEngine", () => {
     expect(rain).not.toHaveBeenCalled();
   });
 });
+
+describe("the HUD before the catch", () => {
+  const text = (selector: string) => host.querySelector(selector)?.textContent;
+  /** How full the bar is drawn, 0–1. */
+  const fill = () => {
+    const transform = host.querySelector<HTMLElement>(".gr-timer-fill")?.style.transform ?? "";
+    return Number(/scaleX\(([\d.]+)\)/.exec(transform)?.[1]);
+  };
+
+  it("shows a full bar holding the catch window, with nothing counted, before the first tap", async () => {
+    await play(100);
+    expect(host.dataset.hud).toBe("on");
+    expect(fill()).toBe(1);
+    expect(text(".gr-timer-s")).toBe(`${(GAME_CONFIG.catchWindowMs / 1000).toFixed(1)}s`);
+    expect(text(".gr-amount")).toBe("0♡");
+    expect(text(".gr-mult")).toBe("×1.0");
+  });
+
+  it("empties the bar over the catch window once the heart is sent, and the catch refills it", async () => {
+    pressHeart();
+    await play(GAME_CONFIG.catchWindowMs / 2);
+    expect(fill()).toBeGreaterThan(0.35);
+    expect(fill()).toBeLessThan(0.65);
+    expect(text(".gr-amount")).toBe(`${GAME_CONFIG.gratitudePerHit}♡`);
+    pressHeart();
+    await play(50);
+    expect(host.dataset.phase).toBe("running");
+    expect(fill()).toBeGreaterThan(0.9);
+  });
+
+  it("runs the bar out when the heart isn't caught, and the heart is sent", async () => {
+    pressHeart();
+    await play(GAME_CONFIG.catchWindowMs + 50);
+    expect(fill()).toBeLessThan(0.01);
+    expect(onRecord.mock.calls[0]?.[1].endReason).toBe("sent");
+  });
+});
