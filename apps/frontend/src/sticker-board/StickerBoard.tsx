@@ -12,6 +12,9 @@ import { flushSync } from "react-dom";
 import { Giving } from "../giving/Giving";
 import { useGiftSender } from "../giving/useGiftSender";
 import { useStickerGifts } from "../giving/useStickerGifts";
+import { FEEL_CONFIG } from "../gratitude/gameConfig";
+import { GratitudeMiniGame } from "../gratitude/GratitudeMiniGame";
+import { readMiniGameDemoSettings } from "../gratitude/miniGameDemoSettings";
 import { DrawIcon } from "../icons/DrawIcon";
 import { useIdentity } from "../identity/useIdentity";
 import { LIFF_ID } from "../line/liff";
@@ -154,6 +157,8 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const [giving, setGiving] = useState<BoardSticker | null>(null);
   /** The board is turned over to its stat board. */
   const [turned, setTurned] = useState(false);
+  /** The sticker the gratitude mini-game is open for, from the stat board's developer slip. */
+  const [thanking, setThanking] = useState<BoardSticker | null>(null);
   const me = useIdentity();
   const tickets = useTicketState();
   const gifts = useStickerGifts();
@@ -229,6 +234,11 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   // A sticker given away has left the board.
   const onBoard = (stickers ?? []).filter(
     (s) => s.placement.on && gifts.get(s.id)?.state !== "sent",
+  );
+  // The gratitude mini-game's demo always thanks whichever sticker landed most recently.
+  const newest = onBoard.reduce<BoardSticker | null>(
+    (latest, s) => (!latest || s.createdAt > latest.createdAt ? s : latest),
+    null,
   );
   // Given away, it leaves its given sticker silhouette where it sat.
   const givenSilhouettes = (stickers ?? []).flatMap((s) => {
@@ -522,6 +532,20 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         />
       )}
 
+      {thanking && (
+        <GratitudeMiniGame
+          sticker={thanking}
+          giver={{ handle: me.handle, displayName: me.displayName, pictureUrl: me.pictureUrl }}
+          intensity={
+            readMiniGameDemoSettings().fullEffects
+              ? FEEL_CONFIG.intensity.full
+              : FEEL_CONFIG.intensity.everyday
+          }
+          showFrameTimes={readMiniGameDemoSettings().showFrameTimes}
+          onClose={() => setThanking(null)}
+        />
+      )}
+
       {open && (
         <StickerDetail
           // In the order they arrived, as the board loads them.
@@ -577,6 +601,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           gifts={gifts}
           onFlipBack={() => turn(false)}
           flipBackRef={flipBack}
+          onTryGratitudeMiniGame={newest ? () => setThanking(newest) : null}
         />
       }
     />
