@@ -39,13 +39,18 @@ export function paintDim(
   g.globalCompositeOperation = "source-over";
 }
 
-/** The kiss-cut hole the sticker leaves: the backing liner, its maker's print, and the cut wall. */
-export function paintHole(canvas: HTMLCanvasElement, box: Box, mask: CanvasImageSource, r: number) {
+/** The used sticker silhouette: the backing liner, its maker's print, and the cut wall. */
+export function paintUsedStickerSilhouette(
+  canvas: HTMLCanvasElement,
+  box: Box,
+  mask: CanvasImageSource,
+  r: number,
+) {
   const W = Math.max(1, Math.round(box.w * r));
   const H = Math.max(1, Math.round(box.h * r));
   canvas.width = W;
   canvas.height = H;
-  const g = paintable(canvas, "kiss-cut hole");
+  const g = paintable(canvas, "used sticker silhouette");
   if (!g) return;
   g.fillStyle = BACKING;
   g.fillRect(0, 0, W, H);

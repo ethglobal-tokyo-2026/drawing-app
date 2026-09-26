@@ -9,7 +9,7 @@
   color: var(--ink);
 }
 
-/* The sticker being given, above the sheet. Once it's in the bag, its glue ghost stays behind. */
+/* The sticker being given, above the sheet. Once it's in the bag, its silhouette stays behind. */
 .giving__piece {
   position: absolute;
   left: 0;
@@ -29,7 +29,7 @@
   filter: var(--sticker-cut) var(--sticker-cast);
 }
 
-.giving__ghost {
+.giving__given-sticker-silhouette {
   position: relative;
   width: 206px;
   height: 206px;
@@ -37,20 +37,20 @@
 }
 
 /* The silhouette, hatched at 45° in faint graphite, with a hairline where the cut was. */
-.giving__ghost::before,
-.giving__ghost::after {
+.giving__given-sticker-silhouette::before,
+.giving__given-sticker-silhouette::after {
   content: "";
   position: absolute;
   -webkit-mask: var(--src) center / contain no-repeat;
   mask: var(--src) center / contain no-repeat;
 }
 
-.giving__ghost::before {
+.giving__given-sticker-silhouette::before {
   inset: -2px;
   background: var(--rule-strong);
 }
 
-.giving__ghost::after {
+.giving__given-sticker-silhouette::after {
   inset: 0;
   background: repeating-linear-gradient(45deg, rgba(110, 104, 120, 0.16) 0 1px, transparent 1px 6px)
     var(--liner);

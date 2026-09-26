@@ -8,6 +8,7 @@ import App from "./app/App.tsx";
 import { PrivySignIn } from "./identity/PrivySignIn";
 import { initLine } from "./line/liff";
 import { LineGate } from "./line/LineGate";
+import { installLight } from "./stickers/light";
 import { installPress } from "./ui/press";
 import { ToastProvider } from "./ui/ToastProvider";
 
@@ -17,6 +18,7 @@ const ICON_DEFAULTS: IconProps = { weight: "bold" };
 // LIFF starts first, since it reads the address bar as it starts; LineGate holds the app until it settles.
 void initLine();
 installPress();
+installLight(document.documentElement);
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element #root is missing from index.html");

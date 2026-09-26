@@ -10,6 +10,10 @@ export interface SealedSticker {
   png: Blob;
   /** The cut's shape (white, with the cut as alpha), the same size and place as `png`. */
   mask: Blob;
+  /** The live resin's specular mask, along the top edge. */
+  spec: Blob;
+  /** The live resin's rim-light mask, inside the lower edge. */
+  rim: Blob;
   /** The sheet as it was drawn, on white. */
   flat: Blob;
   /** The cut line as an SVG path, in image pixels. */
@@ -26,7 +30,7 @@ export interface SealedSticker {
   contour: Point[];
   /** The ceremony's layers, as object URLs. */
   layers: Record<LayerName, string>;
-  /** The mask, for painting the dim and the hole the sticker leaves. */
+  /** The mask, for painting the dim and the used sticker silhouette. */
   maskImage: HTMLCanvasElement;
   /** Lets the layers' URLs and the mask's canvas go. */
   dispose: () => void;
@@ -138,6 +142,8 @@ export async function makeSticker(ink: HTMLCanvasElement): Promise<SealedSticker
   return {
     png,
     mask,
+    spec,
+    rim,
     flat,
     outline: outlinePath(inImage),
     width,

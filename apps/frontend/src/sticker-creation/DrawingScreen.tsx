@@ -189,6 +189,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         height: sticker.height,
         outline: sticker.outline,
         mask: sticker.mask,
+        resin: { spec: sticker.spec, rim: sticker.rim },
         flat: sticker.flat,
       });
       tickets.linkSticker(record.id);

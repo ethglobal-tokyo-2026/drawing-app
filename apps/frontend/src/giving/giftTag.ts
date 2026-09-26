@@ -1,16 +1,15 @@
+import { formatHandle } from "../stickers/format";
+
 /**
  * The gift tag is printed, never typed. LINE's picker never tells the app who was picked,
- * so a card sent through it names its giver instead of its recipient.
+ * so a gift message sent through it names its giver instead of its recipient.
  */
 export interface GiftTag {
   label: "From";
   name: string;
 }
 
-export const giftTag = (handle: string): GiftTag => ({
-  label: "From",
-  name: `@${handle.replace(/^@+/, "")}`,
-});
+export const giftTag = (handle: string): GiftTag => ({ label: "From", name: formatHandle(handle) });
 
 /** The date printed on the tear tape: "SEALED 9.23". */
 export const sealDate = (at: number): string => {

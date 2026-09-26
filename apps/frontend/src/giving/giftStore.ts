@@ -26,7 +26,7 @@ export type GiftRecord =
   /** In the bag, not sent yet: LINE's picker is about to open or is open. */
   | (GiftFields & { state: "packed" })
   | (GiftFields & { state: "sent"; sentAt: number })
-  /** The card never left, so the sticker is back. `error` says why sending failed. */
+  /** The gift message never left, so the sticker is back. `error` says why sending failed. */
   | (GiftFields & { state: "not_sent"; closedAt: number; reason: NotSentReason; error?: string });
 
 const isText = (v: unknown): v is string => typeof v === "string" && v.length > 0;

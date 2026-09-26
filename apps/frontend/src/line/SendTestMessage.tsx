@@ -13,8 +13,8 @@ type Status =
   | { kind: "failed"; reason: string };
 
 /**
- * Tries LINE's friend picker end to end: pick one friend, and they get a text from you. It stands
- * in for Give until stickers can change hands, so LINE can be tested before anyone has drawn.
+ * Tries LINE's friend picker end to end: pick one friend, and they get a text from you, so LINE can
+ * be tested before anyone has drawn.
  */
 export function SendTestMessage({ senderName }: { senderName: string }) {
   const [status, setStatus] = useState<Status>({ kind: "idle" });

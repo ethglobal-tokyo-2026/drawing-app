@@ -1,0 +1,687 @@
+/* ---------- The stat board: the Sticker Board's back is cork, with User Stats pinned on as paper ---------- */
+
+.stat-board {
+  position: absolute;
+  inset: 0;
+  color: var(--ink);
+}
+
+/* Focusable so Escape still reaches it after a tap on paper; it never shows a ring of its own. */
+.stat-board:focus {
+  outline: none;
+}
+
+/* Cork: a warm board with its granules, darker where the frame edge meets it. It scrolls, texture and
+   all, when the paper runs past the foot. */
+.stat-board__cork {
+  --cork: #cfa476;
+  position: absolute;
+  inset: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  padding: 12px 14px 16px;
+  background-color: var(--cork);
+  background-image:
+    radial-gradient(
+      circle at 7% 66%,
+      rgba(52, 30, 12, 0.6) 0 1.1px,
+      rgba(255, 236, 206, 0.45) 1.5px 2.1px,
+      transparent 2.5px
+    ),
+    radial-gradient(
+      circle at 94% 47%,
+      rgba(52, 30, 12, 0.6) 0 1.1px,
+      rgba(255, 236, 206, 0.45) 1.5px 2.1px,
+      transparent 2.5px
+    ),
+    radial-gradient(
+      circle at 57% 97%,
+      rgba(52, 30, 12, 0.55) 0 1px,
+      rgba(255, 236, 206, 0.4) 1.4px 2px,
+      transparent 2.4px
+    ),
+    radial-gradient(
+      circle at 51% 49%,
+      rgba(52, 30, 12, 0.5) 0 1px,
+      rgba(255, 236, 206, 0.4) 1.4px 2px,
+      transparent 2.4px
+    ),
+    radial-gradient(
+      circle at 88% 91%,
+      rgba(52, 30, 12, 0.6) 0 1.1px,
+      rgba(255, 236, 206, 0.45) 1.5px 2.1px,
+      transparent 2.5px
+    ),
+    radial-gradient(
+      circle at 36% 93.5%,
+      rgba(52, 30, 12, 0.5) 0 1px,
+      rgba(255, 236, 206, 0.4) 1.4px 2px,
+      transparent 2.4px
+    ),
+    radial-gradient(
+      circle at 96% 8%,
+      rgba(52, 30, 12, 0.55) 0 1px,
+      rgba(255, 236, 206, 0.4) 1.4px 2px,
+      transparent 2.4px
+    ),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .36 0 0 0 0 .22 0 0 0 0 .1 0 0 0 1.1 -.42'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23g)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='l'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.55' numOctaves='1' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .93 0 0 0 0 .8 0 0 0 1.3 -.78'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23l)'/%3E%3C/svg%3E");
+  background-attachment: local;
+  box-shadow:
+    inset 0 0 0 1px rgba(28, 24, 36, 0.22),
+    inset 0 0 22px rgba(84, 52, 24, 0.28),
+    inset 0 10px 14px -10px rgba(28, 24, 36, 0.3);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.stat-board__cork::-webkit-scrollbar {
+  display: none;
+}
+
+/* The stats fill the first screen, as in the drafts, so Flip back rides at its foot; the LINE and
+   Privy slip waits below. */
+.stat-board__stats {
+  display: grid;
+  /* The right column keeps the room its labels need; a narrow phone takes it from the left. */
+  grid-template-columns: minmax(0, 206px) minmax(144px, 1fr);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "who who"
+    "a b";
+  gap: 16px 12px;
+  min-height: 100%;
+}
+
+.stat-board__col {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+}
+
+.stat-board__col--a {
+  grid-area: a;
+  gap: 18px;
+  container-type: inline-size;
+}
+
+/* Flip back rides at its foot, in the thumb's reach. */
+.stat-board__col--b {
+  grid-area: b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+/* The person: the LINE picture stuck on, and the name on a paper label under pink washi. */
+.stat-board__who {
+  grid-area: who;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.stat-board__namecard {
+  position: relative;
+  min-width: 0;
+  padding: 7px 14px 7px 16px;
+  border-radius: 3px;
+  background: var(--liner-lift);
+  transform: rotate(-1.2deg);
+  box-shadow:
+    0 1px 0 rgba(28, 24, 36, 0.1),
+    1px 2px 3px rgba(28, 24, 36, 0.16);
+}
+
+.stat-board__name {
+  margin: 0;
+  overflow: hidden;
+  font: 800 18px/1.15 var(--font-ui);
+  font-stretch: var(--w-title);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.stat-board__handle {
+  margin: 2px 0 0;
+  overflow: hidden;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.stat-board__namecard > .stat-board__washi {
+  left: -14px;
+  top: 50%;
+  width: 34px;
+  height: 18px;
+  margin-top: -9px;
+  transform: rotate(-78deg);
+}
+
+/* A note on the cork: it hangs from its pin or tape and casts down and to the right. */
+.stat-board__note {
+  position: relative;
+  margin: 0;
+  filter: drop-shadow(0 1px 0 rgba(28, 24, 36, 0.12))
+    drop-shadow(2px 5px 5px rgba(58, 36, 16, 0.26));
+  cursor: default;
+}
+
+/* The paper hangs from its pin, top center. */
+.stat-board__paper {
+  position: relative;
+  background: var(--liner-lift);
+  transform-origin: 50% 0;
+}
+
+/* Push pins: a round plastic head with the drawings' ink line, casting on the paper. */
+.stat-board__pin {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: -5px;
+  width: 17px;
+  height: 17px;
+  margin-left: -8.5px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 36% 34%, rgba(255, 255, 255, 0.7) 0 2.5px, transparent 3.5px),
+    var(--pin, var(--liner-lift));
+  box-shadow:
+    inset 0 0 0 1.8px var(--ink),
+    2px 3px 2px rgba(28, 24, 36, 0.32);
+}
+
+.stat-board__pin--pink {
+  --pin: var(--pink);
+}
+
+/* Gratitude: a printed receipt, pinned in pink, with its total as the total line. */
+.stat-board__receipt {
+  transform: rotate(-1.4deg);
+  transform-origin: 50% 0;
+}
+
+/* The tear-off edge is a clip-path: a mask renders offset inside the turning board's 3D context. */
+.stat-board__receipt > .stat-board__paper {
+  padding: 14px 14px 24px;
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% 100%,
+    95.45% calc(100% - 7px),
+    90.91% 100%,
+    86.36% calc(100% - 7px),
+    81.82% 100%,
+    77.27% calc(100% - 7px),
+    72.73% 100%,
+    68.18% calc(100% - 7px),
+    63.64% 100%,
+    59.09% calc(100% - 7px),
+    54.55% 100%,
+    50% calc(100% - 7px),
+    45.45% 100%,
+    40.91% calc(100% - 7px),
+    36.36% 100%,
+    31.82% calc(100% - 7px),
+    27.27% 100%,
+    22.73% calc(100% - 7px),
+    18.18% 100%,
+    13.64% calc(100% - 7px),
+    9.09% 100%,
+    4.55% calc(100% - 7px),
+    0 100%
+  );
+}
+
+/* A long name pushes the date onto a line of its own. */
+.stat-board__receipt-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  column-gap: 8px;
+  margin: 0 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed rgba(28, 24, 36, 0.3);
+  overflow-wrap: anywhere;
+}
+
+.stat-board__receipt-h {
+  margin: 0 0 6px;
+  color: var(--ink);
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+
+.stat-board__receipt-none {
+  margin: 2px 0 0;
+  color: var(--graphite);
+  font: 500 13px/1.35 var(--font-ui);
+}
+
+.stat-board__receipt-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding-top: 9px;
+  border-top: 1.5px solid var(--ink);
+}
+
+.stat-board__receipt-total .fine {
+  color: var(--ink);
+  font-weight: 750;
+  letter-spacing: 0.14em;
+}
+
+.stat-board__receipt-total b {
+  font: 900 30px/0.95 var(--font-ui);
+  font-stretch: var(--w-figure);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The streak: a day-calendar leaf torn off its pad, in the daily yellow. */
+.stat-board__leaf {
+  width: 100%;
+  max-width: 138px;
+  transform: rotate(2.6deg);
+  transform-origin: 50% 0;
+}
+
+.stat-board__leaf > .stat-board__paper {
+  padding: 0 0 12px;
+  text-align: center;
+  clip-path: polygon(
+    0 3px,
+    9% 0,
+    18% 3px,
+    27% 1px,
+    36% 4px,
+    45% 0,
+    54% 3px,
+    63% 1px,
+    72% 4px,
+    81% 0,
+    90% 3px,
+    100% 1px,
+    100% 100%,
+    0 100%
+  );
+}
+
+.stat-board__leaf-band {
+  margin: 0;
+  padding: 10px 0 6px;
+  background: var(--seal);
+  color: var(--ink);
+  font-weight: 750;
+  letter-spacing: 0.16em;
+}
+
+.stat-board__leaf-n {
+  display: grid;
+  justify-items: center;
+  margin: 10px 0 0;
+}
+
+.stat-board__leaf-n b {
+  font: 900 58px/0.9 var(--font-ui);
+  font-stretch: var(--w-figure);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-board__leaf-n .fine {
+  margin-top: 4px;
+  color: var(--ink);
+  font-weight: 750;
+  letter-spacing: 0.16em;
+}
+
+.stat-board__leaf-n--none b {
+  font: 800 20px/1.1 var(--font-ui);
+  font-stretch: var(--w-title);
+  letter-spacing: -0.01em;
+}
+
+.stat-board__leaf-rule {
+  margin: 10px 12px 0;
+  color: var(--graphite);
+  font: 500 12px/1.32 var(--font-ui);
+  text-wrap: balance;
+}
+
+/* Stickers made, received and given: three postage stamps, stuck on (stamps are stickers too). */
+.stat-board__stamps {
+  position: relative;
+  flex: none;
+  width: 138px;
+  height: 176px;
+  margin: 0;
+}
+
+.stat-board__stamp {
+  position: absolute;
+  width: 70px;
+  height: 80px;
+  margin: 0;
+  filter: drop-shadow(0 0.5px 0 rgba(28, 24, 36, 0.2))
+    drop-shadow(1px 3px 3px rgba(58, 36, 16, 0.28));
+}
+
+.stat-board__stamp--0 {
+  left: 0;
+  top: 0;
+  transform: rotate(-5deg);
+}
+
+.stat-board__stamp--1 {
+  left: 64px;
+  top: 14px;
+  transform: rotate(4deg);
+}
+
+.stat-board__stamp--2 {
+  left: 26px;
+  top: 92px;
+  transform: rotate(-1.5deg);
+}
+
+/* The perforated edge: round bites along the border, over a solid middle. */
+.stat-board__stamp-paper {
+  --h: 3px;
+  position: absolute;
+  inset: 0;
+  display: grid;
+  padding: 7px;
+  background: var(--liner-lift);
+  -webkit-mask:
+    radial-gradient(var(--h) at var(--h) var(--h), #0000 97%, #000) calc(-1 * var(--h))
+      calc(-1 * var(--h)) / calc(3 * var(--h)) calc(3 * var(--h)) round,
+    linear-gradient(#000 0 0) calc(1.5 * var(--h)) calc(1.5 * var(--h)) / calc(100% - 3 * var(--h))
+      calc(100% - 3 * var(--h)) no-repeat;
+  mask:
+    radial-gradient(var(--h) at var(--h) var(--h), #0000 97%, #000) calc(-1 * var(--h))
+      calc(-1 * var(--h)) / calc(3 * var(--h)) calc(3 * var(--h)) round,
+    linear-gradient(#000 0 0) calc(1.5 * var(--h)) calc(1.5 * var(--h)) / calc(100% - 3 * var(--h))
+      calc(100% - 3 * var(--h)) no-repeat;
+}
+
+.stat-board__stamp-print {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  background: var(--c);
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+
+.stat-board__stamp-print b {
+  font: 900 26px/0.95 var(--font-ui);
+  font-stretch: var(--w-figure);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-board__stamp-print .fine {
+  color: var(--ink);
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+
+/* Bests: a torn notebook scrap under a strip of washi. It hangs from its tape, top right. */
+.stat-board__scrap {
+  margin-top: 2px;
+  transform: rotate(1.1deg);
+}
+
+.stat-board__scrap > .stat-board__paper {
+  padding: 16px 14px 12px;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 23px, rgba(155, 123, 255, 0.22) 23px 24px) 0
+      6px / 100% 100%,
+    var(--liner-lift);
+  transform-origin: 92% 0;
+  clip-path: polygon(
+    0 2px,
+    7% 5px,
+    15% 1px,
+    24% 4px,
+    31% 0,
+    40% 5px,
+    49% 2px,
+    58% 5px,
+    66% 1px,
+    75% 4px,
+    83% 0,
+    92% 4px,
+    100% 2px,
+    100% 100%,
+    0 100%
+  );
+}
+
+.stat-board__scrap-h {
+  margin: 0 0 6px;
+  font: 800 18px/1.1 var(--font-ui);
+  font-stretch: var(--w-title);
+  letter-spacing: -0.01em;
+}
+
+.stat-board__scrap-rows {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.stat-board__scrap-rows > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 8px;
+  align-items: start;
+}
+
+.stat-board__scrap-rows dt {
+  min-width: 0;
+  font: 650 13.5px/1.3 var(--font-ui);
+  text-wrap: balance;
+}
+
+.stat-board__scrap-rows dt small {
+  display: block;
+  color: var(--graphite);
+  font: 500 12px/1.3 var(--font-ui);
+  text-wrap: pretty;
+}
+
+.stat-board__scrap-rows dd {
+  margin: 0;
+  font: 800 14px/1.3 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* A narrow phone's left column: each best sits under its name rather than squeezing it. */
+@container (max-width: 157px) {
+  .stat-board__scrap-rows > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.stat-board__scrap > .stat-board__washi {
+  right: -10px;
+  top: -6px;
+  width: 56px;
+  height: 18px;
+  transform: rotate(24deg);
+}
+
+/* Washi tape: translucent paper tape with torn ends. */
+.stat-board__washi {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.28) 0 3px, transparent 3px 7px),
+    rgba(236, 230, 214, 0.78);
+  clip-path: polygon(
+    0 8%,
+    6% 0,
+    12% 10%,
+    88% 4%,
+    94% 12%,
+    100% 2%,
+    100% 94%,
+    94% 100%,
+    88% 90%,
+    12% 97%,
+    6% 88%,
+    0 100%
+  );
+  box-shadow: 0 1px 1px rgba(28, 24, 36, 0.08);
+}
+
+.stat-board__washi--pink {
+  background:
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.3) 0 3px, transparent 3px 7px),
+    color-mix(in srgb, var(--pink) 58%, transparent);
+}
+
+/* The day you joined, on label-maker tape: ink tape, the letters pressed up. */
+.stat-board__tape {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  margin: 2px 0 0;
+  padding: 0 12px 0 11px;
+  background: var(--ink);
+  color: var(--liner);
+  font: 750 12px/1 var(--font-ui);
+  font-stretch: var(--w-ui);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  clip-path: polygon(0 6%, 100% 0, 98.5% 100%, 1.5% 94%);
+  filter: drop-shadow(1px 2px 1.5px rgba(28, 24, 36, 0.35));
+  transform: rotate(0.8deg) translateX(10px);
+}
+
+.stat-board__tape-text {
+  white-space: nowrap;
+  text-shadow:
+    -0.5px -0.5px 0 rgba(255, 255, 255, 0.28),
+    0.6px 0.8px 0 rgba(12, 9, 16, 0.6);
+}
+
+/* A narrow phone's left column: the tape prints tighter so the whole date still fits. */
+@container (max-width: 163px) {
+  .stat-board__tape {
+    padding: 0 9px 0 8px;
+    letter-spacing: 0.05em;
+    transform: rotate(0.8deg) translateX(4px);
+  }
+}
+
+/* What you can do with your board, and the way back, as label stock on the cork. */
+.stat-board__share {
+  display: grid;
+  justify-items: stretch;
+  gap: 10px;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.stat-board__share .label-btn {
+  padding: 0 8px;
+}
+
+.stat-board__share .label-btn,
+.stat-board__flip-back {
+  gap: 8px;
+}
+
+.stat-board__flip-back {
+  align-self: stretch;
+  margin-top: auto;
+}
+
+/* LINE and Privy, for testing them from the board: a slip taped across the foot of the cork. */
+.stat-board__slip {
+  margin-top: 30px;
+  transform: rotate(-0.6deg);
+}
+
+.stat-board__slip > .stat-board__paper {
+  display: grid;
+  gap: 10px;
+  padding: 18px 16px 14px;
+  clip-path: polygon(
+    0 3px,
+    8% 0,
+    17% 2px,
+    26% 0,
+    35% 3px,
+    44% 1px,
+    53% 3px,
+    62% 0,
+    71% 2px,
+    80% 0,
+    89% 3px,
+    100% 1px,
+    100% 100%,
+    0 100%
+  );
+}
+
+.stat-board__slip > .stat-board__washi {
+  left: 50%;
+  top: -7px;
+  width: 72px;
+  height: 18px;
+  margin-left: -36px;
+  transform: rotate(-2deg);
+}
+
+.stat-board__slip-h {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+
+/* Far enough below Try again that their touch bands don't overlap. */
+.stat-board__logout {
+  justify-self: start;
+  margin-top: 4px;
+}
+
+.stat-board__privy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(28, 24, 36, 0.3);
+}
+
+/* Privy's user ID is case-sensitive and a failure's reason can be long: both keep their case, wrap,
+   and can be copied into a report. */
+.stat-board__privy .fine {
+  flex: 1 1 100%;
+  margin: 0;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+}

@@ -6,20 +6,23 @@ const FOCUSABLE =
 interface Options {
   active?: boolean;
   onEscape?: () => void;
+  /** Where focus goes when it deactivates, when that isn't back where it was. */
+  returnFocus?: () => HTMLElement | null;
 }
 
 /**
  * Keeps keyboard focus inside a dialog while it's active: focuses its first control, wraps Tab and
- * Shift+Tab at the ends, calls `onEscape` on Escape, and gives focus back to where it was when it
- * deactivates. Give the container `tabIndex={-1}` so it can hold focus when it has no controls.
+ * Shift+Tab at the ends, calls `onEscape` on Escape, and gives focus back to where it was (or to
+ * `returnFocus`'s element) when it deactivates. Give the container `tabIndex={-1}` so it can hold
+ * focus when it has no controls.
  */
 export function useFocusTrap(
   ref: RefObject<HTMLElement | null>,
-  { active = true, onEscape }: Options = {},
+  { active = true, onEscape, returnFocus }: Options = {},
 ) {
-  const onEscapeRef = useRef(onEscape);
+  const latest = useRef({ onEscape, returnFocus });
   useLayoutEffect(() => {
-    onEscapeRef.current = onEscape;
+    latest.current = { onEscape, returnFocus };
   });
 
   useEffect(() => {
@@ -32,7 +35,7 @@ export function useFocusTrap(
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onEscapeRef.current?.();
+        latest.current.onEscape?.();
         return;
       }
       if (e.key !== "Tab") return;
@@ -54,7 +57,7 @@ export function useFocusTrap(
     root.addEventListener("keydown", onKeyDown);
     return () => {
       root.removeEventListener("keydown", onKeyDown);
-      previous?.focus();
+      (latest.current.returnFocus?.() ?? previous)?.focus({ preventScroll: true });
     };
   }, [active, ref]);
 }

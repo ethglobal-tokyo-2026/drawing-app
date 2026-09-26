@@ -1,0 +1,256 @@
+/* The sticker detail: the sticker large on the liner, a strip of thumbnails down the left edge like a
+   binding, and its fine print and key, over the whole phone. */
+
+.sticker-detail {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-sheet);
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  grid-template-rows: 54px minmax(0, 1fr);
+  padding-top: env(safe-area-inset-top);
+  overflow: hidden;
+  background: var(--liner);
+  color: var(--ink);
+}
+
+/* It holds focus only when nothing in it can; a ring round the whole screen says nothing. */
+.sticker-detail:focus {
+  outline: none;
+}
+
+.sticker-detail__top {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  padding: 0 12px 0 4px;
+}
+
+.sticker-detail__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  margin: 0;
+  padding: 0 12px 0 8px;
+  border: 0;
+  border-radius: var(--r-label);
+  background: none;
+  color: var(--ink);
+  font: 700 15px/1 var(--font-ui);
+}
+
+.sticker-detail__back:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 0;
+}
+
+/* Positioned, so each thumb's offset is measured from the strip's top. */
+.sticker-detail__strip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0 44px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--liner-deep);
+  box-shadow: inset -1px 0 0 var(--rule);
+  scrollbar-width: none;
+}
+
+.sticker-detail__strip::-webkit-scrollbar {
+  display: none;
+}
+
+.sticker-detail__thumb {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+}
+
+.sticker-detail__thumb img {
+  display: block;
+  max-width: 38px;
+  max-height: 38px;
+  filter: var(--sticker-cut) drop-shadow(0.5px 1px 1px rgba(28, 24, 36, 0.16));
+  opacity: 0.72;
+  transition: opacity 140ms linear;
+}
+
+.sticker-detail__thumb[aria-current="true"] {
+  background: var(--liner-lift);
+  box-shadow:
+    inset 0 0 0 1.5px var(--ink),
+    1px 2px 4px rgba(28, 24, 36, 0.12);
+}
+
+.sticker-detail__thumb[aria-current="true"] img {
+  opacity: 1;
+}
+
+.sticker-detail__thumb:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.sticker-detail__main {
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0 18px 44px;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.sticker-detail__main::-webkit-scrollbar {
+  display: none;
+}
+
+/* Only a vertical pan goes to the page; a sideways swipe pages between stickers. */
+.sticker-detail__stage {
+  position: relative;
+  height: 240px;
+  margin: 0 -6px;
+  touch-action: pan-y;
+  cursor: grab;
+}
+
+.sticker-detail__slide {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* Its own shape, inside a 216px square. */
+.sticker-detail__slide .sticker-figure {
+  width: calc(216px * min(1, var(--ar)));
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: var(--ar);
+}
+
+.sticker-detail__pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 36px;
+  margin-top: 2px;
+}
+
+.sticker-detail__pager button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-label);
+  background: none;
+  color: var(--ink);
+}
+
+/* A 44px touch. */
+.sticker-detail__pager button::before {
+  content: "";
+  position: absolute;
+  inset: -4px -2px;
+}
+
+.sticker-detail__pager button[aria-disabled="true"] {
+  color: rgba(110, 104, 120, 0.4);
+  cursor: default;
+}
+
+.sticker-detail__pager button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 0;
+}
+
+.sticker-detail__count {
+  min-width: 54px;
+  text-align: center;
+  font: 650 13px/1 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  color: var(--graphite);
+}
+
+/* One column no wider than the page, however long a line's unbreakable facts. */
+.sticker-detail__meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3px;
+  margin-top: 12px;
+}
+
+.sticker-detail__title {
+  margin: 0;
+  min-width: 0;
+  font-size: 31px;
+  overflow-wrap: anywhere;
+}
+
+/* The line people read: caps kept, but at full width and 12px, wrapping between facts. */
+.sticker-detail__fine-print {
+  margin: 5px 0 0;
+  font-size: 12px;
+  font-stretch: var(--w-ui);
+  letter-spacing: 0.045em;
+  line-height: 1.5;
+  color: #5f5969;
+}
+
+.sticker-detail__fine-print + .sticker-detail__fine-print {
+  margin-top: 0;
+}
+
+.sticker-detail__fine-print span {
+  white-space: nowrap;
+}
+
+/* A name too long for the line ends in an ellipsis rather than running off it. */
+.sticker-detail__by {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+
+.sticker-detail__acts {
+  display: flex;
+  margin-top: 18px;
+}
+
+.sticker-detail__acts .key {
+  flex: 1;
+  min-width: 0;
+  padding-inline: 18px;
+}
+
+.sticker-detail__none {
+  margin: 24px 0 0;
+  color: var(--graphite);
+}
+
+@media (hover: hover) {
+  .sticker-detail__back:hover,
+  .sticker-detail__pager button:not([aria-disabled="true"]):hover {
+    background: rgba(28, 24, 36, 0.05);
+  }
+
+  .sticker-detail__thumb:hover img {
+    opacity: 1;
+  }
+}

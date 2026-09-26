@@ -81,8 +81,8 @@ export interface SealFrame {
   shadow: { opacity: number; x: number; y: number; rotate: number; scale: number };
   /** Off its backing: the ink it was cut from is gone from the sheet. */
   lifted: boolean;
-  /** The kiss-cut hole it leaves. */
-  hole: number;
+  /** The used sticker silhouette it leaves in the sheet. */
+  usedStickerSilhouette: number;
   card: { opacity: number; y: number };
   /** The card's lines, each fading up in turn. */
   items: { opacity: number; y: number }[];
@@ -136,7 +136,7 @@ export function sealFrame(t: number, path: Flight, items: number): SealFrame {
       scale: scale * (1 + 0.03 * height),
     },
     lifted: t >= T.peel0,
-    hole: t >= T.peel0 ? 1 - span(T.card1, T.card1 + 260) : 0,
+    usedStickerSilhouette: t >= T.peel0 ? 1 - span(T.card1, T.card1 + 260) : 0,
     card: { opacity: Math.min(1, card * 1.8), y: (1 - card) * 60 },
     items: Array.from({ length: items }, (_, i) => {
       const u = easeOut(span(T.txt0 + i * 40, T.txt0 + i * 40 + 240));

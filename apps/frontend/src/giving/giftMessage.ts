@@ -4,26 +4,26 @@ import { giftTag } from "./giftTag";
 
 type LiffMessage = Parameters<typeof liff.shareTargetPicker>[0][number];
 
-/** The gift card as LINE's picker takes it: one Flex bubble. */
-export type GiftCardMessage = Extract<LiffMessage, { type: "flex" }>;
+/** The gift message as LINE's picker takes it: one Flex bubble. */
+export type GiftMessage = Extract<LiffMessage, { type: "flex" }>;
 
-export interface GiftCardInput {
-  /** The LIFF app the card's link opens. */
+export interface GiftMessageInput {
+  /** The LIFF app the gift message's link opens. */
   liffId: string;
-  /** The gift's one-time code. The link carries it; nothing else on the card identifies the gift. */
-  code: string;
+  /** The link carries it; nothing else on the gift message identifies the gift. */
+  giftClaimToken: string;
   /** The giver's handle, printed as "From @alice". */
   fromHandle: string;
   /** Seconds the sticker took to draw. */
   timeUsed: number;
   /**
    * The frosted-sleeve image: HTTPS, at an immutable content-hashed URL, because LINE caches it
-   * for good. Cards may be forwarded, so the drawing itself is never on the card.
+   * for good. Gift messages may be forwarded, so the sticker itself is never on one.
    */
   heroUrl?: string;
 }
 
-// LINE draws the card and can't read CSS variables, so the world's colors are written out.
+// LINE draws the gift message and can't read CSS variables, so the world's colors are written out.
 const INK = "#1C1824";
 const GRAPHITE = "#6E6878";
 const AQUA = "#38D3DC";
@@ -35,35 +35,41 @@ const MAX_IMAGE_URL = 2000;
 
 const URL_SAFE = /^[A-Za-z0-9_-]+$/;
 
-function giftLink(liffId: string, code: string): string {
-  if (!URL_SAFE.test(liffId)) throw new Error(`Gift card: the LIFF ID "${liffId}" is not valid`);
-  if (!URL_SAFE.test(code)) throw new Error("Gift card: the gift code is not URL-safe");
-  const link = `https://liff.line.me/${liffId}/g/${code}`;
+function giftLink(liffId: string, giftClaimToken: string): string {
+  if (!URL_SAFE.test(liffId)) throw new Error(`Gift message: the LIFF ID "${liffId}" is not valid`);
+  if (!URL_SAFE.test(giftClaimToken)) {
+    throw new Error("Gift message: the gift claim token is not URL-safe");
+  }
+  const link = `https://liff.line.me/${liffId}/g/${giftClaimToken}`;
   if (link.length > MAX_URI) {
-    throw new Error(`Gift card: the link is ${link.length} characters; LINE allows ${MAX_URI}`);
+    throw new Error(`Gift message: the link is ${link.length} characters; LINE allows ${MAX_URI}`);
   }
   return link;
 }
 
-/** The LINE message a gift is sent as. Pure, so the server can build the same card later. */
-export function buildGiftCard({
+/** The LINE message a gift is sent as. Pure, so the server can build the same gift message later. */
+export function buildGiftMessage({
   liffId,
-  code,
+  giftClaimToken,
   fromHandle,
   timeUsed,
   heroUrl,
-}: GiftCardInput): GiftCardMessage {
+}: GiftMessageInput): GiftMessage {
   const tag = giftTag(fromHandle);
-  if (tag.name === "@") throw new Error("Gift card: the giver has no handle");
+  if (tag.name === "@") throw new Error("Gift message: the giver has no handle");
   if (
     heroUrl !== undefined &&
     (!heroUrl.startsWith("https://") || heroUrl.length > MAX_IMAGE_URL)
   ) {
     throw new Error(
-      "Gift card: LINE needs the sleeve image at an HTTPS URL of 2,000 characters or less",
+      "Gift message: LINE needs the sleeve image at an HTTPS URL of 2,000 characters or less",
     );
   }
-  const open = { type: "uri", label: "Open your gift", uri: giftLink(liffId, code) } as const;
+  const open = {
+    type: "uri",
+    label: "Open your gift",
+    uri: giftLink(liffId, giftClaimToken),
+  } as const;
 
   return {
     type: "flex",

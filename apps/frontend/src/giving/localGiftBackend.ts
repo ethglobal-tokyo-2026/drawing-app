@@ -1,11 +1,11 @@
 import { formatNo } from "../stickers/format";
 import type { GiftBackend } from "./giftBackend";
-import { buildGiftCard } from "./giftCard";
+import { buildGiftMessage } from "./giftMessage";
 import type { GiftRecord, GiftStore } from "./giftStore";
 
 interface LocalGiftBackendOptions {
   store: GiftStore;
-  /** Printed on the card: "From @alice". */
+  /** Printed on the gift message: "From @alice". */
   fromHandle: string;
   liffId: string;
   heroUrl?: string;
@@ -19,9 +19,9 @@ const toHex = (bytes: Uint8Array) =>
 type PackedRecord = Extract<GiftRecord, { state: "packed" }>;
 
 /**
- * Makes gifts on this device. IDs and codes take createGiftClaim's format (32 random bytes as
- * 0x-hex) so links keep their shape when the server issues them; there's no claim commitment,
- * because nothing here can accept a gift yet.
+ * Makes gifts on this device. Gift IDs and gift claim tokens take createGiftClaim's format (32
+ * random bytes as 0x-hex) so links keep their shape when the server issues them; there's no claim
+ * commitment, because nothing here can accept a gift yet.
  */
 export function createLocalGiftBackend({
   store,
@@ -53,15 +53,15 @@ export function createLocalGiftBackend({
         }
       }
       const giftId = toHex(randomBytes(32));
-      const card = buildGiftCard({
+      const message = buildGiftMessage({
         liffId,
-        code: toHex(randomBytes(32)),
+        giftClaimToken: toHex(randomBytes(32)),
         fromHandle,
         timeUsed: sticker.timeUsed,
         heroUrl,
       });
       store.put({ id: giftId, stickerId: sticker.id, state: "packed", packedAt });
-      return { giftId, card };
+      return { giftId, message };
     },
     markSent: async (giftId) => settle(giftId, (r) => ({ ...r, state: "sent", sentAt: now() })),
     markNotSent: async (giftId, reason, error) =>

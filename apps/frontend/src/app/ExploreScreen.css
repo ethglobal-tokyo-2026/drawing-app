@@ -1,15 +1,23 @@
+/* Over the drawing screen, which stays mounted underneath. */
 .explore {
   position: absolute;
   inset: 0;
   z-index: 25;
   display: grid;
   place-content: center;
+  justify-items: center;
   padding: 32px;
-  background: #efeef3;
+  background: var(--liner);
   text-align: center;
 }
 
 .explore h1 {
   margin: 0 0 6px;
-  font-family: "Archivo Black", "Archivo", sans-serif;
+  font-size: 26px;
+}
+
+.explore__note {
+  max-width: 30ch;
+  margin: 0;
+  color: var(--graphite);
 }

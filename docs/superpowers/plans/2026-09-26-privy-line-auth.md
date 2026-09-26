@@ -7,7 +7,7 @@
 **Architecture:**
 
 - **Box:** the auth server runs on the Hetzner box as `sticker-auth` (Node 22, 127.0.0.1:8787, compiled to plain JS). HAProxy routes `/v1/auth/` and `/.well-known/jwks.json` on the app's host to it. That's one command for ad0ll.
-- **Frontend:** a lazily loaded `PrivySession` runs Privy's `useSubscribeToJwtAuthWithFlag` beside the app, so Privy's large SDK never delays the board. Its state shows on the profile card.
+- **Frontend:** a lazily loaded `PrivySession` runs Privy's `useSubscribeToJwtAuthWithFlag` beside the app, so Privy's large SDK never delays the board. Its state shows on the stat board.
 - **Dev server:** it proxies `/v1/auth` to the live auth server, so desktop testing against real LINE signs in to Privy too.
 
 **Tech Stack:** `@privy-io/react-auth` 3.45.0 (the newest release at least three days old), `@line/liff` 2.31, Node 22 on the box, systemd, HAProxy.
@@ -57,7 +57,7 @@
 ### Task 3: Verify
 
 - [ ] Deploy: both JWKS checks pass once the route is in. A fake ID token at the public URL gets 401 `line_auth_failed`.
-- [ ] After ad0ll turns on custom auth and sets the JWKS URL: sign in on the live site, and the profile card shows the Privy user ID.
+- [ ] After ad0ll turns on custom auth and sets the JWKS URL: sign in on the live site, and the stat board shows the Privy user ID.
 - [ ] Merge into local main (no push). Tell drawing-app-f6.
 
 ## Outcome so far

@@ -9,9 +9,17 @@ declare global {
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
-function Dialog({ active, onEscape }: { active: boolean; onEscape: () => void }) {
+function Dialog({
+  active,
+  onEscape,
+  returnFocus,
+}: {
+  active: boolean;
+  onEscape: () => void;
+  returnFocus?: () => HTMLElement | null;
+}) {
   const ref = useRef<HTMLDivElement>(null);
-  useFocusTrap(ref, { active, onEscape });
+  useFocusTrap(ref, { active, onEscape, returnFocus });
   return (
     <div ref={ref} tabIndex={-1}>
       <button id="first">First</button>
@@ -75,5 +83,25 @@ describe("useFocusTrap", () => {
     render(true);
     render(false);
     expect(document.activeElement).toBe(opener);
+  });
+
+  it("gives focus to the element returnFocus names instead, while there is one", () => {
+    const origin = document.createElement("button");
+    document.body.append(origin);
+    let target: HTMLElement | null = origin;
+    const dialog = (active: boolean) =>
+      act(() =>
+        root.render(<Dialog active={active} onEscape={onEscape} returnFocus={() => target} />),
+      );
+    dialog(true);
+    dialog(false);
+    expect(document.activeElement).toBe(origin);
+
+    opener.focus();
+    target = null;
+    dialog(true);
+    dialog(false);
+    expect(document.activeElement).toBe(opener);
+    origin.remove();
   });
 });

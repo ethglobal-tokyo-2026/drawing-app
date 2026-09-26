@@ -39,7 +39,7 @@ export interface GiveFlow {
   /** The Send in LINE key. */
   sendInLine: () => void;
   takeOut: () => void;
-  /** Closes the flow. A card already in LINE's hands still records its outcome. */
+  /** Closes the flow. A gift message already in LINE's hands still records its outcome. */
   dispose: () => void;
 }
 
@@ -136,7 +136,7 @@ export function createGiveFlow({
 
     let outcome: GiftSendOutcome;
     try {
-      outcome = await sender.send(packed.card);
+      outcome = await sender.send(packed.message);
     } catch (error) {
       a.open = false;
       report(`${which} wasn’t sent`, error);

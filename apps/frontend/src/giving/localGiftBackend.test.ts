@@ -10,16 +10,16 @@ function setup() {
   return { store, backend };
 }
 
-const codeOf = (link: string) => link.split("/g/")[1];
-const linkOf = (card: unknown) => /"uri":"([^"]*)"/.exec(JSON.stringify(card))?.[1] ?? "";
+const giftClaimTokenOf = (link: string) => link.split("/g/")[1];
+const linkOf = (message: unknown) => /"uri":"([^"]*)"/.exec(JSON.stringify(message))?.[1] ?? "";
 
 describe("local gift backend", () => {
-  it("packs each gift with its own unguessable code, in the chain's bytes32 format", async () => {
+  it("packs each gift with its own unguessable gift claim token, in the chain's bytes32 format", async () => {
     const { store, backend } = setup();
     const a = await backend.pack(sticker("s1"));
     const b = await backend.pack(sticker("s2"));
-    expect(codeOf(linkOf(a.card))).toMatch(/^0x[0-9a-f]{64}$/);
-    expect(codeOf(linkOf(a.card))).not.toBe(codeOf(linkOf(b.card)));
+    expect(giftClaimTokenOf(linkOf(a.message))).toMatch(/^0x[0-9a-f]{64}$/);
+    expect(giftClaimTokenOf(linkOf(a.message))).not.toBe(giftClaimTokenOf(linkOf(b.message)));
     expect(a.giftId).toMatch(/^0x[0-9a-f]{64}$/);
     expect(store.get(a.giftId)?.state).toBe("packed");
   });

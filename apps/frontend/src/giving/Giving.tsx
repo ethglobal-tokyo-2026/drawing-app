@@ -8,14 +8,14 @@ import {
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
-import { formatClock, formatDay, formatNo } from "../stickers/format";
+import { formatClock, formatDay, formatHandle, formatNo } from "../stickers/format";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
 import { Sheet } from "../ui/Sheet";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import { giftCardHeroUrl } from "./config";
+import { giftMessageHeroUrl } from "./config";
 import { GiftBag } from "./GiftBag";
 import type { GiftSender } from "./giftSender";
 import { deviceGiftStore } from "./giftStore";
@@ -36,10 +36,10 @@ interface GivingSticker {
 
 interface Props {
   sticker: GivingSticker;
-  /** The giver's handle: the tag and the card read "From @alice". */
+  /** The giver's handle: the tag and the gift message read "From @alice". */
   fromHandle: string;
   sender: GiftSender;
-  /** The LIFF app the card's link opens. */
+  /** The LIFF app the gift message's link opens. */
   liffId: string;
   /** Closes Giving; `sent` is true once the sticker has gone. */
   onClose: (sent: boolean) => void;
@@ -67,7 +67,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
       store: deviceGiftStore(),
       fromHandle,
       liffId,
-      heroUrl: giftCardHeroUrl,
+      heroUrl: giftMessageHeroUrl,
     }),
     pickerDelayMs: PICKER_DELAY[motion],
     takeOutMs: TAKE_OUT[motion],
@@ -151,7 +151,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
         {bag(sealed ? "sealed" : "open", state.sentAt)}
         <h2 className="giving__title">{title}</h2>
         <p className="giving__sub">
-          It’s in your LINE chat now, and the card opens once. When they accept, you’ll see who
+          It’s in your LINE chat now, and the message opens once. When they accept, you’ll see who
           opened it.
         </p>
         {state.recordError && (
@@ -198,7 +198,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
         <p className="giving__sub">
           {unsent
             ? "It’s still in the bag, unsealed. Pick a friend again, or take it out."
-            : "It seals when it’s sent. Pick one friend in LINE: the card goes only to your chat with them."}
+            : "It seals when it’s sent. Pick one friend in LINE: the message goes only to your chat with them."}
         </p>
         {problem.filter(Boolean).map((line) => (
           <p key={String(line)} className="giving__problem" role="alert">
@@ -231,11 +231,14 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
         {screen === "sheet" ? (
           <img className="giving__figure" src={sticker.url} alt="" draggable={false} />
         ) : (
-          <span className="giving__ghost" style={{ "--src": `url("${sticker.url}")` }} />
+          <span
+            className="giving__given-sticker-silhouette"
+            style={{ "--src": `url("${sticker.url}")` }}
+          />
         )}
         <p className="fine giving__meta">
           {formatNo(sticker.no)} · {formatClock(sticker.timeUsed)} · {formatDay(sticker.createdAt)}{" "}
-          · @{fromHandle.replace(/^@+/, "")}
+          · {formatHandle(fromHandle)}
         </p>
       </div>
       <div className="giving__scrim" onClick={close} />

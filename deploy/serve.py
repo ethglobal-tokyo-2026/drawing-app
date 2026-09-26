@@ -3,10 +3,10 @@
 
     python3 serve.py --port 3003 --dir /srv/sticker-board/site
 
-Any path that isn't a file gets index.html, so app routes such as /g/<code> load the app. A missing file under
-/assets/ stays a 404. index.html is never cached, because LINE's in-app browser keeps what it fetched and its
-cache can't be cleared: a cached page would outlive every deploy. Vite gives the files under /assets/ content
-hashes, so they're cached for a year.
+Any path that isn't a file gets index.html, so app routes such as /g/<gift claim token> load the app. A missing
+file under /assets/ stays a 404. index.html is never cached, because LINE's in-app browser keeps what it fetched
+and its cache can't be cleared: a cached page would outlive every deploy. Vite gives the files under /assets/
+content hashes, so they're cached for a year.
 """
 
 import argparse
@@ -45,8 +45,8 @@ class Handler(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def log_message(self, fmt, *args):
-        # Gift codes travel in the path, so they never reach the log.
-        line = re.sub(r"/g/[^\s\"?]+", "/g/<code>", fmt % args)
+        # Gift claim tokens travel in the path, so they never reach the log.
+        line = re.sub(r"/g/[^\s\"?]+", "/g/<gift-claim-token>", fmt % args)
         sys.stderr.write(f"{self.address_string()} {line}\n")
 
 

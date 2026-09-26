@@ -13,11 +13,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { describe, expect, it } from "vitest";
 import { compileGiftEscrow, compileSticker } from "../scripts/compile.js";
-import {
-  createGiftAuthorizer,
-  createGiftClaim,
-  prepareGiftTransfer,
-} from "../src/gift-sticker.js";
+import { createGiftAuthorizer, createGiftClaim, prepareGiftTransfer } from "../src/gift-sticker.js";
 
 const stickerArtifact = compileSticker();
 const escrowArtifact = compileGiftEscrow();
@@ -122,21 +118,29 @@ function createAuthorizer(
     signer,
     chainId: chain.id,
     escrowContract: context.escrowAddress,
-    findGift: async (requestedGiftId) => requestedGiftId === giftId ? {
-      giftId,
-      claimCommitment,
-      expiresAt,
-      status: "pending",
-    } : null,
-    findArtistSmartWallet: async (artistId) => artistId === "recipient-artist" ? {
-      address: context.recipient.address,
-      kind: "smart_account",
-      chainId: chain.id,
-    } : artistId === "recipient-with-signer-only" ? {
-      address: context.recipient.address,
-      kind: "signer_eoa",
-      chainId: chain.id,
-    } : null,
+    findGift: async (requestedGiftId) =>
+      requestedGiftId === giftId
+        ? {
+            giftId,
+            claimCommitment,
+            expiresAt,
+            status: "pending",
+          }
+        : null,
+    findArtistSmartWallet: async (artistId) =>
+      artistId === "recipient-artist"
+        ? {
+            address: context.recipient.address,
+            kind: "smart_account",
+            chainId: chain.id,
+          }
+        : artistId === "recipient-with-signer-only"
+          ? {
+              address: context.recipient.address,
+              kind: "signer_eoa",
+              chainId: chain.id,
+            }
+          : null,
   });
 }
 
@@ -146,12 +150,14 @@ describe("StickerGiftEscrow", () => {
     const expiresAt = Math.floor(Date.now() / 1000) + 3600;
     const claim = await stageGift(context, expiresAt);
 
-    await expect(context.publicClient.readContract({
-      address: context.stickerAddress,
-      abi: stickerArtifact.abi,
-      functionName: "ownerOf",
-      args: [1n],
-    })).resolves.toBe(getAddress(context.escrowAddress));
+    await expect(
+      context.publicClient.readContract({
+        address: context.stickerAddress,
+        abi: stickerArtifact.abi,
+        functionName: "ownerOf",
+        args: [1n],
+      }),
+    ).resolves.toBe(getAddress(context.escrowAddress));
     const gift = await context.publicClient.readContract({
       address: context.escrowAddress,
       abi: escrowArtifact.abi,
@@ -173,15 +179,10 @@ describe("StickerGiftEscrow", () => {
     const context = await setup();
     const expiresAt = Math.floor(Date.now() / 1000) + 3600;
     const claim = await stageGift(context, expiresAt);
-    const authorizer = createAuthorizer(
-      context,
-      claim.giftId,
-      claim.claimCommitment,
-      expiresAt,
-    );
+    const authorizer = createAuthorizer(context, claim.giftId, claim.claimCommitment, expiresAt);
     const authorized = await authorizer.authorizeClaim({
       giftId: claim.giftId,
-      claimToken: claim.claimToken,
+      giftClaimToken: claim.giftClaimToken,
       recipientArtistId: "recipient-artist",
     });
     const hash = await context.walletClient.writeContract({
@@ -199,40 +200,43 @@ describe("StickerGiftEscrow", () => {
     });
     await context.publicClient.waitForTransactionReceipt({ hash });
 
-    await expect(context.publicClient.readContract({
-      address: context.stickerAddress,
-      abi: stickerArtifact.abi,
-      functionName: "ownerOf",
-      args: [1n],
-    })).resolves.toBe(context.recipient.address);
-    await expect(context.publicClient.readContract({
-      address: context.escrowAddress,
-      abi: escrowArtifact.abi,
-      functionName: "pendingGiftForToken",
-      args: [1n],
-    })).resolves.toBe(`0x${"00".repeat(32)}`);
+    await expect(
+      context.publicClient.readContract({
+        address: context.stickerAddress,
+        abi: stickerArtifact.abi,
+        functionName: "ownerOf",
+        args: [1n],
+      }),
+    ).resolves.toBe(context.recipient.address);
+    await expect(
+      context.publicClient.readContract({
+        address: context.escrowAddress,
+        abi: escrowArtifact.abi,
+        functionName: "pendingGiftForToken",
+        args: [1n],
+      }),
+    ).resolves.toBe(`0x${"00".repeat(32)}`);
   }, 20_000);
 
-  it("rejects invalid claim tokens, signer authorizations, and signer EOAs", async () => {
+  it("rejects invalid gift claim tokens, signer authorizations, and signer EOAs", async () => {
     const context = await setup();
     const expiresAt = Math.floor(Date.now() / 1000) + 3600;
     const claim = await stageGift(context, expiresAt);
-    const authorizer = createAuthorizer(
-      context,
-      claim.giftId,
-      claim.claimCommitment,
-      expiresAt,
-    );
-    await expect(authorizer.authorizeClaim({
-      giftId: claim.giftId,
-      claimToken: `0x${"ff".repeat(32)}`,
-      recipientArtistId: "recipient-artist",
-    })).rejects.toThrow("claim token is invalid");
-    await expect(authorizer.authorizeClaim({
-      giftId: claim.giftId,
-      claimToken: claim.claimToken,
-      recipientArtistId: "recipient-with-signer-only",
-    })).rejects.toThrow("smart wallet is unavailable");
+    const authorizer = createAuthorizer(context, claim.giftId, claim.claimCommitment, expiresAt);
+    await expect(
+      authorizer.authorizeClaim({
+        giftId: claim.giftId,
+        giftClaimToken: `0x${"ff".repeat(32)}`,
+        recipientArtistId: "recipient-artist",
+      }),
+    ).rejects.toThrow("Gift claim token is invalid");
+    await expect(
+      authorizer.authorizeClaim({
+        giftId: claim.giftId,
+        giftClaimToken: claim.giftClaimToken,
+        recipientArtistId: "recipient-with-signer-only",
+      }),
+    ).rejects.toThrow("smart wallet is unavailable");
 
     const unauthorized = await createAuthorizer(
       context,
@@ -242,22 +246,24 @@ describe("StickerGiftEscrow", () => {
       context.stranger,
     ).authorizeClaim({
       giftId: claim.giftId,
-      claimToken: claim.claimToken,
+      giftClaimToken: claim.giftClaimToken,
       recipientArtistId: "recipient-artist",
     });
-    await expect(context.walletClient.writeContract({
-      address: context.escrowAddress,
-      abi: escrowArtifact.abi,
-      functionName: "claimGift",
-      args: [
-        claim.giftId,
-        context.recipient.address,
-        BigInt(unauthorized.authorizationDeadline),
-        unauthorized.authorization,
-      ],
-      account: context.relayer,
-      chain,
-    })).rejects.toThrow();
+    await expect(
+      context.walletClient.writeContract({
+        address: context.escrowAddress,
+        abi: escrowArtifact.abi,
+        functionName: "claimGift",
+        args: [
+          claim.giftId,
+          context.recipient.address,
+          BigInt(unauthorized.authorizationDeadline),
+          unauthorized.authorization,
+        ],
+        account: context.relayer,
+        chain,
+      }),
+    ).rejects.toThrow();
   }, 20_000);
 
   it("returns rejected and expired gifts to the sender", async () => {
@@ -271,7 +277,7 @@ describe("StickerGiftEscrow", () => {
       rejectedExpiresAt,
     ).authorizeRejection({
       giftId: rejectedClaim.giftId,
-      claimToken: rejectedClaim.claimToken,
+      giftClaimToken: rejectedClaim.giftClaimToken,
     });
     const rejectionHash = await rejectedContext.walletClient.writeContract({
       address: rejectedContext.escrowAddress,
@@ -286,12 +292,14 @@ describe("StickerGiftEscrow", () => {
       chain,
     });
     await rejectedContext.publicClient.waitForTransactionReceipt({ hash: rejectionHash });
-    await expect(rejectedContext.publicClient.readContract({
-      address: rejectedContext.stickerAddress,
-      abi: stickerArtifact.abi,
-      functionName: "ownerOf",
-      args: [1n],
-    })).resolves.toBe(rejectedContext.artist.address);
+    await expect(
+      rejectedContext.publicClient.readContract({
+        address: rejectedContext.stickerAddress,
+        abi: stickerArtifact.abi,
+        functionName: "ownerOf",
+        args: [1n],
+      }),
+    ).resolves.toBe(rejectedContext.artist.address);
 
     const expiredContext = await setup();
     const expiredAt = Math.floor(Date.now() / 1000) + 60;
@@ -307,11 +315,13 @@ describe("StickerGiftEscrow", () => {
       chain,
     });
     await expiredContext.publicClient.waitForTransactionReceipt({ hash: returnHash });
-    await expect(expiredContext.publicClient.readContract({
-      address: expiredContext.stickerAddress,
-      abi: stickerArtifact.abi,
-      functionName: "ownerOf",
-      args: [1n],
-    })).resolves.toBe(expiredContext.artist.address);
+    await expect(
+      expiredContext.publicClient.readContract({
+        address: expiredContext.stickerAddress,
+        abi: stickerArtifact.abi,
+        functionName: "ownerOf",
+        args: [1n],
+      }),
+    ).resolves.toBe(expiredContext.artist.address);
   }, 30_000);
 });

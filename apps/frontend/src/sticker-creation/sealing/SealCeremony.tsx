@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { LiveResin } from "../../stickers/LiveResin";
+import { sweepSheen } from "../../stickers/resinSheen";
 import type { StickerRecord } from "../../stickers/stickerStorage";
 import { useReducedMotion } from "../../ui/useReducedMotion";
-import { makeCutLine, paintDim, paintHole } from "./ceremonyPaint";
+import { makeCutLine, paintDim, paintUsedStickerSilhouette } from "./ceremonyPaint";
 import type { SealedSticker } from "./makeSticker";
 import { SealedCard } from "./SealedCard";
 import {
@@ -97,7 +99,7 @@ export function SealCeremony({
       need(host.querySelector<E>(selector), selector);
     const parts = {
       dim: el<HTMLCanvasElement>(".seal-ceremony__dim"),
-      hole: el<HTMLCanvasElement>(".seal-ceremony__hole"),
+      usedStickerSilhouette: el<HTMLCanvasElement>(".seal-ceremony__used-sticker-silhouette"),
       veil: el<HTMLElement>(".seal-ceremony__veil"),
       cut: el<HTMLCanvasElement>(".seal-ceremony__cut"),
       shadow: el<HTMLElement>(".seal-ceremony__shadow"),
@@ -121,7 +123,7 @@ export function SealCeremony({
     const size = { w: host.offsetWidth, h: host.offsetHeight };
     const r = Math.min(devicePixelRatio || 1, 2);
     paintDim(parts.dim, size, box, sticker.maskImage, r);
-    paintHole(parts.hole, box, sticker.maskImage, r);
+    paintUsedStickerSilhouette(parts.usedStickerSilhouette, box, sticker.maskImage, r);
     const drawCut = makeCutLine(parts.cut, size, contour, r);
 
     const path = flight(box, body, {
@@ -155,7 +157,7 @@ export function SealCeremony({
       opacity(parts.shadow, s.opacity);
       parts.shadow.style.transform = `translate(${s.x}px, ${s.y}px) rotate(${s.rotate}deg) scale(${s.scale})`;
       host.toggleAttribute("data-lifted", f.lifted);
-      opacity(parts.hole, f.hole);
+      opacity(parts.usedStickerSilhouette, f.usedStickerSilhouette);
       opacity(cardEl, f.card.opacity);
       cardEl.style.transform = f.card.y ? `translateY(${f.card.y}px)` : "";
       lines.forEach((node, i) => {
@@ -165,15 +167,7 @@ export function SealCeremony({
       // It sticks with a sheen, unless it was skipped past.
       if (!swept && t >= T.land && t < TOTAL - 1 && !reduced) {
         swept = true;
-        parts.sheen.animate(
-          [
-            { transform: "translateX(-140%) skewX(-16deg)", opacity: 0 },
-            { opacity: 1, offset: 0.2 },
-            { opacity: 1, offset: 0.75 },
-            { transform: "translateX(260%) skewX(-16deg)", opacity: 0 },
-          ],
-          { duration: 640, easing: "cubic-bezier(0.3, 0.6, 0.2, 1)" },
-        );
+        sweepSheen(parts.sheen, 640);
       }
       if (f.done && !ended) {
         ended = true;
@@ -243,7 +237,11 @@ export function SealCeremony({
     >
       <p className="seal-ceremony__status visually-hidden" role="status" />
       <canvas className="seal-ceremony__dim" aria-hidden="true" />
-      <canvas className="seal-ceremony__hole" style={boxStyle(box)} aria-hidden="true" />
+      <canvas
+        className="seal-ceremony__used-sticker-silhouette"
+        style={boxStyle(box)}
+        aria-hidden="true"
+      />
       <span className="seal-ceremony__veil" aria-hidden="true" />
       <canvas className="seal-ceremony__cut" aria-hidden="true" />
       <SealedCard
@@ -270,20 +268,7 @@ export function SealCeremony({
         <span className="seal-ceremony__pour">
           <b style={boxStyle(pour)} />
         </span>
-        <span className="live-resin">
-          <i className="live-resin__lens">
-            <b />
-          </i>
-          <i className="live-resin__spec">
-            <b />
-          </i>
-          <i className="live-resin__rim">
-            <b />
-          </i>
-          <i className="live-resin__sheen">
-            <b />
-          </i>
-        </span>
+        <LiveResin highlights />
       </div>
     </div>
   );

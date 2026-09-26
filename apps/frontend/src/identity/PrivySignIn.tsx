@@ -5,7 +5,7 @@ import { setPrivyStatus } from "./privy";
 // Privy's SDK is large, so it loads on its own once the board is up and never delays it.
 const PrivySession = lazy(() => import("./PrivySession"));
 
-/** Privy failing, down to its code not loading, shows on the profile card and never takes the app down. */
+/** Privy failing, down to its code not loading, shows on the stat board and never takes the app down. */
 class PrivyBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
 

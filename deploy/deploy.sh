@@ -47,7 +47,8 @@ if [ -n "$changed" ]; then
 fi
 
 echo "→ rsync → $TARGET:$AUTH_DIR"
-auth_changed="$(rsync -ai --delete "$AUTH_BUILD/" "$TARGET:$AUTH_DIR/server/")"
+# By content, without times: every deploy rebuilds the server, and a new timestamp alone would restart it.
+auth_changed="$(rsync -rci --delete "$AUTH_BUILD/" "$TARGET:$AUTH_DIR/server/")"
 auth_changed+="$(rsync -ai "$ROOT/deploy/sticker-auth.env" "$TARGET:$AUTH_DIR/auth.env")"
 auth_changed+="$(rsync -ai "$ROOT/deploy/sticker-auth.service" "$TARGET:$AUTH_DIR/")"
 # The key that signs Privy JWTs is made on the box and never leaves it.

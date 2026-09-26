@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode, Ref } from "react";
 
 type LabelTone = "plain" | "seal" | "aqua" | "pink" | "grape" | "tomato" | "ink";
 
@@ -7,6 +7,7 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: "md" | "sm";
   block?: boolean;
   icon?: ReactNode;
+  ref?: Ref<HTMLButtonElement>;
 }
 
 /** Label stock: every button that isn't the screen's key. */

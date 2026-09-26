@@ -18,6 +18,8 @@ const NOW = new Date(2026, 8, 26, 21, 4);
 const sticker: SealedSticker = {
   png: new Blob(),
   mask: new Blob(),
+  spec: new Blob(),
+  rim: new Blob(),
   flat: new Blob(),
   outline: "M0 0L100 0L100 80Z",
   width: 120,
@@ -52,7 +54,6 @@ const record: StickerRecord = {
   blob: new Blob(),
   width: 120,
   height: 100,
-  rotation: 0,
 };
 
 const onKeepDrawing = vi.fn();
@@ -96,7 +97,8 @@ beforeEach(() => {
   vi.useFakeTimers({ now: NOW });
   // Whether the sheen plays isn't tested here; happy-dom's own animations reject unhandled.
   vi.spyOn(Element.prototype, "animate").mockImplementation(() => new Animation());
-  // happy-dom has no 2D canvas: the ceremony plays without its dim, hole and cut line, and says so.
+  // happy-dom has no 2D canvas: the ceremony plays without its dim, used sticker silhouette and
+  // cut line, and says so.
   const report = console.error.bind(console);
   vi.spyOn(console, "error").mockImplementation((message: unknown, ...rest: unknown[]) => {
     if (!String(message).startsWith("No 2D context")) report(message, ...rest);

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GiftBackend } from "./giftBackend";
-import type { GiftCardMessage } from "./giftCard";
+import type { GiftMessage } from "./giftMessage";
 import type { GiftSendOutcome } from "./giftSender";
 import { createGiftStore, giftStatusBySticker, memoryStorage } from "./giftStore";
 import { createGiveFlow } from "./giveFlow";
@@ -21,14 +21,14 @@ class Deferred<T> {
 
 function setup({ backend }: { backend?: GiftBackend } = {}) {
   const store = createGiftStore(memoryStorage());
-  const cards: GiftCardMessage[] = [];
+  const messages: GiftMessage[] = [];
   const pickers: Deferred<GiftSendOutcome>[] = [];
   const flow = createGiveFlow({
     sticker: { id: "s1", no: 147, timeUsed: 292 },
     backend: backend ?? createLocalGiftBackend({ store, fromHandle: "alice", liffId: "123-abc" }),
     sender: {
-      send: (card) => {
-        cards.push(card);
+      send: (message) => {
+        messages.push(message);
         const picker = new Deferred<GiftSendOutcome>();
         pickers.push(picker);
         return picker.promise;
@@ -47,7 +47,7 @@ function setup({ backend }: { backend?: GiftBackend } = {}) {
   return {
     flow,
     store,
-    cards,
+    messages,
     picker,
     step: () => flow.getState().step,
     status: () => giftStatusBySticker(store.list()).get("s1"),
@@ -91,14 +91,14 @@ describe("giving through a LINE chat", () => {
     await wait(PICKER_DELAY - 1);
     expect(t.step()).toBe("packed");
     expect(t.status()?.state).toBe("packed");
-    expect(t.cards).toHaveLength(0);
+    expect(t.messages).toHaveLength(0);
 
     await wait(1);
     expect(t.step()).toBe("picking");
-    expect(t.cards).toHaveLength(1);
+    expect(t.messages).toHaveLength(1);
   });
 
-  it("seals only once LINE reports the card sent", async () => {
+  it("seals only once LINE reports the gift message sent", async () => {
     const t = setup();
     await openPicker(t);
     t.flow.takeOut();
@@ -140,8 +140,8 @@ describe("giving through a LINE chat", () => {
     t.flow.sendInLine();
     await wait();
     expect(t.step()).toBe("picking");
-    expect(t.cards).toHaveLength(2);
-    expect(t.cards[1]).not.toEqual(t.cards[0]);
+    expect(t.messages).toHaveLength(2);
+    expect(t.messages[1]).not.toEqual(t.messages[0]);
     expect(t.store.list().map((r) => r.state)).toEqual(["not_sent", "packed"]);
   });
 
@@ -150,11 +150,11 @@ describe("giving through a LINE chat", () => {
     t.flow.chooseLineChat();
     t.flow.sendInLine();
     await wait();
-    expect(t.cards).toHaveLength(1);
+    expect(t.messages).toHaveLength(1);
 
     t.picker().resolve("cancelled");
     await wait(PICKER_DELAY * 2);
-    expect(t.cards).toHaveLength(1);
+    expect(t.messages).toHaveLength(1);
     expect(t.step()).toBe("notSent");
   });
 
@@ -168,7 +168,7 @@ describe("giving through a LINE chat", () => {
     await wait(TAKE_OUT);
     expect(t.step()).toBe("sheet");
     await wait(PICKER_DELAY * 2);
-    expect(t.cards).toHaveLength(0);
+    expect(t.messages).toHaveLength(0);
     expect(t.status()).toBeUndefined();
     expect(t.notSent().reason).toBe("taken_out");
   });
@@ -184,7 +184,7 @@ describe("giving through a LINE chat", () => {
     t.flow.chooseLineChat();
     await wait(PICKER_DELAY * 2);
     expect(t.failure()).toContain("storage is full");
-    expect(t.cards).toHaveLength(0);
+    expect(t.messages).toHaveLength(0);
   });
 
   it("still records the outcome when the flow closes mid-send", async () => {
@@ -201,7 +201,7 @@ describe("giving through a LINE chat", () => {
     t.flow.chooseLineChat();
     t.flow.dispose();
     await wait(PICKER_DELAY * 2);
-    expect(t.cards).toHaveLength(0);
+    expect(t.messages).toHaveLength(0);
     expect(t.status()).toBeUndefined();
   });
 });
