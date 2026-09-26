@@ -133,15 +133,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
   let content: ReactNode;
   if (view === "cantFind") {
     title = "Can’t find them?";
-    content = (
-      <CantFindThem
-        onBack={() => setCantFind(false)}
-        onShowAllChats={() => {
-          setCantFind(false);
-          flow?.chooseLineChat({ anyChat: true });
-        }}
-      />
-    );
+    content = <CantFindThem onBack={() => setCantFind(false)} />;
   } else if (state.step === "sheet") {
     title = `Give ${formatNo(sticker.no)}`;
     content = (
@@ -164,7 +156,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
           </span>
           <span className="giving__row-text">
             <b>Send in a LINE chat</b>
-            <small>Pick one friend. It goes only to them.</small>
+            <small>Pick your chat with them. The first to open it gets it.</small>
           </span>
           <CaretRight className="giving__row-chev" size={20} />
         </button>
@@ -221,8 +213,8 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
         </header>
         <p className="giving__sub">
           {unsent
-            ? "It’s still in the bag, unsealed. Pick a friend again, or take it out."
-            : "It seals when it’s sent. Pick one friend in LINE: the message goes only to your chat with them."}
+            ? "It’s still in the bag, unsealed. Pick a chat again, or take it out."
+            : "It seals when it’s sent. Pick your chat with them in LINE: whoever opens it first gets it."}
         </p>
         {problem.filter(Boolean).map((line) => (
           <p key={String(line)} className="giving__problem" role="alert">
