@@ -266,7 +266,12 @@ export function GratitudeMiniGame({
         <div className="gr-hud" ref={hud} aria-hidden />
         <div className="gr-stage" ref={stage} />
         <p className="gr-hint" ref={hint}>
-          Tap the heart as fast as you can!
+          {/* It beats like a game's start button, to be noticed before the first tap. */}
+          <span className="gr-hint-beat">
+            Tap the heart
+            <br />
+            as fast as you can!
+          </span>
         </p>
       </div>
       <div className="gr-fuu" ref={fuu} aria-hidden>
