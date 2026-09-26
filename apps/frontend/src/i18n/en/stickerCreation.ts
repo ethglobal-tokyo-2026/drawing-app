@@ -49,7 +49,7 @@ export const stickerCreation = {
     emptyAtTimeUp: "Time’s up. The sheet was empty, so nothing was sealed.",
     /** The chip when the server refused or didn't answer the seal; the reason is the API's error. */
     failed: "Couldn’t seal. {{reason}} Tap the check to try again.",
-    /** The chip when the sticker couldn't be cut on this device; the reason stays English. */
+    /** The chip when sealing failed on this device, before the server was asked; the reason stays English. */
     failedHere: "Couldn’t seal ({{reason}}). Tap the check to try again.",
   },
   /** The tool strip's tiles, named for assistive tech. */
