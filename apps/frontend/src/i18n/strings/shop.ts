@@ -1,0 +1,88 @@
+import type { Section } from "../catalog";
+
+export const shop = {
+  /** The Shop tab: the page's title */
+  title: { en: "Shop", ja: "ショップ" },
+  /** The Shop's reserve tickets section, the one thing on sale */
+  reserve: {
+    /** Reserve tickets section: its headline, under the fanned tickets */
+    title: { en: "Reserve tickets", ja: "有償チケット" },
+    /** Reserve tickets section: the one line under the headline, on what they're for */
+    lead: {
+      en: "Keep drawing after your daily tickets run out.",
+      ja: "無償チケットを使い切っても、かき続けられます。",
+    },
+    /** Reserve tickets section, under the fanned tickets: the ones you hold; `<count/>` is the reserve ticket mark and ×count */
+    held: { en: "You have <count/>", ja: "所持数<count/>" },
+    /** Reserve tickets section: what the line above says, for screen readers, when you hold one */
+    heldSpoken_one: { en: "You have {{count}} reserve ticket." },
+    /** Reserve tickets section: what the line above says, for screen readers */
+    heldSpoken_other: {
+      en: "You have {{count}} reserve tickets.",
+      ja: "有償チケットを{{count}}枚持っています。",
+    },
+    /** Reserve tickets section: the one-ticket price, while a bigger pack is discounted; `price` is in yen */
+    priceWithPacks: {
+      en: "{{price}} each, less in packs",
+      ja: "1枚{{price}}、まとめ買いでお得",
+    },
+    /** Reserve tickets section: the one-ticket price, while no pack is discounted; `price` is in yen */
+    price: { en: "{{price}} each", ja: "1枚{{price}}" },
+    /** Reserve tickets section: the blue key that opens the reserve ticket checkout */
+    buy: { en: "Buy reserve tickets", ja: "有償チケットを買う" },
+  },
+  /** The Sui credit, under the checkout's Pay key and at the foot of the reserve tickets section; `<logo/>` is Sui's logo, which Japanese puts first */
+  paymentsOn: { en: "Payments on <logo/>", ja: "<logo/>で決済" },
+  /** Beside each coming-soon shelf's name: nothing on it is on sale yet */
+  comingSoon: { en: "Coming soon", ja: "近日登場" },
+  /** On the first swatch of each coming-soon shelf: the one you have now */
+  yours: { en: "Yours", ja: "使用中" },
+  /** The coming-soon shelves, each a row of four swatches */
+  shelves: {
+    laminates: {
+      /** Laminates shelf: its name */
+      title: { en: "Laminates", ja: "ラミネート" },
+      /** Laminates shelf: the line under its name */
+      lead: {
+        en: "The finish your stickers are sealed with.",
+        ja: "シールを仕上げるときの表面加工です。",
+      },
+      /** Laminates shelf: the swatches' names, gloss first as the one every sticker has now */
+      items: {
+        gloss: { en: "Gloss", ja: "グロス" },
+        matte: { en: "Matte", ja: "マット" },
+        glitter: { en: "Glitter", ja: "ラメ" },
+        prism: { en: "Prism", ja: "プリズム" },
+      },
+    },
+    brushes: {
+      /** Brushes shelf: its name */
+      title: { en: "Brushes", ja: "ブラシ" },
+      /** Brushes shelf: the line under its name */
+      lead: { en: "More ways to lay down ink.", ja: "もっといろいろな線がかけます。" },
+      /** Brushes shelf: the swatches' names, the brush first as the one the drawing screen has now */
+      items: {
+        brush: { en: "Brush", ja: "ブラシ" },
+        marker: { en: "Marker", ja: "マーカー" },
+        fineliner: { en: "Fineliner", ja: "ミリペン" },
+        pixelPen: { en: "Pixel pen", ja: "ドットペン" },
+      },
+    },
+    backingFoils: {
+      /** Backing foils shelf: its name */
+      title: { en: "Backing foils", ja: "ホイル" },
+      /** Backing foils shelf: the line under its name */
+      lead: {
+        en: "The foil your stickers wear on other people’s sticker boards.",
+        ja: "ほかの人のシールボードで、あなたのシールのふちに光るホイルです。",
+      },
+      /** Backing foils shelf: the swatches' names, holo first as the foil every sticker wears now */
+      items: {
+        holo: { en: "Holo", ja: "ホロ" },
+        gold: { en: "Gold", ja: "ゴールド" },
+        silver: { en: "Silver", ja: "シルバー" },
+        roseGold: { en: "Rose gold", ja: "ローズゴールド" },
+      },
+    },
+  },
+} as const satisfies Section;

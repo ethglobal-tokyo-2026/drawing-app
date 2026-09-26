@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { boardSticker, people, sticker } from "../api/testFixtures";
 import { toApiPlacement, toPerson, toRecordPlacement } from "../api/views";
 import { placeUnplaced, toBoardSticker } from "./boardSticker";
+import { LAID_OUT_SPOTS, TAKEN_WITHIN } from "./placement";
 
 describe("toBoardSticker", () => {
   it("draws the API's board sticker with the app's names and milliseconds", () => {
@@ -46,6 +47,21 @@ describe("placeUnplaced", () => {
     expect(a.on && b.on).toBe(true);
     expect(Math.min(a.z, b.z)).toBeGreaterThan(at.z);
     expect(placeUnplaced(stickers).placed).toEqual([]);
+  });
+
+  it("spreads stickers that arrive together over spots of their own once the laid-out ones are taken", () => {
+    const some = () => Array.from({ length: LAID_OUT_SPOTS }, () => toBoardSticker(boardSticker()));
+    const onBoard = placeUnplaced(some()).stickers;
+    const arrived = some();
+    const { stickers, placed } = placeUnplaced([...onBoard, ...arrived]);
+    expect(placed.map((s) => s.id)).toEqual(arrived.map((s) => s.id));
+    for (const s of placed)
+      for (const other of stickers.filter((o) => o.id !== s.id)) {
+        const [a, b] = [s.placement, other.placement];
+        expect(Math.hypot(a.x - b.x, (a.y - b.y) * 1.4)).toBeGreaterThan(TAKEN_WITHIN);
+      }
+    // A reload that finds them unplaced again puts them in the same spots.
+    expect(placeUnplaced([...onBoard, ...arrived]).stickers).toEqual(stickers);
   });
 
   it("keeps the spots the board already gave its stickers over a reload's", () => {

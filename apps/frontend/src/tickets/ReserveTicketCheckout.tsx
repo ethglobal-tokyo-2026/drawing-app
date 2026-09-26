@@ -20,6 +20,7 @@ import { TICKET_PRICE_YEN } from "./config";
 import { formatYen, yenForJpyc } from "./prices";
 import { useReservePacks, type ReservePack } from "./reservePacks";
 import { TicketCount, TicketCounts } from "./TicketCount";
+import { TicketPurchases } from "./TicketPurchases";
 import { describeTickets } from "./tickets";
 import { TicketStubs } from "./TicketStubs";
 import { useTickets } from "./useTickets";
@@ -326,6 +327,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
                 : t(($) => $.tickets.checkout.pay)}
         </Key>
         <SuiCredit className="reserve-checkout__credit" />
+        {sui.address && shop && <TicketPurchases owner={sui.address} shop={shop} />}
         {close}
       </>
     );

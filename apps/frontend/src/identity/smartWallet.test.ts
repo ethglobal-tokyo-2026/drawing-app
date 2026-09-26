@@ -18,9 +18,11 @@ describe("the smart account becoming ready", () => {
     await expect(waitForSmartWallet()).resolves.toBe(wallet);
   });
 
-  it("offers retry when Privy never supplies a client", async () => {
+  it("offers retry, in the catalog's words, when Privy never supplies a client", async () => {
     vi.useFakeTimers();
-    const result = expect(waitForSmartWallet()).rejects.toThrow("Please try again");
+    const result = expect(waitForSmartWallet()).rejects.toMatchObject({
+      code: "smart_account_not_ready",
+    });
     await vi.runAllTimersAsync();
     await result;
   });

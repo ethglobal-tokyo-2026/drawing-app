@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { giving } from "../i18n/strings/giving";
 import { buildGiftMessage, type GiftMessageInput } from "./giftMessage";
 
 const input = (over: Partial<GiftMessageInput> = {}): GiftMessageInput => ({
@@ -57,14 +58,15 @@ describe("buildGiftMessage", () => {
     );
   });
 
-  it("is written in the giver's language, falling back to English where Japanese has no text yet", () => {
+  it("is written in the giver's language", () => {
     const message = buildGiftMessage(input({ language: "ja" }));
-    expect(message.altText).toBe("@aliceからシールが届きました");
-    expect(JSON.stringify(message)).toContain('"label":"ギフトをひらく"');
+    const { giftMessage, tag } = giving;
+    expect(message.altText).toBe(giftMessage.altText.ja.replace("{{name}}", "@alice"));
+    expect(JSON.stringify(message)).toContain(`"label":"${giftMessage.open.ja}"`);
     expect(printedTexts(message)).toEqual([
-      "NO.0147 · ONE OF ONE",
-      "From @alice",
-      "A one-of-one sticker, drawn in 4分52秒. It opens once.",
+      `NO.0147 · ${giftMessage.oneOfOne.ja}`,
+      `${tag.from.ja} @alice`,
+      giftMessage.body.ja.replace("{{duration}}", "4分52秒"),
     ]);
   });
 

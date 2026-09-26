@@ -45,7 +45,7 @@ Scripts: `flow.mjs` (real user, flip, scroll, seal attempt), `render.mjs` (mocke
     - Leave off a row at 0.
     - In the CSS, delete the dot rules and `small` rule (stat-board.css:290-313) and set each row as label left, amount right.
     - statFigures.ts:25 only needs its type changed.
-    - New strings go into `apps/frontend/src/i18n/en/stickerBoard.ts`, in a new `statBoard` section, with ja Translations (AGENTS.MD:54). Suggested ja: 直接 / 作者として, for the ja catalog's owner to confirm.
+    - New strings go into `apps/frontend/src/i18n/strings/stickerBoard.ts`, under `statBoard`, each `{ en, ja }` under its where-comment (AGENTS.MD "Internationalization"). Suggested ja: 直接 / 作者として, for the ja catalog's owner to confirm.
   - **Docs:**
     - AGENTS.MD vocabulary needs ad0ll's approval first (AGENTS.MD:5 says agents may not invent or redefine vocabulary). Rename "Original Artist Gratitude Share" to Residual, or give it Residual as its on-screen name, and add Direct.
     - DESIGN.md:471 (the cork back's Gratitude bullet).

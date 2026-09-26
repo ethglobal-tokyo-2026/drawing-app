@@ -204,6 +204,11 @@
   padding: 6px 16px 6px 14px;
 }
 
+/* A leaderboard nobody is on yet says so at the rows' inset. */
+.leaderboard-empty {
+  padding: 14px 16px 14px 14px;
+}
+
 .leaderboard li + li,
 .search-results li + li {
   border-top: 1px solid var(--rule);
