@@ -7,7 +7,7 @@
   right: var(--gutter);
   bottom: var(--gutter);
   padding-bottom: 16px;
-  border-radius: 22px;
+  border-radius: 16px;
   box-shadow:
     0 0 0 0.5px rgba(28, 24, 36, 0.18),
     3px 7px 8px rgba(28, 24, 36, 0.16),
