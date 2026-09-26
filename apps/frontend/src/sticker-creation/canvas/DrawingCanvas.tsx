@@ -6,6 +6,7 @@ import {
   useRef,
   type Ref,
 } from "react";
+import { useTranslation } from "../../i18n/react";
 import { InkEngine, type InkEvents, type InkSettings } from "./inkEngine";
 import { InkSurface } from "./inkSurface";
 import type { Op } from "./ops";
@@ -40,6 +41,7 @@ interface Props extends InkEvents {
  * React state; the engine reads the settings as each pointer lands and reports back through the events.
  */
 export function DrawingCanvas({ ref, settings, active, ...events }: Props) {
+  const { t } = useTranslation();
   const sheetRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const ink = useRef<{ engine: InkEngine; surface: InkSurface } | null>(null);
@@ -114,7 +116,11 @@ export function DrawingCanvas({ ref, settings, active, ...events }: Props) {
 
   return (
     <div ref={sheetRef} className="ink-sheet" data-tool={settings.tool}>
-      <canvas ref={canvasRef} className="ink-canvas" aria-label="Canvas" />
+      <canvas
+        ref={canvasRef}
+        className="ink-canvas"
+        aria-label={t(($) => $.stickerCreation.canvas)}
+      />
     </div>
   );
 }
