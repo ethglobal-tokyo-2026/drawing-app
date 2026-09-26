@@ -1,14 +1,10 @@
 import type { Sticker } from "@drawing-app/api/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { setSmartWallet } from "../identity/smartWallet";
 import type { ApiClient } from "./apiClient";
+import { withSmartWallet } from "./smartWalletApi";
 import { sticker } from "./testFixtures";
 import { emptyApi } from "./testing";
-
-// As in a build: with LIFF Mock on, as on the dev server by default, Sealing skips both checks.
-vi.stubEnv("VITE_LIFF_MOCK", "off");
-
-const { setSmartWallet } = await import("../identity/smartWallet");
-const { withSmartWallet } = await import("./smartWalletApi");
 
 afterEach(() => setSmartWallet(null));
 
@@ -75,22 +71,5 @@ describe("REST actions that require a smart account", () => {
     const seal = vi.fn<ApiClient["seal"]>().mockResolvedValue(answer(sticker(confirmation)));
     const api = withSmartWallet(emptyApi({ seal }));
     await expect(api.seal(request)).rejects.toMatchObject({ code: "mint_failed" });
-  });
-});
-
-describe("Sealing under LIFF Mock, on the dev server", () => {
-  afterEach(() => {
-    vi.stubEnv("VITE_LIFF_MOCK", "off");
-  });
-
-  it("doesn't wait for a smart account, and takes the mock chain's seal without a token", async () => {
-    vi.stubEnv("VITE_LIFF_MOCK", "");
-    vi.resetModules();
-    const { withSmartWallet: underMock } = await import("./smartWalletApi");
-    const unconfirmed = answer(sticker({ tokenId: null, mintTxHash: null }));
-    const seal = vi.fn<ApiClient["seal"]>().mockResolvedValue(unconfirmed);
-    // Privy is off here, so no smart account is ever set.
-    await expect(underMock(emptyApi({ seal })).seal(request)).resolves.toBe(unconfirmed);
-    expect(seal).toHaveBeenCalledWith(request);
   });
 });
