@@ -67,7 +67,10 @@ export const FEEL_CONFIG = {
   intensity: { everyday: 0.7, full: 1 },
   /** 昇天's climax holds everything this long before the soul rises. */
   climaxFreezeMs: 140,
-  /** A first tap is a release within this travel and hold. */
+  /** Shares of the heart's half-width and half-height: how far past the middle of each side of its
+   * resting box a touch still counts, on the ellipse through the box's edges grown by this much. */
+  heartReach: 0.07,
+  /** A first tap lifts before it travels `tapSlopPx` or is held `tapHoldMs`. */
   tapSlopPx: 12,
   tapHoldMs: 800,
   /** Mini hearts: sprayed by taps from ドキドキ up, sweated off the heart, and 昇天's rain. */

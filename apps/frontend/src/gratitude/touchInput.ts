@@ -1,3 +1,5 @@
+import { FEEL_CONFIG } from "./gameConfig";
+
 /** The heart's resting box, in the stage's own pixels. */
 export interface HeartArea {
   cx: number;
@@ -7,14 +9,15 @@ export interface HeartArea {
 }
 
 /**
- * On the heart at rest: inside its box, or inside the ellipse through the box's edges grown by 7%,
- * which reaches a little past the middle of each side. The area never follows the heart's squash or
- * tremor, so an animation can't move the target out from under a thumb.
+ * On the heart at rest: inside its box, or inside the ellipse through the box's edges grown by
+ * `heartReach`, which reaches a little past the middle of each side. The area never follows the
+ * heart's squash or tremor, so an animation can't move the target out from under a thumb.
  */
 export function isOnHeart(x: number, y: number, heart: HeartArea): boolean {
   const dx = (x - heart.cx) / (heart.width / 2);
   const dy = (y - heart.cy) / (heart.height / 2);
-  return dx * dx + dy * dy < 1.15 || (Math.abs(dx) < 1 && Math.abs(dy) < 1);
+  const reach = 1 + FEEL_CONFIG.heartReach;
+  return dx * dx + dy * dy < reach * reach || (Math.abs(dx) < 1 && Math.abs(dy) < 1);
 }
 
 export interface TouchHandlers {
@@ -29,9 +32,9 @@ export interface TouchOptions {
   heartArea: () => HeartArea;
   /** A pointer's position in the stage's own pixels. */
   toStage: (e: PointerEvent) => { x: number; y: number };
-  /** A touch that travels further is a drag. */
+  /** A touch that travels this far is a drag. */
   tapSlopPx: number;
-  /** A touch held longer is a hold. */
+  /** A touch held this long is a hold. */
   tapHoldMs: number;
 }
 
@@ -62,7 +65,7 @@ export function listenForTouches(
     const grab = grabs.get(e.pointerId);
     if (!grab || grab.dragged) return;
     const { x, y } = options.toStage(e);
-    if (Math.hypot(x - grab.x, y - grab.y) > options.tapSlopPx) grab.dragged = true;
+    if (Math.hypot(x - grab.x, y - grab.y) >= options.tapSlopPx) grab.dragged = true;
   };
   const onUp = (e: PointerEvent) => {
     const grab = grabs.get(e.pointerId);

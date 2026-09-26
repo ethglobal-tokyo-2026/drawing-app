@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { isOnHeart, listenForTouches, type HeartArea } from "./touchInput";
 
 const heart: HeartArea = { cx: 200, cy: 400, width: 220, height: 212 };
+const TAP_SLOP_PX = 12;
+const TAP_HOLD_MS = 800;
 
 let stage: HTMLDivElement;
 let stop: () => void;
@@ -30,8 +32,8 @@ beforeEach(() => {
     {
       heartArea: () => heart,
       toStage: (e) => ({ x: e.clientX, y: e.clientY }),
-      tapSlopPx: 12,
-      tapHoldMs: 800,
+      tapSlopPx: TAP_SLOP_PX,
+      tapHoldMs: TAP_HOLD_MS,
     },
     { onHeartDown, onHeartTap },
   );
@@ -44,11 +46,14 @@ afterEach(() => {
 });
 
 describe("isOnHeart", () => {
-  it("takes a touch just inside the heart's resting box and refuses one just outside it", () => {
+  it("takes a touch in the heart's resting box or just past the middle of a side, and none further", () => {
     const right = heart.cx + heart.width / 2;
     const bottom = heart.cy + heart.height / 2;
     expect(isOnHeart(right - 1, heart.cy, heart)).toBe(true);
     expect(isOnHeart(heart.cx, bottom - 1, heart)).toBe(true);
+    // The ellipse reaches past the side, and the box fills the corner the ellipse misses.
+    expect(isOnHeart(right + 1, heart.cy, heart)).toBe(true);
+    expect(isOnHeart(right - 1, bottom - 1, heart)).toBe(true);
     expect(isOnHeart(right + heart.width * 0.1, heart.cy, heart)).toBe(false);
     expect(isOnHeart(right + 1, bottom + 1, heart)).toBe(false);
   });
@@ -68,14 +73,14 @@ describe("listenForTouches", () => {
     expect(onHeartDown).toHaveBeenCalledTimes(2);
   });
 
-  it("reports a quick lift as a tap, and a drag or a hold as neither", () => {
+  it("reports a quick lift as a tap, and a drag or a hold, from the slop and hold time on, as neither", () => {
     pointer("pointerdown", heart.cx, heart.cy, 0);
     pointer("pointerup", heart.cx, heart.cy, 120);
     pointer("pointerdown", heart.cx, heart.cy, 1000, 2);
-    pointer("pointermove", heart.cx + 20, heart.cy, 1050, 2);
-    pointer("pointerup", heart.cx + 20, heart.cy, 1100, 2);
+    pointer("pointermove", heart.cx + TAP_SLOP_PX, heart.cy, 1050, 2);
+    pointer("pointerup", heart.cx + TAP_SLOP_PX, heart.cy, 1100, 2);
     pointer("pointerdown", heart.cx, heart.cy, 2000, 3);
-    pointer("pointerup", heart.cx, heart.cy, 2900, 3);
+    pointer("pointerup", heart.cx, heart.cy, 2000 + TAP_HOLD_MS, 3);
     expect(onHeartTap).toHaveBeenCalledTimes(1);
     expect(onHeartTap).toHaveBeenCalledWith(120, heart.cx, heart.cy);
   });
