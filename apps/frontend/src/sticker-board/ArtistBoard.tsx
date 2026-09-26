@@ -46,18 +46,24 @@ const FULL_GLOW = 900;
 /** The sticker menu's width, for keeping it on the board. */
 const MENU_W = 250;
 
-/** A demo sticker as the board's parts take it: an image of its art, where it was stuck. */
-const asBoardSticker = (owner: string, s: ArtistBoardSticker, z: number): BoardSticker => ({
-  id: `${owner}-${s.no}`,
-  no: s.no,
-  createdAt: s.sealedAt,
-  timeUsed: s.timeUsed,
-  blob: new Blob(),
-  width: ART_SIZE,
-  height: ART_SIZE,
-  urls: { png: stickerArtUrl(s.art) },
-  placement: { on: true, x: s.x, y: s.y, s: s.scale, r: s.rotation, z },
-});
+/**
+ * A demo sticker as the board's parts take it: an image of its art, where it was stuck. The art
+ * doubles as its mask, since its alpha is the silhouette, white edge and all.
+ */
+const asBoardSticker = (owner: string, s: ArtistBoardSticker, z: number): BoardSticker => {
+  const art = stickerArtUrl(s.art);
+  return {
+    id: `${owner}-${s.no}`,
+    no: s.no,
+    createdAt: s.sealedAt,
+    timeUsed: s.timeUsed,
+    blob: new Blob(),
+    width: ART_SIZE,
+    height: ART_SIZE,
+    urls: { png: art, mask: art },
+    placement: { on: true, x: s.x, y: s.y, s: s.scale, r: s.rotation, z },
+  };
+};
 
 /** Someone else's board has no sticker tray, so its field runs to the right inset too. */
 const visitField = (w: number, h: number): Field => {
