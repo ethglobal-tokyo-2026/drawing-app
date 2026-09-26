@@ -23,6 +23,7 @@ import { GiftBag } from "./GiftBag";
 import type { GiftSender } from "./giftSender";
 import { deviceGiftStore } from "./giftStore";
 import type { GiveFlowState } from "./giveFlow";
+import heroPng from "./gift-message-hero.png";
 import { createLocalGiftBackend } from "./localGiftBackend";
 import { useGiveFlow } from "./useGiveFlow";
 import "./Giving.css";
@@ -73,6 +74,8 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
       store: deviceGiftStore(),
       fromHandle,
       liffId,
+      // The sealed bag, never the sticker; the gift message drops it where the app isn't on HTTPS.
+      heroUrl: new URL(heroPng, location.origin).href,
     }),
     pickerDelayMs: PICKER_DELAY[motion],
     takeOutMs: TAKE_OUT[motion],
