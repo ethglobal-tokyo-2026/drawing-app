@@ -26,6 +26,7 @@ import { useReducedMotion } from "../ui/useReducedMotion";
 import { HitCounter } from "../ui/HitCounter";
 import { LiftedSticker } from "./LiftedSticker";
 import { dayBadge, exploreDay, pileDays, type PileSticker } from "./pileDays";
+import { textWidth } from "./pileLayout";
 import { pileOrigin } from "./pileOrigin";
 import { StickerPile } from "./StickerPile";
 import "./ExploreScreen.css";
@@ -96,6 +97,11 @@ function Avatar({ person, size }: { person: Person; size: number }) {
   return <PhotoSticker src={view.pictureUrl} name={view.name} size={size} />;
 }
 
+/** A handle with its natural breaks marked: after "_", "." or "-", as on the pile's name tags. */
+function breakable(text: string): ReactNode[] {
+  return text.split(/(?<=[_.-])/).flatMap((part, i) => (i ? [<wbr key={i} />, part] : [part]));
+}
+
 function PersonRow({
   person,
   meId,
@@ -113,6 +119,7 @@ function PersonRow({
 }) {
   const { t } = useTranslation();
   const isMe = person.id === meId;
+  const handle = formatHandle(person.handle ?? "");
   return (
     <li className={isMe ? "me" : ""}>
       <Pressable
@@ -122,7 +129,7 @@ function PersonRow({
       >
         {lead}
         <span className="row-names">
-          <b>{name ?? formatHandle(person.handle ?? "")}</b>
+          <b style={{ "--handle-w": textWidth(handle) }}>{name ?? breakable(handle)}</b>
           <span>{isMe ? t(($) => $.explore.you) : toPerson(person).name}</span>
         </span>
         {trail}
@@ -499,12 +506,12 @@ function SearchResults({ query, meId, open }: { query: string; meId: string; ope
               open={open}
               name={
                 at < 0 ? (
-                  formatHandle(handle)
+                  breakable(formatHandle(handle))
                 ) : (
                   <>
-                    {formatHandle(handle.slice(0, at))}
-                    <mark>{handle.slice(at, at + query.length)}</mark>
-                    {handle.slice(at + query.length)}
+                    {breakable(formatHandle(handle.slice(0, at)))}
+                    <mark>{breakable(handle.slice(at, at + query.length))}</mark>
+                    {breakable(handle.slice(at + query.length))}
                   </>
                 )
               }
