@@ -19,9 +19,39 @@ export const explore = {
     yours: "Your sticker board",
     theirs: "{{handle}}'s sticker board",
   },
-  today: {
-    title: "Today’s stickers",
-    none: "No one has sealed a sticker yet today.",
+  /** The switch under the search between Explore's two views. */
+  views: {
+    /** Names the switch for assistive tech. */
+    label: "Explore",
+    stickers: "Stickers",
+    thisWeek: "This week",
+  },
+  /** The sticker pile: each day's stickers heaped on its own floor. */
+  pile: {
+    /** Each day's heading, for assistive tech. An older day is its date, in the app's language. */
+    today: "Today",
+    yesterday: "Yesterday",
+    /** Today's dot badge, on its perforation: "Today 9.26". */
+    todayBadge: "Today {{date}}",
+    /** A sticker in the pile, for assistive tech: "No.0147 by @mika, 5 min ago". */
+    sticker: "{{number}} by {{artist}}, {{ago}}",
+    /** A given sticker, with who it last went to. */
+    stickerGiven: "{{number}} by {{artist}}, {{ago}}, given to {{receiver}}",
+    /** The aqua tag on a given sticker. <handle/> is who it went to. */
+    to: "to <handle/>",
+    /** Today's floor while it has no stickers. */
+    empty: "The first sticker sealed today lands here.",
+    /** Said once as the pile opens, when stickers arrived since your last look. */
+    arrivals_one: "{{count}} new sticker since you last looked",
+    arrivals_other: "{{count}} new stickers since you last looked",
+    /** How long ago a sticker was sealed, in its largest whole unit. */
+    ago: {
+      justNow: "just now",
+      minutes: "{{minutes}} min ago",
+      hours: "{{hours}} hr ago",
+      days_one: "{{count}} day ago",
+      days_other: "{{count}} days ago",
+    },
   },
   thisWeek: {
     title: "This week",
@@ -41,20 +71,6 @@ export const explore = {
     hits: "×{{hits}}",
     streak_one: "{{count}}<small>day</small>",
     streak_other: "{{count}}<small>days</small>",
-  },
-  /** The activity feed. <artist/>, <giver/> and <receiver/> are handles. */
-  feed: {
-    sealed: "<artist/> made a sticker",
-    gave: "<giver/> gave a sticker to <receiver/>",
-    gaveYou: "<giver/> gave a sticker to <b>you</b>",
-    /** Under the sticker: its number, drawing time and artist. */
-    caption: "{{number}} · <duration/> · <artist/>",
-    /** How long ago, in its largest whole unit. */
-    ago: {
-      minutes: "{{minutes}} min",
-      hours: "{{hours}} hr",
-      days: "{{days}} d",
-    },
   },
   failed: {
     explore: "Couldn’t load Explore",

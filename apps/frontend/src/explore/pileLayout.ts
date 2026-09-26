@@ -61,11 +61,11 @@ function textWidth(text: string): number {
   let w = 0;
   for (const ch of text) {
     const code = ch.codePointAt(0) ?? 0;
-    if (code >= 0x1100) w += 11.5;
-    else if (ch >= "A" && ch <= "Z") w += 8;
-    else if (ch === "i" || ch === "l" || ch === "." || ch === "_" || ch === "'") w += 4;
-    else if (ch === "m" || ch === "w" || ch === "@") w += 10;
-    else w += 6.6;
+    if (code >= 0x1100) w += 12;
+    else if (ch >= "A" && ch <= "Z") w += 8.8;
+    else if (ch === "i" || ch === "l" || ch === "." || ch === "_" || ch === "'") w += 4.4;
+    else if (ch === "m" || ch === "w" || ch === "@") w += 11.5;
+    else w += 7.4;
   }
   return w;
 }
