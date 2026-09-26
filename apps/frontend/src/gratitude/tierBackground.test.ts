@@ -54,4 +54,24 @@ describe("createTierBackground", () => {
     background.hideAll();
     expect(raysTurn()).toBe(false);
   });
+
+  it("dents the top wall where the heart hit it, and a bare edge on the screen's edge", () => {
+    const { background } = setUp();
+    const animate = vi.spyOn(Element.prototype, "animate");
+    const place = () => {
+      const frames = animate.mock.lastCall?.[0];
+      const first = Array.isArray(frames) ? frames[0] : undefined;
+      return String(first?.transform).split(" scale")[0];
+    };
+    background.dent("top", 120, 176);
+    expect(place()).toBe("translate(120px,176px) rotate(0deg)");
+    background.dent("top", 120);
+    expect(place()).toBe("translate(120px,0px) rotate(0deg)");
+    background.dent("bottom", 80);
+    expect(place()).toBe("translate(80px,741px) rotate(180deg)");
+    background.dent("left", 300);
+    expect(place()).toBe("translate(0px,300px) rotate(-90deg)");
+    background.dent("right", 300);
+    expect(place()).toBe("translate(390px,300px) rotate(90deg)");
+  });
 });

@@ -21,8 +21,12 @@ export interface TierBackground {
   hideAll: () => void;
   /** The screen's corner peels up by `amount`, 0–1: a hard shake could shake the heart loose. */
   liftCorner: (amount: number) => void;
-  /** Where the loose heart hit an edge, `along` px along it, the edge dents in. */
-  dent: (edge: ScreenEdge, along: number) => void;
+  /**
+   * Where the loose heart hit an edge, `along` px along it, the edge dents in. `across` is the
+   * hit's place on the other axis, so a dent in the top wall, the HUD's underside, shows where the
+   * heart hit it; without it, the dent sits on the screen's own edge.
+   */
+  dent: (edge: ScreenEdge, along: number, across?: number) => void;
   /** Takes what it put in `front` away; the engine empties the ground. */
   destroy: () => void;
 }
@@ -219,16 +223,16 @@ export function createTierBackground(
       cornerLift = clamp(amount, 0, 1);
     },
 
-    dent(edge, along) {
+    dent(edge, along, across) {
       const { width, height } = screen;
       const at =
         edge === "top"
-          ? `translate(${along}px,0) rotate(0deg)`
+          ? `translate(${along}px,${across ?? 0}px) rotate(0deg)`
           : edge === "bottom"
-            ? `translate(${along}px,${height}px) rotate(180deg)`
+            ? `translate(${along}px,${across ?? height}px) rotate(180deg)`
             : edge === "left"
-              ? `translate(0,${along}px) rotate(-90deg)`
-              : `translate(${width}px,${along}px) rotate(90deg)`;
+              ? `translate(${across ?? 0}px,${along}px) rotate(-90deg)`
+              : `translate(${across ?? width}px,${along}px) rotate(90deg)`;
       const dent = (dents.length >= DENTS ? dents.shift() : undefined) ?? {
         el: Object.assign(dentLayer.appendChild(layer("gr-dent")), { innerHTML: DENT_SVG }),
         animation: null,
