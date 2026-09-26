@@ -45,6 +45,12 @@ export type LineProfile = z.infer<typeof lineProfileSchema>;
 /** LINE refused the ID token: expired, forged, or issued for another channel. */
 export class LineTokenInvalidError extends Error {
   name = "LineTokenInvalidError";
+  readonly reason: "invalid" | "expired";
+
+  constructor(message?: string, reason: "invalid" | "expired" = "invalid") {
+    super(message);
+    this.reason = reason;
+  }
 }
 
 export interface LineVerifier {

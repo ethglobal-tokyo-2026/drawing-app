@@ -6,10 +6,12 @@ const liff = vi.hoisted(() => ({
   getDecodedIDToken: vi.fn<() => { exp: number } | null>(),
 }));
 vi.mock("@line/liff", () => ({ default: liff }));
+const reconnectLine = vi.hoisted(() => vi.fn<() => Promise<void>>());
+vi.mock("../line/reconnectLine", () => ({ reconnectLine }));
 // As in a build: with LIFF Mock on, as on the dev server by default, Privy stays off.
 vi.stubEnv("VITE_LIFF_MOCK", "off");
 
-const { fetchPrivyJwt, privyStatus, retryPrivySignIn } = await import("./privy");
+const { fetchPrivyJwt, privyStatus, retryPrivySignIn, setPrivyStatus } = await import("./privy");
 
 const nowS = () => Math.floor(Date.now() / 1000);
 const lineToken = (expiresInS: number) => {
@@ -26,7 +28,9 @@ const failureReason = () => {
 
 beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
+  reconnectLine.mockReset().mockResolvedValue(undefined);
   // Each test starts from a fresh sign-in, with no JWT kept from the last one.
+  setPrivyStatus({ state: "signing-in" });
   retryPrivySignIn();
 });
 afterEach(() => {
@@ -60,9 +64,9 @@ describe("trading LINE's ID token for a Privy JWT", () => {
   });
 
   // The SDK re-syncs on its own after a failure; each retry would hit the auth server, LINE and Privy.
-  it("asks nothing more after a failure until the person tries again", async () => {
+  it("retries an unavailable auth server only when the person tries again", async () => {
     lineToken(3600);
-    const fetch = server(401, { error: "line_auth_failed" });
+    const fetch = server(503, {});
     vi.stubGlobal("fetch", fetch);
     await fetchPrivyJwt();
     expect(await fetchPrivyJwt()).toBeUndefined();
@@ -70,6 +74,7 @@ describe("trading LINE's ID token for a Privy JWT", () => {
     retryPrivySignIn();
     await fetchPrivyJwt();
     expect(fetch).toHaveBeenCalledTimes(2);
+    expect(reconnectLine).not.toHaveBeenCalled();
   });
 
   // Privy logs the person out when this throws, so failures resolve and say why.
@@ -78,26 +83,79 @@ describe("trading LINE's ID token for a Privy JWT", () => {
     vi.stubGlobal("fetch", server(401, { error: "line_auth_failed" }));
     expect(await fetchPrivyJwt()).toBeUndefined();
     expect(failureReason()).toMatch(/401.*line_auth_failed/);
+    expect(privyStatus()).toMatchObject({ reconnectLine: true });
   });
 
-  it("resolves to nothing when the auth server can't be reached", async () => {
+  it("allows an ordinary retry when the auth server can't be reached", async () => {
     lineToken(3600);
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    const fetch = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+    vi.stubGlobal("fetch", fetch);
     expect(await fetchPrivyJwt()).toBeUndefined();
     expect(failureReason()).toContain("Failed to fetch");
+    retryPrivySignIn();
+    await fetchPrivyJwt();
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(reconnectLine).not.toHaveBeenCalled();
   });
 
-  it("never sends a missing or expired LINE ID token", async () => {
-    const fetch = server(200, { jwt: "privy.jwt" });
+  it.each(["missing", "expired"])(
+    "reconnects a %s LINE ID token on explicit retry",
+    async (token) => {
+      const fetch = server(200, { jwt: "privy.jwt", expiresAt: nowS() + 300 });
+      vi.stubGlobal("fetch", fetch);
+      if (token === "missing") {
+        liff.getIDToken.mockReturnValue(null);
+        liff.getDecodedIDToken.mockReturnValue(null);
+      } else {
+        lineToken(-10);
+      }
+      expect(await fetchPrivyJwt()).toBeUndefined();
+      expect(privyStatus()).toMatchObject({ state: "failed", reconnectLine: true });
+      expect(reconnectLine).not.toHaveBeenCalled();
+
+      retryPrivySignIn();
+      retryPrivySignIn();
+      expect(await fetchPrivyJwt()).toBeUndefined();
+      expect(reconnectLine).toHaveBeenCalledOnce();
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it("reconnects LINE after an auth rejection without repeating the exchange", async () => {
+    lineToken(3600);
+    const fetch = server(401, { error: "line_auth_failed" });
     vi.stubGlobal("fetch", fetch);
-    liff.getIDToken.mockReturnValue(null);
-    liff.getDecodedIDToken.mockReturnValue(null);
+    await fetchPrivyJwt();
     expect(await fetchPrivyJwt()).toBeUndefined();
+    expect(reconnectLine).not.toHaveBeenCalled();
+
     retryPrivySignIn();
-    lineToken(-10);
     expect(await fetchPrivyJwt()).toBeUndefined();
-    expect(failureReason()).toContain("expired");
-    expect(fetch).not.toHaveBeenCalled();
+
+    expect(reconnectLine).toHaveBeenCalledOnce();
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it("keeps a failed LINE reconnect recoverable without logging SDK error values", async () => {
+    lineToken(-10);
+    const failure = new Error("SDK error containing credential details");
+    reconnectLine.mockRejectedValueOnce(failure);
+    await fetchPrivyJwt();
+
+    retryPrivySignIn();
+    await vi.waitFor(() => {
+      expect(privyStatus()).toEqual({
+        state: "failed",
+        reason: "LINE could not reconnect; try again",
+        reconnectLine: true,
+      });
+    });
+    expect(vi.mocked(console.error).mock.calls.flat()).not.toContain(failure);
+    expect(vi.mocked(console.error).mock.calls.flat().join(" ")).not.toContain(failure.message);
+
+    retryPrivySignIn();
+    expect(reconnectLine).toHaveBeenCalledTimes(2);
+    expect(await fetchPrivyJwt()).toBeUndefined();
   });
 });
 
@@ -137,6 +195,24 @@ describe("Privy's errors after the JWT is accepted", () => {
     privy.onPrivyError(new Error(WALLET_FRAME_RACE));
     vi.advanceTimersByTime(1000);
     expect(privy.privyStatus()).toMatchObject({ state: "failed" });
+    expect(reconnectLine).not.toHaveBeenCalled();
+  });
+
+  it("preserves a newer LINE failure when a wallet-frame retry is pending", async () => {
+    const privy = await freshPrivy();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    privy.onPrivyError(new Error(WALLET_FRAME_RACE));
+    privy.setPrivyStatus({ state: "failed", reason: "LINE expired", reconnectLine: true });
+
+    vi.runAllTimers();
+    privy.onPrivyError(new Error("Invalid JWT"));
+
+    expect(privy.privyStatus()).toEqual({
+      state: "failed",
+      reason: "LINE expired",
+      reconnectLine: true,
+    });
+    expect(reconnectLine).not.toHaveBeenCalled();
   });
 
   it("shows any other error as the failure, without retrying", async () => {

@@ -4,7 +4,8 @@ import type { ErrorCode } from "../../api/apiClient";
 export const errors = {
   unknown: "Something went wrong ({{code}}).",
   network: "The app's server didn't answer. Check your connection, then try again.",
-  no_line_token: "LINE didn't give the app a way to sign you in.",
+  no_line_token: "LINE didn't provide a sign-in token. Reconnect with LINE to try again.",
+  line_reconnect_failed: "Couldn't reconnect with LINE. Try again, or reopen the app from LINE.",
   already_received: "This gift was already opened.",
   ens_not_configured: "Names aren't set up on this server yet.",
   deposit_mismatch: "The gift bag doesn't hold the sticker it should.",
@@ -22,7 +23,9 @@ export const errors = {
   handle_taken: "Someone else has that handle.",
   internal_error: "The app's server ran into a problem.",
   invalid_request: "The app sent something the server couldn't read.",
-  line_token_invalid: "LINE didn't confirm who you are.",
+  line_token_invalid:
+    "LINE didn't accept this sign-in. Reconnect with LINE; if this continues, contact the team.",
+  line_token_expired: "Your LINE sign-in token has expired. Reconnect with LINE to continue.",
   mint_failed:
     "Your sticker is saved, but it couldn't be sealed on-chain. Try again; it won't use another ticket.",
   no_tickets_left: "You're out of tickets.",
