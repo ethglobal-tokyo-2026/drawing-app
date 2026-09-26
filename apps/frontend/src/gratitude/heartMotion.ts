@@ -1,5 +1,6 @@
 import type { ComboPhase, Tier } from "./combo";
 import { clamp, easeInOutSine, lerp } from "./easing";
+import { FEEL_CONFIG } from "./gameConfig";
 
 export interface HeartLayout {
   /** The heart's resting centre, in the stage's pixels. */
@@ -37,6 +38,8 @@ export interface HeartFrame {
   /** The heart's centre. */
   x: number;
   y: number;
+  /** Its size, as a share of its resting size: smaller loose and in flight. */
+  scale: number;
 }
 
 export interface HeartMotionState {
@@ -71,11 +74,13 @@ export interface HeartMotion {
   jiggle: () => void;
   /** The wrist: a sideways move in m/s² sways it, and gravity's sideways pull tilts it. */
   swayWith: (ax: number, gx: number | null) => void;
+  /** The wrist no longer moves it: its sway and tilt ease back upright. */
+  stopSway: () => void;
   /** It comes loose and ricochets off the screen's edges until an ending takes it. */
   comeLoose: () => void;
   /** A shake reversal sends the loose heart along, against the phone's move. */
   kickLoose: (direction: { x: number; y: number }, strength: number) => void;
-  /** The combo is over: no pull, jiggle, sway or tilt carries on. */
+  /** The combo is over: no pull, jiggle, sway or tilt carries on, and a loose heart stops where it is. */
   calm: () => void;
   /** Fades the heart out, unless it's already gone. */
   fadeOut: () => void;
@@ -92,8 +97,17 @@ interface Flight {
   from: Point;
   via: Point;
   to: Point;
+  /** Its size as it sets off: smaller if it was loose. */
+  fromScale: number;
   startedAt: number;
   land: () => void;
+}
+
+/** Where a loose heart stopped as the combo ended, and its size there. */
+interface Settled {
+  x: number;
+  y: number;
+  scale: number;
 }
 
 interface Fade {
@@ -136,7 +150,7 @@ const PULL = {
   stretch: 0.13,
   reduced: 0.05,
 };
-/** Stroking stretches it with the thumb's speed, up to `max`. */
+/** Stroking stretches it with the thumb's speed, up to `max`, or FEEL_CONFIG's less with reduced motion. */
 const STROKE_STRETCH = { perSpeed: 0.16, max: 0.26 };
 /** It leans toward a holding thumb this fast, a second. */
 const LEAN_RATE = 8;
@@ -178,6 +192,8 @@ const IMPACT = { per: 1 / 1400, least: 0.08, most: 0.32, decay: 16 };
 const FADE_OUT_S = 0.3;
 
 const degrees = (radians: number) => (radians * 180) / Math.PI;
+/** A stretch looks the same turned half a turn: the way from `from` to `to`, at most 90° either way. */
+const axisTurn = (from: number, to: number) => ((((to - from) % 180) + 270) % 180) - 90;
 /** Starts slow and lands at speed. */
 const flightEase = (t: number) => t * t * (1.6 - 0.6 * t);
 const bezier = (a: number, via: number, b: number, t: number) =>
@@ -211,6 +227,7 @@ export function createHeartMotion(
   const sway = { angle: 0, speed: 0, drive: 0 };
   const tilt = { target: 0, now: 0 };
   let loose: { x: number; y: number; vx: number; vy: number; scale: number } | null = null;
+  let settled: Settled | null = null;
   let impact = { angle: 0, amount: 0 };
   let flight: Flight | null = null;
   let fade: Fade | null = null;
@@ -218,6 +235,14 @@ export function createHeartMotion(
   let opacity = 1;
   /** As of the latest frame. */
   let reduced = false;
+  /** The size it was last drawn at. */
+  let drawnScale = 1;
+
+  /** A loose heart stops where it is, at its size, and ricochets no more. */
+  const settle = () => {
+    if (loose) settled = { x: loose.x, y: loose.y, scale: loose.scale };
+    loose = null;
+  };
 
   /** Ricochets off the edges; a hard hit squashes it and is reported. */
   function stepLoose(
@@ -246,7 +271,8 @@ export function createHeartMotion(
     };
     const minX = r + 2;
     const maxX = width - r - 2;
-    const minY = Math.max(r + 2, L.ceiling);
+    // The ceiling holds its top edge, so it never rises over the HUD.
+    const minY = Math.max(r + 2, L.ceiling + r);
     const maxY = height - r - 2;
     if (f.x < minX) {
       f.x = minX;
@@ -306,7 +332,7 @@ export function createHeartMotion(
 
     flyToGiver() {
       landing ??= new Promise<void>((land) => {
-        loose = null;
+        settle();
         if (reduced) {
           fade = { from: opacity, seconds: REDUCED_FLIGHT_FADE_S, elapsed: 0, done: land };
           return;
@@ -317,13 +343,15 @@ export function createHeartMotion(
           x: lerp(from.x, to.x, FLIGHT.along) + FLIGHT.outPx,
           y: Math.min(from.y, to.y) - FLIGHT.upPx,
         };
-        flight = { from, via, to, startedAt: play, land };
+        flight = { from, via, to, fromScale: drawnScale, startedAt: play, land };
+        settled = null;
       });
       return landing;
     },
 
     goLimp() {
       limpFrom ??= play;
+      settle();
     },
 
     wobble(amount) {
@@ -337,6 +365,11 @@ export function createHeartMotion(
     swayWith(ax, gx) {
       if (gx !== null) tilt.target = clamp(gx * TILT.perGravity, -TILT.most, TILT.most);
       sway.drive = clamp(-ax * SWAY.perAccel, -SWAY.maxDrive, SWAY.maxDrive);
+    },
+
+    stopSway() {
+      sway.drive = 0;
+      tilt.target = 0;
     },
 
     comeLoose() {
@@ -357,6 +390,7 @@ export function createHeartMotion(
       jelly.amount = 0;
       sway.drive = 0;
       tilt.target = 0;
+      settle();
     },
 
     fadeOut() {
@@ -387,7 +421,7 @@ export function createHeartMotion(
         }
         pos.x = x;
         pos.y = y;
-        scale = lerp(1, FLIGHT.endScale, e);
+        scale = lerp(f.fromScale, FLIGHT.endScale, e);
         if (k >= 1) {
           flight = null;
           opacity = 0;
@@ -398,6 +432,10 @@ export function createHeartMotion(
         pos.x = loose.x;
         pos.y = loose.y;
         scale = loose.scale;
+      } else if (settled) {
+        pos.x = settled.x;
+        pos.y = settled.y;
+        scale = settled.scale;
       } else {
         const damping = 2 * Math.sqrt(HOLD.stiffness) * HOLD.damping;
         pos.vx += (-(pos.x - L.rest.x) * HOLD.stiffness - pos.vx * damping) * h;
@@ -435,6 +473,8 @@ export function createHeartMotion(
       rotate += lean;
 
       const r = Math.min(real, 1 / 30);
+      // The first tap lets go of a pull still springing back from a drag: the wind-up takes over.
+      if (state.phase === "sending" && pull.target === 0) pull.px = pull.speed = 0;
       if (r > 0) {
         const damping =
           2 * Math.sqrt(PULL.stiffness) * (state.reduced ? PULL.reducedDamping : PULL.damping);
@@ -449,28 +489,32 @@ export function createHeartMotion(
       }
       if (!flight) {
         const pulled = pull.px !== 0 || pull.target !== 0;
+        const windUp =
+          state.phase === "sending" ? easeInOutSine(clamp(state.sendingProgress, 0, 1)) : 0;
+        // Winding up, it leans toward the giver whatever stretches it.
+        rotate -= WIND_UP.leanDeg * windUp;
         let target = 1;
         let angle = stretch.angle;
         if (state.strokeStretch) {
-          target =
-            1 + Math.min(STROKE_STRETCH.max, state.strokeStretch.speed * STROKE_STRETCH.perSpeed);
+          const most = state.reduced ? FEEL_CONFIG.stroke.reducedStretch : STROKE_STRETCH.max;
+          target = 1 + Math.min(most, state.strokeStretch.speed * STROKE_STRETCH.perSpeed);
           angle = state.strokeStretch.angle;
         } else if (pulled) {
           target = 1 + (state.reduced ? PULL.reduced : PULL.stretch) * Math.tanh(pull.px / 100);
           angle = pull.angle;
         } else if (state.phase === "sending") {
-          const k = easeInOutSine(clamp(state.sendingProgress, 0, 1));
-          target = 1 + WIND_UP.stretch * k;
-          rotate -= WIND_UP.leanDeg * k;
+          target = 1 + WIND_UP.stretch * windUp;
           angle = degrees(Math.atan2(L.giver.y - L.rest.y, L.giver.x - L.rest.x));
         }
-        // The pull's spring already carries the motion; anything else eases to its stretch.
+        // The pull's spring already carries the motion; anything else eases to its stretch, turning
+        // the short way round, so a new stretch takes over from the last without a jump.
         if (pulled) {
           stretch.scale = target;
           stretch.angle = angle;
         } else {
-          stretch.scale += (target - stretch.scale) * Math.min(1, real * STRETCH_RATE);
-          if (target !== 1) stretch.angle = angle;
+          const k = Math.min(1, real * STRETCH_RATE);
+          stretch.scale += (target - stretch.scale) * k;
+          if (target !== 1) stretch.angle += axisTurn(stretch.angle, angle) * k;
         }
       }
 
@@ -538,6 +582,7 @@ export function createHeartMotion(
         hs = scale / ps;
       }
 
+      drawnScale = scale;
       const fading = fade;
       if (fading) {
         fading.elapsed += real;
@@ -558,6 +603,7 @@ export function createHeartMotion(
         opacity,
         x: pos.x,
         y: pos.y,
+        scale,
       };
     },
   };

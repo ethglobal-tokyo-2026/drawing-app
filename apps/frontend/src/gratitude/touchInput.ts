@@ -66,6 +66,12 @@ export function listenForTouches(
 
   const onDown = (e: PointerEvent) => {
     if (e.button > 0) return;
+    // The stage keeps the pointer until it lifts, so a mouse let go off the stage still lifts here.
+    try {
+      stage.setPointerCapture(e.pointerId);
+    } catch {
+      // Synthetic pointer events have no active pointer to capture; the touch still counts.
+    }
     const { x, y } = options.toStage(e);
     const onHeart = isOnHeart(x, y, options.heartArea());
     grabs.set(e.pointerId, { x, y, t: e.timeStamp, onHeart, dragged: false });
@@ -89,6 +95,7 @@ export function listenForTouches(
   const lift = (e: PointerEvent) => {
     const grab = grabs.get(e.pointerId);
     grabs.delete(e.pointerId);
+    if (stage.hasPointerCapture?.(e.pointerId)) stage.releasePointerCapture(e.pointerId);
     if (e.pointerId === strokeFinger) {
       strokeFinger = null;
       handlers.onStrokeEnd();
@@ -108,10 +115,13 @@ export function listenForTouches(
   stage.addEventListener("pointermove", onMove);
   stage.addEventListener("pointerup", onUp);
   stage.addEventListener("pointercancel", onCancel);
+  // Capture lost without a lift, as when the browser takes the pointer: the touch is over.
+  stage.addEventListener("lostpointercapture", onCancel);
   return () => {
     stage.removeEventListener("pointerdown", onDown);
     stage.removeEventListener("pointermove", onMove);
     stage.removeEventListener("pointerup", onUp);
     stage.removeEventListener("pointercancel", onCancel);
+    stage.removeEventListener("lostpointercapture", onCancel);
   };
 }

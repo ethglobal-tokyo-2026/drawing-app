@@ -19,7 +19,7 @@ import { mountMiniGameEngine, type MiniGameEngine } from "./miniGameEngine";
 import { TIER_NAMES } from "./tierNames";
 import "./gratitude-mini-game.css";
 
-/** A finished combo and the sticker it thanks: what the app keeps. */
+/** A finished combo and the sticker its gratitude is for: what the app keeps. */
 export interface GratitudeResult extends ComboRecord {
   stickerId: string;
 }
@@ -36,7 +36,7 @@ interface Props {
   };
   /** Who gave the sticker, and gets the gratitude. */
   giver: { handle: string; displayName: string; pictureUrl?: string };
-  /** The received gift this thanks. Without one, as in the stat board's demo, nothing is recorded. */
+  /** The received gift the gratitude is for. Without one, as in the stat board's demo, nothing is recorded. */
   giftId?: string;
   /** The effects' dial, 0 to 1. */
   intensity: number;
@@ -140,9 +140,9 @@ export function GratitudeMiniGame({
   useLayoutEffect(() => {
     // The gratitude outbox keeps the combo on this device before its request goes.
     const record = (combo: ComboRecord, replay: ReplayV1) => {
-      const { api: client, giftId: thanked, onEnd: ended, stickerId } = latest.current;
-      if (thanked) {
-        void sendGratitude(client, gratitudeFor(thanked, combo, replay)).then((sent) => {
+      const { api: client, giftId, onEnd: ended, stickerId } = latest.current;
+      if (giftId) {
+        void sendGratitude(client, gratitudeFor(giftId, combo, replay)).then((sent) => {
           if (sent.state === "refused") setRefused(true);
         });
       }

@@ -118,6 +118,33 @@ describe("the stroke finger", () => {
     expect(onHeartTap).toHaveBeenCalledWith(260, heart.cx, heart.cy);
   });
 
+  it("keeps a mouse's pointer on the stage until it lifts, so a release off the stage still ends the stroke", () => {
+    const captured = new Set<number>();
+    const capture = vi.fn((id: number) => void captured.add(id));
+    const release = vi.fn((id: number) => void captured.delete(id));
+    stage.setPointerCapture = capture;
+    stage.hasPointerCapture = (id: number) => captured.has(id);
+    stage.releasePointerCapture = release;
+    pointer("pointerdown", heart.cx, heart.cy, 0, 4);
+    expect(capture).toHaveBeenCalledWith(4);
+    pointer("pointermove", heart.cx, heart.cy + 60, 20, 4);
+    // Captured, the browser sends the lift to the stage wherever the mouse is.
+    pointer("pointerup", heart.cx, heart.cy + 900, 40, 4);
+    expect(onStrokeEnd).toHaveBeenCalledTimes(1);
+    expect(release).toHaveBeenCalledWith(4);
+  });
+
+  it("ends a stroke whose pointer capture is lost, and a hover after it strokes nothing", () => {
+    pointer("pointerdown", heart.cx, heart.cy, 0, 5);
+    pointer("pointermove", heart.cx, heart.cy + 60, 20, 5);
+    pointer("lostpointercapture", heart.cx, heart.cy + 60, 30, 5);
+    expect(onStrokeEnd).toHaveBeenCalledTimes(1);
+    onStrokeMove.mockClear();
+    pointer("pointermove", heart.cx, heart.cy - 60, 50, 5);
+    expect(onStrokeMove).not.toHaveBeenCalled();
+    expect(onStrokeStart).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps the stroke from a second finger that drags too", () => {
     pointer("pointerdown", heart.cx, heart.cy, 0, 1);
     pointer("pointermove", heart.cx, heart.cy + 40, 20, 1);

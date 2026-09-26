@@ -97,6 +97,14 @@ export const FEEL_CONFIG = {
     /** A drag on the heart this long is a try at stroking it; after three, the tip says how. */
     tryTravelPx: 40,
     triesForTip: 3,
+    /** With reduced motion a committed stroke stretches the heart by this share at most. */
+    reducedStretch: 0.04,
+    /** Speed lines stream past a thumb at most once per `fastMs` when it moves faster than
+     * `fastPxPerMs`, and once per `slowMs` otherwise. */
+    lines: { fastPxPerMs: 0.9, fastMs: 50, slowMs: 90 },
+    /** The ground's speed field is written again only once its opacity moves by `opacityStep` or its
+     * angle by `angleStepDeg`. */
+    speedField: { opacityStep: 0.03, angleStepDeg: 3 },
   },
   /** Shaking the phone in a rhythm: PJ's PHYS and ShakeDetector. */
   shake: {
@@ -155,5 +163,13 @@ export const FEEL_CONFIG = {
     bead: [0.35, 0.6],
     rainGravity: 1500,
     rainMax: 24,
+  },
+  /** Pop-in words land round the heart, never on it. */
+  popIns: {
+    /** Words keep out of the heart's box drawn in by this share at each side, about where its outline runs. */
+    heartInset: 0.1,
+    /** A word that fits no free slot shrinks a step at a time, to this at the least. */
+    minScale: 0.7,
+    scaleStep: 0.1,
   },
 } as const;

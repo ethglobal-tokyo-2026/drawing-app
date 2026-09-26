@@ -11,7 +11,7 @@ export interface TierBackground {
   ) => void;
   /** Stroking has its own speed lines, so the focus lines keep out of its way. */
   show: (tier: Tier | null, intensity: number, method: Method) => void;
-  /** The stroke's speed lines, turned to its axis in degrees. */
+  /** The stroke's speed lines, turned to its axis in degrees; unseen changes aren't written. */
   setSpeedField: (opacity: number, angle: number) => void;
   /** `real`: wall-clock seconds since the last frame. */
   step: (real: number) => void;
@@ -21,8 +21,12 @@ export interface TierBackground {
   hideAll: () => void;
   /** The screen's corner peels up by `amount`, 0–1: a hard shake could shake the heart loose. */
   liftCorner: (amount: number) => void;
-  /** Where the loose heart hit an edge, `along` px along it, the edge dents in. */
-  dent: (edge: ScreenEdge, along: number) => void;
+  /**
+   * Where the loose heart hit an edge, `along` px along it, the edge dents in. `across` is the
+   * hit's place on the other axis, so a dent in the top wall, the HUD's underside, shows where the
+   * heart hit it; without it, the dent sits on the screen's own edge.
+   */
+  dent: (edge: ScreenEdge, along: number, across?: number) => void;
   /** Takes what it put in `front` away; the engine empties the ground. */
   destroy: () => void;
 }
@@ -33,6 +37,8 @@ const FOCUS_FPS = 8;
 const RAYS_DEG_PER_S = 6;
 const FLASH = { opacity: 0.7, seconds: 0.32 };
 const SPEED_FIELD_SEED = 31;
+/** The least change in the speed lines' opacity or angle, in degrees, worth writing. */
+const SPEED_FIELD_STEP = { opacity: 0.02, degrees: 1 };
 /** Dents on screen at most; past this the oldest is reused. */
 const DENTS = 6;
 /** How fast the corner follows its lift, a second. */
@@ -50,6 +56,12 @@ const layer = (className: string) => {
 const setOpacity = (el: HTMLElement, value: number) => {
   el.style.opacity = value > 0 ? clamp(value, 0, 1).toFixed(3) : "0";
   return value > 0;
+};
+
+/** How far apart two angles are, in degrees, the short way round: 179° and −179° are 2° apart. */
+const degreesApart = (a: number, b: number) => {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
 };
 
 /** Cancelling an animation rejects its `finished`: browsers mark that handled, happy-dom doesn't. */
@@ -109,6 +121,9 @@ export function createTierBackground(
   cornerFlap.append(layer("gr-corner-flap"));
   const corner = layer("gr-corner");
   corner.append(cornerUnder, cornerFlap);
+  // The stylesheet peels the top right, where the close button sits over the lifted corner and
+  // hides nearly all of it. Mirrored, it peels the bottom right, where nothing covers it.
+  Object.assign(corner.style, { top: "auto", bottom: "0", transform: "scaleY(-1)" });
   const dentLayer = layer("gr-layer");
   const shakeMarks = layer("gr-shakemarks");
   shakeMarks.innerHTML = VIBRATE_SVG + VIBRATE_SVG;
@@ -123,7 +138,8 @@ export function createTierBackground(
   let beamOn = false;
   /** Seconds of the flash still to fade. */
   let flashLeft = 0;
-  let speedFieldShown = { opacity: "", angle: "" };
+  /** What the speed lines last had written; `angle` is null until one is. */
+  const speedFieldShown: { opacity: number; angle: number | null } = { opacity: 0, angle: null };
 
   return {
     setLayout(width, height, heart) {
@@ -150,16 +166,20 @@ export function createTierBackground(
     },
 
     setSpeedField(opacity, angle) {
-      // Written every frame of a stroke, so only a change touches the style.
-      const shown = {
-        opacity: opacity > 0 ? clamp(opacity, 0, 1).toFixed(3) : "0",
-        angle: angle.toFixed(1),
-      };
-      if (shown.opacity !== speedFieldShown.opacity) speedField.style.opacity = shown.opacity;
-      if (shown.angle !== speedFieldShown.angle && speedLines instanceof SVGElement) {
-        speedLines.style.transform = `rotate(${shown.angle}deg)`;
+      // Called nearly every frame of a stroke, and the layer covers the screen, so only a change
+      // you'd see is written. Hiding is always written, so no faint field is left to composite.
+      const next = opacity > 0 ? clamp(opacity, 0, 1) : 0;
+      const change = Math.abs(next - speedFieldShown.opacity);
+      if (next === 0 ? speedFieldShown.opacity !== 0 : change >= SPEED_FIELD_STEP.opacity) {
+        setOpacity(speedField, next);
+        speedFieldShown.opacity = next;
       }
-      speedFieldShown = shown;
+      // Hidden lines needn't turn; they turn as they show again.
+      if (speedFieldShown.opacity === 0 || !(speedLines instanceof SVGElement)) return;
+      const last = speedFieldShown.angle;
+      if (last !== null && degreesApart(angle, last) < SPEED_FIELD_STEP.degrees) return;
+      speedLines.style.transform = `rotate(${angle.toFixed(1)}deg)`;
+      speedFieldShown.angle = angle;
     },
 
     step(real) {
@@ -204,8 +224,10 @@ export function createTierBackground(
 
     hideAll() {
       for (const el of [blush, focus, speedField, haze, beam, white]) setOpacity(el, 0);
-      speedFieldShown = { opacity: "0", angle: speedFieldShown.angle };
+      speedFieldShown.opacity = 0;
       cornerLift = 0;
+      focusOn = false;
+      beamOn = false;
     },
 
     destroy() {
@@ -217,16 +239,16 @@ export function createTierBackground(
       cornerLift = clamp(amount, 0, 1);
     },
 
-    dent(edge, along) {
+    dent(edge, along, across) {
       const { width, height } = screen;
       const at =
         edge === "top"
-          ? `translate(${along}px,0) rotate(0deg)`
+          ? `translate(${along}px,${across ?? 0}px) rotate(0deg)`
           : edge === "bottom"
-            ? `translate(${along}px,${height}px) rotate(180deg)`
+            ? `translate(${along}px,${across ?? height}px) rotate(180deg)`
             : edge === "left"
-              ? `translate(0,${along}px) rotate(-90deg)`
-              : `translate(${width}px,${along}px) rotate(90deg)`;
+              ? `translate(${across ?? 0}px,${along}px) rotate(-90deg)`
+              : `translate(${across ?? width}px,${along}px) rotate(90deg)`;
       const dent = (dents.length >= DENTS ? dents.shift() : undefined) ?? {
         el: Object.assign(dentLayer.appendChild(layer("gr-dent")), { innerHTML: DENT_SVG }),
         animation: null,
@@ -243,8 +265,6 @@ export function createTierBackground(
         ],
         { duration: 1500, easing: EASE_PEEL, fill: "both" },
       );
-      focusOn = false;
-      beamOn = false;
     },
   };
 }
