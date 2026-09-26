@@ -127,18 +127,47 @@ describe("signing in", () => {
     });
   });
 
-  it("refuses an ID token LINE refuses with no session, and logs LINE's reason instead of sending it", async () => {
-    const reason = "IdToken expired.";
+  it.each([
+    { reason: "invalid", message: "Invalid IdToken Audience.", code: "line_token_invalid" },
+    { reason: "expired", message: "IdToken expired.", code: "line_token_expired" },
+  ] as const)(
+    "refuses a $reason ID token without a session and keeps LINE's reason in the log",
+    async ({ reason, message, code }) => {
+      test = await createTestApp({
+        line: { verifyIdToken: () => Promise.reject(new LineTokenInvalidError(message, reason)) },
+      });
+      const log = vi.spyOn(console, "error").mockImplementation(() => {});
+      const response = await signIn(ALICE);
+      expect(response.headers.get("set-cookie")).toBeNull();
+      const refused = await refusal(response);
+      expect(refused).toMatchObject({ status: 401, error: code });
+      expect(refused.detail).not.toContain(message);
+      expect(log).toHaveBeenCalledWith(expect.stringContaining(message));
+    },
+  );
+
+  it("redacts credentials from the provider refusal log", async () => {
+    const credential = "eyJhbGciOiJFUzI1NiJ9.c2VjcmV0.c2lnbmF0dXJl";
     test = await createTestApp({
-      line: { verifyIdToken: () => Promise.reject(new LineTokenInvalidError(reason)) },
+      line: {
+        verifyIdToken: () =>
+          Promise.reject(new LineTokenInvalidError(`Invalid IdToken: ${credential}`)),
+      },
     });
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await refusal(await signIn(ALICE))).toMatchObject({ error: "line_token_invalid" });
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("Invalid IdToken"));
+    expect(log).not.toHaveBeenCalledWith(expect.stringContaining(credential));
+  });
+
+  it("reports a provider outage as a server failure, not an expired token", async () => {
+    test = await createTestApp({
+      line: { verifyIdToken: () => Promise.reject(new Error("LINE unavailable")) },
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
     const response = await signIn(ALICE);
     expect(response.headers.get("set-cookie")).toBeNull();
-    const refused = await refusal(response);
-    expect(refused).toMatchObject({ status: 401, error: "line_token_invalid" });
-    expect(refused.detail).not.toContain(reason);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining(reason));
+    expect(await refusal(response)).toMatchObject({ status: 500, error: "internal_error" });
   });
 
   it("refuses an unknown zone or language, and an ID token that's empty or too long", async () => {
@@ -159,6 +188,35 @@ describe("signing in", () => {
 });
 
 describe("me", () => {
+  it("reuses a signed session only for the requested LINE account", async () => {
+    const signedIn = await signIn(ALICE);
+    const headers = sessionCookie(signedIn);
+    const me = await meIn(signedIn);
+    expect(await meIn(await call("GET", "/api/me", headers))).toEqual(me);
+    const matching = await call("GET", "/api/me", { ...headers, "x-line-user-id": ALICE.sub });
+    expect(matching.headers.get("cache-control")).toBe("no-store");
+    expect(await meIn(matching)).toEqual(me);
+    const mismatched = await call("GET", "/api/me", { ...headers, "x-line-user-id": "line-bob" });
+    expect(mismatched.headers.get("cache-control")).toBe("no-store");
+    expect(await refusal(mismatched)).toMatchObject({ status: 401, error: "signed_out" });
+  });
+
+  it("does not treat the requested LINE account as authentication", async () => {
+    await signIn(ALICE);
+    expect(
+      await refusal(await call("GET", "/api/me", { "x-line-user-id": ALICE.sub })),
+    ).toMatchObject({ status: 401, error: "signed_out" });
+  });
+
+  it("rejects an empty or oversized LINE account header", async () => {
+    const headers = sessionCookie(await signIn(ALICE));
+    for (const lineUserId of ["", "x".repeat(129)]) {
+      expect(
+        await refusal(await call("GET", "/api/me", { ...headers, "x-line-user-id": lineUserId })),
+      ).toMatchObject({ status: 400, error: "invalid_request" });
+    }
+  });
+
   it("counts NEW in your sticker tray and the pink tag", async () => {
     const userId = insertUser(test.db);
     const unseen = [insertSealedSticker(test.db, userId), insertSealedSticker(test.db, userId)];

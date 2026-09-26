@@ -180,7 +180,7 @@ A gift is an event, and PRODUCT.md wants "User gave [sticker] to User" in the gl
   - The layout: `pileLayout.ts`, plus the `profileOf` export in `sticker-board/tray/sheetPacking.ts`.
   - `stickers/ArtistChip.tsx` and `artist-chip.css`: the `plain` variant.
   - `sticker-board/detailLift.ts`: generalize the origin.
-  - `i18n/en/explore.ts` and `ja/explore.ts`, built on `i18n/explore`. New keys:
+  - `i18n/strings/explore.ts`, each new string `{ en, ja }` under its where-comment. New keys:
     - `views.stickers`, `views.thisWeek`;
     - `pile.today`, `pile.yesterday`, `pile.day`, `pile.sticker` (the button label), `pile.givenTo`, `pile.empty`, `pile.newArrivals`;
     - `lifted.goToBoard`, `lifted.putBack`, `lifted.next`, `lifted.previous`, `lifted.caption`.

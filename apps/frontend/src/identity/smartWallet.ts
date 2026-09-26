@@ -1,4 +1,5 @@
 import type { Address, Hash, Hex } from "viem";
+import { ApiError } from "../api/apiClient";
 import { startPrivy } from "./privyStart";
 
 export interface SmartWalletClient {
@@ -29,7 +30,8 @@ export function waitForSmartWallet(): Promise<SmartWalletClient> {
     };
     const timer = setTimeout(() => {
       listeners.delete(ready);
-      reject(new Error("Your sticker wallet is taking too long to get ready. Please try again."));
+      // The app's own code for this, so the person reads its catalog message.
+      reject(new ApiError(0, { error: "smart_account_not_ready" }));
     }, READY_TIMEOUT_MS);
     listeners.add(ready);
   });

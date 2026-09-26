@@ -220,6 +220,11 @@ export function lineIdToken(): string | null {
   return state.status === "ready" ? liff.getIDToken() : null;
 }
 
+/** Used only to match an existing server session, never as a sign-in credential. */
+export function lineUserId(): string | null {
+  return state.status === "ready" ? state.profile.userId : null;
+}
+
 export function useLine(): LineState {
   return useSyncExternalStore(subscribe, () => state);
 }

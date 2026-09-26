@@ -99,8 +99,8 @@ export interface SessionApi {
   signIn: (
     request: InferRequestType<ServerClient["session"]["$post"]>["json"],
   ) => Promise<{ me: Me }>;
-  /** GET /api/me */
-  me: () => Promise<{ me: Me }>;
+  /** GET /api/me; only resume a session belonging to this LINE user when supplied. */
+  me: (lineUserId?: string) => Promise<{ me: Me }>;
   /** POST /api/me/handle */
   setHandle: (handle: string) => Promise<{ me: Me }>;
   /** DELETE /api/session: ends the session, so the cookie is gone. */
@@ -118,8 +118,11 @@ export function createSessionApi(api: ServerClient = createServerClient()): Sess
       const response = await api.session.$delete();
       if (!response.ok) throw await refusal(response, "DELETE /api/session");
     },
-    me: async () => {
-      const response = await api.me.$get();
+    me: async (lineUserId) => {
+      const response = await api.me.$get(
+        { header: lineUserId ? { "x-line-user-id": lineUserId } : {} },
+        { init: { cache: "no-store" } },
+      );
       if (!response.ok) throw await refusal(response, "GET /api/me");
       return response.json();
     },

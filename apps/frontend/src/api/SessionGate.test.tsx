@@ -20,7 +20,7 @@ const me: Me = {
   lineDisplayName: "Alice",
   linePictureUrl: null,
   ensName: "alice.croquis.eth",
-  lineUserId: "U-alice",
+  lineUserId: "line-alice",
   timeZone: "Asia/Tokyo",
   language: "en",
   languageChoice: null,
@@ -42,11 +42,12 @@ afterEach(() => cleanup());
 vi.spyOn(console, "error").mockImplementation(() => {});
 
 /** Who LINE's ID token names: Alice, as the server last heard of her. */
-const ALICE_CLAIMS: LineClaims = { sub: "U-alice", name: "Alice" };
+const ALICE_CLAIMS: LineClaims = { sub: "line-alice", name: "Alice" };
 
 function render(
   session: SessionApi,
   idToken: () => string | null = () => "token",
+  reconnect = vi.fn<() => Promise<void>>().mockResolvedValue(),
   {
     early = null,
     claims = ALICE_CLAIMS,
@@ -57,7 +58,14 @@ function render(
   const root = createRoot(host);
   act(() =>
     root.render(
-      <SessionGate session={session} idToken={idToken} claims={() => claims} early={early}>
+      <SessionGate
+        session={session}
+        idToken={idToken}
+        claims={() => claims}
+        currentLineUserId={() => claims.sub}
+        early={early}
+        reconnect={reconnect}
+      >
         <Board />
       </SessionGate>,
     ),
@@ -71,7 +79,7 @@ function render(
 
 const session = (overrides: Partial<SessionApi>): SessionApi => ({
   signIn: () => Promise.resolve({ me }),
-  me: () => Promise.resolve({ me }),
+  me: () => Promise.reject(new ApiError(401, { error: "signed_out" })),
   setHandle: () => Promise.reject(new Error("not expected")),
   signOut: () => Promise.resolve(),
   ...overrides,
@@ -108,6 +116,18 @@ const submit = (host: HTMLElement) =>
   });
 
 describe("SessionGate", () => {
+  it("resumes the matching server session without reading or exchanging an old LINE token", async () => {
+    const resume = vi.fn<SessionApi["me"]>().mockResolvedValue({ me });
+    const signIn = vi.fn<SessionApi["signIn"]>();
+    const idToken = vi.fn(() => "expired-token");
+    const host = render(session({ me: resume, signIn }), idToken);
+    await settle();
+    expect(resume).toHaveBeenCalledWith("line-alice");
+    expect(signIn).not.toHaveBeenCalled();
+    expect(idToken).not.toHaveBeenCalled();
+    expect(host.textContent).toContain("Board of @alice");
+  });
+
   it("signs in with LINE's token, your zone and the app's language, then opens the app as you", async () => {
     await i18next.changeLanguage("ja");
     onTestFinished(async () => {
@@ -145,20 +165,94 @@ describe("SessionGate", () => {
     },
   );
 
-  it("says why sign-in failed, and Try again signs in again", async () => {
-    const refusal = new ApiError(401, { error: "line_token_invalid" });
+  it("retries a temporary server failure without restarting LINE authentication", async () => {
+    const refusal = new ApiError(503, { error: "internal_error" });
+    const reconnect = vi.fn<() => Promise<void>>().mockResolvedValue();
     const signIn = vi
       .fn<SessionApi["signIn"]>()
       .mockRejectedValueOnce(refusal)
       .mockResolvedValueOnce({ me });
-    const host = render(session({ signIn }));
+    const host = render(session({ signIn }), () => "token", reconnect);
     await settle();
     expect(host.textContent).toContain("Couldn’t sign you in");
     expect(host.textContent).toContain(errorMessage(refusal));
-    expect(host.textContent).toContain("line_token_invalid");
+    expect(host.textContent).toContain("internal_error");
     act(() => host.querySelector("button")?.click());
     await settle();
     expect(host.textContent).toContain("Board of @alice");
+    expect(reconnect).not.toHaveBeenCalled();
+  });
+
+  it.each(["line_token_invalid", "line_token_expired"])(
+    "reconnects LINE on %s instead of resubmitting the rejected token",
+    async (code) => {
+      const signIn = vi
+        .fn<SessionApi["signIn"]>()
+        .mockRejectedValue(new ApiError(401, { error: code }));
+      const reconnect = vi.fn<() => Promise<void>>().mockResolvedValue();
+      const host = render(session({ signIn }), () => "rejected-token", reconnect);
+      await settle();
+      expect(host.textContent).toContain(errorMessage(new ApiError(401, { error: code })));
+      expect(reconnect).not.toHaveBeenCalled();
+      expect(host.querySelector("button")?.textContent).toBe("Reconnect with LINE");
+      act(() => host.querySelector("button")?.click());
+      await settle();
+      expect(reconnect).toHaveBeenCalledOnce();
+      expect(signIn).toHaveBeenCalledOnce();
+      expect(host.querySelector('[role="status"]')?.textContent).toBe("Reconnecting with LINE…");
+    },
+  );
+
+  it("does not replace a session or start LINE login when checking the session fails", async () => {
+    const resume = vi
+      .fn<SessionApi["me"]>()
+      .mockRejectedValueOnce(new ApiError(0, { error: "network" }))
+      .mockResolvedValueOnce({ me });
+    const signIn = vi.fn<SessionApi["signIn"]>();
+    const reconnect = vi.fn<() => Promise<void>>().mockResolvedValue();
+    const host = render(session({ me: resume, signIn }), () => "token", reconnect);
+    await settle();
+    expect(host.textContent).toContain("Check your connection");
+    act(() => host.querySelector("button")?.click());
+    await settle();
+    expect(host.textContent).toContain("Board of @alice");
+    expect(signIn).not.toHaveBeenCalled();
+    expect(reconnect).not.toHaveBeenCalled();
+  });
+
+  it("shows a failed reconnect without exposing SDK error details or looping", async () => {
+    const signIn = vi
+      .fn<SessionApi["signIn"]>()
+      .mockRejectedValue(new ApiError(401, { error: "line_token_invalid" }));
+    const reconnect = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValue(new Error("private-login-url"));
+    const host = render(session({ signIn }), () => "token", reconnect);
+    await settle();
+    act(() => host.querySelector("button")?.click());
+    await settle();
+    expect(host.textContent).toContain("Couldn't reconnect with LINE");
+    expect(host.textContent).not.toContain("private-login-url");
+    expect(signIn).toHaveBeenCalledOnce();
+    expect(reconnect).toHaveBeenCalledOnce();
+    expect(host.querySelector("button")?.disabled).toBe(false);
+  });
+
+  it("uses the saved language and handle prompt when resuming an unfinished account", async () => {
+    onTestFinished(async () => {
+      localStorage.clear();
+      await i18next.changeLanguage("en");
+    });
+    const host = render(
+      session({
+        me: () =>
+          Promise.resolve({ me: { ...me, handle: null, needsHandle: true, languageChoice: "ja" } }),
+      }),
+    );
+    await settle();
+    expect(readChosenLanguage()).toBe("ja");
+    expect(host.querySelector("form")).not.toBeNull();
+    expect(host.textContent).not.toContain("Board of");
   });
 
   it("says why it can't sign in when LINE can't give a token, and never asks the server", async () => {
@@ -205,7 +299,7 @@ describe("SessionGate with the cookie from the last visit", () => {
   it("opens as the cookie's person when LINE's user is theirs, without signing in again", async () => {
     const signIn = vi.fn(() => Promise.resolve({ me }));
     const early = earlyAs(me);
-    const host = render(session({ signIn }), undefined, { early });
+    const host = render(session({ signIn }), undefined, undefined, { early });
     await settle();
     expect(host.textContent).toContain("Board of @alice");
     expect(signIn).not.toHaveBeenCalled();
@@ -217,7 +311,7 @@ describe("SessionGate with the cookie from the last visit", () => {
     const mallory: Me = { ...me, id: "u2", handle: "mallory", lineUserId: "U-mallory" };
     const { signIn, finish } = pendingSignIn(me);
     const early = earlyAs(mallory);
-    const host = render(session({ signIn }), undefined, { early });
+    const host = render(session({ signIn }), undefined, undefined, { early });
     await settle();
     // Signing in as Alice is still under way: nothing of Mallory's shows meanwhile.
     expect(signIn).toHaveBeenCalledOnce();
@@ -233,7 +327,7 @@ describe("SessionGate with the cookie from the last visit", () => {
   it("signs in with LINE when the cookie holds no session", async () => {
     const signIn = vi.fn(() => Promise.resolve({ me }));
     const early = earlyAs(null);
-    const host = render(session({ signIn }), undefined, { early });
+    const host = render(session({ signIn }), undefined, undefined, { early });
     await settle();
     expect(signIn).toHaveBeenCalledOnce();
     expect(early.drop).toHaveBeenCalled();
@@ -248,7 +342,10 @@ describe("SessionGate with the cookie from the last visit", () => {
     "opens at once after %s, and signs in with LINE behind it to bring it to the account",
     async (_change, claims, cookies) => {
       const { signIn, finish } = pendingSignIn({ ...cookies, handle: "alice-renamed" });
-      const host = render(session({ signIn }), undefined, { early: earlyAs(cookies), claims });
+      const host = render(session({ signIn }), undefined, undefined, {
+        early: earlyAs(cookies),
+        claims,
+      });
       await settle();
       expect(host.textContent).toContain("Board of @alice");
       expect(signIn).toHaveBeenCalledOnce();

@@ -177,8 +177,9 @@ vite.config.ts.timestamp-*
 .vite/
 
 .serena
-.claude/.headroom*
-.claude/settings.local.json
+# Claude Code's local files, in any folder a session starts in (deploy/ has its own)
+**/.claude/.headroom*
+**/.claude/settings.local.json
 
 # npm lockfiles: the workspace installs with pnpm (pnpm-lock.yaml)
 package-lock.json
