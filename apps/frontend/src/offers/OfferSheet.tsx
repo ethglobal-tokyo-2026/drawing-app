@@ -2,7 +2,8 @@ import { ArrowsLeftRight, ChatCircleDots, Heart, PaperPlaneTilt, X } from "@phos
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { PersonView } from "../api/views";
 import { formatCount } from "../i18n/format";
-import type { BoardStickerView } from "../sticker-board/boardSticker";
+import { useTranslation } from "../i18n/react";
+import { handleOf, type BoardStickerView } from "../sticker-board/boardSticker";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 // Giving.css goes first, even ahead of the give-sheet.css StickerPicker brings, so the sheet's
@@ -21,27 +22,11 @@ import "./offers.css";
 
 type OfferKind = "ask" | "swap" | "gratitude";
 
-const KINDS: { id: OfferKind; title: string; note: (holder: string) => string; icon: ReactNode }[] =
-  [
-    {
-      id: "ask",
-      title: "Ask for it",
-      note: (holder) => `A plain request. @${holder} can say yes or no.`,
-      icon: <ChatCircleDots size={18} weight="fill" />,
-    },
-    {
-      id: "swap",
-      title: "Swap one of yours",
-      note: () => "Pick one of your stickers to trade for it.",
-      icon: <ArrowsLeftRight size={18} />,
-    },
-    {
-      id: "gratitude",
-      title: "Offer gratitude",
-      note: () => "Give some of your gratitude for it.",
-      icon: <Heart size={18} />,
-    },
-  ];
+const KINDS: { id: OfferKind; icon: ReactNode }[] = [
+  { id: "ask", icon: <ChatCircleDots size={18} weight="fill" /> },
+  { id: "swap", icon: <ArrowsLeftRight size={18} /> },
+  { id: "gratitude", icon: <Heart size={18} /> },
+];
 
 const GRATITUDE_AMOUNTS = [100, 250, 500];
 
@@ -54,12 +39,14 @@ interface Props {
 
 /** Offer for a sticker on someone else's board: ask, swap one of yours, or offer gratitude. */
 export function OfferSheet({ sticker, holder, onClose }: Props) {
+  const { t } = useTranslation();
   const [kind, setKind] = useState<OfferKind>("ask");
   const [swapFor, setSwapFor] = useState<string | null>(null);
   const [amount, setAmount] = useState(GRATITUDE_AMOUNTS[0]);
   const [sent, setSent] = useState(false);
   const { stickers, error } = useKeptStickers();
-  const handle = holder.handle ?? holder.name;
+  const printedHolder = handleOf(holder);
+  const title = t(($) => $.offers.title, { no: formatNo(sticker.no) });
   const root = useRef<HTMLDivElement>(null);
   useBackToClose(true, onClose);
   useFocusTrap(root, { onEscape: onClose });
@@ -73,35 +60,33 @@ export function OfferSheet({ sticker, holder, onClose }: Props) {
   return (
     <div className="board-sheet-layer" ref={root} tabIndex={-1}>
       <div className="giving__scrim" onClick={onClose} />
-      <Sheet
-        label={`Offer for ${formatNo(sticker.no)}`}
-        onClose={onClose}
-        className="giving__sheet"
-      >
+      <Sheet label={title} onClose={onClose} className="giving__sheet">
         <div className="board-sheet-body">
           {sent ? (
             <div className="giving__sent" role="status">
               <span className="offer-sent-art">
                 <img src={sticker.urls.png} alt="" className="sticker-image" />
               </span>
-              <h2 className="giving__title">Offer sent to @{handle}</h2>
+              <h2 className="giving__title">
+                {t(($) => $.offers.sent.title, { holder: printedHolder })}
+              </h2>
               <p className="giving__sub">
-                Nothing moves until @{handle} says yes. You’ll hear about it in LINE.
+                {t(($) => $.offers.sent.lead, { holder: printedHolder })}
               </p>
-              <p className="fine sheet-fine">Demo material · offers aren’t sent anywhere yet</p>
+              <p className="fine sheet-fine">{t(($) => $.offers.sent.demo)}</p>
               <LabelButton ref={back} icon={<StickerBoardIcon size={18} />} onClick={onClose}>
-                Back to @{handle}’s board
+                {t(($) => $.offers.sent.back, { holder: printedHolder })}
               </LabelButton>
             </div>
           ) : (
             <>
               <header className="giving__head">
-                <h2 className="giving__title">Offer for {formatNo(sticker.no)}</h2>
+                <h2 className="giving__title">{title}</h2>
                 <button
                   type="button"
                   className="giving__icon-btn"
                   onClick={onClose}
-                  aria-label="Close"
+                  aria-label={t(($) => $.offers.close)}
                 >
                   <X size={20} />
                 </button>
@@ -110,14 +95,24 @@ export function OfferSheet({ sticker, holder, onClose }: Props) {
               <div className="offer-subject">
                 <img src={sticker.urls.png} alt="" className="sticker-image offer-art" />
                 <p className="fine sheet-fine">
-                  {formatNo(sticker.no)} · <Duration seconds={sticker.timeUsed} /> ·{" "}
+                  {formatNo(sticker.no)}
+                  {" · "}
+                  <Duration seconds={sticker.timeUsed} />
+                  {" · "}
                   {formatDay(sticker.createdAt)}
                   <br />
-                  By @{sticker.artist.handle ?? sticker.artist.name} · @{handle} holds it
+                  {t(($) => $.offers.credit, {
+                    artist: handleOf(sticker.artist),
+                    holder: printedHolder,
+                  })}
                 </p>
               </div>
 
-              <div className="offer-kinds" role="radiogroup" aria-label="What to offer">
+              <div
+                className="offer-kinds"
+                role="radiogroup"
+                aria-label={t(($) => $.offers.kinds.label)}
+              >
                 {KINDS.map((k) => (
                   <button
                     key={k.id}
@@ -129,8 +124,8 @@ export function OfferSheet({ sticker, holder, onClose }: Props) {
                   >
                     <span className="offer-icon">{k.icon}</span>
                     <span className="offer-text">
-                      <b>{k.title}</b>
-                      <span>{k.note(handle)}</span>
+                      <b>{t(($) => $.offers.kinds[k.id].title)}</b>
+                      <span>{t(($) => $.offers.kinds[k.id].note, { holder: printedHolder })}</span>
                     </span>
                     <span className="radio" aria-hidden />
                   </button>
@@ -143,14 +138,14 @@ export function OfferSheet({ sticker, holder, onClose }: Props) {
                     {error}
                   </p>
                 ) : stickers?.length === 0 ? (
-                  <p className="sheet-empty">You don’t have a sticker to swap yet.</p>
+                  <p className="sheet-empty">{t(($) => $.offers.swap.none)}</p>
                 ) : (
                   stickers && (
                     <StickerPicker
                       stickers={stickers}
                       picked={swapFor}
                       onPick={setSwapFor}
-                      label="Your sticker to swap"
+                      label={t(($) => $.offers.swap.picker)}
                       compact
                     />
                   )
@@ -160,7 +155,7 @@ export function OfferSheet({ sticker, holder, onClose }: Props) {
                 <div
                   className="gratitude-amounts"
                   role="radiogroup"
-                  aria-label="How much gratitude"
+                  aria-label={t(($) => $.offers.gratitudeAmounts)}
                 >
                   {GRATITUDE_AMOUNTS.map((a) => (
                     <button
@@ -185,9 +180,11 @@ export function OfferSheet({ sticker, holder, onClose }: Props) {
                   onClick={() => setSent(true)}
                   disabled={!ready}
                 >
-                  Send offer
+                  {t(($) => $.offers.send)}
                 </Key>
-                <p className="giving__leaves">Nothing moves until @{handle} says yes.</p>
+                <p className="giving__leaves">
+                  {t(($) => $.offers.waitsForYes, { holder: printedHolder })}
+                </p>
               </div>
             </>
           )}
