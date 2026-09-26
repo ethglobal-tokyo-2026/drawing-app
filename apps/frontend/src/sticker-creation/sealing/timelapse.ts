@@ -15,8 +15,12 @@ interface TimelapseInput {
 const tenths = (n: number) => Math.round(n * 10);
 /** A length to the tenth of a pixel, as JSON keeps it short. */
 const toTenth = (n: number) => tenths(n) / 10;
-/** A fill's tap to the hundredth of a pixel, so it seeds the pixel it seeded. */
-const toHundredth = (n: number) => Math.round(n * 100) / 100;
+/**
+ * A fill's tap as the middle of the device pixel it seeded, to the hundredth of a sheet pixel: the
+ * tap itself, rounded, could land in the pixel beside it.
+ */
+const seededPixel = (n: number, density: number) =>
+  Math.round(((Math.floor(n * density) + 0.5) / density) * 100) / 100;
 /** A density to the thousandth, as phones report ones like 2.625. */
 const toThousandth = (n: number) => Math.round(n * 1000) / 1000;
 
@@ -42,7 +46,13 @@ export function encodeTimelapse({ ops, ink, place, density }: TimelapseInput): T
     density: toThousandth(density),
     ops: ops.map((op) =>
       op.tool === "fill"
-        ? ["fill", op.color, Math.round(op.T), toHundredth(op.x), toHundredth(op.y)]
+        ? [
+            "fill",
+            op.color,
+            Math.round(op.T),
+            seededPixel(op.x, density),
+            seededPixel(op.y, density),
+          ]
         : [op.tool, op.color, Math.round(op.T), pointChanges(op.pts)],
     ),
   };

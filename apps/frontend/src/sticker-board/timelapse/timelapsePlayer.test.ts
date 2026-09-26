@@ -239,7 +239,8 @@ describe("the timelapse player", () => {
 });
 
 describe("the timelapse player's fills", () => {
-  const TAP = { x: 40, y: 50 };
+  /** The middle of a pixel at density 1, as the timelapse stores a tap. */
+  const TAP = { x: 40.5, y: 50.5 };
   /** A line, a fill, and a line over it. */
   const drawing = (): Op[] => {
     const fill: FillOp = { tool: "fill", color: "#ff0000", ...TAP, T: 500 };
