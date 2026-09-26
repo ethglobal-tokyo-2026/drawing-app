@@ -2,8 +2,8 @@
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Person } from "@drawing-app/api/client";
-import { gift, people, sticker } from "../api/testFixtures";
-import { renderWithApi } from "../api/testing";
+import { gift, MARKUP_LIKE_NAME, markupLikePerson, people, sticker } from "../api/testFixtures";
+import { renderWithApi, shownText } from "../api/testing";
 import { toPerson, toSticker } from "../api/views";
 import { formatDuration } from "../stickers/format";
 import { SendGratitudeSheet } from "./SendGratitudeSheet";
@@ -44,9 +44,11 @@ const button = (name: string) => {
 };
 
 describe("SendGratitudeSheet", () => {
-  it("says the giver drew it, and how long it took, when they're its Original Artist", () => {
-    const { drawn, line } = open(people.mika, people.mika);
-    expect(line).toContain(`@mika drew it in ${formatDuration(drawn.timeUsed)}`);
+  it("says the giver drew it, and how long it took, when they're its Original Artist, printing their name as it is", () => {
+    const { drawn } = open(markupLikePerson, markupLikePerson);
+    expect(shownText(".send-gratitude-sheet__line")).toBe(
+      `It’s on your board. ${MARKUP_LIKE_NAME} drew it in ${formatDuration(drawn.timeUsed)}, and gratitude never expires.`,
+    );
   });
 
   it("names and pictures the giver, not the artist, when someone else drew it", () => {

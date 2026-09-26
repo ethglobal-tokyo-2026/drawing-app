@@ -20,8 +20,8 @@ export const giving = {
     noPicker: "LINE’s friend picker isn’t available here, so gifts can’t be sent from this screen.",
     pick: "Pick a sticker",
   },
-  /** The sticker's fine print, over Giving's sheet. */
-  meta: "{{no}} · <duration/> · {{day}} · {{name}}",
+  /** The sticker's fine print, over Giving's sheet: `<name/>` is the giver's handle. */
+  meta: "{{no}} · <duration/> · {{day}} · <name/>",
   /** Giving's first screen: how the sticker goes out. */
   sheet: {
     sendInChat: "Send in a LINE chat",

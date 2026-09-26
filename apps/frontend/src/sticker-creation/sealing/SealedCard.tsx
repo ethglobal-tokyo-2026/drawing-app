@@ -87,12 +87,12 @@ export function SealedCard({
       <p className="fine sealed-card__fine" data-card-line>
         <Trans
           i18nKey={($) => $.stickerCreation.sealedCard.finePrint}
-          values={{
-            no: formatNo(sealed.number),
-            day: formatDay(Date.parse(sealed.sealedAt)),
-            handle: formatHandle(handle),
+          values={{ no: formatNo(sealed.number), day: formatDay(Date.parse(sealed.sealedAt)) }}
+          components={{
+            duration: <Duration seconds={sealed.timeUsed} />,
+            // A handle is a component's text, not a value: Trans would read markup in a value.
+            handle: <>{formatHandle(handle)}</>,
           }}
-          components={{ duration: <Duration seconds={sealed.timeUsed} /> }}
         />
       </p>
       <div data-card-line>

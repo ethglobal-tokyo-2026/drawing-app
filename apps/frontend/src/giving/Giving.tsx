@@ -255,12 +255,12 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
         <p className="fine giving__meta">
           <Trans
             i18nKey={($) => $.giving.meta}
-            values={{
-              no: formatNo(sticker.no),
-              day: formatDay(sticker.createdAt),
-              name: formatHandle(fromHandle),
+            values={{ no: formatNo(sticker.no), day: formatDay(sticker.createdAt) }}
+            components={{
+              duration: <Duration seconds={sticker.timeUsed} />,
+              // A handle is a component's text, not a value: Trans would read markup in a value.
+              name: <>{formatHandle(fromHandle)}</>,
             }}
-            components={{ duration: <Duration seconds={sticker.timeUsed} /> }}
           />
         </p>
       </div>
