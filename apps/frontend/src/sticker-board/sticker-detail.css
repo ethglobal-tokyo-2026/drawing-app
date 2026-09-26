@@ -209,8 +209,13 @@
 }
 
 .sticker-detail__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
   margin: 0;
   min-width: 0;
+  font-size: 34px;
 }
 
 /* The sticker's number: a Seal Yellow label stuck on at the house tilt. */
@@ -224,7 +229,7 @@
     var(--shadow-label);
   font-family: var(--font-puffy);
   font-weight: 400;
-  font-size: 20px;
+  font-size: 17px;
   line-height: 1.2;
   rotate: var(--tilt);
 }

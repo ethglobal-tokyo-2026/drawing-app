@@ -81,7 +81,7 @@ const closedRows = () =>
     ),
   ].filter((b) => !b.textContent?.includes("earlier"));
 
-const heading = () => document.querySelector("h2")?.textContent;
+const heading = () => document.querySelector("h2 .sticker-detail__no")?.textContent;
 const button = (name: string) =>
   [...document.querySelectorAll("button")].find(
     (b) => (b.getAttribute("aria-label") ?? b.textContent?.trim()) === name,

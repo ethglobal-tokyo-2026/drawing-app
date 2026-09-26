@@ -279,8 +279,9 @@ export function StickerDetail({
             </div>
 
             <section className="sticker-detail__meta">
-              <h2 className="sticker-detail__title">
-                <span className="sticker-detail__no">{formatNo(sticker.no)}</span>
+              {/* "sticker" stands in for the sticker's name, which no data carries yet. */}
+              <h2 className="title-label sticker-detail__title">
+                sticker <span className="sticker-detail__no">{formatNo(sticker.no)}</span>
               </h2>
               <p className="fine sticker-detail__fine-print">
                 <span className="sticker-detail__by">
