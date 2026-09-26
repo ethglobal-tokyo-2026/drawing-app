@@ -1,6 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "./apiClient";
 import { createHttpApi, createServerClient, createSessionApi } from "./httpApi";
+import { startNftRequest } from "./httpDiagnostics";
 
 const me = {
   id: "u1",
@@ -134,5 +135,169 @@ describe("sealing", () => {
     const fetch = answering(201, {});
     await createHttpApi(createServerClient(fetch)).seal(sealRequest);
     expect(formOf(fetch).has("timelapse")).toBe(false);
+  });
+});
+
+describe("NFT request diagnostics", () => {
+  const requestId = "7ca8e8a4-4ea8-47bc-b3df-03777b388ed4";
+  const giftClaimToken: `0x${string}` = `0x${"ab".repeat(32)}`;
+  const claim = { giftClaimToken, liffContextType: "utou" } as const;
+
+  function captureDiagnostics() {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(performance, "now").mockReturnValue(100);
+    return {
+      info,
+      error,
+      text: () => JSON.stringify([...info.mock.calls, ...error.mock.calls]),
+    };
+  }
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it("correlates a completed request without reading or replacing its response", async () => {
+    const logs = captureDiagnostics();
+    vi.spyOn(performance, "now").mockReturnValueOnce(100).mockReturnValueOnce(137);
+    const body = { giftClaimToken };
+    const response = new Response(JSON.stringify(body), {
+      status: 201,
+      headers: { "x-request-id": requestId, "set-cookie": "private-session-cookie" },
+    });
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => response);
+    const received = await createServerClient(fetch).gifts.$post({ json: { stickerId: "s1" } });
+
+    expect(received).toBe(response);
+    expect(received.bodyUsed).toBe(false);
+    expect(await received.json()).toEqual(body);
+    expect(logs.info.mock.calls).toEqual([
+      [
+        "NFT API request",
+        { event: "nft_request_started", method: "POST", path: "/api/gifts", elapsedMs: 0 },
+      ],
+      [
+        "NFT API request",
+        {
+          event: "nft_request_completed",
+          method: "POST",
+          path: "/api/gifts",
+          elapsedMs: 37,
+          status: 201,
+          requestId,
+        },
+      ],
+    ]);
+    expect(logs.error).not.toHaveBeenCalled();
+    expect(logs.text()).not.toContain(giftClaimToken);
+    expect(logs.text()).not.toContain("private-session-cookie");
+  });
+
+  it("distinguishes an HTTP refusal without logging request or response secrets", async () => {
+    const logs = captureDiagnostics();
+    const response = new Response(
+      JSON.stringify({ error: "internal", detail: "https://provider.invalid/private-rpc-key" }),
+      { status: 503, headers: { "x-request-id": requestId } },
+    );
+    const client = createServerClient(async () => response);
+    const received = await client.gifts.receive.$post(
+      { json: claim },
+      {
+        init: { headers: { Authorization: "Bearer private-auth-token", Cookie: "private-cookie" } },
+      },
+    );
+
+    expect(received).toBe(response);
+    expect(received.bodyUsed).toBe(false);
+    expect(logs.error).toHaveBeenCalledWith("NFT API request", {
+      event: "nft_request_http_failed",
+      method: "POST",
+      path: "/api/gifts/receive",
+      elapsedMs: 0,
+      status: 503,
+      requestId,
+    });
+    for (const secret of [
+      giftClaimToken,
+      "private-rpc-key",
+      "private-auth-token",
+      "private-cookie",
+    ]) {
+      expect(logs.text()).not.toContain(secret);
+    }
+  });
+
+  it("reports a network failure without adding raw error details to the console", async () => {
+    const logs = captureDiagnostics();
+    const rawMessage = "https://provider.invalid/private-rpc-key could not receive private-token";
+    const client = createHttpApi(
+      createServerClient(async () => {
+        throw new TypeError(rawMessage);
+      }),
+    );
+    const failure = await refusalOf(client.receiveGift(claim));
+
+    expect(failure).toMatchObject({ status: 0, code: "network" });
+    expect(failure.detail).toContain(rawMessage);
+    expect(logs.error).toHaveBeenCalledWith("NFT API request", {
+      event: "nft_request_network_failed",
+      method: "POST",
+      path: "/api/gifts/receive",
+      elapsedMs: 0,
+      status: 0,
+    });
+    expect(logs.text()).not.toContain(rawMessage);
+    expect(logs.text()).not.toContain(giftClaimToken);
+  });
+
+  it("omits an arbitrary response header instead of treating it as a request ID", async () => {
+    const logs = captureDiagnostics();
+    const response = new Response("{}", {
+      headers: { "x-request-id": `${requestId}/private-header-value` },
+    });
+    await createServerClient(async () => response).gifts.preview.$post({ json: claim });
+
+    expect(logs.info).toHaveBeenLastCalledWith("NFT API request", {
+      event: "nft_request_completed",
+      method: "POST",
+      path: "/api/gifts/preview",
+      elapsedMs: 0,
+      status: 200,
+    });
+    expect(logs.text()).not.toContain("private-header-value");
+  });
+
+  it.each([
+    ["/api/stickers", "/api/stickers"],
+    ["/api/gifts/private-gift-id/deposit", "/api/gifts/:giftId/deposit"],
+    ["/api/gifts/private-gift-id/shared", "/api/gifts/:giftId/shared"],
+    ["/api/gifts/private-gift-id/take-out", "/api/gifts/:giftId/take-out"],
+  ])("logs a safe template for %s", (path, template) => {
+    const logs = captureDiagnostics();
+    const diagnostic = startNftRequest(
+      `https://private-user:private-password@provider.invalid${path}?token=private-query#private-fragment`,
+      "POST",
+    );
+    diagnostic?.completed(new Response());
+
+    expect(logs.info).toHaveBeenLastCalledWith(
+      "NFT API request",
+      expect.objectContaining({ event: "nft_request_completed", path: template }),
+    );
+    expect(logs.text()).not.toContain("private-");
+    expect(logs.text()).not.toContain("provider.invalid");
+  });
+
+  it("keeps unrelated requests and gift links outside the diagnostic routes", () => {
+    const logs = captureDiagnostics();
+    for (const [path, method] of [
+      ["/api/session", "POST"],
+      ["/api/gifts/pending", "GET"],
+      [`/gift/${giftClaimToken}`, "POST"],
+      ["/api/gifts/unknown-private-route", "POST"],
+    ]) {
+      expect(startNftRequest(path, method)).toBeUndefined();
+    }
+    expect(logs.info).not.toHaveBeenCalled();
+    expect(logs.error).not.toHaveBeenCalled();
   });
 });

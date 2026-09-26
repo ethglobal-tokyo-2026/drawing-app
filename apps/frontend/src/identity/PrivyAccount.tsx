@@ -1,16 +1,20 @@
 import { AccountRow } from "./AccountRow";
+import { etherscanAddressUrl, suiscanAccountUrl } from "./explorers";
 import { usePrivyStatus } from "./privy";
 import { SPONSORSHIP_CHECK_TARGET_ID } from "./sponsorship-target";
 import { useSuiWalletFailure } from "./suiWallet";
 
-// Ethereum Sepolia, where the sticker contracts live.
-const ETHERSCAN = {
-  url: "https://sepolia.etherscan.io/address/",
+interface Explorer {
+  href: (address: string) => string;
+  name: string;
+}
+
+const ETHERSCAN: Explorer = {
+  href: etherscanAddressUrl,
   name: "Etherscan, Ethereum Sepolia’s explorer",
 };
-// A Sui address is the same on every Sui network; the app tests on Testnet.
-const SUISCAN = {
-  url: "https://suiscan.xyz/testnet/account/",
+const SUISCAN: Explorer = {
+  href: suiscanAccountUrl,
   name: "Suiscan, Sui Testnet’s explorer",
 };
 
@@ -49,12 +53,12 @@ function Address({
 }: {
   label: string;
   address: string;
-  explorer: { url: string; name: string };
+  explorer: Explorer;
 }) {
   return (
     <AccountRow label={label} value={address} copyable>
       <a
-        href={explorer.url + address}
+        href={explorer.href(address)}
         target="_blank"
         rel="noopener noreferrer"
         aria-label={`${label} ${address} on ${explorer.name}`}
