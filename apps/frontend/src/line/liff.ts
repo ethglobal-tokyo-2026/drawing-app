@@ -116,23 +116,6 @@ export function lineLogout() {
   location.reload();
 }
 
-/**
- * Shares through LINE's friend/group picker when available (inside LINE,
- * with Share Target Picker enabled in the console). Returns false when the
- * caller should fall back to another share method.
- */
-export async function shareOnLine(text: string): Promise<boolean> {
-  if (state.status !== "ready" || !liff.isApiAvailable("shareTargetPicker")) return false;
-  try {
-    await liff.shareTargetPicker([{ type: "text", text }]);
-    return true;
-  } catch (error) {
-    // The caller falls back to the system share sheet or a copied link; the failure is kept here.
-    console.error("LINE's share picker failed:", describeLiffError(error), error);
-    return false;
-  }
-}
-
 const subscribe = (l: () => void) => {
   listeners.add(l);
   return () => listeners.delete(l);
