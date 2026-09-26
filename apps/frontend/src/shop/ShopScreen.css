@@ -129,11 +129,12 @@
   letter-spacing: -0.012em;
 }
 
-/* A quiet pressed pill: not the pink sale sticker, which means a discount. */
+/* A quiet pressed pill, in the Graphite that reads on Liner Deep (plain Graphite reads only 4.2:1 there). */
 .shelf__soon {
   padding: 3px 8px;
   border-radius: 999px;
   background: var(--liner-deep);
+  color: var(--graphite-on-deep);
 }
 
 .shelf__lead {
