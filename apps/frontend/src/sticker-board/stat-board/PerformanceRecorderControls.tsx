@@ -9,6 +9,7 @@ import {
   setPerformanceRecorder,
 } from "../../performance/performanceRecorder";
 import { formatPerformanceReport, formatSummaryLine } from "../../performance/performanceReport";
+import { useTranslation } from "../../i18n/react";
 import { LabelButton } from "../../ui/LabelButton";
 import { QuietLink } from "../../ui/QuietLink";
 import "./performance-recorder-controls.css";
@@ -17,6 +18,7 @@ const reason = (error: unknown) => (error instanceof Error ? error.message : Str
 
 /** The performance recorder's switch, live summary and report, on the stat board's developer slip. */
 export function PerformanceRecorderControls() {
+  const { t } = useTranslation();
   const id = useId();
   const slip = useRef<HTMLDivElement>(null);
   const [on, setOn] = useState(isPerformanceRecorderOn);
@@ -63,10 +65,15 @@ export function PerformanceRecorderControls() {
     } catch (error) {
       console.error("The performance recorder's switch failed", error);
       // Either it switched and only its setting wasn't kept, or it couldn't switch at all.
+      const why = { reason: reason(error) };
       setProblem(
         isPerformanceRecorderOn() === next
-          ? `Recording is ${next ? "on" : "off"} until the app restarts: ${reason(error)}`
-          : `Recording couldn't ${next ? "start" : "stop"}: ${reason(error)}`,
+          ? next
+            ? t(($) => $.stickerBoard.developer.performance.onUntilRestart, why)
+            : t(($) => $.stickerBoard.developer.performance.offUntilRestart, why)
+          : next
+            ? t(($) => $.stickerBoard.developer.performance.couldntStart, why)
+            : t(($) => $.stickerBoard.developer.performance.couldntStop, why),
       );
     }
     setOn(isPerformanceRecorderOn());
@@ -89,7 +96,9 @@ export function PerformanceRecorderControls() {
       setCopied(true);
     } catch (error) {
       console.error("The performance report couldn't be copied", error);
-      setProblem(`The report couldn't be copied: ${reason(error)}. It's below to copy by hand.`);
+      setProblem(
+        t(($) => $.stickerBoard.developer.performance.notCopied, { reason: reason(error) }),
+      );
       setUncopied(report);
     }
   };
@@ -103,7 +112,9 @@ export function PerformanceRecorderControls() {
 
   return (
     <div className="performance-recorder" ref={slip}>
-      <h3 className="fine performance-recorder__h">Performance</h3>
+      <h3 className="fine performance-recorder__h">
+        {t(($) => $.stickerBoard.developer.performance.title)}
+      </h3>
       <label className="performance-recorder__switch">
         <input
           type="checkbox"
@@ -111,13 +122,15 @@ export function PerformanceRecorderControls() {
           aria-describedby={`${id}-what`}
           onChange={(e) => toggle(e.target.checked)}
         />
-        Record performance
+        {t(($) => $.stickerBoard.developer.performance.record)}
       </label>
       <p id={`${id}-what`} className="fine performance-recorder__note">
-        Slow frames and what happened around them. While it’s on, it records from the app’s start.
+        {t(($) => $.stickerBoard.developer.performance.what)}
       </p>
       <p className="performance-recorder__summary">
-        {summary ? formatSummaryLine(summary) : "Nothing recorded yet"}
+        {summary
+          ? formatSummaryLine(summary)
+          : t(($) => $.stickerBoard.developer.performance.nothingYet)}
       </p>
       <div className="performance-recorder__actions">
         {/* The clipboard wants the tap's own click, which the press would fire late. */}
@@ -128,14 +141,14 @@ export function PerformanceRecorderControls() {
           disabled={!summary}
           onClick={() => void copy()}
         >
-          Copy report
+          {t(($) => $.stickerBoard.developer.performance.copy)}
         </LabelButton>
         <QuietLink disabled={!summary} onClick={clear}>
-          Clear
+          {t(($) => $.stickerBoard.developer.performance.clear)}
         </QuietLink>
       </div>
       <p className="fine performance-recorder__note" role="status">
-        {copied ? "Copied. Paste it into the chat." : ""}
+        {copied ? t(($) => $.stickerBoard.developer.performance.copied) : ""}
       </p>
       {problem && (
         <p className="performance-recorder__problem" role="alert">
@@ -145,7 +158,7 @@ export function PerformanceRecorderControls() {
       {uncopied && (
         <textarea
           className="performance-recorder__report"
-          aria-label="Performance report"
+          aria-label={t(($) => $.stickerBoard.developer.performance.report)}
           readOnly
           value={uncopied}
         />

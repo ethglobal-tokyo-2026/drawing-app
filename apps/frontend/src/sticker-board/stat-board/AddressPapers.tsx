@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, type Ref } from "react";
+import { useTranslation } from "../../i18n/react";
 import { QrCode } from "../../ui/QrCode";
 import { QuietLink } from "../../ui/QuietLink";
 import { useReducedMotion } from "../../ui/useReducedMotion";
@@ -21,23 +22,6 @@ interface Props {
  * modules of a board address's code, and more for a Sui address's finer one.
  */
 const CODE_PX = 116;
-
-const PAPERS = {
-  ethereum: {
-    caption: "Board address",
-    network: "Ethereum Sepolia",
-    open: "Show your board address as a QR code",
-    loading: "Getting your board address…",
-    failed: "Board address didn’t load",
-  },
-  sui: {
-    caption: "Sui address",
-    network: "Sui Testnet",
-    open: "Show your Sui address as a QR code",
-    loading: "Getting your Sui address…",
-    failed: "Sui address didn’t load",
-  },
-} as const;
 
 /** Back on the cork, the paper presses down from a little proud of it and swings on its pin. */
 function stickBack(face: Element) {
@@ -100,10 +84,10 @@ interface PaperProps {
 
 /** One address on white label paper under its chain's pin. Once the address is known, the face opens it. */
 function AddressPaper({ chain, address, lifted, paperRef, onOpen }: PaperProps) {
+  const { t } = useTranslation();
   const reduced = useReducedMotion();
   const note = useRef<HTMLDivElement>(null);
   const wasLifted = useRef(lifted);
-  const copy = PAPERS[chain];
 
   // Only on the way back: on the way up, the dialog's card covers the paper on the frame it hides.
   useLayoutEffect(() => {
@@ -115,8 +99,12 @@ function AddressPaper({ chain, address, lifted, paperRef, onOpen }: PaperProps) 
 
   const caption = (
     <>
-      <span className="fine address-papers__caption">{copy.caption}</span>
-      <span className="fine address-papers__chain">{copy.network}</span>
+      <span className="fine address-papers__caption">
+        {t(($) => $.stickerBoard.addresses[chain].caption)}
+      </span>
+      <span className="fine address-papers__chain">
+        {t(($) => $.stickerBoard.addresses[chain].network)}
+      </span>
     </>
   );
   return (
@@ -132,7 +120,7 @@ function AddressPaper({ chain, address, lifted, paperRef, onOpen }: PaperProps) 
           className={`stat-board__paper address-papers__face${lifted ? " is-lifted" : ""}`}
           data-press
           aria-haspopup="dialog"
-          aria-label={copy.open}
+          aria-label={t(($) => $.stickerBoard.addresses[chain].open)}
           onClick={onOpen}
         >
           <QrCode className="address-papers__code" value={address.address} size={CODE_PX} />
@@ -144,11 +132,13 @@ function AddressPaper({ chain, address, lifted, paperRef, onOpen }: PaperProps) 
           <CodePlaceholder />
           {caption}
           <span className="address-papers__status">
-            {address.state === "loading" ? copy.loading : copy.failed}
+            {address.state === "loading"
+              ? t(($) => $.stickerBoard.addresses[chain].loading)
+              : t(($) => $.stickerBoard.addresses[chain].didntLoad)}
           </span>
           {address.state === "failed" && address.retry && (
             <QuietLink className="address-papers__retry" onClick={address.retry}>
-              Try again
+              {t(($) => $.stickerBoard.addresses.tryAgain)}
             </QuietLink>
           )}
         </div>

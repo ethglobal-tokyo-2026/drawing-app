@@ -19,10 +19,12 @@ export const TEST_OWNER: Person = {
   linePictureUrl: null,
 };
 
-const TEST_ME: Me = {
+/** You in tests. */
+export const TEST_ME: Me = {
   ...TEST_OWNER,
   timeZone: "Asia/Tokyo",
   language: "en",
+  languageChoice: null,
   createdAt: "2026-09-01T00:00:00.000Z",
   needsHandle: false,
   newStickerCount: 0,
@@ -91,6 +93,7 @@ const unanswered = (method: string) => () =>
  */
 export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
   return {
+    setLanguageChoice: unanswered("setLanguageChoice"),
     stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [] }),
     userStats: unanswered("userStats"),
     saveStickerPlacement: (stickerId, placement) =>
