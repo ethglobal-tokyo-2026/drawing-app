@@ -16,6 +16,7 @@ import { useTickets } from "../tickets/useTickets";
 import { useToast } from "../ui/useToast";
 import { sizePx } from "./canvas/brush";
 import { DrawingCanvas, type DrawingCanvasHandle } from "./canvas/DrawingCanvas";
+import { isFirstVisit } from "./drawVisits";
 import { lazyRadius } from "./canvas/lazyBrush";
 import type { Op, Tool } from "./canvas/ops";
 import { SealKey } from "./SealKey";
@@ -124,7 +125,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // Until a drawing kept across a reload is back, or known lost, the sheet takes no input.
   const [restoring, setRestoring] = useState(true);
   const [pickedUp, setPickedUp] = useState<keyof typeof PICKED_UP | null>(null);
-  // "Starts when you draw" under the timer, until the first stroke peels it off.
+  // A tap on the waiting timer puts "Starts when you draw" under it, until the first stroke.
   const [startsNote, setStartsNote] = useState(false);
 
   const clock = useSessionClock(() => send({ type: "time-up" }));
@@ -301,7 +302,6 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     setPickedUp(null);
     setStartsNote(true);
   };
-  const timerNote = pickedUp ? PICKED_UP[pickedUp] : startsNote ? STARTS : null;
 
   // Every hold stops the clock: the person's pause, the board covering the screen, a tool in hand.
   useEffect(() => {
@@ -328,6 +328,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const paywall = active && fresh && paywallOpen !== null;
   const sealing = session.phase === "sealing" || session.phase === "sealed";
   const locked = !active || paywall || sealing || restoring;
+
+  // On the first few visits, a fresh sheet says the timer waits for the first stroke, which peels it off.
+  const startsLabel = startsNote || (active && fresh && !paywall && isFirstVisit());
+  const timerNote = pickedUp ? PICKED_UP[pickedUp] : startsLabel ? STARTS : null;
 
   const sizeKey = tool === "eraser" ? "eraser" : "brush";
   const setSize = (value: number) => setSizes((s) => ({ ...s, [sizeKey]: value }));
