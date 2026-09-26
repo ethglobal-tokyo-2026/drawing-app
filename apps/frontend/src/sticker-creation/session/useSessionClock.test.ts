@@ -40,10 +40,10 @@ function setup({ started = true } = {}) {
 }
 
 describe("SessionClock", () => {
-  it("waits at 5:00 until the first stroke starts it", () => {
+  it("waits at 3:00 until the first stroke starts it", () => {
     const { clock, counted } = setup({ started: false });
     expect(counted(5000)).toBe(0);
-    expect(clock.getView().secondsLeft).toBe(300);
+    expect(clock.getView().secondsLeft).toBe(SESSION_MS / 1000);
     clock.start();
     expect(counted(1000)).toBe(1000);
   });
@@ -133,11 +133,11 @@ describe("SessionClock", () => {
     expect(counted(500)).toBe(500);
   });
 
-  it("goes back to 5:00 on a fresh sheet", () => {
+  it("goes back to 3:00 on a fresh sheet", () => {
     const { clock, counted } = setup();
     counted(20_000);
     clock.reset();
-    expect(clock.getView().secondsLeft).toBe(300);
+    expect(clock.getView().secondsLeft).toBe(SESSION_MS / 1000);
     expect(counted(1000)).toBe(0);
   });
 });

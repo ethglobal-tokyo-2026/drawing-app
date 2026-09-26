@@ -93,7 +93,12 @@ export class SessionKeeper {
     this.ticket = ticket;
     this.written = [];
     writeRecord({ ticket, elapsedMs: 0 });
-    this.write(transact("readwrite", clearStores));
+    this.write(
+      transact("readwrite", (ops, progress) => {
+        clearStores(ops, progress);
+        progress.put(0, PROGRESS_KEY);
+      }),
+    );
   }
 
   /** A session picked back up after a reload, whose ops are already kept. */
