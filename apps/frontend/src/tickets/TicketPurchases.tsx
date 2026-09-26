@@ -1,9 +1,9 @@
 import type { TicketShop as Shop } from "@drawing-app/api/client";
-import { ArrowSquareOut, CaretDown, Receipt } from "@phosphor-icons/react";
 import { useEffect, useId, useState } from "react";
 import { useMe } from "../api/meContext";
 import { formatDateTime } from "../i18n/format";
 import { useTranslation } from "../i18n/react";
+import { ArrowSquareOut, CaretDown, Receipt } from "../icons";
 import { suiscanTxUrl } from "../identity/explorers";
 import { openLinkInLine } from "../line/openLink";
 import type { TicketPaymentRecord } from "../payments/jpyc";

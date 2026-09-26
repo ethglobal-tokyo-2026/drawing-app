@@ -63,6 +63,13 @@
   font-weight: 800;
 }
 
+/* The out-arrow: the row opens the payment on Suiscan. Phosphor's icons carry no size of their own. */
+.ticket-purchases__price svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
 .ticket-purchases__note {
   margin: 4px 0 0;
   font-weight: 650;
