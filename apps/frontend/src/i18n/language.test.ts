@@ -13,10 +13,11 @@ describe("the app's language", () => {
     ]);
   });
 
-  it("starts in the developer slip's choice, and in English for LINE's Japanese until that's automatic", () => {
+  it("starts in the person's choice, else in LINE's language", () => {
     expect(startLanguage("ja", "en-US")).toBe("ja");
     expect(startLanguage("en", "ja")).toBe("en");
-    expect(startLanguage(null, "ja-JP")).toBe("en");
+    expect(startLanguage(null, "ja-JP")).toBe("ja");
     expect(startLanguage(null, "en-US")).toBe("en");
+    expect(startLanguage(null, "zh-TW")).toBe("en");
   });
 });

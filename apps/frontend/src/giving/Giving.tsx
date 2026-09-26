@@ -9,6 +9,7 @@ import {
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useApi } from "../api/useApi";
+import { Trans, useTranslation } from "../i18n/react";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
@@ -65,6 +66,7 @@ type View = Screen | "cantFind";
 
 /** Giving a sticker through a LINE chat: the give sheet, the gift bag, and the seal on send. */
 export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) {
+  const { t } = useTranslation();
   const reduced = useReducedMotion();
   const motion = reduced ? 1 : 0;
   const api = useApi();
@@ -132,15 +134,20 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
   let title: string;
   let content: ReactNode;
   if (view === "cantFind") {
-    title = "Can’t find them?";
+    title = t(($) => $.giving.cantFind.title);
     content = <CantFindThem onBack={() => setCantFind(false)} />;
   } else if (state.step === "sheet") {
-    title = `Give ${formatNo(sticker.no)}`;
+    title = t(($) => $.giving.give, { no: formatNo(sticker.no) });
     content = (
       <>
         <header className="giving__head">
           <h2 className="giving__title">{title}</h2>
-          <button type="button" className="giving__icon-btn" onClick={close} aria-label="Close">
+          <button
+            type="button"
+            className="giving__icon-btn"
+            onClick={close}
+            aria-label={t(($) => $.giving.close)}
+          >
             <X size={20} />
           </button>
         </header>
@@ -155,32 +162,29 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
             <PaperPlaneTilt size={20} />
           </span>
           <span className="giving__row-text">
-            <b>Send in a LINE chat</b>
-            <small>Pick your chat with them. The first to open it gets it.</small>
+            <b>{t(($) => $.giving.sheet.sendInChat)}</b>
+            <small>{t(($) => $.giving.sheet.sendInChatHint)}</small>
           </span>
           <CaretRight className="giving__row-chev" size={20} />
         </button>
         <QuietLink className="giving__cant-find" onClick={() => setCantFind(true)}>
-          <Question /> Can’t find them?
+          <Question /> {t(($) => $.giving.cantFind.title)}
         </QuietLink>
         <p className="giving__leaves">
-          <StickerGlyph size={16} /> It comes off your board and into a gift bag.
+          <StickerGlyph size={16} /> {t(($) => $.giving.sheet.leaves)}
         </p>
       </>
     );
   } else if (state.step === "sent") {
-    title = "Sealed and sent";
+    title = t(($) => $.giving.sent.title);
     content = (
       <div className="giving__sent">
         {bag(sealed ? "sealed" : "open", state.sentAt)}
         <h2 className="giving__title">{title}</h2>
-        <p className="giving__sub">
-          It’s in your LINE chat now, and the gift message opens once. When they receive it, you’ll
-          see who did.
-        </p>
+        <p className="giving__sub">{t(($) => $.giving.sent.lead)}</p>
         {state.recordError && (
           <p className="giving__problem" role="alert">
-            It went out in LINE, but the app’s server couldn’t record it: {state.recordError}
+            {t(($) => $.giving.sent.couldntRecord, { reason: state.recordError })}
           </p>
         )}
         <LabelButton
@@ -189,21 +193,19 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
           data-autofocus
           onClick={() => onClose(true)}
         >
-          Back to my sticker board
+          {t(($) => $.giving.backToBoard)}
         </LabelButton>
       </div>
     );
   } else {
     const unsent = state.step === "notSent" || state.step === "failed";
-    title = unsent ? "Not sent yet" : "In the bag";
+    title = unsent ? t(($) => $.giving.inTheBag.notSent) : t(($) => $.giving.inTheBag.title);
+    const couldntRecord = (reason: string) => t(($) => $.giving.inTheBag.couldntRecord, { reason });
     const problem =
       state.step === "failed"
-        ? [
-            state.error,
-            state.recordError && `The app’s server couldn’t record that: ${state.recordError}`,
-          ]
+        ? [state.error, state.recordError && couldntRecord(state.recordError)]
         : state.step === "notSent" && state.recordError
-          ? [`The app’s server couldn’t record that: ${state.recordError}`]
+          ? [couldntRecord(state.recordError)]
           : [];
     content = (
       <>
@@ -212,9 +214,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
           <h2 className="giving__title">{title}</h2>
         </header>
         <p className="giving__sub">
-          {unsent
-            ? "It’s still in the bag, unsealed. Pick a chat again, or take it out."
-            : "It seals when it’s sent. Pick your chat with them in LINE: whoever opens it first gets it."}
+          {unsent ? t(($) => $.giving.inTheBag.notSentLead) : t(($) => $.giving.inTheBag.lead)}
         </p>
         {problem.filter(Boolean).map((line) => (
           <p key={String(line)} className="giving__problem" role="alert">
@@ -230,10 +230,10 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
             disabled={busy}
             data-autofocus
           >
-            Send in LINE
+            {t(($) => $.giving.inTheBag.send)}
           </Key>
           <QuietLink onClick={() => flow?.takeOut()} disabled={busy}>
-            <ArrowUUpLeft /> Take it out
+            <ArrowUUpLeft /> {t(($) => $.giving.inTheBag.takeOut)}
           </QuietLink>
         </div>
       </>
@@ -253,8 +253,15 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
           />
         )}
         <p className="fine giving__meta">
-          {formatNo(sticker.no)} · <Duration seconds={sticker.timeUsed} /> ·{" "}
-          {formatDay(sticker.createdAt)} · {formatHandle(fromHandle)}
+          <Trans
+            i18nKey={($) => $.giving.meta}
+            values={{ no: formatNo(sticker.no), day: formatDay(sticker.createdAt) }}
+            components={{
+              duration: <Duration seconds={sticker.timeUsed} />,
+              // A handle is a component's text, not a value: Trans would read markup in a value.
+              name: <>{formatHandle(fromHandle)}</>,
+            }}
+          />
         </p>
       </div>
       <div className="giving__scrim" onClick={close} />

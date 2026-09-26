@@ -2,14 +2,10 @@ import { CaretDown, CaretRight, Heart, Play } from "@phosphor-icons/react";
 import { useState } from "react";
 import type { PersonView } from "../api/views";
 import { formatCount } from "../i18n/format";
+import { Trans, useTranslation } from "../i18n/react";
 import { formatMonthDay } from "../stickers/format";
-import {
-  artistShareLine,
-  defaultOpenRow,
-  TRAIL_SHOWN,
-  trailName,
-  type TrailRow,
-} from "./trailRows";
+import { handleOf } from "./boardSticker";
+import { artistShareLine, defaultOpenRow, TRAIL_SHOWN, type TrailRow } from "./trailRows";
 import "./transfer-trail.css";
 
 interface Props {
@@ -28,27 +24,36 @@ interface Props {
  * a tap. Past the newest gift, the rest fold into "N earlier gifts".
  */
 export function TransferTrail({ rows, viewerId, artist, onReplay }: Props) {
+  const { t } = useTranslation();
   const [openId, setOpenId] = useState(() => defaultOpenRow(rows, viewerId));
   const openAt = rows.findIndex((r) => r.giftId === openId);
   const [unfolded, setUnfolded] = useState(openAt >= TRAIL_SHOWN);
   const shown = unfolded ? rows : rows.slice(0, TRAIL_SHOWN);
   const earlier = rows.length - shown.length;
+  const isYou = (p: PersonView) => p.id === viewerId;
 
-  // The artist is named once, in the detail's by-line, so the rows carry no artist tag.
-  const name = (p: PersonView, leads = false) => {
-    const n = trailName(p, viewerId);
-    return <b>{leads && n === "you" ? "You" : n}</b>;
+  // "@mika gave it to you · 9.23". The artist is named once, in the detail's by-line, so the rows
+  // carry no artist tag. Names are components' text, which Trans never reads as markup.
+  const sentence = (r: TrailRow) => {
+    const who = isYou(r.giver) ? "byYou" : isYou(r.receiver) ? "toYou" : "between";
+    return (
+      <span className="transfer-trail__say">
+        <Trans
+          i18nKey={($) => $.stickerBoard.transferTrail.handOff[who]}
+          values={{ day: formatMonthDay(r.receivedAt) }}
+          components={{
+            b: <b />,
+            giver: <b>{handleOf(r.giver)}</b>,
+            receiver: <b>{handleOf(r.receiver)}</b>,
+            at: <span className="transfer-trail__at" />,
+          }}
+        />
+      </span>
+    );
   };
-  // "@mika gave it to you · 9.23", with the giver's name leading the sentence.
-  const sentence = (r: TrailRow) => (
-    <span className="transfer-trail__say">
-      {name(r.giver, true)} gave it to {name(r.receiver)}
-      <span className="transfer-trail__at"> · {formatMonthDay(r.receivedAt)}</span>
-    </span>
-  );
 
   return (
-    <section className="transfer-trail" aria-label="Where it’s been">
+    <section className="transfer-trail" aria-label={t(($) => $.stickerBoard.transferTrail.label)}>
       <ol className="transfer-trail__list">
         {shown.map((r) => {
           const g = r.gratitude;
@@ -70,15 +75,21 @@ export function TransferTrail({ rows, viewerId, artist, onReplay }: Props) {
                   {sentence(r)}
                   <span className="transfer-trail__amount">
                     <Heart size={13} weight="fill" aria-hidden />
-                    {formatCount(g.total)}
-                    <span className="visually-hidden"> gratitude</span>
+                    <Trans
+                      i18nKey={($) => $.stickerBoard.transferTrail.amount}
+                      values={{ amount: formatCount(g.total) }}
+                      components={{ hidden: <span className="visually-hidden" /> }}
+                    />
                   </span>
                   <CaretRight size={14} aria-hidden className="transfer-trail__caret" />
                 </button>
               </li>
             );
           const split = artistShareLine(r, artist, viewerId);
-          const from = trailName(r.receiver, viewerId);
+          // The receiver sends the Gratitude, so it's from them.
+          const fromYou = isYou(r.receiver);
+          const from = handleOf(r.receiver);
+          const amount = formatCount(g.total);
           return (
             <li key={r.giftId} className="transfer-trail__row is-open">
               <p className="transfer-trail__head">{sentence(r)}</p>
@@ -87,24 +98,31 @@ export function TransferTrail({ rows, viewerId, artist, onReplay }: Props) {
                   <Heart size={20} weight="fill" />
                 </span>
                 <span className="transfer-trail__sum">
-                  <span
-                    className={`transfer-trail__total ${formatCount(g.total).length > 5 ? "is-long" : ""}`}
-                  >
-                    {formatCount(g.total)}
+                  <span className={`transfer-trail__total ${amount.length > 5 ? "is-long" : ""}`}>
+                    {amount}
                   </span>
                   <span className="fine transfer-trail__from">
-                    {from === "you" ? "From you" : `From ${from}`}
+                    {fromYou
+                      ? t(($) => $.stickerBoard.transferTrail.fromYou)
+                      : t(($) => $.stickerBoard.transferTrail.from, { name: from })}
                   </span>
                 </span>
                 {onReplay && (
                   <button
                     type="button"
                     className="transfer-trail__replay"
-                    aria-label={`Play the replay of ${from === "you" ? "your" : `${from}’s`} ${formatCount(g.total)} gratitude`}
+                    aria-label={
+                      fromYou
+                        ? t(($) => $.stickerBoard.transferTrail.replayYours, { amount })
+                        : t(($) => $.stickerBoard.transferTrail.replayTheirs, {
+                            name: from,
+                            amount,
+                          })
+                    }
                     onClick={() => onReplay(r.giftId)}
                   >
                     <Play size={16} aria-hidden />
-                    <span>Replay</span>
+                    <span>{t(($) => $.stickerBoard.transferTrail.replay)}</span>
                   </button>
                 )}
               </div>
@@ -121,9 +139,7 @@ export function TransferTrail({ rows, viewerId, artist, onReplay }: Props) {
               onClick={() => setUnfolded(true)}
             >
               <CaretDown size={14} aria-hidden className="transfer-trail__caret" />
-              <span>
-                {earlier} earlier {earlier === 1 ? "gift" : "gifts"}
-              </span>
+              <span>{t(($) => $.stickerBoard.transferTrail.earlierGifts, { count: earlier })}</span>
             </button>
           </li>
         )}

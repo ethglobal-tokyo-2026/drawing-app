@@ -65,6 +65,9 @@ const refusal = async (response: Response) => ({
 const setHandle = (headers: Record<string, string>, handle: unknown) =>
   call("POST", "/api/me/handle", headers, { handle });
 
+const setLanguageChoice = (headers: Record<string, string>, body: unknown) =>
+  call("POST", "/api/me/language-choice", headers, body);
+
 describe("signing in", () => {
   it("makes the person at their first sign-in, with their LINE name as handle and the device's zone", async () => {
     const response = await signIn(ALICE);
@@ -102,6 +105,15 @@ describe("signing in", () => {
   it("keeps the app's language, and takes a returning sign-in's new one", async () => {
     expect((await meIn(await signIn(ALICE, DEVICE_ZONE, "ja"))).language).toBe("ja");
     expect((await meIn(await signIn(ALICE, DEVICE_ZONE, "en"))).language).toBe("en");
+  });
+
+  it("keeps a returning person's language choice, which is their language whatever the device says", async () => {
+    const headers = sessionCookie(await signIn(ALICE));
+    await setLanguageChoice(headers, { languageChoice: "ja" });
+    expect(await meIn(await signIn(ALICE, DEVICE_ZONE, "en"))).toMatchObject({
+      languageChoice: "ja",
+      language: "ja",
+    });
   });
 
   it("refuses an ID token LINE refuses with no session, and logs LINE's reason instead of sending it", async () => {
@@ -181,6 +193,32 @@ describe("your handle", () => {
   });
 });
 
+describe("your language choice", () => {
+  it("is null until you choose, then comes with you, and null goes back to LINE's language", async () => {
+    const headers = await test.signInAs(insertUser(test.db));
+    const me = () => call("GET", "/api/me", headers);
+    expect((await meIn(await me())).languageChoice).toBeNull();
+    expect(await meIn(await setLanguageChoice(headers, { languageChoice: "ja" }))).toMatchObject({
+      languageChoice: "ja",
+    });
+    expect((await meIn(await me())).languageChoice).toBe("ja");
+    expect(
+      (await meIn(await setLanguageChoice(headers, { languageChoice: null }))).languageChoice,
+    ).toBeNull();
+    expect((await meIn(await me())).languageChoice).toBeNull();
+  });
+
+  it("refuses a language the app doesn't speak, and a body that doesn't say", async () => {
+    const headers = await test.signInAs(insertUser(test.db));
+    for (const body of [{ languageChoice: "fr" }, {}]) {
+      expect(await refusal(await setLanguageChoice(headers, body))).toMatchObject({
+        status: 400,
+        error: "invalid_request",
+      });
+    }
+  });
+});
+
 describe("deleting your account", () => {
   it("forgets LINE and the handle, keeps the rest, ends the session, and a new sign-in makes a new person", async () => {
     const signedIn = await signIn(ALICE);
@@ -219,10 +257,11 @@ describe("deleting your account", () => {
 });
 
 describe("without a session", () => {
-  it("you can't read, rename or delete your account", async () => {
+  it("you can't read, rename, set a language on or delete your account", async () => {
     const responses = [
       await call("GET", "/api/me"),
       await setHandle({}, "sakura"),
+      await setLanguageChoice({}, { languageChoice: "ja" }),
       await call("DELETE", "/api/me"),
     ];
     for (const response of responses) {

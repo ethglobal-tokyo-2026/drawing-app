@@ -1,3 +1,6 @@
+import { ApiError } from "../api/apiClient";
+import { errorReason } from "../i18n/errorMessage";
+import { i18next } from "../i18n/i18n";
 import { formatNo } from "../stickers/format";
 import type { GiftBackend, GiftSticker, PackedGift } from "./giftBackend";
 import type { GiftSender, GiftSendOutcome } from "./giftSender";
@@ -52,7 +55,13 @@ interface Attempt {
   open: boolean;
 }
 
-const describe = (error: unknown) => (error instanceof Error ? error.message : String(error));
+/** Why a step failed, as the screen says it: an API error in the app's language, else its own text. */
+const describe = (error: unknown) =>
+  error instanceof ApiError
+    ? errorReason(error)
+    : error instanceof Error
+      ? error.message
+      : String(error);
 
 export function createGiveFlow({
   sticker,
@@ -113,7 +122,13 @@ export function createGiveFlow({
         report(`${which} couldn’t be packed`, error);
         if (attempt === a) {
           clearTimer();
-          set({ step: "failed", error: `${which} couldn’t be packed: ${describe(error)}` });
+          set({
+            step: "failed",
+            error: i18next.t(($) => $.giving.inTheBag.couldntPack, {
+              no: which,
+              reason: describe(error),
+            }),
+          });
         }
       }
       return null;
@@ -143,7 +158,14 @@ export function createGiveFlow({
     } catch (error) {
       report(`${which} wasn’t sent`, error);
       const recordError = await record("the failure", () => backend.markCancelled(packed.giftId));
-      set({ step: "failed", error: `${which} wasn’t sent: ${describe(error)}`, recordError });
+      set({
+        step: "failed",
+        error: i18next.t(($) => $.giving.inTheBag.wasntSent, {
+          no: which,
+          reason: describe(error),
+        }),
+        recordError,
+      });
       return;
     }
     if (outcome === "sent") {
@@ -183,7 +205,13 @@ export function createGiveFlow({
             a.open = false;
           } catch (error) {
             report(`${which} couldn't be taken out`, error);
-            set({ step: "failed", error: `${which} couldn't be taken out: ${describe(error)}` });
+            set({
+              step: "failed",
+              error: i18next.t(($) => $.giving.inTheBag.couldntTakeOut, {
+                no: which,
+                reason: describe(error),
+              }),
+            });
             return;
           }
         }

@@ -1,6 +1,8 @@
 import type { ApiError } from "../api/apiClient";
 import type { GiftPreview, ReceivedGift, ReceiveRefusal } from "@drawing-app/api/client";
 import { toMs, toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
+import { errorReason } from "../i18n/errorMessage";
+import { i18next } from "../i18n/i18n";
 
 /** Why a gift can't be received here: the REST doc's refusals, plus a link to no gift and no server. */
 export type RefusalKind = ReceiveRefusal | "gift_not_found" | "needs_server";
@@ -12,7 +14,10 @@ export interface GiftPreviewView {
   expiresAt: number;
 }
 
-/** ReceiveGiftDialog's steps, from the Gift Claim Token's preview to the received sticker. */
+/**
+ * ReceiveGiftDialog's steps, from the Gift Claim Token's preview to the received sticker. `failed`
+ * and `message` say what failed, in the app's language.
+ */
 export type ReceiveScreen =
   | { step: "opening" }
   | { step: "sealed"; preview: GiftPreviewView }
@@ -58,8 +63,8 @@ function opened({ giver, expiresAt, receivable, refusal, sticker }: GiftPreview)
   return {
     step: "failed",
     message: receivable
-      ? "The gift's preview came without its sticker."
-      : "The gift's preview refused it without saying why.",
+      ? i18next.t(($) => $.receiving.previewFailed.withoutSticker)
+      : i18next.t(($) => $.receiving.previewFailed.withoutRefusal),
   };
 }
 
@@ -72,7 +77,7 @@ export function receiveFlow(screen: ReceiveScreen, event: ReceiveEvent): Receive
       if (screen.step !== "opening") return screen;
       return isRefusal(event.error.code)
         ? { step: "refused", refusal: event.error.code, giver: null }
-        : { step: "failed", message: event.error.message };
+        : { step: "failed", message: errorReason(event.error) };
     case "retry":
       return screen.step === "refused" || screen.step === "failed" ? { step: "opening" } : screen;
     case "unpackaged":
@@ -95,7 +100,7 @@ export function receiveFlow(screen: ReceiveScreen, event: ReceiveEvent): Receive
             step: "unpackaged",
             preview: screen.preview,
             receiving: false,
-            failed: event.error.message,
+            failed: errorReason(event.error),
           };
   }
 }

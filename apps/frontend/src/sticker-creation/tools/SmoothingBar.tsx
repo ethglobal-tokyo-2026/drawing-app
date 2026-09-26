@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent, useId, useRef } from "react";
+import { useTranslation } from "../../i18n/react";
 import "./SmoothingBar.css";
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
  * once the thumb is let go.
  */
 export function SmoothingBar({ id, open, value, onChange }: Props) {
+  const { t } = useTranslation();
   const titleId = useId();
   const range = useRef<HTMLInputElement>(null);
   const commit = useEffectEvent(onChange);
@@ -36,10 +38,10 @@ export function SmoothingBar({ id, open, value, onChange }: Props) {
       aria-labelledby={titleId}
     >
       <span className="smoothing-title" id={titleId}>
-        Smoothing
+        {t(($) => $.stickerCreation.tools.smoothing)}
       </span>
       <span className="smoothing-end" aria-hidden="true">
-        Raw
+        {t(($) => $.stickerCreation.smoothingBar.raw)}
       </span>
       <input
         ref={range}
@@ -49,12 +51,12 @@ export function SmoothingBar({ id, open, value, onChange }: Props) {
         max={100}
         step={1}
         defaultValue={value}
-        aria-label="Smoothing"
+        aria-label={t(($) => $.stickerCreation.tools.smoothing)}
         style={{ "--p": `${value}%` }}
         onInput={(e) => e.currentTarget.style.setProperty("--p", `${e.currentTarget.value}%`)}
       />
       <span className="smoothing-end" aria-hidden="true">
-        Smooth
+        {t(($) => $.stickerCreation.smoothingBar.smooth)}
       </span>
     </div>
   );

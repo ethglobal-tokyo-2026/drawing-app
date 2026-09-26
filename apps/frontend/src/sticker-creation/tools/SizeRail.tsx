@@ -1,4 +1,5 @@
 import { useRef, type CSSProperties, type KeyboardEvent } from "react";
+import { useTranslation } from "../../i18n/react";
 import { sizePx } from "../canvas/brush";
 import { useDrag } from "./useDrag";
 import "./SizeRail.css";
@@ -38,6 +39,7 @@ interface Props {
  * at its foot. While a finger is on it, a ghost of the tip shows mid-sheet at its real size.
  */
 export function SizeRail({ value, eraser, active, onChange, onHold }: Props) {
+  const { t } = useTranslation();
   const rail = useRef<HTMLDivElement>(null);
   const ghost = useRef<HTMLDivElement>(null);
   const dragged = useRef(value);
@@ -74,12 +76,16 @@ export function SizeRail({ value, eraser, active, onChange, onHold }: Props) {
         className={`size-rail ${active ? "is-active" : ""} ${eraser ? "is-eraser" : ""}`}
         role="slider"
         tabIndex={0}
-        aria-label={eraser ? "Eraser size" : "Brush size"}
+        aria-label={
+          eraser
+            ? t(($) => $.stickerCreation.sizeRail.eraser)
+            : t(($) => $.stickerCreation.sizeRail.brush)
+        }
         aria-orientation="vertical"
         aria-valuemin={1}
         aria-valuemax={48}
         aria-valuenow={px}
-        aria-valuetext={`${px} px`}
+        aria-valuetext={t(($) => $.stickerCreation.sizeRail.value, { size: px })}
         style={style}
         onKeyDown={onKeyDown}
         {...drag}

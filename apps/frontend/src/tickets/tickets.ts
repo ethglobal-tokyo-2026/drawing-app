@@ -1,4 +1,5 @@
 import type { TicketKind, Tickets } from "@drawing-app/api/client";
+import { i18next } from "../i18n/i18n";
 import { TICKET_DAY_UTC_OFFSET_MS } from "./config";
 
 export type { TicketKind, Tickets };
@@ -38,7 +39,8 @@ export function dailyTickets(t: Tickets): DailyTicket[] {
 
 /** Screen-reader text for both counts, such as "2 daily tickets and 5 reserve tickets". */
 export function describeTickets(t: Tickets): string {
-  const n = (count: number, kind: TicketKind) =>
-    `${count} ${kind} ${count === 1 ? "ticket" : "tickets"}`;
-  return `${n(t.dailyLeft, "daily")} and ${n(t.reserveLeft, "reserve")}`;
+  return i18next.t(($) => $.tickets.summary.dailyAndReserve, {
+    daily: i18next.t(($) => $.tickets.summary.daily, { count: t.dailyLeft }),
+    reserve: i18next.t(($) => $.tickets.summary.reserve, { count: t.reserveLeft }),
+  });
 }

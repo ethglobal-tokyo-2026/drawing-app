@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
+import { useTranslation } from "../i18n/react";
 import "./sheet.css";
 
 /** How far the perforation must be dragged down before the sheet lets go. */
@@ -19,6 +20,7 @@ interface Props {
 
 /** A bottom sheet on the Liner. Its perforation row is the grab: drag it down or tap it to close. */
 export function Sheet({ label, open = true, onClose, className, children }: Props) {
+  const { t } = useTranslation();
   const start = useRef<number | null>(null);
   const [dy, setDy] = useState(0);
   // Where a drag left the sheet, so it slides away from there rather than jumping back first.
@@ -59,7 +61,7 @@ export function Sheet({ label, open = true, onClose, className, children }: Prop
       <button
         type="button"
         className="perf"
-        aria-label={`Close ${label}`}
+        aria-label={t(($) => $.ui.sheet.close, { label })}
         onPointerDown={(e) => {
           start.current = e.clientY;
           e.currentTarget.setPointerCapture(e.pointerId);
