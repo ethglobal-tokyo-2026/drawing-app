@@ -8,10 +8,18 @@ export interface Field {
   h: number;
 }
 
+/** A box on the board, in board pixels. */
+export interface Box {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
 /** The header band: your name, and the sticker tray's top. */
 const HEADER = 86;
 const INSET = 12;
-/** Nothing runs along the foot, so the field reaches almost to it. */
+/** Draw floats over the field's lower left rather than taking a band, so the field reaches almost to the foot. */
 const FOOT = 16;
 /** The right edge belongs to the sticker tray. */
 const TRAY_EDGE = 40;
@@ -72,10 +80,7 @@ const KNOB_RADIUS = 14;
  * Whether the rotate knob, which stands past the sticker's top edge and turns with it, would sit off
  * the board's top or under the name button, where it can't be reached.
  */
-export function knobHidden(
-  sticker: { x: number; y: number; h: number; r: number },
-  name: { left: number; top: number; right: number; bottom: number },
-) {
+export function knobHidden(sticker: { x: number; y: number; h: number; r: number }, name: Box) {
   const turn = (sticker.r * Math.PI) / 180;
   const reach = sticker.h / 2 + KNOB_REACH;
   const x = sticker.x + Math.sin(turn) * reach;
@@ -89,26 +94,40 @@ export function knobHidden(
   );
 }
 
+/** How far the toolbar keeps from what it must stay clear of. */
+const CLEARANCE = 8;
+
 /**
  * Where the selected sticker's toolbar goes, in board pixels: under the sticker, clear of its turned
- * corners; on the other side when there's no room; clear of the knob on whichever side it stands;
- * never over the header or the sticker tray's edge.
+ * corners; on the other side when there's no room or it would meet `clearOf` (Draw); clear of the
+ * knob on whichever side it stands; never over the header or the sticker tray's edge.
  */
 export function toolbarSpot(
   sticker: { x: number; y: number; w: number; h: number; r: number },
   board: { W: number; H: number },
   toolbar: { w: number; h: number },
-  knobBelow = false,
+  { knobBelow = false, clearOf }: { knobBelow?: boolean; clearOf?: Box | null } = {},
 ) {
   const turn = (sticker.r * Math.PI) / 180;
   const reach =
     (Math.abs(Math.sin(turn)) * sticker.w + Math.abs(Math.cos(turn)) * sticker.h) / 2 + 12;
   const [below, above] = knobBelow ? [50, 14] : [14, 50];
-  let top = sticker.y + reach + below;
-  if (top + toolbar.h > board.H - 12) top = sticker.y - reach - above - toolbar.h;
-  if (top < HEADER - 6)
-    top = clamp(sticker.y - toolbar.h / 2, HEADER - 6, board.H - toolbar.h - 12);
   const left = clamp(sticker.x - toolbar.w / 2, 10, board.W - toolbar.w - TRAY_EDGE - 4);
+  const meets = (top: number) =>
+    Boolean(
+      clearOf &&
+      left < clearOf.right + CLEARANCE &&
+      left + toolbar.w > clearOf.left - CLEARANCE &&
+      top < clearOf.bottom + CLEARANCE &&
+      top + toolbar.h > clearOf.top - CLEARANCE,
+    );
+  let top = sticker.y + reach + below;
+  if (top + toolbar.h > board.H - 12 || meets(top)) top = sticker.y - reach - above - toolbar.h;
+  if (top < HEADER - 6) {
+    top = clamp(sticker.y - toolbar.h / 2, HEADER - 6, board.H - toolbar.h - 12);
+    // A sticker too big to clear on either side still gets its toolbar clear of Draw.
+    if (clearOf && meets(top)) top = Math.max(HEADER - 6, clearOf.top - CLEARANCE - toolbar.h);
+  }
   return { left, top };
 }
 

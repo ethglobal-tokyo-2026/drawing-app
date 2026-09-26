@@ -301,10 +301,11 @@
   flex: none;
 }
 
-/* The selected sticker's toolbar: label stock on a lifted strip, beside the sticker. */
+/* The selected sticker's toolbar: label stock on a lifted strip, beside the sticker. It's placed
+   clear of Draw, and stacks above it in case they ever meet, so a press on Give never lands on Draw. */
 .sticker-toolbar {
   position: absolute;
-  z-index: 950;
+  z-index: 960;
   left: 0;
   top: 0;
   display: flex;

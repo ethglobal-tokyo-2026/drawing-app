@@ -37,6 +37,7 @@ import {
   stickerBox,
   toFrac,
   toPx,
+  type Box,
 } from "./placement";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import { StatBoard, type StatBoardHandle } from "./stat-board/StatBoard";
@@ -77,6 +78,23 @@ function curledToday(stickers: readonly BoardSticker[], now: Date) {
 
 const round4 = (v: number) => Number(v.toFixed(4));
 
+/** An element's box on the board, which is its offset parent. */
+const boxOf = (el: HTMLElement): Box => ({
+  left: el.offsetLeft,
+  top: el.offsetTop,
+  right: el.offsetLeft + el.offsetWidth,
+  bottom: el.offsetTop + el.offsetHeight,
+});
+
+/** The box as it was when it hasn't moved, so measuring again doesn't re-render the board. */
+const kept = (was: Box | null, now: Box) =>
+  was?.left === now.left &&
+  was.top === now.top &&
+  was.right === now.right &&
+  was.bottom === now.bottom
+    ? was
+    : now;
+
 const reasonOf = (error: unknown) =>
   error instanceof Error && error.message ? error.message : String(error);
 
@@ -108,6 +126,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const [face, setFace] = useState<HTMLDivElement | null>(null);
   const tray = useRef<StickerTrayHandle>(null);
   const nameButton = useRef<HTMLButtonElement>(null);
+  const drawSlot = useRef<HTMLSpanElement>(null);
   const flipBack = useRef<HTMLButtonElement>(null);
   const statBoard = useRef<StatBoardHandle>(null);
   const [stickers, setStickers] = useState<BoardSticker[] | null>(null);
@@ -117,12 +136,9 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const [unsaved, setUnsaved] = useState<ReadonlyMap<string, string>>(() => new Map());
   const [size, setSize] = useState<{ W: number; H: number } | null>(null);
   /** The name button's box on the board, which a sticker's knob must stay clear of. */
-  const [name, setName] = useState<{
-    left: number;
-    top: number;
-    right: number;
-    bottom: number;
-  } | null>(null);
+  const [name, setName] = useState<Box | null>(null);
+  /** Draw's box on the board, which the selected sticker's toolbar keeps clear of. */
+  const [draw, setDraw] = useState<Box | null>(null);
   const [landingId, setLandingId] = useState(() =>
     freshId && !landed.has(freshId) ? freshId : undefined,
   );
@@ -177,32 +193,22 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   useLayoutEffect(() => {
     const el = stage.current;
     const who = nameButton.current;
-    if (!el || !who) return;
+    const key = drawSlot.current;
+    if (!el || !who || !key) return;
     const measure = () => {
       setSize((was) =>
         was?.W === el.clientWidth && was.H === el.clientHeight
           ? was
           : { W: el.clientWidth, H: el.clientHeight },
       );
-      const box = {
-        left: who.offsetLeft,
-        top: who.offsetTop,
-        right: who.offsetLeft + who.offsetWidth,
-        bottom: who.offsetTop + who.offsetHeight,
-      };
-      setName((was) =>
-        was?.left === box.left &&
-        was.top === box.top &&
-        was.right === box.right &&
-        was.bottom === box.bottom
-          ? was
-          : box,
-      );
+      setName((was) => kept(was, boxOf(who)));
+      setDraw((was) => kept(was, boxOf(key)));
     };
-    // The name's width follows the person's name, which arrives after the board.
+    // The name's width follows the person's name, which arrives after the board; Draw's, its font.
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     observer.observe(who);
+    observer.observe(key);
     measure();
     return () => observer.disconnect();
   }, []);
@@ -385,6 +391,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
                   sticker={{ ...stickerBox(field, size.W, s.placement, s), r: s.placement.r }}
                   board={size}
                   knobBelow={knobBelow}
+                  clearOf={draw}
                   give={giftSender !== null}
                   onGive={() => setGiving(s)}
                   onView={() => setOpen({ id: s.id, mode: "yours" })}
@@ -451,7 +458,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
       </button>
 
       {/* The slot carries the first-sticker hop and ring, so the key keeps its own lip and press. */}
-      <span className={`board-draw ${firstVisit ? "is-fresh" : ""}`}>
+      <span ref={drawSlot} className={`board-draw ${firstVisit ? "is-fresh" : ""}`}>
         <Key size="compact" icon={<DrawIcon />} onClick={onDraw} aria-label="Draw a new sticker">
           Draw
         </Key>

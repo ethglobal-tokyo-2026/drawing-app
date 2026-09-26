@@ -1,7 +1,7 @@
 import { Eye, Gift, TrayArrowDown } from "@phosphor-icons/react";
 import { useEffectEvent, useLayoutEffect, useRef } from "react";
 import { LabelButton } from "../ui/LabelButton";
-import { toolbarSpot } from "./placement";
+import { toolbarSpot, type Box } from "./placement";
 
 interface Props {
   /** The selected sticker's box on the board, in board pixels, and its turn. */
@@ -9,6 +9,8 @@ interface Props {
   board: { W: number; H: number };
   /** Whether the sticker's knob hangs below it, so the toolbar keeps clear of it there. */
   knobBelow: boolean;
+  /** Draw's box on the board, which the toolbar keeps clear of so a press meant for it can't land on Draw. */
+  clearOf: Box | null;
   /**
    * Give, where LINE's picker can send the sticker. A gift left packed (the app closed mid-send)
    * doesn't block it: packing again sets the stale one aside.
@@ -28,6 +30,7 @@ export function StickerToolbar({
   sticker,
   board,
   knobBelow,
+  clearOf,
   give,
   onGive,
   onView,
@@ -45,7 +48,7 @@ export function StickerToolbar({
       sticker,
       board,
       { w: el.offsetWidth, h: el.offsetHeight },
-      knobBelow,
+      { knobBelow, clearOf },
     );
     el.style.transform = `translate(${left.toFixed(1)}px, ${top.toFixed(1)}px)`;
   });
