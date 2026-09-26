@@ -1,787 +1,917 @@
 # Database schema: proposal for review
 
-2026-09-25, revised 2026-09-26. For ad0ll's review before it becomes the first Drizzle migration. Nothing here is signed off.
+2026-09-25, revised 2026-09-26 after ad0ll's review. For ad0ll's review before it becomes the first Drizzle migration. What's decided is listed under Decided; the rest is under Decisions for you.
 
 **Where to read it:**
 
-- **This doc:** what each table holds, the screens that read it, and why.
-- **`2026-09-25-database-schema.sql`, next to this doc:** the SQL drizzle-kit generates from the draft, for reading the tables as SQL.
-- **The draft:** `packages/db/src/schema.ts` on this branch, `worktree-schema-proposal`. It isn't merged. Validation says what has and hasn't been run against it.
+- **This doc:** the whole process step by step, then every table with when each column is set, the indexes and the queries they serve, the REST routes, and what's still open.
+- **`2026-09-25-database-schema.sql`, next to this doc:** the SQL drizzle-kit generates from the draft, plus the hand-written trigger migration.
+- **The draft:** `packages/db/src/schema.ts` on this branch, `worktree-schema-proposal`. It isn't merged. Validation says what ran against it.
 
-**Written against `main` at 505b683** (2026-09-26 00:48). The schema follows the app's giving flow (`apps/frontend/src/giving/`), tickets (`src/tickets/`) and sticker storage (`src/stickers/`), and the gratitude plan's recording contract. This branch starts from an older `main`, so those files aren't on it.
+**Written against local `main` at d63d8ef** (2026-09-26 08:15). That includes:
 
-**Sources:**
+- the app's giving flow (`apps/frontend/src/giving/`), tickets (`src/tickets/`), stickers and sealing (`src/stickers/`, `src/sticker-creation/`), the board and stat board (`src/sticker-board/`) and identity (`src/identity/`);
+- the gratitude plan (`docs/superpowers/plans/2026-09-25-gratitude-heart-stand-in.md`) and the sticker tray plan (`docs/superpowers/plans/2026-09-26-sticker-tray.md`).
 
-- drawing-app:
-  - the app: `src/giving/` (`giveFlow.ts`, `giftStore.ts`, `giftBackend.ts`, `giftCard.ts`, `giftTag.ts`), `src/tickets/`, `src/stickers/stickerStorage.ts`, `src/identity/useIdentity.ts`, `src/sticker-board/StickerBoard.tsx` and `src/payments/sui.ts`
-  - `docs/superpowers/plans/2026-09-25-gratitude-heart-stand-in.md` §5, cited below as "the gratitude plan"
-  - `packages/sticker-chain` (the contracts and chain code), today's `packages/db` schema, and AGENTS.MD's vocabulary
-- the design drafts in `ethglobal-tokyo-2026-design-drafts/drawing-app/`:
-  - `PRODUCT.md`, `SCOPE.md` and `DESIGN.md`
-  - `research/build-contract.md` LATEST DECISIONS, cited below as "item N"
-  - `signup-give-build.md`, `gratitude-history-brief.md`, `stats-flip-brief.md`, `tray-brief.md`, `sheet-stack-brief.md`, `out-of-tickets-brief.md` and `give-poc.md` §5
-  - the prototype's `js/store.js` and screens
+This branch starts from an older `main`, so those files aren't on it.
+
+**Other sources:**
+
+- `packages/sticker-chain` (the contracts and chain code) and AGENTS.MD's vocabulary;
+- the design drafts in `ethglobal-tokyo-2026-design-drafts/drawing-app/`: `PRODUCT.md`, `SCOPE.md`, `DESIGN.md` and `research/build-contract.md` LATEST DECISIONS, cited as "item N";
+- LINE's, Privy's and Pimlico's docs, linked where used.
 
 **Precedence:**
 
 - The contracts decide what's on chain.
 - AGENTS.MD's vocabulary decides what the words mean.
 - Where the app already names a state or a field, the schema uses the app's name.
-- The latest design decisions decide the rest.
-
-Two defaults below go against a design, and each says so:
-
-- decision 1 drops the stat board's Daily row, because the vocabulary says gratitude only comes from the mini-game;
-- decision 12 puts off item 4's ENS sticker names.
+- ad0ll's answers in this review decide the rest, then the latest design decisions.
 
 ## Where each thing lives
 
-| What                                                                                         | On chain (World Chain Sepolia)                                                                | Privy                                                   | LINE                                        | Our database                                                                                        | Device                                 |
-| -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| Who holds a sticker                                                                          | `StickerNFT.ownerOf`: **owner of record**                                                     | the smart account that holds it                         | —                                           | `stickers.owner_id`, which screens read                                                             | —                                      |
-| A sticker's artist, image and metadata                                                       | `artistOf`, `contentHashOf`, `tokenURI`, fixed at mint                                        | —                                                       | —                                           | `stickers` (and the PNG as a file named by its hash)                                                | —                                      |
-| A gift in transit                                                                            | `StickerGiftEscrow.gifts(giftId)`: sender, recipient, token, claim commitment, expiry, status | —                                                       | —                                           | `gifts`, with `escrow_status` mirroring the escrow                                                  | —                                      |
-| The gift link's secret (claim token)                                                         | only its keccak256 commitment                                                                 | —                                                       | in the gift message's link, in one 1:1 chat | only its keccak256 commitment                                                                       | from packing until the message is sent |
-| Wallets                                                                                      | addresses appear as owners                                                                    | embedded signer + smart account                         | —                                           | `wallets` (addresses only)                                                                          | —                                      |
-| Identity                                                                                     | never                                                                                         | a derived subject, `line_` + a hash of the LINE user ID | LINE user ID, name, picture                 | `line_accounts`, `users`                                                                            | —                                      |
-| Handle (@alice)                                                                              | ENS, later                                                                                    | —                                                       | —                                           | `users.handle`                                                                                      | —                                      |
-| Tickets                                                                                      | —                                                                                             | —                                                       | —                                           | `ticket_uses`, plus `ticket_purchases` for paid ones. The Sui payment is a mock today (decision 16) | —                                      |
-| Board placement, tray spots, NEW marks                                                       | —                                                                                             | —                                                       | —                                           | `board_placements`, `sticker_arrivals`                                                              | —                                      |
-| Gratitude and its replay                                                                     | a ledger, later                                                                               | —                                                       | —                                           | `gratitude`                                                                                         | the unsent record, until it lands      |
-| Official account pushes                                                                      | —                                                                                             | —                                                       | the Messaging API delivers                  | `line_notices` (outbox)                                                                             | —                                      |
-| Stats, streaks, leaderboards, glow, the Transfer Trail                                       | —                                                                                             | —                                                       | —                                           | derived; only the streak is cached                                                                  | —                                      |
-| Drawing in progress, brush and smoothing, recent colors, motion permission, sound, intensity | —                                                                                             | —                                                       | —                                           | —                                                                                                   | yes                                    |
+| What                                                                                         | On chain (World Chain Sepolia)                                                                | Privy                                   | LINE                                        | Our database                                                                          | Device                                   |
+| -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Who holds a sticker                                                                          | `StickerNFT.ownerOf`: **owner of record**                                                     | the smart wallet that holds it          | —                                           | `stickers.owner_id`, an index of the owner as a person                                | —                                        |
+| A sticker's artist, image and metadata                                                       | `artistOf`, `contentHashOf`, `tokenURI`, fixed at mint                                        | —                                       | —                                           | `stickers`, and the five images as files named by the content hash                    | —                                        |
+| A gift in transit                                                                            | `StickerGiftEscrow.gifts(giftId)`: sender, recipient, token, claim commitment, expiry, status | —                                       | —                                           | `gifts`, with `escrow_status` as an index of the escrow's status                      | —                                        |
+| The Gift Claim Token                                                                         | only its keccak256 commitment                                                                 | —                                       | in the gift message's link, in one 1:1 chat | only its keccak256 commitment                                                         | from Packaging until the message is sent |
+| Identity                                                                                     | never                                                                                         | a subject derived from the LINE user ID | LINE user ID, name, picture                 | `users`: the LINE user ID, name and picture                                           | —                                        |
+| Wallets                                                                                      | addresses appear as owners                                                                    | embedded wallet and smart wallet        | —                                           | `users.smart_account_address`                                                         | —                                        |
+| Handle (@alice)                                                                              | ENS, later                                                                                    | —                                       | —                                           | `users.handle`                                                                        | —                                        |
+| Tickets                                                                                      | —                                                                                             | —                                       | —                                           | `ticket_uses`, and `ticket_purchases` for paid ones (the Sui payment is a mock today) | —                                        |
+| Placement on the Sticker Board, the tray's order, NEW                                        | —                                                                                             | —                                       | —                                           | `sticker_placements`                                                                  | —                                        |
+| How a sticker was drawn (the timelapse)                                                      | —                                                                                             | —                                       | —                                           | `sticker_timelapses`                                                                  | until the seal                           |
+| Gratitude and its replay                                                                     | a ledger, later                                                                               | —                                       | —                                           | `gratitude`                                                                           | the unsent record, until it lands        |
+| Official account pushes                                                                      | —                                                                                             | —                                       | the Messaging API delivers                  | a `pushed_to_giver_at` column on what's announced                                     | —                                        |
+| Stats, streaks, leaderboards, glow, the Transfer Trail                                       | —                                                                                             | —                                       | —                                           | derived, never stored                                                                 | —                                        |
+| Drawing in progress, brush and smoothing, recent colors, motion permission, sound, intensity | —                                                                                             | —                                       | —                                           | —                                                                                     | yes                                      |
 
-Today the app keeps stickers, tickets and gifts on the device. This proposal moves them into the database; decision 17 covers what's already on devices.
+**The rule:**
+
+- World Chain is the owner of record for stickers and gifts.
+- The database keeps what the chain never sees, plus three indexed values from the chain that screens list and filter by: `stickers.token_id`, `stickers.owner_id` and `gifts.escrow_status`.
+- Screens don't wait for the chain, with three exceptions, each usually a few seconds:
+  - giving needs the sticker's mint;
+  - sending the gift message needs the deposit;
+  - giving a sticker on needs the last claim or reject to have landed.
+
+## The whole process, step by step
+
+A sticker's life on chain is at most four kinds of transaction:
+
+- the **mint**, sent by our server;
+- the **deposit** into the escrow, sent by the giver's smart wallet;
+- the **claim**, sent by our server;
+- a **reject**, when a deposited sticker is taken back out.
+
+Everything else happens in our database, in LINE or on the phone.
+
+### 1. Sign in (Login Channel)
+
+1. **Device:** LIFF starts and `LineGate` holds the app until LINE has logged the person in. The app sends `liff.getIDToken()` and the device's time zone to `POST /api/session`.
+2. **Server:** verifies the ID token with LINE, then finds the person by `line_user_id`.
+   - **New:** inserts `users` with `line_user_id`, `line_display_name`, `line_picture_url` and `time_zone`.
+     - The handle is the LINE name, trimmed and NFKC-normalized, if no one has it (ignoring letter case). Otherwise `handle` stays null and the response asks for one.
+     - The app shows the handle prompt, and `POST /api/me/handle` sets it. This is the only time the app asks.
+   - **Returning:** refreshes `line_display_name` and `line_picture_url`.
+   - Either way, it sets the session cookie (no table).
+3. **Device → Privy:** `PrivySession` trades the same ID token for a Privy JWT at `POST /v1/auth/privy-jwt`, which already exists. Privy creates the embedded wallet on first login, and the smart wallet once smart wallets are on (see Changes needed).
+
+Nothing happens on chain.
+
+### 2. Draw (Ticket)
+
+1. **Device:** the first stroke starts the clock and calls `POST /api/tickets/spend`.
+2. **Server:** in one transaction, reads today's `ticket_uses` for the person (`ticket_day` in their zone, turning over at 4:00).
+   - Index 0–2 is free. Index 3 or more needs a verified purchase with tickets left.
+   - Inserts `ticket_uses` with the next `day_index`. Two spends can't take the same index, so a double tap can't spend two tickets.
+
+### 3. Seal and mint
 
 ```mermaid
-flowchart LR
-  subgraph Device["Phone: the LIFF app"]
-    draft[Drawing in progress]
-  end
-  subgraph LINE
-    idt[ID token: sub, name, picture]
-    msg[Gift message in a 1:1 chat<br/>its link carries the claim token]
-    oa[Official account chat]
-  end
-  subgraph Privy
-    signer[Embedded signer] --> sa[Smart account]
-  end
-  subgraph DB["Our database (SQLite)"]
-    tables[users · line_accounts · wallets<br/>stickers · ticket_uses · ticket_purchases<br/>sticker_arrivals · board_placements<br/>gifts · gift_opens · gratitude]
-    jobs[chain_jobs]
-    notices[line_notices]
-  end
-  subgraph Chain["World Chain Sepolia"]
-    nft[StickerNFT]
-    escrow[StickerGiftEscrow]
-  end
-  idt -- verified by the server --> tables
-  sa -- address, confirmed with Privy --> tables
-  tables --> jobs
-  jobs -- mint, claim, reject, return --> nft & escrow
-  sa -- the giver's deposit when packing --> escrow
-  nft & escrow -- confirmations and events update the mirrors --> tables
-  notices -- push --> oa
+sequenceDiagram
+  autonumber
+  participant App as App (LIFF)
+  participant API as Our server
+  participant DB as Database
+  participant Privy
+  participant Chain as World Chain Sepolia
+  App->>API: POST /api/stickers (five images, outline, size, time used, ticket, timelapse)
+  API->>DB: one transaction: stickers, ticket_uses.sticker_id, sticker_placements, sticker_timelapses
+  API-->>App: the sticker, with its number
+  Note over API,Chain: the worker, a few seconds later
+  API->>Privy: the artist's smart wallet address (first time only)
+  API->>DB: users.smart_account_address
+  API->>Chain: StickerNFT.sealSticker from our sealer account, which pays the gas
+  Chain-->>API: receipt
+  API->>DB: stickers.token_id and mint_tx_hash
 ```
 
-**The rule:** our database is what every screen reads. On chain, the NFT is the owner of record. Columns marked _chain mirror_ cache what the contracts hold, and `chain_jobs` tracks the transactions that keep the two in step.
+- **Files:** the server hashes the sticker PNG (keccak256) and writes the five images as files named by that hash. Identical drawings share the files.
+- **Metadata:** it builds the metadata JSON, whose IPFS address is known before anything is uploaded (decision 8).
+- **Row:** `number` is the highest so far plus one, in the same transaction.
+- **Board:** the sticker lands on the board at once (item 2). `sticker_placements` starts with no placement; the owner's board picks a free spot and saves it (step 6).
+- **Mint:** the mint follows (decision 7). The chain package's `sealStickerForArtist` checks the chain first, so a retry after a crash can't mint twice.
 
-Screens don't wait for the chain, with three exceptions, each usually a few seconds:
+### 4. Giving
 
-- giving needs the sticker's mint;
-- sending the gift message needs the deposit;
-- giving a sticker on needs the last claim (or reject) to have landed.
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Giver as Giver's app
+  participant API as Our server
+  participant DB as Database
+  participant Chain as World Chain Sepolia
+  participant LINE
+  Giver->>API: POST /api/gifts (the sticker)
+  API->>DB: gifts, status packed, escrow_status missing
+  API-->>Giver: Gift Claim Token (once), the escrow transfer, the LINE message
+  Giver->>Chain: the smart wallet sends the sticker to the escrow, and the paymaster pays the gas
+  Giver->>API: POST /api/gifts/:giftId/deposit (transaction hash)
+  API->>Chain: read gifts(giftId)
+  API->>DB: escrow_status pending
+  Giver->>LINE: the one-friend picker sends the message, whose link carries the token
+  Giver->>API: POST /api/gifts/:giftId/shared (sent)
+  API->>DB: status sent, sent_at
+```
 
-## On chain: World Chain Sepolia (4801)
+- **Packaging (`POST /api/gifts`):**
+  - The server checks you hold the sticker (`owner_id`) and it's minted (`token_id`), since the deposit moves the NFT.
+  - If a gift for this sticker is still packed (the app closed mid-send), it returns that gift instead of making a second one.
+  - Otherwise it runs the chain package's `createGiftClaim` and inserts `gifts` (`id`, `sticker_id`, `giver_id`, `claim_commitment`). It returns the Gift Claim Token once and never stores it.
+- **Deposit:**
+  - The giver's smart wallet sends the transfer that `prepareGiftTransfer` built, with the expiry fixed at 2100-01-01 (decision 5).
+  - The server reads the escrow's `gifts(giftId)`: the sender must be the giver's smart wallet, and the token ID, commitment and expiry must be the ones it issued. A match sets `escrow_status` to `pending`.
+  - A mismatch sets `status` to `taken_out` and `taken_out_at`, and the worker rejects it.
+  - If the app closes before reporting, the worker re-reads every gift still `missing`.
+- **Send (`POST /api/gifts/:giftId/shared`):**
+  - The picker opens only once the deposit is in.
+  - Sent sets `status` to `sent` and `sent_at`.
+  - A cancelled or failed picker keeps the gift packed, and the next "Send in LINE" reuses it (decision 6).
+- **Take it out (`POST /api/gifts/:giftId/take-out`, only before sending):**
+  - Sets `status` to `taken_out` and `taken_out_at`.
+  - If the deposit landed, the worker sends `rejectGift` (`reject_tx_hash`), and the receipt sets `escrow_status` to `rejected`. The sticker can't be packaged again until then.
 
-From `packages/sticker-chain`:
+### 5. Receiving
 
-- **StickerNFT (ERC-721 "Sticker"):** one token per sealed sticker.
-  - Our server's sealer account mints it to the artist's smart account.
-  - Per token: the owner; `tokenId`, which the contract counts up from 1 in mint order; `artistOf`, `contentHashOf` and `tokenURI`, all fixed at mint; and `tokenIdForSticker(keccak256(sticker id))`.
-  - There's no burn, so a minted sticker can't be deleted.
-  - Events: `StickerSealed`, `Transfer`.
-- **StickerGiftEscrow:** holds a sticker between Giving and Receiving.
-  - **Deposit:** the giver's smart account transfers the sticker in with `(giftId, claimCommitment, expiresAt)`. The contract only checks that these are non-zero, that the expiry is in the future and that the gift ID is new. So our server checks each deposit against the gift it issued (Flows, step 4).
-  - **Claim:** anyone relays `claimGift` with our claim signer's EIP-712 `GiftClaim` authorization, which binds the gift, the receiver's smart account and a deadline.
-  - **Reject:** a separate `GiftReject` authorization from the same signer returns the sticker to its sender.
-  - **Deadlines:** the chain package's helpers make each authorization last at most five minutes, and both claim and reject revert after `expiresAt`.
-  - **Expiry:** after `expiresAt`, anyone can return the sticker to its sender.
-  - **One gift per token at a time:** depositing a token whose gift is still pending reverts.
-  - Status per gift: Missing, Pending, Claimed, Rejected or ExpiredReturned.
-  - Events: `GiftStaged`, `GiftClaimed`, `GiftRejected`, `ExpiredGiftReturned`.
-- **Accounts and gas:**
-  - Everyone gets a Privy embedded signer and a smart account, created through Privy custom auth. It uses our 5-minute JWT, whose subject is `line_` plus a hash of the channel and LINE user ID, so Privy never sees the raw ID.
-  - A paymaster sponsors the smart accounts' transactions (the giver's deposit). A server relayer sends the mint, the claim, the reject and expiry returns.
-- **Never on chain:** LINE IDs, claim tokens, handles, placements, the tray, tickets, gratitude (for now), stats, and images (only their hash and metadata URI).
-- **Not built yet:**
-  - ENS handles and sticker names (ENSv2 on Ethereum, asynchronous, never atomic with World Chain)
-  - the on-chain gratitude ledger (the gratitude plan's §5.5 has the interface)
-  - real Sui payments
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Receiver as Receiver's app
+  participant API as Our server
+  participant DB as Database
+  participant Privy
+  participant Chain as World Chain Sepolia
+  participant LINE
+  Receiver->>API: POST /api/session (a new person signs up here)
+  Receiver->>API: POST /api/gifts/preview (Gift Claim Token)
+  API-->>Receiver: the giver's name and picture, never the sticker
+  Receiver->>API: POST /api/gifts/receive (Gift Claim Token, LIFF context type)
+  API->>DB: one transaction: gifts received, stickers.owner_id, sticker_placements
+  API-->>Receiver: the sticker, for the reveal
+  Note over API,Chain: the worker, a few seconds later
+  API->>Privy: the receiver's smart wallet address (first time only)
+  API->>Chain: StickerGiftEscrow.claimGift from our relayer, which pays the gas
+  API->>DB: claim_tx_hash, then escrow_status claimed from the receipt
+  API->>LINE: push to the giver, "Bob accepted your sticker ♡"
+  API->>DB: gifts.pushed_to_giver_at
+```
+
+- **Finding the gift:** the server looks it up by the token's hash. If the row still says `missing`, it reads the escrow once, since the deposit may have landed a moment ago.
+- **Refusals:**
+  - group, multi-person and OpenChat opens (`group`, `room`, `square_chat`);
+  - your own gift;
+  - a gift already received or taken out;
+  - a gift whose deposit isn't in.
+- **The receive:** one conditional update decides it. Exactly one person wins, and a forwarded link fails for everyone after. The same transaction:
+  - sets `receiver_id`, `received_at` and `status` = `received` (from `packed` too, since a message can go out while the picker never reports back);
+  - sets `stickers.owner_id` to the receiver;
+  - inserts the receiver's `sticker_placements` row.
+
+  If the sticker has been theirs before, the row is updated instead: same spot on the sticker sheet, back in the tray, NEW again (item 17).
+
+- **The claim:**
+  - The claim needs the receiver's smart wallet. The chain package's `authorizeClaim` checks the Gift Claim Token, so it works when the claim is signed during this request.
+  - A claim that has to wait (a brand-new receiver whose smart wallet doesn't exist yet) or retry needs the chain package change below, since the server doesn't keep the token.
+  - Until the claim lands, the sticker can't be given on.
+
+### 6. The Sticker Board and the sticker tray
+
+- **Landing:** the owner's board lands stickers with no placement on a free spot and saves it with `PATCH /api/sticker-boards/me/sticker-placements/:stickerId`.
+- **Moves:** every drag, resize, turn and Remove saves the same way, debounced on release. Remove keeps the spot and sets `on_board` to false.
+- **Seen:** when the sticker tray zips shut, `POST /api/sticker-boards/me/sticker-tray/seen` sets `seen_at` on the stickers whose sheet was open. That clears NEW.
+
+### 7. Gratitude (the gratitude plan's §5)
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Receiver as Receiver's app
+  participant API as Our server
+  participant DB as Database
+  participant LINE
+  participant Giver as Giver's app
+  Receiver->>API: POST /api/gratitude (the combo and its replay, sent with keepalive)
+  API->>API: unzip the replay, check it, replay the hits for the total and the artist's share
+  API->>DB: gratitude
+  API->>LINE: push to the giver, or a digest when the 6-hour window closes
+  API->>DB: gratitude.pushed_to_giver_at
+  Giver->>API: GET /api/gratitude/unseen
+  Giver->>API: POST /api/gratitude/:giftId/seen after the replay
+  API->>DB: gratitude.seen_by_giver_at
+```
+
+- **Recording:**
+  - The receiver's app keeps the record until it lands and resends it on the next open.
+  - The same idempotency key gets the stored record back. A second combo for the same gift is refused (409).
+- **Split:** the artist gets 20% of the total, out of the giver's share, when the artist is neither the giver nor the receiver (item 50).
+- **On chain:** gratitude doesn't touch the chain. The on-chain ledger is later (the gratitude plan's §5.5).
+
+### 8. Paid tickets and withdrawal
+
+- **Paid tickets:** `POST /api/ticket-purchases` records the Sui payment's digest. `verified_at` is set once the server has checked it on Sui, and at once while the payment is a mock (decision 14).
+- **Withdrawal (`DELETE /api/me`, decision 13):**
+  - Clears the LINE columns and the smart wallet address, and sets `withdrawn_at`.
+  - Closes gifts still in the bag.
+  - Skips pushes to them.
+
+## What's on chain, and what we keep
+
+- **Chain only:**
+  - the NFT's artist address, content hash and token URI after the mint;
+  - the escrow's sender, recipient, commitment and expiry.
+
+  We read them when verifying and never copy them.
+
+- **Ours, which the chain needs:** `content_hash` and `metadata_uri` exist before the mint, as its input.
+- **Indexed from the chain, for screens:**
+  - `stickers.token_id`, for building a deposit and mapping chain events to stickers;
+  - `stickers.owner_id`, for every board and tray;
+  - `gifts.escrow_status`, to gate sending, Receiving and giving on.
+- **Local only:**
+  - everything LINE and the board produce;
+  - gratitude, tickets and the timelapse;
+  - the receiver before the claim lands, since the chain only learns them at the claim, and only as an address.
+
+**No indexer for the demo:**
+
+- Our server sends the mint, claim and reject, so it learns each result from its own receipt.
+- The one transaction it doesn't send is the deposit, which it reads from the escrow when the app reports it, with a worker re-check.
+- An indexer is needed once the chain can change without our server:
+  - if the app lets people export their Privy wallet and move stickers themselves;
+  - if gifts can expire, since anyone can return an expired one.
+
+  Start then with a log poller in the worker (the NFT's `Transfer`, the escrow's events, the last block read in a one-row table) before Ponder or The Graph.
+
+**The worker's to-do list is read from the rows; there's no job table.**
+
+| Work                        | Rows                                          | Index                      |
+| --------------------------- | --------------------------------------------- | -------------------------- |
+| Mint                        | `stickers` with no `token_id`                 | `stickers_token_id_unique` |
+| Check a deposit             | `gifts` whose `escrow_status` is `missing`    | `gifts_escrow_open`        |
+| Claim                       | `received` gifts whose escrow is `pending`    | `gifts_escrow_open`        |
+| Reject                      | `taken_out` gifts whose escrow is `pending`   | `gifts_escrow_open`        |
+| Push a receive to its giver | `received` gifts with no `pushed_to_giver_at` | `gifts_push_due`           |
+| Push gratitude or a digest  | `gratitude` with no `pushed_to_giver_at`      | `gratitude_push_due`       |
+
+- **Pushes:**
+  - Each push's `X-Line-Retry-Key` is derived from the gift ID, so every retry sends the same key.
+  - LINE answers a repeat with 409, and a key lasts 24 hours, so the worker gives up after 24 hours and sets `pushed_to_giver_at` anyway. https://developers.line.biz/en/docs/messaging-api/retrying-api-request/
+  - The month's quota is read from LINE: `GET /v2/bot/message/quota/consumption`.
+- **Transactions:** each transaction's hash is stored when sent. A repeat reverts harmlessly, since the contracts check state first.
 
 ## The database
 
-- **Engine and layout:** SQLite through Drizzle (better-sqlite3) on the single Hetzner host.
-- **Column types:** times are integer milliseconds; hashes and addresses are 0x hex text; uint256 values are decimal text; JSON is text.
+- **Engine:** SQLite through Drizzle (better-sqlite3) on the single Hetzner host.
+- **Column types:** times are integer milliseconds; hashes and addresses are 0x hex text; uint256 values are decimal text; replays are gzipped JSON in BLOBs.
 - **Types:**
   - Everything comes from these tables. API validation derives from them through drizzle-zod, and the app gets its types through Hono's RPC client.
-  - drizzle-zod carries columns, types and enums, but not CHECK constraints. So ranges (0–300 seconds, 1–120 events, and so on) are repeated as zod refinements. Otherwise the database's refusal reaches the app as a server error.
-- **Constraints:** CHECK constraints, partial unique indexes and composite foreign keys hold every rule a race could slip past. That includes the rules that span tables: a ticket's sticker must be its owner's own, and a gratitude's sticker and people must be its gift's.
+  - drizzle-zod doesn't carry CHECK constraints, so their ranges are repeated as zod refinements.
+- **Constraints:** CHECK constraints and partial unique indexes hold every rule a race could slip past.
 - **Transactions:**
-  - better-sqlite3 transactions are synchronous, so nothing inside one waits on the network. Calls to LINE, Privy and the chain happen before the transaction, or through the outboxes after it.
-  - Transactions that read before writing (numbering a sticker, accepting a gift) run as `BEGIN IMMEDIATE`, so a second process can't read the same state first.
+  - better-sqlite3 transactions are synchronous, so calls to LINE, Privy and the chain happen before or after them, never inside.
+  - Transactions that read before writing run as `BEGIN IMMEDIATE`.
+- **`created_at` and `updated_at` on every table:**
+  - Both default to the database's clock, `cast(unixepoch('subsec') * 1000 as integer)`, so every insert gets them. `created_at` never changes after that.
+  - `updated_at` moves on every update in two ways:
+    - Drizzle sets it in the statement (`$onUpdate`), so a response's `RETURNING` shows the new time.
+    - A trigger per table catches updates made outside Drizzle, such as a hand edit in sqlite3. It acts only when a statement left `updated_at` unchanged.
+  - drizzle-kit can't declare triggers, so they live in a custom migration, `drizzle-kit generate --custom --name=updated_at_triggers`: https://orm.drizzle.team/docs/sqlite/kit-custom-migrations
+  - drizzle-kit doesn't track triggers. SQLite drops a table's trigger when drizzle-kit rebuilds that table, which it does to change a CHECK, so that migration has to recreate the trigger.
+
+  ```sql
+  CREATE TRIGGER `gifts_updated_at` AFTER UPDATE ON `gifts` FOR EACH ROW
+  WHEN NEW.`updated_at` IS OLD.`updated_at`
+  BEGIN
+    UPDATE `gifts` SET `updated_at` = (cast(unixepoch('subsec') * 1000 as integer)) WHERE rowid = NEW.rowid;
+  END;
+  ```
+
 - **Migrations:**
-  - Generated with `drizzle-kit generate` and run by the runtime migrator, not by `drizzle-kit push`, which exits 0 when it fails.
-  - drizzle-kit rebuilds a table to change one of its constraints, which needs foreign keys off. But the migrator wraps each migration in a transaction, and inside one SQLite ignores `PRAGMA foreign_keys=OFF`.
-  - So the migrator runs on its own connection, opened with foreign keys off. Then it runs `PRAGMA foreign_key_check` and fails on any row that returns. Only then does the app open its usual connection, with foreign keys on.
-  - When this lands, remove `packages/db`'s `db:push` script, and delete `data/drawing-app.db`, which `db:push` made from today's one-table schema. The first migration then starts from an empty file.
+  - Run by the runtime migrator, not `drizzle-kit push`, which exits 0 when it fails.
+  - drizzle-kit rebuilds a table to change one of its constraints, which needs foreign keys off, and SQLite ignores `PRAGMA foreign_keys=OFF` inside the migrator's transaction. So the migrator runs on its own connection opened with foreign keys off, then runs `PRAGMA foreign_key_check` and fails on any row that returns.
+  - When this lands, remove `packages/db`'s `db:push` script and delete `data/drawing-app.db`, which holds today's one-table schema.
 
 ```mermaid
 erDiagram
-  users ||--o| line_accounts : "signs in with"
-  users ||--o{ wallets : controls
   users ||--o{ stickers : "is the artist of"
   users ||--o{ stickers : holds
+  stickers ||--o| sticker_timelapses : "was drawn as"
   users ||--o{ ticket_uses : spends
+  ticket_uses |o--o| stickers : became
   users ||--o{ ticket_purchases : buys
-  ticket_uses |o--o| stickers : "became"
-  users ||--o{ sticker_arrivals : "tray spots"
-  stickers ||--o{ sticker_arrivals : "sits in"
-  sticker_arrivals ||--o| board_placements : "placed as"
+  users ||--o{ sticker_placements : "has on their board"
+  stickers ||--o{ sticker_placements : "placed as"
   stickers ||--o{ gifts : "given in"
   users ||--o{ gifts : gives
   users |o--o{ gifts : receives
-  gifts ||--o{ gift_opens : "opened as"
   gifts ||--o| gratitude : "thanked with"
-  users ||--o{ line_notices : "is pushed"
-  stickers |o--o{ chain_jobs : "minted by"
-  gifts |o--o{ chain_jobs : "moved by"
 ```
+
+## The tables, and when each column is set
+
+Every table also has `created_at`, set by the database on insert, and `updated_at`, which moves on every update. They're listed below only where they mean something more.
 
 ### users: the person (artist)
 
 Screens:
 
 - every screen, as "me";
-- handles: the gift message's tag ("From @alice"), Explore search, the give sheet's Recent row, and the ENS strip on the stat board;
-- the join date: the stat board's "Since";
-- streaks: the stat board's calendar leaf and bests.
+- other people's names and pictures on their boards and in the Transfer Trail, the "By" chip, and the Receiving screen;
+- handles on the gift tag ("From @alice"), in search and in the Recent row;
+- the join date on the stat board's "Since".
 
-| Column                                        | Type               | Notes                                                                                                                                                                          |
-| --------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `id`                                          | text PK            | Server UUID                                                                                                                                                                    |
-| `handle`                                      | text, unique, null | ENSIP-15 normalized; Japanese works. Null until the name label is stuck on ("Stick it on"). Until handles exist, the app shows the LINE name in its place. Decision 15         |
-| `time_zone`                                   | text               | IANA, taken from the device at sign-up and never changed. Ticket days and streak days turn over at 4:00 here. Decision 3                                                       |
-| `terms_accepted_at`, `terms_version`          | int, text          | Accepted on the first action                                                                                                                                                   |
-| `privy_user_id`                               | text, unique, null | did:privy:…, once Privy has seen them. Cleared on withdrawal                                                                                                                   |
-| `streak_current`, `streak_best`, `streak_day` | int, int, text     | The streak as of `streak_day`, the last ticket day that counted, updated at seal. Readers subtract the decay for days missed since, so nothing has to run at 4:00. Decision 11 |
-| `hide_from_leaderboards`                      | bool               | Decision 10                                                                                                                                                                    |
-| `created_at`                                  | int                | "Since 2026.08.12"                                                                                                                                                             |
-| `withdrawn_at`                                | int, null          | Decision 14                                                                                                                                                                    |
+| Column                  | Type               | Set when                                                                        | Notes                                                                                                               |
+| ----------------------- | ------------------ | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `id`                    | text PK            | First sign-in                                                                   | Server UUID                                                                                                         |
+| `line_user_id`          | text, unique       | First sign-in; cleared at withdrawal                                            | The ID token's `sub`. Finds a returning person; the Official account's push target                                  |
+| `line_display_name`     | text               | Every sign-in; cleared at withdrawal                                            | LINE gives each person only their own profile, so this is how others see them                                       |
+| `line_picture_url`      | text, null         | Every sign-in; cleared at withdrawal                                            |                                                                                                                     |
+| `handle`                | text, null         | First sign-in, from the LINE name if no one has it; otherwise the handle prompt | Unique ignoring letter case. Null only until the prompt is answered. Kept after withdrawal, so no one else takes it |
+| `time_zone`             | text               | First sign-in, from the device                                                  | Ticket days turn over at 4:00 here (decision 3)                                                                     |
+| `smart_account_address` | text, unique, null | The first time the server needs it (the first mint or claim), from Privy        | Lowercase. The mint and claim target, and maps chain addresses to people                                            |
+| `terms_accepted_at`     | int, null          | The first action that carries the terms line                                    | Not built in the app yet                                                                                            |
+| `withdrawn_at`          | int, null          | Withdrawal                                                                      | A CHECK clears the LINE columns with it                                                                             |
+| `created_at`            | int                | First sign-in                                                                   | The stat board's "Since"                                                                                            |
 
-### line_accounts: LINE identity (Login Channel)
-
-Screens:
-
-- the board header (photo sticker and name), the My board tab's picture, and the artist chip;
-- the accept screen ("Alice sent you a sticker");
-- in-app notices;
-- Official account pushes, by LINE user ID.
-
-| Column                        | Type                     | Notes                                                                  |
-| ----------------------------- | ------------------------ | ---------------------------------------------------------------------- |
-| `user_id`                     | text PK → users, cascade | Its own table, so withdrawal deletes LINE data and nothing else        |
-| `line_user_id`                | text, unique             | The verified ID token's `sub`; also the Official account's push target |
-| `display_name`, `picture_url` | text                     | Refreshed from the verified token every session, never from the page   |
-| `refreshed_at`                | int                      |                                                                        |
-
-LINE's user data policy:
-
-- allows keeping these with notice;
-- requires deleting them on withdrawal (decision 14);
-- limits who may see them (decision 9).
-
-Email and status message aren't stored. Friends are never stored: LINE gives no friend list, and its policy caps Friend data at 24 hours.
-
-### wallets: Privy addresses
-
-Screens: none; wallets are invisible.
-
-| Column        | Type                            | Notes                                                                                                  |
-| ------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `id`          | int PK                          |                                                                                                        |
-| `user_id`     | → users                         |                                                                                                        |
-| `chain_id`    | int                             | 4801                                                                                                   |
-| `kind`        | `smart_account` or `signer_eoa` | The chain package's names. Stickers are minted to, and claimed by, the smart account, never the signer |
-| `address`     | text                            | Lowercase; unique per chain                                                                            |
-| `verified_at` | int                             | When the server confirmed it with Privy                                                                |
-
-One of each kind per person per chain. Withdrawal deletes these rows (decision 14).
+- **Why the LINE columns:**
+  - LIFF's `getProfile()` "gets the current user's profile information" only: https://developers.line.biz/en/reference/liff/#get-profile
+  - The Messaging API's Get profile answers only for people who've added our Official account and haven't blocked it: https://developers.line.biz/en/reference/messaging-api/#get-profile
+- **LINE's User Data Policy** (https://terms2.line.me/LINE_Developers_user_data_policy):
+  - keeping these past 24 hours requires telling users (§3.2.3);
+  - withdrawal deletes all of it, including the user ID (§3.5.2);
+  - the audience must match LINE's own (§3.2.9, decision 9).
+- **Why the address:** Privy returns a user's `smart_wallet` address from `POST /v1/users/custom_auth/id`, and a person from an address at `POST /v1/users/smart_wallet/address`. The server needs it from background work with no request in hand, and to map chain addresses to people. So it's stored once, when first needed. https://docs.privy.io/api-reference/users/get-by-custom-auth
 
 ### stickers: a sealed sticker (Seal)
 
 Screens:
 
-- the seal card (No., time spent, date, "Sealed on-chain");
-- the sticker board and the sticker sheets in the tray;
-- the sticker detail's by-line and the ticket stubs' outlines;
+- the sealed card (number, time used, date, "Sealed on-chain");
+- the Sticker Board and the sticker sheets;
+- the sticker detail and the ticket stubs' outlines;
 - Explore's "Today's stickers" and activity feed.
 
-The gift message shows only a sleeve, never the sticker.
+| Column            | Type               | Set when                             | Notes                                                                                 |
+| ----------------- | ------------------ | ------------------------------------ | ------------------------------------------------------------------------------------- |
+| `id`              | text PK            | Seal                                 | Server UUID. On chain the sticker key is keccak256 of it                              |
+| `number`          | int, unique        | Seal, as the highest so far plus one | Shown as "No.0147". Today the app numbers stickers on the device                      |
+| `artist_id`       | → users            | Seal                                 |                                                                                       |
+| `owner_id`        | → users            | Seal (the artist), then each receive | The owner of record as a person, a few seconds ahead of the chain while a claim lands |
+| `time_used`       | int, 0–180         | Seal                                 | Seconds on the drawing clock, which pauses. The 3-minute timer; see Changes needed    |
+| `width`, `height` | int                | Seal                                 | Of the sticker image. The mask and resin masks share them                             |
+| `outline`         | text               | Seal                                 | The cut line as an SVG path. Ticket stubs, sheet packing, the given outline           |
+| `content_hash`    | text               | Seal                                 | keccak256 of the sticker PNG. Names its files; passed to the mint                     |
+| `metadata_uri`    | text               | Seal                                 | The metadata JSON's IPFS address. Passed to the mint as `tokenURI` (decision 8)       |
+| `token_id`        | text, unique, null | When the mint lands                  | Indexed from the chain                                                                |
+| `mint_tx_hash`    | text, null         | When the mint lands, with `token_id` |                                                                                       |
+| `created_at`      | int                | Seal                                 | The seal time: the sealed card's date, "Today's stickers", streak days                |
+| `updated_at`      | int                | The mint, and each receive           |                                                                                       |
 
-| Column            | Type               | Notes                                                                                                                                                                                                 |
-| ----------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`              | text PK            | Server UUID. On chain the sticker key is keccak256 of it                                                                                                                                              |
-| `no`              | int, unique        | "No.0147": counted across everyone, assigned in the seal transaction. Decision 4                                                                                                                      |
-| `artist_id`       | → users            | Fixed at seal                                                                                                                                                                                         |
-| `owner_id`        | → users            | The current holder. While a gift is open it stays the giver, and the sticker sits in escrow on chain                                                                                                  |
-| `sealed_at`       | int                | Today's table calls it `created_at`                                                                                                                                                                   |
-| `time_used`       | int, 0–300         | Seconds on the drawing clock, which pauses, so it's the app's figure. 0 if sealed within the first second. The app's name                                                                             |
-| `width`, `height` | int                | Of the sealed PNG                                                                                                                                                                                     |
-| `outline`         | text               | The cut line as an SVG path in image pixels. Used by sheet packing, ticket-stub outlines, foil, and the outline a given sticker leaves on the board. The app's older stickers have none (decision 17) |
-| `content_hash`    | text, indexed      | keccak256 of the sealed PNG, which is also its file name. Identical drawings share the file, so the hash isn't unique. **Chain mirror:** `contentHashOf`                                              |
-| `metadata_uri`    | text               | Immutable metadata JSON, written and pinned before the mint. Decision 8. **Chain mirror:** `tokenURI`                                                                                                 |
-| `token_id`        | text, unique, null | Set when the mint confirms. **Chain mirror**                                                                                                                                                          |
-| `minted_at`       | int, null          | Set together with `token_id`                                                                                                                                                                          |
+- **Files, one set per content hash:**
+  - `{hash}.png`: the sticker;
+  - `{hash}.mask.png`: the cut's shape;
+  - `{hash}.spec.png` and `{hash}.rim.png`: the live resin's masks;
+  - `{hash}.flat.png`: the sheet as drawn.
 
-- **Fixed at seal:** everything but `owner_id` and the chain mirror. "Sealed" means unmodifiable.
-- **No deleting:** there's no hard delete, and `StickerNFT` has no burn. "Remove" takes a sticker off the board. The app's "Peel off", which deletes a sticker, has no place once stickers are minted.
-- **What changes from today's table:** the PNG blob goes to files; the per-sticker `rotation` and the `placement` JSON go to `board_placements`; `created_at` becomes `sealed_at`.
-- **`(id, artist_id)`** is also unique, as the target of the keys that tie a ticket's and a gratitude's artist to the sticker's.
+  These are the app's `SealedSticker` images. Browsers fetch them directly, so they're files, not blobs.
+
+- **Fixed at seal:** everything but `owner_id` and the mint. There's no delete: `StickerNFT` has no burn, so the app's "Peel off" has no place once stickers are minted.
+
+### sticker_timelapses: how a sticker was drawn
+
+Screens: the timelapse (not built). Its own table, so board and tray reads never load it.
+
+| Column       | Type               | Set when                      | Notes                                          |
+| ------------ | ------------------ | ----------------------------- | ---------------------------------------------- |
+| `sticker_id` | text PK → stickers | Seal, in the same transaction |                                                |
+| `ops`        | blob               | Seal                          | Gzipped JSON; see Replay and timelapse storage |
 
 ### ticket_uses: spent tickets (Ticket)
 
 Screens:
 
-- Draw (the gate);
-- the seal card's three stubs;
-- the out-of-tickets card: its stubs, with their stickers' outlines (item 41), and "New tickets at 4:00 AM, in 5h 19m".
+- the Draw gate;
+- the sealed card's and the out-of-tickets card's ticket stubs, with their stickers' outlines (item 41);
+- "New tickets at 4:00 AM".
 
-| Column       | Type                     | Notes                                                                                                                                                               |
-| ------------ | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`         | int PK                   |                                                                                                                                                                     |
-| `user_id`    | → users                  |                                                                                                                                                                     |
-| `ticket_day` | text                     | YYYY-MM-DD in the person's zone, turning over at 4:00                                                                                                               |
-| `seq`        | int                      | Order within the day; unique per person and day                                                                                                                     |
-| `source`     | `free` or `paid`         | Free first: `seq` 0–2 are free, and a CHECK allows only three a day. A paid use needs a confirmed purchase with tickets left, which the spending transaction checks |
-| `started_at` | int                      | The first stroke. Decision 2                                                                                                                                        |
-| `sticker_id` | → stickers, unique, null | Linked at seal. A composite key makes it the ticket owner's own sticker. An abandoned drawing keeps its ticket spent with no sticker                                |
+| Column       | Type                     | Set when                                | Notes                                                              |
+| ------------ | ------------------------ | --------------------------------------- | ------------------------------------------------------------------ |
+| `id`         | int PK                   | First stroke                            |                                                                    |
+| `user_id`    | → users                  | First stroke                            |                                                                    |
+| `ticket_day` | text                     | First stroke                            | YYYY-MM-DD in the person's zone, from 4:00                         |
+| `day_index`  | int                      | First stroke, as the day's count so far | 0–2 are the free tickets, 3 and up paid. Unique per person and day |
+| `sticker_id` | → stickers, unique, null | Seal                                    | Null for good when a drawing is abandoned                          |
+| `created_at` | int                      | First stroke                            | When the ticket was spent                                          |
+| `updated_at` | int                      | Seal, when the sticker is linked        |                                                                    |
 
-This is what the app keeps on the device today (`src/tickets/tickets.ts`): a ticket day that turns over at 4:00 local time, and the day's uses in order, free ones first, each linked to the sticker it became. The server enforces the limit because every seal costs a mint that our server pays for.
+This is the app's own model (`src/tickets/tickets.ts`): uses per ticket day, free first, each linked to the sticker it became.
 
 ### ticket_purchases: paid tickets
 
-Screens: the out-of-tickets card's "Get more tickets with Sui", its approve step ("Approve 0.1 SUI", "Confirming on Sui…"), and "Paid 0.1 SUI". Decision 16.
+Screens: the out-of-tickets card's "Get more tickets with Sui", "Pay 0.1 SUI" and "3 tickets added".
 
-| Column                       | Type                             | Notes                                                        |
-| ---------------------------- | -------------------------------- | ------------------------------------------------------------ |
-| `id`                         | int PK                           |                                                              |
-| `user_id`                    | → users                          |                                                              |
-| `tickets`                    | int, > 0                         | 3 per pack today                                             |
-| `price_mist`                 | text                             | The price in MIST, as decimal text (0.1 SUI is 100000000)    |
-| `tx_digest`                  | text, unique                     | The Sui transaction digest, so one payment can't count twice |
-| `status`                     | `pending`, `confirmed`, `failed` | Tickets count only once `confirmed`                          |
-| `created_at`, `confirmed_at` | int                              | `confirmed_at` is set exactly when confirmed                 |
+| Column        | Type         | Set when                                                                  | Notes                     |
+| ------------- | ------------ | ------------------------------------------------------------------------- | ------------------------- |
+| `id`          | int PK       | Purchase                                                                  |                           |
+| `user_id`     | → users      | Purchase                                                                  |                           |
+| `tickets`     | int, > 0     | Purchase                                                                  | 3 per pack today          |
+| `price_mist`  | text         | Purchase                                                                  | 0.1 SUI is 100000000 MIST |
+| `tx_digest`   | text, unique | Purchase                                                                  | One payment counts once   |
+| `verified_at` | int, null    | Once the server has checked the payment on Sui; at once while it's a mock | Decision 14               |
 
-Paid tickets carry over from day to day, as they do in the app today. So the paid tickets left are the confirmed `tickets` minus every paid use.
+Paid tickets carry over from day to day, as in the app. Paid tickets left = verified purchases' `tickets` minus uses with `day_index` 3 or more.
 
-### sticker_arrivals: permanent spots in the sticker tray (Sticker tray, Sticker sheet)
-
-Screens:
-
-- the tray's sheets, packed in `seq` order;
-- the All, Mine and Gifts tabs (Mine means the artist is me);
-- the dates printed on each sheet;
-- NEW dots, and the NEW dot on the tray's pull.
-
-| Column                  | Type      | Notes                                                                    |
-| ----------------------- | --------- | ------------------------------------------------------------------------ |
-| `user_id`, `sticker_id` | PK        | One per sticker a person has ever held                                   |
-| `seq`                   | int       | Arrival order, unique per person. A sticker's spot never moves (item 45) |
-| `arrived_at`            | int       | At seal for your own, at accept for gifts                                |
-| `seen_at`               | int, null | Set when the tray closes with its sheet open; clears NEW                 |
-
-- **Given away:** the sticker keeps its row, so its spot stays blank. Given stickers never show in the tray (item 19).
-- **Given back:** the sticker returns to the same spot. It keeps its `seq` and `arrived_at`, and `seen_at` clears so it shows NEW again.
-- **Sheets and packing** are derived in the app.
-
-### board_placements: the sticker on the Sticker Board
+### sticker_placements: a sticker on a person's Sticker Board (Sticker Board, Sticker tray, Sticker sheet)
 
 Screens:
 
-- your sticker board: drag, corner handles, rotate knob, pinch, z-order, and Remove;
-- the outline a given sticker leaves on your board;
-- someone else's board, read-only.
+- your Sticker Board (drag, corner handles, rotate knob, z-order, Remove), the given outline, and someone else's board, read-only;
+- the sticker tray's sticker sheets, in arrival order, and NEW.
 
-The vocabulary counts this as part of the Sticker: "the physical presentation of the drawing on the Sticker Board".
+| Column                                         | Type                                                 | Set when                                                                                                                            | Notes                                                                                                                                                       |
+| ---------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_id`, `sticker_id`                        | PK                                                   | When the sticker first reaches the person: seal for the artist, receive for a gift                                                  | One row per person per sticker they've had                                                                                                                  |
+| `on_board`, `x`, `y`, `scale`, `rotation`, `z` | bool, real, real, real, real, int; null until placed | When their board first lands it, then every drag, resize, turn and Remove. A sticker given back goes to the tray (`on_board` false) | The app's placement `{ on, x, y, s, r, z }`: centre as fractions of the field, long side as a fraction of the width, degrees clockwise. All null or all set |
+| `seen_at`                                      | int, null                                            | When the tray zips shut with its sticker sheet open. Cleared when the sticker comes back                                            | Null shows NEW                                                                                                                                              |
+| `created_at`                                   | int                                                  | Insert                                                                                                                              | The tray's order. Kept when a sticker comes back, so it returns to its old spot                                                                             |
 
-| Column                  | Type                  | Notes                                                                                                                          |
-| ----------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `user_id`, `sticker_id` | PK → sticker_arrivals | The board's owner, one sticker board per person. The key allows a placement only for a sticker that reached that person's tray |
-| `on_board`              | bool                  | False once it's removed from the board. The tray shows it either way, since it holds everything you own (item 19)              |
-| `x`, `y`                | real, 0–1             | Center, as fractions of the board's field                                                                                      |
-| `scale`                 | real                  | The long side as a fraction of board width (the design allows 0.16–0.72)                                                       |
-| `rotation`              | real                  | Degrees, set by the rotate knob. It replaces the random tilt each sticker gets today                                           |
-| `z`                     | int                   | Stacking; selecting raises it                                                                                                  |
-| `updated_at`            | int                   | Saved on release, debounced                                                                                                    |
+- **Given away:** the row stays. The board keeps the given outline where it sat (`GivenOutline`), and its spot on the sticker sheet stays empty, so nothing after it shifts (the tray plan's T1).
+- **Receive date:** a received gift's receive date is also `gifts.received_at`. The two differ only when a sticker comes back, since this row keeps its first date.
 
-- **New stickers** you make and receive land on the board automatically (item 2).
-- **Given away:** once a sticker's gift message is sent, the sticker leaves its giver's board, as the app does today. While the gift is only packed, it stays.
-  - Its placement row stays too. The design keeps a faint outline where it was (item 17), and tapping it opens the read-only detail.
-  - The receiver gets a placement of their own.
-- **Given back:** the sticker's old placement is updated, not inserted, and the sticker goes to the tray (item 17).
-
-### gifts: one Giving of one sticker (Giving, Receiving; Packaging is the visual of the escrow deposit)
+### gifts: one Giving of one sticker (Giving, Receiving, Packaging)
 
 Screens:
 
-- **Giving:** the give sheet, the bag ("In the bag", "Not sent yet"), and "Sealed and sent".
-- **Boards:** the pending-gifts indicator at the top right, outgoing and incoming.
-- **Receiving:** the accept screen and its guards.
-- **Elsewhere:**
-  - the in-app notice and the Official account push;
-  - the sticker detail's Transfer Trail and "Given to @bob";
-  - the give sheet's Recent row;
-  - Explore's "gave" rows;
-  - the stat board's received and given counts.
+- **Giving:** the give sheet, the gift bag ("In the bag", "Not sent yet"), "Sealed and sent", and PendingGiftsNotificationBadge;
+- **Receiving:** the Receiving screen and its refusals;
+- **Elsewhere:** the Official account's push, the sticker detail's Transfer Trail and "Given to @bob", the give sheet's Recent row, and the stat board's received and given counts.
 
-| Column             | Type                                                            | Notes                                                                                                                                                                                                                                                                                                  |
-| ------------------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `id`               | text PK                                                         | Random bytes32: the escrow's `giftId`. The app already makes gift IDs in this format                                                                                                                                                                                                                   |
-| `sticker_id`       | → stickers                                                      | One gift per sticker at a time (a partial unique index). That holds while the gift is `packed` or `sent`, and while the escrow still holds the NFT. So a gift given on waits for the last claim, and a re-pack waits for the reject                                                                    |
-| `giver_id`         | → users                                                         |                                                                                                                                                                                                                                                                                                        |
-| `sent_via`         | `line_chat` or `handle`                                         | Decision 13                                                                                                                                                                                                                                                                                            |
-| `recipient_id`     | → users, null                                                   | Known at packing for a handle gift; set by the accept for a LINE chat gift                                                                                                                                                                                                                             |
-| `claim_commitment` | text, unique                                                    | keccak256 of the one-time claim token. The token lives only in the gift link (`liff.line.me/{liffId}/g/{token}`, as the app builds it), and the escrow holds this same commitment. A LINE chat gift's accept looks the gift up by it                                                                   |
-| `state`            | `packed`, `sent`, `accepted`, `not_sent`, `returned`            | The app's `packed`, `sent` and `not_sent`, plus the two that need a server. See the state table                                                                                                                                                                                                        |
-| `not_sent_reason`  | enum, null                                                      | Set exactly when `not_sent`. The app's four: `picker_cancelled`, `send_failed`, `taken_out`, and `abandoned` (still packed when the same sticker was packed again). The server's two: `deposit_failed` (the giver's deposit never landed) and `deposit_mismatch` (it landed but didn't match the gift) |
-| `send_error`       | text, null                                                      | Why sending failed, in LINE's words: the app's `error`. Only on `not_sent`                                                                                                                                                                                                                             |
-| `escrow_status`    | `missing`, `pending`, `claimed`, `rejected`, `expired_returned` | **Chain mirror**, verbatim. A CHECK allows only the statuses in the state table                                                                                                                                                                                                                        |
-| `expires_at`       | int                                                             | The escrow's expiry: 2100-01-01 by default. Decision 5                                                                                                                                                                                                                                                 |
-| `idempotency_key`  | text                                                            | Unique per giver                                                                                                                                                                                                                                                                                       |
-| `packed_at`        | int                                                             | The app's `packedAt`                                                                                                                                                                                                                                                                                   |
-| `sent_at`          | int, null                                                       | The app's `sentAt`: the picker reported the message sent, or the server delivered a handle gift. A `not_sent` gift never has one                                                                                                                                                                       |
-| `accepted_at`      | int, null                                                       | Kept if an accepted gift later returns, as the record of the accept                                                                                                                                                                                                                                    |
-| `accept_seen_at`   | int, null                                                       | The giver saw "Bob accepted your sticker ♡" in the app                                                                                                                                                                                                                                                 |
-| `closed_at`        | int, null                                                       | The app's `closedAt`. Set exactly for `not_sent` and `returned`                                                                                                                                                                                                                                        |
+| Column                       | Type                                                            | Set when                                                                                                          | Notes                                                                                                             |
+| ---------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `id`                         | text PK                                                         | Packaging                                                                                                         | The escrow's `giftId`, from `createGiftClaim`                                                                     |
+| `sticker_id`                 | → stickers                                                      | Packaging                                                                                                         | One gift per sticker at a time (see the index)                                                                    |
+| `giver_id`                   | → users                                                         | Packaging                                                                                                         |                                                                                                                   |
+| `claim_commitment`           | text, unique                                                    | Packaging                                                                                                         | keccak256 of the Gift Claim Token. Receiving finds the gift by it; the escrow can't be searched by it             |
+| `status`                     | `packed`, `sent`, `received`, `taken_out`                       | Packaging (`packed`); the picker's report (`sent`); receive (`received`); take-out or a bad deposit (`taken_out`) | The app's `packed` and `sent`, the vocabulary's Receiving, and the app's take-out                                 |
+| `escrow_status`              | `missing`, `pending`, `claimed`, `rejected`, `expired_returned` | Packaging (`missing`); the deposit checked (`pending`); the claim or reject lands (`claimed`, `rejected`)         | The contract's GiftStatus, verbatim. `expired_returned` can't happen with the 2100 expiry, and a CHECK refuses it |
+| `sent_at`                    | int, null                                                       | LINE's picker reports sent                                                                                        | The app's `sentAt`                                                                                                |
+| `taken_out_at`               | int, null                                                       | Take it out, before sending; or a deposit that didn't match                                                       |                                                                                                                   |
+| `receiver_id`, `received_at` | → users, int, null                                              | Receive                                                                                                           | Set together                                                                                                      |
+| `claim_tx_hash`              | text, null                                                      | The worker sends `claimGift`                                                                                      |                                                                                                                   |
+| `reject_tx_hash`             | text, null                                                      | The worker sends `rejectGift`                                                                                     |                                                                                                                   |
+| `pushed_to_giver_at`         | int, null                                                       | The Official account's push goes out, or is given up on after 24 hours                                            |                                                                                                                   |
+| `created_at`                 | int                                                             | Packaging                                                                                                         | The app's `packedAt`                                                                                              |
 
-| `state`    | Escrow status allowed                                                                       | Owner in our database | Giver sees                                                                                         | Whoever opens the link sees                                                       |
-| ---------- | ------------------------------------------------------------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `packed`   | `missing` until the deposit, then `pending`                                                 | giver                 | "In the bag"; "Not sent yet" after a cancelled picker (decision 6)                                 | the sleeve and Accept, if the message went out and the picker never reported back |
-| `sent`     | `pending`                                                                                   | giver                 | "On its way", with no name ("On its way to @mika" for a handle gift). The sticker leaves the board | the sleeve, "Alice sent you a sticker", Accept                                    |
-| `accepted` | `pending` until the claim lands, then `claimed`                                             | receiver              | the outline on the board; "Bob accepted your sticker ♡"                                            | their board with it; anyone after: "Already opened"                               |
-| `not_sent` | `missing` if no deposit landed; otherwise `pending` until the reject lands, then `rejected` | giver                 | the sticker, back                                                                                  | — (the message never left)                                                        |
-| `returned` | `expired_returned` after expiry; `pending`, then `rejected`, when the server sends it back  | giver                 | the sticker, back (no design copy yet)                                                             | the link no longer works (no design copy yet)                                     |
+| `status`    | Dates set                      | `escrow_status` allowed                                         | Giver sees                                                                                     | Whoever opens the link sees                                                       |
+| ----------- | ------------------------------ | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `packed`    | none                           | `missing` until the deposit lands, then `pending`               | "In the bag"; "Not sent yet" after a cancelled picker                                          | the sleeve and Accept, if the message went out and the picker never reported back |
+| `sent`      | `sent_at`                      | `pending`                                                       | "On its way", with no name, since LINE never says who was picked. The sticker leaves the board | "Alice sent you a sticker", and the pull tab                                      |
+| `received`  | `received_at`, maybe `sent_at` | `pending` until the claim lands, then `claimed`                 | the given outline, and "Bob accepted your sticker ♡" in LINE                                   | their board, with the sticker; anyone after: "Already opened"                     |
+| `taken_out` | `taken_out_at`                 | `missing`, or `pending` until the reject lands, then `rejected` | the sticker, back                                                                              | — (the message never left)                                                        |
 
-- **Following the app:** the states, reasons and times are the ones `giftStore.ts` records on the device today, so its `GiftRecord` can come from this table once gifts live on the server.
-- **Tag:**
-  - "From @alice", the giver's handle, when the message goes through LINE's picker, as `giftTag.ts` prints it. "For @mika" for a handle gift.
-  - It's printed from `sent_via`, never typed or stored (item 15).
-  - Item 15 and DESIGN.md write "From Alice", the name; the app prints the handle (decision 15).
-- **Unknown receiver:**
-  - LINE never tells the app who was picked. Until a LINE chat gift is accepted, the giver sees "On its way", with no name.
-  - "On its way to @mika" is only possible for a handle gift. The prototype shows a name it couldn't know.
-- **Sending:** the message can go out only once the deposit is in. A CHECK refuses `sent` until `escrow_status` is `pending`.
-- **Accepting:**
-  - One conditional update decides it: the commitment matches, `state` is `packed` or `sent`, the deposit is in, the accepter isn't the giver, and, for a handle gift, the accepter is its recipient.
-  - Exactly one accept wins, and a forwarded link fails for everyone after.
-  - `packed` is allowed because a message can go out even when the picker never reports back.
-- **Group chats:** an open from a group, a multi-person chat or an OpenChat (`group`, `room`, `square_chat`) is refused before that update.
-- **Taking it out:** only while packed. It closes the gift as `not_sent` (`taken_out`), as the app does today. Once the message is sent there's no take-back (item 5), and a CHECK refuses `not_sent` for a gift with a `sent_at`.
-- **Packing again:** a gift still packed when the same sticker is packed again (the app closed mid-send) closes as `not_sent` (`abandoned`), as the app does today.
-- **Returned:** the message went out, or could have, and the sticker went back to its giver: after expiry (decision 5), or because its handle recipient withdrew (decision 14).
-
-### gift_opens: every open of a gift link
-
-Screens: none directly. It's the audit behind the accept screen's guards ("Open this in your chat with Alice", "Already opened").
-
-| Column         | Type                                                                                            | Notes                                                                                             |
-| -------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `id`           | int PK                                                                                          |                                                                                                   |
-| `gift_id`      | → gifts                                                                                         |                                                                                                   |
-| `user_id`      | → users, null                                                                                   | Null when opened before signing in                                                                |
-| `context_type` | `utou`, `room`, `group`, `square_chat`, `external`, `none`                                      | From `liff.getContext()`: a hint for refusing group, multi-person and OpenChat opens, never proof |
-| `outcome`      | `accepted`, `already_yours`, `own_gift`, `blocked_group`, `already_opened`, `not_ready`, `gone` | `not_ready`: the deposit isn't in yet. `gone`: not sent, or returned                              |
-| `created_at`   | int                                                                                             |                                                                                                   |
+- **CHECKs:** each status has exactly its dates, and only the escrow statuses in the table.
+- **Take-back:** there's none once the message is sent (item 5). Nothing is sent or received before the deposit.
+- **Tag:** "From @alice", the giver's handle, printed from the gift and never stored (item 15).
 
 ### gratitude: one mini-game combo (Gratitude, Mini-game)
 
 Screens:
 
-- **The combo itself:** the gratitude mini-game, its receipt, and the replay.
-- **The sticker detail:** the Transfer Trail's open row, with "590 came to you, its artist".
-- **Boards:** each sticker's glow, and the giver's pink tag on their board.
-- **Stats and Explore:** the stat board's gratitude receipt and bests, and Explore's weekly leaderboards.
-- **LINE:** the Official account's notice.
+- the mini-game, its receipt, and the replay;
+- the Transfer Trail's rows ("590 came to you, its artist");
+- each sticker's glow, and the giver's pink tag;
+- the stat board's gratitude receipt and bests, and Explore's weekly leaderboards;
+- the Official account's notice.
 
-The columns follow the gratitude plan's recording contract (§5), with one addition, `switched_at_event`.
+| Column                   | Type                     | Set when                                                             | Notes                                                                                                               |
+| ------------------------ | ------------------------ | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `gift_id`                | text PK → gifts          | Recorded                                                             | One gratitude per received gift, sent by its receiver (item 33). The giver, receiver and sticker come from the gift |
+| `idempotency_key`        | text, unique             | Recorded                                                             | Made on the device at the first hit                                                                                 |
+| `method`                 | `tap`, `stroke`, `shake` | Recorded                                                             | The method it ended in. Inspired is tap; Magic is stroke or shake                                                   |
+| `hits`                   | int, 1–120               | Recorded                                                             | Counted taps, passes or reversals. Best combo                                                                       |
+| `total`                  | int                      | Recorded                                                             | The server's replayed total, multiplier included                                                                    |
+| `peak_mult`, `peak_tier` | real 1–8, int 0–4        | Recorded                                                             | Tiers: ありがと, 照れ, ドキドキ, オーバーヒート, 昇天                                                               |
+| `artist_share`           | int, 0–total             | Recorded                                                             | 20% when the artist is a third person, else 0. The giver's share is `total` minus this                              |
+| `tuning_version`         | text                     | Recorded                                                             | Every tuning stays in code for good, for replays                                                                    |
+| `replay`                 | blob                     | Recorded                                                             | Gzipped JSON; see below                                                                                             |
+| `seen_by_giver_at`       | int, null                | The giver finishes watching the replay                               | Drives the pink tag                                                                                                 |
+| `pushed_to_giver_at`     | int, null                | Its push, or the digest that included it, goes out or is given up on |                                                                                                                     |
+| `created_at`             | int                      | Recorded                                                             | Weekly leaderboards; most thanks in a day                                                                           |
 
-| Column                       | Type                               | Notes                                                                                                                                                                                                                                                           |
-| ---------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                         | text PK                            |                                                                                                                                                                                                                                                                 |
-| `gift_id`                    | → gifts, unique                    | The plan's `handoffId`: one gratitude per accepted gift, sent by its receiver (item 33)                                                                                                                                                                         |
-| `sticker_id`                 | → the gift's sticker               | Copied from the gift, for glow and Transfer Trail queries                                                                                                                                                                                                       |
-| `from_user_id`               | → the gift's receiver              | The receiver, who played                                                                                                                                                                                                                                        |
-| `to_user_id`                 | → the gift's giver                 | The giver                                                                                                                                                                                                                                                       |
-| `artist_user_id`             | → the sticker's artist, null       | Set when the artist is neither the giver nor the receiver. The plan gives the artist a share whenever the giver isn't the artist, but when the receiver drew it, they'd pay themselves. A CHECK refuses a share that goes to either side, or that has no artist |
-| `method`                     | `tap`, `stroke`, `shake`           | The method the combo ended in. Inspired is tap, and Magic is stroke or shake (SCOPE's reading)                                                                                                                                                                  |
-| `switched_at_event`          | int, null                          | Where in `event_times` a combo committed to stroke or shake: 0 if it started there, null for taps only. The replay needs it, since passes and reversals weigh more than taps. The plan's payload doesn't have it yet                                            |
-| `events`                     | int, 1–120                         | Counted taps, passes or reversals                                                                                                                                                                                                                               |
-| `total`                      | int                                | The server's replayed total, multiplier included                                                                                                                                                                                                                |
-| `to_amount`, `artist_amount` | int                                | The artist's share (20%) comes out of the giver's (item 50). It's stored per record, so changing the share never rewrites history. A CHECK makes the two add up to `total`                                                                                      |
-| `peak_mult`                  | real, 1–8                          |                                                                                                                                                                                                                                                                 |
-| `peak_tier`                  | int, 0–4                           | ありがと, 照れ, ドキドキ, オーバーヒート, 昇天                                                                                                                                                                                                                  |
-| `duration_ms`                | int, ≤ 8000                        |                                                                                                                                                                                                                                                                 |
-| `end_reason`                 | `empty`, `hidden`, `closed`, `cap` |                                                                                                                                                                                                                                                                 |
-| `event_times`                | JSON int[]                         | The replay: ms after the first counted event. A CHECK ties its length to `events`                                                                                                                                                                               |
-| `tuning_version`             | text                               | Which tuning the server replayed with                                                                                                                                                                                                                           |
-| `idempotency_key`            | text, unique                       | Made on the device at the first counted event. The same key again gets the stored result; another key for the same gift gets a 409 (the plan's §5.3)                                                                                                            |
-| `recorded_at`                | int                                | Indexed, for the weekly leaderboards                                                                                                                                                                                                                            |
-| `seen_by_giver_at`           | int, null                          | The giver watched the replay. Drives the pink tag and the plan's `GET /api/gratitude/unseen`                                                                                                                                                                    |
+## Replay and timelapse storage
 
-- **Composite foreign keys:** they tie `gift_id`, `sticker_id`, `from_user_id` and `to_user_id` to the gift's own sticker, receiver and giver, and `artist_user_id` to the sticker's artist. So a record can't credit the wrong people.
-- **Size:** a replay is at most 120 small integers of JSON, so storing and replaying it is trivial for SQLite.
+- **One gzipped JSON blob per replay, never a row per event:**
+  - Nothing reads a single hit or point, and a replay always loads whole.
+  - Rows per event would be about 120 per combo and several thousand per timelapse.
+  - SQLite reads blobs under about 100 KB faster from the database than from separate files: https://www.sqlite.org/intern-v-extern-blob.html
+- **Encoding:** the JSON holds integers only, each stored as the change from the one before. The device gzips it with `CompressionStream`, and a version field lets the format change later.
+- **Measured on synthetic strokes during validation:**
+  - a gratitude replay with 240 taps and a 240-sample stroke is 2.7 KB;
+  - a full 3-minute timelapse is 20 KB at 60 Hz and 40 KB at 120 Hz;
+  - the same timelapse as the app's raw floats is 175 KB and 352 KB.
 
-### line_notices: Official account pushes (Messaging API)
+**Gratitude replay, version 1:**
 
-Screens: the Official account chat ("Bob accepted your sticker ♡", "Bob sent you gratitude ♡", digests).
+```json
+{
+  "v": 1,
+  "seed": 1234567,
+  "intensity": 0.7,
+  "stage": [390, 844],
+  "durationMs": 5420,
+  "endReason": "empty",
+  "switchedAtHit": 12,
+  "hits": [0, 5000, 4800, 1, 180, 20, -35, 1],
+  "strokes": [[0, 3000, 6000, 33, 40, -12]],
+  "shakes": [0, 1, 140, -1]
+}
+```
 
-| Column                                                                                  | Type                                             | Notes                                                                                                |
-| --------------------------------------------------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
-| `id`                                                                                    | int PK                                           |                                                                                                      |
-| `user_id`                                                                               | → users                                          | The recipient                                                                                        |
-| `kind`                                                                                  | `gift_accepted`, `gratitude`, `gratitude_digest` |                                                                                                      |
-| `dedupe_key`                                                                            | text, unique                                     | e.g. `gift_accepted:{giftId}`: one push per event, however often it retries                          |
-| `payload`                                                                               | JSON                                             |                                                                                                      |
-| `retry_key`                                                                             | text                                             | Sent as `X-Line-Retry-Key` on every attempt                                                          |
-| `status`                                                                                | `queued`, `sent`, `failed`, `cancelled`          | `failed` once retries pass 24 hours, the retry key's lifetime. `cancelled` when the person withdraws |
-| `attempts`, `next_attempt_at`, `sent_at`, `line_request_id`, `last_error`, `created_at` |                                                  | `sent_at` counts pushes against the month's quota                                                    |
+- **`hits`:** every tap, counted or not, as a flat list of ms since the one before, x, y (0–10000 of the stage, each as the change from the one before) and counted (0 or 1).
+- **`strokes`:** paths sampled at about 30 Hz, in the same encoding.
+- **`shakes`:** reversals, as ms and direction.
+- **`switchedAtHit`:** where a tap combo committed to stroke or shake.
+- **`seed`:** the random seed for pop-in lines and particles, so the replay looks exactly as it did.
+- **Checking:** the server unzips it and replays the counted hits with `tuningVersion` to check `total`, before storing.
 
-- **When rows are written:** a push for one event is written in the same transaction as the change it announces.
-- **Gratitude, per the plan's §5.4:**
-  - The first gratitude to a giver in a 6-hour window pushes at once. Later ones fold into one digest, written when the window closes.
-  - Past 80% of the month's quota, the window becomes a day. At 100%, pushes stop, and the app shows the news on its own.
-- **Delivery:** a 200 from LINE doesn't prove delivery, so the app shows the same news in-app.
-- **The artist's share:** no push is designed for it. The artist sees it in the Transfer Trail and on the stat board.
+**Timelapse, version 1:**
 
-### chain_jobs: World Chain transactions
+```json
+{
+  "v": 1,
+  "ink": [390, 600],
+  "place": [22, 40, 344, 512],
+  "ops": [
+    ["brush", "#1C1824", 0, [2010, 3020, 80, 0, 27, -3, 0, 16]],
+    ["fill", "#E94F64", 41200, 1500, 2600]
+  ]
+}
+```
 
-Screens: none. Only the "Sealed on-chain" timing depends on it (decision 7).
+- **`ink` and `place`:** the ink canvas's size, and where the sticker image sits on it, so the timelapse frames like the sticker.
+- **`ops`:** the app's `Op`s in the order drawn.
+  - A stroke is its tool, color, start time (`T`, ms into the session) and points. Points are x, y and width in tenths of a pixel, plus ms, each as the change from the point before.
+  - A fill is its tool, color, time, x and y.
+- **Undo:** version 1 is what's on the sheet at seal, meaning the history's ops, without undone strokes.
 
-| Column                                                              | Type                                                           | Notes                                                                                                            |
-| ------------------------------------------------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `id`                                                                | int PK                                                         |                                                                                                                  |
-| `kind`                                                              | `mint`, `confirm_deposit`, `claim`, `reject`, `return_expired` | `reject` covers a gift closed after its deposit landed: `not_sent`, or `returned` by the server                  |
-| `dedupe_key`                                                        | text, unique                                                   | e.g. `mint:{stickerId}`, `claim:{giftId}`. The contracts' own checks make a repeat revert harmlessly             |
-| `sticker_id`                                                        | → stickers, null                                               | Required for `mint`                                                                                              |
-| `gift_id`                                                           | → gifts, null                                                  | Required for the rest                                                                                            |
-| `status`                                                            | `queued`, `submitted`, `confirmed`, `failed`, `cancelled`      | `cancelled`, e.g. for a claim on a gift that returned after expiry. `confirmed_at` is set exactly when confirmed |
-| `tx_hash`                                                           | text, null                                                     | For `confirm_deposit`, it's the transaction the giver's smart account sent                                       |
-| `attempts`, `run_after`, `last_error`, `created_at`, `confirmed_at` |                                                                |                                                                                                                  |
+## Derived, never stored
 
-- **Order:** a sticker's or a gift's jobs run in the order they were queued. Each waits while an earlier one for the same sticker or gift hasn't confirmed.
-- **Waiting on accounts:** a mint waits for the artist's smart account, and a claim for the receiver's. The chain package requires one on 4801.
-- **Signing:** the worker signs a claim or reject when it submits it, since an authorization lasts five minutes.
-
-## Flows: what happens where
-
-1. **Sign in.**
-   - The app already waits for LINE Login before it shows anything (`LineGate`).
-   - LIFF hands the ID token to our server, which verifies it with LINE, upserts `users` and `line_accounts`, and issues its own session cookie (no table). The token lasts an hour, and LIFF doesn't renew it.
-   - Separately, the auth endpoint turns the same ID token into a Privy JWT. Privy creates the signer and smart account; the server confirms the address with Privy and adds it to `wallets`.
-2. **Draw.** The first stroke spends a ticket: a `ticket_uses` row. A paid ticket needs a confirmed purchase with tickets left.
-3. **Seal.**
-   - One transaction:
-     - number the sticker;
-     - insert `stickers`, with its PNG saved as a file named by its keccak256;
-     - set `metadata_uri`;
-     - link the ticket;
-     - add a `sticker_arrivals` row and an automatic `board_placements` spot;
-     - queue `mint`.
-   - The metadata's IPFS address can be computed before anything is uploaded, so `metadata_uri` is known at seal.
-   - The mint job pins the metadata and image first. It then waits for the artist's smart account and calls `StickerNFT.sealSticker`.
-   - Once the mint confirms, the job fills `token_id` and `minted_at`.
-4. **Give.** The endpoints are the ones `giftBackend.ts` names.
-   - **Pack** (`POST /api/gifts`):
-     - Needs `token_id`, since the deposit moves the NFT, so a sticker can't be given until its mint confirms.
-     - Closes a gift still packed for the same sticker as `not_sent` (`abandoned`).
-     - Inserts `gifts` as `packed`, with a fresh gift ID and claim commitment.
-     - Returns the claim token (once), the gift message, and the escrow transfer for the app to send from the giver's smart account.
-   - **Deposit:**
-     - The transaction hash comes back as a `confirm_deposit` job.
-     - The server checks the `GiftStaged` event against the gift: the sender is the giver's smart account, and the token ID, claim commitment and expiry are the ones it issued.
-     - A match sets `escrow_status` to `pending`.
-     - A mismatch closes the gift as `not_sent` (`deposit_mismatch`) and queues a `reject`, which returns the sticker to whoever deposited it. A deposit that never lands closes it as `not_sent` (`deposit_failed`).
-   - **Send** (`POST /api/gifts/:id/shared`):
-     - Only once the deposit is in.
-     - The picker's success moves the gift to `sent`. What a cancelled or failed picker does is decision 6.
-     - For a handle gift, the server delivers it and moves it to `sent` itself.
-   - **Take it out:**
-     - Only while packed. Closes the gift as `not_sent` (`taken_out`) and, if the deposit is in, queues a `reject`.
-     - The sticker can't be packed again until the reject lands.
-5. **Accept.**
-   - One transaction:
-     - the conditional update;
-     - a `gift_opens` row;
-     - the new `owner_id`;
-     - the receiver's `sticker_arrivals` and `board_placements` rows;
-     - a `line_notices` row for the giver;
-     - a `claim` job, which waits until the receiver has a smart account.
-   - Refused opens only add a `gift_opens` row.
-   - If the receiver held this sticker before, their `sticker_arrivals` row stays: same tray spot and arrival date, NEW again. Their `board_placements` row is updated, not inserted, and the sticker goes to the tray (item 17).
-   - The receiver can't give it on until the claim lands.
-6. **Gratitude** (the plan's §5).
-   - The app keeps the record on the device and POSTs it with `keepalive`, resending on the next open until it lands.
-   - The server runs the plan's checks, replays the events, stores the total and the split, and queues the notice or leaves it for the digest.
-7. **Board and tray.** Placement edits and seen marks write to our database only.
-8. **Expiry.** With the default expiry (decision 5) this never happens. If gifts can expire:
-   - after `expires_at`, anyone can return the sticker on chain, and the reconciler marks the gift `returned`;
-   - that includes an accepted gift whose claim never landed: it keeps `accepted_at`, the sticker goes back to the giver in our database too, and the claim job is cancelled.
-9. **Withdrawal.** See decision 14.
-
-## Derived, not stored
-
+- **Streak:**
+  - The app's own rule (`userStats.ts`): a ticket day with a sealed sticker adds one; a missed day takes one away, but never below one; today isn't missed until it's over.
+  - The server runs it over the person's `stickers.created_at` in their zone (`stickers_artist`). "Longest streak" is the best it has been.
 - **Stat board:**
-  - Made: stickers where you're the artist.
-  - Received and given: accepted gifts to and from you.
+  - Made is your stickers as artist.
+  - Received and given are your `received` gifts, to and from you.
   - Gratitude rows:
-    - Inspired: your `to_amount` from tap combos.
-    - Magic: your `to_amount` from stroke and shake combos, including ones that switched.
-    - As the artist: your `artist_amount`.
-    - Daily: see decision 1.
-  - TOTAL: the sum of the rows.
-  - Bests:
-    - Best combo: the most `events` in any gratitude you sent.
-    - Most thanks in a day: your biggest day of gratitude received.
-    - Longest streak: `streak_best`.
+    - **Inspired:** `total − artist_share` from tap combos on gifts you gave.
+    - **Magic:** the same, from stroke and shake combos.
+    - **As the artist:** `artist_share` on stickers you drew.
+  - **Bests:**
+    - **Best combo:** the most `hits` in a combo you sent.
+    - **Most thanks in a day:** your biggest day of gratitude received.
 - **Explore:**
-  - Weekly leaderboards (from Monday 4:00, Tokyo time):
-    - Most thanked: the giver's share plus the artist's share, received that week.
-    - Best combo: the most counted events that week.
-    - Longest streak: the current streak.
-  - Today's stickers: by `sealed_at`.
-  - The activity feed: seals and accepted gifts.
-  - Search: handle matches, prefix matches first and then substrings, A to Z.
-- **The sticker detail:**
-  - The Transfer Trail: accepted gifts, newest first, each with its gratitude.
-  - "Given to @bob": your last accepted gift of it.
+  - weekly leaderboards (from Monday 4:00 Tokyo): most thanked, best combo, longest streak;
+  - Today's stickers, by `created_at`;
+  - the activity feed of seals and receives;
+  - search by handle.
 - **Boards:**
-  - Glow: from the sticker's gratitude totals.
-  - Foil: the artist isn't the board's owner (item 46).
-  - A given sticker's outline: your placements of stickers you no longer hold.
-  - Leaving the board: a sticker whose gift is `sent` leaves its giver's board, as the app does today. A `packed` one stays.
-  - The pending-gifts indicator: your open gifts, and handle gifts waiting for you. Its sleeves use the design's default colors; no per-sticker colors are stored.
-  - Old sticker links: the current owner's board.
-  - "Make your first sticker": you've made no stickers, which is how the app decides it today. No first-visit flag is stored.
-  - The give sheet's Recent row: the people you've given to.
-- **The sticker tray:**
-  - What it holds: everything you own, whether on the board or off it (item 19).
-  - NEW: a sticker you hold whose `seen_at` is null.
-  - The sheets and each sticker's spot: packed in `seq` order in the app.
-- **Tickets:**
-  - Tickets left: three minus today's free uses, plus confirmed purchased tickets minus every paid use.
-  - The next refill: 4:00 in your zone.
-- **Streak:** `streak_current`, less one for each day missed since `streak_day` (decision 11).
+  - **Glow:** a sticker's gratitude totals.
+  - **Foil:** the artist isn't the board's owner (item 46).
+  - **Given outline:** your placements of stickers you no longer hold.
+  - A sticker with a `sent` gift leaves its giver's board; a `packed` one stays.
+- **Sticker tray:**
+  - Everything you've had, in `created_at` order.
+  - Given stickers leave their spot empty.
+  - NEW is `seen_at` null. The tray plan also limits it to the current ticket day (T3).
+- **Tickets left:** three minus today's free uses, plus paid tickets left. The next refill is 4:00 in your zone.
 
-## Kept on the device
+## Indexes, and the queries they serve
 
-- The drawing in progress (wiped at seal).
-- Brush sizes, smoothing and recent colors.
-- The gratitude record until it lands.
-- The motion permission (`gr:motion`), the intensity dial, and sound on or off.
-- The tray's first-visit tug count.
-- Which of the day's arrivals has been touched (the lifted corner).
-- The claim token, from packing until the message is sent, for its link.
-- Reduced motion (the OS setting).
+Every query below was run through `EXPLAIN QUERY PLAN` during validation, and SQLite used the index shown. Primary keys and `UNIQUE` columns are indexes too.
 
-## Not in the first migration
+| Query                                         | Where it's used                  | Index                                                                                                   |
+| --------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Find a person by LINE user ID                 | Sign-in                          | `users_line_user_id_unique`                                                                             |
+| Is this handle taken? (ignoring case)         | Sign-in, the handle prompt       | `users_handle` on `lower(handle)`                                                                       |
+| Handle search (prefix)                        | Explore search                   | `users_handle` (a range on `lower(handle)`)                                                             |
+| A person from a chain address                 | Mapping chain events to people   | `users_smart_account_address_unique`                                                                    |
+| A Sticker Board, with its stickers            | `StickerBoard`, the sticker tray | `sticker_placements`' primary key, then `stickers`'                                                     |
+| Stickers you hold                             | The Give check                   | `stickers_owner`                                                                                        |
+| Made, and seal days for the streak            | Stat board                       | `stickers_artist` (covering)                                                                            |
+| Today's stickers                              | Explore                          | `stickers_created`                                                                                      |
+| A sticker from a chain token ID               | Mapping chain events to stickers | `stickers_token_id_unique`                                                                              |
+| Stickers not minted yet                       | The mint worker                  | `stickers_token_id_unique`                                                                              |
+| Today's tickets                               | Draw gate, ticket stubs          | `ticket_uses_day`                                                                                       |
+| Paid tickets used, bought                     | Tickets left                     | `ticket_uses_day` (covering), `ticket_purchases_user`                                                   |
+| Your gifts not yet received                   | PendingGiftsNotificationBadge    | `gifts_giver` on (`giver_id`, `status`)                                                                 |
+| Given count                                   | Stat board                       | `gifts_giver` (covering)                                                                                |
+| Received count, Best combo                    | Stat board                       | `gifts_receiver`                                                                                        |
+| A gift from its Gift Claim Token              | Receiving                        | `gifts_claim_commitment_unique`                                                                         |
+| One gift per sticker at a time                | Packaging                        | `gifts_one_per_sticker`: unique, only over gifts `packed` or `sent` or whose escrow still holds the NFT |
+| Transfer Trail                                | Sticker detail                   | `gifts_transfer_trail` on (`sticker_id`, `received_at`)                                                 |
+| Activity feed                                 | Explore                          | `gifts_received`                                                                                        |
+| Deposits to check, claims and rejects to send | The worker                       | `gifts_escrow_open`, only over `missing` and `pending`                                                  |
+| Receives to push                              | The worker                       | `gifts_push_due`, only over unpushed receives                                                           |
+| Weekly leaderboards, most thanks in a day     | Explore, stat board              | `gratitude_created`, then `gifts`' primary key                                                          |
+| Gratitude to push                             | The worker                       | `gratitude_push_due`                                                                                    |
+| Unseen gratitude                              | The pink tag                     | `gifts_giver`, then `gratitude`'s primary key                                                           |
 
-Each arrives as its own later migration:
+The earlier draft's composite keys, job and notice tables, and their indexes are gone. So is an index on unminted stickers, which SQLite never chose over `token_id`'s own.
 
-- offers (stretch)
-- stroke replay's uploaded strokes (stretch)
-- the anti-AI protected image and the owner's clean copy
-- World ID at seal
-- ENS handles and sticker names
-- the on-chain gratitude ledger
-- chain event indexing beyond our own transactions
-- Take the original
-- Surprise an artist
+## REST routes
+
+No routes are implemented; this is their shape.
+
+- **Stack:** Hono with zod validation derived from these tables. The app calls them through Hono's typed client.
+- **The Gift Claim Token** travels only in request bodies, never URL paths, so it stays out of server logs.
+- **Not routes:** LINE's picker, the escrow deposit (the smart wallet, through Privy), Privy sign-in and the worker.
+
+**Login Channel and the person**
+
+| Route                     | What it does                                                                                                                                                                     | Called from                   | Tables                                     |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- | ------------------------------------------ |
+| `POST /api/session`       | Verifies the LINE ID token with LINE, finds or creates the person, refreshes their LINE name and picture, sets the session cookie. Asks for a handle when the LINE name is taken | `LineGate` once LIFF is ready | `users`                                    |
+| `POST /v1/auth/privy-jwt` | Trades the LINE ID token for a Privy JWT. Already exists, on the sticker-auth server                                                                                             | `PrivySession`                | —                                          |
+| `GET /api/me`             | Who you are, plus the counts behind the board's NEW and pink-tag badges                                                                                                          | App start, the board's header | `users`, `sticker_placements`, `gratitude` |
+| `POST /api/me/handle`     | Sets your handle                                                                                                                                                                 | The handle prompt (not built) | `users`                                    |
+| `DELETE /api/me`          | Withdrawal (decision 13)                                                                                                                                                         | Not designed yet              | `users`, `gifts`                           |
+
+**Ticket**
+
+| Route                        | What it does                                                                                    | Called from                                                  | Tables                                        |
+| ---------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------- |
+| `GET /api/tickets`           | Today's used tickets with their stickers' outlines, free and paid tickets left, the next refill | `DrawingScreen`, `SealedCard`, `TicketStubs`, `OutOfTickets` | `ticket_uses`, `ticket_purchases`, `stickers` |
+| `POST /api/tickets/spend`    | Spends a ticket at the first stroke, or refuses when none are left                              | `DrawingScreen`                                              | `ticket_uses`                                 |
+| `POST /api/ticket-purchases` | Records the Sui payment's digest                                                                | `OutOfTickets`                                               | `ticket_purchases`                            |
+
+**Sticker (Seal)**
+
+| Route                                    | What it does                                                                                                      | Called from                                                                 | Tables                                                                |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `POST /api/stickers`                     | Seal: the five images, outline, size, time used, the ticket and the timelapse. Returns the sticker and its number | `DrawingScreen`'s seal step, before `SealCeremony` plays                    | `stickers`, `ticket_uses`, `sticker_placements`, `sticker_timelapses` |
+| `GET /api/stickers/:stickerId`           | The sticker detail: artist, who holds it, the Transfer Trail with each gratitude                                  | `StickerDetail`, opened from the board, `StickerToolbar` and `GivenOutline` | `stickers`, `users`, `gifts`, `gratitude`                             |
+| `GET /api/stickers/:stickerId/timelapse` | The timelapse's ops                                                                                               | The timelapse (not built)                                                   | `sticker_timelapses`                                                  |
+
+Images are static files named by content hash, not routes. `StickerFigure`, `PlacedSticker` and `LiveResin` read them.
+
+**Sticker Board, sticker tray and stat board**
+
+| Route                                                        | What it does                                                                               | Called from                                                                              | Tables                                    |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `GET /api/sticker-boards/:userId`                            | A Sticker Board: placements and given outlines; on your own, also the tray's order and NEW | `StickerBoard`, the sticker tray (not built)                                             | `sticker_placements`, `stickers`, `gifts` |
+| `PATCH /api/sticker-boards/me/sticker-placements/:stickerId` | Saves a sticker placement: `on_board`, `x`, `y`, `scale`, `rotation`, `z`                  | The board's gestures on release, `StickerToolbar`'s Remove, the sticker tray (not built) | `sticker_placements`                      |
+| `POST /api/sticker-boards/me/sticker-tray/seen`              | Marks the stickers seen whose sticker sheet was open when the tray zipped shut             | The sticker tray (not built)                                                             | `sticker_placements`                      |
+| `GET /api/sticker-boards/:userId/user-stats`                 | User Stats for the stat board                                                              | `StatBoard`                                                                              | `stickers`, `gifts`, `gratitude`          |
+
+**Giving**
+
+| Route                              | What it does                                                                                                                                                                   | Called from                                                      | Tables  |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- | ------- |
+| `POST /api/gifts`                  | Packaging: checks you hold the sticker and it's minted, returns the open gift or stores a new one. Returns the Gift Claim Token once, the escrow transfer and the LINE message | `Giving` ("Send in a LINE chat"), in place of `giftBackend.pack` | `gifts` |
+| `POST /api/gifts/:giftId/deposit`  | The transfer your smart wallet sent; the server checks the escrow                                                                                                              | `Giving`                                                         | `gifts` |
+| `POST /api/gifts/:giftId/shared`   | The picker's result: sent, or cancelled                                                                                                                                        | `Giving`, in place of `markSent` and `markNotSent`               | `gifts` |
+| `POST /api/gifts/:giftId/take-out` | Take it out, before sending                                                                                                                                                    | `GiftBag`, `Giving`                                              | `gifts` |
+| `GET /api/gifts/pending`           | Your gifts not yet received                                                                                                                                                    | PendingGiftsNotificationBadge (not built), `StickerBoard`        | `gifts` |
+
+**Receiving**
+
+| Route                     | What it does                                                                                                            | Called from                                 | Tables                                    |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- | ----------------------------------------- |
+| `POST /api/gifts/preview` | Body: the Gift Claim Token. The giver's name and picture and whether it can be received, never the sticker              | The Receiving screen (not built)            | `gifts`, `users`                          |
+| `POST /api/gifts/receive` | Body: the Gift Claim Token and LIFF's context type. Receives it and returns the sticker for the reveal, or says why not | The Receiving screen's pull tab (not built) | `gifts`, `stickers`, `sticker_placements` |
+
+**Gratitude**
+
+| Route                              | What it does                                                                                  | Called from                                                | Tables               |
+| ---------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | -------------------- |
+| `POST /api/gratitude`              | One combo and its replay, sent with `keepalive`. The same key again returns the stored record | The mini-game (not built), and its resend on the next open | `gratitude`          |
+| `GET /api/gratitude/unseen`        | Gratitude to you that you haven't watched                                                     | The board's pink tag (not built)                           | `gifts`, `gratitude` |
+| `GET /api/gratitude/:giftId`       | One combo with its replay                                                                     | The pink tag, the Transfer Trail (not built)               | `gratitude`          |
+| `POST /api/gratitude/:giftId/seen` | Marks it watched                                                                              | The replay (not built)                                     | `gratitude`          |
+
+**Explore**
+
+| Route                    | What it does                                                 | Called from                           | Tables                                    |
+| ------------------------ | ------------------------------------------------------------ | ------------------------------------- | ----------------------------------------- |
+| `GET /api/explore`       | Today's stickers, the activity feed, the weekly leaderboards | `ExploreScreen` (a placeholder today) | `stickers`, `gifts`, `gratitude`, `users` |
+| `GET /api/users?handle=` | Search by handle                                             | Explore search (not built)            | `users`                                   |
+
+## Decided (ad0ll, 2026-09-26)
+
+- **LINE:** store the LINE user ID. The LINE name and picture are cached on `users`, with no separate table.
+- **Privy:** store the smart wallet address on `users`, with no `wallets` table.
+- **Timestamps:** `created_at` and `updated_at` on every table, with an `updated_at` trigger per table.
+- **The sticker tray:** every sticker you've had, in the order it reached you. Given stickers leave their spot empty. NEW marks unseen ones, with `seen_at` stored on the server.
+- **Handles:** each person's is their LINE name. The app asks for one only at sign-up, when someone already has that name.
+- **Gifts:** a `status` column (`packed`, `sent`, `received`, `taken_out`) beside each step's date. Only LINE chats: no giving by handle in the demo.
+- **Numbers and names:**
+  - `number`, not `no`;
+  - `hits`, not events;
+  - "sticker placement" in the route and table names.
+- **Storage:** replays as one gzipped JSON blob each, and a timelapse for every sticker.
+- **Chain:** no indexer for the demo.
+- **Timer:** the drawing timer is 3 minutes.
 
 ## Decisions for you (defaults in bold)
 
 1. **Where gratitude comes from.**
-   - **Only the mini-game, as the vocabulary says:** the stat board's Daily row goes, and the streak stays its own figure. This goes against the stat board's design, which has the row.
-   - Or also Daily gratitude for sealing. That needs a formula, gratitude rows that aren't gifts, and a vocabulary change.
+   - **Only the mini-game, as the vocabulary says:** the stat board's Daily row goes. This goes against the stat board's design.
+   - Or Daily gratitude for sealing too, which needs a formula and a vocabulary change.
 2. **When a ticket is spent.**
-   - **At the first stroke,** as the vocabulary ("permission to draw") and today's app have it.
-   - Or at seal, as the prototype has it ("3 seals a day").
+   - **At the first stroke,** as the vocabulary and the app have it.
+   - Or at seal.
 3. **Whose clock turns the day.**
-   - **Tickets, streaks, "best day" and NEW use the person's own zone,** as the design team decided and the app does today. The zone is taken from the device at sign-up and never changes, so moving between zones can't mint tickets.
-   - **Explore's "Today's stickers" and the weekly leaderboards use Tokyo,** since everyone shares them.
-   - Or Tokyo for everything. The prototype mixes 4:00 Tokyo with Tokyo midnight today.
-4. **No. vs token ID.**
-   - **Separate:** No. is assigned at seal and the token ID by the contract at mint. They drift apart when a mint fails or confirms out of order.
-   - Or change `StickerNFT` to mint with token ID = No.
-5. **Gift expiry.** The escrow requires one, and after it anyone can return the sticker. But item 10 says an unopened gift stays "on its way".
-   - **2100-01-01, effectively never.**
-   - Or N days, with `returned` becoming something people see.
-6. **When the escrow deposit happens, and what a cancelled picker does.** Today the app closes the gift when the picker is cancelled or fails (`not_sent`), and packs a new one on retry. `giftBackend.ts` leaves open where the deposit goes.
-   - **At packing, and a cancelled or failed picker keeps the gift packed, so a retry reuses it.**
-     - The bag is the escrow, as the vocabulary's Packaging and Giving have it.
-     - One deposit per gift, and a take-out costs one reject.
-     - The picker opens once the deposit lands, usually a few seconds after packing.
-     - The app's give flow changes: a cancel stops closing the gift.
-   - Or at packing, with one gift per picker attempt, as the app does now. Each cancel then costs a reject, and the retry waits for it to land before depositing again.
-   - Or when the picker reports sent, since the bag seals on send (item 16).
-     - Cancels cost nothing, and the app's flow stays as it is.
-     - But the message is out before the deposit. Someone who opens it early waits for the deposit. If the app closes before sending it, nobody can accept until the giver opens the app again.
+   - **Tickets, streaks, "best day" and NEW use the person's zone,** taken from the device at sign-up and never changed. Explore's "Today's stickers" and the weekly leaderboards use Tokyo.
+   - Or Tokyo for everything.
+4. **Number vs token ID.**
+   - **Separate:** the number is assigned at seal, and the token ID by the contract at mint.
+   - Or change `StickerNFT` to mint with token ID = number.
+5. **Gift expiry.**
+   - **2100-01-01, effectively never,** since item 10 says an unopened gift stays "on its way".
+   - Or N days, with returned gifts becoming something people see. That needs a `returned` status and the indexer above.
+6. **The deposit, and a cancelled picker.**
+   - **The deposit happens at Packaging, as the vocabulary has it. A cancelled or failed picker keeps the gift packed, and "Send in LINE" reuses it.** One deposit per gift, and a take-out costs one reject.
+   - Or one gift per picker attempt, as the app does now, with a reject for each cancel.
 7. **"Sealed on-chain".**
-   - **The sticker is usable at once, and the mint follows:** the seal card doesn't wait. Its copy stays, a failed mint retries, and giving still waits for the mint.
-   - Or wait for the mint, as the chain package's README suggests ("add the sticker to the sticker tray only after a successful transaction receipt").
-8. **Images and metadata.** `tokenURI` is permanent on chain, so the metadata has to outlive hostnames. The app's endpoint, `sticker.195-201-8-147.sslip.io`, is tied to an IP address.
-   - **The metadata JSON and the PNG pinned on IPFS (or Walrus) before the mint, with our copy of the PNG on disk, named by its hash, for the app to serve.** The chain package's tests already use an `ipfs://` URI.
+   - **The sticker is usable at once, and the mint follows;** giving waits for the mint.
+   - Or wait for the mint, as the chain package's README suggests.
+8. **Images and metadata.** `tokenURI` is permanent, so the metadata has to outlive hostnames.
+   - **The metadata JSON and the PNG pinned on IPFS before the mint,** which needs a pinning service key (none is set up).
    - Or metadata at an immutable URL on a domain we'll keep.
-   - Or PNGs as blobs in SQLite for our copy, as today's table keeps them.
-   - Either way, the metadata holds only what can stay public forever: the No., the image, its content hash, width and height, and the seal date.
-   - It never holds LINE data: the policy requires deleting that on withdrawal, and nothing on IPFS or on chain can be deleted. Nor does it hold the handle, which can change.
-9. **Who sees LINE names and pictures.** LINE's policy limits the audience to what LINE itself allows, and boards are meant to be public.
-   - **Signed-in LINE users see them; public pages show handles and stickers.**
+   - Either way, the metadata holds only what can stay public forever: the number, the image, its content hash, width and height, and the seal date. Never LINE data or the handle.
+9. **Who sees LINE names and pictures** (LINE's policy, §3.2.9).
+   - **Signed-in LINE users; public pages show handles and stickers.**
    - Or everyone.
 10. **Leaderboards.**
-    - **Everyone, with an opt-out.**
+    - **Everyone.** An opt-out would add one column to `users`.
     - Or opt-in only.
-11. **Streak decay.** "Miss a day and it drops by one, not back to zero."
-    - **Each missed day lowers it by one, and once started it never goes below 1.** Readers apply it, so nothing runs at 4:00.
-    - Or one drop per gap, however long.
-12. **Sticker names.** Item 4 gives stickers ENS v2 names like `sunset.alice.sketch.eth`, and the design shows "sunset · No.0147".
-    - **No names for now: No. only, with a number-based ENS label later.** This puts off item 4.
-    - Or an app-picked word, or one the artist types.
-    - Either way, the seal card's white ENS label (`sunset.alice.sketch.eth`) has nothing to show until ENS lands. It shows the handle, or it waits.
-13. **Gifts to a handle** (someone already on the app).
-    - **Keep `sent_via = handle` in the schema; the first build ships LINE chat only, as the app does today.** A handle gift has no link, so its accept has no claim token: one reason for the first chain package change below.
-    - Or drop it until it's built.
-14. **Withdrawal.** LINE's policy requires deleting their LINE data. The rest is open:
-    - **LINE data goes at once, and queued pushes to them are cancelled.**
-    - **Their stickers keep their artist, and past Transfer Trails keep their entries, shown without a name or handle.**
-    - **Gifts still in their bag close as `not_sent` (`abandoned`), and the stickers go back. Messages they already sent keep working, since a claim needs only our authorization and the receiver's smart account. Handle gifts waiting for them are `returned` to their givers.**
-    - **Their handle stays reserved, so nobody else can take it.** Or free it.
-    - **Their wallet rows go, and the NFTs they hold stay in their smart account on chain.** Privy finds that account from their LINE user ID, so it survives unless we delete their Privy user.
-      - **Keep the Privy user. Signing in again with the same LINE account starts a new person, and the stickers still in that smart account come back to them.**
-      - Or delete the Privy user too, which leaves those stickers out of everyone's reach for good.
-15. **A handle before the first gift.** Handles show on the gift message's tag, in Transfer Trails, in "Given to @bob" and in Explore's activity feed. The app already refuses to build a gift message without the giver's handle, and until handles exist it uses the LINE name. The design leaves the name label blank until it's written, and asks a receiver for theirs right after accepting.
-    - **Givers write their handle before their first gift: the give sheet opens on the name label while it's blank. Until a receiver writes theirs, Transfer Trails show their LINE name to signed-in LINE users and nothing publicly.**
-    - Or no handle needed to give, with the same fallback for givers. The tag would then print the LINE name, as item 15 and DESIGN.md write it ("From Alice").
-16. **Paid tickets while the Sui payment is a mock.** Item 3 says "Get more tickets with Sui" is display only. The app's payment is a mock that returns a made-up digest, and no SUI moves. But each paid ticket can still become a mint that our server pays for.
-    - **Record mock purchases as `confirmed`, at most one pack a day, until the payment is real. After that, the server verifies each digest on Sui before confirming it.**
-    - Or no paid tickets until the payment is real: the card shows the offer and grants nothing.
-    - Or unlimited mock purchases.
-17. **What's already on people's devices.** Today the app keeps stickers (IndexedDB), tickets and gifts (localStorage) on the device.
-    - **The server starts empty, and nothing on a device is uploaded: it's test data from before the server.**
-    - Or upload device stickers at first sign-in. They'd be numbered, minted and placed like new seals, and `outline` would have to allow null, since older stickers don't have one.
+11. **Streak decay.**
+    - **The app's rule: each missed day lowers it by one, never below one once started.**
+    - Or one drop per gap.
+12. **Sticker names.**
+    - **The number only, for now, with a number-based ENS label later.** This puts off item 4.
+    - Or an app-picked or artist-typed name.
+13. **Withdrawal.** LINE's policy requires deleting their LINE data.
+    - **LINE data and the smart wallet address go at once, and pushes to them stop.**
+    - **Their stickers keep their artist, and past Transfer Trails keep their entries, shown without a name.**
+    - **Gifts still in their bag are taken out, with a reject if deposited. Messages they already sent keep working, since a claim needs only our authorization and the receiver's smart wallet.**
+    - **Their handle stays reserved.**
+    - **Keep the Privy user. Signing in again with the same LINE account starts a new person, and the stickers still in that smart wallet come back to them.** Or delete the Privy user, which leaves those stickers out of reach for good.
+14. **Paid tickets while the Sui payment is a mock.**
+    - **Record mock purchases as verified, at most one pack a day, until the payment is real. Then the server checks each digest on Sui.**
+    - Or no paid tickets until the payment is real.
 
 ## Changes needed elsewhere
 
-These are proposals; this branch changes only `packages/db`.
+These are proposals; this branch changes only `packages/db` and this doc.
+
+**Privy, Pimlico and chain setup** (dashboards; the Privy secret has no API for app settings):
+
+- **Privy dashboard, smart wallets:**
+  - Turn smart wallets on, with type "Alchemy" (LightAccount). https://dashboard.privy.io/apps?page=smart-wallets
+  - Add World Chain Sepolia as a custom chain if it isn't listed:
+    - chain ID 4801;
+    - RPC `https://worldchain-sepolia.g.alchemy.com/public`;
+    - bundler and paymaster `https://api.pimlico.io/v2/4801/rpc?apikey=…`.
+  - Existing users keep their first smart wallet type if it changes later. https://docs.privy.io/wallets/using-wallets/evm-smart-wallets/setup/configuring-dashboard
+  - Check that a deployed LightAccount accepts `safeTransferFrom`, since the mint and the claim use it.
+- **Privy dashboard, JWT auth:** the setup guide's step is "Request access to Custom authentication in the Integrations > Built-in tab". The app's public config still says `custom_jwt_auth: false`. https://docs.privy.io/authentication/user-authentication/jwt-based-auth/setup
+- **Pimlico:** an account and API key. Pimlico supports 4801 for Safe, LightAccount, Simple and Thirdweb accounts, not Kernel or Biconomy. https://docs.pimlico.io/guides/supported-chains
+- **Privy's own gas sponsorship** covers World Chain mainnet, not Sepolia. https://docs.privy.io/wallets/gas-and-asset-management/gas/overview
+- **Our server's accounts:**
+  - World Chain Sepolia ETH from the faucet (https://www.alchemy.com/faucets/world-chain-sepolia), since they send the mint, claim and reject.
+  - `SEALER_ROLE` on `StickerNFT` and `CLAIM_SIGNER_ROLE` on the escrow.
+- **Sui gas sponsorship:**
+  - Privy only signs Sui transactions: https://docs.privy.io/wallets/overview/chains
+  - Sponsoring needs Enoki or Shinami and a secret key on our server: https://docs.sui.io/develop/transaction-payment/sponsor-txn
+  - The payment can't come out of the gas coin, as `payments/sui.ts`'s comment plans.
+  - Nothing to do while the payment is a mock.
 
 **packages/sticker-chain** (for its owner):
 
-1. **Authorize claims and rejections from our records, not the claim token.**
-   - `authorizeClaim` and `authorizeRejection` both require the claim token and check it against the commitment. But the server never stores the token, and it's gone whenever these run:
-     - a handle gift has no link;
-     - a claim or a reject runs later as a job, after the request that carried the token.
+1. **Authorize claims and rejections by gift ID.**
+   - `authorizeClaim` and `authorizeRejection` require the Gift Claim Token. The server doesn't keep it, so a claim that waits for a new receiver's smart wallet, or any retry, can't be signed.
    - **Proposal:**
-     - Both helpers take only the gift ID.
-     - `findGift` also returns who accepted the gift, so the helper checks that a claim goes to that person's smart account.
-     - The token check moves to our accept endpoint, whose conditional update compares keccak256 of the token with `claim_commitment`.
-   - **Or** keep the helpers as they are and store claim tokens encrypted on the server.
-2. **A deposit check.** A helper that compares a `GiftStaged` event with our gift: the sender (the giver's smart account), the token ID, the claim commitment and the expiry. The worker could do this itself, but it fits next to `prepareGiftTransfer`, which builds the same data.
-3. **README step 4** ("add the sticker to the sticker tray only after a successful transaction receipt") changes if decision 7 keeps its default.
-4. **Decision 4's alternative** (token ID = No.) would change `StickerNFT`'s numbering.
+     - both helpers take the gift ID;
+     - `findGift` also returns the receiver, so a claim can only go to them;
+     - the token check moves to our receive endpoint.
+2. **A deposit check** beside `prepareGiftTransfer`: the escrow's `gifts(giftId)` against our gift.
+3. **Adapters, no change needed:**
+   - `findGift` returns the 2100 expiry constant, and `null` for `missing`;
+   - `findSticker` passes `created_at` as `sealedAt`.
 
-Fits as is: the wallet kinds, which use the package's names, and `findGift` and `findSticker`, which adapt our rows. Our `escrow_status` of `missing` becomes "no pending gift", and `sealed_at` becomes the string the package expects.
+**The app** (`apps/frontend`):
 
-**The app:**
-
-- Decision 6's default: `giveFlow.ts` keeps the gift packed after a cancelled or failed picker, and "Send in LINE" reuses it.
-- When gifts move to the server, `giftStore.ts`'s `GiftRecord` and `NotSentReason` come from this table, and the API client that `giftBackend.ts` describes replaces `localGiftBackend.ts`.
+- **Timer:** `SESSION_MS` becomes 3 minutes. `session.ts` and PRODUCT.md (2026-09-22, "Every drawing is a 5-minute session") say 5.
+- **Sign-in:** `LineGate` calls `POST /api/session` and shows the handle prompt when asked. `useIdentity` takes the handle from the server instead of the LINE name.
+- **Drawing screen:** the first stroke calls `POST /api/tickets/spend`.
+- **Sealing:**
+  - The seal posts the five images, the outline and the timelapse to `POST /api/stickers` instead of IndexedDB.
+  - The number comes from the server.
+  - The timelapse is the history's ops plus the ink size and `place`, gzipped as above.
+- **Board:** reads and saves through the Sticker Board routes, and lands stickers that have no placement.
+- **Tray:** NEW moves from localStorage (the tray plan's T3) to `seen_at`.
+- **Giving:**
+  - The gift gets a deposit from the smart wallet (`SmartWalletsProvider`) before the picker opens.
+  - A cancel keeps the gift packed (decision 6).
+  - Packing again returns the open gift instead of setting one aside as abandoned.
+- **Stat board:** "given" counts received gifts; today it counts sent ones, since receiving doesn't exist yet.
+- **Not built:**
+  - the Receiving screen;
+  - the gratitude mini-game;
+  - the pink tag and replay;
+  - the handle prompt;
+  - the sticker tray;
+  - Explore.
 
 **The gratitude plan:**
 
-- §5.2's payload gains `switchedAtEvent`, so the replay knows which events were taps.
+- §5.2's payload becomes this doc's replay: `events` become `hits`, and the replay adds positions, strokes, shakes, the switch point, the seed and the intensity.
 - §5.3's artist's share: none when the receiver drew the sticker.
-
-## Where the prototype and the rules disagree
-
-The schema follows the rule. These are prototype behaviors the app shouldn't copy:
-
-- **Gratitude recipient:** gratitude goes to the giver of the accepted gift (item 33). The prototype's mini-game defaults to the sticker's artist.
-- **Gratitude count:** once per accepted gift, not once per sticker per person.
-- **Given-away spot:** a given sticker's outline keeps its own spot. The prototype overwrites the giver's placement when a gift is accepted.
-- **Unrecorded state:** the prototype never records seen marks, the chosen handle, the terms agreement or streaks. Streaks and Daily gratitude are made-up numbers there.
-
-## Vocabulary
-
-No new AGENTS.MD entries are proposed. Following your rulings of 2026-09-26, this doc uses plain names. Where the design drafts coined one, it's named here once so you can find the design:
-
-- the pending-gifts indicator at the top right (the drafts' "zip pocket")
-- the outline a given sticker leaves on the board (the drafts' "glue ghost")
-- the gift message (the drafts' "gift card")
-- the artist's share, 20% (the drafts' "the artist's fifth")
-- counted events (the drafts' "hits")
-- an accepted gift (the drafts' and the gratitude plan's "hand-off")
-
-"Transfer Trail", your name for a sticker's gift history, is the one feature-level name, and it isn't in AGENTS.MD yet. "Claim token" is the chain package's name in code; people never see it.
 
 ## Validation
 
-**What ran,** on 2026-09-26, against 4f3cc46:
+**What ran,** on 2026-09-26, against this branch's `packages/db/src/schema.ts`:
 
 - **Typing and linting:** tsc and oxlint pass.
-- **Migration:** `drizzle-kit generate` produces one migration for all 13 tables, saved next to this doc. The runtime migrator applied it to an empty scratch file with foreign keys on.
-- **Scripted run:** a throwaway script, deleted afterwards, took the typed client through 82 checks on that file. All passed.
+- **Migration:** `drizzle-kit generate` makes one migration for all 8 tables. `drizzle-kit generate --custom` made the empty trigger migration, and the triggers were written into it. The runtime migrator applied both to an empty file with foreign keys on.
+- **Scripted run:** a throwaway script, deleted afterwards, made 74 checks through the typed client and raw SQL. All passed.
+  - **Timestamps:**
+    - `created_at` and `updated_at` come from the database clock;
+    - an update through Drizzle returns a fresh `updated_at`;
+    - a hand edit gets one from its trigger;
+    - an update that sets `updated_at` keeps its value;
+    - all 8 tables have their trigger.
   - **Flows:**
-    - sealing, packing, depositing, sending and accepting;
-    - thanking, giving on, and giving back, which kept the tray spot and arrival date and showed NEW again;
-    - a handle gift, and an accept from `packed`;
-    - the app's closes: a cancelled picker, a failed send with LINE's error, and an abandoned gift; and a deposit that never landed;
-    - a take-out after the deposit, a deposit that didn't match, and an expiry return;
-    - an accepted gift that returned after expiry and kept its accept;
-    - a handle gift returned to its giver;
-    - a withdrawal.
-  - **Refused, as intended:**
-    - **Tickets and stickers:** a fourth free ticket; a drawing clock past 5:00; another artist's sticker on a ticket; a placement for a sticker that never reached the tray.
-    - **Gifts:**
-      - `not_sent` without a reason or a close time, and a reason or a send error on an open gift;
-      - sending or accepting before the deposit;
-      - a second gift for a sticker in the bag;
-      - giving on before the claim lands, and packing again before a reject lands, after a take-out and after a return;
-      - taking out a gift whose message went out;
-      - a return while the escrow says claimed;
-      - a handle gift with no receiver, and a gift to yourself.
-    - **Gratitude:**
-      - a record for the wrong sticker or from the wrong person;
-      - the artist's share going to the giver, the receiver, someone who didn't draw it, or nobody;
-      - a second gratitude for a gift;
-      - switch points that don't fit the method;
-      - replay times that don't match the count, and a split that doesn't add up.
-    - **Outboxes and purchases:** a confirmed purchase or job without its time; the same Sui digest twice.
+    - sealing with its ticket, sticker placement and timelapse, then the mint;
+    - the board landing a sticker and the tray marking it seen;
+    - Packaging, deposit, send and receive;
+    - receiving a gift still marked `packed`;
+    - giving on after the claim, and giving back, which kept the spot on the sticker sheet and showed NEW again;
+    - gratitude with a gzipped replay that reads back;
+    - take-out before and after a deposit;
+    - a verified purchase;
+    - withdrawal.
+  - **20 refusals, as intended:**
+    - a handle that differs only in case;
+    - a drawing clock past 3:00;
+    - a token without its mint transaction;
+    - the same ticket slot twice;
+    - half a placement;
+    - sending or receiving before the deposit, and a status without its date;
+    - a second gift for a sticker in the bag, giving on before the claim lands, and packing again before a reject lands;
+    - a take-out after sending;
+    - a reject on a received gift;
+    - an expiry return;
+    - a push for a gift nobody received;
+    - a combo with no hits, and an artist's share above the total;
+    - a second gratitude for a gift;
+    - the same Sui payment twice;
+    - withdrawing with LINE data left.
   - **Reads:**
-    - a board with a given-away sticker and a given-back one;
-    - gratitude received, including the artist's share;
-    - a sticker's Transfer Trail;
-    - each closed attempt with its reason and error.
+    - a board;
+    - NEW;
+    - a Transfer Trail;
+    - gratitude received, with the artist's share (alice 40, bob 40, carol 0 from two combos).
 
     `foreign_key_check` and `integrity_check` were clean.
-- **Rules the checks found missing, now added:**
-  - An artist amount with no artist got through. A CHECK that evaluates to NULL passes, and `artist_user_id <> from_user_id` is NULL when there's no artist. The check now tests `is not null` first.
-  - Nothing stopped a sent gift from closing as `not_sent`. `gifts_not_sent` now refuses one with a `sent_at`.
-- **Earlier run:** the first draft's run (4029f88) also read the stat board's rows, the weekly leaderboard, tickets left, unseen gratitude and waiting chain jobs. Later runs didn't repeat those reads.
+
+  - **Query plans:** the 24 queries in the index table, each on the index shown.
+- **Review:** there's no reviewer agent in this session, so I reviewed each flow myself against the app on local `main`, the chain package and the designs. What it found is under Changes needed. The unused index was dropped.
 
 **What hasn't run:**
 
-- Anything outside the database: no API, LINE, Privy or chain. The chain mirrors were set by hand, not from real transactions or events.
-- Two processes at once. The forwarded link failed for the second person in one process, one accept after the other, so `BEGIN IMMEDIATE` is untested.
-- An upgrade from the file `db:push` made, which is why that file should be deleted.
-- Load or performance.
+- **External services:** anything outside the database, including LINE, Privy, Pimlico, IPFS and the chain. The chain values were set by hand.
+- **Concurrency:** two processes at once. `BEGIN IMMEDIATE` is untested.
+- **Sizes:** the replay and timelapse sizes come from synthetic strokes, not a real drawing.
+- **Upgrades:** an upgrade from today's `data/drawing-app.db`, which should be deleted instead.
+
+## Vocabulary
+
+- **From AGENTS.MD:** Sticker, Ticket, Seal, Packaging, Giving, Receiving, Gratitude, Mini-game, Sticker Board, Stat board, User Stats, Sticker tray, Sticker sheet, Login Channel, Official account, Messaging API.
+- **Your names:** Hits, Transfer Trail, Gift Claim Token, PendingGiftsNotificationBadge, UsedStickerSilhouette.
+- **The app's names:** `GivenOutline`, the placement's fields, and the gift states `packed` and `sent`.
+- **Code names:** "sticker placement" (`sticker_placements`, `StickerPlacement`), from your note on the route.
+- **No new AGENTS.MD entries are proposed.**
