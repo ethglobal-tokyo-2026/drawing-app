@@ -191,7 +191,9 @@ const viewOf = (s: BoardStickerView): StickerView => ({
   sealedAt: s.createdAt,
 });
 
-type GratitudeFor = { sticker: BoardSticker; giver: ReturnType<typeof asGiver> };
+/** Gratitude being sent: for a received gift when `giftId` is set, which records it; the stat
+ * board's demo has none. */
+type GratitudeFor = { sticker: BoardSticker; giver: ReturnType<typeof asGiver>; giftId?: string };
 
 export function StickerBoard({ freshId, onDraw }: Props) {
   const stage = useRef<HTMLDivElement>(null);
@@ -741,7 +743,11 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           onSend={() => {
             askedForGratitude.add(freshSticker.id);
             setOwed(null);
-            setGratitudeFor({ sticker: freshSticker, giver: asGiver(owed.giver) });
+            setGratitudeFor({
+              sticker: freshSticker,
+              giver: asGiver(owed.giver),
+              giftId: owed.gift.id,
+            });
           }}
           onLater={() => {
             askedForGratitude.add(freshSticker.id);
@@ -754,6 +760,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         <GratitudeMiniGame
           sticker={gratitudeFor.sticker}
           giver={gratitudeFor.giver}
+          {...(gratitudeFor.giftId && { giftId: gratitudeFor.giftId })}
           intensity={
             readMiniGameDemoSettings().fullEffects
               ? FEEL_CONFIG.intensity.full
@@ -778,11 +785,11 @@ export function StickerBoard({ freshId, onDraw }: Props) {
               ) ?? null
             }
             {...(owner && { ownerId: owner.id })}
-            onSendGratitude={(_gift, sticker, giver) => {
+            onSendGratitude={(gift, sticker, giver) => {
               const s = stickers?.find((x) => x.id === sticker.id);
               if (!s) return;
               setOpen(null);
-              setGratitudeFor({ sticker: s, giver: asGiver(giver) });
+              setGratitudeFor({ sticker: s, giver: asGiver(giver), giftId: gift.id });
             }}
             onClose={() => setOpen(null)}
             // Back to the sticker it opened from: on the board, or its given sticker silhouette.
