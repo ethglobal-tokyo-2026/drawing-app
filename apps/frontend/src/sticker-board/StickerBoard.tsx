@@ -37,6 +37,7 @@ import { useLight } from "../stickers/light";
 import { playStick } from "../stickers/stick";
 import { DrawKeyTickets } from "../tickets/DrawKeyTickets";
 import { describeTickets, ticketDay } from "../tickets/tickets";
+import { useDrawFromBoard } from "../tickets/useDrawFromBoard";
 import { useTickets } from "../tickets/useTickets";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
@@ -270,6 +271,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift }: Props) {
   /** The board has turned over before, so its stat board stays mounted for every turn after. */
   const [wasTurned, setWasTurned] = useState(false);
   const { tickets } = useTickets();
+  // Draw spends a daily ticket at once, its ticket peeling off the key; with none at all, a card says when.
+  const drawKey = useDrawFromBoard(onDraw);
   /** The sticker the gratitude mini-game is open for, from the stat board's developer slip. */
   const [gratitudeFor, setGratitudeFor] = useState<GratitudeFor | null>(null);
   /** A received gift's notice, closed: the silhouettes say the rest. */
@@ -638,7 +641,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift }: Props) {
         <Key
           size="compact"
           icon={<DrawIcon />}
-          onClick={onDraw}
+          onClick={drawKey.draw}
           aria-label={
             tickets
               ? t(($) => $.stickerBoard.board.drawLabelWithTickets, {
@@ -649,8 +652,9 @@ export function StickerBoard({ freshId, onDraw, onOpenGift }: Props) {
         >
           {t(($) => $.stickerBoard.board.draw)}
         </Key>
-        {tickets && <DrawKeyTickets tickets={tickets} />}
+        {drawKey.shown && <DrawKeyTickets tickets={drawKey.shown} peel={drawKey.peeling} />}
       </span>
+      {drawKey.overBoard}
       {firstVisit && (
         <span className="board-nudge" aria-hidden>
           {t(($) => $.stickerBoard.board.firstSticker)}

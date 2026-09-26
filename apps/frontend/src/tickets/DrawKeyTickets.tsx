@@ -75,9 +75,9 @@ function KeyTicket({ kind, print, behind = false, pop = false, style }: TicketPr
  * (ticketView). One Seal Yellow ticket ×daily, with the reserve ticket behind it when there are any; the reserve
  * ticket alone once the daily ones are used; with neither, the empty backing printed with the refill time. They're
  * paper under the key, not part of it: they take no taps, the key sinks over them, and the key's own name says
- * what's left.
+ * what's left. When Draw spends a ticket, the front one peels off as the canvas opens.
  */
-export function DrawKeyTickets({ tickets }: { tickets: Tickets }) {
+export function DrawKeyTickets({ tickets, peel = false }: { tickets: Tickets; peel?: boolean }) {
   const { t } = useTranslation();
   const view = ticketView(tickets);
   const [front, frontWidth] = useWidth<HTMLSpanElement>();
@@ -106,7 +106,7 @@ export function DrawKeyTickets({ tickets }: { tickets: Tickets }) {
           style={{ "--front-w": `${frontWidth}px` }}
         />
       )}
-      <span ref={front} className="draw-key-tickets__front">
+      <span ref={front} className={`draw-key-tickets__front${peel ? " is-peeling" : ""}`}>
         {view.show === "daily" && <KeyTicket kind="daily" print={count(view.daily)} />}
         {view.show === "reserve" && (
           <KeyTicket kind="reserve" print={count(view.reserve)} pop={pop} />

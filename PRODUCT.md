@@ -151,8 +151,9 @@ ad0ll's hand-drawn sketch (a photo in the 2026-09-22 conversation; the file is n
 - **Tickets.** Everyone gets **3 daily tickets a day**, refilled at midnight JST; unused ones expire. **Reserve tickets** are bought with Sui, have no limit and never expire. Daily tickets are spent first.
   - After sealing, an animated dialog shows the sticker being sealed.
   - It offers **Keep drawing** (spends a daily ticket) or **Go to sticker board**.
+  - Draw spends a daily ticket without asking, and the canvas opens at once (2026-09-27: zero steps to the canvas).
   - With no daily tickets left, drawing asks before spending a reserve ticket, or offers the **reserve ticket checkout**.
-  - An **out-of-tickets** dialog appears when daily and reserve tickets are all used.
+  - An **out-of-tickets** dialog appears when daily and reserve tickets are all used. Draw raises it over the board, without opening the canvas.
   - **Reserve ticket checkout:** packs of 1, 3, 5 and 10 for ¥100, ¥270 (10% off), ¥375 (25% off) and ¥600 (40% off), paid in JPYC on Sui. It shows every amount, the balance included, in yen only.
   - Every picture of tickets shows the tickets the next drawing can use (ad0ll, 2026-09-26): daily tickets while any are left, with reserve tickets as one ticket and its count; one reserve ticket once the daily ones are used; a zero never shows. The board's Draw key carries them tucked behind its right end, not inside it. Reserve tickets look bought: Blue, in the stickers' resin, with an Ink outline and a star.
   - The **Shop** tab (ad0ll, 2026-09-27): reserve tickets are the one thing on sale, then coming-soon shelves of laminates, brushes and backing foils, each led by what you have now, with no prices. They show intent only; nothing on them can be bought.

@@ -17,6 +17,25 @@
   display: flex;
 }
 
+/* Draw spends the front ticket: it peels up and away the way the ticket stubs do (TicketStubs.css), in
+   the small stubs' 220ms, and the canvas opens as it goes. Under reduced motion it simply goes. */
+.draw-key-tickets__front.is-peeling {
+  transform-origin: 0 100%;
+  animation: draw-key-ticket-peel var(--t-stick) var(--ease-peel) forwards;
+}
+
+@keyframes draw-key-ticket-peel {
+  60% {
+    opacity: 1;
+    animation-timing-function: linear;
+  }
+  to {
+    translate: 8px -24px;
+    rotate: -12deg;
+    opacity: 0;
+  }
+}
+
 /* One ticket, sized to its print; the print starts past the tucked end and stops short of the notch. */
 .draw-key-ticket {
   position: relative;

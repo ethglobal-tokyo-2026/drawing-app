@@ -56,16 +56,16 @@ export const stickerCreation = {
         en: "Couldn’t pick up your drawing,\nso its ticket carries over",
         ja: "続きから再開できなかったので、\nチケットはそのまま使えます",
       },
+      /** Drawing screen, top left: the white label under the timer when a reload couldn't bring back your drawing in progress, and it had no ticket to carry over, until the first stroke; also announced */
+      lost: {
+        en: "Couldn’t pick up where you left off",
+        ja: "前回の続きから再開できませんでした",
+      },
     },
   },
   /** The start card's notes about this sheet. */
   startNote: {
-    /** Drawing screen, the start card that asks before a ticket is spent: a note under its line when a reload couldn't bring back your drawing in progress */
-    lost: {
-      en: "Couldn’t pick up where you left off.",
-      ja: "前回の続きから再開できませんでした。",
-    },
-    /** Drawing screen, the start card that asks before a ticket is spent: a note under its line when tapping Start couldn't spend the ticket; {{reason}} is the server's error message */
+    /** Drawing screen, the card that comes up when a ticket couldn't be spent on a fresh sheet (Draw, Keep drawing, or the reserve ask's key): a note under its line; {{reason}} is the server's error message */
     ticketFailed: {
       en: "Couldn’t use a ticket. {{reason}}",
       ja: "チケットを使えませんでした。{{reason}}",
