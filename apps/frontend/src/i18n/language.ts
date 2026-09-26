@@ -15,7 +15,7 @@ export function startLanguage(chosen: Language | null, lineTag: string): Languag
 
 const CHOSEN = "draw.language";
 
-/** The developer slip's choice, or null for LINE's language. */
+/** The person's language choice as this device keeps it, or null to follow LINE's. */
 export function readChosenLanguage(): Language | null {
   // Tests outside a browser have no storage, so no choice.
   if (typeof localStorage === "undefined") return null;
@@ -28,7 +28,7 @@ export function readChosenLanguage(): Language | null {
   }
 }
 
-/** Keeps the developer slip's choice, or null for LINE's language, for the next start; throws when it can't. */
+/** Keeps the person's choice, or null to follow LINE's, for the next start; throws when it can't. */
 export function keepChosenLanguage(language: Language | null): void {
   if (language) localStorage.setItem(CHOSEN, language);
   else localStorage.removeItem(CHOSEN);

@@ -10,6 +10,7 @@ const me = {
   linePictureUrl: null,
   timeZone: "Asia/Tokyo",
   language: "en",
+  languageChoice: null,
   createdAt: "2026-09-26T00:00:00.000Z",
   needsHandle: false,
   newStickerCount: 0,
