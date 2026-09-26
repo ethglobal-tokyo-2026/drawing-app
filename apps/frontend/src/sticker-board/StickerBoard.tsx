@@ -81,6 +81,7 @@ import type { StatBoardHandle } from "./stat-board/StatBoard";
 import { readingOrder } from "./stickerOrder";
 import { StickerToolbar } from "./StickerToolbar";
 import { SendGratitudeSheet } from "../receiving/SendGratitudeSheet";
+import { GiftsForYouBadge, type GiftForYou } from "../receiving/GiftsForYouBadge";
 import { ArtistChipLayer } from "./ArtistChipLayer";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
@@ -113,6 +114,8 @@ interface Props {
   /** The sticker that was just sealed; it lands on the board the first time the board shows it. */
   freshId?: string;
   onDraw: () => void;
+  /** Opens a gift waiting for you, to unpackage and accept as its gift message would. */
+  onOpenGift: (gift: GiftForYou) => void;
 }
 
 /** Stickers that have landed this session. */
@@ -218,7 +221,7 @@ const viewOf = (s: BoardStickerView): StickerView => ({
  * board's demo has none. */
 type GratitudeFor = { sticker: BoardSticker; giver: ReturnType<typeof asGiver>; giftId?: string };
 
-export function StickerBoard({ freshId, onDraw }: Props) {
+export function StickerBoard({ freshId, onDraw, onOpenGift }: Props) {
   const { t, i18n } = useTranslation();
   const stage = useRef<HTMLDivElement>(null);
   /** The board's face, which the sticker tray runs down the right edge of. */
@@ -342,11 +345,18 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   }, [failed]);
 
   const pending = useApiQuery("pending-gifts", (client) => client.pendingGifts());
+  // Loaded with every board opening, so a gift just received has left it.
+  const forYou = useApiQuery("gifts-for-you", (client) => client.giftsForYou());
+  const waiting = forYou.state === "ready" ? forYou.data.gifts : [];
   const onTheirWay =
     pending.state === "ready"
       ? pending.data.gifts
           .filter((p) => p.gift.status === "sent")
-          .map((p) => ({ giftId: p.gift.id, sticker: toSticker(p.sticker) }))
+          .map((p) => ({
+            giftId: p.gift.id,
+            sticker: toSticker(p.sticker),
+            ...(p.for && { to: toPerson(p.for) }),
+          }))
       : [];
 
   // Once per board opening: the newest gift someone received since this device last said so.
@@ -604,8 +614,10 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         <span className="board-who-name">{me.displayName}</span>
       </button>
 
-      {onTheirWay.length > 0 && (
-        <div className="board-pending">
+      {(waiting.length > 0 || onTheirWay.length > 0) && (
+        <div className="board-gifts">
+          {/* Gifts for you first: they ask to be opened, where gifts on their way only report. */}
+          <GiftsForYouBadge gifts={waiting} onOpen={onOpenGift} />
           <PendingGiftsNotificationBadge
             gifts={onTheirWay}
             onOpen={(id) => setOpen({ id, mode: "yours" })}

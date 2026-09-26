@@ -11,7 +11,7 @@ import { formatDay, formatDuration, formatNo } from "../stickers/format";
 import { PULL } from "./pullTab";
 import type { RefusalKind } from "./receiveFlow";
 import { refusalScreen } from "./refusals";
-import { ReceiveGiftDialog } from "./ReceiveGiftDialog";
+import { ReceiveGiftDialog, type GiftFrom } from "./ReceiveGiftDialog";
 
 // LINE as a 1:1 chat inside LINE's app, logged in as `profile`: the person opening the gift.
 const liff = vi.hoisted(() => ({
@@ -67,9 +67,9 @@ const received: ReceivedGift = {
 const onClose = vi.fn();
 let unmount = () => {};
 
-const open = (overrides: Partial<ApiClient>) => {
+const open = (overrides: Partial<ApiClient>, from: GiftFrom = { giftClaimToken: "t0k3n" }) => {
   ({ unmount } = renderWithApi(
-    <ReceiveGiftDialog giftClaimToken={claim.giftClaimToken} onClose={onClose} />,
+    <ReceiveGiftDialog from={from} onClose={onClose} />,
     emptyApi(overrides),
   ));
 };
@@ -87,6 +87,11 @@ const press = (name: string) =>
 /** Opens a receivable gift and unpackages it from the keyboard, up to Accept. */
 async function unpackage(receiveGift: ApiClient["receiveGift"], preview = receivable) {
   open({ previewGift: () => Promise.resolve(preview), receiveGift });
+  await pullTheTab();
+}
+
+/** Pulls the open gift's tab from the keyboard, up to Accept. */
+async function pullTheTab() {
   await settle();
   const slider = document.querySelector<HTMLElement>("[role=slider]");
   if (!slider) throw new Error(`no pull tab; the heading is "${heading()}"`);
@@ -183,6 +188,21 @@ describe("ReceiveGiftDialog", () => {
     await settle(1000);
     expect(receiveGift).toHaveBeenCalledTimes(2);
     expect(onClose).toHaveBeenCalledWith(gifted.id);
+  });
+
+  it("receives a gift waiting for you from the board, without its link", async () => {
+    const receiveGiftForYou = vi.fn(() => Promise.resolve(received));
+    const waiting = { gift: received.gift, giver, sticker: gifted };
+    // The board's list carried the preview: asking the server for one again would fail here.
+    open({ receiveGiftForYou }, { gift: waiting });
+    await pullTheTab();
+    expect(heading()).toBe(`${toPerson(giver).name} sent you a sticker`);
+    press("Accept");
+    await settle();
+    await settle(1000);
+    expect(receiveGiftForYou).toHaveBeenCalledWith(received.gift.id);
+    expect(onClose).toHaveBeenCalledWith(gifted.id);
+    expect(liff.closeWindow).not.toHaveBeenCalled();
   });
 
   it("closes on Not now without receiving it", async () => {

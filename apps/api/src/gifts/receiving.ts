@@ -1,5 +1,5 @@
 import { gifts, stickerPlacements, stickers, users } from "@drawing-app/db";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { queueNaming } from "../ens/naming.ts";
 import type { AppDeps } from "../deps.ts";
@@ -48,6 +48,12 @@ export const giftPreviewSchema = z.object({
   sticker: stickerSchema.nullable(),
 });
 export type GiftPreview = z.infer<typeof giftPreviewSchema>;
+
+export const giftsForYouSchema = z.object({
+  /** Newest first. */
+  gifts: z.array(z.object({ gift: giftSchema, sticker: stickerSchema, giver: personSchema })),
+});
+export type GiftsForYou = z.infer<typeof giftsForYouSchema>;
 
 export const receivedGiftSchema = z.object({
   gift: giftSchema,
@@ -120,6 +126,13 @@ export async function previewGift(
   const giver = db.select().from(users).where(eq(users.id, gift.giverId)).get();
   if (!giver) throw new Error(`Gift ${gift.id}'s giver ${gift.giverId} is missing`);
   const refusal = receiveRefusal(gift, userId, liffContextType, clock.now());
+  // The first person to open it becomes who it waits for, so it stays on their board if they leave.
+  if (!refusal && gift.forUserId === null) {
+    db.update(gifts)
+      .set({ forUserId: userId })
+      .where(and(eq(gifts.id, gift.id), isNull(gifts.forUserId)))
+      .run();
+  }
   const sticker = refusal
     ? null
     : loadStickers(db, [gift.stickerId], images.urls).get(gift.stickerId);
@@ -151,6 +164,63 @@ export async function receiveGift(
   if (groupChat) return groupChat;
   const opened = await openGift(deps, giftClaimToken);
   if (!opened) return notFound();
+  return receiveOpened(deps, userId, opened, liffContextType, giftClaimToken);
+}
+
+/** The gifts waiting for this person, which they can receive from their board. */
+export function giftsForYou({ db, clock, images }: AppDeps, userId: string): GiftsForYou {
+  const rows = db
+    .select({ gift: gifts, giver: users })
+    .from(gifts)
+    .innerJoin(users, eq(users.id, gifts.giverId))
+    .where(
+      and(
+        eq(gifts.forUserId, userId),
+        eq(gifts.status, "sent"),
+        eq(gifts.escrowStatus, "pending"),
+        gt(gifts.expiresAt, clock.now()),
+      ),
+    )
+    .orderBy(desc(gifts.createdAt))
+    .all();
+  const stickersById = loadStickers(
+    db,
+    rows.map(({ gift }) => gift.stickerId),
+    images.urls,
+  );
+  return {
+    gifts: rows.map(({ gift, giver }) => {
+      const sticker = stickersById.get(gift.stickerId);
+      if (!sticker) throw new Error(`Gift ${gift.id}'s sticker ${gift.stickerId} is missing`);
+      return { gift: toGift(gift), sticker, giver: toPerson(giver) };
+    }),
+  };
+}
+
+/**
+ * Accept from the board, without the Gift Message's link: only for the person the gift waits for.
+ * A gift for someone else answers as if there were none.
+ */
+export async function receiveGiftForYou(
+  deps: AppDeps,
+  userId: string,
+  giftId: string,
+): Promise<Receiving> {
+  const gift = deps.db.select().from(gifts).where(eq(gifts.id, giftId)).get();
+  if (!gift || gift.forUserId !== userId) {
+    return refuse("gift_not_found", `No gift ${giftId} waits for you`);
+  }
+  return receiveOpened(deps, userId, gift, "none", null);
+}
+
+/** Receives an opened gift for this person; without its token, they're who it waits for. */
+async function receiveOpened(
+  deps: AppDeps,
+  userId: string,
+  opened: GiftRow,
+  liffContextType: LiffContextType,
+  giftClaimToken: OpenGiftBody["giftClaimToken"] | null,
+): Promise<Receiving> {
   const { db, clock, giftChain, images } = deps;
   const now = clock.now();
   const beforeClaim = receiveRefusal(opened, userId, liffContextType, now);
@@ -172,7 +242,7 @@ export async function receiveGift(
   const receiving = db.transaction(
     (tx) => {
       const gift = tx.select().from(gifts).where(eq(gifts.id, opened.id)).get();
-      if (!gift) return notFound();
+      if (!gift) return refuse("gift_not_found", `Gift ${opened.id} is gone`);
       const refusal = receiveRefusal(gift, userId, liffContextType, now);
       if (refusal) return refusal;
       const received = tx

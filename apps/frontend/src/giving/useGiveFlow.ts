@@ -8,7 +8,7 @@ import {
 
 const BEFORE_START: GiveFlowState = { step: "sheet" };
 
-/** Runs one give flow while the component is mounted; closing it puts an unsent sticker back. */
+/** Runs one give flow while mounted; closing leaves an unsent sticker in its gift. */
 export function useGiveFlow(makeOptions: () => GiveFlowOptions): {
   state: GiveFlowState;
   flow: GiveFlow | null;

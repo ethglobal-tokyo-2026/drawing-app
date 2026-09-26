@@ -29,6 +29,7 @@ export type { LeaderboardRow } from "./explore/leaderboards.ts";
 export type { PackagedGift, PendingGifts } from "./gifts/packaging.ts";
 export type {
   GiftPreview,
+  GiftsForYou,
   LiffContextType,
   OpenGiftBody,
   ReceivedGift,

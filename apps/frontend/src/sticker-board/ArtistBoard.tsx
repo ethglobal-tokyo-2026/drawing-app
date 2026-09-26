@@ -372,7 +372,13 @@ export function ArtistBoard({ person, onBack }: Props) {
       />
 
       {viewing && <StickerView sticker={viewing} owner={owner} onClose={() => setViewing(null)} />}
-      {giving && <GiveSheet to={person.handle ?? owner.name} onClose={() => setGiving(false)} />}
+      {giving && (
+        <GiveSheet
+          to={person.handle ?? owner.name}
+          toId={person.id}
+          onClose={() => setGiving(false)}
+        />
+      )}
       {offering && (
         <OfferSheet sticker={offering} holder={owner} onClose={() => setOffering(null)} />
       )}

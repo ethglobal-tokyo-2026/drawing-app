@@ -48,7 +48,7 @@ function giftsApi() {
 }
 
 /** Opens Giving for a sticker, as `fromHandle`; returns the sticker. */
-const open = (stickerId: string, fromHandle = "alice") => {
+const open = (stickerId: string, fromHandle = "alice", api = giftsApi()) => {
   const given = { id: stickerId, no: 147, timeUsed: 292, createdAt: Date.now(), url: "blob:x" };
   view = renderWithApi(
     <Giving
@@ -58,7 +58,7 @@ const open = (stickerId: string, fromHandle = "alice") => {
       liffId="2011732197-P98cxGpu"
       onClose={onClose}
     />,
-    giftsApi(),
+    api,
   );
   return given;
 };
@@ -97,7 +97,7 @@ describe("Giving", () => {
     expect(title()).toBe("Give No.0147");
 
     tap("Send in a LINE chat");
-    expect(title()).toBe("In the bag");
+    expect(title()).toBe("Preparing your gift");
     expect(document.querySelector(".gift-tag__name")?.textContent).toBe("@alice");
     await wait(1150);
     expect(giftOf("s-sent")).toBe("packed");
@@ -111,6 +111,38 @@ describe("Giving", () => {
 
     tap("Back to my sticker board");
     expect(onClose).toHaveBeenCalledWith(true);
+  });
+
+  it("explains wallet confirmation before opening LINE and keeps preparation open", async () => {
+    const api = giftsApi();
+    const packed = await api.packageGift("s-preparing");
+    let finishPacking: () => void = () => {
+      throw new Error("No pending gift");
+    };
+    const packing = new Promise<typeof packed>((resolve) => {
+      finishPacking = () => resolve(packed);
+    });
+    vi.spyOn(api, "packageGift").mockReturnValue(packing);
+    const send = vi.spyOn(sender, "send");
+    open("s-preparing", "alice", api);
+    tap("Send in a LINE chat");
+    expect(title()).toBe("Preparing your gift");
+    await wait(1150);
+    expect(title()).toBe("Preparing your gift");
+    expect(shownText(".giving__sub")).toContain("LINE’s friend picker will open next");
+    expect(shownText(".giving__sub")).toContain("hasn’t been sent yet");
+    expect(send).not.toHaveBeenCalled();
+    tap("Preparing…");
+    tap("Take it out");
+    tap("Close Preparing your gift");
+    expect(onClose).not.toHaveBeenCalled();
+
+    await act(async () => finishPacking());
+    expect(title()).toBe("In the bag");
+    expect(send).toHaveBeenCalledTimes(1);
+    await act(async () => answerPicker("sent"));
+    expect(title()).toBe("Sealed and sent");
+    send.mockRestore();
   });
 
   it("shows Not sent yet when the picker is cancelled, and Take it out puts the sticker back", async () => {
@@ -128,6 +160,27 @@ describe("Giving", () => {
     expect(giftOf("s-cancelled")).toBe("taken_out");
     expect(title()).toBe("Give No.0147");
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("keeps the same gift when its parent renders again during packing", async () => {
+    const given = open("s-rerender");
+    const packageGift = vi.spyOn(view.client, "packageGift");
+    const takeOutGift = vi.spyOn(view.client, "takeOutGift");
+    tap("Send in a LINE chat");
+    view.rerender(
+      <Giving
+        sticker={{ ...given }}
+        fromHandle="alice"
+        sender={{ ...sender }}
+        liffId="2011732197-P98cxGpu"
+        onClose={onClose}
+      />,
+    );
+    await wait(1150);
+    await act(async () => answerPicker("sent"));
+    expect(packageGift).toHaveBeenCalledTimes(1);
+    expect(takeOutGift).not.toHaveBeenCalled();
+    expect(title()).toBe("Sealed and sent");
   });
 
   it("prints a handle that reads as markup as it is, in the sticker's fine print", () => {

@@ -299,7 +299,7 @@ export function createStickerChain({
         address: sealerAccount.address,
       };
       const id = bytes32(giftId, "Gift ID");
-      const token = bytes32(giftClaimToken, "Gift claim token");
+      const token = giftClaimToken === null ? null : bytes32(giftClaimToken, "Gift claim token");
       const recipientWallet = await findSmartWallet(recipientId);
       if (!recipientWallet) {
         throw new Error("Recipient Ethereum smart wallet is unavailable on the configured chain");
@@ -309,7 +309,8 @@ export function createStickerChain({
         const reconciled = await diagnosticStep("chain.claim.reconcile", fields, async () => {
           const gift = await readEscrowGift(id);
           if (gift.status === "missing") return null;
-          if (!giftClaimTokenMatches(token, bytes32(gift.claimCommitment, "Claim commitment"))) {
+          const commitment = bytes32(gift.claimCommitment, "Claim commitment");
+          if (token !== null && !giftClaimTokenMatches(token, commitment)) {
             throw new Error("Gift claim token is invalid");
           }
           if (gift.status !== "claimed") return null;
@@ -337,11 +338,16 @@ export function createStickerChain({
       let txHash: Hex | undefined;
       try {
         const authorized = await diagnosticStep("chain.claim.authorize", fields, () =>
-          authorizer.authorizeClaim({
-            giftId: id,
-            giftClaimToken: token,
-            recipientArtistId: recipientId,
-          }),
+          token === null
+            ? authorizer.authorizeClaimForNamedRecipient({
+                giftId: id,
+                recipientArtistId: recipientId,
+              })
+            : authorizer.authorizeClaim({
+                giftId: id,
+                giftClaimToken: token,
+                recipientArtistId: recipientId,
+              }),
         );
         txHash = await diagnosticStep("chain.claim.submit", fields, () =>
           walletClient.writeContract({

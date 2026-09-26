@@ -30,14 +30,17 @@ import { Sheet } from "../ui/Sheet";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
+import type { GiftForYou } from "./GiftsForYouBadge";
 import { receiveFlow, type GiftPreviewView } from "./receiveFlow";
 import { previewFailedScreen, refusalScreen, type EndScreen } from "./refusals";
 import { usePullTab } from "./usePullTab";
 import "./receive-gift-dialog.css";
 
+/** The gift message's link's token, or a gift waiting for you, opened from your board. */
+export type GiftFrom = { giftClaimToken: string } | { gift: GiftForYou };
+
 interface Props {
-  /** From the gift message's link. */
-  giftClaimToken: string;
+  from: GiftFrom;
   /** Closes the dialog; with the received sticker's ID once Accept has received it. */
   onClose: (receivedStickerId?: string) => void;
 }
@@ -52,6 +55,18 @@ const FIGURE_PX = 200;
 /** Gifts wait a week from the seal; the preview says when the wait ends, so the tape's date is a week before. */
 const GIFT_WAIT_MS = 7 * 24 * 60 * 60 * 1000;
 
+/** Where the gift comes from: its gift message's link, or your board, where it waits for you. */
+type Opening = { claim: GiftOpening } | { gift: GiftForYou };
+
+/** A waiting gift came with everything its preview shows, and can be received. */
+const previewOfWaiting = ({ gift, giver, sticker }: GiftForYou): GiftPreview => ({
+  giver,
+  expiresAt: gift.expiresAt,
+  receivable: true,
+  refusal: null,
+  sticker,
+});
+
 /** How a person is printed: their handle, or their LINE name until they have one. */
 const printed = (p: PersonView) => (p.handle ? formatHandle(p.handle) : p.name);
 
@@ -59,7 +74,7 @@ const printed = (p: PersonView) => (p.handle ? formatHandle(p.handle) : p.name);
  * Opening a gift message's link, over the whole phone: the sealed bag, the pull tab, the reveal and
  * Accept, or the reason the gift can't be received here. On the Back stack, as Not now is.
  */
-export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
+export function ReceiveGiftDialog({ from, onClose }: Props) {
   const { t } = useTranslation();
   const api = useApi();
   const me = useIdentity();
@@ -68,11 +83,18 @@ export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
   useLight();
   const [screen, dispatch] = useReducer(receiveFlow, { step: "opening" });
   const [attempt, setAttempt] = useState(0);
-  // LINE says which chat opened the link; the server refuses group chats.
-  const [claim] = useState<GiftOpening>(() => ({
-    giftClaimToken,
-    liffContextType: liff.getContext()?.type ?? "none",
-  }));
+  // LINE says which chat opened the link; the server refuses group chats. A gift from the board
+  // needs no link: it's waiting for you.
+  const [opening] = useState<Opening>(() =>
+    "giftClaimToken" in from
+      ? {
+          claim: {
+            giftClaimToken: from.giftClaimToken,
+            liffContextType: liff.getContext()?.type ?? "none",
+          },
+        }
+      : { gift: from.gift },
+  );
   const latestClose = useRef(onClose);
   useLayoutEffect(() => {
     latestClose.current = onClose;
@@ -82,7 +104,11 @@ export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
   const previewing = useRef<{ attempt: number; answer: Promise<GiftPreview> } | null>(null);
   useEffect(() => {
     if (previewing.current?.attempt !== attempt) {
-      previewing.current = { attempt, answer: api.previewGift(claim) };
+      const answer =
+        "claim" in opening
+          ? api.previewGift(opening.claim)
+          : Promise.resolve(previewOfWaiting(opening.gift));
+      previewing.current = { attempt, answer };
     }
     let current = true;
     previewing.current.answer.then(
@@ -99,7 +125,7 @@ export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
     return () => {
       current = false;
     };
-  }, [api, claim, attempt]);
+  }, [api, opening, attempt]);
 
   // The reveal plays out from the snap: the stage glides up with the sheet, then the sticker rises.
   const [reveal, setReveal] = useState<"snapped" | "rising" | "out">("snapped");
@@ -159,13 +185,16 @@ export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
     root.current?.querySelector<HTMLElement>("[data-autofocus], [role=slider]")?.focus();
   }, [screen.step, reveal]);
 
-  // Outside LINE's app there's no LINE window to close, so the way out is the board.
-  const leave = me.inClient
-    ? { label: t(($) => $.receiving.backToLine), icon: <ArrowSquareOut /> }
-    : { label: t(($) => $.receiving.goToStickerBoard), icon: <StickerBoardIcon size={18} /> };
+  // Outside LINE's app, or opened from the board, there's no LINE window to go back to: the way out
+  // is the board.
+  const fromBoard = "gift" in opening;
+  const leave =
+    me.inClient && !fromBoard
+      ? { label: t(($) => $.receiving.backToLine), icon: <ArrowSquareOut /> }
+      : { label: t(($) => $.receiving.goToStickerBoard), icon: <StickerBoardIcon size={18} /> };
   const backToLine = () => {
     // Outside LINE's app there's no window to close, so the board shows instead.
-    if (me.inClient) liff.closeWindow();
+    if (me.inClient && !fromBoard) liff.closeWindow();
     onClose();
   };
   const tryAgain = () => {
@@ -177,7 +206,11 @@ export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
     if (screen.step !== "unpackaged" || screen.receiving) return;
     const which = formatNo(screen.preview.sticker.no);
     dispatch({ type: "receive" });
-    api.receiveGift(claim).then(
+    const receiving =
+      "claim" in opening
+        ? api.receiveGift(opening.claim)
+        : api.receiveGiftForYou(opening.gift.gift.id);
+    receiving.then(
       (response) => dispatch({ type: "received", response }),
       (error: unknown) => {
         const failure = apiError(error);
