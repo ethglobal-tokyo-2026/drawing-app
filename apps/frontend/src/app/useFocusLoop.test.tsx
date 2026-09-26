@@ -15,12 +15,12 @@ function Screen({ active }: { active: boolean }) {
   useFocusLoop(ref, active);
   return (
     <div ref={ref}>
-      <button id="first" />
-      <button id="last" />
+      <button id="first">First</button>
+      <button id="last">Last</button>
       <nav inert>
-        <button />
+        <button>Tucked</button>
       </nav>
-      <button tabIndex={-1} />
+      <button tabIndex={-1}>Stepped aside</button>
     </div>
   );
 }

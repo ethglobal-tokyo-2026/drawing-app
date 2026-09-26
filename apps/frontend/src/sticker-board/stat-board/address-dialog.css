@@ -1,0 +1,194 @@
+/* The address dialog (AddressDialog.tsx): an address paper held up off the cork,
+   over an Ink scrim. The card is that paper enlarged in the same proportions, QR code on top, so the
+   QR code lands where the eye follows it. Only transform and opacity move, from the script. */
+
+.address-dialog {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-sheet);
+  color: var(--ink);
+}
+
+/* Focusable so Escape still reaches it after a tap on the card; it never shows a ring of its own. */
+.address-dialog:focus {
+  outline: none;
+}
+
+/* A tap here puts the paper back. */
+.address-dialog__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 24, 36, 0.55);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Centered a little above the middle. A short phone scrolls it rather than clipping the actions; taps
+   off the card and actions fall through to the scrim. */
+.address-dialog__stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 0 40px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  pointer-events: none;
+}
+
+.address-dialog__stage::-webkit-scrollbar {
+  display: none;
+}
+
+.address-dialog__held {
+  display: grid;
+  gap: 16px;
+  width: 300px;
+  margin: auto;
+  pointer-events: auto;
+}
+
+/* White label paper, hung from its top center as it was from the pin: the flight turns and scales it
+   about that point. */
+.address-dialog__card {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  justify-items: center;
+  padding: 34px 20px 22px;
+  border-radius: 3px;
+  background: var(--canvas);
+  box-shadow: 0 1px 0 rgba(28, 24, 36, 0.12);
+  text-align: center;
+  transform-origin: 50% 0;
+}
+
+/* The lift shadow, a layer of its own so it can deepen as the paper rises. */
+.address-dialog__shadow {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  box-shadow: var(--shadow-lift);
+  pointer-events: none;
+}
+
+/* Where the pin went through: the pin stayed on the cork. */
+.address-dialog__hole {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 64% 70%, rgba(255, 255, 255, 0.45) 0 0.6px, transparent 1.2px),
+    rgba(28, 24, 36, 0.8);
+  box-shadow: 0 0 0 0.75px rgba(28, 24, 36, 0.08);
+}
+
+/* 34px of white around it: more than the four modules a scanner needs. */
+.address-dialog__qr {
+  display: block;
+  color: var(--ink);
+}
+
+.address-dialog__title {
+  margin: 30px 0 0;
+  font: 800 20px/1.1 var(--font-ui);
+  font-stretch: var(--w-title);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+/* The address in full, in fours: the first and last four, the ones people compare, in Ink, the rest
+   in Graphite. The gaps and the line break are drawn, not typed, so a copy by hand pastes a working
+   address. */
+.address-dialog__address {
+  margin: 10px 0 0;
+  color: var(--graphite);
+  font: 500 15px/1.5 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.address-dialog__four + .address-dialog__four {
+  margin-left: 0.36em;
+}
+
+.address-dialog__four.is-compared {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+/* Each line after the first starts under the first four: an unseen 0x holds the prefix's width. */
+.address-dialog__four.is-line-start {
+  margin-left: 0;
+}
+
+.address-dialog__four.is-line-start::before {
+  content: "\A 0x";
+  visibility: hidden;
+  white-space: pre;
+}
+
+.address-dialog__note {
+  margin: 12px 0 0;
+  color: var(--graphite);
+  font: 500 13px/1.4 var(--font-ui);
+  text-wrap: balance;
+}
+
+.address-dialog__acts {
+  display: grid;
+  gap: 10px;
+}
+
+/* Over the scrim an Ink ring would vanish, so the ring is the ink label's yellow. */
+.address-dialog__etherscan:focus-visible {
+  outline-color: var(--seal);
+}
+
+/* Top left, over the corner: back onto the cork. A flat Liner Lift disc with a thumb's reach. */
+.address-dialog__x {
+  position: absolute;
+  left: -12px;
+  top: -12px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  appearance: none;
+  background: var(--liner-lift);
+  box-shadow:
+    0 0 0 0.5px rgba(28, 24, 36, 0.26),
+    1px 2px 3px rgba(28, 24, 36, 0.18);
+  color: var(--ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.address-dialog__x::before {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+}
+
+.address-dialog__x svg {
+  width: 16px;
+  height: 16px;
+}
+
+.address-dialog__x:focus-visible {
+  outline: 2px solid var(--seal);
+  outline-offset: 2px;
+}
