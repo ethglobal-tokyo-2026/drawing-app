@@ -2,6 +2,7 @@ import { MAX_TIME_USED_S } from "@drawing-app/db";
 import { crc32, gzipSync } from "node:zlib";
 import type { z } from "zod";
 import type { sealForm } from "./sealForm.ts";
+import type { TimelapseV1 } from "./timelapse.ts";
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 const IHDR_BYTES = 13;
@@ -59,9 +60,19 @@ export const sealImages = () => ({
   flat: testPng(SHEET_SIZE.width, SHEET_SIZE.height, "flat"),
 });
 
+/** How the tests' sticker was drawn: one brush stroke of two points, then a fill. */
+export const TEST_TIMELAPSE: TimelapseV1 = {
+  v: 1,
+  ink: [SHEET_SIZE.width, SHEET_SIZE.height],
+  place: [10, 20, STICKER_SIZE.width, STICKER_SIZE.height],
+  ops: [
+    ["brush", "#ff3366", 0, [100, 200, 60, 0, 50, 25, 0, 16]],
+    ["fill", "#33aaff", 1500, 40.5, 60],
+  ],
+};
+
 /** A gzipped timelapse, which sealing stores as sent. */
-export const testTimelapse = () =>
-  new Uint8Array(gzipSync(JSON.stringify({ v: 1, ink: [SHEET_SIZE.width, SHEET_SIZE.height] })));
+export const testTimelapse = () => new Uint8Array(gzipSync(JSON.stringify(TEST_TIMELAPSE)));
 
 export const pngFile = (bytes: Uint8Array<ArrayBuffer>, name: string) =>
   new File([bytes], `${name}.png`, { type: "image/png" });

@@ -63,7 +63,7 @@ export const line = {
     testMessage: {
       send: "Send a test message",
       /** Sent to the chat the person picks. */
-      message: "Test message from Sticker Board, sent by {{name}} through LINE’s friend picker.",
+      message: "Test message from Croquis, sent by {{name}} through LINE’s friend picker.",
       pick: "Pick one LINE friend and they get a test message from you.",
       unavailable:
         "LINE’s friend list isn’t available here. It needs LINE Login, in LINE or a browser.",

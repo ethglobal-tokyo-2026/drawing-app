@@ -54,11 +54,11 @@
     },
     {
       "files": ["apps/frontend/src/explore/**"],
-      "rules": { "react/jsx-no-literals": "off" }
+      "rules": { "react/jsx-no-literals": "error" }
     },
     {
       "files": ["apps/frontend/src/giving/**"],
-      "rules": { "react/jsx-no-literals": "off" }
+      "rules": { "react/jsx-no-literals": "error" }
     },
     {
       "files": ["apps/frontend/src/gratitude/**"],
@@ -74,7 +74,7 @@
     },
     {
       "files": ["apps/frontend/src/offers/**"],
-      "rules": { "react/jsx-no-literals": "off" }
+      "rules": { "react/jsx-no-literals": "error" }
     },
     {
       "files": ["apps/frontend/src/receiving/**"],
@@ -86,11 +86,11 @@
     },
     {
       "files": ["apps/frontend/src/sticker-creation/**"],
-      "rules": { "react/jsx-no-literals": "off" }
+      "rules": { "react/jsx-no-literals": "error" }
     },
     {
       "files": ["apps/frontend/src/stickers/**"],
-      "rules": { "react/jsx-no-literals": "off" }
+      "rules": { "react/jsx-no-literals": "error" }
     },
     {
       "files": ["apps/frontend/src/tickets/**"],
@@ -98,7 +98,7 @@
     },
     {
       "files": ["apps/frontend/src/ui/**"],
-      "rules": { "react/jsx-no-literals": "off" }
+      "rules": { "react/jsx-no-literals": "error" }
     },
     // Last, so it wins over the folders above: tests render stand-in text that nobody sees.
     {

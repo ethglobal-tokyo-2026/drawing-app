@@ -400,7 +400,7 @@ interface UserStats {
 
 ### Replay and timelapse formats
 
-Both are JSON with a version field. The replay travels as JSON; the server gzips it for storage. The timelapse is sent and served gzipped.
+Both are JSON with a version field. The replay travels as JSON; the server gzips it for storage. The timelapse is sent gzipped, stored as sent, and served as JSON, checked against `TimelapseV1` on the way out.
 
 ```ts
 /** A gratitude combo, as played. Positions are 0–10000 of the stage; values that follow one another store the change from the one before. */
@@ -469,10 +469,10 @@ interface TimelapseV1 {
 - In mock chain mode, `tokenId` and `mintTxHash` are null. In Sepolia mode, the response requires a confirmed NFT; a failed confirmation returns `503 mint_failed` and keeps the sticker for a same-ticket retry.
 - Errors: 403 `ticket_not_yours`; 404 `ticket_not_found`; 409 `ticket_already_used`; 503 `mint_failed`.
 
-| Route                                    | Request | Response                                                                                                        | Errors                  |
-| ---------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| `GET /api/stickers/:stickerId`           | none    | 200 `{ sticker: Sticker; owner: Person; transferTrail: TransferTrailEntry[] }`, the Transfer Trail newest first | 404 `sticker_not_found` |
-| `GET /api/stickers/:stickerId/timelapse` | none    | 200 `TimelapseV1`, served with `Content-Encoding: gzip`                                                         | 404 `sticker_not_found` |
+| Route                                    | Request | Response                                                                                                        | Errors                                                                              |
+| ---------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `GET /api/stickers/:stickerId`           | none    | 200 `{ sticker: Sticker; owner: Person; transferTrail: TransferTrailEntry[] }`, the Transfer Trail newest first | 404 `sticker_not_found`                                                             |
+| `GET /api/stickers/:stickerId/timelapse` | none    | 200 `TimelapseV1` JSON, cached as immutable                                                                     | 404 `sticker_not_found`; 404 `timelapse_not_found` for a sticker sealed without one |
 
 ```ts
 interface TransferTrailEntry {

@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "../api/apiClient";
+import { errors } from "../i18n/en/errors";
 import type { GiftBackend } from "./giftBackend";
 import { buildGiftMessage, type GiftMessage } from "./giftMessage";
 import type { GiftSendOutcome } from "./giftSender";
@@ -197,7 +199,10 @@ describe("giving through a LINE chat", () => {
   it("says why when the sticker can't be packed, and doesn't open the picker", async () => {
     const t = setup({
       backend: {
-        pack: () => Promise.reject(new Error("not_minted: No.0147 has no NFT yet")),
+        pack: () =>
+          Promise.reject(
+            new ApiError(409, { error: "not_minted", detail: "No.0147 has no NFT yet" }),
+          ),
         markSent: () => Promise.resolve(),
         markCancelled: () => Promise.resolve(),
         takeOut: () => Promise.resolve(),
@@ -205,7 +210,7 @@ describe("giving through a LINE chat", () => {
     });
     t.flow.chooseLineChat();
     await wait(PICKER_DELAY * 2);
-    expect(t.failure()).toContain("not_minted");
+    expect(t.failure()).toContain(errors.not_minted);
     expect(t.messages).toHaveLength(0);
   });
 
