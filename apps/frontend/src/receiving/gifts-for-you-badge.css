@@ -70,7 +70,9 @@
   line-height: 1.2;
 }
 
+/* In Ink: Graphite reads only 3.5:1 on Pink Soft. */
 .gifts-for-you-badge__from {
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

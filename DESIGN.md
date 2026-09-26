@@ -492,7 +492,7 @@ The board's back, where a person's figures are pinned up as paper. It's the only
 
 Opposite your name, top-right, stacked: gifts for you, then gifts on their way.
 
-- **Gifts for you:** Pink Soft label stock with a Pink ring and a round Pink seal holding a filled gift in Ink, never the sticker, so the pull tab still reveals it. "A gift for you" or "3 gifts for you" over "from @alice (and 2 more)"; a Seal Yellow dot badge counts them past one. It asks to be opened: now and then it lifts 3px and settles. Tapping it opens the newest in the Receive gift dialog, as its gift message would; the rest wait for the next tap. Reduced motion holds it still.
+- **Gifts for you:** Pink Soft label stock with a Pink ring and a round Pink seal holding a filled gift in Ink, never the sticker, so the pull tab still reveals it. "A gift for you" or "3 gifts for you" over "from @alice (and 2 more)" in Ink fine print, since Graphite is too faint on Pink Soft; a Seal Yellow dot badge counts them past one. It asks to be opened: now and then it lifts 3px and settles. Tapping it opens the newest in the Receive gift dialog, as its gift message would; the rest wait for the next tap. Reduced motion holds it still.
 - **On their way:** clear film with the stickers' frosted sleeves, quieter, since it only reports.
 
 ### Someone else's board
