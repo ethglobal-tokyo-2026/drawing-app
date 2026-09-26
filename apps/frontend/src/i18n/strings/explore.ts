@@ -3,7 +3,7 @@ import type { Section } from "../catalog";
 export const explore = {
   search: {
     /** Explore tab, top: placeholder text in the artist search field, beside its @ icon, until you type */
-    placeholder: { en: "search artists", ja: "アーティストをさがす" },
+    placeholder: { en: "Search artists", ja: "アーティストをさがす" },
     /** Explore tab, top: screen readers' name for the artist search field */
     label: { en: "Search artists by handle", ja: "ユーザー名でアーティストをさがす" },
     /** Explore tab, top: screen readers' name for the X button that appears in the search field once you've typed, and empties it */

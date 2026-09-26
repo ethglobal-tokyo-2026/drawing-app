@@ -17,7 +17,8 @@
   background: var(--liner);
 }
 
-/* White label stock with an aqua halo: the search sits on the page like a stuck-on label. */
+/* White label stock: the search sits on the page like a stuck-on label, and takes the house focus
+   ring while you type in it. */
 .artist-search {
   flex: none;
   display: flex;
@@ -28,11 +29,12 @@
   border: 1px solid var(--rule-strong);
   border-radius: 6px;
   background: var(--canvas);
-  box-shadow: 0 0 0 4px var(--aqua-soft);
+  box-shadow: var(--shadow-label);
 }
 
-.artist-search:focus-within {
-  border-color: var(--aqua-deep);
+.artist-search:has(input:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
 }
 
 .artist-search input {
@@ -209,9 +211,11 @@
   padding: 6px 16px 6px 14px;
 }
 
-/* A leaderboard nobody is on yet says so at the rows' inset. */
+/* A leaderboard nobody is on yet says so at the rows' inset, as a supporting note. */
 .leaderboard-empty {
   padding: 14px 16px 14px 14px;
+  color: var(--graphite);
+  font-size: 13px;
 }
 
 .leaderboard li + li,
@@ -327,6 +331,11 @@ li.me .rank {
   content: "";
   position: absolute;
   inset: -6px;
+}
+
+.search-clear:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 
 .results-count {

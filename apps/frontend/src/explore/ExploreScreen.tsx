@@ -322,7 +322,7 @@ function ThisWeek({
       <div role="tabpanel" id="leaderboard-panel" aria-labelledby={`leaderboard-${board}`}>
         <ol ref={list} className="leaderboard">
           {rows.length === 0 && (
-            <li className="leaderboard-empty fine muted">{t(($) => $.explore.thisWeek.empty)}</li>
+            <li className="leaderboard-empty">{t(($) => $.explore.thisWeek.empty)}</li>
           )}
           {rows.map((row, i) => (
             <PersonRow
