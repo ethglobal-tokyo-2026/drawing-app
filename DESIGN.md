@@ -477,7 +477,7 @@ Your avatar (a 42px photo sticker at -4°) and your name (800, 18px, width 112) 
 The board's back, where a person's figures are pinned up as paper. It's the only place stats live.
 
 - **The turn:** 640ms. The board lifts to 0.92 scale, turns on its vertical axis over the Ink table, with each face darkening as it turns from the top-left light, and lands with a small overshoot. A tap mid-turn reverses it. Reduced motion crossfades the faces in 180ms. The tray and Draw are fixed to the front and turn away with it; the front takes no taps while turned.
-- **No person card:** the front's header already names them, and the receipt prints their @handle.
+- **No person card:** the front's header already names them, and the receipt prints their @handle in its own case, inside the fine print's capitals.
 - **Gratitude:** a printed receipt pinned with a pink pushpin, headed "Gratitude received" beside a pink heart with an ink line. Its rows are plain line items in Ink, Direct and Residual, with no dots and no reason lines; a row at 0 is left off, so a friend-first artist sees Direct alone. The total is its TOTAL line. When the stats don't load, the receipt says why in place of its rows.
 - **Streak:** a torn-off calendar leaf with a Tangerine band, the Fire icon before STREAK under the pin, and the day count in Figure type. No rule copy.
 - **Stickers:** made, received and given as three postage stamps stuck on at small turns, each printed on its hue with an Ink rule.

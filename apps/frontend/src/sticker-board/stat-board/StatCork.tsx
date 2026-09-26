@@ -169,7 +169,7 @@ export function StatCork({
               <i className="stat-board__pin stat-board__pin--pink" aria-hidden />
               <div className="stat-board__paper">
                 <p className="fine stat-board__receipt-top" aria-hidden>
-                  <span>{formatHandle(f.handle)}</span>
+                  <span className="handle">{formatHandle(f.handle)}</span>
                   <span>{formatDay(printedAt)}</span>
                 </p>
                 <h3 className="fine stat-board__receipt-h" id={`${id}-gratitude`}>
