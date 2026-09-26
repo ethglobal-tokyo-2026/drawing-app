@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import type { StickerGiftStatus } from "../giving/giftStore";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { formatClock, formatDay, formatHandle, formatNo } from "../stickers/format";
+import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { Key } from "../ui/Key";
 import { useFocusTrap } from "../ui/useFocusTrap";
@@ -56,6 +57,7 @@ export function StickerDetail({
   returnFocus,
 }: Props) {
   const reduced = useReducedMotion();
+  useLight();
   const [shownId, setShownId] = useState(startId);
   const index = Math.max(
     0,
