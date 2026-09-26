@@ -26,14 +26,17 @@ export function createLineVerifier({
     if (!claims || typeof claims !== "object" || Array.isArray(claims)) {
       throw new Error("Invalid LINE token claims");
     }
-    const issuer = Reflect.get(claims, "iss");
-    const audience = Reflect.get(claims, "aud");
-    const subject = Reflect.get(claims, "sub");
-    const expiration = Reflect.get(claims, "exp");
+    const issuer: unknown = Reflect.get(claims, "iss");
+    const audience: unknown = Reflect.get(claims, "aud");
+    const subject: unknown = Reflect.get(claims, "sub");
+    const expiration: unknown = Reflect.get(claims, "exp");
     if (
-      issuer !== "https://access.line.me" || audience !== channelId ||
-      typeof subject !== "string" || subject.length === 0 ||
-      typeof expiration !== "number" || !Number.isFinite(expiration) ||
+      issuer !== "https://access.line.me" ||
+      audience !== channelId ||
+      typeof subject !== "string" ||
+      subject.length === 0 ||
+      typeof expiration !== "number" ||
+      !Number.isFinite(expiration) ||
       expiration <= Date.now() / 1000
     ) {
       throw new Error("Invalid LINE token claims");

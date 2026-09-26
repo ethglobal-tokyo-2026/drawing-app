@@ -26,11 +26,12 @@ The escrow never receives approval for stickers that remain in an artist's walle
 ## Commands
 
 ```sh
+git submodule update --init --recursive
 pnpm --filter @drawing-app/sticker-chain test
-pnpm --filter @drawing-app/sticker-chain compile
+pnpm --filter @drawing-app/sticker-chain generate-types
 ```
 
-The compiler writes `dist/StickerNFT.json` and `dist/StickerGiftEscrow.json`. Configure Privy Custom Authentication with the deployed app's `/.well-known/jwks.json`, use `sub` as the user ID claim, and keep the P-256 private key outside the repository.
+Install Foundry before running these commands. `forge test` covers the contracts, while the TypeScript integration tests run against Anvil and consume the same Forge artifacts. Wagmi CLI reads the artifacts in `out/` and generates typed ABIs in `src/generated/contracts.ts`; application code imports these instead of maintaining handwritten ABI fragments. Configure Privy Custom Authentication with the deployed app's `/.well-known/jwks.json`, use `sub` as the user ID claim, and keep the P-256 private key outside the repository.
 
 ## Required integration checks
 

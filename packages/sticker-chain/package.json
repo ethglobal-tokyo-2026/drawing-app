@@ -5,18 +5,22 @@
   "type": "module",
   "exports": {
     "./auth-http": "./src/auth-http.ts",
+    "./contracts": "./src/generated/contracts.ts",
     "./gift-sticker": "./src/gift-sticker.ts",
     "./line": "./src/line.ts",
     "./line-privy-jwt": "./src/line-privy-jwt.ts",
     "./seal-sticker": "./src/seal-sticker.ts"
   },
   "scripts": {
-    "build": "tsx scripts/compile.ts",
+    "build": "pnpm generate-types",
     "build:auth-server": "rm -rf dist/auth-server && tsc src/start-auth-server.ts --ignoreConfig --outDir dist/auth-server --module nodenext --moduleResolution nodenext --target es2023 --strict --skipLibCheck --types node && echo '{\"type\":\"module\"}' > dist/auth-server/package.json",
-    "compile": "tsx scripts/compile.ts",
-    "lint": "oxlint .",
+    "compile": "forge build",
+    "generate-types": "pnpm compile && wagmi generate",
+    "lint": "oxlint src test wagmi.config.ts",
     "start:auth": "tsx src/start-auth-server.ts",
-    "test": "vitest run",
+    "test": "pnpm test:contracts && pnpm test:backend",
+    "test:backend": "vitest run",
+    "test:contracts": "forge test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -25,9 +29,8 @@
   },
   "devDependencies": {
     "@types/node": "24.13.3",
-    "ganache": "7.9.2",
+    "@wagmi/cli": "2.2.0",
     "oxlint": "1.81.0",
-    "solc": "0.8.37",
     "tsx": "4.20.6",
     "typescript": "6.0.2",
     "vitest": "4.1.0"
