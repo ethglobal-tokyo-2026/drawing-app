@@ -315,13 +315,16 @@ const isSlowInput = (entry: PerformanceEntry): entry is PerformanceEventTiming =
 
 const ms = (value: number) => `${Math.round(value)}ms`;
 
-/** A fetch's host and path. Not `URL.parse`: iOS has it only from 18, and LINE's browser there is the phone's Safari. */
-function hostAndPath(name: string): string {
+/**
+ * A fetch's host and path, without its query, or null for a name that isn't a URL. Not `URL.parse`:
+ * iOS has it only from 18, and LINE's browser there is the phone's Safari.
+ */
+function hostAndPath(name: string): string | null {
   try {
     const url = new URL(name);
     return `${url.host}${url.pathname}`;
   } catch {
-    return name;
+    return null;
   }
 }
 
@@ -431,7 +434,8 @@ function listen(log: PerformanceLog): () => void {
   };
   observe("resource", { buffered: true }, (entry) => {
     if (!isResource(entry)) return;
-    note("network", `${hostAndPath(entry.name)} in ${ms(entry.duration)}`, entry.responseEnd);
+    const where = hostAndPath(entry.name);
+    if (where !== null) note("network", `${where} in ${ms(entry.duration)}`, entry.responseEnd);
   });
   observe("long-animation-frame", { buffered: true }, (entry) => {
     if (isLongAnimationFrame(entry)) {

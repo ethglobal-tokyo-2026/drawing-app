@@ -219,6 +219,49 @@ describe("the recorder on the page", () => {
     expect(types(unlistens.mock.calls)).toEqual(types(listens.mock.calls));
   });
 
+  it("notes the network by host and path without URL.parse, and skips a name that isn't a URL", () => {
+    // iOS before 18 has no URL.parse, and LINE's browser on an iPhone is the phone's Safari.
+    vi.spyOn(URL, "parse").mockImplementation(() => {
+      throw new TypeError("URL.parse is not a function");
+    });
+    let deliver = (_entries: PerformanceEntry[]) => {};
+    vi.stubGlobal(
+      "PerformanceObserver",
+      class {
+        static supportedEntryTypes = ["resource"];
+        constructor(callback: PerformanceObserverCallback) {
+          deliver = (entries) =>
+            callback(
+              { getEntries: () => entries, getEntriesByName: () => [], getEntriesByType: () => [] },
+              this,
+            );
+        }
+        observe() {}
+        disconnect() {}
+        takeRecords() {
+          return [];
+        }
+      },
+    );
+    const fetched = (name: string) => ({
+      entryType: "resource",
+      name,
+      startTime: 210,
+      duration: 120,
+      responseEnd: 330,
+      toJSON: () => ({}),
+    });
+    startPerformanceRecorder();
+    for (let t = 0; t <= 320; t += 16) frameAt(t);
+    deliver([fetched("https://api.example.com/v1/me?code=private"), fetched("not a url")]);
+    frameAt(400);
+
+    const [slow] = readPerformanceRecording()?.slowFrames ?? [];
+    expect(slow.events.filter((e) => e.kind === "network").map((e) => e.detail)).toEqual([
+      "api.example.com/v1/me in 120ms",
+    ]);
+  });
+
   it("starts and stops at once from the switch, and keeps the setting for the next start", () => {
     setPerformanceRecorder(true);
     expect(queued).not.toBeNull();
