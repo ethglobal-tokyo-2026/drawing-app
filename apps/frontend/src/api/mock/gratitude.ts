@@ -19,16 +19,17 @@ export const gratitudeOf = (body: RecordGratitude, recordedAt: number): Gratitud
 
 /**
  * Gratitude's fixtures: combos recorded in memory, one per gift. A resend with the same idempotency
- * key gets the stored record back; another key for a thanked gift is refused, as on the server.
+ * key gets the stored record back; another key for a gift that already has its gratitude is refused,
+ * as on the server.
  */
 export function createGratitudeMock(now: () => number): Pick<ApiClient, "recordGratitude"> {
   const byKey = new Map<string, Gratitude>();
-  const thanked = new Set<string>();
+  const giftsWithGratitude = new Set<string>();
   return {
     recordGratitude: (body) => {
       const stored = byKey.get(body.idempotencyKey);
       if (stored) return Promise.resolve({ gratitude: stored });
-      if (thanked.has(body.giftId)) {
+      if (giftsWithGratitude.has(body.giftId)) {
         return Promise.reject(
           new ApiError(409, {
             error: "gratitude_already_recorded",
@@ -38,7 +39,7 @@ export function createGratitudeMock(now: () => number): Pick<ApiClient, "recordG
       }
       const gratitude = gratitudeOf(body, now());
       byKey.set(body.idempotencyKey, gratitude);
-      thanked.add(body.giftId);
+      giftsWithGratitude.add(body.giftId);
       return Promise.resolve({ gratitude });
     },
   };
