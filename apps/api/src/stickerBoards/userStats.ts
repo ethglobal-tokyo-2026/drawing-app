@@ -30,7 +30,6 @@ export function loadUserStats(db: Db, user: typeof users.$inferSelect, now: Date
   // Every combo that gave the person something: as its gift's giver, or as the Original Artist.
   const combos = db
     .select({
-      method: gratitude.method,
       total: gratitude.total,
       share: gratitude.originalArtistGratitudeShare,
       recordedAt: gratitude.createdAt,
@@ -43,14 +42,14 @@ export function loadUserStats(db: Db, user: typeof users.$inferSelect, now: Date
     .where(or(eq(gifts.giverId, user.id), eq(stickers.artistId, user.id)))
     .all();
 
-  const split = { inspired: 0, magic: 0, asOriginalArtist: 0 };
+  let direct = 0;
+  let residual = 0;
   const gratitudeByDay = new Map<string, number>();
   for (const combo of combos) {
     const giversPart = combo.giverId === user.id ? combo.total - combo.share : 0;
     const share = combo.artistId === user.id ? combo.share : 0;
-    if (combo.method === "tap") split.inspired += giversPart;
-    else split.magic += giversPart;
-    split.asOriginalArtist += share;
+    direct += giversPart;
+    residual += share;
     const day = tokyoTicketDay(combo.recordedAt);
     gratitudeByDay.set(day, (gratitudeByDay.get(day) ?? 0) + giversPart + share);
   }
@@ -61,7 +60,7 @@ export function loadUserStats(db: Db, user: typeof users.$inferSelect, now: Date
     made: sealDays.length,
     received: receivedGiftCount(db, eq(gifts.receiverId, user.id)),
     given: receivedGiftCount(db, eq(gifts.giverId, user.id)),
-    gratitude: { ...split, total: split.inspired + split.magic + split.asOriginalArtist },
+    gratitude: { direct, residual, total: direct + residual },
     bests: {
       bestCombo,
       mostGratitudeInADay: Math.max(0, ...gratitudeByDay.values()),

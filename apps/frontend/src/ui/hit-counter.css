@@ -1,0 +1,57 @@
+/* ---------- The hit counter: a combo's length, the way fighting games show it ---------- */
+
+/* Figure numerals leaning 11°, HITS after them in small caps, and three pink speed lines trailing off
+   the number's left as if it had just slammed in. The pink stays off the digits. */
+.hit-counter {
+  display: inline-block;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.hit-counter__face {
+  display: inline-flex;
+  align-items: baseline;
+  color: var(--ink);
+  transform: skewX(-11deg);
+}
+
+.hit-counter__n {
+  font: 900 1em/0.95 var(--font-ui);
+  font-stretch: var(--w-figure);
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Small caps drawn at a cap height of their own, so Japanese's ヒット sits the same way. */
+.hit-counter__unit {
+  margin-left: 0.2em;
+  font: 800 0.58em/1 var(--font-ui);
+  font-stretch: var(--w-title);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hit-counter__lines {
+  display: inline-grid;
+  align-self: center;
+  justify-items: end;
+  gap: 0.1em;
+  width: 0.6em;
+  margin: 0.04em 0.14em 0 0;
+}
+
+.hit-counter__lines i {
+  display: block;
+  width: 100%;
+  height: 0.09em;
+  border-radius: 1em;
+  background: var(--pink);
+}
+
+.hit-counter__lines i:nth-child(1) {
+  width: 72%;
+}
+
+.hit-counter__lines i:nth-child(3) {
+  width: 48%;
+}

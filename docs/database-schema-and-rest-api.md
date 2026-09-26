@@ -400,9 +400,8 @@ interface UserStats {
   received: number;
   given: number;
   gratitude: {
-    inspired: number; // your part of tap combos on gifts you gave
-    magic: number; // your part of stroke and shake combos
-    asOriginalArtist: number; // Original Artist Gratitude Shares
+    direct: number; // your part of the combos on gifts you gave: each total less any Original Artist Gratitude Share
+    residual: number; // your Original Artist Gratitude Shares
     total: number;
   };
   bests: { bestCombo: number; mostGratitudeInADay: number; longestStreak: number };

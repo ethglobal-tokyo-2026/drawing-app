@@ -1,6 +1,14 @@
-import { useEffect, useLayoutEffect, useRef, type ReactNode, type RefObject } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 import "./board-flip.css";
+import { RestingSide, type BoardSide } from "./restingSide";
 
 interface Props {
   /** The stat board faces out, rather than the Sticker Board. */
@@ -59,6 +67,7 @@ export function BoardFlip({
   const running = useRef<Animation[]>([]);
   // The side the board rests on, or is turning toward.
   const heading = useRef(turned);
+  const [resting, setResting] = useState<BoardSide>(turned ? "back" : "front");
   const reduced = useReducedMotion();
   // The turn lands after later renders, so it reads their props.
   const latest = useRef({ turned, onTurnEnd, frontFocus, backFocus });
@@ -78,6 +87,7 @@ export function BoardFlip({
       for (const animation of running.current) animation.cancel();
       running.current = [];
       const now = latest.current;
+      setResting(now.turned ? "back" : "front");
       now.onTurnEnd?.(now.turned);
       (now.turned ? now.backFocus : now.frontFocus)?.current?.focus({ preventScroll: true });
     };
@@ -119,16 +129,18 @@ export function BoardFlip({
         onTurnedChange(!turned);
       }}
     >
-      <div className="board-flip" ref={flip}>
-        <div className="board-front" inert={turned}>
-          {front}
-          <i className="board-shade" ref={frontShade} aria-hidden />
+      <RestingSide value={resting}>
+        <div className="board-flip" ref={flip}>
+          <div className="board-front" inert={turned}>
+            {front}
+            <i className="board-shade" ref={frontShade} aria-hidden />
+          </div>
+          <div className="board-rear" inert={!turned}>
+            {back}
+            <i className="board-shade" ref={rearShade} aria-hidden />
+          </div>
         </div>
-        <div className="board-rear" inert={!turned}>
-          {back}
-          <i className="board-shade" ref={rearShade} aria-hidden />
-        </div>
-      </div>
+      </RestingSide>
     </div>
   );
 }
