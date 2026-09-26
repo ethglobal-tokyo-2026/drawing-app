@@ -26,6 +26,7 @@ const REFUSAL_STATUS = {
   not_yours: 403,
   not_minted: 409,
   gift_in_transit: 409,
+  take_out_not_landed: 409,
   deposit_not_landed: 409,
   deposit_mismatch: 409,
   not_deposited: 409,

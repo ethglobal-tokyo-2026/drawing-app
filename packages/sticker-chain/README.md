@@ -51,6 +51,10 @@ After the recipient authenticates with LINE, the API resolves their Ethereum Sep
 
 Receiving requests carry the Gift Claim Token so the API can validate it before authorizing a claim. The sender can take a pending sticker out with `prepareGiftTakeOut`; the escrow verifies the caller is that gift's sender, so taking out needs no backend signature or claim token.
 
+Giving confirms the NFT deposit before opening LINE's friend picker. Closing the Giving screen leaves an unsent gift in its bag; it does not withdraw the NFT. Submitted deposit and take-out hashes are retained for retries while the page stays open, and receipts must include the matching escrow event, not just a successful outer transaction. A missing Gift read is not proof of a completed take-out. If the Gift Claim Token is lost after a reload, recovery settles the existing deposit and takes it out before preparing a replacement gift.
+
+Receipt recovery retains replacement transaction hashes and does not require the smart wallet to initialize again. A completed take-out in contract state takes precedence over an unavailable old receipt. Failed preparation preserves its allocated Gift ID for Taking out; once Taking out starts, Send cannot reuse that gift's old message, even if confirmation fails.
+
 The escrow never receives approval for stickers that remain in an artist's wallet and cannot transfer them. Raw LINE IDs and gift claim tokens are not stored onchain.
 
 ## ENS names

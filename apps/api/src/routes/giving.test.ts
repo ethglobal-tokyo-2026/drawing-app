@@ -154,6 +154,35 @@ describe("Packaging on the escrow chain", () => {
       await refusalOf(await test.post(giverId, "", { stickerId: gift.stickerId })),
     ).toMatchObject({ status: 409, error: "gift_in_transit" });
   });
+
+  it("lets the receiver give a claimed sticker on without taking out its previous gift", async () => {
+    const test = await createGiftsTestApp({ escrowChain: true });
+    const giverId = insertUser(test.db);
+    const receiverId = insertUser(test.db);
+    const stickerId = test.sealSticker(giverId);
+    const packed = await test.packageSticker(giverId, stickerId);
+    test.landDeposit(packed.gift.id);
+    await giftOf(await deposit(test, giverId, packed.gift.id));
+    await giftOf(await share(test, giverId, packed.gift.id, "sent"));
+    await giftOf(
+      await test.post(receiverId, "/receive", {
+        giftClaimToken: packed.giftClaimToken,
+        liffContextType: "utou",
+      }),
+    );
+    const received = test.giftRow(packed.gift.id);
+    expect(received).toMatchObject({ status: "received", escrowStatus: "claimed", receiverId });
+
+    const next = await test.packageSticker(receiverId, stickerId);
+    expect(next).toMatchObject({
+      status: 201,
+      gift: { giverId: receiverId, stickerId, status: "packed", escrowStatus: "missing" },
+    });
+    expect(next.gift.id).not.toBe(packed.gift.id);
+    expect(next.escrowTransfer).not.toBeNull();
+    expect(test.giftRow(packed.gift.id)).toEqual(received);
+    expect((await test.giftChain.readEscrowGift(packed.gift.id)).status).toBe("claimed");
+  });
 });
 
 describe("The picker's result", () => {
@@ -217,6 +246,41 @@ describe("Taking out", () => {
     });
   });
 
+  it.each(["missing", "pending"] as const)(
+    "keeps the gift unchanged while the escrow reports %s instead of a confirmed take-out",
+    async (escrowStatus) => {
+      const test = await createGiftsTestApp({ escrowChain: true });
+      const { giverId, gift } = await packagedGift(test);
+      if (escrowStatus === "pending") {
+        test.landDeposit(gift.id);
+        await giftOf(await deposit(test, giverId, gift.id));
+      }
+      const before = test.giftRow(gift.id);
+
+      expect(await refusalOf(await takeOut(test, giverId, gift.id))).toMatchObject({
+        status: 409,
+        error: "take_out_not_landed",
+      });
+      expect(test.giftRow(gift.id)).toEqual(before);
+    },
+  );
+
+  it("refuses to take out a gift claimed on-chain before Receiving is recorded", async () => {
+    const test = await createGiftsTestApp({ escrowChain: true });
+    const { giverId, gift } = await packagedGift(test);
+    test.landDeposit(gift.id);
+    await giftOf(await deposit(test, giverId, gift.id));
+    const before = test.giftRow(gift.id);
+    const escrow = await test.giftChain.readEscrowGift(gift.id);
+    test.giftChain.escrow.set(gift.id, { ...escrow, status: "claimed" });
+
+    expect(await refusalOf(await takeOut(test, giverId, gift.id))).toMatchObject({
+      status: 409,
+      error: "already_received",
+    });
+    expect(test.giftRow(gift.id)).toEqual(before);
+  });
+
   it.each(["rejected", "expired_returned"] as const)(
     "confirms %s before closing a chain gift, then lets the sticker be given again",
     async (escrowStatus) => {
@@ -225,10 +289,6 @@ describe("Taking out", () => {
       test.landDeposit(gift.id);
       await giftOf(await deposit(test, giverId, gift.id));
 
-      expect(await refusalOf(await takeOut(test, giverId, gift.id))).toMatchObject({
-        status: 409,
-        error: "gift_in_transit",
-      });
       const escrow = await test.giftChain.readEscrowGift(gift.id);
       test.giftChain.escrow.set(gift.id, { ...escrow, status: escrowStatus });
 

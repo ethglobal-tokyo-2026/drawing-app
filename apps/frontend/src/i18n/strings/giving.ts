@@ -104,6 +104,17 @@ export const giving = {
       ja: "LINEの友だち追加画面がひらきませんでした：{{reason}}",
     },
   },
+  preparing: {
+    /** Giving, while the sticker's transfer is being confirmed before LINE's friend picker opens: the sheet's title */
+    title: { en: "Preparing your gift", ja: "ギフトを準備中" },
+    /** Giving, before LINE's friend picker opens: explains wallet confirmation and that the gift has not been sent */
+    lead: {
+      en: "Confirm in your wallet if asked, then wait for your sticker to be ready. LINE’s friend picker will open next; your gift hasn’t been sent yet.",
+      ja: "ウォレットで確認を求められたら、承認してシールの準備ができるまでお待ちください。次にLINEの友だち選択がひらきます。ギフトはまだ送られていません。",
+    },
+    /** Giving, while the sticker is being prepared: the disabled send button */
+    button: { en: "Preparing…", ja: "準備中…" },
+  },
   /** The sticker in the open bag, until it's sent or taken out. */
   inTheBag: {
     /** Giving, once the sticker drops into the open gift bag: the sheet's title while LINE's friend picker opens and is up */

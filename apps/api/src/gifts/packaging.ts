@@ -223,7 +223,9 @@ export async function takeOut(
   userId: string,
   giftId: string,
 ): Promise<
-  GiftStep<"gift_not_found" | "not_yours" | "already_received" | "gift_closed" | "gift_in_transit">
+  GiftStep<
+    "gift_not_found" | "not_yours" | "already_received" | "gift_closed" | "take_out_not_landed"
+  >
 > {
   const before = ownGift(db.select().from(gifts).where(eq(gifts.id, giftId)).get(), userId, giftId);
   if (before.refusal !== null) return before;
@@ -248,8 +250,8 @@ export async function takeOut(
       }
       if (escrow.status !== "rejected" && escrow.status !== "expired_returned") {
         return refuse(
-          "gift_in_transit",
-          `Gift ${giftId}'s take-out has not landed in the escrow yet`,
+          "take_out_not_landed",
+          `Gift ${giftId}'s take-out is not confirmed: escrow is ${escrow.status}`,
         );
       }
       escrowStatus = escrow.status;
