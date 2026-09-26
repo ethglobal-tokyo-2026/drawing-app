@@ -1,0 +1,40 @@
+# drawing-api.service: the REST API (apps/api) on 127.0.0.1:8788, for HAProxy's /api/.
+# deploy/deploy-api.sh copies it to /etc/systemd/system/ and restarts it whenever it, its config or its code changes.
+[Unit]
+Description=Sticker Board REST API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bawler
+Group=bawler
+WorkingDirectory=/srv/drawing-api
+EnvironmentFile=/srv/drawing-api/api.env
+EnvironmentFile=/srv/drawing-api/secrets.env
+EnvironmentFile=-/srv/drawing-api/chain.env
+ExecStart=/usr/bin/node /srv/drawing-api/server/server.mjs
+Restart=always
+RestartSec=3
+
+MemoryMax=512M
+TasksMax=64
+
+# Sandboxing: it writes only its database and sticker images, and calls LINE, Privy and Ethereum.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/srv/drawing-api/data /srv/drawing-api/images
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=drawing-api
+
+[Install]
+WantedBy=multi-user.target

@@ -8,7 +8,7 @@ import { userStatsSchema } from "../shapes.ts";
 import { MAX_SEEN_BATCH, stickerBoardSchema } from "../stickerBoards/board.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { insertGratitude, insertSealedSticker, receiveGift } from "../testing/rows.ts";
-import { addDays, ticketDay, ticketDayStart } from "../ticketDays.ts";
+import { addDays, tokyoTicketDay, tokyoTicketDayStart } from "../ticketDays.ts";
 import { newStickerCount, stickerPlacementSchema, type StickerPlacement } from "../views.ts";
 
 /** A spot on the board, as a drag leaves it. */
@@ -25,8 +25,6 @@ const FIRST_ARRIVAL = new Date("2026-09-01T00:00:00.000Z");
 
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
-/** A zone whose ticket days start at another moment than Tokyo's and UTC's. */
-const ZONE = "America/New_York";
 /** When the stats' person made their account. */
 const SINCE = new Date("2026-01-15T00:00:00.000Z");
 /** A combo on a gift its Original Artist didn't give: their share comes out of the giver's part. */
@@ -89,8 +87,10 @@ const placementOf = (userId: string, stickerId: string) =>
 const seal = (artistId: string) => insertSealedSticker(test.db, artistId);
 
 /** `giverId` gives `stickerId` to `receiverId`: packed, then received. */
-const give = (stickerId: string, giverId: string, receiverId: string) =>
-  receiveGift(test.db, packGift(test.db, stickerId, giverId), receiverId);
+const give = (stickerId: string, giverId: string, receiverId: string, receivedAt?: Date) =>
+  receiveGift(test.db, packGift(test.db, stickerId, giverId), receiverId, receivedAt);
+
+const minuteAfter = (at: Date) => new Date(at.getTime() + MINUTE_MS);
 
 /** `giverId` gives `stickerId` to `receiverId`, who thanks them with `combo`. */
 const giveAndThank = (
@@ -176,7 +176,8 @@ describe("GET /api/sticker-boards/:userId", () => {
         .where(placementOf(friend, stickerId))
         .run();
     }
-    give(givenAway, friend, insertUser(test.db));
+    const receiver = insertUser(test.db);
+    give(givenAway, friend, receiver);
 
     const board = await boardOf(me, friend);
     expect(board.owner.id).toBe(friend);
@@ -187,6 +188,35 @@ describe("GET /api/sticker-boards/:userId", () => {
     const stickers = byStickerId(board.boardStickers);
     expect(stickers.get(onBoard)).toMatchObject({ held: true, openGift: null, seenAt: null });
     expect(stickers.get(givenAway)).toMatchObject({ held: false, openGift: null, seenAt: null });
+    expect(stickers.get(givenAway)?.givenTo?.receiver.id).toBe(receiver);
+  });
+
+  it("names who received a sticker given away, the last time it left the board's owner", async () => {
+    const me = insertUser(test.db);
+    const friend = insertUser(test.db);
+    const other = insertUser(test.db);
+    const cameBack = seal(me);
+    give(cameBack, me, friend);
+    give(cameBack, friend, me);
+    const givenAgain = seal(me);
+    const firstGivenAt = FIRST_ARRIVAL;
+    const backAt = minuteAfter(firstGivenAt);
+    const givenAgainAt = minuteAfter(backAt);
+    give(givenAgain, me, friend, firstGivenAt);
+    give(givenAgain, friend, me, backAt);
+    give(givenAgain, me, other, givenAgainAt);
+
+    const mine = byStickerId((await boardOf(me, "me")).boardStickers);
+    expect(mine.get(cameBack)).toMatchObject({ held: true, givenTo: null });
+    expect(mine.get(givenAgain)?.givenTo).toMatchObject({
+      receiver: { id: other },
+      receivedAt: givenAgainAt.toISOString(),
+    });
+    const friends = byStickerId((await boardOf(friend, "me")).boardStickers);
+    expect(friends.get(givenAgain)?.givenTo).toMatchObject({
+      receiver: { id: me },
+      receivedAt: backAt.toISOString(),
+    });
   });
 
   it("refuses a person who doesn't exist, for their board and their stats", async () => {
@@ -349,18 +379,18 @@ describe("GET /api/sticker-boards/:userId/user-stats", () => {
     expect((await statsOf(me, friend)).bests.bestCombo).toBe(MAX_HITS);
   });
 
-  it("add up the person's part of a ticket day's thanks, in their zone", async () => {
-    const me = insertUser(test.db, { timeZone: ZONE });
+  it("add up the person's part of a ticket day's thanks, Tokyo time", async () => {
+    const me = insertUser(test.db);
     const artist = insertUser(test.db);
     const friend = insertUser(test.db);
-    const nextDay = addDays(ticketDay(test.clock.now(), ZONE), -1);
+    const nextDay = addDays(tokyoTicketDay(test.clock.now()), -1);
     const day = addDays(nextDay, -1);
-    const nextDayStart = ticketDayStart(nextDay, ZONE);
+    const nextDayStart = tokyoTicketDayStart(nextDay);
     // The day's first moment: my share, as the Original Artist of a sticker a friend passed on.
     const mine = seal(me);
     give(mine, me, friend);
-    giveAndThank(mine, friend, artist, { ...SHARED_TAP, createdAt: ticketDayStart(day, ZONE) });
-    // Its last hour, past midnight: my part of a sticker I passed on.
+    giveAndThank(mine, friend, artist, { ...SHARED_TAP, createdAt: tokyoTicketDayStart(day) });
+    // Its last hour, a UTC date later than its first moment: my part of a sticker I passed on.
     const theirs = seal(artist);
     give(theirs, artist, me);
     const lastHour = new Date(nextDayStart.getTime() - HOUR_MS);
@@ -373,14 +403,14 @@ describe("GET /api/sticker-boards/:userId/user-stats", () => {
   });
 
   it("count the streak over seal days, and keep the longest after a missed day", async () => {
-    const me = insertUser(test.db, { timeZone: ZONE });
-    const yesterday = addDays(ticketDay(test.clock.now(), ZONE), -1);
+    const me = insertUser(test.db);
+    const yesterday = addDays(tokyoTicketDay(test.clock.now()), -1);
     const missed = addDays(yesterday, -1);
     const longest = Array.from({ length: LONGEST_RUN }, (_, index) =>
       addDays(missed, index - LONGEST_RUN),
     );
     for (const day of [...longest, yesterday]) {
-      insertSealedSticker(test.db, me, { createdAt: ticketDayStart(day, ZONE) });
+      insertSealedSticker(test.db, me, { createdAt: tokyoTicketDayStart(day) });
     }
 
     expect(await statsOf(me, "me")).toMatchObject({

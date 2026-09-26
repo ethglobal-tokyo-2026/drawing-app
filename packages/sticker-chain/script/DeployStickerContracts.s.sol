@@ -10,8 +10,8 @@ contract DeployStickerContracts is Script {
     function run() external returns (StickerNFT sticker, StickerGiftEscrow escrow) {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
-        address sealer = vm.envAddress("STICKER_SEALER_ADDRESS");
-        address claimSigner = vm.envAddress("STICKER_CLAIM_SIGNER_ADDRESS");
+        address sealer = vm.addr(vm.envUint("STICKER_SEALER_PRIVATE_KEY"));
+        address claimSigner = vm.envOr("STICKER_CLAIM_SIGNER_ADDRESS", sealer);
 
         vm.startBroadcast(deployerPrivateKey);
 

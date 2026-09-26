@@ -13,6 +13,7 @@ import {
   takeOut,
   type Refusal,
 } from "../gifts/packaging.ts";
+import { openGiftBodySchema, previewGift, receiveGift } from "../gifts/receiving.ts";
 import type { AppEnv } from "../session.ts";
 import { bytes32Schema } from "../shapes.ts";
 import { toGift } from "../views.ts";
@@ -29,6 +30,11 @@ const REFUSAL_STATUS = {
   not_deposited: 409,
   gift_closed: 409,
   already_received: 409,
+  group_chat: 403,
+  own_gift: 403,
+  taken_back: 409,
+  gift_returned: 410,
+  gift_expired: 410,
 } as const satisfies Record<string, ContentfulStatusCode>;
 
 const refused = <Code extends keyof typeof REFUSAL_STATUS>(
@@ -42,6 +48,16 @@ const giftParamSchema = z.object({ giftId: bytes32Schema });
 export const giftRoutes = (deps: AppDeps) =>
   new Hono<AppEnv>()
     .get("/pending", (c) => c.json(pendingGifts(deps, c.var.userId), 200))
+    .post("/preview", validate("json", openGiftBodySchema), async (c) => {
+      const previewing = await previewGift(deps, c.var.userId, c.req.valid("json"));
+      if (previewing.refusal !== null) return refused(c, previewing);
+      return c.json(previewing.preview, 200);
+    })
+    .post("/receive", validate("json", openGiftBodySchema), async (c) => {
+      const receiving = await receiveGift(deps, c.var.userId, c.req.valid("json"));
+      if (receiving.refusal !== null) return refused(c, receiving);
+      return c.json(receiving.received, 200);
+    })
     .post("/", validate("json", packageBodySchema), async (c) => {
       const packaging = await packageGift(deps, c.var.userId, c.req.valid("json").stickerId);
       if (packaging.refusal !== null) return refused(c, packaging);

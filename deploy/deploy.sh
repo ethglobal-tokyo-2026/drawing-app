@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# deploy/deploy.sh: build the frontend and the LINE → Privy auth server, and publish both behind the LIFF endpoint.
+# deploy/deploy.sh: build the frontend and the LINE → Privy auth server, and publish both behind the LIFF endpoint;
+# then deploy/deploy-api.sh does the same for the REST API.
 #
 #   ./deploy/deploy.sh
 #
@@ -25,6 +26,11 @@ KEY_ID="$(sed -n 's/^AUTH_KEY_ID=//p' "$ROOT/deploy/sticker-auth.env")"
 SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/cm-deploy-%C" -o ControlPersist=60)
 ssh() { command ssh "${SSH_OPTS[@]}" "$@"; }
 export RSYNC_RSH="ssh ${SSH_OPTS[*]}"
+
+# The frontend sends Take it out directly from the artist's smart account to this deployment.
+if [ -n "${STICKER_GIFT_ESCROW_ADDRESS:-}" ]; then
+  export VITE_STICKER_ESCROW_ADDRESS="$STICKER_GIFT_ESCROW_ADDRESS"
+fi
 
 pnpm --dir "$ROOT" --filter frontend build
 pnpm --dir "$ROOT" --filter @drawing-app/sticker-chain build:auth-server
@@ -90,3 +96,6 @@ curl -fsS --max-time 15 "$URL/.well-known/jwks.json" | grep -q "\"kid\":\"$KEY_I
   exit 1
 }
 echo "✓ $URL/.well-known/jwks.json"
+
+# The REST API has its own script, so it can also go out alone.
+"$ROOT/deploy/deploy-api.sh"

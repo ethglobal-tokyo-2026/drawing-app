@@ -11,6 +11,7 @@ import {
   type MintedToken,
   type SmartWallets,
   type SuiPayments,
+  type SuiPrice,
 } from "../deps.ts";
 import { keccak256 } from "../keccak256.ts";
 import { stickerImageUrls } from "../services/imageStore.ts";
@@ -143,3 +144,9 @@ export const fakeSmartWallets = (): SmartWallets => ({
 export const fakeSuiPayments = (verified: boolean): SuiPayments => ({
   verifyPayment: () => Promise.resolve(verified),
 });
+
+/** A SUI/JPY price that never moves: `yenPerSui`, or null for none available. */
+export const fakeSuiPrice =
+  (yenPerSui: string | null): SuiPrice =>
+  () =>
+    Promise.resolve(yenPerSui);
