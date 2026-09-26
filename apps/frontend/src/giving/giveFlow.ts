@@ -1,4 +1,3 @@
-import type { PickerOptions } from "../line/friendPicker";
 import { formatNo } from "../stickers/format";
 import type { GiftBackend, GiftSticker, PackedGift } from "./giftBackend";
 import type { GiftSender, GiftSendOutcome } from "./giftSender";
@@ -35,9 +34,9 @@ export interface GiveFlowOptions {
 export interface GiveFlow {
   getState: () => GiveFlowState;
   subscribe: (listener: () => void) => () => void;
-  /** "Send in a LINE chat" on the give sheet, or "Show all my chats" with `anyChat`. */
-  chooseLineChat: (picker?: PickerOptions) => void;
-  /** The Send in LINE key: the picker the giver chose, again. */
+  /** "Send in a LINE chat" on the give sheet. */
+  chooseLineChat: () => void;
+  /** The Send in LINE key: LINE's picker, again. */
   sendInLine: () => void;
   takeOut: () => void;
   /** Closes the flow. A gift message already in LINE's hands still records its outcome. */
@@ -67,8 +66,6 @@ export function createGiveFlow({
   const which = formatNo(sticker.no);
   const listeners = new Set<() => void>();
   let state: GiveFlowState = { step: "sheet" };
-  /** The picker chosen on the give sheet, which Send in LINE reopens. */
-  let picker: PickerOptions = {};
   let attempt: Attempt | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let disposed = false;
@@ -142,7 +139,7 @@ export function createGiveFlow({
 
     let outcome: GiftSendOutcome;
     try {
-      outcome = await sender.send(packed.message, picker);
+      outcome = await sender.send(packed.message);
     } catch (error) {
       report(`${which} wasn’t sent`, error);
       const recordError = await record("the failure", () => backend.markCancelled(packed.giftId));
@@ -165,9 +162,8 @@ export function createGiveFlow({
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-    chooseLineChat: (chosen = {}) => {
+    chooseLineChat: () => {
       if (state.step !== "sheet") return;
-      picker = chosen;
       const a = startAttempt();
       set({ step: "packed" });
       void packedGift(a);
