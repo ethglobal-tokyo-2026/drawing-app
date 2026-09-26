@@ -592,26 +592,10 @@
   }
 }
 
-/* What you can do with your board, and the way back, as label stock on the cork. */
-.stat-board__share {
-  display: grid;
-  justify-items: stretch;
-  gap: 10px;
-  width: 100%;
-  margin-top: 2px;
-}
-
-.stat-board__share .label-btn {
-  padding: 0 8px;
-}
-
-.stat-board__share .label-btn,
-.stat-board__flip-back {
-  gap: 8px;
-}
-
+/* The way back, as label stock on the cork. */
 .stat-board__flip-back {
   align-self: stretch;
+  gap: 8px;
   margin-top: auto;
 }
 

@@ -1,4 +1,4 @@
-import { ArrowUUpLeft, QrCode, ShareNetwork } from "@phosphor-icons/react";
+import { ArrowUUpLeft } from "@phosphor-icons/react";
 import {
   useId,
   useImperativeHandle,
@@ -25,9 +25,6 @@ import { LabelButton } from "../../ui/LabelButton";
 import { PhotoSticker } from "../../ui/PhotoSticker";
 import { QuietLink } from "../../ui/QuietLink";
 import { useReducedMotion } from "../../ui/useReducedMotion";
-import { useToast } from "../../ui/useToast";
-import { BoardQrSheet } from "./BoardQrSheet";
-import { shareBoard } from "./shareBoard";
 import { streakOf } from "./userStats";
 import "./stat-board.css";
 
@@ -84,10 +81,8 @@ function swing(paper: Element, k: number, delay = 0) {
  */
 export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Props) {
   const me = useIdentity();
-  const toast = useToast();
   const reduced = useReducedMotion();
   const cork = useRef<HTMLDivElement>(null);
-  const [qrOpen, setQrOpen] = useState(false);
   const [since] = useState(() => formatDay(firstSeen()));
   const id = useId();
 
@@ -133,8 +128,7 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== "Escape") return;
     e.stopPropagation();
-    if (qrOpen) setQrOpen(false);
-    else onFlipBack();
+    onFlipBack();
   };
 
   return (
@@ -263,19 +257,6 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
               ))}
             </div>
 
-            <div className="stat-board__share">
-              <LabelButton
-                tone="aqua"
-                size="sm"
-                icon={<ShareNetwork />}
-                onClick={() => void shareBoard(me, toast)}
-              >
-                Share my board
-              </LabelButton>
-              <LabelButton size="sm" icon={<QrCode />} onClick={() => setQrOpen(true)}>
-                QR code
-              </LabelButton>
-            </div>
             <LabelButton
               ref={flipBackRef}
               size="sm"
@@ -307,8 +288,6 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
           <i className="stat-board__washi" aria-hidden />
         </section>
       </div>
-
-      <BoardQrSheet open={qrOpen} onClose={() => setQrOpen(false)} />
     </div>
   );
 }
