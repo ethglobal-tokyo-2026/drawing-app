@@ -6,8 +6,12 @@ import type { AppEnv } from "../session.ts";
 import { sealSticker } from "../stickers/seal.ts";
 import { MAX_SEAL_BYTES, sealForm } from "../stickers/sealForm.ts";
 import { stickerDetail, stickerIdParam } from "../stickers/stickerDetail.ts";
+import { readTimelapse } from "../stickers/timelapse.ts";
 
-/** Stickers: sealing, and a sticker's detail with its Transfer Trail. */
+/** A sticker's timelapse never changes once it's sealed. */
+const TIMELAPSE_MAX_AGE_S = 365 * 24 * 60 * 60;
+
+/** Stickers: sealing, a sticker's detail with its Transfer Trail, and how it was drawn. */
 export const stickerRoutes = (deps: AppDeps) =>
   new Hono<AppEnv>()
     .post(
@@ -32,4 +36,21 @@ export const stickerRoutes = (deps: AppDeps) =>
       const detail = stickerDetail(deps.db, stickerId, deps.images.urls);
       if (!detail) return apiError(c, 404, "sticker_not_found", `No sticker ${stickerId}`);
       return c.json(detail, 200);
+    })
+    .get("/:stickerId/timelapse", validate("param", stickerIdParam), (c) => {
+      const { stickerId } = c.req.valid("param");
+      const timelapse = readTimelapse(deps.db, stickerId);
+      if (timelapse === "sticker_not_found") {
+        return apiError(c, 404, "sticker_not_found", `No sticker ${stickerId}`);
+      }
+      if (timelapse === "timelapse_not_found") {
+        return apiError(
+          c,
+          404,
+          "timelapse_not_found",
+          `Sticker ${stickerId} was sealed without one`,
+        );
+      }
+      c.header("Cache-Control", `private, max-age=${TIMELAPSE_MAX_AGE_S}, immutable`);
+      return c.json(timelapse, 200);
     });

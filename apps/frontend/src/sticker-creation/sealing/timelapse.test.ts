@@ -1,7 +1,7 @@
-import { MAX_TIMELAPSE_BYTES } from "@drawing-app/api/client";
+import { MAX_TIMELAPSE_BYTES, type TimelapseV1 } from "@drawing-app/api/client";
 import { describe, expect, it, vi } from "vitest";
 import type { Op } from "../canvas/ops";
-import { encodeTimelapse, gzipTimelapse, type TimelapseV1 } from "./timelapse";
+import { encodeTimelapse, gzipTimelapse } from "./timelapse";
 
 const stroke: Op = {
   tool: "brush",
