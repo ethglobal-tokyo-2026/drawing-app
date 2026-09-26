@@ -6,8 +6,10 @@ export type BrushKind = "brush" | "marker" | "fineliner" | "pixelPen";
 
 /** Ink, the color every sample is painted in. */
 const INK = "#1C1824";
-/** The chisel's edge, in radians: a stroke across it lays down the full width. */
+/** The chisel's flat edge, in radians, running up and to the right: a stroke across it lays down the full width. */
 const CHISEL = -Math.PI / 4;
+/** The chisel's edge, as a share of the swatch: broad, so the flat cut ends read at 104px. */
+const CHISEL_WIDTH = 0.15;
 
 /** One S-shaped wave across a `side` square, the path every sample paints. */
 function wave(side: number): [number, number][] {
@@ -48,11 +50,29 @@ export function brushSample(kind: BrushKind, side: number): StrokeOp {
       });
       return stroke.op;
     }
-    case "marker":
-      return shaped(
-        side,
-        (_, direction) => size * (0.25 + 0.75 * Math.abs(Math.sin(direction - CHISEL))),
-      );
+    case "marker": {
+      // A chisel tip is a flat edge held at one angle, so its mark is the path swept by that edge: broad down, a
+      // hairline up, and both ends cut straight along the edge, where a brush tapers round. Copies of the path laid
+      // side by side across the edge build that sweep, run back and forth so each join lies along a cut end.
+      const path = wave(side);
+      const edge = side * CHISEL_WIDTH;
+      const line = Math.max(1.2, side * 0.014);
+      const copies = Math.ceil(edge / (line * 0.6)) + 1;
+      const pts: number[] = [];
+      for (let k = 0; k < copies; k++) {
+        const across = edge * (k / (copies - 1) - 0.5);
+        const run = k % 2 === 0 ? path : [...path].reverse();
+        for (const [x, y] of run) {
+          pts.push(
+            x + across * Math.cos(CHISEL),
+            y + across * Math.sin(CHISEL),
+            line,
+            pts.length * 3,
+          );
+        }
+      }
+      return { tool: "brush", color: INK, pts, T: 0 };
+    }
     case "fineliner":
       return shaped(side, () => Math.max(1.5, side * 0.025));
     case "pixelPen":
