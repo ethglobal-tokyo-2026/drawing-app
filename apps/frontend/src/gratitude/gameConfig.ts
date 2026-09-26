@@ -30,13 +30,13 @@ export interface GameConfig {
     rise: number;
     fall: number;
   };
-  /** The gratitude total each tier starts at: ありがと, 照れ, ドキドキ, オーバーヒート, 昇天. */
-  tierStarts: readonly [number, number, number, number, number];
+  /** The gratitude totals 照れ, ドキドキ, オーバーヒート and 昇天 start at; ありがと comes with the first hit. */
+  tierStarts: readonly [number, number, number, number];
   /** A tier-up freezes the combo clock this long. */
   tierUpFreezeMs: number;
 }
 
-export const GAME_CONFIG: GameConfig = {
+export const GAME_CONFIG = {
   version: "2026-09-26",
   gratitudePerHit: 10,
   catchWindowMs: 920,
@@ -57,9 +57,9 @@ export const GAME_CONFIG: GameConfig = {
     rise: 6,
     fall: 2.5,
   },
-  tierStarts: [1, 100, 320, 1100, 3000],
+  tierStarts: [100, 320, 1100, 3000],
   tierUpFreezeMs: 60,
-};
+} as const satisfies GameConfig;
 
 /** How the game looks and answers a touch: the prototype's numbers. A combo doesn't record these. */
 export const FEEL_CONFIG = {
@@ -105,7 +105,7 @@ export const FEEL_CONFIG = {
     live: 90,
     /** 1/s: rolling friction. */
     roll: 6,
-    /** px/s: slower than this, held up for a quarter second, it settles. */
+    /** px/s: held up and slower than this for a moment, it settles. */
     sleep: 45,
     /** px/s: a hit this hard knocks a settled one loose. */
     wake: 520,
@@ -120,4 +120,4 @@ export const FEEL_CONFIG = {
     rainGravity: 1500,
     rainMax: 24,
   },
-};
+} as const;

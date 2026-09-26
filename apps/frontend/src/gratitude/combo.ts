@@ -59,20 +59,30 @@ export interface GratitudeCombo {
   endCombo: (t: number) => ComboEvent[];
 }
 
-export function tierFor(total: number, starts: GameConfig["tierStarts"]): Tier {
-  if (total >= starts[4]) return 4;
-  if (total >= starts[3]) return 3;
-  if (total >= starts[2]) return 2;
-  if (total >= starts[1]) return 1;
+function tierFor(total: number, starts: GameConfig["tierStarts"]): Tier {
+  if (total >= starts[3]) return 4;
+  if (total >= starts[2]) return 3;
+  if (total >= starts[1]) return 2;
+  if (total >= starts[0]) return 1;
   return 0;
 }
 
 type Pending = { t: number; kind: "sendEnd" | "cadence" | "empty" | "cap" };
 
+/** The bar's drain in closed form, one curve for the rules and the HUD's scale so they agree exactly. */
+function barDrain(config: GameConfig) {
+  const T = config.drainDoublingS;
+  /** Bars drained between combo seconds a and b: K × (2^(b/T) − 2^(a/T)). */
+  const K = (config.drainStart * T) / Math.LN2;
+  const grow = (comboS: number) => 2 ** (comboS / T);
+  /** Seconds a bar lasts from combo second `comboS` with no more hits. */
+  const lasts = (bar: number, comboS: number) => T * Math.log2(bar / K + grow(comboS)) - comboS;
+  return { K, grow, lasts };
+}
+
 /** Seconds a full bar lasts from the catch with no more hits: the HUD's scale. */
 export function fullBarSeconds(config: GameConfig = GAME_CONFIG): number {
-  const T = config.drainDoublingS;
-  return T * Math.log2(1 + Math.LN2 / (T * config.drainStart));
+  return barDrain(config).lasts(1, 0);
 }
 
 /**
@@ -83,13 +93,8 @@ export function fullBarSeconds(config: GameConfig = GAME_CONFIG): number {
  */
 export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): GratitudeCombo {
   const M = config.multiplier;
-  const T = config.drainDoublingS;
-  /** Bars drained between combo seconds a and b: K × (2^(b/T) − 2^(a/T)). */
-  const K = (config.drainStart * T) / Math.LN2;
-  const grow = (comboS: number) => 2 ** (comboS / T);
-  /** Seconds a bar lasts from combo second `comboS` with no more hits. */
-  const lasts = (bar: number, comboS: number) => T * Math.log2(bar / K + grow(comboS)) - comboS;
-  const fullBar = fullBarSeconds(config);
+  const { K, grow, lasts } = barDrain(config);
+  const fullBar = lasts(1, 0);
 
   let phase: ComboPhase = "ready";
   /** The caller's time of the first hit. */
@@ -271,4 +276,22 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
       return events;
     },
   };
+}
+
+/**
+ * A record's hits played again through a fresh combo. The rules are closed-form between events, so
+ * a record replays to itself under the config it was played with.
+ */
+export function replayGratitudeCombo(
+  record: ComboRecord,
+  config: GameConfig = GAME_CONFIG,
+): ComboRecord {
+  if (record.hitTimes.length === 0) throw new Error("A gratitude record with no hits can't replay");
+  const combo = createGratitudeCombo(config);
+  const events = record.hitTimes.flatMap((t) => combo.tapHeart(t));
+  // durationMs is rounded, so a bar that ran out may have ended up to half a millisecond after it.
+  events.push(...combo.advanceTo(record.durationMs + 0.5));
+  if (combo.view.phase !== "ended") events.push(...combo.endCombo(record.durationMs));
+  for (const e of events) if (e.kind === "ended") return e.record;
+  throw new Error(`Replaying a gratitude record of ${record.hits} hits gave no record`);
 }

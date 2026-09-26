@@ -1,27 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { createGratitudeCombo, type ComboEvent, type ComboRecord } from "./combo";
+import { seededRandom } from "../ui/seededRandom";
+import { createGratitudeCombo, replayGratitudeCombo, type ComboEvent } from "./combo";
 import { GAME_CONFIG, type GameConfig } from "./gameConfig";
 
 type Ended = Extract<ComboEvent, { kind: "ended" }>;
 const endOf = (events: readonly ComboEvent[]) => events.find((e): e is Ended => e.kind === "ended");
 
-/** A seeded random source, so a failing run can be repeated. */
-function seeded(seed: number) {
-  let s = seed >>> 0;
-  return () => {
-    s = (s + 0x6d2b79f5) >>> 0;
-    let r = Math.imul(s ^ (s >>> 15), 1 | s);
-    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
-    return ((r ^ (r >>> 14)) >>> 0) / 2 ** 32;
-  };
+interface PlayOptions {
+  config?: GameConfig;
+  jitter?: number;
+  seed?: number;
 }
 
 /**
  * Taps the heart `rate` times a second from t = 0 until the combo ends, with a frame between taps.
  * `jitter` spreads each gap and each frame by up to that share, from `seed`.
  */
-function play(rate: number, { config = GAME_CONFIG, jitter = 0, seed = 1 } = {}) {
-  const random = seeded(seed);
+function play(rate: number, { config = GAME_CONFIG, jitter = 0, seed = 1 }: PlayOptions = {}) {
+  const random = seededRandom(seed);
   const spread = () => 1 + jitter * (random() * 2 - 1);
   const combo = createGratitudeCombo(config);
   const events: ComboEvent[] = [];
@@ -39,15 +35,6 @@ function play(rate: number, { config = GAME_CONFIG, jitter = 0, seed = 1 } = {})
       };
   }
   throw new Error(`A combo at ${rate} taps a second never ended`);
-}
-
-/** Feeds a record's hit times, and nothing else, to a fresh combo. */
-function replay(record: ComboRecord): ComboRecord | undefined {
-  const combo = createGratitudeCombo();
-  const events = record.hitTimes.flatMap((t) => combo.tapHeart(t));
-  events.push(...combo.advanceTo(record.durationMs + 0.5));
-  if (!endOf(events)) events.push(...combo.endCombo(record.durationMs));
-  return endOf(events)?.record;
 }
 
 describe("createGratitudeCombo", () => {
@@ -160,11 +147,13 @@ describe("createGratitudeCombo", () => {
       }
     }
   });
+});
 
-  it("gives the same record when replayed from its hit times, however the frames fell", () => {
+describe("replayGratitudeCombo", () => {
+  it("gives the same record from its hit times, however the frames fell", () => {
     for (const seed of [1, 2, 3, 4, 5]) {
       const { record } = play(4 + seed * 2, { jitter: 0.4, seed });
-      expect(replay(record)).toEqual(record);
+      expect(replayGratitudeCombo(record), `seed ${seed}`).toEqual(record);
     }
   });
 });
