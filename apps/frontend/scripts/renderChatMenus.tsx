@@ -11,12 +11,9 @@ import { promisify } from "node:util";
 import { StarFour } from "@phosphor-icons/react";
 import { createElement, type ComponentType } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { app as enApp } from "../src/i18n/en/app";
-import { stickerBoard as enBoard } from "../src/i18n/en/stickerBoard";
-import { tickets as enTickets } from "../src/i18n/en/tickets";
-import { app as jaApp } from "../src/i18n/ja/app";
-import { stickerBoard as jaBoard } from "../src/i18n/ja/stickerBoard";
-import { tickets as jaTickets } from "../src/i18n/ja/tickets";
+import { app } from "../src/i18n/strings/app";
+import { stickerBoard } from "../src/i18n/strings/stickerBoard";
+import { tickets } from "../src/i18n/strings/tickets";
 import { DrawIcon, ExploreIcon, StickerBoardIcon } from "../src/icons";
 import { ticketPath } from "../src/tickets/ticketShape";
 
@@ -52,24 +49,21 @@ const ticket = (w: number) => ({
   d: ticketPath({ w, h: TICKET_HEIGHT, corner: 5, notch: 5 }),
 });
 
+/** The menu's words from the app's catalog, in one language; a string not yet in Japanese reads in English. */
+const wordsIn = (language: Language) => {
+  const word = (leaf: { en: string; ja?: string }) => leaf[language] ?? leaf.en;
+  return {
+    draw: word(stickerBoard.board.draw),
+    myBoard: word(app.tabs.myBoard),
+    explore: word(app.tabs.explore),
+    count: word(tickets.count),
+    refill: refillTime(language),
+  };
+};
+
 /** What the page draws with, handed to it as window.chatMenu. */
 const content = {
-  words: {
-    en: {
-      draw: enBoard.board.draw,
-      myBoard: enApp.tabs.myBoard,
-      explore: enApp.tabs.explore,
-      count: enTickets.count,
-      refill: refillTime("en"),
-    },
-    ja: {
-      draw: jaBoard.board?.draw ?? enBoard.board.draw,
-      myBoard: jaApp.tabs?.myBoard ?? enApp.tabs.myBoard,
-      explore: jaApp.tabs?.explore ?? enApp.tabs.explore,
-      count: jaTickets.count ?? enTickets.count,
-      refill: refillTime("ja"),
-    },
-  },
+  words: { en: wordsIn("en"), ja: wordsIn("ja") },
   icons: {
     draw: svg(DrawIcon, { weight: "fill" }),
     myBoard: svg(StickerBoardIcon, { weight: "bold" }),

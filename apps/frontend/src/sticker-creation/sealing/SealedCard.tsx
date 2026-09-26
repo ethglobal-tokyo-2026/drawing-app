@@ -54,6 +54,8 @@ export function SealedCard({
   const dailyStubs = tickets ? dailyTickets(tickets) : [];
   const daily = tickets?.dailyLeft ?? 0;
   const last = tickets !== null && ticketsLeft(tickets) === 0;
+  // This sticker's ticket is the day's latest use, so after a reserve seal the daily tickets go unmentioned.
+  const lastDaily = daily === 0 && tickets?.usedToday.at(-1)?.kind === "daily";
   const refillTime = formatRefillTime(nextRefill(new Date()));
   // Fresh tickets first, then the used ones in the order they were used.
   const stubs = [...dailyStubs.filter((s) => !s.used), ...dailyStubs.filter((s) => s.used)];
@@ -135,7 +137,7 @@ export function SealedCard({
           {last ? (
             <p>{t(($) => $.stickerCreation.sealedCard.lastTicket, { time: refillTime })}</p>
           ) : (
-            daily === 0 && (
+            lastDaily && (
               <p>{t(($) => $.stickerCreation.sealedCard.lastDailyTicket, { time: refillTime })}</p>
             )
           )}

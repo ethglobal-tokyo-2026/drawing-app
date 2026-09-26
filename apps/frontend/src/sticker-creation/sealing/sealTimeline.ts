@@ -6,6 +6,9 @@
 
 export const TOTAL = 2580;
 
+/** How long the ceremony takes to fade when the drawing screen comes back. */
+export const LEAVE_MS = 260;
+
 /** When each part starts and ends, in ms. */
 export const T = {
   cut0: 110,
@@ -153,10 +156,42 @@ export function sealFrame(t: number, path: Flight, items: number): SealFrame {
   };
 }
 
-/** How far into the ceremony it is: its end once skipped, or from the start under reduced motion. */
+/**
+ * Where the ceremony waits while the server seals the sticker: the cut is made and the paper around it
+ * dimmed. The resin, the peel and the card all say it's sealed, so none of them starts before it is.
+ */
+export const HOLD = T.cut1;
+
+/** Where the ceremony runs to: the wait until the seal is recorded, then the end. */
+export const stopAt = (recorded: boolean) => (recorded ? TOTAL : HOLD);
+
+/**
+ * How far into the ceremony it is, `dt` ms after `t`. It waits at HOLD until the seal is recorded;
+ * under reduced motion it goes straight to the wait, and on to the end once recorded.
+ */
 export function ceremonyTime(
-  elapsed: number,
-  { skipped, reduced }: { skipped: boolean; reduced: boolean },
+  t: number,
+  dt: number,
+  { recorded, reduced }: { recorded: boolean; reduced: boolean },
 ): number {
-  return skipped || reduced ? TOTAL : Math.min(TOTAL, Math.max(0, elapsed));
+  const stop = stopAt(recorded);
+  return reduced ? stop : Math.min(stop, t + Math.max(0, dt));
+}
+
+/** While it waits, the cutter keeps running round the cut: this fast, in px per ms… */
+const CUTTER_SPEED = 0.42;
+/** …but a lap never takes less or more than these, however short or long the line. */
+const LAP_MIN = 1300;
+const LAP_MAX = 2600;
+/** The cut leaves it at rest, and it gets up to speed over this long. */
+const CUTTER_RAMP = 500;
+
+/**
+ * Where the cutter is `ms` into the wait, as a share (0–1) of a cut line `length` px long: it keeps
+ * running round the cut, pass after pass, from where the cut ended.
+ */
+export function cutterAt(ms: number, length: number): number {
+  const lap = Math.min(LAP_MAX, Math.max(LAP_MIN, length / CUTTER_SPEED));
+  const run = ms < CUTTER_RAMP ? (ms * ms) / (2 * CUTTER_RAMP) : ms - CUTTER_RAMP / 2;
+  return (Math.max(0, run) / lap) % 1;
 }

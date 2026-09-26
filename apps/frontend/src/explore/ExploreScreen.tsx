@@ -36,9 +36,10 @@ const SEARCH_AFTER_MS = 250;
 
 const todayBadge = () => formatMonthDay(Date.now() - DAY_TURNOVER_MS);
 
-/** How long ago `at` was, in its largest whole unit. */
+/** How long ago `at` was, in its largest whole unit; under a minute is just now. */
 function ago(at: string, t: TFunction): string {
   const minutes = Math.max(0, Math.floor((Date.now() - Date.parse(at)) / 60_000));
+  if (minutes === 0) return t(($) => $.explore.feed.ago.justNow);
   if (minutes < 60) return t(($) => $.explore.feed.ago.minutes, { minutes });
   const hours = Math.floor(minutes / 60);
   return hours < 24
@@ -185,7 +186,9 @@ function ThisWeek({
         ))}
       </div>
       <ol className="leaderboard" role="tabpanel">
-        {rows.length === 0 && <li className="fine muted">{t(($) => $.explore.thisWeek.empty)}</li>}
+        {rows.length === 0 && (
+          <li className="fine muted leaderboard-empty">{t(($) => $.explore.thisWeek.empty)}</li>
+        )}
         {rows.map((row, i) => (
           <PersonRow
             key={row.person.id}

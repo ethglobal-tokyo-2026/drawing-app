@@ -122,14 +122,15 @@ async function mintSticker(deps: AppDeps, stickerId: string): Promise<SealRefusa
       height: sticker.height,
     });
     if (minted === null && deps.giftChain !== null) {
-      throw new Error("The mint returned no confirmed NFT");
+      throw new Error("The chain returned no confirmed record");
     }
   } catch (error) {
     logFailure("sticker.mint.failed", error, { stickerId, artistId: sticker.artistId });
+    // The app shows this detail beside its own message, so it keeps to the words the app uses.
     return {
       status: 503,
       error: "mint_failed",
-      detail: `Sticker ${stickerId} is saved, but its NFT could not be confirmed (${failureCause(error)}). Retry Sealing with the same ticket; no new ticket is needed.`,
+      detail: `Sticker ${stickerId} is saved, but it couldn't be confirmed on the chain (${failureCause(error)}). Retry Sealing with the same ticket; no new ticket is needed.`,
     };
   }
   // Explicit local mock mode stores stickers without sending a mint transaction.

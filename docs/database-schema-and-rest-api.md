@@ -443,13 +443,15 @@ interface TimelapseV1 {
 
 ### Session and you
 
-| Route                          | Request                                                                             | Response                              | Errors                                   |
-| ------------------------------ | ----------------------------------------------------------------------------------- | ------------------------------------- | ---------------------------------------- |
-| `POST /api/session`            | `{ idToken: string }`: from `liff.getIDToken()`                                     | 200 `{ me: Me }`, and sets the cookie | 401 `line_token_invalid`                 |
-| `GET /api/me`                  | none                                                                                | 200 `{ me: Me }`                      |                                          |
-| `POST /api/me/handle`          | `{ handle: string }`: 1–32 characters after trimming, no `@`                        | 200 `{ me: Me }`                      | 400 `handle_invalid`; 409 `handle_taken` |
-| `POST /api/me/language-choice` | `{ languageChoice: "en" \| "ja" \| null }`: Settings' language; null follows LINE's | 200 `{ me: Me }`                      | 400 `invalid_request`                    |
-| `DELETE /api/me`               | none                                                                                | 204, and clears the cookie            |                                          |
+| Route                          | Request                                                                                         | Response                                         | Errors                                                                    |
+| ------------------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------- |
+| `POST /api/session`            | `{ idToken: string; timeZone: string; language: "en" \| "ja" }`: token from `liff.getIDToken()` | 200 `{ me: Me }`, and sets the cookie            | 401 `line_token_invalid` or `line_token_expired`                          |
+| `GET /api/me`                  | Optional `x-line-user-id` header: current LIFF profile's user ID                                | 200 `{ me: Me }`, with `Cache-Control: no-store` | 401 `signed_out` if the session is absent or belongs to another LINE user |
+| `POST /api/me/handle`          | `{ handle: string }`: 1–32 characters after trimming, no `@`                                    | 200 `{ me: Me }`                                 | 400 `handle_invalid`; 409 `handle_taken`                                  |
+| `POST /api/me/language-choice` | `{ languageChoice: "en" \| "ja" \| null }`: Settings' language; null follows LINE's             | 200 `{ me: Me }`                                 | 400 `invalid_request`                                                     |
+| `DELETE /api/me`               | none                                                                                            | 204, and clears the cookie                       |                                                                           |
+
+The frontend first resumes the signed-cookie session using `GET /api/me` with the current LINE user ID. That header only restricts session reuse; it cannot authenticate a user. Only `401 signed_out` starts a new token exchange. Network failures keep a normal retry; missing or rejected LINE credentials offer an explicit reconnect that preserves the current page, including Gift Message links. Privy sign-in uses the same reconnect action when its LINE credentials are rejected.
 
 ### Tickets
 
