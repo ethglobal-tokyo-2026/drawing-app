@@ -138,7 +138,7 @@ export const tickets = {
     pack_one: { en: "{{count}} ticket" },
     /** Reserve ticket checkout: a pack button's name, such as "3 tickets" */
     pack_other: { en: "{{count}} tickets", ja: "チケット{{count}}枚" },
-    /** Reserve ticket checkout: the pink sale sticker on a discounted pack button */
+    /** Reserve ticket checkout: a discounted pack button's discount, in fine print before its struck-through full price */
     discount: { en: "−{{percent}}%", ja: "{{percent}}%オフ" },
     /** Reserve ticket checkout: screen-reader text for a discounted pack's struck-through full price */
     was: { en: "was {{price}}", ja: "通常価格{{price}}" },

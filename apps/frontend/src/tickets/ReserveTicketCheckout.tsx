@@ -268,7 +268,6 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
               <div key={n} className="reserve-checkout__pack" aria-hidden="true">
                 <Skeleton width={24} height={16} />
                 <Skeleton width={72} height={14} />
-                <span />
                 <Skeleton width={56} height={18} />
               </div>
             ))}
@@ -292,20 +291,20 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
                 <span className="reserve-checkout__pack-name">
                   {t(($) => $.tickets.checkout.pack, { count: p.tickets })}
                 </span>
-                {p.discountPercent > 0 && (
-                  <span className="reserve-checkout__discount">
-                    {t(($) => $.tickets.checkout.discount, { percent: p.discountPercent })}
-                  </span>
-                )}
                 <span className="reserve-checkout__price">
                   {p.discountPercent > 0 && (
-                    <s
-                      aria-label={t(($) => $.tickets.checkout.was, {
-                        price: formatYen(p.tickets * TICKET_PRICE_YEN),
-                      })}
-                    >
-                      {formatYen(p.tickets * TICKET_PRICE_YEN)}
-                    </s>
+                    <span className="reserve-checkout__was">
+                      <span className="fine reserve-checkout__discount">
+                        {t(($) => $.tickets.checkout.discount, { percent: p.discountPercent })}
+                      </span>
+                      <s
+                        aria-label={t(($) => $.tickets.checkout.was, {
+                          price: formatYen(p.tickets * TICKET_PRICE_YEN),
+                        })}
+                      >
+                        {formatYen(p.tickets * TICKET_PRICE_YEN)}
+                      </s>
+                    </span>
                   )}
                   <strong>{formatYen(p.priceYen)}</strong>
                 </span>
