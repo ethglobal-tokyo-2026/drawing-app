@@ -260,6 +260,8 @@ export function useDetailLift({ root, shownId, originOf, into, reduced, onClose 
       ...timing,
       fill: "forwards",
     });
+    // Nothing waits on it: it holds until paging on or putting back cancels it, which rejects `finished`.
+    void settled([fade]);
     ghosted.current = { el: origin.el, fade };
   });
 

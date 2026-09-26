@@ -63,4 +63,24 @@ export const explore = {
     ensName: "Couldn’t load {{name}}",
     tryAgain: "Try again",
   },
+  /** A sticker lifted off the pile into a sheet. {{artist}} is its artist's handle, or LINE name. */
+  lifted: {
+    /** Explore tab, lifted sticker: screen readers' name for the sheet, the sticker's number and who drew it */
+    label: "{{no}} by {{artist}}",
+    /** Explore tab, lifted sticker: fine print under the artist chip, the number, drawing time and the day it was sealed */
+    caption: "{{no}} · <duration/> · {{day}}",
+    /** Explore tab, lifted sticker: the same fine print for a sticker someone was given; <receiver/> is their handle */
+    captionGiven: "{{no}} · <duration/> · {{day}} · to <receiver/>",
+    /** Explore tab, lifted sticker: label stock under the fine print that opens the artist's sticker board */
+    goToBoard: "Go to {{artist}}'s sticker board",
+    /** Explore tab, lifted sticker: the same label stock on a sticker you drew, opening your own board */
+    goToYourBoard: "Go to your sticker board",
+    /** Explore tab, lifted sticker: the quiet link at the sheet's foot that puts the sticker back on the pile */
+    putBack: "Put back",
+    /** Explore tab, lifted sticker: screen readers' names for the small arrows either side of the sticker */
+    previous: "Previous sticker",
+    next: "Next sticker",
+    /** Explore tab, lifted sticker: what screen readers hear on paging, the sticker, its artist and where it is in the pile */
+    shown: "{{no}} by {{artist}}, {{position}} of {{setSize}}",
+  },
 } as const;
