@@ -104,6 +104,7 @@ You can hand someone a physical drawing, but no existing system makes a _digital
 - **Notices go through the app's LINE Official Account** **[inferred]**; ad0ll was fine either way. It's the only way to reach someone outside the app, because LINE's browser has no web push. The same account's chat carries a Draw · Explore · You menu, which is how people come back daily. Pending gifts and offers also show inside the app.
 - **Navigation** (from the sketch): three tabs, **DRAW · Explore · You**.
 - **Sponsors** (backend only; never surfaced in consumer copy): ENS gives each artist a sub-registry that resolves their sticker board, and transfers update it. Sui/Walrus or Filecoin for file storage.
+  - **Exception: the Sui credit** (ad0ll, 2026-09-27). "Payments on" with Sui's full logo, unmodified and in black, sits under the reserve ticket checkout's Pay key and at the foot of the Shop's reserve tickets section. It's a credit, not a link.
 - **Open, and not to be invented as settled:** what the sketch's "inspired" and "magic" gratitude categories measure; how the leaderboard is scoped; what happens to gratitude offered for a sticker; LIFF app or MINI App channel.
 - **The name is Croquis, クロッキー in Japanese** (ad0ll, 2026-09-26). A sticker board is a person's board of stickers, never the app.
 
@@ -148,11 +149,11 @@ ad0ll's hand-drawn sketch (a photo in the 2026-09-22 conversation; the file is n
 - **Tickets.** Everyone gets **3 daily tickets a day**, refilled at midnight JST; unused ones expire. **Reserve tickets** are bought with Sui, have no limit and never expire. Daily tickets are spent first.
   - After sealing, an animated dialog shows the sticker being sealed.
   - It offers **Keep drawing** (spends a daily ticket) or **Go to sticker board**.
-  - With no daily tickets left, drawing asks before spending a reserve ticket, or offers the **ticket shop**.
+  - With no daily tickets left, drawing asks before spending a reserve ticket, or offers the **reserve ticket checkout**.
   - An **out-of-tickets** dialog appears when daily and reserve tickets are all used.
-  - **Ticket shop:** packs of 1, 3, 5 and 10 for ¥100, ¥270 (10% off), ¥375 (25% off) and ¥600 (40% off), paid in SUI at the 5-minute average SUI/JPY price. It shows every amount, the balance included, in yen only. The payment is a mock for now.
+  - **Reserve ticket checkout:** packs of 1, 3, 5 and 10 for ¥100, ¥270 (10% off), ¥375 (25% off) and ¥600 (40% off), paid in JPYC on Sui. It shows every amount, the balance included, in yen only.
   - Every picture of tickets shows the tickets the next drawing can use (ad0ll, 2026-09-26): daily tickets while any are left, with reserve tickets as one ticket and its count; one reserve ticket once the daily ones are used; a zero never shows. The board's Draw key carries them tucked behind its right end, not inside it. Reserve tickets look bought: Blue, in the stickers' resin, with an Ink outline and a star.
-  - A **Shop** tab signals a Sui-backed in-app store; tickets are the only item for now.
+  - The **Shop** tab (ad0ll, 2026-09-27): reserve tickets are the one thing on sale, then coming-soon shelves of laminates, brushes and backing foils, each led by what you have now, with no prices. They show intent only; nothing on them can be bought.
 - **On-chain copy is allowed in the hackathon build** (for example, in the seal dialog). The real app would hide the complexity.
 - **Gift delivery: no take-back and no grace window.**
   - Prevent mistakes at send time: the one-friend picker, a gift tag naming who it's for, receiving blocked when opened in a group chat, and each Gift Message works once.

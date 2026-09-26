@@ -81,6 +81,10 @@
       "rules": { "react/jsx-no-literals": "error" }
     },
     {
+      "files": ["apps/frontend/src/shop/**"],
+      "rules": { "react/jsx-no-literals": "error" }
+    },
+    {
       "files": ["apps/frontend/src/sticker-board/**"],
       "rules": { "react/jsx-no-literals": "error" }
     },

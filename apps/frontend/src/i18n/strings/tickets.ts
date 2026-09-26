@@ -110,99 +110,100 @@ export const tickets = {
     /** Drawing screen, in the start card's place: the title when your tickets didn't load, above the reason */
     couldntLoad: { en: "Couldn’t load your tickets", ja: "チケットを読み込めませんでした" },
   },
-  shop: {
-    /** Ticket shop, as a card over the drawing screen or as the Shop tab: the title */
-    title: { en: "Ticket shop", ja: "チケットショップ" },
-    /** Ticket shop: the bold line under the title */
+  /** The reserve ticket checkout: the card that sells reserve ticket packs. */
+  checkout: {
+    /** Reserve ticket checkout, over the Shop or the drawing screen: the title */
+    title: { en: "Reserve tickets", ja: "有償チケット" },
+    /** Reserve ticket checkout: the bold line under the title */
     lead: { en: "Reserve tickets never expire.", ja: "有償チケットに有効期限はありません。" },
-    /** Ticket shop: the small label on the wallet row, beside your JPYC balance shown in yen */
+    /** Reserve ticket checkout: the small label on the wallet row, beside your JPYC balance shown in yen */
     balance: { en: "Your JPYC", ja: "JPYC残高" },
-    /** Ticket shop: the wallet row while the balance loads */
+    /** Reserve ticket checkout: the wallet row while the balance loads */
     readingBalance: { en: "Reading your balance…", ja: "残高を確認しています…" },
-    /** Ticket shop: the wallet row when the balance couldn't be read, before a Try again link; `reason` is the wallet's own words */
+    /** Reserve ticket checkout: the wallet row when the balance couldn't be read, before a Try again link; `reason` is the wallet's own words */
     balanceProblem: {
       en: "Couldn’t read your balance ({{reason}}).",
       ja: "残高を確認できませんでした（{{reason}}）。",
     },
-    /** Ticket shop: in the packs' place while today's prices load */
+    /** Reserve ticket checkout: in the packs' place while today's prices load */
     gettingPrices: { en: "Getting today’s prices…", ja: "今日の価格を確認しています…" },
-    /** Ticket shop: in the packs' place when today's prices couldn't be fetched, before a Try again link */
+    /** Reserve ticket checkout: in the packs' place when today's prices couldn't be fetched, before a Try again link */
     pricesProblem: {
       en: "Couldn’t get today’s prices: {{reason}}",
       ja: "今日の価格を確認できませんでした：{{reason}}",
     },
-    /** Ticket shop: screen-reader name of the group of pack buttons */
+    /** Reserve ticket checkout: screen-reader name of the group of pack buttons */
     packs: { en: "Ticket packs", ja: "チケットパック" },
-    /** Ticket shop: a pack button's name, for the one-ticket pack */
+    /** Reserve ticket checkout: a pack button's name, for the one-ticket pack */
     pack_one: { en: "{{count}} ticket" },
-    /** Ticket shop: a pack button's name, such as "3 tickets" */
+    /** Reserve ticket checkout: a pack button's name, such as "3 tickets" */
     pack_other: { en: "{{count}} tickets", ja: "チケット{{count}}枚" },
-    /** Ticket shop: the pink sale sticker on a discounted pack button */
+    /** Reserve ticket checkout: the pink sale sticker on a discounted pack button */
     discount: { en: "−{{percent}}%", ja: "{{percent}}%オフ" },
-    /** Ticket shop: screen-reader text for a discounted pack's struck-through full price */
+    /** Reserve ticket checkout: screen-reader text for a discounted pack's struck-through full price */
     was: { en: "was {{price}}", ja: "通常価格{{price}}" },
-    /** Ticket shop: the grape pay key, before a pack's price is known */
+    /** Reserve ticket checkout: the blue Pay key, before a pack's price is known */
     pay: { en: "Pay", ja: "支払う" },
-    /** Ticket shop: the grape pay key, with the chosen pack's price */
+    /** Reserve ticket checkout: the blue Pay key, with the chosen pack's price */
     payPrice: { en: "Pay {{price}}", ja: "{{price}}を支払う" },
-    /** Ticket shop: the pay key while the payment goes through */
+    /** Reserve ticket checkout: the pay key while the payment goes through */
     paying: { en: "Paying…", ja: "支払い中…" },
-    /** Ticket shop: the pay key, disabled, when your JPYC is less than the chosen pack's price */
+    /** Reserve ticket checkout: the pay key, disabled, when your JPYC is less than the chosen pack's price */
     notEnoughJpyc: { en: "Not enough JPYC", ja: "JPYC残高不足" },
-    /** Ticket shop after a purchase: the title, when one reserve ticket was added */
+    /** Reserve ticket checkout after a purchase: the title, when one reserve ticket was added */
     added_one: { en: "{{count}} reserve ticket added" },
-    /** Ticket shop after a purchase: the title saying how many reserve tickets were added */
+    /** Reserve ticket checkout after a purchase: the title saying how many reserve tickets were added */
     added_other: {
       en: "{{count}} reserve tickets added",
       ja: "有償チケットを{{count}}枚追加しました",
     },
-    /** Ticket shop after a purchase: the quiet line under the title with the price paid, in yen */
+    /** Reserve ticket checkout after a purchase: the quiet line under the title with the price paid, in yen */
     paid: { en: "Paid {{price}} in JPYC.", ja: "{{price}}をJPYCで支払いました。" },
-    /** Ticket shop after a purchase: the button under Draw that goes back to the packs */
+    /** Reserve ticket checkout after a purchase: the button under Draw that goes back to the packs */
     buyMore: { en: "Buy more tickets", ja: "チケットをもっと買う" },
-    /** Ticket shop when a payment fails: the title, above the reason */
+    /** Reserve ticket checkout when a payment fails: the title, above the reason */
     paymentFailed: { en: "Payment didn’t go through", ja: "支払いが完了しませんでした" },
-    /** Ticket shop when a payment fails after the money moved: the line under the title; `digest` is the transaction's ID, `reason` the error */
+    /** Reserve ticket checkout when a payment fails after the money moved: the line under the title; `digest` is the transaction's ID, `reason` the error */
     paidButNotAdded: {
       en: "The payment went through ({{digest}}), but the tickets weren’t added: {{reason}}",
       ja: "支払いは完了しました（{{digest}}）が、チケットは追加されませんでした：{{reason}}",
     },
-    /** Ticket shop when a payment fails: the key that goes back to the packs */
-    backToShop: { en: "Back to the shop", ja: "ショップに戻る" },
-    /** Ticket shop: the wallet row, in the balance's place, when your Privy Sui wallet can't be used; `reason` is Privy's or the signer's own words */
+    /** Reserve ticket checkout when a payment fails: the key that goes back to the packs */
+    backToPacks: { en: "Back to the packs", ja: "パック選びに戻る" },
+    /** Reserve ticket checkout: the wallet row, in the balance's place, when your Privy Sui wallet can't be used; `reason` is Privy's or the signer's own words */
     walletBroken: {
-      en: "Your Sui wallet isn’t working ({{reason}}).",
-      ja: "Suiウォレットが使えません（{{reason}}）。",
+      en: "Your Sui account isn’t working ({{reason}}).",
+      ja: "Suiアカウントが使えません（{{reason}}）。",
     },
-    /** Ticket shop: the wallet row, in the balance's place, when the Privy sign-in behind your wallet failed; `reason` is Privy's own words */
+    /** Reserve ticket checkout: the wallet row, in the balance's place, when the Privy sign-in behind your wallet failed; `reason` is Privy's own words */
     walletSignInFailed: {
-      en: "Your wallet didn’t sign in ({{reason}}).",
-      ja: "ウォレットにサインインできませんでした（{{reason}}）。",
+      en: "Couldn’t sign you in to pay ({{reason}}).",
+      ja: "支払いのためのサインインができませんでした（{{reason}}）。",
     },
-    /** Ticket shop on the dev server: the wallet row, in the balance's place, when LIFF Mock signed you in, so there's no Privy wallet to pay from */
+    /** Reserve ticket checkout on the dev server: the wallet row, in the balance's place, when LIFF Mock signed you in, so there's no Privy wallet to pay from */
     walletNeedsLine: {
       en: "Paying needs LINE’s sign-in, which LIFF Mock skips.",
       ja: "支払いにはLINEでのサインインが必要ですが、LIFF Mockでは省略されます。",
     },
-    /** Ticket shop, under the pay key: your ENS name, which opens your ticket purchases read from Sui */
+    /** Reserve ticket checkout, under the pay key: your ENS name, which opens your ticket purchases read from Sui */
     purchases: {
-      /** Ticket shop: screen-reader name of the ENS name button; `name` is your ENS name or short Sui address */
+      /** Reserve ticket checkout: screen-reader name of the ENS name button; `name` is your ENS name or short Sui address */
       show: { en: "Ticket purchases by {{name}}", ja: "{{name}}のチケット購入履歴" },
-      /** Ticket shop, purchases list: screen-reader status while Sui is read */
+      /** Reserve ticket checkout, purchases list: screen-reader status while Sui is read */
       reading: {
         en: "Reading your ticket purchases from Sui…",
         ja: "Suiからチケット購入履歴を読み込んでいます…",
       },
-      /** Ticket shop, purchases list: when Sui couldn't be read; `reason` is Sui's own words */
+      /** Reserve ticket checkout, purchases list: when Sui couldn't be read; `reason` is Sui's own words */
       problem: {
         en: "Couldn’t read your ticket purchases from Sui ({{reason}}).",
         ja: "Suiからチケット購入履歴を読み込めませんでした（{{reason}}）。",
       },
-      /** Ticket shop, purchases list: when you've never bought a pack */
+      /** Reserve ticket checkout, purchases list: when you've never bought a pack */
       none: { en: "No ticket purchases yet.", ja: "チケットの購入履歴はまだありません。" },
-      /** Ticket shop, purchases list: the link under the list that reads the next, older page */
+      /** Reserve ticket checkout, purchases list: the link under the list that reads the next, older page */
       more: { en: "Older purchases", ja: "以前の購入" },
-      /** Ticket shop, purchases list: screen-reader name of a row, which opens it on Suiscan; `digest` is the transaction's ID */
+      /** Reserve ticket checkout, purchases list: screen-reader name of a row, which opens it on Suiscan; `digest` is the transaction's ID */
       open: {
         en: "Open the payment {{digest}} on Suiscan",
         ja: "支払い{{digest}}をSuiscanで開く",

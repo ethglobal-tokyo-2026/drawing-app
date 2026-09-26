@@ -91,7 +91,7 @@ export function TicketPurchases({ owner, shop }: Props) {
         icon={<Receipt />}
         aria-expanded={open}
         aria-controls={id}
-        aria-label={t(($) => $.tickets.shop.purchases.show, { name })}
+        aria-label={t(($) => $.tickets.checkout.purchases.show, { name })}
         onClick={() => {
           if (!open) history.start();
           setOpen(!open);
@@ -105,7 +105,7 @@ export function TicketPurchases({ owner, shop }: Props) {
           {history.payments === null && history.error ? null : history.payments === null ? (
             <>
               <p className="visually-hidden" role="status">
-                {t(($) => $.tickets.shop.purchases.reading)}
+                {t(($) => $.tickets.checkout.purchases.reading)}
               </p>
               {[1, 2].map((n) => (
                 <div key={n} className="ticket-purchases__row" aria-hidden="true">
@@ -115,7 +115,7 @@ export function TicketPurchases({ owner, shop }: Props) {
               ))}
             </>
           ) : history.payments.length === 0 && !history.more ? (
-            <p className="ticket-purchases__note">{t(($) => $.tickets.shop.purchases.none)}</p>
+            <p className="ticket-purchases__note">{t(($) => $.tickets.checkout.purchases.none)}</p>
           ) : (
             <ul className={REVEAL}>
               {history.payments.map((p) => {
@@ -127,13 +127,13 @@ export function TicketPurchases({ owner, shop }: Props) {
                       href={suiscanTxUrl(shop.payment.network, p.digest)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      aria-label={t(($) => $.tickets.shop.purchases.open, { digest: p.digest })}
+                      aria-label={t(($) => $.tickets.checkout.purchases.open, { digest: p.digest })}
                       onClick={openLinkInLine}
                     >
                       <span>
                         <strong>
                           {pack
-                            ? t(($) => $.tickets.shop.pack, { count: pack.tickets })
+                            ? t(($) => $.tickets.checkout.pack, { count: pack.tickets })
                             : formatYen(yenForJpyc(p.amount, shop.payment.decimals))}
                         </strong>
                         <span className="fine">{formatDateTime(new Date(p.paidAt))}</span>
@@ -150,7 +150,7 @@ export function TicketPurchases({ owner, shop }: Props) {
           )}
           {history.error ? (
             <p className="ticket-purchases__note" role="alert">
-              {t(($) => $.tickets.shop.purchases.problem, { reason: history.error })}{" "}
+              {t(($) => $.tickets.checkout.purchases.problem, { reason: history.error })}{" "}
               <QuietLink disabled={history.reading} onClick={history.retry}>
                 {t(($) => $.tickets.tryAgain)}
               </QuietLink>
@@ -158,7 +158,7 @@ export function TicketPurchases({ owner, shop }: Props) {
           ) : (
             history.more && (
               <QuietLink disabled={history.reading} onClick={history.more}>
-                {t(($) => $.tickets.shop.purchases.more)}
+                {t(($) => $.tickets.checkout.purchases.more)}
               </QuietLink>
             )
           )}

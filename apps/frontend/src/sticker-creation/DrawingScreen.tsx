@@ -17,7 +17,7 @@ import { useTranslation } from "../i18n/react";
 import { OutOfTickets } from "../tickets/OutOfTickets";
 import { StartDrawing } from "../tickets/StartDrawing";
 import { nextKind, ticketsLeft, type TicketKind, type Tickets } from "../tickets/tickets";
-import { TicketShop } from "../tickets/TicketShop";
+import { ReserveTicketCheckout } from "../tickets/ReserveTicketCheckout";
 import { TicketsNotLoaded } from "../tickets/TicketsNotLoaded";
 import { useTickets } from "../tickets/useTickets";
 import { useToast } from "../ui/useToast";
@@ -669,10 +669,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           }}
         />
       )}
-      {/* Leaving the shop with no tickets brings the out-of-tickets card back; with some, the start screen. */}
+      {/* Leaving the checkout with no tickets brings the out-of-tickets card back; with some, the start screen. */}
       {paywall && overlay === "shop" && (
-        <TicketShop
-          layout="card"
+        <ReserveTicketCheckout
           onDraw={() => {
             setOverlay(null);
             startRightAway({ reserve: true });

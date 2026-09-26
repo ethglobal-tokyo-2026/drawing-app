@@ -26,7 +26,8 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 | (Gratitude) Mini-game              | 感謝ミニゲーム                         |                                                                                       |
 | hits                               | ヒット                                 |                                                                                       |
 | ticket / daily / reserve           | チケット / 無償チケット / 有償チケット | Gacha's words for free and bought; 無償チケットから先に使われます (ad0ll, 2026-09-27) |
-| ticket shop                        | チケットショップ                       |                                                                                       |
+| Shop (the tab)                     | ショップ                               |                                                                                       |
+| laminate / backing foil            | ラミネート / ホイル                    | The Shop's coming-soon shelves                                                        |
 | Original Artist                    | 作者                                   |                                                                                       |
 | Direct / Residual (gratitude)      | 直接 / 作者として                      | The stat board's receipt rows; never a money word such as 印税                        |
 | artist (someone who draws)         | アーティスト                           |                                                                                       |

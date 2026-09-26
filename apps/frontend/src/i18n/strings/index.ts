@@ -9,6 +9,7 @@ import { line } from "./line";
 import { offers } from "./offers";
 import { pages } from "./pages";
 import { receiving } from "./receiving";
+import { shop } from "./shop";
 import { stickerBoard } from "./stickerBoard";
 import { stickerCreation } from "./stickerCreation";
 import { stickers } from "./stickers";
@@ -28,6 +29,7 @@ export const strings = {
   offers,
   pages,
   receiving,
+  shop,
   stickerBoard,
   stickerCreation,
   stickers,
