@@ -22,7 +22,7 @@ export interface ComboHud {
 const HOT = 0.3;
 const BLINK = 0.12;
 /** A hit that adds less than this, in s, shows no tick. */
-const TICK_MIN_S = 0.005;
+const TICK_MIN_S = 0.05;
 /** At a mash the labels would stack: one at most this often, in s. */
 const LABEL_GAP_S = 0.13;
 const LABEL_MS = 540;
@@ -186,8 +186,7 @@ export function createComboHud(
           ? lastLabel.item
           : recycle(labels, LABELS, () => ticks.appendChild(element("span", "gr-tick")));
       lastLabel = { item: label, x: labelX };
-      // Two decimals only for what would round below a tenth.
-      label.el.textContent = `+${secondsAdded >= 0.095 ? secondsAdded.toFixed(1) : secondsAdded.toFixed(2)}s`;
+      label.el.textContent = `+${secondsAdded.toFixed(1)}s`;
       // Over the bar's end, in the HUD's lane above the bar: it rises out of the bar, never past the HUD's top.
       const at = `translateX(${labelX.toFixed(1)}px) translateX(-50%)`;
       play(
