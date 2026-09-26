@@ -1,5 +1,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
+import { useApi } from "../api/useApi";
 import { artistByHandle } from "../artists/demoArtists";
+import { resendPendingGratitude } from "../gratitude/gratitudeOutbox";
 import { StickerBoard } from "../sticker-board/StickerBoard";
 import { DrawingScreen, type DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
 import { lazyWithPreload, usePreloadWhenIdle } from "../ui/lazyWithPreload";
@@ -29,6 +31,7 @@ const TITLES: Record<View, string> = {
 };
 
 export default function App() {
+  const api = useApi();
   const phone = useRef<HTMLDivElement>(null);
   const drawingScreen = useRef<DrawingScreenHandle>(null);
   // The sticker board is home. Draw is the board's key, not a tab. A chat menu link opens its own screen.
@@ -44,6 +47,11 @@ export default function App() {
   useEffect(() => {
     if (view === "explore") void ArtistBoard.preload();
   }, [view]);
+
+  // Gratitude that hadn't reached the server when the app last closed goes again as it starts.
+  useEffect(() => {
+    void resendPendingGratitude(api);
+  }, [api]);
 
   useEffect(() => {
     document.title = TITLES[view];
