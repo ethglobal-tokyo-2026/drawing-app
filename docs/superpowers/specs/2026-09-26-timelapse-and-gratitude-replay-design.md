@@ -1,14 +1,19 @@
 # Timelapse and Gratitude Replay: design
 
-**Status:** proposal for ad0ll's review, 2026-09-26, against `main` at `14f73a7`. Nothing below is built except the timelapse upload and `GET /api/stickers/:stickerId/timelapse`, which are live.
+**Status:** built 2026-09-27: the timelapse in the sticker detail and the gratitude replay in the Transfer Trail, as designed here, with `hasTimelapse`, `density` and `strokePasses` on the API. DESIGN.md's "Timelapse" and "Gratitude replay" describe them as built. Their strings went into `i18n/strings/` with Japanese, not as "Translation" below planned. Still out of scope: the giver's pink tag, and a Timelapse button on someone else's board. Approved 2026-09-27: ad0ll accepted every recommendation ("I'm going to go ahead and trust with your recommendations"). Designed from `main` at `753aa9f`.
 
 **Sources.** Code references name functions and files rather than line numbers, because `main` moves under this doc; `DRAFTS` = the design drafts' `drawing-app/` directory.
 
-## Decisions (ad0ll, 2026-09-26)
+## Decisions (ad0ll, 2026-09-26 and 27)
 
 1. **Timelapse:** a Timelapse button in the sticker detail (the sticker's drill-down) plays how the sticker was drawn.
 2. **Gratitude replay:** plays **inline**, in the gratitude card it belongs to, never as a modal.
 3. **The timelapse route** exists and is live: `GET /api/stickers/:stickerId/timelapse` answers the stored `TimelapseV1` as JSON, or `404 timelapse_not_found` for a sticker sealed before uploads began.
+4. **The gratitude card** is the Transfer Trail's open row, the gratitude card that exists. The giver's pink tag is later work (see "Out of scope").
+5. **Replay length:** real time when a combo lasted up to 4s; a longer combo plays on a clock sped up to fit 4s, at most ×2.
+6. **The timelapse's frame** is the sticker's final silhouette from the first stroke. Ink outside the cut never shows.
+7. **The timelapse's length** scales with how long it was drawn: 2.5–6s.
+8. **Reduced motion:** a timelapse's strokes still play; its fills appear at once and its ending is a 150ms fade with no sheen. A gratitude replay plays through the engine's reduced path.
 
 ## What exists today
 
@@ -31,7 +36,7 @@
 
 **The Transfer Trail's open row**, the one gratitude card that already exists: a pink-outlined card with the 40px heart dot, the amount in 27px Figure type, "From @x", and the screen's only Replay pill (`li.transfer-trail__row.is-open`). DESIGN.md already says "The sticker's trail opens the same replay."
 
-Pressing **Replay** grows a stage **inside the card**, between the figure row and the artist's-share line. The amount and heart dot stay above it as the card's header, so the stage reads as the card's own playback, not a new surface. The card is 262–292px wide on 360–390px phones (the detail's 62px strip and 18px padding), so the stage is **the card's inner width × 300px**; that holds the engine's heart at about 170px, its HUD band and its pop-ins. Below about 260×280 the lettering and the heart's face stop reading, so that's the floor.
+Pressing **Replay** grows a stage **inside the card**, between the figure row and the artist's-share line. The amount and heart dot stay above it as the card's header, so the stage reads as the card's own playback, not a new surface. The card is 262–292px wide on 360–390px phones (the detail's 62px strip and 18px padding), so the stage is **the card's inner width (238–268px) × 300px**. The engine's `scale` option (stage width / 390) sizes everything in it: the heart comes out at 140–160px, and the tier lettering, the slam and the pop-ins shrink with it, so オーバーヒート still fits at 238px.
 
 **Sequence:**
 
@@ -43,7 +48,7 @@ Pressing **Replay** grows a stage **inside the card**, between the figure row an
 
 **Stop** (or Escape while the stage has focus, or paging to another sticker, or the card closing because another row opened) ends the replay at once and shuts the stage.
 
-**The giver's pink tag**, when it's built, mounts the same component in its own card, which expands in place on the board's edge instead of opening a scrim. Its landing is the given sticker's outline. That's a separate piece of work; this design only keeps the component placement-agnostic so the tag can use it (see "Later").
+**The giver's pink tag**, when it's built, mounts the same component in its own card, which expands in place on the board's edge instead of opening a scrim. Its landing is the given sticker's outline. That's a separate piece of work; this design only keeps the component placement-agnostic so the tag can use it (see "Out of scope").
 
 ### What it shows, and how faithful it is
 
@@ -63,10 +68,8 @@ The amount is always right: **the card's figure comes from the stored `gratitude
 
 A faithful combo runs 1–8s (`durationMs` is capped at 8000), and DESIGN.md says the giver's replay takes **3s**. The combo rules are closed-form in time, so a replay can run on a virtual clock without changing the score:
 
-- **Recommendation:** play in real time when `durationMs ≤ 4000`; above that, speed the clock so the combo takes 4s (at most ×2). The ending is the short landing above, not the live game's endings (昇天's alone runs about 2.4s).
+- Play in real time when `durationMs ≤ 4000`; above that, speed the clock so the combo takes 4s (at most ×2, so an 8s combo takes 4s). The ending is the short landing above, not the live game's endings (昇天's alone runs about 2.4s).
 - Web Animations used by the pop-ins and slam get `playbackRate` equal to the clock's speed.
-
-This is **open question G1**: ad0ll may prefer strict 3s, or real time always.
 
 ### Data and state
 
@@ -74,28 +77,28 @@ This is **open question G1**: ad0ll may prefer strict 3s, or real time always.
 - **Loading:** the stage shows the resting heart; the pill reads Stop.
 - **Failure:** the stage shuts and the card shows one line, "Couldn't load the replay: {reason}. Try again", with the reason from the `ApiError` (`errorMessage`), following the detail's existing load failure.
 - **An unknown game config version** (`gratitude.gameConfigVersion` not in `GAME_CONFIG`'s versions) plays with the current config and logs it. The stored figures stay right regardless.
-- **Seen:** when the viewer is the giver and `seenByGiverAt` is null, call `api.markGratitudeSeen(giftId)` when the ending starts, then refresh `me` so `unseenGratitudeCount` drops. `toTrailRows` currently drops `seenByGiverAt`; it keeps it. A receiver or a third person never marks it (the API answers them `403 not_giver`).
+- **Seen:** when the viewer is the giver and `seenByGiverAt` is null, call `api.markGratitudeSeen(giftId)` when the ending starts, and keep the row marked so a second replay doesn't call it again. `toTrailRows` currently drops `seenByGiverAt`; it keeps it. Nothing shows `Me.unseenGratitudeCount` yet, so nothing refreshes; the pink tag will read it fresh. A receiver or a third person never marks it (the API answers them `403 not_giver`).
 
 ### Engine changes
 
 All seams are inside `mountMiniGameEngine` (`gratitude/miniGameEngine.ts`); the live game keeps its behavior.
 
 1. **Input source.** A new option: `input: "live"` (today: `listenForTouches`, `listenToPhoneMotion`, key and pointer listeners, the touchmove hold) or `input: { replay }`. In replay mode none of those listeners attach, and neither do the recorder, `onRecord`, the visibility end (hidden/pagehide), the tips or the heart button. The heart is `aria-hidden` and inert.
-2. **A pure `gratitude/replayFeed.ts`**, no DOM. It decodes `ReplayV1`'s running sums into one time-ordered queue of touches, stroke samples and shake reversals, in heart-relative coordinates (item 4). It's fully unit-testable.
+2. **A pure `gratitude/replay/replayFeed.ts`**, no DOM. It decodes `ReplayV1`'s running sums into one time-ordered queue of touches, stroke samples and shake reversals, in heart-relative coordinates (item 4). It's fully unit-testable.
 3. **Dispatch in the frame loop.** `drawFrame` feeds every queued input whose time has come, through the existing handlers, before `combo.advanceTo(now)`:
    - the first touch: the squash, then `firstTap`; later touches `tapHeart`;
    - stroke samples: `onStrokeStart`, `onStrokeMove`, `onStrokeEnd`;
    - the first reversal: `unlockShake`; later ones the shaking branch of `onMotion`, at the nominal strength.
    - End reasons: `empty` and `cap` end by themselves; `hidden` and `closed` end with `combo.endCombo(t0 + durationMs, reason)`. Stored replays can also say `sent` (the one-tap send, removed in `14f73a7`); the feed plays those as a one-hit combo ending at `durationMs`.
-4. **Positions relative to the heart.** A replay's positions are shares of the recording phone's stage (`replay.stage`, e.g. 390×741). Mapped as shares onto a 292×300 stage, touches would miss the heart. The feed rebuilds the recording's heart box from `replay.stage` with the live layout rules, expresses each point in heart widths from the heart's middle, and maps it onto the replay's heart.
+4. **Positions relative to the heart.** A replay's positions are shares of the recording phone's stage (`replay.stage`, e.g. 390×741). Mapped as shares onto a 268×300 stage, touches would miss the heart. The feed rebuilds the recording's heart box from `replay.stage` with the live layout rules, expresses each point in heart widths from the heart's middle, and maps it onto the replay's heart.
 5. **Layout and scale options.** `TOP`, `HUD_TOP`, `HUD_HEIGHT`, the fallback size and `layoutFor` become options, with a landing point (`landAt()`) in place of `giverPhoto`. A `scale` option (stage width / 390) scales the lettering, the slam, pop-ins, particles, mini hearts (capped at about 40 alive inline, 90 live) and the HUD.
 6. **Seeded effects.** Each effect gets its own stream, `seededRandom(seed ^ salt)`: pop-in words, slam and pop-in slots, particle spawns. Per-frame jitter (tremor, the bar's shiver, physics) keeps an unseeded stream: it's texture, not story. The same change applies to live play, so every combo recorded after it replays with the same words. Combos recorded before it replay with different words, which is acceptable.
 7. **Replay-mode styles.** `.gr[data-mode="replay"]`, ported from the drafts' `gratitude.css` replay rules (12px inset HUD, 12px track, 28px amount, 18px multiplier), plus: no ground mask, no `touch-action: none` (so the detail still scrolls under a finger), no sheet z-index.
 8. **Frame loop.** An IntersectionObserver pauses the loop while the card is off screen; paging to another sticker destroys the engine. The dev slip's "Show frame times" readout works on the inline stage too, for measuring on a phone.
 
-### Stroke passes (small, recommended)
+### Stroke passes
 
-Record which stroke sample ended a pass: an optional `strokePasses: number[]` on `ReplayV1` (sample indexes), added to the API's schema and the recorder. Replays of new stroke combos then replay exactly; stored ones stay close. Old replays without the field stay valid.
+Record which stroke samples ended a pass: an optional `strokePasses: number[][]` on `ReplayV1`, one array per stroke of the indexes of its samples that ended a pass, added to the API's schema and the recorder. Replays of new stroke combos then replay exactly; stored ones stay close. Old replays without the field stay valid.
 
 ### Motion, accessibility
 
@@ -109,7 +112,7 @@ Record which stroke sample ended a pass: an optional `strokePasses: number[]` on
 
 ### Where it plays
 
-**The button** sits in the detail's meta, at the end of the fine print that already says how long it took: "by @mika · drawn in 2:51 · 9.26". It's a small `LabelButton` with Phosphor's Play, labeled **Timelapse**, the same pattern as the toolbar's buttons. It's not called "Replay": DESIGN.md gives that word, and "the screen's only Replay button", to the gratitude card. It shows in both "yours" and "given" modes, and **only when the sticker has a timelapse**. The detail's answer gains `hasTimelapse` (a left join in `stickerDetail`), so stickers sealed before uploads began show no button, rather than a button that fails.
+**The button** appears once the detail's answer is in, and sits in the detail's meta, at the end of the fine print that already says how long it took: "by @mika · drawn in 2:51 · 9.26". It's a small `LabelButton` with Phosphor's Play, labeled **Timelapse**, the same pattern as the toolbar's buttons. It's not called "Replay": DESIGN.md gives that word, and "the screen's only Replay button", to the gratitude card. It shows in both "yours" and "given" modes, and **only when the sticker has a timelapse**. The detail's answer gains `hasTimelapse` (a left join in `stickerDetail`), so stickers sealed before uploads began show no button, rather than a button that fails.
 
 **It plays in the sticker's own spot**, the detail's 240px stage, over the sticker itself:
 
@@ -117,7 +120,7 @@ Record which stroke sample ended a pass: an optional `strokePasses: number[]` on
 - So the sticker's silhouette, baked shadow, kiss-cut groove and foil stay in place the whole time, and the ink appears inside them stroke by stroke, as it was drawn.
 - **At the end:** a 300ms hold on the finished ink, then the layer fades out over 400ms, revealing the real sticker's resin tint, gloss and live resin, and the sheen sweeps once (`sweepSheen`, as the seal does). Because the layer and the sticker share the silhouette and the ink, nothing jumps.
 
-Ink drawn outside the final cut never shows: the cut is exactly what was kept. The alternative, a paper rectangle the size of the sheet that gets cut at the end, is **open question T1**.
+Ink drawn outside the final cut never shows: the cut is exactly what was kept.
 
 **Controls and states:**
 
@@ -168,7 +171,7 @@ fills  = a 150–200ms reveal each, at most 25% of L together
 end    = 300ms hold, 400ms reveal
 ```
 
-One speed for everything keeps each stroke's shape and the speed ratios between strokes; only idle time is squeezed. A 3-minute sticker plays in at most 6s, a quick doodle in 2.5s. The target length is **open question T2**.
+One speed for everything keeps each stroke's shape and the speed ratios between strokes; only idle time is squeezed. A 3-minute sticker plays in at most 6s, a quick doodle in 2.5s.
 
 **Frame loop.** It uses the house pattern (`miniGameEngine`'s loop, `sealTimeline`):
 
@@ -178,7 +181,7 @@ One speed for everything keeps each stroke's shape and the speed ratios between 
 - paused while the page is hidden;
 - stopped when done, with every canvas released (width and height to 0, as `makeSticker` does).
 
-**Reduced motion (recommendation, open question T3):** the strokes still play, since the person asked for them and nothing moves across the screen, but fills appear at once and the ending is a 150ms fade with no sheen.
+**Reduced motion:** the strokes still play, since the person asked for them and nothing moves across the screen, but fills appear at once and the ending is a 150ms fade with no sheen.
 
 **A fix on the way:** `InkSurface.fill` makes a full-size copy canvas on every fill and never releases it. The drawing screen leaks one per fill today, and the prepare pass would too. It gets released.
 
@@ -192,34 +195,45 @@ It fans out after a small shared commit. Each lane gets its own worktree, a firs
 
 - API: `hasTimelapse` on the sticker detail; `density` (optional) on `TimelapseV1`; `strokePasses` (optional) on `ReplayV1`.
 - App: `decodeTimelapse` with its round-trip test; `density` and 0.01px fill taps in the encoder; `seenByGiverAt` kept on `TrailRow`; `InkSurface.fill` releases its copy; `MAX_DPR` exported.
-- The two player interfaces as stubs, so the UI lanes and the engine lanes build against them:
-  - `createTimelapsePlayer({ timelapse, box, density, frames }) → { prepare(): Promise<void>, play(): Promise<"done" | "stopped">, skip(), stop() }`
-  - `mountGratitudeReplay(host, { replay, gratitude, landAt, reduced, speed }) → { finished: Promise<"landed" | "stopped">, stop() }`
+- The two players' interfaces, as typed stubs, so the UI lanes and the engine lanes build against them at once: `createTimelapsePlayer` (prepare, play, skip, stop) and `mountGratitudeReplay` (finished, stop, setReduced). The implementation plan fixes their exact signatures.
 
 **Lanes, in parallel:**
 
-| Lane | Owns                                                 | Builds                                                                                                                |
-| ---- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| T1   | `sticker-board/timelapse/` (new)                     | `timelapseSchedule.ts`; the player: decode, prepare pass, paint, fill reveals, end                                    |
-| T2   | `StickerDetail.tsx`, its CSS                         | the Timelapse button, the playback layer over the figure, states, Skip, stop on page/close, reduced motion            |
-| G1   | `gratitude/miniGameEngine.ts` and its helpers        | input source option, layout and scale options, replay-mode CSS, seeded effect streams                                 |
-| G2   | `gratitude/replayFeed.ts` (new), `replayRecorder.ts` | the pure feed with heart-relative positions, the virtual clock, `strokePasses` recording                              |
-| G3   | `TransferTrail.tsx`, its CSS, `trailRows.ts`         | the inline stage in the open row: fetch on press, Stop, landing in the heart dot, seen and `me` refresh, failure line |
+| Lane | Owns                                                                                       | Builds                                                                                                                        |
+| ---- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| T1   | `sticker-board/timelapse/` player files (new)                                              | `timelapseSchedule.ts`; the player: prepare pass, paint, fill reveals, the end                                                |
+| T2   | `sticker-board/timelapse/` UI files (new); the mount point in `StickerDetail.tsx`          | the Timelapse button and its states, the playback layer over the figure, Skip, stop on page and close, reduced motion         |
+| G1   | `gratitude/miniGameEngine.ts` and its helpers, `gratitude-mini-game.css`                   | the input source option, layout and scale options, replay-mode styles, seeded effect streams                                  |
+| G2   | `gratitude/replay/replayFeed.ts` (new), `replayRecorder.ts`, the API's replay schema       | the pure feed with heart-relative positions and the virtual clock; `strokePasses` recorded and accepted                       |
+| G3   | `gratitude/replay/` UI files (new); the mount point in `TransferTrail.tsx`; `trailRows.ts` | the inline stage in the open row: fetch on press, Stop, the landing in the heart dot, seen and `me` refresh, the failure line |
 
 **Finish (controller):**
 
-1. End to end in Chromium on the dev server, with dev sign-in:
+1. End to end in Chromium on the dev server, with dev sign-in (`DEV_SIGN_IN=on`, LIFF Mock's `?as=`):
    - as `?as=alice`: seal a sticker, then open its detail. Timelapse plays and ends on the real sticker.
    - Give it; as `?as=bob`: receive it and play the Mini-game.
    - As alice again: open the sticker. The trail's Replay plays inline, lands in the card, and alice's unseen gratitude count drops.
-2. `pnpm check:full`, one code review, then merge and deploy.
+2. `pnpm check:full`, one code review, then merge, push and deploy.
 
-**Later:** the giver's pink tag on the board's edge, with the same `mountGratitudeReplay` in its own card, landing on the given sticker's outline.
+## Translation
 
-## Open questions for ad0ll
+The app is moving to Japanese and English (the i18n spec, `docs/superpowers/specs/2026-09-26-i18n-design.md`):
 
-- **B1. Which banner?** This design plays the gratitude replay in the Transfer Trail's open card, the gratitude card that exists. If you meant the giver's pink tag (DESIGN.md's "After", not built yet), the same player goes there; say whether to build the tag now.
-- **G1. The replay's length:** real time up to 4s and sped up to fit 4s beyond that (recommended), strict 3s as DESIGN.md says, or always real time?
-- **T1. The timelapse's frame:** the sticker's final silhouette from the start (recommended), or the whole sheet as a paper rectangle, cut at the end?
-- **T2. The timelapse's length:** 2.5–6s, scaled to how long it was drawn (recommended), or a fixed length?
-- **T3. Reduced motion:** strokes still play, fills and the ending don't move (recommended), or show the finished sticker only?
+- Every new user-facing string goes into the English catalog of its folder (`i18n/en/stickerBoard.ts`, `i18n/en/gratitude.ts`), read with `t(($) => $.section.key, vars)` from `useTranslation` (`i18n/react`). Counts use i18next plurals.
+- The Japanese catalogs stay partial by design until the translation pass (the i18n spec's decision 9), so no Japanese strings are added here; missing keys fall back to English.
+- Log text and thrown errors stay in the code.
+- New folders follow the i18n branch's `jsx-no-literals` rule.
+
+## Working alongside the i18n slices
+
+Draft PR #10 (`i18n/handoff`) and its slice branches (`i18n/sticker-board`, `i18n/gratitude`, `i18n/sticker-creation` and more) are moving every folder's text into the catalogs, in the same files this work changes. To keep merges small:
+
+- **New UI lives in new files:** `sticker-board/timelapse/` (the player, its layer, its button) and `gratitude/replay/` (the feed and the inline stage). `StickerDetail.tsx` and `TransferTrail.tsx` get mount points of a few lines each.
+- **Engine changes are new options and a new input path.** They leave the engine's text (tier names, pop-in words, HUD labels) alone, since the gratitude slice owns it.
+- **Before merging,** each lane merges the latest `main` (with whatever slices have landed), resolves there, and reruns its checks. Catalog conflicts are key unions.
+
+## Out of scope
+
+- **The giver's pink tag** on the board's edge. It will mount the same inline replay in its own card and land on the given sticker's outline.
+- **Someone else's board:** its sticker view doesn't get a Timelapse button yet.
+- **The drafts' synthesized replay**, which invents the curves from the totals; this plays what was recorded.

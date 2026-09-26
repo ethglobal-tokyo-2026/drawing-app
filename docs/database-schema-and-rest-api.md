@@ -459,6 +459,7 @@ interface ReplayV1 {
   hits: number[]; // flat: [msSincePrevious, x, y, counted (0 | 1), …] for every touch
   strokes: number[][]; // one per stroke: [msSincePrevious, x, y, …] at about 30 Hz
   shakes: number[]; // flat: [msSincePrevious, direction (1 | -1), …]
+  strokePasses?: number[][]; // one per stroke: indexes of its samples that ended a fast pass; older replays lack it
 }
 
 /** How a sticker was drawn: the ink canvas's ops, in order. Points are x, y and width in tenths of a pixel, plus ms, each as the change from the point before. */
@@ -466,6 +467,7 @@ interface TimelapseV1 {
   v: 1;
   ink: [width: number, height: number]; // the sheet, in sheet pixels: the ops' space, whatever the screen's density
   place: [x: number, y: number, width: number, height: number]; // where the sticker image sits on it
+  density?: number; // device pixels per sheet pixel where it was drawn, which fills flood at; older timelapses lack it
   ops: Array<
     | ["brush" | "eraser", color: string, startMs: number, points: number[]]
     | ["fill", color: string, atMs: number, x: number, y: number]
@@ -541,10 +543,10 @@ After a spend or a purchase commits, the chat menu is linked for the new count i
 - In mock chain mode, `tokenId` and `mintTxHash` are null. In Sepolia mode, the response requires a confirmed NFT; a failed confirmation returns `503 mint_failed` and keeps the sticker for a same-ticket retry.
 - Errors: 403 `ticket_not_yours`; 404 `ticket_not_found`; 409 `ticket_already_used`; 503 `mint_failed`.
 
-| Route                                    | Request | Response                                                                                                        | Errors                                                                              |
-| ---------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `GET /api/stickers/:stickerId`           | none    | 200 `{ sticker: Sticker; owner: Person; transferTrail: TransferTrailEntry[] }`, the Transfer Trail newest first | 404 `sticker_not_found`                                                             |
-| `GET /api/stickers/:stickerId/timelapse` | none    | 200 `TimelapseV1` JSON, cached as immutable                                                                     | 404 `sticker_not_found`; 404 `timelapse_not_found` for a sticker sealed without one |
+| Route                                    | Request | Response                                                                                                                                                                        | Errors                                                                              |
+| ---------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `GET /api/stickers/:stickerId`           | none    | 200 `{ sticker: Sticker; owner: Person; transferTrail: TransferTrailEntry[]; hasTimelapse: boolean }`, the Transfer Trail newest first, and whether the timelapse route answers | 404 `sticker_not_found`                                                             |
+| `GET /api/stickers/:stickerId/timelapse` | none    | 200 `TimelapseV1` JSON, cached as immutable                                                                                                                                     | 404 `sticker_not_found`; 404 `timelapse_not_found` for a sticker sealed without one |
 
 ```ts
 interface TransferTrailEntry {

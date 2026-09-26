@@ -186,11 +186,11 @@ pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
 - `apps/frontend` — Vite + React + TypeScript
   - `src/app` — app shell: tab bar and screen switching
   - `src/sticker-creation` — the drawing screen: canvas engine (`canvas/`), tools and drawers (`tools/`), sealing (`sealing/`)
-  - `src/sticker-board` — the sticker board, its stat board, sticker detail and placement; someone else's sticker board and its cork back
+  - `src/sticker-board` — the sticker board, its stat board, sticker detail and placement; someone else's sticker board and its cork back; the sticker detail's timelapse, which plays how a sticker was drawn (`timelapse/`)
   - `src/explore` — Explore: artist search, today's stickers, this week's leaderboards and the activity feed
   - `src/giving` — Giving: the give sheet and gift bag, the gift message, and sending it through LINE's friend picker; the give sheet and sticker picker on someone else's board
   - `src/offers` — the offer sheet on someone else's board (ask, swap or offer gratitude); UI only, sent nowhere yet
-  - `src/gratitude` — the (Gratitude) Mini-game: its rules, input, effects and screen; how it plays, scores and records, and where to tune it, is in `docs/gratitude-mini-game-design-doc.md`
+  - `src/gratitude` — the (Gratitude) Mini-game: its rules, input, effects and screen; how it plays, scores and records, and where to tune it, is in `docs/gratitude-mini-game-design-doc.md`. `replay/` plays a recorded combo back through the same engine, inside the Transfer Trail's open card (the gratitude replay)
   - `src/performance` — the performance recorder, switched on from the stat board's developer slip: frame intervals, slow frames and what happened around each, for phones where LINE's browser has no developer tools
   - `src/line` — LIFF: starts before the app renders and holds it until LINE has logged the person in. The dev server uses real LINE too, through a LIFF app whose endpoint is the dev server (`apps/frontend/.env.example`)
   - `src/identity` — who the person is: the LINE profile, and the Privy sign-in, which trades LINE's ID token at the auth server for a Privy JWT (Privy's SDK loads only after the board)
