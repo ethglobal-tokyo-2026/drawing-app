@@ -18,7 +18,7 @@ interface Props {
 
 const nameOf = (p: PersonView) => (p.handle ? formatHandle(p.handle) : p.name);
 
-/** Your gifts on their way, in a clear-film pocket. With none on their way, nothing shows. */
+/** Your gifts on their way, in clear film. With none on their way, nothing shows. */
 export function PendingGiftsNotificationBadge({ gifts, onOpen }: Props) {
   const [newest, next] = gifts;
   if (!newest) return null;
