@@ -55,9 +55,9 @@ interface Props {
 
 /**
  * The timer: a Seal Yellow dot slapped on at the world's tilt, with puffy numerals in fixed cells.
- * Tapping it pauses. Every hold wears the same white PAUSED tag, the page being hidden also lifts a
- * corner, and the last ten seconds turn Tomato. A white label under it points up at it: the paused
- * hint, or the drawing screen's note.
+ * Once the first stroke starts it, tapping it pauses. Every hold wears the same white PAUSED tag, the
+ * page being hidden also lifts a corner, and the last ten seconds turn Tomato. A white label under it
+ * points up at it: the paused hint, or the drawing screen's note.
  */
 export function TimerDot({ ref, clock, paused, note, onToggle }: Props) {
   const view = useSyncExternalStore(clock.subscribe, clock.getView);
@@ -109,7 +109,7 @@ export function TimerDot({ ref, clock, paused, note, onToggle }: Props) {
         ref={dot}
         type="button"
         className={classes.join(" ")}
-        aria-label={paused ? "Resume timer" : "Pause timer"}
+        aria-label={view.waiting ? "Timer" : paused ? "Resume timer" : "Pause timer"}
         aria-describedby={describedBy}
         onClick={onToggle}
       >
@@ -127,7 +127,7 @@ export function TimerDot({ ref, clock, paused, note, onToggle }: Props) {
           <b>Paused</b>
         </span>
         <span className="visually-hidden" id={describedBy}>
-          {`${time} left${view.held ? `, paused${WHY[view.held] ?? ""}` : ""}`}
+          {`${time} left${view.waiting ? ", starts when you draw" : view.held ? `, paused${WHY[view.held] ?? ""}` : ""}`}
         </span>
       </button>
       <div className={`timer-hint ${label ? "is-on" : ""}`} aria-hidden="true">

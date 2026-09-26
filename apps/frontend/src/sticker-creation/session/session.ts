@@ -80,17 +80,16 @@ export function transition(session: Session, event: SessionEvent): Result {
 }
 
 /**
- * Why the clock is held. The person's pause, a hidden page and the drawing screen being covered hold
- * it at any time; a tool in hand (the color sheet, the smoothing bar, a finger on the size rail) holds
- * it only while it runs.
+ * Why the clock is held: the person's pause, a hidden page, the drawing screen being covered, or a
+ * tool in hand (the color sheet, the smoothing bar, a finger on the size rail). Only a started clock
+ * is held; before the first stroke it just waits, and nothing shows as paused.
  */
 export type Hold = "paused" | "hidden" | "away" | "color" | "smoothing" | "size";
 
 /** Which hold the timer shows, most important first. */
 const HOLDS: readonly Hold[] = ["paused", "hidden", "away", "color", "smoothing", "size"];
-const ANYTIME: ReadonlySet<Hold> = new Set(["paused", "hidden", "away"]);
 
 /** The hold the timer shows, or null when nothing holds it. */
-export function heldBy(holds: ReadonlySet<Hold>, started: boolean): Hold | null {
-  return HOLDS.find((hold) => holds.has(hold) && (started || ANYTIME.has(hold))) ?? null;
+export function heldBy(holds: ReadonlySet<Hold>): Hold | null {
+  return HOLDS.find((hold) => holds.has(hold)) ?? null;
 }

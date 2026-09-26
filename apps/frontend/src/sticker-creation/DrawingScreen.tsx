@@ -54,6 +54,8 @@ const afterPaint = () =>
 const reason = (error: unknown) =>
   error instanceof Error && error.message ? error.message : String(error);
 
+/** What the label under the timer says while the clock waits for the first stroke. */
+const STARTS = "Starts when you draw";
 /** What the label under the timer says about the drawing kept across a reload. */
 const PICKED_UP = {
   restored: "Picked up where you left off",
@@ -122,6 +124,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // Until a drawing kept across a reload is back, or known lost, the sheet takes no input.
   const [restoring, setRestoring] = useState(true);
   const [pickedUp, setPickedUp] = useState<keyof typeof PICKED_UP | null>(null);
+  // "Starts when you draw" under the timer, until the first stroke peels it off.
+  const [startsNote, setStartsNote] = useState(false);
 
   const clock = useSessionClock(() => send({ type: "time-up" }));
 
@@ -286,6 +290,18 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // "Picked up" stays until the clock runs again; word of a lost drawing, until the next one starts.
   if (pickedUp === "restored" && !paused) setPickedUp(null);
   if (pickedUp && pickedUp !== "restored" && session.phase !== "blank") setPickedUp(null);
+  if (startsNote && session.phase !== "blank") setStartsNote(false);
+
+  // Before the first stroke there's nothing to pause: a tap on the timer says when it starts.
+  const onTimerTap = () => {
+    if (!clock.getView().waiting) {
+      setPaused((p) => !p);
+      return;
+    }
+    setPickedUp(null);
+    setStartsNote(true);
+  };
+  const timerNote = pickedUp ? PICKED_UP[pickedUp] : startsNote ? STARTS : null;
 
   // Every hold stops the clock: the person's pause, the board covering the screen, a tool in hand.
   useEffect(() => {
@@ -383,8 +399,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           ref={timer}
           clock={clock}
           paused={paused}
-          note={active && pickedUp ? PICKED_UP[pickedUp] : null}
-          onToggle={() => setPaused((p) => !p)}
+          note={active ? timerNote : null}
+          onToggle={onTimerTap}
         />
         <ToolStrip
           tool={tool}

@@ -60,6 +60,15 @@ describe("SessionClock", () => {
     }
   });
 
+  it("shows no hold while it waits for the first stroke", () => {
+    const { clock } = setup({ started: false });
+    clock.setHolds({ ...NO_HOLDS, away: true });
+    clock.setHidden(true);
+    expect(clock.getView()).toMatchObject({ held: null, waiting: true });
+    clock.start();
+    expect(clock.getView()).toMatchObject({ held: "hidden", waiting: false });
+  });
+
   it("holds while the page is hidden and resumes 420ms after it returns", () => {
     const { clock, counted } = setup();
     clock.setHidden(true);

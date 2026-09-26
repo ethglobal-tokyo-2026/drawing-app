@@ -88,23 +88,9 @@ describe("transition", () => {
 });
 
 describe("heldBy", () => {
-  const holds = (...list: Hold[]) => new Set(list);
-
-  it("holds for the person's pause or a hidden screen even before the first stroke", () => {
-    expect(heldBy(holds("paused"), false)).toBe("paused");
-    expect(heldBy(holds("hidden"), false)).toBe("hidden");
-    expect(heldBy(holds("away"), false)).toBe("away");
-  });
-
-  it("holds for a tool in hand only once the clock runs", () => {
-    for (const tool of ["color", "smoothing", "size"] as const) {
-      expect(heldBy(holds(tool), false)).toBeNull();
-      expect(heldBy(holds(tool), true)).toBe(tool);
-    }
-  });
-
   it("names the person's own pause over any other hold", () => {
-    expect(heldBy(holds("size", "hidden", "paused"), true)).toBe("paused");
-    expect(heldBy(holds(), true)).toBeNull();
+    const holds = (...list: Hold[]) => new Set(list);
+    expect(heldBy(holds("size", "hidden", "paused"))).toBe("paused");
+    expect(heldBy(holds())).toBeNull();
   });
 });
