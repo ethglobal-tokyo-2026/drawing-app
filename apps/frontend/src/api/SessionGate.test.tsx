@@ -26,6 +26,7 @@ const me: Me = {
   languageChoice: null,
   createdAt: "2026-09-26T00:00:00.000Z",
   needsHandle: false,
+  ageVerifiedAt: null,
   newStickerCount: 0,
   unseenGratitudeCount: 0,
 };

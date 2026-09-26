@@ -20,6 +20,31 @@ export const errors = {
     en: "Couldn't reconnect with LINE. Try again, or reopen the app from LINE.",
     ja: "LINEで再ログインできませんでした。もう一度試すか、LINEからアプリをひらき直してください。",
   },
+  /** Your stat board, Age verification paper: sending World App's proof (POST /api/me/age-verification) when it isn't an Orb-verified World ID's, or came from World's other environment, in “Your age couldn’t be verified” through errorReason */
+  age_not_proven: {
+    en: "This World ID isn't verified at an Orb.",
+    ja: "このWorld IDは、Orbで認証されていません。",
+  },
+  /** Your stat board, Age verification paper: tapping Verify your age (POST /api/me/age-verification/request) when this server has no World ID app, in “Your age couldn’t be verified” through errorReason */
+  age_verification_not_configured: {
+    en: "Age verification isn't set up on this server yet.",
+    ja: "このサーバーでは、まだ年齢確認ができません。",
+  },
+  /** Your stat board, Age verification paper: sending World App's proof (POST /api/me/age-verification) when World refuses it, in “Your age couldn’t be verified” through errorReason */
+  age_verification_refused: {
+    en: "World ID didn't accept the proof.",
+    ja: "World IDが証明を受け付けませんでした。",
+  },
+  /** Your stat board, Age verification paper: sending World App's proof (POST /api/me/age-verification) when the same World ID already verified another account, in “Your age couldn’t be verified” through errorReason */
+  age_verification_used: {
+    en: "This World ID already verified another account.",
+    ja: "このWorld IDは、すでに別のアカウントの年齢確認に使われています。",
+  },
+  /** Your stat board, Age verification paper: tapping Verify your age (POST /api/me/age-verification/request) after your age was already verified, in “Your age couldn’t be verified” through errorReason */
+  already_age_verified: {
+    en: "Your age is already verified.",
+    ja: "年齢確認は、すでに済んでいます。",
+  },
   /** Giving, In the bag: taking a gift back out (POST /api/gifts/:giftId/take-out) that its receiver already received, in “couldn’t be taken out” through errorReason; the Receive gift dialog shows its own Already opened screen instead */
   already_received: {
     en: "This gift was already opened.",
@@ -226,4 +251,9 @@ export const errors = {
   },
   /** An artist's sticker board: loading their board or stats (GET /api/sticker-boards/:userId, …/user-stats) for a person who doesn't exist, in “Couldn’t load …’s board” or “Their stats didn’t load” through errorReason */
   user_not_found: { en: "That artist isn't here.", ja: "そのアーティストは見つかりませんでした。" },
+  /** Your stat board, Age verification paper: sending World App's proof (POST /api/me/age-verification) when World's verify service doesn't answer, in “Your age couldn’t be verified” through errorReason */
+  world_id_unavailable: {
+    en: "World ID didn't answer. Try again in a moment.",
+    ja: "World IDから応答がありませんでした。少し待ってから、もう一度お試しください。",
+  },
 } as const satisfies Record<ErrorCode | "unknown", Leaf>;

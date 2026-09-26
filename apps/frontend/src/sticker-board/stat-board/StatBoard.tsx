@@ -13,6 +13,7 @@ import { SendTestMessage } from "../../line/SendTestMessage";
 import { LabelButton } from "../../ui/LabelButton";
 import { QuietLink } from "../../ui/QuietLink";
 import { AddressDialog } from "./AddressDialog";
+import { AgeVerificationNote } from "./AgeVerificationNote";
 import { AddressPapers } from "./AddressPapers";
 import { useBoardAddress, useSuiAddress, type Chain } from "./addresses";
 import { DeveloperSlip } from "./DeveloperSlip";
@@ -101,6 +102,7 @@ export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref
           paperRefs={papers}
           onOpen={setOpen}
         />
+        <AgeVerificationNote />
         <SettingsNote />
         {DEV_SLIP && (
           <DeveloperSlip>

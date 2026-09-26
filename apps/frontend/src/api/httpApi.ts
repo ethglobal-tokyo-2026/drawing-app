@@ -145,6 +145,16 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       if (!response.ok) throw await refusal(response, "POST /api/me/language-choice");
       return (await response.json()).me;
     },
+    ageVerificationRequest: async () => {
+      const response = await api.me["age-verification"].request.$post();
+      if (!response.ok) throw await refusal(response, "POST /api/me/age-verification/request");
+      return response.json();
+    },
+    verifyAge: async (proof) => {
+      const response = await api.me["age-verification"].$post({ json: proof });
+      if (!response.ok) throw await refusal(response, "POST /api/me/age-verification");
+      return (await response.json()).me;
+    },
 
     stickerBoard: async (userId = "me") => {
       const response = await boards[":userId"].$get({ param: { userId } });
