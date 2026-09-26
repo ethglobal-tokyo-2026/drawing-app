@@ -16,6 +16,7 @@ import type { GiftOpening } from "../api/apiClient";
 import { useApi } from "../api/useApi";
 import type { PersonView } from "../api/views";
 import { GiftBag } from "../giving/GiftBag";
+import { Trans, useTranslation } from "../i18n/react";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { useIdentity } from "../identity/useIdentity";
 import { Duration } from "../stickers/Duration";
@@ -272,6 +273,7 @@ function Gift({
   onAccept,
   onNotNow,
 }: GiftProps) {
+  const { t } = useTranslation();
   const { giver, sticker } = preview;
   const fit = FIGURE_PX / Math.max(sticker.width, sticker.height);
   const openPage = (e: MouseEvent<HTMLAnchorElement>) => {
@@ -344,15 +346,14 @@ function Gift({
               <X /> Not now
             </QuietLink>
             <p className="receive-gift__terms">
-              Receiving it shows {printed(giver)} your LINE name and picture. You agree to the{" "}
-              <a href="/terms.html" onClick={openPage}>
-                Terms
-              </a>{" "}
-              and{" "}
-              <a href="/privacy.html" onClick={openPage}>
-                Privacy Policy
-              </a>
-              .
+              <Trans
+                i18nKey={($) => $.receiving.termsLine}
+                values={{ name: printed(giver) }}
+                components={{
+                  terms: <a href={t(($) => $.pages.terms)} onClick={openPage} />,
+                  privacy: <a href={t(($) => $.pages.privacy)} onClick={openPage} />,
+                }}
+              />
             </p>
           </div>
         </Sheet>
