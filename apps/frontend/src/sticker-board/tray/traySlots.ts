@@ -1,5 +1,4 @@
-import type { StickerGiftStatus } from "../../giving/giftStore";
-import type { BoardStickerView } from "../boardSticker";
+import { onItsWay, type BoardStickerView } from "../boardSticker";
 
 /**
  * "here" in its spot, "used" out on the board (its used sticker silhouette shows), "given" away (its
@@ -26,8 +25,10 @@ const PER_SHEET = 6;
  * nothing after them shifts.
  */
 export function traySlots(
-  stickers: readonly Pick<BoardStickerView, "id" | "no" | "arrivedAt" | "placement">[],
-  gifts: ReadonlyMap<string, StickerGiftStatus>,
+  stickers: readonly Pick<
+    BoardStickerView,
+    "id" | "no" | "arrivedAt" | "placement" | "held" | "openGift"
+  >[],
 ): TraySlot[] {
   return [...stickers]
     .sort((a, b) => a.arrivedAt - b.arrivedAt || a.no - b.no)
@@ -36,7 +37,8 @@ export function traySlots(
       arrivedAt: s.arrivedAt,
       sheet: Math.floor(n / PER_SHEET),
       slot: n % PER_SHEET,
-      state: gifts.get(s.id)?.state === "sent" ? "given" : s.placement.on ? "used" : "here",
+      // On its way or received, it's gone from its spot.
+      state: !s.held || onItsWay(s) ? "given" : s.placement.on ? "used" : "here",
     }));
 }
 

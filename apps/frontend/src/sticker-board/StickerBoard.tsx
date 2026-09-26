@@ -33,6 +33,7 @@ import { useBackToClose } from "../ui/useBackToClose";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { normalizeTurn } from "./boardGesture";
 import {
+  onItsWay,
   placeUnplaced,
   toApiPlacement,
   toBoardSticker,
@@ -156,6 +157,11 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   /** The load the stickers came from, and whose board it is: a sticker someone else drew wears foil. */
   const [adopted, setAdopted] = useState<LoadedBoard | null>(null);
   const owner = adopted?.owner ?? null;
+  /** The stickers as last drawn, for a reload to keep the spots the board has given them. */
+  const latestStickers = useRef(stickers);
+  useLayoutEffect(() => {
+    latestStickers.current = stickers;
+  });
   /** Stickers whose spot didn't save, and why; each goes once a save of it succeeds. */
   const [unsaved, setUnsaved] = useState<ReadonlyMap<string, string>>(() => new Map());
   const [size, setSize] = useState<{ W: number; H: number } | null>(null);
@@ -204,14 +210,18 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   // placed gets a spot as it loads, saved so it stays there.
   const board = useApiQuery("sticker-board", async (client): Promise<LoadedBoard> => {
     const data = await client.stickerBoard();
-    const { stickers: list, placed } = placeUnplaced(data.boardStickers.map(toBoardSticker));
+    const { stickers: list, placed } = placeUnplaced(
+      data.boardStickers.map(toBoardSticker),
+      latestStickers.current ?? [],
+    );
     for (const s of placed) save(s, s.placement);
     return { owner: toPerson(data.owner), stickers: list };
   });
   const loaded = board.state === "ready" ? board.data : null;
   if (loaded && loaded !== adopted) {
     setAdopted(loaded);
-    setStickers(loaded.stickers);
+    // Moves made while it loaded stay.
+    setStickers(placeUnplaced(loaded.stickers, stickers ?? []).stickers);
   }
 
   // The open sticker tray's NEW marks, which the tray takes off at once.
@@ -251,17 +261,12 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     if (landingId) landed.add(landingId);
   }, [landingId]);
 
-  // A sticker given away has left the board.
-  const onBoard = (stickers ?? []).filter(
-    (s) => s.placement.on && gifts.get(s.id)?.state !== "sent",
-  );
-  // Given away, it leaves its given sticker silhouette where it sat.
+  // A sticker on its way has left the board for the badge.
+  const onBoard = (stickers ?? []).filter((s) => s.placement.on && s.held && !onItsWay(s));
+  // Received, it leaves its given sticker silhouette where it sat, naming who has it.
   const givenSilhouettes = (stickers ?? []).flatMap((s) => {
-    const gift = gifts.get(s.id);
     const mask = s.urls.mask;
-    return gift?.state === "sent" && mask
-      ? [{ sticker: s, mask, sentAt: gift.sentAt, to: gift.to }]
-      : [];
+    return !s.held && s.givenTo && mask ? [{ sticker: s, mask, givenTo: s.givenTo }] : [];
   });
   const field = useMemo(() => size && fieldOf(size.W, size.H), [size]);
   const landedNow = useCallback(() => setLandingId(undefined), []);
@@ -503,7 +508,6 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           board={face}
           stickers={stickers}
           ownerId={owner.id}
-          gifts={gifts}
           api={trayBoard}
           onSeen={markSeen}
         />
@@ -544,8 +548,21 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           liffId={LIFF_ID}
           onClose={(sent) => {
             setGiving(null);
-            // Given, it has left the board.
-            if (sent) setSelected(null);
+            if (!sent) return;
+            // Sent, it leaves the board at once, as this device's gift record says, and the reload
+            // confirms where it is.
+            setSelected(null);
+            const gift = gifts.get(giving.id);
+            if (gift?.state === "sent")
+              setStickers(
+                (list) =>
+                  list?.map((s) =>
+                    s.id === giving.id
+                      ? { ...s, openGift: { id: gift.giftId, status: "sent" } }
+                      : s,
+                  ) ?? null,
+              );
+            if (board.state === "ready") board.refresh();
           }}
         />
       )}
@@ -553,21 +570,15 @@ export function StickerBoard({ freshId, onDraw }: Props) {
       {open && (
         <StickerDetail
           // In the order they arrived, as the board loads them.
-          stickers={(stickers ?? []).filter((s) =>
-            open.mode === "given"
-              ? gifts.get(s.id)?.state === "sent"
-              : gifts.get(s.id)?.state !== "sent",
-          )}
+          stickers={(stickers ?? []).filter((s) => (open.mode === "given" ? !s.held : s.held))}
           startId={open.id}
           mode={open.mode}
-          handle={me.handle}
           // It lifts off from where the sticker sits: on the board, or its given sticker silhouette.
           originOf={(id) =>
             stickerEl(id)?.querySelector<HTMLElement>(
               ".placed-sticker__lift, .given-sticker-silhouette__art",
             ) ?? null
           }
-          gifts={gifts}
           onClose={() => setOpen(null)}
           // Back to the sticker it opened from: on the board, or its given sticker silhouette.
           returnFocus={() =>

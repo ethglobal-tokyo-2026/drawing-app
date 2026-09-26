@@ -1,35 +1,30 @@
 import { CaretLeft, CaretRight, Gift } from "@phosphor-icons/react";
 import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
-import type { StickerGiftStatus } from "../giving/giftStore";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Duration } from "../stickers/Duration";
-import { formatDay, formatHandle, formatNo } from "../stickers/format";
+import { formatDay, formatMonthDay, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { Key } from "../ui/Key";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import type { BoardSticker } from "./boardSticker";
+import { handleOf, onItsWay, type BoardStickerView } from "./boardSticker";
 import { useDetailLift } from "./detailLift";
 import { swipeLock, swipeTo } from "./detailPaging";
 import "./sticker-detail.css";
 
 interface Props {
   /** The stickers it pages through, in order. */
-  stickers: readonly BoardSticker[];
+  stickers: readonly BoardStickerView[];
   /** The sticker it opens at. */
   startId: string;
   /** Your stickers, or the ones you gave, which it only shows. */
   mode: "yours" | "given";
-  /** Who drew them, for the fine print: you, until stickers can be received. */
-  handle: string;
-  /** When each given sticker went. */
-  gifts: ReadonlyMap<string, StickerGiftStatus>;
   onClose: () => void;
   /** Give, where LINE's picker can send the sticker; without it there's no key. */
-  onGive?: (sticker: BoardSticker) => void;
+  onGive?: (sticker: BoardStickerView) => void;
   /** Where focus goes once it closes, when that isn't back to what opened it. */
   returnFocus?: () => HTMLElement | null;
   /** Where a sticker sits on the board, which it lifts off from and sticks back onto. */
@@ -55,8 +50,6 @@ export function StickerDetail({
   stickers,
   startId,
   mode,
-  handle,
-  gifts,
   onClose,
   onGive,
   returnFocus,
@@ -69,7 +62,7 @@ export function StickerDetail({
     0,
     stickers.findIndex((s) => s.id === shownId),
   );
-  const sticker: BoardSticker | undefined = stickers[index];
+  const sticker: BoardStickerView | undefined = stickers[index];
   const last = stickers.length - 1;
 
   const root = useRef<HTMLDivElement>(null);
@@ -169,7 +162,6 @@ export function StickerDetail({
       });
   };
 
-  const gift = sticker && gifts.get(sticker.id);
   const detail = (
     <div
       ref={root}
@@ -262,27 +254,40 @@ export function StickerDetail({
             <section className="sticker-detail__meta">
               <h2 className="title-label sticker-detail__title">{formatNo(sticker.no)}</h2>
               <p className="fine sticker-detail__fine-print">
-                <span className="sticker-detail__by">by {formatHandle(handle)}</span>{" "}
+                <span className="sticker-detail__by">by {handleOf(sticker.artist)}</span>{" "}
                 <span>
                   · drawn in <Duration seconds={sticker.timeUsed} />
                 </span>{" "}
                 <span>· {formatDay(sticker.createdAt)}</span>
               </p>
-              {mode === "given" && gift?.state === "sent" && (
+              {mode === "given" && sticker.givenTo && (
                 <p className="fine sticker-detail__fine-print">
-                  Given to {gift.to ? formatHandle(gift.to) : "a friend"} on{" "}
-                  {formatDay(gift.sentAt)}
+                  You gave it to {handleOf(sticker.givenTo.receiver)} ·{" "}
+                  {formatMonthDay(sticker.givenTo.receivedAt)}
                 </p>
               )}
             </section>
 
-            {mode === "yours" && onGive && (
-              <div className="sticker-detail__acts">
-                <Key tone="aqua" icon={<Gift aria-hidden />} onClick={() => onGive(sticker)}>
-                  Give
-                </Key>
-              </div>
-            )}
+            {mode === "yours" &&
+              (onItsWay(sticker) ? (
+                <div className="sticker-detail__acts">
+                  {/* Sent, it waits for its friend: nothing to give until it comes back. */}
+                  <p className="sticker-detail__on-its-way">
+                    <span className="sticker-detail__sleeve" aria-hidden="true">
+                      <img src={sticker.urls.png} alt="" draggable={false} />
+                    </span>
+                    On its way
+                  </p>
+                </div>
+              ) : (
+                onGive && (
+                  <div className="sticker-detail__acts">
+                    <Key tone="aqua" icon={<Gift aria-hidden />} onClick={() => onGive(sticker)}>
+                      Give
+                    </Key>
+                  </div>
+                )
+              ))}
           </>
         ) : (
           <p className="sticker-detail__none">No sticker here yet.</p>

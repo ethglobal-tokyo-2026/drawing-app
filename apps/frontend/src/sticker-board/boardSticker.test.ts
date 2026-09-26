@@ -47,4 +47,12 @@ describe("placeUnplaced", () => {
     expect(Math.min(a.z, b.z)).toBeGreaterThan(at.z);
     expect(placeUnplaced(stickers).placed).toEqual([]);
   });
+
+  it("keeps the spots the board already gave its stickers over a reload's", () => {
+    const [moved] = placeUnplaced([toBoardSticker(boardSticker())]).stickers;
+    const nudged = { ...moved, placement: { ...moved.placement, x: 0.2, r: 12 } };
+    const { stickers, placed } = placeUnplaced([{ ...moved, placement: null }], [nudged]);
+    expect(stickers[0].placement).toEqual(nudged.placement);
+    expect(placed).toEqual([]);
+  });
 });
