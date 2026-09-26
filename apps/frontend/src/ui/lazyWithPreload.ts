@@ -1,8 +1,4 @@
-import { createElement, lazy, useEffect, useState, type ComponentType } from "react";
-
-interface Preloadable {
-  preload: () => Promise<unknown>;
-}
+import { createElement, lazy, useState, type ComponentType } from "react";
 
 /**
  * A component whose code loads in its own chunk, which `preload` starts early. Unlike `React.lazy`,
@@ -34,23 +30,4 @@ export function lazyWithPreload<P extends object>(
     return createElement(Component, props);
   }
   return Object.assign(Preloaded, { preload });
-}
-
-/** Once the page is idle after the first paint, starts loading the parts' code; true from then on. */
-export function usePreloadWhenIdle(parts: readonly Preloadable[]) {
-  const [idle, setIdle] = useState(false);
-  useEffect(() => {
-    const run = () => {
-      setIdle(true);
-      for (const part of parts) void part.preload();
-    };
-    // Safari has no requestIdleCallback.
-    if (typeof requestIdleCallback === "function") {
-      const id = requestIdleCallback(run, { timeout: 2000 });
-      return () => cancelIdleCallback(id);
-    }
-    const id = setTimeout(run, 1000);
-    return () => clearTimeout(id);
-  }, [parts]);
-  return idle;
 }

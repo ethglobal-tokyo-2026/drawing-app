@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { PerformanceSummary, SlowFrame } from "./performanceRecorder";
+import type { BootMilestone } from "./bootMilestones";
+import type { FrameWindow, PerformanceSummary, SlowFrame } from "./performanceRecorder";
 import { formatPerformanceReport, formatSummaryLine } from "./performanceReport";
 
 const summary: PerformanceSummary = {
@@ -13,6 +14,28 @@ const summary: PerformanceSummary = {
     ["Sticker Board", { frames: 6120, slow: 32 }],
     ["Send gratitude", { frames: 5400, slow: 180 }],
   ]),
+  windows: [],
+};
+const start: BootMilestone[] = [
+  { step: "HTML in", at: 310 },
+  { step: "JS running", at: 420 },
+  { step: "LIFF ready", at: 950 },
+  { step: "signed in", at: 1620 },
+  { step: "board from this phone", at: 1631, detail: "12 stickers" },
+  { step: "first sticker decoded", at: 1702 },
+  { step: "board JSON", at: 2010, detail: "12 stickers" },
+  { step: "all stickers", at: 2450, detail: "12 stickers, 48 images" },
+  { step: "board complete", at: 2451 },
+];
+/** 300 frames from 2451ms: all 16ms, but for a 50ms one 0.4s in. */
+const afterTheBoard: FrameWindow = {
+  label: "the 5s after the board was complete",
+  from: 2451,
+  ms: 5000,
+  frames: 300,
+  slow: 1,
+  worst: { ms: 50, at: 2851 },
+  intervals: Array.from({ length: 300 }, (_, i) => (i === 24 ? 50 : 16)),
 };
 const slowFrame: SlowFrame = {
   start: 65_200,
@@ -27,12 +50,17 @@ const slowFrame: SlowFrame = {
     { at: 65_210, ms: 0, kind: "gratitude", detail: "tier-up オーバーヒート" },
   ],
 };
-const report = (over: Partial<PerformanceSummary> = {}, slowFrames = [slowFrame]) =>
+const report = (
+  over: Partial<PerformanceSummary> = {},
+  slowFrames = [slowFrame],
+  steps: BootMilestone[] = [],
+) =>
   formatPerformanceReport({
     summary: { ...summary, ...over },
     slowFrames,
     takenAt: new Date(Date.UTC(2026, 8, 26, 9, 4, 5)),
     device: "iPhone Line/15.14.0",
+    start: steps,
   });
 
 describe("the performance report", () => {
@@ -78,6 +106,44 @@ describe("the performance report", () => {
 
   it("says how many slow frames it lists of all of them", () => {
     expect(report()).toContain("The latest 1 of 212 slow frames, oldest first");
+  });
+
+  it("tells the open's start step by step, on the page's clock, before the recording", () => {
+    const text = report({}, [slowFrame], start);
+    expect(text).toContain(
+      [
+        "Start, on the page's clock",
+        "  0.31s HTML in",
+        "  0.42s JS running",
+        "  0.95s LIFF ready",
+        "  1.62s signed in",
+        "  1.63s board from this phone: 12 stickers",
+        "  1.70s first sticker decoded",
+        "  2.01s board JSON: 12 stickers",
+        "  2.45s all stickers: 12 stickers, 48 images",
+        "  2.45s board complete",
+      ].join("\n"),
+    );
+    expect(text.indexOf("Start, on the page's clock")).toBeLessThan(text.indexOf("recorded ·"));
+  });
+
+  it("sums up the 5s after the board was complete: the slow ones, the worst and the long tail", () => {
+    expect(report({ windows: [afterTheBoard] }, [slowFrame], start)).toContain(
+      "The 5s after the board was complete: 300 frames in 4.8s · 1 slow (0.3%) · worst 50ms at +0.4s · typical 16.0ms (63 fps) · 95th percentile 16.0ms",
+    );
+  });
+
+  it("says when the board's first seconds weren't recorded", () => {
+    expect(report({}, [slowFrame], start)).toContain(
+      "The 5s after the board was complete: not recorded, as the recorder was off then",
+    );
+    expect(report({}, [slowFrame], [])).not.toContain("after the board was complete");
+  });
+
+  it("tells the start even before any frame is recorded", () => {
+    const text = report({ frames: 0 }, [], start);
+    expect(text).toContain("  2.45s board complete");
+    expect(text).toContain("Nothing recorded yet");
   });
 });
 
