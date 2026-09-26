@@ -1,5 +1,4 @@
 import type { Explore, LeaderboardRow, Person } from "@drawing-app/api/client";
-import { At, X } from "@phosphor-icons/react";
 import type { TFunction } from "i18next";
 import {
   useEffect,
@@ -17,6 +16,7 @@ import { toPerson } from "../api/views";
 import { errorReason } from "../i18n/errorMessage";
 import { formatCount } from "../i18n/format";
 import { Trans, useTranslation } from "../i18n/react";
+import { At, StreakIcon, X } from "../icons";
 import { formatHandle } from "../stickers/format";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
@@ -135,12 +135,15 @@ function Figure({ board, value }: { board: Leaderboard; value: number }) {
   if (board === "bestCombo") return <HitCounter hits={value} size={23} className="figure" />;
   if (board === "longestStreak")
     return (
-      <span className="figure">
-        <Trans
-          i18nKey={($) => $.explore.figure.streak}
-          count={value}
-          components={{ small: <small /> }}
-        />
+      <span className="figure figure--streak">
+        <StreakIcon size={17} />
+        <span>
+          <Trans
+            i18nKey={($) => $.explore.figure.streak}
+            count={value}
+            components={{ small: <small /> }}
+          />
+        </span>
       </span>
     );
   return <span className="figure">{formatCount(value)}</span>;
@@ -182,6 +185,7 @@ function SlidingTabs<T extends string>({
       className={`sliding-tabs ${className}`}
       role="tablist"
       aria-label={label}
+      data-selected={value}
       style={{ "--i": index, "--n": tabs.length } as CSSProperties}
       onKeyDown={(event) => {
         if (event.key === "ArrowRight") move(index + 1);
@@ -322,7 +326,7 @@ function ThisWeek({
       <div role="tabpanel" id="leaderboard-panel" aria-labelledby={`leaderboard-${board}`}>
         <ol ref={list} className="leaderboard">
           {rows.length === 0 && (
-            <li className="leaderboard-empty fine muted">{t(($) => $.explore.thisWeek.empty)}</li>
+            <li className="leaderboard-empty">{t(($) => $.explore.thisWeek.empty)}</li>
           )}
           {rows.map((row, i) => (
             <PersonRow
@@ -597,7 +601,7 @@ export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
     <div className="explore">
       {boardOf && <OpenBoardOf label={boardOf} open={open} />}
       <label className="artist-search">
-        <At size={20} />
+        <At size={20} aria-hidden />
         <input
           type="search"
           placeholder={t(($) => $.explore.search.placeholder)}
@@ -615,7 +619,7 @@ export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
             aria-label={t(($) => $.explore.search.clear)}
             onClick={() => setQuery("")}
           >
-            <X size={16} />
+            <X size={16} aria-hidden />
           </button>
         )}
       </label>

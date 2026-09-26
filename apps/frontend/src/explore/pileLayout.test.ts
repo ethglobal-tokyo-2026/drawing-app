@@ -4,8 +4,13 @@ import { seededRandom } from "../ui/seededRandom";
 import {
   PILE_WIDTH,
   pileStickers,
-  tagSize,
+  tagGroup,
+  tagLines,
+  TAG_H,
+  TAG_LINE,
+  TAG_LINE_MAX,
   TAG_MAX_W,
+  textWidth,
   type Box,
   type PileItem,
   type PiledSticker,
@@ -27,25 +32,32 @@ function blob(rnd: () => number, points = 28): Shape {
   return { w, h, poly };
 }
 
+/** Handles from two letters to the longest a handle can be, 32, and in Japanese. */
 const HANDLES = [
   "mika",
   "ken",
-  "hana",
+  "sakura_mochi_doodles",
   "riku",
-  "taro",
+  "Crit-tap-700-90",
   "aoi",
-  "mei",
+  "Wm".repeat(16),
   "kaito",
-  "nana",
+  "さくらもちのおえかきちょうとまいにちのらくがき",
   "yuzuriha_long",
 ];
+
+/** "to @x" in English, and "@xさんへ" in Japanese, as the aqua tag reads. */
+const toLabel = (i: number, handle: string) => (i % 2 ? `to @${handle}` : `@${handle}さんへ`);
 
 function itemsOf(count: number, seed = 1, givenEvery = 5): PileItem[] {
   const rnd = seededRandom(seed);
   return Array.from({ length: count }, (_, i) => ({
     id: `sticker-${seed}-${i}`,
     shape: blob(rnd),
-    tag: tagSize(`@${HANDLES[i % HANDLES.length]}`, i % givenEvery === 3 ? "@ken" : null),
+    tag: tagGroup(
+      `@${HANDLES[i % HANDLES.length]}`,
+      i % givenEvery === 3 ? toLabel(i, HANDLES[(i * 7) % HANDLES.length]) : null,
+    ),
   }));
 }
 
@@ -175,24 +187,67 @@ describe("pileStickers", () => {
 
   it("lays out a sticker whose cut line can't be read as its whole image", () => {
     const { items: pile } = pileStickers(
-      [{ id: "a", shape: { w: 300, h: 300, poly: [] }, tag: tagSize("@a", null) }],
+      [{ id: "a", shape: { w: 300, h: 300, poly: [] }, tag: tagGroup("@a", null) }],
       { seed: "d" },
     );
     expect(pile[0].w).toBeGreaterThan(0);
   });
 });
 
-describe("tagSize", () => {
+describe("tagGroup", () => {
   it("fits a longer name in a wider tag, up to its widest", () => {
-    expect(tagSize("@mika", null).w).toBeLessThan(tagSize("@mikamikamika", null).w);
-    expect(tagSize(`@${"m".repeat(32)}`, null).w).toBe(TAG_MAX_W);
+    expect(tagGroup("@mika", null).w).toBeLessThan(tagGroup("@mikamikamika", null).w);
+    expect(tagGroup(`@${"m".repeat(32)}`, null).w).toBeLessThanOrEqual(TAG_MAX_W);
+  });
+
+  it("measures the aqua tag round its whole label, not just the handle", () => {
+    const to = (label: string) => tagGroup("@Crit-rich", label).to?.w ?? 0;
+    expect(to("to @Kenji")).toBeGreaterThan(to("@Kenji"));
+    expect(to("@Kenjiさんへ")).toBeGreaterThan(to("to @Kenji"));
+    expect(tagGroup("@Crit-rich", "to @Kenji").to?.lines).toEqual(["to @Kenji"]);
   });
 
   it("gives Japanese names the room of full-width letters", () => {
-    expect(tagSize("@さくら", null).w).toBeGreaterThan(tagSize("@abc", null).w);
+    expect(tagGroup("@さくら", null).w).toBeGreaterThan(tagGroup("@abc", null).w);
   });
 
   it("stacks the tag of a given sticker under its name tag", () => {
-    expect(tagSize("@mika", "@ken").h).toBeGreaterThan(tagSize("@mika", null).h);
+    const group = tagGroup("@mika", "to @ken");
+    expect(group.h).toBeGreaterThan(tagGroup("@mika", null).h);
+    expect(group.to?.y).toBeGreaterThanOrEqual(group.name.h);
+  });
+
+  it("runs a long handle onto more lines, taller, rather than cutting it short", () => {
+    const one = tagGroup("@mika", null).name;
+    const two = tagGroup("@sakura_mochi_doodles", null).name;
+    expect(one.h).toBe(TAG_H);
+    expect(two.lines).toEqual(["@sakura_mochi_", "doodles"]);
+    expect(two.h).toBe(TAG_H + TAG_LINE);
+  });
+});
+
+describe("tagLines", () => {
+  it.each([
+    "@sakura_mochi_doodles",
+    `@${"a".repeat(32)}`,
+    `@${"Wm".repeat(16)}`,
+    "@さくらもちのおえかきちょうとまいにちのらくがき",
+    "to @sakura_mochi_doodles",
+    "@sakura_mochi_doodlesさんへ",
+    "@🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸",
+  ])("shows %s whole, no line wider than a tag's", (text) => {
+    const lines = tagLines(text);
+    // Only a space a line breaks at goes.
+    const letters = (s: string) => s.replaceAll(" ", "");
+    expect(letters(lines.join(""))).toBe(letters(text));
+    for (const line of lines) expect(textWidth(line)).toBeLessThanOrEqual(TAG_LINE_MAX);
+  });
+
+  it("breaks after an underscore, a dot or a hyphen when that fills the line well", () => {
+    expect(tagLines("@mika.draws.every.single.day")).toEqual(["@mika.draws.", "every.single.day"]);
+    expect(tagLines("to @sakura_mochi_doodles")).toEqual(["to @sakura_", "mochi_doodles"]);
+    expect(tagLines("@Crit-tap-700-90")).toEqual(["@Crit-tap-700-90"]);
+    // Without a break that fills the line well, it breaks between letters instead.
+    expect(tagLines("@ab_cdefghijklmnopqrstuvwxyz")).toEqual(["@ab_cdefghijklmn", "opqrstuvwxyz"]);
   });
 });

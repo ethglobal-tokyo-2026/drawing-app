@@ -193,47 +193,62 @@
   cursor: pointer;
 }
 
-/* Liner Lift label stock: the artist's picture and handle. */
+/* Liner Lift label stock, thin and flat on the sticker so the stickers lead: no cast, a hairline
+   kiss-cut edge and 600-weight text. The artist's picture and handle, the whole handle however long,
+   on as many lines as the layout gave it; its size is the layout's, so no later sticker covers it. */
 .pile-tag {
   position: absolute;
-  left: calc(var(--tag-x, 0) * var(--k) * 1px);
-  top: calc(var(--tag-y, 0) * var(--k) * 1px);
+  left: calc(var(--tag-x) * var(--k) * 1px);
+  top: calc(var(--tag-y) * var(--k) * 1px);
   display: inline-flex;
   align-items: center;
   gap: calc(4px * var(--k));
   max-width: calc(var(--tag-w) * var(--k) * 1px);
-  height: calc(20px * var(--k));
-  padding: 0 calc(8px * var(--k)) 0 calc(2px * var(--k));
-  border-radius: 999px;
+  height: calc(var(--tag-h) * var(--k) * 1px);
+  padding: 0 calc(7px * var(--k)) 0 calc(2px * var(--k));
+  border-radius: calc(8.5px * var(--k));
   background: var(--liner-lift);
-  box-shadow:
-    0 0 0 0.5px var(--rule-strong),
-    var(--shadow-label);
+  box-shadow: 0 0 0 0.5px var(--rule-strong);
   color: var(--ink);
   font-size: calc(11px * var(--k));
-  font-weight: 750;
-  line-height: 1;
+  font-weight: 600;
+  line-height: calc(12px * var(--k));
   white-space: nowrap;
 }
 
 .pile-tag .photo-sticker {
-  width: calc(16px * var(--k));
-  height: calc(16px * var(--k));
+  width: calc(13px * var(--k));
+  height: calc(13px * var(--k));
+}
+
+/* No picture: a plain dot in its place, never a letter too small to read. */
+.pile-tag__dot {
+  flex: none;
+  width: calc(13px * var(--k));
+  height: calc(13px * var(--k));
+  border: calc(3.5px * var(--k)) solid transparent;
+  border-radius: 50%;
+  background: var(--rule-strong);
+  background-clip: content-box;
 }
 
 .pile-tag__name {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  text-align: start;
+}
+
+.pile-tag__line {
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Aqua means giving: who a given sticker went to. */
+/* Soft aqua, giving at rest volume: who a given sticker went to. */
 .pile-tag--to {
-  padding: 0 calc(8px * var(--k));
-  background: var(--aqua);
-  box-shadow:
-    0 0 0 0.5px rgba(28, 24, 36, 0.24),
-    var(--shadow-label);
+  padding: 0 calc(7px * var(--k));
+  background: var(--aqua-soft);
+  box-shadow: 0 0 0 0.5px var(--rule-strong);
 }
 
 /* NEW since your last look: a Seal Yellow pip on the tag's corner. */

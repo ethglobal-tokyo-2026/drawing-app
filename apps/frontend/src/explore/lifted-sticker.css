@@ -128,14 +128,13 @@
   margin-top: 4px;
 }
 
-/* The line people read: caps kept, but at 12px, wrapping between facts. */
+/* The line people read: fine print at 11px, as the sticker detail's, in Graphite on the Liner,
+   wrapping between facts. */
 .lifted-sticker__fine {
   margin: 0;
-  font-size: 12px;
   line-height: 1.5;
   text-align: center;
   text-wrap: balance;
-  color: #5f5969;
 }
 
 .lifted-sticker__acts {

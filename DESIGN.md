@@ -290,13 +290,13 @@ The palette is Liner and Ink, plus five candy-bright coded fields, each with one
 ### Secondary
 
 - **Soda Aqua** (soda-aqua): giving. The Give key (including where Draw sits on someone else's board), the Explore tab, the gift bag's tear tape and its pull tab, and viewer hints mixed toward Liner.
-- **Bonbon Pink** (bonbon-pink): gratitude, and you. The Send gratitude key, the heart and its mini hearts, the My board tab, the tray's zip pull and its Mine folder tab, the open trail row's outline, the selected leaderboard tab, and on the cork back the receipt's pushpin and heart, and the hit counter's speed lines.
+- **Bonbon Pink** (bonbon-pink): gratitude, and you. The Send gratitude key, the heart and its mini hearts, the My board tab, the tray's zip pull and its Mine folder tab, the open trail row's outline, the selected leaderboard tab (but Longest streak's, which is tangerine), and on the cork back the receipt's pushpin and heart, and the hit counter's speed lines.
 
 ### Tertiary
 
 - **Grape** (grape): received, and offers. The Accept key on a gift, the Send offer key, Offer for it on someone else's board, the tray's Gifts folder tab, received-sticker marks, and the received stamp on the cork back.
 - **Blue** (blue): the Shop and reserve tickets. The Shop tab, the Pay key and picked pack, reserve tickets, and the Use a reserve ticket key. Opposite daily tickets' yellow, so the two kinds of ticket can't be confused.
-- **Tangerine** (tangerine): the streak. The streak leaf's band on the cork back, with the Fire icon, and the streak's figures elsewhere.
+- **Tangerine** (tangerine): the streak. The streak leaf's band on the cork back, with the Fire icon, and the streak's figures elsewhere: Longest streak's selected leaderboard tab, and the fire before each of its figures, whose numerals stay Ink.
 - **Tomato** (tomato): can't undo. Stopped states and warnings. It's never a key.
 - **Foil** (foil-pink, foil-peach, foil-lemon, foil-aqua, foil-sky, foil-lilac): six iridescent bands, one 96px period, that flow along a sticker's foil band and turn in the ring round the artist chip's picture. It isn't a fill color. It's a material worn only by a sticker drawn by someone other than the board's owner. It has no green.
 
@@ -454,7 +454,7 @@ One press for every key and label, and anything marked pressable.
 
 ### Touch targets
 
-Every key is at least 54px tall. A label's face carries invisible bands above and below it (5px on the small label, so 35px to see and 45px to touch), and the press measures its slide-off slop from that touch edge. A quiet link's touch area reaches 7px above and below and 4px to each side. Sticker handles, tray folder tabs, the sheet stack's +N button, a floating sheet's X, the zip pull and drawing tools all pad to 44px.
+Every key is at least 54px tall. A label's face carries invisible bands above and below it (5px on the small label, so 35px to see and 45px to touch), and the press measures its slide-off slop from that touch edge. A quiet link's touch area reaches 7px above and below and 4px to each side. Explore's sliding tabs carry the same bands, reaching across the gap between tabs too: the view switch is 38px to see and the leaderboard tabs 34px, and both are 44px to touch. Sticker handles, tray folder tabs, the sheet stack's +N button, a floating sheet's X, the zip pull and drawing tools all pad to 44px.
 
 ### Dot badges
 
@@ -568,23 +568,24 @@ The one card that sells reserve tickets, in the out-of-tickets card's stock. The
 
 ### Artist chip
 
-Who drew a foil sticker: a Liner Lift pill (40px) with the artist's LINE picture in a white edge inside a turning foil ring, then a fine-print ARTIST caption over "@name" (760, 14px). A one-line "By @name" variant is for tight spaces. The copy is "artist" or "By", never "from".
+Who drew a foil sticker: a Liner Lift pill (40px) with the artist's LINE picture in a white edge inside a turning foil ring, then a fine-print ARTIST caption over "@name" (760, 14px). Without a picture, their first letter stands in on the paper, in the photo sticker's puffy capital (12px, and 11px in the By variant), never a blank disc. A one-line "By @name" variant is for tight spaces. The copy is "artist" or "By", never "from".
 
 - **First load:** when a board opens, each foil sticker's chip pops in at its top-left corner, top to bottom 80ms apart, holds about 2s and fades (3.2s in all), in one layer above every sticker and the name header. It happens once per opening. Reduced motion shows and hides it without the pop.
 - **Tapped:** the chip heads the selected sticker's menu, above its actions, until you deselect.
 - **Detail:** under the big sticker, the chip leads the fine print. Your own stickers never get a chip.
-- **Plain:** off a board, where foil never shows (Explore's lifted sticker), the chip has no ring: the picture keeps its white edge, cut from the pill by a kiss-cut, and casts a small shadow.
+- **Plain:** off a board, where foil never shows (Explore's lifted sticker), the chip has no ring: the picture keeps its white edge, cut from the pill by a kiss-cut, and casts a small shadow. With a sheet's width to use, it shows the whole handle, up to the longest (32 characters), running onto a second line rather than cut short.
 
 ### Explore
 
 Browse what everyone draws, see who drew each sticker, and get to that artist's board. Under the search, a two-way switch picks **Stickers** or **This week**. Search results replace both views.
 
-- **The view switch:** a Liner Deep track with one label stuck on the current view, Soda Aqua for the switch and Bonbon Pink for the leaderboard tabs inside This week. The label slides to the tapped tab in 260ms on the ease-out; the text changes color in 140ms. The tabs take the shared press and the arrow keys. Reduced motion moves the label at once.
-- **This week:** the three leaderboards, moved as they were, with "Resets Monday 4:00" in fine print under the list. On a new board the old rows fade out in 90ms and the new ones stick on from the top, 25ms apart (the first five, the rest together), each rising 6px over 200ms. Reduced motion cross-fades them in 120ms. Best combo is the hit counter.
+- **The search:** white label stock on the label shadow, "Search artists" beside an @, with no halo. Typing in it draws the house focus ring, 2px Ink at a 3px offset.
+- **The view switch:** a Liner Deep track with one label stuck on the current view, Soda Aqua for the switch and Bonbon Pink for the leaderboard tabs inside This week, except Longest streak's, which is the streak's Tangerine. The label slides to the tapped tab in 260ms on the ease-out, fading between pink and tangerine as it goes; the text changes color in 140ms. The tabs take the shared press and the arrow keys. Reduced motion moves the label at once.
+- **This week:** the three leaderboards, moved as they were, with "Resets Monday 4:00" in fine print under the list. A board nobody is on yet says so as a sentence in a 13px supporting note, never in fine print's capitals. On a new board the old rows fade out in 90ms and the new ones stick on from the top, 25ms apart (the first five, the rest together), each rising 6px over 200ms. Reduced motion cross-fades them in 120ms. Best combo is the hit counter, and Longest streak's figures lead with the streak's fire (StreakIcon) in Tangerine.
 - **The pile:** Explore's stickers are a heap of real die-cut stickers, never a grid or a feed. Each Tokyo day (turning over at 4:00) is its own layer, newest first: a perforation row across the whole width as its top edge, with the day's dot badge stuck on it at the house tilt (Seal Yellow "Today 9.26", Liner Lift "9.25" for older days), then that day's heap resting on the next day's perforation. The last day ends on a bare perforation.
 - **The heap:** stickers drop onto the floor oldest first, so the newest lie on top: at a few seeded, middle-leaning spots, sliding off anything they can't balance on, sinking into what they land on and staying at the lowest of those drops, turned up to 17° either way. The layout is 360 units across on every phone, seeded by the day and the sticker, so the pile looks the same on every visit and a new sticker moves nothing beneath it. Stickers keep their size however many share a day.
 - **Flat:** pile stickers are the sealed image alone, with its own cut, white edge, cast and baked resin: no live light and no foil. Only the lifted sticker gets live resin. A tap lands only on the cut line or the tags, so a clear corner lets the tap through to the sticker beneath.
-- **Name tags:** every sticker wears one across its lower left edge, turned a little against the sticker: a Liner Lift pill with the artist's LINE picture as a 16px photo sticker (letter fallback) and "@handle" in 11px bold. A given sticker adds a Soda Aqua "to @ken" tag under it. No later sticker or tag ever covers an earlier tag.
+- **Name tags:** every sticker wears one across its lower left edge, turned a little against the sticker, and quiet so the stickers lead: thin, flat Liner Lift stock with a hairline edge and no cast, 17 units tall, holding the artist's LINE picture as a 13-unit photo sticker (a plain dot without one, never a letter under the 11px floor) and "@handle" in 11px at 600. A given sticker adds a soft aqua "to @ken" tag under it ("@kenさんへ" in Japanese). Each tag is measured round its whole label, and a handle always shows whole, up to 32 characters: past 112 units a line runs onto the next, breaking after "_", ".", "-" or a space where that leaves the line well filled, and between letters otherwise. No later sticker or tag ever covers an earlier tag.
 - **Empty:** a day with no stickers yet shows a faint dashed kiss-cut outline on its floor and "The first sticker sealed today lands here."
 - **The fall-in:** on a first look, today's newest 14 fall in from under the view switch, oldest first, 55ms apart: 620ms of gravity (slow off the top, fastest as it lands) while spinning 24° into their turn, then a squash to 1.05 × 0.93, a 5px rebound and the stick settle. A shadow of the sticker in the air converges from the peeling offset to the sticker's own cast and fades as it lands. It waits for the falling stickers' images, at most 0.7s. On a return visit only stickers new since your last look fall, and every new sticker wears a Seal Yellow NEW pip on its tag; screen readers hear "3 new stickers since you last looked". Reduced motion fades the whole pile in over 150ms. While Explore loads, today's badge and faint die-cut shapes on its floor stand in (the skeleton), and the fall-in is the arrival.
 - **Screen readers and keys:** a section per day ("Today", "Yesterday", "September 24"), each an ordered list of buttons newest first, named like "No.0147 by @mika, 5 min ago" and ", given to @ken". A focused sticker rises to the top of the pile, lifts 2px and gets the house focus ring around its cut; Enter or Space lifts it.
