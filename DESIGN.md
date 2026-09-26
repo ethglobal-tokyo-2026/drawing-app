@@ -523,6 +523,16 @@ Who drew a foil sticker: a Liner Lift pill (40px) with the artist's LINE picture
 - **First load:** when a board opens, each foil sticker's chip pops in at its top-left corner, top to bottom 80ms apart, holds about 2s and fades (3.2s in all), in one layer above every sticker and the name header. It happens once per opening. Reduced motion shows and hides it without the pop.
 - **Tapped:** the chip heads the selected sticker's menu, above its actions, until you deselect.
 - **Detail:** under the big sticker, the chip leads the fine print. Your own stickers never get a chip.
+- **Plain:** off a board, where foil never shows (Explore's lifted sticker), the chip has no ring: the picture keeps its white edge, cut from the pill by a kiss-cut, and casts a small shadow.
+
+### Lifted sticker
+
+Tapping a sticker in Explore's pile lifts it into a bottom sheet over a 36% Ink scrim.
+
+- **The sheet:** the sticker in a 210px square with live resin under the one light, the plain artist chip, fine print (No. · drawing time · date, and "to @ken" when it was given), "Go to @mika's sticker board" on label stock (Explore has no key) and a Put back quiet link. Small flat carets either side of the sticker page to the previous and next one in pile order, newest first.
+- **The flight:** the sticker peels up from its spot in the house peel (280ms, 3D lift at 35%) and flies into the sheet as the sheet rises under it; its spot keeps an 18% ghost. Put back, the scrim, the perforation, Escape and LINE's Back play the flight backward at the stick's pace, and it sticks down with the settle and gloss sweep.
+- **Paging:** a sideways swipe, the carets or the arrow keys. The new sticker slides in from its side; the old spot fills back in and the new one fades to its ghost.
+- **Reduced motion:** the sheet and the ghost crossfade in 150ms, with no flight.
 
 ### Hit counter
 

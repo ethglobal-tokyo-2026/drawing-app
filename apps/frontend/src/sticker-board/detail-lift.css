@@ -1,0 +1,15 @@
+/* A sticker in flight between where it sits and the view it lifts into (detailLift.ts), over both,
+   in the peeling shadow. */
+.detail-lift__flyer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: var(--z-sheet);
+  pointer-events: none;
+}
+
+/* A foil sticker casts from its band's edge (sticker-foil.css), so the band's cast takes the shadow too. */
+.detail-lift__flyer :is(.sticker-figure__img, .sticker-foil__cast) {
+  filter: var(--sticker-cut) drop-shadow(3px 7px 5px rgba(28, 24, 36, 0.18))
+    drop-shadow(8px 16px 18px rgba(28, 24, 36, 0.12));
+}
