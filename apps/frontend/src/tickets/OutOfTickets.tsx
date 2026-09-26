@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { IS_MOCK_PAYMENT, payForTickets } from "../payments/sui";
-import { StickerIcon } from "../icons/StickerIcon";
+import { Key, Label, QuietLink } from "../controls/controls";
+import { DrawIcon } from "../icons/DrawIcon";
+import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { TicketIcon } from "../icons/TicketIcon";
-import { TICKET_PACK } from "./config";
+import { FREE_TICKETS_PER_DAY, TICKET_PACK } from "./config";
+import { TicketStubs } from "./TicketStubs";
 import "../styles/result-card.css";
 import "./tickets.css";
 
@@ -15,20 +18,27 @@ interface Props {
   onBoard: () => void;
 }
 
-const clock = (d: Date) => `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+const clock = (d: Date) => d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
-/** A paper ticket: outlined when used up, yellow when fresh. */
-function Ticket({ filled, tilt }: { filled: boolean; tilt: number }) {
+/** "in 6h 56m", rounded up so it never reads "in 0m" before the refill. */
+function countdown(to: Date, now: Date) {
+  const minutes = Math.max(1, Math.ceil((to.getTime() - now.getTime()) / 60_000));
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h ? `in ${h}h ${m}m` : `in ${m}m`;
+}
+
+/** A printed refill line, never the timer dot's look. */
+function RefillLine({ refillAt }: { refillAt: Date }) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
   return (
-    <svg
-      className={`ticket ${filled ? "filled" : ""}`}
-      viewBox="0 0 104 64"
-      style={{ rotate: `${tilt}deg` }}
-      aria-hidden
-    >
-      <path d="M6 4h92a2 2 0 0 1 2 2v18a8 8 0 0 0 0 16v18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V40a8 8 0 0 0 0-16V6a2 2 0 0 1 2-2Z" />
-      <line x1="34" y1="10" x2="34" y2="54" />
-    </svg>
+    <p className="refill-line">
+      <b>New tickets at {clock(refillAt)},</b> <span>{countdown(refillAt, now)}</span>
+    </p>
   );
 }
 
@@ -50,34 +60,21 @@ export function OutOfTickets({ refillAt, onTicketsBought, onStartDrawing, onBoar
     }
   };
 
-  const tickets = (filled: boolean) => (
-    <div className="ticket-row">
-      <Ticket filled={filled} tilt={-4} />
-      <Ticket filled={filled} tilt={1} />
-      <Ticket filled={filled} tilt={3} />
-      {!filled && <span className="refill-badge">{clock(refillAt)}</span>}
-    </div>
-  );
-
   return (
     <div className="result-backdrop">
-      <div className="result-card tickets-card" role="dialog" aria-label="Out of tickets">
+      <div className="result-card" role="dialog" aria-label="Out of tickets">
         {step === "out" && (
           <>
-            {tickets(false)}
+            <TicketStubs used={FREE_TICKETS_PER_DAY} large />
             <h2 className="card-title">Out of tickets for today</h2>
-            <p className="card-sub">
-              Everyone gets 3 drawing tickets a day.
-              <br />
-              Yours refill at {clock(refillAt)}.
-            </p>
+            <RefillLine refillAt={refillAt} />
             <div className="perforation" />
-            <button className="keep-btn" onClick={() => setStep("approve")}>
-              <TicketIcon /> Get more tickets with Sui
-            </button>
-            <button className="board-btn" onClick={onBoard}>
-              <StickerIcon /> Go to sticker board
-            </button>
+            <Key icon={<TicketIcon size={20} />} onPress={() => setStep("approve")}>
+              Get more tickets with Sui
+            </Key>
+            <Label icon={<StickerBoardIcon size={20} />} onPress={onBoard}>
+              Go to sticker board
+            </Label>
           </>
         )}
 
@@ -95,7 +92,7 @@ export function OutOfTickets({ refillAt, onTicketsBought, onStartDrawing, onBoar
               <div>
                 <b>Approve payment</b>
                 <div className="muted small">
-                  {IS_MOCK_PAYMENT ? "Mock wallet · no real SUI is sent" : "Sui wallet"}
+                  {IS_MOCK_PAYMENT ? "Mock payment · no real SUI is sent" : "Pay with Sui"}
                 </div>
               </div>
             </div>
@@ -114,40 +111,34 @@ export function OutOfTickets({ refillAt, onTicketsBought, onStartDrawing, onBoar
               </div>
             </dl>
             <div className="perforation" />
-            <button className="keep-btn" onClick={pay} disabled={step === "paying"}>
-              {step === "paying" ? (
-                <>
-                  <span className="spinner" /> Confirming on Sui…
-                </>
-              ) : (
-                <>Approve {TICKET_PACK.priceSui} SUI</>
-              )}
-            </button>
-            <button
-              className="board-btn"
-              onClick={() => setStep("out")}
+            <Key
+              onPress={() => void pay()}
               disabled={step === "paying"}
+              icon={step === "paying" && <span className="spinner" />}
             >
+              {step === "paying" ? "Confirming on Sui…" : `Approve ${TICKET_PACK.priceSui} SUI`}
+            </Key>
+            <QuietLink onPress={() => setStep("out")} disabled={step === "paying"}>
               Cancel
-            </button>
+            </QuietLink>
           </>
         )}
 
         {step === "done" && (
           <>
-            {tickets(true)}
+            <TicketStubs used={0} filled large />
             <h2 className="card-title">{TICKET_PACK.tickets} tickets added</h2>
             <p className="card-sub">
               Paid {TICKET_PACK.priceSui} SUI
               <br />
-              <span className="digest">
+              <span className="fine">
                 tx {digest.slice(0, 6)}…{digest.slice(-4)}
               </span>
             </p>
             <div className="perforation" />
-            <button className="keep-btn" onClick={onStartDrawing}>
+            <Key icon={<DrawIcon size={20} />} onPress={onStartDrawing}>
               Start drawing
-            </button>
+            </Key>
           </>
         )}
 
@@ -156,12 +147,8 @@ export function OutOfTickets({ refillAt, onTicketsBought, onStartDrawing, onBoar
             <h2 className="card-title">Payment didn’t go through</h2>
             <p className="card-sub">{error}</p>
             <div className="perforation" />
-            <button className="keep-btn" onClick={pay}>
-              Try again
-            </button>
-            <button className="board-btn" onClick={() => setStep("out")}>
-              Back
-            </button>
+            <Key onPress={() => void pay()}>Try again</Key>
+            <QuietLink onPress={() => setStep("out")}>Back</QuietLink>
           </>
         )}
       </div>

@@ -1,7 +1,4 @@
-import { IconSvg } from "./IconSvg";
+import bold from "@phosphor-icons/core/bold/x-bold.svg?raw";
+import { IconSvg, type IconProps } from "./IconSvg";
 
-export const CloseIcon = () => (
-  <IconSvg size={18}>
-    <path d="M6 6l12 12M18 6 6 18" />
-  </IconSvg>
-);
+export const CloseIcon = ({ size }: IconProps) => <IconSvg svg={bold} size={size} />;

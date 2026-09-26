@@ -5,11 +5,15 @@
   display: grid;
   place-content: center;
   padding: 32px;
-  background: #efeef3;
+  background: var(--liner);
   text-align: center;
 }
 
 .explore h1 {
   margin: 0 0 6px;
-  font-family: "Archivo Black", "Archivo", sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  font-variation-settings: var(--wdth-title);
 }

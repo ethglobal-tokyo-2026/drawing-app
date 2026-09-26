@@ -5,7 +5,8 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { SmallBrushIcon } from "../icons/SmallBrushIcon";
+import { Key } from "../controls/controls";
+import { DrawIcon } from "../icons/DrawIcon";
 import { useIdentity } from "../identity/useIdentity";
 import { formatClock, formatNo } from "../stickers/format";
 import { listStickers, updatePlacement, type Placement } from "../stickers/stickerStorage";
@@ -216,29 +217,35 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     return () => board.removeEventListener("wheel", onWheel);
   }, []);
 
+  const newestUrl = stickers?.reduce<BoardSticker | undefined>(
+    (a, s) => (!a || s.createdAt > a.createdAt ? s : a),
+    undefined,
+  )?.url;
+  const avatarUrl = me.pictureUrl ?? newestUrl;
+
   return (
     <div className="board">
       <button
-        className={`name-tag ${profileOpen ? "open" : ""}`}
+        className={`board-header ${profileOpen ? "open" : ""}`}
         onClick={() => setProfileOpen((v) => !v)}
         aria-expanded={profileOpen}
-        aria-label="Open your profile"
+        aria-label={`@${me.handle}, open your profile`}
       >
-        <span className="name-label">おなまえ</span>
-        <span className="name-value">@{me.handle}</span>
-        <span className="name-line" />
+        <span className="photo-sticker" aria-hidden>
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="" className={me.pictureUrl ? "photo" : ""} />
+          ) : (
+            me.handle[0]?.toUpperCase()
+          )}
+        </span>
+        <span className="board-name">@{me.handle}</span>
       </button>
 
       {profileOpen && (
         <div className="profile-backdrop" onClick={() => setProfileOpen(false)}>
           <ProfileCard
             made={stickers?.length ?? 0}
-            avatarUrl={
-              stickers?.reduce<BoardSticker | undefined>(
-                (a, s) => (!a || s.createdAt > a.createdAt ? s : a),
-                undefined,
-              )?.url
-            }
+            avatarUrl={newestUrl}
             onClose={() => setProfileOpen(false)}
           />
         </div>
@@ -259,21 +266,11 @@ export function StickerBoard({ freshId, onDraw }: Props) {
 
         {stickers?.length === 0 && (
           <div className="board-empty">
-            <button className="empty-slot" onClick={onDraw}>
-              <span className="empty-icon">
-                <SmallBrushIcon />
-              </span>
-              <span className="empty-title">
-                Draw your
-                <br />
-                first sticker
-              </span>
-              <span className="empty-sub">
-                Stickers you make
-                <br />
-                or receive land here.
-              </span>
-            </button>
+            <div className="empty-slot">
+              Stickers you make
+              <br />
+              or receive land here.
+            </div>
           </div>
         )}
 
@@ -303,7 +300,26 @@ export function StickerBoard({ freshId, onDraw }: Props) {
             );
           })}
 
-        {!!stickers?.length && <div className="board-hint">Drag to move · pinch to resize</div>}
+        {!!stickers?.length && (
+          <div className="board-hint fine">Drag to move · pinch to resize</div>
+        )}
+      </div>
+
+      {/* A new artist's first visit: the key hops inside a pulse ring, under a first-sticker hint. */}
+      <div className={`board-draw ${stickers?.length === 0 ? "first-visit" : ""}`}>
+        {stickers?.length === 0 && (
+          <div className="draw-hint" id="draw-hint" role="note">
+            Make your first sticker
+          </div>
+        )}
+        <Key
+          size="sm"
+          icon={<DrawIcon size={20} />}
+          onPress={onDraw}
+          aria-describedby={stickers?.length === 0 ? "draw-hint" : undefined}
+        >
+          Draw
+        </Key>
       </div>
 
       {open && (

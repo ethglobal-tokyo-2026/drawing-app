@@ -7,6 +7,8 @@ import {
   useState,
   type Ref,
 } from "react";
+import { Key } from "../controls/controls";
+import { ArrowBendLeftUpIcon } from "../icons/ArrowBendLeftUpIcon";
 import { CheckIcon } from "../icons/CheckIcon";
 import { RedoIcon } from "../icons/RedoIcon";
 import { UndoIcon } from "../icons/UndoIcon";
@@ -20,14 +22,16 @@ import { SealSequence } from "./sealing/SealSequence";
 import { Timer } from "./Timer";
 import { ColorDrawer } from "./tools/ColorDrawer";
 import { SizeSlider } from "./tools/SizeSlider";
-import { SmoothnessDrawer } from "./tools/SmoothnessDrawer";
+import { SmoothingBar } from "./tools/SmoothingBar";
 import { ToolPill, type Drawer } from "./tools/ToolPill";
 import { useShortcuts } from "./useShortcuts";
 import "./DrawingScreen.css";
 
 const DURATION_S = 5 * 60;
 const MAX_SIZE = 60;
-const ARM_TIMEOUT_MS = 3000;
+const ARM_TIMEOUT_MS = 2500;
+/** How long the paused hint stays stuck on before it peels off. */
+const PAUSED_HINT_MS = 2500;
 
 // Slider position (0..1) ↔ brush size, squared for finer control of thin lines.
 const sizeFromSlider = (v: number) => Math.round(1 + (MAX_SIZE - 1) * v * v);
@@ -61,21 +65,38 @@ interface Props {
   onGoToBoard: () => void;
 }
 
+/** Counts down only while running, so a hold keeps the time that was left. */
 function useCountdown(running: boolean) {
   const [left, setLeft] = useState(DURATION_S);
-  const deadline = useRef(0);
+  const remainingMs = useRef(DURATION_S * 1000);
   useEffect(() => {
     if (!running) return;
-    const id = setInterval(() => {
-      setLeft(Math.max(0, Math.ceil((deadline.current - Date.now()) / 1000)));
-    }, 250);
-    return () => clearInterval(id);
+    const deadline = Date.now() + remainingMs.current;
+    const tick = () => {
+      remainingMs.current = Math.max(0, deadline - Date.now());
+      setLeft(Math.ceil(remainingMs.current / 1000));
+    };
+    const id = setInterval(tick, 250);
+    return () => {
+      clearInterval(id);
+      remainingMs.current = Math.max(0, deadline - Date.now());
+    };
   }, [running]);
   const restart = () => {
-    deadline.current = Date.now() + DURATION_S * 1000;
+    remainingMs.current = DURATION_S * 1000;
     setLeft(DURATION_S);
   };
   return { left, restart };
+}
+
+function usePageHidden() {
+  const [hidden, setHidden] = useState(() => document.hidden);
+  useEffect(() => {
+    const onChange = () => setHidden(document.hidden);
+    document.addEventListener("visibilitychange", onChange);
+    return () => document.removeEventListener("visibilitychange", onChange);
+  }, []);
+  return hidden;
 }
 
 export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard }: Props) {
@@ -104,13 +125,30 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // Keeps the ticket card up after a purchase until "Start drawing".
   const [holdPaywall, setHoldPaywall] = useState(false);
 
-  const { left, restart } = useCountdown(storedPhase === "drawing" || storedPhase === "armed");
+  // The person's pause is the timer tap; the other holds release on their own.
+  const [userPaused, setUserPaused] = useState(false);
+  const [railHeld, setRailHeld] = useState(false);
+  const pageHidden = usePageHidden();
+  const [pausedHint, setPausedHint] = useState(0);
+  const clockPhase = storedPhase === "drawing" || storedPhase === "armed";
+  const held = userPaused || pageHidden || openDrawer !== null || railHeld;
+  const { left, restart } = useCountdown(clockPhase && !held);
   // Time's up: the canvas locks and the tick seals in one tap.
   const phase: Phase =
     left === 0 && (storedPhase === "drawing" || storedPhase === "armed") ? "timeup" : storedPhase;
   const paywall = active && phase === "ready" && (tickets.left === 0 || holdPaywall);
   const locked = paywall || phase === "timeup" || phase === "sealing" || phase === "sealed";
   const drawer = locked ? null : openDrawer;
+  const canPause = clockPhase && left > 0;
+  // While paused by a tap the canvas takes no marks; tools can still switch.
+  const tapPaused = userPaused && canPause;
+
+  // The paused hint peels off by itself.
+  useEffect(() => {
+    if (!pausedHint) return;
+    const id = setTimeout(() => setPausedHint(0), PAUSED_HINT_MS);
+    return () => clearTimeout(id);
+  }, [pausedHint]);
 
   const sizeTool = tool === "eraser" ? "eraser" : "brush";
   const size = sizes[sizeTool];
@@ -178,6 +216,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         blob: images.domeBlob,
         width: images.width,
         height: images.height,
+        outline: images.outline,
       });
       setSealed({ images, record });
       setPhase("sealed");
@@ -205,6 +244,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     canvas.current?.reset();
     setSealed(null);
     setPhase("ready");
+    setUserPaused(false);
     restart();
     onNewSticker();
   };
@@ -225,23 +265,44 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     <>
       <div
         className="canvas-area"
-        // A tap on the canvas while a drawer is open just closes it.
+        // A tap on the canvas while a drawer is open just closes it; a stroke while
+        // paused shows the hint instead of a mark.
         onPointerDownCapture={(e) => {
-          if (!drawer) return;
-          e.stopPropagation();
-          setDrawer(null);
+          if (drawer) {
+            e.stopPropagation();
+            setDrawer(null);
+          } else if (tapPaused) {
+            setPausedHint((n) => n + 1);
+          }
         }}
       >
         <DrawingCanvas
           ref={canvas}
-          settings={{ tool, color, size, stabilization, pressure, fingerDraws, locked }}
+          settings={{
+            tool,
+            color,
+            size,
+            stabilization,
+            pressure,
+            fingerDraws,
+            locked: locked || tapPaused,
+          }}
           onHistoryChange={onHistoryChange}
           onPenDetected={onPenDetected}
         />
       </div>
 
       <div className="overlay top">
-        <Timer seconds={left} />
+        <Timer
+          seconds={left}
+          paused={canPause && held}
+          canPause={canPause}
+          nudge={pausedHint}
+          onToggle={() => {
+            setUserPaused((p) => !p);
+            setPausedHint(0);
+          }}
+        />
         <ToolPill
           tool={tool}
           color={color}
@@ -258,7 +319,15 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           previewSize={size}
           previewColor={tool === "eraser" ? "#fff" : color}
           onChange={(v) => setSize(sizeFromSlider(v))}
+          onActiveChange={setRailHeld}
         />
+      )}
+
+      {pausedHint > 0 && tapPaused && (
+        <div className="paused-hint" key={pausedHint} role="status">
+          <ArrowBendLeftUpIcon size={28} />
+          Tap the timer to keep drawing
+        </div>
       )}
 
       <div className="overlay bottom">
@@ -269,7 +338,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
             disabled={!history.canUndo || locked}
             aria-label="Undo"
           >
-            <UndoIcon />
+            <UndoIcon size={24} />
           </button>
           <button
             className="square-btn"
@@ -277,7 +346,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
             disabled={!history.canRedo || locked}
             aria-label="Redo"
           >
-            <RedoIcon />
+            <RedoIcon size={24} />
           </button>
         </div>
         <div className="seal-area">
@@ -292,14 +361,14 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
               </span>
             )
           )}
-          <button
-            className={`seal-btn ${phase === "armed" || phase === "timeup" ? "armed" : ""}`}
-            onClick={onTick}
+          <Key
+            size="round"
+            className={phase === "armed" || phase === "timeup" ? "armed" : ""}
+            onPress={onTick}
             disabled={phase === "sealing" || phase === "sealed"}
             aria-label="Finish drawing"
-          >
-            <CheckIcon />
-          </button>
+            icon={<CheckIcon size={26} />}
+          />
         </div>
       </div>
 
@@ -316,14 +385,13 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         />
       )}
       {drawer === "smooth" && (
-        <SmoothnessDrawer
+        <SmoothingBar
           value={stabilization}
           pressure={pressure}
           fingerDraws={fingerDraws}
           onChange={setStabilization}
           onPressure={setPressure}
           onFingerDraws={setFingerDraws}
-          onClose={() => setDrawer(null)}
         />
       )}
 
@@ -333,6 +401,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           images={sealed.images}
           record={sealed.record}
           ticketsLeft={tickets.left}
+          usedToday={tickets.usedFree}
           onKeepDrawing={startNewSticker}
           onBoard={onGoToBoard}
         />

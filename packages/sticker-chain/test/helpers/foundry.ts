@@ -21,11 +21,21 @@ export interface AnvilInstance {
   rpcUrl: string;
 }
 
+// forge writes the artifact; this checks the parts the tests use before trusting its shape.
+const isFoundryArtifact = (value: unknown): value is FoundryArtifact => {
+  if (typeof value !== "object" || value === null) return false;
+  const abi: unknown = Reflect.get(value, "abi");
+  const bytecode: unknown = Reflect.get(value, "bytecode");
+  if (!Array.isArray(abi) || typeof bytecode !== "object" || bytecode === null) return false;
+  const object: unknown = Reflect.get(bytecode, "object");
+  return typeof object === "string" && object.startsWith("0x");
+};
+
 export function readFoundryArtifact(sourceName: string, contractName: string) {
   const artifactPath = resolve(projectRoot, "out", `${sourceName}.sol`, `${contractName}.json`);
-  const artifact = JSON.parse(readFileSync(artifactPath, "utf8")) as FoundryArtifact;
-  if (!artifact.bytecode.object.startsWith("0x")) {
-    throw new Error(`${contractName} artifact contains invalid bytecode`);
+  const artifact: unknown = JSON.parse(readFileSync(artifactPath, "utf8"));
+  if (!isFoundryArtifact(artifact)) {
+    throw new Error(`${contractName} artifact at ${artifactPath} has no ABI or valid bytecode`);
   }
   return { abi: artifact.abi, bytecode: artifact.bytecode.object };
 }
@@ -42,7 +52,7 @@ async function reservePort() {
     throw new Error("Could not reserve a port for Anvil");
   }
   await new Promise<void>((resolveClosed, reject) => {
-    server.close((error) => error ? reject(error) : resolveClosed());
+    server.close((error) => (error ? reject(error) : resolveClosed()));
   });
   return address.port;
 }
@@ -60,14 +70,23 @@ async function stopAnvil(process: ChildProcessWithoutNullStreams) {
 export async function startAnvil(chainId: number): Promise<AnvilInstance> {
   const port = await reservePort();
   const rpcUrl = `http://127.0.0.1:${port}`;
-  const process = spawn("anvil", [
-    "--silent",
-    "--host", "127.0.0.1",
-    "--port", String(port),
-    "--chain-id", String(chainId),
-    "--mnemonic", mnemonic,
-    "--accounts", "8",
-  ], { cwd: projectRoot });
+  const process = spawn(
+    "anvil",
+    [
+      "--silent",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      String(port),
+      "--chain-id",
+      String(chainId),
+      "--mnemonic",
+      mnemonic,
+      "--accounts",
+      "8",
+    ],
+    { cwd: projectRoot },
+  );
   let processError: Error | undefined;
   let stderr = "";
   process.once("error", (error) => {
@@ -91,7 +110,8 @@ export async function startAnvil(chainId: number): Promise<AnvilInstance> {
       if (response.ok) {
         return {
           accounts: Array.from({ length: 8 }, (_, addressIndex) =>
-            mnemonicToAccount(mnemonic, { addressIndex })),
+            mnemonicToAccount(mnemonic, { addressIndex }),
+          ),
           close: () => stopAnvil(process),
           rpcUrl,
         };

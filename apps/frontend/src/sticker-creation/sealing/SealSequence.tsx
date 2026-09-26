@@ -1,8 +1,10 @@
 import { useEffect, useState, type CSSProperties } from "react";
-import { SmallBrushIcon } from "../../icons/SmallBrushIcon";
-import { StickerIcon } from "../../icons/StickerIcon";
+import { Key, Label } from "../../controls/controls";
+import { DrawIcon } from "../../icons/DrawIcon";
+import { StickerBoardIcon } from "../../icons/StickerBoardIcon";
 import { formatClock, formatDay, formatNo } from "../../stickers/format";
 import type { StickerRecord } from "../../stickers/stickerStorage";
+import { TicketStubs } from "../../tickets/TicketStubs";
 import type { StickerImages } from "./makeSticker";
 import "../../styles/result-card.css";
 import "./SealSequence.css";
@@ -21,11 +23,20 @@ interface Props {
   images: StickerImages;
   record: StickerRecord;
   ticketsLeft: number;
+  /** Free tickets used today, for the stubs. */
+  usedToday: number;
   onKeepDrawing: () => void;
   onBoard: () => void;
 }
 
-export function SealSequence({ images, record, ticketsLeft, onKeepDrawing, onBoard }: Props) {
+export function SealSequence({
+  images,
+  record,
+  ticketsLeft,
+  usedToday,
+  onKeepDrawing,
+  onBoard,
+}: Props) {
   const [step, setStep] = useState(0);
   const { stage, label } = STEPS[step];
 
@@ -63,7 +74,7 @@ export function SealSequence({ images, record, ticketsLeft, onKeepDrawing, onBoa
           </svg>
         )}
       </div>
-      {label && <div className="seal-caption">{label}…</div>}
+      {label && <div className="seal-caption fine">{label}…</div>}
 
       {stage === "done" && (
         <div className="result-backdrop">
@@ -75,21 +86,22 @@ export function SealSequence({ images, record, ticketsLeft, onKeepDrawing, onBoa
               style={{ rotate: `${record.rotation}deg` }}
             />
             <h2>Sealed</h2>
-            <div className="result-meta">
+            <div className="result-meta fine">
               {formatNo(record.no)} · {formatClock(record.timeUsed)} · {formatDay(record.createdAt)}
             </div>
-            <div className="tickets-left">
+            <TicketStubs used={usedToday} />
+            <div className="tickets-left fine">
               {ticketsLeft === 0
                 ? "No tickets left today"
                 : `${ticketsLeft} ticket${ticketsLeft === 1 ? "" : "s"} left`}
             </div>
             <div className="perforation" />
-            <button className="keep-btn" onClick={onKeepDrawing}>
-              <SmallBrushIcon /> Keep drawing
-            </button>
-            <button className="board-btn" onClick={onBoard}>
-              <StickerIcon /> Go to sticker board
-            </button>
+            <Key icon={<DrawIcon size={20} />} onPress={onKeepDrawing}>
+              Keep drawing
+            </Key>
+            <Label icon={<StickerBoardIcon size={20} />} onPress={onBoard}>
+              Go to sticker board
+            </Label>
           </div>
         </div>
       )}

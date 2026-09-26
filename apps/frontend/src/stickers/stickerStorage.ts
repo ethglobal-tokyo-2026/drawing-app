@@ -12,6 +12,8 @@ export interface StickerRecord {
   rotation: number;
   /** Where it sits on the board, once placed or moved. */
   placement?: Placement;
+  /** SVG path of the cut line, in image pixels. Missing on stickers sealed before it was kept. */
+  outline?: string;
 }
 
 export interface Placement {
@@ -116,4 +118,5 @@ const isStickerRecord = (v: unknown): v is StickerRecord =>
   typeof v.height === "number" &&
   "rotation" in v &&
   typeof v.rotation === "number" &&
-  (!("placement" in v) || v.placement === undefined || isPlacement(v.placement));
+  (!("placement" in v) || v.placement === undefined || isPlacement(v.placement)) &&
+  (!("outline" in v) || v.outline === undefined || typeof v.outline === "string");

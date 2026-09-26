@@ -40,9 +40,7 @@ function claimTokenMatches(token: Hex, commitment: Hex) {
   );
 }
 
-export function createGiftClaim(
-  randomBytesImpl: (size: number) => Uint8Array = randomBytes,
-) {
+export function createGiftClaim(randomBytesImpl: (size: number) => Uint8Array = randomBytes) {
   const giftId = bytesToHex(randomBytesImpl(32));
   const claimToken = bytesToHex(randomBytesImpl(32));
   requireBytes32(giftId, "Gift ID");
@@ -143,7 +141,8 @@ export function createGiftAuthorizer({
       if (!recipientArtistId) throw new Error("Recipient artist is required");
       const recipientWallet = await findArtistSmartWallet(recipientArtistId);
       if (
-        recipientWallet?.kind !== "smart_account" || recipientWallet.chainId !== chainId ||
+        recipientWallet?.kind !== "smart_account" ||
+        recipientWallet.chainId !== chainId ||
         !isAddress(recipientWallet.address)
       ) {
         throw new Error("Recipient World Chain smart wallet is unavailable");

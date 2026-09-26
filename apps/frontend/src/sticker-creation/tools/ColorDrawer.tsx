@@ -39,7 +39,7 @@ export function ColorDrawer({ color, recent, onChange, onCommit, onClose }: Colo
         <span className="current-color" style={{ background: color }} />
       </div>
       <div className="recent">
-        <span className="recent-label">Recent</span>
+        <span className="recent-label fine">Recent</span>
         {recent.map((c) => (
           <button
             key={c}

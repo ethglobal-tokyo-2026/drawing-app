@@ -8,11 +8,7 @@ import {
 } from "viem";
 import { afterEach, describe, expect, it } from "vitest";
 import { createStickerSealer } from "../src/seal-sticker.js";
-import {
-  readFoundryArtifact,
-  startAnvil,
-  type AnvilInstance,
-} from "./helpers/foundry.js";
+import { readFoundryArtifact, startAnvil, type AnvilInstance } from "./helpers/foundry.js";
 
 const artifact = readFoundryArtifact("StickerNFT", "StickerNFT");
 const chain = defineChain({
@@ -78,30 +74,38 @@ describe("StickerNFT", () => {
     const context = await setup();
     await expect(sealSticker(context)).resolves.toMatchObject({ status: "success" });
 
-    await expect(context.publicClient.readContract({
-      address: context.contractAddress,
-      abi: artifact.abi,
-      functionName: "ownerOf",
-      args: [1n],
-    })).resolves.toBe(context.artist.address);
-    await expect(context.publicClient.readContract({
-      address: context.contractAddress,
-      abi: artifact.abi,
-      functionName: "artistOf",
-      args: [1n],
-    })).resolves.toBe(context.artist.address);
-    await expect(context.publicClient.readContract({
-      address: context.contractAddress,
-      abi: artifact.abi,
-      functionName: "contentHashOf",
-      args: [1n],
-    })).resolves.toBe(contentHash);
-    await expect(context.publicClient.readContract({
-      address: context.contractAddress,
-      abi: artifact.abi,
-      functionName: "tokenURI",
-      args: [1n],
-    })).resolves.toBe(metadataUri);
+    await expect(
+      context.publicClient.readContract({
+        address: context.contractAddress,
+        abi: artifact.abi,
+        functionName: "ownerOf",
+        args: [1n],
+      }),
+    ).resolves.toBe(context.artist.address);
+    await expect(
+      context.publicClient.readContract({
+        address: context.contractAddress,
+        abi: artifact.abi,
+        functionName: "artistOf",
+        args: [1n],
+      }),
+    ).resolves.toBe(context.artist.address);
+    await expect(
+      context.publicClient.readContract({
+        address: context.contractAddress,
+        abi: artifact.abi,
+        functionName: "contentHashOf",
+        args: [1n],
+      }),
+    ).resolves.toBe(contentHash);
+    await expect(
+      context.publicClient.readContract({
+        address: context.contractAddress,
+        abi: artifact.abi,
+        functionName: "tokenURI",
+        args: [1n],
+      }),
+    ).resolves.toBe(metadataUri);
   });
 
   it("allows only an approved sealer and only one NFT per sticker", async () => {
@@ -109,12 +113,14 @@ describe("StickerNFT", () => {
     await expect(sealSticker(context, context.stranger)).rejects.toThrow();
     await sealSticker(context);
     await expect(sealSticker(context)).rejects.toThrow();
-    await expect(context.publicClient.readContract({
-      address: context.contractAddress,
-      abi: artifact.abi,
-      functionName: "balanceOf",
-      args: [context.artist.address],
-    })).resolves.toBe(1n);
+    await expect(
+      context.publicClient.readContract({
+        address: context.contractAddress,
+        abi: artifact.abi,
+        functionName: "balanceOf",
+        args: [context.artist.address],
+      }),
+    ).resolves.toBe(1n);
   });
 
   it("keeps the original artist and content after a later transfer", async () => {
@@ -130,24 +136,30 @@ describe("StickerNFT", () => {
     });
     await context.publicClient.waitForTransactionReceipt({ hash });
 
-    await expect(context.publicClient.readContract({
-      address: context.contractAddress,
-      abi: artifact.abi,
-      functionName: "ownerOf",
-      args: [1n],
-    })).resolves.toBe(context.recipient.address);
-    await expect(context.publicClient.readContract({
-      address: context.contractAddress,
-      abi: artifact.abi,
-      functionName: "artistOf",
-      args: [1n],
-    })).resolves.toBe(context.artist.address);
-    await expect(context.publicClient.readContract({
-      address: context.contractAddress,
-      abi: artifact.abi,
-      functionName: "contentHashOf",
-      args: [1n],
-    })).resolves.toBe(contentHash);
+    await expect(
+      context.publicClient.readContract({
+        address: context.contractAddress,
+        abi: artifact.abi,
+        functionName: "ownerOf",
+        args: [1n],
+      }),
+    ).resolves.toBe(context.recipient.address);
+    await expect(
+      context.publicClient.readContract({
+        address: context.contractAddress,
+        abi: artifact.abi,
+        functionName: "artistOf",
+        args: [1n],
+      }),
+    ).resolves.toBe(context.artist.address);
+    await expect(
+      context.publicClient.readContract({
+        address: context.contractAddress,
+        abi: artifact.abi,
+        functionName: "contentHashOf",
+        args: [1n],
+      }),
+    ).resolves.toBe(contentHash);
   });
 });
 
@@ -160,26 +172,37 @@ describe("sticker sealing backend", () => {
       contractAddress: context.contractAddress,
       sealerAccount: context.admin,
       abi: artifact.abi,
-      findSticker: async (id) => id === stickerId ? {
-        id,
-        artistId: "line-user-1",
-        sealedAt: "2026-09-25T00:00:00Z",
-        contentHash,
-        metadataUri,
-      } : null,
-      findArtistSmartWallet: async (artistId) => artistId === "line-user-1" ? {
-        address: context.artist.address,
-        kind: "smart_account",
-        chainId: 4801,
-      } : null,
+      findSticker: async (id) =>
+        id === stickerId
+          ? {
+              id,
+              artistId: "line-user-1",
+              sealedAt: "2026-09-25T00:00:00Z",
+              contentHash,
+              metadataUri,
+            }
+          : null,
+      findArtistSmartWallet: async (artistId) =>
+        artistId === "line-user-1"
+          ? {
+              address: context.artist.address,
+              kind: "smart_account",
+              chainId: 4801,
+            }
+          : null,
     });
 
-    await expect(sealForArtist({ artistId: "another-user", stickerId }))
-      .rejects.toThrow("Sticker is not sealed for this artist");
-    await expect(sealForArtist({ artistId: "line-user-1", stickerId }))
-      .resolves.toMatchObject({ tokenId: 1n, alreadySealed: false });
-    await expect(sealForArtist({ artistId: "line-user-1", stickerId }))
-      .resolves.toEqual({ tokenId: 1n, alreadySealed: true });
+    await expect(sealForArtist({ artistId: "another-user", stickerId })).rejects.toThrow(
+      "Sticker is not sealed for this artist",
+    );
+    await expect(sealForArtist({ artistId: "line-user-1", stickerId })).resolves.toMatchObject({
+      tokenId: 1n,
+      alreadySealed: false,
+    });
+    await expect(sealForArtist({ artistId: "line-user-1", stickerId })).resolves.toEqual({
+      tokenId: 1n,
+      alreadySealed: true,
+    });
   });
 
   it("refuses a signer EOA in place of the artist smart account", async () => {
@@ -204,13 +227,16 @@ describe("sticker sealing backend", () => {
       }),
     });
 
-    await expect(sealForArtist({ artistId: "line-user-1", stickerId }))
-      .rejects.toThrow("smart wallet is unavailable");
-    await expect(context.publicClient.readContract({
-      address: context.contractAddress,
-      abi: artifact.abi,
-      functionName: "tokenIdForSticker",
-      args: [stickerKey],
-    })).resolves.toBe(0n);
+    await expect(sealForArtist({ artistId: "line-user-1", stickerId })).rejects.toThrow(
+      "smart wallet is unavailable",
+    );
+    await expect(
+      context.publicClient.readContract({
+        address: context.contractAddress,
+        abi: artifact.abi,
+        functionName: "tokenIdForSticker",
+        args: [stickerKey],
+      }),
+    ).resolves.toBe(0n);
   });
 });

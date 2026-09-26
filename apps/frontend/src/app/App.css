@@ -2,15 +2,22 @@
 
 /* On a phone the app fills the screen. */
 .phone {
+  --safe-bottom: max(14px, env(safe-area-inset-bottom));
+  --tabs-h: calc(59px + var(--safe-bottom));
   position: fixed;
   inset: 0;
   display: flex;
   flex-direction: column;
-  padding: max(8px, env(safe-area-inset-top)) 8px 0;
-  background: var(--bg);
+  padding: max(8px, env(safe-area-inset-top)) 8px calc(var(--tabs-h) + 8px);
+  background: var(--liner);
 }
 
-/* On a desktop with a mouse, show it inside a phone-sized frame. */
+/* Tabs tucked: the page runs down to the grabber. */
+.phone.tabs-tucked {
+  padding-bottom: calc(var(--safe-bottom) + 44px);
+}
+
+/* On a desktop with a mouse, show it inside a phone-sized frame. The frame is a device mock, not the world. */
 @media (hover: hover) and (pointer: fine) and (min-width: 500px) {
   #root {
     display: grid;
@@ -22,7 +29,7 @@
     inset: auto;
     width: 390px;
     height: min(844px, calc(100dvh - 48px));
-    padding: 14px 8px 0;
+    padding-top: 14px;
     border: 10px solid #16151f;
     border-radius: 54px;
     overflow: hidden;
@@ -37,7 +44,7 @@
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  background: var(--card);
-  border: 1px solid var(--line);
+  background: var(--liner);
+  border: 1px solid var(--rule-kiss);
   border-radius: 6px;
 }

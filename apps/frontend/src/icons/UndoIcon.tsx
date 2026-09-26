@@ -1,8 +1,4 @@
-import { IconSvg } from "./IconSvg";
+import bold from "@phosphor-icons/core/bold/arrow-u-up-left-bold.svg?raw";
+import { IconSvg, type IconProps } from "./IconSvg";
 
-export const UndoIcon = () => (
-  <IconSvg size={24}>
-    <path d="M4 4v5h5" />
-    <path d="M4.6 14.5A8 8 0 1 0 6.3 6.6L4 9" />
-  </IconSvg>
-);
+export const UndoIcon = ({ size }: IconProps) => <IconSvg svg={bold} size={size} />;

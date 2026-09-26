@@ -6,7 +6,7 @@
 
 .canvas-container {
   overflow: hidden;
-  background: #fff;
+  background: var(--canvas);
 }
 
 .drawing-canvas {
