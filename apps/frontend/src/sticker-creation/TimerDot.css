@@ -1,0 +1,190 @@
+.timer-dot {
+  position: relative;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  transform: rotate(var(--tilt));
+  transition: transform var(--t-stick) var(--ease-peel);
+}
+
+/* It presses like a dot sticker. */
+.timer-dot:active {
+  transform: rotate(var(--tilt)) scale(0.94);
+  transition-duration: var(--t-press);
+}
+
+.timer-dot:focus-visible {
+  outline-offset: 3px;
+}
+
+.timer-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--seal);
+  box-shadow:
+    inset 0 0 0 1px rgba(28, 24, 36, 0.07),
+    0 1px 0 rgba(28, 24, 36, 0.1),
+    1px 2px 3px rgba(28, 24, 36, 0.14);
+  transition: background-color 240ms var(--ease-out);
+}
+
+.timer-dot.is-late .timer-face {
+  background: var(--tomato);
+}
+
+.timer-time {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  font-family: var(--font-puffy);
+  font-size: 13.5px;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--ink);
+  translate: 0 1px;
+  transition: transform 220ms var(--ease-out);
+}
+
+/* Fixed digit cells, so the numerals don't shuffle as the seconds change. */
+.timer-time i {
+  display: inline-block;
+  width: 0.8em;
+  font-style: normal;
+  text-align: center;
+}
+
+.timer-time .timer-colon {
+  width: 0.36em;
+  translate: 0 -0.04em;
+}
+
+/* Held: the dot stays whole and bright, and a white label with the pause mark sticks across its lower
+   edge at a counter-angle. It sticks on when the clock holds and peels off when it runs, one look for
+   every hold. */
+.timer-tag {
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px 3px 5px;
+  border-radius: 4px;
+  background: var(--canvas);
+  color: var(--ink);
+  box-shadow:
+    0 0 0 1px var(--rule-strong),
+    1px 1px 2px rgba(28, 24, 36, 0.18);
+  font-size: var(--fs-fine);
+  font-weight: 800;
+  font-stretch: var(--w-fine);
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-50%) rotate(8deg) scale(1.3);
+  transition:
+    opacity 110ms var(--ease-out),
+    transform 240ms var(--ease-out);
+}
+
+.timer-tag svg {
+  flex: none;
+  width: 8px;
+  height: 8px;
+}
+
+.timer-dot.is-held .timer-tag {
+  opacity: 1;
+  transform: translateX(-50%) rotate(8deg);
+}
+
+.timer-dot.is-held .timer-time {
+  transform: translateY(-3px);
+}
+
+/* Hidden: the clock holds and a corner lifts. */
+.timer-dot::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  bottom: 2px;
+  width: 20px;
+  height: 13px;
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  background: linear-gradient(170deg, #fff, var(--liner-deep));
+  box-shadow: -1px -2px 3px rgba(28, 24, 36, 0.16);
+  transform-origin: 50% 0;
+  transform: rotate(-38deg) scaleY(0);
+  opacity: 0;
+  transition:
+    transform var(--t-peel) var(--ease-peel),
+    opacity var(--t-peel) var(--ease-peel);
+}
+
+.timer-dot.is-lifted {
+  transform: rotate(calc(var(--tilt) - 3deg)) translateY(-1px);
+}
+
+.timer-dot.is-lifted::after {
+  transform: rotate(-38deg) scaleY(1);
+  opacity: 1;
+}
+
+/* The paused hint: a label stuck just under the timer, with an arrow pointing up at it. It sticks on
+   as the dot nudges and peels off by itself. Placed from the top row's corner. */
+.timer-hint {
+  position: absolute;
+  left: 4px;
+  top: 61px;
+  z-index: 6;
+  display: flex;
+  align-items: flex-start;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-3px) scale(0.96);
+  transform-origin: 14px 0;
+  transition:
+    opacity 260ms var(--ease-out),
+    transform 260ms var(--ease-out);
+}
+
+.timer-hint.is-on {
+  opacity: 1;
+  transform: none;
+  transition-duration: 120ms, 220ms;
+}
+
+.timer-hint-arrow {
+  flex: none;
+  color: var(--ink);
+}
+
+.timer-hint-label {
+  margin: 18px 0 0 -2px;
+  padding: 7px 11px 8px;
+  border-radius: var(--r-label);
+  background: var(--canvas);
+  color: var(--ink);
+  box-shadow:
+    0 0 0 1px var(--rule-strong),
+    var(--shadow-label);
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+  transform: rotate(-2deg);
+  transform-origin: 0 0;
+}

@@ -17,6 +17,21 @@
   }
 }
 
+/* A sheet that stays mounted slides back down, from wherever a drag left it, before it goes. */
+.bottom-sheet.is-leaving {
+  animation: bottom-sheet-out var(--t-peel) var(--ease-peel) forwards;
+  pointer-events: none;
+}
+
+@keyframes bottom-sheet-out {
+  from {
+    transform: translateY(var(--leave-from, 0px));
+  }
+  to {
+    transform: translateY(104%);
+  }
+}
+
 /* The perforation row, and the grab: a firmer run of holes at the center. */
 .perf {
   position: relative;

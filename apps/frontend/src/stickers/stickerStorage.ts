@@ -10,6 +10,13 @@ export interface StickerRecord {
   height: number;
   /** SVG path of the cut line, in image pixels. Older stickers don't have one. */
   outline?: string;
+  /**
+   * The cut's shape (white, with the cut as alpha), the same size and place as `blob`, whose baked
+   * shadow keeps it from acting as a mask. Older stickers don't have one.
+   */
+  mask?: Blob;
+  /** The sheet as it was drawn, on white. Older stickers don't have one. */
+  flat?: Blob;
   /** Degrees, so each sticker sits on the board a little crooked. */
   rotation: number;
   /** Where it sits on the board, once placed or moved. */
@@ -127,4 +134,6 @@ export const isStickerRecord = (v: unknown): v is StickerRecord =>
   "rotation" in v &&
   typeof v.rotation === "number" &&
   (!("outline" in v) || v.outline === undefined || typeof v.outline === "string") &&
+  (!("mask" in v) || v.mask === undefined || v.mask instanceof Blob) &&
+  (!("flat" in v) || v.flat === undefined || v.flat instanceof Blob) &&
   (!("placement" in v) || v.placement === undefined || isPlacement(v.placement));

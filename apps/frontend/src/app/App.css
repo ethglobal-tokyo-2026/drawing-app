@@ -32,11 +32,16 @@
   }
 }
 
-/* Everything between LINE's header and the tabs, edge to edge. */
+/* Everything between LINE's header and the tabs, edge to edge. Each screen paints its own ground. */
 .screen {
   position: relative;
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  background: var(--card);
+  background: var(--liner);
+}
+
+/* With the tabs tucked away, the screen runs down to the grabber's strip above the home indicator. */
+.phone.has-tucked-tabs .screen {
+  margin-bottom: var(--ph-safe);
 }

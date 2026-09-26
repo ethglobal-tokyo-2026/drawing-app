@@ -1,12 +1,9 @@
 /* Variables of the screens that predate the design tokens; each goes with the last screen that uses it. */
 :root {
   --bg: #f2f2f7;
-  --card: #ffffff;
   --line: #e2e2e8;
   --muted: #8a8894;
   --yellow: #f6d84c;
-  --yellow-deep: #e8c43a;
-  --pill: #f7f7f9;
 }
 
 :root {

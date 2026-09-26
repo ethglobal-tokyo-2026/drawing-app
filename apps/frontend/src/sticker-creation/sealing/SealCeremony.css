@@ -1,0 +1,211 @@
+/* The seal ceremony over the drawing screen. Its moving parts are written frame by frame, on transform
+   and opacity only; they start hidden here. */
+.seal-ceremony {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  color: var(--ink);
+}
+
+.seal-ceremony.is-leaving {
+  opacity: 0;
+  transition: opacity 240ms var(--ease-out);
+}
+
+/* Off its backing, the sticker takes the ink with it; the kiss-cut hole shows where it was. */
+.drawing-screen:has(> .seal-ceremony[data-lifted]) .ink-canvas {
+  opacity: 0;
+}
+
+.seal-ceremony__dim,
+.seal-ceremony__cut {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.seal-ceremony__dim,
+.seal-ceremony__hole,
+.seal-ceremony__veil,
+.seal-ceremony__shadow,
+.seal-ceremony__plain,
+.seal-ceremony__tint,
+.seal-ceremony__gloss,
+.seal-ceremony__pour,
+.seal-ceremony__piece :is(.live-resin__lens, .live-resin__spec, .live-resin__rim) {
+  opacity: 0;
+}
+
+.seal-ceremony__hole {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+
+/* The card's scrim is a plain veil, so nothing of the cut sheet shows around the card. */
+.seal-ceremony__veil {
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 24, 36, 0.52);
+  pointer-events: none;
+}
+
+/* The cast shadow is the sticker's sibling, so it stays flat on the sheet while the sticker tilts. */
+.seal-ceremony__shadow,
+.seal-ceremony__piece {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+.seal-ceremony__piece img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The resin's wet front: a clear film with a bright meniscus and a thin refracted shadow behind it. */
+.seal-ceremony__pour {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
+  mask: var(--m) 0 0 / 100% 100% no-repeat;
+}
+
+.seal-ceremony__pour b {
+  position: absolute;
+  display: block;
+  transform: scale(0.02);
+  will-change: transform;
+  border-radius: 47% 53% 44% 56% / 55% 45% 57% 43%;
+  background: rgba(238, 234, 250, 0.1);
+  box-shadow:
+    inset 0 0 0 2.5px rgba(255, 255, 255, 0.95),
+    inset 0 0 0 5.5px rgba(28, 24, 36, 0.08),
+    inset 0 0 16px 7px rgba(255, 255, 255, 0.38);
+}
+
+/* Live resin, shaped by the silhouette: a lens over it all, a specular along the top edge, a rim light
+   inside the lower edge, and a sheen that sweeps when the sticker lands. The highlights read the app's
+   shared light (--lx, --ly, -1 to 1) and rest in the middle without one. */
+.live-resin {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.live-resin > i {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
+  mask: var(--m) 0 0 / 100% 100% no-repeat;
+}
+
+.live-resin > i > b {
+  position: absolute;
+  display: block;
+}
+
+.live-resin > .live-resin__spec {
+  -webkit-mask: var(--mt) 0 0 / 100% 100% no-repeat;
+  mask: var(--mt) 0 0 / 100% 100% no-repeat;
+}
+
+.live-resin > .live-resin__rim {
+  -webkit-mask: var(--mb) 0 0 / 100% 100% no-repeat;
+  mask: var(--mb) 0 0 / 100% 100% no-repeat;
+}
+
+.live-resin__lens > b {
+  inset: -20%;
+  background: radial-gradient(
+    34% 30% at 50% 48%,
+    rgba(255, 255, 255, 0.17),
+    rgba(255, 255, 255, 0.05) 55%,
+    rgba(255, 255, 255, 0) 76%
+  );
+  translate: calc(var(--lx, 0) * 5%) calc(var(--ly, 0) * 4%);
+  transition: translate 280ms var(--ease-out);
+}
+
+/* The ceremony gathers the specular frame by frame, so only the light's moves glide. */
+.live-resin__spec > b {
+  inset: -40%;
+  background:
+    radial-gradient(
+      19% 14% at 38% 36%,
+      #fff 0 44%,
+      rgba(238, 245, 255, 0.94) 64%,
+      rgba(238, 245, 255, 0) 100%
+    ),
+    radial-gradient(
+      46% 32% at 40% 37%,
+      rgba(222, 236, 255, 0.9),
+      rgba(200, 222, 255, 0.42) 52%,
+      rgba(200, 222, 255, 0) 80%
+    );
+  translate: calc(var(--lx, 0) * 22%) calc(var(--ly, 0) * 9%);
+  animation: live-resin-sway 11s ease-in-out infinite alternate;
+  transition: translate 280ms var(--ease-out);
+}
+
+.live-resin__rim > b {
+  inset: -40%;
+  background: radial-gradient(
+    34% 26% at 62% 66%,
+    rgba(255, 255, 255, 0.92),
+    rgba(255, 255, 255, 0.32) 45%,
+    rgba(255, 255, 255, 0) 72%
+  );
+  translate: calc(var(--lx, 0) * -14%) calc(var(--ly, 0) * -6%);
+  transition: translate 280ms var(--ease-out);
+}
+
+.live-resin__sheen > b {
+  top: -30%;
+  bottom: -30%;
+  left: 0;
+  width: 46%;
+  opacity: 0;
+  background: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0) 15%,
+    rgba(255, 255, 255, 0.74) 50%,
+    rgba(255, 255, 255, 0) 85%
+  );
+  transform: translateX(-140%) skewX(-16deg);
+}
+
+/* Stills look alive: the specular sways slowly on its own. */
+@keyframes live-resin-sway {
+  0% {
+    transform: translate(-3%, -1.2%);
+  }
+  50% {
+    transform: translate(1.8%, 1.4%);
+  }
+  100% {
+    transform: translate(3.4%, -0.8%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-resin__spec > b {
+    animation: none;
+  }
+
+  .live-resin > i > b {
+    transition: none;
+  }
+}

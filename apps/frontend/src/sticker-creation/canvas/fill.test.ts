@@ -1,50 +1,84 @@
 import { describe, expect, it } from "vitest";
 import { floodFill, type Pixels } from "./fill";
 
-/** 7x7 transparent image with an opaque black ring around the center 3x3. */
-function ring(): Pixels {
-  const w = 7;
-  const data = new Uint8ClampedArray(w * w * 4);
-  for (let y = 1; y <= 5; y++)
-    for (let x = 1; x <= 5; x++)
-      if (x === 1 || x === 5 || y === 1 || y === 5) data.set([0, 0, 0, 255], (y * w + x) * 4);
-  return { width: w, height: w, data };
+type Rgba = [number, number, number, number];
+
+const INK: Rgba = [28, 24, 36, 255];
+const RED = [255, 0, 0] as const;
+const KEY: Record<string, Rgba> = {
+  ".": [0, 0, 0, 0],
+  "#": INK,
+  // Faint enough to count as empty paper.
+  f: [28, 24, 36, 100],
+  // A line's soft edge: ink, but not opaque.
+  e: [28, 24, 36, 191],
+  o: [255, 90, 54, 255],
+  // Within the tolerance of o (|ΔRGB| sums to 46)…
+  p: [255, 110, 80, 255],
+  // …and outside it (sums to 105).
+  q: [200, 40, 54, 255],
+};
+
+/** Pixels from rows of characters, one per pixel, colored by `KEY`. */
+function image(rows: string[]): Pixels {
+  const width = rows[0].length;
+  const data = new Uint8ClampedArray(width * rows.length * 4);
+  rows.forEach((row, y) => row.split("").forEach((c, x) => data.set(KEY[c], (y * width + x) * 4)));
+  return { width, height: rows.length, data };
 }
 
-const px = (img: Pixels, x: number, y: number) => [
-  ...img.data.slice((y * img.width + x) * 4, (y * img.width + x) * 4 + 4),
+const at = (img: Pixels, x: number, y: number) => [
+  ...img.data.subarray((y * img.width + x) * 4, (y * img.width + x) * 4 + 4),
 ];
-const RED: [number, number, number, number] = [255, 0, 0, 255];
 
 describe("floodFill", () => {
-  it("fills the enclosed region and stops at the outline", () => {
-    const img = ring();
+  it("fills empty paper up to the line, counting faint pixels as empty", () => {
+    const img = image([
+      "..........",
+      ".########.",
+      ".########.",
+      ".##....##.",
+      ".##.f..##.",
+      ".##....##.",
+      ".########.",
+      ".########.",
+      "..........",
+    ]);
     expect(floodFill(img, 3, 3, RED)).toBe(true);
-    expect(px(img, 3, 3)).toEqual(RED);
-    expect(px(img, 2, 4)).toEqual(RED);
-    // Outside the ring stays transparent.
-    expect(px(img, 0, 0)).toEqual([0, 0, 0, 0]);
+    expect(at(img, 3, 3)).toEqual([...RED, 255]);
+    expect(at(img, 6, 5)).toEqual([...RED, 255]);
+    expect(at(img, 4, 4)).toEqual([...RED, 255]);
+    expect(at(img, 1, 1)).toEqual(INK);
+    expect(at(img, 0, 0)).toEqual(KEY["."]);
+    expect(at(img, 9, 8)).toEqual(KEY["."]);
   });
 
-  it("grows one pixel into the outline to cover anti-aliasing", () => {
-    const img = ring();
-    floodFill(img, 3, 3, RED);
-    expect(px(img, 1, 3)).toEqual(RED);
-    expect(px(img, 5, 3)).toEqual(RED);
-    // Corners of the ring aren't 4-adjacent to the interior.
-    expect(px(img, 1, 1)).toEqual([0, 0, 0, 255]);
-  });
-
-  it("fills the outside without leaking into the ring interior", () => {
-    const img = ring();
+  it("fills a colored region across small color differences but not large ones", () => {
+    const img = image(["oopoq", "ooooq"]);
     floodFill(img, 0, 0, RED);
-    expect(px(img, 6, 6)).toEqual(RED);
-    expect(px(img, 3, 3)).toEqual([0, 0, 0, 0]);
+    expect(at(img, 2, 0)).toEqual([...RED, 255]);
+    expect(at(img, 4, 0)).toEqual(KEY.q);
   });
 
-  it("does nothing when the seed already has the fill color", () => {
-    const img = ring();
-    expect(floodFill(img, 1, 1, [0, 0, 0, 255])).toBe(false);
-    expect(floodFill(img, 99, 0, RED)).toBe(false);
+  it("does nothing on a color already within 8 of the fill color", () => {
+    const img = image(["ooo"]);
+    const before = [...img.data];
+    expect(floodFill(img, 1, 0, [255, 93, 55])).toBe(false);
+    expect([...img.data]).toEqual(before);
+  });
+
+  it("tucks the fill 2px under a line's soft edge", () => {
+    const img = image(["....eeee...."]);
+    floodFill(img, 0, 0, RED);
+    for (const x of [4, 5]) {
+      const [r, g, b, a] = at(img, x, 0);
+      expect(a).toBe(255);
+      // The fill shows through under the edge, so the pixel sits between the ink and the fill.
+      expect(r).toBeGreaterThan(INK[0]);
+      expect(r).toBeLessThan(RED[0]);
+      expect([g, b]).toEqual([18, 27]);
+    }
+    expect(at(img, 6, 0)).toEqual(KEY.e);
+    expect(at(img, 11, 0)).toEqual(KEY["."]);
   });
 });

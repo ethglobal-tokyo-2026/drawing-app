@@ -1,0 +1,92 @@
+/* The key's own press moves `translate`; the spring-in here uses opacity, transform and scale. */
+.key.seal-key {
+  position: absolute;
+  right: 18px;
+  bottom: 16px;
+  opacity: 0;
+  transform: scale(0.6);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    translate 360ms var(--ease-spring),
+    opacity var(--t-pop) var(--ease-out),
+    transform var(--t-pop) var(--ease-spring),
+    scale 480ms var(--ease-spring),
+    visibility 0s linear var(--t-pop);
+}
+
+.key.seal-key.is-shown {
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    translate 360ms var(--ease-spring),
+    opacity var(--t-pop) var(--ease-out),
+    transform 320ms var(--ease-spring),
+    scale 480ms var(--ease-spring),
+    visibility 0s;
+}
+
+.key.seal-key svg {
+  position: relative;
+  width: 26px;
+  height: 26px;
+}
+
+/* Armed: the key breathes while the chip asks for the second tap. */
+.key.seal-key.is-armed {
+  animation: seal-key-armed 900ms var(--ease-out) infinite;
+}
+
+@keyframes seal-key-armed {
+  0%,
+  100% {
+    scale: 1;
+  }
+  45% {
+    scale: 1.08;
+  }
+}
+
+.seal-chip {
+  position: absolute;
+  right: 88px;
+  bottom: 30px;
+  z-index: 3;
+  padding: 7px 11px 8px;
+  border-radius: var(--r-label);
+  background: var(--liner-lift);
+  box-shadow:
+    inset 0 0 0 1px var(--rule),
+    var(--shadow-label);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1;
+  color: var(--ink);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateX(6px);
+  pointer-events: none;
+  transition:
+    opacity 160ms var(--ease-out),
+    transform 220ms var(--ease-out);
+}
+
+.seal-chip.is-on {
+  opacity: 1;
+  transform: none;
+}
+
+/* A problem can run longer than the prompt; it wraps short of the undo and redo tiles. */
+.seal-chip.is-problem {
+  max-width: calc(100% - 226px);
+  line-height: 1.25;
+  white-space: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .key.seal-key.is-armed {
+    animation: none;
+  }
+}

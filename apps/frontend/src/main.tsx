@@ -5,6 +5,7 @@ import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/keys.css";
 import App from "./app/App.tsx";
+import { PrivySignIn } from "./identity/PrivySignIn";
 import { initLine } from "./line/liff";
 import { LineGate } from "./line/LineGate";
 import { installPress } from "./ui/press";
@@ -26,6 +27,7 @@ createRoot(root).render(
       <ToastProvider>
         <LineGate>
           <App />
+          <PrivySignIn />
         </LineGate>
       </ToastProvider>
     </IconContext.Provider>

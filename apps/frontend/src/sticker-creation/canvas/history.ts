@@ -1,128 +1,118 @@
-import type { Entry } from "./types";
+import type { Op } from "./ops";
 
 /* oxlint-disable typescript/method-signature-style -- implemented by classes; method syntax keeps unbound-method able to flag a detached call */
-/** Something history can draw entries onto and snapshot for fast undo. */
+/** Something history can draw ops onto and snapshot for fast undo. */
 export interface Surface<S> {
-  apply(entry: Entry): void;
+  apply(op: Op): void;
   /** Restore a snapshot, or blank the surface when `null`. */
   restore(snapshot: S | null): void;
   snapshot(): S;
+  /** Roughly what replaying the op costs, counted in strokes. */
+  cost(op: Op): number;
 }
 /* oxlint-enable typescript/method-signature-style */
 
-export interface HistoryOptions {
-  /** Take a snapshot every N entries. */
-  interval?: number;
-  /** Keep at most this many snapshots (they can be large bitmaps). */
+interface HistoryOptions {
+  /** Snapshot once the ops since the last snapshot cost this much to replay. */
+  checkpointCost?: number;
+  /** Keep at most this many snapshots; each is a full copy of the ink. */
   maxCheckpoints?: number;
 }
 
 /**
- * Vector undo/redo history. Undo rebuilds the surface from the nearest
- * snapshot (or last clear) and replays the remaining entries.
+ * Undo and redo over ops. Undo rebuilds the surface from the nearest snapshot and replays the ops
+ * after it; snapshots come often enough that an undo never replays much.
  */
 export class History<S> {
-  private surface: Surface<S>;
-  private entries: Entry[] = [];
-  private redoStack: Entry[] = [];
-  /** Keyed by the number of entries the snapshot contains. */
-  private checkpoints = new Map<number, S>();
-  private interval: number;
-  private maxCheckpoints: number;
+  private readonly surface: Surface<S>;
+  private readonly checkpointCost: number;
+  private readonly maxCheckpoints: number;
+  private ops: Op[] = [];
+  private undone: Op[] = [];
+  /** Keyed by how many ops the snapshot contains. */
+  private readonly checkpoints = new Map<number, S>();
 
-  constructor(surface: Surface<S>, opts: HistoryOptions = {}) {
+  constructor(
+    surface: Surface<S>,
+    { checkpointCost = 24, maxCheckpoints = 4 }: HistoryOptions = {},
+  ) {
     this.surface = surface;
-    this.interval = opts.interval ?? 25;
-    this.maxCheckpoints = opts.maxCheckpoints ?? 6;
+    this.checkpointCost = checkpointCost;
+    this.maxCheckpoints = maxCheckpoints;
   }
 
   get canUndo(): boolean {
-    return this.entries.length > 0;
+    return this.ops.length > 0;
   }
 
   get canRedo(): boolean {
-    return this.redoStack.length > 0;
+    return this.undone.length > 0;
   }
 
-  get length(): number {
-    return this.entries.length;
-  }
-
-  get last(): Entry | undefined {
-    return this.entries[this.entries.length - 1];
-  }
-
-  push(entry: Entry): void {
-    this.redoStack = [];
-    // Snapshots past the current length belong to an abandoned branch.
-    for (const k of this.checkpoints.keys())
-      if (k > this.entries.length) this.checkpoints.delete(k);
-    this.append(entry);
+  /** Records an op the surface already shows. */
+  commit(op: Op): void {
+    this.undone = [];
+    // Snapshots past this point belong to the ops that were undone.
+    for (const k of this.checkpoints.keys()) if (k > this.ops.length) this.checkpoints.delete(k);
+    this.record(op);
   }
 
   undo(): boolean {
-    const entry = this.entries.pop();
-    if (!entry) return false;
-    this.redoStack.push(entry);
+    const op = this.ops.pop();
+    if (!op) return false;
+    this.undone.push(op);
     this.rebuild();
     return true;
   }
 
   redo(): boolean {
-    const entry = this.redoStack.pop();
-    if (!entry) return false;
-    this.append(entry);
+    const op = this.undone.pop();
+    if (!op) return false;
+    this.surface.apply(op);
+    this.record(op);
     return true;
   }
 
-  /** Start over with an empty surface and no undo/redo. */
+  /** Starts over on an empty surface with nothing to undo or redo. */
   reset(): void {
-    this.entries = [];
-    this.redoStack = [];
+    this.ops = [];
+    this.undone = [];
     this.checkpoints.clear();
     this.surface.restore(null);
   }
 
-  /** Drop snapshots (e.g. after a resize) and redraw from entries. */
+  /** Repaints the committed ops, dropping whatever else was painted, such as a cancelled stroke. */
+  repaint(): void {
+    this.rebuild();
+  }
+
+  /** Repaints every op, as after a resize, when the snapshots no longer fit. */
   invalidate(): void {
     this.checkpoints.clear();
     this.rebuild();
   }
 
-  rebuild(): void {
-    const len = this.entries.length;
-    let start = 0;
-    let snapshot: S | null = null;
-    for (const [k, s] of this.checkpoints) {
-      if (k <= len && k > start) {
-        start = k;
-        snapshot = s;
-      }
-    }
-    let lastClear = -1;
-    for (let i = len - 1; i >= start; i--) {
-      if (this.entries[i].kind === "clear") {
-        lastClear = i;
-        break;
-      }
-    }
-    if (lastClear >= 0) {
-      start = lastClear + 1;
-      snapshot = null;
-    }
-    this.surface.restore(snapshot);
-    for (let i = start; i < len; i++) this.surface.apply(this.entries[i]);
+  private latestCheckpoint(len: number): number {
+    let latest = 0;
+    for (const k of this.checkpoints.keys()) if (k <= len && k > latest) latest = k;
+    return latest;
   }
 
-  private append(entry: Entry): void {
-    this.entries.push(entry);
-    this.surface.apply(entry);
-    const len = this.entries.length;
-    if (len % this.interval === 0 && !this.checkpoints.has(len)) {
-      this.checkpoints.set(len, this.surface.snapshot());
-      if (this.checkpoints.size > this.maxCheckpoints) {
-        this.checkpoints.delete(Math.min(...this.checkpoints.keys()));
-      }
-    }
+  private rebuild(): void {
+    const len = this.ops.length;
+    const start = this.latestCheckpoint(len);
+    this.surface.restore(this.checkpoints.get(start) ?? null);
+    for (let i = start; i < len; i++) this.surface.apply(this.ops[i]);
+  }
+
+  private record(op: Op): void {
+    this.ops.push(op);
+    const len = this.ops.length;
+    let cost = 0;
+    for (let i = this.latestCheckpoint(len); i < len; i++) cost += this.surface.cost(this.ops[i]);
+    if (cost < this.checkpointCost) return;
+    this.checkpoints.set(len, this.surface.snapshot());
+    if (this.checkpoints.size > this.maxCheckpoints)
+      this.checkpoints.delete(Math.min(...this.checkpoints.keys()));
   }
 }

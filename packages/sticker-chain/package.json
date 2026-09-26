@@ -1,7 +1,7 @@
 {
   "name": "@drawing-app/sticker-chain",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "exports": {
     "./auth-http": "./src/auth-http.ts",
@@ -12,6 +12,7 @@
   },
   "scripts": {
     "build": "tsx scripts/compile.ts",
+    "build:auth-server": "rm -rf dist/auth-server && tsc src/start-auth-server.ts --ignoreConfig --outDir dist/auth-server --module nodenext --moduleResolution nodenext --target es2023 --strict --skipLibCheck --types node && echo '{\"type\":\"module\"}' > dist/auth-server/package.json",
     "compile": "tsx scripts/compile.ts",
     "lint": "oxlint .",
     "start:auth": "tsx src/start-auth-server.ts",

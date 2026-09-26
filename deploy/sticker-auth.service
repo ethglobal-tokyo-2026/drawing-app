@@ -1,0 +1,36 @@
+# sticker-auth.service: the LINE → Privy auth server (packages/sticker-chain) on 127.0.0.1:8787, for HAProxy.
+# deploy/deploy.sh copies it to /etc/systemd/system/ and restarts it whenever it, its config or its code changes.
+[Unit]
+Description=Sticker Board LINE → Privy auth server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bawler
+Group=bawler
+EnvironmentFile=/srv/sticker-auth/auth.env
+ExecStart=/usr/bin/node /srv/sticker-auth/server/start-auth-server.js
+Restart=always
+RestartSec=3
+
+MemoryMax=256M
+TasksMax=64
+
+# Sandboxing: it reads its own directory and calls LINE's verify endpoint.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sticker-auth
+
+[Install]
+WantedBy=multi-user.target

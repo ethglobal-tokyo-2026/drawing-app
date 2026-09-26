@@ -1,6 +1,7 @@
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import { Copy, QrCode, ShareNetwork, X } from "@phosphor-icons/react";
+import { PrivyStatusRow } from "../identity/PrivyStatusRow";
 import { boardUrl, firstSeen } from "../identity/profile";
 import { useIdentity } from "../identity/useIdentity";
 import { lineLogout, shareOnLine } from "../line/liff";
@@ -152,6 +153,7 @@ export function ProfileCard({ made, avatarUrl, onClose }: Props) {
               )}
             </dd>
           </div>
+          <PrivyStatusRow />
         </dl>
       )}
 

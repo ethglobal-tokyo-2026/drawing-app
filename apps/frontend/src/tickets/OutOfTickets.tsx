@@ -18,9 +18,14 @@ import "./tickets.css";
 
 type Step = "out" | "approve" | "paying" | "done" | "error";
 
+/** Where the card opens: the day's used stubs, or straight at the Sui purchase. */
+export type OutOfTicketsStep = Extract<Step, "out" | "approve">;
+
 interface Props {
   /** When the day's free tickets come back. */
   refillAt: Date;
+  /** The sealed card's Sui label opens the card at the purchase; Not now still leads to the stubs. */
+  firstStep?: OutOfTicketsStep;
   /** A purchase went through: the host adds the tickets and keeps the card up until the next choice. */
   onTicketsBought: (n: number) => void;
   /** Draw, once there are tickets again. */
@@ -49,8 +54,14 @@ const packStubs = Array.from({ length: TICKET_PACK.tickets }, () => ({ used: fal
  * the key goes to the sticker board and buying with Sui is label stock under it. If tickets come back
  * while it's open, it turns over in place and the key becomes Draw.
  */
-export function OutOfTickets({ refillAt, onTicketsBought, onStartDrawing, onBoard }: Props) {
-  const [step, setStep] = useState<Step>("out");
+export function OutOfTickets({
+  refillAt,
+  firstStep = "out",
+  onTicketsBought,
+  onStartDrawing,
+  onBoard,
+}: Props) {
+  const [step, setStep] = useState<Step>(firstStep);
   const [error, setError] = useState("");
   const { at, msLeft } = useRefillCountdown(refillAt);
   const state = useTicketState();

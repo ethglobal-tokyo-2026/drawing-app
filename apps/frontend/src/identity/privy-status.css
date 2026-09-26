@@ -1,0 +1,13 @@
+/* ---------- Privy sign-in row ---------- */
+
+/* Privy user IDs are long, and a failure's reason can be too; both wrap, and can be copied into a report. */
+.privy-status {
+  flex-wrap: wrap;
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.privy-status .mono {
+  font-size: 12px;
+}

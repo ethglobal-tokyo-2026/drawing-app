@@ -1,0 +1,61 @@
+import { useEffect, useEffectEvent, useId, useRef } from "react";
+import "./SmoothingBar.css";
+
+interface Props {
+  id: string;
+  open: boolean;
+  /** 0 (Raw) to 100 (Smooth). */
+  value: number;
+  onChange: (value: number) => void;
+}
+
+/**
+ * Smoothing: a compact bar under the tools, Raw to Smooth. Smoothing has no standard icon, so its name
+ * shows here, and only while the bar is open. The track redraws as the thumb moves; the value lands
+ * once the thumb is let go.
+ */
+export function SmoothingBar({ id, open, value, onChange }: Props) {
+  const titleId = useId();
+  const range = useRef<HTMLInputElement>(null);
+  const commit = useEffectEvent(onChange);
+
+  useEffect(() => {
+    const input = range.current;
+    if (!input) return;
+    const onCommit = () => commit(input.valueAsNumber);
+    // The native change event fires on release, where React's onChange fires on every step.
+    input.addEventListener("change", onCommit);
+    return () => input.removeEventListener("change", onCommit);
+  }, []);
+
+  return (
+    <div
+      id={id}
+      className={`smoothing-bar ${open ? "is-open" : ""}`}
+      role="group"
+      aria-labelledby={titleId}
+    >
+      <span className="smoothing-title" id={titleId}>
+        Smoothing
+      </span>
+      <span className="smoothing-end" aria-hidden="true">
+        Raw
+      </span>
+      <input
+        ref={range}
+        className="smoothing-range"
+        type="range"
+        min={0}
+        max={100}
+        step={1}
+        defaultValue={value}
+        aria-label="Smoothing"
+        style={{ "--p": `${value}%` }}
+        onInput={(e) => e.currentTarget.style.setProperty("--p", `${e.currentTarget.value}%`)}
+      />
+      <span className="smoothing-end" aria-hidden="true">
+        Smooth
+      </span>
+    </div>
+  );
+}

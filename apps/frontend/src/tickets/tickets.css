@@ -1,10 +1,3 @@
-/* The sealed card's ticket line; it goes when that card shows TicketStubs. */
-.tickets-left {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-}
-
 /* Out of tickets (OutOfTickets.tsx): a liner card risen over the canvas, behind an Ink scrim. */
 .out-of-tickets {
   position: absolute;
@@ -52,8 +45,8 @@
 
 .out-of-tickets__title {
   margin: 0;
-  font-size: 22px;
-  line-height: 1.1;
+  font-size: 26px;
+  line-height: 1.08;
   font-weight: 800;
   font-stretch: var(--w-title);
   letter-spacing: -0.015em;

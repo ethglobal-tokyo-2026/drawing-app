@@ -21,4 +21,12 @@ describe("isStickerRecord", () => {
     expect(isStickerRecord({ ...stored, outline: "M0 0L120 0L120 90Z" })).toBe(true);
     expect(isStickerRecord({ ...stored, outline: 42 })).toBe(false);
   });
+
+  it.each(["mask", "flat"])(
+    "reads a sticker's %s image, and rejects one that isn't an image",
+    (field) => {
+      expect(isStickerRecord({ ...stored, [field]: new Blob() })).toBe(true);
+      expect(isStickerRecord({ ...stored, [field]: "data:image/png;base64," })).toBe(false);
+    },
+  );
 });

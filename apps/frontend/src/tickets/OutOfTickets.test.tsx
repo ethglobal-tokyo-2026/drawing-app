@@ -2,8 +2,8 @@
 import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { REFILL_HOUR } from "./config";
-import { OutOfTickets } from "./OutOfTickets";
+import { REFILL_HOUR, TICKET_PACK } from "./config";
+import { OutOfTickets, type OutOfTicketsStep } from "./OutOfTickets";
 import { ticketDay } from "./tickets";
 import { useTickets } from "./useTickets";
 
@@ -15,13 +15,14 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const onBoard = vi.fn();
 
 /** Hosts the card the way the drawing screen does: up while there are no tickets, or held after a purchase. */
-function Host() {
+function Host({ firstStep }: { firstStep?: OutOfTicketsStep }) {
   const tickets = useTickets();
   const [hold, setHold] = useState(false);
   if (tickets.left > 0 && !hold) return <p>canvas</p>;
   return (
     <OutOfTickets
       refillAt={tickets.refillAt}
+      firstStep={firstStep}
       onTicketsBought={(n) => {
         setHold(true);
         tickets.add(n);
@@ -36,11 +37,11 @@ let host: HTMLDivElement;
 let root: Root;
 
 /** Opens the card at `now`, with the day's free tickets all used. */
-function openAt(now: Date) {
+function openAt(now: Date, firstStep?: OutOfTicketsStep) {
   vi.setSystemTime(now);
   const used = { day: ticketDay(now), uses: [{}, {}, {}], paid: 0 };
   localStorage.setItem("draw.tickets", JSON.stringify(used));
-  act(() => root.render(<Host />));
+  act(() => root.render(<Host firstStep={firstStep} />));
 }
 
 const title = () => document.querySelector("h2")?.textContent;
@@ -82,5 +83,12 @@ describe("OutOfTickets", () => {
       );
     });
     expect(onBoard).toHaveBeenCalledOnce();
+  });
+
+  it("opens at the Sui purchase when asked, and Not now leads back to the day's stubs", () => {
+    openAt(new Date(2026, 8, 25, 21, 4), "approve");
+    expect(title()).toBe(`${TICKET_PACK.tickets} more drawing tickets`);
+    act(() => buttonNamed("Not now")?.click());
+    expect(title()).toBe("Out of tickets for today");
   });
 });

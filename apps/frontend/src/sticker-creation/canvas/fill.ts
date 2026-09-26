@@ -1,89 +1,130 @@
-import type { RGBA } from "./color";
-
-/** Structural subset of ImageData, so this runs in tests without a DOM. */
+/** Structural subset of ImageData, so the fill runs in tests without a DOM. */
 export interface Pixels {
   width: number;
   height: number;
   data: Uint8ClampedArray;
 }
 
+type Rgb = readonly [number, number, number];
+
+/** Pixels fainter than this are empty paper. */
+const EMPTY_ALPHA = 128;
+/** A colored region takes in pixels whose summed |ΔRGB| from the tapped pixel is under this. */
+const REGION_TOLERANCE = 72;
+/** A tap on a color this close to the fill color changes nothing. */
+const SAME_COLOR = 8;
+/** The fill reaches this many pixels under neighboring edges, so no white halo shows between color and line. */
+const TUCK = 2;
+
+const rgbDistance = (data: Uint8ClampedArray, i: number, [r, g, b]: Rgb) =>
+  Math.abs(data[i] - r) + Math.abs(data[i + 1] - g) + Math.abs(data[i + 2] - b);
+
 /**
- * Scanline flood fill from (sx, sy) in device pixels. Pixels within
- * `tolerance` of the seed color (per channel) are filled, then the region
- * grows by one pixel to cover anti-aliased stroke edges. Returns false when
- * nothing changed (seed out of bounds or already the fill color).
+ * Scanline flood fill from (sx, sy), in the pixels' own units. It takes in empty paper, or a colored
+ * region of similar colors, and tucks the fill under what borders it. Returns false when nothing
+ * changed: the seed is off the image or already the fill color.
  */
-export function floodFill(
-  img: Pixels,
-  sx: number,
-  sy: number,
-  color: RGBA,
-  tolerance = 40,
-): boolean {
+export function floodFill(img: Pixels, sx: number, sy: number, fill: Rgb): boolean {
   const { width: w, height: h, data } = img;
   if (sx < 0 || sy < 0 || sx >= w || sy >= h) return false;
   const seed = (sy * w + sx) * 4;
-  const [tr, tg, tb, ta] = [data[seed], data[seed + 1], data[seed + 2], data[seed + 3]];
-  if (tr === color[0] && tg === color[1] && tb === color[2] && ta === color[3]) return false;
+  const target: Rgb = [data[seed], data[seed + 1], data[seed + 2]];
+  const empty = data[seed + 3] < EMPTY_ALPHA;
+  if (!empty && rgbDistance(data, seed, fill) < SAME_COLOR) return false;
 
-  const mask = new Uint8Array(w * h);
-  const matches = (p: number) => {
-    if (mask[p]) return false;
-    const i = p * 4;
-    return (
-      Math.abs(data[i + 3] - ta) <= tolerance &&
-      // Fully transparent pixels match each other whatever their RGB.
-      (ta === 0 && data[i + 3] === 0
-        ? true
-        : Math.abs(data[i] - tr) <= tolerance &&
-          Math.abs(data[i + 1] - tg) <= tolerance &&
-          Math.abs(data[i + 2] - tb) <= tolerance)
-    );
-  };
+  const region = new Uint8Array(w * h);
+  const matches = empty
+    ? (p: number) => data[p * 4 + 3] < EMPTY_ALPHA
+    : (p: number) =>
+        data[p * 4 + 3] >= EMPTY_ALPHA && rgbDistance(data, p * 4, target) < REGION_TOLERANCE;
+  const open = (p: number) => !region[p] && matches(p);
 
+  let x0 = sx;
+  let x1 = sx;
+  let y0 = sy;
+  let y1 = sy;
   const stack = [sx, sy];
   while (stack.length) {
-    const y = stack.pop();
-    let x = stack.pop();
-    if (y === undefined || x === undefined) break;
-    while (x > 0 && matches(y * w + x - 1)) x--;
+    const y = stack.pop() ?? 0;
+    let x = stack.pop() ?? 0;
+    while (x > 0 && open(y * w + x - 1)) x--;
     let up = false;
     let down = false;
-    for (; x < w && matches(y * w + x); x++) {
+    for (; x < w && open(y * w + x); x++) {
       const p = y * w + x;
-      mask[p] = 1;
+      region[p] = 1;
+      if (x < x0) x0 = x;
+      if (x > x1) x1 = x;
       if (y > 0) {
-        const m = matches(p - w);
-        if (m && !up) stack.push(x, y - 1);
-        up = m;
+        const next = open(p - w);
+        if (next && !up) stack.push(x, y - 1);
+        up = next;
       }
       if (y < h - 1) {
-        const m = matches(p + w);
-        if (m && !down) stack.push(x, y + 1);
-        down = m;
+        const next = open(p + w);
+        if (next && !down) stack.push(x, y + 1);
+        down = next;
       }
     }
+    if (y < y0) y0 = y;
+    if (y > y1) y1 = y;
   }
 
-  const [r, g, b, a] = color;
-  const paint = (p: number) => {
-    const i = p * 4;
-    data[i] = r;
-    data[i + 1] = g;
-    data[i + 2] = b;
-    data[i + 3] = a;
-  };
-  for (let p = 0; p < mask.length; p++) {
-    if (mask[p] !== 1) continue;
-    paint(p);
-    const x = p % w;
-    // Grow by one pixel (marked 2 so growth doesn't cascade).
-    for (const q of [x > 0 ? p - 1 : -1, x < w - 1 ? p + 1 : -1, p - w, p + w]) {
-      if (q >= 0 && q < mask.length && !mask[q]) {
-        mask[q] = 2;
-        paint(q);
-      }
+  const bx0 = Math.max(0, x0 - TUCK);
+  const bx1 = Math.min(w - 1, x1 + TUCK);
+  const by0 = Math.max(0, y0 - TUCK);
+  const by1 = Math.min(h - 1, y1 + TUCK);
+  const near = dilate(region, w, bx0, bx1, by0, by1);
+  const [fr, fg, fb] = fill;
+  for (let y = by0; y <= by1; y++) {
+    for (let x = bx0; x <= bx1; x++) {
+      const p = y * w + x;
+      if (!near[p]) continue;
+      const i = p * 4;
+      // The region takes the fill; its surroundings keep their color over it, by their own alpha.
+      const a = region[p] ? 0 : data[i + 3] / 255;
+      data[i] = data[i] * a + fr * (1 - a);
+      data[i + 1] = data[i + 1] * a + fg * (1 - a);
+      data[i + 2] = data[i + 2] * a + fb * (1 - a);
+      data[i + 3] = 255;
     }
   }
   return true;
+}
+
+/** The region grown by `TUCK` pixels in every direction (a square), within the given box. */
+function dilate(
+  region: Uint8Array,
+  w: number,
+  x0: number,
+  x1: number,
+  y0: number,
+  y1: number,
+): Uint8Array {
+  // Two one-dimensional passes grow the same square as checking every neighbor, for far less work.
+  const rows = new Uint8Array(region.length);
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      for (let dx = -TUCK; dx <= TUCK; dx++) {
+        const nx = x + dx;
+        if (nx >= x0 && nx <= x1 && region[y * w + nx]) {
+          rows[y * w + x] = 1;
+          break;
+        }
+      }
+    }
+  }
+  const grown = new Uint8Array(region.length);
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      for (let dy = -TUCK; dy <= TUCK; dy++) {
+        const ny = y + dy;
+        if (ny >= y0 && ny <= y1 && rows[ny * w + x]) {
+          grown[y * w + x] = 1;
+          break;
+        }
+      }
+    }
+  }
+  return grown;
 }

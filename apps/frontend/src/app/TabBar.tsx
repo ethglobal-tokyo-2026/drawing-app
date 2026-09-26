@@ -1,4 +1,5 @@
 import { Eyes } from "@phosphor-icons/react";
+import { useEffect, useRef, useState } from "react";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { useIdentity } from "../identity/useIdentity";
 import { PhotoSticker } from "../ui/PhotoSticker";
@@ -6,40 +7,117 @@ import "./TabBar.css";
 
 export type Tab = "board" | "explore";
 
+/** Tabs brought back over a screen that tucks them away go again after this long untouched. */
+const IDLE_MS = 4000;
+/** Dragging the grabber up this far brings the tabs back. */
+const GRAB_PX = 8;
+
 interface Props {
   /** None while drawing: Draw is the board's key, not a tab. */
   active?: Tab;
+  /** The tabs tuck away below the screen, behind a grabber, so the screen gets the room. */
+  tucked: boolean;
   onChange: (tab: Tab) => void;
 }
 
-/** Index tabs cut from label stock; the current one is stuck on in its full hue. */
-export function TabBar({ active, onChange }: Props) {
+/**
+ * Index tabs cut from label stock; the current one is stuck on in its full hue. On a screen that
+ * tucks them away, tapping the grabber or dragging it up brings them back, and the next touch
+ * anywhere else, or a few idle seconds, tucks them away again.
+ */
+export function TabBar({ active, tucked, onChange }: Props) {
   const me = useIdentity();
+  const nav = useRef<HTMLElement>(null);
+  const grabber = useRef<HTMLButtonElement>(null);
+  const grabY = useRef<number | null>(null);
+  const idle = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [shown, setShown] = useState(false);
+  if (!tucked && shown) setShown(false);
+  const peeking = tucked && shown;
+
+  const waitIdle = () => {
+    clearTimeout(idle.current);
+    idle.current = setTimeout(() => setShown(false), IDLE_MS);
+  };
+  const show = () => {
+    setShown(true);
+    waitIdle();
+  };
+  // Using the tabs keeps them up.
+  const keepUp = () => {
+    if (peeking) waitIdle();
+  };
+
+  useEffect(() => {
+    if (!peeking) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!(e.target instanceof Node)) return;
+      if (nav.current?.contains(e.target) || grabber.current?.contains(e.target)) return;
+      setShown(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [peeking]);
+
+  useEffect(() => () => clearTimeout(idle.current), []);
+
   const current = (tab: Tab) => (active === tab ? "page" : undefined);
   return (
-    <nav className="tabs" aria-label="App sections">
-      <button
-        className="tab tab-board"
-        data-press
-        aria-current={current("board")}
-        onClick={() => onChange("board")}
+    <>
+      <nav
+        ref={nav}
+        className={`tabs ${tucked ? "is-tucked" : ""} ${peeking ? "is-peeking" : ""}`}
+        aria-label="App sections"
+        inert={tucked && !peeking}
+        onPointerDown={keepUp}
+        onPointerMove={keepUp}
       >
-        {me.pictureUrl ? (
-          <PhotoSticker src={me.pictureUrl} name={me.displayName} size={24} />
-        ) : (
-          <StickerBoardIcon weight={active === "board" ? "fill" : "bold"} />
-        )}
-        <span>My board</span>
-      </button>
-      <button
-        className="tab tab-explore"
-        data-press
-        aria-current={current("explore")}
-        onClick={() => onChange("explore")}
-      >
-        <Eyes size={20} weight={active === "explore" ? "fill" : "bold"} />
-        <span>Explore</span>
-      </button>
-    </nav>
+        <button
+          className="tab tab-board"
+          data-press
+          aria-current={current("board")}
+          onClick={() => onChange("board")}
+        >
+          {me.pictureUrl ? (
+            <PhotoSticker src={me.pictureUrl} name={me.displayName} size={24} />
+          ) : (
+            <StickerBoardIcon weight={active === "board" ? "fill" : "bold"} />
+          )}
+          <span>My board</span>
+        </button>
+        <button
+          className="tab tab-explore"
+          data-press
+          aria-current={current("explore")}
+          onClick={() => onChange("explore")}
+        >
+          <Eyes size={20} weight={active === "explore" ? "fill" : "bold"} />
+          <span>Explore</span>
+        </button>
+      </nav>
+      {tucked && (
+        <button
+          ref={grabber}
+          type="button"
+          className={`tab-grabber ${peeking ? "is-hidden" : ""}`}
+          aria-label="Show the My board and Explore tabs"
+          aria-expanded={peeking}
+          onPointerDown={(e) => {
+            grabY.current = e.clientY;
+            e.currentTarget.setPointerCapture(e.pointerId);
+          }}
+          onPointerMove={(e) => {
+            if (grabY.current === null || grabY.current - e.clientY <= GRAB_PX) return;
+            grabY.current = null;
+            show();
+          }}
+          onPointerUp={() => (grabY.current = null)}
+          onPointerCancel={() => (grabY.current = null)}
+          onClick={show}
+        >
+          <i />
+        </button>
+      )}
+    </>
   );
 }

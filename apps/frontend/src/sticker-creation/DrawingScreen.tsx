@@ -1,47 +1,62 @@
 import {
-  useCallback,
   useEffect,
+  useEffectEvent,
+  useId,
   useImperativeHandle,
-  useLayoutEffect,
   useRef,
   useState,
+  type PointerEvent as ReactPointerEvent,
   type Ref,
 } from "react";
-import { ArrowClockwise, ArrowCounterClockwise, CheckFat } from "@phosphor-icons/react";
+import { useIdentity } from "../identity/useIdentity";
 import { addSticker, type StickerRecord } from "../stickers/stickerStorage";
-import { OutOfTickets } from "../tickets/OutOfTickets";
+import { OutOfTickets, type OutOfTicketsStep } from "../tickets/OutOfTickets";
 import { useTickets } from "../tickets/useTickets";
-import { DrawingCanvas, type CanvasHandle } from "./canvas/DrawingCanvas";
-import type { Tool } from "./canvas/types";
-import { hasContent, makeSticker, type StickerImages } from "./sealing/makeSticker";
-import { SealSequence } from "./sealing/SealSequence";
-import { Timer } from "./Timer";
-import { ColorDrawer } from "./tools/ColorDrawer";
-import { SizeSlider } from "./tools/SizeSlider";
-import { SmoothnessDrawer } from "./tools/SmoothnessDrawer";
-import { ToolPill, type Drawer } from "./tools/ToolPill";
+import { useToast } from "../ui/useToast";
+import { sizePx } from "./canvas/brush";
+import { DrawingCanvas, type DrawingCanvasHandle } from "./canvas/DrawingCanvas";
+import { lazyRadius } from "./canvas/lazyBrush";
+import type { Op, Tool } from "./canvas/ops";
+import { SealKey } from "./SealKey";
+import { makeSticker, type SealedSticker } from "./sealing/makeSticker";
+import { SealCeremony } from "./sealing/SealCeremony";
+import type { Box } from "./sealing/sealTimeline";
+import {
+  ARM_WINDOW_MS,
+  FRESH_SESSION,
+  SESSION_MS,
+  transition,
+  type SessionEffect,
+  type SessionEvent,
+} from "./session/session";
+import { useSessionClock } from "./session/useSessionClock";
+import { TimerDot, type TimerDotHandle } from "./TimerDot";
+import { ColorSheet } from "./tools/ColorSheet";
+import { HistoryButtons } from "./tools/HistoryButtons";
+import { FIRST_COLOR, FIRST_RECENT, withRecent } from "./tools/palette";
+import { SizeRail } from "./tools/SizeRail";
+import { SmoothingBar } from "./tools/SmoothingBar";
+import { ToolStrip, type Panel } from "./tools/ToolStrip";
 import { useShortcuts } from "./useShortcuts";
 import "./DrawingScreen.css";
 
-const DURATION_S = 5 * 60;
-const MAX_SIZE = 60;
-const ARM_TIMEOUT_MS = 3000;
+/** Where the size rail starts for each tool, remembered per tool from then on. */
+const FIRST_SIZES = { brush: 0.34, eraser: 0.52 };
+const FIRST_SMOOTHING = 30;
+/** How far [ and ] move the size rail. */
+const SIZE_STEP = 0.04;
 
-// Slider position (0..1) ↔ brush size, squared for finer control of thin lines.
-const sizeFromSlider = (v: number) => Math.round(1 + (MAX_SIZE - 1) * v * v);
-const sliderFromSize = (s: number) => Math.sqrt((s - 1) / (MAX_SIZE - 1));
-
-/**
- * ready (nothing drawn; the first stroke spends a ticket and starts the
- * clock) → drawing → armed (first tick tap) → sealing (building the sticker)
- * → sealed (animation + result). When the clock runs out it becomes timeup,
- * where a single tap seals.
- */
-type Phase = "ready" | "drawing" | "armed" | "timeup" | "sealing" | "sealed";
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+const afterPaint = () =>
+  new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve)));
+const reason = (error: unknown) =>
+  error instanceof Error && error.message ? error.message : String(error);
 
 interface Sealed {
-  images: StickerImages;
+  sticker: SealedSticker;
   record: StickerRecord;
+  /** Where the sheet sat in the drawing screen when it was sealed. */
+  sheet: Box;
 }
 
 export interface DrawingScreenHandle {
@@ -59,299 +74,309 @@ interface Props {
   onGoToBoard: () => void;
 }
 
-function useCountdown(running: boolean) {
-  const [left, setLeft] = useState(DURATION_S);
-  const deadline = useRef(0);
-  useEffect(() => {
-    if (!running) return;
-    const id = setInterval(() => {
-      setLeft(Math.max(0, Math.ceil((deadline.current - Date.now()) / 1000)));
-    }, 250);
-    return () => clearInterval(id);
-  }, [running]);
-  const restart = () => {
-    deadline.current = Date.now() + DURATION_S * 1000;
-    setLeft(DURATION_S);
-  };
-  return { left, restart };
-}
-
+/**
+ * The drawing screen: a white sheet on the Liner, the timer and the tools in one row across the top,
+ * the size rail down the left edge, undo and redo at the bottom left and the seal key at the bottom
+ * right. It owns the session (tickets, the clock and the seal step); the ink engine owns the drawing.
+ */
 export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard }: Props) {
-  const canvas = useRef<CanvasHandle>(null);
-  const [tool, setTool] = useState<Tool>("brush");
-  const [sizes, setSizes] = useState({ brush: 6, eraser: 24 });
-  const [color, setColor] = useState("#1c1b29");
-  const [recent, setRecent] = useState([
-    "#1c1b29",
-    "#ec6341",
-    "#f1b555",
-    "#3a3c86",
-    "#8cc2f7",
-    "#f4b6c6",
-  ]);
-  const [stabilization, setStabilization] = useState(30);
-  const [pressure, setPressure] = useState(true);
-  const [fingerDraws, setFingerDraws] = useState(true);
-  const [history, setHistory] = useState({ canUndo: false, canRedo: false });
-  const [openDrawer, setDrawer] = useState<Drawer>(null);
-  const [storedPhase, setPhase] = useState<Exclude<Phase, "timeup">>("ready");
-  const penSeen = useRef(false);
-  const [sealed, setSealed] = useState<Sealed | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const root = useRef<HTMLDivElement>(null);
+  const canvas = useRef<DrawingCanvasHandle>(null);
+  const timer = useRef<TimerDotHandle>(null);
   const tickets = useTickets();
-  // Keeps the ticket card up after a purchase until "Start drawing".
-  const [holdPaywall, setHoldPaywall] = useState(false);
+  const me = useIdentity();
+  const toast = useToast();
+  const colorSheetId = useId();
+  const smoothingBarId = useId();
 
-  const { left, restart } = useCountdown(storedPhase === "drawing" || storedPhase === "armed");
-  // Time's up: the canvas locks and the tick seals in one tap.
-  const phase: Phase =
-    left === 0 && (storedPhase === "drawing" || storedPhase === "armed") ? "timeup" : storedPhase;
-  const paywall = active && phase === "ready" && (tickets.left === 0 || holdPaywall);
-  const locked = paywall || phase === "timeup" || phase === "sealing" || phase === "sealed";
-  const drawer = locked ? null : openDrawer;
+  const [tool, setTool] = useState<Tool>("brush");
+  const [color, setColor] = useState(FIRST_COLOR);
+  const [recent, setRecent] = useState(FIRST_RECENT);
+  const [sizes, setSizes] = useState(FIRST_SIZES);
+  const [smoothing, setSmoothing] = useState(FIRST_SMOOTHING);
+  const [panel, setPanel] = useState<Panel>(null);
+  const [paused, setPaused] = useState(false);
+  const [sizing, setSizing] = useState(false);
+  const [history, setHistory] = useState({ canUndo: false, canRedo: false });
+  const [session, setSession] = useState(FRESH_SESSION);
+  // Transitions start from here, so one sent after an await still starts from the latest session.
+  const latest = useRef(FRESH_SESSION);
+  const [sealed, setSealed] = useState<Sealed | null>(null);
+  // The sealed sticker's layers are let go when a fresh sheet replaces it.
+  const lastSealed = useRef<Sealed | null>(null);
+  const [sealProblem, setSealProblem] = useState<string | null>(null);
+  // The out-of-tickets card's first step while it's up, or null.
+  const [paywallOpen, setPaywallOpen] = useState<OutOfTicketsStep | null>(null);
 
-  const sizeTool = tool === "eraser" ? "eraser" : "brush";
-  const size = sizes[sizeTool];
-  const setSize = (n: number) =>
-    setSizes((s) => ({ ...s, [sizeTool]: Math.min(MAX_SIZE, Math.max(1, n)) }));
+  const clock = useSessionClock(() => send({ type: "time-up" }));
 
-  // An armed tick disarms itself after a moment.
-  useEffect(() => {
-    if (phase !== "armed") return;
-    const id = setTimeout(() => setPhase("drawing"), ARM_TIMEOUT_MS);
-    return () => clearTimeout(id);
-  }, [phase]);
+  function send(event: SessionEvent) {
+    const { session: next, effects } = transition(latest.current, event);
+    if (next === latest.current) return;
+    latest.current = next;
+    setSession(next);
+    effects.forEach(run);
+  }
 
-  // The first stroke of a sticker spends a ticket and starts the clock.
-  const startRef = useRef({ phase: storedPhase, tickets, restart });
-  useLayoutEffect(() => {
-    startRef.current = { phase: storedPhase, tickets, restart };
-  });
-  const onHistoryChange = useCallback((canUndo: boolean, canRedo: boolean) => {
-    setHistory({ canUndo, canRedo });
-    const { phase: p, tickets: t, restart: r } = startRef.current;
-    if (p === "ready" && canUndo) {
-      startRef.current.phase = "drawing";
-      t.use();
-      r();
-      setPhase("drawing");
-    } else {
-      setPhase((cur) => (cur === "armed" ? "drawing" : cur));
+  function run(effect: SessionEffect) {
+    switch (effect) {
+      case "spend-ticket":
+        if (!tickets.use()) console.error("The first stroke landed with no ticket left to spend");
+        return;
+      case "start-clock":
+        clock.start();
+        return;
+      case "seal":
+        clock.stop();
+        void seal();
+        return;
+      case "resume-clock":
+        clock.resume();
+        return;
+      case "reset-sheet":
+        canvas.current?.reset();
+        clock.reset();
+        setPaused(false);
+        setPanel(null);
+        lastSealed.current?.sticker.dispose();
+        lastSealed.current = null;
+        setSealed(null);
+        setSealProblem(null);
+        return;
     }
-  }, []);
+  }
 
-  // Like most tablet apps: once a pen shows up, fingers stop drawing (palm
-  // rejection) but still do gestures. The toggle turns finger drawing back on.
-  const onPenDetected = useCallback(() => {
-    if (penSeen.current) return;
-    penSeen.current = true;
-    setFingerDraws(false);
-  }, []);
+  /** The sheet's place in the drawing screen, which the ceremony plays over. */
+  function sheetBox(): Box {
+    const screen = root.current?.getBoundingClientRect();
+    const paper = root.current?.querySelector(".ink-sheet")?.getBoundingClientRect();
+    if (!screen || !paper) throw new Error("the sheet isn't on screen");
+    return {
+      x: paper.left - screen.left,
+      y: paper.top - screen.top,
+      w: paper.width,
+      h: paper.height,
+    };
+  }
 
-  const commitRecent = (c: string) =>
-    setRecent((r) => [c, ...r.filter((x) => x !== c)].slice(0, 6));
-
-  // Brief hint above the tick ("Draw something first").
-  useEffect(() => {
-    if (!notice) return;
-    const id = setTimeout(() => setNotice(null), 2000);
-    return () => clearTimeout(id);
-  }, [notice]);
-
-  const isBlank = () => {
-    const surface = canvas.current?.surface();
-    return !surface || !hasContent(surface);
-  };
-
-  const seal = async () => {
-    const surface = canvas.current?.surface();
-    if (!surface) return;
-    setPhase("sealing");
+  async function seal() {
+    setPanel(null);
+    canvas.current?.finishStroke();
+    const ink = canvas.current?.inkForReading() ?? null;
+    const timeUsed = Math.min(SESSION_MS / 1000, Math.max(1, Math.round(clock.elapsed / 1000)));
+    let sticker: SealedSticker | null = null;
     try {
-      const images = await makeSticker(surface);
-      if (!images) throw new Error("Nothing to seal");
+      const sheet = sheetBox();
+      // The cut holds the main thread a moment: the key's pop and the tools stepping back paint first.
+      await afterPaint();
+      sticker = ink && (await makeSticker(ink));
+      if (!sticker) {
+        // Everything drawn was erased or undone. At 0:00 the sheet is spent; before that, draw on.
+        if (clock.elapsed >= SESSION_MS) {
+          toast("Time’s up. The sheet was empty, so nothing was sealed.");
+          send({ type: "reset" });
+        } else {
+          setSealProblem("The sheet is empty, so there’s nothing to seal.");
+          send({ type: "seal-failed" });
+        }
+        return;
+      }
       const record = await addSticker({
         createdAt: Date.now(),
-        timeUsed: DURATION_S - left,
-        blob: images.domeBlob,
-        width: images.width,
-        height: images.height,
-        outline: images.outline,
+        timeUsed,
+        blob: sticker.png,
+        width: sticker.width,
+        height: sticker.height,
+        outline: sticker.outline,
+        mask: sticker.mask,
+        flat: sticker.flat,
       });
       tickets.linkSticker(record.id);
-      setSealed({ images, record });
-      setPhase("sealed");
+      lastSealed.current = { sticker, record, sheet };
+      setSealed(lastSealed.current);
+      send({ type: "sealed" });
       onSealed(record.id);
-    } catch {
-      setPhase("drawing");
-      setNotice("Couldn’t seal, try again");
+    } catch (error) {
+      sticker?.dispose();
+      console.error("Sealing the sticker failed", error);
+      setSealProblem(`Couldn’t seal (${reason(error)}). Tap the check to try again.`);
+      send({ type: "seal-failed" });
     }
-  };
-
-  const onTick = () => {
-    setDrawer(null);
-    if (phase === "ready") setNotice("Draw something first");
-    else if (phase === "drawing") {
-      if (isBlank()) setNotice("Draw something first");
-      else setPhase("armed");
-    } else if (phase === "armed") void seal();
-    else if (phase === "timeup") {
-      if (isBlank()) setNotice("Nothing to seal");
-      else void seal();
-    }
-  };
+  }
 
   const startNewSticker = () => {
-    canvas.current?.reset();
-    setSealed(null);
-    setPhase("ready");
-    restart();
+    send({ type: "reset" });
     onNewSticker();
   };
 
-  useImperativeHandle(ref, () => ({ startNewSticker, closeDrawers: () => setDrawer(null) }));
+  useImperativeHandle(ref, () => ({ startNewSticker, closeDrawers: () => setPanel(null) }));
 
-  const undo = () => active && !locked && canvas.current?.undo();
-  const redo = () => active && !locked && canvas.current?.redo();
+  // Every hold stops the clock: the person's pause, the board covering the screen, a tool in hand.
+  useEffect(() => {
+    clock.setHolds({
+      paused,
+      away: !active,
+      color: panel === "color",
+      smoothing: panel === "smoothing",
+      size: sizing,
+    });
+  }, [clock, paused, active, panel, sizing]);
+
+  const expireArm = useEffectEvent(() => send({ type: "arm-expired", now: performance.now() }));
+  useEffect(() => {
+    if (session.phase !== "armed") return;
+    const id = setTimeout(() => expireArm(), ARM_WINDOW_MS);
+    return () => clearTimeout(id);
+  }, [session]);
+
+  // Out of tickets: the card comes up as Draw opens on a fresh sheet, and stays until the person picks
+  // a way on, even if tickets come back meanwhile.
+  const fresh = session.phase === "blank";
+  if (active && fresh && tickets.left === 0 && !paywallOpen) setPaywallOpen("out");
+  const paywall = active && fresh && paywallOpen !== null;
+  const sealing = session.phase === "sealing" || session.phase === "sealed";
+  const locked = !active || paywall || sealing;
+
+  const sizeKey = tool === "eraser" ? "eraser" : "brush";
+  const setSize = (value: number) => setSizes((s) => ({ ...s, [sizeKey]: value }));
+  const pickTool = (next: Tool) => {
+    setTool(next);
+    setPanel(null);
+  };
+  const pickColor = (hex: string) => {
+    setColor(hex);
+    if (tool === "eraser") setTool("brush");
+  };
 
   useShortcuts({
-    undo,
-    redo,
-    setTool: (t) => active && setTool(t),
-    adjustSize: (d) => setSize(size + d * Math.max(1, Math.round(size * 0.1))),
+    enabled: !locked,
+    undo: () => canvas.current?.undo(),
+    redo: () => canvas.current?.redo(),
+    setTool: pickTool,
+    stepSize: (direction) => setSize(clamp01(sizes[sizeKey] + direction * SIZE_STEP)),
+    closePanel: () => setPanel(null),
   });
 
+  // A tap anywhere but the bar or its button closes the smoothing bar. The sheet closes it as well,
+  // and swallows the tap.
+  const closeSmoothingOutside = (e: ReactPointerEvent) => {
+    if (panel !== "smoothing" || !(e.target instanceof Element)) return;
+    const own = `#${CSS.escape(smoothingBarId)}, [aria-controls="${smoothingBarId}"]`;
+    if (!e.target.closest(own)) setPanel(null);
+  };
+
   return (
-    <>
-      <div
-        className="canvas-area"
-        // A tap on the canvas while a drawer is open just closes it.
-        onPointerDownCapture={(e) => {
-          if (!drawer) return;
-          e.stopPropagation();
-          setDrawer(null);
+    <div
+      ref={root}
+      className={`drawing-screen ${sealing ? "is-sealing" : ""}`}
+      style={{ "--draw-color": color }}
+      // It stays mounted under the board so a sticker in progress survives; covered, it takes no focus.
+      inert={!active}
+      onPointerDownCapture={closeSmoothingOutside}
+    >
+      <DrawingCanvas
+        ref={canvas}
+        settings={{
+          tool,
+          color,
+          size: sizePx(sizes[sizeKey]),
+          lazyRadius: lazyRadius(smoothing),
+          locked,
+          paused,
+          panelOpen: panel !== null,
+          armed: session.phase === "armed",
+          sessionMs: () => clock.elapsed,
         }}
-      >
-        <DrawingCanvas
-          ref={canvas}
-          settings={{ tool, color, size, stabilization, pressure, fingerDraws, locked }}
-          onHistoryChange={onHistoryChange}
-          onPenDetected={onPenDetected}
-        />
-      </div>
-
-      <div className="overlay top">
-        <Timer seconds={left} />
-        <ToolPill
+        onHistory={(canUndo, canRedo) =>
+          setHistory((h) =>
+            h.canUndo === canUndo && h.canRedo === canRedo ? h : { canUndo, canRedo },
+          )
+        }
+        onCommit={(op: Op) => {
+          if (sealProblem) setSealProblem(null);
+          send({ type: "ink" });
+          if (op.tool === "brush") setRecent((r) => withRecent(r, op.color));
+        }}
+        onBlocked={() => timer.current?.showHint()}
+        onDismissPanel={() => setPanel(null)}
+        onDisarm={() => send({ type: "canvas-touch" })}
+      />
+      <div className="drawing-top">
+        <TimerDot ref={timer} clock={clock} paused={paused} onToggle={() => setPaused((p) => !p)} />
+        <ToolStrip
           tool={tool}
-          color={color}
-          drawer={drawer}
-          disabled={locked}
-          onTool={setTool}
-          onDrawer={setDrawer}
+          panel={panel}
+          colorSheetId={colorSheetId}
+          smoothingBarId={smoothingBarId}
+          onTool={pickTool}
+          onPanel={setPanel}
         />
       </div>
-
-      {tool !== "bucket" && !locked && (
-        <SizeSlider
-          value={sliderFromSize(size)}
-          previewSize={size}
-          previewColor={tool === "eraser" ? "#fff" : color}
-          onChange={(v) => setSize(sizeFromSlider(v))}
-        />
-      )}
-
-      <div className="overlay bottom">
-        <div className="history-btns">
-          <button
-            className="square-btn"
-            onClick={undo}
-            disabled={!history.canUndo || locked}
-            aria-label="Undo"
-          >
-            <ArrowCounterClockwise size={24} />
-          </button>
-          <button
-            className="square-btn"
-            onClick={redo}
-            disabled={!history.canRedo || locked}
-            aria-label="Redo"
-          >
-            <ArrowClockwise size={24} />
-          </button>
-        </div>
-        <div className="seal-area">
-          {notice ? (
-            <span className="seal-hint" key={notice}>
-              {notice}
-            </span>
-          ) : (
-            (phase === "armed" || phase === "timeup") && (
-              <span className="seal-hint">
-                {phase === "timeup" ? "Time’s up · tap to seal" : "Tap again to seal"}
-              </span>
-            )
-          )}
-          <button
-            className={`seal-btn ${phase === "armed" || phase === "timeup" ? "armed" : ""}`}
-            onClick={onTick}
-            disabled={phase === "sealing" || phase === "sealed"}
-            aria-label="Finish drawing"
-          >
-            <CheckFat size={30} weight="fill" />
-          </button>
-        </div>
-      </div>
-
-      {drawer === "color" && (
-        <ColorDrawer
-          color={color}
-          recent={recent}
-          onChange={(c) => {
-            setColor(c);
-            if (tool === "eraser") setTool("brush");
-          }}
-          onCommit={commitRecent}
-          onClose={() => setDrawer(null)}
-        />
-      )}
-      {drawer === "smooth" && (
-        <SmoothnessDrawer
-          value={stabilization}
-          pressure={pressure}
-          fingerDraws={fingerDraws}
-          onChange={setStabilization}
-          onPressure={setPressure}
-          onFingerDraws={setFingerDraws}
-          onClose={() => setDrawer(null)}
-        />
-      )}
-
+      <ColorSheet
+        id={colorSheetId}
+        open={panel === "color"}
+        color={color}
+        recent={recent}
+        onPick={pickColor}
+        onPreview={(hex) => root.current?.style.setProperty("--draw-color", hex)}
+        onClose={() => setPanel(null)}
+      />
+      <SmoothingBar
+        id={smoothingBarId}
+        open={panel === "smoothing"}
+        value={smoothing}
+        onChange={setSmoothing}
+      />
+      <SizeRail
+        value={sizes[sizeKey]}
+        eraser={tool === "eraser"}
+        active={sizing}
+        onChange={setSize}
+        onHold={setSizing}
+      />
+      <HistoryButtons
+        canUndo={history.canUndo}
+        canRedo={history.canRedo}
+        onUndo={() => canvas.current?.undo()}
+        onRedo={() => canvas.current?.redo()}
+      />
+      <SealKey
+        shown={history.canUndo && !sealing}
+        armed={session.phase === "armed"}
+        problem={sealProblem}
+        onTap={() => {
+          setSealProblem(null);
+          send({ type: "seal-tap", now: performance.now(), hasInk: history.canUndo });
+        }}
+      />
       {sealed && active && (
-        <SealSequence
+        <SealCeremony
           key={sealed.record.id}
-          images={sealed.images}
+          sticker={sealed.sticker}
           record={sealed.record}
-          ticketsLeft={tickets.left}
+          sheet={sealed.sheet}
+          handle={me.handle}
           onKeepDrawing={startNewSticker}
           onBoard={onGoToBoard}
+          // A fresh sheet with no tickets left brings up the out-of-tickets card, here at its Sui purchase.
+          onGetTickets={() => {
+            setPaywallOpen("approve");
+            startNewSticker();
+          }}
         />
       )}
-
-      {paywall && !sealed && (
+      {paywall && (
         <OutOfTickets
           refillAt={tickets.refillAt}
-          onTicketsBought={(n) => {
-            setHoldPaywall(true);
-            tickets.add(n);
-          }}
-          onStartDrawing={() => setHoldPaywall(false)}
+          firstStep={paywallOpen}
+          onTicketsBought={tickets.add}
+          onStartDrawing={() => setPaywallOpen(null)}
           onBoard={() => {
-            setHoldPaywall(false);
+            setPaywallOpen(null);
             onGoToBoard();
           }}
         />
       )}
-    </>
+    </div>
   );
 }

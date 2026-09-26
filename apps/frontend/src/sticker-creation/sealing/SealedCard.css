@@ -1,0 +1,68 @@
+/* The backing card the sealed sticker lands on: Liner stock over a veil, the sticker's slot, one key and
+   one label under a tear line. The ceremony drives its opacity and lift, and each line's fade. */
+.sealed-card {
+  --card-pad: 18px;
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  padding: 0 var(--card-pad) 18px;
+  background: var(--liner);
+  border-radius: 14px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.7),
+    0 1px 0 rgba(28, 24, 36, 0.06),
+    2px 10px 30px rgba(28, 24, 36, 0.28),
+    1px 3px 8px rgba(28, 24, 36, 0.14);
+  text-align: center;
+  opacity: 0;
+}
+
+.sealed-card:focus {
+  outline: none;
+}
+
+.sealed-card__slot {
+  height: 208px;
+  margin: 0 calc(-1 * var(--card-pad)) 4px;
+}
+
+.sealed-card__title {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.08;
+  font-weight: 800;
+  font-stretch: var(--w-title);
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+/* A long name wraps the line evenly rather than leaving an orphan. */
+.sealed-card__fine {
+  margin: 9px 0 0;
+  text-wrap: balance;
+}
+
+/* The one key on the card, sized to it: a 58px face on its 6px lip. */
+.sealed-card .sealed-card__key {
+  display: flex;
+  width: 100%;
+  min-height: 64px;
+  padding: 0 20px;
+  font-size: 19px;
+}
+
+.sealed-card__tickets {
+  margin: 9px 0 0;
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--graphite);
+}
+
+.sealed-card__tickets p {
+  margin: 8px 0 0;
+}
+
+.sealed-card > .label-btn {
+  margin-top: 10px;
+}

@@ -7,6 +7,9 @@ import { useSyncExternalStore } from "react";
 export const LIFF_ID =
   (import.meta.env.DEV && import.meta.env.VITE_LIFF_ID) || "2011732197-P98cxGpu";
 
+/** LIFF Mock answers for LINE on the dev server unless `.env` switches it off; builds always use LINE. */
+export const liffMockActive = import.meta.env.DEV && import.meta.env.VITE_LIFF_MOCK !== "off";
+
 interface LineProfile {
   userId: string;
   displayName: string;
@@ -49,8 +52,8 @@ export async function initLine(): Promise<void> {
 }
 
 async function startLine(): Promise<LineState> {
-  // DEV is false in the build, which drops this branch and LIFF Mock with it.
-  if (import.meta.env.DEV && import.meta.env.VITE_LIFF_MOCK !== "off") await initMock();
+  // False in the build, which drops this branch and LIFF Mock with it.
+  if (liffMockActive) await initMock();
   else await liff.init({ liffId: LIFF_ID });
   if (!liff.isLoggedIn()) return { status: "logged-out" };
   const profile = await liff.getProfile();

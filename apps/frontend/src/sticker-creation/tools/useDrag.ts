@@ -1,28 +1,38 @@
 import { useRef, type PointerEvent as ReactPointerEvent } from "react";
 
-const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
+interface Drag {
+  /** The drag began. */
+  onStart?: () => void;
+  /** Each move of the drag, with the element's box as it began. Draws the drag; sets no React state. */
+  onMove: (x: number, y: number, box: DOMRect) => void;
+  /** The drag ended, lifted or taken by the browser: keep what it showed. */
+  onEnd: () => void;
+}
 
-/** Pointer drag helper: calls `onMove` with the pointer position (0..1) over `el`. */
-export function useDrag(onMove: (fx: number, fy: number) => void, onEnd?: () => void) {
-  const dragging = useRef(false);
-  const at = (e: ReactPointerEvent<HTMLElement>) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    onMove(clamp01((e.clientX - r.left) / r.width), clamp01((e.clientY - r.top) / r.height));
+/**
+ * A pointer dragged over a control, from press to lift. Moves only redraw the control; the value
+ * lands in React state once, at the end, so a drag never re-renders the screen.
+ */
+export function useDrag({ onStart, onMove, onEnd }: Drag) {
+  const box = useRef<DOMRect | null>(null);
+  const end = () => {
+    if (!box.current) return;
+    box.current = null;
+    onEnd();
   };
   return {
     onPointerDown: (e: ReactPointerEvent<HTMLElement>) => {
-      dragging.current = true;
+      if (box.current || (e.pointerType === "mouse" && e.button !== 0)) return;
+      e.preventDefault();
+      box.current = e.currentTarget.getBoundingClientRect();
       e.currentTarget.setPointerCapture(e.pointerId);
-      at(e);
+      onStart?.();
+      onMove(e.clientX, e.clientY, box.current);
     },
-    onPointerMove: (e: ReactPointerEvent<HTMLElement>) => dragging.current && at(e),
-    onPointerUp: () => {
-      if (!dragging.current) return;
-      dragging.current = false;
-      onEnd?.();
+    onPointerMove: (e: ReactPointerEvent<HTMLElement>) => {
+      if (box.current) onMove(e.clientX, e.clientY, box.current);
     },
-    onPointerCancel: () => {
-      dragging.current = false;
-    },
+    onPointerUp: end,
+    onPointerCancel: end,
   };
 }
