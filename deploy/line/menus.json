@@ -1,19 +1,19 @@
 {
   "en": {
-    "plain": "richmenu-b412f71e14bf67dcafff8ee167f8743a",
-    "3": null,
-    "2": null,
-    "1": null,
-    "reserve": null,
-    "none": null
+    "plain": "richmenu-940c5b26507f415fb9398be401ec5b2b",
+    "3": "richmenu-df6d9aecbc8c468420de1d23f72d33fe",
+    "2": "richmenu-ad550c040e988c93c83e84d0979840c1",
+    "1": "richmenu-e5d5db2d2204d25075063faf7df7c232",
+    "reserve": "richmenu-906db70eea772f5a7727274cf14d3a35",
+    "none": "richmenu-c6adde8c054b9648b18c5464370dd628"
   },
   "ja": {
-    "plain": "richmenu-582145555595c0b14b01fa3805df2ace",
-    "3": null,
-    "2": null,
-    "1": null,
-    "reserve": null,
-    "none": null
+    "plain": "richmenu-4b96e2034b20c2c0a0bc89db329cd669",
+    "3": "richmenu-b6295eb9c26dd68d21aaa702ef807d64",
+    "2": "richmenu-f76bfd38cdaf13a904cd6af65f9290e6",
+    "1": "richmenu-6b9750b54e136ebb35e245ff1dc2f4a4",
+    "reserve": "richmenu-6fecc4001985343df0b0c120d8163732",
+    "none": "richmenu-306299b0eda3e0421b5d328f69ae773a"
   },
-  "default": null
+  "default": "richmenu-a2a3e803b4e4dc01e9c54dd932afd511"
 }
