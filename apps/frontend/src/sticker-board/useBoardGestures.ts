@@ -270,8 +270,8 @@ export function useBoardGestures(options: Options) {
     const onDown = (e: PointerEvent) => {
       const { field, selected } = latest.current;
       if (e.button > 0 || !field || !(e.target instanceof Element)) return;
-      // The toolbar's labels and the given sticker silhouettes take their own presses.
-      if (e.target.closest(".sticker-toolbar, .given-sticker-silhouette")) return;
+      // The toolbar's labels take their own presses.
+      if (e.target.closest(".sticker-toolbar")) return;
       if (pointers.size === 0) {
         const r = stage.getBoundingClientRect();
         origin = { left: r.left, top: r.top, k: r.width / (stage.offsetWidth || r.width || 1) };

@@ -272,58 +272,6 @@
   pointer-events: auto;
 }
 
-/* Where a given sticker sat: its silhouette hatched over clean liner, so the maker print stays out
-   of it, under every sticker. Its caption stays level while the silhouette keeps the sticker's turn. */
-.given-sticker-silhouette {
-  position: absolute;
-  left: 0;
-  top: 0;
-  z-index: 5;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  transform-origin: 50% 50%;
-}
-
-.given-sticker-silhouette:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 5px;
-  border-radius: 14px;
-}
-
-.given-sticker-silhouette__art {
-  position: absolute;
-  inset: 0;
-  -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
-  mask: var(--m) 0 0 / 100% 100% no-repeat;
-  background:
-    repeating-linear-gradient(45deg, rgba(110, 104, 120, 0.2) 0 1px, transparent 1px 5px),
-    linear-gradient(rgba(110, 104, 120, 0.06), rgba(110, 104, 120, 0.06)), var(--liner);
-  transition: filter 140ms linear;
-}
-
-@media (hover: hover) {
-  .given-sticker-silhouette:hover .given-sticker-silhouette__art {
-    filter: brightness(0.96);
-  }
-}
-
-.given-sticker-silhouette__caption {
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 5px);
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  white-space: nowrap;
-  transform: translateX(calc(-50% + var(--nudge, 0px))) rotate(calc(var(--r) * -1));
-}
-
-.given-sticker-silhouette__caption svg {
-  flex: none;
-}
-
 /* The selected sticker's toolbar: label stock on a lifted strip, beside the sticker. It's placed
    clear of Draw, and stacks above it in case they ever meet, so a press on Give never lands on Draw. */
 .sticker-toolbar {

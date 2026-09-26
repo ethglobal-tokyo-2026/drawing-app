@@ -2,12 +2,14 @@
 import type {
   BoardSticker as ApiBoardSticker,
   StickerBoard as LoadedBoard,
+  Person,
 } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { boardSticker } from "../api/testFixtures";
+import { boardSticker, people } from "../api/testFixtures";
 import { emptyApi, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
 import { toPerson } from "../api/views";
+import { markNoticed } from "../giving/noticedGifts";
 import { forgetBoardComplete } from "./boardComplete";
 import { placeUnplaced, toBoardSticker } from "./boardSticker";
 import { keepBoard, keptBoardFor, readKeptBoardAgain } from "./lastBoard";
@@ -87,6 +89,82 @@ describe("StickerBoard with the board kept on this phone", () => {
     expect(shownIds(view.host)).toEqual([]);
     expect(view.host.querySelectorAll(".board-loading-sticker").length).toBeGreaterThan(0);
     expect(localStorage.getItem("draw.lastBoard")).toBeNull();
+  });
+});
+
+describe("StickerBoard after a gift", () => {
+  const given = () =>
+    boardSticker({
+      placement: at(0.3),
+      held: false,
+      givenTo: { receiver: people.bob, receivedAt: "2026-09-23T11:52:00.000Z" },
+    });
+  const show = async (...boardStickers: ApiBoardSticker[]) => {
+    const api = emptyApi({
+      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers }),
+    });
+    const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
+    unmount = view.unmount;
+    await act(async () => {});
+    const stage = view.host.querySelector<HTMLElement>(".board-stage");
+    if (!stage) throw new Error("The board has no stage");
+    return stage;
+  };
+
+  it("leaves a given sticker off the board, and out of the count", async () => {
+    const gone = given();
+    const kept = boardSticker({ placement: at(0.7) });
+    const stage = await show(gone, kept);
+    expect(shownIds(stage)).toEqual([kept.stickerId]);
+    expect(stage.querySelector(`[data-sticker-id="${gone.stickerId}"]`)).toBeNull();
+    expect(stage.querySelector(".placed-sticker")?.getAttribute("aria-label")).toMatch(/1 of 1$/);
+    expect(stage.querySelector(".board-blank")).toBeNull();
+  });
+
+  it("shows the empty board when every sticker was given", async () => {
+    const stage = await show(given());
+    expect(shownIds(stage)).toEqual([]);
+    expect(stage.querySelector(".board-blank")).not.toBeNull();
+  });
+
+  it("opens a given sticker among the stickers you gave from its blank spot in the tray", async () => {
+    const gone = given();
+    // Noticed already, so no notice covers the board.
+    markNoticed([
+      { stickerId: gone.stickerId, receivedAt: Date.parse("2026-09-23T11:52:00.000Z") },
+    ]);
+    const stage = await show(gone, boardSticker({ placement: at(0.7) }));
+    // The sticker tray loads with the board.
+    await act(() => vi.dynamicImportSettled());
+    const spot = stage
+      .closest(".board")
+      ?.querySelector<HTMLElement>(`.tray__slot[data-id="${gone.stickerId}"]`);
+    expect(spot?.getAttribute("aria-label")).toMatch(/^No\.\d{4}, given to @bob\. Open it$/);
+
+    act(() => spot?.click());
+    await act(() => vi.dynamicImportSettled());
+    const detail = document.querySelector(".sticker-detail");
+    expect(detail?.querySelector("nav")?.getAttribute("aria-label")).toBe("Stickers you gave");
+    // Only the stickers you gave page past, and it says who has this one.
+    expect(detail?.querySelectorAll(".sticker-detail__thumb")).toHaveLength(1);
+    expect(detail?.textContent).toContain("You gave it to @bob");
+  });
+
+  it("gives each gift received since the last visit its own notice, newest first", async () => {
+    const gave = (receiver: Person, receivedAt: string) =>
+      boardSticker({ held: false, givenTo: { receiver, receivedAt } });
+    await show(
+      gave(people.mika, "2026-09-22T11:52:00.000Z"),
+      gave(people.bob, "2026-09-23T11:52:00.000Z"),
+    );
+    const title = () => document.querySelector(".gift-received-notice h1")?.textContent?.trim();
+    const close = () =>
+      act(() => document.querySelector<HTMLElement>(".gift-received-notice .label-btn")?.click());
+    expect(title()).toBe("@bob received your sticker");
+    close();
+    expect(title()).toBe("@mika received your sticker");
+    close();
+    expect(document.querySelector(".gift-received-notice")).toBeNull();
   });
 });
 

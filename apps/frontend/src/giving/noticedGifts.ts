@@ -3,7 +3,8 @@
 const KEY = "draw.gifts.noticed";
 
 /** A sticker can come back to you and be given again, so a receive is its sticker and its time. */
-const keyOf = (g: { stickerId: string; receivedAt: number }) => `${g.stickerId}@${g.receivedAt}`;
+export const receiveOf = (g: { stickerId: string; receivedAt: number }) =>
+  `${g.stickerId}@${g.receivedAt}`;
 
 function readNoticed(): Set<string> {
   let raw: string | null;
@@ -40,14 +41,14 @@ export function newestUnnoticed<T extends { stickerId: string; receivedAt: numbe
   const noticed = readNoticed();
   let next: T | null = null;
   for (const g of received) {
-    if (!noticed.has(keyOf(g)) && (!next || g.receivedAt > next.receivedAt)) next = g;
+    if (!noticed.has(receiveOf(g)) && (!next || g.receivedAt > next.receivedAt)) next = g;
   }
   return next;
 }
 
-/** Marks every gift passed in as noticed: once one notice has shown, the silhouettes say the rest. */
+/** Marks the gifts passed in as noticed: each gets its own notice, one after another. */
 export function markNoticed(received: readonly { stickerId: string; receivedAt: number }[]) {
   const noticed = readNoticed();
-  for (const g of received) noticed.add(keyOf(g));
+  for (const g of received) noticed.add(receiveOf(g));
   saveNoticed(noticed);
 }

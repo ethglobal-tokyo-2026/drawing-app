@@ -447,7 +447,9 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.tray__slot[data-state="used"] {
+/* A given sticker's spot is blank paper that opens the sticker, so it only shows as a pointer. */
+.tray__slot[data-state="used"],
+.tray__slot[data-state="given"] {
   cursor: pointer;
 }
 

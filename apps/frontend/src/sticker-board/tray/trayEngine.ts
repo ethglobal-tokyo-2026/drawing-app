@@ -2,7 +2,7 @@
  * The sticker tray: zipped down the Sticker Board's right edge, opened by its Zipper.
  * Inside, a stack of loose sticker sheets holds every sticker you've had, in arrival order, each in
  * its packed spot: a used sticker silhouette where one is out on the board, a blank where one was
- * given. You page the stack, pull a sheet out over the board, spread every sheet out, peel stickers
+ * given, which opens it among the stickers you gave. You page the stack, pull a sheet out over the board, spread every sheet out, peel stickers
  * onto the board and put them back. Everything is in board pixels, in the board's stacking context.
  */
 import { i18next } from "../../i18n/i18n";
@@ -33,6 +33,8 @@ export interface TraySticker extends TraySlot {
   nsfw: boolean;
   /** Shown in the open tray before, so it isn't NEW. */
   seen: boolean;
+  /** Given away and received: who has it, printed. Its blank spot opens it among the stickers you gave. */
+  givenTo?: string;
 }
 
 interface Point {
@@ -62,6 +64,8 @@ export interface TrayBoard {
   remove: (id: string) => void;
   /** Shows where a sticker is on the board. */
   pulse: (id: string) => void;
+  /** Opens a given sticker's detail, among the stickers you gave. */
+  openGiven: (id: string) => void;
 }
 
 /**
@@ -523,6 +527,15 @@ export function createTrayEngine(
     el.style.height = px(q.h);
     el.style.margin = `${px(-q.h / 2)} 0 0 ${px(-q.w / 2)}`;
     const no = { no: formatNo(s.no) };
+    // A given sticker's spot stays blank: a button with nothing on it, which takes the shared press.
+    if (s.givenTo !== undefined) {
+      el.dataset.press = "";
+      el.setAttribute(
+        "aria-label",
+        i18next.t(($) => $.stickerBoard.tray.slot.given, { ...no, recipient: s.givenTo }),
+      );
+      return el;
+    }
     el.setAttribute(
       "aria-label",
       s.state === "used"
@@ -595,7 +608,9 @@ export function createTrayEngine(
   /** A loose sheet: a tear strip to grip at its top, stickers on their cut lines, its dates on its foot. */
   function sheetEl(f: number, cls: string, depth: number, news: ReadonlySet<string> = newIds()) {
     const paper = make("div", "tray__paper", decorative(make("i", "tray__tear")));
-    for (const s of sheetItems(f)) if (s.state !== "given") paper.append(slotEl(s, news.has(s.id)));
+    // A sticker on its way leaves nothing; one received leaves its blank spot, which opens it.
+    for (const s of sheetItems(f))
+      if (s.state !== "given" || s.givenTo !== undefined) paper.append(slotEl(s, news.has(s.id)));
     paper.append(
       make(
         "div",
@@ -962,6 +977,7 @@ export function createTrayEngine(
       if (Math.abs(dy) >= Math.abs(dx)) g.mode = "page";
       else if (dx < 0) g.mode = g.slotEl?.dataset.state === "here" ? "peel" : "pull";
       else g.mode = "none";
+      holdPress(g.slotEl);
       if (g.mode === "peel") startPeel(g);
       else if (g.mode === "pull") startPull(g);
     }
@@ -978,6 +994,7 @@ export function createTrayEngine(
     const g = ui.g;
     if (!g || g.id !== e.pointerId) return;
     ui.g = null;
+    freePress(g.slotEl);
     if (g.mode === "maybe") {
       if (g.depth > 0) {
         const f = ui.order[g.depth];
@@ -1004,6 +1021,7 @@ export function createTrayEngine(
   listen(stack, "pointercancel", stackUp);
   listen(stack, "click", (e) => {
     if (targetOf(e)?.closest(".tray__depth")) openSpread({ focus: e.detail === 0 });
+    else openGivenAt(e);
   });
   listen(stack, "keydown", (e) => {
     if (e.key === "PageDown") {
@@ -1025,12 +1043,28 @@ export function createTrayEngine(
       void bringToFront(f);
       return;
     }
+    // A given sticker's spot opens on its click, which the press sends as it pops.
     const slot = target?.closest<HTMLElement>(".tray__slot");
-    if (slot) {
+    if (slot && slot.dataset.state !== "given") {
       e.preventDefault();
       tapSlot(slot);
     }
   });
+  /** A click on a given sticker's blank spot opens it among the stickers you gave. */
+  function openGivenAt(e: Event) {
+    const id = targetOf(e)?.closest<HTMLElement>('.tray__slot[data-state="given"]')?.dataset.id;
+    if (id !== undefined) api.openGiven(id);
+  }
+  /**
+   * A press on a given sticker's spot that turned into a drag isn't a tap: its shared press lets go
+   * without the click that opens it, and presses again after.
+   */
+  function holdPress(el: HTMLElement | null) {
+    if (el?.dataset.state === "given") el.dataset.press = "off";
+  }
+  function freePress(el: HTMLElement | null) {
+    if (el?.dataset.press === "off") el.dataset.press = "";
+  }
   /**
    * A tap on a sticker sticks it on the board; a tap on a used sticker silhouette shows its sticker
    * there.
@@ -1281,6 +1315,7 @@ export function createTrayEngine(
     let slot: HTMLElement | null = null;
     on("click", (e) => {
       if (targetOf(e)?.closest(".tray__x")) void sendHome();
+      else openGivenAt(e);
     });
     on("pointerdown", (e) => {
       const target = targetOf(e);
@@ -1317,6 +1352,7 @@ export function createTrayEngine(
       if (g.mode === "maybe") {
         if (Math.hypot(dx, dy) < DECIDE) return;
         g.mode = slot?.dataset.state === "here" ? "peel" : "move";
+        holdPress(slot);
         if (g.mode === "peel") {
           ui.g = g;
           startPeel(g);
@@ -1334,6 +1370,7 @@ export function createTrayEngine(
       if (!done || e.pointerId !== done.id) return;
       g = null;
       ui.g = null;
+      freePress(slot);
       if (done.mode === "maybe") tapSlot(slot);
       else if (done.mode === "peel") void dropPeel(done, local(e));
       else if (done.mode === "move") settlePulled(p);

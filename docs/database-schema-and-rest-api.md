@@ -248,7 +248,7 @@ Inserted at Packaging.
 | ----------- | ------------------------------------------------- | ------------------------------------------- | ---------------------------------- |
 | `packed`    | in the bag; the Gift Message isn't confirmed sent | "In the bag"; "Not sent yet" after a cancel | the gift, if the message went out  |
 | `sent`      | LINE's picker reported the Gift Message sent      | "On its way"; the sticker leaves the board  | "Alice sent you a sticker"         |
-| `received`  | someone received it                               | a GivenStickerSilhouette                    | their board; anyone after: refused |
+| `received`  | someone received it                               | the notice; the sticker stays off the board | their board; anyone after: refused |
 | `taken_out` | the giver took it back before anyone received it  | the sticker, back                           | refused (`taken_back`)             |
 | `returned`  | 7 days passed, so the escrow returned it          | the sticker, back                           | refused (`gift_returned`)          |
 
@@ -574,8 +574,8 @@ interface TransferTrailEntry {
 ```ts
 interface BoardSticker extends StickerPlacement {
   sticker: Sticker;
-  held: boolean; // false: given away; show a GivenStickerSilhouette, and an empty spot in the tray
-  givenTo: { receiver: Person; receivedAt: IsoTime } | null; // set when held is false: the silhouette's "→ @bob"
+  held: boolean; // false: given away; off the board, and an empty spot in the tray
+  givenTo: { receiver: Person; receivedAt: IsoTime } | null; // set when held is false: the giver's notice's "@bob"
   openGift: { id: string; status: "packed" | "sent"; for: Person | null } | null; // for: who it waits for
 }
 ```
