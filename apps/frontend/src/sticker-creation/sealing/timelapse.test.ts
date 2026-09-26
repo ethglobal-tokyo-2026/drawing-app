@@ -39,7 +39,6 @@ describe("the timelapse", () => {
       ["eraser", "#ffffff", 5000],
       ["fill", "#00ff00", 9000],
     ]);
-    expect(ops[2]?.slice(3)).toEqual([30.26, 40]);
   });
 
   it("writes stroke points in tenths of a pixel, each a change from the point before", () => {
@@ -48,7 +47,21 @@ describe("the timelapse", () => {
     expect(first?.[3]).toEqual([100, 200, 40, 0, 5, 13, 0, 16]);
   });
 
-  it("records the drawing's density, so fills can flood as they did", () => {
+  it.each([1, 2, 2.625, 3])(
+    "stores each fill's tap where it seeds the pixel it seeded, at a density of %s",
+    (density) => {
+      // At density 3, 10.334 seeded pixel 31, which 10.33 would miss.
+      const taps = [10.334, 30.26, 40, 99.999];
+      const ops = taps.map((x): Op => ({ tool: "fill", color: "#00ff00", T: 0, x, y: x }));
+      const decoded = decodeTimelapse(encodeTimelapse({ ...input, ops, density })).ops;
+      const seeded = (n: number) => Math.floor(n * density);
+      expect(decoded.map((op) => (op.tool === "fill" ? [seeded(op.x), seeded(op.y)] : []))).toEqual(
+        taps.map((x) => [seeded(x), seeded(x)]),
+      );
+    },
+  );
+
+  it("records the density the sticker was drawn at, so fills can flood as they did", () => {
     expect(encodeTimelapse(input).density).toBe(DENSITY);
   });
 
@@ -62,11 +75,12 @@ describe("the timelapse", () => {
       h: 400 / DENSITY,
     });
     expect(decoded.density).toBe(DENSITY);
-    // Stroke points come back to the tenth (21.25 is 21.3), times to the ms, fill taps exact.
+    // Stroke points come back to the tenth (21.25 is 21.3), times to the ms, and fill taps as the
+    // middle of the pixel they seeded at DENSITY.
     expect(decoded.ops).toEqual([
       { tool: "brush", color: "#ff0000", T: 1200, pts: [10, 20, 4, 0, 10.5, 21.3, 4, 16] },
       { tool: "eraser", color: "#ffffff", T: 5000, pts: [3, 4, 12, 0] },
-      { tool: "fill", color: "#00ff00", T: 9000, x: 30.26, y: 40 },
+      { tool: "fill", color: "#00ff00", T: 9000, x: 30.25, y: 40.25 },
     ]);
   });
 

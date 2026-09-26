@@ -126,6 +126,9 @@ const closedRows = () =>
   ].filter((b) => !b.textContent?.includes("earlier"));
 
 const heading = () => document.querySelector("h2 .sticker-detail__no")?.textContent;
+/** Whether keyboard focus is in the detail, which hears its keys. */
+const focusInDetail = () =>
+  document.querySelector('[role="dialog"]')?.contains(document.activeElement) === true;
 const button = (name: string) =>
   [...document.querySelectorAll("button")].find(
     (b) => (b.getAttribute("aria-label") ?? b.textContent?.trim()) === name,
@@ -304,6 +307,19 @@ describe("StickerDetail", () => {
     expect(document.querySelector(".sticker-detail__ens")).toBeNull();
   });
 
+  it("keeps focus in the detail when Try again goes as it checks the sticker again", async () => {
+    open();
+    await settle();
+    const tryAgain = document.querySelector<HTMLButtonElement>(
+      ".sticker-detail__check-failed button",
+    );
+    act(() => tryAgain?.focus());
+    expect(document.activeElement).toBe(tryAgain);
+    act(() => tryAgain?.click());
+    expect(document.querySelector(".sticker-detail__check-failed")).toBeNull();
+    expect(focusInDetail()).toBe(true);
+  });
+
   describe("its timelapse", () => {
     let players: ReturnType<typeof fakeTimelapsePlayers>;
     beforeEach(() => {
@@ -356,11 +372,24 @@ describe("StickerDetail", () => {
       ["paging", () => press("Next sticker")],
       ["the Sticker board button", () => press("Sticker board")],
       ["Escape", () => key("Escape")],
-    ])("stops on %s, and leaves no layer behind", async (_, leave) => {
+    ])("stops on %s, lets go of its canvas, and leaves no layer behind", async (_, leave) => {
       const player = await playing();
       leave();
       expect(player.calls).toContain("stop");
+      const { canvas } = player.options;
+      expect([canvas.width, canvas.height]).toEqual([0, 0]);
       expect(layer()).toBeNull();
+    });
+
+    it("keeps focus in the dialog when paging from Timelapse takes the button away", async () => {
+      open({ stickers: masked }, withTimelapse());
+      await settle();
+      act(() => timelapseButton()?.focus());
+      expect(document.activeElement).toBe(timelapseButton());
+      key("ArrowRight");
+      expect(heading()).toBe("No.0117");
+      expect(timelapseButton()).toBeNull();
+      expect(focusInDetail()).toBe(true);
     });
 
     it("stops when Back closes the detail", async () => {

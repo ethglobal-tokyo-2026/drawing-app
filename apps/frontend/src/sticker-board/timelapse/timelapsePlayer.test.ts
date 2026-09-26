@@ -5,8 +5,8 @@ import { STRIDE, type FillOp, type Op, type StrokeOp } from "../../sticker-creat
 import { paintStroke } from "../../sticker-creation/canvas/paintStroke";
 import { decodeTimelapse, encodeTimelapse } from "../../sticker-creation/sealing/timelapse";
 import { notePerformance } from "../../performance/performanceRecorder";
-import type { FrameSource } from "../../ui/frameSource";
 import { contextOf, forgetContexts, madeContexts, type FakeContext } from "./testCanvas";
+import { handFrames } from "./testTimelapse";
 import { MAX_FRAME_MS, createTimelapsePlayer } from "./timelapsePlayer";
 import { scheduleTimelapse, type ScheduledStroke } from "./timelapseSchedule";
 
@@ -38,31 +38,6 @@ const steady = (ms: number, step = 16) =>
   Array.from({ length: Math.floor(ms / step) + 1 }, (_, i) => i * step);
 const pointCount = (op: StrokeOp) => op.pts.length / STRIDE;
 
-/** Frames a test hands out: `advance(ms)` runs one every `step` ms, up to `ms` later. */
-function fakeFrames() {
-  let time = 1_000;
-  let pending: ((t: number) => void) | null = null;
-  const frames: FrameSource = {
-    now: () => time,
-    request(frame) {
-      pending = frame;
-      return () => {
-        if (pending === frame) pending = null;
-      };
-    },
-  };
-  const advance = (ms: number, step = 16) => {
-    const end = time + ms;
-    while (time < end) {
-      time = Math.min(end, time + step);
-      const frame = pending;
-      pending = null;
-      frame?.(time);
-    }
-  };
-  return { frames, advance, waiting: () => pending !== null };
-}
-
 const sameObject = (a: object, b: object | undefined) => a === b;
 
 function setup(ops: Op[], { reduced = false } = {}) {
@@ -73,14 +48,14 @@ function setup(ops: Op[], { reduced = false } = {}) {
     density: 1,
   });
   const canvas = document.createElement("canvas");
-  const clock = fakeFrames();
+  const clock = handFrames();
   const player = createTimelapsePlayer({
     timelapse,
     canvas,
-    box: BOX,
+    width: BOX.width,
     image: { width: PLACE.w, height: PLACE.h },
     reduced,
-    frames: clock.frames,
+    frames: clock.source,
   });
   const display = contextOf(canvas);
   const schedule = scheduleTimelapse(decodeTimelapse(timelapse).ops, { reduced });
@@ -239,9 +214,10 @@ describe("the timelapse player", () => {
 });
 
 describe("the timelapse player's fills", () => {
-  const TAP = { x: 40, y: 50 };
+  /** The middle of a pixel at density 1, as the timelapse stores a tap. */
+  const TAP = { x: 40.5, y: 50.5 };
   /** A line, a fill, and a line over it. */
-  const drawing = (): Op[] => {
+  const sticker = (): Op[] => {
     const fill: FillOp = { tool: "fill", color: "#ff0000", ...TAP, T: 500 };
     return [stroke(0, steady(300)), fill, stroke(800, steady(300))];
   };
@@ -257,7 +233,7 @@ describe("the timelapse player's fills", () => {
       .filter((canvas) => canvas.width > 0 || canvas.height > 0);
 
   it("reveals a fill inside a circle growing from its tap, then whole", async () => {
-    const { display, player, start, advance, schedule } = setup(drawing());
+    const { display, player, start, advance, schedule } = setup(sticker());
     await player.prepare();
     const { playing } = await start();
     advance(schedule.length + 32);
@@ -274,7 +250,7 @@ describe("the timelapse player's fills", () => {
   });
 
   it("notes how long preparing its fills took, for the performance recorder", async () => {
-    const { player } = setup(drawing());
+    const { player } = setup(sticker());
     await player.prepare();
     expect(notePerformance).toHaveBeenCalledWith(
       "timelapse",
@@ -282,18 +258,27 @@ describe("the timelapse player's fills", () => {
     );
   });
 
-  it("reveals fills whole at once under reduced motion", async () => {
-    const { display, player, start, advance, schedule } = setup(drawing(), { reduced: true });
+  it("reveals fills whole at once under reduced motion, in no beat, so the strokes after start sooner", async () => {
+    const { display, player, start, advance, schedule, painted } = setup(sticker(), {
+      reduced: true,
+    });
+    const after = strokeAt(schedule, 2);
+    const ops = schedule.ops.map((scheduled) => scheduled.op);
+    const withBeat = strokeAt(scheduleTimelapse(ops, { reduced: false }), 2).at[0];
+    expect(withBeat).toBeGreaterThan(after.at[0]);
     await player.prepare();
     const { playing } = await start();
-    advance(schedule.length + 32);
+    // The first frame starts the clock at 0, so after `ms` of frames it has played `ms - 16`.
+    advance((after.at[0] + withBeat) / 2 + 16);
+    expect(painted().some((range) => range.op.T === after.op.T)).toBe(true);
+    advance(schedule.length);
     await expect(playing).resolves.toBe("done");
     expect(clips(display)).toEqual([]);
     expect(draws(display)).toHaveLength(1);
   });
 
   it("reveals its fills whole at once from when reduced motion is turned on mid-play", async () => {
-    const { display, player, start, advance, schedule } = setup(drawing());
+    const { display, player, start, advance, schedule } = setup(sticker());
     await player.prepare();
     const { playing } = await start();
     advance(32);
@@ -305,7 +290,7 @@ describe("the timelapse player's fills", () => {
   });
 
   it("reveals the fills still to come whole on skip", async () => {
-    const { display, player, start, advance } = setup(drawing());
+    const { display, player, start, advance } = setup(sticker());
     await player.prepare();
     const { playing } = await start();
     advance(32);
@@ -316,7 +301,7 @@ describe("the timelapse player's fills", () => {
   });
 
   it("lets go of every canvas it made once done, keeping the display's", async () => {
-    const { canvas, player, start, advance, schedule } = setup(drawing());
+    const { canvas, player, start, advance, schedule } = setup(sticker());
     await player.prepare();
     const { playing } = await start();
     advance(schedule.length + 32);
@@ -325,7 +310,7 @@ describe("the timelapse player's fills", () => {
   });
 
   it("lets go of every canvas it made when stopped mid-reveal", async () => {
-    const { canvas, display, player, start, advance } = setup(drawing());
+    const { canvas, display, player, start, advance } = setup(sticker());
     await player.prepare();
     await start();
     for (let frames = 0; clips(display).length === 0 && frames < 1_000; frames++) advance(16);
@@ -334,7 +319,7 @@ describe("the timelapse player's fills", () => {
   });
 
   it("ends the prepare pass when stopped while preparing, and play finishes stopped", async () => {
-    const { canvas, player } = setup(drawing());
+    const { canvas, player } = setup(sticker());
     const preparing = player.prepare();
     player.stop();
     await expect(preparing).resolves.toBeUndefined();
@@ -346,7 +331,7 @@ describe("the timelapse player's fills", () => {
     vi.spyOn(InkSurface.prototype, "apply").mockImplementation((op) => {
       if (op.tool === "fill") throw new Error("out of memory");
     });
-    const { player } = setup(drawing());
+    const { player } = setup(sticker());
     const failure = "Preparing the timelapse's fill 1 of 1 failed: out of memory";
     await expect(player.prepare()).rejects.toThrow(failure);
     await expect(player.play()).rejects.toThrow(failure);

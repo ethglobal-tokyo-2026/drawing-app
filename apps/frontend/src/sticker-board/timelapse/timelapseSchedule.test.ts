@@ -129,7 +129,7 @@ describe("a timelapse's schedule", () => {
     expect(reduced.line).toBeGreaterThan(full.line);
   });
 
-  it("plays a drawing with no time in it, a dot and a fill, in the fill's reveal alone", () => {
+  it("plays a sticker with no time in it, a dot and a fill, in the fill's reveal alone", () => {
     const s = schedule([stroke(0, [0]), fill(0)]);
     const [f] = fills(s);
     expect(strokes(s)[0].at).toEqual([0]);
@@ -138,15 +138,15 @@ describe("a timelapse's schedule", () => {
 });
 
 describe("what's due each frame", () => {
-  const drawing: Op[] = [stroke(0, steady(900)), fill(1_200), stroke(1_500, steady(400, 30))];
-  const [first, , last] = drawing;
+  const sticker: Op[] = [stroke(0, steady(900)), fill(1_200), stroke(1_500, steady(400, 30))];
+  const [first, , last] = sticker;
   if (first.tool === "fill" || last.tool === "fill")
-    throw new Error("the drawing starts and ends with strokes");
+    throw new Error("the sticker starts and ends with strokes");
 
   it("paints every point once, in order, grows each reveal to whole before moving on, and ends at the length", () => {
-    const s = schedule(drawing);
+    const s = schedule(sticker);
     const cursor = startOfPlayback();
-    const points = drawing.map((): number[] => []);
+    const points = sticker.map((): number[] => []);
     const reveals: number[] = [];
     const order: number[] = [];
     let t = 0;
@@ -169,10 +169,10 @@ describe("what's due each frame", () => {
   });
 
   it("brings in the rest at once, whole, at the end of time", () => {
-    const s = schedule(drawing);
+    const s = schedule(sticker);
     expect(stepsDue(s, startOfPlayback(), Infinity)).toEqual([
       { kind: "stroke", index: 0, op: first, from: 0, to: pointCount(first) },
-      { kind: "reveal", index: 1, op: drawing[1], progress: 1 },
+      { kind: "reveal", index: 1, op: sticker[1], progress: 1 },
       { kind: "stroke", index: 2, op: last, from: 0, to: pointCount(last) },
     ]);
     const midway = startOfPlayback();

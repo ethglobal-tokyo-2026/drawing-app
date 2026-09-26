@@ -60,6 +60,8 @@ const IDLE: View = { stickerId: null, phase: "idle", failure: null, said: null }
 interface Session {
   stickerId: string;
   player: TimelapsePlayer | null;
+  /** The player's canvas, kept here since paging detaches the layer's refs before the session ends. */
+  canvas: HTMLCanvasElement | null;
   over: boolean;
   /** Withdraws the ending's next frame. */
   cancelFrame: () => void;
@@ -144,7 +146,7 @@ export function useTimelapse({
     s.cancelFrame();
     if (layer.current) layer.current.style.visibility = "hidden";
     s.player?.stop();
-    const ink = canvas.current;
+    const ink = s.canvas;
     if (ink) {
       // iOS counts canvases against a small budget until they're collected, so this one goes now.
       ink.width = 0;
@@ -185,10 +187,11 @@ export function useTimelapse({
       const box = figure.current;
       if (!ink || !box) throw new Error("The timelapse's layer or the sticker's figure is gone");
       const { reduced: still, createPlayer: create, frames: clock } = latest.current;
+      s.canvas = ink;
       s.player = create({
         timelapse,
         canvas: ink,
-        box: { width: box.offsetWidth, height: box.offsetHeight },
+        width: box.offsetWidth,
         image: { width: target.width, height: target.height },
         reduced: still,
         frames: clock,
@@ -199,15 +202,22 @@ export function useTimelapse({
       if ((await s.player.play()) === "stopped" || s.over) return;
       reveal(s);
     } catch (error) {
-      if (s.over) return;
+      // Logged even once stopped, when no failure line shows it.
       console.error(`Sticker ${target.id}'s timelapse couldn't play`, error);
+      if (s.over) return;
       end(s, { stickerId: target.id, phase: "idle", failure: toError(error), said: null });
     }
   };
 
   const start = () => {
     if (!shown || session.current) return;
-    const s: Session = { stickerId: shown.id, player: null, over: false, cancelFrame: () => {} };
+    const s: Session = {
+      stickerId: shown.id,
+      player: null,
+      canvas: null,
+      over: false,
+      cancelFrame: () => {},
+    };
     session.current = s;
     setView({ stickerId: shown.id, phase: "loading", failure: null, said: null });
     void run(s, shown);

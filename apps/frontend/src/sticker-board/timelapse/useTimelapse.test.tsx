@@ -287,7 +287,11 @@ describe("useTimelapse", () => {
     expect(logged).toHaveBeenCalled();
     expect(players.made).toHaveLength(0);
 
-    act(() => document.querySelector<HTMLButtonElement>('[role="alert"] button')?.click());
+    // Try again goes as it retries, so focus moves on to the button first.
+    const tryAgain = document.querySelector<HTMLButtonElement>('[role="alert"] button');
+    act(() => tryAgain?.focus());
+    expect(document.activeElement).toBe(tryAgain);
+    act(() => tryAgain?.click());
     expect(label()).toBe("Loading…");
     expect(document.activeElement).toBe(button());
     expect(alert()).toBeUndefined();
@@ -306,6 +310,20 @@ describe("useTimelapse", () => {
     expect(logged).toHaveBeenCalled();
     expect(player.calls).toContain("stop");
     expect(layer()).toBeNull();
+  });
+
+  it("logs a failure that comes after stop, naming the sticker, and shows no failure line", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const loaded = deferred<TimelapseV1>();
+    client = emptyApi({ timelapse: () => loaded.promise });
+    render();
+    press();
+    act(() => control("stop").click());
+    loaded.reject(new Error("offline"));
+    await settle();
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining(STICKER.id), expect.anything());
+    expect(alert()).toBeUndefined();
+    expect(phase()).toBe("idle");
   });
 
   it("hides the layer at stop, before React renders again, and stops the player", async () => {

@@ -7,6 +7,7 @@ import { decodeTimelapse, encodeTimelapse } from "../../sticker-creation/sealing
 import {
   CAPPED_IMAGE_SIDE,
   changedArea,
+  displayCanvas,
   displayPoint,
   drawingDensity,
   revealRadius,
@@ -120,6 +121,31 @@ describe("the reveal's circle", () => {
     expect(new Set(radii).size).toBe(radii.length);
     expect(radii[2]).toBeGreaterThan(reach / 2);
   });
+});
+
+describe("the display canvas", () => {
+  /** Layers laid out in fractions of a CSS px, as the detail sizes a sticker by its aspect. */
+  const LAYERS = [
+    [146.66, 216],
+    [70.5, 216],
+    [93.51, 216],
+    [216, 146.94],
+    [216, 61.37],
+  ];
+
+  it.each([1, 2, 2.625, 3])(
+    "maps the ink's place onto the whole layer, to half a pixel, at a density of %s",
+    (density) => {
+      for (const [width, height] of LAYERS) {
+        const place = { x: 12.3, y: 40.5, w: 60, h: (60 * height) / width };
+        // The figure's offset width, which layout rounds to whole CSS px.
+        const display = displayCanvas(place, Math.round(width), density);
+        // The canvas covers the layer, so the ink ends where the canvas does, on both axes.
+        expect(Math.abs(place.w * display.scale - display.width)).toBeLessThanOrEqual(0.5);
+        expect(Math.abs(place.h * display.scale - display.height)).toBeLessThanOrEqual(0.5);
+      }
+    },
+  );
 });
 
 describe("a point on the display", () => {

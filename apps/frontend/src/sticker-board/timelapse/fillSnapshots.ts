@@ -1,7 +1,7 @@
 /**
  * The prepare pass. A fill floods whatever pixels are there, at the density it was drawn at, and
  * reads and writes the whole sheet, too slow for playback. So each fill floods once, beforehand, on
- * a full sheet at the drawing's density, and what it changed in the display canvas is kept to reveal.
+ * a full sheet at that density, and what it changed in the display canvas is kept to reveal.
  */
 import { context2d } from "../../sticker-creation/canvas/context2d";
 import { InkSurface } from "../../sticker-creation/canvas/inkSurface";
@@ -9,7 +9,7 @@ import type { Op } from "../../sticker-creation/canvas/ops";
 import type { Rect } from "../../sticker-creation/sealing/stickerLayers";
 import { changedArea, displayPoint, sheetCrop, type DisplayCanvas } from "./timelapseCrop";
 
-/** Far longer than a phone takes over a drawing's fills: only a runaway pass is given up on. */
+/** Far longer than a phone takes over a sticker's fills: only a runaway pass is given up on. */
 export const PREPARE_TIMEOUT_MS = 30_000;
 
 /** A fill's reveal: the box it changed in the display canvas, px, and those pixels just after it. */
@@ -26,7 +26,7 @@ export interface PrepareInput {
   ink: { width: number; height: number };
   /** Where the sticker's image sits on the sheet, sheet px. */
   place: Rect;
-  /** Device px per sheet px to flood at: the drawing's. */
+  /** Device px per sheet px to flood at: the density the sticker was drawn at. */
   density: number;
   display: DisplayCanvas;
 }

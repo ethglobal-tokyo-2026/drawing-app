@@ -9,11 +9,11 @@ import { STRIDE, type FillOp, type Op, type StrokeOp } from "../../sticker-creat
 export const MAX_IDLE_MS = 300;
 /** Before the speed-up, a hold inside a stroke counts at most this long per point step. */
 export const MAX_POINT_STEP_MS = 150;
-/** The drawing plays this many times faster, as far as the length's bounds allow. */
+/** The sticker plays this many times faster than it was drawn, within the length's bounds. */
 export const SPEEDUP = 15;
-/** A timelapse plays at least this long, however quick the drawing… */
+/** A timelapse plays at least this long, however quickly the sticker was drawn… */
 export const MIN_LENGTH_MS = 2500;
-/** …and at most this long, however slow. */
+/** …and at most this long, however slowly. */
 export const MAX_LENGTH_MS = 6000;
 /** A fill's reveal in the shortest timelapse, and in the longest. */
 export const MIN_FILL_REVEAL_MS = 150;

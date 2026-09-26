@@ -42,6 +42,20 @@ export interface DisplayCanvas {
 }
 
 /**
+ * The display canvas over a box `width` CSS px wide, at `density` px per CSS px. Both sides come from
+ * one scale, so the canvas has the ink's aspect and CSS stretches it evenly onto the box, whatever
+ * fractions of a px the box's layout has.
+ */
+export function displayCanvas(place: Rect, width: number, density: number): DisplayCanvas {
+  const scale = (density * width) / place.w;
+  return {
+    width: Math.max(1, Math.round(place.w * scale)),
+    height: Math.max(1, Math.round(place.h * scale)),
+    scale,
+  };
+}
+
+/**
  * The window of the sheet's canvas the display shows from `place`, and where it lands, clipped to the
  * sheet: older Safari draws nothing for a source rectangle reaching past its image. Null off the sheet.
  */
