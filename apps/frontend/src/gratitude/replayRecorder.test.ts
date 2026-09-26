@@ -3,13 +3,9 @@ import type { ReplayV1 } from "@drawing-app/api/client";
 import { seededRandom } from "../ui/seededRandom";
 import { createGratitudeCombo, type ComboEvent, type ComboRecord, type EndReason } from "./combo";
 import { FEEL_CONFIG, GAME_CONFIG, type GameConfig } from "./gameConfig";
-import { createReplayRecorder, STAGE_UNITS, STROKE_SAMPLE_GAP_MS } from "./replayRecorder";
-import { createStrokeDetector } from "./strokeDetector";
+import { STAGE_UNITS, STROKE_SAMPLE_GAP_MS } from "./replayRecorder";
+import { endOf, session, strokeStartedCombo, strokeUpAndDown } from "./testCombos";
 
-type Ended = Extract<ComboEvent, { kind: "ended" }>;
-const endOf = (events: readonly ComboEvent[]) => events.find((e): e is Ended => e.kind === "ended");
-
-const STAGE = { width: 390, height: 741 };
 /** The server's MAX_COMBO_MS, and the most a keepalive request carries. */
 const MAX_COMBO_MS = 8000;
 const MAX_BODY_BYTES = 64 * 1024;
@@ -53,6 +49,23 @@ function readReplay(replay: ReplayV1, record: ComboRecord) {
     "strokes",
   );
   rule(replay.shakes.length % 2 === 0 && replay.shakes.every(int), "shakes");
+  const { strokePasses } = replay;
+  rule(
+    strokePasses === undefined || strokePasses.length === replay.strokes.length,
+    "one list of stroke passes per stroke",
+  );
+  rule(
+    (strokePasses ?? []).every((passes, stroke) =>
+      passes.every(
+        (index, at) =>
+          int(index) &&
+          index >= 0 &&
+          index < replay.strokes[stroke].length / 3 &&
+          (at === 0 || index > passes[at - 1]),
+      ),
+    ),
+    "stroke passes name later samples of their own stroke",
+  );
 
   const steps = [
     ...msSteps(replay.hits, 4),
@@ -107,32 +120,6 @@ function playBack(replay: ReplayV1, config: GameConfig = GAME_CONFIG) {
     events.push(...combo.advanceTo(durationMs + 0.5));
   }
   return endOf(events);
-}
-
-/** A combo and a recorder, each input told to both the way the engine tells them. */
-function session(config: GameConfig = GAME_CONFIG) {
-  const combo = createGratitudeCombo(config);
-  const recorder = createReplayRecorder({ seed: 42, intensity: 0.7, ...STAGE });
-  let ended: Ended | undefined;
-  const hear = (events: ComboEvent[]) => {
-    ended ??= endOf(events);
-    return events;
-  };
-  return {
-    combo,
-    recorder,
-    hear,
-    get ended() {
-      return ended;
-    },
-    tap: (t: number, x = 195, y = 400) => recorder.touch(x, y, hear(combo.tapHeart(t))),
-    frame: (t: number) => hear(combo.advanceTo(t)),
-    end: (t: number, reason: "hidden" | "closed") => hear(combo.endCombo(t, reason)),
-    finish() {
-      if (!ended) throw new Error("The combo never ended");
-      return { ended, replay: recorder.finish(ended) };
-    },
-  };
 }
 
 interface TapOptions {
@@ -270,6 +257,20 @@ describe("createReplayRecorder", () => {
       [0, 40],
     ]);
   });
+
+  it("marks the samples that ended a fast pass, counted among the samples it keeps", () => {
+    const { ended, replay, fastPasses } = strokeStartedCombo();
+    const { durationMs } = ended.record;
+    const [stroke, ...others] = readReplay(replay, ended.record).strokes;
+    // The stroke before the combo, and the passes before and after it, went with their samples.
+    expect(others).toEqual([]);
+    expect(fastPasses.some((at) => at < 0) && fastPasses.some((at) => at > durationMs)).toBe(true);
+    const marked = replay.strokePasses?.[0] ?? [];
+    expect(marked[0]).toBe(0);
+    expect(marked.map((index) => stroke[index][0])).toEqual(
+      fastPasses.filter((at) => at >= 0 && at <= durationMs),
+    );
+  });
 });
 
 describe("a replay has all the data to play its combo back", () => {
@@ -317,25 +318,10 @@ describe("a replay has all the data to play its combo back", () => {
 
   it("a stroke combo: the taps before the switch, and a sample at every pass it counted", () => {
     const s = session();
-    const detector = createStrokeDetector(FEEL_CONFIG.stroke);
     [1000, 1150, 1300].forEach((t) => s.tap(t));
+    // Up and down for 3 s; then the thumb lifts, and the bar runs out.
     const down = 1450;
-    detector.fingerDown(200, 520, down);
-    s.recorder.strokeStart(down, 200, 520);
-    // Up and down 120 px, 125 ms a run, a move every 8 ms, for 3 s; then the thumb lifts.
-    for (let t = down + 8; !s.ended && t < down + 3000; t += 8) {
-      const run = (t - down) / 125;
-      const y = 520 - 120 * (run % 2 < 1 ? run % 1 : 1 - (run % 1));
-      const pass = detector.fingerMove(200, y, t);
-      s.recorder.strokeMove(t, 200, y, pass?.fast === true);
-      if (pass?.fast && s.combo.view.method === "stroke") s.hear(s.combo.countStrokePass(t));
-      else if (pass?.fast && pass.fastStreak >= FEEL_CONFIG.stroke.unlockPasses) {
-        s.hear(s.combo.commitTo("stroke", t));
-      }
-      s.frame(t);
-    }
-    detector.fingerUp();
-    s.recorder.strokeEnd();
+    strokeUpAndDown(s, { from: down, until: down + 3000 });
     for (let t = down + 3000; !s.ended; t += 16) s.frame(t);
 
     const { ended, replay } = s.finish();
@@ -361,12 +347,7 @@ describe("a replay has all the data to play its combo back", () => {
       const due = 1200 + 55 * (reversal + 1);
       if (t >= due && due <= 5000) {
         reversal++;
-        const direction = reversal % 2 === 0 ? 1 : -1;
-        if (s.combo.view.method === "shake") {
-          s.recorder.shake(direction, s.hear(s.combo.countShakeReversal(due)));
-        } else if (reversal >= FEEL_CONFIG.shake.unlockAt) {
-          s.recorder.shake(direction, s.hear(s.combo.commitTo("shake", due)));
-        }
+        if (reversal >= FEEL_CONFIG.shake.unlockAt) s.reverse(due, reversal % 2 === 0 ? 1 : -1);
       }
       s.frame(t);
     }

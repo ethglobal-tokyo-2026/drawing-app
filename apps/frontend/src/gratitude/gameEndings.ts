@@ -12,6 +12,7 @@ import type { ParticleEffects } from "./particleEffects";
 import type { TierBackground } from "./tierBackground";
 import { shownGloss, TIER_NAMES } from "./tierNames";
 import type { Lettering } from "./tierSlamAndPopIns";
+import { animate } from "./webAnimations";
 
 /** What the endings play on: the engine's parts, its play clock and the screen's elements. */
 export interface EndingParts {
@@ -53,21 +54,6 @@ export interface EndingParts {
 const TILT = "rotate(-4deg)";
 const SOUL_RISE_MS = 1500;
 const SIGH_MS = 1000;
-
-/** Cancelling an animation rejects its `finished`: browsers mark that handled, happy-dom doesn't. */
-function animate(
-  el: HTMLElement,
-  frames: Keyframe[],
-  options: KeyframeAnimationOptions,
-): Animation {
-  const animation = el.animate(frames, options);
-  void animation.finished.catch(rethrowUnlessCancelled);
-  return animation;
-}
-
-function rethrowUnlessCancelled(error: unknown) {
-  if (!(error instanceof Error && error.name === "AbortError")) throw error;
-}
 
 /**
  * The giver's picture squashes as the heart lands in it and takes its heart dot, and the live region
@@ -124,6 +110,16 @@ export async function flyHeartToGiver(parts: EndingParts, total: number): Promis
   parts.effects.tidy();
   await parts.heart.flyToGiver();
   hitGiver(parts, total);
+}
+
+/**
+ * A replay's ending, whatever the tier: the stamps go, and the heart shrinks into where it lands,
+ * or fades out there with reduced motion.
+ */
+export async function landHeart(parts: Pick<EndingParts, "heart" | "effects">): Promise<void> {
+  notePerformance("gratitude", "ending: landing");
+  parts.effects.tidy();
+  await parts.heart.flyToGiver();
 }
 
 /** The soul drifts up from the heart to the giver's picture, weaving less as it nears. */

@@ -55,6 +55,34 @@ describe("createMiniHeartPhysics", () => {
     }
   });
 
+  it("draws a smaller stage's hearts where they're thrown, and piles them on its floor", () => {
+    const scale = 0.5;
+    const stage = { width: 195, height: 370, ceiling: 128 };
+    const physics = createMiniHeartPhysics(stage, seededRandom(5), { scale });
+    physics.sprayFromTap(150, 190, { x: 97, y: 210, width: 113, height: 109 }, 3);
+    // The layer draws each heart at the stage's scale.
+    for (const h of physics.hearts) {
+      expect(Math.abs(h.x * scale - 150)).toBeLessThan(4);
+      expect(Math.abs(h.y * scale - 190)).toBeLessThan(4);
+    }
+    settle(physics);
+    for (const h of physics.hearts) {
+      expect((h.y + h.size / 2) * scale).toBeLessThanOrEqual(stage.height);
+      expect((h.y - h.size) * scale).toBeGreaterThan(
+        stage.height - FEEL_CONFIG.miniHearts.pileMax * scale,
+      );
+    }
+  });
+
+  it("keeps no more hearts in play than a stage's own cap", () => {
+    const physics = createMiniHeartPhysics(bounds, seededRandom(6), { live: 12 });
+    for (let i = 0; i < 20; i++) {
+      physics.sprayFromTap(195, 380, heart, 3);
+      run(physics, 1 / 30);
+      expect(physics.hearts.filter((h) => h.opacity === 1).length).toBeLessThanOrEqual(12);
+    }
+  });
+
   it("keeps every heart between the walls", () => {
     const physics = createMiniHeartPhysics(bounds, seededRandom(4));
     for (let i = 0; i < 20; i++) physics.sprayFromTap(20, 380, heart, 3);

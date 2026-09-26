@@ -94,7 +94,7 @@ export const errors = {
     en: "Gratitude for this gift is already in.",
     ja: "このギフトへの感謝は、すでに届いています。",
   },
-  /** Sticker detail's Transfer Trail: loading a gift's Gratitude replay (GET /api/gratitude/:giftId) when none was recorded; the replay isn't built yet, so no screen shows this today */
+  /** Sticker detail's Transfer Trail: loading a gift's Gratitude replay (GET /api/gratitude/:giftId) when none was recorded, in “Couldn’t load the replay” through errorReason */
   gratitude_not_found: {
     en: "There's no Gratitude for this gift yet.",
     ja: "このギフトへの感謝は、まだありません。",
@@ -151,7 +151,7 @@ export const errors = {
     en: "This gift hasn't been sent yet.",
     ja: "このギフトは、まだ送られていません。",
   },
-  /** Sticker detail's Transfer Trail: marking a Gratitude replay watched (POST /api/gratitude/:giftId/seen) by anyone but the gift's giver; the replay isn't built yet, so no screen shows this today */
+  /** Sticker detail's Transfer Trail: marking a Gratitude replay watched (POST /api/gratitude/:giftId/seen) by anyone but the gift's giver, in “Couldn’t mark this gratitude watched” through errorReason; the card marks it only for the giver */
   not_giver: { en: "Only the giver can do that.", ja: "それができるのは贈り主だけです。" },
   /** Giving, In the bag: packing a sticker (POST /api/gifts) whose NFT isn't minted yet, in “couldn’t be packed” through errorReason */
   not_minted: {
@@ -234,7 +234,7 @@ export const errors = {
     en: "That ticket isn't yours.",
     ja: "そのチケットは、あなたのものではありません。",
   },
-  /** Sticker detail: loading a sticker's timelapse (GET /api/stickers/:stickerId/timelapse) when it was sealed without one; the timelapse player isn't built yet, so no screen shows this today */
+  /** Sticker detail: loading a sticker's timelapse (GET /api/stickers/:stickerId/timelapse) when it was sealed without one, in “Couldn’t load the timelapse” through errorReason; Timelapse shows only for stickers that have one */
   timelapse_not_found: {
     en: "This sticker was sealed without its timelapse.",
     ja: "このシールは、タイムラプスなしで仕上げられました。",

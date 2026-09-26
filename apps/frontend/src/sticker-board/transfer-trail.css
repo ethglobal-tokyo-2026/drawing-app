@@ -164,6 +164,8 @@ button.transfer-trail__head:focus-visible {
   font-stretch: var(--w-figure);
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
+  /* A replay's landing pulses it from its left edge, beside the heart dot. */
+  transform-origin: 0 50%;
 }
 
 .transfer-trail__total.is-long {
@@ -214,6 +216,24 @@ button.transfer-trail__head:focus-visible {
 .transfer-trail__replay:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
+}
+
+/* Replay and Stop share one place, so the pill keeps its width as it turns. */
+.transfer-trail__replay-words {
+  display: grid;
+}
+
+.transfer-trail__replay-words > span {
+  grid-area: 1 / 1;
+}
+
+.transfer-trail__replay-words > .is-off {
+  visibility: hidden;
+}
+
+/* Why a replay didn't play through, where its stage was. */
+.transfer-trail__replay-note {
+  margin: 10px 0 0;
 }
 
 /* The artist's share, under a rule across the card. */

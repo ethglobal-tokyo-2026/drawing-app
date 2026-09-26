@@ -93,9 +93,13 @@ function resize(s: Surface, width: number, height: number) {
   s.canvas.height = Math.round(height * s.dpr);
 }
 
-/** Draws the surface's hearts afresh, in the physics' order, so the newest is on top. */
-function paint(s: Surface, hearts: readonly MiniHeart[]) {
-  const { ctx, dpr } = s;
+/**
+ * Draws the surface's hearts afresh, in the physics' order, so the newest is on top: at `scale`, as
+ * the physics moves them in the live game's px.
+ */
+function paint(s: Surface, hearts: readonly MiniHeart[], scale: number) {
+  const { ctx } = s;
+  const dpr = s.dpr * scale;
   if (!ctx) return;
   s.bakesSeen = bakes;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -120,11 +124,12 @@ function paint(s: Surface, hearts: readonly MiniHeart[]) {
 /**
  * Draws the physics' hearts on two canvases: 昇天's rain on one behind the big heart, the rest on
  * one in front of it. Each canvas is sized when its layer resizes, never by reading layout per frame.
+ * `scale`: the stage's size over the live game's, whose px the physics moves the hearts in.
  */
-export function createMiniHeartLayer(layers: {
-  front: HTMLElement;
-  behind: HTMLElement;
-}): MiniHeartLayer {
+export function createMiniHeartLayer(
+  layers: { front: HTMLElement; behind: HTMLElement },
+  scale = 1,
+): MiniHeartLayer {
   const surfaces = [surface(layers.front, "mini"), surface(layers.behind, "rain")];
   let latest: readonly MiniHeart[] = [];
 
@@ -138,7 +143,7 @@ export function createMiniHeartLayer(layers: {
           return;
         }
         resize(s, entry.contentRect.width, entry.contentRect.height);
-        paint(s, latest);
+        paint(s, latest, scale);
       }
     });
     for (const s of surfaces) observer.observe(s.canvas);
@@ -169,14 +174,14 @@ export function createMiniHeartLayer(layers: {
           s.next.every((value, i) => value === s.shown[i]);
         if (same) continue;
         [s.shown, s.next] = [s.next, s.shown];
-        paint(s, hearts);
+        paint(s, hearts, scale);
       }
     },
     clear: () => {
       latest = [];
       for (const s of surfaces) {
         s.shown.length = 0;
-        paint(s, latest);
+        paint(s, latest, scale);
       }
     },
   };

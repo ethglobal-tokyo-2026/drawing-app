@@ -2,6 +2,7 @@ import type { Method, Tier } from "./combo";
 import { EASE_PEEL, clamp } from "./easing";
 import { DENT_SVG, focusLinesSvg, HAZE_WAVE_SVG, speedFieldSvg, VIBRATE_SVG } from "./heartArt";
 import type { ScreenEdge } from "./heartMotion";
+import { animate } from "./webAnimations";
 
 export interface TierBackground {
   setLayout: (
@@ -64,21 +65,6 @@ const degreesApart = (a: number, b: number) => {
   return d > 180 ? 360 - d : d;
 };
 
-/** Cancelling an animation rejects its `finished`: browsers mark that handled, happy-dom doesn't. */
-function animate(
-  el: HTMLElement,
-  frames: Keyframe[],
-  options: KeyframeAnimationOptions,
-): Animation {
-  const animation = el.animate(frames, options);
-  void animation.finished.catch(rethrowUnlessCancelled);
-  return animation;
-}
-
-function rethrowUnlessCancelled(error: unknown) {
-  if (!(error instanceof Error && error.name === "AbortError")) throw error;
-}
-
 /**
  * The ground behind the heart, escalating with the tier: the calm liner, a warm blush, 集中線 focus
  * lines, heat haze, then 昇天's light beams and white-out. Each layer fades in and out on its own,
@@ -91,6 +77,8 @@ export function createTierBackground(
   ground: HTMLElement,
   front: HTMLElement,
   reduced: () => boolean,
+  /** How fast the dents play: a replay's clock's speed. */
+  rate = 1,
 ): TierBackground {
   const blush = layer("gr-bg gr-bg-blush");
   const focus = layer("gr-focus");
@@ -264,6 +252,7 @@ export function createTierBackground(
           { transform: `${at} scale(.7, .2)`, opacity: 0 },
         ],
         { duration: 1500, easing: EASE_PEEL, fill: "both" },
+        rate,
       );
     },
   };

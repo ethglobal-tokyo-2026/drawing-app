@@ -1,7 +1,7 @@
 import { MAX_TIMELAPSE_BYTES, type TimelapseV1 } from "@drawing-app/api/client";
 import { describe, expect, it, vi } from "vitest";
 import type { Op } from "../canvas/ops";
-import { encodeTimelapse, gzipTimelapse } from "./timelapse";
+import { decodeTimelapse, encodeTimelapse, gzipTimelapse } from "./timelapse";
 
 const stroke: Op = {
   tool: "brush",
@@ -39,13 +39,40 @@ describe("the timelapse", () => {
       ["eraser", "#ffffff", 5000],
       ["fill", "#00ff00", 9000],
     ]);
-    expect(ops[2]?.slice(3)).toEqual([30.3, 40]);
+    expect(ops[2]?.slice(3)).toEqual([30.26, 40]);
   });
 
   it("writes stroke points in tenths of a pixel, each a change from the point before", () => {
     const [first] = encodeTimelapse(input).ops;
     // (10, 20) at width 4 and 0 ms, then (10.5, 21.25) at width 4 and 16 ms.
     expect(first?.[3]).toEqual([100, 200, 40, 0, 5, 13, 0, 16]);
+  });
+
+  it("records the drawing's density, so fills can flood as they did", () => {
+    expect(encodeTimelapse(input).density).toBe(DENSITY);
+  });
+
+  it("decodes back to the drawing screen's ops, in sheet pixels", () => {
+    const decoded = decodeTimelapse(encodeTimelapse(input));
+    expect(decoded.ink).toEqual({ width: 800 / DENSITY, height: 1200 / DENSITY });
+    expect(decoded.place).toEqual({
+      x: 100 / DENSITY,
+      y: 200 / DENSITY,
+      w: 300 / DENSITY,
+      h: 400 / DENSITY,
+    });
+    expect(decoded.density).toBe(DENSITY);
+    // Stroke points come back to the tenth (21.25 is 21.3), times to the ms, fill taps exact.
+    expect(decoded.ops).toEqual([
+      { tool: "brush", color: "#ff0000", T: 1200, pts: [10, 20, 4, 0, 10.5, 21.3, 4, 16] },
+      { tool: "eraser", color: "#ffffff", T: 5000, pts: [3, 4, 12, 0] },
+      { tool: "fill", color: "#00ff00", T: 9000, x: 30.26, y: 40 },
+    ]);
+  });
+
+  it("decodes a timelapse from before densities were recorded", () => {
+    const { density: _dropped, ...older } = encodeTimelapse(input);
+    expect(decodeTimelapse(older).density).toBeNull();
   });
 
   it("gzips it for the upload, and reads back the same", async () => {

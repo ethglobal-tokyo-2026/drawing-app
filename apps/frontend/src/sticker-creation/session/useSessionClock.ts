@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent, useState } from "react";
+import { browserFrames, type FrameSource } from "../../ui/frameSource";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 import { heldBy, SESSION_MS, type Hold } from "./session";
 
@@ -32,21 +33,6 @@ const SCREEN_HOLDS = [
   "smoothing",
   "size",
 ] as const satisfies readonly (keyof ScreenHolds)[];
-
-/** Where frames and time come from: the browser's frames, or a test's hand-driven ones. */
-export interface FrameSource {
-  now: () => number;
-  /** Asks for one frame; returns a function that withdraws the request. */
-  request: (frame: (t: number) => void) => () => void;
-}
-
-const browserFrames: FrameSource = {
-  now: () => performance.now(),
-  request(frame) {
-    const id = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(id);
-  },
-};
 
 /**
  * The session's three minutes. Frames run only while it counts, or while a hidden page's resume is

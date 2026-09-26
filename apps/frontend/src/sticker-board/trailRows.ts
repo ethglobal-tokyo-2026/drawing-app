@@ -15,6 +15,8 @@ export interface TrailRow {
     total: number;
     /** The Original Artist Gratitude Share, out of the giver's part. */
     artistShare: number;
+    /** When the giver watched its replay, ms; null until then. */
+    seenByGiverAt: number | null;
   } | null;
 }
 
@@ -30,6 +32,7 @@ export const toTrailRows = (trail: readonly TransferTrailEntry[]): TrailRow[] =>
     gratitude: e.gratitude && {
       total: e.gratitude.total,
       artistShare: e.gratitude.originalArtistGratitudeShare,
+      seenByGiverAt: e.gratitude.seenByGiverAt === null ? null : toMs(e.gratitude.seenByGiverAt),
     },
   }));
 

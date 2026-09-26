@@ -258,7 +258,7 @@ export const stickerBoard = {
       report: { en: "Performance report" },
     },
   },
-  /** Retry button after a failure: your sticker board's load error and its unsaved-positions alert, the sticker detail's failed check, and someone else's sticker board that didn't load */
+  /** Retry button after a failure: your sticker board's load error and its unsaved-positions alert, the sticker detail's failed check, its timelapse and its Transfer Trail replay, and someone else's sticker board that didn't load */
   tryAgain: { en: "Try again", ja: "もう一度" },
   /** Your own sticker board. */
   board: {
@@ -448,6 +448,38 @@ export const stickerBoard = {
     /** Sticker detail: in place of the sticker when there's none to show */
     none: { en: "No sticker here yet.", ja: "まだシールがありません。" },
   },
+  /** The sticker detail's timelapse, which plays how the sticker was drawn. */
+  timelapse: {
+    /** Sticker detail: the Timelapse button at the end of the fine print, which plays how the sticker was drawn */
+    watch: { en: "Timelapse", ja: "タイムラプス" },
+    /** Sticker detail: the Timelapse button while the timelapse loads */
+    loading: { en: "Loading…", ja: "読み込み中…" },
+    /** Sticker detail: the Timelapse button while it gets the timelapse's fills ready */
+    preparing: { en: "Preparing…", ja: "準備中…" },
+    /** Sticker detail: the Timelapse button while the timelapse plays; a tap shows the finished sticker at once */
+    skip: { en: "Skip", ja: "スキップ" },
+    /** Sticker detail: screen readers' name for the Timelapse button; {{no}} is the sticker's number, such as "No.0012" */
+    watchLabel: {
+      en: "Timelapse: watch {{no}} being drawn",
+      ja: "タイムラプス：{{no}}をかく様子を見る",
+    },
+    /** Sticker detail: screen readers' name for Skip while the timelapse plays */
+    skipLabel: { en: "Skip to the end", ja: "最後までスキップ" },
+    /** Sticker detail: read out as the timelapse starts; {{no}} is the sticker's number */
+    playing: { en: "Playing how {{no}} was drawn", ja: "{{no}}をかいた様子を再生しています" },
+    /** Sticker detail: read out when the timelapse ends */
+    done: { en: "Done", ja: "再生が終わりました" },
+    /** Sticker detail: the alert under the fine print when the timelapse fails to load or play, before Try again */
+    failed: {
+      en: "Couldn’t load the timelapse: {{reason}}",
+      ja: "タイムラプスを読み込めませんでした：{{reason}}",
+    },
+    /** Sticker detail: the timelapse alert's reason when this phone couldn't play it; {{detail}} is the player's error, in English */
+    notPlayed: {
+      en: "It couldn’t play here ({{detail}}).",
+      ja: "この端末では再生できませんでした（{{detail}}）。",
+    },
+  },
   /** Where a sticker has been: one row per time it was given, newest first. */
   transferTrail: {
     /** Sticker detail: screen readers' name for the Transfer Trail section under the sticker */
@@ -476,17 +508,48 @@ export const stickerBoard = {
     fromYou: { en: "From you", ja: "あなたから" },
     /** Transfer Trail, the open row: under the gratitude total, naming who sent it */
     from: { en: "From {{name}}", ja: "{{name}}さんから" },
-    /** Transfer Trail, the open row: the Replay button beside the gratitude total (not shown yet: nothing plays replays) */
+    /** Transfer Trail, the open row: the Replay button beside the gratitude total, which plays the combo inside the card */
     replay: { en: "Replay", ja: "リプレイ" },
-    /** Transfer Trail, the open row: screen readers' name for Replay when you sent the gratitude (not shown yet) */
+    /** Transfer Trail, the open row: screen readers' name for Replay when you sent the gratitude */
     replayYours: {
       en: "Play the replay of your {{amount}} gratitude",
       ja: "あなたが送った感謝{{amount}}のリプレイを再生",
     },
-    /** Transfer Trail, the open row: screen readers' name for Replay when someone else sent the gratitude (not shown yet) */
+    /** Transfer Trail, the open row: screen readers' name for Replay when someone else sent the gratitude */
     replayTheirs: {
       en: "Play the replay of {{name}}’s {{amount}} gratitude",
       ja: "{{name}}さんが送った感謝{{amount}}のリプレイを再生",
+    },
+    /** The open row while its gratitude replays inside it. */
+    replaying: {
+      /** Transfer Trail, the open row: the Replay button while the replay plays, which stops it */
+      stop: { en: "Stop", ja: "停止" },
+      /** Transfer Trail, the open row: screen readers' name for Stop while the replay plays */
+      stopLabel: { en: "Stop the replay", ja: "リプレイを停止" },
+      /** Transfer Trail, the open row: read out as the replay of gratitude you sent starts; {{amount}} is its total */
+      yours: {
+        en: "Replaying your {{amount}} gratitude",
+        ja: "あなたが送った感謝{{amount}}をリプレイしています",
+      },
+      /** Transfer Trail, the open row: read out as the replay of someone else's gratitude starts; {{name}} sent it */
+      theirs: {
+        en: "Replaying {{name}}’s {{amount}} gratitude",
+        ja: "{{name}}さんが送った感謝{{amount}}をリプレイしています",
+      },
+      /** Transfer Trail, the open row: read out when the replayed heart has landed in its dot */
+      ended: { en: "Replay ended", ja: "リプレイが終わりました" },
+      /** Transfer Trail, the open row: the alert under the card when the replay fails to load, before Try again */
+      didntLoad: {
+        en: "Couldn’t load the replay: {{reason}}",
+        ja: "リプレイを読み込めませんでした：{{reason}}",
+      },
+      /** Transfer Trail, the open row: the alert when the replay fails while it plays */
+      stopped: { en: "The replay stopped: {{reason}}", ja: "リプレイが止まりました：{{reason}}" },
+      /** Transfer Trail, the open row of gratitude sent to you: the fine print when your watching it couldn't be saved */
+      notMarkedSeen: {
+        en: "Couldn’t mark this gratitude watched: {{reason}}",
+        ja: "この感謝を見たことを保存できませんでした：{{reason}}",
+      },
     },
     /** The Original Artist Gratitude Share, out of the giver's part. Never money words. */
     artistShare: {

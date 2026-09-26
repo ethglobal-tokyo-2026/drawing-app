@@ -12,11 +12,12 @@ export const STROKE_SAMPLE_GAP_MS = 30;
 type Ended = Extract<ComboEvent, { kind: "ended" }>;
 type Answer = Extract<ComboEvent, { kind: "hit" | "limited" }>;
 
-/** A stroke sample: the caller's time, and where, in stage units. */
+/** A stroke sample: the caller's time, where, in stage units, and whether it ended a fast pass. */
 interface Sample {
   t: number;
   x: number;
   y: number;
+  fastPass: boolean;
 }
 
 export interface ReplayRecorderOptions {
@@ -118,13 +119,13 @@ export function createReplayRecorder(options: ReplayRecorderOptions): ReplayReco
 
     strokeStart(t, x, y) {
       closeGesture();
-      gesture = [{ t, x: unit(x, width), y: unit(y, height) }];
+      gesture = [{ t, x: unit(x, width), y: unit(y, height), fastPass: false }];
       gestures.push(gesture);
     },
 
     strokeMove(t, x, y, fastPass) {
       if (!gesture) return;
-      const sample = { t, x: unit(x, width), y: unit(y, height) };
+      const sample = { t, x: unit(x, width), y: unit(y, height), fastPass };
       if (fastPass || t - gesture[gesture.length - 1].t >= STROKE_SAMPLE_GAP_MS) {
         gesture.push(sample);
         unkept = null;
@@ -136,17 +137,24 @@ export function createReplayRecorder(options: ReplayRecorderOptions): ReplayReco
     finish({ record, reason, startedAt }) {
       closeGesture();
       const end = record.durationMs;
-      // Samples from the first hit to the end, on the record's clock.
-      const strokes = gestures.flatMap((samples) => {
+      // Samples from the first hit to the end, on the record's clock. A pass is the index of its
+      // sample as stored, so it counts only the samples kept.
+      const strokes: number[][] = [];
+      const strokePasses: number[][] = [];
+      for (const samples of gestures) {
         const rows: number[][] = [];
+        const passes: number[] = [];
         for (const s of samples) {
           const at = Math.round(s.t - startedAt);
           if (at < 0 || at > end) continue;
           const previous = rows.length > 0 ? rows[rows.length - 1][0] : 0;
+          if (s.fastPass) passes.push(rows.length);
           rows.push([Math.max(previous, at), s.x, s.y]);
         }
-        return rows.length > 0 ? [changes(rows, 3)] : [];
-      });
+        if (rows.length === 0) continue;
+        strokes.push(changes(rows, 3));
+        strokePasses.push(passes);
+      }
       return {
         v: 1,
         seed: options.seed >>> 0,
@@ -158,6 +166,8 @@ export function createReplayRecorder(options: ReplayRecorderOptions): ReplayReco
         hits: changes(inTimeOrder(touches, end), 3),
         strokes,
         shakes: changes(inTimeOrder(reversals, end), 1),
+        // A replay with no strokes has no passes to say, and keeps the shape it always had.
+        ...(strokes.length > 0 ? { strokePasses } : {}),
       };
     },
   };

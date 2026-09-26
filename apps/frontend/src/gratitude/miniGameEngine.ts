@@ -6,11 +6,13 @@ import {
   notePerformance,
   timeOurWork,
 } from "../performance/performanceRecorder";
+import { browserFrames, type FrameSource } from "../ui/frameSource";
 import { seededRandom } from "../ui/seededRandom";
 import {
   createGratitudeCombo,
   fullBarSeconds,
   type ComboEvent,
+  type ComboPhase,
   type ComboRecord,
   type Method,
   type Tier,
@@ -19,7 +21,13 @@ import { createComboHud } from "./comboHud";
 import { EASE_OUT, EASE_SPRING, clamp } from "./easing";
 import { createFrameTimeReadout } from "./frameTimeReadout";
 import { FEEL_CONFIG, GAME_CONFIG } from "./gameConfig";
-import { flyHeartToGiver, playAscension, sighAndTidy, type EndingParts } from "./gameEndings";
+import {
+  flyHeartToGiver,
+  landHeart,
+  playAscension,
+  sighAndTidy,
+  type EndingParts,
+} from "./gameEndings";
 import { bigHeartLayers, HAND_SWIPE_SVG, SOUL_SVG, VIBRATE_SVG } from "./heartArt";
 import { heartFaceFor, type HeartFace } from "./heartFaces";
 import { createHeartMotion, type HeartLayout, type WallHit } from "./heartMotion";
@@ -29,20 +37,26 @@ import { createParticleEffects } from "./particleEffects";
 import { listenToPhoneMotion } from "./phoneMotion";
 import { createReplayRecorder } from "./replayRecorder";
 import { createShakeDetector, type ShakeReversal } from "./shakeDetector";
+import { heartRest, LIVE_FRAME, type StageFrame } from "./stageLayout";
 import { createStrokeDetector } from "./strokeDetector";
 import { createTierBackground } from "./tierBackground";
 import { shownGloss, TIER_NAMES } from "./tierNames";
 import { createLettering } from "./tierSlamAndPopIns";
 import { isOnHeart, listenForTouches, type HeartArea } from "./touchInput";
+import { animate } from "./webAnimations";
 
-/** The screen's parts that React renders; the engine fills and moves them. */
-export interface MiniGameParts {
+/** The parts of a stage the engine fills and moves: the live screen's, or a replay's. */
+export interface StageParts {
   root: HTMLElement;
   /** Everything that shakes: the ground, the top, the HUD and the stage. */
   page: HTMLElement;
   ground: HTMLElement;
   hud: HTMLElement;
   stage: HTMLElement;
+}
+
+/** The screen's parts that React renders; the engine fills and moves them. */
+export interface MiniGameParts extends StageParts {
   hint: HTMLElement;
   /** A polite live region. */
   live: HTMLElement;
@@ -63,6 +77,8 @@ export interface MiniGameOptions {
   onFinished: (record: ComboRecord) => void;
   /** The frame loop failed and stopped. */
   onError: (message: string) => void;
+  /** Where frames and time come from: the browser's, unless a test drives them. */
+  frames?: FrameSource;
 }
 
 export interface MiniGameEngine {
@@ -74,17 +90,113 @@ export interface MiniGameEngine {
   destroy: () => void;
 }
 
+/** The rules' ways in, for an input path: times in ms on the engine's clock, places in stage px. */
+export interface ComboInput {
+  readonly phase: ComboPhase;
+  /** A finger down on the heart: a press before the first tap, a tap once the combo runs. */
+  heartDown: (t: number, x: number, y: number) => void;
+  /** A finger lifting off the heart without dragging or holding: the first tap. */
+  heartTap: (t: number, x: number, y: number) => void;
+  strokeStart: (t: number, x: number, y: number) => void;
+  /** The stroke finger moved; `fastPass` as StrokeDetector's `fingerMove` takes it. */
+  strokeMove: (t: number, x: number, y: number, fastPass?: boolean | null) => void;
+  strokeEnd: () => void;
+  /** Commits a combo still tapping, or not started, to stroke, as a streak of fast passes does. */
+  unlockStroke: (t: number, x: number, y: number) => void;
+  /** The phone turned back, one way along its axis: the shake unlock, then a hit each. */
+  shakeReversal: (t: number, direction: 1 | -1) => void;
+  /** Ends a combo still in play at `t`, as the page going hidden or the screen closing does. */
+  endAt: (t: number, reason: "hidden" | "closed") => void;
+}
+
+/** Where the HUD and the heart's area sit on a stage, px. */
+export interface StageLayout {
+  /** What sits above the heart's area. */
+  frame: StageFrame;
+  /** The HUD's top. */
+  hudTop: number;
+  /** The stage's size until it has one, as in a test's DOM. */
+  fallback: { width: number; height: number };
+}
+
+/** A recorded combo, played on a replay's stage through the engine's own handlers. */
+export interface ReplayEngineOptions {
+  /** The combo's own: its effects' seed and intensity. */
+  seed: number;
+  intensity: number;
+  reduced: boolean;
+  /** The replay's clock. */
+  frames: FrameSource;
+  /** How fast that clock runs against real time: Web Animations play at it too. */
+  speed: number;
+  layout: StageLayout;
+  /** The stage's width over the live game's: lettering, particles and mini hearts scale by it. */
+  scale: number;
+  /** The replay's px per px of the stage it was recorded on: the stroke rules scale by it. */
+  inputScale: number;
+  /** Mini hearts in play at most. */
+  miniHearts: number;
+  /** Where the heart lands at the end, px on the stage; null lands it where it rests. */
+  landAt: () => { x: number; y: number } | null;
+  /** Feeds the inputs due by `now`, on the engine's clock, before the rules advance to it. */
+  drive: (now: number, input: ComboInput) => void;
+  /** The combo has ended, as the replay counted it: the total its HUD ends on. */
+  onEnded: (record: ComboRecord) => number;
+  /** The heart has landed. */
+  onLanded: () => void;
+  /** The frame loop failed and stopped. */
+  onError: (message: string) => void;
+}
+
+export type ReplayEngine = Pick<MiniGameEngine, "setReduced" | "destroy">;
+
+/** The live game: touches, keys and the phone's motion, and the record and replay kept of them. */
+interface LiveInput {
+  kind: "live";
+  parts: Omit<MiniGameParts, keyof StageParts>;
+  onRecord: MiniGameOptions["onRecord"];
+}
+
+/** A recorded combo, its inputs fed each frame; it ends in a landing. */
+interface ReplayInput {
+  kind: "replay";
+  landAt: ReplayEngineOptions["landAt"];
+  drive: ReplayEngineOptions["drive"];
+  onEnded: ReplayEngineOptions["onEnded"];
+}
+
+interface EngineOptions {
+  /** As printed: "@alice". */
+  giverHandle: string;
+  intensity: number;
+  reduced: boolean;
+  showFrameTimes: boolean;
+  /** The effects' seed: a replay's recorded one, or else one of the mount's own. */
+  seed?: number;
+  frames: FrameSource;
+  speed: number;
+  layout: StageLayout;
+  scale: number;
+  inputScale: number;
+  miniHearts: number;
+  onFinished: (record: ComboRecord) => void;
+  onError: (message: string) => void;
+  input: LiveInput | ReplayInput;
+}
+
 type Ended = Extract<ComboEvent, { kind: "ended" }>;
 
 /** A hit's press, by how it was made. */
 const SQUASH_BY_METHOD: Record<Method, number> = { tap: 3.3, stroke: 1.6, shake: 1.2 };
 
-/** The screen's size when it has none yet, as in a test's DOM. */
-const FALLBACK = { width: 390, height: 741 };
-/** The top and the HUD sit above the heart. */
-const TOP = 176;
-const HUD_TOP = 172;
-const HUD_HEIGHT = 80;
+/** The live game's stage width: a smaller stage draws at its width over this. */
+export const LIVE_STAGE_WIDTH = 390;
+/** The live screen: its top band and HUD above the heart, and a phone's size until it has one. */
+const LIVE_LAYOUT: StageLayout = {
+  frame: LIVE_FRAME,
+  hudTop: 172,
+  fallback: { width: LIVE_STAGE_WIDTH, height: 741 },
+};
 
 /** The tips: what to do, said only once the person is trying, and held this long in s. */
 const TIPS = {
@@ -96,23 +208,15 @@ type TipKind = keyof typeof TIPS;
 const THUMB_RECENT_MS = 250;
 /** ms between writes of the heart's light while a thumb holds it, which the CSS glides between. */
 const LIGHT_MS = 45;
+/** A replayed shake reversal's strength in m/s²: a reversal's own isn't recorded. */
+const REPLAYED_REVERSAL_STRENGTH = 14;
+/**
+ * Salts for the streams of the seed that the combo's own effects draw from, one each, so the same
+ * hits draw the same words, word places and particles however the frames fall.
+ */
+const EFFECT_STREAMS = { words: 0x9e3779b9, wordPlaces: 0x85ebca6b, particles: 0xc2b2ae35 };
 
 let mounts = 0;
-
-/** Cancelling an animation rejects its `finished`: browsers mark that handled, happy-dom doesn't. */
-function animate(
-  el: HTMLElement,
-  frames: Keyframe[],
-  options: KeyframeAnimationOptions,
-): Animation {
-  const animation = el.animate(frames, options);
-  void animation.finished.catch(rethrowUnlessCancelled);
-  return animation;
-}
-
-function rethrowUnlessCancelled(error: unknown) {
-  if (!(error instanceof Error && error.name === "AbortError")) throw error;
-}
 
 /**
  * The gratitude mini-game on one animation-frame loop: touches and keys go to the combo's rules,
@@ -123,14 +227,55 @@ export function mountMiniGameEngine(
   parts: MiniGameParts,
   options: MiniGameOptions,
 ): MiniGameEngine {
-  const { root, page, ground, hint, live, giverPhoto, giverDot, fuu } = parts;
+  const { onRecord, frames, ...rest } = options;
+  return mountEngine(parts, {
+    ...rest,
+    frames: frames ?? browserFrames,
+    speed: 1,
+    layout: LIVE_LAYOUT,
+    scale: 1,
+    inputScale: 1,
+    miniHearts: FEEL_CONFIG.miniHearts.live,
+    input: { kind: "live", parts, onRecord },
+  });
+}
+
+/**
+ * A recorded combo on the engine's frame loop: its inputs go through the same handlers a finger's
+ * do, on the replay's clock. It listens to nothing, records nothing and shows no tips.
+ */
+export function mountReplayEngine(parts: StageParts, options: ReplayEngineOptions): ReplayEngine {
+  const { landAt, drive, onEnded, onLanded, ...rest } = options;
+  const { setReduced, destroy } = mountEngine(parts, {
+    ...rest,
+    // Its stage is hidden from assistive tech: the card it plays in says what it shows.
+    giverHandle: "",
+    showFrameTimes: false,
+    onFinished: onLanded,
+    input: { kind: "replay", landAt, drive, onEnded },
+  });
+  return { setReduced, destroy };
+}
+
+function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine {
+  const { root, page, ground } = parts;
+  const { frames, layout, scale, inputScale, speed } = options;
+  const liveInput = options.input.kind === "live" ? options.input : null;
+  const replay = options.input.kind === "replay" ? options.input : null;
   const mount = ++mounts;
-  const seed = (0xa11ce + mount * 7) >>> 0;
+  const seed = options.seed ?? (0xa11ce + mount * 7) >>> 0;
+  // Per-frame jitter: the HUD's shiver, the heart's tremor and kicks, the physics. Frames draw on it.
   const random = seededRandom(seed);
+  const words = seededRandom(seed ^ EFFECT_STREAMS.words);
   const combo = createGratitudeCombo(GAME_CONFIG);
   const { intensity } = options;
-  const recorder = createReplayRecorder({ seed, intensity, ...FALLBACK });
+  const recorder = liveInput ? createReplayRecorder({ seed, intensity, ...layout.fallback }) : null;
   let reduced = options.reduced;
+  /**
+   * The engine's clock, ms: the time of the input being handled, else the latest frame's. Every
+   * timer reads it, so an input's effects share its time, and a replay's clock drives them all.
+   */
+  let clock = frames.now();
 
   // The stage's layers, back to front: the thumb's glow, speed lines, stamps, 昇天's rain, the heart,
   // mini hearts, the soul, effects, lettering.
@@ -145,8 +290,8 @@ export function mountMiniGameEngine(
   const linesLayer = layer("gr-layer");
   const stampsLayer = layer("gr-layer");
   const behind = layer("gr-layer");
-  // The heart's anchor holds its button, so assistive tech keeps it.
-  const anchor = layer("gr-heart-anchor", false);
+  // The live heart's anchor holds its button, so assistive tech keeps it; a replay's heart is hidden.
+  const anchor = layer("gr-heart-anchor", replay !== null);
   const front = layer("gr-layer");
   const soul = layer("gr-soul");
   const effectsLayer = layer("gr-layer");
@@ -167,18 +312,39 @@ export function mountMiniGameEngine(
     "aria-label",
     i18next.t(($) => $.gratitude.heart, { handle: options.giverHandle }),
   );
+  // A replay plays itself: its heart takes no taps.
+  if (replay) button.inert = true;
   body.append(button);
   anchor.append(body);
 
-  const hud = createComboHud(parts.hud, { reduced: () => reduced, random });
-  const background = createTierBackground(ground, page, () => reduced);
-  const lettering = createLettering(captions, { intensity, random, reduced: () => reduced });
+  const hud = createComboHud(parts.hud, { reduced: () => reduced, random, rate: speed });
+  const background = createTierBackground(ground, page, () => reduced, speed);
+  const lettering = createLettering(captions, {
+    intensity,
+    random: seededRandom(seed ^ EFFECT_STREAMS.wordPlaces),
+    words,
+    reduced: () => reduced,
+    now: () => clock,
+    rate: speed,
+    scale,
+    // A replay's stage is too small for the English glosses' fine print.
+    glosses: liveInput !== null,
+  });
   const effects = createParticleEffects(
     { stamps: stampsLayer, effects: effectsLayer, lines: linesLayer },
-    { reduced: () => reduced, random },
+    {
+      reduced: () => reduced,
+      random: seededRandom(seed ^ EFFECT_STREAMS.particles),
+      rate: speed,
+      scale,
+    },
   );
-  const miniHearts = createMiniHeartLayer({ front, behind });
-  const physics = createMiniHeartPhysics({ ...FALLBACK, ceiling: TOP + HUD_HEIGHT }, random);
+  const miniHearts = createMiniHeartLayer({ front, behind }, scale);
+  const physics = createMiniHeartPhysics(
+    { ...layout.fallback, ceiling: layout.frame.above },
+    random,
+    { scale, live: options.miniHearts },
+  );
   const readout = options.showFrameTimes ? createFrameTimeReadout(root) : null;
 
   const tip = document.createElement("p");
@@ -188,25 +354,30 @@ export function mountMiniGameEngine(
   tipIcon.className = "gr-tip-ic";
   const tipText = document.createElement("span");
   tip.append(tipIcon, tipText);
-  page.append(tip);
+  if (liveInput) page.append(tip);
 
   // Layout, read when the screen mounts or resizes, never per frame.
-  let size = { ...FALLBACK };
+  let size = { ...layout.fallback };
   let rect = { left: 0, top: 0, scale: 1 };
-  const layoutFor = (width: number, height: number): HeartLayout => {
-    const w = Math.min(width * 0.58, 232);
-    const h = (w * 232) / 240;
-    const top = TOP + HUD_HEIGHT;
+  /** Where the heart ends up: the middle of the giver's picture, or where a replay lands it. */
+  const giverPoint = (rest: { x: number; y: number }) => {
+    if (!liveInput) return replay?.landAt() ?? { x: rest.x, y: rest.y };
+    const { giverPhoto } = liveInput.parts;
     return {
-      rest: { x: width / 2, y: Math.max(top + (height - top) * 0.38, top + h * 0.5 + 12) },
-      width: w,
-      height: h,
-      giver: {
-        x: giverPhoto.offsetLeft + giverPhoto.offsetWidth / 2 || 128,
-        y: giverPhoto.offsetTop + giverPhoto.offsetHeight / 2 || 120,
-      },
+      x: giverPhoto.offsetLeft + giverPhoto.offsetWidth / 2 || 128,
+      y: giverPhoto.offsetTop + giverPhoto.offsetHeight / 2 || 120,
+    };
+  };
+  const layoutFor = (width: number, height: number): HeartLayout => {
+    const rest = heartRest(width, height, layout.frame);
+    const top = layout.frame.above;
+    return {
+      rest: { x: rest.x, y: rest.y },
+      width: rest.width,
+      height: rest.height,
+      giver: giverPoint(rest),
       screen: { width, height },
-      ceiling: top - 20,
+      ceiling: top - 20 * scale,
     };
   };
   let L = layoutFor(size.width, size.height);
@@ -217,34 +388,38 @@ export function mountMiniGameEngine(
     // Where it hit, along the edge and across it: the top wall is the HUD's underside.
     const level = hit.edge === "top" || hit.edge === "bottom";
     background.dent(hit.edge, level ? hit.x : hit.y, level ? hit.y : hit.x);
-    heart.shake(Math.min(5, hit.speed / 260) * (0.4 + intensity * 0.6));
+    heart.shake(Math.min(5 * scale, hit.speed / 260) * (0.4 + intensity * 0.6));
     if ((combo.view.tier ?? 0) >= FEEL_CONFIG.miniHearts.fromTier && !reduced) {
       const { normal } = hit;
-      const from = { x: hit.x + normal.x * 10, y: hit.y + normal.y * 10 };
+      const off = 10 * scale;
+      const from = { x: hit.x + normal.x * off, y: hit.y + normal.y * off };
       const count = throwCount();
       physics.knockOffWall(from.x, from.y, normal, hit.speed, count);
       markThrow("knock", count);
     } else if (random() < 0.6) effects.burst(2, hit);
   };
-  const heart = createHeartMotion(L, random, onWallHit);
+  const heart = createHeartMotion(L, random, onWallHit, scale);
   const applyLayout = () => {
     size = {
-      width: root.clientWidth || FALLBACK.width,
-      height: root.clientHeight || FALLBACK.height,
+      width: root.clientWidth || layout.fallback.width,
+      height: root.clientHeight || layout.fallback.height,
     };
-    recorder.resize(size.width, size.height);
+    recorder?.resize(size.width, size.height);
     const box = root.getBoundingClientRect();
     rect = { left: box.left, top: box.top, scale: box.width / size.width || 1 };
     L = layoutFor(size.width, size.height);
     heart.setLayout(L);
     body.style.width = `${L.width}px`;
-    parts.hud.style.setProperty("--hud-top", `${HUD_TOP}px`);
-    hint.style.top = `${L.rest.y + L.height * 0.5 + 22}px`;
-    tip.style.top = `${L.rest.y + L.height * 0.5 + 16}px`;
-    root.style.setProperty("--rc-top", `${Math.max(TOP + HUD_HEIGHT - 10, L.rest.y - 110)}px`);
+    parts.hud.style.setProperty("--hud-top", `${layout.hudTop}px`);
+    const above = layout.frame.above;
+    if (liveInput) {
+      liveInput.parts.hint.style.top = `${L.rest.y + L.height * 0.5 + 22}px`;
+      tip.style.top = `${L.rest.y + L.height * 0.5 + 16}px`;
+      root.style.setProperty("--rc-top", `${Math.max(above - 10, L.rest.y - 110)}px`);
+    }
     background.setLayout(size.width, size.height, { x: L.rest.x, y: L.rest.y, height: L.height });
-    lettering.setLayout(size.width, size.height, TOP + HUD_HEIGHT);
-    physics.setBounds({ ...size, ceiling: TOP + HUD_HEIGHT });
+    lettering.setLayout(size.width, size.height, above);
+    physics.setBounds({ ...size, ceiling: above });
   };
   applyLayout();
   const resizes =
@@ -273,7 +448,8 @@ export function mountMiniGameEngine(
     height: L.height,
   });
   const say = (text: string) => {
-    live.textContent = text;
+    // A replay's stage is hidden from assistive tech: its card says what plays.
+    if (liveInput) liveInput.parts.live.textContent = text;
   };
 
   root.dataset.phase = "ready";
@@ -288,7 +464,7 @@ export function mountMiniGameEngine(
 
   let face = heartFaceFor(null, intensity, 0);
   let forced: Partial<HeartFace> | null = null;
-  /** A face shown for a moment over the tier's, until performance.now() passes `until`. */
+  /** A face shown for a moment over the tier's, until the clock passes `until`. */
   let flash: { face: HeartFace["face"]; until: number } | null = null;
   const writeFace = () => {
     const f = { ...face, ...(flash ? { face: flash.face } : null), ...forced };
@@ -316,46 +492,60 @@ export function mountMiniGameEngine(
   let ending = false;
   let alive = true;
   let running = true;
-  let raf = 0;
-  let last = 0;
+  /** Withdraws the frame asked for. */
+  let cancelFrame = () => {};
+  let last: number | null = null;
 
-  const endingParts: EndingParts = {
-    heart,
-    background,
-    lettering,
-    effects,
-    physics,
-    miniHearts,
-    hud,
-    giverPhoto,
-    giverDot,
-    giverPoint: () => L.giver,
-    fuu,
-    soul,
-    heartBox,
-    restBox,
-    heartPoint: () => heartAt,
-    screenWidth: () => size.width,
-    wait: (ms) => new Promise((resolve) => waits.push({ at: play + ms / 1000, resolve })),
-    freeze: (ms) => {
-      heldUntil = Math.max(heldUntil, performance.now() + ms);
-    },
-    forceFace: (f) => {
-      forced = f;
-      writeFace();
-    },
-    reduced: () => reduced,
-    intensity,
-    say,
-    giverHandle: options.giverHandle,
+  /** Resolves after `ms` of play time, which stops while the screen is held. */
+  const wait = (ms: number) =>
+    new Promise<void>((resolve) => waits.push({ at: play + ms / 1000, resolve }));
+  /** Holds the screen, play time included, for `ms`. */
+  const freeze = (ms: number) => {
+    heldUntil = Math.max(heldUntil, clock + ms);
   };
+  const endingParts: EndingParts | null = liveInput
+    ? {
+        heart,
+        background,
+        lettering,
+        effects,
+        physics,
+        miniHearts,
+        hud,
+        giverPhoto: liveInput.parts.giverPhoto,
+        giverDot: liveInput.parts.giverDot,
+        giverPoint: () => L.giver,
+        fuu: liveInput.parts.fuu,
+        soul,
+        heartBox,
+        restBox,
+        heartPoint: () => heartAt,
+        screenWidth: () => size.width,
+        wait,
+        freeze,
+        forceFace: (f) => {
+          forced = f;
+          writeFace();
+        },
+        reduced: () => reduced,
+        intensity,
+        say,
+        giverHandle: options.giverHandle,
+      }
+    : null;
+
+  /** The total the HUD ends on, when a replay's stored one differs from its own count. */
+  let endTotal: number | null = null;
 
   const finish = (record: ComboRecord) => {
     if (!alive) return;
     root.dataset.phase = "done";
     notePerformance("gratitude", "phase done");
-    root.dataset.hud = "off";
-    hud.show(false);
+    // The live game's receipt takes the HUD's place; a replay's HUD stays on its figures.
+    if (liveInput) {
+      root.dataset.hud = "off";
+      hud.show(false);
+    }
     options.onFinished(record);
   };
 
@@ -369,8 +559,21 @@ export function mountMiniGameEngine(
     }
     // The heart leaves: nothing can tap it, and focus can't stay on it.
     button.disabled = true;
+    if (replay) {
+      const total = replay.onEnded(record);
+      if (total !== record.total) {
+        endTotal = total;
+        hud.snapTotal(total);
+      }
+      // Where it lands is read now, as the card's layout may have moved since the replay began.
+      L = { ...L, giver: giverPoint(L.rest) };
+      heart.setLayout(L);
+      await landHeart({ heart, effects });
+      return finish(record);
+    }
+    if (!liveInput || !recorder || !endingParts) return finish(record);
     try {
-      options.onRecord(record, recorder.finish(ended));
+      liveInput.onRecord(record, recorder.finish(ended));
     } catch (error) {
       // The record is the app's to keep; its failure shouldn't strand the person mid-ending.
       console.error("Keeping the gratitude failed; the ending plays on", error);
@@ -437,11 +640,11 @@ export function mountMiniGameEngine(
     const every = tier >= 2 ? 2 : 3;
     if (!tierUp && hits % every === 0) {
       // A stroke or a shake draws on its own words some of the time.
-      lettering.showPopInWord(!tapped && random() < 0.3 ? method : tier, box);
+      lettering.showPopInWord(!tapped && words() < 0.3 ? method : tier, box);
     }
     if (tier === 0 && hits % 2 === 0) effects.glint(box);
     if (tier === 1 && hits % 4 === 0) effects.bead(box);
-    if (tier >= 2 && !reduced) heart.shake(tier >= 3 ? 5 * intensity : 2 * intensity);
+    if (tier >= 2 && !reduced) heart.shake((tier >= 3 ? 5 : 2) * intensity * scale);
     if (tier === 2 && hits % 5 === 0) effects.burst(2, heartAt);
     if (tier >= 3 && hits % 2 === 0) effects.steam(Math.max(1, Math.round(intensity * 2)), box);
     if (tier >= 3 && hits % 2 === 1 && method !== "stroke" && !reduced) {
@@ -490,6 +693,8 @@ export function mountMiniGameEngine(
   let tipPulsedAt = -Infinity;
   let tipAnimation: Animation | null = null;
   const showTip = (kind: TipKind) => {
+    // A replay shows no tips: nobody is there to take them.
+    if (!liveInput) return;
     const fresh = tipShown !== kind;
     tipShown = kind;
     tipUntil = wall + TIPS[kind].holdS;
@@ -533,8 +738,15 @@ export function mountMiniGameEngine(
   };
 
   // Stroking: one finger at a time, anywhere on the screen. Before the unlock a drag on the heart
-  // pulls it and counts as a try; five fast passes in a row commit the combo to stroking.
-  const strokes = createStrokeDetector(FEEL_CONFIG.stroke);
+  // pulls it and counts as a try; five fast passes in a row commit the combo to stroking. A replay's
+  // strokes come scaled onto its stage, so the rules' lengths and speeds scale with them.
+  const { minRunPx, fastPxPerMs, turnPx, pauseMs } = FEEL_CONFIG.stroke;
+  const strokes = createStrokeDetector({
+    minRunPx: minRunPx * inputScale,
+    fastPxPerMs: fastPxPerMs * inputScale,
+    turnPx: turnPx * inputScale,
+    pauseMs,
+  });
   let stroke: {
     onHeart: boolean;
     from: { x: number; y: number };
@@ -547,7 +759,7 @@ export function mountMiniGameEngine(
     runFrom: { x: number; y: number };
   } | null = null;
   let strokeTries = 0;
-  /** The thumb's smoothed speed in px/ms, and the stroke's axis in degrees. */
+  /** The thumb's smoothed speed in the recorded stage's px/ms, and the stroke's axis in degrees. */
   let strokeSpeed = 0;
   let strokeAngle = 90;
   let lastMoveAt = -Infinity;
@@ -557,7 +769,7 @@ export function mountMiniGameEngine(
   /** The speed field as last written: its opacity, and its angle as an axis kept turning smoothly. */
   let field = { opacity: 0, angle: 0 };
 
-  /** performance.now() at which a corner a shake lifted comes down, unless the shake keeps on: 0 when down. */
+  /** The clock's time at which a corner a shake lifted comes down, unless the shake keeps on: 0 when down. */
   let cornerUntil = 0;
   const lowerCorner = () => {
     cornerUntil = 0;
@@ -572,7 +784,8 @@ export function mountMiniGameEngine(
     v: { x: number; y: number; speed: number },
   ) => {
     const { fastPxPerMs, fastMs, slowMs } = FEEL_CONFIG.stroke.lines;
-    if (reduced || t - lastLinesAt <= (v.speed > fastPxPerMs ? fastMs : slowMs)) return;
+    const fast = v.speed / inputScale > fastPxPerMs;
+    if (reduced || t - lastLinesAt <= (fast ? fastMs : slowMs)) return;
     lastLinesAt = t;
     effects.streamLines(x, y, v);
   };
@@ -623,17 +836,18 @@ export function mountMiniGameEngine(
     handle(events, x, y);
     background.show(combo.view.tier, intensity, "stroke");
     lettering.slamTierName("!?", "");
-    flash = { face: "wide", until: performance.now() + 700 };
+    flash = { face: "wide", until: clock + 700 };
     writeFace();
     if (!reduced) heart.punch(0.05);
-    endingParts.freeze(80);
+    freeze(80);
     say(i18next.t(($) => $.gratitude.announcements.strokeUnlocked));
   };
 
   const onStrokeStart = (t: number, x: number, y: number) => {
+    clock = t;
     if (!running || ending || combo.view.method === "shake") return;
     strokes.fingerDown(x, y, t);
-    recorder.strokeStart(t, x, y);
+    recorder?.strokeStart(t, x, y);
     stroke = {
       onHeart: isOnHeart(x, y, heartArea()),
       from: { x, y },
@@ -644,7 +858,8 @@ export function mountMiniGameEngine(
     };
   };
 
-  const onStrokeMove = (t: number, x: number, y: number) => {
+  const onStrokeMove = (t: number, x: number, y: number, fastPass: boolean | null = null) => {
+    clock = t;
     const s = stroke;
     if (!s || !running || ending || combo.view.method === "shake") return;
     s.travel += Math.hypot(x - s.last.x, y - s.last.y);
@@ -653,9 +868,9 @@ export function mountMiniGameEngine(
     s.samples.push({ x, y, t });
     while (s.samples.length > 3 && t - s.samples[0].t > 180) s.samples.shift();
     const v = velocity(s.samples);
-    strokeSpeed += (v.speed - strokeSpeed) * 0.35;
-    const pass = strokes.fingerMove(x, y, t);
-    recorder.strokeMove(t, x, y, pass?.fast === true);
+    strokeSpeed += (v.speed / inputScale - strokeSpeed) * 0.35;
+    const pass = strokes.fingerMove(x, y, t, fastPass);
+    recorder?.strokeMove(t, x, y, pass?.fast === true);
     if (pass) s.runFrom = pass.end;
     // The stretch and the speed field follow the run, at any angle.
     const rx = x - s.runFrom.x;
@@ -682,11 +897,11 @@ export function mountMiniGameEngine(
       const dx = x - s.from.x;
       const dy = y - s.from.y;
       const d = Math.hypot(dx, dy);
-      heart.pullTo(d, d > 8 ? (Math.atan2(dy, dx) * 180) / Math.PI : null);
+      heart.pullTo(d / inputScale, d > 8 ? (Math.atan2(dy, dx) * 180) / Math.PI : null);
       // A hard or fast drag throws speed lines.
-      const { fastPxPerMs } = FEEL_CONFIG.stroke.lines;
-      if (v.speed > fastPxPerMs) streamLinesAt(t, x, y, v);
-      else if (d > 100) streamLinesAt(t, x, y, { x: dx / d, y: dy / d, speed: fastPxPerMs });
+      const lines = FEEL_CONFIG.stroke.lines.fastPxPerMs * inputScale;
+      if (v.speed > lines) streamLinesAt(t, x, y, v);
+      else if (d / inputScale > 100) streamLinesAt(t, x, y, { x: dx / d, y: dy / d, speed: lines });
       // Trying again: the tip stays.
       if (tipShown === "stroke") tipUntil = Math.max(tipUntil, wall + 4);
     }
@@ -699,7 +914,7 @@ export function mountMiniGameEngine(
     const s = stroke;
     stroke = null;
     strokes.fingerUp();
-    recorder.strokeEnd();
+    recorder?.strokeEnd();
     heart.pullTo(0, null);
     // A drag on the heart that didn't unlock stroking is a try; enough of them, and the tip says how.
     if (!s?.onHeart || s.travel < FEEL_CONFIG.stroke.tryTravelPx) return;
@@ -711,7 +926,7 @@ export function mountMiniGameEngine(
   // Shaking: before the unlock the heart answers the wrist in place, and a hard shake in a rhythm
   // builds to the tip, a lifting corner, then the heart coming loose. Reduced motion keeps it in place.
   const shakes = createShakeDetector(FEEL_CONFIG.shake);
-  /** performance.now() until which the shake marks show. */
+  /** The clock's time until which the shake marks show. */
   let shakingUntil = 0;
 
   /** The way a reversal went along its axis: 1 or −1. */
@@ -719,7 +934,7 @@ export function mountMiniGameEngine(
 
   const unlockShake = (t: number, reversal: ShakeReversal) => {
     const events = combo.commitTo("shake", t);
-    recorder.shake(directionOf(reversal), events);
+    recorder?.shake(directionOf(reversal), events);
     // No hit: the combo had already ended, and that end still plays.
     if (!events.some((e) => e.kind === "hit")) return handle(events, heartAt.x, heartAt.y);
     hideTip();
@@ -730,7 +945,7 @@ export function mountMiniGameEngine(
     if (stroke) {
       stroke = null;
       strokes.fingerUp();
-      recorder.strokeEnd();
+      recorder?.strokeEnd();
     }
     // The combo's own look first, so the unlock's slam is the one that shows.
     handle(events, heartAt.x, heartAt.y);
@@ -739,7 +954,7 @@ export function mountMiniGameEngine(
       heart.kickLoose(reversal.direction, reversal.strength);
     }
     lettering.slamTierName("ポンッ", shownGloss("*pop*"));
-    flash = { face: "wide", until: performance.now() + 600 };
+    flash = { face: "wide", until: clock + 600 };
     writeFace();
     effects.burst(8, heartAt);
     // With reduced motion the heart stays put.
@@ -750,7 +965,18 @@ export function mountMiniGameEngine(
     );
   };
 
+  /** A reversal once the combo is shaking: a hit, which kicks the loose heart along. */
+  const countReversal = (t: number, reversal: ShakeReversal) => {
+    shakingUntil = t + FEEL_CONFIG.shake.resetMs;
+    if (reduced) heart.jiggle();
+    else heart.kickLoose(reversal.direction, reversal.strength);
+    const events = combo.countShakeReversal(t);
+    recorder?.shake(directionOf(reversal), events);
+    handle(events, heartAt.x, heartAt.y);
+  };
+
   const onMotion = (ax: number, ay: number, gx: number | null, t: number) => {
+    clock = t;
     const view = combo.view;
     if (!running || ending || view.phase === "ended" || view.method === "stroke") return;
     const shaking = view.method === "shake";
@@ -761,15 +987,7 @@ export function mountMiniGameEngine(
     }
     const reversal = shakes.addMotionSample(ax, ay, t);
     if (!reversal) return;
-    if (shaking) {
-      shakingUntil = t + FEEL_CONFIG.shake.resetMs;
-      if (reduced) heart.jiggle();
-      else heart.kickLoose(reversal.direction, reversal.strength);
-      const events = combo.countShakeReversal(t);
-      recorder.shake(directionOf(reversal), events);
-      handle(events, heartAt.x, heartAt.y);
-      return;
-    }
+    if (shaking) return countReversal(t, reversal);
     heart.jiggle();
     if (reversal.run >= FEEL_CONFIG.shake.keepShakingAt) showTip("shake");
     if (reversal.run >= FEEL_CONFIG.shake.cornerAt) {
@@ -782,7 +1000,7 @@ export function mountMiniGameEngine(
       unlockShake(t, reversal);
     }
   };
-  const stopMotion = listenToPhoneMotion(onMotion);
+  const stopMotion = liveInput ? listenToPhoneMotion(onMotion) : null;
 
   /** The combo is over: nothing more is hinted at or held. */
   const stopHints = () => {
@@ -797,48 +1015,51 @@ export function mountMiniGameEngine(
   /** A touch on the heart, or a key, goes to the combo, and the replay keeps it if the combo heard it. */
   const tapHeart = (t: number, x: number, y: number) => {
     const events = combo.tapHeart(t);
-    recorder.touch(x, y, events);
+    recorder?.touch(x, y, events);
     return events;
   };
 
-  const stopTouches = listenForTouches(
-    parts.stage,
-    {
-      heartArea: () => ({ cx: L.rest.x, cy: L.rest.y, width: L.width, height: L.height }),
-      toStage: (e) => ({
-        x: (e.clientX - rect.left) / rect.scale,
-        y: (e.clientY - rect.top) / rect.scale,
-      }),
-      tapSlopPx: FEEL_CONFIG.tapSlopPx,
-      tapHoldMs: FEEL_CONFIG.tapHoldMs,
-    },
-    {
-      onHeartDown: (t, x, y) => {
-        if (!running || ending) return;
-        const phase = combo.view.phase;
-        if (phase === "ready") heart.squash(3.6);
-        else if (phase === "running") handle(tapHeart(t, x, y), x, y);
-      },
-      onHeartTap: (t, x, y) => {
-        if (running && !ending && combo.view.phase === "ready") handle(tapHeart(t, x, y), x, y);
-      },
-      onStrokeStart,
-      onStrokeMove,
-      onStrokeEnd,
-    },
-  );
+  const onHeartDown = (t: number, x: number, y: number) => {
+    clock = t;
+    if (!running || ending) return;
+    const phase = combo.view.phase;
+    if (phase === "ready") heart.squash(3.6);
+    else if (phase === "running") handle(tapHeart(t, x, y), x, y);
+  };
+  const onHeartTap = (t: number, x: number, y: number) => {
+    clock = t;
+    if (running && !ending && combo.view.phase === "ready") handle(tapHeart(t, x, y), x, y);
+  };
+
+  const stopTouches = liveInput
+    ? listenForTouches(
+        parts.stage,
+        {
+          heartArea: () => ({ cx: L.rest.x, cy: L.rest.y, width: L.width, height: L.height }),
+          toStage: (e) => ({
+            x: (e.clientX - rect.left) / rect.scale,
+            y: (e.clientY - rect.top) / rect.scale,
+          }),
+          tapSlopPx: FEEL_CONFIG.tapSlopPx,
+          tapHoldMs: FEEL_CONFIG.tapHoldMs,
+        },
+        { onHeartDown, onHeartTap, onStrokeStart, onStrokeMove, onStrokeEnd },
+      )
+    : null;
 
   /**
    * A tap with no finger on the heart, from a key or a click, lands on the heart's middle: the first
-   * tap while it's ready, a tap after that. performance.now keeps it on the loop's clock.
+   * tap while it's ready, a tap after that. The frames' clock keeps it on the loop's time.
    */
   const tapMiddle = () => {
     if (!running || ending) return;
+    const t = frames.now();
+    clock = t;
     const x = L.rest.x;
     const y = L.rest.y + 10;
     const phase = combo.view.phase;
     if (phase === "ready") heart.squash(3.6);
-    if (phase === "ready" || phase === "running") handle(tapHeart(performance.now(), x, y), x, y);
+    if (phase === "ready" || phase === "running") handle(tapHeart(t, x, y), x, y);
   };
 
   // A finger, a mouse or a key on the heart makes its own taps, and the browser's click after it is
@@ -846,7 +1067,7 @@ export function mountMiniGameEngine(
   const pressing = new Set<number | "key">();
   let pressLiftedAt = -Infinity;
   const lifted = (id: number | "key") => {
-    if (pressing.delete(id)) pressLiftedAt = performance.now();
+    if (pressing.delete(id)) pressLiftedAt = frames.now();
   };
   const onKey = (e: KeyboardEvent) => {
     if (e.key !== "Enter" && e.key !== " ") return;
@@ -871,20 +1092,11 @@ export function mountMiniGameEngine(
   // Voice Control, Switch Control and screen readers tap the heart with a click alone.
   const onClick = () => {
     if (pressing.size > 0) return;
-    if (performance.now() - pressLiftedAt < FEEL_CONFIG.clickAfterPressMs) return;
+    if (frames.now() - pressLiftedAt < FEEL_CONFIG.clickAfterPressMs) return;
     tapMiddle();
   };
-  button.addEventListener("keydown", onKey);
-  button.addEventListener("keyup", onKeyUp);
-  button.addEventListener("pointerdown", onPointerDown);
-  button.addEventListener("click", onClick);
-  button.addEventListener("blur", onBlur);
-  // A pointer can lift anywhere: off the heart, and off the stage.
-  window.addEventListener("pointerup", onPointerLift, true);
-  window.addEventListener("pointercancel", onPointerLift, true);
   // touch-action stops panning and zooming; this also keeps WebKit from bouncing the page mid-mash.
   const holdStill = (e: TouchEvent) => e.preventDefault();
-  parts.stage.addEventListener("touchmove", holdStill, { passive: false });
 
   // A combo in play ends the moment the page is hidden or goes away, so its record is sent in time.
   const onHidden = () => {
@@ -896,14 +1108,61 @@ export function mountMiniGameEngine(
     const phase = combo.view.phase;
     if (ending || phase !== "running") return;
     const reason = hidden ? "hidden" : "closed";
-    handle(combo.endCombo(performance.now(), reason), L.rest.x, L.rest.y, hidden);
+    const t = frames.now();
+    clock = t;
+    handle(combo.endCombo(t, reason), L.rest.x, L.rest.y, hidden);
   };
-  document.addEventListener("visibilitychange", onHidden);
-  window.addEventListener("pagehide", onPageHide);
+
+  if (liveInput) {
+    button.addEventListener("keydown", onKey);
+    button.addEventListener("keyup", onKeyUp);
+    button.addEventListener("pointerdown", onPointerDown);
+    button.addEventListener("click", onClick);
+    button.addEventListener("blur", onBlur);
+    // A pointer can lift anywhere: off the heart, and off the stage.
+    window.addEventListener("pointerup", onPointerLift, true);
+    window.addEventListener("pointercancel", onPointerLift, true);
+    parts.stage.addEventListener("touchmove", holdStill, { passive: false });
+    document.addEventListener("visibilitychange", onHidden);
+    window.addEventListener("pagehide", onPageHide);
+  }
+
+  /** The handlers a replay's input path drives, each input at its own time. */
+  const input: ComboInput = {
+    get phase() {
+      return combo.view.phase;
+    },
+    heartDown: onHeartDown,
+    heartTap: onHeartTap,
+    strokeStart: onStrokeStart,
+    strokeMove: onStrokeMove,
+    strokeEnd: onStrokeEnd,
+    unlockStroke: (t, x, y) => {
+      clock = t;
+      if (running && !ending && combo.view.method === "tap") unlockStroke(t, x, y);
+    },
+    shakeReversal: (t, direction) => {
+      clock = t;
+      const { phase, method } = combo.view;
+      if (!running || ending || phase === "ended" || method === "stroke") return;
+      const reversal = {
+        run: 0,
+        direction: { x: direction, y: 0 },
+        strength: REPLAYED_REVERSAL_STRENGTH,
+      };
+      if (method === "shake") countReversal(t, reversal);
+      else unlockShake(t, reversal);
+    },
+    endAt: (t, reason) => {
+      clock = t;
+      if (ending || combo.view.phase !== "running") return;
+      handle(combo.endCombo(t, reason), L.rest.x, L.rest.y);
+    },
+  };
 
   const fail = (error: unknown) => {
     running = false;
-    cancelAnimationFrame(raf);
+    cancelFrame();
     console.error("The gratitude mini-game stopped", error, combo.view);
     options.onError(error instanceof Error ? error.message : String(error));
   };
@@ -913,7 +1172,7 @@ export function mountMiniGameEngine(
   const drawThisFrame = () => drawFrame(frameNow);
   const frame = (now: number) => {
     if (!running) return;
-    raf = requestAnimationFrame(frame);
+    cancelFrame = frames.request(frame);
     frameNow = now;
     try {
       timeOurWork("gratitude", drawThisFrame);
@@ -924,11 +1183,14 @@ export function mountMiniGameEngine(
 
   /** One frame: the combo's clock, the mini hearts, the heart, the ground and the HUD. */
   const drawFrame = (now: number) => {
-    const realMs = last ? now - last : 16;
+    const realMs = last === null ? 16 : now - last;
     last = now;
     readout?.frame(realMs);
     const real = Math.min(0.05, realMs / 1000);
     wall += real;
+    // A replay's inputs due by now go in first, each at its own time, then the rules catch up.
+    replay?.drive(now, input);
+    clock = now;
     const due = combo.advanceTo(now);
     if (due.length > 0) handle(due, L.rest.x, L.rest.y);
     const view = combo.view;
@@ -1016,7 +1278,7 @@ export function mountMiniGameEngine(
       }
     } else {
       hud.step(real, {
-        total: view.total,
+        total: endTotal ?? view.total,
         multiplier: view.multiplier,
         secondsLeft: view.secondsLeft,
         barFill: view.barFill,
@@ -1027,10 +1289,10 @@ export function mountMiniGameEngine(
     // Once the receipt is up and the pile has melted, nothing moves: the loop sleeps.
     if (root.dataset.phase === "done" && physics.hearts.length === 0 && !readout) {
       running = false;
-      cancelAnimationFrame(raf);
+      cancelFrame();
     }
   };
-  raf = requestAnimationFrame(frame);
+  cancelFrame = frames.request(frame);
 
   return {
     close: () => endNow(false),
@@ -1042,9 +1304,9 @@ export function mountMiniGameEngine(
     destroy: () => {
       alive = false;
       running = false;
-      cancelAnimationFrame(raf);
-      stopTouches();
-      stopMotion();
+      cancelFrame();
+      stopTouches?.();
+      stopMotion?.();
       background.destroy();
       button.removeEventListener("keydown", onKey);
       button.removeEventListener("keyup", onKeyUp);
