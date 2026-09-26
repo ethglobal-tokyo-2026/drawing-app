@@ -66,6 +66,17 @@
   gap: 10px;
 }
 
+/* Reserve tickets as one small reserve ticket and ×count, in Figure type. */
+.sealed-card__reserve {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink);
+  font: 850 13px/1 var(--font-ui);
+  font-stretch: var(--w-figure);
+  font-variant-numeric: tabular-nums;
+}
+
 .sealed-card__tickets p {
   margin: 8px 0 0;
 }

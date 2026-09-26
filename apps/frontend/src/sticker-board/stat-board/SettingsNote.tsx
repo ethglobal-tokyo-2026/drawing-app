@@ -56,8 +56,14 @@ function usePeek(note: RefObject<HTMLElement | null>, title: RefObject<HTMLEleme
     const cork = paper?.parentElement;
     // Tucked, or partly scrolled in, the note's foot is below the cork's.
     if (!paper || !cork) return;
-    if (paper.getBoundingClientRect().bottom <= cork.getBoundingClientRect().bottom + 1) return;
-    cork.scrollTo({ top: cork.scrollHeight, behavior: reduced ? "auto" : "smooth" });
+    const edge = cork.getBoundingClientRect().bottom;
+    if (paper.getBoundingClientRect().bottom <= edge + 1) return;
+    // Unstuck for a moment, it measures where it lies in the cork, which may go on past it.
+    paper.style.setProperty("position", "relative");
+    const below = paper.getBoundingClientRect().bottom - edge;
+    paper.style.removeProperty("position");
+    const padding = parseFloat(getComputedStyle(cork).paddingBottom) || 0;
+    cork.scrollBy({ top: below + padding, behavior: reduced ? "auto" : "smooth" });
   };
 }
 

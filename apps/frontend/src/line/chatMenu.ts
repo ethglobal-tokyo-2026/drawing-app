@@ -1,14 +1,16 @@
-import liff from "@line/liff";
-import { useSyncExternalStore } from "react";
-import { currentLanguage } from "../i18n/i18n";
+import type { ChatMenuLink } from "@drawing-app/api/client";
+import { useEffect, useSyncExternalStore } from "react";
+import { createServerClient } from "../api/httpApi";
 import { jsonField } from "../identity/privy";
 
-/** The menu under the official account's chat: one "Open Sticker Board" button for someone new, three tiles after. */
+/**
+ * The menu under the Official Account's chat: "Open Sticker Board" for someone new; for someone with
+ * an account, Draw, My board and Explore, with the tickets they have left on the Draw key.
+ */
 export type ChatMenuStatus =
   | { state: "waiting" }
-  | { state: "switching" }
-  | { state: "returning" }
-  | { state: "new"; reason: "not_signed_up" | "not_a_friend" }
+  | { state: "linking" }
+  | { state: "answered"; link: ChatMenuLink }
   | { state: "failed"; reason: string };
 
 let status: ChatMenuStatus = { state: "waiting" };
@@ -30,50 +32,39 @@ export function useChatMenuStatus(): ChatMenuStatus {
   return useSyncExternalStore(subscribe, chatMenuStatus);
 }
 
-// Longer than the server's worst case, five upstream calls of up to 5 s each, so a slow switch isn't called a failure.
-const SWITCH_TIMEOUT_MS = 30_000;
 let asked = false;
 
 function fail(reason: string) {
-  console.error(`The chat menu didn't switch: ${reason}`);
+  console.error(`The chat menu didn't link: ${reason}`);
   set({ state: "failed", reason });
 }
 
 /**
- * Asks the auth server to give this person the returning-user chat menu in the app's language, once per
- * page load. The server checks with LINE and Privy itself; the outcome goes to the status, and this never
- * throws.
+ * Asks the app's server to link your chat menu to the one for your language and the tickets you have
+ * left, once per page load. The server asks LINE itself; the answer goes to the status, and this
+ * never throws.
  */
-export async function requestReturningMenu(): Promise<void> {
+export async function linkChatMenu(api = createServerClient()): Promise<void> {
   if (asked) return;
-  const idToken = liff.getIDToken();
-  // Without a token nothing was asked, so a later sign-in can still try.
-  if (!idToken) return fail("LINE gave no ID token");
   asked = true;
-  set({ state: "switching" });
+  set({ state: "linking" });
   try {
-    const response = await fetch("/v1/auth/line-menu", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ idToken, language: currentLanguage() }),
-      signal: AbortSignal.timeout(SWITCH_TIMEOUT_MS),
-    });
-    const body: unknown = await response.json().catch(() => null);
-    const menu = jsonField(body, "menu");
-    const reason = jsonField(body, "reason");
-    if (response.ok && menu === "returning") return set({ state: "returning" });
-    if (
-      response.ok &&
-      menu === "new" &&
-      (reason === "not_signed_up" || reason === "not_a_friend")
-    ) {
-      return set({ state: "new", reason });
+    const response = await api["line-menu"].$post();
+    if (response.ok) {
+      set({ state: "answered", link: (await response.json()).chatMenu });
+      return;
     }
-    const error = jsonField(body, "error");
+    const error = jsonField(await response.json().catch(() => null), "error");
     fail(`HTTP ${response.status}${typeof error === "string" ? ` ${error}` : ""}`);
   } catch (error) {
-    fail(
-      `couldn’t reach the auth server: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    fail(`couldn’t reach the server: ${error instanceof Error ? error.message : String(error)}`);
   }
+}
+
+/** Links your chat menu once you're signed in to the app's server. It shows nothing. */
+export function ChatMenuLink() {
+  useEffect(() => {
+    void linkChatMenu();
+  }, []);
+  return null;
 }

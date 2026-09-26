@@ -1,0 +1,164 @@
+/* Explore's lifted sticker (LiftedSticker.tsx): a sticker lifted off the pile into a bottom sheet over
+   a scrim, large, with live resin under the one light. The pile stays in sight behind, where the
+   sticker's spot keeps a ghost of it until it's put back. The flight and the sheet's rise are
+   transform and opacity, from the script (sticker-board/detailLift.ts). */
+
+.lifted-sticker {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-sheet);
+  color: var(--ink);
+}
+
+/* It holds focus only when nothing in it can; a ring round the whole screen says nothing. */
+.lifted-sticker:focus {
+  outline: none;
+}
+
+/* A tap here puts the sticker back. */
+.lifted-sticker__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 24, 36, 0.36);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* A sheet on the Liner, sized to what it holds; a short screen scrolls it rather than clipping. */
+.lifted-sticker__sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-height: calc(100% - 24px);
+  padding: 0 20px calc(20px + env(safe-area-inset-bottom));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  border-radius: 16px 16px 0 0;
+  background: var(--liner);
+  box-shadow: var(--shadow-sheet);
+}
+
+.lifted-sticker__sheet::-webkit-scrollbar {
+  display: none;
+}
+
+.lifted-sticker__sheet > .perf {
+  flex: none;
+}
+
+/* Only a vertical pan goes to the sheet; a sideways swipe lifts the next or previous sticker. */
+.lifted-sticker__stage {
+  position: relative;
+  flex: none;
+  align-self: stretch;
+  height: 228px;
+  touch-action: pan-y;
+  cursor: grab;
+}
+
+/* On a layer of its own, so a swipe moves the figure without repainting it. */
+.lifted-sticker__slide {
+  position: absolute;
+  inset: 0 40px;
+  display: grid;
+  place-items: center;
+  will-change: transform;
+}
+
+/* Its own shape, inside a 210px square. */
+.lifted-sticker__slide .sticker-figure {
+  width: calc(210px * min(1, var(--ar)));
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: var(--ar);
+}
+
+/* Small flat arrows either side of the sticker. */
+.lifted-sticker__turn {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 44px;
+  margin: -22px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-label);
+  background: none;
+  color: var(--ink);
+}
+
+.lifted-sticker__turn--previous {
+  left: -8px;
+}
+
+.lifted-sticker__turn--next {
+  right: -8px;
+}
+
+/* A 44px touch. */
+.lifted-sticker__turn::before {
+  content: "";
+  position: absolute;
+  inset: 0 -4px;
+}
+
+.lifted-sticker__turn[aria-disabled="true"] {
+  color: rgba(110, 104, 120, 0.4);
+  cursor: default;
+}
+
+.lifted-sticker__turn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 0;
+}
+
+.lifted-sticker__about {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  margin-top: 4px;
+}
+
+/* The line people read: caps kept, but at 12px, wrapping between facts. */
+.lifted-sticker__fine {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+  text-wrap: balance;
+  color: #5f5969;
+}
+
+.lifted-sticker__acts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  align-self: stretch;
+  margin-top: 18px;
+}
+
+/* A long handle wraps the label onto a second line rather than running off the sheet. */
+.lifted-sticker__acts .label-btn:not(.label-btn--quiet) {
+  max-width: 100%;
+  padding-block: 6px;
+  white-space: normal;
+  text-align: center;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+@media (hover: hover) {
+  .lifted-sticker__turn:not([aria-disabled="true"]):hover {
+    background: rgba(28, 24, 36, 0.05);
+  }
+}

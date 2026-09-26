@@ -6,6 +6,7 @@ import { emptyApi, FRESH_TICKETS, renderWithApi } from "../api/testing";
 import { setPrivyStatus } from "../identity/privy";
 import { getJpycBalance, getTicketPayments, payForTickets } from "../payments/jpyc";
 import { OutOfTickets } from "./OutOfTickets";
+import { formatRefillTime } from "./refill";
 import { StartDrawing } from "./StartDrawing";
 import { TicketShop } from "./TicketShop";
 import { useTickets } from "./useTickets";
@@ -98,9 +99,13 @@ describe("OutOfTickets", () => {
     expect(document.body.textContent).toContain("canvas");
   });
 
-  it("takes the sticker-board exit on Escape, and offers the ticket shop", async () => {
+  it("takes the sticker-board exit on Escape, and offers reserve tickets", async () => {
     await render(<Host />, serving(tickets(3, 0)).api);
-    click("Shop for tickets");
+    // The day's three used stubs, and no reserve count at zero.
+    expect(document.querySelectorAll(".ticket-stub.is-used")).toHaveLength(3);
+    expect(document.querySelector(".ticket-stub--reserve")).toBeNull();
+    expect(document.body.textContent).not.toContain("×0");
+    click("Buy reserve tickets");
     expect(onShop).toHaveBeenCalledOnce();
     act(() => {
       document.activeElement?.dispatchEvent(
@@ -126,15 +131,41 @@ describe("StartDrawing", () => {
 
   it("spends a daily ticket while there are any", async () => {
     await start(tickets(1, 4));
+    // The daily stubs lead, fresh first; the reserve tickets are one small ticket and its count.
+    const stubs = [...document.querySelectorAll(".ticket-stubs--large .ticket-stub")];
+    expect(stubs.map((s) => s.classList.contains("is-fresh"))).toEqual([true, true, false]);
+    expect(document.querySelector(".out-of-tickets__reserve")?.textContent).toContain("×4");
     click("Start drawing");
     expect(onStart).toHaveBeenCalledWith("daily");
   });
 
-  it("asks before spending a reserve ticket once the daily ones are gone", async () => {
+  it("shows no reserve count while there are no reserve tickets", async () => {
+    await start(tickets(0, 0));
+    expect(document.querySelector(".out-of-tickets__reserve")).toBeNull();
+    expect(document.body.textContent).not.toContain("×0");
+  });
+
+  it("asks before spending a reserve ticket once the daily ones are gone, with that ticket as its art", async () => {
     await start(tickets(3, 4));
     expect(title()).toBe("Use a reserve ticket?");
+    // One large reserve ticket with its count on a badge, in the daily slots' place.
+    expect(document.querySelectorAll(".ticket-stub")).toHaveLength(1);
+    expect(document.querySelector(".ticket-stubs--hero .ticket-stub--reserve")).not.toBeNull();
+    expect(document.querySelector(".ticket-stub__badge")?.textContent).toBe("×4");
+    // The line says each fact once; the count is on the badge, and in words for screen readers.
+    expect(document.querySelector(".out-of-tickets__line")?.textContent).toBe(
+      `Today’s daily tickets are used. New ones at ${formatRefillTime(REFILL)}.`,
+    );
+    const dialog = document.querySelector("[role=dialog]");
+    const described = dialog?.getAttribute("aria-describedby")?.split(" ") ?? [];
+    expect(described.map((id) => document.getElementById(id)?.textContent)).toContain(
+      "You have 4 reserve tickets.",
+    );
+    expect(buttonNamed("Use a reserve ticket")?.classList.contains("key--blue")).toBe(true);
     click("Use a reserve ticket");
     expect(onStart).toHaveBeenCalledWith("reserve");
+    click("Buy reserve tickets");
+    expect(onShop).toHaveBeenCalledOnce();
   });
 });
 
@@ -194,6 +225,9 @@ describe("TicketShop", () => {
     click("Pay");
     await settle(2000);
     expect(title()).toBe("3 reserve tickets added");
+    // One reserve ticket, its badge on the new total.
+    expect(document.querySelectorAll(".ticket-stub")).toHaveLength(1);
+    expect(document.querySelector(".ticket-stub__badge")?.textContent).toBe("×4");
     expect(payForTickets).toHaveBeenCalledWith(expect.anything(), SHOP.payment, 270n * JPYC);
     expect(bought).toHaveBeenCalledWith({ tickets: 3, txDigest: TX_DIGEST });
     expect(buttonNamed("Draw")?.getAttribute("aria-label")).toContain("4 reserve tickets");

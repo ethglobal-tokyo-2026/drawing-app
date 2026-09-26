@@ -17,10 +17,11 @@ interface Props {
 
 /**
  * Holo foil round a sticker someone other than the board's owner drew: its silhouette grown into a
- * band just past the white edge, with bands of light flowing along it and a glint where the app's
- * one light falls, which holds where the last tilt left it. The band's shape is the server's mask
- * when the sticker has one, else the silhouette the container sets as `--m`, dilated in CSS. It goes
- * under the image.
+ * band just past the white edge, from the server's mask when the sticker has one, else dilated in
+ * CSS from the `--m` the container sets. The band is the sticker's edge, so its cut and cast shadow
+ * fall from the band's outer edge. Bands of light flow under a fine, still grating, and a glint sits
+ * where the app's one light falls, holding where the last tilt left it. It goes under the image,
+ * which shows only inside its own cut.
  */
 export function StickerFoil({ size, no, turn = 0, mask }: Props) {
   const foil = useRef<HTMLSpanElement>(null);
@@ -39,6 +40,7 @@ export function StickerFoil({ size, no, turn = 0, mask }: Props) {
       }}
       aria-hidden="true"
     >
+      <span className="sticker-foil__cast" />
       <span className="sticker-foil__band">
         <i className="sticker-foil__sheen" />
         <i className="sticker-foil__glint" />

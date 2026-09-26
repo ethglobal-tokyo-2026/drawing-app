@@ -1,4 +1,5 @@
 import { currentLanguage, i18next } from "./i18n";
+import { requestJapaneseFont } from "./japaneseFont";
 import {
   keepChosenLanguage,
   languageOf,
@@ -43,12 +44,16 @@ export async function followAccountLanguage(choice: Language | null): Promise<vo
   await switchTo(startLanguage(choice, line));
 }
 
-/** Keeps `<html lang>`, the page's title and LIFF's own text in the app's language. */
+/**
+ * Keeps `<html lang>`, the page's title and LIFF's own text in the app's language, and asks for the
+ * Japanese face the first time it's Japanese.
+ */
 export function followLanguageOnPage(setLiffLanguage: (language: Language) => Promise<void>): void {
   const apply = () => {
     const language = currentLanguage();
     document.documentElement.lang = language;
     document.title = i18next.t(($) => $.app.title);
+    if (language === "ja") requestJapaneseFont();
     setLiffLanguage(language).catch((error: unknown) =>
       console.error(`LIFF's own text didn't switch to ${language}`, error),
     );

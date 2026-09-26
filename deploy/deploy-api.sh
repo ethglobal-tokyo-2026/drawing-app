@@ -51,10 +51,11 @@ export RSYNC_RSH="ssh ${SSH_OPTS[*]}"
 REMOTE_STAGE="$(ssh "$TARGET" "mktemp -d /tmp/drawing-api-deploy.XXXXXXXX")"
 rsync -c "$ROOT/deploy/install-chain-env.mjs" "$TARGET:$REMOTE_STAGE/install-chain-env.mjs"
 chain_config() {
-  printf 'STICKER_CHAIN_MODE=sepolia\nETHEREUM_SEPOLIA_RPC_URL=%s\nSTICKER_NFT_ADDRESS=%s\nSTICKER_GIFT_ESCROW_ADDRESS=%s\nSTICKER_SEALER_PRIVATE_KEY=%s\nCROQUIS_NAMES_ADDRESS=%s\nCROQUIS_RESOLVER_ADDRESS=%s\nENS_GATEWAY_PRIVATE_KEY=%s\nPRIVY_APP_ID=%s\nPRIVY_APP_SECRET=%s\n' \
+  printf 'STICKER_CHAIN_MODE=sepolia\nETHEREUM_SEPOLIA_RPC_URL=%s\nSTICKER_NFT_ADDRESS=%s\nSTICKER_GIFT_ESCROW_ADDRESS=%s\nSTICKER_SEALER_PRIVATE_KEY=%s\nCROQUIS_NAMES_ADDRESS=%s\nCROQUIS_RESOLVER_ADDRESS=%s\nENS_GATEWAY_PRIVATE_KEY=%s\nPRIVY_APP_ID=%s\nPRIVY_APP_SECRET=%s\nLINE_MESSAGING_CHANNEL_ID=%s\nLINE_MESSAGING_CHANNEL_SECRET=%s\n' \
     "${ETHEREUM_SEPOLIA_RPC_URL:-}" "${STICKER_NFT_ADDRESS:-}" "${STICKER_GIFT_ESCROW_ADDRESS:-}" \
     "${STICKER_SEALER_PRIVATE_KEY:-}" "${CROQUIS_NAMES_ADDRESS:-}" "${CROQUIS_RESOLVER_ADDRESS:-}" \
-    "${ENS_GATEWAY_PRIVATE_KEY:-}" "${PRIVY_APP_ID:-}" "${PRIVY_APP_SECRET:-}"
+    "${ENS_GATEWAY_PRIVATE_KEY:-}" "${PRIVY_APP_ID:-}" "${PRIVY_APP_SECRET:-}" \
+    "${LINE_MESSAGING_CHANNEL_ID:-}" "${LINE_MESSAGING_CHANNEL_SECRET:-}"
 }
 chain_config | ssh "$TARGET" "node '$REMOTE_STAGE/install-chain-env.mjs' '$DIR/chain.env' '$AUTH_DIR/secrets.env' check"
 if [ "$PREFLIGHT_ONLY" = true ]; then exit 0; fi
@@ -85,6 +86,10 @@ changed+="$(rsync -ci "$ROOT/apps/api/dist/server.mjs" "$TARGET:$DIR/server/serv
 changed+="$(rsync -rci --delete "$ROOT/packages/db/drizzle/" "$TARGET:$DIR/drizzle/")"
 changed+="$(rsync -ci "$ROOT/deploy/drawing-api.env" "$TARGET:$DIR/api.env")"
 changed+="$(rsync -ci "$ROOT/deploy/drawing-api.service" "$TARGET:$DIR/")"
+# The chat menus' IDs, which LINE_CHAT_MENUS_FILE names; without the file, the API links no chat menu.
+if [ -f "$ROOT/deploy/line/menus.json" ]; then
+  changed+="$(rsync -ci "$ROOT/deploy/line/menus.json" "$TARGET:$DIR/line-menus.json")"
+fi
 # The session cookie's secret is made on the box and never leaves it.
 changed+="$(ssh "$TARGET" "test -s '$DIR/secrets.env' || { umask 077 \
   && printf 'SESSION_SECRET=%s\n' \"\$(openssl rand -hex 32)\" > '$DIR/secrets.env' && echo 'made a session secret'; }")"
