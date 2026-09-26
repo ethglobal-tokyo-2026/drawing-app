@@ -96,7 +96,9 @@ export const explore = {
     },
     /** How long ago, in its largest whole unit. */
     ago: {
-      /** Explore tab, activity feed: fine print at the end of a post's head, how long ago it happened, under an hour */
+      /** Explore tab, activity feed: fine print at the end of a post's head, for something under a minute ago */
+      justNow: { en: "just now", ja: "たった今" },
+      /** Explore tab, activity feed: fine print at the end of a post's head, how long ago it happened, from a minute to an hour */
       minutes: { en: "{{minutes}} min", ja: "{{minutes}}分前" },
       /** Explore tab, activity feed: fine print at the end of a post's head, how long ago it happened, from an hour to a day */
       hours: { en: "{{hours}} hr", ja: "{{hours}}時間前" },

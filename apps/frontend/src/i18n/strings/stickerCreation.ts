@@ -236,9 +236,14 @@ export const stickerCreation = {
     /** Drawing screen, bottom left: the redo tile, named for screen readers */
     redo: { en: "Redo", ja: "やり直す" },
   },
+  /** The white label at the foot of the drawing screen while the seal is on its way, which screen readers hear too. */
   sealCeremony: {
-    /** Drawing screen: announced to screen readers as the seal ceremony starts, while the sticker is cut out, domed with resin and peeled onto the sealed card */
-    sealing: { en: "Sealing your sticker", ja: "シールを仕上げています" },
+    /** Drawing screen, after tapping the check to seal: the white label at the foot of the screen while the server records the seal, and what screen readers hear */
+    sealing: { en: "Sealing your sticker…", ja: "シールを仕上げています…" },
+    /** Drawing screen, when sealing takes a while: the line added under “Sealing your sticker…” on a fresh label */
+    takesAWhile: { en: "It can take up to half a minute.", ja: "30秒ほどかかることがあります。" },
+    /** Drawing screen, when sealing takes longer still: the line that replaces “It can take up to half a minute.” */
+    takingLonger: { en: "It’s taking longer than usual.", ja: "いつもより時間がかかっています。" },
   },
   /** The backing card the sticker lands on. */
   sealedCard: {

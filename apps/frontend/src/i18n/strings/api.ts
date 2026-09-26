@@ -5,10 +5,14 @@ export const api = {
   signIn: {
     /** Sign-in screen, right after the LINE sign-in screen while the app signs in to its server with LINE's ID token: the status line */
     opening: { en: "Opening your sticker board…", ja: "シールボードをひらいています…" },
-    /** Sign-in screen, when signing in to the app's server fails: the heading above the error's message and a Try again button */
+    /** Sign-in screen, when signing in to the app's server fails: the heading above the error's message and a Try again or Reconnect with LINE button */
     failed: { en: "Couldn’t sign you in", ja: "ログインできませんでした" },
-    /** Sign-in screen, after signing in to the app's server failed: the button that retries the sign-in */
+    /** Sign-in screen, after signing in to the app's server failed for a reason other than LINE's sign-in: the button that retries it */
     tryAgain: { en: "Try again", ja: "もう一度" },
+    /** Sign-in screen, when LINE's sign-in token was missing, refused or expired: the button that restarts LINE Login */
+    reconnect: { en: "Reconnect with LINE", ja: "LINEで再ログイン" },
+    /** Sign-in screen, after tapping Reconnect with LINE: the status line while LINE Login restarts */
+    reconnecting: { en: "Reconnecting with LINE…", ja: "LINEで再ログインしています…" },
   },
   /** Asks for a handle when your LINE name is already someone's, before the app opens. */
   handle: {

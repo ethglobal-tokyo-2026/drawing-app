@@ -29,7 +29,8 @@ import type { Op, Tool } from "./canvas/ops";
 import { SealKey } from "./SealKey";
 import { makeSticker, type SealedSticker } from "./sealing/makeSticker";
 import { SealCeremony } from "./sealing/SealCeremony";
-import type { Box } from "./sealing/sealTimeline";
+import { SealingStatusLabel } from "./sealing/SealingStatusLabel";
+import { LEAVE_MS, type Box } from "./sealing/sealTimeline";
 import { encodeTimelapse, gzipTimelapse } from "./sealing/timelapse";
 import { keptColor, loadKeptSession, SessionKeeper, type KeptSession } from "./session/keptSession";
 import {
@@ -63,10 +64,15 @@ const afterPaint = () =>
 const reason = (error: unknown) =>
   error instanceof Error && error.message ? error.message : String(error);
 
-interface Sealed {
+/** A seal's ceremony: from the moment the sticker is cut, through the server's answer. */
+interface Ceremony {
+  /** Counts seals, so a new try replaces a failed one's ceremony. */
+  id: number;
   sticker: SealedSticker;
-  /** The sticker as the server sealed it. */
-  sealed: Sticker;
+  /** The sticker as the server sealed it; null while the seal is on its way. */
+  sealed: Sticker | null;
+  /** The seal failed, and the ceremony is fading back to the drawing. */
+  failed: boolean;
   /** Where the sheet sat in the drawing screen when it was sealed. */
   sheet: Box;
 }
@@ -117,9 +123,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const [session, setSession] = useState(FRESH_SESSION);
   // Transitions start from here, so one sent after an await still starts from the latest session.
   const latest = useRef(FRESH_SESSION);
-  const [sealed, setSealed] = useState<Sealed | null>(null);
+  const [ceremony, setCeremony] = useState<Ceremony | null>(null);
   // The sealed sticker's layers are let go when a fresh sheet replaces it.
-  const lastSealed = useRef<Sealed | null>(null);
+  const lastCeremony = useRef<Ceremony | null>(null);
+  const seals = useRef(0);
   const [sealProblem, setSealProblem] = useState<string | null>(null);
   // The out-of-tickets card or the ticket shop, over a fresh sheet, or null.
   const [overlay, setOverlay] = useState<"out" | "shop" | null>(null);
@@ -168,9 +175,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         setPickedUp(null);
         setPaused(false);
         setPanel(null);
-        lastSealed.current?.sticker.dispose();
-        lastSealed.current = null;
-        setSealed(null);
+        lastCeremony.current?.sticker.dispose();
+        lastCeremony.current = null;
+        setCeremony(null);
         setSealProblem(null);
         setStartProblem(null);
         // A fresh sheet starts in a new color, whatever the last one ended in.
@@ -207,12 +214,23 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     }
   }
 
+  /** A failed seal's ceremony fades back to the drawing, then its layers are let go. */
+  function dismissCeremony(failed: Ceremony) {
+    setCeremony((c) => (c?.id === failed.id ? { ...c, failed: true } : c));
+    setTimeout(() => {
+      setCeremony((c) => (c?.id === failed.id ? null : c));
+      if (lastCeremony.current === failed) lastCeremony.current = null;
+      failed.sticker.dispose();
+    }, LEAVE_MS);
+  }
+
   async function seal() {
     setPanel(null);
     canvas.current?.finishStroke();
     const ink = canvas.current?.inkForReading() ?? null;
     const timeUsed = Math.min(SESSION_MS / 1000, Math.max(1, Math.round(clock.elapsed / 1000)));
     let sticker: SealedSticker | null = null;
+    let shown: Ceremony | null = null;
     try {
       const sheet = sheetBox();
       // Handing the ink to the sealing worker, or the whole cut where that can't run, holds the main
@@ -231,6 +249,18 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         return;
       }
       if (ticket.current === null) throw new Error("this sheet has no ticket to seal it on");
+      // The ceremony starts as soon as the sticker is cut, and waits at the cut until the server has
+      // sealed it.
+      const started: Ceremony = {
+        id: ++seals.current,
+        sticker,
+        sealed: null,
+        failed: false,
+        sheet,
+      };
+      shown = started;
+      lastCeremony.current = started;
+      setCeremony(started);
       const timelapse = ink && (await timelapseOf(sticker, ink));
       const { sticker: sealedSticker } = await api.seal({
         ticketUseId: ticket.current,
@@ -249,12 +279,12 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       keeper.wipe();
       // The used ticket's stub now carries this sticker's outline.
       tickets.refresh();
-      lastSealed.current = { sticker, sealed: sealedSticker, sheet };
-      setSealed(lastSealed.current);
+      setCeremony((c) => (c?.id === started.id ? { ...c, sealed: sealedSticker } : c));
       send({ type: "sealed" });
       onSealed(sealedSticker.id);
     } catch (error) {
-      sticker?.dispose();
+      if (shown) dismissCeremony(shown);
+      else sticker?.dispose();
       console.error("Sealing the sticker failed", error);
       setSealProblem(
         error instanceof ApiError
@@ -548,12 +578,13 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           send({ type: "seal-tap", now: performance.now(), hasInk: history.canUndo });
         }}
       />
-      {sealed && active && (
+      {ceremony && active && (
         <SealCeremony
-          key={sealed.sealed.id}
-          sticker={sealed.sticker}
-          sealed={sealed.sealed}
-          sheet={sealed.sheet}
+          key={ceremony.id}
+          sticker={ceremony.sticker}
+          sealed={ceremony.sealed}
+          failed={ceremony.failed}
+          sheet={ceremony.sheet}
           handle={me.handle ?? ""}
           onKeepDrawing={() => {
             startNewSticker();
@@ -566,6 +597,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           }}
         />
       )}
+      <SealingStatusLabel waiting={active && session.phase === "sealing"} />
       {asking && !loaded && (
         <TicketsNotLoaded error={tickets.error} onRetry={tickets.refresh} onBoard={onGoToBoard} />
       )}

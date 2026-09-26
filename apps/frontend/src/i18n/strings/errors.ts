@@ -10,10 +10,15 @@ export const errors = {
     en: "The app's server didn't answer. Check your connection, then try again.",
     ja: "アプリのサーバーから応答がありませんでした。接続を確認して、もう一度お試しください。",
   },
-  /** Sign-in screen, under “Couldn’t sign you in”: LINE is logged in but hands over no ID token to sign in to the app's server with (made by the app itself, shown through errorMessage) */
+  /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: LINE is logged in but hands over no ID token to sign in to the app's server with (made by the app itself, shown through errorMessage) */
   no_line_token: {
-    en: "LINE didn't give the app a way to sign you in.",
-    ja: "LINEからログインに必要な情報が届きませんでした。",
+    en: "LINE didn't provide a sign-in token. Reconnect with LINE to try again.",
+    ja: "LINEのログイン情報を取得できませんでした。LINEで再ログインしてください。",
+  },
+  /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: tapping it couldn't restart LINE Login (made by the app itself, shown through errorMessage) */
+  line_reconnect_failed: {
+    en: "Couldn't reconnect with LINE. Try again, or reopen the app from LINE.",
+    ja: "LINEで再ログインできませんでした。もう一度試すか、LINEからアプリをひらき直してください。",
   },
   /** Giving, In the bag: taking a gift back out (POST /api/gifts/:giftId/take-out) that its receiver already received, in “couldn’t be taken out” through errorReason; the Receive gift dialog shows its own Already opened screen instead */
   already_received: {
@@ -94,10 +99,15 @@ export const errors = {
     en: "The app sent something the server couldn't read.",
     ja: "アプリが送った内容を、サーバーが読み取れませんでした。",
   },
-  /** Sign-in screen, under “Couldn’t sign you in”: signing in to the app's server (POST /api/session) when LINE refuses the ID token, such as an expired one, through errorMessage */
+  /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: signing in to the app's server (POST /api/session) when LINE refuses the ID token, through errorMessage */
   line_token_invalid: {
-    en: "LINE didn't confirm who you are.",
-    ja: "LINEであなたのアカウントを確認できませんでした。",
+    en: "LINE didn't accept this sign-in. Reconnect with LINE; if this continues, contact the team.",
+    ja: "LINEがログイン情報を確認できませんでした。再ログインしても続く場合は、チームにお問い合わせください。",
+  },
+  /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: signing in to the app's server (POST /api/session) with an expired LINE ID token, through errorMessage */
+  line_token_expired: {
+    en: "Your LINE sign-in token has expired. Reconnect with LINE to continue.",
+    ja: "LINEのログイン情報の有効期限が切れました。LINEで再ログインしてください。",
   },
   /** Drawing screen, after tapping the check to seal: the seal chip's reason when the sticker saved but its NFT mint wasn't confirmed (POST /api/stickers), through errorReason */
   mint_failed: {
