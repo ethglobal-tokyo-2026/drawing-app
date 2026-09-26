@@ -53,6 +53,7 @@ This is the known vocab in the project. When relevant you should use the termino
 - The UI supports both Japanese and English for all UI elements as well as any user facing content
 - English text is American English: identifiers, comments and the English catalog
 - User-facing text goes in the catalog, `apps/frontend/src/i18n/` (i18next, a section per feature folder; Japanese sections are `Translation`s of the English ones). Don't write it inline.
+- For a translator, `pnpm --filter frontend i18n:export <file.csv>` writes a sheet of every English string with its Japanese and notes; `pnpm --filter frontend i18n:import <file.csv>` reads their Japanese back into `ja/` and reports the keys it changed.
 
 ### Banned words
 
