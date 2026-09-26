@@ -5,6 +5,7 @@ import {
   saveMiniGameDemoSettings,
   type MiniGameDemoSettings,
 } from "../../gratitude/miniGameDemoSettings";
+import { useTranslation } from "../../i18n/react";
 import { LabelButton } from "../../ui/LabelButton";
 import "./gratitude-demo-controls.css";
 
@@ -15,6 +16,7 @@ interface Props {
 
 /** The gratitude mini-game's demo entry, on the stat board's developer slip. */
 export function GratitudeDemoControls({ onTry }: Props) {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState(readMiniGameDemoSettings);
   const id = useId();
 
@@ -25,7 +27,9 @@ export function GratitudeDemoControls({ onTry }: Props) {
 
   return (
     <div className="gratitude-demo">
-      <h3 className="fine gratitude-demo__h">Gratitude mini-game</h3>
+      <h3 className="fine gratitude-demo__h">
+        {t(($) => $.stickerBoard.developer.gratitudeDemo.title)}
+      </h3>
       <LabelButton
         block
         icon={<Heart />}
@@ -33,11 +37,11 @@ export function GratitudeDemoControls({ onTry }: Props) {
         aria-describedby={onTry ? undefined : `${id}-note`}
         onClick={onTry ?? undefined}
       >
-        Try the gratitude mini-game
+        {t(($) => $.stickerBoard.developer.gratitudeDemo.try)}
       </LabelButton>
       {!onTry && (
         <p id={`${id}-note`} className="fine gratitude-demo__note">
-          Draw a sticker first
+          {t(($) => $.stickerBoard.developer.gratitudeDemo.drawFirst)}
         </p>
       )}
       <label className="gratitude-demo__switch">
@@ -46,7 +50,7 @@ export function GratitudeDemoControls({ onTry }: Props) {
           checked={settings.fullEffects}
           onChange={(e) => change({ ...settings, fullEffects: e.target.checked })}
         />
-        Full effects
+        {t(($) => $.stickerBoard.developer.gratitudeDemo.fullEffects)}
       </label>
       <label className="gratitude-demo__switch">
         <input
@@ -54,7 +58,7 @@ export function GratitudeDemoControls({ onTry }: Props) {
           checked={settings.showFrameTimes}
           onChange={(e) => change({ ...settings, showFrameTimes: e.target.checked })}
         />
-        Show frame times
+        {t(($) => $.stickerBoard.developer.gratitudeDemo.showFrameTimes)}
       </label>
     </div>
   );
