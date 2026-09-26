@@ -258,11 +258,20 @@ describe("the timelapse player's fills", () => {
     );
   });
 
-  it("reveals fills whole at once under reduced motion", async () => {
-    const { display, player, start, advance, schedule } = setup(sticker(), { reduced: true });
+  it("reveals fills whole at once under reduced motion, in no beat, so the strokes after start sooner", async () => {
+    const { display, player, start, advance, schedule, painted } = setup(sticker(), {
+      reduced: true,
+    });
+    const after = strokeAt(schedule, 2);
+    const ops = schedule.ops.map((scheduled) => scheduled.op);
+    const withBeat = strokeAt(scheduleTimelapse(ops, { reduced: false }), 2).at[0];
+    expect(withBeat).toBeGreaterThan(after.at[0]);
     await player.prepare();
     const { playing } = await start();
-    advance(schedule.length + 32);
+    // The first frame starts the clock at 0, so after `ms` of frames it has played `ms - 16`.
+    advance((after.at[0] + withBeat) / 2 + 16);
+    expect(painted().some((range) => range.op.T === after.op.T)).toBe(true);
+    advance(schedule.length);
     await expect(playing).resolves.toBe("done");
     expect(clips(display)).toEqual([]);
     expect(draws(display)).toHaveLength(1);
