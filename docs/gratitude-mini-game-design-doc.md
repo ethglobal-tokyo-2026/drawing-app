@@ -73,7 +73,8 @@ Under `apps/frontend/src/gratitude/` unless a path says otherwise.
 
 - Only the dominant axis counts, and motion under `deadZone` is ignored.
 - A reversal is the motion flipping direction after a peak of at least `minPeak`, between `minGapMs` and `maxGapMs` after the last flip. `resetMs` of calm breaks the run, so a single jolt never counts.
-- With motion allowed, the heart sways with the wrist, tilts with the phone's roll, and jiggles when shaken.
+- Motion counts from its first sample. Where a platform flips the motion's sign, `phoneMotion.ts` finds it from the orientation while the phone is still; the sign sets only which way the heart goes.
+- With motion allowed, the heart sways with the wrist, tilts with the phone's roll, and jiggles when shaken. On a phone with a gyroscope the roll comes from the orientation, at once. Otherwise it comes from the gravity estimate low-passed twice, which keeps a shake out of it but lags.
 - At `keepShakingAt` reversals "Keep shaking!" shows, at `cornerAt` a corner lifts, and at `unlockAt` the heart comes loose ("ポンッ") and the combo commits to shake. After that, each reversal is a hit, and the loose heart ricochets off the walls, denting them and, from ドキドキ up, knocking mini hearts off.
 - Shake needs motion permission on iPhones (below).
 
