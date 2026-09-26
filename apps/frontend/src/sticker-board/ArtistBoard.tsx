@@ -9,7 +9,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent,
 } from "react";
-import { ArtistAvatarArt } from "../artists/ArtistAvatarArt";
+import type { PersonView } from "../api/views";
 import { ART_SIZE, avatarUrl, stickerArtUrl } from "../artists/artUrl";
 import {
   artistByHandle,
@@ -19,6 +19,7 @@ import {
 } from "../artists/demoArtists";
 import { GiveSheet } from "../giving/GiveSheet";
 import { OfferSheet } from "../offers/OfferSheet";
+import { ArtistChip } from "../stickers/ArtistChip";
 import { Duration } from "../stickers/Duration";
 import { formatHandle, formatNo } from "../stickers/format";
 import { StickerFigure } from "../stickers/StickerFigure";
@@ -46,18 +47,24 @@ const FULL_GLOW = 900;
 /** The sticker menu's width, for keeping it on the board. */
 const MENU_W = 250;
 
-/** A demo sticker as the board's parts take it: an image of its art, where it was stuck. */
-const asBoardSticker = (owner: string, s: ArtistBoardSticker, z: number): BoardSticker => ({
-  id: `${owner}-${s.no}`,
-  no: s.no,
-  createdAt: s.sealedAt,
-  timeUsed: s.timeUsed,
-  blob: new Blob(),
-  width: ART_SIZE,
-  height: ART_SIZE,
-  urls: { png: stickerArtUrl(s.art) },
-  placement: { on: true, x: s.x, y: s.y, s: s.scale, r: s.rotation, z },
-});
+/**
+ * A demo sticker as the board's parts take it: an image of its art, where it was stuck. The art
+ * doubles as its mask, since its alpha is the silhouette, white edge and all.
+ */
+const asBoardSticker = (owner: string, s: ArtistBoardSticker, z: number): BoardSticker => {
+  const art = stickerArtUrl(s.art);
+  return {
+    id: `${owner}-${s.no}`,
+    no: s.no,
+    createdAt: s.sealedAt,
+    timeUsed: s.timeUsed,
+    blob: new Blob(),
+    width: ART_SIZE,
+    height: ART_SIZE,
+    urls: { png: art, mask: art },
+    placement: { on: true, x: s.x, y: s.y, s: s.scale, r: s.rotation, z },
+  };
+};
 
 /** Someone else's board has no sticker tray, so its field runs to the right inset too. */
 const visitField = (w: number, h: number): Field => {
@@ -65,25 +72,16 @@ const visitField = (w: number, h: number): Field => {
   return { ...f, w: w - 2 * f.left };
 };
 
-/** Who drew a foil sticker: their picture in a foil ring, over "ARTIST @name". */
-function ArtistChip({ handle }: { handle: string }) {
+/** Who drew a foil sticker, as its artist chip names them: a demo artist, with their picture. */
+const artistOf = (handle: string): PersonView => {
   const artist = artistByHandle.get(handle);
-  return (
-    <span className="artist-chip">
-      <span className="chip-ring">
-        {artist ? (
-          <ArtistAvatarArt avatar={artist.avatar} className="chip-avatar" />
-        ) : (
-          <span className="chip-avatar artist-avatar" />
-        )}
-      </span>
-      <span className="chip-text">
-        <span className="fine">Artist</span>
-        <b>{formatHandle(handle)}</b>
-      </span>
-    </span>
-  );
-}
+  return {
+    id: `artist-${handle}`,
+    handle,
+    name: artist?.displayName ?? formatHandle(handle),
+    ...(artist && { pictureUrl: avatarUrl(artist.avatar) }),
+  };
+};
 
 function StickerView({
   sticker,
@@ -118,7 +116,7 @@ function StickerView({
         <div className="visit-view-meta fine">
           Drawn in <Duration seconds={sticker.timeUsed} /> · {formatHandle(sticker.by ?? owner)}
         </div>
-        {sticker.by && <ArtistChip handle={sticker.by} />}
+        {sticker.by && <ArtistChip artist={artistOf(sticker.by)} />}
         <div className="visit-view-perf" />
         <QuietLink onClick={onClose}>Close</QuietLink>
       </div>
@@ -307,7 +305,7 @@ export function ArtistBoard({ artist, onBack }: Props) {
           role="menu"
           onClick={(e) => e.stopPropagation()}
         >
-          {menuSticker.by && <ArtistChip handle={menuSticker.by} />}
+          {menuSticker.by && <ArtistChip artist={artistOf(menuSticker.by)} />}
           <div className="sticker-menu-actions">
             <LabelButton
               size="sm"

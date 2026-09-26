@@ -26,7 +26,9 @@ SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/cm-deploy-%C" -o Cont
 ssh() { command ssh "${SSH_OPTS[@]}" "$@"; }
 export RSYNC_RSH="ssh ${SSH_OPTS[*]}"
 
-pnpm --dir "$ROOT" --filter frontend build
+# The live app shows the stat board's developer slip, so its test tools (the gratitude mini-game,
+# LINE and Privy's checks) can be tried inside LINE on a phone.
+VITE_DEV_SLIP=on pnpm --dir "$ROOT" --filter frontend build
 pnpm --dir "$ROOT" --filter @drawing-app/sticker-chain build:auth-server
 
 echo "→ rsync → $TARGET:$DIR"

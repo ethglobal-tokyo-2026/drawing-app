@@ -35,6 +35,12 @@ describe("LINE's one-friend picker", () => {
     expect(line.shareTargetPicker).toHaveBeenCalledWith([message], { isMultiple: false });
   });
 
+  it("opens LINE's full picker, groups and recent chats included, when any chat will do", async () => {
+    const line = fakeLine();
+    expect(await sendToOneFriend(line, [message], { anyChat: true })).toBe("sent");
+    expect(line.shareTargetPicker).toHaveBeenCalledWith([message], { isMultiple: true });
+  });
+
   it("reads a picker closed without sending as cancelled", async () => {
     const line = fakeLine({ picker: () => Promise.resolve() });
     expect(await sendToOneFriend(line, [message])).toBe("cancelled");

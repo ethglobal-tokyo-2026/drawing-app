@@ -21,13 +21,14 @@
   -webkit-user-drag: none;
 }
 
-/* A lifted corner: the image clipped at the fold, the backing under it, and the flap's paper back. */
+/* A lifted corner: the image and its foil clipped at the fold, the backing under it, and the flap's
+   paper back. */
 .sticker-figure__spot,
 .sticker-figure__flapw {
   display: none;
 }
 
-.sticker-figure.is-curled .sticker-figure__img {
+.sticker-figure.is-curled :is(.sticker-figure__img, .sticker-foil) {
   clip-path: var(--clip-in);
 }
 

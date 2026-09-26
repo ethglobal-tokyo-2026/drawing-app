@@ -3,6 +3,7 @@ import { artistByHandle } from "../artists/demoArtists";
 import { StickerBoard } from "../sticker-board/StickerBoard";
 import { DrawingScreen, type DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
 import { lazyWithPreload, usePreloadWhenIdle } from "../ui/lazyWithPreload";
+import { MotionPermissionCard } from "./MotionPermissionCard";
 import { openedFrom, type View } from "./openedView";
 import { ShopScreen } from "./ShopScreen";
 import { TabBar } from "./TabBar";
@@ -124,6 +125,7 @@ export default function App() {
           setVisiting(undefined);
         }}
       />
+      <MotionPermissionCard />
       {giftClaimToken && (
         // Liner while the gift's code loads, so the board doesn't show first.
         <Suspense fallback={<div style={GIFT_LOADING} />}>

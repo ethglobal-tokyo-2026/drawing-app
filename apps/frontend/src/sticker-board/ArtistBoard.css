@@ -70,64 +70,6 @@
   flex: 1 0 auto;
 }
 
-/* ---------- Artist chip ---------- */
-
-.artist-chip {
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 14px 0 4px;
-  border: 1px solid var(--rule);
-  border-radius: 999px;
-  background: var(--liner-lift);
-  box-shadow: var(--shadow-label);
-}
-
-.visit-view .artist-chip {
-  align-self: center;
-}
-
-/* A turning foil ring around the artist's picture. */
-.chip-ring {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: conic-gradient(#ff8fd0, #ffe27a, #8cf5c0, #7fe0ff, #b69cff, #ff8fd0);
-  animation: chip-turn 7s linear infinite;
-}
-
-@keyframes chip-turn {
-  to {
-    rotate: 360deg;
-  }
-}
-
-.chip-avatar {
-  width: 27px;
-  height: 27px;
-  box-shadow: none;
-  animation: chip-turn 7s linear infinite reverse;
-}
-
-.chip-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.1;
-}
-
-.chip-text .fine {
-  color: var(--graphite);
-}
-
-.chip-text b {
-  font-size: 14px;
-  font-weight: 760;
-}
-
 @keyframes menu-in {
   from {
     opacity: 0;
