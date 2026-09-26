@@ -376,25 +376,22 @@ export function createTrayEngine(
   );
   board.append(root);
 
-  const zip = createZipper(col, {
-    chainAt: COL - 15,
-    insets: [6, 6],
-    maxGap: GMAX,
-  });
+  const zip = createZipper(col, { chainAt: COL - 15, insets: [6, 6], maxGap: GMAX });
+  /** The tray's fixed words, in the app's language. */
+  const words = {
+    sheets: i18next.t(($) => $.stickerBoard.tray.sheets),
+    tabs: i18next.t(($) => $.stickerBoard.tray.tabs),
+    new: i18next.t(($) => $.stickerBoard.tray.new),
+    putBack: i18next.t(($) => $.stickerBoard.tray.putBack),
+  };
   const stack = make("div", "tray__stack");
   stack.setAttribute("role", "group");
-  stack.setAttribute(
-    "aria-label",
-    i18next.t(($) => $.stickerBoard.tray.sheets),
-  );
+  stack.setAttribute("aria-label", words.sheets);
   // It holds focus when paging leaves nothing else to hold it.
   stack.tabIndex = -1;
   const tabsEl = make("div", "tray__tabs");
   tabsEl.setAttribute("role", "tablist");
-  tabsEl.setAttribute(
-    "aria-label",
-    i18next.t(($) => $.stickerBoard.tray.tabs),
-  );
+  tabsEl.setAttribute("aria-label", words.tabs);
   const deepTop = make("i", "tray__deep tray__deep--top");
   const deepBot = make("i", "tray__deep tray__deep--bot");
   // The stack shows through a window clipped to the mouth: w1 and c1 cut its top, w2 and c2 its foot.
@@ -571,16 +568,7 @@ export function createTrayEngine(
     fit.style.height = px(q.h);
     fit.style.setProperty("--m", cssUrl(maskOf(s)));
     el.append(fit);
-    if (isNew)
-      el.append(
-        decorative(
-          make(
-            "span",
-            "tray__new",
-            i18next.t(($) => $.stickerBoard.tray.new),
-          ),
-        ),
-      );
+    if (isNew) el.append(decorative(make("span", "tray__new", words.new)));
     return el;
   }
   function rangeOf(f: number) {
@@ -641,10 +629,8 @@ export function createTrayEngine(
       const more = make("button", "tray__depth", icon(ICONS.stack), make("span", "", `+${hidden}`));
       more.type = "button";
       more.style.transform = `translateY(${SHEET.h + k * PEEK + 3}px)`;
-      more.setAttribute(
-        "aria-label",
-        i18next.t(($) => $.stickerBoard.tray.moreSheets, { count: hidden }),
-      );
+      const spread = i18next.t(($) => $.stickerBoard.tray.moreSheets, { count: hidden });
+      more.setAttribute("aria-label", spread);
       kids.push(more);
     }
     stack.replaceChildren(...kids);
@@ -696,15 +682,8 @@ export function createTrayEngine(
 
   /* ---------------------------------------------------------------- the folder tabs: the stack's dividers */
   const tabs = FILTERS.map((f) => {
-    const t = make(
-      "button",
-      "tray__tab",
-      make(
-        "span",
-        "",
-        i18next.t(($) => $.stickerBoard.tray.filters[f]),
-      ),
-    );
+    const name = i18next.t(($) => $.stickerBoard.tray.filters[f]);
+    const t = make("button", "tray__tab", make("span", "", name));
     t.type = "button";
     t.setAttribute("role", "tab");
     t.dataset.filter = f;
@@ -1220,10 +1199,7 @@ export function createTrayEngine(
     if (ui.pulled) void sendHome({ instant: true });
     const x = make("button", "tray__x", icon(ICONS.x));
     x.type = "button";
-    x.setAttribute(
-      "aria-label",
-      i18next.t(($) => $.stickerBoard.tray.putBack),
-    );
+    x.setAttribute("aria-label", words.putBack);
     const wrap = make("div", "tray__pulled", sheetEl(f, "is-top is-pulled", 0), x);
     wrap.style.transform = `translate(${px(x0)},${px(y0)})`;
     fly.append(wrap);
