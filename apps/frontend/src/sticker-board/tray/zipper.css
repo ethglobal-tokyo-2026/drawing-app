@@ -398,3 +398,10 @@
 .zip__slider:focus-visible .zip__ring {
   opacity: 1;
 }
+
+/* The pull swings on for seconds after each run. On layers of their own, it and its shadow move
+   without repainting the Zipper. */
+.zip__flop,
+.zip__shadowpart {
+  will-change: transform;
+}

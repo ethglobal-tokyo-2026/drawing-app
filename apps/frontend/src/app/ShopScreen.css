@@ -7,10 +7,3 @@
   padding: 8px 0 24px;
   background: var(--liner);
 }
-
-.shop__soon {
-  max-width: 30ch;
-  margin: 8px auto 0;
-  color: var(--graphite);
-  text-align: center;
-}
