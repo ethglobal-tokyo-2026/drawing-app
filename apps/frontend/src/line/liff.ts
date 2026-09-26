@@ -100,6 +100,8 @@ async function initMock() {
     isInClient: true,
     isApiAvailable: true,
     shareTargetPicker: { status: "success" },
+    // LIFF Mock reports a group chat; a gift link opens as it would from a 1:1 chat.
+    getContext: data.getContext && { ...data.getContext, type: "utou", utouId: "mock-utou" },
   }));
   Object.assign(window, { liffMock: mocked.$mock });
   // The mock's profile calls need a login call first, as a real browser would.

@@ -1,9 +1,9 @@
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState, type CSSProperties } from "react";
 import { artistByHandle } from "../artists/demoArtists";
 import { StickerBoard } from "../sticker-board/StickerBoard";
 import { DrawingScreen, type DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
 import { lazyWithPreload, usePreloadWhenIdle } from "../ui/lazyWithPreload";
-import { viewFromPath, type View } from "./openedView";
+import { openedFrom, type View } from "./openedView";
 import { ShopScreen } from "./ShopScreen";
 import { TabBar } from "./TabBar";
 import { useFocusLoop } from "./useFocusLoop";
@@ -18,6 +18,16 @@ const OPENED_FROM_TABS = [ExploreScreen];
 const ArtistBoard = lazyWithPreload("someone else's sticker board", () =>
   import("../sticker-board/ArtistBoard").then((m) => m.ArtistBoard),
 );
+// Only a gift message's link opens a gift, so its code loads when one does.
+const ReceiveGiftDialog = lazyWithPreload("the gift", () =>
+  import("../receiving/ReceiveGiftDialog").then((m) => m.ReceiveGiftDialog),
+);
+const GIFT_LOADING: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  zIndex: "var(--z-sheet)",
+  background: "var(--liner)",
+};
 
 /** LINE's header shows the page title. */
 const TITLES: Record<View, string> = {
@@ -30,10 +40,18 @@ const TITLES: Record<View, string> = {
 export default function App() {
   const phone = useRef<HTMLDivElement>(null);
   const drawingScreen = useRef<DrawingScreenHandle>(null);
-  // The sticker board is home. Draw is the board's key, not a tab. A chat menu link opens its own screen.
-  const [view, setView] = useState<View>(() => viewFromPath(location.pathname));
-  // Set from the seal until the next sticker starts; the board lands it with a "stick" animation.
+  // The sticker board is home. Draw is the board's key, not a tab. A chat menu link opens its own
+  // screen; a gift message's link opens its gift over the board.
+  const [opened] = useState(() => openedFrom(location.pathname));
+  const [view, setView] = useState<View>(opened.view);
+  // Held in memory while ReceiveGiftDialog is open over the board.
+  const [giftClaimToken, setGiftClaimToken] = useState(opened.giftClaimToken);
+  // Set from the seal until the next sticker starts, when Draw starts a new one.
   const [sealedId, setSealedId] = useState<string>();
+  // The sticker that last arrived, sealed or received; the board lands it with a "stick" animation.
+  const [freshId, setFreshId] = useState<string>();
+  // A received gift mounts the board again, so it loads with the sticker on it.
+  const [boardLoads, setBoardLoads] = useState(0);
   // Someone else's sticker board, opened from Explore over it, so Explore keeps its search and scroll.
   const [visiting, setVisiting] = useState<string>();
   const visitedArtist = visiting ? artistByHandle.get(visiting) : undefined;
@@ -45,16 +63,18 @@ export default function App() {
   }, [view]);
 
   useEffect(() => {
-    document.title = TITLES[view];
-  }, [view]);
+    // While a gift is open, its dialog names the page.
+    if (!giftClaimToken) document.title = TITLES[view];
+  }, [view, giftClaimToken]);
 
-  // Once opened, a menu link's path goes, so a reload after moving on doesn't jump back to it.
+  // Once opened, a link's path goes, so a reload after moving on doesn't jump back to it, and a
+  // reload with a gift open lands on the board: the gift message opens it again.
   useEffect(() => {
-    if (viewFromPath(location.pathname) === "board") return;
+    if (opened.view === "board" && !opened.giftClaimToken) return;
     const url = new URL(location.href);
     url.pathname = "/";
     history.replaceState(history.state, "", url);
-  }, []);
+  }, [opened]);
 
   // While drawing, the drawing screen's controls and the grabber are all there is to focus.
   useFocusLoop(phone, drawing);
@@ -72,11 +92,16 @@ export default function App() {
         <DrawingScreen
           ref={drawingScreen}
           active={drawing}
-          onSealed={setSealedId}
+          onSealed={(id) => {
+            setSealedId(id);
+            setFreshId(id);
+          }}
           onNewSticker={() => setSealedId(undefined)}
           onGoToBoard={() => setView("board")}
         />
-        {view === "board" && <StickerBoard freshId={sealedId} onDraw={openDrawing} />}
+        {view === "board" && (
+          <StickerBoard key={boardLoads} freshId={freshId} onDraw={openDrawing} />
+        )}
         {/* Each in its own boundary, so Explore stays up while an artist's board loads over it. */}
         {view === "explore" && (
           <Suspense fallback={null}>
@@ -99,6 +124,20 @@ export default function App() {
           setVisiting(undefined);
         }}
       />
+      {giftClaimToken && (
+        // Liner while the gift's code loads, so the board doesn't show first.
+        <Suspense fallback={<div style={GIFT_LOADING} />}>
+          <ReceiveGiftDialog
+            giftClaimToken={giftClaimToken}
+            onClose={(receivedId) => {
+              setGiftClaimToken(undefined);
+              if (!receivedId) return;
+              setFreshId(receivedId);
+              setBoardLoads((n) => n + 1);
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
