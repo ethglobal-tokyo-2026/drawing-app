@@ -398,7 +398,15 @@ export function StickerDetail({
                 {t(($) => $.stickerBoard.detail.checkFailed, {
                   reason: errorReason(detail.error),
                 })}{" "}
-                <QuietLink onClick={detail.retry}>{t(($) => $.stickerBoard.tryAgain)}</QuietLink>
+                {/* It goes as it retries, so focus moves to the dialog, which holds its keys. */}
+                <QuietLink
+                  onClick={() => {
+                    root.current?.focus({ preventScroll: true });
+                    detail.retry();
+                  }}
+                >
+                  {t(($) => $.stickerBoard.tryAgain)}
+                </QuietLink>
               </p>
             )}
             {trail.length > 0 && ownerId && (
