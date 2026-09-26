@@ -1,30 +1,83 @@
-import { listStickers, type Placement, type StickerRecord } from "../stickers/stickerStorage";
-import { stickerUrls, type StickerUrls } from "../stickers/stickerUrls";
+import type { BoardSticker as ApiBoardSticker } from "../api/contract";
+import { toMs, toPerson, toRecordPlacement, toSticker, type PersonView } from "../api/views";
+import type { Placement } from "../stickers/stickerStorage";
+import type { StickerUrls } from "../stickers/stickerUrls";
 import { freeSpot, nextZ } from "./placement";
 
-/** A stored sticker as the board holds it: with its images' URLs and a settled placement. */
-export type BoardSticker = StickerRecord & { urls: StickerUrls; placement: Placement };
+/** A sticker as the board holds it: what it draws, where it sits, and where its gift is. */
+export interface BoardSticker {
+  id: string;
+  /** Printed as No.0147. */
+  no: number;
+  /** When it was sealed, in milliseconds. */
+  createdAt: number;
+  timeUsed: number;
+  width: number;
+  height: number;
+  /** The cut line, an SVG path in image pixels; absent for stickers sealed before it was kept. */
+  outline?: string;
+  urls: StickerUrls;
+  placement: Placement;
+  /** The Original Artist. */
+  artist: PersonView;
+  /** False once given away: a given sticker silhouette on the board, an empty spot in the tray. */
+  held: boolean;
+  /** Who received it, once it's given away. */
+  givenTo: { receiver: PersonView; receivedAt: number } | null;
+  /**
+   * Its gift while packed or on its way. `to` is known only for a gift given to an artist in the app;
+   * LINE's friend picker never says who was picked.
+   */
+  openGift: { id: string; status: "packed" | "sent"; to?: string } | null;
+}
+
+/** A board sticker as it comes from the API; its placement may not be settled yet. */
+export type UnplacedBoardSticker = Omit<BoardSticker, "placement"> & {
+  placement: Placement | null;
+};
+
+export function toBoardSticker(b: ApiBoardSticker): UnplacedBoardSticker {
+  const sticker = toSticker(b.sticker);
+  return {
+    id: sticker.id,
+    no: sticker.no,
+    createdAt: sticker.sealedAt,
+    timeUsed: sticker.timeUsed,
+    width: sticker.width,
+    height: sticker.height,
+    // The API sends an empty cut line for a sticker sealed before it was kept.
+    ...(sticker.outline && { outline: sticker.outline }),
+    urls: sticker.urls,
+    placement: b.placement && toRecordPlacement(b.placement),
+    artist: sticker.artist,
+    held: b.held,
+    givenTo: b.givenTo && {
+      receiver: toPerson(b.givenTo.receiver),
+      receivedAt: toMs(b.givenTo.receivedAt),
+    },
+    openGift: b.openGift,
+  };
+}
 
 /**
- * Every sticker, oldest first, with URLs the caller releases. A sticker without a placement gets a
- * free spot on top of the others, which `keep` saves so it doesn't move when others do.
+ * Settles every sticker's placement, oldest first. One without a placement gets a free spot on top
+ * of the others, and `keep` saves it so it doesn't move when others do.
  */
-export async function loadBoardStickers(
-  keep: (sticker: StickerRecord, placement: Placement) => void,
-): Promise<BoardSticker[]> {
-  const records = (await listStickers()).reverse();
-  const placements = records.flatMap((r) => (r.placement ? [r.placement] : []));
-  return records.map((record) => {
-    let placement = record.placement;
-    if (!placement) {
-      placement = {
-        on: true,
-        ...freeSpot(placements.filter((p) => p.on)),
-        z: nextZ(placements),
-      };
-      placements.push(placement);
-      keep(record, placement);
-    }
-    return { ...record, urls: stickerUrls(record), placement };
+export function placeUnplaced(
+  stickers: readonly UnplacedBoardSticker[],
+  keep: (sticker: BoardSticker) => void,
+): BoardSticker[] {
+  const placements = stickers.flatMap((s) => (s.placement ? [s.placement] : []));
+  return stickers.map((s) => {
+    if (s.placement) return { ...s, placement: s.placement };
+    const placement: Placement = {
+      on: true,
+      ...freeSpot(placements.filter((p) => p.on)),
+      z: nextZ(placements),
+    };
+    placements.push(placement);
+    const placed = { ...s, placement };
+    keep(placed);
+    return placed;
   });
 }

@@ -3,7 +3,8 @@ import { giftStatusBySticker } from "../giving/giftStore";
 import type { Placement as RecordPlacement, StickerRecord } from "../stickers/stickerStorage";
 import type { StickerUrls } from "../stickers/stickerUrls";
 import { ApiError, type ApiClient } from "./apiClient";
-import type { BoardSticker, Gift, Person, Placement, Sticker, StickerPlacement } from "./contract";
+import { toApiPlacement } from "./views";
+import type { BoardSticker, Gift, Person, Sticker, StickerPlacement } from "./contract";
 
 /** Gift Messages go unreceived after this long, as on the server. */
 const GIFT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
@@ -31,15 +32,6 @@ const needsServer = () =>
       detail: "Opening a gift needs the app's server, which isn't running yet.",
     }),
   );
-
-const toContractPlacement = (p: RecordPlacement): Placement => ({
-  onBoard: p.on,
-  x: p.x,
-  y: p.y,
-  scale: p.s,
-  rotation: p.r,
-  z: p.z,
-});
 
 /**
  * The API as this device can answer it, until the server exists. Every sticker here is yours, and
@@ -75,7 +67,7 @@ export function createDeviceApi(sources: DeviceSources): ApiClient {
   // The device keeps which stickers were seen, not when, so a seen sticker reports its arrival.
   const placementOf = (r: StickerRecord, seen: ReadonlySet<string>): StickerPlacement => ({
     stickerId: r.id,
-    placement: r.placement ? toContractPlacement(r.placement) : null,
+    placement: r.placement ? toApiPlacement(r.placement) : null,
     seenAt: seen.has(r.id) ? iso(r.createdAt) : null,
     arrivedAt: iso(r.createdAt),
   });

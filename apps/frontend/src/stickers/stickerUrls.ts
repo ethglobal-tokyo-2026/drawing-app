@@ -1,6 +1,6 @@
 import type { StickerRecord } from "./stickerStorage";
 
-/** Object URLs for a sticker's images. Whoever makes them releases them. */
+/** Object URLs for a sticker's images. They last for the page: the API client shares them between screens. */
 export interface StickerUrls {
   png: string;
   mask?: string;
@@ -18,8 +18,4 @@ export function stickerUrls(r: StickerRecord): StickerUrls {
       rim: URL.createObjectURL(r.resin.rim),
     }),
   };
-}
-
-export function releaseStickerUrls(u: StickerUrls) {
-  for (const url of [u.png, u.mask, u.spec, u.rim]) if (url) URL.revokeObjectURL(url);
 }

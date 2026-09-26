@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BoardSticker } from "../boardSticker";
 import { StickerTray, type StickerTrayHandle } from "./StickerTray";
 import type { TrayBoard } from "./trayEngine";
+import { yoursHeld } from "../testBoardSticker";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -21,7 +22,7 @@ const sticker = (id: string, createdAt: number, on: boolean): BoardSticker => ({
   no: createdAt,
   createdAt,
   timeUsed: 120,
-  blob: new Blob(),
+  ...yoursHeld,
   width: 100,
   height: 80,
   // A stored cut line, so its shape is known without reading an image.

@@ -6,6 +6,7 @@ import type { BoardSticker } from "./boardSticker";
 import { fieldOf } from "./placement";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import { useBoardGestures } from "./useBoardGestures";
+import { yoursHeld } from "./testBoardSticker";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -19,7 +20,7 @@ const sticker: BoardSticker = {
   no: 1,
   createdAt: 1,
   timeUsed: 60,
-  blob: new Blob(),
+  ...yoursHeld,
   width: 100,
   height: 80,
   urls: { png: "a.png" },

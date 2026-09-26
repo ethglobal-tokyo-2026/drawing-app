@@ -10,6 +10,9 @@ import {
   useState,
 } from "react";
 import { flushSync } from "react-dom";
+import { useApi } from "../api/useApi";
+import { useApiQuery } from "../api/useApiQuery";
+import { toApiPlacement, type PersonView } from "../api/views";
 import { useGiftSender } from "../giving/useGiftSender";
 import { useStickerGifts } from "../giving/useStickerGifts";
 import { DrawIcon } from "../icons/DrawIcon";
@@ -18,8 +21,7 @@ import { LIFF_ID } from "../line/liff";
 import { formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { playStick } from "../stickers/stick";
-import { updatePlacement, type Placement, type StickerRecord } from "../stickers/stickerStorage";
-import { releaseStickerUrls } from "../stickers/stickerUrls";
+import type { Placement } from "../stickers/stickerStorage";
 import { TicketCounts } from "../tickets/TicketCount";
 import { describeTickets, ticketDay } from "../tickets/tickets";
 import { useTicketState } from "../tickets/useTickets";
@@ -30,7 +32,7 @@ import { PhotoSticker } from "../ui/PhotoSticker";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { normalizeTurn } from "./boardGesture";
-import { loadBoardStickers, type BoardSticker } from "./boardSticker";
+import { placeUnplaced, toBoardSticker, type BoardSticker } from "./boardSticker";
 import { PlacedSticker } from "./PlacedSticker";
 import { GivenStickerSilhouette } from "./GivenStickerSilhouette";
 import {
@@ -64,6 +66,10 @@ const StickerDetail = lazyWithPreload("the sticker detail", () =>
   import("./StickerDetail").then((m) => m.StickerDetail),
 );
 const Giving = lazyWithPreload("Giving", () => import("../giving/Giving").then((m) => m.Giving));
+// Opened from a received sticker's detail.
+const GratitudeMiniGamePlaceholder = lazyWithPreload("the gratitude Mini-game", () =>
+  import("../gratitude/GratitudeMiniGamePlaceholder").then((m) => m.GratitudeMiniGamePlaceholder),
+);
 const StatBoard = lazyWithPreload("the stat board", () =>
   import("./stat-board/StatBoard").then((m) => m.StatBoard),
 );
@@ -152,9 +158,11 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const drawSlot = useRef<HTMLSpanElement>(null);
   const flipBack = useRef<HTMLButtonElement>(null);
   const statBoard = useRef<StatBoardHandle>(null);
+  const api = useApi();
+  const board = useApiQuery("sticker-board", (client) => client.stickerBoard());
+  // The board's own copy, which moves as stickers do; the next load replaces it.
   const [stickers, setStickers] = useState<BoardSticker[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [attempt, setAttempt] = useState(0);
+  const [loadedFrom, setLoadedFrom] = useState<object | null>(null);
   /** Stickers whose spot didn't save, and why; each goes once a save of it succeeds. */
   const [unsaved, setUnsaved] = useState<ReadonlyMap<string, string>>(() => new Map());
   const [size, setSize] = useState<{ W: number; H: number } | null>(null);
@@ -169,6 +177,12 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   /** The sticker the detail shows, among your stickers or among the ones you gave. */
   const [open, setOpen] = useState<{ id: string; mode: "yours" | "given" } | null>(null);
   const [giving, setGiving] = useState<BoardSticker | null>(null);
+  /** A received sticker being thanked, with its gift and giver. */
+  const [thanking, setThanking] = useState<{
+    giftId: string;
+    sticker: BoardSticker;
+    giver: PersonView;
+  } | null>(null);
   /** The board is turned over to its stat board. */
   const [turned, setTurned] = useState(false);
   /** The board has turned over before, so its stat board stays mounted for every turn after. */
@@ -182,42 +196,40 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const idle = usePreloadWhenIdle(OPENED_FROM_BOARD);
   useLight(!turned);
 
-  const save = useCallback((sticker: Pick<StickerRecord, "id" | "no">, placement: Placement) => {
-    updatePlacement(sticker.id, placement).then(
-      () =>
-        setUnsaved((was) => {
-          if (!was.has(sticker.id)) return was;
-          const next = new Map(was);
-          next.delete(sticker.id);
-          return next;
-        }),
-      (error: unknown) => {
-        console.error(`Saving where ${formatNo(sticker.no)} sits failed`, error);
-        setUnsaved((was) => new Map(was).set(sticker.id, reasonOf(error)));
-      },
-    );
-  }, []);
+  const save = useCallback(
+    (sticker: Pick<BoardSticker, "id" | "no">, placement: Placement) => {
+      api.saveStickerPlacement(sticker.id, toApiPlacement(placement)).then(
+        () =>
+          setUnsaved((was) => {
+            if (!was.has(sticker.id)) return was;
+            const next = new Map(was);
+            next.delete(sticker.id);
+            return next;
+          }),
+        (error: unknown) => {
+          console.error(`Saving where ${formatNo(sticker.no)} sits failed`, error);
+          setUnsaved((was) => new Map(was).set(sticker.id, reasonOf(error)));
+        },
+      );
+    },
+    [api],
+  );
 
-  // The board mounts anew on every visit, so this load is its refresh.
+  // The board mounts anew on every visit, so its load is its refresh. Each answer replaces the
+  // board's copy, and a sticker without a spot gets one, saved so it stays there.
+  const [newlyPlaced, setNewlyPlaced] = useState<readonly BoardSticker[]>([]);
+  if (board.state === "ready" && board.data !== loadedFrom) {
+    const placed: BoardSticker[] = [];
+    setLoadedFrom(board.data);
+    setStickers(placeUnplaced(board.data.boardStickers.map(toBoardSticker), (s) => placed.push(s)));
+    setNewlyPlaced(placed);
+  }
   useEffect(() => {
-    let cancelled = false;
-    let loaded: BoardSticker[] = [];
-    loadBoardStickers(save).then(
-      (list) => {
-        loaded = list;
-        if (cancelled) list.forEach((s) => releaseStickerUrls(s.urls));
-        else setStickers(list);
-      },
-      (error: unknown) => {
-        console.error("Stickers failed to load", error);
-        if (!cancelled) setLoadError(reasonOf(error));
-      },
-    );
-    return () => {
-      cancelled = true;
-      loaded.forEach((s) => releaseStickerUrls(s.urls));
-    };
-  }, [attempt, save]);
+    for (const s of newlyPlaced) save(s, s.placement);
+  }, [newlyPlaced, save]);
+  const loadError = board.state === "failed" ? board.error.message : null;
+  // You, as the API names you: the board's owner.
+  const viewerId = board.state === "ready" ? board.data.owner.id : null;
 
   useLayoutEffect(() => {
     const el = stage.current;
@@ -246,17 +258,25 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     if (landingId) landed.add(landingId);
   }, [landingId]);
 
-  // A sticker given away has left the board.
-  const onBoard = (stickers ?? []).filter(
-    (s) => s.placement.on && gifts.get(s.id)?.state !== "sent",
-  );
-  // Given away, it leaves its given sticker silhouette where it sat.
+  // A sticker given away, or on its way, has left the board.
+  const away = (s: BoardSticker) => !s.held || gifts.get(s.id)?.state === "sent";
+  const onBoard = (stickers ?? []).filter((s) => s.placement.on && !away(s));
+  // It leaves its given sticker silhouette where it sat. On its way, it keeps one until the
+  // pending gifts badge can hold it.
   const givenSilhouettes = (stickers ?? []).flatMap((s) => {
-    const gift = gifts.get(s.id);
     const mask = s.urls.mask;
-    return gift?.state === "sent" && mask
-      ? [{ sticker: s, mask, sentAt: gift.sentAt, to: gift.to }]
-      : [];
+    if (!mask) return [];
+    if (s.givenTo)
+      return [
+        {
+          sticker: s,
+          mask,
+          sentAt: s.givenTo.receivedAt,
+          to: s.givenTo.receiver.handle ?? undefined,
+        },
+      ];
+    const gift = gifts.get(s.id);
+    return gift?.state === "sent" ? [{ sticker: s, mask, sentAt: gift.sentAt, to: gift.to }] : [];
   });
   const field = useMemo(() => size && fieldOf(size.W, size.H), [size]);
   const landedNow = useCallback(() => setLandingId(undefined), []);
@@ -446,7 +466,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
               {...o}
               field={field}
               boardWidth={size.W}
-              onOpen={() => setOpen({ id: o.sticker.id, mode: "given" })}
+              onOpen={() => setOpen({ id: o.sticker.id, mode: o.sticker.held ? "yours" : "given" })}
             />
           ))}
         {field &&
@@ -507,8 +527,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           <LabelButton
             size="sm"
             onClick={() => {
-              setLoadError(null);
-              setAttempt((n) => n + 1);
+              if (board.state === "failed") board.retry();
             }}
           >
             Try again
@@ -541,32 +560,37 @@ export function StickerBoard({ freshId, onDraw }: Props) {
             liffId={LIFF_ID}
             onClose={(sent) => {
               setGiving(null);
-              // Given, it has left the board.
-              if (sent) setSelected(null);
+              // Given, it has left the board, and the board loads where its gift is.
+              if (sent) {
+                setSelected(null);
+                if (board.state === "ready") board.refresh();
+              }
             }}
           />
         </Suspense>
       )}
 
-      {open && (
+      {open && viewerId && (
         <Suspense fallback={null}>
           <StickerDetail
             // In the order they arrived, as the board loads them.
-            stickers={(stickers ?? []).filter((s) =>
-              open.mode === "given"
-                ? gifts.get(s.id)?.state === "sent"
-                : gifts.get(s.id)?.state !== "sent",
-            )}
+            stickers={(stickers ?? [])
+              .filter((s) => (open.mode === "given") !== s.held)
+              .map((s) => {
+                const gift = gifts.get(s.id);
+                return gift?.state === "sent" && gift.to && s.openGift
+                  ? { ...s, openGift: { ...s.openGift, to: gift.to } }
+                  : s;
+              })}
             startId={open.id}
             mode={open.mode}
-            handle={me.handle}
+            viewerId={viewerId}
             // It lifts off from where the sticker sits: on the board, or its given sticker silhouette.
             originOf={(id) =>
               stickerEl(id)?.querySelector<HTMLElement>(
                 ".placed-sticker__lift, .given-sticker-silhouette__art",
               ) ?? null
             }
-            gifts={gifts}
             onClose={() => setOpen(null)}
             // Back to the sticker it opened from: on the board, or its given sticker silhouette.
             returnFocus={() =>
@@ -582,6 +606,32 @@ export function StickerBoard({ freshId, onDraw }: Props) {
                   }
                 : undefined
             }
+            onSendGratitude={(gift, sticker, giver) =>
+              setThanking({ giftId: gift.id, sticker, giver })
+            }
+          />
+        </Suspense>
+      )}
+
+      {thanking && (
+        <Suspense fallback={null}>
+          <GratitudeMiniGamePlaceholder
+            giftId={thanking.giftId}
+            sticker={{
+              id: thanking.sticker.id,
+              no: thanking.sticker.no,
+              timeUsed: thanking.sticker.timeUsed,
+              createdAt: thanking.sticker.createdAt,
+              urls: thanking.sticker.urls,
+              width: thanking.sticker.width,
+              height: thanking.sticker.height,
+            }}
+            giver={{
+              handle: thanking.giver.handle ?? thanking.giver.name,
+              displayName: thanking.giver.name,
+              ...(thanking.giver.pictureUrl && { pictureUrl: thanking.giver.pictureUrl }),
+            }}
+            onClose={() => setThanking(null)}
           />
         </Suspense>
       )}

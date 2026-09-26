@@ -6,6 +6,12 @@ export const formatDay = (t: number) => {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 };
 
+/** "9.23": a day within the recent past, where the year goes without saying. */
+export const formatMonthDay = (t: number) => {
+  const d = new Date(t);
+  return `${d.getMonth() + 1}.${d.getDate()}`;
+};
+
 /** Whole minutes and the seconds past them; the seconds are left out on the minute. */
 function durationParts(seconds: number) {
   const whole = Math.max(0, Math.round(seconds));
