@@ -138,7 +138,7 @@ export const ticketsSchema = z.object({
       id: z.number().int(),
       dayIndex: count,
       kind: z.enum(ticketKinds),
-      /** For the ticket stubs; null until its sticker is sealed. */
+      /** For the ticket stubs, with its outline simplified; null until its sticker is sealed. */
       sticker: z
         .object({ id: z.string(), outline: z.string(), width: positiveInt, height: positiveInt })
         .nullable(),

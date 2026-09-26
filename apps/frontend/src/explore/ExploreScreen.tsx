@@ -209,7 +209,7 @@ function ThisWeek({
 const StickerImage = ({ sticker, className }: { sticker: Sticker; className: string }) => (
   <img
     ref={revealOnLoad}
-    src={sticker.images.png}
+    src={sticker.images.webp.sticker}
     alt=""
     className={`sticker-image reveal-img ${className}`}
   />

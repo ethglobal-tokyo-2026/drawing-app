@@ -18,7 +18,7 @@ import { foilMaskAlpha } from "./foilMask.ts";
 sharp.cache(false);
 
 const pngKinds = stickerPngsSchema.keyof().options;
-export const webpKinds = stickerWebpsSchema.keyof().options;
+const webpKinds = stickerWebpsSchema.keyof().options;
 
 /** The sticker's WebP quality: its colors hide the loss, where the masks' edges would show it. */
 const STICKER_WEBP_QUALITY = 85;
