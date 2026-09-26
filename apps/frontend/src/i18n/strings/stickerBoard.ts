@@ -190,6 +190,37 @@ export const stickerBoard = {
       },
     },
   },
+  /** Your stat board's Age verification paper, where an Orb-verified World ID proves you're 18 or older. */
+  ageVerification: {
+    /** Your stat board, Age verification paper: its title */
+    title: { en: "Age verification", ja: "年齢確認" },
+    /** Your stat board, Age verification paper, before you've verified: what verifying does, over the Verify your age button */
+    lead: {
+      en: "Prove you’re 18 or older with a World ID verified at an Orb, which World gives only to people 18 or older. Croquis learns nothing else about you.",
+      ja: "Orbで認証したWorld IDで、18歳以上であることを証明します。Orbでの認証は18歳以上の人しか受けられません。クロッキーには、それ以外の情報は伝わりません。",
+    },
+    /** Your stat board, Age verification paper: the button that opens World ID to verify your age */
+    verify: { en: "Verify your age", ja: "年齢を確認する" },
+    /** Your stat board, Age verification paper: the button's text while World ID opens, after tapping Verify your age */
+    opening: { en: "Opening World ID…", ja: "World IDをひらいています…" },
+    /** Your stat board, Age verification paper, once World ID proved your age: in place of the button */
+    verified: { en: "Verified 18+ with World ID", ja: "World IDで18歳以上を確認済み" },
+    /** Your stat board, Age verification paper: the alert when verifying failed, with the reason */
+    failed: {
+      en: "Your age couldn’t be verified: {{reason}}",
+      ja: "年齢を確認できませんでした：{{reason}}",
+    },
+    /** Your stat board, Age verification paper: the reason in “couldn’t be verified” when World App sent a proof that isn't for verifying your age */
+    otherProof: {
+      en: "World App sent a different kind of proof. Update World App, then try again.",
+      ja: "World Appから別の種類の証明が届きました。World Appを更新してから、もう一度お試しください。",
+    },
+    /** Your stat board, Age verification paper: the reason in “couldn’t be verified” when World App failed; {{code}} is World ID's error code, such as credential_unavailable */
+    worldAppFailed: {
+      en: "World App couldn’t finish ({{code}}).",
+      ja: "World Appで確認を完了できませんでした（{{code}}）。",
+    },
+  },
   /** The developer slip: English only, so the Japanese catalog never translates it. */
   developer: {
     label: { en: "Developer tools" },

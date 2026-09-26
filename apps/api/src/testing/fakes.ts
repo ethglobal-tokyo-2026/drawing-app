@@ -12,6 +12,8 @@ import type {
   JpycPayment,
   TicketPayments,
   TicketPaymentTarget,
+  WorldId,
+  WorldIdVerdict,
 } from "../deps.ts";
 import { keccak256 } from "../keccak256.ts";
 import { createDevLineVerifier } from "../services/devSignIn.ts";
@@ -217,3 +219,27 @@ export const fakeEns = (writer: NameWriter | null = null): EnsDeps => ({
   writer,
   naming: createNamingQueue(),
 });
+
+/**
+ * World ID without World: it signs any request, and gives each proof `verdict`, or rejects with it
+ * when it's an Error. `proofs` holds every proof sent to World.
+ */
+export function fakeWorldId(verdict: WorldIdVerdict | Error = { verified: true, nullifier: null }) {
+  const proofs: Record<string, unknown>[] = [];
+  const worldId: WorldId = {
+    appId: "app_test",
+    environment: "production",
+    signRequest: () => ({
+      rp_id: "rp_test",
+      nonce: "0x01",
+      created_at: 1,
+      expires_at: 301,
+      signature: "0x02",
+    }),
+    verifyProof: (proof) => {
+      proofs.push(proof);
+      return verdict instanceof Error ? Promise.reject(verdict) : Promise.resolve(verdict);
+    },
+  };
+  return Object.assign(worldId, { proofs });
+}

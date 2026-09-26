@@ -1,4 +1,6 @@
 import type {
+  AgeProof,
+  AgeVerificationRequest,
   ApiErrorCode,
   ErrorBody,
   Explore,
@@ -57,6 +59,10 @@ interface TicketPurchase {
 export interface ApiClient {
   /** POST /api/me/language-choice: Settings' language, or null to follow LINE's. */
   setLanguageChoice: (languageChoice: Me["languageChoice"]) => Promise<Me>;
+  /** POST /api/me/age-verification/request: IDKit's settings for asking World App for the proof. */
+  ageVerificationRequest: () => Promise<AgeVerificationRequest>;
+  /** POST /api/me/age-verification: World App's proof that you're 18 or older. */
+  verifyAge: (proof: AgeProof) => Promise<Me>;
 
   /** GET /api/sticker-boards/:userId; `me` for your own. */
   stickerBoard: (userId?: string) => Promise<StickerBoard>;

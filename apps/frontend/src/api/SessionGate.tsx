@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { errorMessage } from "../i18n/errorMessage";
 import { currentLanguage } from "../i18n/i18n";
 import { followAccountLanguage } from "../i18n/pageLanguage";
@@ -11,7 +11,7 @@ import type { Me } from "@drawing-app/api/client";
 import { earlySession, type EarlySession } from "./earlySession";
 import { HandlePrompt } from "./HandlePrompt";
 import type { SessionApi } from "./httpApi";
-import { MeContext } from "./meContext";
+import { MeContext, SetMeContext } from "./meContext";
 import "../line/LineGate.css";
 
 const describe = (error: unknown) => (error instanceof Error ? error.message : String(error));
@@ -144,6 +144,8 @@ export function SessionGate({
     };
   }, [session, idToken, claims, currentLineUserId, early, attempt]);
 
+  const setReadyMe = useCallback((me: Me) => setState({ step: "ready", me }), []);
+
   const retry = async () => {
     if (state.step !== "failed") return;
     if (!needsLine(state.error)) {
@@ -174,7 +176,9 @@ export function SessionGate({
         onChosen={(me) => setState({ step: "ready", me })}
       />
     ) : (
-      <MeContext value={state.me}>{children}</MeContext>
+      <MeContext value={state.me}>
+        <SetMeContext value={setReadyMe}>{children}</SetMeContext>
+      </MeContext>
     );
   }
   return (

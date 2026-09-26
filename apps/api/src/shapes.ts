@@ -67,6 +67,8 @@ export const meSchema = personSchema.extend({
   createdAt: isoTimeSchema,
   /** True until the handle prompt is answered. */
   needsHandle: z.boolean(),
+  /** When World ID proved you're 18 or older; null until it has. */
+  ageVerifiedAt: isoTimeSchema.nullable(),
   /** NEW in your sticker tray. */
   newStickerCount: count,
   /** The pink tag. */
@@ -85,6 +87,7 @@ export const toMe = (
   languageChoice: user.languageChoice,
   createdAt: toIsoTime(user.createdAt),
   needsHandle: user.handle === null,
+  ageVerifiedAt: toIsoTime(user.ageVerifiedAt),
   ...counts,
 });
 
