@@ -21,27 +21,39 @@
 - **Existing pieces to use, not rebuild:** `ui/Key`, `ui/LabelButton`, `ui/QuietLink`, `ui/Sheet`, `ui/PhotoSticker`, `ui/useFocusTrap`, `ui/useReducedMotion`, `ui/useBackToClose` (overlays on the Back stack), `stickers/StickerFigure`, `stickers/Duration` and `formatDuration`, `stickers/format.ts`, `giving/GiftBag`, `line/friendPicker.ts` (the one `liff.shareTargetPicker` call).
 - **Screenshots:** 390 × 844, beside the drafts' renders in `~/projects/ethglobal-tokyo-2026-design-drafts/drawing-app/.impeccable/review/screens-local/` (files named by gallery step, e.g. `0NN-receive--…jpeg`). List every difference in the report.
 
+## Status and what the streams build on
+
+- **Wave 0 is done** on `gifts/base` (a227b8f, merged with `main` at 7315ac7, fixtures at a09bd17). What exists, as built:
+  - `api/contract.ts`, `api/apiClient.ts` (`ApiClient`, `ApiError`, `apiError()`), `api/apiContext.ts`, `api/ApiProvider.tsx`, `api/useApi.ts`, `api/useApiQuery.ts`, `api/views.ts` (`PersonView`, `StickerView`, `toPerson`, `toSticker`, `toMs`), `api/deviceApi.ts`, `api/ApiRoot.tsx` (mounted in `main.tsx` inside `LineGate`), `api/testing.tsx` (`emptyApi(overrides)`, `renderWithApi(ui, client)`, `TEST_OWNER`), `gratitude/GratitudeMiniGamePlaceholder.tsx` (its props type is `GratitudeMiniGameProps`).
+  - **The mock:** `api/mock/index.ts`'s `createMockApi({ base, latencyMs })` applies `receivingOverlay`, `givingOverlay` and `boardOverlay` in that order. An overlay is `(below: ApiClient) => Partial<ApiClient>`: it answers the methods it overrides and calls `below` for the rest. Overlays share state through their own module's exports (Receiving exports the stickers it gave out; Giving exports the gifts its pretend friend received; the board overlay reads both).
+  - **Fixtures:** `people.mika`, `people.ken`, `people.bob` are Explore's demo artists (`artists/demoArtists.ts`) as `Person`s, with `avatarUrl` pictures; `imagesOf(artKey)` uses `stickerArtUrl`, 224 × 224, the art doubling as its mask.
+- **Already on `main` from the Explore work (a teammate's PR), which this plan builds on rather than duplicating:**
+  - `sticker-board/ArtistBoard.tsx`: someone else's board, with an interim foil (`.placed-sticker.is-foiled`, a static colored drop-shadow edge in `StickerBoard.css`) and a local `ArtistChip` function.
+  - `PlacedSticker`'s `foil` and `glow` props.
+  - `giving/GiveSheet.tsx` and `StickerPicker.tsx`: giving to a demo artist in the app. It records the gift as `sent` with a `to` handle in the device's gift store, and `giftTag(from, to)` prints "For @mika". `GivenStickerSilhouette` takes `to`.
+  - `stickers/useKeptStickers.ts`, `sticker-board/stat-board/StatCork.tsx`.
+- **The Foil stream replaces the interim foil and chip:** `StickerFoil` goes where `.is-foiled` is (PlacedSticker's `foil` prop now renders it), the drop-shadow rule goes, and `ArtistBoard.tsx` imports the shared `ArtistChip` in place of its local one. One foil, one chip.
+
 ## File structure
 
-| Path (under `apps/frontend/src/`)                   | Responsibility                                                                    | Wave / stream  |
-| --------------------------------------------------- | --------------------------------------------------------------------------------- | -------------- |
-| `api/contract.ts`                                   | The REST doc's shapes and these routes' requests and responses                    | 0              |
-| `api/apiClient.ts`                                  | `ApiClient`, `ApiError`, `apiError()`                                             | 0              |
-| `api/ApiProvider.tsx`                               | The client in React context; `useApi()`                                           | 0              |
-| `api/useApiQuery.ts` (+test)                        | One load: loading, failed with retry, ready with refresh                          | 0              |
-| `api/deviceApi.ts` (+test)                          | The build's client until the server exists                                        | 0              |
-| `api/views.ts` (+test)                              | Contract → view models shared by several screens (`PersonView`, `StickerView`)    | 0              |
-| `api/mock/index.ts`                                 | `createMockApi()`: `deviceApi` plus each feature's overlay, with latency          | 0              |
-| `api/mock/fixtures.ts`                              | Fixture builders (`person`, `sticker`, `boardSticker`, `gift`) and fixture people | 0              |
-| `api/mock/stickers/*.svg`                           | Fixture sticker art                                                               | 0              |
-| `api/mock/receiving.ts`, `giving.ts`, `board.ts`    | Each feature's overlay                                                            | 1: that stream |
-| `api/testing.tsx`                                   | `renderWithApi()` for UI tests                                                    | 0              |
-| `gratitude/GratitudeMiniGamePlaceholder.tsx` (+css) | Stands in for the Mini-game                                                       | 0              |
-| `receiving/*`                                       | ReceiveGiftDialog, the pull tab, the refusals, the Send gratitude sheet           | 1: Receiving   |
-| `giving/*` (new files), `line/friendPicker.ts`      | "Can't find them?", the badge, the giver's notice, the gift message               | 1: Giving      |
-| `stickers/StickerFoil.*`, `stickers/ArtistChip.*`   | Foil and the artist chip                                                          | 1: Foil        |
-| `sticker-board/*` (listed in its section)           | The board on the client, silhouettes, the detail's states                         | 1: Board data  |
-| `public/terms.html`, `public/privacy.html`          | The placeholder pages                                                             | 1: Receiving   |
+| Path (under `apps/frontend/src/`)                   | Responsibility                                                                                                              | Wave / stream  |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| `api/contract.ts`                                   | The REST doc's shapes and these routes' requests and responses                                                              | 0              |
+| `api/apiClient.ts`                                  | `ApiClient`, `ApiError`, `apiError()`                                                                                       | 0              |
+| `api/ApiProvider.tsx`                               | The client in React context; `useApi()`                                                                                     | 0              |
+| `api/useApiQuery.ts` (+test)                        | One load: loading, failed with retry, ready with refresh                                                                    | 0              |
+| `api/deviceApi.ts` (+test)                          | The build's client until the server exists                                                                                  | 0              |
+| `api/views.ts` (+test)                              | Contract → view models shared by several screens (`PersonView`, `StickerView`)                                              | 0              |
+| `api/mock/index.ts`                                 | `createMockApi()`: `deviceApi` plus each feature's overlay, with latency                                                    | 0              |
+| `api/mock/fixtures.ts`                              | Fixture builders (`sticker`, `boardSticker`, `gift`, `imagesOf`) and `people` (mika, ken, bob), from Explore's demo artists | 0              |
+| `api/mock/receiving.ts`, `giving.ts`, `board.ts`    | Each feature's overlay                                                                                                      | 1: that stream |
+| `api/testing.tsx`                                   | `renderWithApi()` for UI tests                                                                                              | 0              |
+| `gratitude/GratitudeMiniGamePlaceholder.tsx` (+css) | Stands in for the Mini-game                                                                                                 | 0              |
+| `receiving/*`                                       | ReceiveGiftDialog, the pull tab, the refusals, the Send gratitude sheet                                                     | 1: Receiving   |
+| `giving/*` (new files), `line/friendPicker.ts`      | "Can't find them?", the badge, the giver's notice, the gift message                                                         | 1: Giving      |
+| `stickers/StickerFoil.*`, `stickers/ArtistChip.*`   | Foil and the artist chip                                                                                                    | 1: Foil        |
+| `sticker-board/*` (listed in its section)           | The board on the client, silhouettes, the detail's states                                                                   | 1: Board data  |
+| `public/terms.html`, `public/privacy.html`          | The placeholder pages                                                                                                       | 1: Receiving   |
 
 ---
 
