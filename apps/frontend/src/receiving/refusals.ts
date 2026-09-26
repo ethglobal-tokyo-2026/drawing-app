@@ -87,7 +87,7 @@ export function refusalScreen(kind: RefusalKind, giver: PersonView | null): EndS
 
 /** A preview that failed: what failed, from the error, and Try again. */
 export const previewFailedScreen = (message: string): EndScreen => ({
-  title: i18next.t(($) => $.receiving.previewFailed),
+  title: i18next.t(($) => $.receiving.previewFailed.title),
   line: message,
   bag: null,
   action: "tryAgain",

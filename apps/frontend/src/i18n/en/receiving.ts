@@ -1,4 +1,23 @@
 export const receiving = {
+  /** Names the dialog, and LINE's header while it's open. `_unknownGiver` is before the preview names them. */
+  title: "A gift from {{name}}",
+  title_unknownGiver: "A gift",
+  /** The gift itself: the sealed bag and its pull tab, then the reveal and Accept. */
+  gift: {
+    title: "{{name}} sent you a sticker",
+    /** Under the sealed bag, over two lines: the pull tab, then the other ways to open it. */
+    pullTabHint: "<b>Pull the tab to open it</b><span>or double-tap, or press and hold</span>",
+    /** Names the Accept sheet for assistive tech. */
+    acceptSheet: "Accept this sticker",
+    /** Names the person opening it. */
+    forYou: "This sticker is for you, <b>{{name}}</b>.",
+    /** The sticker's number, drawing time, seal day and Original Artist. */
+    finePrint: "{{no}} · <duration/> · {{day}} · by {{artist}}",
+    notReceived: "{{no}} wasn’t received. {{reason}} Tap Accept to try again.",
+    accept: "Accept",
+    accepting: "Accepting…",
+    notNow: "Not now",
+  },
   termsLine:
     "Receiving it shows {{name}} your LINE name and picture. You agree to the <terms>Terms</terms> and <privacy>Privacy Policy</privacy>.",
   /**
@@ -46,6 +65,24 @@ export const receiving = {
       line: "Opening a gift needs the app’s server, which isn’t running yet.",
     },
   },
-  /** A preview that failed; the line under it says what failed. */
-  previewFailed: "Couldn’t open the gift",
+  /** A preview that failed, and the line for a preview that came back without what it needed. */
+  previewFailed: {
+    title: "Couldn’t open the gift",
+    withoutSticker: "The gift's preview came without its sticker.",
+    withoutRefusal: "The gift's preview refused it without saying why.",
+  },
+  /** The ways on from a gift that can't be received here. */
+  backToLine: "Back to LINE",
+  goToStickerBoard: "Go to my sticker board",
+  tryAgain: "Try again",
+  /** Asks, once a received sticker is on the board, whether to send its giver gratitude now. */
+  sendGratitude: {
+    title: "Send {{name}} gratitude?",
+    line: "It’s on your board, from {{name}}. Gratitude never expires.",
+    /** When the giver is the sticker's Original Artist. */
+    lineFromOriginalArtist:
+      "It’s on your board. {{name}} drew it in <duration/>, and gratitude never expires.",
+    send: "Send gratitude",
+    later: "Later",
+  },
 } as const;

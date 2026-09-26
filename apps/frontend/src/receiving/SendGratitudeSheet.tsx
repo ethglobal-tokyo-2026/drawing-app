@@ -1,6 +1,7 @@
 import { Clock, Heart } from "@phosphor-icons/react";
 import { useRef } from "react";
 import type { PersonView, StickerView } from "../api/views";
+import { Trans, useTranslation } from "../i18n/react";
 import { Duration } from "../stickers/Duration";
 import { formatHandle } from "../stickers/format";
 import { Key } from "../ui/Key";
@@ -27,12 +28,13 @@ interface Props {
  * for the sticker's detail.
  */
 export function SendGratitudeSheet({ sticker, giver, onSend, onLater }: Props) {
+  const { t } = useTranslation();
   const body = useRef<HTMLDivElement>(null);
   useFocusTrap(body, { onEscape: onLater });
   useBackToClose(true, onLater);
 
   const who = giver.handle === null ? giver.name : formatHandle(giver.handle);
-  const title = `Send ${who} gratitude?`;
+  const title = t(($) => $.receiving.sendGratitude.title, { name: who });
   return (
     <Sheet label={title} onClose={onLater} className="send-gratitude-sheet">
       <div ref={body}>
@@ -42,22 +44,23 @@ export function SendGratitudeSheet({ sticker, giver, onSend, onLater }: Props) {
             <h2 className="title-label send-gratitude-sheet__title">{title}</h2>
             <p className="send-gratitude-sheet__line">
               {giver.id === sticker.artist.id ? (
-                <>
-                  It’s on your board. {who} drew it in <Duration seconds={sticker.timeUsed} />, and
-                  gratitude never expires.
-                </>
+                <Trans
+                  i18nKey={($) => $.receiving.sendGratitude.lineFromOriginalArtist}
+                  values={{ name: who }}
+                  components={{ duration: <Duration seconds={sticker.timeUsed} /> }}
+                />
               ) : (
-                `It’s on your board, from ${who}. Gratitude never expires.`
+                t(($) => $.receiving.sendGratitude.line, { name: who })
               )}
             </p>
           </div>
         </div>
         <div className="send-gratitude-sheet__acts">
           <Key tone="pink" size="lg" icon={<Heart weight="fill" />} onClick={onSend}>
-            Send gratitude
+            {t(($) => $.receiving.sendGratitude.send)}
           </Key>
           <QuietLink onClick={onLater}>
-            <Clock /> Later
+            <Clock /> {t(($) => $.receiving.sendGratitude.later)}
           </QuietLink>
         </div>
       </div>
