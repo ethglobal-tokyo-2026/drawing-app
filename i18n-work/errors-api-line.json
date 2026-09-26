@@ -1,0 +1,86 @@
+{
+  "api.signIn.opening": {
+    "where": "Sign-in screen, right after the LINE sign-in screen while the app signs in to its server with LINE's ID token: the status line",
+    "ja": "シールボードをひらいています…"
+  },
+  "api.signIn.failed": {
+    "where": "Sign-in screen, when signing in to the app's server fails: the heading above the error's message and a Try again button",
+    "ja": "ログインできませんでした"
+  },
+  "api.signIn.tryAgain": {
+    "where": "Sign-in screen, after signing in to the app's server failed: the button that retries the sign-in",
+    "ja": "もう一度"
+  },
+  "api.handle.title": {
+    "where": "Handle prompt, on a first sign-in whose LINE name is already someone's handle, before the app opens: the heading",
+    "ja": "ユーザー名を決めましょう"
+  },
+  "api.handle.lead": {
+    "where": "Handle prompt, when LINE gave no display name: the line under the heading",
+    "ja": "みんながあなたやあなたのシールを見つけるときに使う名前です。"
+  },
+  "api.handle.leadNameTaken": {
+    "where": "Handle prompt, when the person's LINE display name ({{name}}) is already someone's handle: the line under the heading",
+    "ja": "@{{name}}はすでにほかの人が使っているので、あなただけのユーザー名を決めてください。みんながあなたやあなたのシールを見つけるときに使う名前です。"
+  },
+  "api.handle.field": {
+    "where": "Handle prompt: the handle input's accessible label, read by screen readers",
+    "ja": "ユーザー名"
+  },
+  "api.handle.placeholder": {
+    "where": "Handle prompt: the placeholder in the empty handle input, after the @ icon",
+    "ja": "ユーザー名"
+  },
+  "api.handle.tooLong": {
+    "where": "Handle prompt, while typing: the problem line under the input once the handle is longer than {{max}} characters",
+    "ja": "{{max}}文字を超えています。"
+  },
+  "api.handle.taken": {
+    "where": "Handle prompt, after tapping Use @handle: the problem line when the server answers handle_taken",
+    "ja": "@{{handle}}はすでに使われています。別のユーザー名をお試しください。"
+  },
+  "api.handle.invalid": {
+    "where": "Handle prompt, after tapping Use @handle: the problem line when the server answers handle_invalid",
+    "ja": "ユーザー名は「@」なしの1〜{{max}}文字です。"
+  },
+  "api.handle.couldntSave": {
+    "where": "Handle prompt, after tapping Use @handle: the problem line when saving fails any other way; {{reason}} is errorReason's message with the server's detail",
+    "ja": "ユーザー名を保存できませんでした：{{reason}}"
+  },
+  "api.handle.use": {
+    "where": "Handle prompt: the submit button once a handle is typed, naming it",
+    "ja": "@{{handle}}にする"
+  },
+  "api.handle.pick": {
+    "where": "Handle prompt: the submit button, disabled, while the handle input is empty",
+    "ja": "ユーザー名を決める"
+  },
+  "line.gate.opening": {
+    "where": "LINE sign-in screen, while LINE (LIFF) starts up as the app opens: the status line",
+    "ja": "シールボードをひらいています…"
+  },
+  "line.gate.title": {
+    "where": "LINE sign-in screen, in a browser outside LINE before LINE Login: the heading",
+    "ja": "あなたのシールボード"
+  },
+  "line.gate.lead": {
+    "where": "LINE sign-in screen, in a browser outside LINE before LINE Login: the line under the heading",
+    "ja": "LINEアカウントでひらきます。"
+  },
+  "line.gate.logIn": {
+    "where": "LINE sign-in screen, in a browser outside LINE: the button that starts LINE Login",
+    "ja": "LINEでログイン"
+  },
+  "line.gate.didntStart": {
+    "where": "LINE sign-in screen, when LINE (LIFF) fails to start or doesn't within 15 seconds: the heading",
+    "ja": "LINEが起動しませんでした"
+  },
+  "line.gate.didntStartLead": {
+    "where": "LINE sign-in screen, when LINE (LIFF) fails to start: the line under the heading, above Try again and LINE's reason in fine print",
+    "ja": "起動すると、シールボードがひらきます。接続を確認して、もう一度お試しください。"
+  },
+  "line.gate.tryAgain": {
+    "where": "LINE sign-in screen, when LINE (LIFF) fails to start: the button that reloads the page",
+    "ja": "もう一度"
+  }
+}
