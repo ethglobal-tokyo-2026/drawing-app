@@ -4,12 +4,16 @@ import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Sheet } from "../ui/Sheet";
+import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { formatNo } from "../stickers/format";
 import { useIdentity } from "../identity/useIdentity";
 import { deviceGiftStore } from "./giftStore";
 import { useKeptStickers, type KeptSticker } from "../stickers/useKeptStickers";
 import { GiftBag } from "./GiftBag";
+// Giving.css goes first, even ahead of the give-sheet.css StickerPicker brings, so the sheet's
+// resets come after its margins wherever this loads.
+import "./Giving.css";
 import { StickerPicker } from "./StickerPicker";
 import "./give-sheet.css";
 
@@ -48,6 +52,7 @@ export function GiveSheet({ to, onClose }: Props) {
   const pickedSticker = stickers?.find((s) => s.id === picked);
   const me = useIdentity();
   const root = useRef<HTMLDivElement>(null);
+  useBackToClose(true, onClose);
   useFocusTrap(root, { onEscape: onClose });
   // The confirmation replaces the key that had focus, so focus moves to its way back.
   const back = useRef<HTMLButtonElement>(null);

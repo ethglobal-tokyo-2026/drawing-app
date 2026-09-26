@@ -89,7 +89,6 @@ export const PlacedSticker = memo(function PlacedSticker({
     held === "drag" && "is-dragging",
     held === "handle" && "is-handling",
     landing && "is-landing",
-    foil && "is-foiled",
     glow > 0 && "is-glowing",
   ];
   return (
@@ -116,6 +115,8 @@ export const PlacedSticker = memo(function PlacedSticker({
           width={sticker.width}
           height={sticker.height}
           fold={fold}
+          foil={foil ? "board" : undefined}
+          no={sticker.no}
         />
       </div>
       {/* A clear frame, four corners to resize and a knob on a stem to turn. */}

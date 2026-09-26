@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import * as schema from "./schema.ts";
+import * as schema from "./schema/index.ts";
 
 const repoRoot = fileURLToPath(new URL("../../../", import.meta.url));
 

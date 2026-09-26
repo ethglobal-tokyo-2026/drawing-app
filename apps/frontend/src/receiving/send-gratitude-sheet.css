@@ -1,0 +1,72 @@
+/* Send gratitude: a sheet floating over the board, with the board in view around it. */
+
+.bottom-sheet.send-gratitude-sheet {
+  left: var(--gutter);
+  right: var(--gutter);
+  bottom: var(--gutter);
+  padding-bottom: 16px;
+  border-radius: 22px;
+  box-shadow:
+    0 0 0 0.5px rgba(28, 24, 36, 0.18),
+    3px 7px 8px rgba(28, 24, 36, 0.16),
+    8px 18px 30px rgba(28, 24, 36, 0.18);
+  animation: send-gratitude-sheet-in 380ms var(--ease-peel);
+}
+
+@keyframes send-gratitude-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(26px) scale(0.96);
+  }
+}
+
+.send-gratitude-sheet__from {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.send-gratitude-sheet__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.send-gratitude-sheet__title {
+  margin: 0;
+  font-size: 22px;
+}
+
+.send-gratitude-sheet__line {
+  margin: 3px 0 0;
+  color: var(--graphite);
+  font-size: 14.5px;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+/* Later's touch band reaches 7px above it, so the gap keeps it off the key's lip. */
+.send-gratitude-sheet__acts {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.send-gratitude-sheet__acts .key {
+  min-width: 232px;
+  max-width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bottom-sheet.send-gratitude-sheet {
+    animation: send-gratitude-sheet-fade 150ms linear;
+  }
+}
+
+@keyframes send-gratitude-sheet-fade {
+  from {
+    opacity: 0;
+  }
+}

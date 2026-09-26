@@ -22,13 +22,16 @@ class Deferred<T> {
 function setup({ backend }: { backend?: GiftBackend } = {}) {
   const store = createGiftStore(memoryStorage());
   const messages: GiftMessage[] = [];
+  /** Per picker opened: whether it was LINE's full picker. */
+  const fullPickers: boolean[] = [];
   const pickers: Deferred<GiftSendOutcome>[] = [];
   const flow = createGiveFlow({
     sticker: { id: "s1", no: 147, timeUsed: 292 },
     backend: backend ?? createLocalGiftBackend({ store, fromHandle: "alice", liffId: "123-abc" }),
     sender: {
-      send: (message) => {
+      send: (message, options) => {
         messages.push(message);
+        fullPickers.push(options?.anyChat === true);
         const picker = new Deferred<GiftSendOutcome>();
         pickers.push(picker);
         return picker.promise;
@@ -48,6 +51,7 @@ function setup({ backend }: { backend?: GiftBackend } = {}) {
     flow,
     store,
     messages,
+    fullPickers,
     picker,
     step: () => flow.getState().step,
     status: () => giftStatusBySticker(store.list()).get("s1"),
@@ -143,6 +147,24 @@ describe("giving through a LINE chat", () => {
     expect(t.messages).toHaveLength(2);
     expect(t.messages[1]).not.toEqual(t.messages[0]);
     expect(t.store.list().map((r) => r.state)).toEqual(["not_sent", "packed"]);
+  });
+
+  it("reopens the picker the giver chose, until the sticker comes back out", async () => {
+    const t = setup();
+    t.flow.chooseLineChat({ anyChat: true });
+    await wait(PICKER_DELAY);
+    t.picker().resolve("cancelled");
+    await wait();
+    t.flow.sendInLine();
+    await wait();
+    expect(t.fullPickers).toEqual([true, true]);
+
+    t.picker().resolve("cancelled");
+    await wait();
+    t.flow.takeOut();
+    await wait(TAKE_OUT);
+    await openPicker(t);
+    expect(t.fullPickers).toEqual([true, true, false]);
   });
 
   it("opens the picker once, at once, when Send in LINE beats the timer", async () => {

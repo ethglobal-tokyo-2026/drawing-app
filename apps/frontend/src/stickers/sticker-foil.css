@@ -1,0 +1,109 @@
+/* Holo foil: the sticker's silhouette dilated into a band just past its white edge. Its box is the
+   image's, so a lifted corner clips it along the same fold; the band spills past that box by its width.
+   The light moves by transform only, on its own clock, and holds still under reduced motion. */
+.sticker-foil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.sticker-foil--board {
+  --foil-w: 5px;
+}
+
+.sticker-foil--detail {
+  --foil-w: 6px;
+}
+
+.sticker-foil--sheet {
+  --foil-w: 3px;
+}
+
+/* Nine copies of the silhouette at the image's size, which together dilate it: the center, four
+   sides and four diagonals. */
+.sticker-foil__band {
+  --foil-d: calc(var(--foil-w) * 0.71);
+  --foil-s: calc(100% - var(--foil-w) * 2);
+  --foil-copies:
+    var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m);
+  --foil-at:
+    var(--foil-w) var(--foil-w), calc(var(--foil-w) * 2) var(--foil-w), 0 var(--foil-w),
+    var(--foil-w) 0, var(--foil-w) calc(var(--foil-w) * 2),
+    calc(var(--foil-w) + var(--foil-d)) calc(var(--foil-w) + var(--foil-d)),
+    calc(var(--foil-w) - var(--foil-d)) calc(var(--foil-w) + var(--foil-d)),
+    calc(var(--foil-w) + var(--foil-d)) calc(var(--foil-w) - var(--foil-d)),
+    calc(var(--foil-w) - var(--foil-d)) calc(var(--foil-w) - var(--foil-d));
+  position: absolute;
+  inset: calc(var(--foil-w) * -1);
+  overflow: hidden;
+  -webkit-mask-image: var(--foil-copies);
+  mask-image: var(--foil-copies);
+  -webkit-mask-position: var(--foil-at);
+  mask-position: var(--foil-at);
+  -webkit-mask-size: var(--foil-s) var(--foil-s);
+  mask-size: var(--foil-s) var(--foil-s);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+/* The six bands, one period apart; moving a period along their angle is seamless. */
+.sticker-foil__sheen {
+  position: absolute;
+  inset: -160px;
+  background: repeating-linear-gradient(
+    115deg,
+    var(--foil-pink) 0,
+    var(--foil-peach) 16px,
+    var(--foil-lemon) 32px,
+    var(--foil-aqua) 48px,
+    var(--foil-sky) 64px,
+    var(--foil-lilac) 80px,
+    var(--foil-pink) 96px
+  );
+  animation: sticker-foil-flow 7s linear infinite;
+  animation-delay: calc(var(--foil-i, 0) * -2.3s);
+}
+
+/* A white glint that sweeps across now and then. */
+.sticker-foil__glint {
+  position: absolute;
+  top: -40%;
+  bottom: -40%;
+  left: -60%;
+  width: 45%;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0.92) 50%,
+    rgba(255, 255, 255, 0)
+  );
+  transform: skewX(-18deg);
+  animation: sticker-foil-glint 4.2s cubic-bezier(0.45, 0.05, 0.25, 1) infinite;
+  animation-delay: calc(var(--foil-i, 0) * -1.3s);
+}
+
+@keyframes sticker-foil-flow {
+  to {
+    transform: translate3d(87px, 40.6px, 0);
+  }
+}
+
+@keyframes sticker-foil-glint {
+  0%,
+  52% {
+    transform: translateX(0) skewX(-18deg);
+  }
+  100% {
+    transform: translateX(460%) skewX(-18deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sticker-foil__sheen {
+    animation: none;
+  }
+
+  .sticker-foil__glint {
+    display: none;
+  }
+}

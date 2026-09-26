@@ -4,9 +4,13 @@ import { ArtistArt } from "../artists/ArtistArt";
 import type { Artist, ArtistBoardSticker } from "../artists/demoArtists";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
+// Giving.css goes first, even ahead of the give-sheet.css StickerPicker brings, so the sheet's
+// resets come after its margins wherever this loads.
+import "../giving/Giving.css";
 import { StickerPicker } from "../giving/StickerPicker";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Sheet } from "../ui/Sheet";
+import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatNo } from "../stickers/format";
@@ -56,6 +60,7 @@ export function OfferSheet({ sticker, holder, onClose }: Props) {
   const { stickers, error } = useKeptStickers();
   const handle = holder.handle;
   const root = useRef<HTMLDivElement>(null);
+  useBackToClose(true, onClose);
   useFocusTrap(root, { onEscape: onClose });
   // The confirmation replaces the key that had focus, so focus moves to its way back.
   const back = useRef<HTMLButtonElement>(null);

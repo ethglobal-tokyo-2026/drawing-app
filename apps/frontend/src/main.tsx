@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/keys.css";
+import { ApiRoot } from "./api/ApiRoot";
 import App from "./app/App.tsx";
 import { PrivySignIn } from "./identity/PrivySignIn";
 import { initLine } from "./line/liff";
@@ -20,6 +21,17 @@ void initLine();
 installPress();
 installLight(document.documentElement);
 
+// A deploy deletes the old build's chunks, so a page still on it reloads onto the new build before
+// opening what it hadn't loaded. Once per missing chunk: one still missing after that is a broken build.
+const RELOADED_FOR = "draw.reloadedFor";
+window.addEventListener("vite:preloadError", (event) => {
+  const missing = event.payload.message;
+  if (sessionStorage.getItem(RELOADED_FOR) === missing) return;
+  sessionStorage.setItem(RELOADED_FOR, missing);
+  event.preventDefault();
+  location.reload();
+});
+
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element #root is missing from index.html");
 
@@ -28,8 +40,10 @@ createRoot(root).render(
     <IconContext.Provider value={ICON_DEFAULTS}>
       <ToastProvider>
         <LineGate>
-          <App />
-          <PrivySignIn />
+          <ApiRoot>
+            <App />
+            <PrivySignIn />
+          </ApiRoot>
         </LineGate>
       </ToastProvider>
     </IconContext.Provider>

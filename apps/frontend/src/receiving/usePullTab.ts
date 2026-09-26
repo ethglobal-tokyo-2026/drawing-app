@@ -1,0 +1,240 @@
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import type { PullTab } from "../giving/GiftBag";
+import {
+  PULL,
+  atRest,
+  autoTear,
+  keyTear,
+  snapped,
+  springStep,
+  tearTarget,
+  ticksBetween,
+} from "./pullTab";
+
+interface Physics {
+  tear: number;
+  velocity: number;
+  target: number;
+  /** Where the drag started: the pointer's x and the tear then. */
+  drag: { x: number; tear: number } | null;
+  /** A press on the bag that tears it by itself once it's held long enough. */
+  hold: { x: number; y: number; timer: ReturnType<typeof setTimeout> } | null;
+  lastTap: number;
+  frame: number;
+  last: number;
+  torn: boolean;
+}
+
+const ARROWS = new Set(["ArrowRight", "ArrowUp", "ArrowLeft", "ArrowDown"]);
+const isArrow = (key: string): key is Parameters<typeof keyTear>[1] => ARROWS.has(key);
+
+/**
+ * The pull tab, worked by a drag along the strip, a press and hold or a double-tap on the bag, or
+ * the slider's keys, through pullTab.ts's physics. `onSnap` runs once, when the tab tears free.
+ * Under reduced motion the tear follows the finger with no spring, ticks or hint.
+ */
+export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () => void }) {
+  const [tear, setTear] = useState(0);
+  const [grip, setGrip] = useState<PullTab["grip"]>(null);
+  const [hinting, setHinting] = useState(true);
+  const [shivers, setShivers] = useState(0);
+  const latestSnap = useRef(onSnap);
+  useLayoutEffect(() => {
+    latestSnap.current = onSnap;
+  });
+  const physics = useRef<Physics>({
+    tear: 0,
+    velocity: 0,
+    target: 0,
+    drag: null,
+    hold: null,
+    lastTap: -Infinity,
+    frame: 0,
+    last: 0,
+    torn: false,
+  });
+
+  useEffect(() => {
+    const p = physics.current;
+    return () => {
+      cancelAnimationFrame(p.frame);
+      if (p.hold) clearTimeout(p.hold.timer);
+    };
+  }, []);
+
+  const show = (next: number) => {
+    physics.current.tear = next;
+    setTear(next);
+  };
+
+  const letGoOfBag = () => {
+    const p = physics.current;
+    if (p.hold) clearTimeout(p.hold.timer);
+    p.hold = null;
+  };
+
+  const stopMoving = () => {
+    const p = physics.current;
+    cancelAnimationFrame(p.frame);
+    p.frame = 0;
+    p.last = 0;
+    letGoOfBag();
+  };
+
+  const snap = () => {
+    const p = physics.current;
+    if (p.torn) return;
+    p.torn = true;
+    p.drag = null;
+    stopMoving();
+    show(1);
+    setGrip(null);
+    setHinting(false);
+    latestSnap.current();
+  };
+
+  const step = (t: number) => {
+    const p = physics.current;
+    const dt = p.last ? t - p.last : 16;
+    p.last = t;
+    const moved = reduced
+      ? { tear: p.target, velocity: 0 }
+      : springStep(p.tear, p.velocity, p.target, dt);
+    if (p.drag && !reduced && ticksBetween(p.tear, moved.tear) > 0) setShivers((n) => n + 1);
+    p.velocity = moved.velocity;
+    show(moved.tear);
+    if (p.drag && snapped(moved.tear)) return snap();
+    if (p.drag || !atRest(moved.tear, moved.velocity, p.target)) {
+      p.frame = requestAnimationFrame(step);
+    } else {
+      p.frame = 0;
+      p.last = 0;
+    }
+  };
+
+  const kick = () => {
+    const p = physics.current;
+    if (!p.frame) p.frame = requestAnimationFrame(step);
+  };
+
+  const tearByItself = () => {
+    const p = physics.current;
+    if (p.torn) return;
+    stopMoving();
+    p.drag = null;
+    setGrip(null);
+    setHinting(false);
+    if (reduced) return snap();
+    let start: number | undefined;
+    const run = (t: number) => {
+      if (p.torn) return;
+      start ??= t;
+      const next = autoTear(t - start);
+      p.target = next;
+      show(next);
+      if (next < 1) p.frame = requestAnimationFrame(run);
+      else snap();
+    };
+    p.frame = requestAnimationFrame(run);
+  };
+
+  const release = (e: ReactPointerEvent) => {
+    const p = physics.current;
+    if (!p.drag) return;
+    e.stopPropagation();
+    p.drag = null;
+    setGrip(null);
+    if (snapped(p.tear)) return snap();
+    p.target = 0;
+    kick();
+  };
+
+  const handlers: PullTab["handlers"] = {
+    onPointerDown: (e) => {
+      const p = physics.current;
+      if (p.torn) return;
+      // The bag's own press and hold is for presses off the tab.
+      e.stopPropagation();
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        // A synthetic pointer has nothing to capture; the drag still follows it.
+      }
+      stopMoving();
+      p.drag = { x: e.clientX, tear: p.tear };
+      p.target = p.tear;
+      setHinting(false);
+      setGrip("pull");
+      setShivers(0);
+      kick();
+    },
+    onPointerMove: (e) => {
+      const p = physics.current;
+      if (p.drag) p.target = tearTarget(p.drag.tear, e.clientX - p.drag.x);
+    },
+    onPointerUp: release,
+    onPointerCancel: release,
+    onKeyDown: (e) => {
+      const p = physics.current;
+      if (p.torn) return;
+      if (isArrow(e.key)) {
+        e.preventDefault();
+        setHinting(false);
+        p.target = keyTear(p.target, e.key);
+        if (snapped(p.target)) return snap();
+        kick();
+      } else if (e.key === "Enter" || e.key === " " || e.key === "End") {
+        e.preventDefault();
+        tearByItself();
+      }
+    },
+  };
+
+  /** On the bag around the tab: press and hold, or double-tap, and it tears by itself. */
+  const stage = {
+    onPointerDown: (e: ReactPointerEvent) => {
+      const p = physics.current;
+      if (p.torn || p.drag) return;
+      setHinting(false);
+      setGrip("hold");
+      letGoOfBag();
+      p.hold = {
+        x: e.clientX,
+        y: e.clientY,
+        timer: setTimeout(tearByItself, PULL.holdMs),
+      };
+    },
+    onPointerMove: (e: ReactPointerEvent) => {
+      const { hold } = physics.current;
+      if (hold && Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > PULL.holdSlopPx) {
+        letGoOfBag();
+        setGrip(null);
+      }
+    },
+    onPointerUp: () => {
+      const p = physics.current;
+      if (!p.hold) return;
+      letGoOfBag();
+      setGrip(null);
+      const now = performance.now();
+      if (now - p.lastTap < PULL.doubleTapMs) tearByItself();
+      p.lastTap = now;
+    },
+    onPointerCancel: () => {
+      letGoOfBag();
+      setGrip(null);
+    },
+  };
+
+  return {
+    tear,
+    pullTab: { handlers, grip, hinting: hinting && !reduced, shivers } satisfies PullTab,
+    stage,
+  };
+}

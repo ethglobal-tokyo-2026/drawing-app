@@ -35,10 +35,19 @@ export function createBackStack(win: BackWindow) {
   /** history.back() calls of ours whose popstate hasn't come yet. Pushes wait for them. */
   let ownPops = 0;
   const waiting: Overlay[] = [];
+  /**
+   * A closed overlay's step back, held one task: a Back already on its way lands first and takes
+   * the entry itself, and stepping back as well would take two.
+   */
+  let pending: { id: string; timer: ReturnType<typeof setTimeout> } | null = null;
+
+  const flush = () => {
+    if (ownPops === 0 && !pending) for (const overlay of waiting.splice(0)) push(overlay);
+  };
 
   function push(overlay: Overlay) {
     overlay.id = `${run}-${++made}`;
-    if (ownPops > 0) {
+    if (ownPops > 0 || pending) {
       overlay.state = "waiting";
       waiting.push(overlay);
       return;
@@ -56,6 +65,11 @@ export function createBackStack(win: BackWindow) {
 
   win.addEventListener("popstate", (e) => {
     const at = markerOf(e.state);
+    // A Back beat a close's held step to the entry: the entry's gone, so the step is too.
+    if (pending && at !== pending.id) {
+      clearTimeout(pending.timer);
+      pending = null;
+    }
     if (ownPops > 0) ownPops--;
     else if (typeof at === "string" && gone.has(at)) {
       goBack();
@@ -78,7 +92,7 @@ export function createBackStack(win: BackWindow) {
       goBack();
       return;
     }
-    if (ownPops === 0) for (const overlay of waiting.splice(0)) push(overlay);
+    flush();
   });
 
   return {
@@ -95,7 +109,15 @@ export function createBackStack(win: BackWindow) {
       if (!wasPushed || markerOf(win.history.state) !== overlay.id) return;
       stack.splice(stack.indexOf(overlay), 1);
       gone.add(overlay.id);
-      goBack();
+      const id = overlay.id;
+      pending = {
+        id,
+        timer: setTimeout(() => {
+          pending = null;
+          if (markerOf(win.history.state) === id) goBack();
+          else flush();
+        }),
+      };
     },
   };
 }
