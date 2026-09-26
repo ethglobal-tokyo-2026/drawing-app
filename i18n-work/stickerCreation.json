@@ -28,20 +28,20 @@
     "ja": "残り{{time}}、かき始めるとスタート"
   },
   "stickerCreation.timer.status.paused": {
-    "where": "Drawing screen, top left: read by screen readers after the timer dot's name while the clock is stopped by a tap on the timer or by leaving the app",
+    "where": "Drawing screen, top left: read by screen readers after the timer dot's name while the clock is stopped by a tap on the timer, by the app going to the background, or by another screen covering the drawing screen",
     "ja": "残り{{time}}、一時停止中"
   },
   "stickerCreation.timer.status.color": {
     "where": "Drawing screen, top left: read by screen readers after the timer dot's name while the color sheet is open, which stops the clock",
-    "ja": "残り{{time}}、色を選ぶ間は一時停止中"
+    "ja": "残り{{time}}、色を選んでいる間は一時停止中"
   },
   "stickerCreation.timer.status.smoothing": {
     "where": "Drawing screen, top left: read by screen readers after the timer dot's name while the smoothing bar is open, which stops the clock",
-    "ja": "残り{{time}}、手ぶれ補正を調整する間は一時停止中"
+    "ja": "残り{{time}}、手ぶれ補正を調整している間は一時停止中"
   },
   "stickerCreation.timer.status.size": {
     "where": "Drawing screen, top left: read by screen readers after the timer dot's name while a finger is on the size rail, which stops the clock",
-    "ja": "残り{{time}}、ブラシのサイズを調整する間は一時停止中"
+    "ja": "残り{{time}}、ブラシのサイズを調整している間は一時停止中"
   },
   "stickerCreation.timer.note.tapToKeepDrawing": {
     "where": "Drawing screen, top left: the white label under the timer for a few seconds when you draw on a paused sheet, also announced; the label never wraps by itself, so the line break is where it wraps",
@@ -68,11 +68,11 @@
     "ja": "チケットを使えませんでした。{{reason}}"
   },
   "stickerCreation.seal.label": {
-    "where": "Drawing screen, bottom right: the seal key's (a check mark) name for screen readers until the first tap arms it",
+    "where": "Drawing screen, bottom right: the seal key's name for screen readers until its first tap arms it; the key shows a check mark",
     "ja": "仕上げ：2回タップ"
   },
   "stickerCreation.seal.tapAgain": {
-    "where": "Drawing screen, bottom right: the chip beside the seal key after the first tap, announced, and the key's name for screen readers then; the second tap seals",
+    "where": "Drawing screen, bottom right: the chip beside the seal key after its first tap, announced to screen readers and the key's name until the second tap, which seals",
     "ja": "もう一度タップで仕上げ"
   },
   "stickerCreation.seal.empty": {
@@ -80,7 +80,7 @@
     "ja": "キャンバスが真っ白なので、仕上げるものがありません。"
   },
   "stickerCreation.seal.emptyAtTimeUp": {
-    "where": "Drawing screen: a toast when time runs out on a sheet with nothing on it, and the sheet starts over",
+    "where": "Drawing screen: a toast when time runs out after everything drawn was erased or undone; the sheet then resets",
     "ja": "時間切れです。キャンバスが真っ白だったので、何も仕上がりませんでした。"
   },
   "stickerCreation.seal.failed": {
@@ -304,8 +304,8 @@
     "ja": "{{no}}・<duration/>・{{day}}・<handle/>"
   },
   "stickerCreation.sealedCard.keepDrawing": {
-    "where": "Sealed card: the main key while you have tickets left; it opens a fresh sheet on the next ticket",
-    "ja": "続けてかく"
+    "where": "Sealed card: the main key while you have tickets left; it opens a fresh sheet for the next sticker",
+    "ja": "もう1枚かく"
   },
   "stickerCreation.sealedCard.goToStickerBoard": {
     "where": "Sealed card: the button at the bottom while you have tickets left, or the main key after your last ticket; it goes to your sticker board",
@@ -331,10 +331,10 @@
   },
   "stickerCreation.sealedCard.lastTicket": {
     "where": "Sealed card: the line under the tickets after you used your last ticket of either kind; {{time}} is when daily tickets refill (0:00 in Japanese)",
-    "ja": "これが今日最後のチケットでした。次は{{time}}に補充されます"
+    "ja": "これが今日最後のチケットでした。{{time}}に新しい無償チケットが届きます"
   },
   "stickerCreation.sealedCard.lastDailyTicket": {
     "where": "Sealed card: the line under the tickets after the day's last daily ticket, while reserve tickets remain; {{time}} is when daily tickets refill (0:00 in Japanese)",
-    "ja": "これが今日最後の無償チケットでした。次は{{time}}に補充されます"
+    "ja": "これが今日最後の無償チケットでした。{{time}}に新しい無償チケットが届きます"
   }
 }
