@@ -1,4 +1,5 @@
 import type { Db } from "@drawing-app/db";
+import type { LocalAccount } from "viem";
 import { z } from "zod";
 import type { EscrowStatus, EscrowTransfer, StickerImages } from "./shapes.ts";
 
@@ -15,6 +16,8 @@ export interface AppDeps {
   /** Null in mock chain mode: Giving sends no escrow transfer, and a deposit counts as landed at once. */
   giftChain: GiftChain | null;
   smartWallets: SmartWallets;
+  /** Null when the names under croquis.eth aren't configured: labels are kept, nothing resolves. */
+  ens: EnsDeps | null;
   sui: SuiPayments;
   /** The ticket shop quotes its packs at this price. */
   suiPrice: SuiPrice;
@@ -126,4 +129,41 @@ export interface SmartWallets {
 export interface SuiPayments {
   /** Whether a ticket pack's Sui payment has landed. */
   verifyPayment: (txDigest: string) => Promise<boolean>;
+}
+
+/** The names under croquis.eth: the CCIP-Read gateway, and the relayer that writes names. */
+export interface EnsDeps {
+  /** CroquisResolver: the gateway answers only its lookups. */
+  resolverAddress: string;
+  /** Signs the gateway's answers; CroquisResolver trusts its address. */
+  gatewaySigner: LocalAccount;
+  /** A person's `url` record is this plus /@<label>: the LIFF app's link, which opens their board. */
+  appLinkBase: string;
+  chainId: number;
+  stickerContract: string;
+  /** Null in mock chain mode: names resolve through the gateway, and none go onchain. */
+  writer: NameWriter | null;
+  naming: NamingQueue;
+}
+
+/** sticker-chain's createCroquisNames. Each call reads the chain first, so it's safe to repeat. */
+export interface NameWriter {
+  ensurePersonName: (
+    person: string,
+    label: string,
+    records: { avatar: string; url: string },
+  ) => Promise<{ label: string; created: boolean }>;
+  ensureStickerName: (
+    tokenId: string,
+    label: string,
+  ) => Promise<{ label: string; created: boolean }>;
+  setAvatar: (person: string, avatar: string) => Promise<void>;
+}
+
+/** Runs naming jobs one at a time, off the request that asked for them. */
+export interface NamingQueue {
+  /** Queues `job` under `key`, unless a job for that key is already waiting. */
+  enqueue: (key: string, job: () => Promise<void>) => void;
+  /** Settles once every queued job has. */
+  idle: () => Promise<void>;
 }

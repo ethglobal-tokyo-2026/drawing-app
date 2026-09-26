@@ -28,8 +28,16 @@ export function stickerAvatar(chainId: number, stickerContract: Address, tokenId
   return `eip155:${chainId}/erc721:${stickerContract.toLowerCase()}/${tokenId}`;
 }
 
+/** The name every person, sticker and gift name sits under; the deploy script builds it. */
+export const CROQUIS_PARENT_NAME = "croquis.eth";
+
 /** A sticker name's label: its number, padded as in "No.0042". */
 export const stickerLabel = (number: number) => String(number).padStart(4, "0");
+
+export const personEnsName = (label: string) => `${label}.${CROQUIS_PARENT_NAME}`;
+
+export const stickerEnsName = (number: number, artistLabel: string) =>
+  `${stickerLabel(number)}.${personEnsName(artistLabel)}`;
 
 /**
  * Writes names under croquis.eth through CroquisNames. Each call reads the chain first, so a retry

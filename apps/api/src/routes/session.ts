@@ -4,6 +4,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { Hono } from "hono";
 import { z } from "zod";
 import { LineTokenInvalidError, type AppDeps, type LineVerifier } from "../deps.ts";
+import { syncEnsLabel } from "../ens/labels.ts";
 import { apiError, validate } from "../errors.ts";
 import { HANDLE_MAX_LENGTH, isHandleTaken, parseHandle } from "../session/handles.ts";
 import { clearSessionCookie, setSessionCookie, type AppEnv } from "../session.ts";
@@ -85,9 +86,9 @@ export const sessionRoutes = (deps: AppDeps) =>
             .where(eq(users.lineUserId, profile.sub))
             .returning()
             .get();
-          if (returning) return returning;
+          if (returning) return syncEnsLabel(tx, returning);
           const handle = parseHandle(profile.name);
-          return tx
+          const created = tx
             .insert(users)
             .values({
               id: deps.ids.uuid(),
@@ -99,6 +100,7 @@ export const sessionRoutes = (deps: AppDeps) =>
             })
             .returning()
             .get();
+          return syncEnsLabel(tx, created);
         },
         { behavior: "immediate" },
       );
@@ -122,15 +124,16 @@ export const sessionRoutes = (deps: AppDeps) =>
       }
       const { userId } = c.var;
       const user = deps.db.transaction(
-        (tx) =>
-          isHandleTaken(tx, handle, userId)
-            ? null
-            : tx
-                .update(users)
-                .set({ handle })
-                .where(and(eq(users.id, userId), isNull(users.deletedAt)))
-                .returning()
-                .get(),
+        (tx) => {
+          if (isHandleTaken(tx, handle, userId)) return null;
+          const updated = tx
+            .update(users)
+            .set({ handle })
+            .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+            .returning()
+            .get();
+          return updated && syncEnsLabel(tx, updated);
+        },
         { behavior: "immediate" },
       );
       if (user === null) return apiError(c, 409, "handle_taken", `Someone else has @${handle}`);

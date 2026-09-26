@@ -10,6 +10,7 @@ import {
   users,
   type Db,
 } from "@drawing-app/db";
+import { stickerEnsName } from "@drawing-app/sticker-chain/croquis-names";
 import { and, count, eq, inArray, isNull } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -48,6 +49,8 @@ export const stickerSchema = z.object({
   artist: personSchema,
   images: stickerImagesSchema,
   sealedAt: isoTime,
+  /** <number>.<artist>.croquis.eth, once it's onchain. */
+  ensName: z.string().nullable(),
 });
 export type Sticker = z.infer<typeof stickerSchema>;
 
@@ -141,6 +144,10 @@ export function toSticker(
     tokenId: sticker.tokenId,
     mintTxHash: sticker.mintTxHash,
     sealedAt: toIsoTime(sticker.createdAt),
+    ensName:
+      sticker.ensNamedAt !== null && artist.ensLabel !== null
+        ? stickerEnsName(sticker.number, artist.ensLabel)
+        : null,
   };
 }
 
