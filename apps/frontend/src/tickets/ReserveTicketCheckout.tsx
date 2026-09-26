@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
 import { errorReason } from "../i18n/errorMessage";
-import { useTranslation } from "../i18n/react";
+import { Trans, useTranslation } from "../i18n/react";
 import { BuyTicketsIcon, DrawIcon } from "../icons";
 import { usePrivyStatus } from "../identity/privy";
 import { useSuiWalletFailure } from "../identity/suiWallet";
@@ -109,7 +109,11 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   const id = useId();
 
   const pack = shop?.packs.find((p) => p.tickets === chosen);
-  const short = pack && jpyc.balance !== null && jpyc.balance < BigInt(pack.priceJpyc);
+  const balance = jpyc.balance;
+  const short = pack && balance !== null && balance < BigInt(pack.priceJpyc);
+  // What to do when it's short: a smaller pack, if the balance covers one.
+  const coversSmaller =
+    balance !== null && !!shop?.packs.some((p) => BigInt(p.priceJpyc) <= balance);
 
   const pay = async (p: ReservePack, payment: JpycPayment) => {
     setStep("paying");
@@ -314,6 +318,24 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
             ))}
           </div>
         )}
+        {/* Always there, so a screen reader hears the line as a pick brings it. */}
+        <div role="status">
+          {short && (
+            <p className="reserve-checkout__short">
+              {coversSmaller ? (
+                <Trans
+                  i18nKey={($) => $.tickets.checkout.short.pickSmaller}
+                  components={{ strong: <strong /> }}
+                />
+              ) : (
+                <Trans
+                  i18nKey={($) => $.tickets.checkout.short.addJpyc}
+                  components={{ strong: <strong /> }}
+                />
+              )}
+            </p>
+          )}
+        </div>
         <TearLine />
         <Key
           className="out-of-tickets__key"
@@ -324,11 +346,9 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
         >
           {paying
             ? t(($) => $.tickets.checkout.paying)
-            : short
-              ? t(($) => $.tickets.checkout.notEnoughJpyc)
-              : pack
-                ? t(($) => $.tickets.checkout.payPrice, { price: formatYen(pack.priceYen) })
-                : t(($) => $.tickets.checkout.pay)}
+            : pack
+              ? t(($) => $.tickets.checkout.payPrice, { price: formatYen(pack.priceYen) })
+              : t(($) => $.tickets.checkout.pay)}
         </Key>
         <SuiCredit className="reserve-checkout__credit" />
         {sui.address && shop && <TicketPurchases owner={sui.address} shop={shop} />}

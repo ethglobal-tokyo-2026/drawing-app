@@ -285,13 +285,29 @@ describe("ReserveTicketCheckout", () => {
     expect(onDraw).toHaveBeenCalledOnce();
   });
 
-  it("won't pay a pack the wallet's JPYC can't cover", async () => {
+  it("won't pay a pack the wallet's JPYC can't cover, and says what to do instead", async () => {
     vi.mocked(getJpycBalance).mockResolvedValue(150n * JPYC);
     await render(checkout(), emptyApi({ ticketShop: () => Promise.resolve(SHOP) }));
     await settle(500);
+    const line = () => document.querySelector(".reserve-checkout__short")?.textContent;
+    expect(line()).toBeUndefined();
     click("3 tickets");
-    expect(buttonNamed("Not enough JPYC")?.disabled).toBe(true);
+    expect(buttonNamed("Pay")?.disabled).toBe(true);
+    expect(line()).toBe(
+      "Not enough balance for this pack. Pick a smaller one, or add JPYC to your Sui account.",
+    );
+    click("Pay");
     expect(payForTickets).not.toHaveBeenCalled();
+  });
+
+  it("says to add JPYC when the balance covers no pack at all", async () => {
+    vi.mocked(getJpycBalance).mockResolvedValue(50n * JPYC);
+    await render(checkout(), emptyApi({ ticketShop: () => Promise.resolve(SHOP) }));
+    await settle(500);
+    expect(buttonNamed("Pay")?.disabled).toBe(true);
+    expect(document.querySelector(".reserve-checkout__short")?.textContent).toBe(
+      "Not enough balance for this pack. Add JPYC to your Sui account to buy it.",
+    );
   });
 
   it("opens the ticket purchases Sui lists under the ENS name, a page at a time", async () => {

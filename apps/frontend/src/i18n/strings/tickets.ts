@@ -148,8 +148,19 @@ export const tickets = {
     payPrice: { en: "Pay {{price}}", ja: "{{price}}を支払う" },
     /** Reserve ticket checkout: the pay key while the payment goes through */
     paying: { en: "Paying…", ja: "支払い中…" },
-    /** Reserve ticket checkout: the pay key, disabled, when your JPYC is less than the chosen pack's price */
-    notEnoughJpyc: { en: "Not enough JPYC", ja: "JPYC残高不足" },
+    /** When your balance is less than the picked pack's price: Pay stays sunk, and a line under the packs says why and what to do. */
+    short: {
+      /** Reserve ticket checkout, under the packs, when your balance can't cover the picked pack but covers a smaller one: what's wrong in bold, then what to do */
+      pickSmaller: {
+        en: "<strong>Not enough balance for this pack.</strong> Pick a smaller one, or add JPYC to your Sui account.",
+        ja: "<strong>このパックには残高が足りません。</strong>小さいパックを選ぶか、SuiアカウントにJPYCを追加してください。",
+      },
+      /** Reserve ticket checkout, under the packs, when your balance can't cover even the smallest pack: what's wrong in bold, then what to do */
+      addJpyc: {
+        en: "<strong>Not enough balance for this pack.</strong> Add JPYC to your Sui account to buy it.",
+        ja: "<strong>このパックには残高が足りません。</strong>購入するには、SuiアカウントにJPYCを追加してください。",
+      },
+    },
     /** Reserve ticket checkout after a purchase: the title, when one reserve ticket was added */
     added_one: { en: "{{count}} reserve ticket added" },
     /** Reserve ticket checkout after a purchase: the title saying how many reserve tickets were added */
