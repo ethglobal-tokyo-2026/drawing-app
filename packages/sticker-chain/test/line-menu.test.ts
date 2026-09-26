@@ -214,7 +214,7 @@ describe("LINE chat menu switch", () => {
     },
   );
 
-  it("answers 401 when LINE rejects the ID token or the request has none", async () => {
+  it("distinguishes a rejected ID token from a malformed request", async () => {
     const menu = await startMenuServer({
       [VERIFY]: () =>
         Response.json(
@@ -223,14 +223,35 @@ describe("LINE chat menu switch", () => {
         ),
     });
 
-    for (const body of [{ idToken: ID_TOKEN }, {}]) {
+    for (const { body, status, error } of [
+      { body: { idToken: ID_TOKEN }, status: 401, error: "line_auth_failed" },
+      { body: {}, status: 400, error: "invalid_request" },
+    ]) {
       const response = await menu.post(body);
-      expect(response.status).toBe(401);
-      await expect(response.json()).resolves.toEqual({ error: "line_auth_failed" });
+      expect(response.status).toBe(status);
+      await expect(response.json()).resolves.toEqual({ error });
     }
     expect(menu.requested()).toEqual([VERIFY]);
     expect(menu.errors).toHaveLength(2);
-    expect(String(menu.errors[0])).toContain("IdToken expired.");
+    expect(menu.errors[0]).toEqual({
+      code: "line_auth_failed",
+      reason: "token_expired",
+      upstreamStatus: 400,
+    });
+  });
+
+  it("answers 502 when LINE verification is unavailable", async () => {
+    const menu = await startMenuServer({
+      [VERIFY]: () => {
+        throw new TypeError(`Network failed for ${ID_TOKEN}`);
+      },
+    });
+    const response = await menu.post();
+
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toEqual({ error: "line_unavailable" });
+    expect(menu.requested()).toEqual([VERIFY]);
+    expect(menu.errors).toEqual([{ code: "line_unavailable", reason: "network_error" }]);
   });
 
   it("answers 403 to another origin without calling LINE or Privy", async () => {

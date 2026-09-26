@@ -3,7 +3,8 @@ import { errorMessage } from "../i18n/errorMessage";
 import { currentLanguage } from "../i18n/i18n";
 import { followAccountLanguage } from "../i18n/pageLanguage";
 import { useTranslation } from "../i18n/react";
-import { lineIdToken } from "../line/liff";
+import { lineIdToken, lineUserId } from "../line/liff";
+import { reconnectLine } from "../line/reconnectLine";
 import { Key } from "../ui/Key";
 import { ApiError, apiError } from "./apiClient";
 import type { Me } from "@drawing-app/api/client";
@@ -16,22 +17,32 @@ const describe = (error: unknown) => (error instanceof Error ? error.message : S
 
 type Session =
   | { step: "signing-in" }
+  | { step: "reconnecting" }
   | { step: "failed"; error: ApiError }
   | { step: "ready"; me: Me };
 
+const needsLine = (error: ApiError) =>
+  error.code === "line_token_invalid" ||
+  error.code === "line_token_expired" ||
+  error.code === "no_line_token" ||
+  error.code === "line_reconnect_failed";
+
 /**
- * Signs you in to the app's server with LINE's ID token, inside LineGate, and holds the app until it
- * has and it's in your account's language. A first sign-in whose LINE name is someone's handle asks
- * for another before the app opens.
+ * Resumes the current LINE user's server session before exchanging another ID token. Holds the app
+ * until it is in that account's language and, when needed, the person has chosen a handle.
  */
 export function SessionGate({
   session,
   idToken = lineIdToken,
+  currentLineUserId = lineUserId,
+  reconnect = reconnectLine,
   children,
 }: {
   session: SessionApi;
   /** LINE's ID token; LIFF's, unless a test hands in its own. */
   idToken?: () => string | null;
+  currentLineUserId?: () => string | null;
+  reconnect?: () => Promise<void>;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
@@ -41,6 +52,20 @@ export function SessionGate({
   useEffect(() => {
     let current = true;
     const signingIn = (async () => {
+      const expectedLineUserId = currentLineUserId();
+      if (expectedLineUserId) {
+        try {
+          const resumed = await session.me(expectedLineUserId);
+          await followAccountLanguage(resumed.me.languageChoice);
+          return resumed;
+        } catch (error) {
+          // An outage isn't a reason to discard a session or start another LINE login.
+          if (!(error instanceof ApiError) || error.status !== 401 || error.code !== "signed_out") {
+            throw error;
+          }
+        }
+      }
+      if (!current) return null;
       let token: string | null;
       try {
         token = idToken();
@@ -63,8 +88,8 @@ export function SessionGate({
       return signedIn;
     })();
     signingIn.then(
-      ({ me }) => {
-        if (current) setState({ step: "ready", me });
+      (signedIn) => {
+        if (current && signedIn) setState({ step: "ready", me: signedIn.me });
       },
       (error: unknown) => {
         const failure = apiError(error);
@@ -75,7 +100,29 @@ export function SessionGate({
     return () => {
       current = false;
     };
-  }, [session, idToken, attempt]);
+  }, [session, idToken, currentLineUserId, attempt]);
+
+  const retry = async () => {
+    if (state.step !== "failed") return;
+    if (!needsLine(state.error)) {
+      setState({ step: "signing-in" });
+      setAttempt((n) => n + 1);
+      return;
+    }
+    setState({ step: "reconnecting" });
+    try {
+      // Explicit user action only: never loop redirects or resubmit a rejected cached token.
+      await reconnect();
+    } catch (error) {
+      console.error("Restarting LINE sign-in failed", {
+        errorName: error instanceof Error ? error.name : "UnknownError",
+      });
+      setState({
+        step: "failed",
+        error: new ApiError(0, { error: "line_reconnect_failed" }),
+      });
+    }
+  };
 
   if (state.step === "ready") {
     return state.me.needsHandle ? (
@@ -89,22 +136,21 @@ export function SessionGate({
     );
   }
   return (
-    <main className="line-gate" aria-busy={state.step === "signing-in"}>
-      {state.step === "signing-in" ? (
+    <main className="line-gate" aria-busy={state.step !== "failed"}>
+      {state.step === "signing-in" || state.step === "reconnecting" ? (
         <p className="fine line-gate__opening" role="status">
-          {t(($) => $.api.signIn.opening)}
+          {state.step === "reconnecting"
+            ? t(($) => $.api.signIn.reconnecting)
+            : t(($) => $.api.signIn.opening)}
         </p>
       ) : (
         <>
           <h1 className="title-label">{t(($) => $.api.signIn.failed)}</h1>
           <p className="line-gate__lead">{errorMessage(state.error)}</p>
-          <Key
-            onClick={() => {
-              setState({ step: "signing-in" });
-              setAttempt((n) => n + 1);
-            }}
-          >
-            {t(($) => $.api.signIn.tryAgain)}
+          <Key onClick={() => void retry()}>
+            {needsLine(state.error)
+              ? t(($) => $.api.signIn.reconnect)
+              : t(($) => $.api.signIn.tryAgain)}
           </Key>
           <p className="fine line-gate__reason">
             {state.error.status > 0 && `${state.error.status} · `}

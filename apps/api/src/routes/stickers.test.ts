@@ -206,9 +206,14 @@ describe("POST /api/stickers", () => {
     test = await createTestApp({ giftChain: fakeGiftChain(), mint: () => Promise.resolve(null) });
     const artistId = insertUser(test.db);
     const response = await postSeal(artistId, sealFormData(sealParts(spendTicket(artistId))));
-    expect(await refusal(response)).toMatchObject({ status: 503, error: "mint_failed" });
+    const refused = await refusal(response);
+    expect(refused).toMatchObject({ status: 503, error: "mint_failed" });
+    // The app shows the detail beside its own message.
+    expect(refused.detail).not.toMatch(/NFT|crypto|token|wallet|mint|burn/i);
     expect(log).toHaveBeenCalledWith(expect.stringContaining('"event":"sticker.mint.failed"'));
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("The mint returned no confirmed NFT"));
+    expect(log).toHaveBeenCalledWith(
+      expect.stringContaining("The chain returned no confirmed record"),
+    );
     expect(allStickers()).toMatchObject([{ tokenId: null, mintTxHash: null }]);
   });
 
