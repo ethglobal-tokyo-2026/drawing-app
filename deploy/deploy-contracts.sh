@@ -15,8 +15,9 @@ fi
 : "${STICKER_SEALER_PRIVATE_KEY:?set STICKER_SEALER_PRIVATE_KEY in deploy/.env}"
 
 cd "$ROOT/packages/sticker-chain"
+# Forge takes one RPC: the first of a comma-separated list, which the REST API tries in turn.
 forge script script/DeployStickerContracts.s.sol:DeployStickerContracts \
-  --rpc-url "$ETHEREUM_SEPOLIA_RPC_URL" \
+  --rpc-url "${ETHEREUM_SEPOLIA_RPC_URL%%,*}" \
   --broadcast
 
 echo "Copy StickerNFT and StickerGiftEscrow into deploy/.env, then run ./deploy/deploy.sh."
