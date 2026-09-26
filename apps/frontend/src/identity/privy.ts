@@ -129,8 +129,8 @@ export async function fetchPrivyJwt(): Promise<string | undefined> {
     if (!response.ok) {
       const error = jsonField(body, "error");
       return fail(
-        `the auth server refused LINE’s token: HTTP ${response.status}${typeof error === "string" ? ` ${error}` : ""}`,
-        response.status === 401,
+        `the auth server could not complete sign-in: HTTP ${response.status}${typeof error === "string" ? ` ${error}` : ""}`,
+        response.status === 401 && error === "line_auth_failed",
       );
     }
     const jwt = jsonField(body, "jwt");

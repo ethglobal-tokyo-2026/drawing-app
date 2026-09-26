@@ -15,6 +15,12 @@ This package contains the first backend and contract boundaries for sealing stic
 
 The API persists application records and sticker assets. Privy smart-wallet sponsorship is configured separately.
 
+## Authentication recovery
+
+The frontend starts Privy only after LINE and the app session are ready, and enables JWT synchronization only after Privy's wallet connection is ready. A loading flag alone does not delay the SDK's initial synchronization.
+
+`POST /v1/auth/privy-jwt` distinguishes invalid requests (`400 invalid_request`), rejected LINE credentials (`401 line_auth_failed`), unavailable LINE verification (`502 line_unavailable`), and internal JWT issuance failures (`500 auth_unavailable`). Only an explicit LINE credential rejection offers LINE reconnection; service failures retry the exchange without restarting LINE authentication. JWT issuance diagnostics keep fixed failure reasons without tokens or raw provider responses.
+
 ## Sealing confirmation
 
 `POST /api/stickers` saves the drawing and uses the authenticated artist's Privy smart account as the mint recipient. The funded sealer signs `sealSticker`; the artist does not sign or pay mint gas. Before returning success, the backend waits for the receipt and verifies the NFT data and the mint's ERC-721 `Transfer` event to the artist.

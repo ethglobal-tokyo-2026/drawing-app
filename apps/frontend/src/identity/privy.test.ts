@@ -98,6 +98,28 @@ describe("trading LINE's ID token for a Privy JWT", () => {
     expect(reconnectLine).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { status: 502, error: "line_unavailable" },
+    { status: 500, error: "auth_unavailable" },
+    { status: 400, error: "invalid_request" },
+    { status: 401, error: "auth_unavailable" },
+  ])("retries $status $error without reconnecting LINE", async ({ status, error }) => {
+    lineToken(3600);
+    const fetch = server(status, { error });
+    vi.stubGlobal("fetch", fetch);
+    expect(await fetchPrivyJwt()).toBeUndefined();
+    expect(privyStatus()).toMatchObject({ state: "failed", reconnectLine: false });
+    expect(failureReason()).toContain(`${status} ${error}`);
+
+    fetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ jwt: "privy.jwt", expiresAt: nowS() + 300 })),
+    );
+    retryPrivySignIn();
+    expect(await fetchPrivyJwt()).toBe("privy.jwt");
+    expect(reconnectLine).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
   it.each(["missing", "expired"])(
     "reconnects a %s LINE ID token on explicit retry",
     async (token) => {
