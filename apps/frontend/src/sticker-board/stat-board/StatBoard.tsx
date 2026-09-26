@@ -12,6 +12,7 @@ import { QuietLink } from "../../ui/QuietLink";
 import { useMe } from "../../api/meContext";
 import { useApiQuery } from "../../api/useApiQuery";
 import { GratitudeDemoControls } from "./GratitudeDemoControls";
+import { LanguageControls } from "./LanguageControls";
 import { PerformanceRecorderControls } from "./PerformanceRecorderControls";
 import { StatCork, type CorkFigures, type StatCorkHandle } from "./StatCork";
 import { statFigures } from "./statFigures";
@@ -80,6 +81,7 @@ export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref
             <PrivyAccount />
             <GratitudeDemoControls onTry={onTryGratitudeMiniGame} />
             <PerformanceRecorderControls />
+            <LanguageControls />
           </div>
           <i className="stat-board__washi" aria-hidden />
         </section>
