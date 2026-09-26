@@ -58,6 +58,27 @@ describe("press", () => {
     expect(button.dataset.pressState).toBeUndefined();
   });
 
+  it("swallows the browser's own click on the pressed key, and lets a click elsewhere through", () => {
+    const other = document.createElement("button");
+    document.body.append(other);
+    let otherClicks = 0;
+    other.addEventListener("click", () => otherClicks++);
+    const trustedClick = (el: HTMLElement) => {
+      const e = new MouseEvent("click", { bubbles: true });
+      Object.defineProperty(e, "isTrusted", { value: true });
+      el.dispatchEvent(e);
+    };
+    key("keydown", "Enter");
+    key("keyup", "Enter");
+    vi.advanceTimersByTime(100);
+    expect(clicks).toBe(1);
+    trustedClick(other);
+    expect(otherClicks).toBe(1);
+    trustedClick(button);
+    expect(clicks).toBe(1);
+    other.remove();
+  });
+
   it("fires nothing after the finger slides off", () => {
     pointer("pointerdown", 50);
     pointer("pointermove", 120);

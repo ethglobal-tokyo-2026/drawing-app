@@ -90,7 +90,8 @@ export function installPress(): () => void {
   const timers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
   let held: { el: HTMLElement; id: number; rect: Bounds; inside: boolean } | null = null;
   let keyed: { el: HTMLElement; key: string } | null = null;
-  let swallowUntil = 0;
+  // The browser's own click after a press lands on the pressed element; a click anywhere else is real.
+  let swallow: { el: HTMLElement; until: number } | null = null;
 
   const stop = (el: HTMLElement) => {
     running.get(el)?.forEach((a) => a?.cancel());
@@ -190,20 +191,21 @@ export function installPress(): () => void {
     settle(el, "pop", reduced() ? 0 : T.pop + 20);
   };
 
-  const swallowNext = () => {
-    swallowUntil = performance.now() + SWALLOW_MS;
+  const swallowNext = (el: HTMLElement) => {
+    swallow = { el, until: performance.now() + SWALLOW_MS };
   };
 
   // Only the clicks a press commits get through; the browser's own click after a press is swallowed.
   const onClick = (e: MouseEvent) => {
-    if (!e.isTrusted || performance.now() > swallowUntil) return;
-    swallowUntil = 0;
+    if (!e.isTrusted || !swallow || performance.now() > swallow.until) return;
+    if (!(e.target instanceof Node) || !swallow.el.contains(e.target)) return;
+    swallow = null;
     e.preventDefault();
     e.stopImmediatePropagation();
   };
 
   const onPointerDown = (e: PointerEvent) => {
-    swallowUntil = 0;
+    swallow = null;
     if (held || !e.isPrimary || (e.pointerType === "mouse" && e.button !== 0)) return;
     const el = pressable(e.target);
     if (!el) return;
@@ -232,7 +234,7 @@ export function installPress(): () => void {
     if (!held || e.pointerId !== held.id) return;
     const h = held;
     held = null;
-    swallowNext();
+    swallowNext(h.el);
     const inside =
       !cancelled && within(h.rect, e.clientX, e.clientY, h.inside ? SLOP_OUT : SLOP_IN);
     if (inside && !isOff(h.el)) commit(h.el);
@@ -276,7 +278,7 @@ export function installPress(): () => void {
     const k = keyed;
     keyed = null;
     e.preventDefault();
-    swallowNext();
+    swallowNext(k.el);
     if (isOff(k.el)) lift(k.el);
     else commit(k.el);
   };
@@ -294,7 +296,7 @@ export function installPress(): () => void {
     if (held) {
       const h = held;
       held = null;
-      swallowNext();
+      swallowNext(h.el);
       lift(h.el);
     }
     if (keyed) {
