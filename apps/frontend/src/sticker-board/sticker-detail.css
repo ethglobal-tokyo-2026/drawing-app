@@ -234,6 +234,14 @@
   rotate: var(--tilt);
 }
 
+/* The sticker's .eth name, under its title. */
+.sticker-detail__ens {
+  margin: 2px 0 0;
+  color: var(--graphite);
+  font: 550 13.5px/1.3 var(--font-ui);
+  overflow-wrap: anywhere;
+}
+
 /* The line people read: caps kept, but at full width and 12px, wrapping between facts. */
 .sticker-detail__fine-print {
   margin: 5px 0 0;

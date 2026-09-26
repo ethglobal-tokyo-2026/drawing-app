@@ -239,6 +239,13 @@ describe("StickerDetail", () => {
     expect(document.querySelectorAll(".transfer-trail__row.is-open")).toHaveLength(1);
   });
 
+  it("names the sticker's .eth from its number and artist, until the chain gives it one", () => {
+    open();
+    expect(document.querySelector(".sticker-detail__ens")?.textContent).toBe(
+      "sticker-0133.me.sketch.eth",
+    );
+  });
+
   it("titles LINE's header with the shown sticker, and puts the title back when it closes", () => {
     document.title = "Your sticker board";
     open();

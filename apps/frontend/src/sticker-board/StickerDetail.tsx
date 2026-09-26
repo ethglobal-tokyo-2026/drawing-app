@@ -49,6 +49,20 @@ interface Swipe {
   lock: ReturnType<typeof swipeLock>;
 }
 
+/**
+ * The sticker's .eth name, as the prototype shapes it: `{name}.{artist}.sketch.eth`. A stand-in
+ * built from its number and artist until the chain gives stickers their names.
+ */
+function placeholderEnsName(sticker: BoardSticker): string {
+  const label = (v: string) =>
+    v
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "someone";
+  const artist = label(sticker.artist.handle ?? sticker.artist.name);
+  return `sticker-${String(sticker.no).padStart(4, "0")}.${artist}.sketch.eth`;
+}
+
 /** The --ease-out curve, spelled out: Web Animations can't read CSS variables. */
 const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 
@@ -283,6 +297,7 @@ export function StickerDetail({
               <h2 className="title-label sticker-detail__title">
                 sticker <span className="sticker-detail__no">{formatNo(sticker.no)}</span>
               </h2>
+              <p className="sticker-detail__ens">{placeholderEnsName(sticker)}</p>
               <p className="fine sticker-detail__fine-print">
                 <span className="sticker-detail__by">
                   by {formatHandle(sticker.artist.handle ?? sticker.artist.name)}
