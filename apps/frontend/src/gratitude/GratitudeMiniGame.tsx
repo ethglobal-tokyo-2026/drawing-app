@@ -103,7 +103,8 @@ export function GratitudeMiniGame({
   const { t } = useTranslation();
   const api = useApi();
   const reduced = useReducedMotion();
-  const [ending, setEnding] = useState<{ caught: boolean; record: ComboRecord } | null>(null);
+  /** The finished combo, once its ending has played: the receipt shows it. */
+  const [ended, setEnded] = useState<ComboRecord | null>(null);
   const [failed, setFailed] = useState(false);
   const [refused, setRefused] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -176,7 +177,7 @@ export function GratitudeMiniGame({
         reduced: latest.current.reduced,
         showFrameTimes: latest.current.showFrameTimes,
         onRecord: record,
-        onFinished: setEnding,
+        onFinished: setEnded,
         onError: () => setFailed(true),
       },
     );
@@ -222,11 +223,10 @@ export function GratitudeMiniGame({
   useEffect(() => engine.current?.focusHeart(), []);
   // The heart has gone, and disabled: the receipt's button takes focus.
   useEffect(() => {
-    if (ending) receipt.current?.querySelector("button")?.focus();
-  }, [ending]);
+    if (ended) receipt.current?.querySelector("button")?.focus();
+  }, [ended]);
 
-  const tier = ending ? TIER_NAMES[ending.record.peakTier] : null;
-  const tierGloss = tier ? shownGloss(tier.en) : "";
+  const tierGloss = ended ? shownGloss(TIER_NAMES[ended.peakTier].en) : "";
   const screen = (
     <div
       className="gr"
@@ -290,11 +290,10 @@ export function GratitudeMiniGame({
         <Wind />
       </div>
       <p className="gr-sr" ref={live} aria-live="polite" />
-      {ending && (
+      {ended && (
         <section
           ref={receipt}
           className="gr-receipt is-on"
-          data-kind={ending.caught ? "combo" : "sent"}
           aria-label={t(($) => $.gratitude.receipt.label)}
         >
           <div className="gr-rc-row">
@@ -307,36 +306,21 @@ export function GratitudeMiniGame({
               </span>
             </div>
             <div className="gr-rc-text">
-              {ending.caught && tier ? (
-                <>
-                  <p className="gr-rc-figure">
-                    {formatCount(ending.record.total)}
-                    <small aria-hidden="true">{" ♡"}</small>
-                  </p>
-                  <p className="gr-rc-head">
-                    {t(($) => $.gratitude.receipt.gratitudeTo, { handle })}
-                  </p>
-                  <p className="gr-rc-sub fine">
-                    {t(($) => $.gratitude.receipt.best, {
-                      multiplier: ending.record.peakMult.toFixed(1),
-                      hits: formatCount(ending.record.hits),
-                    })}
-                    {"\n"}
-                    {tier.jp}
-                    {tierGloss && ` ${tierGloss}`}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="gr-rc-head">
-                    {t(($) => $.gratitude.receipt.sentTo, { handle })}{" "}
-                    <span aria-hidden="true">{"♡"}</span>
-                  </p>
-                  <p className="gr-rc-sub fine">
-                    {t(($) => $.gratitude.receipt.forSticker, { no: formatNo(sticker.no) })}
-                  </p>
-                </>
-              )}
+              <p className="gr-rc-figure">
+                {formatCount(ended.total)}
+                <small aria-hidden="true">{" ♡"}</small>
+              </p>
+              <p className="gr-rc-head">{t(($) => $.gratitude.receipt.gratitudeTo, { handle })}</p>
+              <p className="gr-rc-sub fine">
+                {t(($) => $.gratitude.receipt.best, {
+                  multiplier: ended.peakMult.toFixed(1),
+                  hits: formatCount(ended.hits),
+                  count: ended.hits,
+                })}
+                {"\n"}
+                {TIER_NAMES[ended.peakTier].jp}
+                {tierGloss && ` ${tierGloss}`}
+              </p>
             </div>
           </div>
           <div className="gr-rc-actions">

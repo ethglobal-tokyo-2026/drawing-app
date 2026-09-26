@@ -1,5 +1,5 @@
 import type { ComboPhase, Tier } from "./combo";
-import { clamp, easeInOutSine, lerp } from "./easing";
+import { clamp, lerp } from "./easing";
 import { FEEL_CONFIG } from "./gameConfig";
 
 export interface HeartLayout {
@@ -47,8 +47,6 @@ export interface HeartMotionState {
   tier: Tier | null;
   intensity: number;
   reduced: boolean;
-  /** How much of the catch window has passed, from 0 to 1. */
-  sendingProgress: number;
   /** A thumb holding the heart: it leans toward the thumb's x, by up to `degrees`. */
   leanToward: { x: number; degrees: number } | null;
   /** Stroking: it stretches along the stroke, `angle` in degrees, with the thumb's speed in px/ms. */
@@ -137,8 +135,6 @@ const HEARTBEAT_FROM: Tier = 2;
 const TREMOR_FROM: Tier = 3;
 /** Degrees either way at full intensity: the tremor turns the heart and never shifts it. */
 const TREMOR_DEG = 1.4;
-/** Waiting to be caught, it winds up: stretching toward the giver and leaning their way. */
-const WIND_UP = { stretch: 0.07, leanDeg: 8 };
 /** How fast the stretch settles on its target, a second. */
 const STRETCH_RATE = 12;
 /** A drag's pull: a loose spring, so letting go overshoots into a squash and wobbles out. */
@@ -473,8 +469,6 @@ export function createHeartMotion(
       rotate += lean;
 
       const r = Math.min(real, 1 / 30);
-      // The first tap lets go of a pull still springing back from a drag: the wind-up takes over.
-      if (state.phase === "sending" && pull.target === 0) pull.px = pull.speed = 0;
       if (r > 0) {
         const damping =
           2 * Math.sqrt(PULL.stiffness) * (state.reduced ? PULL.reducedDamping : PULL.damping);
@@ -489,10 +483,6 @@ export function createHeartMotion(
       }
       if (!flight) {
         const pulled = pull.px !== 0 || pull.target !== 0;
-        const windUp =
-          state.phase === "sending" ? easeInOutSine(clamp(state.sendingProgress, 0, 1)) : 0;
-        // Winding up, it leans toward the giver whatever stretches it.
-        rotate -= WIND_UP.leanDeg * windUp;
         let target = 1;
         let angle = stretch.angle;
         if (state.strokeStretch) {
@@ -502,9 +492,6 @@ export function createHeartMotion(
         } else if (pulled) {
           target = 1 + (state.reduced ? PULL.reduced : PULL.stretch) * Math.tanh(pull.px / 100);
           angle = pull.angle;
-        } else if (state.phase === "sending") {
-          target = 1 + WIND_UP.stretch * windUp;
-          angle = degrees(Math.atan2(L.giver.y - L.rest.y, L.giver.x - L.rest.x));
         }
         // The pull's spring already carries the motion; anything else eases to its stretch, turning
         // the short way round, so a new stretch takes over from the last without a jump.

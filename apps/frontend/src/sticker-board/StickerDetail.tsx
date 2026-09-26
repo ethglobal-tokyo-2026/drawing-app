@@ -5,6 +5,7 @@ import type { StickerDetail as StickerDetailResponse } from "@drawing-app/api/cl
 import { useApiQuery } from "../api/useApiQuery";
 import { toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
 import { errorReason } from "../i18n/errorMessage";
+import { Trans, useTranslation } from "../i18n/react";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatMonthDay, formatNo } from "../stickers/format";
@@ -95,6 +96,7 @@ export function StickerDetail({
   originOf,
   ownerId,
 }: Props) {
+  const { t } = useTranslation();
   const reduced = useReducedMotion();
   useLight();
   const [shownId, setShownId] = useState(startId);
@@ -221,7 +223,7 @@ export function StickerDetail({
       className="sticker-detail"
       role="dialog"
       aria-modal="true"
-      aria-label={sticker ? formatNo(sticker.no) : "Sticker"}
+      aria-label={sticker ? formatNo(sticker.no) : t(($) => $.stickerBoard.detail.label)}
       tabIndex={-1}
       onKeyDown={(e) => {
         if (e.altKey || e.ctrlKey || e.metaKey) return;
@@ -232,14 +234,18 @@ export function StickerDetail({
       <header className="sticker-detail__top">
         <button type="button" className="sticker-detail__back" onClick={close}>
           <StickerBoardIcon size={18} />
-          <span>Sticker board</span>
+          <span>{t(($) => $.stickerBoard.detail.back)}</span>
         </button>
       </header>
 
       <nav
         ref={strip}
         className="sticker-detail__strip"
-        aria-label={mode === "given" ? "Stickers you gave" : "Your stickers"}
+        aria-label={
+          mode === "given"
+            ? t(($) => $.stickerBoard.detail.stickersYouGave)
+            : t(($) => $.stickerBoard.detail.yourStickers)
+        }
       >
         {stickers.map((s, i) => (
           <button
@@ -281,7 +287,7 @@ export function StickerDetail({
             <div className="sticker-detail__pager">
               <button
                 type="button"
-                aria-label="Previous sticker"
+                aria-label={t(($) => $.stickerBoard.detail.previous)}
                 aria-disabled={index === 0}
                 onClick={() => go(index - 1)}
               >
@@ -290,15 +296,22 @@ export function StickerDetail({
               {/* Paging announces which sticker it landed on, not only where in the list. */}
               <span className="sticker-detail__count" aria-live="polite">
                 <span aria-hidden="true">
-                  {index + 1} / {stickers.length}
+                  {t(($) => $.stickerBoard.detail.count, {
+                    position: index + 1,
+                    setSize: stickers.length,
+                  })}
                 </span>
                 <span className="visually-hidden">
-                  {formatNo(sticker.no)}, {index + 1} of {stickers.length}
+                  {t(($) => $.stickerBoard.detail.countSpoken, {
+                    no: formatNo(sticker.no),
+                    position: index + 1,
+                    setSize: stickers.length,
+                  })}
                 </span>
               </span>
               <button
                 type="button"
-                aria-label="Next sticker"
+                aria-label={t(($) => $.stickerBoard.detail.next)}
                 aria-disabled={index === last}
                 onClick={() => go(index + 1)}
               >
@@ -307,27 +320,40 @@ export function StickerDetail({
             </div>
 
             <section className="sticker-detail__meta">
-              {/* "sticker" stands in for the sticker's name, which no data carries yet. */}
               <h2 className="title-label sticker-detail__title">
-                sticker <span className="sticker-detail__no">{formatNo(sticker.no)}</span>
+                <Trans
+                  i18nKey={($) => $.stickerBoard.detail.title}
+                  components={{
+                    no: <span className="sticker-detail__no">{formatNo(sticker.no)}</span>,
+                  }}
+                />
               </h2>
               <p className="sticker-detail__ens">{placeholderEnsName(sticker)}</p>
               <p className="fine sticker-detail__fine-print">
                 {byOther ? (
                   <ArtistChip artist={sticker.artist} />
                 ) : (
-                  <span className="sticker-detail__by">by {handleOf(sticker.artist)}</span>
+                  <span className="sticker-detail__by">
+                    {t(($) => $.stickerBoard.detail.by, { artist: handleOf(sticker.artist) })}
+                  </span>
                 )}{" "}
                 <span>
-                  · drawn in <Duration seconds={sticker.timeUsed} />
+                  <Trans
+                    i18nKey={($) => $.stickerBoard.detail.drawnIn}
+                    components={{ duration: <Duration seconds={sticker.timeUsed} /> }}
+                  />
                 </span>{" "}
-                <span>· {formatDay(sticker.createdAt)}</span>
+                <span>
+                  {t(($) => $.stickerBoard.detail.sealedOn, { day: formatDay(sticker.createdAt) })}
+                </span>
               </p>
               {/* The Transfer Trail says it too, once it's in. */}
               {mode === "given" && sticker.givenTo && trail.length === 0 && (
                 <p className="fine sticker-detail__fine-print">
-                  You gave it to {handleOf(sticker.givenTo.receiver)} ·{" "}
-                  {formatMonthDay(sticker.givenTo.receivedAt)}
+                  {t(($) => $.stickerBoard.detail.youGaveIt, {
+                    receiver: handleOf(sticker.givenTo.receiver),
+                    day: formatMonthDay(sticker.givenTo.receivedAt),
+                  })}
                 </p>
               )}
             </section>
@@ -341,8 +367,11 @@ export function StickerDetail({
                       <img src={sticker.urls.png} alt="" draggable={false} />
                     </span>
                     <span>
-                      On its way
-                      {sticker.openGift?.to && ` to ${formatHandle(sticker.openGift.to)}`}
+                      {sticker.openGift?.to
+                        ? t(($) => $.stickerBoard.detail.onItsWayTo, {
+                            receiver: formatHandle(sticker.openGift.to),
+                          })
+                        : t(($) => $.stickerBoard.detail.onItsWay)}
                     </span>
                   </p>
                 </div>
@@ -354,7 +383,7 @@ export function StickerDetail({
                     icon={<Heart weight="fill" aria-hidden />}
                     onClick={() => onSendGratitude(owed.gift, owed.sticker, owed.giver)}
                   >
-                    Send gratitude
+                    {t(($) => $.stickerBoard.detail.sendGratitude)}
                   </Key>
                   {onGive && (
                     <LabelButton
@@ -362,7 +391,7 @@ export function StickerDetail({
                       icon={<Gift size={18} aria-hidden />}
                       onClick={() => onGive(sticker)}
                     >
-                      Give
+                      {t(($) => $.stickerBoard.detail.give)}
                     </LabelButton>
                   )}
                 </div>
@@ -370,15 +399,17 @@ export function StickerDetail({
                 onGive && (
                   <div className="sticker-detail__acts">
                     <Key tone="aqua" icon={<Gift aria-hidden />} onClick={() => onGive(sticker)}>
-                      Give
+                      {t(($) => $.stickerBoard.detail.give)}
                     </Key>
                   </div>
                 )
               ))}
             {detail.state === "failed" && (
               <p className="fine sticker-detail__check-failed" role="alert">
-                Couldn’t load where it’s been, or whether you’ve sent gratitude for it:{" "}
-                {errorReason(detail.error)} <QuietLink onClick={detail.retry}>Try again</QuietLink>
+                {t(($) => $.stickerBoard.detail.checkFailed, {
+                  reason: errorReason(detail.error),
+                })}{" "}
+                <QuietLink onClick={detail.retry}>{t(($) => $.stickerBoard.tryAgain)}</QuietLink>
               </p>
             )}
             {trail.length > 0 && ownerId && (
@@ -392,7 +423,7 @@ export function StickerDetail({
             )}
           </>
         ) : (
-          <p className="sticker-detail__none">No sticker here yet.</p>
+          <p className="sticker-detail__none">{t(($) => $.stickerBoard.detail.none)}</p>
         )}
       </div>
     </div>
