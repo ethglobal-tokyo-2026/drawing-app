@@ -1,26 +1,6 @@
-import { MAX_TIMELAPSE_BYTES } from "@drawing-app/api/client";
+import { MAX_TIMELAPSE_BYTES, type TimelapseV1 } from "@drawing-app/api/client";
 import { STRIDE, type Op } from "../canvas/ops";
 import type { Rect } from "./stickerLayers";
-
-/**
- * How a sticker was drawn, uploaded with it at seal: `TimelapseV1` in the REST API's contract.
- * Lengths are sheet pixels, the ops' own space, whatever the screen's density.
- */
-export interface TimelapseV1 {
-  v: 1;
-  /** The sheet the ops were drawn on. */
-  ink: [width: number, height: number];
-  /** Where the sticker image sits on the sheet. */
-  place: [x: number, y: number, width: number, height: number];
-  /**
-   * In the order drawn, each with its ms into the session. A stroke's points are x, y and width in
-   * tenths of a pixel, plus ms, each a change from the point before.
-   */
-  ops: Array<
-    | [tool: "brush" | "eraser", color: string, startMs: number, points: number[]]
-    | [tool: "fill", color: string, atMs: number, x: number, y: number]
-  >;
-}
 
 interface TimelapseInput {
   ops: readonly Op[];
