@@ -14,7 +14,7 @@ import {
 } from "./boardGesture";
 import type { BoardSticker } from "./boardSticker";
 import { clampS, sizeOf, toFrac, toPx, transformAt, type Field } from "./placement";
-import { focusStep } from "./stickerOrder";
+import { focusStep, readingOrder } from "./stickerOrder";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 
 interface Options {
@@ -125,6 +125,9 @@ export function useBoardGestures(options: Options) {
       latest.current.onCommit(sticker.id, placement);
     };
 
+    const focusSticker = (id: string) =>
+      stage.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`)?.focus();
+
     /** The backing shows for a moment where a sticker was peeled up. */
     const peelMark = (sticker: BoardSticker, live: Live) => {
       const mask = sticker.urls.mask;
@@ -204,6 +207,22 @@ export function useBoardGestures(options: Options) {
       const { field, size, reduced } = latest.current;
       const sticker = stickerOf(id);
       if (!sticker || !field || !size || stowingId || leaving.has(id)) return;
+      // Focus on it or its toolbar goes to the next sticker along rather than falling to the page.
+      const focused = stage.ownerDocument.activeElement;
+      if (
+        focused instanceof HTMLElement &&
+        (focused.closest(".sticker-toolbar") ||
+          focused.closest<HTMLElement>(".placed-sticker")?.dataset.stickerId === id)
+      ) {
+        const order = readingOrder(
+          latest.current.stickers.map((s) => ({ id: s.id, ...toPx(field, s.placement) })),
+        );
+        const i = order.indexOf(id);
+        const next = [...order.slice(i + 1), ...order.slice(0, i).reverse()].find(
+          (other) => !leaving.has(other),
+        );
+        if (next) focusSticker(next);
+      }
       latest.current.onSelect(null);
       const el = stage.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`);
       if (!latest.current.tray.current || !el) {
@@ -247,9 +266,6 @@ export function useBoardGestures(options: Options) {
       if (latest.current.selected !== id) latest.current.onSelect(id);
       el.focus({ preventScroll: true, focusVisible: false });
     };
-
-    const focusSticker = (id: string) =>
-      stage.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`)?.focus();
 
     const onDown = (e: PointerEvent) => {
       const { field, selected } = latest.current;
