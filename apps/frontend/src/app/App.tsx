@@ -11,6 +11,7 @@ import { markBoardComplete, usePreloadAfterBoard } from "../sticker-board/boardC
 import { forgetBoardUnlessFor } from "../sticker-board/lastBoard";
 import { lazyWithPreload } from "../ui/lazyWithPreload";
 import { MotionPermissionCard } from "./MotionPermissionCard";
+import type { GiftFrom } from "../receiving/ReceiveGiftDialog";
 import { openedFrom, type View } from "./openedView";
 import { changeScreen } from "./screenTransition";
 import { ShopScreen } from "./ShopScreen";
@@ -71,8 +72,11 @@ export default function App() {
   // screen; a gift message's link opens its gift over the board.
   const [opened] = useState(() => openedFrom(location.pathname));
   const [view, setView] = useState<View>(opened.view);
-  // Held in memory while ReceiveGiftDialog is open over the board.
-  const [giftClaimToken, setGiftClaimToken] = useState(opened.giftClaimToken);
+  // The gift ReceiveGiftDialog shows over the board: a gift message's link's token, held in memory
+  // while it's open, or a gift waiting for you, opened from the board's badge.
+  const [giftOpening, setGiftOpening] = useState<GiftFrom | undefined>(() =>
+    opened.giftClaimToken ? { giftClaimToken: opened.giftClaimToken } : undefined,
+  );
   // Set from the seal until the next sticker starts, when Draw starts a new one.
   const [sealedId, setSealedId] = useState<string>();
   // The sticker that last arrived, sealed or received; the board lands it with a "stick" animation.
@@ -106,8 +110,8 @@ export default function App() {
 
   useEffect(() => {
     // While a gift is open, its dialog names the page.
-    if (!giftClaimToken) document.title = t(($) => $.app.pageTitles[view]);
-  }, [view, giftClaimToken, t]);
+    if (!giftOpening) document.title = t(($) => $.app.pageTitles[view]);
+  }, [view, giftOpening, t]);
 
   // Once opened, a link's path goes, so a reload after moving on doesn't jump back to it, and a
   // reload with a gift open lands on the board: the gift message opens it again.
@@ -147,7 +151,12 @@ export default function App() {
           </Suspense>
         )}
         {view === "board" && (
-          <StickerBoard key={boardLoads} freshId={freshId} onDraw={openDrawing} />
+          <StickerBoard
+            key={boardLoads}
+            freshId={freshId}
+            onDraw={openDrawing}
+            onOpenGift={(gift) => setGiftOpening({ gift })}
+          />
         )}
         {/* Each in its own boundary, so Explore stays up while an artist's board loads over it. */}
         {view === "explore" && (
@@ -182,13 +191,13 @@ export default function App() {
         }}
       />
       <MotionPermissionCard />
-      {giftClaimToken && (
+      {giftOpening && (
         // Liner while ReceiveGiftDialog's code loads, so the board doesn't show first.
         <Suspense fallback={<div style={GIFT_LOADING} />}>
           <ReceiveGiftDialog
-            giftClaimToken={giftClaimToken}
+            from={giftOpening}
             onClose={(receivedId) => {
-              setGiftClaimToken(undefined);
+              setGiftOpening(undefined);
               if (!receivedId) return;
               setFreshId(receivedId);
               setBoardLoads((n) => n + 1);

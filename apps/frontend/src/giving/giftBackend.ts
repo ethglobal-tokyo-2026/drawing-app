@@ -25,6 +25,16 @@ export interface PackedGift {
   message: GiftMessage;
 }
 
+/** Preparation failed after allocation; Taking out must still be able to identify this gift. */
+export class GiftPackagingError extends Error {
+  readonly giftId: string;
+
+  constructor(giftId: string, cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause), { cause });
+    this.giftId = giftId;
+  }
+}
+
 /** Where gifts are made and settled. */
 export interface GiftBackend {
   /** Puts the sticker in a gift and returns the gift message that sends it. */
@@ -44,20 +54,34 @@ interface ApiGiftBackendOptions {
   liffId: string;
   heroUrl?: string;
   transactions?: GiftTransactions;
+  /** Who the giver picked in the app, so the gift waits on their board too. */
+  forUserId?: string;
 }
 
 // The raw claim token lives only until the page closes. The server remains authoritative for gifts.
-const attempts = new Map<string, { token: string; escrowed: boolean; depositHash?: Hash }>();
+interface GiftAttempt {
+  token: string;
+  escrowed: boolean;
+  depositHash?: Hash;
+  takeOutHash?: Hash;
+  takingOut?: boolean;
+}
+const attempts = new Map<string, GiftAttempt>();
+const packaging = new WeakMap<ApiClient, Map<string, Promise<PackedGift>>>();
+const takingOut = new Map<string, Promise<void>>();
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function confirmDeposit(api: ApiClient, giftId: string, hash?: Hash) {
+async function confirmStep(
+  step: () => Promise<unknown>,
+  pendingCode: "deposit_not_landed" | "take_out_not_landed",
+) {
   for (let attempt = 0; ; attempt++) {
     try {
-      await api.reportDeposit(giftId, hash);
+      await step();
       return;
     } catch (error) {
-      if (!(error instanceof ApiError) || error.code !== "deposit_not_landed" || attempt >= 5) {
+      if (!(error instanceof ApiError) || error.code !== pendingCode || attempt >= 5) {
         throw error;
       }
       await pause(500 * (attempt + 1));
@@ -72,7 +96,10 @@ export function createApiGiftBackend({
   liffId,
   heroUrl,
   transactions = giftTransactions,
+  forUserId,
 }: ApiGiftBackendOptions): GiftBackend {
+  const packing = packaging.get(api) ?? new Map<string, Promise<PackedGift>>();
+  packaging.set(api, packing);
   const deposit = async (
     giftId: string,
     transfer: { to: string; data: string },
@@ -87,25 +114,56 @@ export function createApiGiftBackend({
         },
         attempt.depositHash,
       );
-      await confirmDeposit(api, giftId, hash ?? undefined);
+      await confirmStep(() => api.reportDeposit(giftId, hash ?? undefined), "deposit_not_landed");
     } catch (error) {
       if (error instanceof GiftTransactionRevertedError) attempt.depositHash = undefined;
       throw error;
     }
   };
-  const takeOut = async (giftId: string, escrowed = attempts.get(giftId)?.escrowed) => {
-    if (escrowed) await transactions.takeOut(giftId, attempts.get(giftId)?.depositHash);
-    await api.takeOutGift(giftId);
-    attempts.delete(giftId);
+  const takeOut = (giftId: string, escrowed = attempts.get(giftId)?.escrowed) => {
+    const pending = takingOut.get(giftId);
+    if (pending) return pending;
+    const operation = (async () => {
+      const attempt = attempts.get(giftId) ?? { token: "", escrowed: Boolean(escrowed) };
+      attempts.set(giftId, attempt);
+      attempt.takingOut = true;
+      if (attempt.escrowed) {
+        try {
+          await transactions.takeOut(
+            giftId,
+            (hash) => {
+              attempt.takeOutHash = hash;
+            },
+            attempt.takeOutHash,
+            attempt.depositHash,
+          );
+        } catch (error) {
+          if (error instanceof GiftTransactionRevertedError) attempt.takeOutHash = undefined;
+          throw error;
+        }
+      }
+      await confirmStep(() => api.takeOutGift(giftId), "take_out_not_landed");
+      attempts.delete(giftId);
+    })().finally(() => takingOut.delete(giftId));
+    takingOut.set(giftId, operation);
+    return operation;
   };
-  return {
-    pack: async (sticker) => {
-      let packaged = await api.packageGift(sticker.id);
+  const pack = async (sticker: GiftSticker): Promise<PackedGift> => {
+    let packaged = await api.packageGift(sticker.id, forUserId);
+    try {
       // Already in the bag from an earlier visit: its Gift Claim Token left with that page, so the
       // gift comes out and goes back in with a new one.
-      if (packaged.giftClaimToken === null && !attempts.get(packaged.gift.id)?.token) {
-        if (packaged.escrowTransfer !== null) {
-          const recovery = attempts.get(packaged.gift.id) ?? { token: "", escrowed: true };
+      const previousAttempt = attempts.get(packaged.gift.id);
+      if (
+        previousAttempt?.takingOut ||
+        (packaged.giftClaimToken === null && !previousAttempt?.token)
+      ) {
+        console.info("Gift packaging recovery started", {
+          giftId: packaged.gift.id,
+          stickerId: sticker.id,
+        });
+        if (packaged.escrowTransfer !== null && !previousAttempt?.takingOut) {
+          const recovery = previousAttempt ?? { token: "", escrowed: true };
           attempts.set(packaged.gift.id, recovery);
           // Settle the old deposit before taking it out, including one broadcast before a reload.
           // Closing a missing deposit in the database could strand a transaction that lands later.
@@ -115,7 +173,7 @@ export function createApiGiftBackend({
           packaged.gift.id,
           packaged.escrowTransfer !== null || Boolean(import.meta.env.VITE_STICKER_ESCROW_ADDRESS),
         );
-        packaged = await api.packageGift(sticker.id);
+        packaged = await api.packageGift(sticker.id, forUserId);
       }
       const { gift, giftClaimToken, escrowTransfer } = packaged;
       const previous = attempts.get(gift.id);
@@ -138,6 +196,17 @@ export function createApiGiftBackend({
         language: currentLanguage(),
       });
       return { giftId: gift.id, message };
+    } catch (error) {
+      throw new GiftPackagingError(packaged.gift.id, error);
+    }
+  };
+  return {
+    pack: (sticker) => {
+      const pending = packing.get(sticker.id);
+      if (pending) return pending;
+      const operation = pack(sticker).finally(() => packing.delete(sticker.id));
+      packing.set(sticker.id, operation);
+      return operation;
     },
     markSent: async (giftId) => void (await api.reportShared(giftId, "sent")),
     markCancelled: async (giftId) => void (await api.reportShared(giftId, "cancelled")),

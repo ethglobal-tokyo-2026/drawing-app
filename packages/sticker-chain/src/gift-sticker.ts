@@ -134,17 +134,49 @@ export function createGiftAuthorizer({
     verifyingContract: escrowContract,
   } as const;
 
-  async function requirePendingGift(giftId: Hex, giftClaimToken: Hex) {
+  /** A pending, unexpired gift; with a Gift Claim Token, only the gift that token opens. */
+  async function requirePendingGift(giftId: Hex, giftClaimToken: Hex | null) {
     requireBytes32(giftId, "Gift ID");
     const gift = await findGift(giftId);
     if (!gift || gift.giftId !== giftId || gift.status !== "pending") {
       throw new Error("Gift is not pending");
     }
     if (gift.expiresAt <= now()) throw new Error("Gift has expired");
-    if (!giftClaimTokenMatches(giftClaimToken, gift.claimCommitment)) {
+    if (giftClaimToken !== null && !giftClaimTokenMatches(giftClaimToken, gift.claimCommitment)) {
       throw new Error("Gift claim token is invalid");
     }
     return gift;
+  }
+
+  /** Signs a claim of a pending gift for the recipient's smart wallet. */
+  async function signClaim(gift: PendingGiftRecord, giftId: Hex, recipientArtistId: string) {
+    if (!recipientArtistId) throw new Error("Recipient artist is required");
+    const recipientWallet = await findArtistSmartWallet(recipientArtistId);
+    if (
+      recipientWallet?.kind !== "smart_account" ||
+      recipientWallet.chainId !== chainId ||
+      !isAddress(recipientWallet.address)
+    ) {
+      throw new Error("Recipient Ethereum smart wallet is unavailable on the configured chain");
+    }
+    const authorizationDeadline = Math.min(gift.expiresAt, now() + 300);
+    const authorization = await signer.signTypedData({
+      domain,
+      primaryType: "GiftClaim",
+      types: {
+        GiftClaim: [
+          { name: "giftId", type: "bytes32" },
+          { name: "recipient", type: "address" },
+          { name: "authorizationDeadline", type: "uint256" },
+        ],
+      },
+      message: {
+        giftId,
+        recipient: recipientWallet.address,
+        authorizationDeadline: BigInt(authorizationDeadline),
+      },
+    });
+    return { authorization, authorizationDeadline, recipient: recipientWallet.address };
   }
 
   return {
@@ -157,34 +189,22 @@ export function createGiftAuthorizer({
       giftClaimToken: Hex;
       recipientArtistId: string;
     }) {
-      const gift = await requirePendingGift(giftId, giftClaimToken);
-      if (!recipientArtistId) throw new Error("Recipient artist is required");
-      const recipientWallet = await findArtistSmartWallet(recipientArtistId);
-      if (
-        recipientWallet?.kind !== "smart_account" ||
-        recipientWallet.chainId !== chainId ||
-        !isAddress(recipientWallet.address)
-      ) {
-        throw new Error("Recipient Ethereum smart wallet is unavailable on the configured chain");
-      }
-      const authorizationDeadline = Math.min(gift.expiresAt, now() + 300);
-      const authorization = await signer.signTypedData({
-        domain,
-        primaryType: "GiftClaim",
-        types: {
-          GiftClaim: [
-            { name: "giftId", type: "bytes32" },
-            { name: "recipient", type: "address" },
-            { name: "authorizationDeadline", type: "uint256" },
-          ],
-        },
-        message: {
-          giftId,
-          recipient: recipientWallet.address,
-          authorizationDeadline: BigInt(authorizationDeadline),
-        },
-      });
-      return { authorization, authorizationDeadline, recipient: recipientWallet.address };
+      return signClaim(await requirePendingGift(giftId, giftClaimToken), giftId, recipientArtistId);
+    },
+
+    /**
+     * Signs a claim without the Gift Claim Token, for the person the API says the gift waits for.
+     * A stopgap: the token's holder is no longer the only one who can receive, so it stands only
+     * until smart account permissions can authorize that person on chain.
+     */
+    async authorizeClaimForNamedRecipient({
+      giftId,
+      recipientArtistId,
+    }: {
+      giftId: Hex;
+      recipientArtistId: string;
+    }) {
+      return signClaim(await requirePendingGift(giftId, null), giftId, recipientArtistId);
     },
 
     async authorizeRejection({ giftId, giftClaimToken }: { giftId: Hex; giftClaimToken: Hex }) {

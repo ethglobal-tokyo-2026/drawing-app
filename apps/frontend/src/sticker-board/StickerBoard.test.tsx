@@ -53,7 +53,7 @@ describe("StickerBoard with the board kept on this phone", () => {
     keep(TEST_ME.id, a);
     let answer: (board: LoadedBoard) => void = () => {};
     const api = emptyApi({ stickerBoard: () => new Promise((resolve) => (answer = resolve)) });
-    const view = renderWithApi(<StickerBoard onDraw={() => {}} />, api);
+    const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
     unmount = view.unmount;
     expect(view.host.querySelectorAll(".board-loading-sticker")).toHaveLength(0);
     expect(shownIds(view.host)).toEqual([a.stickerId]);
@@ -71,7 +71,7 @@ describe("StickerBoard with the board kept on this phone", () => {
     const api = emptyApi({
       stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [moved] }),
     });
-    const view = renderWithApi(<StickerBoard onDraw={() => {}} />, api);
+    const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
     unmount = view.unmount;
     await act(async () => {});
     expect(keptBoardFor(TEST_ME.id)?.stickers[0].placement.x).toBe(0.6);
@@ -80,7 +80,7 @@ describe("StickerBoard with the board kept on this phone", () => {
   it("never draws a board kept for someone else, and forgets it", () => {
     keep("someone-else", boardSticker({ placement: at(0.3) }));
     const api = emptyApi({ stickerBoard: () => new Promise(() => {}) });
-    const view = renderWithApi(<StickerBoard onDraw={() => {}} />, api);
+    const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
     unmount = view.unmount;
     expect(shownIds(view.host)).toEqual([]);
     expect(view.host.querySelectorAll(".board-loading-sticker").length).toBeGreaterThan(0);
@@ -92,7 +92,7 @@ describe("StickerBoard while it loads", () => {
   it("shows faint sticker shapes until the board's stickers arrive", async () => {
     let answer: (board: LoadedBoard) => void = () => {};
     const api = emptyApi({ stickerBoard: () => new Promise((resolve) => (answer = resolve)) });
-    const view = renderWithApi(<StickerBoard onDraw={() => {}} />, api);
+    const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
     unmount = view.unmount;
     const shapes = () => view.host.querySelectorAll(".board-loading-sticker").length;
     expect(shapes()).toBeGreaterThan(0);

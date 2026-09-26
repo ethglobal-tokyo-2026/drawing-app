@@ -22,6 +22,8 @@ const Giving = lazyWithPreload("Giving", () => import("./Giving").then((m) => m.
 interface Props {
   /** The board's owner's handle. */
   to: string;
+  /** The board's owner: the gift waits on their board as well as in the LINE chat. */
+  toId: string;
   onClose: () => void;
 }
 
@@ -29,7 +31,7 @@ interface Props {
  * Giving from someone else's board: pick one of yours, then it goes into a gift bag and out through
  * a LINE chat, as every gift does.
  */
-export function GiveSheet({ to, onClose }: Props) {
+export function GiveSheet({ to, toId, onClose }: Props) {
   const { t } = useTranslation();
   const { stickers, error: loadError } = useKeptStickers();
   const [picked, setPicked] = useState<string | null>(null);
@@ -49,6 +51,7 @@ export function GiveSheet({ to, onClose }: Props) {
           fromHandle={me.handle ?? ""}
           sender={sender}
           liffId={LIFF_ID}
+          forUserId={toId}
           onClose={(sent) => (sent ? onClose() : setGiving(null))}
         />
       </Suspense>
