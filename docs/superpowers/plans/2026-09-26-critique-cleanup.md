@@ -64,7 +64,7 @@ Fixes from the 2026-09-26 whole-app critique (27/40, Acceptable), plus the owner
   - It comes after the tools in Tab order.
 - [ ] D3 The PAUSED tag shows only once the clock has started.
 - [ ] D4 Focus stays within the drawing screen's controls; it never falls to the page body.
-- [ ] D5 The light listens for tilt only while a screen with stickers is showing.
+- [x] D5 The light listens for tilt only while a screen with stickers is showing.
 
 Another branch changes the session to 3 minutes, so no new code or copy assumes 5:00.
 
