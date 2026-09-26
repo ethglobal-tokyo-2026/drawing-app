@@ -558,23 +558,25 @@ Branch `gifts/board`, from `gifts/base` merged with `main` once the cleanup's bu
 **Files:** Modify `sticker-board/boardSticker.ts` (+test), `sticker-board/StickerBoard.tsx`, `sticker-board/tray/StickerTray.tsx`, `sticker-board/tray/traySeen.ts` callers; create `api/mock/board.ts`'s overlay.
 
 - `boardSticker.ts`: `toBoardSticker(b: ApiBoardSticker): BoardSticker` (import the contract's as `ApiBoardSticker`) (the view: today's fields plus `artist: PersonView`, `held`, `givenTo`, `openGift`), and `placeUnplaced(list)` giving null placements a `freeSpot`, which the board saves through `saveStickerPlacement`.
-- The board loads with `useApiQuery("sticker-board", (api) => api.stickerBoard())`; saves go through the client; NEW through `markTraySeen`. `owner` is kept for foil.
+- The board loads with `useApiQuery("sticker-board", (api) => api.stickerBoard())`; saves go through the client. `owner` is kept for foil.
+- [ ] Left: the tray's NEW still reads and writes `traySeen` itself (the same storage `deviceApi.markTraySeen` uses); move it to `markTraySeen`.
 - `api/mock/board.ts`: `stickerBoard` is the base's plus received stickers (from `receiving.ts`), with `held: false` and `givenTo` for gifts `giving.ts`'s friend received.
-- [ ] Tests: the mapping; unplaced stickers get spots once. The board's existing tests pass. Commit `feat: load the Sticker Board through the API client`.
+- [x] Tests: the mapping; unplaced stickers get spots once. The board's existing tests pass. Commit `feat: load the Sticker Board through the API client`.
 
 ### Task B2: Where a gift is
 
 **Files:** Modify `sticker-board/StickerBoard.tsx`, `sticker-board/GivenStickerSilhouette.tsx` (+test), `sticker-board/StickerDetail.tsx` (+test).
 
 - The spec's table: `openGift.status === "sent"` leaves the board and the tray; `held === false` draws the silhouette with `givenTo` ("No.0147 → @bob", its label); the detail's "On its way" note and "You gave it to @bob · 9.23".
-- [ ] Tests: each row of the table. Commit `feat: follow each gift from on its way to received`.
+- [x] The detail's rows: "On its way" and "You gave it to @bob"; a received gift's silhouette from `givenTo`.
+- [ ] The board's and tray's `sent` row (gone, the badge has it): waits for G4's badge. Until then a sent sticker keeps its silhouette, and opens among your stickers.
 
 ### Task B3: The detail's Send gratitude
 
 **Files:** Modify `sticker-board/StickerDetail.tsx` (+test).
 
 - For a sticker you hold that someone else gave you: `stickerDetail` when it opens; the Transfer Trail's newest entry to you with no gratitude makes Send gratitude the key (pink, `Heart` fill) and Give label stock under it. `onSendGratitude(gift, sticker, giver)` is a new prop the coordinator connects to the placeholder.
-- [ ] Tests: thanked and unthanked. Commit `feat: send gratitude from a received sticker's detail`.
+- [x] Tests: thanked and unthanked. Commit `feat: send gratitude from a received sticker's detail`.
 
 ---
 
