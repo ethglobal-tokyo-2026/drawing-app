@@ -8,7 +8,10 @@ libs = ["lib", "node_modules"]
 solc_version = "0.8.25"
 evm_version = "cancun"
 remappings = [
-  "@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/",
+  # Our sources' OpenZeppelin, scoped so ENSv2's sources never look for theirs here.
+  "contracts/:@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/",
+  "script/:@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/",
+  "test/:@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/",
   "forge-std/=lib/forge-std/src/",
   "ens-v2/=lib/ens-contracts-v2/contracts/src/",
   "ens-v2-lib/=lib/ens-contracts-v2/contracts/lib/",

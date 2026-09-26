@@ -14,6 +14,7 @@ const person = (handle: string, lineDisplayName: string): Person => ({
   handle,
   lineDisplayName,
   linePictureUrl: null,
+  ensName: `${handle}.croquis.eth`,
 });
 
 export const people = {
@@ -51,6 +52,7 @@ export function sticker(overrides: Partial<Sticker> = {}): Sticker {
     tokenId: null,
     mintTxHash: null,
     sealedAt: "2026-09-23T11:52:00.000Z",
+    ensName: null,
     ...overrides,
   };
 }

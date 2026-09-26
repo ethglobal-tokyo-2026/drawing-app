@@ -1,4 +1,8 @@
 export const stickerBoard = {
+  /** A name under croquis.eth, which opens in the ENS app. */
+  ensName: {
+    open: "Open {{name}} in the ENS app",
+  },
   /** The developer slip: English only, so the Japanese catalog never translates it. */
   developer: {
     language: {

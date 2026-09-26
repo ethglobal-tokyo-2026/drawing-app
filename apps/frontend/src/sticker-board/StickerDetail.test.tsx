@@ -92,7 +92,7 @@ function received(gratitude: Gratitude | null) {
 }
 const giveIsTheKey = () => button("Give")?.classList.contains("key");
 
-const me = { id: "me", handle: "me", lineDisplayName: "Me", linePictureUrl: null };
+const me = { ...TEST_OWNER, handle: "me", lineDisplayName: "Me" };
 /** A client whose sticker details have Transfer Trails: `trail` for s-133, empty for the rest. */
 const withTrail = (trail: StickerDetailResponse["transferTrail"]) =>
   emptyApi({
@@ -265,11 +265,15 @@ describe("StickerDetail", () => {
     expect(document.querySelectorAll(".transfer-trail__row.is-open")).toHaveLength(1);
   });
 
-  it("names the sticker's .eth from its number and artist, until the chain gives it one", () => {
-    open();
-    expect(document.querySelector(".sticker-detail__ens")?.textContent).toBe(
-      "sticker-0133.alice.sketch.eth",
-    );
+  it("links the sticker's name under croquis.eth to the ENS app once it's onchain", () => {
+    const named = sticker(133, day(14), { ensName: "0133.alice.croquis.eth" });
+    open({ stickers: [named] });
+    const link = document.querySelector<HTMLAnchorElement>(".sticker-detail__ens a");
+    expect(link?.textContent).toBe("0133.alice.croquis.eth");
+    expect(link?.href).toBe("https://sepolia.app.ens.domains/0133.alice.croquis.eth");
+
+    open({ stickers: [sticker(133, day(14))] });
+    expect(document.querySelector(".sticker-detail__ens")).toBeNull();
   });
 
   it("titles LINE's header with the shown sticker, and puts the title back when it closes", () => {
