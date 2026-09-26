@@ -102,5 +102,115 @@
   "tickets.startDrawing.reserve.use": {
     "where": "Start card, reserve ticket variant: the grape key that spends a reserve ticket and opens the sheet",
     "ja": "有償チケットを使う"
+  },
+  "tickets.outOfTickets.title": {
+    "where": "Out-of-tickets card on the drawing screen, when both daily and reserve tickets are used up: the title",
+    "ja": "今日はもうチケットがありません"
+  },
+  "tickets.outOfTickets.refillLine": {
+    "where": "Out-of-tickets card: the line under the title, when new daily tickets arrive (bold) and the countdown to it (quiet)",
+    "ja": "<strong>{{time}}に新しい無償チケットが届きます</strong><countdown>（{{countdown}}）</countdown>"
+  },
+  "tickets.outOfTickets.refilled": {
+    "where": "Out-of-tickets card: the title once the refill brings tickets back while it's open, as the card turns over",
+    "ja": "新しいチケットが届きました"
+  },
+  "tickets.notLoaded.checking": {
+    "where": "Drawing screen, in the start card's place: the title while your tickets load",
+    "ja": "チケットを確認しています…"
+  },
+  "tickets.notLoaded.couldntLoad": {
+    "where": "Drawing screen, in the start card's place: the title when your tickets didn't load, above the reason",
+    "ja": "チケットを読み込めませんでした"
+  },
+  "tickets.shop.title": {
+    "where": "Ticket shop, as a card over the drawing screen or as the Shop tab: the title",
+    "ja": "チケットショップ"
+  },
+  "tickets.shop.lead": {
+    "where": "Ticket shop: the bold line under the title",
+    "ja": "有償チケットに有効期限はありません。"
+  },
+  "tickets.shop.balance": {
+    "where": "Ticket shop: the small label on the wallet row, beside the balance shown in yen",
+    "ja": "残高"
+  },
+  "tickets.shop.readingBalance": {
+    "where": "Ticket shop: the wallet row while the balance loads",
+    "ja": "残高を確認しています…"
+  },
+  "tickets.shop.balanceProblem": {
+    "where": "Ticket shop: the wallet row when the balance couldn't be read, before a Try again link; `reason` is the wallet's own words",
+    "ja": "残高を確認できませんでした（{{reason}}）。"
+  },
+  "tickets.shop.gettingPrices": {
+    "where": "Ticket shop: in the packs' place while today's prices load",
+    "ja": "今日の価格を確認しています…"
+  },
+  "tickets.shop.pricesProblem": {
+    "where": "Ticket shop: in the packs' place when today's prices couldn't be fetched, before a Try again link",
+    "ja": "今日の価格を確認できませんでした：{{reason}}"
+  },
+  "tickets.shop.packs": {
+    "where": "Ticket shop: screen-reader name of the group of pack buttons",
+    "ja": "チケットパック"
+  },
+  "tickets.shop.pack_one": {
+    "where": "Ticket shop: a pack button's name, for the one-ticket pack"
+  },
+  "tickets.shop.pack_other": {
+    "where": "Ticket shop: a pack button's name, such as \"3 tickets\"",
+    "ja": "チケット{{count}}枚"
+  },
+  "tickets.shop.discount": {
+    "where": "Ticket shop: the pink sale sticker on a discounted pack button",
+    "ja": "{{percent}}%オフ"
+  },
+  "tickets.shop.was": {
+    "where": "Ticket shop: screen-reader text for a discounted pack's struck-through full price",
+    "ja": "通常価格{{price}}"
+  },
+  "tickets.shop.pay": {
+    "where": "Ticket shop: the grape pay key, before a pack's price is known",
+    "ja": "支払う"
+  },
+  "tickets.shop.payPrice": {
+    "where": "Ticket shop: the grape pay key, with the chosen pack's price",
+    "ja": "{{price}}を支払う"
+  },
+  "tickets.shop.paying": {
+    "where": "Ticket shop: the pay key while the payment goes through",
+    "ja": "支払い中…"
+  },
+  "tickets.shop.notEnoughYen": {
+    "where": "Ticket shop: the pay key, disabled, when the balance is less than the chosen pack's price",
+    "ja": "残高不足"
+  },
+  "tickets.shop.added_one": {
+    "where": "Ticket shop after a purchase: the title, when one reserve ticket was added"
+  },
+  "tickets.shop.added_other": {
+    "where": "Ticket shop after a purchase: the title saying how many reserve tickets were added",
+    "ja": "有償チケットを{{count}}枚追加しました"
+  },
+  "tickets.shop.paid": {
+    "where": "Ticket shop after a purchase: the quiet line under the title with the price paid",
+    "ja": "{{price}}を支払いました。"
+  },
+  "tickets.shop.buyMore": {
+    "where": "Ticket shop after a purchase: the button under Draw that goes back to the packs",
+    "ja": "チケットをもっと買う"
+  },
+  "tickets.shop.paymentFailed": {
+    "where": "Ticket shop when a payment fails: the title, above the reason",
+    "ja": "支払いが完了しませんでした"
+  },
+  "tickets.shop.paidButNotAdded": {
+    "where": "Ticket shop when a payment fails after the money moved: the line under the title; `digest` is the transaction's ID, `reason` the error",
+    "ja": "支払いは完了しました（{{digest}}）が、チケットは追加されませんでした：{{reason}}"
+  },
+  "tickets.shop.backToShop": {
+    "where": "Ticket shop when a payment fails: the key that goes back to the packs",
+    "ja": "ショップに戻る"
   }
 }
