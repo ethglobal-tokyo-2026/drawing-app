@@ -1,8 +1,8 @@
 /**
  * The performance recorder, for phones where LINE's browser has no developer tools: every frame's
  * interval, judged against the typical frame, and what happened around each slow one. Off, it costs
- * nothing: no loop, no observers and no listeners, and `notePerformance` and `timeOurWork` return
- * at their first check.
+ * a flag check: no loop, no observers and no listeners, and `notePerformance` and `timeOurWork`
+ * return at their first check.
  */
 
 /** Something that happened, on the performance.now() clock. */

@@ -243,7 +243,7 @@ describe("the recorder on the page", () => {
     vi.restoreAllMocks();
   });
 
-  it("costs nothing while off: no loop, no listeners, and marks and timings pass through", () => {
+  it("costs a flag check while off: no loop, no listeners, and marks and timings pass through", () => {
     const listens = vi.spyOn(window, "addEventListener");
     notePerformance("gratitude", "tier-up");
     expect(timeOurWork("gratitude", () => 7)).toBe(7);
