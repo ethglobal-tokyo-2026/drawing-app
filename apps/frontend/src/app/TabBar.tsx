@@ -1,4 +1,4 @@
-import { Eyes } from "@phosphor-icons/react";
+import { CaretUp, Eyes } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { useIdentity } from "../identity/useIdentity";
@@ -11,6 +11,25 @@ export type Tab = "board" | "explore";
 const IDLE_MS = 4000;
 /** Dragging the grabber up this far brings the tabs back. */
 const GRAB_PX = 8;
+/** Set once the grabber has brought the tabs back, after which it needs no label. */
+const GRABBED_KEY = "draw.tabs.grabbed";
+
+function readGrabbed(): boolean {
+  try {
+    return localStorage.getItem(GRABBED_KEY) !== null;
+  } catch (error) {
+    console.error("Can't read whether the tab grabber was used on this device", error);
+    return false;
+  }
+}
+
+function saveGrabbed(): void {
+  try {
+    localStorage.setItem(GRABBED_KEY, "1");
+  } catch (error) {
+    console.error("Can't save that the tab grabber was used on this device", error);
+  }
+}
 
 interface Props {
   /** None while drawing: Draw is the board's key, not a tab. */
@@ -23,7 +42,8 @@ interface Props {
 /**
  * Index tabs cut from label stock; the current one is stuck on in its full hue. On a screen that
  * tucks them away, tapping the grabber or dragging it up brings them back, and the next touch
- * anywhere else, or a few idle seconds, tucks them away again.
+ * anywhere else, or a few idle seconds, tucks them away again. Until it has been used once, the
+ * grabber is a label-stock pull tab that says where it goes.
  */
 export function TabBar({ active, tucked, onChange }: Props) {
   const me = useIdentity();
@@ -32,16 +52,25 @@ export function TabBar({ active, tucked, onChange }: Props) {
   const grabY = useRef<number | null>(null);
   const idle = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [shown, setShown] = useState(false);
+  const [grabbed, setGrabbed] = useState(readGrabbed);
   if (!tucked && shown) setShown(false);
   const peeking = tucked && shown;
 
+  // Keyboard focus on a tab going away with it would fall to the page body, so it goes to the grabber.
+  const hide = () => {
+    if (nav.current?.contains(document.activeElement)) grabber.current?.focus();
+    setShown(false);
+  };
   const waitIdle = () => {
     clearTimeout(idle.current);
-    idle.current = setTimeout(() => setShown(false), IDLE_MS);
+    idle.current = setTimeout(hide, IDLE_MS);
   };
   const show = () => {
     setShown(true);
     waitIdle();
+    if (grabbed) return;
+    setGrabbed(true);
+    saveGrabbed();
   };
   // Using the tabs keeps them up.
   const keepUp = () => {
@@ -53,10 +82,16 @@ export function TabBar({ active, tucked, onChange }: Props) {
     const onPointerDown = (e: PointerEvent) => {
       if (!(e.target instanceof Node)) return;
       if (nav.current?.contains(e.target) || grabber.current?.contains(e.target)) return;
-      setShown(false);
+      hide();
     };
     document.addEventListener("pointerdown", onPointerDown, true);
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [peeking]);
+
+  // The grabber steps aside once the tabs are up; keyboard focus on it moves on to the tabs.
+  useEffect(() => {
+    if (peeking && document.activeElement === grabber.current)
+      nav.current?.querySelector("button")?.focus();
   }, [peeking]);
 
   useEffect(() => () => clearTimeout(idle.current), []);
@@ -71,6 +106,8 @@ export function TabBar({ active, tucked, onChange }: Props) {
         inert={tucked && !peeking}
         onPointerDown={keepUp}
         onPointerMove={keepUp}
+        onFocus={keepUp}
+        onKeyDown={keepUp}
       >
         <button
           className="tab tab-board"
@@ -99,9 +136,10 @@ export function TabBar({ active, tucked, onChange }: Props) {
         <button
           ref={grabber}
           type="button"
-          className={`tab-grabber ${peeking ? "is-hidden" : ""}`}
+          className={`tab-grabber ${grabbed ? "" : "is-pull-tab"} ${peeking ? "is-hidden" : ""}`}
           aria-label="Show the My board and Explore tabs"
           aria-expanded={peeking}
+          tabIndex={peeking ? -1 : undefined}
           onPointerDown={(e) => {
             grabY.current = e.clientY;
             e.currentTarget.setPointerCapture(e.pointerId);
@@ -115,7 +153,14 @@ export function TabBar({ active, tucked, onChange }: Props) {
           onPointerCancel={() => (grabY.current = null)}
           onClick={show}
         >
-          <i />
+          {grabbed ? (
+            <i />
+          ) : (
+            <span className="tab-pull">
+              <CaretUp />
+              Board
+            </span>
+          )}
         </button>
       )}
     </>

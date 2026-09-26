@@ -30,6 +30,15 @@ describe("transition", () => {
     expect(run(start, ink, ink)).toEqual({ phase: "drawing", effects: [] });
   });
 
+  it("picks a session kept across a reload back up without spending another ticket", () => {
+    expect(run({ type: "restored", drawn: true })).toEqual({ phase: "drawing", effects: [] });
+    expect(run({ type: "restored", drawn: false }, start).phase).toBe("primed");
+    expect(run({ type: "restored", drawn: false }, ink)).toEqual({
+      phase: "drawing",
+      effects: ["start-clock"],
+    });
+  });
+
   it("arms at the first tap and seals at a second within the window", () => {
     expect(run(start, ink, tap(1000))).toEqual({ phase: "armed", effects: [] });
     expect(run(start, ink, tap(1000), tap(1000 + ARM_WINDOW_MS - 1))).toEqual({
@@ -88,23 +97,9 @@ describe("transition", () => {
 });
 
 describe("heldBy", () => {
-  const holds = (...list: Hold[]) => new Set(list);
-
-  it("holds for the person's pause or a hidden screen even before the first stroke", () => {
-    expect(heldBy(holds("paused"), false)).toBe("paused");
-    expect(heldBy(holds("hidden"), false)).toBe("hidden");
-    expect(heldBy(holds("away"), false)).toBe("away");
-  });
-
-  it("holds for a tool in hand only once the clock runs", () => {
-    for (const tool of ["color", "smoothing", "size"] as const) {
-      expect(heldBy(holds(tool), false)).toBeNull();
-      expect(heldBy(holds(tool), true)).toBe(tool);
-    }
-  });
-
   it("names the person's own pause over any other hold", () => {
-    expect(heldBy(holds("size", "hidden", "paused"), true)).toBe("paused");
-    expect(heldBy(holds(), true)).toBeNull();
+    const holds = (...list: Hold[]) => new Set(list);
+    expect(heldBy(holds("size", "hidden", "paused"))).toBe("paused");
+    expect(heldBy(holds())).toBeNull();
   });
 });

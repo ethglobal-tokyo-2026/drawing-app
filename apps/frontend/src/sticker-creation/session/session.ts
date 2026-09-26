@@ -24,6 +24,11 @@ export type SessionEvent =
   | { type: "start" }
   /** A stroke or fill landed on the sheet. */
   | { type: "ink" }
+  /**
+   * A session kept across a reload is back, its ticket spent before the reload: drawn on, or only
+   * started, with the clock still waiting for the first stroke.
+   */
+  | { type: "restored"; drawn: boolean }
   | { type: "seal-tap"; now: number; hasInk: boolean }
   | { type: "arm-expired"; now: number }
   | { type: "canvas-touch" }
@@ -57,6 +62,8 @@ export function transition(session: Session, event: SessionEvent): Result {
       return phase === "blank" ? to("primed", ["spend-ticket"]) : unchanged;
     case "ink":
       return phase === "primed" ? to("drawing", ["start-clock"]) : unchanged;
+    case "restored":
+      return phase === "blank" ? to(event.drawn ? "drawing" : "primed") : unchanged;
     case "seal-tap":
       if (phase === "armed" && event.now - session.armedAt < ARM_WINDOW_MS)
         return to("sealing", ["seal"]);
@@ -81,17 +88,16 @@ export function transition(session: Session, event: SessionEvent): Result {
 }
 
 /**
- * Why the clock is held. The person's pause, a hidden page and the drawing screen being covered hold
- * it at any time; a tool in hand (the color sheet, the smoothing bar, a finger on the size rail) holds
- * it only while it runs.
+ * Why the clock is held: the person's pause, a hidden page, the drawing screen being covered, or a
+ * tool in hand (the color sheet, the smoothing bar, a finger on the size rail). Only a started clock
+ * is held; before the first stroke it just waits, and nothing shows as paused.
  */
 export type Hold = "paused" | "hidden" | "away" | "color" | "smoothing" | "size";
 
 /** Which hold the timer shows, most important first. */
 const HOLDS: readonly Hold[] = ["paused", "hidden", "away", "color", "smoothing", "size"];
-const ANYTIME: ReadonlySet<Hold> = new Set(["paused", "hidden", "away"]);
 
 /** The hold the timer shows, or null when nothing holds it. */
-export function heldBy(holds: ReadonlySet<Hold>, started: boolean): Hold | null {
-  return HOLDS.find((hold) => holds.has(hold) && (started || ANYTIME.has(hold))) ?? null;
+export function heldBy(holds: ReadonlySet<Hold>): Hold | null {
+  return HOLDS.find((hold) => holds.has(hold)) ?? null;
 }

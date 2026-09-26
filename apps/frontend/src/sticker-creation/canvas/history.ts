@@ -49,6 +49,11 @@ export class History<S> {
     return this.undone.length > 0;
   }
 
+  /** The ops on the surface, oldest first. */
+  get committed(): readonly Op[] {
+    return this.ops;
+  }
+
   /** Records an op the surface already shows. */
   commit(op: Op): void {
     this.undone = [];
@@ -79,6 +84,15 @@ export class History<S> {
     this.undone = [];
     this.checkpoints.clear();
     this.surface.restore(null);
+  }
+
+  /** Starts over with these ops painted on, as a drawing picked up after a reload does. */
+  load(ops: readonly Op[]): void {
+    this.reset();
+    for (const op of ops) {
+      this.surface.apply(op);
+      this.record(op);
+    }
   }
 
   /** Repaints the committed ops, dropping whatever else was painted, such as a cancelled stroke. */

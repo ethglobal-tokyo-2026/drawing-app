@@ -18,6 +18,8 @@ export interface ClockView {
   held: Hold | null;
   /** The page is hidden, or only just back: the dot lifts a corner. */
   lifted: boolean;
+  /** Nothing is drawn yet: the clock waits for the first stroke. */
+  waiting: boolean;
 }
 
 /** The holds the drawing screen sets. The clock watches the page itself for `hidden`. */
@@ -115,6 +117,13 @@ export class SessionClock {
     this.setState("idle");
   }
 
+  /** Picks a drawing kept across a reload back up: started, with the time it had drawn. */
+  restore(elapsedMs: number): void {
+    if (this.state !== "idle") return;
+    this.elapsedMs = Math.min(SESSION_MS, Math.max(0, elapsedMs));
+    this.setState("running");
+  }
+
   setHolds(holds: ScreenHolds): void {
     this.holds = holds;
     this.changed();
@@ -142,7 +151,7 @@ export class SessionClock {
   }
 
   private counting(): boolean {
-    return this.state === "running" && heldBy(this.activeHolds(), true) === null;
+    return this.state === "running" && heldBy(this.activeHolds()) === null;
   }
 
   private readonly frame = (t: number): void => {
@@ -176,7 +185,8 @@ export class SessionClock {
       next.secondsLeft !== v.secondsLeft ||
       next.late !== v.late ||
       next.held !== v.held ||
-      next.lifted !== v.lifted
+      next.lifted !== v.lifted ||
+      next.waiting !== v.waiting
     ) {
       this.view = next;
       this.listeners.forEach((listener) => listener());
@@ -195,12 +205,12 @@ export class SessionClock {
 
   private computeView(): ClockView {
     const left = SESSION_MS - this.elapsedMs;
-    const live = this.state === "idle" || this.state === "running";
     return {
       secondsLeft: Math.ceil(left / 1000),
       late: left <= LATE_MS,
-      held: live ? heldBy(this.activeHolds(), this.state === "running") : null,
+      held: this.state === "running" ? heldBy(this.activeHolds()) : null,
       lifted: this.hidden,
+      waiting: this.state === "idle",
     };
   }
 }

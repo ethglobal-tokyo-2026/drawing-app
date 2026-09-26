@@ -60,6 +60,15 @@ describe("SessionClock", () => {
     }
   });
 
+  it("shows no hold while it waits for the first stroke", () => {
+    const { clock } = setup({ started: false });
+    clock.setHolds({ ...NO_HOLDS, away: true });
+    clock.setHidden(true);
+    expect(clock.getView()).toMatchObject({ held: null, waiting: true });
+    clock.start();
+    expect(clock.getView()).toMatchObject({ held: "hidden", waiting: false });
+  });
+
   it("holds while the page is hidden and resumes 420ms after it returns", () => {
     const { clock, counted } = setup();
     clock.setHidden(true);
@@ -94,6 +103,24 @@ describe("SessionClock", () => {
     expect(hasFrame()).toBe(false);
     clock.resume();
     advance(1000);
+    expect(onTimeUp).toHaveBeenCalledOnce();
+  });
+
+  it("picks a kept drawing back up with the time it had drawn", () => {
+    const { clock, counted } = setup({ started: false });
+    clock.restore(SESSION_MS - 30_000);
+    expect(clock.getView().secondsLeft).toBe(30);
+    expect(counted(1000)).toBe(1000);
+  });
+
+  it("calls time on a kept drawing whose time had run out once it runs again", () => {
+    const { clock, onTimeUp, advance } = setup({ started: false });
+    clock.setHolds({ ...NO_HOLDS, paused: true });
+    clock.restore(SESSION_MS);
+    advance(1000);
+    expect(onTimeUp).not.toHaveBeenCalled();
+    clock.setHolds(NO_HOLDS);
+    advance(16);
     expect(onTimeUp).toHaveBeenCalledOnce();
   });
 

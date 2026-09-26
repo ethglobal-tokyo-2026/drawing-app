@@ -15,6 +15,7 @@ import "./TimerDot.css";
 
 /** How long the paused hint stays after a stroke meets a paused sheet. */
 const HINT_MS = 2600;
+const HINT = "Tap the timer\nto keep drawing.";
 
 /** A stroke on a paused sheet: the dot turns toward the hint and back, on top of its tilt. */
 const NUDGE: Keyframe[] = [
@@ -47,15 +48,18 @@ interface Props {
   clock: SessionClock;
   /** The person's own pause. */
   paused: boolean;
+  /** Said on the white label under the timer while there's no paused hint to show; null for none. */
+  note: string | null;
   onToggle: () => void;
 }
 
 /**
  * The timer: a Seal Yellow dot slapped on at the world's tilt, with puffy numerals in fixed cells.
- * Tapping it pauses. Every hold wears the same white PAUSED tag, the page being hidden also lifts a
- * corner, and the last ten seconds turn Tomato.
+ * Once the first stroke starts it, tapping it pauses. Every hold wears the same white PAUSED tag, the
+ * page being hidden also lifts a corner, and the last ten seconds turn Tomato. A white label under it
+ * points up at it: the paused hint, or the drawing screen's note.
  */
-export function TimerDot({ ref, clock, paused, onToggle }: Props) {
+export function TimerDot({ ref, clock, paused, note, onToggle }: Props) {
   const view = useSyncExternalStore(clock.subscribe, clock.getView);
   const reduced = useReducedMotion();
   const dot = useRef<HTMLButtonElement>(null);
@@ -66,6 +70,10 @@ export function TimerDot({ ref, clock, paused, onToggle }: Props) {
 
   // The hint only ever speaks to a paused sheet.
   if (hint && !paused) setHint(false);
+  const label = hint ? HINT : note;
+  // The label keeps its words while it peels off.
+  const [words, setWords] = useState(label);
+  if (label && label !== words) setWords(label);
 
   useImperativeHandle(
     ref,
@@ -101,7 +109,7 @@ export function TimerDot({ ref, clock, paused, onToggle }: Props) {
         ref={dot}
         type="button"
         className={classes.join(" ")}
-        aria-label={paused ? "Resume timer" : "Pause timer"}
+        aria-label={view.waiting ? "Timer" : paused ? "Resume timer" : "Pause timer"}
         aria-describedby={describedBy}
         onClick={onToggle}
       >
@@ -119,18 +127,15 @@ export function TimerDot({ ref, clock, paused, onToggle }: Props) {
           <b>Paused</b>
         </span>
         <span className="visually-hidden" id={describedBy}>
-          {`${time} left${view.held ? `, paused${WHY[view.held] ?? ""}` : ""}`}
+          {`${time} left${view.waiting ? ", starts when you draw" : view.held ? `, paused${WHY[view.held] ?? ""}` : ""}`}
         </span>
       </button>
-      <div className={`timer-hint ${hint ? "is-on" : ""}`} aria-hidden="true">
+      <div className={`timer-hint ${label ? "is-on" : ""}`} aria-hidden="true">
         <ArrowBendLeftUp className="timer-hint-arrow" size={28} />
-        <span className="timer-hint-label">
-          Tap the timer <br />
-          to keep drawing.
-        </span>
+        <span className="timer-hint-label">{words}</span>
       </div>
       <span className="visually-hidden" role="status">
-        {hint ? "Tap the timer to keep drawing." : ""}
+        {label ?? ""}
       </span>
     </>
   );
