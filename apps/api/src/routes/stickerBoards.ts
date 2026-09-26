@@ -11,6 +11,7 @@ import {
   savePlacement,
   seenRequestSchema,
 } from "../stickerBoards/board.ts";
+import { loadUserStats } from "../stickerBoards/userStats.ts";
 import {
   newStickerCount,
   placementSchema,
@@ -29,6 +30,12 @@ export const stickerBoardRoutes = ({ db, clock, images }: AppDeps) =>
       const owner = findBoardOwner(db, userId, c.var.userId);
       if (!owner) return apiError(c, 404, "user_not_found", `There's no person ${userId}`);
       return c.json(loadStickerBoard(db, owner, c.var.userId, images.urls), 200);
+    })
+    .get("/:userId/user-stats", validate("param", ownerParamSchema), (c) => {
+      const { userId } = c.req.valid("param");
+      const owner = findBoardOwner(db, userId, c.var.userId);
+      if (!owner) return apiError(c, 404, "user_not_found", `There's no person ${userId}`);
+      return c.json({ userStats: loadUserStats(db, owner, clock.now()) }, 200);
     })
     .patch(
       "/me/sticker-placements/:stickerId",
