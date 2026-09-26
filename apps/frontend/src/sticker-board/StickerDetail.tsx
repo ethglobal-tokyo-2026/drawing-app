@@ -7,6 +7,7 @@ import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { Key } from "../ui/Key";
+import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import type { BoardSticker } from "./boardSticker";
@@ -57,6 +58,7 @@ export function StickerDetail({
   returnFocus,
 }: Props) {
   const reduced = useReducedMotion();
+  useBackToClose(true, onClose);
   const [shownId, setShownId] = useState(startId);
   const index = Math.max(
     0,

@@ -23,6 +23,7 @@ import { ticketDay } from "../tickets/tickets";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
+import { useBackToClose } from "../ui/useBackToClose";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { normalizeTurn } from "./boardGesture";
 import { loadBoardStickers, type BoardSticker } from "./boardSticker";
@@ -261,6 +262,8 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     setTurned(over);
     if (over) select(null);
   };
+  // Back turns the stat board back over, as LINE's Back does on any overlay.
+  useBackToClose(turned, () => turn(false));
 
   const { hold, stow, tabStop } = useBoardGestures({
     stage,
