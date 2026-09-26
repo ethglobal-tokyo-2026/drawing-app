@@ -10,7 +10,7 @@ import { QuietLink } from "../ui/QuietLink";
 import { TearLine } from "../ui/TearLine";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { TICKET_PRICE_YEN } from "./config";
-import { formatSui, formatYen, yenForMist } from "./prices";
+import { formatYen, yenForMist } from "./prices";
 import { TicketCount, TicketCounts } from "./TicketCount";
 import { describeTickets } from "./tickets";
 import { TicketStubs } from "./TicketStubs";
@@ -100,7 +100,7 @@ function useSuiBalance() {
 
 /**
  * The ticket shop: reserve ticket packs priced in yen, paid in SUI at the quote's price, with the
- * wallet's balance up top. The smallest pack is picked to start, so no pack is pushed.
+ * balance up top in yen at that price. The smallest pack is picked to start, so no pack is pushed.
  */
 export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: Props) {
   const [step, setStep] = useState<Step>("choose");
@@ -181,7 +181,7 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
         </h2>
         {!IS_MOCK_PAYMENT && (
           <p className="out-of-tickets__line out-of-tickets__quiet">
-            Paid {formatSui(BigInt(bought.priceMist))} SUI.
+            Paid {formatYen(bought.priceYen)}.
           </p>
         )}
         <TearLine />
@@ -227,66 +227,52 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
           <strong>Reserve tickets never expire.</strong>
         </p>
         <div className="ticket-shop__wallet">
-          <span className="fine">Your SUI</span>
+          <span className="fine">Your JPY</span>
           {wallet.error ? (
             <span role="alert">
               Couldn’t read your balance ({wallet.error}).{" "}
               <QuietLink onClick={wallet.refresh}>Try again</QuietLink>
             </span>
-          ) : wallet.balance === null ? (
-            <span className="out-of-tickets__quiet">Reading your wallet…</span>
+          ) : wallet.balance === null || !quote ? (
+            <span className="out-of-tickets__quiet">Reading your balance…</span>
           ) : (
-            <span>
-              <strong>{formatSui(wallet.balance)} SUI</strong>
-              {quote && (
-                <span className="out-of-tickets__quiet">
-                  {" "}
-                  ≈ {formatYen(yenForMist(wallet.balance, quote.suiYen))}
-                </span>
-              )}
-            </span>
+            <strong>{formatYen(yenForMist(wallet.balance, quote.suiYen))}</strong>
           )}
         </div>
         {quoteError ? (
           <p className="ticket-shop__problem" role="alert">
-            Couldn’t get today’s SUI price ({quoteError}).{" "}
+            Couldn’t get today’s prices ({quoteError}).{" "}
             <QuietLink onClick={retry}>Try again</QuietLink>
           </p>
         ) : !quote ? (
-          <p className="ticket-shop__problem out-of-tickets__quiet">Getting today’s SUI price…</p>
+          <p className="ticket-shop__problem out-of-tickets__quiet">Getting today’s prices…</p>
         ) : (
-          <>
-            <div className="ticket-shop__packs" role="group" aria-label="Ticket packs">
-              {quote.packs.map((p) => (
-                <button
-                  key={p.tickets}
-                  type="button"
-                  className="ticket-shop__pack"
-                  aria-pressed={p.tickets === chosen}
-                  disabled={paying}
-                  onClick={() => setChosen(p.tickets)}
-                >
-                  <TicketCount kind="reserve" />
-                  <span className="ticket-shop__pack-name">{tickets(p.tickets)}</span>
+          <div className="ticket-shop__packs" role="group" aria-label="Ticket packs">
+            {quote.packs.map((p) => (
+              <button
+                key={p.tickets}
+                type="button"
+                className="ticket-shop__pack"
+                aria-pressed={p.tickets === chosen}
+                disabled={paying}
+                onClick={() => setChosen(p.tickets)}
+              >
+                <TicketCount kind="reserve" />
+                <span className="ticket-shop__pack-name">{tickets(p.tickets)}</span>
+                {p.discountPercent > 0 && (
+                  <span className="ticket-shop__discount">−{p.discountPercent}%</span>
+                )}
+                <span className="ticket-shop__price">
                   {p.discountPercent > 0 && (
-                    <span className="ticket-shop__discount">−{p.discountPercent}%</span>
+                    <s aria-label={`was ${formatYen(p.tickets * TICKET_PRICE_YEN)}`}>
+                      {formatYen(p.tickets * TICKET_PRICE_YEN)}
+                    </s>
                   )}
-                  <span className="ticket-shop__price">
-                    {p.discountPercent > 0 && (
-                      <s aria-label={`was ${formatYen(p.tickets * TICKET_PRICE_YEN)}`}>
-                        {formatYen(p.tickets * TICKET_PRICE_YEN)}
-                      </s>
-                    )}
-                    <strong>{formatYen(p.priceYen)}</strong>
-                    <small>{formatSui(BigInt(p.priceMist))} SUI</small>
-                  </span>
-                </button>
-              ))}
-            </div>
-            <p className="fine ticket-shop__rate">
-              1 SUI ≈ {formatYen(Number(quote.suiYen))} · 5-minute average
-            </p>
-          </>
+                  <strong>{formatYen(p.priceYen)}</strong>
+                </span>
+              </button>
+            ))}
+          </div>
         )}
         <TearLine />
         <Key
@@ -297,12 +283,12 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
           onClick={() => pack && void pay(pack)}
         >
           {paying
-            ? "Paying with Sui…"
+            ? "Paying…"
             : short
-              ? "Not enough SUI"
+              ? "Not enough yen"
               : pack
-                ? `Pay ${formatSui(BigInt(pack.priceMist))} SUI`
-                : "Pay with Sui"}
+                ? `Pay ${formatYen(pack.priceYen)}`
+                : "Pay"}
         </Key>
         {close}
       </>

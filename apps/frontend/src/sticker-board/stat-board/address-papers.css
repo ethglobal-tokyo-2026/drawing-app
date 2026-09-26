@@ -1,0 +1,166 @@
+/* ---------- Your addresses as QR codes on white label stock: the board address and your Sui address ---------- */
+
+/* A row under the stats, clear of Flip back's touch band. Two papers side by side fit a 360px phone. */
+.address-papers {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 26px 20px;
+  margin-top: 30px;
+}
+
+.address-papers__note {
+  flex: none;
+  width: 148px;
+}
+
+/* White label stock hanging from its pin. The 16px of white around the code is its quiet zone, without
+   which scanners miss it. The tilt stays on the face, where the dialog reads it. */
+.address-papers__note > .address-papers__face {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 16px 16px 12px;
+  border: 0;
+  border-radius: 3px;
+  background: var(--canvas);
+  color: var(--ink);
+  text-align: center;
+  transform: rotate(var(--tilt));
+  touch-action: manipulation;
+}
+
+.address-papers__note--ethereum > .address-papers__face {
+  --tilt: -2deg;
+}
+
+.address-papers__note--sui > .address-papers__face {
+  --tilt: 1.6deg;
+}
+
+/* Held up in the dialog, whose card covers this spot from the same frame; the pin stays on the cork. */
+.address-papers__note > .address-papers__face.is-lifted {
+  visibility: hidden;
+}
+
+.address-papers__face:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.address-papers__code {
+  display: block;
+  width: 116px;
+  height: 116px;
+  margin: 0 auto 16px;
+  color: var(--ink);
+}
+
+/* The lines under the code may run into the side margins, which only the code needs clear. */
+.address-papers__caption,
+.address-papers__chain,
+.address-papers__address,
+.address-papers__status {
+  display: block;
+  margin-inline: -6px;
+}
+
+.address-papers__caption {
+  color: var(--ink);
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+
+.address-papers__address {
+  margin-top: 4px;
+  font: 800 15px/1.2 var(--font-ui);
+  font-stretch: var(--w-ui);
+  font-variant-numeric: tabular-nums;
+}
+
+.address-papers__status {
+  margin-top: 5px;
+  color: var(--graphite);
+  font: 500 13px/1.3 var(--font-ui);
+  font-stretch: var(--w-ui);
+  text-wrap: balance;
+}
+
+.address-papers__retry {
+  margin-top: 2px;
+}
+
+/* Where a code goes, hatched like the space a given sticker left, with three finder squares so it reads
+   as a QR code to come. Nothing in it scans. */
+.address-papers__placeholder {
+  position: relative;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(28, 24, 36, 0.08) 0 1.5px,
+    transparent 1.5px 6px
+  );
+}
+
+.address-papers__placeholder > i {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border: 4px solid rgba(28, 24, 36, 0.22);
+  border-radius: 7px;
+  background: var(--canvas);
+}
+
+.address-papers__placeholder > i::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 2px;
+  background: rgba(28, 24, 36, 0.22);
+}
+
+.address-papers__placeholder > i:nth-child(1) {
+  left: 0;
+  top: 0;
+}
+
+.address-papers__placeholder > i:nth-child(2) {
+  right: 0;
+  top: 0;
+}
+
+.address-papers__placeholder > i:nth-child(3) {
+  left: 0;
+  bottom: 0;
+}
+
+/* The pin stays on the cork when its paper lifts off, so it's the note's, not the face's. Its head
+   covers the paper's top edge, as the round pins do. */
+.address-papers__pin {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: -8px;
+  margin-left: -11px;
+}
+
+/* A push pin whose plastic head is a chain's mark: Liner Lift plastic in the drawings' ink line, a
+   glint of the top-left light, and a cast on the paper. */
+.chain-pin {
+  overflow: visible;
+  filter: drop-shadow(2px 3px 2px rgba(28, 24, 36, 0.32));
+}
+
+/* The fill covers the stroke's inner half, so the line shows about 1.1px outside the mark, near the
+   round pins' ring, and fills the Ethereum mark's split as the line between its two parts. */
+.chain-pin__head {
+  fill: var(--liner-lift);
+  stroke: var(--ink);
+  stroke-width: 2.4;
+  stroke-linejoin: round;
+  paint-order: stroke;
+}
+
+.chain-pin__glint {
+  fill: rgba(255, 255, 255, 0.8);
+}
