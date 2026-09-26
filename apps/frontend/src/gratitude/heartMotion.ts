@@ -9,6 +9,22 @@ export interface HeartLayout {
   /** The middle of the giver's picture, where the heart lands. */
   giver: { x: number; y: number };
   screen: { width: number; height: number };
+  /** The loose heart's top edge keeps below this: the HUD's underside. */
+  ceiling: number;
+}
+
+export type ScreenEdge = "left" | "right" | "top" | "bottom";
+
+/** The loose heart hit an edge hard. */
+export interface WallHit {
+  edge: ScreenEdge;
+  /** Where it hit, on the edge. */
+  x: number;
+  y: number;
+  /** Pointing off the edge, into the screen. */
+  normal: { x: number; y: number };
+  /** px/s into the edge. */
+  speed: number;
 }
 
 /** One frame of the heart, for the engine to write. */
@@ -30,6 +46,10 @@ export interface HeartMotionState {
   reduced: boolean;
   /** How much of the catch window has passed, from 0 to 1. */
   sendingProgress: number;
+  /** A thumb holding the heart: it leans toward the thumb's x, by up to `degrees`. */
+  leanToward: { x: number; degrees: number } | null;
+  /** Stroking: it stretches along the stroke, `angle` in degrees, with the thumb's speed in px/ms. */
+  strokeStretch: { speed: number; angle: number } | null;
 }
 
 export interface HeartMotion {
@@ -40,9 +60,23 @@ export interface HeartMotion {
   shake: (amplitude: number) => void;
   /** Swells the page by `amount`, dying away. */
   punch: (amount: number) => void;
+  /** A drag on the heart pulls it `px` along `angle` degrees on a spring; 0 lets go. */
+  pullTo: (px: number, angle: number | null) => void;
   /** Resolves as the heart lands in the giver's picture. */
   flyToGiver: () => Promise<void>;
   goLimp: () => void;
+  /** Jiggles like jelly, by at least `amount`. */
+  wobble: (amount: number) => void;
+  /** A hard shake in a rhythm: the jiggle builds. */
+  jiggle: () => void;
+  /** The wrist: a sideways move in m/s² sways it, and gravity's sideways pull tilts it. */
+  swayWith: (ax: number, gx: number | null) => void;
+  /** It comes loose and ricochets off the screen's edges until an ending takes it. */
+  comeLoose: () => void;
+  /** A shake reversal sends the loose heart along, against the phone's move. */
+  kickLoose: (direction: { x: number; y: number }, strength: number) => void;
+  /** The combo is over: no pull, jiggle, sway or tilt carries on. */
+  calm: () => void;
   /** Fades the heart out, unless it's already gone. */
   fadeOut: () => void;
   /** `dt` is play time, which stops while the screen is held; `real` is wall-clock time. Seconds. */
@@ -93,6 +127,19 @@ const TREMOR_DEG = 1.4;
 const WIND_UP = { stretch: 0.07, leanDeg: 8 };
 /** How fast the stretch settles on its target, a second. */
 const STRETCH_RATE = 12;
+/** A drag's pull: a loose spring, so letting go overshoots into a squash and wobbles out. */
+const PULL = {
+  stiffness: 420,
+  damping: 0.3,
+  reducedDamping: 1,
+  maxPx: 160,
+  stretch: 0.13,
+  reduced: 0.05,
+};
+/** Stroking stretches it with the thumb's speed, up to `max`. */
+const STROKE_STRETCH = { perSpeed: 0.16, max: 0.26 };
+/** It leans toward a holding thumb this fast, a second. */
+const LEAN_RATE = 8;
 /** 昇天: it droops where it is, over play time, so the climax's freeze holds it too. */
 const LIMP = { seconds: 0.5, leanDeg: 9, sag: 0.08 };
 /** How fast the shake and the punch die away, a second. */
@@ -109,6 +156,25 @@ const FLIGHT = {
   upPx: 40,
 };
 const REDUCED_FLIGHT_FADE_S = 0.25;
+/** Jelly: its wobble's pace in radians a second, how fast it dies away, and its most. */
+const JELLY = { pace: 17, decay: 2.2, most: 0.16, perShake: 0.04 };
+/** The wrist: a spring the phone's sideways moves drive, in degrees, and the tilt with its roll. */
+const SWAY = {
+  stiffness: 60,
+  damping: 5,
+  drive: 40,
+  most: 10,
+  driveDecay: 8,
+  perAccel: 1.6,
+  maxDrive: 30,
+};
+const TILT = { perGravity: 0.9, most: 8, rate: 5 };
+/** Loose: it shrinks to `scale`, slows by `drag` a second and keeps `bounce` of its speed off an edge. */
+const LOOSE = { scale: 0.62, shrinkRate: 8, drag: 0.9, bounce: 0.82, launch: -420, hardHit: 150 };
+/** A kick from a shake reversal, in px/s: its base, more with the shake's strength, and some scatter. */
+const KICK = { base: 620, perStrength: 18, most: 500, scatterX: 320, scatterY: 560 };
+/** A hard hit squashes it against the edge. */
+const IMPACT = { per: 1 / 1400, least: 0.08, most: 0.32, decay: 16 };
 const FADE_OUT_S = 0.3;
 
 const degrees = (radians: number) => (radians * 180) / Math.PI;
@@ -123,11 +189,17 @@ const thump = (beat: number, at: number) => Math.exp(-((beat - at) ** 2) / BEAT.
  * into the giver's picture or limp where it is. The page shakes and swells around it, and the heart
  * is held out of both so its spot never moves under a thumb.
  */
-export function createHeartMotion(layout: HeartLayout, random: () => number): HeartMotion {
+export function createHeartMotion(
+  layout: HeartLayout,
+  random: () => number,
+  onWallHit: (hit: WallHit) => void,
+): HeartMotion {
   let L = layout;
   const pos = { x: layout.rest.x, y: layout.rest.y, vx: 0, vy: 0 };
   const press = { depth: 0, speed: 0 };
   const stretch = { scale: 1, angle: 0 };
+  const pull = { px: 0, speed: 0, target: 0, angle: 90 };
+  let lean = 0;
   /** Until the first frame, a new layout places the heart instead of springing it across. */
   let placed = false;
   let shakeAmplitude = 0;
@@ -135,12 +207,76 @@ export function createHeartMotion(layout: HeartLayout, random: () => number): He
   let play = 0;
   let wall = 0;
   let limpFrom: number | null = null;
+  const jelly = { amount: 0, phase: 0 };
+  const sway = { angle: 0, speed: 0, drive: 0 };
+  const tilt = { target: 0, now: 0 };
+  let loose: { x: number; y: number; vx: number; vy: number; scale: number } | null = null;
+  let impact = { angle: 0, amount: 0 };
   let flight: Flight | null = null;
   let fade: Fade | null = null;
   let landing: Promise<void> | null = null;
   let opacity = 1;
   /** As of the latest frame. */
   let reduced = false;
+
+  /** Ricochets off the edges; a hard hit squashes it and is reported. */
+  function stepLoose(
+    f: { x: number; y: number; vx: number; vy: number; scale: number },
+    dt: number,
+  ) {
+    const { width, height } = L.screen;
+    f.scale += (LOOSE.scale - f.scale) * Math.min(1, dt * LOOSE.shrinkRate);
+    const r = L.width * 0.5 * f.scale * 0.92;
+    const drag = Math.exp(-LOOSE.drag * dt);
+    f.vx *= drag;
+    f.vy *= drag;
+    f.x += f.vx * dt;
+    f.y += f.vy * dt;
+    const hit = (
+      edge: ScreenEdge,
+      speed: number,
+      x: number,
+      y: number,
+      angle: number,
+      normal: { x: number; y: number },
+    ) => {
+      if (Math.abs(speed) <= LOOSE.hardHit) return;
+      impact = { angle, amount: clamp(Math.abs(speed) * IMPACT.per, IMPACT.least, IMPACT.most) };
+      onWallHit({ edge, x, y, normal, speed: Math.abs(speed) });
+    };
+    const minX = r + 2;
+    const maxX = width - r - 2;
+    const minY = Math.max(r + 2, L.ceiling);
+    const maxY = height - r - 2;
+    if (f.x < minX) {
+      f.x = minX;
+      if (f.vx < 0) {
+        hit("left", f.vx, 0, f.y, 0, { x: 1, y: 0 });
+        f.vx = -f.vx * LOOSE.bounce;
+      }
+    }
+    if (f.x > maxX) {
+      f.x = maxX;
+      if (f.vx > 0) {
+        hit("right", f.vx, width, f.y, 0, { x: -1, y: 0 });
+        f.vx = -f.vx * LOOSE.bounce;
+      }
+    }
+    if (f.y < minY) {
+      f.y = minY;
+      if (f.vy < 0) {
+        hit("top", f.vy, f.x, f.y - r, 90, { x: 0, y: 1 });
+        f.vy = -f.vy * LOOSE.bounce;
+      }
+    }
+    if (f.y > maxY) {
+      f.y = maxY;
+      if (f.vy > 0) {
+        hit("bottom", f.vy, f.x, height, 90, { x: 0, y: -1 });
+        f.vy = -f.vy * LOOSE.bounce;
+      }
+    }
+  }
 
   return {
     setLayout(next) {
@@ -163,8 +299,14 @@ export function createHeartMotion(layout: HeartLayout, random: () => number): He
       punchAmount = amount;
     },
 
+    pullTo(px, angle) {
+      pull.target = Math.min(PULL.maxPx, px);
+      if (angle !== null) pull.angle = angle;
+    },
+
     flyToGiver() {
       landing ??= new Promise<void>((land) => {
+        loose = null;
         if (reduced) {
           fade = { from: opacity, seconds: REDUCED_FLIGHT_FADE_S, elapsed: 0, done: land };
           return;
@@ -182,6 +324,39 @@ export function createHeartMotion(layout: HeartLayout, random: () => number): He
 
     goLimp() {
       limpFrom ??= play;
+    },
+
+    wobble(amount) {
+      jelly.amount = Math.max(jelly.amount, amount);
+    },
+
+    jiggle() {
+      jelly.amount = Math.min(JELLY.most, jelly.amount + JELLY.perShake);
+    },
+
+    swayWith(ax, gx) {
+      if (gx !== null) tilt.target = clamp(gx * TILT.perGravity, -TILT.most, TILT.most);
+      sway.drive = clamp(-ax * SWAY.perAccel, -SWAY.maxDrive, SWAY.maxDrive);
+    },
+
+    comeLoose() {
+      sway.angle = sway.speed = sway.drive = 0;
+      tilt.target = tilt.now = 0;
+      loose ??= { x: pos.x, y: pos.y, vx: 0, vy: LOOSE.launch, scale: 1 };
+    },
+
+    kickLoose(direction, strength) {
+      if (!loose) return;
+      const k = KICK.base + Math.min(KICK.most, strength * KICK.perStrength);
+      loose.vx += -direction.x * k + (random() - 0.5) * KICK.scatterX;
+      loose.vy += direction.y * k + (random() - 0.5) * KICK.scatterY;
+    },
+
+    calm() {
+      pull.target = 0;
+      jelly.amount = 0;
+      sway.drive = 0;
+      tilt.target = 0;
     },
 
     fadeOut() {
@@ -218,6 +393,11 @@ export function createHeartMotion(layout: HeartLayout, random: () => number): He
           opacity = 0;
           f.land();
         }
+      } else if (loose) {
+        stepLoose(loose, dt);
+        pos.x = loose.x;
+        pos.y = loose.y;
+        scale = loose.scale;
       } else {
         const damping = 2 * Math.sqrt(HOLD.stiffness) * HOLD.damping;
         pos.vx += (-(pos.x - L.rest.x) * HOLD.stiffness - pos.vx * damping) * h;
@@ -248,18 +428,73 @@ export function createHeartMotion(layout: HeartLayout, random: () => number): He
         sy *= b;
       }
 
+      const leanTarget = state.leanToward
+        ? clamp((state.leanToward.x - pos.x) / 160, -1, 1) * state.leanToward.degrees
+        : 0;
+      lean += (leanTarget - lean) * Math.min(1, real * LEAN_RATE);
+      rotate += lean;
+
+      const r = Math.min(real, 1 / 30);
+      if (r > 0) {
+        const damping =
+          2 * Math.sqrt(PULL.stiffness) * (state.reduced ? PULL.reducedDamping : PULL.damping);
+        for (let i = 0; i < 2; i++) {
+          pull.speed +=
+            (-(pull.px - pull.target) * PULL.stiffness - pull.speed * damping) * (r / 2);
+          pull.px += pull.speed * (r / 2);
+        }
+        if (!pull.target && Math.abs(pull.px) < 0.05 && Math.abs(pull.speed) < 0.5) {
+          pull.px = pull.speed = 0;
+        }
+      }
       if (!flight) {
+        const pulled = pull.px !== 0 || pull.target !== 0;
         let target = 1;
-        if (state.phase === "sending") {
+        let angle = stretch.angle;
+        if (state.strokeStretch) {
+          target =
+            1 + Math.min(STROKE_STRETCH.max, state.strokeStretch.speed * STROKE_STRETCH.perSpeed);
+          angle = state.strokeStretch.angle;
+        } else if (pulled) {
+          target = 1 + (state.reduced ? PULL.reduced : PULL.stretch) * Math.tanh(pull.px / 100);
+          angle = pull.angle;
+        } else if (state.phase === "sending") {
           const k = easeInOutSine(clamp(state.sendingProgress, 0, 1));
           target = 1 + WIND_UP.stretch * k;
           rotate -= WIND_UP.leanDeg * k;
-          if (target !== 1) {
-            stretch.angle = degrees(Math.atan2(L.giver.y - L.rest.y, L.giver.x - L.rest.x));
-          }
+          angle = degrees(Math.atan2(L.giver.y - L.rest.y, L.giver.x - L.rest.x));
         }
-        stretch.scale += (target - stretch.scale) * Math.min(1, real * STRETCH_RATE);
+        // The pull's spring already carries the motion; anything else eases to its stretch.
+        if (pulled) {
+          stretch.scale = target;
+          stretch.angle = angle;
+        } else {
+          stretch.scale += (target - stretch.scale) * Math.min(1, real * STRETCH_RATE);
+          if (target !== 1) stretch.angle = angle;
+        }
       }
+
+      if (jelly.amount > 0.002) {
+        jelly.phase += real * JELLY.pace;
+        const w = Math.sin(jelly.phase) * jelly.amount;
+        sx *= 1 + w;
+        sy *= 1 - w;
+        jelly.amount *= Math.exp(-real * JELLY.decay);
+      }
+      let impactTransform = "";
+      if (impact.amount > 0.01) {
+        const a = impact.angle;
+        impactTransform = `rotate(${a}deg) scale(${(1 - impact.amount * 0.9).toFixed(4)}, ${(1 + impact.amount * 0.5).toFixed(4)}) rotate(${-a}deg) `;
+        impact.amount *= Math.exp(-real * IMPACT.decay);
+      }
+      if (r > 0 && !state.reduced) {
+        sway.speed +=
+          (-sway.angle * SWAY.stiffness - sway.speed * SWAY.damping + sway.drive * SWAY.drive) * r;
+        sway.angle = clamp(sway.angle + sway.speed * r, -SWAY.most, SWAY.most);
+        sway.drive *= Math.exp(-r * SWAY.driveDecay);
+        tilt.now += (tilt.target - tilt.now) * Math.min(1, r * TILT.rate);
+      }
+      if (!loose && !flight) rotate += sway.angle + tilt.now;
 
       if (tier >= TREMOR_FROM && limpFrom === null && !state.reduced) {
         const tremor = TREMOR_DEG * state.intensity;
@@ -319,7 +554,7 @@ export function createHeartMotion(layout: HeartLayout, random: () => number): He
           ? `translate(${px.toFixed(2)}px, ${py.toFixed(2)}px) scale(${ps.toFixed(4)})`
           : "",
         anchor: `translate(${(hx - L.width / 2).toFixed(2)}px, ${(hy - L.height / 2).toFixed(2)}px) rotate(${rotate.toFixed(2)}deg) scale(${hs.toFixed(4)})`,
-        body: `${stretchTransform}scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`,
+        body: `${stretchTransform}${impactTransform}scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`,
         opacity,
         x: pos.x,
         y: pos.y,

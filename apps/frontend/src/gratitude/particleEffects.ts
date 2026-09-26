@@ -15,6 +15,8 @@ export interface ParticleEffects {
   bead: (heart: HeartBox) => void;
   /** Hearts thrown out in a ring from `at`. */
   burst: (count: number, at: { x: number; y: number }) => void;
+  /** Speed lines streaming past (x, y) along a thumb's velocity, in px/ms. */
+  streamLines: (x: number, y: number, velocity: { x: number; y: number; speed: number }) => void;
   /** The stamps leave, one after another. */
   tidy: () => void;
 }
@@ -34,6 +36,8 @@ const SPRITES: Record<Kind, { url: string; cap: number }> = {
 const STAMP_URL = svgDataUrl(stampHeartSvg());
 /** Stamps kept on the heart's stage; past this the oldest fades. */
 const STAMPS = 16;
+/** Speed lines on screen at most. */
+const LINES = 40;
 
 /** A pooled sprite and the animation it was last given, cancelled when it's reused. */
 interface Sprite {
@@ -75,7 +79,7 @@ const at = (x: number, y: number) => `translate(${x}px,${y}px)`;
 
 /** The heart's small effects, each from a fixed set of elements per kind. */
 export function createParticleEffects(
-  layers: { stamps: HTMLElement; effects: HTMLElement },
+  layers: { stamps: HTMLElement; effects: HTMLElement; lines: HTMLElement },
   options: { reduced: () => boolean; random: () => number },
 ): ParticleEffects {
   const { reduced, random } = options;
@@ -84,6 +88,7 @@ export function createParticleEffects(
   const stamps: Stamp[] = [];
   /** Faded out and off the page, ready for the next stamp. */
   const spareStamps: Stamp[] = [];
+  const lines: Sprite[] = [];
 
   /** The kind's oldest sprite once it has its fill, otherwise a new one; sized `size` px square. */
   function particle(kind: Kind, size: number): Sprite {
@@ -270,6 +275,43 @@ export function createParticleEffects(
             { transform: `${at(x + Math.cos(a) * d, y + Math.sin(a) * d)} scale(1)`, opacity: 0 },
           ],
           520,
+        );
+      }
+    },
+
+    streamLines(x, y, velocity) {
+      if (velocity.speed < 0.2 || reduced()) return;
+      const count = Math.min(3, 1 + Math.floor(velocity.speed * 2));
+      const angle = Math.atan2(velocity.y, velocity.x);
+      const deg = (angle * 180) / Math.PI;
+      const dx = Math.cos(angle);
+      const dy = Math.sin(angle);
+      for (let i = 0; i < count; i++) {
+        const line = (lines.length >= LINES ? lines.shift() : undefined) ?? {
+          el: layers.lines.appendChild(
+            Object.assign(document.createElement("div"), { className: "gr-line" }),
+          ),
+          animation: null,
+        };
+        lines.push(line);
+        // Spread across the stroke, trailing behind the thumb.
+        const off = (random() - 0.5) * 230;
+        const length = 50 + Math.min(180, velocity.speed * 130);
+        line.el.style.width = `${length.toFixed(1)}px`;
+        line.el.style.height = `${(1.4 + random() * 2.4).toFixed(2)}px`;
+        const sx = x - dy * off - dx * (length * 0.8 + random() * 30);
+        const sy = y + dx * off - dy * (length * 0.8 + random() * 30);
+        fly(
+          line,
+          [
+            { transform: `${at(sx, sy)} rotate(${deg}deg)`, opacity: 0.9 },
+            {
+              transform: `${at(sx + dx * 60, sy + dy * 60)} rotate(${deg}deg) scaleX(.6)`,
+              opacity: 0,
+            },
+          ],
+          240,
+          "linear",
         );
       }
     },

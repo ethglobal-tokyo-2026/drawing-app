@@ -124,10 +124,48 @@ describe("createGratitudeCombo", () => {
   it("ends at once, with its result, when the page goes hidden", () => {
     const combo = createGratitudeCombo();
     [0, 200, 400].forEach((t) => combo.tapHeart(t));
-    expect(endOf(combo.endCombo(500))).toMatchObject({
+    expect(endOf(combo.endCombo(500, "hidden"))).toMatchObject({
       caught: true,
+      reason: "hidden",
       record: { hits: 3, durationMs: 500 },
     });
+  });
+
+  it("says why it ended: sent, empty, cap, or the caller's hidden or closed", () => {
+    const sent = createGratitudeCombo();
+    sent.tapHeart(5000);
+    expect(endOf(sent.advanceTo(5000 + GAME_CONFIG.catchWindowMs))).toMatchObject({
+      reason: "sent",
+      startedAt: 5000,
+    });
+    expect(endOf(play(5).events)?.reason).toBe("empty");
+    const slowDrain: GameConfig = { ...GAME_CONFIG, drainStart: 0.001 };
+    expect(endOf(play(10, { config: slowDrain }).events)?.reason).toBe("cap");
+    const closed = createGratitudeCombo();
+    closed.tapHeart(0);
+    expect(endOf(closed.endCombo(400, "closed"))).toMatchObject({
+      reason: "closed",
+      caught: false,
+    });
+  });
+
+  it("keeps a rule's reason when the rule ended it before the caller did", () => {
+    const combo = createGratitudeCombo();
+    combo.tapHeart(0);
+    expect(endOf(combo.endCombo(GAME_CONFIG.catchWindowMs + 500, "hidden"))).toMatchObject({
+      reason: "sent",
+      record: { durationMs: GAME_CONFIG.catchWindowMs },
+    });
+  });
+
+  it("gives each hit and rate-limited touch its time in the record", () => {
+    const combo = createGratitudeCombo();
+    const events = [1000, 1100, 1105, 1110, 1115, 1120, 1125].flatMap((t) => combo.tapHeart(t));
+    const timed = events.flatMap((e) => (e.kind === "hit" || e.kind === "limited" ? [e] : []));
+    expect(timed.some((e) => e.kind === "limited")).toBe(true);
+    const end = endOf(combo.endCombo(1200, "closed"));
+    expect(timed.filter((e) => e.kind === "hit").map((e) => e.at)).toEqual(end?.record.hitTimes);
+    expect(timed.map((e) => e.at)).toEqual([0, 100, 105, 110, 115, 120, 125]);
   });
 
   it("climbs the multiplier at hits and at its rise rate, to its max, and sinks it at its fall rate", () => {
@@ -162,13 +200,13 @@ describe("createGratitudeCombo", () => {
     const endedInFreeze = createGratitudeCombo();
     endedInFreeze.tapHeart(0);
     endedInFreeze.tapHeart(300);
-    endedInFreeze.endCombo(300 + tierUpFreezeMs / 2);
+    endedInFreeze.endCombo(300 + tierUpFreezeMs / 2, "closed");
     expect(endedInFreeze.view).toMatchObject({ phase: "ended", frozen: false });
   });
 
   it("ends without a record when closed before the first tap", () => {
     const combo = createGratitudeCombo();
-    expect(combo.endCombo(100)).toEqual([]);
+    expect(combo.endCombo(100, "closed")).toEqual([]);
     expect(combo.tapHeart(200)).toEqual([]);
   });
 

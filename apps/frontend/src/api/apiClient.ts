@@ -5,6 +5,8 @@ import type {
   PendingGiftsResponse,
   Placement,
   ReceiveGiftResponse,
+  RecordGratitude,
+  RecordGratitudeResponse,
   StickerBoardResponse,
   StickerDetailResponse,
   StickerPlacement,
@@ -26,6 +28,8 @@ export interface ApiClient {
   previewGift: (body: GiftClaimRequest) => Promise<GiftPreviewResponse>;
   /** POST /api/gifts/receive */
   receiveGift: (body: GiftClaimRequest) => Promise<ReceiveGiftResponse>;
+  /** POST /api/gratitude, with keepalive, so a combo that ends as the page goes away still lands. */
+  recordGratitude: (body: RecordGratitude) => Promise<RecordGratitudeResponse>;
 }
 
 /** A refused or failed request: the HTTP status and the REST doc's error body. Status 0 is no answer. */
@@ -52,3 +56,41 @@ export const apiError = (error: unknown): ApiError =>
         error: "network",
         detail: error instanceof Error ? error.message : String(error),
       });
+
+/** How long a request may go unanswered before it counts as no answer. */
+const REQUEST_TIMEOUT_MS = 15_000;
+
+const isErrorBody = (value: unknown): value is ErrorBody =>
+  typeof value === "object" &&
+  value !== null &&
+  "error" in value &&
+  typeof value.error === "string";
+
+/** POSTs `body` as JSON to the app's server and returns its answer; a refusal or none throws an ApiError. */
+export async function postJson(
+  path: string,
+  body: unknown,
+  init: Pick<RequestInit, "keepalive"> = {},
+): Promise<unknown> {
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      ...init,
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (error) {
+    throw apiError(error);
+  }
+  // An answer that isn't JSON, like a static host's error page, still reports its status.
+  const answer: unknown = await response.json().catch(() => null);
+  if (response.ok) return answer;
+  throw new ApiError(
+    response.status,
+    isErrorBody(answer)
+      ? answer
+      : { error: "unexpected_response", detail: `HTTP ${response.status} ${response.statusText}` },
+  );
+}

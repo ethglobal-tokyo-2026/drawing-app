@@ -2,7 +2,8 @@ import { act, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { ApiError, type ApiClient } from "./apiClient";
 import { ApiProvider } from "./ApiProvider";
-import type { Person } from "./contract";
+import type { Person, RecordGratitude } from "./contract";
+import { gratitudeOf } from "./mock/gratitude";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -17,6 +18,31 @@ export const TEST_OWNER: Person = {
   linePictureUrl: null,
 };
 
+/** A one-tap combo's POST /api/gratitude body; `overrides` replace any of its fields. */
+export const recordGratitudeBody = (overrides: Partial<RecordGratitude> = {}): RecordGratitude => ({
+  idempotencyKey: "0f6c1a52-3d4b-4e8a-9c21-5b7d8e9f0a13",
+  giftId: "g1",
+  method: "tap",
+  hits: 1,
+  total: 1,
+  peakMult: 1,
+  peakTier: 0,
+  gameConfigVersion: "test",
+  replay: {
+    v: 1,
+    seed: 1,
+    intensity: 0.7,
+    stage: [390, 741],
+    durationMs: 0,
+    endReason: "sent",
+    switchedAtHit: null,
+    hits: [0, 5000, 5000, 1],
+    strokes: [],
+    shakes: [],
+  },
+  ...overrides,
+});
+
 const needsServer = () =>
   Promise.reject(
     new ApiError(501, {
@@ -25,7 +51,10 @@ const needsServer = () =>
     }),
   );
 
-/** A client with nothing on the board and no gifts; `overrides` replace any of its methods. */
+/**
+ * A client with nothing on the board and no gifts, that records any gratitude; `overrides` replace
+ * any of its methods.
+ */
 export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
   return {
     stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [] }),
@@ -37,6 +66,7 @@ export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
     pendingGifts: () => Promise.resolve({ gifts: [] }),
     previewGift: needsServer,
     receiveGift: needsServer,
+    recordGratitude: (body) => Promise.resolve({ gratitude: gratitudeOf(body, 0) }),
     ...overrides,
   };
 }

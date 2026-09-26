@@ -2,8 +2,16 @@ import type { GiftRecord } from "../giving/giftStore";
 import { giftStatusBySticker } from "../giving/giftStore";
 import type { Placement as RecordPlacement, StickerRecord } from "../stickers/stickerStorage";
 import type { StickerUrls } from "../stickers/stickerUrls";
-import { ApiError, type ApiClient } from "./apiClient";
-import type { BoardSticker, Gift, Person, Placement, Sticker, StickerPlacement } from "./contract";
+import { ApiError, postJson, type ApiClient } from "./apiClient";
+import type {
+  BoardSticker,
+  Gift,
+  Person,
+  Placement,
+  RecordGratitudeResponse,
+  Sticker,
+  StickerPlacement,
+} from "./contract";
 
 /** Gift Messages go unreceived after this long, as on the server. */
 const GIFT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
@@ -32,6 +40,9 @@ const needsServer = () =>
     }),
   );
 
+const isRecordedGratitude = (answer: unknown): answer is RecordGratitudeResponse =>
+  typeof answer === "object" && answer !== null && "gratitude" in answer;
+
 const toContractPlacement = (p: RecordPlacement): Placement => ({
   onBoard: p.on,
   x: p.x,
@@ -44,6 +55,7 @@ const toContractPlacement = (p: RecordPlacement): Placement => ({
 /**
  * The API as this device can answer it, until the server exists. Every sticker here is yours, and
  * nothing can be received, so no sticker is ever given away: a sent gift stays on its way.
+ * Gratitude goes to the server already: the gratitude outbox keeps it until it lands.
  */
 export function createDeviceApi(sources: DeviceSources): ApiClient {
   const toSticker = (r: StickerRecord): Sticker => {
@@ -170,5 +182,14 @@ export function createDeviceApi(sources: DeviceSources): ApiClient {
 
     previewGift: needsServer,
     receiveGift: needsServer,
+
+    recordGratitude: async (body) => {
+      const answer = await postJson("/api/gratitude", body, { keepalive: true });
+      if (isRecordedGratitude(answer)) return answer;
+      throw new ApiError(502, {
+        error: "unexpected_response",
+        detail: `POST /api/gratitude answered without the gratitude: ${JSON.stringify(answer)}`,
+      });
+    },
   };
 }
