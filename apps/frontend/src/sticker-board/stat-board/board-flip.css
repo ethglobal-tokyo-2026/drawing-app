@@ -38,9 +38,11 @@
   pointer-events: none;
 }
 
+/* The back is cork before its papers arrive, never the dark behind the board. */
 .board-rear {
   overflow: hidden;
   transform: rotateY(180deg);
+  background: #cfa476;
 }
 
 /* Each face darkens as it turns away from the top-left light. */
