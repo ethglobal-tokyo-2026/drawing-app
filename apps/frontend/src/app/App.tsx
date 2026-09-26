@@ -3,13 +3,14 @@ import { Suspense, useEffect, useRef, useState, type CSSProperties } from "react
 import { useApi } from "../api/useApi";
 import { resendPendingGratitude } from "../gratitude/gratitudeOutbox";
 import { useTranslation } from "../i18n/react";
+import { ShopScreen } from "../shop/ShopScreen";
 import { StickerBoard } from "../sticker-board/StickerBoard";
 import { DrawingScreen, type DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
+import { ReserveTicketCheckout } from "../tickets/ReserveTicketCheckout";
 import { lazyWithPreload, usePreloadWhenIdle } from "../ui/lazyWithPreload";
 import { MotionPermissionCard } from "./MotionPermissionCard";
 import { openedFrom, type View } from "./openedView";
 import { changeScreen } from "./screenTransition";
-import { ShopScreen } from "./ShopScreen";
 import { TabBar } from "./TabBar";
 import { useFocusLoop } from "./useFocusLoop";
 import "./App.css";
@@ -53,6 +54,8 @@ export default function App() {
   const [boardLoads, setBoardLoads] = useState(0);
   // Someone else's sticker board, opened from Explore over it, so Explore keeps its search and scroll.
   const [visiting, setVisiting] = useState<Person>();
+  // The reserve ticket checkout, opened from the Shop over the whole phone, tabs and all.
+  const [checkingOut, setCheckingOut] = useState(false);
   const drawing = view === "draw";
   usePreloadWhenIdle(OPENED_FROM_TABS);
 
@@ -124,7 +127,7 @@ export default function App() {
             />
           </Suspense>
         )}
-        {view === "shop" && <ShopScreen onDraw={openDrawing} />}
+        {view === "shop" && <ShopScreen onBuyReserveTickets={() => setCheckingOut(true)} />}
       </div>
       <TabBar
         active={drawing ? undefined : view}
@@ -137,6 +140,15 @@ export default function App() {
           });
         }}
       />
+      {checkingOut && view === "shop" && (
+        <ReserveTicketCheckout
+          onDraw={() => {
+            setCheckingOut(false);
+            openDrawing();
+          }}
+          onClose={() => setCheckingOut(false)}
+        />
+      )}
       <MotionPermissionCard />
       {giftClaimToken && (
         // Liner while ReceiveGiftDialog's code loads, so the board doesn't show first.

@@ -1,4 +1,3 @@
-import type { TicketShop as Shop } from "@drawing-app/api/client";
 import { Ticket } from "@phosphor-icons/react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "../api/apiClient";
@@ -9,6 +8,7 @@ import { DrawIcon } from "../icons/DrawIcon";
 import { usePrivyStatus } from "../identity/privy";
 import { useSuiWalletFailure } from "../identity/suiWallet";
 import type { JpycPayment } from "../payments/jpyc";
+import { SuiCredit } from "../shop/SuiCredit";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
@@ -18,24 +18,21 @@ import { TearLine } from "../ui/TearLine";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { TICKET_PRICE_YEN } from "./config";
 import { formatYen, yenForJpyc } from "./prices";
+import { useReservePacks, type ReservePack } from "./reservePacks";
 import { TicketCount, TicketCounts } from "./TicketCount";
 import { describeTickets } from "./tickets";
 import { TicketStubs } from "./TicketStubs";
 import { useTickets } from "./useTickets";
 import "./tickets.css";
-import "./TicketShop.css";
+import "./ReserveTicketCheckout.css";
 
 type Step = "choose" | "paying" | "done" | "error";
-type Pack = Shop["packs"][number];
 
 interface Props {
-  /** "card": risen over the drawing screen as a dialog. "page": the Shop tab's content. */
-  layout: "card" | "page";
   /** Draw, after a purchase. */
   onDraw: () => void;
-  /** Leave the shop; in the card, also what Escape does. The Shop tab has no way out but its tabs. */
-  onClose?: () => void;
-  closeLabel?: string;
+  /** Close the card; also what Escape does. */
+  onClose: () => void;
 }
 
 /** Why something failed: an API error in the app's language, anything else in its own words. */
@@ -45,47 +42,19 @@ const reason = (error: unknown) =>
     : error instanceof Error && error.message
       ? error.message
       : String(error);
-/** One outline row per pack the shop sells, while today's prices load. */
+/** One outline row per pack on sale, while today's prices load. */
 const PACKS_LOADING = [1, 2, 3, 4];
 
-/** The shop's packs and where they're paid. */
-function useTicketShop() {
-  const api = useApi();
-  const [shop, setShop] = useState<Shop | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [attempt, setAttempt] = useState(0);
-
-  useEffect(() => {
-    let live = true;
-    api.ticketShop().then(
-      (next) => {
-        if (!live) return;
-        setShop(next);
-        setError(null);
-      },
-      (e: unknown) => {
-        console.error("Couldn't get the ticket shop's packs", e);
-        if (live) setError(reason(e));
-      },
-    );
-    return () => {
-      live = false;
-    };
-  }, [api, attempt]);
-
-  return { shop, error, retry: () => setAttempt((a) => a + 1) };
-}
-
-/** The person's Privy Sui wallet: its address, or why there's none yet. */
-function useSuiWallet(): { address?: string; problem?: string } {
+/** The person's Privy Sui account: its address, or why there's none yet. */
+function useSuiAccount(): { address?: string; problem?: string } {
   const { t } = useTranslation();
   const privy = usePrivyStatus();
   const failure = useSuiWalletFailure();
-  if (failure) return { problem: t(($) => $.tickets.shop.walletBroken, { reason: failure }) };
+  if (failure) return { problem: t(($) => $.tickets.checkout.walletBroken, { reason: failure }) };
   if (privy.state === "failed") {
-    return { problem: t(($) => $.tickets.shop.walletSignInFailed, { reason: privy.reason }) };
+    return { problem: t(($) => $.tickets.checkout.walletSignInFailed, { reason: privy.reason }) };
   }
-  if (privy.state === "off") return { problem: t(($) => $.tickets.shop.walletNeedsLine) };
+  if (privy.state === "off") return { problem: t(($) => $.tickets.checkout.walletNeedsLine) };
   return { address: privy.state === "signed-in" ? privy.suiWallet : undefined };
 }
 
@@ -97,7 +66,7 @@ function useJpycBalance(owner: string | undefined, payment: JpycPayment | undefi
   useEffect(() => {
     if (!owner || !payment) return;
     let live = true;
-    // Sui's SDK loads with the shop, not with the app.
+    // Sui's SDK loads with the checkout, not with the app.
     import("../payments/jpyc")
       .then(({ getJpycBalance }) => getJpycBalance(owner, payment))
       .then(
@@ -120,27 +89,29 @@ function useJpycBalance(owner: string | undefined, payment: JpycPayment | undefi
 }
 
 /**
- * The ticket shop: reserve ticket packs priced in yen and paid in JPYC from the person's Sui wallet,
- * with its JPYC balance up top in yen. The smallest pack is picked to start, so no pack is pushed.
+ * The reserve ticket checkout, a card risen over the Shop or the drawing screen: reserve ticket packs
+ * priced in yen and paid in JPYC from the person's Sui account, with that JPYC up top in yen. The
+ * smallest pack is picked to start, so no pack is pushed.
  */
-export function TicketShop({ layout, onDraw, onClose, closeLabel }: Props) {
+export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   const { t } = useTranslation();
   const [step, setStep] = useState<Step>("choose");
-  const [chosen, setChosen] = useState<Pack["tickets"]>(1);
-  const [bought, setBought] = useState<Pack | null>(null);
+  const [chosen, setChosen] = useState<ReservePack["tickets"]>(1);
+  const [bought, setBought] = useState<ReservePack | null>(null);
   const [error, setError] = useState("");
-  const { shop, error: shopError, retry } = useTicketShop();
-  const sui = useSuiWallet();
-  const wallet = useJpycBalance(sui.address, shop?.payment);
+  const packs = useReservePacks();
+  const shop = packs.state === "ready" ? packs.data : null;
+  const sui = useSuiAccount();
+  const jpyc = useJpycBalance(sui.address, shop?.payment);
   const api = useApi();
   const { tickets: state, set: setTickets } = useTickets();
   const card = useRef<HTMLElement>(null);
   const id = useId();
 
   const pack = shop?.packs.find((p) => p.tickets === chosen);
-  const short = pack && wallet.balance !== null && wallet.balance < BigInt(pack.priceJpyc);
+  const short = pack && jpyc.balance !== null && jpyc.balance < BigInt(pack.priceJpyc);
 
-  const pay = async (p: Pack, payment: JpycPayment) => {
+  const pay = async (p: ReservePack, payment: JpycPayment) => {
     setStep("paying");
     let digest: string | null = null;
     try {
@@ -156,36 +127,34 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel }: Props) {
       console.error(`Buying a pack of ${p.tickets} tickets with JPYC failed`, { digest, error: e });
       setError(
         digest
-          ? t(($) => $.tickets.shop.paidButNotAdded, { digest, reason: reason(e) })
+          ? t(($) => $.tickets.checkout.paidButNotAdded, { digest, reason: reason(e) })
           : reason(e),
       );
       setStep("error");
     } finally {
-      wallet.refresh();
+      jpyc.refresh();
     }
   };
 
   useFocusTrap(card, {
-    active: layout === "card",
     onEscape: () => {
-      if (step !== "paying") onClose?.();
+      if (step !== "paying") onClose();
     },
   });
 
   // Each view's first control takes focus, so focus never drops out of the card when its controls change.
   useEffect(() => {
-    if (layout !== "card") return;
     const first = card.current?.querySelector<HTMLElement>("button:not(:disabled)");
     (first ?? card.current)?.focus();
-  }, [layout, step]);
+  }, [step]);
 
-  const close = onClose && (
+  const close = (
     <QuietLink
       className="out-of-tickets__quiet-link"
       disabled={step === "paying"}
       onClick={onClose}
     >
-      {closeLabel ?? t(($) => $.tickets.notNow)}
+      {t(($) => $.tickets.notNow)}
     </QuietLink>
   );
 
@@ -202,10 +171,10 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel }: Props) {
           }))}
         />
         <h2 className="out-of-tickets__title" id={`${id}-title`}>
-          {t(($) => $.tickets.shop.added, { count: bought.tickets })}
+          {t(($) => $.tickets.checkout.added, { count: bought.tickets })}
         </h2>
         <p className="out-of-tickets__line out-of-tickets__quiet">
-          {t(($) => $.tickets.shop.paid, { price: formatYen(bought.priceYen) })}
+          {t(($) => $.tickets.checkout.paid, { price: formatYen(bought.priceYen) })}
         </p>
         <TearLine />
         <Key
@@ -222,7 +191,7 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel }: Props) {
           {state && <TicketCounts state={state} className="ticket-counts--on-key" />}
         </Key>
         <LabelButton block icon={<Ticket />} onClick={() => setStep("choose")}>
-          {t(($) => $.tickets.shop.buyMore)}
+          {t(($) => $.tickets.checkout.buyMore)}
         </LabelButton>
         {close}
       </>
@@ -231,14 +200,19 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel }: Props) {
     body = (
       <>
         <h2 className="out-of-tickets__title out-of-tickets__title--top" id={`${id}-title`}>
-          {t(($) => $.tickets.shop.paymentFailed)}
+          {t(($) => $.tickets.checkout.paymentFailed)}
         </h2>
         <p className="out-of-tickets__line" role="alert">
           <strong>{error}</strong>
         </p>
         <TearLine />
-        <Key className="out-of-tickets__key" icon={<Ticket />} onClick={() => setStep("choose")}>
-          {t(($) => $.tickets.shop.backToShop)}
+        <Key
+          className="out-of-tickets__key"
+          tone="blue"
+          icon={<Ticket />}
+          onClick={() => setStep("choose")}
+        >
+          {t(($) => $.tickets.checkout.backToPacks)}
         </Key>
         {close}
       </>
@@ -248,46 +222,46 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel }: Props) {
     body = (
       <>
         <h2 className="out-of-tickets__title out-of-tickets__title--top" id={`${id}-title`}>
-          {t(($) => $.tickets.shop.title)}
+          {t(($) => $.tickets.checkout.title)}
         </h2>
         <p className="out-of-tickets__line">
-          <strong>{t(($) => $.tickets.shop.lead)}</strong>
+          <strong>{t(($) => $.tickets.checkout.lead)}</strong>
         </p>
-        <div className="ticket-shop__wallet">
-          <span className="fine">{t(($) => $.tickets.shop.balance)}</span>
+        <div className="reserve-checkout__balance">
+          <span className="fine">{t(($) => $.tickets.checkout.balance)}</span>
           {sui.problem ? (
             <span role="alert">{sui.problem}</span>
-          ) : wallet.error ? (
+          ) : jpyc.error ? (
             <span role="alert">
-              {t(($) => $.tickets.shop.balanceProblem, { reason: wallet.error })}{" "}
-              <QuietLink onClick={wallet.refresh}>{t(($) => $.tickets.tryAgain)}</QuietLink>
+              {t(($) => $.tickets.checkout.balanceProblem, { reason: jpyc.error })}{" "}
+              <QuietLink onClick={jpyc.refresh}>{t(($) => $.tickets.tryAgain)}</QuietLink>
             </span>
-          ) : wallet.balance === null || !shop ? (
-            <span className="ticket-shop__loading">
+          ) : jpyc.balance === null || !shop ? (
+            <span className="reserve-checkout__loading">
               <span className="visually-hidden" role="status">
-                {t(($) => $.tickets.shop.readingBalance)}
+                {t(($) => $.tickets.checkout.readingBalance)}
               </span>
               <Skeleton width={84} height={18} />
             </span>
           ) : (
             <strong className={REVEAL}>
-              {formatYen(yenForJpyc(wallet.balance, shop.payment.decimals))}
+              {formatYen(yenForJpyc(jpyc.balance, shop.payment.decimals))}
             </strong>
           )}
         </div>
-        {shopError ? (
-          <p className="ticket-shop__problem" role="alert">
-            {t(($) => $.tickets.shop.pricesProblem, { reason: shopError })}{" "}
-            <QuietLink onClick={retry}>{t(($) => $.tickets.tryAgain)}</QuietLink>
+        {packs.state === "failed" ? (
+          <p className="reserve-checkout__problem" role="alert">
+            {t(($) => $.tickets.checkout.pricesProblem, { reason: errorReason(packs.error) })}{" "}
+            <QuietLink onClick={packs.retry}>{t(($) => $.tickets.tryAgain)}</QuietLink>
           </p>
         ) : !shop ? (
-          <div className="ticket-shop__packs">
+          <div className="reserve-checkout__packs">
             <p className="visually-hidden" role="status">
-              {t(($) => $.tickets.shop.gettingPrices)}
+              {t(($) => $.tickets.checkout.gettingPrices)}
             </p>
             {/* The packs' own rows in outline, so nothing jumps as the prices come in. */}
             {PACKS_LOADING.map((n) => (
-              <div key={n} className="ticket-shop__pack" aria-hidden="true">
+              <div key={n} className="reserve-checkout__pack" aria-hidden="true">
                 <Skeleton width={24} height={16} />
                 <Skeleton width={72} height={14} />
                 <span />
@@ -297,32 +271,32 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel }: Props) {
           </div>
         ) : (
           <div
-            className={`${REVEAL} ticket-shop__packs`}
+            className={`${REVEAL} reserve-checkout__packs`}
             role="group"
-            aria-label={t(($) => $.tickets.shop.packs)}
+            aria-label={t(($) => $.tickets.checkout.packs)}
           >
             {shop.packs.map((p) => (
               <button
                 key={p.tickets}
                 type="button"
-                className="ticket-shop__pack"
+                className="reserve-checkout__pack"
                 aria-pressed={p.tickets === chosen}
                 disabled={paying}
                 onClick={() => setChosen(p.tickets)}
               >
                 <TicketCount kind="reserve" />
-                <span className="ticket-shop__pack-name">
-                  {t(($) => $.tickets.shop.pack, { count: p.tickets })}
+                <span className="reserve-checkout__pack-name">
+                  {t(($) => $.tickets.checkout.pack, { count: p.tickets })}
                 </span>
                 {p.discountPercent > 0 && (
-                  <span className="ticket-shop__discount">
-                    {t(($) => $.tickets.shop.discount, { percent: p.discountPercent })}
+                  <span className="reserve-checkout__discount">
+                    {t(($) => $.tickets.checkout.discount, { percent: p.discountPercent })}
                   </span>
                 )}
-                <span className="ticket-shop__price">
+                <span className="reserve-checkout__price">
                   {p.discountPercent > 0 && (
                     <s
-                      aria-label={t(($) => $.tickets.shop.was, {
+                      aria-label={t(($) => $.tickets.checkout.was, {
                         price: formatYen(p.tickets * TICKET_PRICE_YEN),
                       })}
                     >
@@ -338,37 +312,31 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel }: Props) {
         <TearLine />
         <Key
           className="out-of-tickets__key"
-          tone="grape"
+          tone="blue"
           icon={<Ticket />}
           disabled={!pack || !shop || !sui.address || short || paying}
           onClick={() => pack && shop && void pay(pack, shop.payment)}
         >
           {paying
-            ? t(($) => $.tickets.shop.paying)
+            ? t(($) => $.tickets.checkout.paying)
             : short
-              ? t(($) => $.tickets.shop.notEnoughJpyc)
+              ? t(($) => $.tickets.checkout.notEnoughJpyc)
               : pack
-                ? t(($) => $.tickets.shop.payPrice, { price: formatYen(pack.priceYen) })
-                : t(($) => $.tickets.shop.pay)}
+                ? t(($) => $.tickets.checkout.payPrice, { price: formatYen(pack.priceYen) })
+                : t(($) => $.tickets.checkout.pay)}
         </Key>
+        <SuiCredit className="reserve-checkout__credit" />
         {close}
       </>
     );
   }
 
-  if (layout === "page")
-    return (
-      <section className="ticket-shop ticket-shop--page" aria-labelledby={`${id}-title`}>
-        {body}
-      </section>
-    );
-
   return (
-    <div className="out-of-tickets">
+    <div className="out-of-tickets reserve-checkout">
       <div className="out-of-tickets__scrim" />
       <section
         ref={card}
-        className="out-of-tickets__card ticket-shop"
+        className="out-of-tickets__card reserve-checkout__card"
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${id}-title`}

@@ -1,0 +1,349 @@
+/* The Shop (ShopScreen.tsx): reserve tickets as the page's peak, then shelves of what's coming. */
+.shop {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px 0 32px;
+  background: var(--liner);
+}
+
+.shop__title {
+  margin: 0 18px 14px;
+  font-size: 26px;
+  line-height: 1.08;
+  font-weight: 800;
+  font-stretch: var(--w-title);
+  letter-spacing: -0.015em;
+}
+
+/* ---------- Reserve tickets ---------- */
+
+/* Label stock lifted off the liner, the page's only key at its foot. */
+.reserve-hero {
+  --card-pad: 18px;
+  margin: 0 12px;
+  padding: 14px var(--card-pad) 10px;
+  border-radius: 14px;
+  background: var(--liner-lift);
+  box-shadow:
+    inset 0 0 0 1px var(--rule),
+    var(--shadow-label);
+  text-align: center;
+}
+
+/* Three reserve tickets fanned like a hand of cards, turned about a point below them. */
+.reserve-hero .reserve-hero__fan {
+  gap: 0;
+  height: 104px;
+  margin: 0 0 4px;
+}
+
+.reserve-hero .reserve-hero__fan .ticket-stub {
+  transform-origin: 50% 150%;
+  translate: 0 8px;
+}
+
+.reserve-hero .reserve-hero__fan .ticket-stub + .ticket-stub {
+  margin-left: -46px;
+}
+
+.reserve-hero .reserve-hero__fan .ticket-stub:nth-child(1) {
+  rotate: -15deg;
+}
+
+.reserve-hero .reserve-hero__fan .ticket-stub:nth-child(2) {
+  rotate: 0deg;
+  translate: 0 0;
+}
+
+.reserve-hero .reserve-hero__fan .ticket-stub:nth-child(3) {
+  rotate: 15deg;
+}
+
+.reserve-hero__held {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.reserve-hero__title {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.08;
+  font-weight: 800;
+  font-stretch: var(--w-title);
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.reserve-hero__lead {
+  margin: 6px 0 0;
+  font-size: 15px;
+  line-height: 1.4;
+  font-weight: 500;
+  text-wrap: balance;
+}
+
+/* Holds its line while the price loads, or if it doesn't. */
+.reserve-hero__price {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 22px;
+  margin: 8px 0 0;
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.reserve-hero__key {
+  width: 100%;
+}
+
+/* ---------- Coming-soon shelves ---------- */
+
+.shelf {
+  margin-top: 28px;
+}
+
+.shelf__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px;
+}
+
+.shelf__title {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.1;
+  font-weight: 800;
+  font-stretch: var(--w-title);
+  letter-spacing: -0.012em;
+}
+
+/* A quiet pressed pill: not the pink sale sticker, which means a discount. */
+.shelf__soon {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--liner-deep);
+}
+
+.shelf__lead {
+  margin: 4px 18px 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--graphite);
+}
+
+/* A row that scrolls sideways; the last swatch peeks past the edge, so there's plainly more. */
+.shelf__row {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  padding: 14px 18px 6px;
+  list-style: none;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 18px;
+  scrollbar-width: none;
+}
+
+.shelf__row::-webkit-scrollbar {
+  display: none;
+}
+
+.shelf-item {
+  position: relative;
+  flex: none;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  scroll-snap-align: start;
+}
+
+.shelf-item__swatch {
+  display: grid;
+  place-items: center;
+  width: 104px;
+  height: 104px;
+  border-radius: 10px;
+  background: var(--liner);
+  box-shadow:
+    inset 0 0 0 1px var(--rule),
+    inset 1px 2px 4px rgba(28, 24, 36, 0.06);
+}
+
+/* Paper to draw on, for brushes. */
+.shelf-item__swatch--white {
+  background: var(--canvas);
+}
+
+.shelf-item__name {
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+/* What you have now, tagged in pink: it's yours. */
+.shelf-item__yours {
+  position: absolute;
+  top: -7px;
+  left: -3px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--pink-soft);
+  box-shadow:
+    inset 0 0 0 1px rgba(28, 24, 36, 0.12),
+    var(--shadow-label);
+  color: var(--ink);
+  rotate: var(--tilt);
+}
+
+/* ---------- Previews ---------- */
+
+.brush-sample {
+  display: block;
+}
+
+.brush-sample--pixel {
+  image-rendering: pixelated;
+}
+
+.finish-preview {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* The sticker at the house tilt, as if one hand stuck it on. */
+.finish-preview__art {
+  position: relative;
+  display: block;
+  rotate: var(--tilt);
+}
+
+/* Matte: no live resin, and a fine white haze over the print that flattens its gloss. */
+.laminate--matte .live-resin {
+  display: none;
+}
+
+.laminate--matte .sticker-figure__img {
+  filter: var(--sticker-cut) var(--sticker-cast) saturate(0.88);
+}
+
+.laminate-haze {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
+  mask: var(--m) 0 0 / 100% 100% no-repeat;
+  background-color: rgba(255, 255, 255, 0.2);
+  background-image: var(--liner-grain);
+  background-size: 90px 90px;
+}
+
+/* Glitter: flecks in the resin, brightest round where the light falls. */
+.laminate-film--glitter > i {
+  mix-blend-mode: screen;
+}
+
+.laminate-film--glitter > i > b {
+  inset: -20%;
+  background-image:
+    radial-gradient(circle, #fff 0 0.7px, rgba(255, 255, 255, 0) 1.2px),
+    radial-gradient(circle, var(--foil-lemon) 0 0.8px, rgba(255, 255, 255, 0) 1.3px),
+    radial-gradient(circle, var(--foil-aqua) 0 0.7px, rgba(255, 255, 255, 0) 1.2px),
+    radial-gradient(circle, var(--foil-pink) 0 0.8px, rgba(255, 255, 255, 0) 1.3px);
+  background-size:
+    7px 7px,
+    11px 9px,
+    9px 13px,
+    13px 11px;
+  background-position:
+    0 0,
+    3px 5px,
+    6px 2px,
+    2px 8px;
+  -webkit-mask-image: radial-gradient(
+    circle at calc(50% + var(--lx, -0.6) * 38%) calc(50% + var(--ly, -0.6) * 38%),
+    #000 0 18%,
+    rgba(0, 0, 0, 0.35) 62%
+  );
+  mask-image: radial-gradient(
+    circle at calc(50% + var(--lx, -0.6) * 38%) calc(50% + var(--ly, -0.6) * 38%),
+    #000 0 18%,
+    rgba(0, 0, 0, 0.35) 62%
+  );
+  translate: calc(var(--lx, 0) * 4%) calc(var(--ly, 0) * 4%);
+  transition: translate 280ms var(--ease-out);
+}
+
+/* Prism: facets of the foil's colors over the print, turning a little with the light. */
+.laminate-film--prism > i {
+  mix-blend-mode: soft-light;
+}
+
+.laminate-film--prism > i > b {
+  inset: -35%;
+  background: conic-gradient(
+    from 12deg at 38% 34%,
+    var(--foil-pink) 0 34deg,
+    var(--foil-lemon) 34deg 70deg,
+    var(--foil-aqua) 70deg 118deg,
+    var(--foil-lilac) 118deg 150deg,
+    var(--foil-peach) 150deg 196deg,
+    var(--foil-sky) 196deg 240deg,
+    var(--foil-lemon) 240deg 272deg,
+    var(--foil-pink) 272deg 318deg,
+    var(--foil-aqua) 318deg 360deg
+  );
+  translate: calc(var(--lx, 0) * 10%) calc(var(--ly, 0) * 10%);
+  rotate: calc(var(--lx, 0) * 10deg);
+  transition:
+    translate 280ms var(--ease-out),
+    rotate 280ms var(--ease-out);
+}
+
+/* Backing foils: the foil's six bands in metal. Holo is the foil as it is. */
+.backing-foil--gold {
+  --foil-pink: #fff3c4;
+  --foil-peach: #f0c357;
+  --foil-lemon: #ffe597;
+  --foil-aqua: #c38b28;
+  --foil-sky: #ffd670;
+  --foil-lilac: #9c6a1b;
+}
+
+.backing-foil--silver {
+  --foil-pink: #ffffff;
+  --foil-peach: #c5c9d4;
+  --foil-lemon: #eceef4;
+  --foil-aqua: #969cad;
+  --foil-sky: #dde0e8;
+  --foil-lilac: #787e8f;
+}
+
+.backing-foil--rose-gold {
+  --foil-pink: #ffe5dd;
+  --foil-peach: #e8a292;
+  --foil-lemon: #ffd3c5;
+  --foil-aqua: #c47b6c;
+  --foil-sky: #f5bdac;
+  --foil-lilac: #a4625a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .laminate-film > i > b {
+    transition: none;
+  }
+}
