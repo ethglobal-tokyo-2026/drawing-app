@@ -4,7 +4,7 @@ import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../../api/apiClient";
 import { emptyApi, renderWithApi, TEST_ME } from "../../api/testing";
-import { errors } from "../../i18n/en/errors";
+import { errors } from "../../i18n/strings/errors";
 import { i18next } from "../../i18n/i18n";
 import { keepChosenLanguage, readChosenLanguage } from "../../i18n/language";
 import { SettingsNote } from "./SettingsNote";
@@ -78,7 +78,7 @@ describe("the Settings note's language", () => {
     const offline = new ApiError(0, { error: "network", detail: "Failed to fetch" });
     const host = render(() => Promise.reject(offline));
     await choose(host, "日本語");
-    expect(alert(host)).toContain(errors.network);
+    expect(alert(host)).toContain(errors.network.en);
     expect(alert(host)).toContain("Failed to fetch");
     expect(readChosenLanguage()).toBeNull();
     expect(option(host, "Same as LINE (English)").checked).toBe(true);

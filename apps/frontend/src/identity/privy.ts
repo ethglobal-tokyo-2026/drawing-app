@@ -1,6 +1,7 @@
 import liff from "@line/liff";
 import { useSyncExternalStore } from "react";
 import { liffMockActive } from "../line/liff";
+import { reconnectLine } from "../line/reconnectLine";
 
 // The Privy app. It isn't secret: Privy's SDK sends it with every request.
 export const PRIVY_APP_ID = "cmuh4s0lz01fn0cl143lomlzj";
@@ -17,7 +18,7 @@ export type PrivyStatus =
       /** The Sui address, which MakeSuiWallet asks Privy for once the Ethereum one exists. */
       suiWallet?: string;
     }
-  | { state: "failed"; reason: string }
+  | { state: "failed"; reason: string; reconnectLine?: boolean }
   /** On the dev server under LIFF Mock, whose sign-in isn't LINE's, so the auth server would refuse it. */
   | { state: "off" };
 
@@ -46,9 +47,29 @@ const EXCHANGE_TIMEOUT_MS = 10_000;
 
 // Privy re-authenticates whenever it's handed a JWT unlike the last, so one is kept while it's good.
 let kept: { jwt: string; expiresAt: number } | undefined;
+let reconnecting = false;
 
-/** Clears a failure, so the next sync signs in afresh. */
-export function retryPrivySignIn() {
+/** The person's retry reconnects LINE when its credentials need replacing. */
+export function retryPrivySignIn(): void {
+  if (reconnecting) return;
+  if (status.state === "failed" && status.reconnectLine) {
+    reconnecting = true;
+    // Keep the exchange disabled while LINE navigates, so Privy cannot resend the stale token.
+    void reconnectLine()
+      .catch(() => {
+        fail("LINE could not reconnect; try again", true);
+      })
+      .finally(() => {
+        reconnecting = false;
+      });
+    return;
+  }
+  resetPrivySignIn();
+}
+
+function resetPrivySignIn() {
+  // A delayed wallet-frame retry must preserve a newer LINE authentication failure.
+  if (status.state === "failed" && status.reconnectLine) return;
   kept = undefined;
   setPrivyStatus({ state: "signing-in" });
 }
@@ -62,18 +83,19 @@ let retriedRace = false;
 
 /** Privy's error after it took the JWT: one retry for the wallet-frame race, otherwise the failure. */
 export function onPrivyError(error: Error) {
+  if (status.state === "failed" && status.reconnectLine) return;
   if (error.message.includes(WALLET_FRAME_RACE) && !retriedRace) {
     retriedRace = true;
-    console.warn("Privy signed out while making the wallet; signing in again", error);
-    setTimeout(retryPrivySignIn, RACE_RETRY_MS);
+    console.warn("Privy signed out while making the wallet; signing in again");
+    setTimeout(resetPrivySignIn, RACE_RETRY_MS);
     return;
   }
   setPrivyStatus({ state: "failed", reason: `Privy refused the sign-in: ${error.message}` });
 }
 
-function fail(reason: string): undefined {
+function fail(reason: string, requiresLineReconnect = false): undefined {
   console.error(`Privy sign-in failed: ${reason}`);
-  setPrivyStatus({ state: "failed", reason });
+  setPrivyStatus({ state: "failed", reason, reconnectLine: requiresLineReconnect });
   return undefined;
 }
 
@@ -91,9 +113,9 @@ export async function fetchPrivyJwt(): Promise<string | undefined> {
   if (kept && kept.expiresAt - EXPIRY_MARGIN_S > Date.now() / 1000) return kept.jwt;
   const idToken = liff.getIDToken();
   const expiresAt = liff.getDecodedIDToken()?.exp;
-  if (!idToken || !expiresAt) return fail("LINE gave no ID token");
+  if (!idToken || !expiresAt) return fail("LINE gave no ID token", true);
   if (expiresAt - EXPIRY_MARGIN_S <= Date.now() / 1000) {
-    return fail("LINE’s ID token has expired; reopen the app from LINE");
+    return fail("LINE’s ID token has expired; try again to reconnect LINE", true);
   }
   setPrivyStatus({ state: "signing-in" });
   try {
@@ -107,7 +129,8 @@ export async function fetchPrivyJwt(): Promise<string | undefined> {
     if (!response.ok) {
       const error = jsonField(body, "error");
       return fail(
-        `the auth server refused LINE’s token: HTTP ${response.status}${typeof error === "string" ? ` ${error}` : ""}`,
+        `the auth server could not complete sign-in: HTTP ${response.status}${typeof error === "string" ? ` ${error}` : ""}`,
+        response.status === 401 && error === "line_auth_failed",
       );
     }
     const jwt = jsonField(body, "jwt");

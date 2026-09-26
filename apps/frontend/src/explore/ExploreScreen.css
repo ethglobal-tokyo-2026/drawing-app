@@ -162,10 +162,6 @@
 
 /* ---------- This week ---------- */
 
-.leaderboard-empty {
-  padding: 16px;
-}
-
 .week-resets {
   margin: -4px 0 0;
   text-align: right;
@@ -211,6 +207,11 @@
   width: 100%;
   min-height: 63px;
   padding: 6px 16px 6px 14px;
+}
+
+/* A leaderboard nobody is on yet says so at the rows' inset. */
+.leaderboard-empty {
+  padding: 14px 16px 14px 14px;
 }
 
 .leaderboard li + li,

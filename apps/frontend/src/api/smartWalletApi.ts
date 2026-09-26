@@ -12,7 +12,8 @@ export function withSmartWallet(api: ApiClient): ApiClient {
         // The server's own code for this, so the person reads its catalog message.
         throw new ApiError(0, {
           error: "mint_failed",
-          detail: `POST /api/stickers answered without a confirmed NFT for ${sealed.sticker.id}`,
+          // errorReason shows the detail too, so it keeps to the words the app uses.
+          detail: `POST /api/stickers answered without a confirmed chain record for ${sealed.sticker.id}`,
         });
       }
       return sealed;

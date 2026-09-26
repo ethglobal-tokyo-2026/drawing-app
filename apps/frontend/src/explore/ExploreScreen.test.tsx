@@ -4,6 +4,7 @@ import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { people, sticker } from "../api/testFixtures";
 import { emptyApi, renderWithApi } from "../api/testing";
+import { i18next } from "../i18n/i18n";
 import { ExploreScreen } from "./ExploreScreen";
 
 // 21:00 on 9.26 in Tokyo.
@@ -32,11 +33,12 @@ class StillResizeObserver implements ResizeObserver {
   unobserve() {}
   disconnect() {}
 }
-afterEach(() => {
+afterEach(async () => {
   view?.unmount();
   view = undefined;
   vi.useRealTimers();
   localStorage.clear();
+  await i18next.changeLanguage("en");
 });
 
 const wait = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
@@ -117,6 +119,17 @@ describe("ExploreScreen's sticker pile", () => {
     expect(labelsOf(host, ".pile-sticker__button")).toEqual([
       `No.0${given.number} by @mika, 30 min ago, given to @ken`,
     ]);
+  });
+
+  it("says just now for anything under a minute ago, in English and Japanese", async () => {
+    const drawn = sticker({ sealedAt: new Date(NOW - MINUTE + 1000).toISOString() });
+    const host = await openExplore(
+      exploreWith([{ type: "sealed", at: drawn.sealedAt, sticker: drawn }]),
+    );
+
+    expect(labelsOf(host, ".pile-sticker__button")[0]).toMatch(/, just now$/);
+    await act(() => i18next.changeLanguage("ja"));
+    expect(labelsOf(host, ".pile-sticker__button")[0]).toMatch(/、たった今$/);
   });
 
   it("prints a handle as it is, even one that reads as markup or a variable", async () => {
