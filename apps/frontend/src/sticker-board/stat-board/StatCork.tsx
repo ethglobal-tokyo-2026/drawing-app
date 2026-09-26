@@ -12,8 +12,10 @@ import {
 } from "react";
 import { formatCount } from "../../i18n/format";
 import { useTranslation } from "../../i18n/react";
+import { GratitudeIcon } from "../../icons";
 import { EnsNameLink } from "../../identity/EnsNameLink";
 import { formatDay, formatHandle } from "../../stickers/format";
+import { HitCounter } from "../../ui/HitCounter";
 import { LabelButton } from "../../ui/LabelButton";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 import "./stat-board.css";
@@ -34,7 +36,7 @@ export interface CorkFigures {
   /** Why the figures didn't load, printed on the receipt; null while they load and once they have. */
   failure: string | null;
   /** Null when it didn't load; zeros read as "No gratitude yet". */
-  gratitude: { inspired: number; magic: number; asOriginalArtist: number; total: number } | null;
+  gratitude: { direct: number; residual: number; total: number } | null;
   streak: { current: number; best: number } | null;
   stamps: { made: number | null; received: number | null; given: number | null };
   bestCombo: number | null;
@@ -69,7 +71,8 @@ function Unknown() {
 
 const figure = (n: number | null) => (n === null ? <Unknown /> : formatCount(n));
 
-const GRATITUDE_KINDS = ["inspired", "magic", "asOriginalArtist"] as const;
+// A kind at 0 is left off the receipt, so a friend-first artist sees Direct alone.
+const GRATITUDE_KINDS = ["direct", "residual"] as const;
 
 const STAMPS = [
   { kind: "made", hue: "var(--seal)" },
@@ -111,7 +114,7 @@ export function StatCork({
   // The receipt is printed when the cork first shows.
   const [printedAt] = useState(() => Date.now());
   const since = f.since === null ? null : formatDay(f.since);
-  const gratitudeTotal = f.gratitude?.total ?? 0;
+  const gratitude = f.gratitude;
 
   useImperativeHandle(
     ref,
@@ -171,24 +174,21 @@ export function StatCork({
                   <span>{formatDay(printedAt)}</span>
                 </p>
                 <h3 className="fine stat-board__receipt-h" id={`${id}-gratitude`}>
+                  <GratitudeIcon className="stat-board__receipt-heart" size={14} />
                   {t(($) => $.stickerBoard.statBoard.gratitude.title)}
                 </h3>
-                {f.gratitude && gratitudeTotal > 0 ? (
-                  <ul className="stat-board__receipt-rows">
-                    {GRATITUDE_KINDS.map((kind) => (
-                      <li key={kind}>
-                        <i className={`stat-board__receipt-dot is-${kind}`} aria-hidden />
-                        <b>{t(($) => $.stickerBoard.statBoard.gratitude[kind].label)}</b>
-                        <span className="stat-board__receipt-amount">
-                          {formatCount(f.gratitude?.[kind] ?? 0)}
-                        </span>
-                        <small>{t(($) => $.stickerBoard.statBoard.gratitude[kind].reason)}</small>
-                      </li>
+                {gratitude && gratitude.total > 0 ? (
+                  <dl className="stat-board__receipt-rows">
+                    {GRATITUDE_KINDS.filter((kind) => gratitude[kind] > 0).map((kind) => (
+                      <div key={kind}>
+                        <dt>{t(($) => $.stickerBoard.statBoard.gratitude[kind])}</dt>
+                        <dd>{formatCount(gratitude[kind])}</dd>
+                      </div>
                     ))}
-                  </ul>
+                  </dl>
                 ) : (
                   <p className="stat-board__receipt-none">
-                    {!f.gratitude
+                    {!gratitude
                       ? f.failure
                       : f.own
                         ? t(($) => $.stickerBoard.statBoard.gratitude.noneYetOwn)
@@ -197,7 +197,7 @@ export function StatCork({
                 )}
                 <p className="stat-board__receipt-total">
                   <span className="fine">{t(($) => $.stickerBoard.statBoard.gratitude.total)}</span>
-                  <b>{f.gratitude ? formatCount(gratitudeTotal) : <Unknown />}</b>
+                  <b>{gratitude ? formatCount(gratitude.total) : <Unknown />}</b>
                 </p>
               </div>
             </section>
@@ -229,9 +229,7 @@ export function StatCork({
                       {f.bestCombo === null ? (
                         <Unknown />
                       ) : f.bestCombo > 0 ? (
-                        t(($) => $.stickerBoard.statBoard.bests.combo, {
-                          hits: formatCount(f.bestCombo),
-                        })
+                        <HitCounter hits={f.bestCombo} size={20} />
                       ) : (
                         t(($) => $.stickerBoard.statBoard.bests.noneYet)
                       )}

@@ -10,12 +10,10 @@ export const stickerBoard = {
     notKnown: { mark: "–", spoken: "not known" },
     gratitude: {
       title: "Gratitude received",
-      inspired: { label: "Inspired", reason: "Gratitude for stickers they gave." },
-      magic: { label: "Magic", reason: "Gratitude sent a special way." },
-      asOriginalArtist: {
-        label: "Original Artist",
-        reason: "A share of the gratitude when a sticker they drew is given on.",
-      },
+      /** A row: gratitude sent for stickers they gave. */
+      direct: "Direct",
+      /** A row: the Original Artist Gratitude Share from stickers they drew that others gave on. */
+      residual: "Residual",
       noneYetOwn:
         "No gratitude yet. It arrives when someone you give a sticker to sends you some for it.",
       noneYet:
@@ -29,8 +27,6 @@ export const stickerBoard = {
       days_one: "{{days}} day",
       days_other: "{{days}} days",
       bestCombo: "Best combo",
-      /** `hits` is the count, grouped. */
-      combo: "×{{hits}}",
       mostGratitudeInADay: "Most gratitude in a day",
       noneYet: "None yet",
     },

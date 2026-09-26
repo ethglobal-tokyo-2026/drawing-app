@@ -8,6 +8,12 @@ export const stickerBoard: Translation<typeof english> = {
   ensName: {
     open: "{{name}} を ENS アプリで開く",
   },
+  statBoard: {
+    gratitude: {
+      direct: "直接",
+      residual: "作者として",
+    },
+  },
   settings: {
     title: "設定",
     language: {

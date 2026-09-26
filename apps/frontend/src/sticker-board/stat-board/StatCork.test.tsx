@@ -17,10 +17,12 @@ const NEW_ARTIST: UserStats = {
   made: 0,
   received: 0,
   given: 0,
-  gratitude: { inspired: 0, magic: 0, asOriginalArtist: 0, total: 0 },
+  gratitude: { direct: 0, residual: 0, total: 0 },
   bests: { bestCombo: 0, mostGratitudeInADay: 0, longestStreak: 0 },
   streak: 0,
 };
+
+const FAILURE = "Your stats didn’t load: the network is down";
 
 let host: HTMLDivElement;
 let root: Root;
@@ -34,7 +36,7 @@ const render = (stats: UserStats | null) =>
           handle: "mika",
           ensName: null,
           own: false,
-          failure: null,
+          failure: stats ? null : FAILURE,
           since: null,
           ...statFigures(stats),
         }}
@@ -44,17 +46,23 @@ const render = (stats: UserStats | null) =>
     ),
   );
 
-/** Each of the Bests scrap's rows, as its label and what it shows. */
-const bests = () =>
+/** What a screen reader hears from `element`: its text without the parts hidden from it. */
+function spoken(element: Element | null) {
+  const copy = element?.cloneNode(true);
+  if (!(copy instanceof Element)) return "";
+  copy.querySelectorAll("[aria-hidden]").forEach((hidden) => hidden.remove());
+  return copy.textContent ?? "";
+}
+
+/** Rows of term and value, as each reads out. */
+const rows = (selector: string) =>
   Object.fromEntries(
-    [...host.querySelectorAll(".stat-board__scrap-rows > div")].map(
-      (row) =>
-        [
-          row.querySelector("dt")?.firstChild?.textContent ?? "",
-          row.querySelector("dd")?.textContent ?? "",
-        ] as const,
+    [...host.querySelectorAll(selector)].map(
+      (row) => [spoken(row.querySelector("dt")), spoken(row.querySelector("dd"))] as const,
     ),
   );
+
+const receipt = () => host.querySelector(".stat-board__receipt");
 
 beforeEach(() => {
   host = document.createElement("div");
@@ -67,7 +75,28 @@ afterEach(() => {
   host.remove();
 });
 
+describe("StatCork's receipt", () => {
+  it("lists Direct and Residual gratitude above the total", () => {
+    render({ ...NEW_ARTIST, gratitude: { direct: 2460, residual: 395, total: 2855 } });
+    expect(rows(".stat-board__receipt-rows > div")).toEqual({ Direct: "2,460", Residual: "395" });
+    expect(spoken(host.querySelector(".stat-board__receipt-total b"))).toBe("2,855");
+  });
+
+  it("leaves a kind of gratitude at 0 off", () => {
+    render({ ...NEW_ARTIST, gratitude: { direct: 80, residual: 0, total: 80 } });
+    expect(rows(".stat-board__receipt-rows > div")).toEqual({ Direct: "80" });
+  });
+
+  it("says why the stats didn't load in place of the rows", () => {
+    render(null);
+    expect(receipt()?.textContent).toContain(FAILURE);
+    expect(host.querySelector(".stat-board__receipt-rows")).toBeNull();
+  });
+});
+
 describe("StatCork's Bests", () => {
+  const bests = () => rows(".stat-board__scrap-rows > div");
+
   it("says None yet for every best a new artist hasn't set", () => {
     render(NEW_ARTIST);
     expect(bests()).toEqual({
@@ -77,14 +106,14 @@ describe("StatCork's Bests", () => {
     });
   });
 
-  it("shows the bests someone has set", () => {
+  it("shows the bests someone has set, Best combo in hits", () => {
     render({
       ...NEW_ARTIST,
       bests: { bestCombo: 64, mostGratitudeInADay: 1210, longestStreak: 9 },
     });
     expect(bests()).toEqual({
       "Longest streak": "9 days",
-      "Best combo": "×64",
+      "Best combo": "64 hits",
       "Most gratitude in a day": "1,210",
     });
   });
@@ -92,9 +121,9 @@ describe("StatCork's Bests", () => {
   it("marks every best as not known when the stats didn't load", () => {
     render(null);
     expect(bests()).toEqual({
-      "Longest streak": "–not known",
-      "Best combo": "–not known",
-      "Most gratitude in a day": "–not known",
+      "Longest streak": "not known",
+      "Best combo": "not known",
+      "Most gratitude in a day": "not known",
     });
   });
 });

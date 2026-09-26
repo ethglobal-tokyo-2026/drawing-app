@@ -202,10 +202,27 @@
 }
 
 .stat-board__receipt-h {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 0 0 6px;
   color: var(--ink);
   font-weight: 750;
   letter-spacing: 0.1em;
+}
+
+/* Gratitude's heart, in its pink with the drawings' ink line: the fill covers the stroke's inner half. */
+.stat-board__receipt-heart {
+  flex: none;
+  overflow: visible;
+  color: var(--pink);
+}
+
+.stat-board__receipt-heart path {
+  stroke: var(--ink);
+  stroke-width: 30;
+  stroke-linejoin: round;
+  paint-order: stroke;
 }
 
 .stat-board__receipt-none {
@@ -214,51 +231,29 @@
   font: 500 13px/1.35 var(--font-ui);
 }
 
-/* One row per kind of gratitude: a colored dot, the kind and its amount, then why in plain words. */
+/* A line item per kind of gratitude, in Ink: the kind at the left, its amount at the right. */
 .stat-board__receipt-rows {
   display: grid;
-  gap: 8px;
-  margin: 2px 0 0;
-  padding: 0;
-  list-style: none;
+  gap: 6px;
+  margin: 4px 0 0;
 }
 
-.stat-board__receipt-rows li {
-  display: grid;
-  grid-template-columns: 12px 1fr auto;
-  align-items: center;
-  column-gap: 4px;
+.stat-board__receipt-rows > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  column-gap: 8px;
 }
 
-.stat-board__receipt-rows b,
-.stat-board__receipt-amount {
-  font: 800 14px/1.2 var(--font-ui);
+.stat-board__receipt-rows dt {
+  font: 650 14px/1.3 var(--font-ui);
+}
+
+.stat-board__receipt-rows dd {
+  margin: 0 0 0 auto;
+  font: 800 14px/1.3 var(--font-ui);
   font-variant-numeric: tabular-nums;
-}
-
-.stat-board__receipt-rows small {
-  grid-column: 2 / -1;
-  color: var(--graphite);
-  font: 500 12px/1.3 var(--font-ui);
-}
-
-.stat-board__receipt-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.stat-board__receipt-dot.is-asOriginalArtist {
-  background: var(--seal);
-  box-shadow: 0 0 0 1px var(--seal-deep);
-}
-
-.stat-board__receipt-dot.is-inspired {
-  background: var(--pink);
-}
-
-.stat-board__receipt-dot.is-magic {
-  background: var(--grape);
 }
 
 .stat-board__receipt-total {
