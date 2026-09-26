@@ -21,6 +21,7 @@ import type {
   TicketQuote,
   Tickets,
   TicketUse,
+  TimelapseV1,
   UnseenGratitude,
   UserStats,
 } from "@drawing-app/api/client";
@@ -66,6 +67,8 @@ export interface ApiClient {
   seal: (request: SealRequest) => Promise<SealResponse>;
   /** GET /api/stickers/:stickerId */
   stickerDetail: (stickerId: string) => Promise<StickerDetail>;
+  /** GET /api/stickers/:stickerId/timelapse: how it was drawn; 404 timelapse_not_found without one. */
+  timelapse: (stickerId: string) => Promise<TimelapseV1>;
 
   /** GET /api/tickets */
   tickets: () => Promise<Tickets>;

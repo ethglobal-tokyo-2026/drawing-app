@@ -198,6 +198,11 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       if (!response.ok) throw await refusal(response, `GET /api/stickers/${stickerId}`);
       return response.json();
     },
+    timelapse: async (stickerId) => {
+      const response = await api.stickers[":stickerId"].timelapse.$get({ param: { stickerId } });
+      if (!response.ok) throw await refusal(response, `GET /api/stickers/${stickerId}/timelapse`);
+      return response.json();
+    },
 
     tickets: async () => {
       const response = await api.tickets.$get();
