@@ -20,6 +20,7 @@ export const stickerBoard = {
     drawLabelWithTickets: "Draw a new sticker: you have {{tickets}}",
     /** Beside Draw until the first sticker. */
     firstSticker: "Make your first sticker",
+    /** Names the stickers' area for assistive tech. */
     label: "Sticker board",
     /** Read out for a focused sticker, then for the selected one. */
     focusHint: "Enter selects it. Arrow keys go to the other stickers.",
@@ -83,6 +84,7 @@ export const stickerBoard = {
   },
   /** One sticker large, paging through the rest. */
   detail: {
+    /** Names it for assistive tech when it has no sticker to show. */
     label: "Sticker",
     back: "Sticker board",
     yourStickers: "Your stickers",
@@ -91,7 +93,7 @@ export const stickerBoard = {
     next: "Next sticker",
     count: "{{position}} / {{setSize}}",
     countSpoken: "{{no}}, {{position}} of {{setSize}}",
-    /** "sticker" stands in for the sticker's name, which no data carries yet; `<no/>` is its number. */
+    /** "sticker" stands in for its name, which no data carries yet; `<no/>` is its number. */
     title: "sticker <no/>",
     by: "by {{artist}}",
     /** `<duration/>` is how long it took to draw. */
@@ -126,8 +128,8 @@ export const stickerBoard = {
     replayTheirs: "Play the replay of {{name}}’s {{amount}} gratitude",
     /** The Original Artist Gratitude Share, out of the giver's part. Never money words. */
     artistShare: {
-      toYou: "{{share}} of it came to you, its artist",
-      fromYou: "{{kept}} came to you · {{share}} to {{artist}}, its artist",
+      youDrewIt: "{{share}} of it came to you, its artist",
+      youGaveIt: "{{kept}} came to you · {{share}} to {{artist}}, its artist",
       between: "{{kept}} to {{giver}} · {{share}} to {{artist}}, its artist",
     },
     earlierGifts_one: "{{count}} earlier gift",
@@ -148,7 +150,7 @@ export const stickerBoard = {
     view: "View",
     offer: "Offer for it",
     give: "Give",
-    /** A sticker opened from their board: `<duration/>` is how long it took, `<artist/>` who drew it. */
+    /** A sticker opened from it: `<duration/>` is how long it took, `<artist/>` who drew it. */
     drawnIn: "Drawn in <duration/> · <artist/>",
     close: "Close",
   },

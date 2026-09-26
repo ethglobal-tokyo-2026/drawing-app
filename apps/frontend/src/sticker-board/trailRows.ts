@@ -57,10 +57,10 @@ export function artistShareLine(
   if (!g || g.artistShare <= 0 || row.giver.id === artist.id) return null;
   const share = formatCount(g.artistShare);
   if (artist.id === viewerId)
-    return i18next.t(($) => $.stickerBoard.transferTrail.artistShare.toYou, { share });
+    return i18next.t(($) => $.stickerBoard.transferTrail.artistShare.youDrewIt, { share });
   const split = { kept: formatCount(g.total - g.artistShare), share, artist: handleOf(artist) };
   return row.giver.id === viewerId
-    ? i18next.t(($) => $.stickerBoard.transferTrail.artistShare.fromYou, split)
+    ? i18next.t(($) => $.stickerBoard.transferTrail.artistShare.youGaveIt, split)
     : i18next.t(($) => $.stickerBoard.transferTrail.artistShare.between, {
         ...split,
         giver: handleOf(row.giver),
