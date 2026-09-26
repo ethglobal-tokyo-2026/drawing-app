@@ -8,11 +8,11 @@ import { keepChosenLanguage, readChosenLanguage } from "../i18n/language";
 import type { LineClaims } from "../line/liff";
 import { ApiError } from "./apiClient";
 import type { Me } from "@drawing-app/api/client";
-import type { EarlySession } from "./earlySession";
+import { openEarly, type EarlySession } from "./earlySession";
 import type { SessionApi } from "./httpApi";
 import { useMe } from "./meContext";
 import { SessionGate } from "./SessionGate";
-import "./testing";
+import { emptyApi } from "./testing";
 
 const me: Me = {
   id: "u1",
@@ -296,6 +296,31 @@ describe("SessionGate", () => {
 });
 
 describe("SessionGate with the cookie from the last visit", () => {
+  it("rechecks the cookie after an early network failure without exchanging a stale LINE token", async () => {
+    const resume = vi
+      .fn<SessionApi["me"]>()
+      .mockRejectedValueOnce(new ApiError(0, { error: "network" }))
+      .mockResolvedValueOnce({ me });
+    const signIn = vi
+      .fn<SessionApi["signIn"]>()
+      .mockRejectedValue(new ApiError(401, { error: "line_token_expired" }));
+    const idToken = vi.fn(() => "expired-token");
+    const reconnect = vi.fn<() => Promise<void>>().mockResolvedValue();
+    const client = session({ me: resume, signIn });
+    const early = openEarly(client, emptyApi(), { board: true });
+    const host = render(client, idToken, reconnect, { early });
+    await settle();
+    expect(host.textContent).toContain("Check your connection");
+    expect(signIn).not.toHaveBeenCalled();
+
+    act(() => host.querySelector("button")?.click());
+    await settle();
+    expect(resume).toHaveBeenLastCalledWith("line-alice");
+    expect(host.textContent).toContain("Board of @alice");
+    expect(idToken).not.toHaveBeenCalled();
+    expect(reconnect).not.toHaveBeenCalled();
+  });
+
   it("opens as the cookie's person when LINE's user is theirs, without signing in again", async () => {
     const signIn = vi.fn(() => Promise.resolve({ me }));
     const early = earlyAs(me);
@@ -354,4 +379,29 @@ describe("SessionGate with the cookie from the last visit", () => {
       expect(host.textContent).toContain("Board of @alice-renamed");
     },
   );
+
+  it("keeps a newly chosen handle when an earlier profile refresh finishes afterward", async () => {
+    const unfinished = { ...me, handle: null, needsHandle: true };
+    const { signIn, finish } = pendingSignIn({ ...unfinished, lineDisplayName: "Alice B" });
+    const setHandle = vi
+      .fn<SessionApi["setHandle"]>()
+      .mockResolvedValue({ me: { ...me, handle: "alice2" } });
+    const host = render(session({ signIn, setHandle }), undefined, undefined, {
+      early: earlyAs(unfinished),
+      claims: { ...ALICE_CLAIMS, name: "Alice B" },
+    });
+    await settle();
+    expect(signIn).toHaveBeenCalledOnce();
+    const input = host.querySelector("input");
+    if (!input) throw new Error("no handle field");
+    type(input, "alice2");
+    submit(host);
+    await settle();
+    expect(host.textContent).toContain("Board of @alice2");
+
+    finish();
+    await settle();
+    expect(host.querySelector("form")).toBeNull();
+    expect(host.textContent).toContain("Board of @alice2");
+  });
 });
