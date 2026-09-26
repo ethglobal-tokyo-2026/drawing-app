@@ -175,8 +175,11 @@ pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
 - `apps/frontend` — Vite + React + TypeScript
   - `src/app` — app shell: tab bar and screen switching
   - `src/sticker-creation` — the drawing screen: canvas engine (`canvas/`), tools and drawers (`tools/`), sealing (`sealing/`)
-  - `src/sticker-board` — the sticker board, its stat board, sticker detail and placement
-  - `src/giving` — Giving: the give sheet and gift bag, the gift message, and sending it through LINE's friend picker
+  - `src/sticker-board` — the sticker board, its stat board, sticker detail and placement; someone else's sticker board and its cork back
+  - `src/explore` — Explore: artist search, today's stickers, this week's leaderboards and the activity feed (demo data until the server serves them)
+  - `src/artists` — demo artists (profiles, stats, sticker boards) and their authored art, until the server serves other people
+  - `src/giving` — Giving: the give sheet and gift bag, the gift message, and sending it through LINE's friend picker; the give sheet and sticker picker on someone else's board
+  - `src/offers` — the offer sheet on someone else's board (ask, swap or offer gratitude)
   - `src/line` — LIFF: starts before the app renders and holds it until LINE has logged the person in; on the dev server LIFF Mock stands in for LINE (`apps/frontend/.env.example` switches it off)
   - `src/identity` — who the person is: the LINE profile, and the Privy sign-in, which trades LINE's ID token at the auth server for a Privy JWT (Privy's SDK loads only after the board)
   - `src/tickets`, `src/stickers` (local sticker storage, display formatting, and the sticker's material: the figure, its live resin and the shared light), `src/payments`

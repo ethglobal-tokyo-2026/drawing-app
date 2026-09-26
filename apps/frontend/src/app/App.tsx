@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import { artistByHandle } from "../artists/demoArtists";
+import { ArtistBoard } from "../sticker-board/ArtistBoard";
 import { StickerBoard } from "../sticker-board/StickerBoard";
 import { DrawingScreen, type DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
-import { ExploreScreen } from "./ExploreScreen";
+import { ExploreScreen } from "../explore/ExploreScreen";
 import { viewFromPath, type View } from "./openedView";
 import { TabBar } from "./TabBar";
 import { useFocusLoop } from "./useFocusLoop";
@@ -21,6 +23,9 @@ export default function App() {
   const [view, setView] = useState<View>(() => viewFromPath(location.pathname));
   // Set from the seal until the next sticker starts; the board lands it with a "stick" animation.
   const [sealedId, setSealedId] = useState<string>();
+  // Someone else's sticker board, opened from Explore over it, so Explore keeps its search and scroll.
+  const [visiting, setVisiting] = useState<string>();
+  const visitedArtist = visiting ? artistByHandle.get(visiting) : undefined;
   const drawing = view === "draw";
 
   useEffect(() => {
@@ -56,7 +61,12 @@ export default function App() {
           onGoToBoard={() => setView("board")}
         />
         {view === "board" && <StickerBoard freshId={sealedId} onDraw={openDrawing} />}
-        {view === "explore" && <ExploreScreen />}
+        {view === "explore" && (
+          <ExploreScreen onOpenArtist={setVisiting} onOpenMyBoard={() => setView("board")} />
+        )}
+        {view === "explore" && visitedArtist && (
+          <ArtistBoard artist={visitedArtist} onBack={() => setVisiting(undefined)} />
+        )}
       </div>
       <TabBar
         active={drawing ? undefined : view}
@@ -64,6 +74,7 @@ export default function App() {
         onChange={(tab) => {
           drawingScreen.current?.closeDrawers();
           setView(tab);
+          setVisiting(undefined);
         }}
       />
     </div>
