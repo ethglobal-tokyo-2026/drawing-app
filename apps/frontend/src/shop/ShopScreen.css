@@ -252,11 +252,13 @@
   background-size: 90px 90px;
 }
 
-/* Glitter: flecks in the resin, brightest round where the light falls. */
-.laminate-film--glitter > i {
+/* A film blends on its outer span, never on the masked layer inside it: WebKit composites that layer
+   while its flecks or facets glide after the light, and there it carries the mask alone. */
+.laminate-film--glitter {
   mix-blend-mode: screen;
 }
 
+/* Glitter: flecks in the resin, brightest round where the light falls. */
 .laminate-film--glitter > i > b {
   inset: -20%;
   background-image:
@@ -289,7 +291,7 @@
 }
 
 /* Prism: facets of the foil's colors over the print, turning a little with the light. */
-.laminate-film--prism > i {
+.laminate-film--prism {
   mix-blend-mode: soft-light;
 }
 

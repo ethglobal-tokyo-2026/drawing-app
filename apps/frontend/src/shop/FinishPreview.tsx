@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { StickerFigure } from "../stickers/StickerFigure";
 import type { ShopSticker } from "./shopSticker";
 
@@ -14,6 +14,28 @@ const FILL = 0.74;
 
 /** "roseGold" as a class name's "rose-gold". */
 const kebab = (id: string) => id.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
+
+/**
+ * Whether the image at `url` has loaded. A layer shaped by a mask waits for it, so it never shows
+ * before its mask can shape it.
+ */
+function useImageLoaded(url: string): boolean {
+  const [loaded, setLoaded] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    const img = new Image();
+    // A mask that fails to load leaves the layer out, never unmasked.
+    img.onload = () => {
+      if (live) setLoaded(url);
+    };
+    img.src = url;
+    return () => {
+      live = false;
+      img.onload = null;
+    };
+  }, [url]);
+  return loaded === url;
+}
 
 /**
  * Your sticker in a coming finish: a laminate over it, or a backing foil round it the way someone
@@ -38,7 +60,9 @@ export function FinishPreview({
   };
   const laminate = "laminate" in finish ? finish.laminate : null;
   const foil = "foil" in finish ? finish.foil : null;
-  const film = laminate === "glitter" || laminate === "prism";
+  // The haze and the film are shaped by the sticker's mask, so neither shows until it's in.
+  const masked = useImageLoaded(urls.mask);
+  const film = masked && (laminate === "glitter" || laminate === "prism");
   const finishClass =
     "laminate" in finish ? `laminate--${finish.laminate}` : `backing-foil--${kebab(finish.foil)}`;
   return (
@@ -53,7 +77,7 @@ export function FinishPreview({
           turn={-4}
           reveal
         />
-        {laminate === "matte" && <span className="laminate-haze" />}
+        {masked && laminate === "matte" && <span className="laminate-haze" />}
         {film && (
           <span className={`live-resin laminate-film laminate-film--${laminate}`}>
             <i>
