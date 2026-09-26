@@ -9,7 +9,7 @@ Fixes from the 2026-09-26 whole-app critique (27/40, Acceptable), plus the owner
 - The sticker detail opens with a "lift off the board" (spec below).
 - Drawing time prints with units: "4m 52s", "5m" on the minute, "54s" under a minute. The live timer keeps M:SS.
 - Share my board and its QR code are removed until visiting someone's board exists. Their link opens the app, not your board.
-- Kept as they are: the mock Sui ticket purchase. Not supported: 320px phones.
+- Kept as they are: the mock Sui ticket purchase, a placeholder until it has designs. Not supported: 320px phones.
 
 ## Streams
 
@@ -90,7 +90,7 @@ Another branch changes the session to 3 minutes, so no new code or copy assumes 
   - write the reasons neutrally.
 - [x] C2 Ignore `.playwright-mcp/`, the detector's caches and critique snapshots.
 - [ ] C3 After Board merges, split the bundle: lazy-load the tray, the detail, the stat board, Giving and the LIFF SDK. The entry chunk is over Vite's 500 kB warning.
-- [ ] C4 Re-run the critique, then push.
+- [ ] C4 Push. The whole-app critique isn't re-run yet (owner, 2026-09-26).
 
 ## Detail "lift off the board"
 
