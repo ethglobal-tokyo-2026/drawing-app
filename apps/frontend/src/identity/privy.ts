@@ -32,13 +32,16 @@ export function setPrivyStatus(next: PrivyStatus) {
 
 export const privyStatus = () => status;
 
-const subscribe = (l: () => void) => {
+/** Calls `l` whenever the status changes; returns the unsubscribe. */
+export const onPrivyStatus = (l: () => void) => {
   listeners.add(l);
-  return () => listeners.delete(l);
+  return () => {
+    listeners.delete(l);
+  };
 };
 
 export function usePrivyStatus(): PrivyStatus {
-  return useSyncExternalStore(subscribe, privyStatus);
+  return useSyncExternalStore(onPrivyStatus, privyStatus);
 }
 
 // LINE's ID token lasts an hour, and the auth server checks it with LINE again, so one about to lapse fails there.
@@ -49,13 +52,16 @@ const EXCHANGE_TIMEOUT_MS = 10_000;
 let kept: { jwt: string; expiresAt: number } | undefined;
 let reconnecting = false;
 
-/** The person's retry reconnects LINE when its credentials need replacing. */
-export function retryPrivySignIn(): void {
+/**
+ * The person's retry reconnects LINE when its credentials need replacing, coming back to `returnTo`
+ * (this page, unless a screen says where it picks up).
+ */
+export function retryPrivySignIn(returnTo?: string): void {
   if (reconnecting) return;
   if (status.state === "failed" && status.reconnectLine) {
     reconnecting = true;
     // Keep the exchange disabled while LINE navigates, so Privy cannot resend the stale token.
-    void reconnectLine()
+    void reconnectLine(returnTo)
       .catch(() => {
         fail("LINE could not reconnect; try again", true);
       })
@@ -67,7 +73,8 @@ export function retryPrivySignIn(): void {
   resetPrivySignIn();
 }
 
-function resetPrivySignIn() {
+/** Signs in to Privy again, without ever leaving the page: a failure that needs LINE stays failed. */
+export function resetPrivySignIn() {
   // A delayed wallet-frame retry must preserve a newer LINE authentication failure.
   if (status.state === "failed" && status.reconnectLine) return;
   kept = undefined;

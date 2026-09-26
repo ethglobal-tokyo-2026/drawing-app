@@ -1,11 +1,14 @@
 import type { Sticker } from "@drawing-app/api/client";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { setPrivyStatus } from "../identity/privy";
 import { setSmartWallet } from "../identity/smartWallet";
 import { ApiError, type ApiClient } from "./apiClient";
 import { withSmartWallet } from "./smartWalletApi";
 import { sticker } from "./testFixtures";
 import { emptyApi } from "./testing";
 
+// Signing in, as in the app: tests run under LIFF Mock, where Privy is off and nothing waits.
+beforeEach(() => setPrivyStatus({ state: "signing-in" }));
 afterEach(() => setSmartWallet(null));
 
 const ready = () =>

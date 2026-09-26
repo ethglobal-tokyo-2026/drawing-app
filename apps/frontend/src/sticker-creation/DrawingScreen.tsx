@@ -8,6 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type Ref,
 } from "react";
+import { retryPrivySignIn } from "../identity/privy";
 import { useMyAgeStatus } from "../identity/useMyAgeStatus";
 import type { Sticker, TicketUse } from "@drawing-app/api/client";
 import { ApiError, apiError } from "../api/apiClient";
@@ -132,6 +133,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const lastCeremony = useRef<Ceremony | null>(null);
   const seals = useRef(0);
   const [sealProblem, setSealProblem] = useState<string | null>(null);
+  /** The chip says LINE's sign-in expired, so tapping the check reconnects instead of sealing. */
+  const reconnectOnTap = useRef(false);
   // The out-of-tickets card or the ticket shop, over a fresh sheet, or null.
   const [overlay, setOverlay] = useState<"out" | "shop" | null>(null);
   // A ticket is being spent on the server; Start waits for it.
@@ -322,10 +325,14 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       if (shown) dismissCeremony(shown);
       else sticker?.dispose();
       console.error("Sealing the sticker failed", error);
+      // Only reconnecting LINE renews its sign-in, and that leaves the page: the check does it.
+      reconnectOnTap.current = error instanceof ApiError && error.code === "line_token_expired";
       setSealProblem(
-        error instanceof ApiError
-          ? t(($) => $.stickerCreation.seal.failed, { reason: errorReason(error) })
-          : t(($) => $.stickerCreation.seal.failedHere, { reason: reason(error) }),
+        reconnectOnTap.current
+          ? t(($) => $.stickerCreation.seal.reconnect)
+          : error instanceof ApiError
+            ? t(($) => $.stickerCreation.seal.failed, { reason: errorReason(error) })
+            : t(($) => $.stickerCreation.seal.failedHere, { reason: reason(error) }),
       );
       send({ type: "seal-failed" });
     }
@@ -677,6 +684,11 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         problem={sealProblem}
         onTap={() => {
           setSealProblem(null);
+          if (sealProblem && reconnectOnTap.current) {
+            // The drawing is kept on this device, and the drawing screen picks it back up.
+            retryPrivySignIn(new URL("/draw", location.href).href);
+            return;
+          }
           send({ type: "seal-tap", now: performance.now(), hasInk: history.canUndo });
         }}
       />
