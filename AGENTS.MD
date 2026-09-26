@@ -169,10 +169,13 @@ pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
 - `apps/frontend` — Vite + React + TypeScript
   - `src/app` — app shell: tab bar and screen switching
   - `src/sticker-creation` — the drawing screen: canvas engine (`canvas/`), tools and drawers (`tools/`), sealing (`sealing/`)
-  - `src/sticker-board` — the sticker board, sticker detail, profile card and placement
-  - `src/tickets`, `src/stickers` (local sticker storage and display formatting), `src/line` (LIFF), `src/identity`, `src/payments`
+  - `src/sticker-board` — the sticker board, sticker detail, profile card and placement; someone else's sticker board and its cork back (stat board)
+  - `src/artists` — demo artists (profiles, stats, sticker boards) and their authored art, until the server serves other people
+  - `src/giving` — the Give sheet on someone else's sticker board, the sticker picker and the gift bag; `src/offers` — the offer sheet (ask, swap or offer gratitude)
+  - `src/explore` — Explore: artist search, today's stickers, this week's leaderboards and the activity feed (placeholder data until the server serves them)
+  - `src/tickets`, `src/stickers` (local sticker storage, including given stickers, and display formatting), `src/line` (LIFF), `src/identity`, `src/payments`
   - `src/icons` — one icon per file, all rendered from published Phosphor / Material Symbols SVGs; `src/styles` — design tokens (`base.css`) and CSS shared across features
-  - `src/controls` — the key, label stock and quiet link, and the one press they share (`usePress`)
+  - `src/controls` — the key, label stock and quiet link, the one press they share (`usePress`), and the toast (`useToast`)
 - `packages/db` — Drizzle schema and typed database client (`@drawing-app/db`)
 - `packages/*` — shared workspace packages
 

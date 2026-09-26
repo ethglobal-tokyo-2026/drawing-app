@@ -1,6 +1,6 @@
 export interface StickerRecord {
   id: string;
-  /** Running number shown as NO.0001. */
+  /** Running number shown as No.0001. */
   no: number;
   createdAt: number;
   /** Seconds spent drawing. */
@@ -14,6 +14,14 @@ export interface StickerRecord {
   placement?: Placement;
   /** SVG path of the cut line, in image pixels. Missing on stickers sealed before it was kept. */
   outline?: string;
+  /** Set once it's given: it leaves your board and waits in a gift bag for the recipient. */
+  gift?: Gift;
+}
+
+export interface Gift {
+  /** The recipient's handle. */
+  to: string;
+  givenAt: number;
 }
 
 export interface Placement {
@@ -81,10 +89,30 @@ export async function addSticker(
 
 export const deleteSticker = (id: string) => run("readwrite", (s) => s.delete(id));
 
+/** Stickers still yours to show or give: newest first, without the ones given away. */
+export const listKeptStickers = async () => (await listStickers()).filter((s) => !s.gift);
+
+export async function giveSticker(id: string, to: string): Promise<Gift> {
+  const record: unknown = await run("readonly", (s) => s.get(id));
+  if (!isStickerRecord(record)) throw new Error(`No stored sticker with id ${id}`);
+  if (record.gift) throw new Error(`${id} was already given to @${record.gift.to}`);
+  const gift: Gift = { to, givenAt: Date.now() };
+  await run("readwrite", (s) => s.put({ ...record, gift }));
+  return gift;
+}
+
 export async function updatePlacement(id: string, placement: Placement): Promise<void> {
   const record: unknown = await run("readonly", (s) => s.get(id));
   if (isStickerRecord(record)) await run("readwrite", (s) => s.put({ ...record, placement }));
 }
+
+const isGift = (v: unknown): v is Gift =>
+  typeof v === "object" &&
+  v !== null &&
+  "to" in v &&
+  typeof v.to === "string" &&
+  "givenAt" in v &&
+  typeof v.givenAt === "number";
 
 const isPlacement = (v: unknown): v is Placement =>
   typeof v === "object" &&
@@ -119,4 +147,5 @@ const isStickerRecord = (v: unknown): v is StickerRecord =>
   "rotation" in v &&
   typeof v.rotation === "number" &&
   (!("placement" in v) || v.placement === undefined || isPlacement(v.placement)) &&
-  (!("outline" in v) || v.outline === undefined || typeof v.outline === "string");
+  (!("outline" in v) || v.outline === undefined || typeof v.outline === "string") &&
+  (!("gift" in v) || v.gift === undefined || isGift(v.gift));

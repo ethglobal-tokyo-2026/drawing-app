@@ -9,7 +9,7 @@ import { Key } from "../controls/controls";
 import { DrawIcon } from "../icons/DrawIcon";
 import { useIdentity } from "../identity/useIdentity";
 import { formatClock, formatNo } from "../stickers/format";
-import { listStickers, updatePlacement, type Placement } from "../stickers/stickerStorage";
+import { listKeptStickers, updatePlacement, type Placement } from "../stickers/stickerStorage";
 import type { BoardSticker } from "./boardSticker";
 import { autoPlace, clamp, MAX_SCALE, MIN_SCALE } from "./placement";
 import { ProfileCard } from "./ProfileCard";
@@ -63,7 +63,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   useEffect(() => {
     let cancelled = false;
     let urls: string[] = [];
-    listStickers().then(
+    listKeptStickers().then(
       (records) => {
         if (cancelled) return;
         // Oldest first, so newer stickers stack on top by default.

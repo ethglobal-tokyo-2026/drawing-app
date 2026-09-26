@@ -1,0 +1,29 @@
+/* ---------- Demo artist art ---------- */
+
+/* A white die-cut edge traced around the art, then the kiss-cut groove and cast. */
+.artist-art {
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(2px 0 0 var(--canvas)) drop-shadow(-2px 0 0 var(--canvas))
+    drop-shadow(0 2px 0 var(--canvas)) drop-shadow(0 -2px 0 var(--canvas)) var(--kiss-cut)
+    var(--sticker-cast);
+}
+
+/* A round picture in a white edge. */
+.artist-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 2px solid var(--canvas);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px var(--rule-kiss),
+    var(--shadow-label);
+}
+
+/* Sized off the avatar itself; padding would resolve against the parent's width. */
+.artist-avatar svg {
+  width: 78%;
+  height: 78%;
+}
