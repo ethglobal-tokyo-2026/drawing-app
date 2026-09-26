@@ -541,7 +541,7 @@ The tickets your next drawing can use tuck behind the Draw key's right end, like
 - **Daily tickets left:** one Seal Yellow ticket, 30px tall, with ×count in Figure type (850, 13px). Tickets this small carry a 1.5px Ink outline, both kinds.
 - **Reserve tickets held too:** the reserve ticket fans out past the daily one's end like the next card in a hand: its own 16px end tucks under the daily ticket's notch, and the rest shows whole, 5px higher and turned 3° further, printed ×count, its star on its corner. It never hides behind the daily ticket as a sliver.
 - **Daily tickets used:** the reserve ticket alone, in front.
-- **Neither:** the used backing (Liner Lift, a dashed 26% edge) printed with the refill time in fine print, Graphite.
+- **Neither:** the used backing (Liner Lift, a dashed 26% edge) printed in fine print, Graphite, with when new ones come: "New at 12:00 AM", never the bare time. The key stays live: Draw raises the out-of-tickets card over the board.
 
 The key's name says what's left: "Draw a new sticker: 2 daily tickets and 5 reserve tickets left", or "…: no tickets until 12:00 AM". The star pops when the key first shows a reserve ticket in an app open, or when one is bought or comes to the front, not on every return to the board. Full-width Draw keys on the cards carry only their label; the card's art above shows the tickets.
 

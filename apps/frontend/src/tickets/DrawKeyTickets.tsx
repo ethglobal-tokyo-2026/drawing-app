@@ -73,7 +73,7 @@ function KeyTicket({ kind, print, behind = false, pop = false, style }: TicketPr
 /**
  * The tickets tucked behind the Draw key's right end, like tickets slid behind a keycap: what the next drawing can use
  * (ticketView). One Seal Yellow ticket ×daily, with the reserve ticket behind it when there are any; the reserve
- * ticket alone once the daily ones are used; with neither, the empty backing printed with the refill time. They're
+ * ticket alone once the daily ones are used; with neither, the empty backing printed "New at 12:00 AM". They're
  * paper under the key, not part of it: they take no taps, the key sinks over them, and the key's own name says
  * what's left. When Draw spends a ticket, the front one peels off as the canvas opens.
  */
@@ -112,7 +112,10 @@ export function DrawKeyTickets({ tickets, peel = false }: { tickets: Tickets; pe
           <KeyTicket kind="reserve" print={count(view.reserve)} pop={pop} />
         )}
         {view.show === "none" && (
-          <KeyTicket kind="backing" print={formatRefillTime(view.refillAt)} />
+          <KeyTicket
+            kind="backing"
+            print={t(($) => $.tickets.newAt, { time: formatRefillTime(view.refillAt) })}
+          />
         )}
       </span>
     </span>

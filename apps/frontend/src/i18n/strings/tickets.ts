@@ -34,6 +34,8 @@ export const tickets = {
     /** Out-of-tickets card: the countdown after the refill time, in the last hour, such as "in 42m" */
     minutes: { en: "in {{minutes}}m", ja: "あと{{minutes}}分" },
   },
+  /** Sticker board, the empty ticket backing behind the Draw key when no tickets of either kind are left, in small capitals: when new daily tickets arrive; {{time}} is the refill time, such as "12:00 AM" */
+  newAt: { en: "New at {{time}}", ja: "{{time}}に届く" },
   /** Start card, while daily tickets are left and you hold reserve ones: the small caption after the small reserve ticket and its count, under the daily ticket stubs */
   reserve: { en: "Reserve", ja: "有償" },
   /** The Draw key on the out-of-tickets card once the refill brings tickets back, and in the ticket shop (card or Shop tab) after a purchase */
