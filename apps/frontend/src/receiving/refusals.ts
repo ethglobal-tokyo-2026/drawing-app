@@ -44,7 +44,7 @@ export function refusalScreen(kind: RefusalKind, giver: PersonView | null): EndS
     case "taken_back":
       return {
         title: `${giver ? giver.name : "The giver"} took this one back`,
-        line: "It went back to their sticker board before anyone accepted it.",
+        line: "It went back to their sticker board before anyone received it.",
         bag: { state: "opened", stamp: "taken-back" },
         action: "backToLine",
       };

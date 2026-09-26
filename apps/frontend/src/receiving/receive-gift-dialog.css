@@ -1,6 +1,6 @@
 /* ReceiveGiftDialog: over the whole phone, tabs included. The sealed bag sits low on its stage;
-   torn open, the stage glides up with the sheet, then the bag drops away and the sticker rises out
-   of it. The stage's geometry is GiftBag's receive size. */
+   once the gift is unpackaged, the stage glides up with the sheet, then the bag drops away and the
+   sticker rises out of it. The stage's geometry is GiftBag's receive size. */
 
 .receive-gift {
   position: absolute;
@@ -128,16 +128,16 @@
   }
 }
 
-/* Accepting: the sticker lifts a little off the page while the receive is out. */
+/* Receiving: the sticker lifts a little off the page while the receive is out. */
 .receive-gift__figure .sticker-figure__img {
   transition: filter var(--t-peel) var(--ease-peel);
 }
 
-.receive-gift.is-accepting .receive-gift__figure {
+.receive-gift.is-receiving .receive-gift__figure {
   transform: translateY(-58px) scale(1.02);
 }
 
-.receive-gift.is-accepting .receive-gift__figure .sticker-figure__img {
+.receive-gift.is-receiving .receive-gift__figure .sticker-figure__img {
   filter: var(--sticker-cut) drop-shadow(8px 22px 14px rgba(28, 24, 36, 0.18));
 }
 

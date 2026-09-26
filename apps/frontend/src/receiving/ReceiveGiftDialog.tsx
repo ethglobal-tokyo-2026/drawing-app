@@ -99,7 +99,7 @@ export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
 
   // The reveal plays out from the snap: the stage glides up with the sheet, then the sticker rises.
   const [reveal, setReveal] = useState<"snapped" | "rising" | "out">("snapped");
-  const opened = screen.step === "torn" || screen.step === "received";
+  const opened = screen.step === "unpackaged" || screen.step === "received";
   useEffect(() => {
     if (!opened) return;
     const timers = [
@@ -116,11 +116,11 @@ export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
     return () => clearTimeout(timer);
   }, [screen, motion]);
 
-  const pull = usePullTab({ reduced, onSnap: () => dispatch({ type: "tore" }) });
+  const pull = usePullTab({ reduced, onSnap: () => dispatch({ type: "unpackaged" }) });
 
   // The giver stays known through the leave, so LINE's header keeps naming them.
   const shownGiver =
-    screen.step === "sealed" || screen.step === "torn"
+    screen.step === "sealed" || screen.step === "unpackaged"
       ? screen.preview.giver
       : screen.step === "refused"
         ? screen.giver
@@ -128,7 +128,7 @@ export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
   const [giver, setGiver] = useState<PersonView | null>(null);
   if (shownGiver && shownGiver !== giver) setGiver(shownGiver);
   // The gift stays drawn through the leave after Accept, when the flow holds only its ID.
-  const preview = screen.step === "sealed" || screen.step === "torn" ? screen.preview : null;
+  const preview = screen.step === "sealed" || screen.step === "unpackaged" ? screen.preview : null;
   const [shownPreview, setShownPreview] = useState<GiftPreviewView | null>(null);
   if (preview && preview !== shownPreview) setShownPreview(preview);
   const title = giver ? `A gift from ${printed(giver)}` : "A gift";
@@ -137,7 +137,7 @@ export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
     document.title = title;
   }, [title]);
 
-  const busy = (screen.step === "torn" && screen.accepting) || screen.step === "received";
+  const busy = (screen.step === "unpackaged" && screen.receiving) || screen.step === "received";
   const close = () => {
     if (!busy) onClose();
   };
@@ -167,15 +167,15 @@ export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
   };
 
   const accept = () => {
-    if (screen.step !== "torn" || screen.accepting) return;
+    if (screen.step !== "unpackaged" || screen.receiving) return;
     const which = formatNo(screen.preview.sticker.no);
-    dispatch({ type: "accept" });
+    dispatch({ type: "receive" });
     api.receiveGift(claim).then(
       (response) => dispatch({ type: "received", response }),
       (error: unknown) => {
         const failure = apiError(error);
-        console.error(`Accepting ${which} failed`, failure);
-        dispatch({ type: "acceptFailed", error: failure });
+        console.error(`Receiving ${which} failed`, failure);
+        dispatch({ type: "receiveFailed", error: failure });
       },
     );
   };
@@ -211,8 +211,8 @@ export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
         reveal={reveal}
         pull={pull}
         opener={me.displayName}
-        accepting={screen.step === "torn" && screen.accepting}
-        failed={screen.step === "torn" ? screen.failed : undefined}
+        receiving={screen.step === "unpackaged" && screen.receiving}
+        failed={screen.step === "unpackaged" ? screen.failed : undefined}
         onAccept={accept}
         onNotNow={close}
       />
@@ -224,7 +224,7 @@ export function ReceiveGiftDialog({ giftClaimToken, onClose }: Props) {
   const classes = [
     "receive-gift",
     `is-${screen.step}`,
-    screen.step === "torn" && screen.accepting && "is-accepting",
+    screen.step === "unpackaged" && screen.receiving && "is-receiving",
     reveal !== "snapped" && "is-rising",
     reveal === "out" && "is-out",
   ];
@@ -251,7 +251,7 @@ interface GiftProps {
   pull: ReturnType<typeof usePullTab>;
   /** The opener's LINE name. */
   opener: string;
-  accepting: boolean;
+  receiving: boolean;
   failed?: string;
   onAccept: () => void;
   onNotNow: () => void;
@@ -264,7 +264,7 @@ function Gift({
   reveal,
   pull,
   opener,
-  accepting,
+  receiving,
   failed,
   onAccept,
   onNotNow,
@@ -323,7 +323,7 @@ function Gift({
           <div className="receive-gift__acts">
             {failed && (
               <p className="receive-gift__problem" role="alert">
-                {formatNo(sticker.no)} wasn’t accepted: {failed}. Tap Accept to try again.
+                {formatNo(sticker.no)} wasn’t received: {failed}. Tap Accept to try again.
               </p>
             )}
             <Key
@@ -331,17 +331,17 @@ function Gift({
               size="lg"
               icon={<HandHeart />}
               onClick={onAccept}
-              disabled={accepting}
-              aria-busy={accepting || undefined}
+              disabled={receiving}
+              aria-busy={receiving || undefined}
               data-autofocus
             >
-              {accepting ? "Accepting…" : "Accept"}
+              {receiving ? "Accepting…" : "Accept"}
             </Key>
-            <QuietLink onClick={onNotNow} disabled={accepting}>
+            <QuietLink onClick={onNotNow} disabled={receiving}>
               <X /> Not now
             </QuietLink>
             <p className="receive-gift__terms">
-              Accepting shows {printed(giver)} your LINE name and picture. You agree to the{" "}
+              Receiving it shows {printed(giver)} your LINE name and picture. You agree to the{" "}
               <a href="/terms.html" onClick={openPage}>
                 Terms
               </a>{" "}

@@ -19,8 +19,8 @@ type DemoGift =
       previewMs?: number;
       /** Previews refused as not deposited before the deposit lands. */
       depositAfter?: number;
-      /** Accepts that fail before one goes through. */
-      failedAccepts?: number;
+      /** Receives that fail before one goes through. */
+      failedReceives?: number;
     }
   | { kind: "refused"; refusal: ReceiveRefusal }
   | { kind: "failing" };
@@ -64,11 +64,11 @@ const DEMO_GIFTS = new Map<string, DemoGift>([
   ],
   ["demo-fail", { kind: "failing" }],
   [
-    "demo-accept-fail",
+    "demo-receive-fail",
     {
       kind: "receivable",
       sticker: demoSticker("demo-fox", "fox", 163, people.ken),
-      failedAccepts: 1,
+      failedReceives: 1,
     },
   ],
 ]);
@@ -86,9 +86,9 @@ const STATUS: Record<ReceiveRefusal, number> = {
 
 const GROUP_CHATS = new Set<string>(["group", "room", "square_chat"]);
 
-/** This page load's demo gifts, by token: how often each was previewed and accepted, and receives. */
+/** This page load's demo gifts, by token: previews, receive tries, and what each delivered. */
 const previews = new Map<string, number>();
-const accepts = new Map<string, number>();
+const receiveTries = new Map<string, number>();
 const received = new Map<
   string,
   { sticker: Sticker; giftId: string; receiver: Person; receivedAt: string }
@@ -145,9 +145,9 @@ export const receivingOverlay: Overlay = (below) => ({
     if (demo.kind === "refused") throw refused(demo.refusal);
     const refusal = refusalOf(token, demo, body);
     if (refusal) throw refused(refusal);
-    const tries = (accepts.get(token) ?? 0) + 1;
-    accepts.set(token, tries);
-    if (tries <= (demo.failedAccepts ?? 0)) throw dropped("this gift's first Accept");
+    const tries = (receiveTries.get(token) ?? 0) + 1;
+    receiveTries.set(token, tries);
+    if (tries <= (demo.failedReceives ?? 0)) throw dropped("this gift's first Accept");
     const { owner } = await below.stickerBoard();
     const receivedAt = new Date().toISOString();
     const got = { ...demo.sticker, ownerId: owner.id };
@@ -168,7 +168,7 @@ export const receivingOverlay: Overlay = (below) => ({
     };
   },
 
-  // A received demo sticker's detail: its one hand-off, to you, not thanked yet.
+  // A received demo sticker's detail: one Transfer Trail row, its gift to you, no gratitude yet.
   stickerDetail: async (stickerId) => {
     const got = [...received.values()].find((r) => r.sticker.id === stickerId);
     if (!got) return below.stickerDetail(stickerId);
