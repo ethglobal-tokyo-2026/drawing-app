@@ -41,13 +41,14 @@ describe("traySlots", () => {
 });
 
 describe("newSlots", () => {
-  it("marks as new what arrived today and hasn't been seen or given", () => {
+  it("marks as new what's in the tray, arrived today and hasn't been seen", () => {
     const slots = traySlots(
       [
         sticker("old", 1, false),
         sticker("seen", 2, false),
         sticker("given", 2, false),
-        sticker("new", 2, true),
+        sticker("on the board", 2, true),
+        sticker("new", 2, false),
       ],
       new Map([["given", sent]]),
     );
