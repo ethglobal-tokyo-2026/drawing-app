@@ -59,6 +59,13 @@
   color: var(--graphite);
 }
 
+.sealed-card__ticket-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
 .sealed-card__tickets p {
   margin: 8px 0 0;
 }

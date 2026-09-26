@@ -1,0 +1,126 @@
+/* The ticket shop (TicketShop.tsx). The card borrows the out-of-tickets card's stock; packs are label
+   stock rows, the picked one stuck on in Grape, the reserve ticket's color. */
+
+.ticket-shop {
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+.ticket-shop--page {
+  --card-pad: 18px;
+  padding: 0 var(--card-pad) 18px;
+  text-align: center;
+}
+
+.ticket-shop__wallet {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--r-label);
+  background: var(--liner-lift);
+  box-shadow: inset 0 0 0 1px var(--rule);
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.ticket-shop__packs {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ticket-shop__pack {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--liner-lift);
+  box-shadow:
+    inset 0 0 0 1px var(--rule-strong),
+    var(--shadow-label);
+  text-align: left;
+  transition:
+    background-color 140ms linear,
+    transform 140ms var(--ease-out);
+}
+
+.ticket-shop__pack[aria-pressed="true"] {
+  background: var(--grape-soft);
+  box-shadow:
+    inset 0 0 0 2px var(--grape),
+    var(--shadow-label);
+  transform: translateY(-1px);
+}
+
+.ticket-shop__pack:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.ticket-shop__pack:disabled {
+  cursor: default;
+}
+
+.ticket-shop__pack-name {
+  font-size: 16px;
+  font-weight: 750;
+}
+
+/* A sale sticker, slapped on at the house tilt. */
+.ticket-shop__discount {
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: var(--pink);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  rotate: var(--tilt);
+}
+
+.ticket-shop__price {
+  display: grid;
+  justify-items: end;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.ticket-shop__price s {
+  font-size: 12px;
+  color: var(--graphite);
+}
+
+.ticket-shop__price strong {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.ticket-shop__price small {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--graphite);
+}
+
+.ticket-shop__rate {
+  margin: 10px 0 0;
+}
+
+.ticket-shop__problem {
+  margin: 14px 0 0;
+  font-weight: 650;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticket-shop__pack {
+    transition: none;
+  }
+}

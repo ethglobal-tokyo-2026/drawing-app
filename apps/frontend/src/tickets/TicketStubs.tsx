@@ -1,11 +1,15 @@
 import { useMemo } from "react";
 import { DrawIcon } from "../icons/DrawIcon";
 import { fitOutline, type Box } from "./stubOutline";
+import { ticketPath } from "./ticketShape";
+import type { TicketKind } from "./tickets";
 import "./TicketStubs.css";
 
 export interface TicketStub {
-  /** A used ticket is the empty backing it left; a fresh one is Seal Yellow ticket stock. */
+  /** A used ticket is the empty backing it left; a fresh one is ticket stock in its kind's color. */
   used: boolean;
+  /** Daily when absent. */
+  kind?: TicketKind;
   /** The cut outline of the sticker a used ticket became: an SVG path in any units, fitted to the stub. */
   outline?: string;
 }
@@ -52,19 +56,6 @@ const GEOMETRY: Record<Props["size"], Geometry> = {
   },
 };
 
-/** A ticket's silhouette: rounded corners with a round notch in each end. */
-function ticketPath({ w, h, corner: c, notch: n }: Geometry): string {
-  const m = h / 2;
-  return [
-    `M${c} 0H${w - c}A${c} ${c} 0 0 1 ${w} ${c}`,
-    `V${m - n}A${n} ${n} 0 0 0 ${w} ${m + n}`,
-    `V${h - c}A${c} ${c} 0 0 1 ${w - c} ${h}`,
-    `H${c}A${c} ${c} 0 0 1 0 ${h - c}`,
-    `V${m + n}A${n} ${n} 0 0 0 0 ${m - n}`,
-    `V${c}A${c} ${c} 0 0 1 ${c} 0Z`,
-  ].join("");
-}
-
 function Stub({ stub, geometry }: { stub: TicketStub; geometry: Geometry }) {
   const { w, h, perf, glyph, notch } = geometry;
   const shape = useMemo(() => ticketPath(geometry), [geometry]);
@@ -76,7 +67,7 @@ function Stub({ stub, geometry }: { stub: TicketStub; geometry: Geometry }) {
 
   return (
     <svg
-      className={`ticket-stub ${stub.used ? "is-used" : "is-fresh"}`}
+      className={`ticket-stub ticket-stub--${stub.kind ?? "daily"} ${stub.used ? "is-used" : "is-fresh"}`}
       viewBox={`0 0 ${w} ${h}`}
       width={w}
       height={h}
@@ -102,7 +93,7 @@ function Stub({ stub, geometry }: { stub: TicketStub; geometry: Geometry }) {
 }
 
 /**
- * Drawing tickets as paper stubs: fresh ones are Seal Yellow ticket stock, used ones the empty backing
+ * Drawing tickets as paper stubs: fresh ones are ticket stock (daily Seal Yellow, reserve Grape), used ones the empty backing
  * they left, carrying the kiss-cut outline of the sticker each became.
  */
 export function TicketStubs({ stubs, size, label, className }: Props) {

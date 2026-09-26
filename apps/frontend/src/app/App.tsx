@@ -5,6 +5,7 @@ import { StickerBoard } from "../sticker-board/StickerBoard";
 import { DrawingScreen, type DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
 import { ExploreScreen } from "../explore/ExploreScreen";
 import { viewFromPath, type View } from "./openedView";
+import { ShopScreen } from "./ShopScreen";
 import { TabBar } from "./TabBar";
 import { useFocusLoop } from "./useFocusLoop";
 import "./App.css";
@@ -13,6 +14,7 @@ import "./App.css";
 const TITLES: Record<View, string> = {
   board: "Your sticker board",
   explore: "Explore",
+  shop: "Shop",
   draw: "Draw",
 };
 
@@ -67,6 +69,7 @@ export default function App() {
         {view === "explore" && visitedArtist && (
           <ArtistBoard artist={visitedArtist} onBack={() => setVisiting(undefined)} />
         )}
+        {view === "shop" && <ShopScreen onDraw={openDrawing} />}
       </div>
       <TabBar
         active={drawing ? undefined : view}

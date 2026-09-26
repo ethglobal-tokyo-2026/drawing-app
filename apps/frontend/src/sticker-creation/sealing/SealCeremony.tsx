@@ -29,7 +29,7 @@ interface Props {
   handle: string;
   onKeepDrawing: () => void;
   onBoard: () => void;
-  onGetTickets: () => void;
+  onShop: () => void;
 }
 
 const px = (v: number) => `${v}px`;
@@ -80,7 +80,7 @@ export function SealCeremony({
   handle,
   onKeepDrawing,
   onBoard,
-  onGetTickets,
+  onShop,
 }: Props) {
   const reduced = useReducedMotion();
   useLight();
@@ -254,7 +254,7 @@ export function SealCeremony({
         slotRef={slot}
         onKeepDrawing={leave(onKeepDrawing)}
         onBoard={onBoard}
-        onGetTickets={leave(onGetTickets)}
+        onShop={leave(onShop)}
       />
       <img
         className="seal-ceremony__shadow"
