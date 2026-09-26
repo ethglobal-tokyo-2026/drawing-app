@@ -26,7 +26,7 @@ If minting cannot be confirmed, the live API returns `503 mint_failed`. The save
 
 `prepareGiftTransfer` creates the transaction that the artist's sponsored smart account sends while Giving. It transfers the sticker directly into the escrow with the gift ID, claim commitment, and expiration encoded in the ERC-721 receiver data. The recipient does not need an account at this point.
 
-After the recipient authenticates with LINE, resolve their Ethereum Sepolia smart account and call `authorizeClaim`. The authorization binds the gift ID, recipient smart account, escrow contract, chain ID, and a deadline. Any relayer can submit it, but the escrow accepts only signatures from `CLAIM_SIGNER_ROLE`. Rejection uses the same restricted authorization pattern, while anyone can return an expired gift to its sender.
+After the recipient authenticates with LINE, the API resolves their Ethereum Sepolia smart account, calls `authorizeClaim`, and relays `claimGift`. The authorization binds the gift ID, recipient smart account, escrow contract, chain ID, and a deadline. The escrow accepts only signatures from `CLAIM_SIGNER_ROLE`. Rejection uses the same restricted authorization pattern, while anyone can return an expired gift to its sender.
 
 Receiving requests carry the Gift Claim Token so the API can validate it before authorizing a claim. The sender can take a pending sticker out with `prepareGiftTakeOut`; the escrow verifies the caller is that gift's sender, so taking out needs no backend signature or claim token.
 
@@ -40,6 +40,25 @@ pnpm --filter @drawing-app/sticker-chain test
 pnpm --filter @drawing-app/sticker-chain generate-types
 pnpm --filter @drawing-app/api exec vitest run src/routes/stickers.chain.test.ts
 ```
+
+## Deploy to Ethereum Sepolia
+
+The deployment account remains the contracts' administrator. The account derived from
+`STICKER_SEALER_PRIVATE_KEY` receives permission to mint sealed stickers, authorize Receiving, and
+relay claims.
+
+```sh
+export ETHEREUM_SEPOLIA_RPC_URL=https://your-sepolia-rpc.example
+export DEPLOYER_PRIVATE_KEY=0x...
+export STICKER_SEALER_PRIVATE_KEY=0x...
+
+forge script script/DeployStickerContracts.s.sol:DeployStickerContracts \
+  --rpc-url "$ETHEREUM_SEPOLIA_RPC_URL" \
+  --broadcast
+```
+
+Copy the two printed contract addresses into the API and frontend environments. The sealer address
+must be derived from the API's `STICKER_SEALER_PRIVATE_KEY`.
 
 Install Foundry before running these commands. `forge test` covers the contracts, while the TypeScript integration tests run against Anvil and consume the same Forge artifacts. Wagmi CLI reads the artifacts in `out/` and generates typed ABIs in `src/generated/contracts.ts`; application code imports these instead of maintaining handwritten ABI fragments. Configure Privy Custom Authentication with the deployed app's `/.well-known/jwks.json`, use `sub` as the user ID claim, and keep the P-256 private key outside the repository.
 

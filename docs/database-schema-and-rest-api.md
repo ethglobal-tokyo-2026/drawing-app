@@ -22,7 +22,7 @@ What the server stores and serves. `packages/db` holds the schema and `apps/api`
 
 ### Sealing
 
-- Sealing waits for the mint. Until Privy smart wallets are set up, the mint step is a stub: a dev toast, and a comment where the minting logic goes.
+- In Sepolia mode, Sealing waits for the NFT mint to the Original Artist's Privy smart account. Mock mode leaves the sticker unminted for local UI work.
 - A sticker's number (No.0147) is separate from its NFT token ID. The sticker detail links to the token on Sepolia Etherscan.
 
 ### Sticker Board and sticker tray
@@ -465,8 +465,9 @@ interface TimelapseV1 {
 | `flat`        | file, `image/png`        | the sheet as drawn                        |
 | `timelapse`   | file, `application/gzip` | gzipped `TimelapseV1`                     |
 
-- 201 `{ sticker: Sticker; stickerPlacement: StickerPlacement }`, once the mint step resolves. While minting is a stub, `tokenId` is null.
-- Errors: 403 `ticket_not_yours`; 404 `ticket_not_found`; 409 `ticket_already_used`.
+- 201 `{ sticker: Sticker; stickerPlacement: StickerPlacement }`. A repeat with the same ticket returns the same sticker with 200 and retries its mint when it is still unminted.
+- In mock chain mode, `tokenId` and `mintTxHash` are null. In Sepolia mode, the response requires a confirmed NFT; a failed confirmation returns `503 mint_failed` and keeps the sticker for a same-ticket retry.
+- Errors: 403 `ticket_not_yours`; 404 `ticket_not_found`; 409 `ticket_already_used`; 503 `mint_failed`.
 
 | Route                                    | Request | Response                                                                                                        | Errors                  |
 | ---------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------- | ----------------------- |
@@ -503,13 +504,13 @@ interface BoardSticker extends StickerPlacement {
 
 ### Giving
 
-| Route                              | Request                                                                        | Response                                                                                                                                                                | Errors                                                                                      |
-| ---------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `POST /api/gifts`                  | `{ stickerId: string }`                                                        | 201 `{ gift: Gift; giftClaimToken: string; escrowTransfer: EscrowTransfer \| null }`; or 200 with `giftClaimToken: null` when the sticker already has a gift in the bag | 403 `not_yours`; 404 `sticker_not_found`; 409 `not_minted`, `gift_in_transit`               |
-| `POST /api/gifts/:giftId/deposit`  | `{ txHash: string }`: the escrow transfer's transaction or user operation hash | 200 `{ gift: Gift }`, `escrowStatus` `pending` once checked                                                                                                             | 403 `not_yours`; 404 `gift_not_found`; 409 `deposit_not_landed` (retry), `deposit_mismatch` |
-| `POST /api/gifts/:giftId/shared`   | `{ outcome: "sent" \| "cancelled" }`: the picker's result                      | 200 `{ gift: Gift }`: `sent` moves it to `sent`; `cancelled` leaves it `packed`                                                                                         | 403 `not_yours`; 404 `gift_not_found`; 409 `not_deposited`, `gift_closed`                   |
-| `POST /api/gifts/:giftId/take-out` | none                                                                           | 200 `{ gift: Gift }`, status `taken_out`                                                                                                                                | 403 `not_yours`; 404 `gift_not_found`; 409 `already_received`, `gift_closed`                |
-| `GET /api/gifts/pending`           | none                                                                           | 200 `{ gifts: Array<{ gift: Gift; sticker: Sticker }> }`: your `packed` and `sent` gifts, newest first                                                                  |                                                                                             |
+| Route                              | Request                                                                        | Response                                                                                                                                                                | Errors                                                                                          |
+| ---------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `POST /api/gifts`                  | `{ stickerId: string }`                                                        | 201 `{ gift: Gift; giftClaimToken: string; escrowTransfer: EscrowTransfer \| null }`; or 200 with `giftClaimToken: null` when the sticker already has a gift in the bag | 403 `not_yours`; 404 `sticker_not_found`; 409 `not_minted`, `gift_in_transit`                   |
+| `POST /api/gifts/:giftId/deposit`  | `{ txHash: string }`: the escrow transfer's transaction or user operation hash | 200 `{ gift: Gift }`, `escrowStatus` `pending` once checked                                                                                                             | 403 `not_yours`; 404 `gift_not_found`; 409 `deposit_not_landed` (retry), `deposit_mismatch`     |
+| `POST /api/gifts/:giftId/shared`   | `{ outcome: "sent" \| "cancelled" }`: the picker's result                      | 200 `{ gift: Gift }`: `sent` moves it to `sent`; `cancelled` leaves it `packed`                                                                                         | 403 `not_yours`; 404 `gift_not_found`; 409 `not_deposited`, `gift_closed`                       |
+| `POST /api/gifts/:giftId/take-out` | none                                                                           | 200 `{ gift: Gift }`, status `taken_out` and escrow status `rejected`                                                                                                   | 403 `not_yours`; 404 `gift_not_found`; 409 `already_received`, `gift_closed`, `gift_in_transit` |
+| `GET /api/gifts/pending`           | none                                                                           | 200 `{ gifts: Array<{ gift: Gift; sticker: Sticker }> }`: your `packed` and `sent` gifts, newest first                                                                  |                                                                                                 |
 
 ```ts
 /** Send it from the giver's smart wallet to move the sticker into the escrow. */
@@ -520,7 +521,7 @@ interface EscrowTransfer {
 ```
 
 - **The Gift Claim Token** comes back once, from the 201. Keep it on the device until the Gift Message is sent, and build the message's link from it: `https://liff.line.me/{liffId}/g/{giftClaimToken}`. If it's lost while the gift is in the bag, take the gift out and package again.
-- **While minting is a stub,** `escrowTransfer` is null and the deposit counts as landed at once, so Giving works end to end, as the mock Sui purchase does.
+- **In mock chain mode,** `escrowTransfer` is null and the deposit counts as landed at once. Sepolia mode returns the transfer the giver's sponsored smart account submits.
 - **`gift_closed`:** the gift was already received, taken back or returned.
 
 ### Receiving
@@ -529,6 +530,8 @@ interface EscrowTransfer {
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `POST /api/gifts/preview` | `{ giftClaimToken: string; liffContextType: "utou" \| "room" \| "group" \| "square_chat" \| "external" \| "none" }`, as `receive` takes it         | 200 `{ giver: Person; expiresAt: IsoTime; receivable: boolean; refusal: ReceiveRefusal \| null; sticker: Sticker \| null }`: the sticker only when `receivable` | 404 `gift_not_found`                                                                                                                                                        |
 | `POST /api/gifts/receive` | `{ giftClaimToken: string; liffContextType: "utou" \| "room" \| "group" \| "square_chat" \| "external" \| "none" }`, from `liff.getContext().type` | 200 `{ gift: Gift; sticker: Sticker; stickerPlacement: StickerPlacement }`                                                                                      | 403 `group_chat` (room, group or square_chat), `own_gift`; 404 `gift_not_found`; 409 `already_received`, `taken_back`, `not_deposited`; 410 `gift_expired`, `gift_returned` |
+
+- In Sepolia mode, Receiving signs and submits `claimGift`, waits for it to land, stores its transaction hash, and only then transfers ownership in the database. A retry reconciles a claim that landed before its database update.
 
 ```ts
 type ReceiveRefusal =

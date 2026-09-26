@@ -20,7 +20,7 @@ RestartSec=3
 MemoryMax=512M
 TasksMax=64
 
-# Sandboxing: it writes only its database and the sticker images, and calls LINE's API.
+# Sandboxing: it writes only its database and sticker images, and calls LINE, Privy and Ethereum.
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
