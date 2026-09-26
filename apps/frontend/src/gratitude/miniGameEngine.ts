@@ -697,7 +697,8 @@ export function mountMiniGameEngine(
   const endNow = (hidden: boolean) => {
     const phase = combo.view.phase;
     if (ending || (phase !== "sending" && phase !== "running")) return;
-    handle(combo.endCombo(performance.now()), L.rest.x, L.rest.y, hidden);
+    const reason = hidden ? "hidden" : "closed";
+    handle(combo.endCombo(performance.now(), reason), L.rest.x, L.rest.y, hidden);
   };
   document.addEventListener("visibilitychange", onHidden);
   window.addEventListener("pagehide", onPageHide);

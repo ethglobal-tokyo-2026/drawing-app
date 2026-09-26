@@ -4,6 +4,11 @@ export type Method = "tap" | "stroke" | "shake";
 /** 0–4: ありがと, 照れ, ドキドキ, オーバーヒート, 昇天. */
 export type Tier = 0 | 1 | 2 | 3 | 4;
 export type ComboPhase = "ready" | "sending" | "running" | "ended";
+/**
+ * Why a combo ended: `sent`, the catch window lapsed after one tap; `empty`, the bar ran out; `cap`,
+ * the safety stop; `hidden` and `closed`, the caller's `endCombo` as the page went hidden or the X.
+ */
+export type EndReason = "sent" | "empty" | "cap" | "hidden" | "closed";
 
 /** A finished combo, as the draft schema's `gratitude` table records it. */
 export interface ComboRecord {
@@ -24,14 +29,20 @@ export interface ComboRecord {
 }
 
 export type ComboEvent =
-  /** `secondsAdded`: how much the hit raised the seconds left; 0 when the bar isn't running yet. */
-  | { kind: "hit"; gratitude: number; secondsAdded: number }
-  /** A touch past the rate limit: it animates but adds nothing. */
-  | { kind: "limited" }
+  /**
+   * `secondsAdded`: how much the hit raised the seconds left; 0 when the bar isn't running yet.
+   * `at`: its time in the record, ms after the first hit.
+   */
+  | { kind: "hit"; gratitude: number; secondsAdded: number; at: number }
+  /** A touch past the rate limit: it animates but adds nothing. `at` as for a hit. */
+  | { kind: "limited"; at: number }
   | { kind: "caught" }
   | { kind: "tier"; tier: Tier }
-  /** `caught`: false for a one-tap send, or an end before the catch. */
-  | { kind: "ended"; record: ComboRecord; caught: boolean };
+  /**
+   * `caught`: false for a one-tap send, or an end before the catch. `startedAt`: the caller's time
+   * of the first hit, which the record's times count from.
+   */
+  | { kind: "ended"; record: ComboRecord; caught: boolean; reason: EndReason; startedAt: number };
 
 /** The combo as of the latest call, for drawing. */
 export interface ComboView {
@@ -63,8 +74,11 @@ export interface GratitudeCombo {
   countShakeReversal: (t: number) => ComboEvent[];
   /** Brings the rules to `t` ms: the catch window closing, hits leaving the cadence window, the bar emptying, the safety stop. */
   advanceTo: (t: number) => ComboEvent[];
-  /** Ends it at `t` ms, because the page went hidden or the screen closed. Before the first tap it ends without a record. */
-  endCombo: (t: number) => ComboEvent[];
+  /**
+   * Ends it at `t` ms, because the page went hidden or the screen closed: the end's `reason`, unless
+   * a rule ended it first. Before the first tap it ends without a record.
+   */
+  endCombo: (t: number, reason: "hidden" | "closed") => ComboEvent[];
 }
 
 function tierFor(total: number, starts: GameConfig["tierStarts"]): Tier {
@@ -75,7 +89,7 @@ function tierFor(total: number, starts: GameConfig["tierStarts"]): Tier {
   return 0;
 }
 
-type Pending = { t: number; kind: "sendEnd" | "cadence" | "empty" | "cap" };
+type Pending = { t: number; kind: "sent" | "cadence" | "empty" | "cap" };
 
 /** The bar's drain in closed form, one curve for the rules and the HUD's scale so they agree exactly. */
 function barDrain(config: GameConfig) {
@@ -161,7 +175,7 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
   }
 
   function nextPending(): Pending | null {
-    if (phase === "sending") return { t: config.catchWindowMs, kind: "sendEnd" };
+    if (phase === "sending") return { t: config.catchWindowMs, kind: "sent" };
     if (phase !== "running") return null;
     let next: Pending = { t: config.maxDurationMs, kind: "cap" };
     const leaves = cadence.length > 0 ? cadence[0].t + M.windowMs : Infinity;
@@ -171,13 +185,15 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
     return next;
   }
 
-  function finish(end: number, caught: boolean, events: ComboEvent[]) {
+  function finish(end: number, caught: boolean, reason: EndReason, events: ComboEvent[]) {
     settleAt(end);
     phase = "ended";
     latest = end;
     events.push({
       kind: "ended",
       caught,
+      reason,
+      startedAt: origin,
       record: {
         method,
         switchedAtHit,
@@ -196,7 +212,7 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
   function advance(x: number, events: ComboEvent[]): boolean {
     for (let next = nextPending(); next && next.t <= x; next = nextPending()) {
       if (next.kind !== "cadence") {
-        finish(next.t, next.kind !== "sendEnd", events);
+        finish(next.t, next.kind !== "sent", next.kind, events);
         return true;
       }
       settleAt(next.t);
@@ -222,7 +238,7 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
     bucket.milli = Math.min(config.burst * 1000, bucket.milli + (x - bucket.at) * perSecond[by]);
     bucket.at = x;
     if (bucket.milli < 1000) {
-      events.push({ kind: "limited" });
+      events.push({ kind: "limited", at: x });
       return events;
     }
     bucket.milli -= 1000;
@@ -250,7 +266,7 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
     const gratitude = Math.round(config.gratitudePerHit * mult * weight);
     total += gratitude;
     const secondsAdded = before > 0 ? Math.max(0, lasts(bar, comboMs / 1000) - before) : 0;
-    events.push({ kind: "hit", gratitude, secondsAdded });
+    events.push({ kind: "hit", gratitude, secondsAdded, at: x });
 
     if (phase === "running") {
       const tier = tierFor(total, config.tierStarts);
@@ -304,7 +320,7 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
       return events;
     },
 
-    endCombo(t) {
+    endCombo(t, reason) {
       const events: ComboEvent[] = [];
       if (phase === "ended") return events;
       if (phase === "ready") {
@@ -312,7 +328,7 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
         return events;
       }
       const x = Math.max(Math.round(t - origin), at);
-      if (!advance(x, events)) finish(x, phase === "running", events);
+      if (!advance(x, events)) finish(x, phase === "running", reason, events);
       return events;
     },
   };
@@ -339,7 +355,8 @@ export function replayGratitudeCombo(
   });
   // durationMs is rounded, so a bar that ran out may have ended up to half a millisecond after it.
   events.push(...combo.advanceTo(record.durationMs + 0.5));
-  if (combo.view.phase !== "ended") events.push(...combo.endCombo(record.durationMs));
+  // Hidden or closed, the record is the same: it doesn't say which.
+  if (combo.view.phase !== "ended") events.push(...combo.endCombo(record.durationMs, "closed"));
   for (const e of events) if (e.kind === "ended") return e.record;
   throw new Error(`Replaying a gratitude record of ${record.hits} hits gave no record`);
 }
