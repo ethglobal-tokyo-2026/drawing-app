@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/keys.css";
+import { ApiRoot } from "./api/ApiRoot";
 import App from "./app/App.tsx";
 import { PrivySignIn } from "./identity/PrivySignIn";
 import { initLine } from "./line/liff";
@@ -28,8 +29,10 @@ createRoot(root).render(
     <IconContext.Provider value={ICON_DEFAULTS}>
       <ToastProvider>
         <LineGate>
-          <App />
-          <PrivySignIn />
+          <ApiRoot>
+            <App />
+            <PrivySignIn />
+          </ApiRoot>
         </LineGate>
       </ToastProvider>
     </IconContext.Provider>
