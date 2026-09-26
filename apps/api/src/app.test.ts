@@ -121,7 +121,22 @@ describe("errors", () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const response = await test.app.request("/api/probe/failure", { headers: await signedIn() });
     expect(await refusal(response)).toEqual({ status: 500, error: "internal_error" });
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("/api/probe/failure"), probeFailure);
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('"event":"request.failed"'));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining(probeFailure.message));
+    expect(log).toHaveBeenCalledWith(
+      expect.stringContaining(`"requestId":"${response.headers.get("x-request-id")}"`),
+    );
+  });
+
+  it("assigns its own request ID even when the client supplies one", async () => {
+    const response = await post(
+      "/api/gifts/receive",
+      {},
+      { "x-request-id": "untrusted-client-value" },
+    );
+    expect(response.status).toBe(401);
+    expect(response.headers.get("x-request-id")).toMatch(/^[a-f0-9-]{36}$/);
+    expect(response.headers.get("x-request-id")).not.toBe("untrusted-client-value");
   });
 });
 
