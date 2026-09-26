@@ -699,6 +699,8 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
     S0 = STOP + SLIDER / 2;
     S1 = L - STOP - SLIDER / 2;
     travel = Math.max(1, S1 - S0);
+    // New teeth have never been drawn.
+    drawn.S = NaN;
     return true;
   }
 
@@ -1000,9 +1002,58 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
     s.ts = t;
   };
 
+  /** What the chain was last drawn from. The pull swings on for seconds after each run while the rest
+   * holds still, and redrawing the chain for it would change nothing. */
+  const drawn = {
+    S: NaN,
+    G: NaN,
+    spread: NaN,
+    jx: NaN,
+    relax: NaN,
+    rip: NaN,
+    ripPhase: NaN,
+    open: st.open,
+    mode: st.mode,
+  };
+  /** Moves under these, in px and on the 0 to 1 scales, stay below the 0.01px transforms are written at. */
+  const SAME_PX = 0.004;
+  const SAME_SHARE = 0.0001;
+  function chainMoved(): boolean {
+    // The ripple draws nothing at or under 0.01.
+    const rip = st.rip > 0.01 ? st.rip : 0;
+    const same =
+      Math.abs(shape.S - drawn.S) < SAME_PX &&
+      Math.abs(shape.G - drawn.G) < SAME_PX &&
+      Math.abs(st.jx - drawn.jx) < SAME_PX &&
+      Math.abs(st.spread - drawn.spread) < SAME_SHARE &&
+      Math.abs(st.relax - drawn.relax) < SAME_SHARE &&
+      rip === drawn.rip &&
+      (rip === 0 || st.ripPhase === drawn.ripPhase) &&
+      st.open === drawn.open &&
+      st.mode === drawn.mode;
+    if (same) return false;
+    Object.assign(drawn, {
+      S: shape.S,
+      G: shape.G,
+      spread: st.spread,
+      jx: st.jx,
+      relax: st.relax,
+      rip,
+      ripPhase: st.ripPhase,
+      open: st.open,
+      mode: st.mode,
+    });
+    return true;
+  }
+
   function render() {
     if (!L && !build()) return;
     setShape();
+    if (chainMoved()) renderChain();
+    renderPull();
+  }
+
+  function renderChain() {
     const total = shape.G > 0.05 ? sample() : 0;
     const len = Math.max(1e-3, shape.sM);
     const stretch = total > 0 ? Math.max(1, total / len) : 1;
@@ -1052,6 +1103,10 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
     stopB.style.transform = `translate(${f2(chainX + STOP_SIDE)}px,${f2(yOf(topStop))}px)`;
     stopFar.style.transform = `translate(${f2(chainX)}px,${f2(yOf(L - FAR_STOP / 2))}px)`;
     slider.style.transform = `translate(${f2(chainX + st.jx)}px,${f2(yOf(shape.S))}px)`;
+    emit("frame", geometry());
+  }
+
+  function renderPull() {
     // The pull tips toward you as it lifts, whichever way it lies.
     const tip = LIFT.tip * st.lift;
     const beta = st.flip < Math.PI / 2 ? st.flip + tip : st.flip - tip;
@@ -1065,7 +1120,6 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
     tabShadow.style.opacity = (PULL_SHADOW.opacity * (1 - PULL_SHADOW.fade * sn) * edgeOn).toFixed(
       3,
     );
-    emit("frame", geometry());
   }
 
   function geometry(): ZipperGeometry {
