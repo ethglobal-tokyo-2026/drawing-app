@@ -12,7 +12,7 @@ This package contains the first backend and contract boundaries for sealing stic
 - The LINE authentication server verifies the LIFF ID token with LINE before issuing a five-minute Privy Custom Auth JWT.
 - The same server switches a returning user's LINE chat menu: `POST /v1/auth/line-menu` verifies the ID token, looks the person up in Privy, and links the returning-user rich menu when they have an account.
 
-The package does not deploy the contracts, persist application records, upload sticker assets, configure Privy, or fund a paymaster.
+The package does not persist application records, configure Privy, or fund a paymaster.
 
 ## Giving and receiving
 
@@ -31,6 +31,27 @@ git submodule update --init --recursive
 pnpm --filter @drawing-app/sticker-chain test
 pnpm --filter @drawing-app/sticker-chain generate-types
 ```
+
+## Deploy to Ethereum Sepolia
+
+The deployment account remains the contracts' administrator. `STICKER_SEALER_ADDRESS` receives
+permission to mint sealed stickers, and `STICKER_CLAIM_SIGNER_ADDRESS` receives permission to
+authorize receiving and rejecting gifts. Use separate managed accounts for those roles when
+possible.
+
+```sh
+export ETHEREUM_SEPOLIA_RPC_URL=https://your-sepolia-rpc.example
+export DEPLOYER_PRIVATE_KEY=0x...
+export STICKER_SEALER_ADDRESS=0x...
+export STICKER_CLAIM_SIGNER_ADDRESS=0x...
+
+forge script script/DeployStickerContracts.s.sol:DeployStickerContracts \
+  --rpc-url "$ETHEREUM_SEPOLIA_RPC_URL" \
+  --broadcast
+```
+
+Copy the two printed contract addresses into the API and frontend environments. The sealer address
+must be derived from the API's `STICKER_SEALER_PRIVATE_KEY`.
 
 Install Foundry before running these commands. `forge test` covers the contracts, while the TypeScript integration tests run against Anvil and consume the same Forge artifacts. Wagmi CLI reads the artifacts in `out/` and generates typed ABIs in `src/generated/contracts.ts`; application code imports these instead of maintaining handwritten ABI fragments. Configure Privy Custom Authentication with the deployed app's `/.well-known/jwks.json`, use `sub` as the user ID claim, and keep the P-256 private key outside the repository.
 

@@ -32,8 +32,9 @@
     "@wagmi/cli": "2.2.0",
     "oxlint": "1.81.0",
     "tsx": "4.20.6",
-    "typescript": "6.0.2",
-    "vitest": "4.1.0"
+    "typescript": "~7.0.2",
+    "vitest": "4.1.0",
+    "zod": "^4.6.5"
   },
   "engines": {
     "node": ">=22"

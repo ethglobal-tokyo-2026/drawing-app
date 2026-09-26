@@ -10,9 +10,9 @@ import {
   type Hex,
 } from "viem";
 import type { PrivateKeyAccount } from "viem/accounts";
-import { stickerNftAbi } from "./generated/contracts.js";
+import { stickerGiftEscrowAbi, stickerNftAbi } from "./generated/contracts.js";
 
-export { stickerGiftEscrowAbi } from "./generated/contracts.js";
+export { stickerGiftEscrowAbi };
 
 interface PendingGiftRecord {
   giftId: Hex;
@@ -85,6 +85,26 @@ export function prepareGiftTransfer({
       abi: stickerNftAbi,
       functionName: "safeTransferFrom",
       args: [sender, escrowContract, tokenId, stageData],
+    }),
+  };
+}
+
+/** Calldata the sender's smart account uses to take its pending sticker out of escrow. */
+export function prepareGiftTakeOut({
+  escrowContract,
+  giftId,
+}: {
+  escrowContract: Address;
+  giftId: Hex;
+}) {
+  if (!isAddress(escrowContract)) throw new Error("Gift take-out contains an invalid address");
+  requireBytes32(giftId, "Gift ID");
+  return {
+    to: escrowContract,
+    data: encodeFunctionData({
+      abi: stickerGiftEscrowAbi,
+      functionName: "takeOut",
+      args: [giftId],
     }),
   };
 }
