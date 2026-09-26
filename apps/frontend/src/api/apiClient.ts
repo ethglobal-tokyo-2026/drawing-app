@@ -19,7 +19,7 @@ import type {
   StickerDetail,
   StickerPlacement,
   TicketKind,
-  TicketQuote,
+  TicketShop,
   Tickets,
   TicketUse,
   TimelapseV1,
@@ -46,11 +46,10 @@ interface SealRequest {
 /** Opening a Gift Message's link: its token as the link carries it, which the client checks. */
 export type GiftOpening = Omit<OpenGiftBody, "giftClaimToken"> & { giftClaimToken: string };
 
-/** A pack bought with a Sui payment. */
+/** A pack bought with a JPYC payment on Sui. */
 interface TicketPurchase {
   tickets: number;
   txDigest: string;
-  paidMist: string;
 }
 
 /** The REST API, one method per route the app calls. */
@@ -78,8 +77,8 @@ export interface ApiClient {
   tickets: () => Promise<Tickets>;
   /** POST /api/tickets/spend */
   spendTicket: (kind: TicketKind) => Promise<{ ticketUse: TicketUse; tickets: Tickets }>;
-  /** GET /api/ticket-quote */
-  ticketQuote: () => Promise<TicketQuote>;
+  /** GET /api/ticket-shop */
+  ticketShop: () => Promise<TicketShop>;
   /** POST /api/ticket-purchases */
   buyTickets: (purchase: TicketPurchase) => Promise<Tickets>;
 
@@ -116,10 +115,14 @@ export interface ApiClient {
 }
 
 /**
- * Codes the app makes itself: no answer, no LINE ID token to sign in with, and no smart account from
- * Privy in time for a chain action.
+ * Codes the app makes itself: no answer, no LINE ID token to sign in with, a LINE reconnect that
+ * failed, and no smart account from Privy in time for a chain action.
  */
-type ClientErrorCode = "network" | "no_line_token" | "smart_account_not_ready";
+type ClientErrorCode =
+  | "network"
+  | "no_line_token"
+  | "line_reconnect_failed"
+  | "smart_account_not_ready";
 export type ErrorCode = ApiErrorCode | ClientErrorCode;
 
 /** A refused or failed request: the HTTP status and the REST doc's error body. Status 0 is no answer. */

@@ -16,6 +16,7 @@
   "dependencies": {
     "@drawing-app/sticker-chain": "workspace:*",
     "@line/liff": "^2.31.0",
+    "@mysten/sui": "2.31.3",
     "@paulmillr/qr": "0.3.0",
     "@phosphor-icons/react": "2.1.10",
     "@privy-io/react-auth": "3.45.0",
@@ -35,6 +36,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
     "happy-dom": "^20.14.5",
+    "oxc-parser": "0.150.0",
     "oxlint": "^1.85.0",
     "oxlint-tsgolint": "^7.0.2002",
     "tsx": "4.23.15",

@@ -1,5 +1,5 @@
 import type { Account, Address, Hash, PublicClient, WalletClient } from "viem";
-import { croquisNamesAbi } from "./generated/contracts.js";
+import { croquisNamesAbi } from "@drawing-app/sticker-chain/contracts";
 
 /** How long a naming transaction may take to land before it counts as failed. */
 const RECEIPT_TIMEOUT_MS = 120_000;

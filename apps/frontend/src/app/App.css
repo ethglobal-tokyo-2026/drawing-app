@@ -77,31 +77,53 @@
   }
 }
 
-/* A tab's screen opens from the paper: a veil of it over the screen fades away as it mounts, so the
-   screen's own animations run untouched beneath. */
-.screen > .board-turn::after,
-.screen > .explore::after,
-.screen > .shop::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1000;
-  background: var(--liner);
-  pointer-events: none;
-  animation: screen-veil 160ms var(--ease-out) both;
+/* Changing tabs (screenTransition.ts): the screen as it was fades out and sinks back a little while
+   the next fades in and settles into place, slow and soft. The tab bar changes crisply around it. */
+.screen {
+  view-transition-name: screen;
 }
 
-@keyframes screen-veil {
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-old(screen) {
+  animation: screen-out 300ms var(--ease-soft) both;
+}
+
+::view-transition-new(screen) {
+  animation: screen-in 300ms var(--ease-soft) both;
+}
+
+@keyframes screen-out {
   to {
     opacity: 0;
-    visibility: hidden;
+    transform: scale(0.985);
+  }
+}
+
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+/* Reduced motion: a short plain cross-fade, nothing moving. */
+@keyframes screen-fade {
+  from {
+    opacity: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .screen > .board-turn::after,
-  .screen > .explore::after,
-  .screen > .shop::after {
-    display: none;
+  ::view-transition-old(screen),
+  ::view-transition-new(screen) {
+    animation: screen-fade 150ms linear both;
+  }
+
+  ::view-transition-old(screen) {
+    animation-direction: reverse;
   }
 }

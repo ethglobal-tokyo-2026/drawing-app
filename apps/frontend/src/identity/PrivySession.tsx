@@ -21,6 +21,7 @@ import {
 import { MakeSuiWallet } from "./MakeSuiWallet";
 import { SponsorshipCheck } from "./SponsorshipCheck";
 import { SmartWalletBridge } from "./SmartWalletBridge";
+import { SuiWalletBridge } from "./SuiWalletBridge";
 
 // The address of the wallet Privy itself made on a chain, as opposed to one the person connected.
 const privysWallet = (user: User, chainType: "ethereum" | "sui") =>
@@ -60,8 +61,9 @@ function SyncLineToPrivy() {
   const failed = usePrivyStatus().state === "failed";
   const walletsReady = useWallets().ready;
   useSubscribeToJwtAuthWithFlag({
-    // After a failure the SDK re-syncs over and over on its own, so syncing waits for Try again.
-    enabled: !failed,
+    // isLoading only triggers re-syncs; enabled also holds the first sign-in until the wallet frame is up.
+    // After a failure, syncing waits for Try again.
+    enabled: walletsReady && !failed,
     // Rendered only inside LineGate, so LINE has always logged the person in by now.
     isAuthenticated: true,
     // Privy makes the wallet right after sign-in, and signs out again if its wallet frame isn't up yet.
@@ -91,6 +93,7 @@ export default function PrivySession() {
         <SyncLineToPrivy />
         <MakeSuiWallet />
         <SmartWalletBridge />
+        <SuiWalletBridge />
         <SponsorshipCheck />
       </SmartWalletsProvider>
     </PrivyProvider>

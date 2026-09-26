@@ -99,8 +99,8 @@ export interface SessionApi {
   signIn: (
     request: InferRequestType<ServerClient["session"]["$post"]>["json"],
   ) => Promise<{ me: Me }>;
-  /** GET /api/me */
-  me: () => Promise<{ me: Me }>;
+  /** GET /api/me; only resume a session belonging to this LINE user when supplied. */
+  me: (lineUserId?: string) => Promise<{ me: Me }>;
   /** POST /api/me/handle */
   setHandle: (handle: string) => Promise<{ me: Me }>;
 }
@@ -112,8 +112,11 @@ export function createSessionApi(api: ServerClient = createServerClient()): Sess
       if (!response.ok) throw await refusal(response, "POST /api/session");
       return response.json();
     },
-    me: async () => {
-      const response = await api.me.$get();
+    me: async (lineUserId) => {
+      const response = await api.me.$get(
+        { header: lineUserId ? { "x-line-user-id": lineUserId } : {} },
+        { init: { cache: "no-store" } },
+      );
       if (!response.ok) throw await refusal(response, "GET /api/me");
       return response.json();
     },
@@ -220,10 +223,10 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       if (!response.ok) throw await refusal(response, "POST /api/tickets/spend");
       return response.json();
     },
-    ticketQuote: async () => {
-      const response = await api["ticket-quote"].$get();
-      if (!response.ok) throw await refusal(response, "GET /api/ticket-quote");
-      return (await response.json()).quote;
+    ticketShop: async () => {
+      const response = await api["ticket-shop"].$get();
+      if (!response.ok) throw await refusal(response, "GET /api/ticket-shop");
+      return (await response.json()).shop;
     },
     buyTickets: async (purchase) => {
       const response = await api["ticket-purchases"].$post({ json: purchase });

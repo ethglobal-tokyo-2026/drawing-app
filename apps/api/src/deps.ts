@@ -1,7 +1,7 @@
 import type { Db } from "@drawing-app/db";
 import type { LocalAccount } from "viem";
 import { z } from "zod";
-import type { EscrowStatus, EscrowTransfer, StickerImages } from "./shapes.ts";
+import type { EscrowStatus, EscrowTransfer, StickerImages, TicketShop } from "./shapes.ts";
 
 /** Everything the routes reach beyond the request. server.ts builds the real ones; tests pass fakes. */
 export interface AppDeps {
@@ -18,13 +18,12 @@ export interface AppDeps {
   smartWallets: SmartWallets;
   /** Null when the names under croquis.eth aren't configured: labels are kept, nothing resolves. */
   ens: EnsDeps | null;
-  sui: SuiPayments;
-  /** The ticket shop quotes its packs at this price. */
-  suiPrice: SuiPrice;
+  ticketPayments: TicketPayments;
+  serverLog: ServerLog;
 }
 
-/** The 5-minute time-weighted average SUI/JPY price, as decimal yen per SUI; null while there's none. */
-export type SuiPrice = () => Promise<string | null>;
+/** The server's whole log as text, oldest line first. Rejects when the log can't be read. */
+export type ServerLog = () => Promise<ReadableStream<Uint8Array>>;
 
 export interface Clock {
   now: () => Date;
@@ -46,6 +45,12 @@ export type LineProfile = z.infer<typeof lineProfileSchema>;
 /** LINE refused the ID token: expired, forged, or issued for another channel. */
 export class LineTokenInvalidError extends Error {
   name = "LineTokenInvalidError";
+  readonly reason: "invalid" | "expired";
+
+  constructor(message?: string, reason: "invalid" | "expired" = "invalid") {
+    super(message);
+    this.reason = reason;
+  }
 }
 
 export interface LineVerifier {
@@ -126,9 +131,26 @@ export interface SmartWallets {
   addressFor: (userId: string) => Promise<string | null>;
 }
 
-export interface SuiPayments {
-  /** Whether a ticket pack's Sui payment has landed. */
-  verifyPayment: (txDigest: string) => Promise<boolean>;
+/** Where ticket packs are paid: the JPYC payment contract's vault on Sui. */
+export type TicketPaymentTarget = Omit<TicketShop["payment"], "reference">;
+
+/** One PaymentReceived event of the payment contract. */
+export interface JpycPayment {
+  vault: string;
+  payer: string;
+  /** JPYC base units. */
+  amount: bigint;
+  /** What the payer passed as `pay`'s reference, as UTF-8. */
+  reference: string;
+}
+
+export interface TicketPayments {
+  target: TicketPaymentTarget;
+  /**
+   * The payment contract's PaymentReceived events in a transaction that succeeded; null when Sui has
+   * no such transaction. Rejects when Sui can't be asked.
+   */
+  paymentsIn: (txDigest: string) => Promise<JpycPayment[] | null>;
 }
 
 /** The names under croquis.eth: the CCIP-Read gateway, and the relayer that writes names. */

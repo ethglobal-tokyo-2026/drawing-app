@@ -10,7 +10,7 @@ import {
   type Hex,
 } from "viem";
 import type { PrivateKeyAccount } from "viem/accounts";
-import { stickerGiftEscrowAbi, stickerNftAbi } from "./generated/contracts.js";
+import { stickerGiftEscrowAbi, stickerNftAbi } from "@drawing-app/sticker-chain/contracts";
 
 export { stickerGiftEscrowAbi };
 

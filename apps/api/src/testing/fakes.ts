@@ -7,9 +7,11 @@ import type {
   Mint,
   MintedToken,
   NameWriter,
+  ServerLog,
   SmartWallets,
-  SuiPayments,
-  SuiPrice,
+  JpycPayment,
+  TicketPayments,
+  TicketPaymentTarget,
 } from "../deps.ts";
 import { keccak256 } from "../keccak256.ts";
 import { createDevLineVerifier } from "../services/devSignIn.ts";
@@ -143,16 +145,33 @@ export const fakeSmartWallets = (): SmartWallets => ({
   addressFor: (userId) => Promise.resolve(fakeAddress(`smart wallet ${userId}`)),
 });
 
-/** Answers every payment check with `verified`. */
-export const fakeSuiPayments = (verified: boolean): SuiPayments => ({
-  verifyPayment: () => Promise.resolve(verified),
-});
+/** A made-up JPYC payment contract on Sui. */
+export const TEST_PAYMENT_TARGET: TicketPaymentTarget = {
+  network: "testnet",
+  coinType: `0x${"a".repeat(64)}::jpy_coin::JPY_COIN`,
+  decimals: 6,
+  paymentPackage: `0x${"b".repeat(64)}`,
+  vault: `0x${"c".repeat(64)}`,
+};
 
-/** A SUI/JPY price that never moves: `yenPerSui`, or null for none available. */
-export const fakeSuiPrice =
-  (yenPerSui: string | null): SuiPrice =>
+/** Sui's transactions, by digest: the payments each made, or a rejection for Sui being unreachable. */
+export function fakeTicketPayments(transactions = new Map<string, JpycPayment[] | Error>()) {
+  const ticketPayments: TicketPayments = {
+    target: TEST_PAYMENT_TARGET,
+    paymentsIn: (txDigest) => {
+      const found = transactions.get(txDigest);
+      if (found instanceof Error) return Promise.reject(found);
+      return Promise.resolve(found ?? null);
+    },
+  };
+  return { ticketPayments, transactions };
+}
+
+/** A server log that reads `text`. */
+export const fakeServerLog =
+  (text = ""): ServerLog =>
   () =>
-    Promise.resolve(yenPerSui);
+    Promise.resolve(new Blob([text]).stream());
 
 /** A name writer that records each call, and throws at `failAt` when that step comes up. */
 export function fakeNameWriter({ failAt }: { failAt?: string } = {}) {
