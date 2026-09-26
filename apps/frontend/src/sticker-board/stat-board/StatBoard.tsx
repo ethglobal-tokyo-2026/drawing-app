@@ -1,5 +1,6 @@
 import { SignOut } from "@phosphor-icons/react";
 import { useRef, useState, type Ref } from "react";
+import { logOut } from "../../api/logOut";
 import { useMe } from "../../api/meContext";
 import { useApiQuery } from "../../api/useApiQuery";
 import { errorReason } from "../../i18n/errorMessage";
@@ -8,7 +9,6 @@ import { retryPrivySignIn, usePrivyStatus, type PrivyStatus } from "../../identi
 import { PrivyAccount } from "../../identity/PrivyAccount";
 import { useIdentity } from "../../identity/useIdentity";
 import { LineDetails } from "../../line/LineDetails";
-import { lineLogout } from "../../line/liff";
 import { SendTestMessage } from "../../line/SendTestMessage";
 import { LabelButton } from "../../ui/LabelButton";
 import { QuietLink } from "../../ui/QuietLink";
@@ -88,7 +88,7 @@ export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref
               size="sm"
               icon={<SignOut />}
               className="stat-board__logout"
-              onClick={lineLogout}
+              onClick={() => void logOut()}
             >
               {t(($) => $.stickerBoard.statBoard.logOut)}
             </LabelButton>

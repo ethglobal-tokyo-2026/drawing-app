@@ -1,12 +1,13 @@
 // @vitest-environment happy-dom
 import type { ActivityEntry, Explore, Person } from "@drawing-app/api/client";
 import { act } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { people, sticker } from "../api/testFixtures";
-import { emptyApi, renderWithApi, TEST_OWNER } from "../api/testing";
+import { emptyApi, renderWithApi } from "../api/testing";
 import { i18next } from "../i18n/i18n";
 import { ExploreScreen } from "./ExploreScreen";
 
+// 21:00 on 9.26 in Tokyo.
 const NOW = Date.parse("2026-09-26T12:00:00.000Z");
 const MINUTE = 60_000;
 const minutesAgo = (minutes: number) => new Date(NOW - minutes * MINUTE).toISOString();
@@ -23,23 +24,34 @@ const exploreWith = (
 let view: ReturnType<typeof renderWithApi> | undefined;
 beforeEach(() => {
   vi.useFakeTimers({ now: NOW });
+  globalThis.ResizeObserver ??= StillResizeObserver;
 });
+
+/** happy-dom has no ResizeObserver; the pile's width never changes here. */
+class StillResizeObserver implements ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
 afterEach(async () => {
   view?.unmount();
   view = undefined;
   vi.useRealTimers();
+  localStorage.clear();
   await i18next.changeLanguage("en");
 });
 
 const wait = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
 const textsOf = (host: HTMLElement, selector: string) =>
   [...host.querySelectorAll(selector)].map((element) => element.textContent);
+const labelsOf = (host: HTMLElement, selector: string) =>
+  [...host.querySelectorAll(selector)].map((element) => element.getAttribute("aria-label"));
 
 /** Explore as you, on `explore`; a search finds everyone whose handle holds it. */
-async function openExplore(explore: Explore) {
+async function openExplore(explore: Explore, onOpenArtist: (person: Person) => void = () => {}) {
   const everyone: Person[] = Object.values(people);
   view = renderWithApi(
-    <ExploreScreen onOpenArtist={() => {}} onOpenMyBoard={() => {}} />,
+    <ExploreScreen onOpenArtist={onOpenArtist} onOpenMyBoard={() => {}} />,
     emptyApi({
       explore: () => Promise.resolve(explore),
       searchUsers: (handle) => Promise.resolve(everyone.filter((p) => p.handle?.includes(handle))),
@@ -60,62 +72,109 @@ async function searchFor(host: HTMLElement, text: string) {
   await wait(1000);
 }
 
-describe("ExploreScreen", () => {
-  it("says who made or gave each sticker, in one sentence with the people in bold", async () => {
-    const drawn = sticker();
+const tab = (host: HTMLElement, name: string) => {
+  const found = [...host.querySelectorAll<HTMLElement>('[role="tab"]')].find(
+    (element) => element.textContent === name,
+  );
+  if (!found) throw new Error(`no ${name} tab`);
+  return found;
+};
+
+describe("ExploreScreen's sticker pile", () => {
+  it("names each sticker for screen readers, newest day and newest sticker first", async () => {
+    const newest = sticker({ sealedAt: minutesAgo(0.5), artist: people.mika });
+    const older = sticker({ sealedAt: minutesAgo(5), artist: people.ken });
+    const yesterday = sticker({ sealedAt: minutesAgo(26 * 60), artist: people.bob });
     const host = await openExplore(
       exploreWith([
-        { type: "sealed", at: minutesAgo(5), sticker: drawn },
+        { type: "sealed", at: newest.sealedAt, sticker: newest },
+        { type: "sealed", at: older.sealedAt, sticker: older },
+        { type: "sealed", at: yesterday.sealedAt, sticker: yesterday },
+      ]),
+    );
+
+    expect(textsOf(host, ".pile-day h2")).toEqual(["Today", "Yesterday"]);
+    expect(labelsOf(host, ".pile-sticker__button")).toEqual([
+      `No.0${newest.number} by @mika, just now`,
+      `No.0${older.number} by @ken, 5 min ago`,
+      `No.0${yesterday.number} by @bob, 1 day ago`,
+    ]);
+    expect(textsOf(host, ".pile-tag__name")).toEqual(["@mika", "@ken", "@bob"]);
+  });
+
+  it("tags a given sticker with who it went to, in aqua", async () => {
+    const given = sticker({ sealedAt: minutesAgo(30), artist: people.mika });
+    const host = await openExplore(
+      exploreWith([
         {
           type: "received",
-          at: minutesAgo(3 * 60),
-          sticker: drawn,
+          at: minutesAgo(10),
+          sticker: given,
           giver: people.mika,
           receiver: people.ken,
         },
-        {
-          type: "received",
-          at: minutesAgo(2 * 24 * 60),
-          sticker: drawn,
-          giver: people.ken,
-          receiver: TEST_OWNER,
-        },
       ]),
     );
-
-    expect(textsOf(host, ".feed-head p")).toEqual([
-      "@mika made a sticker",
-      "@mika gave a sticker to @ken",
-      "@ken gave a sticker to you",
+    expect(textsOf(host, ".pile-tag--to")).toEqual(["to @ken"]);
+    expect(labelsOf(host, ".pile-sticker__button")).toEqual([
+      `No.0${given.number} by @mika, 30 min ago, given to @ken`,
     ]);
-    expect(textsOf(host, ".feed-head p b")).toEqual(["@mika", "@mika", "@ken", "@ken", "you"]);
-    expect(textsOf(host, ".feed-head > .fine")).toEqual(["5 min", "3 hr", "2 d"]);
   });
 
   it("says just now for anything under a minute ago, in English and Japanese", async () => {
+    const drawn = sticker({ sealedAt: new Date(NOW - MINUTE + 1000).toISOString() });
     const host = await openExplore(
-      exploreWith([
-        { type: "sealed", at: new Date(NOW - MINUTE + 1000).toISOString(), sticker: sticker() },
-        { type: "sealed", at: minutesAgo(1), sticker: sticker() },
-      ]),
+      exploreWith([{ type: "sealed", at: drawn.sealedAt, sticker: drawn }]),
     );
 
-    expect(textsOf(host, ".feed-head > .fine")).toEqual(["just now", "1 min"]);
+    expect(labelsOf(host, ".pile-sticker__button")[0]).toMatch(/, just now$/);
     await act(() => i18next.changeLanguage("ja"));
-    expect(textsOf(host, ".feed-head > .fine")[0]).toBe("たった今");
+    expect(labelsOf(host, ".pile-sticker__button")[0]).toMatch(/、たった今$/);
   });
 
   it("prints a handle as it is, even one that reads as markup or a variable", async () => {
     const odd = { ...people.bob, handle: "<i>{{bob}}</i>" };
+    const drawn = sticker({ sealedAt: minutesAgo(5), artist: odd });
     const host = await openExplore(
-      exploreWith([{ type: "sealed", at: minutesAgo(5), sticker: sticker({ artist: odd }) }]),
+      exploreWith([
+        { type: "received", at: minutesAgo(1), sticker: drawn, giver: odd, receiver: odd },
+      ]),
     );
-
-    expect(textsOf(host, ".feed-head p")).toEqual(["@<i>{{bob}}</i> made a sticker"]);
-    expect(host.querySelector(".feed-meta")?.textContent).toMatch(/ · @<i>\{\{bob\}\}<\/i>$/);
+    expect(textsOf(host, ".pile-tag__name")).toEqual(["@<i>{{bob}}</i>", "to @<i>{{bob}}</i>"]);
+    expect(labelsOf(host, ".pile-sticker__button")[0]).toContain("by @<i>{{bob}}</i>,");
   });
 
+  it("lifts a tapped sticker off the pile into a sheet", async () => {
+    const drawn = sticker({ sealedAt: minutesAgo(5), artist: people.mika });
+    const host = await openExplore(
+      exploreWith([{ type: "sealed", at: drawn.sealedAt, sticker: drawn }]),
+    );
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    act(() => host.querySelector<HTMLElement>(".pile-sticker__button")?.click());
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+  });
+
+  it("shows today's empty floor before anyone seals", async () => {
+    const host = await openExplore(exploreWith([]));
+    expect(textsOf(host, ".pile-day h2")).toEqual(["Today"]);
+    expect(host.querySelector(".pile-day__empty")?.textContent).toBe(
+      "The first sticker sealed today lands here.",
+    );
+  });
+});
+
+describe("ExploreScreen's This week", () => {
   it("counts streak days and found artists in the singular and the plural", async () => {
+    // Reduced motion swaps the rows at once, rather than after the old ones fade out.
+    const matchMedia = window.matchMedia;
+    window.matchMedia = (query: string) => {
+      const list = matchMedia.call(window, query);
+      Object.defineProperty(list, "matches", { value: query.includes("reduce") });
+      return list;
+    };
+    onTestFinished(() => {
+      window.matchMedia = matchMedia;
+    });
     const host = await openExplore(
       exploreWith(
         [],
@@ -125,16 +184,27 @@ describe("ExploreScreen", () => {
         ],
       ),
     );
-    const streakTab = [...host.querySelectorAll<HTMLElement>('[role="tab"]')].find(
-      (tab) => tab.textContent === "Longest streak",
-    );
-    act(() => streakTab?.click());
+    act(() => tab(host, "This week").click());
+    act(() => tab(host, "Longest streak").click());
+    await wait(500);
     expect(textsOf(host, ".figure small")).toEqual(["days", "day"]);
+    expect(tab(host, "Longest streak").getAttribute("aria-selected")).toBe("true");
 
     await searchFor(host, "k");
     expect(host.querySelector(".results-count")?.textContent).toBe("2 artists");
     await searchFor(host, "bo");
     expect(host.querySelector(".results-count")?.textContent).toBe("1 artist");
+  });
+
+  it("moves between the views with the arrow keys", async () => {
+    const host = await openExplore(exploreWith([]));
+    act(() => {
+      tab(host, "Stickers").dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+      );
+    });
+    expect(tab(host, "This week").getAttribute("aria-selected")).toBe("true");
+    expect(host.querySelector(".leaderboard")).not.toBeNull();
   });
 });
 
@@ -173,16 +243,9 @@ function inFlight<T>() {
   return { promise, answer };
 }
 
-const EXPLORE: Explore = {
-  todaysStickers: [sticker()],
-  activity: [],
-  leaderboards: {
-    weekStart: "2026-09-20T19:00:00.000Z",
-    mostGratitude: [],
-    bestCombo: [],
-    longestStreak: [],
-  },
-};
+const EXPLORE: Explore = exploreWith([
+  { type: "sealed", at: minutesAgo(3), sticker: sticker({ sealedAt: minutesAgo(3) }) },
+]);
 
 function show(client: Parameters<typeof renderWithApi>[1]) {
   view = renderWithApi(<ExploreScreen onOpenArtist={vi.fn()} onOpenMyBoard={vi.fn()} />, client);
@@ -193,7 +256,7 @@ const skeletons = (host: HTMLElement) => host.querySelectorAll(".skeleton").leng
 const status = (host: HTMLElement) => host.querySelector('[role="status"]')?.textContent;
 
 describe("ExploreScreen while it loads", () => {
-  it("outlines its sections, then shows them once Explore arrives", async () => {
+  it("outlines today's floor, then shows the pile once Explore arrives", async () => {
     const explore = inFlight<Explore>();
     const host = show(emptyApi({ explore: () => explore.promise }));
     expect(status(host)).toBe("Loading…");
@@ -201,7 +264,7 @@ describe("ExploreScreen while it loads", () => {
 
     await act(async () => explore.answer(EXPLORE));
     expect(skeletons(host)).toBe(0);
-    expect(host.querySelectorAll(".today-sticker")).toHaveLength(1);
+    expect(host.querySelectorAll(".pile-sticker")).toHaveLength(1);
   });
 
   it("outlines search results while the search is out", async () => {

@@ -7,8 +7,8 @@ import { setPrivyStatus } from "../identity/privy";
 import { getJpycBalance, getTicketPayments, payForTickets } from "../payments/jpyc";
 import { OutOfTickets } from "./OutOfTickets";
 import { formatRefillTime } from "./refill";
+import { ReserveTicketCheckout } from "./ReserveTicketCheckout";
 import { StartDrawing } from "./StartDrawing";
-import { TicketShop } from "./TicketShop";
 import { useTickets } from "./useTickets";
 
 vi.mock("../payments/jpyc", () => ({
@@ -167,6 +167,52 @@ describe("StartDrawing", () => {
     click("Buy reserve tickets");
     expect(onShop).toHaveBeenCalledOnce();
   });
+
+  it("keeps the key's face while the ticket is on its way: busy, not disabled", async () => {
+    await render(
+      <StartDrawing
+        tickets={tickets(1, 0)}
+        minutes={3}
+        busy
+        note={null}
+        onStart={onStart}
+        onShop={onShop}
+        onBoard={onBoard}
+      />,
+    );
+    const key = buttonNamed("Start drawing");
+    expect(key?.disabled).toBe(false);
+    expect(key?.getAttribute("aria-busy")).toBe("true");
+    // The press skips it, so a second tap doesn't press; start() ignores the click itself.
+    expect(key?.getAttribute("aria-disabled")).toBe("true");
+  });
+
+  it("drops away once the ticket is spent, then lets go", async () => {
+    const onLeft = vi.fn();
+    await render(
+      <StartDrawing
+        tickets={tickets(1, 0)}
+        minutes={3}
+        leaving
+        onLeft={onLeft}
+        note={null}
+        onStart={onStart}
+        onShop={onShop}
+        onBoard={onBoard}
+      />,
+    );
+    const root = document.querySelector(".out-of-tickets");
+    expect(root?.classList.contains("is-leaving")).toBe(true);
+    // The sheet under it takes the taps.
+    expect(root?.hasAttribute("inert")).toBe(true);
+    const card = document.querySelector(".out-of-tickets__card");
+    act(() => {
+      card?.dispatchEvent(
+        new AnimationEvent("animationend", { animationName: "out-of-tickets-drop", bubbles: true }),
+      );
+    });
+    expect(onLeft).toHaveBeenCalledOnce();
+  });
 });
 
 const SUI_WALLET = `0x${"1".repeat(64)}`;
@@ -190,26 +236,30 @@ const SHOP: Shop = {
   },
 };
 
-describe("TicketShop", () => {
+describe("ReserveTicketCheckout", () => {
+  const checkout = () => <ReserveTicketCheckout onDraw={onDraw} onClose={onBoard} />;
+
   beforeEach(() => {
     setPrivyStatus({ state: "signed-in", userId: "privy-me", suiWallet: SUI_WALLET });
     vi.mocked(getJpycBalance).mockResolvedValue(1000n * JPYC);
     vi.mocked(payForTickets).mockResolvedValue(TX_DIGEST);
   });
 
-  it("outlines the balance and the packs until the wallet and the shop are in", async () => {
+  it("outlines the balance and the packs until the JPYC and the packs are in", async () => {
     const api = emptyApi({
       ticketShop: () => new Promise((resolve) => setTimeout(() => resolve(SHOP), 1000)),
     });
-    await render(<TicketShop layout="page" onDraw={onDraw} />, api);
+    await render(checkout(), api);
     const skeletons = () => document.querySelectorAll(".skeleton").length;
     expect(skeletons()).toBeGreaterThan(1);
-    expect(document.querySelector(".ticket-shop__packs [role=status]")?.textContent).toBe(
+    expect(document.querySelector(".reserve-checkout__packs [role=status]")?.textContent).toBe(
       "Getting today’s prices…",
     );
     await settle(3000);
     expect(skeletons()).toBe(0);
-    expect(document.querySelector(".ticket-shop__wallet strong")?.textContent).toBe("￥1,000");
+    expect(document.querySelector(".reserve-checkout__balance strong")?.textContent).toBe(
+      "￥1,000",
+    );
   });
 
   it("pays the chosen pack's JPYC from the Sui wallet, and shows the tickets the server added", async () => {
@@ -219,7 +269,7 @@ describe("TicketShop", () => {
       ticketShop: () => Promise.resolve(SHOP),
       buyTickets: bought,
     });
-    await render(<TicketShop layout="card" onDraw={onDraw} onClose={onBoard} />, api);
+    await render(checkout(), api);
     await settle(500);
     click("3 tickets");
     click("Pay");
@@ -237,10 +287,7 @@ describe("TicketShop", () => {
 
   it("won't pay a pack the wallet's JPYC can't cover", async () => {
     vi.mocked(getJpycBalance).mockResolvedValue(150n * JPYC);
-    await render(
-      <TicketShop layout="page" onDraw={onDraw} />,
-      emptyApi({ ticketShop: () => Promise.resolve(SHOP) }),
-    );
+    await render(checkout(), emptyApi({ ticketShop: () => Promise.resolve(SHOP) }));
     await settle(500);
     click("3 tickets");
     expect(buttonNamed("Not enough JPYC")?.disabled).toBe(true);
@@ -258,10 +305,7 @@ describe("TicketShop", () => {
         payments: [{ digest: OLDER, paidAt: EVENING.getTime() - 60_000, amount: 100n * JPYC }],
         cursor: null,
       });
-    await render(
-      <TicketShop layout="page" onDraw={onDraw} />,
-      emptyApi({ ticketShop: () => Promise.resolve(SHOP) }),
-    );
+    await render(checkout(), emptyApi({ ticketShop: () => Promise.resolve(SHOP) }));
     await settle(500);
     expect(getTicketPayments).not.toHaveBeenCalled();
     click("you.croquis.eth");
@@ -285,11 +329,13 @@ describe("TicketShop", () => {
       ticketShop: () => Promise.resolve(SHOP),
       buyTickets: () => Promise.reject(new Error("sui_unavailable")),
     });
-    await render(<TicketShop layout="page" onDraw={onDraw} />, api);
+    await render(checkout(), api);
     await settle(500);
     click("Pay");
     await settle(500);
     expect(title()).toBe("Payment didn’t go through");
     expect(document.querySelector("[role=alert]")?.textContent).toContain(TX_DIGEST);
+    click("Back to the packs");
+    expect(title()).toBe("Reserve tickets");
   });
 });

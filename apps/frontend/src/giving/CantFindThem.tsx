@@ -1,5 +1,5 @@
 import liff from "@line/liff";
-import { ArrowSquareOut, CaretLeft, CaretRight } from "@phosphor-icons/react";
+import { ArrowSquareOut, CaretLeft, CaretRight } from "../icons";
 import { useState } from "react";
 import { useTranslation } from "../i18n/react";
 import { describeLiffError } from "../line/liff";

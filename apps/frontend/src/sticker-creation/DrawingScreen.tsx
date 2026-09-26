@@ -18,8 +18,8 @@ import { errorReason } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
 import { OutOfTickets } from "../tickets/OutOfTickets";
 import { StartDrawing } from "../tickets/StartDrawing";
-import { nextKind, ticketsLeft, type TicketKind } from "../tickets/tickets";
-import { TicketShop } from "../tickets/TicketShop";
+import { nextKind, ticketsLeft, type TicketKind, type Tickets } from "../tickets/tickets";
+import { ReserveTicketCheckout } from "../tickets/ReserveTicketCheckout";
 import { TicketsNotLoaded } from "../tickets/TicketsNotLoaded";
 import { useTickets } from "../tickets/useTickets";
 import { useToast } from "../ui/useToast";
@@ -76,6 +76,8 @@ interface Ceremony {
   sealed: Sticker | null;
   /** The seal failed, and the ceremony is fading back to the drawing. */
   failed: boolean;
+  /** Keep drawing or the shop was chosen: the card is leaving over the fresh sheet. */
+  leaving: boolean;
   /** Where the sheet sat in the drawing screen when it was sealed. */
   sheet: Box;
 }
@@ -127,7 +129,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // Transitions start from here, so one sent after an await still starts from the latest session.
   const latest = useRef(FRESH_SESSION);
   const [ceremony, setCeremony] = useState<Ceremony | null>(null);
-  // The sealed sticker's layers are let go when a fresh sheet replaces it.
+  // The sealed sticker's layers are let go when a fresh sheet replaces it, or once its card has left.
   const lastCeremony = useRef<Ceremony | null>(null);
   const seals = useRef(0);
   const [sealProblem, setSealProblem] = useState<string | null>(null);
@@ -135,6 +137,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const [overlay, setOverlay] = useState<"out" | "shop" | null>(null);
   // A ticket is being spent on the server; Start waits for it.
   const [spending, setSpending] = useState(false);
+  // The spend needs no asking (Keep drawing, or Draw after a refill or a purchase): the ask stays down
+  // while it's on its way, and comes up only if it fails.
+  const [rightAway, setRightAway] = useState(false);
   const [startProblem, setStartProblem] = useState<string | null>(null);
   // The session's ticket use, as the server numbers it: spent at Start, or before a reload.
   const ticket = useRef<number | null>(null);
@@ -188,7 +193,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         setPanel(null);
         lastCeremony.current?.sticker.dispose();
         lastCeremony.current = null;
-        setCeremony(null);
+        // A sealed card handing over to this sheet stays up until it has left.
+        setCeremony((c) => (c?.leaving ? c : null));
         setSealProblem(null);
         setStartProblem(null);
         keepNsfw(false);
@@ -224,6 +230,23 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       console.error("The timelapse couldn’t be made, so the sticker seals without it", error);
       return null;
     }
+  }
+
+  /**
+   * Keep drawing or the shop, from the sealed card: the fresh sheet and clock are set up at once,
+   * under the veil, while the card carries the sticker away over them. Its layers go once it's gone.
+   */
+  function handOver(from: Ceremony) {
+    // The reset lets go of the last ceremony's layers; this one's are still on screen.
+    if (lastCeremony.current?.id === from.id) lastCeremony.current = null;
+    setCeremony((c) => (c?.id === from.id ? { ...c, leaving: true } : c));
+    startNewSticker();
+  }
+
+  /** The sealed card has left: its sticker's layers are let go. */
+  function dropCeremony(gone: Ceremony) {
+    setCeremony((c) => (c?.id === gone.id ? null : c));
+    gone.sticker.dispose();
   }
 
   /** A failed seal's ceremony fades back to the drawing, then its layers are let go. */
@@ -268,6 +291,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         sticker,
         sealed: null,
         failed: false,
+        leaving: false,
         sheet,
       };
       shown = started;
@@ -314,13 +338,15 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     onNewSticker();
   };
 
-  const start = (kind: TicketKind) => {
+  const start = (kind: TicketKind, { asked = true } = {}) => {
     if (spending) return;
     setSpending(true);
+    setRightAway(!asked);
     setStartProblem(null);
     tickets.spend(kind).then(
       (use) => {
         setSpending(false);
+        setRightAway(false);
         ticket.current = use.id;
         send({ type: "start" });
       },
@@ -328,6 +354,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         const failure = apiError(error);
         console.error(`Spending a ${kind} ticket failed`, failure);
         setSpending(false);
+        setRightAway(false);
         setStartProblem(
           t(($) => $.stickerCreation.startNote.ticketFailed, { reason: errorReason(failure) }),
         );
@@ -342,7 +369,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
    */
   const startRightAway = ({ reserve }: { reserve: boolean }) => {
     const kind = tickets.tickets && nextKind(tickets.tickets);
-    if (kind === "daily" || (kind === "reserve" && reserve)) start(kind);
+    if (kind === "daily" || (kind === "reserve" && reserve)) start(kind, { asked: false });
   };
 
   useImperativeHandle(ref, () => ({ startNewSticker, closeDrawers: () => setPanel(null) }));
@@ -458,6 +485,13 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const paywall = active && fresh && overlay !== null;
   // A fresh sheet asks before a ticket is spent, and takes no ink until then.
   const asking = active && fresh && !paywall;
+  // Once its ticket is spent, the ask drops away over the sheet, showing the tickets it asked about:
+  // the spend it answers mustn't turn it into another ask on its way out. When the shop takes its
+  // place, or the board covers it, it simply goes: the next card's rise carries that change.
+  const ask = asking && !rightAway ? loaded : null;
+  const [askShown, setAskShown] = useState<Tickets | null>(null);
+  if (ask && askShown !== ask) setAskShown(ask);
+  if (!ask && askShown && (!active || paywall)) setAskShown(null);
   const sealing = session.phase === "sealing" || session.phase === "sealed";
   // Until Start, and while a kept session loads, the sheet takes no ink.
   const locked = !active || session.phase === "blank" || sealing;
@@ -603,22 +637,25 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           send({ type: "seal-tap", now: performance.now(), hasInk: history.canUndo });
         }}
       />
-      {ceremony && active && (
+      {/* A card on its way out finishes leaving even under the board, so it never plays again. */}
+      {ceremony && (active || ceremony.leaving) && (
         <SealCeremony
           key={ceremony.id}
           sticker={ceremony.sticker}
           sealed={ceremony.sealed}
           failed={ceremony.failed}
+          leaving={ceremony.leaving}
+          onLeft={() => dropCeremony(ceremony)}
           sheet={ceremony.sheet}
           handle={me.handle ?? ""}
           onKeepDrawing={() => {
-            startNewSticker();
+            handOver(ceremony);
             startRightAway({ reserve: false });
           }}
           onBoard={onGoToBoard}
           onShop={() => {
             setOverlay("shop");
-            startNewSticker();
+            handOver(ceremony);
           }}
         />
       )}
@@ -626,10 +663,13 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       {asking && !loaded && (
         <TicketsNotLoaded error={tickets.error} onRetry={tickets.refresh} onBoard={onGoToBoard} />
       )}
-      {asking && loaded && (
+      {askShown && (
         <StartDrawing
-          tickets={loaded}
+          tickets={askShown}
           minutes={SESSION_MS / 60_000}
+          followsSealedCard={ceremony?.leaving === true}
+          leaving={!ask}
+          onLeft={() => setAskShown(null)}
           busy={spending}
           note={
             startProblem ??
@@ -654,10 +694,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           }}
         />
       )}
-      {/* Leaving the shop with no tickets brings the out-of-tickets card back; with some, the start screen. */}
+      {/* Leaving the checkout with no tickets brings the out-of-tickets card back; with some, the start screen. */}
       {paywall && overlay === "shop" && (
-        <TicketShop
-          layout="card"
+        <ReserveTicketCheckout
           onDraw={() => {
             setOverlay(null);
             startRightAway({ reserve: true });

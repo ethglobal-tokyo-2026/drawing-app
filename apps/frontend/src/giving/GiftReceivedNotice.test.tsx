@@ -41,7 +41,8 @@ describe("GiftReceivedNotice", () => {
       ),
     );
     const text = (selector: string) => host.querySelector(selector)?.textContent;
-    expect(text("h1")).toBe("@bob received your sticker ♡");
+    expect(text("h1")?.trim()).toBe("@bob received your sticker");
+    expect(host.querySelector("h1 svg")).not.toBeNull();
     expect(text(".gift-received-notice__sub")).toBe("It’s on @bob’s sticker board now.");
     expect(text(".gift-received-notice__caption")).toBe("@bob · 9.23");
 

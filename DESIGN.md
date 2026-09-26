@@ -277,7 +277,7 @@ The world refuses two category defaults. One is Procreate-grey tool chrome with 
 - The board turns over: its back is cork, with the figures pinned on as paper.
 - Physical motion grammar on transform and opacity only.
 - Mocked LINE and iOS screens copy those platforms exactly and never borrow the world's materials.
-- Icons come from Phosphor through one registry, with Material Symbols' `draw` as the single exception. They're never drawn by hand.
+- Icons come from Phosphor through one registry (`apps/frontend/src/icons`). They're never drawn by hand.
 
 ## Colors
 
@@ -332,7 +332,7 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 
 **The One Meaning Rule.** Each hue means one thing: yellow is now, aqua is giving, pink is gratitude and you, grape is received and offers, blue is the Shop and reserve tickets, tangerine is the streak, and tomato is can't-undo. Don't pick a hue for looks.
 
-**The Other Hand Rule.** Foil appears only on a sticker drawn by someone other than the board's owner (on your tray's sheets, someone other than you). Your own stickers keep the plain white die-cut edge; the pearl rim is retired. Surfaces that aren't a board (Explore's feed, the leaderboard) show no foil. It's never a rarity grade.
+**The Other Hand Rule.** Foil appears only on a sticker drawn by someone other than the board's owner (on your tray's sheets, someone other than you). Your own stickers keep the plain white die-cut edge; the pearl rim is retired. Surfaces that aren't a board (Explore's sticker pile, the leaderboard) show no foil. It's never a rarity grade.
 
 **The Platform Green Rule.** The world has no green. LINE's green appears only inside LINE's own mocked UI (the chat, the Gift Message, the consent and share screens, and the app badge).
 
@@ -425,9 +425,10 @@ A cartoon keycap: the screen's one primary act.
 - **Round:** the seal check, a 58px round key with Phosphor's check-fat (fill) at 26px. The first tap arms it: it breathes (scale to 1.08 and back every 900ms) and a label-stock chip beside it says "Tap again to seal". A second tap within 2.5s seals; otherwise it disarms. It's still the draw screen's only key.
 - **Compact:** Draw on your own board, a Seal Yellow compact key at the lower left over the stickers. It carries only its icon and "Draw"; its tickets tuck behind its right end (see The Draw key's tickets). On a new artist's first visit it hops and a pulse ring surrounds it, held by a wrapper so the key keeps its own lip; the tickets sit in the same wrapper, so they hop along.
 - **Disabled:** sunk flush with the page, with no lip and no ink: a Liner Deep face and a graphite label. Enabling springs it up out of the page.
+- **Busy:** while its act is on its way to the server, such as spending a ticket, the key keeps its face, lip and ink, and takes no second press. It's marked `aria-busy` and `aria-disabled`, never `disabled`, which would sink it grey as if the act weren't there.
 - **Hover and focus:** hover shades the face 6% toward Ink. Focus draws a 2px Ink outline at a 3px offset.
 - **Visiting:** on someone else's board, a Soda Aqua compact Give key sits in Draw's slot, and it's that board's one key.
-- **Where it goes:** Keep drawing, Pay in the ticket shop, Use a reserve ticket, Give, Send in LINE, Accept, Send gratitude, Send offer, the seal check, Draw on your board and Give on someone else's. A can't-undo act never gets the key.
+- **Where it goes:** Keep drawing, Buy reserve tickets in the Shop, Pay in the reserve ticket checkout, Use a reserve ticket, Give, Send in LINE, Accept, Send gratitude, Send offer, the seal check, Draw on your board and Give on someone else's. A can't-undo act never gets the key.
 
 ### Label stock
 
@@ -461,7 +462,11 @@ Round flat stickers stuck at -4°: a 26px pill in a coded hue with Ink puffy num
 
 ### Index tabs
 
-Three tabs cut from label stock, side by side on the Liner strip: My board (pink), Explore (aqua) and Shop (grape), each up to 176px wide and 46px tall with a 6px radius. Draw isn't a tab; the board has its own Draw key. An inactive tab is an outline (a 26% Ink edge) with graphite text; the current tab is stuck on in its full hue with Ink text, lifted 2px with a lift shadow. Each tab presses 1.5px through the shared press. Current is shown by fill and lift only, never by weight or case. My board's icon is the person's own LINE picture as a 24px photo sticker, the same whether current or not; Explore's is Phosphor's eyes and Shop's is Phosphor's storefront, both bold at rest and fill when current. On screens where the tabs hide, the whole strip slides away behind the grabber described in Layout.
+Three tabs cut from label stock, side by side on the Liner strip: My board (pink), Explore (aqua) and Shop (blue), each up to 176px wide and 46px tall with a 6px radius. Draw isn't a tab; the board has its own Draw key. An inactive tab is an outline (a 26% Ink edge) with graphite text; the current tab is stuck on in its full hue with Ink text, lifted 2px with a lift shadow. Each tab presses 1.5px through the shared press. Current is shown by fill and lift only, never by weight or case. The icons are Phosphor's smiley-sticker (My board, for everyone), compass (Explore) and tag (Shop), 20px, bold at rest and fill when current.
+
+- **Sticking on:** the tapped tab fills with its hue in 140ms while it lifts 2px and settles from 1.04 to 1 (220ms, `--ease-peel`), the world's stick. The tab it leaves drops its lift and shadow in 140ms. The screen's own change is a separate cross-fade; the strip never moves with it.
+- **Reduced motion:** only the hue changes, in 120ms, with no lift travel and no settle.
+- **Tucked:** on screens where the tabs hide, the whole strip slides away behind the grabber described in Layout.
 
 ### Board header
 
@@ -506,6 +511,7 @@ The canvas is just for drawing.
 - **Size rail:** the left edge, with a live number of the brush size in px.
 - **Foot:** flat undo and redo at the bottom left, the seal check at the bottom right. The canvas shows no ticket count.
 - **Sealing:** the ceremony starts as soon as the sticker is cut: the cut runs round the ink behind a Seal Yellow blade, and the paper around it dims. It then waits there while the server seals the sticker, which takes 10–30 s. The blade keeps running round the cut, pass after pass, trailing a heavier stroke of fresh cut. Only once the seal is recorded does the resin pour, the sticker peel off and the sealed card come up, so nothing that says "sealed" shows early. A white label at the foot, turned -2°, sticks on after 1 s: "Sealing your sticker…". At 10 s a fresh label is pressed over it adding "It can take up to half a minute.", and at 30 s "It's taking longer than usual." It peels off when the seal lands. A tap skips to the wait but can't pass it. A failed seal fades back to the drawing, and the seal chip says what went wrong. Under reduced motion the cut shows at once, the blade stays hidden and the label still shows.
+- **Keep drawing:** the hand-over overlaps rather than running in turn. On the press, the fresh sheet and the clock (3:00) are set up under the veil, and the day's next daily ticket is spent without asking. The sealed card carries the sticker down toward the Board grabber, 70% of the screen, over 280ms on the peel curve, fading over its last half, while the veil lifts linearly. The timer, tools, size rail and undo fade back in 120ms later, so the sheet is never bare. No "Use a ticket to draw?" card shows during that spend; it comes up only if the spend fails, with the reason. When the sticker used the last daily ticket and reserve ones are left, the reserve ask rises 120ms into the card's exit, its scrim taking over from the lifting veil. The shop from the last ticket's card leaves the same way. The fresh sheet takes ink as soon as the spend lands, even while the card is still leaving. Under reduced motion it's the same order in one frame.
 
 ### Tickets
 
@@ -524,6 +530,8 @@ Three empty ticket stubs say "used up" without a number. Each used ticket keeps 
 
 The start screen shares the card. With daily tickets left, it shows the day's stubs and, when you hold reserve tickets, one small reserve ticket, ×count and RESERVE under them. With daily tickets gone but reserve ones left, it asks "Use a reserve ticket?" instead. Its art is that one ticket, large (148 × 90) at the house tilt, with the count on a Blue dot badge, and no daily stubs. The line says each fact once: "Today's daily tickets are used." in bold, then "New ones at 12:00 AM." in Graphite; screen readers also hear "You have 3 reserve tickets." Then a Blue key and Buy reserve tickets on label stock. The checkout's done step shows the same one reserve ticket, its badge on the new total.
 
+Spending a ticket peels it, the house verb. On the press, the ticket being spent (the last fresh daily stub, or the reserve ask's one reserve ticket) lifts at a corner, 4px and -3°, over 220ms, while the key stays busy in its own color (see the key's Busy state). If the spend fails, it settles back. Once the server answers, its face peels up and away off the backing, fading over its last 40%, in 280ms on the peel curve, and leaves the used backing; a reserve ticket's badge ticks down one and is stuck on again, and a zero never shows. 120ms into the peel, the card drops back 56px and fades over 220ms, faster than its 460ms rise, and its scrim and the grabber strip's clear with it. Keep drawing peels the sealed card's next small daily stub (18px of travel, 220ms) as the card leaves. Under reduced motion there's no lift or travel: the face goes and the backing shows in one frame. The sheet under it takes ink at once. The card keeps showing the tickets it asked about on its way out, so spending the last daily ticket never turns it into the reserve ask. When the ticket shop takes its place, it goes at once and the shop's card rises.
+
 ### The Draw key's tickets
 
 The tickets your next drawing can use tuck behind the Draw key's right end, like tickets slid behind a keycap. They're paper on the page, not part of the key: 14px of each hides under the key, they sit centered on its 48px face at -3°, and the key's cast shadow falls on them. They take no taps and don't press; the key sinks over them. By the Ticket Rule:
@@ -535,16 +543,26 @@ The tickets your next drawing can use tuck behind the Draw key's right end, like
 
 The key's name says what's left: "Draw a new sticker: 2 daily tickets and 5 reserve tickets left", or "…: no tickets until 12:00 AM". The star pops when the key first shows a reserve ticket in an app open, or when one is bought or comes to the front, not on every return to the board. Full-width Draw keys on the cards carry only their label; the card's art above shows the tickets.
 
-### Ticket shop
+### Shop
 
-The out-of-tickets card's stock. The balance sits in a Liner Lift well in yen: the Sui wallet's JPYC, one yen each. Packs are label rows: a Grape ticket mark, the name, a Pink sale sticker at the house tilt ("−40%"), and the price stacked right (struck-through full price, yen in bold). The picked pack is stuck on in Grape Soft with a Grape ring. Every amount shows in yen; SUI never shows. The smallest pack is picked to start.
+The Shop tab: reserve tickets on sale, then what's coming. No rules copy anywhere on it.
+
+- **Title:** "Shop" in Headline type at the top left.
+- **Reserve tickets:** the page's peak, one Liner Lift card. Three reserve tickets fanned like a hand of cards; what you hold (the reserve ticket mark × count, left off at zero); the headline "Reserve tickets"; one line on what they're for; the one-ticket price from the pack list ("¥100 each, less in packs", the tail only while a pack is discounted, outlined while it loads); the perforation; the blue Buy reserve tickets key, the page's only key; and the Sui credit.
+- **Coming-soon shelves:** Laminates, Brushes and Backing foils. Each has its name in Title type, a quiet Liner Deep "Coming soon" pill (never the Pink sale sticker, which means a discount) and one Graphite line on what the things are. Four 104px swatches scroll sideways with snap, the fourth peeking past the edge. The first is what you have now, tagged "Yours" on a Pink Soft pill at the house tilt. No prices and no press: the swatches are a list, not buttons.
+- **Previews** use the app's own materials. Laminate and backing foil swatches show the newest sticker you drew, or a bundled sample for artists with none, at the house tilt. Gloss is the live resin as it is; Matte drops it for a fine white haze; Glitter adds flecks and Prism faceted foil colors, both moving with the one light. Backing foils are the foil band in other metals: Holo as it is, Gold, Silver and Rose gold. Brush swatches are one S-stroke on white, painted by the drawing screen's own `paintStroke`: Brush (today's pressure taper), Marker (a chisel, its width set by direction), Fineliner (one thin width) and Pixel pen (the stroke on a coarse grid, hard-edged and scaled up).
+- **The Sui credit:** "Payments on" in fine print, then Sui's full logo: the black file from Sui's brand kit, unmodified, 16px tall, its wordmark on the text's baseline, with a "u" of clear space. Black because Sui Blue measures under 3:1 on Liner. It's a credit, never a link or inside a button. Japanese puts the logo first (「[logo]で決済」).
+
+### Reserve ticket checkout
+
+The one card that sells reserve tickets, in the out-of-tickets card's stock. The Shop's key raises it over the whole phone, tabs included; the drawing screen's cards raise it over the canvas. The title "Reserve tickets", then "Reserve tickets never expire." in bold Ink. The balance sits in a Liner Lift well in yen: the Sui account's JPYC, one yen each. Packs are label rows: a reserve ticket mark, the name, a Pink sale sticker at the house tilt ("−40%"), and the price stacked right (struck-through full price, yen in bold). The picked pack is stuck on in Blue Soft with a Blue ring. Then the perforation, the blue Pay key, the Sui credit and Not now. Every amount shows in yen; SUI never shows. The smallest pack is picked to start. A failed payment says what failed, with Back to the packs as its key.
 
 ### Stickers
 
 - **Die-cut:** the outline comes from the artist's own strokes, offset into a white border and bounded by the kiss-cut groove, with the sticker cast shadow beneath.
 - **Baked resin:** the gloss is baked into the image, with the print darker and more saturated where resin pools at the edge, a refraction band inside the cut edge, a rim light and a meniscus at the foot.
 - **Live resin:** on stickers that are showing, a live layer adds a specular along the top edge, a rim light and a sheen that sweeps when the sticker is placed, dragged or tilted.
-- **Foil:** a sticker drawn by someone other than the board's owner wears a foil band just outside its white edge: 5px on the board, 6px on the detail's big sticker, 3px on tray sheets. It's the silhouette dilated in sixteen directions, so it follows the cut at an even width round curves and points. The band is the sticker's edge: the white edge runs straight into it, the image shows only inside its own cut, and the kiss-cut and cast shadow fall from the band's outer edge. A fine diffraction grating lies over it and never moves: diagonal hairlines on a 2px period, lit white and shaded Ink at low alpha. The six foil bands flow under the grating, so the band glitters rather than crawls, and a white glint sits where the one light falls; holes hide it; it's decorative, and the sticker's own label names the artist. The seal ceremony adds nothing: a freshly sealed sticker is yours and plain.
+- **Foil:** a sticker drawn by someone other than the board's owner wears a foil band just outside its white edge, 4% of the sticker's long side: about 5px on the board, wider on the detail's big sticker, narrower on tray sheets. It's the silhouette grown by that distance on the server, one mask per sticker, so it follows the cut at an even width round curves and points; a sticker without that mask dilates its silhouette in sixteen directions instead, 5px on the board, 6px on the detail, 3px on sheets. The band is the sticker's edge: the white edge runs straight into it, the image shows only inside its own cut, and the kiss-cut and cast shadow fall from the band's outer edge. A fine diffraction grating lies over it and never moves: diagonal hairlines on a 2px period, lit white and shaded Ink at low alpha. The six foil bands flow under the grating, so the band glitters rather than crawls, and a white glint sits where the one light falls; holes hide it; it's decorative, and the sticker's own label names the artist. The seal ceremony adds nothing: a freshly sealed sticker is yours and plain.
 - **Glow:** gratitude shows on a sticker as a soft glow behind it, warmer and brighter with more gratitude.
 - **Peel and stick:** a sticker peels with a 3D lift toward the top right and sticks with a short settle from 1.06 scale.
 
@@ -556,6 +574,20 @@ Who drew a foil sticker: a Liner Lift pill (40px) with the artist's LINE picture
 - **Tapped:** the chip heads the selected sticker's menu, above its actions, until you deselect.
 - **Detail:** under the big sticker, the chip leads the fine print. Your own stickers never get a chip.
 - **Plain:** off a board, where foil never shows (Explore's lifted sticker), the chip has no ring: the picture keeps its white edge, cut from the pill by a kiss-cut, and casts a small shadow.
+
+### Explore
+
+Browse what everyone draws, see who drew each sticker, and get to that artist's board. Under the search, a two-way switch picks **Stickers** or **This week**. Search results replace both views.
+
+- **The view switch:** a Liner Deep track with one label stuck on the current view, Soda Aqua for the switch and Bonbon Pink for the leaderboard tabs inside This week. The label slides to the tapped tab in 260ms on the ease-out; the text changes color in 140ms. The tabs take the shared press and the arrow keys. Reduced motion moves the label at once.
+- **This week:** the three leaderboards, moved as they were, with "Resets Monday 4:00" in fine print under the list. On a new board the old rows fade out in 90ms and the new ones stick on from the top, 25ms apart (the first five, the rest together), each rising 6px over 200ms. Reduced motion cross-fades them in 120ms. Best combo is the hit counter.
+- **The pile:** Explore's stickers are a heap of real die-cut stickers, never a grid or a feed. Each Tokyo day (turning over at 4:00) is its own layer, newest first: a perforation row across the whole width as its top edge, with the day's dot badge stuck on it at the house tilt (Seal Yellow "Today 9.26", Liner Lift "9.25" for older days), then that day's heap resting on the next day's perforation. The last day ends on a bare perforation.
+- **The heap:** stickers drop onto the floor oldest first, so the newest lie on top: at a few seeded, middle-leaning spots, sliding off anything they can't balance on, sinking into what they land on and staying at the lowest of those drops, turned up to 17° either way. The layout is 360 units across on every phone, seeded by the day and the sticker, so the pile looks the same on every visit and a new sticker moves nothing beneath it. Stickers keep their size however many share a day.
+- **Flat:** pile stickers are the sealed image alone, with its own cut, white edge, cast and baked resin: no live light and no foil. Only the lifted sticker gets live resin. A tap lands only on the cut line or the tags, so a clear corner lets the tap through to the sticker beneath.
+- **Name tags:** every sticker wears one across its lower left edge, turned a little against the sticker: a Liner Lift pill with the artist's LINE picture as a 16px photo sticker (letter fallback) and "@handle" in 11px bold. A given sticker adds a Soda Aqua "to @ken" tag under it. No later sticker or tag ever covers an earlier tag.
+- **Empty:** a day with no stickers yet shows a faint dashed kiss-cut outline on its floor and "The first sticker sealed today lands here."
+- **The fall-in:** on a first look, today's newest 14 fall in from under the view switch, oldest first, 55ms apart: 620ms of gravity (slow off the top, fastest as it lands) while spinning 24° into their turn, then a squash to 1.05 × 0.93, a 5px rebound and the stick settle. A shadow of the sticker in the air converges from the peeling offset to the sticker's own cast and fades as it lands. It waits for the falling stickers' images, at most 0.7s. On a return visit only stickers new since your last look fall, and every new sticker wears a Seal Yellow NEW pip on its tag; screen readers hear "3 new stickers since you last looked". Reduced motion fades the whole pile in over 150ms. While Explore loads, today's badge and faint die-cut shapes on its floor stand in (the skeleton), and the fall-in is the arrival.
+- **Screen readers and keys:** a section per day ("Today", "Yesterday", "September 24"), each an ordered list of buttons newest first, named like "No.0147 by @mika, 5 min ago" and ", given to @ken". A focused sticker rises to the top of the pile, lifts 2px and gets the house focus ring around its cut; Enter or Space lifts it.
 
 ### Lifted sticker
 
@@ -590,7 +622,7 @@ Your whole collection, in a pink canvas tray zipped down the board's right edge.
 - **Packing:** stickers are laid organically on their real cut lines, at least 6px apart, in arrival order, bottom up so the newest sits highest, with small seeded turns and never shrunk. A sticker's spot is permanent: an earlier one never moves, and a given sticker's spot stays blank.
 - **Holes:** a sticker out on the board leaves its kiss-cut hole in its packed spot: plain backing paper with the faint maker print, a crisp cut line and a hair of shadow on the top-left inside edge. Tapping a hole shows that sticker on the board.
 - **Paging:** the stack is a cyclic deck. Swipe up and the front sheet tucks in at the back; swipe down and the back sheet comes to the front; tap a dated edge and that sheet comes forward, riffling through the ones before it. The first 10px lock the direction: mostly vertical pages, wherever it started; horizontal toward the board peels a sticker if it started on one, or pulls the sheet out if it started on paper. PageUp and PageDown page too.
-- **Folder tabs:** All (liner), Mine (pink) and Gifts (grape) stand up from the stack's top edge, 46 × 24px padded to 44px. The current one is full hue and lifted; the others are soft fields. A filter chooses sheets and never moves a sticker: in about 650ms the stack gathers into the mouth, the front sheet and every sheet without a match slide back into the tray, the rest riffle, and the newest match is dealt onto the front. Stickers that don't match fade to 20%. Reduced motion crossfades.
+- **Folder tabs:** All (liner), Mine (pink) and Gifts (grape) stand up from the stack's top edge, 46 × 24px padded to 44px. The current one is full hue and lifted; the others are soft fields. A tapped tab stands up (220ms, `--ease-out`) as its fill and shadow come in (160ms), and the tabs take the shared press with 1px of travel; under reduced motion a tab stands up at once and only its color changes, in 120ms. A filter chooses sheets and never moves a sticker: in about 650ms the stack gathers into the mouth, the front sheet and every sheet without a match slide back into the tray, the rest riffle, and the newest match is dealt onto the front. Stickers that don't match fade to 20%. Reduced motion crossfades.
 - **Pulling a sheet out:** drag the front sheet's paper toward the board and past about 60px it floats over the board at full size with the floating-sheet shadow and an X at its top left (a 30px Liner Lift disc with Phosphor's x). The tray sags to a crack. Stickers peel or tap off it; board stickers whose hole is on it drop back in. The X, dragging it back, closing the tray or opening the spread sends it home on top of the stack. One sheet out at a time.
 - **The spread:** the +N button deals every sheet onto the tray's lining, front first, dates kept at the 11px floor. Tap one to bring it to the front; tap the lining or press Escape to put them back.
 - **Peel and snap-back:** press a sticker and its edge lifts; drag and it rides under the thumb while the mouth relaxes to a crack and the sticker's own soft shadow previews where it lands. Drag a board sticker to the right edge and the tray opens to its sheet, its hole breathing in Ink until it drops in.
@@ -629,7 +661,7 @@ One experience for everyone, on plain Liner, once per hand-off.
 
 ### Loading
 
-- **Skeletons:** while a screen loads, it shows its own layout in outline, never a "Loading…" line: blocks of pressed Liner (Liner Deep) with a slow white shine passing over them, real headings and tab labels where they're fixed. Explore outlines Today's stickers, the leaderboard and the feed; the ticket shop its balance and pack rows; the sticker board faint die-cut shapes where stickers usually sit. A screen reader hears one status line ("Loading Explore").
+- **Skeletons:** while a screen loads, it shows its own layout in outline, never a "Loading…" line: blocks of pressed Liner (Liner Deep) with a slow white shine passing over them, real headings and tab labels where they're fixed. Explore outlines today's floor with faint die-cut shapes, or the leaderboard; the ticket shop its balance and pack rows; the sticker board faint die-cut shapes where stickers usually sit. A screen reader hears one status line ("Loading Explore").
 - **Reveal:** loaded content rises 6px into place and fades in over 220ms. A picture (a sticker, a photo sticker) holds back until its image has loaded, then fades in whole, never half-drawn.
 - **Tabs:** changing tabs cross-fades the screen over 300ms on a gentle ease: the old one fades out and sinks back a little as the new one fades in and settles up 8px from 98% size. The tab bar changes crisply around it. Browsers without View Transitions change at once.
 - **Reduced motion:** no shine and no rise; tabs cross-fade plainly in 150ms.
@@ -642,16 +674,19 @@ An Ink slip with Liner text (600, 14px) and 6px corners on the lift shadow. It r
 
 ### Icons
 
-Every icon comes from one registry: Phosphor Icons (MIT) as `@phosphor-icons/react` 2.1.10 renders them, plus one Material Symbols glyph copied byte for byte from its published SVG. The app's own controls use bold; fill marks an active or primary state, such as the current tool or the current tab; the mocked LINE and iOS screens use regular. The same action always gets the same icon (Give is gift, View is eye, Offer is handshake, Remove is tray-arrow-down). Brand marks (LINE's logo, from Simple Icons, CC0) and illustrations (the heart, stickers, avatars, pins, tape, stamps, zipper parts) are not icons.
+Every icon is Phosphor Icons (MIT) as `@phosphor-icons/react` 2.1.10 renders them, through one registry: `apps/frontend/src/icons`. An icon that carries one of the app's meanings goes by that meaning there (`DrawIcon`, `GiveIcon`); the rest keep Phosphor's names. The app's own controls use bold; fill marks an active or primary state, such as the current tool or the current tab; the mocked LINE and iOS screens use regular. The same action always gets the same icon:
 
-- **My board:** the tab shows the person's own LINE picture as a photo sticker. The rich menu's My board tile uses Phosphor's smiley-sticker (fill), since the rich menu is one image for everyone and can't show each person's picture.
-- **Explore:** Phosphor's eyes, on the tab (bold, fill when current) and the rich menu tile (fill).
-- **Shop:** Phosphor's storefront, on the tab (bold, fill when current) and the keys that open the Shop.
-- **Sticker board:** one composed entry, Phosphor's square with Phosphor's sticker set at 64%, turned -12° and masked, in bold and fill only. It marks the board itself (Go to sticker board) and stands in on the My board tab when a person has no LINE picture.
+- **Draw:** pencil-simple-line (fill), on every Draw action: the board's Draw key, Keep drawing, the print on fresh ticket stubs and the chat menu's Draw tile. The brush tool keeps paint-brush; it's a drawing tool, not the Draw action.
+- **My board:** smiley-sticker, on the tab (bold, fill when current), every "go to the board" action and the chat menu's My board tile (fill).
+- **Explore:** compass. **Shop:** tag, on the tab and every way into the Shop.
+- **Gratitude:** heart (fill) at every size, since it's a mark, not a control: Send gratitude, the Transfer Trail, the combo HUD and the receipt. **Streak:** fire (fill).
+- **Give** is gift, **View** eye, **Offer** handshake and **Remove** tray-arrow-down.
 
-**The Never Hand-Drawn Rule.** Icons are never drawn by hand and published paths are never edited. If Phosphor doesn't have it, choose a different Phosphor icon or compose published paths by transform.
+Screens that build their DOM from strings (the mini-game, the tray) carry copies of Phosphor's paths; `phosphorCopies.test.tsx` checks each against the installed package.
 
-**The Draw Exception.** Every Draw action (the board's Draw key, Keep drawing, and the rich menu's Draw tile) uses Material Symbols' `draw` (Apache-2.0, weight 700, filled). It's the one icon from outside Phosphor, because its pencil mid-squiggle says "draw", where every Phosphor pencil says "edit". The brush tool keeps Phosphor's paint-brush; it's a drawing tool, not the Draw action.
+**The Never Hand-Drawn Rule.** Icons are never drawn by hand and published paths are never edited. If Phosphor doesn't have it, choose a different Phosphor icon. A text glyph (♡, ★) never stands in for an icon.
+
+**Brand marks** (Sui's and Ethereum's, from Simple Icons, CC0, in `icons/brandMarks.ts`; LINE's logo from Simple Icons or LINE's guidelines) and illustrations (the heart you tap, stickers, avatars, pins, tape, stamps, zipper parts) are not icons. Brand marks are pasted verbatim. Sui's brand kit forbids altering its logo, so the stat board's chain pin, which recolors and outlines Sui's mark as a push-pin head, is an open exception.
 
 ### Chat menu
 
@@ -678,7 +713,7 @@ The LINE chat, the Gift Message, consent, share picker, Add friends screen and i
 - **Do** keep every in-phone text size at 11px or above.
 - **Do** cast shadows down and to the right from a top-left light, in neutral Ink alpha.
 - **Do** show gratitude figures plainly, to everyone: in the combo, the receipt, the sticker's trail and the board's cork back.
-- **Do** use icons from the registry only: Phosphor bold at rest, fill for an active state, regular inside the LINE and iOS mocks, and Material Symbols' `draw` for Draw actions.
+- **Do** use icons from the registry only: Phosphor bold at rest, fill for an active state, regular inside the LINE and iOS mocks.
 - **Do** give every touch target a 44px hit area, including small labels, quiet links, sticker handles, folder tabs, the +N stack button, a floating sheet's X and the zip pull.
 - **Do** put foil on every sticker drawn by someone other than the board's owner, and name its artist with the artist chip.
 - **Do** honor reduced motion. Durations collapse to 1ms, presses halve and lose their spring, the tray, paging and tab changes fade, the board's turn crossfades, the foil holds still, and the gift's snap becomes a fade.

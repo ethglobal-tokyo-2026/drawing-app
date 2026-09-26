@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type RefObject } from "react";
+import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import { Trans, useTranslation } from "../../i18n/react";
 import { DrawIcon, ShopIcon, StickerBoardIcon } from "../../icons";
 import { Duration } from "../../stickers/Duration";
@@ -7,7 +7,13 @@ import type { Sticker } from "@drawing-app/api/client";
 import { toSticker } from "../../api/views";
 import { formatRefillTime } from "../../tickets/refill";
 import { TicketStubs } from "../../tickets/TicketStubs";
-import { describeTickets, nextRefill, ticketView, type Tickets } from "../../tickets/tickets";
+import {
+  describeTickets,
+  nextRefill,
+  spentIndex,
+  ticketView,
+  type Tickets,
+} from "../../tickets/tickets";
 import { useTickets } from "../../tickets/useTickets";
 import { Key } from "../../ui/Key";
 import { LabelButton } from "../../ui/LabelButton";
@@ -15,7 +21,7 @@ import { TearLine } from "../../ui/TearLine";
 import { useFocusTrap } from "../../ui/useFocusTrap";
 import "./SealedCard.css";
 
-/** A press shows before the screen changes. */
+/** A press shows before the screen changes to the sticker board. */
 const ACT_AFTER_MS = 160;
 
 interface Props {
@@ -23,6 +29,8 @@ interface Props {
   handle: string;
   /** The ceremony has ended: until then, nothing on the card can be pressed. */
   done: boolean;
+  /** It's on its way out, over the fresh sheet: it takes no presses and keeps what it showed. */
+  leaving: boolean;
   cardRef: RefObject<HTMLElement | null>;
   slotRef: RefObject<HTMLDivElement | null>;
   onKeepDrawing: () => void;
@@ -36,7 +44,7 @@ interface Props {
  * as one reserve ticket and its count, or that reserve ticket alone once the daily ones are used. Under them, a line
  * when this sticker used the day's last daily ticket, or the last ticket of all.
  */
-function TicketRow({ tickets }: { tickets: Tickets }) {
+function TicketRow({ tickets, peel }: { tickets: Tickets; peel: boolean }) {
   const { t } = useTranslation();
   const view = ticketView(tickets);
   const refillTime = formatRefillTime(nextRefill(new Date()));
@@ -45,7 +53,13 @@ function TicketRow({ tickets }: { tickets: Tickets }) {
   return (
     <div className="sealed-card__tickets" data-card-line>
       <div className="sealed-card__ticket-row" role="img" aria-label={describeTickets(tickets)}>
-        {view.show !== "reserve" && <TicketStubs size="small" stubs={view.stubs} />}
+        {view.show !== "reserve" && (
+          <TicketStubs
+            size="small"
+            stubs={view.stubs}
+            spending={peel ? { index: spentIndex(view.stubs), state: "peel" } : null}
+          />
+        )}
         {view.reserve > 0 && (
           <span className="sealed-card__reserve">
             <TicketStubs size="small" stubs={[{ used: false, kind: "reserve" }]} />
@@ -72,6 +86,7 @@ export function SealedCard({
   sealed,
   handle,
   done,
+  leaving,
   cardRef,
   slotRef,
   onKeepDrawing,
@@ -80,19 +95,28 @@ export function SealedCard({
 }: Props) {
   const { t } = useTranslation();
   const titleId = useId();
-  const { tickets } = useTickets();
+  const { tickets: live } = useTickets();
+  // The spend Keep drawing hands over to can land while the card leaves; it leaves as it was.
+  const [shown, setShown] = useState(live);
+  if (!leaving && shown !== live) setShown(live);
+  const tickets = leaving ? shown : live;
   const last = tickets !== null && ticketView(tickets).show === "none";
 
   const chosen = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
-  const act = (action: () => void) => () => {
-    if (!done || chosen.current) return;
-    chosen.current = true;
-    timer.current = setTimeout(action, ACT_AFTER_MS);
-  };
+  // Keep drawing and the shop act at once: the card's own exit carries the change, and the key's
+  // pop rides out on it. The sticker board is another screen, so the press shows first.
+  const act =
+    (action: () => void, { now = false } = {}) =>
+    () => {
+      if (!done || chosen.current) return;
+      chosen.current = true;
+      if (now) action();
+      else timer.current = setTimeout(action, ACT_AFTER_MS);
+    };
   // Escape takes the way that spends and buys nothing.
-  useFocusTrap(cardRef, { active: done, onEscape: act(onBoard) });
+  useFocusTrap(cardRef, { active: done && !leaving, onEscape: act(onBoard) });
 
   return (
     <section
@@ -102,7 +126,7 @@ export function SealedCard({
       aria-modal="true"
       aria-labelledby={titleId}
       tabIndex={-1}
-      inert={!done}
+      inert={!done || leaving}
     >
       <div ref={slotRef} className="sealed-card__slot" aria-hidden="true" />
       {/* "Sealed on-chain" and the sticker's name wait until the sticker has a chain record. */}
@@ -140,14 +164,15 @@ export function SealedCard({
           className="sealed-card__key"
           icon={<DrawIcon />}
           data-card-line
-          onClick={act(onKeepDrawing)}
+          onClick={act(onKeepDrawing, { now: true })}
         >
           {t(($) => $.stickerCreation.sealedCard.keepDrawing)}
         </Key>
       )}
-      {tickets && <TicketRow tickets={tickets} />}
+      {/* Keep drawing spends the next daily ticket: it peels off as the card leaves. */}
+      {tickets && <TicketRow tickets={tickets} peel={leaving && !last} />}
       {last ? (
-        <LabelButton block icon={<ShopIcon />} data-card-line onClick={act(onShop)}>
+        <LabelButton block icon={<ShopIcon />} data-card-line onClick={act(onShop, { now: true })}>
           {t(($) => $.stickerCreation.sealedCard.buyReserveTickets)}
         </LabelButton>
       ) : (

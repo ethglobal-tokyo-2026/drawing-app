@@ -1,4 +1,4 @@
-import { CheckFat } from "@phosphor-icons/react";
+import { CheckFat } from "../icons";
 import { useState } from "react";
 import { useTranslation } from "../i18n/react";
 import { Key } from "../ui/Key";

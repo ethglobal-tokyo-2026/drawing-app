@@ -1,4 +1,4 @@
-import { Gift, X } from "@phosphor-icons/react";
+import { GiveIcon, X } from "../icons";
 import { Suspense, useRef, useState } from "react";
 import { useMe } from "../api/meContext";
 import { ageStatusOf } from "../identity/ageStatus";
@@ -111,7 +111,7 @@ export function GiveSheet({ to, toId, onClose }: Props) {
             <Key
               size="md"
               tone="aqua"
-              icon={<Gift size={22} />}
+              icon={<GiveIcon size={22} />}
               onClick={() => pickedSticker && setGiving(pickedSticker)}
               disabled={!pickedSticker || !sender}
             >

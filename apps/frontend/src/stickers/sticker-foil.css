@@ -50,6 +50,13 @@
   --band-6: var(--foil-magenta);
 }
 
+/* The band's mask made on the server: the silhouette grown by an even distance, at the image's size.
+   One copy in the center copy's place stands in for them all, with a crisp edge. */
+.sticker-foil.sticker-foil--baked {
+  --foil-copies: var(--foil-mask);
+  --foil-at: var(--foil-w) var(--foil-w);
+}
+
 .sticker-foil--board {
   --foil-w: 5px;
 }

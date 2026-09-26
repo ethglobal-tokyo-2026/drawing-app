@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { i18next } from "../i18n/i18n";
 import { TabBar } from "./TabBar";
 
@@ -9,14 +9,6 @@ declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-
-vi.mock("../line/liff", () => ({
-  useLine: () => ({
-    status: "ready",
-    profile: { userId: "U1", displayName: "Bob Tanaka" },
-    inClient: true,
-  }),
-}));
 
 let host: HTMLDivElement;
 let root: Root;

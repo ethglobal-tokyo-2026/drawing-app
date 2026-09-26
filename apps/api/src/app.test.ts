@@ -12,6 +12,7 @@ import { errorBodySchema, validate } from "./errors.ts";
 import { keccak256 } from "./keccak256.ts";
 import { createDiskImageStore } from "./services/imageStore.ts";
 import { setSessionCookie, type AppEnv } from "./session.ts";
+import { sealImages } from "./stickers/testPngs.ts";
 import { createTestApp, type TestApp } from "./testing/createTestApp.ts";
 import { fakeServerLog } from "./testing/fakes.ts";
 
@@ -153,14 +154,19 @@ describe("sticker images", () => {
   const get = (path: string) => createServer(test.deps, imageDir).request(path);
 
   it("are served where their URLs point, without a session, cached for good", async () => {
-    const png = new Uint8Array([1, 2, 3]);
+    const pngs = sealImages();
     const store = createDiskImageStore(imageDir, `https://sticker.test${STICKER_IMAGES_PATH}`);
-    const contentHash = keccak256(png);
-    await store.save(contentHash, { png, mask: png, spec: png, rim: png, flat: png });
-    const response = await get(new URL(store.urls(contentHash).png).pathname);
+    const contentHash = keccak256(pngs.png);
+    await store.save(contentHash, pngs);
+    const urls = store.urls(contentHash);
+    const response = await get(new URL(urls.png).pathname);
     expect(response.status).toBe(200);
-    expect(new Uint8Array(await response.arrayBuffer())).toEqual(png);
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(pngs.png);
     expect(response.headers.get("cache-control")).toContain("immutable");
+    const webp = await get(new URL(urls.webp.sticker).pathname);
+    expect(webp.status).toBe(200);
+    expect(webp.headers.get("content-type")).toBe("image/webp");
+    expect(webp.headers.get("cache-control")).toContain("immutable");
   });
 
   it("answer a name with no image with 404, not the session check, and uncached", async () => {

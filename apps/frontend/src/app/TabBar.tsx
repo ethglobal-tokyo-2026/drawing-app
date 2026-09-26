@@ -1,9 +1,6 @@
-import { CaretUp, Eyes, Storefront } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "../i18n/react";
-import { StickerBoardIcon } from "../icons/StickerBoardIcon";
-import { useIdentity } from "../identity/useIdentity";
-import { PhotoSticker } from "../ui/PhotoSticker";
+import { CaretUp, ExploreIcon, ShopIcon, StickerBoardIcon } from "../icons";
 import "./TabBar.css";
 
 export type Tab = "board" | "explore" | "shop";
@@ -48,7 +45,6 @@ interface Props {
  */
 export function TabBar({ active, tucked, onChange }: Props) {
   const { t } = useTranslation();
-  const me = useIdentity();
   const nav = useRef<HTMLElement>(null);
   const grabber = useRef<HTMLButtonElement>(null);
   const grabY = useRef<number | null>(null);
@@ -99,6 +95,7 @@ export function TabBar({ active, tucked, onChange }: Props) {
   useEffect(() => () => clearTimeout(idle.current), []);
 
   const current = (tab: Tab) => (active === tab ? "page" : undefined);
+  const weight = (tab: Tab) => (active === tab ? "fill" : "bold");
   return (
     <>
       <nav
@@ -117,11 +114,7 @@ export function TabBar({ active, tucked, onChange }: Props) {
           aria-current={current("board")}
           onClick={() => onChange("board")}
         >
-          {me.pictureUrl ? (
-            <PhotoSticker src={me.pictureUrl} name={me.displayName} size={24} />
-          ) : (
-            <StickerBoardIcon weight={active === "board" ? "fill" : "bold"} />
-          )}
+          <StickerBoardIcon size={20} weight={weight("board")} />
           <span>{t(($) => $.app.tabs.myBoard)}</span>
         </button>
         <button
@@ -130,7 +123,7 @@ export function TabBar({ active, tucked, onChange }: Props) {
           aria-current={current("explore")}
           onClick={() => onChange("explore")}
         >
-          <Eyes size={20} weight={active === "explore" ? "fill" : "bold"} />
+          <ExploreIcon size={20} weight={weight("explore")} />
           <span>{t(($) => $.app.tabs.explore)}</span>
         </button>
         <button
@@ -139,7 +132,7 @@ export function TabBar({ active, tucked, onChange }: Props) {
           aria-current={current("shop")}
           onClick={() => onChange("shop")}
         >
-          <Storefront size={20} weight={active === "shop" ? "fill" : "bold"} />
+          <ShopIcon size={20} weight={weight("shop")} />
           <span>{t(($) => $.app.tabs.shop)}</span>
         </button>
       </nav>

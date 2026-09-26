@@ -26,7 +26,7 @@ export interface TraySticker extends TraySlot {
   width: number;
   height: number;
   outline?: string;
-  urls: Pick<StickerUrls, "png" | "mask">;
+  urls: Pick<StickerUrls, "png" | "mask" | "foil">;
   /** Drawn by someone else: a received gift. */
   gift: boolean;
   /** An NSFW sticker: it wears pink foil, whoever drew it. */
@@ -224,7 +224,7 @@ const EASE_PEEL = "cubic-bezier(.2,.7,.2,1)";
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 const SVG_NS = "http://www.w3.org/2000/svg";
 /** Phosphor's Stack and X icons, bold. */
-const ICONS = {
+export const ICONS = {
   stack:
     "M234.36,170A12,12,0,0,1,230,186.37l-96,56a12,12,0,0,1-12.1,0l-96-56a12,12,0,0,1,12.09-20.74l90,52.48L218,165.63A12,12,0,0,1,234.36,170ZM218,117.63,128,170.11,38.05,117.63A12,12,0,0,0,26,138.37l96,56a12,12,0,0,0,12.1,0l96-56A12,12,0,0,0,218,117.63ZM20,80a12,12,0,0,1,6-10.37l96-56a12.06,12.06,0,0,1,12.1,0l96,56a12,12,0,0,1,0,20.74l-96,56a12,12,0,0,1-12.1,0l-96-56A12,12,0,0,1,20,80Zm35.82,0L128,122.11,200.18,80,128,37.89Z",
   x: "M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z",
@@ -550,7 +550,7 @@ export function createTrayEngine(
         const foil = decorative(
           make(
             "span",
-            `sticker-foil sticker-foil--sheet sticker-foil--${s.nsfw ? "pink" : "holo"}`,
+            `sticker-foil sticker-foil--sheet sticker-foil--${s.nsfw ? "pink" : "holo"}${s.urls.foil ? " sticker-foil--baked" : ""}`,
             make("span", "sticker-foil__cast"),
             make(
               "span",
@@ -561,6 +561,7 @@ export function createTrayEngine(
           ),
         );
         foil.style.setProperty("--foil-i", String(s.no));
+        if (s.urls.foil) foil.style.setProperty("--foil-mask", cssUrl(s.urls.foil));
         lightUp(foil);
         fit.append(foil);
       }
@@ -693,6 +694,7 @@ export function createTrayEngine(
     t.type = "button";
     t.setAttribute("role", "tab");
     t.dataset.filter = f;
+    t.dataset.press = "";
     t.setAttribute("aria-selected", String(ui.filter === f));
     return t;
   });

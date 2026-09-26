@@ -597,6 +597,7 @@
 
 .tray__tab {
   --tab: var(--liner-lift);
+  --press-travel: 1px;
   position: relative;
   width: 46px;
   height: 24px;
@@ -616,7 +617,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Label stock cut as a folder tab. */
+/* Label stock cut as a folder tab. The chosen tab stands up, fills and casts its shadow as one move. */
 .tray__tab::before {
   content: "";
   position: absolute;
@@ -627,7 +628,10 @@
   box-shadow: inset 0 0 0 0.5px rgba(28, 24, 36, 0.2);
   transform-origin: 50% 100%;
   transform: scaleY(0.8);
-  transition: transform var(--t-stick) var(--ease-out);
+  transition:
+    transform var(--t-stick) var(--ease-out),
+    background-color 160ms linear,
+    box-shadow 160ms linear;
 }
 
 /* A thumb's reach. */
@@ -800,9 +804,15 @@
 
 @media (prefers-reduced-motion: reduce) {
   .tray__slot,
-  .tray__tab::before,
   .tray__tab span {
     transition: none;
+  }
+
+  /* A folder tab only changes color: it stands up at once. */
+  .tray__tab::before {
+    transition:
+      background-color 120ms linear,
+      box-shadow 120ms linear;
   }
 
   .tray__slot.is-target .tray__used-sticker-silhouette-ring {

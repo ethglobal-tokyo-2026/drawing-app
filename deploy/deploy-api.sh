@@ -61,6 +61,8 @@ chain_config | ssh "$TARGET" "node '$REMOTE_STAGE/install-chain-env.mjs' '$DIR/c
 if [ "$PREFLIGHT_ONLY" = true ]; then exit 0; fi
 
 SQLITE_VERSION="$(cd "$ROOT/packages/db" && node -p "require('better-sqlite3/package.json').version")"
+# sharp's exports don't include its package.json, so it's read as a file.
+SHARP_VERSION="$(cd "$ROOT/apps/api" && node -p "JSON.parse(require('fs').readFileSync('node_modules/sharp/package.json', 'utf8')).version")"
 NODE_VERSION="$(node -p "require('$ROOT/package.json').devEngines.runtime.version")"
 pnpm --dir "$ROOT" --filter @drawing-app/api build
 "$ROOT/deploy/install-node.sh" drawing-api
@@ -71,9 +73,9 @@ ssh "$TARGET" "test -d '$DIR' || sudo install -d -o \"\$(id -un)\" -g \"\$(id -g
 ssh "$TARGET" "mkdir -p '$DIR/server' '$DIR/data' '$DIR/images'"
 
 # By content, without times: every deploy rebuilds the bundle, and a new timestamp alone would restart it. The Node
-# version is in it so that a new Node reinstalls better-sqlite3 too.
-printf '{ "private": true, "type": "module", "engines": { "node": "%s" }, "dependencies": { "better-sqlite3": "%s" } }\n' \
-  "$NODE_VERSION" "$SQLITE_VERSION" >"$STAGE/package.json"
+# version is in it so that a new Node reinstalls the native modules too.
+printf '{ "private": true, "type": "module", "engines": { "node": "%s" }, "dependencies": { "better-sqlite3": "%s", "sharp": "%s" } }\n' \
+  "$NODE_VERSION" "$SQLITE_VERSION" "$SHARP_VERSION" >"$STAGE/package.json"
 changed="$(rsync -ci "$STAGE/package.json" "$TARGET:$DIR/server/package.json")"
 if [ -n "$changed" ]; then
   # With the pinned Node's npm, so native modules match the Node that loads them.

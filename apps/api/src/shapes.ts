@@ -54,6 +54,11 @@ export const toPerson = ({
 
 /** You. */
 export const meSchema = personSchema.extend({
+  /**
+   * LINE's `sub` for your account. The app opens on a lasting session only when it's the LINE user
+   * LIFF logged in. Yours alone: Person leaves it out.
+   */
+  lineUserId: userRow.shape.lineUserId,
   timeZone: userRow.shape.timeZone,
   language: userRow.shape.language,
   /** Settings' language; null follows LINE's. */
@@ -74,6 +79,7 @@ export const toMe = (
   counts: Pick<Me, "newStickerCount" | "unseenGratitudeCount">,
 ): Me => ({
   ...toPerson(user),
+  lineUserId: user.lineUserId,
   timeZone: user.timeZone,
   language: user.language,
   languageChoice: user.languageChoice,
@@ -82,14 +88,29 @@ export const toMe = (
   ...counts,
 });
 
-/** A sticker's five files on the CDN, named by its content hash. */
-export const stickerImagesSchema = z.object({
+/** The five PNGs a sticker is sealed with. The sticker PNG's hash names it and its NFT. */
+export const stickerPngsSchema = z.object({
   png: z.url(),
   mask: z.url(),
   spec: z.url(),
   rim: z.url(),
   flat: z.url(),
 });
+export type StickerPngKind = keyof z.infer<typeof stickerPngsSchema>;
+
+/** What the app shows: WebP copies of the sticker and its masks, and the foil band's mask. */
+export const stickerWebpsSchema = z.object({
+  sticker: z.url(),
+  mask: z.url(),
+  spec: z.url(),
+  rim: z.url(),
+  /** The silhouette grown to the foil band's outer edge, the image's size. */
+  foil: z.url(),
+});
+export type StickerWebpKind = keyof z.infer<typeof stickerWebpsSchema>;
+
+/** A sticker's files on the CDN, named by its content hash. */
+export const stickerImagesSchema = stickerPngsSchema.extend({ webp: stickerWebpsSchema });
 export type StickerImages = z.infer<typeof stickerImagesSchema>;
 
 export const giftStatusSchema = z.enum(giftStatuses);
@@ -123,7 +144,7 @@ export const ticketsSchema = z.object({
       id: z.number().int(),
       dayIndex: count,
       kind: z.enum(ticketKinds),
-      /** For the ticket stubs; null until its sticker is sealed. */
+      /** For the ticket stubs, with its outline simplified; null until its sticker is sealed. */
       sticker: z
         .object({ id: z.string(), outline: z.string(), width: positiveInt, height: positiveInt })
         .nullable(),

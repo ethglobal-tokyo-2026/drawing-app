@@ -85,77 +85,35 @@
   margin-left: auto;
 }
 
-/* A seal dot badge: today's date stuck on beside the title. */
-.date-badge {
-  padding: 3px 7px;
-  border: 1.5px solid var(--ink);
-  border-radius: 999px;
-  background: var(--seal);
-  font-family: var(--font-puffy);
-  font-size: 12px;
-  line-height: 1;
-  rotate: -3deg;
-}
+/* ---------- Sliding tabs: the view switch and the leaderboards ---------- */
 
-/* ---------- Today's stickers ---------- */
-
-/* A strip that bleeds off the right edge, so there's always more to swipe. */
-.todays-stickers {
-  display: flex;
-  gap: 14px;
-  margin: 0 -16px 0 0;
-  padding: 14px 16px 12px 16px;
-  list-style: none;
-  overflow-x: auto;
-  scrollbar-width: none;
-  border: 1px solid var(--rule);
-  border-right: none;
-  border-radius: 10px 0 0 10px;
-  background: var(--canvas);
-  box-shadow: var(--shadow-label);
-}
-
-.todays-stickers::-webkit-scrollbar {
-  display: none;
-}
-
-.today-sticker {
+/* A track with one label stuck on the current tab; it slides along to the next one. */
+.sliding-tabs {
+  position: relative;
   flex: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-.today-art {
-  width: 72px;
-  height: 72px;
-}
-
-.todays-stickers li:nth-child(odd) .today-art {
-  rotate: -4deg;
-}
-
-.todays-stickers li:nth-child(even) .today-art {
-  rotate: 3deg;
-}
-
-.todays-stickers .fine {
-  color: var(--ink-soft);
-}
-
-/* ---------- This week ---------- */
-
-.leaderboard-tabs {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(var(--n), 1fr);
   gap: 4px;
   padding: 4px;
   border-radius: 8px;
   background: var(--liner-deep);
 }
 
-.leaderboard-tabs button {
-  flex: 1;
+.sliding-tabs__label {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  bottom: 4px;
+  width: calc((100% - 8px - (var(--n) - 1) * 4px) / var(--n));
+  border-radius: 6px;
+  box-shadow: var(--shadow-label);
+  transform: translateX(calc(var(--i) * (100% + 4px)));
+  transition: transform 260ms var(--ease-out);
+}
+
+.sliding-tabs button {
+  position: relative;
+  min-width: 0;
   height: 34px;
   padding: 0 4px;
   border: none;
@@ -166,12 +124,59 @@
   font-weight: 700;
   white-space: nowrap;
   touch-action: manipulation;
+  transition: color 140ms linear;
 }
 
-.leaderboard-tabs button.selected {
-  background: var(--pink);
+.sliding-tabs button.selected {
   color: var(--ink);
-  box-shadow: var(--shadow-label);
+}
+
+.sliding-tabs button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* Explore's own hue for the view; pink for the leaderboards. */
+.view-switch .sliding-tabs__label {
+  background: var(--aqua);
+}
+
+.view-switch button {
+  height: 38px;
+  font-size: 15px;
+}
+
+.leaderboard-tabs .sliding-tabs__label {
+  background: var(--pink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sliding-tabs__label {
+    transition: none;
+  }
+
+  .sliding-tabs button {
+    transition: color 120ms linear;
+  }
+}
+
+/* ---------- This week ---------- */
+
+.week-resets {
+  margin: -4px 0 0;
+  text-align: right;
+}
+
+/* ---------- The pile while it loads ---------- */
+
+.pile-loading {
+  position: relative;
+  height: 250px;
+}
+
+.pile-loading__sticker {
+  position: absolute;
+  border-radius: 40% 46% 38% 44%;
 }
 
 .leaderboard {
@@ -372,65 +377,4 @@ li.me .rank {
   font-size: 14px;
   margin: 0;
   color: var(--graphite);
-}
-
-/* ---------- Feed ---------- */
-
-.feed {
-  gap: 0;
-}
-
-.feed-post {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 18px 0 20px;
-  border-bottom: 1px solid var(--rule);
-}
-
-.feed-head {
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 44px;
-}
-
-.feed-head p {
-  flex: 1;
-  margin: 0;
-  font-size: 15px;
-}
-
-.feed-head b {
-  font-weight: 800;
-}
-
-/* The artist's picture in a pink ring. */
-.feed-avatar {
-  display: inline-flex;
-  flex: none;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 1.5px var(--pink),
-    var(--shadow-label);
-}
-
-.feed-art {
-  width: 112px;
-  height: 112px;
-  margin: 16px 0 12px;
-  rotate: -3deg;
-}
-
-.feed-meta {
-  margin: 0;
-}
-
-/* A sealed sticker's image: its own cut, edge and cast are in the PNG. */
-.sticker-image {
-  display: block;
-  object-fit: contain;
 }

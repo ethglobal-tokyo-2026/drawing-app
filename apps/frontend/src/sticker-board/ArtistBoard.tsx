@@ -1,4 +1,4 @@
-import { CaretLeft, Eye, Gift, Handshake } from "@phosphor-icons/react";
+import { CaretLeft, GiveIcon, OfferIcon, ViewIcon } from "../icons";
 import { useMyAgeStatus } from "../identity/useMyAgeStatus";
 import { veiledFor } from "../stickers/nsfw";
 import {
@@ -317,7 +317,7 @@ export function ArtistBoard({ person, onBack }: Props) {
           <div className="sticker-menu-actions">
             <LabelButton
               size="sm"
-              icon={<Eye />}
+              icon={<ViewIcon />}
               onClick={() => {
                 setViewing(menuSticker);
                 setSelected(null);
@@ -328,7 +328,7 @@ export function ArtistBoard({ person, onBack }: Props) {
             <LabelButton
               size="sm"
               tone="grape"
-              icon={<Handshake />}
+              icon={<OfferIcon />}
               onClick={() => {
                 setOffering(menuSticker);
                 setSelected(null);
@@ -345,7 +345,7 @@ export function ArtistBoard({ person, onBack }: Props) {
         <Key
           size="compact"
           tone="aqua"
-          icon={<Gift />}
+          icon={<GiveIcon />}
           onClick={() => {
             setSelected(null);
             setGiving(true);

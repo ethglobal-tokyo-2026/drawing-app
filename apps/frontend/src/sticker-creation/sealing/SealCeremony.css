@@ -7,14 +7,50 @@
   color: var(--ink);
 }
 
-.seal-ceremony.is-leaving {
+/* A failed seal fades back to the drawing. */
+.seal-ceremony.is-failed {
   opacity: 0;
   transition: opacity 240ms var(--ease-out);
 }
 
-/* Off its backing, the sticker takes the ink with it; its used sticker silhouette shows where it was. */
-.drawing-screen:has(> .seal-ceremony[data-lifted]) .ink-canvas {
+/* Off its backing, the sticker takes the ink with it; its used sticker silhouette shows where it was.
+   Once the card is leaving, the sheet under it is fresh, and takes ink at once. */
+.drawing-screen:has(> .seal-ceremony[data-lifted]:not(.is-leaving)) .ink-canvas {
   opacity: 0;
+}
+
+/* The sealed card and the sticker on it, as one piece. */
+.seal-ceremony__carrier {
+  position: absolute;
+  inset: 0;
+}
+
+/* Keep drawing, or the shop: the fresh sheet and clock are already under the veil. The card carries
+   the sticker down toward the Board grabber, fading over its last half, as the veil lifts off. */
+.seal-ceremony.is-leaving {
+  pointer-events: none;
+}
+
+.seal-ceremony.is-leaving .seal-ceremony__carrier {
+  animation:
+    seal-ceremony-carry var(--t-peel) var(--ease-peel) forwards,
+    seal-ceremony-fade calc(var(--t-peel) / 2) linear calc(var(--t-peel) / 2) forwards;
+}
+
+.seal-ceremony.is-leaving .seal-ceremony__veil {
+  animation: seal-ceremony-fade var(--t-peel) linear forwards;
+}
+
+@keyframes seal-ceremony-carry {
+  to {
+    translate: 0 70%;
+  }
+}
+
+@keyframes seal-ceremony-fade {
+  to {
+    opacity: 0;
+  }
 }
 
 .seal-ceremony__dim,

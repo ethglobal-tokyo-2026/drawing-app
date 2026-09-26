@@ -1,5 +1,4 @@
 import liff from "@line/liff";
-import { ArrowSquareOut, HandHeart, X } from "@phosphor-icons/react";
 import {
   useEffect,
   useLayoutEffect,
@@ -17,7 +16,7 @@ import { useApi } from "../api/useApi";
 import type { PersonView } from "../api/views";
 import { GiftBag } from "../giving/GiftBag";
 import { Trans, useTranslation } from "../i18n/react";
-import { StickerBoardIcon } from "../icons/StickerBoardIcon";
+import { ArrowSquareOut, HandHeart, StickerBoardIcon, X } from "../icons";
 import { useIdentity } from "../identity/useIdentity";
 import { useMyAgeStatus } from "../identity/useMyAgeStatus";
 import { Duration } from "../stickers/Duration";

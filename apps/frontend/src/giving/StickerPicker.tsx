@@ -1,4 +1,4 @@
-import { Check } from "@phosphor-icons/react";
+import { Check } from "../icons";
 import { useTranslation } from "../i18n/react";
 import { formatNo } from "../stickers/format";
 import type { KeptSticker } from "../stickers/useKeptStickers";

@@ -8,7 +8,7 @@ What the server stores and serves. `packages/db` holds the schema and `apps/api`
 - **Types:** request and response types derive from the tables through drizzle-zod. The app will call routes through Hono's typed client, so UI code gets its types from the server. Until then, the shapes below are the contract.
 - **Sign-in:** every screen needs LINE Login; there are no public pages. The server verifies LIFF's ID token and sets a session cookie.
 - **Chain:** Ethereum Sepolia is the owner of record for each sticker (`StickerNFT`) and each gift in transit (`StickerGiftEscrow`). The server keeps a small index of chain state, so screens don't wait for the chain except where noted below.
-- **Images:** five files per sticker on our CDN, named by the sticker PNG's content hash. The NFT's metadata is a JSON file on the same CDN. No IPFS.
+- **Images:** each sticker's five PNGs on our CDN, and the WebP files the app shows, named by the sticker PNG's content hash. The NFT's metadata is a JSON file on the same CDN. No IPFS.
 
 ## Rules that shape the UI
 
@@ -129,21 +129,21 @@ Inserted at the first sign-in.
 
 Inserted at seal. Everything but `owner_id` and the mint is fixed then.
 
-| Column         | Type           | Values                   | Set when                                      | Meaning                                                      |
-| -------------- | -------------- | ------------------------ | --------------------------------------------- | ------------------------------------------------------------ |
-| `id`           | text, PK       | UUID                     | seal                                          | the NFT's sticker key is keccak256 of it                     |
-| `number`       | int            | 1, 2, 3…; unique         | seal                                          | shown as No.0147                                             |
-| `artist_id`    | text → users   |                          | seal                                          | the Original Artist                                          |
-| `owner_id`     | text → users   |                          | seal (the Original Artist), then each receive | who holds it now                                             |
-| `time_used`    | int            | 0–180                    | seal                                          | seconds on the drawing clock                                 |
-| `width`        | int            | > 0                      | seal                                          | the sticker image's size in pixels; all five images share it |
-| `height`       | int            | > 0                      | seal                                          |                                                              |
-| `outline`      | text           | SVG path in image pixels | seal                                          | the cut line: ticket stubs, sheet packing, silhouettes       |
-| `content_hash` | text           | `0x` + 64 hex            | seal                                          | keccak256 of the sticker PNG; names its image files          |
-| `metadata_uri` | text           | CDN URL                  | seal                                          | the NFT's tokenURI                                           |
-| `token_id`     | text, null     | uint256; unique          | the mint lands                                | null while minting is a stub                                 |
-| `mint_tx_hash` | text, null     | `0x` + 64 hex            | with `token_id`                               | for the WorldScan link                                       |
-| `ens_named_at` | int (ms), null |                          | the sticker's name lands onchain              | `<number>.<artist's ens_label>.croquis.eth`                  |
+| Column         | Type           | Values                   | Set when                                      | Meaning                                                   |
+| -------------- | -------------- | ------------------------ | --------------------------------------------- | --------------------------------------------------------- |
+| `id`           | text, PK       | UUID                     | seal                                          | the NFT's sticker key is keccak256 of it                  |
+| `number`       | int            | 1, 2, 3…; unique         | seal                                          | shown as No.0147                                          |
+| `artist_id`    | text → users   |                          | seal                                          | the Original Artist                                       |
+| `owner_id`     | text → users   |                          | seal (the Original Artist), then each receive | who holds it now                                          |
+| `time_used`    | int            | 0–180                    | seal                                          | seconds on the drawing clock                              |
+| `width`        | int            | > 0                      | seal                                          | the sticker image's size in pixels, which its masks share |
+| `height`       | int            | > 0                      | seal                                          |                                                           |
+| `outline`      | text           | SVG path in image pixels | seal                                          | the cut line: ticket stubs, sheet packing, silhouettes    |
+| `content_hash` | text           | `0x` + 64 hex            | seal                                          | keccak256 of the sticker PNG; names its image files       |
+| `metadata_uri` | text           | CDN URL                  | seal                                          | the NFT's tokenURI                                        |
+| `token_id`     | text, null     | uint256; unique          | the mint lands                                | null while minting is a stub                              |
+| `mint_tx_hash` | text, null     | `0x` + 64 hex            | with `token_id`                               | for the WorldScan link                                    |
+| `ens_named_at` | int (ms), null |                          | the sticker's name lands onchain              | `<number>.<artist's ens_label>.croquis.eth`               |
 
 - `created_at` is the seal: the sealed card's date, "Today's stickers", streak days.
 
@@ -285,7 +285,7 @@ Inserted when the receiver's Mini-game combo is recorded.
 ### Conventions
 
 - **Base path:** `/api`. JSON in and out, except sealing (multipart) and the timelapse (gzipped JSON).
-- **Session:** `POST /api/session` sets a signed, HttpOnly cookie named `session`. Every other route needs it, and returns 401 `signed_out` without it.
+- **Session:** `POST /api/session` sets a signed, HttpOnly cookie named `session`, kept for 30 days. Every other route but `DELETE /api/session` needs it, and returns 401 `signed_out` without it.
 - **Times:** ISO 8601 UTC strings, e.g. `"2026-09-26T02:15:00.000Z"`. Ticket days are `"YYYY-MM-DD"`.
 - **IDs:** people and stickers are UUID strings; gifts are `0x` + 64 hex; ticket uses are integers.
 - **Errors:** every error has this body, and its code is stable, so mocks can switch on it:
@@ -315,6 +315,7 @@ interface Person {
 
 /** You. */
 interface Me extends Person {
+  lineUserId: string | null; // LINE's sub, checked against LIFF's user before a lasting session opens the app
   createdAt: IsoTime; // the stat board's "Since"
   needsHandle: boolean; // true until the handle prompt is answered
   newStickerCount: number; // NEW in your sticker tray
@@ -329,9 +330,18 @@ interface Sticker {
   timeUsed: number; // seconds, 0–180
   width: number;
   height: number;
-  outline: string; // SVG path in image pixels
+  outline: string; // SVG path in image pixels; simplified in boards and tickets, whole in the detail
   contentHash: string;
-  images: { png: string; mask: string; spec: string; rim: string; flat: string }; // CDN URLs
+  images: {
+    // CDN URLs. The PNGs it was sealed with:
+    png: string;
+    mask: string;
+    spec: string;
+    rim: string;
+    flat: string;
+    // What the app shows, made from them:
+    webp: { sticker: string; mask: string; spec: string; rim: string; foil: string };
+  };
   tokenId: string | null; // null while minting is a stub
   mintTxHash: string | null; // for the WorldScan link
   sealedAt: IsoTime;
@@ -393,7 +403,7 @@ interface Tickets {
     id: number;
     dayIndex: number;
     kind: "daily" | "reserve";
-    sticker: { id: string; outline: string; width: number; height: number } | null; // for the ticket stubs
+    sticker: { id: string; outline: string; width: number; height: number } | null; // for the ticket stubs; outline simplified
   }>;
 }
 
@@ -469,8 +479,11 @@ interface TimelapseV1 {
 | `POST /api/me/handle`          | `{ handle: string }`: 1–32 characters after trimming, no `@`                                    | 200 `{ me: Me }`                                  | 400 `handle_invalid`; 409 `handle_taken`                                  |
 | `POST /api/me/language-choice` | `{ languageChoice: "en" \| "ja" \| null }`: Settings' language; null follows LINE's             | 200 `{ me: Me }`                                  | 400 `invalid_request`                                                     |
 | `DELETE /api/me`               | none                                                                                            | 204, clears the cookie, and unlinks the chat menu |                                                                           |
+| `DELETE /api/session`          | none; no session needed                                                                         | 204, and clears the cookie                        |                                                                           |
 
-The frontend first resumes the signed-cookie session using `GET /api/me` with the current LINE user ID. That header only restricts session reuse; it cannot authenticate a user. Only `401 signed_out` starts a new token exchange. Network failures keep a normal retry; missing or rejected LINE credentials offer an explicit reconnect that preserves the current page, including Gift Message links. Privy sign-in uses the same reconnect action when its LINE credentials are rejected.
+`Me` also carries `lineUserId`, LINE's `sub` for your own account; `Person` never does. As the app starts, while LIFF does, it asks `GET /api/me`, `GET /api/tickets` and, when it opens on the board, `GET /api/sticker-boards/me` with the cookie it has. Once LIFF is ready, it opens on those answers only when `lineUserId` is LIFF's user; otherwise it drops them unread and signs in, so another LINE user never sees them. Logging out of LINE outside LINE's app calls `DELETE /api/session` first.
+
+Without that early answer, the frontend resumes the signed-cookie session using `GET /api/me` with the current LINE user ID. That header only restricts session reuse; it cannot authenticate a user. Only `401 signed_out` starts a new token exchange. Network failures keep a normal retry; missing or rejected LINE credentials offer an explicit reconnect that preserves the current page, including Gift Message links. Privy sign-in uses the same reconnect action when its LINE credentials are rejected.
 
 ### Chat menu
 
@@ -668,4 +681,7 @@ interface LeaderboardRow {
 
 ### Images
 
-Not routes: the URLs come in `Sticker.images`. Each sticker's five files are on the CDN, named by its content hash: `{contentHash}.png`, `.mask.png`, `.spec.png`, `.rim.png` and `.flat.png`. `StickerFigure`, `PlacedSticker` and `LiveResin` read them.
+Not routes: the URLs come in `Sticker.images`. Each sticker's files are on the CDN, named by its content hash, and never change once written.
+
+- The five PNGs it was sealed with: `{contentHash}.png`, `.mask.png`, `.spec.png`, `.rim.png` and `.flat.png`. The sticker PNG's hash names the sticker and its NFT.
+- The WebP files sealing makes from them, which the app shows: `{contentHash}.webp` (the sticker, lossy with alpha), `.mask.webp`, `.spec.webp` and `.rim.webp` (lossless), and `.foil.webp`, the foil band's mask: the silhouette grown by a distance transform, the image's size. `StickerFigure`, `StickerFoil`, `PlacedSticker`, `LiveResin` and the sticker tray read them.

@@ -23,6 +23,7 @@ export const TEST_OWNER: Person = {
 /** You in tests. */
 export const TEST_ME: Me = {
   ...TEST_OWNER,
+  lineUserId: "U-you",
   timeZone: "Asia/Tokyo",
   language: "en",
   languageChoice: null,

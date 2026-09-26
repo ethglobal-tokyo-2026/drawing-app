@@ -10,10 +10,18 @@ describe("toSticker", () => {
     expect(view.artist.name).toBe("Mika Hoshino");
   });
 
-  it("leaves out images the sticker doesn't have", () => {
+  it("shows the WebP files, and leaves out images the sticker doesn't have", () => {
     const s = sticker();
-    const view = toSticker({ ...s, images: { ...s.images, mask: "", spec: "", rim: "" } });
-    expect(view.urls).toEqual({ png: s.images.png });
+    expect(toSticker(s).urls).toEqual({
+      png: s.images.webp.sticker,
+      mask: s.images.webp.mask,
+      spec: s.images.webp.spec,
+      rim: s.images.webp.rim,
+      foil: s.images.webp.foil,
+    });
+    const webp = { ...s.images.webp, mask: "", spec: "", rim: "", foil: "" };
+    const view = toSticker({ ...s, images: { ...s.images, webp } });
+    expect(view.urls).toEqual({ png: s.images.webp.sticker });
   });
 });
 

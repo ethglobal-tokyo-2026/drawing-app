@@ -57,8 +57,66 @@ async function startLine(): Promise<LineState> {
   if (liffMockActive) await initMock();
   else await liff.init({ liffId: LIFF_ID });
   if (!liff.isLoggedIn()) return { status: "logged-out" };
-  const profile = await liff.getProfile();
-  return { status: "ready", profile, inClient: liff.isInClient() };
+  const inClient = liff.isInClient();
+  // The ID token already names the person, so the app opens without waiting on another call to LINE;
+  // the profile follows, for a name or picture changed since the token was issued.
+  const claims = lineClaims();
+  if (claims?.name !== undefined) {
+    void followProfile();
+    return {
+      status: "ready",
+      profile: {
+        userId: claims.sub,
+        displayName: claims.name,
+        ...(claims.picture && { pictureUrl: claims.picture }),
+      },
+      inClient,
+    };
+  }
+  return { status: "ready", profile: await liff.getProfile(), inClient };
+}
+
+/** Who LIFF's ID token names: LINE's user ID (`sub`), and the name and picture it was issued with. */
+export interface LineClaims {
+  sub: string;
+  name?: string;
+  picture?: string;
+}
+
+/** The logged-in person as LIFF's ID token names them, or null before LIFF has one. */
+export function lineClaims(): LineClaims | null {
+  let token: ReturnType<typeof liff.getDecodedIDToken>;
+  try {
+    token = liff.getDecodedIDToken();
+  } catch {
+    // Before liff.init LIFF throws rather than answering null; either way there's no token yet.
+    return null;
+  }
+  if (!token?.sub) return null;
+  return {
+    sub: token.sub,
+    ...(token.name !== undefined && { name: token.name }),
+    ...(token.picture && { picture: token.picture }),
+  };
+}
+
+/** LINE's profile, once it answers, where it differs from what the app opened with. */
+async function followProfile() {
+  try {
+    const profile = await liff.getProfile();
+    if (state.status !== "ready") return;
+    const was = state.profile;
+    if (
+      profile.displayName !== was.displayName ||
+      profile.pictureUrl !== was.pictureUrl ||
+      profile.statusMessage !== was.statusMessage
+    ) {
+      set({ ...state, profile: { ...profile, userId: was.userId } });
+    }
+  } catch (error) {
+    // The ID token's name and picture stay, which is what the app opened with.
+    console.warn("LINE's profile didn't load", error);
+  }
 }
 
 async function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
@@ -124,6 +182,8 @@ async function initMock() {
     getContext: data.getContext && { ...data.getContext, type: "utou", utouId: "mock-utou" },
     // The REST API trusts a dev ID token only with DEV_SIGN_IN=on.
     getIDToken: devIdToken(person),
+    // The claims LINE's token would carry, which the app opens with before LINE's profile answers.
+    getDecodedIDToken: { sub: person.sub, name: person.name },
     getProfile: { userId: person.sub, displayName: person.name },
   }));
   Object.assign(window, { liffMock: mocked.$mock });
@@ -136,7 +196,16 @@ export function lineLogin() {
   liff.login({ redirectUri: location.href });
 }
 
-export function lineLogout() {
+/**
+ * Logs out of LINE. `endSession` ends the app's session first, so a browser handed to someone else
+ * holds none; LINE's logout goes ahead whether it answers or not.
+ */
+export async function lineLogout(endSession: () => Promise<void>) {
+  try {
+    await endSession();
+  } catch (error) {
+    console.error("The app's session didn't end with LINE's logout", error);
+  }
   liff.logout();
   location.reload();
 }

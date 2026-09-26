@@ -1,4 +1,4 @@
-import { ArrowClockwise } from "@phosphor-icons/react";
+import { ArrowClockwise } from "../icons";
 import { memo, useEffectEvent, useLayoutEffect, useRef } from "react";
 import { useTranslation } from "../i18n/react";
 import { formatNo, spokenDuration } from "../stickers/format";

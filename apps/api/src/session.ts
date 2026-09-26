@@ -14,11 +14,18 @@ export type AppEnv = {
 
 export const SESSION_COOKIE = "session";
 
+/**
+ * 30 days: the app opens on the cookie it already has instead of signing in again. It checks that
+ * LINE's user is the session's, through Me's `lineUserId`, before it shows anything.
+ */
+export const SESSION_MAX_AGE_S = 30 * 24 * 60 * 60;
+
 const cookieOptions = {
   path: "/api",
   httpOnly: true,
   secure: true,
   sameSite: "Lax",
+  maxAge: SESSION_MAX_AGE_S,
 } as const satisfies CookieOptions;
 
 /** Signs the person in: the cookie holds their user id, signed so it can't be forged. */

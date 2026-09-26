@@ -46,12 +46,20 @@
   transition-duration: 220ms;
 }
 
+/* Keep drawing: the fresh sheet's timer and tools come back a beat after the sealed card starts to
+   leave, so the eye goes with the card first, and the sheet is never bare. */
+.drawing-screen:has(> .seal-ceremony.is-leaving) :is(.drawing-top, .size-rail, .history-buttons) {
+  transition-delay: 120ms;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  /* Keys and labels handle their own press; everything else settles at once. */
+  /* Keys and labels handle their own press; everything else settles at once, in the same order. */
   .drawing-screen :where(:not(.key, .label-btn)),
   .drawing-screen :where(:not(.key, .label-btn))::before,
   .drawing-screen :where(:not(.key, .label-btn))::after {
     animation-duration: 1ms !important;
+    animation-delay: 0s !important;
     transition-duration: 1ms !important;
+    transition-delay: 0s !important;
   }
 }

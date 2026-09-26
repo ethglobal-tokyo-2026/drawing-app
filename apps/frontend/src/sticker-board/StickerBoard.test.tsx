@@ -15,6 +15,8 @@ import { StickerBoard } from "./StickerBoard";
 
 // The board's chat menu and Privy reach LINE's SDK; nothing here needs it to answer.
 vi.mock("@line/liff", () => ({ default: { isApiAvailable: () => false } }));
+// The stat board mounts once the board is idle; its developer slip's LINE details read LIFF's context.
+vi.mock("../line/LineDetails", () => ({ LineDetails: () => null }));
 vi.mock("../line/liff", () => ({
   liffMockActive: true,
   useLine: () => ({

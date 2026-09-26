@@ -4,17 +4,20 @@ import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
 import { resendPendingGratitude } from "../gratitude/gratitudeOutbox";
 import { useTranslation } from "../i18n/react";
+import { startPrivy } from "../identity/privyStart";
+import { ShopScreen } from "../shop/ShopScreen";
+import { whenBoardSettled } from "../sticker-board/boardSettled";
 import { StickerBoard } from "../sticker-board/StickerBoard";
 import type { DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
 import { noteBootMilestone } from "../performance/bootMilestones";
 import { markBoardComplete, usePreloadAfterBoard } from "../sticker-board/boardComplete";
 import { forgetBoardUnlessFor } from "../sticker-board/lastBoard";
+import { ReserveTicketCheckout } from "../tickets/ReserveTicketCheckout";
 import { lazyWithPreload } from "../ui/lazyWithPreload";
 import { MotionPermissionCard } from "./MotionPermissionCard";
 import type { GiftFrom } from "../receiving/ReceiveGiftDialog";
 import { openedFrom, type View } from "./openedView";
 import { changeScreen } from "./screenTransition";
-import { ShopScreen } from "./ShopScreen";
 import { TabBar } from "./TabBar";
 import { useFocusLoop } from "./useFocusLoop";
 import "./App.css";
@@ -85,6 +88,8 @@ export default function App() {
   const [boardLoads, setBoardLoads] = useState(0);
   // Someone else's sticker board, opened from Explore over it, so Explore keeps its search and scroll.
   const [visiting, setVisiting] = useState<Person>();
+  // The reserve ticket checkout, opened from the Shop over the whole phone, tabs and all.
+  const [checkingOut, setCheckingOut] = useState(false);
   const drawing = view === "draw";
   const afterTheBoard = usePreloadAfterBoard(AFTER_THE_BOARD);
   // Draw opened the drawing screen, so it stays mounted from then on.
@@ -107,6 +112,14 @@ export default function App() {
   useEffect(() => {
     void resendPendingGratitude(api);
   }, [api]);
+
+  // Privy's SDK waits for the board to settle, so it doesn't hold up the stickers. A gift needs
+  // it at once, and any other screen has no board to wait for.
+  useEffect(() => {
+    if (giftOpening) startPrivy("gift-link");
+    else if (view !== "board") startPrivy("elsewhere");
+    else void whenBoardSettled().then(() => startPrivy("board-settled"));
+  }, [giftOpening, view]);
 
   useEffect(() => {
     // While a gift is open, its dialog names the page.
@@ -177,7 +190,7 @@ export default function App() {
             />
           </Suspense>
         )}
-        {view === "shop" && <ShopScreen onDraw={openDrawing} />}
+        {view === "shop" && <ShopScreen onBuyReserveTickets={() => setCheckingOut(true)} />}
       </div>
       <TabBar
         active={drawing ? undefined : view}
@@ -190,6 +203,15 @@ export default function App() {
           });
         }}
       />
+      {checkingOut && view === "shop" && (
+        <ReserveTicketCheckout
+          onDraw={() => {
+            setCheckingOut(false);
+            openDrawing();
+          }}
+          onClose={() => setCheckingOut(false)}
+        />
+      )}
       <MotionPermissionCard />
       {giftOpening && (
         // Liner while ReceiveGiftDialog's code loads, so the board doesn't show first.

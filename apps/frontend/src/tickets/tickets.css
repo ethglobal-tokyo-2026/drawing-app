@@ -140,9 +140,47 @@
   }
 }
 
+/* Coming up as the sealed card leaves, the card rises a beat into that exit, so the two don't meet
+   head on. Its scrim comes at once, taking over from the sealed card's veil as that lifts. */
+.out-of-tickets--follows .out-of-tickets__card {
+  animation-delay: 120ms;
+}
+
+/* The ticket is spent: the card drops back the way it rose and fades, faster than it came, and its
+   scrim clears with it. The sheet under it already takes ink. */
+.out-of-tickets.is-leaving {
+  pointer-events: none;
+}
+
+/* It goes 120ms into its ticket's peel, so the peel shows first. */
+.out-of-tickets.is-leaving .out-of-tickets__card {
+  animation: out-of-tickets-drop var(--t-stick) var(--ease-soft) 120ms both;
+}
+
+.out-of-tickets.is-leaving .out-of-tickets__scrim {
+  animation: out-of-tickets-clear var(--t-stick) linear 120ms both;
+}
+
+@keyframes out-of-tickets-drop {
+  to {
+    transform: translateY(56px);
+    opacity: 0;
+  }
+}
+
+@keyframes out-of-tickets-clear {
+  to {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .out-of-tickets__scrim,
   .out-of-tickets__card {
     animation-duration: 1ms;
+  }
+
+  .out-of-tickets--follows .out-of-tickets__card {
+    animation-delay: 0s;
   }
 }
