@@ -62,6 +62,9 @@ export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref
   const [open, setOpen] = useState<Chain | null>(null);
   const opened = open && { ethereum: board, sui }[open];
   const held = open && opened?.state === "ready" ? { chain: open, address: opened.address } : null;
+  // An address lost while its dialog is up, as when Privy signs you out, takes the dialog with it for
+  // good, so it doesn't reopen by itself when the address comes back.
+  if (open && !held) setOpen(null);
 
   return (
     <>
