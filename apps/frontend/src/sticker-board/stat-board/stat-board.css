@@ -15,13 +15,14 @@
    all, when the paper runs past the foot. */
 .stat-board__cork {
   --cork: #cfa476;
+  --cork-inset: 14px;
   position: absolute;
   inset: 0;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
-  padding: 12px 14px 16px;
+  padding: 12px var(--cork-inset) 16px;
   background-color: var(--cork);
   background-image:
     radial-gradient(
@@ -629,50 +630,6 @@
   align-self: stretch;
   gap: 8px;
   margin-top: auto;
-}
-
-/* The developer slip: LINE's and Privy's details, on a slip taped across the foot of the cork. */
-.stat-board__slip {
-  margin-top: 28px;
-  transform: rotate(-0.6deg);
-}
-
-.stat-board__slip > .stat-board__paper {
-  display: grid;
-  gap: 10px;
-  padding: 18px 16px 16px;
-  clip-path: polygon(
-    0 3px,
-    8% 0,
-    17% 2px,
-    26% 0,
-    35% 3px,
-    44% 1px,
-    53% 3px,
-    62% 0,
-    71% 2px,
-    80% 0,
-    89% 3px,
-    100% 1px,
-    100% 100%,
-    0 100%
-  );
-}
-
-.stat-board__slip > .stat-board__washi {
-  left: 50%;
-  top: -7px;
-  width: 72px;
-  height: 18px;
-  margin-left: -36px;
-  transform: rotate(-2deg);
-}
-
-.stat-board__slip-h {
-  margin: 0;
-  color: var(--ink);
-  font-weight: 750;
-  letter-spacing: 0.1em;
 }
 
 /* Far enough below Try again that their touch bands don't overlap. */

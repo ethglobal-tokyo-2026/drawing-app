@@ -53,7 +53,7 @@ interface Props {
   onEscape?: () => boolean;
   /** Labels under Flip back, such as logging out of LINE on your own board. */
   afterFlipBack?: ReactNode;
-  /** Paper pinned below the stats, such as your LINE and Privy details. */
+  /** Paper pinned below the stats, such as your addresses and Settings. */
   children?: ReactNode;
   ref?: Ref<StatCorkHandle>;
 }

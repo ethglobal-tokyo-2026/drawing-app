@@ -15,6 +15,7 @@ import { QuietLink } from "../../ui/QuietLink";
 import { AddressDialog } from "./AddressDialog";
 import { AddressPapers } from "./AddressPapers";
 import { useBoardAddress, useSuiAddress, type Chain } from "./addresses";
+import { DeveloperSlip } from "./DeveloperSlip";
 import { GratitudeDemoControls } from "./GratitudeDemoControls";
 import { PerformanceRecorderControls } from "./PerformanceRecorderControls";
 import { SettingsNote } from "./SettingsNote";
@@ -100,26 +101,17 @@ export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref
           paperRefs={papers}
           onOpen={setOpen}
         />
-        {DEV_SLIP && (
-          <section
-            className="stat-board__note stat-board__slip"
-            aria-label={t(($) => $.stickerBoard.developer.label)}
-          >
-            <div className="stat-board__paper">
-              <h3 className="fine stat-board__slip-h">
-                {t(($) => $.stickerBoard.developer.title)}
-              </h3>
-              <SendTestMessage senderName={me.displayName} />
-              <LineDetails />
-              <PrivyLine />
-              <PrivyAccount />
-              <GratitudeDemoControls onTry={onTryGratitudeMiniGame} />
-              <PerformanceRecorderControls />
-            </div>
-            <i className="stat-board__washi" aria-hidden />
-          </section>
-        )}
         <SettingsNote />
+        {DEV_SLIP && (
+          <DeveloperSlip>
+            <SendTestMessage senderName={me.displayName} />
+            <LineDetails />
+            <PrivyLine />
+            <PrivyAccount />
+            <GratitudeDemoControls onTry={onTryGratitudeMiniGame} />
+            <PerformanceRecorderControls />
+          </DeveloperSlip>
+        )}
       </StatCork>
       {/* Beside the cork rather than in it, so its taps and Escape never reach the cork's own. */}
       {held && (
