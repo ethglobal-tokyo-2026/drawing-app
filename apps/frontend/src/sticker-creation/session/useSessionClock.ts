@@ -47,7 +47,7 @@ const browserFrames: FrameSource = {
 };
 
 /**
- * The session's five minutes. Frames run only while it counts, or while a hidden page's resume is
+ * The session's three minutes. Frames run only while it counts, or while a hidden page's resume is
  * due; each frame adds its delta unless something holds the clock. Stopped while sealing, it can
  * resume if the seal fails; at 0:00 it's done for good.
  */

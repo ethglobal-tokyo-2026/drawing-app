@@ -1,10 +1,10 @@
-/** A sticker gets five minutes of drawing. */
-export const SESSION_MS = 5 * 60_000;
+/** A sticker gets three minutes of drawing. */
+export const SESSION_MS = 3 * 60_000;
 /** After the first tap on the seal key, a second tap within this long seals. */
 export const ARM_WINDOW_MS = 2_500;
 
 /**
- * blank: nothing drawn; the clock waits at 5:00.
+ * blank: nothing drawn; the clock waits at 3:00.
  * drawing: the first stroke or fill spent a ticket and started the clock.
  * armed: the seal key took its first tap. sealing: building the sticker. sealed: done.
  */
@@ -36,7 +36,7 @@ export type SessionEffect =
   /** Stop the clock and build the sticker. */
   | "seal"
   | "resume-clock"
-  /** Clear the sheet and set the clock back to 5:00. */
+  /** Clear the sheet and set the clock back to 3:00. */
   | "reset-sheet";
 
 type Result = { session: Session; effects: SessionEffect[] };
