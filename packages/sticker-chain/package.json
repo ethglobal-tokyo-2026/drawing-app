@@ -6,6 +6,8 @@
   "exports": {
     "./auth-http": "./src/auth-http.ts",
     "./contracts": "./src/generated/contracts.ts",
+    "./croquis-names": "./src/croquis-names.ts",
+    "./ens-gateway": "./src/ens-gateway.ts",
     "./gift-sticker": "./src/gift-sticker.ts",
     "./line": "./src/line.ts",
     "./line-privy-jwt": "./src/line-privy-jwt.ts",

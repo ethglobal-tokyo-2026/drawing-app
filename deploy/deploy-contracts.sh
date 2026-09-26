@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# deploy/deploy-contracts.sh: deploy StickerNFT and StickerGiftEscrow to Ethereum Sepolia.
+# deploy/deploy-contracts.sh: deploy the names under croquis.eth and StickerGiftEscrow to Ethereum
+# Sepolia, keeping the StickerNFT at STICKER_NFT_ADDRESS when it is set.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -13,6 +14,8 @@ fi
 : "${ETHEREUM_SEPOLIA_RPC_URL:?set ETHEREUM_SEPOLIA_RPC_URL in deploy/.env}"
 : "${DEPLOYER_PRIVATE_KEY:?set DEPLOYER_PRIVATE_KEY in deploy/.env}"
 : "${STICKER_SEALER_PRIVATE_KEY:?set STICKER_SEALER_PRIVATE_KEY in deploy/.env}"
+: "${ENS_GATEWAY_PRIVATE_KEY:?set ENS_GATEWAY_PRIVATE_KEY in deploy/.env}"
+: "${ENS_GATEWAY_URL:?set ENS_GATEWAY_URL in deploy/.env}"
 
 cd "$ROOT/packages/sticker-chain"
 # Forge takes one RPC: the first of a comma-separated list, which the REST API tries in turn.
@@ -20,4 +23,5 @@ forge script script/DeployStickerContracts.s.sol:DeployStickerContracts \
   --rpc-url "${ETHEREUM_SEPOLIA_RPC_URL%%,*}" \
   --broadcast
 
-echo "Copy StickerNFT and StickerGiftEscrow into deploy/.env, then run ./deploy/deploy.sh."
+echo "Copy the printed STICKER_NFT_ADDRESS, STICKER_GIFT_ESCROW_ADDRESS, CROQUIS_NAMES_ADDRESS and"
+echo "CROQUIS_RESOLVER_ADDRESS into deploy/.env, then run ./deploy/deploy.sh."
