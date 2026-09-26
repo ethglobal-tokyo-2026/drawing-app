@@ -44,5 +44,6 @@ export const errors = {
   ticket_kind_changed: "Your tickets changed. Try again.",
   ticket_not_found: "That ticket isn't here.",
   ticket_not_yours: "That ticket isn't yours.",
+  timelapse_not_found: "This sticker was sealed without its timelapse.",
   user_not_found: "That artist isn't here.",
 } as const satisfies Record<ErrorCode | "unknown", string>;
