@@ -1,10 +1,5 @@
 import type { Language } from "./language";
 
-/** A translation of an English section: the same keys, any of them missing until it's complete. */
-export type Translation<T> = {
-  readonly [K in keyof T]?: T[K] extends string ? string : Translation<T[K]>;
-};
-
 /** One string, in English and, once it's translated, Japanese. Without `ja`, Japanese shows the English. */
 export interface Leaf {
   readonly en: string;

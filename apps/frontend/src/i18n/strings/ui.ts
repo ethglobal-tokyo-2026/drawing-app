@@ -1,6 +1,8 @@
+import type { Section } from "../catalog";
+
 export const ui = {
   sheet: {
     /** Names the perforation, which closes the sheet, for assistive tech; `label` names the sheet. */
-    close: "Close {{label}}",
+    close: { en: "Close {{label}}" },
   },
-} as const;
+} as const satisfies Section;
