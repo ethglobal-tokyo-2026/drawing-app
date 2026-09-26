@@ -523,6 +523,7 @@ Who drew a foil sticker: a Liner Lift pill (40px) with the artist's LINE picture
 - **First load:** when a board opens, each foil sticker's chip pops in at its top-left corner, top to bottom 80ms apart, holds about 2s and fades (3.2s in all), in one layer above every sticker and the name header. It happens once per opening. Reduced motion shows and hides it without the pop.
 - **Tapped:** the chip heads the selected sticker's menu, above its actions, until you deselect.
 - **Detail:** under the big sticker, the chip leads the fine print. Your own stickers never get a chip.
+- **Plain:** off a board, where foil never shows (Explore's lifted sticker), the chip has no ring: the picture keeps its white edge, cut from the pill by a kiss-cut, and casts a small shadow.
 
 ### Hit counter
 
