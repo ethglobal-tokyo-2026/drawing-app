@@ -7,7 +7,7 @@ What the server will store and serve, so UI work and mocks can line up with it w
 - **Server:** Hono, with SQLite through Drizzle (`packages/db`).
 - **Types:** request and response types derive from the tables through drizzle-zod. The app will call routes through Hono's typed client, so UI code gets its types from the server. Until then, the shapes below are the contract.
 - **Sign-in:** every screen needs LINE Login; there are no public pages. The server verifies LIFF's ID token and sets a session cookie.
-- **Chain:** World Chain Sepolia is the owner of record for each sticker (`StickerNFT`) and each gift in transit (`StickerGiftEscrow`). The server keeps a small index of chain state, so screens don't wait for the chain except where noted below.
+- **Chain:** Ethereum Sepolia is the owner of record for each sticker (`StickerNFT`) and each gift in transit (`StickerGiftEscrow`). The server keeps a small index of chain state, so screens don't wait for the chain except where noted below.
 - **Images:** five files per sticker on our CDN, named by the sticker PNG's content hash. The NFT's metadata is a JSON file on the same CDN. No IPFS.
 
 ## Rules that shape the UI
@@ -23,7 +23,7 @@ What the server will store and serve, so UI work and mocks can line up with it w
 ### Sealing
 
 - Sealing waits for the mint. Until Privy smart wallets are set up, the mint step is a stub: a dev toast, and a comment where the minting logic goes.
-- A sticker's number (No.0147) is separate from its NFT token ID. The sticker detail links to the token on WorldScan, World Chain's explorer.
+- A sticker's number (No.0147) is separate from its NFT token ID. The sticker detail links to the token on Sepolia Etherscan.
 
 ### Sticker Board and sticker tray
 

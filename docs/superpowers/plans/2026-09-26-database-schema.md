@@ -299,7 +299,7 @@ export const users = sqliteTable(
      */
     handle: text("handle"),
     /**
-     * The Privy smart wallet on World Chain, lowercase. Stickers are minted and claimed to it, and it
+     * The Privy smart wallet on Ethereum Sepolia, lowercase. Stickers are minted and claimed to it, and it
      * maps chain events back to a person. Set from Privy the first time the server needs it.
      */
     smartAccountAddress: text("smart_account_address").unique(),

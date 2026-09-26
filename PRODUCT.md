@@ -103,7 +103,7 @@ You can hand someone a physical drawing, but no existing system makes a _digital
 - **Wallets are invisible and made for you** **[inferred]**. A LINE account doesn't come with a usable wallet. LINE's own wallet products have closed or merged into Unifi, an opt-in wallet on a different chain. So the app's server creates each artist's wallet on first open, tied to their LINE ID, and handles every transaction. Nobody sees a wallet, a key or a signature prompt.
 - **Notices go through the app's LINE Official Account** **[inferred]**; ad0ll was fine either way. It's the only way to reach someone outside the app, because LINE's browser has no web push. The same account's chat carries a Draw · Explore · You menu, which is how people come back daily. Pending gifts and offers also show inside the app.
 - **Navigation** (from the sketch): three tabs, **DRAW · Explore · You**.
-- **Sponsors** (backend only; never surfaced in consumer copy): ENS gives each artist a sub-registry that resolves their sketchbook, and transfers update it. Sui/Walrus or Filecoin for file storage. Worldcoin is undecided.
+- **Sponsors** (backend only; never surfaced in consumer copy): ENS gives each artist a sub-registry that resolves their sketchbook, and transfers update it. Sui/Walrus or Filecoin for file storage.
 - **Open, and not to be invented as settled:** what the sketch's "inspired" and "magic" gratitude categories measure; how the leaderboard is scoped; what happens to gratitude offered for a piece; LIFF app or MINI App channel; the product name.
 
 ## Brand Commitments
