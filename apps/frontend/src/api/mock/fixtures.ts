@@ -46,7 +46,8 @@ export function sticker(overrides: Partial<Sticker> = {}): Sticker {
     timeUsed: 172,
     width: ART_PX,
     height: ART_PX,
-    outline: `M0 0H${ART_PX}V${ART_PX}H0Z`,
+    // Point pairs only, as the seal writes a cut line and the sticker tray reads one.
+    outline: `M0 0L${ART_PX} 0L${ART_PX} ${ART_PX}L0 ${ART_PX}Z`,
     contentHash: `0x${made.toString(16).padStart(64, "0")}`,
     images: imagesOf("sunset"),
     tokenId: null,
