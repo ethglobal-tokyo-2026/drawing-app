@@ -28,6 +28,7 @@ import { SealKey } from "./SealKey";
 import { makeSticker, type SealedSticker } from "./sealing/makeSticker";
 import { SealCeremony } from "./sealing/SealCeremony";
 import type { Box } from "./sealing/sealTimeline";
+import { encodeTimelapse, gzipTimelapse } from "./sealing/timelapse";
 import { loadKeptSession, SessionKeeper, type KeptSession } from "./session/keptSession";
 import {
   ARM_WINDOW_MS,
@@ -193,6 +194,18 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     };
   }
 
+  /** How the sticker was drawn, gzipped; null when it can't be made, and the sticker seals without it. */
+  async function timelapseOf(sticker: SealedSticker, ink: HTMLCanvasElement) {
+    try {
+      const ops = canvas.current?.ops() ?? [];
+      const density = canvas.current?.inkDensity() ?? 1;
+      return await gzipTimelapse(encodeTimelapse({ ops, ink, place: sticker.place, density }));
+    } catch (error) {
+      console.error("The timelapse couldn’t be made, so the sticker seals without it", error);
+      return null;
+    }
+  }
+
   async function seal() {
     setPanel(null);
     canvas.current?.finishStroke();
@@ -217,6 +230,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         return;
       }
       if (ticket.current === null) throw new Error("this sheet has no ticket to seal it on");
+      const timelapse = ink && (await timelapseOf(sticker, ink));
       const { sticker: sealedSticker } = await api.seal({
         ticketUseId: ticket.current,
         timeUsed,
@@ -228,6 +242,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         spec: sticker.spec,
         rim: sticker.rim,
         flat: sticker.flat,
+        ...(timelapse && { timelapse }),
       });
       ticket.current = null;
       keeper.wipe();

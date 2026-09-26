@@ -1,11 +1,12 @@
 import type { AppType, ErrorBody, Me, TicketKind } from "@drawing-app/api/client";
-import { hc } from "hono/client";
+import { hc, type InferRequestType } from "hono/client";
 import { ApiError, type ApiClient, type GiftOpening } from "./apiClient";
 
 /** A request that hasn't answered by then fails with Try again, rather than hanging the screen. */
 const REQUEST_TIMEOUT_MS = 15_000;
 /** Sealing uploads five images, which takes longer on a phone's connection. */
 const SEAL_TIMEOUT_MS = 60_000;
+const RECEIVE_TIMEOUT_MS = 120_000;
 
 const isErrorBody = (v: unknown): v is ErrorBody =>
   typeof v === "object" &&
@@ -87,7 +88,9 @@ function claimOf(body: GiftOpening) {
 /** Signing in and your account, which the app needs before any screen can load. */
 export interface SessionApi {
   /** POST /api/session */
-  signIn: (request: { idToken: string; timeZone: string }) => Promise<{ me: Me }>;
+  signIn: (
+    request: InferRequestType<ServerClient["session"]["$post"]>["json"],
+  ) => Promise<{ me: Me }>;
   /** GET /api/me */
   me: () => Promise<{ me: Me }>;
   /** POST /api/me/handle */
@@ -170,6 +173,11 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
             spec: png(request.spec, "spec.png"),
             rim: png(request.rim, "rim.png"),
             flat: png(request.flat, "flat.png"),
+            ...(request.timelapse && {
+              timelapse: new File([request.timelapse], "timelapse.json.gz", {
+                type: "application/gzip",
+              }),
+            }),
           },
         },
         { init: { signal: AbortSignal.timeout(SEAL_TIMEOUT_MS) } },
@@ -241,7 +249,10 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       return response.json();
     },
     receiveGift: async (body) => {
-      const response = await api.gifts.receive.$post({ json: claimOf(body) });
+      const response = await api.gifts.receive.$post(
+        { json: claimOf(body) },
+        { init: { signal: AbortSignal.timeout(RECEIVE_TIMEOUT_MS) } },
+      );
       if (!response.ok) throw await refusal(response, "POST /api/gifts/receive");
       return response.json();
     },

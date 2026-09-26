@@ -1,5 +1,6 @@
 import liff from "@line/liff";
 import { useSyncExternalStore } from "react";
+import { liffMockActive } from "../line/liff";
 
 // The Privy app. It isn't secret: Privy's SDK sends it with every request.
 export const PRIVY_APP_ID = "cmuh4s0lz01fn0cl143lomlzj";
@@ -13,10 +14,14 @@ export type PrivyStatus =
       wallet?: string;
       /** Once smart wallets are on: the account that holds the person's stickers. */
       smartAccount?: string;
+      /** The Sui address, which MakeSuiWallet asks Privy for once the Ethereum one exists. */
+      suiWallet?: string;
     }
-  | { state: "failed"; reason: string };
+  | { state: "failed"; reason: string }
+  /** On the dev server under LIFF Mock, whose sign-in isn't LINE's, so the auth server would refuse it. */
+  | { state: "off" };
 
-let status: PrivyStatus = { state: "signing-in" };
+let status: PrivyStatus = liffMockActive ? { state: "off" } : { state: "signing-in" };
 const listeners = new Set<() => void>();
 
 export function setPrivyStatus(next: PrivyStatus) {

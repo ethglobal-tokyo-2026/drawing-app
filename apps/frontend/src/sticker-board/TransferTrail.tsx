@@ -1,6 +1,7 @@
 import { CaretDown, CaretRight, Heart, Play } from "@phosphor-icons/react";
 import { useState } from "react";
 import type { PersonView } from "../api/views";
+import { formatCount } from "../i18n/format";
 import { formatMonthDay } from "../stickers/format";
 import {
   artistShareLine,
@@ -20,8 +21,6 @@ interface Props {
   /** Plays a gratitude replay; without it there's no Replay button. */
   onReplay?: (giftId: string) => void;
 }
-
-const amount = (n: number) => n.toLocaleString("en-US");
 
 /**
  * Where a sticker has been: one row per hand-off, newest first. One row is open at a time, the
@@ -71,7 +70,7 @@ export function TransferTrail({ rows, viewerId, artist, onReplay }: Props) {
                   {sentence(r)}
                   <span className="transfer-trail__amount">
                     <Heart size={13} weight="fill" aria-hidden />
-                    {amount(g.total)}
+                    {formatCount(g.total)}
                     <span className="visually-hidden"> gratitude</span>
                   </span>
                   <CaretRight size={14} aria-hidden className="transfer-trail__caret" />
@@ -89,9 +88,9 @@ export function TransferTrail({ rows, viewerId, artist, onReplay }: Props) {
                 </span>
                 <span className="transfer-trail__sum">
                   <span
-                    className={`transfer-trail__total ${amount(g.total).length > 5 ? "is-long" : ""}`}
+                    className={`transfer-trail__total ${formatCount(g.total).length > 5 ? "is-long" : ""}`}
                   >
-                    {amount(g.total)}
+                    {formatCount(g.total)}
                   </span>
                   <span className="fine transfer-trail__from">
                     {from === "you" ? "From you" : `From ${from}`}
@@ -101,7 +100,7 @@ export function TransferTrail({ rows, viewerId, artist, onReplay }: Props) {
                   <button
                     type="button"
                     className="transfer-trail__replay"
-                    aria-label={`Play the replay of ${from === "you" ? "your" : `${from}’s`} ${amount(g.total)} gratitude`}
+                    aria-label={`Play the replay of ${from === "you" ? "your" : `${from}’s`} ${formatCount(g.total)} gratitude`}
                     onClick={() => onReplay(r.giftId)}
                   >
                     <Play size={16} aria-hidden />

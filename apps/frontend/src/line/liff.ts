@@ -8,7 +8,7 @@ export const LIFF_ID =
   (import.meta.env.DEV && import.meta.env.VITE_LIFF_ID) || "2011732197-P98cxGpu";
 
 /** LIFF Mock answers for LINE on the dev server unless `.env` switches it off; builds always use LINE. */
-const liffMockActive = import.meta.env.DEV && import.meta.env.VITE_LIFF_MOCK !== "off";
+export const liffMockActive = import.meta.env.DEV && import.meta.env.VITE_LIFF_MOCK !== "off";
 
 interface LineProfile {
   userId: string;

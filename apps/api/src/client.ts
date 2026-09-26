@@ -1,7 +1,20 @@
 import { hc } from "hono/client";
+import type { ExtractSchema } from "hono/types";
+import type { ClientErrorStatusCode, ServerErrorStatusCode } from "hono/utils/http-status";
 import type { AppType } from "./app.ts";
 
 export type { AppType };
+
+type Schema = ExtractSchema<AppType>;
+type Endpoint = { [Path in keyof Schema]: Schema[Path][keyof Schema[Path]] }[keyof Schema];
+type ErrorOutput = Extract<
+  Endpoint,
+  { status: ClientErrorStatusCode | ServerErrorStatusCode }
+>["output"];
+
+/** Every `error` code a route answers, from the routes' own types: `apiError` keeps each code's literal. */
+export type ApiErrorCode = ErrorOutput extends { error: infer Code extends string } ? Code : never;
+export { MAX_TIMELAPSE_BYTES } from "./stickers/timelapseLimit.ts";
 
 // The contract's shapes, for the app's screens: each is the type its route's schema checks.
 export type { ErrorBody } from "./errors.ts";

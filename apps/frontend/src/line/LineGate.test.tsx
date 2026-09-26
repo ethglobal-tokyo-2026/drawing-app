@@ -2,6 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { i18next } from "../i18n/i18n";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -29,7 +30,7 @@ async function openApp() {
   await act(async () => {
     root.render(
       <LineGate>
-        <p>board</p>
+        <p>{"board"}</p>
       </LineGate>,
     );
   });
@@ -46,9 +47,10 @@ beforeEach(() => {
   root = createRoot(host);
 });
 
-afterEach(() => {
+afterEach(async () => {
   act(() => root.unmount());
   host.remove();
+  await i18next.changeLanguage("en");
   vi.restoreAllMocks();
   vi.useRealTimers();
 });
@@ -67,6 +69,16 @@ describe("LineGate", () => {
     await openApp();
     await settle();
     expect(host.textContent).toContain("Log in with LINE");
+  });
+
+  it("asks in Japanese to log in with LINE", async () => {
+    liff.init.mockResolvedValue();
+    liff.isLoggedIn.mockReturnValueOnce(false);
+    await openApp();
+    await settle();
+    // After openApp, whose fresh import of the gate starts i18next again in English.
+    await act(() => i18next.changeLanguage("ja"));
+    expect(host.textContent).toContain("LINEでログイン");
   });
 
   it("says it's opening while LINE starts, and ends a start LINE never answers on the error screen", async () => {

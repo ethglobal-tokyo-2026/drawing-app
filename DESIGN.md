@@ -31,25 +31,25 @@ colors:
   cork: "#CFA476"
 typography:
   display:
-    fontFamily: "Dela Gothic One, Mona Sans, system-ui, sans-serif"
+    fontFamily: "Dela Gothic One, Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "20px"
     fontWeight: 400
     lineHeight: 1
     letterSpacing: "0.01em"
   display-lg:
-    fontFamily: "Dela Gothic One, Mona Sans, system-ui, sans-serif"
+    fontFamily: "Dela Gothic One, Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "23px"
     fontWeight: 400
     lineHeight: 1
     letterSpacing: "0.01em"
   display-sm:
-    fontFamily: "Dela Gothic One, Mona Sans, system-ui, sans-serif"
+    fontFamily: "Dela Gothic One, Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "17px"
     fontWeight: 400
     lineHeight: 1
     letterSpacing: "0.01em"
   figure:
-    fontFamily: "Mona Sans, system-ui, sans-serif"
+    fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "44px"
     fontWeight: 900
     lineHeight: 0.95
@@ -57,34 +57,34 @@ typography:
     fontFeature: "tnum"
     fontVariation: "'wdth' 125"
   headline:
-    fontFamily: "Mona Sans, system-ui, sans-serif"
+    fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "26px"
     fontWeight: 800
     lineHeight: 1.08
     letterSpacing: "-0.015em"
     fontVariation: "'wdth' 112"
   title:
-    fontFamily: "Mona Sans, system-ui, sans-serif"
+    fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "22px"
     fontWeight: 800
     lineHeight: 1.1
     letterSpacing: "-0.012em"
     fontVariation: "'wdth' 112"
   body:
-    fontFamily: "Mona Sans, system-ui, sans-serif"
+    fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "15px"
     fontWeight: 400
     lineHeight: 1.42
     fontVariation: "'wdth' 100"
   label:
-    fontFamily: "Mona Sans, system-ui, sans-serif"
+    fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "15px"
     fontWeight: 700
     lineHeight: 1.1
     letterSpacing: "0.004em"
     fontVariation: "'wdth' 100"
   fine:
-    fontFamily: "Mona Sans, system-ui, sans-serif"
+    fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "11px"
     fontWeight: 650
     lineHeight: 1.3
@@ -291,7 +291,7 @@ The palette is Liner and Ink, plus five candy-bright coded fields, each with one
 ### Tertiary
 
 - **Grape** (grape): received, offers, and reserve tickets. The Accept key on a gift, the ticket shop's Pay key and picked pack, the Use a reserve ticket key, the Shop tab, the Send offer key, Offer for it on someone else's board, the tray's Gifts folder tab, received-sticker marks, and the ruled lines of the notebook scrap on the cork back.
-- **Tomato** (tomato): can't undo. Stopped states, warnings and Take the original. It's never a key.
+- **Tomato** (tomato): can't undo. Stopped states and warnings. It's never a key.
 - **Foil** (foil-pink, foil-peach, foil-lemon, foil-aqua, foil-sky, foil-lilac): six iridescent bands, one 96px period, that flow along a sticker's foil band and turn in the ring round the artist chip's picture. It isn't a fill color. It's a material worn only by a sticker drawn by someone other than the board's owner. It has no green.
 
 ### Lips (deep partners)
@@ -333,7 +333,7 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 ## Typography
 
 **Display Font:** Dela Gothic One (with Mona Sans fallback)
-**Body Font:** Mona Sans, a variable font with a width axis (with system-ui fallback)
+**Body Font:** Mona Sans, a variable font with a width axis (with Zen Kaku Gothic New for Japanese, then system-ui)
 **Japanese:** Zen Kaku Gothic New (with Hiragino Sans fallback)
 **Platform chrome:** the native system stack (-apple-system, SF Pro Text, Hiragino Sans), used only inside mocked LINE and iOS UI.
 
@@ -432,7 +432,7 @@ Everything that isn't the key: the same construction at a third of the depth, wi
 - **Coded:** seal, aqua, pink, grape and tomato faces take their deep partner as the lip and a 22% edge. The ink variant has a near-black lip and Liner text.
 - **Held:** while held, the face also takes a 10% shade, since 2px of travel is small.
 - **Quiet link:** text with a 1px underline at a 3px offset, in Graphite, with no stock and no travel. It turns Ink on press. It's the way out under a key.
-- **Where it goes:** a secondary action beside or under a key (Go to sticker board, Give under Send gratitude), and coded actions in toolbars and rows (Give, View, Remove on a selected sticker; Take the original in tomato). Three keys in a row would read as a keyboard.
+- **Where it goes:** a secondary action beside or under a key (Go to sticker board, Give under Send gratitude), and coded actions in toolbars and rows (Give, View, Remove on a selected sticker). Three keys in a row would read as a keyboard.
 - **Not buttons:** drawing tools, undo and redo, and close, back and header icons stay flat tiles. Chips, filters, segments and radio rows are selectable labels whose selection is their feedback. Gestures (hold to tear, the gift's pull tab, the zip, grabbers, the heart, the tray's sheets) keep their own physics.
 
 ### The press

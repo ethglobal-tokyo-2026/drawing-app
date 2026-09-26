@@ -160,6 +160,7 @@ contracts/**/.gas-snapshot
 
 # Sticker chain Foundry cache
 packages/sticker-chain/cache/
+packages/sticker-chain/broadcast/
 
 # yarn v3
 .pnp.*

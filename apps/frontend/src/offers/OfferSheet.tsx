@@ -1,6 +1,7 @@
 import { ArrowsLeftRight, ChatCircleDots, Heart, PaperPlaneTilt, X } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { PersonView } from "../api/views";
+import { formatCount } from "../i18n/format";
 import type { BoardStickerView } from "../sticker-board/boardSticker";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
@@ -170,7 +171,7 @@ export function OfferSheet({ sticker, holder, onClose }: Props) {
                       className={amount === a ? "chosen" : ""}
                       onClick={() => setAmount(a)}
                     >
-                      {a.toLocaleString("en-US")}
+                      {formatCount(a)}
                     </button>
                   ))}
                 </div>

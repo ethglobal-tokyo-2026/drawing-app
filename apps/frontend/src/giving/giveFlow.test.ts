@@ -36,6 +36,7 @@ function fakeBackend() {
           fromHandle: "alice",
           no: sticker.no,
           timeUsed: sticker.timeUsed,
+          language: "en",
         }),
       });
     },
@@ -206,6 +207,24 @@ describe("giving through a LINE chat", () => {
     await wait(PICKER_DELAY * 2);
     expect(t.failure()).toContain("not_minted");
     expect(t.messages).toHaveLength(0);
+  });
+
+  it("keeps a taking-out failure visible and lets the person retry", async () => {
+    const server = fakeBackend();
+    const takeOut = vi
+      .fn(server.backend.takeOut)
+      .mockRejectedValueOnce(new Error("Gas sponsorship failed"));
+    const t = setup({ backend: { ...server.backend, takeOut } });
+    t.flow.chooseLineChat();
+    await wait();
+    t.flow.takeOut();
+    await wait(TAKE_OUT);
+    expect(t.failure()).toContain("Gas sponsorship failed");
+    expect(server.states()).toEqual(["packed"]);
+    t.flow.takeOut();
+    await wait(TAKE_OUT);
+    expect(t.step()).toBe("sheet");
+    expect(server.states()).toEqual(["taken_out"]);
   });
 
   it("still records the outcome when the flow closes mid-send", async () => {

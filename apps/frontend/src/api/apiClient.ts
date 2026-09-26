@@ -1,4 +1,5 @@
 import type {
+  ApiErrorCode,
   ErrorBody,
   Explore,
   Gift,
@@ -36,6 +37,8 @@ interface SealRequest {
   spec: Blob;
   rim: Blob;
   flat: Blob;
+  /** The gzipped TimelapseV1; a seal without one still seals. */
+  timelapse?: Blob;
 }
 
 /** Opening a Gift Message's link: its token as the link carries it, which the client checks. */
@@ -76,7 +79,7 @@ export interface ApiClient {
   /** POST /api/gifts: a new gift of the sticker, or the one already in the bag. */
   packageGift: (stickerId: string) => Promise<PackagedGift>;
   /** POST /api/gifts/:giftId/deposit */
-  reportDeposit: (giftId: string, txHash: string) => Promise<Gift>;
+  reportDeposit: (giftId: string, txHash?: string) => Promise<Gift>;
   /** POST /api/gifts/:giftId/shared */
   reportShared: (giftId: string, outcome: "sent" | "cancelled") => Promise<Gift>;
   /** POST /api/gifts/:giftId/take-out */
@@ -102,6 +105,10 @@ export interface ApiClient {
   /** GET /api/users?handle= */
   searchUsers: (handle: string) => Promise<Person[]>;
 }
+
+/** Codes the app makes itself: no answer, and no LINE ID token to sign in with. */
+type ClientErrorCode = "network" | "no_line_token";
+export type ErrorCode = ApiErrorCode | ClientErrorCode;
 
 /** A refused or failed request: the HTTP status and the REST doc's error body. Status 0 is no answer. */
 export class ApiError extends Error {

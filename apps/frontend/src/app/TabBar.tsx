@@ -1,5 +1,6 @@
 import { CaretUp, Eyes, Storefront } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "../i18n/react";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { useIdentity } from "../identity/useIdentity";
 import { PhotoSticker } from "../ui/PhotoSticker";
@@ -46,6 +47,7 @@ interface Props {
  * grabber is a label-stock pull tab that says where it goes.
  */
 export function TabBar({ active, tucked, onChange }: Props) {
+  const { t } = useTranslation();
   const me = useIdentity();
   const nav = useRef<HTMLElement>(null);
   const grabber = useRef<HTMLButtonElement>(null);
@@ -102,7 +104,7 @@ export function TabBar({ active, tucked, onChange }: Props) {
       <nav
         ref={nav}
         className={`tabs ${tucked ? "is-tucked" : ""} ${peeking ? "is-peeking" : ""}`}
-        aria-label="App sections"
+        aria-label={t(($) => $.app.tabs.sections)}
         inert={tucked && !peeking}
         onPointerDown={keepUp}
         onPointerMove={keepUp}
@@ -120,7 +122,7 @@ export function TabBar({ active, tucked, onChange }: Props) {
           ) : (
             <StickerBoardIcon weight={active === "board" ? "fill" : "bold"} />
           )}
-          <span>My board</span>
+          <span>{t(($) => $.app.tabs.myBoard)}</span>
         </button>
         <button
           className="tab tab-explore"
@@ -129,7 +131,7 @@ export function TabBar({ active, tucked, onChange }: Props) {
           onClick={() => onChange("explore")}
         >
           <Eyes size={20} weight={active === "explore" ? "fill" : "bold"} />
-          <span>Explore</span>
+          <span>{t(($) => $.app.tabs.explore)}</span>
         </button>
         <button
           className="tab tab-shop"
@@ -138,7 +140,7 @@ export function TabBar({ active, tucked, onChange }: Props) {
           onClick={() => onChange("shop")}
         >
           <Storefront size={20} weight={active === "shop" ? "fill" : "bold"} />
-          <span>Shop</span>
+          <span>{t(($) => $.app.tabs.shop)}</span>
         </button>
       </nav>
       {tucked && (
@@ -146,7 +148,7 @@ export function TabBar({ active, tucked, onChange }: Props) {
           ref={grabber}
           type="button"
           className={`tab-grabber ${grabbed ? "" : "is-pull-tab"} ${peeking ? "is-hidden" : ""}`}
-          aria-label="Show the My board, Explore and Shop tabs"
+          aria-label={t(($) => $.app.tabs.showTabs)}
           aria-expanded={peeking}
           tabIndex={peeking ? -1 : undefined}
           onPointerDown={(e) => {
@@ -167,7 +169,7 @@ export function TabBar({ active, tucked, onChange }: Props) {
           ) : (
             <span className="tab-pull">
               <CaretUp />
-              Board
+              {t(($) => $.app.tabs.grabber)}
             </span>
           )}
         </button>

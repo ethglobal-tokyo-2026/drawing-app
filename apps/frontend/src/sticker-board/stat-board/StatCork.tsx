@@ -10,6 +10,7 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
+import { formatCount } from "../../i18n/format";
 import { formatDay, formatHandle } from "../../stickers/format";
 import { LabelButton } from "../../ui/LabelButton";
 import { useReducedMotion } from "../../ui/useReducedMotion";
@@ -52,8 +53,7 @@ interface Props {
   ref?: Ref<StatCorkHandle>;
 }
 
-const num = (n: number) => n.toLocaleString("en-US");
-const days = (n: number) => `${num(n)} ${n === 1 ? "day" : "days"}`;
+const days = (n: number) => `${formatCount(n)} ${n === 1 ? "day" : "days"}`;
 
 /** A figure that can't be known, because what it's drawn from didn't load. */
 function Unknown() {
@@ -65,7 +65,7 @@ function Unknown() {
   );
 }
 
-const figure = (n: number | null) => (n === null ? <Unknown /> : num(n));
+const figure = (n: number | null) => (n === null ? <Unknown /> : formatCount(n));
 
 const GRATITUDE_KINDS = [
   { key: "inspired", label: "Inspired", reason: "Gratitude for stickers they gave." },
@@ -166,10 +166,7 @@ export function StatCork({
                 aria-hidden
               />
               <h2 className="stat-board__name">{f.name}</h2>
-              <p className="fine stat-board__handle">
-                {formatHandle(f.handle)} ·{" "}
-                {f.own ? "name and picture from LINE" : "from their LINE profile"}
-              </p>
+              <p className="fine stat-board__handle">{formatHandle(f.handle)}</p>
             </div>
           </div>
 
@@ -194,7 +191,7 @@ export function StatCork({
                         <i className={`stat-board__receipt-dot is-${k.key}`} aria-hidden />
                         <b>{k.label}</b>
                         <span className="stat-board__receipt-amount">
-                          {num(f.gratitude?.[k.key] ?? 0)}
+                          {formatCount(f.gratitude?.[k.key] ?? 0)}
                         </span>
                         <small>{k.reason}</small>
                       </li>
@@ -211,7 +208,7 @@ export function StatCork({
                 )}
                 <p className="stat-board__receipt-total">
                   <span className="fine">Total</span>
-                  <b>{f.gratitude ? num(gratitudeTotal) : <Unknown />}</b>
+                  <b>{f.gratitude ? formatCount(gratitudeTotal) : <Unknown />}</b>
                 </p>
               </div>
             </section>
@@ -238,12 +235,14 @@ export function StatCork({
                     <dt>
                       Best combo<small>Most hits in one gratitude combo</small>
                     </dt>
-                    <dd>{f.bestCombo === null ? "None yet" : `×${num(f.bestCombo)}`}</dd>
+                    <dd>{f.bestCombo === null ? "None yet" : `×${formatCount(f.bestCombo)}`}</dd>
                   </div>
                   <div>
                     <dt>Most gratitude in a day</dt>
                     <dd>
-                      {f.mostGratitudeInADay === null ? "None yet" : num(f.mostGratitudeInADay)}
+                      {f.mostGratitudeInADay === null
+                        ? "None yet"
+                        : formatCount(f.mostGratitudeInADay)}
                     </dd>
                   </div>
                 </dl>
@@ -276,7 +275,7 @@ export function StatCork({
                   </p>
                 ) : f.streak.current > 0 ? (
                   <p className="stat-board__leaf-n">
-                    <b>{num(f.streak.current)}</b>
+                    <b>{formatCount(f.streak.current)}</b>
                     <span className="fine">{f.streak.current === 1 ? "day" : "days"}</span>
                   </p>
                 ) : (

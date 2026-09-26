@@ -6,6 +6,7 @@ import type { GiftPreview, ReceivedGift, ReceiveRefusal } from "@drawing-app/api
 import { people, sticker } from "../api/testFixtures";
 import { emptyApi, renderWithApi } from "../api/testing";
 import { toPerson } from "../api/views";
+import { i18next } from "../i18n/i18n";
 import { PULL } from "./pullTab";
 import type { RefusalKind } from "./receiveFlow";
 import { refusalScreen } from "./refusals";
@@ -191,5 +192,19 @@ describe("ReceiveGiftDialog", () => {
     press("Not now");
     expect(onClose).toHaveBeenCalledWith();
     expect(receiveGift).not.toHaveBeenCalled();
+  });
+
+  it("points the terms line's links at the /ja/ pages in Japanese", async () => {
+    await i18next.changeLanguage("ja");
+    try {
+      await unpackage(vi.fn(() => Promise.resolve(received)));
+      const links = [...document.querySelectorAll(".receive-gift__terms a")];
+      expect(links.map((a) => a.getAttribute("href"))).toEqual([
+        "/ja/terms.html",
+        "/ja/privacy.html",
+      ]);
+    } finally {
+      await act(() => i18next.changeLanguage("en"));
+    }
   });
 });

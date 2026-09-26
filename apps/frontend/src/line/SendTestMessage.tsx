@@ -1,6 +1,7 @@
 import liff from "@line/liff";
 import { PaperPlaneTilt } from "@phosphor-icons/react";
 import { useState } from "react";
+import { useTranslation } from "../i18n/react";
 import { LabelButton } from "../ui/LabelButton";
 import { canOpenPicker, sendInLineChat } from "./friendPicker";
 import "./send-test-message.css";
@@ -17,13 +18,14 @@ type Status =
  * be tested before anyone has drawn.
  */
 export function SendTestMessage({ senderName }: { senderName: string }) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const available = canOpenPicker(liff);
 
   const send = async () => {
     setStatus({ kind: "picking" });
     try {
-      const text = `Test message from Sticker Board, sent by ${senderName} through LINE’s friend picker.`;
+      const text = t(($) => $.line.developer.testMessage.message, { name: senderName });
       setStatus({ kind: await sendInLineChat(liff, [{ type: "text", text }]) });
     } catch (error) {
       console.error(error);
@@ -39,18 +41,18 @@ export function SendTestMessage({ senderName }: { senderName: string }) {
         disabled={!available || status.kind === "picking"}
         onClick={send}
       >
-        Send a test message
+        {t(($) => $.line.developer.testMessage.send)}
       </LabelButton>
       <p className="test-message-status" role="status">
         {!available
-          ? "LINE’s friend list isn’t available here. It needs LINE Login, in LINE or a browser."
+          ? t(($) => $.line.developer.testMessage.unavailable)
           : status.kind === "sent"
-            ? "Sent. It’s in your chat with the friend you picked."
+            ? t(($) => $.line.developer.testMessage.sent)
             : status.kind === "cancelled"
-              ? "Nothing sent: the friend list was closed."
+              ? t(($) => $.line.developer.testMessage.cancelled)
               : status.kind === "failed"
                 ? status.reason
-                : "Pick one LINE friend and they get a test message from you."}
+                : t(($) => $.line.developer.testMessage.pick)}
       </p>
     </div>
   );

@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import type { StickerDetail as StickerDetailResponse } from "@drawing-app/api/client";
 import { useApiQuery } from "../api/useApiQuery";
 import { toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
+import { errorReason } from "../i18n/errorMessage";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatMonthDay, formatNo } from "../stickers/format";
@@ -19,7 +20,6 @@ import { useReducedMotion } from "../ui/useReducedMotion";
 import { handleOf, onItsWay, type BoardStickerView } from "./boardSticker";
 import { useDetailLift } from "./detailLift";
 import { swipeLock, swipeTo } from "./detailPaging";
-import { TakeTheOriginal } from "./TakeTheOriginal";
 import { TransferTrail } from "./TransferTrail";
 import { toTrailRows } from "./trailRows";
 import "./sticker-detail.css";
@@ -378,8 +378,7 @@ export function StickerDetail({
             {detail.state === "failed" && (
               <p className="fine sticker-detail__check-failed" role="alert">
                 Couldn’t load where it’s been, or whether you’ve sent gratitude for it:{" "}
-                {detail.error.detail ?? detail.error.code}{" "}
-                <QuietLink onClick={detail.retry}>Try again</QuietLink>
+                {errorReason(detail.error)} <QuietLink onClick={detail.retry}>Try again</QuietLink>
               </p>
             )}
             {trail.length > 0 && ownerId && (
@@ -390,9 +389,6 @@ export function StickerDetail({
                 viewerId={ownerId}
                 artist={sticker.artist}
               />
-            )}
-            {mode === "yours" && sticker.held && !onItsWay(sticker) && (
-              <TakeTheOriginal key={sticker.id} sticker={sticker} />
             )}
           </>
         ) : (

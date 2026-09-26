@@ -1,3 +1,4 @@
+import liff from "@line/liff";
 import { IconContext, type IconProps } from "@phosphor-icons/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -6,6 +7,7 @@ import "./styles/base.css";
 import "./styles/keys.css";
 import { ApiRoot } from "./api/ApiRoot";
 import App from "./app/App.tsx";
+import { followLanguageOnPage, startInLineLanguage } from "./i18n/pageLanguage";
 import { PrivySignIn } from "./identity/PrivySignIn";
 import { initLine } from "./line/liff";
 import { LineGate } from "./line/LineGate";
@@ -17,7 +19,11 @@ import { ToastProvider } from "./ui/ToastProvider";
 // The app's own controls use bold icons; fill marks an active or primary state.
 const ICON_DEFAULTS: IconProps = { weight: "bold" };
 
-// LIFF starts first, since it reads the address bar as it starts; LineGate holds the app until it settles.
+// LINE's language, unless the developer slip chose one; LIFF answers both before it has started.
+startInLineLanguage(liff.getAppLanguage());
+followLanguageOnPage((language) => liff.i18n.setLang(language));
+// LIFF starts before the app renders, since it reads the address bar as it starts; LineGate holds the
+// app until it settles.
 void initLine();
 // From boot while it's on, so the app's own start is in the recording. It never throws: a recorder
 // that can't start must not keep the app from rendering.

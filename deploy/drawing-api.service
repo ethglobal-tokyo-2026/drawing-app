@@ -12,6 +12,7 @@ Group=bawler
 WorkingDirectory=/srv/drawing-api
 EnvironmentFile=/srv/drawing-api/api.env
 EnvironmentFile=/srv/drawing-api/secrets.env
+EnvironmentFile=/srv/drawing-api/chain.env
 ExecStart=/usr/local/lib/nodejs/node-24/bin/node /srv/drawing-api/server/server.mjs
 Restart=always
 RestartSec=3
@@ -19,7 +20,7 @@ RestartSec=3
 MemoryMax=512M
 TasksMax=64
 
-# Sandboxing: it writes only its database and the sticker images, and calls LINE's API.
+# Sandboxing: it writes only its database and sticker images, and calls LINE, Privy and Ethereum.
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict

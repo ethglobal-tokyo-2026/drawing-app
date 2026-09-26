@@ -2,6 +2,7 @@ import type { Person } from "@drawing-app/api/client";
 import { Suspense, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useApi } from "../api/useApi";
 import { resendPendingGratitude } from "../gratitude/gratitudeOutbox";
+import { useTranslation } from "../i18n/react";
 import { StickerBoard } from "../sticker-board/StickerBoard";
 import { DrawingScreen, type DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
 import { lazyWithPreload, usePreloadWhenIdle } from "../ui/lazyWithPreload";
@@ -32,15 +33,8 @@ const GIFT_LOADING: CSSProperties = {
   background: "var(--liner)",
 };
 
-/** LINE's header shows the page title. */
-const TITLES: Record<View, string> = {
-  board: "Your sticker board",
-  explore: "Explore",
-  shop: "Shop",
-  draw: "Draw",
-};
-
 export default function App() {
+  const { t } = useTranslation();
   const api = useApi();
   const phone = useRef<HTMLDivElement>(null);
   const drawingScreen = useRef<DrawingScreenHandle>(null);
@@ -72,8 +66,8 @@ export default function App() {
 
   useEffect(() => {
     // While a gift is open, its dialog names the page.
-    if (!giftClaimToken) document.title = TITLES[view];
-  }, [view, giftClaimToken]);
+    if (!giftClaimToken) document.title = t(($) => $.app.pageTitles[view]);
+  }, [view, giftClaimToken, t]);
 
   // Once opened, a link's path goes, so a reload after moving on doesn't jump back to it, and a
   // reload with a gift open lands on the board: the gift message opens it again.

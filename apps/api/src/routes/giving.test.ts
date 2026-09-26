@@ -135,7 +135,7 @@ describe("Packaging on the escrow chain", () => {
       error: "deposit_not_landed",
     });
     test.landDeposit(row.id);
-    expect(await giftOf(await deposit(test, giverId, row.id))).toMatchObject({
+    expect(await giftOf(await test.post(giverId, `/${row.id}/deposit`, {}))).toMatchObject({
       status: "packed",
       escrowStatus: "pending",
     });
@@ -201,7 +201,7 @@ describe("Taking out", () => {
     }
   });
 
-  it("refuses a received gift, and a gift already taken out", async () => {
+  it("refuses a received gift and returns an already taken-out gift on retry", async () => {
     const test = await createGiftsTestApp();
     const received = await packagedGift(test);
     receiveGift(test.db, received.gift.id, insertUser(test.db));
@@ -211,11 +211,38 @@ describe("Taking out", () => {
     });
     const { giverId, gift } = await packagedGift(test);
     await giftOf(await takeOut(test, giverId, gift.id));
-    expect(await refusalOf(await takeOut(test, giverId, gift.id))).toMatchObject({
-      status: 409,
-      error: "gift_closed",
+    expect(await giftOf(await takeOut(test, giverId, gift.id))).toMatchObject({
+      status: "taken_out",
+      escrowStatus: "rejected",
     });
   });
+
+  it.each(["rejected", "expired_returned"] as const)(
+    "confirms %s before closing a chain gift, then lets the sticker be given again",
+    async (escrowStatus) => {
+      const test = await createGiftsTestApp({ escrowChain: true });
+      const { giverId, gift } = await packagedGift(test);
+      test.landDeposit(gift.id);
+      await giftOf(await deposit(test, giverId, gift.id));
+
+      expect(await refusalOf(await takeOut(test, giverId, gift.id))).toMatchObject({
+        status: 409,
+        error: "gift_in_transit",
+      });
+      const escrow = await test.giftChain.readEscrowGift(gift.id);
+      test.giftChain.escrow.set(gift.id, { ...escrow, status: escrowStatus });
+
+      expect(await giftOf(await takeOut(test, giverId, gift.id))).toMatchObject({
+        status: escrowStatus === "expired_returned" ? "returned" : "taken_out",
+        escrowStatus,
+      });
+      expect(await giftOf(await takeOut(test, giverId, gift.id))).toMatchObject({ escrowStatus });
+      expect(await test.packageSticker(giverId, gift.stickerId)).toMatchObject({
+        status: 201,
+        gift: { status: "packed" },
+      });
+    },
+  );
 });
 
 describe("A gift's routes", () => {

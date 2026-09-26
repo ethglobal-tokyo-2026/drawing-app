@@ -37,5 +37,68 @@
     "typescript/use-unknown-in-catch-callback-variable": "error",
     // Method members get bivariant parameter checks; property members are checked strictly.
     "typescript/method-signature-style": ["error", "property"]
-  }
+  },
+  // Text in JSX comes from the catalog (apps/frontend/src/i18n). A folder turns this on as its text moves there.
+  "overrides": [
+    {
+      "files": ["apps/frontend/src/i18n/**"],
+      "rules": { "react/jsx-no-literals": "error" }
+    },
+    {
+      "files": ["apps/frontend/src/api/**"],
+      "rules": { "react/jsx-no-literals": "off" }
+    },
+    {
+      "files": ["apps/frontend/src/app/**"],
+      "rules": { "react/jsx-no-literals": "error" }
+    },
+    {
+      "files": ["apps/frontend/src/explore/**"],
+      "rules": { "react/jsx-no-literals": "off" }
+    },
+    {
+      "files": ["apps/frontend/src/giving/**"],
+      "rules": { "react/jsx-no-literals": "off" }
+    },
+    {
+      "files": ["apps/frontend/src/gratitude/**"],
+      "rules": { "react/jsx-no-literals": "off" }
+    },
+    {
+      "files": ["apps/frontend/src/identity/**"],
+      "rules": { "react/jsx-no-literals": "off" }
+    },
+    {
+      "files": ["apps/frontend/src/line/**"],
+      "rules": { "react/jsx-no-literals": "error" }
+    },
+    {
+      "files": ["apps/frontend/src/offers/**"],
+      "rules": { "react/jsx-no-literals": "off" }
+    },
+    {
+      "files": ["apps/frontend/src/receiving/**"],
+      "rules": { "react/jsx-no-literals": "off" }
+    },
+    {
+      "files": ["apps/frontend/src/sticker-board/**"],
+      "rules": { "react/jsx-no-literals": "off" }
+    },
+    {
+      "files": ["apps/frontend/src/sticker-creation/**"],
+      "rules": { "react/jsx-no-literals": "off" }
+    },
+    {
+      "files": ["apps/frontend/src/stickers/**"],
+      "rules": { "react/jsx-no-literals": "off" }
+    },
+    {
+      "files": ["apps/frontend/src/tickets/**"],
+      "rules": { "react/jsx-no-literals": "off" }
+    },
+    {
+      "files": ["apps/frontend/src/ui/**"],
+      "rules": { "react/jsx-no-literals": "off" }
+    }
+  ]
 }

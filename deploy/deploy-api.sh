@@ -2,12 +2,20 @@
 # deploy/deploy-api.sh: build the REST API (apps/api) and run it on the box, behind the LIFF endpoint.
 #
 #   ./deploy/deploy-api.sh
+#   ./deploy/deploy-api.sh --preflight-only
 #
 # deploy/deploy.sh runs it too. HAProxy sends DEPLOY_URL's /api/ to 127.0.0.1:8788 (deploy/drawing-api.service).
 # The API ships as one bundle, with the box's own build of better-sqlite3 beside it, and runs on the Node that
 # package.json pins (deploy/install-node.sh). On start, it applies pending migrations from drizzle/, and it serves
 # the sticker images under /api/images/.
 set -euo pipefail
+PREFLIGHT_ONLY=false
+if [ "${1:-}" = "--preflight-only" ] && [ "$#" -eq 1 ]; then
+  PREFLIGHT_ONLY=true
+elif [ "$#" -ne 0 ]; then
+  echo "Usage: deploy-api.sh [--preflight-only]" >&2
+  exit 1
+fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # Dev sign-in lets anyone sign in as anyone, so the box's config may not mention it, even commented out.
@@ -16,23 +24,42 @@ if grep -q DEV_SIGN_IN "$ROOT/deploy/drawing-api.env"; then
     "goes on the box. Remove it and deploy again." >&2
   exit 1
 fi
-if [ -f "$ROOT/deploy/.env" ]; then
+ENV_FILE="${DEPLOY_ENV_FILE:-$ROOT/deploy/.env}"
+if [ -f "$ENV_FILE" ]; then
   # shellcheck source=/dev/null
-  . "$ROOT/deploy/.env"
+  . "$ENV_FILE"
 fi
 TARGET="${DEPLOY_TARGET:?set DEPLOY_TARGET (user@host) in deploy/.env}"
 DIR="${DEPLOY_API_DIR:-/srv/drawing-api}"
+AUTH_DIR="${DEPLOY_AUTH_DIR:-/srv/sticker-auth}"
 URL="${DEPLOY_URL:-https://sticker.195-201-8-147.sslip.io}"
-SQLITE_VERSION="$(cd "$ROOT/packages/db" && node -p "require('better-sqlite3/package.json').version")"
-NODE_VERSION="$(node -p "require('$ROOT/package.json').devEngines.runtime.version")"
 STAGE="$(mktemp -d)"
-trap 'rm -rf "$STAGE"' EXIT
+REMOTE_STAGE=""
+cleanup() {
+  rm -rf "$STAGE"
+  if [ -n "$REMOTE_STAGE" ]; then ssh "$TARGET" "rm -rf '$REMOTE_STAGE'"; fi
+}
+trap cleanup EXIT
 
 # One SSH connection for every ssh and rsync below: the box resets bursts of new ones.
 SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/cm-deploy-%C" -o ControlPersist=60)
 ssh() { command ssh "${SSH_OPTS[@]}" "$@"; }
 export RSYNC_RSH="ssh ${SSH_OPTS[*]}"
 
+# Validate the merged credentials before replacing any running server code. Existing secrets stay on
+# the server; the auth service's Privy secret can be reused when this is the API's first chain deploy.
+REMOTE_STAGE="$(ssh "$TARGET" "mktemp -d /tmp/drawing-api-deploy.XXXXXXXX")"
+rsync -c "$ROOT/deploy/install-chain-env.mjs" "$TARGET:$REMOTE_STAGE/install-chain-env.mjs"
+chain_config() {
+  printf 'STICKER_CHAIN_MODE=sepolia\nETHEREUM_SEPOLIA_RPC_URL=%s\nSTICKER_NFT_ADDRESS=%s\nSTICKER_GIFT_ESCROW_ADDRESS=%s\nSTICKER_SEALER_PRIVATE_KEY=%s\nPRIVY_APP_ID=%s\nPRIVY_APP_SECRET=%s\n' \
+    "${ETHEREUM_SEPOLIA_RPC_URL:-}" "${STICKER_NFT_ADDRESS:-}" "${STICKER_GIFT_ESCROW_ADDRESS:-}" \
+    "${STICKER_SEALER_PRIVATE_KEY:-}" "${PRIVY_APP_ID:-}" "${PRIVY_APP_SECRET:-}"
+}
+chain_config | ssh "$TARGET" "node '$REMOTE_STAGE/install-chain-env.mjs' '$DIR/chain.env' '$AUTH_DIR/secrets.env' check"
+if [ "$PREFLIGHT_ONLY" = true ]; then exit 0; fi
+
+SQLITE_VERSION="$(cd "$ROOT/packages/db" && node -p "require('better-sqlite3/package.json').version")"
+NODE_VERSION="$(node -p "require('$ROOT/package.json').devEngines.runtime.version")"
 pnpm --dir "$ROOT" --filter @drawing-app/api build
 "$ROOT/deploy/install-node.sh" drawing-api
 
@@ -58,6 +85,7 @@ changed+="$(rsync -ci "$ROOT/deploy/drawing-api.service" "$TARGET:$DIR/")"
 # The session cookie's secret is made on the box and never leaves it.
 changed+="$(ssh "$TARGET" "test -s '$DIR/secrets.env' || { umask 077 \
   && printf 'SESSION_SECRET=%s\n' \"\$(openssl rand -hex 32)\" > '$DIR/secrets.env' && echo 'made a session secret'; }")"
+changed+="$(chain_config | ssh "$TARGET" "node '$REMOTE_STAGE/install-chain-env.mjs' '$DIR/chain.env' '$AUTH_DIR/secrets.env' install")"
 if [ -n "$changed" ]; then
   ssh "$TARGET" "sudo install -m 644 '$DIR/drawing-api.service' /etc/systemd/system/drawing-api.service \
     && sudo systemctl daemon-reload && sudo systemctl enable -q drawing-api && sudo systemctl restart drawing-api"

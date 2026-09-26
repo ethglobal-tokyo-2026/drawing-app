@@ -62,7 +62,9 @@ async function answered<Answer extends ClientResponse<unknown>>(
 async function signIn(test: TestApp, profile: LineProfile) {
   const api = clientFor(test);
   const { me } = await answered(
-    api.session.$post({ json: { idToken: devIdToken(profile), timeZone: DEVICE_ZONE } }),
+    api.session.$post({
+      json: { idToken: devIdToken(profile), timeZone: DEVICE_ZONE, language: "en" },
+    }),
     OK,
   );
   return { api, me };

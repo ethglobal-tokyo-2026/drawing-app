@@ -8,6 +8,7 @@ const me = {
   lineDisplayName: "Alice",
   linePictureUrl: null,
   timeZone: "Asia/Tokyo",
+  language: "en",
   createdAt: "2026-09-26T00:00:00.000Z",
   needsHandle: false,
   newStickerCount: 0,
@@ -32,19 +33,18 @@ const refusalOf = (promise: Promise<unknown>) =>
   );
 
 describe("the session client", () => {
-  it("signs in with the token and zone, on this origin with the cookie", async () => {
+  it("signs in with the token, zone and language, on this origin with the cookie", async () => {
     const fetch = answering(200, { me });
     const session = createSessionApi(createServerClient(fetch));
-    await expect(session.signIn({ idToken: "t", timeZone: "Asia/Tokyo" })).resolves.toEqual({
-      me,
-    });
+    const request = { idToken: "t", timeZone: "Asia/Tokyo", language: "ja" } as const;
+    await expect(session.signIn(request)).resolves.toEqual({ me });
     const [input, init] = fetch.mock.calls[0] ?? [];
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input?.url;
     expect(url).toMatch(/\/api\/session$/);
     expect(init?.method).toBe("POST");
     expect(init?.credentials).toBe("same-origin");
     const body = typeof init?.body === "string" ? init.body : "";
-    expect(JSON.parse(body)).toEqual({ idToken: "t", timeZone: "Asia/Tokyo" });
+    expect(JSON.parse(body)).toEqual(request);
   });
 
   it("turns the server's refusal into an ApiError with its code", async () => {
@@ -97,5 +97,42 @@ describe("the app's client over the server", () => {
     const init = fetch.mock.calls[0]?.[1];
     const body = typeof init?.body === "string" ? init.body : "";
     expect(JSON.parse(body)).toMatchObject({ giftClaimToken });
+  });
+});
+
+describe("sealing", () => {
+  const sealRequest = {
+    ticketUseId: 1,
+    timeUsed: 60,
+    width: 10,
+    height: 10,
+    outline: "M0 0L1 1Z",
+    png: new Blob(["png"]),
+    mask: new Blob(["mask"]),
+    spec: new Blob(["spec"]),
+    rim: new Blob(["rim"]),
+    flat: new Blob(["flat"]),
+  };
+
+  /** The multipart body the seal sent. */
+  const formOf = (fetch: ReturnType<typeof answering>) => {
+    const body = fetch.mock.calls[0]?.[1]?.body;
+    if (!(body instanceof FormData)) throw new Error("expected a multipart body");
+    return body;
+  };
+
+  it("uploads the timelapse with the sticker", async () => {
+    const fetch = answering(201, {});
+    const timelapse = new Blob(["gzipped"], { type: "application/gzip" });
+    await createHttpApi(createServerClient(fetch)).seal({ ...sealRequest, timelapse });
+    const part = formOf(fetch).get("timelapse");
+    if (!(part instanceof File)) throw new Error("expected the timelapse as a file part");
+    expect(await part.text()).toBe("gzipped");
+  });
+
+  it("seals without a timelapse part when there's none", async () => {
+    const fetch = answering(201, {});
+    await createHttpApi(createServerClient(fetch)).seal(sealRequest);
+    expect(formOf(fetch).has("timelapse")).toBe(false);
   });
 });

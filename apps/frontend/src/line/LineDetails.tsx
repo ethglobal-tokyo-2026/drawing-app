@@ -1,32 +1,25 @@
 import liff from "@line/liff";
+import type { TFunction } from "i18next";
 import { useEffect, useState } from "react";
+import { useTranslation } from "../i18n/react";
 import { AccountRow } from "../identity/AccountRow";
 import { useChatMenuStatus, type ChatMenuStatus } from "./chatMenu";
 import { describeLiffError, LIFF_ID, useLine } from "./liff";
 
-type Context = NonNullable<ReturnType<typeof liff.getContext>>;
-
-const OPENED_FROM: Record<Context["type"], string> = {
-  utou: "a one-to-one chat",
-  group: "a group chat",
-  room: "a multi-person chat",
-  square_chat: "an OpenChat",
-  none: "LINE, outside any chat",
-  external: "a browser",
-};
-
-// "Checking…" until LINE answers; its answer or its error otherwise.
-type Lookup = { state: "checking" } | { state: "done"; text: string };
+// "Checking…" until LINE answers; then its answer, or why it couldn't give one.
+type Lookup<T> =
+  | { state: "checking" }
+  | { state: "answered"; answer: T }
+  | { state: "failed"; reason: string };
 
 /** Asks LINE once, after it has started. */
-function useLineLookup(ask: () => Promise<string>): Lookup {
-  const [lookup, setLookup] = useState<Lookup>({ state: "checking" });
+function useLineLookup<T>(ask: () => Promise<T>): Lookup<T> {
+  const [lookup, setLookup] = useState<Lookup<T>>({ state: "checking" });
   useEffect(() => {
     let live = true;
     ask().then(
-      (text) => live && setLookup({ state: "done", text }),
-      (error: unknown) =>
-        live && setLookup({ state: "done", text: `Couldn’t check: ${describeLiffError(error)}` }),
+      (answer) => live && setLookup({ state: "answered", answer }),
+      (error: unknown) => live && setLookup({ state: "failed", reason: describeLiffError(error) }),
     );
     return () => {
       live = false;
@@ -35,65 +28,102 @@ function useLineLookup(ask: () => Promise<string>): Lookup {
   return lookup;
 }
 
-function chatMenuText(menu: ChatMenuStatus): string {
+function chatMenuText(menu: ChatMenuStatus, t: TFunction): string {
   switch (menu.state) {
     case "waiting":
-      return "Switches after the Privy sign-in";
+      return t(($) => $.line.developer.chatMenu.waiting);
     case "switching":
-      return "Checking…";
+      return t(($) => $.line.developer.checking);
     case "returning":
-      return "Draw · My board · Explore";
+      return t(($) => $.line.developer.chatMenu.returning);
     case "new":
       return menu.reason === "not_a_friend"
-        ? "Open Sticker Board: add the official account as a friend to switch"
-        : "Open Sticker Board: not signed up yet";
+        ? t(($) => $.line.developer.chatMenu.notAFriend)
+        : t(($) => $.line.developer.chatMenu.notSignedUp);
     case "failed":
-      return `Didn’t switch: ${menu.reason}`;
+      return t(($) => $.line.developer.chatMenu.failed, { reason: menu.reason });
   }
 }
 
-const friendship = async () =>
-  (await liff.getFriendship()).friendFlag ? "Added as a friend" : "Not a friend yet";
-const permissions = async () => (await liff.permission.getGrantedAll()).join(", ") || "None";
+const isFriend = async () => (await liff.getFriendship()).friendFlag;
+const grantedPermissions = () => liff.permission.getGrantedAll();
 
 /** What LINE says about the person and where the app is open, for checking LINE from the board. */
 export function LineDetails() {
+  const { t } = useTranslation();
   const line = useLine();
-  const officialAccount = useLineLookup(friendship);
-  const granted = useLineLookup(permissions);
+  const friend = useLineLookup(isFriend);
+  const granted = useLineLookup(grantedPermissions);
   const chatMenu = useChatMenuStatus();
   // When the slip first showed, so the ID token reads as expired or not as of then.
   const [shownAt] = useState(() => Date.now());
   if (line.status !== "ready") return null;
 
   const context = liff.getContext();
-  const os = liff.getOS() ?? "an unknown OS";
-  const opened = line.inClient
-    ? ["The LINE app", liff.getLineVersion(), "on", os].filter(Boolean).join(" ")
-    : `A browser on ${os}, through LINE Login`;
-  const expiry = liff.getDecodedIDToken()?.exp;
-  const idToken = expiry
-    ? `${expiry * 1000 > shownAt ? "Expires" : "Expired"} ${new Date(expiry * 1000).toLocaleTimeString()}`
-    : "None";
-  const text = (lookup: Lookup) => (lookup.state === "done" ? lookup.text : "Checking…");
+  const os = liff.getOS() ?? t(($) => $.line.developer.openedIn.unknownOs);
+  const version = liff.getLineVersion();
+  const opened = !line.inClient
+    ? t(($) => $.line.developer.openedIn.browser, { os })
+    : version
+      ? t(($) => $.line.developer.openedIn.lineApp, { version, os })
+      : t(($) => $.line.developer.openedIn.lineAppUnknownVersion, { os });
+  const exp = liff.getDecodedIDToken()?.exp;
+  const expiry = exp ? new Date(exp * 1000) : null;
+  const idToken = !expiry
+    ? t(($) => $.line.developer.none)
+    : expiry.getTime() > shownAt
+      ? t(($) => $.line.developer.idToken.expires, { time: expiry.toLocaleTimeString() })
+      : t(($) => $.line.developer.idToken.expired, { time: expiry.toLocaleTimeString() });
+  const text = <T,>(lookup: Lookup<T>, answerText: (answer: T) => string) =>
+    lookup.state === "answered"
+      ? answerText(lookup.answer)
+      : lookup.state === "failed"
+        ? t(($) => $.line.developer.couldntCheck, { reason: lookup.reason })
+        : t(($) => $.line.developer.checking);
 
   return (
     <dl className="account-rows">
-      <AccountRow label="LINE user ID" value={line.profile.userId} copyable />
-      <AccountRow label="LINE name" value={line.profile.displayName} />
+      <AccountRow label={t(($) => $.line.developer.userId)} value={line.profile.userId} copyable />
+      <AccountRow label={t(($) => $.line.developer.name)} value={line.profile.displayName} />
       {line.profile.statusMessage && (
-        <AccountRow label="Status message" value={line.profile.statusMessage} />
+        <AccountRow
+          label={t(($) => $.line.developer.statusMessage)}
+          value={line.profile.statusMessage}
+        />
       )}
-      <AccountRow label="Opened in" value={opened} />
+      <AccountRow label={t(($) => $.line.developer.openedIn.label)} value={opened} />
       <AccountRow
-        label="Opened from"
-        value={context ? OPENED_FROM[context.type] : "LINE didn’t say"}
+        label={t(($) => $.line.developer.openedFrom.label)}
+        value={
+          context
+            ? t(($) => $.line.developer.openedFrom.contextType[context.type])
+            : t(($) => $.line.developer.openedFrom.unknown)
+        }
       />
-      <AccountRow label="Official account" value={text(officialAccount)} />
-      <AccountRow label="Chat menu" value={chatMenuText(chatMenu)} />
-      <AccountRow label="Permissions" value={text(granted)} />
-      <AccountRow label="ID token" value={idToken} />
-      <AccountRow label="LIFF app" value={`${LIFF_ID} · SDK ${liff.getVersion()}`} />
+      <AccountRow
+        label={t(($) => $.line.developer.officialAccount.label)}
+        value={text(friend, (added) =>
+          added
+            ? t(($) => $.line.developer.officialAccount.friend)
+            : t(($) => $.line.developer.officialAccount.notFriend),
+        )}
+      />
+      <AccountRow
+        label={t(($) => $.line.developer.chatMenu.label)}
+        value={chatMenuText(chatMenu, t)}
+      />
+      <AccountRow
+        label={t(($) => $.line.developer.permissions)}
+        value={text(granted, (names) => names.join(", ") || t(($) => $.line.developer.none))}
+      />
+      <AccountRow label={t(($) => $.line.developer.idToken.label)} value={idToken} />
+      <AccountRow
+        label={t(($) => $.line.developer.liffApp.label)}
+        value={t(($) => $.line.developer.liffApp.value, {
+          id: LIFF_ID,
+          version: liff.getVersion(),
+        })}
+      />
     </dl>
   );
 }
