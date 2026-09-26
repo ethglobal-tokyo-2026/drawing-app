@@ -1,8 +1,10 @@
 // @vitest-environment happy-dom
-import { act } from "react";
+import { act, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
-import { i18next } from "../i18n/i18n";
+import { errorMessage } from "../i18n/errorMessage";
+import { currentLanguage, i18next } from "../i18n/i18n";
+import { keepChosenLanguage, readChosenLanguage } from "../i18n/language";
 import { ApiError } from "./apiClient";
 import type { Me } from "@drawing-app/api/client";
 import type { SessionApi } from "./httpApi";
@@ -15,16 +17,20 @@ const me: Me = {
   handle: "alice",
   lineDisplayName: "Alice",
   linePictureUrl: null,
+  ensName: "alice.croquis.eth",
   timeZone: "Asia/Tokyo",
   language: "en",
+  languageChoice: null,
   createdAt: "2026-09-26T00:00:00.000Z",
   needsHandle: false,
   newStickerCount: 0,
   unseenGratitudeCount: 0,
 };
 
+/** The app behind the gate; its `lang` is the app's language as it first opens. */
 function Board() {
-  return <p>Board of @{useMe().handle}</p>;
+  const [language] = useState(currentLanguage);
+  return <p lang={language}>Board of @{useMe().handle}</p>;
 }
 
 const settle = () => act(() => Promise.resolve());
@@ -86,14 +92,36 @@ describe("SessionGate", () => {
     expect(host.textContent).toContain("Board of @alice");
   });
 
+  it.each([
+    ["ja", "en", "ja"],
+    [null, "ja", "en"],
+  ] as const)(
+    "opens in the account's language choice (%s) over this device's (%s), which then keeps it",
+    async (account, device, opensIn) => {
+      keepChosenLanguage(device);
+      await i18next.changeLanguage(device);
+      onTestFinished(async () => {
+        localStorage.clear();
+        await i18next.changeLanguage("en");
+      });
+      const signIn = () => Promise.resolve({ me: { ...me, languageChoice: account } });
+      const host = render(session({ signIn }));
+      await settle();
+      expect(host.querySelector("p")?.lang).toBe(opensIn);
+      expect(readChosenLanguage()).toBe(account);
+    },
+  );
+
   it("says why sign-in failed, and Try again signs in again", async () => {
+    const refusal = new ApiError(401, { error: "line_token_invalid" });
     const signIn = vi
       .fn<SessionApi["signIn"]>()
-      .mockRejectedValueOnce(new ApiError(401, { error: "line_token_invalid" }))
+      .mockRejectedValueOnce(refusal)
       .mockResolvedValueOnce({ me });
     const host = render(session({ signIn }));
     await settle();
     expect(host.textContent).toContain("Couldn’t sign you in");
+    expect(host.textContent).toContain(errorMessage(refusal));
     expect(host.textContent).toContain("line_token_invalid");
     act(() => host.querySelector("button")?.click());
     await settle();

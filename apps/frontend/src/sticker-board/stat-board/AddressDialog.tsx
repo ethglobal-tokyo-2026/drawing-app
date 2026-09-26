@@ -1,16 +1,9 @@
-import liff from "@line/liff";
 import { ArrowSquareOut, Copy, X } from "@phosphor-icons/react";
-import {
-  useEffectEvent,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type MouseEvent,
-  type RefObject,
-} from "react";
+import { useEffectEvent, useId, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "../../i18n/react";
 import { etherscanAddressUrl, suiscanAccountUrl } from "../../identity/explorers";
+import { openLinkInLine } from "../../line/openLink";
 import { LabelButton } from "../../ui/LabelButton";
 import { QrCode } from "../../ui/QrCode";
 import { useBackToClose } from "../../ui/useBackToClose";
@@ -30,24 +23,10 @@ interface Props {
   onClose: () => void;
 }
 
-/** Each chain's words, its explorer, and how many fours of its address fit a line. */
+/** Each chain's name in the log, its explorer, and how many fours of its address fit a line. */
 const CHAINS = {
-  ethereum: {
-    name: "board address",
-    title: "Your board address",
-    copied: "Board address copied",
-    note: "Your stickers are kept at this address on Ethereum Sepolia.",
-    explorer: { href: etherscanAddressUrl, name: "Etherscan" },
-    foursPerLine: 5,
-  },
-  sui: {
-    name: "Sui address",
-    title: "Your Sui address",
-    copied: "Sui address copied",
-    note: "Your address on Sui Testnet.",
-    explorer: { href: suiscanAccountUrl, name: "Suiscan" },
-    foursPerLine: 4,
-  },
+  ethereum: { logName: "board address", explorer: etherscanAddressUrl, foursPerLine: 5 },
+  sui: { logName: "Sui address", explorer: suiscanAccountUrl, foursPerLine: 4 },
 } as const;
 
 // Motion tokens spelled out: Web Animations can't read CSS variables.
@@ -258,7 +237,8 @@ function reportUnlessCancelled(error: unknown) {
  * code big, the address in full, Copy and its explorer. Closing flies it back under its pin.
  */
 export function AddressDialog({ chain, address, from, onClose }: Props) {
-  const words = CHAINS[chain];
+  const { t } = useTranslation();
+  const { logName, explorer, foursPerLine } = CHAINS[chain];
   const reduced = useReducedMotion();
   const toast = useToast();
   const titleId = useId();
@@ -315,20 +295,15 @@ export function AddressDialog({ chain, address, from, onClose }: Props) {
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(address);
-      toast(words.copied);
+      toast(t(($) => $.stickerBoard.addresses[chain].copied));
     } catch (error) {
       // The address stays selectable, so it can still be copied by hand.
-      console.error(`Couldn't copy the ${words.name}`, error);
-      toast(`Couldn’t copy the ${words.name}`);
+      console.error(`Couldn't copy the ${logName}`, error);
+      toast(t(($) => $.stickerBoard.addresses[chain].notCopied));
     }
   };
 
   // Inside LINE's app, the explorer opens in LINE's own browser rather than leaving LINE.
-  const openInLine = (e: MouseEvent<HTMLAnchorElement>) => {
-    if (!liff.isInClient()) return;
-    e.preventDefault();
-    liff.openWindow({ url: e.currentTarget.href, external: false });
-  };
 
   // Resolved once, so the dialog never moves between the page and the phone, which would remount it.
   const [phone] = useState(() => document.querySelector<HTMLElement>(".phone"));
@@ -347,28 +322,34 @@ export function AddressDialog({ chain, address, from, onClose }: Props) {
         <div className="address-dialog__held">
           <div className="address-dialog__card">
             <i className="address-dialog__shadow" aria-hidden />
-            <button type="button" className="address-dialog__x" aria-label="Close" onClick={close}>
+            <button
+              type="button"
+              className="address-dialog__x"
+              aria-label={t(($) => $.stickerBoard.addresses.close)}
+              onClick={close}
+            >
               <X />
             </button>
             <i className="address-dialog__hole" aria-hidden />
             <QrCode
               value={address}
               size={232}
-              label={`QR code of your ${words.name}`}
+              label={t(($) => $.stickerBoard.addresses[chain].qrCode)}
               className="address-dialog__qr"
             />
             <h2 className="address-dialog__title address-dialog__rise" id={titleId}>
-              {words.title}
+              {t(($) => $.stickerBoard.addresses[chain].title)}
             </h2>
             <p className="address-dialog__address address-dialog__rise">
-              <span className="address-dialog__prefix">0x</span>
+              {/* The address's own 0x, set apart from the digits that tell it apart. */}
+              <span className="address-dialog__prefix">{address.slice(0, 2)}</span>
               {fours.map((four, i) => (
                 <span
                   key={i}
                   className={[
                     "address-dialog__four",
                     (i === 0 || i === fours.length - 1) && "is-compared",
-                    i > 0 && i % words.foursPerLine === 0 && "is-line-start",
+                    i > 0 && i % foursPerLine === 0 && "is-line-start",
                   ]
                     .filter(Boolean)
                     .join(" ")}
@@ -377,7 +358,9 @@ export function AddressDialog({ chain, address, from, onClose }: Props) {
                 </span>
               ))}
             </p>
-            <p className="address-dialog__note address-dialog__rise">{words.note}</p>
+            <p className="address-dialog__note address-dialog__rise">
+              {t(($) => $.stickerBoard.addresses[chain].note)}
+            </p>
           </div>
           <div className="address-dialog__acts">
             <LabelButton
@@ -387,18 +370,18 @@ export function AddressDialog({ chain, address, from, onClose }: Props) {
               className="address-dialog__rise"
               onClick={copy}
             >
-              Copy address
+              {t(($) => $.stickerBoard.addresses.copy)}
             </LabelButton>
             <a
               className="label-btn label-btn--block address-dialog__rise address-dialog__etherscan"
-              href={words.explorer.href(address)}
+              href={explorer(address)}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={`View your ${words.name} on ${words.explorer.name}`}
-              onClick={openInLine}
+              aria-label={t(($) => $.stickerBoard.addresses[chain].viewOnExplorerLabel)}
+              onClick={openLinkInLine}
             >
               <ArrowSquareOut />
-              View on {words.explorer.name}
+              {t(($) => $.stickerBoard.addresses[chain].viewOnExplorer)}
             </a>
           </div>
         </div>

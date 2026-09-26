@@ -5,6 +5,7 @@
  * given. You page the stack, pull a sheet out over the board, spread every sheet out, peel stickers
  * onto the board and put them back. Everything is in board pixels, in the board's stacking context.
  */
+import { i18next } from "../../i18n/i18n";
 import { timeOurWork } from "../../performance/performanceRecorder";
 import { formatNo } from "../../stickers/format";
 import { lightUp } from "../../stickers/light";
@@ -213,11 +214,7 @@ const PEEL_FREE = 26;
 const SNAP = 120;
 /** How the mouth sags to a crack while something is out over the board. */
 const CRACK = 0.12;
-const FILTERS: readonly (readonly [Filter, string])[] = [
-  ["all", "All"],
-  ["mine", "Mine"],
-  ["gifts", "Gifts"],
-];
+const FILTERS: readonly Filter[] = ["all", "mine", "gifts"];
 /** Where the spread lays each sheet down: a slight turn apiece. */
 const SPREAD_TURNS = [-1.2, 0.8, -0.5, 1.1, -0.9, 0.6, 1.3, -0.7];
 const EASE_OUT = "cubic-bezier(.16,1,.3,1)";
@@ -380,20 +377,22 @@ export function createTrayEngine(
   );
   board.append(root);
 
-  const zip = createZipper(col, {
-    chainAt: COL - 15,
-    insets: [6, 6],
-    maxGap: GMAX,
-    label: "Your stickers",
-  });
+  const zip = createZipper(col, { chainAt: COL - 15, insets: [6, 6], maxGap: GMAX });
+  /** The tray's fixed words, in the app's language. */
+  const words = {
+    sheets: i18next.t(($) => $.stickerBoard.tray.sheets),
+    tabs: i18next.t(($) => $.stickerBoard.tray.tabs),
+    new: i18next.t(($) => $.stickerBoard.tray.new),
+    putBack: i18next.t(($) => $.stickerBoard.tray.putBack),
+  };
   const stack = make("div", "tray__stack");
   stack.setAttribute("role", "group");
-  stack.setAttribute("aria-label", "Your sticker sheets");
+  stack.setAttribute("aria-label", words.sheets);
   // It holds focus when paging leaves nothing else to hold it.
   stack.tabIndex = -1;
   const tabsEl = make("div", "tray__tabs");
   tabsEl.setAttribute("role", "tablist");
-  tabsEl.setAttribute("aria-label", "Show");
+  tabsEl.setAttribute("aria-label", words.tabs);
   const deepTop = make("i", "tray__deep tray__deep--top");
   const deepBot = make("i", "tray__deep tray__deep--bot");
   // The stack shows through a window clipped to the mouth: w1 and c1 cut its top, w2 and c2 its foot.
@@ -521,11 +520,14 @@ export function createTrayEngine(
     el.style.width = px(q.w);
     el.style.height = px(q.h);
     el.style.margin = `${px(-q.h / 2)} 0 0 ${px(-q.w / 2)}`;
+    const no = { no: formatNo(s.no) };
     el.setAttribute(
       "aria-label",
       s.state === "used"
-        ? `${formatNo(s.no)}, on your board. Show it`
-        : `${formatNo(s.no)}${isNew ? ", new" : ""}. Drag it onto your board, or tap to stick it on`,
+        ? i18next.t(($) => $.stickerBoard.tray.slot.used, no)
+        : isNew
+          ? i18next.t(($) => $.stickerBoard.tray.slot.newOnSheet, no)
+          : i18next.t(($) => $.stickerBoard.tray.slot.onSheet, no),
     );
     const silhouette = make("span", "tray__used-sticker-silhouette", make("i", ""));
     const fit = make(
@@ -568,7 +570,7 @@ export function createTrayEngine(
     fit.style.height = px(q.h);
     fit.style.setProperty("--m", cssUrl(maskOf(s)));
     el.append(fit);
-    if (isNew) el.append(decorative(make("span", "tray__new", "NEW")));
+    if (isNew) el.append(decorative(make("span", "tray__new", words.new)));
     return el;
   }
   function rangeOf(f: number) {
@@ -578,6 +580,13 @@ export function createTrayEngine(
     const hi = Math.max(...ats);
     return sameDay(lo, hi) ? monthDay(lo) : `${monthDay(lo)}–${monthDay(hi)}`;
   }
+  /** A sheet's name, as a button that brings it to the front. */
+  const sheetLabel = (f: number, inFront = false) => {
+    const sheet = { number: f + 1, dates: rangeOf(f) };
+    return inFront
+      ? i18next.t(($) => $.stickerBoard.tray.sheetInFront, sheet)
+      : i18next.t(($) => $.stickerBoard.tray.sheet, sheet);
+  };
   /** A loose sheet: a tear strip to grip at its top, stickers on their cut lines, its dates on its foot. */
   function sheetEl(f: number, cls: string, depth: number, news: ReadonlySet<string> = newIds()) {
     const paper = make("div", "tray__paper", decorative(make("i", "tray__tear")));
@@ -622,7 +631,8 @@ export function createTrayEngine(
       const more = make("button", "tray__depth", icon(ICONS.stack), make("span", "", `+${hidden}`));
       more.type = "button";
       more.style.transform = `translateY(${SHEET.h + k * PEEK + 3}px)`;
-      more.setAttribute("aria-label", `${hidden} more sheets. Spread every sheet out`);
+      const spread = i18next.t(($) => $.stickerBoard.tray.moreSheets, { count: hidden });
+      more.setAttribute("aria-label", spread);
       kids.push(more);
     }
     stack.replaceChildren(...kids);
@@ -633,8 +643,7 @@ export function createTrayEngine(
       const f = sheetOf(foot);
       foot.setAttribute("role", "button");
       foot.tabIndex = 0;
-      if (f !== null)
-        foot.setAttribute("aria-label", `Sheet ${f + 1}, ${rangeOf(f)}. Bring it to the front`);
+      if (f !== null) foot.setAttribute("aria-label", sheetLabel(f));
     }
     markShown();
   }
@@ -674,8 +683,9 @@ export function createTrayEngine(
   }
 
   /* ---------------------------------------------------------------- the folder tabs: the stack's dividers */
-  const tabs = FILTERS.map(([f, text]) => {
-    const t = make("button", "tray__tab", make("span", "", text));
+  const tabs = FILTERS.map((f) => {
+    const name = i18next.t(($) => $.stickerBoard.tray.filters[f]);
+    const t = make("button", "tray__tab", make("span", "", name));
     t.type = "button";
     t.setAttribute("role", "tab");
     t.dataset.filter = f;
@@ -689,7 +699,7 @@ export function createTrayEngine(
   };
   listen(tabsEl, "click", (e) => {
     const f = targetOf(e)?.closest<HTMLElement>(".tray__tab")?.dataset.filter;
-    const filter = FILTERS.find(([id]) => id === f)?.[0];
+    const filter = FILTERS.find((id) => id === f);
     if (filter) void setFilter(filter);
   });
 
@@ -1191,7 +1201,7 @@ export function createTrayEngine(
     if (ui.pulled) void sendHome({ instant: true });
     const x = make("button", "tray__x", icon(ICONS.x));
     x.type = "button";
-    x.setAttribute("aria-label", "Put this sheet back in the tray");
+    x.setAttribute("aria-label", words.putBack);
     const wrap = make("div", "tray__pulled", sheetEl(f, "is-top is-pulled", 0), x);
     wrap.style.transform = `translate(${px(x0)},${px(y0)})`;
     fly.append(wrap);
@@ -1860,10 +1870,7 @@ export function createTrayEngine(
       );
       c.type = "button";
       c.dataset.f = String(f);
-      c.setAttribute(
-        "aria-label",
-        `Sheet ${f + 1}, ${rangeOf(f)}${d === 0 ? ", in front now" : ""}. Bring it to the front`,
-      );
+      c.setAttribute("aria-label", sheetLabel(f, d === 0));
       c.style.transform = `translate(${px(cell.x)},${px(cell.y)}) rotate(${cell.rot}deg) scale(${cell.k.toFixed(4)})`;
       // The CSS keeps a spread sheet's dates at the fine-print floor at this scale.
       c.style.setProperty("--k", cell.k.toFixed(4));

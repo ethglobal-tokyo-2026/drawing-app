@@ -1,9 +1,11 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReplayV1 } from "@drawing-app/api/client";
+import { i18next } from "../i18n/i18n";
 import { fullBarSeconds, type ComboRecord } from "./combo";
 import { GAME_CONFIG } from "./gameConfig";
 import { mountMiniGameEngine, type MiniGameEngine } from "./miniGameEngine";
+import { TIER_NAMES } from "./tierNames";
 
 const { log, watch } = vi.hoisted(() => {
   const log: { name: string; args: unknown[]; result: unknown; at: number }[] = [];
@@ -521,8 +523,8 @@ describe("the HUD", () => {
   });
 });
 
-// Last in the file: each mount seeds its own randomness, and the wall test above was written for
-// the seed its place gives it.
+// From here to the end of the file: each mount seeds its own randomness, and the wall test above was
+// written for the seed its place gives it.
 describe("switching to stroke or shake after the first tap", () => {
   it("unlocks stroke in fewer passes once the bar is running, before it runs out", async () => {
     pressHeart();
@@ -544,5 +546,21 @@ describe("switching to stroke or shake after the first tap", () => {
     await strokeFrom(OFF_HEART, 3, 40);
     await shake(7);
     expect(host.dataset.phase).toBe("ready");
+  });
+});
+
+describe("in Japanese", () => {
+  afterEach(() => i18next.changeLanguage("en"));
+
+  it("slams a tier-up's name and pops words in with no gloss, and says the name itself", async () => {
+    await i18next.changeLanguage("ja");
+    for (let i = 0; i < 30 && host.dataset.tier !== "1"; i++) await mash(1);
+    expect(host.dataset.tier).toBe("1");
+    const { jp } = TIER_NAMES[1];
+    expect(stage.querySelector(".gr-slam")?.textContent).toBe(jp);
+    const pops = [...stage.querySelectorAll(".gr-pop")];
+    expect(pops.length).toBeGreaterThan(0);
+    for (const pop of pops) expect(pop.querySelector(".gr-cap-gloss")?.textContent).toBe("");
+    expect(live()).toBe(jp);
   });
 });

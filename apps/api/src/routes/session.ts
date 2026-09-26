@@ -1,9 +1,10 @@
 import { users, type Db } from "@drawing-app/db";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { Hono } from "hono";
 import { z } from "zod";
 import { LineTokenInvalidError, type AppDeps, type LineVerifier } from "../deps.ts";
+import { syncEnsLabel } from "../ens/labels.ts";
 import { apiError, validate } from "../errors.ts";
 import { HANDLE_MAX_LENGTH, isHandleTaken, parseHandle } from "../session/handles.ts";
 import { clearSessionCookie, setSessionCookie, type AppEnv } from "../session.ts";
@@ -37,6 +38,9 @@ const signInBody = userInput
 
 const handleBody = userInput.pick({ handle: true });
 
+// Required, so a body that leaves it out is refused rather than clearing the choice.
+const languageChoiceBody = userInput.pick({ languageChoice: true }).required();
+
 type UserRow = typeof users.$inferSelect;
 
 /** A live account's row; undefined once it's deleted. */
@@ -65,7 +69,7 @@ async function lineProfileOf(line: LineVerifier, idToken: string) {
   }
 }
 
-/** Session and you: signing in with LINE, your profile and handle, and account deletion. */
+/** Session and you: signing in with LINE, your profile, handle and language, and account deletion. */
 export const sessionRoutes = (deps: AppDeps) =>
   new Hono<AppEnv>()
     .post("/session", validate("json", signInBody), async (c) => {
@@ -78,16 +82,17 @@ export const sessionRoutes = (deps: AppDeps) =>
       };
       const user = deps.db.transaction(
         (tx) => {
-          // A deleted account has no line_user_id, so signing in again makes a new person.
+          // A deleted account has no line_user_id, so signing in again makes a new person. The app
+          // switches to the person's language choice once it's signed in, so that's their language.
           const returning = tx
             .update(users)
-            .set({ ...lineProfile, language })
+            .set({ ...lineProfile, language: sql`coalesce(${users.languageChoice}, ${language})` })
             .where(eq(users.lineUserId, profile.sub))
             .returning()
             .get();
-          if (returning) return returning;
+          if (returning) return syncEnsLabel(tx, returning);
           const handle = parseHandle(profile.name);
-          return tx
+          const created = tx
             .insert(users)
             .values({
               id: deps.ids.uuid(),
@@ -99,6 +104,7 @@ export const sessionRoutes = (deps: AppDeps) =>
             })
             .returning()
             .get();
+          return syncEnsLabel(tx, created);
         },
         { behavior: "immediate" },
       );
@@ -122,18 +128,29 @@ export const sessionRoutes = (deps: AppDeps) =>
       }
       const { userId } = c.var;
       const user = deps.db.transaction(
-        (tx) =>
-          isHandleTaken(tx, handle, userId)
-            ? null
-            : tx
-                .update(users)
-                .set({ handle })
-                .where(and(eq(users.id, userId), isNull(users.deletedAt)))
-                .returning()
-                .get(),
+        (tx) => {
+          if (isHandleTaken(tx, handle, userId)) return null;
+          const updated = tx
+            .update(users)
+            .set({ handle })
+            .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+            .returning()
+            .get();
+          return updated && syncEnsLabel(tx, updated);
+        },
         { behavior: "immediate" },
       );
       if (user === null) return apiError(c, 409, "handle_taken", `Someone else has @${handle}`);
+      if (!user) return apiError(c, 401, "signed_out");
+      return c.json({ me: meOf(deps.db, user) }, 200);
+    })
+    .post("/me/language-choice", validate("json", languageChoiceBody), (c) => {
+      const user = deps.db
+        .update(users)
+        .set({ languageChoice: c.req.valid("json").languageChoice })
+        .where(and(eq(users.id, c.var.userId), isNull(users.deletedAt)))
+        .returning()
+        .get();
       if (!user) return apiError(c, 401, "signed_out");
       return c.json({ me: meOf(deps.db, user) }, 200);
     })

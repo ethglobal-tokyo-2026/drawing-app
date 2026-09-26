@@ -4,7 +4,7 @@ import { EASE_SPRING, clamp } from "./easing";
 import { FEEL_CONFIG } from "./gameConfig";
 import type { HeartBox } from "./miniHeartPhysics";
 import { POP_IN_WORDS, createPopInPicker, type PopInBank } from "./popInWords";
-import { TIER_NAMES } from "./tierNames";
+import { shownGloss, TIER_NAMES } from "./tierNames";
 
 export interface Lettering {
   /** The screen's size, and `top`, where the stage starts under the HUD. */
@@ -445,7 +445,8 @@ export function createLettering(
       if (slam && now < slamUntil) onScreen.add(slam.word.data);
       const word = pick(bank, onScreen);
       if (!word) return;
-      const { jp, gloss } = word;
+      const { jp } = word;
+      const gloss = shownGloss(word.gloss);
       if (typeof bank === "number") tierShown = bank;
       else if (bank === "climax") tierShown = 4;
       const px = POP_PX[tierShown] * grow;

@@ -39,6 +39,15 @@ export const users = sqliteTable(
     language: text("language", { enum: ["en", "ja"] })
       .notNull()
       .default("en"),
+    /**
+     * The person's ENS label: <ens_label>.croquis.eth. Follows the handle until the name is onchain
+     * (ens_named_at), then fixed, since an onchain name is forever. Kept on account deletion.
+     */
+    ensLabel: text("ens_label").unique(),
+    /** When CroquisNames confirmed the person's name onchain. */
+    ensNamedAt: integer("ens_named_at", { mode: "timestamp_ms" }),
+    /** The language picked in Settings, which the app starts in on every device; null follows LINE's. */
+    languageChoice: text("language_choice", { enum: ["en", "ja"] }),
   },
   (t) => [
     uniqueIndex("users_handle").on(sql`lower(${t.handle})`),

@@ -2,8 +2,9 @@
 import type { Gift } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { emptyApi, renderWithApi } from "../api/testing";
-import { gift } from "../api/testFixtures";
+import { emptyApi, renderWithApi, shownText } from "../api/testing";
+import { gift, MARKUP_LIKE_NAME } from "../api/testFixtures";
+import { formatDay, formatDuration, formatNo } from "../stickers/format";
 import type { GiftSender, GiftSendOutcome } from "./giftSender";
 import { Giving } from "./Giving";
 
@@ -46,18 +47,20 @@ function giftsApi() {
   });
 }
 
-/** Opens Giving for a sticker. */
-const open = (stickerId: string) => {
+/** Opens Giving for a sticker, as `fromHandle`; returns the sticker. */
+const open = (stickerId: string, fromHandle = "alice") => {
+  const given = { id: stickerId, no: 147, timeUsed: 292, createdAt: Date.now(), url: "blob:x" };
   view = renderWithApi(
     <Giving
-      sticker={{ id: stickerId, no: 147, timeUsed: 292, createdAt: Date.now(), url: "blob:x" }}
-      fromHandle="alice"
+      sticker={given}
+      fromHandle={fromHandle}
       sender={sender}
       liffId="2011732197-P98cxGpu"
       onClose={onClose}
     />,
     giftsApi(),
   );
+  return given;
 };
 
 const title = () => document.querySelector(".giving__title")?.textContent;
@@ -125,6 +128,13 @@ describe("Giving", () => {
     expect(giftOf("s-cancelled")).toBe("taken_out");
     expect(title()).toBe("Give No.0147");
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("prints a handle that reads as markup as it is, in the sticker's fine print", () => {
+    const given = open("s-markup", MARKUP_LIKE_NAME);
+    expect(shownText(".giving__meta")).toBe(
+      `${formatNo(given.no)} · ${formatDuration(given.timeUsed)} · ${formatDay(given.createdAt)} · @${MARKUP_LIKE_NAME}`,
+    );
   });
 
   describe("Can’t find them?", () => {

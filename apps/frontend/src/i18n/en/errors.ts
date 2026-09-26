@@ -6,6 +6,7 @@ export const errors = {
   network: "The app's server didn't answer. Check your connection, then try again.",
   no_line_token: "LINE didn't give the app a way to sign you in.",
   already_received: "This gift was already opened.",
+  ens_not_configured: "Names aren't set up on this server yet.",
   deposit_mismatch: "The gift bag doesn't hold the sticker it should.",
   deposit_not_landed: "The gift bag isn't on the chain yet.",
   gift_closed: "This gift is closed.",
@@ -45,5 +46,7 @@ export const errors = {
   ticket_not_found: "That ticket isn't here.",
   ticket_not_yours: "That ticket isn't yours.",
   timelapse_not_found: "This sticker was sealed without its timelapse.",
+  unknown_resolver: "That name belongs to another app.",
+  unsupported_request: "That name lookup isn't one this app answers.",
   user_not_found: "That artist isn't here.",
 } as const satisfies Record<ErrorCode | "unknown", string>;

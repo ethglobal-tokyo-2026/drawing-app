@@ -6,18 +6,23 @@ import type {
   Sticker,
 } from "@drawing-app/api/client";
 import { At, X } from "@phosphor-icons/react";
-import { useEffect, useState, type ReactNode } from "react";
+import type { TFunction } from "i18next";
+import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import { useMe } from "../api/meContext";
 import { useApiQuery, type Query } from "../api/useApiQuery";
 import { toPerson } from "../api/views";
+import { errorReason } from "../i18n/errorMessage";
 import { formatCount } from "../i18n/format";
+import { Trans, useTranslation } from "../i18n/react";
 import { Duration } from "../stickers/Duration";
-import { formatHandle, formatNo } from "../stickers/format";
+import { formatHandle, formatMonthDay, formatNo } from "../stickers/format";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import "./ExploreScreen.css";
 
 interface Props {
+  /** A name's link opened the app: <boardOf>.croquis.eth's Sticker Board opens once it's found. */
+  boardOf?: string;
   onOpenArtist: (person: Person) => void;
   onOpenMyBoard: () => void;
 }
@@ -27,25 +32,21 @@ const DAY_TURNOVER_MS = 4 * 60 * 60 * 1000;
 /** Search waits for a pause in typing before it asks the server. */
 const SEARCH_AFTER_MS = 250;
 
-const todayBadge = () => {
-  const d = new Date(Date.now() - DAY_TURNOVER_MS);
-  return `${d.getMonth() + 1}.${d.getDate()}`;
-};
+const todayBadge = () => formatMonthDay(Date.now() - DAY_TURNOVER_MS);
 
-function ago(at: string): string {
+/** How long ago `at` was, in its largest whole unit. */
+function ago(at: string, t: TFunction): string {
   const minutes = Math.max(0, Math.floor((Date.now() - Date.parse(at)) / 60_000));
-  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 60) return t(($) => $.explore.feed.ago.minutes, { minutes });
   const hours = Math.floor(minutes / 60);
-  return hours < 24 ? `${hours} hr` : `${Math.floor(hours / 24)} d`;
+  return hours < 24
+    ? t(($) => $.explore.feed.ago.hours, { hours })
+    : t(($) => $.explore.feed.ago.days, { days: Math.floor(hours / 24) });
 }
 
 type Leaderboard = "mostGratitude" | "bestCombo" | "longestStreak";
 
-const LEADERBOARDS: { id: Leaderboard; label: string }[] = [
-  { id: "mostGratitude", label: "Most gratitude" },
-  { id: "bestCombo", label: "Best combo" },
-  { id: "longestStreak", label: "Longest streak" },
-];
+const LEADERBOARDS: Leaderboard[] = ["mostGratitude", "bestCombo", "longestStreak"];
 
 /** Opens someone's sticker board: yours, or theirs. */
 type Open = (person: Person) => void;
@@ -75,10 +76,17 @@ function Pressable({
   );
 }
 
-const boardLabel = (person: Person, meId: string) =>
+const boardLabel = (person: Person, meId: string, t: TFunction) =>
   person.id === meId
-    ? "Your sticker board"
-    : `${formatHandle(person.handle ?? "")}'s sticker board`;
+    ? t(($) => $.explore.stickerBoard.yours)
+    : t(($) => $.explore.stickerBoard.theirs, { handle: formatHandle(person.handle ?? "") });
+
+/**
+ * A handle as a Trans component, plain or bold. Handles can hold anything but "@", so none goes in
+ * as a value: Trans would read a "<b>" in it as markup and a "{{x}}" as a variable.
+ */
+const handleOf = (person: Person) => <>{formatHandle(person.handle ?? "")}</>;
+const boldHandleOf = (person: Person) => <b>{formatHandle(person.handle ?? "")}</b>;
 
 function Avatar({ person, size }: { person: Person; size: number }) {
   const view = toPerson(person);
@@ -100,18 +108,19 @@ function PersonRow({
   trail?: ReactNode;
   open: Open;
 }) {
+  const { t } = useTranslation();
   const isMe = person.id === meId;
   return (
     <li className={isMe ? "me" : ""}>
       <Pressable
         className="artist-row"
         onClick={() => open(person)}
-        label={boardLabel(person, meId)}
+        label={boardLabel(person, meId, t)}
       >
         {lead}
         <span className="row-names">
           <b>{name ?? formatHandle(person.handle ?? "")}</b>
-          <span>{isMe ? "You" : toPerson(person).name}</span>
+          <span>{isMe ? t(($) => $.explore.you) : toPerson(person).name}</span>
         </span>
         {trail}
       </Pressable>
@@ -120,12 +129,17 @@ function PersonRow({
 }
 
 function Figure({ board, value }: { board: Leaderboard; value: number }) {
-  if (board === "bestCombo") return <span className="figure">×{value}</span>;
+  const { t } = useTranslation();
+  if (board === "bestCombo")
+    return <span className="figure">{t(($) => $.explore.figure.hits, { hits: value })}</span>;
   if (board === "longestStreak")
     return (
       <span className="figure">
-        {value}
-        <small>{value === 1 ? "day" : "days"}</small>
+        <Trans
+          i18nKey={($) => $.explore.figure.streak}
+          count={value}
+          components={{ small: <small /> }}
+        />
       </span>
     );
   return <span className="figure">{formatCount(value)}</span>;
@@ -140,31 +154,36 @@ function ThisWeek({
   meId: string;
   open: Open;
 }) {
+  const { t } = useTranslation();
   const [board, setBoard] = useState<Leaderboard>("mostGratitude");
   const rows: LeaderboardRow[] = leaderboards[board];
 
   return (
     <section className="explore-section">
       <header className="section-head">
-        <h2>This week</h2>
-        <span className="fine muted">Resets Monday 4:00</span>
+        <h2>{t(($) => $.explore.thisWeek.title)}</h2>
+        <span className="fine muted">{t(($) => $.explore.thisWeek.resets)}</span>
       </header>
-      <div className="leaderboard-tabs" role="tablist" aria-label="This week's leaderboards">
+      <div
+        className="leaderboard-tabs"
+        role="tablist"
+        aria-label={t(($) => $.explore.thisWeek.leaderboards)}
+      >
         {LEADERBOARDS.map((b) => (
           <button
-            key={b.id}
+            key={b}
             type="button"
             role="tab"
-            aria-selected={board === b.id}
-            className={board === b.id ? "selected" : ""}
-            onClick={() => setBoard(b.id)}
+            aria-selected={board === b}
+            className={board === b ? "selected" : ""}
+            onClick={() => setBoard(b)}
           >
-            {b.label}
+            {t(($) => $.explore.leaderboards[b])}
           </button>
         ))}
       </div>
       <ol className="leaderboard" role="tabpanel">
-        {rows.length === 0 && <li className="fine muted">No one is on it yet this week.</li>}
+        {rows.length === 0 && <li className="fine muted">{t(($) => $.explore.thisWeek.empty)}</li>}
         {rows.map((row, i) => (
           <PersonRow
             key={row.person.id}
@@ -189,50 +208,65 @@ const StickerImage = ({ sticker, className }: { sticker: Sticker; className: str
   <img src={sticker.images.png} alt="" className={`sticker-image ${className}`} />
 );
 
+/** What happened, as one sentence with its people in bold. */
+function FeedLine({ entry, meId }: { entry: ActivityEntry; meId: string }) {
+  if (entry.type === "sealed")
+    return (
+      <Trans
+        i18nKey={($) => $.explore.feed.sealed}
+        components={{ artist: boldHandleOf(entry.sticker.artist) }}
+      />
+    );
+  const giver = boldHandleOf(entry.giver);
+  return entry.receiver.id === meId ? (
+    <Trans i18nKey={($) => $.explore.feed.gaveYou} components={{ giver, b: <b /> }} />
+  ) : (
+    <Trans
+      i18nKey={($) => $.explore.feed.gave}
+      components={{ giver, receiver: boldHandleOf(entry.receiver) }}
+    />
+  );
+}
+
 function FeedPost({ entry, meId, open }: { entry: ActivityEntry; meId: string; open: Open }) {
+  const { t } = useTranslation();
   const who = entry.type === "sealed" ? entry.sticker.artist : entry.giver;
-  const to =
-    entry.type === "received"
-      ? entry.receiver.id === meId
-        ? "you"
-        : formatHandle(entry.receiver.handle ?? "")
-      : null;
   return (
     <article className="feed-post">
-      <Pressable className="feed-head" onClick={() => open(who)} label={boardLabel(who, meId)}>
+      <Pressable className="feed-head" onClick={() => open(who)} label={boardLabel(who, meId, t)}>
         <span className="feed-avatar">
           <Avatar person={who} size={36} />
         </span>
         <p>
-          <b>{formatHandle(who.handle ?? "")}</b>{" "}
-          {to ? (
-            <>
-              gave a sticker to <b>{to}</b>
-            </>
-          ) : (
-            "made a sticker"
-          )}
+          <FeedLine entry={entry} meId={meId} />
         </p>
-        <span className="fine muted">{ago(entry.at)}</span>
+        <span className="fine muted">{ago(entry.at, t)}</span>
       </Pressable>
       <StickerImage sticker={entry.sticker} className="feed-art" />
       <p className="fine muted feed-meta">
-        {formatNo(entry.sticker.number)} · <Duration seconds={entry.sticker.timeUsed} /> ·{" "}
-        {formatHandle(entry.sticker.artist.handle ?? "")}
+        <Trans
+          i18nKey={($) => $.explore.feed.caption}
+          values={{ number: formatNo(entry.sticker.number) }}
+          components={{
+            duration: <Duration seconds={entry.sticker.timeUsed} />,
+            artist: handleOf(entry.sticker.artist),
+          }}
+        />
       </p>
     </article>
   );
 }
 
 /** What didn't load and why, with a way to ask again. */
-function Failed({ what, query }: { what: string; query: Query<unknown> }) {
+function Failed({ title, query }: { title: string; query: Query<unknown> }) {
+  const { t } = useTranslation();
   if (query.state !== "failed") return null;
   return (
     <section className="explore-section" role="alert">
-      <h2>Couldn’t load {what}</h2>
-      <p className="fine muted">{query.error.message}</p>
+      <h2>{title}</h2>
+      <p className="fine muted">{errorReason(query.error)}</p>
       <LabelButton size="sm" onClick={query.retry}>
-        Try again
+        {t(($) => $.explore.failed.tryAgain)}
       </LabelButton>
     </section>
   );
@@ -240,26 +274,26 @@ function Failed({ what, query }: { what: string; query: Query<unknown> }) {
 
 /** Handles starting with the search first, then ones containing it, A to Z, as the server sorts. */
 function SearchResults({ query, meId, open }: { query: string; meId: string; open: Open }) {
+  const { t } = useTranslation();
   const results = useApiQuery(`users?handle=${query}`, (api) => api.searchUsers(query));
-  if (results.state === "loading") return <p className="fine muted results-count">Searching…</p>;
-  if (results.state === "failed") return <Failed what="search results" query={results} />;
+  if (results.state === "loading")
+    return <p className="fine muted results-count">{t(($) => $.explore.search.searching)}</p>;
+  if (results.state === "failed")
+    return <Failed title={t(($) => $.explore.failed.searchResults)} query={results} />;
   const people = results.data;
 
   if (!people.length)
     return (
       <section className="explore-section search-empty">
-        <h2>No one here is @{query} yet</h2>
-        <p>
-          Handles are exact, so check the spelling with them. If they’re your LINE friend, give them
-          a sticker from your board in a LINE chat: receiving it brings them in.
-        </p>
+        <h2>{t(($) => $.explore.search.notFound.title, { handle: formatHandle(query) })}</h2>
+        <p>{t(($) => $.explore.search.notFound.lead)}</p>
       </section>
     );
 
   return (
     <section className="explore-section">
       <p className="fine muted results-count">
-        {people.length} {people.length === 1 ? "artist" : "artists"}
+        {t(($) => $.explore.search.artists, { count: people.length })}
       </p>
       <ul className="search-results">
         {people.map((person) => {
@@ -276,7 +310,7 @@ function SearchResults({ query, meId, open }: { query: string; meId: string; ope
                   formatHandle(handle)
                 ) : (
                   <>
-                    @{handle.slice(0, at)}
+                    {formatHandle(handle.slice(0, at))}
                     <mark>{handle.slice(at, at + query.length)}</mark>
                     {handle.slice(at + query.length)}
                   </>
@@ -296,15 +330,16 @@ function SearchResults({ query, meId, open }: { query: string; meId: string; ope
 }
 
 function Today({ explore, meId, open }: { explore: Explore; meId: string; open: Open }) {
+  const { t } = useTranslation();
   return (
     <>
       <section className="explore-section">
         <header className="section-head">
-          <h2>Today’s stickers</h2>
+          <h2>{t(($) => $.explore.today.title)}</h2>
           <span className="date-badge">{todayBadge()}</span>
         </header>
         {explore.todaysStickers.length === 0 ? (
-          <p className="fine muted">No one has sealed a sticker yet today.</p>
+          <p className="fine muted">{t(($) => $.explore.today.none)}</p>
         ) : (
           <ul className="todays-stickers">
             {explore.todaysStickers.map((sticker) => (
@@ -312,7 +347,7 @@ function Today({ explore, meId, open }: { explore: Explore; meId: string; open: 
                 <Pressable
                   className="today-sticker"
                   onClick={() => open(sticker.artist)}
-                  label={boardLabel(sticker.artist, meId)}
+                  label={boardLabel(sticker.artist, meId, t)}
                 >
                   <StickerImage sticker={sticker} className="today-art" />
                   <span className="fine">{formatHandle(sticker.artist.handle ?? "")}</span>
@@ -339,7 +374,27 @@ function Today({ explore, meId, open }: { explore: Explore; meId: string; open: 
   );
 }
 
-export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
+/** Finds whoever a name's link names and opens their board, once; says so when there's nobody. */
+function OpenBoardOf({ label, open }: { label: string; open: Open }) {
+  const { t } = useTranslation();
+  const person = useApiQuery(`ens-person/${label}`, (api) => api.personByEnsLabel(label));
+  const opened = useRef(false);
+  const openPerson = useEffectEvent(open);
+  useEffect(() => {
+    if (person.state !== "ready" || opened.current) return;
+    opened.current = true;
+    openPerson(person.data);
+  }, [person]);
+  return (
+    <Failed
+      title={t(($) => $.explore.failed.ensName, { name: `${label}.croquis.eth` })}
+      query={person}
+    />
+  );
+}
+
+export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
+  const { t } = useTranslation();
   const me = useMe();
   const [query, setQuery] = useState("");
   const q = query.trim().replace(/^@/, "");
@@ -353,12 +408,13 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
 
   return (
     <div className="explore">
+      {boardOf && <OpenBoardOf label={boardOf} open={open} />}
       <label className="artist-search">
         <At size={20} />
         <input
           type="search"
-          placeholder="search artists"
-          aria-label="Search artists by handle"
+          placeholder={t(($) => $.explore.search.placeholder)}
+          aria-label={t(($) => $.explore.search.label)}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           autoCapitalize="off"
@@ -369,7 +425,7 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
           <button
             type="button"
             className="search-clear"
-            aria-label="Clear search"
+            aria-label={t(($) => $.explore.search.clear)}
             onClick={() => setQuery("")}
           >
             <X size={16} />
@@ -382,9 +438,9 @@ export function ExploreScreen({ onOpenArtist, onOpenMyBoard }: Props) {
       ) : explore.state === "ready" ? (
         <Today explore={explore.data} meId={me.id} open={open} />
       ) : explore.state === "failed" ? (
-        <Failed what="Explore" query={explore} />
+        <Failed title={t(($) => $.explore.failed.explore)} query={explore} />
       ) : (
-        <p className="fine muted results-count">Loading…</p>
+        <p className="fine muted results-count">{t(($) => $.explore.loading)}</p>
       )}
     </div>
   );

@@ -11,6 +11,8 @@ import {
   type Ref,
 } from "react";
 import { formatCount } from "../../i18n/format";
+import { useTranslation } from "../../i18n/react";
+import { EnsNameLink } from "../../identity/EnsNameLink";
 import { formatDay, formatHandle } from "../../stickers/format";
 import { LabelButton } from "../../ui/LabelButton";
 import { useReducedMotion } from "../../ui/useReducedMotion";
@@ -25,6 +27,8 @@ export interface StatCorkHandle {
 export interface CorkFigures {
   name: string;
   handle: string;
+  /** <label>.croquis.eth, under the handle. */
+  ensName: string | null;
   /** Their picture, stuck on beside the name card. */
   picture: ReactNode;
   /** Your own board: pink washi on the name card, and "you" in the notes. */
@@ -53,28 +57,25 @@ interface Props {
   ref?: Ref<StatCorkHandle>;
 }
 
-const days = (n: number) => `${formatCount(n)} ${n === 1 ? "day" : "days"}`;
-
 /** A figure that can't be known, because what it's drawn from didn't load. */
 function Unknown() {
+  const { t } = useTranslation();
   return (
     <>
-      <span aria-hidden>–</span>
-      <span className="visually-hidden">not known</span>
+      <span aria-hidden>{t(($) => $.stickerBoard.statBoard.notKnown.mark)}</span>
+      <span className="visually-hidden">{t(($) => $.stickerBoard.statBoard.notKnown.spoken)}</span>
     </>
   );
 }
 
 const figure = (n: number | null) => (n === null ? <Unknown /> : formatCount(n));
 
-const GRATITUDE_KINDS = [
-  { key: "inspired", label: "Inspired", reason: "Gratitude for stickers they gave." },
-  { key: "magic", label: "Magic", reason: "Gratitude sent a special way." },
-  {
-    key: "asOriginalArtist",
-    label: "Original Artist",
-    reason: "A share of the gratitude when a sticker they drew is given on.",
-  },
+const GRATITUDE_KINDS = ["inspired", "magic", "asOriginalArtist"] as const;
+
+const STAMPS = [
+  { kind: "made", hue: "var(--seal)" },
+  { kind: "received", hue: "var(--grape)" },
+  { kind: "given", hue: "var(--aqua)" },
 ] as const;
 
 // Things stuck on the cork; a tap anywhere else is on bare cork.
@@ -105,6 +106,7 @@ export function StatCork({
   children,
   ref,
 }: Props) {
+  const { t } = useTranslation();
   const reduced = useReducedMotion();
   const cork = useRef<HTMLDivElement>(null);
   const id = useId();
@@ -134,7 +136,8 @@ export function StatCork({
   // moving it.
   const nudge = (e: PointerEvent<HTMLDivElement>) => {
     const target = e.target;
-    if (reduced || !(target instanceof Element) || target.closest("button, a")) return;
+    const control = "button, a, label, input, textarea";
+    if (reduced || !(target instanceof Element) || target.closest(control)) return;
     const style = getComputedStyle(target);
     if ((style.userSelect || style.getPropertyValue("-webkit-user-select")) === "text") return;
     const note = target.closest(".stat-board__note");
@@ -152,7 +155,7 @@ export function StatCork({
     <div
       className="stat-board"
       role="dialog"
-      aria-label={`${f.name}’s stats`}
+      aria-label={t(($) => $.stickerBoard.statBoard.label, { name: f.name })}
       tabIndex={-1}
       onKeyDown={onKeyDown}
     >
@@ -167,6 +170,7 @@ export function StatCork({
               />
               <h2 className="stat-board__name">{f.name}</h2>
               <p className="fine stat-board__handle">{formatHandle(f.handle)}</p>
+              {f.ensName && <EnsNameLink className="fine stat-board__ens" name={f.ensName} />}
             </div>
           </div>
 
@@ -182,32 +186,32 @@ export function StatCork({
                   <span>{formatDay(printedAt)}</span>
                 </p>
                 <h3 className="fine stat-board__receipt-h" id={`${id}-gratitude`}>
-                  Gratitude received
+                  {t(($) => $.stickerBoard.statBoard.gratitude.title)}
                 </h3>
                 {f.gratitude && gratitudeTotal > 0 ? (
                   <ul className="stat-board__receipt-rows">
-                    {GRATITUDE_KINDS.map((k) => (
-                      <li key={k.key}>
-                        <i className={`stat-board__receipt-dot is-${k.key}`} aria-hidden />
-                        <b>{k.label}</b>
+                    {GRATITUDE_KINDS.map((kind) => (
+                      <li key={kind}>
+                        <i className={`stat-board__receipt-dot is-${kind}`} aria-hidden />
+                        <b>{t(($) => $.stickerBoard.statBoard.gratitude[kind].label)}</b>
                         <span className="stat-board__receipt-amount">
-                          {formatCount(f.gratitude?.[k.key] ?? 0)}
+                          {formatCount(f.gratitude?.[kind] ?? 0)}
                         </span>
-                        <small>{k.reason}</small>
+                        <small>{t(($) => $.stickerBoard.statBoard.gratitude[kind].reason)}</small>
                       </li>
                     ))}
                   </ul>
                 ) : (
                   <p className="stat-board__receipt-none">
                     {!f.gratitude
-                      ? "Gratitude didn’t load."
+                      ? t(($) => $.stickerBoard.statBoard.gratitude.didntLoad)
                       : f.own
-                        ? "No gratitude yet. It arrives when someone you give a sticker to sends you some for it."
-                        : "No gratitude yet. It arrives when someone sends gratitude for a sticker they gave them."}
+                        ? t(($) => $.stickerBoard.statBoard.gratitude.noneYetOwn)
+                        : t(($) => $.stickerBoard.statBoard.gratitude.noneYet)}
                   </p>
                 )}
                 <p className="stat-board__receipt-total">
-                  <span className="fine">Total</span>
+                  <span className="fine">{t(($) => $.stickerBoard.statBoard.gratitude.total)}</span>
                   <b>{f.gratitude ? formatCount(gratitudeTotal) : <Unknown />}</b>
                 </p>
               </div>
@@ -216,32 +220,42 @@ export function StatCork({
             <section className="stat-board__note stat-board__scrap" aria-labelledby={`${id}-bests`}>
               <div className="stat-board__paper">
                 <h3 className="stat-board__scrap-h" id={`${id}-bests`}>
-                  Bests
+                  {t(($) => $.stickerBoard.statBoard.bests.title)}
                 </h3>
                 <dl className="stat-board__scrap-rows">
                   <div>
-                    <dt>Longest streak</dt>
+                    <dt>{t(($) => $.stickerBoard.statBoard.bests.longestStreak)}</dt>
                     <dd>
                       {!f.streak ? (
                         <Unknown />
                       ) : f.streak.best > 0 ? (
-                        days(f.streak.best)
+                        t(($) => $.stickerBoard.statBoard.bests.days, {
+                          count: f.streak.best,
+                          days: formatCount(f.streak.best),
+                        })
                       ) : (
-                        "None yet"
+                        t(($) => $.stickerBoard.statBoard.bests.noneYet)
                       )}
                     </dd>
                   </div>
                   <div>
                     <dt>
-                      Best combo<small>Most hits in one gratitude combo</small>
+                      {t(($) => $.stickerBoard.statBoard.bests.bestCombo)}
+                      <small>{t(($) => $.stickerBoard.statBoard.bests.bestComboNote)}</small>
                     </dt>
-                    <dd>{f.bestCombo === null ? "None yet" : `×${formatCount(f.bestCombo)}`}</dd>
+                    <dd>
+                      {f.bestCombo === null
+                        ? t(($) => $.stickerBoard.statBoard.bests.noneYet)
+                        : t(($) => $.stickerBoard.statBoard.bests.combo, {
+                            hits: formatCount(f.bestCombo),
+                          })}
+                    </dd>
                   </div>
                   <div>
-                    <dt>Most gratitude in a day</dt>
+                    <dt>{t(($) => $.stickerBoard.statBoard.bests.mostGratitudeInADay)}</dt>
                     <dd>
                       {f.mostGratitudeInADay === null
-                        ? "None yet"
+                        ? t(($) => $.stickerBoard.statBoard.bests.noneYet)
                         : formatCount(f.mostGratitudeInADay)}
                     </dd>
                   </div>
@@ -252,9 +266,11 @@ export function StatCork({
 
             {since && (
               <p className="stat-board__tape">
-                <span className="visually-hidden">On the app since {since}</span>
+                <span className="visually-hidden">
+                  {t(($) => $.stickerBoard.statBoard.sinceSpoken, { day: since })}
+                </span>
                 <span className="stat-board__tape-text" aria-hidden>
-                  Since {since}
+                  {t(($) => $.stickerBoard.statBoard.since, { day: since })}
                 </span>
               </p>
             )}
@@ -265,7 +281,7 @@ export function StatCork({
               <i className="stat-board__pin" aria-hidden />
               <div className="stat-board__paper">
                 <h3 className="fine stat-board__leaf-band" id={`${id}-streak`}>
-                  Streak
+                  {t(($) => $.stickerBoard.statBoard.streak.title)}
                 </h3>
                 {!f.streak ? (
                   <p className="stat-board__leaf-n">
@@ -276,30 +292,32 @@ export function StatCork({
                 ) : f.streak.current > 0 ? (
                   <p className="stat-board__leaf-n">
                     <b>{formatCount(f.streak.current)}</b>
-                    <span className="fine">{f.streak.current === 1 ? "day" : "days"}</span>
+                    <span className="fine">
+                      {t(($) => $.stickerBoard.statBoard.streak.days, { count: f.streak.current })}
+                    </span>
                   </p>
                 ) : (
                   <p className="stat-board__leaf-n stat-board__leaf-n--none">
-                    <b>Not started</b>
+                    <b>{t(($) => $.stickerBoard.statBoard.streak.notStarted)}</b>
                   </p>
                 )}
                 <p className="stat-board__leaf-rule">{f.streakRule}</p>
               </div>
             </section>
 
-            <div className="stat-board__stamps" role="group" aria-label="Stickers">
-              {(
-                [
-                  { label: "made", count: f.stamps.made, hue: "var(--seal)" },
-                  { label: "received", count: f.stamps.received, hue: "var(--grape)" },
-                  { label: "given", count: f.stamps.given, hue: "var(--aqua)" },
-                ] as const
-              ).map(({ label, count, hue }, i) => (
-                <p key={label} className={`stat-board__stamp stat-board__stamp--${i}`}>
+            <div
+              className="stat-board__stamps"
+              role="group"
+              aria-label={t(($) => $.stickerBoard.statBoard.stamps.label)}
+            >
+              {STAMPS.map(({ kind, hue }, i) => (
+                <p key={kind} className={`stat-board__stamp stat-board__stamp--${i}`}>
                   <span className="stat-board__stamp-paper">
                     <span className="stat-board__stamp-print" style={{ "--c": hue }}>
-                      <b>{figure(count)}</b>
-                      <span className="fine">{label}</span>
+                      <b>{figure(f.stamps[kind])}</b>
+                      <span className="fine">
+                        {t(($) => $.stickerBoard.statBoard.stamps[kind])}
+                      </span>
                     </span>
                   </span>
                 </p>
@@ -313,7 +331,7 @@ export function StatCork({
               className="stat-board__flip-back"
               onClick={onFlipBack}
             >
-              Flip back
+              {t(($) => $.stickerBoard.statBoard.flipBack)}
             </LabelButton>
             {afterFlipBack}
           </div>

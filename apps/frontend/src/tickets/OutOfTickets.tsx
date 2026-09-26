@@ -1,5 +1,6 @@
 import { Storefront } from "@phosphor-icons/react";
 import { useEffect, useId, useRef, useState } from "react";
+import { Trans, useTranslation } from "../i18n/react";
 import { DrawIcon } from "../icons/DrawIcon";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Key } from "../ui/Key";
@@ -42,6 +43,7 @@ function useRefillCountdown(refillAt: string) {
  * tickets come back while it's open, it turns over in place and the key becomes Draw.
  */
 export function OutOfTickets({ tickets: state, onShop, onStartDrawing, onBoard }: Props) {
+  const { t } = useTranslation();
   const { at, msLeft } = useRefillCountdown(state.nextRefillAt);
   const stubs = dailyTickets(state);
   const card = useRef<HTMLElement>(null);
@@ -71,18 +73,24 @@ export function OutOfTickets({ tickets: state, onShop, onStartDrawing, onBoard }
         <TicketStubs className="out-of-tickets__art" size="large" stubs={stubs} />
         <p className="out-of-tickets__reserve">
           <TicketCount kind="reserve" count={state.reserveLeft} />
-          <span className="fine">Reserve</span>
+          <span className="fine">{t(($) => $.tickets.reserve)}</span>
         </p>
         {/* One title element for both, so screen readers hear it turn over. */}
         <h2 className="out-of-tickets__title" id={`${id}-title`} aria-live="polite">
-          {refilled ? "New tickets are here" : "Out of tickets for today"}
+          {refilled
+            ? t(($) => $.tickets.outOfTickets.refilled)
+            : t(($) => $.tickets.outOfTickets.title)}
         </h2>
         {!refilled && (
           <p className="out-of-tickets__line" id={`${id}-line`}>
-            <strong>New daily tickets at {formatRefillTime(at)},</strong>{" "}
-            <span className="out-of-tickets__quiet out-of-tickets__countdown">
-              {formatRefillIn(msLeft)}
-            </span>
+            <Trans
+              i18nKey={($) => $.tickets.outOfTickets.refillLine}
+              values={{ time: formatRefillTime(at), countdown: formatRefillIn(msLeft) }}
+              components={{
+                strong: <strong />,
+                countdown: <span className="out-of-tickets__quiet out-of-tickets__countdown" />,
+              }}
+            />
           </p>
         )}
         <TearLine />
@@ -90,24 +98,24 @@ export function OutOfTickets({ tickets: state, onShop, onStartDrawing, onBoard }
           <Key
             className="out-of-tickets__key"
             icon={<DrawIcon />}
-            aria-label={`Draw: you have ${describeTickets(state)}`}
+            aria-label={t(($) => $.tickets.drawWithTickets, { tickets: describeTickets(state) })}
             onClick={onStartDrawing}
           >
-            Draw
+            {t(($) => $.tickets.draw)}
             <TicketCounts state={state} className="ticket-counts--on-key" />
           </Key>
         ) : (
           <Key className="out-of-tickets__key" icon={<StickerBoardIcon />} onClick={onBoard}>
-            Go to sticker board
+            {t(($) => $.tickets.goToStickerBoard)}
           </Key>
         )}
         {refilled ? (
           <LabelButton block icon={<StickerBoardIcon />} onClick={onBoard}>
-            Go to sticker board
+            {t(($) => $.tickets.goToStickerBoard)}
           </LabelButton>
         ) : (
           <LabelButton block icon={<Storefront />} onClick={onShop}>
-            Shop for tickets
+            {t(($) => $.tickets.shopForTickets)}
           </LabelButton>
         )}
       </section>

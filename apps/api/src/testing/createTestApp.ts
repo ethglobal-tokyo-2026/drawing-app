@@ -38,6 +38,7 @@ export async function createTestApp(
     mint: mintStub,
     giftChain: null,
     smartWallets: noSmartWallets,
+    ens: null,
     sui: mockSuiPayments,
     suiPrice: fakeSuiPrice(TEST_SUI_YEN),
     serverLog: fakeServerLog(),

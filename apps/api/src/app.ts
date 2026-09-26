@@ -3,6 +3,7 @@ import { Hono, type Context } from "hono";
 import { except } from "hono/combine";
 import type { AppDeps } from "./deps.ts";
 import { apiError, notFound, onError } from "./errors.ts";
+import { ensRoutes } from "./routes/ens.ts";
 import { exploreRoutes } from "./routes/explore.ts";
 import { giftRoutes } from "./routes/gifts.ts";
 import { gratitudeRoutes } from "./routes/gratitude.ts";
@@ -14,6 +15,9 @@ import { requireSession, type AppEnv } from "./session.ts";
 import { requestDiagnostics } from "./requestDiagnostics.ts";
 
 const isSignIn = (c: Context) => c.req.method === "POST" && c.req.path === "/api/session";
+/** ENS clients call the gateway with no session. */
+const isEnsGateway = (c: Context) =>
+  c.req.method === "GET" && c.req.path.startsWith("/api/ens/gateway/");
 
 /**
  * The REST API. Every call chains, here and inside each route group, so each route's request and
@@ -24,7 +28,7 @@ export function createApp(deps: AppDeps) {
     new Hono<AppEnv>()
       .basePath("/api")
       .use(requestDiagnostics)
-      .use(except(isSignIn, requireSession(deps)))
+      .use(except([isSignIn, isEnsGateway], requireSession(deps)))
       // /session and /me
       .route("/", sessionRoutes(deps))
       // /tickets and /ticket-purchases
@@ -33,6 +37,7 @@ export function createApp(deps: AppDeps) {
       .route("/sticker-boards", stickerBoardRoutes(deps))
       .route("/gifts", giftRoutes(deps))
       .route("/gratitude", gratitudeRoutes(deps))
+      .route("/ens", ensRoutes(deps))
       // /explore and /users
       .route("/", exploreRoutes(deps))
       .onError(onError)

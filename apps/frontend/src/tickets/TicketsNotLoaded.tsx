@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef } from "react";
 import type { ApiError } from "../api/apiClient";
+import { errorReason } from "../i18n/errorMessage";
+import { useTranslation } from "../i18n/react";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Key } from "../ui/Key";
 import { QuietLink } from "../ui/QuietLink";
@@ -16,6 +18,7 @@ interface Props {
 
 /** In the start card's place until your tickets load, or saying why they didn't. */
 export function TicketsNotLoaded({ error, onRetry, onBoard }: Props) {
+  const { t } = useTranslation();
   const card = useRef<HTMLElement>(null);
   const id = useId();
   useFocusTrap(card, { onEscape: onBoard });
@@ -38,26 +41,28 @@ export function TicketsNotLoaded({ error, onRetry, onBoard }: Props) {
         tabIndex={-1}
       >
         <h2 className="out-of-tickets__title out-of-tickets__title--top" id={`${id}-title`}>
-          {error ? "Couldn’t load your tickets" : "Checking your tickets…"}
+          {error
+            ? t(($) => $.tickets.notLoaded.couldntLoad)
+            : t(($) => $.tickets.notLoaded.checking)}
         </h2>
         {error && (
           <p className="out-of-tickets__line" role="alert">
-            <strong>{error.message}</strong>
+            <strong>{errorReason(error)}</strong>
           </p>
         )}
         <TearLine />
         {error ? (
           <Key className="out-of-tickets__key" onClick={onRetry}>
-            Try again
+            {t(($) => $.tickets.tryAgain)}
           </Key>
         ) : (
           <Key className="out-of-tickets__key" icon={<StickerBoardIcon />} onClick={onBoard}>
-            Go to sticker board
+            {t(($) => $.tickets.goToStickerBoard)}
           </Key>
         )}
         {error && (
           <QuietLink className="out-of-tickets__quiet-link" onClick={onBoard}>
-            Not now
+            {t(($) => $.tickets.notNow)}
           </QuietLink>
         )}
       </section>

@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/react";
 import { ticketPath } from "./ticketShape";
 import type { TicketKind, Tickets } from "./tickets";
 import "./TicketCount.css";
@@ -10,6 +11,7 @@ const markPath = ticketPath(MARK);
  * host says the count in words.
  */
 export function TicketCount({ kind, count }: { kind: TicketKind; count?: number }) {
+  const { t } = useTranslation();
   return (
     <span
       className={`ticket-count ticket-count--${kind} ${count === 0 ? "is-empty" : ""}`}
@@ -18,7 +20,7 @@ export function TicketCount({ kind, count }: { kind: TicketKind; count?: number 
       <svg viewBox={`-1 -1 ${MARK.w + 2} ${MARK.h + 2}`} width={MARK.w + 2} height={MARK.h + 2}>
         <path d={markPath} />
       </svg>
-      {count !== undefined && `×${count}`}
+      {count !== undefined && t(($) => $.tickets.count, { count })}
     </span>
   );
 }

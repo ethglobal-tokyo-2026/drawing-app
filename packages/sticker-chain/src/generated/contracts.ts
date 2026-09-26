@@ -1,4 +1,811 @@
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// CroquisNames
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export const croquisNamesAbi = [
+  {
+    type: 'constructor',
+    inputs: [
+      { name: 'admin', internalType: 'address', type: 'address' },
+      {
+        name: 'croquisRegistry',
+        internalType: 'contract IEnsRegistry',
+        type: 'address',
+      },
+      {
+        name: 'stickers',
+        internalType: 'contract IStickerRecords',
+        type: 'address',
+      },
+      {
+        name: 'resolver',
+        internalType: 'contract CroquisResolver',
+        type: 'address',
+      },
+      {
+        name: 'factory',
+        internalType: 'contract IVerifiableFactory',
+        type: 'address',
+      },
+      {
+        name: 'registryImplementation',
+        internalType: 'address',
+        type: 'address',
+      },
+      {
+        name: 'resolverImplementation',
+        internalType: 'address',
+        type: 'address',
+      },
+      { name: 'parentName_', internalType: 'bytes', type: 'bytes' },
+    ],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'CROQUIS_REGISTRY',
+    outputs: [
+      { name: '', internalType: 'contract IEnsRegistry', type: 'address' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'DEFAULT_ADMIN_ROLE',
+    outputs: [{ name: '', internalType: 'bytes32', type: 'bytes32' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'FACTORY',
+    outputs: [
+      {
+        name: '',
+        internalType: 'contract IVerifiableFactory',
+        type: 'address',
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'NAMER_ROLE',
+    outputs: [{ name: '', internalType: 'bytes32', type: 'bytes32' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'PARENT_NODE',
+    outputs: [{ name: '', internalType: 'bytes32', type: 'bytes32' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'REGISTRY_IMPLEMENTATION',
+    outputs: [{ name: '', internalType: 'address', type: 'address' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'RESOLVER',
+    outputs: [
+      { name: '', internalType: 'contract CroquisResolver', type: 'address' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'RESOLVER_IMPLEMENTATION',
+    outputs: [{ name: '', internalType: 'address', type: 'address' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'STICKERS',
+    outputs: [
+      { name: '', internalType: 'contract IStickerRecords', type: 'address' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'label', internalType: 'string', type: 'string' },
+      { name: 'account', internalType: 'address', type: 'address' },
+      { name: 'avatar', internalType: 'string', type: 'string' },
+      { name: 'url', internalType: 'string', type: 'string' },
+    ],
+    name: 'claimPersonName',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'role', internalType: 'bytes32', type: 'bytes32' }],
+    name: 'getRoleAdmin',
+    outputs: [{ name: '', internalType: 'bytes32', type: 'bytes32' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'role', internalType: 'bytes32', type: 'bytes32' },
+      { name: 'account', internalType: 'address', type: 'address' },
+    ],
+    name: 'grantRole',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'role', internalType: 'bytes32', type: 'bytes32' },
+      { name: 'account', internalType: 'address', type: 'address' },
+    ],
+    name: 'hasRole',
+    outputs: [{ name: '', internalType: 'bool', type: 'bool' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'account', internalType: 'address', type: 'address' }],
+    name: 'labelOf',
+    outputs: [{ name: '', internalType: 'string', type: 'string' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'account', internalType: 'address', type: 'address' }],
+    name: 'nameOf',
+    outputs: [{ name: '', internalType: 'string', type: 'string' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'tokenId', internalType: 'uint256', type: 'uint256' },
+      { name: 'label', internalType: 'string', type: 'string' },
+    ],
+    name: 'nameSticker',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'parentName',
+    outputs: [{ name: '', internalType: 'bytes', type: 'bytes' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'account', internalType: 'address', type: 'address' }],
+    name: 'registryOf',
+    outputs: [{ name: '', internalType: 'address', type: 'address' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'role', internalType: 'bytes32', type: 'bytes32' },
+      { name: 'callerConfirmation', internalType: 'address', type: 'address' },
+    ],
+    name: 'renounceRole',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'account', internalType: 'address', type: 'address' }],
+    name: 'resolverOf',
+    outputs: [{ name: '', internalType: 'address', type: 'address' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'role', internalType: 'bytes32', type: 'bytes32' },
+      { name: 'account', internalType: 'address', type: 'address' },
+    ],
+    name: 'revokeRole',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'account', internalType: 'address', type: 'address' },
+      { name: 'avatar', internalType: 'string', type: 'string' },
+    ],
+    name: 'setAvatar',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'tokenId', internalType: 'uint256', type: 'uint256' }],
+    name: 'stickerLabelOf',
+    outputs: [{ name: 'label', internalType: 'string', type: 'string' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'tokenId', internalType: 'uint256', type: 'uint256' }],
+    name: 'stickerNameOf',
+    outputs: [{ name: '', internalType: 'string', type: 'string' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'interfaceId', internalType: 'bytes4', type: 'bytes4' }],
+    name: 'supportsInterface',
+    outputs: [{ name: '', internalType: 'bool', type: 'bool' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'tokenId', internalType: 'uint256', type: 'uint256' }],
+    name: 'syncSticker',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'account',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+      { name: 'label', internalType: 'string', type: 'string', indexed: false },
+      {
+        name: 'registry',
+        internalType: 'address',
+        type: 'address',
+        indexed: false,
+      },
+      {
+        name: 'resolver',
+        internalType: 'address',
+        type: 'address',
+        indexed: false,
+      },
+    ],
+    name: 'PersonNamed',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      { name: 'role', internalType: 'bytes32', type: 'bytes32', indexed: true },
+      {
+        name: 'previousAdminRole',
+        internalType: 'bytes32',
+        type: 'bytes32',
+        indexed: true,
+      },
+      {
+        name: 'newAdminRole',
+        internalType: 'bytes32',
+        type: 'bytes32',
+        indexed: true,
+      },
+    ],
+    name: 'RoleAdminChanged',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      { name: 'role', internalType: 'bytes32', type: 'bytes32', indexed: true },
+      {
+        name: 'account',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+      {
+        name: 'sender',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+    ],
+    name: 'RoleGranted',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      { name: 'role', internalType: 'bytes32', type: 'bytes32', indexed: true },
+      {
+        name: 'account',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+      {
+        name: 'sender',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+    ],
+    name: 'RoleRevoked',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'tokenId',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: true,
+      },
+      {
+        name: 'holder',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+    ],
+    name: 'StickerNameSynced',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'tokenId',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: true,
+      },
+      {
+        name: 'artist',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+      { name: 'label', internalType: 'string', type: 'string', indexed: false },
+    ],
+    name: 'StickerNamed',
+  },
+  { type: 'error', inputs: [], name: 'AccessControlBadConfirmation' },
+  {
+    type: 'error',
+    inputs: [
+      { name: 'account', internalType: 'address', type: 'address' },
+      { name: 'neededRole', internalType: 'bytes32', type: 'bytes32' },
+    ],
+    name: 'AccessControlUnauthorizedAccount',
+  },
+  {
+    type: 'error',
+    inputs: [{ name: 'account', internalType: 'address', type: 'address' }],
+    name: 'AlreadyNamed',
+  },
+  {
+    type: 'error',
+    inputs: [{ name: 'artist', internalType: 'address', type: 'address' }],
+    name: 'ArtistHasNoName',
+  },
+  {
+    type: 'error',
+    inputs: [{ name: 'label', internalType: 'string', type: 'string' }],
+    name: 'InvalidLabel',
+  },
+  {
+    type: 'error',
+    inputs: [{ name: 'account', internalType: 'address', type: 'address' }],
+    name: 'PersonHasNoName',
+  },
+  {
+    type: 'error',
+    inputs: [{ name: 'tokenId', internalType: 'uint256', type: 'uint256' }],
+    name: 'StickerAlreadyNamed',
+  },
+] as const
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// CroquisResolver
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export const croquisResolverAbi = [
+  {
+    type: 'constructor',
+    inputs: [
+      { name: 'admin', internalType: 'address', type: 'address' },
+      {
+        name: 'stickers',
+        internalType: 'contract IStickerRecords',
+        type: 'address',
+      },
+      { name: 'gatewayUrls', internalType: 'string[]', type: 'string[]' },
+      { name: 'gatewaySigner', internalType: 'address', type: 'address' },
+    ],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'DEFAULT_ADMIN_ROLE',
+    outputs: [{ name: '', internalType: 'bytes32', type: 'bytes32' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'NAME_WRITER_ROLE',
+    outputs: [{ name: '', internalType: 'bytes32', type: 'bytes32' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'STICKERS',
+    outputs: [
+      { name: '', internalType: 'contract IStickerRecords', type: 'address' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'node', internalType: 'bytes32', type: 'bytes32' }],
+    name: 'addr',
+    outputs: [{ name: '', internalType: 'address', type: 'address' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'expires', internalType: 'uint64', type: 'uint64' },
+      { name: 'request', internalType: 'bytes', type: 'bytes' },
+      { name: 'result', internalType: 'bytes', type: 'bytes' },
+    ],
+    name: 'gatewayDigest',
+    outputs: [{ name: '', internalType: 'bytes32', type: 'bytes32' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'role', internalType: 'bytes32', type: 'bytes32' }],
+    name: 'getRoleAdmin',
+    outputs: [{ name: '', internalType: 'bytes32', type: 'bytes32' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'giftRecords',
+    outputs: [
+      { name: '', internalType: 'contract IGiftRecords', type: 'address' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'role', internalType: 'bytes32', type: 'bytes32' },
+      { name: 'account', internalType: 'address', type: 'address' },
+    ],
+    name: 'grantRole',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'role', internalType: 'bytes32', type: 'bytes32' },
+      { name: 'account', internalType: 'address', type: 'address' },
+    ],
+    name: 'hasRole',
+    outputs: [{ name: '', internalType: 'bool', type: 'bool' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'signer', internalType: 'address', type: 'address' }],
+    name: 'isGatewaySigner',
+    outputs: [{ name: 'trusted', internalType: 'bool', type: 'bool' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'names',
+    outputs: [
+      { name: '', internalType: 'contract INameBook', type: 'address' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'role', internalType: 'bytes32', type: 'bytes32' },
+      { name: 'callerConfirmation', internalType: 'address', type: 'address' },
+    ],
+    name: 'renounceRole',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'name', internalType: 'bytes', type: 'bytes' },
+      { name: 'data', internalType: 'bytes', type: 'bytes' },
+    ],
+    name: 'resolve',
+    outputs: [{ name: '', internalType: 'bytes', type: 'bytes' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'response', internalType: 'bytes', type: 'bytes' },
+      { name: 'extraData', internalType: 'bytes', type: 'bytes' },
+    ],
+    name: 'resolveWithProof',
+    outputs: [{ name: '', internalType: 'bytes', type: 'bytes' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'role', internalType: 'bytes32', type: 'bytes32' },
+      { name: 'account', internalType: 'address', type: 'address' },
+    ],
+    name: 'revokeRole',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'urls', internalType: 'string[]', type: 'string[]' },
+      { name: 'signer', internalType: 'address', type: 'address' },
+      { name: 'trusted', internalType: 'bool', type: 'bool' },
+    ],
+    name: 'setGateway',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'node', internalType: 'bytes32', type: 'bytes32' },
+      { name: 'giftId', internalType: 'bytes32', type: 'bytes32' },
+    ],
+    name: 'setGiftTarget',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'names_', internalType: 'contract INameBook', type: 'address' },
+      {
+        name: 'giftRecords_',
+        internalType: 'contract IGiftRecords',
+        type: 'address',
+      },
+    ],
+    name: 'setSources',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'node', internalType: 'bytes32', type: 'bytes32' },
+      { name: 'tokenId', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'setStickerTarget',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'interfaceId', internalType: 'bytes4', type: 'bytes4' }],
+    name: 'supportsInterface',
+    outputs: [{ name: '', internalType: 'bool', type: 'bool' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'node', internalType: 'bytes32', type: 'bytes32' }],
+    name: 'targetOf',
+    outputs: [
+      {
+        name: '',
+        internalType: 'struct CroquisResolver.Target',
+        type: 'tuple',
+        components: [
+          {
+            name: 'kind',
+            internalType: 'enum CroquisResolver.Kind',
+            type: 'uint8',
+          },
+          { name: 'id', internalType: 'uint256', type: 'uint256' },
+        ],
+      },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: 'node', internalType: 'bytes32', type: 'bytes32' },
+      { name: 'key', internalType: 'string', type: 'string' },
+    ],
+    name: 'text',
+    outputs: [{ name: '', internalType: 'string', type: 'string' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      {
+        name: 'urls',
+        internalType: 'string[]',
+        type: 'string[]',
+        indexed: false,
+      },
+      {
+        name: 'signer',
+        internalType: 'address',
+        type: 'address',
+        indexed: false,
+      },
+      { name: 'trusted', internalType: 'bool', type: 'bool', indexed: false },
+    ],
+    name: 'GatewayChanged',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      { name: 'node', internalType: 'bytes32', type: 'bytes32', indexed: true },
+      {
+        name: 'kind',
+        internalType: 'enum CroquisResolver.Kind',
+        type: 'uint8',
+        indexed: false,
+      },
+      { name: 'id', internalType: 'uint256', type: 'uint256', indexed: false },
+    ],
+    name: 'NameTargetSet',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      { name: 'role', internalType: 'bytes32', type: 'bytes32', indexed: true },
+      {
+        name: 'previousAdminRole',
+        internalType: 'bytes32',
+        type: 'bytes32',
+        indexed: true,
+      },
+      {
+        name: 'newAdminRole',
+        internalType: 'bytes32',
+        type: 'bytes32',
+        indexed: true,
+      },
+    ],
+    name: 'RoleAdminChanged',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      { name: 'role', internalType: 'bytes32', type: 'bytes32', indexed: true },
+      {
+        name: 'account',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+      {
+        name: 'sender',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+    ],
+    name: 'RoleGranted',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
+      { name: 'role', internalType: 'bytes32', type: 'bytes32', indexed: true },
+      {
+        name: 'account',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+      {
+        name: 'sender',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+    ],
+    name: 'RoleRevoked',
+  },
+  { type: 'error', inputs: [], name: 'AccessControlBadConfirmation' },
+  {
+    type: 'error',
+    inputs: [
+      { name: 'account', internalType: 'address', type: 'address' },
+      { name: 'neededRole', internalType: 'bytes32', type: 'bytes32' },
+    ],
+    name: 'AccessControlUnauthorizedAccount',
+  },
+  { type: 'error', inputs: [], name: 'ECDSAInvalidSignature' },
+  {
+    type: 'error',
+    inputs: [{ name: 'length', internalType: 'uint256', type: 'uint256' }],
+    name: 'ECDSAInvalidSignatureLength',
+  },
+  {
+    type: 'error',
+    inputs: [{ name: 's', internalType: 'bytes32', type: 'bytes32' }],
+    name: 'ECDSAInvalidSignatureS',
+  },
+  {
+    type: 'error',
+    inputs: [{ name: 'expires', internalType: 'uint64', type: 'uint64' }],
+    name: 'GatewayAnswerExpired',
+  },
+  {
+    type: 'error',
+    inputs: [
+      { name: 'sender', internalType: 'address', type: 'address' },
+      { name: 'urls', internalType: 'string[]', type: 'string[]' },
+      { name: 'callData', internalType: 'bytes', type: 'bytes' },
+      { name: 'callbackFunction', internalType: 'bytes4', type: 'bytes4' },
+      { name: 'extraData', internalType: 'bytes', type: 'bytes' },
+    ],
+    name: 'OffchainLookup',
+  },
+  {
+    type: 'error',
+    inputs: [
+      { name: 'value', internalType: 'uint256', type: 'uint256' },
+      { name: 'length', internalType: 'uint256', type: 'uint256' },
+    ],
+    name: 'StringsInsufficientHexLength',
+  },
+  {
+    type: 'error',
+    inputs: [{ name: 'selector', internalType: 'bytes4', type: 'bytes4' }],
+    name: 'UnsupportedResolverProfile',
+  },
+  {
+    type: 'error',
+    inputs: [{ name: 'signer', internalType: 'address', type: 'address' }],
+    name: 'UntrustedGatewaySigner',
+  },
+] as const
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // StickerGiftEscrow
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -9,6 +816,16 @@ export const stickerGiftEscrowAbi = [
       { name: 'stickerAddress', internalType: 'address', type: 'address' },
       { name: 'admin', internalType: 'address', type: 'address' },
       { name: 'claimSigner', internalType: 'address', type: 'address' },
+      {
+        name: 'names_',
+        internalType: 'contract CroquisNames',
+        type: 'address',
+      },
+      {
+        name: 'giftsRegistry_',
+        internalType: 'contract IEnsRegistry',
+        type: 'address',
+      },
     ],
     stateMutability: 'nonpayable',
   },
@@ -81,6 +898,13 @@ export const stickerGiftEscrowAbi = [
   {
     type: 'function',
     inputs: [{ name: 'giftId', internalType: 'bytes32', type: 'bytes32' }],
+    name: 'giftLabel',
+    outputs: [{ name: '', internalType: 'string', type: 'string' }],
+    stateMutability: 'pure',
+  },
+  {
+    type: 'function',
+    inputs: [{ name: 'giftId', internalType: 'bytes32', type: 'bytes32' }],
     name: 'gifts',
     outputs: [
       { name: 'sender', internalType: 'address', type: 'address' },
@@ -93,6 +917,22 @@ export const stickerGiftEscrowAbi = [
         internalType: 'enum StickerGiftEscrow.GiftStatus',
         type: 'uint8',
       },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'giftsNode',
+    outputs: [{ name: '', internalType: 'bytes32', type: 'bytes32' }],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'giftsRegistry',
+    outputs: [
+      { name: '', internalType: 'contract IEnsRegistry', type: 'address' },
     ],
     stateMutability: 'view',
   },
@@ -115,6 +955,28 @@ export const stickerGiftEscrowAbi = [
     name: 'hasRole',
     outputs: [{ name: '', internalType: 'bool', type: 'bool' }],
     stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'names',
+    outputs: [
+      { name: '', internalType: 'contract CroquisNames', type: 'address' },
+    ],
+    stateMutability: 'view',
+  },
+  {
+    type: 'function',
+    inputs: [
+      { name: '', internalType: 'address', type: 'address' },
+      { name: '', internalType: 'address', type: 'address' },
+      { name: '', internalType: 'uint256', type: 'uint256' },
+      { name: '', internalType: 'uint256', type: 'uint256' },
+      { name: '', internalType: 'bytes', type: 'bytes' },
+    ],
+    name: 'onERC1155Received',
+    outputs: [{ name: '', internalType: 'bytes4', type: 'bytes4' }],
+    stateMutability: 'pure',
   },
   {
     type: 'function',
@@ -159,6 +1021,15 @@ export const stickerGiftEscrowAbi = [
     name: 'renounceRole',
     outputs: [],
     stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'resolver',
+    outputs: [
+      { name: '', internalType: 'contract CroquisResolver', type: 'address' },
+    ],
+    stateMutability: 'view',
   },
   {
     type: 'function',

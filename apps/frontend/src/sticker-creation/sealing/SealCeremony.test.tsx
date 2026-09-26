@@ -1,8 +1,9 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { emptyApi, FRESH_TICKETS, renderWithApi } from "../../api/testing";
-import { sticker as apiSticker } from "../../api/testFixtures";
+import { emptyApi, FRESH_TICKETS, renderWithApi, shownText } from "../../api/testing";
+import { MARKUP_LIKE_NAME, sticker as apiSticker } from "../../api/testFixtures";
+import { formatDay, formatDuration, formatNo } from "../../stickers/format";
 import { formatRefillTime } from "../../tickets/refill";
 import { nextRefill } from "../../tickets/tickets";
 import type { SealedSticker } from "./makeSticker";
@@ -51,8 +52,8 @@ const onShop = vi.fn();
 let view: ReturnType<typeof renderWithApi> | undefined;
 let host: HTMLDivElement;
 
-/** Opens the ceremony with `used` of the day's three tickets used. */
-async function seal(used: number) {
+/** Opens the ceremony as `handle`, with `used` of the day's three tickets used. */
+async function seal(used: number, handle = "alice") {
   const usedToday = Array.from({ length: used }, (_, i) => ({
     id: i + 1,
     dayIndex: i,
@@ -65,7 +66,7 @@ async function seal(used: number) {
       sticker={sticker}
       sealed={sealed}
       sheet={{ x: 8, y: 8, w: 374, h: 788 }}
-      handle="alice"
+      handle={handle}
       onKeepDrawing={onKeepDrawing}
       onBoard={onBoard}
       onShop={onShop}
@@ -164,6 +165,13 @@ describe("SealCeremony", () => {
     expect(onShop).toHaveBeenCalledOnce();
     expect(host.textContent).toContain(
       `That was today’s last ticket · new ones at ${formatRefillTime(nextRefill(NOW))}`,
+    );
+  });
+
+  it("prints a handle that reads as markup as it is, in the card's fine print", async () => {
+    await seal(1, MARKUP_LIKE_NAME);
+    expect(shownText(".sealed-card__fine")).toBe(
+      `${formatNo(sealed.number)} · ${formatDuration(sealed.timeUsed)} · ${formatDay(NOW.getTime())} · @${MARKUP_LIKE_NAME}`,
     );
   });
 });

@@ -14,12 +14,28 @@ const person = (handle: string, lineDisplayName: string): Person => ({
   handle,
   lineDisplayName,
   linePictureUrl: null,
+  ensName: `${handle}.croquis.eth`,
 });
 
 export const people = {
   mika: person("mika", "Mika Hoshino"),
   ken: person("ken", "Ken Mori"),
   bob: person("bob", "Bob Tanaka"),
+};
+
+/**
+ * A name that reads as markup, for LINE names, which can hold any text, and handles, which can hold
+ * anything but "@". Its "<3 … >" parses as a tag, so a sentence given it as a value loses text.
+ */
+export const MARKUP_LIKE_NAME = "<3 Mika & co >_<";
+
+/** Someone with no handle yet, so they're printed by their LINE name, which reads as markup. */
+export const markupLikePerson: Person = {
+  id: "user-markup-like",
+  handle: null,
+  lineDisplayName: MARKUP_LIKE_NAME,
+  linePictureUrl: null,
+  ensName: null,
 };
 
 const ART_PX = 224;
@@ -51,6 +67,7 @@ export function sticker(overrides: Partial<Sticker> = {}): Sticker {
     tokenId: null,
     mintTxHash: null,
     sealedAt: "2026-09-23T11:52:00.000Z",
+    ensName: null,
     ...overrides,
   };
 }

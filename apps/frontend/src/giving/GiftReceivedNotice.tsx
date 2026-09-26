@@ -2,6 +2,7 @@ import { ArrowRight } from "@phosphor-icons/react";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { PersonView, StickerView } from "../api/views";
+import { useTranslation } from "../i18n/react";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { formatHandle } from "../stickers/format";
 import { LabelButton } from "../ui/LabelButton";
@@ -33,6 +34,7 @@ const FLYER_PX = 56;
  * The sticker's silhouette holds its place, and the receiver's picture sticks on beside it.
  */
 export function GiftReceivedNotice({ sticker, receiver, receivedAt, mask, onClose }: Props) {
+  const { t } = useTranslation();
   const reduced = useReducedMotion();
   const titleId = useId();
   const root = useRef<HTMLDivElement>(null);
@@ -82,9 +84,11 @@ export function GiftReceivedNotice({ sticker, receiver, receivedAt, mask, onClos
     >
       <header className="gift-received-notice__head">
         <h1 id={titleId} className="gift-received-notice__title">
-          {who} received your sticker ♡
+          {t(($) => $.giving.receivedNotice.title, { name: who })}
         </h1>
-        <p className="gift-received-notice__sub">It’s on {who}’s sticker board now.</p>
+        <p className="gift-received-notice__sub">
+          {t(($) => $.giving.receivedNotice.lead, { name: who })}
+        </p>
       </header>
       <div className="gift-received-notice__stage">
         <div ref={prop} className="gift-received-notice__prop">
@@ -95,7 +99,10 @@ export function GiftReceivedNotice({ sticker, receiver, receivedAt, mask, onClos
           />
           <span className="gift-received-notice__caption">
             <ArrowRight size={12} aria-hidden="true" />
-            {who} · {sealDate(receivedAt)}
+            {t(($) => $.giving.receivedNotice.caption, {
+              name: who,
+              date: sealDate(receivedAt),
+            })}
           </span>
           <span ref={face} className="gift-received-notice__face">
             <PhotoSticker src={receiver.pictureUrl} name={receiver.name} size={150} />
@@ -113,7 +120,7 @@ export function GiftReceivedNotice({ sticker, receiver, receivedAt, mask, onClos
       </div>
       <div className="gift-received-notice__act">
         <LabelButton block icon={<StickerBoardIcon size={18} />} onClick={onClose}>
-          Back to my sticker board
+          {t(($) => $.giving.backToBoard)}
         </LabelButton>
       </div>
     </div>
