@@ -221,6 +221,9 @@ importers:
       '@types/node':
         specifier: ^24.13.6
         version: 24.13.6
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
       oxlint:
         specifier: ^1.85.0
         version: 1.85.0(oxlint-tsgolint@7.0.2002)

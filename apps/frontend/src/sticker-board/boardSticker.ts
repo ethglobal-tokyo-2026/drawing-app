@@ -37,7 +37,11 @@ export interface BoardStickerView extends Omit<BoardSticker, "blob"> {
   held: boolean;
   /** Set when `held` is false. */
   givenTo: GivenTo | null;
-  openGift: { id: string; status: "packed" | "sent" } | null;
+  /**
+   * Its gift while packed or on its way. `to` is known only for a gift given to an artist in the app;
+   * LINE's friend picker never says who was picked.
+   */
+  openGift: { id: string; status: "packed" | "sent"; to?: string } | null;
   /** When the open sticker tray showed it, in milliseconds; null shows NEW. */
   seenAt: number | null;
   /** When it came to you, in milliseconds: the sticker tray's order. */

@@ -4,8 +4,13 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "../api/apiClient";
 import { ApiProvider } from "../api/ApiProvider";
-import type { Gratitude } from "../api/contract";
-import { people, sticker as apiSticker } from "../api/mock/fixtures";
+import type { Gratitude, StickerDetailResponse } from "../api/contract";
+import {
+  gratitude as gratitudeFixture,
+  people,
+  sticker as apiSticker,
+  trailEntry,
+} from "../api/mock/fixtures";
 import { emptyApi, TEST_OWNER } from "../api/testing";
 import { toPerson, toSticker } from "../api/views";
 import type { BoardStickerView } from "./boardSticker";
@@ -87,7 +92,27 @@ function received(gratitude: Gratitude | null) {
 }
 const giveIsTheKey = () => button("Give")?.classList.contains("key");
 
-const heading = () => document.querySelector("h2")?.textContent;
+const me = { id: "me", handle: "me", lineDisplayName: "Me", linePictureUrl: null };
+/** A client whose sticker details have Transfer Trails: `trail` for s-133, empty for the rest. */
+const withTrail = (trail: StickerDetailResponse["transferTrail"]) =>
+  emptyApi({
+    stickerDetail: (id) =>
+      Promise.resolve({
+        sticker: apiSticker({ id, number: 133 }),
+        owner: me,
+        transferTrail: id === "s-133" ? trail : [],
+      }),
+  });
+const rows = () => [...document.querySelectorAll(".transfer-trail__row")];
+const openRow = () => document.querySelector(".transfer-trail__row.is-open")?.textContent;
+const closedRows = () =>
+  [
+    ...document.querySelectorAll<HTMLButtonElement>(
+      '.transfer-trail__row:not(.is-open) button[aria-expanded="false"]',
+    ),
+  ].filter((b) => !b.textContent?.includes("earlier"));
+
+const heading = () => document.querySelector("h2 .sticker-detail__no")?.textContent;
 const button = (name: string) =>
   [...document.querySelectorAll("button")].find(
     (b) => (b.getAttribute("aria-label") ?? b.textContent?.trim()) === name,
@@ -190,6 +215,74 @@ describe("StickerDetail", () => {
     await settle();
     expect(button("Send gratitude")).toBeUndefined();
     expect(giveIsTheKey()).toBe(true);
+  });
+
+  it("shows where it's been, the most recent gratitude open with its artist's share", async () => {
+    const thanked = trailEntry({
+      giftId: "g-2",
+      giver: people.ken,
+      receiver: me,
+      gratitude: gratitudeFixture({
+        giftId: "g-2",
+        total: 2946,
+        originalArtistGratitudeShare: 589,
+      }),
+    });
+    // Drawn by @mika, so her share comes out of @ken's part.
+    const byMika = stickers.map((s) =>
+      s.id === "s-133" ? { ...s, artist: { id: people.mika.id, handle: "mika", name: "Mika" } } : s,
+    );
+    open(
+      { stickers: byMika, ownerId: "me" },
+      withTrail([thanked, trailEntry({ giftId: "g-1", giver: people.mika, receiver: people.ken })]),
+    );
+    await settle();
+    expect(rows()).toHaveLength(2);
+    expect(openRow()).toContain("2,946");
+    expect(openRow()).toContain("From you");
+    expect(openRow()).toContain("2,357 to @ken · 589 to @mika, its artist");
+  });
+
+  it("folds the rows past the newest, and opens a tapped row in place of the open one", async () => {
+    const given = (n: number) =>
+      trailEntry({
+        giftId: `g-${n}`,
+        giver: people.ken,
+        receiver: people.bob,
+        gratitude: gratitudeFixture({ giftId: `g-${n}`, total: n * 100 }),
+      });
+    open({ ownerId: "me" }, withTrail([5, 4, 3, 2, 1].map(given)));
+    await settle();
+    expect(rows()).toHaveLength(2);
+    expect(openRow()).toContain("500");
+    press("4 earlier gifts");
+    expect(rows()).toHaveLength(5);
+    act(() => closedRows()[0]?.click());
+    expect(openRow()).toContain("400");
+    expect(document.querySelectorAll(".transfer-trail__row.is-open")).toHaveLength(1);
+  });
+
+  it("asks before taking the original, and keeps the sticker on Keep", () => {
+    open();
+    press("Take the original");
+    expect(document.querySelector(".take-the-original__title")?.textContent).toBe(
+      "Take the original of No.0133?",
+    );
+    press("Keep the sticker");
+    expect(document.querySelector(".take-the-original__title")).toBeNull();
+  });
+
+  it("offers Take the original only for a sticker you hold here", () => {
+    const sent = stickers.map((s) => ({ ...s, openGift: { id: "g", status: "sent" as const } }));
+    open({ stickers: sent });
+    expect(button("Take the original")).toBeUndefined();
+  });
+
+  it("names the sticker's .eth from its number and artist, until the chain gives it one", () => {
+    open();
+    expect(document.querySelector(".sticker-detail__ens")?.textContent).toBe(
+      "sticker-0133.alice.sketch.eth",
+    );
   });
 
   it("titles LINE's header with the shown sticker, and puts the title back when it closes", () => {

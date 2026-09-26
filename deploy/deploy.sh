@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# deploy/deploy.sh: build the frontend and the LINE → Privy auth server, and publish both behind the LIFF endpoint.
+# deploy/deploy.sh: build the frontend and the LINE → Privy auth server, and publish both behind the LIFF endpoint;
+# then deploy/deploy-api.sh does the same for the REST API.
 #
 #   ./deploy/deploy.sh
 #
@@ -92,3 +93,6 @@ curl -fsS --max-time 15 "$URL/.well-known/jwks.json" | grep -q "\"kid\":\"$KEY_I
   exit 1
 }
 echo "✓ $URL/.well-known/jwks.json"
+
+# The REST API has its own script, so it can also go out alone.
+"$ROOT/deploy/deploy-api.sh"

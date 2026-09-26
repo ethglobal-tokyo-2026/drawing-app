@@ -28,7 +28,7 @@ export type StatBoardHandle = StatCorkHandle;
 
 interface Props {
   /** Null when they didn't load, so nothing drawn from them can be known. */
-  stickers: readonly StickerRecord[] | null;
+  stickers: readonly Pick<StickerRecord, "id" | "createdAt">[] | null;
   gifts: ReadonlyMap<string, StickerGiftStatus>;
   onFlipBack: () => void;
   flipBackRef: Ref<HTMLButtonElement>;

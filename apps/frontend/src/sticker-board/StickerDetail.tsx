@@ -1,12 +1,12 @@
 import { CaretLeft, CaretRight, Gift, Heart } from "@phosphor-icons/react";
-import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
 import type { StickerDetailResponse } from "../api/contract";
 import { useApiQuery } from "../api/useApiQuery";
 import { toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Duration } from "../stickers/Duration";
-import { formatDay, formatMonthDay, formatNo } from "../stickers/format";
+import { formatDay, formatHandle, formatMonthDay, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { ArtistChip } from "../stickers/ArtistChip";
 import { StickerFigure } from "../stickers/StickerFigure";
@@ -19,6 +19,9 @@ import { useReducedMotion } from "../ui/useReducedMotion";
 import { handleOf, onItsWay, type BoardStickerView } from "./boardSticker";
 import { useDetailLift } from "./detailLift";
 import { swipeLock, swipeTo } from "./detailPaging";
+import { TakeTheOriginal } from "./TakeTheOriginal";
+import { TransferTrail } from "./TransferTrail";
+import { toTrailRows } from "./trailRows";
 import "./sticker-detail.css";
 
 interface Props {
@@ -37,7 +40,10 @@ interface Props {
   returnFocus?: () => HTMLElement | null;
   /** Where a sticker sits on the board, which it lifts off from and sticks back onto. */
   originOf?: (id: string) => HTMLElement | null;
-  /** The board's owner: a sticker someone else drew wears foil and names its Original Artist. */
+  /**
+   * The board's owner, who's looking: a sticker someone else drew wears foil and names its Original
+   * Artist, and the Transfer Trail reads the owner as "you".
+   */
   ownerId?: string;
 }
 
@@ -47,6 +53,20 @@ interface Swipe {
   y: number;
   dx: number;
   lock: ReturnType<typeof swipeLock>;
+}
+
+/**
+ * The sticker's .eth name, as the prototype shapes it: `{name}.{artist}.sketch.eth`. A stand-in
+ * built from its number and artist until the chain gives stickers their names.
+ */
+function placeholderEnsName(sticker: BoardStickerView): string {
+  const label = (v: string) =>
+    v
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "someone";
+  const artist = label(sticker.artist.handle ?? sticker.artist.name);
+  return `sticker-${String(sticker.no).padStart(4, "0")}.${artist}.sketch.eth`;
 }
 
 /** The --ease-out curve, spelled out: Web Animations can't read CSS variables. */
@@ -84,14 +104,17 @@ export function StickerDetail({
   );
   const sticker: BoardStickerView | undefined = stickers[index];
   const last = stickers.length - 1;
-
-  // A sticker you hold may be one someone gave you, with no gratitude sent for it yet.
-  const checkId =
-    mode === "yours" && onSendGratitude && sticker && !onItsWay(sticker) ? sticker.id : null;
-  const gratitude = useApiQuery(`sticker-detail:${checkId}`, (client) =>
-    checkId === null ? Promise.resolve(null) : client.stickerDetail(checkId).then(owedGratitude),
+  // Its Transfer Trail, and whether you owe gratitude for a sticker you hold, come with its detail.
+  const shownStickerId = sticker?.id ?? null;
+  const detail = useApiQuery(`sticker-detail:${shownStickerId ?? "none"}`, (api) =>
+    shownStickerId ? api.stickerDetail(shownStickerId) : Promise.resolve(null),
   );
-  const owed = gratitude.state === "ready" ? gratitude.data : null;
+  const loaded = detail.state === "ready" ? detail.data : null;
+  const trail = useMemo(() => (loaded ? toTrailRows(loaded.transferTrail) : []), [loaded]);
+  const owed =
+    mode === "yours" && onSendGratitude && sticker && !onItsWay(sticker) && loaded
+      ? owedGratitude(loaded)
+      : null;
 
   const root = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLElement>(null);
@@ -104,7 +127,8 @@ export function StickerDetail({
     root,
     sticker,
     originOf,
-    given: mode === "given",
+    // A sticker given away, or on its way, lifts out of its given sticker silhouette.
+    given: sticker ? !sticker.held || sticker.openGift?.status === "sent" : mode === "given",
     reduced,
     onClose,
   });
@@ -191,7 +215,7 @@ export function StickerDetail({
   };
 
   const byOther = Boolean(ownerId && sticker && sticker.artist.id !== ownerId);
-  const detail = (
+  const page = (
     <div
       ref={root}
       className="sticker-detail"
@@ -283,7 +307,11 @@ export function StickerDetail({
             </div>
 
             <section className="sticker-detail__meta">
-              <h2 className="title-label sticker-detail__title">{formatNo(sticker.no)}</h2>
+              {/* "sticker" stands in for the sticker's name, which no data carries yet. */}
+              <h2 className="title-label sticker-detail__title">
+                sticker <span className="sticker-detail__no">{formatNo(sticker.no)}</span>
+              </h2>
+              <p className="sticker-detail__ens">{placeholderEnsName(sticker)}</p>
               <p className="fine sticker-detail__fine-print">
                 {byOther ? (
                   <ArtistChip artist={sticker.artist} />
@@ -295,7 +323,8 @@ export function StickerDetail({
                 </span>{" "}
                 <span>· {formatDay(sticker.createdAt)}</span>
               </p>
-              {mode === "given" && sticker.givenTo && (
+              {/* The Transfer Trail says it too, once it's in. */}
+              {mode === "given" && sticker.givenTo && trail.length === 0 && (
                 <p className="fine sticker-detail__fine-print">
                   You gave it to {handleOf(sticker.givenTo.receiver)} ·{" "}
                   {formatMonthDay(sticker.givenTo.receivedAt)}
@@ -311,7 +340,10 @@ export function StickerDetail({
                     <span className="sticker-detail__sleeve" aria-hidden="true">
                       <img src={sticker.urls.png} alt="" draggable={false} />
                     </span>
-                    On its way
+                    <span>
+                      On its way
+                      {sticker.openGift?.to && ` to ${formatHandle(sticker.openGift.to)}`}
+                    </span>
                   </p>
                 </div>
               ) : owed && onSendGratitude ? (
@@ -343,12 +375,24 @@ export function StickerDetail({
                   </div>
                 )
               ))}
-            {gratitude.state === "failed" && (
+            {detail.state === "failed" && (
               <p className="fine sticker-detail__check-failed" role="alert">
-                Couldn’t check whether you’ve sent gratitude for it:{" "}
-                {gratitude.error.detail ?? gratitude.error.code}{" "}
-                <QuietLink onClick={gratitude.retry}>Try again</QuietLink>
+                Couldn’t load where it’s been, or whether you’ve sent gratitude for it:{" "}
+                {detail.error.detail ?? detail.error.code}{" "}
+                <QuietLink onClick={detail.retry}>Try again</QuietLink>
               </p>
+            )}
+            {trail.length > 0 && ownerId && (
+              // Mounted once its rows are in, so the open row is picked from them.
+              <TransferTrail
+                key={sticker.id}
+                rows={trail}
+                viewerId={ownerId}
+                artist={sticker.artist}
+              />
+            )}
+            {mode === "yours" && sticker.held && !onItsWay(sticker) && (
+              <TakeTheOriginal key={sticker.id} sticker={sticker} />
             )}
           </>
         ) : (
@@ -359,5 +403,5 @@ export function StickerDetail({
   );
   // Over the whole phone, tabs included, as the Giving flow is.
   const phone = document.querySelector<HTMLElement>(".phone");
-  return phone ? createPortal(detail, phone) : detail;
+  return phone ? createPortal(page, phone) : page;
 }

@@ -6,12 +6,21 @@ import { mintStub } from "../services/mint.ts";
 import { noSmartWallets } from "../services/smartWallets.ts";
 import { mockSuiPayments } from "../services/suiPayments.ts";
 import { SESSION_COOKIE } from "../session.ts";
-import { fakeClock, fakeImageStore, fakeLineVerifier, sequentialIds } from "./fakes.ts";
+import {
+  fakeClock,
+  fakeImageStore,
+  fakeLineVerifier,
+  fakeSuiPrice,
+  sequentialIds,
+} from "./fakes.ts";
+
+/** A made-up SUI/JPY price that never moves. */
+const TEST_SUI_YEN = "300";
 
 /**
  * The app as the server runs it today (mock chain mode, the mint stub, no smart wallets, the mock Sui
- * payment) on a fresh in-memory database, with fakes for LINE, the disk, the time and ids. Override a
- * dep with a fake from ./fakes.ts to run a path the server doesn't take yet.
+ * payment at a fixed SUI/JPY price) on a fresh in-memory database, with fakes for LINE, the disk, the
+ * time and ids. Override a dep with a fake from ./fakes.ts to run a path the server doesn't take yet.
  */
 export async function createTestApp(
   overrides: Partial<Omit<AppDeps, "db" | "sessionSecret" | "clock" | "images">> = {},
@@ -30,6 +39,7 @@ export async function createTestApp(
     giftChain: null,
     smartWallets: noSmartWallets,
     sui: mockSuiPayments,
+    suiPrice: fakeSuiPrice(TEST_SUI_YEN),
     ...overrides,
   };
   return {

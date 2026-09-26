@@ -775,7 +775,14 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         <Suspense fallback={null}>
           <StickerDetail
             // In the order they arrived, as the board loads them.
-            stickers={(stickers ?? []).filter((s) => (open.mode === "given" ? !s.held : s.held))}
+            stickers={(stickers ?? [])
+              .filter((s) => (open.mode === "given" ? !s.held : s.held))
+              .map((s) => {
+                const gift = gifts.get(s.id);
+                return gift?.state === "sent" && gift.to && s.openGift
+                  ? { ...s, openGift: { ...s.openGift, to: gift.to } }
+                  : s;
+              })}
             startId={open.id}
             mode={open.mode}
             // It lifts off from where the sticker sits: on the board, or its given sticker silhouette.
