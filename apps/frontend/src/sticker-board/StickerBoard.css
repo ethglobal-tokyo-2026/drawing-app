@@ -134,6 +134,11 @@
   border-color: var(--ink);
 }
 
+/* Focus alone doesn't select, so its ring is the bare frame; the handles and knob come with selection. */
+.placed-sticker:not(.is-selected) :is(.placed-sticker__handle, .placed-sticker__rotate) {
+  display: none;
+}
+
 .placed-sticker.is-handling .placed-sticker__frame {
   border-color: var(--ink);
 }
