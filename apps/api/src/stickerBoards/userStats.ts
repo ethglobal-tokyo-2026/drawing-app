@@ -1,0 +1,73 @@
+import { gifts, gratitude, stickers, users, type Db } from "@drawing-app/db";
+import { and, count, eq, max, or, type SQL } from "drizzle-orm";
+import { toIsoTime, type UserStats } from "../shapes.ts";
+import { streakOf } from "../streak.ts";
+import { ticketDay } from "../ticketDays.ts";
+
+/** Gifts matching `where` that were received: only a received gift counts as given or received. */
+const receivedGiftCount = (db: Db, where: SQL) =>
+  db
+    .select({ n: count() })
+    .from(gifts)
+    .where(and(eq(gifts.status, "received"), where))
+    .get()?.n ?? 0;
+
+/** A person's User Stats, with ticket days in their own zone. */
+export function loadUserStats(db: Db, user: typeof users.$inferSelect, now: Date): UserStats {
+  const zone = user.timeZone;
+  const sealDays = db
+    .select({ sealedAt: stickers.createdAt })
+    .from(stickers)
+    .where(eq(stickers.artistId, user.id))
+    .all()
+    .map(({ sealedAt }) => ticketDay(sealedAt, zone));
+  const bestCombo =
+    db
+      .select({ hits: max(gratitude.hits) })
+      .from(gratitude)
+      .innerJoin(gifts, eq(gifts.id, gratitude.giftId))
+      .where(eq(gifts.receiverId, user.id))
+      .get()?.hits ?? 0;
+  // Every combo that gave the person something: as its gift's giver, or as the Original Artist.
+  const combos = db
+    .select({
+      method: gratitude.method,
+      total: gratitude.total,
+      share: gratitude.originalArtistGratitudeShare,
+      recordedAt: gratitude.createdAt,
+      giverId: gifts.giverId,
+      artistId: stickers.artistId,
+    })
+    .from(gratitude)
+    .innerJoin(gifts, eq(gifts.id, gratitude.giftId))
+    .innerJoin(stickers, eq(stickers.id, gifts.stickerId))
+    .where(or(eq(gifts.giverId, user.id), eq(stickers.artistId, user.id)))
+    .all();
+
+  const split = { inspired: 0, magic: 0, asOriginalArtist: 0 };
+  const thanksByDay = new Map<string, number>();
+  for (const combo of combos) {
+    const giversPart = combo.giverId === user.id ? combo.total - combo.share : 0;
+    const share = combo.artistId === user.id ? combo.share : 0;
+    if (combo.method === "tap") split.inspired += giversPart;
+    else split.magic += giversPart;
+    split.asOriginalArtist += share;
+    const day = ticketDay(combo.recordedAt, zone);
+    thanksByDay.set(day, (thanksByDay.get(day) ?? 0) + giversPart + share);
+  }
+  const streak = streakOf(sealDays, ticketDay(now, zone));
+
+  return {
+    since: toIsoTime(user.createdAt),
+    made: sealDays.length,
+    received: receivedGiftCount(db, eq(gifts.receiverId, user.id)),
+    given: receivedGiftCount(db, eq(gifts.giverId, user.id)),
+    gratitude: { ...split, total: split.inspired + split.magic + split.asOriginalArtist },
+    bests: {
+      bestCombo,
+      mostThanksInADay: Math.max(0, ...thanksByDay.values()),
+      longestStreak: streak.best,
+    },
+    streak: streak.current,
+  };
+}

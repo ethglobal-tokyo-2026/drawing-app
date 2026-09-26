@@ -1,6 +1,27 @@
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import type { AppDeps } from "../deps.ts";
+import { apiError, validate } from "../errors.ts";
 import type { AppEnv } from "../session.ts";
+import { sealSticker } from "../stickers/seal.ts";
+import { MAX_SEAL_BYTES, sealForm } from "../stickers/sealForm.ts";
 
-/** Stickers: sealing, a sticker's detail with its Transfer Trail, and its timelapse. */
-export const stickerRoutes = (_deps: AppDeps) => new Hono<AppEnv>();
+/** Stickers: sealing, and a sticker's detail with its Transfer Trail. */
+export const stickerRoutes = (deps: AppDeps) =>
+  new Hono<AppEnv>().post(
+    "/",
+    // The contract has no 413: an oversized body is invalid_request, in ErrorBody JSON.
+    bodyLimit({
+      maxSize: MAX_SEAL_BYTES,
+      onError: (c) => apiError(c, 400, "invalid_request", `body: over ${MAX_SEAL_BYTES} bytes`),
+    }),
+    validate("form", sealForm),
+    async (c) => {
+      const outcome = await sealSticker(deps, c.var.userId, c.req.valid("form"));
+      if ("refused" in outcome) {
+        const { status, error, detail } = outcome.refused;
+        return apiError(c, status, error, detail);
+      }
+      return c.json(outcome.sealed, 201);
+    },
+  );
