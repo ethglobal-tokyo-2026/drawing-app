@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(0.34, 1.7, 0.5, 1)",
+        "createdAt": "2026-09-25T15:12:26.008Z",
+        "reason": "DESIGN.md's spring curve (--ease-spring in tokens.css): 'Use the spring curve for release and springs'."
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(.34, 1.7, .5, 1)",
+        "createdAt": "2026-09-26T02:30:00.000Z",
+        "reason": "The same spring curve, as press.ts's fallback writes it."
+      },
+      {
+        "rule": "overused-font",
+        "value": "mona sans",
+        "createdAt": "2026-09-26T02:30:00.000Z",
+        "reason": "DESIGN.md pins Mona Sans as the interface face."
+      }
+    ]
+  }
+}
