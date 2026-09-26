@@ -28,7 +28,7 @@ Static HTML/CSS: a **board** showing every screen side by side in phone frames u
 - **Friend-first artists (the default):** draw, feel good, share with friends.
 - **Gamer artists:** also want to win. They farm gratitude in a dopamine-driven, arcade-style clout layer that people only see if they choose to take part.
 
-How to balance the two: there's no separate layer or mode (ad0ll, 2026-09-24). The gratitude combo escalates only when you push it, so friends who tap a few times send warm gratitude, and people who mash reach the wild upper tiers. Figures such as total gratitude and streak live in each person's stats dialog, and leaderboards live in Explore.
+How to balance the two: there's no separate layer or mode (ad0ll, 2026-09-24). The gratitude combo escalates only when you push it, so friends who tap a few times send warm gratitude, and people who mash reach the wild upper tiers. Figures such as total gratitude and streak live on each person's stat board, and leaderboards live in Explore.
 
 These artists are **suspicious of crypto and money in an art app.** ad0ll, an artist, writes that they would read financial rewards or visible NFTs as "a racket" and would not use the app. If they wanted to be paid, they'd use Skeb, Patreon, or Fanbox.
 
@@ -45,8 +45,8 @@ You can hand someone a physical drawing, but no existing system makes a _digital
 ## Operating Context
 
 - **Opening the app is drawing.** One button starts a drawing; nothing sits in between.
-- **Every drawing is a 5-minute session** (ad0ll, 2026-09-22). The clock starts at the **first stroke**, not when the canvas opens, and **pauses while the app is hidden** (minimized or switched away), resuming on return (ad0ll, 2026-09-22). At 0:00 it goes straight to Finish. Strokes in progress may sit in app-private storage during the session so a reload doesn't lose them; that storage is **wiped at Finish** (ad0ll, 2026-09-22). This is the spec's own solution to its storage problem: progress never needs durable storage, and image data never lands on the device, which keeps stickers scarce. It also makes "daily drawing" one small daily ritual, and gives each sticker an honest time-spent figure. The sketch shows ⌛5:00 on the canvas.
-- **Finishing is a ceremony, not a save.** "Finish drawing" protects the image, makes it a one-of-one, saves it to cloud storage, adds it to the sticker board, and then offers to post it to your feed. Its metadata is the artist, time spent, and date created.
+- **Every drawing is a 5-minute session** (ad0ll, 2026-09-22). The clock starts at the **first stroke**, not when the canvas opens, and **pauses while the app is hidden** (minimized or switched away), resuming on return (ad0ll, 2026-09-22). At 0:00 it goes straight to sealing. Strokes in progress may sit in app-private storage during the session so a reload doesn't lose them; that storage is **wiped at sealing** (ad0ll, 2026-09-22). This is the spec's own solution to its storage problem: progress never needs durable storage, and image data never lands on the device, which keeps stickers scarce. It also makes "daily drawing" one small daily ritual, and gives each sticker an honest time-spent figure. The sketch shows ⌛5:00 on the canvas.
+- **Sealing is a ceremony, not a save.** Sealing protects the image, makes it a one-of-one, saves it to cloud storage, adds it to the sticker board, and then offers to post it to your feed. Its metadata is the artist, time spent, and date created.
 - **Giving is two-sided.** The sticker transfers only once the recipient receives it. After that, the giver is prompted to post about it.
 - **Gratitude is a combo minigame** (ad0ll, 2026-09-23, replacing the flat five-second window). It's modelled on Death Stranding's likes, and it's the product's signature interaction.
   - A received sticker shows a **Send gratitude** button. It opens a big, softly pulsing heart and a one-line instruction to tap.
@@ -88,14 +88,14 @@ You can hand someone a physical drawing, but no existing system makes a _digital
      - If not, a button opens LINE's own **Add friends** screen (`line.me/R/nv/addFriends`), where the artist searches the classmate's LINE ID, adds them, comes back, and picks them.
      - No app can search LINE users itself.
      - The one-friend picker shows **only** the Friends list, not recent chats or groups. It hides friends who set LINE's _External app access_ to "Never allowed", and friends added in the last few minutes. **Can't find them?** opens the full picker, where recent chats may appear.
-  2. **The sticker moves to a holding area.** While the gift is in transit, only the giver can see it, marked as pending, and it's hidden from everyone else.
-  3. **The classmate gets a card in their LINE chat, sent as the artist:** the drawing, "Alice sent you a drawing", and **Accept**. The app itself can't send this: LINE only delivers the Official Account's messages to people who have added it.
+  2. **The sticker moves to escrow.** While the gift is in transit, only the giver can see it, marked as pending, and it's hidden from everyone else.
+  3. **The classmate gets a Gift Message in their LINE chat, sent as the artist:** the drawing, "Alice sent you a drawing", and **Accept**. The app itself can't send this: LINE only delivers the Official Account's messages to people who have added it.
   4. **Receiving is the sign-up.** The classmate is already logged into LINE. On a LIFF app they see one LINE consent screen; a Japan MINI App channel skips it. Then they accept the app's terms, and the server creates their account, wallet and ENS handle. The sticker lands on their new sticker board.
   5. **Making sure Bob gets it, with no extra steps** (ad0ll, 2026-09-23). A hand-over step and an in-person exchange were rejected as too much friction. The confidence comes from how the gift is sent:
-     - The one-friend picker sends the card to exactly one private chat. The card shows a frosted sleeve, never the drawing.
+     - The one-friend picker sends the Gift Message to exactly one private chat. It shows a frosted sleeve, never the drawing.
      - **Bob's Accept delivers the sticker immediately.**
      - The artist gets a **receipt, not a gate**: "Bob Tanaka received No.0147 ♡", with his LINE picture. A quiet "Not them? Take it back" link works for 24 hours; the on-chain transfer finalizes after that window, so taking it back is just a refund.
-     - Delivery is held for the artist only in rare cases: the card was opened in a group chat, or a second person tried the same card.
+     - Delivery is held for the artist only in rare cases: the Gift Message was opened in a group chat, or a second person tried the same one.
      - Unopened gifts return after 7 days. People already on the app get gifts directly by handle.
      - LINE ID search needs both people to have passed LINE's carrier age check, which many adults haven't done. So the one-friend picker is the main path, not ID search.
 - **Every transaction is paid by the app**, through gas-sponsored accounts or a gasless chain. That's why there's a **daily limit on drawings** per artist (ad0ll, 2026-09-23). The number is open.
@@ -133,7 +133,7 @@ ad0ll's hand-drawn sketch (a photo in the 2026-09-22 conversation; the file is n
 4. **Clout, not cash.** Gratitude measures attention and devotion. It never looks like money.
 5. **An artist's app first.** It should read as something made by artists for artists; the technology stays invisible.
 6. **Sane on the surface, about to burst at the seams** (ad0ll, 2026-09-23). It looks colorful, simple, stable, intelligent and sharply designed. A few accented oddities hint there's more. Push hard enough and it bursts at the seams: that's the power-user and easter-egg layer. Drawing, giving, receiving and gratitude stay rock solid underneath.
-7. **Friends first; intensity is earned by pushing.** The default experience is calm and warm. The dopamine-and-clout side isn't behind a door: it opens up as you push the combo harder, and the numbers sit a tap away in the stats dialog and in Explore. (The hidden "flip side" reached by peeling your name label was dropped on 2026-09-24. ad0ll: the interaction "didn't look good".)
+7. **Friends first; intensity is earned by pushing.** The default experience is calm and warm. The dopamine-and-clout side isn't behind a door: it opens up as you push the combo harder, and the numbers sit a tap away on the stat board and in Explore. (The hidden "flip side" reached by peeling your name label was dropped on 2026-09-24. ad0ll: the interaction "didn't look good".)
 
 ## Decisions of 2026-09-23 (latest; these override older lines)
 
@@ -153,7 +153,7 @@ ad0ll's hand-drawn sketch (a photo in the 2026-09-22 conversation; the file is n
   - A **Shop** tab signals a Sui-backed in-app store; tickets are the only item for now.
 - **On-chain copy is allowed in the hackathon build** (for example, in the seal dialog). The real app would hide the complexity.
 - **Gift delivery: no take-back and no grace window.**
-  - Prevent mistakes at send time: the one-friend picker, a gift tag naming who it's for, receiving blocked when opened in a group chat, and each card works once.
+  - Prevent mistakes at send time: the one-friend picker, a gift tag naming who it's for, receiving blocked when opened in a group chat, and each Gift Message works once.
   - The giver just gets "Bob received your sticker ♡".
 - **AI sticker generation from the sketch** is coming later. It stays out of the designs until ad0ll is ready.
 - **Designs first:** ad0ll wants to see the UI and UX before any working tech.
