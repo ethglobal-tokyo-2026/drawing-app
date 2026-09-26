@@ -8,7 +8,7 @@ import {
 import { and, eq, max } from "drizzle-orm";
 import { z } from "zod";
 import type { AppDeps } from "../deps.ts";
-import { diagnosticStep, logFailure, logInfo } from "../diagnostics.ts";
+import { diagnosticStep, failureCause, logFailure, logInfo } from "../diagnostics.ts";
 import { keccak256 } from "../keccak256.ts";
 import { stickerImagesSchema, type StickerImages } from "../shapes.ts";
 import {
@@ -128,7 +128,7 @@ async function mintSticker(deps: AppDeps, stickerId: string): Promise<SealRefusa
     return {
       status: 503,
       error: "mint_failed",
-      detail: `Sticker ${stickerId} is saved, but its NFT could not be confirmed. Retry Sealing with the same ticket; no new ticket is needed.`,
+      detail: `Sticker ${stickerId} is saved, but its NFT could not be confirmed (${failureCause(error)}). Retry Sealing with the same ticket; no new ticket is needed.`,
     };
   }
   // Explicit local mock mode stores stickers without sending a mint transaction.
