@@ -39,7 +39,7 @@ export function useBoardAddress(): ChainAddress {
   const privy = usePrivyStatus();
   const address = privy.state === "signed-in" ? privy.smartAccount : undefined;
   const late = useLate(privy.state === "signed-in" && !address, "The board address");
-  if (privy.state === "failed" || late) return { state: "failed", retry: retryPrivySignIn };
+  if (privy.state === "failed" || late) return { state: "failed", retry: () => retryPrivySignIn() };
   if (address) return { state: "ready", address: checksumAddress(address) };
   return { state: "loading" };
 }
@@ -50,7 +50,7 @@ export function useSuiAddress(): ChainAddress {
   const refused = useSuiWalletFailure() !== undefined;
   const address = privy.state === "signed-in" ? privy.suiWallet : undefined;
   const late = useLate(privy.state === "signed-in" && !address && !refused, "The Sui address");
-  if (privy.state === "failed") return { state: "failed", retry: retryPrivySignIn };
+  if (privy.state === "failed") return { state: "failed", retry: () => retryPrivySignIn() };
   if (address) return { state: "ready", address };
   // Privy is asked for it once per page load, so only a reload asks again.
   if (refused || late) return { state: "failed" };

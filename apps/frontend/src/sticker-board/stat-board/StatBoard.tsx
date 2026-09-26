@@ -153,7 +153,7 @@ function PrivyLine() {
     <div className="stat-board__privy">
       <p className="stat-board__privy-status">{privyText(t, privy)}</p>
       {privy.state === "failed" && (
-        <QuietLink onClick={retryPrivySignIn}>
+        <QuietLink onClick={() => retryPrivySignIn()}>
           {t(($) => $.stickerBoard.developer.privy.tryAgain)}
         </QuietLink>
       )}

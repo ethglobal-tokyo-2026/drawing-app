@@ -134,7 +134,7 @@ export const errors = {
     en: "LINE didn't accept this sign-in. Reconnect with LINE; if this continues, contact the team.",
     ja: "LINEがログイン情報を確認できませんでした。再ログインしても続く場合は、チームにお問い合わせください。",
   },
-  /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: signing in to the app's server (POST /api/session) with an expired LINE ID token, through errorMessage */
+  /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: signing in to the app's server (POST /api/session) with an expired LINE ID token, through errorMessage. Also Giving and Receiving, through errorReason, when a chain action waited on the board address and Privy couldn't sign in because LINE's ID token had expired (made by the app itself) */
   line_token_expired: {
     en: "Your LINE sign-in token has expired. Reconnect with LINE to continue.",
     ja: "LINEのログイン情報の有効期限が切れました。LINEで再ログインしてください。",
@@ -198,7 +198,7 @@ export const errors = {
   },
   /** Any screen, when a request has no valid session (the cookie expired, or the account was deleted), through errorMessage/errorReason */
   signed_out: { en: "You're signed out.", ja: "ログアウトしています。" },
-  /** Drawing screen, the seal key's chip, and Giving and Receiving: a chain action waited 15 s for the Sepolia account that holds the stickers and Privy never readied it (made by the app itself, shown through errorReason) */
+  /** Drawing screen, the seal key's chip, and Giving and Receiving: a chain action waited 30 s for the Sepolia account that holds the stickers and Privy never readied it, or Privy failed again after one fresh try; the reason follows in brackets (made by the app itself, shown through errorReason) */
   smart_account_not_ready: {
     en: "Your board address is taking too long to get ready. Try again.",
     ja: "ボードアドレスの準備に時間がかかっています。もう一度お試しください。",

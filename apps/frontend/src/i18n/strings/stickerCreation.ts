@@ -92,6 +92,11 @@ export const stickerCreation = {
       en: "Couldn’t seal. {{reason}} Tap the check to try again.",
       ja: "仕上げられませんでした。{{reason}}チェックをタップして、もう一度お試しください。",
     },
+    /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing waited on the board address and LINE's sign-in had expired, so Privy couldn't sign in; tapping the check reconnects with LINE and comes back to the drawing screen, which picks the drawing back up */
+    reconnect: {
+      en: "Couldn’t seal: your LINE sign-in has expired. Tap the check to reconnect with LINE, then pick up where you left off.",
+      ja: "仕上げられませんでした。LINEのログイン情報の有効期限が切れました。チェックをタップしてLINEで再ログインすると、続きから再開できます。",
+    },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing failed on the phone before the server was asked; {{reason}} is a technical message that stays English */
     failedHere: {
       en: "Couldn’t seal ({{reason}}). Tap the check to try again.",
