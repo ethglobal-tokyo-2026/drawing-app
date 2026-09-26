@@ -1,5 +1,7 @@
 import { Eye, Gift, TrayArrowDown } from "@phosphor-icons/react";
 import { useEffectEvent, useLayoutEffect, useRef } from "react";
+import type { PersonView } from "../api/views";
+import { ArtistChip } from "../stickers/ArtistChip";
 import { LabelButton } from "../ui/LabelButton";
 import { toolbarSpot, type Box } from "./placement";
 
@@ -25,6 +27,8 @@ interface Props {
   /** Escape hands focus back to the sticker. */
   onEscape: () => void;
   reduced: boolean;
+  /** Its Original Artist, when someone other than the board's owner drew it: the chip heads the toolbar. */
+  artist?: PersonView;
 }
 
 /** When a toolbar last went away; a new one within the handoff window is the same toolbar moving. */
@@ -44,6 +48,7 @@ export function StickerToolbar({
   onRemove,
   onEscape,
   reduced,
+  artist,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -89,6 +94,11 @@ export function StickerToolbar({
         if (e.key === "Escape") onEscape();
       }}
     >
+      {artist && (
+        <div className="sticker-toolbar__by">
+          <ArtistChip artist={artist} bare />
+        </div>
+      )}
       {give && (
         <LabelButton tone="aqua" size="sm" icon={<Gift size={18} aria-hidden />} onClick={onGive}>
           Give

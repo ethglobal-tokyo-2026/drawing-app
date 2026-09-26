@@ -276,6 +276,7 @@ export function ArtistBoard({ artist, onBack }: Props) {
               position={`${i + 1} of ${stickers.length}`}
               hintId={hint}
               foil={Boolean(artist.board[i].by)}
+              by={artist.board[i].by && formatHandle(artist.board[i].by)}
               glow={Math.min(artist.board[i].gratitude / FULL_GLOW, 1)}
             />
           ))}

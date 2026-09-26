@@ -65,9 +65,3 @@ export function boardOverlayWith(sources: BoardSources): Overlay {
     };
   };
 }
-
-/** Until Receiving and Giving hand over what their fixtures did, nothing is received either way. */
-export const boardOverlay = boardOverlayWith({
-  receivedStickers: () => [],
-  receivedGifts: () => new Map(),
-});

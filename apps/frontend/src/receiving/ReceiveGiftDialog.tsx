@@ -294,7 +294,13 @@ function Gift({
         {!sealed && (
           <span className="receive-gift__figure" aria-hidden="true">
             <span style={{ width: sticker.width * fit, height: sticker.height * fit }}>
-              <StickerFigure urls={sticker.urls} width={sticker.width} height={sticker.height} />
+              <StickerFigure
+                urls={sticker.urls}
+                width={sticker.width}
+                height={sticker.height}
+                foil="detail"
+                no={sticker.no}
+              />
             </span>
           </span>
         )}

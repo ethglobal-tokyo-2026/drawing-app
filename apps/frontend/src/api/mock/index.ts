@@ -1,13 +1,17 @@
 import type { ApiClient } from "../apiClient";
-import { boardOverlay } from "./board";
-import { givingOverlay } from "./giving";
-import { receivingOverlay } from "./receiving";
+import { boardOverlayWith } from "./board";
+import { givingOverlay, receivedGifts } from "./giving";
+import { receivedDemoStickers, receivingOverlay } from "./receiving";
 
 /** One feature's fixtures, over the client beneath: the methods it answers itself. */
 export type Overlay = (below: ApiClient) => Partial<ApiClient>;
 
 /** Later overlays see the earlier ones: the board reads what Receiving and Giving did. */
-const OVERLAYS: Overlay[] = [receivingOverlay, givingOverlay, boardOverlay];
+const OVERLAYS: Overlay[] = [
+  receivingOverlay,
+  givingOverlay,
+  boardOverlayWith({ receivedStickers: receivedDemoStickers, receivedGifts }),
+];
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

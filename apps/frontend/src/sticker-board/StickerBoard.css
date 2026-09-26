@@ -336,6 +336,15 @@
 }
 
 /* A 36px face on its lip. */
+/* The artist of a sticker someone else drew heads its toolbar, on a row of its own. */
+.sticker-toolbar:has(.sticker-toolbar__by) {
+  flex-wrap: wrap;
+}
+
+.sticker-toolbar__by {
+  flex-basis: 100%;
+}
+
 .sticker-toolbar .label-btn {
   min-height: calc(36px + var(--lip));
   padding: 0 13px 0 11px;
