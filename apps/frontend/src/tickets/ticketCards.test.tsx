@@ -257,9 +257,8 @@ describe("ReserveTicketCheckout", () => {
     );
     await settle(3000);
     expect(skeletons()).toBe(0);
-    expect(document.querySelector(".reserve-checkout__balance strong")?.textContent).toBe(
-      "￥1,000",
-    );
+    // The half-width yen sign, Mona Sans's own, though Node's ICU (like Chromium's) writes the full-width ￥.
+    expect(document.querySelector(".reserve-checkout__balance strong")?.textContent).toBe("¥1,000");
   });
 
   it("pays the chosen pack's JPYC from the Sui wallet, and shows the tickets the server added", async () => {
