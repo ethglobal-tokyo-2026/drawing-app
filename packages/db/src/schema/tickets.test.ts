@@ -39,7 +39,14 @@ describe("tickets", () => {
     const record = () =>
       db
         .insert(ticketPurchases)
-        .values({ userId, tickets: 1, priceYen: 100, paidMist: "1", txDigest: "digest" })
+        .values({
+          userId,
+          tickets: 1,
+          priceYen: 100,
+          suiYen: "300",
+          paidMist: "1",
+          txDigest: "digest",
+        })
         .run();
     record();
     expect(refusal(record)).toMatch(/ticket_purchases.tx_digest/);

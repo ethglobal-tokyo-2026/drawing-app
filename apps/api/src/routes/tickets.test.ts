@@ -4,15 +4,22 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { errorBodySchema } from "../errors.ts";
-import { ticketsSchema } from "../shapes.ts";
+import { ticketQuoteSchema, ticketsSchema, type TicketQuote } from "../shapes.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
-import { fakeSuiPayments } from "../testing/fakes.ts";
+import { fakeSuiPayments, fakeSuiPrice } from "../testing/fakes.ts";
 import { insertSealedSticker } from "../testing/rows.ts";
 import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
-import { TICKET_PACKS, ticketUseSchema, type TicketKind } from "../tickets/tickets.ts";
+import {
+  QUOTE_HOLDS_MS,
+  TICKET_PACKS,
+  TICKET_PRICE_YEN,
+  ticketUseSchema,
+  type TicketKind,
+} from "../tickets/tickets.ts";
 
 const ticketsBodySchema = z.object({ tickets: ticketsSchema });
 const spendBodySchema = z.object({ ticketUse: ticketUseSchema, tickets: ticketsSchema });
+const quoteBodySchema = z.object({ quote: ticketQuoteSchema });
 
 /** A sealed sticker's cut, for the ticket stubs. */
 const SEALED_CUT = { outline: "M0 0H4V2Z", width: 4, height: 2 };
@@ -21,8 +28,17 @@ const SEALED_CUT = { outline: "M0 0H4V2Z", width: 4, height: 2 };
 const [, PACK] = TICKET_PACKS;
 /** More tickets than any pack holds. */
 const NOT_A_PACK = Math.max(...TICKET_PACKS.map((pack) => pack.tickets)) + 1;
-/** 1 SUI in MIST. The mock payment's amount isn't checked. */
+/** 1 SUI in MIST. */
 const PAID_MIST = "1000000000";
+/** A SUI/JPY price with a fraction, and the same price in hundredths of a yen. */
+const SUI_YEN = "312.45";
+const SUI_YEN_HUNDREDTHS = 31245n;
+const HUNDREDTHS_PER_YEN = 100n;
+const MIST_PER_SUI = 1_000_000_000n;
+const ONE_MIST = 1n;
+const ONE_MS = 1;
+const PERCENT = 100;
+const PAYMENT_SHORT = { status: 402, error: "payment_short" };
 
 const BASE58_DIGITS = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 /** Sui prints a transaction's 32-byte digest in base58. */
@@ -86,9 +102,30 @@ const buy = (body: object, as: Headers = headers) =>
     body: JSON.stringify(body),
   });
 
-/** Buys `pack`, which must be granted, and returns the tickets after. */
+const getQuote = async (as: Headers = headers) => {
+  const response = await test.app.request("/api/ticket-quote", { headers: as });
+  expect(response.status).toBe(200);
+  return quoteBodySchema.parse(await response.json()).quote;
+};
+
+/** What `quote` asks for the pack of `tickets`, in MIST. */
+function priceMistAt(quote: TicketQuote, tickets: number) {
+  const offer = quote.packs.find((pack) => pack.tickets === tickets);
+  if (!offer) throw new Error(`The quote has no pack of ${tickets}`);
+  return offer.priceMist;
+}
+
+/** Pays for `pack` what a fresh quote asks. */
+async function buyAtQuote(pack: { tickets: number }, txDigest = newTxDigest(), as = headers) {
+  const quote = await getQuote(as);
+  const paidMist = priceMistAt(quote, pack.tickets);
+  const response = await buy({ tickets: pack.tickets, txDigest, paidMist }, as);
+  return { quote, paidMist, response };
+}
+
+/** Buys `pack` at a fresh quote, which must be granted, and returns the tickets after. */
 async function buyPack(pack: { tickets: number }, txDigest = newTxDigest(), as = headers) {
-  const response = await buy({ tickets: pack.tickets, txDigest, paidMist: PAID_MIST }, as);
+  const { response } = await buyAtQuote(pack, txDigest, as);
   expect(response.status).toBe(201);
   return ticketsBodySchema.parse(await response.json()).tickets;
 }
@@ -201,19 +238,58 @@ describe("tickets", () => {
     expect((await getTickets()).reserveLeft).toBe(PACK.tickets);
   });
 
-  it("add each pack's tickets, recording the pack's price and the verified payment", async () => {
+  it("quote each pack's MIST at the SUI/JPY price, rounded up, and hold the quote for QUOTE_HOLDS_MS", async () => {
+    await start({ suiPrice: fakeSuiPrice(SUI_YEN) });
+    const quote = await getQuote();
+    expect(quote).toMatchObject({ suiYen: SUI_YEN, quotedAt: test.clock.now().toISOString() });
+    expect(Date.parse(quote.expiresAt) - Date.parse(quote.quotedAt)).toBe(QUOTE_HOLDS_MS);
+    expect(quote.packs.map(({ tickets, priceYen }) => ({ tickets, priceYen }))).toEqual(
+      TICKET_PACKS,
+    );
+    for (const { tickets, priceYen, discountPercent, priceMist } of quote.packs) {
+      expect(priceYen * PERCENT).toBe(tickets * TICKET_PRICE_YEN * (PERCENT - discountPercent));
+      const price = BigInt(priceYen) * HUNDREDTHS_PER_YEN * MIST_PER_SUI;
+      expect(BigInt(priceMist) * SUI_YEN_HUNDREDTHS).toBeGreaterThanOrEqual(price);
+      expect((BigInt(priceMist) - ONE_MIST) * SUI_YEN_HUNDREDTHS).toBeLessThan(price);
+    }
+  });
+
+  it("refuse a quote with sui_price_unavailable while there's no SUI/JPY price", async () => {
+    await start({ suiPrice: fakeSuiPrice(null) });
+    const response = await test.app.request("/api/ticket-quote", { headers });
+    expect(await refusal(response)).toMatchObject({ status: 503, error: "sui_price_unavailable" });
+  });
+
+  it("add each pack's tickets, recording its price, the quote's SUI/JPY price and the payment", async () => {
     let reserveLeft = 0;
     for (const pack of TICKET_PACKS) {
       const txDigest = newTxDigest();
+      const { quote, paidMist, response } = await buyAtQuote(pack, txDigest);
       reserveLeft += pack.tickets;
-      expect((await buyPack(pack, txDigest)).reserveLeft).toBe(reserveLeft);
+      expect(response.status).toBe(201);
+      expect(ticketsBodySchema.parse(await response.json()).tickets.reserveLeft).toBe(reserveLeft);
       expect(purchaseOf(txDigest)).toMatchObject({
         userId,
         priceYen: pack.priceYen,
-        paidMist: PAID_MIST,
+        suiYen: quote.suiYen,
+        paidMist,
         verifiedAt: test.clock.now(),
       });
     }
+  });
+
+  it("refuse with payment_short a payment short of its pack at every quote still holding", async () => {
+    const buyFor = (paidMist: bigint) =>
+      buy({ tickets: PACK.tickets, txDigest: newTxDigest(), paidMist: paidMist.toString() });
+    expect(await refusal(await buyFor(BigInt(PAID_MIST)))).toMatchObject(PAYMENT_SHORT);
+
+    const priceMist = BigInt(priceMistAt(await getQuote(), PACK.tickets));
+    expect(await refusal(await buyFor(priceMist - ONE_MIST))).toMatchObject(PAYMENT_SHORT);
+    test.clock.advance(QUOTE_HOLDS_MS + ONE_MS);
+    expect(await refusal(await buyFor(priceMist))).toMatchObject(PAYMENT_SHORT);
+
+    expect(test.db.select().from(ticketPurchases).all()).toEqual([]);
+    expect((await getTickets()).reserveLeft).toBe(0);
   });
 
   it("count a payment once, whoever sends it again", async () => {
@@ -246,7 +322,7 @@ describe("tickets", () => {
     await start({ sui: fakeSuiPayments(false) });
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const txDigest = newTxDigest();
-    const response = await buy({ tickets: PACK.tickets, txDigest, paidMist: PAID_MIST });
+    const { response } = await buyAtQuote(PACK, txDigest);
     expect(await refusal(response)).toMatchObject({ status: 500, error: "internal_error" });
     expect(log).toHaveBeenCalledWith(expect.stringContaining(txDigest));
     expect(purchaseOf(txDigest)).toBeUndefined();
@@ -258,6 +334,7 @@ describe("tickets", () => {
     for (const response of [
       await test.app.request("/api/tickets"),
       await spend("daily", {}),
+      await test.app.request("/api/ticket-quote"),
       await buy({ tickets: PACK.tickets, txDigest, paidMist: PAID_MIST }, {}),
     ]) {
       expect(await refusal(response)).toMatchObject({ status: 401, error: "signed_out" });

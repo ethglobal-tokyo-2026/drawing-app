@@ -4,6 +4,7 @@ import type { AppDeps } from "../deps.ts";
 import { apiError, validate } from "../errors.ts";
 import type { AppEnv } from "../session.ts";
 import {
+  createQuoteBook,
   paymentCounted,
   spendRequestSchema,
   TICKET_PACKS,
@@ -18,9 +19,10 @@ import {
 const noAccount = (c: Context<AppEnv>) =>
   apiError(c, 401, "signed_out", `Person ${c.var.userId} has no account`);
 
-/** Tickets: the day's tickets, spending one, and buying packs. */
-export const ticketRoutes = ({ db, clock, sui }: AppDeps) =>
-  new Hono<AppEnv>()
+/** Tickets: the day's tickets, spending one, quoting packs in SUI, and buying them. */
+export const ticketRoutes = ({ db, clock, sui, suiPrice }: AppDeps) => {
+  const quotes = createQuoteBook();
+  return new Hono<AppEnv>()
     .get("/tickets", (c) => {
       const holder = ticketHolder(db, c.var.userId);
       if (!holder) return noAccount(c);
@@ -68,6 +70,18 @@ export const ticketRoutes = ({ db, clock, sui }: AppDeps) =>
         { behavior: "immediate" },
       );
     })
+    .get("/ticket-quote", async (c) => {
+      const suiYen = await suiPrice();
+      if (suiYen === null) {
+        return apiError(
+          c,
+          503,
+          "sui_price_unavailable",
+          "No 5-minute average SUI/JPY price is available",
+        );
+      }
+      return c.json({ quote: quotes.issue(suiYen, clock.now()) }, 200);
+    })
     .post("/ticket-purchases", validate("json", ticketPurchaseRequestSchema), async (c) => {
       const { tickets, txDigest, paidMist } = c.req.valid("json");
       const pack = TICKET_PACKS.find((offer) => offer.tickets === tickets);
@@ -83,6 +97,15 @@ export const ticketRoutes = ({ db, clock, sui }: AppDeps) =>
       const alreadyCounted = () =>
         apiError(c, 409, "payment_already_counted", `txDigest: ${txDigest} already bought tickets`);
       if (paymentCounted(db, txDigest)) return alreadyCounted();
+      const quote = quotes.covering(pack.tickets, BigInt(paidMist), clock.now());
+      if (!quote) {
+        return apiError(
+          c,
+          402,
+          "payment_short",
+          `paidMist: ${paidMist} MIST covers the ${pack.tickets}-ticket pack at no quote that still holds`,
+        );
+      }
       // The contract has no code for a payment Sui doesn't verify; the mock payment always verifies.
       if (!(await sui.verifyPayment(txDigest))) {
         console.error(`POST /api/ticket-purchases: Sui didn't verify payment ${txDigest}`);
@@ -100,6 +123,7 @@ export const ticketRoutes = ({ db, clock, sui }: AppDeps) =>
               userId: holder.id,
               tickets,
               priceYen: pack.priceYen,
+              suiYen: quote.suiYen,
               paidMist,
               txDigest,
               verifiedAt: now,
@@ -110,3 +134,4 @@ export const ticketRoutes = ({ db, clock, sui }: AppDeps) =>
         { behavior: "immediate" },
       );
     });
+};

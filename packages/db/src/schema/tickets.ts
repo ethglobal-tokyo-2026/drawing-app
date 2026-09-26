@@ -50,6 +50,8 @@ export const ticketPurchases = sqliteTable(
     tickets: integer("tickets").notNull(),
     /** The pack's price in yen. */
     priceYen: integer("price_yen").notNull(),
+    /** The SUI/JPY price of the quote the payment covered: yen per SUI, as decimal text. */
+    suiYen: text("sui_yen").notNull(),
     /** What the Sui payment carried, in MIST, as decimal text. */
     paidMist: text("paid_mist").notNull(),
     /** The Sui transaction digest; one payment counts once. */

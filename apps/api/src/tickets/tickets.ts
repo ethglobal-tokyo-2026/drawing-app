@@ -9,16 +9,76 @@ import {
 import { and, asc, count, eq, isNotNull, sum } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
-import { isoTimeSchema, toIsoTime, type Tickets } from "../shapes.ts";
+import { isoTimeSchema, toIsoTime, type TicketQuote, type Tickets } from "../shapes.ts";
 import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
 
-/** The ticket shop's packs of reserve tickets, paid in SUI. */
+/** A single reserve ticket's price in yen; packs show their discount off it. */
+export const TICKET_PRICE_YEN = 100;
+
+/** The ticket shop's packs of reserve tickets, priced in yen and paid in SUI. */
 export const TICKET_PACKS = [
   { tickets: 1, priceYen: 100 },
   { tickets: 3, priceYen: 270 },
   { tickets: 5, priceYen: 375 },
   { tickets: 10, priceYen: 600 },
-] as const;
+] as const satisfies ReadonlyArray<Pick<TicketQuote["packs"][number], "tickets" | "priceYen">>;
+
+/** How long a quote holds: a purchase counts only at a quote issued within it. */
+export const QUOTE_HOLDS_MS = 60 * 1000;
+
+const MIST_PER_SUI = 1_000_000_000n;
+const PERCENT = 100;
+
+/** The least MIST worth `priceYen` at `suiYen` yen per SUI, so paying it always covers the price. */
+function mistFor(priceYen: number, suiYen: string): bigint {
+  const [whole, fraction = ""] = suiYen.split(".");
+  const yenPerSui = BigInt(whole + fraction);
+  const price = BigInt(priceYen) * MIST_PER_SUI * 10n ** BigInt(fraction.length);
+  return (price + yenPerSui - 1n) / yenPerSui;
+}
+
+/** The ticket shop's packs at `suiYen` yen per SUI, quoted at `now`. */
+const quoteAt = (suiYen: string, now: Date): TicketQuote => ({
+  suiYen,
+  quotedAt: toIsoTime(now),
+  expiresAt: toIsoTime(new Date(now.getTime() + QUOTE_HOLDS_MS)),
+  packs: TICKET_PACKS.map(({ tickets, priceYen }) => ({
+    tickets,
+    priceYen,
+    discountPercent: Math.round(PERCENT - (PERCENT * priceYen) / (tickets * TICKET_PRICE_YEN)),
+    priceMist: mistFor(priceYen, suiYen).toString(),
+  })),
+});
+
+/**
+ * The quotes issued that still hold, for anyone: a purchase counts only at one of them. They live in
+ * memory, since none outlasts a minute.
+ */
+export function createQuoteBook() {
+  let holding: TicketQuote[] = [];
+  const dropExpired = (now: Date) => {
+    holding = holding.filter((quote) => Date.parse(quote.expiresAt) >= now.getTime());
+  };
+  return {
+    issue: (suiYen: string, now: Date): TicketQuote => {
+      dropExpired(now);
+      const quote = quoteAt(suiYen, now);
+      holding.push(quote);
+      return quote;
+    },
+    /** The newest quote still holding at which `paidMist` covers the pack of `tickets`. */
+    covering: (tickets: number, paidMist: bigint, now: Date): TicketQuote | undefined => {
+      dropExpired(now);
+      return [...holding]
+        .reverse()
+        .find((quote) =>
+          quote.packs.some(
+            (pack) => pack.tickets === tickets && BigInt(pack.priceMist) <= paidMist,
+          ),
+        );
+    },
+  };
+}
 
 /** The database, or a transaction on it. */
 type DbOrTx = Db | Parameters<Parameters<Db["transaction"]>[0]>[0];

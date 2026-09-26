@@ -114,6 +114,25 @@ export const ticketsSchema = z.object({
 });
 export type Tickets = z.infer<typeof ticketsSchema>;
 
+export const ticketQuoteSchema = z.object({
+  /** Yen per SUI, the 5-minute time-weighted average, as decimal text. */
+  suiYen: z.string().regex(/^[0-9]+(\.[0-9]+)?$/),
+  quotedAt: isoTimeSchema,
+  /** A purchase counts only at a quote that still holds. */
+  expiresAt: isoTimeSchema,
+  packs: z.array(
+    z.object({
+      tickets: z.literal([1, 3, 5, 10]),
+      priceYen: positiveInt,
+      /** Off ¥100 per ticket. */
+      discountPercent: count,
+      /** Decimal MIST, rounded up. */
+      priceMist: z.string().regex(/^[0-9]+$/),
+    }),
+  ),
+});
+export type TicketQuote = z.infer<typeof ticketQuoteSchema>;
+
 export const userStatsSchema = z.object({
   since: isoTimeSchema,
   made: count,

@@ -16,7 +16,12 @@ export interface AppDeps {
   giftChain: GiftChain | null;
   smartWallets: SmartWallets;
   sui: SuiPayments;
+  /** The ticket shop quotes its packs at this price. */
+  suiPrice: SuiPrice;
 }
+
+/** The 5-minute time-weighted average SUI/JPY price, as decimal yen per SUI; null while there's none. */
+export type SuiPrice = () => Promise<string | null>;
 
 export interface Clock {
   now: () => Date;

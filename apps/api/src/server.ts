@@ -34,6 +34,9 @@ const env = parsed.data;
 migrateDatabase();
 mkdirSync(env.IMAGE_DIR, { recursive: true });
 
+/** A stand-in SUI/JPY price, not a market one, until the server reads a price feed. */
+const MOCK_SUI_YEN = "300";
+
 const deps: AppDeps = {
   db: openDb(),
   sessionSecret: env.SESSION_SECRET,
@@ -45,6 +48,7 @@ const deps: AppDeps = {
   giftChain: null,
   smartWallets: noSmartWallets,
   sui: mockSuiPayments,
+  suiPrice: () => Promise.resolve(MOCK_SUI_YEN),
 };
 
 /** Where the sticker images are served; on the box, CDN_BASE_URL is the site's origin plus this. */
