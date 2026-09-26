@@ -1,5 +1,5 @@
 ---
-name: Sketchbook (シール帳)
+name: Sticker Board (シール帳)
 description: A LINE drawing app where every five-minute drawing is sealed into a die-cut sticker you keep, give or trade.
 colors:
   liner: "#F2F1F6"
@@ -19,9 +19,9 @@ colors:
   grape-deep: "#6D4FD6"
   tomato-deep: "#C63C1E"
   label-lip: "#D3D0DC"
-  pouch-canvas: "#F9B3D1"
-  pouch-tape: "#FFA6CD"
-  pouch-lining: "#FBE3EE"
+  tray-canvas: "#F9B3D1"
+  tray-tape: "#FFA6CD"
+  tray-lining: "#FBE3EE"
   foil-pink: "#FF6FAE"
   foil-peach: "#FFA85E"
   foil-lemon: "#FFD84A"
@@ -189,7 +189,7 @@ components:
     rounded: "{rounded.label}"
     padding: "0 12px"
     height: "46px"
-  pouch-folder-tab:
+  tray-folder-tab:
     backgroundColor: "{colors.liner-lift}"
     textColor: "{colors.ink}"
     rounded: "{rounded.label}"
@@ -250,17 +250,17 @@ components:
     padding: "11px 16px 12px"
 ---
 
-# Design System: Sketchbook (シール帳)
+# Design System: Sticker Board (シール帳)
 
 ## Overview
 
 **Creative North Star: "The Sticker Trade Book"**
 
-The app is a シール帳, a sticker trade book. The ground is release-liner backing paper, controls are printed label stock, and the one thing each screen wants pressed is a cartoon keycap: a flat coded face with an ink outline, like the drawings, sitting on a thick lip it sinks into. A finished drawing gets sealed: its own strokes become a die-cut outline, a white border and a kiss-cut groove. Then it peels off the page and sticks to a free-form sticker board, and your whole collection lives as a stack of loose sheets in a zipped canvas pouch down the board's right edge. The board has a cork back, and your figures are paper pinned to it. Everything that moves lives in the same physical world. Keys press and pop, labels sink 2px, stickers peel and stick, zippers run tooth by tooth, a gift's seal tears off, and sheets have a perforation row you tear along.
+The app is a シール帳, a sticker trade book. The ground is release-liner backing paper, controls are printed label stock, and the one thing each screen wants pressed is a cartoon keycap: a flat coded face with an ink outline, like the drawings, sitting on a thick lip it sinks into. A finished drawing gets sealed: its own strokes become a die-cut outline, a white border and a kiss-cut groove. Then it peels off the page and sticks to a free-form sticker board, and your whole collection lives as a stack of loose sheets in a zipped canvas tray down the board's right edge. The board has a cork back, and your figures are paper pinned to it. Everything that moves lives in the same physical world. Keys press and pop, labels sink 2px, stickers peel and stick, zippers run tooth by tooth, a gift's seal tears off, and sheets have a perforation row you tear along.
 
 The surface is calm and orderly. Calm screens are almost all Liner and Ink, and color comes in flat coded fields where each hue has one meaning. The world only goes wild when you push it. Gratitude is one experience for everyone: the figures always show, and only people who keep mashing the heart reach the upper tiers, where it blushes, sweats hearts and finally fogs the glass. Nothing is hidden behind a second place: tap a person's picture or name on their board and the whole board turns over to its cork back, where their figures are pinned up as a receipt, a calendar leaf, stamps, a notebook scrap and label tape.
 
-The world refuses two category defaults. One is Procreate-grey tool chrome with a pixiv-style feed. The other is the sticker boom's gacha, rarity and "rate" market: holo foil marks who drew a sticker, never how rare it is, and gratitude is never described in money words.
+The world refuses two category defaults. One is Procreate-grey tool chrome with a pixiv-style feed. The other is the sticker boom's gacha, rarity and "rate" market: foil marks who drew a sticker, never how rare it is, and gratitude is never described in money words.
 
 **Key Characteristics:**
 
@@ -268,8 +268,8 @@ The world refuses two category defaults. One is Procreate-grey tool chrome with 
 - One cartoon keycap per screen for its primary act; everything else is thinner label stock, quiet links or flat tools.
 - One tactile press for every key and label: press, hold, slide-off lift, release pop, with the action firing 60ms into the pop.
 - No gloss on any control. Stickers keep their baked resin and live light; buttons never do.
-- Stickers are die-cut from the artist's own strokes; the collection lives as loose sheets in a pink canvas pouch with a real zipper.
-- A sticker drawn by someone other than the board's owner wears a moving holo foil band and names its artist.
+- Stickers are die-cut from the artist's own strokes; the collection lives as loose sheets in a pink canvas tray with a real zipper.
+- A sticker drawn by someone other than the board's owner wears a moving foil band and names its artist.
 - The board turns over: its back is cork, with the figures pinned on as paper.
 - Physical motion grammar on transform and opacity only.
 - Mocked LINE and iOS screens copy those platforms exactly and never borrow the world's materials.
@@ -286,11 +286,11 @@ The palette is Liner and Ink, plus five candy-bright coded fields, each with one
 ### Secondary
 
 - **Soda Aqua** (soda-aqua): giving. The Give key (including where Draw sits on someone else's board), the Explore tab, the gift bag's tear tape and its pull tab, and viewer hints mixed toward Liner.
-- **Bonbon Pink** (bonbon-pink): gratitude, and you. The Send gratitude key, the heart and its mini hearts, the My board tab, the pouch's zip pull and its Mine folder tab, the open trail row's outline, the selected leaderboard tab, and on the cork back the receipt's pushpin and your name's washi strip.
+- **Bonbon Pink** (bonbon-pink): gratitude, and you. The Send gratitude key, the heart and its mini hearts, the My board tab, the tray's zip pull and its Mine folder tab, the open trail row's outline, the selected leaderboard tab, and on the cork back the receipt's pushpin and your name's washi strip.
 
 ### Tertiary
 
-- **Grape** (grape): received, offers, and reserve tickets. The Accept key on a gift, the ticket shop's Pay key and picked pack, the Use a reserve ticket key, the Shop tab, the Send offer key, Offer for it on someone else's board, the pouch's Gifts folder tab, received-sticker marks, and the ruled lines of the notebook scrap on the cork back.
+- **Grape** (grape): received, offers, and reserve tickets. The Accept key on a gift, the ticket shop's Pay key and picked pack, the Use a reserve ticket key, the Shop tab, the Send offer key, Offer for it on someone else's board, the tray's Gifts folder tab, received-sticker marks, and the ruled lines of the notebook scrap on the cork back.
 - **Tomato** (tomato): can't undo. Stopped states, warnings and Take the original. It's never a key.
 - **Foil** (foil-pink, foil-peach, foil-lemon, foil-aqua, foil-sky, foil-lilac): six iridescent bands, one 96px period, that flow along a sticker's foil band and turn in the ring round the artist chip's picture. It isn't a fill color. It's a material worn only by a sticker drawn by someone other than the board's owner. It has no green.
 
@@ -299,11 +299,11 @@ The palette is Liner and Ink, plus five candy-bright coded fields, each with one
 - **Seal Deep, Aqua Deep, Pink Deep, Grape Deep, Tomato Deep** (seal-deep, aqua-deep, pink-deep, grape-deep, tomato-deep): the front wall under a coded key or label. They never appear as fields or text.
 - **Label Lip** (label-lip): the 3px paper edge under plain Liner Lift label stock.
 
-### The pouch
+### The tray
 
-- **Pouch Canvas** (pouch-canvas): the pink canvas edge down the board's right side where the zipper is sewn on.
-- **Pouch Tape** (pouch-tape): the zipper tape, lighter than Bonbon Pink so the pull stays the one strong pink.
-- **Pouch Lining** (pouch-lining): the soft pink canvas you see into when it's open.
+- **Tray Canvas** (tray-canvas): the pink canvas edge down the board's right side where the zipper is sewn on.
+- **Tray Tape** (tray-tape): the zipper tape, lighter than Bonbon Pink so the pull stays the one strong pink.
+- **Tray Lining** (tray-lining): the soft pink canvas you see into when it's open.
 
 ### The cork back
 
@@ -313,7 +313,7 @@ The palette is Liner and Ink, plus five candy-bright coded fields, each with one
 
 - **Liner** (liner): the backing-paper ground of every in-world screen and sheet.
 - **Liner Deep** (liner-deep): a sunk (disabled) key or label, a pressed inactive tab, and the leaderboard tab track.
-- **Liner Lift** (liner-lift): a label lifted off the liner: label-stock faces, the paper on the cork back, the artist chip, the open trail row, the pouch's loose sheets, and selected chips.
+- **Liner Lift** (liner-lift): a label lifted off the liner: label-stock faces, the paper on the cork back, the artist chip, the open trail row, the tray's loose sheets, and selected chips.
 - **Ink** (ink): all text on every field, the key's outline, the toast, the table under the board while it turns over, the label-maker tape on the cork back, the current drawing tool, and the ink button.
 - **Graphite** (graphite): secondary text, fine print, placeholders and quiet links. Ink-alpha steps carry hairlines: a kiss-cut rule at 14% and a stronger rule at 26%. Ink at 62% is the soft-text color.
 - **Canvas** (canvas): drawing surfaces, and white label stock. That's the drawing sheet, a sticker's white border, and the draw screen's two stuck-on labels (the PAUSED tag and the paused hint), which are white so they read as labels over any drawing.
@@ -326,9 +326,9 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 
 **The One Meaning Rule.** Each hue means one thing: yellow is now, aqua is giving, pink is gratitude and you, grape is received, and tomato is can't-undo. Don't pick a hue for looks.
 
-**The Other Hand Rule.** Foil appears only on a sticker drawn by someone other than the board's owner (on your pouch's sheets, someone other than you). Your own stickers keep the plain white die-cut edge; the pearl rim is retired. Surfaces that aren't a board (Explore's feed, the leaderboard) show no foil. It's never a rarity grade.
+**The Other Hand Rule.** Foil appears only on a sticker drawn by someone other than the board's owner (on your tray's sheets, someone other than you). Your own stickers keep the plain white die-cut edge; the pearl rim is retired. Surfaces that aren't a board (Explore's feed, the leaderboard) show no foil. It's never a rarity grade.
 
-**The Platform Green Rule.** The world has no green. LINE's green appears only inside LINE's own mocked UI (the chat, the Flex card, the consent and share screens, and the app badge).
+**The Platform Green Rule.** The world has no green. LINE's green appears only inside LINE's own mocked UI (the chat, the Gift Message, the consent and share screens, and the app badge).
 
 ## Typography
 
@@ -347,7 +347,7 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 - **Title** (800, 18–22px, line-height 1.1, width 112): sheet titles, the board header's name, and the name card and notebook scrap heading on the cork back (18px).
 - **Body** (400–500, 15px, line-height 1.42–1.5, width 100): running text. Notes cap at 28–44ch. Supporting notes drop to 13px.
 - **Label** (700, 15px, or 13px on small buttons, width 100): buttons, tabs and chips, in sentence case at one weight.
-- **Fine** (650, 11px, uppercase, +0.07em, width 87.5, tabular): metadata lines such as "No.0147 · 4:52 · 2026.09.23 · @alice", sheet date ranges in the pouch, captions and hints.
+- **Fine** (650, 11px, uppercase, +0.07em, width 87.5, tabular): metadata lines such as "No.0147 · 4:52 · 2026.09.23 · @alice", sheet date ranges in the tray, captions and hints.
 - **JP caption** (700, 11px, +0.14em): the なまえ cap on the name label.
 
 ### Named Rules
@@ -373,7 +373,7 @@ Every screen is a 390 × 844 iPhone viewport. From top to bottom there's a 47px 
 
 The spacing rhythm steps in 4px units, and 12px is the house gutter. Tabs sit on a 12px inset with an 8px gap, and sheets pad 18–20px on the sides and 24px at the foot. Controls anchor to the thumb zone. The key sits low, usually bottom right or centered at a sheet's foot, with any secondary label or quiet link directly beneath it.
 
-The sticker board is free-form, not a grid. Stickers sit wherever they were dropped, at their own size and slight rotation. The board's header is your avatar and name at the top left; the compact Draw key floats at the lower left; the sticker pouch runs down the right edge from under the header (y 64) to the foot and opens across half the screen. Someone else's board keeps the same layout with the pouch gone, so the field runs to the right inset; Give takes Draw's slot, and a small Explore back chip sits beside the name. The cork back is a two-column grid (206px and the rest, 16 × 12px gaps) under the person's picture and name card, with Flip back at the foot of the right column in the thumb's reach. No surface shows grid paper: paper is hinted by the liner stock and the faint diagonal "SEAL · シール" maker print, never a full grid.
+The sticker board is free-form, not a grid. Stickers sit wherever they were dropped, at their own size and slight rotation. The board's header is your avatar and name at the top left; the compact Draw key floats at the lower left; the sticker tray runs down the right edge from under the header (y 64) to the foot and opens across half the screen. Someone else's board keeps the same layout with the tray gone, so the field runs to the right inset; Give takes Draw's slot, and a small Explore back chip sits beside the name. The cork back is a two-column grid (206px and the rest, 16 × 12px gaps) under the person's picture and name card, with Flip back at the foot of the right column in the thumb's reach. No surface shows grid paper: paper is hinted by the liner stock and the faint diagonal "SEAL · シール" maker print, never a full grid.
 
 The gallery around the phones (a sticky flow index, a 260px story column beside rows of scaled phone frames, and a viewer with a 300px strip) collapses to one column at 1100px and stacks the viewer at 760px. Each phone's caption is a plain annotation: the element, where it is in parentheses, and what was just done to it and what that shows, with a quiet step number the gallery adds. It belongs to the design review, not the app.
 
@@ -393,7 +393,7 @@ Stickers and the gratitude heart also respond to the app's one moving light. The
 - **Kiss-cut** (`filter: drop-shadow(0 0 .5px rgba(28,24,36,.55))`): the die-cut groove around every sticker.
 - **Sticker cast** (`filter: drop-shadow(1px 2px 1.5px rgba(28,24,36,.16)) drop-shadow(2px 6px 8px rgba(28,24,36,.10))`): a sticker stuck to the page. It's always paired with the kiss-cut.
 - **Peeling** (`filter: drop-shadow(3px 7px 5px rgba(28,24,36,.18)) drop-shadow(8px 16px 18px rgba(28,24,36,.12))`): a sticker lifting off, tilted in 3D by 11°.
-- **Floating sheet** (`box-shadow: 0 0 0 .5px rgba(28,24,36,.18), 3px 7px 8px rgba(28,24,36,.16), 8px 18px 30px rgba(28,24,36,.18)`): a sheet pulled out of the pouch, hovering over the board.
+- **Floating sheet** (`box-shadow: 0 0 0 .5px rgba(28,24,36,.18), 3px 7px 8px rgba(28,24,36,.16), 8px 18px 30px rgba(28,24,36,.18)`): a sheet pulled out of the tray, hovering over the board.
 - **Pinned note** (`filter: drop-shadow(0 1px 0 rgba(28,24,36,.12)) drop-shadow(2px 5px 5px rgba(58,36,16,.26))`): paper hanging on the cork back, from its pin or tape.
 
 ### Named Rules
@@ -406,9 +406,9 @@ Stickers and the gratitude heart also respond to the app's one moving light. The
 
 ## Shapes
 
-Corners come from paper and cut stock. Label stock uses an 8px radius, and toasts, fields and index tabs 6px. The pouch's folder tabs round only their top corners, where they stand up from the stack. Keys are 16px (18px large, 14px compact), which reads as a key, not a pill or a tile; the seal check is a round 58px key. Zip pockets use 10px, the open trail row 12px, bottom sheets 16–18px on their top corners, and the pouch's loose sheets a paper-like 4px. Dot badges are pills tilted at -4°, as if one hand stuck them all. The same -4° tilt carries onto photo stickers and the gift's SEALED stamp.
+Corners come from paper and cut stock. Label stock uses an 8px radius, and toasts, fields and index tabs 6px. The tray's folder tabs round only their top corners, where they stand up from the stack. Keys are 16px (18px large, 14px compact), which reads as a key, not a pill or a tile; the seal check is a round 58px key. Zip pockets use 10px, the open trail row 12px, bottom sheets 16–18px on their top corners, and the tray's loose sheets a paper-like 4px. Dot badges are pills tilted at -4°, as if one hand stuck them all. The same -4° tilt carries onto photo stickers and the gift's SEALED stamp.
 
-Stickers have no radius. Their outline is the artist's own stroke silhouette, offset by a white border and bounded by a kiss-cut groove. A given sticker leaves a glue ghost on the board: its silhouette, hatched at 45° in faint graphite. A sticker out on the board leaves a kiss-cut hole in its pouch sheet, and a used drawing ticket keeps a faint kiss-cut outline of the sticker it became. Sheets begin with a perforation row, a dotted line with a firmer run of holes at the center as the grab. Only the pouch has a zipper; the gift bag closes with a clear film and an aqua tear tape whose tab sticks out past the bag's edge. Paper on the cork back has torn or cut edges of its own kind: a receipt's zigzag foot, a calendar leaf's and a notebook scrap's torn tops, a stamp's perforated edge, washi with torn ends, and slightly skewed label-maker tape. A selected sticker gets a clear frame with 10px corners, four 20px corner squares, and a round knob on a short stem above the top edge.
+Stickers have no radius. Their outline is the artist's own stroke silhouette, offset by a white border and bounded by a kiss-cut groove. A given sticker leaves its silhouette on the board, hatched at 45° in faint graphite. A sticker out on the board leaves a kiss-cut hole in its tray sheet, and a used drawing ticket keeps a faint kiss-cut outline of the sticker it became. Sheets begin with a perforation row, a dotted line with a firmer run of holes at the center as the grab. Only the tray has a zipper; the gift bag closes with a clear film and an aqua tear tape whose tab sticks out past the bag's edge. Paper on the cork back has torn or cut edges of its own kind: a receipt's zigzag foot, a calendar leaf's and a notebook scrap's torn tops, a stamp's perforated edge, washi with torn ends, and slightly skewed label-maker tape. A selected sticker gets a clear frame with 10px corners, four 20px corner squares, and a round knob on a short stem above the top edge.
 
 ## Components
 
@@ -433,7 +433,7 @@ Everything that isn't the key: the same construction at a third of the depth, wi
 - **Held:** while held, the face also takes a 10% shade, since 2px of travel is small.
 - **Quiet link:** text with a 1px underline at a 3px offset, in Graphite, with no stock and no travel. It turns Ink on press. It's the way out under a key.
 - **Where it goes:** a secondary action beside or under a key (Go to sticker board, Give under Send gratitude), and coded actions in toolbars and rows (Give, View, Remove on a selected sticker; Take the original in tomato). Three keys in a row would read as a keyboard.
-- **Not buttons:** drawing tools, undo and redo, and close, back and header icons stay flat tiles. Chips, filters, segments and radio rows are selectable labels whose selection is their feedback. Gestures (hold to tear, the gift's pull tab, the zip, grabbers, the heart, the pouch's sheets) keep their own physics.
+- **Not buttons:** drawing tools, undo and redo, and close, back and header icons stay flat tiles. Chips, filters, segments and radio rows are selectable labels whose selection is their feedback. Gestures (hold to tear, the gift's pull tab, the zip, grabbers, the heart, the tray's sheets) keep their own physics.
 
 ### The press
 
@@ -448,7 +448,7 @@ One press for every key and label, and anything marked pressable.
 
 ### Touch targets
 
-Every key is at least 54px tall. A label's face carries invisible bands above and below it (5px on the small label, so 35px to see and 45px to touch), and the press measures its slide-off slop from that touch edge. A quiet link's touch area reaches 7px above and below and 4px to each side. Sticker handles, pouch folder tabs, the sheet stack's +N button, a floating sheet's X, the zip pull and drawing tools all pad to 44px.
+Every key is at least 54px tall. A label's face carries invisible bands above and below it (5px on the small label, so 35px to see and 45px to touch), and the press measures its slide-off slop from that touch edge. A quiet link's touch area reaches 7px above and below and 4px to each side. Sticker handles, tray folder tabs, the sheet stack's +N button, a floating sheet's X, the zip pull and drawing tools all pad to 44px.
 
 ### Dot badges
 
@@ -466,7 +466,7 @@ Your avatar (a 42px photo sticker at -4°) and your name (800, 18px, width 112) 
 
 The board's back, where a person's figures are pinned up as paper. It's the only place stats live.
 
-- **The turn:** 640ms. The board lifts to 0.92 scale, turns on its vertical axis over the Ink table, with each face darkening as it turns from the top-left light, and lands with a small overshoot. A tap mid-turn reverses it. Reduced motion crossfades the faces in 180ms. The pouch and Draw are fixed to the front and turn away with it; the front takes no taps while turned.
+- **The turn:** 640ms. The board lifts to 0.92 scale, turns on its vertical axis over the Ink table, with each face darkening as it turns from the top-left light, and lands with a small overshoot. A tap mid-turn reverses it. Reduced motion crossfades the faces in 180ms. The tray and Draw are fixed to the front and turn away with it; the front takes no taps while turned.
 - **The person:** their photo sticker and their name on a Liner Lift card held by washi (pink on your own board), where the header sits on the front.
 - **Gratitude:** a printed receipt pinned with a pink pushpin, one row per kind (Daily, Inspired, Magic, and As the artist when above 0), each with a colored dot and a one-line plain-words reason, and the total as its TOTAL line.
 - **Streak:** a torn-off calendar leaf with a Seal Yellow band, the day count in Figure type and the rule beneath.
@@ -478,7 +478,7 @@ The board's back, where a person's figures are pinned up as paper. It's the only
 
 ### Someone else's board
 
-The same board, read only, opened from Explore. Their stickers sit where they stuck them, with foil on the ones someone else drew. Nothing moves, so there are no handles and no rotate knob. There's no pouch, since a pouch is private; Give takes Draw's slot as the board's one key; an Explore back chip (a 32px Liner Lift pill with a caret) sits beside the name. Tapping a sticker opens its menu: the artist chip on top when someone else drew it, then View and Offer for it (grape label).
+The same board, read only, opened from Explore. Their stickers sit where they stuck them, with foil on the ones someone else drew. Nothing moves, so there are no handles and no rotate knob. There's no tray, since a tray is private; Give takes Draw's slot as the board's one key; an Explore back chip (a 32px Liner Lift pill with a caret) sits beside the name. Tapping a sticker opens its menu: the artist chip on top when someone else drew it, then View and Offer for it (grape label).
 
 ### Draw screen
 
@@ -511,7 +511,7 @@ The out-of-tickets card's stock. The wallet's SUI balance sits in a Liner Lift w
 - **Die-cut:** the outline comes from the artist's own strokes, offset into a white border and bounded by the kiss-cut groove, with the sticker cast shadow beneath.
 - **Baked resin:** the gloss is baked into the image, with the print darker and more saturated where resin pools at the edge, a refraction band inside the cut edge, a rim light and a meniscus at the foot.
 - **Live resin:** on stickers that are showing, a live layer adds a specular along the top edge, a rim light and a sheen that sweeps when the sticker is placed, dragged or tilted.
-- **Foil:** a sticker drawn by someone other than the board's owner wears a holo foil band just outside its white edge: 5px on the board, 6px on the detail's big sticker, 3px on pouch sheets. It's the silhouette dilated, so it follows the cut. The six foil bands flow along it and a white glint sweeps across; holes hide it; it's decorative, and the sticker's own label names the artist. The seal ceremony adds nothing: a freshly sealed sticker is yours and plain.
+- **Foil:** a sticker drawn by someone other than the board's owner wears a foil band just outside its white edge: 5px on the board, 6px on the detail's big sticker, 3px on tray sheets. It's the silhouette dilated, so it follows the cut. The six foil bands flow along it and a white glint sweeps across; holes hide it; it's decorative, and the sticker's own label names the artist. The seal ceremony adds nothing: a freshly sealed sticker is yours and plain.
 - **Glow:** gratitude shows on a sticker as a soft glow behind it, warmer and brighter with more gratitude.
 - **Peel and stick:** a sticker peels with a 3D lift toward the top right and sticks with a short settle from 1.06 scale.
 
@@ -536,30 +536,30 @@ A combo's length, shown the way fighting games show it: "64 HITS" (`UI.hits`).
 
 A selected sticker on the board shows a clear frame (a 1.5px line at 50% Ink, 10px outside the sticker, with 10px corners). Four 20px corner squares in Liner Lift with an ink edge resize it. A 28px round knob with Phosphor's arrow-clockwise icon rotates it, on a 20px stem above the top edge. Every handle has a 44px hit area. The frame turns full Ink while a handle is being dragged.
 
-### Sticker pouch (the tray)
+### Sticker tray
 
-Your whole collection, in a pink canvas pouch zipped down the board's right edge. The zipper is the pouch's alone.
+Your whole collection, in a pink canvas tray zipped down the board's right edge. The zipper is the tray's alone.
 
-- **Zipper:** drawn from the real part. Two woven tapes in Pouch Tape with white stitching, white molded teeth in two rows offset by half a pitch (12px), a top stop on each tape, a bottom stop across both, a white painted-metal slider, and a Bonbon Pink paddle pull hinged on its bridge. It's matte, lit flat from the top left.
+- **Zipper:** drawn from the real part. Two woven tapes in Tray Tape with white stitching, white molded teeth in two rows offset by half a pitch (12px), a top stop on each tape, a bottom stop across both, a white painted-metal slider, and a Bonbon Pink paddle pull hinged on its bridge. It's matte, lit flat from the top left.
 - **Opening:** it opens top down. The slider rests at the top, just under the board header, with its pull hanging down. Pull down and the slider follows with a little stiction and a tick per tooth, and the teeth part behind it, showing the lining. Released under 25% of the travel it springs shut, the teeth meshing back in a ripple; past 25%, or flicked, it runs to the bottom stop, knocks it, and the mouth overshoots and settles at half the screen. The pull flops over so it always lies toward the next pull. Push up or tap to close. It can be interrupted at any point.
-- **Idle and shake:** on the first three visits, or while something NEW is inside, the pull tugs itself at most twice a visit. When the phone moves (only with the app's existing motion permission), the pull swings and settles, the chain ripples and the slider jiggles a pixel or two. It never opens the pouch. A Seal Yellow pip on the pull marks something unseen inside.
-- **The sheets:** inside is a stack of loose 156 × 364px backing-paper sheets. Each has a perforated tear strip at the top to grip, and its date range and number printed on its foot. Up to three sheets sit behind the front one, each 15px lower, 2.5% narrower and a shade darker, so their dated edges show below it and the stack is its own index. Deeper sheets collapse into a "+N" pill with Phosphor's stack icon. The pouch opens on the newest sheet.
+- **Idle and shake:** on the first three visits, or while something NEW is inside, the pull tugs itself at most twice a visit. When the phone moves (only with the app's existing motion permission), the pull swings and settles, the chain ripples and the slider jiggles a pixel or two. It never opens the tray. A Seal Yellow pip on the pull marks something unseen inside.
+- **The sheets:** inside is a stack of loose 156 × 364px backing-paper sheets. Each has a perforated tear strip at the top to grip, and its date range and number printed on its foot. Up to three sheets sit behind the front one, each 15px lower, 2.5% narrower and a shade darker, so their dated edges show below it and the stack is its own index. Deeper sheets collapse into a "+N" pill with Phosphor's stack icon. The tray opens on the newest sheet.
 - **Packing:** stickers are laid organically on their real cut lines, at least 6px apart, in arrival order, bottom up so the newest sits highest, with small seeded turns and never shrunk. A sticker's spot is permanent: an earlier one never moves, and a given sticker's spot stays blank.
 - **Holes:** a sticker out on the board leaves its kiss-cut hole in its packed spot: plain backing paper with the faint maker print, a crisp cut line and a hair of shadow on the top-left inside edge. Tapping a hole shows that sticker on the board.
 - **Paging:** the stack is a cyclic deck. Swipe up and the front sheet tucks in at the back; swipe down and the back sheet comes to the front; tap a dated edge and that sheet comes forward, riffling through the ones before it. The first 10px lock the direction: mostly vertical pages, wherever it started; horizontal toward the board peels a sticker if it started on one, or pulls the sheet out if it started on paper. PageUp and PageDown page too.
-- **Folder tabs:** All (liner), Mine (pink) and Gifts (grape) stand up from the stack's top edge, 46 × 24px padded to 44px. The current one is full hue and lifted; the others are soft fields. A filter chooses sheets and never moves a sticker: in about 650ms the stack gathers into the mouth, the front sheet and every sheet without a match slide back into the pouch, the rest riffle, and the newest match is dealt onto the front. Stickers that don't match fade to 20%. Reduced motion crossfades.
-- **Pulling a sheet out:** drag the front sheet's paper toward the board and past about 60px it floats over the board at full size with the floating-sheet shadow and an X at its top left (a 30px Liner Lift disc with Phosphor's x). The pouch sags to a crack. Stickers peel or tap off it; board stickers whose hole is on it drop back in. The X, dragging it back, closing the pouch or opening the spread sends it home on top of the stack. One sheet out at a time.
-- **The spread:** the +N button deals every sheet onto the pouch's lining, front first, dates kept at the 11px floor. Tap one to bring it to the front; tap the lining or press Escape to put them back.
-- **Peel and snap-back:** press a sticker and its edge lifts; drag and it rides under the thumb while the mouth relaxes to a crack and the sticker's own soft shadow previews where it lands. Drag a board sticker to the right edge and the pouch opens to its sheet, its hole breathing in Ink until it drops in.
-- **Reduced motion:** the pull toggles and the open pouch fades in over 150ms; paging and tab changes cross-fade; the peel lifts without a tilt; no idle tug and no shake.
+- **Folder tabs:** All (liner), Mine (pink) and Gifts (grape) stand up from the stack's top edge, 46 × 24px padded to 44px. The current one is full hue and lifted; the others are soft fields. A filter chooses sheets and never moves a sticker: in about 650ms the stack gathers into the mouth, the front sheet and every sheet without a match slide back into the tray, the rest riffle, and the newest match is dealt onto the front. Stickers that don't match fade to 20%. Reduced motion crossfades.
+- **Pulling a sheet out:** drag the front sheet's paper toward the board and past about 60px it floats over the board at full size with the floating-sheet shadow and an X at its top left (a 30px Liner Lift disc with Phosphor's x). The tray sags to a crack. Stickers peel or tap off it; board stickers whose hole is on it drop back in. The X, dragging it back, closing the tray or opening the spread sends it home on top of the stack. One sheet out at a time.
+- **The spread:** the +N button deals every sheet onto the tray's lining, front first, dates kept at the 11px floor. Tap one to bring it to the front; tap the lining or press Escape to put them back.
+- **Peel and snap-back:** press a sticker and its edge lifts; drag and it rides under the thumb while the mouth relaxes to a crack and the sticker's own soft shadow previews where it lands. Drag a board sticker to the right edge and the tray opens to its sheet, its hole breathing in Ink until it drops in.
+- **Reduced motion:** the pull toggles and the open tray fades in over 150ms; paging and tab changes cross-fade; the peel lifts without a tilt; no idle tug and no shake.
 
 ### Gift bag
 
 A frosted bag with no zipper. Packing drops the sticker into the open bag, peeking out of its mouth. The bag seals only when the send succeeds: the sticker settles in, the mouth presses shut, and the seal goes on. It's built like a konbini wrapper: a clear film band heat-sealed across the mouth, with a Soda Aqua tear tape running through it, printed with the pull direction and "SEALED 9.23". The tape's loose end is the pull tab: a narrow neck leaves the film at the bag's left edge and widens into a rounded lobe that sticks out past the edge, tips up and casts a shadow, with three grip ribs moulded across its free end and PULL printed on it.
 
-- **Opening:** the receiver takes the tab and drags it along the strip. The tape tears out behind it with resistance, lagging the finger and advancing in small ticks, and hangs from the tab in a loop that grows as you pull. Behind it the film splits along its line, rimmed by a thin torn edge, showing the bag's pale inside and the top of the sticker's sleeve. Let go early and it settles back. Past the end it snaps free, the tab flies off, the mouth springs open, the sticker rises, and the accept dialog slides up.
+- **Opening:** the receiver takes the tab and drags it along the strip. The tape tears out behind it with resistance, lagging the finger and advancing in small ticks, and hangs from the tab in a loop that grows as you pull. Behind it the film splits along its line, rimmed by a thin torn edge, showing the bag's pale inside and the top of the sticker's sleeve. Let go early and it settles back. Past the end it snaps free, the tab flies off, the mouth springs open, the sticker rises, and the receive dialog slides up.
 - **Alternatives:** a looping hint shows a small pull; double-tap or press-and-hold tears it by itself; for keyboards and screen readers the tab is a slider. Under reduced motion there's no loop and the snap becomes a fade.
-- **The tag** is printed, never typed. It reads "For @name" when the recipient was chosen in the app, and "From Alice" when it went through LINE's picker. An opened card carries a rubber OPENED date stamp on its tag.
+- **The tag** is printed, never typed. It reads "For @name" when the recipient was chosen in the app, and "From Alice" when it went through LINE's picker. An opened bag carries a rubber OPENED date stamp on its tag.
 
 ### Sticker trail
 
@@ -602,7 +602,7 @@ Every icon comes from one registry, copied byte for byte from the published SVGs
 
 ### Mocked platform screens
 
-The LINE chat, Flex gift card, consent, share picker, Add friends screen and iOS notification banners use the platform's own native type, white and system greys, and LINE's green. They're faithful mimicry, and the world's materials (keys, labels, the press) never leak into them.
+The LINE chat, the Gift Message, consent, share picker, Add friends screen and iOS notification banners use the platform's own native type, white and system greys, and LINE's green. They're faithful mimicry, and the world's materials (keys, labels, the press) never leak into them.
 
 ## Do's and Don'ts
 
@@ -619,7 +619,7 @@ The LINE chat, Flex gift card, consent, share picker, Add friends screen and iOS
 - **Do** use icons from the registry only: Phosphor bold at rest, fill for an active state, regular inside the LINE and iOS mocks, and Material Symbols' `draw` for Draw actions.
 - **Do** give every touch target a 44px hit area, including small labels, quiet links, sticker handles, folder tabs, the +N stack button, a floating sheet's X and the zip pull.
 - **Do** put foil on every sticker drawn by someone other than the board's owner, and name its artist with the artist chip.
-- **Do** honor reduced motion. Durations collapse to 1ms, presses halve and lose their spring, the pouch, paging and tab changes fade, the board's turn crossfades, the foil holds still, and the gift's snap becomes a fade.
+- **Do** honor reduced motion. Durations collapse to 1ms, presses halve and lose their spring, the tray, paging and tab changes fade, the board's turn crossfades, the foil holds still, and the gift's snap becomes a fade.
 
 ### Don't:
 
@@ -630,7 +630,7 @@ The LINE chat, Flex gift card, consent, share picker, Add friends screen and iOS
 - **Don't** put foil on the board owner's own stickers, on surfaces that aren't a board, or use it as a rarity grade. The pearl rim is retired.
 - **Don't** set headings or body text in Dela Gothic One.
 - **Don't** put a second key on a screen, or give a key to a tomato (can't-undo) action.
-- **Don't** put a zipper on anything but the pouch. The gift bag tears open along its tape.
+- **Don't** put a zipper on anything but the tray. The gift bag tears open along its tape.
 - **Don't** put stats in a sheet or a big-number card; they live on the cork back as paper.
 - **Don't** show grid paper anywhere; hint paper with liner stock and the faint maker print.
 - **Don't** describe gratitude with money words (royalty, earn, reward, cut, share, %). It flows "to" people.
