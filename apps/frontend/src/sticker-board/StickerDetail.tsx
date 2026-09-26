@@ -1,4 +1,3 @@
-import { CaretLeft, CaretRight, Gift, Heart } from "@phosphor-icons/react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { StickerDetail as StickerDetailResponse } from "@drawing-app/api/client";
@@ -7,7 +6,7 @@ import { toPerson, toSticker, type PersonView, type StickerView } from "../api/v
 import { errorReason } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
 import { EnsNameLink } from "../identity/EnsNameLink";
-import { StickerBoardIcon } from "../icons/StickerBoardIcon";
+import { CaretLeft, CaretRight, GiveIcon, GratitudeIcon, StickerBoardIcon } from "../icons";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatMonthDay, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
@@ -344,7 +343,7 @@ export function StickerDetail({
                 <div className="sticker-detail__acts sticker-detail__acts--stack">
                   <Key
                     tone="pink"
-                    icon={<Heart weight="fill" aria-hidden />}
+                    icon={<GratitudeIcon />}
                     onClick={() => onSendGratitude(owed.gift, owed.sticker, owed.giver)}
                   >
                     {t(($) => $.stickerBoard.detail.sendGratitude)}
@@ -352,7 +351,7 @@ export function StickerDetail({
                   {onGive && (
                     <LabelButton
                       size="sm"
-                      icon={<Gift size={18} aria-hidden />}
+                      icon={<GiveIcon size={18} />}
                       onClick={() => onGive(sticker)}
                     >
                       {t(($) => $.stickerBoard.detail.give)}
@@ -362,7 +361,7 @@ export function StickerDetail({
               ) : (
                 onGive && (
                   <div className="sticker-detail__acts">
-                    <Key tone="aqua" icon={<Gift aria-hidden />} onClick={() => onGive(sticker)}>
+                    <Key tone="aqua" icon={<GiveIcon />} onClick={() => onGive(sticker)}>
                       {t(($) => $.stickerBoard.detail.give)}
                     </Key>
                   </div>

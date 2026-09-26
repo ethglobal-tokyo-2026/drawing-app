@@ -22,6 +22,8 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  /* tsx compiles JSX only in files a tsconfig includes, and the chat menu script renders the app's icons */
-  "include": ["scripts", "src/icons"]
+  /* tsx compiles JSX only in files a tsconfig includes, and the chat menu script renders the app's icons.
+     The icons' tests read the app's screens, which only the app's config can check. */
+  "include": ["scripts", "src/icons"],
+  "exclude": ["src/icons/**/*.test.tsx"]
 }

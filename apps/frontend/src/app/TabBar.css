@@ -10,7 +10,8 @@
 }
 
 /* An inactive tab is an outline; the current one is stuck on in its full hue and lifted. The lift uses
-   transform, so it never fights the translate the shared press animates. */
+   transform, so it never fights the translate the shared press animates. A tab that stops being current
+   drops its lift and shadow as its hue goes. */
 .tab {
   --c: var(--pink);
   --press-travel: 1.5px;
@@ -34,7 +35,9 @@
   white-space: nowrap;
   transition:
     background-color 140ms linear,
-    color 140ms linear;
+    color 140ms linear,
+    box-shadow 140ms linear,
+    transform 140ms var(--ease-out);
 }
 
 .tab-explore {
@@ -42,7 +45,7 @@
 }
 
 .tab-shop {
-  --c: var(--grape);
+  --c: var(--blue);
 }
 
 .tab svg {
@@ -55,6 +58,7 @@
   box-shadow: inset 0 0 0 1px rgba(28, 24, 36, 0.4);
 }
 
+/* The tapped tab sticks on, the world's stick: its hue fills while it lifts and settles from 1.04. */
 .tab[aria-current="page"] {
   color: var(--ink);
   background: var(--c);
@@ -63,6 +67,16 @@
     inset 0 0 0 1px rgba(28, 24, 36, 0.16),
     1px 3px 0 rgba(28, 24, 36, 0.1),
     2px 8px 14px rgba(28, 24, 36, 0.16);
+  animation: tab-stick-on var(--t-stick) var(--ease-peel);
+}
+
+@keyframes tab-stick-on {
+  from {
+    transform: translateY(0) scale(1.04);
+  }
+  to {
+    transform: translateY(-2px) scale(1);
+  }
 }
 
 .tab[data-press-state="down"]:not([aria-current="page"]) {
@@ -229,5 +243,16 @@
 @media (prefers-reduced-motion: reduce) {
   .tabs.is-tucked {
     transition: none;
+  }
+
+  /* Only the hue changes: no lift travels and nothing settles. */
+  .tab {
+    transition:
+      background-color 120ms linear,
+      color 120ms linear;
+  }
+
+  .tab[aria-current="page"] {
+    animation: none;
   }
 }

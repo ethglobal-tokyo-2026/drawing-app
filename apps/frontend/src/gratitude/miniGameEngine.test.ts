@@ -505,7 +505,7 @@ describe("the HUD", () => {
     expect(host.dataset.hud).toBe("on");
     expect(fill()).toBe(1);
     expect(text(".gr-timer-s")).toBe(`${fullBarSeconds().toFixed(1)}s`);
-    expect(text(".gr-amount")).toBe("0♡");
+    expect(text(".gr-amount")).toBe("0");
     expect(text(".gr-mult")).toBe("×1.0");
   });
 
@@ -516,7 +516,7 @@ describe("the HUD", () => {
     expect(fill()).toBeGreaterThan(0.9);
     // The amount counts up to the tap's gratitude.
     await play(400);
-    expect(text(".gr-amount")).toBe(`${GAME_CONFIG.gratitudePerHit}♡`);
+    expect(text(".gr-amount")).toBe(`${GAME_CONFIG.gratitudePerHit}`);
     await play(ONE_TAP_RUNS_OUT_MS);
     expect(fill()).toBeLessThan(0.01);
     expect(onRecord.mock.calls[0]?.[1].endReason).toBe("empty");

@@ -1,4 +1,4 @@
-import { Vibrate } from "@phosphor-icons/react";
+import { Vibrate } from "../icons";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "../i18n/react";
 import { Key } from "../ui/Key";

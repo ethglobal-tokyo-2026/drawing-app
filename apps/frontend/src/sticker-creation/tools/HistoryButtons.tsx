@@ -1,4 +1,4 @@
-import { ArrowClockwise, ArrowCounterClockwise } from "@phosphor-icons/react";
+import { ArrowClockwise, ArrowCounterClockwise } from "../../icons";
 import { useTranslation } from "../../i18n/react";
 import "./HistoryButtons.css";
 

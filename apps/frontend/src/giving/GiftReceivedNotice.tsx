@@ -1,9 +1,8 @@
-import { ArrowRight } from "@phosphor-icons/react";
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { PersonView, StickerView } from "../api/views";
 import { useTranslation } from "../i18n/react";
-import { StickerBoardIcon } from "../icons/StickerBoardIcon";
+import { ArrowRight, GratitudeIcon, StickerBoardIcon } from "../icons";
 import { formatHandle } from "../stickers/format";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
@@ -30,7 +29,7 @@ const ARC_MS = 820;
 const FLYER_PX = 56;
 
 /**
- * "@bob received your sticker ♡": the giver's moment once a gift is received, over the whole phone.
+ * "@bob received your sticker", and a heart: the giver's moment once a gift is received, over the whole phone.
  * The sticker's silhouette holds its place, and the receiver's picture sticks on beside it.
  */
 export function GiftReceivedNotice({ sticker, receiver, receivedAt, mask, onClose }: Props) {
@@ -85,6 +84,9 @@ export function GiftReceivedNotice({ sticker, receiver, receivedAt, mask, onClos
       <header className="gift-received-notice__head">
         <h1 id={titleId} className="gift-received-notice__title">
           {t(($) => $.giving.receivedNotice.title, { name: who })}
+          {/* A no-break space, so the heart never wraps onto a line of its own. */}
+          {"\u00a0"}
+          <GratitudeIcon className="gift-received-notice__heart" />
         </h1>
         <p className="gift-received-notice__sub">
           {t(($) => $.giving.receivedNotice.lead, { name: who })}

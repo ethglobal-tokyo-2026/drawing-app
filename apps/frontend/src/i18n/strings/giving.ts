@@ -220,10 +220,10 @@ export const giving = {
   },
   /** The giver's moment once a gift is received. */
   receivedNotice: {
-    /** The giver's received notice, over the whole phone on their sticker board once someone received their gift: its title */
+    /** The giver's received notice, over the whole phone on their sticker board once someone received their gift: its title. The Gratitude heart follows it. */
     title: {
-      en: "{{name}} received your sticker ♡",
-      ja: "{{name}}があなたのシールを受け取りました♡",
+      en: "{{name}} received your sticker",
+      ja: "{{name}}があなたのシールを受け取りました",
     },
     /** The giver's received notice: the line under its title */
     lead: {

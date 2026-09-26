@@ -505,11 +505,12 @@
   font-variant-numeric: tabular-nums;
 }
 .gr-amount i {
-  font-style: normal;
-  font-size: 24px;
-  line-height: 1;
-  font-weight: 800;
   color: var(--pink);
+}
+.gr-amount svg {
+  display: block;
+  width: 22px;
+  height: 22px;
 }
 .gr-mult {
   display: flex;
@@ -1142,10 +1143,10 @@
   color: var(--ink);
   white-space: nowrap;
 }
-.gr-rc-figure small {
-  font-size: 0.46em;
-  font-weight: 800;
-  letter-spacing: 0;
+.gr-rc-figure svg {
+  width: 0.42em;
+  height: 0.42em;
+  margin-left: 0.14em;
   color: var(--pink);
 }
 .gr-rc-actions {

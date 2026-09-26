@@ -1,4 +1,4 @@
-import { CaretDown, CaretRight, Heart, Play } from "@phosphor-icons/react";
+import { CaretDown, CaretRight, GratitudeIcon, Play } from "../icons";
 import { useState } from "react";
 import type { PersonView } from "../api/views";
 import { formatCount } from "../i18n/format";
@@ -74,7 +74,7 @@ export function TransferTrail({ rows, viewerId, artist, onReplay }: Props) {
                 >
                   {sentence(r)}
                   <span className="transfer-trail__amount">
-                    <Heart size={13} weight="fill" aria-hidden />
+                    <GratitudeIcon size={13} />
                     <Trans
                       i18nKey={($) => $.stickerBoard.transferTrail.amount}
                       values={{ amount: formatCount(g.total) }}
@@ -95,7 +95,7 @@ export function TransferTrail({ rows, viewerId, artist, onReplay }: Props) {
               <p className="transfer-trail__head">{sentence(r)}</p>
               <div className="transfer-trail__figure">
                 <span className="transfer-trail__heart" aria-hidden>
-                  <Heart size={20} weight="fill" />
+                  <GratitudeIcon size={20} />
                 </span>
                 <span className="transfer-trail__sum">
                   <span className={`transfer-trail__total ${amount.length > 5 ? "is-long" : ""}`}>

@@ -277,7 +277,7 @@ The world refuses two category defaults. One is Procreate-grey tool chrome with 
 - The board turns over: its back is cork, with the figures pinned on as paper.
 - Physical motion grammar on transform and opacity only.
 - Mocked LINE and iOS screens copy those platforms exactly and never borrow the world's materials.
-- Icons come from Phosphor through one registry, with Material Symbols' `draw` as the single exception. They're never drawn by hand.
+- Icons come from Phosphor through one registry (`apps/frontend/src/icons`). They're never drawn by hand.
 
 ## Colors
 
@@ -462,7 +462,11 @@ Round flat stickers stuck at -4°: a 26px pill in a coded hue with Ink puffy num
 
 ### Index tabs
 
-Three tabs cut from label stock, side by side on the Liner strip: My board (pink), Explore (aqua) and Shop (grape), each up to 176px wide and 46px tall with a 6px radius. Draw isn't a tab; the board has its own Draw key. An inactive tab is an outline (a 26% Ink edge) with graphite text; the current tab is stuck on in its full hue with Ink text, lifted 2px with a lift shadow. Each tab presses 1.5px through the shared press. Current is shown by fill and lift only, never by weight or case. My board's icon is the person's own LINE picture as a 24px photo sticker, the same whether current or not; Explore's is Phosphor's eyes and Shop's is Phosphor's storefront, both bold at rest and fill when current. On screens where the tabs hide, the whole strip slides away behind the grabber described in Layout.
+Three tabs cut from label stock, side by side on the Liner strip: My board (pink), Explore (aqua) and Shop (blue), each up to 176px wide and 46px tall with a 6px radius. Draw isn't a tab; the board has its own Draw key. An inactive tab is an outline (a 26% Ink edge) with graphite text; the current tab is stuck on in its full hue with Ink text, lifted 2px with a lift shadow. Each tab presses 1.5px through the shared press. Current is shown by fill and lift only, never by weight or case. The icons are Phosphor's smiley-sticker (My board, for everyone), compass (Explore) and tag (Shop), 20px, bold at rest and fill when current.
+
+- **Sticking on:** the tapped tab fills with its hue in 140ms while it lifts 2px and settles from 1.04 to 1 (220ms, `--ease-peel`), the world's stick. The tab it leaves drops its lift and shadow in 140ms. The screen's own change is a separate cross-fade; the strip never moves with it.
+- **Reduced motion:** only the hue changes, in 120ms, with no lift travel and no settle.
+- **Tucked:** on screens where the tabs hide, the whole strip slides away behind the grabber described in Layout.
 
 ### Board header
 
@@ -608,7 +612,7 @@ Your whole collection, in a pink canvas tray zipped down the board's right edge.
 - **Packing:** stickers are laid organically on their real cut lines, at least 6px apart, in arrival order, bottom up so the newest sits highest, with small seeded turns and never shrunk. A sticker's spot is permanent: an earlier one never moves, and a given sticker's spot stays blank.
 - **Holes:** a sticker out on the board leaves its kiss-cut hole in its packed spot: plain backing paper with the faint maker print, a crisp cut line and a hair of shadow on the top-left inside edge. Tapping a hole shows that sticker on the board.
 - **Paging:** the stack is a cyclic deck. Swipe up and the front sheet tucks in at the back; swipe down and the back sheet comes to the front; tap a dated edge and that sheet comes forward, riffling through the ones before it. The first 10px lock the direction: mostly vertical pages, wherever it started; horizontal toward the board peels a sticker if it started on one, or pulls the sheet out if it started on paper. PageUp and PageDown page too.
-- **Folder tabs:** All (liner), Mine (pink) and Gifts (grape) stand up from the stack's top edge, 46 × 24px padded to 44px. The current one is full hue and lifted; the others are soft fields. A filter chooses sheets and never moves a sticker: in about 650ms the stack gathers into the mouth, the front sheet and every sheet without a match slide back into the tray, the rest riffle, and the newest match is dealt onto the front. Stickers that don't match fade to 20%. Reduced motion crossfades.
+- **Folder tabs:** All (liner), Mine (pink) and Gifts (grape) stand up from the stack's top edge, 46 × 24px padded to 44px. The current one is full hue and lifted; the others are soft fields. A tapped tab stands up (220ms, `--ease-out`) as its fill and shadow come in (160ms), and the tabs take the shared press with 1px of travel; under reduced motion a tab stands up at once and only its color changes, in 120ms. A filter chooses sheets and never moves a sticker: in about 650ms the stack gathers into the mouth, the front sheet and every sheet without a match slide back into the tray, the rest riffle, and the newest match is dealt onto the front. Stickers that don't match fade to 20%. Reduced motion crossfades.
 - **Pulling a sheet out:** drag the front sheet's paper toward the board and past about 60px it floats over the board at full size with the floating-sheet shadow and an X at its top left (a 30px Liner Lift disc with Phosphor's x). The tray sags to a crack. Stickers peel or tap off it; board stickers whose hole is on it drop back in. The X, dragging it back, closing the tray or opening the spread sends it home on top of the stack. One sheet out at a time.
 - **The spread:** the +N button deals every sheet onto the tray's lining, front first, dates kept at the 11px floor. Tap one to bring it to the front; tap the lining or press Escape to put them back.
 - **Peel and snap-back:** press a sticker and its edge lifts; drag and it rides under the thumb while the mouth relaxes to a crack and the sticker's own soft shadow previews where it lands. Drag a board sticker to the right edge and the tray opens to its sheet, its hole breathing in Ink until it drops in.
@@ -660,16 +664,19 @@ An Ink slip with Liner text (600, 14px) and 6px corners on the lift shadow. It r
 
 ### Icons
 
-Every icon comes from one registry: Phosphor Icons (MIT) as `@phosphor-icons/react` 2.1.10 renders them, plus one Material Symbols glyph copied byte for byte from its published SVG. The app's own controls use bold; fill marks an active or primary state, such as the current tool or the current tab; the mocked LINE and iOS screens use regular. The same action always gets the same icon (Give is gift, View is eye, Offer is handshake, Remove is tray-arrow-down). Brand marks (LINE's logo, from Simple Icons, CC0) and illustrations (the heart, stickers, avatars, pins, tape, stamps, zipper parts) are not icons.
+Every icon is Phosphor Icons (MIT) as `@phosphor-icons/react` 2.1.10 renders them, through one registry: `apps/frontend/src/icons`. An icon that carries one of the app's meanings goes by that meaning there (`DrawIcon`, `GiveIcon`); the rest keep Phosphor's names. The app's own controls use bold; fill marks an active or primary state, such as the current tool or the current tab; the mocked LINE and iOS screens use regular. The same action always gets the same icon:
 
-- **My board:** the tab shows the person's own LINE picture as a photo sticker. The rich menu's My board tile uses Phosphor's smiley-sticker (fill), since the rich menu is one image for everyone and can't show each person's picture.
-- **Explore:** Phosphor's eyes, on the tab (bold, fill when current) and the rich menu tile (fill).
-- **Shop:** Phosphor's storefront, on the tab (bold, fill when current) and the keys that open the Shop.
-- **Sticker board:** one composed entry, Phosphor's square with Phosphor's sticker set at 64%, turned -12° and masked, in bold and fill only. It marks the board itself (Go to sticker board) and stands in on the My board tab when a person has no LINE picture.
+- **Draw:** pencil-simple-line (fill), on every Draw action: the board's Draw key, Keep drawing, the print on fresh ticket stubs and the chat menu's Draw tile. The brush tool keeps paint-brush; it's a drawing tool, not the Draw action.
+- **My board:** smiley-sticker, on the tab (bold, fill when current), every "go to the board" action and the chat menu's My board tile (fill).
+- **Explore:** compass. **Shop:** tag, on the tab and every way into the Shop.
+- **Gratitude:** heart (fill) at every size, since it's a mark, not a control: Send gratitude, the Transfer Trail, the combo HUD and the receipt. **Streak:** fire (fill).
+- **Give** is gift, **View** eye, **Offer** handshake and **Remove** tray-arrow-down.
 
-**The Never Hand-Drawn Rule.** Icons are never drawn by hand and published paths are never edited. If Phosphor doesn't have it, choose a different Phosphor icon or compose published paths by transform.
+Screens that build their DOM from strings (the mini-game, the tray) carry copies of Phosphor's paths; `phosphorCopies.test.tsx` checks each against the installed package.
 
-**The Draw Exception.** Every Draw action (the board's Draw key, Keep drawing, and the rich menu's Draw tile) uses Material Symbols' `draw` (Apache-2.0, weight 700, filled). It's the one icon from outside Phosphor, because its pencil mid-squiggle says "draw", where every Phosphor pencil says "edit". The brush tool keeps Phosphor's paint-brush; it's a drawing tool, not the Draw action.
+**The Never Hand-Drawn Rule.** Icons are never drawn by hand and published paths are never edited. If Phosphor doesn't have it, choose a different Phosphor icon. A text glyph (♡, ★) never stands in for an icon.
+
+**Brand marks** (Sui's and Ethereum's, from Simple Icons, CC0, in `icons/brandMarks.ts`; LINE's logo from Simple Icons or LINE's guidelines) and illustrations (the heart you tap, stickers, avatars, pins, tape, stamps, zipper parts) are not icons. Brand marks are pasted verbatim. Sui's brand kit forbids altering its logo, so the stat board's chain pin, which recolors and outlines Sui's mark as a push-pin head, is an open exception.
 
 ### Chat menu
 
@@ -696,7 +703,7 @@ The LINE chat, the Gift Message, consent, share picker, Add friends screen and i
 - **Do** keep every in-phone text size at 11px or above.
 - **Do** cast shadows down and to the right from a top-left light, in neutral Ink alpha.
 - **Do** show gratitude figures plainly, to everyone: in the combo, the receipt, the sticker's trail and the board's cork back.
-- **Do** use icons from the registry only: Phosphor bold at rest, fill for an active state, regular inside the LINE and iOS mocks, and Material Symbols' `draw` for Draw actions.
+- **Do** use icons from the registry only: Phosphor bold at rest, fill for an active state, regular inside the LINE and iOS mocks.
 - **Do** give every touch target a 44px hit area, including small labels, quiet links, sticker handles, folder tabs, the +N stack button, a floating sheet's X and the zip pull.
 - **Do** put foil on every sticker drawn by someone other than the board's owner, and name its artist with the artist chip.
 - **Do** honor reduced motion. Durations collapse to 1ms, presses halve and lose their spring, the tray, paging and tab changes fade, the board's turn crossfades, the foil holds still, and the gift's snap becomes a fade.

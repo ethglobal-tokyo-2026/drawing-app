@@ -1,16 +1,16 @@
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { useApi } from "../api/useApi";
+import { Trans, useTranslation } from "../i18n/react";
 import {
   ArrowUUpLeft,
   CaretRight,
   PaperPlaneTilt,
   Question,
+  StickerBoardIcon,
   Sticker as StickerGlyph,
   X,
-} from "@phosphor-icons/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
-import { useApi } from "../api/useApi";
-import { Trans, useTranslation } from "../i18n/react";
-import { StickerBoardIcon } from "../icons/StickerBoardIcon";
+} from "../icons";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
 import { Key } from "../ui/Key";
