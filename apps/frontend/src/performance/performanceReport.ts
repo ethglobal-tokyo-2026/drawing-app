@@ -98,7 +98,7 @@ function startLines(start: readonly BootMilestone[]): string[] {
   ];
 }
 
-/** The value `share` of the way up the sorted values, such as 0.95 for the 95th percentile. */
+/** The value `part` of the way up the sorted values, such as 0.95 for the 95th percentile. */
 function percentile(values: readonly number[], part: number): number {
   const sorted = values.toSorted((a, b) => a - b);
   return sorted[Math.max(0, Math.ceil(part * sorted.length) - 1)] ?? 0;
