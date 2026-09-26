@@ -70,14 +70,14 @@ Another branch changes the session to 3 minutes, so no new code or copy assumes 
 
 ## Stat board
 
-- [ ] S1 The dev flag and the slip:
+- [x] S1 The dev flag and the slip:
   - `VITE_DEV_SLIP` is on in the dev server. Builds show the slip only when it's set to `on`. Document the flag in `.env.example` and `env.d.ts`.
   - Style the slip's rows in the stat board's paper and label vocabulary, keeping their wording.
   - The Privy status line moves from the 11px caption size to a body size.
-- [ ] S2 Remove Share my board, the QR sheet and their now-unused code; git keeps them for when boards can be visited.
-- [ ] S3 At 360px, the Bests note keeps its labels on one line where the drafts do. Close the empty gap above Flip back.
-- [ ] S4 "Since" is the earliest of the first visit and the oldest sticker.
-- [ ] S5 LINE's screens:
+- [x] S2 Remove Share my board, the QR sheet and their now-unused code; git keeps them for when boards can be visited.
+- [x] S3 At 360px, the Bests note keeps its labels on one line where the drafts do. Close the empty gap above Flip back.
+- [x] S4 "Since" is the earliest of the first visit and the oldest sticker.
+- [x] S5 LINE's screens:
   - The world's ground: Liner with its grain and the SEAL · シール maker print.
   - A plain first sentence, with LIFF's code as selectable fine print.
   - A quiet opening state instead of a blank page while LIFF starts.
