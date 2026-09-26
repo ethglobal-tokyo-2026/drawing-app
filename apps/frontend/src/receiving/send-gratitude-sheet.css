@@ -1,6 +1,8 @@
 /* Send gratitude: a sheet floating over the board, with the board in view around it. */
 
+/* Above the board's stickers, toolbar and Draw key, which it's asking about. */
 .bottom-sheet.send-gratitude-sheet {
+  z-index: 980;
   left: var(--gutter);
   right: var(--gutter);
   bottom: var(--gutter);
