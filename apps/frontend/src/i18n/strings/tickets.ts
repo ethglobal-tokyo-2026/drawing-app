@@ -112,12 +112,12 @@ export const tickets = {
   },
   /** The reserve ticket checkout: the card that sells reserve ticket packs. */
   checkout: {
-    /** Reserve ticket checkout, over the Shop or the drawing screen: the title */
-    title: { en: "Reserve tickets", ja: "有償チケット" },
+    /** Reserve ticket checkout, over the Shop or the drawing screen: the title, over the packs (over the Shop, its reserve tickets headline shows just above) */
+    title: { en: "Pick a pack", ja: "パックを選んでください" },
     /** Reserve ticket checkout: the bold line under the title */
     lead: { en: "Reserve tickets never expire.", ja: "有償チケットに有効期限はありません。" },
-    /** Reserve ticket checkout: the small label on the wallet row, beside your JPYC balance shown in yen */
-    balance: { en: "Your JPYC", ja: "JPYC残高" },
+    /** Reserve ticket checkout: the small label on the wallet row, beside your balance in yen (the JPYC in your Sui account, never named here) */
+    balance: { en: "Balance", ja: "残高" },
     /** Reserve ticket checkout: the wallet row while the balance loads */
     readingBalance: { en: "Reading your balance…", ja: "残高を確認しています…" },
     /** Reserve ticket checkout: the wallet row when the balance couldn't be read, before a Try again link; `reason` is the wallet's own words */
@@ -138,7 +138,7 @@ export const tickets = {
     pack_one: { en: "{{count}} ticket" },
     /** Reserve ticket checkout: a pack button's name, such as "3 tickets" */
     pack_other: { en: "{{count}} tickets", ja: "チケット{{count}}枚" },
-    /** Reserve ticket checkout: the pink sale sticker on a discounted pack button */
+    /** Reserve ticket checkout: a discounted pack button's discount, in fine print before its struck-through full price */
     discount: { en: "−{{percent}}%", ja: "{{percent}}%オフ" },
     /** Reserve ticket checkout: screen-reader text for a discounted pack's struck-through full price */
     was: { en: "was {{price}}", ja: "通常価格{{price}}" },
@@ -148,8 +148,19 @@ export const tickets = {
     payPrice: { en: "Pay {{price}}", ja: "{{price}}を支払う" },
     /** Reserve ticket checkout: the pay key while the payment goes through */
     paying: { en: "Paying…", ja: "支払い中…" },
-    /** Reserve ticket checkout: the pay key, disabled, when your JPYC is less than the chosen pack's price */
-    notEnoughJpyc: { en: "Not enough JPYC", ja: "JPYC残高不足" },
+    /** When your balance is less than the picked pack's price: Pay stays sunk, and a line under the packs says why and what to do. */
+    short: {
+      /** Reserve ticket checkout, under the packs, when your balance can't cover the picked pack but covers a smaller one: what's wrong in bold, then what to do */
+      pickSmaller: {
+        en: "<strong>Not enough balance for this pack.</strong> Pick a smaller one, or add JPYC to your Sui account.",
+        ja: "<strong>このパックには残高が足りません。</strong>小さいパックを選ぶか、SuiアカウントにJPYCを追加してください。",
+      },
+      /** Reserve ticket checkout, under the packs, when your balance can't cover even the smallest pack: what's wrong in bold, then what to do */
+      addJpyc: {
+        en: "<strong>Not enough balance for this pack.</strong> Add JPYC to your Sui account to buy it.",
+        ja: "<strong>このパックには残高が足りません。</strong>購入するには、SuiアカウントにJPYCを追加してください。",
+      },
+    },
     /** Reserve ticket checkout after a purchase: the title, when one reserve ticket was added */
     added_one: { en: "{{count}} reserve ticket added" },
     /** Reserve ticket checkout after a purchase: the title saying how many reserve tickets were added */
@@ -163,10 +174,25 @@ export const tickets = {
     buyMore: { en: "Buy more tickets", ja: "チケットをもっと買う" },
     /** Reserve ticket checkout when a payment fails: the title, above the reason */
     paymentFailed: { en: "Payment didn’t go through", ja: "支払いが完了しませんでした" },
-    /** Reserve ticket checkout when a payment fails after the money moved: the line under the title; `digest` is the transaction's ID, `reason` the error */
-    paidButNotAdded: {
-      en: "The payment went through ({{digest}}), but the tickets weren’t added: {{reason}}",
-      ja: "支払いは完了しました（{{digest}}）が、チケットは追加されませんでした：{{reason}}",
+    /** When the payment went through but the server didn't add its tickets: asking the server again never pays again. */
+    notAdded: {
+      /** Reserve ticket checkout after paying, when the payment went through but the tickets weren't added: the title */
+      title: { en: "Tickets not added yet", ja: "チケットが未追加です" },
+      /** Reserve ticket checkout, tickets not added: the line under the title, in bold, then why in quiet type; `reason` is the server's or Sui's words */
+      line: {
+        en: "<strong>Your payment went through. Adding the tickets again won’t charge you twice.</strong> <why>{{reason}}</why>",
+        ja: "<strong>支払いは完了しています。チケットをもう一度追加しても、二重に請求されることはありません。</strong><why>{{reason}}</why>",
+      },
+      /** Reserve ticket checkout, tickets not added: the blue key that asks again for the tickets the payment bought */
+      add: { en: "Add the tickets", ja: "チケットを追加する" },
+      /** Reserve ticket checkout, tickets not added: that key while it asks */
+      adding: { en: "Adding…", ja: "追加中…" },
+      /** Reserve ticket checkout, tickets not added: fine print under the key naming the payment; `<id>` holds its Sui transaction ID, cut short on screen */
+      payment: { en: "Payment <id>{{digest}}</id>", ja: "支払い<id>{{digest}}</id>" },
+      /** Reserve ticket checkout, tickets not added: the small button beside the payment that copies its whole ID */
+      copy: { en: "Copy", ja: "コピー" },
+      /** Reserve ticket checkout, tickets not added: that button once the ID is copied */
+      copied: { en: "Copied", ja: "コピー済み" },
     },
     /** Reserve ticket checkout when a payment fails: the key that goes back to the packs */
     backToPacks: { en: "Back to the packs", ja: "パック選びに戻る" },

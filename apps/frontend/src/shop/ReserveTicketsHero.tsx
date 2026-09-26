@@ -1,6 +1,6 @@
-import { Ticket } from "@phosphor-icons/react";
 import { useId } from "react";
 import { Trans, useTranslation } from "../i18n/react";
+import { BuyTicketsIcon } from "../icons";
 import { formatYen } from "../tickets/prices";
 import { singleTicketPrice, useReservePacks } from "../tickets/reservePacks";
 import { TicketCount } from "../tickets/TicketCount";
@@ -33,7 +33,7 @@ export function ReserveTicketsHero({ onBuy }: { onBuy: () => void }) {
 
   return (
     <section className="reserve-hero" aria-labelledby={`${id}-title`}>
-      <TicketStubs className="reserve-hero__fan" size="large" stubs={FAN} />
+      <TicketStubs className="reserve-hero__fan" size="large" stubs={FAN} stars="front" />
       {held > 0 && (
         <p className="reserve-hero__held">
           <span aria-hidden="true">
@@ -64,7 +64,7 @@ export function ReserveTicketsHero({ onBuy }: { onBuy: () => void }) {
         )}
       </p>
       <TearLine />
-      <Key className="reserve-hero__key" tone="blue" icon={<Ticket />} onClick={onBuy}>
+      <Key className="reserve-hero__key" tone="blue" icon={<BuyTicketsIcon />} onClick={onBuy}>
         {t(($) => $.shop.reserve.buy)}
       </Key>
       <SuiCredit />
