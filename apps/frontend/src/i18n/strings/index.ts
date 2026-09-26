@@ -15,8 +15,8 @@ import { stickers } from "./stickers";
 import { tickets } from "./tickets";
 import { ui } from "./ui";
 
-/** The English catalog: one section per feature folder, plus errors and pages. */
-export const en = {
+/** The catalog: one section per feature folder, plus errors and pages, each string in English and Japanese. */
+export const strings = {
   api,
   app,
   errors,
