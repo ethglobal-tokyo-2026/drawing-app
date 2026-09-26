@@ -347,12 +347,12 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 
 ### Hierarchy
 
-- **Display** (400, 20px; 23px on the large key, 17px on the compact key; line-height 1): the key's label. It also sets dot badges (12–19px), the gratitude multiplier (×8.0), the giver's gratitude tag, and the outlined 袋文字 tier captions (46px, pink inside white inside ink).
-- **Figure** (900, 26px on the cork back's stamps and 27px in the open trail row, up to 52px on the gratitude receipt and 58px on the streak leaf; line-height about 0.95, width 125, tabular): gratitude amounts in the combo, the receipt and the sticker's trail, the counts pinned on the cork back (the receipt's TOTAL at 30px), and the hit counter (23px on the leaderboard, 20px in the cork back's Bests).
-- **Headline** (800, 26px, line-height 1.08, width 112, balanced wrap): screen and dialog titles such as "Sealed on-chain" and "Out of tickets for today".
+- **Display** (400, 20px; 23px on the large key, 17px on the compact key; line-height 1): the key's label. It also sets dot badges (12–19px; the draw screen's timer dot at 13px), the gratitude multiplier (×8.0, 27px), the giver's gratitude tag, and the outlined 袋文字 tier captions (46px, pink inside white inside ink).
+- **Figure** (900, 26px on the cork back's stamps and 27px in the open trail row and its replay stage, up to 52px on the gratitude receipt and 58px on the streak leaf; line-height about 0.95, width 125, tabular): gratitude amounts in the combo, the receipt and the sticker's trail, the counts pinned on the cork back (the receipt's TOTAL at 30px), and the hit counter (23px on the leaderboard, 20px in the cork back's Bests).
+- **Headline** (800, 26px, line-height 1.08, width 112, balanced wrap): screen and dialog titles such as "Sealed on-chain" and "Out of tickets for today", the sticker detail's heading and the name printed on a gift's tag.
 - **Title** (800, 18–22px, line-height 1.1, width 112): sheet titles, the board header's name, and the notebook scrap and Settings headings on the cork back (18px).
-- **Body** (400–500, 15px, line-height 1.42–1.5, width 100): running text. Notes cap at 28–44ch. Supporting notes drop to 13px.
-- **Label** (700, 15px, or 13px on small buttons, width 100): buttons, tabs and chips, in sentence case at one weight.
+- **Body** (400–500, 15px, line-height 1.42–1.5, width 100): running text. Notes cap at 28–44ch. Supporting notes drop to 13px. Text never sits between the steps (12, 12.5, 13.5, 14 or 16px), except the toast's 14px and the 16px search field, which keeps iOS from zooming.
+- **Label** (700, 15px, or 13px on small buttons, the selected sticker's toolbar and the draw screen's white labels, width 100): buttons, tabs and chips, in sentence case at one weight.
 - **Fine** (650, 11px, uppercase, +0.07em, width 87.5, tabular): metadata lines such as "No.0147 · 4:52 · 2026.09.23 · @alice", sheet date ranges in the tray, captions and hints.
 - **JP caption** (700, 11px, +0.14em): the なまえ cap on the name label.
 

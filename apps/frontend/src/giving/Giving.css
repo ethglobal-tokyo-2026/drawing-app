@@ -58,7 +58,6 @@
 
 .giving__meta {
   margin: 12px 0 0;
-  font-size: 12px;
 }
 
 .giving__scrim {
@@ -233,7 +232,7 @@
 .giving__row-text small {
   display: block;
   margin-top: 3px;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.35;
   color: var(--graphite);
 }
@@ -260,7 +259,7 @@
   justify-content: center;
   gap: 6px;
   margin: 18px 0 0;
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--graphite);
 }
 

@@ -367,7 +367,7 @@
 .sticker-toolbar .label-btn {
   min-height: calc(36px + var(--lip));
   padding: 0 13px 0 11px;
-  font-size: 13.5px;
+  font-size: 13px;
   gap: 8px;
 }
 

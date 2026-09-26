@@ -46,7 +46,7 @@
   align-items: baseline;
   justify-content: center;
   font-family: var(--font-puffy);
-  font-size: 13.5px;
+  font-size: 13px;
   line-height: 1;
   letter-spacing: 0;
   color: var(--ink);
@@ -181,7 +181,7 @@
   box-shadow:
     0 0 0 1px var(--rule-strong),
     var(--shadow-label);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1.3;
   /* Lines break where the words say, and nowhere else. */
