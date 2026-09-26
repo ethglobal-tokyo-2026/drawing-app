@@ -351,7 +351,7 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 - **Title** (800, 18–22px, line-height 1.1, width 112): sheet titles, the board header's name, and the notebook scrap and Settings headings on the cork back (18px).
 - **Body** (400–500, 15px, line-height 1.42–1.5, width 100): running text. Notes cap at 28–44ch. Supporting notes drop to 13px.
 - **Label** (700, 15px, or 13px on small buttons, width 100): buttons, tabs and chips, in sentence case at one weight.
-- **Fine** (650, 11px, uppercase, +0.07em, width 87.5, proportional figures): metadata lines such as "No.0147 · 4:52 · 2026.09.23 · @alice", sheet date ranges in the tray, captions and hints.
+- **Fine** (650, 11px, uppercase, +0.07em, width 87.5, proportional figures): metadata lines such as "No.0147 · 4m 52s · 2026.09.23 · @alice", sheet date ranges in the tray, captions and hints. Two things keep their own case inside its capitals: a @handle or LINE name (the `.handle` class), and a drawing time, whose units stay lowercase ("4m 52s") because "4M" reads as millions.
 - **JP caption** (700, 11px, +0.14em): the なまえ cap on the name label.
 
 ### Named Rules
