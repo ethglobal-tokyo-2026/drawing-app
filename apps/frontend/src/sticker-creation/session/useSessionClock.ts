@@ -115,6 +115,13 @@ export class SessionClock {
     this.setState("idle");
   }
 
+  /** Picks a drawing kept across a reload back up: started, with the time it had drawn. */
+  restore(elapsedMs: number): void {
+    if (this.state !== "idle") return;
+    this.elapsedMs = Math.min(SESSION_MS, Math.max(0, elapsedMs));
+    this.setState("running");
+  }
+
   setHolds(holds: ScreenHolds): void {
     this.holds = holds;
     this.changed();

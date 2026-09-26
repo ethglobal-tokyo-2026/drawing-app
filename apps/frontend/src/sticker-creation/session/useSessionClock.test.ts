@@ -97,6 +97,24 @@ describe("SessionClock", () => {
     expect(onTimeUp).toHaveBeenCalledOnce();
   });
 
+  it("picks a kept drawing back up with the time it had drawn", () => {
+    const { clock, counted } = setup({ started: false });
+    clock.restore(SESSION_MS - 30_000);
+    expect(clock.getView().secondsLeft).toBe(30);
+    expect(counted(1000)).toBe(1000);
+  });
+
+  it("calls time on a kept drawing whose time had run out once it runs again", () => {
+    const { clock, onTimeUp, advance } = setup({ started: false });
+    clock.setHolds({ ...NO_HOLDS, paused: true });
+    clock.restore(SESSION_MS);
+    advance(1000);
+    expect(onTimeUp).not.toHaveBeenCalled();
+    clock.setHolds(NO_HOLDS);
+    advance(16);
+    expect(onTimeUp).toHaveBeenCalledOnce();
+  });
+
   it("freezes while sealing and runs on if the seal fails", () => {
     const { clock, counted } = setup();
     counted(1000);

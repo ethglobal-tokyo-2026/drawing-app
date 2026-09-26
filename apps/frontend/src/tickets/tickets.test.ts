@@ -6,6 +6,7 @@ import {
   dailyTickets,
   linkSticker,
   nextRefill,
+  refund,
   spend,
   ticketDay,
   ticketsLeft,
@@ -72,6 +73,21 @@ describe("tickets", () => {
     const { state, spent } = spendOne(current(null, at(24, REFILL_HOUR - 1, 58)));
     const nextDay = spendOne(current(state, at(24, REFILL_HOUR, 2))).state;
     expect(linkSticker(nextDay, spent, "late")).toEqual(nextDay);
+  });
+
+  it("gives back a lost drawing's ticket, free or bought, but not one that became a sticker", () => {
+    const free = spendOne(current(null, at(24, 10)));
+    const freeBack = refund(free.state, free.spent);
+    expect(freeBack && ticketsLeft(freeBack)).toBe(FREE);
+    const bought = spendOne(spendMany(addPaid(current(null, at(24, 10)), 1), FREE));
+    const boughtBack = refund(bought.state, bought.spent);
+    expect(boughtBack && ticketsLeft(boughtBack)).toBe(1);
+    expect(refund(linkSticker(free.state, free.spent, "sunset"), free.spent)).toBeNull();
+  });
+
+  it("gives nothing back for a ticket spent before the refill", () => {
+    const { state, spent } = spendOne(current(null, at(24, REFILL_HOUR - 1, 58)));
+    expect(refund(current(state, at(24, REFILL_HOUR, 2)), spent)).toBeNull();
   });
 
   it("shows only the day's free tickets, even after bought ones are used", () => {

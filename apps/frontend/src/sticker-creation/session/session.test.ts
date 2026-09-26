@@ -26,6 +26,11 @@ describe("transition", () => {
     expect(run(ink, ink)).toEqual({ phase: "drawing", effects: [] });
   });
 
+  it("picks a drawing kept across a reload back up without spending another ticket", () => {
+    expect(run({ type: "restored" })).toEqual({ phase: "drawing", effects: [] });
+    expect(run({ type: "restored" }, ink).effects).toEqual([]);
+  });
+
   it("arms at the first tap and seals at a second within the window", () => {
     expect(run(ink, tap(1000))).toEqual({ phase: "armed", effects: [] });
     expect(run(ink, tap(1000), tap(1000 + ARM_WINDOW_MS - 1))).toEqual({

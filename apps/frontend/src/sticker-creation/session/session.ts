@@ -21,6 +21,8 @@ export const FRESH_SESSION: Session = { phase: "blank", armedAt: 0 };
 export type SessionEvent =
   /** A stroke or fill landed on the sheet. */
   | { type: "ink" }
+  /** A drawing kept across a reload is back on the sheet; its ticket was spent before the reload. */
+  | { type: "restored" }
   | { type: "seal-tap"; now: number; hasInk: boolean }
   | { type: "arm-expired"; now: number }
   | { type: "canvas-touch" }
@@ -52,6 +54,8 @@ export function transition(session: Session, event: SessionEvent): Result {
   switch (event.type) {
     case "ink":
       return phase === "blank" ? to("drawing", ["spend-ticket", "start-clock"]) : unchanged;
+    case "restored":
+      return phase === "blank" ? to("drawing") : unchanged;
     case "seal-tap":
       if (phase === "armed" && event.now - session.armedAt < ARM_WINDOW_MS)
         return to("sealing", ["seal"]);
