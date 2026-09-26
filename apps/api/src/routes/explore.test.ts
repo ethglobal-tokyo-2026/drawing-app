@@ -86,8 +86,8 @@ const seal = (artistId: string, sealedAt = test.clock.now()) =>
 const give = (stickerId: string, giverId: string, receiverId: string, receivedAt?: Date) =>
   receiveGift(test.db, packGift(test.db, stickerId, giverId), receiverId, receivedAt);
 
-/** `giverId` gives `stickerId` to `receiverId`, who thanks them with `combo`, by default now. */
-const giveAndThank = (
+/** `giverId` gives `stickerId` to `receiverId`, who sends gratitude as `combo`, by default now. */
+const giveAndSendGratitude = (
   stickerId: string,
   giverId: string,
   receiverId: string,
@@ -192,42 +192,42 @@ describe("GET /api/explore", () => {
     expect(await weekStartFor(me)).toEqual(msAfter(weekStart, WEEK_MS));
   });
 
-  it("ranks mostThanked by this week's giver's parts and Original Artist Gratitude Shares", async () => {
+  it("ranks mostGratitude by this week's giver's parts and Original Artist Gratitude Shares", async () => {
     const artist = insertUser(test.db);
     const giver = insertUser(test.db);
-    const thanker = insertUser(test.db);
+    const receiver = insertUser(test.db);
     const lastWeeks = insertUser(test.db);
-    const weekStart = await weekStartFor(thanker);
+    const weekStart = await weekStartFor(receiver);
     const drawn = seal(artist);
     give(drawn, artist, giver);
-    giveAndThank(drawn, giver, thanker, SHARED_TAP);
-    giveAndThank(seal(artist), artist, thanker, OWN_TAP);
-    giveAndThank(seal(giver), giver, thanker, { ...SMALL_TAP, createdAt: weekStart });
-    giveAndThank(seal(lastWeeks), lastWeeks, thanker, {
+    giveAndSendGratitude(drawn, giver, receiver, SHARED_TAP);
+    giveAndSendGratitude(seal(artist), artist, receiver, OWN_TAP);
+    giveAndSendGratitude(seal(giver), giver, receiver, { ...SMALL_TAP, createdAt: weekStart });
+    giveAndSendGratitude(seal(lastWeeks), lastWeeks, receiver, {
       ...OWN_TAP,
       createdAt: msAfter(weekStart, -1),
     });
 
     const share = SHARED_TAP.originalArtistGratitudeShare;
-    const { mostThanked } = (await exploreAs(thanker)).leaderboards;
-    expect(idsAndValues(mostThanked)).toEqual([
+    const { mostGratitude } = (await exploreAs(receiver)).leaderboards;
+    expect(idsAndValues(mostGratitude)).toEqual([
       [giver, SHARED_TAP.total - share + SMALL_TAP.total],
       [artist, share + OWN_TAP.total],
     ]);
   });
 
-  it("ranks bestCombo by each thanker's most hits in one combo this week", async () => {
+  it("ranks bestCombo by each receiver's most hits in one combo this week", async () => {
     const giver = insertUser(test.db);
     const steady = insertUser(test.db);
     const lastWeeksBest = insertUser(test.db);
     const weekStart = await weekStartFor(giver);
-    giveAndThank(seal(giver), giver, steady, { hits: FEW_HITS });
-    giveAndThank(seal(giver), giver, steady, { hits: MORE_HITS });
-    giveAndThank(seal(giver), giver, lastWeeksBest, {
+    giveAndSendGratitude(seal(giver), giver, steady, { hits: FEW_HITS });
+    giveAndSendGratitude(seal(giver), giver, steady, { hits: MORE_HITS });
+    giveAndSendGratitude(seal(giver), giver, lastWeeksBest, {
       hits: MAX_HITS,
       createdAt: msAfter(weekStart, -1),
     });
-    giveAndThank(seal(giver), giver, lastWeeksBest, { hits: SOME_HITS });
+    giveAndSendGratitude(seal(giver), giver, lastWeeksBest, { hits: SOME_HITS });
 
     const { bestCombo } = (await exploreAs(giver)).leaderboards;
     expect(idsAndValues(bestCombo)).toEqual([
@@ -267,16 +267,16 @@ describe("GET /api/explore", () => {
       .map((handle) => insertUser(test.db, { handle }))
       .reverse();
     const deleted = insertUser(test.db, { handle: "aardvark" });
-    // A ring: everyone seals once today, gives it to the next, and is thanked with the same combo.
+    // A ring: everyone seals once today, gives it to the next, and gets the same gratitude combo.
     const everyone = [deleted, ...live];
     everyone.forEach((userId, index) => {
-      giveAndThank(seal(userId), userId, everyone[(index + 1) % everyone.length]);
+      giveAndSendGratitude(seal(userId), userId, everyone[(index + 1) % everyone.length]);
     });
     await deleteAccount(deleted);
 
-    const { mostThanked, bestCombo, longestStreak } = (await exploreAs(live[0])).leaderboards;
+    const { mostGratitude, bestCombo, longestStreak } = (await exploreAs(live[0])).leaderboards;
     const firstAToZ = live.slice(0, LEADERBOARD_SIZE);
-    for (const board of [mostThanked, bestCombo, longestStreak]) {
+    for (const board of [mostGratitude, bestCombo, longestStreak]) {
       expect(board.map(({ person }) => person.id)).toEqual(firstAToZ);
     }
   });

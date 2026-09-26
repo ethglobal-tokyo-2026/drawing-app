@@ -393,7 +393,7 @@ interface UserStats {
     asOriginalArtist: number; // Original Artist Gratitude Shares
     total: number;
   };
-  bests: { bestCombo: number; mostThanksInADay: number; longestStreak: number };
+  bests: { bestCombo: number; mostGratitudeInADay: number; longestStreak: number };
   streak: number; // current; a missed ticket day resets it to 0
 }
 ```
@@ -584,7 +584,7 @@ interface Explore {
   >; // newest first; at most 50
   leaderboards: {
     weekStart: IsoTime; // Monday 4:00, Tokyo time
-    mostThanked: LeaderboardRow[]; // the giver's part plus Original Artist Gratitude Shares received this week
+    mostGratitude: LeaderboardRow[]; // the giver's part plus Original Artist Gratitude Shares received this week
     bestCombo: LeaderboardRow[]; // the most hits in one combo this week
     longestStreak: LeaderboardRow[]; // current streaks
   };
