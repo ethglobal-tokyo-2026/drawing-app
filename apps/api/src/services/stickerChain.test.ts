@@ -7,7 +7,8 @@ import {
   zeroAddress,
   type Hex,
 } from "viem";
-import { createStickerChain } from "./stickerChain.ts";
+import { sepolia } from "viem/chains";
+import { createStickerChain, rpcTransport } from "./stickerChain.ts";
 import { stickerImageUrls } from "./imageStore.ts";
 
 const rpc = vi.hoisted(() => ({
@@ -106,6 +107,17 @@ beforeEach(() => {
 });
 
 afterEach(() => vi.restoreAllMocks());
+
+describe("the RPC transport", () => {
+  it("is one URL's, or tries several separated by commas in turn", () => {
+    expect(rpcTransport("https://rpc.test/one")({ chain: sepolia }).config.type).toBe("http");
+    const several = rpcTransport("https://rpc.test/one, https://rpc.test/two")({ chain: sepolia });
+    expect(several.config.type).toBe("fallback");
+    expect(several.value && "transports" in several.value && several.value.transports).toHaveLength(
+      2,
+    );
+  });
+});
 
 describe("Sepolia sticker adapter", () => {
   it("mints to the artist's smart wallet and recovers an existing mint without sending another", async () => {
