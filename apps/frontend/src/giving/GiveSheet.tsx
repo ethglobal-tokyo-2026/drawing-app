@@ -4,6 +4,7 @@ import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Sheet } from "../ui/Sheet";
+import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { formatNo } from "../stickers/format";
 import { useIdentity } from "../identity/useIdentity";
@@ -48,6 +49,7 @@ export function GiveSheet({ to, onClose }: Props) {
   const pickedSticker = stickers?.find((s) => s.id === picked);
   const me = useIdentity();
   const root = useRef<HTMLDivElement>(null);
+  useBackToClose(true, onClose);
   useFocusTrap(root, { onEscape: onClose });
   // The confirmation replaces the key that had focus, so focus moves to its way back.
   const back = useRef<HTMLButtonElement>(null);

@@ -47,3 +47,21 @@
 .phone.has-tucked-tabs .screen {
   margin-bottom: 50px;
 }
+
+/* A ticket card's scrim stops at the drawing screen, so the grabber's strip takes the same scrim:
+   the tabs can't come up past a card that's waiting for an answer. */
+.phone.has-tucked-tabs:has(.out-of-tickets__scrim)::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: calc(50px + env(safe-area-inset-bottom));
+  z-index: calc(var(--z-tabs) + 2);
+  background: rgba(28, 24, 36, 0.46);
+  animation: out-of-tickets-fade 320ms var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phone.has-tucked-tabs:has(.out-of-tickets__scrim)::after {
+    animation: none;
+  }
+}
