@@ -7,6 +7,7 @@ import {
   type WalletWithMetadata,
 } from "@privy-io/react-auth";
 import { useEffect } from "react";
+import { requestReturningMenu } from "../line/chatMenu";
 import {
   fetchPrivyJwt,
   onPrivyError,
@@ -20,13 +21,16 @@ import {
 const isPrivysWallet = (a: User["linkedAccounts"][number]): a is WalletWithMetadata =>
   a.type === "wallet" && a.walletClientType === "privy" && a.chainType === "ethereum";
 
-const signedIn = (user: User) =>
+const signedIn = (user: User) => {
   setPrivyStatus({
     state: "signed-in",
     userId: user.id,
     wallet: user.linkedAccounts.find(isPrivysWallet)?.address,
     smartAccount: user.smartWallet?.address,
   });
+  // Having a Privy account is what makes someone returning, so their chat menu switches now.
+  void requestReturningMenu();
+};
 
 const onAuthenticated = ({ user }: { user: User }) => signedIn(user);
 

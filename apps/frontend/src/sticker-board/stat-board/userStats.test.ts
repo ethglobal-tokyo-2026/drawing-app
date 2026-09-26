@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { streakOf } from "./userStats";
+import { joinedAt, streakOf } from "./userStats";
 
 const days = (...keys: string[]) => keys;
 
@@ -50,5 +50,13 @@ describe("streakOf", () => {
     // London's clocks go forward on 2026-03-29, so that day lasts 23 hours there.
     vi.stubEnv("TZ", "Europe/London");
     expect(streakOf(days("2026-03-28", "2026-03-29", "2026-03-30"), "2026-03-30").current).toBe(3);
+  });
+});
+
+describe("joinedAt", () => {
+  it("is the earlier of the first visit and the oldest sticker", () => {
+    const stickers = [{ createdAt: 500 }, { createdAt: 200 }, { createdAt: 900 }];
+    expect(joinedAt(300, stickers)).toBe(200);
+    expect(joinedAt(100, stickers)).toBe(100);
   });
 });

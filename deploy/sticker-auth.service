@@ -10,6 +10,7 @@ Type=simple
 User=bawler
 Group=bawler
 EnvironmentFile=/srv/sticker-auth/auth.env
+EnvironmentFile=-/srv/sticker-auth/secrets.env
 ExecStart=/usr/bin/node /srv/sticker-auth/server/start-auth-server.js
 Restart=always
 RestartSec=3
@@ -17,7 +18,7 @@ RestartSec=3
 MemoryMax=256M
 TasksMax=64
 
-# Sandboxing: it reads its own directory and calls LINE's verify endpoint.
+# Sandboxing: it reads its own directory and calls LINE's and Privy's APIs.
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict

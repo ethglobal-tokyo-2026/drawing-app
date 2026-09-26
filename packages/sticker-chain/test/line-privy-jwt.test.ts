@@ -1,6 +1,6 @@
 import { createPublicKey, generateKeyPairSync, verify } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { createLinePrivyJwtIssuer } from "../src/line-privy-jwt.js";
+import { createLinePrivyJwtIssuer, privySubject } from "../src/line-privy-jwt.js";
 
 const { privateKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
 const privateKeyPem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();
@@ -81,6 +81,16 @@ describe("LINE to Privy JWT", () => {
     expect((await otherChannel.issue("first")).subject).not.toBe(
       (await first.issue("first")).subject,
     );
+  });
+
+  it("signs the subject that the chat menu switch looks up in Privy", async () => {
+    const issuer = createLinePrivyJwtIssuer({
+      ...baseOptions,
+      verifyLineIdToken: async () => ({ sub: "line-user-1" }),
+    });
+
+    const { subject } = await issuer.issue("line-id-token");
+    expect(subject).toBe(privySubject(baseOptions.channelId, "line-user-1"));
   });
 
   it("does not issue a token when LINE rejects authentication", async () => {
