@@ -275,31 +275,33 @@ li.me .rank {
   height: 44px;
 }
 
+/* Its width sizes a long handle. */
 .row-names {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
+  container-type: inline-size;
 }
 
 .row-names.is-loading {
   gap: 6px;
 }
 
+/* A handle shows whole, as on the pile's name tags: it runs onto a second line after "_", "." or "-",
+   and between letters only where it must. A long one steps down to fit two lines, never under 11px;
+   --handle-w is its width in the tags' 11px letters (pileLayout's textWidth). */
 .row-names b {
-  font-size: 16px;
+  font-size: clamp(11px, calc(2000cqi / var(--handle-w, 1)), 16px);
   font-weight: 800;
   line-height: 1.15;
-}
-
-.row-names span,
-.row-names b {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .row-names span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--graphite);
   font-size: 13px;
 }

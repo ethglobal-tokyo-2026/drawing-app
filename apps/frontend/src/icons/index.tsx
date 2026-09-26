@@ -78,6 +78,7 @@ export {
   Pause,
   Play,
   Question,
+  Receipt,
   SealCheck,
   SignOut,
   SkipForward,

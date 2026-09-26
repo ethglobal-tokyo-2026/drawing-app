@@ -1,7 +1,7 @@
 import type { GiftsForYou } from "@drawing-app/api/client";
-import { Gift } from "@phosphor-icons/react";
 import { toPerson, toSticker } from "../api/views";
 import { Trans, useTranslation } from "../i18n/react";
+import { GiveIcon } from "../icons";
 import { formatHandle } from "../stickers/format";
 import "./gifts-for-you-badge.css";
 
@@ -36,7 +36,7 @@ export function GiftsForYouBadge({ gifts, onOpen }: Props) {
       onClick={() => onOpen(newest)}
     >
       <span className="gifts-for-you-badge__bag" aria-hidden="true">
-        <Gift weight="fill" size={24} />
+        <GiveIcon weight="fill" size={24} />
         {count > 1 && <span className="gifts-for-you-badge__count">{count}</span>}
         {nsfw && (
           <span className="gifts-for-you-badge__nsfw">{t(($) => $.stickers.nsfw.mark)}</span>

@@ -59,6 +59,19 @@ export function OutOfTickets({
 
   useFocusTrap(card, { onEscape: onBoard });
 
+  // Over the board the card dims the tab strip too (App.css), and a tap there closes it like its scrim.
+  useEffect(() => {
+    if (!overBoard) return;
+    const onClick = (e: MouseEvent) => {
+      if (!(e.target instanceof Element) || !e.target.closest(".tabs")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      onBoard();
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, [overBoard, onBoard]);
+
   // Each view's first control takes focus, so focus never drops out of the card when its controls change.
   useEffect(() => {
     const first = card.current?.querySelector<HTMLElement>("button:not(:disabled)");
@@ -66,8 +79,12 @@ export function OutOfTickets({
   }, [refilled]);
 
   return (
-    <div className="out-of-tickets">
-      <div className="out-of-tickets__scrim" />
+    <div className={`out-of-tickets ${overBoard ? "out-of-tickets--over-board" : ""}`}>
+      <div
+        className="out-of-tickets__scrim"
+        aria-hidden="true"
+        onClick={overBoard ? onBoard : undefined}
+      />
       <section
         ref={card}
         className="out-of-tickets__card"

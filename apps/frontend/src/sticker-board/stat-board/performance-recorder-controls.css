@@ -33,11 +33,10 @@
   accent-color: var(--ink);
 }
 
-/* It changes each second: tabular figures keep it from jittering. */
+/* Proportional figures, as everywhere in Mona Sans: its tabular zero is slashed. */
 .performance-recorder__summary {
   margin: 0;
   font: 500 14px/1.4 var(--font-ui);
-  font-variant-numeric: tabular-nums;
 }
 
 .performance-recorder__actions {
@@ -55,11 +54,10 @@
   user-select: text;
 }
 
+/* In the app's own face, not the system monospace, whose zero is slashed too. */
 .performance-recorder__report {
   min-height: 180px;
-  font:
-    12px/1.4 ui-monospace,
-    monospace;
+  font: 500 12px/1.4 var(--font-ui);
   -webkit-user-select: text;
   user-select: text;
 }

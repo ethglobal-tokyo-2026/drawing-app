@@ -90,6 +90,27 @@
   }
 }
 
+/* The out-of-tickets card over the board dims the tab strip under it too; a tap on the strip then
+   closes the card, as a tap on its scrim does (OutOfTickets.tsx), and never reaches a tab. */
+.phone:has(.out-of-tickets--over-board) .tabs {
+  position: relative;
+}
+
+.phone:has(.out-of-tickets--over-board) .tabs::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgba(28, 24, 36, 0.46);
+  animation: out-of-tickets-fade 320ms var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phone:has(.out-of-tickets--over-board) .tabs::after {
+    animation-duration: 1ms;
+  }
+}
+
 /* Changing tabs (screenTransition.ts): the screen as it was fades out and sinks back a little while
    the next fades in and settles into place, slow and soft. The tab bar changes crisply around it. */
 .screen {

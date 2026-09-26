@@ -1,8 +1,8 @@
-import { At } from "@phosphor-icons/react";
 import type { TFunction } from "i18next";
 import { useState, type FormEvent } from "react";
 import { errorReason } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
+import { At } from "../icons";
 import { Key } from "../ui/Key";
 import { apiError, type ApiError } from "./apiClient";
 import type { Me } from "@drawing-app/api/client";
