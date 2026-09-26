@@ -96,6 +96,8 @@ function privyText(privy: PrivyStatus): string {
       return "Signing in to Privy…";
     case "failed":
       return `Privy sign-in failed: ${privy.reason}`;
+    case "off":
+      return "Privy is off on the dev server, where LIFF Mock signs you in";
   }
 }
 
