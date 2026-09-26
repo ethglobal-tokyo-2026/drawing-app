@@ -80,6 +80,15 @@ describe("PerformanceRecorderControls", () => {
     expect(control<HTMLTextAreaElement>("textarea").value).toContain("Typical frame");
   });
 
+  it("runs its once-a-second update only while the slip shows", async () => {
+    record();
+    const running = vi.getTimerCount();
+    await act(async () => host.setAttribute("inert", ""));
+    expect(vi.getTimerCount()).toBe(running - 1);
+    await act(async () => host.removeAttribute("inert"));
+    expect(vi.getTimerCount()).toBe(running);
+  });
+
   it("says why recording couldn't start, and leaves the switch off", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.stubGlobal(
