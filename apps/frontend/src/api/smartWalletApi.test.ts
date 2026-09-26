@@ -1,7 +1,7 @@
 import type { Sticker } from "@drawing-app/api/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { setSmartWallet } from "../identity/smartWallet";
-import type { ApiClient } from "./apiClient";
+import { ApiError, type ApiClient } from "./apiClient";
 import { withSmartWallet } from "./smartWalletApi";
 import { sticker } from "./testFixtures";
 import { emptyApi } from "./testing";
@@ -70,6 +70,11 @@ describe("REST actions that require a smart account", () => {
     ready();
     const seal = vi.fn<ApiClient["seal"]>().mockResolvedValue(answer(sticker(confirmation)));
     const api = withSmartWallet(emptyApi({ seal }));
-    await expect(api.seal(request)).rejects.toMatchObject({ code: "mint_failed" });
+    const failed = await api.seal(request).catch((error: unknown) => error);
+    if (!(failed instanceof ApiError))
+      throw new Error("Sealing unconfirmed didn't fail as an ApiError");
+    expect(failed.code).toBe("mint_failed");
+    // The seal key's chip shows the detail too.
+    expect(failed.detail).not.toMatch(/NFT|crypto|token|wallet|mint|burn/i);
   });
 });
