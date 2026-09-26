@@ -95,6 +95,30 @@ contract StickerGiftEscrowTest is Test {
         assertEq(escrow.pendingGiftForToken(1), bytes32(0));
     }
 
+    function testSenderCanTakeStickerOut() public {
+        _stageGift(uint64(block.timestamp + 1 hours));
+
+        vm.prank(artist);
+        escrow.takeOut(GIFT_ID);
+
+        assertEq(sticker.ownerOf(1), artist);
+        assertEq(escrow.pendingGiftForToken(1), bytes32(0));
+        (,,,,, StickerGiftEscrow.GiftStatus status) = escrow.gifts(GIFT_ID);
+        assertEq(uint8(status), uint8(StickerGiftEscrow.GiftStatus.Rejected));
+    }
+
+    function testOnlySenderCanTakeStickerOut() public {
+        _stageGift(uint64(block.timestamp + 1 hours));
+
+        vm.prank(relayer);
+        vm.expectRevert(
+            abi.encodeWithSelector(StickerGiftEscrow.NotGiftSender.selector, GIFT_ID, relayer)
+        );
+        escrow.takeOut(GIFT_ID);
+
+        assertEq(sticker.ownerOf(1), address(escrow));
+    }
+
     function testAnyoneCanReturnExpiredGift() public {
         uint64 expiresAt = uint64(block.timestamp + 1 minutes);
         _stageGift(expiresAt);

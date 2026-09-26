@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # deploy/deploy.sh: build the frontend and the LINE → Privy auth server, and publish both behind the LIFF endpoint;
-# then deploy/deploy-api.sh does the same for the REST API.
+# deploy/deploy-api.sh validates and publishes the REST API before the frontend is published.
 #
 #   ./deploy/deploy.sh
 #
@@ -10,9 +10,10 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-if [ -f "$ROOT/deploy/.env" ]; then
+ENV_FILE="${DEPLOY_ENV_FILE:-$ROOT/deploy/.env}"
+if [ -f "$ENV_FILE" ]; then
   # shellcheck source=/dev/null
-  . "$ROOT/deploy/.env"
+  . "$ENV_FILE"
 fi
 TARGET="${DEPLOY_TARGET:?set DEPLOY_TARGET (user@host) in deploy/.env}"
 DIR="${DEPLOY_DIR:-/srv/sticker-board}"
@@ -27,10 +28,22 @@ SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/cm-deploy-%C" -o Cont
 ssh() { command ssh "${SSH_OPTS[@]}" "$@"; }
 export RSYNC_RSH="ssh ${SSH_OPTS[*]}"
 
+: "${STICKER_GIFT_ESCROW_ADDRESS:?set STICKER_GIFT_ESCROW_ADDRESS in deploy/.env for the frontend}"
+[[ "$STICKER_GIFT_ESCROW_ADDRESS" =~ ^0x[0-9a-fA-F]{40}$ ]] || {
+  echo "Invalid STICKER_GIFT_ESCROW_ADDRESS" >&2
+  exit 1
+}
+export VITE_STICKER_ESCROW_ADDRESS="$STICKER_GIFT_ESCROW_ADDRESS"
+# Only an explicitly public RPC belongs in the browser bundle; the backend RPC can contain credentials.
+if [ -n "${VITE_STICKER_RPC_URL:-}" ]; then export VITE_STICKER_RPC_URL; fi
+"$ROOT/deploy/deploy-api.sh" --preflight-only
+
 # The live app shows the stat board's developer slip, so its test tools (the gratitude mini-game,
 # LINE and Privy's checks) can be tried inside LINE on a phone.
 VITE_DEV_SLIP=on pnpm --dir "$ROOT" --filter frontend build
 pnpm --dir "$ROOT" --filter @drawing-app/sticker-chain build:auth-server
+# Publish and verify the API before serving a frontend that depends on it.
+"$ROOT/deploy/deploy-api.sh"
 # The auth server runs on the Node that package.json pins.
 "$ROOT/deploy/install-node.sh" sticker-auth
 
@@ -95,6 +108,3 @@ curl -fsS --max-time 15 "$URL/.well-known/jwks.json" | grep -q "\"kid\":\"$KEY_I
   exit 1
 }
 echo "✓ $URL/.well-known/jwks.json"
-
-# The REST API has its own script, so it can also go out alone.
-"$ROOT/deploy/deploy-api.sh"

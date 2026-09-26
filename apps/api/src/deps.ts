@@ -66,6 +66,10 @@ export interface MintRequest {
   artistId: string;
   contentHash: string;
   metadataUri: string;
+  number?: number;
+  sealedAt?: Date;
+  width?: number;
+  height?: number;
 }
 
 export interface MintedToken {
@@ -106,10 +110,16 @@ export interface GiftChain {
     expiresAt: Date;
   }) => EscrowTransfer;
   readEscrowGift: (giftId: string) => Promise<EscrowGift>;
+  /** Claims a pending gift for the recipient's smart wallet and waits for it to land. */
+  claimGift: (gift: {
+    giftId: string;
+    giftClaimToken: string;
+    recipientId: string;
+  }) => Promise<{ claimed: true; txHash: string } | { claimed: false }>;
 }
 
 export interface SmartWallets {
-  /** The person's smart wallet on Ethereum Sepolia, lowercase; null while they have none. */
+  /** The person's Ethereum Sepolia smart wallet, lowercase; null while they have none. */
   addressFor: (userId: string) => Promise<string | null>;
 }
 

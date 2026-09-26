@@ -134,16 +134,28 @@ describe("POST /api/stickers", () => {
     expect(allStickers()).toMatchObject([minted]);
   });
 
-  it("leaves the sticker sealed and unminted when the mint fails, and logs it", async () => {
+  it("retries an unminted sticker on the same ticket without creating another sticker", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const chainDown = new Error("The chain is down");
-    test = await createTestApp({ mint: () => Promise.reject(chainDown) });
-    const { sticker } = await seal(insertUser(test.db));
+    const mint = fakeMint();
+    let available = false;
+    test = await createTestApp({
+      mint: (request) => (available ? mint(request) : Promise.reject(chainDown)),
+    });
+    const artistId = insertUser(test.db);
+    const { ticketUseId, sticker } = await seal(artistId);
     expect(sticker.tokenId).toBeNull();
     expect(log).toHaveBeenCalledWith(expect.stringContaining(sticker.id), chainDown);
+
+    available = true;
+    const retry = await postSeal(artistId, sealFormData(sealParts(ticketUseId)));
+    expect(retry.status).toBe(200);
+    const retried = sealResponseSchema.parse(await retry.json()).sticker;
+    expect(retried).toMatchObject({ id: sticker.id, tokenId: "1" });
+    expect(allStickers()).toHaveLength(1);
   });
 
-  it("refuses a ticket that's someone else's, unknown or already sealed, and stores nothing", async () => {
+  it("refuses others' and unknown tickets, and answers an already sealed ticket without storing new images", async () => {
     const artistId = insertUser(test.db);
     const { ticketUseId: sealedTicket } = await seal(artistId);
     const before = allStickers();
@@ -161,10 +173,9 @@ describe("POST /api/stickers", () => {
       status: 404,
       error: "ticket_not_found",
     });
-    expect(await attempt(sealedTicket)).toMatchObject({
-      status: 409,
-      error: "ticket_already_used",
-    });
+    const repeated = await postSeal(artistId, sealFormData(sealParts(sealedTicket)));
+    expect(repeated.status).toBe(200);
+    expect(sealResponseSchema.parse(await repeated.json()).sticker.id).toBe(before[0]?.id);
     expect(allStickers()).toEqual(before);
     expect(test.images.saved.has(keccak256(refusedPng))).toBe(false);
   });
