@@ -36,6 +36,8 @@ export type ComboEvent =
 /** The combo as of the latest call, for drawing. */
 export interface ComboView {
   phase: ComboPhase;
+  /** Tap until the combo commits to stroke or shake. */
+  method: Method;
   hits: number;
   total: number;
   multiplier: number;
@@ -51,8 +53,14 @@ export interface ComboView {
 
 export interface GratitudeCombo {
   readonly view: ComboView;
-  /** A touch-down on the heart at `t` ms; for the first tap, its release. */
+  /** A touch-down on the heart at `t` ms; for the first tap, its release. Ignored once committed to stroke or shake. */
   tapHeart: (t: number) => ComboEvent[];
+  /** The detector unlocked stroke or shake at `t`: the combo commits to it, starting or catching it first if need be, and that pass or reversal is a hit. */
+  commitTo: (method: "stroke" | "shake", t: number) => ComboEvent[];
+  /** A fast pass, once committed to stroke. */
+  countStrokePass: (t: number) => ComboEvent[];
+  /** A rhythmic reversal, once committed to shake. */
+  countShakeReversal: (t: number) => ComboEvent[];
   /** Brings the rules to `t` ms: the catch window closing, hits leaving the cadence window, the bar emptying, the safety stop. */
   advanceTo: (t: number) => ComboEvent[];
   /** Ends it at `t` ms, because the page went hidden or the screen closed. Before the first tap it ends without a record. */
@@ -88,15 +96,22 @@ export function fullBarSeconds(config: GameConfig = GAME_CONFIG): number {
 /**
  * The gratitude combo's rules, with no DOM and no clock of their own: every call is passed the time.
  * State changes only at events (hits, a hit leaving the cadence window, the ends) and is computed in
- * closed form between them, so a replay of the same hit times gives the same record however the
- * frames fell. Times are held in whole milliseconds after the first hit.
+ * closed form between them, so a replay of the same hits gives the same record however the frames
+ * fell. Times are held in whole milliseconds after the first hit.
  */
 export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): GratitudeCombo {
   const M = config.multiplier;
   const { K, grow, lasts } = barDrain(config);
   const fullBar = lasts(1, 0);
+  const perSecond: Record<Method, number> = {
+    tap: config.tapsPerSecond,
+    stroke: config.passesPerSecond,
+    shake: config.reversalsPerSecond,
+  };
 
   let phase: ComboPhase = "ready";
+  let method: Method = "tap";
+  let switchedAtHit: number | null = null;
   /** The caller's time of the first hit. */
   let origin = 0;
   // The state as of the latest event, at `at` ms after the first hit.
@@ -106,18 +121,25 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
   let comboMs = 0;
   let mult = 1;
   let frozenUntil = 0;
-  let milliTokens = config.burst * 1000;
-  let tokensAt = 0;
+  /** A token bucket per method, in thousandths of a hit, so refills stay whole numbers. */
+  const tokens: Record<Method, { milli: number; at: number }> = {
+    tap: { milli: config.burst * 1000, at: 0 },
+    stroke: { milli: config.burst * 1000, at: 0 },
+    shake: { milli: config.burst * 1000, at: 0 },
+  };
   let total = 0;
   let peakMult = 1;
   let shownTier: Tier | null = null;
   /** The latest time the combo was brought to. */
   let latest = 0;
   const hitTimes: number[] = [];
-  /** Hit times still in the cadence window, oldest first. */
-  const cadence: number[] = [];
+  /** Hits still in the cadence window, oldest first, with their weights. */
+  const cadence: { t: number; weight: number }[] = [];
 
-  const target = () => Math.min(M.max, 1 + M.perHit * Math.max(0, cadence.length - M.freeHits));
+  const target = () => {
+    const hits = cadence.reduce((sum, h) => sum + h.weight, 0);
+    return Math.min(M.max, 1 + M.perHit * Math.max(0, hits - M.freeHits));
+  };
 
   /** The state at `x` ≥ `at`, with no event between. */
   function stateAt(x: number) {
@@ -142,7 +164,7 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
     if (phase === "sending") return { t: config.catchWindowMs, kind: "sendEnd" };
     if (phase !== "running") return null;
     let next: Pending = { t: config.maxDurationMs, kind: "cap" };
-    const leaves = cadence.length > 0 ? cadence[0] + M.windowMs : Infinity;
+    const leaves = cadence.length > 0 ? cadence[0].t + M.windowMs : Infinity;
     if (leaves < next.t) next = { t: leaves, kind: "cadence" };
     const empties = Math.max(at, frozenUntil) + lasts(bar, comboMs / 1000) * 1000;
     if (empties < next.t) next = { t: empties, kind: "empty" };
@@ -157,8 +179,8 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
       kind: "ended",
       caught,
       record: {
-        method: "tap",
-        switchedAtHit: null,
+        method,
+        switchedAtHit,
         hits: hitTimes.length,
         hitTimes: [...hitTimes],
         durationMs: Math.round(end),
@@ -184,12 +206,71 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
     return false;
   }
 
+  /**
+   * One hit by `by` at caller time `t`. Before any hit, a tap sends and waits to be caught; a stroke
+   * or shake unlock starts the bar at once. A combo's first hit weighs 1, like a tap.
+   */
+  function hit(by: Method, t: number): ComboEvent[] {
+    const events: ComboEvent[] = [];
+    if (phase === "ended") return events;
+    if (phase === "ready") origin = t;
+    // Whole milliseconds, never before an event already run, so a replay meets the same order.
+    const x = Math.max(Math.round(t - origin), at);
+    if (advance(x, events)) return events;
+
+    const bucket = tokens[by];
+    bucket.milli = Math.min(config.burst * 1000, bucket.milli + (x - bucket.at) * perSecond[by]);
+    bucket.at = x;
+    if (bucket.milli < 1000) {
+      events.push({ kind: "limited" });
+      return events;
+    }
+    bucket.milli -= 1000;
+
+    settleAt(x);
+    const weight = by === "tap" || hitTimes.length === 0 ? 1 : config.methodWeight;
+    const before = phase === "running" ? lasts(bar, comboMs / 1000) : 0;
+    hitTimes.push(x);
+    cadence.push({ t: x, weight });
+    if (phase === "ready" && by === "tap") phase = "sending";
+    else if (phase === "ready" || phase === "sending") {
+      phase = "running";
+      bar = 1;
+      comboMs = 0;
+      events.push({ kind: "caught" });
+    } else {
+      const n = hitTimes.length;
+      const gain = config.gainFloor + config.gainAboveFloor * config.gainDecay ** (n - 3);
+      bar = Math.min(1, bar + weight * gain);
+    }
+
+    const goal = target();
+    if (goal > mult) mult += (goal - mult) * M.hitNudge;
+    peakMult = Math.max(peakMult, mult);
+    const gratitude = Math.round(config.gratitudePerHit * mult * weight);
+    total += gratitude;
+    const secondsAdded = before > 0 ? Math.max(0, lasts(bar, comboMs / 1000) - before) : 0;
+    events.push({ kind: "hit", gratitude, secondsAdded });
+
+    if (phase === "running") {
+      const tier = tierFor(total, config.tierStarts);
+      if (shownTier === null || tier > shownTier) {
+        shownTier = tier;
+        frozenUntil = Math.max(frozenUntil, x + config.tierUpFreezeMs);
+        events.push({ kind: "tier", tier });
+      }
+    }
+    latest = Math.max(latest, x);
+    return events;
+  }
+
   return {
     get view(): ComboView {
       const now = stateAt(Math.max(latest, at));
       const secondsLeft = phase === "running" ? Math.max(0, lasts(now.bar, now.comboMs / 1000)) : 0;
       return {
         phase,
+        method,
         hits: hitTimes.length,
         total,
         multiplier: now.mult,
@@ -201,62 +282,21 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
       };
     },
 
-    tapHeart(t) {
-      const events: ComboEvent[] = [];
-      if (phase === "ended") return events;
-      if (phase === "ready") origin = t;
-      // Whole milliseconds, never before an event already run, so a replay meets the same order.
-      const x = Math.max(Math.round(t - origin), at);
-      if (advance(x, events)) return events;
+    tapHeart: (t) => (method === "tap" ? hit("tap", t) : []),
 
-      milliTokens = Math.min(
-        config.burst * 1000,
-        milliTokens + (x - tokensAt) * config.tapsPerSecond,
-      );
-      tokensAt = x;
-      if (milliTokens < 1000) {
-        events.push({ kind: "limited" });
-        return events;
+    commitTo(by, t) {
+      if (method !== "tap") return [];
+      const index = hitTimes.length;
+      const events = hit(by, t);
+      if (events.some((e) => e.kind === "hit")) {
+        method = by;
+        switchedAtHit = index;
       }
-      milliTokens -= 1000;
-
-      settleAt(x);
-      const before = phase === "running" ? lasts(bar, comboMs / 1000) : 0;
-      hitTimes.push(x);
-      cadence.push(x);
-      if (phase === "ready") phase = "sending";
-      else if (phase === "sending") {
-        phase = "running";
-        bar = 1;
-        comboMs = 0;
-        events.push({ kind: "caught" });
-      } else {
-        const n = hitTimes.length;
-        bar = Math.min(
-          1,
-          bar + config.gainFloor + config.gainAboveFloor * config.gainDecay ** (n - 3),
-        );
-      }
-
-      const goal = target();
-      if (goal > mult) mult += (goal - mult) * M.hitNudge;
-      peakMult = Math.max(peakMult, mult);
-      const gratitude = Math.round(config.gratitudePerHit * mult);
-      total += gratitude;
-      const secondsAdded = before > 0 ? Math.max(0, lasts(bar, comboMs / 1000) - before) : 0;
-      events.push({ kind: "hit", gratitude, secondsAdded });
-
-      if (phase === "running") {
-        const tier = tierFor(total, config.tierStarts);
-        if (shownTier === null || tier > shownTier) {
-          shownTier = tier;
-          frozenUntil = Math.max(frozenUntil, x + config.tierUpFreezeMs);
-          events.push({ kind: "tier", tier });
-        }
-      }
-      latest = Math.max(latest, x);
       return events;
     },
+
+    countStrokePass: (t) => (method === "stroke" ? hit("stroke", t) : []),
+    countShakeReversal: (t) => (method === "shake" ? hit("shake", t) : []),
 
     advanceTo(t) {
       const events: ComboEvent[] = [];
@@ -279,16 +319,24 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
 }
 
 /**
- * A record's hits played again through a fresh combo. The rules are closed-form between events, so
- * a record replays to itself under the config it was played with.
+ * A record's hits played again through a fresh combo, the way they were made: taps, then from
+ * `switchedAtHit` its passes or reversals. The rules are closed-form between events, so a record
+ * replays to itself under the config it was played with.
  */
 export function replayGratitudeCombo(
   record: ComboRecord,
   config: GameConfig = GAME_CONFIG,
 ): ComboRecord {
   if (record.hitTimes.length === 0) throw new Error("A gratitude record with no hits can't replay");
+  const { method, switchedAtHit } = record;
   const combo = createGratitudeCombo(config);
-  const events = record.hitTimes.flatMap((t) => combo.tapHeart(t));
+  const events = record.hitTimes.flatMap((t, i) => {
+    if (switchedAtHit === null || i < switchedAtHit) return combo.tapHeart(t);
+    if (method === "tap")
+      throw new Error(`A gratitude record switched at hit ${i} but ends in taps`);
+    if (i === switchedAtHit) return combo.commitTo(method, t);
+    return method === "stroke" ? combo.countStrokePass(t) : combo.countShakeReversal(t);
+  });
   // durationMs is rounded, so a bar that ran out may have ended up to half a millisecond after it.
   events.push(...combo.advanceTo(record.durationMs + 0.5));
   if (combo.view.phase !== "ended") events.push(...combo.endCombo(record.durationMs));

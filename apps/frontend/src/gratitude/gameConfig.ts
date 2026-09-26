@@ -15,9 +15,13 @@ export interface GameConfig {
   gainFloor: number;
   gainAboveFloor: number;
   gainDecay: number;
-  /** Taps a second that count, beyond a burst of `burst`. */
+  /** Hits a second that count for each method, beyond a burst of `burst`. */
   tapsPerSecond: number;
+  passesPerSecond: number;
+  reversalsPerSecond: number;
   burst: number;
+  /** A stroke pass or a shake reversal counts as this many hits, except as a combo's first hit. */
+  methodWeight: number;
   /** The multiplier's target is 1 + perHit × (hits in the last window − freeHits), up to max. */
   multiplier: {
     windowMs: number;
@@ -47,7 +51,10 @@ export const GAME_CONFIG = {
   gainAboveFloor: 0.1,
   gainDecay: 0.93,
   tapsPerSecond: 16,
+  passesPerSecond: 10,
+  reversalsPerSecond: 14,
   burst: 4,
+  methodWeight: 1.5,
   multiplier: {
     windowMs: 1000,
     freeHits: 2,
