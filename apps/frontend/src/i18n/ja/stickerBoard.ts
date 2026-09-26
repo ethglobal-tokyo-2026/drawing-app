@@ -4,6 +4,7 @@ import type { stickerBoard as english } from "../en/stickerBoard";
 export const stickerBoard: Translation<typeof english> = {
   board: {
     loading: "ステッカーを読み込んでいます",
+    draw: "かく",
   },
   ensName: {
     open: "{{name}} を ENS アプリで開く",
