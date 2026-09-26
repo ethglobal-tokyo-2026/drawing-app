@@ -6,6 +6,7 @@ import { ApiError, type ApiClient } from "../../api/apiClient";
 import { ApiProvider } from "../../api/ApiProvider";
 import { gratitude } from "../../api/testFixtures";
 import { emptyApi } from "../../api/testing";
+import { STAGE_EASE_MS } from "./ReplayStage";
 import { fakeReplayEngine, REPLAYED_TOTAL, replayAnswer } from "./testReplayEngine";
 import { LANDED_HOLD_MS, useGratitudeReplay } from "./useGratitudeReplay";
 
@@ -128,8 +129,11 @@ describe("useGratitudeReplay", () => {
     show();
     await press();
     await press();
-    expect(engine.last().stop).toHaveBeenCalledTimes(1);
     expect(phase()).toBe("idle");
+    // Its engine stays in view while the stage eases shut, then goes.
+    expect(engine.last().stop).not.toHaveBeenCalled();
+    await wait(STAGE_EASE_MS);
+    expect(engine.last().stop).toHaveBeenCalledTimes(1);
 
     let answer = () => {};
     read.mockImplementation(
@@ -165,9 +169,10 @@ describe("useGratitudeReplay", () => {
     show();
     await press();
     escape(find(".host"));
-    expect(engine.last().stop).toHaveBeenCalledTimes(1);
     expect(phase()).toBe("idle");
     expect(outside).not.toHaveBeenCalled();
+    await wait(STAGE_EASE_MS);
+    expect(engine.last().stop).toHaveBeenCalledTimes(1);
     // With nothing playing, Escape belongs to whatever holds the card.
     escape(find("button"));
     expect(outside).toHaveBeenCalledTimes(1);
@@ -179,9 +184,10 @@ describe("useGratitudeReplay", () => {
     show();
     await press();
     escape(container);
-    expect(engine.last().stop).toHaveBeenCalledTimes(1);
     expect(phase()).toBe("idle");
     expect(outside).not.toHaveBeenCalled();
+    await wait(STAGE_EASE_MS);
+    expect(engine.last().stop).toHaveBeenCalledTimes(1);
   });
 
   it("stops when its gift changes, or its card goes", async () => {
@@ -196,7 +202,7 @@ describe("useGratitudeReplay", () => {
     expect(engine.last().stop).toHaveBeenCalledTimes(1);
   });
 
-  it("holds the landing, then goes idle and lets its engine go", async () => {
+  it("holds the landing, then goes idle, and lets its engine go once the stage has shut", async () => {
     show({ marksSeen: false });
     await press();
     await land();
@@ -206,6 +212,8 @@ describe("useGratitudeReplay", () => {
     expect(engine.last().stop).not.toHaveBeenCalled();
     await wait(1);
     expect(phase()).toBe("idle");
+    expect(engine.last().stop).not.toHaveBeenCalled();
+    await wait(STAGE_EASE_MS);
     expect(engine.last().stop).toHaveBeenCalledTimes(1);
   });
 

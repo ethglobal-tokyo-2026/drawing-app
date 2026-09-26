@@ -665,10 +665,10 @@ A sticker's detail shows where it has been, one quiet row per hand-off, newest f
 
 The trail's open row plays its gratitude combo back inside the card, never in a modal.
 
-- **Replay:** the pill turns to Stop (Phosphor's stop), and a stage eases open inside the card, between the amount and the artist's share (200ms, height and opacity): the card's inner width by 300px, on the Mini-game's Liner with a hairline edge. The amount and the heart dot stay above it as the card's header. The replay loads on the press, with the heart resting on the stage meanwhile.
+- **Replay:** the pill turns to Stop (Phosphor's stop), and a stage eases open inside the card, between the amount and the artist's share (200ms, height and opacity): the card's inner width by 300px, on the Mini-game's Liner with a hairline edge. The amount and the heart dot stay above it as the card's header. The replay loads on the press; until it arrives the stage is plain Liner.
 - **What plays:** the combo as it was recorded, through the Mini-game's own rules and effects at the stage's scale: the drain bar and amount along the stage's top, the multiplier, the tiers, pop-in words and mini hearts. Every tap plays where and when it landed; a shake plays from its unlock; a stroke plays its recorded passes. The same combo draws the same words every time.
 - **Length:** a combo of up to 4s plays in real time; a longer one plays sped up to take 4s, at most twice as fast.
-- **The landing:** no receipt. The heart shrinks into the card's pink heart dot, the 27px amount pulses once, and after a 600ms beat the stage eases shut and the pill reads Replay again.
+- **The landing:** no receipt. The heart shrinks into the card's pink heart dot, the 27px amount pulses once, and after a 600ms beat the stage eases shut, with the landed heart and total still in it, and the pill reads Replay again.
 - **The amount is the record's:** the card always shows the stored total, and a replay that counts differently ends its bar on it.
 - **Stop:** Stop, Escape, paging, or opening another row ends it at once and shuts the stage. Scrolled off screen, it holds still until it's back.
 - **Watched:** the giver's first replay of new gratitude marks it watched as the heart lands.

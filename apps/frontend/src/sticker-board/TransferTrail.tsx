@@ -194,7 +194,13 @@ export function TransferTrail({ rows, viewerId, artist, mountReplay }: Props) {
                       {t(($) => $.stickerBoard.transferTrail.replaying.didntLoad, {
                         reason: errorReason(replay.failure.error),
                       })}{" "}
-                      <QuietLink onClick={replay.play}>
+                      <QuietLink
+                        onClick={() => {
+                          // It goes as the replay starts, so focus moves to the pill, not the page.
+                          pill.current?.focus();
+                          replay.play();
+                        }}
+                      >
                         {t(($) => $.stickerBoard.tryAgain)}
                       </QuietLink>
                     </>

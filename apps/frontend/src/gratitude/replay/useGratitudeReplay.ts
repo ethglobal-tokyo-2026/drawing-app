@@ -3,6 +3,7 @@ import { apiError, type ApiError } from "../../api/apiClient";
 import { useApi } from "../../api/useApi";
 import { useApiQuery } from "../../api/useApiQuery";
 import { mountGratitudeReplay, type GratitudeReplayHandle } from "./mountGratitudeReplay";
+import { STAGE_EASE_MS } from "./ReplayStage";
 
 /** How long the landed heart holds in its card before the stage shuts, ms. */
 export const LANDED_HOLD_MS = 600;
@@ -65,6 +66,11 @@ export function useGratitudeReplay({
   mount = mountGratitudeReplay,
 }: Options): GratitudeReplay {
   const handle = useRef<GratitudeReplayHandle | null>(null);
+  /** A stopped replay's engine, still in view while its stage eases shut. */
+  const leaving = useRef<{
+    engine: GratitudeReplayHandle;
+    timer: ReturnType<typeof setTimeout>;
+  } | null>(null);
   const presses = useRef(0);
   /** Gifts this card marked watched, so replaying one doesn't mark it again. */
   const marked = useRef(new Set<string>());
@@ -91,13 +97,28 @@ export function useGratitudeReplay({
   const phase: ReplayPhase =
     !current || loadFailure ? "idle" : current.landed ? "landed" : answer ? "playing" : "loading";
 
-  const release = () => {
+  const letGo = () => {
+    const shutting = leaving.current;
+    leaving.current = null;
+    if (!shutting) return;
+    clearTimeout(shutting.timer);
+    shutting.engine.stop();
+  };
+  /** Stops the engine now, or, `asItShuts`, once its stage has eased shut, so it doesn't shut empty. */
+  const release = (asItShuts = false) => {
     const playing = handle.current;
     handle.current = null;
-    playing?.stop();
+    letGo();
+    if (!playing) return;
+    if (!asItShuts) {
+      playing.stop();
+      return;
+    }
+    const timer = setTimeout(letGo, latest.current.reduced ? 0 : STAGE_EASE_MS);
+    leaving.current = { engine: playing, timer };
   };
   const stop = () => {
-    release();
+    release(true);
     setRun(null);
   };
   const play = () => {

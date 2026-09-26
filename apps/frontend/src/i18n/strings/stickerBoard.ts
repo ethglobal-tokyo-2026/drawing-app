@@ -543,7 +543,7 @@ export const stickerBoard = {
         en: "Couldn’t load the replay: {{reason}}",
         ja: "リプレイを読み込めませんでした：{{reason}}",
       },
-      /** Transfer Trail, the open row: the alert when the replay fails while it plays */
+      /** Transfer Trail, the open row: the alert when the replay fails while it plays; {{reason}} is the Mini-game engine's error, in English */
       stopped: { en: "The replay stopped: {{reason}}", ja: "リプレイが止まりました：{{reason}}" },
       /** Transfer Trail, the open row of gratitude sent to you: the fine print when your watching it couldn't be saved */
       notMarkedSeen: {

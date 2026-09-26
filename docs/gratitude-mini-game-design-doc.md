@@ -184,7 +184,7 @@ What a person sees is in DESIGN.md's Gratitude replay. How it runs:
 - **Speed.** `replaySpeed`: real time up to `REPLAY_REAL_TIME_MS`, and a longer combo sped up to take that long, at most `MAX_REPLAY_SPEED` times as fast. Web Animations keep pace through `webAnimations.ts`; CSS transitions run at real time. The first hit comes a moment in, so the heart rests first.
 - **Scale.** The lettering, particles, mini hearts, the loose heart's kicks and the screen shake scale by the stage's width over 390, with fewer mini hearts in play. The physics runs in the live game's pixels.
 - **The figures.** A replay ends on the stored combo's total, hits and tier. If its own count comes out different, the HUD shows the stored figures and a console warning names the gift. A replay shows no English glosses.
-- **Stopping.** `useGratitudeReplay` stops it on Stop, Escape, another gift or the card going, and removes its stage. It hears Escape on the document while a replay plays, because Safari doesn't focus a clicked button. Off screen, the replay's clock pauses.
+- **Stopping.** `useGratitudeReplay` stops it on Stop, Escape, another gift or the card going. After Stop, Escape or the landing, the engine stays in view until its stage has eased shut, so the stage never shuts empty. It hears Escape on the document while a replay plays, because Safari doesn't focus a clicked button. Off screen, the replay's clock pauses.
 - **Watched.** As the heart lands, the giver's replay marks the gratitude watched (`POST /api/gratitude/:giftId/seen`) while `seenByGiverAt` is null.
 
 ## Effects and motion

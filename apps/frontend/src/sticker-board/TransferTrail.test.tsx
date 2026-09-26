@@ -141,13 +141,14 @@ describe("TransferTrail's replay", () => {
     expect(options.landAt()).toEqual({ x: 38, y: -40 });
   });
 
-  it("stops on Stop, and the stage shuts", async () => {
+  it("stops on Stop, and the stage shuts with the replay still in it", async () => {
     show();
     await press(pill());
     await press(pill());
-    expect(engine.last().stop).toHaveBeenCalledTimes(1);
     expect(pill().getAttribute("aria-label")).toBe(PLAY_LABEL);
+    expect(engine.last().stop).not.toHaveBeenCalled();
     await wait(STAGE_EASE_MS);
+    expect(engine.last().stop).toHaveBeenCalledTimes(1);
     expect(stage()).toBeNull();
   });
 
@@ -161,9 +162,10 @@ describe("TransferTrail's replay", () => {
     act(() => {
       host.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     });
-    expect(stop).toHaveBeenCalledTimes(1);
     expect(detail).not.toHaveBeenCalled();
     expect(document.activeElement).toBe(pill());
+    await wait(STAGE_EASE_MS);
+    expect(stop).toHaveBeenCalledTimes(1);
   });
 
   it("lands: the amount pulses, the live line says so, and the stage shuts a beat later", async () => {
@@ -175,7 +177,10 @@ describe("TransferTrail's replay", () => {
     expect(liveLine()).toBe("Replay ended");
     await wait(LANDED_HOLD_MS);
     expect(pill().getAttribute("aria-label")).toBe(PLAY_LABEL);
+    // The stage shuts with the landed heart and its total in it, not empty.
+    expect(engine.last().stop).not.toHaveBeenCalled();
     await wait(STAGE_EASE_MS);
+    expect(engine.last().stop).toHaveBeenCalledTimes(1);
     expect(stage()).toBeNull();
   });
 
@@ -214,9 +219,13 @@ describe("TransferTrail's replay", () => {
     expect(note()).toBe(`Couldn’t load the replay: ${errorReason(missing)} Try again`);
     await wait(STAGE_EASE_MS);
     expect(stage()).toBeNull();
-    await press(find(".transfer-trail__replay-note button"));
+    const retry = find(".transfer-trail__replay-note button");
+    act(() => retry.focus());
+    await press(retry);
     expect(engine.mount).toHaveBeenCalledTimes(1);
     expect(container.querySelector(".transfer-trail__replay-note")).toBeNull();
+    // Try again goes as it plays, so focus moves to the pill rather than out of the detail.
+    expect(document.activeElement).toBe(pill());
   });
 
   it("says the replay stopped when its frame loop fails", async () => {

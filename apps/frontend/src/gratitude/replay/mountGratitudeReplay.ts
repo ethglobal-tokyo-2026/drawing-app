@@ -131,8 +131,8 @@ export function mountGratitudeReplay(
       }),
       onEnded: (record) => storedTotal(record, gratitude),
       onLanded: () => settle("landed"),
-      onError: (message) =>
-        fail(new Error(`The replay of gift ${gratitude.giftId}'s gratitude stopped: ${message}`)),
+      // The card shows the engine's words as the reason, and logs the gift with them.
+      onError: (message) => fail(new Error(message)),
     },
   );
 

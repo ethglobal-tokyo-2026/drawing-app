@@ -212,6 +212,31 @@ describe("mountGratitudeReplay", () => {
     expect(host.children).toHaveLength(0);
   });
 
+  it("fails with the engine's own words, which the card shows as the reason", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const record = tapRecord(TAPS);
+    const { frames, run } = handFrames();
+    handle = mountGratitudeReplay(
+      host,
+      {
+        replay: replayOf(record),
+        gratitude: storedOf(record),
+        landAt: () => LANDING,
+        reduced: false,
+        frames,
+      },
+      (replay) => ({
+        ...feedOf([], { at: replay.durationMs, reason: replay.endReason }),
+        due: () => {
+          throw new Error("the stage's canvas was lost");
+        },
+      }),
+    );
+    const failed = expect(handle.finished).rejects.toThrow(/^the stage's canvas was lost$/);
+    await run(100);
+    await failed;
+  });
+
   it("plays a combo that lasted twice its real time at twice the speed", async () => {
     const times = Array.from({ length: 11 }, (_, i) => i * 100);
     const replay = { ...replayOf(tapRecord(times)), durationMs: 2 * REPLAY_REAL_TIME_MS };
