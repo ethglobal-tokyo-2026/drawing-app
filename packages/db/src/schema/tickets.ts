@@ -39,7 +39,7 @@ export const ticketUses = sqliteTable(
   ],
 );
 
-/** A pack of reserve tickets bought with SUI. Its tickets count once verified_at is set. */
+/** A pack of reserve tickets bought with JPYC on Sui. Its tickets count once verified_at is set. */
 export const ticketPurchases = sqliteTable(
   "ticket_purchases",
   {
@@ -50,13 +50,11 @@ export const ticketPurchases = sqliteTable(
     tickets: integer("tickets").notNull(),
     /** The pack's price in yen. */
     priceYen: integer("price_yen").notNull(),
-    /** The SUI/JPY price of the quote the payment covered: yen per SUI, as decimal text. */
-    suiYen: text("sui_yen").notNull(),
-    /** What the Sui payment carried, in MIST, as decimal text. */
-    paidMist: text("paid_mist").notNull(),
+    /** What the payment carried, in JPYC base units, as decimal text. */
+    paidJpyc: text("paid_jpyc").notNull(),
     /** The Sui transaction digest; one payment counts once. */
     txDigest: text("tx_digest").notNull().unique(),
-    /** Set once the server has checked the payment on Sui (at once for the mock payment). */
+    /** Set once the server has checked the payment on Sui. */
     verifiedAt: integer("verified_at", { mode: "timestamp_ms" }),
     ...timestamps(),
   },

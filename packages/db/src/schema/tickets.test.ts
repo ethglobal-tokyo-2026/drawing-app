@@ -43,8 +43,7 @@ describe("tickets", () => {
           userId,
           tickets: 1,
           priceYen: 100,
-          suiYen: "300",
-          paidMist: "1",
+          paidJpyc: "1",
           txDigest: "digest",
         })
         .run();

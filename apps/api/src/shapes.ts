@@ -129,24 +129,34 @@ export const ticketsSchema = z.object({
 });
 export type Tickets = z.infer<typeof ticketsSchema>;
 
-export const ticketQuoteSchema = z.object({
-  /** Yen per SUI, the 5-minute time-weighted average, as decimal text. */
-  suiYen: z.string().regex(/^[0-9]+(\.[0-9]+)?$/),
-  quotedAt: isoTimeSchema,
-  /** A purchase counts only at a quote that still holds. */
-  expiresAt: isoTimeSchema,
+/** A Sui address or object ID: 0x and 64 hex digits. */
+const suiIdSchema = z.string().regex(/^0x[0-9a-f]{64}$/);
+
+export const ticketShopSchema = z.object({
   packs: z.array(
     z.object({
       tickets: z.literal([1, 3, 5, 10]),
       priceYen: positiveInt,
       /** Off ¥100 per ticket. */
       discountPercent: count,
-      /** Decimal MIST, rounded up. */
-      priceMist: z.string().regex(/^[0-9]+$/),
+      /** The same price in JPYC base units, as decimal text: one JPYC is one yen. */
+      priceJpyc: z.string().regex(/^[0-9]+$/),
     }),
   ),
+  /** Where a pack is paid: the payment contract's `pay`, into its vault. */
+  payment: z.object({
+    network: z.enum(["testnet", "mainnet", "devnet"]),
+    /** JPYC's Move type, `<package>::jpy_coin::JPY_COIN`. */
+    coinType: z.string().min(1),
+    /** JPYC base units per JPYC. */
+    decimals: count,
+    paymentPackage: suiIdSchema,
+    vault: suiIdSchema,
+    /** Passed to `pay` as its reference: the server counts only a payment that names this person. */
+    reference: z.string().min(1),
+  }),
 });
-export type TicketQuote = z.infer<typeof ticketQuoteSchema>;
+export type TicketShop = z.infer<typeof ticketShopSchema>;
 
 export const userStatsSchema = z.object({
   since: isoTimeSchema,

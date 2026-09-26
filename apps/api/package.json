@@ -20,6 +20,7 @@
     "@drawing-app/sticker-chain": "workspace:*",
     "@hono/node-server": "^2.1.1",
     "@hono/zod-validator": "^0.9.1",
+    "@mysten/sui": "2.31.3",
     "@noble/hashes": "^2.4.0",
     "@privy-io/node": "0.35.0",
     "drizzle-orm": "^0.45.3",

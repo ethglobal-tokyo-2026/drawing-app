@@ -4,18 +4,14 @@ import { createApp } from "../app.ts";
 import type { AppDeps } from "../deps.ts";
 import { mintStub } from "../services/mint.ts";
 import { noSmartWallets } from "../services/smartWallets.ts";
-import { mockSuiPayments } from "../services/suiPayments.ts";
 import { SESSION_COOKIE } from "../session.ts";
 import {
   fakeClock,
   fakeImageStore,
   fakeLineVerifier,
-  fakeSuiPrice,
+  fakeTicketPayments,
   sequentialIds,
 } from "./fakes.ts";
-
-/** A made-up SUI/JPY price that never moves. */
-const TEST_SUI_YEN = "300";
 
 /**
  * The app on a fresh in-memory database, with fakes for external services. Tests override the
@@ -38,8 +34,7 @@ export async function createTestApp(
     giftChain: null,
     smartWallets: noSmartWallets,
     ens: null,
-    sui: mockSuiPayments,
-    suiPrice: fakeSuiPrice(TEST_SUI_YEN),
+    ticketPayments: fakeTicketPayments().ticketPayments,
     ...overrides,
   };
   return {
