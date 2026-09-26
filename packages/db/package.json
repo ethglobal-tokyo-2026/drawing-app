@@ -4,12 +4,15 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testDb.ts"
   },
   "scripts": {
-    "db:push": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node src/migrate.ts",
     "lint": "oxlint --type-check",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "test": "vitest run"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
@@ -21,6 +24,7 @@
     "drizzle-kit": "^0.31.11",
     "oxlint": "^1.85.0",
     "oxlint-tsgolint": "^7.0.2002",
-    "typescript": "~7.0.2"
+    "typescript": "~7.0.2",
+    "vitest": "^5.0.1"
   }
 }
