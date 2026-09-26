@@ -126,9 +126,19 @@
   }
 }
 
+/* Coming up as the sealed card leaves, the card rises a beat into that exit, so the two don't meet
+   head on. Its scrim comes at once, taking over from the sealed card's veil as that lifts. */
+.out-of-tickets--follows .out-of-tickets__card {
+  animation-delay: 120ms;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .out-of-tickets__scrim,
   .out-of-tickets__card {
     animation-duration: 1ms;
+  }
+
+  .out-of-tickets--follows .out-of-tickets__card {
+    animation-delay: 0s;
   }
 }

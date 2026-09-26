@@ -19,7 +19,6 @@ import {
   cutterAt,
   flight,
   HOLD,
-  LEAVE_MS,
   sealFrame,
   stopAt,
   T,
@@ -45,6 +44,12 @@ interface Props {
   sealed: Sticker | null;
   /** The seal failed: the ceremony fades back to the drawing. */
   failed: boolean;
+  /**
+   * Keep drawing or the shop was chosen, and the fresh sheet is already under the veil: the card
+   * carries the sticker down toward the board as the veil lifts, then `onLeft` lets it go.
+   */
+  leaving: boolean;
+  onLeft: () => void;
   /** The sheet the sticker was cut from, in the ceremony's own pixels. */
   sheet: Box;
   handle: string;
@@ -95,12 +100,15 @@ function need<E extends Element>(el: E | null, what: string): E {
  * the server has sealed the sticker: only then does the resin pour. One animation-frame loop writes
  * each frame of the timeline straight to the canvases, images and transforms; React only hears that
  * it's done. A tap, Enter, Space or Escape skips to the wait, or to the end once sealed; reduced
- * motion starts there. A failed seal fades back to the drawing.
+ * motion starts there. A failed seal fades back to the drawing. Keep drawing and the shop hand over
+ * at once: the fresh sheet is set up under the veil while the card leaves over it.
  */
 export function SealCeremony({
   sticker,
   sealed,
   failed,
+  leaving,
+  onLeft,
   sheet,
   handle,
   onKeepDrawing,
@@ -112,7 +120,6 @@ export function SealCeremony({
   // Read by the frame loop, so the seal's answer isn't one of the things that restart it.
   const isSealed = useEffectEvent(() => sealed !== null);
   const [done, setDone] = useState(false);
-  const [leaving, setLeaving] = useState(false);
   const skip = useRef<() => void>(() => {});
   const wake = useRef<() => void>(() => {});
   const root = useRef<HTMLDivElement>(null);
@@ -272,14 +279,6 @@ export function SealCeremony({
     if (sealed) wake.current();
   }, [sealed]);
 
-  const leaveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  useEffect(() => () => clearTimeout(leaveTimer.current), []);
-  const leave = (action: () => void) => () => {
-    if (reduced) return action();
-    setLeaving(true);
-    leaveTimer.current = setTimeout(action, LEAVE_MS);
-  };
-
   const resin: CSSProperties = {
     ...boxStyle(box),
     "--m": `url("${layers.mask}")`,
@@ -287,10 +286,11 @@ export function SealCeremony({
     "--mb": `url("${layers.rim}")`,
   };
 
+  const classes = ["seal-ceremony", failed && "is-failed", leaving && "is-leaving"];
   return (
     <div
       ref={root}
-      className={`seal-ceremony ${leaving || failed ? "is-leaving" : ""}`}
+      className={classes.filter(Boolean).join(" ")}
       onPointerDown={(e) => {
         if (done || failed) return;
         e.preventDefault();
@@ -305,33 +305,42 @@ export function SealCeremony({
       />
       <span className="seal-ceremony__veil" aria-hidden="true" />
       <canvas className="seal-ceremony__cut" aria-hidden="true" />
-      {sealed && (
-        <SealedCard
-          sealed={sealed}
-          handle={handle}
-          done={done}
-          cardRef={card}
-          slotRef={slot}
-          onKeepDrawing={leave(onKeepDrawing)}
-          onBoard={onBoard}
-          onShop={leave(onShop)}
+      {/* The card and the sticker on it leave together, as one piece. */}
+      <div
+        className="seal-ceremony__carrier"
+        onAnimationEnd={(e) => {
+          if (e.target === e.currentTarget && e.animationName === "seal-ceremony-carry") onLeft();
+        }}
+      >
+        {sealed && (
+          <SealedCard
+            sealed={sealed}
+            handle={handle}
+            done={done}
+            leaving={leaving}
+            cardRef={card}
+            slotRef={slot}
+            onKeepDrawing={onKeepDrawing}
+            onBoard={onBoard}
+            onShop={onShop}
+          />
+        )}
+        <img
+          className="seal-ceremony__shadow"
+          style={boxStyle(box)}
+          src={layers.shadow}
+          alt=""
+          decoding="sync"
         />
-      )}
-      <img
-        className="seal-ceremony__shadow"
-        style={boxStyle(box)}
-        src={layers.shadow}
-        alt=""
-        decoding="sync"
-      />
-      <div className="seal-ceremony__sticker" style={resin} aria-hidden="true">
-        <img className="seal-ceremony__plain" src={layers.plain} alt="" decoding="sync" />
-        <img className="seal-ceremony__tint" src={layers.tint} alt="" decoding="sync" />
-        <img className="seal-ceremony__gloss" src={layers.gloss} alt="" decoding="sync" />
-        <span className="seal-ceremony__pour">
-          <b style={boxStyle(pour)} />
-        </span>
-        <LiveResin highlights />
+        <div className="seal-ceremony__sticker" style={resin} aria-hidden="true">
+          <img className="seal-ceremony__plain" src={layers.plain} alt="" decoding="sync" />
+          <img className="seal-ceremony__tint" src={layers.tint} alt="" decoding="sync" />
+          <img className="seal-ceremony__gloss" src={layers.gloss} alt="" decoding="sync" />
+          <span className="seal-ceremony__pour">
+            <b style={boxStyle(pour)} />
+          </span>
+          <LiveResin highlights />
+        </div>
       </div>
     </div>
   );

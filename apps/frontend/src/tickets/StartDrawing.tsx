@@ -1,5 +1,5 @@
 import { Storefront } from "@phosphor-icons/react";
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "../i18n/react";
 import { DrawIcon } from "../icons/DrawIcon";
 import { Key } from "../ui/Key";
@@ -17,6 +17,8 @@ interface Props {
   tickets: Tickets;
   /** How long the drawing timer runs, for the card's line. */
   minutes: number;
+  /** It comes up as the sealed card leaves (Keep drawing onto the reserve ask), so it rises a beat later. */
+  followsSealedCard?: boolean;
   /** A ticket is being spent: Start waits for it. */
   busy?: boolean;
   /** Said under the line, such as what became of a drawing a reload interrupted; null for nothing. */
@@ -37,6 +39,7 @@ interface Props {
 export function StartDrawing({
   tickets,
   minutes,
+  followsSealedCard = false,
   busy = false,
   note,
   onStart,
@@ -49,6 +52,8 @@ export function StartDrawing({
   const reserveAsk = daily === 0;
   const card = useRef<HTMLElement>(null);
   const id = useId();
+  // Read once, as it comes up: it decides only how the card rises.
+  const [follows] = useState(followsSealedCard);
   useFocusTrap(card, { onEscape: onBoard });
 
   useEffect(() => {
@@ -56,7 +61,7 @@ export function StartDrawing({
   }, [reserveAsk]);
 
   return (
-    <div className="out-of-tickets">
+    <div className={`out-of-tickets ${follows ? "out-of-tickets--follows" : ""}`}>
       <div className="out-of-tickets__scrim" />
       <section
         ref={card}

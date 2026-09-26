@@ -1,5 +1,5 @@
 import { Storefront } from "@phosphor-icons/react";
-import { useEffect, useId, useRef, type RefObject } from "react";
+import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import { Trans, useTranslation } from "../../i18n/react";
 import { DrawIcon } from "../../icons/DrawIcon";
 import { StickerBoardIcon } from "../../icons/StickerBoardIcon";
@@ -17,7 +17,7 @@ import { TearLine } from "../../ui/TearLine";
 import { useFocusTrap } from "../../ui/useFocusTrap";
 import "./SealedCard.css";
 
-/** A press shows before the screen changes. */
+/** A press shows before the screen changes to the sticker board. */
 const ACT_AFTER_MS = 160;
 
 interface Props {
@@ -25,6 +25,8 @@ interface Props {
   handle: string;
   /** The ceremony has ended: until then, nothing on the card can be pressed. */
   done: boolean;
+  /** It's on its way out, over the fresh sheet: it takes no presses and keeps what it showed. */
+  leaving: boolean;
   cardRef: RefObject<HTMLElement | null>;
   slotRef: RefObject<HTMLDivElement | null>;
   onKeepDrawing: () => void;
@@ -42,6 +44,7 @@ export function SealedCard({
   sealed,
   handle,
   done,
+  leaving,
   cardRef,
   slotRef,
   onKeepDrawing,
@@ -50,7 +53,11 @@ export function SealedCard({
 }: Props) {
   const { t } = useTranslation();
   const titleId = useId();
-  const { tickets } = useTickets();
+  const { tickets: live } = useTickets();
+  // The spend Keep drawing hands over to can land while the card leaves; it leaves as it was.
+  const [shown, setShown] = useState(live);
+  if (!leaving && shown !== live) setShown(live);
+  const tickets = leaving ? shown : live;
   const dailyStubs = tickets ? dailyTickets(tickets) : [];
   const daily = tickets?.dailyLeft ?? 0;
   const last = tickets !== null && ticketsLeft(tickets) === 0;
@@ -61,13 +68,18 @@ export function SealedCard({
   const chosen = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
-  const act = (action: () => void) => () => {
-    if (!done || chosen.current) return;
-    chosen.current = true;
-    timer.current = setTimeout(action, ACT_AFTER_MS);
-  };
+  // Keep drawing and the shop act at once: the card's own exit carries the change, and the key's
+  // pop rides out on it. The sticker board is another screen, so the press shows first.
+  const act =
+    (action: () => void, { now = false } = {}) =>
+    () => {
+      if (!done || chosen.current) return;
+      chosen.current = true;
+      if (now) action();
+      else timer.current = setTimeout(action, ACT_AFTER_MS);
+    };
   // Escape takes the way that spends and buys nothing.
-  useFocusTrap(cardRef, { active: done, onEscape: act(onBoard) });
+  useFocusTrap(cardRef, { active: done && !leaving, onEscape: act(onBoard) });
 
   return (
     <section
@@ -77,7 +89,7 @@ export function SealedCard({
       aria-modal="true"
       aria-labelledby={titleId}
       tabIndex={-1}
-      inert={!done}
+      inert={!done || leaving}
     >
       <div ref={slotRef} className="sealed-card__slot" aria-hidden="true" />
       {/* "Sealed on-chain" and the sticker's name wait until the sticker has a chain record. */}
@@ -112,7 +124,7 @@ export function SealedCard({
           className="sealed-card__key"
           icon={<DrawIcon />}
           data-card-line
-          onClick={act(onKeepDrawing)}
+          onClick={act(onKeepDrawing, { now: true })}
         >
           {t(($) => $.stickerCreation.sealedCard.keepDrawing)}
         </Key>
@@ -142,7 +154,12 @@ export function SealedCard({
         </div>
       )}
       {last ? (
-        <LabelButton block icon={<Storefront />} data-card-line onClick={act(onShop)}>
+        <LabelButton
+          block
+          icon={<Storefront />}
+          data-card-line
+          onClick={act(onShop, { now: true })}
+        >
           {t(($) => $.stickerCreation.sealedCard.shopForTickets)}
         </LabelButton>
       ) : (

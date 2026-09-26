@@ -3,10 +3,11 @@ import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyApi, FRESH_TICKETS, renderWithApi, shownText } from "../../api/testing";
 import { MARKUP_LIKE_NAME, sticker as apiSticker } from "../../api/testFixtures";
-import type { Sticker } from "@drawing-app/api/client";
+import type { Sticker, Tickets } from "@drawing-app/api/client";
 import { formatDay, formatDuration, formatNo } from "../../stickers/format";
 import { formatRefillTime } from "../../tickets/refill";
 import { nextRefill } from "../../tickets/tickets";
+import { useTickets } from "../../tickets/useTickets";
 import type { SealedSticker } from "./makeSticker";
 import { SealCeremony } from "./SealCeremony";
 import { TOTAL } from "./sealTimeline";
@@ -49,6 +50,7 @@ const sealed = apiSticker({ number: 147, timeUsed: 292, sealedAt: NOW.toISOStrin
 const onKeepDrawing = vi.fn();
 const onBoard = vi.fn();
 const onShop = vi.fn();
+const onLeft = vi.fn();
 
 let view: ReturnType<typeof renderWithApi> | undefined;
 let host: HTMLDivElement;
@@ -57,11 +59,16 @@ let host: HTMLDivElement;
 const SHEET = { x: 8, y: 8, w: 374, h: 788 };
 
 /** The ceremony with the server's answer, as `handle`: null while the seal is on its way. */
-const ceremony = (answer: Sticker | null, { handle = "alice", failed = false } = {}) => (
+const ceremony = (
+  answer: Sticker | null,
+  { handle = "alice", failed = false, leaving = false } = {},
+) => (
   <SealCeremony
     sticker={sticker}
     sealed={answer}
     failed={failed}
+    leaving={leaving}
+    onLeft={onLeft}
     sheet={SHEET}
     handle={handle}
     onKeepDrawing={onKeepDrawing}
@@ -162,6 +169,70 @@ describe("SealCeremony", () => {
     expect(action).toHaveBeenCalledOnce();
   });
 
+  it("keeps drawing at once, since the card's exit carries the change, but lets the press show before the board", async () => {
+    await seal(1);
+    playThrough();
+    act(() => button("Keep drawing").click());
+    expect(onKeepDrawing).toHaveBeenCalledOnce();
+    view?.unmount();
+
+    await seal(1);
+    playThrough();
+    act(() => button("Go to sticker board").click());
+    expect(onBoard).not.toHaveBeenCalled();
+    wait(200);
+    expect(onBoard).toHaveBeenCalledOnce();
+  });
+
+  it("carries the card away over the fresh sheet, then lets it go", async () => {
+    await seal(1);
+    playThrough();
+    view?.rerender(ceremony(sealed, { leaving: true }));
+    expect(root()?.classList.contains("is-leaving")).toBe(true);
+    // It takes no more presses on its way out, and no taps meant for the sheet under it.
+    expect(card()?.hasAttribute("inert")).toBe(true);
+    const carrier = host.querySelector(".seal-ceremony__carrier");
+    // The fade over the carry's last half ends too, but only the carry's end lets it go.
+    act(() => {
+      carrier?.dispatchEvent(
+        new AnimationEvent("animationend", { animationName: "seal-ceremony-fade", bubbles: true }),
+      );
+    });
+    expect(onLeft).not.toHaveBeenCalled();
+    act(() => {
+      carrier?.dispatchEvent(
+        new AnimationEvent("animationend", { animationName: "seal-ceremony-carry", bubbles: true }),
+      );
+    });
+    expect(onLeft).toHaveBeenCalledOnce();
+  });
+
+  it("leaves as it was, whatever the spend it hands over to does to the tickets meanwhile", async () => {
+    const oneLeft: Tickets = { ...FRESH_TICKETS, dailyLeft: 1 };
+    /** The ceremony, and a way to spend the last ticket behind its back. */
+    function Host({ leaving }: { leaving: boolean }) {
+      const { set } = useTickets();
+      return (
+        <>
+          {ceremony(sealed, { leaving })}
+          <button type="button" data-spend onClick={() => set({ ...oneLeft, dailyLeft: 0 })} />
+        </>
+      );
+    }
+    view = renderWithApi(
+      <Host leaving={false} />,
+      emptyApi({ tickets: () => Promise.resolve(oneLeft) }),
+    );
+    host = view.host;
+    await act(async () => {});
+    playThrough();
+    view.rerender(<Host leaving />);
+    // Keep drawing spends the last ticket as the card leaves: it doesn't turn into the last ticket's card.
+    act(() => host.querySelector<HTMLButtonElement>("[data-spend]")?.click());
+    expect(button("Keep drawing")).toBeTruthy();
+    expect(host.textContent).not.toContain("That was today’s last ticket");
+  });
+
   it("leads to the sticker board and the ticket shop on the last ticket", async () => {
     await seal(1);
     playThrough();
@@ -215,7 +286,7 @@ describe("SealCeremony", () => {
     await seal(1, "alice", null);
     wait(3000);
     view?.rerender(ceremony(null, { failed: true }));
-    expect(root()?.classList.contains("is-leaving")).toBe(true);
+    expect(root()?.classList.contains("is-failed")).toBe(true);
     expect(root()?.hasAttribute("data-lifted")).toBe(false);
     expect(card()).toBeNull();
   });
