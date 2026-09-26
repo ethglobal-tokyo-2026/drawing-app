@@ -1,14 +1,18 @@
 import { Eye, Gift, TrayArrowDown } from "@phosphor-icons/react";
 import { useEffectEvent, useLayoutEffect, useRef } from "react";
 import { LabelButton } from "../ui/LabelButton";
-import { toolbarSpot } from "./placement";
+import { toolbarSpot, type Box } from "./placement";
 
 interface Props {
+  /** Names the toolbar after its sticker. */
+  label: string;
   /** The selected sticker's box on the board, in board pixels, and its turn. */
   sticker: { x: number; y: number; w: number; h: number; r: number };
   board: { W: number; H: number };
   /** Whether the sticker's knob hangs below it, so the toolbar keeps clear of it there. */
   knobBelow: boolean;
+  /** Draw's box on the board, which the toolbar keeps clear of so a press meant for it can't land on Draw. */
+  clearOf: Box | null;
   /**
    * Give, where LINE's picker can send the sticker. A gift left packed (the app closed mid-send)
    * doesn't block it: packing again sets the stale one aside.
@@ -25,9 +29,11 @@ interface Props {
 
 /** Give, View and Remove for the selected sticker, beside it on the board. */
 export function StickerToolbar({
+  label,
   sticker,
   board,
   knobBelow,
+  clearOf,
   give,
   onGive,
   onView,
@@ -45,7 +51,7 @@ export function StickerToolbar({
       sticker,
       board,
       { w: el.offsetWidth, h: el.offsetHeight },
-      knobBelow,
+      { knobBelow, clearOf },
     );
     el.style.transform = `translate(${left.toFixed(1)}px, ${top.toFixed(1)}px)`;
   });
@@ -68,7 +74,7 @@ export function StickerToolbar({
       ref={ref}
       className="sticker-toolbar"
       role="toolbar"
-      aria-label="Sticker"
+      aria-label={label}
       onKeyDown={(e) => {
         if (e.key === "Escape") onEscape();
       }}

@@ -2,6 +2,7 @@ import {
   Fragment,
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -23,15 +24,28 @@ import { ticketDay } from "../tickets/tickets";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
+import { useBackToClose } from "../ui/useBackToClose";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { normalizeTurn } from "./boardGesture";
 import { loadBoardStickers, type BoardSticker } from "./boardSticker";
 import { PlacedSticker } from "./PlacedSticker";
 import { GivenStickerSilhouette } from "./GivenStickerSilhouette";
-import { fieldOf, freeSpot, knobHidden, nextZ, sizeOf, stickerBox, toFrac } from "./placement";
+import {
+  FIRST_SPOT,
+  fieldOf,
+  freeSpot,
+  knobHidden,
+  nextZ,
+  sizeOf,
+  stickerBox,
+  toFrac,
+  toPx,
+  type Box,
+} from "./placement";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import { StatBoard, type StatBoardHandle } from "./stat-board/StatBoard";
 import { StickerDetail } from "./StickerDetail";
+import { readingOrder } from "./stickerOrder";
 import { StickerToolbar } from "./StickerToolbar";
 import { StickerTray, type StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
@@ -68,6 +82,23 @@ function curledToday(stickers: readonly BoardSticker[], now: Date) {
 
 const round4 = (v: number) => Number(v.toFixed(4));
 
+/** An element's box on the board, which is its offset parent. */
+const boxOf = (el: HTMLElement): Box => ({
+  left: el.offsetLeft,
+  top: el.offsetTop,
+  right: el.offsetLeft + el.offsetWidth,
+  bottom: el.offsetTop + el.offsetHeight,
+});
+
+/** The box as it was when it hasn't moved, so measuring again doesn't re-render the board. */
+const kept = (was: Box | null, now: Box) =>
+  was?.left === now.left &&
+  was.top === now.top &&
+  was.right === now.right &&
+  was.bottom === now.bottom
+    ? was
+    : now;
+
 const reasonOf = (error: unknown) =>
   error instanceof Error && error.message ? error.message : String(error);
 
@@ -99,6 +130,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const [face, setFace] = useState<HTMLDivElement | null>(null);
   const tray = useRef<StickerTrayHandle>(null);
   const nameButton = useRef<HTMLButtonElement>(null);
+  const drawSlot = useRef<HTMLSpanElement>(null);
   const flipBack = useRef<HTMLButtonElement>(null);
   const statBoard = useRef<StatBoardHandle>(null);
   const [stickers, setStickers] = useState<BoardSticker[] | null>(null);
@@ -108,12 +140,9 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const [unsaved, setUnsaved] = useState<ReadonlyMap<string, string>>(() => new Map());
   const [size, setSize] = useState<{ W: number; H: number } | null>(null);
   /** The name button's box on the board, which a sticker's knob must stay clear of. */
-  const [name, setName] = useState<{
-    left: number;
-    top: number;
-    right: number;
-    bottom: number;
-  } | null>(null);
+  const [name, setName] = useState<Box | null>(null);
+  /** Draw's box on the board, which the selected sticker's toolbar keeps clear of. */
+  const [draw, setDraw] = useState<Box | null>(null);
   const [landingId, setLandingId] = useState(() =>
     freshId && !landed.has(freshId) ? freshId : undefined,
   );
@@ -127,6 +156,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const gifts = useStickerGifts();
   const giftSender = useGiftSender();
   const reduced = useReducedMotion();
+  const hints = useId();
   useLight(!turned);
 
   const save = useCallback((sticker: Pick<StickerRecord, "id" | "no">, placement: Placement) => {
@@ -169,32 +199,22 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   useLayoutEffect(() => {
     const el = stage.current;
     const who = nameButton.current;
-    if (!el || !who) return;
+    const key = drawSlot.current;
+    if (!el || !who || !key) return;
     const measure = () => {
       setSize((was) =>
         was?.W === el.clientWidth && was.H === el.clientHeight
           ? was
           : { W: el.clientWidth, H: el.clientHeight },
       );
-      const box = {
-        left: who.offsetLeft,
-        top: who.offsetTop,
-        right: who.offsetLeft + who.offsetWidth,
-        bottom: who.offsetTop + who.offsetHeight,
-      };
-      setName((was) =>
-        was?.left === box.left &&
-        was.top === box.top &&
-        was.right === box.right &&
-        was.bottom === box.bottom
-          ? was
-          : box,
-      );
+      setName((was) => kept(was, boxOf(who)));
+      setDraw((was) => kept(was, boxOf(key)));
     };
-    // The name's width follows the person's name, which arrives after the board.
+    // The name's width follows the person's name, which arrives after the board; Draw's, its font.
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     observer.observe(who);
+    observer.observe(key);
     measure();
     return () => observer.disconnect();
   }, []);
@@ -244,8 +264,10 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     setTurned(over);
     if (over) select(null);
   };
+  // Back turns the stat board back over, as LINE's Back does on any overlay.
+  useBackToClose(turned, () => turn(false));
 
-  const { hold, stow } = useBoardGestures({
+  const { hold, stow, tabStop } = useBoardGestures({
     stage,
     stickers: onBoard,
     field,
@@ -320,6 +342,13 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     },
   };
   const stack = stackOf(onBoard);
+  // Screen readers and the arrow keys take the stickers in reading order, which is the DOM's too.
+  const order = field
+    ? readingOrder(onBoard.map((s) => ({ id: s.id, ...toPx(field, s.placement) })))
+    : [];
+  const inOrder = order.flatMap((id) => onBoard.filter((s) => s.id === id));
+  // The stickers' one Tab stop: the one last focused, else the selected one, else the first.
+  const tabbable = [tabStop, selected].find((id) => id && order.includes(id)) ?? order[0];
   const chosen = onBoard.find((s) => s.id === selected);
   const chosenBox = chosen && field && size && stickerBox(field, size.W, chosen.placement, chosen);
   // Where the knob would sit off the board or under the name, it hangs below the sticker.
@@ -327,15 +356,51 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     chosen && chosenBox && name && knobHidden({ ...chosenBox, r: chosen.placement.r }, name),
   );
   const curled = curledToday(onBoard, new Date());
+  // The empty board's dashed spot, where the first sticker lands; a load error shows in it too.
+  const blankAt = field && toPx(field, FIRST_SPOT);
+  const blankStyle = blankAt ? { left: blankAt.x, top: blankAt.y } : undefined;
   // Until the first sticker, Draw says where to start.
   const firstVisit = stickers?.length === 0;
   const unsavedStickers = (stickers ?? []).filter((s) => unsaved.has(s.id));
 
   const front = (
     <div className="board" ref={setFace}>
+      {/* Your name and Draw come before the stickers, so Tab reaches them first. */}
+      <button
+        ref={nameButton}
+        className="board-who"
+        onClick={() => turn(!turned)}
+        aria-expanded={turned}
+        aria-haspopup="dialog"
+        aria-label={`${me.displayName}: your stats`}
+      >
+        <PhotoSticker src={me.pictureUrl} name={me.displayName} size={42} />
+        <span className="board-who-name">{me.displayName}</span>
+      </button>
+
+      {/* The slot carries the first-sticker hop and ring, so the key keeps its own lip and press. */}
+      <span ref={drawSlot} className={`board-draw ${firstVisit ? "is-fresh" : ""}`}>
+        <Key size="compact" icon={<DrawIcon />} onClick={onDraw} aria-label="Draw a new sticker">
+          Draw
+        </Key>
+      </span>
+      {firstVisit && (
+        <span className="board-nudge" aria-hidden>
+          Make your first sticker
+        </span>
+      )}
+
       <div className="board-stage" ref={stage} role="region" aria-label="Sticker board">
+        {/* Descriptions only: hidden from reading, still read out for the sticker that names them. */}
+        <span id={`${hints}-focus`} hidden>
+          Enter selects it. Arrow keys go to the other stickers.
+        </span>
+        <span id={`${hints}-selected`} hidden>
+          Selected. Enter opens it, and Tab reaches its toolbar. Arrow keys move it, [ and ] turn
+          it, minus and plus resize it, Delete takes it off the board, and Escape lets go of it.
+        </span>
         {stickers && onBoard.length === 0 && givenSilhouettes.length === 0 && (
-          <div className="board-blank">
+          <div className="board-blank" style={blankStyle}>
             <span className="board-blank-cut" aria-hidden />
             <span className="board-blank-note">Stickers you make or receive land here.</span>
           </div>
@@ -353,7 +418,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           ))}
         {field &&
           size &&
-          onBoard.map((s) => (
+          inOrder.map((s) => (
             <Fragment key={s.id}>
               <PlacedSticker
                 sticker={s}
@@ -367,13 +432,18 @@ export function StickerBoard({ freshId, onDraw }: Props) {
                 landing={s.id === landingId}
                 onLanded={landedNow}
                 reduced={reduced}
+                tabbable={s.id === tabbable}
+                position={`${order.indexOf(s.id) + 1} of ${order.length}`}
+                hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
               />
               {/* Right after its sticker, so Tab reaches it next. */}
               {s.id === selected && !hold && (
                 <StickerToolbar
+                  label={formatNo(s.no)}
                   sticker={{ ...stickerBox(field, size.W, s.placement, s), r: s.placement.r }}
                   board={size}
                   knobBelow={knobBelow}
+                  clearOf={draw}
                   give={giftSender !== null}
                   onGive={() => setGiving(s)}
                   onView={() => setOpen({ id: s.id, mode: "yours" })}
@@ -395,9 +465,10 @@ export function StickerBoard({ freshId, onDraw }: Props) {
       )}
 
       {loadError && (
-        <div className="board-blank board-problem" role="alert">
+        <div className="board-blank board-problem" role="alert" style={blankStyle}>
           <span className="board-blank-cut" aria-hidden />
-          <span className="board-blank-note">Your stickers didn’t load: {loadError}</span>
+          <span className="board-blank-note">Your stickers didn’t load.</span>
+          <span className="fine board-problem-reason">{loadError}</span>
           <LabelButton
             size="sm"
             onClick={() => {
@@ -424,30 +495,6 @@ export function StickerBoard({ freshId, onDraw }: Props) {
             Try again
           </LabelButton>
         </div>
-      )}
-
-      <button
-        ref={nameButton}
-        className="board-who"
-        onClick={() => turn(!turned)}
-        aria-expanded={turned}
-        aria-haspopup="dialog"
-        aria-label={`${me.displayName}: your stats`}
-      >
-        <PhotoSticker src={me.pictureUrl} name={me.displayName} size={42} />
-        <span className="board-who-name">{me.displayName}</span>
-      </button>
-
-      {/* The slot carries the first-sticker hop and ring, so the key keeps its own lip and press. */}
-      <span className={`board-draw ${firstVisit ? "is-fresh" : ""}`}>
-        <Key size="compact" icon={<DrawIcon />} onClick={onDraw} aria-label="Draw a new sticker">
-          Draw
-        </Key>
-      </span>
-      {firstVisit && (
-        <span className="board-nudge" aria-hidden>
-          Make your first sticker
-        </span>
       )}
 
       {giving && giftSender && (

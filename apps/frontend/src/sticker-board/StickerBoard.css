@@ -134,6 +134,11 @@
   border-color: var(--ink);
 }
 
+/* Focus alone doesn't select, so its ring is the bare frame; the handles and knob come with selection. */
+.placed-sticker:not(.is-selected) :is(.placed-sticker__handle, .placed-sticker__rotate) {
+  display: none;
+}
+
 .placed-sticker.is-handling .placed-sticker__frame {
   border-color: var(--ink);
 }
@@ -301,10 +306,11 @@
   flex: none;
 }
 
-/* The selected sticker's toolbar: label stock on a lifted strip, beside the sticker. */
+/* The selected sticker's toolbar: label stock on a lifted strip, beside the sticker. It's placed
+   clear of Draw, and stacks above it in case they ever meet, so a press on Give never lands on Draw. */
 .sticker-toolbar {
   position: absolute;
-  z-index: 950;
+  z-index: 960;
   left: 0;
   top: 0;
   display: flex;
@@ -337,11 +343,12 @@
   background: rgba(255, 255, 255, 0.62);
 }
 
-/* The empty board: a quiet die-cut spot in the middle of the field. Draw is the way in. */
+/* The empty board: a quiet die-cut spot in the field, where the first sticker lands. Draw is the
+   way in. The board places it on that sticker's spot. */
 .board-blank {
   position: absolute;
-  left: calc(50% - 12px);
-  top: calc(86px + (100% - 86px - 16px) * 0.42);
+  left: 50%;
+  top: 50%;
   display: grid;
   place-items: center;
   width: 236px;
@@ -373,6 +380,15 @@
   color: var(--graphite);
   font: 500 13.5px/1.4 var(--font-ui);
   text-wrap: balance;
+}
+
+/* What the browser said, under the plain sentence, selectable for a bug report. */
+.board-problem-reason {
+  position: relative;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* A spot that didn't save stays in view, over the board and above Draw, until a save of it succeeds. */

@@ -1,5 +1,5 @@
 import type liff from "@line/liff";
-import { formatClock } from "../stickers/format";
+import { formatDuration } from "../stickers/format";
 import { giftTag } from "./giftTag";
 
 type LiffMessage = Parameters<typeof liff.shareTargetPicker>[0][number];
@@ -103,7 +103,7 @@ export function buildGiftMessage({
           },
           {
             type: "text",
-            text: `A one-of-one drawing · ${formatClock(timeUsed)}`,
+            text: `A one-of-one drawing · drawn in ${formatDuration(timeUsed)}`,
             size: "sm",
             color: GRAPHITE,
           },

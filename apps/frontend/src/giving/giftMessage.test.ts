@@ -44,7 +44,7 @@ describe("buildGiftMessage", () => {
   it("names the giver by handle and shows the drawing time", () => {
     const texts = printedTexts(buildGiftMessage(input({ fromHandle: "@mika", timeUsed: 125 })));
     expect(texts).toContain("From @mika");
-    expect(texts.some((t) => t.includes("2:05"))).toBe(true);
+    expect(texts.some((t) => t.includes("drawn in 2m 5s"))).toBe(true);
     expect(buildGiftMessage(input({ fromHandle: "mika" }))).toEqual(
       buildGiftMessage(input({ fromHandle: "@mika" })),
     );
