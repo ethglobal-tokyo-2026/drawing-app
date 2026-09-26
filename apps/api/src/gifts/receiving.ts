@@ -1,0 +1,205 @@
+import { gifts, stickerPlacements, stickers, users } from "@drawing-app/db";
+import { and, eq, isNull, sql } from "drizzle-orm";
+import { z } from "zod";
+import type { AppDeps } from "../deps.ts";
+import { keccak256 } from "../keccak256.ts";
+import { isoTimeSchema, personSchema, toIsoTime, toPerson } from "../shapes.ts";
+import {
+  giftSchema,
+  loadStickers,
+  stickerPlacementSchema,
+  stickerSchema,
+  toGift,
+  toStickerPlacement,
+} from "../views.ts";
+import { checkDeposit } from "./deposit.ts";
+import { giftClaimTokenSchema, refuse, type GiftRow, type Refusal } from "./packaging.ts";
+
+/** `liff.getContext().type`: where the Gift Message was opened. */
+const liffContextTypeSchema = z.enum(["utou", "room", "group", "square_chat", "external", "none"]);
+type LiffContextType = z.infer<typeof liffContextTypeSchema>;
+
+/** The preview's body and the receive's. */
+export const openGiftBodySchema = z.object({
+  giftClaimToken: giftClaimTokenSchema,
+  liffContextType: liffContextTypeSchema,
+});
+type OpenGiftBody = z.infer<typeof openGiftBodySchema>;
+
+/** Why a gift can't be received, in the order they're checked. */
+export const receiveRefusalSchema = z.enum([
+  "group_chat",
+  "own_gift",
+  "already_received",
+  "taken_back",
+  "gift_returned",
+  "gift_expired",
+  "not_deposited",
+]);
+export type ReceiveRefusal = z.infer<typeof receiveRefusalSchema>;
+
+export const giftPreviewSchema = z.object({
+  giver: personSchema,
+  expiresAt: isoTimeSchema,
+  receivable: z.boolean(),
+  refusal: receiveRefusalSchema.nullable(),
+  /** Only when it can be received, so the torn bag shows it before Accept. */
+  sticker: stickerSchema.nullable(),
+});
+export type GiftPreview = z.infer<typeof giftPreviewSchema>;
+
+export const receivedGiftSchema = z.object({
+  gift: giftSchema,
+  sticker: stickerSchema,
+  stickerPlacement: stickerPlacementSchema,
+});
+export type ReceivedGift = z.infer<typeof receivedGiftSchema>;
+
+/** A gift goes to one person: a group, a multi-person chat or an OpenChat can't receive it. */
+const GROUP_CHATS: ReadonlySet<LiffContextType> = new Set(["group", "room", "square_chat"]);
+
+const groupChatRefusal = (liffContextType: LiffContextType) =>
+  GROUP_CHATS.has(liffContextType)
+    ? refuse("group_chat", `A gift can't be received from a ${liffContextType} chat`)
+    : null;
+
+const notFound = () => refuse("gift_not_found", "No gift has this Gift Claim Token");
+
+/** The first reason this person can't receive this gift now, or null. */
+function receiveRefusal(
+  gift: GiftRow,
+  userId: string,
+  liffContextType: LiffContextType,
+  now: Date,
+): Refusal<ReceiveRefusal> | null {
+  const groupChat = groupChatRefusal(liffContextType);
+  if (groupChat) return groupChat;
+  if (gift.giverId === userId) return refuse("own_gift", `Gift ${gift.id} is your own`);
+  if (gift.status === "received") {
+    return refuse("already_received", `Gift ${gift.id} was already received`);
+  }
+  if (gift.status === "taken_out") {
+    return refuse("taken_back", `Gift ${gift.id} was taken back by its giver`);
+  }
+  if (gift.status === "returned") {
+    return refuse("gift_returned", `Gift ${gift.id} expired and went back to its giver`);
+  }
+  if (now.getTime() >= gift.expiresAt.getTime()) {
+    return refuse("gift_expired", `Gift ${gift.id} expired at ${toIsoTime(gift.expiresAt)}`);
+  }
+  if (gift.escrowStatus !== "pending") {
+    return refuse("not_deposited", `Gift ${gift.id}'s deposit hasn't landed in the escrow`);
+  }
+  return null;
+}
+
+/**
+ * The gift a Gift Claim Token opens. On the escrow chain, a deposit not seen yet is read first, since
+ * it may have landed a moment ago.
+ */
+async function openGift(deps: AppDeps, giftClaimToken: OpenGiftBody["giftClaimToken"]) {
+  const { db, giftChain } = deps;
+  const commitment = keccak256(giftClaimToken);
+  const gift = db.select().from(gifts).where(eq(gifts.claimCommitment, commitment)).get();
+  if (!gift || !giftChain || gift.escrowStatus !== "missing") return gift;
+  return (await checkDeposit(deps, giftChain, gift)).gift;
+}
+
+export type Previewing = Refusal<"gift_not_found"> | { refusal: null; preview: GiftPreview };
+
+/** What opening the Gift Message's link shows, before Accept. */
+export async function previewGift(
+  deps: AppDeps,
+  userId: string,
+  { giftClaimToken, liffContextType }: OpenGiftBody,
+): Promise<Previewing> {
+  const { db, clock, images } = deps;
+  const gift = await openGift(deps, giftClaimToken);
+  if (!gift) return notFound();
+  const giver = db.select().from(users).where(eq(users.id, gift.giverId)).get();
+  if (!giver) throw new Error(`Gift ${gift.id}'s giver ${gift.giverId} is missing`);
+  const refusal = receiveRefusal(gift, userId, liffContextType, clock.now());
+  const sticker = refusal
+    ? null
+    : loadStickers(db, [gift.stickerId], images.urls).get(gift.stickerId);
+  if (sticker === undefined)
+    throw new Error(`Gift ${gift.id}'s sticker ${gift.stickerId} is missing`);
+  return {
+    refusal: null,
+    preview: {
+      giver: toPerson(giver),
+      expiresAt: toIsoTime(gift.expiresAt),
+      receivable: refusal === null,
+      refusal: refusal?.refusal ?? null,
+      sticker,
+    },
+  };
+}
+
+export type Receiving =
+  | Refusal<ReceiveRefusal | "gift_not_found">
+  | { refusal: null; received: ReceivedGift };
+
+/** Accept: the first person to receive gets the sticker, on their board. */
+export async function receiveGift(
+  deps: AppDeps,
+  userId: string,
+  { giftClaimToken, liffContextType }: OpenGiftBody,
+): Promise<Receiving> {
+  const groupChat = groupChatRefusal(liffContextType);
+  if (groupChat) return groupChat;
+  const opened = await openGift(deps, giftClaimToken);
+  if (!opened) return notFound();
+  const { db, clock, giftChain, images } = deps;
+  const now = clock.now();
+  const receiving = db.transaction(
+    (tx) => {
+      const gift = tx.select().from(gifts).where(eq(gifts.id, opened.id)).get();
+      if (!gift) return notFound();
+      const refusal = receiveRefusal(gift, userId, liffContextType, now);
+      if (refusal) return refusal;
+      const received = tx
+        .update(gifts)
+        .set({
+          status: "received",
+          receiverId: userId,
+          receivedAt: now,
+          // The mock chain's claim lands at once, so the receiver can give the sticker on.
+          escrowStatus: giftChain ? undefined : "claimed",
+        })
+        .where(eq(gifts.id, gift.id))
+        .returning()
+        .get();
+      tx.update(stickers).set({ ownerId: userId }).where(eq(stickers.id, gift.stickerId)).run();
+      // Accept carries the terms line.
+      tx.update(users)
+        .set({ termsAcceptedAt: now })
+        .where(and(eq(users.id, userId), isNull(users.termsAcceptedAt)))
+        .run();
+      const placement = tx
+        .insert(stickerPlacements)
+        .values({ userId, stickerId: gift.stickerId })
+        .onConflictDoUpdate({
+          target: [stickerPlacements.userId, stickerPlacements.stickerId],
+          // A sticker coming back returns to the tray at its old spot, and is NEW again. created_at
+          // is kept, so its place in the tray doesn't move.
+          set: {
+            onBoard: sql`case when ${stickerPlacements.onBoard} is null then null else 0 end`,
+            seenAt: null,
+          },
+        })
+        .returning()
+        .get();
+      return { refusal: null, gift: received, placement };
+    },
+    { behavior: "immediate" },
+  );
+  if (receiving.refusal !== null) return receiving;
+  const { gift, placement } = receiving;
+  const sticker = loadStickers(db, [gift.stickerId], images.urls).get(gift.stickerId);
+  if (!sticker) throw new Error(`Gift ${gift.id}'s sticker ${gift.stickerId} is missing`);
+  return {
+    refusal: null,
+    received: { gift: toGift(gift), sticker, stickerPlacement: toStickerPlacement(placement) },
+  };
+}

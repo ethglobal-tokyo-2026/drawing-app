@@ -1,8 +1,10 @@
 import { randomUUID } from "node:crypto";
+import { mkdirSync } from "node:fs";
 import { openDb } from "@drawing-app/db";
+import { migrateDatabase } from "@drawing-app/db/migrate";
 import { serve } from "@hono/node-server";
 import { z } from "zod";
-import { createApp } from "./app.ts";
+import { createServer } from "./app.ts";
 import type { AppDeps } from "./deps.ts";
 import { createDiskImageStore } from "./services/imageStore.ts";
 import { createLineVerifier } from "./services/lineVerifier.ts";
@@ -25,6 +27,13 @@ if (!parsed.success) {
 }
 const env = parsed.data;
 
+// Pending migrations go in before the first query.
+migrateDatabase();
+mkdirSync(env.IMAGE_DIR, { recursive: true });
+
+/** A stand-in SUI/JPY price, not a market one, until the server reads a price feed. */
+const MOCK_SUI_YEN = "300";
+
 const deps: AppDeps = {
   db: openDb(),
   sessionSecret: env.SESSION_SECRET,
@@ -36,9 +45,13 @@ const deps: AppDeps = {
   giftChain: null,
   smartWallets: noSmartWallets,
   sui: mockSuiPayments,
+  suiPrice: () => Promise.resolve(MOCK_SUI_YEN),
 };
 
 // Only a proxy on this machine reaches it: Vite's in development, HAProxy's on the box.
-serve({ fetch: createApp(deps).fetch, port: env.PORT, hostname: "127.0.0.1" }, ({ port }) => {
-  console.log(`REST API listening on http://127.0.0.1:${port}/api`);
-});
+serve(
+  { fetch: createServer(deps, env.IMAGE_DIR).fetch, port: env.PORT, hostname: "127.0.0.1" },
+  ({ port }) => {
+    console.log(`REST API listening on http://127.0.0.1:${port}/api`);
+  },
+);

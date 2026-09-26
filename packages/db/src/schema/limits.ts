@@ -8,3 +8,5 @@ export const MAX_HITS = 120;
 export const MAX_PEAK_TIER = 4;
 /** The gratitude multiplier's ceiling. */
 export const MAX_PEAK_MULT = 8;
+/** Daily tickets per ticket day: each day's first uses spend them. */
+export const DAILY_TICKETS_PER_DAY = 3;

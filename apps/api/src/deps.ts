@@ -16,7 +16,12 @@ export interface AppDeps {
   giftChain: GiftChain | null;
   smartWallets: SmartWallets;
   sui: SuiPayments;
+  /** The ticket shop quotes its packs at this price. */
+  suiPrice: SuiPrice;
 }
+
+/** The 5-minute time-weighted average SUI/JPY price, as decimal yen per SUI; null while there's none. */
+export type SuiPrice = () => Promise<string | null>;
 
 export interface Clock {
   now: () => Date;
@@ -104,7 +109,7 @@ export interface GiftChain {
 }
 
 export interface SmartWallets {
-  /** The person's smart wallet on World Chain, lowercase; null while they have none. */
+  /** The person's smart wallet on Ethereum Sepolia, lowercase; null while they have none. */
   addressFor: (userId: string) => Promise<string | null>;
 }
 

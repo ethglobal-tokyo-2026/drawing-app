@@ -1,7 +1,8 @@
+import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono, type Context } from "hono";
 import { except } from "hono/combine";
 import type { AppDeps } from "./deps.ts";
-import { notFound, onError } from "./errors.ts";
+import { apiError, notFound, onError } from "./errors.ts";
 import { exploreRoutes } from "./routes/explore.ts";
 import { giftRoutes } from "./routes/gifts.ts";
 import { gratitudeRoutes } from "./routes/gratitude.ts";
@@ -38,3 +39,33 @@ export function createApp(deps: AppDeps) {
 }
 
 export type AppType = ReturnType<typeof createApp>;
+
+/** Where the server serves the sticker images; on the box, CDN_BASE_URL is the site's origin plus this. */
+export const STICKER_IMAGES_PATH = "/api/images";
+/** A year: an image's name is its content's hash, so the file never changes. */
+const IMAGE_MAX_AGE_S = 365 * 24 * 60 * 60;
+
+/**
+ * The REST API as the server runs it, with the sticker images in `imageDir` served in front of it,
+ * public like a CDN's. A name with no image is a 404 there, never the API's session check.
+ */
+export function createServer(deps: AppDeps, imageDir: string) {
+  const images = `${STICKER_IMAGES_PATH}/*`;
+  return new Hono()
+    .use(images, async (c, next) => {
+      await next();
+      // serveStatic's onFound runs after it has made the response, too late to add a header.
+      if (c.res.ok) c.header("Cache-Control", `public, max-age=${IMAGE_MAX_AGE_S}, immutable`);
+    })
+    .use(
+      images,
+      serveStatic({
+        root: imageDir,
+        rewriteRequestPath: (path) => path.slice(STICKER_IMAGES_PATH.length),
+      }),
+    )
+    .get(images, (c) => apiError(c, 404, "image_not_found", `No sticker image at ${c.req.path}`))
+    .route("/", createApp(deps))
+    .onError(onError)
+    .notFound(notFound);
+}
