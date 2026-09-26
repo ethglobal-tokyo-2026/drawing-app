@@ -1,5 +1,8 @@
 import { At } from "@phosphor-icons/react";
+import type { TFunction } from "i18next";
 import { useState, type FormEvent } from "react";
+import { errorReason } from "../i18n/errorMessage";
+import { useTranslation } from "../i18n/react";
 import { Key } from "../ui/Key";
 import { apiError, type ApiError } from "./apiClient";
 import type { Me } from "@drawing-app/api/client";
@@ -15,20 +18,27 @@ interface Props {
   onChosen: (me: Me) => void;
 }
 
+/** A save that failed, kept as the error rather than words, so the words follow the app's language. */
+interface FailedSave {
+  handle: string;
+  error: ApiError;
+}
+
 /** What went wrong, in words: a taken or broken handle, or the server's own answer. */
-function problemOf(error: ApiError, handle: string): string {
-  if (error.code === "handle_taken") return `@${handle} is taken. Try another.`;
+function problemOf({ handle, error }: FailedSave, t: TFunction): string {
+  if (error.code === "handle_taken") return t(($) => $.api.handle.taken, { handle });
   if (error.code === "handle_invalid") {
-    return `A handle is 1 to ${HANDLE_MAX_LENGTH} characters, without “@”.`;
+    return t(($) => $.api.handle.invalid, { max: HANDLE_MAX_LENGTH });
   }
-  return `Couldn’t save your handle: ${error.message}`;
+  return t(($) => $.api.handle.couldntSave, { reason: errorReason(error) });
 }
 
 /** Asks for a handle when your LINE name is already someone's, before the app opens. */
 export function HandlePrompt({ me, setHandle, onChosen }: Props) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
-  const [problem, setProblem] = useState<string | null>(null);
+  const [failedSave, setFailedSave] = useState<FailedSave | null>(null);
   const handle = draft.trim().replace(/^@/, "");
   const tooLong = Array.from(handle).length > HANDLE_MAX_LENGTH;
 
@@ -36,13 +46,13 @@ export function HandlePrompt({ me, setHandle, onChosen }: Props) {
     e.preventDefault();
     if (!handle || tooLong || saving) return;
     setSaving(true);
-    setProblem(null);
+    setFailedSave(null);
     try {
       onChosen((await setHandle(handle)).me);
     } catch (error) {
       const failure = apiError(error);
       console.error(`Saving the handle @${handle} failed`, failure);
-      setProblem(problemOf(failure, handle));
+      setFailedSave({ handle, error: failure });
     } finally {
       setSaving(false);
     }
@@ -50,11 +60,11 @@ export function HandlePrompt({ me, setHandle, onChosen }: Props) {
 
   return (
     <main className="line-gate handle-prompt">
-      <h1 className="title-label">Pick your handle</h1>
+      <h1 className="title-label">{t(($) => $.api.handle.title)}</h1>
       <p className="line-gate__lead">
-        {me.lineDisplayName &&
-          `Someone already goes by @${me.lineDisplayName}, so choose your own. `}
-        It’s how people find you and your stickers.
+        {me.lineDisplayName
+          ? t(($) => $.api.handle.leadNameTaken, { name: me.lineDisplayName })
+          : t(($) => $.api.handle.lead)}
       </p>
       <form className="handle-prompt__form" onSubmit={(e) => void submit(e)}>
         <label className="handle-prompt__field">
@@ -62,9 +72,9 @@ export function HandlePrompt({ me, setHandle, onChosen }: Props) {
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="handle"
-            aria-label="Your handle"
-            aria-invalid={Boolean(problem) || tooLong}
+            placeholder={t(($) => $.api.handle.placeholder)}
+            aria-label={t(($) => $.api.handle.field)}
+            aria-invalid={Boolean(failedSave) || tooLong}
             aria-describedby="handle-prompt-problem"
             autoCapitalize="off"
             autoCorrect="off"
@@ -73,10 +83,12 @@ export function HandlePrompt({ me, setHandle, onChosen }: Props) {
           />
         </label>
         <p id="handle-prompt-problem" className="handle-prompt__problem" role="alert">
-          {tooLong ? `That’s over ${HANDLE_MAX_LENGTH} characters.` : problem}
+          {tooLong
+            ? t(($) => $.api.handle.tooLong, { max: HANDLE_MAX_LENGTH })
+            : failedSave && problemOf(failedSave, t)}
         </p>
         <Key type="submit" tone="pink" disabled={!handle || tooLong || saving}>
-          {handle ? `Use @${handle}` : "Pick a handle"}
+          {handle ? t(($) => $.api.handle.use, { handle }) : t(($) => $.api.handle.pick)}
         </Key>
       </form>
     </main>
