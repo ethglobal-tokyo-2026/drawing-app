@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BoardSticker } from "./boardSticker";
 import { StickerDetail } from "./StickerDetail";
+import { yoursHeld } from "./testBoardSticker";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -18,7 +19,7 @@ const sticker = (no: number, createdAt: number): BoardSticker => ({
   no,
   createdAt,
   timeUsed: 292,
-  blob: new Blob(),
+  ...yoursHeld,
   width: 120,
   height: 100,
   urls: { png: `blob:${no}` },

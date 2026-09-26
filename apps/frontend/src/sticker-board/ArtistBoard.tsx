@@ -52,11 +52,14 @@ const asBoardSticker = (owner: string, s: ArtistBoardSticker, z: number): BoardS
   no: s.no,
   createdAt: s.sealedAt,
   timeUsed: s.timeUsed,
-  blob: new Blob(),
   width: ART_SIZE,
   height: ART_SIZE,
   urls: { png: stickerArtUrl(s.art) },
   placement: { on: true, x: s.x, y: s.y, s: s.scale, r: s.rotation, z },
+  artist: { id: s.by ?? owner, handle: s.by ?? owner, name: `@${s.by ?? owner}` },
+  held: true,
+  givenTo: null,
+  openGift: null,
 });
 
 /** Someone else's board has no sticker tray, so its field runs to the right inset too. */
