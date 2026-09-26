@@ -1,9 +1,9 @@
 <!doctype html>
 <!--
-  The returning-user rich menu: Draw, My board and Explore under the official account's chat. returning-menu.png is
-  this page's screenshot, and create-returning-menu.sh uploads it to LINE.
+  The returning-user rich menu: Draw, My board and Explore under the official account's chat. returning-menu.png and
+  returning-menu.ja.png are this page's screenshots, and create-returning-menu.sh uploads one to LINE per language.
   Re-render: open this page at a 2500 × 843 viewport with device scale 1, wait for document.fonts.ready, then
-  screenshot the viewport.
+  screenshot the viewport: as it is for returning-menu.png, and with ?lang=ja for returning-menu.ja.png.
 -->
 <html lang="en">
   <head>
@@ -11,7 +11,7 @@
     <title>Returning-user rich menu</title>
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@75..125,200..900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@75..125,200..900&family=Zen+Kaku+Gothic+New:wght@700&display=swap"
     />
     <style>
       :root {
@@ -46,7 +46,7 @@
         height: calc(843px * 390 / 2500);
         padding: 0 8px;
         box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.06);
-        font-family: "Mona Sans", system-ui, sans-serif;
+        font-family: "Mona Sans", "Zen Kaku Gothic New", system-ui, sans-serif;
         font-size: 16px;
         line-height: 1.35;
         color: var(--ink);
@@ -115,8 +115,8 @@
             d="M135-95v-131l613-613q12-13 25.5-20t27.5-7q14 0 28 7t27 20l25 23q12 11 18.5 25t6.5 28q0 14-6 28t-19 27L267-95H135Zm607-575 92-92-32-32-91 92 31 32ZM545-95q81 0 143.5-38T751-241q0-41-30-75.5T628-371l-56 56q51 12 79.5 33t28.5 41q0 31-39 53t-96 22q-14 0-24.5 10T510-131q0 15 10.5 25.5T545-95ZM241-419l60-60q-70-14-102.5-29T166-540q0-13 19.5-27.5T273-604q84-27 113.5-57.5T416-739q0-58-42.5-92.5T261-866q-44 0-79 15.5T129-812q-9 11-8.5 25t13.5 24q11 9 25.5 8t24.5-12q14-14 32-20.5t45-6.5q43 0 63.5 16.5T345-739q0 20-18.5 35T244-670q-99 33-124 63.5T95-540q0 41 33 73t113 48Z"
           />
         </svg>
-        <b>Draw</b>
-        <span class="dot">3 a day</span>
+        <b data-ja="かく">Draw</b>
+        <span class="dot" data-ja="1日3枚">3 a day</span>
       </div>
       <div class="tile tile--board">
         <svg viewBox="0 0 256 256" aria-hidden="true">
@@ -124,7 +124,7 @@
             d="M128,24a104,104,0,1,0,30.57,203.43,7.9,7.9,0,0,0,3.3-2l63.57-63.57a8,8,0,0,0,2-3.31A104.09,104.09,0,0,0,128,24ZM92,96a12,12,0,1,1-12,12A12,12,0,0,1,92,96Zm82.92,60c-10.29,17.79-27.39,28-46.92,28s-36.63-10.2-46.92-28a8,8,0,1,1,13.84-8c7.47,12.91,19.21,20,33.08,20s25.61-7.1,33.08-20a8,8,0,1,1,13.84,8ZM164,120a12,12,0,1,1,12-12A12,12,0,0,1,164,120Z"
           />
         </svg>
-        <b>My board</b>
+        <b data-ja="マイボード">My board</b>
       </div>
       <div class="tile tile--explore">
         <svg viewBox="0 0 256 256" aria-hidden="true">
@@ -132,8 +132,16 @@
             d="M176,32c-20.61,0-38.28,18.16-48,45.85C118.28,50.16,100.61,32,80,32c-31.4,0-56,42.17-56,96s24.6,96,56,96c20.61,0,38.28-18.16,48-45.85,9.72,27.69,27.39,45.85,48,45.85,31.4,0,56-42.17,56-96S207.4,32,176,32ZM106.92,186.39C99.43,200.12,89.62,208,80,208s-19.43-7.88-26.92-21.61a104.81,104.81,0,0,1-10.24-29.23,32,32,0,1,0,0-58.32A104.81,104.81,0,0,1,53.08,69.61C60.57,55.88,70.38,48,80,48s19.43,7.88,26.92,21.61C115.35,85.07,120,105.81,120,128S115.35,170.93,106.92,186.39Zm96,0C195.43,200.12,185.62,208,176,208s-19.43-7.88-26.92-21.61a104.81,104.81,0,0,1-10.24-29.23,32,32,0,1,0,0-58.32,104.81,104.81,0,0,1,10.24-29.23C156.57,55.88,166.38,48,176,48s19.43,7.88,26.92,21.61C211.35,85.07,216,105.81,216,128S211.35,170.93,202.92,186.39Z"
           />
         </svg>
-        <b>Explore</b>
+        <b data-ja="さがす">Explore</b>
       </div>
     </div>
+    <script>
+      // ?lang=ja draws the Japanese menu, returning-menu.ja.png.
+      if (new URLSearchParams(location.search).get("lang") === "ja") {
+        document.documentElement.lang = "ja";
+        for (const label of document.querySelectorAll("[data-ja]"))
+          label.textContent = label.dataset.ja;
+      }
+    </script>
   </body>
 </html>

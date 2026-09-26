@@ -1,21 +1,46 @@
 #!/usr/bin/env bash
-# deploy/line/create-returning-menu.sh: create the returning-user rich menu (Draw, My board, Explore) in LINE.
+# deploy/line/create-returning-menu.sh: create the returning-user rich menu (Draw, My board, Explore) in LINE, in
+# English or Japanese.
 #
-#   ./deploy/line/create-returning-menu.sh           validate and create the menu, then upload returning-menu.png
-#   ./deploy/line/create-returning-menu.sh --print   print the menu object, without calling LINE
+#   ./deploy/line/create-returning-menu.sh en|ja           validate and create the menu, then upload its image
+#   ./deploy/line/create-returning-menu.sh en|ja --print   print the menu object, without calling LINE
 #
-# Reusable: LINE can't replace a menu's image, so a new image means running this again for a new menu. It never
-# sets the default menu or links anyone; the auth server links returning users. Needs curl, jq, and the Messaging
-# API channel's LINE_MESSAGING_CHANNEL_ID and LINE_MESSAGING_CHANNEL_SECRET in deploy/.env (gitignored).
+# en uploads returning-menu.png, and ja returning-menu.ja.png. Reusable: LINE can't replace a menu's image, so a new
+# image means running this again for a new menu. It never sets the default menu or links anyone; the auth server
+# links returning users to the menu in the app's language. Needs curl, jq, and the Messaging API channel's
+# LINE_MESSAGING_CHANNEL_ID and LINE_MESSAGING_CHANNEL_SECRET in deploy/.env (gitignored).
 set -euo pipefail
+
+usage() {
+  echo "usage: $0 en|ja [--print]" >&2
+  exit 2
+}
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 if [ -f "$ROOT/deploy/.env" ]; then
   # shellcheck source=/dev/null
   . "$ROOT/deploy/.env"
 fi
-IMAGE="$ROOT/deploy/line/returning-menu.png"
 LIFF_URL="https://liff.line.me/2011732197-P98cxGpu"
+
+# The area labels are what screen readers read out; LINE takes at most 20 characters each.
+case "${1:-}" in
+  en)
+    IMAGE="$ROOT/deploy/line/returning-menu.png"
+    NAME="Returning: Draw · My board · Explore"
+    CHAT_BAR_TEXT="Sticker Board"
+    LABELS=("Draw" "My board" "Explore")
+    MENU_ID_SETTING="LINE_RETURNING_RICH_MENU_ID_EN"
+    ;;
+  ja)
+    IMAGE="$ROOT/deploy/line/returning-menu.ja.png"
+    NAME="Returning (ja): かく · マイボード · さがす"
+    CHAT_BAR_TEXT="シールボード"
+    LABELS=("かく" "マイボード" "さがす")
+    MENU_ID_SETTING="LINE_RETURNING_RICH_MENU_ID_JA"
+    ;;
+  *) usage ;;
+esac
 
 # Three full-height columns, one over each tile of the image; the app opens the screen its path names.
 MENU="$(
@@ -23,36 +48,34 @@ MENU="$(
 {
   "size": { "width": 2500, "height": 843 },
   "selected": true,
-  "name": "Returning: Draw · My board · Explore",
-  "chatBarText": "Sticker Board",
+  "name": "$NAME",
+  "chatBarText": "$CHAT_BAR_TEXT",
   "areas": [
     {
       "bounds": { "x": 0, "y": 0, "width": 833, "height": 843 },
-      "action": { "type": "uri", "label": "Draw", "uri": "$LIFF_URL/draw" }
+      "action": { "type": "uri", "label": "${LABELS[0]}", "uri": "$LIFF_URL/draw" }
     },
     {
       "bounds": { "x": 833, "y": 0, "width": 833, "height": 843 },
-      "action": { "type": "uri", "label": "My board", "uri": "$LIFF_URL" }
+      "action": { "type": "uri", "label": "${LABELS[1]}", "uri": "$LIFF_URL" }
     },
     {
       "bounds": { "x": 1666, "y": 0, "width": 834, "height": 843 },
-      "action": { "type": "uri", "label": "Explore", "uri": "$LIFF_URL/explore" }
+      "action": { "type": "uri", "label": "${LABELS[2]}", "uri": "$LIFF_URL/explore" }
     }
   ]
 }
 JSON
 )"
 
-case "${1:-}" in
+[ $# -le 2 ] || usage
+case "${2:-}" in
   --print)
     printf '%s\n' "$MENU"
     exit 0
     ;;
   "") ;;
-  *)
-    echo "usage: $0 [--print]" >&2
-    exit 2
-    ;;
+  *) usage ;;
 esac
 
 CHANNEL_ID="${LINE_MESSAGING_CHANNEL_ID:?set LINE_MESSAGING_CHANNEL_ID in deploy/.env}"
@@ -116,4 +139,4 @@ if ! answer="$(line_api "https://api-data.line.me/v2/bot/richmenu/$MENU_ID/conte
 fi
 
 echo "✓ created $MENU_ID"
-echo "Next: set LINE_RETURNING_RICH_MENU_ID=$MENU_ID in deploy/sticker-auth.env, then run ./deploy/deploy.sh"
+echo "Next: set $MENU_ID_SETTING=$MENU_ID in deploy/sticker-auth.env, then run ./deploy/deploy.sh"
