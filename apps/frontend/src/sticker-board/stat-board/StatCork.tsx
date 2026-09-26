@@ -12,6 +12,7 @@ import {
 } from "react";
 import { formatCount } from "../../i18n/format";
 import { useTranslation } from "../../i18n/react";
+import { EnsNameLink } from "../../identity/EnsNameLink";
 import { formatDay, formatHandle } from "../../stickers/format";
 import { LabelButton } from "../../ui/LabelButton";
 import { useReducedMotion } from "../../ui/useReducedMotion";
@@ -26,6 +27,8 @@ export interface StatCorkHandle {
 export interface CorkFigures {
   name: string;
   handle: string;
+  /** <label>.croquis.eth, under the handle. */
+  ensName: string | null;
   /** Their picture, stuck on beside the name card. */
   picture: ReactNode;
   /** Your own board: pink washi on the name card, and "you" in the notes. */
@@ -167,6 +170,7 @@ export function StatCork({
               />
               <h2 className="stat-board__name">{f.name}</h2>
               <p className="fine stat-board__handle">{formatHandle(f.handle)}</p>
+              {f.ensName && <EnsNameLink className="fine stat-board__ens" name={f.ensName} />}
             </div>
           </div>
 

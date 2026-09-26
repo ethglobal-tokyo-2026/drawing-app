@@ -76,6 +76,7 @@ function adapter() {
     rpcUrl: "https://rpc.test",
     stickerContract: NFT,
     escrowContract: ESCROW,
+    namesContract: "0x0000000000000000000000000000000000000cc0",
     sealerPrivateKey: hex("5"),
     smartWallets: { addressFor: async (id) => (id === "alice" ? ALICE : BOB) },
     images: {

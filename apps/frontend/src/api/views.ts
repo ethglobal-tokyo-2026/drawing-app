@@ -11,6 +11,8 @@ export interface PersonView {
   /** The LINE name; the handle when LINE's is gone. */
   name: string;
   pictureUrl?: string;
+  /** <label>.croquis.eth. */
+  ensName?: string;
 }
 
 /** A sticker, as a screen draws it. */
@@ -27,6 +29,8 @@ export interface StickerView {
   urls: StickerUrls;
   /** Milliseconds. */
   sealedAt: number;
+  /** <number>.<artist>.croquis.eth, once it's onchain. */
+  ensName?: string;
 }
 
 export const toMs = (t: IsoTime): number => Date.parse(t);
@@ -36,6 +40,7 @@ export const toPerson = (p: Person): PersonView => ({
   handle: p.handle,
   name: p.lineDisplayName ?? (p.handle === null ? "Someone" : formatHandle(p.handle)),
   ...(p.linePictureUrl && { pictureUrl: p.linePictureUrl }),
+  ...(p.ensName && { ensName: p.ensName }),
 });
 
 /** An empty image URL is an image the sticker doesn't have. */
@@ -54,6 +59,7 @@ export const toSticker = (s: Sticker): StickerView => ({
     ...(s.images.rim && { rim: s.images.rim }),
   },
   sealedAt: toMs(s.sealedAt),
+  ...(s.ensName && { ensName: s.ensName }),
 });
 
 /** The app's placement names: `on`, `s` and `r` for `onBoard`, `scale` and `rotation`. */

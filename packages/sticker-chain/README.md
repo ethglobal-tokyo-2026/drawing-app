@@ -11,6 +11,7 @@ This package contains the first backend and contract boundaries for sealing stic
 - The backend reconciles repeat requests against the existing NFT instead of creating another NFT.
 - The LINE authentication server verifies the LIFF ID token with LINE before issuing a five-minute Privy Custom Auth JWT.
 - The same server switches a returning user's LINE chat menu: `POST /v1/auth/line-menu` verifies the ID token, looks the person up in Privy, and links the returning-user rich menu when they have an account.
+- `contracts/ens/` names people, stickers and pending gifts under croquis.eth on ENSv2. The design is `docs/superpowers/specs/2026-09-26-ens-names-design.md`.
 
 The API persists application records and sticker assets. Privy smart-wallet sponsorship is configured separately.
 
@@ -46,33 +47,26 @@ Receiving requests carry the Gift Claim Token so the API can validate it before 
 
 The escrow never receives approval for stickers that remain in an artist's wallet and cannot transfer them. Raw LINE IDs and gift claim tokens are not stored onchain.
 
+## ENS names
+
+ENSv2 is vendored at the commit deployed to Sepolia (`lib/ens-contracts-v2`, 71a3b73). Our contracts call it through the interfaces in `contracts/ens/EnsV2.sol`; the Forge tests build a local ENS from ENSv2's own contracts (`test/foundry/CroquisFixture.sol`).
+
+- `CroquisNames` gives a person `<label>.croquis.eth`, forever and non-transferable, with their own registry and PermissionedResolver. It names a sealed sticker `<number>.<artist>.croquis.eth`, and `syncSticker` keeps that name with whoever holds the NFT.
+- `CroquisResolver` answers sticker and gift names from `StickerNFT` and the escrow, and everyone else under croquis.eth through CCIP-Read: the API's gateway answers with `src/ens-gateway.ts`.
+- `StickerGiftEscrow` registers `g-<gift ID>.gifts.croquis.eth` while a gift waits, removes it when the gift ends, and syncs the sticker's name whenever the sticker leaves.
+- `src/croquis-names.ts` writes names from the relayer. Each call reads the chain first, so a retry after a timeout does nothing when the first attempt landed.
+
 ## Commands
 
 ```sh
-git submodule update --init --recursive
+git submodule update --init packages/sticker-chain/lib/forge-std packages/sticker-chain/lib/ens-contracts-v2
+git -C packages/sticker-chain/lib/ens-contracts-v2 submodule update --init --depth 1 \
+  contracts/lib/openzeppelin-contracts contracts/lib/openzeppelin-contracts-upgradeable \
+  contracts/lib/verifiable-factory contracts/lib/ens-contracts
 pnpm --filter @drawing-app/sticker-chain test
 pnpm --filter @drawing-app/sticker-chain generate-types
 pnpm --filter @drawing-app/api exec vitest run src/routes/stickers.chain.test.ts
 ```
-
-## Deploy to Ethereum Sepolia
-
-The deployment account remains the contracts' administrator. The account derived from
-`STICKER_SEALER_PRIVATE_KEY` receives permission to mint sealed stickers, authorize Receiving, and
-relay claims.
-
-```sh
-export ETHEREUM_SEPOLIA_RPC_URL=https://your-sepolia-rpc.example
-export DEPLOYER_PRIVATE_KEY=0x...
-export STICKER_SEALER_PRIVATE_KEY=0x...
-
-forge script script/DeployStickerContracts.s.sol:DeployStickerContracts \
-  --rpc-url "$ETHEREUM_SEPOLIA_RPC_URL" \
-  --broadcast
-```
-
-Copy the two printed contract addresses into the API and frontend environments. The sealer address
-must be derived from the API's `STICKER_SEALER_PRIVATE_KEY`.
 
 Install Foundry before running these commands. `forge test` covers the contracts, while the TypeScript integration tests run against Anvil and consume the same Forge artifacts. Wagmi CLI reads the artifacts in `out/` and generates typed ABIs in `src/generated/contracts.ts`; application code imports these instead of maintaining handwritten ABI fragments. Configure Privy Custom Authentication with the deployed app's `/.well-known/jwks.json`, use `sub` as the user ID claim, and keep the P-256 private key outside the repository.
 
@@ -80,7 +74,7 @@ The API chain integration test submits PNGs through Sealing, checks on-chain own
 
 ## Deploy to Ethereum Sepolia
 
-Set `DEPLOYER_PRIVATE_KEY`, `STICKER_SEALER_PRIVATE_KEY`, and `ETHEREUM_SEPOLIA_RPC_URL` in the gitignored `deploy/.env`, then run `bash deploy/deploy-contracts.sh` from the repository root. The deployer remains the administrator; the sealer receives mint and claim-signing permissions. Record both contract addresses in `STICKER_NFT_ADDRESS` and `STICKER_GIFT_ESCROW_ADDRESS`.
+Set `DEPLOYER_PRIVATE_KEY`, `STICKER_SEALER_PRIVATE_KEY`, `ENS_GATEWAY_PRIVATE_KEY`, `ENS_GATEWAY_URL` and `ETHEREUM_SEPOLIA_RPC_URL` in the gitignored `deploy/.env`, then run `bash deploy/deploy-contracts.sh` from the repository root. With `STICKER_NFT_ADDRESS` set it keeps that StickerNFT; otherwise it deploys one. The deployer remains the administrator; the sealer receives mint, claim-signing and naming permissions, and the gateway key's address is the only signer `CroquisResolver` trusts. When the deployer owns croquis.eth, the script points croquis.eth at its registry and resolver; otherwise it prints the two addresses croquis.eth's owner sets. Record the printed addresses in `deploy/.env`.
 
 `deploy/deploy-api.sh` installs chain configuration in a private `chain.env` on the server. It preserves existing values when local values are omitted and can reuse `PRIVY_APP_SECRET` from the auth service. Incomplete configuration aborts before publishing the API. The sealer pays backend mint and Receiving gas; sponsored smart-wallet transactions cover Giving and taking out. Run the installer tests with `node --test deploy/install-chain-env.test.mjs`.
 
@@ -94,7 +88,7 @@ For Safe smart accounts, configure Sepolia's bundler and paymaster under Privy's
 2. Store and verify the artist's Ethereum Sepolia smart account address. Do not mint to its Privy signer EOA.
 3. Configure an Ethereum Sepolia bundler and funded paymaster, then verify a transfer from a zero-balance artist wallet.
 4. Wait for Sealing's transaction receipt before adding the sticker to the tray; retry using the same ticket if the response is interrupted.
-5. Keep ENS updates optional until their contract flow is finalized.
+5. Names are minted to smart accounts as ERC-1155 tokens, so the smart account must accept them (Safe does, through its fallback handler).
 
 References:
 

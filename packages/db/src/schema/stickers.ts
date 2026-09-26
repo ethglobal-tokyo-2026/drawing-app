@@ -38,6 +38,8 @@ export const stickers = sqliteTable(
     tokenId: text("token_id").unique(),
     mintTxHash: text("mint_tx_hash"),
     ...timestamps(),
+    /** When CroquisNames confirmed the sticker's name, <number>.<artist's ens_label>.croquis.eth. */
+    ensNamedAt: integer("ens_named_at", { mode: "timestamp_ms" }),
   },
   (t) => [
     index("stickers_owner").on(t.ownerId),

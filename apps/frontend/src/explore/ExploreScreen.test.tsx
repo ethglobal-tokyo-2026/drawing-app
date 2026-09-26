@@ -122,3 +122,31 @@ describe("ExploreScreen", () => {
     expect(host.querySelector(".results-count")?.textContent).toBe("1 artist");
   });
 });
+
+describe("a name's link", () => {
+  it("opens the board of whoever holds the name, once", async () => {
+    const onOpenArtist = vi.fn();
+    view = renderWithApi(
+      <ExploreScreen boardOf="mika" onOpenArtist={onOpenArtist} onOpenMyBoard={vi.fn()} />,
+      emptyApi({
+        explore: () => new Promise(() => {}),
+        personByEnsLabel: (label) =>
+          label === "mika" ? Promise.resolve(people.mika) : Promise.reject(new Error(label)),
+      }),
+    );
+    await wait(0);
+    await wait(0);
+    expect(onOpenArtist.mock.calls).toEqual([[people.mika]]);
+  });
+
+  it("says so when nobody holds the name", async () => {
+    view = renderWithApi(
+      <ExploreScreen boardOf="nobody" onOpenArtist={vi.fn()} onOpenMyBoard={vi.fn()} />,
+      emptyApi({ explore: () => new Promise(() => {}) }),
+    );
+    await wait(0);
+    expect(document.querySelector('[role="alert"] h2')?.textContent).toBe(
+      "Couldn’t load nobody.croquis.eth",
+    );
+  });
+});
