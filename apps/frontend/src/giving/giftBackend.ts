@@ -1,6 +1,7 @@
 import type { ApiClient } from "../api/apiClient";
 import { ApiError } from "../api/apiClient";
 import type { Hash } from "viem";
+import { currentLanguage } from "../i18n/i18n";
 import { formatNo } from "../stickers/format";
 import { buildGiftMessage, type GiftMessage } from "./giftMessage";
 import {
@@ -134,6 +135,7 @@ export function createApiGiftBackend({
         no: sticker.no,
         timeUsed: sticker.timeUsed,
         heroUrl,
+        language: currentLanguage(),
       });
       return { giftId: gift.id, message };
     },

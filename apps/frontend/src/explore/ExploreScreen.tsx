@@ -10,6 +10,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useMe } from "../api/meContext";
 import { useApiQuery, type Query } from "../api/useApiQuery";
 import { toPerson } from "../api/views";
+import { formatCount } from "../i18n/format";
 import { Duration } from "../stickers/Duration";
 import { formatHandle, formatNo } from "../stickers/format";
 import { LabelButton } from "../ui/LabelButton";
@@ -127,7 +128,7 @@ function Figure({ board, value }: { board: Leaderboard; value: number }) {
         <small>{value === 1 ? "day" : "days"}</small>
       </span>
     );
-  return <span className="figure">{value.toLocaleString("en-US")}</span>;
+  return <span className="figure">{formatCount(value)}</span>;
 }
 
 function ThisWeek({

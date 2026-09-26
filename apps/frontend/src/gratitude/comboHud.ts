@@ -1,3 +1,4 @@
+import { formatCount } from "../i18n/format";
 import { fullBarSeconds } from "./combo";
 import { EASE_OUT, EASE_PEEL, clamp } from "./easing";
 
@@ -32,7 +33,6 @@ const LABELS = 5;
 const SLIVERS = 8;
 /** Until the track is measured. */
 const FALLBACK_TRACK_PX = 300;
-const THOUSANDS = new Intl.NumberFormat("en-US");
 
 /** A pooled element and the animation it was last given, cancelled when it's reused. */
 interface Pooled<E extends HTMLElement> {
@@ -231,7 +231,7 @@ export function createComboHud(
       const rounded = Math.round(countedTotal);
       if (rounded !== amountShown) {
         amountShown = rounded;
-        amountNumber.data = THOUSANDS.format(rounded);
+        amountNumber.data = formatCount(rounded);
       }
       setText(multNumber, view.multiplier.toFixed(1));
       setText(seconds, view.secondsLeft.toFixed(1));

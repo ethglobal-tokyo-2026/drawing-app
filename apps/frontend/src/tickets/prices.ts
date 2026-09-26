@@ -1,7 +1,9 @@
+import { i18next } from "../i18n/i18n";
 import { MIST_PER_SUI } from "../payments/sui";
 
 const yen = new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" });
-const sui = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+const sui = (n: number) =>
+  n.toLocaleString(i18next.language, { minimumFractionDigits: 2, maximumFractionDigits: 3 });
 
 /** "¥1,000". */
 export const formatYen = (amount: number) => yen.format(amount);
@@ -10,7 +12,7 @@ export const formatYen = (amount: number) => yen.format(amount);
 export function formatSui(mist: bigint): string {
   const step = MIST_PER_SUI / 1000n;
   const thousandths = (mist + step - 1n) / step;
-  return sui.format(Number(thousandths) / 1000);
+  return sui(Number(thousandths) / 1000);
 }
 
 /** What `mist` is worth at `suiYen` yen per SUI, rounded down to the yen. */

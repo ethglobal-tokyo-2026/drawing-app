@@ -7,6 +7,7 @@ const input = (over: Partial<GiftMessageInput> = {}): GiftMessageInput => ({
   fromHandle: "alice",
   no: 147,
   timeUsed: 292,
+  language: "en",
   ...over,
 });
 
@@ -54,6 +55,17 @@ describe("buildGiftMessage", () => {
     expect(buildGiftMessage(input({ fromHandle: "mika" }))).toEqual(
       buildGiftMessage(input({ fromHandle: "@mika" })),
     );
+  });
+
+  it("is written in the giver's language, falling back to English where Japanese has no text yet", () => {
+    const message = buildGiftMessage(input({ language: "ja" }));
+    expect(message.altText).toBe("@aliceからシールが届きました");
+    expect(JSON.stringify(message)).toContain('"label":"ギフトをひらく"');
+    expect(printedTexts(message)).toEqual([
+      "NO.0147 · ONE OF ONE",
+      "From @alice",
+      "A one-of-one sticker, drawn in 4分52秒. It opens once.",
+    ]);
   });
 
   it("refuses what LINE would reject or what would break the link", () => {

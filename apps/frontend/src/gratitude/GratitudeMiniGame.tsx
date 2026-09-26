@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { RecordGratitude, ReplayV1 } from "@drawing-app/api/client";
 import { useApi } from "../api/useApi";
+import { formatCount } from "../i18n/format";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
@@ -294,13 +295,13 @@ export function GratitudeMiniGame({
               {ending.caught && tier ? (
                 <>
                   <p className="gr-rc-figure">
-                    {ending.record.total.toLocaleString("en-US")}
+                    {formatCount(ending.record.total)}
                     <small aria-hidden="true"> ♡</small>
                   </p>
                   <p className="gr-rc-head">gratitude to {handle}</p>
                   <p className="gr-rc-sub fine">
-                    best ×{ending.record.peakMult.toFixed(1)} ·{" "}
-                    {ending.record.hits.toLocaleString("en-US")} hits{"\n"}
+                    best ×{ending.record.peakMult.toFixed(1)} · {formatCount(ending.record.hits)}{" "}
+                    hits{"\n"}
                     {tier.jp} {tier.en}
                   </p>
                 </>

@@ -25,3 +25,11 @@ describe("formatDuration", () => {
     expect(spokenDuration(54)).toBe("54 seconds");
   });
 });
+
+describe("durations in Japanese", () => {
+  it("print Japanese units", () => {
+    expect(formatDuration(4 * MINUTE + 52, "ja")).toBe("4分52秒");
+    expect(formatDuration(5 * MINUTE, "ja")).toBe("5分");
+    expect(spokenDuration(MINUTE + 1, "ja")).toBe("1分1秒");
+  });
+});

@@ -1,3 +1,5 @@
+import { formatTimeOfDay } from "../i18n/format";
+
 const MINUTE = 60_000;
 
 /**
@@ -17,7 +19,5 @@ export function msUntilRefillLineChanges(msLeft: number): number {
   return msLeft < MINUTE ? msLeft : (msLeft % MINUTE) + 1;
 }
 
-const timeOfDay = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" });
-
-/** "12:00 AM", in the person’s own time zone. */
-export const formatRefillTime = (at: Date) => timeOfDay.format(at);
+/** "12:00 AM", or "0:00" in Japanese, in the person’s own time zone. */
+export const formatRefillTime = (at: Date) => formatTimeOfDay(at);
