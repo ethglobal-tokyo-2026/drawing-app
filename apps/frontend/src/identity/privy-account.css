@@ -1,0 +1,43 @@
+/* ---------- The Privy account, in full, on the stat board's LINE and Privy slip ---------- */
+
+.privy-account {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+/* The label over the value, and Copy beside the value. */
+.privy-account__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: 12px;
+}
+
+.privy-account__row dt {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.privy-account__row dd {
+  margin: 0;
+}
+
+/* IDs and addresses are case-sensitive and long: shown whole, wrapping anywhere, and selectable. */
+.privy-account__value {
+  min-width: 0;
+  font:
+    600 12.5px/1.35 ui-monospace,
+    "SF Mono",
+    Menlo,
+    monospace;
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.privy-account__value a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
