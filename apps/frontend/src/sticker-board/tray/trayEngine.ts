@@ -13,6 +13,7 @@ import { knownShape, stickerShape } from "./stickerShape";
 import { countVisit } from "./traySeen";
 import { newSlots, type TraySlot } from "./traySlots";
 import { createZipper, type Zipper } from "./zipper";
+import "../../stickers/sticker-foil.css";
 import "./sticker-tray.css";
 
 /** A sticker as the sticker tray holds it: its slot, and what it's drawn from. */
@@ -537,6 +538,23 @@ export function createTrayEngine(
     );
     // A used sticker silhouette shows no sticker, so it loads none.
     if (s.state !== "used") {
+      // Drawn by someone else, it wears the sheet's foil under its image, as StickerFoil draws it.
+      if (s.gift && s.urls.mask) {
+        const foil = decorative(
+          make(
+            "span",
+            "sticker-foil sticker-foil--sheet",
+            make(
+              "span",
+              "sticker-foil__band",
+              make("i", "sticker-foil__sheen"),
+              make("i", "sticker-foil__glint"),
+            ),
+          ),
+        );
+        foil.style.setProperty("--foil-i", String(s.no));
+        fit.append(foil);
+      }
       const img = make("img", "tray__img");
       img.src = s.urls.png;
       img.alt = "";
