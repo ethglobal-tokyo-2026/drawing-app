@@ -1,3 +1,4 @@
+import { notePerformance } from "../performance/performanceRecorder";
 import type { ComboHud } from "./comboHud";
 import { EASE_OUT, EASE_PEEL, clamp, easeInOutSine, lerp } from "./easing";
 import { FEEL_CONFIG } from "./gameConfig";
@@ -111,6 +112,7 @@ function hitGiver(parts: EndingParts, total: number) {
  * it. `total`: the combo's gratitude, which the live region says.
  */
 export async function flyHeartToGiver(parts: EndingParts, total: number): Promise<void> {
+  notePerformance("gratitude", "ending: fly to the giver");
   // The finger stamps go with the heart, rather than hang where it was.
   parts.effects.tidy();
   await parts.heart.flyToGiver();
@@ -142,6 +144,7 @@ function riseSoul(parts: EndingParts) {
  * `total` as for flyHeartToGiver.
  */
 export async function playAscension(parts: EndingParts, total: number): Promise<void> {
+  notePerformance("gratitude", "ending: 昇天");
   const { background, heart, lettering } = parts;
   parts.freeze(FEEL_CONFIG.climaxFreezeMs);
   background.flash();
@@ -167,6 +170,7 @@ export async function playAscension(parts: EndingParts, total: number): Promise<
  * hearts, the ground and the heart clear away.
  */
 export async function sighAndTidy(parts: EndingParts): Promise<void> {
+  notePerformance("gratitude", "ending: sigh");
   // Over where the heart rested, clear of its pale art and of the screen's edges.
   const box = parts.restBox();
   const width = parts.fuu.offsetWidth || 120;
