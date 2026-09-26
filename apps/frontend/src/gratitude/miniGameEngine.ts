@@ -1286,8 +1286,14 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
       });
     }
 
-    // Once the receipt is up and the pile has melted, nothing moves: the loop sleeps.
-    if (root.dataset.phase === "done" && physics.hearts.length === 0 && !readout) {
+    // Once the receipt is up, the pile has melted and a replay's amount has counted up, nothing
+    // moves: the loop sleeps.
+    if (
+      root.dataset.phase === "done" &&
+      physics.hearts.length === 0 &&
+      !readout &&
+      !hud.counting()
+    ) {
       running = false;
       cancelFrame();
     }

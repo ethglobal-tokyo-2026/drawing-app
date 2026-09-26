@@ -22,6 +22,8 @@ export interface ComboHud {
   step: (real: number, view: HudView) => void;
   /** Shows `total` at once, with no count up to it. */
   snapTotal: (total: number) => void;
+  /** Whether the amount on show is still counting up to its total. */
+  counting: () => boolean;
 }
 
 /** Shares of a full bar: below HOT the bar heats up and shivers, below BLINK it blinks too. */
@@ -118,6 +120,8 @@ export function createComboHud(
   let fillShare = 0;
   let countedTotal = 0;
   let amountShown = 0;
+  /** The total the amount counts up to. */
+  let countingTo = 0;
   let wholeMultiplier = 1;
   let lastLabelAt = -Infinity;
   let lastLabel: { item: Pooled<HTMLSpanElement>; x: number } | null = null;
@@ -234,6 +238,7 @@ export function createComboHud(
         row.style.transform = `translate(${dx.toFixed(2)}px, ${dy.toFixed(2)}px)`;
       } else if (row.style.transform) row.style.transform = "";
 
+      countingTo = view.total;
       countedTotal += (view.total - countedTotal) * Math.min(1, real * 12);
       if (Math.abs(view.total - countedTotal) < 0.6) countedTotal = view.total;
       const rounded = Math.round(countedTotal);
@@ -251,8 +256,11 @@ export function createComboHud(
 
     snapTotal(total) {
       countedTotal = total;
+      countingTo = total;
       amountShown = total;
       amountNumber.data = formatCount(total);
     },
+
+    counting: () => shown && countedTotal !== countingTo,
   };
 }

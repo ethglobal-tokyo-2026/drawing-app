@@ -185,6 +185,14 @@ describe("mountGratitudeReplay", () => {
     expect(amount()).toBe(formatCount(ended.record.total));
   });
 
+  it("counts its HUD up to the total when the combo was closed right after its last hit", async () => {
+    const lastTap = TAPS.at(-1) ?? 0;
+    const { record, run } = play(TAPS, { reduced: true }, { at: lastTap + 10, reason: "closed" });
+    await run(REPLAY_REAL_TIME_MS + 1000);
+    expect(settled).toBe("landed");
+    expect(amount()).toBe(formatCount(record.total));
+  });
+
   it("ends on the stored total when its own count differs, and names the gift", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const record = tapRecord(TAPS);
