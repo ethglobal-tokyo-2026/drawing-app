@@ -154,7 +154,8 @@ describe("POST /api/stickers", () => {
     });
     expect(failedBody.detail).toContain(saved.id);
     expect(saved.tokenId).toBeNull();
-    expect(log).toHaveBeenCalledWith(expect.stringContaining(saved.id), chainDown);
+    expect(log).toHaveBeenCalledWith(expect.stringContaining(`"stickerId":"${saved.id}"`));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining(chainDown.message));
     expect(test.images.saved.get(saved.contentHash)).toEqual(sealImages());
     expect(new Uint8Array(timelapseOf(saved.id)?.ops ?? [])).toEqual(testTimelapse());
 
@@ -176,10 +177,8 @@ describe("POST /api/stickers", () => {
     const artistId = insertUser(test.db);
     const response = await postSeal(artistId, sealFormData(sealParts(spendTicket(artistId))));
     expect(await refusal(response)).toMatchObject({ status: 503, error: "mint_failed" });
-    expect(log).toHaveBeenCalledWith(
-      expect.stringContaining("could not be confirmed"),
-      expect.any(Error),
-    );
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('"event":"sticker.mint.failed"'));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("The mint returned no confirmed NFT"));
     expect(allStickers()).toMatchObject([{ tokenId: null, mintTxHash: null }]);
   });
 

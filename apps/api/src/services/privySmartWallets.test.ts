@@ -3,7 +3,7 @@ import { createTestDb, insertUser } from "@drawing-app/db/testing";
 import { privySubject } from "@drawing-app/sticker-chain/line-privy-jwt";
 import { APIConnectionTimeoutError } from "@privy-io/node";
 import { eq } from "drizzle-orm";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { privySmartWallet, privyUser } from "../testing/privy.ts";
 import { createPrivySmartWallets } from "./privySmartWallets.ts";
 
@@ -11,6 +11,21 @@ const APP_ID = "privy-app";
 const APP_SECRET = "privy-secret";
 const CHANNEL_ID = "line-channel";
 const ADDRESS = `0x${"a".repeat(40)}`;
+const diagnostics: unknown[] = [];
+
+function captureDiagnostic(line: unknown) {
+  if (typeof line !== "string") throw new Error("Expected a structured diagnostic");
+  const entry: unknown = JSON.parse(line);
+  diagnostics.push(entry);
+}
+
+beforeEach(() => {
+  diagnostics.length = 0;
+  vi.spyOn(console, "info").mockImplementation(captureDiagnostic);
+  vi.spyOn(console, "error").mockImplementation(captureDiagnostic);
+});
+
+afterEach(() => vi.restoreAllMocks());
 
 async function setup(fetchImpl: typeof fetch) {
   const { db, sqlite } = await createTestDb();
@@ -51,6 +66,33 @@ describe("Privy smart-wallet lookup", () => {
       await expect(test.wallets.addressFor(test.userId)).resolves.toBe(ADDRESS);
       expect(fetchImpl).toHaveBeenCalledOnce();
       expect(test.cached()).toBe(ADDRESS);
+      expect(diagnostics).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            event: "wallet.lookup.started",
+            userId: test.userId,
+            cached: false,
+          }),
+          expect.objectContaining({
+            event: "wallet.lookup.completed",
+            userId: test.userId,
+            cached: false,
+            status: "found",
+            address: ADDRESS,
+          }),
+          expect.objectContaining({
+            event: "wallet.lookup.completed",
+            userId: test.userId,
+            cached: true,
+            status: "found",
+            address: ADDRESS,
+          }),
+        ]),
+      );
+      const output = JSON.stringify(diagnostics);
+      expect(output).not.toContain(APP_SECRET);
+      expect(output).not.toContain("line-alice");
+      expect(output).not.toContain("https://api.privy.io");
     } finally {
       test.close();
     }
@@ -79,6 +121,14 @@ describe("Privy smart-wallet lookup", () => {
     try {
       await expect(test.wallets.addressFor(test.userId)).resolves.toBeNull();
       expect(test.cached()).toBeNull();
+      expect(diagnostics).toContainEqual(
+        expect.objectContaining({
+          event: "wallet.lookup.completed",
+          userId: test.userId,
+          cached: false,
+          status: "missing_smart_wallet",
+        }),
+      );
       await expect(test.wallets.addressFor(test.userId)).resolves.toBe(ADDRESS);
     } finally {
       test.close();
@@ -94,6 +144,14 @@ describe("Privy smart-wallet lookup", () => {
     try {
       await expect(test.wallets.addressFor(test.userId)).resolves.toBeNull();
       expect(test.cached()).toBeNull();
+      expect(diagnostics).toContainEqual(
+        expect.objectContaining({
+          event: "wallet.lookup.completed",
+          userId: test.userId,
+          cached: false,
+          status: "not_found",
+        }),
+      );
       await expect(test.wallets.addressFor(test.userId)).resolves.toBe(ADDRESS);
     } finally {
       test.close();
@@ -113,6 +171,14 @@ describe("Privy smart-wallet lookup", () => {
         );
         expect(test.cached()).toBeNull();
         expect(fetchImpl).toHaveBeenCalledOnce();
+        expect(diagnostics).toContainEqual(
+          expect.objectContaining({
+            event: "wallet.lookup.failed",
+            userId: test.userId,
+            cached: false,
+            status,
+          }),
+        );
       } finally {
         test.close();
       }
@@ -152,6 +218,14 @@ describe("Privy smart-wallet lookup", () => {
       await failed;
       expect(fetchImpl).toHaveBeenCalledOnce();
       expect(test.cached()).toBeNull();
+      expect(diagnostics).toContainEqual(
+        expect.objectContaining({
+          event: "wallet.lookup.failed",
+          userId: test.userId,
+          cached: false,
+        }),
+      );
+      expect(JSON.stringify(diagnostics)).toContain('"message":"Request timed out."');
     } finally {
       vi.useRealTimers();
       test.close();
