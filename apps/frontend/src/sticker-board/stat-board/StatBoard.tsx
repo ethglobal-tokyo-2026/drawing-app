@@ -1,4 +1,4 @@
-import { ArrowUUpLeft } from "@phosphor-icons/react";
+import { ArrowUUpLeft, SignOut } from "@phosphor-icons/react";
 import {
   useId,
   useImperativeHandle,
@@ -277,6 +277,17 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
             >
               Flip back
             </LabelButton>
+            {/* Outside LINE's app it's the only way to switch LINE accounts, so it's never behind the dev flag. */}
+            {!me.inClient && (
+              <LabelButton
+                size="sm"
+                icon={<SignOut />}
+                className="stat-board__logout"
+                onClick={lineLogout}
+              >
+                Log out of LINE
+              </LabelButton>
+            )}
           </div>
         </div>
 
@@ -290,12 +301,6 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
               <LineDetails />
               <PrivyLine />
               <PrivyAccount />
-              {/* Outside LINE's app it's the only way to switch LINE accounts. */}
-              {!me.inClient && (
-                <QuietLink className="stat-board__logout" onClick={lineLogout}>
-                  Log out of LINE
-                </QuietLink>
-              )}
             </div>
             <i className="stat-board__washi" aria-hidden />
           </section>
