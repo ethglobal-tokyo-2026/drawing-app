@@ -1,5 +1,10 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { LineMenuSwitchError, type LineMenuFailure, type SwitchLineMenu } from "./line-menu.js";
+import {
+  LineMenuSwitchError,
+  menuLanguageOf,
+  type LineMenuFailure,
+  type SwitchLineMenu,
+} from "./line-menu.js";
 import type { LinePrivyJwtIssuer } from "./line-privy-jwt.js";
 
 interface Logger {
@@ -27,7 +32,8 @@ function sendJson(
   response.end(JSON.stringify(body));
 }
 
-async function readIdToken(request: IncomingMessage) {
+// Both routes take LINE's ID token; only the chat menu's uses the app's language.
+async function readBody(request: IncomingMessage) {
   if (!request.headers["content-type"]?.startsWith("application/json")) {
     throw new Error("JSON content type is required");
   }
@@ -42,7 +48,7 @@ async function readIdToken(request: IncomingMessage) {
   }
   const idToken: unknown = Reflect.get(parsed, "idToken");
   if (typeof idToken !== "string") throw new Error("idToken is required");
-  return idToken;
+  return { idToken, language: menuLanguageOf(Reflect.get(parsed, "language")) };
 }
 
 export function createAuthHttpServer({
@@ -61,7 +67,8 @@ export function createAuthHttpServer({
 
   async function answerPrivyJwt(request: IncomingMessage, response: ServerResponse) {
     try {
-      const { jwt, expiresAt } = await issuer.issue(await readIdToken(request));
+      const { idToken } = await readBody(request);
+      const { jwt, expiresAt } = await issuer.issue(idToken);
       sendJson(response, 200, { jwt, expiresAt });
     } catch (error) {
       logger.error("LINE authentication failed", { error });
@@ -75,7 +82,8 @@ export function createAuthHttpServer({
       return;
     }
     try {
-      const outcome = await switchLineMenu(await readIdToken(request));
+      const { idToken, language } = await readBody(request);
+      const outcome = await switchLineMenu(idToken, language);
       logger.info(
         `LINE chat menu: ${outcome.menu === "returning" ? "returning" : `new, ${outcome.reason}`}`,
       );
