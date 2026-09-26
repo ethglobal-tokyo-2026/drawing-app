@@ -168,7 +168,7 @@ function Figure({ board, value }: { board: Leaderboard; value: number }) {
 }
 
 function ThisWeek({ me, open }: { me: RowArtist; open: (who: Who) => void }) {
-  const [board, setBoard] = useState<Leaderboard>("most-thanked");
+  const [board, setBoard] = useState<Leaderboard>("most-gratitude");
   const standings = THIS_WEEK[board];
 
   const row = (s: Standing, i: number) => {
@@ -286,7 +286,7 @@ function SearchResults({
         <h2>No one here is @{query} yet</h2>
         <p>
           Handles are exact, so check the spelling with them. If they’re your LINE friend, give them
-          a sticker in your chat: accepting it brings them in.
+          a sticker in your chat: receiving it brings them in.
         </p>
         <LabelButton
           size="sm"

@@ -35,7 +35,7 @@ export interface CorkFigures {
   streakRule: string;
   stamps: { made: number | null; received: number | null; given: number | null };
   bestCombo: number | null;
-  mostThanksInADay: number | null;
+  mostGratitudeInADay: number | null;
   /** When they joined, as epoch ms. */
   since: number;
   /** Their board address, on label-maker tape that copies it. */
@@ -72,8 +72,8 @@ const figure = (n: number | null) => (n === null ? <Unknown /> : num(n));
 
 const GRATITUDE_KINDS = [
   { key: "daily", label: "Daily", reason: "For drawing each day. A streak adds more." },
-  { key: "inspired", label: "Inspired", reason: "Thanks for stickers they gave." },
-  { key: "magic", label: "Magic", reason: "Thanks sent a special way." },
+  { key: "inspired", label: "Inspired", reason: "Gratitude for stickers they gave." },
+  { key: "magic", label: "Magic", reason: "Gratitude sent a special way." },
 ] as const;
 
 // Things stuck on the cork; a tap anywhere else is on bare cork.
@@ -215,8 +215,8 @@ export function StatCork({
                 ) : (
                   <p className="stat-board__receipt-none">
                     {f.own
-                      ? "No gratitude yet. It arrives when someone you give a sticker to thanks you for it."
-                      : "No gratitude yet. It arrives when someone thanks a sticker they gave them."}
+                      ? "No gratitude yet. It arrives when someone you give a sticker to sends you some for it."
+                      : "No gratitude yet. It arrives when someone sends gratitude for a sticker they gave them."}
                   </p>
                 )}
                 <p className="stat-board__receipt-total">
@@ -246,13 +246,15 @@ export function StatCork({
                   </div>
                   <div>
                     <dt>
-                      Best combo<small>Most hits in one thank-you</small>
+                      Best combo<small>Most hits in one gratitude combo</small>
                     </dt>
                     <dd>{f.bestCombo === null ? "None yet" : `×${num(f.bestCombo)}`}</dd>
                   </div>
                   <div>
-                    <dt>Most thanks in a day</dt>
-                    <dd>{f.mostThanksInADay === null ? "None yet" : num(f.mostThanksInADay)}</dd>
+                    <dt>Most gratitude in a day</dt>
+                    <dd>
+                      {f.mostGratitudeInADay === null ? "None yet" : num(f.mostGratitudeInADay)}
+                    </dd>
                   </div>
                 </dl>
               </div>

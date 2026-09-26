@@ -74,7 +74,7 @@ export function StatBoard({
         : "Draw a sticker today to start one. Miss a day later and it drops by one.",
     stamps: { made: stickers && stickers.length, received: 0, given },
     bestCombo: null,
-    mostThanksInADay: null,
+    mostGratitudeInADay: null,
     since: joinedAt(firstVisit, stickers ?? []),
   };
 

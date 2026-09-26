@@ -111,7 +111,7 @@ export function GiveSheet({ to, onClose }: Props) {
                 </button>
               </header>
               <p className="giving__sub">
-                Pick one of yours. It goes straight to @{to}’s board, and only they can accept it.
+                Pick one of yours. It goes straight to @{to}’s board, and only they can receive it.
               </p>
 
               {loadError && (

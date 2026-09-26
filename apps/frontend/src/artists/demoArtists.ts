@@ -39,9 +39,9 @@ export interface ArtistStats {
   given: number;
   bests: {
     longestStreak: number | null;
-    /** Hits in their biggest single thank-you. */
+    /** Hits in their biggest single gratitude combo. */
     bestCombo: number | null;
-    mostThanksInADay: number | null;
+    mostGratitudeInADay: number | null;
   };
   /** When they joined, as epoch ms. */
   since: number;
@@ -66,7 +66,7 @@ const plainStats = (s: Partial<ArtistStats> & Pick<ArtistStats, "since">): Artis
   made: 0,
   received: 0,
   given: 0,
-  bests: { longestStreak: null, bestCombo: null, mostThanksInADay: null },
+  bests: { longestStreak: null, bestCombo: null, mostGratitudeInADay: null },
   ...s,
 });
 
@@ -103,7 +103,7 @@ export const ARTISTS: Artist[] = [
       made: 64,
       received: 21,
       given: 17,
-      bests: { longestStreak: 38, bestCombo: 74, mostThanksInADay: 402 },
+      bests: { longestStreak: 38, bestCombo: 74, mostGratitudeInADay: 402 },
       since: day("2026-08-03"),
     },
     [
@@ -199,7 +199,7 @@ export const ARTISTS: Artist[] = [
       made: 31,
       received: 9,
       given: 12,
-      bests: { longestStreak: 24, bestCombo: 88, mostThanksInADay: 233 },
+      bests: { longestStreak: 24, bestCombo: 88, mostGratitudeInADay: 233 },
       since: day("2026-08-11"),
     }),
     ownBoard(["lightning", "fish", "mushroom"], 120),
@@ -226,7 +226,7 @@ export const ARTISTS: Artist[] = [
       made: 44,
       received: 15,
       given: 10,
-      bests: { longestStreak: 41, bestCombo: 63, mostThanksInADay: 310 },
+      bests: { longestStreak: 41, bestCombo: 63, mostGratitudeInADay: 310 },
       since: day("2026-08-01"),
     }),
     ownBoard(["jellyfish", "moon"], 150),
@@ -241,7 +241,7 @@ export const ARTISTS: Artist[] = [
       made: 22,
       received: 11,
       given: 8,
-      bests: { longestStreak: 19, bestCombo: 69, mostThanksInADay: 188 },
+      bests: { longestStreak: 19, bestCombo: 69, mostGratitudeInADay: 188 },
       since: day("2026-08-20"),
     }),
     ownBoard(["fox", "cherry"], 160),
@@ -256,7 +256,7 @@ export const ARTISTS: Artist[] = [
       made: 29,
       received: 7,
       given: 6,
-      bests: { longestStreak: 27, bestCombo: 52, mostThanksInADay: 170 },
+      bests: { longestStreak: 27, bestCombo: 52, mostGratitudeInADay: 170 },
       since: day("2026-08-14"),
     }),
     ownBoard(["ghost", "bunny"], 170),
@@ -271,7 +271,7 @@ export const ARTISTS: Artist[] = [
       made: 18,
       received: 5,
       given: 4,
-      bests: { longestStreak: 14, bestCombo: 58, mostThanksInADay: 140 },
+      bests: { longestStreak: 14, bestCombo: 58, mostGratitudeInADay: 140 },
       since: day("2026-08-25"),
     }),
     ownBoard(["planet", "moon"], 180),
@@ -286,7 +286,7 @@ export const ARTISTS: Artist[] = [
       made: 30,
       received: 4,
       given: 3,
-      bests: { longestStreak: 30, bestCombo: 41, mostThanksInADay: 120 },
+      bests: { longestStreak: 30, bestCombo: 41, mostGratitudeInADay: 120 },
       since: day("2026-08-27"),
     }),
     ownBoard(["daruma"], 190),
@@ -313,7 +313,7 @@ export const ARTISTS: Artist[] = [
       made: 16,
       received: 2,
       given: 9,
-      bests: { longestStreak: 11, bestCombo: 33, mostThanksInADay: 96 },
+      bests: { longestStreak: 11, bestCombo: 33, mostGratitudeInADay: 96 },
       since: day("2026-09-01"),
     }),
     ownBoard(["bunny", "cherry", "dango"], 86),
@@ -339,7 +339,7 @@ export const ARTISTS: Artist[] = [
       streakDays: 16,
       made: 21,
       given: 11,
-      bests: { longestStreak: 16, bestCombo: 45, mostThanksInADay: 130 },
+      bests: { longestStreak: 16, bestCombo: 45, mostGratitudeInADay: 130 },
       since: day("2026-08-22"),
     }),
     ownBoard(["fish", "bird"], 93),
@@ -350,7 +350,7 @@ export const ARTISTS: Artist[] = [
     { art: "boy", bg: "#abe6ec" },
     plainStats({
       received: 1,
-      bests: { longestStreak: null, bestCombo: 64, mostThanksInADay: null },
+      bests: { longestStreak: null, bestCombo: 64, mostGratitudeInADay: null },
       since: day("2026-09-23"),
     }),
     [

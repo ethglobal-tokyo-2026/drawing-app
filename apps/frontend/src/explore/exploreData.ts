@@ -9,10 +9,10 @@ export type Who = string | typeof ME;
 /** Stickers sealed today, newest first. */
 export const TODAYS_STICKERS: Who[] = ["mika", ME, "ken", "ゆず", "hina"];
 
-export type Leaderboard = "most-thanked" | "best-combo" | "longest-streak";
+export type Leaderboard = "most-gratitude" | "best-combo" | "longest-streak";
 
 export const LEADERBOARDS: { id: Leaderboard; label: string }[] = [
-  { id: "most-thanked", label: "Most thanked" },
+  { id: "most-gratitude", label: "Most gratitude" },
   { id: "best-combo", label: "Best combo" },
   { id: "longest-streak", label: "Longest streak" },
 ];
@@ -25,7 +25,7 @@ export interface Standing {
 
 /** The top five, plus your own standing when you're outside them. */
 export const THIS_WEEK: Record<Leaderboard, Standing[]> = {
-  "most-thanked": [
+  "most-gratitude": [
     { rank: 1, who: ME, value: 3066 },
     { rank: 2, who: "natsu", value: 1522 },
     { rank: 3, who: "aoi", value: 1309 },

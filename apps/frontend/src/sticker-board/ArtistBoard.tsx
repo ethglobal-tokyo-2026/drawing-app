@@ -139,7 +139,7 @@ const figuresOf = (artist: Artist): CorkFigures => {
         : "It starts the first day they draw. Miss a day later and it drops by one.",
     stamps: { made: stats.made, received: stats.received, given: stats.given },
     bestCombo: stats.bests.bestCombo,
-    mostThanksInADay: stats.bests.mostThanksInADay,
+    mostGratitudeInADay: stats.bests.mostGratitudeInADay,
     since: stats.since,
     address: artist.boardAddress,
   };
