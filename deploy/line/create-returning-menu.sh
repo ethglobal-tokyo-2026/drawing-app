@@ -28,14 +28,14 @@ case "${1:-}" in
   en)
     IMAGE="$ROOT/deploy/line/returning-menu.png"
     NAME="Returning: Draw · My board · Explore"
-    CHAT_BAR_TEXT="Sticker Board"
+    CHAT_BAR_TEXT="Croquis"
     LABELS=("Draw" "My board" "Explore")
     MENU_ID_SETTING="LINE_RETURNING_RICH_MENU_ID_EN"
     ;;
   ja)
     IMAGE="$ROOT/deploy/line/returning-menu.ja.png"
     NAME="Returning (ja): かく · マイボード · さがす"
-    CHAT_BAR_TEXT="シールボード"
+    CHAT_BAR_TEXT="クロッキー"
     LABELS=("かく" "マイボード" "さがす")
     MENU_ID_SETTING="LINE_RETURNING_RICH_MENU_ID_JA"
     ;;
