@@ -130,7 +130,7 @@ export function SealedCard({
       )}
       {last ? (
         <LabelButton block icon={<Storefront />} data-card-line onClick={act(onShop)}>
-          Shop for tickets with Sui
+          Shop for tickets
         </LabelButton>
       ) : (
         <LabelButton block icon={<StickerBoardIcon />} data-card-line onClick={act(onBoard)}>

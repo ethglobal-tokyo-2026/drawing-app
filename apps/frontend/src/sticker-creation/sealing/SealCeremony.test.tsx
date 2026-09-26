@@ -159,7 +159,7 @@ describe("SealCeremony", () => {
     await seal(3);
     playThrough();
     expect(button("Go to sticker board").classList.contains("key")).toBe(true);
-    act(() => button("Shop for tickets with Sui").click());
+    act(() => button("Shop for tickets").click());
     wait(1000);
     expect(onShop).toHaveBeenCalledOnce();
     expect(host.textContent).toContain(
