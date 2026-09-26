@@ -8,7 +8,7 @@ What the server stores and serves. `packages/db` holds the schema and `apps/api`
 - **Types:** request and response types derive from the tables through drizzle-zod. The app will call routes through Hono's typed client, so UI code gets its types from the server. Until then, the shapes below are the contract.
 - **Sign-in:** every screen needs LINE Login; there are no public pages. The server verifies LIFF's ID token and sets a session cookie.
 - **Chain:** Ethereum Sepolia is the owner of record for each sticker (`StickerNFT`) and each gift in transit (`StickerGiftEscrow`). The server keeps a small index of chain state, so screens don't wait for the chain except where noted below.
-- **Images:** five files per sticker on our CDN, named by the sticker PNG's content hash. The NFT's metadata is a JSON file on the same CDN. No IPFS.
+- **Images:** each sticker's five PNGs on our CDN, and the WebP files the app shows, named by the sticker PNG's content hash. The NFT's metadata is a JSON file on the same CDN. No IPFS.
 
 ## Rules that shape the UI
 
