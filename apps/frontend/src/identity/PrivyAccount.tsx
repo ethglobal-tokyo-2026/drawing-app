@@ -1,8 +1,8 @@
 import { AccountRow } from "./AccountRow";
 import { usePrivyStatus } from "./privy";
 
-// World Chain Sepolia, where the sticker contracts live.
-const EXPLORER = "https://sepolia.worldscan.org/address/";
+// Ethereum Sepolia, where the sticker contracts live.
+const EXPLORER = "https://sepolia.etherscan.io/address/";
 
 /** The person's Privy account in full, each value with Copy: its ID and the addresses Privy holds. */
 export function PrivyAccount() {
@@ -24,7 +24,7 @@ function Address({ label, address }: { label: string; address: string }) {
         href={EXPLORER + address}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label={`${label} ${address} on Worldscan, World Chain Sepolia’s explorer`}
+        aria-label={`${label} ${address} on Etherscan, Ethereum Sepolia’s explorer`}
       >
         {address}
       </a>

@@ -301,7 +301,7 @@ export const users = sqliteTable(
     /** IANA zone from the device at the first sign-in. Ticket days turn over at 4:00 here. */
     timeZone: text("time_zone").notNull().default("Asia/Tokyo"),
     /**
-     * The Privy smart wallet on World Chain, lowercase. Stickers are minted and claimed to it, and it
+     * The Privy smart wallet on Ethereum Sepolia, lowercase. Stickers are minted and claimed to it, and it
      * maps chain events back to a person. Set from Privy the first time the server needs it.
      */
     smartAccountAddress: text("smart_account_address").unique(),

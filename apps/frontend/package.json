@@ -15,8 +15,10 @@
     "@line/liff": "^2.31.0",
     "@phosphor-icons/react": "2.1.10",
     "@privy-io/react-auth": "3.45.0",
+    "permissionless": "0.4.1",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "viem": "2.56.9"
   },
   "devDependencies": {
     "@line/liff-mock": "1.0.4",

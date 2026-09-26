@@ -10,6 +10,7 @@ import {
   type PublicClient,
   type WalletClient,
 } from "viem";
+import { sepolia } from "viem/chains";
 
 interface SealedSticker {
   id: string;
@@ -142,10 +143,10 @@ export function createStickerSealer({
     const walletRecord = await findArtistSmartWallet(artistId);
     if (
       walletRecord?.kind !== "smart_account" ||
-      walletRecord.chainId !== 4801 ||
+      walletRecord.chainId !== sepolia.id ||
       !isAddress(walletRecord.address)
     ) {
-      throw new Error("Artist World Chain smart wallet is unavailable");
+      throw new Error("Artist Ethereum Sepolia smart wallet is unavailable");
     }
 
     const stickerKey = keccak256(stringToBytes(sticker.id));

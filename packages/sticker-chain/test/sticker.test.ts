@@ -6,14 +6,15 @@ import {
   keccak256,
   stringToBytes,
 } from "viem";
+import { sepolia } from "viem/chains";
 import { afterEach, describe, expect, it } from "vitest";
 import { createStickerSealer } from "../src/seal-sticker.js";
 import { readFoundryArtifact, startAnvil, type AnvilInstance } from "./helpers/foundry.js";
 
 const artifact = readFoundryArtifact("StickerNFT", "StickerNFT");
 const chain = defineChain({
-  id: 4801,
-  name: "Local World Chain Sepolia",
+  id: sepolia.id,
+  name: "Local Ethereum Sepolia",
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
   rpcUrls: { default: { http: ["http://localhost"] } },
 });
@@ -187,7 +188,7 @@ describe("sticker sealing backend", () => {
           ? {
               address: context.artist.address,
               kind: "smart_account",
-              chainId: 4801,
+              chainId: sepolia.id,
             }
           : null,
     });
@@ -223,7 +224,7 @@ describe("sticker sealing backend", () => {
       findArtistSmartWallet: async () => ({
         address: context.artist.address,
         kind: "signer_eoa",
-        chainId: 4801,
+        chainId: sepolia.id,
       }),
     });
 
