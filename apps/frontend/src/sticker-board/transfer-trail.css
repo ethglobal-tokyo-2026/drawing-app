@@ -1,14 +1,33 @@
 /* The Transfer Trail (TransferTrail.tsx): quiet rows on the Liner, one open as a Liner Lift card. */
 .transfer-trail {
-  margin-top: 18px;
+  margin-top: 12px;
 }
 
 .transfer-trail__list {
   display: grid;
-  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.transfer-trail__row {
+  position: relative;
+}
+
+/* A hairline between closed rows; the open card needs none. */
+.transfer-trail__row + .transfer-trail__row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--rule);
+}
+
+.transfer-trail__row.is-open::before,
+.transfer-trail__row.is-open + .transfer-trail__row::before {
+  display: none;
 }
 
 .transfer-trail__head {
@@ -18,22 +37,33 @@
   width: 100%;
   min-height: 44px;
   margin: 0;
-  padding: 0 4px;
+  padding: 6px 2px;
   border: 0;
   background: none;
   color: var(--ink);
-  font: 600 14px/1.3 var(--font-ui);
+  font: 550 13.5px/1.3 var(--font-ui);
+  font-stretch: var(--w-ui);
   text-align: left;
 }
 
+/* A line, not a tap target. */
+p.transfer-trail__head {
+  min-height: 36px;
+}
+
 button.transfer-trail__head {
-  border-radius: 8px;
+  border-radius: var(--r-label);
   cursor: pointer;
+  transition: background-color 140ms linear;
+}
+
+button.transfer-trail__head:active {
+  background: rgba(28, 24, 36, 0.08);
 }
 
 button.transfer-trail__head:focus-visible {
   outline: 2px solid var(--ink);
-  outline-offset: 2px;
+  outline-offset: 0;
 }
 
 /* The names carry the sentence; "gave it to" and the day read quieter. */
@@ -49,16 +79,18 @@ button.transfer-trail__head:focus-visible {
 }
 
 .transfer-trail__at {
-  color: var(--graphite);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
+/* The heart stays with its figure, like a currency sign. */
 .transfer-trail__amount {
   display: inline-flex;
+  flex: none;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   color: var(--ink);
-  font-weight: 800;
+  font: 700 13.5px/1 var(--font-ui);
   font-variant-numeric: tabular-nums;
 }
 
@@ -71,57 +103,112 @@ button.transfer-trail__head:focus-visible {
   color: var(--graphite);
 }
 
+.transfer-trail__row--fold .transfer-trail__head {
+  gap: 10px;
+  color: var(--graphite);
+  font-weight: 650;
+}
+
+.transfer-trail__row--fold .transfer-trail__caret {
+  margin-left: 3px;
+}
+
 /* The open row: a Liner Lift card with a pink outline, the amount in Figure type. */
 .transfer-trail__row.is-open {
-  padding: 2px 12px 12px;
+  margin: 2px 0 4px;
+  padding: 0 12px 11px;
   border-radius: 12px;
   background: var(--liner-lift);
   box-shadow:
-    inset 0 0 0 1.5px var(--pink),
-    var(--shadow-label);
+    inset 0 0 0 1.5px color-mix(in srgb, var(--pink) 55%, transparent),
+    0 1px 0 rgba(28, 24, 36, 0.1);
+}
+
+.transfer-trail__row.is-open .transfer-trail__head {
+  min-height: 38px;
+  padding: 8px 0 4px;
 }
 
 .transfer-trail__figure {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
+/* A pink dot stuck on at the house tilt. */
 .transfer-trail__heart {
   display: grid;
-  place-items: center;
   flex: none;
-  width: 34px;
-  height: 34px;
+  place-items: center;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: var(--pink);
   color: var(--ink);
+  rotate: var(--tilt);
+  box-shadow:
+    inset 0 0 0 1px rgba(28, 24, 36, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    1px 2px 3px rgba(28, 24, 36, 0.16);
 }
 
 .transfer-trail__sum {
   display: grid;
   flex: 1;
+  gap: 4px;
   min-width: 0;
 }
 
 .transfer-trail__total {
-  font: 900 27px/0.95 var(--font-ui);
+  font: 900 27px/1 var(--font-ui);
   font-stretch: var(--w-figure);
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
+.transfer-trail__total.is-long {
+  font-size: 23px;
+}
+
+.transfer-trail__from {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .transfer-trail__replay {
+  position: relative;
   display: inline-flex;
+  flex: none;
   align-items: center;
-  gap: 6px;
-  min-height: 44px;
-  padding: 0 14px;
+  gap: 8px;
+  height: 40px;
+  margin: 0;
+  padding: 0 15px 0 13px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 999px;
   background: var(--pink-soft);
-  box-shadow: inset 0 0 0 1px var(--rule-strong);
+  box-shadow:
+    inset 0 0 0 1px rgba(28, 24, 36, 0.12),
+    0 1px 0 rgba(28, 24, 36, 0.12);
   color: var(--ink);
-  font: 750 14px/1 var(--font-ui);
+  font: 700 13.5px/1 var(--font-ui);
+  font-stretch: var(--w-ui);
+  cursor: pointer;
+  transition:
+    translate var(--t-press) linear,
+    background-color 140ms linear;
+}
+
+/* A 48px tap target. */
+.transfer-trail__replay::after {
+  content: "";
+  position: absolute;
+  inset: -4px -2px;
+}
+
+.transfer-trail__replay:active {
+  translate: 0 1px;
 }
 
 .transfer-trail__replay:focus-visible {
@@ -131,14 +218,27 @@ button.transfer-trail__head:focus-visible {
 
 /* The artist's share, under a rule across the card. */
 .transfer-trail__split {
-  margin: 10px 0 0;
-  padding-top: 10px;
-  border-top: 1px solid var(--rule);
-  font-size: 13px;
-  font-weight: 650;
+  margin: 11px 0 0;
+  padding-top: 9px;
+  box-shadow: inset 0 1px 0 var(--rule);
   color: var(--ink);
+  font: 600 12.5px/1.35 var(--font-ui);
+  font-variant-numeric: tabular-nums;
 }
 
-.transfer-trail__row--fold .transfer-trail__head {
-  color: var(--graphite);
+@media (hover: hover) {
+  button.transfer-trail__head:hover {
+    background: rgba(28, 24, 36, 0.045);
+  }
+
+  .transfer-trail__replay:hover {
+    background: color-mix(in srgb, var(--pink) 42%, var(--liner));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button.transfer-trail__head,
+  .transfer-trail__replay {
+    transition: none;
+  }
 }

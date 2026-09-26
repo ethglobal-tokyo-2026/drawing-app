@@ -88,8 +88,14 @@ export function TransferTrail({ rows, viewerId, artist, onReplay }: Props) {
                   <Heart size={20} weight="fill" />
                 </span>
                 <span className="transfer-trail__sum">
-                  <span className="transfer-trail__total">{amount(g.total)}</span>
-                  <span className="fine">{from === "you" ? "From you" : `From ${from}`}</span>
+                  <span
+                    className={`transfer-trail__total ${amount(g.total).length > 5 ? "is-long" : ""}`}
+                  >
+                    {amount(g.total)}
+                  </span>
+                  <span className="fine transfer-trail__from">
+                    {from === "you" ? "From you" : `From ${from}`}
+                  </span>
                 </span>
                 {onReplay && (
                   <button
