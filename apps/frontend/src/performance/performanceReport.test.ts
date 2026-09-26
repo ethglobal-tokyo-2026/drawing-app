@@ -22,15 +22,15 @@ const slowFrame: SlowFrame = {
   ours: { light: { ms: 0.5, calls: 1 }, gratitude: { ms: 11.9, calls: 3 } },
   events: [
     { at: 64_990, ms: 0, kind: "tap", detail: 'pointerdown button "Send gratitude to @alice"' },
-    { at: 65_150, ms: 0, kind: "light", detail: "write to 3 resins" },
+    { at: 65_180, ms: 0, kind: "light", detail: "write to 3 resins" },
     { at: 65_195, ms: 0, kind: "light", detail: "write to 3 resins" },
     { at: 65_210, ms: 0, kind: "gratitude", detail: "tier-up オーバーヒート" },
   ],
 };
-const report = (over: Partial<PerformanceSummary> = {}) =>
+const report = (over: Partial<PerformanceSummary> = {}, slowFrames = [slowFrame]) =>
   formatPerformanceReport({
     summary: { ...summary, ...over },
-    slowFrames: [slowFrame],
+    slowFrames,
     takenAt: new Date(Date.UTC(2026, 8, 26, 9, 4, 5)),
     device: "iPhone Line/15.14.0",
   });
@@ -57,9 +57,22 @@ describe("the performance report", () => {
         "1:04.2 Send gratitude: 184ms (typical 16.7ms)",
         "  ours 12.4ms: gratitude 11.9ms (3 calls), light 0.5ms (1 call)",
         '  -210ms tap: pointerdown button "Send gratitude to @alice"',
-        "  -50ms light: write to 3 resins ×2",
+        "  -20ms light: write to 3 resins ×2",
         "  +10ms gratitude: tier-up オーバーヒート",
       ].join("\n"),
+    );
+  });
+
+  it("lists repeats far apart on their own lines, so one just before the frame shows", () => {
+    const tap = { ms: 0, kind: "tap", detail: 'pointerdown button "Send"' };
+    const events = [
+      { ...tap, at: 64_966 },
+      { ...tap, at: 65_191 },
+    ];
+    expect(report({}, [{ ...slowFrame, events }])).toContain(
+      ['  -234ms tap: pointerdown button "Send"', '  -9ms tap: pointerdown button "Send"'].join(
+        "\n",
+      ),
     );
   });
 

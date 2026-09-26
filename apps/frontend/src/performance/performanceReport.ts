@@ -44,25 +44,39 @@ export function formatSummaryLine(summary: PerformanceSummary): string {
   ].join(" · ");
 }
 
-/** A slow frame: when and where, our work in it, and what happened around it, repeats counted. */
+/** Repeats of an event this close to the one before are one line, counted. */
+const REPEATS_WITHIN_MS = 20;
+
+/** A slow frame: when, where, our work in it, and what happened around it, close repeats counted. */
 function slowFrameLines(frame: SlowFrame, startedAt: number): string[] {
   const work = Object.entries(frame.ours).sort(([, a], [, b]) => b.ms - a.ms);
   const ours = work.reduce((sum, [, spent]) => sum + spent.ms, 0);
   const split = work
     .map(([label, spent]) => `${label} ${ms(spent.ms, 1)} (${calls(spent.calls)})`)
     .join(", ");
-  const seen = new Map<string, { line: string; times: number }>();
+  const happened: { line: string; times: number; lastAt: number }[] = [];
+  const latest = new Map<string, (typeof happened)[number]>();
   for (const event of frame.events) {
-    const offset = Math.round(event.at - frame.start);
     const key = `${event.kind}: ${event.detail}`;
-    const had = seen.get(key);
-    if (had) had.times++;
-    else seen.set(key, { line: `  ${offset < 0 ? "" : "+"}${offset}ms ${key}`, times: 1 });
+    const repeated = latest.get(key);
+    if (repeated && event.at - repeated.lastAt <= REPEATS_WITHIN_MS) {
+      repeated.times++;
+      repeated.lastAt = event.at;
+      continue;
+    }
+    const offset = Math.round(event.at - frame.start);
+    const line = {
+      line: `  ${offset < 0 ? "" : "+"}${offset}ms ${key}`,
+      times: 1,
+      lastAt: event.at,
+    };
+    happened.push(line);
+    latest.set(key, line);
   }
   return [
     `${since(frame.start, startedAt)} ${screenName(frame.screen)}: ${ms(frame.end - frame.start)} (typical ${ms(frame.typicalMs, 1)})`,
     `  ours ${ms(ours, 1)}${split ? `: ${split}` : ""}`,
-    ...[...seen.values()].map(({ line, times }) => (times > 1 ? `${line} ×${times}` : line)),
+    ...happened.map(({ line, times }) => (times > 1 ? `${line} ×${times}` : line)),
   ];
 }
 
