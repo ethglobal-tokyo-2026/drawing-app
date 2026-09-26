@@ -6,7 +6,7 @@
 
 - `DESIGN/DESIGN.md`: "Gift bag", "Stickers", "Artist chip", "The cork back", "Hit counter", "Toast".
 - `DESIGN/research/build-contract.md` LATEST DECISIONS; `gift-seal-brief.md`, `stats-flip-brief.md`, `sticker-by-artist.md`, `hits-brief.md`.
-- `P/screens/accept.js`, `receipt.js`, `give.js`, `linechat.js` (the gift message), `gift.css`, `sketchbook.js` (the pocket and the cork back), `piece.js`, `js/ui.js` (foil, the artist chip, hits).
+- `P/screens/accept.js`, `receipt.js`, `give.js`, `linechat.js` (the gift message), `gift.css`, `sketchbook.js` (the PendingGiftsNotificationBadge and the stat board), `piece.js`, `js/ui.js` (foil, the artist chip, hits).
 - `docs/database-schema-and-rest-api.md`: the rules and routes the data layer follows.
 
 **Precedence:** this spec > `docs/database-schema-and-rest-api.md` > build-contract LATEST DECISIONS > `DESIGN.md` > `P`'s code. Where this spec changes the REST doc, it says so under "Changes to the REST doc".
@@ -15,7 +15,7 @@
 
 1. **Scope.** In: Receiving, the giving flow's remaining LINE-chat parts, the gift message, foil with the artist chip, and Send gratitude's entry to the Mini-game. Out: everything listed under "Not in this work". The stat board's User Stats have their own spec, `2026-09-26-stat-board-user-stats-design.md`.
 2. **LINE chats only.** No gifts by handle: no handle search, no Recent row, no "For @name" tag, no Give on someone else's board.
-3. **Receiving happens at Accept.** The receiver sees the sticker first: the preview returns it for a 1:1 open of a gift that can still be received, so the torn bag reveals it before Accept.
+3. **Receiving happens at Accept.** The receiver sees the sticker first: the preview returns it for a 1:1 open of a gift that can still be received, so unpackaging reveals it before Accept.
 4. **A data layer shaped like the REST routes** (`src/api/`), with a device client for the deployed app until the server exists and a mock for the dev server and tests.
 5. **Fixtures run only on the dev server and in tests.** The build drops them.
 6. **A sent gift leaves the board and waits in the PendingGiftsNotificationBadge.** Its GivenStickerSilhouette appears once it's received, naming the receiver. Until the server exists nobody can receive, so on the deployed app sent gifts stay on their way.
@@ -30,7 +30,7 @@
 - The Mini-game itself, recording a combo (`POST /api/gratitude`), the replay and the pink tag: `2026-09-26-gratitude-mini-game-design.md`.
 - The stat board's User Stats: `2026-09-26-stat-board-user-stats-design.md`.
 - Taking back a sent gift, and what the giver sees when a gift returns after 7 days: the REST doc marks both "not designed".
-- The Official account's pushes ("Bob accepted your sticker ♡" in LINE): server work.
+- The Official account's pushes ("Bob received your sticker ♡" in LINE): server work.
 - The Transfer Trail on the sticker detail.
 - LINE's own screens (consent, the friend picker, notifications): LINE draws them.
 
@@ -48,15 +48,15 @@
 
 **The routes this work calls** (the REST doc's "REST API" section; two change, under "Changes to the REST doc"):
 
-| `ApiClient` method     | Route                                                        | Called from                                                |
-| ---------------------- | ------------------------------------------------------------ | ---------------------------------------------------------- |
-| `stickerBoard`         | `GET /api/sticker-boards/me`                                 | `StickerBoard`, `StickerTray`, `StickerDetail`             |
-| `saveStickerPlacement` | `PATCH /api/sticker-boards/me/sticker-placements/:stickerId` | the board's gestures, Remove, the tray                     |
-| `markTraySeen`         | `POST /api/sticker-boards/me/sticker-tray/seen`              | `StickerTray`                                              |
-| `stickerDetail`        | `GET /api/stickers/:stickerId`                               | `StickerDetail`: whether you've thanked a received sticker |
-| `pendingGifts`         | `GET /api/gifts/pending`                                     | PendingGiftsNotificationBadge                              |
-| `previewGift`          | `POST /api/gifts/preview`                                    | ReceiveGiftDialog                                          |
-| `receiveGift`          | `POST /api/gifts/receive`                                    | ReceiveGiftDialog's Accept                                 |
+| `ApiClient` method     | Route                                                        | Called from                                                           |
+| ---------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------- |
+| `stickerBoard`         | `GET /api/sticker-boards/me`                                 | `StickerBoard`, `StickerTray`, `StickerDetail`                        |
+| `saveStickerPlacement` | `PATCH /api/sticker-boards/me/sticker-placements/:stickerId` | the board's gestures, Remove, the tray                                |
+| `markTraySeen`         | `POST /api/sticker-boards/me/sticker-tray/seen`              | `StickerTray`                                                         |
+| `stickerDetail`        | `GET /api/stickers/:stickerId`                               | `StickerDetail`: whether you've sent gratitude for a received sticker |
+| `pendingGifts`         | `GET /api/gifts/pending`                                     | PendingGiftsNotificationBadge                                         |
+| `previewGift`          | `POST /api/gifts/preview`                                    | ReceiveGiftDialog                                                     |
+| `receiveGift`          | `POST /api/gifts/receive`                                    | ReceiveGiftDialog's Accept                                            |
 
 **Errors.** Every method rejects with an `ApiError`: the HTTP status and the REST doc's `ErrorBody` (`error`, the stable snake_case code screens switch on, and `detail`). Screens say what failed where the action was, with Try again, and log it. A request that never gets an answer is status 0, `network`. `deviceApi`'s preview and receive reject with 501 `needs_server`.
 
@@ -90,7 +90,7 @@ A sticker drawn by someone other than the board's owner wears holo foil and name
 - **Shape:** the silhouette dilated. The box is inset by −width and masked by nine copies of the sticker's mask at 100% − 2 × width: the center, four offsets of ±width and four diagonals of ±0.71 × width. It sits under the image.
 - **Bands:** `repeating-linear-gradient(115deg, #FF6FAE 0, #FFA85E 16px, #FFD84A 32px, #5ED3D8 48px, #6FA8FF 64px, #A98BFF 80px, #FF6FAE 96px)` on a sheen inset −160px, the foil tokens in `tokens.css`.
 - **Motion:** the sheen moves one period, `translate3d(87px, 40.6px, 0)`, in 7s linear, delayed −2.3s × the sticker's No. A glint (a 45%-wide white strip, 0 → .92 → 0, skewed −18°) waits to 52% of a 4.2s `cubic-bezier(.45,.05,.25,1)` loop and sweeps to `translateX(460%)`, delayed −1.3s × the No.
-- **Holes, peels and curls:** a curled corner clips it with `--clip-in`; a tray hole or a peeling slot hides it.
+- **Silhouettes, peels and curls:** a curled corner clips it with `--clip-in`; a UsedStickerSilhouette in the tray or a peeling slot hides it.
 - **Reduced motion:** still bands, no glint.
 - `aria-hidden`.
 
@@ -120,7 +120,7 @@ The give sheet, the bag and "Sealed and sent" exist (`giving/Giving.tsx`). This 
 A quiet link under "Send in a LINE chat" (Phosphor's question icon) opens a sheet in its place, with a back button to the give sheet (`P/screens/give.js:589, 614-631`):
 
 - **The note:** "LINE's list shows friends only. It leaves out anyone who turned off sharing with apps, and friends you added in the last few minutes."
-- **"Show all my chats"**, "Recent chats appear here too. Keep it to your chat with them: a gift opened in a group can't be accepted." It packs the sticker into the bag like "Send in a LINE chat", then opens LINE's full picker: friends, groups and recent chats (`isMultiple: true`). The bag's "Send in LINE" reopens the picker the giver chose. `line/friendPicker.ts` stays the one picker call and gains that option.
+- **"Show all my chats"**, "Recent chats appear here too. Keep it to your chat with them: a gift opened in a group can't be received." It packs the sticker into the bag like "Send in a LINE chat", then opens LINE's full picker: friends, groups and recent chats (`isMultiple: true`). The bag's "Send in LINE" reopens the picker the giver chose. `line/friendPicker.ts` stays the one picker call and gains that option.
 - **"Not friends in LINE yet?"**, "Add them in LINE first and say hi. Then come back and pick them." (arrow-square-out). It opens LINE's Add friends screen, `https://line.me/R/nv/addFriends`, through `liff.openWindow({ external: true })`, and the sheet stays open for when they come back. LINE supports the link on phones only; its behavior inside LINE needs a check on a phone.
 
 The drafts said "card"; the copy says "gift" for the Gift Message.
@@ -129,7 +129,7 @@ The drafts said "card"; the copy says "gift" for the Gift Message.
 
 Your gifts on their way, at the board's top right, in the header row opposite your name (`P/screens/sketchbook.js:1085-1112`, `sketchbook.css:180-211`):
 
-- **The look:** a 178 × 62 clear-film pocket (padding 10/12/6/10, gap 10): `rgba(214,236,255,.34)` with a 112° white streak, 10px corners and a 10% Ink edge. The drafts' zipper teeth are left off: DESIGN.md keeps the zipper to the sticker tray alone.
+- **The look:** a 178 × 62 clear-film badge (padding 10/12/6/10, gap 10): `rgba(214,236,255,.34)` with a 112° white streak, 10px corners and a 10% Ink edge. The drafts' zipper teeth are left off: DESIGN.md keeps the zipper to the sticker tray alone.
 - **Sleeves:** up to two frosted 32 × 40 sleeves, 4px corners, each with a 2px Soda Aqua strip, the front one turned −4° and the back one 5°. A sleeve is the sticker's own PNG blurred behind the frost, so each gift keeps its colors without storing any.
 - **Text:** "On its way" in fine print (11px, width 75), then "No.0147" (750, 14.5px, Ink). With more than one: "On their way", then "No.0147 and 2 more". LINE never says who was picked, so no name.
 - **Which gifts:** `pendingGifts` with status `sent`, newest first. A `packed` gift is the bag's, in Giving.
@@ -147,13 +147,13 @@ Your gifts on their way, at the board's top right, in the header row opposite yo
 
 - **The silhouette's label:** "No.0147, given to @bob on 9.23. Open it". Its date is `givenTo.receivedAt`.
 - **`deviceApi`** can't learn of a receive, so on the deployed app a sent gift stays in the badge.
-- **"Sealed and sent"** reads "It's in your LINE chat now, and the gift message opens once. When they accept it, you'll see who did." (the drafts', with "gift message" for "card"). It replaces the cleanup's interim line, which no longer holds once the sticker waits in the badge.
+- **"Sealed and sent"** reads "It's in your LINE chat now, and the gift message opens once. When they receive it, you'll see who did." (the drafts', with "gift message" for "card" and "receive" for "accept"). It replaces the cleanup's interim line, which no longer holds once the sticker waits in the badge.
 
-### "@bob accepted your sticker ♡"
+### "@bob received your sticker ♡"
 
 The giver's moment when a gift has been received (`P/screens/receipt.js`), over the whole phone without the tabs:
 
-- **Copy:** "@bob accepted your sticker ♡", then "It's on @bob's sticker board now." Handles rather than first names, which LINE names don't reliably have.
+- **Copy:** "@bob received your sticker ♡", then "It's on @bob's sticker board now." Handles rather than first names, which LINE names don't reliably have.
 - **The prop:** the sticker's GivenStickerSilhouette, captioned "→ @bob · 9.23", with @bob's LINE picture stuck on beside it as a 150px photo sticker.
 - **The way out:** "Back to my sticker board", in label stock with the sticker-board icon. Nothing to press but that: no take-back.
 - **Motion:** on first view the sticker arcs into the picture (820ms, `--ease-out`) and the picture sticks on. Reduced motion shows it still.
@@ -171,32 +171,32 @@ Over the whole phone without the tabs, as Giving is. LINE's header reads "A gift
    - The bag, larger than Giving's (the drafts' 250 × 278 sleeve on a 330px stage, a 14px tape, a 52 × 32 lobe and an 8px neck), sits 92px low, the sticker blurred inside. Its tag reads "From @alice"; its tape prints "→ SEALED 9.23" five times; its tab prints PULL.
    - Under it: "**Pull the tab to open it**", then "or double-tap, or press and hold".
    - A 44px hand loops the hint (below).
-3. **The pull:** the tape tears out behind the tab, the film splits along its line, and the torn-out tape hangs from the tab in a growing loop (below).
+3. **The pull:** the tear tape pulls out behind the tab, the film splits along its line, and the pulled-out tape hangs from the tab in a growing loop (below).
 4. **The reveal:** the tab snaps free, the bag drops and the sticker rises out of it, in `StickerFigure` with its resin sweep and, since someone else drew it, its foil. The sheet slides up:
    - "This sticker is for you, Bob Tanaka." (the opener's LINE name).
    - Fine print: "No.0147 · 4m 52s · 2026.09.23 · by @ken", naming the Original Artist.
    - **Accept**: the dialog's one key, grape, large, with Phosphor's hand-heart (build-contract item 52).
    - **Not now**: a quiet link with an X. It closes the dialog and sends nothing; the gift stays open for later, and the sheet's perforation does the same.
-   - The terms line: "Accepting shows @alice your LINE name and picture. You agree to the Terms and Privacy Policy." The drafts' "starts your own sticker board" is left off, since it's only true the first time.
-5. **Accepting:** Accept calls `receiveGift`. Until it answers, the key is busy and the sticker's shadow lifts (g:294). Then the copy fades over 200ms, the sheet drops, and the bag falls 420px (g:673, 682, 718).
+   - The terms line: "Receiving it shows @alice your LINE name and picture. You agree to the Terms and Privacy Policy." The drafts' "starts your own sticker board" is left off, since it's only true the first time.
+5. **Receiving:** Accept calls `receiveGift`. Until it answers, the key is busy and the sticker's shadow lifts (g:294). Then the copy fades over 200ms, the sheet drops, and the bag falls 420px (g:673, 682, 718).
 6. **On the board:** the dialog closes, the board loads again, and the sticker lands, in foil, with its artist chip shown for it alone (3.2s). LINE's header reads "Your sticker board".
 
 A failed Accept keeps the sheet up, with a line above the key saying what failed and "Tap Accept to try again" (as Giving does). An Accept the server refuses (someone else got there first, or it was taken back meanwhile) moves to that refusal's screen.
 
 ### The pull tab
 
-- **Drag:** pointer capture, horizontal only; the stage has `touch-action: none`. The tear follows `start + dx ÷ 250px × 0.82` through a spring (stiffness 340, damping 32) (a:230, 274-275, 312).
-- **Feel:** a tick every 6.25px of tear (40 in all), each a 0.7px, 80ms shiver, only while dragging. Held, the lobe lifts to 1.06; the tear tips it from −6° to level over its first quarter (a:248-249; g:554, 581-590).
+- **Drag:** pointer capture, horizontal only; the stage has `touch-action: none`. The pull follows `start + dx ÷ 250px × 0.82` through a spring (stiffness 340, damping 32) (a:230, 274-275, 312).
+- **Feel:** a tick every 6.25px of pull (40 in all), each a 0.7px, 80ms shiver, only while dragging. Held, the lobe lifts to 1.06; the pull tips it from −6° to level over its first quarter (a:248-249; g:554, 581-590).
 - **Letting go:** under 86% it springs back to 0. At 86%, mid-drag or on release, it snaps: the tab flies off (+330px, −120px, −40°, 440ms ease-out, fading over 340ms after 90ms), the film fades over 200ms after 140ms, and the mouth opens (a:229, 267, 279, 319; g:592-593).
 - **The tape and the loop:** the tape leaves with the tab while its print holds still, so it shortens. The loop fades in from 16% and grows from 6% to full by about 83% (g:468, 489, 574-576).
 - **The split:** a zigzag gap shows the bag's pale inside, tinted by the sticker blurred behind it (g:416-455).
 - **The reveal's timing:** 380ms after the snap the stage glides up (520ms, `--ease-peel`) and the sheet rises (440ms); 340ms later the bag drops 178px (640ms ease-out) and the sticker rises 52px (720ms ease-out); 460ms after that, a 560ms gloss sweep (a:211, 216, 268; g:313, 669-672, 688, 716).
-- **The hint:** a 2.8s loop while the tear is at 0: the finger presses at 22%, drags 40px by 56%, lifts by 72%, and the tear reaches 16%. The first grab ends it (a:286, 304, 347; g:695-704).
-- **Without dragging:** press and hold the bag for 520ms (cancelled past 10px of movement; the frost thins to .88), or double-tap within 340ms, and the strip tears by itself over 720ms, then snaps (a:292-295, 327-337).
-- **Keyboard and screen readers:** the tab is a focusable slider, "Pull the tab to open the gift", 0–100 as the tear. Arrow keys move it 20% (the fifth press snaps); Enter, Space and End tear it (a:343-345). The bag's picture stays `aria-hidden`, so the slider isn't inside an image.
-- **Reduced motion:** no spring, ticks, loop or hint; the tear still follows the finger; the snap and the reveal are a 150ms fade (DESIGN.md "Gift bag").
+- **The hint:** a 2.8s loop while the pull is at 0: the finger presses at 22%, drags 40px by 56%, lifts by 72%, and the pull reaches 16%. The first grab ends it (a:286, 304, 347; g:695-704).
+- **Without dragging:** press and hold the bag for 520ms (cancelled past 10px of movement; the frost thins to .88), or double-tap within 340ms, and the pull plays by itself over 720ms, then snaps (a:292-295, 327-337).
+- **Keyboard and screen readers:** the tab is a focusable slider, "Pull the tab to open the gift", 0–100 as the pull. Arrow keys move it 20% (the fifth press snaps); Enter, Space and End finish the pull (a:343-345). The bag's picture stays `aria-hidden`, so the slider isn't inside an image.
+- **Reduced motion:** no spring, ticks, loop or hint; the pull still follows the finger; the snap and the reveal are a 150ms fade (DESIGN.md "Gift bag").
 
-`GiftBag` stays the one bag: it gains the receive size, a `tear` value (0–1) as a custom property, the torn gap and the loop, the slider tab, the hint finger, and the rubber stamps below. The physics are a pure module, `receiving/pullTab.ts`.
+`GiftBag` stays the one bag: it gains the receive size, the pull's progress (0–1) as a custom property, the split and the loop, the slider tab, the hint finger, and the rubber stamps below. The physics are a pure module, `receiving/pullTab.ts`.
 
 ### Refusals
 
@@ -207,7 +207,7 @@ One layout for each: a title, one line, the bag as a prop, and one label-stock b
 | a group, multi-person chat or OpenChat (`group_chat`) | "Open this in your chat with Alice Sato"     | "Gifts open only in the private chat they were sent to. If Alice Sato sent it to you, open it there." | sealed, stamped "OPENS ONLY IN / 1:1 CHAT" in ink | Back to LINE                             |
 | received already (`already_received`)                 | "Already opened"                             | PROPOSED: "Each gift message opens once. If it was you, the sticker's on your sticker board."         | open and empty, stamped "OPENED" in grape         | Go to my sticker board                   |
 | your own gift (`own_gift`)                            | PROPOSED: "This gift is on its way"          | PROPOSED: "Only the friend you sent it to can open it."                                               | sealed                                            | Go to my sticker board                   |
-| taken back (`taken_back`)                             | PROPOSED: "Alice Sato took this one back"    | PROPOSED: "It went back to their sticker board before anyone accepted it."                            | open and empty, stamped "TAKEN BACK"              | Back to LINE                             |
+| taken back (`taken_back`)                             | PROPOSED: "Alice Sato took this one back"    | PROPOSED: "It went back to their sticker board before anyone received it."                            | open and empty, stamped "TAKEN BACK"              | Back to LINE                             |
 | 7 days passed (`gift_returned`, `gift_expired`)       | PROPOSED: "This one went back to Alice Sato" | PROPOSED: "Gifts wait a week. This one wasn't opened in time, so it's back on their sticker board."   | open and empty, stamped "RETURNED"                | Back to LINE                             |
 | the deposit hasn't landed (`not_deposited`)           | PROPOSED: "Almost here"                      | PROPOSED: "This gift is still on its way. Try again in a few seconds."                                | sealed                                            | Try again, and a Back to LINE quiet link |
 | no such gift (`gift_not_found`)                       | PROPOSED: "This link doesn't open a gift"    | PROPOSED: "Open it again from the gift message in your chat."                                         | none                                              | Back to LINE                             |
@@ -237,10 +237,10 @@ On the dev server, `/g/demo` opens a gift from a fixture friend that can be rece
 
 ## Send gratitude: the Mini-game's entry
 
-Two ways in, both for a sticker you received and haven't thanked:
+Two ways in, both for a sticker you received and haven't sent gratitude for:
 
-- **The sheet after landing** (the drafts' `receive-landed`): once a received sticker has stuck to the board, a sheet rises with the giver's 60px photo sticker, "Send @alice gratitude?", and "It's on your board. @alice drew it in 4m 52s, and thanks never expires." When someone else drew it: "It's on your board, from @alice. Thanks never expires." Then **Send gratitude**, the sheet's one key (pink, Phosphor's heart, fill), and **Later**, a quiet link with Phosphor's clock. It shows once, for the gift just received.
-- **The sticker's detail:** a received sticker you haven't thanked has Send gratitude as its key, with Give as label stock under it (`P/screens/piece.js` `owes`). "Haven't thanked" is the Transfer Trail's newest entry to you with no gratitude, from `stickerDetail`.
+- **The sheet after landing** (the drafts' `receive-landed`): once a received sticker has stuck to the board, a sheet rises with the giver's 60px photo sticker, "Send @alice gratitude?", and "It's on your board. @alice drew it in 4m 52s, and gratitude never expires." When someone else drew it: "It's on your board, from @alice. Gratitude never expires." Then **Send gratitude**, the sheet's one key (pink, Phosphor's heart, fill), and **Later**, a quiet link with Phosphor's clock. It shows once, for the gift just received.
+- **The sticker's detail:** a received sticker you haven't sent gratitude for has Send gratitude as its key, with Give as label stock under it (`P/screens/piece.js` `owes`). You haven't when the Transfer Trail's newest entry to you, from `stickerDetail`, has no gratitude.
 
 Both open the Mini-game with the gift, the sticker and its giver, as `GratitudeMiniGame` takes them (`sticker`, `giver`, `onEnd`, `onClose`; `2026-09-26-gratitude-mini-game.md`), plus the gift's ID. Until `design/gratitude-mini-game` merges, `gratitude/GratitudeMiniGamePlaceholder.tsx` stands in: over the whole phone, "The gratitude Mini-game is being built", then those props as formatted JSON, and Close. Swapping in the Mini-game is one import. Recording the combo is the Mini-game's.
 
@@ -265,7 +265,7 @@ Approved on 2026-09-26 and made in `docs/database-schema-and-rest-api.md`; `cont
 ## Testing
 
 - **Pure modules (vitest):**
-  - `receiving/pullTab.ts`: the tear follows a drag with its resistance; a release under the snap settles back; the snap at its threshold; one tick per step; the fifth arrow press snaps.
+  - `receiving/pullTab.ts`: the pull follows a drag with its resistance; a release under the snap settles back; the snap at its threshold; one tick per step; the fifth arrow press snaps.
   - The dialog's flow: each preview outcome picks its screen; Accept goes busy, then received; a failed Accept shows its line and retries; a refused Accept moves to its refusal.
   - The refusal screens, one per REST doc error code. The codes are the server's contract, so the test names them.
   - The contract mappings: ISO times to milliseconds, the placement's fields, an empty image URL as none, and `held`, `openGift` and `givenTo` choosing the board, the badge or the silhouette.
@@ -273,7 +273,7 @@ Approved on 2026-09-26 and made in `docs/database-schema-and-rest-api.md`; `cont
   - `friendPicker.ts`: the any-chat option asks for LINE's full picker.
   - `giftMessage.ts`: the texts, and a hero only at an HTTPS URL.
 - **UI (happy-dom), rendered from fixtures:**
-  - ReceiveGiftDialog: every screen's title; the slider tears it and brings up Accept; Accept calls `receiveGift` once and closes with the sticker's ID.
+  - ReceiveGiftDialog: every screen's title; the slider unpackages the sticker and brings up Accept; Accept calls `receiveGift` once and closes with the sticker's ID.
   - The Send gratitude sheet and the detail's key open the placeholder with the sticker, its giver and the gift.
   - PendingGiftsNotificationBadge: one gift and several; a tap opens the newest.
   - GivenStickerSilhouette names its receiver; "Can't find them?" opens the full picker and goes back.
