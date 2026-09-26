@@ -10,7 +10,7 @@ import type { StickerUrls } from "../../stickers/stickerUrls";
 import { ticketDay } from "../../tickets/tickets";
 import { packSheets, type PackedItem, type Shape } from "./sheetPacking";
 import { knownShape, stickerShape } from "./stickerShape";
-import { countVisit, readSeen, saveSeen } from "./traySeen";
+import { countVisit } from "./traySeen";
 import { newSlots, type TraySlot } from "./traySlots";
 import { createZipper, type Zipper } from "./zipper";
 import "./sticker-tray.css";
@@ -25,6 +25,8 @@ export interface TraySticker extends TraySlot {
   urls: Pick<StickerUrls, "png" | "mask">;
   /** Drawn by someone else: a received gift. */
   gift: boolean;
+  /** Shown in the open tray before, so it isn't NEW. */
+  seen: boolean;
 }
 
 interface Point {
@@ -291,7 +293,16 @@ function windowOf(doc: Document): Window & typeof globalThis {
 
 export function createTrayEngine(
   board: HTMLElement,
-  { slots: read, api }: { slots: () => readonly TraySticker[]; api: TrayBoard },
+  {
+    slots: read,
+    api,
+    markSeen,
+  }: {
+    slots: () => readonly TraySticker[];
+    api: TrayBoard;
+    /** Stickers the open tray showed that it hadn't before, once it zips shut. */
+    markSeen: (ids: readonly string[]) => void;
+  },
 ): TrayEngine {
   const doc = board.ownerDocument;
   const win = windowOf(doc);
@@ -406,7 +417,8 @@ export function createTrayEngine(
     shown: new Set(),
     pulled: null,
   };
-  const seen = readSeen();
+  /** Shown in the open tray: the stickers' own marks, and this visit's. */
+  const seen = new Set<string>();
   let model = modelOf(read());
   /** The stack's window is on show: the tray open, opening, or pulled to a crack. */
   let onShow = false;
@@ -416,6 +428,7 @@ export function createTrayEngine(
   let orderedFor = 0;
 
   function modelOf(list: readonly TraySticker[]) {
+    for (const s of list) if (s.seen) seen.add(s.id);
     const slots: Slot[] = list.map((s) => ({ ...s }));
     return { slots, count: Math.max(1, ...slots.map((s) => s.sheet + 1)) };
   }
@@ -719,18 +732,13 @@ export function createTrayEngine(
   });
   zip.on("closed", () => {
     // What was on show in the open tray is no longer new.
-    let changed = false;
-    for (const id of ui.shown)
-      if (!seen.has(id)) {
-        seen.add(id);
-        changed = true;
-      }
+    const fresh = [...ui.shown].filter((id) => !seen.has(id));
     ui.shown.clear();
-    if (changed) {
-      saveSeen(seen);
-      renderStack();
-      updateBadge();
-    }
+    if (fresh.length === 0) return;
+    for (const id of fresh) seen.add(id);
+    markSeen(fresh);
+    renderStack();
+    updateBadge();
   });
   // A hand on the pull decides for itself.
   zip.on("grab", () => {

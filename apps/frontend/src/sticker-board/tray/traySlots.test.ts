@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { StickerGiftStatus } from "../../giving/giftStore";
 import { newSlots, traySlots } from "./traySlots";
 
-const sticker = (id: string, createdAt: number, on?: boolean) => ({
+const sticker = (id: string, arrivedAt: number, on = false) => ({
   id,
-  no: createdAt,
-  createdAt,
-  placement: on === undefined ? undefined : { on, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 },
+  no: arrivedAt,
+  arrivedAt,
+  placement: { on, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 },
 });
 const sent: StickerGiftStatus = { giftId: "x", state: "sent", packedAt: 1, sentAt: 2 };
 const packed: StickerGiftStatus = { giftId: "y", state: "packed", packedAt: 1 };
