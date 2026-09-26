@@ -262,8 +262,11 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
           {t(($) => $.tickets.checkout.notAdded.title)}
         </h2>
         <p className="out-of-tickets__line" role="alert">
-          <strong>{t(($) => $.tickets.checkout.notAdded.line)}</strong>{" "}
-          <span className="out-of-tickets__quiet">{unadded.reason}</span>
+          <Trans
+            i18nKey={($) => $.tickets.checkout.notAdded.line}
+            values={{ reason: unadded.reason }}
+            components={{ strong: <strong />, why: <span className="out-of-tickets__quiet" /> }}
+          />
         </p>
         <TearLine />
         <Key

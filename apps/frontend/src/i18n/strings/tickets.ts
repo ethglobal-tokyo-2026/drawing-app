@@ -177,11 +177,11 @@ export const tickets = {
     /** When the payment went through but the server didn't add its tickets: asking the server again never pays again. */
     notAdded: {
       /** Reserve ticket checkout after paying, when the payment went through but the tickets weren't added: the title */
-      title: { en: "Tickets not added yet", ja: "チケットがまだ追加されていません" },
-      /** Reserve ticket checkout, tickets not added: the bold line under the title, before the reason in quiet type */
+      title: { en: "Tickets not added yet", ja: "チケットが未追加です" },
+      /** Reserve ticket checkout, tickets not added: the line under the title, in bold, then why in quiet type; `reason` is the server's or Sui's words */
       line: {
-        en: "Your payment went through. Adding the tickets again won’t charge you twice.",
-        ja: "支払いは完了しています。チケットをもう一度追加しても、二重に請求されることはありません。",
+        en: "<strong>Your payment went through. Adding the tickets again won’t charge you twice.</strong> <why>{{reason}}</why>",
+        ja: "<strong>支払いは完了しています。チケットをもう一度追加しても、二重に請求されることはありません。</strong><why>{{reason}}</why>",
       },
       /** Reserve ticket checkout, tickets not added: the blue key that asks again for the tickets the payment bought */
       add: { en: "Add the tickets", ja: "チケットを追加する" },
@@ -192,7 +192,7 @@ export const tickets = {
       /** Reserve ticket checkout, tickets not added: the small button beside the payment that copies its whole ID */
       copy: { en: "Copy", ja: "コピー" },
       /** Reserve ticket checkout, tickets not added: that button once the ID is copied */
-      copied: { en: "Copied", ja: "コピーしました" },
+      copied: { en: "Copied", ja: "コピー済み" },
     },
     /** Reserve ticket checkout when a payment fails: the key that goes back to the packs */
     backToPacks: { en: "Back to the packs", ja: "パック選びに戻る" },
