@@ -28,7 +28,7 @@ Fixes from the 2026-09-26 whole-app critique (27/40, Acceptable), plus the owner
   - Enter or Space selects. Arrows then move the selected sticker, and Tab enters its toolbar. Escape returns to focus-only.
   - The name and Draw come before the stickers in DOM order.
   - The detail's dialog is named after its sticker ("No.0117").
-- [ ] B3 The detail's "lift off the board" (spec below).
+- [x] B3 The detail's "lift off the board" (spec below).
 - [x] B4 App-wide Back, as an overlay stack on `history.pushState`/`popstate`:
   - It covers the sticker detail, the stat board (Back flips it back, as DESIGN.md says for LINE's Back) and the Giving sheet.
   - Closing from the UI pops its own entry, so the stack stays true.
