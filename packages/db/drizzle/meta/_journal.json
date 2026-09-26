@@ -57,6 +57,13 @@
       "when": 1790441483685,
       "tag": "0007_ticket_purchases_jpyc",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1790443850794,
+      "tag": "0008_chat_menu_batches",
+      "breakpoints": true
     }
   ]
 }

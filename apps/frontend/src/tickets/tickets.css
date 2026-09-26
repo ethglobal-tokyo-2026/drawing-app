@@ -41,15 +41,29 @@
 .out-of-tickets__art {
   height: 112px;
   margin: 0 calc(-1 * var(--card-pad)) 8px;
+  /* A reserve ticket's star pops once the card has risen. */
+  --star-delay: 260ms;
 }
 
-/* The reserve count under the day's stubs. */
+/* The one reserve ticket the reserve ask is about, with room above it for its count's badge. */
+.out-of-tickets__art--hero {
+  height: 138px;
+  padding-top: 22px;
+}
+
+/* Reserve tickets held behind the day's stubs: one small reserve ticket, ×count and the caption. */
 .out-of-tickets__reserve {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 6px;
   margin: -2px 0 10px;
+}
+
+.out-of-tickets__reserve-count {
+  font: 850 15px/1 var(--font-ui);
+  font-stretch: var(--w-figure);
+  font-variant-numeric: tabular-nums;
 }
 
 .out-of-tickets__title {

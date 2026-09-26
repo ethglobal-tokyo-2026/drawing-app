@@ -1,13 +1,17 @@
 import type { Person } from "@drawing-app/api/client";
-import { Suspense, useEffect, useRef, useState, type CSSProperties } from "react";
+import { Suspense, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
 import { resendPendingGratitude } from "../gratitude/gratitudeOutbox";
 import { useTranslation } from "../i18n/react";
 import { ShopScreen } from "../shop/ShopScreen";
 import { StickerBoard } from "../sticker-board/StickerBoard";
-import { DrawingScreen, type DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
+import type { DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
+import { noteBootMilestone } from "../performance/bootMilestones";
+import { markBoardComplete, usePreloadAfterBoard } from "../sticker-board/boardComplete";
+import { forgetBoardUnlessFor } from "../sticker-board/lastBoard";
 import { ReserveTicketCheckout } from "../tickets/ReserveTicketCheckout";
-import { lazyWithPreload, usePreloadWhenIdle } from "../ui/lazyWithPreload";
+import { lazyWithPreload } from "../ui/lazyWithPreload";
 import { MotionPermissionCard } from "./MotionPermissionCard";
 import { openedFrom, type View } from "./openedView";
 import { changeScreen } from "./screenTransition";
@@ -15,11 +19,17 @@ import { TabBar } from "./TabBar";
 import { useFocusLoop } from "./useFocusLoop";
 import "./App.css";
 
-// Explore is a tab away, so its code loads once the app is idle.
+// Explore is a tab away, so its code loads once the board is complete.
 const ExploreScreen = lazyWithPreload("Explore", () =>
   import("../explore/ExploreScreen").then((m) => m.ExploreScreen),
 );
-const OPENED_FROM_TABS = [ExploreScreen];
+// The drawing screen loads once the board is complete too, or at once when Draw opens it first.
+// Mounted, it stays under the other screens, so a sticker in progress survives a tab change, and it
+// picks up a sheet kept across a reload as it mounts.
+const DrawingScreen = lazyWithPreload("the drawing screen", () =>
+  import("../sticker-creation/DrawingScreen").then((m) => m.DrawingScreen),
+);
+const AFTER_THE_BOARD = [ExploreScreen, DrawingScreen];
 // Someone else's sticker board opens from Explore, so its code loads once Explore is open.
 const ArtistBoard = lazyWithPreload("someone else's sticker board", () =>
   import("../sticker-board/ArtistBoard").then((m) => m.ArtistBoard),
@@ -34,10 +44,28 @@ const GIFT_LOADING: CSSProperties = {
   zIndex: "var(--z-sheet)",
   background: "var(--liner)",
 };
+const DRAWING_LOADING: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  background: "var(--liner)",
+};
+
+/** The drawing screen's place while its code loads: plain Liner, and one line for screen readers. */
+function DrawingScreenLoading() {
+  const { t } = useTranslation();
+  return (
+    <div style={DRAWING_LOADING}>
+      <p className="visually-hidden" role="status">
+        {t(($) => $.app.drawingLoading)}
+      </p>
+    </div>
+  );
+}
 
 export default function App() {
   const { t } = useTranslation();
   const api = useApi();
+  const me = useMe();
   const phone = useRef<HTMLDivElement>(null);
   const drawingScreen = useRef<DrawingScreenHandle>(null);
   // The sticker board is home. Draw is the board's key, not a tab. A chat menu link opens its own
@@ -57,7 +85,18 @@ export default function App() {
   // The reserve ticket checkout, opened from the Shop over the whole phone, tabs and all.
   const [checkingOut, setCheckingOut] = useState(false);
   const drawing = view === "draw";
-  usePreloadWhenIdle(OPENED_FROM_TABS);
+  const afterTheBoard = usePreloadAfterBoard(AFTER_THE_BOARD);
+  // Draw opened the drawing screen, so it stays mounted from then on.
+  const [drewHere, setDrewHere] = useState(drawing);
+  if (drawing && !drewHere) setDrewHere(true);
+
+  // The app renders once you're signed in to the server, and a board this phone kept for someone
+  // else goes. Opened on another screen, there's no board to wait for.
+  useLayoutEffect(() => {
+    noteBootMilestone("signed in");
+    forgetBoardUnlessFor(me.id);
+    if (opened.view !== "board") markBoardComplete();
+  }, [opened, me.id]);
 
   useEffect(() => {
     if (view === "explore") void ArtistBoard.preload();
@@ -95,16 +134,21 @@ export default function App() {
   return (
     <div ref={phone} className={`phone ${drawing ? "has-tucked-tabs" : ""}`}>
       <div className="screen">
-        <DrawingScreen
-          ref={drawingScreen}
-          active={drawing}
-          onSealed={(id) => {
-            setSealedId(id);
-            setFreshId(id);
-          }}
-          onNewSticker={() => setSealedId(undefined)}
-          onGoToBoard={() => setView("board")}
-        />
+        {(afterTheBoard || drewHere) && (
+          // Draw tapped before its code is in holds on plain Liner for the moment it takes.
+          <Suspense fallback={drawing ? <DrawingScreenLoading /> : null}>
+            <DrawingScreen
+              ref={drawingScreen}
+              active={drawing}
+              onSealed={(id) => {
+                setSealedId(id);
+                setFreshId(id);
+              }}
+              onNewSticker={() => setSealedId(undefined)}
+              onGoToBoard={() => setView("board")}
+            />
+          </Suspense>
+        )}
         {view === "board" && (
           <StickerBoard key={boardLoads} freshId={freshId} onDraw={openDrawing} />
         )}

@@ -116,4 +116,31 @@ export const explore = {
     /** Explore tab, when it or a search fails to load: the small button under the error's reason that asks again */
     tryAgain: { en: "Try again", ja: "もう一度" },
   },
+  /** A sticker lifted off the pile into a sheet. {{artist}} is its artist's @handle, or LINE name. */
+  lifted: {
+    /** Explore tab, lifted sticker: screen readers' name for the sheet, the sticker's number and who drew it */
+    label: { en: "{{no}} by {{artist}}", ja: "{{artist}}さんの{{no}}" },
+    /** Explore tab, lifted sticker: fine print under the artist chip: the number, drawing time and the day it was sealed */
+    caption: { en: "{{no}} · <duration/> · {{day}}", ja: "{{no}}・<duration/>・{{day}}" },
+    /** Explore tab, lifted sticker: the same fine print for a sticker someone was given; <receiver/> is their @handle */
+    captionGiven: {
+      en: "{{no}} · <duration/> · {{day}} · to <receiver/>",
+      ja: "{{no}}・<duration/>・{{day}}・<receiver/>さんへ",
+    },
+    /** Explore tab, lifted sticker: label stock under the fine print that opens the artist's sticker board */
+    goToBoard: { en: "Go to {{artist}}'s sticker board", ja: "{{artist}}さんのシールボードへ" },
+    /** Explore tab, lifted sticker: the same label stock on a sticker you drew, opening your own board */
+    goToYourBoard: { en: "Go to your sticker board", ja: "あなたのシールボードへ" },
+    /** Explore tab, lifted sticker: the quiet link at the sheet's foot that puts the sticker back on the pile */
+    putBack: { en: "Put back", ja: "もどす" },
+    /** Explore tab, lifted sticker: screen readers' name for the small arrow left of the sticker, which lifts the one before it */
+    previous: { en: "Previous sticker", ja: "前のシール" },
+    /** Explore tab, lifted sticker: screen readers' name for the small arrow right of the sticker, which lifts the one after it */
+    next: { en: "Next sticker", ja: "次のシール" },
+    /** Explore tab, lifted sticker: what screen readers hear on paging: the sticker, its artist and where it is in the pile */
+    shown: {
+      en: "{{no}} by {{artist}}, {{position}} of {{setSize}}",
+      ja: "{{artist}}さんの{{no}}、{{setSize}}枚中{{position}}枚目",
+    },
+  },
 } as const satisfies Section;

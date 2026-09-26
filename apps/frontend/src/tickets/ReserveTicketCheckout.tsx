@@ -19,9 +19,9 @@ import { useFocusTrap } from "../ui/useFocusTrap";
 import { TICKET_PRICE_YEN } from "./config";
 import { formatYen, yenForJpyc } from "./prices";
 import { useReservePacks, type ReservePack } from "./reservePacks";
-import { TicketCount, TicketCounts } from "./TicketCount";
+import { TicketCount } from "./TicketCount";
 import { TicketPurchases } from "./TicketPurchases";
-import { describeTickets } from "./tickets";
+import { describeTickets, ticketView } from "./tickets";
 import { TicketStubs } from "./TicketStubs";
 import { useTickets } from "./useTickets";
 import "./tickets.css";
@@ -163,13 +163,18 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   if (step === "done" && bought) {
     body = (
       <>
+        {/* The one reserve ticket, its badge on the new total. */}
         <TicketStubs
-          className="out-of-tickets__art"
-          size="large"
-          stubs={Array.from({ length: Math.min(bought.tickets, 3) }, () => ({
-            used: false,
-            kind: "reserve" as const,
-          }))}
+          className="out-of-tickets__art out-of-tickets__art--hero"
+          size="hero"
+          stubs={[
+            {
+              used: false,
+              kind: "reserve",
+              count: state ? ticketView(state).reserve : bought.tickets,
+            },
+          ]}
+          pop
         />
         <h2 className="out-of-tickets__title" id={`${id}-title`}>
           {t(($) => $.tickets.checkout.added, { count: bought.tickets })}
@@ -189,7 +194,6 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
           onClick={onDraw}
         >
           {t(($) => $.tickets.draw)}
-          {state && <TicketCounts state={state} className="ticket-counts--on-key" />}
         </Key>
         <LabelButton block icon={<Ticket />} onClick={() => setStep("choose")}>
           {t(($) => $.tickets.checkout.buyMore)}

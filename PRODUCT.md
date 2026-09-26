@@ -152,7 +152,7 @@ ad0ll's hand-drawn sketch (a photo in the 2026-09-22 conversation; the file is n
   - With no daily tickets left, drawing asks before spending a reserve ticket, or offers the **reserve ticket checkout**.
   - An **out-of-tickets** dialog appears when daily and reserve tickets are all used.
   - **Reserve ticket checkout:** packs of 1, 3, 5 and 10 for ¥100, ¥270 (10% off), ¥375 (25% off) and ¥600 (40% off), paid in JPYC on Sui. It shows every amount, the balance included, in yen only.
-  - Every Draw key shows daily and reserve tickets left as ticket mark × count.
+  - Every picture of tickets shows the tickets the next drawing can use (ad0ll, 2026-09-26): daily tickets while any are left, with reserve tickets as one ticket and its count; one reserve ticket once the daily ones are used; a zero never shows. The board's Draw key carries them tucked behind its right end, not inside it. Reserve tickets look bought: Blue, in the stickers' resin, with an Ink outline and a star.
   - The **Shop** tab (ad0ll, 2026-09-27): reserve tickets are the one thing on sale, then coming-soon shelves of laminates, brushes and backing foils, each led by what you have now, with no prices. They show intent only; nothing on them can be bought.
 - **On-chain copy is allowed in the hackathon build** (for example, in the seal dialog). The real app would hide the complexity.
 - **Gift delivery: no take-back and no grace window.**

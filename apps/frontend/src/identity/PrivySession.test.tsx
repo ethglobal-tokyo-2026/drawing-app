@@ -11,7 +11,6 @@ const sdk = vi.hoisted(() => ({
   user: null as User | null,
   authenticate: vi.fn<(jwt: string) => Promise<User>>(),
   fetchJwt: vi.fn<() => Promise<string | undefined>>(),
-  returningMenu: vi.fn<() => Promise<void>>(),
 }));
 
 // Privy starts when enabled, independently of isLoading. Its in-flight request survives disabling,
@@ -55,7 +54,6 @@ vi.mock("@privy-io/react-auth/smart-wallets", () => ({
   SmartWalletsProvider: ({ children }: { children: ReactNode }) => children,
 }));
 vi.mock("@line/liff", () => ({ default: {} }));
-vi.mock("../line/chatMenu", () => ({ requestReturningMenu: sdk.returningMenu }));
 vi.mock("./privy", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./privy")>()),
   fetchPrivyJwt: sdk.fetchJwt,
@@ -114,7 +112,6 @@ beforeEach(() => {
   sdk.user = null;
   sdk.authenticate.mockReset().mockResolvedValue(person);
   sdk.fetchJwt.mockReset().mockResolvedValue("privy-jwt");
-  sdk.returningMenu.mockReset().mockResolvedValue();
   setPrivyStatus({ state: "signing-in" });
   host = document.createElement("div");
   document.body.append(host);
@@ -135,7 +132,6 @@ describe("LINE sign-in to Privy", () => {
     await walletsReady(true);
     expect(sdk.authenticate).toHaveBeenCalledExactlyOnceWith("privy-jwt");
     expect(privyStatus()).toMatchObject({ state: "signed-in", userId: person.id });
-    expect(sdk.returningMenu).toHaveBeenCalled();
   });
 
   it("finishes an in-flight sign-in across wallet readiness changes without restarting authentication", async () => {

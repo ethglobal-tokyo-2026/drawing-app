@@ -1,22 +1,19 @@
-import { Storefront } from "@phosphor-icons/react";
 import { useEffect, useId, useRef, useState } from "react";
 import { Trans, useTranslation } from "../i18n/react";
-import { DrawIcon } from "../icons/DrawIcon";
-import { StickerBoardIcon } from "../icons/StickerBoardIcon";
+import { DrawIcon, ShopIcon, StickerBoardIcon } from "../icons";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { TearLine } from "../ui/TearLine";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { formatRefillIn, formatRefillTime, msUntilRefillLineChanges } from "./refill";
-import { TicketCount, TicketCounts } from "./TicketCount";
-import { TicketStubs } from "./TicketStubs";
-import { dailyTickets, describeTickets, ticketsLeft, type Tickets } from "./tickets";
+import { TicketArt } from "./TicketArt";
+import { describeTickets, ticketsLeft, ticketView, type Tickets } from "./tickets";
 import "./tickets.css";
 
 interface Props {
   /** Live: the card turns over when the refill brings tickets back. */
   tickets: Tickets;
-  /** Open the ticket shop. */
+  /** Open the reserve ticket checkout. */
   onShop: () => void;
   /** Draw, once there are tickets again. */
   onStartDrawing: () => void;
@@ -39,13 +36,12 @@ function useRefillCountdown(refillAt: string) {
 
 /**
  * Out of daily and reserve tickets: the day's used stubs, when new ones arrive, and the ways on. The
- * free path leads: the key goes to the sticker board and the ticket shop is label stock under it. If
+ * free path leads: the key goes to the sticker board and buying reserve tickets is label stock under it. If
  * tickets come back while it's open, it turns over in place and the key becomes Draw.
  */
 export function OutOfTickets({ tickets: state, onShop, onStartDrawing, onBoard }: Props) {
   const { t } = useTranslation();
   const { at, msLeft } = useRefillCountdown(state.nextRefillAt);
-  const stubs = dailyTickets(state);
   const card = useRef<HTMLElement>(null);
   const id = useId();
   const refilled = ticketsLeft(state) > 0;
@@ -70,11 +66,7 @@ export function OutOfTickets({ tickets: state, onShop, onStartDrawing, onBoard }
         aria-describedby={refilled ? undefined : `${id}-line`}
         tabIndex={-1}
       >
-        <TicketStubs className="out-of-tickets__art" size="large" stubs={stubs} />
-        <p className="out-of-tickets__reserve">
-          <TicketCount kind="reserve" count={state.reserveLeft} />
-          <span className="fine">{t(($) => $.tickets.reserve)}</span>
-        </p>
+        <TicketArt view={ticketView(state)} />
         {/* One title element for both, so screen readers hear it turn over. */}
         <h2 className="out-of-tickets__title" id={`${id}-title`} aria-live="polite">
           {refilled
@@ -102,7 +94,6 @@ export function OutOfTickets({ tickets: state, onShop, onStartDrawing, onBoard }
             onClick={onStartDrawing}
           >
             {t(($) => $.tickets.draw)}
-            <TicketCounts state={state} className="ticket-counts--on-key" />
           </Key>
         ) : (
           <Key className="out-of-tickets__key" icon={<StickerBoardIcon />} onClick={onBoard}>
@@ -114,8 +105,8 @@ export function OutOfTickets({ tickets: state, onShop, onStartDrawing, onBoard }
             {t(($) => $.tickets.goToStickerBoard)}
           </LabelButton>
         ) : (
-          <LabelButton block icon={<Storefront />} onClick={onShop}>
-            {t(($) => $.tickets.shopForTickets)}
+          <LabelButton block icon={<ShopIcon />} onClick={onShop}>
+            {t(($) => $.tickets.buyReserveTickets)}
           </LabelButton>
         )}
       </section>

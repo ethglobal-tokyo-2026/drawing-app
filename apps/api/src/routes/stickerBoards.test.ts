@@ -309,7 +309,7 @@ describe("GET /api/sticker-boards/:userId/user-stats", () => {
       made: 0,
       received: 0,
       given: 0,
-      gratitude: { inspired: 0, magic: 0, asOriginalArtist: 0, total: 0 },
+      gratitude: { direct: 0, residual: 0, total: 0 },
       bests: { bestCombo: 0, mostGratitudeInADay: 0, longestStreak: 0 },
       streak: 0,
     });
@@ -341,7 +341,7 @@ describe("GET /api/sticker-boards/:userId/user-stats", () => {
     });
   });
 
-  it("split gratitude into the giver's part by method and the Original Artist's share", async () => {
+  it("split gratitude into the giver's direct part and the Original Artist's residual", async () => {
     const artist = insertUser(test.db);
     const giver = insertUser(test.db);
     const receiver = insertUser(test.db);
@@ -351,19 +351,16 @@ describe("GET /api/sticker-boards/:userId/user-stats", () => {
     giveAndSendGratitude(seal(giver), giver, receiver, STROKE);
     giveAndSendGratitude(seal(giver), giver, receiver, SHAKE);
 
-    const inspired = SHARED_TAP.total - SHARED_TAP.originalArtistGratitudeShare;
-    const magic = STROKE.total + SHAKE.total;
-    expect((await statsOf(giver, "me")).gratitude).toEqual({
-      inspired,
-      magic,
-      asOriginalArtist: 0,
-      total: inspired + magic,
-    });
     const share = SHARED_TAP.originalArtistGratitudeShare;
+    const direct = SHARED_TAP.total - share + STROKE.total + SHAKE.total;
+    expect((await statsOf(giver, "me")).gratitude).toEqual({
+      direct,
+      residual: 0,
+      total: direct,
+    });
     expect((await statsOf(giver, artist)).gratitude).toEqual({
-      inspired: 0,
-      magic: 0,
-      asOriginalArtist: share,
+      direct: 0,
+      residual: share,
       total: share,
     });
     expect((await statsOf(giver, receiver)).gratitude.total).toBe(0);
