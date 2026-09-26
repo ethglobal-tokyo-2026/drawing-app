@@ -46,6 +46,7 @@ contract StickerGiftEscrow is AccessControl, EIP712, IERC721Receiver, Reentrancy
     );
     event GiftClaimed(bytes32 indexed giftId, uint256 indexed tokenId, address indexed recipient);
     event GiftRejected(bytes32 indexed giftId, uint256 indexed tokenId, address indexed sender);
+    event GiftTakenOut(bytes32 indexed giftId, uint256 indexed tokenId, address indexed sender);
     event ExpiredGiftReturned(
         bytes32 indexed giftId, uint256 indexed tokenId, address indexed sender
     );
@@ -56,6 +57,7 @@ contract StickerGiftEscrow is AccessControl, EIP712, IERC721Receiver, Reentrancy
     error GiftNotExpired(bytes32 giftId);
     error InvalidGift();
     error InvalidSigner();
+    error NotGiftSender(bytes32 giftId, address caller);
     error StickerAlreadyPending(uint256 tokenId);
     error UnsupportedSticker(address token);
 
@@ -81,7 +83,9 @@ contract StickerGiftEscrow is AccessControl, EIP712, IERC721Receiver, Reentrancy
         if (
             from == address(0) || giftId == bytes32(0) || claimCommitment == bytes32(0)
                 || expiresAt <= block.timestamp
-        ) revert InvalidGift();
+        ) {
+            revert InvalidGift();
+        }
         if (gifts[giftId].status != GiftStatus.Missing) revert GiftAlreadyExists(giftId);
         if (pendingGiftForToken[tokenId] != bytes32(0)) revert StickerAlreadyPending(tokenId);
 
@@ -141,6 +145,19 @@ contract StickerGiftEscrow is AccessControl, EIP712, IERC721Receiver, Reentrancy
         delete pendingGiftForToken[gift.tokenId];
         sticker.safeTransferFrom(address(this), gift.sender, gift.tokenId);
         emit GiftRejected(giftId, gift.tokenId, gift.sender);
+    }
+
+    /// @notice Lets the original sender take a pending sticker back without a backend signature.
+    function takeOut(bytes32 giftId) external nonReentrant {
+        Gift storage gift = _pendingGift(giftId);
+        if (msg.sender != gift.sender) revert NotGiftSender(giftId, msg.sender);
+
+        // The database already uses Rejected for every sender return before expiry. The dedicated
+        // event distinguishes a take-out from a backend-authorized rejection.
+        gift.status = GiftStatus.Rejected;
+        delete pendingGiftForToken[gift.tokenId];
+        sticker.safeTransferFrom(address(this), gift.sender, gift.tokenId);
+        emit GiftTakenOut(giftId, gift.tokenId, gift.sender);
     }
 
     function returnExpiredGift(bytes32 giftId) external nonReentrant {

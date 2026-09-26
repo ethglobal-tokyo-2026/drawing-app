@@ -147,14 +147,81 @@ describe("POST /api/gifts/receive", () => {
     expect(ownerOf(test, gift.stickerId)).toBe(artistId);
   });
 
-  it("keeps the escrow's claim for the worker on the escrow chain, reading a deposit that just landed once", async () => {
+  it("claims the escrowed sticker before recording it as received", async () => {
     const test = await createGiftsTestApp({ escrowChain: true });
     const { gift, giftClaimToken } = await giftToOpen(test);
     test.landDeposit(gift.id);
+    const receiverId = insertUser(test.db);
     const reads = vi.spyOn(test.giftChain, "readEscrowGift");
-    const received = await receivedOf(await receive(test, insertUser(test.db), giftClaimToken));
-    expect(received.gift).toMatchObject({ status: "received", escrowStatus: "pending" });
+    const claims = vi.spyOn(test.giftChain, "claimGift");
+    const received = await receivedOf(await receive(test, receiverId, giftClaimToken));
+    expect(received.gift).toMatchObject({
+      status: "received",
+      escrowStatus: "claimed",
+    });
+    expect(test.giftRow(gift.id).claimTxHash).toBe(test.giftChain.claimTransactions.get(gift.id));
     expect(reads).toHaveBeenCalledTimes(1);
+    expect(claims).toHaveBeenCalledWith({
+      giftId: gift.id,
+      giftClaimToken,
+      recipientId: receiverId,
+    });
+    expect(test.giftChain.escrow.get(gift.id)).toMatchObject({
+      status: "claimed",
+      recipient: await test.deps.smartWallets.addressFor(receiverId),
+    });
+  });
+
+  it("reconciles a claim that landed before its database update", async () => {
+    const test = await createGiftsTestApp({ escrowChain: true });
+    const { gift, giftClaimToken } = await giftToOpen(test);
+    test.landDeposit(gift.id);
+    const receiverId = insertUser(test.db);
+    await previewOf(await preview(test, receiverId, giftClaimToken));
+    const landed = await test.giftChain.claimGift({
+      giftId: gift.id,
+      giftClaimToken,
+      recipientId: receiverId,
+    });
+    if (!landed.claimed) throw new Error("The fake escrow did not claim the gift");
+
+    const received = await receivedOf(await receive(test, receiverId, giftClaimToken));
+
+    expect(received.gift).toMatchObject({
+      status: "received",
+      escrowStatus: "claimed",
+    });
+    expect(test.giftRow(gift.id).claimTxHash).toBe(landed.txHash);
+  });
+
+  it("leaves ownership unchanged when the escrow claim fails", async () => {
+    const test = await createGiftsTestApp({ escrowChain: true });
+    const { giverId, gift, giftClaimToken } = await giftToOpen(test);
+    test.landDeposit(gift.id);
+    vi.spyOn(test.giftChain, "claimGift").mockRejectedValue(new Error("Sepolia unavailable"));
+
+    const response = await receive(test, insertUser(test.db), giftClaimToken);
+
+    expect(response.status).toBe(500);
+    expect(test.giftRow(gift.id)).toMatchObject({ status: "packed", escrowStatus: "pending" });
+    expect(ownerOf(test, gift.stickerId)).toBe(giverId);
+  });
+
+  it("does not give database ownership to a second recipient after another wallet claimed", async () => {
+    const test = await createGiftsTestApp({ escrowChain: true });
+    const { giverId, gift, giftClaimToken } = await giftToOpen(test);
+    test.landDeposit(gift.id);
+    const receiverId = insertUser(test.db);
+    await previewOf(await preview(test, receiverId, giftClaimToken));
+    await test.giftChain.claimGift({ giftId: gift.id, giftClaimToken, recipientId: receiverId });
+
+    const loser = await receive(test, insertUser(test.db), giftClaimToken);
+    expect(loser.status).toBe(409);
+    expect(await loser.json()).toMatchObject({ error: "already_received" });
+    expect(ownerOf(test, gift.stickerId)).toBe(giverId);
+
+    await receivedOf(await receive(test, receiverId, giftClaimToken));
+    expect(ownerOf(test, gift.stickerId)).toBe(receiverId);
   });
 });
 

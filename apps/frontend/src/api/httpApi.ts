@@ -6,6 +6,7 @@ import { ApiError, type ApiClient, type GiftOpening } from "./apiClient";
 const REQUEST_TIMEOUT_MS = 15_000;
 /** Sealing uploads five images, which takes longer on a phone's connection. */
 const SEAL_TIMEOUT_MS = 60_000;
+const RECEIVE_TIMEOUT_MS = 120_000;
 
 const isErrorBody = (v: unknown): v is ErrorBody =>
   typeof v === "object" &&
@@ -241,7 +242,10 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       return response.json();
     },
     receiveGift: async (body) => {
-      const response = await api.gifts.receive.$post({ json: claimOf(body) });
+      const response = await api.gifts.receive.$post(
+        { json: claimOf(body) },
+        { init: { signal: AbortSignal.timeout(RECEIVE_TIMEOUT_MS) } },
+      );
       if (!response.ok) throw await refusal(response, "POST /api/gifts/receive");
       return response.json();
     },

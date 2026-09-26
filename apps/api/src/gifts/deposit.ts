@@ -6,8 +6,8 @@ import { bytes32Schema } from "../shapes.ts";
 import { ownGift, refuse, type GiftRow, type GiftStep } from "./packaging.ts";
 
 export const depositBodySchema = z.object({
-  /** The escrow transfer's transaction or user operation hash. */
-  txHash: bytes32Schema,
+  /** Optional after a lost response: the escrow record is authoritative. */
+  txHash: bytes32Schema.optional(),
 });
 
 /** What the escrow holds for a gift whose deposit hadn't been seen. */

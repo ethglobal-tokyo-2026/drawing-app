@@ -172,10 +172,24 @@ export function createGiveFlow({
     sendInLine: () => void openPicker(),
     takeOut: () => {
       if (state.step !== "packed" && state.step !== "notSent" && state.step !== "failed") return;
-      if (attempt) putBack(attempt);
-      attempt = null;
+      clearTimer();
+      const a = attempt;
       set({ step: "takingOut" });
-      after(takeOutMs, () => set({ step: "sheet" }));
+      void (async () => {
+        if (a) {
+          try {
+            const packed = await a.gift;
+            await backend.takeOut(packed.giftId);
+            a.open = false;
+          } catch (error) {
+            report(`${which} couldn't be taken out`, error);
+            set({ step: "failed", error: `${which} couldn't be taken out: ${describe(error)}` });
+            return;
+          }
+        }
+        attempt = null;
+        after(takeOutMs, () => set({ step: "sheet" }));
+      })();
     },
     dispose: () => {
       clearTimer();
