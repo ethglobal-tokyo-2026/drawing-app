@@ -48,6 +48,8 @@ const PROBE_PX = 100;
 const MEASURE_TRIES = 3;
 /** Until the engine lays the screen out: a phone's. */
 const FALLBACK_SCREEN = { width: 390, height: 741, top: 256 };
+/** With reduced motion a word fades in over this share of its life, where it lands, and holds still. */
+const STILL_FADE_IN = 0.15;
 
 /** A word in outlined bag letters (袋文字), and the animation it was last given. */
 interface Caption {
@@ -90,15 +92,34 @@ function makeCaption(kind: "gr-slam" | "gr-pop"): Caption {
   return { el, word, gloss, animation: null };
 }
 
+/** The system's reduced-motion setting, followed live: until the engine passes its own. */
+function systemReduced(): () => boolean {
+  const query =
+    typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
+  return () => query?.matches ?? false;
+}
+
+/** A word that fades in and out at `transform`, with no spring, drift or scale. */
+function stillFrames(transform: string): Keyframe[] {
+  return [
+    { transform, opacity: 0 },
+    { offset: STILL_FADE_IN, transform, opacity: 1 },
+    { offset: 0.72, transform, opacity: 1 },
+    { transform, opacity: 0 },
+  ];
+}
+
 /**
  * The tier slams and pop-in words. Placing one never reads layout: every word, gloss and slam text
  * is measured once in a hidden probe after the fonts load, and guessed from its length until then.
+ * With reduced motion each one fades in and out where it lands.
  */
 export function createLettering(
   layer: HTMLElement,
-  options: { intensity: number; random: () => number },
+  options: { intensity: number; random: () => number; reduced?: () => boolean },
 ): Lettering {
   const { random } = options;
+  const reduced = options.reduced ?? systemReduced();
   const pick = createPopInPicker(random);
   const grow = 0.86 + 0.28 * options.intensity;
   let screen = FALLBACK_SCREEN;
@@ -232,12 +253,14 @@ export function createLettering(
       // In small and tilted hard, springing to its slant: it never leaves the screen.
       caption.animation = animate(
         caption.el,
-        [
-          { transform: `${base} rotate(-11deg) scale(.55)`, opacity: 0, easing: EASE_SPRING },
-          { offset: 0.18, transform: `${base} rotate(0deg) scale(1)`, opacity: 1 },
-          { offset: 0.72, transform: `${base} rotate(0deg) scale(1)`, opacity: 1 },
-          { transform: `${base} translateY(-8px) rotate(0deg) scale(1.02)`, opacity: 0 },
-        ],
+        reduced()
+          ? stillFrames(base)
+          : [
+              { transform: `${base} rotate(-11deg) scale(.55)`, opacity: 0, easing: EASE_SPRING },
+              { offset: 0.18, transform: `${base} rotate(0deg) scale(1)`, opacity: 1 },
+              { offset: 0.72, transform: `${base} rotate(0deg) scale(1)`, opacity: 1 },
+              { transform: `${base} translateY(-8px) rotate(0deg) scale(1.02)`, opacity: 0 },
+            ],
         { duration: SLAM_MS, easing: "linear", fill: "both" },
       );
     },
@@ -277,12 +300,14 @@ export function createLettering(
         `translate(${(x + dx * k).toFixed(1)}px,${(y + dy * k).toFixed(1)}px) rotate(${rot.toFixed(1)}deg) scale(${scale})`;
       caption.animation = animate(
         caption.el,
-        [
-          { transform: at(0, 0), opacity: 1, easing: EASE_SPRING },
-          { offset: 0.2, transform: at(0.1, 1), opacity: 1 },
-          { offset: 0.64, transform: at(0.6, 1), opacity: 1 },
-          { transform: at(1, 0.96), opacity: 0 },
-        ],
+        reduced()
+          ? stillFrames(at(0, 1))
+          : [
+              { transform: at(0, 0), opacity: 1, easing: EASE_SPRING },
+              { offset: 0.2, transform: at(0.1, 1), opacity: 1 },
+              { offset: 0.64, transform: at(0.6, 1), opacity: 1 },
+              { transform: at(1, 0.96), opacity: 0 },
+            ],
         { duration, easing: "linear", fill: "both" },
       );
     },
