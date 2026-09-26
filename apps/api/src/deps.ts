@@ -19,7 +19,11 @@ export interface AppDeps {
   /** Null when the names under croquis.eth aren't configured: labels are kept, nothing resolves. */
   ens: EnsDeps | null;
   ticketPayments: TicketPayments;
+  serverLog: ServerLog;
 }
+
+/** The server's whole log as text, oldest line first. Rejects when the log can't be read. */
+export type ServerLog = () => Promise<ReadableStream<Uint8Array>>;
 
 export interface Clock {
   now: () => Date;

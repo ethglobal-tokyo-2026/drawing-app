@@ -9,6 +9,7 @@ import {
   fakeClock,
   fakeImageStore,
   fakeLineVerifier,
+  fakeServerLog,
   fakeTicketPayments,
   sequentialIds,
 } from "./fakes.ts";
@@ -35,6 +36,7 @@ export async function createTestApp(
     smartWallets: noSmartWallets,
     ens: null,
     ticketPayments: fakeTicketPayments().ticketPayments,
+    serverLog: fakeServerLog(),
     ...overrides,
   };
   return {

@@ -13,6 +13,7 @@ import { logInfo } from "./diagnostics.ts";
 import { createNamingQueue } from "./ens/naming.ts";
 import { chooseLineVerifier } from "./services/devSignIn.ts";
 import { createDiskImageStore } from "./services/imageStore.ts";
+import { journalLog } from "./services/journal.ts";
 import { createLineVerifier } from "./services/lineVerifier.ts";
 import { mintStub } from "./services/mint.ts";
 import { noSmartWallets } from "./services/smartWallets.ts";
@@ -129,6 +130,7 @@ const deps: AppDeps = {
     paymentPackage: env.JPYC_PAYMENT_PACKAGE,
     vault: env.JPYC_PAYMENT_VAULT,
   }),
+  serverLog: journalLog,
 };
 
 logInfo("api.configured", { mode: env.STICKER_CHAIN_MODE });

@@ -13,6 +13,7 @@ import { keccak256 } from "./keccak256.ts";
 import { createDiskImageStore } from "./services/imageStore.ts";
 import { setSessionCookie, type AppEnv } from "./session.ts";
 import { createTestApp, type TestApp } from "./testing/createTestApp.ts";
+import { fakeServerLog } from "./testing/fakes.ts";
 
 const probeBodySchema = z.object({ handle: z.string(), placement: z.object({ x: z.number() }) });
 const probeBody = { handle: "alice", placement: { x: 0.5 } };
@@ -166,5 +167,16 @@ describe("sticker images", () => {
     const response = await get(`${STICKER_IMAGES_PATH}/${keccak256(new Uint8Array([9]))}.png`);
     expect(response.headers.get("cache-control")).toBeNull();
     expect(await refusal(response)).toMatchObject({ status: 404, error: "image_not_found" });
+  });
+});
+
+describe("the server log", () => {
+  it("is served whole, as text, without a session", async () => {
+    const log = `2026-09-27T00:36:41+0900 box drawing-api[7]: {"event":"nft.mint.started"}\n`;
+    const server = createServer({ ...test.deps, serverLog: fakeServerLog(log) }, tmpdir());
+    const response = await server.request("/api/logs");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toMatch(/^text\/plain/);
+    expect(await response.text()).toBe(log);
   });
 });

@@ -7,6 +7,7 @@ import type {
   Mint,
   MintedToken,
   NameWriter,
+  ServerLog,
   SmartWallets,
   JpycPayment,
   TicketPayments,
@@ -165,6 +166,12 @@ export function fakeTicketPayments(transactions = new Map<string, JpycPayment[] 
   };
   return { ticketPayments, transactions };
 }
+
+/** A server log that reads `text`. */
+export const fakeServerLog =
+  (text = ""): ServerLog =>
+  () =>
+    Promise.resolve(new Blob([text]).stream());
 
 /** A name writer that records each call, and throws at `failAt` when that step comes up. */
 export function fakeNameWriter({ failAt }: { failAt?: string } = {}) {
