@@ -1,6 +1,8 @@
 import { Heart, Wind, X } from "@phosphor-icons/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import type { RecordGratitude, ReplayV1 } from "../api/contract";
+import { useApi } from "../api/useApi";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
@@ -11,6 +13,7 @@ import { PhotoSticker } from "../ui/PhotoSticker";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import type { ComboRecord } from "./combo";
+import { newIdempotencyKey, sendGratitude } from "./gratitudeOutbox";
 import { mountMiniGameEngine, type MiniGameEngine } from "./miniGameEngine";
 import { TIER_NAMES } from "./tierNames";
 import "./gratitude-mini-game.css";
@@ -32,6 +35,8 @@ interface Props {
   };
   /** Who gave the sticker, and gets the gratitude. */
   giver: { handle: string; displayName: string; pictureUrl?: string };
+  /** The received gift this thanks. Without one, as in the stat board's demo, nothing is recorded. */
+  giftId?: string;
   /** The effects' dial, 0 to 1. */
   intensity: number;
   showFrameTimes: boolean;
@@ -45,18 +50,36 @@ function need<E extends Element>(el: E | null, what: string): E {
   return el;
 }
 
+/** POST /api/gratitude's body: the record's scored fields, not its timings, which the replay holds. */
+function gratitudeFor(giftId: string, record: ComboRecord, replay: ReplayV1): RecordGratitude {
+  return {
+    idempotencyKey: newIdempotencyKey(),
+    giftId,
+    method: record.method,
+    hits: record.hits,
+    total: record.total,
+    peakMult: record.peakMult,
+    peakTier: record.peakTier,
+    gameConfigVersion: record.gameConfigVersion,
+    replay,
+  };
+}
+
 /** Send gratitude, over the whole phone: the sticker and its giver, the heart, the combo, the receipt. */
 export function GratitudeMiniGame({
   sticker,
   giver,
+  giftId,
   intensity,
   showFrameTimes,
   onEnd,
   onClose,
 }: Props) {
+  const api = useApi();
   const reduced = useReducedMotion();
   const [ending, setEnding] = useState<{ caught: boolean; record: ComboRecord } | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const [refusal, setRefusal] = useState<string | null>(null);
   const root = useRef<HTMLDivElement>(null);
   const page = useRef<HTMLDivElement>(null);
   const ground = useRef<HTMLDivElement>(null);
@@ -72,6 +95,8 @@ export function GratitudeMiniGame({
 
   // The engine mounts once per screen; its callbacks read the latest props through this.
   const latest = useRef({
+    api,
+    giftId,
     onEnd,
     stickerId: sticker.id,
     reduced,
@@ -80,10 +105,30 @@ export function GratitudeMiniGame({
     handle,
   });
   useLayoutEffect(() => {
-    latest.current = { onEnd, stickerId: sticker.id, reduced, intensity, showFrameTimes, handle };
+    latest.current = {
+      api,
+      giftId,
+      onEnd,
+      stickerId: sticker.id,
+      reduced,
+      intensity,
+      showFrameTimes,
+      handle,
+    };
   });
 
   useLayoutEffect(() => {
+    // The gratitude outbox keeps the combo on this device before its request goes.
+    const record = (combo: ComboRecord, replay: ReplayV1) => {
+      const { api: client, giftId: thanked, onEnd: ended, stickerId } = latest.current;
+      if (thanked) {
+        void sendGratitude(client, gratitudeFor(thanked, combo, replay)).then((sent) => {
+          if (sent.state === "refused") setRefusal(sent.error.message);
+        });
+      }
+      ended?.({ ...combo, stickerId });
+    };
+
     const mounted = mountMiniGameEngine(
       {
         root: need(root.current, "root"),
@@ -102,8 +147,7 @@ export function GratitudeMiniGame({
         intensity: latest.current.intensity,
         reduced: latest.current.reduced,
         showFrameTimes: latest.current.showFrameTimes,
-        onRecord: (record) =>
-          latest.current.onEnd?.({ ...record, stickerId: latest.current.stickerId }),
+        onRecord: record,
         onFinished: setEnding,
         onError: setFailure,
       },
@@ -222,9 +266,11 @@ export function GratitudeMiniGame({
           </div>
         </section>
       )}
-      {failure && (
+      {(failure || refusal) && (
         <p className="gr-failure" role="alert">
-          The mini-game stopped: {failure}
+          {failure && `The mini-game stopped: ${failure}`}
+          {failure && refusal && <br />}
+          {refusal && `The server didn't record your gratitude: ${refusal}`}
         </p>
       )}
     </div>
