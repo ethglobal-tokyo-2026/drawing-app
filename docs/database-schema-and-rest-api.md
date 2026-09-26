@@ -285,7 +285,7 @@ Inserted when the receiver's Mini-game combo is recorded.
 ### Conventions
 
 - **Base path:** `/api`. JSON in and out, except sealing (multipart) and the timelapse (gzipped JSON).
-- **Session:** `POST /api/session` sets a signed, HttpOnly cookie named `session`. Every other route needs it, and returns 401 `signed_out` without it.
+- **Session:** `POST /api/session` sets a signed, HttpOnly cookie named `session`, kept for 30 days. Every other route but `DELETE /api/session` needs it, and returns 401 `signed_out` without it.
 - **Times:** ISO 8601 UTC strings, e.g. `"2026-09-26T02:15:00.000Z"`. Ticket days are `"YYYY-MM-DD"`.
 - **IDs:** people and stickers are UUID strings; gifts are `0x` + 64 hex; ticket uses are integers.
 - **Errors:** every error has this body, and its code is stable, so mocks can switch on it:
@@ -315,6 +315,7 @@ interface Person {
 
 /** You. */
 interface Me extends Person {
+  lineUserId: string | null; // LINE's sub, checked against LIFF's user before a lasting session opens the app
   createdAt: IsoTime; // the stat board's "Since"
   needsHandle: boolean; // true until the handle prompt is answered
   newStickerCount: number; // NEW in your sticker tray
@@ -469,8 +470,11 @@ interface TimelapseV1 {
 | `POST /api/me/handle`          | `{ handle: string }`: 1–32 characters after trimming, no `@`                                    | 200 `{ me: Me }`                                  | 400 `handle_invalid`; 409 `handle_taken`                                  |
 | `POST /api/me/language-choice` | `{ languageChoice: "en" \| "ja" \| null }`: Settings' language; null follows LINE's             | 200 `{ me: Me }`                                  | 400 `invalid_request`                                                     |
 | `DELETE /api/me`               | none                                                                                            | 204, clears the cookie, and unlinks the chat menu |                                                                           |
+| `DELETE /api/session`          | none; no session needed                                                                         | 204, and clears the cookie                        |                                                                           |
 
-The frontend first resumes the signed-cookie session using `GET /api/me` with the current LINE user ID. That header only restricts session reuse; it cannot authenticate a user. Only `401 signed_out` starts a new token exchange. Network failures keep a normal retry; missing or rejected LINE credentials offer an explicit reconnect that preserves the current page, including Gift Message links. Privy sign-in uses the same reconnect action when its LINE credentials are rejected.
+`Me` also carries `lineUserId`, LINE's `sub` for your own account; `Person` never does. As the app starts, while LIFF does, it asks `GET /api/me`, `GET /api/tickets` and, when it opens on the board, `GET /api/sticker-boards/me` with the cookie it has. Once LIFF is ready, it opens on those answers only when `lineUserId` is LIFF's user; otherwise it drops them unread and signs in, so another LINE user never sees them. Logging out of LINE outside LINE's app calls `DELETE /api/session` first.
+
+Without that early answer, the frontend resumes the signed-cookie session using `GET /api/me` with the current LINE user ID. That header only restricts session reuse; it cannot authenticate a user. Only `401 signed_out` starts a new token exchange. Network failures keep a normal retry; missing or rejected LINE credentials offer an explicit reconnect that preserves the current page, including Gift Message links. Privy sign-in uses the same reconnect action when its LINE credentials are rejected.
 
 ### Chat menu
 
