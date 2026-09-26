@@ -2,7 +2,7 @@
    sealed (only once the send succeeded), it has settled in, the mouth is pressed shut, and a clear film
    band with an aqua tear tape runs across it, the tape's loose end sticking out as the pull tab.
    The parts share one sleeve box (--sx, --sy, --sw, --sh) inside the stage. --gift-tear (0 to 1)
-   is how far the tape has torn out; registered, so the hint's loop can move it. */
+   is how far the tape has torn out; registered, so it's 0 until a tear is given. */
 
 @property --gift-tear {
   syntax: "<number>";
@@ -685,9 +685,24 @@
   }
 }
 
-/* The hint: a finger takes the tab and pulls a little, the strip tears a little, then it lets go. */
-.gift-bag.is-hinting {
-  animation: gift-tear-hint 2.8s var(--ease-peel) infinite;
+/* The hint: a finger takes the tab and pulls a little, the strip tears a little, then it lets go.
+   The parts the tear moves get their own keyframes on transform or opacity, which the compositor
+   runs, where animating --gift-tear would restyle the whole bag every frame. Each is its part's
+   rule at a tear of 0 and 0.16; the loop shows only past 0.16, so it has none. */
+.gift-bag.is-hinting :is(.gift-seal__tape, .gift-seal__tab) {
+  animation: gift-hint-pull 2.8s var(--ease-peel) infinite;
+}
+
+.gift-bag.is-hinting .gift-seal__print {
+  animation: gift-hint-print 2.8s var(--ease-peel) infinite;
+}
+
+.gift-bag.is-hinting .gift-seal__lobe {
+  animation: gift-hint-lobe 2.8s var(--ease-peel) infinite;
+}
+
+.gift-bag.is-hinting .gift-seal__gap {
+  animation: gift-hint-gap 2.8s var(--ease-peel) infinite;
 }
 
 .gift-bag__finger {
@@ -702,17 +717,60 @@
   animation: gift-finger-pull 2.8s var(--ease-peel) infinite;
 }
 
-@keyframes gift-tear-hint {
+@keyframes gift-hint-pull {
   0%,
-  22% {
-    --gift-tear: 0;
+  22%,
+  72%,
+  100% {
+    transform: translateX(0);
   }
   56% {
-    --gift-tear: 0.16;
+    transform: translateX(calc(0.16 * var(--sw)));
+  }
+}
+
+@keyframes gift-hint-print {
+  0%,
+  22%,
+  72%,
+  100% {
+    transform: translateX(0);
+  }
+  56% {
+    transform: translateX(calc(-0.16 * var(--sw)));
+  }
+}
+
+@keyframes gift-hint-lobe {
+  0%,
+  22%,
+  72%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  56% {
+    transform: rotate(-2.16deg);
+  }
+}
+
+/* The gap's min(1, tear * 40) tops out early in the pull, so it fades in and out along the
+   stretches of --ease-peel before and after that point, each cut from the curve and rescaled. */
+@keyframes gift-hint-gap {
+  0%,
+  22% {
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.3576, 0.3487, 0.6873, 0.682);
+  }
+  23.4805% {
+    opacity: 1;
+  }
+  61.6452% {
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.1977, 0.6811, 0.4962, 1);
   }
   72%,
   100% {
-    --gift-tear: 0;
+    opacity: 0;
   }
 }
 
@@ -746,7 +804,8 @@
     display: none;
   }
 
-  .gift-bag.is-hinting,
+  .gift-bag.is-hinting
+    :is(.gift-seal__gap, .gift-seal__tape, .gift-seal__print, .gift-seal__tab, .gift-seal__lobe),
   .gift-bag__finger {
     animation: none;
   }
