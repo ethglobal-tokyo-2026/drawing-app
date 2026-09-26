@@ -509,7 +509,6 @@
   color: var(--ink);
   white-space: nowrap;
   font: 400 var(--fs-fine) / 1 var(--font-puffy);
-  font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   transform: rotate(var(--tilt));
   box-shadow:

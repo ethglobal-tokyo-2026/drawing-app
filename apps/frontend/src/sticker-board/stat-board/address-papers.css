@@ -76,7 +76,6 @@
   margin-top: 4px;
   font: 800 15px/1.2 var(--font-ui);
   font-stretch: var(--w-ui);
-  font-variant-numeric: tabular-nums;
 }
 
 .address-papers__status {

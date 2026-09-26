@@ -58,7 +58,6 @@ typography:
     fontWeight: 900
     lineHeight: 0.95
     letterSpacing: "-0.035em"
-    fontFeature: "tnum"
     fontVariation: "'wdth' 125"
   headline:
     fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
@@ -93,7 +92,6 @@ typography:
     fontWeight: 650
     lineHeight: 1.3
     letterSpacing: "0.07em"
-    fontFeature: "tnum"
     fontVariation: "'wdth' 87.5"
   jp-caption:
     fontFamily: "Zen Kaku Gothic New, Hiragino Sans, Hiragino Kaku Gothic ProN, Mona Sans, sans-serif"
@@ -348,12 +346,12 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 ### Hierarchy
 
 - **Display** (400, 20px; 23px on the large key, 17px on the compact key; line-height 1): the key's label. It also sets dot badges (12–19px), the gratitude multiplier (×8.0), the giver's gratitude tag, and the outlined 袋文字 tier captions (46px, pink inside white inside ink).
-- **Figure** (900, 26px on the cork back's stamps and 27px in the open trail row, up to 52px on the gratitude receipt and 58px on the streak leaf; line-height about 0.95, width 125, tabular): gratitude amounts in the combo, the receipt and the sticker's trail, the counts pinned on the cork back (the receipt's TOTAL at 30px), and the hit counter (23px on the leaderboard, 20px in the cork back's Bests).
+- **Figure** (900, 26px on the cork back's stamps and 27px in the open trail row, up to 52px on the gratitude receipt and 58px on the streak leaf; line-height about 0.95, width 125, proportional figures): gratitude amounts in the combo, the receipt and the sticker's trail, the counts pinned on the cork back (the receipt's TOTAL at 30px), and the hit counter (23px on the leaderboard, 20px in the cork back's Bests).
 - **Headline** (800, 26px, line-height 1.08, width 112, balanced wrap): screen and dialog titles such as "Sealed on-chain" and "Out of tickets for today".
 - **Title** (800, 18–22px, line-height 1.1, width 112): sheet titles, the board header's name, and the notebook scrap and Settings headings on the cork back (18px).
 - **Body** (400–500, 15px, line-height 1.42–1.5, width 100): running text. Notes cap at 28–44ch. Supporting notes drop to 13px.
 - **Label** (700, 15px, or 13px on small buttons, width 100): buttons, tabs and chips, in sentence case at one weight.
-- **Fine** (650, 11px, uppercase, +0.07em, width 87.5, tabular): metadata lines such as "No.0147 · 4:52 · 2026.09.23 · @alice", sheet date ranges in the tray, captions and hints.
+- **Fine** (650, 11px, uppercase, +0.07em, width 87.5, proportional figures): metadata lines such as "No.0147 · 4:52 · 2026.09.23 · @alice", sheet date ranges in the tray, captions and hints.
 - **JP caption** (700, 11px, +0.14em): the なまえ cap on the name label.
 
 ### Named Rules
@@ -369,6 +367,8 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 Nothing else is set at 75.
 
 **The Puffy Voice Rule.** Dela Gothic One appears only on keys, dot badges (the draw screen's timer dot is one), the gratitude multiplier and tag, and outlined 袋文字 captions. It's never used for headings, body text or plain figures.
+
+**The Plain Zero Rule.** Mona Sans's tabular figures draw a slashed zero, and nothing in the font turns it back: it has no `zero` feature and no stylistic sets. So Mona Sans figures are never tabular (`tabular-nums`, `tnum`). Prices, dates, stamps, totals, the receipt, ticket counts and the hit counter all set its proportional figures, whose zero is plain.
 
 **The Hits Rule.** A combo's length is counted in hits, the way fighting games count it, never in taps. It never wears ×, which belongs to the multiplier. It always shows as the hit counter.
 
