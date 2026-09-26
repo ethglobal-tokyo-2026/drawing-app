@@ -10,7 +10,7 @@ This package contains the first backend and contract boundaries for sealing stic
 - The original artist, content hash, and metadata URI remain immutable after later ownership transfers.
 - The backend reconciles repeat requests against the existing NFT instead of creating another NFT.
 - The LINE authentication server verifies the LIFF ID token with LINE before issuing a five-minute Privy Custom Auth JWT.
-- The same server switches a returning user's LINE chat menu: `POST /v1/auth/line-menu` verifies the ID token, looks the person up in Privy, and links the returning-user rich menu when they have an account.
+- The REST API (`apps/api`) links each person's LINE chat menu, not this server.
 - `contracts/ens/` names people, stickers and pending gifts under croquis.eth on ENSv2. The design is `docs/superpowers/specs/2026-09-26-ens-names-design.md`.
 
 The API persists application records and sticker assets. Privy smart-wallet sponsorship is configured separately.

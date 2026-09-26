@@ -4,19 +4,15 @@ import { createAuthHttpServer } from "../../src/auth-http.js";
 
 export const APP_ORIGIN = "https://drawing.example";
 
-/** Starts the auth server on a free port for the current test, recording what it logs. */
+/** Starts the auth server on a free port for the current test, recording the errors it logs. */
 export async function startAuthServer(
   options: Omit<Parameters<typeof createAuthHttpServer>[0], "appOrigin" | "logger">,
 ) {
-  const info: string[] = [];
   const errors: unknown[] = [];
   const server = createAuthHttpServer({
     ...options,
     appOrigin: APP_ORIGIN,
-    logger: {
-      info: (message) => info.push(message),
-      error: (_message, details) => errors.push(details.error),
-    },
+    logger: { error: (_message, details) => errors.push(details.error) },
   });
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
@@ -28,5 +24,5 @@ export async function startAuthServer(
   );
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("Test server has no TCP address");
-  return { url: `http://127.0.0.1:${address.port}`, info, errors };
+  return { url: `http://127.0.0.1:${address.port}`, errors };
 }

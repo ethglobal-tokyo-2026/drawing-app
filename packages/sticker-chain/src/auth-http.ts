@@ -1,22 +1,9 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import {
-  LineMenuSwitchError,
-  menuLanguageOf,
-  type LineMenuFailure,
-  type SwitchLineMenu,
-} from "./line-menu.js";
 import type { LinePrivyJwtIssuer } from "./line-privy-jwt.js";
 
 interface Logger {
-  info: (message: string) => void;
   error: (message: string, details: { error: unknown }) => void;
 }
-
-const LINE_MENU_FAILURE_STATUS: Record<LineMenuFailure, number> = {
-  line_auth_failed: 401,
-  privy_lookup_failed: 502,
-  line_menu_link_failed: 502,
-};
 
 function sendJson(
   response: ServerResponse,
@@ -32,8 +19,8 @@ function sendJson(
   response.end(JSON.stringify(body));
 }
 
-// Both routes take LINE's ID token; only the chat menu's uses the app's language.
-async function readBody(request: IncomingMessage) {
+// The route takes LINE's ID token.
+async function readIdToken(request: IncomingMessage) {
   if (!request.headers["content-type"]?.startsWith("application/json")) {
     throw new Error("JSON content type is required");
   }
@@ -48,18 +35,19 @@ async function readBody(request: IncomingMessage) {
   }
   const idToken: unknown = Reflect.get(parsed, "idToken");
   if (typeof idToken !== "string") throw new Error("idToken is required");
-  return { idToken, language: menuLanguageOf(Reflect.get(parsed, "language")) };
+  return idToken;
 }
 
+/**
+ * The LINE → Privy auth server: trades LINE's ID token for a Privy JWT, and serves the keys Privy
+ * checks it with. The REST API links chat menus.
+ */
 export function createAuthHttpServer({
   issuer,
-  switchLineMenu,
   appOrigin,
   logger = console,
 }: {
   issuer: LinePrivyJwtIssuer;
-  /** Absent when the server lacks the menu switch's credentials or menu ID. */
-  switchLineMenu?: SwitchLineMenu;
   appOrigin: string;
   logger?: Logger;
 }) {
@@ -67,8 +55,7 @@ export function createAuthHttpServer({
 
   async function answerPrivyJwt(request: IncomingMessage, response: ServerResponse) {
     try {
-      const { idToken } = await readBody(request);
-      const { jwt, expiresAt } = await issuer.issue(idToken);
+      const { jwt, expiresAt } = await issuer.issue(await readIdToken(request));
       sendJson(response, 200, { jwt, expiresAt });
     } catch (error) {
       logger.error("LINE authentication failed", { error });
@@ -76,30 +63,7 @@ export function createAuthHttpServer({
     }
   }
 
-  async function answerLineMenu(request: IncomingMessage, response: ServerResponse) {
-    if (!switchLineMenu) {
-      sendJson(response, 503, { error: "menu_switching_off" });
-      return;
-    }
-    try {
-      const { idToken, language } = await readBody(request);
-      const outcome = await switchLineMenu(idToken, language);
-      logger.info(
-        `LINE chat menu: ${outcome.menu === "returning" ? "returning" : `new, ${outcome.reason}`}`,
-      );
-      sendJson(response, 200, outcome);
-    } catch (error) {
-      logger.error("LINE chat menu switch failed", { error });
-      // A request without a readable ID token fails LINE authentication, as it does for privy-jwt.
-      const failure = error instanceof LineMenuSwitchError ? error.failure : "line_auth_failed";
-      sendJson(response, LINE_MENU_FAILURE_STATUS[failure], { error: failure });
-    }
-  }
-
-  const postRoutes = new Map([
-    ["/v1/auth/privy-jwt", answerPrivyJwt],
-    ["/v1/auth/line-menu", answerLineMenu],
-  ]);
+  const postRoutes = new Map([["/v1/auth/privy-jwt", answerPrivyJwt]]);
 
   return createServer(async (request, response) => {
     const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
