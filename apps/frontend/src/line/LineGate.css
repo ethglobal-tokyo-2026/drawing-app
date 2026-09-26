@@ -1,15 +1,27 @@
-/* ---------- Before LINE has logged the person in ---------- */
+/* ---------- Before LINE has logged the person in: the board's backing paper, still bare ---------- */
 
 .line-gate {
   position: fixed;
   inset: 0;
+  isolation: isolate;
   display: grid;
   place-content: center;
   justify-items: center;
   gap: 12px;
-  padding: 32px;
-  background: var(--liner);
+  padding: 32px 24px;
+  background: var(--liner-grain), var(--liner);
   text-align: center;
+}
+
+/* The maker print, barely there, as on the board. */
+.line-gate::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--liner-print);
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 .line-gate h1 {
@@ -17,15 +29,40 @@
   font-size: 26px;
 }
 
-.line-gate p {
+.line-gate__lead {
   max-width: 30ch;
   margin: 0 0 12px;
   color: var(--graphite);
+  text-wrap: pretty;
 }
 
-/* Selectable, so the reason can be copied into a report. */
-.line-gate-error {
+/* LINE's own words under the key, for a report: case kept, wrapping anywhere, and selectable. */
+.line-gate__reason {
+  max-width: 36ch;
+  margin: 6px 0 0;
+  letter-spacing: 0.02em;
+  text-transform: none;
   overflow-wrap: anywhere;
   -webkit-user-select: text;
   user-select: text;
+}
+
+/* LIFF usually starts within a second, so the paper shows alone at first and the line only comes in
+   when it takes longer. */
+.line-gate__opening {
+  margin: 0;
+  animation: line-gate-appear 400ms var(--ease-out) 1200ms both;
+}
+
+@keyframes line-gate-appear {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .line-gate__opening {
+    animation: line-gate-appear 1ms linear 1200ms both;
+  }
 }
