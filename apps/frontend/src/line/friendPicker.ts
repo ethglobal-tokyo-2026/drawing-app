@@ -16,17 +16,27 @@ export type OneFriendShare = "sent" | "cancelled";
 export const canPickOneFriend = (line: LiffPicker): boolean =>
   line.isApiAvailable("shareTargetPicker");
 
+export interface PickerOptions {
+  /**
+   * LINE's full picker: groups and recent chats beside friends. LINE shows them only to a picker
+   * that allows several picks, so this one does.
+   */
+  anyChat?: boolean;
+}
+
 /**
  * Sends messages through LINE's share target picker, limited to one friend so they land in one
- * private chat. Rejects with LINE's error code when the picker itself fails.
+ * private chat, unless `anyChat` opens the full picker. Rejects with LINE's error code when the
+ * picker itself fails.
  */
 export async function sendToOneFriend(
   line: LiffPicker,
   messages: PickerMessage[],
+  { anyChat }: PickerOptions = {},
 ): Promise<OneFriendShare> {
   let result;
   try {
-    result = await line.shareTargetPicker(messages, { isMultiple: false });
+    result = await line.shareTargetPicker(messages, { isMultiple: anyChat === true });
   } catch (error) {
     throw new Error(`LINE’s friend picker failed: ${describeLiffError(error)}`, { cause: error });
   }
