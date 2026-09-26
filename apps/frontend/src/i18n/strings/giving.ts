@@ -104,6 +104,17 @@ export const giving = {
       ja: "LINEの友だち追加画面がひらきませんでした：{{reason}}",
     },
   },
+  preparing: {
+    /** Giving, while the sticker's transfer is being confirmed before LINE's friend picker opens: the sheet's title */
+    title: { en: "Preparing your gift", ja: "ギフトを準備中" },
+    /** Giving, before LINE's friend picker opens: explains wallet confirmation and that the gift has not been sent */
+    lead: {
+      en: "Confirm in your wallet if asked, then wait for your sticker to be ready. LINE’s friend picker will open next; your gift hasn’t been sent yet.",
+      ja: "ウォレットで確認を求められたら、承認してシールの準備ができるまでお待ちください。次にLINEの友だち選択がひらきます。ギフトはまだ送られていません。",
+    },
+    /** Giving, while the sticker is being prepared: the disabled send button */
+    button: { en: "Preparing…", ja: "準備中…" },
+  },
   /** The sticker in the open bag, until it's sent or taken out. */
   inTheBag: {
     /** Giving, once the sticker drops into the open gift bag: the sheet's title while LINE's friend picker opens and is up */
@@ -230,13 +241,13 @@ export const giving = {
     onTheirWay_other: { en: "On their way", ja: "お届け中" },
     /** The pending gifts badge on your own sticker board: the line under "On their way", the newest gift's number and how many more */
     andMore: { en: "{{no}} and {{count}} more", ja: "{{no}}ほか{{count}}枚" },
-    /** The pending gifts badge on your own sticker board: the line under "On its way" naming who one gift given in the app went to; no screen names a recipient yet, so it isn't shown */
+    /** The pending gifts badge on your own sticker board: the line under "On its way" naming who one gift waits for: the person picked in the app, or whoever first opened its link */
     to: { en: "to {{name}}", ja: "{{name}}へ" },
     /** Names the badge for assistive tech. */
     label: {
       /** The pending gifts badge on your own sticker board: its name for assistive tech, with one gift on its way */
       one: { en: "Gifts on their way: {{no}}", ja: "お届け中のギフト：{{no}}" },
-      /** The pending gifts badge on your own sticker board: its name for assistive tech, with one gift given to someone in the app; no screen names a recipient yet, so it isn't shown */
+      /** The pending gifts badge on your own sticker board: its name for assistive tech, with one gift that waits for someone: the person picked in the app, or whoever first opened its link */
       oneTo: {
         en: "Gifts on their way: {{no}} to {{name}}",
         ja: "お届け中のギフト：{{name}}への{{no}}",

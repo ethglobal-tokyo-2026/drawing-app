@@ -173,6 +173,8 @@ export const sessionRoutes = (deps: AppDeps) =>
       return c.json({ me: meOf(deps.db, user) }, 200);
     })
     .delete("/me", (c) => {
+      // Read before the row loses it: their chat menu goes back to LINE's default, in the background.
+      const lineUserId = liveUser(deps.db, c.var.userId)?.lineUserId;
       // The handle goes with the LINE columns, since it started as the LINE name. The row stays, as
       // the Original Artist of their stickers, with their smart wallet and gifts.
       deps.db
@@ -186,6 +188,7 @@ export const sessionRoutes = (deps: AppDeps) =>
         })
         .where(and(eq(users.id, c.var.userId), isNull(users.deletedAt)))
         .run();
+      if (lineUserId) void deps.lineChatMenu.unlink(c.var.userId, lineUserId);
       clearSessionCookie(c);
       return c.body(null, 204);
     });

@@ -1,147 +1,337 @@
 <!doctype html>
 <!--
-  The returning-user rich menu: Draw, My board and Explore under the official account's chat. returning-menu.png and
-  returning-menu.ja.png are this page's screenshots, and create-returning-menu.sh uploads one to LINE per language.
-  Re-render: open this page at a 2500 × 843 viewport with device scale 1, wait for document.fonts.ready, then
-  screenshot the viewport: as it is for returning-menu.png, and with ?lang=ja for returning-menu.ja.png.
+  The official account's chat menus, drawn as the app's board foot: the Draw key on the left, and My board and
+  Explore as label stock stacked on the right. ?state=plain|3|2|1|reserve|none sets the tickets tucked behind the
+  key, ?lang=en|ja the language, and ?menu=default draws the one bilingual key new people see instead.
+  Don't open this file directly: `pnpm --filter frontend chat-menus` serves it with the app's styles, words, icons
+  and ticket shape, and renders every menu to deploy/line/images/ (`--serve` only serves it). The script is
+  apps/frontend/scripts/renderChatMenus.tsx. Add ?areas to outline the tap areas create-returning-menu.sh sets.
 -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Returning-user rich menu</title>
+    <title>Chat menu</title>
+    <!-- The app's fonts, as its index.html asks for them. -->
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@75..125,200..900&family=Zen+Kaku+Gothic+New:wght@700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@75..125,200..900&family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap"
     />
+    <link rel="stylesheet" href="/apps/frontend/src/styles/tokens.css" />
+    <link rel="stylesheet" href="/apps/frontend/src/styles/base.css" />
+    <link rel="stylesheet" href="/apps/frontend/src/styles/keys.css" />
     <style>
-      :root {
-        --liner: #f2f1f6;
-        --ink: #1c1824;
-        --seal: #ffd93b;
-        --pink: #ff4f9a;
-        --aqua: #38d3dc;
-      }
-
       html,
       body {
-        margin: 0;
         width: 2500px;
         height: 843px;
-        overflow: hidden;
-        background: var(--liner);
       }
 
-      /* Sized in the design's phone pixels (a 390 px wide row), then zoomed to LINE's 2500 px wide image. */
+      /* Drawn at the phone's size, where LINE shows the 2500 × 843 image 390 wide, then zoomed to LINE's
+         pixels. The grid's lines are the tap areas: Draw {0, 0, 1409, 843}, My board {1409, 0, 1091, 421}
+         and Explore {1409, 421, 1091, 422}. */
       .menu {
+        --menu-h: calc(390px * 843 / 2500);
         zoom: calc(2500 / 390);
-        box-sizing: border-box;
+        position: relative;
+        isolation: isolate;
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        /* The design's row is 138 tall; LINE's 843 is shorter, so the tiles keep their size and the top and bottom
-           padding give. */
-        grid-template-rows: 122px;
-        align-content: center;
-        gap: 7px;
+        grid-template-columns: calc(390px * 1409 / 2500) 1fr;
+        grid-template-rows: calc(var(--menu-h) * 421 / 843) 1fr;
         width: 390px;
-        height: calc(843px * 390 / 2500);
-        padding: 0 8px;
-        box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.06);
-        font-family: "Mona Sans", "Zen Kaku Gothic New", system-ui, sans-serif;
-        font-size: 16px;
-        line-height: 1.35;
-        color: var(--ink);
-        -webkit-font-smoothing: antialiased;
+        height: var(--menu-h);
+        box-shadow: inset 0 1px 0 var(--rule);
       }
 
-      .tile {
-        position: relative;
+      /* The board's backing paper: the maker print, barely there. */
+      .menu::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background: var(--liner-print);
+        opacity: 0.55;
+      }
+
+      .menu > * {
         display: flex;
-        flex-direction: column;
+        min-width: 0;
+      }
+
+      /* The house gutter at the image's edges, and half of it each side of the line between the areas. */
+      .area-draw {
+        grid-row: 1 / 3;
+        align-items: center;
+        padding: 0 6px 0 var(--gutter);
+      }
+
+      .area-board {
+        align-items: flex-end;
+        padding: 0 var(--gutter) 5px 6px;
+      }
+
+      .area-explore {
+        align-items: flex-start;
+        padding: 5px var(--gutter) 0 6px;
+      }
+
+      .area-board .label-btn,
+      .area-explore .label-btn {
+        width: 100%;
+      }
+
+      .draw {
+        position: relative;
+        isolation: isolate;
+        display: flex;
+        align-items: flex-start;
+      }
+
+      /* The key keeps one width in every ticket state, so only the tickets change as they're used; at 136px the
+         widest (the used backing) still ends inside Draw's tap area. With no tickets it takes the whole area. */
+      .draw .key {
+        width: 136px;
+      }
+
+      .menu[data-state="plain"] .draw,
+      .menu[data-state="plain"] .draw .key {
+        width: 100%;
+      }
+
+      /* ---------- The tickets tucked behind the key's right end ----------
+         Until the app's Draw key draws its own, these follow the approved mock: a Seal Yellow ticket ×N for daily
+         tickets left, the reserve ticket in blue resin with its four-point star and no count, and at none the used
+         backing printed with the refill time. They sit centered on the key's face, 16px under its end. */
+      .tickets {
+        position: relative;
+        z-index: -1;
+        margin: 13px 0 0 -16px;
+      }
+
+      .ticket {
+        position: relative;
+        display: block;
+        height: 34px;
+        rotate: -3deg;
+        transform-origin: 0 50%;
+        filter: drop-shadow(0 1px 0 rgba(28, 24, 36, 0.1))
+          drop-shadow(1px 2px 3px rgba(28, 24, 36, 0.08));
+      }
+
+      .ticket > svg {
+        position: absolute;
+        inset: 0;
+        overflow: visible;
+      }
+
+      .ticket-face {
+        fill: var(--seal);
+        stroke: var(--ink);
+        stroke-width: 1.5;
+        stroke-linejoin: round;
+      }
+
+      .ticket--reserve .ticket-face {
+        fill: var(--blue);
+      }
+
+      .ticket-resin {
+        fill: url(#resin);
+      }
+
+      .ticket--used .ticket-face {
+        fill: var(--liner-lift);
+        stroke: rgba(110, 104, 120, 0.62);
+        stroke-width: 1.25;
+        stroke-dasharray: 3 2.4;
+      }
+
+      /* What's printed on the ticket, in the part that shows: from the key's end to the notch. */
+      .ticket-print {
+        position: absolute;
+        inset: 0 9px 0 16px;
+        display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
-        border-radius: 8px;
-        box-shadow: inset 0 0 0 1px rgba(28, 24, 36, 0.16);
-      }
-      .tile--draw {
-        background: var(--seal);
-      }
-      .tile--board {
-        background: var(--pink);
-      }
-      .tile--explore {
-        background: var(--aqua);
+        font: 800 15px/1 var(--font-ui);
+        font-stretch: var(--w-figure);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
       }
 
-      .tile svg {
+      /* The refill time, in fine print. */
+      .ticket--used .ticket-print {
+        font-weight: 650;
+        font-size: var(--fs-fine);
+        font-stretch: var(--w-fine);
+        letter-spacing: 0.02em;
+        color: var(--ink-soft);
+      }
+
+      /* The reserve ticket's star, on its top-right corner. */
+      .ticket-star {
+        position: absolute;
+        top: -9px;
+        right: -9px;
+        width: 15px;
+        height: 15px;
+        color: var(--canvas);
+        filter: drop-shadow(0 0 0.5px rgba(28, 24, 36, 0.55))
+          drop-shadow(1px 1px 1.5px rgba(28, 24, 36, 0.24));
+      }
+
+      .ticket-star svg {
         display: block;
-        flex: none;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* ---------- The default menu: one key, Japanese over English ---------- */
+      .area-open {
+        grid-row: 1 / 3;
+        grid-column: 1 / 3;
+        align-items: center;
+        padding: 0 var(--gutter);
+      }
+
+      .area-open .key {
+        width: 100%;
+        gap: 12px;
+      }
+
+      /* A label on two lines takes an icon as tall as both. */
+      .area-open .key svg {
         width: 30px;
         height: 30px;
-        fill: currentColor;
-      }
-      .tile b {
-        font-weight: 800;
-        font-stretch: 112%;
-        font-size: 19px;
-        letter-spacing: -0.01em;
       }
 
-      /* One image serves everyone, so the dot states the ticket rule rather than a count of what's left. */
-      .dot {
-        position: absolute;
-        right: 10px;
-        top: 9px;
-        padding: 3px 6px 2px;
-        border-radius: 10px;
-        background: #fff;
-        font-stretch: 75%;
-        font-weight: 700;
-        font-size: 11px;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        transform: rotate(-4deg);
-        box-shadow: 0 1px 2px rgba(28, 24, 36, 0.2);
+      .open-words {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+      }
+
+      .open-words [lang="en"] {
+        font-size: 15px;
+      }
+
+      /* ?areas: the tap areas, to check the drawing against them. Never in a rendered menu. */
+      .menu[data-areas] > * {
+        outline: 1px dashed rgba(255, 0, 128, 0.7);
+        outline-offset: -0.5px;
       }
     </style>
   </head>
   <body>
-    <!-- Icons copied byte for byte, never edited, all in their fill weight: Material Symbols "draw" (Apache-2.0,
-         @material-symbols/svg-700 0.47.5), and Phosphor Icons "smiley-sticker" and "eyes" (MIT, @phosphor-icons/core 2.1.1). -->
-    <div class="menu">
-      <div class="tile tile--draw">
-        <svg viewBox="0 -960 960 960" aria-hidden="true">
-          <path
-            d="M135-95v-131l613-613q12-13 25.5-20t27.5-7q14 0 28 7t27 20l25 23q12 11 18.5 25t6.5 28q0 14-6 28t-19 27L267-95H135Zm607-575 92-92-32-32-91 92 31 32ZM545-95q81 0 143.5-38T751-241q0-41-30-75.5T628-371l-56 56q51 12 79.5 33t28.5 41q0 31-39 53t-96 22q-14 0-24.5 10T510-131q0 15 10.5 25.5T545-95ZM241-419l60-60q-70-14-102.5-29T166-540q0-13 19.5-27.5T273-604q84-27 113.5-57.5T416-739q0-58-42.5-92.5T261-866q-44 0-79 15.5T129-812q-9 11-8.5 25t13.5 24q11 9 25.5 8t24.5-12q14-14 32-20.5t45-6.5q43 0 63.5 16.5T345-739q0 20-18.5 35T244-670q-99 33-124 63.5T95-540q0 41 33 73t113 48Z"
-          />
-        </svg>
-        <b data-ja="かく">Draw</b>
-        <span class="dot" data-ja="1日3枚">3 a day</span>
+    <svg width="0" height="0" aria-hidden="true" style="position: absolute">
+      <!-- The stickers' baked resin: a highlight from the top-left light across the ticket's top. -->
+      <linearGradient id="resin" x1="0" y1="0" x2="0.18" y2="1">
+        <stop offset="0" stop-color="#fff" stop-opacity="0.5" />
+        <stop offset="0.4" stop-color="#fff" stop-opacity="0.22" />
+        <stop offset="0.44" stop-color="#fff" stop-opacity="0" />
+      </linearGradient>
+    </svg>
+
+    <main class="menu" id="menu"></main>
+
+    <template id="returning">
+      <div class="area-draw">
+        <div class="draw">
+          <span class="key key--seal"><i data-icon="draw"></i><span data-word="draw"></span></span>
+          <span class="tickets"></span>
+        </div>
       </div>
-      <div class="tile tile--board">
-        <svg viewBox="0 0 256 256" aria-hidden="true">
-          <path
-            d="M128,24a104,104,0,1,0,30.57,203.43,7.9,7.9,0,0,0,3.3-2l63.57-63.57a8,8,0,0,0,2-3.31A104.09,104.09,0,0,0,128,24ZM92,96a12,12,0,1,1-12,12A12,12,0,0,1,92,96Zm82.92,60c-10.29,17.79-27.39,28-46.92,28s-36.63-10.2-46.92-28a8,8,0,1,1,13.84-8c7.47,12.91,19.21,20,33.08,20s25.61-7.1,33.08-20a8,8,0,1,1,13.84,8ZM164,120a12,12,0,1,1,12-12A12,12,0,0,1,164,120Z"
-          />
-        </svg>
-        <b data-ja="マイボード">My board</b>
+      <div class="area-board">
+        <span class="label-btn label-btn--pink"
+          ><i data-icon="myBoard"></i><span data-word="myBoard"></span
+        ></span>
       </div>
-      <div class="tile tile--explore">
-        <svg viewBox="0 0 256 256" aria-hidden="true">
-          <path
-            d="M176,32c-20.61,0-38.28,18.16-48,45.85C118.28,50.16,100.61,32,80,32c-31.4,0-56,42.17-56,96s24.6,96,56,96c20.61,0,38.28-18.16,48-45.85,9.72,27.69,27.39,45.85,48,45.85,31.4,0,56-42.17,56-96S207.4,32,176,32ZM106.92,186.39C99.43,200.12,89.62,208,80,208s-19.43-7.88-26.92-21.61a104.81,104.81,0,0,1-10.24-29.23,32,32,0,1,0,0-58.32A104.81,104.81,0,0,1,53.08,69.61C60.57,55.88,70.38,48,80,48s19.43,7.88,26.92,21.61C115.35,85.07,120,105.81,120,128S115.35,170.93,106.92,186.39Zm96,0C195.43,200.12,185.62,208,176,208s-19.43-7.88-26.92-21.61a104.81,104.81,0,0,1-10.24-29.23,32,32,0,1,0,0-58.32,104.81,104.81,0,0,1,10.24-29.23C156.57,55.88,166.38,48,176,48s19.43,7.88,26.92,21.61C211.35,85.07,216,105.81,216,128S211.35,170.93,202.92,186.39Z"
-          />
-        </svg>
-        <b data-ja="さがす">Explore</b>
+      <div class="area-explore">
+        <span class="label-btn label-btn--aqua"
+          ><i data-icon="explore"></i><span data-word="explore"></span
+        ></span>
       </div>
-    </div>
-    <script>
-      // ?lang=ja draws the Japanese menu, returning-menu.ja.png.
-      if (new URLSearchParams(location.search).get("lang") === "ja") {
-        document.documentElement.lang = "ja";
-        for (const label of document.querySelectorAll("[data-ja]"))
-          label.textContent = label.dataset.ja;
+    </template>
+
+    <!-- New people's menu can't know their language, so it says both, Japanese first, in the greeting's words
+         (greeting.md). -->
+    <template id="default">
+      <div class="area-open">
+        <span class="key key--seal key--lg"
+          ><i data-icon="open"></i
+          ><span class="open-words"
+            ><span lang="ja">シールボードをひらく</span
+            ><span lang="en">Open Sticker Board</span></span
+          ></span
+        >
+      </div>
+    </template>
+
+    <script type="module">
+      // window.chatMenu comes from the render script: the app's words, icons and ticket shapes.
+      const content = window.chatMenu;
+      const query = new URLSearchParams(location.search);
+      const menu = document.getElementById("menu");
+      const kind = query.get("menu") === "default" ? "default" : "returning";
+      const lang = query.get("lang") === "ja" ? "ja" : "en";
+      const state = query.get("state") ?? "plain";
+      if (!["plain", "3", "2", "1", "reserve", "none"].includes(state))
+        throw new Error(`No chat menu state "${state}"`);
+
+      document.documentElement.lang = kind === "default" ? "ja" : lang;
+      menu.dataset.state = kind === "default" ? "plain" : state;
+      if (query.has("areas")) menu.dataset.areas = "";
+      menu.append(document.getElementById(kind).content.cloneNode(true));
+
+      const words = content.words[lang];
+      for (const slot of menu.querySelectorAll("[data-word]"))
+        slot.textContent = words[slot.dataset.word];
+      for (const slot of menu.querySelectorAll("[data-icon]"))
+        slot.outerHTML = content.icons[slot.dataset.icon];
+
+      const ticket = (kind, shape, print) => `
+        <span class="ticket ticket--${kind}" style="width: ${shape.w}px">
+          <svg viewBox="0 0 ${shape.w} ${shape.h}" width="${shape.w}" height="${shape.h}">
+            <path class="ticket-face" d="${shape.d}" />
+            ${kind === "reserve" ? `<path class="ticket-resin" d="${shape.d}" />` : ""}
+          </svg>
+          ${print}
+        </span>`;
+      const tickets = menu.querySelector(".tickets");
+      if (tickets) {
+        const { daily, reserve, used } = content.tickets;
+        if (["3", "2", "1"].includes(state))
+          tickets.innerHTML = ticket(
+            "daily",
+            daily,
+            `<span class="ticket-print">${words.count.replace("{{count}}", state)}</span>`,
+          );
+        else if (state === "reserve")
+          tickets.innerHTML = ticket(
+            "reserve",
+            reserve,
+            `<span class="ticket-star">${content.icons.star}</span>`,
+          );
+        else if (state === "none")
+          tickets.innerHTML = ticket(
+            "used",
+            used[lang],
+            `<span class="ticket-print">${words.refill}</span>`,
+          );
       }
+
+      // Every face the menu uses, loaded for the words it prints, before the render script shoots it.
+      const text = menu.textContent;
+      await Promise.all(
+        [
+          '400 20px "Dela Gothic One"',
+          '700 15px "Mona Sans"',
+          '800 15px "Mona Sans"',
+          '700 15px "Zen Kaku Gothic New"',
+        ].map((font) => document.fonts.load(font, text)),
+      );
+      await document.fonts.ready;
+      document.documentElement.dataset.ready = "";
     </script>
   </body>
 </html>

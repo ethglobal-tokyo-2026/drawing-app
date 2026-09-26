@@ -125,11 +125,14 @@ export function fakeGiftChain() {
         );
       }
       if (gift.status !== "pending") return Promise.reject(new Error("Gift is not pending"));
-      if (!isHex(giftClaimToken) || giftClaimToken.length !== 66) {
-        return Promise.reject(new Error("Gift claim token is invalid"));
-      }
-      if (keccak256(giftClaimToken).toLowerCase() !== gift.claimCommitment.toLowerCase()) {
-        return Promise.reject(new Error("Gift claim token is invalid"));
+      // Without a token, the API has already checked the recipient is who the gift waits for.
+      if (giftClaimToken !== null) {
+        if (!isHex(giftClaimToken) || giftClaimToken.length !== 66) {
+          return Promise.reject(new Error("Gift claim token is invalid"));
+        }
+        if (keccak256(giftClaimToken).toLowerCase() !== gift.claimCommitment.toLowerCase()) {
+          return Promise.reject(new Error("Gift claim token is invalid"));
+        }
       }
       const txHash = fakeBytes32(`claim ${giftId}`);
       claimTransactions.set(giftId, txHash);

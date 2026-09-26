@@ -31,6 +31,8 @@ export const app = {
     /** Drawing screen: text on the grabber at the bottom until it's first used, saying where it leads */
     grabber: { en: "Board", ja: "ボード" },
   },
+  /** Drawing screen, when Draw is tapped before its code has loaded: what screen readers hear while it loads */
+  drawingLoading: { en: "Opening the drawing screen", ja: "かく画面を読み込んでいます" },
   motionPermission: {
     /** Motion permission card, shown once over the app on iPhone: its screen-reader name */
     label: { en: "Motion permission", ja: "モーションの許可" },

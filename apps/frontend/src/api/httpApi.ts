@@ -240,8 +240,10 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       return (await response.json()).tickets;
     },
 
-    packageGift: async (stickerId) => {
-      const response = await api.gifts.$post({ json: { stickerId } });
+    packageGift: async (stickerId, forUserId) => {
+      const response = await api.gifts.$post({
+        json: { stickerId, ...(forUserId && { forUserId }) },
+      });
       if (!response.ok) throw await refusal(response, "POST /api/gifts");
       return response.json();
     },
@@ -282,6 +284,18 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
         { init: { signal: AbortSignal.timeout(RECEIVE_TIMEOUT_MS) } },
       );
       if (!response.ok) throw await refusal(response, "POST /api/gifts/receive");
+      return response.json();
+    },
+    giftsForYou: async () => {
+      const response = await api.gifts["for-you"].$get();
+      if (!response.ok) throw await refusal(response, "GET /api/gifts/for-you");
+      return response.json();
+    },
+    receiveGiftForYou: async (giftId) => {
+      const response = await api.gifts[":giftId"].receive.$post(gift(giftId), {
+        init: { signal: AbortSignal.timeout(RECEIVE_TIMEOUT_MS) },
+      });
+      if (!response.ok) throw await refusal(response, `POST /api/gifts/${giftId}/receive`);
       return response.json();
     },
 

@@ -18,9 +18,9 @@ export function withSmartWallet(api: ApiClient): ApiClient {
       }
       return sealed;
     },
-    packageGift: async (stickerId) => {
+    packageGift: async (stickerId, forUserId) => {
       await waitForSmartWallet();
-      return api.packageGift(stickerId);
+      return api.packageGift(stickerId, forUserId);
     },
     receiveGift: async (request) => {
       await waitForSmartWallet();

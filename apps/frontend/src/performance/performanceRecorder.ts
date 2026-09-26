@@ -42,6 +42,20 @@ interface ScreenFrames {
   slow: number;
 }
 
+/** The frames that began in a stretch of time, such as the 5s after the board was complete. */
+export interface FrameWindow {
+  label: string;
+  /** When it starts, on the performance.now() clock, and how long it lasts. */
+  from: number;
+  ms: number;
+  frames: number;
+  slow: number;
+  /** The longest frame, and when it began. */
+  worst: { ms: number; at: number } | null;
+  /** Each frame's interval, in order. */
+  intervals: readonly number[];
+}
+
 export interface PerformanceSummary {
   /** When the recording began, on the performance.now() clock. */
   startedAt: number;
@@ -53,6 +67,8 @@ export interface PerformanceSummary {
   /** The median of the latest intervals; 0 before the first. */
   typicalMs: number;
   byScreen: ReadonlyMap<string, ScreenFrames>;
+  /** The stretches watched, oldest first. */
+  windows: readonly FrameWindow[];
 }
 
 export interface PerformanceLog {
@@ -68,6 +84,8 @@ export interface PerformanceLog {
   note: (event: TimelineEvent) => void;
   /** Our own script time, counted in the frame in progress. */
   addOurWork: (label: string, ms: number) => void;
+  /** Sums up, apart, the frames that begin in the `ms` from `from`. */
+  watch: (label: string, from: number, ms: number) => void;
   setScreen: (screen: string, at: number) => void;
   summary: () => PerformanceSummary;
   /** The kept slow frames, oldest first; those still waiting on late events settle now. */
@@ -109,6 +127,7 @@ export function createPerformanceLog(now: number): PerformanceLog {
   let recordedMs = 0;
   let worst: PerformanceSummary["worst"] = null;
   const byScreen = new Map<string, ScreenFrames>();
+  let windows: (FrameWindow & { intervals: number[] })[] = [];
 
   const typicalMs = () => {
     const n = intervals.length;
@@ -167,7 +186,15 @@ export function createPerformanceLog(now: number): PerformanceLog {
       const counts = countsOnScreen();
       counts.frames++;
       if (!worst || ms > worst.ms) worst = { ms, at: before, screen };
-      if (ms > SLOW_FACTOR * typical) {
+      const isSlow = ms > SLOW_FACTOR * typical;
+      for (const w of windows) {
+        if (before < w.from || before >= w.from + w.ms) continue;
+        w.frames++;
+        w.intervals.push(ms);
+        if (isSlow) w.slow++;
+        if (!w.worst || ms > w.worst.ms) w.worst = { ms, at: before };
+      }
+      if (isSlow) {
         slow++;
         counts.slow++;
         pending.push({
@@ -200,6 +227,9 @@ export function createPerformanceLog(now: number): PerformanceLog {
       work.ms += ms;
       work.calls++;
     },
+    watch: (label, from, ms) => {
+      windows.push({ label, from, ms, frames: 0, slow: 0, worst: null, intervals: [] });
+    },
     setScreen: (next, at) => {
       screen = next;
       note({ at, ms: 0, kind: "screen", detail: next });
@@ -214,6 +244,7 @@ export function createPerformanceLog(now: number): PerformanceLog {
       byScreen: new Map(
         [...byScreen].map(([name, counts]): [string, ScreenFrames] => [name, { ...counts }]),
       ),
+      windows: windows.map((w) => ({ ...w, intervals: [...w.intervals] })),
     }),
     slowFrames: () => {
       settle();
@@ -233,6 +264,7 @@ export function createPerformanceLog(now: number): PerformanceLog {
       recordedMs = 0;
       worst = null;
       byScreen.clear();
+      windows = [];
     },
   };
 }
@@ -252,6 +284,15 @@ let stopRecording: (() => void) | null = null;
 export function notePerformance(kind: string, detail: string): void {
   if (!stopRecording) return;
   log?.note({ at: performance.now(), ms: 0, kind, detail });
+}
+
+/**
+ * While recording, the frames that begin in the `ms` from `from` are summed up apart, under `label`,
+ * such as the 5s after the board was complete.
+ */
+export function watchFrames(label: string, from: number, ms: number): void {
+  if (!stopRecording) return;
+  log?.watch(label, from, ms);
 }
 
 /** Runs `work`; while recording, its time counts as ours, under `label`, in the frame in progress. */

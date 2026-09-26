@@ -190,6 +190,27 @@ describe("the performance log", () => {
     expect(log.summary()).toMatchObject({ startedAt: 5000, frames: 0, slow: 0, worst: null });
     expect(log.slowFrames()).toEqual([]);
   });
+
+  it("sums up a watched stretch apart: only the frames that begin in it", () => {
+    const log = createPerformanceLog(0);
+    const run = framesFor(log);
+    const from = run(steady(30));
+    log.watch("the 5s after the board was complete", from, 500);
+    run([...steady(10), 60, ...steady(20)]);
+
+    const [watched] = log.summary().windows;
+    // Its 500ms take in 10 frames, the 60ms one and 17 more; the last 3 begin after it.
+    expect(watched).toMatchObject({
+      label: "the 5s after the board was complete",
+      frames: 28,
+      slow: 1,
+      worst: { ms: 60 },
+    });
+    expect(watched.worst?.at).toBeCloseTo(from + FRAME * 10);
+    expect(watched.intervals).toHaveLength(28);
+    log.clear(5000);
+    expect(log.summary().windows).toEqual([]);
+  });
 });
 
 describe("a long animation frame's split", () => {

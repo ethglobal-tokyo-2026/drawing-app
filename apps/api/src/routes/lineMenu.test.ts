@@ -1,0 +1,255 @@
+import { inspect } from "node:util";
+import { DAILY_TICKETS_PER_DAY } from "@drawing-app/db";
+import { insertUser } from "@drawing-app/db/testing";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
+import { chatMenuLinkSchema, type ChatMenuIds } from "../chatMenu/menus.ts";
+import type { JpycPayment } from "../deps.ts";
+import { errorBodySchema } from "../errors.ts";
+import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
+import {
+  chatMenuThrough,
+  createFakeLine,
+  TEST_CHANNEL,
+  TEST_CHAT_MENU_IDS,
+  type FakeLine,
+} from "../testing/fakeLine.ts";
+import { fakeTicketPayments, TEST_PAYMENT_TARGET } from "../testing/fakes.ts";
+import { TICKET_PACKS, ticketPaymentReference, type TicketKind } from "../tickets/tickets.ts";
+
+const linkBodySchema = z.object({ chatMenu: chatMenuLinkSchema });
+
+/** A LINE user ID as LINE writes them: U and 32 hex digits. */
+const LINE_USER_ID = `U${"0123456789abcdef".repeat(2)}`;
+const [ONE_TICKET] = TICKET_PACKS;
+/** A well-formed Sui transaction digest. */
+const TX_DIGEST = "1".repeat(44);
+
+type Headers = Record<string, string>;
+
+let test: TestApp;
+let line: FakeLine;
+let userId: string;
+let headers: Headers;
+let logged: unknown[][];
+
+/** A fresh app whose chat menu links through a fake LINE, and a person signed in to it. */
+async function start({
+  ids = TEST_CHAT_MENU_IDS,
+  language = "en",
+}: { ids?: ChatMenuIds; language?: "en" | "ja" } = {}) {
+  line = createFakeLine();
+  const sui = fakeTicketPayments(
+    new Map<string, JpycPayment[]>([
+      [
+        TX_DIGEST,
+        [
+          {
+            vault: TEST_PAYMENT_TARGET.vault,
+            payer: `0x${"d".repeat(64)}`,
+            amount: BigInt(ONE_TICKET.priceYen) * 10n ** BigInt(TEST_PAYMENT_TARGET.decimals),
+            reference: ticketPaymentReference("00000000-0000-4000-8000-000000000001"),
+          },
+        ],
+      ],
+    ]),
+  );
+  test = await createTestApp((base) => ({
+    ...chatMenuThrough(line, ids)(base),
+    ticketPayments: sui.ticketPayments,
+  }));
+  userId = insertUser(test.db, {
+    id: "00000000-0000-4000-8000-000000000001",
+    lineUserId: LINE_USER_ID,
+    language,
+  });
+  headers = await test.signInAs(userId);
+}
+
+beforeEach(async () => {
+  logged = [];
+  for (const method of ["info", "warn", "error"] as const) {
+    vi.spyOn(console, method).mockImplementation((...args: unknown[]) => {
+      logged.push(args);
+    });
+  }
+  await start();
+});
+
+afterEach(() => {
+  // The log never shows the channel's secret, its access tokens or anyone's LINE user ID.
+  const log = inspect(logged, { depth: null });
+  for (const secret of [TEST_CHANNEL.channelSecret, "fake-channel-token", LINE_USER_ID]) {
+    expect(log).not.toContain(secret);
+  }
+  vi.restoreAllMocks();
+});
+
+const linkMenu = (as: Headers = headers) =>
+  test.app.request("/api/line-menu", { method: "POST", headers: as });
+
+/** Asks for the chat menu, which must answer 200, and returns what LINE shows. */
+async function linkedMenu() {
+  const response = await linkMenu();
+  expect(response.status).toBe(200);
+  return linkBodySchema.parse(await response.json()).chatMenu;
+}
+
+const post = (path: string, body: object) =>
+  test.app.request(path, {
+    method: "POST",
+    headers: { ...headers, "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+const spend = (kind: TicketKind) => post("/api/tickets/spend", { kind });
+
+/** Spends a ticket of `kind`, which must be granted. */
+async function spendTicket(kind: TicketKind) {
+  expect((await spend(kind)).status).toBe(201);
+}
+
+/** The menu LINE shows the person once every link asked for so far has landed. */
+async function menuAfterLinks() {
+  await test.deps.lineChatMenu.idle();
+  return line.links.get(LINE_USER_ID);
+}
+
+describe("POST /api/line-menu", () => {
+  it("links the menu for your language and tickets, and says LINE shows it", async () => {
+    expect(await linkedMenu()).toEqual({ status: "linked", menu: "3" });
+    expect(line.links.get(LINE_USER_ID)).toBe(TEST_CHAT_MENU_IDS.en["3"]);
+    expect(line.calls).toEqual([
+      "token",
+      `link ${LINE_USER_ID} ${TEST_CHAT_MENU_IDS.en["3"]}`,
+      `read ${LINE_USER_ID}`,
+    ]);
+  });
+
+  it("links the Japanese menus for someone whose language is Japanese", async () => {
+    await start({ language: "ja" });
+    expect(await linkedMenu()).toEqual({ status: "linked", menu: "3" });
+    expect(line.links.get(LINE_USER_ID)).toBe(TEST_CHAT_MENU_IDS.ja["3"]);
+  });
+
+  it("links the menu for the tickets left today, which heals a count that went stale", async () => {
+    await spendTicket("daily");
+    await test.deps.lineChatMenu.idle();
+    line.links.set(LINE_USER_ID, TEST_CHAT_MENU_IDS.en["3"]);
+    expect(await linkedMenu()).toEqual({ status: "linked", menu: "2" });
+    expect(line.links.get(LINE_USER_ID)).toBe(TEST_CHAT_MENU_IDS.en["2"]);
+  });
+
+  it("says not_a_friend when LINE takes the link but shows the default menu", async () => {
+    line.strangers.add(LINE_USER_ID);
+    expect(await linkedMenu()).toEqual({ status: "not_a_friend", menu: "3" });
+    expect(line.links.has(LINE_USER_ID)).toBe(false);
+  });
+
+  it("falls back to the language's plain menu, and links nothing without one", async () => {
+    await start({ ids: { en: { plain: "richmenu-en-plain" } } });
+    expect(await linkedMenu()).toEqual({ status: "linked", menu: "plain" });
+    expect(line.links.get(LINE_USER_ID)).toBe("richmenu-en-plain");
+
+    await start({ ids: { ja: TEST_CHAT_MENU_IDS.ja } });
+    expect(await linkedMenu()).toEqual({ status: "off", reason: "no_menu" });
+    expect(line.calls).toEqual([]);
+  });
+
+  it("answers 502 line_unavailable when LINE fails or doesn't answer", async () => {
+    for (const failure of [
+      Response.json({ message: "Internal server error" }, { status: 500 }),
+      new TypeError("fetch failed"),
+    ]) {
+      line.failNext("link", failure);
+      const response = await linkMenu();
+      expect(response.status).toBe(502);
+      expect(errorBodySchema.parse(await response.json()).error).toBe("line_unavailable");
+    }
+    expect(await linkedMenu()).toEqual({ status: "linked", menu: "3" });
+  });
+
+  it("says the chat menu is off when the server has no Messaging API channel", async () => {
+    test = await createTestApp();
+    userId = insertUser(test.db, { lineUserId: LINE_USER_ID });
+    headers = await test.signInAs(userId);
+    expect(await linkedMenu()).toEqual({ status: "off", reason: "not_configured" });
+  });
+
+  it("answers 401 signed_out without a session", async () => {
+    const response = await linkMenu({});
+    expect(response.status).toBe(401);
+    expect(line.calls).toEqual([]);
+  });
+
+  it("reuses the channel access token", async () => {
+    await linkedMenu();
+    await linkedMenu();
+    expect(line.calls.filter((call) => call === "token")).toHaveLength(1);
+  });
+});
+
+describe("the chat menu after a spend or a purchase", () => {
+  it("follows each spend: 2 and 1 daily tickets left, then none", async () => {
+    const shown = [];
+    for (let spent = 0; spent < DAILY_TICKETS_PER_DAY; spent++) {
+      await spendTicket("daily");
+      shown.push(await menuAfterLinks());
+    }
+    const { en } = TEST_CHAT_MENU_IDS;
+    expect(shown).toEqual([en["2"], en["1"], en.none]);
+  });
+
+  it("shows reserve tickets only once the daily ones are gone, after a purchase", async () => {
+    for (let spent = 0; spent < DAILY_TICKETS_PER_DAY; spent++) await spendTicket("daily");
+    const bought = await post("/api/ticket-purchases", {
+      tickets: ONE_TICKET.tickets,
+      txDigest: TX_DIGEST,
+    });
+    expect(bought.status).toBe(201);
+    expect(await menuAfterLinks()).toBe(TEST_CHAT_MENU_IDS.en.reserve);
+
+    await spendTicket("reserve");
+    expect(await menuAfterLinks()).toBe(TEST_CHAT_MENU_IDS.en.none);
+  });
+
+  it("links nothing after a refused spend", async () => {
+    expect((await spend("reserve")).status).toBe(409);
+    await test.deps.lineChatMenu.idle();
+    expect(line.calls).toEqual([]);
+  });
+
+  it("never fails a spend when LINE does", async () => {
+    line.failNext("token", Response.json({ error: "server_error" }, { status: 500 }));
+    await spendTicket("daily");
+    await test.deps.lineChatMenu.idle();
+    expect(line.links.has(LINE_USER_ID)).toBe(false);
+    expect(inspect(logged)).toContain("chat_menu.relink_failed");
+
+    await spendTicket("daily");
+    expect(await menuAfterLinks()).toBe(TEST_CHAT_MENU_IDS.en["1"]);
+  });
+
+  it("links one person's counts in turn, so an older count can't land after a newer one", async () => {
+    const releaseFirstLink = line.holdNext("link");
+    await spendTicket("daily");
+    await spendTicket("daily");
+    releaseFirstLink();
+    expect(await menuAfterLinks()).toBe(TEST_CHAT_MENU_IDS.en["1"]);
+    expect(line.calls.filter((call) => call.startsWith("link"))).toEqual([
+      `link ${LINE_USER_ID} ${TEST_CHAT_MENU_IDS.en["2"]}`,
+      `link ${LINE_USER_ID} ${TEST_CHAT_MENU_IDS.en["1"]}`,
+    ]);
+  });
+});
+
+describe("DELETE /api/me", () => {
+  it("unlinks the chat menu, so LINE shows the default one", async () => {
+    await linkedMenu();
+    const response = await test.app.request("/api/me", { method: "DELETE", headers });
+    expect(response.status).toBe(204);
+    await test.deps.lineChatMenu.idle();
+    expect(line.links.has(LINE_USER_ID)).toBe(false);
+    expect(line.calls.at(-1)).toBe(`unlink ${LINE_USER_ID}`);
+  });
+});

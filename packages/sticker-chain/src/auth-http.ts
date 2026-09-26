@@ -1,22 +1,10 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { AuthError, AUTH_FAILURE_STATUS, authFailureOf } from "./auth-error.js";
-import {
-  LineMenuSwitchError,
-  menuLanguageOf,
-  type LineMenuFailure,
-  type SwitchLineMenu,
-} from "./line-menu.js";
 import type { LinePrivyJwtIssuer } from "./line-privy-jwt.js";
 
 interface Logger {
-  info: (message: string) => void;
   error: (message: string, details: { error: unknown }) => void;
 }
-
-const LINE_MENU_FAILURE_STATUS: Record<LineMenuFailure, number> = {
-  privy_lookup_failed: 502,
-  line_menu_link_failed: 502,
-};
 
 function sendJson(
   response: ServerResponse,
@@ -32,8 +20,8 @@ function sendJson(
   response.end(JSON.stringify(body));
 }
 
-// Both routes take LINE's ID token; only the chat menu's uses the app's language.
-async function readBody(request: IncomingMessage) {
+// The route takes LINE's ID token.
+async function readIdToken(request: IncomingMessage) {
   if (!request.headers["content-type"]?.startsWith("application/json")) {
     throw new AuthError({ code: "invalid_request", reason: "content_type_required" });
   }
@@ -57,18 +45,19 @@ async function readBody(request: IncomingMessage) {
   if (typeof idToken !== "string") {
     throw new AuthError({ code: "invalid_request", reason: "id_token_required" });
   }
-  return { idToken, language: menuLanguageOf(Reflect.get(parsed, "language")) };
+  return idToken;
 }
 
+/**
+ * The LINE → Privy auth server: trades LINE's ID token for a Privy JWT, and serves the keys Privy
+ * checks it with. The REST API links chat menus.
+ */
 export function createAuthHttpServer({
   issuer,
-  switchLineMenu,
   appOrigin,
   logger = console,
 }: {
   issuer: LinePrivyJwtIssuer;
-  /** Absent when the server lacks the menu switch's credentials or menu ID. */
-  switchLineMenu?: SwitchLineMenu;
   appOrigin: string;
   logger?: Logger;
 }) {
@@ -76,8 +65,7 @@ export function createAuthHttpServer({
 
   async function answerPrivyJwt(request: IncomingMessage, response: ServerResponse) {
     try {
-      const { idToken } = await readBody(request);
-      const { jwt, expiresAt } = await issuer.issue(idToken);
+      const { jwt, expiresAt } = await issuer.issue(await readIdToken(request));
       sendJson(response, 200, { jwt, expiresAt });
     } catch (error) {
       const failure = authFailureOf(error);
@@ -86,34 +74,7 @@ export function createAuthHttpServer({
     }
   }
 
-  async function answerLineMenu(request: IncomingMessage, response: ServerResponse) {
-    if (!switchLineMenu) {
-      sendJson(response, 503, { error: "menu_switching_off" });
-      return;
-    }
-    try {
-      const { idToken, language } = await readBody(request);
-      const outcome = await switchLineMenu(idToken, language);
-      logger.info(
-        `LINE chat menu: ${outcome.menu === "returning" ? "returning" : `new, ${outcome.reason}`}`,
-      );
-      sendJson(response, 200, outcome);
-    } catch (error) {
-      if (error instanceof LineMenuSwitchError) {
-        logger.error("LINE chat menu switch failed", { error });
-        sendJson(response, LINE_MENU_FAILURE_STATUS[error.failure], { error: error.failure });
-      } else {
-        const failure = authFailureOf(error);
-        logger.error("LINE chat menu switch failed", { error: failure });
-        sendJson(response, AUTH_FAILURE_STATUS[failure.code], { error: failure.code });
-      }
-    }
-  }
-
-  const postRoutes = new Map([
-    ["/v1/auth/privy-jwt", answerPrivyJwt],
-    ["/v1/auth/line-menu", answerLineMenu],
-  ]);
+  const postRoutes = new Map([["/v1/auth/privy-jwt", answerPrivyJwt]]);
 
   return createServer(async (request, response) => {
     const pathname = new URL(request.url ?? "/", "http://localhost").pathname;

@@ -25,7 +25,6 @@ import { markNoticed, newestUnnoticed } from "../giving/noticedGifts";
 import { PendingGiftsNotificationBadge } from "../giving/PendingGiftsNotificationBadge";
 import { useGiftSender } from "../giving/useGiftSender";
 import { FEEL_CONFIG } from "../gratitude/gameConfig";
-import { GratitudeMiniGame } from "../gratitude/GratitudeMiniGame";
 import { readMiniGameDemoSettings } from "../gratitude/miniGameDemoSettings";
 import { errorReason } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
@@ -36,12 +35,12 @@ import { LIFF_ID } from "../line/liff";
 import { formatHandle, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { playStick } from "../stickers/stick";
-import { TicketCounts } from "../tickets/TicketCount";
+import { DrawKeyTickets } from "../tickets/DrawKeyTickets";
 import { describeTickets, ticketDay } from "../tickets/tickets";
 import { useTickets } from "../tickets/useTickets";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
-import { lazyWithPreload, usePreloadWhenIdle } from "../ui/lazyWithPreload";
+import { lazyWithPreload } from "../ui/lazyWithPreload";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useReducedMotion } from "../ui/useReducedMotion";
@@ -68,13 +67,22 @@ import {
   type Box,
   type Placement,
 } from "./placement";
+import { noteBootMilestone } from "../performance/bootMilestones";
 import { BoardLoading } from "./BoardLoading";
-import { useSettleBoard } from "./boardSettled";
+import {
+  assemblyOf,
+  followBoardAssembly,
+  markBoardComplete,
+  usePreloadAfterBoard,
+} from "./boardComplete";
+import { markChipsPlayed } from "./boardSettled";
+import { keepBoard, keptBoardFor } from "./lastBoard";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
 import { readingOrder } from "./stickerOrder";
 import { StickerToolbar } from "./StickerToolbar";
 import { SendGratitudeSheet } from "../receiving/SendGratitudeSheet";
+import { GiftsForYouBadge, type GiftForYou } from "../receiving/GiftsForYouBadge";
 import { ArtistChipLayer } from "./ArtistChipLayer";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
@@ -86,22 +94,29 @@ const StickerTray = lazyWithPreload("the sticker tray", () =>
   import("./tray/StickerTray").then((m) => m.StickerTray),
 );
 void StickerTray.preload();
-// Opened from the board, so their code loads once it's up.
+// Opened from the board, so their code loads once the board is complete: nothing else downloads while
+// it assembles.
 const StickerDetail = lazyWithPreload("the sticker detail", () =>
   import("./StickerDetail").then((m) => m.StickerDetail),
 );
 const Giving = lazyWithPreload("Giving", () => import("../giving/Giving").then((m) => m.Giving));
+// Your name turns the board over from the moment it shows, so a touch on it starts the stat board's
+// code loading too.
 const StatBoard = lazyWithPreload("the stat board", () =>
   import("./stat-board/StatBoard").then((m) => m.StatBoard),
 );
-// Your name turns the board over from the moment it shows, so the stat board's code loads with the board's.
-void StatBoard.preload();
-const OPENED_FROM_BOARD = [StickerDetail, Giving, StatBoard];
+// The Gratitude Mini-game opens over the board from a received sticker or the stat board's slip.
+const GratitudeMiniGame = lazyWithPreload("the Gratitude Mini-game", () =>
+  import("../gratitude/GratitudeMiniGame").then((m) => m.GratitudeMiniGame),
+);
+const OPENED_FROM_BOARD = [StickerDetail, Giving, StatBoard, GratitudeMiniGame];
 
 interface Props {
   /** The sticker that was just sealed; it lands on the board the first time the board shows it. */
   freshId?: string;
   onDraw: () => void;
+  /** Opens a gift waiting for you, to unpackage and accept as its gift message would. */
+  onOpenGift: (gift: GiftForYou) => void;
 }
 
 /** Stickers that have landed this session. */
@@ -148,6 +163,18 @@ const kept = (was: Box | null, now: Box) =>
 interface LoadedBoard {
   owner: PersonView;
   stickers: BoardStickerView[];
+  /** Drawn from the phone's storage, until the fresh board lands. */
+  fromPhone?: boolean;
+}
+
+/**
+ * The stickers whose spots win over a load's: all the board holds, since its moves are newer than any
+ * load, but over a board from the phone's storage only those moved since it showed.
+ */
+function heldOver(list: readonly BoardStickerView[] | null, over: LoadedBoard | null) {
+  if (!list || !over?.fromPhone) return list ?? [];
+  const keptSpots = new Map(over.stickers.map((s) => [s.id, s.placement]));
+  return list.filter((s) => keptSpots.get(s.id) !== s.placement);
 }
 
 /** The stacking order that keeps a sticker on top: its own when it's there already. */
@@ -195,7 +222,7 @@ const viewOf = (s: BoardStickerView): StickerView => ({
  * board's demo has none. */
 type GratitudeFor = { sticker: BoardSticker; giver: ReturnType<typeof asGiver>; giftId?: string };
 
-export function StickerBoard({ freshId, onDraw }: Props) {
+export function StickerBoard({ freshId, onDraw, onOpenGift }: Props) {
   const { t, i18n } = useTranslation();
   const stage = useRef<HTMLDivElement>(null);
   /** The board's face, which the sticker tray runs down the right edge of. */
@@ -206,14 +233,23 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const flipBack = useRef<HTMLButtonElement>(null);
   const statBoard = useRef<StatBoardHandle>(null);
   const api = useApi();
-  const [stickers, setStickers] = useState<BoardStickerView[] | null>(null);
+  const account = useMe();
+  /** The last board this phone showed you, drawn at once while the fresh one loads. */
+  const [fromPhone] = useState(() => keptBoardFor(account.id));
+  const [stickers, setStickers] = useState<BoardStickerView[] | null>(
+    () => fromPhone?.stickers ?? null,
+  );
   /** The load the stickers came from, and whose board it is: a sticker someone else drew wears foil. */
-  const [adopted, setAdopted] = useState<LoadedBoard | null>(null);
+  const [adopted, setAdopted] = useState<LoadedBoard | null>(
+    () => fromPhone && { ...fromPhone, fromPhone: true },
+  );
   const owner = adopted?.owner ?? null;
-  /** The stickers as last drawn, for a reload to keep the spots the board has given them. */
+  /** The stickers as last drawn, and their load, for a reload to keep the spots the board has given them. */
   const latestStickers = useRef(stickers);
+  const latestAdopted = useRef(adopted);
   useLayoutEffect(() => {
     latestStickers.current = stickers;
+    latestAdopted.current = adopted;
   });
   /** Stickers whose spot didn't save, and why; each goes once a save of it succeeds. */
   const [unsaved, setUnsaved] = useState<ReadonlyMap<string, string>>(() => new Map());
@@ -243,11 +279,10 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   /** The first-load artist chips have played, or a sticker was selected, which clears them. */
   const [chipsDone, setChipsDone] = useState(false);
   const me = useIdentity();
-  const account = useMe();
   const giftSender = useGiftSender();
   const reduced = useReducedMotion();
   const hints = useId();
-  const idle = usePreloadWhenIdle(OPENED_FROM_BOARD);
+  const idle = usePreloadAfterBoard(OPENED_FROM_BOARD);
   // The gratitude mini-game covers the board, so the tilt and its sheen sweeps rest while it plays.
   useLight(!turned && !gratitudeFor);
 
@@ -275,9 +310,10 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   // placed gets a spot as it loads, saved so it stays there.
   const board = useApiQuery("sticker-board", async (client): Promise<LoadedBoard> => {
     const data = await client.stickerBoard();
+    noteBootMilestone("board JSON", `${data.boardStickers.length} stickers`);
     const { stickers: list, placed } = placeUnplaced(
       data.boardStickers.map(toBoardSticker),
-      latestStickers.current ?? [],
+      heldOver(latestStickers.current, latestAdopted.current),
     );
     for (const s of placed) save(s, s.placement);
     return { owner: toPerson(data.owner), stickers: list };
@@ -286,15 +322,42 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   if (loaded && loaded !== adopted) {
     setAdopted(loaded);
     // Moves made while it loaded stay.
-    setStickers(placeUnplaced(loaded.stickers, stickers ?? []).stickers);
+    setStickers(placeUnplaced(loaded.stickers, heldOver(stickers, adopted)).stickers);
   }
+  // The first open's board completes once the fresh board's stickers have all decoded; one from the
+  // phone's storage starts them decoding. A board that didn't load has nothing more coming, so what
+  // waited for it goes ahead.
+  useEffect(() => {
+    if (!adopted) return;
+    followBoardAssembly(assemblyOf(adopted.stickers), { fresh: !adopted.fromPhone });
+  }, [adopted]);
+  useEffect(() => {
+    if (fromPhone)
+      noteBootMilestone("board from this phone", `${fromPhone.stickers.length} stickers`);
+  }, [fromPhone]);
+  // Once the fresh board is in, the board as it shows is kept for your next open.
+  useEffect(() => {
+    if (adopted && !adopted.fromPhone && stickers)
+      keepBoard(account.id, { owner: adopted.owner, stickers });
+  }, [account.id, adopted, stickers]);
+  const failed = board.state === "failed";
+  useEffect(() => {
+    if (failed) markBoardComplete();
+  }, [failed]);
 
   const pending = useApiQuery("pending-gifts", (client) => client.pendingGifts());
+  // Loaded with every board opening, so a gift just received has left it.
+  const forYou = useApiQuery("gifts-for-you", (client) => client.giftsForYou());
+  const waiting = forYou.state === "ready" ? forYou.data.gifts : [];
   const onTheirWay =
     pending.state === "ready"
       ? pending.data.gifts
           .filter((p) => p.gift.status === "sent")
-          .map((p) => ({ giftId: p.gift.id, sticker: toSticker(p.sticker) }))
+          .map((p) => ({
+            giftId: p.gift.id,
+            sticker: toSticker(p.sticker),
+            ...(p.for && { to: toPerson(p.for) }),
+          }))
       : [];
 
   // Once per board opening: the newest gift someone received since this device last said so.
@@ -330,6 +393,11 @@ export function StickerBoard({ freshId, onDraw }: Props) {
       current = false;
     };
   }, [api, freshId]);
+
+  // The sheet asking about gratitude starts the game's code while it's read.
+  useEffect(() => {
+    if (owed) void GratitudeMiniGame.preload();
+  }, [owed]);
 
   // The open sticker tray's NEW marks, which the tray takes off at once.
   const markSeen = (ids: readonly string[]) => {
@@ -514,12 +582,12 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     ? readingOrder(onBoard.map((s) => ({ id: s.id, ...toPx(field, s.placement) })))
     : [];
   const inOrder = order.flatMap((id) => onBoard.filter((s) => s.id === id));
-  // Its stickers in and its chips played, the board lets heavier work start, like Privy's SDK.
-  useSettleBoard(stage, {
-    stickers: field && stickers ? inOrder.map((s) => s.id).join(" ") : null,
-    failed: board.state === "failed",
-    chipsPlaying: chips.length > 0,
-  });
+  // Privy's SDK waits for the first-load chips too (whenBoardSettled), so its wallet frame doesn't
+  // stutter them.
+  const chipsOver = failed || (stickers !== null && field !== null && chips.length === 0);
+  useEffect(() => {
+    if (chipsOver) markChipsPlayed();
+  }, [chipsOver]);
   // The stickers' one Tab stop: the one last focused, else the selected one, else the first.
   const tabbable = [tabStop, selected].find((id) => id && order.includes(id)) ?? order[0];
   const chosen = onBoard.find((s) => s.id === selected);
@@ -543,6 +611,8 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         ref={nameButton}
         className="board-who"
         onClick={() => turn(!turned)}
+        onPointerDown={() => void StatBoard.preload()}
+        onFocus={() => void StatBoard.preload()}
         aria-expanded={turned}
         aria-haspopup="dialog"
         aria-label={t(($) => $.stickerBoard.board.yourStats, { name: me.displayName })}
@@ -551,8 +621,10 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         <span className="board-who-name">{me.displayName}</span>
       </button>
 
-      {onTheirWay.length > 0 && (
-        <div className="board-pending">
+      {(waiting.length > 0 || onTheirWay.length > 0) && (
+        <div className="board-gifts">
+          {/* Gifts for you first: they ask to be opened, where gifts on their way only report. */}
+          <GiftsForYouBadge gifts={waiting} onOpen={onOpenGift} />
           <PendingGiftsNotificationBadge
             gifts={onTheirWay}
             onOpen={(id) => setOpen({ id, mode: "yours" })}
@@ -560,7 +632,8 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         </div>
       )}
 
-      {/* The slot carries the first-sticker hop and ring, so the key keeps its own lip and press. */}
+      {/* The slot carries the first-sticker hop and ring, so the key keeps its own lip and press. The tickets
+          tuck behind the key's right end, in the slot beside it, so they hop along but never press. */}
       <span ref={drawSlot} className={`board-draw ${firstVisit ? "is-fresh" : ""}`}>
         <Key
           size="compact"
@@ -575,8 +648,8 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           }
         >
           {t(($) => $.stickerBoard.board.draw)}
-          {tickets && <TicketCounts state={tickets} className="ticket-counts--on-key" />}
         </Key>
+        {tickets && <DrawKeyTickets tickets={tickets} />}
       </span>
       {firstVisit && (
         <span className="board-nudge" aria-hidden>
@@ -773,18 +846,20 @@ export function StickerBoard({ freshId, onDraw }: Props) {
       )}
 
       {gratitudeFor && (
-        <GratitudeMiniGame
-          sticker={gratitudeFor.sticker}
-          giver={gratitudeFor.giver}
-          {...(gratitudeFor.giftId && { giftId: gratitudeFor.giftId })}
-          intensity={
-            readMiniGameDemoSettings().fullEffects
-              ? FEEL_CONFIG.intensity.full
-              : FEEL_CONFIG.intensity.everyday
-          }
-          showFrameTimes={readMiniGameDemoSettings().showFrameTimes}
-          onClose={() => setGratitudeFor(null)}
-        />
+        <Suspense fallback={null}>
+          <GratitudeMiniGame
+            sticker={gratitudeFor.sticker}
+            giver={gratitudeFor.giver}
+            {...(gratitudeFor.giftId && { giftId: gratitudeFor.giftId })}
+            intensity={
+              readMiniGameDemoSettings().fullEffects
+                ? FEEL_CONFIG.intensity.full
+                : FEEL_CONFIG.intensity.everyday
+            }
+            showFrameTimes={readMiniGameDemoSettings().showFrameTimes}
+            onClose={() => setGratitudeFor(null)}
+          />
+        </Suspense>
       )}
 
       {open && (

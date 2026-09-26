@@ -477,6 +477,12 @@
   max-width: none;
   pointer-events: none;
   -webkit-user-drag: none;
+}
+
+/* A sticker on a sheet lies flat: its cut and a short contact shadow, from its image, or from its
+   foil's band when someone else drew it. */
+.tray__img,
+.tray__fit .sticker-foil__cast {
   filter: drop-shadow(0 0 0.5px rgba(28, 24, 36, 0.55))
     drop-shadow(0.4px 0.8px 0.5px rgba(28, 24, 36, 0.18));
 }

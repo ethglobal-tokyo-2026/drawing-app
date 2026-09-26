@@ -213,15 +213,16 @@ export function ArtistBoard({ person, onBack }: Props) {
     name: owner.name,
     handle: person.handle ?? owner.name,
     ensName: person.ensName,
-    picture: <PhotoSticker src={owner.pictureUrl} name={owner.name} size={42} />,
     own: false,
-    ...statFigures(stats.state === "ready" ? stats.data : null, false, new Date()),
+    failure:
+      stats.state === "failed"
+        ? t(($) => $.stickerBoard.artistBoard.statsDidntLoad, {
+            reason: errorReason(stats.error),
+          })
+        : null,
+    ...statFigures(stats.state === "ready" ? stats.data : null),
     since: stats.state === "ready" ? Date.parse(stats.data.since) : null,
   };
-  if (stats.state === "failed")
-    figures.streakRule = t(($) => $.stickerBoard.artistBoard.statsDidntLoad, {
-      reason: errorReason(stats.error),
-    });
 
   const front = (
     <div className="board visit" ref={face}>
@@ -371,7 +372,13 @@ export function ArtistBoard({ person, onBack }: Props) {
       />
 
       {viewing && <StickerView sticker={viewing} owner={owner} onClose={() => setViewing(null)} />}
-      {giving && <GiveSheet to={person.handle ?? owner.name} onClose={() => setGiving(false)} />}
+      {giving && (
+        <GiveSheet
+          to={person.handle ?? owner.name}
+          toId={person.id}
+          onClose={() => setGiving(false)}
+        />
+      )}
       {offering && (
         <OfferSheet sticker={offering} holder={owner} onClose={() => setOffering(null)} />
       )}
