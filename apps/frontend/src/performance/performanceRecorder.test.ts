@@ -1,5 +1,20 @@
-import { describe, expect, it } from "vitest";
-import { createPerformanceLog, SLOW_FRAMES_KEPT, type PerformanceLog } from "./performanceRecorder";
+// @vitest-environment happy-dom
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  clearPerformanceRecording,
+  createPerformanceLog,
+  describeLongFrame,
+  notePerformance,
+  readPerformanceRecorderSetting,
+  readPerformanceRecording,
+  setPerformanceRecorder,
+  SLOW_FRAMES_KEPT,
+  startPerformanceRecorder,
+  stopPerformanceRecorder,
+  timeOurWork,
+  type LongAnimationFrame,
+  type PerformanceLog,
+} from "./performanceRecorder";
 
 const FRAME = 16.7;
 const steady = (n: number, ms = FRAME) => Array.from({ length: n }, () => ms);
@@ -116,5 +131,100 @@ describe("the performance log", () => {
     log.clear(5000);
     expect(log.summary()).toMatchObject({ startedAt: 5000, frames: 0, slow: 0, worst: null });
     expect(log.slowFrames()).toEqual([]);
+  });
+});
+
+describe("a long animation frame's split", () => {
+  it("parts script from rAF callbacks from style, layout and paint", () => {
+    const frame: LongAnimationFrame = {
+      entryType: "long-animation-frame",
+      name: "long-animation-frame",
+      startTime: 1000,
+      duration: 140,
+      renderStart: 1040,
+      styleAndLayoutStart: 1052,
+      scripts: [
+        { duration: 30, forcedStyleAndLayoutDuration: 8, invoker: "FrameRequestCallback" },
+        { duration: 6, forcedStyleAndLayoutDuration: 0, invoker: "BUTTON.onclick" },
+      ],
+      toJSON: () => ({}),
+    };
+    expect(describeLongFrame(frame)).toBe(
+      "140ms: script 36ms (forced style and layout 8ms), rAF callbacks 12ms, style, layout and paint 88ms, longest script FrameRequestCallback 30ms",
+    );
+  });
+});
+
+describe("the recorder on the page", () => {
+  let queued: FrameRequestCallback | null = null;
+  let clock = 0;
+  /** The browser starts a frame at `t`. */
+  const frameAt = (t: number) => {
+    clock = t;
+    const run = queued;
+    queued = null;
+    run?.(t);
+  };
+
+  beforeEach(() => {
+    vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
+      queued = callback;
+      return 1;
+    });
+    vi.stubGlobal("cancelAnimationFrame", () => {
+      queued = null;
+    });
+    vi.spyOn(performance, "now").mockImplementation(() => clock);
+  });
+
+  afterEach(() => {
+    stopPerformanceRecorder();
+    clearPerformanceRecording();
+    localStorage.clear();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("costs nothing while off: no loop, no listeners, and marks and timings pass through", () => {
+    const listens = vi.spyOn(window, "addEventListener");
+    notePerformance("gratitude", "tier-up");
+    expect(timeOurWork("gratitude", () => 7)).toBe(7);
+    expect(queued).toBeNull();
+    expect(listens).not.toHaveBeenCalled();
+    expect(readPerformanceRecording()).toBeNull();
+  });
+
+  it("records a slow frame with the marks and our work in it, then stops all it started", () => {
+    document.title = "Send gratitude";
+    const listens = vi.spyOn(window, "addEventListener");
+    const unlistens = vi.spyOn(window, "removeEventListener");
+    startPerformanceRecorder();
+    for (let t = 0; t <= 320; t += 16) frameAt(t);
+    clock = 330;
+    notePerformance("gratitude", "tier-up オーバーヒート");
+    timeOurWork("gratitude", () => {
+      clock = 336;
+    });
+    frameAt(400);
+    stopPerformanceRecorder();
+
+    const recording = readPerformanceRecording();
+    expect(recording?.summary).toMatchObject({ slow: 1 });
+    const [slow] = recording?.slowFrames ?? [];
+    expect(slow).toMatchObject({ screen: "Send gratitude", ours: { gratitude: 6 } });
+    expect(slow.events.map((e) => e.detail)).toContain("tier-up オーバーヒート");
+    expect(queued).toBeNull();
+    const types = (calls: unknown[][]) =>
+      calls.map(([type]) => String(type)).sort((a, b) => a.localeCompare(b));
+    expect(types(unlistens.mock.calls)).toEqual(types(listens.mock.calls));
+  });
+
+  it("starts and stops at once from the switch, and keeps the setting for the next start", () => {
+    setPerformanceRecorder(true);
+    expect(queued).not.toBeNull();
+    expect(readPerformanceRecorderSetting()).toBe(true);
+    setPerformanceRecorder(false);
+    expect(queued).toBeNull();
+    expect(readPerformanceRecorderSetting()).toBe(false);
   });
 });
