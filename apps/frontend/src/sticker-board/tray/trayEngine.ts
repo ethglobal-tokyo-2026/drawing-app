@@ -689,6 +689,7 @@ export function createTrayEngine(
     t.type = "button";
     t.setAttribute("role", "tab");
     t.dataset.filter = f;
+    t.dataset.press = "";
     t.setAttribute("aria-selected", String(ui.filter === f));
     return t;
   });
