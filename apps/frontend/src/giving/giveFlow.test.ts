@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/apiClient";
-import { errors } from "../i18n/en/errors";
+import { errors } from "../i18n/strings/errors";
 import type { GiftBackend } from "./giftBackend";
 import { buildGiftMessage, type GiftMessage } from "./giftMessage";
 import type { GiftSendOutcome } from "./giftSender";
@@ -210,7 +210,7 @@ describe("giving through a LINE chat", () => {
     });
     t.flow.chooseLineChat();
     await wait(PICKER_DELAY * 2);
-    expect(t.failure()).toContain(errors.not_minted);
+    expect(t.failure()).toContain(errors.not_minted.en);
     expect(t.messages).toHaveLength(0);
   });
 

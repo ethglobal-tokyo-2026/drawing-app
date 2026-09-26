@@ -4,8 +4,10 @@ import {
   fieldOf,
   freeSpot,
   knobHidden,
+  LAID_OUT_SPOTS,
   nextZ,
   sizeOf,
+  SPOT_BOUNDS,
   toFrac,
   toolbarSpot,
   type Placement,
@@ -27,6 +29,27 @@ describe("placement", () => {
 
   it("gives the same spot for the same board", () => {
     expect(freeSpot([at(0.5, 0.45)])).toEqual(freeSpot([at(0.5, 0.45)]));
+  });
+
+  it("gives each sticker past the laid-out spots its own, inside their bounds, the same each time", () => {
+    const fill = () => {
+      const board: Placement[] = [];
+      for (let z = 1; z <= LAID_OUT_SPOTS * 3; z++) board.push({ on: true, ...freeSpot(board), z });
+      return board;
+    };
+    const board = fill();
+    const within = (v: number, [lo, hi]: readonly [number, number]) => {
+      expect(v).toBeGreaterThanOrEqual(lo);
+      expect(v).toBeLessThanOrEqual(hi);
+    };
+    for (const p of board) {
+      within(p.x, SPOT_BOUNDS.x);
+      within(p.y, SPOT_BOUNDS.y);
+      within(p.s, SPOT_BOUNDS.s);
+      within(p.r, SPOT_BOUNDS.r);
+    }
+    expect(new Set(board.map((p) => `${p.x},${p.y}`)).size).toBe(board.length);
+    expect(fill()).toEqual(board);
   });
 
   it("sizes the long side as a share of the board's width, keeping the art's shape", () => {

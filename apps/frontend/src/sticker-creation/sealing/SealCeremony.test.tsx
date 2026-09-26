@@ -3,6 +3,7 @@ import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyApi, FRESH_TICKETS, renderWithApi, shownText } from "../../api/testing";
 import { MARKUP_LIKE_NAME, sticker as apiSticker } from "../../api/testFixtures";
+import type { Sticker } from "@drawing-app/api/client";
 import { formatDay, formatDuration, formatNo } from "../../stickers/format";
 import { formatRefillTime } from "../../tickets/refill";
 import { nextRefill } from "../../tickets/tickets";
@@ -52,33 +53,42 @@ const onShop = vi.fn();
 let view: ReturnType<typeof renderWithApi> | undefined;
 let host: HTMLDivElement;
 
-/** The day's `dayIndex`th ticket use, of `kind`. */
-const use = (dayIndex: number, kind: "daily" | "reserve" = "daily") => ({
-  id: dayIndex + 1,
-  dayIndex,
-  kind,
-  sticker: null,
-});
+// One sheet for every render: a new one would be a new ceremony.
+const SHEET = { x: 8, y: 8, w: 374, h: 788 };
+
+/** The ceremony with the server's answer, as `handle`: null while the seal is on its way. */
+const ceremony = (answer: Sticker | null, { handle = "alice", failed = false } = {}) => (
+  <SealCeremony
+    sticker={sticker}
+    sealed={answer}
+    failed={failed}
+    sheet={SHEET}
+    handle={handle}
+    onKeepDrawing={onKeepDrawing}
+    onBoard={onBoard}
+    onShop={onShop}
+  />
+);
 
 /**
- * Opens the ceremony as `handle`, with `used` of the day's three tickets used, then `reserveUsed` reserve tickets,
- * and `reserveLeft` held.
+ * Opens the ceremony as `handle`, with `used` of the day's three tickets used, then `reserve.used`
+ * reserve tickets, and `reserve.left` still held.
  */
-async function seal(used: number, handle = "alice", reserveLeft = 0, reserveUsed = 0) {
-  const usedToday = Array.from({ length: used + reserveUsed }, (_, i) =>
-    use(i, i < used ? "daily" : "reserve"),
-  );
-  const tickets = { ...FRESH_TICKETS, dailyLeft: 3 - used, reserveLeft, usedToday };
+async function seal(
+  used: number,
+  handle = "alice",
+  answer: Sticker | null = sealed,
+  reserve = { used: 0, left: 0 },
+) {
+  const usedToday = Array.from({ length: used + reserve.used }, (_, i) => ({
+    id: i + 1,
+    dayIndex: i,
+    kind: i < used ? ("daily" as const) : ("reserve" as const),
+    sticker: null,
+  }));
+  const tickets = { ...FRESH_TICKETS, dailyLeft: 3 - used, reserveLeft: reserve.left, usedToday };
   view = renderWithApi(
-    <SealCeremony
-      sticker={sticker}
-      sealed={sealed}
-      sheet={{ x: 8, y: 8, w: 374, h: 788 }}
-      handle={handle}
-      onKeepDrawing={onKeepDrawing}
-      onBoard={onBoard}
-      onShop={onShop}
-    />,
+    ceremony(answer, { handle }),
     emptyApi({ tickets: () => Promise.resolve(tickets) }),
   );
   host = view.host;
@@ -92,6 +102,11 @@ const button = (name: string) => {
   return found;
 };
 const card = () => host.querySelector(".sealed-card");
+const root = () => host.querySelector(".seal-ceremony");
+const tap = () =>
+  act(() => {
+    root()?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+  });
 const wait = (ms: number) => act(() => void vi.advanceTimersByTime(ms));
 /** Past the ceremony's end: its clock starts at its first animation frame, not at mount. */
 const playThrough = () => wait(TOTAL + 50);
@@ -176,11 +191,11 @@ describe("SealCeremony", () => {
     );
   });
 
-  it("says the day's last daily ticket went only when this sticker used it", async () => {
-    const line = `That was today’s last daily ticket · new ones at ${formatRefillTime(nextRefill(NOW))}`;
-    await seal(3, "alice", 2);
+  it("says the day's last daily ticket is gone only when this sticker used it", async () => {
+    const lastDaily = `That was today’s last daily ticket · new ones at ${formatRefillTime(nextRefill(NOW))}`;
+    await seal(3, "alice", sealed, { used: 0, left: 2 });
     playThrough();
-    expect(host.textContent).toContain(line);
+    expect(host.textContent).toContain(lastDaily);
     // One reserve ticket in the daily slots' place, with its count.
     expect(host.querySelectorAll(".ticket-stub")).toHaveLength(1);
     expect(host.querySelector('[role="img"]')?.getAttribute("aria-label")).toBe(
@@ -188,11 +203,48 @@ describe("SealCeremony", () => {
     );
     view?.unmount();
 
-    // Drawn on a reserve ticket: the daily ones went earlier.
-    await seal(3, "alice", 1, 1);
+    // A reserve ticket sealed this one: the daily tickets were already gone.
+    await seal(3, "alice", sealed, { used: 1, left: 1 });
     playThrough();
-    expect(host.textContent).not.toContain("last daily ticket");
     expect(button("Keep drawing")).toBeTruthy();
+    expect(host.textContent).not.toContain("last daily ticket");
+  });
+
+  it("waits at the cut while the seal is on its way, then peels onto the card", async () => {
+    await seal(1, "alice", null);
+    wait(20_000);
+    expect(card()).toBeNull();
+    expect(root()?.hasAttribute("data-lifted")).toBe(false);
+    // A tap can't hurry the server.
+    tap();
+    expect(card()).toBeNull();
+
+    view?.rerender(ceremony(sealed));
+    wait(1000);
+    expect(root()?.hasAttribute("data-lifted")).toBe(true);
+    expect(card()?.hasAttribute("inert")).toBe(true);
+    playThrough();
+    expect(card()?.hasAttribute("inert")).toBe(false);
+  });
+
+  it("skips to the wait at a tap, and on to the card once sealed", async () => {
+    await seal(1, "alice", null);
+    wait(100);
+    tap();
+    expect(host.querySelector<HTMLElement>(".seal-ceremony__plain")?.style.opacity).toBe("1");
+    view?.rerender(ceremony(sealed));
+    wait(100);
+    tap();
+    expect(card()?.hasAttribute("inert")).toBe(false);
+  });
+
+  it("fades back to the drawing when the seal fails", async () => {
+    await seal(1, "alice", null);
+    wait(3000);
+    view?.rerender(ceremony(null, { failed: true }));
+    expect(root()?.classList.contains("is-leaving")).toBe(true);
+    expect(root()?.hasAttribute("data-lifted")).toBe(false);
+    expect(card()).toBeNull();
   });
 
   it("prints a handle that reads as markup as it is, in the card's fine print", async () => {

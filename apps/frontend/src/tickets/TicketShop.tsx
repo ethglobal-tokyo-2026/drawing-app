@@ -19,6 +19,7 @@ import { useFocusTrap } from "../ui/useFocusTrap";
 import { TICKET_PRICE_YEN } from "./config";
 import { formatYen, yenForJpyc } from "./prices";
 import { TicketCount } from "./TicketCount";
+import { TicketPurchases } from "./TicketPurchases";
 import { describeTickets, ticketView } from "./tickets";
 import { TicketStubs } from "./TicketStubs";
 import { useTickets } from "./useTickets";
@@ -355,6 +356,7 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel }: Props) {
                 ? t(($) => $.tickets.shop.payPrice, { price: formatYen(pack.priceYen) })
                 : t(($) => $.tickets.shop.pay)}
         </Key>
+        {sui.address && shop && <TicketPurchases owner={sui.address} shop={shop} />}
         {close}
       </>
     );
