@@ -84,11 +84,6 @@
       "files": ["apps/frontend/src/sticker-board/**"],
       "rules": { "react/jsx-no-literals": "error" }
     },
-    // Turns on when the Settings work lands in the stat board.
-    {
-      "files": ["apps/frontend/src/sticker-board/stat-board/**"],
-      "rules": { "react/jsx-no-literals": "off" }
-    },
     {
       "files": ["apps/frontend/src/sticker-creation/**"],
       "rules": { "react/jsx-no-literals": "error" }

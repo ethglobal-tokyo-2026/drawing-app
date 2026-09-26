@@ -8,14 +8,14 @@ import { sheenIn, sweepSheen } from "./resinSheen";
 
 /**
  * The app's one light: `--lx` and `--ly` (-1 to 1) follow the pointer, or the phone's tilt where the
- * browser shares it. They're set on each live resin rather than the root, so a move restyles only the
- * highlights that read them; without them a highlight rests in the middle. The light listens only
+ * browser shares it. They're set on each live resin and foil rather than the root, so a move restyles
+ * only the highlights that read them; without them a highlight rests at its own default. The light listens only
  * while a screen with stickers holds it, so the pointer and the motion sensor rest everywhere else.
  */
 
 const REDUCED = "(prefers-reduced-motion: reduce)";
-/** The elements whose highlights read the light. */
-const LIT = ".live-resin";
+/** The elements whose highlights read the light: each live resin, and each foil's glint. */
+const LIT = ".live-resin, .sticker-foil";
 /** The light is written at most this often; the highlights' transitions glide between writes. */
 const BEAT_MS = 45;
 /** A move shorter than this, on the -1 to 1 scale, isn't written, so the hand's tremor keeps still. */
@@ -24,10 +24,7 @@ const STEP = 0.02;
 const TILT_RANGE = 32;
 /** How far back a phone leans when it's held to read, in degrees. */
 const HELD_BETA = 40;
-/**
- * A tilt change this big sweeps a sheen across the stickers on screen, and a glint along their foil,
- * at most once a pause.
- */
+/** A tilt change this big sweeps a sheen across the stickers on screen, at most once a pause. */
 const SWEEP_TILT = 9;
 const SWEEP_PAUSE_MS = 1400;
 
@@ -37,37 +34,25 @@ const clamp11 = (v: number) => (v < -1 ? -1 : v > 1 ? 1 : v);
 let light: { on: () => void; off: () => void; relight: () => void } | null = null;
 let holders = 0;
 
-/** The foil whose glint a tilt sweeps; the glint rests out of sight until then. */
-const FOIL = ".sticker-foil";
+/** Where the light last was, or null before it first moves: what a newly shown sticker starts at. */
+let lightNow: { lx: string; ly: string } | null = null;
 
-const onScreen = (el: Element, win: Window) => {
-  const r = el.getBoundingClientRect();
-  return r.width > 30 && r.bottom > 0 && r.top < win.innerHeight;
-};
-
-function sweepGlint(glint: Element) {
-  glint.animate(
-    [{ transform: "translateX(0) skewX(-18deg)" }, { transform: "translateX(460%) skewX(-18deg)" }],
-    { duration: 2000, easing: "cubic-bezier(0.45, 0.05, 0.25, 1)" },
-  );
+/** Sets the light where it is now on one newly shown lit element, so it matches the rest at once. */
+export function lightUp(el: HTMLElement) {
+  if (!lightNow) return;
+  el.style.setProperty("--lx", lightNow.lx);
+  el.style.setProperty("--ly", lightNow.ly);
 }
 
-/**
- * Sweeps a sheen across each live resin, and a glint along each foil, big enough to see on screen;
- * returns how many it measured.
- */
+/** Sweeps a sheen across each live resin big enough to see on screen; returns how many it measured. */
 function sweepVisible(doc: Document, win: Window): number {
-  const resins = doc.querySelectorAll(LIT);
+  const resins = doc.querySelectorAll(".live-resin");
   for (const resin of resins) {
+    const r = resin.getBoundingClientRect();
     const sheen = sheenIn(resin);
-    if (sheen && onScreen(resin, win)) sweepSheen(sheen);
+    if (sheen && r.width > 30 && r.bottom > 0 && r.top < win.innerHeight) sweepSheen(sheen);
   }
-  const foils = doc.querySelectorAll(FOIL);
-  for (const foil of foils) {
-    const glint = foil.querySelector(".sticker-foil__glint");
-    if (glint && onScreen(foil, win)) sweepGlint(glint);
-  }
-  return resins.length + foils.length;
+  return resins.length;
 }
 
 /** Starts the light; returns what stops it. */
@@ -80,8 +65,9 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
   let frame = 0;
   let lastWrite = -Infinity;
 
-  /** Sets the light on every live resin, or clears it with null; returns how many. */
+  /** Sets the light on every lit element, or clears it with null; returns how many. */
   const setOnResins = (lx: string | null, ly: string | null) => {
+    lightNow = lx === null || ly === null ? null : { lx, ly };
     const resins = root.querySelectorAll<HTMLElement>(LIT);
     for (const resin of resins) {
       if (lx === null || ly === null) {
@@ -147,8 +133,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     ) {
       lastSweep = now;
       const measured = timeOurWork("light sweep", sweep);
-      if (isPerformanceRecorderOn())
-        notePerformance("light", `sweep measured ${measured} resins and foils`);
+      if (isPerformanceRecorderOn()) notePerformance("light", `sweep measured ${measured} resins`);
     }
     lastGamma = e.gamma;
   };
