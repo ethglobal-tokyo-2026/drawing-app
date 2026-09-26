@@ -1,9 +1,7 @@
-// One-off: makes the WebP files and the foil band's mask for stickers sealed before sealing made them.
-// Delete it, and its entry in build.ts, once it has run on the box: every seal since makes its own.
-//
-// `pnpm --filter @drawing-app/api build` bundles it as dist/backfill-sticker-webp.mjs. Copy that to
-// /srv/drawing-api/server/ on the box, where deploy-api.sh has installed sharp, and run it there as the API's
-// user, after the deploy that serves the WebP URLs:
+// Deployment prepares missing WebP images before it publishes the API. Keep this for existing image
+// folders, including restored backups: only absent files are added, never replaced.
+// `pnpm --filter @drawing-app/api build` bundles it as dist/backfill-sticker-webp.mjs. deploy-api.sh
+// copies and runs it automatically; inspect or repair the same folder manually as the API's user:
 //
 //   IMAGE_DIR=/srv/drawing-api/images /usr/local/lib/nodejs/node-24/bin/node backfill-sticker-webp.mjs --dry-run
 //   IMAGE_DIR=/srv/drawing-api/images /usr/local/lib/nodejs/node-24/bin/node backfill-sticker-webp.mjs

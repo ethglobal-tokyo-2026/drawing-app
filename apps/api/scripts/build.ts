@@ -1,4 +1,4 @@
-// Bundles the REST API into one ES module for the box, and the one-off sticker WebP backfill beside it.
+// Bundles the REST API and the sticker image preparation required before publishing it.
 // better-sqlite3 and sharp stay out of the bundles: they're native, so deploy/deploy-api.sh installs the box's
 // own builds beside them.
 import { fileURLToPath } from "node:url";
