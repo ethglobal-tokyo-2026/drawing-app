@@ -1,4 +1,306 @@
 {
+  "stickerBoard.statBoard.label": {
+    "where": "Stat board (a sticker board's cork back, yours or someone else's): screen readers' name for the dialog; {{name}} is the board owner's LINE name",
+    "ja": "{{name}}さんの記録"
+  },
+  "stickerBoard.statBoard.notKnown.mark": {
+    "where": "Stat board: the dash in place of a figure whose data didn't load (hidden from screen readers)",
+    "ja": "–"
+  },
+  "stickerBoard.statBoard.notKnown.spoken": {
+    "where": "Stat board: what screen readers say in place of a figure whose data didn't load",
+    "ja": "不明"
+  },
+  "stickerBoard.statBoard.gratitude.title": {
+    "where": "Stat board: the heading of the Gratitude receipt, the paper under the pink pushpin",
+    "ja": "受け取った感謝"
+  },
+  "stickerBoard.statBoard.gratitude.inspired.label": {
+    "where": "Stat board, Gratitude receipt: the Inspired row's name, beside its amount",
+    "ja": "インスパイア"
+  },
+  "stickerBoard.statBoard.gratitude.inspired.reason": {
+    "where": "Stat board, Gratitude receipt: the Inspired row's one-line reason, under its name",
+    "ja": "贈ったシールへの感謝です。"
+  },
+  "stickerBoard.statBoard.gratitude.magic.label": {
+    "where": "Stat board, Gratitude receipt: the Magic row's name, beside its amount",
+    "ja": "マジック"
+  },
+  "stickerBoard.statBoard.gratitude.magic.reason": {
+    "where": "Stat board, Gratitude receipt: the Magic row's one-line reason, under its name",
+    "ja": "特別な方法で送られた感謝です。"
+  },
+  "stickerBoard.statBoard.gratitude.asOriginalArtist.label": {
+    "where": "Stat board, Gratitude receipt: the name of the row for the Original Artist Gratitude Share, beside its amount",
+    "ja": "作者"
+  },
+  "stickerBoard.statBoard.gratitude.asOriginalArtist.reason": {
+    "where": "Stat board, Gratitude receipt: the Original Artist row's one-line reason, under its name",
+    "ja": "かいたシールが、ほかの人どうしで贈られたときの感謝の一部です。"
+  },
+  "stickerBoard.statBoard.gratitude.didntLoad": {
+    "where": "Stat board, Gratitude receipt: in place of the rows while the User Stats load or when they fail to",
+    "ja": "感謝を読み込めませんでした。"
+  },
+  "stickerBoard.statBoard.gratitude.noneYetOwn": {
+    "where": "Your stat board, Gratitude receipt: in place of the rows before you've received any gratitude",
+    "ja": "まだ感謝はありません。シールを贈った相手が感謝を送ると、ここに届きます。"
+  },
+  "stickerBoard.statBoard.gratitude.noneYet": {
+    "where": "Someone else's stat board, Gratitude receipt: in place of the rows before they've received any gratitude",
+    "ja": "まだ感謝はありません。贈ったシールに相手が感謝を送ると、ここに届きます。"
+  },
+  "stickerBoard.statBoard.gratitude.total": {
+    "where": "Stat board, Gratitude receipt: the label of the total line at its foot",
+    "ja": "合計"
+  },
+  "stickerBoard.statBoard.bests.title": {
+    "where": "Stat board: the heading of the Bests scrap",
+    "ja": "自己ベスト"
+  },
+  "stickerBoard.statBoard.bests.longestStreak": {
+    "where": "Stat board, Bests scrap: the Longest streak row's label",
+    "ja": "最長連続日数"
+  },
+  "stickerBoard.statBoard.bests.days_one": {
+    "where": "Stat board, Bests scrap: the Longest streak figure when it's one day; {{days}} is the count"
+  },
+  "stickerBoard.statBoard.bests.days_other": {
+    "where": "Stat board, Bests scrap: the Longest streak figure, such as \"12 days\"; {{days}} is the count",
+    "ja": "{{days}}日"
+  },
+  "stickerBoard.statBoard.bests.bestCombo": {
+    "where": "Stat board, Bests scrap: the Best combo row's label",
+    "ja": "最高コンボ"
+  },
+  "stickerBoard.statBoard.bests.bestComboNote": {
+    "where": "Stat board, Bests scrap: the small note under Best combo",
+    "ja": "1回の感謝コンボでの最多ヒット"
+  },
+  "stickerBoard.statBoard.bests.combo": {
+    "where": "Stat board, Bests scrap: the Best combo figure, the hits in that combo, such as \"×64\"",
+    "ja": "×{{hits}}"
+  },
+  "stickerBoard.statBoard.bests.mostGratitudeInADay": {
+    "where": "Stat board, Bests scrap: the Most gratitude in a day row's label",
+    "ja": "1日の最多感謝"
+  },
+  "stickerBoard.statBoard.bests.noneYet": {
+    "where": "Stat board, Bests scrap: in place of a best that has no figure yet",
+    "ja": "まだなし"
+  },
+  "stickerBoard.statBoard.since": {
+    "where": "Stat board: the label-maker tape with the day they joined, such as \"Since 2026.09.01\" (hidden from screen readers)",
+    "ja": "{{day}}から"
+  },
+  "stickerBoard.statBoard.sinceSpoken": {
+    "where": "Stat board: what screen readers say for the label-maker tape with the day they joined",
+    "ja": "{{day}}からクロッキーを使っています"
+  },
+  "stickerBoard.statBoard.streak.title": {
+    "where": "Stat board: the heading of the Streak leaf, over the day count",
+    "ja": "連続日数"
+  },
+  "stickerBoard.statBoard.streak.days_one": {
+    "where": "Stat board, Streak leaf: the word under the day count when it's 1"
+  },
+  "stickerBoard.statBoard.streak.days_other": {
+    "where": "Stat board, Streak leaf: the word under the day count, such as \"12\" over \"days\"",
+    "ja": "日"
+  },
+  "stickerBoard.statBoard.streak.notStarted": {
+    "where": "Stat board, Streak leaf: in place of the day count while there's no streak",
+    "ja": "まだこれから"
+  },
+  "stickerBoard.statBoard.streak.rule": {
+    "where": "Stat board, Streak leaf: the rule under a running streak; {{time}} is when the day turns over, such as \"0:00\"",
+    "ja": "1日でも休むと0に戻ります。日付は{{time}}に切り替わります。"
+  },
+  "stickerBoard.statBoard.streak.startOwn": {
+    "where": "Your stat board, Streak leaf: the note under Not started",
+    "ja": "今日シールをかくと、連続日数のカウントが始まります。"
+  },
+  "stickerBoard.statBoard.streak.start": {
+    "where": "Someone else's stat board, Streak leaf: the note under Not started",
+    "ja": "シールをかいた日からカウントが始まります。"
+  },
+  "stickerBoard.statBoard.didntLoadOwn": {
+    "where": "Your stat board, Streak leaf: the note in place of the streak rule while your User Stats load",
+    "ja": "記録を読み込めませんでした。"
+  },
+  "stickerBoard.statBoard.didntLoad": {
+    "where": "Someone else's stat board, Streak leaf: the note in place of the streak rule while their User Stats load",
+    "ja": "記録を読み込めませんでした。"
+  },
+  "stickerBoard.statBoard.didntLoadOwnBecause": {
+    "where": "Your stat board, Streak leaf: the note in place of the streak rule when your User Stats fail to load, with the reason",
+    "ja": "記録を読み込めませんでした：{{reason}}"
+  },
+  "stickerBoard.statBoard.stamps.label": {
+    "where": "Stat board: screen readers' name for the three stamps that count stickers made, received and given",
+    "ja": "シール"
+  },
+  "stickerBoard.statBoard.stamps.made": {
+    "where": "Stat board: the word under the count on the stamp for stickers made",
+    "ja": "つくった"
+  },
+  "stickerBoard.statBoard.stamps.received": {
+    "where": "Stat board: the word under the count on the stamp for stickers received",
+    "ja": "受け取った"
+  },
+  "stickerBoard.statBoard.stamps.given": {
+    "where": "Stat board: the word under the count on the stamp for stickers given",
+    "ja": "贈った"
+  },
+  "stickerBoard.statBoard.flipBack": {
+    "where": "Stat board: the Flip back button, which turns the board back over to its stickers",
+    "ja": "表に戻す"
+  },
+  "stickerBoard.statBoard.logOut": {
+    "where": "Your stat board, opened outside LINE's app: the button under Flip back that logs out of LINE",
+    "ja": "LINEからログアウト"
+  },
+  "stickerBoard.addresses.ethereum.caption": {
+    "where": "Your stat board: the caption on the board address's QR code paper",
+    "ja": "ボードアドレス"
+  },
+  "stickerBoard.addresses.ethereum.network": {
+    "where": "Your stat board: the network's name under the board address paper's caption",
+    "ja": "Ethereum Sepolia"
+  },
+  "stickerBoard.addresses.ethereum.open": {
+    "where": "Your stat board: screen readers' name for the board address paper, a button that holds its QR code up in the address dialog",
+    "ja": "ボードアドレスをQRコードで表示"
+  },
+  "stickerBoard.addresses.ethereum.loading": {
+    "where": "Your stat board: on the board address paper while the address loads",
+    "ja": "ボードアドレスを取得しています…"
+  },
+  "stickerBoard.addresses.ethereum.didntLoad": {
+    "where": "Your stat board: on the board address paper when the address didn't load, over Try again",
+    "ja": "ボードアドレスを読み込めませんでした"
+  },
+  "stickerBoard.addresses.ethereum.title": {
+    "where": "Address dialog for the board address: its heading, under the large QR code",
+    "ja": "あなたのボードアドレス"
+  },
+  "stickerBoard.addresses.ethereum.qrCode": {
+    "where": "Address dialog for the board address: screen readers' name for the large QR code",
+    "ja": "ボードアドレスのQRコード"
+  },
+  "stickerBoard.addresses.ethereum.note": {
+    "where": "Address dialog for the board address: the note under the address",
+    "ja": "あなたのシールは、Ethereum Sepoliaのこのアドレスに保管されています。"
+  },
+  "stickerBoard.addresses.ethereum.copied": {
+    "where": "Address dialog for the board address: the toast after Copy address copies it",
+    "ja": "ボードアドレスをコピーしました"
+  },
+  "stickerBoard.addresses.ethereum.notCopied": {
+    "where": "Address dialog for the board address: the toast when Copy address can't copy it",
+    "ja": "ボードアドレスをコピーできませんでした"
+  },
+  "stickerBoard.addresses.ethereum.viewOnExplorer": {
+    "where": "Address dialog for the board address: the link under Copy address that opens the address on Etherscan",
+    "ja": "Etherscanで見る"
+  },
+  "stickerBoard.addresses.ethereum.viewOnExplorerLabel": {
+    "where": "Address dialog for the board address: screen readers' name for the Etherscan link",
+    "ja": "ボードアドレスをEtherscanで見る"
+  },
+  "stickerBoard.addresses.sui.caption": {
+    "where": "Your stat board: the caption on the Sui address's QR code paper",
+    "ja": "Suiアドレス"
+  },
+  "stickerBoard.addresses.sui.network": {
+    "where": "Your stat board: the network's name under the Sui address paper's caption",
+    "ja": "Sui Testnet"
+  },
+  "stickerBoard.addresses.sui.open": {
+    "where": "Your stat board: screen readers' name for the Sui address paper, a button that holds its QR code up in the address dialog",
+    "ja": "SuiアドレスをQRコードで表示"
+  },
+  "stickerBoard.addresses.sui.loading": {
+    "where": "Your stat board: on the Sui address paper while the address loads",
+    "ja": "Suiアドレスを取得しています…"
+  },
+  "stickerBoard.addresses.sui.didntLoad": {
+    "where": "Your stat board: on the Sui address paper when the address didn't load, over Try again",
+    "ja": "Suiアドレスを読み込めませんでした"
+  },
+  "stickerBoard.addresses.sui.title": {
+    "where": "Address dialog for the Sui address: its heading, under the large QR code",
+    "ja": "あなたのSuiアドレス"
+  },
+  "stickerBoard.addresses.sui.qrCode": {
+    "where": "Address dialog for the Sui address: screen readers' name for the large QR code",
+    "ja": "SuiアドレスのQRコード"
+  },
+  "stickerBoard.addresses.sui.note": {
+    "where": "Address dialog for the Sui address: the note under the address",
+    "ja": "Sui Testnetでのあなたのアドレスです。"
+  },
+  "stickerBoard.addresses.sui.copied": {
+    "where": "Address dialog for the Sui address: the toast after Copy address copies it",
+    "ja": "Suiアドレスをコピーしました"
+  },
+  "stickerBoard.addresses.sui.notCopied": {
+    "where": "Address dialog for the Sui address: the toast when Copy address can't copy it",
+    "ja": "Suiアドレスをコピーできませんでした"
+  },
+  "stickerBoard.addresses.sui.viewOnExplorer": {
+    "where": "Address dialog for the Sui address: the link under Copy address that opens the address on Suiscan",
+    "ja": "Suiscanで見る"
+  },
+  "stickerBoard.addresses.sui.viewOnExplorerLabel": {
+    "where": "Address dialog for the Sui address: screen readers' name for the Suiscan link",
+    "ja": "SuiアドレスをSuiscanで見る"
+  },
+  "stickerBoard.addresses.tryAgain": {
+    "where": "Your stat board: the link on an address paper whose address didn't load",
+    "ja": "もう一度"
+  },
+  "stickerBoard.addresses.close": {
+    "where": "Address dialog: screen readers' name for the X button that puts the paper back on the cork",
+    "ja": "閉じる"
+  },
+  "stickerBoard.addresses.copy": {
+    "where": "Address dialog: the Copy address button under the card",
+    "ja": "アドレスをコピー"
+  },
+  "stickerBoard.settings.title": {
+    "where": "Your stat board: the title of the Settings note, the last paper on the cork, which peeks up from the cork's foot until it's scrolled into view",
+    "ja": "設定"
+  },
+  "stickerBoard.settings.language.title": {
+    "where": "Settings note: the heading over the language choices",
+    "ja": "言語"
+  },
+  "stickerBoard.settings.language.sameAsLine": {
+    "where": "Settings note: the first language choice, which follows LINE's language; {{language}} is that language's own name, such as \"日本語\"",
+    "ja": "LINEと同じ（{{language}}）"
+  },
+  "stickerBoard.settings.language.names.en": {
+    "where": "Settings note: the English choice, named in English; also LINE's language in Same as LINE",
+    "ja": "English"
+  },
+  "stickerBoard.settings.language.names.ja": {
+    "where": "Settings note: the Japanese choice, named in Japanese; also LINE's language in Same as LINE",
+    "ja": "日本語"
+  },
+  "stickerBoard.settings.language.saving": {
+    "where": "Settings note: the status line while a language choice saves, which screen readers announce",
+    "ja": "保存しています…"
+  },
+  "stickerBoard.settings.language.notSaved": {
+    "where": "Settings note: the alert when the language choice didn't save to your account, with the reason",
+    "ja": "言語を保存できなかったため、変更していません：{{reason}}"
+  },
+  "stickerBoard.settings.language.notKept": {
+    "where": "Settings note: the alert when the language saved to your account but this phone couldn't keep it for the next start, with the reason",
+    "ja": "言語は保存しましたが、この端末には残せませんでした（{{reason}}）。次にアプリをひらいたときに切り替わります。"
+  },
   "stickerBoard.tryAgain": {
     "where": "Retry button after a failure: your sticker board's load error and its unsaved-positions alert, the sticker detail's failed check, and someone else's sticker board that didn't load",
     "ja": "もう一度"
@@ -33,7 +335,7 @@
   },
   "stickerBoard.board.selectedHint": {
     "where": "Your sticker board: read out by screen readers for the selected sticker, listing its keyboard controls",
-    "ja": "選択中です。Enterキーでひらき、Tabキーでツールバーに移動します。矢印キーで動かし、[と]で回し、マイナスとプラスで大きさを変え、Deleteキーでボードからはがし、Escapeキーで選択を解除します。"
+    "ja": "選択中です。Enterキーでひらき、Tabキーでツールバーに移動します。矢印キーで動かし、[キーと]キーで回し、マイナスキーとプラスキーで大きさを変え、Deleteキーでボードからはがし、Escapeキーで選択を解除します。"
   },
   "stickerBoard.board.blank": {
     "where": "Your empty sticker board: the note in the dashed spot where the first sticker lands",
@@ -60,7 +362,7 @@
   },
   "stickerBoard.placedSticker.labelBy": {
     "where": "Any sticker board: screen readers' name for a sticker someone other than the board's owner drew; {{artist}} is its Original Artist",
-    "ja": "{{no}}、制作時間{{duration}}、作者は{{artist}}さん、{{setSize}}枚中{{position}}枚目"
+    "ja": "{{no}}、制作時間{{duration}}、作者：{{artist}}、{{setSize}}枚中{{position}}枚目"
   },
   "stickerBoard.givenStickerSilhouette.aFriend": {
     "where": "Your sticker board: the caption under a given sticker's silhouette (\"No.0012 → a friend\") when it went through LINE's friend picker, which never says who was picked",
@@ -85,5 +387,247 @@
   "stickerBoard.toolbar.remove": {
     "where": "Your sticker board, a sticker selected: the toolbar's Remove key, which takes it off the board and back into the sticker tray",
     "ja": "はがす"
+  },
+  "stickerBoard.tray.zipper": {
+    "where": "Your sticker board: screen readers' name for the Zipper's pull down the right edge, which opens the sticker tray",
+    "ja": "手持ちのシール"
+  },
+  "stickerBoard.tray.sheets": {
+    "where": "Sticker tray: screen readers' name for the stack of sticker sheets",
+    "ja": "手持ちのシールシート"
+  },
+  "stickerBoard.tray.tabs": {
+    "where": "Sticker tray: screen readers' name for the folder tabs (All, Mine, Gifts), which pick the stickers shown; the tabs show once the tray holds a gift",
+    "ja": "表示するシール"
+  },
+  "stickerBoard.tray.filters.all": {
+    "where": "Sticker tray: the folder tab that shows every sticker",
+    "ja": "すべて"
+  },
+  "stickerBoard.tray.filters.mine": {
+    "where": "Sticker tray: the folder tab that shows only the stickers you drew",
+    "ja": "自作"
+  },
+  "stickerBoard.tray.filters.gifts": {
+    "where": "Sticker tray: the folder tab that shows only the stickers you received",
+    "ja": "ギフト"
+  },
+  "stickerBoard.tray.new": {
+    "where": "Sticker tray: the badge on a sticker the open tray hasn't shown before (hidden from screen readers)",
+    "ja": "NEW"
+  },
+  "stickerBoard.tray.slot.used": {
+    "where": "Sticker tray: screen readers' name for a used sticker silhouette, whose sticker is on the board; a tap makes that sticker pulse there",
+    "ja": "{{no}}、ボードに貼ってあります。ボードで見る"
+  },
+  "stickerBoard.tray.slot.onSheet": {
+    "where": "Sticker tray: screen readers' name for a sticker on a sheet, which can be dragged onto the board or tapped to stick on",
+    "ja": "{{no}}。ボードへドラッグするか、タップすると貼れます"
+  },
+  "stickerBoard.tray.slot.newOnSheet": {
+    "where": "Sticker tray: screen readers' name for a sticker on a sheet that the tray hasn't shown before",
+    "ja": "{{no}}、新着。ボードへドラッグするか、タップすると貼れます"
+  },
+  "stickerBoard.tray.moreSheets_one": {
+    "where": "Sticker tray: screen readers' name for the +1 button under the stack, which spreads every sheet out over the board"
+  },
+  "stickerBoard.tray.moreSheets_other": {
+    "where": "Sticker tray: screen readers' name for the +N button under the stack, which spreads every sheet out over the board",
+    "ja": "ほかに{{count}}枚のシート。すべてのシートを広げる"
+  },
+  "stickerBoard.tray.sheet": {
+    "where": "Sticker tray: screen readers' name for a sheet behind the front one, or one laid out in the spread; {{dates}} is when its stickers came, such as \"9.20–9.23\"",
+    "ja": "シート{{number}}、{{dates}}。手前に出す"
+  },
+  "stickerBoard.tray.sheetInFront": {
+    "where": "Sticker tray, sheets spread over the board: screen readers' name for the sheet that's in front now",
+    "ja": "シート{{number}}、{{dates}}、いま手前にあります。手前に出す"
+  },
+  "stickerBoard.tray.putBack": {
+    "where": "Sticker tray: screen readers' name for the X on a sheet pulled out over the board",
+    "ja": "このシートをシールトレイに戻す"
+  },
+  "stickerBoard.detail.label": {
+    "where": "Sticker detail: screen readers' name for the screen when it has no sticker to show",
+    "ja": "シール"
+  },
+  "stickerBoard.detail.back": {
+    "where": "Sticker detail: the back button at the top, with the sticker board icon",
+    "ja": "シールボード"
+  },
+  "stickerBoard.detail.yourStickers": {
+    "where": "Sticker detail, opened from a sticker you hold: screen readers' name for the strip of sticker thumbnails at the top",
+    "ja": "手持ちのシール"
+  },
+  "stickerBoard.detail.stickersYouGave": {
+    "where": "Sticker detail, opened from a given sticker's silhouette: screen readers' name for the strip of thumbnails of the stickers you gave",
+    "ja": "贈ったシール"
+  },
+  "stickerBoard.detail.previous": {
+    "where": "Sticker detail: screen readers' name for the left arrow under the sticker, which pages to the previous one",
+    "ja": "前のシール"
+  },
+  "stickerBoard.detail.next": {
+    "where": "Sticker detail: screen readers' name for the right arrow under the sticker, which pages to the next one",
+    "ja": "次のシール"
+  },
+  "stickerBoard.detail.count": {
+    "where": "Sticker detail: the page count between the arrows, such as \"3 / 6\" (hidden from screen readers)",
+    "ja": "{{position}} / {{setSize}}"
+  },
+  "stickerBoard.detail.countSpoken": {
+    "where": "Sticker detail: what screen readers announce after paging, naming the sticker and its place",
+    "ja": "{{no}}、{{setSize}}枚中{{position}}枚目"
+  },
+  "stickerBoard.detail.title": {
+    "where": "Sticker detail: the sticker's heading under the pager; <no/> is its number, such as \"No.0012\"",
+    "ja": "シール<no/>"
+  },
+  "stickerBoard.detail.by": {
+    "where": "Sticker detail, a sticker the board's owner drew: the fine print naming its Original Artist, first on the line",
+    "ja": "作者：{{artist}}"
+  },
+  "stickerBoard.detail.drawnIn": {
+    "where": "Sticker detail: the fine print after the artist, with how long it took to draw, such as \"4m 52s\"",
+    "ja": "・制作時間<duration/>"
+  },
+  "stickerBoard.detail.sealedOn": {
+    "where": "Sticker detail: the fine print ending the artist line, the day it was sealed, such as \"2026.09.23\"",
+    "ja": "・{{day}}"
+  },
+  "stickerBoard.detail.youGaveIt": {
+    "where": "Sticker detail, a sticker you gave: the fine print naming who received it and when, until its Transfer Trail loads",
+    "ja": "{{receiver}}さんに贈りました・{{day}}"
+  },
+  "stickerBoard.detail.onItsWay": {
+    "where": "Sticker detail, a sticker you've sent that hasn't been received: shown in place of Give, beside its sleeve",
+    "ja": "お届け中"
+  },
+  "stickerBoard.detail.onItsWayTo": {
+    "where": "Sticker detail, a sticker you've sent to someone in the app that hasn't been received: shown in place of Give, beside its sleeve",
+    "ja": "{{receiver}}さんへお届け中"
+  },
+  "stickerBoard.detail.sendGratitude": {
+    "where": "Sticker detail, a sticker you received and haven't sent gratitude for: the pink key that opens the Gratitude Mini-game",
+    "ja": "感謝を送る"
+  },
+  "stickerBoard.detail.give": {
+    "where": "Sticker detail, a sticker you hold: the Give key, or the smaller Give button under Send gratitude",
+    "ja": "贈る"
+  },
+  "stickerBoard.detail.checkFailed": {
+    "where": "Sticker detail: the alert when its Transfer Trail and gratitude check fail to load, before Try again",
+    "ja": "来歴と、感謝を送ったかどうかを読み込めませんでした：{{reason}}"
+  },
+  "stickerBoard.detail.none": {
+    "where": "Sticker detail: in place of the sticker when there's none to show",
+    "ja": "まだシールがありません。"
+  },
+  "stickerBoard.transferTrail.label": {
+    "where": "Sticker detail: screen readers' name for the Transfer Trail section under the sticker",
+    "ja": "来歴"
+  },
+  "stickerBoard.transferTrail.handOff.between": {
+    "where": "Transfer Trail: a row for a gift between two other people; <at> holds the day, such as \"9.23\"",
+    "ja": "<giver/>さんが<receiver/>さんに贈りました<at>・{{day}}</at>"
+  },
+  "stickerBoard.transferTrail.handOff.byYou": {
+    "where": "Transfer Trail: a row for a gift you gave; <at> holds the day",
+    "ja": "<b>あなた</b>が<receiver/>さんに贈りました<at>・{{day}}</at>"
+  },
+  "stickerBoard.transferTrail.handOff.toYou": {
+    "where": "Transfer Trail: a row for a gift you received; <at> holds the day",
+    "ja": "<giver/>さんが<b>あなた</b>に贈りました<at>・{{day}}</at>"
+  },
+  "stickerBoard.transferTrail.amount": {
+    "where": "Transfer Trail: a closed row's gratitude amount beside a heart; the <hidden> words are for screen readers only",
+    "ja": "<hidden>感謝</hidden>{{amount}}"
+  },
+  "stickerBoard.transferTrail.fromYou": {
+    "where": "Transfer Trail, the open row: under the gratitude total, when you sent it",
+    "ja": "あなたから"
+  },
+  "stickerBoard.transferTrail.from": {
+    "where": "Transfer Trail, the open row: under the gratitude total, naming who sent it",
+    "ja": "{{name}}さんから"
+  },
+  "stickerBoard.transferTrail.replay": {
+    "where": "Transfer Trail, the open row: the Replay button beside the gratitude total (not shown yet: nothing plays replays)",
+    "ja": "リプレイ"
+  },
+  "stickerBoard.transferTrail.replayYours": {
+    "where": "Transfer Trail, the open row: screen readers' name for Replay when you sent the gratitude (not shown yet)",
+    "ja": "あなたが送った感謝{{amount}}のリプレイを再生"
+  },
+  "stickerBoard.transferTrail.replayTheirs": {
+    "where": "Transfer Trail, the open row: screen readers' name for Replay when someone else sent the gratitude (not shown yet)",
+    "ja": "{{name}}さんが送った感謝{{amount}}のリプレイを再生"
+  },
+  "stickerBoard.transferTrail.artistShare.youDrewIt": {
+    "where": "Transfer Trail, the open row of a sticker you drew that others passed on: the fine print for your Original Artist Gratitude Share",
+    "ja": "このうち{{share}}が、作者のあなたに届きました"
+  },
+  "stickerBoard.transferTrail.artistShare.youGaveIt": {
+    "where": "Transfer Trail, the open row of a gift you gave of someone else's sticker: the fine print splitting its gratitude between you and its Original Artist",
+    "ja": "{{kept}}はあなたに・{{share}}は作者の{{artist}}さんに"
+  },
+  "stickerBoard.transferTrail.artistShare.between": {
+    "where": "Transfer Trail, the open row of a gift between others: the fine print splitting its gratitude between the giver and the Original Artist",
+    "ja": "{{kept}}は{{giver}}さんに・{{share}}は作者の{{artist}}さんに"
+  },
+  "stickerBoard.transferTrail.earlierGifts_one": {
+    "where": "Transfer Trail: the fold under the newest row, holding one earlier gift; a tap unfolds it"
+  },
+  "stickerBoard.transferTrail.earlierGifts_other": {
+    "where": "Transfer Trail: the fold under the newest row, holding the earlier gifts; a tap unfolds them",
+    "ja": "それより前のギフト{{count}}件"
+  },
+  "stickerBoard.artistBoard.title": {
+    "where": "Someone else's sticker board, opened from Explore: LINE's header, and screen readers' name for the board",
+    "ja": "{{name}}さんのシールボード"
+  },
+  "stickerBoard.artistBoard.theirStats": {
+    "where": "Someone else's sticker board: screen readers' name for the button with their photo and name, which turns the board over to their stat board",
+    "ja": "{{name}}さんの記録"
+  },
+  "stickerBoard.artistBoard.statsDidntLoad": {
+    "where": "Someone else's stat board, Streak leaf: the note in place of the streak rule when their User Stats fail to load, with the reason",
+    "ja": "記録を読み込めませんでした：{{reason}}"
+  },
+  "stickerBoard.artistBoard.hint": {
+    "where": "Someone else's sticker board: read out by screen readers when keyboard focus lands on a sticker",
+    "ja": "Enterキーでメニューをひらきます。シールを見たり、オファーしたりできます。"
+  },
+  "stickerBoard.artistBoard.blank": {
+    "where": "Someone else's empty sticker board: the note in the dashed spot",
+    "ja": "{{name}}さんはまだ何も貼っていません。"
+  },
+  "stickerBoard.artistBoard.didntLoad": {
+    "where": "Someone else's sticker board, when it fails to load: the alert above Try again",
+    "ja": "{{name}}さんのシールボードを読み込めませんでした：{{reason}}"
+  },
+  "stickerBoard.artistBoard.explore": {
+    "where": "Someone else's sticker board: the back chip at the top that returns to Explore",
+    "ja": "さがす"
+  },
+  "stickerBoard.artistBoard.view": {
+    "where": "Someone else's sticker board, a sticker tapped: the menu's View button, which opens it large",
+    "ja": "見る"
+  },
+  "stickerBoard.artistBoard.offer": {
+    "where": "Someone else's sticker board, a sticker tapped: the menu's Offer for it button, which opens an offer for that sticker",
+    "ja": "オファーする"
+  },
+  "stickerBoard.artistBoard.give": {
+    "where": "Someone else's sticker board: the Give key in Draw's place, which gives them one of your stickers",
+    "ja": "贈る"
+  },
+  "stickerBoard.artistBoard.drawnIn": {
+    "where": "Someone else's sticker board, a sticker opened large: the fine print under its number; <duration/> is how long it took to draw, <artist/> its Original Artist",
+    "ja": "制作時間<duration/>・<artist/>"
+  },
+  "stickerBoard.artistBoard.close": {
+    "where": "Someone else's sticker board, a sticker opened large: the Close link under it",
+    "ja": "閉じる"
   }
 }
