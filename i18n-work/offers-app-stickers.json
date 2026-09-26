@@ -1,0 +1,184 @@
+{
+  "offers.title": {
+    "where": "Offer sheet, opened by Offer for it in a sticker's menu on someone else's sticker board: its heading and its screen-reader name; {{no}} is the sticker's No., like No.0042",
+    "ja": "{{no}}へのオファー"
+  },
+  "offers.close": {
+    "where": "Offer sheet: screen-reader label of the X button in the sheet's header, which closes it",
+    "ja": "閉じる"
+  },
+  "offers.credit": {
+    "where": "Offer sheet: fine print beside the sticker, under its No., drawing time and day; {{artist}} is the Original Artist, {{holder}} the owner of the board it's on, each an @handle or LINE name",
+    "ja": "作者：{{artist}}・持ち主：{{holder}}"
+  },
+  "offers.kinds.label": {
+    "where": "Offer sheet: screen-reader name of the three offer choices (ask, swap, Gratitude)",
+    "ja": "オファーの内容"
+  },
+  "offers.kinds.ask.title": {
+    "where": "Offer sheet: bold title of the first offer choice, a plain request for the sticker",
+    "ja": "お願いする"
+  },
+  "offers.kinds.ask.note": {
+    "where": "Offer sheet: line under the Ask for it choice; {{holder}} is the board's owner",
+    "ja": "ふつうのお願いです。受けるかどうかは{{holder}}さんが決めます。"
+  },
+  "offers.kinds.swap.title": {
+    "where": "Offer sheet: bold title of the second offer choice, trading one of your stickers for it",
+    "ja": "自分のシールと交換する"
+  },
+  "offers.kinds.swap.note": {
+    "where": "Offer sheet: line under the Swap one of yours choice",
+    "ja": "交換に出すシールを1枚選びます。"
+  },
+  "offers.kinds.gratitude.title": {
+    "where": "Offer sheet: bold title of the third offer choice, giving some of your Gratitude for the sticker",
+    "ja": "感謝を差し出す"
+  },
+  "offers.kinds.gratitude.note": {
+    "where": "Offer sheet: line under the Offer gratitude choice",
+    "ja": "手持ちの感謝を少し渡して、ゆずってもらいます。"
+  },
+  "offers.swap.picker": {
+    "where": "Offer sheet, with Swap chosen: screen-reader name of the row of your stickers to pick from",
+    "ja": "交換に出すシール"
+  },
+  "offers.swap.none": {
+    "where": "Offer sheet, with Swap chosen: shown in place of the sticker picker when you have no sticker to trade",
+    "ja": "交換に出せるシールがまだありません。"
+  },
+  "offers.gratitudeAmounts": {
+    "where": "Offer sheet, with Offer gratitude chosen: screen-reader name of the amount choices (100, 250, 500)",
+    "ja": "渡す感謝の量"
+  },
+  "offers.send": {
+    "where": "Offer sheet: the main key at the bottom, which sends the offer",
+    "ja": "オファーを送る"
+  },
+  "offers.waitsForYes": {
+    "where": "Offer sheet: small line under the Send offer key; {{holder}} is the board's owner",
+    "ja": "{{holder}}さんがOKするまで、やりとりは始まりません。"
+  },
+  "offers.sent.title": {
+    "where": "Offer sheet, after Send offer: heading of the confirmation that replaces the sheet's choices",
+    "ja": "{{holder}}さんにオファーを送りました"
+  },
+  "offers.sent.lead": {
+    "where": "Offer sheet, after Send offer: line under the confirmation's heading",
+    "ja": "{{holder}}さんがOKするまで、やりとりは始まりません。返事はLINEでお知らせします。"
+  },
+  "offers.sent.demo": {
+    "where": "Offer sheet, after Send offer: fine print saying the offer is a demo that went nowhere",
+    "ja": "デモ表示・オファーはまだどこにも送られません"
+  },
+  "offers.sent.back": {
+    "where": "Offer sheet, after Send offer: the button that closes the sheet, back to the owner's sticker board",
+    "ja": "{{holder}}さんのボードに戻る"
+  },
+  "app.title": {
+    "where": "Page title in LINE's header as the app opens, before a screen names itself: the app's name",
+    "ja": "クロッキー"
+  },
+  "app.pageTitles.board": {
+    "where": "Page title in LINE's header while your own sticker board is open",
+    "ja": "あなたのシールボード"
+  },
+  "app.pageTitles.explore": {
+    "where": "Page title in LINE's header while the Explore tab is open",
+    "ja": "さがす"
+  },
+  "app.pageTitles.shop": {
+    "where": "Page title in LINE's header while the Shop tab, the ticket shop, is open",
+    "ja": "ショップ"
+  },
+  "app.pageTitles.draw": {
+    "where": "Page title in LINE's header while the drawing screen is open",
+    "ja": "かく"
+  },
+  "app.tabs.sections": {
+    "where": "Tab bar at the bottom of every screen: its screen-reader name",
+    "ja": "アプリのセクション"
+  },
+  "app.tabs.myBoard": {
+    "where": "Tab bar at the bottom of every screen: the tab for your own sticker board",
+    "ja": "マイボード"
+  },
+  "app.tabs.explore": {
+    "where": "Tab bar at the bottom of every screen: the tab for Explore, where you find other people's stickers and boards",
+    "ja": "さがす"
+  },
+  "app.tabs.shop": {
+    "where": "Tab bar at the bottom of every screen: the tab for the Shop, where tickets are bought",
+    "ja": "ショップ"
+  },
+  "app.tabs.showTabs": {
+    "where": "Drawing screen, which tucks the tab bar away: screen-reader label of the grabber at the bottom that brings the tabs back",
+    "ja": "マイボード・さがす・ショップのタブを出す"
+  },
+  "app.tabs.grabber": {
+    "where": "Drawing screen: text on the grabber at the bottom until it's first used, saying where it leads",
+    "ja": "ボード"
+  },
+  "app.motionPermission.label": {
+    "where": "Motion permission card, shown once over the app on iPhone: its screen-reader name",
+    "ja": "モーションの許可"
+  },
+  "app.motionPermission.question": {
+    "where": "Motion permission card, shown once over the app on iPhone: the question it asks",
+    "ja": "クロッキーでは、一部のアニメーションや操作に端末の動きを使います。モーションセンサーの使用を許可しますか？"
+  },
+  "app.motionPermission.allow": {
+    "where": "Motion permission card: the key that grants motion access, after which iOS shows its own prompt",
+    "ja": "許可する"
+  },
+  "app.motionPermission.dontAllow": {
+    "where": "Motion permission card: the quiet link under Allow that declines",
+    "ja": "許可しない"
+  },
+  "stickers.duration.minutesAndSeconds": {
+    "where": "A sticker's drawing time in fine print, like 4m 52s: on the offer sheet, the Explore feed, the sealed card, a gift, the Mini-game, and in a Gift Message",
+    "ja": "{{minutes}}分{{seconds}}秒"
+  },
+  "stickers.duration.minutes": {
+    "where": "A sticker's drawing time in fine print on the minute, like 5m, wherever the 4m 52s form shows",
+    "ja": "{{minutes}}分"
+  },
+  "stickers.duration.seconds": {
+    "where": "A sticker's drawing time in fine print under a minute, like 54s, wherever the 4m 52s form shows",
+    "ja": "{{seconds}}秒"
+  },
+  "stickers.spokenDuration.minutesAndSeconds": {
+    "where": "Screen readers only: a drawing time read aloud, the minutes then the seconds, for the fine-print time and a sticker on a board",
+    "ja": "{{minutes}}{{seconds}}"
+  },
+  "stickers.spokenDuration.minutes_one": {
+    "where": "Screen readers only: the minutes of a drawing time read aloud, for 1 minute"
+  },
+  "stickers.spokenDuration.minutes_other": {
+    "where": "Screen readers only: the minutes of a drawing time read aloud",
+    "ja": "{{count}}分"
+  },
+  "stickers.spokenDuration.seconds_one": {
+    "where": "Screen readers only: the seconds of a drawing time read aloud, for 1 second"
+  },
+  "stickers.spokenDuration.seconds_other": {
+    "where": "Screen readers only: the seconds of a drawing time read aloud",
+    "ja": "{{count}}秒"
+  },
+  "stickers.artistChip.label": {
+    "where": "Artist chip, the Original Artist's picture and name on a sticker someone else drew: its screen-reader label; {{name}} is their @handle or LINE name",
+    "ja": "作者：{{name}}"
+  },
+  "stickers.artistChip.artist": {
+    "where": "Artist chip: small caption over the Original Artist's name, on a sticker's detail, its toolbar and menu, and over stickers as your board first loads",
+    "ja": "作者"
+  },
+  "stickers.artistChip.by": {
+    "where": "Artist chip, one-line form for tight rows: before the Original Artist's name, as in By @alice",
+    "ja": "作者"
+  },
+  "stickers.keptStickers.notLoaded": {
+    "where": "Give sheet, and the offer sheet with Swap chosen: alert when your stickers fail to load; {{reason}} is the error message",
+    "ja": "手持ちのシールを読み込めませんでした：{{reason}}"
+  }
+}
