@@ -34,6 +34,7 @@ import { meSchema, stickerImagesSchema } from "../shapes.ts";
 import { sealResponseSchema } from "../stickers/seal.ts";
 import { pngFile, sealFormData, sealParts } from "../stickers/testPngs.ts";
 import { createTestApp } from "../testing/createTestApp.ts";
+import { privySmartWallet, privyUser } from "../testing/privy.ts";
 import { ticketUseSchema } from "../tickets/tickets.ts";
 
 const chainRoot = fileURLToPath(new URL("../../../../packages/sticker-chain", import.meta.url));
@@ -88,9 +89,7 @@ describe("Sealing through the REST API and NFT contract", () => {
         expect(JSON.parse(init.body)).toEqual({
           custom_user_id: privySubject(lineChannelId, alice.sub),
         });
-        return Response.json({
-          linked_accounts: [{ type: "smart_wallet", address: artistAddress }],
-        });
+        return Response.json(privyUser([privySmartWallet(artistAddress)]));
       });
       const smartWallets = createPrivySmartWallets({
         db: test.db,
