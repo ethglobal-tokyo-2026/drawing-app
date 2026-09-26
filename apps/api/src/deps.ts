@@ -22,7 +22,7 @@ export interface AppDeps {
   serverLog: ServerLog;
 }
 
-/** The server's whole log as text, oldest line first. Rejects when the log can't be read. */
+/** The server's whole log as text, newest line first. Rejects when the log can't be read. */
 export type ServerLog = () => Promise<ReadableStream<Uint8Array>>;
 
 export interface Clock {
@@ -45,6 +45,12 @@ export type LineProfile = z.infer<typeof lineProfileSchema>;
 /** LINE refused the ID token: expired, forged, or issued for another channel. */
 export class LineTokenInvalidError extends Error {
   name = "LineTokenInvalidError";
+  readonly reason: "invalid" | "expired";
+
+  constructor(message?: string, reason: "invalid" | "expired" = "invalid") {
+    super(message);
+    this.reason = reason;
+  }
 }
 
 export interface LineVerifier {
