@@ -1,8 +1,23 @@
-/* Holo foil: the sticker's silhouette dilated into a band just past its white edge. Its box is the
-   image's, so a lifted corner clips it along the same fold; the band spills past that box by its width.
-   The bands flow on their own clock; the glint follows the app's one light (light.ts). Both move by
-   transform only and hold still under reduced motion. */
+/* Holo foil: the sticker's silhouette dilated into a band just past its white edge. The band is the
+   sticker's edge: the kiss-cut and the cast shadow fall from its outer edge, and the image it sits
+   under shows only inside its own cut. Its box is the image's, so a lifted corner clips it along the
+   same fold; the band spills past that box by its width. Six bands of color flow on their own clock
+   under a fine, still grating, so the band glitters rather than crawls; the glint follows the app's
+   one light (light.ts). Both move by transform only and hold still under reduced motion. */
 .sticker-foil {
+  /* Nine copies of the silhouette at the image's size, which together dilate it: the center, four
+     sides and four diagonals. The band and its cast share them. */
+  --foil-d: calc(var(--foil-w) * 0.71);
+  --foil-s: calc(100% - var(--foil-w) * 2);
+  --foil-copies:
+    var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m);
+  --foil-at:
+    var(--foil-w) var(--foil-w), calc(var(--foil-w) * 2) var(--foil-w), 0 var(--foil-w),
+    var(--foil-w) 0, var(--foil-w) calc(var(--foil-w) * 2),
+    calc(var(--foil-w) + var(--foil-d)) calc(var(--foil-w) + var(--foil-d)),
+    calc(var(--foil-w) - var(--foil-d)) calc(var(--foil-w) + var(--foil-d)),
+    calc(var(--foil-w) + var(--foil-d)) calc(var(--foil-w) - var(--foil-d)),
+    calc(var(--foil-w) - var(--foil-d)) calc(var(--foil-w) - var(--foil-d));
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -20,23 +35,21 @@
   --foil-w: 3px;
 }
 
-/* Nine copies of the silhouette at the image's size, which together dilate it: the center, four
-   sides and four diagonals. */
+.sticker-foil__cast,
 .sticker-foil__band {
-  --foil-d: calc(var(--foil-w) * 0.71);
-  --foil-s: calc(100% - var(--foil-w) * 2);
-  --foil-copies:
-    var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m);
-  --foil-at:
-    var(--foil-w) var(--foil-w), calc(var(--foil-w) * 2) var(--foil-w), 0 var(--foil-w),
-    var(--foil-w) 0, var(--foil-w) calc(var(--foil-w) * 2),
-    calc(var(--foil-w) + var(--foil-d)) calc(var(--foil-w) + var(--foil-d)),
-    calc(var(--foil-w) - var(--foil-d)) calc(var(--foil-w) + var(--foil-d)),
-    calc(var(--foil-w) + var(--foil-d)) calc(var(--foil-w) - var(--foil-d)),
-    calc(var(--foil-w) - var(--foil-d)) calc(var(--foil-w) - var(--foil-d));
   position: absolute;
   inset: calc(var(--foil-w) * -1);
-  overflow: hidden;
+}
+
+/* The band's shape, filled and held still, casts the sticker's cut and shadow from the band's outer
+   edge. It sits under the band, so the flowing bands never redraw a shadow. Wherever a sticker is
+   lifted, the lifted shadow falls from here too. */
+.sticker-foil__cast {
+  filter: var(--sticker-cut) var(--sticker-cast);
+}
+
+.sticker-foil__cast::before,
+.sticker-foil__band {
   -webkit-mask-image: var(--foil-copies);
   mask-image: var(--foil-copies);
   -webkit-mask-position: var(--foil-at);
@@ -45,6 +58,17 @@
   mask-size: var(--foil-s) var(--foil-s);
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
+}
+
+.sticker-foil__cast::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--foil-lilac);
+}
+
+.sticker-foil__band {
+  overflow: hidden;
 }
 
 /* The six bands, one period apart; moving a period along their angle is seamless. The flow runs down
@@ -64,6 +88,25 @@
   );
   animation: sticker-foil-flow 7s linear infinite;
   animation-delay: calc(var(--foil-i, 0) * -2.3s);
+}
+
+/* The diffraction grating: fine diagonal hairlines, lit and shaded, pressed into the foil. They hold
+   still across the bands, crossing them, so the eye reads the flowing color as light moving over
+   metal. Each hairline ramps in and out, so it stays smooth at any angle and scale. */
+.sticker-foil__band::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.34) 0,
+    rgba(255, 255, 255, 0) 0.6px,
+    rgba(28, 24, 36, 0) 0.8px,
+    rgba(28, 24, 36, 0.1) 1.1px,
+    rgba(28, 24, 36, 0) 1.4px,
+    rgba(255, 255, 255, 0) 1.5px,
+    rgba(255, 255, 255, 0.34) 2px
+  );
 }
 
 /* A white glint where the light falls on the band: the top-left until the light first moves, then
@@ -89,6 +132,15 @@
   /* From the middle to the band's edge as the light goes from 0 to ±1. */
   translate: calc(var(--lx, -0.6) * 83%) calc(var(--ly, -0.6) * 83%);
   transition: translate 280ms var(--ease-out);
+}
+
+/* The image a foil sits under shows only inside its cut. Past the cut is the band, the sticker's edge
+   now, and the image's own groove and baked shadow there would draw a dark gap between the white
+   edge and the foil. */
+.sticker-foil ~ img {
+  -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
+  mask: var(--m) 0 0 / 100% 100% no-repeat;
+  filter: none;
 }
 
 @keyframes sticker-foil-flow {
