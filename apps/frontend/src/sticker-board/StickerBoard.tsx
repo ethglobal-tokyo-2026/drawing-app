@@ -9,6 +9,10 @@ import {
   useState,
 } from "react";
 import { flushSync } from "react-dom";
+import { apiError, type ApiError } from "../api/apiClient";
+import { useApi } from "../api/useApi";
+import { useApiQuery } from "../api/useApiQuery";
+import { toPerson, type PersonView } from "../api/views";
 import { Giving } from "../giving/Giving";
 import { useGiftSender } from "../giving/useGiftSender";
 import { useStickerGifts } from "../giving/useStickerGifts";
@@ -18,8 +22,7 @@ import { LIFF_ID } from "../line/liff";
 import { formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { playStick } from "../stickers/stick";
-import { updatePlacement, type Placement, type StickerRecord } from "../stickers/stickerStorage";
-import { releaseStickerUrls } from "../stickers/stickerUrls";
+import type { Placement } from "../stickers/stickerStorage";
 import { TicketCounts } from "../tickets/TicketCount";
 import { describeTickets, ticketDay } from "../tickets/tickets";
 import { useTicketState } from "../tickets/useTickets";
@@ -29,7 +32,13 @@ import { PhotoSticker } from "../ui/PhotoSticker";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { normalizeTurn } from "./boardGesture";
-import { loadBoardStickers, type BoardSticker } from "./boardSticker";
+import {
+  placeUnplaced,
+  toApiPlacement,
+  toBoardSticker,
+  type BoardSticker,
+  type BoardStickerView,
+} from "./boardSticker";
 import { PlacedSticker } from "./PlacedSticker";
 import { GivenStickerSilhouette } from "./GivenStickerSilhouette";
 import {
@@ -101,8 +110,15 @@ const kept = (was: Box | null, now: Box) =>
     ? was
     : now;
 
-const reasonOf = (error: unknown) =>
-  error instanceof Error && error.message ? error.message : String(error);
+const reasonOf = (error: ApiError) => error.detail ?? error.code;
+
+/** The stat board reads records' dates, never their images. */
+const NO_IMAGE = new Blob();
+
+interface LoadedBoard {
+  owner: PersonView;
+  stickers: BoardStickerView[];
+}
 
 /** "No.0001", "No.0001 and No.0002", "No.0001, No.0002 and No.0003". */
 const listed = (names: readonly string[]) =>
@@ -135,9 +151,11 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const drawSlot = useRef<HTMLSpanElement>(null);
   const flipBack = useRef<HTMLButtonElement>(null);
   const statBoard = useRef<StatBoardHandle>(null);
-  const [stickers, setStickers] = useState<BoardSticker[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [attempt, setAttempt] = useState(0);
+  const api = useApi();
+  const [stickers, setStickers] = useState<BoardStickerView[] | null>(null);
+  /** The load the stickers came from, and whose board it is: a sticker someone else drew wears foil. */
+  const [adopted, setAdopted] = useState<LoadedBoard | null>(null);
+  const owner = adopted?.owner ?? null;
   /** Stickers whose spot didn't save, and why; each goes once a save of it succeeds. */
   const [unsaved, setUnsaved] = useState<ReadonlyMap<string, string>>(() => new Map());
   const [size, setSize] = useState<{ W: number; H: number } | null>(null);
@@ -162,42 +180,49 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const hints = useId();
   useLight(!turned);
 
-  const save = useCallback((sticker: Pick<StickerRecord, "id" | "no">, placement: Placement) => {
-    updatePlacement(sticker.id, placement).then(
-      () =>
-        setUnsaved((was) => {
-          if (!was.has(sticker.id)) return was;
-          const next = new Map(was);
-          next.delete(sticker.id);
-          return next;
-        }),
-      (error: unknown) => {
-        console.error(`Saving where ${formatNo(sticker.no)} sits failed`, error);
-        setUnsaved((was) => new Map(was).set(sticker.id, reasonOf(error)));
-      },
-    );
-  }, []);
+  const save = useCallback(
+    (sticker: Pick<BoardSticker, "id" | "no">, placement: Placement) => {
+      api.saveStickerPlacement(sticker.id, toApiPlacement(placement)).then(
+        () =>
+          setUnsaved((was) => {
+            if (!was.has(sticker.id)) return was;
+            const next = new Map(was);
+            next.delete(sticker.id);
+            return next;
+          }),
+        (error: unknown) => {
+          const failure = apiError(error);
+          console.error(`Saving where ${formatNo(sticker.no)} sits failed`, failure);
+          setUnsaved((was) => new Map(was).set(sticker.id, reasonOf(failure)));
+        },
+      );
+    },
+    [api],
+  );
 
-  // The board mounts anew on every visit, so this load is its refresh.
-  useEffect(() => {
-    let cancelled = false;
-    let loaded: BoardSticker[] = [];
-    loadBoardStickers(save).then(
-      (list) => {
-        loaded = list;
-        if (cancelled) list.forEach((s) => releaseStickerUrls(s.urls));
-        else setStickers(list);
-      },
-      (error: unknown) => {
-        console.error("Stickers failed to load", error);
-        if (!cancelled) setLoadError(reasonOf(error));
-      },
-    );
-    return () => {
-      cancelled = true;
-      loaded.forEach((s) => releaseStickerUrls(s.urls));
-    };
-  }, [attempt, save]);
+  // The board mounts anew on every visit, so its load is its refresh. A sticker the board has never
+  // placed gets a spot as it loads, saved so it stays there.
+  const board = useApiQuery("sticker-board", async (client): Promise<LoadedBoard> => {
+    const data = await client.stickerBoard();
+    const { stickers: list, placed } = placeUnplaced(data.boardStickers.map(toBoardSticker));
+    for (const s of placed) save(s, s.placement);
+    return { owner: toPerson(data.owner), stickers: list };
+  });
+  const loaded = board.state === "ready" ? board.data : null;
+  if (loaded && loaded !== adopted) {
+    setAdopted(loaded);
+    setStickers(loaded.stickers);
+  }
+
+  // The open sticker tray's NEW marks, which the tray takes off at once.
+  const markSeen = (ids: readonly string[]) => {
+    api.markTraySeen(ids).catch((error: unknown) => {
+      console.error(
+        `Saving that the sticker tray showed ${ids.join(", ")} failed, so they show NEW again next time`,
+        apiError(error),
+      );
+    });
+  };
 
   useLayoutEffect(() => {
     const el = stage.current;
@@ -446,6 +471,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
                 tabbable={s.id === tabbable}
                 position={`${order.indexOf(s.id) + 1} of ${order.length}`}
                 hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
+                foil={owner !== null && s.artist.id !== owner.id}
               />
               {/* Right after its sticker, so Tab reaches it next. */}
               {s.id === selected && !hold && (
@@ -471,22 +497,24 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           ))}
       </div>
 
-      {stickers && (
-        <StickerTray ref={tray} board={face} stickers={stickers} gifts={gifts} api={trayBoard} />
+      {stickers && owner && (
+        <StickerTray
+          ref={tray}
+          board={face}
+          stickers={stickers}
+          ownerId={owner.id}
+          gifts={gifts}
+          api={trayBoard}
+          onSeen={markSeen}
+        />
       )}
 
-      {loadError && (
+      {board.state === "failed" && (
         <div className="board-blank board-problem" role="alert" style={blankStyle}>
           <span className="board-blank-cut" aria-hidden />
           <span className="board-blank-note">Your stickers didn’t load.</span>
-          <span className="fine board-problem-reason">{loadError}</span>
-          <LabelButton
-            size="sm"
-            onClick={() => {
-              setLoadError(null);
-              setAttempt((n) => n + 1);
-            }}
-          >
+          <span className="fine board-problem-reason">{reasonOf(board.error)}</span>
+          <LabelButton size="sm" onClick={board.retry}>
             Try again
           </LabelButton>
         </div>
@@ -573,7 +601,14 @@ export function StickerBoard({ freshId, onDraw }: Props) {
       back={
         <StatBoard
           ref={statBoard}
-          stickers={loadError ? null : (stickers ?? [])}
+          // Your own stickers, as it counted when every sticker here was one you drew.
+          stickers={
+            board.state === "failed"
+              ? null
+              : (stickers ?? [])
+                  .filter((s) => s.artist.id === owner?.id)
+                  .map((s) => ({ ...s, blob: NO_IMAGE }))
+          }
           gifts={gifts}
           onFlipBack={() => turn(false)}
           flipBackRef={flipBack}

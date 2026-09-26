@@ -1,5 +1,5 @@
 import type { StickerGiftStatus } from "../../giving/giftStore";
-import type { StickerRecord } from "../../stickers/stickerStorage";
+import type { BoardStickerView } from "../boardSticker";
 
 /**
  * "here" in its spot, "used" out on the board (its used sticker silhouette shows), "given" away (its
@@ -10,7 +10,7 @@ type TraySlotState = "here" | "used" | "given";
 /** A sticker's permanent place in the sticker tray. */
 export interface TraySlot {
   id: string;
-  /** Every sticker here is your own, so it arrived when it was sealed. */
+  /** When it came to you: sealed, or received. */
   arrivedAt: number;
   /** Its stand-in spot until every sticker's shape is known: packing moves it, never out of order. */
   sheet: number;
@@ -26,17 +26,17 @@ const PER_SHEET = 6;
  * nothing after them shifts.
  */
 export function traySlots(
-  stickers: readonly Pick<StickerRecord, "id" | "no" | "createdAt" | "placement">[],
+  stickers: readonly Pick<BoardStickerView, "id" | "no" | "arrivedAt" | "placement">[],
   gifts: ReadonlyMap<string, StickerGiftStatus>,
 ): TraySlot[] {
   return [...stickers]
-    .sort((a, b) => a.createdAt - b.createdAt || a.no - b.no)
+    .sort((a, b) => a.arrivedAt - b.arrivedAt || a.no - b.no)
     .map((s, n) => ({
       id: s.id,
-      arrivedAt: s.createdAt,
+      arrivedAt: s.arrivedAt,
       sheet: Math.floor(n / PER_SHEET),
       slot: n % PER_SHEET,
-      state: gifts.get(s.id)?.state === "sent" ? "given" : s.placement?.on ? "used" : "here",
+      state: gifts.get(s.id)?.state === "sent" ? "given" : s.placement.on ? "used" : "here",
     }));
 }
 
