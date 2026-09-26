@@ -65,14 +65,7 @@
   animation-delay: calc(var(--foil-i, 0) * -2.3s);
 }
 
-/* Only the sticker in hand and the sticker's detail shimmer: foil moving under its mask on every
-   sticker at once would keep the board and the sticker tray repainting. */
-.sticker-foil--sheet :is(.sticker-foil__sheen, .sticker-foil__glint),
-.placed-sticker:not(.is-selected, .is-dragging) :is(.sticker-foil__sheen, .sticker-foil__glint) {
-  animation: none;
-}
-
-/* A white glint that sweeps across now and then. */
+/* A white glint, out of sight until a tilt of the phone sweeps it across (light.ts). */
 .sticker-foil__glint {
   position: absolute;
   top: -40%;
@@ -86,23 +79,11 @@
     rgba(255, 255, 255, 0)
   );
   transform: skewX(-18deg);
-  animation: sticker-foil-glint 4.2s cubic-bezier(0.45, 0.05, 0.25, 1) infinite;
-  animation-delay: calc(var(--foil-i, 0) * -1.3s);
 }
 
 @keyframes sticker-foil-flow {
   to {
     transform: translate3d(87px, 40.6px, 0);
-  }
-}
-
-@keyframes sticker-foil-glint {
-  0%,
-  52% {
-    transform: translateX(0) skewX(-18deg);
-  }
-  100% {
-    transform: translateX(460%) skewX(-18deg);
   }
 }
 

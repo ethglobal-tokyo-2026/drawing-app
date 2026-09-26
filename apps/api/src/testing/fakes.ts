@@ -1,21 +1,19 @@
-import {
-  LineTokenInvalidError,
-  lineProfileSchema,
-  type EscrowGift,
-  type GiftChain,
-  type Ids,
-  type ImageStore,
-  type LineProfile,
-  type LineVerifier,
-  type Mint,
-  type MintedToken,
-  type SmartWallets,
-  type SuiPayments,
-  type SuiPrice,
+import type {
+  EscrowGift,
+  GiftChain,
+  Ids,
+  ImageStore,
+  Mint,
+  MintedToken,
+  SmartWallets,
+  SuiPayments,
+  SuiPrice,
 } from "../deps.ts";
 import { keccak256 } from "../keccak256.ts";
+import { createDevLineVerifier } from "../services/devSignIn.ts";
 import { stickerImageUrls } from "../services/imageStore.ts";
 import type { StickerImages } from "../shapes.ts";
+import { isHex } from "viem";
 
 /** A made-up 32-byte hex value, the same for the same seed. */
 const fakeBytes32 = (seed: string) => keccak256(new TextEncoder().encode(seed));
@@ -44,33 +42,8 @@ export function sequentialIds() {
   } satisfies Ids;
 }
 
-const FAKE_ID_TOKEN = "fake-line-id-token:";
-
-/** An ID token the fake LINE verifier accepts as naming `profile`. */
-export const fakeLineIdToken = (profile: LineProfile) => FAKE_ID_TOKEN + JSON.stringify(profile);
-
-const parseJson = (text: string): unknown => {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return undefined;
-  }
-};
-
-/** Accepts tokens from fakeLineIdToken, and refuses anything else as LINE would. */
-export function fakeLineVerifier() {
-  return {
-    verifyIdToken: (idToken) => {
-      const claims = idToken.startsWith(FAKE_ID_TOKEN)
-        ? parseJson(idToken.slice(FAKE_ID_TOKEN.length))
-        : undefined;
-      const profile = lineProfileSchema.safeParse(claims);
-      return profile.success
-        ? Promise.resolve(profile.data)
-        : Promise.reject(new LineTokenInvalidError(`Not a fake LINE ID token: ${idToken}`));
-    },
-  } satisfies LineVerifier;
-}
+/** LINE, as dev sign-in stands in for it: devIdToken's tokens name their profile, and any other is refused. */
+export const fakeLineVerifier = createDevLineVerifier;
 
 /** Keeps saved images in memory, by content hash; like the disk store, the first save stays. */
 export function fakeImageStore(cdnBaseUrl = "https://cdn.test") {
@@ -115,6 +88,7 @@ const missingEscrowGift = (): EscrowGift => ({
  */
 export function fakeGiftChain() {
   const escrow = new Map<string, EscrowGift>();
+  const claimTransactions = new Map<string, string>();
   let claims = 0;
   const chain: GiftChain = {
     createGiftClaim: () => {
@@ -131,8 +105,33 @@ export function fakeGiftChain() {
       data: fakeBytes32(JSON.stringify(gift)),
     }),
     readEscrowGift: (giftId) => Promise.resolve(escrow.get(giftId) ?? missingEscrowGift()),
+    claimGift: ({ giftId, giftClaimToken, recipientId }) => {
+      const gift = escrow.get(giftId) ?? missingEscrowGift();
+      const recipient = fakeAddress(`smart wallet ${recipientId}`);
+      if (gift.status === "claimed") {
+        return Promise.resolve(
+          gift.recipient.toLowerCase() === recipient.toLowerCase()
+            ? {
+                claimed: true as const,
+                txHash: claimTransactions.get(giftId) ?? fakeBytes32(giftId),
+              }
+            : { claimed: false as const },
+        );
+      }
+      if (gift.status !== "pending") return Promise.reject(new Error("Gift is not pending"));
+      if (!isHex(giftClaimToken) || giftClaimToken.length !== 66) {
+        return Promise.reject(new Error("Gift claim token is invalid"));
+      }
+      if (keccak256(giftClaimToken).toLowerCase() !== gift.claimCommitment.toLowerCase()) {
+        return Promise.reject(new Error("Gift claim token is invalid"));
+      }
+      const txHash = fakeBytes32(`claim ${giftId}`);
+      claimTransactions.set(giftId, txHash);
+      escrow.set(giftId, { ...gift, recipient, status: "claimed" });
+      return Promise.resolve({ claimed: true as const, txHash });
+    },
   };
-  return { ...chain, escrow };
+  return { ...chain, escrow, claimTransactions };
 }
 
 /** Gives everyone a smart wallet, its address made from their user id. */

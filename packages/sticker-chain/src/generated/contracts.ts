@@ -191,6 +191,13 @@ export const stickerGiftEscrowAbi = [
     outputs: [{ name: '', internalType: 'bool', type: 'bool' }],
     stateMutability: 'view',
   },
+  {
+    type: 'function',
+    inputs: [{ name: 'giftId', internalType: 'bytes32', type: 'bytes32' }],
+    name: 'takeOut',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
   { type: 'event', anonymous: false, inputs: [], name: 'EIP712DomainChanged' },
   {
     type: 'event',
@@ -308,6 +315,31 @@ export const stickerGiftEscrowAbi = [
     type: 'event',
     anonymous: false,
     inputs: [
+      {
+        name: 'giftId',
+        internalType: 'bytes32',
+        type: 'bytes32',
+        indexed: true,
+      },
+      {
+        name: 'tokenId',
+        internalType: 'uint256',
+        type: 'uint256',
+        indexed: true,
+      },
+      {
+        name: 'sender',
+        internalType: 'address',
+        type: 'address',
+        indexed: true,
+      },
+    ],
+    name: 'GiftTakenOut',
+  },
+  {
+    type: 'event',
+    anonymous: false,
+    inputs: [
       { name: 'role', internalType: 'bytes32', type: 'bytes32', indexed: true },
       {
         name: 'previousAdminRole',
@@ -403,6 +435,14 @@ export const stickerGiftEscrowAbi = [
   { type: 'error', inputs: [], name: 'InvalidGift' },
   { type: 'error', inputs: [], name: 'InvalidShortString' },
   { type: 'error', inputs: [], name: 'InvalidSigner' },
+  {
+    type: 'error',
+    inputs: [
+      { name: 'giftId', internalType: 'bytes32', type: 'bytes32' },
+      { name: 'caller', internalType: 'address', type: 'address' },
+    ],
+    name: 'NotGiftSender',
+  },
   { type: 'error', inputs: [], name: 'ReentrancyGuardReentrantCall' },
   {
     type: 'error',

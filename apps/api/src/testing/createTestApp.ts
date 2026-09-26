@@ -18,9 +18,8 @@ import {
 const TEST_SUI_YEN = "300";
 
 /**
- * The app as the server runs it today (mock chain mode, the mint stub, no smart wallets, the mock Sui
- * payment at a fixed SUI/JPY price) on a fresh in-memory database, with fakes for LINE, the disk, the
- * time and ids. Override a dep with a fake from ./fakes.ts to run a path the server doesn't take yet.
+ * The app on a fresh in-memory database, with fakes for external services. Tests override the
+ * chain dependencies to exercise minting and escrow without submitting transactions.
  */
 export async function createTestApp(
   overrides: Partial<Omit<AppDeps, "db" | "sessionSecret" | "clock" | "images">> = {},

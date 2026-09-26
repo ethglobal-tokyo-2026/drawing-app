@@ -1,5 +1,9 @@
 import { useEffect } from "react";
-import { notePerformance, timeOurWork } from "../performance/performanceRecorder";
+import {
+  isPerformanceRecorderOn,
+  notePerformance,
+  timeOurWork,
+} from "../performance/performanceRecorder";
 import { sheenIn, sweepSheen } from "./resinSheen";
 
 /**
@@ -20,7 +24,10 @@ const STEP = 0.02;
 const TILT_RANGE = 32;
 /** How far back a phone leans when it's held to read, in degrees. */
 const HELD_BETA = 40;
-/** A tilt change this big sweeps a sheen across the stickers on screen, at most once a pause. */
+/**
+ * A tilt change this big sweeps a sheen across the stickers on screen, and a glint along their foil,
+ * at most once a pause.
+ */
 const SWEEP_TILT = 9;
 const SWEEP_PAUSE_MS = 1400;
 
@@ -30,15 +37,37 @@ const clamp11 = (v: number) => (v < -1 ? -1 : v > 1 ? 1 : v);
 let light: { on: () => void; off: () => void; relight: () => void } | null = null;
 let holders = 0;
 
-/** Sweeps a sheen across each live resin big enough to see on screen; returns how many it measured. */
+/** The foil whose glint a tilt sweeps; the glint rests out of sight until then. */
+const FOIL = ".sticker-foil";
+
+const onScreen = (el: Element, win: Window) => {
+  const r = el.getBoundingClientRect();
+  return r.width > 30 && r.bottom > 0 && r.top < win.innerHeight;
+};
+
+function sweepGlint(glint: Element) {
+  glint.animate(
+    [{ transform: "translateX(0) skewX(-18deg)" }, { transform: "translateX(460%) skewX(-18deg)" }],
+    { duration: 2000, easing: "cubic-bezier(0.45, 0.05, 0.25, 1)" },
+  );
+}
+
+/**
+ * Sweeps a sheen across each live resin, and a glint along each foil, big enough to see on screen;
+ * returns how many it measured.
+ */
 function sweepVisible(doc: Document, win: Window): number {
   const resins = doc.querySelectorAll(LIT);
   for (const resin of resins) {
-    const r = resin.getBoundingClientRect();
     const sheen = sheenIn(resin);
-    if (sheen && r.width > 30 && r.bottom > 0 && r.top < win.innerHeight) sweepSheen(sheen);
+    if (sheen && onScreen(resin, win)) sweepSheen(sheen);
   }
-  return resins.length;
+  const foils = doc.querySelectorAll(FOIL);
+  for (const foil of foils) {
+    const glint = foil.querySelector(".sticker-foil__glint");
+    if (glint && onScreen(foil, win)) sweepGlint(glint);
+  }
+  return resins.length + foils.length;
 }
 
 /** Starts the light; returns what stops it. */
@@ -66,10 +95,13 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     return resins.length;
   };
 
-  /** Lights the resins from `at` as our work, and marks how many it lit. */
-  const lightResins = (at: { x: number; y: number }, why: string) => {
-    const count = timeOurWork("light", () => setOnResins(at.x.toFixed(3), at.y.toFixed(3)));
-    notePerformance("light", `${why} ${count} resins`);
+  /** Sets the light from `lit` on every live resin; returns how many. Made once, not per write. */
+  const lightFromLit = () => (lit ? setOnResins(lit.x.toFixed(3), lit.y.toFixed(3)) : 0);
+
+  /** Lights the resins from `lit` as our work, and marks how many it lit while recording. */
+  const lightResins = (why: string) => {
+    const count = timeOurWork("light", lightFromLit);
+    if (isPerformanceRecorderOn()) notePerformance("light", `${why} ${count} resins`);
   };
 
   const write = (now: number) => {
@@ -80,7 +112,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     }
     lastWrite = now;
     lit = { x, y };
-    lightResins(lit, "write to");
+    lightResins("write to");
   };
 
   const aim = (nx: number, ny: number) => {
@@ -93,7 +125,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
 
   // A screen's resins come in at the middle; they start where the light already is.
   const relight = () => {
-    if (lit && !reduced.matches) lightResins(lit, "relight");
+    if (lit && !reduced.matches) lightResins("relight");
   };
 
   const fromPointer = (e: PointerEvent) =>
@@ -101,6 +133,8 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
 
   let lastGamma: number | null = null;
   let lastSweep = -Infinity;
+  // Made once, like lightFromLit, not per sweep.
+  const sweep = () => sweepVisible(root.ownerDocument, win);
   const fromTilt = (e: DeviceOrientationEvent) => {
     if (e.gamma === null || e.beta === null) return;
     aim(e.gamma / TILT_RANGE, (e.beta - HELD_BETA) / TILT_RANGE);
@@ -112,8 +146,9 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
       !reduced.matches
     ) {
       lastSweep = now;
-      const measured = timeOurWork("light sweep", () => sweepVisible(root.ownerDocument, win));
-      notePerformance("light", `sweep measured ${measured} resins`);
+      const measured = timeOurWork("light sweep", sweep);
+      if (isPerformanceRecorderOn())
+        notePerformance("light", `sweep measured ${measured} resins and foils`);
     }
     lastGamma = e.gamma;
   };

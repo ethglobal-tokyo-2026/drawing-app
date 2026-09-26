@@ -1,8 +1,8 @@
 /**
  * The performance recorder, for phones where LINE's browser has no developer tools: every frame's
  * interval, judged against the typical frame, and what happened around each slow one. Off, it costs
- * nothing: no loop, no observers and no listeners, and `notePerformance` and `timeOurWork` return
- * at their first check.
+ * a flag check: no loop, no observers and no listeners, and `notePerformance` and `timeOurWork`
+ * return at their first check.
  */
 
 /** Something that happened, on the performance.now() clock. */
@@ -14,16 +14,25 @@ interface TimelineEvent {
   detail: string;
 }
 
+/**
+ * Our work under one label in a frame: its time, and how many `timeOurWork` calls it took. The
+ * calls tell work apart from none where the clock moves in whole ms, as WebKit's does.
+ */
+export interface OurWork {
+  ms: number;
+  calls: number;
+}
+
 /** A frame over `SLOW_FACTOR` typical frames, and what happened around it. */
 export interface SlowFrame {
   /** Its interval: when the frame before it began, and when it began. */
   start: number;
   end: number;
-  /** The typical frame it was judged against, in ms. */
+  /** The typical frame it was judged against, in ms, but never over 30 fps's. */
   typicalMs: number;
   screen: string;
-  /** Our own script time in it, in ms by label. */
-  ours: Record<string, number>;
+  /** Our own script time in it, by label. */
+  ours: Record<string, OurWork>;
   /** What happened from `BEFORE_SLOW_MS` before it to its end, oldest first. */
   events: TimelineEvent[];
 }
@@ -49,8 +58,13 @@ export interface PerformanceSummary {
 export interface PerformanceLog {
   /** A frame began at `now`: the interval since the one before is judged. */
   frame: (now: number) => void;
-  /** The page went hidden, so the interval across it is no frame. */
+  /** The page went hidden or came back, so the interval to the next frame is no frame. */
   pageHidden: () => void;
+  /**
+   * Recording stops. The slow frames still waiting take the events they have, since no more are
+   * coming, and the time until it starts again is no frame.
+   */
+  pause: () => void;
   note: (event: TimelineEvent) => void;
   /** Our own script time, counted in the frame in progress. */
   addOurWork: (label: string, ms: number) => void;
@@ -65,7 +79,10 @@ export interface PerformanceLog {
 const SLOW_FACTOR = 1.5;
 /** The typical frame is the median of this many latest intervals. */
 const TYPICAL_OF = 120;
-/** Before any interval, the typical frame is the slowest pace a phone keeps: 30 fps. */
+/**
+ * The slowest pace a phone keeps, 30 fps: the typical frame before any interval, and the most a frame
+ * is judged against, so a run of long frames, as at the app's start, can't raise the bar for itself.
+ */
 const FIRST_TYPICAL_MS = 1000 / 30;
 /** The timeline keeps this much. */
 const TIMELINE_MS = 5000;
@@ -84,7 +101,7 @@ export function createPerformanceLog(now: number): PerformanceLog {
   const sorting = new Float64Array(TYPICAL_OF);
   let last: number | null = null;
   let hidden = false;
-  let ours: Record<string, number> | null = null;
+  let ours: Record<string, OurWork> | null = null;
   let pending: SlowFrame[] = [];
   let kept: SlowFrame[] = [];
   let frames = 0;
@@ -142,7 +159,7 @@ export function createPerformanceLog(now: number): PerformanceLog {
         return;
       }
       const ms = now - before;
-      const typical = typicalMs();
+      const typical = Math.min(typicalMs(), FIRST_TYPICAL_MS);
       intervals.push(ms);
       if (intervals.length > TYPICAL_OF) intervals.shift();
       frames++;
@@ -163,18 +180,25 @@ export function createPerformanceLog(now: number): PerformanceLog {
         });
       }
       settle(now);
-      // What no slow frame can still take goes.
-      while (timeline.length > 0 && timeline[0].at + timeline[0].ms < now - TIMELINE_MS) {
-        timeline.shift();
-      }
+      // What no slow frame can still take goes; a stall longer than the timeline keeps its own.
+      const from = Math.min(now - TIMELINE_MS, (pending[0]?.start ?? Infinity) - BEFORE_SLOW_MS);
+      while (timeline.length > 0 && timeline[0].at + timeline[0].ms < from) timeline.shift();
     },
     pageHidden: () => {
       hidden = true;
     },
+    pause: () => {
+      settle();
+      last = null;
+      hidden = false;
+      ours = null;
+    },
     note,
     addOurWork: (label, ms) => {
       ours ??= {};
-      ours[label] = (ours[label] ?? 0) + ms;
+      const work = (ours[label] ??= { ms: 0, calls: 0 });
+      work.ms += ms;
+      work.calls++;
     },
     setScreen: (next, at) => {
       screen = next;
@@ -260,15 +284,39 @@ export function setPerformanceRecorder(on: boolean): void {
   else localStorage.removeItem(SETTING);
 }
 
+/** Throws, with nothing left running, when it can't start. */
 export function startPerformanceRecorder(): void {
   if (stopRecording) return;
-  log ??= createPerformanceLog(performance.now());
-  stopRecording = listen(log);
+  const recording = log ?? createPerformanceLog(performance.now());
+  stopRecording = listen(recording);
+  log = recording;
+}
+
+/**
+ * At the app's start: records from boot while the setting is on. It never throws, so the app renders
+ * whatever happens; a recorder that can't start logs why and turns its setting off.
+ */
+export function startPerformanceRecorderAtBoot(): void {
+  if (!readPerformanceRecorderSetting()) return;
+  try {
+    startPerformanceRecorder();
+  } catch (error) {
+    console.error("The performance recorder couldn't start, so its setting is now off", error);
+    try {
+      localStorage.removeItem(SETTING);
+    } catch (removing) {
+      console.error("The performance recorder's setting couldn't be removed", removing);
+    }
+  }
 }
 
 export function stopPerformanceRecorder(): void {
-  stopRecording?.();
+  if (!stopRecording) return;
+  stopRecording();
   stopRecording = null;
+  // Else a start without Clear would count the time off as a frame, and the new observers' buffered
+  // entries would reach the slow frames still waiting a second time.
+  log?.pause();
 }
 
 /** Empties the recording; a running recorder records on from now. */
@@ -288,10 +336,28 @@ export function readPerformanceRecording(): {
   return log && { summary: log.summary(), slowFrames: log.slowFrames() };
 }
 
-/** The phone and browser, for the report. */
+/** The phone and browser, for the report, and the clock's step where it's a whole ms or more. */
 export function describeDevice(): string {
   const { width, height } = window.screen;
-  return `${navigator.userAgent}\nScreen ${width}×${height} at ${devicePixelRatio}x, window ${innerWidth}×${innerHeight}`;
+  const step = clockStepMs();
+  const clock = step >= 1 ? `, clock in ${Math.round(step)}ms steps` : "";
+  return `${navigator.userAgent}\nScreen ${width}×${height} at ${devicePixelRatio}x, window ${innerWidth}×${innerHeight}${clock}`;
+}
+
+/**
+ * How far performance.now() moves at a time, in ms, read to its next tick and then over one whole
+ * step: at most 2ms of reads where it moves in whole ms. 0 for a clock that doesn't move.
+ */
+function clockStepMs(): number {
+  const tickAfter = (from: number) => {
+    for (let reads = 0; reads < 100_000; reads++) {
+      const now = performance.now();
+      if (now !== from) return now;
+    }
+    return from;
+  };
+  const tick = tickAfter(performance.now());
+  return tickAfter(tick) - tick;
 }
 
 /** Chromium's long animation frame entry, which TypeScript's DOM types don't have yet. */
@@ -368,9 +434,26 @@ function describeSlowInput(input: PerformanceEventTiming): string {
   return `${input.name} ${ms(input.duration)}: waited ${ms(waited)}, handlers ${ms(handled)}, then ${ms(painted)} to paint, on ${describeTarget(input.target)}`;
 }
 
-/** Everything the recorder hears on the page; returns what stops it all. */
+/**
+ * Everything the recorder hears on the page; returns what stops it all. When any of it can't start,
+ * what did start stops before the error goes on.
+ */
 function listen(log: PerformanceLog): () => void {
   const stops: (() => void)[] = [];
+  const stopAll = () => {
+    for (const stop of stops.splice(0)) stop();
+  };
+  try {
+    startListening(log, stops);
+  } catch (error) {
+    stopAll();
+    throw error;
+  }
+  return stopAll;
+}
+
+/** Starts the loop, the listeners and the observers, adding what stops each to `stops` as it starts. */
+function startListening(log: PerformanceLog, stops: (() => void)[]): void {
   const note = (kind: string, detail: string, at = performance.now(), duration = 0) =>
     log.note({ at, ms: duration, kind, detail });
 
@@ -394,14 +477,16 @@ function listen(log: PerformanceLog): () => void {
   const onTap = (e: PointerEvent) => note("tap", `${e.type} ${describeTarget(e.target)}`);
   hear("pointerdown", onTap);
   hear("pointerup", onTap);
-  // Only named keys: what someone types stays theirs.
-  hear("keydown", (e) =>
-    note("key", `${e.key.length === 1 ? "a character" : e.key} on ${describeTarget(e.target)}`),
-  );
+  // Only named keys: what someone types stays theirs. Android's autofill sends a keydown with no key.
+  hear("keydown", (e) => {
+    const key = typeof e.key === "string" ? e.key : "Unidentified";
+    note("key", `${key.length === 1 ? "a character" : key} on ${describeTarget(e.target)}`);
+  });
   hear("resize", () => note("resize", `${innerWidth}×${innerHeight}`));
 
+  // Coming back too: a frame can come after the page goes hidden, and take the skip with it.
   const onVisibility = () => {
-    if (document.visibilityState === "hidden") log.pageHidden();
+    log.pageHidden();
     note("visibility", document.visibilityState);
   };
   document.addEventListener("visibilitychange", onVisibility);
@@ -430,7 +515,11 @@ function listen(log: PerformanceLog): () => void {
     });
     const init = { ...options, type };
     observer.observe(init);
-    stops.push(() => observer.disconnect());
+    stops.push(() => {
+      // What the browser has queued but not yet delivered still counts.
+      for (const entry of observer.takeRecords()) take(entry);
+      observer.disconnect();
+    });
   };
   observe("resource", { buffered: true }, (entry) => {
     if (!isResource(entry)) return;
@@ -447,8 +536,4 @@ function listen(log: PerformanceLog): () => void {
       note("slow input", describeSlowInput(entry), entry.startTime, entry.duration);
     }
   });
-
-  return () => {
-    for (const stop of stops.splice(0)) stop();
-  };
 }

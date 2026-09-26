@@ -152,6 +152,22 @@ export async function receiveGift(
   if (!opened) return notFound();
   const { db, clock, giftChain, images } = deps;
   const now = clock.now();
+  const beforeClaim = receiveRefusal(opened, userId, liffContextType, now);
+  if (beforeClaim) return beforeClaim;
+
+  let claimTxHash: string | undefined;
+  if (giftChain) {
+    const claimed = await giftChain.claimGift({
+      giftId: opened.id,
+      giftClaimToken,
+      recipientId: userId,
+    });
+    if (!claimed.claimed) {
+      return refuse("already_received", `Gift ${opened.id} was already received`);
+    }
+    claimTxHash = claimed.txHash;
+  }
+
   const receiving = db.transaction(
     (tx) => {
       const gift = tx.select().from(gifts).where(eq(gifts.id, opened.id)).get();
@@ -164,8 +180,8 @@ export async function receiveGift(
           status: "received",
           receiverId: userId,
           receivedAt: now,
-          // The mock chain's claim lands at once, so the receiver can give the sticker on.
-          escrowStatus: giftChain ? undefined : "claimed",
+          escrowStatus: "claimed",
+          claimTxHash,
         })
         .where(eq(gifts.id, gift.id))
         .returning()

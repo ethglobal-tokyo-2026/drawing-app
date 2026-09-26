@@ -7,7 +7,7 @@ import {
 } from "@drawing-app/db";
 import { and, eq, max } from "drizzle-orm";
 import { z } from "zod";
-import type { AppDeps, Mint, MintedToken, MintRequest } from "../deps.ts";
+import type { AppDeps } from "../deps.ts";
 import { keccak256 } from "../keccak256.ts";
 import { stickerImagesSchema, type StickerImages } from "../shapes.ts";
 import {
@@ -30,7 +30,8 @@ export type SealRefusal =
   | { status: 400; error: "invalid_request"; detail: string }
   | { status: 403; error: "ticket_not_yours"; detail: string }
   | { status: 404; error: "ticket_not_found"; detail: string }
-  | { status: 409; error: "ticket_already_used"; detail: string };
+  | { status: 409; error: "ticket_already_used"; detail: string }
+  | { status: 503; error: "mint_failed"; detail: string };
 
 type StickerPngs = Record<keyof StickerImages, Uint8Array>;
 
@@ -80,7 +81,7 @@ function checkTicket(
   db: Pick<Db, "select">,
   ticketUseId: number,
   userId: string,
-): SealRefusal | null {
+): { stickerId: string | null } | SealRefusal {
   const ticket = db
     .select({ userId: ticketUses.userId, stickerId: ticketUses.stickerId })
     .from(ticketUses)
@@ -93,26 +94,50 @@ function checkTicket(
     const detail = `Ticket use ${ticketUseId} is someone else's`;
     return { status: 403, error: "ticket_not_yours", detail };
   }
-  if (ticket.stickerId !== null) {
-    const detail = `Ticket use ${ticketUseId} already became sticker ${ticket.stickerId}`;
-    return { status: 409, error: "ticket_already_used", detail };
-  }
-  return null;
+  return { stickerId: ticket.stickerId };
 }
 
 const bytesOf = async (file: File) => new Uint8Array(await file.arrayBuffer());
 
 /**
  * The seal already holds when the mint runs: the ticket is spent and the rows are written. So a
- * failed mint leaves the sticker unminted, as the stub does, for the worker's mint retries.
+ * failed confirmation keeps the sticker for a same-ticket retry, which reconciles its NFT.
  */
-async function mintOrNull(mint: Mint, request: MintRequest): Promise<MintedToken | null> {
+async function mintSticker(deps: AppDeps, stickerId: string): Promise<SealRefusal | null> {
+  const sticker = deps.db.select().from(stickers).where(eq(stickers.id, stickerId)).get();
+  if (!sticker) throw new Error(`Sticker ${stickerId} is missing before its mint`);
+  if (sticker.tokenId !== null && sticker.mintTxHash !== null) return null;
+  let minted;
   try {
-    return await mint(request);
+    minted = await deps.mint({
+      stickerId,
+      artistId: sticker.artistId,
+      contentHash: sticker.contentHash,
+      metadataUri: sticker.metadataUri,
+      number: sticker.number,
+      sealedAt: sticker.createdAt,
+      width: sticker.width,
+      height: sticker.height,
+    });
+    if (minted === null && deps.giftChain !== null) {
+      throw new Error("The mint returned no confirmed NFT");
+    }
   } catch (error) {
-    console.error(`Minting sticker ${request.stickerId} failed; it stays unminted:`, error);
-    return null;
+    console.error(`Minting sticker ${stickerId} could not be confirmed:`, error);
+    return {
+      status: 503,
+      error: "mint_failed",
+      detail: `Sticker ${stickerId} is saved, but its NFT could not be confirmed. Retry Sealing with the same ticket; no new ticket is needed.`,
+    };
   }
+  // Explicit local mock mode stores stickers without sending a mint transaction.
+  if (minted === null) return null;
+  deps.db
+    .update(stickers)
+    .set({ tokenId: minted.tokenId, mintTxHash: minted.txHash })
+    .where(eq(stickers.id, stickerId))
+    .run();
+  return null;
 }
 
 function sealedSticker({ db, images }: AppDeps, userId: string, stickerId: string): SealResponse {
@@ -136,10 +161,15 @@ export async function sealSticker(
   deps: AppDeps,
   userId: string,
   form: SealForm,
-): Promise<{ sealed: SealResponse } | { refused: SealRefusal }> {
+): Promise<{ sealed: SealResponse; created: boolean } | { refused: SealRefusal }> {
   // Checked before any file is stored, and again where the rows are written.
-  const ticketRefusal = checkTicket(deps.db, form.ticketUseId, userId);
-  if (ticketRefusal) return { refused: ticketRefusal };
+  const ticket = checkTicket(deps.db, form.ticketUseId, userId);
+  if (!("stickerId" in ticket)) return { refused: ticket };
+  if (ticket.stickerId !== null) {
+    const refused = await mintSticker(deps, ticket.stickerId);
+    if (refused) return { refused };
+    return { sealed: sealedSticker(deps, userId, ticket.stickerId), created: false };
+  }
 
   const pngs: StickerPngs = {
     png: await bytesOf(form.png),
@@ -162,8 +192,12 @@ export async function sealSticker(
   const metadataUri = new URL(`${stickerId}.json`, deps.images.urls(contentHash).png).href;
   const refused = deps.db.transaction(
     (tx) => {
-      const refusal = checkTicket(tx, form.ticketUseId, userId);
-      if (refusal) return refusal;
+      const checked = checkTicket(tx, form.ticketUseId, userId);
+      if (!("stickerId" in checked)) return checked;
+      if (checked.stickerId !== null) {
+        const detail = `Ticket use ${form.ticketUseId} already became sticker ${checked.stickerId}`;
+        return { status: 409, error: "ticket_already_used", detail } satisfies SealRefusal;
+      }
       const last = tx
         .select({ number: max(stickers.number) })
         .from(stickers)
@@ -192,18 +226,7 @@ export async function sealSticker(
   );
   if (refused) return { refused };
 
-  const minted = await mintOrNull(deps.mint, {
-    stickerId,
-    artistId: userId,
-    contentHash,
-    metadataUri,
-  });
-  if (minted) {
-    deps.db
-      .update(stickers)
-      .set({ tokenId: minted.tokenId, mintTxHash: minted.txHash })
-      .where(eq(stickers.id, stickerId))
-      .run();
-  }
-  return { sealed: sealedSticker(deps, userId, stickerId) };
+  const mintRefusal = await mintSticker(deps, stickerId);
+  if (mintRefusal) return { refused: mintRefusal };
+  return { sealed: sealedSticker(deps, userId, stickerId), created: true };
 }

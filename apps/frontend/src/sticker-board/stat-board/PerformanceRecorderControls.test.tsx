@@ -54,6 +54,8 @@ afterEach(() => {
   clearPerformanceRecording();
   localStorage.clear();
   writeText.mockReset();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   vi.useRealTimers();
 });
 
@@ -76,5 +78,32 @@ describe("PerformanceRecorderControls", () => {
       "The report couldn't be copied: Not allowed here. It's below to copy by hand.",
     );
     expect(control<HTMLTextAreaElement>("textarea").value).toContain("Typical frame");
+  });
+
+  it("runs its once-a-second update only while the slip shows", async () => {
+    record();
+    const running = vi.getTimerCount();
+    await act(async () => host.setAttribute("inert", ""));
+    expect(vi.getTimerCount()).toBe(running - 1);
+    await act(async () => host.removeAttribute("inert"));
+    expect(vi.getTimerCount()).toBe(running);
+  });
+
+  it("says why recording couldn't start, and leaves the switch off", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal(
+      "PerformanceObserver",
+      class {
+        static supportedEntryTypes = ["resource"];
+        observe() {
+          throw new TypeError("observe failed");
+        }
+        disconnect() {}
+      },
+    );
+    const toggle = control<HTMLInputElement>("input[type=checkbox]");
+    act(() => toggle.click());
+    expect(toggle.checked).toBe(false);
+    expect(control('[role="alert"]').textContent).toBe("Recording couldn't start: observe failed");
   });
 });

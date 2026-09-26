@@ -84,8 +84,8 @@ export const giftRoutes = (deps: AppDeps) =>
         return c.json({ gift: toGift(shared.gift) }, 200);
       },
     )
-    .post("/:giftId/take-out", validate("param", giftParamSchema), (c) => {
-      const takenOut = takeOut(deps, c.var.userId, c.req.valid("param").giftId);
+    .post("/:giftId/take-out", validate("param", giftParamSchema), async (c) => {
+      const takenOut = await takeOut(deps, c.var.userId, c.req.valid("param").giftId);
       if (takenOut.refusal !== null) return refused(c, takenOut);
       return c.json({ gift: toGift(takenOut.gift) }, 200);
     });

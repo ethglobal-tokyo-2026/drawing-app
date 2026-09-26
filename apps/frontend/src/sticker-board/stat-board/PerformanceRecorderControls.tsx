@@ -26,26 +26,50 @@ export function PerformanceRecorderControls() {
   /** The report, to copy by hand after the clipboard refused it. */
   const [uncopied, setUncopied] = useState<string | null>(null);
 
-  // Each second while the slip shows: the board facing out, or a game over it, makes it inert.
+  // Each second while the slip shows. The stat board stays mounted behind the board, so the timer
+  // runs only while the page is visible and the slip isn't inert, as the board facing out, or a game
+  // over it, makes it.
   useEffect(() => {
-    if (!on) return;
-    const timer = setInterval(() => {
-      if (document.visibilityState === "visible" && !slip.current?.closest("[inert]")) {
+    const el = slip.current;
+    if (!on || !el) return;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const follow = () => {
+      const showing = document.visibilityState === "visible" && !el.closest("[inert]");
+      if (showing && timer === undefined) {
         setSummary(readPerformanceSummary());
+        timer = setInterval(() => setSummary(readPerformanceSummary()), 1000);
+      } else if (!showing && timer !== undefined) {
+        clearInterval(timer);
+        timer = undefined;
       }
-    }, 1000);
-    return () => clearInterval(timer);
+    };
+    const inert = new MutationObserver(follow);
+    for (let up = el.parentElement; up; up = up.parentElement) {
+      inert.observe(up, { attributes: true, attributeFilter: ["inert"] });
+    }
+    document.addEventListener("visibilitychange", follow);
+    follow();
+    return () => {
+      inert.disconnect();
+      document.removeEventListener("visibilitychange", follow);
+      clearInterval(timer);
+    };
   }, [on]);
 
   const toggle = (next: boolean) => {
-    setOn(next);
     setProblem(null);
     try {
       setPerformanceRecorder(next);
     } catch (error) {
-      console.error("The performance recorder's setting couldn't be kept", error);
-      setProblem(`Recording is ${next ? "on" : "off"} until the app restarts: ${reason(error)}`);
+      console.error("The performance recorder's switch failed", error);
+      // Either it switched and only its setting wasn't kept, or it couldn't switch at all.
+      setProblem(
+        isPerformanceRecorderOn() === next
+          ? `Recording is ${next ? "on" : "off"} until the app restarts: ${reason(error)}`
+          : `Recording couldn't ${next ? "start" : "stop"}: ${reason(error)}`,
+      );
     }
+    setOn(isPerformanceRecorderOn());
     setSummary(readPerformanceSummary());
   };
 

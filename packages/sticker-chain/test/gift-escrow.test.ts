@@ -11,7 +11,12 @@ import {
 } from "viem";
 import { sepolia } from "viem/chains";
 import { afterEach, describe, expect, it } from "vitest";
-import { createGiftAuthorizer, createGiftClaim, prepareGiftTransfer } from "../src/gift-sticker.js";
+import {
+  createGiftAuthorizer,
+  createGiftClaim,
+  prepareGiftTakeOut,
+  prepareGiftTransfer,
+} from "../src/gift-sticker.js";
 import {
   anvilPollingInterval,
   readFoundryArtifact,
@@ -154,6 +159,31 @@ function createAuthorizer(
 }
 
 describe("StickerGiftEscrow", () => {
+  it("lets only the sender take a pending sticker out", async () => {
+    const context = await setup();
+    const claim = await stageGift(context, Math.floor(Date.now() / 1000) + 3600);
+    const takeOut = prepareGiftTakeOut({
+      escrowContract: context.escrowAddress,
+      giftId: claim.giftId,
+    });
+    await expect(
+      context.walletClient.sendTransaction({ ...takeOut, account: context.stranger, chain }),
+    ).rejects.toThrow();
+    const hash = await context.walletClient.sendTransaction({
+      ...takeOut,
+      account: context.artist,
+      chain,
+    });
+    await context.publicClient.waitForTransactionReceipt({ hash });
+    await expect(
+      context.publicClient.readContract({
+        address: context.stickerAddress,
+        abi: stickerArtifact.abi,
+        functionName: "ownerOf",
+        args: [1n],
+      }),
+    ).resolves.toBe(context.artist.address);
+  }, 20_000);
   it("stages a gift before the recipient has a smart account", async () => {
     const context = await setup();
     const expiresAt = Math.floor(Date.now() / 1000) + 3600;

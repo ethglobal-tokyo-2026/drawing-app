@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@drawing-app/sticker-chain": "workspace:*",
     "@line/liff": "^2.31.0",
     "@phosphor-icons/react": "2.1.10",
     "@privy-io/react-auth": "3.45.0",
@@ -23,6 +24,7 @@
   },
   "devDependencies": {
     "@drawing-app/api": "workspace:*",
+    "@line/liff-mock": "1.0.4",
     "@types/node": "^24.13.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

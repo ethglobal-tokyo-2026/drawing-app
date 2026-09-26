@@ -32,7 +32,14 @@
         "value": "*",
         "files": ["apps/frontend/public/terms.html"],
         "createdAt": "2026-09-26T08:35:25.318Z",
-        "reason": "sanctioned: the .shout lines use DESIGN.md's Title style (800, 18–22px, width 112), whose leading is 1.1; body text on the page stays at 1.5"
+        "reason": "sanctioned: the clause headings use DESIGN.md's Title style (800, 18–22px, width 112), whose leading is 1.1; body text on the page stays at 1.5"
+      },
+      {
+        "rule": "tight-leading",
+        "value": "*",
+        "files": ["apps/frontend/public/ja/terms.html"],
+        "createdAt": "2026-09-26T10:41:47.225Z",
+        "reason": "sanctioned: the .shout lines use DESIGN.md's Title style (800, 18–22px, width 112), whose leading is 1.1; body text on the page stays at 1.7"
       }
     ]
   }

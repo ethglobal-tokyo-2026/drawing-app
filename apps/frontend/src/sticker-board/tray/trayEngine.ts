@@ -1470,22 +1470,23 @@ export function createTrayEngine(
     // The tray gets out of the way: its mouth sags to a crack, still unzipped.
     zip.relax(CRACK);
     pk.startX = pk.r.x;
-    const loop = () =>
-      timeOurWork("sticker tray", () => {
-        if (pk.target) {
-          const was = pk.x;
-          pk.x = lerp(pk.x, pk.target.x, 0.34);
-          pk.y = lerp(pk.y, pk.target.y, 0.34);
-          pk.vx = lerp(pk.vx, pk.x - was, 0.3);
-          const out = clamp((pk.startX - pk.x) / 80, 0, 1);
-          const ez = 1 - Math.pow(1 - out, 2);
-          pk.scale = lerp(pk.r.w / pk.size.w, 1.04, ez);
-          pk.rot = lerp(pk.r.r, clamp(pk.vx * 1.4, -12, 12), ez * 0.9);
-          pk.el.style.transform = flyerAt(pk.x, pk.y, pk.size, pk.scale, pk.rot);
-          showLanding(overBoard(pk.target) ? pk : null);
-        }
-        pk.raf = win.requestAnimationFrame(loop);
-      });
+    // Made once for the peel, so no frame makes a closure.
+    const follow = () => {
+      if (pk.target) {
+        const was = pk.x;
+        pk.x = lerp(pk.x, pk.target.x, 0.34);
+        pk.y = lerp(pk.y, pk.target.y, 0.34);
+        pk.vx = lerp(pk.vx, pk.x - was, 0.3);
+        const out = clamp((pk.startX - pk.x) / 80, 0, 1);
+        const ez = 1 - Math.pow(1 - out, 2);
+        pk.scale = lerp(pk.r.w / pk.size.w, 1.04, ez);
+        pk.rot = lerp(pk.r.r, clamp(pk.vx * 1.4, -12, 12), ez * 0.9);
+        pk.el.style.transform = flyerAt(pk.x, pk.y, pk.size, pk.scale, pk.rot);
+        showLanding(overBoard(pk.target) ? pk : null);
+      }
+      pk.raf = win.requestAnimationFrame(loop);
+    };
+    const loop = () => timeOurWork("sticker tray", follow);
     pk.raf = win.requestAnimationFrame(loop);
   }
   function movePeel(g: Gesture, pt: Point) {
