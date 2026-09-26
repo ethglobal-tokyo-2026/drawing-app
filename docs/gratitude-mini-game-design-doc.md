@@ -69,11 +69,14 @@ Under `apps/frontend/src/gratitude/` unless a path says otherwise.
 - Before the unlock, a drag on the heart stretches it. After `triesForTip` drags of `tryTravelPx` or more that don't unlock, the tip "Stroke it back and forth, fast" shows.
 - Once committed, the heart stretches and leans with the thumb, with speed lines, and flings mini hearts along each pass from ドキドキ up. Pop-ins sometimes come from the stroke words.
 
-**Shake.** Shaking the phone in a rhythm, per `F.shake`, from motion samples with gravity taken out:
+**Shake.** Shaking the phone, or twisting it back and forth with the wrist like turning a doorknob, in a rhythm, per `F.shake`:
 
-- Only the dominant axis counts, and motion under `deadZone` is ignored.
+- The motion is the phone's acceleration with gravity taken out. Sideways, it's the stronger of that and the twist, so a twist and the push it gives the phone count as one motion.
+- The twist is the phone's turning rate about the axis it last turned fast about, its long axis to start, scaled into the same units: a twist at `twistPeakDegPerS` peaks like a shake at `minPeak`. Its direction flips where the phone turns back, so a twist counts sooner after the turn than a shake, whose push flips a quarter turn later.
+- Only the dominant axis counts, and motion under `deadZone` is ignored. A twist has to pass `deadZone / minPeak` of `twistPeakDegPerS` to flip at all, which tilting the phone to read it, walking or setting it down stays under.
 - A reversal is the motion flipping direction after a peak of at least `minPeak`, between `minGapMs` and `maxGapMs` after the last flip. `resetMs` of calm breaks the run, so a single jolt never counts.
-- With motion allowed, the heart sways with the wrist, tilts with the phone's roll, and jiggles when shaken.
+- Motion counts from its first sample. Where a platform flips the motion's sign, `phoneMotion.ts` finds it from the orientation while the phone is still; the sign sets only which way the heart goes.
+- With motion allowed, the heart sways with the wrist and its twist, tilts with the phone's roll, and jiggles when shaken. On a phone with a gyroscope the roll comes from the orientation, at once. Otherwise it comes from the gravity estimate low-passed twice, which keeps a shake out of it but lags.
 - At `keepShakingAt` reversals "Keep shaking!" shows, at `cornerAt` a corner lifts, and at `unlockAt` the heart comes loose ("ポンッ") and the combo commits to shake. After that, each reversal is a hit, and the loose heart ricochets off the walls, denting them and, from ドキドキ up, knocking mini hearts off.
 - Shake needs motion permission on iPhones (below).
 

@@ -1,8 +1,15 @@
+import { FEEL_CONFIG } from "./gameConfig";
+
 /**
- * One motion sample: the phone's sideways and vertical acceleration with gravity taken out, in
- * m/s², gravity's sideways pull (the phone's roll) where the phone reports it, and the time in ms.
- * Each has the spec's sign on every platform: a push toward the phone's right is +x, and the pull
- * is positive with the phone's right edge up.
+ * One motion sample: the phone's sideways and vertical motion in m/s², gravity's sideways pull (the
+ * phone's roll) where the phone reports it, and the time in ms. The motion is the acceleration with
+ * gravity taken out; sideways, it's the stronger of that and a twist of the wrist, scaled into the
+ * same units, so a twist and the push it gives the phone count as one motion.
+ *
+ * Each has the spec's sign on every platform: a push toward the phone's right is +x, and the pull is
+ * positive with the phone's right edge up. A twist about the phone's long axis that turns its screen
+ * to the right is +x, like the push it gives a phone held in the palm; a twist about another axis
+ * keeps the sign the last twist had.
  */
 export type MotionSample = (ax: number, ay: number, gx: number | null, t: number) => void;
 
@@ -14,9 +21,15 @@ const STANDARD_GRAVITY = 9.80665;
  * orientation's angles mean the same everywhere, so the sign is found by checking gravity against
  * them. A sample counts only when the phone is still, within `still` m/s² of resting, and gravity
  * lies within 45° (`agree`, the cosine) of the orientation's up or its down. `samples` in a row
- * settle the sign. Samples wait up to `waitMs` for it; past that, they go out with the spec's sign.
+ * settle the sign. A reversal doesn't depend on the sign, so the motion goes out at once, with the
+ * spec's sign until the sign is found. The pull from the gravity estimate waits up to `waitMs` for
+ * it, and past that takes the spec's sign too.
  */
 const SIGN_CHECK = { still: 1.5, agree: 0.7, samples: 3, waitMs: 500 };
+
+const { deadZone, minPeak, twistPeakDegPerS } = FEEL_CONFIG.shake;
+/** m/s² for each °/s of twist: a twist at `twistPeakDegPerS` peaks at `minPeak`. */
+const TWIST_SCALE = minPeak / twistPeakDegPerS;
 
 interface Vector {
   x: number;
@@ -29,22 +42,37 @@ const vectorOf = (v: DeviceMotionEventAcceleration | null): Vector | null =>
   typeof v?.x === "number" ? { x: v.x, y: v.y ?? 0, z: v.z ?? 0 } : null;
 
 /**
- * The sign a still sample shows against the orientation: 1 where `accelerationIncludingGravity`
- * points up, as the spec has it, −1 where it points down, 0 where the sample can't tell.
+ * The turning rate in °/s about the phone's own x, y and z (the spec's beta, gamma and alpha), with
+ * any missing axis as 0; null where the phone has no gyroscope.
  */
-function signShown(tilt: { beta: number; gamma: number }, raw: Vector, linear: Vector): -1 | 0 | 1 {
-  const size = Math.hypot(raw.x, raw.y, raw.z);
-  const moving = Math.hypot(linear.x, linear.y, linear.z);
-  if (Math.abs(size - STANDARD_GRAVITY) > SIGN_CHECK.still || moving > SIGN_CHECK.still) return 0;
-  const beta = (tilt.beta * Math.PI) / 180;
-  const gamma = (tilt.gamma * Math.PI) / 180;
-  // Up, in the phone's own axes, for this orientation.
-  const up = {
+const turnOf = (r: DeviceMotionEventRotationRate | null | undefined): Vector | null =>
+  r && [r.alpha, r.beta, r.gamma].some((v) => typeof v === "number")
+    ? { x: r.beta ?? 0, y: r.gamma ?? 0, z: r.alpha ?? 0 }
+    : null;
+
+const dot = (a: Vector, b: Vector) => a.x * b.x + a.y * b.y + a.z * b.z;
+
+/** Up, in the phone's own axes, for the orientation's angles in degrees. */
+function upOf(betaDeg: number, gammaDeg: number): Vector {
+  const beta = (betaDeg * Math.PI) / 180;
+  const gamma = (gammaDeg * Math.PI) / 180;
+  return {
     x: -Math.cos(beta) * Math.sin(gamma),
     y: Math.sin(beta),
     z: Math.cos(beta) * Math.cos(gamma),
   };
-  const along = (raw.x * up.x + raw.y * up.y + raw.z * up.z) / size;
+}
+
+/**
+ * The sign a still sample shows against the orientation's `up`: 1 where
+ * `accelerationIncludingGravity` points up, as the spec has it, −1 where it points down, 0 where the
+ * sample can't tell.
+ */
+function signShown(up: Vector, raw: Vector, linear: Vector): -1 | 0 | 1 {
+  const size = Math.hypot(raw.x, raw.y, raw.z);
+  const moving = Math.hypot(linear.x, linear.y, linear.z);
+  if (Math.abs(size - STANDARD_GRAVITY) > SIGN_CHECK.still || moving > SIGN_CHECK.still) return 0;
+  const along = dot(raw, up) / size;
   return along > SIGN_CHECK.agree ? 1 : along < -SIGN_CHECK.agree ? -1 : 0;
 }
 
@@ -61,14 +89,35 @@ export function listenToPhoneMotion(onSample: MotionSample): () => void {
   let sign: 1 | -1 | null = null;
   /** Still samples in a row that showed one sign, counted with that sign. */
   let inARow = 0;
-  /** The orientation since the last motion sample. */
-  let tilt: { beta: number; gamma: number } | null = null;
+  /** Up, from the latest orientation. */
+  let up: Vector | null = null;
+  /** An orientation has come since the last motion sample, for the sign check. */
+  let freshTilt = false;
   let firstAt: number | null = null;
+  /** The axis the wrist twists the phone about, a unit vector: its long axis until a clear turn. */
+  const axis: Vector = { x: 0, y: 1, z: 0 };
+
+  /**
+   * The twist about `axis`, in the shake's units. A turn past the dead zone moves the axis onto its
+   * own, kept pointing the way it did, so twisting back and forth flips the sign at each turn
+   * however the phone is held.
+   */
+  const twistOf = (turn: Vector) => {
+    const speed = Math.hypot(turn.x, turn.y, turn.z);
+    if (speed * TWIST_SCALE > deadZone) {
+      const k = (dot(turn, axis) < 0 ? -1 : 1) / speed;
+      axis.x = turn.x * k;
+      axis.y = turn.y * k;
+      axis.z = turn.z * k;
+    }
+    return dot(turn, axis) * TWIST_SCALE;
+  };
 
   const onTilt = (e: DeviceOrientationEvent) => {
-    if (e.beta !== null && e.gamma !== null) tilt = { beta: e.beta, gamma: e.gamma };
+    if (e.beta === null || e.gamma === null) return;
+    up = upOf(e.beta, e.gamma);
+    freshTilt = true;
   };
-  const stopTilt = () => window.removeEventListener("deviceorientation", onTilt);
 
   const onMotion = (e: DeviceMotionEvent) => {
     const raw = vectorOf(e.accelerationIncludingGravity);
@@ -86,24 +135,37 @@ export function listenToPhoneMotion(onSample: MotionSample): () => void {
         ? { x: raw.x - gravity.x, y: raw.y - gravity.y, z: raw.z - gravity.z }
         : null);
     if (!linear) return;
-    if (sign === null && tilt && raw) {
-      const shown = signShown(tilt, raw, linear);
-      tilt = null;
+    if (sign === null && freshTilt && up && raw) {
+      const shown = signShown(up, raw, linear);
+      freshTilt = false;
       inARow = shown !== 0 && Math.sign(inARow) === shown ? inARow + shown : shown;
-      if (Math.abs(inARow) >= SIGN_CHECK.samples) {
-        sign = inARow > 0 ? 1 : -1;
-        stopTilt();
-      }
+      if (Math.abs(inARow) >= SIGN_CHECK.samples) sign = inARow > 0 ? 1 : -1;
     }
     firstAt ??= e.timeStamp;
-    if (sign === null && e.timeStamp - firstAt < SIGN_CHECK.waitMs) return;
     const s = sign ?? 1;
-    onSample(s * linear.x, s * linear.y, pull === null ? null : s * pull, e.timeStamp);
+    const turn = turnOf(e.rotationRate);
+    const twist = turn ? twistOf(turn) : 0;
+    const sideways = s * linear.x;
+    // A phone with a gyroscope fuses its orientation from it, so the orientation keeps a shake's
+    // jerk out with no lag. Otherwise the pull is the gravity estimate low-passed twice, and its
+    // sign is the platform's.
+    const gx =
+      turn && up
+        ? STANDARD_GRAVITY * up.x
+        : pull !== null && (sign !== null || e.timeStamp - firstAt >= SIGN_CHECK.waitMs)
+          ? s * pull
+          : null;
+    onSample(
+      Math.abs(twist) > Math.abs(sideways) ? twist : sideways,
+      s * linear.y,
+      gx,
+      e.timeStamp,
+    );
   };
   window.addEventListener("devicemotion", onMotion);
   window.addEventListener("deviceorientation", onTilt, { passive: true });
   return () => {
     window.removeEventListener("devicemotion", onMotion);
-    stopTilt();
+    window.removeEventListener("deviceorientation", onTilt);
   };
 }
