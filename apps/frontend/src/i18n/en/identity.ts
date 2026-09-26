@@ -22,5 +22,14 @@ export const identity = {
       etherscan: "Etherscan, Ethereum Sepolia’s explorer",
       suiscan: "Suiscan, Sui Testnet’s explorer",
     },
+    /** The proof that Privy's paymaster pays a smart-account transaction's gas. */
+    sponsorshipCheck: {
+      check: "Check sponsored gas",
+      checking: "Checking sponsored gas…",
+      waitingForSmartAccount: "Waiting for the smart account…",
+      failed: "Gas check failed: {{reason}}",
+      passed: "Sponsored with no ETH spent.",
+      viewTransaction: "View transaction",
+    },
   },
 } as const;
