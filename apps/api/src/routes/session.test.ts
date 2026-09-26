@@ -7,7 +7,7 @@ import { LineTokenInvalidError, type LineProfile } from "../deps.ts";
 import { errorBodySchema } from "../errors.ts";
 import { devIdToken } from "../services/devSignIn.ts";
 import { HANDLE_MAX_LENGTH } from "../session/handles.ts";
-import { SESSION_COOKIE } from "../session.ts";
+import { SESSION_COOKIE, SESSION_MAX_AGE_S } from "../session.ts";
 import { meSchema } from "../shapes.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { fakeSmartWallets } from "../testing/fakes.ts";
@@ -80,6 +80,17 @@ describe("signing in", () => {
       needsHandle: false,
     });
     expect(await meIn(await call("GET", "/api/me", sessionCookie(response)))).toEqual(me);
+  });
+
+  it("keeps the session for 30 days, and names LINE's user so the app can check it's still them", async () => {
+    const response = await signIn(ALICE);
+    const cookie = response.headers.get("set-cookie") ?? "";
+    expect(cookie).toContain(`Max-Age=${SESSION_MAX_AGE_S}`);
+    expect(SESSION_MAX_AGE_S).toBe(30 * 24 * 60 * 60);
+    expect((await meIn(response)).lineUserId).toBe(ALICE.sub);
+    expect((await meIn(await call("GET", "/api/me", sessionCookie(response)))).lineUserId).toBe(
+      ALICE.sub,
+    );
   });
 
   it("asks for a handle when the LINE name is taken in another letter case, or breaks the rules", async () => {
@@ -253,6 +264,19 @@ describe("deleting your account", () => {
     const again = await meIn(await signIn(ALICE));
     expect(again.id).not.toBe(id);
     expect(again.handle).toBe(ALICE.name);
+  });
+});
+
+describe("signing out", () => {
+  it("clears the cookie, with a session or without one", async () => {
+    const headers = sessionCookie(await signIn(ALICE));
+    for (const sent of [headers, {}]) {
+      const response = await call("DELETE", "/api/session", sent);
+      expect(response.status).toBe(204);
+      const cleared = response.headers.get("set-cookie") ?? "";
+      expect(cleared.startsWith(`${SESSION_COOKIE}=;`)).toBe(true);
+      expect(cleared).toContain("Max-Age=0");
+    }
   });
 });
 

@@ -6,6 +6,7 @@ import "./styles/tokens.css";
 import "./styles/base.css";
 import "./styles/keys.css";
 import { ApiRoot } from "./api/ApiRoot";
+import { openSessionEarly } from "./api/serverClients";
 import App from "./app/App.tsx";
 import { followLanguageOnPage, startInLineLanguage } from "./i18n/pageLanguage";
 import { PrivySignIn } from "./identity/PrivySignIn";
@@ -25,6 +26,8 @@ followLanguageOnPage((language) => liff.i18n.setLang(language));
 // LIFF starts before the app renders, since it reads the address bar as it starts; LineGate holds the
 // app until it settles.
 void initLine();
+// Meanwhile the server says who the session cookie signs in, and sends the first screen's data.
+openSessionEarly();
 // From boot while it's on, so the app's own start is in the recording. It never throws: a recorder
 // that can't start must not keep the app from rendering.
 startPerformanceRecorderAtBoot();

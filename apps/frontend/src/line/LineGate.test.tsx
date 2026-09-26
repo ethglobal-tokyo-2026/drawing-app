@@ -14,7 +14,12 @@ const liff = vi.hoisted(() => ({
   init: vi.fn<() => Promise<void>>(),
   isLoggedIn: vi.fn(() => true),
   isInClient: vi.fn(() => true),
-  getProfile: vi.fn(async () => ({ userId: "U1", displayName: "Bob Tanaka" })),
+  getDecodedIDToken: vi.fn<() => { sub?: string; name?: string; picture?: string } | null>(
+    () => null,
+  ),
+  getProfile: vi.fn<() => Promise<{ userId: string; displayName: string; pictureUrl?: string }>>(
+    async () => ({ userId: "U1", displayName: "Bob Tanaka" }),
+  ),
 }));
 vi.mock("@line/liff", () => ({ default: liff }));
 
@@ -88,6 +93,37 @@ describe("LineGate", () => {
     await act(() => vi.advanceTimersByTimeAsync(60_000));
     expect(host.textContent).toContain("LINE didn’t start");
     expect(host.textContent).toContain("Try again");
+  });
+
+  it("opens with the ID token's name and picture without waiting for LINE's profile, then takes the profile", async () => {
+    liff.init.mockResolvedValue();
+    liff.getDecodedIDToken.mockReturnValueOnce({
+      sub: "U1",
+      name: "Bob",
+      picture: "https://p/bob",
+    });
+    let answer = (_: { userId: string; displayName: string; pictureUrl?: string }) => {};
+    liff.getProfile.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+    vi.resetModules();
+    const { initLine, useLine } = await import("./liff");
+    const { LineGate } = await import("./LineGate");
+    function Named() {
+      const line = useLine();
+      return line.status === "ready" ? `${line.profile.userId} ${line.profile.displayName}` : null;
+    }
+    void initLine();
+    await act(async () => {
+      root.render(
+        <LineGate>
+          <Named />
+        </LineGate>,
+      );
+    });
+    await settle();
+    expect(host.textContent).toBe("U1 Bob");
+    answer({ userId: "U1", displayName: "Bob Tanaka", pictureUrl: "https://p/bob" });
+    await settle();
+    expect(host.textContent).toBe("U1 Bob Tanaka");
   });
 
   it("names LIFF's error code with the reason", async () => {

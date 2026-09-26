@@ -8,6 +8,7 @@ const me = {
   handle: "alice",
   lineDisplayName: "Alice",
   linePictureUrl: null,
+  lineUserId: "U-alice",
   timeZone: "Asia/Tokyo",
   language: "en",
   languageChoice: null,

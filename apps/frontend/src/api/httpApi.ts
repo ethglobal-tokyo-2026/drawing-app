@@ -103,6 +103,8 @@ export interface SessionApi {
   me: () => Promise<{ me: Me }>;
   /** POST /api/me/handle */
   setHandle: (handle: string) => Promise<{ me: Me }>;
+  /** DELETE /api/session: ends the session, so the cookie is gone. */
+  signOut: () => Promise<void>;
 }
 
 export function createSessionApi(api: ServerClient = createServerClient()): SessionApi {
@@ -111,6 +113,10 @@ export function createSessionApi(api: ServerClient = createServerClient()): Sess
       const response = await api.session.$post({ json: request });
       if (!response.ok) throw await refusal(response, "POST /api/session");
       return response.json();
+    },
+    signOut: async () => {
+      const response = await api.session.$delete();
+      if (!response.ok) throw await refusal(response, "DELETE /api/session");
     },
     me: async () => {
       const response = await api.me.$get();
