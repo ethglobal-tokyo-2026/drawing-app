@@ -184,7 +184,6 @@
   min-width: 54px;
   text-align: center;
   font: 650 13px/1 var(--font-ui);
-  font-variant-numeric: tabular-nums;
   color: var(--graphite);
 }
 

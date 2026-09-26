@@ -19,7 +19,6 @@
   font: 900 1em/0.95 var(--font-ui);
   font-stretch: var(--w-figure);
   letter-spacing: -0.035em;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Small caps drawn at a cap height of their own, so Japanese's ヒット sits the same way. */

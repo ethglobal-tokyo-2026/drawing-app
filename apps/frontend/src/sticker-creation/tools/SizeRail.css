@@ -38,7 +38,6 @@
   line-height: 18px;
   text-align: center;
   white-space: nowrap;
-  font-variant-numeric: tabular-nums;
   color: var(--ink);
   counter-reset: size var(--px);
   transform-origin: 0 100%;
@@ -46,8 +45,14 @@
   pointer-events: none;
 }
 
+/* The number keeps the widest digit's width (a 4's, 0.645em at this weight) per digit, so a drag only
+   moves the label when the digits go from one to two. Mona Sans's tabular figures would hold it too, but
+   they draw a slashed zero. */
 .size-num::before {
   content: counter(size);
+  display: inline-block;
+  min-width: calc(var(--px-digits, 1) * 0.65em);
+  text-align: right;
 }
 
 .size-num::after {

@@ -308,10 +308,18 @@ export function StickerDetail({
               )}
               <p className="fine sticker-detail__fine-print">
                 {byOther ? (
-                  <ArtistChip artist={sticker.artist} />
+                  // The chip's handle keeps its own case in the fine print's capitals.
+                  <span className="handle">
+                    <ArtistChip artist={sticker.artist} />
+                  </span>
                 ) : (
                   <span className="sticker-detail__by">
-                    {t(($) => $.stickerBoard.detail.by, { artist: handleOf(sticker.artist) })}
+                    <Trans
+                      i18nKey={($) => $.stickerBoard.detail.by}
+                      components={{
+                        artist: <span className="handle">{handleOf(sticker.artist)}</span>,
+                      }}
+                    />
                   </span>
                 )}{" "}
                 <span>
@@ -328,10 +336,15 @@ export function StickerDetail({
               {/* The Transfer Trail says it too, once it's in. */}
               {mode === "given" && sticker.givenTo && trail.length === 0 && (
                 <p className="fine sticker-detail__fine-print">
-                  {t(($) => $.stickerBoard.detail.youGaveIt, {
-                    receiver: handleOf(sticker.givenTo.receiver),
-                    day: formatMonthDay(sticker.givenTo.receivedAt),
-                  })}
+                  <Trans
+                    i18nKey={($) => $.stickerBoard.detail.youGaveIt}
+                    values={{ day: formatMonthDay(sticker.givenTo.receivedAt) }}
+                    components={{
+                      receiver: (
+                        <span className="handle">{handleOf(sticker.givenTo.receiver)}</span>
+                      ),
+                    }}
+                  />
                 </p>
               )}
             </section>

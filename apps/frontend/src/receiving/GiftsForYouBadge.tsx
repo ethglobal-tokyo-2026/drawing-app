@@ -1,7 +1,7 @@
 import type { GiftsForYou } from "@drawing-app/api/client";
 import { Gift } from "@phosphor-icons/react";
 import { toPerson, toSticker } from "../api/views";
-import { useTranslation } from "../i18n/react";
+import { Trans, useTranslation } from "../i18n/react";
 import { formatHandle } from "../stickers/format";
 import "./gifts-for-you-badge.css";
 
@@ -47,9 +47,19 @@ export function GiftsForYouBadge({ gifts, onOpen }: Props) {
           {t(($) => $.receiving.giftsForYou.title, { count })}
         </span>
         <span className="fine gifts-for-you-badge__from">
-          {count > 1
-            ? t(($) => $.receiving.giftsForYou.fromAndMore, { name, count: count - 1 })
-            : t(($) => $.receiving.giftsForYou.from, { name })}
+          {/* The handle keeps its own case in the fine print's capitals. */}
+          {count > 1 ? (
+            <Trans
+              i18nKey={($) => $.receiving.giftsForYou.fromAndMore}
+              values={{ count: count - 1 }}
+              components={{ name: <span className="handle">{name}</span> }}
+            />
+          ) : (
+            <Trans
+              i18nKey={($) => $.receiving.giftsForYou.from}
+              components={{ name: <span className="handle">{name}</span> }}
+            />
+          )}
         </span>
       </span>
     </button>

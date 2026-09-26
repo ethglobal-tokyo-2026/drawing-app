@@ -203,10 +203,10 @@ export const receiving = {
     title_one: { en: "A gift for you" },
     /** Gifts for you badge on your own sticker board: its first line, with gifts waiting */
     title_other: { en: "{{count}} gifts for you", ja: "ギフトが{{count}}件" },
-    /** Gifts for you badge on your own sticker board: the line under the title, naming who sent the newest gift */
-    from: { en: "from {{name}}", ja: "{{name}}さんから" },
-    /** Gifts for you badge on your own sticker board: the line under the title, naming the newest gift's sender and how many more are waiting */
-    fromAndMore: { en: "from {{name}} and {{count}} more", ja: "{{name}}さんほか{{count}}件" },
+    /** Gifts for you badge on your own sticker board: the line under the title, naming who sent the newest gift; <name/> is their handle, which keeps its own case in the capitals */
+    from: { en: "from <name/>", ja: "<name/>さんから" },
+    /** Gifts for you badge on your own sticker board: the line under the title, naming the newest gift's sender and how many more are waiting; <name/> is their handle, which keeps its own case in the capitals */
+    fromAndMore: { en: "from <name/> and {{count}} more", ja: "<name/>さんほか{{count}}件" },
     /** Gifts for you badge on your own sticker board: its name for assistive tech, tapping it opens the newest gift */
     label_one: { en: "A gift for you from {{name}}. Open it" },
     /** Gifts for you badge on your own sticker board: its name for assistive tech with several gifts, tapping it opens the newest */

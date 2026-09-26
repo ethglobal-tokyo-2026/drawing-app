@@ -76,7 +76,8 @@ export function GivenStickerSilhouette({
       <span ref={caption} className="fine given-sticker-silhouette__caption" aria-hidden="true">
         {formatNo(sticker.no)}
         <ArrowRight size={12} />
-        {to}
+        {/* A handle keeps its own case in the capitals; "a friend" takes them. */}
+        {recipient ? <span className="handle">{recipient}</span> : to}
       </span>
     </button>
   );

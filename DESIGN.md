@@ -58,7 +58,6 @@ typography:
     fontWeight: 900
     lineHeight: 0.95
     letterSpacing: "-0.035em"
-    fontFeature: "tnum"
     fontVariation: "'wdth' 125"
   headline:
     fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
@@ -93,7 +92,6 @@ typography:
     fontWeight: 650
     lineHeight: 1.3
     letterSpacing: "0.07em"
-    fontFeature: "tnum"
     fontVariation: "'wdth' 87.5"
   jp-caption:
     fontFamily: "Zen Kaku Gothic New, Hiragino Sans, Hiragino Kaku Gothic ProN, Mona Sans, sans-serif"
@@ -348,12 +346,12 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 ### Hierarchy
 
 - **Display** (400, 20px; 23px on the large key, 17px on the compact key; line-height 1): the key's label. It also sets dot badges (12–19px; the draw screen's timer dot at 13px), the gratitude multiplier (×8.0, 27px), the giver's gratitude tag, and the outlined 袋文字 tier captions (46px, pink inside white inside ink).
-- **Figure** (900, 26px on the cork back's stamps and 27px in the open trail row and its replay stage, up to 52px on the gratitude receipt and 58px on the streak leaf; line-height about 0.95, width 125, tabular): gratitude amounts in the combo, the receipt and the sticker's trail, the counts pinned on the cork back (the receipt's TOTAL at 30px), and the hit counter (23px on the leaderboard, 20px in the cork back's Bests).
+- **Figure** (900, 26px on the cork back's stamps and 27px in the open trail row and its replay stage, up to 52px on the gratitude receipt and 58px on the streak leaf; line-height about 0.95, width 125, proportional figures): gratitude amounts in the combo, the receipt and the sticker's trail, the counts pinned on the cork back (the receipt's TOTAL at 30px), and the hit counter (23px on the leaderboard, 20px in the cork back's Bests).
 - **Headline** (800, 26px, line-height 1.08, width 112, balanced wrap): screen and dialog titles such as "Sealed on-chain" and "Out of tickets for today", the sticker detail's heading and the name printed on a gift's tag.
 - **Title** (800, 18–22px, line-height 1.1, width 112): sheet titles, the board header's name, and the notebook scrap and Settings headings on the cork back (18px).
 - **Body** (400–500, 15px, line-height 1.42–1.5, width 100): running text. Notes cap at 28–44ch. Supporting notes drop to 13px. Text never sits between the steps (12, 12.5, 13.5, 14 or 16px), except the toast's 14px and the 16px search field, which keeps iOS from zooming.
 - **Label** (700, 15px, or 13px on small buttons, the selected sticker's toolbar and the draw screen's white labels, width 100): buttons, tabs and chips, in sentence case at one weight.
-- **Fine** (650, 11px, uppercase, +0.07em, width 87.5, tabular): metadata lines such as "No.0147 · 4:52 · 2026.09.23 · @alice", sheet date ranges in the tray, captions and hints.
+- **Fine** (650, 11px, uppercase, +0.07em, width 87.5, proportional figures): metadata lines such as "No.0147 · 4m 52s · 2026.09.23 · @alice", sheet date ranges in the tray, captions and hints. Two things keep their own case inside its capitals: a @handle or LINE name (the `.handle` class), and a drawing time, whose units stay lowercase ("4m 52s") because "4M" reads as millions.
 - **JP caption** (700, 11px, +0.14em): the なまえ cap on the name label.
 
 ### Named Rules
@@ -369,6 +367,8 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 Nothing else is set at 75.
 
 **The Puffy Voice Rule.** Dela Gothic One appears only on keys, dot badges (the draw screen's timer dot is one), the gratitude multiplier and tag, and outlined 袋文字 captions. It's never used for headings, body text or plain figures.
+
+**The Plain Zero Rule.** Mona Sans's tabular figures draw a slashed zero, and nothing in the font turns it back: it has no `zero` feature and no stylistic sets. So Mona Sans figures are proportional, never `tabular-nums` or `tnum`, and their zero is plain. That covers fine print, prices, dates, stamps, totals, the receipt, ticket counts and the hit counter. Only a number that changes while you watch keeps its digits in place. The combo's amount and clock are the one exception: they stay tabular, and each zero in them is set as the plain zero at width 114, which is as wide as a tabular zero at 125. The brush size label holds the widest digit's width per digit. The timer dot already sets its numerals in fixed cells. The refill countdown changes once a minute and needs none of this. Dela Gothic One's tabular zero is its plain one, so the multiplier stays tabular.
 
 **The Hits Rule.** A combo's length is counted in hits, the way fighting games count it, never in taps. It never wears ×, which belongs to the multiplier. It always shows as the hit counter.
 
@@ -527,7 +527,7 @@ Tickets aren't controls: daily tickets are matte ticket stock; reserve tickets w
 
 ### Out of tickets
 
-Three empty ticket stubs say "used up" without a number. Each used ticket keeps a faint kiss-cut outline of the sticker it became (a 1px graphite line at 62%, dashed on the large stubs), fading in over 700ms: the cut line a sticker leaves on its backing. The small stubs on the seal screen carry the same outlines. Under the title, a printed refill line reads "New daily tickets at 12:00 AM," in bold Ink followed by the countdown ("in 6h 56m") in Graphite, in tabular figures. It never borrows the timer dot's look: no dot, no color field, no tilt, no Dela numerals. Then the perforation, Go to sticker board as the key and Buy reserve tickets on label stock with the Shop's tag. The card doesn't restate the three-a-day rule. When the refill brings tickets back while it's open, it turns over in place and its key becomes a plain Draw.
+Three empty ticket stubs say "used up" without a number. Each used ticket keeps a faint kiss-cut outline of the sticker it became (a 1px graphite line at 62%, dashed on the large stubs), fading in over 700ms: the cut line a sticker leaves on its backing. The small stubs on the seal screen carry the same outlines. Under the title, a printed refill line reads "New daily tickets at 12:00 AM," in bold Ink followed by the countdown ("in 6h 56m") in Graphite. It never borrows the timer dot's look: no dot, no color field, no tilt, no Dela numerals. Then the perforation, Go to sticker board as the key and Buy reserve tickets on label stock with the Shop's tag. The card doesn't restate the three-a-day rule. When the refill brings tickets back while it's open, it turns over in place and its key becomes a plain Draw.
 
 **Draw never asks for a daily ticket** (zero steps to the canvas). On the board, Draw with a daily ticket left spends it at once: the key's front ticket peels off, and the canvas opens as it goes, taking the ink as soon as the spend lands. With no tickets at all, Draw raises this card over the board instead, and the canvas doesn't load; its key reads "Back to my board", and the card's scrim covers the board, not the tabs. A drawing in progress already has its ticket, so Draw just opens it.
 

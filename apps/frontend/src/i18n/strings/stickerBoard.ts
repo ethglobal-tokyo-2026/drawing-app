@@ -421,16 +421,16 @@ export const stickerBoard = {
     },
     /** Sticker detail: the sticker's heading under the pager; <no/> is its number, such as "No.0012" */
     title: { en: "sticker <no/>", ja: "シール<no/>" },
-    /** Sticker detail, a sticker the board's owner drew: the fine print naming its Original Artist, first on the line */
-    by: { en: "by {{artist}}", ja: "作者：{{artist}}" },
+    /** Sticker detail, a sticker the board's owner drew: the fine print naming its Original Artist, first on the line; <artist/> is their handle, which keeps its own case in the capitals */
+    by: { en: "by <artist/>", ja: "作者：<artist/>" },
     /** Sticker detail: the fine print after the artist, with how long it took to draw, such as "4m 52s" */
     drawnIn: { en: "· drawn in <duration/>", ja: "・制作時間<duration/>" },
     /** Sticker detail: the fine print ending the artist line, the day it was sealed, such as "2026.09.23" */
     sealedOn: { en: "· {{day}}", ja: "・{{day}}" },
-    /** Sticker detail, a sticker you gave: the fine print naming who received it and when, until its Transfer Trail loads */
+    /** Sticker detail, a sticker you gave: the fine print naming who received it and when, until its Transfer Trail loads; <receiver/> is their handle, which keeps its own case in the capitals */
     youGaveIt: {
-      en: "You gave it to {{receiver}} · {{day}}",
-      ja: "{{receiver}}さんに贈りました・{{day}}",
+      en: "You gave it to <receiver/> · {{day}}",
+      ja: "<receiver/>さんに贈りました・{{day}}",
     },
     /** Sticker detail, a sticker you've sent that hasn't been received: shown in place of Give, beside its sleeve */
     onItsWay: { en: "On its way", ja: "お届け中" },
@@ -506,8 +506,8 @@ export const stickerBoard = {
     amount: { en: "{{amount}}<hidden> gratitude</hidden>", ja: "<hidden>感謝</hidden>{{amount}}" },
     /** Transfer Trail, the open row: under the gratitude total, when you sent it */
     fromYou: { en: "From you", ja: "あなたから" },
-    /** Transfer Trail, the open row: under the gratitude total, naming who sent it */
-    from: { en: "From {{name}}", ja: "{{name}}さんから" },
+    /** Transfer Trail, the open row: under the gratitude total, naming who sent it; <name/> is their handle, which keeps its own case in the capitals */
+    from: { en: "From <name/>", ja: "<name/>さんから" },
     /** Transfer Trail, the open row: the Replay button beside the gratitude total, which plays the combo inside the card */
     replay: { en: "Replay", ja: "リプレイ" },
     /** Transfer Trail, the open row: screen readers' name for Replay when you sent the gratitude */

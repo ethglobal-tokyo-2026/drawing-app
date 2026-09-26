@@ -16,7 +16,6 @@
   -webkit-tap-highlight-color: transparent;
   touch-action: none;
   overscroll-behavior: none;
-  font-variant-numeric: tabular-nums;
   z-index: var(--z-sheet); /* portaled over the phone, like the sticker detail */
 }
 .gr ::selection {
@@ -460,7 +459,6 @@
   font-stretch: var(--w-figure, 125%);
   letter-spacing: 0.01em;
   color: var(--ink);
-  font-variant-numeric: tabular-nums;
 }
 .gr-tick.is-capped {
   color: var(--graphite);
@@ -476,11 +474,19 @@
   font-stretch: var(--w-figure, 125%);
   letter-spacing: -0.01em;
   color: var(--ink);
+  font-variant-numeric: tabular-nums;
 }
 .gr-timer-s small {
   font-size: var(--fs-fine, 11px);
   font-weight: 700;
   margin-left: 1px;
+}
+/* The clock's and the amount's zeros (comboHud.ts's plainZeros). The figures around them are tabular, so
+   their digits hold their places as they count, but Mona Sans's tabular zero is slashed. At width 114 the
+   plain zero is as wide as a tabular one at 125, so it takes the same place. */
+.gr-zero {
+  font-variant-numeric: normal;
+  font-stretch: 114%;
 }
 .gr-readout {
   display: flex;
@@ -535,6 +541,7 @@
   font-size: 27px;
   line-height: 1;
   letter-spacing: -0.02em;
+  /* Dela Gothic One's tabular zero is its plain zero. */
   font-variant-numeric: tabular-nums;
 }
 

@@ -36,7 +36,6 @@
   min-width: 0;
   font: 600 14px/1.35 var(--font-ui);
   font-stretch: var(--w-ui);
-  font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
   -webkit-user-select: text;
   user-select: text;

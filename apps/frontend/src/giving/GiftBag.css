@@ -333,7 +333,6 @@
   line-height: 1;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
   color: var(--ink);
   transform: translateX(calc(var(--gift-tear) * var(--sw) * -1));
 }

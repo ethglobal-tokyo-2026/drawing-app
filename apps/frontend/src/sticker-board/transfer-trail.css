@@ -79,7 +79,6 @@ button.transfer-trail__head:focus-visible {
 }
 
 .transfer-trail__at {
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
@@ -91,7 +90,6 @@ button.transfer-trail__head:focus-visible {
   gap: 4px;
   color: var(--ink);
   font: 700 13.5px/1 var(--font-ui);
-  font-variant-numeric: tabular-nums;
 }
 
 .transfer-trail__amount svg {
@@ -163,7 +161,6 @@ button.transfer-trail__head:focus-visible {
   font: 900 27px/1 var(--font-ui);
   font-stretch: var(--w-figure);
   letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
   /* A replay's landing pulses it from its left edge, beside the heart dot. */
   transform-origin: 0 50%;
 }
@@ -243,7 +240,6 @@ button.transfer-trail__head:focus-visible {
   box-shadow: inset 0 1px 0 var(--rule);
   color: var(--ink);
   font: 600 12.5px/1.35 var(--font-ui);
-  font-variant-numeric: tabular-nums;
 }
 
 @media (hover: hover) {

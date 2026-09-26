@@ -25,7 +25,6 @@
   box-shadow: inset 0 0 0 1px var(--rule);
   font-size: 15px;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
   text-align: right;
 }
 
@@ -93,7 +92,6 @@
   display: grid;
   justify-items: end;
   line-height: 1.15;
-  font-variant-numeric: tabular-nums;
 }
 
 /* The full price struck through, and the discount before it in plain Ink fine print. */
@@ -238,7 +236,6 @@
   align-items: center;
   gap: 6px;
   font-weight: 800;
-  font-variant-numeric: tabular-nums;
 }
 
 .ticket-purchases__note {
