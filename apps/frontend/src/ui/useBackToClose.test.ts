@@ -109,4 +109,20 @@ describe("createBackStack", () => {
     expect(close).toHaveBeenCalledTimes(2);
     vi.useRealTimers();
   });
+
+  it("takes one entry when an overlay closes as a Back is already on its way", async () => {
+    vi.useFakeTimers();
+    const win = fakeWindow();
+    win.history.pushState({ app: "board" }, "");
+    const stack = createBackStack(win);
+    const close = vi.fn();
+    const overlay = stack.open(close);
+
+    win.history.back();
+    stack.release(overlay);
+    await settle();
+    expect(win.where()).toMatchObject({ at: 1, state: { app: "board" } });
+    expect(close).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
 });
