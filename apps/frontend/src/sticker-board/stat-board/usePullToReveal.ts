@@ -10,7 +10,7 @@ const SETTLE_MS = 320;
 const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 /** iOS's rubber band: `pull` px past the end shows this much, and never `LIMIT`. */
-export const rubberBand = (pull: number) => LIMIT * (1 - 1 / ((pull * 0.55) / LIMIT + 1));
+const rubberBand = (pull: number) => LIMIT * (1 - 1 / ((pull * 0.55) / LIMIT + 1));
 
 /** The pull that shows `shown` px, so a band still settling back can be caught where it is. */
 const pullShowing = (shown: number) => ((LIMIT / (LIMIT - shown) - 1) * LIMIT) / 0.55;

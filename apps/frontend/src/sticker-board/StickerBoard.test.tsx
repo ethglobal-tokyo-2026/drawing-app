@@ -8,6 +8,7 @@ import { StickerBoard } from "./StickerBoard";
 // The board's chat menu and Privy reach LINE's SDK; nothing here needs it to answer.
 vi.mock("@line/liff", () => ({ default: { isApiAvailable: () => false } }));
 vi.mock("../line/liff", () => ({
+  liffMockActive: true,
   useLine: () => ({
     status: "ready",
     profile: { userId: "U1", displayName: "You" },

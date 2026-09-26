@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { AuthError, AUTH_FAILURE_STATUS, authFailureOf } from "./auth-error.js";
 import {
   LineMenuSwitchError,
   menuLanguageOf,
@@ -13,7 +14,6 @@ interface Logger {
 }
 
 const LINE_MENU_FAILURE_STATUS: Record<LineMenuFailure, number> = {
-  line_auth_failed: 401,
   privy_lookup_failed: 502,
   line_menu_link_failed: 502,
 };
@@ -35,19 +35,28 @@ function sendJson(
 // Both routes take LINE's ID token; only the chat menu's uses the app's language.
 async function readBody(request: IncomingMessage) {
   if (!request.headers["content-type"]?.startsWith("application/json")) {
-    throw new Error("JSON content type is required");
+    throw new AuthError({ code: "invalid_request", reason: "content_type_required" });
   }
   let body = "";
   for await (const chunk of request) {
     body += String(chunk);
-    if (body.length > 8000) throw new Error("Request body exceeds 8000 bytes");
+    if (Buffer.byteLength(body) > 8000) {
+      throw new AuthError({ code: "invalid_request", reason: "body_too_large" });
+    }
   }
-  const parsed: unknown = JSON.parse(body);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    throw new AuthError({ code: "invalid_request", reason: "invalid_json" });
+  }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error("JSON body must be an object");
+    throw new AuthError({ code: "invalid_request", reason: "invalid_body" });
   }
   const idToken: unknown = Reflect.get(parsed, "idToken");
-  if (typeof idToken !== "string") throw new Error("idToken is required");
+  if (typeof idToken !== "string") {
+    throw new AuthError({ code: "invalid_request", reason: "id_token_required" });
+  }
   return { idToken, language: menuLanguageOf(Reflect.get(parsed, "language")) };
 }
 
@@ -71,8 +80,9 @@ export function createAuthHttpServer({
       const { jwt, expiresAt } = await issuer.issue(idToken);
       sendJson(response, 200, { jwt, expiresAt });
     } catch (error) {
-      logger.error("LINE authentication failed", { error });
-      sendJson(response, 401, { error: "line_auth_failed" });
+      const failure = authFailureOf(error);
+      logger.error("Privy JWT issuance failed", { error: failure });
+      sendJson(response, AUTH_FAILURE_STATUS[failure.code], { error: failure.code });
     }
   }
 
@@ -89,10 +99,14 @@ export function createAuthHttpServer({
       );
       sendJson(response, 200, outcome);
     } catch (error) {
-      logger.error("LINE chat menu switch failed", { error });
-      // A request without a readable ID token fails LINE authentication, as it does for privy-jwt.
-      const failure = error instanceof LineMenuSwitchError ? error.failure : "line_auth_failed";
-      sendJson(response, LINE_MENU_FAILURE_STATUS[failure], { error: failure });
+      if (error instanceof LineMenuSwitchError) {
+        logger.error("LINE chat menu switch failed", { error });
+        sendJson(response, LINE_MENU_FAILURE_STATUS[error.failure], { error: error.failure });
+      } else {
+        const failure = authFailureOf(error);
+        logger.error("LINE chat menu switch failed", { error: failure });
+        sendJson(response, AUTH_FAILURE_STATUS[failure.code], { error: failure.code });
+      }
     }
   }
 

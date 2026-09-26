@@ -143,7 +143,9 @@ describe("the REST API, through the typed client", () => {
     await answered(bob.api.gratitude.$post({ json: combo }), CREATED);
 
     // Alice sees the pink tag, watches the combo's replay, and marks it watched.
-    expect((await answered(alice.api.me.$get(), OK)).me.unseenGratitudeCount).toBe(ONE_COMBO);
+    expect((await answered(alice.api.me.$get({ header: {} }), OK)).me.unseenGratitudeCount).toBe(
+      ONE_COMBO,
+    );
     const { unseen } = await answered(alice.api.gratitude.unseen.$get(), OK);
     expect(unseen).toMatchObject([
       { gratitude: { giftId }, sticker: { id: sticker.id }, receiver: { id: bob.me.id } },

@@ -4,6 +4,8 @@ import type { Box } from "./sealTimeline";
 const BACKING = "#E7E5EE";
 const PRINT = "SEAL · シール · ";
 const INK = "#1C1824";
+/** Seal Yellow: the blade is the seal check's own "now". */
+const SEAL = "#FFD93B";
 
 type Size = { w: number; h: number };
 
@@ -96,8 +98,30 @@ export function paintUsedStickerSilhouette(
 }
 
 /**
+ * The cutter running round the finished cut: how far round it is (0–1), how much of its fresh cut
+ * trails it yet (0–1), and how strongly it shows.
+ */
+export interface Cutter {
+  at: number;
+  trail: number;
+  alpha: number;
+}
+
+/** The hairline's width, and the fresh cut's where it meets the blade. */
+const LINE_WIDTH = 1.4;
+const FRESH_WIDTH = 3.8;
+/** How much fresh cut trails the blade: a share of the line, up to a length in px, in tapering steps. */
+const FRESH_SHARE = 0.3;
+const FRESH_MAX = 170;
+const FRESH_STEPS = 10;
+/** The blade's radius, in px. */
+const BLADE = 5.4;
+
+/**
  * The cut line, as a function that draws it as far round as the ceremony has got: an Ink hairline
- * led by a white dot, the blade. It redraws only when what it shows would change.
+ * led by a Seal Yellow dot, the blade, lifted off the paper by its shadow. Once the cut is made, the
+ * blade can keep running round it, pass after pass, trailing a heavier stroke of fresh cut. It
+ * redraws only when what it shows would change.
  */
 export function makeCutLine(canvas: HTMLCanvasElement, size: Size, line: number[][], r: number) {
   cover(canvas, size, r);
@@ -108,9 +132,51 @@ export function makeCutLine(canvas: HTMLCanvasElement, size: Size, line: number[
       lengths[i - 1] + Math.hypot(line[i][0] - line[i - 1][0], line[i][1] - line[i - 1][1]),
     );
   const total = lengths[lengths.length - 1] || 1;
-  let shown = -1;
-  return (progress: number, alpha: number) => {
-    const key = Math.round(progress * 400) + alpha * 1000;
+  const fresh = Math.min(total * FRESH_SHARE, FRESH_MAX);
+
+  /** The index of the segment `d` px along the line falls in, and the point there. */
+  const pointAt = (d: number): [number, number, number] => {
+    let lo = 1;
+    let hi = line.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (lengths[mid] < d) lo = mid + 1;
+      else hi = mid;
+    }
+    const u = (d - lengths[lo - 1]) / (lengths[lo] - lengths[lo - 1] || 1);
+    const [ax, ay] = line[lo - 1];
+    const [bx, by] = line[lo];
+    return [lo, ax + (bx - ax) * u, ay + (by - ay) * u];
+  };
+
+  /** Adds the line from `a` to `b` px along it to the current path, `a` before `b`. */
+  const trace = (a: number, b: number) => {
+    const [from, ax, ay] = pointAt(a);
+    const [to, bx, by] = pointAt(b);
+    g?.moveTo(ax, ay);
+    for (let i = from; i < to; i++) g?.lineTo(line[i][0], line[i][1]);
+    g?.lineTo(bx, by);
+  };
+
+  const blade = (x: number, y: number) => {
+    if (!g) return;
+    g.fillStyle = SEAL;
+    g.lineWidth = 1.5;
+    g.beginPath();
+    g.arc(x, y, BLADE, 0, Math.PI * 2);
+    // Its shadow falls down and to the right, from the one light.
+    g.shadowColor = "rgba(28, 24, 36, 0.32)";
+    g.shadowOffsetX = r;
+    g.shadowOffsetY = 1.6 * r;
+    g.shadowBlur = 2 * r;
+    g.fill();
+    g.shadowColor = "transparent";
+    g.stroke();
+  };
+
+  let shown = "";
+  const draw = (progress: number, alpha: number, cutter: Cutter | null = null) => {
+    const key = `${Math.round(progress * 400)} ${alpha} ${cutter ? `${Math.round(cutter.at * 4000)} ${cutter.trail} ${cutter.alpha}` : ""}`;
     if (!g || key === shown) return;
     shown = key;
     g.setTransform(r, 0, 0, r, 0, 0);
@@ -118,7 +184,7 @@ export function makeCutLine(canvas: HTMLCanvasElement, size: Size, line: number[
     if (progress <= 0 || alpha <= 0 || line.length < 2) return;
     g.globalAlpha = alpha;
     const reach = progress * total;
-    g.lineWidth = 1.4;
+    g.lineWidth = LINE_WIDTH;
     g.lineCap = "round";
     g.lineJoin = "round";
     g.strokeStyle = INK;
@@ -138,14 +204,30 @@ export function makeCutLine(canvas: HTMLCanvasElement, size: Size, line: number[
       break;
     }
     g.stroke();
-    if (progress < 1) {
-      g.fillStyle = "#fff";
-      g.lineWidth = 1.2;
-      g.beginPath();
-      g.arc(hx, hy, 3.4, 0, Math.PI * 2);
-      g.fill();
-      g.stroke();
+    if (progress < 1) blade(hx, hy);
+    else if (cutter && cutter.alpha > 0) {
+      // Another pass: the fresh cut thickens toward the blade, wrapping past the line's start.
+      g.globalAlpha = alpha * cutter.alpha;
+      const head = cutter.at * total;
+      const trail = fresh * cutter.trail;
+      const step = trail / FRESH_STEPS;
+      for (let k = 0; k < FRESH_STEPS; k++) {
+        const a = head - trail + k * step;
+        const b = a + step;
+        g.lineWidth = LINE_WIDTH + ((FRESH_WIDTH - LINE_WIDTH) * (k + 1)) / FRESH_STEPS;
+        g.beginPath();
+        if (a >= 0) trace(a, b);
+        else if (b <= 0) trace(total + a, total + b);
+        else {
+          trace(total + a, total);
+          trace(0, b);
+        }
+        g.stroke();
+      }
+      const [, bx, by] = pointAt(head);
+      blade(bx, by);
     }
     g.globalAlpha = 1;
   };
+  return { draw, length: total };
 }
