@@ -1,0 +1,102 @@
+{
+  "giving.tag.from": {
+    "where": "The gift tag's small label over the giver's handle, on the gift bag in Giving and in the gift a recipient opens, and before the handle in the Gift Message sent through LINE (\"From @alice\")",
+    "ja": "贈り主"
+  },
+  "giving.tag.for": {
+    "where": "The gift tag's small label over the recipient's handle, on the gift bag of a gift given to someone chosen in the app (\"For @bob\")",
+    "ja": "贈り先"
+  },
+  "giving.giftMessage.altText": {
+    "where": "The Gift Message sent through LINE: its preview in the recipient's chat list and LINE's notification",
+    "ja": "{{name}}からシールが届きました"
+  },
+  "giving.giftMessage.oneOfOne": {
+    "where": "The Gift Message sent through LINE: the fine print after the sticker's number (\"NO.0147 · ONE OF ONE\")",
+    "ja": "一点もの"
+  },
+  "giving.giftMessage.body": {
+    "where": "The Gift Message sent through LINE: the line under \"From @alice\", with the sticker's drawing time",
+    "ja": "{{duration}}でかいた、一点もののシールです。ひらけるのは一度だけです。"
+  },
+  "giving.giftMessage.open": {
+    "where": "The Gift Message sent through LINE: its button, which opens the gift in the app",
+    "ja": "ギフトをひらく"
+  },
+  "giving.give": {
+    "where": "Giving's first screen: the sheet's title (\"Give No.0147\"); and the give sheet's key once a sticker is picked",
+    "ja": "{{no}}を贈る"
+  },
+  "giving.close": {
+    "where": "Giving's first screen and the give sheet: the X button's name for assistive tech",
+    "ja": "閉じる"
+  },
+  "giving.backToBoard": {
+    "where": "Giving's \"Sealed and sent\" screen, and the giver's received notice: the button that closes it",
+    "ja": "シールボードに戻る"
+  },
+  "giving.giveSheet.title": {
+    "where": "The give sheet, opened by Give on someone else's sticker board: its title",
+    "ja": "{{name}}にシールを贈る"
+  },
+  "giving.giveSheet.lead": {
+    "where": "The give sheet on someone else's sticker board: the line under its title",
+    "ja": "あなたのシールを1枚選んで、LINEのトークで{{name}}に送りましょう。"
+  },
+  "giving.giveSheet.yourStickers": {
+    "where": "The give sheet on someone else's sticker board: the name of the grid of your stickers, for assistive tech",
+    "ja": "あなたのシール"
+  },
+  "giving.giveSheet.none": {
+    "where": "The give sheet on someone else's sticker board: in the grid's place when you have no sticker to give",
+    "ja": "贈れるシールがまだありません。まずはシールボードで1枚かいてみましょう。"
+  },
+  "giving.giveSheet.noPicker": {
+    "where": "The give sheet on someone else's sticker board: an alert when LINE's friend picker can't open there, such as outside LINE",
+    "ja": "ここではLINEの友だち選択が使えないため、この画面からはギフトを送れません。"
+  },
+  "giving.giveSheet.pick": {
+    "where": "The give sheet on someone else's sticker board: its key, disabled, until you pick a sticker",
+    "ja": "シールを選ぶ"
+  },
+  "giving.meta": {
+    "where": "Giving: the sticker's fine print over the sheet, its number, drawing time, seal day and the giver's handle",
+    "ja": "{{no}} · <duration/> · {{day}} · <name/>"
+  },
+  "giving.sheet.sendInChat": {
+    "where": "Giving's first screen: the bold title of the aqua row that packs the sticker and opens LINE's friend picker",
+    "ja": "LINEのトークで送る"
+  },
+  "giving.sheet.sendInChatHint": {
+    "where": "Giving's first screen: the small line under \"Send in a LINE chat\"",
+    "ja": "相手とのトークを選んでください。最初にひらいた人が受け取れます。"
+  },
+  "giving.sheet.leaves": {
+    "where": "Giving's first screen: the note at the bottom, beside a sticker icon",
+    "ja": "シールはボードからはがれて、ギフト袋に入ります。"
+  },
+  "giving.cantFind.title": {
+    "where": "Giving's first screen: the quiet link under \"Send in a LINE chat\"; and the title of the screen it opens in the sheet",
+    "ja": "相手が見つからない？"
+  },
+  "giving.cantFind.back": {
+    "where": "Giving's \"Can't find them?\" screen: the back arrow's name for assistive tech",
+    "ja": "戻る"
+  },
+  "giving.cantFind.lead": {
+    "where": "Giving's \"Can't find them?\" screen: the line under its title, on who LINE's friend picker leaves out",
+    "ja": "LINEのリストには、アプリとの共有をオフにしている人と、数分以内に追加した友だちは表示されません。"
+  },
+  "giving.cantFind.notFriends": {
+    "where": "Giving's \"Can't find them?\" screen: the bold title of the row that opens LINE's Add friends screen",
+    "ja": "まだLINEの友だちではない？"
+  },
+  "giving.cantFind.notFriendsHint": {
+    "where": "Giving's \"Can't find them?\" screen: the small line under \"Not friends in LINE yet?\"",
+    "ja": "まずLINEで友だちに追加して、あいさつしましょう。それから戻って選んでください。"
+  },
+  "giving.cantFind.addFriendsDidntOpen": {
+    "where": "Giving's \"Can't find them?\" screen: an alert when tapping \"Not friends in LINE yet?\" fails to open LINE's Add friends screen",
+    "ja": "LINEの友だち追加画面がひらきませんでした：{{reason}}"
+  }
+}
