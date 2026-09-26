@@ -16,7 +16,7 @@ import { errorReason } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
 import { OutOfTickets } from "../tickets/OutOfTickets";
 import { StartDrawing } from "../tickets/StartDrawing";
-import { nextKind, ticketsLeft, type TicketKind } from "../tickets/tickets";
+import { nextKind, ticketsLeft, type TicketKind, type Tickets } from "../tickets/tickets";
 import { TicketShop } from "../tickets/TicketShop";
 import { TicketsNotLoaded } from "../tickets/TicketsNotLoaded";
 import { useTickets } from "../tickets/useTickets";
@@ -470,6 +470,13 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const paywall = active && fresh && overlay !== null;
   // A fresh sheet asks before a ticket is spent, and takes no ink until then.
   const asking = active && fresh && !paywall;
+  // Once its ticket is spent, the ask drops away over the sheet, showing the tickets it asked about:
+  // the spend it answers mustn't turn it into another ask on its way out. When the shop takes its
+  // place, or the board covers it, it simply goes: the next card's rise carries that change.
+  const ask = asking && !rightAway ? loaded : null;
+  const [askShown, setAskShown] = useState<Tickets | null>(null);
+  if (ask && askShown !== ask) setAskShown(ask);
+  if (!ask && askShown && (!active || paywall)) setAskShown(null);
   const sealing = session.phase === "sealing" || session.phase === "sealed";
   // Until Start, and while a kept session loads, the sheet takes no ink.
   const locked = !active || session.phase === "blank" || sealing;
@@ -631,11 +638,13 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       {asking && !loaded && (
         <TicketsNotLoaded error={tickets.error} onRetry={tickets.refresh} onBoard={onGoToBoard} />
       )}
-      {asking && loaded && !rightAway && (
+      {askShown && (
         <StartDrawing
-          tickets={loaded}
+          tickets={askShown}
           minutes={SESSION_MS / 60_000}
           followsSealedCard={ceremony?.leaving === true}
+          leaving={!ask}
+          onLeft={() => setAskShown(null)}
           busy={spending}
           note={
             startProblem ??

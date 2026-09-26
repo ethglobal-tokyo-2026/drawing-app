@@ -420,6 +420,7 @@ A cartoon keycap: the screen's one primary act.
 - **Round:** the seal check, a 58px round key with Phosphor's check-fat (fill) at 26px. The first tap arms it: it breathes (scale to 1.08 and back every 900ms) and a label-stock chip beside it says "Tap again to seal". A second tap within 2.5s seals; otherwise it disarms. It's still the draw screen's only key.
 - **Compact:** Draw on your own board, a Seal Yellow compact key at the lower left over the stickers. On a new artist's first visit it hops and a pulse ring surrounds it, held by a wrapper so the key keeps its own lip.
 - **Disabled:** sunk flush with the page, with no lip and no ink: a Liner Deep face and a graphite label. Enabling springs it up out of the page.
+- **Busy:** while its act is on its way to the server, such as spending a ticket, the key keeps its face, lip and ink, and takes no second press. It's marked `aria-busy` and `aria-disabled`, never `disabled`, which would sink it grey as if the act weren't there.
 - **Hover and focus:** hover shades the face 6% toward Ink. Focus draws a 2px Ink outline at a 3px offset.
 - **Visiting:** on someone else's board, a Soda Aqua compact Give key sits in Draw's slot, and it's that board's one key.
 - **Where it goes:** Keep drawing, Pay in the ticket shop, Use a reserve ticket, Give, Send in LINE, Accept, Send gratitude, Send offer, the seal check, Draw on your board and Give on someone else's. A can't-undo act never gets the key.
@@ -500,6 +501,8 @@ The canvas is just for drawing.
 Three empty ticket stubs say "used up" without a number. Each used ticket keeps a faint kiss-cut outline of the sticker it became (a 1px graphite line at 62%, dashed on the large stubs), fading in over 700ms: the cut line a sticker leaves on its backing. The small stubs on the seal screen carry the same outlines. Under the stubs, the reserve count: a Grape ticket mark × count. Under the title, a printed refill line reads "New daily tickets at 12:00 AM," in bold Ink followed by the countdown ("in 6h 56m") in Graphite, in tabular figures. It never borrows the timer dot's look: no dot, no color field, no tilt, no Dela numerals. Then the perforation, Go to sticker board as the key and Shop for tickets on label stock. The card doesn't restate the three-a-day rule.
 
 With daily tickets gone but reserve ones left, the start screen asks "Use a reserve ticket?" instead, with a Grape key and the ticket shop on label stock.
+
+Spending from the start screen: while the ticket is on its way to the server, the key stays busy in its own color (see the key's Busy state). Once the server answers, the card drops back 56px and fades over 220ms, faster than its 460ms rise, and its scrim and the grabber strip's clear with it. The sheet under it takes ink at once. The card keeps showing the tickets it asked about on its way out, so spending the last daily ticket never turns it into the reserve ask. When the ticket shop takes its place, it goes at once and the shop's card rises.
 
 ### Ticket counts
 

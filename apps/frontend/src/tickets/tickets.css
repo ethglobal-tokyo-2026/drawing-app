@@ -132,6 +132,33 @@
   animation-delay: 120ms;
 }
 
+/* The ticket is spent: the card drops back the way it rose and fades, faster than it came, and its
+   scrim clears with it. The sheet under it already takes ink. */
+.out-of-tickets.is-leaving {
+  pointer-events: none;
+}
+
+.out-of-tickets.is-leaving .out-of-tickets__card {
+  animation: out-of-tickets-drop var(--t-stick) var(--ease-soft) forwards;
+}
+
+.out-of-tickets.is-leaving .out-of-tickets__scrim {
+  animation: out-of-tickets-clear var(--t-stick) linear forwards;
+}
+
+@keyframes out-of-tickets-drop {
+  to {
+    transform: translateY(56px);
+    opacity: 0;
+  }
+}
+
+@keyframes out-of-tickets-clear {
+  to {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .out-of-tickets__scrim,
   .out-of-tickets__card {
