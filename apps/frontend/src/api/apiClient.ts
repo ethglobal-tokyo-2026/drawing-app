@@ -1,4 +1,5 @@
 import type {
+  ApiErrorCode,
   ErrorBody,
   Explore,
   Gift,
@@ -104,6 +105,10 @@ export interface ApiClient {
   /** GET /api/users?handle= */
   searchUsers: (handle: string) => Promise<Person[]>;
 }
+
+/** Codes the app makes itself: no answer, and no LINE ID token to sign in with. */
+type ClientErrorCode = "network" | "no_line_token";
+export type ErrorCode = ApiErrorCode | ClientErrorCode;
 
 /** A refused or failed request: the HTTP status and the REST doc's error body. Status 0 is no answer. */
 export class ApiError extends Error {
