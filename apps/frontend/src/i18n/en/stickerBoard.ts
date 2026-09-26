@@ -159,6 +159,8 @@ export const stickerBoard = {
       "Selected. Enter opens it, and Tab reaches its toolbar. Arrow keys move it, [ and ] turn it, minus and plus resize it, Delete takes it off the board, and Escape lets go of it.",
     /** In the empty board's dashed spot. */
     blank: "Stickers you make or receive land here.",
+    /** Read out while the board's faint placeholder stickers show. */
+    loading: "Loading your stickers",
     didntLoad: "Your stickers didn’t load.",
     /** `stickers` lists their numbers; `reasons`, why. */
     unsaved_one: "Couldn’t save where {{stickers}} sits: {{reasons}}",
