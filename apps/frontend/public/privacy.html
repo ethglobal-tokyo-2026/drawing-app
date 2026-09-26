@@ -44,6 +44,21 @@
       a {
         color: inherit;
       }
+      .boat {
+        margin: 20px 0 0;
+      }
+      .boat img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 12px;
+      }
+      .boat figcaption {
+        margin-top: 12px;
+        font-size: 22px;
+        font-weight: 800;
+        font-stretch: 112%;
+      }
       .back {
         display: inline-block;
         margin-top: 24px;
@@ -55,14 +70,15 @@
     <main>
       <p class="placeholder">Placeholder: the real Privacy Policy isn&rsquo;t written yet</p>
       <h1>Privacy Policy</h1>
-      <p>
-        Until it is: the app keeps your stickers, gifts and tickets on this device. When you accept
-        a gift, the person who sent it sees your LINE name and picture.
-      </p>
-      <p>
-        For stronger opinions on software and privacy than any policy will hold, see
-        <a href="https://stallman.org/">stallman.org</a>.
-      </p>
+      <figure class="boat">
+        <img
+          src="/nice-boat.jpg"
+          width="1024"
+          height="576"
+          alt="A ferry crossing a still Norwegian fjord, under a notice that the scheduled program has been changed"
+        />
+        <figcaption>Nice boat.</figcaption>
+      </figure>
       <a class="back" href="/">Back to the app</a>
     </main>
   </body>
