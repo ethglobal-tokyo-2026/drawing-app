@@ -8,6 +8,7 @@ import { DrawingScreen, type DrawingScreenHandle } from "../sticker-creation/Dra
 import { lazyWithPreload, usePreloadWhenIdle } from "../ui/lazyWithPreload";
 import { MotionPermissionCard } from "./MotionPermissionCard";
 import { openedFrom, type View } from "./openedView";
+import { changeScreen } from "./screenTransition";
 import { ShopScreen } from "./ShopScreen";
 import { TabBar } from "./TabBar";
 import { useFocusLoop } from "./useFocusLoop";
@@ -130,8 +131,10 @@ export default function App() {
         tucked={drawing}
         onChange={(tab) => {
           drawingScreen.current?.closeDrawers();
-          setView(tab);
-          setVisiting(undefined);
+          changeScreen(() => {
+            setView(tab);
+            setVisiting(undefined);
+          });
         }}
       />
       <MotionPermissionCard />
