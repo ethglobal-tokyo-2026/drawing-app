@@ -99,17 +99,19 @@ export function StickerToolbar({
           <ArtistChip artist={artist} bare />
         </div>
       )}
-      {give && (
-        <LabelButton tone="aqua" size="sm" icon={<Gift size={18} aria-hidden />} onClick={onGive}>
-          Give
+      <div className="sticker-toolbar__acts">
+        {give && (
+          <LabelButton tone="aqua" size="sm" icon={<Gift size={18} aria-hidden />} onClick={onGive}>
+            Give
+          </LabelButton>
+        )}
+        <LabelButton size="sm" icon={<Eye size={18} aria-hidden />} onClick={onView}>
+          View
         </LabelButton>
-      )}
-      <LabelButton size="sm" icon={<Eye size={18} aria-hidden />} onClick={onView}>
-        View
-      </LabelButton>
-      <LabelButton size="sm" icon={<TrayArrowDown size={18} aria-hidden />} onClick={onRemove}>
-        Remove
-      </LabelButton>
+        <LabelButton size="sm" icon={<TrayArrowDown size={18} aria-hidden />} onClick={onRemove}>
+          Remove
+        </LabelButton>
+      </div>
     </div>
   );
 }
