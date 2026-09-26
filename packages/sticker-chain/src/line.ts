@@ -20,7 +20,16 @@ export function createLineVerifier({
       signal: AbortSignal.timeout(5000),
     });
     if (!response.ok) {
-      throw new Error(`LINE token verification failed with status ${response.status}`);
+      // LINE names the reason ("IdToken expired." and the like); it goes to the server log, never the client.
+      const rejection: unknown = await response.json().catch(() => null);
+      const reason: unknown =
+        rejection && typeof rejection === "object"
+          ? Reflect.get(rejection, "error_description")
+          : undefined;
+      throw new Error(
+        `LINE token verification failed with status ${response.status}` +
+          (typeof reason === "string" ? `: ${reason}` : ""),
+      );
     }
     const claims: unknown = await response.json();
     if (!claims || typeof claims !== "object" || Array.isArray(claims)) {
