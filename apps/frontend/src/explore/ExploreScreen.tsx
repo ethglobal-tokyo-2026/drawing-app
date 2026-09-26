@@ -1,25 +1,33 @@
-import type {
-  ActivityEntry,
-  Explore,
-  LeaderboardRow,
-  Person,
-  Sticker,
-} from "@drawing-app/api/client";
+import type { Explore, LeaderboardRow, Person } from "@drawing-app/api/client";
 import { At, X } from "@phosphor-icons/react";
 import type { TFunction } from "i18next";
-import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { useMe } from "../api/meContext";
 import { useApiQuery, type Query } from "../api/useApiQuery";
 import { toPerson } from "../api/views";
 import { errorReason } from "../i18n/errorMessage";
 import { formatCount } from "../i18n/format";
 import { Trans, useTranslation } from "../i18n/react";
-import { Duration } from "../stickers/Duration";
-import { formatHandle, formatMonthDay, formatNo } from "../stickers/format";
+import { formatHandle } from "../stickers/format";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
-import { REVEAL, revealOnLoad } from "../ui/reveal";
+import { REVEAL } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
+import { useReducedMotion } from "../ui/useReducedMotion";
+import { HitCounter } from "../ui/HitCounter";
+import { LiftedSticker } from "./LiftedSticker";
+import { dayBadge, exploreDay, pileDays, type PileSticker } from "./pileDays";
+import { pileOrigin } from "./pileOrigin";
+import { StickerPile } from "./StickerPile";
 import "./ExploreScreen.css";
 
 interface Props {
@@ -29,27 +37,26 @@ interface Props {
   onOpenMyBoard: () => void;
 }
 
-/** Days turn over at 4:00, so 2:00 still belongs to yesterday. */
-const DAY_TURNOVER_MS = 4 * 60 * 60 * 1000;
 /** Search waits for a pause in typing before it asks the server. */
 const SEARCH_AFTER_MS = 250;
 
-const todayBadge = () => formatMonthDay(Date.now() - DAY_TURNOVER_MS);
+type View = "stickers" | "thisWeek";
 
-/** How long ago `at` was, in its largest whole unit; under a minute is just now. */
-function ago(at: string, t: TFunction): string {
-  const minutes = Math.max(0, Math.floor((Date.now() - Date.parse(at)) / 60_000));
-  if (minutes === 0) return t(($) => $.explore.feed.ago.justNow);
-  if (minutes < 60) return t(($) => $.explore.feed.ago.minutes, { minutes });
-  const hours = Math.floor(minutes / 60);
-  return hours < 24
-    ? t(($) => $.explore.feed.ago.hours, { hours })
-    : t(($) => $.explore.feed.ago.days, { days: Math.floor(hours / 24) });
-}
+const VIEWS: View[] = ["stickers", "thisWeek"];
 
 type Leaderboard = "mostGratitude" | "bestCombo" | "longestStreak";
 
 const LEADERBOARDS: Leaderboard[] = ["mostGratitude", "bestCombo", "longestStreak"];
+
+/** Rows re-deal on a new leaderboard: the old ones fade out, the new ones stick on top down. */
+const ROWS_OUT_MS = 90;
+const ROW_IN_MS = 200;
+const ROW_GAP_MS = 25;
+/** Only the first rows are dealt one by one; the rest land with the last of them. */
+const ROWS_DEALT = 5;
+/** Reduced motion: the rows cross-fade. */
+const ROWS_FADE_MS = 120;
+const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 /** Opens someone's sticker board: yours, or theirs. */
 type Open = (person: Person) => void;
@@ -83,13 +90,6 @@ const boardLabel = (person: Person, meId: string, t: TFunction) =>
   person.id === meId
     ? t(($) => $.explore.stickerBoard.yours)
     : t(($) => $.explore.stickerBoard.theirs, { handle: formatHandle(person.handle ?? "") });
-
-/**
- * A handle as a Trans component, plain or bold. Handles can hold anything but "@", so none goes in
- * as a value: Trans would read a "<b>" in it as markup and a "{{x}}" as a variable.
- */
-const handleOf = (person: Person) => <>{formatHandle(person.handle ?? "")}</>;
-const boldHandleOf = (person: Person) => <b>{formatHandle(person.handle ?? "")}</b>;
 
 function Avatar({ person, size }: { person: Person; size: number }) {
   const view = toPerson(person);
@@ -132,9 +132,7 @@ function PersonRow({
 }
 
 function Figure({ board, value }: { board: Leaderboard; value: number }) {
-  const { t } = useTranslation();
-  if (board === "bestCombo")
-    return <span className="figure">{t(($) => $.explore.figure.hits, { hits: value })}</span>;
+  if (board === "bestCombo") return <HitCounter hits={value} size={23} className="figure" />;
   if (board === "longestStreak")
     return (
       <span className="figure">
@@ -148,6 +146,154 @@ function Figure({ board, value }: { board: Leaderboard; value: number }) {
   return <span className="figure">{formatCount(value)}</span>;
 }
 
+/**
+ * Tabs as one label sliding along a track to the current tab, which the arrow keys move too. Each
+ * tab takes the shared press, since they're selectable labels.
+ */
+function SlidingTabs<T extends string>({
+  tabs,
+  value,
+  onChange,
+  label,
+  labelOf,
+  id,
+  className,
+  disabled = false,
+}: {
+  tabs: readonly T[];
+  value: T;
+  onChange: (tab: T) => void;
+  label: string;
+  labelOf: (tab: T) => string;
+  /** Starts the tabs' ids and names their panel, `${id}-panel`. */
+  id: string;
+  className: string;
+  disabled?: boolean;
+}) {
+  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+  const index = Math.max(0, tabs.indexOf(value));
+  const move = (to: number) => {
+    const next = (to + tabs.length) % tabs.length;
+    onChange(tabs[next]);
+    buttons.current[next]?.focus();
+  };
+  return (
+    <div
+      className={`sliding-tabs ${className}`}
+      role="tablist"
+      aria-label={label}
+      style={{ "--i": index, "--n": tabs.length } as CSSProperties}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowRight") move(index + 1);
+        else if (event.key === "ArrowLeft") move(index - 1);
+        else if (event.key === "Home") move(0);
+        else if (event.key === "End") move(tabs.length - 1);
+        else return;
+        event.preventDefault();
+      }}
+    >
+      <span className="sliding-tabs__label" aria-hidden="true" />
+      {tabs.map((tab, i) => (
+        <button
+          key={tab}
+          ref={(button) => {
+            buttons.current[i] = button;
+          }}
+          type="button"
+          role="tab"
+          id={`${id}-${tab}`}
+          aria-selected={tab === value}
+          aria-controls={`${id}-panel`}
+          tabIndex={tab === value ? 0 : -1}
+          className={tab === value ? "selected" : ""}
+          data-press
+          disabled={disabled}
+          onClick={() => onChange(tab)}
+        >
+          {labelOf(tab)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * A new leaderboard's rows re-deal: the old list fades out, then the new rows stick on from the
+ * top. Taps during the fade go straight to the last one tapped. Under reduced motion they cross-fade.
+ */
+function useRowDeal(first: Leaderboard) {
+  const reduced = useReducedMotion();
+  const [board, setBoard] = useState(first);
+  const [shown, setShown] = useState(first);
+  // Counts deals, so one lands even when the rows it deals are the ones already shown.
+  const [deals, setDeals] = useState(0);
+  const list = useRef<HTMLOListElement>(null);
+  const fading = useRef<{ to: Leaderboard; fade: Animation } | null>(null);
+  const deal = useRef(false);
+
+  useEffect(() => () => fading.current?.fade.cancel(), []);
+
+  const dealRows = (to: Leaderboard) => {
+    deal.current = true;
+    setShown(to);
+    setDeals((n) => n + 1);
+  };
+
+  const select = (to: Leaderboard) => {
+    if (to === board) return;
+    setBoard(to);
+    const rows = list.current;
+    if (fading.current) {
+      fading.current.to = to;
+      return;
+    }
+    if (!rows || reduced) {
+      dealRows(to);
+      return;
+    }
+    const fade = rows.animate([{ opacity: 1 }, { opacity: 0 }], {
+      duration: ROWS_OUT_MS,
+      easing: "linear",
+      fill: "forwards",
+    });
+    fading.current = { to, fade };
+    fade.finished.then(
+      () => dealRows(fading.current?.to ?? to),
+      // Cancelled: the list went away mid-fade.
+      () => {},
+    );
+  };
+
+  useLayoutEffect(() => {
+    const rows = list.current;
+    if (!deal.current || !rows) return;
+    deal.current = false;
+    // The new rows are in, so the faded list can show again under them.
+    fading.current?.fade.cancel();
+    fading.current = null;
+    if (reduced) {
+      rows.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ROWS_FADE_MS });
+      return;
+    }
+    [...rows.children].forEach((row, i) =>
+      row.animate(
+        [
+          { opacity: 0, transform: "translateY(6px)" },
+          { opacity: 1, transform: "none" },
+        ],
+        {
+          duration: ROW_IN_MS,
+          delay: Math.min(i, ROWS_DEALT - 1) * ROW_GAP_MS,
+          easing: EASE_OUT,
+          fill: "backwards",
+        },
+      ),
+    );
+  }, [deals, reduced]);
+
+  return { board, shown, select, list };
+}
+
 function ThisWeek({
   leaderboards,
   meId,
@@ -158,112 +304,45 @@ function ThisWeek({
   open: Open;
 }) {
   const { t } = useTranslation();
-  const [board, setBoard] = useState<Leaderboard>("mostGratitude");
-  const rows: LeaderboardRow[] = leaderboards[board];
+  const { board, shown, select, list } = useRowDeal("mostGratitude");
+  const rows: LeaderboardRow[] = leaderboards[shown];
 
   return (
     <section className={`${REVEAL} explore-section`}>
-      <header className="section-head">
-        <h2>{t(($) => $.explore.thisWeek.title)}</h2>
-        <span className="fine muted">{t(($) => $.explore.thisWeek.resets)}</span>
-      </header>
-      <div
+      <h2 className="visually-hidden">{t(($) => $.explore.thisWeek.title)}</h2>
+      <SlidingTabs
+        tabs={LEADERBOARDS}
+        value={board}
+        onChange={select}
+        label={t(($) => $.explore.thisWeek.leaderboards)}
+        labelOf={(b) => t(($) => $.explore.leaderboards[b])}
+        id="leaderboard"
         className="leaderboard-tabs"
-        role="tablist"
-        aria-label={t(($) => $.explore.thisWeek.leaderboards)}
-      >
-        {LEADERBOARDS.map((b) => (
-          <button
-            key={b}
-            type="button"
-            role="tab"
-            aria-selected={board === b}
-            className={board === b ? "selected" : ""}
-            onClick={() => setBoard(b)}
-          >
-            {t(($) => $.explore.leaderboards[b])}
-          </button>
-        ))}
-      </div>
-      <ol className="leaderboard" role="tabpanel">
-        {rows.length === 0 && (
-          <li className="fine muted leaderboard-empty">{t(($) => $.explore.thisWeek.empty)}</li>
-        )}
-        {rows.map((row, i) => (
-          <PersonRow
-            key={row.person.id}
-            person={row.person}
-            meId={meId}
-            open={open}
-            lead={
-              <>
-                <span className="rank">{i + 1}</span>
-                <Avatar person={row.person} size={40} />
-              </>
-            }
-            trail={<Figure board={board} value={row.value} />}
-          />
-        ))}
-      </ol>
-    </section>
-  );
-}
-
-const StickerImage = ({ sticker, className }: { sticker: Sticker; className: string }) => (
-  <img
-    ref={revealOnLoad}
-    src={sticker.images.png}
-    alt=""
-    className={`sticker-image reveal-img ${className}`}
-  />
-);
-
-/** What happened, as one sentence with its people in bold. */
-function FeedLine({ entry, meId }: { entry: ActivityEntry; meId: string }) {
-  if (entry.type === "sealed")
-    return (
-      <Trans
-        i18nKey={($) => $.explore.feed.sealed}
-        components={{ artist: boldHandleOf(entry.sticker.artist) }}
       />
-    );
-  const giver = boldHandleOf(entry.giver);
-  return entry.receiver.id === meId ? (
-    <Trans i18nKey={($) => $.explore.feed.gaveYou} components={{ giver, b: <b /> }} />
-  ) : (
-    <Trans
-      i18nKey={($) => $.explore.feed.gave}
-      components={{ giver, receiver: boldHandleOf(entry.receiver) }}
-    />
-  );
-}
-
-function FeedPost({ entry, meId, open }: { entry: ActivityEntry; meId: string; open: Open }) {
-  const { t } = useTranslation();
-  const who = entry.type === "sealed" ? entry.sticker.artist : entry.giver;
-  return (
-    <article className="feed-post">
-      <Pressable className="feed-head" onClick={() => open(who)} label={boardLabel(who, meId, t)}>
-        <span className="feed-avatar">
-          <Avatar person={who} size={36} />
-        </span>
-        <p>
-          <FeedLine entry={entry} meId={meId} />
-        </p>
-        <span className="fine muted">{ago(entry.at, t)}</span>
-      </Pressable>
-      <StickerImage sticker={entry.sticker} className="feed-art" />
-      <p className="fine muted feed-meta">
-        <Trans
-          i18nKey={($) => $.explore.feed.caption}
-          values={{ number: formatNo(entry.sticker.number) }}
-          components={{
-            duration: <Duration seconds={entry.sticker.timeUsed} />,
-            artist: handleOf(entry.sticker.artist),
-          }}
-        />
-      </p>
-    </article>
+      <div role="tabpanel" id="leaderboard-panel" aria-labelledby={`leaderboard-${board}`}>
+        <ol ref={list} className="leaderboard">
+          {rows.length === 0 && (
+            <li className="leaderboard-empty fine muted">{t(($) => $.explore.thisWeek.empty)}</li>
+          )}
+          {rows.map((row, i) => (
+            <PersonRow
+              key={row.person.id}
+              person={row.person}
+              meId={meId}
+              open={open}
+              lead={
+                <>
+                  <span className="rank">{i + 1}</span>
+                  <Avatar person={row.person} size={40} />
+                </>
+              }
+              trail={<Figure board={shown} value={row.value} />}
+            />
+          ))}
+        </ol>
+      </div>
+      <p className="fine muted week-resets">{t(($) => $.explore.thisWeek.resets)}</p>
+    </section>
   );
 }
 
@@ -283,34 +362,28 @@ function PersonRowsLoading({ rows, ranked }: { rows: number; ranked: boolean }) 
   ));
 }
 
-/** Explore's own sections in outline while it loads, so nothing jumps as they fill in. */
-function TodayLoading() {
+/** The one line a screen reader hears while Explore loads. */
+function LoadingStatus() {
+  const { t } = useTranslation();
+  return (
+    <p className="visually-hidden" role="status">
+      {t(($) => $.explore.loading)}
+    </p>
+  );
+}
+
+/** This week in outline while it loads. */
+function ThisWeekLoading() {
   const { t } = useTranslation();
   return (
     <>
-      <p className="visually-hidden" role="status">
-        {t(($) => $.explore.loading)}
-      </p>
+      <LoadingStatus />
       <section className="explore-section" aria-hidden="true">
-        <header className="section-head">
-          <h2>{t(($) => $.explore.today.title)}</h2>
-          <span className="date-badge">{todayBadge()}</span>
-        </header>
-        <ul className="todays-stickers">
-          {Array.from({ length: 5 }, (_, i) => (
-            <li key={i} className="today-sticker">
-              <Skeleton className="today-art" width={72} height={72} />
-              <Skeleton width={52} height={10} />
-            </li>
-          ))}
-        </ul>
-      </section>
-      <section className="explore-section" aria-hidden="true">
-        <header className="section-head">
-          <h2>{t(($) => $.explore.thisWeek.title)}</h2>
-          <span className="fine muted">{t(($) => $.explore.thisWeek.resets)}</span>
-        </header>
-        <div className="leaderboard-tabs">
+        <div
+          className="sliding-tabs leaderboard-tabs"
+          style={{ "--i": 0, "--n": 3 } as CSSProperties}
+        >
+          <span className="sliding-tabs__label" />
           {LEADERBOARDS.map((b, i) => (
             <button key={b} type="button" className={i === 0 ? "selected" : ""} disabled>
               {t(($) => $.explore.leaderboards[b])}
@@ -321,18 +394,44 @@ function TodayLoading() {
           <PersonRowsLoading rows={3} ranked />
         </ol>
       </section>
-      <section className="explore-section feed" aria-hidden="true">
-        {Array.from({ length: 2 }, (_, i) => (
-          <div key={i} className="feed-post">
-            <div className="feed-head">
-              <Skeleton width={36} height={36} round />
-              <Skeleton width="55%" height={13} />
-            </div>
-            <Skeleton className="feed-art" width={112} height={112} />
-            <Skeleton width={150} height={10} />
-          </div>
-        ))}
-      </section>
+    </>
+  );
+}
+
+/** Where faint sticker shapes heap on today's floor while the pile loads: x in %, y from the floor. */
+const LOADING_HEAP = [
+  { x: 14, y: 96, size: 84, turn: -8 },
+  { x: 42, y: 90, size: 96, turn: 5 },
+  { x: 70, y: 98, size: 80, turn: -4 },
+  { x: 28, y: 168, size: 78, turn: 9 },
+  { x: 57, y: 172, size: 88, turn: -6 },
+];
+
+/** Today's floor in outline while the pile loads; the stickers fall in once it has. */
+function PileLoading() {
+  const { t } = useTranslation();
+  const [date] = useState(() => dayBadge(exploreDay(Date.now())));
+  return (
+    <>
+      <LoadingStatus />
+      <div className="sticker-pile" aria-hidden="true">
+        <div className="pile-day__edge">
+          <span className="pile-day__badge is-today">
+            {t(($) => $.explore.pile.todayBadge, { date })}
+          </span>
+        </div>
+        <div className="pile-loading">
+          {LOADING_HEAP.map((spot) => (
+            <Skeleton
+              key={spot.x}
+              className="pile-loading__sticker"
+              width={spot.size}
+              height={spot.size * 0.86}
+              style={{ left: `${spot.x}%`, bottom: spot.y - spot.size, rotate: `${spot.turn}deg` }}
+            />
+          ))}
+        </div>
+      </div>
     </>
   );
 }
@@ -418,47 +517,30 @@ function SearchResults({ query, meId, open }: { query: string; meId: string; ope
   );
 }
 
-function Today({ explore, meId, open }: { explore: Explore; meId: string; open: Open }) {
-  const { t } = useTranslation();
+/** The pile, once Explore has arrived; a tapped sticker lifts off it into a sheet. */
+function Stickers({ explore, meId, open }: { explore: Explore; meId: string; open: Open }) {
+  const days = useMemo(() => pileDays(explore), [explore]);
+  // Paging in the sheet runs in the pile's reading order: newest day, newest sticker first.
+  const order = useMemo(() => days.flatMap(({ stickers }) => stickers.toReversed()), [days]);
+  const [lifted, setLifted] = useState<number | null>(null);
+  const lift = (pile: PileSticker) =>
+    setLifted(order.findIndex((p) => p.sticker.id === pile.sticker.id));
   return (
     <>
-      <section className={`${REVEAL} explore-section`}>
-        <header className="section-head">
-          <h2>{t(($) => $.explore.today.title)}</h2>
-          <span className="date-badge">{todayBadge()}</span>
-        </header>
-        {explore.todaysStickers.length === 0 ? (
-          <p className="fine muted">{t(($) => $.explore.today.none)}</p>
-        ) : (
-          <ul className="todays-stickers">
-            {explore.todaysStickers.map((sticker) => (
-              <li key={sticker.id}>
-                <Pressable
-                  className="today-sticker"
-                  onClick={() => open(sticker.artist)}
-                  label={boardLabel(sticker.artist, meId, t)}
-                >
-                  <StickerImage sticker={sticker} className="today-art" />
-                  <span className="fine">{formatHandle(sticker.artist.handle ?? "")}</span>
-                </Pressable>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <ThisWeek leaderboards={explore.leaderboards} meId={meId} open={open} />
-
-      <section className={`${REVEAL} explore-section feed`}>
-        {explore.activity.map((entry) => (
-          <FeedPost
-            key={`${entry.type}-${entry.sticker.id}-${entry.at}`}
-            entry={entry}
-            meId={meId}
-            open={open}
-          />
-        ))}
-      </section>
+      <StickerPile days={days} meId={meId} onLift={lift} />
+      {lifted !== null && lifted >= 0 && (
+        <LiftedSticker
+          stickers={order}
+          index={lifted}
+          onIndexChange={setLifted}
+          onClose={() => setLifted(null)}
+          onGoToBoard={(artist) => {
+            setLifted(null);
+            open(artist);
+          }}
+          originOf={pileOrigin}
+        />
+      )}
     </>
   );
 }
@@ -492,8 +574,24 @@ export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
     const id = setTimeout(() => setSearched(q), SEARCH_AFTER_MS);
     return () => clearTimeout(id);
   }, [q]);
+  const [view, setView] = useState<View>("stickers");
   const explore = useApiQuery("explore", (api) => api.explore());
   const open: Open = (person) => (person.id === me.id ? onOpenMyBoard() : onOpenArtist(person));
+
+  const shown =
+    explore.state === "failed" ? (
+      <Failed title={t(($) => $.explore.failed.explore)} query={explore} />
+    ) : view === "stickers" ? (
+      explore.state === "ready" ? (
+        <Stickers explore={explore.data} meId={me.id} open={open} />
+      ) : (
+        <PileLoading />
+      )
+    ) : explore.state === "ready" ? (
+      <ThisWeek leaderboards={explore.data.leaderboards} meId={me.id} open={open} />
+    ) : (
+      <ThisWeekLoading />
+    );
 
   return (
     <div className="explore">
@@ -524,12 +622,26 @@ export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
 
       {q ? (
         searched && <SearchResults query={searched} meId={me.id} open={open} />
-      ) : explore.state === "ready" ? (
-        <Today explore={explore.data} meId={me.id} open={open} />
-      ) : explore.state === "failed" ? (
-        <Failed title={t(($) => $.explore.failed.explore)} query={explore} />
       ) : (
-        <TodayLoading />
+        <>
+          <SlidingTabs
+            tabs={VIEWS}
+            value={view}
+            onChange={setView}
+            label={t(($) => $.explore.views.label)}
+            labelOf={(v) => t(($) => $.explore.views[v])}
+            id="explore-view"
+            className="view-switch"
+          />
+          <div
+            className="explore-view"
+            role="tabpanel"
+            id="explore-view-panel"
+            aria-labelledby={`explore-view-${view}`}
+          >
+            {shown}
+          </div>
+        </>
       )}
     </div>
   );

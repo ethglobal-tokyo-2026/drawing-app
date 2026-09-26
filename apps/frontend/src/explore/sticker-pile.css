@@ -1,0 +1,289 @@
+/* ---------- Explore's sticker pile ----------
+   Each day is a heap on its own perforated floor. Positions come from pileLayout in pile units,
+   360 across on every phone; --k scales a unit to the pile's width in pixels. */
+
+.sticker-pile {
+  --k: 1.0833;
+  position: relative;
+  flex: none;
+  /* Edge to edge: the heap runs under the screen's side padding. */
+  margin: -6px -16px 0;
+  /* Falling stickers start above this edge, so they drop in from under the view switch. */
+  overflow: hidden;
+}
+
+.pile-day {
+  position: relative;
+}
+
+/* A day's top edge: a perforation, the house's tear-here line, with the day's dot badge on it. */
+.pile-day__edge {
+  position: relative;
+  height: 34px;
+}
+
+.pile-day__edge::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 14px;
+  height: 3px;
+  background: radial-gradient(circle, rgba(28, 24, 36, 0.22) 0 1.2px, transparent 1.5px) 0 50% / 7px
+    3px repeat-x;
+}
+
+/* A dot badge stuck on the perforation at the house tilt: the day's date, today's in Seal Yellow. */
+.pile-day__badge {
+  position: absolute;
+  left: 16px;
+  top: 3px;
+  padding: 4px 8px 3px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--liner-lift);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    var(--shadow-label);
+  font-family: var(--font-puffy);
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  rotate: var(--tilt);
+}
+
+.pile-day__badge.is-today {
+  background: var(--seal);
+}
+
+.pile-day__heap {
+  position: relative;
+  height: calc(var(--hh) * var(--k) * 1px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The last day's floor. */
+.pile-floor {
+  height: 12px;
+  background: radial-gradient(circle, rgba(28, 24, 36, 0.22) 0 1.2px, transparent 1.5px) 0 0 / 7px
+    3px repeat-x;
+}
+
+/* ---------- A sticker in the pile ---------- */
+
+.pile-sticker {
+  position: absolute;
+  left: calc(var(--x) * var(--k) * 1px);
+  top: calc(var(--y) * var(--k) * 1px);
+  width: calc(var(--w) * var(--k) * 1px);
+  height: calc(var(--h) * var(--k) * 1px);
+  z-index: var(--z);
+}
+
+/* The button is the sticker's name for screen readers and its keyboard stop; taps land only on
+   its cut line and its tags, so a tap on a clear corner reaches the sticker underneath. */
+.pile-sticker__button {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  pointer-events: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pile-sticker__button:focus-visible {
+  outline: none;
+}
+
+/* What falls: the sticker and its tags, together. */
+.pile-sticker__drop {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 85%;
+  transition:
+    opacity 180ms var(--ease-out),
+    translate 180ms var(--ease-out);
+}
+
+.pile-sticker__art {
+  position: absolute;
+  inset: 0;
+  rotate: var(--r);
+}
+
+/* Flat: the image's own cut, white edge, cast and baked resin, with no live light and no foil. */
+.pile-sticker__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Its shadow on the liner while it's in the air; only transform and opacity move it. */
+.pile-sticker__air {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: brightness(0) blur(3px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pile-sticker__hit {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* The house focus ring, round the cut. */
+.pile-sticker__ring {
+  position: absolute;
+  border-radius: 10px;
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* A focused sticker rises to the top of the pile and lifts 2px. */
+.pile-sticker:focus-within {
+  z-index: 100000;
+}
+
+.pile-sticker__button:focus-visible .pile-sticker__drop {
+  translate: 0 -2px;
+}
+
+.pile-sticker__button:focus-visible .pile-sticker__ring {
+  opacity: 1;
+}
+
+/* Waiting for its image, out of sight, before it falls. */
+.pile-sticker[data-falling="waiting"] .pile-sticker__drop {
+  opacity: 0;
+  transition: none;
+}
+
+/* Lifted off the pile: its spot keeps a faint ghost. */
+.pile-sticker[data-lifted] .pile-sticker__drop {
+  opacity: 0.18;
+}
+
+/* ---------- Name tags ---------- */
+
+/* Hung across the sticker's lower left edge, turned a little against it. */
+.pile-tags {
+  position: absolute;
+  left: calc(var(--tx) * var(--k) * 1px);
+  top: calc(var(--ty) * var(--k) * 1px);
+  width: calc(var(--tw) * var(--k) * 1px);
+  height: calc(var(--th) * var(--k) * 1px);
+  rotate: var(--tr);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Liner Lift label stock: the artist's picture and handle. */
+.pile-tag {
+  position: absolute;
+  left: calc(var(--tag-x, 0) * var(--k) * 1px);
+  top: calc(var(--tag-y, 0) * var(--k) * 1px);
+  display: inline-flex;
+  align-items: center;
+  gap: calc(4px * var(--k));
+  max-width: calc(var(--tag-w) * var(--k) * 1px);
+  height: calc(20px * var(--k));
+  padding: 0 calc(8px * var(--k)) 0 calc(2px * var(--k));
+  border-radius: 999px;
+  background: var(--liner-lift);
+  box-shadow:
+    0 0 0 0.5px var(--rule-strong),
+    var(--shadow-label);
+  color: var(--ink);
+  font-size: calc(11px * var(--k));
+  font-weight: 750;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.pile-tag .photo-sticker {
+  width: calc(16px * var(--k));
+  height: calc(16px * var(--k));
+}
+
+.pile-tag__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Aqua means giving: who a given sticker went to. */
+.pile-tag--to {
+  padding: 0 calc(8px * var(--k));
+  background: var(--aqua);
+  box-shadow:
+    0 0 0 0.5px rgba(28, 24, 36, 0.24),
+    var(--shadow-label);
+}
+
+/* NEW since your last look: a Seal Yellow pip on the tag's corner. */
+.pile-tag__new {
+  position: absolute;
+  right: calc(-3px * var(--k));
+  top: calc(-3px * var(--k));
+  width: calc(10px * var(--k));
+  height: calc(10px * var(--k));
+  border-radius: 50%;
+  background: var(--seal);
+  box-shadow:
+    inset 0 0 0 1px rgba(28, 24, 36, 0.34),
+    1px 1.5px 2px rgba(28, 24, 36, 0.3);
+}
+
+/* ---------- An empty day ---------- */
+
+.pile-day__empty {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  height: calc(var(--hh) * var(--k) * 1px);
+  padding: 0 32px;
+  text-align: center;
+}
+
+/* The kiss-cut outline a sticker leaves, faint and dashed, where the first one will land. */
+.pile-day__outline {
+  width: 84px;
+  height: 72px;
+  fill: none;
+  stroke: var(--ink-soft);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+  rotate: -6deg;
+}
+
+.pile-day__empty p {
+  max-width: 30ch;
+  margin: 0;
+  color: var(--graphite);
+  font-size: 13px;
+  text-wrap: balance;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pile-sticker__drop {
+    transition: none;
+  }
+}

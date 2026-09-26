@@ -27,84 +27,94 @@ export const explore = {
       },
     },
   },
-  /** Explore tab, on opening it: fine print under the search field while today's stickers, the leaderboards and the activity feed load */
+  /** Explore tab, on opening it: what screen readers hear while the sticker pile or the leaderboards load */
   loading: { en: "Loading…", ja: "読み込み中…" },
   /** Explore tab, a search result or leaderboard row that is you: under your handle, where other people's rows show their LINE name */
   you: { en: "You", ja: "あなた" },
   /** Names the sticker board a tap opens, for assistive tech. */
   stickerBoard: {
-    /** Explore tab: screen readers' name for anything of yours that opens your sticker board when tapped: your search result or leaderboard row, your sticker in Today's stickers, or your post's head in the activity feed */
+    /** Explore tab: screen readers' name for your search result or leaderboard row, which opens your sticker board when tapped */
     yours: { en: "Your sticker board", ja: "あなたのシールボード" },
-    /** Explore tab: screen readers' name for someone's search result or leaderboard row, their sticker in Today's stickers, or their post's head in the activity feed, which opens their sticker board when tapped */
+    /** Explore tab: screen readers' name for someone's search result or leaderboard row, which opens their sticker board when tapped */
     theirs: { en: "{{handle}}'s sticker board", ja: "{{handle}}さんのシールボード" },
   },
-  today: {
-    /** Explore tab, below the search field: the heading of the first section, today's sealed stickers, beside a date badge */
-    title: { en: "Today’s stickers", ja: "今日のシール" },
-    /** Explore tab, Today's stickers section: fine print in place of the stickers when no one has sealed one today */
-    none: {
-      en: "No one has sealed a sticker yet today.",
-      ja: "今日はまだ誰もシールを仕上げていません。",
+  /** The switch under the search between Explore's two views. */
+  views: {
+    /** Explore tab, under the search field: screen readers' name for the switch between the sticker pile and This week */
+    label: { en: "Explore", ja: "さがす" },
+    /** Explore tab, under the search field: the switch's first half, which shows the sticker pile */
+    stickers: { en: "Stickers", ja: "シール" },
+    /** Explore tab, under the search field: the switch's second half, which shows this week's leaderboards */
+    thisWeek: { en: "This week", ja: "今週" },
+  },
+  /** The sticker pile: each day's stickers heaped on its own perforated floor. */
+  pile: {
+    /** Explore tab, Stickers view: screen readers' heading for today's heap */
+    today: { en: "Today", ja: "今日" },
+    /** Explore tab, Stickers view: screen readers' heading for yesterday's heap; older days are their date, in the app's language */
+    yesterday: { en: "Yesterday", ja: "昨日" },
+    /** Explore tab, Stickers view: the yellow dot badge on today's perforation, with the date, such as 9.26 */
+    todayBadge: { en: "Today {{date}}", ja: "今日{{date}}" },
+    /** Explore tab, Stickers view: screen readers' name for a sticker in the pile, such as "No.0147 by @mika, 5 min ago"; a tap opens it */
+    sticker: { en: "{{number}} by {{artist}}, {{ago}}", ja: "{{artist}}の{{number}}、{{ago}}" },
+    /** Explore tab, Stickers view: screen readers' name for a sticker in the pile that was given, with who it last went to */
+    stickerGiven: {
+      en: "{{number}} by {{artist}}, {{ago}}, given to {{receiver}}",
+      ja: "{{artist}}の{{number}}、{{ago}}、{{receiver}}さんに贈られました",
+    },
+    /** Explore tab, Stickers view: the aqua tag under a given sticker's name tag; <handle/> is who it went to */
+    to: { en: "to <handle/>", ja: "<handle/>さんへ" },
+    /** Explore tab, Stickers view: the line under a faint sticker outline on today's floor while no one has sealed a sticker today */
+    empty: {
+      en: "The first sticker sealed today lands here.",
+      ja: "今日さいしょに仕上がったシールが、ここに落ちてきます。",
+    },
+    /** Explore tab, Stickers view: what screen readers hear once as the pile opens, when one sticker arrived since your last look */
+    arrivals_one: { en: "{{count}} new sticker since you last looked" },
+    /** Explore tab, Stickers view: what screen readers hear once as the pile opens, when stickers arrived since your last look */
+    arrivals_other: {
+      en: "{{count}} new stickers since you last looked",
+      ja: "前に見たときから、新しいシールが{{count}}枚あります",
+    },
+    /** How long ago a sticker was sealed, in its largest whole unit. */
+    ago: {
+      /** Explore tab, Stickers view: the end of a sticker's name for screen readers, sealed under a minute ago */
+      justNow: { en: "just now", ja: "たった今" },
+      /** Explore tab, Stickers view: the end of a sticker's name for screen readers, sealed a minute to an hour ago */
+      minutes: { en: "{{minutes}} min ago", ja: "{{minutes}}分前" },
+      /** Explore tab, Stickers view: the end of a sticker's name for screen readers, sealed an hour to a day ago */
+      hours: { en: "{{hours}} hr ago", ja: "{{hours}}時間前" },
+      /** Explore tab, Stickers view: the end of a sticker's name for screen readers, sealed a day ago */
+      days_one: { en: "{{count}} day ago" },
+      /** Explore tab, Stickers view: the end of a sticker's name for screen readers, sealed days ago */
+      days_other: { en: "{{count}} days ago", ja: "{{count}}日前" },
     },
   },
   thisWeek: {
-    /** Explore tab: the heading of the leaderboards section, below Today's stickers */
+    /** Explore tab, This week view: screen readers' heading for the leaderboards */
     title: { en: "This week", ja: "今週" },
-    /** Explore tab, leaderboards section: fine print beside the heading, when the week's leaderboards start over */
+    /** Explore tab, This week view: fine print under the leaderboard, when the week's leaderboards start over */
     resets: { en: "Resets Monday 4:00", ja: "月曜4:00にリセット" },
-    /** Explore tab, leaderboards section: screen readers' name for the row of three leaderboard tabs */
+    /** Explore tab, This week view: screen readers' name for the row of three leaderboard tabs */
     leaderboards: { en: "This week's leaderboards", ja: "今週のランキング" },
-    /** Explore tab, leaderboards section: fine print in place of the rows when the chosen leaderboard has no one on it this week */
+    /** Explore tab, This week view: fine print in place of the rows when the chosen leaderboard has no one on it this week */
     empty: { en: "No one is on it yet this week.", ja: "今週はまだ誰もランクインしていません。" },
   },
   /** The leaderboards' tabs. */
   leaderboards: {
-    /** Explore tab, leaderboards section: the first tab, ranking people by the gratitude they earned this week */
+    /** Explore tab, This week view: the first tab, ranking people by the gratitude they earned this week */
     mostGratitude: { en: "Most gratitude", ja: "感謝の数" },
-    /** Explore tab, leaderboards section: the second tab, ranking people by the most hits in one gratitude combo this week */
+    /** Explore tab, This week view: the second tab, ranking people by the most hits in one gratitude combo this week */
     bestCombo: { en: "Best combo", ja: "最大コンボ" },
-    /** Explore tab, leaderboards section: the third tab, ranking people by their current streak of days sealing a sticker */
+    /** Explore tab, This week view: the third tab, ranking people by their current streak of days sealing a sticker */
     longestStreak: { en: "Longest streak", ja: "連続日数" },
   },
   /** A leaderboard row's figure. A unit in <small> is set small beside its number. */
   figure: {
-    /** Explore tab, Best combo leaderboard: the figure at the end of each row, that person's hits in their best combo */
-    hits: { en: "×{{hits}}", ja: "×{{hits}}" },
     /** Explore tab, Longest streak leaderboard: the figure at the end of a row whose streak is one day, the unit set small */
     streak_one: { en: "{{count}}<small>day</small>" },
     /** Explore tab, Longest streak leaderboard: the figure at the end of each row, that person's streak in days, the unit set small */
     streak_other: { en: "{{count}}<small>days</small>", ja: "{{count}}<small>日</small>" },
-  },
-  /** The activity feed. <artist/>, <giver/> and <receiver/> are handles. */
-  feed: {
-    /** Explore tab, activity feed: a post's line when someone sealed a sticker, their handle in bold */
-    sealed: { en: "<artist/> made a sticker", ja: "<artist/>さんがシールをつくりました" },
-    /** Explore tab, activity feed: a post's line when someone gave a sticker to someone else, both handles in bold */
-    gave: {
-      en: "<giver/> gave a sticker to <receiver/>",
-      ja: "<giver/>さんが<receiver/>さんにシールを贈りました",
-    },
-    /** Explore tab, activity feed: a post's line when someone gave a sticker to you, their handle and "you" in bold */
-    gaveYou: {
-      en: "<giver/> gave a sticker to <b>you</b>",
-      ja: "<giver/>さんが<b>あなた</b>にシールを贈りました",
-    },
-    /** Explore tab, activity feed: fine print under a post's sticker: its number, drawing time and artist's handle */
-    caption: {
-      en: "{{number}} · <duration/> · <artist/>",
-      ja: "{{number}}・<duration/>・<artist/>",
-    },
-    /** How long ago, in its largest whole unit. */
-    ago: {
-      /** Explore tab, activity feed: fine print at the end of a post's head, for something under a minute ago */
-      justNow: { en: "just now", ja: "たった今" },
-      /** Explore tab, activity feed: fine print at the end of a post's head, how long ago it happened, from a minute to an hour */
-      minutes: { en: "{{minutes}} min", ja: "{{minutes}}分前" },
-      /** Explore tab, activity feed: fine print at the end of a post's head, how long ago it happened, from an hour to a day */
-      hours: { en: "{{hours}} hr", ja: "{{hours}}時間前" },
-      /** Explore tab, activity feed: fine print at the end of a post's head, how long ago it happened, a day or more */
-      days: { en: "{{days}} d", ja: "{{days}}日前" },
-    },
   },
   failed: {
     /** Explore tab, when it fails to load: the heading of the error, over the reason and a Try again button */

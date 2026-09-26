@@ -332,7 +332,7 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 
 **The One Meaning Rule.** Each hue means one thing: yellow is now, aqua is giving, pink is gratitude and you, grape is received and offers, blue is the Shop and reserve tickets, tangerine is the streak, and tomato is can't-undo. Don't pick a hue for looks.
 
-**The Other Hand Rule.** Foil appears only on a sticker drawn by someone other than the board's owner (on your tray's sheets, someone other than you). Your own stickers keep the plain white die-cut edge; the pearl rim is retired. Surfaces that aren't a board (Explore's feed, the leaderboard) show no foil. It's never a rarity grade.
+**The Other Hand Rule.** Foil appears only on a sticker drawn by someone other than the board's owner (on your tray's sheets, someone other than you). Your own stickers keep the plain white die-cut edge; the pearl rim is retired. Surfaces that aren't a board (Explore's sticker pile, the leaderboard) show no foil. It's never a rarity grade.
 
 **The Platform Green Rule.** The world has no green. LINE's green appears only inside LINE's own mocked UI (the chat, the Gift Message, the consent and share screens, and the app badge).
 
@@ -557,6 +557,20 @@ Who drew a foil sticker: a Liner Lift pill (40px) with the artist's LINE picture
 - **Detail:** under the big sticker, the chip leads the fine print. Your own stickers never get a chip.
 - **Plain:** off a board, where foil never shows (Explore's lifted sticker), the chip has no ring: the picture keeps its white edge, cut from the pill by a kiss-cut, and casts a small shadow.
 
+### Explore
+
+Browse what everyone draws, see who drew each sticker, and get to that artist's board. Under the search, a two-way switch picks **Stickers** or **This week**. Search results replace both views.
+
+- **The view switch:** a Liner Deep track with one label stuck on the current view, Soda Aqua for the switch and Bonbon Pink for the leaderboard tabs inside This week. The label slides to the tapped tab in 260ms on the ease-out; the text changes color in 140ms. The tabs take the shared press and the arrow keys. Reduced motion moves the label at once.
+- **This week:** the three leaderboards, moved as they were, with "Resets Monday 4:00" in fine print under the list. On a new board the old rows fade out in 90ms and the new ones stick on from the top, 25ms apart (the first five, the rest together), each rising 6px over 200ms. Reduced motion cross-fades them in 120ms. Best combo is the hit counter.
+- **The pile:** Explore's stickers are a heap of real die-cut stickers, never a grid or a feed. Each Tokyo day (turning over at 4:00) is its own layer, newest first: a perforation row across the whole width as its top edge, with the day's dot badge stuck on it at the house tilt (Seal Yellow "Today 9.26", Liner Lift "9.25" for older days), then that day's heap resting on the next day's perforation. The last day ends on a bare perforation.
+- **The heap:** stickers drop onto the floor oldest first, so the newest lie on top: at a few seeded, middle-leaning spots, sliding off anything they can't balance on, sinking into what they land on and staying at the lowest of those drops, turned up to 17° either way. The layout is 360 units across on every phone, seeded by the day and the sticker, so the pile looks the same on every visit and a new sticker moves nothing beneath it. Stickers keep their size however many share a day.
+- **Flat:** pile stickers are the sealed image alone, with its own cut, white edge, cast and baked resin: no live light and no foil. Only the lifted sticker gets live resin. A tap lands only on the cut line or the tags, so a clear corner lets the tap through to the sticker beneath.
+- **Name tags:** every sticker wears one across its lower left edge, turned a little against the sticker: a Liner Lift pill with the artist's LINE picture as a 16px photo sticker (letter fallback) and "@handle" in 11px bold. A given sticker adds a Soda Aqua "to @ken" tag under it. No later sticker or tag ever covers an earlier tag.
+- **Empty:** a day with no stickers yet shows a faint dashed kiss-cut outline on its floor and "The first sticker sealed today lands here."
+- **The fall-in:** on a first look, today's newest 14 fall in from under the view switch, oldest first, 55ms apart: 620ms of gravity (slow off the top, fastest as it lands) while spinning 24° into their turn, then a squash to 1.05 × 0.93, a 5px rebound and the stick settle. A shadow of the sticker in the air converges from the peeling offset to the sticker's own cast and fades as it lands. It waits for the falling stickers' images, at most 0.7s. On a return visit only stickers new since your last look fall, and every new sticker wears a Seal Yellow NEW pip on its tag; screen readers hear "3 new stickers since you last looked". Reduced motion fades the whole pile in over 150ms. While Explore loads, today's badge and faint die-cut shapes on its floor stand in (the skeleton), and the fall-in is the arrival.
+- **Screen readers and keys:** a section per day ("Today", "Yesterday", "September 24"), each an ordered list of buttons newest first, named like "No.0147 by @mika, 5 min ago" and ", given to @ken". A focused sticker rises to the top of the pile, lifts 2px and gets the house focus ring around its cut; Enter or Space lifts it.
+
 ### Lifted sticker
 
 Tapping a sticker in Explore's pile lifts it into a bottom sheet over a 36% Ink scrim.
@@ -629,7 +643,7 @@ One experience for everyone, on plain Liner, once per hand-off.
 
 ### Loading
 
-- **Skeletons:** while a screen loads, it shows its own layout in outline, never a "Loading…" line: blocks of pressed Liner (Liner Deep) with a slow white shine passing over them, real headings and tab labels where they're fixed. Explore outlines Today's stickers, the leaderboard and the feed; the ticket shop its balance and pack rows; the sticker board faint die-cut shapes where stickers usually sit. A screen reader hears one status line ("Loading Explore").
+- **Skeletons:** while a screen loads, it shows its own layout in outline, never a "Loading…" line: blocks of pressed Liner (Liner Deep) with a slow white shine passing over them, real headings and tab labels where they're fixed. Explore outlines today's floor with faint die-cut shapes, or the leaderboard; the ticket shop its balance and pack rows; the sticker board faint die-cut shapes where stickers usually sit. A screen reader hears one status line ("Loading Explore").
 - **Reveal:** loaded content rises 6px into place and fades in over 220ms. A picture (a sticker, a photo sticker) holds back until its image has loaded, then fades in whole, never half-drawn.
 - **Tabs:** changing tabs cross-fades the screen over 300ms on a gentle ease: the old one fades out and sinks back a little as the new one fades in and settles up 8px from 98% size. The tab bar changes crisply around it. Browsers without View Transitions change at once.
 - **Reduced motion:** no shine and no rise; tabs cross-fade plainly in 150ms.
