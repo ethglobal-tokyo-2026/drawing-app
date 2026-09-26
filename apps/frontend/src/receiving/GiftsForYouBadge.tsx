@@ -1,6 +1,6 @@
 import type { GiftsForYou } from "@drawing-app/api/client";
 import { Gift } from "@phosphor-icons/react";
-import { toPerson } from "../api/views";
+import { toPerson, toSticker } from "../api/views";
 import { useTranslation } from "../i18n/react";
 import { formatHandle } from "../stickers/format";
 import "./gifts-for-you-badge.css";
@@ -15,8 +15,9 @@ interface Props {
 }
 
 /**
- * Gifts waiting for you: a sealed gift, never the sticker, so the pull tab still reveals it. It asks
- * to be opened, where the badge for gifts on their way only reports. With none waiting, nothing shows.
+ * Gifts waiting for you: a sealed gift, never the sticker, so the pull tab still reveals it; an NSFW
+ * sticker's gift says 18+. It asks to be opened, where the badge for gifts on their way only reports.
+ * With none waiting, nothing shows.
  */
 export function GiftsForYouBadge({ gifts, onOpen }: Props) {
   const { t } = useTranslation();
@@ -25,6 +26,7 @@ export function GiftsForYouBadge({ gifts, onOpen }: Props) {
   const giver = toPerson(newest.giver);
   const name = giver.handle ? formatHandle(giver.handle) : giver.name;
   const count = gifts.length;
+  const nsfw = toSticker(newest.sticker).nsfw;
   return (
     <button
       type="button"
@@ -36,6 +38,9 @@ export function GiftsForYouBadge({ gifts, onOpen }: Props) {
       <span className="gifts-for-you-badge__bag" aria-hidden="true">
         <Gift weight="fill" size={24} />
         {count > 1 && <span className="gifts-for-you-badge__count">{count}</span>}
+        {nsfw && (
+          <span className="gifts-for-you-badge__nsfw">{t(($) => $.stickers.nsfw.mark)}</span>
+        )}
       </span>
       <span className="gifts-for-you-badge__text" aria-hidden="true">
         <span className="gifts-for-you-badge__title">

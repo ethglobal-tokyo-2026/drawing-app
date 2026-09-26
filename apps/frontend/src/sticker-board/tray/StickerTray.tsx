@@ -47,6 +47,7 @@ function trayStickers(stickers: readonly BoardStickerView[], ownerId: string): T
       height: s.height,
       urls: s.urls,
       gift: s.artist.id !== ownerId,
+      nsfw: s.nsfw,
       seen: s.seenAt !== null,
     };
     if (s.outline !== undefined) sticker.outline = s.outline;

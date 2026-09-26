@@ -5,15 +5,21 @@ import { createStrokeDetector, type StrokePass, type StrokeRules } from "./strok
 const STROKE: StrokeRules = { minRunPx: 40, fastPxPerMs: 0.38, turnPx: 12, pauseMs: 900 };
 const SHAKE: ShakeRules = { deadZone: 6, minPeak: 11, minGapMs: 60, maxGapMs: 480, resetMs: 650 };
 
-/** A thumb stroking up and down `runs` times over `span` px, `msPerRun` each, sampled every 8 ms. */
-function stroke(runs: number, { span = 120, msPerRun = 125, from = 0 } = {}) {
+/**
+ * A thumb stroking up and down `runs` times over `span` px, `msPerRun` each, sampled every 8 ms.
+ * `forced`, as a replay passes it, goes with every move.
+ */
+function stroke(
+  runs: number,
+  { span = 120, msPerRun = 125, from = 0, forced = null as boolean | null } = {},
+) {
   const detector = createStrokeDetector(STROKE);
   const passes: StrokePass[] = [];
   detector.fingerDown(200, 300, from);
   for (let t = 0; t <= runs * msPerRun + 60; t += 8) {
     const phase = Math.min(t / msPerRun, runs + 0.5);
     const y = 300 - span * (phase % 2 < 1 ? phase % 1 : 1 - (phase % 1));
-    const pass = detector.fingerMove(200, y, from + t);
+    const pass = detector.fingerMove(200, y, from + t, forced);
     if (pass) passes.push(pass);
   }
   return { detector, passes };
@@ -51,6 +57,31 @@ describe("createStrokeDetector", () => {
     }
     expect(detector.fastStreak).toBe(3);
     detector.fingerMove(200, 300, 2000);
+    expect(detector.fastStreak).toBe(0);
+  });
+
+  it("ends a fast pass wherever a replay says one ended, turned back or not", () => {
+    const detector = createStrokeDetector(STROKE);
+    detector.fingerDown(200, 300, 0);
+    // Slow and still going: nothing ends by itself.
+    expect(detector.fingerMove(200, 280, 100, null)).toBeNull();
+    expect(detector.fingerMove(200, 260, 200, true)).toMatchObject({
+      fast: true,
+      fastStreak: 1,
+      end: { x: 200, y: 260 },
+    });
+    // The next run starts where the forced one ended.
+    expect(detector.fingerMove(200, 300, 260, true)).toMatchObject({
+      fastStreak: 2,
+      dy: 40,
+      end: { x: 200, y: 300 },
+    });
+  });
+
+  it("ends only slow passes where a replay says no fast one ended", () => {
+    const { detector, passes } = stroke(5, { forced: false });
+    expect(passes.length).toBeGreaterThan(0);
+    expect(passes.every((p) => !p.fast)).toBe(true);
     expect(detector.fastStreak).toBe(0);
   });
 });

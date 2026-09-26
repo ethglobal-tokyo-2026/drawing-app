@@ -1,0 +1,75 @@
+/* The timelapse: the sticker's ink played back in its own spot, over its figure. */
+
+/* The layer shares the figure's grid cell; auto-placed beside it, the figure would drop a row. */
+.sticker-detail__slide > .sticker-figure,
+.timelapse-layer {
+  grid-area: 1 / 1;
+}
+
+/* White paper cut to the sticker's silhouette and sized as the figure is, so the figure's kiss-cut,
+   cast shadow and foil stay around the ink as it plays. Positioned, so it paints over the figure. */
+.timelapse-layer {
+  position: relative;
+  width: calc(216px * min(1, var(--ar)));
+  max-width: 100%;
+  aspect-ratio: var(--ar);
+  background: var(--canvas);
+  -webkit-mask: var(--m) 0 0 / 100% 100% no-repeat;
+  mask: var(--m) 0 0 / 100% 100% no-repeat;
+  cursor: pointer;
+}
+
+/* In the page while its fills are prepared, unseen until it plays. */
+.timelapse-layer[data-phase="preparing"] {
+  visibility: hidden;
+}
+
+/* The sticker wipes to white paper as the first strokes land. */
+.timelapse-layer[data-phase="playing"] {
+  animation: timelapse-paper-in 160ms var(--ease-out);
+}
+
+.timelapse-layer__ink {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* At the end of the fine print, in label stock's own sentence case, clear of the facts before it. */
+.timelapse-button {
+  margin: 4px 0 2px 8px;
+  vertical-align: middle;
+  text-transform: none;
+}
+
+/* Every state's label in one cell, so the button keeps its width and never jumps a line. */
+.timelapse-button__labels {
+  display: inline-grid;
+}
+
+.timelapse-button__labels > span {
+  grid-area: 1 / 1;
+}
+
+.timelapse-button__labels > [aria-hidden="true"] {
+  visibility: hidden;
+}
+
+.timelapse-failed {
+  margin: 8px 0 0;
+  color: var(--graphite);
+}
+
+@keyframes timelapse-paper-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timelapse-layer[data-phase="playing"] {
+    animation: none;
+  }
+}

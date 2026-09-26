@@ -6,6 +6,7 @@ import { z } from "zod";
 import type { AppDeps, GiftChain, GiftClaim } from "../deps.ts";
 import { keccak256 } from "../keccak256.ts";
 import {
+  ageStatusOf,
   bytes32Schema,
   escrowTransferSchema,
   personSchema,
@@ -118,6 +119,7 @@ export type Packaging =
       | "not_minted"
       | "user_not_found"
       | "own_gift"
+      | "adults_only"
     >
   | { refusal: null; created: boolean; packaged: PackagedGift };
 
@@ -139,8 +141,17 @@ export async function packageGift(
       }
       // gifts.for_user_id carries no foreign key or check, so it's checked here.
       if (forUserId === userId) return refuse("own_gift", "A gift can't be for its own giver");
-      if (forUserId !== null && !tx.select().from(users).where(eq(users.id, forUserId)).get()) {
-        return refuse("user_not_found", `There's no person ${forUserId} to give it to`);
+      if (forUserId !== null) {
+        const recipient = tx.select().from(users).where(eq(users.id, forUserId)).get();
+        if (!recipient) {
+          return refuse("user_not_found", `There's no person ${forUserId} to give it to`);
+        }
+        if (sticker.nsfw && ageStatusOf(recipient) !== "adult") {
+          return refuse(
+            "adults_only",
+            `Sticker ${stickerId} is NSFW, and ${forUserId} isn't an adult`,
+          );
+        }
       }
       // gifts_one_per_sticker's condition: at most one gift of a sticker is open.
       const open = tx

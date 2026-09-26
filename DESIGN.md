@@ -636,6 +636,19 @@ A frosted bag with no zipper. Packing drops the sticker into the open bag, peeki
 - **Alternatives:** a looping hint shows a small pull; double-tap or press-and-hold tears it by itself; for keyboards and screen readers the tab is a slider. Under reduced motion there's no loop and the snap becomes a fade.
 - **The tag** is printed, never typed. It reads "For @name" when the recipient was chosen in the app, and "From Alice" when it went through LINE's picker. An opened bag carries a rubber OPENED date stamp on its tag.
 
+### Timelapse
+
+The sticker detail plays how a sticker was drawn, stroke by stroke, in the sticker's own spot. It's never called a replay: that word belongs to the gratitude card.
+
+- **The button:** a small label-stock button, "Timelapse" with Phosphor's play, at the end of the fine print ("by @mika · drawn in 2:51 · 9.26"). It shows in your stickers and the ones you gave, only for a sticker sealed with its timelapse, once the detail's answer is in. Every state's label shares one cell, so it never changes width: Loading…, Preparing… while the fills get ready, then Skip (Phosphor's skip-forward) while it plays.
+- **Where it plays:** white paper cut to the sticker's silhouette covers the figure, the same size in the same spot, and the ink comes back inside it as it was drawn, eraser included. The silhouette, cast shadow, kiss-cut and foil stay put around it, and ink outside the final cut never shows. Fills spread in a circle from where they were tapped.
+- **Length:** 2.5–6s, longer for a sticker that took longer. Every stroke keeps its own pace; only the pauses between them shrink.
+- **The end:** the finished ink holds 300ms, the paper fades out over 400ms onto the real sticker's resin, and the sheen sweeps once, as when it was sealed.
+- **Skip and stop:** Skip, or a tap on the sticker, jumps to the finished ink and the reveal. Paging, Escape, Back and closing stop it at once, and the paper goes before the sticker flies back to the board.
+- **Failure:** the paper goes, and a line under the fine print says "Couldn't load the timelapse: {reason}" with Try again.
+- **Reduced motion:** the strokes still play, since nothing crosses the screen; fills appear whole, and the end is a 150ms fade with no sheen.
+- **Screen readers:** the paper is hidden; one polite line says "Playing how No.0147 was drawn", then "Done". The button reads "Timelapse: watch No.0147 being drawn", then "Skip to the end", and focus stays on it.
+
 ### Sticker trail
 
 A sticker's detail shows where it has been, one quiet row per hand-off, newest first, replacing any separate provenance line.
@@ -648,6 +661,21 @@ A sticker's detail shows where it has been, one quiet row per hand-off, newest f
 - **The number:** No.0147 sits on a Seal Yellow label at the house tilt, in Dela.
 - **On its way:** a Liner Lift note with the gift bag's frosted sleeve replaces Give: "On its way to @bob" once the app knows who it waits for (the artist picked in the app, or whoever first opened its link), and "On its way" until then, since LINE's picker never says who was picked. The badge on the board reads the same.
 
+### Gratitude replay
+
+The trail's open row plays its gratitude combo back inside the card, never in a modal.
+
+- **Replay:** the pill turns to Stop (Phosphor's stop), and a stage eases open inside the card, between the amount and the artist's share (200ms, height and opacity): the card's inner width by 300px, on the Mini-game's Liner with a hairline edge. The amount and the heart dot stay above it as the card's header. The replay loads on the press, with the heart resting on the stage meanwhile.
+- **What plays:** the combo as it was recorded, through the Mini-game's own rules and effects at the stage's scale: the drain bar and amount along the stage's top, the multiplier, the tiers, pop-in words and mini hearts. Every tap plays where and when it landed; a shake plays from its unlock; a stroke plays its recorded passes. The same combo draws the same words every time.
+- **Length:** a combo of up to 4s plays in real time; a longer one plays sped up to take 4s, at most twice as fast.
+- **The landing:** no receipt. The heart shrinks into the card's pink heart dot, the 27px amount pulses once, and after a 600ms beat the stage eases shut and the pill reads Replay again.
+- **The amount is the record's:** the card always shows the stored total, and a replay that counts differently ends its bar on it.
+- **Stop:** Stop, Escape, paging, or opening another row ends it at once and shuts the stage. Scrolled off screen, it holds still until it's back.
+- **Watched:** the giver's first replay of new gratitude marks it watched as the heart lands.
+- **Failure:** the stage shuts, and a line under the card says "Couldn't load the replay: {reason}" with Try again, or "The replay stopped: {reason}".
+- **Reduced motion:** it plays through the Mini-game's reduced path: fades for flights, no screen shake and no climax. It follows the setting mid-play.
+- **Screen readers:** the stage is hidden; one polite line says "Replaying @bob's 2,946 gratitude", then "Replay ended". The pill reads "Play the replay of @bob's 2,946 gratitude", then "Stop the replay", and focus stays on it.
+
 ### Gratitude
 
 One experience for everyone, on plain Liner, once per hand-off.
@@ -657,7 +685,7 @@ One experience for everyone, on plain Liner, once per hand-off.
 - **Mini hearts:** from ドキドキ up, taps spray small pink hearts that bounce, collide and pile along the bottom before fading. A tap shoves nearby hearts away, harder the closer they are. The heart sweats hearts: a slow drip at ドキドキ, a real sweat at オーバーヒート, heavier at 昇天, all landing in the same pile with 昇天's rain.
 - **Discovery:** stroking the heart stretches it along the drag, and after three tries a tip says what to do. After the one motion opt-in, it sways with the wrist, and shaking hard says "Keep shaking!".
 - **After 昇天:** condensation fogs the glass in from the edges over 1.2s and clears on its own.
-- **After:** the receipt shows the amount, the best multiplier and the combo's length. The giver sees a pink tag on the board's edge; tapping it replays the combo in 3s. The sticker's trail opens the same replay.
+- **After:** the receipt shows the amount, the best multiplier and the combo's length. The sticker's trail replays the combo inside its card (Gratitude replay). The giver will see a pink tag on the board's edge whose card plays the same replay.
 
 ### Loading
 

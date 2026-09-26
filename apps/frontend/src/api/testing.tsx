@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 import { ApiError, type ApiClient } from "./apiClient";
 import { ApiProvider } from "./ApiProvider";
 import { TicketsProvider } from "../tickets/TicketsProvider";
-import { MeContext } from "./meContext";
+import { MeHolder } from "./MeHolder";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -18,6 +18,7 @@ export const TEST_OWNER: Person = {
   lineDisplayName: "You",
   linePictureUrl: null,
   ensName: "you.croquis.eth",
+  ageStatus: "adult",
 };
 
 /** You in tests. */
@@ -29,6 +30,7 @@ export const TEST_ME: Me = {
   languageChoice: null,
   createdAt: "2026-09-01T00:00:00.000Z",
   needsHandle: false,
+  ageVerifiedAt: null,
   newStickerCount: 0,
   unseenGratitudeCount: 0,
 };
@@ -96,6 +98,8 @@ const unanswered = (method: string) => () =>
 export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
   return {
     setLanguageChoice: unanswered("setLanguageChoice"),
+    ageVerificationRequest: unanswered("ageVerificationRequest"),
+    verifyAge: unanswered("verifyAge"),
     stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [] }),
     userStats: unanswered("userStats"),
     saveStickerPlacement: (stickerId, placement) =>
@@ -145,11 +149,11 @@ export function renderWithApi(ui: ReactNode, client: ApiClient = emptyApi(), me:
   document.body.append(host);
   const root = createRoot(host);
   const wrap = (node: ReactNode) => (
-    <MeContext value={me}>
+    <MeHolder me={me}>
       <ApiProvider client={client}>
         <TicketsProvider>{node}</TicketsProvider>
       </ApiProvider>
-    </MeContext>
+    </MeHolder>
   );
   act(() => root.render(wrap(ui)));
   return {

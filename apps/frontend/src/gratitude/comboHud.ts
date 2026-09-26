@@ -3,6 +3,7 @@ import { i18next } from "../i18n/i18n";
 import { fullBarSeconds } from "./combo";
 import { EASE_OUT, EASE_PEEL, clamp } from "./easing";
 import { HEART_SVG } from "./heartArt";
+import { animate } from "./webAnimations";
 
 /** The combo as the HUD draws it. */
 export interface HudView {
@@ -19,6 +20,8 @@ export interface ComboHud {
   /** A hit's tick: a sliver of the time it added at the bar's end, and a "+0.2s" over it. */
   hit: (secondsAdded: number) => void;
   step: (real: number, view: HudView) => void;
+  /** Shows `total` at once, with no count up to it. */
+  snapTotal: (total: number) => void;
 }
 
 /** Shares of a full bar: below HOT the bar heats up and shivers, below BLINK it blinks too. */
@@ -60,32 +63,23 @@ function recycle<E extends HTMLElement>(pool: Pooled<E>[], cap: number, make: ()
   return item;
 }
 
-/** Cancelling an animation rejects its `finished`: browsers mark that handled, happy-dom doesn't. */
-function animate(
-  el: HTMLElement,
-  frames: Keyframe[],
-  options: KeyframeAnimationOptions,
-): Animation {
-  const animation = el.animate(frames, options);
-  void animation.finished.catch(rethrowUnlessCancelled);
-  return animation;
-}
-
-function rethrowUnlessCancelled(error: unknown) {
-  if (!(error instanceof Error && error.name === "AbortError")) throw error;
-}
-
-function play(item: Pooled<HTMLElement>, frames: Keyframe[], options: KeyframeAnimationOptions) {
-  item.animation?.cancel();
-  item.animation = animate(item.el, frames, options);
-}
-
-/** The bar that only goes down, the amount counting up under it and the multiplier sticker. */
+/**
+ * The bar that only goes down, the amount counting up under it and the multiplier sticker. `rate`:
+ * how fast its animations play, a replay's clock's speed.
+ */
 export function createComboHud(
   hud: HTMLElement,
-  options: { reduced: () => boolean; random: () => number },
+  options: { reduced: () => boolean; random: () => number; rate?: number },
 ): ComboHud {
-  const { reduced, random } = options;
+  const { reduced, random, rate = 1 } = options;
+  const play = (
+    item: Pooled<HTMLElement>,
+    frames: Keyframe[],
+    timing: KeyframeAnimationOptions,
+  ) => {
+    item.animation?.cancel();
+    item.animation = animate(item.el, frames, timing, rate);
+  };
   const fullBar = fullBarSeconds();
 
   const hot = element("div", "gr-timer-hot");
@@ -148,6 +142,7 @@ export function createComboHud(
         { transform: "rotate(-4deg) scale(1)" },
       ],
       { duration: 320, easing: EASE_PEEL },
+      rate,
     );
   }
 
@@ -162,9 +157,12 @@ export function createComboHud(
     hit(secondsAdded) {
       if (!reduced()) {
         amountPulse?.cancel();
-        amountPulse = animate(amount, [{ transform: "scale(1.05)" }, { transform: "scale(1)" }], {
-          duration: 110,
-        });
+        amountPulse = animate(
+          amount,
+          [{ transform: "scale(1.05)" }, { transform: "scale(1)" }],
+          { duration: 110 },
+          rate,
+        );
       }
       if (secondsAdded < TICK_MIN_S) return;
 
@@ -249,6 +247,12 @@ export function createComboHud(
       const whole = Math.floor(view.multiplier + 1e-6);
       if (whole > wholeMultiplier) pulseMultiplier();
       wholeMultiplier = whole;
+    },
+
+    snapTotal(total) {
+      countedTotal = total;
+      amountShown = total;
+      amountNumber.data = formatCount(total);
     },
   };
 }

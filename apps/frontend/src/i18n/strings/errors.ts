@@ -20,6 +20,36 @@ export const errors = {
     en: "Couldn't reconnect with LINE. Try again, or reopen the app from LINE.",
     ja: "LINEで再ログインできませんでした。もう一度試すか、LINEからアプリをひらき直してください。",
   },
+  /** Drawing screen, Giving and Receiving: sealing an 18+ sticker (POST /api/stickers) when you aren't a verified adult, giving one from a board (POST /api/gifts) to someone who isn't, or receiving one (POST /api/gifts/receive) when you aren't; in the seal chip, “couldn’t be packed” or the gift's refusal, through errorMessage/errorReason */
+  adults_only: {
+    en: "Only adults verified with World ID can seal, give or receive 18+ stickers.",
+    ja: "18+のシールは、World IDで年齢確認した成人だけが仕上げたり、贈ったり、受け取ったりできます。",
+  },
+  /** Your stat board, Age verification paper: sending World App's proof (POST /api/me/age-verification) when it isn't an Orb-verified World ID's, or came from World's other environment, in “Your age couldn’t be verified” through errorReason */
+  age_not_proven: {
+    en: "This World ID isn't verified at an Orb.",
+    ja: "このWorld IDは、Orbで認証されていません。",
+  },
+  /** Your stat board, Age verification paper: tapping Verify your age (POST /api/me/age-verification/request) when this server has no World ID app, in “Your age couldn’t be verified” through errorReason */
+  age_verification_not_configured: {
+    en: "Age verification isn't set up on this server yet.",
+    ja: "このサーバーでは、まだ年齢確認ができません。",
+  },
+  /** Your stat board, Age verification paper: sending World App's proof (POST /api/me/age-verification) when World refuses it, in “Your age couldn’t be verified” through errorReason */
+  age_verification_refused: {
+    en: "World ID didn't accept the proof.",
+    ja: "World IDが証明を受け付けませんでした。",
+  },
+  /** Your stat board, Age verification paper: sending World App's proof (POST /api/me/age-verification) when the same World ID already verified another account, in “Your age couldn’t be verified” through errorReason */
+  age_verification_used: {
+    en: "This World ID already verified another account.",
+    ja: "このWorld IDは、すでに別のアカウントの年齢確認に使われています。",
+  },
+  /** Your stat board, Age verification paper: tapping Verify your age (POST /api/me/age-verification/request) after your age was already verified, in “Your age couldn’t be verified” through errorReason */
+  already_age_verified: {
+    en: "Your age is already verified.",
+    ja: "年齢確認は、すでに済んでいます。",
+  },
   /** Giving, In the bag: taking a gift back out (POST /api/gifts/:giftId/take-out) that its receiver already received, in “couldn’t be taken out” through errorReason; the Receive gift dialog shows its own Already opened screen instead */
   already_received: {
     en: "This gift was already opened.",
@@ -69,7 +99,7 @@ export const errors = {
     en: "Gratitude for this gift is already in.",
     ja: "このギフトへの感謝は、すでに届いています。",
   },
-  /** Sticker detail's Transfer Trail: loading a gift's Gratitude replay (GET /api/gratitude/:giftId) when none was recorded; the replay isn't built yet, so no screen shows this today */
+  /** Sticker detail's Transfer Trail: loading a gift's Gratitude replay (GET /api/gratitude/:giftId) when none was recorded, in “Couldn’t load the replay” through errorReason */
   gratitude_not_found: {
     en: "There's no Gratitude for this gift yet.",
     ja: "このギフトへの感謝は、まだありません。",
@@ -126,7 +156,7 @@ export const errors = {
     en: "This gift hasn't been sent yet.",
     ja: "このギフトは、まだ送られていません。",
   },
-  /** Sticker detail's Transfer Trail: marking a Gratitude replay watched (POST /api/gratitude/:giftId/seen) by anyone but the gift's giver; the replay isn't built yet, so no screen shows this today */
+  /** Sticker detail's Transfer Trail: marking a Gratitude replay watched (POST /api/gratitude/:giftId/seen) by anyone but the gift's giver, in “Couldn’t mark this gratitude watched” through errorReason; the card marks it only for the giver */
   not_giver: { en: "Only the giver can do that.", ja: "それができるのは贈り主だけです。" },
   /** Giving, In the bag: packing a sticker (POST /api/gifts) whose NFT isn't minted yet, in “couldn’t be packed” through errorReason */
   not_minted: {
@@ -209,7 +239,7 @@ export const errors = {
     en: "That ticket isn't yours.",
     ja: "そのチケットは、あなたのものではありません。",
   },
-  /** Sticker detail: loading a sticker's timelapse (GET /api/stickers/:stickerId/timelapse) when it was sealed without one; the timelapse player isn't built yet, so no screen shows this today */
+  /** Sticker detail: loading a sticker's timelapse (GET /api/stickers/:stickerId/timelapse) when it was sealed without one, in “Couldn’t load the timelapse” through errorReason; Timelapse shows only for stickers that have one */
   timelapse_not_found: {
     en: "This sticker was sealed without its timelapse.",
     ja: "このシールは、タイムラプスなしで仕上げられました。",
@@ -226,4 +256,9 @@ export const errors = {
   },
   /** An artist's sticker board: loading their board or stats (GET /api/sticker-boards/:userId, …/user-stats) for a person who doesn't exist, in “Couldn’t load …’s board” or “Their stats didn’t load” through errorReason */
   user_not_found: { en: "That artist isn't here.", ja: "そのアーティストは見つかりませんでした。" },
+  /** Your stat board, Age verification paper: sending World App's proof (POST /api/me/age-verification) when World's verify service doesn't answer, in “Your age couldn’t be verified” through errorReason */
+  world_id_unavailable: {
+    en: "World ID didn't answer. Try again in a moment.",
+    ja: "World IDから応答がありませんでした。少し待ってから、もう一度お試しください。",
+  },
 } as const satisfies Record<ErrorCode | "unknown", Leaf>;

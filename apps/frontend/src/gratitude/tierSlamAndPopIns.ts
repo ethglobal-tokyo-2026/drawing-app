@@ -5,6 +5,7 @@ import { FEEL_CONFIG } from "./gameConfig";
 import type { HeartBox } from "./miniHeartPhysics";
 import { POP_IN_WORDS, createPopInPicker, type PopInBank } from "./popInWords";
 import { shownGloss, TIER_NAMES } from "./tierNames";
+import { animate } from "./webAnimations";
 
 export interface Lettering {
   /** The screen's size, and `top`, where the stage starts under the HUD. */
@@ -78,7 +79,7 @@ interface Caption {
   word: Text;
   gloss: HTMLSpanElement;
   animation: Animation | null;
-  /** A pop-in's slot, and the performance.now() it's gone by. */
+  /** A pop-in's slot, and the clock's time it's gone by. */
   slot: number | null;
   until: number;
 }
@@ -178,21 +179,6 @@ interface WordSize {
   height: number;
 }
 
-/** Cancelling an animation rejects its `finished`: browsers mark that handled, happy-dom doesn't. */
-function animate(
-  el: HTMLElement,
-  frames: Keyframe[],
-  options: KeyframeAnimationOptions,
-): Animation {
-  const animation = el.animate(frames, options);
-  void animation.finished.catch(rethrowUnlessCancelled);
-  return animation;
-}
-
-function rethrowUnlessCancelled(error: unknown) {
-  if (!(error instanceof Error && error.name === "AbortError")) throw error;
-}
-
 function makeCaption(kind: "gr-slam" | "gr-pop"): Caption {
   const el = document.createElement("div");
   el.className = `gr-cap ${kind}`;
@@ -225,16 +211,29 @@ function stillFrames(transform: string): Keyframe[] {
 /**
  * The tier slams and pop-in words. Placing one never reads layout: every word, gloss and slam text
  * is measured once in a hidden probe after the fonts load, and guessed from its length until then.
- * With reduced motion each one fades in and out where it lands.
+ * With reduced motion each one fades in and out where it lands. `words` picks the words, `random`
+ * where they go; `now` is the engine's clock, ms; `rate` how fast the words play, a replay's clock's
+ * speed; `scale` the stage's size over the live game's. Without `glosses`, no word shows its English.
  */
 export function createLettering(
   layer: HTMLElement,
-  options: { intensity: number; random: () => number; reduced?: () => boolean },
+  options: {
+    intensity: number;
+    random: () => number;
+    words?: () => number;
+    reduced?: () => boolean;
+    now?: () => number;
+    rate?: number;
+    scale?: number;
+    glosses?: boolean;
+  },
 ): Lettering {
-  const { random } = options;
+  const { random, rate = 1, scale = 1, glosses = true } = options;
   const reduced = options.reduced ?? systemReduced();
-  const pick = createPopInPicker(random);
-  const grow = 0.86 + 0.28 * options.intensity;
+  const clock = options.now ?? (() => performance.now());
+  const pick = createPopInPicker(options.words ?? random);
+  /** Words grow with the intensity, and shrink with a smaller stage. */
+  const grow = (0.86 + 0.28 * options.intensity) * scale;
   let screen = FALLBACK_SCREEN;
 
   const wordSizes = new Map<string, WordSize>();
@@ -304,7 +303,7 @@ export function createLettering(
   if (fonts) measureOnceFontsLoad(fonts, MEASURE_TRIES);
 
   let slam: Caption | null = null;
-  /** performance.now() until which a slam holds the band above the heart. */
+  /** The clock's time until which a slam holds the band above the heart. */
   let slamUntil = 0;
   const pops: Caption[] = [];
   /** The latest tier shown, which sizes the stroke and shake words. */
@@ -316,8 +315,9 @@ export function createLettering(
     caption.animation?.cancel();
     caption.el.dataset.t = text;
     caption.word.data = text;
-    caption.gloss.textContent = gloss;
-    caption.gloss.hidden = !gloss;
+    const shown = glosses ? gloss : "";
+    caption.gloss.textContent = shown;
+    caption.gloss.hidden = !shown;
     caption.el.style.fontSize = `${px.toFixed(1)}px`;
     // Last in the layer, so the newest word is on top.
     layer.append(caption.el);
@@ -361,10 +361,10 @@ export function createLettering(
       },
       draw.rad,
     );
-    const xMin = EDGE_PX - peak.minX;
-    const xMax = Math.max(xMin, screen.width - EDGE_PX - peak.maxX);
-    const yMin = screen.top + 2 - peak.minY;
-    const yMax = Math.max(yMin, screen.height - FOOT_PX - peak.maxY);
+    const xMin = EDGE_PX * scale - peak.minX;
+    const xMax = Math.max(xMin, screen.width - EDGE_PX * scale - peak.maxX);
+    const yMin = screen.top + 2 * scale - peak.minY;
+    const yMax = Math.max(yMin, screen.height - FOOT_PX * scale - peak.maxY);
     const drawn = drawnHeart(heart);
     let cy = heart.y + sy * heart.height + draw.jy;
     // Above the heart a word starts clear of it and rises away; below it, it rises to just short of it.
@@ -372,7 +372,7 @@ export function createLettering(
     else if (BELOW.includes(slot)) cy = Math.max(cy, drawn.y1 - rest.minY - draw.dy);
     cy = clamp(cy, yMin, yMax);
     const cx = clamp(heart.x + sx * heart.width + draw.jx, xMin, xMax);
-    const dx = clamp(sx * 26 + draw.dxJitter, xMin - cx, xMax - cx);
+    const dx = clamp(sx * 26 * scale + draw.dxJitter, xMin - cx, xMax - cx);
     // And it never rises out of the stage, under the HUD.
     const dy = Math.min(0, Math.max(draw.dy, yMin - cy));
     return { slot, scale, edges, cx, cy, dx, dy };
@@ -412,15 +412,15 @@ export function createLettering(
       // The slam keeps its energy in the tilt and the overshoot, not in its size.
       const tilt = (5 * Math.PI) / 180;
       const reach = (w * Math.cos(tilt) + ht * Math.sin(tilt) + px * 0.3) * 1.06;
-      const fit = Math.min(1, (screen.width - SLAM_MARGIN * 2) / reach);
+      const fit = Math.min(1, (screen.width - SLAM_MARGIN * scale * 2) / reach);
       // The gloss stays at its fine-print size.
       caption.gloss.style.transformOrigin = fit < 1 ? "0 0" : "";
       caption.gloss.style.transform = fit < 1 ? `rotate(3deg) scale(${(1 / fit).toFixed(3)})` : "";
       // Centered on the screen, its top on the band above the heart.
       const x = (screen.width - w) / 2;
-      const y = screen.top + 4 - (ht * (1 - fit)) / 2;
+      const y = screen.top + 4 * scale - (ht * (1 - fit)) / 2;
       const base = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) rotate(-5deg) scale(${fit.toFixed(3)})`;
-      slamUntil = performance.now() + SLAM_MS;
+      slamUntil = clock() + SLAM_MS;
       // In small and tilted hard, springing to its slant: it never leaves the screen.
       caption.animation = animate(
         caption.el,
@@ -433,12 +433,13 @@ export function createLettering(
               { transform: `${base} translateY(-8px) rotate(0deg) scale(1.02)`, opacity: 0 },
             ],
         { duration: SLAM_MS, easing: "linear", fill: "both" },
+        rate,
       );
     },
 
     showPopInWord(bank, heart) {
       if (isPerformanceRecorderOn()) notePerformance("gratitude", `pop-in ${bank}`);
-      const now = performance.now();
+      const now = clock();
       const reused = pops.length >= POP_INS ? pops[0] : undefined;
       const showing = pops.filter((c) => c !== reused && c.until > now);
       const onScreen = new Set(showing.map((c) => c.word.data));
@@ -460,16 +461,16 @@ export function createLettering(
         w: measured.width * px,
         ht: measured.height * px,
         px,
-        glossWidth: gloss ? glossWidth(gloss) : null,
+        glossWidth: glosses && gloss ? glossWidth(gloss) : null,
       };
       const avoidTop = now < slamUntil;
       const preferred = nextSlot(avoidTop);
       const draw = {
-        jx: (random() - 0.5) * 26,
-        jy: (random() - 0.5) * 18,
+        jx: (random() - 0.5) * 26 * scale,
+        jy: (random() - 0.5) * 18 * scale,
         rad: ((random() - 0.5) * 44 * Math.PI) / 180,
-        dy: -(16 + random() * 22),
-        dxJitter: (random() - 0.5) * 14,
+        dy: -(16 + random() * 22) * scale,
+        dxJitter: (random() - 0.5) * 14 * scale,
       };
       const duration = 620 + random() * 560;
 
@@ -522,6 +523,7 @@ export function createLettering(
               { transform: at(1, 0.96), opacity: 0 },
             ],
         { duration, easing: "linear", fill: "both" },
+        rate,
       );
     },
 

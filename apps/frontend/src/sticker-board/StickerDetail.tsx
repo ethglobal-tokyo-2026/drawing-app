@@ -21,6 +21,9 @@ import { useReducedMotion } from "../ui/useReducedMotion";
 import { handleOf, onItsWay, type BoardStickerView } from "./boardSticker";
 import { useDetailLift, type LiftView } from "./detailLift";
 import { useSwipePaging } from "./detailPaging";
+import { TimelapseButton, TimelapseFailure } from "./timelapse/TimelapseButton";
+import { TimelapseLayer } from "./timelapse/TimelapseLayer";
+import { useTimelapse } from "./timelapse/useTimelapse";
 import { TransferTrail } from "./TransferTrail";
 import { toTrailRows } from "./trailRows";
 import "./sticker-detail.css";
@@ -127,8 +130,9 @@ export function StickerDetail({
 
   const root = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLElement>(null);
+  const figure = useRef<HTMLSpanElement>(null);
 
-  const close = useDetailLift({
+  const lift = useDetailLift({
     root,
     shownId: sticker?.id,
     originOf: (id) => {
@@ -142,6 +146,13 @@ export function StickerDetail({
     reduced,
     onClose,
   });
+  const hasTimelapse = loaded?.hasTimelapse === true;
+  const timelapse = useTimelapse({ sticker, hasTimelapse, figure, reduced });
+  // The timelapse's layer goes first: the lift clones the figure and flies it back to the board.
+  const close = () => {
+    timelapse.stop();
+    lift();
+  };
   useBackToClose(true, close);
   useFocusTrap(root, { onEscape: close, returnFocus });
 
@@ -232,13 +243,16 @@ export function StickerDetail({
             <div className="sticker-detail__stage" {...stage}>
               <div ref={slide} className="sticker-detail__slide">
                 <StickerFigure
+                  ref={figure}
                   key={sticker.id}
                   urls={sticker.urls}
                   width={sticker.width}
                   height={sticker.height}
                   foil={byOther ? "detail" : undefined}
+                  nsfw={sticker.nsfw}
                   no={sticker.no}
                 />
+                <TimelapseLayer timelapse={timelapse} />
               </div>
             </div>
 
@@ -309,6 +323,7 @@ export function StickerDetail({
                 <span>
                   {t(($) => $.stickerBoard.detail.sealedOn, { day: formatDay(sticker.createdAt) })}
                 </span>
+                <TimelapseButton timelapse={timelapse} />
               </p>
               {/* The Transfer Trail says it too, once it's in. */}
               {mode === "given" && sticker.givenTo && trail.length === 0 && (
@@ -320,6 +335,7 @@ export function StickerDetail({
                 </p>
               )}
             </section>
+            <TimelapseFailure timelapse={timelapse} />
 
             {mode === "yours" &&
               (onItsWay(sticker) ? (

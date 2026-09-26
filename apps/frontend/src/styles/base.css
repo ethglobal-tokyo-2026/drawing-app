@@ -59,6 +59,11 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+/* A handle keeps its own case, even inside fine print's capitals. */
+.handle {
+  text-transform: none;
+}
+
 .title-label {
   font-stretch: var(--w-title);
   font-weight: 800;

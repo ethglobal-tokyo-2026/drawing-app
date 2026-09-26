@@ -26,6 +26,7 @@ const request = {
   spec: image,
   rim: image,
   flat: image,
+  nsfw: false,
 };
 
 /** The server's answer to a seal that made `sealed`. */

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { SESSION_MS, type Hold } from "./session";
-import { SessionClock, type FrameSource } from "./useSessionClock";
+import type { FrameSource } from "../../ui/frameSource";
+import { SessionClock } from "./useSessionClock";
 
 const NO_HOLDS = { paused: false, away: false, color: false, smoothing: false, size: false };
 

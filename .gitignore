@@ -158,9 +158,10 @@ contracts/**/.gas-snapshot
 **/.impeccable/critique/
 **/.impeccable/live/
 
-# Sticker chain Foundry cache
+# Sticker chain Foundry cache, and the lock forge writes from the lib/ submodules, which pin the same commits
 packages/sticker-chain/cache/
 packages/sticker-chain/broadcast/
+packages/sticker-chain/foundry.lock
 
 # yarn v3
 .pnp.*

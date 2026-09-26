@@ -6,7 +6,7 @@ import { giftTag, sealDate, type GiftTag } from "./giftTag";
 import "./GiftBag.css";
 
 /** A rubber stamp inked on the tag. */
-export type GiftStamp = "one-to-one" | "opened" | "taken-back" | "returned";
+export type GiftStamp = "one-to-one" | "opened" | "taken-back" | "returned" | "adults-only";
 
 /** The pull tab as the receiver works it. */
 export interface PullTab {
@@ -45,10 +45,13 @@ interface Props {
   stamp?: GiftStamp;
   /** Makes the tab a slider the receiver pulls, outside the bag's picture. */
   pullTab?: PullTab;
+  /** An NSFW sticker's bag: pink, embossed, and sealed without a glimpse of the sticker. */
+  nsfw?: boolean;
 }
 
-const STAMP_TONES: Record<GiftStamp, "ink" | "grape" | "plain"> = {
+const STAMP_TONES: Record<GiftStamp, "ink" | "grape" | "pink" | "plain"> = {
   "one-to-one": "ink",
+  "adults-only": "pink",
   opened: "grape",
   "taken-back": "plain",
   returned: "plain",
@@ -63,8 +66,9 @@ function stampWords(stamp: GiftStamp): { small?: string; big: string } {
 }
 
 /** The bag's picture in words. A stamp is inked on the tag, so without a tag there's none to read. */
-function describeBag(state: Props["state"], tag: GiftTag | null, stamp?: GiftStamp) {
-  const pictured = i18next.t(($) => $.giving.giftBag.pictured[state]);
+function describeBag(state: Props["state"], tag: GiftTag | null, stamp?: GiftStamp, nsfw = false) {
+  const bag = i18next.t(($) => $.giving.giftBag.pictured[state]);
+  const pictured = nsfw ? i18next.t(($) => $.giving.giftBag.nsfw, { pictured: bag }) : bag;
   if (!tag) return pictured;
   const label = i18next.t(($) => $.giving.tag[tag.label]);
   if (!stamp) return i18next.t(($) => $.giving.giftBag.tagged, { pictured, label, name: tag.name });
@@ -90,8 +94,11 @@ export function GiftBag({
   tear,
   stamp,
   pullTab,
+  nsfw = false,
 }: Props) {
   const { t } = useTranslation();
+  // Sealed, an NSFW sticker never shows through the frost or the film: the pull tab reveals it.
+  const inside = nsfw && state === "sealed" ? undefined : stickerUrl;
   const tag = fromHandle || toHandle ? giftTag(fromHandle ?? "", toHandle) : null;
   const name = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
@@ -101,6 +108,7 @@ export function GiftBag({
   const classes = [
     "gift-bag",
     size === "receive" && "gift-bag--receive",
+    nsfw && "gift-bag--nsfw",
     motion === "drop" && "is-dropping",
     motion === "takeOut" && "is-taking-out",
     pullTab?.hinting && "is-hinting",
@@ -110,7 +118,7 @@ export function GiftBag({
   // With the slider, the picture is hidden part by part, so the slider isn't inside an image.
   const picture = pullTab
     ? {}
-    : ({ role: "img", "aria-label": describeBag(state, tag, stamp) } as const);
+    : ({ role: "img", "aria-label": describeBag(state, tag, stamp, nsfw) } as const);
   return (
     <div
       className={classes.filter(Boolean).join(" ")}
@@ -121,16 +129,15 @@ export function GiftBag({
       {...picture}
     >
       <i className="gift-bag__part gift-bag__back" />
-      {stickerUrl && (
-        <img className="gift-bag__sticker" src={stickerUrl} alt="" draggable={false} />
-      )}
+      {inside && <img className="gift-bag__sticker" src={inside} alt="" draggable={false} />}
       <i className="gift-bag__part gift-bag__front" />
+      {nsfw && <BikiniEmboss />}
       <i className="gift-bag__part gift-bag__streak" />
       <i className="gift-bag__part gift-bag__mouth" />
       {state !== "opened" && (
         <SealStrip
           date={sealedAt === undefined ? "" : sealDate(sealedAt)}
-          insideUrl={stickerUrl}
+          insideUrl={inside}
           tear={tear ?? 0}
           pullTab={state === "torn" ? undefined : pullTab}
           hidden={Boolean(pullTab)}
@@ -152,6 +159,27 @@ export function GiftBag({
         <HandPointing className="gift-bag__finger" weight="fill" size={44} aria-hidden="true" />
       )}
     </div>
+  );
+}
+
+const BIKINI = [
+  "M52 14L56 40M68 14L64 40",
+  "M22 50Q28 54 36 52M84 52Q92 54 98 50",
+  "M36 52Q40 36 56 40Q60 50 60 56Q46 60 36 52Z",
+  "M84 52Q80 36 64 40Q60 50 60 56Q74 60 84 52Z",
+  "M36 78Q60 84 84 78Q72 90 64 102Q60 104 56 102Q48 90 36 78Z",
+  "M36 78L28 73M36 78L30 85M84 78L92 73M84 78L90 85",
+].join("");
+
+/** A bikini pressed faintly into an NSFW sticker's bag, so it reads as 18+ while sealed. */
+function BikiniEmboss() {
+  return (
+    <i className="gift-bag__part gift-bag__emboss" aria-hidden="true">
+      <svg viewBox="0 0 120 120">
+        <path className="gift-bag__emboss-shade" d={BIKINI} />
+        <path className="gift-bag__emboss-light" d={BIKINI} />
+      </svg>
+    </i>
   );
 }
 

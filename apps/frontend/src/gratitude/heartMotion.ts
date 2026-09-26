@@ -199,12 +199,14 @@ const thump = (beat: number, at: number) => Math.exp(-((beat - at) ** 2) / BEAT.
 /**
  * The heart's motion, a frame at a time. It holds its spot at every tier: only the endings move it,
  * into the giver's picture or limp where it is. The page shakes and swells around it, and the heart
- * is held out of both so its spot never moves under a thumb.
+ * is held out of both so its spot never moves under a thumb. `scale`: the stage's size over the live
+ * game's, which the loose heart's speeds and the flight's arc shrink with.
  */
 export function createHeartMotion(
   layout: HeartLayout,
   random: () => number,
   onWallHit: (hit: WallHit) => void,
+  scale = 1,
 ): HeartMotion {
   let L = layout;
   const pos = { x: layout.rest.x, y: layout.rest.y, vx: 0, vy: 0 };
@@ -261,8 +263,9 @@ export function createHeartMotion(
       angle: number,
       normal: { x: number; y: number },
     ) => {
-      if (Math.abs(speed) <= LOOSE.hardHit) return;
-      impact = { angle, amount: clamp(Math.abs(speed) * IMPACT.per, IMPACT.least, IMPACT.most) };
+      if (Math.abs(speed) <= LOOSE.hardHit * scale) return;
+      const amount = (Math.abs(speed) / scale) * IMPACT.per;
+      impact = { angle, amount: clamp(amount, IMPACT.least, IMPACT.most) };
       onWallHit({ edge, x, y, normal, speed: Math.abs(speed) });
     };
     const minX = r + 2;
@@ -336,8 +339,8 @@ export function createHeartMotion(
         const from = { x: pos.x, y: pos.y };
         const to = { ...L.giver };
         const via = {
-          x: lerp(from.x, to.x, FLIGHT.along) + FLIGHT.outPx,
-          y: Math.min(from.y, to.y) - FLIGHT.upPx,
+          x: lerp(from.x, to.x, FLIGHT.along) + FLIGHT.outPx * scale,
+          y: Math.min(from.y, to.y) - FLIGHT.upPx * scale,
         };
         flight = { from, via, to, fromScale: drawnScale, startedAt: play, land };
         settled = null;
@@ -371,14 +374,14 @@ export function createHeartMotion(
     comeLoose() {
       sway.angle = sway.speed = sway.drive = 0;
       tilt.target = tilt.now = 0;
-      loose ??= { x: pos.x, y: pos.y, vx: 0, vy: LOOSE.launch, scale: 1 };
+      loose ??= { x: pos.x, y: pos.y, vx: 0, vy: LOOSE.launch * scale, scale: 1 };
     },
 
     kickLoose(direction, strength) {
       if (!loose) return;
-      const k = KICK.base + Math.min(KICK.most, strength * KICK.perStrength);
-      loose.vx += -direction.x * k + (random() - 0.5) * KICK.scatterX;
-      loose.vy += direction.y * k + (random() - 0.5) * KICK.scatterY;
+      const k = (KICK.base + Math.min(KICK.most, strength * KICK.perStrength)) * scale;
+      loose.vx += -direction.x * k + (random() - 0.5) * KICK.scatterX * scale;
+      loose.vy += direction.y * k + (random() - 0.5) * KICK.scatterY * scale;
     },
 
     calm() {
@@ -413,7 +416,8 @@ export function createHeartMotion(
         const vy = y - pos.y;
         if (vx !== 0 || vy !== 0) {
           stretch.angle = degrees(Math.atan2(vy, vx));
-          stretch.scale = 1 + Math.min(FLIGHT.maxStretch, Math.hypot(vx, vy) / FLIGHT.stretchPx);
+          const moved = Math.hypot(vx, vy) / (FLIGHT.stretchPx * scale);
+          stretch.scale = 1 + Math.min(FLIGHT.maxStretch, moved);
         }
         pos.x = x;
         pos.y = y;

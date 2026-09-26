@@ -46,6 +46,7 @@ export async function createTestApp(overrides: Overrides | ((base: TestBase) => 
     ticketPayments: fakeTicketPayments().ticketPayments,
     serverLog: fakeServerLog(),
     lineChatMenu: chatMenuOff("not_configured"),
+    worldId: null,
     ...(typeof overrides === "function" ? overrides({ db, clock }) : overrides),
   };
   return {

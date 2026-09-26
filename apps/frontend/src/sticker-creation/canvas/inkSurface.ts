@@ -6,7 +6,7 @@ import type { FillOp, Op, StrokeOp } from "./ops";
 import { paintStroke } from "./paintStroke";
 
 /** Past this density a sharper canvas costs memory and shows nothing more. */
-const MAX_DPR = 3;
+export const MAX_DPR = 3;
 /** A fill rereads and rewrites every pixel, far more work than painting a stroke. */
 const FILL_COST = 24;
 
@@ -60,13 +60,19 @@ export class InkSurface implements Surface<HTMLCanvasElement> {
 
   /** Floods from the op's point; false when nothing changed. */
   fill(op: FillOp): boolean {
-    const { ctx: reader } = copyOf(this.canvas, { willReadFrequently: true });
-    const pixels = reader.getImageData(0, 0, this.canvas.width, this.canvas.height);
-    const x = Math.floor(op.x * this.dpr);
-    const y = Math.floor(op.y * this.dpr);
-    if (!floodFill(pixels, x, y, hexToRgb(op.color))) return false;
-    this.ctx.putImageData(pixels, 0, 0);
-    return true;
+    const { copy, ctx: reader } = copyOf(this.canvas, { willReadFrequently: true });
+    try {
+      const pixels = reader.getImageData(0, 0, this.canvas.width, this.canvas.height);
+      const x = Math.floor(op.x * this.dpr);
+      const y = Math.floor(op.y * this.dpr);
+      if (!floodFill(pixels, x, y, hexToRgb(op.color))) return false;
+      this.ctx.putImageData(pixels, 0, 0);
+      return true;
+    } finally {
+      // iOS counts canvases against a small budget until they're collected, so this one goes now.
+      copy.width = 0;
+      copy.height = 0;
+    }
   }
 
   /** A copy of the ink to read pixels from, as sealing does. */

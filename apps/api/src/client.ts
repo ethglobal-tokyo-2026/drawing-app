@@ -22,6 +22,7 @@ export type ApiErrorCode =
 export { MAX_TIMELAPSE_BYTES } from "./stickers/timelapseLimit.ts";
 
 // The contract's shapes, for the app's screens: each is the type its route's schema checks.
+export type { AgeProof, AgeVerificationRequest } from "./routes/ageVerification.ts";
 export type { ChatMenu, ChatMenuLink } from "./chatMenu/menus.ts";
 export type { ErrorBody } from "./errors.ts";
 export type { ActivityEntry, Explore } from "./explore/explore.ts";
@@ -39,6 +40,7 @@ export type { GratitudeWithReplay, UnseenGratitude } from "./gratitude/feed.ts";
 export type { RecordGratitude } from "./gratitude/record.ts";
 export type { ReplayV1 } from "./gratitude/replay.ts";
 export type {
+  AgeStatus,
   EscrowTransfer,
   GiftStatus,
   IsoTime,

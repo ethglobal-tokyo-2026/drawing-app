@@ -109,18 +109,20 @@ What the server stores and serves. `packages/db` holds the schema and `apps/api`
 
 Inserted at the first sign-in.
 
-| Column                  | Type           | Values                      | Set when                                                       | Meaning                                                      |
-| ----------------------- | -------------- | --------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------ |
-| `id`                    | text, PK       | UUID                        | first sign-in                                                  |                                                              |
-| `line_user_id`          | text, null     | LINE's `sub`; unique        | first sign-in; cleared on account deletion                     | finds a returning person; the Official account's push target |
-| `line_display_name`     | text, null     | LINE name                   | every sign-in; cleared on account deletion                     | how others see them                                          |
-| `line_picture_url`      | text, null     | https URL                   | every sign-in; cleared on account deletion                     |                                                              |
-| `handle`                | text, null     | unique ignoring letter case | first sign-in (the LINE name, when free), or the handle prompt | printed as `@handle`                                         |
-| `smart_account_address` | text, null     | `0x` + 40 hex; unique       | the first time the server needs it, from Privy                 | where stickers are minted and claimed                        |
-| `terms_accepted_at`     | int (ms), null |                             | the first action that carries the terms line                   |                                                              |
-| `deleted_at`            | int (ms), null |                             | account deletion                                               |                                                              |
-| `ens_label`             | text, null     | ENSIP-15 label; unique      | every sign-in and handle change, until `ens_named_at`          | `<ens_label>.croquis.eth`; kept on account deletion          |
-| `ens_named_at`          | int (ms), null |                             | the person's name lands onchain                                | `ens_label` is fixed from then on                            |
+| Column                       | Type           | Values                      | Set when                                                       | Meaning                                                      |
+| ---------------------------- | -------------- | --------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------ |
+| `id`                         | text, PK       | UUID                        | first sign-in                                                  |                                                              |
+| `line_user_id`               | text, null     | LINE's `sub`; unique        | first sign-in; cleared on account deletion                     | finds a returning person; the Official account's push target |
+| `line_display_name`          | text, null     | LINE name                   | every sign-in; cleared on account deletion                     | how others see them                                          |
+| `line_picture_url`           | text, null     | https URL                   | every sign-in; cleared on account deletion                     |                                                              |
+| `handle`                     | text, null     | unique ignoring letter case | first sign-in (the LINE name, when free), or the handle prompt | printed as `@handle`                                         |
+| `smart_account_address`      | text, null     | `0x` + 40 hex; unique       | the first time the server needs it, from Privy                 | where stickers are minted and claimed                        |
+| `terms_accepted_at`          | int (ms), null |                             | the first action that carries the terms line                   |                                                              |
+| `deleted_at`                 | int (ms), null |                             | account deletion                                               |                                                              |
+| `ens_label`                  | text, null     | ENSIP-15 label; unique      | every sign-in and handle change, until `ens_named_at`          | `<ens_label>.croquis.eth`; kept on account deletion          |
+| `ens_named_at`               | int (ms), null |                             | the person's name lands onchain                                | `ens_label` is fixed from then on                            |
+| `age_verified_at`            | int (ms), null |                             | World ID proves they're 18+; cleared on account deletion       | age verification                                             |
+| `age_verification_nullifier` | text, null     | decimal; unique             | with `age_verified_at`; cleared on account deletion            | one World ID verifies one live account                       |
 
 - A live account has `line_user_id` and `line_display_name`; a deleted one has none of the LINE columns.
 - `created_at` is the stat board's "Since".
@@ -129,21 +131,22 @@ Inserted at the first sign-in.
 
 Inserted at seal. Everything but `owner_id` and the mint is fixed then.
 
-| Column         | Type           | Values                   | Set when                                      | Meaning                                                   |
-| -------------- | -------------- | ------------------------ | --------------------------------------------- | --------------------------------------------------------- |
-| `id`           | text, PK       | UUID                     | seal                                          | the NFT's sticker key is keccak256 of it                  |
-| `number`       | int            | 1, 2, 3…; unique         | seal                                          | shown as No.0147                                          |
-| `artist_id`    | text → users   |                          | seal                                          | the Original Artist                                       |
-| `owner_id`     | text → users   |                          | seal (the Original Artist), then each receive | who holds it now                                          |
-| `time_used`    | int            | 0–180                    | seal                                          | seconds on the drawing clock                              |
-| `width`        | int            | > 0                      | seal                                          | the sticker image's size in pixels, which its masks share |
-| `height`       | int            | > 0                      | seal                                          |                                                           |
-| `outline`      | text           | SVG path in image pixels | seal                                          | the cut line: ticket stubs, sheet packing, silhouettes    |
-| `content_hash` | text           | `0x` + 64 hex            | seal                                          | keccak256 of the sticker PNG; names its image files       |
-| `metadata_uri` | text           | CDN URL                  | seal                                          | the NFT's tokenURI                                        |
-| `token_id`     | text, null     | uint256; unique          | the mint lands                                | null while minting is a stub                              |
-| `mint_tx_hash` | text, null     | `0x` + 64 hex            | with `token_id`                               | for the WorldScan link                                    |
-| `ens_named_at` | int (ms), null |                          | the sticker's name lands onchain              | `<number>.<artist's ens_label>.croquis.eth`               |
+| Column         | Type           | Values                   | Set when                                      | Meaning                                                        |
+| -------------- | -------------- | ------------------------ | --------------------------------------------- | -------------------------------------------------------------- |
+| `id`           | text, PK       | UUID                     | seal                                          | the NFT's sticker key is keccak256 of it                       |
+| `number`       | int            | 1, 2, 3…; unique         | seal                                          | shown as No.0147                                               |
+| `artist_id`    | text → users   |                          | seal                                          | the Original Artist                                            |
+| `owner_id`     | text → users   |                          | seal (the Original Artist), then each receive | who holds it now                                               |
+| `time_used`    | int            | 0–180                    | seal                                          | seconds on the drawing clock                                   |
+| `width`        | int            | > 0                      | seal                                          | the sticker image's size in pixels, which its masks share      |
+| `height`       | int            | > 0                      | seal                                          |                                                                |
+| `outline`      | text           | SVG path in image pixels | seal                                          | the cut line: ticket stubs, sheet packing, silhouettes         |
+| `content_hash` | text           | `0x` + 64 hex            | seal                                          | keccak256 of the sticker PNG; names its image files            |
+| `metadata_uri` | text           | CDN URL                  | seal                                          | the NFT's tokenURI                                             |
+| `token_id`     | text, null     | uint256; unique          | the mint lands                                | null while minting is a stub                                   |
+| `mint_tx_hash` | text, null     | `0x` + 64 hex            | with `token_id`                               | for the WorldScan link                                         |
+| `ens_named_at` | int (ms), null |                          | the sticker's name lands onchain              | `<number>.<artist's ens_label>.croquis.eth`                    |
+| `nsfw`         | int (bool)     | default 0                | seal                                          | an NSFW sticker; only an adult seals, receives or is given one |
 
 - `created_at` is the seal: the sealed card's date, "Today's stickers", streak days.
 
@@ -311,6 +314,7 @@ interface Person {
   lineDisplayName: string | null; // null after account deletion
   linePictureUrl: string | null;
   ensName: string | null; // <label>.croquis.eth
+  ageStatus: "adult" | "minor" | "unknown"; // adult once age verification proves it; the server never says minor yet
 }
 
 /** You. */
@@ -318,6 +322,7 @@ interface Me extends Person {
   lineUserId: string | null; // LINE's sub, checked against LIFF's user before a lasting session opens the app
   createdAt: IsoTime; // the stat board's "Since"
   needsHandle: boolean; // true until the handle prompt is answered
+  ageVerifiedAt: IsoTime | null; // when an Orb-verified World ID proved you're 18 or older
   newStickerCount: number; // NEW in your sticker tray
   unseenGratitudeCount: number; // the pink tag
 }
@@ -332,6 +337,7 @@ interface Sticker {
   height: number;
   outline: string; // SVG path in image pixels; simplified in boards and tickets, whole in the detail
   contentHash: string;
+  nsfw: boolean; // pink foil; blurred by the app for anyone not adult
   images: {
     // CDN URLs. The PNGs it was sealed with:
     png: string;
@@ -456,6 +462,7 @@ interface ReplayV1 {
   hits: number[]; // flat: [msSincePrevious, x, y, counted (0 | 1), …] for every touch
   strokes: number[][]; // one per stroke: [msSincePrevious, x, y, …] at about 30 Hz
   shakes: number[]; // flat: [msSincePrevious, direction (1 | -1), …]
+  strokePasses?: number[][]; // one per stroke: indexes of its samples that ended a fast pass; older replays lack it
 }
 
 /** How a sticker was drawn: the ink canvas's ops, in order. Points are x, y and width in tenths of a pixel, plus ms, each as the change from the point before. */
@@ -463,6 +470,7 @@ interface TimelapseV1 {
   v: 1;
   ink: [width: number, height: number]; // the sheet, in sheet pixels: the ops' space, whatever the screen's density
   place: [x: number, y: number, width: number, height: number]; // where the sticker image sits on it
+  density?: number; // device pixels per sheet pixel where it was drawn, which fills flood at; older timelapses lack it
   ops: Array<
     | ["brush" | "eraser", color: string, startMs: number, points: number[]]
     | ["fill", color: string, atMs: number, x: number, y: number]
@@ -472,14 +480,16 @@ interface TimelapseV1 {
 
 ### Session and you
 
-| Route                          | Request                                                                                         | Response                                          | Errors                                                                    |
-| ------------------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------- |
-| `POST /api/session`            | `{ idToken: string; timeZone: string; language: "en" \| "ja" }`: token from `liff.getIDToken()` | 200 `{ me: Me }`, and sets the cookie             | 401 `line_token_invalid` or `line_token_expired`                          |
-| `GET /api/me`                  | Optional `x-line-user-id` header: current LIFF profile's user ID                                | 200 `{ me: Me }`, with `Cache-Control: no-store`  | 401 `signed_out` if the session is absent or belongs to another LINE user |
-| `POST /api/me/handle`          | `{ handle: string }`: 1–32 characters after trimming, no `@`                                    | 200 `{ me: Me }`                                  | 400 `handle_invalid`; 409 `handle_taken`                                  |
-| `POST /api/me/language-choice` | `{ languageChoice: "en" \| "ja" \| null }`: Settings' language; null follows LINE's             | 200 `{ me: Me }`                                  | 400 `invalid_request`                                                     |
-| `DELETE /api/me`               | none                                                                                            | 204, clears the cookie, and unlinks the chat menu |                                                                           |
-| `DELETE /api/session`          | none; no session needed                                                                         | 204, and clears the cookie                        |                                                                           |
+| Route                                   | Request                                                                                         | Response                                                                                  | Errors                                                                                                                                                                                                                                                       |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `POST /api/session`                     | `{ idToken: string; timeZone: string; language: "en" \| "ja" }`: token from `liff.getIDToken()` | 200 `{ me: Me }`, and sets the cookie                                                     | 401 `line_token_invalid` or `line_token_expired`                                                                                                                                                                                                             |
+| `GET /api/me`                           | Optional `x-line-user-id` header: current LIFF profile's user ID                                | 200 `{ me: Me }`, with `Cache-Control: no-store`                                          | 401 `signed_out` if the session is absent or belongs to another LINE user                                                                                                                                                                                    |
+| `POST /api/me/handle`                   | `{ handle: string }`: 1–32 characters after trimming, no `@`                                    | 200 `{ me: Me }`                                                                          | 400 `handle_invalid`; 409 `handle_taken`                                                                                                                                                                                                                     |
+| `POST /api/me/language-choice`          | `{ languageChoice: "en" \| "ja" \| null }`: Settings' language; null follows LINE's             | 200 `{ me: Me }`                                                                          | 400 `invalid_request`                                                                                                                                                                                                                                        |
+| `POST /api/me/age-verification/request` | none                                                                                            | 200 `{ appId, action, environment, rpContext }`: IDKit's settings, signed with the RP key | 404 `age_verification_not_configured`; 409 `already_age_verified`                                                                                                                                                                                            |
+| `POST /api/me/age-verification`         | IDKit's Orb (`proof_of_human`) result, 3.0 or 4.0, as IDKit gave it                             | 200 `{ me: Me }`, once World's verify endpoint takes it                                   | 404 `age_verification_not_configured`; 422 `age_not_proven` (not one Orb proof, or the wrong environment) or `age_verification_refused` (World's code); 409 `age_verification_used` (the World ID verified another live account); 502 `world_id_unavailable` |
+| `DELETE /api/me`                        | none                                                                                            | 204, clears the cookie, and unlinks the chat menu                                         |                                                                                                                                                                                                                                                              |
+| `DELETE /api/session`                   | none; no session needed                                                                         | 204, and clears the cookie                                                                |                                                                                                                                                                                                                                                              |
 
 `Me` also carries `lineUserId`, LINE's `sub` for your own account; `Person` never does. As the app starts, while LIFF does, it asks `GET /api/me`, `GET /api/tickets` and, when it opens on the board, `GET /api/sticker-boards/me` with the cookie it has. Once LIFF is ready, it opens on those answers only when `lineUserId` is LIFF's user; otherwise it drops them unread and signs in, so another LINE user never sees them. Logging out of LINE outside LINE's app calls `DELETE /api/session` first.
 
@@ -531,15 +541,16 @@ After a spend or a purchase commits, the chat menu is linked for the new count i
 | `rim`         | file, `image/png`        | the live resin's rim-light mask           |
 | `flat`        | file, `image/png`        | the sheet as drawn                        |
 | `timelapse`   | file, `application/gzip` | gzipped `TimelapseV1`                     |
+| `nsfw`        | field, optional          | `"true"` or `"false"` (default)           |
 
 - 201 `{ sticker: Sticker; stickerPlacement: StickerPlacement }`. A repeat with the same ticket returns the same sticker with 200 and retries its mint when it is still unminted.
 - In mock chain mode, `tokenId` and `mintTxHash` are null. In Sepolia mode, the response requires a confirmed NFT; a failed confirmation returns `503 mint_failed` and keeps the sticker for a same-ticket retry.
-- Errors: 403 `ticket_not_yours`; 404 `ticket_not_found`; 409 `ticket_already_used`; 503 `mint_failed`.
+- Errors: 403 `ticket_not_yours`, `adults_only` (an NSFW seal from anyone not adult, before any file is stored); 404 `ticket_not_found`; 409 `ticket_already_used`; 503 `mint_failed`.
 
-| Route                                    | Request | Response                                                                                                        | Errors                                                                              |
-| ---------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `GET /api/stickers/:stickerId`           | none    | 200 `{ sticker: Sticker; owner: Person; transferTrail: TransferTrailEntry[] }`, the Transfer Trail newest first | 404 `sticker_not_found`                                                             |
-| `GET /api/stickers/:stickerId/timelapse` | none    | 200 `TimelapseV1` JSON, cached as immutable                                                                     | 404 `sticker_not_found`; 404 `timelapse_not_found` for a sticker sealed without one |
+| Route                                    | Request | Response                                                                                                                                                                        | Errors                                                                              |
+| ---------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `GET /api/stickers/:stickerId`           | none    | 200 `{ sticker: Sticker; owner: Person; transferTrail: TransferTrailEntry[]; hasTimelapse: boolean }`, the Transfer Trail newest first, and whether the timelapse route answers | 404 `sticker_not_found`                                                             |
+| `GET /api/stickers/:stickerId/timelapse` | none    | 200 `TimelapseV1` JSON, cached as immutable                                                                                                                                     | 404 `sticker_not_found`; 404 `timelapse_not_found` for a sticker sealed without one |
 
 ```ts
 interface TransferTrailEntry {
@@ -571,13 +582,13 @@ interface BoardSticker extends StickerPlacement {
 
 ### Giving
 
-| Route                              | Request                                                                        | Response                                                                                                                                                                | Errors                                                                                                      |
-| ---------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `POST /api/gifts`                  | `{ stickerId: string; forUserId?: string }`                                    | 201 `{ gift: Gift; giftClaimToken: string; escrowTransfer: EscrowTransfer \| null }`; or 200 with `giftClaimToken: null` when the sticker already has a gift in the bag | 403 `not_yours`, `own_gift`; 404 `sticker_not_found`, `user_not_found`; 409 `not_minted`, `gift_in_transit` |
-| `POST /api/gifts/:giftId/deposit`  | `{ txHash: string }`: the escrow transfer's transaction or user operation hash | 200 `{ gift: Gift }`, `escrowStatus` `pending` once checked                                                                                                             | 403 `not_yours`; 404 `gift_not_found`; 409 `deposit_not_landed` (retry), `deposit_mismatch`                 |
-| `POST /api/gifts/:giftId/shared`   | `{ outcome: "sent" \| "cancelled" }`: the picker's result                      | 200 `{ gift: Gift }`: `sent` moves it to `sent`; `cancelled` leaves it `packed`                                                                                         | 403 `not_yours`; 404 `gift_not_found`; 409 `not_deposited`, `gift_closed`                                   |
-| `POST /api/gifts/:giftId/take-out` | none                                                                           | 200 `{ gift: Gift }`, status `taken_out` and escrow status `rejected`                                                                                                   | 403 `not_yours`; 404 `gift_not_found`; 409 `already_received`, `gift_closed`, `take_out_not_landed`         |
-| `GET /api/gifts/pending`           | none                                                                           | 200 `{ gifts: Array<{ gift: Gift; sticker: Sticker; for: Person \| null }> }`: your `packed` and `sent` gifts, newest first; `for` is who each waits for                |                                                                                                             |
+| Route                              | Request                                                                        | Response                                                                                                                                                                | Errors                                                                                                                                                             |
+| ---------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `POST /api/gifts`                  | `{ stickerId: string; forUserId?: string }`                                    | 201 `{ gift: Gift; giftClaimToken: string; escrowTransfer: EscrowTransfer \| null }`; or 200 with `giftClaimToken: null` when the sticker already has a gift in the bag | 403 `not_yours`, `own_gift`, `adults_only` (an NSFW sticker for someone not adult); 404 `sticker_not_found`, `user_not_found`; 409 `not_minted`, `gift_in_transit` |
+| `POST /api/gifts/:giftId/deposit`  | `{ txHash: string }`: the escrow transfer's transaction or user operation hash | 200 `{ gift: Gift }`, `escrowStatus` `pending` once checked                                                                                                             | 403 `not_yours`; 404 `gift_not_found`; 409 `deposit_not_landed` (retry), `deposit_mismatch`                                                                        |
+| `POST /api/gifts/:giftId/shared`   | `{ outcome: "sent" \| "cancelled" }`: the picker's result                      | 200 `{ gift: Gift }`: `sent` moves it to `sent`; `cancelled` leaves it `packed`                                                                                         | 403 `not_yours`; 404 `gift_not_found`; 409 `not_deposited`, `gift_closed`                                                                                          |
+| `POST /api/gifts/:giftId/take-out` | none                                                                           | 200 `{ gift: Gift }`, status `taken_out` and escrow status `rejected`                                                                                                   | 403 `not_yours`; 404 `gift_not_found`; 409 `already_received`, `gift_closed`, `take_out_not_landed`                                                                |
+| `GET /api/gifts/pending`           | none                                                                           | 200 `{ gifts: Array<{ gift: Gift; sticker: Sticker; for: Person \| null }> }`: your `packed` and `sent` gifts, newest first; `for` is who each waits for                |                                                                                                                                                                    |
 
 ```ts
 /** Send it from the giver's smart wallet to move the sticker into the escrow. */
@@ -593,10 +604,10 @@ interface EscrowTransfer {
 
 ### Receiving
 
-| Route                     | Request                                                                                                                                            | Response                                                                                                                                                        | Errors                                                                                                                                                                      |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /api/gifts/preview` | `{ giftClaimToken: string; liffContextType: "utou" \| "room" \| "group" \| "square_chat" \| "external" \| "none" }`, as `receive` takes it         | 200 `{ giver: Person; expiresAt: IsoTime; receivable: boolean; refusal: ReceiveRefusal \| null; sticker: Sticker \| null }`: the sticker only when `receivable` | 404 `gift_not_found`                                                                                                                                                        |
-| `POST /api/gifts/receive` | `{ giftClaimToken: string; liffContextType: "utou" \| "room" \| "group" \| "square_chat" \| "external" \| "none" }`, from `liff.getContext().type` | 200 `{ gift: Gift; sticker: Sticker; stickerPlacement: StickerPlacement }`                                                                                      | 403 `group_chat` (room, group or square_chat), `own_gift`; 404 `gift_not_found`; 409 `already_received`, `taken_back`, `not_deposited`; 410 `gift_expired`, `gift_returned` |
+| Route                     | Request                                                                                                                                            | Response                                                                                                                                                        | Errors                                                                                                                                                                                     |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `POST /api/gifts/preview` | `{ giftClaimToken: string; liffContextType: "utou" \| "room" \| "group" \| "square_chat" \| "external" \| "none" }`, as `receive` takes it         | 200 `{ giver: Person; expiresAt: IsoTime; receivable: boolean; refusal: ReceiveRefusal \| null; sticker: Sticker \| null }`: the sticker only when `receivable` | 404 `gift_not_found`                                                                                                                                                                       |
+| `POST /api/gifts/receive` | `{ giftClaimToken: string; liffContextType: "utou" \| "room" \| "group" \| "square_chat" \| "external" \| "none" }`, from `liff.getContext().type` | 200 `{ gift: Gift; sticker: Sticker; stickerPlacement: StickerPlacement }`                                                                                      | 403 `group_chat` (room, group or square_chat), `own_gift`, `adults_only`; 404 `gift_not_found`; 409 `already_received`, `taken_back`, `not_deposited`; 410 `gift_expired`, `gift_returned` |
 
 - In Sepolia mode, Receiving signs and submits `claimGift`, waits for it to land, stores its transaction hash, and only then transfers ownership in the database. A retry reconciles a claim that landed before its database update.
 - If the success response is lost, the same recipient can retry Accept and get the stored receipt and current placement without another claim. This works only while they still own the Sticker and it is not in another open Gift; other recipients still get `already_received`.
@@ -615,7 +626,8 @@ type ReceiveRefusal =
   | "taken_back"
   | "gift_returned"
   | "gift_expired"
-  | "not_deposited";
+  | "not_deposited"
+  | "adults_only"; // an NSFW sticker, to anyone not adult
 ```
 
 ### Gratitude

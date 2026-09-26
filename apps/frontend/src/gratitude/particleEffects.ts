@@ -1,6 +1,7 @@
 import { EASE_OUT, EASE_PEEL } from "./easing";
 import { BEAD_SVG, GLINT_SVG, PUFF_SVG, miniHeartSvg, stampHeartSvg, svgDataUrl } from "./heartArt";
 import type { HeartBox } from "./miniHeartPhysics";
+import { animate } from "./webAnimations";
 
 export interface ParticleEffects {
   /** A finger stamp where a touch landed. */
@@ -68,29 +69,19 @@ function makeLine(): HTMLDivElement {
   return el;
 }
 
-/** Cancelling an animation rejects its `finished`: browsers mark that handled, happy-dom doesn't. */
-function animate(
-  el: HTMLElement,
-  frames: Keyframe[],
-  options: KeyframeAnimationOptions,
-): Animation {
-  const animation = el.animate(frames, options);
-  void animation.finished.catch(rethrowUnlessCancelled);
-  return animation;
-}
-
-function rethrowUnlessCancelled(error: unknown) {
-  if (!(error instanceof Error && error.name === "AbortError")) throw error;
-}
-
 const at = (x: number, y: number) => `translate(${x}px,${y}px)`;
 
-/** The heart's small effects, each from a fixed set of elements per kind. */
+/**
+ * The heart's small effects, each from a fixed set of elements per kind. `scale`: the stage's size
+ * over the live game's, which sizes and spreads them; `rate`: how fast they play, a replay's clock's.
+ */
 export function createParticleEffects(
   layers: { stamps: HTMLElement; effects: HTMLElement; lines: HTMLElement },
-  options: { reduced: () => boolean; random: () => number },
+  options: { reduced: () => boolean; random: () => number; rate?: number; scale?: number },
 ): ParticleEffects {
-  const { reduced, random } = options;
+  const { reduced, random, rate = 1, scale = 1 } = options;
+  /** The live game's px, on this stage. */
+  const px = (n: number) => n * scale;
   const pools: Record<Kind, Sprite[]> = { rise: [], glint: [], puff: [], bead: [], burst: [] };
   /** On screen, oldest first. */
   const stamps: Stamp[] = [];
@@ -114,7 +105,7 @@ export function createParticleEffects(
 
   function fly(sprite: Sprite, frames: Keyframe[], duration: number, easing = EASE_PEEL) {
     sprite.animation?.cancel();
-    sprite.animation = animate(sprite.el, frames, { duration, easing, fill: "both" });
+    sprite.animation = animate(sprite.el, frames, { duration, easing, fill: "both" }, rate);
   }
 
   /** With reduced motion: the sprite fades in and out where it starts, with no travel, spin or spring. */
@@ -134,7 +125,7 @@ export function createParticleEffects(
   /** Plays a stamp's way out, then takes it off the page to be reused. */
   function retire(stamp: Stamp, frames: Keyframe[], timing: KeyframeAnimationOptions) {
     stamp.animation?.cancel();
-    const animation = animate(stamp.el, frames, timing);
+    const animation = animate(stamp.el, frames, timing, rate);
     stamp.animation = animation;
     animation.onfinish = () => {
       stamp.el.remove();
@@ -144,7 +135,7 @@ export function createParticleEffects(
 
   return {
     stamp(x, y) {
-      const s = 26 + random() * 10;
+      const s = px(26 + random() * 10);
       const rot = -4 + (random() - 0.5) * 26;
       const stamp = spareStamps.pop() ?? { el: makeSprite(STAMP_URL), animation: null, base: "" };
       stamp.animation?.cancel();
@@ -163,6 +154,7 @@ export function createParticleEffects(
             { transform: `${stamp.base} scale(1)` },
           ],
           { duration: 200, easing: EASE_PEEL },
+          rate,
         );
       }
       stamps.push(stamp);
@@ -178,12 +170,12 @@ export function createParticleEffects(
 
     rise(count, heart) {
       for (let i = 0; i < count; i++) {
-        const s = 14 + random() * 14;
+        const s = px(14 + random() * 14);
         const ox = heart.x + (random() - 0.5) * heart.width * 0.5;
         const oy = heart.y - heart.height * 0.38;
         const sprite = particle("rise", s);
-        const dx = (random() - 0.5) * 90;
-        const dy = -(90 + random() * 110);
+        const dx = px((random() - 0.5) * 90);
+        const dy = -px(90 + random() * 110);
         const r0 = (random() - 0.5) * 30;
         const r1 = r0 + (random() - 0.5) * 50;
         const x = ox - s / 2;
@@ -194,8 +186,8 @@ export function createParticleEffects(
             sprite,
             [
               { transform: at(x, y), opacity: 0 },
-              { offset: 0.3, transform: at(x, y - 5), opacity: 1 },
-              { transform: at(x, y - 14), opacity: 0 },
+              { offset: 0.3, transform: at(x, y - px(5)), opacity: 1 },
+              { transform: at(x, y - px(14)), opacity: 0 },
             ],
             600,
             EASE_OUT,
@@ -224,7 +216,7 @@ export function createParticleEffects(
       const r = 0.58 + random() * 0.2;
       const x = heart.x + Math.cos(a) * heart.width * r;
       const y = heart.y + Math.sin(a) * heart.height * r * 0.9;
-      const s = 16 + random() * 14;
+      const s = px(16 + random() * 14);
       const sprite = particle("glint", s);
       const spot = at(x - s / 2, y - s / 2);
       if (reduced()) {
@@ -245,7 +237,7 @@ export function createParticleEffects(
     steam(count, heart) {
       for (let i = 0; i < count; i++) {
         const side = random() < 0.5 ? -1 : 1;
-        const s = 26 + random() * 20;
+        const s = px(26 + random() * 20);
         const x = heart.x + side * heart.width * (0.22 + random() * 0.12) - s / 2;
         const y = heart.y - heart.height * 0.44 - s / 2;
         const sprite = particle("puff", s);
@@ -253,8 +245,8 @@ export function createParticleEffects(
           fadeInPlace(sprite, at(x, y), 900, 0.95);
           continue;
         }
-        const dx = side * (18 + random() * 30);
-        const dy = -(50 + random() * 50);
+        const dx = side * px(18 + random() * 30);
+        const dy = -px(50 + random() * 50);
         fly(
           sprite,
           [
@@ -275,7 +267,7 @@ export function createParticleEffects(
       const side = random() < 0.5 ? -1 : 1;
       const x = heart.x + side * heart.width * 0.4;
       const y = heart.y - heart.height * 0.2;
-      const sprite = particle("bead", 13);
+      const sprite = particle("bead", px(13));
       if (reduced()) {
         fadeInPlace(sprite, `${at(x, y)} rotate(${side * 30}deg)`, 700);
         return;
@@ -286,7 +278,7 @@ export function createParticleEffects(
           { transform: `${at(x, y)} rotate(${side * 30}deg) scale(.4)`, opacity: 0 },
           { offset: 0.2, opacity: 1 },
           {
-            transform: `${at(x + side * 40, y + 50)} rotate(${side * 60}deg) scale(1)`,
+            transform: `${at(x + side * px(40), y + px(50))} rotate(${side * 60}deg) scale(1)`,
             opacity: 0,
           },
         ],
@@ -297,10 +289,10 @@ export function createParticleEffects(
 
     burst(count, from) {
       for (let i = 0; i < count; i++) {
-        const s = 12 + random() * 10;
+        const s = px(12 + random() * 10);
         const a = (i / count) * Math.PI * 2 + random();
         const sprite = particle("burst", s);
-        const d = 50 + random() * 40;
+        const d = px(50 + random() * 40);
         const x = from.x - s / 2;
         const y = from.y - s / 2;
         if (reduced()) {
@@ -320,8 +312,10 @@ export function createParticleEffects(
     },
 
     streamLines(x, y, velocity) {
-      if (velocity.speed < 0.2 || reduced()) return;
-      const count = Math.min(3, 1 + Math.floor(velocity.speed * 2));
+      // The thumb's speed as the live game's px would measure it.
+      const speed = velocity.speed / scale;
+      if (speed < 0.2 || reduced()) return;
+      const count = Math.min(3, 1 + Math.floor(speed * 2));
       const angle = Math.atan2(velocity.y, velocity.x);
       const deg = (angle * 180) / Math.PI;
       const dx = Math.cos(angle);
@@ -333,18 +327,19 @@ export function createParticleEffects(
         };
         lines.push(line);
         // Spread across the stroke, trailing behind the thumb.
-        const off = (random() - 0.5) * 230;
-        const length = 50 + Math.min(180, velocity.speed * 130);
+        const off = px((random() - 0.5) * 230);
+        const length = px(50 + Math.min(180, speed * 130));
         line.el.style.width = `${length.toFixed(1)}px`;
-        line.el.style.height = `${(1.4 + random() * 2.4).toFixed(2)}px`;
-        const sx = x - dy * off - dx * (length * 0.8 + random() * 30);
-        const sy = y + dx * off - dy * (length * 0.8 + random() * 30);
+        line.el.style.height = `${px(1.4 + random() * 2.4).toFixed(2)}px`;
+        const sx = x - dy * off - dx * (length * 0.8 + px(random() * 30));
+        const sy = y + dx * off - dy * (length * 0.8 + px(random() * 30));
+        const travel = px(60);
         fly(
           line,
           [
             { transform: `${at(sx, sy)} rotate(${deg}deg)`, opacity: 0.9 },
             {
-              transform: `${at(sx + dx * 60, sy + dy * 60)} rotate(${deg}deg) scaleX(.6)`,
+              transform: `${at(sx + dx * travel, sy + dy * travel)} rotate(${deg}deg) scaleX(.6)`,
               opacity: 0,
             },
           ],

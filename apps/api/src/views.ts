@@ -44,6 +44,7 @@ export const stickerSchema = z.object({
     contentHash: true,
     tokenId: true,
     mintTxHash: true,
+    nsfw: true,
   }).shape,
   /** The Original Artist. */
   artist: personSchema,
@@ -143,6 +144,7 @@ export function toSticker(
     images: urls(sticker.contentHash),
     tokenId: sticker.tokenId,
     mintTxHash: sticker.mintTxHash,
+    nsfw: sticker.nsfw,
     sealedAt: toIsoTime(sticker.createdAt),
     ensName:
       sticker.ensNamedAt !== null && artist.ensLabel !== null

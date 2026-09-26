@@ -1,11 +1,11 @@
-import { gifts, stickerPlacements, stickers, users } from "@drawing-app/db";
+import { gifts, stickerPlacements, stickers, users, type Db } from "@drawing-app/db";
 import { and, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { queueNaming } from "../ens/naming.ts";
 import type { AppDeps } from "../deps.ts";
 import { logInfo } from "../diagnostics.ts";
 import { keccak256 } from "../keccak256.ts";
-import { isoTimeSchema, personSchema, toIsoTime, toPerson } from "../shapes.ts";
+import { ageStatusOf, isoTimeSchema, personSchema, toIsoTime, toPerson } from "../shapes.ts";
 import {
   giftSchema,
   loadStickers,
@@ -37,6 +37,7 @@ export const receiveRefusalSchema = z.enum([
   "gift_returned",
   "gift_expired",
   "not_deposited",
+  "adults_only",
 ]);
 export type ReceiveRefusal = z.infer<typeof receiveRefusalSchema>;
 
@@ -73,8 +74,26 @@ const groupChatRefusal = (liffContextType: LiffContextType) =>
 
 const notFound = () => refuse("gift_not_found", "No gift has this Gift Claim Token");
 
+/** An NSFW sticker goes only to an adult. */
+function adultsOnlyRefusal(db: Pick<Db, "select">, gift: GiftRow, userId: string) {
+  const sticker = db
+    .select({ nsfw: stickers.nsfw })
+    .from(stickers)
+    .where(eq(stickers.id, gift.stickerId))
+    .get();
+  if (!sticker?.nsfw) return null;
+  const receiver = db
+    .select({ ageVerifiedAt: users.ageVerifiedAt })
+    .from(users)
+    .where(eq(users.id, userId))
+    .get();
+  if (receiver && ageStatusOf(receiver) === "adult") return null;
+  return refuse("adults_only", `Gift ${gift.id} is an NSFW sticker, for adults only`);
+}
+
 /** The first reason this person can't receive this gift now, or null. */
 function receiveRefusal(
+  db: Pick<Db, "select">,
   gift: GiftRow,
   userId: string,
   liffContextType: LiffContextType,
@@ -98,7 +117,7 @@ function receiveRefusal(
   if (gift.escrowStatus !== "pending") {
     return refuse("not_deposited", `Gift ${gift.id}'s deposit hasn't landed in the escrow`);
   }
-  return null;
+  return adultsOnlyRefusal(db, gift, userId);
 }
 
 /**
@@ -126,7 +145,7 @@ export async function previewGift(
   if (!gift) return notFound();
   const giver = db.select().from(users).where(eq(users.id, gift.giverId)).get();
   if (!giver) throw new Error(`Gift ${gift.id}'s giver ${gift.giverId} is missing`);
-  const refusal = receiveRefusal(gift, userId, liffContextType, clock.now());
+  const refusal = receiveRefusal(db, gift, userId, liffContextType, clock.now());
   // The first person to open it becomes who it waits for, so it stays on their board if they leave.
   if (!refusal && gift.forUserId === null) {
     db.update(gifts)
@@ -285,7 +304,7 @@ async function completeReceive(
 ): Promise<Receiving> {
   const { db, clock, giftChain, images } = deps;
   const now = clock.now();
-  const beforeClaim = receiveRefusal(opened, userId, liffContextType, now);
+  const beforeClaim = receiveRefusal(db, opened, userId, liffContextType, now);
   if (beforeClaim) {
     return beforeClaim.refusal === "already_received"
       ? (recordedReceive(deps, userId, opened) ?? beforeClaim)
@@ -309,7 +328,7 @@ async function completeReceive(
     (tx) => {
       const gift = tx.select().from(gifts).where(eq(gifts.id, opened.id)).get();
       if (!gift) return refuse("gift_not_found", `Gift ${opened.id} is gone`);
-      const refusal = receiveRefusal(gift, userId, liffContextType, now);
+      const refusal = receiveRefusal(tx, gift, userId, liffContextType, now);
       if (refusal) return refusal;
       const received = tx
         .update(gifts)

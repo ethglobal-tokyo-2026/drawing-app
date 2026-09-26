@@ -17,15 +17,17 @@ const RECORD_KEY = "draw.session";
 /** A kept session that hasn't loaded by then counts as lost, so Draw never waits on it for good. */
 const LOAD_TIMEOUT_MS = 5_000;
 
-/** The ticket use the session spent (the server's id), null when none was, and the time drawn. */
+/** The ticket use the session spent (the server's id), null when none was, the time drawn, and 18+. */
 interface SessionRecord {
   ticket: number | null;
   elapsedMs: number;
+  /** The 18+ switch: it seals as an NSFW sticker. */
+  nsfw: boolean;
 }
 
 export type KeptSession =
   | { status: "none" }
-  | { status: "found"; ops: Op[]; elapsedMs: number; ticket: number | null }
+  | { status: "found"; ops: Op[]; elapsedMs: number; ticket: number | null; nsfw: boolean }
   /** A drawing was in progress, but it can't be read back. */
   | { status: "lost"; ticket: number | null; error: unknown };
 
@@ -88,6 +90,8 @@ export function keptColor(ops: readonly Op[]): string | null {
 /** Keeps the session in progress on this device as it changes. */
 export class SessionKeeper {
   private ticket: number | null = null;
+  private nsfw = false;
+  private elapsedMs = 0;
   /** The ops as last written, by reference; null when a write failed and what landed is unknown. */
   private written: readonly Op[] | null = [];
   private reported = false;
@@ -95,8 +99,10 @@ export class SessionKeeper {
   /** A new session: the ticket it spent, and nothing drawn yet. */
   start(ticket: number | null): void {
     this.ticket = ticket;
+    this.nsfw = false;
+    this.elapsedMs = 0;
     this.written = [];
-    writeRecord({ ticket, elapsedMs: 0 });
+    writeRecord({ ticket, elapsedMs: 0, nsfw: false });
     this.write(
       transact("readwrite", (ops, progress) => {
         clearStores(ops, progress);
@@ -106,14 +112,23 @@ export class SessionKeeper {
   }
 
   /** A session picked back up after a reload, whose ops are already kept. */
-  resume(ticket: number | null, ops: readonly Op[]): void {
+  resume(ticket: number | null, ops: readonly Op[], elapsedMs: number, nsfw: boolean): void {
     this.ticket = ticket;
+    this.elapsedMs = elapsedMs;
+    this.nsfw = nsfw;
     this.written = [...ops];
+  }
+
+  /** Keeps the 18+ switch. */
+  keepNsfw(nsfw: boolean): void {
+    this.nsfw = nsfw;
+    writeRecord({ ticket: this.ticket, elapsedMs: this.elapsedMs, nsfw });
   }
 
   /** Keeps the time drawn, and any ops that changed since the last save. */
   save(ops: readonly Op[], elapsedMs: number): void {
-    writeRecord({ ticket: this.ticket, elapsedMs });
+    this.elapsedMs = elapsedMs;
+    writeRecord({ ticket: this.ticket, elapsedMs, nsfw: this.nsfw });
     const written = this.written;
     const from = written ? firstChanged(written, ops) : 0;
     if (written && from === ops.length && ops.length === written.length) return;
@@ -129,6 +144,8 @@ export class SessionKeeper {
   /** Nothing is in progress any more. */
   wipe(): void {
     this.ticket = null;
+    this.nsfw = false;
+    this.elapsedMs = 0;
     this.written = [];
     removeRecord();
     this.write(transact("readwrite", clearStores));
@@ -156,7 +173,13 @@ export async function loadKeptSession(): Promise<KeptSession> {
     return { status: "lost", ticket: null, error: new Error("Its record is unreadable") };
   try {
     const ops = await withTimeout(readOps(), LOAD_TIMEOUT_MS);
-    return { status: "found", ops, elapsedMs: record.elapsedMs, ticket: record.ticket };
+    return {
+      status: "found",
+      ops,
+      elapsedMs: record.elapsedMs,
+      ticket: record.ticket,
+      nsfw: record.nsfw,
+    };
   } catch (error) {
     return { status: "lost", ticket: record.ticket, error };
   }
@@ -242,7 +265,12 @@ function readRecord(): SessionRecord | "unreadable" | null {
     "elapsedMs" in value &&
     isFiniteNumber(value.elapsedMs)
   )
-    return { ticket: value.ticket, elapsedMs: value.elapsedMs };
+    // A record kept before the 18+ switch existed has no `nsfw`; the drawing goes on with it off.
+    return {
+      ticket: value.ticket,
+      elapsedMs: value.elapsedMs,
+      nsfw: "nsfw" in value && value.nsfw === true,
+    };
   console.error("The record of the drawing in progress is unreadable:", raw);
   return "unreadable";
 }

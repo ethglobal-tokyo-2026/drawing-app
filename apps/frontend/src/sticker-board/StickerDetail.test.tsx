@@ -15,6 +15,12 @@ import { emptyApi, TEST_OWNER } from "../api/testing";
 import { toPerson, toSticker } from "../api/views";
 import type { BoardStickerView } from "./boardSticker";
 import { StickerDetail } from "./StickerDetail";
+import { fakeTimelapsePlayers, TEST_TIMELAPSE } from "./timelapse/testTimelapse";
+import type { CreateTimelapsePlayer } from "./timelapse/useTimelapse";
+
+// The timelapse's player paints on a 2D canvas, which happy-dom lacks, so a fake plays instead.
+const timelapsePlayer = vi.hoisted(() => ({ create: vi.fn<CreateTimelapsePlayer>() }));
+vi.mock("./timelapse/timelapsePlayer", () => ({ createTimelapsePlayer: timelapsePlayer.create }));
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -24,7 +30,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 /** Midday, so the day reads the same in every time zone. */
 const day = (d: number) => new Date(2026, 8, d, 12).getTime();
 
-const you = { id: "me", handle: "alice", name: "Alice" };
+const you = { id: "me", handle: "alice", name: "Alice", ageStatus: "adult" as const };
 const sticker = (
   no: number,
   createdAt: number,
@@ -37,6 +43,7 @@ const sticker = (
   timeUsed: 292,
   width: 120,
   height: 100,
+  nsfw: false,
   urls: { png: `blob:${no}` },
   placement: { on: true, x: 0.5, y: 0.5, s: 0.3, r: 0, z: no },
   artist: you,
@@ -86,7 +93,12 @@ function received(gratitude: Gratitude | null) {
   };
   const client = emptyApi({
     stickerDetail: () =>
-      Promise.resolve({ sticker: drawn, owner: TEST_OWNER, transferTrail: [entry] }),
+      Promise.resolve({
+        sticker: drawn,
+        owner: TEST_OWNER,
+        transferTrail: [entry],
+        hasTimelapse: false,
+      }),
   });
   return { drawn, client };
 }
@@ -101,6 +113,7 @@ const withTrail = (trail: StickerDetailResponse["transferTrail"]) =>
         sticker: apiSticker({ id, number: 133 }),
         owner: me,
         transferTrail: id === "s-133" ? trail : [],
+        hasTimelapse: false,
       }),
   });
 const rows = () => [...document.querySelectorAll(".transfer-trail__row")];
@@ -160,7 +173,12 @@ describe("StickerDetail", () => {
   });
 
   it("says who received a given sticker, and when, and offers no Give", () => {
-    const receiver = { id: "artist-bob", handle: "bob", name: "Bob Tanaka" };
+    const receiver = {
+      id: "artist-bob",
+      handle: "bob",
+      name: "Bob Tanaka",
+      ageStatus: "adult" as const,
+    };
     const given = sticker(133, day(14), {
       held: false,
       givenTo: { receiver, receivedAt: day(23) },
@@ -230,7 +248,17 @@ describe("StickerDetail", () => {
     });
     // Drawn by @mika, so the artist's share comes out of @ken's part.
     const byMika = stickers.map((s) =>
-      s.id === "s-133" ? { ...s, artist: { id: people.mika.id, handle: "mika", name: "Mika" } } : s,
+      s.id === "s-133"
+        ? {
+            ...s,
+            artist: {
+              id: people.mika.id,
+              handle: "mika",
+              name: "Mika",
+              ageStatus: "adult" as const,
+            },
+          }
+        : s,
     );
     open(
       { stickers: byMika, ownerId: "me" },
@@ -274,6 +302,76 @@ describe("StickerDetail", () => {
 
     open({ stickers: [sticker(133, day(14))] });
     expect(document.querySelector(".sticker-detail__ens")).toBeNull();
+  });
+
+  describe("its timelapse", () => {
+    let players: ReturnType<typeof fakeTimelapsePlayers>;
+    beforeEach(() => {
+      players = fakeTimelapsePlayers();
+      timelapsePlayer.create.mockImplementation(players.create);
+    });
+
+    /** The stickers with their masks; only No.0133 was sealed with its timelapse. */
+    const masked = stickers.map((s) => ({ ...s, urls: { ...s.urls, mask: `blob:${s.no}-mask` } }));
+    const withTimelapse = () =>
+      emptyApi({
+        stickerDetail: (id) =>
+          Promise.resolve({
+            sticker: apiSticker({ id }),
+            owner: me,
+            transferTrail: [],
+            hasTimelapse: id === "s-133",
+          }),
+        timelapse: () => Promise.resolve(TEST_TIMELAPSE),
+      });
+    const timelapseButton = () => document.querySelector<HTMLButtonElement>(".timelapse-button");
+    const layer = () => document.querySelector(".timelapse-layer");
+
+    /** Opens No.0133 and plays its timelapse. */
+    async function playing() {
+      open({ stickers: masked }, withTimelapse());
+      await settle();
+      act(() => timelapseButton()?.click());
+      await settle();
+      players.last().prepared.resolve();
+      await settle();
+      expect(layer()).not.toBeNull();
+      return players.last();
+    }
+
+    it.each(["yours", "given"] as const)(
+      "offers Timelapse in %s mode, only for a sticker sealed with one",
+      async (mode) => {
+        open({ mode, stickers: masked }, withTimelapse());
+        await settle();
+        expect(timelapseButton()).not.toBeNull();
+        press("Next sticker");
+        await settle();
+        expect(heading()).toBe("No.0117");
+        expect(timelapseButton()).toBeNull();
+      },
+    );
+
+    it.each([
+      ["paging", () => press("Next sticker")],
+      ["the Sticker board button", () => press("Sticker board")],
+      ["Escape", () => key("Escape")],
+    ])("stops on %s, and leaves no layer behind", async (_, leave) => {
+      const player = await playing();
+      leave();
+      expect(player.calls).toContain("stop");
+      expect(layer()).toBeNull();
+    });
+
+    it("stops when Back closes the detail", async () => {
+      const player = await playing();
+      await act(async () => {
+        history.back();
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      });
+      expect(player.calls).toContain("stop");
+      expect(layer()).toBeNull();
+    });
   });
 
   it("titles LINE's header with the shown sticker, and puts the title back when it closes", () => {

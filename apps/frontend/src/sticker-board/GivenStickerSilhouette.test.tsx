@@ -20,6 +20,7 @@ const sticker = {
   timeUsed: 292,
   width: 120,
   height: 100,
+  nsfw: false,
   urls: { png: "blob:147", mask: "blob:147-mask" },
   placement: { on: true, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 },
 };
@@ -60,7 +61,12 @@ afterEach(() => {
 
 describe("GivenStickerSilhouette", () => {
   it("names who received it, and when", () => {
-    const receiver = { id: "artist-bob", handle: "bob", name: "Bob Tanaka" };
+    const receiver = {
+      id: "artist-bob",
+      handle: "bob",
+      name: "Bob Tanaka",
+      ageStatus: "adult" as const,
+    };
     expect(draw({ givenTo: { receiver, receivedAt: sept23 } })).toEqual({
       label: "No.0147, given to @bob on 9.23. Open it",
       caption: "No.0147@bob",

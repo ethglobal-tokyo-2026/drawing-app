@@ -15,6 +15,10 @@ interface TimelapseInput {
 const tenths = (n: number) => Math.round(n * 10);
 /** A length to the tenth of a pixel, as JSON keeps it short. */
 const toTenth = (n: number) => tenths(n) / 10;
+/** A fill's tap to the hundredth of a pixel, so it seeds the pixel it seeded. */
+const toHundredth = (n: number) => Math.round(n * 100) / 100;
+/** A density to the thousandth, as phones report ones like 2.625. */
+const toThousandth = (n: number) => Math.round(n * 1000) / 1000;
 
 /** A stroke's points as changes from the point before; the first is from zero. */
 function pointChanges(pts: readonly number[]): number[] {
@@ -35,10 +39,45 @@ export function encodeTimelapse({ ops, ink, place, density }: TimelapseInput): T
     v: 1,
     ink: [sheet(ink.width), sheet(ink.height)],
     place: [sheet(place.x), sheet(place.y), sheet(place.w), sheet(place.h)],
+    density: toThousandth(density),
     ops: ops.map((op) =>
       op.tool === "fill"
-        ? ["fill", op.color, Math.round(op.T), toTenth(op.x), toTenth(op.y)]
+        ? ["fill", op.color, Math.round(op.T), toHundredth(op.x), toHundredth(op.y)]
         : [op.tool, op.color, Math.round(op.T), pointChanges(op.pts)],
+    ),
+  };
+}
+
+/** A timelapse as the drawing screen's own ops again, in sheet pixels. */
+export interface DecodedTimelapse {
+  ink: { width: number; height: number };
+  place: Rect;
+  /** Device pixels per sheet pixel where it was drawn; null before densities were recorded. */
+  density: number | null;
+  ops: Op[];
+}
+
+/** A stroke's points from their changes, tenths back to pixels. */
+function pointsFrom(changes: readonly number[]): number[] {
+  const pts: number[] = [];
+  const running = [0, 0, 0, 0];
+  for (let i = 0; i + STRIDE <= changes.length; i += STRIDE) {
+    for (let k = 0; k < STRIDE; k++) running[k] += changes[i + k] ?? 0;
+    pts.push(running[0] / 10, running[1] / 10, running[2] / 10, running[3]);
+  }
+  return pts;
+}
+
+export function decodeTimelapse(timelapse: TimelapseV1): DecodedTimelapse {
+  const [x, y, w, h] = timelapse.place;
+  return {
+    ink: { width: timelapse.ink[0], height: timelapse.ink[1] },
+    place: { x, y, w, h },
+    density: timelapse.density ?? null,
+    ops: timelapse.ops.map((op): Op =>
+      op[0] === "fill"
+        ? { tool: "fill", color: op[1], T: op[2], x: op[3], y: op[4] }
+        : { tool: op[0], color: op[1], T: op[2], pts: pointsFrom(op[3]) },
     ),
   };
 }

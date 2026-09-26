@@ -8,6 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type Ref,
 } from "react";
+import { useMyAgeStatus } from "../identity/useMyAgeStatus";
 import type { Sticker } from "@drawing-app/api/client";
 import { ApiError, apiError } from "../api/apiClient";
 import { useMe } from "../api/meContext";
@@ -26,6 +27,7 @@ import { DrawingCanvas, type DrawingCanvasHandle } from "./canvas/DrawingCanvas"
 import { isFirstVisit } from "./drawVisits";
 import { lazyRadius } from "./canvas/lazyBrush";
 import type { Op, Tool } from "./canvas/ops";
+import { NsfwToggle } from "./NsfwToggle";
 import { SealKey } from "./SealKey";
 import { makeSticker, type SealedSticker } from "./sealing/makeSticker";
 import { SealCeremony } from "./sealing/SealCeremony";
@@ -143,6 +145,14 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const [keeper] = useState(() => new SessionKeeper());
   // Until a session kept across a reload is back, or known lost, Draw doesn't ask for a ticket.
   const [restoring, setRestoring] = useState(true);
+  // The 18+ switch; the seal reads the ref, since it runs from the clock's time-up too.
+  const [nsfwOn, setNsfwOn] = useState(false);
+  const nsfw = useRef(false);
+  const adult = useMyAgeStatus() === "adult";
+  const keepNsfw = (on: boolean) => {
+    nsfw.current = on;
+    setNsfwOn(on);
+  };
   const [pickedUp, setPickedUp] = useState<"restored" | "lost" | "carried" | null>(null);
   // A tap on the waiting timer puts "Starts when you draw" under it, until the first stroke.
   const [startsNote, setStartsNote] = useState(false);
@@ -186,6 +196,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         setCeremony((c) => (c?.leaving ? c : null));
         setSealProblem(null);
         setStartProblem(null);
+        keepNsfw(false);
         // A fresh sheet starts in a new color, whatever the last one ended in.
         const next = startingColor([startedIn.current, color]);
         startedIn.current = next;
@@ -298,6 +309,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         rim: sticker.rim,
         flat: sticker.flat,
         ...(timelapse && { timelapse }),
+        nsfw: nsfw.current,
       });
       ticket.current = null;
       keeper.wipe();
@@ -395,7 +407,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         setColor(own);
         startedIn.current = own;
       }
-      keeper.resume(kept.ticket, kept.ops);
+      keeper.resume(kept.ticket, kept.ops, kept.elapsedMs, kept.nsfw);
+      keepNsfw(kept.nsfw);
       ticket.current = kept.ticket;
       send({ type: "restored", drawn });
       if (!drawn) return;
@@ -603,6 +616,16 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         onUndo={() => canvas.current?.undo()}
         onRedo={() => canvas.current?.redo()}
       />
+      {adult && (
+        <NsfwToggle
+          shown={history.canUndo && !sealing}
+          on={nsfwOn}
+          onChange={(on) => {
+            keepNsfw(on);
+            keeper.keepNsfw(on);
+          }}
+        />
+      )}
       <SealKey
         shown={history.canUndo && !sealing}
         armed={session.phase === "armed"}

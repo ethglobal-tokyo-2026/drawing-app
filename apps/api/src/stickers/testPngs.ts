@@ -68,6 +68,7 @@ export const TEST_TIMELAPSE: TimelapseV1 = {
   v: 1,
   ink: [SHEET_SIZE.width, SHEET_SIZE.height],
   place: [10, 20, STICKER_SIZE.width, STICKER_SIZE.height],
+  density: 2,
   ops: [
     ["brush", "#ff3366", 0, [100, 200, 60, 0, 50, 25, 0, 16]],
     ["fill", "#33aaff", 1500, 40.5, 60],
@@ -98,6 +99,7 @@ export function sealUpload(ticketUseId: number) {
     rim: pngFile(images.rim, "rim"),
     flat: pngFile(images.flat, "flat"),
     timelapse: new File([testTimelapse()], "timelapse.json.gz", { type: "application/gzip" }),
+    nsfw: "false",
   } satisfies z.input<typeof sealForm>;
 }
 

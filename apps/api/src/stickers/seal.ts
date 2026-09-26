@@ -3,6 +3,7 @@ import {
   stickers,
   stickerTimelapses,
   ticketUses,
+  users,
   type Db,
 } from "@drawing-app/db";
 import { and, eq, max } from "drizzle-orm";
@@ -11,7 +12,7 @@ import { queueNaming } from "../ens/naming.ts";
 import type { AppDeps } from "../deps.ts";
 import { diagnosticStep, failureCause, logFailure, logInfo } from "../diagnostics.ts";
 import { keccak256 } from "../keccak256.ts";
-import { stickerPngsSchema, type StickerPngKind } from "../shapes.ts";
+import { ageStatusOf, stickerPngsSchema, type StickerPngKind } from "../shapes.ts";
 import {
   loadStickers,
   stickerPlacementSchema,
@@ -31,6 +32,7 @@ export type SealResponse = z.infer<typeof sealResponseSchema>;
 export type SealRefusal =
   | { status: 400; error: "invalid_request"; detail: string }
   | { status: 403; error: "ticket_not_yours"; detail: string }
+  | { status: 403; error: "adults_only"; detail: string }
   | { status: 404; error: "ticket_not_found"; detail: string }
   | { status: 409; error: "ticket_already_used"; detail: string }
   | { status: 503; error: "mint_failed"; detail: string };
@@ -177,6 +179,19 @@ export async function sealSticker(
     return { sealed: sealedSticker(deps, userId, ticket.stickerId), created: false };
   }
 
+  if (form.nsfw) {
+    const artist = deps.db
+      .select({ ageVerifiedAt: users.ageVerifiedAt })
+      .from(users)
+      .where(eq(users.id, userId))
+      .get();
+    if (!artist || ageStatusOf(artist) !== "adult") {
+      const detail =
+        "Only a person whose age verification proved them an adult can seal an NSFW sticker";
+      return { refused: { status: 403, error: "adults_only", detail } };
+    }
+  }
+
   const pngs: StickerPngs = {
     png: await bytesOf(form.png),
     mask: await bytesOf(form.mask),
@@ -222,6 +237,7 @@ export async function sealSticker(
           outline: form.outline,
           contentHash,
           metadataUri,
+          nsfw: form.nsfw,
         })
         .run();
       tx.update(ticketUses).set({ stickerId }).where(eq(ticketUses.id, form.ticketUseId)).run();

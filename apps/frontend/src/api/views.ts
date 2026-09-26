@@ -1,7 +1,7 @@
 import { formatHandle } from "../stickers/format";
 import type { Placement as RecordPlacement } from "../sticker-board/placement";
 import type { StickerUrls } from "../stickers/stickerUrls";
-import type { IsoTime, Person, Placement, Sticker } from "@drawing-app/api/client";
+import type { AgeStatus, IsoTime, Person, Placement, Sticker } from "@drawing-app/api/client";
 
 /** Someone, as a screen shows them. */
 export interface PersonView {
@@ -13,6 +13,8 @@ export interface PersonView {
   pictureUrl?: string;
   /** <label>.croquis.eth. */
   ensName?: string;
+  /** Only an adult marks, sees plainly or receives NSFW stickers. */
+  ageStatus: AgeStatus;
 }
 
 /** A sticker, as a screen draws it. */
@@ -31,6 +33,8 @@ export interface StickerView {
   sealedAt: number;
   /** <number>.<artist>.croquis.eth, once it's onchain. */
   ensName?: string;
+  /** An NSFW sticker: pink foil, and blurred for anyone not adult. */
+  nsfw: boolean;
 }
 
 export const toMs = (t: IsoTime): number => Date.parse(t);
@@ -41,6 +45,7 @@ export const toPerson = (p: Person): PersonView => ({
   name: p.lineDisplayName ?? (p.handle === null ? "Someone" : formatHandle(p.handle)),
   ...(p.linePictureUrl && { pictureUrl: p.linePictureUrl }),
   ...(p.ensName && { ensName: p.ensName }),
+  ageStatus: p.ageStatus,
 });
 
 /** Shown from its WebP copies, a fraction of its PNGs' bytes. An empty URL is an image it doesn't have. */
@@ -61,6 +66,7 @@ export const toSticker = (s: Sticker): StickerView => ({
   },
   sealedAt: toMs(s.sealedAt),
   ...(s.ensName && { ensName: s.ensName }),
+  nsfw: s.nsfw,
 });
 
 /** The app's placement names: `on`, `s` and `r` for `onBoard`, `scale` and `rotation`. */

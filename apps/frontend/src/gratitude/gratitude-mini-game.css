@@ -1191,6 +1191,84 @@
   user-select: text;
 }
 
+/* ------------------------------------------------------------------ a replay, inline in its card
+   A small stage with the drafts' slim HUD and no top band, so no ground mask. It takes its card's
+   ground and corners, sits in the page's own stacking and lets a finger scroll the page. The heart
+   lands outside it, in the card's dot. */
+.gr[data-mode="replay"] {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: 100%;
+  z-index: auto;
+  background: none;
+  border-radius: inherit;
+  touch-action: auto;
+  overscroll-behavior: auto;
+}
+/* the ground keeps to the stage as the heart flies out of it */
+.gr[data-mode="replay"]:is([data-phase="ending"], [data-phase="done"]) {
+  overflow: visible;
+}
+.gr[data-mode="replay"] .gr-ground {
+  -webkit-mask-image: none;
+  mask-image: none;
+  overflow: hidden;
+  overflow: clip;
+  border-radius: inherit;
+}
+.gr[data-mode="replay"] .gr-heart-btn {
+  pointer-events: none;
+}
+.gr[data-mode="replay"] .gr-hud {
+  left: 12px;
+  right: 12px;
+}
+.gr[data-mode="replay"] .gr-timer-track {
+  height: 12px;
+}
+.gr[data-mode="replay"] .gr-timer-s {
+  font-size: 13px;
+}
+.gr[data-mode="replay"] .gr-readout {
+  margin-top: 6px;
+}
+.gr[data-mode="replay"] .gr-amount b {
+  font-size: 28px;
+}
+.gr[data-mode="replay"] .gr-amount i {
+  font-size: 17px;
+}
+.gr[data-mode="replay"] .gr-mult {
+  padding: 4px 9px 3px;
+}
+.gr[data-mode="replay"] .gr-mult b {
+  font-size: 18px;
+}
+.gr[data-mode="replay"] .gr-mult span {
+  font-size: 13px;
+}
+/* what the stylesheet sizes in px, at the stage's scale (the engine's --gr-scale) */
+.gr[data-mode="replay"] .gr-thumb-glow {
+  width: calc(150px * var(--gr-scale));
+  height: calc(150px * var(--gr-scale));
+  margin: calc(-75px * var(--gr-scale)) 0 0 calc(-75px * var(--gr-scale));
+}
+.gr[data-mode="replay"] .gr-dent {
+  width: calc(112px * var(--gr-scale));
+  height: calc(30px * var(--gr-scale));
+  margin-left: calc(-56px * var(--gr-scale));
+}
+.gr[data-mode="replay"] .gr-beam-shaft {
+  width: calc(190px * var(--gr-scale));
+  margin-left: calc(-95px * var(--gr-scale));
+}
+.gr[data-mode="replay"] .gr-shakemarks svg {
+  width: calc(30px * var(--gr-scale));
+  height: calc(30px * var(--gr-scale));
+  margin-top: calc(-15px * var(--gr-scale));
+}
+
 /* ------------------------------------------------------------------ reduced motion: no shake, no haze */
 .gr[data-reduced="1"] .gr-page {
   transform: none !important;

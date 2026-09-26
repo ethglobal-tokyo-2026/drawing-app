@@ -18,6 +18,8 @@ export interface BoardSticker {
   outline?: string;
   urls: StickerUrls;
   placement: Placement;
+  /** An NSFW sticker: pink foil, and blurred for anyone not adult. */
+  nsfw: boolean;
   /** Someone else's board hands its demo stickers a stand-in image, which nothing reads. */
   blob?: Blob;
 }
@@ -66,6 +68,7 @@ export function toBoardSticker(b: ApiBoardSticker): UnplacedBoardSticker {
     // An empty cut line is one the sticker doesn't have.
     ...(s.outline && { outline: s.outline }),
     urls: s.urls,
+    nsfw: s.nsfw,
     placement: b.placement && toRecordPlacement(b.placement),
     artist: s.artist,
     ...(s.ensName && { ensName: s.ensName }),

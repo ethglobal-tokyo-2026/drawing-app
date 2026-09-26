@@ -48,6 +48,7 @@ const REFUSAL_KINDS: Record<RefusalKind, true> = {
   not_deposited: true,
   gift_not_found: true,
   needs_server: true,
+  adults_only: true,
 };
 
 const isRefusal = (code: string): code is RefusalKind => Object.hasOwn(REFUSAL_KINDS, code);

@@ -145,6 +145,16 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       if (!response.ok) throw await refusal(response, "POST /api/me/language-choice");
       return (await response.json()).me;
     },
+    ageVerificationRequest: async () => {
+      const response = await api.me["age-verification"].request.$post();
+      if (!response.ok) throw await refusal(response, "POST /api/me/age-verification/request");
+      return response.json();
+    },
+    verifyAge: async (proof) => {
+      const response = await api.me["age-verification"].$post({ json: proof });
+      if (!response.ok) throw await refusal(response, "POST /api/me/age-verification");
+      return (await response.json()).me;
+    },
 
     stickerBoard: async (userId = "me") => {
       const response = await boards[":userId"].$get({ param: { userId } });
@@ -196,6 +206,7 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
             spec: png(request.spec, "spec.png"),
             rim: png(request.rim, "rim.png"),
             flat: png(request.flat, "flat.png"),
+            nsfw: request.nsfw ? "true" : "false",
             ...(request.timelapse && {
               timelapse: new File([request.timelapse], "timelapse.json.gz", {
                 type: "application/gzip",

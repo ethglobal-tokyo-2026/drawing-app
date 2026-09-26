@@ -42,10 +42,19 @@ export interface StrokeThrow {
   speed: number;
 }
 
+/** A stage's own sizes for its pile. */
+export interface PileOptions {
+  /** The stage's size over the live game's. The pile moves in the live game's px, so it moves alike on any stage. */
+  scale?: number;
+  /** Hearts in play at most. */
+  live?: number;
+}
+
 /**
  * Mini hearts, sweat and 昇天's rain in one world of circles. They bounce off the floor, the walls,
  * the HUD's underside and each other, settle into a heap along the bottom, and sleep there until a
- * hard hit, a tap close by or the heart under them melting away wakes them.
+ * hard hit, a tap close by or the heart under them melting away wakes them. Places given to it are
+ * the stage's px; its hearts' are the live game's, drawn at the stage's scale.
  */
 export interface MiniHeartPhysics {
   readonly hearts: readonly MiniHeart[];
@@ -131,8 +140,27 @@ function bounceOffWall(b: Body) {
   b.spin = -b.spin * 0.8;
 }
 
-export function createMiniHeartPhysics(bounds: PileBounds, random: () => number): MiniHeartPhysics {
-  let area = { ...bounds };
+export function createMiniHeartPhysics(
+  bounds: PileBounds,
+  random: () => number,
+  options: PileOptions = {},
+): MiniHeartPhysics {
+  const scale = options.scale ?? 1;
+  const cap = options.live ?? MINI.live;
+  /** A stage's px, in the pile's. */
+  const world = (px: number) => px / scale;
+  const worldBox = (box: HeartBox): HeartBox => ({
+    x: world(box.x),
+    y: world(box.y),
+    width: world(box.width),
+    height: world(box.height),
+  });
+  const worldBounds = (b: PileBounds): PileBounds => ({
+    width: world(b.width),
+    height: world(b.height),
+    ceiling: world(b.ceiling),
+  });
+  let area = worldBounds(bounds);
   const bodies: Body[] = [];
   let now = 0;
   let nextId = 1;
@@ -162,13 +190,13 @@ export function createMiniHeartPhysics(bounds: PileBounds, random: () => number)
     // Past the live cap the oldest fades out fast instead of blinking away.
     let live = 0;
     for (const b of bodies) if (!b.fade) live++;
-    while (live >= MINI.live) {
+    while (live >= cap) {
       const i = oldestIndex(false);
       if (i < 0) break;
       bodies[i].fade = { from: now, duration: 0.25 };
       live--;
     }
-    while (bodies.length >= MINI.live + HARD_STOP) remove(oldestIndex(true));
+    while (bodies.length >= cap + HARD_STOP) remove(oldestIndex(true));
     const body: Body = {
       ...launch,
       id: nextId++,
@@ -400,10 +428,13 @@ export function createMiniHeartPhysics(bounds: PileBounds, random: () => number)
   return {
     hearts: bodies,
     setBounds: (next) => {
-      area = { ...next };
+      area = worldBounds(next);
     },
     // From under the finger, sprayed outward from the heart's middle through the finger, tipped up.
-    sprayFromTap: (x, y, heart, count) => {
+    sprayFromTap: (tapX, tapY, stageHeart, count) => {
+      const x = world(tapX);
+      const y = world(tapY);
+      const heart = worldBox(stageHeart);
       let ox = (x - heart.x) / (heart.width * 0.5);
       let oy = (y - heart.y) / (heart.height * 0.5);
       const m = Math.hypot(ox, oy);
@@ -429,14 +460,14 @@ export function createMiniHeartPhysics(bounds: PileBounds, random: () => number)
       const base = Math.atan2(pass.dy, pass.dx);
       const aim = (STROKE_THROW.aimDeg * Math.PI) / 180;
       const speed = clamp(
-        pass.speed * 1000 * STROKE_THROW.share,
+        world(pass.speed) * 1000 * STROKE_THROW.share,
         STROKE_THROW.min,
         STROKE_THROW.max,
       );
       const batch = nextBatch++;
       for (let i = 0; i < count; i++) {
-        const sx = pass.end.x + (random() - 0.5) * 6;
-        const sy = pass.end.y + (random() - 0.5) * 6;
+        const sx = world(pass.end.x) + (random() - 0.5) * 6;
+        const sy = world(pass.end.y) + (random() - 0.5) * 6;
         const angle = base + (random() - 0.5) * 2 * aim;
         throwMini(sx, sy, angle, speed * lerp(0.88, 1.08, random()), batch);
       }
@@ -445,17 +476,18 @@ export function createMiniHeartPhysics(bounds: PileBounds, random: () => number)
     knockOffWall: (x, y, normal, speed, count) => {
       const base = Math.atan2(normal.y, normal.x);
       const spray = (MINI.sprayDeg * Math.PI) / 180;
-      const thrown = clamp(speed * IMPACT_THROW.share, IMPACT_THROW.min, IMPACT_THROW.max);
+      const thrown = clamp(world(speed) * IMPACT_THROW.share, IMPACT_THROW.min, IMPACT_THROW.max);
       const batch = nextBatch++;
       for (let i = 0; i < count; i++) {
-        const sx = x + (random() - 0.5) * 8;
-        const sy = y + (random() - 0.5) * 8;
+        const sx = world(x) + (random() - 0.5) * 8;
+        const sy = world(y) + (random() - 0.5) * 8;
         const angle = base + (random() - 0.5) * 2 * spray;
         throwMini(sx, sy, angle, thrown * lerp(0.85, 1.08, random()), batch);
       }
     },
     // A drop swells on the heart's edge, lets go and falls into the heap.
-    sweatFromHeart: (heart) => {
+    sweatFromHeart: (stageHeart) => {
+      const heart = worldBox(stageHeart);
       const p = SWEAT_EDGE[Math.floor(random() * SWEAT_EDGE.length)];
       const size = lerp(MINI.sweatSizes[0], MINI.sweatSizes[1], random());
       const r = size * MINI_HIT;
@@ -495,7 +527,9 @@ export function createMiniHeartPhysics(bounds: PileBounds, random: () => number)
       });
     },
     // Hardest right under the finger, and barely at the edge of its reach.
-    shoveAwayFrom: (x, y) => {
+    shoveAwayFrom: (tapX, tapY) => {
+      const x = world(tapX);
+      const y = world(tapY);
       for (const b of bodies) {
         if (b.bead || b.fade) continue;
         const dx = b.x - x;

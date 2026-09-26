@@ -84,6 +84,8 @@ export const replayV1Schema = z
     strokes: z.array(seriesSchema(STROKE_SAMPLE)),
     /** Every reversal, flat: [ms since the reversal before, direction (1 | -1)]. */
     shakes: seriesSchema(SHAKE_REVERSAL),
+    /** Per stroke, the indexes of its samples that ended a fast pass. Older replays lack it. */
+    strokePasses: z.array(z.array(z.int().min(0))).optional(),
   })
   .superRefine((replay, ctx) => {
     const report = (path: (string | number)[], message: string) =>
@@ -100,6 +102,23 @@ export const replayV1Schema = z
     }
     const shakes = walkSeries(replay.shakes, SHAKE_REVERSAL);
     if (shakes.problem !== null) report(["shakes", shakes.at], shakes.problem);
+    if (replay.strokePasses) {
+      const lists = replay.strokePasses.length;
+      if (lists !== replay.strokes.length) {
+        report(["strokePasses"], `${lists} lists of passes for ${replay.strokes.length} strokes`);
+      }
+      for (const [stroke, passes] of replay.strokePasses.entries()) {
+        const samples = (replay.strokes[stroke]?.length ?? 0) / STROKE_SAMPLE.length;
+        for (const [at, index] of passes.entries()) {
+          if (index >= samples || (at > 0 && index <= passes[at - 1])) {
+            report(
+              ["strokePasses", stroke, at],
+              `sample ${index} isn't a later sample of stroke ${stroke}`,
+            );
+          }
+        }
+      }
+    }
   });
 export type ReplayV1 = z.infer<typeof replayV1Schema>;
 

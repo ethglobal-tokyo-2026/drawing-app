@@ -71,6 +71,20 @@
       "when": 1790448194414,
       "tag": "0009_gifts_for_user",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1790453408579,
+      "tag": "0010_users_age_verification",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1790457671438,
+      "tag": "0011_stickers_nsfw",
+      "breakpoints": true
     }
   ]
 }

@@ -28,9 +28,26 @@
     calc(var(--foil-w) * 1.3827) calc(var(--foil-w) * 0.0761),
     calc(var(--foil-w) * 1.7071) calc(var(--foil-w) * 0.2929),
     calc(var(--foil-w) * 1.9239) calc(var(--foil-w) * 0.6173);
+  /* The six bands' colors: holo, unless a tone changes them. */
+  --band-1: var(--foil-pink);
+  --band-2: var(--foil-peach);
+  --band-3: var(--foil-lemon);
+  --band-4: var(--foil-aqua);
+  --band-5: var(--foil-sky);
+  --band-6: var(--foil-lilac);
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+
+/* Pink foil, on an NSFW sticker: pinks only, so it reads apart from holo at a glance. */
+.sticker-foil--pink {
+  --band-1: var(--foil-rose);
+  --band-2: var(--foil-blush);
+  --band-3: var(--foil-pearl);
+  --band-4: var(--foil-candy);
+  --band-5: var(--foil-orchid);
+  --band-6: var(--foil-magenta);
 }
 
 /* The band's mask made on the server: the silhouette grown by an even distance, at the image's size.
@@ -81,7 +98,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: var(--foil-lilac);
+  background: var(--band-6);
 }
 
 .sticker-foil__band {
@@ -95,13 +112,13 @@
   inset: -48px 0 0 -96px;
   background: repeating-linear-gradient(
     115deg,
-    var(--foil-pink) 0,
-    var(--foil-peach) 16px,
-    var(--foil-lemon) 32px,
-    var(--foil-aqua) 48px,
-    var(--foil-sky) 64px,
-    var(--foil-lilac) 80px,
-    var(--foil-pink) 96px
+    var(--band-1) 0,
+    var(--band-2) 16px,
+    var(--band-3) 32px,
+    var(--band-4) 48px,
+    var(--band-5) 64px,
+    var(--band-6) 80px,
+    var(--band-1) 96px
   );
   animation: sticker-foil-flow 7s linear infinite;
   animation-delay: calc(var(--foil-i, 0) * -2.3s);

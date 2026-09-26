@@ -112,6 +112,25 @@ describe("POST /api/stickers", () => {
     expect(row?.metadataUri).toBe(new URL(`${sticker.id}.json`, sticker.images.png).href);
   });
 
+  it("seals an NSFW sticker for an adult, and refuses anyone else before storing a file", async () => {
+    const adultId = insertUser(test.db, { ageVerifiedAt: test.clock.now() });
+    expect((await seal(adultId, { nsfw: "true" })).sticker).toMatchObject({
+      nsfw: true,
+      artist: { ageStatus: "adult" },
+    });
+    expect((await seal(adultId)).sticker.nsfw).toBe(false);
+
+    const unverifiedId = insertUser(test.db);
+    const ticketUseId = spendTicket(unverifiedId);
+    const png = testPng(STICKER_SIZE.width, STICKER_SIZE.height, "nsfw");
+    const parts = sealParts(ticketUseId, { nsfw: "true", png: pngFile(png, "png") });
+    expect(await refusal(await postSeal(unverifiedId, sealFormData(parts)))).toMatchObject({
+      status: 403,
+      error: "adults_only",
+    });
+    expect(test.images.saved.has(keccak256(png))).toBe(false);
+  });
+
   it("numbers seals across everyone, one after another", async () => {
     const first = await seal(insertUser(test.db));
     const second = await seal(insertUser(test.db));
@@ -377,6 +396,16 @@ describe("GET /api/stickers/:stickerId", () => {
     ]);
   });
 
+  it("says whether the sticker was sealed with its timelapse", async () => {
+    const artistId = insertUser(test.db);
+    const withOne = await seal(artistId);
+    const without = await seal(artistId, { timelapse: undefined });
+    const hasTimelapse = async (stickerId: string) =>
+      stickerDetailSchema.parse(await (await getSticker(artistId, stickerId)).json()).hasTimelapse;
+    expect(await hasTimelapse(withOne.sticker.id)).toBe(true);
+    expect(await hasTimelapse(without.sticker.id)).toBe(false);
+  });
+
   it("refuses an unknown sticker with sticker_not_found", async () => {
     const response = await getSticker(insertUser(test.db), "no-such-sticker");
     expect(await refusal(response)).toMatchObject({ status: 404, error: "sticker_not_found" });
@@ -394,6 +423,18 @@ describe("GET /api/stickers/:stickerId/timelapse", () => {
     const response = await getTimelapse(insertUser(test.db), sticker.id);
     expect(response.status).toBe(200);
     expect(timelapseV1Schema.parse(await response.json())).toEqual(TEST_TIMELAPSE);
+  });
+
+  it("answers a timelapse from before densities were recorded without one", async () => {
+    const artistId = insertUser(test.db);
+    const { density: _dropped, ...older } = TEST_TIMELAPSE;
+    const file = new File([gzipSync(JSON.stringify(older))], "t.json.gz");
+    const { sticker } = await seal(artistId, { timelapse: file });
+    const answered = timelapseV1Schema.parse(
+      await (await getTimelapse(artistId, sticker.id)).json(),
+    );
+    expect(answered).toEqual(older);
+    expect(answered.density).toBeUndefined();
   });
 
   it("refuses a sticker sealed without one with timelapse_not_found", async () => {

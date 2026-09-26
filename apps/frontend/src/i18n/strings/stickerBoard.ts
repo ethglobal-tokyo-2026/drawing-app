@@ -190,6 +190,37 @@ export const stickerBoard = {
       },
     },
   },
+  /** Your stat board's Age verification paper, where an Orb-verified World ID proves you're 18 or older. */
+  ageVerification: {
+    /** Your stat board, Age verification paper: its title */
+    title: { en: "Age verification", ja: "年齢確認" },
+    /** Your stat board, Age verification paper, before you've verified: what verifying does, over the Verify your age button */
+    lead: {
+      en: "Prove you’re 18 or older with a World ID verified at an Orb, which World gives only to people 18 or older. Croquis learns nothing else about you.",
+      ja: "Orbで認証したWorld IDで、18歳以上であることを証明します。Orbでの認証は18歳以上の人しか受けられません。クロッキーには、それ以外の情報は伝わりません。",
+    },
+    /** Your stat board, Age verification paper: the button that opens World ID to verify your age */
+    verify: { en: "Verify your age", ja: "年齢を確認する" },
+    /** Your stat board, Age verification paper: the button's text while World ID opens, after tapping Verify your age */
+    opening: { en: "Opening World ID…", ja: "World IDをひらいています…" },
+    /** Your stat board, Age verification paper, once World ID proved your age: in place of the button */
+    verified: { en: "Verified 18+ with World ID", ja: "World IDで18歳以上を確認済み" },
+    /** Your stat board, Age verification paper: the alert when verifying failed, with the reason */
+    failed: {
+      en: "Your age couldn’t be verified: {{reason}}",
+      ja: "年齢を確認できませんでした：{{reason}}",
+    },
+    /** Your stat board, Age verification paper: the reason in “couldn’t be verified” when World App sent a proof that isn't for verifying your age */
+    otherProof: {
+      en: "World App sent a different kind of proof. Update World App, then try again.",
+      ja: "World Appから別の種類の証明が届きました。World Appを更新してから、もう一度お試しください。",
+    },
+    /** Your stat board, Age verification paper: the reason in “couldn’t be verified” when World App failed; {{code}} is World ID's error code, such as credential_unavailable */
+    worldAppFailed: {
+      en: "World App couldn’t finish ({{code}}).",
+      ja: "World Appで確認を完了できませんでした（{{code}}）。",
+    },
+  },
   /** The developer slip: English only, so the Japanese catalog never translates it. */
   developer: {
     label: { en: "Developer tools" },
@@ -227,7 +258,7 @@ export const stickerBoard = {
       report: { en: "Performance report" },
     },
   },
-  /** Retry button after a failure: your sticker board's load error and its unsaved-positions alert, the sticker detail's failed check, and someone else's sticker board that didn't load */
+  /** Retry button after a failure: your sticker board's load error and its unsaved-positions alert, the sticker detail's failed check, its timelapse and its Transfer Trail replay, and someone else's sticker board that didn't load */
   tryAgain: { en: "Try again", ja: "もう一度" },
   /** Your own sticker board. */
   board: {
@@ -417,6 +448,38 @@ export const stickerBoard = {
     /** Sticker detail: in place of the sticker when there's none to show */
     none: { en: "No sticker here yet.", ja: "まだシールがありません。" },
   },
+  /** The sticker detail's timelapse, which plays how the sticker was drawn. */
+  timelapse: {
+    /** Sticker detail: the Timelapse button at the end of the fine print, which plays how the sticker was drawn */
+    watch: { en: "Timelapse", ja: "タイムラプス" },
+    /** Sticker detail: the Timelapse button while the timelapse loads */
+    loading: { en: "Loading…", ja: "読み込み中…" },
+    /** Sticker detail: the Timelapse button while it gets the timelapse's fills ready */
+    preparing: { en: "Preparing…", ja: "準備中…" },
+    /** Sticker detail: the Timelapse button while the timelapse plays; a tap shows the finished sticker at once */
+    skip: { en: "Skip", ja: "スキップ" },
+    /** Sticker detail: screen readers' name for the Timelapse button; {{no}} is the sticker's number, such as "No.0012" */
+    watchLabel: {
+      en: "Timelapse: watch {{no}} being drawn",
+      ja: "タイムラプス：{{no}}をかく様子を見る",
+    },
+    /** Sticker detail: screen readers' name for Skip while the timelapse plays */
+    skipLabel: { en: "Skip to the end", ja: "最後までスキップ" },
+    /** Sticker detail: read out as the timelapse starts; {{no}} is the sticker's number */
+    playing: { en: "Playing how {{no}} was drawn", ja: "{{no}}をかいた様子を再生しています" },
+    /** Sticker detail: read out when the timelapse ends */
+    done: { en: "Done", ja: "再生が終わりました" },
+    /** Sticker detail: the alert under the fine print when the timelapse fails to load or play, before Try again */
+    failed: {
+      en: "Couldn’t load the timelapse: {{reason}}",
+      ja: "タイムラプスを読み込めませんでした：{{reason}}",
+    },
+    /** Sticker detail: the timelapse alert's reason when this phone couldn't play it; {{detail}} is the player's error, in English */
+    notPlayed: {
+      en: "It couldn’t play here ({{detail}}).",
+      ja: "この端末では再生できませんでした（{{detail}}）。",
+    },
+  },
   /** Where a sticker has been: one row per time it was given, newest first. */
   transferTrail: {
     /** Sticker detail: screen readers' name for the Transfer Trail section under the sticker */
@@ -445,17 +508,48 @@ export const stickerBoard = {
     fromYou: { en: "From you", ja: "あなたから" },
     /** Transfer Trail, the open row: under the gratitude total, naming who sent it */
     from: { en: "From {{name}}", ja: "{{name}}さんから" },
-    /** Transfer Trail, the open row: the Replay button beside the gratitude total (not shown yet: nothing plays replays) */
+    /** Transfer Trail, the open row: the Replay button beside the gratitude total, which plays the combo inside the card */
     replay: { en: "Replay", ja: "リプレイ" },
-    /** Transfer Trail, the open row: screen readers' name for Replay when you sent the gratitude (not shown yet) */
+    /** Transfer Trail, the open row: screen readers' name for Replay when you sent the gratitude */
     replayYours: {
       en: "Play the replay of your {{amount}} gratitude",
       ja: "あなたが送った感謝{{amount}}のリプレイを再生",
     },
-    /** Transfer Trail, the open row: screen readers' name for Replay when someone else sent the gratitude (not shown yet) */
+    /** Transfer Trail, the open row: screen readers' name for Replay when someone else sent the gratitude */
     replayTheirs: {
       en: "Play the replay of {{name}}’s {{amount}} gratitude",
       ja: "{{name}}さんが送った感謝{{amount}}のリプレイを再生",
+    },
+    /** The open row while its gratitude replays inside it. */
+    replaying: {
+      /** Transfer Trail, the open row: the Replay button while the replay plays, which stops it */
+      stop: { en: "Stop", ja: "停止" },
+      /** Transfer Trail, the open row: screen readers' name for Stop while the replay plays */
+      stopLabel: { en: "Stop the replay", ja: "リプレイを停止" },
+      /** Transfer Trail, the open row: read out as the replay of gratitude you sent starts; {{amount}} is its total */
+      yours: {
+        en: "Replaying your {{amount}} gratitude",
+        ja: "あなたが送った感謝{{amount}}をリプレイしています",
+      },
+      /** Transfer Trail, the open row: read out as the replay of someone else's gratitude starts; {{name}} sent it */
+      theirs: {
+        en: "Replaying {{name}}’s {{amount}} gratitude",
+        ja: "{{name}}さんが送った感謝{{amount}}をリプレイしています",
+      },
+      /** Transfer Trail, the open row: read out when the replayed heart has landed in its dot */
+      ended: { en: "Replay ended", ja: "リプレイが終わりました" },
+      /** Transfer Trail, the open row: the alert under the card when the replay fails to load, before Try again */
+      didntLoad: {
+        en: "Couldn’t load the replay: {{reason}}",
+        ja: "リプレイを読み込めませんでした：{{reason}}",
+      },
+      /** Transfer Trail, the open row: the alert when the replay fails while it plays */
+      stopped: { en: "The replay stopped: {{reason}}", ja: "リプレイが止まりました：{{reason}}" },
+      /** Transfer Trail, the open row of gratitude sent to you: the fine print when your watching it couldn't be saved */
+      notMarkedSeen: {
+        en: "Couldn’t mark this gratitude watched: {{reason}}",
+        ja: "この感謝を見たことを保存できませんでした：{{reason}}",
+      },
     },
     /** The Original Artist Gratitude Share, out of the giver's part. Never money words. */
     artistShare: {
