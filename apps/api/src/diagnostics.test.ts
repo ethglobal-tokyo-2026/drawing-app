@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { diagnosticStep, logFailure, logInfo, withRequestDiagnostics } from "./diagnostics.ts";
+import {
+  diagnosticStep,
+  failureCause,
+  logFailure,
+  logInfo,
+  withRequestDiagnostics,
+} from "./diagnostics.ts";
 
 const entrySchema = z.object({
   event: z.string(),
@@ -124,6 +130,23 @@ describe("NFT diagnostics", () => {
       expect(output).not.toContain(value);
     }
     expect(output).toContain("nonce too low");
+  });
+
+  it("names a failure's cause in its innermost words, masked, for the person's own error", () => {
+    const rpc = Object.assign(new Error("HTTP request failed."), {
+      details: "rate limit exceeded",
+      shortMessage: "RPC failed at https://eth-sepolia.g.alchemy.com/v2/rpc-key-secret",
+    });
+    const mint = Object.assign(new Error("full SDK payload"), {
+      shortMessage: "Request exceeds defined limit.",
+      cause: rpc,
+    });
+    expect(failureCause(mint)).toBe("rate limit exceeded");
+    const keyed = new Error(
+      "request to https://eth-sepolia.g.alchemy.com/v2/rpc-key-secret timed out",
+    );
+    expect(failureCause(keyed)).toBe("request to [redacted-url] timed out");
+    expect(failureCause(new Error("x".repeat(400)))).toHaveLength(160);
   });
 
   it("does not serialize extra fields or repeat cyclic error causes", () => {

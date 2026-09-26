@@ -863,6 +863,27 @@
     transform 200ms var(--ease-out),
     visibility 200ms;
 }
+.gr-hint-beat {
+  display: inline-block;
+  animation: gr-hint-beat 1.2s ease-in-out infinite;
+}
+/* A heartbeat: a strong beat, a softer one, then a rest. */
+@keyframes gr-hint-beat {
+  0%,
+  50%,
+  100% {
+    transform: scale(1);
+  }
+  12% {
+    transform: scale(1.08);
+  }
+  24% {
+    transform: scale(1);
+  }
+  36% {
+    transform: scale(1.05);
+  }
+}
 /* hidden from screen readers too, once it fades */
 .gr[data-phase]:not([data-phase="ready"]) .gr-hint {
   opacity: 0;
@@ -1181,6 +1202,9 @@
 .gr[data-reduced="1"] .gr-timer {
   transform: none !important;
 }
+.gr[data-reduced="1"] .gr-hint-beat {
+  animation: none;
+}
 @media (prefers-reduced-motion: reduce) {
   .gr-page,
   .gr-timer {
@@ -1193,6 +1217,7 @@
   [data-nose="1"] .h-nose-drop,
   .gr-heart-layers .h-gloss,
   .gr-shakemarks svg,
+  .gr-hint-beat,
   .gr-receipt.is-on {
     animation: none;
   }

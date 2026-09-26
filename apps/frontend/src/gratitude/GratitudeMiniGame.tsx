@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import type { RecordGratitude, ReplayV1 } from "@drawing-app/api/client";
 import { useApi } from "../api/useApi";
 import { formatCount } from "../i18n/format";
-import { useTranslation } from "../i18n/react";
+import { Trans, useTranslation } from "../i18n/react";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
@@ -282,7 +282,10 @@ export function GratitudeMiniGame({
         <div className="gr-hud" ref={hud} aria-hidden />
         <div className="gr-stage" ref={stage} />
         <p className="gr-hint" ref={hint}>
-          {t(($) => $.gratitude.hint)}
+          {/* It beats like a game's start button, to be noticed before the first tap. */}
+          <span className="gr-hint-beat">
+            <Trans i18nKey={($) => $.gratitude.hint} />
+          </span>
         </p>
       </div>
       <div className="gr-fuu" ref={fuu} aria-hidden>
