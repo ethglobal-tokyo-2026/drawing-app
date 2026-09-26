@@ -104,6 +104,11 @@
     {
       "files": ["apps/frontend/src/ui/**"],
       "rules": { "react/jsx-no-literals": "off" }
+    },
+    // Last, so it wins over the folders above: tests render stand-in text that nobody sees.
+    {
+      "files": ["apps/frontend/src/**/*.test.tsx"],
+      "rules": { "react/jsx-no-literals": "off" }
     }
   ]
 }

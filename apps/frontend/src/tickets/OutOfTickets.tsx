@@ -107,7 +107,7 @@ export function OutOfTickets({ tickets: state, onShop, onStartDrawing, onBoard }
           </LabelButton>
         ) : (
           <LabelButton block icon={<Storefront />} onClick={onShop}>
-            Shop for tickets with Sui
+            Shop for tickets
           </LabelButton>
         )}
       </section>

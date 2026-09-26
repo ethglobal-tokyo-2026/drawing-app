@@ -38,7 +38,7 @@ export const errors = {
   signed_out: "You're signed out.",
   sticker_not_found: "This sticker isn't here.",
   sticker_placement_not_found: "That sticker isn't on your sticker board.",
-  sui_price_unavailable: "The SUI price isn't available right now.",
+  sui_price_unavailable: "Today's prices aren't available right now.",
   taken_back: "The giver took this gift back.",
   ticket_already_used: "That ticket was already used.",
   ticket_kind_changed: "Your tickets changed. Try again.",

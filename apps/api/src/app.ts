@@ -11,6 +11,7 @@ import { stickerBoardRoutes } from "./routes/stickerBoards.ts";
 import { stickerRoutes } from "./routes/stickers.ts";
 import { ticketRoutes } from "./routes/tickets.ts";
 import { requireSession, type AppEnv } from "./session.ts";
+import { requestDiagnostics } from "./requestDiagnostics.ts";
 
 const isSignIn = (c: Context) => c.req.method === "POST" && c.req.path === "/api/session";
 
@@ -22,6 +23,7 @@ export function createApp(deps: AppDeps) {
   return (
     new Hono<AppEnv>()
       .basePath("/api")
+      .use(requestDiagnostics)
       .use(except(isSignIn, requireSession(deps)))
       // /session and /me
       .route("/", sessionRoutes(deps))

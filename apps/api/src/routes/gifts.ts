@@ -2,6 +2,7 @@ import { Hono, type Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
 import type { AppDeps } from "../deps.ts";
+import { diagnosticStep, logInfo } from "../diagnostics.ts";
 import { apiError, validate } from "../errors.ts";
 import { depositBodySchema, reportDeposit } from "../gifts/deposit.ts";
 import {
@@ -54,13 +55,26 @@ export const giftRoutes = (deps: AppDeps) =>
       return c.json(previewing.preview, 200);
     })
     .post("/receive", validate("json", openGiftBodySchema), async (c) => {
-      const receiving = await receiveGift(deps, c.var.userId, c.req.valid("json"));
+      const receiving = await diagnosticStep("gift.receive", { userId: c.var.userId }, () =>
+        receiveGift(deps, c.var.userId, c.req.valid("json")),
+      );
       if (receiving.refusal !== null) return refused(c, receiving);
+      logInfo("gift.receive.recorded", {
+        giftId: receiving.received.gift.id,
+        stickerId: receiving.received.sticker.id,
+        userId: c.var.userId,
+      });
       return c.json(receiving.received, 200);
     })
     .post("/", validate("json", packageBodySchema), async (c) => {
-      const packaging = await packageGift(deps, c.var.userId, c.req.valid("json").stickerId);
+      const stickerId = c.req.valid("json").stickerId;
+      const packaging = await diagnosticStep(
+        "gift.package",
+        { stickerId, userId: c.var.userId },
+        () => packageGift(deps, c.var.userId, stickerId),
+      );
       if (packaging.refusal !== null) return refused(c, packaging);
+      logInfo("gift.package.ready", { stickerId, giftId: packaging.packaged.gift.id });
       return packaging.created ? c.json(packaging.packaged, 201) : c.json(packaging.packaged, 200);
     })
     .post(
@@ -68,7 +82,10 @@ export const giftRoutes = (deps: AppDeps) =>
       validate("param", giftParamSchema),
       validate("json", depositBodySchema),
       async (c) => {
-        const report = await reportDeposit(deps, c.var.userId, c.req.valid("param").giftId);
+        const giftId = c.req.valid("param").giftId;
+        const report = await diagnosticStep("gift.deposit", { giftId, userId: c.var.userId }, () =>
+          reportDeposit(deps, c.var.userId, giftId),
+        );
         if (report.refusal !== null) return refused(c, report);
         return c.json({ gift: toGift(report.gift) }, 200);
       },
@@ -85,7 +102,10 @@ export const giftRoutes = (deps: AppDeps) =>
       },
     )
     .post("/:giftId/take-out", validate("param", giftParamSchema), async (c) => {
-      const takenOut = await takeOut(deps, c.var.userId, c.req.valid("param").giftId);
+      const giftId = c.req.valid("param").giftId;
+      const takenOut = await diagnosticStep("gift.take_out", { giftId, userId: c.var.userId }, () =>
+        takeOut(deps, c.var.userId, giftId),
+      );
       if (takenOut.refusal !== null) return refused(c, takenOut);
       return c.json({ gift: toGift(takenOut.gift) }, 200);
     });

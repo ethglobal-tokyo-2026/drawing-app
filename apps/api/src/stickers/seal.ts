@@ -8,6 +8,7 @@ import {
 import { and, eq, max } from "drizzle-orm";
 import { z } from "zod";
 import type { AppDeps } from "../deps.ts";
+import { diagnosticStep, logFailure, logInfo } from "../diagnostics.ts";
 import { keccak256 } from "../keccak256.ts";
 import { stickerImagesSchema, type StickerImages } from "../shapes.ts";
 import {
@@ -123,7 +124,7 @@ async function mintSticker(deps: AppDeps, stickerId: string): Promise<SealRefusa
       throw new Error("The mint returned no confirmed NFT");
     }
   } catch (error) {
-    console.error(`Minting sticker ${stickerId} could not be confirmed:`, error);
+    logFailure("sticker.mint.failed", error, { stickerId, artistId: sticker.artistId });
     return {
       status: 503,
       error: "mint_failed",
@@ -137,6 +138,7 @@ async function mintSticker(deps: AppDeps, stickerId: string): Promise<SealRefusa
     .set({ tokenId: minted.tokenId, mintTxHash: minted.txHash })
     .where(eq(stickers.id, stickerId))
     .run();
+  logInfo("sticker.mint.recorded", { stickerId, tokenId: minted.tokenId, txHash: minted.txHash });
   return null;
 }
 
@@ -166,6 +168,7 @@ export async function sealSticker(
   const ticket = checkTicket(deps.db, form.ticketUseId, userId);
   if (!("stickerId" in ticket)) return { refused: ticket };
   if (ticket.stickerId !== null) {
+    logInfo("sticker.seal.retry", { stickerId: ticket.stickerId, userId });
     const refused = await mintSticker(deps, ticket.stickerId);
     if (refused) return { refused };
     return { sealed: sealedSticker(deps, userId, ticket.stickerId), created: false };
@@ -184,7 +187,9 @@ export async function sealSticker(
   // Hashed here, never taken from the client: the hash names files other stickers may share. The
   // store keeps a name's first files, so a PNG sealed before keeps its first seal's images.
   const contentHash = keccak256(pngs.png);
-  await deps.images.save(contentHash, pngs);
+  await diagnosticStep("sticker.images.save", { userId }, () =>
+    deps.images.save(contentHash, pngs),
+  );
   const timelapse = form.timelapse ? Buffer.from(await form.timelapse.arrayBuffer()) : null;
 
   const stickerId = deps.ids.uuid();
@@ -226,6 +231,7 @@ export async function sealSticker(
   );
   if (refused) return { refused };
 
+  logInfo("sticker.seal.saved", { stickerId, userId });
   const mintRefusal = await mintSticker(deps, stickerId);
   if (mintRefusal) return { refused: mintRefusal };
   return { sealed: sealedSticker(deps, userId, stickerId), created: true };
