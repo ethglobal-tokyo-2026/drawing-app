@@ -80,18 +80,16 @@
   display: none;
 }
 
-/* The stats fill the first screen, as in the drafts, so Flip back rides at its foot; the LINE and
-   Privy slip waits below. */
+/* The stats are pinned up together, so Flip back ends the right column level with the left one's
+   foot rather than across a stretch of bare cork. */
 .stat-board__stats {
   display: grid;
-  /* The right column keeps the room its labels need; a narrow phone takes it from the left. */
-  grid-template-columns: minmax(0, 206px) minmax(144px, 1fr);
-  grid-template-rows: auto 1fr;
+  /* The right column keeps the stamps' width; a narrow phone takes the rest from the left. */
+  grid-template-columns: minmax(0, 206px) minmax(138px, 1fr);
   grid-template-areas:
     "who who"
     "a b";
   gap: 16px 12px;
-  min-height: 100%;
 }
 
 .stat-board__col {
@@ -511,10 +509,27 @@
   white-space: nowrap;
 }
 
-/* A narrow phone's left column: each best sits under its name rather than squeezing it. */
-@container (max-width: 157px) {
+/* A column narrower than the drafts' keeps each best's name on one line: its value moves under it,
+   at the right, only when the two don't fit side by side. */
+@container (max-width: 205px) {
   .stat-board__scrap-rows > div {
-    grid-template-columns: minmax(0, 1fr);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+  }
+
+  .stat-board__scrap-rows dt {
+    flex: 1 1 auto;
+    min-width: auto;
+  }
+
+  /* Best combo's note wraps in the room its name leaves, rather than widening the name. */
+  .stat-board__scrap-rows dt small {
+    contain: inline-size;
+  }
+
+  .stat-board__scrap-rows dd {
+    margin-left: auto;
   }
 }
 
