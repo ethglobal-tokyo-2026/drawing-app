@@ -11,7 +11,7 @@ User=bawler
 Group=bawler
 EnvironmentFile=/srv/sticker-auth/auth.env
 EnvironmentFile=-/srv/sticker-auth/secrets.env
-ExecStart=/usr/bin/node /srv/sticker-auth/server/start-auth-server.js
+ExecStart=/usr/local/lib/nodejs/node-24/bin/node /srv/sticker-auth/server/start-auth-server.js
 Restart=always
 RestartSec=3
 
