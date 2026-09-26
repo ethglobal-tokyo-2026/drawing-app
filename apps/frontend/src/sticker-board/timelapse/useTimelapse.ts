@@ -202,8 +202,9 @@ export function useTimelapse({
       if ((await s.player.play()) === "stopped" || s.over) return;
       reveal(s);
     } catch (error) {
-      if (s.over) return;
+      // Logged even once stopped, when no failure line shows it.
       console.error(`Sticker ${target.id}'s timelapse couldn't play`, error);
+      if (s.over) return;
       end(s, { stickerId: target.id, phase: "idle", failure: toError(error), said: null });
     }
   };

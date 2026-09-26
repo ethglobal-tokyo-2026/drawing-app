@@ -312,6 +312,20 @@ describe("useTimelapse", () => {
     expect(layer()).toBeNull();
   });
 
+  it("logs a failure that comes after stop, naming the sticker, and shows no failure line", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const loaded = deferred<TimelapseV1>();
+    client = emptyApi({ timelapse: () => loaded.promise });
+    render();
+    press();
+    act(() => control("stop").click());
+    loaded.reject(new Error("offline"));
+    await settle();
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining(STICKER.id), expect.anything());
+    expect(alert()).toBeUndefined();
+    expect(phase()).toBe("idle");
+  });
+
   it("hides the layer at stop, before React renders again, and stops the player", async () => {
     const player = await playing();
     const shown = layer();
