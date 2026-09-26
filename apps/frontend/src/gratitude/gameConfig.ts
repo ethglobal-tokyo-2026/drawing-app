@@ -97,6 +97,8 @@ export const FEEL_CONFIG = {
     /** A drag on the heart this long is a try at stroking it; after three, the tip says how. */
     tryTravelPx: 40,
     triesForTip: 3,
+    /** With reduced motion a committed stroke stretches the heart by this share at most. */
+    reducedStretch: 0.04,
   },
   /** Shaking the phone in a rhythm: PJ's PHYS and ShakeDetector. */
   shake: {
