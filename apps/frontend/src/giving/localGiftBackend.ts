@@ -8,6 +8,7 @@ interface LocalGiftBackendOptions {
   /** Printed on the gift message: "From @alice". */
   fromHandle: string;
   liffId: string;
+  /** The gift message's hero image; see GiftMessageInput. */
   heroUrl?: string;
   now?: () => number;
   randomBytes?: (size: number) => Uint8Array;
@@ -57,6 +58,7 @@ export function createLocalGiftBackend({
         liffId,
         giftClaimToken: toHex(randomBytes(32)),
         fromHandle,
+        no: sticker.no,
         timeUsed: sticker.timeUsed,
         heroUrl,
       });

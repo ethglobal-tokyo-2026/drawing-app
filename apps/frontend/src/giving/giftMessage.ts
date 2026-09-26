@@ -1,5 +1,5 @@
 import type liff from "@line/liff";
-import { formatDuration } from "../stickers/format";
+import { formatDuration, formatNo } from "../stickers/format";
 import { giftTag } from "./giftTag";
 
 type LiffMessage = Parameters<typeof liff.shareTargetPicker>[0][number];
@@ -14,11 +14,14 @@ export interface GiftMessageInput {
   giftClaimToken: string;
   /** The giver's handle, printed as "From @alice". */
   fromHandle: string;
+  /** The sticker's number, printed as NO.0147. */
+  no: number;
   /** Seconds the sticker took to draw. */
   timeUsed: number;
   /**
-   * The frosted-sleeve image: HTTPS, at an immutable content-hashed URL, because LINE caches it
-   * for good. Gift messages may be forwarded, so the sticker itself is never on one.
+   * The sealed bag, the same image on every gift message, at a content-hashed URL because LINE
+   * caches it for good. Gift messages may be forwarded, so the sticker itself is never on one.
+   * LINE fetches only HTTPS images, so any other URL goes without.
    */
   heroUrl?: string;
 }
@@ -52,17 +55,16 @@ export function buildGiftMessage({
   liffId,
   giftClaimToken,
   fromHandle,
+  no,
   timeUsed,
   heroUrl,
 }: GiftMessageInput): GiftMessage {
   const tag = giftTag(fromHandle);
   if (tag.name === "@") throw new Error("Gift message: the giver has no handle");
-  if (
-    heroUrl !== undefined &&
-    (!heroUrl.startsWith("https://") || heroUrl.length > MAX_IMAGE_URL)
-  ) {
+  const hero = heroUrl?.startsWith("https://") ? heroUrl : undefined;
+  if (hero && hero.length > MAX_IMAGE_URL) {
     throw new Error(
-      "Gift message: LINE needs the sleeve image at an HTTPS URL of 2,000 characters or less",
+      `Gift message: the hero image's URL is ${hero.length} characters; LINE allows ${MAX_IMAGE_URL}`,
     );
   }
   const open = {
@@ -73,13 +75,14 @@ export function buildGiftMessage({
 
   return {
     type: "flex",
-    altText: `${tag.name} sent you a drawing`,
+    // What the chat list and LINE's notification show.
+    altText: `${tag.name} sent you a sticker`,
     contents: {
       type: "bubble",
-      ...(heroUrl && {
+      ...(hero && {
         hero: {
           type: "image",
-          url: heroUrl,
+          url: hero,
           size: "full",
           aspectRatio: "1:1",
           aspectMode: "cover",
@@ -92,6 +95,13 @@ export function buildGiftMessage({
         layout: "vertical",
         spacing: "sm",
         contents: [
+          // Printed in capitals: LINE draws no fine print of its own.
+          {
+            type: "text",
+            text: `${formatNo(no).toUpperCase()} · ONE OF ONE`,
+            size: "xs",
+            color: GRAPHITE,
+          },
           {
             type: "text",
             text: `${tag.label} ${tag.name}`,
@@ -103,9 +113,10 @@ export function buildGiftMessage({
           },
           {
             type: "text",
-            text: `A one-of-one drawing · drawn in ${formatDuration(timeUsed)}`,
+            text: `A one-of-one sticker, drawn in ${formatDuration(timeUsed)}. It opens once.`,
             size: "sm",
             color: GRAPHITE,
+            wrap: true,
           },
         ],
       },

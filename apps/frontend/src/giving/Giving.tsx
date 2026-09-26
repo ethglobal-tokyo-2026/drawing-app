@@ -19,7 +19,6 @@ import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { CantFindThem } from "./CantFindThem";
-import { giftMessageHeroUrl } from "./config";
 import { GiftBag } from "./GiftBag";
 import type { GiftSender } from "./giftSender";
 import { deviceGiftStore } from "./giftStore";
@@ -74,7 +73,6 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
       store: deviceGiftStore(),
       fromHandle,
       liffId,
-      heroUrl: giftMessageHeroUrl,
     }),
     pickerDelayMs: PICKER_DELAY[motion],
     takeOutMs: TAKE_OUT[motion],
