@@ -1,13 +1,14 @@
 import type { ApiClient } from "../apiClient";
 import { boardOverlay } from "./board";
 import { givingOverlay } from "./giving";
+import { gratitudeOverlay } from "./gratitude";
 import { receivingOverlay } from "./receiving";
 
 /** One feature's fixtures, over the client beneath: the methods it answers itself. */
 export type Overlay = (below: ApiClient) => Partial<ApiClient>;
 
 /** Later overlays see the earlier ones: the board reads what Receiving and Giving did. */
-const OVERLAYS: Overlay[] = [receivingOverlay, givingOverlay, boardOverlay];
+const OVERLAYS: Overlay[] = [receivingOverlay, givingOverlay, boardOverlay, gratitudeOverlay];
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -40,5 +41,6 @@ export function createMockApi({
     pendingGifts: later(client.pendingGifts),
     previewGift: later(client.previewGift),
     receiveGift: later(client.receiveGift),
+    recordGratitude: later(client.recordGratitude),
   };
 }
