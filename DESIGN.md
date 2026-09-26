@@ -186,12 +186,12 @@ components:
     textColor: "{colors.graphite}"
     typography: "{typography.label}"
     rounded: "{rounded.label}"
-    padding: "0 12px"
+    padding: "0 6px"
     height: "46px"
   index-tab-current:
     textColor: "{colors.ink}"
     rounded: "{rounded.label}"
-    padding: "0 12px"
+    padding: "0 6px"
     height: "46px"
   tray-folder-tab:
     backgroundColor: "{colors.liner-lift}"
@@ -462,7 +462,7 @@ Round flat stickers stuck at -4°: a 26px pill in a coded hue with Ink puffy num
 
 ### Index tabs
 
-Three tabs cut from label stock, side by side on the Liner strip: My board (pink), Explore (aqua) and Shop (blue), each up to 176px wide and 46px tall with a 6px radius. Draw isn't a tab; the board has its own Draw key. An inactive tab is an outline (a 26% Ink edge) with graphite text; the current tab is stuck on in its full hue with Ink text, lifted 2px with a lift shadow. Each tab presses 1.5px through the shared press. Current is shown by fill and lift only, never by weight or case. The icons are Phosphor's smiley-sticker (My board, for everyone), compass (Explore) and tag (Shop), 20px, bold at rest and fill when current.
+Three tabs cut from label stock, side by side on the Liner strip: My board (pink), Explore (aqua) and Shop (blue). They're equal thirds of the strip, up to 176px each, 46px tall with a 6px radius. A label centers in its third and never widens its tab; the 6px padding keeps the longest, マイボード, inside the edge, and on phones narrower than 390px the icon sits 4px from its label instead of 8px. Draw isn't a tab; the board has its own Draw key. An inactive tab is an outline (a 26% Ink edge) with Graphite text (4.8:1 on Liner); the current tab is stuck on in its full hue with Ink text, lifted 2px with a lift shadow. Each tab presses 1.5px through the shared press. Current is shown by fill and lift only, never by weight or case. The icons are Phosphor's smiley-sticker (My board, for everyone), compass (Explore) and tag (Shop), 20px, bold at rest and fill when current.
 
 - **Sticking on:** the tapped tab fills with its hue in 140ms while it lifts 2px and settles from 1.04 to 1 (220ms, `--ease-peel`), the world's stick. The tab it leaves drops its lift and shadow in 140ms. The screen's own change is a separate cross-fade; the strip never moves with it.
 - **Reduced motion:** only the hue changes, in 120ms, with no lift travel and no settle.
