@@ -67,6 +67,8 @@ const Giving = lazyWithPreload("Giving", () => import("../giving/Giving").then((
 const StatBoard = lazyWithPreload("the stat board", () =>
   import("./stat-board/StatBoard").then((m) => m.StatBoard),
 );
+// Your name turns the board over from the moment it shows, so the stat board's code loads with the board's.
+void StatBoard.preload();
 const OPENED_FROM_BOARD = [StickerDetail, Giving, StatBoard];
 
 interface Props {
