@@ -352,9 +352,9 @@ export const gifts = sqliteTable(
 export const gratitudeMethods = ["tap", "stroke", "shake"] as const;
 
 /**
- * One gratitude mini-game combo: the receiver thanking the giver for one received gift, at most
- * once. The gratitude plan's recording contract (§5); created_at is when it was recorded. Columns
- * hold what's queried; everything a replay needs is in `replay`.
+ * One gratitude Mini-game combo: the receiver thanking the giver for one received gift, at most
+ * once. The mini-game's GratitudeResult, recorded; created_at is when. Columns hold what's
+ * queried; everything a replay needs is in `replay`.
  */
 export const gratitude = sqliteTable(
   "gratitude",
@@ -367,7 +367,7 @@ export const gratitude = sqliteTable(
     idempotencyKey: text("idempotency_key").notNull().unique(),
     /** The method the combo ended in: Inspired is tap, Magic is stroke or shake. */
     method: text("method", { enum: gratitudeMethods }).notNull(),
-    /** Counted taps, passes or reversals. */
+    /** Hits: counted taps, stroke passes or shake reversals. One tap that sends is 1. */
     hits: integer("hits").notNull(),
     /** The server's replayed gratitude, multiplier included. */
     total: integer("total").notNull(),
@@ -375,16 +375,17 @@ export const gratitude = sqliteTable(
     /** 0–4: ありがと, 照れ, ドキドキ, オーバーヒート, 昇天. */
     peakTier: integer("peak_tier").notNull(),
     /**
-     * The artist's 20%, out of the giver's share, when the artist is neither the giver nor the
-     * receiver; otherwise 0. Stored, so changing the share never rewrites history.
+     * The artist's 20%, out of the giver's part, when the giver isn't the sticker's artist; otherwise
+     * 0. Stored, so changing the share never rewrites history.
      */
-    artistShare: integer("artist_share").notNull(),
-    /** The tuning the server replayed with; every version stays in code for replays. */
-    tuningVersion: text("tuning_version").notNull(),
+    originalArtistGratitudeShare: integer("original_artist_gratitude_share").notNull(),
+    /** GAME_CONFIG's version, which the server replayed with; every version stays in code for replays. */
+    gameConfigVersion: text("game_config_version").notNull(),
     /**
-     * Gzipped JSON with a format version: every hit with its time and position and whether it
+     * Gzipped JSON with a format version: every touch with its time and position and whether it
      * counted, stroke paths, shake reversals, where the method switched, the duration and end
-     * reason, the random seed for pop-ins and particles, and the thanker's intensity.
+     * reason (sent, empty, cap, hidden, closed), the random seed for pop-ins and particles, and the
+     * thanker's intensity. Decodes to the result's hitTimes.
      */
     replay: blob("replay", { mode: "buffer" }).notNull(),
     /** The giver watched the replay (the pink tag's unseen feed). */
@@ -400,7 +401,10 @@ export const gratitude = sqliteTable(
       .where(sql`${t.pushedToGiverAt} is null`),
     check("gratitude_method", oneOf(t.method, gratitudeMethods)),
     check("gratitude_hits", sql`${t.hits} between 1 and 120`),
-    check("gratitude_artist_share", sql`${t.artistShare} between 0 and ${t.total}`),
+    check(
+      "gratitude_original_artist_share",
+      sql`${t.originalArtistGratitudeShare} between 0 and ${t.total}`,
+    ),
     check("gratitude_tier", sql`${t.peakTier} between 0 and 4`),
     check("gratitude_mult", sql`${t.peakMult} between 1 and 8`),
   ],

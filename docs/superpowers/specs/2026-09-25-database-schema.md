@@ -8,16 +8,16 @@
 - **`2026-09-25-database-schema.sql`, next to this doc:** the SQL drizzle-kit generates from the draft, plus the hand-written trigger migration.
 - **The draft:** `packages/db/src/schema.ts` on this branch, `worktree-schema-proposal`. It isn't merged. Validation says what ran against it.
 
-**Written against local `main` at d63d8ef** (2026-09-26 08:15). That includes:
+**Written against local `main` at 528cf5e** (2026-09-26 09:31). That includes:
 
-- the app's giving flow (`apps/frontend/src/giving/`), tickets (`src/tickets/`), stickers and sealing (`src/stickers/`, `src/sticker-creation/`), the board and stat board (`src/sticker-board/`) and identity (`src/identity/`);
-- the gratitude plan (`docs/superpowers/plans/2026-09-25-gratitude-heart-stand-in.md`) and the sticker tray plan (`docs/superpowers/plans/2026-09-26-sticker-tray.md`).
+- the app's giving flow (`apps/frontend/src/giving/`), tickets (`src/tickets/`), stickers and sealing (`src/stickers/`, `src/sticker-creation/`), the board, stat board and sticker tray (`src/sticker-board/`) and identity (`src/identity/`);
+- the gratitude Mini-game design (`docs/superpowers/specs/2026-09-26-gratitude-mini-game-design.md`), whose `GratitudeResult` this schema records, and the stand-in plan it replaces (`docs/superpowers/plans/2026-09-25-gratitude-heart-stand-in.md`, cited as "the gratitude plan").
 
 This branch starts from an older `main`, so those files aren't on it.
 
 **Other sources:**
 
-- `packages/sticker-chain` (the contracts and chain code) and AGENTS.MD's vocabulary;
+- `packages/sticker-chain` (the contracts and chain code) and AGENTS.MD's vocabulary, including its Gift Message, Gift Claim Token, Transfer Trail, Hits and Original Artist Gratitude Share;
 - the design drafts in `ethglobal-tokyo-2026-design-drafts/drawing-app/`: `PRODUCT.md`, `SCOPE.md`, `DESIGN.md` and `research/build-contract.md` LATEST DECISIONS, cited as "item N";
 - LINE's, Privy's and Pimlico's docs, linked where used.
 
@@ -35,7 +35,7 @@ This branch starts from an older `main`, so those files aren't on it.
 | Who holds a sticker                                                                          | `StickerNFT.ownerOf`: **owner of record**                                                     | the smart wallet that holds it          | —                                           | `stickers.owner_id`, an index of the owner as a person                                | —                                        |
 | A sticker's artist, image and metadata                                                       | `artistOf`, `contentHashOf`, `tokenURI`, fixed at mint                                        | —                                       | —                                           | `stickers`, and the five images as files named by the content hash                    | —                                        |
 | A gift in transit                                                                            | `StickerGiftEscrow.gifts(giftId)`: sender, recipient, token, claim commitment, expiry, status | —                                       | —                                           | `gifts`, with `escrow_status` as an index of the escrow's status                      | —                                        |
-| The Gift Claim Token                                                                         | only its keccak256 commitment                                                                 | —                                       | in the gift message's link, in one 1:1 chat | only its keccak256 commitment                                                         | from Packaging until the message is sent |
+| The Gift Claim Token                                                                         | only its keccak256 commitment                                                                 | —                                       | in the Gift Message's link, in one 1:1 chat | only its keccak256 commitment                                                         | from Packaging until the message is sent |
 | Identity                                                                                     | never                                                                                         | a subject derived from the LINE user ID | LINE user ID, name, picture                 | `users`: the LINE user ID, name and picture                                           | —                                        |
 | Wallets                                                                                      | addresses appear as owners                                                                    | embedded wallet and smart wallet        | —                                           | `users.smart_account_address`                                                         | —                                        |
 | Handle (@alice)                                                                              | ENS, later                                                                                    | —                                       | —                                           | `users.handle`                                                                        | —                                        |
@@ -53,7 +53,7 @@ This branch starts from an older `main`, so those files aren't on it.
 - The database keeps what the chain never sees, plus three indexed values from the chain that screens list and filter by: `stickers.token_id`, `stickers.owner_id` and `gifts.escrow_status`.
 - Screens don't wait for the chain, with three exceptions, each usually a few seconds:
   - giving needs the sticker's mint;
-  - sending the gift message needs the deposit;
+  - sending the Gift Message needs the deposit;
   - giving a sticker on needs the last claim or reject to have landed.
 
 ## The whole process, step by step
@@ -126,7 +126,7 @@ sequenceDiagram
   participant LINE
   Giver->>API: POST /api/gifts (the sticker)
   API->>DB: gifts, status packed, escrow_status missing
-  API-->>Giver: Gift Claim Token (once), the escrow transfer, the LINE message
+  API-->>Giver: Gift Claim Token (once), the escrow transfer, the Gift Message
   Giver->>Chain: the smart wallet sends the sticker to the escrow, and the paymaster pays the gas
   Giver->>API: POST /api/gifts/:giftId/deposit (transaction hash)
   API->>Chain: read gifts(giftId)
@@ -202,7 +202,7 @@ sequenceDiagram
 - **Moves:** every drag, resize, turn and Remove saves the same way, debounced on release. Remove keeps the spot and sets `on_board` to false.
 - **Seen:** when the sticker tray zips shut, `POST /api/sticker-boards/me/sticker-tray/seen` sets `seen_at` on the stickers whose sheet was open. That clears NEW.
 
-### 7. Gratitude (the gratitude plan's §5)
+### 7. Gratitude (the Mini-game's result)
 
 ```mermaid
 sequenceDiagram
@@ -213,7 +213,7 @@ sequenceDiagram
   participant LINE
   participant Giver as Giver's app
   Receiver->>API: POST /api/gratitude (the combo and its replay, sent with keepalive)
-  API->>API: unzip the replay, check it, replay the hits for the total and the artist's share
+  API->>API: unzip the replay, check it, replay the hits for the total and the Original Artist Gratitude Share
   API->>DB: gratitude
   API->>LINE: push to the giver, or a digest when the 6-hour window closes
   API->>DB: gratitude.pushed_to_giver_at
@@ -225,7 +225,7 @@ sequenceDiagram
 - **Recording:**
   - The receiver's app keeps the record until it lands and resends it on the next open.
   - The same idempotency key gets the stored record back. A second combo for the same gift is refused (409).
-- **Split:** the artist gets 20% of the total, out of the giver's share, when the artist is neither the giver nor the receiver (item 50).
+- **Split:** the Original Artist Gratitude Share, 20% of the total out of the giver's part, goes to the artist when the giver isn't the sticker's artist (item 50). Decision 15 covers a receiver who drew it.
 - **On chain:** gratitude doesn't touch the chain. The on-chain ledger is later (the gratitude plan's §5.5).
 
 ### 8. Paid tickets and withdrawal
@@ -338,7 +338,7 @@ Every table also has `created_at`, set by the database on insert, and `updated_a
 Screens:
 
 - every screen, as "me";
-- other people's names and pictures on their boards and in the Transfer Trail, the "By" chip, and the Receiving screen;
+- other people's names and pictures on their boards and in the Transfer Trail, the "By" chip, and `ReceiveGiftDialog`;
 - handles on the gift tag ("From @alice"), in search and in the Recent row;
 - the join date on the stat board's "Since".
 
@@ -373,21 +373,21 @@ Screens:
 - the sticker detail and the ticket stubs' outlines;
 - Explore's "Today's stickers" and activity feed.
 
-| Column            | Type               | Set when                             | Notes                                                                                 |
-| ----------------- | ------------------ | ------------------------------------ | ------------------------------------------------------------------------------------- |
-| `id`              | text PK            | Seal                                 | Server UUID. On chain the sticker key is keccak256 of it                              |
-| `number`          | int, unique        | Seal, as the highest so far plus one | Shown as "No.0147". Today the app numbers stickers on the device                      |
-| `artist_id`       | → users            | Seal                                 |                                                                                       |
-| `owner_id`        | → users            | Seal (the artist), then each receive | The owner of record as a person, a few seconds ahead of the chain while a claim lands |
-| `time_used`       | int, 0–180         | Seal                                 | Seconds on the drawing clock, which pauses. The 3-minute timer; see Changes needed    |
-| `width`, `height` | int                | Seal                                 | Of the sticker image. The mask and resin masks share them                             |
-| `outline`         | text               | Seal                                 | The cut line as an SVG path. Ticket stubs, sheet packing, the given outline           |
-| `content_hash`    | text               | Seal                                 | keccak256 of the sticker PNG. Names its files; passed to the mint                     |
-| `metadata_uri`    | text               | Seal                                 | The metadata JSON's IPFS address. Passed to the mint as `tokenURI` (decision 8)       |
-| `token_id`        | text, unique, null | When the mint lands                  | Indexed from the chain                                                                |
-| `mint_tx_hash`    | text, null         | When the mint lands, with `token_id` |                                                                                       |
-| `created_at`      | int                | Seal                                 | The seal time: the sealed card's date, "Today's stickers", streak days                |
-| `updated_at`      | int                | The mint, and each receive           |                                                                                       |
+| Column            | Type               | Set when                             | Notes                                                                                  |
+| ----------------- | ------------------ | ------------------------------------ | -------------------------------------------------------------------------------------- |
+| `id`              | text PK            | Seal                                 | Server UUID. On chain the sticker key is keccak256 of it                               |
+| `number`          | int, unique        | Seal, as the highest so far plus one | Shown as "No.0147". Today the app numbers stickers on the device                       |
+| `artist_id`       | → users            | Seal                                 |                                                                                        |
+| `owner_id`        | → users            | Seal (the artist), then each receive | The owner of record as a person, a few seconds ahead of the chain while a claim lands  |
+| `time_used`       | int, 0–180         | Seal                                 | Seconds on the drawing clock, which pauses. The 3-minute timer; see Changes needed     |
+| `width`, `height` | int                | Seal                                 | Of the sticker image. The mask and resin masks share them                              |
+| `outline`         | text               | Seal                                 | The cut line as an SVG path. Ticket stubs, sheet packing, the given sticker silhouette |
+| `content_hash`    | text               | Seal                                 | keccak256 of the sticker PNG. Names its files; passed to the mint                      |
+| `metadata_uri`    | text               | Seal                                 | The metadata JSON's IPFS address. Passed to the mint as `tokenURI` (decision 8)        |
+| `token_id`        | text, unique, null | When the mint lands                  | Indexed from the chain                                                                 |
+| `mint_tx_hash`    | text, null         | When the mint lands, with `token_id` |                                                                                        |
+| `created_at`      | int                | Seal                                 | The seal time: the sealed card's date, "Today's stickers", streak days                 |
+| `updated_at`      | int                | The mint, and each receive           |                                                                                        |
 
 - **Files, one set per content hash:**
   - `{hash}.png`: the sticker;
@@ -447,7 +447,7 @@ Paid tickets carry over from day to day, as in the app. Paid tickets left = veri
 
 Screens:
 
-- your Sticker Board (drag, corner handles, rotate knob, z-order, Remove), the given outline, and someone else's board, read-only;
+- your Sticker Board (drag, corner handles, rotate knob, z-order, Remove), the given sticker silhouette, and someone else's board, read-only;
 - the sticker tray's sticker sheets, in arrival order, and NEW.
 
 | Column                                         | Type                                                 | Set when                                                                                                                            | Notes                                                                                                                                                       |
@@ -457,7 +457,7 @@ Screens:
 | `seen_at`                                      | int, null                                            | When the tray zips shut with its sticker sheet open. Cleared when the sticker comes back                                            | Null shows NEW                                                                                                                                              |
 | `created_at`                                   | int                                                  | Insert                                                                                                                              | The tray's order. Kept when a sticker comes back, so it returns to its old spot                                                                             |
 
-- **Given away:** the row stays. The board keeps the given outline where it sat (`GivenOutline`), and its spot on the sticker sheet stays empty, so nothing after it shifts (the tray plan's T1).
+- **Given away:** the row stays. The board keeps the given sticker silhouette where it sat (`GivenStickerSilhouette`), and its spot on the sticker sheet stays empty, so nothing after it shifts, as `traySlots.ts` already does.
 - **Receive date:** a received gift's receive date is also `gifts.received_at`. The two differ only when a sticker comes back, since this row keeps its first date.
 
 ### gifts: one Giving of one sticker (Giving, Receiving, Packaging)
@@ -465,7 +465,7 @@ Screens:
 Screens:
 
 - **Giving:** the give sheet, the gift bag ("In the bag", "Not sent yet"), "Sealed and sent", and PendingGiftsNotificationBadge;
-- **Receiving:** the Receiving screen and its refusals;
+- **Receiving:** `ReceiveGiftDialog` and its refusals;
 - **Elsewhere:** the Official account's push, the sticker detail's Transfer Trail and "Given to @bob", the give sheet's Recent row, and the stat board's received and given counts.
 
 | Column                       | Type                                                            | Set when                                                                                                          | Notes                                                                                                             |
@@ -488,7 +488,7 @@ Screens:
 | ----------- | ------------------------------ | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | `packed`    | none                           | `missing` until the deposit lands, then `pending`               | "In the bag"; "Not sent yet" after a cancelled picker                                          | the sleeve and Accept, if the message went out and the picker never reported back |
 | `sent`      | `sent_at`                      | `pending`                                                       | "On its way", with no name, since LINE never says who was picked. The sticker leaves the board | "Alice sent you a sticker", and the pull tab                                      |
-| `received`  | `received_at`, maybe `sent_at` | `pending` until the claim lands, then `claimed`                 | the given outline, and "Bob accepted your sticker ♡" in LINE                                   | their board, with the sticker; anyone after: "Already opened"                     |
+| `received`  | `received_at`, maybe `sent_at` | `pending` until the claim lands, then `claimed`                 | the given sticker silhouette, and "Bob accepted your sticker ♡" in LINE                        | their board, with the sticker; anyone after: "Already opened"                     |
 | `taken_out` | `taken_out_at`                 | `missing`, or `pending` until the reject lands, then `rejected` | the sticker, back                                                                              | — (the message never left)                                                        |
 
 - **CHECKs:** each status has exactly its dates, and only the escrow statuses in the table.
@@ -505,20 +505,20 @@ Screens:
 - the stat board's gratitude receipt and bests, and Explore's weekly leaderboards;
 - the Official account's notice.
 
-| Column                   | Type                     | Set when                                                             | Notes                                                                                                               |
-| ------------------------ | ------------------------ | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `gift_id`                | text PK → gifts          | Recorded                                                             | One gratitude per received gift, sent by its receiver (item 33). The giver, receiver and sticker come from the gift |
-| `idempotency_key`        | text, unique             | Recorded                                                             | Made on the device at the first hit                                                                                 |
-| `method`                 | `tap`, `stroke`, `shake` | Recorded                                                             | The method it ended in. Inspired is tap; Magic is stroke or shake                                                   |
-| `hits`                   | int, 1–120               | Recorded                                                             | Counted taps, passes or reversals. Best combo                                                                       |
-| `total`                  | int                      | Recorded                                                             | The server's replayed total, multiplier included                                                                    |
-| `peak_mult`, `peak_tier` | real 1–8, int 0–4        | Recorded                                                             | Tiers: ありがと, 照れ, ドキドキ, オーバーヒート, 昇天                                                               |
-| `artist_share`           | int, 0–total             | Recorded                                                             | 20% when the artist is a third person, else 0. The giver's share is `total` minus this                              |
-| `tuning_version`         | text                     | Recorded                                                             | Every tuning stays in code for good, for replays                                                                    |
-| `replay`                 | blob                     | Recorded                                                             | Gzipped JSON; see below                                                                                             |
-| `seen_by_giver_at`       | int, null                | The giver finishes watching the replay                               | Drives the pink tag                                                                                                 |
-| `pushed_to_giver_at`     | int, null                | Its push, or the digest that included it, goes out or is given up on |                                                                                                                     |
-| `created_at`             | int                      | Recorded                                                             | Weekly leaderboards; most thanks in a day                                                                           |
+| Column                            | Type                     | Set when                                                             | Notes                                                                                                                                            |
+| --------------------------------- | ------------------------ | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `gift_id`                         | text PK → gifts          | Recorded                                                             | One gratitude per received gift, sent by its receiver (item 33). The giver, receiver and sticker come from the gift                              |
+| `idempotency_key`                 | text, unique             | Recorded                                                             | Made on the device at the first hit                                                                                                              |
+| `method`                          | `tap`, `stroke`, `shake` | Recorded                                                             | The method it ended in. Inspired is tap; Magic is stroke or shake                                                                                |
+| `hits`                            | int, 1–120               | Recorded                                                             | Hits: counted taps, stroke passes or shake reversals. One tap that sends is 1. Best combo                                                        |
+| `total`                           | int                      | Recorded                                                             | The server's replayed total, multiplier included                                                                                                 |
+| `peak_mult`, `peak_tier`          | real 1–8, int 0–4        | Recorded                                                             | Tiers: ありがと, 照れ, ドキドキ, オーバーヒート, 昇天                                                                                            |
+| `original_artist_gratitude_share` | int, 0–total             | Recorded                                                             | The Original Artist Gratitude Share: 20% when the giver isn't the sticker's artist, else 0 (decision 15). The giver's part is `total` minus this |
+| `game_config_version`             | text                     | Recorded                                                             | `GAME_CONFIG`'s version (`gameConfig.ts`). Every version stays in code for good, for replays                                                     |
+| `replay`                          | blob                     | Recorded                                                             | Gzipped JSON; see below                                                                                                                          |
+| `seen_by_giver_at`                | int, null                | The giver finishes watching the replay                               | Drives the pink tag                                                                                                                              |
+| `pushed_to_giver_at`              | int, null                | Its push, or the digest that included it, goes out or is given up on |                                                                                                                                                  |
+| `created_at`                      | int                      | Recorded                                                             | Weekly leaderboards; most thanks in a day                                                                                                        |
 
 ## Replay and timelapse storage
 
@@ -554,7 +554,9 @@ Screens:
 - **`shakes`:** reversals, as ms and direction.
 - **`switchedAtHit`:** where a tap combo committed to stroke or shake.
 - **`seed`:** the random seed for pop-in lines and particles, so the replay looks exactly as it did.
-- **Checking:** the server unzips it and replays the counted hits with `tuningVersion` to check `total`, before storing.
+- **`endReason`:** the Mini-game's five: `sent` (one tap), `empty`, `cap`, `hidden`, `closed`.
+- **Decoding:** the counted hits' times decode to the result's `hitTimes`, which is what the Mini-game replays.
+- **Checking:** the server unzips it and replays the counted hits with `game_config_version` to check `total`, before storing.
 
 **Timelapse, version 1:**
 
@@ -585,9 +587,9 @@ Screens:
   - Made is your stickers as artist.
   - Received and given are your `received` gifts, to and from you.
   - Gratitude rows:
-    - **Inspired:** `total − artist_share` from tap combos on gifts you gave.
+    - **Inspired:** `total − original_artist_gratitude_share` from tap combos on gifts you gave.
     - **Magic:** the same, from stroke and shake combos.
-    - **As the artist:** `artist_share` on stickers you drew.
+    - **As the artist:** the Original Artist Gratitude Share on stickers you drew.
   - **Bests:**
     - **Best combo:** the most `hits` in a combo you sent.
     - **Most thanks in a day:** your biggest day of gratitude received.
@@ -599,12 +601,12 @@ Screens:
 - **Boards:**
   - **Glow:** a sticker's gratitude totals.
   - **Foil:** the artist isn't the board's owner (item 46).
-  - **Given outline:** your placements of stickers you no longer hold.
+  - **Given sticker silhouette:** your placements of stickers you no longer hold.
   - A sticker with a `sent` gift leaves its giver's board; a `packed` one stays.
 - **Sticker tray:**
   - Everything you've had, in `created_at` order.
   - Given stickers leave their spot empty.
-  - NEW is `seen_at` null. The tray plan also limits it to the current ticket day (T3).
+  - NEW is `seen_at` null. The app's tray also limits it to stickers that arrived in the current ticket day (`traySlots.ts`).
 - **Tickets left:** three minus today's free uses, plus paid tickets left. The next refill is 4:00 in your zone.
 
 ## Indexes, and the queries they serve
@@ -668,28 +670,28 @@ No routes are implemented; this is their shape.
 
 **Sticker (Seal)**
 
-| Route                                    | What it does                                                                                                      | Called from                                                                 | Tables                                                                |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `POST /api/stickers`                     | Seal: the five images, outline, size, time used, the ticket and the timelapse. Returns the sticker and its number | `DrawingScreen`'s seal step, before `SealCeremony` plays                    | `stickers`, `ticket_uses`, `sticker_placements`, `sticker_timelapses` |
-| `GET /api/stickers/:stickerId`           | The sticker detail: artist, who holds it, the Transfer Trail with each gratitude                                  | `StickerDetail`, opened from the board, `StickerToolbar` and `GivenOutline` | `stickers`, `users`, `gifts`, `gratitude`                             |
-| `GET /api/stickers/:stickerId/timelapse` | The timelapse's ops                                                                                               | The timelapse (not built)                                                   | `sticker_timelapses`                                                  |
+| Route                                    | What it does                                                                                                      | Called from                                                                           | Tables                                                                |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `POST /api/stickers`                     | Seal: the five images, outline, size, time used, the ticket and the timelapse. Returns the sticker and its number | `DrawingScreen`'s seal step, before `SealCeremony` plays                              | `stickers`, `ticket_uses`, `sticker_placements`, `sticker_timelapses` |
+| `GET /api/stickers/:stickerId`           | The sticker detail: artist, who holds it, the Transfer Trail with each gratitude                                  | `StickerDetail`, opened from the board, `StickerToolbar` and `GivenStickerSilhouette` | `stickers`, `users`, `gifts`, `gratitude`                             |
+| `GET /api/stickers/:stickerId/timelapse` | The timelapse's ops                                                                                               | The timelapse (not built)                                                             | `sticker_timelapses`                                                  |
 
 Images are static files named by content hash, not routes. `StickerFigure`, `PlacedSticker` and `LiveResin` read them.
 
 **Sticker Board, sticker tray and stat board**
 
-| Route                                                        | What it does                                                                               | Called from                                                                              | Tables                                    |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `GET /api/sticker-boards/:userId`                            | A Sticker Board: placements and given outlines; on your own, also the tray's order and NEW | `StickerBoard`, the sticker tray (not built)                                             | `sticker_placements`, `stickers`, `gifts` |
-| `PATCH /api/sticker-boards/me/sticker-placements/:stickerId` | Saves a sticker placement: `on_board`, `x`, `y`, `scale`, `rotation`, `z`                  | The board's gestures on release, `StickerToolbar`'s Remove, the sticker tray (not built) | `sticker_placements`                      |
-| `POST /api/sticker-boards/me/sticker-tray/seen`              | Marks the stickers seen whose sticker sheet was open when the tray zipped shut             | The sticker tray (not built)                                                             | `sticker_placements`                      |
-| `GET /api/sticker-boards/:userId/user-stats`                 | User Stats for the stat board                                                              | `StatBoard`                                                                              | `stickers`, `gifts`, `gratitude`          |
+| Route                                                        | What it does                                                                                          | Called from                                                               | Tables                                    |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------- |
+| `GET /api/sticker-boards/:userId`                            | A Sticker Board: placements and given sticker silhouettes; on your own, also the tray's order and NEW | `StickerBoard`, `StickerTray`                                             | `sticker_placements`, `stickers`, `gifts` |
+| `PATCH /api/sticker-boards/me/sticker-placements/:stickerId` | Saves a sticker placement: `on_board`, `x`, `y`, `scale`, `rotation`, `z`                             | The board's gestures on release, `StickerToolbar`'s Remove, `StickerTray` | `sticker_placements`                      |
+| `POST /api/sticker-boards/me/sticker-tray/seen`              | Marks the stickers seen whose sticker sheet was open when the tray zipped shut                        | `StickerTray`                                                             | `sticker_placements`                      |
+| `GET /api/sticker-boards/:userId/user-stats`                 | User Stats for the stat board                                                                         | `StatBoard`                                                               | `stickers`, `gifts`, `gratitude`          |
 
 **Giving**
 
 | Route                              | What it does                                                                                                                                                                   | Called from                                                      | Tables  |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- | ------- |
-| `POST /api/gifts`                  | Packaging: checks you hold the sticker and it's minted, returns the open gift or stores a new one. Returns the Gift Claim Token once, the escrow transfer and the LINE message | `Giving` ("Send in a LINE chat"), in place of `giftBackend.pack` | `gifts` |
+| `POST /api/gifts`                  | Packaging: checks you hold the sticker and it's minted, returns the open gift or stores a new one. Returns the Gift Claim Token once, the escrow transfer and the Gift Message | `Giving` ("Send in a LINE chat"), in place of `giftBackend.pack` | `gifts` |
 | `POST /api/gifts/:giftId/deposit`  | The transfer your smart wallet sent; the server checks the escrow                                                                                                              | `Giving`                                                         | `gifts` |
 | `POST /api/gifts/:giftId/shared`   | The picker's result: sent, or cancelled                                                                                                                                        | `Giving`, in place of `markSent` and `markNotSent`               | `gifts` |
 | `POST /api/gifts/:giftId/take-out` | Take it out, before sending                                                                                                                                                    | `GiftBag`, `Giving`                                              | `gifts` |
@@ -697,10 +699,10 @@ Images are static files named by content hash, not routes. `StickerFigure`, `Pla
 
 **Receiving**
 
-| Route                     | What it does                                                                                                            | Called from                                 | Tables                                    |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- | ----------------------------------------- |
-| `POST /api/gifts/preview` | Body: the Gift Claim Token. The giver's name and picture and whether it can be received, never the sticker              | The Receiving screen (not built)            | `gifts`, `users`                          |
-| `POST /api/gifts/receive` | Body: the Gift Claim Token and LIFF's context type. Receives it and returns the sticker for the reveal, or says why not | The Receiving screen's pull tab (not built) | `gifts`, `stickers`, `sticker_placements` |
+| Route                     | What it does                                                                                                            | Called from                                | Tables                                    |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | ----------------------------------------- |
+| `POST /api/gifts/preview` | Body: the Gift Claim Token. The giver's name and picture and whether it can be received, never the sticker              | `ReceiveGiftDialog` (not built)            | `gifts`, `users`                          |
+| `POST /api/gifts/receive` | Body: the Gift Claim Token and LIFF's context type. Receives it and returns the sticker for the reveal, or says why not | `ReceiveGiftDialog`'s pull tab (not built) | `gifts`, `stickers`, `sticker_placements` |
 
 **Gratitude**
 
@@ -782,6 +784,9 @@ Images are static files named by content hash, not routes. `StickerFigure`, `Pla
 14. **Paid tickets while the Sui payment is a mock.**
     - **Record mock purchases as verified, at most one pack a day, until the payment is real. Then the server checks each digest on Sui.**
     - Or no paid tickets until the payment is real.
+15. **The Original Artist Gratitude Share when the receiver drew the sticker.** AGENTS.MD gives the artist 20% whenever the giver isn't the artist. When a sticker comes back to the person who drew it, that means 20% of their own thanks goes to themselves.
+    - **None in that case: the giver gets the whole total.**
+    - Or follow the definition as written.
 
 ## Changes needed elsewhere
 
@@ -832,24 +837,24 @@ These are proposals; this branch changes only `packages/db` and this doc.
   - The number comes from the server.
   - The timelapse is the history's ops plus the ink size and `place`, gzipped as above.
 - **Board:** reads and saves through the Sticker Board routes, and lands stickers that have no placement.
-- **Tray:** NEW moves from localStorage (the tray plan's T3) to `seen_at`.
+- **Tray:** the seen marks move from localStorage (`traySeen.ts`) to `seen_at`, and `traySlots.ts` orders by the placement's `created_at` instead of the seal, so received stickers fall in place.
 - **Giving:**
   - The gift gets a deposit from the smart wallet (`SmartWalletsProvider`) before the picker opens.
   - A cancel keeps the gift packed (decision 6).
   - Packing again returns the open gift instead of setting one aside as abandoned.
 - **Stat board:** "given" counts received gifts; today it counts sent ones, since receiving doesn't exist yet.
 - **Not built:**
-  - the Receiving screen;
+  - `ReceiveGiftDialog`, where the receiver pulls the tab;
   - the gratitude mini-game;
   - the pink tag and replay;
   - the handle prompt;
-  - the sticker tray;
   - Explore.
 
-**The gratitude plan:**
+**The gratitude Mini-game design** (`docs/superpowers/specs/2026-09-26-gratitude-mini-game-design.md`):
 
-- §5.2's payload becomes this doc's replay: `events` become `hits`, and the replay adds positions, strokes, shakes, the switch point, the seed and the intensity.
-- §5.3's artist's share: none when the receiver drew the sticker.
+- `GratitudeResult` gains what the replay needs: each touch's position and whether it counted, stroke paths, shake reversals with their direction, the random seed and the intensity.
+- `tuningVersion` becomes `gameConfigVersion`, as the design offers, and part 2 records the gift instead of `stickerId`.
+- Its note that the draft needs `sent` among its end reasons is done: the end reason lives in the replay.
 
 ## Validation
 
@@ -870,7 +875,7 @@ These are proposals; this branch changes only `packages/db` and this doc.
     - Packaging, deposit, send and receive;
     - receiving a gift still marked `packed`;
     - giving on after the claim, and giving back, which kept the spot on the sticker sheet and showed NEW again;
-    - gratitude with a gzipped replay that reads back;
+    - gratitude from one tap that sends (1 hit), with a gzipped replay that reads back;
     - take-out before and after a deposit;
     - a verified purchase;
     - withdrawal.
@@ -886,7 +891,7 @@ These are proposals; this branch changes only `packages/db` and this doc.
     - a reject on a received gift;
     - an expiry return;
     - a push for a gift nobody received;
-    - a combo with no hits, and an artist's share above the total;
+    - a combo with no hits, and an Original Artist Gratitude Share above the total;
     - a second gratitude for a gift;
     - the same Sui payment twice;
     - withdrawing with LINE data left.
@@ -894,7 +899,7 @@ These are proposals; this branch changes only `packages/db` and this doc.
     - a board;
     - NEW;
     - a Transfer Trail;
-    - gratitude received, with the artist's share (alice 40, bob 40, carol 0 from two combos).
+    - gratitude received, with the Original Artist Gratitude Share (alice 20, bob 40, carol 0, from a one-tap combo and a combo that paid the share).
 
     `foreign_key_check` and `integrity_check` were clean.
 
@@ -910,8 +915,8 @@ These are proposals; this branch changes only `packages/db` and this doc.
 
 ## Vocabulary
 
-- **From AGENTS.MD:** Sticker, Ticket, Seal, Packaging, Giving, Receiving, Gratitude, Mini-game, Sticker Board, Stat board, User Stats, Sticker tray, Sticker sheet, Login Channel, Official account, Messaging API.
-- **Your names:** Hits, Transfer Trail, Gift Claim Token, PendingGiftsNotificationBadge, UsedStickerSilhouette.
-- **The app's names:** `GivenOutline`, the placement's fields, and the gift states `packed` and `sent`.
+- **From AGENTS.MD:** Sticker, Ticket, Seal, Packaging, Giving, Receiving, Gratitude, Mini-game, Sticker Board, Stat board, User Stats, Sticker tray, Sticker sheet, Gift Message, Gift Claim Token, Transfer Trail, Hits, Original Artist Gratitude Share, Login Channel, Official account, Messaging API.
+- **Your code names:** GivenStickerSilhouette, UsedStickerSilhouette, PendingGiftsNotificationBadge, ReceiveGiftDialog.
+- **The app's names:** the placement's fields, the tray's `here`, `used` and `given`, and the gift states `packed` and `sent`.
 - **Code names:** "sticker placement" (`sticker_placements`, `StickerPlacement`), from your note on the route.
 - **No new AGENTS.MD entries are proposed.**

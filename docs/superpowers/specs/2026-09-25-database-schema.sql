@@ -59,8 +59,8 @@ CREATE TABLE `gratitude` (
 	`total` integer NOT NULL,
 	`peak_mult` real NOT NULL,
 	`peak_tier` integer NOT NULL,
-	`artist_share` integer NOT NULL,
-	`tuning_version` text NOT NULL,
+	`original_artist_gratitude_share` integer NOT NULL,
+	`game_config_version` text NOT NULL,
 	`replay` blob NOT NULL,
 	`seen_by_giver_at` integer,
 	`pushed_to_giver_at` integer,
@@ -69,7 +69,7 @@ CREATE TABLE `gratitude` (
 	FOREIGN KEY (`gift_id`) REFERENCES `gifts`(`id`) ON UPDATE no action ON DELETE no action,
 	CONSTRAINT "gratitude_method" CHECK("gratitude"."method" in ('tap', 'stroke', 'shake')),
 	CONSTRAINT "gratitude_hits" CHECK("gratitude"."hits" between 1 and 120),
-	CONSTRAINT "gratitude_artist_share" CHECK("gratitude"."artist_share" between 0 and "gratitude"."total"),
+	CONSTRAINT "gratitude_original_artist_share" CHECK("gratitude"."original_artist_gratitude_share" between 0 and "gratitude"."total"),
 	CONSTRAINT "gratitude_tier" CHECK("gratitude"."peak_tier" between 0 and 4),
 	CONSTRAINT "gratitude_mult" CHECK("gratitude"."peak_mult" between 1 and 8)
 );
