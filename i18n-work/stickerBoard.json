@@ -1,0 +1,89 @@
+{
+  "stickerBoard.tryAgain": {
+    "where": "Retry button after a failure: your sticker board's load error and its unsaved-positions alert, the sticker detail's failed check, and someone else's sticker board that didn't load",
+    "ja": "もう一度"
+  },
+  "stickerBoard.board.yourStats": {
+    "where": "Your sticker board, top left: screen readers' name for the button with your photo and name, which turns the board over to your stat board",
+    "ja": "{{name}}：あなたの記録"
+  },
+  "stickerBoard.board.draw": {
+    "where": "Your sticker board: the Draw key's visible label, beside your ticket counts",
+    "ja": "かく"
+  },
+  "stickerBoard.board.drawLabel": {
+    "where": "Your sticker board: screen readers' name for the Draw key while your ticket counts haven't loaded",
+    "ja": "新しいシールをかく"
+  },
+  "stickerBoard.board.drawLabelWithTickets": {
+    "where": "Your sticker board: screen readers' name for the Draw key; {{tickets}} is the ticket summary, such as \"2 daily tickets and 5 reserve tickets\"",
+    "ja": "新しいシールをかく：手持ちは{{tickets}}"
+  },
+  "stickerBoard.board.firstSticker": {
+    "where": "Your sticker board with no stickers yet: the nudge beside the Draw key (hidden from screen readers)",
+    "ja": "はじめてのシールをつくろう"
+  },
+  "stickerBoard.board.label": {
+    "where": "Your sticker board: screen readers' name for the region that holds your stickers",
+    "ja": "シールボード"
+  },
+  "stickerBoard.board.focusHint": {
+    "where": "Your sticker board: read out by screen readers when keyboard focus lands on a sticker",
+    "ja": "Enterキーで選択します。矢印キーでほかのシールに移動します。"
+  },
+  "stickerBoard.board.selectedHint": {
+    "where": "Your sticker board: read out by screen readers for the selected sticker, listing its keyboard controls",
+    "ja": "選択中です。Enterキーでひらき、Tabキーでツールバーに移動します。矢印キーで動かし、[と]で回し、マイナスとプラスで大きさを変え、Deleteキーでボードからはがし、Escapeキーで選択を解除します。"
+  },
+  "stickerBoard.board.blank": {
+    "where": "Your empty sticker board: the note in the dashed spot where the first sticker lands",
+    "ja": "つくったシールや受け取ったシールは、ここに貼られます。"
+  },
+  "stickerBoard.board.didntLoad": {
+    "where": "Your sticker board, when your stickers fail to load: the alert in the dashed spot, above the reason and Try again",
+    "ja": "シールを読み込めませんでした。"
+  },
+  "stickerBoard.board.unsaved_one": {
+    "where": "Your sticker board: the alert when one moved sticker's new position didn't save; {{stickers}} is its number, {{reasons}} why"
+  },
+  "stickerBoard.board.unsaved_other": {
+    "where": "Your sticker board: the alert when moved stickers' new positions didn't save; {{stickers}} lists their numbers, {{reasons}} why",
+    "ja": "{{stickers}}の位置を保存できませんでした：{{reasons}}"
+  },
+  "stickerBoard.placedSticker.roleDescription": {
+    "where": "Any sticker board: screen readers' role name for each sticker on it, read after its label",
+    "ja": "シール"
+  },
+  "stickerBoard.placedSticker.label": {
+    "where": "Any sticker board: screen readers' name for a sticker the board's owner drew; {{position}} of {{setSize}} is its place in reading order",
+    "ja": "{{no}}、制作時間{{duration}}、{{setSize}}枚中{{position}}枚目"
+  },
+  "stickerBoard.placedSticker.labelBy": {
+    "where": "Any sticker board: screen readers' name for a sticker someone other than the board's owner drew; {{artist}} is its Original Artist",
+    "ja": "{{no}}、制作時間{{duration}}、作者は{{artist}}さん、{{setSize}}枚中{{position}}枚目"
+  },
+  "stickerBoard.givenStickerSilhouette.aFriend": {
+    "where": "Your sticker board: the caption under a given sticker's silhouette (\"No.0012 → a friend\") when it went through LINE's friend picker, which never says who was picked",
+    "ja": "友だち"
+  },
+  "stickerBoard.givenStickerSilhouette.label": {
+    "where": "Your sticker board: screen readers' name for a given sticker's silhouette, a button that opens the sticker among the stickers you gave",
+    "ja": "{{no}}、{{day}}に{{recipient}}さんへ贈ったシールをひらく"
+  },
+  "stickerBoard.givenStickerSilhouette.labelToAFriend": {
+    "where": "Your sticker board: screen readers' name for a given sticker's silhouette when it went through LINE's friend picker; the button opens the sticker",
+    "ja": "{{no}}、{{day}}に友だちへ贈ったシールをひらく"
+  },
+  "stickerBoard.toolbar.give": {
+    "where": "Your sticker board, a sticker selected: the toolbar's Give key, which starts giving it through LINE",
+    "ja": "贈る"
+  },
+  "stickerBoard.toolbar.view": {
+    "where": "Your sticker board, a sticker selected: the toolbar's View key, which opens its sticker detail",
+    "ja": "見る"
+  },
+  "stickerBoard.toolbar.remove": {
+    "where": "Your sticker board, a sticker selected: the toolbar's Remove key, which takes it off the board and back into the sticker tray",
+    "ja": "はがす"
+  }
+}
