@@ -109,6 +109,7 @@ You can hand someone a physical drawing, but no existing system makes a _digital
 ## Brand Commitments
 
 - **Never say "NFT", "crypto", "token", "wallet", "mint" or "burn" in the interface** (ad0ll: "I would want the fact that they're NFTs to be hidden in copy in the app"). The product's own words are **sticker board**, **sticker** or **drawing**, **give**, **offer**, **gratitude**, and **take the original**.
+- **Your own stat board shows your addresses** (ad0ll, 2026-09-26): the board address on Ethereum Sepolia and your Sui address, each as a QR code on paper pinned under its chain's mark. Tapping one opens Copy address and its explorer (Etherscan, Suiscan). The copy still never says wallet.
 - No financial framing anywhere a user can see it.
 
 ## Evidence on Hand
