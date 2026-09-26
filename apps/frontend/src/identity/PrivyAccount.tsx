@@ -1,19 +1,18 @@
 import { useTranslation } from "../i18n/react";
 import { AccountRow } from "./AccountRow";
+import { etherscanAddressUrl, suiscanAccountUrl } from "./explorers";
 import { usePrivyStatus } from "./privy";
 import { SPONSORSHIP_CHECK_TARGET_ID } from "./sponsorship-target";
 import { useSuiWalletFailure } from "./suiWallet";
 
 interface Explorer {
-  url: string;
+  href: (address: string) => string;
   /** Its name's key in the catalog. */
   name: "etherscan" | "suiscan";
 }
 
-// Ethereum Sepolia, where the sticker contracts live.
-const ETHERSCAN: Explorer = { url: "https://sepolia.etherscan.io/address/", name: "etherscan" };
-// A Sui address is the same on every Sui network; the app tests on Testnet.
-const SUISCAN: Explorer = { url: "https://suiscan.xyz/testnet/account/", name: "suiscan" };
+const ETHERSCAN: Explorer = { href: etherscanAddressUrl, name: "etherscan" };
+const SUISCAN: Explorer = { href: suiscanAccountUrl, name: "suiscan" };
 
 /** The person's Privy account in full, each value with Copy: its ID and the addresses Privy holds. */
 export function PrivyAccount() {
@@ -69,7 +68,7 @@ function Address({
   return (
     <AccountRow label={label} value={address} copyable>
       <a
-        href={explorer.url + address}
+        href={explorer.href(address)}
         target="_blank"
         rel="noopener noreferrer"
         aria-label={t(($) => $.identity.developer.onExplorer, {

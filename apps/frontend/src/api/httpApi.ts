@@ -1,6 +1,7 @@
 import type { AppType, ErrorBody, Me, TicketKind } from "@drawing-app/api/client";
 import { hc, type InferRequestType } from "hono/client";
 import { ApiError, type ApiClient, type GiftOpening } from "./apiClient";
+import { startNftRequest } from "./httpDiagnostics";
 
 /** A request that hasn't answered by then fails with Try again, rather than hanging the screen. */
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -27,13 +28,20 @@ const describe = (error: unknown) => (error instanceof Error ? error.message : S
 export function createServerClient(fetchImpl: typeof fetch = fetch) {
   return hc<AppType>("/", {
     fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+      const diagnostic = startNftRequest(
+        urlOf(input),
+        init?.method ?? (input instanceof Request ? input.method : "GET"),
+      );
       try {
-        return await fetchImpl(input, {
+        const response = await fetchImpl(input, {
           ...init,
           credentials: "same-origin",
           signal: init?.signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         });
+        diagnostic?.completed(response);
+        return response;
       } catch (error) {
+        diagnostic?.networkFailed();
         throw new ApiError(0, {
           error: "network",
           detail: `${init?.method ?? "GET"} ${urlOf(input)} got no answer: ${describe(error)}`,

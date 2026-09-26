@@ -1,5 +1,5 @@
 import { SignOut } from "@phosphor-icons/react";
-import type { Ref } from "react";
+import { useRef, useState, type Ref } from "react";
 import { retryPrivySignIn, usePrivyStatus, type PrivyStatus } from "../../identity/privy";
 import { PrivyAccount } from "../../identity/PrivyAccount";
 import { useIdentity } from "../../identity/useIdentity";
@@ -11,6 +11,9 @@ import { PhotoSticker } from "../../ui/PhotoSticker";
 import { QuietLink } from "../../ui/QuietLink";
 import { useMe } from "../../api/meContext";
 import { useApiQuery } from "../../api/useApiQuery";
+import { AddressDialog } from "./AddressDialog";
+import { AddressPapers } from "./AddressPapers";
+import { useBoardAddress, useSuiAddress, type Chain } from "./addresses";
 import { GratitudeDemoControls } from "./GratitudeDemoControls";
 import { LanguageControls } from "./LanguageControls";
 import { PerformanceRecorderControls } from "./PerformanceRecorderControls";
@@ -51,42 +54,70 @@ export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref
   if (stats.state === "failed")
     figures.streakRule = `Your stats didn’t load: ${stats.error.message}`;
 
+  const board = useBoardAddress();
+  const sui = useSuiAddress();
+  const boardPaper = useRef<HTMLButtonElement>(null);
+  const suiPaper = useRef<HTMLButtonElement>(null);
+  const papers = { ethereum: boardPaper, sui: suiPaper };
+  const [open, setOpen] = useState<Chain | null>(null);
+  const opened = open && { ethereum: board, sui }[open];
+  const held = open && opened?.state === "ready" ? { chain: open, address: opened.address } : null;
+
   return (
-    <StatCork
-      ref={ref}
-      figures={figures}
-      onFlipBack={onFlipBack}
-      flipBackRef={flipBackRef}
-      afterFlipBack={
-        // Outside LINE's app it's the only way to switch LINE accounts, so it's never behind the dev flag.
-        !me.inClient && (
-          <LabelButton
-            size="sm"
-            icon={<SignOut />}
-            className="stat-board__logout"
-            onClick={lineLogout}
-          >
-            Log out of LINE
-          </LabelButton>
-        )
-      }
-    >
-      {DEV_SLIP && (
-        <section className="stat-board__note stat-board__slip" aria-label="Developer tools">
-          <div className="stat-board__paper">
-            <h3 className="fine stat-board__slip-h">LINE and Privy</h3>
-            <SendTestMessage senderName={me.displayName} />
-            <LineDetails />
-            <PrivyLine />
-            <PrivyAccount />
-            <GratitudeDemoControls onTry={onTryGratitudeMiniGame} />
-            <PerformanceRecorderControls />
-            <LanguageControls />
-          </div>
-          <i className="stat-board__washi" aria-hidden />
-        </section>
+    <>
+      <StatCork
+        ref={ref}
+        figures={figures}
+        onFlipBack={onFlipBack}
+        flipBackRef={flipBackRef}
+        afterFlipBack={
+          // Outside LINE's app it's the only way to switch LINE accounts, so it's never behind the dev flag.
+          !me.inClient && (
+            <LabelButton
+              size="sm"
+              icon={<SignOut />}
+              className="stat-board__logout"
+              onClick={lineLogout}
+            >
+              Log out of LINE
+            </LabelButton>
+          )
+        }
+      >
+        <AddressPapers
+          board={board}
+          sui={sui}
+          lifted={held?.chain ?? null}
+          paperRefs={papers}
+          onOpen={setOpen}
+        />
+        {DEV_SLIP && (
+          <section className="stat-board__note stat-board__slip" aria-label="Developer tools">
+            <div className="stat-board__paper">
+              <h3 className="fine stat-board__slip-h">LINE and Privy</h3>
+              <SendTestMessage senderName={me.displayName} />
+              <LineDetails />
+              <PrivyLine />
+              <PrivyAccount />
+              <GratitudeDemoControls onTry={onTryGratitudeMiniGame} />
+              <PerformanceRecorderControls />
+              <LanguageControls />
+            </div>
+            <i className="stat-board__washi" aria-hidden />
+          </section>
+        )}
+      </StatCork>
+      {/* Beside the cork rather than in it, so its taps and Escape never reach the cork's own. */}
+      {held && (
+        <AddressDialog
+          key={held.chain}
+          chain={held.chain}
+          address={held.address}
+          from={papers[held.chain]}
+          onClose={() => setOpen(null)}
+        />
       )}
-    </StatCork>
+    </>
   );
 }
 
