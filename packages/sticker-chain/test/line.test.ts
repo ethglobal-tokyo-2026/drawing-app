@@ -51,4 +51,17 @@ describe("LINE ID token verification", () => {
     await expect(expired("valid-line-id-token")).rejects.toThrow("Invalid LINE token claims");
     await expect(rejected("valid-line-id-token")).rejects.toThrow("status 401");
   });
+
+  it("keeps LINE's reason for a rejection, for the server log", async () => {
+    const rejected = createLineVerifier({
+      channelId,
+      fetchImpl: async () =>
+        Response.json(
+          { error: "invalid_request", error_description: "IdToken expired." },
+          { status: 400 },
+        ),
+    });
+
+    await expect(rejected("valid-line-id-token")).rejects.toThrow("status 400: IdToken expired.");
+  });
 });
