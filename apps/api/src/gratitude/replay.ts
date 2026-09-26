@@ -70,7 +70,7 @@ export const replayV1Schema = z
     v: z.literal(1),
     /** Seeds the pop-in lines and particles. */
     seed: z.uint32(),
-    /** The thanker's setting. */
+    /** The receiver's setting. */
     intensity: z.number().min(0).max(1),
     /** Width and height, px. */
     stage: z.tuple([z.int().positive(), z.int().positive()]),

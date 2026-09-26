@@ -196,6 +196,7 @@ pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
 ### Toolchain
 
 - Runtime is **pnpm**
+- Node is **24 LTS**, one exact version in the root `package.json`'s `devEngines.runtime`: pnpm runs every script on it, and downloads it when it's missing. `deploy/install-node.sh` installs the same version on the box under `/usr/local/lib/nodejs/` for sticker-auth and drawing-api; the box's `/usr/bin/node` stays NodeSource's Node 22, which other projects there run on
 - Tests are **vitest**
 - Monorepo tech is turborepo
 - Frontend is **Vite** + **React**

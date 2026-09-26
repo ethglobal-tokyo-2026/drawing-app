@@ -5,7 +5,7 @@ import type { CorkFigures } from "./StatCork";
 
 type StatFigures = Pick<
   CorkFigures,
-  "gratitude" | "streak" | "streakRule" | "stamps" | "bestCombo" | "mostThanksInADay"
+  "gratitude" | "streak" | "streakRule" | "stamps" | "bestCombo" | "mostGratitudeInADay"
 >;
 
 /** Someone's User Stats as the cork pins them; null stats, when they didn't load, show as unknown. */
@@ -18,7 +18,7 @@ export function statFigures(stats: UserStats | null, own: boolean, now: Date): S
       streakRule: own ? "Your stats didn’t load." : "Their stats didn’t load.",
       stamps: { made: null, received: null, given: null },
       bestCombo: null,
-      mostThanksInADay: null,
+      mostGratitudeInADay: null,
     };
   }
   return {
@@ -32,6 +32,6 @@ export function statFigures(stats: UserStats | null, own: boolean, now: Date): S
           : "It starts the first day they draw.",
     stamps: { made: stats.made, received: stats.received, given: stats.given },
     bestCombo: stats.bests.bestCombo,
-    mostThanksInADay: stats.bests.mostThanksInADay,
+    mostGratitudeInADay: stats.bests.mostGratitudeInADay,
   };
 }

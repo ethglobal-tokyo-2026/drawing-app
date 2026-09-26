@@ -31,6 +31,8 @@ export RSYNC_RSH="ssh ${SSH_OPTS[*]}"
 # LINE and Privy's checks) can be tried inside LINE on a phone.
 VITE_DEV_SLIP=on pnpm --dir "$ROOT" --filter frontend build
 pnpm --dir "$ROOT" --filter @drawing-app/sticker-chain build:auth-server
+# The auth server runs on the Node that package.json pins.
+"$ROOT/deploy/install-node.sh" sticker-auth
 
 echo "→ rsync → $TARGET:$DIR"
 # /srv belongs to root, so a missing folder is made once with sudo and handed to the deploy user.

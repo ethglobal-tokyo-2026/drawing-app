@@ -76,7 +76,14 @@ export interface SealFrame {
   gloss: number;
   spec: { opacity: number; scale: number };
   rim: number;
-  piece: { x: number; y: number; rotate: number; rotateX: number; rotateY: number; scale: number };
+  sticker: {
+    x: number;
+    y: number;
+    rotate: number;
+    rotateX: number;
+    rotateY: number;
+    scale: number;
+  };
   /** The cast shadow stays flat on the sheet: it moves with the sticker but never tilts. */
   shadow: { opacity: number; x: number; y: number; rotate: number; scale: number };
   /** Off its backing: the ink it was cut from is gone from the sheet. */
@@ -127,7 +134,7 @@ export function sealFrame(t: number, path: Flight, items: number): SealFrame {
     gloss: easeOut(span(T.rise0 + 80, T.rise1 + 80)),
     spec: { opacity: formed, scale: 1.8 - 0.8 * formed },
     rim: easeOut(span(T.form0 + 90, T.form1 + 40)),
-    piece: { x, y, rotate, rotateX: -11 * up, rotateY: 9 * up, scale },
+    sticker: { x, y, rotate, rotateX: -11 * up, rotateY: 9 * up, scale },
     shadow: {
       opacity: t < T.peel0 ? 0 : 0.45 + 0.25 * height,
       x: x + 3 + 11 * height,

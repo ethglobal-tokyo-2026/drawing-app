@@ -147,7 +147,7 @@ export const userStatsSchema = z.object({
     asOriginalArtist: count,
     total: count,
   }),
-  bests: z.object({ bestCombo: count, mostThanksInADay: count, longestStreak: count }),
+  bests: z.object({ bestCombo: count, mostGratitudeInADay: count, longestStreak: count }),
   /** Current; a missed ticket day resets it to 0. */
   streak: count,
 });

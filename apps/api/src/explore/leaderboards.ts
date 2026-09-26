@@ -26,7 +26,7 @@ export const leaderboardsSchema = z.object({
   /** When this week's Monday ticket day began, on Explore's clock. */
   weekStart: isoTimeSchema,
   /** The giver's part plus Original Artist Gratitude Shares received this week. */
-  mostThanked: z.array(leaderboardRowSchema),
+  mostGratitude: z.array(leaderboardRowSchema),
   /** The most hits in one combo this week. */
   bestCombo: z.array(leaderboardRowSchema),
   /** Current streaks, each counted in its person's own zone. */
@@ -46,14 +46,14 @@ function weekStart(at: Date, timeZone: string): Date {
 const addTo = (values: Map<string, number>, personId: string, value: number) =>
   values.set(personId, (values.get(personId) ?? 0) + value);
 
-/** Since `since`: each person's part of the gratitude, and each thanker's most hits in one combo. */
+/** Since `since`: each person's part of the gratitude, and each receiver's most hits in one combo. */
 function gratitudeSince(db: Db, since: Date) {
-  const thankers = alias(users, "thanker");
+  const receivers = alias(users, "receiver");
   const combos = db
     .select({
       giverId: gifts.giverId,
       artistId: stickers.artistId,
-      thankerId: thankers.id,
+      receiverId: receivers.id,
       hits: gratitude.hits,
       total: gratitude.total,
       share: gratitude.originalArtistGratitudeShare,
@@ -61,17 +61,17 @@ function gratitudeSince(db: Db, since: Date) {
     .from(gratitude)
     .innerJoin(gifts, eq(gifts.id, gratitude.giftId))
     .innerJoin(stickers, eq(stickers.id, gifts.stickerId))
-    .innerJoin(thankers, eq(thankers.id, gifts.receiverId))
+    .innerJoin(receivers, eq(receivers.id, gifts.receiverId))
     .where(gte(gratitude.createdAt, since))
     .all();
-  const thanked = new Map<string, number>();
+  const gratitudeByPerson = new Map<string, number>();
   const bestCombo = new Map<string, number>();
   for (const combo of combos) {
-    addTo(thanked, combo.giverId, combo.total - combo.share);
-    addTo(thanked, combo.artistId, combo.share);
-    bestCombo.set(combo.thankerId, Math.max(bestCombo.get(combo.thankerId) ?? 0, combo.hits));
+    addTo(gratitudeByPerson, combo.giverId, combo.total - combo.share);
+    addTo(gratitudeByPerson, combo.artistId, combo.share);
+    bestCombo.set(combo.receiverId, Math.max(bestCombo.get(combo.receiverId) ?? 0, combo.hits));
   }
-  return { thanked, bestCombo };
+  return { gratitudeByPerson, bestCombo };
 }
 
 /** Each recent artist's current streak, over the ticket days of all their seals in their own zone. */
@@ -128,15 +128,15 @@ const leaderboard = (values: Map<string, number>, peopleAToZ: Person[]): Leaderb
 /** This week's leaderboards, the week starting on Monday in `timeZone`. */
 export function loadLeaderboards(db: Db, now: Date, timeZone: string): Leaderboards {
   const since = weekStart(now, timeZone);
-  const { thanked, bestCombo } = gratitudeSince(db, since);
+  const { gratitudeByPerson, bestCombo } = gratitudeSince(db, since);
   const streaks = currentStreaks(db, now);
   const people = livePeopleAToZ(
     db,
-    new Set([...thanked.keys(), ...bestCombo.keys(), ...streaks.keys()]),
+    new Set([...gratitudeByPerson.keys(), ...bestCombo.keys(), ...streaks.keys()]),
   );
   return {
     weekStart: toIsoTime(since),
-    mostThanked: leaderboard(thanked, people),
+    mostGratitude: leaderboard(gratitudeByPerson, people),
     bestCombo: leaderboard(bestCombo, people),
     longestStreak: leaderboard(streaks, people),
   };

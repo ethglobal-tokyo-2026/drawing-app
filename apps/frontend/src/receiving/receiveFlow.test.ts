@@ -109,22 +109,22 @@ describe("opening a gift", () => {
   });
 });
 
-describe("accepting a gift", () => {
-  const torn = () => play(previewed(), { type: "tore" });
-  const accepting = () => receiveFlow(torn(), { type: "accept" });
+describe("receiving a gift", () => {
+  const unpackaged = () => play(previewed(), { type: "unpackaged" });
+  const receiving = () => receiveFlow(unpackaged(), { type: "receive" });
 
-  it("brings up Accept once the bag is torn open", () => {
-    expect(torn()).toEqual({ step: "torn", preview: sealedPreview, accepting: false });
+  it("brings up Accept once the sticker is unpackaged", () => {
+    expect(unpackaged()).toEqual({ step: "unpackaged", preview: sealedPreview, receiving: false });
   });
 
   it("waits on Accept's receive, and a second Accept meanwhile changes nothing", () => {
-    const busy = accepting();
-    expect(busy).toEqual({ step: "torn", preview: sealedPreview, accepting: true });
-    expect(receiveFlow(busy, { type: "accept" })).toBe(busy);
+    const busy = receiving();
+    expect(busy).toEqual({ step: "unpackaged", preview: sealedPreview, receiving: true });
+    expect(receiveFlow(busy, { type: "receive" })).toBe(busy);
   });
 
   it("closes on the sticker it received", () => {
-    expect(receiveFlow(accepting(), { type: "received", response: received })).toEqual({
+    expect(receiveFlow(receiving(), { type: "received", response: received })).toEqual({
       step: "received",
       stickerId: gifted.id,
     });
@@ -132,7 +132,7 @@ describe("accepting a gift", () => {
 
   it("moves to the refusal when the server refuses Accept, naming the giver", () => {
     const error = failed(409, "taken_back");
-    expect(receiveFlow(accepting(), { type: "acceptFailed", error })).toEqual({
+    expect(receiveFlow(receiving(), { type: "receiveFailed", error })).toEqual({
       step: "refused",
       refusal: "taken_back",
       giver: toPerson(giver),
@@ -141,17 +141,17 @@ describe("accepting a gift", () => {
 
   it("keeps Accept up with what failed, and clears it when Accept tries again", () => {
     const error = failed(0, "network", "Failed to fetch");
-    const again = receiveFlow(accepting(), { type: "acceptFailed", error });
+    const again = receiveFlow(receiving(), { type: "receiveFailed", error });
     expect(again).toEqual({
-      step: "torn",
+      step: "unpackaged",
       preview: sealedPreview,
-      accepting: false,
+      receiving: false,
       failed: error.message,
     });
-    expect(receiveFlow(again, { type: "accept" })).toEqual({
-      step: "torn",
+    expect(receiveFlow(again, { type: "receive" })).toEqual({
+      step: "unpackaged",
       preview: sealedPreview,
-      accepting: true,
+      receiving: true,
     });
   });
 });

@@ -38,10 +38,10 @@ function ago(at: string): string {
   return hours < 24 ? `${hours} hr` : `${Math.floor(hours / 24)} d`;
 }
 
-type Leaderboard = "mostThanked" | "bestCombo" | "longestStreak";
+type Leaderboard = "mostGratitude" | "bestCombo" | "longestStreak";
 
 const LEADERBOARDS: { id: Leaderboard; label: string }[] = [
-  { id: "mostThanked", label: "Most thanked" },
+  { id: "mostGratitude", label: "Most gratitude" },
   { id: "bestCombo", label: "Best combo" },
   { id: "longestStreak", label: "Longest streak" },
 ];
@@ -139,7 +139,7 @@ function ThisWeek({
   meId: string;
   open: Open;
 }) {
-  const [board, setBoard] = useState<Leaderboard>("mostThanked");
+  const [board, setBoard] = useState<Leaderboard>("mostGratitude");
   const rows: LeaderboardRow[] = leaderboards[board];
 
   return (

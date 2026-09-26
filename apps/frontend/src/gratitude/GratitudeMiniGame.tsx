@@ -14,11 +14,12 @@ import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import type { ComboRecord } from "./combo";
 import { newIdempotencyKey, sendGratitude } from "./gratitudeOutbox";
+import { loadLetteringFonts } from "./letteringFonts";
 import { mountMiniGameEngine, type MiniGameEngine } from "./miniGameEngine";
 import { TIER_NAMES } from "./tierNames";
 import "./gratitude-mini-game.css";
 
-/** A finished combo and the sticker it thanks: what the app keeps. */
+/** A finished combo and the sticker its gratitude is for: what the app keeps. */
 export interface GratitudeResult extends ComboRecord {
   stickerId: string;
 }
@@ -35,7 +36,7 @@ interface Props {
   };
   /** Who gave the sticker, and gets the gratitude. */
   giver: { handle: string; displayName: string; pictureUrl?: string };
-  /** The received gift this thanks. Without one, as in the stat board's demo, nothing is recorded. */
+  /** The received gift the gratitude is for. Without one, as in the stat board's demo, nothing is recorded. */
   giftId?: string;
   /** The effects' dial, 0 to 1. */
   intensity: number;
@@ -65,6 +66,23 @@ function gratitudeFor(giftId: string, record: ComboRecord, replay: ReplayV1): Re
   };
 }
 
+/**
+ * While the game covers the phone, the phone's other children (the board's screen, the tab bar and
+ * anything else open) go inert, so assistive tech and Tab reach only the game. Returns what undoes
+ * it, which takes off only the `inert` it added.
+ */
+function setPhoneAside(game: HTMLElement): () => void {
+  const phone = game.parentElement;
+  if (!phone?.classList.contains("phone")) return () => {};
+  const added = [...phone.children].filter(
+    (child) => child !== game && !child.hasAttribute("inert"),
+  );
+  for (const child of added) child.setAttribute("inert", "");
+  return () => {
+    for (const child of added.splice(0)) child.removeAttribute("inert");
+  };
+}
+
 /** Send gratitude, over the whole phone: the sticker and its giver, the heart, the combo, the receipt. */
 export function GratitudeMiniGame({
   sticker,
@@ -78,8 +96,8 @@ export function GratitudeMiniGame({
   const api = useApi();
   const reduced = useReducedMotion();
   const [ending, setEnding] = useState<{ caught: boolean; record: ComboRecord } | null>(null);
-  const [failure, setFailure] = useState<string | null>(null);
-  const [refusal, setRefusal] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [refused, setRefused] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const page = useRef<HTMLDivElement>(null);
   const ground = useRef<HTMLDivElement>(null);
@@ -90,7 +108,9 @@ export function GratitudeMiniGame({
   const photo = useRef<HTMLDivElement>(null);
   const dot = useRef<HTMLSpanElement>(null);
   const fuu = useRef<HTMLDivElement>(null);
+  const receipt = useRef<HTMLElement>(null);
   const engine = useRef<MiniGameEngine | null>(null);
+  const restorePhone = useRef<() => void>(() => {});
   const handle = formatHandle(giver.handle);
 
   // The engine mounts once per screen; its callbacks read the latest props through this.
@@ -120,10 +140,10 @@ export function GratitudeMiniGame({
   useLayoutEffect(() => {
     // The gratitude outbox keeps the combo on this device before its request goes.
     const record = (combo: ComboRecord, replay: ReplayV1) => {
-      const { api: client, giftId: thanked, onEnd: ended, stickerId } = latest.current;
-      if (thanked) {
-        void sendGratitude(client, gratitudeFor(thanked, combo, replay)).then((sent) => {
-          if (sent.state === "refused") setRefusal(sent.error.message);
+      const { api: client, giftId, onEnd: ended, stickerId } = latest.current;
+      if (giftId) {
+        void sendGratitude(client, gratitudeFor(giftId, combo, replay)).then((sent) => {
+          if (sent.state === "refused") setRefused(true);
         });
       }
       ended?.({ ...combo, stickerId });
@@ -149,7 +169,7 @@ export function GratitudeMiniGame({
         showFrameTimes: latest.current.showFrameTimes,
         onRecord: record,
         onFinished: setEnding,
-        onError: setFailure,
+        onError: () => setFailed(true),
       },
     );
     engine.current = mounted;
@@ -162,6 +182,16 @@ export function GratitudeMiniGame({
 
   useEffect(() => engine.current?.setReduced(reduced), [reduced]);
 
+  // The tier names' and pop-in words' Japanese glyphs arrive before the first tier-up.
+  useEffect(() => loadLetteringFonts(), []);
+
+  // A layout effect, so on unmount the phone comes back before the focus trap returns focus to it.
+  useLayoutEffect(() => {
+    const restore = setPhoneAside(need(root.current, "root"));
+    restorePhone.current = restore;
+    return restore;
+  }, []);
+
   // LINE's header shows the page title.
   useEffect(() => {
     const was = document.title;
@@ -171,19 +201,36 @@ export function GratitudeMiniGame({
     };
   }, []);
 
-  const close = () => {
-    engine.current?.close();
+  const leave = () => {
+    restorePhone.current();
     onClose();
   };
+  const close = () => {
+    engine.current?.close();
+    leave();
+  };
   useFocusTrap(root, { onEscape: close });
+  // The trap focuses the first control, the X; the heart takes it, so Enter taps rather than closes.
+  useEffect(() => engine.current?.focusHeart(), []);
+  // The heart has gone, and disabled: the receipt's button takes focus.
+  useEffect(() => {
+    if (ending) receipt.current?.querySelector("button")?.focus();
+  }, [ending]);
 
   const tier = ending ? TIER_NAMES[ending.record.peakTier] : null;
   const screen = (
-    <div className="gr" ref={root} role="dialog" aria-label="Send gratitude" tabIndex={-1}>
+    <div
+      className="gr"
+      ref={root}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Send gratitude"
+      tabIndex={-1}
+    >
       <div className="gr-page" ref={page}>
-        <div className="gr-ground" ref={ground} />
-        <header className="gr-top">
-          <figure className="gr-piece">
+        <div className="gr-ground" ref={ground} aria-hidden="true" />
+        <div className="gr-top">
+          <figure className="gr-piece" aria-label={`Sticker ${formatNo(sticker.no)}`}>
             <StickerFigure
               className="gr-piece-art"
               urls={sticker.urls}
@@ -207,10 +254,10 @@ export function GratitudeMiniGame({
               {formatDay(sticker.createdAt)}
             </p>
           </div>
-          <button type="button" className="gr-close" aria-label="Close" onClick={close}>
+          <button type="button" className="gr-close" aria-label="Close" data-press onClick={close}>
             <X />
           </button>
-        </header>
+        </div>
         <div className="gr-hud" ref={hud} aria-hidden />
         <div className="gr-stage" ref={stage} />
         <p className="gr-hint" ref={hint}>
@@ -224,6 +271,7 @@ export function GratitudeMiniGame({
       <p className="gr-sr" ref={live} aria-live="polite" />
       {ending && (
         <section
+          ref={receipt}
           className="gr-receipt is-on"
           data-kind={ending.caught ? "combo" : "sent"}
           aria-label="Gratitude sent"
@@ -242,35 +290,38 @@ export function GratitudeMiniGame({
                 <>
                   <p className="gr-rc-figure">
                     {ending.record.total.toLocaleString("en-US")}
-                    <small> ♡</small>
+                    <small aria-hidden="true"> ♡</small>
                   </p>
                   <p className="gr-rc-head">gratitude to {handle}</p>
                   <p className="gr-rc-sub fine">
                     best ×{ending.record.peakMult.toFixed(1)} ·{" "}
-                    {(ending.record.durationMs / 1000).toFixed(1)}s{"\n"}
-                    {tier.jp} {tier.en} · {ending.record.method}
+                    {ending.record.hits.toLocaleString("en-US")} hits{"\n"}
+                    {tier.jp} {tier.en}
                   </p>
                 </>
               ) : (
                 <>
-                  <p className="gr-rc-head">Sent to {handle} ♡</p>
+                  <p className="gr-rc-head">
+                    Sent to {handle} <span aria-hidden="true">♡</span>
+                  </p>
                   <p className="gr-rc-sub fine">For {formatNo(sticker.no)}</p>
                 </>
               )}
             </div>
           </div>
           <div className="gr-rc-actions">
-            <LabelButton block icon={<StickerBoardIcon />} onClick={onClose}>
+            <LabelButton block icon={<StickerBoardIcon />} onClick={leave}>
               Back to your board
             </LabelButton>
           </div>
         </section>
       )}
-      {(failure || refusal) && (
+      {/* In plain words: the engine and the gratitude outbox log what went wrong to the console. */}
+      {(failed || refused) && (
         <p className="gr-failure" role="alert">
-          {failure && `The mini-game stopped: ${failure}`}
-          {failure && refusal && <br />}
-          {refusal && `The server didn't record your gratitude: ${refusal}`}
+          {failed && "The game stopped. Close it and send your gratitude again."}
+          {failed && refused && <br />}
+          {refused && `Your gratitude didn't reach ${handle}. Close this and send it again.`}
         </p>
       )}
     </div>

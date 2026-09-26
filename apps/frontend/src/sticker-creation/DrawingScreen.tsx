@@ -438,6 +438,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     >
       <DrawingCanvas
         ref={canvas}
+        active={active}
         settings={{
           tool,
           color,

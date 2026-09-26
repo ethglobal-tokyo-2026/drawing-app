@@ -38,7 +38,7 @@ export const FRESH_TICKETS: Tickets = {
   usedToday: [],
 };
 
-/** A one-tap combo's POST /api/gratitude body; `overrides` replace any of its fields. */
+/** A one-hit tap combo's POST /api/gratitude body; `overrides` replace any of its fields. */
 export const recordGratitudeBody = (overrides: Partial<RecordGratitude> = {}): RecordGratitude => ({
   idempotencyKey: "0f6c1a52-3d4b-4e8a-9c21-5b7d8e9f0a13",
   giftId: "g1",

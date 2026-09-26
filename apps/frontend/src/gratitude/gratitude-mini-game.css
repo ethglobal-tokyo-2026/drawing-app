@@ -2,7 +2,9 @@
 .gr {
   position: absolute;
   inset: 0;
+  /* clip, not hidden: the speed field's 1100px would make it scrollable */
   overflow: hidden;
+  overflow: clip;
   isolation: isolate;
   background: var(--liner);
   color: var(--ink);
@@ -21,13 +23,13 @@
   background: var(--pink);
   color: var(--ink);
 }
-.gr button:where(:not(.dome, .btn)) {
+.gr button:where(:not(.key, .label-btn)) {
   font: inherit;
   color: inherit;
   -webkit-tap-highlight-color: transparent;
-} /* label stock and domes keep their own type */
+} /* keys and label stock keep their own type */
 .gr :focus-visible {
-  outline: 3px solid var(--pink);
+  outline: 2px solid var(--ink);
   outline-offset: 3px;
   border-radius: var(--r-label);
 }
@@ -46,15 +48,22 @@
 .gr-page {
   position: absolute;
   inset: 0;
+}
+/* it shakes in play, so only then is it a layer of its own */
+.gr[data-phase="running"] .gr-page {
   will-change: transform;
 }
 
 /* ------------------------------------------------------------------ the ground escalates with the tier
-   calm liner → a warm blush → 集中線 focus lines → heat haze → 昇天's white-out rays */
+   calm liner → a warm blush → 集中線 focus lines → heat haze → 昇天's white-out rays.
+   The header's band stays plain liner, so its fine print keeps its contrast and no line runs behind
+   its text: the ground fades in below the header's text, above the HUD. */
 .gr-ground {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  -webkit-mask-image: linear-gradient(180deg, transparent 144px, #000 184px);
+  mask-image: linear-gradient(180deg, transparent 144px, #000 184px);
 }
 .gr-bg {
   position: absolute;
@@ -89,8 +98,7 @@
   height: 46%;
   border-radius: 50%;
   background: radial-gradient(closest-side, rgba(255, 112, 72, 0.36), rgba(255, 112, 72, 0));
-  animation: gr-haze 3.6s linear infinite;
-  will-change: transform, opacity;
+  animation: gr-haze 3.6s linear infinite paused;
 }
 .gr-haze i:nth-child(1) {
   left: -10%;
@@ -126,12 +134,17 @@
   right: 0;
   bottom: 8%;
   height: 40px;
-  animation: gr-wave 2.8s linear infinite;
-  will-change: transform, opacity;
+  animation: gr-wave 2.8s linear infinite paused;
 }
 .gr-haze span + span {
   bottom: 30%;
   animation-delay: -1.4s;
+}
+/* the haze moves only while it can show: オーバーヒート and 昇天, in play */
+.gr:is([data-phase="running"], [data-phase="ending"]):is([data-tier="3"], [data-tier="4"])
+  .gr-haze
+  :is(i, span) {
+  animation-play-state: running;
 }
 .gr-haze svg {
   width: 100%;
@@ -244,7 +257,15 @@
   left: 0;
   right: 0;
   top: 0;
-  height: var(--gr-top, 176px);
+  height: 176px;
+}
+/* Its parts sit over the stage, so 昇天's rain and the mini hearts pass behind the giver's name. The
+   peeling corner and the dents stay over them, under the close button; at the end the heart lands
+   over them (see the heart). */
+.gr-piece,
+.gr-photo,
+.gr-from {
+  z-index: 1;
 }
 .gr-piece {
   position: absolute;
@@ -277,7 +298,7 @@
   opacity: 0;
   transform: scale(0) rotate(var(--tilt));
 }
-/* a heart dot: Phosphor heart (fill) on the world's pink dot badge */
+/* a heart dot: Phosphor heart (fill) in Ink on the world's pink dot badge */
 .gr-dot {
   display: grid;
   place-items: center;
@@ -286,8 +307,8 @@
   box-sizing: border-box;
   border-radius: 50%;
   background: var(--pink);
-  border: 2.5px solid #fff;
-  color: #fff;
+  border: 2.5px solid var(--canvas);
+  color: var(--ink);
 }
 .gr-dot svg {
   width: 58%;
@@ -328,11 +349,6 @@
   place-items: center;
   cursor: pointer;
   z-index: 5;
-  transition: transform var(--t-press) linear;
-}
-.gr-close:active {
-  transform: translateY(1px);
-  box-shadow: none;
 }
 .gr-close svg {
   width: 18px;
@@ -347,6 +363,7 @@
   left: 20px;
   right: 20px;
   top: var(--hud-top, 172px);
+  padding-top: 14px; /* the tick labels' lane, so they never rise past the HUD into the header */
   z-index: 3;
   pointer-events: none;
   opacity: 0;
@@ -390,7 +407,12 @@
   position: absolute;
   inset: 0;
   opacity: 0;
-  background: linear-gradient(90deg, var(--tomato) 0%, #ff8a3c 55%, var(--seal) 100%);
+  background: linear-gradient(
+    90deg,
+    var(--tomato) 0%,
+    color-mix(in srgb, var(--tomato) 62%, var(--seal)) 55%,
+    var(--seal) 100%
+  );
 }
 .gr-timer-head {
   /* the fuse's lit end: it glows as the bar runs low */
@@ -404,7 +426,7 @@
   opacity: 0;
   background: radial-gradient(
     circle,
-    #fff 0 20%,
+    var(--canvas) 0 20%,
     rgba(255, 217, 59, 0.95) 38%,
     rgba(255, 90, 54, 0.35) 58%,
     rgba(255, 90, 54, 0) 72%
@@ -424,11 +446,12 @@
   background: rgba(255, 255, 255, 0.88);
   opacity: 0;
 }
+/* in the HUD's lane over the bar's end: comboHud.ts pops it up out of the bar */
 .gr-tick {
   position: absolute;
   left: 0;
   bottom: 100%;
-  margin-bottom: 3px;
+  margin-bottom: 1px;
   white-space: nowrap;
   opacity: 0;
   font-size: var(--fs-fine, 11px);
@@ -464,7 +487,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 12px;
+  margin-top: 8px;
 }
 .gr-amount {
   display: flex;
@@ -497,6 +520,7 @@
   color: var(--ink);
   box-shadow: var(--shadow-label);
   transform: rotate(var(--tilt));
+  transform-origin: 100% 50%; /* its pulse grows inward from the screen's edge */
 }
 .gr-mult span {
   font-size: 17px;
@@ -512,34 +536,6 @@
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
-.gr[data-mode="replay"] .gr-hud {
-  left: 12px;
-  right: 12px;
-}
-.gr[data-mode="replay"] .gr-timer-track {
-  height: 12px;
-}
-.gr[data-mode="replay"] .gr-timer-s {
-  font-size: 13px;
-}
-.gr[data-mode="replay"] .gr-readout {
-  margin-top: 6px;
-}
-.gr[data-mode="replay"] .gr-amount b {
-  font-size: 28px;
-}
-.gr[data-mode="replay"] .gr-amount i {
-  font-size: 17px;
-}
-.gr[data-mode="replay"] .gr-mult {
-  padding: 4px 9px 3px;
-}
-.gr[data-mode="replay"] .gr-mult b {
-  font-size: 18px;
-}
-.gr[data-mode="replay"] .gr-mult span {
-  font-size: 13px;
-}
 
 /* ------------------------------------------------------------------ the heart (the screen's one dome) */
 .gr-stage {
@@ -551,6 +547,11 @@
   left: 0;
   top: 0;
   will-change: transform;
+}
+/* At the end the heart and its soul land on the giver's picture, over the header, with the burst
+   they land with; the words stay over them. In play the mini hearts in front stay over the heart. */
+.gr[data-phase="ending"] :is(.gr-heart-anchor, .gr-soul, .gr-p, .gr-pop) {
+  z-index: 2;
 }
 .gr-heart-body {
   position: relative;
@@ -566,6 +567,9 @@
   border-radius: 48%;
   cursor: pointer;
   z-index: 2;
+}
+.gr-heart-btn:focus-visible {
+  border-radius: 48%;
 }
 /* each heart layer is its own root svg stacked in this box, so animating one is a compositor move, not a paint inside a shared svg */
 .gr-heart-layers {
@@ -711,7 +715,6 @@
   margin: -46px 0 0 -37px;
   opacity: 0;
   pointer-events: none;
-  will-change: transform;
 }
 .gr-soul svg {
   width: 100%;
@@ -730,7 +733,15 @@
   position: absolute;
   left: 0;
   top: 0;
-  will-change: transform, opacity;
+}
+/* every mini heart and 昇天's rain, drawn on one canvas per layer */
+.gr-minis {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
 }
 .gr-p svg {
   display: block;
@@ -786,7 +797,6 @@
   line-height: 1.05;
   letter-spacing: 0.02em;
   color: var(--pink);
-  will-change: transform, opacity;
   opacity: 0;
 }
 .gr-cap::before,
@@ -804,8 +814,8 @@
 }
 .gr-cap::after {
   z-index: -1;
-  color: #fff;
-  -webkit-text-stroke: 0.155em #fff;
+  color: var(--canvas);
+  -webkit-text-stroke: 0.155em var(--canvas);
 }
 .gr-slam {
   z-index: 2;
@@ -816,8 +826,8 @@
   top: 100%;
   margin-top: 6px;
   padding: 3px 6px 2px;
-  border-radius: 3px;
-  background: #fff;
+  border-radius: var(--r-label);
+  background: var(--canvas);
   box-shadow: var(--shadow-label);
   transform: rotate(3deg);
   font-family: var(--font-ui);
@@ -849,14 +859,18 @@
   color: var(--ink);
   transition:
     opacity 200ms var(--ease-out),
-    transform 200ms var(--ease-out);
+    transform 200ms var(--ease-out),
+    visibility 200ms;
 }
+/* hidden from screen readers too, once it fades */
 .gr[data-phase]:not([data-phase="ready"]) .gr-hint {
   opacity: 0;
   transform: translateY(6px);
+  visibility: hidden;
 }
 .gr[data-tip="on"] .gr-hint {
   opacity: 0;
+  visibility: hidden;
 }
 
 /* the tip: what to do, said only after tries (stroke) or during a hard shake (shake). Never unprompted. */
@@ -873,7 +887,7 @@
   gap: 8px;
   padding: 9px 14px 8px 11px;
   border-radius: var(--r-label);
-  background: #fff;
+  background: var(--canvas);
   box-shadow: var(--shadow-label);
   color: var(--ink);
   pointer-events: none;
@@ -884,7 +898,6 @@
   letter-spacing: -0.005em;
   opacity: 0;
   transform: rotate(-2deg);
-  will-change: transform, opacity;
 }
 .gr-tip-ic {
   display: grid;
@@ -900,6 +913,7 @@
   position: absolute;
   right: 0;
   top: 0;
+  z-index: 2;
   width: 132px;
   height: 132px;
   pointer-events: none;
@@ -913,7 +927,7 @@
 }
 .gr-corner-under {
   clip-path: polygon(0 0, 100% 0, 100% 100%);
-  background: linear-gradient(225deg, #d8d4e1 0%, var(--liner-deep) 60%);
+  background: linear-gradient(225deg, var(--label-deep) 0%, var(--liner-deep) 60%);
   box-shadow: inset 6px -6px 14px rgba(28, 24, 36, 0.12);
 }
 .gr-corner-flapwrap {
@@ -923,11 +937,17 @@
   position: absolute;
   inset: 0;
   clip-path: polygon(0 0, 0 100%, 100% 100%);
-  background: linear-gradient(45deg, #e4e1ec 0%, #f7f6fa 55%, #ffffff 100%);
+  background: linear-gradient(
+    45deg,
+    var(--liner-deep) 0%,
+    var(--liner-lift) 55%,
+    var(--canvas) 100%
+  );
 }
 
 .gr-dent {
   position: absolute;
+  z-index: 2;
   width: 112px;
   height: 30px;
   margin-left: -56px;
@@ -957,7 +977,7 @@
   height: 30px;
   margin-top: -15px;
   opacity: 0.8;
-  animation: gr-wiggle 0.23s linear infinite;
+  animation: gr-wiggle 0.23s linear infinite paused; /* runs only while the marks show */
 }
 .gr-shakemarks svg:first-child {
   left: 6px;
@@ -980,12 +1000,26 @@
 .gr[data-shaking="1"] .gr-shakemarks {
   opacity: 1;
 }
+.gr[data-shaking="1"] .gr-shakemarks svg {
+  animation-play-state: running;
+}
+
+/* 昇天's flash: over the whole page, the heart and the HUD too */
+.gr-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  opacity: 0;
+  pointer-events: none;
+  background: var(--canvas);
+}
 
 /* ------------------------------------------------------------------ endings: fuu, receipt */
 .gr-fuu {
   position: absolute;
   left: 0;
   top: 0;
+  z-index: 2; /* over the heart, which the ending lifts over the header */
   opacity: 0;
   pointer-events: none;
   white-space: nowrap;
@@ -994,7 +1028,7 @@
   font-stretch: var(--w-title, 112%);
   font-style: italic;
   letter-spacing: 0.02em;
-  color: var(--graphite);
+  color: var(--ink);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1064,7 +1098,7 @@
 }
 .gr-rc-head {
   margin: 0;
-  font-size: 23px;
+  font-size: 22px;
   line-height: 1.12;
   font-weight: 800;
   font-stretch: var(--w-title, 112%);
@@ -1114,7 +1148,7 @@
   bottom: 12px;
   z-index: 60;
   background: rgba(28, 24, 36, 0.82);
-  color: #f2f1f6;
+  color: var(--liner);
   pointer-events: none;
 }
 .gr-failure {
@@ -1123,6 +1157,8 @@
   right: 20px;
   bottom: 24px;
   z-index: 60;
+  padding: 11px 16px 12px;
+  border-radius: var(--r-label);
   background: var(--liner-lift);
   box-shadow: var(--shadow-lift);
   color: var(--ink);
@@ -1135,6 +1171,7 @@
 /* ------------------------------------------------------------------ reduced motion: no shake, no haze */
 .gr[data-reduced="1"] .gr-page {
   transform: none !important;
+  will-change: auto;
 }
 .gr[data-reduced="1"] .gr-haze,
 .gr[data-reduced="1"] .gr-beam-rays {

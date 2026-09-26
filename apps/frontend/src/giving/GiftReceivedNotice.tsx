@@ -29,7 +29,7 @@ const ARC_MS = 820;
 const FLYER_PX = 56;
 
 /**
- * "@bob accepted your sticker ♡": the giver's moment once a gift is received, over the whole phone.
+ * "@bob received your sticker ♡": the giver's moment once a gift is received, over the whole phone.
  * The sticker's silhouette holds its place, and the receiver's picture sticks on beside it.
  */
 export function GiftReceivedNotice({ sticker, receiver, receivedAt, mask, onClose }: Props) {
@@ -82,7 +82,7 @@ export function GiftReceivedNotice({ sticker, receiver, receivedAt, mask, onClos
     >
       <header className="gift-received-notice__head">
         <h1 id={titleId} className="gift-received-notice__title">
-          {who} accepted your sticker ♡
+          {who} received your sticker ♡
         </h1>
         <p className="gift-received-notice__sub">It’s on {who}’s sticker board now.</p>
       </header>

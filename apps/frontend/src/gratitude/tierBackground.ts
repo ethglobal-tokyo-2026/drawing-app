@@ -11,7 +11,7 @@ export interface TierBackground {
   ) => void;
   /** Stroking has its own speed lines, so the focus lines keep out of its way. */
   show: (tier: Tier | null, intensity: number, method: Method) => void;
-  /** The stroke's speed lines, turned to its axis in degrees. */
+  /** The stroke's speed lines, turned to its axis in degrees; unseen changes aren't written. */
   setSpeedField: (opacity: number, angle: number) => void;
   /** `real`: wall-clock seconds since the last frame. */
   step: (real: number) => void;
@@ -21,8 +21,12 @@ export interface TierBackground {
   hideAll: () => void;
   /** The screen's corner peels up by `amount`, 0–1: a hard shake could shake the heart loose. */
   liftCorner: (amount: number) => void;
-  /** Where the loose heart hit an edge, `along` px along it, the edge dents in. */
-  dent: (edge: ScreenEdge, along: number) => void;
+  /**
+   * Where the loose heart hit an edge, `along` px along it, the edge dents in. `across` is the
+   * hit's place on the other axis, so a dent in the top wall, the HUD's underside, shows where the
+   * heart hit it; without it, the dent sits on the screen's own edge.
+   */
+  dent: (edge: ScreenEdge, along: number, across?: number) => void;
   /** Takes what it put in `front` away; the engine empties the ground. */
   destroy: () => void;
 }
@@ -33,14 +37,18 @@ const FOCUS_FPS = 8;
 const RAYS_DEG_PER_S = 6;
 const FLASH = { opacity: 0.7, seconds: 0.32 };
 const SPEED_FIELD_SEED = 31;
+/** The least change in the speed lines' opacity or angle, in degrees, worth writing. */
+const SPEED_FIELD_STEP = { opacity: 0.02, degrees: 1 };
 /** Dents on screen at most; past this the oldest is reused. */
 const DENTS = 6;
 /** How fast the corner follows its lift, a second. */
 const CORNER_RATE = 10;
 
+/** A decorative layer: none of it is for screen readers. */
 const layer = (className: string) => {
   const el = document.createElement("div");
   el.className = className;
+  el.setAttribute("aria-hidden", "true");
   return el;
 };
 
@@ -50,10 +58,12 @@ const setOpacity = (el: HTMLElement, value: number) => {
   return value > 0;
 };
 
-/**
- * The ground behind the heart, escalating with the tier: the calm liner, a warm blush, 集中線 focus
- * lines, heat haze, then 昇天's light beams and white-out. Each layer fades in and out on its own.
- */
+/** How far apart two angles are, in degrees, the short way round: 179° and −179° are 2° apart. */
+const degreesApart = (a: number, b: number) => {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+};
+
 /** Cancelling an animation rejects its `finished`: browsers mark that handled, happy-dom doesn't. */
 function animate(
   el: HTMLElement,
@@ -70,8 +80,12 @@ function rethrowUnlessCancelled(error: unknown) {
 }
 
 /**
- * `front` takes what sits over the heart: the peeling corner, the dents and the shake marks, which
- * the stylesheet shows while the screen's `data-shaking` is on.
+ * The ground behind the heart, escalating with the tier: the calm liner, a warm blush, 集中線 focus
+ * lines, heat haze, then 昇天's light beams and white-out. Each layer fades in and out on its own,
+ * and the stylesheet keeps them all out of the header's band.
+ *
+ * `front` takes what sits over the heart: the peeling corner, the dents, the shake marks, which the
+ * stylesheet shows while the screen's `data-shaking` is on, and 昇天's flash.
  */
 export function createTierBackground(
   ground: HTMLElement,
@@ -85,7 +99,6 @@ export function createTierBackground(
   speedField.innerHTML = speedFieldSvg(SPEED_FIELD_SEED);
   const speedLines = speedField.firstElementChild;
   const haze = layer("gr-bg gr-haze");
-  haze.setAttribute("aria-hidden", "true");
   // Rising puffs and two waves, as many as the stylesheet places and times.
   for (let i = 0; i < 6; i++) haze.append(document.createElement("i"));
   for (let i = 0; i < 2; i++) {
@@ -98,23 +111,23 @@ export function createTierBackground(
   const shaft = layer("gr-beam-shaft");
   beam.append(rays, shaft);
   const white = layer("gr-bg gr-white");
-  // The ground isn't a stacking context, so this covers the whole page: the heart and the HUD too.
-  const flashCover = layer("gr-layer");
-  flashCover.style.background = "#fff";
-  flashCover.style.zIndex = "30";
-  flashCover.style.opacity = "0";
-  ground.append(blush, focus, speedField, haze, beam, white, flashCover);
+  ground.append(blush, focus, speedField, haze, beam, white);
+  // In front, not in the ground, whose mask would keep it under the header: it covers the whole
+  // page, the heart and the HUD too.
+  const flashCover = layer("gr-flash");
 
   const cornerUnder = layer("gr-corner-under");
   const cornerFlap = layer("gr-corner-flapwrap");
   cornerFlap.append(layer("gr-corner-flap"));
   const corner = layer("gr-corner");
   corner.append(cornerUnder, cornerFlap);
+  // The stylesheet peels the top right, where the close button sits over the lifted corner and
+  // hides nearly all of it. Mirrored, it peels the bottom right, where nothing covers it.
+  Object.assign(corner.style, { top: "auto", bottom: "0", transform: "scaleY(-1)" });
   const dentLayer = layer("gr-layer");
   const shakeMarks = layer("gr-shakemarks");
-  shakeMarks.setAttribute("aria-hidden", "true");
   shakeMarks.innerHTML = VIBRATE_SVG + VIBRATE_SVG;
-  front.append(corner, dentLayer, shakeMarks);
+  front.append(corner, dentLayer, shakeMarks, flashCover);
   const dents: { el: HTMLElement; animation: Animation | null }[] = [];
   let screen = { width: 390, height: 741 };
   let cornerLift = 0;
@@ -125,7 +138,8 @@ export function createTierBackground(
   let beamOn = false;
   /** Seconds of the flash still to fade. */
   let flashLeft = 0;
-  let speedFieldShown = { opacity: "", angle: "" };
+  /** What the speed lines last had written; `angle` is null until one is. */
+  const speedFieldShown: { opacity: number; angle: number | null } = { opacity: 0, angle: null };
 
   return {
     setLayout(width, height, heart) {
@@ -152,16 +166,20 @@ export function createTierBackground(
     },
 
     setSpeedField(opacity, angle) {
-      // Written every frame of a stroke, so only a change touches the style.
-      const shown = {
-        opacity: opacity > 0 ? clamp(opacity, 0, 1).toFixed(3) : "0",
-        angle: angle.toFixed(1),
-      };
-      if (shown.opacity !== speedFieldShown.opacity) speedField.style.opacity = shown.opacity;
-      if (shown.angle !== speedFieldShown.angle && speedLines instanceof SVGElement) {
-        speedLines.style.transform = `rotate(${shown.angle}deg)`;
+      // Called nearly every frame of a stroke, and the layer covers the screen, so only a change
+      // you'd see is written. Hiding is always written, so no faint field is left to composite.
+      const next = opacity > 0 ? clamp(opacity, 0, 1) : 0;
+      const change = Math.abs(next - speedFieldShown.opacity);
+      if (next === 0 ? speedFieldShown.opacity !== 0 : change >= SPEED_FIELD_STEP.opacity) {
+        setOpacity(speedField, next);
+        speedFieldShown.opacity = next;
       }
-      speedFieldShown = shown;
+      // Hidden lines needn't turn; they turn as they show again.
+      if (speedFieldShown.opacity === 0 || !(speedLines instanceof SVGElement)) return;
+      const last = speedFieldShown.angle;
+      if (last !== null && degreesApart(angle, last) < SPEED_FIELD_STEP.degrees) return;
+      speedLines.style.transform = `rotate(${angle.toFixed(1)}deg)`;
+      speedFieldShown.angle = angle;
     },
 
     step(real) {
@@ -206,29 +224,31 @@ export function createTierBackground(
 
     hideAll() {
       for (const el of [blush, focus, speedField, haze, beam, white]) setOpacity(el, 0);
-      speedFieldShown = { opacity: "0", angle: speedFieldShown.angle };
+      speedFieldShown.opacity = 0;
       cornerLift = 0;
+      focusOn = false;
+      beamOn = false;
     },
 
     destroy() {
       for (const dent of dents) dent.animation?.cancel();
-      for (const el of [corner, dentLayer, shakeMarks]) el.remove();
+      for (const el of [corner, dentLayer, shakeMarks, flashCover]) el.remove();
     },
 
     liftCorner(amount) {
       cornerLift = clamp(amount, 0, 1);
     },
 
-    dent(edge, along) {
+    dent(edge, along, across) {
       const { width, height } = screen;
       const at =
         edge === "top"
-          ? `translate(${along}px,0) rotate(0deg)`
+          ? `translate(${along}px,${across ?? 0}px) rotate(0deg)`
           : edge === "bottom"
-            ? `translate(${along}px,${height}px) rotate(180deg)`
+            ? `translate(${along}px,${across ?? height}px) rotate(180deg)`
             : edge === "left"
-              ? `translate(0,${along}px) rotate(-90deg)`
-              : `translate(${width}px,${along}px) rotate(90deg)`;
+              ? `translate(${across ?? 0}px,${along}px) rotate(-90deg)`
+              : `translate(${across ?? width}px,${along}px) rotate(90deg)`;
       const dent = (dents.length >= DENTS ? dents.shift() : undefined) ?? {
         el: Object.assign(dentLayer.appendChild(layer("gr-dent")), { innerHTML: DENT_SVG }),
         animation: null,
@@ -245,8 +265,6 @@ export function createTierBackground(
         ],
         { duration: 1500, easing: EASE_PEEL, fill: "both" },
       );
-      focusOn = false;
-      beamOn = false;
     },
   };
 }

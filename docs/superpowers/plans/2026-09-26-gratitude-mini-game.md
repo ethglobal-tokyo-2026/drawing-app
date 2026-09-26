@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** The thanker's gratitude mini-game as designed, with the combo timing from PRODUCT.md: a tap demo first (phase A), then stroke, shake and the motion ask (phase B).
+**Goal:** The receiver's gratitude mini-game as designed, with the combo timing from PRODUCT.md: a tap demo first (phase A), then stroke, shake and the motion ask (phase B).
 
 **Architecture:** Pure, tested rules (`combo.ts`, the detectors, the mini-heart physics) under one imperative engine that ports the prototype's drawing module by module: DOM, SVG and Web Animations from a fixed set of reused elements, on one animation-frame loop. React renders the screen's static parts once and hears only the record and the ending.
 
@@ -2017,7 +2017,7 @@ import { mountMiniGameEngine, type MiniGameEngine } from "./miniGameEngine";
 import { TIER_NAMES } from "./tierNames";
 import "./gratitude-mini-game.css";
 
-/** A finished combo and the sticker it thanks: what the app keeps. */
+/** A finished combo and the sticker its gratitude is for: what the app keeps. */
 export interface GratitudeResult extends ComboRecord {
   stickerId: string;
 }

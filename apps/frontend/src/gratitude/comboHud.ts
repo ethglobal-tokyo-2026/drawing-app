@@ -22,9 +22,12 @@ export interface ComboHud {
 const HOT = 0.3;
 const BLINK = 0.12;
 /** A hit that adds less than this, in s, shows no tick. */
-const TICK_MIN_S = 0.005;
+const TICK_MIN_S = 0.05;
 /** At a mash the labels would stack: one at most this often, in s. */
 const LABEL_GAP_S = 0.13;
+const LABEL_MS = 540;
+/** A label this close in px to the last one, while that one shows, takes its place instead. */
+const LABEL_NEAR_PX = 36;
 const LABELS = 5;
 const SLIVERS = 8;
 /** Until the track is measured. */
@@ -115,7 +118,7 @@ export function createComboHud(
   let amountShown = 0;
   let wholeMultiplier = 1;
   let lastLabelAt = -Infinity;
-  let labelRaised = false;
+  let lastLabel: { item: Pooled<HTMLSpanElement>; x: number } | null = null;
   let amountPulse: Animation | null = null;
   let multiplierPulse: Animation | null = null;
   const labels: Pooled<HTMLSpanElement>[] = [];
@@ -173,23 +176,33 @@ export function createComboHud(
         { duration: 380, easing: EASE_OUT, fill: "both" },
       );
 
+      const showing = clock - lastLabelAt < LABEL_MS / 1000;
       if (clock - lastLabelAt < LABEL_GAP_S) return;
       lastLabelAt = clock;
-      // Alternate heights, so labels in quick succession don't sit on each other.
-      labelRaised = !labelRaised;
-      const lift = labelRaised ? 0 : -9;
-      const label = recycle(labels, LABELS, () => ticks.appendChild(element("span", "gr-tick")));
-      // Two decimals only for what would round below a tenth.
-      label.el.textContent = `+${secondsAdded >= 0.095 ? secondsAdded.toFixed(1) : secondsAdded.toFixed(2)}s`;
-      const at = `translateX(${Math.min(x, trackWidth - 10).toFixed(1)}px)`;
+      const labelX = Math.min(x, trackWidth - 10);
+      // Labels in quick succession would sit on each other: a label near the last one replaces it.
+      const label =
+        showing && lastLabel && Math.abs(labelX - lastLabel.x) < LABEL_NEAR_PX
+          ? lastLabel.item
+          : recycle(labels, LABELS, () => ticks.appendChild(element("span", "gr-tick")));
+      lastLabel = { item: label, x: labelX };
+      label.el.textContent = `+${secondsAdded.toFixed(1)}s`;
+      // Over the bar's end, in the HUD's lane above the bar: it rises out of the bar, never past the HUD's top.
+      const at = `translateX(${labelX.toFixed(1)}px) translateX(-50%)`;
       play(
         label,
-        [
-          { transform: `${at} translate(-50%, ${4 + lift}px) scale(.6)`, opacity: 0 },
-          { offset: 0.18, transform: `${at} translate(-50%, ${-6 + lift}px) scale(1)`, opacity: 1 },
-          { transform: `${at} translate(-50%, ${-18 + lift}px) scale(.96)`, opacity: 0 },
-        ],
-        { duration: 540, easing: EASE_OUT, fill: "both" },
+        reduced()
+          ? [
+              { transform: at, opacity: 0 },
+              { offset: 0.18, transform: at, opacity: 1 },
+              { transform: at, opacity: 0 },
+            ]
+          : [
+              { transform: `${at} translateY(5px) scale(.6)`, opacity: 0 },
+              { offset: 0.18, transform: `${at} translateY(0) scale(1)`, opacity: 1 },
+              { transform: `${at} translateY(-2px) scale(.96)`, opacity: 0 },
+            ],
+        { duration: LABEL_MS, easing: EASE_OUT, fill: "both" },
       );
     },
 

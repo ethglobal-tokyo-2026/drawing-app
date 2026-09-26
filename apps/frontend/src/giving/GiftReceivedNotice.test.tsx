@@ -28,7 +28,7 @@ afterEach(() => {
 });
 
 describe("GiftReceivedNotice", () => {
-  it("says who accepted the sticker and when, and goes back to the board", () => {
+  it("says who received the sticker and when, and goes back to the board", () => {
     act(() =>
       root.render(
         <GiftReceivedNotice
@@ -41,7 +41,7 @@ describe("GiftReceivedNotice", () => {
       ),
     );
     const text = (selector: string) => host.querySelector(selector)?.textContent;
-    expect(text("h1")).toBe("@bob accepted your sticker ♡");
+    expect(text("h1")).toBe("@bob received your sticker ♡");
     expect(text(".gift-received-notice__sub")).toBe("It’s on @bob’s sticker board now.");
     expect(text(".gift-received-notice__caption")).toBe("@bob · 9.23");
 

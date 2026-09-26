@@ -42,7 +42,7 @@ export function stickerDetail(
   const giverUsers = alias(users, "giver");
   const receiverUsers = alias(users, "receiver");
   const received = db
-    .select({ gift: gifts, giver: giverUsers, receiver: receiverUsers, thanks: gratitude })
+    .select({ gift: gifts, giver: giverUsers, receiver: receiverUsers, combo: gratitude })
     .from(gifts)
     .innerJoin(giverUsers, eq(giverUsers.id, gifts.giverId))
     .innerJoin(receiverUsers, eq(receiverUsers.id, gifts.receiverId))
@@ -51,7 +51,7 @@ export function stickerDetail(
     .where(and(eq(gifts.stickerId, stickerId), eq(gifts.status, "received")))
     .orderBy(desc(gifts.receivedAt))
     .all();
-  const transferTrail = received.flatMap(({ gift, giver, receiver, thanks }) =>
+  const transferTrail = received.flatMap(({ gift, giver, receiver, combo }) =>
     // Every received gift has its received_at; this narrows the type.
     gift.receivedAt === null
       ? []
@@ -61,7 +61,7 @@ export function stickerDetail(
             giver: toPerson(giver),
             receiver: toPerson(receiver),
             receivedAt: toIsoTime(gift.receivedAt),
-            gratitude: thanks ? toGratitude(thanks) : null,
+            gratitude: combo ? toGratitude(combo) : null,
           },
         ],
   );

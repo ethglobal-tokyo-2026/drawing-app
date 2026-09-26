@@ -58,7 +58,7 @@ export function CantFindThem({ onBack, onShowAllChats }: Props) {
             <b>Show all my chats</b>
             <small>
               Recent chats appear here too. Keep it to your chat with them: a gift opened in a group
-              can’t be accepted.
+              can’t be received.
             </small>
           </span>
           <CaretRight className="giving__row-chev" size={20} />

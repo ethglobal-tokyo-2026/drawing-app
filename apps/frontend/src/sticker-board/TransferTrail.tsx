@@ -17,7 +17,7 @@ interface Props {
   viewerId: string;
   /** The Original Artist, for the artist's share. */
   artist: PersonView;
-  /** Plays a thanks' replay; without it there's no Replay button. */
+  /** Plays a gratitude replay; without it there's no Replay button. */
   onReplay?: (giftId: string) => void;
 }
 
@@ -25,8 +25,8 @@ const amount = (n: number) => n.toLocaleString("en-US");
 
 /**
  * Where a sticker has been: one row per hand-off, newest first. One row is open at a time, the
- * most recent thanks by default, with its amount and Replay; a thanked row opens with a tap.
- * Past the newest gift, the rest fold into "N earlier gifts".
+ * most recent gratitude by default, with its amount and Replay; any row with gratitude opens with
+ * a tap. Past the newest gift, the rest fold into "N earlier gifts".
  */
 export function TransferTrail({ rows, viewerId, artist, onReplay }: Props) {
   const [openId, setOpenId] = useState(() => defaultOpenRow(rows, viewerId));

@@ -1,5 +1,6 @@
 import type { Tier } from "./combo";
 import { EASE_SPRING, clamp } from "./easing";
+import { FEEL_CONFIG } from "./gameConfig";
 import type { HeartBox } from "./miniHeartPhysics";
 import { POP_IN_WORDS, createPopInPicker, type PopInBank } from "./popInWords";
 import { TIER_NAMES } from "./tierNames";
@@ -9,7 +10,10 @@ export interface Lettering {
   setLayout: (width: number, height: number, top: number) => void;
   /** A tier's name, slammed in over the heart and gone within a second. */
   slamTierName: (text: string, gloss: string) => void;
-  /** An onomatopoeia beside the heart: it scales in at a slant, drifts and fades. */
+  /**
+   * An onomatopoeia round the heart, never on it: it scales in at a slant, drifts and fades. Never a
+   * word already on screen. `"climax"` is 昇天's.
+   */
   showPopInWord: (bank: PopInBank, heart: HeartBox) => void;
   clear: () => void;
 }
@@ -26,6 +30,22 @@ const SLOTS: readonly (readonly [x: number, y: number])[] = [
 /** The slots before this one are above the heart, in the band a slam holds. */
 const FIRST_LOW_SLOT = 2;
 const LOW_SLOTS = SLOTS.length - FIRST_LOW_SLOT;
+/** Slots above the heart, beside it and below it, left then right. */
+const ABOVE: readonly [number, number] = [0, 1];
+const BESIDE: readonly number[] = [2, 3];
+const BELOW: readonly [number, number] = [4, 5];
+/** A pop-in's outline reaches this far past its letters, in px per px of font size. */
+const OUTLINE = 0.14;
+/** The spring's peak scale, which a word must fit on screen at too. */
+const SPRING_PEAK = 1.14;
+/** px a word keeps from the screen's sides, and from its foot. */
+const EDGE_PX = 8;
+const FOOT_PX = 16;
+/** A pop-in's gloss: its gap under the word, as `.gr-pop .gr-cap-gloss` sets it, and its height. */
+const GLOSS_GAP_PX = 3;
+const GLOSS_HEIGHT_PX = 17;
+/** Shares of a word's drift at which it's checked against the heart, from its start to its end. */
+const DRIFT_CHECKS = [0, 0.25, 0.5, 0.75, 1];
 /** A pop-in's font size in px by tier, before intensity. */
 const POP_PX: readonly [number, number, number, number, number] = [26, 28, 31, 33, 35];
 const SLAM_PX = 58;
@@ -48,6 +68,8 @@ const PROBE_PX = 100;
 const MEASURE_TRIES = 3;
 /** Until the engine lays the screen out: a phone's. */
 const FALLBACK_SCREEN = { width: 390, height: 741, top: 256 };
+/** With reduced motion a word fades in over this share of its life, where it lands, and holds still. */
+const STILL_FADE_IN = 0.15;
 
 /** A word in outlined bag letters (袋文字), and the animation it was last given. */
 interface Caption {
@@ -55,7 +77,99 @@ interface Caption {
   word: Text;
   gloss: HTMLSpanElement;
   animation: Animation | null;
+  /** A pop-in's slot, and the performance.now() it's gone by. */
+  slot: number | null;
+  until: number;
 }
+
+/** A word's box about its middle in px, its outline and gloss included, before its tilt. */
+interface Edges {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+/** A pop-in word's size in px: its letters, their font size and its gloss's width, if it has one. */
+interface PopSize {
+  w: number;
+  ht: number;
+  px: number;
+  glossWidth: number | null;
+}
+
+/** Where a pop-in lands: its slot, its scale, its middle as it starts, and its drift over its life. */
+interface Placement {
+  slot: number;
+  scale: number;
+  edges: Edges;
+  cx: number;
+  cy: number;
+  dx: number;
+  dy: number;
+}
+
+/** A word's edges at `scale`. Its gloss keeps its fine-print size as the word shrinks. */
+function popEdges({ w, ht, px, glossWidth }: PopSize, scale: number): Edges {
+  const ring = px * OUTLINE * scale;
+  const edges = {
+    left: (-w / 2) * scale - ring,
+    right: (w / 2) * scale + ring,
+    top: (-ht / 2) * scale - ring,
+    bottom: (ht / 2) * scale + ring,
+  };
+  if (glossWidth !== null) {
+    edges.right = Math.max(edges.right, (POP_GLOSS_LEFT * w - w / 2) * scale + glossWidth + 6);
+    edges.bottom = Math.max(edges.bottom, (ht / 2 + GLOSS_GAP_PX) * scale + GLOSS_HEIGHT_PX);
+  }
+  return edges;
+}
+
+/** How far edges turned by `rad` about the middle reach from it. */
+function turnedReach(e: Edges, rad: number) {
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const xs = [e.left, e.right].flatMap((x) => [x * cos - e.top * sin, x * cos - e.bottom * sin]);
+  const ys = [e.left, e.right].flatMap((x) => [x * sin + e.top * cos, x * sin + e.bottom * cos]);
+  return {
+    minX: Math.min(...xs),
+    maxX: Math.max(...xs),
+    minY: Math.min(...ys),
+    maxY: Math.max(...ys),
+  };
+}
+
+/** Whether edges turned by `rad` about (cx, cy) overlap `box`: separating axes, the word's two and the box's two. */
+function overlaps(
+  e: Edges,
+  rad: number,
+  cx: number,
+  cy: number,
+  box: { x0: number; x1: number; y0: number; y1: number },
+): boolean {
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const ac = Math.abs(cos);
+  const as = Math.abs(sin);
+  const mx = (e.left + e.right) / 2;
+  const my = (e.top + e.bottom) / 2;
+  const a = (e.right - e.left) / 2;
+  const b = (e.bottom - e.top) / 2;
+  const h = (box.x1 - box.x0) / 2;
+  const v = (box.y1 - box.y0) / 2;
+  const ox = cx + mx * cos - my * sin - (box.x0 + box.x1) / 2;
+  const oy = cy + mx * sin + my * cos - (box.y0 + box.y1) / 2;
+  return (
+    Math.abs(ox) <= h + a * ac + b * as &&
+    Math.abs(oy) <= v + a * as + b * ac &&
+    Math.abs(ox * cos + oy * sin) <= a + h * ac + v * as &&
+    Math.abs(oy * cos - ox * sin) <= b + h * as + v * ac
+  );
+}
+
+/** A pair of slots, the one on `side` first. */
+const sideFirst = (pair: readonly [number, number], side: number): readonly number[] =>
+  SLOTS[pair[0]][0] * side > 0 ? pair : [pair[1], pair[0]];
 
 /** Per px of font size. */
 interface WordSize {
@@ -87,18 +201,37 @@ function makeCaption(kind: "gr-slam" | "gr-pop"): Caption {
   const gloss = document.createElement("span");
   gloss.className = "gr-cap-gloss";
   el.append(word, gloss);
-  return { el, word, gloss, animation: null };
+  return { el, word, gloss, animation: null, slot: null, until: 0 };
+}
+
+/** The system's reduced-motion setting, followed live: until the engine passes its own. */
+function systemReduced(): () => boolean {
+  const query =
+    typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : null;
+  return () => query?.matches ?? false;
+}
+
+/** A word that fades in and out at `transform`, with no spring, drift or scale. */
+function stillFrames(transform: string): Keyframe[] {
+  return [
+    { transform, opacity: 0 },
+    { offset: STILL_FADE_IN, transform, opacity: 1 },
+    { offset: 0.72, transform, opacity: 1 },
+    { transform, opacity: 0 },
+  ];
 }
 
 /**
  * The tier slams and pop-in words. Placing one never reads layout: every word, gloss and slam text
  * is measured once in a hidden probe after the fonts load, and guessed from its length until then.
+ * With reduced motion each one fades in and out where it lands.
  */
 export function createLettering(
   layer: HTMLElement,
-  options: { intensity: number; random: () => number },
+  options: { intensity: number; random: () => number; reduced?: () => boolean },
 ): Lettering {
   const { random } = options;
+  const reduced = options.reduced ?? systemReduced();
   const pick = createPopInPicker(random);
   const grow = 0.86 + 0.28 * options.intensity;
   let screen = FALLBACK_SCREEN;
@@ -189,10 +322,10 @@ export function createLettering(
     layer.append(caption.el);
   }
 
-  function nextSlot(avoidTop: boolean): readonly [number, number] {
+  function nextSlot(avoidTop: boolean): number {
     if (avoidTop) {
       lowSlot = ((lowSlot ?? Math.floor(random() * LOW_SLOTS)) + 1) % LOW_SLOTS;
-      return SLOTS[FIRST_LOW_SLOT + lowSlot];
+      return FIRST_LOW_SLOT + lowSlot;
     }
     if (slotBag.length === 0) {
       slotBag = SLOTS.map((_, i) => i);
@@ -201,7 +334,64 @@ export function createLettering(
         [slotBag[i], slotBag[j]] = [slotBag[j], slotBag[i]];
       }
     }
-    return SLOTS[slotBag.pop() ?? 0];
+    return slotBag.pop() ?? 0;
+  }
+
+  /**
+   * Where a word lands from `slot` at `scale`: kept on screen at the spring's peak, tilt and outline
+   * included, and drifting along an edge rather than off it.
+   */
+  function place(
+    slot: number,
+    scale: number,
+    size: PopSize,
+    heart: HeartBox,
+    draw: { jx: number; jy: number; rad: number; dxJitter: number; dy: number },
+  ): Placement {
+    const [sx, sy] = SLOTS[slot];
+    const edges = popEdges(size, scale);
+    const rest = turnedReach(edges, draw.rad);
+    const peak = turnedReach(
+      {
+        left: edges.left * SPRING_PEAK,
+        right: edges.right * SPRING_PEAK,
+        top: edges.top * SPRING_PEAK,
+        bottom: edges.bottom * SPRING_PEAK,
+      },
+      draw.rad,
+    );
+    const xMin = EDGE_PX - peak.minX;
+    const xMax = Math.max(xMin, screen.width - EDGE_PX - peak.maxX);
+    const yMin = screen.top + 2 - peak.minY;
+    const yMax = Math.max(yMin, screen.height - FOOT_PX - peak.maxY);
+    const drawn = drawnHeart(heart);
+    let cy = heart.y + sy * heart.height + draw.jy;
+    // Above the heart a word starts clear of it and rises away; below it, it rises to just short of it.
+    if (ABOVE.includes(slot)) cy = Math.min(cy, drawn.y0 - rest.maxY);
+    else if (BELOW.includes(slot)) cy = Math.max(cy, drawn.y1 - rest.minY - draw.dy);
+    cy = clamp(cy, yMin, yMax);
+    const cx = clamp(heart.x + sx * heart.width + draw.jx, xMin, xMax);
+    const dx = clamp(sx * 26 + draw.dxJitter, xMin - cx, xMax - cx);
+    // And it never rises out of the stage, under the HUD.
+    const dy = Math.min(0, Math.max(draw.dy, yMin - cy));
+    return { slot, scale, edges, cx, cy, dx, dy };
+  }
+
+  /** The drawn heart: its box drawn in at each side. */
+  function drawnHeart(heart: HeartBox) {
+    const keep = 0.5 - FEEL_CONFIG.popIns.heartInset;
+    return {
+      x0: heart.x - heart.width * keep,
+      x1: heart.x + heart.width * keep,
+      y0: heart.y - heart.height * keep,
+      y1: heart.y + heart.height * keep,
+    };
+  }
+
+  /** Whether a word reaches into the drawn heart anywhere along its drift. */
+  function coversHeart(p: Placement, heart: HeartBox, rad: number) {
+    const box = drawnHeart(heart);
+    return DRIFT_CHECKS.some((k) => overlaps(p.edges, rad, p.cx + p.dx * k, p.cy + p.dy * k, box));
   }
 
   return {
@@ -232,57 +422,101 @@ export function createLettering(
       // In small and tilted hard, springing to its slant: it never leaves the screen.
       caption.animation = animate(
         caption.el,
-        [
-          { transform: `${base} rotate(-11deg) scale(.55)`, opacity: 0, easing: EASE_SPRING },
-          { offset: 0.18, transform: `${base} rotate(0deg) scale(1)`, opacity: 1 },
-          { offset: 0.72, transform: `${base} rotate(0deg) scale(1)`, opacity: 1 },
-          { transform: `${base} translateY(-8px) rotate(0deg) scale(1.02)`, opacity: 0 },
-        ],
+        reduced()
+          ? stillFrames(base)
+          : [
+              { transform: `${base} rotate(-11deg) scale(.55)`, opacity: 0, easing: EASE_SPRING },
+              { offset: 0.18, transform: `${base} rotate(0deg) scale(1)`, opacity: 1 },
+              { offset: 0.72, transform: `${base} rotate(0deg) scale(1)`, opacity: 1 },
+              { transform: `${base} translateY(-8px) rotate(0deg) scale(1.02)`, opacity: 0 },
+            ],
         { duration: SLAM_MS, easing: "linear", fill: "both" },
       );
     },
 
     showPopInWord(bank, heart) {
-      const { jp, gloss } = pick(bank);
+      const now = performance.now();
+      const reused = pops.length >= POP_INS ? pops[0] : undefined;
+      const showing = pops.filter((c) => c !== reused && c.until > now);
+      const onScreen = new Set(showing.map((c) => c.word.data));
+      if (slam && now < slamUntil) onScreen.add(slam.word.data);
+      const word = pick(bank, onScreen);
+      if (!word) return;
+      const { jp, gloss } = word;
       if (typeof bank === "number") tierShown = bank;
+      else if (bank === "climax") tierShown = 4;
       const px = POP_PX[tierShown] * grow;
-      const caption = (pops.length >= POP_INS ? pops.shift() : undefined) ?? makeCaption("gr-pop");
+      if (reused) pops.shift();
+      const caption = reused ?? makeCaption("gr-pop");
       pops.push(caption);
       dress(caption, jp, gloss, px);
 
-      const size = wordSize(jp, POP_HEIGHT_GUESS);
-      const w = size.width * px;
-      const ht = size.height * px;
-      // Room for a gloss that reaches past its word.
-      const withGloss = Math.max(w, POP_GLOSS_LEFT * w + glossWidth(gloss) + 6);
-      const [sx, sy] = nextSlot(performance.now() < slamUntil);
-      const cx = heart.x + sx * heart.width + (random() - 0.5) * 26;
-      const cy = heart.y + sy * heart.height + (random() - 0.5) * 18;
-      const rot = (random() - 0.5) * 44;
-      const dy = -(16 + random() * 22);
-      let dx = sx * 26 + (random() - 0.5) * 14;
+      const measured = wordSize(jp, POP_HEIGHT_GUESS);
+      const size: PopSize = {
+        w: measured.width * px,
+        ht: measured.height * px,
+        px,
+        glossWidth: gloss ? glossWidth(gloss) : null,
+      };
+      const avoidTop = now < slamUntil;
+      const preferred = nextSlot(avoidTop);
+      const draw = {
+        jx: (random() - 0.5) * 26,
+        jy: (random() - 0.5) * 18,
+        rad: ((random() - 0.5) * 44 * Math.PI) / 180,
+        dy: -(16 + random() * 22),
+        dxJitter: (random() - 0.5) * 14,
+      };
       const duration = 620 + random() * 560;
-      // The whole word stays on screen for its whole life: its tilt, the spring's peak and the
-      // outline reach past its box, and at an edge it drifts along the edge instead of off it.
-      const rad = (Math.abs(rot) * Math.PI) / 180;
-      const ring = px * 0.14;
-      const ex = ((w * Math.cos(rad) + ht * Math.sin(rad)) * 1.14 - w) / 2 + ring;
-      const xMin = 8 + ex;
-      const xMax = Math.max(xMin, screen.width - 8 - ex - withGloss);
-      const x = clamp(cx - w / 2, xMin, xMax);
-      const yMin = screen.top + 2;
-      const y = clamp(cy - ht / 2, yMin, Math.max(yMin, screen.height - ht - 36));
-      dx = clamp(dx, xMin - x, xMax - x);
+
+      // Never on the heart: a word that would cover it takes a free slot below it, or above it while
+      // no slam holds that band, and shrinks only when none will do. Beside the heart only if it fits.
+      const full = popEdges(size, 1);
+      const fitsBeside = (screen.width - heart.width) / 2 >= full.right - full.left;
+      const side = Math.sign(SLOTS[preferred][0]) || 1;
+      const slots = [
+        ...new Set([
+          preferred,
+          ...sideFirst(BELOW, side),
+          ...(avoidTop ? [] : sideFirst(ABOVE, side)),
+        ]),
+      ].filter((slot) => fitsBeside || !BESIDE.includes(slot));
+      const free = slots.filter((slot) => !showing.some((c) => c.slot === slot));
+      const tries = free.length > 0 ? free : slots.slice(0, 1);
+      const { minScale, scaleStep } = FEEL_CONFIG.popIns;
+      let p: Placement | null = null;
+      for (let scale = 1; !p && scale > minScale - 1e-6; scale -= scaleStep) {
+        for (const slot of tries) {
+          const candidate = place(slot, Math.max(minScale, scale), size, heart, draw);
+          if (!coversHeart(candidate, heart, draw.rad)) {
+            p = candidate;
+            break;
+          }
+        }
+      }
+      p ??= place(tries[0], minScale, size, heart, draw);
+      caption.slot = p.slot;
+      caption.until = now + duration;
+      // The gloss stays at its fine-print size as the word shrinks.
+      caption.gloss.style.transformOrigin = p.scale < 1 ? "0 0" : "";
+      caption.gloss.style.transform =
+        p.scale < 1 ? `rotate(3deg) scale(${(1 / p.scale).toFixed(3)})` : "";
+
+      const { cx, cy, dx, dy } = p;
+      const rot = (draw.rad * 180) / Math.PI;
+      const fit = p.scale;
       const at = (k: number, scale: number) =>
-        `translate(${(x + dx * k).toFixed(1)}px,${(y + dy * k).toFixed(1)}px) rotate(${rot.toFixed(1)}deg) scale(${scale})`;
+        `translate(${(cx - size.w / 2 + dx * k).toFixed(1)}px,${(cy - size.ht / 2 + dy * k).toFixed(1)}px) rotate(${rot.toFixed(1)}deg) scale(${(scale * fit).toFixed(3)})`;
       caption.animation = animate(
         caption.el,
-        [
-          { transform: at(0, 0), opacity: 1, easing: EASE_SPRING },
-          { offset: 0.2, transform: at(0.1, 1), opacity: 1 },
-          { offset: 0.64, transform: at(0.6, 1), opacity: 1 },
-          { transform: at(1, 0.96), opacity: 0 },
-        ],
+        reduced()
+          ? stillFrames(at(0, 1))
+          : [
+              { transform: at(0, 0), opacity: 1, easing: EASE_SPRING },
+              { offset: 0.2, transform: at(0.1, 1), opacity: 1 },
+              { offset: 0.64, transform: at(0.6, 1), opacity: 1 },
+              { transform: at(1, 0.96), opacity: 0 },
+            ],
         { duration, easing: "linear", fill: "both" },
       );
     },

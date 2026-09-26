@@ -15,16 +15,16 @@ interface Props {
   /** The gift just received. */
   gift: { id: string };
   sticker: StickerView;
-  /** Who gave it: the person Send gratitude thanks. */
+  /** Who gave it: the person Send gratitude goes to. */
   giver: PersonView;
   onSend: () => void;
   onLater: () => void;
 }
 
 /**
- * Asks, once a received sticker has stuck to the board, whether to thank its giver now. It floats
- * over the board, which stays in view around it; Later, Back and the perforation all leave it for
- * the sticker's detail.
+ * Asks, once a received sticker has stuck to the board, whether to send its giver gratitude now. It
+ * floats over the board, which stays in view around it; Later, Back and the perforation all leave it
+ * for the sticker's detail.
  */
 export function SendGratitudeSheet({ sticker, giver, onSend, onLater }: Props) {
   const body = useRef<HTMLDivElement>(null);
@@ -44,10 +44,10 @@ export function SendGratitudeSheet({ sticker, giver, onSend, onLater }: Props) {
               {giver.id === sticker.artist.id ? (
                 <>
                   It’s on your board. {who} drew it in <Duration seconds={sticker.timeUsed} />, and
-                  thanks never expires.
+                  gratitude never expires.
                 </>
               ) : (
-                `It’s on your board, from ${who}. Thanks never expires.`
+                `It’s on your board, from ${who}. Gratitude never expires.`
               )}
             </p>
           </div>

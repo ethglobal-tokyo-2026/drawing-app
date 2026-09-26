@@ -23,7 +23,7 @@ const DEVICE_ZONE = "Asia/Tokyo";
 const ONE_TO_ONE = "utou";
 /** The escrow transfer's hash, as Alice's smart wallet reports it. */
 const DEPOSIT_TX = bytes32("deposit transaction");
-/** Alice spends one ticket on the sticker and gives it once; Bob thanks her with one combo. */
+/** Alice spends one ticket on the sticker and gives it once; Bob sends gratitude with one combo. */
 const ONE_TICKET = 1;
 const ONE_GIFT = 1;
 const ONE_COMBO = 1;
@@ -82,7 +82,7 @@ const ownUserStats = async (api: Api) =>
   ).userStats;
 
 describe("the REST API, through the typed client", () => {
-  it("walks one sticker's whole life: sealed, given, received, thanked, and shown", async () => {
+  it("walks one sticker's whole life: sealed, given, received, sent gratitude, and shown", async () => {
     const test = await createTestApp();
     // Packaging sets a gift's expiry by this clock, and gifts_expiry checks it against the gift's
     // packing time, which is the database's.

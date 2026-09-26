@@ -4,8 +4,9 @@
 #   ./deploy/deploy-api.sh
 #
 # deploy/deploy.sh runs it too. HAProxy sends DEPLOY_URL's /api/ to 127.0.0.1:8788 (deploy/drawing-api.service).
-# The box runs Node 22, so the API ships as one bundle, with the box's own build of better-sqlite3 beside it. On
-# start, it applies pending migrations from drizzle/, and it serves the sticker images under /api/images/.
+# The API ships as one bundle, with the box's own build of better-sqlite3 beside it, and runs on the Node that
+# package.json pins (deploy/install-node.sh). On start, it applies pending migrations from drizzle/, and it serves
+# the sticker images under /api/images/.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -17,6 +18,7 @@ TARGET="${DEPLOY_TARGET:?set DEPLOY_TARGET (user@host) in deploy/.env}"
 DIR="${DEPLOY_API_DIR:-/srv/drawing-api}"
 URL="${DEPLOY_URL:-https://sticker.195-201-8-147.sslip.io}"
 SQLITE_VERSION="$(cd "$ROOT/packages/db" && node -p "require('better-sqlite3/package.json').version")"
+NODE_VERSION="$(node -p "require('$ROOT/package.json').devEngines.runtime.version")"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 
@@ -26,18 +28,22 @@ ssh() { command ssh "${SSH_OPTS[@]}" "$@"; }
 export RSYNC_RSH="ssh ${SSH_OPTS[*]}"
 
 pnpm --dir "$ROOT" --filter @drawing-app/api build
+"$ROOT/deploy/install-node.sh" drawing-api
 
 echo "→ rsync → $TARGET:$DIR"
 # /srv belongs to root, so a missing folder is made once with sudo and handed to the deploy user.
 ssh "$TARGET" "test -d '$DIR' || sudo install -d -o \"\$(id -un)\" -g \"\$(id -gn)\" -m 755 '$DIR'"
 ssh "$TARGET" "mkdir -p '$DIR/server' '$DIR/data' '$DIR/images'"
 
-# By content, without times: every deploy rebuilds the bundle, and a new timestamp alone would restart it.
-printf '{ "private": true, "type": "module", "dependencies": { "better-sqlite3": "%s" } }\n' "$SQLITE_VERSION" \
-  >"$STAGE/package.json"
+# By content, without times: every deploy rebuilds the bundle, and a new timestamp alone would restart it. The Node
+# version is in it so that a new Node reinstalls better-sqlite3 too.
+printf '{ "private": true, "type": "module", "engines": { "node": "%s" }, "dependencies": { "better-sqlite3": "%s" } }\n' \
+  "$NODE_VERSION" "$SQLITE_VERSION" >"$STAGE/package.json"
 changed="$(rsync -ci "$STAGE/package.json" "$TARGET:$DIR/server/package.json")"
 if [ -n "$changed" ]; then
-  ssh "$TARGET" "cd '$DIR/server' && npm install --omit=dev --no-audit --no-fund --loglevel=error"
+  # With the pinned Node's npm, so native modules match the Node that loads them.
+  ssh "$TARGET" "cd '$DIR/server' && PATH=/usr/local/lib/nodejs/node-24/bin:\$PATH \
+    /usr/local/lib/nodejs/node-24/bin/npm install --omit=dev --no-audit --no-fund --loglevel=error"
 fi
 changed+="$(rsync -ci "$ROOT/apps/api/dist/server.mjs" "$TARGET:$DIR/server/server.mjs")"
 changed+="$(rsync -rci --delete "$ROOT/packages/db/drizzle/" "$TARGET:$DIR/drizzle/")"

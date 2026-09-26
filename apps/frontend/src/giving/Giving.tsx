@@ -183,7 +183,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
         {bag(sealed ? "sealed" : "open", state.sentAt)}
         <h2 className="giving__title">{title}</h2>
         <p className="giving__sub">
-          It’s in your LINE chat now, and the gift message opens once. When they accept it, you’ll
+          It’s in your LINE chat now, and the gift message opens once. When they receive it, you’ll
           see who did.
         </p>
         {state.recordError && (
@@ -251,7 +251,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
   const phone = document.querySelector<HTMLElement>(".phone");
   const giving = (
     <div className="giving" ref={root} tabIndex={-1}>
-      <div className="giving__piece" aria-hidden="true">
+      <div className="giving__sticker" aria-hidden="true">
         {screen === "sheet" ? (
           <img className="giving__figure" src={sticker.url} alt="" draggable={false} />
         ) : (

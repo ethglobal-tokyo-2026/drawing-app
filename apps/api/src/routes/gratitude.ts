@@ -48,10 +48,9 @@ export const gratitudeRoutes = (deps: AppDeps) =>
     .get("/unseen", (c) => c.json(unseenGratitude(deps.db, c.var.userId, deps.images.urls), 200))
     .get("/:giftId", validate("param", giftIdParam), (c) => {
       const { giftId } = c.req.valid("param");
-      const thanks = gratitudeWithReplay(deps.db, giftId);
-      if (!thanks)
-        return apiError(c, 404, "gratitude_not_found", `No gratitude for gift ${giftId}`);
-      return c.json(thanks, 200);
+      const found = gratitudeWithReplay(deps.db, giftId);
+      if (!found) return apiError(c, 404, "gratitude_not_found", `No gratitude for gift ${giftId}`);
+      return c.json(found, 200);
     })
     .post("/:giftId/seen", validate("param", giftIdParam), (c) => {
       const { giftId } = c.req.valid("param");
@@ -65,5 +64,5 @@ export const gratitudeRoutes = (deps: AppDeps) =>
           `Only gift ${giftId}'s giver marks its gratitude watched`,
         );
       }
-      return c.json({ gratitude: markSeen(deps.db, found.thanks, deps.clock.now()) }, 200);
+      return c.json({ gratitude: markSeen(deps.db, found.combo, deps.clock.now()) }, 200);
     });

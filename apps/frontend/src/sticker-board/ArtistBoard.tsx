@@ -17,6 +17,7 @@ import { OfferSheet } from "../offers/OfferSheet";
 import { ArtistChip } from "../stickers/ArtistChip";
 import { Duration } from "../stickers/Duration";
 import { formatHandle, formatNo } from "../stickers/format";
+import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
@@ -115,6 +116,7 @@ export function ArtistBoard({ person, onBack }: Props) {
   const [viewing, setViewing] = useState<BoardStickerView | null>(null);
   const [giving, setGiving] = useState(false);
   const [offering, setOffering] = useState<BoardStickerView | null>(null);
+  useLight(!turned);
 
   // What they hold and have stuck on, bottom of the stack first.
   const stickers = useMemo(

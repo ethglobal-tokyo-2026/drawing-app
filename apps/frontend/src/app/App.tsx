@@ -138,7 +138,7 @@ export default function App() {
       />
       <MotionPermissionCard />
       {giftClaimToken && (
-        // Liner while the gift's code loads, so the board doesn't show first.
+        // Liner while ReceiveGiftDialog's code loads, so the board doesn't show first.
         <Suspense fallback={<div style={GIFT_LOADING} />}>
           <ReceiveGiftDialog
             giftClaimToken={giftClaimToken}
