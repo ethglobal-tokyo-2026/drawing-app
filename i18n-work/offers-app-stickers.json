@@ -136,7 +136,7 @@
     "ja": "許可しない"
   },
   "stickers.duration.minutesAndSeconds": {
-    "where": "A sticker's drawing time in fine print, like 4m 52s: on the offer sheet, the Explore feed, the sealed card, a gift, the Mini-game, and in a Gift Message",
+    "where": "A sticker's drawing time in fine print, like 4m 52s: on the offer sheet, the sealed card, the Explore feed, a sticker's view on someone else's board, the giving screen and the Mini-game, and in a Gift Message's text",
     "ja": "{{minutes}}分{{seconds}}秒"
   },
   "stickers.duration.minutes": {
