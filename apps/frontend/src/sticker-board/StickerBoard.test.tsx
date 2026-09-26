@@ -5,7 +5,7 @@ import type {
 } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { boardSticker } from "../api/testFixtures";
+import { boardSticker, people } from "../api/testFixtures";
 import { emptyApi, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
 import { toPerson } from "../api/views";
 import { forgetBoardComplete } from "./boardComplete";
@@ -87,6 +87,42 @@ describe("StickerBoard with the board kept on this phone", () => {
     expect(shownIds(view.host)).toEqual([]);
     expect(view.host.querySelectorAll(".board-loading-sticker").length).toBeGreaterThan(0);
     expect(localStorage.getItem("draw.lastBoard")).toBeNull();
+  });
+});
+
+describe("StickerBoard after a gift", () => {
+  const given = () =>
+    boardSticker({
+      placement: at(0.3),
+      held: false,
+      givenTo: { receiver: people.bob, receivedAt: "2026-09-23T11:52:00.000Z" },
+    });
+  const show = async (...boardStickers: ApiBoardSticker[]) => {
+    const api = emptyApi({
+      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers }),
+    });
+    const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
+    unmount = view.unmount;
+    await act(async () => {});
+    const stage = view.host.querySelector<HTMLElement>(".board-stage");
+    if (!stage) throw new Error("The board has no stage");
+    return stage;
+  };
+
+  it("leaves a given sticker off the board, and out of the count", async () => {
+    const gone = given();
+    const kept = boardSticker({ placement: at(0.7) });
+    const stage = await show(gone, kept);
+    expect(shownIds(stage)).toEqual([kept.stickerId]);
+    expect(stage.querySelector(`[data-sticker-id="${gone.stickerId}"]`)).toBeNull();
+    expect(stage.querySelector(".placed-sticker")?.getAttribute("aria-label")).toMatch(/1 of 1$/);
+    expect(stage.querySelector(".board-blank")).toBeNull();
+  });
+
+  it("shows the empty board when every sticker was given", async () => {
+    const stage = await show(given());
+    expect(shownIds(stage)).toEqual([]);
+    expect(stage.querySelector(".board-blank")).not.toBeNull();
   });
 });
 

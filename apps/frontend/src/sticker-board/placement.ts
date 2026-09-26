@@ -146,12 +146,6 @@ export function toolbarSpot(
   return { left, top };
 }
 
-/** How far to slide a caption centered at `x` so it stays on the board, clear of the tray's edge. */
-export function keepOnBoard(x: number, halfWidth: number, boardWidth: number) {
-  const past = x + halfWidth - (boardWidth - TRAY_EDGE - 4);
-  return Math.max(0, 4 - (x - halfWidth)) - Math.max(0, past);
-}
-
 /**
  * Spots for new stickers, as x, y, s and r: calm, and clear of the header and Draw. The empty board
  * shows the first as a dashed spot, so the first sticker lands in it.

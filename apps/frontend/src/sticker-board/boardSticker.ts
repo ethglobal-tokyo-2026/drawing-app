@@ -25,7 +25,7 @@ export interface BoardSticker {
 }
 
 /** Who received a sticker you gave, and when, in milliseconds. */
-export interface GivenTo {
+interface GivenTo {
   receiver: PersonView;
   receivedAt: number;
 }

@@ -71,14 +71,12 @@ export interface AssemblingSticker {
   urls: readonly string[];
 }
 
-/** What the board's assembly waits for: each sticker on it, and each given sticker's silhouette. */
+/** What the board's assembly waits for: each sticker on it. A given sticker has left it. */
 export const assemblyOf = (stickers: readonly BoardStickerView[]): AssemblingSticker[] =>
   stickers.flatMap((s) => {
-    if (s.placement.on && s.held && !onItsWay(s)) {
-      const { png, mask, spec, rim } = s.urls;
-      return [{ urls: [png, mask, spec, rim].filter((url) => url !== undefined) }];
-    }
-    return !s.held && s.givenTo && s.urls.mask ? [{ urls: [s.urls.mask] }] : [];
+    if (!s.placement.on || !s.held || onItsWay(s)) return [];
+    const { png, mask, spec, rim } = s.urls;
+    return [{ urls: [png, mask, spec, rim].filter((url) => url !== undefined) }];
   });
 
 /**

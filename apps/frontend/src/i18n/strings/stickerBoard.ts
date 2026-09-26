@@ -319,21 +319,6 @@ export const stickerBoard = {
       ja: "{{no}}、制作時間{{duration}}、作者：{{artist}}、{{setSize}}枚中{{position}}枚目",
     },
   },
-  /** Where a sticker you gave sat on your board. */
-  givenStickerSilhouette: {
-    /** Your sticker board: the caption under a given sticker's silhouette ("No.0012 → a friend") when it went through LINE's friend picker, which never says who was picked */
-    aFriend: { en: "a friend", ja: "友だち" },
-    /** Your sticker board: screen readers' name for a given sticker's silhouette, a button that opens the sticker among the stickers you gave */
-    label: {
-      en: "{{no}}, given to {{recipient}} on {{day}}. Open it",
-      ja: "{{no}}、{{day}}に{{recipient}}さんへ贈ったシールをひらく",
-    },
-    /** Your sticker board: screen readers' name for a given sticker's silhouette when it went through LINE's friend picker; the button opens the sticker */
-    labelToAFriend: {
-      en: "{{no}}, given to a friend on {{day}}. Open it",
-      ja: "{{no}}、{{day}}に友だちへ贈ったシールをひらく",
-    },
-  },
   /** Beside the selected sticker on the board. */
   toolbar: {
     /** Your sticker board, a sticker selected: the toolbar's Give key, which starts giving it through LINE */
@@ -406,7 +391,7 @@ export const stickerBoard = {
     back: { en: "Sticker board", ja: "シールボード" },
     /** Sticker detail, opened from a sticker you hold: screen readers' name for the strip of sticker thumbnails at the top */
     yourStickers: { en: "Your stickers", ja: "手持ちのシール" },
-    /** Sticker detail, opened from a given sticker's silhouette: screen readers' name for the strip of thumbnails of the stickers you gave */
+    /** Sticker detail, among the stickers you gave: screen readers' name for the strip of thumbnails of the stickers you gave */
     stickersYouGave: { en: "Stickers you gave", ja: "贈ったシール" },
     /** Sticker detail: screen readers' name for the left arrow under the sticker, which pages to the previous one */
     previous: { en: "Previous sticker", ja: "前のシール" },

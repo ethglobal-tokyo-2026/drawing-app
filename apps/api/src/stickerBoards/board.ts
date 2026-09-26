@@ -25,9 +25,9 @@ const openGiftStatusSchema = giftSchema.shape.status.extract(["packed", "sent"])
 export const boardStickerSchema = stickerPlacementSchema.extend({
   /** Its outline simplified, which is all a sticker sheet packs by; the sticker's detail has it whole. */
   sticker: stickerSchema,
-  /** False: given away; a GivenStickerSilhouette, and an empty spot in the sticker tray. */
+  /** False: given away; off the board, and an empty spot in the sticker tray. */
   held: z.boolean(),
-  /** Set when `held` is false: the silhouette's "→ @bob". */
+  /** Set when `held` is false: who received it, for the giver's notice. */
   givenTo: z.object({ receiver: personSchema, receivedAt: isoTimeSchema }).nullable(),
   /** `for`: who the giver picked in the app, or who first opened its link; null through LINE alone. */
   openGift: z

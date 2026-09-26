@@ -45,7 +45,7 @@ export function newestUnnoticed<T extends { stickerId: string; receivedAt: numbe
   return next;
 }
 
-/** Marks every gift passed in as noticed: once one notice has shown, the silhouettes say the rest. */
+/** Marks every gift passed in as noticed: one notice shows for them all. */
 export function markNoticed(received: readonly { stickerId: string; receivedAt: number }[]) {
   const noticed = readNoticed();
   for (const g of received) noticed.add(keyOf(g));
