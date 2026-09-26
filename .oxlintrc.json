@@ -86,7 +86,7 @@
     },
     {
       "files": ["apps/frontend/src/sticker-creation/**"],
-      "rules": { "react/jsx-no-literals": "off" }
+      "rules": { "react/jsx-no-literals": "error" }
     },
     {
       "files": ["apps/frontend/src/stickers/**"],

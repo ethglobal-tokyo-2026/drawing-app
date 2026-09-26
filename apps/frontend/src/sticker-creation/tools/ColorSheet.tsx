@@ -1,4 +1,5 @@
 import { useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useTranslation } from "../../i18n/react";
 import { Sheet } from "../../ui/Sheet";
 import { hexToHsv, hsvToHex, type Hsv } from "../canvas/color";
 import { colorName, SWATCHES } from "./palette";
@@ -38,14 +39,21 @@ interface Props {
 
 /** The color sheet: recent colors, the swatches, a hue and saturation pad, and a brightness bar. */
 export function ColorSheet({ open, onClose, ...picker }: Props) {
+  const { t } = useTranslation();
   return (
-    <Sheet label="Color" open={open} className="color-sheet" onClose={onClose}>
+    <Sheet
+      label={t(($) => $.stickerCreation.colorSheet.title)}
+      open={open}
+      className="color-sheet"
+      onClose={onClose}
+    >
       <ColorPicker {...picker} />
     </Sheet>
   );
 }
 
 function ColorPicker({ id, color, recent, onPick, onPreview }: Omit<Props, "open" | "onClose">) {
+  const { t } = useTranslation();
   // Hue and saturation survive a trip through black or white here, which a hex can't carry.
   const [picked, setPicked] = useState(() => ({ color, hsv: hexToHsv(color) }));
   if (picked.color !== color) setPicked({ color, hsv: hexToHsv(color) });
@@ -102,25 +110,40 @@ function ColorPicker({ id, color, recent, onPick, onPreview }: Omit<Props, "open
   return (
     <div id={id} ref={body} className="color-picker" style={hsvStyle(picked.hsv)}>
       <header className="color-head">
-        <h2 className="color-title">Color</h2>
+        <h2 className="color-title">{t(($) => $.stickerCreation.colorSheet.title)}</h2>
         <span className="color-now" />
       </header>
       <div className="color-recent">
         <span className="color-label" aria-hidden="true">
-          Recent
+          {t(($) => $.stickerCreation.colorSheet.recent)}
         </span>
-        <Swatches label="Recent colors" colors={recent} color={color} small onPick={onPick} />
+        <Swatches
+          label={t(($) => $.stickerCreation.colorSheet.recentColors)}
+          colors={recent}
+          color={color}
+          small
+          onPick={onPick}
+        />
       </div>
-      <Swatches label="Swatches" colors={SWATCH_HEXES} color={color} columns={10} onPick={onPick} />
+      <Swatches
+        label={t(($) => $.stickerCreation.colorSheet.swatches)}
+        colors={SWATCH_HEXES}
+        color={color}
+        columns={10}
+        onPick={onPick}
+      />
       <div
         className="color-pad"
         role="slider"
         tabIndex={0}
-        aria-label="Hue and saturation"
+        aria-label={t(($) => $.stickerCreation.colorSheet.huePad)}
         aria-valuemin={0}
         aria-valuemax={360}
         aria-valuenow={Math.round(h)}
-        aria-valuetext={`Hue ${Math.round(h)} degrees, saturation ${Math.round(s * 100)}%`}
+        aria-valuetext={t(($) => $.stickerCreation.colorSheet.huePadValue, {
+          hue: Math.round(h),
+          saturation: Math.round(s * 100),
+        })}
         onKeyDown={onPadKey}
         {...pad}
       >
@@ -130,7 +153,7 @@ function ColorPicker({ id, color, recent, onPick, onPreview }: Omit<Props, "open
         className="color-brightness"
         role="slider"
         tabIndex={0}
-        aria-label="Brightness"
+        aria-label={t(($) => $.stickerCreation.colorSheet.brightness)}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(v * 100)}

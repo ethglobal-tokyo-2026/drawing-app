@@ -7,15 +7,16 @@ import {
   type Icon,
 } from "@phosphor-icons/react";
 import { useState, type KeyboardEvent } from "react";
+import { useTranslation } from "../../i18n/react";
 import type { Tool } from "../canvas/ops";
 import "./ToolStrip.css";
 
 export type Panel = "color" | "smoothing" | null;
 
-const TOOLS: { tool: Tool; label: string; Icon: Icon }[] = [
-  { tool: "brush", label: "Brush", Icon: PaintBrush },
-  { tool: "eraser", label: "Eraser", Icon: Eraser },
-  { tool: "fill", label: "Fill", Icon: PaintBucket },
+const TOOLS: { tool: Tool; Icon: Icon }[] = [
+  { tool: "brush", Icon: PaintBrush },
+  { tool: "eraser", Icon: Eraser },
+  { tool: "fill", Icon: PaintBucket },
 ];
 const COLOR_TILE = TOOLS.length;
 const SMOOTHING_TILE = TOOLS.length + 1;
@@ -46,8 +47,9 @@ function moveFocus(e: KeyboardEvent<HTMLDivElement>) {
  * Tab stop, on the tile focused last, or the current tool.
  */
 export function ToolStrip({ tool, panel, colorSheetId, smoothingBarId, onTool, onPanel }: Props) {
+  const { t } = useTranslation();
   const [lastFocused, setLastFocused] = useState<number | null>(null);
-  const stop = lastFocused ?? TOOLS.findIndex((t) => t.tool === tool);
+  const stop = lastFocused ?? TOOLS.findIndex((each) => each.tool === tool);
   const tile = (i: number) => ({
     type: "button" as const,
     tabIndex: i === stop ? 0 : -1,
@@ -55,23 +57,28 @@ export function ToolStrip({ tool, panel, colorSheetId, smoothingBarId, onTool, o
   });
   const toggle = (p: Exclude<Panel, null>) => onPanel(panel === p ? null : p);
   return (
-    <div className="tool-strip" role="toolbar" aria-label="Tools" onKeyDown={moveFocus}>
-      {TOOLS.map(({ tool: t, label, Icon }, i) => (
+    <div
+      className="tool-strip"
+      role="toolbar"
+      aria-label={t(($) => $.stickerCreation.tools.label)}
+      onKeyDown={moveFocus}
+    >
+      {TOOLS.map(({ tool: each, Icon }, i) => (
         <button
-          key={t}
+          key={each}
           {...tile(i)}
           className="tool-tile"
-          aria-label={label}
-          aria-pressed={tool === t}
-          onClick={() => onTool(t)}
+          aria-label={t(($) => $.stickerCreation.tools[each])}
+          aria-pressed={tool === each}
+          onClick={() => onTool(each)}
         >
-          <Icon size={22} weight={tool === t ? "fill" : "bold"} />
+          <Icon size={22} weight={tool === each ? "fill" : "bold"} />
         </button>
       ))}
       <button
         {...tile(COLOR_TILE)}
         className="tool-tile tool-color"
-        aria-label="Color"
+        aria-label={t(($) => $.stickerCreation.tools.color)}
         aria-expanded={panel === "color"}
         aria-controls={colorSheetId}
         onClick={() => toggle("color")}
@@ -83,7 +90,7 @@ export function ToolStrip({ tool, panel, colorSheetId, smoothingBarId, onTool, o
       <button
         {...tile(SMOOTHING_TILE)}
         className="tool-tile"
-        aria-label="Smoothing"
+        aria-label={t(($) => $.stickerCreation.tools.smoothing)}
         aria-expanded={panel === "smoothing"}
         aria-controls={smoothingBarId}
         onClick={() => toggle("smoothing")}
