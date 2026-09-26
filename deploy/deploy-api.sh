@@ -10,6 +10,12 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# Dev sign-in lets anyone sign in as anyone, so the box's config may not mention it, even commented out.
+if grep -q DEV_SIGN_IN "$ROOT/deploy/drawing-api.env"; then
+  echo "✗ deploy/drawing-api.env mentions DEV_SIGN_IN: dev sign-in lets anyone sign in as anyone, so it never" \
+    "goes on the box. Remove it and deploy again." >&2
+  exit 1
+fi
 if [ -f "$ROOT/deploy/.env" ]; then
   # shellcheck source=/dev/null
   . "$ROOT/deploy/.env"

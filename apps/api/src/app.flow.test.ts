@@ -5,10 +5,10 @@ import type { AppType } from "./app.ts";
 import type { LineProfile } from "./deps.ts";
 import { giftClaimTokenSchema } from "./gifts/packaging.ts";
 import { recordBody } from "./gratitude/testReplays.ts";
+import { devIdToken } from "./services/devSignIn.ts";
 import { ME } from "./stickerBoards/board.ts";
 import { sealUpload } from "./stickers/testPngs.ts";
 import { createTestApp, type TestApp } from "./testing/createTestApp.ts";
-import { fakeLineIdToken } from "./testing/fakes.ts";
 
 /** Any origin will do: the test app answers every call itself. */
 const API_ORIGIN = "https://api.test";
@@ -62,7 +62,7 @@ async function answered<Answer extends ClientResponse<unknown>>(
 async function signIn(test: TestApp, profile: LineProfile) {
   const api = clientFor(test);
   const { me } = await answered(
-    api.session.$post({ json: { idToken: fakeLineIdToken(profile), timeZone: DEVICE_ZONE } }),
+    api.session.$post({ json: { idToken: devIdToken(profile), timeZone: DEVICE_ZONE } }),
     OK,
   );
   return { api, me };
