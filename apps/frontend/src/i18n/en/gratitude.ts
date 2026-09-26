@@ -8,8 +8,8 @@ export const gratitude = {
   close: "Close",
   /** The heart's button, for assistive tech. */
   heart: "Send gratitude to {{handle}}",
-  /** Under the heart until the first tap. */
-  hint: "Tap the heart as fast as you can!",
+  /** Under the heart until the first tap, on two lines. */
+  hint: "Tap the heart<br/>as fast as you can!",
   /** What to do, shown and said once the person is trying. */
   tips: {
     stroke: "Stroke it back and forth, fast",
