@@ -1,8 +1,10 @@
 import i18next from "i18next";
 import { initReactI18next } from "react-i18next";
+import { resourcesIn } from "./catalog";
 import { en } from "./en";
 import { ja } from "./ja";
 import { readChosenLanguage, type Language } from "./language";
+import { strings } from "./strings";
 
 i18next
   .use(initReactI18next)
@@ -11,7 +13,10 @@ i18next
     lng: readChosenLanguage() ?? "en",
     fallbackLng: "en",
     supportedLngs: ["en", "ja"],
-    resources: { en: { translation: en }, ja: { translation: ja } },
+    resources: {
+      en: { translation: { ...en, ...resourcesIn(strings, "en") } },
+      ja: { translation: { ...ja, ...resourcesIn(strings, "ja") } },
+    },
     // Both catalogs are bundled, so the first render already has its strings.
     initAsync: false,
     // React escapes what it renders, and LINE's messages are plain text.

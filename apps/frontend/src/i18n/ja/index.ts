@@ -7,7 +7,6 @@ import { explore } from "./explore";
 import { giving } from "./giving";
 import { gratitude } from "./gratitude";
 import { identity } from "./identity";
-import { line } from "./line";
 import { offers } from "./offers";
 import { pages } from "./pages";
 import { receiving } from "./receiving";
@@ -26,7 +25,6 @@ export const ja: Translation<typeof en> = {
   giving,
   gratitude,
   identity,
-  line,
   offers,
   pages,
   receiving,
