@@ -239,6 +239,22 @@ describe("StickerDetail", () => {
     expect(document.querySelectorAll(".transfer-trail__row.is-open")).toHaveLength(1);
   });
 
+  it("asks before taking the original, and keeps the sticker on Keep", () => {
+    open();
+    press("Take the original");
+    expect(document.querySelector(".take-the-original__title")?.textContent).toBe(
+      "Take the original of No.0133?",
+    );
+    press("Keep the sticker");
+    expect(document.querySelector(".take-the-original__title")).toBeNull();
+  });
+
+  it("offers Take the original only for a sticker you hold here", () => {
+    const sent = stickers.map((s) => ({ ...s, openGift: { id: "g", status: "sent" as const } }));
+    open({ stickers: sent });
+    expect(button("Take the original")).toBeUndefined();
+  });
+
   it("names the sticker's .eth from its number and artist, until the chain gives it one", () => {
     open();
     expect(document.querySelector(".sticker-detail__ens")?.textContent).toBe(

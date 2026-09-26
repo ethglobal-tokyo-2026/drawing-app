@@ -1,0 +1,159 @@
+/* Take the original (TakeTheOriginal.tsx): Tomato, below a perforation, well apart from Give. */
+.take-the-original {
+  margin-top: 20px;
+}
+
+.take-the-original__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.take-the-original__row .label-btn {
+  flex: none;
+}
+
+.take-the-original__note {
+  margin: 0;
+  color: var(--graphite);
+  font: 500 12.5px/1.35 var(--font-ui);
+}
+
+.take-the-original__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: calc(var(--z-sheet) + 1);
+  background: rgba(28, 24, 36, 0.34);
+}
+
+.take-the-original__sheet.bottom-sheet {
+  z-index: calc(var(--z-sheet) + 2);
+  padding-bottom: 38px;
+}
+
+.take-the-original__head {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.take-the-original__figure {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+}
+
+.take-the-original__title {
+  margin: 0;
+  font-size: 21px;
+}
+
+.take-the-original__text {
+  margin: 6px 0 0;
+  color: #4e4958;
+  font: 500 14.5px/1.45 var(--font-ui);
+  text-wrap: pretty;
+}
+
+.take-the-original__keep {
+  margin-top: 10px;
+}
+
+[role="status"] > .label-btn {
+  margin-top: 18px;
+}
+
+/* The key held to tear: Tomato stock with a stub past its perforation that tears off. */
+.hold-to-tear {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 62px;
+  margin: 18px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.hold-to-tear:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+  border-radius: var(--r-label);
+}
+
+.hold-to-tear__main {
+  display: grid;
+  flex: 1;
+  align-content: center;
+  justify-items: start;
+  gap: 4px;
+  padding: 0 16px;
+  border-radius: var(--r-label) 0 0 var(--r-label);
+  background: var(--tomato);
+  box-shadow:
+    inset 0 0 0 1px rgba(28, 24, 36, 0.16),
+    0 1px 0 rgba(28, 24, 36, 0.12);
+}
+
+.hold-to-tear__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font: 750 16.5px/1.1 var(--font-ui);
+}
+
+.hold-to-tear__sub {
+  color: rgba(28, 24, 36, 0.74);
+}
+
+.hold-to-tear__stub {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 66px;
+  border-radius: 0 var(--r-label) var(--r-label) 0;
+  background: var(--tomato);
+  color: var(--ink);
+  transform-origin: 0 100%;
+  box-shadow:
+    inset 0 0 0 1px rgba(28, 24, 36, 0.16),
+    0 1px 0 rgba(28, 24, 36, 0.12);
+}
+
+.hold-to-tear__stub::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: -1px;
+  border-left: 2px dashed rgba(28, 24, 36, 0.5);
+}
+
+/* The rip, opening down the perforation as the hold goes on. */
+.hold-to-tear__rip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 64px;
+  width: 4px;
+  background: var(--liner-lift);
+  transform-origin: 50% 0;
+  box-shadow:
+    -1px 0 0 rgba(28, 24, 36, 0.18),
+    1px 0 0 rgba(28, 24, 36, 0.18);
+}
+
+.hold-to-tear.is-holding .hold-to-tear__main,
+.hold-to-tear.is-holding .hold-to-tear__stub {
+  box-shadow: inset 0 0 0 1.5px rgba(28, 24, 36, 0.34);
+}

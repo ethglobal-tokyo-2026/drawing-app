@@ -17,6 +17,7 @@ import type { BoardSticker } from "./boardSticker";
 import { useDetailLift } from "./detailLift";
 import { swipeLock, swipeTo } from "./detailPaging";
 import { owedGratitude } from "./owedGratitude";
+import { TakeTheOriginal } from "./TakeTheOriginal";
 import { TransferTrail } from "./TransferTrail";
 import { toTrailRows } from "./trailRows";
 import "./sticker-detail.css";
@@ -372,6 +373,9 @@ export function StickerDetail({
                   {sticker.openGift?.to && ` to ${formatHandle(sticker.openGift.to)}`}
                 </span>
               </div>
+            )}
+            {mode === "yours" && sticker.held && !onItsWay && (
+              <TakeTheOriginal key={sticker.id} sticker={sticker} />
             )}
           </>
         ) : (
