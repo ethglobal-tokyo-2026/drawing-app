@@ -9,13 +9,13 @@ export const gratitude = {
   /** The heart's button, for assistive tech. */
   heart: "Send gratitude to {{handle}}",
   /** Under the heart until the first tap. */
-  hint: "Tap the heart",
+  hint: "Tap the heart as fast as you can!",
   /** What to do, shown and said once the person is trying. */
   tips: {
     stroke: "Stroke it back and forth, fast",
     shake: "Keep shaking!",
   },
-  /** The sigh that drifts up as a caught combo ends. */
+  /** The sigh that drifts up as the combo ends. */
   sigh: "fuu…",
   hud: {
     /** After the seconds left on the bar. */
@@ -25,7 +25,8 @@ export const gratitude = {
   },
   /** Said through the screen's polite live region, for assistive tech. */
   announcements: {
-    caught: "Caught it. Keep tapping before the bar runs out.",
+    /** As the first tap starts the bar. */
+    keepTapping: "Keep tapping before the bar runs out.",
     /** The combo so far. `total` is formatted. */
     total: "{{total}} gratitude, times {{multiplier}}",
     strokeUnlocked: "Stroke unlocked.",
@@ -38,13 +39,11 @@ export const gratitude = {
   receipt: {
     /** Names the receipt for assistive tech. */
     label: "Gratitude sent",
-    /** A caught combo's, under its total. */
+    /** Under the combo's total. */
     gratitudeTo: "gratitude to {{handle}}",
-    /** A caught combo's best multiplier and its length. `hits` is formatted. */
-    best: "best ×{{multiplier}} · {{hits}} hits",
-    /** A one-tap send's. */
-    sentTo: "Sent to {{handle}}",
-    forSticker: "For {{no}}",
+    /** The combo's best multiplier and its length. `hits` is formatted; `count` picks the form. */
+    best_one: "best ×{{multiplier}} · {{hits}} hit",
+    best_other: "best ×{{multiplier}} · {{hits}} hits",
     backToBoard: "Back to your board",
   },
   failures: {

@@ -94,14 +94,19 @@ afterEach(() => {
   recordGratitude.mockReset();
 });
 
+/** Long enough for one tap's bar to run out and its ending to play. */
+const ONE_TAP_ENDS_MS = 8000;
+
 describe("GratitudeMiniGame", () => {
-  it("sends with one tap: the heart flies to the giver and the receipt says so", async () => {
+  it("sends one tap's gratitude once its bar runs out, and the receipt says so", async () => {
     open();
     tapOnce();
-    await play(3000);
+    await play(ONE_TAP_ENDS_MS);
     expect(onEnd).toHaveBeenCalledTimes(1);
     expect(onEnd).toHaveBeenCalledWith(expect.objectContaining({ stickerId: "s1", hits: 1 }));
-    expect(document.querySelector(".gr-receipt")?.textContent).toContain("Sent to @alice");
+    const receipt = document.querySelector(".gr-receipt")?.textContent;
+    expect(receipt).toContain("gratitude to @alice");
+    expect(receipt).toMatch(/\b1 hit(?!s)/);
     // Without a gift, as in the stat board's demo, nothing is recorded.
     expect(recordGratitude).not.toHaveBeenCalled();
   });
@@ -109,7 +114,7 @@ describe("GratitudeMiniGame", () => {
   it("records a gift's one-tap combo as POST /api/gratitude's body", async () => {
     open({ giftId: "g1" });
     tapOnce();
-    await play(3000);
+    await play(ONE_TAP_ENDS_MS);
     expect(recordGratitude).toHaveBeenCalledTimes(1);
     const [body] = recordGratitude.mock.calls[0] ?? [];
     if (!body) throw new Error("No gratitude recorded");
@@ -142,7 +147,7 @@ describe("GratitudeMiniGame", () => {
     expect(body.replay).toMatchObject({
       v: 1,
       intensity: 0.7,
-      endReason: "sent",
+      endReason: "empty",
       switchedAtHit: null,
       strokes: [],
       shakes: [],
@@ -158,7 +163,7 @@ describe("GratitudeMiniGame", () => {
     recordGratitude.mockRejectedValue(new ApiError(409, { error: "gratitude_already_recorded" }));
     open({ giftId: "g1" });
     tapOnce();
-    await play(3000);
+    await play(ONE_TAP_ENDS_MS);
     const failure = document.querySelector(".gr-failure")?.textContent;
     expect(failure).toBe("Your gratitude didn't reach @alice. Close this and send it again.");
     expect(logged).toHaveBeenCalled();
@@ -167,7 +172,7 @@ describe("GratitudeMiniGame", () => {
   it("says the gratitude sent as the heart reaches the giver", async () => {
     open();
     tapOnce();
-    await play(3000);
+    await play(ONE_TAP_ENDS_MS);
     const total = onEnd.mock.calls[0]?.[0].total ?? 0;
     expect(total).toBeGreaterThan(0);
     expect(document.querySelector(".gr-sr")?.textContent).toBe(
@@ -179,7 +184,7 @@ describe("GratitudeMiniGame", () => {
     open();
     expect(document.activeElement).toBe(heart());
     tapOnce();
-    await play(3000);
+    await play(ONE_TAP_ENDS_MS);
     expect(heart().disabled).toBe(true);
     expect(document.activeElement?.textContent).toContain("Back to your board");
     expect(document.activeElement?.closest(".gr-receipt")).not.toBeNull();
@@ -246,13 +251,11 @@ describe("GratitudeMiniGame", () => {
 describe("GratitudeMiniGame in Japanese", () => {
   afterEach(() => i18next.changeLanguage("en"));
 
-  it("names a caught combo's peak tier on the receipt with no gloss", async () => {
+  it("names the combo's peak tier on the receipt with no gloss", async () => {
     await i18next.changeLanguage("ja");
     open();
     tapOnce();
-    await play(100);
-    tapOnce();
-    await play(8000);
+    await play(ONE_TAP_ENDS_MS);
     const peakTier = onEnd.mock.calls[0]?.[0].peakTier ?? 0;
     const sub = document.querySelector(".gr-rc-sub")?.textContent ?? "";
     expect(sub.split("\n").at(-1)).toBe(TIER_NAMES[peakTier].jp);

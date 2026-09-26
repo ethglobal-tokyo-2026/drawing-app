@@ -8,7 +8,7 @@ How the (Gratitude) Mini-game works, for whoever changes or tunes it. The code i
 
 ## What it is
 
-After receiving a sticker, the receiver taps, strokes or shakes a heart to make gratitude for the sticker's giver. Each counted tap, stroke pass or shake reversal is one hit. One tap sends plain gratitude. A second tap within the catch window starts a combo.
+After receiving a sticker, the receiver taps, strokes or shakes a heart to make gratitude for the sticker's giver. Each counted tap, stroke pass or shake reversal is one hit. The first hit starts the combo and its bar, so one tap is never the whole game: the bar gives time for the next.
 
 **Where it opens today:** "Try the gratitude mini-game", on the stat board's developer slip, opens it for your newest sticker on the board, with you as the giver. With no stickers it's disabled and says "Draw a sticker first". The dev server always shows the slip, and a build shows it only with `VITE_DEV_SLIP=on`, which `deploy/deploy.sh` sets. Two switches, kept on the device, sit beside it: Full effects and Show frame times. Nothing stores the result yet.
 
@@ -38,20 +38,18 @@ Under `apps/frontend/src/gratitude/` unless a path says otherwise.
 
 ## Phases
 
-`combo.view.phase` is one of four.
+`combo.view.phase` is one of three.
 
-| Phase   | Starts                  | Ends                                                                                                                                                               | Shows                                                                                                                                                                                              |
-| ------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ready   | The screen opens        | The first tap → sending; a stroke or shake unlock → running                                                                                                        | The heart breathing, "Tap the heart" under it. The HUD: a full bar reading `G.catchWindowMs` in seconds, 0 and ×1.0. A touch squashes the heart and counts nothing                                 |
-| sending | The first tap: hit 1    | A touch-down on the heart within `G.catchWindowMs` of the first tap (the catch) → running; a stroke or shake unlock → running; no catch → ended, as a one-tap send | The heart winding up toward the giver's picture over `F.windUpMs`, then holding. The bar empties over `G.catchWindowMs` as its seconds count down, and the amount shows hit 1's gratitude. No face |
-| running | The catch, or an unlock | The bar empties; the safety stop; the page goes hidden; the X                                                                                                      | The HUD, its bar now the combo's own, the tier's face and ground, every hit's effects                                                                                                              |
-| ended   | Any end above           | —                                                                                                                                                                  | The record goes to `onEnd` first, then the ending, then the receipt                                                                                                                                |
+| Phase   | Starts                      | Ends                                                          | Shows                                                                                                                                                   |
+| ------- | --------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ready   | The screen opens            | The first tap, or a stroke or shake unlock → running          | The heart breathing, "Tap the heart as fast as you can!" under it. The HUD: a full bar reading `fullBarSeconds`, 0 and ×1.0. A touch squashes the heart |
+| running | The first tap, or an unlock | The bar empties; the safety stop; the page goes hidden; the X | The HUD, the tier's face and ground, every hit's effects                                                                                                |
+| ended   | Any end above               | —                                                             | The record goes to `onEnd` first, then the ending, then the receipt                                                                                     |
 
-- The bar shows from the start, so the combo is plain to see before the first tap. Before the catch it only shows the catch window: the rules and the record don't count it. A one-tap send's bar runs out as the heart is sent, and the HUD leaves at the end of the ending, as a combo's does.
-- A one-tap send never shows a face. ありがと's face and slam wait for the catch.
-- Endings: a one-tap send and a combo below 昇天 fly the heart into the giver's picture. A combo at 昇天 plays the climax: a flash, the heart goes limp and pale, 昇天 slams and its soul rises to the giver. After a combo, "fuu…" shows and everything tidies away before the receipt.
+- The bar shows from the start, so the combo is plain to see before the first tap. The first hit fills it and brings ありがと.
+- Endings: a combo below 昇天 flies the heart into the giver's picture. A combo at 昇天 plays the climax: a flash, the heart goes limp and pale, 昇天 slams and its soul rises to the giver. Then "fuu…" shows and everything tidies away before the receipt.
 - A page that goes hidden ends the combo at once and skips the ending. The X ends it and closes the screen. Either way the record goes out.
-- The receipt after one tap says "Sent to @giver ♡". After a combo it shows the total, the best multiplier, the duration, the peak tier and the method.
+- The receipt shows the total, the best multiplier, the hits and the peak tier.
 
 ## Input methods
 
@@ -65,7 +63,7 @@ Under `apps/frontend/src/gratitude/` unless a path says otherwise.
 
 - A run ends when the thumb doubles back by `turnPx`. A run of at least `minRunPx` is a pass, and a pass at `fastPxPerMs` or faster is fast. Runs are measured along their own direction, so any direction counts.
 - A slow pass, or a pause longer than `pauseMs`, breaks the streak of fast passes.
-- `unlockPasses` fast passes in a row unlock stroke: "!?" slams, and the combo commits to stroke, starting or catching it first if need be. After that, each fast pass is a hit.
+- `unlockPasses` fast passes in a row unlock stroke: "!?" slams, and the combo commits to stroke, starting it first if need be. Once a tap combo's bar is running, `unlockPassesMidCombo` passes do it, so the switch lands before the bar runs out. After that, each fast pass is a hit.
 - Before the unlock, a drag on the heart stretches it. After `triesForTip` drags of `tryTravelPx` or more that don't unlock, the tip "Stroke it back and forth, fast" shows.
 - Once committed, the heart stretches and leans with the thumb, with speed lines, and flings mini hearts along each pass from ドキドキ up. Pop-ins sometimes come from the stroke words.
 
@@ -77,7 +75,7 @@ Under `apps/frontend/src/gratitude/` unless a path says otherwise.
 - A reversal is the motion flipping direction after a peak of at least `minPeak`, between `minGapMs` and `maxGapMs` after the last flip. `resetMs` of calm breaks the run, so a single jolt never counts.
 - Motion counts from its first sample. Where a platform flips the motion's sign, `phoneMotion.ts` finds it from the orientation while the phone is still; the sign sets only which way the heart goes.
 - With motion allowed, the heart sways with the wrist and its twist, tilts with the phone's roll, and jiggles when shaken. On a phone with a gyroscope the roll comes from the orientation, at once. Otherwise it comes from the gravity estimate low-passed twice, which keeps a shake out of it but lags.
-- At `keepShakingAt` reversals "Keep shaking!" shows, at `cornerAt` a corner lifts, and at `unlockAt` the heart comes loose ("ポンッ") and the combo commits to shake. After that, each reversal is a hit, and the loose heart ricochets off the walls, denting them and, from ドキドキ up, knocking mini hearts off.
+- At `keepShakingAt` reversals "Keep shaking!" shows, at `cornerAt` a corner lifts, and at `unlockAt` (`unlockAtMidCombo` once a tap combo's bar is running) the heart comes loose ("ポンッ") and the combo commits to shake. After that, each reversal is a hit, and the loose heart ricochets off the walls, denting them and, from ドキドキ up, knocking mini hearts off.
 - Shake needs motion permission on iPhones (below).
 
 **All methods:**
@@ -120,21 +118,21 @@ gratitude = round(G.gratitudePerHit × m × w)
 
 The bar is the combo's clock. It holds between 0 and 1.
 
-- It fills to 1 at the catch, or at an unlock before the catch, and the combo clock `c` starts at 0. `c` is seconds since then, less tier-up freezes.
+- It fills to 1 at the first hit, and the combo clock `c` starts at 0. `c` is seconds since then, less tier-up freezes.
 - It drains faster and faster, so every combo ends:
 
   ```
   drain(c) = G.drainStart × 2^(c / G.drainDoublingS)   bars a second
   ```
 
-- Hit `n` after the catch adds a gain, and the bar never goes past full. `n` is the hit's place in the combo, so in a tap combo the catch is hit 2 and the first gain comes at hit 3:
+- Every hit after the first adds a gain, and the bar never goes past full. `n` is the hit's place in the combo, so the first gain comes at hit 2:
 
   ```
-  gain(n) = G.gainFloor + G.gainAboveFloor × G.gainDecay^(n − 3)
+  gain(n) = G.gainFloor + G.gainAboveFloor × G.gainDecay^(n − 2)
   bar     ← min(1, bar + w × gain(n))
   ```
 
-- **On screen**, the seconds left if the hits stopped now, and the fill as a share of what a full bar lasts at the catch:
+- **On screen**, the seconds left if the hits stopped now, and the fill as a share of what a full bar lasts at the first hit:
 
   ```
   T = G.drainDoublingS,  K = G.drainStart × T / ln 2
@@ -165,7 +163,7 @@ Every hit squashes the heart, stamps under the finger and sends up a ♡. The hi
 
 ## Replay and the record
 
-- **Closed form between events.** The rules' state changes only at events: a hit, a hit leaving the cadence window, the catch window closing, the bar emptying, the safety stop. Between events, the bar and the multiplier follow the formulas above exactly, never stepped per frame, so the same hits give the same record however the frames fell.
+- **Closed form between events.** The rules' state changes only at events: a hit, a hit leaving the cadence window, the bar emptying, the safety stop. Between events, the bar and the multiplier follow the formulas above exactly, never stepped per frame, so the same hits give the same record however the frames fell.
 - **Whole milliseconds.** Hit times are whole milliseconds after the first hit, and never earlier than an event already run, so a replay meets events in the same order.
 - **`replayGratitudeCombo(record)`** plays a record's hits through a fresh combo: taps, then from `switchedAtHit` its passes or reversals, up to `durationMs`. Under the same config it returns the same record. The replay animation and the server's check rely on this.
 - **The record** (`ComboRecord`, and `GratitudeResult` with the sticker's ID added) holds what the draft schema's `gratitude` table stores: `method` (the one it ended in), `switchedAtHit`, `hits`, `hitTimes`, `durationMs`, `total`, `peakMult` (to hundredths), `peakTier` and `gameConfigVersion`. The hit times, the switch and the version are all a recount needs. The record doesn't say how the combo ended: gratitude exists or it doesn't.
@@ -176,7 +174,7 @@ Every hit squashes the heart, stamps under the finger and sends up a ♡. The hi
 
 - **Intensity.** One dial scales every effect: `F.intensity.everyday` by default, and `F.intensity.full` with the demo's Full effects switch. A low dial keeps each tier's face but drops the boiling outline, the full blush and the nosebleed.
 - **Reduced motion** turns off screen shake, the punch, breathing and heartbeat, and sprayed and sweated mini hearts. Rising hearts fade up in place, the haze and light beams go, and the heart fades out instead of flying, with no climax. The numbers don't change.
-- **Accessibility.** The heart is a button ("Send gratitude to @giver"). A polite live region announces the catch, the total now and then, and the result.
+- **Accessibility.** The heart is a button ("Send gratitude to @giver"). A polite live region asks for more taps as the combo starts, then gives the total now and then, and the result.
 - **The motion permission.** `ui/motionPermission.ts` holds the app's one answer, kept on the device.
   - `app/MotionPermissionCard.tsx` asks once, after sign-in, and only where the browser has an ask (iOS). Nothing asks on the heart screen.
   - Allow asks the platform from inside the tap. Not now is kept, and nothing asks again.
@@ -186,23 +184,24 @@ Every hit squashes the heart, stamps under the finger and sends up a ♡. The hi
 
 ## Tuning
 
-| To change                                                               | Edit                                                |
-| ----------------------------------------------------------------------- | --------------------------------------------------- |
-| Scoring, the bar, the catch window, tiers, speed limits, method weights | `GAME_CONFIG`, and bump its `version`               |
-| The heart's reach, tap slop and hold, the detectors, mini hearts        | `FEEL_CONFIG`                                       |
-| Per-hit effects and their cadence                                       | `onHit` in `miniGameEngine.ts`                      |
-| The faces, the ground, the HUD's warnings                               | `heartFaces.ts`, `tierBackground.ts`, `comboHud.ts` |
+| To change                                                        | Edit                                                |
+| ---------------------------------------------------------------- | --------------------------------------------------- |
+| Scoring, the bar, tiers, speed limits, method weights            | `GAME_CONFIG`, and bump its `version`               |
+| The heart's reach, tap slop and hold, the detectors, mini hearts | `FEEL_CONFIG`                                       |
+| Per-hit effects and their cadence                                | `onHit` in `miniGameEngine.ts`                      |
+| The faces, the ground, the HUD's warnings                        | `heartFaces.ts`, `tierBackground.ts`, `comboHud.ts` |
 
 These tests pin the design's intent, and a retune has to keep them passing:
 
 - `combo.test.ts`:
-  - One tap with no catch is a one-tap send, and a catch starts a full bar.
+  - The first tap starts a full bar, and one tap alone ends only when the bar runs out.
   - Faster tapping lasts longer and reaches a higher tier and total.
   - 照れ never comes before the 7th tap at any steady speed, and comes on the 5th stroke or shake.
   - The speed limits hold, tiers only climb, the safety stop holds, and the freeze lifts.
   - Hiding the page ends the combo with its record.
   - Times are whole milliseconds, and a replay gives the same record, for tap combos and for combos that started in or switched to stroke or shake.
   - Committing to a method shuts out the others.
+- `miniGameEngine.test.ts`: once a tap combo's bar is running, stroke and shake unlock in fewer moves; before any tap, they take the full unlock.
 - `detectors.test.ts`: the stroke unlock streak, strokes in any direction, a slow pass or a pause breaking the streak, and a rhythmic shake counting where a sway, a wobble or a single jolt doesn't.
 - `touchInput.test.ts`: the heart's reach, every finger counting, and a drag or a hold not being a tap.
 - `miniHeartPhysics.test.ts`: the pile settles and fades, a tap shoves it, and the live cap holds.

@@ -13,7 +13,8 @@ const STAGE = { width: 390, height: 741 };
 /** The server's MAX_COMBO_MS, and the most a keepalive request carries. */
 const MAX_COMBO_MS = 8000;
 const MAX_BODY_BYTES = 64 * 1024;
-const END_REASONS: readonly EndReason[] = ["sent", "empty", "cap", "hidden", "closed"];
+// The server still reads "sent" in replays stored before the first tap started the bar; a new one never has it.
+const END_REASONS: readonly ReplayV1["endReason"][] = ["empty", "cap", "hidden", "closed"];
 
 /** Rows of `size` values from a flat list, the first `summed` of each added to the row before's. */
 function runningRows(flat: readonly number[], size: number, summed: number): number[][] {
@@ -84,7 +85,6 @@ function readReplay(replay: ReplayV1, record: ComboRecord) {
   if (record.method === "tap") {
     rule(switchedAtHit === null && counted === record.hits, "a tap combo's counted touches");
   } else rule(switchedAtHit !== null, "a stroke or shake combo's switch");
-  rule(replay.endReason !== "sent" || record.hits === 1, "sent with more than one hit");
   return { touches, strokes, shakes };
 }
 
@@ -164,18 +164,18 @@ function tapCombo(rate: number, { config, stopAfter, stopBy = "hidden", seed = 1
 }
 
 describe("createReplayRecorder", () => {
-  it("records a one-tap send", () => {
+  it("records a one-tap combo", () => {
     const s = session();
     s.tap(5000, 195, 400);
-    s.frame(5000 + GAME_CONFIG.catchWindowMs);
-    const { replay } = s.finish();
+    s.frame(5000 + 3000);
+    const { ended, replay } = s.finish();
     expect(replay).toEqual({
       v: 1,
       seed: 42,
       intensity: 0.7,
       stage: [390, 741],
-      durationMs: GAME_CONFIG.catchWindowMs,
-      endReason: "sent",
+      durationMs: ended.record.durationMs,
+      endReason: "empty",
       switchedAtHit: null,
       // 195 of 390 px across, 400 of 741 down.
       hits: [0, 5000, 5398, 1],
@@ -279,7 +279,7 @@ describe("a replay has all the data to play its combo back", () => {
     ["the safety stop", "cap", 10, { config: { ...GAME_CONFIG, drainStart: 0.001 } }],
     ["the page going hidden", "hidden", 8, { stopAfter: 2600, stopBy: "hidden" }],
     ["the X", "closed", 8, { stopAfter: 2100, stopBy: "closed" }],
-    ["the X before the catch", "closed", 0.5, { stopAfter: 400, stopBy: "closed" }],
+    ["the X after one tap", "closed", 0.5, { stopAfter: 400, stopBy: "closed" }],
   ];
 
   it("breaks the check the way the server would refuse it", () => {
@@ -292,7 +292,6 @@ describe("a replay has all the data to play its combo back", () => {
     );
     expect(broken({ hits: [-1, ...replay.hits.slice(1)] })).toThrow("negative ms step");
     expect(broken({ durationMs: 10 })).toThrow("past durationMs");
-    expect(broken({ endReason: "sent" })).toThrow("sent with more than one hit");
     expect(broken({ switchedAtHit: 2 })).toThrow("a tap combo's counted touches");
   });
 
@@ -308,11 +307,12 @@ describe("a replay has all the data to play its combo back", () => {
     expect(JSON.stringify(replay).length).toBeLessThan(MAX_BODY_BYTES);
   });
 
-  it("a one-tap send", () => {
+  it("a one-tap combo", () => {
     const { ended, replay } = tapCombo(0.5, {});
     readReplay(replay, ended.record);
-    expect(replay).toMatchObject({ endReason: "sent", durationMs: GAME_CONFIG.catchWindowMs });
-    expect(playBack(replay)).toMatchObject({ reason: "sent", record: ended.record });
+    expect(replay).toMatchObject({ endReason: "empty", durationMs: ended.record.durationMs });
+    expect(ended.record.hits).toBe(1);
+    expect(playBack(replay)).toMatchObject({ reason: "empty", record: ended.record });
   });
 
   it("a stroke combo: the taps before the switch, and a sample at every pass it counted", () => {
