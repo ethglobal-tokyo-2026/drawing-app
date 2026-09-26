@@ -56,9 +56,14 @@ export function TabBar({ active, tucked, onChange }: Props) {
   if (!tucked && shown) setShown(false);
   const peeking = tucked && shown;
 
+  // Keyboard focus on a tab going away with it would fall to the page body, so it goes to the grabber.
+  const hide = () => {
+    if (nav.current?.contains(document.activeElement)) grabber.current?.focus();
+    setShown(false);
+  };
   const waitIdle = () => {
     clearTimeout(idle.current);
-    idle.current = setTimeout(() => setShown(false), IDLE_MS);
+    idle.current = setTimeout(hide, IDLE_MS);
   };
   const show = () => {
     setShown(true);
@@ -77,10 +82,16 @@ export function TabBar({ active, tucked, onChange }: Props) {
     const onPointerDown = (e: PointerEvent) => {
       if (!(e.target instanceof Node)) return;
       if (nav.current?.contains(e.target) || grabber.current?.contains(e.target)) return;
-      setShown(false);
+      hide();
     };
     document.addEventListener("pointerdown", onPointerDown, true);
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [peeking]);
+
+  // The grabber steps aside once the tabs are up; keyboard focus on it moves on to the tabs.
+  useEffect(() => {
+    if (peeking && document.activeElement === grabber.current)
+      nav.current?.querySelector("button")?.focus();
   }, [peeking]);
 
   useEffect(() => () => clearTimeout(idle.current), []);
@@ -95,6 +106,8 @@ export function TabBar({ active, tucked, onChange }: Props) {
         inert={tucked && !peeking}
         onPointerDown={keepUp}
         onPointerMove={keepUp}
+        onFocus={keepUp}
+        onKeyDown={keepUp}
       >
         <button
           className="tab tab-board"
@@ -126,6 +139,7 @@ export function TabBar({ active, tucked, onChange }: Props) {
           className={`tab-grabber ${grabbed ? "" : "is-pull-tab"} ${peeking ? "is-hidden" : ""}`}
           aria-label="Show the My board and Explore tabs"
           aria-expanded={peeking}
+          tabIndex={peeking ? -1 : undefined}
           onPointerDown={(e) => {
             grabY.current = e.clientY;
             e.currentTarget.setPointerCapture(e.pointerId);
