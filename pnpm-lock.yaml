@@ -270,6 +270,9 @@ importers:
       '@drawing-app/api':
         specifier: workspace:*
         version: link:../api
+      '@line/liff-mock':
+        specifier: 1.0.4
+        version: 1.0.4(@line/liff@2.31.0(debug@4.4.3))
       '@types/node':
         specifier: ^24.13.6
         version: 24.13.6
@@ -1247,6 +1250,11 @@ packages:
   '@line/bot-sdk@10.8.0':
     resolution: {integrity: sha512-1Mdpw/WPS3QP6fGiwPRTL27k8MgmMe7rVKCKsItP/kPzogX7a/X1ipQqk/F6RkorP9DNyJIx590hnVUkfBQf3w==}
     engines: {node: '>=20'}
+
+  '@line/liff-mock@1.0.4':
+    resolution: {integrity: sha512-galQphORlR83ZTLoMiwh+EilF2ugNjhoQW9o4XfaKk6MpzarIO5JqTa+5JJnkBR+p/ISQZNi7VPI/z58pT2JDg==}
+    peerDependencies:
+      '@line/liff': '>= 2.19.0'
 
   '@line/liff@2.31.0':
     resolution: {integrity: sha512-9uQM+JXOwmhpWzlvmP5gPKcjPbYEtlPyE4rFd/1dKKRLVCQhSv5RDzQjaQM49rLTLcmt7hEDrHjn9Btf2+dRVg==}
@@ -6186,6 +6194,10 @@ snapshots:
     transitivePeerDependencies:
       - debug
       - supports-color
+
+  '@line/liff-mock@1.0.4(@line/liff@2.31.0(debug@4.4.3))':
+    dependencies:
+      '@line/liff': 2.31.0(debug@4.4.3)
 
   '@line/liff@2.31.0(debug@4.4.3)':
     dependencies:

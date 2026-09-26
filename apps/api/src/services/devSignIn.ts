@@ -44,11 +44,23 @@ export function createDevLineVerifier(): LineVerifier {
   };
 }
 
-/** The server's LINE verifier: dev sign-in's when DEV_SIGN_IN is "on", and `line` otherwise. */
-export function chooseLineVerifier(devSignIn: string | undefined, line: LineVerifier) {
+/**
+ * The server's LINE verifier: `line` alone, unless DEV_SIGN_IN is "on". Then a dev ID token signs in
+ * whoever it names, and any other token still goes to `line`, so real LINE keeps working beside it.
+ */
+export function chooseLineVerifier(
+  devSignIn: string | undefined,
+  line: LineVerifier,
+): LineVerifier {
   if (devSignIn !== "on") return line;
   console.warn(
-    "⚠ DEV_SIGN_IN=on: anyone can sign in as anyone. The REST API trusts dev ID tokens and never asks LINE.",
+    "⚠ DEV_SIGN_IN=on: anyone can sign in as anyone. The REST API trusts dev ID tokens without asking LINE.",
   );
-  return createDevLineVerifier();
+  const dev = createDevLineVerifier();
+  return {
+    verifyIdToken: (idToken) =>
+      idToken.startsWith(DEV_ID_TOKEN_PREFIX)
+        ? dev.verifyIdToken(idToken)
+        : line.verifyIdToken(idToken),
+  };
 }

@@ -49,6 +49,22 @@ describe("the server's LINE verifier", () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("anyone can sign in as anyone"));
   });
 
+  it("still asks LINE about LINE's own tokens when DEV_SIGN_IN is on", async () => {
+    silenceWarnings();
+    const bob: LineProfile = { sub: "U-bob", name: "Bob" };
+    const asked: string[] = [];
+    const realLine: LineVerifier = {
+      verifyIdToken: (idToken) => {
+        asked.push(idToken);
+        return Promise.resolve(bob);
+      },
+    };
+    const chosen = chooseLineVerifier("on", realLine);
+    await expect(chosen.verifyIdToken("eyJhbGciOiJFUzI1NiJ9.e30.c2ln")).resolves.toEqual(bob);
+    await expect(chosen.verifyIdToken(devIdToken(ALICE))).resolves.toEqual(ALICE);
+    expect(asked).toEqual(["eyJhbGciOiJFUzI1NiJ9.e30.c2ln"]);
+  });
+
   it("is LINE's, without a warning, when DEV_SIGN_IN is anything else", () => {
     const warn = silenceWarnings();
     for (const devSignIn of [undefined, "", "off"]) {
