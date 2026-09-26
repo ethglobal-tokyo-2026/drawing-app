@@ -321,7 +321,7 @@ The palette is Liner and Ink, plus five candy-bright coded fields, each with one
 - **Liner Deep** (liner-deep): a sunk (disabled) key or label, a pressed inactive tab, and the leaderboard tab track.
 - **Liner Lift** (liner-lift): a label lifted off the liner: label-stock faces, the paper on the cork back, the artist chip, the open trail row, the tray's loose sheets, and selected chips.
 - **Ink** (ink): all text on every field, the key's outline, the toast, the table under the board while it turns over, the label-maker tape on the cork back, the current drawing tool, and the ink button.
-- **Graphite** (graphite): secondary text, fine print, placeholders and quiet links. Ink-alpha steps carry hairlines: a kiss-cut rule at 14% and a stronger rule at 26%. Ink at 62% is the soft-text color.
+- **Graphite** (graphite): secondary text, fine print, placeholders and quiet links. It reads 4.8:1 on Liner and 5.0:1 on Liner Lift, but only 4.2:1 on Liner Deep, so fine text on Liner Deep, or on anything as dark (the clear film of gifts on their way), takes the darker `--graphite-on-deep` (#635D6D, 5.0:1 on Liner Deep). No other graphite is picked by hand. Ink-alpha steps carry hairlines: a kiss-cut rule at 14% and a stronger rule at 26%. Ink at 62% is the soft-text color.
 - **Canvas** (canvas): drawing surfaces, and white label stock. That's the drawing sheet, a sticker's white border, and the draw screen's two stuck-on labels (the PAUSED tag and the paused hint), which are white so they read as labels over any drawing.
 
 Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 30–42% depending on the hue. They keep the hue's meaning at rest volume.
@@ -405,7 +405,7 @@ Stickers and the gratitude heart also respond to the app's one moving light. The
 
 **The One Light Rule.** There's one light for the whole app. Static shadows fall down and to the right from the top-left light, and every moving highlight (the sticker specular and sheen, the foil's glint, the heart's gloss) reads the shared light variables. Don't add a second light source. The foil's glint sits where the light falls, the same way on every sticker whatever its turn, and holds where the last tilt left it; before any tilt it rests top-left. Only the foil's bands run on their own clock, flowing on a 7s loop staggered per sticker, under a grating that never moves. They hold still under reduced motion.
 
-**The Neutral Shadow Rule.** Shadows are Ink alpha, never tinted. The one exception is the cork back: paper, stamps and pins cast a cork-brown throw (rgba(58,36,16,…)) over an Ink contact line, because a shadow on cork is darker cork. The only colored light in the world is a sticker's gratitude glow, warming from faint pink toward amber as more gratitude arrives.
+**The Neutral Shadow Rule.** Shadows are Ink alpha, never tinted. The one exception is the cork back: paper, stamps and pins cast a cork-brown throw (rgba(58,36,16,…)) over an Ink contact line, because a shadow on cork is darker cork. The only colored light in the world is a sticker's gratitude glow, warming from faint pink (#FF7EB6) toward amber (#FFB13B) as more gratitude arrives; those two hues belong to the glow alone.
 
 **The No Gloss Rule.** Controls have no gloss, highlight line or sheen: keys, labels, tabs, the zipper and the gift's tear tape are lit flat, with an edge and a contact shadow at most.
 
@@ -436,7 +436,7 @@ Everything that isn't the key: the same construction at a third of the depth, wi
 
 - **Shape:** a Liner Lift face with a 1px edge at 30% Ink, an 8px radius, and 44px of face over a 3px lip (32px on the small variant).
 - **Coded:** seal, aqua, pink, grape and tomato faces take their deep partner as the lip and a 22% edge. The ink variant has a near-black lip and Liner text.
-- **Held:** while held, the face also takes a 10% shade, since 2px of travel is small.
+- **Held:** while held, the face also takes a 10% shade, since 2px of travel is small. The ink variant can't shade toward Ink, so its hover and held face lift 8% toward Liner instead.
 - **Quiet link:** text with a 1px underline at a 3px offset, in Graphite, with no stock and no travel. It turns Ink on press. It's the way out under a key.
 - **Where it goes:** a secondary action beside or under a key (Go to sticker board, Give under Send gratitude), and coded actions in toolbars and rows (Give, View, Remove on a selected sticker). Three keys in a row would read as a keyboard.
 - **Not buttons:** drawing tools, undo and redo, and close, back and header icons stay flat tiles. Chips, filters, segments and radio rows are selectable labels whose selection is their feedback. Gestures (hold to tear, the gift's pull tab, the zip, grabbers, the heart, the tray's sheets) keep their own physics.

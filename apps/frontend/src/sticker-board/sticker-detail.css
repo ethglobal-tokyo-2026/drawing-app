@@ -243,7 +243,6 @@
   font-stretch: var(--w-ui);
   letter-spacing: 0.045em;
   line-height: 1.5;
-  color: #5f5969;
 }
 
 .sticker-detail__fine-print + .sticker-detail__fine-print {

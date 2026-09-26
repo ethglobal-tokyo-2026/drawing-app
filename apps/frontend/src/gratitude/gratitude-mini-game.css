@@ -97,7 +97,7 @@
   width: 54%;
   height: 46%;
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(255, 112, 72, 0.36), rgba(255, 112, 72, 0));
+  background: radial-gradient(closest-side, rgba(255, 90, 54, 0.36), rgba(255, 90, 54, 0));
   animation: gr-haze 3.6s linear infinite paused;
 }
 .gr-haze i:nth-child(1) {
