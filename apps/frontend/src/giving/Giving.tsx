@@ -14,6 +14,7 @@ import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
 import { Sheet } from "../ui/Sheet";
+import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { giftMessageHeroUrl } from "./config";
@@ -82,6 +83,11 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
 
   const root = useRef<HTMLDivElement>(null);
   useFocusTrap(root, { onEscape: close });
+  // While LINE's picker is up it can't close, so Back leaves it where it is.
+  useBackToClose(true, () => {
+    close();
+    return !busy;
+  });
 
   // Each new screen slides in, except the first, which comes up with the sheet.
   const [shownScreen, setShownScreen] = useState(screen);

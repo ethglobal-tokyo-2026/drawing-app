@@ -1,4 +1,4 @@
-import { ArrowUUpLeft, QrCode, ShareNetwork } from "@phosphor-icons/react";
+import { ArrowUUpLeft, SignOut } from "@phosphor-icons/react";
 import {
   useId,
   useImperativeHandle,
@@ -25,10 +25,7 @@ import { LabelButton } from "../../ui/LabelButton";
 import { PhotoSticker } from "../../ui/PhotoSticker";
 import { QuietLink } from "../../ui/QuietLink";
 import { useReducedMotion } from "../../ui/useReducedMotion";
-import { useToast } from "../../ui/useToast";
-import { BoardQrSheet } from "./BoardQrSheet";
-import { shareBoard } from "./shareBoard";
-import { streakOf } from "./userStats";
+import { joinedAt, streakOf } from "./userStats";
 import "./stat-board.css";
 
 export interface StatBoardHandle {
@@ -64,6 +61,12 @@ const figure = (n: number | null) => (n === null ? <Unknown /> : num(n));
 const ON_CORK =
   ".stat-board__note, .stat-board__stamp, .stat-board__tape, .stat-board__who, button";
 
+// The developer slip, LINE's and Privy's details for testing them from the board. The dev server shows
+// it unless `.env` says "off"; a build shows it only when it's "on".
+const DEV_SLIP = import.meta.env.VITE_DEV_SLIP
+  ? import.meta.env.VITE_DEV_SLIP === "on"
+  : import.meta.env.DEV;
+
 /** A paper hanging from its pin or tape swings and settles; `k` scales the swing and turns it. */
 function swing(paper: Element, k: number, delay = 0) {
   paper.animate(
@@ -84,11 +87,9 @@ function swing(paper: Element, k: number, delay = 0) {
  */
 export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Props) {
   const me = useIdentity();
-  const toast = useToast();
   const reduced = useReducedMotion();
   const cork = useRef<HTMLDivElement>(null);
-  const [qrOpen, setQrOpen] = useState(false);
-  const [since] = useState(() => formatDay(firstSeen()));
+  const [firstVisit] = useState(firstSeen);
   const id = useId();
 
   useImperativeHandle(
@@ -112,6 +113,7 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
       ticketDay(now),
     );
   const given = stickers && stickers.filter((s) => gifts.get(s.id)?.state === "sent").length;
+  const since = formatDay(joinedAt(firstVisit, stickers ?? []));
   const stamps = [
     { label: "made", count: stickers && stickers.length, hue: "var(--seal)" },
     { label: "received", count: 0, hue: "var(--grape)" },
@@ -122,10 +124,14 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
     if (e.target instanceof Element && !e.target.closest(ON_CORK)) onFlipBack();
   };
 
-  // A tap on a note's paper nudges it; its controls press without moving it.
+  // A tap on a note's paper nudges it. Its controls press, and its selectable text selects, without
+  // moving it.
   const nudge = (e: PointerEvent<HTMLDivElement>) => {
-    if (reduced || !(e.target instanceof Element) || e.target.closest("button")) return;
-    const note = e.target.closest(".stat-board__note");
+    const target = e.target;
+    if (reduced || !(target instanceof Element) || target.closest("button, a")) return;
+    const style = getComputedStyle(target);
+    if ((style.userSelect || style.getPropertyValue("-webkit-user-select")) === "text") return;
+    const note = target.closest(".stat-board__note");
     const paper = note?.querySelector(":scope > .stat-board__paper");
     if (note && paper) swing(paper, note.classList.contains("stat-board__scrap") ? 0.45 : 0.6);
   };
@@ -133,8 +139,7 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== "Escape") return;
     e.stopPropagation();
-    if (qrOpen) setQrOpen(false);
-    else onFlipBack();
+    onFlipBack();
   };
 
   return (
@@ -263,19 +268,6 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
               ))}
             </div>
 
-            <div className="stat-board__share">
-              <LabelButton
-                tone="aqua"
-                size="sm"
-                icon={<ShareNetwork />}
-                onClick={() => void shareBoard(me, toast)}
-              >
-                Share my board
-              </LabelButton>
-              <LabelButton size="sm" icon={<QrCode />} onClick={() => setQrOpen(true)}>
-                QR code
-              </LabelButton>
-            </div>
             <LabelButton
               ref={flipBackRef}
               size="sm"
@@ -285,30 +277,35 @@ export function StatBoard({ stickers, gifts, onFlipBack, flipBackRef, ref }: Pro
             >
               Flip back
             </LabelButton>
+            {/* Outside LINE's app it's the only way to switch LINE accounts, so it's never behind the dev flag. */}
+            {!me.inClient && (
+              <LabelButton
+                size="sm"
+                icon={<SignOut />}
+                className="stat-board__logout"
+                onClick={lineLogout}
+              >
+                Log out of LINE
+              </LabelButton>
+            )}
           </div>
         </div>
 
-        <section className="stat-board__note stat-board__slip" aria-labelledby={`${id}-line`}>
-          <div className="stat-board__paper">
-            <h3 className="fine stat-board__slip-h" id={`${id}-line`}>
-              LINE and Privy
-            </h3>
-            <SendTestMessage senderName={me.displayName} />
-            <LineDetails />
-            <PrivyLine />
-            <PrivyAccount />
-            {/* Outside LINE's app it's the only way to switch LINE accounts. */}
-            {!me.inClient && (
-              <QuietLink className="stat-board__logout" onClick={lineLogout}>
-                Log out of LINE
-              </QuietLink>
-            )}
-          </div>
-          <i className="stat-board__washi" aria-hidden />
-        </section>
+        {DEV_SLIP && (
+          <section className="stat-board__note stat-board__slip" aria-labelledby={`${id}-line`}>
+            <div className="stat-board__paper">
+              <h3 className="fine stat-board__slip-h" id={`${id}-line`}>
+                LINE and Privy
+              </h3>
+              <SendTestMessage senderName={me.displayName} />
+              <LineDetails />
+              <PrivyLine />
+              <PrivyAccount />
+            </div>
+            <i className="stat-board__washi" aria-hidden />
+          </section>
+        )}
       </div>
-
-      <BoardQrSheet open={qrOpen} onClose={() => setQrOpen(false)} />
     </div>
   );
 }
@@ -331,7 +328,7 @@ function PrivyLine() {
   const privy = usePrivyStatus();
   return (
     <div className="stat-board__privy">
-      <p className="fine">{privyText(privy)}</p>
+      <p className="stat-board__privy-status">{privyText(privy)}</p>
       {privy.state === "failed" && <QuietLink onClick={retryPrivySignIn}>Try again</QuietLink>}
     </div>
   );

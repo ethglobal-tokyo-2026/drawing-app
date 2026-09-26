@@ -77,6 +77,23 @@ export function linkSticker(
   return { ...state, uses };
 }
 
+/**
+ * Gives back a spent ticket whose drawing was lost. Null when there's nothing to give back: the
+ * ticket became a sticker, or it was spent on an earlier ticket day.
+ */
+export function refund(state: TicketState, spent: SpentTicket): TicketState | null {
+  const use = spent.day === state.day ? state.uses.at(spent.index) : undefined;
+  if (!use || use.stickerId !== undefined) return null;
+  // Uses past the free ones are bought. While there are any, taking a use out leaves the free ones
+  // all used, so the ticket comes back as a bought one.
+  const paidBack = state.uses.length > FREE_TICKETS_PER_DAY ? 1 : 0;
+  return {
+    ...state,
+    uses: state.uses.filter((_, i) => i !== spent.index),
+    paid: state.paid + paidBack,
+  };
+}
+
 /** The day's free tickets in the order they're used. */
 export function dailyTickets(state: TicketState): DailyTicket[] {
   return Array.from({ length: FREE_TICKETS_PER_DAY }, (_, i): DailyTicket => {

@@ -202,9 +202,6 @@ importers:
       '@privy-io/react-auth':
         specifier: 3.45.0
         version: 3.45.0(@solana-program/system@0.10.0(@solana/kit@5.5.1(bufferutil@4.0.7)(typescript@7.0.2)(utf-8-validate@5.0.7)))(@solana-program/token@0.9.0(@solana/kit@5.5.1(bufferutil@4.0.7)(typescript@7.0.2)(utf-8-validate@5.0.7)))(@solana/kit@5.5.1(bufferutil@4.0.7)(typescript@7.0.2)(utf-8-validate@5.0.7))(@solana/sysvars@5.5.1(typescript@7.0.2))(@stripe/stripe-js@1.54.2)(@tanstack/query-core@5.103.2)(@tanstack/react-query@5.103.2(react@19.3.0))(@types/react@19.3.0)(bufferutil@4.0.7)(debug@4.4.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@7.0.2)(use-sync-external-store@1.4.0(react@19.3.0))(utf-8-validate@5.0.7)(zod@4.6.5)
-      qrcode:
-        specifier: ^1.5.4
-        version: 1.5.4
       react:
         specifier: ^19.3.0
         version: 19.3.0
@@ -218,9 +215,6 @@ importers:
       '@types/node':
         specifier: ^24.13.6
         version: 24.13.6
-      '@types/qrcode':
-        specifier: ^1.5.6
-        version: 1.5.6
       '@types/react':
         specifier: ^19.3.0
         version: 19.3.0
@@ -2891,9 +2885,6 @@ packages:
 
   '@types/node@24.13.6':
     resolution: {integrity: sha512-SGrw/h3KPFshy3OE6ZL53LMBG5vGQQ8/gIpiqz/kRZhPJ7HgwCEs8LBuNtWLa8dvGZVpSF7+Bf+c11HUrCb/yg==}
-
-  '@types/qrcode@1.5.6':
-    resolution: {integrity: sha512-te7NQcV2BOvdj2b1hCAHzAoMNuj65kNBMz0KBaxM6c3VGBOhU0dURQKOtH8CFNI/dsKkwlv32p26qYQTWoB5bw==}
 
   '@types/react-dom@19.3.0':
     resolution: {integrity: sha512-ZI7bU42mZXXKHn/qNLEw2IrbiINU7X5+vfgdixBHkCNpYWXjKgfQ/P+uyGb5CjOLB9UcnTeg3rylQtV2hym44Q==}
@@ -8375,10 +8366,6 @@ snapshots:
   '@types/node@24.13.6':
     dependencies:
       undici-types: 7.18.2
-
-  '@types/qrcode@1.5.6':
-    dependencies:
-      '@types/node': 24.13.6
 
   '@types/react-dom@19.3.0(@types/react@19.3.0)':
     dependencies:

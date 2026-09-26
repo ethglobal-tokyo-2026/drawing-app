@@ -5,8 +5,10 @@ import type { StickerGiftStatus } from "../giving/giftStore";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
+import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { Key } from "../ui/Key";
+import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import type { BoardSticker } from "./boardSticker";
@@ -61,6 +63,8 @@ export function StickerDetail({
   originOf,
 }: Props) {
   const reduced = useReducedMotion();
+  useLight();
+  useBackToClose(true, onClose);
   const [shownId, setShownId] = useState(startId);
   const index = Math.max(
     0,
@@ -172,7 +176,7 @@ export function StickerDetail({
       className="sticker-detail"
       role="dialog"
       aria-modal="true"
-      aria-label="Sticker"
+      aria-label={sticker ? formatNo(sticker.no) : "Sticker"}
       tabIndex={-1}
       onKeyDown={(e) => {
         if (e.altKey || e.ctrlKey || e.metaKey) return;

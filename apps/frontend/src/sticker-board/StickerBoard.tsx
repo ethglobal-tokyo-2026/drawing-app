@@ -2,6 +2,7 @@ import {
   Fragment,
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -15,6 +16,7 @@ import { DrawIcon } from "../icons/DrawIcon";
 import { useIdentity } from "../identity/useIdentity";
 import { LIFF_ID } from "../line/liff";
 import { formatNo } from "../stickers/format";
+import { useLight } from "../stickers/light";
 import { playStick } from "../stickers/stick";
 import { updatePlacement, type Placement, type StickerRecord } from "../stickers/stickerStorage";
 import { releaseStickerUrls } from "../stickers/stickerUrls";
@@ -22,6 +24,7 @@ import { ticketDay } from "../tickets/tickets";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
+import { useBackToClose } from "../ui/useBackToClose";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { normalizeTurn } from "./boardGesture";
 import { loadBoardStickers, type BoardSticker } from "./boardSticker";
@@ -42,6 +45,7 @@ import {
 import { BoardFlip } from "./stat-board/BoardFlip";
 import { StatBoard, type StatBoardHandle } from "./stat-board/StatBoard";
 import { StickerDetail } from "./StickerDetail";
+import { readingOrder } from "./stickerOrder";
 import { StickerToolbar } from "./StickerToolbar";
 import { StickerTray, type StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
@@ -152,6 +156,8 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const gifts = useStickerGifts();
   const giftSender = useGiftSender();
   const reduced = useReducedMotion();
+  const hints = useId();
+  useLight(!turned);
 
   const save = useCallback((sticker: Pick<StickerRecord, "id" | "no">, placement: Placement) => {
     updatePlacement(sticker.id, placement).then(
@@ -258,8 +264,10 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     setTurned(over);
     if (over) select(null);
   };
+  // Back turns the stat board back over, as LINE's Back does on any overlay.
+  useBackToClose(turned, () => turn(false));
 
-  const { hold, stow } = useBoardGestures({
+  const { hold, stow, tabStop } = useBoardGestures({
     stage,
     stickers: onBoard,
     field,
@@ -334,6 +342,13 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     },
   };
   const stack = stackOf(onBoard);
+  // Screen readers and the arrow keys take the stickers in reading order, which is the DOM's too.
+  const order = field
+    ? readingOrder(onBoard.map((s) => ({ id: s.id, ...toPx(field, s.placement) })))
+    : [];
+  const inOrder = order.flatMap((id) => onBoard.filter((s) => s.id === id));
+  // The stickers' one Tab stop: the one last focused, else the selected one, else the first.
+  const tabbable = [tabStop, selected].find((id) => id && order.includes(id)) ?? order[0];
   const chosen = onBoard.find((s) => s.id === selected);
   const chosenBox = chosen && field && size && stickerBox(field, size.W, chosen.placement, chosen);
   // Where the knob would sit off the board or under the name, it hangs below the sticker.
@@ -350,7 +365,40 @@ export function StickerBoard({ freshId, onDraw }: Props) {
 
   const front = (
     <div className="board" ref={setFace}>
+      {/* Your name and Draw come before the stickers, so Tab reaches them first. */}
+      <button
+        ref={nameButton}
+        className="board-who"
+        onClick={() => turn(!turned)}
+        aria-expanded={turned}
+        aria-haspopup="dialog"
+        aria-label={`${me.displayName}: your stats`}
+      >
+        <PhotoSticker src={me.pictureUrl} name={me.displayName} size={42} />
+        <span className="board-who-name">{me.displayName}</span>
+      </button>
+
+      {/* The slot carries the first-sticker hop and ring, so the key keeps its own lip and press. */}
+      <span ref={drawSlot} className={`board-draw ${firstVisit ? "is-fresh" : ""}`}>
+        <Key size="compact" icon={<DrawIcon />} onClick={onDraw} aria-label="Draw a new sticker">
+          Draw
+        </Key>
+      </span>
+      {firstVisit && (
+        <span className="board-nudge" aria-hidden>
+          Make your first sticker
+        </span>
+      )}
+
       <div className="board-stage" ref={stage} role="region" aria-label="Sticker board">
+        {/* Descriptions only: hidden from reading, still read out for the sticker that names them. */}
+        <span id={`${hints}-focus`} hidden>
+          Enter selects it. Arrow keys go to the other stickers.
+        </span>
+        <span id={`${hints}-selected`} hidden>
+          Selected. Enter opens it, and Tab reaches its toolbar. Arrow keys move it, [ and ] turn
+          it, minus and plus resize it, Delete takes it off the board, and Escape lets go of it.
+        </span>
         {stickers && onBoard.length === 0 && givenSilhouettes.length === 0 && (
           <div className="board-blank" style={blankStyle}>
             <span className="board-blank-cut" aria-hidden />
@@ -370,7 +418,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           ))}
         {field &&
           size &&
-          onBoard.map((s) => (
+          inOrder.map((s) => (
             <Fragment key={s.id}>
               <PlacedSticker
                 sticker={s}
@@ -384,10 +432,14 @@ export function StickerBoard({ freshId, onDraw }: Props) {
                 landing={s.id === landingId}
                 onLanded={landedNow}
                 reduced={reduced}
+                tabbable={s.id === tabbable}
+                position={`${order.indexOf(s.id) + 1} of ${order.length}`}
+                hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
               />
               {/* Right after its sticker, so Tab reaches it next. */}
               {s.id === selected && !hold && (
                 <StickerToolbar
+                  label={formatNo(s.no)}
                   sticker={{ ...stickerBox(field, size.W, s.placement, s), r: s.placement.r }}
                   board={size}
                   knobBelow={knobBelow}
@@ -443,30 +495,6 @@ export function StickerBoard({ freshId, onDraw }: Props) {
             Try again
           </LabelButton>
         </div>
-      )}
-
-      <button
-        ref={nameButton}
-        className="board-who"
-        onClick={() => turn(!turned)}
-        aria-expanded={turned}
-        aria-haspopup="dialog"
-        aria-label={`${me.displayName}: your stats`}
-      >
-        <PhotoSticker src={me.pictureUrl} name={me.displayName} size={42} />
-        <span className="board-who-name">{me.displayName}</span>
-      </button>
-
-      {/* The slot carries the first-sticker hop and ring, so the key keeps its own lip and press. */}
-      <span ref={drawSlot} className={`board-draw ${firstVisit ? "is-fresh" : ""}`}>
-        <Key size="compact" icon={<DrawIcon />} onClick={onDraw} aria-label="Draw a new sticker">
-          Draw
-        </Key>
-      </span>
-      {firstVisit && (
-        <span className="board-nudge" aria-hidden>
-          Make your first sticker
-        </span>
       )}
 
       {giving && giftSender && (
