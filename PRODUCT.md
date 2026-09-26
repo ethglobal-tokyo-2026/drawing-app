@@ -34,22 +34,22 @@ These artists are **suspicious of crypto and money in an art app.** ad0ll, an ar
 
 ## Product Purpose
 
-Draw on your phone every day, and **give your drawings to other artists** with real digital scarcity. A finished drawing becomes a one-of-one piece in your **Sketchbook**. Its image data is protected with anti-AI poisoning (Nightshade or similar), and only whoever holds the piece can remove that protection. You can keep it, give it away, or trade it.
+Draw on your phone every day, and **give your drawings to other artists** with real digital scarcity. A finished drawing becomes a one-of-one sticker on your **sticker board**. Its image data is protected with anti-AI poisoning (Nightshade or similar), and only whoever holds the sticker can remove that protection. You can keep it, give it away, or trade it.
 
-Success means an artist finishes a drawing in one sitting, gives it to a friend, and that friend accepts.
+Success means an artist finishes a drawing in one sitting, gives it to a friend, and that friend receives it.
 
 ## Positioning
 
-You can hand someone a physical drawing, but no existing system makes a _digital_ drawing scarce enough to give. Here, giving one moves it: it leaves your Sketchbook, and old links to it redirect to its new owner (ad0ll, 2026-09-22, tentative; the spec had them stop working). The seamless consumer flow for handing a drawing off is the part no neighbouring product has.
+You can hand someone a physical drawing, but no existing system makes a _digital_ drawing scarce enough to give. Here, giving one moves it: it leaves your sticker board, and old links to it redirect to its new owner (ad0ll, 2026-09-22, tentative; the spec had them stop working). The seamless consumer flow for handing a drawing off is the part no neighbouring product has.
 
 ## Operating Context
 
 - **Opening the app is drawing.** One button starts a drawing; nothing sits in between.
-- **Every drawing is a 5-minute session** (ad0ll, 2026-09-22). The clock starts at the **first stroke**, not when the canvas opens, and **pauses while the app is hidden** (minimized or switched away), resuming on return (ad0ll, 2026-09-22). At 0:00 it goes straight to Finish. Strokes in progress may sit in app-private storage during the session so a reload doesn't lose them; that storage is **wiped at Finish** (ad0ll, 2026-09-22). This is the spec's own solution to its storage problem: progress never needs durable storage, and image data never lands on the device, which keeps pieces scarce. It also makes "daily drawing" one small daily ritual, and gives each piece an honest time-spent figure. The sketch shows ⌛5:00 on the canvas.
-- **Finishing is a ceremony, not a save.** "Finish drawing" protects the image, makes it a one-of-one, saves it to cloud storage, adds it to the Sketchbook, and then offers to post it to your feed. Its metadata is the artist, time spent, and date created.
-- **Giving is two-sided.** The recipient must accept; only then does the piece transfer. After that, the giver is prompted to post about it.
+- **Every drawing is a 5-minute session** (ad0ll, 2026-09-22). The clock starts at the **first stroke**, not when the canvas opens, and **pauses while the app is hidden** (minimized or switched away), resuming on return (ad0ll, 2026-09-22). At 0:00 it goes straight to Finish. Strokes in progress may sit in app-private storage during the session so a reload doesn't lose them; that storage is **wiped at Finish** (ad0ll, 2026-09-22). This is the spec's own solution to its storage problem: progress never needs durable storage, and image data never lands on the device, which keeps stickers scarce. It also makes "daily drawing" one small daily ritual, and gives each sticker an honest time-spent figure. The sketch shows ⌛5:00 on the canvas.
+- **Finishing is a ceremony, not a save.** "Finish drawing" protects the image, makes it a one-of-one, saves it to cloud storage, adds it to the sticker board, and then offers to post it to your feed. Its metadata is the artist, time spent, and date created.
+- **Giving is two-sided.** The sticker transfers only once the recipient receives it. After that, the giver is prompted to post about it.
 - **Gratitude is a combo minigame** (ad0ll, 2026-09-23, replacing the flat five-second window). It's modelled on Death Stranding's likes, and it's the product's signature interaction.
-  - A received piece shows a **Send gratitude** button. It opens a big, softly pulsing heart and a one-line instruction to tap.
+  - A received sticker shows a **Send gratitude** button. It opens a big, softly pulsing heart and a one-line instruction to tap.
   - The first tap starts a **bar that drains**. Fast tapping wins some of it back, but the drain keeps speeding up, so after about 5 seconds it outruns anyone's tapping and the combo ends. Each tap is one gratitude.
   - **Effects escalate with the combo.** Early taps are modest. A long combo gets more and more anime, and more and more over the top, in suggestive, uncomfortable, played-for-laughs ways, even though you're only tapping.
   - **The intent** (ad0ll, 2026-09-23): "sexual but with hints and plausible deniability". Nothing in the app is explicitly sexual. It gets weird and possibly sexual only when you mash, or use the hidden gestures, in the gamer experience. The friend-first default never sees it. For the presentation, the dial can be turned up.
@@ -72,15 +72,15 @@ You can hand someone a physical drawing, but no existing system makes a _digital
 - **Rendering:** JavaScript on the standard 2D canvas, as Kleki's brush engine does, switching to WebGL only if strokes aren't smooth on a real phone. Undo is stored as strokes, not full snapshots.
 - **Gestures:** "whatever gestures people expect" (ad0ll, 2026-09-22). That means the convention Procreate, Magma and Kleki share: **two-finger tap to undo, three-finger tap to redo**. **[inferred]** Pinch to zoom and two-finger drag to pan, since Magma and Kleki have them and artists will try them; they change the view, not the tools. Small undo and redo buttons back the gestures up.
 - **Never lose a stroke to LINE's own gestures.** In LINE, swiping down on the page can minimize the app, and web code alone can't reliably stop it. The app must run in a setup where LINE doesn't minimize it: a LIFF app with the `chat_message.write` scope on, or an unverified MINI App, where LINE offers minimize only to verified apps. Check on a real phone on day one.
-- **Sketchbook** (your wallet, in the product's own word): every drawing you own, whether you made it or were given it.
-- **Sketchbook drilldown:** full screen, swiping left and right between pieces. Shows the artist, date created, and date you got it; a special mark when the artist still owns their own piece; and its trade history. The owner can **take the original file**, which destroys the piece (the spec's "burn").
-- **Profile:** username, avatar, and sketchbook address. A top hero with Edit (own profile) and **Give** (someone else's). Two tabs: **Feed** (emulate Bluesky or Twitter: text posts, attached drawings, deep links and embeds to posts and drawings) and **Sketchbook**. On someone else's Sketchbook, each piece has an **Offer** button to request it.
+- **Sticker board** (your wallet, in the product's own word): every sticker you own, whether you made it or were given it.
+- **Sticker detail:** full screen, swiping left and right between stickers. Shows the artist, date created, and date you got it; a special mark when the artist still owns their own sticker; and its Transfer Trail. The owner can **take the original file**, which destroys the sticker (the spec's "burn").
+- **Profile:** username, avatar, and sticker board address. A top hero with Edit (own profile) and **Give** (someone else's). Two tabs: **Feed** (emulate Bluesky or Twitter: text posts, attached drawings, deep links and embeds to posts and drawings) and **Sticker board**. On someone else's sticker board, each sticker has an **Offer** button to request it.
 - **Offers:** a plain request, a swap for one of your own drawings, or **gratitude** (ad0ll, 2026-09-22, reversing the earlier "gratitude is never offered"). **No USDC anywhere.**
-- **Gratitude is clout, never money** (ad0ll, 2026-09-22). It's never convertible to money, but kept on-chain. It can now be offered for a piece. What happens to offered gratitude when an offer is accepted is **open**: whether it moves to the owner or is used up, and whether spending it lowers your rank. You earn it by drawing daily and keeping streaks, and from the gratitude Mini-game when someone receives your piece. It ranks you on a leaderboard that brings attention to your work. The sketch breaks a total down into daily streak, inspired, and magic. What "inspired" and "magic" measure is undefined.
-- **Global feed:** drawing activity across the app ("User drew [piece]", "User gave [piece] to User"). **User search.**
-- **Sketchbooks are public** (ad0ll, 2026-09-22). Profiles, Sketchbooks and pieces can be viewed without logging in, including by judges who don't use LINE. LINE Login is asked for only when someone acts: draws, gives, offers or accepts.
+- **Gratitude is clout, never money** (ad0ll, 2026-09-22). It's never convertible to money, but kept on-chain. It can now be offered for a sticker. What happens to offered gratitude when an offer is accepted is **open**: whether it moves to the owner or is used up, and whether spending it lowers your rank. You earn it by drawing daily and keeping streaks, and from the gratitude Mini-game when someone receives your sticker. It ranks you on a leaderboard that brings attention to your work. The sketch breaks a total down into daily streak, inspired, and magic. What "inspired" and "magic" measure is undefined.
+- **Global feed:** drawing activity across the app ("User drew [sticker]", "User gave [sticker] to User"). **User search.**
+- **Sticker boards are public** (ad0ll, 2026-09-22). Profiles, sticker boards and stickers can be viewed without logging in, including by judges who don't use LINE. LINE Login is asked for only when someone acts: draws, gives, offers or receives.
 - **Every artist picks a unique handle** (@alice). LINE display names aren't unique, so the handle is what people search for.
-  - **Underneath, the handle is the artist's ENS name.** It's unique by construction, and the artist's pieces hang off it. The interface shows only @alice, never ".eth".
+  - **Underneath, the handle is the artist's ENS name.** It's unique by construction, and the artist's stickers hang off it. The interface shows only @alice, never ".eth".
   - Handles can be Japanese: ENS accepts hiragana, katakana and kanji, and can mix in a–z. Run input through the standard ENS normalizer, and treat 。 as invalid, since only "." separates name parts.
 - **Finding people is in-app only.** LINE doesn't share anyone's friend list with apps, and since February 2023 an app can't even tell which chat it was opened from. So people find each other through Explore, handle search, a profile link shared in a LINE chat, or its QR code.
 - **Cold gifts pull people in** (ad0ll, 2026-09-23). The target case: an artist on the app wants to give a drawing to a classmate who isn't. Here is the flow, with LINE's limits:
@@ -88,27 +88,27 @@ You can hand someone a physical drawing, but no existing system makes a _digital
      - If not, a button opens LINE's own **Add friends** screen (`line.me/R/nv/addFriends`), where the artist searches the classmate's LINE ID, adds them, comes back, and picks them.
      - No app can search LINE users itself.
      - The one-friend picker shows **only** the Friends list, not recent chats or groups. It hides friends who set LINE's _External app access_ to "Never allowed", and friends added in the last few minutes. **Can't find them?** opens the full picker, where recent chats may appear.
-  2. **The piece moves to a holding area.** While the gift is in transit, only the giver can see it, marked as pending, and it's hidden from everyone else.
+  2. **The sticker moves to a holding area.** While the gift is in transit, only the giver can see it, marked as pending, and it's hidden from everyone else.
   3. **The classmate gets a card in their LINE chat, sent as the artist:** the drawing, "Alice sent you a drawing", and **Accept**. The app itself can't send this: LINE only delivers the Official Account's messages to people who have added it.
-  4. **Accepting is the sign-up.** The classmate is already logged into LINE. On a LIFF app they see one LINE consent screen; a Japan MINI App channel skips it. Then they accept the app's terms, and the server creates their account, wallet and ENS handle. The piece lands in their new Sketchbook.
+  4. **Receiving is the sign-up.** The classmate is already logged into LINE. On a LIFF app they see one LINE consent screen; a Japan MINI App channel skips it. Then they accept the app's terms, and the server creates their account, wallet and ENS handle. The sticker lands on their new sticker board.
   5. **Making sure Bob gets it, with no extra steps** (ad0ll, 2026-09-23). A hand-over step and an in-person exchange were rejected as too much friction. The confidence comes from how the gift is sent:
      - The one-friend picker sends the card to exactly one private chat. The card shows a frosted sleeve, never the drawing.
-     - **Bob's Accept delivers the piece immediately.**
-     - The artist gets a **receipt, not a gate**: "Bob Tanaka accepted No.0147 ♡", with his LINE picture. A quiet "Not them? Take it back" link works for 24 hours; the on-chain transfer finalizes after that window, so taking it back is just a refund.
+     - **Bob's Accept delivers the sticker immediately.**
+     - The artist gets a **receipt, not a gate**: "Bob Tanaka received No.0147 ♡", with his LINE picture. A quiet "Not them? Take it back" link works for 24 hours; the on-chain transfer finalizes after that window, so taking it back is just a refund.
      - Delivery is held for the artist only in rare cases: the card was opened in a group chat, or a second person tried the same card.
      - Unopened gifts return after 7 days. People already on the app get gifts directly by handle.
      - LINE ID search needs both people to have passed LINE's carrier age check, which many adults haven't done. So the one-friend picker is the main path, not ID search.
 - **Every transaction is paid by the app**, through gas-sponsored accounts or a gasless chain. That's why there's a **daily limit on drawings** per artist (ad0ll, 2026-09-23). The number is open.
-- **Give to a random artist** (ad0ll, 2026-09-23): an option from any piece in your Sketchbook. The app picks a recipient among artists on the app. They still accept or decline, and a declined gift goes to someone else.
+- **Give to a random artist** (ad0ll, 2026-09-23): an option from any sticker on your sticker board. The app picks a recipient among artists on the app. They can still receive it or decline it, and a declined gift goes to someone else.
 - **Wallets are invisible and made for you** **[inferred]**. A LINE account doesn't come with a usable wallet. LINE's own wallet products have closed or merged into Unifi, an opt-in wallet on a different chain. So the app's server creates each artist's wallet on first open, tied to their LINE ID, and handles every transaction. Nobody sees a wallet, a key or a signature prompt.
 - **Notices go through the app's LINE Official Account** **[inferred]**; ad0ll was fine either way. It's the only way to reach someone outside the app, because LINE's browser has no web push. The same account's chat carries a Draw · Explore · You menu, which is how people come back daily. Pending gifts and offers also show inside the app.
 - **Navigation** (from the sketch): three tabs, **DRAW · Explore · You**.
-- **Sponsors** (backend only; never surfaced in consumer copy): ENS gives each artist a sub-registry that resolves their sketchbook, and transfers update it. Sui/Walrus or Filecoin for file storage.
-- **Open, and not to be invented as settled:** what the sketch's "inspired" and "magic" gratitude categories measure; how the leaderboard is scoped; what happens to gratitude offered for a piece; LIFF app or MINI App channel; the product name.
+- **Sponsors** (backend only; never surfaced in consumer copy): ENS gives each artist a sub-registry that resolves their sticker board, and transfers update it. Sui/Walrus or Filecoin for file storage.
+- **Open, and not to be invented as settled:** what the sketch's "inspired" and "magic" gratitude categories measure; how the leaderboard is scoped; what happens to gratitude offered for a sticker; LIFF app or MINI App channel; the product name.
 
 ## Brand Commitments
 
-- **Never say "NFT", "crypto", "token", "wallet", "mint" or "burn" in the interface** (ad0ll: "I would want the fact that they're NFTs to be hidden in copy in the app"). The product's own words are **Sketchbook**, **piece** or **drawing**, **give**, **offer**, **gratitude**, and **take the original**.
+- **Never say "NFT", "crypto", "token", "wallet", "mint" or "burn" in the interface** (ad0ll: "I would want the fact that they're NFTs to be hidden in copy in the app"). The product's own words are **sticker board**, **sticker** or **drawing**, **give**, **offer**, **gratitude**, and **take the original**.
 - No financial framing anywhere a user can see it.
 
 ## Evidence on Hand
@@ -116,29 +116,29 @@ You can hand someone a physical drawing, but no existing system makes a _digital
 ad0ll's hand-drawn sketch (a photo in the 2026-09-22 conversation; the file is not on disk), transcribed:
 
 - **Drawing screen:** a full canvas with ⌛5:00 at top right, a pull-tab on the left edge, and a handle at the bottom. A second state shows a left tool column (eraser, fill, pencil) and a bottom **🎁 Finish** bar.
-- **Sketchbook:** a vertical thumbnail strip on the left, the current piece large with a 🔒 badge (protected), and a popup: _"You got 5k gratitude — Details: 1k daily streak · 5k inspired · 3k magic."_
-- **Sketchbook list:** rows of a thumbnail, an address (0xabcd, 0xabe, 0xdef), and a **Give** button. Addresses shown to users would contradict the brand commitment above, so this is a sketch-level placeholder.
+- **Sticker board:** a vertical thumbnail strip on the left, the current sticker large with a 🔒 badge (protected), and a popup: _"You got 5k gratitude — Details: 1k daily streak · 5k inspired · 3k magic."_
+- **Sticker board list:** rows of a thumbnail, an address (0xabcd, 0xabe, 0xdef), and a **Give** button. Addresses shown to users would contradict the brand commitment above, so this is a sketch-level placeholder.
 - **Tab bar:** DRAW · Explore · You.
-- **Explore / global feed:** a search bar, "User drew [piece] 🎁500", "User gave [piece] to User".
+- **Explore / global feed:** a search bar, "User drew [sticker] 🎁500", "User gave [sticker] to User".
 - **User search:** a query field over results User A, User B, Bluser C.
-- **Another user's profile:** back button, avatar, 🎁500 gratitude, name, a grid of their pieces, and a **Give** button.
+- **Another user's profile:** back button, avatar, 🎁500 gratitude, name, a grid of their stickers, and a **Give** button.
 
 **No real content exists:** no artwork, users, handles, or gratitude figures. Everything in the drafts is authored demonstration material and must be labelled as such.
 
 ## Product Principles
 
 1. **Giving is the product.** ad0ll calls the gift button "critical"; it's the feature artists would actually use. Every screen should keep a give within reach.
-2. **Scarcity is felt, not explained.** A given piece leaves you. Old links follow it to its new owner. Taking the original costs the piece. Show these as consequences, never as a lecture about blockchains.
+2. **Scarcity is felt, not explained.** A given sticker leaves you. Old links follow it to its new owner. Taking the original costs the sticker. Show these as consequences, never as a lecture about blockchains.
 3. **Zero steps to the canvas.** Opening the app is starting to draw.
 4. **Clout, not cash.** Gratitude measures attention and devotion. It never looks like money.
 5. **An artist's app first.** It should read as something made by artists for artists; the technology stays invisible.
-6. **Sane on the surface, about to burst at the seams** (ad0ll, 2026-09-23). It looks colorful, simple, stable, intelligent and sharply designed. A few accented oddities hint there's more. Push hard enough and it bursts at the seams: that's the power-user and easter-egg layer. Drawing, giving, accepting and gratitude stay rock solid underneath.
+6. **Sane on the surface, about to burst at the seams** (ad0ll, 2026-09-23). It looks colorful, simple, stable, intelligent and sharply designed. A few accented oddities hint there's more. Push hard enough and it bursts at the seams: that's the power-user and easter-egg layer. Drawing, giving, receiving and gratitude stay rock solid underneath.
 7. **Friends first; intensity is earned by pushing.** The default experience is calm and warm. The dopamine-and-clout side isn't behind a door: it opens up as you push the combo harder, and the numbers sit a tap away in the stats dialog and in Explore. (The hidden "flip side" reached by peeling your name label was dropped on 2026-09-24. ad0ll: the interaction "didn't look good".)
 
 ## Decisions of 2026-09-23 (latest; these override older lines)
 
 - **Stickers and the Sticker Board.** Drawings produce **stickers**; you still draw the same way.
-  - The Sketchbook becomes a **free-form sticker board**: drag stickers to move them, resize them, and remove them to a tray.
+  - The sticker board is **free-form**: drag stickers to move them, resize them, and remove them to a tray.
   - A list of stickers that aren't on the board lets you drop them in or tap to add them.
   - Stickers you make, and stickers you receive, land on the board by default.
 - **Gratitude per sticker shows as a subtle glow,** not a number. Where a user's own data lives (profile, totals) is open.
@@ -153,8 +153,8 @@ ad0ll's hand-drawn sketch (a photo in the 2026-09-22 conversation; the file is n
   - A **Shop** tab signals a Sui-backed in-app store; tickets are the only item for now.
 - **On-chain copy is allowed in the hackathon build** (for example, in the seal dialog). The real app would hide the complexity.
 - **Gift delivery: no take-back and no grace window.**
-  - Prevent mistakes at send time: the one-friend picker, a gift tag naming who it's for, accepting blocked when opened in a group chat, and each card works once.
-  - The giver just gets "Bob accepted your sticker ♡".
+  - Prevent mistakes at send time: the one-friend picker, a gift tag naming who it's for, receiving blocked when opened in a group chat, and each card works once.
+  - The giver just gets "Bob received your sticker ♡".
 - **AI sticker generation from the sketch** is coming later. It stays out of the designs until ad0ll is ready.
 - **Designs first:** ad0ll wants to see the UI and UX before any working tech.
 

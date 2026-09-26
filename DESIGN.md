@@ -260,7 +260,7 @@ The app is a シール帳, a sticker trade book. The ground is release-liner bac
 
 The surface is calm and orderly. Calm screens are almost all Liner and Ink, and color comes in flat coded fields where each hue has one meaning. The world only goes wild when you push it. Gratitude is one experience for everyone: the figures always show, and only people who keep mashing the heart reach the upper tiers, where it blushes, sweats hearts and finally fogs the glass. Nothing is hidden behind a second place: tap a person's picture or name on their board and the whole board turns over to its cork back, where their figures are pinned up as a receipt, a calendar leaf, stamps, a notebook scrap and label tape.
 
-The world refuses two category defaults. One is Procreate-grey tool chrome with a pixiv-style feed. The other is the sticker boom's gacha, rarity and "rate" market: holo foil marks who drew a piece, never how rare it is, and gratitude is never described in money words.
+The world refuses two category defaults. One is Procreate-grey tool chrome with a pixiv-style feed. The other is the sticker boom's gacha, rarity and "rate" market: holo foil marks who drew a sticker, never how rare it is, and gratitude is never described in money words.
 
 **Key Characteristics:**
 
@@ -290,7 +290,7 @@ The palette is Liner and Ink, plus five candy-bright coded fields, each with one
 
 ### Tertiary
 
-- **Grape** (grape): received, offers, and reserve tickets. The Accept key on a gift, the ticket shop's Pay key and picked pack, the Use a reserve ticket key, the Shop tab, the Send offer key, Offer for it on someone else's board, the pouch's Gifts folder tab, received-piece marks, and the ruled lines of the notebook scrap on the cork back.
+- **Grape** (grape): received, offers, and reserve tickets. The Accept key on a gift, the ticket shop's Pay key and picked pack, the Use a reserve ticket key, the Shop tab, the Send offer key, Offer for it on someone else's board, the pouch's Gifts folder tab, received-sticker marks, and the ruled lines of the notebook scrap on the cork back.
 - **Tomato** (tomato): can't undo. Stopped states, warnings and Take the original. It's never a key.
 - **Foil** (foil-pink, foil-peach, foil-lemon, foil-aqua, foil-sky, foil-lilac): six iridescent bands, one 96px period, that flow along a sticker's foil band and turn in the ring round the artist chip's picture. It isn't a fill color. It's a material worn only by a sticker drawn by someone other than the board's owner. It has no green.
 
