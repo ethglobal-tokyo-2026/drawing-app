@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearPerformanceRecording,
   createPerformanceLog,
+  describeDevice,
   describeLongFrame,
   isPerformanceRecorderOn,
   notePerformance,
@@ -153,7 +154,10 @@ describe("the performance log", () => {
     run([80]);
     log.addOurWork("gratitude", 9);
     run([FRAME, 80]);
-    expect(log.slowFrames().map((f) => f.ours)).toEqual([{ gratitude: 6, light: 1 }, {}]);
+    expect(log.slowFrames().map((f) => f.ours)).toEqual([
+      { gratitude: { ms: 6, calls: 2 }, light: { ms: 1, calls: 1 } },
+      {},
+    ]);
   });
 
   it("keeps the latest slow frames, counts each screen's, and clears", () => {
@@ -265,7 +269,10 @@ describe("the recorder on the page", () => {
     const recording = readPerformanceRecording();
     expect(recording?.summary).toMatchObject({ slow: 1 });
     const [slow] = recording?.slowFrames ?? [];
-    expect(slow).toMatchObject({ screen: "Send gratitude", ours: { gratitude: 6 } });
+    expect(slow).toMatchObject({
+      screen: "Send gratitude",
+      ours: { gratitude: { ms: 6, calls: 1 } },
+    });
     expect(slow.events.map((e) => e.detail)).toContain("tier-up オーバーヒート");
     expect(queued).toBeNull();
     const types = (calls: unknown[][]) =>
@@ -358,6 +365,14 @@ describe("the recorder on the page", () => {
     expect(slow.events.map((e) => `${e.kind}: ${e.detail}`)).toContain(
       "key: Unidentified on the page",
     );
+  });
+
+  it("says when the clock moves in whole ms, as WebKit's does", () => {
+    let t = 0;
+    const now = vi.spyOn(performance, "now").mockImplementation(() => Math.floor((t += 0.3)));
+    expect(describeDevice()).toMatch(/window \d+×\d+, clock in 1ms steps$/);
+    now.mockImplementation(() => (t += 0.005));
+    expect(describeDevice()).not.toContain("clock");
   });
 
   it("starts and stops at once from the switch, and keeps the setting for the next start", () => {

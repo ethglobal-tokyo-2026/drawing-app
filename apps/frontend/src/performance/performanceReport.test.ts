@@ -19,7 +19,7 @@ const slowFrame: SlowFrame = {
   end: 65_384,
   typicalMs: 16.7,
   screen: "Send gratitude",
-  ours: { light: 0.5, gratitude: 11.9 },
+  ours: { light: { ms: 0.5, calls: 1 }, gratitude: { ms: 11.9, calls: 3 } },
   events: [
     { at: 64_990, ms: 0, kind: "tap", detail: 'pointerdown button "Send gratitude to @alice"' },
     { at: 65_150, ms: 0, kind: "light", detail: "write to 3 resins" },
@@ -55,7 +55,7 @@ describe("the performance report", () => {
     expect(report()).toContain(
       [
         "1:04.2 Send gratitude: 184ms (typical 16.7ms)",
-        "  ours 12.4ms: gratitude 11.9ms, light 0.5ms",
+        "  ours 12.4ms: gratitude 11.9ms (3 calls), light 0.5ms (1 call)",
         '  -210ms tap: pointerdown button "Send gratitude to @alice"',
         "  -50ms light: write to 3 resins ×2",
         "  +10ms gratitude: tier-up オーバーヒート",

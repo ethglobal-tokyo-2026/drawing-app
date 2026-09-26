@@ -14,6 +14,15 @@ interface TimelineEvent {
   detail: string;
 }
 
+/**
+ * Our work under one label in a frame: its time, and how many `timeOurWork` calls it took. The
+ * calls tell work apart from none where the clock moves in whole ms, as WebKit's does.
+ */
+export interface OurWork {
+  ms: number;
+  calls: number;
+}
+
 /** A frame over `SLOW_FACTOR` typical frames, and what happened around it. */
 export interface SlowFrame {
   /** Its interval: when the frame before it began, and when it began. */
@@ -22,8 +31,8 @@ export interface SlowFrame {
   /** The typical frame it was judged against, in ms, but never over 30 fps's. */
   typicalMs: number;
   screen: string;
-  /** Our own script time in it, in ms by label. */
-  ours: Record<string, number>;
+  /** Our own script time in it, by label. */
+  ours: Record<string, OurWork>;
   /** What happened from `BEFORE_SLOW_MS` before it to its end, oldest first. */
   events: TimelineEvent[];
 }
@@ -92,7 +101,7 @@ export function createPerformanceLog(now: number): PerformanceLog {
   const sorting = new Float64Array(TYPICAL_OF);
   let last: number | null = null;
   let hidden = false;
-  let ours: Record<string, number> | null = null;
+  let ours: Record<string, OurWork> | null = null;
   let pending: SlowFrame[] = [];
   let kept: SlowFrame[] = [];
   let frames = 0;
@@ -187,7 +196,9 @@ export function createPerformanceLog(now: number): PerformanceLog {
     note,
     addOurWork: (label, ms) => {
       ours ??= {};
-      ours[label] = (ours[label] ?? 0) + ms;
+      const work = (ours[label] ??= { ms: 0, calls: 0 });
+      work.ms += ms;
+      work.calls++;
     },
     setScreen: (next, at) => {
       screen = next;
@@ -325,10 +336,28 @@ export function readPerformanceRecording(): {
   return log && { summary: log.summary(), slowFrames: log.slowFrames() };
 }
 
-/** The phone and browser, for the report. */
+/** The phone and browser, for the report, and the clock's step where it's a whole ms or more. */
 export function describeDevice(): string {
   const { width, height } = window.screen;
-  return `${navigator.userAgent}\nScreen ${width}×${height} at ${devicePixelRatio}x, window ${innerWidth}×${innerHeight}`;
+  const step = clockStepMs();
+  const clock = step >= 1 ? `, clock in ${Math.round(step)}ms steps` : "";
+  return `${navigator.userAgent}\nScreen ${width}×${height} at ${devicePixelRatio}x, window ${innerWidth}×${innerHeight}${clock}`;
+}
+
+/**
+ * How far performance.now() moves at a time, in ms, read to its next tick and then over one whole
+ * step: at most 2ms of reads where it moves in whole ms. 0 for a clock that doesn't move.
+ */
+function clockStepMs(): number {
+  const tickAfter = (from: number) => {
+    for (let reads = 0; reads < 100_000; reads++) {
+      const now = performance.now();
+      if (now !== from) return now;
+    }
+    return from;
+  };
+  const tick = tickAfter(performance.now());
+  return tickAfter(tick) - tick;
 }
 
 /** Chromium's long animation frame entry, which TypeScript's DOM types don't have yet. */

@@ -17,6 +17,7 @@ const share = (part: number, whole: number) =>
   `${whole > 0 ? ((part / whole) * 100).toFixed(1) : "0.0"}%`;
 const fps = (typicalMs: number) => Math.round(1000 / typicalMs);
 const screenName = (screen: string) => screen || "untitled";
+const calls = (n: number) => `${count(n)} ${n === 1 ? "call" : "calls"}`;
 
 /** 45s, or 3m 12s. */
 function span(duration: number): string {
@@ -45,9 +46,11 @@ export function formatSummaryLine(summary: PerformanceSummary): string {
 
 /** A slow frame: when and where, our work in it, and what happened around it, repeats counted. */
 function slowFrameLines(frame: SlowFrame, startedAt: number): string[] {
-  const work = Object.entries(frame.ours).sort(([, a], [, b]) => b - a);
-  const ours = work.reduce((sum, [, spent]) => sum + spent, 0);
-  const split = work.map(([label, spent]) => `${label} ${ms(spent, 1)}`).join(", ");
+  const work = Object.entries(frame.ours).sort(([, a], [, b]) => b.ms - a.ms);
+  const ours = work.reduce((sum, [, spent]) => sum + spent.ms, 0);
+  const split = work
+    .map(([label, spent]) => `${label} ${ms(spent.ms, 1)} (${calls(spent.calls)})`)
+    .join(", ");
   const seen = new Map<string, { line: string; times: number }>();
   for (const event of frame.events) {
     const offset = Math.round(event.at - frame.start);
