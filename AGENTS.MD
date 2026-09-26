@@ -197,8 +197,8 @@ pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
   - `src/performance` — the performance recorder, switched on from the stat board's developer slip: frame intervals, slow frames and what happened around each, for phones where LINE's browser has no developer tools
   - `src/line` — LIFF: starts before the app renders and holds it until LINE has logged the person in. The dev server uses real LINE too, through a LIFF app whose endpoint is the dev server (`apps/frontend/.env.example`)
   - `src/identity` — who the person is: the LINE profile, and the Privy sign-in, which trades LINE's ID token at the auth server for a Privy JWT (Privy's SDK loads only after the board)
-  - `src/shop` — the Shop: the reserve tickets section, the coming-soon shelves and their previews, and the Sui credit
-  - `src/tickets` (the tickets, their cards and the reserve ticket checkout), `src/stickers` (display formatting, and the sticker's material: the figure, its live resin and the shared light), `src/payments`
+  - `src/shop` — the Shop: the reserve tickets section and your ticket purchases, the coming-soon shelves and their previews, and the Sui credit
+  - `src/tickets` (the tickets, their cards, the reserve ticket checkout and the ticket purchases list), `src/stickers` (display formatting, and the sticker's material: the figure, its live resin and the shared light), `src/payments`
   - `src/i18n` — the catalog (`strings/`), the i18next instance, the app's language and its formatters; `apps/frontend/scripts/` holds the catalog's export and import
   - `src/icons` — one icon per file; `src/styles` — CSS shared across features
 - `packages/db` — Drizzle schema (`src/schema/`), migrations (`drizzle/`) and typed database client (`@drawing-app/db`)
