@@ -21,6 +21,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import type { GiftChain, Mint, SmartWallets } from "../deps.ts";
+import { diagnosticStep, logFailure, logInfo } from "../diagnostics.ts";
 import type { DiskImageStore } from "./imageStore.ts";
 
 const escrowStatuses = ["missing", "pending", "claimed", "rejected", "expired_returned"] as const;
@@ -59,19 +60,28 @@ export function createStickerChain({
   const walletClient = createWalletClient({ chain: sepolia, transport, account: sealerAccount });
 
   const mint: Mint = async (sticker) => {
+    const fields = {
+      stickerId: sticker.stickerId,
+      artistId: sticker.artistId,
+      chainId: sepolia.id,
+      contractAddress: stickerAddress,
+      address: sealerAccount.address,
+    };
     const image = images.urls(sticker.contentHash).png;
-    await images.saveMetadata(sticker.stickerId, {
-      name: sticker.number ? `Sticker No.${String(sticker.number).padStart(4, "0")}` : "Sticker",
-      description: "A one-of-one sticker sealed in Daily Drawing App.",
-      image,
-      external_url: image,
-      attributes: [
-        { trait_type: "Content hash", value: sticker.contentHash },
-        ...(sticker.width && sticker.height
-          ? [{ trait_type: "Dimensions", value: `${sticker.width} × ${sticker.height}` }]
-          : []),
-      ],
-    });
+    await diagnosticStep("chain.mint.metadata", fields, () =>
+      images.saveMetadata(sticker.stickerId, {
+        name: sticker.number ? `Sticker No.${String(sticker.number).padStart(4, "0")}` : "Sticker",
+        description: "A one-of-one sticker sealed in Daily Drawing App.",
+        image,
+        external_url: image,
+        attributes: [
+          { trait_type: "Content hash", value: sticker.contentHash },
+          ...(sticker.width && sticker.height
+            ? [{ trait_type: "Dimensions", value: `${sticker.width} × ${sticker.height}` }]
+            : []),
+        ],
+      }),
+    );
     const seal = createStickerSealer({
       publicClient,
       walletClient,
@@ -94,34 +104,55 @@ export function createStickerChain({
           ? { address: found, kind: "smart_account", chainId: sepolia.id }
           : null;
       },
+      onProgress: ({ stage, phase, error, ...progress }) => {
+        const event = `chain.mint.${stage}.${phase}`;
+        const context = { ...fields, ...progress };
+        if (phase === "failed") logFailure(event, error, context);
+        else logInfo(event, context);
+      },
     });
-    const result = await seal({ artistId: sticker.artistId, stickerId: sticker.stickerId });
+    const result = await diagnosticStep("chain.mint", fields, () =>
+      seal({ artistId: sticker.artistId, stickerId: sticker.stickerId }),
+    );
     let txHash = "transactionHash" in result ? result.transactionHash : undefined;
     if (!txHash) {
-      const [event] = await publicClient.getContractEvents({
-        address: stickerAddress,
-        abi: stickerNftAbi,
-        eventName: "StickerSealed",
-        args: { stickerId: keccak256(stringToBytes(sticker.stickerId)) },
-        fromBlock: 0n,
-        toBlock: "latest",
+      txHash = await diagnosticStep("chain.mint.event_lookup", fields, async () => {
+        const [event] = await publicClient.getContractEvents({
+          address: stickerAddress,
+          abi: stickerNftAbi,
+          eventName: "StickerSealed",
+          args: { stickerId: keccak256(stringToBytes(sticker.stickerId)) },
+          fromBlock: 0n,
+          toBlock: "latest",
+        });
+        return event?.transactionHash;
       });
-      txHash = event?.transactionHash;
     }
     if (!txHash) throw new Error("The sticker is minted, but its transaction hash was not found");
+    logInfo("chain.mint.confirmed", {
+      ...fields,
+      tokenId: result.tokenId.toString(),
+      txHash,
+      recovered: result.alreadySealed,
+    });
     return { tokenId: result.tokenId.toString(), txHash };
   };
 
   const readEscrowGift: GiftChain["readEscrowGift"] = async (giftId) => {
-    const [sender, recipient, tokenId, claimCommitment, expiresAt, status] =
-      await publicClient.readContract({
-        address: escrowAddress,
-        abi: stickerGiftEscrowAbi,
-        functionName: "gifts",
-        args: [bytes32(giftId, "Gift ID")],
-      });
+    const [sender, recipient, tokenId, claimCommitment, expiresAt, status] = await diagnosticStep(
+      "chain.escrow.read",
+      { giftId, chainId: sepolia.id, contractAddress: escrowAddress },
+      () =>
+        publicClient.readContract({
+          address: escrowAddress,
+          abi: stickerGiftEscrowAbi,
+          functionName: "gifts",
+          args: [bytes32(giftId, "Gift ID")],
+        }),
+    );
     const named = escrowStatuses[status];
     if (!named) throw new Error(`Escrow returned unknown gift status ${status}`);
+    logInfo("chain.escrow.result", { giftId, status: named, tokenId: tokenId.toString() });
     return {
       sender,
       recipient,
@@ -133,7 +164,14 @@ export function createStickerChain({
   };
 
   const findSmartWallet = async (artistId: string) => {
-    const found = await smartWallets.addressFor(artistId);
+    const found = await diagnosticStep("chain.wallet.lookup", { artistId }, () =>
+      smartWallets.addressFor(artistId),
+    );
+    logInfo("chain.wallet.result", {
+      artistId,
+      address: found ?? undefined,
+      status: found ? "found" : "missing",
+    });
     return found && isAddress(found)
       ? { address: found, kind: "smart_account" as const, chainId: sepolia.id }
       : null;
@@ -157,14 +195,19 @@ export function createStickerChain({
   });
 
   const claimTransactionHash = async (giftId: Hex) => {
-    const events = await publicClient.getContractEvents({
-      address: escrowAddress,
-      abi: stickerGiftEscrowAbi,
-      eventName: "GiftClaimed",
-      args: { giftId },
-      fromBlock: 0n,
-      toBlock: "latest",
-    });
+    const events = await diagnosticStep(
+      "chain.claim.event_lookup",
+      { giftId, chainId: sepolia.id, contractAddress: escrowAddress },
+      () =>
+        publicClient.getContractEvents({
+          address: escrowAddress,
+          abi: stickerGiftEscrowAbi,
+          eventName: "GiftClaimed",
+          args: { giftId },
+          fromBlock: 0n,
+          toBlock: "latest",
+        }),
+    );
     const event = events.at(-1);
     if (!event) throw new Error(`Claimed gift ${giftId} has no GiftClaimed event`);
     return event.transactionHash;
@@ -184,6 +227,13 @@ export function createStickerChain({
       }),
     readEscrowGift,
     claimGift: async ({ giftId, giftClaimToken, recipientId }) => {
+      const fields = {
+        giftId,
+        recipientId,
+        chainId: sepolia.id,
+        contractAddress: escrowAddress,
+        address: sealerAccount.address,
+      };
       const id = bytes32(giftId, "Gift ID");
       const token = bytes32(giftClaimToken, "Gift claim token");
       const recipientWallet = await findSmartWallet(recipientId);
@@ -192,42 +242,72 @@ export function createStickerChain({
       }
 
       const reconcileClaim = async () => {
-        const gift = await readEscrowGift(id);
-        if (gift.status === "missing") return null;
-        if (!giftClaimTokenMatches(token, bytes32(gift.claimCommitment, "Claim commitment"))) {
-          throw new Error("Gift claim token is invalid");
-        }
-        if (gift.status !== "claimed") return null;
-        if (gift.recipient.toLowerCase() !== recipientWallet.address.toLowerCase()) {
-          return { claimed: false as const };
-        }
-        return { claimed: true as const, txHash: await claimTransactionHash(id) };
+        const reconciled = await diagnosticStep("chain.claim.reconcile", fields, async () => {
+          const gift = await readEscrowGift(id);
+          if (gift.status === "missing") return null;
+          if (!giftClaimTokenMatches(token, bytes32(gift.claimCommitment, "Claim commitment"))) {
+            throw new Error("Gift claim token is invalid");
+          }
+          if (gift.status !== "claimed") return null;
+          if (gift.recipient.toLowerCase() !== recipientWallet.address.toLowerCase()) {
+            return { claimed: false as const };
+          }
+          return { claimed: true as const, txHash: await claimTransactionHash(id) };
+        });
+        logInfo("chain.claim.reconcile.result", {
+          ...fields,
+          recovered: reconciled?.claimed ?? false,
+          status:
+            reconciled === null
+              ? "not_claimed"
+              : reconciled.claimed
+                ? "claimed"
+                : "other_recipient",
+          txHash: reconciled?.claimed ? reconciled.txHash : undefined,
+        });
+        return reconciled;
       };
 
       const existing = await reconcileClaim();
       if (existing) return existing;
+      let txHash: Hex | undefined;
       try {
-        const authorized = await authorizer.authorizeClaim({
-          giftId: id,
-          giftClaimToken: token,
-          recipientArtistId: recipientId,
+        const authorized = await diagnosticStep("chain.claim.authorize", fields, () =>
+          authorizer.authorizeClaim({
+            giftId: id,
+            giftClaimToken: token,
+            recipientArtistId: recipientId,
+          }),
+        );
+        txHash = await diagnosticStep("chain.claim.submit", fields, () =>
+          walletClient.writeContract({
+            address: escrowAddress,
+            abi: stickerGiftEscrowAbi,
+            functionName: "claimGift",
+            args: [
+              id,
+              authorized.recipient,
+              BigInt(authorized.authorizationDeadline),
+              authorized.authorization,
+            ],
+            account: sealerAccount,
+          }),
+        );
+        logInfo("chain.claim.submitted", { ...fields, txHash });
+        const hash = txHash;
+        await diagnosticStep("chain.claim.receipt", { ...fields, txHash }, async () => {
+          const receipt = await publicClient.waitForTransactionReceipt({ hash });
+          logInfo("chain.claim.receipt.result", {
+            ...fields,
+            txHash,
+            status: receipt.status,
+            blockNumber: receipt.blockNumber?.toString(),
+          });
+          if (receipt.status !== "success") throw new Error(`Claiming gift ${id} reverted`);
         });
-        const txHash = await walletClient.writeContract({
-          address: escrowAddress,
-          abi: stickerGiftEscrowAbi,
-          functionName: "claimGift",
-          args: [
-            id,
-            authorized.recipient,
-            BigInt(authorized.authorizationDeadline),
-            authorized.authorization,
-          ],
-          account: sealerAccount,
-        });
-        const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-        if (receipt.status !== "success") throw new Error(`Claiming gift ${id} reverted`);
         return { claimed: true, txHash };
       } catch (error) {
+        logFailure("chain.claim.transaction.failed", error, { ...fields, txHash });
         // A timeout can hide a transaction that landed. Read the escrow before allowing a retry.
         const reconciled = await reconcileClaim();
         if (reconciled) return reconciled;

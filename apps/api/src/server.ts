@@ -7,6 +7,7 @@ import { isHex } from "viem";
 import { z } from "zod";
 import { createServer } from "./app.ts";
 import type { AppDeps } from "./deps.ts";
+import { logInfo } from "./diagnostics.ts";
 import { chooseLineVerifier } from "./services/devSignIn.ts";
 import { createDiskImageStore } from "./services/imageStore.ts";
 import { createLineVerifier } from "./services/lineVerifier.ts";
@@ -100,6 +101,8 @@ const deps: AppDeps = {
   sui: mockSuiPayments,
   suiPrice: () => Promise.resolve(MOCK_SUI_YEN),
 };
+
+logInfo("api.configured", { mode: env.STICKER_CHAIN_MODE });
 
 // Only a proxy on this machine reaches it: Vite's in development, HAProxy's on the box.
 serve(

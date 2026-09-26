@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   encodeAbiParameters,
   encodeEventTopics,
@@ -34,6 +34,23 @@ const GIFT_ID = hex("3");
 const CONTENT = hex("4");
 const STICKER_ID = "00000000-0000-4000-8000-000000000001";
 const METADATA = `https://images.test/${STICKER_ID}.json`;
+const diagnostics: unknown[] = [];
+
+function captureDiagnostic(line: unknown) {
+  if (typeof line !== "string") throw new Error("Expected a structured diagnostic");
+  const entry: unknown = JSON.parse(line);
+  diagnostics.push(entry);
+}
+
+function expectDiagnostic(event: string, fields: object = {}) {
+  expect(diagnostics).toContainEqual(expect.objectContaining({ event, ...fields }));
+}
+
+function diagnosticEvents() {
+  return diagnostics.map((entry) =>
+    typeof entry === "object" && entry !== null && "event" in entry ? entry.event : undefined,
+  );
+}
 
 function mintReceipt(to: Hex = ALICE) {
   return {
@@ -81,9 +98,14 @@ const escrowGift = (status: number, recipient = BOB) => [
 
 beforeEach(() => {
   vi.resetAllMocks();
+  diagnostics.length = 0;
+  vi.spyOn(console, "info").mockImplementation(captureDiagnostic);
+  vi.spyOn(console, "error").mockImplementation(captureDiagnostic);
   rpc.writeContract.mockResolvedValue(TX);
   rpc.waitForTransactionReceipt.mockResolvedValue({ status: "success" });
 });
+
+afterEach(() => vi.restoreAllMocks());
 
 describe("Sepolia sticker adapter", () => {
   it("mints to the artist's smart wallet and recovers an existing mint without sending another", async () => {
@@ -125,6 +147,23 @@ describe("Sepolia sticker adapter", () => {
         image: `https://images.test/${CONTENT}.png`,
       }),
     );
+    expectDiagnostic("chain.mint.wallet_lookup.completed", {
+      stickerId: STICKER_ID,
+      address: ALICE,
+    });
+    expectDiagnostic("chain.mint.simulate.completed", { stickerId: STICKER_ID });
+    expectDiagnostic("chain.mint.submit.completed", { stickerId: STICKER_ID, txHash: TX });
+    expectDiagnostic("chain.mint.receipt.completed", { txHash: TX, status: "success" });
+    expectDiagnostic("chain.mint.confirmed", {
+      stickerId: STICKER_ID,
+      tokenId: "1",
+      txHash: TX,
+      recovered: true,
+    });
+    const output = JSON.stringify(diagnostics);
+    expect(output).not.toContain(METADATA);
+    expect(output).not.toContain(CONTENT);
+    expect(output).not.toContain(hex("5"));
   });
 
   it("claims to the recipient's smart wallet and checks the transaction receipt", async () => {
@@ -144,6 +183,13 @@ describe("Sepolia sticker adapter", () => {
       }),
     );
     expect(rpc.waitForTransactionReceipt).toHaveBeenCalledWith({ hash: TX });
+    expectDiagnostic("chain.claim.submitted", { giftId: GIFT_ID, recipientId: "bob", txHash: TX });
+    expectDiagnostic("chain.claim.receipt.result", {
+      giftId: GIFT_ID,
+      txHash: TX,
+      status: "success",
+    });
+    expect(JSON.stringify(diagnostics)).not.toContain(TOKEN);
   });
 
   it("does not confirm a mint whose receipt names a different recipient", async () => {
@@ -186,11 +232,72 @@ describe("Sepolia sticker adapter", () => {
     rpc.readContract.mockResolvedValue(escrowGift(2, ALICE));
     await expect(chain.giftChain.claimGift(claimInput)).resolves.toEqual({ claimed: false });
     expect(rpc.writeContract).toHaveBeenCalledOnce();
+    expectDiagnostic("chain.claim.receipt.failed", { giftId: GIFT_ID, txHash: TX });
+    expectDiagnostic("chain.claim.reconcile.result", {
+      giftId: GIFT_ID,
+      txHash: TX,
+      recovered: true,
+    });
+    expectDiagnostic("chain.claim.reconcile.result", {
+      giftId: GIFT_ID,
+      recovered: false,
+      status: "other_recipient",
+    });
   });
 
   it("does not report a reverted claim as successful", async () => {
     rpc.readContract.mockResolvedValue(escrowGift(1));
     rpc.waitForTransactionReceipt.mockResolvedValue({ status: "reverted" });
     await expect(adapter().giftChain.claimGift(claimInput)).rejects.toThrow("reverted");
+    expectDiagnostic("chain.claim.receipt.result", { txHash: TX, status: "reverted" });
+    expectDiagnostic("chain.claim.transaction.failed", { giftId: GIFT_ID, txHash: TX });
+  });
+
+  it("records the mint submission error before a failing reconciliation read", async () => {
+    const submissionError = new Error(`RPC rejected https://rpc.test/private-key ${hex("5")}`);
+    const reconciliationError = new Error("Reconciliation read unavailable");
+    rpc.readContract.mockResolvedValueOnce(0n).mockRejectedValueOnce(reconciliationError);
+    rpc.simulateContract.mockResolvedValue({ request: {} });
+    rpc.writeContract.mockRejectedValue(submissionError);
+
+    await expect(
+      adapter().mint({
+        stickerId: STICKER_ID,
+        artistId: "alice",
+        contentHash: CONTENT,
+        metadataUri: METADATA,
+      }),
+    ).rejects.toBe(reconciliationError);
+
+    expectDiagnostic("chain.mint.transaction.failed", { stickerId: STICKER_ID });
+    expectDiagnostic("chain.mint.reconcile.failed", { stickerId: STICKER_ID });
+    const events = diagnosticEvents();
+    expect(events.indexOf("chain.mint.transaction.failed")).toBeLessThan(
+      events.indexOf("chain.mint.reconcile.failed"),
+    );
+    const output = JSON.stringify(diagnostics);
+    expect(output).toContain("RPC rejected");
+    expect(output).not.toContain("https://rpc.test/private-key");
+    expect(output).not.toContain(hex("5"));
+  });
+
+  it("retains the submitted claim hash and first error when reconciliation also fails", async () => {
+    const reconciliationError = new Error("Reconciliation read unavailable");
+    rpc.readContract.mockResolvedValue(escrowGift(1));
+    rpc.waitForTransactionReceipt.mockImplementation(async () => {
+      rpc.readContract.mockRejectedValue(reconciliationError);
+      throw new Error("Receipt timed out");
+    });
+
+    await expect(adapter().giftChain.claimGift(claimInput)).rejects.toBe(reconciliationError);
+
+    expectDiagnostic("chain.claim.transaction.failed", { giftId: GIFT_ID, txHash: TX });
+    expectDiagnostic("chain.claim.reconcile.failed", { giftId: GIFT_ID });
+    const events = diagnosticEvents();
+    expect(events.indexOf("chain.claim.transaction.failed")).toBeLessThan(
+      events.indexOf("chain.claim.reconcile.failed"),
+    );
+    expect(JSON.stringify(diagnostics)).toContain("Receipt timed out");
+    expect(rpc.writeContract).toHaveBeenCalledOnce();
   });
 });
