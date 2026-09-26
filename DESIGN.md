@@ -398,7 +398,7 @@ Stickers and the gratitude heart also respond to the app's one moving light. The
 
 ### Named Rules
 
-**The One Light Rule.** There's one light for the whole app. Static shadows fall down and to the right from the top-left light, and every moving highlight (the sticker specular and sheen, the heart's gloss) reads the shared light variables. Don't add a second light source. The foil is the one light that runs on its own clock: its bands flow on a 7s loop and a white glint sweeps it every 4.2s, staggered per sticker, so a foil sticker still shimmers when no one touches the phone. It holds still under reduced motion.
+**The One Light Rule.** There's one light for the whole app. Static shadows fall down and to the right from the top-left light, and every moving highlight (the sticker specular and sheen, the foil's glint, the heart's gloss) reads the shared light variables. Don't add a second light source. The foil's glint sits where the light falls, the same way on every sticker whatever its turn, and holds where the last tilt left it; before any tilt it rests top-left. Only the foil's bands run on their own clock, flowing on a 7s loop staggered per sticker. They hold still under reduced motion.
 
 **The Neutral Shadow Rule.** Shadows are Ink alpha, never tinted. The one exception is the cork back: paper, stamps and pins cast a cork-brown throw (rgba(58,36,16,…)) over an Ink contact line, because a shadow on cork is darker cork. The only colored light in the world is a sticker's gratitude glow, warming from faint pink toward amber as more gratitude arrives.
 
@@ -511,7 +511,7 @@ The out-of-tickets card's stock. The balance sits in a Liner Lift well in yen, w
 - **Die-cut:** the outline comes from the artist's own strokes, offset into a white border and bounded by the kiss-cut groove, with the sticker cast shadow beneath.
 - **Baked resin:** the gloss is baked into the image, with the print darker and more saturated where resin pools at the edge, a refraction band inside the cut edge, a rim light and a meniscus at the foot.
 - **Live resin:** on stickers that are showing, a live layer adds a specular along the top edge, a rim light and a sheen that sweeps when the sticker is placed, dragged or tilted.
-- **Foil:** a sticker drawn by someone other than the board's owner wears a foil band just outside its white edge: 5px on the board, 6px on the detail's big sticker, 3px on tray sheets. It's the silhouette dilated, so it follows the cut. The six foil bands flow along it and a white glint sweeps across; holes hide it; it's decorative, and the sticker's own label names the artist. The seal ceremony adds nothing: a freshly sealed sticker is yours and plain.
+- **Foil:** a sticker drawn by someone other than the board's owner wears a foil band just outside its white edge: 5px on the board, 6px on the detail's big sticker, 3px on tray sheets. It's the silhouette dilated, so it follows the cut. The six foil bands flow along it and a white glint sits where the one light falls; holes hide it; it's decorative, and the sticker's own label names the artist. The seal ceremony adds nothing: a freshly sealed sticker is yours and plain.
 - **Glow:** gratitude shows on a sticker as a soft glow behind it, warmer and brighter with more gratitude.
 - **Peel and stick:** a sticker peels with a 3D lift toward the top right and sticks with a short settle from 1.06 scale.
 
