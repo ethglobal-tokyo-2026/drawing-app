@@ -5,6 +5,7 @@ import {
   giftClaimTokenMatches,
   prepareGiftTransfer,
 } from "@drawing-app/sticker-chain/gift-sticker";
+import { createCroquisNames } from "@drawing-app/sticker-chain/croquis-names";
 import { createStickerSealer } from "@drawing-app/sticker-chain/seal-sticker";
 import {
   createPublicClient,
@@ -21,7 +22,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
-import type { GiftChain, Mint, SmartWallets } from "../deps.ts";
+import type { GiftChain, Mint, NameWriter, SmartWallets } from "../deps.ts";
 import { diagnosticStep, logFailure, logInfo } from "../diagnostics.ts";
 import type { DiskImageStore } from "./imageStore.ts";
 
@@ -51,6 +52,7 @@ export function createStickerChain({
   rpcUrl,
   stickerContract,
   escrowContract,
+  namesContract,
   sealerPrivateKey,
   smartWallets,
   images,
@@ -58,10 +60,11 @@ export function createStickerChain({
   rpcUrl: string;
   stickerContract: string;
   escrowContract: string;
+  namesContract: string;
   sealerPrivateKey: Hex;
   smartWallets: SmartWallets;
   images: DiskImageStore;
-}): { mint: Mint; giftChain: GiftChain } {
+}): { mint: Mint; giftChain: GiftChain; nameWriter: NameWriter } {
   const stickerAddress = address(stickerContract, "STICKER_NFT_ADDRESS");
   const escrowAddress = address(escrowContract, "STICKER_GIFT_ESCROW_ADDRESS");
   // Minting and Receiving share the relayer; concurrent requests need distinct nonces.
@@ -69,6 +72,32 @@ export function createStickerChain({
   const transport = rpcTransport(rpcUrl);
   const publicClient = createPublicClient({ chain: sepolia, transport });
   const walletClient = createWalletClient({ chain: sepolia, transport, account: sealerAccount });
+
+  // Historical state locates the transition without asking a provider to search the whole chain.
+  const eventBlock = async (contract: Address, happened: (block: bigint) => Promise<boolean>) => {
+    let first = 0n;
+    let last = await publicClient.getBlockNumber();
+    if (!(await happened(last))) {
+      throw new Error("The confirmed chain state is not visible at the latest block");
+    }
+    const deadline = Date.now() + 30_000;
+    let probes = 0;
+    while (first < last) {
+      if (Date.now() >= deadline) throw new Error("Finding the Sticker event block timed out");
+      const block = (first + last) / 2n;
+      const code = await publicClient.getCode({ address: contract, blockNumber: block });
+      if (code && code !== "0x" && (await happened(block))) last = block;
+      else first = block + 1n;
+      probes += 1;
+      if (probes % 8 === 0) {
+        logInfo("chain.event_lookup.progress", {
+          contractAddress: contract,
+          blockNumber: block.toString(),
+        });
+      }
+    }
+    return first;
+  };
 
   const mint: Mint = async (sticker) => {
     const fields = {
@@ -128,13 +157,25 @@ export function createStickerChain({
     let txHash = "transactionHash" in result ? result.transactionHash : undefined;
     if (!txHash) {
       txHash = await diagnosticStep("chain.mint.event_lookup", fields, async () => {
+        const stickerId = keccak256(stringToBytes(sticker.stickerId));
+        const block = await eventBlock(
+          stickerAddress,
+          async (blockNumber) =>
+            (await publicClient.readContract({
+              address: stickerAddress,
+              abi: stickerNftAbi,
+              functionName: "tokenIdForSticker",
+              args: [stickerId],
+              blockNumber,
+            })) !== 0n,
+        );
         const [event] = await publicClient.getContractEvents({
           address: stickerAddress,
           abi: stickerNftAbi,
           eventName: "StickerSealed",
-          args: { stickerId: keccak256(stringToBytes(sticker.stickerId)) },
-          fromBlock: 0n,
-          toBlock: "latest",
+          args: { stickerId },
+          fromBlock: block,
+          toBlock: block,
         });
         return event?.transactionHash;
       });
@@ -209,15 +250,26 @@ export function createStickerChain({
     const events = await diagnosticStep(
       "chain.claim.event_lookup",
       { giftId, chainId: sepolia.id, contractAddress: escrowAddress },
-      () =>
-        publicClient.getContractEvents({
+      async () => {
+        const block = await eventBlock(escrowAddress, async (blockNumber) => {
+          const gift = await publicClient.readContract({
+            address: escrowAddress,
+            abi: stickerGiftEscrowAbi,
+            functionName: "gifts",
+            args: [giftId],
+            blockNumber,
+          });
+          return gift[5] === 2;
+        });
+        return publicClient.getContractEvents({
           address: escrowAddress,
           abi: stickerGiftEscrowAbi,
           eventName: "GiftClaimed",
           args: { giftId },
-          fromBlock: 0n,
-          toBlock: "latest",
-        }),
+          fromBlock: block,
+          toBlock: block,
+        });
+      },
     );
     const event = events.at(-1);
     if (!event) throw new Error(`Claimed gift ${giftId} has no GiftClaimed event`);
@@ -327,5 +379,23 @@ export function createStickerChain({
     },
   };
 
-  return { mint, giftChain };
+  const croquisNames = createCroquisNames({
+    publicClient,
+    walletClient,
+    account: sealerAccount,
+    namesAddress: address(namesContract, "CROQUIS_NAMES_ADDRESS"),
+    onProgress: ({ stage, phase, txHash, error }) => {
+      const fields = { chainId: sepolia.id, contractAddress: namesContract, txHash };
+      if (phase === "failed") logFailure(`chain.ens.${stage}.failed`, error, fields);
+      else logInfo(`chain.ens.${stage}.${phase}`, fields);
+    },
+  });
+  const nameWriter: NameWriter = {
+    ensurePersonName: (person, label, records) =>
+      croquisNames.ensurePersonName(address(person, "Person"), label, records),
+    ensureStickerName: (tokenId, label) => croquisNames.ensureStickerName(BigInt(tokenId), label),
+    setAvatar: (person, avatar) => croquisNames.setAvatar(address(person, "Person"), avatar),
+  };
+
+  return { mint, giftChain, nameWriter };
 }

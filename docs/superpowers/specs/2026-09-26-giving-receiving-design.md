@@ -89,9 +89,9 @@ A sticker drawn by someone other than the board's owner wears holo foil and name
 - **Width:** 5px on the board, 6px on the detail's big sticker, 3px on the tray's sheets.
 - **Shape:** the silhouette dilated. The box is inset by −width and masked by nine copies of the sticker's mask at 100% − 2 × width: the center, four offsets of ±width and four diagonals of ±0.71 × width. It sits under the image.
 - **Bands:** `repeating-linear-gradient(115deg, #FF6FAE 0, #FFA85E 16px, #FFD84A 32px, #5ED3D8 48px, #6FA8FF 64px, #A98BFF 80px, #FF6FAE 96px)` on a sheen inset −160px, the foil tokens in `tokens.css`.
-- **Motion:** the sheen moves one period, `translate3d(87px, 40.6px, 0)`, in 7s linear, delayed −2.3s × the sticker's No. A glint (a 45%-wide white strip, 0 → .92 → 0, skewed −18°) rests out of sight and sweeps to `translateX(460%)` in 2s `cubic-bezier(.45,.05,.25,1)` only when the phone tilts past the light's sweep threshold (`stickers/light.ts`); never while the phone is held still.
+- **Motion:** the sheen moves one period, `translate3d(87px, 40.6px, 0)`, in 7s linear, delayed −2.3s × the sticker's No. A glint (a soft white spot) sits where the app's one light falls (`--lx`, `--ly` from `stickers/light.ts`), counter-turned by the sticker's own turn, and holds where the last tilt left it; top-left before any tilt.
 - **Silhouettes, peels and curls:** a curled corner clips it with `--clip-in`; a UsedStickerSilhouette in the tray or a peeling slot hides it.
-- **Reduced motion:** still bands, no glint.
+- **Reduced motion:** still bands; the glint rests top-left.
 - `aria-hidden`.
 
 **The artist chip (`stickers/ArtistChip.tsx`):**

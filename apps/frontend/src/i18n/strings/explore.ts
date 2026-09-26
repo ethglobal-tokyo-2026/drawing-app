@@ -63,6 +63,8 @@ export const explore = {
   failed: {
     explore: { en: "Couldn’t load Explore" },
     searchResults: { en: "Couldn’t load search results" },
+    /** A name's link that nobody holds, or that didn't load. */
+    ensName: { en: "Couldn’t load {{name}}" },
     tryAgain: { en: "Try again" },
   },
 } as const satisfies Section;

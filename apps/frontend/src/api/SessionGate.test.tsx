@@ -17,6 +17,7 @@ const me: Me = {
   handle: "alice",
   lineDisplayName: "Alice",
   linePictureUrl: null,
+  ensName: "alice.croquis.eth",
   timeZone: "Asia/Tokyo",
   language: "en",
   languageChoice: null,

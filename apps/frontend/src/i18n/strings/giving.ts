@@ -2,6 +2,14 @@ import type { Section } from "../catalog";
 
 export const giving = {
   tag: { from: { en: "From" }, for: { en: "For" } },
+  depositUnconfirmed: {
+    en: "The Sticker transfer could not be confirmed. Tap Send in LINE to check the gift again.",
+    ja: "シールの転送を確認できませんでした。LINEで送るをタップしてギフトの状態を再確認してください。",
+  },
+  takeOutUnconfirmed: {
+    en: "Taking out the Sticker could not be confirmed. Check the gift in the app before trying again.",
+    ja: "シールを取り出せたか確認できませんでした。再試行する前にアプリでギフトの状態を確認してください。",
+  },
   giftMessage: {
     altText: { en: "{{name}} sent you a sticker", ja: "{{name}}からシールが届きました" },
     oneOfOne: { en: "ONE OF ONE" },

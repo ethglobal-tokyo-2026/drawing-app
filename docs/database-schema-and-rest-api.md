@@ -70,6 +70,10 @@ What the server stores and serves. `packages/db` holds the schema and `apps/api`
 
 - Your handle starts as your LINE name. The app asks for a different one only at sign-up, when someone already has that name (ignoring letter case).
 
+### ENS names
+
+- Everyone has `<label>.croquis.eth`, resolving from their first sign-in through the API's gateway. It goes onchain, forever, at their first seal or receive; a sticker is named `<number>.<artist>.croquis.eth` after its mint. The design: `docs/superpowers/specs/2026-09-26-ens-names-design.md`.
+
 ### Account deletion
 
 - Not designed yet. LINE requires offering it, and deleting the person's LINE data when they use it.
@@ -109,6 +113,8 @@ Inserted at the first sign-in.
 | `smart_account_address` | text, null     | `0x` + 40 hex; unique       | the first time the server needs it, from Privy                 | where stickers are minted and claimed                        |
 | `terms_accepted_at`     | int (ms), null |                             | the first action that carries the terms line                   |                                                              |
 | `deleted_at`            | int (ms), null |                             | account deletion                                               |                                                              |
+| `ens_label`             | text, null     | ENSIP-15 label; unique      | every sign-in and handle change, until `ens_named_at`          | `<ens_label>.croquis.eth`; kept on account deletion          |
+| `ens_named_at`          | int (ms), null |                             | the person's name lands onchain                                | `ens_label` is fixed from then on                            |
 
 - A live account has `line_user_id` and `line_display_name`; a deleted one has none of the LINE columns.
 - `created_at` is the stat board's "Since".
@@ -117,20 +123,21 @@ Inserted at the first sign-in.
 
 Inserted at seal. Everything but `owner_id` and the mint is fixed then.
 
-| Column         | Type         | Values                   | Set when                                      | Meaning                                                      |
-| -------------- | ------------ | ------------------------ | --------------------------------------------- | ------------------------------------------------------------ |
-| `id`           | text, PK     | UUID                     | seal                                          | the NFT's sticker key is keccak256 of it                     |
-| `number`       | int          | 1, 2, 3…; unique         | seal                                          | shown as No.0147                                             |
-| `artist_id`    | text → users |                          | seal                                          | the Original Artist                                          |
-| `owner_id`     | text → users |                          | seal (the Original Artist), then each receive | who holds it now                                             |
-| `time_used`    | int          | 0–180                    | seal                                          | seconds on the drawing clock                                 |
-| `width`        | int          | > 0                      | seal                                          | the sticker image's size in pixels; all five images share it |
-| `height`       | int          | > 0                      | seal                                          |                                                              |
-| `outline`      | text         | SVG path in image pixels | seal                                          | the cut line: ticket stubs, sheet packing, silhouettes       |
-| `content_hash` | text         | `0x` + 64 hex            | seal                                          | keccak256 of the sticker PNG; names its image files          |
-| `metadata_uri` | text         | CDN URL                  | seal                                          | the NFT's tokenURI                                           |
-| `token_id`     | text, null   | uint256; unique          | the mint lands                                | null while minting is a stub                                 |
-| `mint_tx_hash` | text, null   | `0x` + 64 hex            | with `token_id`                               | for the WorldScan link                                       |
+| Column         | Type           | Values                   | Set when                                      | Meaning                                                      |
+| -------------- | -------------- | ------------------------ | --------------------------------------------- | ------------------------------------------------------------ |
+| `id`           | text, PK       | UUID                     | seal                                          | the NFT's sticker key is keccak256 of it                     |
+| `number`       | int            | 1, 2, 3…; unique         | seal                                          | shown as No.0147                                             |
+| `artist_id`    | text → users   |                          | seal                                          | the Original Artist                                          |
+| `owner_id`     | text → users   |                          | seal (the Original Artist), then each receive | who holds it now                                             |
+| `time_used`    | int            | 0–180                    | seal                                          | seconds on the drawing clock                                 |
+| `width`        | int            | > 0                      | seal                                          | the sticker image's size in pixels; all five images share it |
+| `height`       | int            | > 0                      | seal                                          |                                                              |
+| `outline`      | text           | SVG path in image pixels | seal                                          | the cut line: ticket stubs, sheet packing, silhouettes       |
+| `content_hash` | text           | `0x` + 64 hex            | seal                                          | keccak256 of the sticker PNG; names its image files          |
+| `metadata_uri` | text           | CDN URL                  | seal                                          | the NFT's tokenURI                                           |
+| `token_id`     | text, null     | uint256; unique          | the mint lands                                | null while minting is a stub                                 |
+| `mint_tx_hash` | text, null     | `0x` + 64 hex            | with `token_id`                               | for the WorldScan link                                       |
+| `ens_named_at` | int (ms), null |                          | the sticker's name lands onchain              | `<number>.<artist's ens_label>.croquis.eth`                  |
 
 - `created_at` is the seal: the sealed card's date, "Today's stickers", streak days.
 
@@ -285,6 +292,7 @@ interface Person {
   handle: string | null;
   lineDisplayName: string | null; // null after account deletion
   linePictureUrl: string | null;
+  ensName: string | null; // <label>.croquis.eth
 }
 
 /** You. */
@@ -309,6 +317,7 @@ interface Sticker {
   tokenId: string | null; // null while minting is a stub
   mintTxHash: string | null; // for the WorldScan link
   sealedAt: IsoTime;
+  ensName: string | null; // <number>.<artist>.croquis.eth, once onchain
 }
 
 interface StickerPlacement {
@@ -599,6 +608,13 @@ interface LeaderboardRow {
   value: number;
 }
 ```
+
+### ENS
+
+| Route                                       | Session | Answers                                                                                |
+| ------------------------------------------- | ------- | -------------------------------------------------------------------------------------- |
+| `GET /api/ens/gateway/{sender}/{data}.json` | none    | EIP-3668: `{ data }`, the signed answer CroquisResolver checks; 404 `unknown_resolver` |
+| `GET /api/ens/people/{label}`               | yes     | `{ person }`; 404 `user_not_found`                                                     |
 
 ### Images
 

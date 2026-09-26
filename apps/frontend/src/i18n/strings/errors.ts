@@ -7,6 +7,10 @@ export const errors = {
   network: { en: "The app's server didn't answer. Check your connection, then try again." },
   no_line_token: { en: "LINE didn't give the app a way to sign you in." },
   already_received: { en: "This gift was already opened." },
+  ens_not_configured: {
+    en: "Names aren't set up on this server yet.",
+    ja: "このサーバーでは、まだ名前が使えません。",
+  },
   deposit_mismatch: { en: "The gift bag doesn't hold the sticker it should." },
   deposit_not_landed: { en: "The gift bag isn't on the chain yet." },
   gift_closed: { en: "This gift is closed." },
@@ -47,5 +51,13 @@ export const errors = {
   ticket_not_found: { en: "That ticket isn't here." },
   ticket_not_yours: { en: "That ticket isn't yours." },
   timelapse_not_found: { en: "This sticker was sealed without its timelapse." },
+  unknown_resolver: {
+    en: "That name belongs to another app.",
+    ja: "この名前は別のアプリのものです。",
+  },
+  unsupported_request: {
+    en: "That name lookup isn't one this app answers.",
+    ja: "この名前の問い合わせには答えられません。",
+  },
   user_not_found: { en: "That artist isn't here." },
 } as const satisfies Section & Record<ErrorCode | "unknown", Leaf>;

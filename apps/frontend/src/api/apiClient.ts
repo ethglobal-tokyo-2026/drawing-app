@@ -111,6 +111,8 @@ export interface ApiClient {
   explore: () => Promise<Explore>;
   /** GET /api/users?handle= */
   searchUsers: (handle: string) => Promise<Person[]>;
+  /** GET /api/ens/people/:label: whoever is <label>.croquis.eth. */
+  personByEnsLabel: (label: string) => Promise<Person>;
 }
 
 /** Codes the app makes itself: no answer, and no LINE ID token to sign in with. */

@@ -21,7 +21,13 @@ import {
 } from "../stickers/testPngs.ts";
 import { timelapseV1Schema } from "../stickers/timelapse.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
-import { fakeGiftChain, fakeMint } from "../testing/fakes.ts";
+import {
+  fakeEns,
+  fakeGiftChain,
+  fakeMint,
+  fakeNameWriter,
+  fakeSmartWallets,
+} from "../testing/fakes.ts";
 import { insertGratitude, insertSealedSticker, receiveGift } from "../testing/rows.ts";
 import { ticketKindAt } from "../tickets/tickets.ts";
 
@@ -137,6 +143,26 @@ describe("POST /api/stickers", () => {
     expect(allStickers()).toMatchObject([minted]);
   });
 
+  it("names the artist and the sticker under croquis.eth once the mint lands", async () => {
+    const { writer, calls } = fakeNameWriter();
+    const ens = fakeEns(writer);
+    test = await createTestApp({ mint: fakeMint(), smartWallets: fakeSmartWallets(), ens });
+    const artistId = insertUser(test.db, { handle: "Alice" });
+    const { sticker } = await seal(artistId);
+    await ens.naming.idle();
+
+    expect(calls).toEqual([
+      "person alice",
+      `sticker ${sticker.tokenId} ${String(sticker.number).padStart(4, "0")}`,
+    ]);
+    const detail = await test.app.request(`/api/stickers/${sticker.id}`, {
+      headers: await test.signInAs(artistId),
+    });
+    expect(await detail.json()).toMatchObject({
+      sticker: { ensName: `${String(sticker.number).padStart(4, "0")}.alice.croquis.eth` },
+    });
+  });
+
   it("reports mint failure and retries the saved sticker on the same ticket", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const chainDown = new Error("The chain is down");
@@ -156,6 +182,7 @@ describe("POST /api/stickers", () => {
       error: "mint_failed",
     });
     expect(failedBody.detail).toContain(saved.id);
+    expect(failedBody.detail).toContain(`(${chainDown.message})`);
     expect(saved.tokenId).toBeNull();
     expect(log).toHaveBeenCalledWith(expect.stringContaining(`"stickerId":"${saved.id}"`));
     expect(log).toHaveBeenCalledWith(expect.stringContaining(chainDown.message));

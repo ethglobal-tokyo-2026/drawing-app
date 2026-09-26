@@ -1,4 +1,5 @@
 import { escrowStatuses, giftStatuses, ticketKinds, users } from "@drawing-app/db";
+import { personEnsName } from "@drawing-app/sticker-chain/croquis-names";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -23,12 +24,17 @@ const userRow = createSelectSchema(users);
 type UserRow = typeof users.$inferSelect;
 
 /** Anyone, as other signed-in people see them. */
-export const personSchema = userRow.pick({
-  id: true,
-  handle: true,
-  lineDisplayName: true,
-  linePictureUrl: true,
-});
+export const personSchema = userRow
+  .pick({
+    id: true,
+    handle: true,
+    lineDisplayName: true,
+    linePictureUrl: true,
+  })
+  .extend({
+    /** <label>.croquis.eth, which resolves from the moment they have a label. */
+    ensName: z.string().nullable(),
+  });
 export type Person = z.infer<typeof personSchema>;
 
 /** Picks the public columns, so LINE's user ID and the smart wallet never reach other people. */
@@ -37,7 +43,14 @@ export const toPerson = ({
   handle,
   lineDisplayName,
   linePictureUrl,
-}: Pick<UserRow, keyof Person>): Person => ({ id, handle, lineDisplayName, linePictureUrl });
+  ensLabel,
+}: Pick<UserRow, "id" | "handle" | "lineDisplayName" | "linePictureUrl" | "ensLabel">): Person => ({
+  id,
+  handle,
+  lineDisplayName,
+  linePictureUrl,
+  ensName: ensLabel === null ? null : personEnsName(ensLabel),
+});
 
 /** You. */
 export const meSchema = personSchema.extend({

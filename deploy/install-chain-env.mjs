@@ -21,6 +21,9 @@ const required = [
   "STICKER_NFT_ADDRESS",
   "STICKER_GIFT_ESCROW_ADDRESS",
   "STICKER_SEALER_PRIVATE_KEY",
+  "CROQUIS_NAMES_ADDRESS",
+  "CROQUIS_RESOLVER_ADDRESS",
+  "ENS_GATEWAY_PRIVATE_KEY",
   "PRIVY_APP_ID",
   "PRIVY_APP_SECRET",
 ];
@@ -30,11 +33,17 @@ for (const key of required) {
     throw new Error(`Missing or invalid ${key}; configure deploy/.env or the server's chain.env`);
   }
 }
-for (const key of ["STICKER_NFT_ADDRESS", "STICKER_GIFT_ESCROW_ADDRESS"]) {
+for (const key of [
+  "STICKER_NFT_ADDRESS",
+  "STICKER_GIFT_ESCROW_ADDRESS",
+  "CROQUIS_NAMES_ADDRESS",
+  "CROQUIS_RESOLVER_ADDRESS",
+]) {
   if (!/^0x[0-9a-fA-F]{40}$/.test(values[key] ?? "")) throw new Error(`Invalid ${key}`);
 }
-if (!/^0x[0-9a-fA-F]{64}$/.test(values.STICKER_SEALER_PRIVATE_KEY ?? ""))
-  throw new Error("Invalid STICKER_SEALER_PRIVATE_KEY");
+for (const key of ["STICKER_SEALER_PRIVATE_KEY", "ENS_GATEWAY_PRIVATE_KEY"]) {
+  if (!/^0x[0-9a-fA-F]{64}$/.test(values[key] ?? "")) throw new Error(`Invalid ${key}`);
+}
 // One URL, or several separated by commas, which the API tries in turn.
 const rpcUrls = (values.ETHEREUM_SEPOLIA_RPC_URL ?? "")
   .split(",")

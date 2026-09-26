@@ -103,6 +103,7 @@ describe("Sealing through the REST API and NFT contract", () => {
         rpcUrl: anvil.rpcUrl,
         stickerContract: contractAddress,
         escrowContract: zeroAddress,
+        namesContract: zeroAddress,
         sealerPrivateKey: toHex(privateKey),
         smartWallets,
         images,

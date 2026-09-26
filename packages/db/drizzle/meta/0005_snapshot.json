@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "4f596fe5-39cc-42d4-a588-a1eda06d3c7b",
+  "id": "85fe9ffa-208a-4768-8581-39c75211feab",
   "prevId": "5af93bd1-9f05-459c-b310-49dc2608b93e",
   "tables": {
     "gifts": {
@@ -695,6 +695,13 @@
           "notNull": true,
           "autoincrement": false,
           "default": "(cast(unixepoch('subsec') * 1000 as integer))"
+        },
+        "ens_named_at": {
+          "name": "ens_named_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -1071,9 +1078,16 @@
           "autoincrement": false,
           "default": "'en'"
         },
-        "language_choice": {
-          "name": "language_choice",
+        "ens_label": {
+          "name": "ens_label",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "ens_named_at": {
+          "name": "ens_named_at",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -1088,6 +1102,11 @@
         "users_smart_account_address_unique": {
           "name": "users_smart_account_address_unique",
           "columns": ["smart_account_address"],
+          "isUnique": true
+        },
+        "users_ens_label_unique": {
+          "name": "users_ens_label_unique",
+          "columns": ["ens_label"],
           "isUnique": true
         },
         "users_handle": {

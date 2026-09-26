@@ -68,6 +68,7 @@ import {
   type Box,
   type Placement,
 } from "./placement";
+import { BoardLoading } from "./BoardLoading";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
 import { readingOrder } from "./stickerOrder";
@@ -589,6 +590,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         <span id={`${hints}-selected`} hidden>
           {t(($) => $.stickerBoard.board.selectedHint)}
         </span>
+        {!stickers && board.state === "loading" && <BoardLoading />}
         {stickers && onBoard.length === 0 && givenSilhouettes.length === 0 && (
           <div className="board-blank" style={blankStyle}>
             <span className="board-blank-cut" aria-hidden />

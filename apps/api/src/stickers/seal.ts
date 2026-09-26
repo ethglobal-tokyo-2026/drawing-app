@@ -7,8 +7,9 @@ import {
 } from "@drawing-app/db";
 import { and, eq, max } from "drizzle-orm";
 import { z } from "zod";
+import { queueNaming } from "../ens/naming.ts";
 import type { AppDeps } from "../deps.ts";
-import { diagnosticStep, logFailure, logInfo } from "../diagnostics.ts";
+import { diagnosticStep, failureCause, logFailure, logInfo } from "../diagnostics.ts";
 import { keccak256 } from "../keccak256.ts";
 import { stickerImagesSchema, type StickerImages } from "../shapes.ts";
 import {
@@ -128,7 +129,7 @@ async function mintSticker(deps: AppDeps, stickerId: string): Promise<SealRefusa
     return {
       status: 503,
       error: "mint_failed",
-      detail: `Sticker ${stickerId} is saved, but its NFT could not be confirmed. Retry Sealing with the same ticket; no new ticket is needed.`,
+      detail: `Sticker ${stickerId} is saved, but its NFT could not be confirmed (${failureCause(error)}). Retry Sealing with the same ticket; no new ticket is needed.`,
     };
   }
   // Explicit local mock mode stores stickers without sending a mint transaction.
@@ -171,6 +172,7 @@ export async function sealSticker(
     logInfo("sticker.seal.retry", { stickerId: ticket.stickerId, userId });
     const refused = await mintSticker(deps, ticket.stickerId);
     if (refused) return { refused };
+    queueNaming(deps, userId);
     return { sealed: sealedSticker(deps, userId, ticket.stickerId), created: false };
   }
 
@@ -234,5 +236,6 @@ export async function sealSticker(
   logInfo("sticker.seal.saved", { stickerId, userId });
   const mintRefusal = await mintSticker(deps, stickerId);
   if (mintRefusal) return { refused: mintRefusal };
+  queueNaming(deps, userId);
   return { sealed: sealedSticker(deps, userId, stickerId), created: true };
 }

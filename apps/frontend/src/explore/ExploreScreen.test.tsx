@@ -122,3 +122,83 @@ describe("ExploreScreen", () => {
     expect(host.querySelector(".results-count")?.textContent).toBe("1 artist");
   });
 });
+
+describe("a name's link", () => {
+  it("opens the board of whoever holds the name, once", async () => {
+    const onOpenArtist = vi.fn();
+    view = renderWithApi(
+      <ExploreScreen boardOf="mika" onOpenArtist={onOpenArtist} onOpenMyBoard={vi.fn()} />,
+      emptyApi({
+        explore: () => new Promise(() => {}),
+        personByEnsLabel: (label) =>
+          label === "mika" ? Promise.resolve(people.mika) : Promise.reject(new Error(label)),
+      }),
+    );
+    await wait(0);
+    await wait(0);
+    expect(onOpenArtist.mock.calls).toEqual([[people.mika]]);
+  });
+
+  it("says so when nobody holds the name", async () => {
+    view = renderWithApi(
+      <ExploreScreen boardOf="nobody" onOpenArtist={vi.fn()} onOpenMyBoard={vi.fn()} />,
+      emptyApi({ explore: () => new Promise(() => {}) }),
+    );
+    await wait(0);
+    expect(document.querySelector('[role="alert"] h2')?.textContent).toBe(
+      "Couldn’t load nobody.croquis.eth",
+    );
+  });
+});
+
+/** A promise and the function that answers it, for a request still in flight. */
+function inFlight<T>() {
+  let answer: (value: T) => void = () => {};
+  const promise = new Promise<T>((resolve) => (answer = resolve));
+  return { promise, answer };
+}
+
+const EXPLORE: Explore = {
+  todaysStickers: [sticker()],
+  activity: [],
+  leaderboards: {
+    weekStart: "2026-09-20T19:00:00.000Z",
+    mostGratitude: [],
+    bestCombo: [],
+    longestStreak: [],
+  },
+};
+
+function show(client: Parameters<typeof renderWithApi>[1]) {
+  view = renderWithApi(<ExploreScreen onOpenArtist={vi.fn()} onOpenMyBoard={vi.fn()} />, client);
+  return view.host;
+}
+
+const skeletons = (host: HTMLElement) => host.querySelectorAll(".skeleton").length;
+const status = (host: HTMLElement) => host.querySelector('[role="status"]')?.textContent;
+
+describe("ExploreScreen while it loads", () => {
+  it("outlines its sections, then shows them once Explore arrives", async () => {
+    const explore = inFlight<Explore>();
+    const host = show(emptyApi({ explore: () => explore.promise }));
+    expect(status(host)).toBe("Loading…");
+    expect(skeletons(host)).toBeGreaterThan(0);
+
+    await act(async () => explore.answer(EXPLORE));
+    expect(skeletons(host)).toBe(0);
+    expect(host.querySelectorAll(".today-sticker")).toHaveLength(1);
+  });
+
+  it("outlines search results while the search is out", async () => {
+    const search = inFlight<Person[]>();
+    const host = show(
+      emptyApi({ explore: () => Promise.resolve(EXPLORE), searchUsers: () => search.promise }),
+    );
+    await searchFor(host, "ali");
+    expect(status(host)).toBe("Searching…");
+    expect(skeletons(host)).toBeGreaterThan(0);
+
+    await act(async () => search.answer([]));
+    expect(skeletons(host)).toBe(0);
+  });
+});
