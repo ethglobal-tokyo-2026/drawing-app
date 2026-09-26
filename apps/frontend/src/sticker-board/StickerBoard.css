@@ -345,12 +345,17 @@
   gap: 6px;
 }
 
-/* Gifts on their way sit in the header, opposite your name, above the sticker tray's pull. */
-.board-pending {
+/* Gifts for you, then gifts on their way, sit in the header opposite your name, above the sticker
+   tray's pull. */
+.board-gifts {
   position: absolute;
   z-index: 800;
   right: 12px;
   top: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
 }
 
 /* A 36px face on its lip. */

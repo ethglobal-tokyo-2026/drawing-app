@@ -5,6 +5,7 @@ import {
   http,
   isAddress,
   isHex,
+  parseEventLogs,
   type Hash,
   type TransactionReceipt,
 } from "viem";
@@ -42,7 +43,12 @@ export interface GiftTransactions {
     submitted: (hash: Hash) => void,
     previousHash?: Hash,
   ) => Promise<Hash | null>;
-  takeOut: (giftId: string, depositHash?: Hash) => Promise<void>;
+  takeOut: (
+    giftId: string,
+    submitted: (hash: Hash) => void,
+    previousHash?: Hash,
+    depositHash?: Hash,
+  ) => Promise<void>;
 }
 
 function escrowAddress() {
@@ -58,14 +64,31 @@ function checkedGiftId(giftId: string) {
   return giftId;
 }
 
-async function statusOf(giftId: string) {
-  const gift = await publicClient.readContract({
-    address: escrowAddress(),
-    abi: stickerGiftEscrowAbi,
-    functionName: "gifts",
-    args: [checkedGiftId(giftId)],
-  });
-  return gift[5];
+async function statusOf(giftId: string, blockNumber?: bigint) {
+  const address = escrowAddress();
+  const id = checkedGiftId(giftId);
+  try {
+    const gift = await publicClient.readContract({
+      address,
+      abi: stickerGiftEscrowAbi,
+      functionName: "gifts",
+      args: [id],
+      blockNumber,
+    });
+    console.info("Gift escrow status read", {
+      giftId,
+      status: gift[5],
+      blockNumber: blockNumber?.toString(),
+    });
+    return gift[5];
+  } catch (error) {
+    // A known receipt can still prove the transfer when a state read is unavailable.
+    console.warn("Gift escrow status could not be read", {
+      giftId,
+      errorName: error instanceof Error ? error.name : typeof error,
+    });
+    return null;
+  }
 }
 
 async function confirmed(hash: Hash, action: "deposit" | "takeOut") {
@@ -83,6 +106,28 @@ async function confirmed(hash: Hash, action: "deposit" | "takeOut") {
     throw new GiftTransactionUnconfirmedError(action);
   }
   if (receipt.status !== "success") throw new GiftTransactionRevertedError();
+  return receipt;
+}
+
+async function confirmedTransfer(giftId: string, hash: Hash, action: "deposit" | "takeOut") {
+  const receipt = await confirmed(hash, action);
+  const events = parseEventLogs({
+    abi: stickerGiftEscrowAbi,
+    eventName: action === "deposit" ? "GiftStaged" : "GiftTakenOut",
+    logs: receipt.logs.filter((log) => log.address.toLowerCase() === escrowAddress().toLowerCase()),
+  });
+  // An ERC-4337 bundle can succeed while the user's operation fails inside it.
+  if (!events.some((event) => event.args.giftId.toLowerCase() === giftId.toLowerCase())) {
+    console.warn("Gift transaction receipt has no matching escrow event", { giftId, hash, action });
+    throw new GiftTransactionRevertedError();
+  }
+  console.info("Gift transaction confirmed", {
+    giftId,
+    hash: receipt.transactionHash,
+    submittedHash: hash,
+    action,
+  });
+  return receipt;
 }
 
 /** Only the user's Sepolia smart account sends; Privy's paymaster sponsors these transactions. */
@@ -90,13 +135,14 @@ export const giftTransactions: GiftTransactions = {
   deposit: async (giftId, transfer, submitted, previousHash) => {
     const status = await statusOf(giftId);
     if (status === 1) return previousHash ?? null;
-    if (status !== 0) throw new Error("This gift has already left the escrow");
+    if (status !== null && status !== 0) throw new Error("This gift has already left the escrow");
     if (!isAddress(transfer.to) || !isHex(transfer.data)) {
       throw new Error("The sticker escrow transfer is invalid");
     }
-    const wallet = await waitForSmartWallet();
     let hash = previousHash;
     if (!hash) {
+      if (status === null) throw new GiftTransactionUnconfirmedError("deposit");
+      const wallet = await waitForSmartWallet();
       try {
         hash = await wallet.sendTransaction({ to: transfer.to, data: transfer.data });
       } catch (error) {
@@ -104,26 +150,33 @@ export const giftTransactions: GiftTransactions = {
           giftId,
           errorName: error instanceof Error ? error.name : typeof error,
         });
-        try {
-          if ((await statusOf(giftId)) === 1) return null;
-        } catch (lookupError) {
-          console.warn("Gift escrow status could not be read", {
-            giftId,
-            errorName: lookupError instanceof Error ? lookupError.name : typeof lookupError,
-          });
-        }
+        if ((await statusOf(giftId)) === 1) return null;
         throw new GiftTransactionUnconfirmedError("deposit");
       }
     }
     // Keep the hash before waiting so a slow receipt cannot cause a second deposit on retry.
     submitted(hash);
-    await confirmed(hash, "deposit");
-    return hash;
+    const receipt = await confirmedTransfer(giftId, hash, "deposit");
+    // Receipt polling can follow a replaced transaction; retain the hash that actually landed.
+    if (receipt.transactionHash !== hash) submitted(receipt.transactionHash);
+    return receipt.transactionHash;
   },
-  takeOut: async (giftId, depositHash) => {
-    if (depositHash) await confirmed(depositHash, "takeOut");
-    const status = await statusOf(giftId);
-    if (status === 0 || status === 3 || status === 4) return;
+  takeOut: async (giftId, submitted, previousHash, depositHash) => {
+    let status = await statusOf(giftId);
+    if (status === 3 || status === 4) return;
+    if (status === 2) throw new Error("This sticker has already been received");
+    if (previousHash) {
+      const receipt = await confirmedTransfer(giftId, previousHash, "takeOut");
+      if (receipt.transactionHash !== previousHash) submitted(receipt.transactionHash);
+      return;
+    }
+    // A lagging latest-state read must not erase a deposit whose receipt we already have.
+    if ((status === 0 || status === null) && depositHash) {
+      const depositReceipt = await confirmedTransfer(giftId, depositHash, "deposit");
+      status = await statusOf(giftId, depositReceipt.blockNumber);
+    }
+    if (status === 3 || status === 4) return;
+    if (status === 0 || status === null) throw new GiftTransactionUnconfirmedError("takeOut");
     if (status === 2) throw new Error("This sticker has already been received");
     const wallet = await waitForSmartWallet();
     let hash: Hash;
@@ -141,19 +194,14 @@ export const giftTransactions: GiftTransactions = {
         giftId,
         errorName: error instanceof Error ? error.name : typeof error,
       });
-      let result: number | null = null;
-      try {
-        result = await statusOf(giftId);
-      } catch (lookupError) {
-        console.warn("Gift escrow status could not be read after taking out", {
-          giftId,
-          errorName: lookupError instanceof Error ? lookupError.name : typeof lookupError,
-        });
-      }
-      if (result === 0 || result === 3 || result === 4) return;
+      const result = await statusOf(giftId);
+      if (result === 3 || result === 4) return;
       if (result === 2) throw new Error("This sticker has already been received");
       throw new GiftTransactionUnconfirmedError("takeOut");
     }
-    await confirmed(hash, "takeOut");
+    submitted(hash);
+    console.info("Gift take-out submitted", { giftId, hash });
+    const receipt = await confirmedTransfer(giftId, hash, "takeOut");
+    if (receipt.transactionHash !== hash) submitted(receipt.transactionHash);
   },
 };

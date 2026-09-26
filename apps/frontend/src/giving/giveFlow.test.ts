@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/apiClient";
 import { errors } from "../i18n/strings/errors";
-import type { GiftBackend } from "./giftBackend";
+import { GiftPackagingError, type GiftBackend } from "./giftBackend";
 import { buildGiftMessage, type GiftMessage } from "./giftMessage";
 import type { GiftSendOutcome } from "./giftSender";
 import { createGiveFlow } from "./giveFlow";
@@ -137,6 +137,34 @@ describe("giving through a LINE chat", () => {
     expect(t.gifts()).toEqual(["sent"]);
   });
 
+  it("prepares the sticker before opening LINE and ignores actions while it waits", async () => {
+    const server = fakeBackend();
+    const packing = new Deferred<Awaited<ReturnType<GiftBackend["pack"]>>>();
+    const pack = vi.fn(() => packing.promise);
+    const takeOut = vi.fn(server.backend.takeOut);
+    const t = setup({ backend: { ...server.backend, pack, takeOut } });
+    t.flow.chooseLineChat();
+    await wait(PICKER_DELAY);
+    expect(t.step()).toBe("preparing");
+    expect(t.messages).toHaveLength(0);
+
+    t.flow.chooseLineChat();
+    t.flow.sendInLine();
+    t.flow.takeOut();
+    expect(pack).toHaveBeenCalledTimes(1);
+    expect(takeOut).not.toHaveBeenCalled();
+    expect(t.step()).toBe("preparing");
+
+    packing.resolve(await server.backend.pack({ id: "s1", no: 147, timeUsed: 292 }));
+    await wait();
+    expect(t.step()).toBe("picking");
+    expect(t.messages).toHaveLength(1);
+    t.picker().resolve("sent");
+    await wait();
+    expect(t.step()).toBe("sent");
+    expect(server.states()).toEqual(["sent"]);
+  });
+
   it("keeps the gift in the bag when the picker is cancelled", async () => {
     const t = setup();
     await openPicker(t);
@@ -197,6 +225,7 @@ describe("giving through a LINE chat", () => {
   });
 
   it("says why when the sticker can't be packed, and doesn't open the picker", async () => {
+    const takeOut = vi.fn(async () => {});
     const t = setup({
       backend: {
         pack: () =>
@@ -205,12 +234,45 @@ describe("giving through a LINE chat", () => {
           ),
         markSent: () => Promise.resolve(),
         markCancelled: () => Promise.resolve(),
-        takeOut: () => Promise.resolve(),
+        takeOut,
       },
     });
     t.flow.chooseLineChat();
     await wait(PICKER_DELAY * 2);
     expect(t.failure()).toContain(errors.not_minted.en);
+    expect(t.messages).toHaveLength(0);
+    t.flow.takeOut();
+    await wait(TAKE_OUT);
+    expect(t.failure()).toContain(errors.not_minted.en);
+    expect(takeOut).not.toHaveBeenCalled();
+  });
+
+  it("takes out the allocated gift after packaging confirmation fails without preparing it again", async () => {
+    const server = fakeBackend();
+    const pack = vi.fn(async (sticker: Parameters<GiftBackend["pack"]>[0]) => {
+      const packed = await server.backend.pack(sticker);
+      throw new GiftPackagingError(
+        packed.giftId,
+        new ApiError(409, { error: "deposit_not_landed", detail: "Deposit is still pending" }),
+      );
+    });
+    const takeOut = vi
+      .fn(server.backend.takeOut)
+      .mockRejectedValueOnce(new Error("Take-out is still pending"));
+    const t = setup({ backend: { ...server.backend, pack, takeOut } });
+    t.flow.chooseLineChat();
+    await wait(PICKER_DELAY);
+    expect(t.failure()).toContain(errors.deposit_not_landed.en);
+
+    t.flow.takeOut();
+    await wait();
+    expect(t.failure()).toContain("Take-out is still pending");
+    t.flow.takeOut();
+    await wait(TAKE_OUT);
+    expect(t.step()).toBe("sheet");
+    expect(server.states()).toEqual(["taken_out"]);
+    expect(takeOut).toHaveBeenCalledTimes(2);
+    expect(pack).toHaveBeenCalledTimes(1);
     expect(t.messages).toHaveLength(0);
   });
 
@@ -232,6 +294,32 @@ describe("giving through a LINE chat", () => {
     expect(server.states()).toEqual(["taken_out"]);
   });
 
+  it("prepares a fresh Gift Message after an uncertain take-out instead of sending the old one", async () => {
+    const server = fakeBackend();
+    const pack = vi.fn(server.backend.pack);
+    const takeOut = vi.fn(async (giftId: string) => {
+      await server.backend.takeOut(giftId);
+      throw new Error("The server could not confirm the take-out");
+    });
+    const t = setup({ backend: { ...server.backend, pack, takeOut } });
+    await openPicker(t);
+    const previousMessage = t.messages[0];
+    t.picker().resolve("cancelled");
+    await wait();
+
+    t.flow.takeOut();
+    await wait();
+    expect(t.failure()).toContain("could not confirm the take-out");
+    expect(server.states()).toEqual(["taken_out"]);
+
+    t.flow.sendInLine();
+    await wait();
+    expect(pack).toHaveBeenCalledTimes(2);
+    expect(t.step()).toBe("picking");
+    expect(t.messages).toHaveLength(2);
+    expect(t.messages[1]).not.toEqual(previousMessage);
+  });
+
   it("still records the outcome when the flow closes mid-send", async () => {
     const t = setup();
     await openPicker(t);
@@ -241,22 +329,59 @@ describe("giving through a LINE chat", () => {
     expect(t.gifts()).toEqual(["sent"]);
   });
 
-  it("puts the sticker back when the flow closes before the picker opens", async () => {
+  it("leaves the sticker in the bag when the flow closes before the picker opens", async () => {
     const t = setup();
     t.flow.chooseLineChat();
     t.flow.dispose();
     await wait(PICKER_DELAY * 2);
     expect(t.messages).toHaveLength(0);
-    expect(t.gifts()).toEqual(["taken_out"]);
+    expect(t.gifts()).toEqual(["packed"]);
   });
 
-  it("puts the sticker back when the flow closes after a cancel", async () => {
+  it("leaves the sticker in the bag when the flow closes after a cancel", async () => {
     const t = setup();
     await openPicker(t);
     t.picker().resolve("cancelled");
     await wait();
     t.flow.dispose();
     await wait();
-    expect(t.gifts()).toEqual(["taken_out"]);
+    expect(t.gifts()).toEqual(["packed"]);
+  });
+
+  it("does not open LINE or take the sticker out when packing finishes after closing", async () => {
+    const server = fakeBackend();
+    const packing = new Deferred<Awaited<ReturnType<GiftBackend["pack"]>>>();
+    const takeOut = vi.fn(server.backend.takeOut);
+    const t = setup({
+      backend: { ...server.backend, pack: () => packing.promise, takeOut },
+    });
+    t.flow.chooseLineChat();
+    await wait(PICKER_DELAY);
+    expect(t.step()).toBe("preparing");
+    t.flow.dispose();
+    packing.resolve(await server.backend.pack({ id: "s1", no: 147, timeUsed: 292 }));
+    await wait();
+    expect(t.messages).toHaveLength(0);
+    expect(takeOut).not.toHaveBeenCalled();
+    expect(server.states()).toEqual(["packed"]);
+  });
+
+  it("does not repeat an explicit take-out when its flow closes before confirmation", async () => {
+    const server = fakeBackend();
+    const takingOut = new Deferred<void>();
+    const takeOut = vi.fn(async (giftId: string) => {
+      await takingOut.promise;
+      await server.backend.takeOut(giftId);
+    });
+    const t = setup({ backend: { ...server.backend, takeOut } });
+    t.flow.chooseLineChat();
+    await wait();
+    t.flow.takeOut();
+    await wait();
+    t.flow.dispose();
+    takingOut.resolve();
+    await wait(TAKE_OUT);
+    expect(takeOut).toHaveBeenCalledTimes(1);
+    expect(server.states()).toEqual(["taken_out"]);
   });
 });

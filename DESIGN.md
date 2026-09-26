@@ -483,6 +483,13 @@ The board's back, where a person's figures are pinned up as paper. It's the only
 - **Developer slip:** LINE's and Privy's details on a torn-top slip, lying collapsed under the cork's end, after Settings, in every build that has it. Pulling up past the end meets iOS's rubber band: the cork and its papers ride up together as the slip's top shows, and past 150px of travel the release brings it out and the cork glides up to it; short of that it settles back. Only a touch that starts at the end pulls, and the cork doesn't bounce there. A visually hidden "Developer tools" button, shown as label tape when focused, brings it out for keyboards and screen readers. Reduced motion: nothing moves, and it fades in. It goes back under once the board rests on its front.
 - **Empty values** read in words: "No gratitude yet", "Not started", "None yet" (a best at 0).
 
+### Gifts on the board
+
+Opposite your name, top-right, stacked: gifts for you, then gifts on their way.
+
+- **Gifts for you:** Pink Soft label stock with a Pink ring and a round Pink seal holding a filled gift, never the sticker, so the pull tab still reveals it. "A gift for you" or "3 gifts for you" over "from @alice (and 2 more)"; a Seal Yellow dot badge counts them past one. It asks to be opened: now and then it lifts 3px and settles. Tapping it opens the newest in the Receive gift dialog, as its gift message would; the rest wait for the next tap. Reduced motion holds it still.
+- **On their way:** clear film with the stickers' frosted sleeves, quieter, since it only reports.
+
 ### Someone else's board
 
 The same board, read only, opened from Explore. Their stickers sit where they stuck them, with foil on the ones someone else drew. Nothing moves, so there are no handles and no rotate knob. There's no tray, since a tray is private; Give takes Draw's slot as the board's one key; an Explore back chip (a 32px Liner Lift pill with a caret) sits beside the name. Tapping a sticker opens its menu: the artist chip on top when someone else drew it, then View and Offer for it (grape label).
@@ -607,7 +614,7 @@ A sticker's detail shows where it has been, one quiet row per hand-off, newest f
 - **Calm at length:** past the newest gift, the rest fold into one "N earlier gifts" control, with a caret, directly under it.
 - **Order:** when you can give the sticker, Give sits above the gratitude card (the open row); otherwise the actions stay below the trail.
 - **The number:** No.0147 sits on a Seal Yellow label at the house tilt, in Dela.
-- **On its way:** a Liner Lift note with the gift bag's frosted sleeve replaces Give: "On its way to @bob" when the gift went to an artist in the app, and "On its way" through LINE's picker, which never says who was picked.
+- **On its way:** a Liner Lift note with the gift bag's frosted sleeve replaces Give: "On its way to @bob" once the app knows who it waits for (the artist picked in the app, or whoever first opened its link), and "On its way" until then, since LINE's picker never says who was picked. The badge on the board reads the same.
 
 ### Gratitude
 

@@ -29,7 +29,10 @@ export const boardStickerSchema = stickerPlacementSchema.extend({
   held: z.boolean(),
   /** Set when `held` is false: the silhouette's "→ @bob". */
   givenTo: z.object({ receiver: personSchema, receivedAt: isoTimeSchema }).nullable(),
-  openGift: z.object({ id: giftSchema.shape.id, status: openGiftStatusSchema }).nullable(),
+  /** `for`: who the giver picked in the app, or who first opened its link; null through LINE alone. */
+  openGift: z
+    .object({ id: giftSchema.shape.id, status: openGiftStatusSchema, for: personSchema.nullable() })
+    .nullable(),
 });
 export type BoardSticker = z.infer<typeof boardStickerSchema>;
 
@@ -54,14 +57,21 @@ export const findBoardOwner = (db: Db, userId: string, viewerId: string) =>
 /** The owner's gifts in the bag or on their way, by sticker. */
 function openGiftsOf(db: Db, ownerId: string) {
   const rows = db
-    .select({ id: gifts.id, stickerId: gifts.stickerId, status: gifts.status })
+    .select({ id: gifts.id, stickerId: gifts.stickerId, status: gifts.status, for: users })
     .from(gifts)
+    .leftJoin(users, eq(users.id, gifts.forUserId))
     .where(and(eq(gifts.giverId, ownerId), inArray(gifts.status, openGiftStatusSchema.options)))
     .all();
   const open = new Map<string, BoardSticker["openGift"]>();
-  for (const { id, stickerId, status } of rows) {
+  for (const { id, stickerId, status, for: forUser } of rows) {
     const openStatus = openGiftStatusSchema.safeParse(status);
-    if (openStatus.success) open.set(stickerId, { id, status: openStatus.data });
+    if (openStatus.success) {
+      open.set(stickerId, {
+        id,
+        status: openStatus.data,
+        for: forUser ? toPerson(forUser) : null,
+      });
+    }
   }
   return open;
 }
