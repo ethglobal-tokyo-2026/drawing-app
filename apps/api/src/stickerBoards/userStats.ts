@@ -12,7 +12,7 @@ const receivedGiftCount = (db: Db, where: SQL) =>
     .where(and(eq(gifts.status, "received"), where))
     .get()?.n ?? 0;
 
-/** A person's User Stats. The streak and a day's thanks count Tokyo ticket days, as everyone's do. */
+/** A person's User Stats. The streak and a day's gratitude count Tokyo ticket days, as everyone's do. */
 export function loadUserStats(db: Db, user: typeof users.$inferSelect, now: Date): UserStats {
   const sealDays = db
     .select({ sealedAt: stickers.createdAt })
@@ -44,7 +44,7 @@ export function loadUserStats(db: Db, user: typeof users.$inferSelect, now: Date
     .all();
 
   const split = { inspired: 0, magic: 0, asOriginalArtist: 0 };
-  const thanksByDay = new Map<string, number>();
+  const gratitudeByDay = new Map<string, number>();
   for (const combo of combos) {
     const giversPart = combo.giverId === user.id ? combo.total - combo.share : 0;
     const share = combo.artistId === user.id ? combo.share : 0;
@@ -52,7 +52,7 @@ export function loadUserStats(db: Db, user: typeof users.$inferSelect, now: Date
     else split.magic += giversPart;
     split.asOriginalArtist += share;
     const day = tokyoTicketDay(combo.recordedAt);
-    thanksByDay.set(day, (thanksByDay.get(day) ?? 0) + giversPart + share);
+    gratitudeByDay.set(day, (gratitudeByDay.get(day) ?? 0) + giversPart + share);
   }
   const streak = streakOf(sealDays, tokyoTicketDay(now));
 
@@ -64,7 +64,7 @@ export function loadUserStats(db: Db, user: typeof users.$inferSelect, now: Date
     gratitude: { ...split, total: split.inspired + split.magic + split.asOriginalArtist },
     bests: {
       bestCombo,
-      mostThanksInADay: Math.max(0, ...thanksByDay.values()),
+      mostGratitudeInADay: Math.max(0, ...gratitudeByDay.values()),
       longestStreak: streak.best,
     },
     streak: streak.current,

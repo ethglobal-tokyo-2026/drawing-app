@@ -154,12 +154,12 @@ export function recordGratitude(
       if (gift.receiverId !== userId) {
         return { refusal: "not_receiver", detail: `Gift ${giftId} was received by someone else` };
       }
-      const thanked = tx
+      const recorded = tx
         .select({ giftId: gratitude.giftId })
         .from(gratitude)
         .where(eq(gratitude.giftId, giftId))
         .get();
-      if (thanked) {
+      if (recorded) {
         return {
           refusal: "gratitude_already_recorded",
           detail: `Gift ${giftId} already has gratitude`,

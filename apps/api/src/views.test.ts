@@ -75,10 +75,10 @@ describe("views", () => {
       packedAt: gift.createdAt.toISOString(),
       receivedAt: gift.receivedAt?.toISOString(),
     });
-    const thanks = insertGratitude(db, gift.id);
-    expect(gratitudeSchema.parse(toGratitude(thanks))).toMatchObject({
+    const combo = insertGratitude(db, gift.id);
+    expect(gratitudeSchema.parse(toGratitude(combo))).toMatchObject({
       giftId: gift.id,
-      recordedAt: thanks.createdAt.toISOString(),
+      recordedAt: combo.createdAt.toISOString(),
       seenByGiverAt: null,
     });
   });
@@ -97,15 +97,15 @@ describe("views", () => {
   it("count the pink tag as gratitude on gifts you gave that you haven't watched", () => {
     const giverId = insertUser(db);
     const receiverId = insertUser(db);
-    const thanked = [receivedGift(giverId, receiverId), receivedGift(giverId, receiverId)];
-    for (const gift of thanked) insertGratitude(db, gift.id);
-    expect(unseenGratitudeCount(db, giverId)).toBe(thanked.length);
+    const withGratitude = [receivedGift(giverId, receiverId), receivedGift(giverId, receiverId)];
+    for (const gift of withGratitude) insertGratitude(db, gift.id);
+    expect(unseenGratitudeCount(db, giverId)).toBe(withGratitude.length);
     expect(unseenGratitudeCount(db, receiverId)).toBe(0);
-    const [watched] = thanked;
+    const [watched] = withGratitude;
     db.update(gratitude)
       .set({ seenByGiverAt: new Date() })
       .where(eq(gratitude.giftId, watched.id))
       .run();
-    expect(unseenGratitudeCount(db, giverId)).toBe(thanked.length - 1);
+    expect(unseenGratitudeCount(db, giverId)).toBe(withGratitude.length - 1);
   });
 });

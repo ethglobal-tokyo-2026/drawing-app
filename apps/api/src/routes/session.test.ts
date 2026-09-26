@@ -133,12 +133,12 @@ describe("me", () => {
     const userId = insertUser(test.db);
     const unseen = [insertSealedSticker(test.db, userId), insertSealedSticker(test.db, userId)];
     const giftId = packGift(test.db, insertSealedSticker(test.db, userId), userId);
-    const thanked = [receiveGift(test.db, giftId, insertUser(test.db))];
-    for (const gift of thanked) insertGratitude(test.db, gift.id);
+    const withGratitude = [receiveGift(test.db, giftId, insertUser(test.db))];
+    for (const gift of withGratitude) insertGratitude(test.db, gift.id);
     const me = await meIn(await call("GET", "/api/me", await test.signInAs(userId)));
     expect(me).toMatchObject({
       newStickerCount: unseen.length,
-      unseenGratitudeCount: thanked.length,
+      unseenGratitudeCount: withGratitude.length,
     });
   });
 });

@@ -42,8 +42,8 @@ function receivedGift(giverId: string, receiverId: string) {
   return receiveGift(test.db, packGift(test.db, stickerId, giverId), receiverId);
 }
 
-/** A received gift its receiver thanked, with `values` over the recorded combo. */
-function thankedGift(
+/** A received gift its receiver sent gratitude for, with `values` over the recorded combo. */
+function giftWithGratitude(
   giverId: string,
   receiverId: string,
   values: Partial<typeof gratitude.$inferInsert> = {},
@@ -72,11 +72,11 @@ describe("GET /api/gratitude/unseen", () => {
     const firstReceiverId = insertUser(test.db);
     const secondReceiverId = insertUser(test.db);
     // Recorded newest first, so only the ordering puts the older combo first.
-    const newer = thankedGift(giverId, secondReceiverId, { createdAt: NEWER });
-    const older = thankedGift(giverId, firstReceiverId, { createdAt: OLDER });
-    thankedGift(giverId, insertUser(test.db), { seenByGiverAt: NEWER });
+    const newer = giftWithGratitude(giverId, secondReceiverId, { createdAt: NEWER });
+    const older = giftWithGratitude(giverId, firstReceiverId, { createdAt: OLDER });
+    giftWithGratitude(giverId, insertUser(test.db), { seenByGiverAt: NEWER });
     // Gratitude the giver sent is for someone else to watch.
-    thankedGift(insertUser(test.db), giverId);
+    giftWithGratitude(insertUser(test.db), giverId);
 
     const response = await request(giverId, "GET", "/unseen");
     expect(response.status).toBe(200);
@@ -100,7 +100,7 @@ describe("GET /api/gratitude/:giftId", () => {
   it("shows anyone signed in the gratitude, its replay, and who gave and received the gift", async () => {
     const giverId = insertUser(test.db);
     const receiverId = insertUser(test.db);
-    const { giftId } = thankedGift(giverId, receiverId, { replay: gzipReplay(REPLAY) });
+    const { giftId } = giftWithGratitude(giverId, receiverId, { replay: gzipReplay(REPLAY) });
 
     const response = await readGratitude(insertUser(test.db), giftId);
     expect(response.status).toBe(200);
@@ -117,7 +117,7 @@ describe("GET /api/gratitude/:giftId", () => {
 describe("POST /api/gratitude/:giftId/seen", () => {
   it("marks the gratitude watched at the clock's time, and keeps that first time when it's watched again", async () => {
     const giverId = insertUser(test.db);
-    const { giftId } = thankedGift(giverId, insertUser(test.db));
+    const { giftId } = giftWithGratitude(giverId, insertUser(test.db));
     const firstWatch = test.clock.now();
     const watched = async () => {
       const response = await markWatched(giverId, giftId);
@@ -133,7 +133,7 @@ describe("POST /api/gratitude/:giftId/seen", () => {
 
   it("refuses anyone but the giver with not_giver, and leaves the gratitude unwatched", async () => {
     const receiverId = insertUser(test.db);
-    const { giftId } = thankedGift(insertUser(test.db), receiverId);
+    const { giftId } = giftWithGratitude(insertUser(test.db), receiverId);
     for (const userId of [receiverId, insertUser(test.db)]) {
       expect(await refusalOf(await markWatched(userId, giftId))).toMatchObject({
         status: 403,
@@ -151,7 +151,7 @@ const oneGratitudeRoutes = [
 ];
 
 describe.each(oneGratitudeRoutes)("$route", ({ send }) => {
-  it("refuses a received gift nobody thanked with gratitude_not_found", async () => {
+  it("refuses a received gift that has no gratitude with gratitude_not_found", async () => {
     const giverId = insertUser(test.db);
     const gift = receivedGift(giverId, insertUser(test.db));
     expect(await refusalOf(await send(giverId, gift.id))).toMatchObject({
@@ -162,7 +162,7 @@ describe.each(oneGratitudeRoutes)("$route", ({ send }) => {
 
   it("refuses a gift id in capital hex with invalid_request, naming giftId", async () => {
     const giverId = insertUser(test.db);
-    const { giftId } = thankedGift(giverId, insertUser(test.db));
+    const { giftId } = giftWithGratitude(giverId, insertUser(test.db));
     const answer = await refusalOf(await send(giverId, giftId.toUpperCase().replace("0X", "0x")));
     expect(answer).toMatchObject({ status: 400, error: "invalid_request" });
     expect(answer.detail).toContain("giftId");
@@ -171,7 +171,7 @@ describe.each(oneGratitudeRoutes)("$route", ({ send }) => {
 
 describe("the giver's gratitude routes", () => {
   it("need a session", async () => {
-    const { giftId } = thankedGift(insertUser(test.db), insertUser(test.db));
+    const { giftId } = giftWithGratitude(insertUser(test.db), insertUser(test.db));
     const responses = [
       await test.app.request("/api/gratitude/unseen"),
       await test.app.request(`/api/gratitude/${giftId}`),
