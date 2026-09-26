@@ -27,6 +27,10 @@ interface Props {
   reduced: boolean;
 }
 
+/** When a toolbar last went away; a new one within the handoff window is the same toolbar moving. */
+let lastHidden = -Infinity;
+const HANDOFF_MS = 50;
+
 /** Give, View and Remove for the selected sticker, beside it on the board. */
 export function StickerToolbar({
   label,
@@ -56,9 +60,10 @@ export function StickerToolbar({
     el.style.transform = `translate(${left.toFixed(1)}px, ${top.toFixed(1)}px)`;
   });
 
-  // It comes in when it first shows.
+  // It comes in when it first shows. Selection moving straight to another sticker swaps one toolbar
+  // for another in the same commit, and that one moves over without coming in again.
   const reveal = useEffectEvent(() => {
-    if (reduced) return;
+    if (reduced || performance.now() - lastHidden < HANDOFF_MS) return;
     ref.current?.animate(
       [
         { opacity: 0, translate: "0 -4px" },
@@ -67,7 +72,12 @@ export function StickerToolbar({
       { duration: 160, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
     );
   });
-  useLayoutEffect(() => reveal(), []);
+  useLayoutEffect(() => {
+    reveal();
+    return () => {
+      lastHidden = performance.now();
+    };
+  }, []);
 
   return (
     <div
