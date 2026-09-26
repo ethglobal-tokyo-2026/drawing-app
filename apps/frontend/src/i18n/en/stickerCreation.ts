@@ -119,9 +119,13 @@ export const stickerCreation = {
     undo: "Undo",
     redo: "Redo",
   },
+  /** The white label at the foot of the drawing screen while the seal is on its way, which screen readers hear too. */
   sealCeremony: {
-    /** Said to screen readers as the ceremony starts. */
-    sealing: "Sealing your sticker",
+    sealing: "Sealing your sticker…",
+    /** Added under it once sealing has taken 10 seconds. */
+    takesAWhile: "It can take up to half a minute.",
+    /** Instead, once it has taken 30 seconds. */
+    takingLonger: "It’s taking longer than usual.",
   },
   /** The backing card the sticker lands on. */
   sealedCard: {
