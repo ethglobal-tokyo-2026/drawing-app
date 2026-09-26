@@ -22,18 +22,18 @@ Fixes from the 2026-09-26 whole-app critique (27/40, Acceptable), plus the owner
 
 ## Board
 
-- [ ] B1 (P1) Keep the selected sticker's toolbar clear of the Draw key. Draw (z-index 955) covers Give on stickers low on the board, because `toolbarSpot` (`placement.ts`) doesn't avoid it. Pass Draw's box into `toolbarSpot` and flip the toolbar above the sticker when they'd meet. As a backstop, stack the toolbar above Draw.
-- [ ] B2 (P2) Keyboard path:
+- [x] B1 (P1) Keep the selected sticker's toolbar clear of the Draw key. Draw (z-index 955) covers Give on stickers low on the board, because `toolbarSpot` (`placement.ts`) doesn't avoid it. Pass Draw's box into `toolbarSpot` and flip the toolbar above the sticker when they'd meet. As a backstop, stack the toolbar above Draw.
+- [x] B2 (P2) Keyboard path:
   - The stickers take one Tab stop. Focus doesn't select; arrows move focus between stickers until one is selected.
   - Enter or Space selects. Arrows then move the selected sticker, and Tab enters its toolbar. Escape returns to focus-only.
   - The name and Draw come before the stickers in DOM order.
   - The detail's dialog is named after its sticker ("No.0117").
 - [ ] B3 The detail's "lift off the board" (spec below).
-- [ ] B4 App-wide Back, as an overlay stack on `history.pushState`/`popstate`:
+- [x] B4 App-wide Back, as an overlay stack on `history.pushState`/`popstate`:
   - It covers the sticker detail, the stat board (Back flips it back, as DESIGN.md says for LINE's Back) and the Giving sheet.
   - Closing from the UI pops its own entry, so the stack stays true.
   - LIFF's start-up URL handling and gift links keep working.
-- [ ] B5 `formatDuration` in `stickers/format.ts`, with a spoken form ("4 minutes 52 seconds"). Use it on:
+- [x] B5 `formatDuration` in `stickers/format.ts`, with a spoken form ("4 minutes 52 seconds"). Use it on:
   - the sealed card: "No.0147 · 4m 52s · 2026.09.23 · @alice";
   - the detail: "By @alice · drawn in 4m 52s · 2026.09.23";
   - the give sheet's meta line;
@@ -42,13 +42,13 @@ Fixes from the 2026-09-26 whole-app critique (27/40, Acceptable), plus the owner
 
   The units stay lowercase inside capitalized fine print.
 
-- [ ] B6 The first sticker lands on the empty board's dashed spot, the one saying "Stickers you make or receive land here".
-- [ ] B7 Giving:
+- [x] B6 The first sticker lands on the empty board's dashed spot, the one saying "Stickers you make or receive land here".
+- [x] B7 Giving:
   - "When they accept, you'll see who opened it" promises what isn't built; say what's true now.
   - "In the bag" has two controls for one action; keep one, as the drafts do.
-- [ ] B8 Tray: no NEW mark on a used sticker silhouette.
-- [ ] B9 The board's load error leads with a plain sentence instead of splicing the raw message mid-sentence.
-- [ ] B10 (optional) A sticker's tap area follows its cut, not its image box.
+- [x] B8 Tray: no NEW mark on a used sticker silhouette.
+- [x] B9 The board's load error leads with a plain sentence instead of splicing the raw message mid-sentence.
+- [x] B10 (optional, skipped) A sticker's tap area follows its cut, not its image box.
 
 ## Drawing
 
