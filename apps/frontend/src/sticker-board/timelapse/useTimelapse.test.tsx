@@ -287,7 +287,11 @@ describe("useTimelapse", () => {
     expect(logged).toHaveBeenCalled();
     expect(players.made).toHaveLength(0);
 
-    act(() => document.querySelector<HTMLButtonElement>('[role="alert"] button')?.click());
+    // Try again goes as it retries, so focus moves on to the button first.
+    const tryAgain = document.querySelector<HTMLButtonElement>('[role="alert"] button');
+    act(() => tryAgain?.focus());
+    expect(document.activeElement).toBe(tryAgain);
+    act(() => tryAgain?.click());
     expect(label()).toBe("Loading…");
     expect(document.activeElement).toBe(button());
     expect(alert()).toBeUndefined();
