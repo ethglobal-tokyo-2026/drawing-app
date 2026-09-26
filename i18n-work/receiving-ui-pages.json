@@ -1,0 +1,186 @@
+{
+  "receiving.title": {
+    "where": "Receive gift dialog, once the gift's preview names the giver: the dialog's name for assistive tech and LINE's header while it's open",
+    "ja": "{{name}}さんからのギフト"
+  },
+  "receiving.title_unknownGiver": {
+    "where": "Receive gift dialog, while the preview is loading or when a refusal came without the giver: the dialog's name and LINE's header",
+    "ja": "ギフト"
+  },
+  "receiving.gift.title": {
+    "where": "Receive gift dialog, sealed bag through the reveal: the heading beside the giver's picture",
+    "ja": "{{name}}さんからシールが届きました"
+  },
+  "receiving.gift.pullTabHint": {
+    "where": "Receive gift dialog, sealed bag: the two-line hint under the bag, the pull tab first, then the other ways to open it; it fades as the sticker rises",
+    "ja": "<b>つまみを引いてひらいてください</b><span>ダブルタップや長押しでもひらけます</span>"
+  },
+  "receiving.gift.acceptSheet": {
+    "where": "Receive gift dialog, once the pull tab snaps and the sticker rises: the Accept sheet's name for assistive tech, also read in its perforation's Close name",
+    "ja": "このシールを受け取る"
+  },
+  "receiving.gift.forYou": {
+    "where": "Receive gift dialog, Accept sheet: the first line, naming the person opening the gift in bold",
+    "ja": "<name/>さんへのシールです。"
+  },
+  "receiving.gift.finePrint": {
+    "where": "Receive gift dialog, Accept sheet: the fine print under the first line, with the sticker's number, drawing time, seal day and Original Artist",
+    "ja": "{{no}}・<duration/>・{{day}}・作者：<artist/>"
+  },
+  "receiving.gift.notReceived": {
+    "where": "Receive gift dialog, Accept sheet, after tapping Accept fails: the alert above Accept, with the reason",
+    "ja": "{{no}}を受け取れませんでした。{{reason}}「受け取る」をタップして、もう一度お試しください。"
+  },
+  "receiving.gift.accept": {
+    "where": "Receive gift dialog, Accept sheet: the main key, which receives the sticker",
+    "ja": "受け取る"
+  },
+  "receiving.gift.accepting": {
+    "where": "Receive gift dialog, Accept sheet, after tapping Accept: the key's label while the sticker is being received",
+    "ja": "受け取り中…"
+  },
+  "receiving.gift.notNow": {
+    "where": "Receive gift dialog, Accept sheet: the quiet link under Accept that closes the dialog without receiving",
+    "ja": "あとで"
+  },
+  "receiving.termsLine": {
+    "where": "Receive gift dialog, Accept sheet: the small line at the bottom, naming the giver, with links to the Terms and Privacy Policy pages",
+    "ja": "受け取ると、あなたのLINEの名前とプロフィール画像が<name/>さんに表示されます。<terms>利用規約</terms>と<privacy>プライバシーポリシー</privacy>に同意したものとみなされます。"
+  },
+  "receiving.refusals.groupChat.title": {
+    "where": "Gift refusal screen, when the gift message was opened in a group chat: the title",
+    "ja": "{{name}}さんとのトークでひらいてください"
+  },
+  "receiving.refusals.groupChat.title_unknownGiver": {
+    "where": "Gift refusal screen, when the gift message was opened in a group chat and the refusal came without the giver: the title",
+    "ja": "贈り主とのトークでひらいてください"
+  },
+  "receiving.refusals.groupChat.line": {
+    "where": "Gift refusal screen, when the gift message was opened in a group chat: the line under the title",
+    "ja": "ギフトは、送られた1対1のトークでしかひらけません。{{name}}さんからあなたに届いたギフトなら、そちらでひらいてください。"
+  },
+  "receiving.refusals.groupChat.line_unknownGiver": {
+    "where": "Gift refusal screen, when the gift message was opened in a group chat and the refusal came without the giver: the line under the title",
+    "ja": "ギフトは、送られた1対1のトークでしかひらけません。贈り主からあなたに届いたギフトなら、そちらでひらいてください。"
+  },
+  "receiving.refusals.alreadyReceived.title": {
+    "where": "Gift refusal screen, when the gift was already received: the title, over the open, empty bag",
+    "ja": "開封済み"
+  },
+  "receiving.refusals.alreadyReceived.line": {
+    "where": "Gift refusal screen, when the gift was already received: the line under the title",
+    "ja": "ギフトメッセージをひらけるのは一度だけです。あなたがひらいたなら、シールはシールボードにあります。"
+  },
+  "receiving.refusals.ownGift.title": {
+    "where": "Gift refusal screen, when the giver opens their own gift message: the title",
+    "ja": "このギフトはお届け中です"
+  },
+  "receiving.refusals.ownGift.line": {
+    "where": "Gift refusal screen, when the giver opens their own gift message: the line under the title",
+    "ja": "ひらけるのは、贈った友だちだけです。"
+  },
+  "receiving.refusals.takenBack.title": {
+    "where": "Gift refusal screen, when the giver took the gift back before anyone received it: the title",
+    "ja": "{{name}}さんがこのギフトを取り消しました"
+  },
+  "receiving.refusals.takenBack.title_unknownGiver": {
+    "where": "Gift refusal screen, when the giver took the gift back and the refusal came without the giver: the title",
+    "ja": "贈り主がこのギフトを取り消しました"
+  },
+  "receiving.refusals.takenBack.line": {
+    "where": "Gift refusal screen, when the giver took the gift back before anyone received it: the line under the title",
+    "ja": "だれかが受け取る前に、シールは贈り主のシールボードに戻りました。"
+  },
+  "receiving.refusals.giftReturned.title": {
+    "where": "Gift refusal screen, when the gift was returned or expired unopened: the title",
+    "ja": "このギフトは{{name}}さんに戻りました"
+  },
+  "receiving.refusals.giftReturned.title_unknownGiver": {
+    "where": "Gift refusal screen, when the gift was returned or expired and the refusal came without the giver: the title",
+    "ja": "このギフトは贈り主に戻りました"
+  },
+  "receiving.refusals.giftReturned.line": {
+    "where": "Gift refusal screen, when the gift was returned or expired unopened: the line under the title",
+    "ja": "ギフトの受け取り期限は1週間です。期限内にひらかれなかったので、シールは贈り主のシールボードに戻りました。"
+  },
+  "receiving.refusals.notDeposited.title": {
+    "where": "Gift refusal screen, when the gift hasn't reached the escrow yet: the title, above Try again",
+    "ja": "もうすぐ届きます"
+  },
+  "receiving.refusals.notDeposited.line": {
+    "where": "Gift refusal screen, when the gift hasn't reached the escrow yet: the line under the title",
+    "ja": "このギフトはまだお届け中です。数秒後にもう一度お試しください。"
+  },
+  "receiving.refusals.giftNotFound.title": {
+    "where": "Gift refusal screen, when the link's Gift Claim Token matches no gift: the title",
+    "ja": "このリンクではギフトをひらけません"
+  },
+  "receiving.refusals.giftNotFound.line": {
+    "where": "Gift refusal screen, when the link's Gift Claim Token matches no gift: the line under the title",
+    "ja": "トークのギフトメッセージから、もう一度ひらいてください。"
+  },
+  "receiving.refusals.needsServer.title": {
+    "where": "Gift refusal screen, when the app is running without its server: the title",
+    "ja": "ギフトはまだひらけません"
+  },
+  "receiving.refusals.needsServer.line": {
+    "where": "Gift refusal screen, when the app is running without its server: the line under the title",
+    "ja": "ギフトをひらくにはアプリのサーバーが必要ですが、まだ動いていません。"
+  },
+  "receiving.previewFailed.title": {
+    "where": "Gift refusal screen, when loading the gift's preview failed: the title, above Try again",
+    "ja": "ギフトをひらけませんでした"
+  },
+  "receiving.previewFailed.withoutSticker": {
+    "where": "Gift refusal screen, when the preview says the gift can be received but has no sticker: the line under the title",
+    "ja": "ギフトのプレビューにシールが含まれていませんでした。"
+  },
+  "receiving.previewFailed.withoutRefusal": {
+    "where": "Gift refusal screen, when the preview says the gift can't be received but gives no reason: the line under the title",
+    "ja": "ギフトを受け取れない理由が、プレビューに含まれていませんでした。"
+  },
+  "receiving.backToLine": {
+    "where": "Gift refusal screen, inside LINE's app: the button that closes LINE's window, or the quiet link under Try again",
+    "ja": "LINEに戻る"
+  },
+  "receiving.goToStickerBoard": {
+    "where": "Gift refusal screen: the button when the gift was already received or is your own, and the way out in place of Back to LINE outside LINE's app",
+    "ja": "自分のシールボードへ"
+  },
+  "receiving.tryAgain": {
+    "where": "Gift refusal screen, when the gift is still on its way or its preview failed: the button that loads the gift again",
+    "ja": "もう一度"
+  },
+  "receiving.sendGratitude.title": {
+    "where": "Send gratitude sheet, over the sticker board once a received sticker has stuck to it: the title beside the giver's picture, also the sheet's name",
+    "ja": "{{name}}さんに感謝を送りますか？"
+  },
+  "receiving.sendGratitude.line": {
+    "where": "Send gratitude sheet, when the giver isn't the sticker's Original Artist: the line under the title",
+    "ja": "{{name}}さんからのシールが、シールボードに貼られました。感謝に期限はありません。"
+  },
+  "receiving.sendGratitude.lineFromOriginalArtist": {
+    "where": "Send gratitude sheet, when the giver is the sticker's Original Artist: the line under the title, with their drawing time",
+    "ja": "シールボードに貼られました。<name/>さんが<duration/>でかいたシールです。感謝に期限はありません。"
+  },
+  "receiving.sendGratitude.send": {
+    "where": "Send gratitude sheet: the pink key that starts the Gratitude Mini-game for the giver",
+    "ja": "感謝を送る"
+  },
+  "receiving.sendGratitude.later": {
+    "where": "Send gratitude sheet: the quiet link that closes the sheet without sending gratitude",
+    "ja": "あとで"
+  },
+  "ui.sheet.close": {
+    "where": "Every bottom sheet: the perforation's name for assistive tech, a button that closes the sheet when tapped or dragged down; label is the sheet's name",
+    "ja": "「{{label}}」を閉じる"
+  },
+  "pages.terms": {
+    "where": "Receive gift dialog, Accept sheet: where the terms line's Terms link goes, opened in LINE's in-app browser",
+    "ja": "/ja/terms.html"
+  },
+  "pages.privacy": {
+    "where": "Receive gift dialog, Accept sheet: where the terms line's Privacy Policy link goes, opened in LINE's in-app browser",
+    "ja": "/ja/privacy.html"
+  }
+}
