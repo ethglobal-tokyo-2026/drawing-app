@@ -1,4 +1,4 @@
-import { notePerformance } from "../performance/performanceRecorder";
+import { isPerformanceRecorderOn, notePerformance } from "../performance/performanceRecorder";
 import type { Tier } from "./combo";
 import { EASE_SPRING, clamp } from "./easing";
 import { FEEL_CONFIG } from "./gameConfig";
@@ -401,7 +401,7 @@ export function createLettering(
     },
 
     slamTierName(text, gloss) {
-      notePerformance("gratitude", `slam ${text}`);
+      if (isPerformanceRecorderOn()) notePerformance("gratitude", `slam ${text}`);
       const px = SLAM_PX * grow;
       const caption = (slam ??= makeCaption("gr-slam"));
       dress(caption, text, gloss, px);
@@ -437,7 +437,7 @@ export function createLettering(
     },
 
     showPopInWord(bank, heart) {
-      notePerformance("gratitude", `pop-in ${bank}`);
+      if (isPerformanceRecorderOn()) notePerformance("gratitude", `pop-in ${bank}`);
       const now = performance.now();
       const reused = pops.length >= POP_INS ? pops[0] : undefined;
       const showing = pops.filter((c) => c !== reused && c.until > now);

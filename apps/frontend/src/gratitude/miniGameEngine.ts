@@ -1,5 +1,9 @@
 import type { ReplayV1 } from "@drawing-app/api/client";
-import { notePerformance, timeOurWork } from "../performance/performanceRecorder";
+import {
+  isPerformanceRecorderOn,
+  notePerformance,
+  timeOurWork,
+} from "../performance/performanceRecorder";
 import { seededRandom } from "../ui/seededRandom";
 import {
   createGratitudeCombo,
@@ -213,7 +217,7 @@ export function mountMiniGameEngine(
       const from = { x: hit.x + normal.x * 10, y: hit.y + normal.y * 10 };
       const count = throwCount();
       physics.knockOffWall(from.x, from.y, normal, hit.speed, count);
-      markThrow(`knock ${count}`);
+      markThrow("knock", count);
     } else if (random() < 0.6) effects.burst(2, hit);
   };
   const heart = createHeartMotion(L, random, onWallHit);
@@ -355,10 +359,12 @@ export function mountMiniGameEngine(
     ending = true;
     stopHints();
     root.dataset.phase = "ending";
-    notePerformance(
-      "gratitude",
-      `phase ending, ${caught ? "caught" : "sent"} after ${record.hits} hits`,
-    );
+    if (isPerformanceRecorderOn()) {
+      notePerformance(
+        "gratitude",
+        `phase ending, ${caught ? "caught" : "sent"} after ${record.hits} hits`,
+      );
+    }
     // The heart leaves: nothing can tap it, and focus can't stay on it.
     button.disabled = true;
     try {
@@ -379,7 +385,9 @@ export function mountMiniGameEngine(
 
   const onCaught = () => {
     root.dataset.phase = "running";
-    notePerformance("gratitude", `phase running, ${combo.view.method}`);
+    if (isPerformanceRecorderOn()) {
+      notePerformance("gratitude", `phase running, ${combo.view.method}`);
+    }
     root.dataset.hud = "on";
     hud.show(true);
     // The catch's words stand before the score's; a stroke or shake that starts the combo says its own.
@@ -388,7 +396,7 @@ export function mountMiniGameEngine(
   };
 
   const onTierUp = (tier: Tier) => {
-    notePerformance("gratitude", `tier-up ${TIER_NAMES[tier].jp}`);
+    if (isPerformanceRecorderOn()) notePerformance("gratitude", `tier-up ${TIER_NAMES[tier].jp}`);
     root.dataset.tier = String(tier);
     background.show(tier, intensity, combo.view.method);
     if (!reduced) heart.punch(0.035 * (0.6 + intensity));
@@ -404,9 +412,15 @@ export function mountMiniGameEngine(
 
   /** Mini hearts a spray, a fling or a knock throws: more as the multiplier climbs. */
   const throwCount = () => Math.min(3, 1 + Math.floor((combo.view.multiplier - 1) / 3));
-  /** Marks mini hearts thrown for the performance recorder, with the pile they join. */
-  const markThrow = (what: string) =>
-    notePerformance("gratitude", `${what}, ${physics.hearts.length} mini hearts`);
+  /**
+   * Marks mini hearts thrown for the performance recorder: what threw them, `count` if given, and the
+   * pile they join. With the recorder off, it formats nothing.
+   */
+  const markThrow = (what: string, count?: number) => {
+    if (!isPerformanceRecorderOn()) return;
+    const thrown = count === undefined ? what : `${what} ${count}`;
+    notePerformance("gratitude", `${thrown}, ${physics.hearts.length} mini hearts`);
+  };
 
   const onHit = (secondsAdded: number, x: number, y: number, tierUp: boolean) => {
     const view = combo.view;
@@ -437,7 +451,7 @@ export function mountMiniGameEngine(
     if (tapped && tier >= FEEL_CONFIG.miniHearts.fromTier && !reduced) {
       const count = throwCount();
       physics.sprayFromTap(x, y, box, count);
-      markThrow(`spray ${count}`);
+      markThrow("spray", count);
     }
     if (tier === 4 && hits % 3 === 0) effects.glint(box);
     if (play - lastAnnounce > 1.6) {
@@ -653,7 +667,7 @@ export function mountMiniGameEngine(
       if (counted && tier >= FEEL_CONFIG.miniHearts.fromTier && !reduced) {
         const count = throwCount();
         physics.flingAlongStroke(pass, count);
-        markThrow(`fling ${count}`);
+        markThrow("fling", count);
       }
       return;
     }
@@ -897,11 +911,15 @@ export function mountMiniGameEngine(
     options.onError(error instanceof Error ? error.message : String(error));
   };
 
+  /** When the frame in progress began, which drawThisFrame reads, so no frame makes a closure. */
+  let frameNow = 0;
+  const drawThisFrame = () => drawFrame(frameNow);
   const frame = (now: number) => {
     if (!running) return;
     raf = requestAnimationFrame(frame);
+    frameNow = now;
     try {
-      timeOurWork("gratitude", () => drawFrame(now));
+      timeOurWork("gratitude", drawThisFrame);
     } catch (error) {
       fail(error);
     }

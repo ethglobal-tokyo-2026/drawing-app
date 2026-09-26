@@ -1,5 +1,9 @@
 import { useEffect } from "react";
-import { notePerformance, timeOurWork } from "../performance/performanceRecorder";
+import {
+  isPerformanceRecorderOn,
+  notePerformance,
+  timeOurWork,
+} from "../performance/performanceRecorder";
 import { sheenIn, sweepSheen } from "./resinSheen";
 
 /**
@@ -66,10 +70,13 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     return resins.length;
   };
 
-  /** Lights the resins from `at` as our work, and marks how many it lit. */
-  const lightResins = (at: { x: number; y: number }, why: string) => {
-    const count = timeOurWork("light", () => setOnResins(at.x.toFixed(3), at.y.toFixed(3)));
-    notePerformance("light", `${why} ${count} resins`);
+  /** Sets the light from `lit` on every live resin; returns how many. Made once, not per write. */
+  const lightFromLit = () => (lit ? setOnResins(lit.x.toFixed(3), lit.y.toFixed(3)) : 0);
+
+  /** Lights the resins from `lit` as our work, and marks how many it lit while recording. */
+  const lightResins = (why: string) => {
+    const count = timeOurWork("light", lightFromLit);
+    if (isPerformanceRecorderOn()) notePerformance("light", `${why} ${count} resins`);
   };
 
   const write = (now: number) => {
@@ -80,7 +87,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     }
     lastWrite = now;
     lit = { x, y };
-    lightResins(lit, "write to");
+    lightResins("write to");
   };
 
   const aim = (nx: number, ny: number) => {
@@ -93,7 +100,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
 
   // A screen's resins come in at the middle; they start where the light already is.
   const relight = () => {
-    if (lit && !reduced.matches) lightResins(lit, "relight");
+    if (lit && !reduced.matches) lightResins("relight");
   };
 
   const fromPointer = (e: PointerEvent) =>
@@ -101,6 +108,8 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
 
   let lastGamma: number | null = null;
   let lastSweep = -Infinity;
+  // Made once, like lightFromLit, not per sweep.
+  const sweep = () => sweepVisible(root.ownerDocument, win);
   const fromTilt = (e: DeviceOrientationEvent) => {
     if (e.gamma === null || e.beta === null) return;
     aim(e.gamma / TILT_RANGE, (e.beta - HELD_BETA) / TILT_RANGE);
@@ -112,8 +121,8 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
       !reduced.matches
     ) {
       lastSweep = now;
-      const measured = timeOurWork("light sweep", () => sweepVisible(root.ownerDocument, win));
-      notePerformance("light", `sweep measured ${measured} resins`);
+      const measured = timeOurWork("light sweep", sweep);
+      if (isPerformanceRecorderOn()) notePerformance("light", `sweep measured ${measured} resins`);
     }
     lastGamma = e.gamma;
   };

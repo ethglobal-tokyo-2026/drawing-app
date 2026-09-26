@@ -791,22 +791,26 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
   /* ---------------------------------------------------------------- the loop */
   let raf = 0;
   let last = 0;
+  /** When the frame in progress began, which `advance` reads, so no frame makes a closure. */
+  let frameAt = 0;
   const wake = () => {
     if (raf || destroyed) return;
     last = win.performance.now();
     raf = win.requestAnimationFrame(loop);
   };
   function loop(t: number) {
-    timeOurWork("zipper", () => {
-      raf = 0;
-      const dt = Math.min(MAX_FRAME_S, Math.max(0, (t - last) / 1000));
-      last = t;
-      const n = Math.max(1, Math.ceil(dt * SUBSTEPS_PER_S));
-      for (let i = 0; i < n; i++) step(dt / n);
-      render();
-      if (!still()) raf = win.requestAnimationFrame(loop);
-      else settle();
-    });
+    frameAt = t;
+    timeOurWork("zipper", advance);
+  }
+  function advance() {
+    raf = 0;
+    const dt = Math.min(MAX_FRAME_S, Math.max(0, (frameAt - last) / 1000));
+    last = frameAt;
+    const n = Math.max(1, Math.ceil(dt * SUBSTEPS_PER_S));
+    for (let i = 0; i < n; i++) step(dt / n);
+    render();
+    if (!still()) raf = win.requestAnimationFrame(loop);
+    else settle();
   }
   /** The slider hits a stop: the pull jumps and swings on its hinge. */
   function knock(v: number, atFar: boolean) {
