@@ -1,0 +1,253 @@
+import { gifts, stickerPlacements } from "@drawing-app/db";
+import { insertUser, packGift } from "@drawing-app/db/testing";
+import { and, eq } from "drizzle-orm";
+import { beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
+import { errorBodySchema } from "../errors.ts";
+import { MAX_SEEN_BATCH, stickerBoardSchema } from "../stickerBoards/board.ts";
+import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
+import { insertSealedSticker, receiveGift } from "../testing/rows.ts";
+import { newStickerCount, stickerPlacementSchema, type StickerPlacement } from "../views.ts";
+
+/** A spot on the board, as a drag leaves it. */
+const SPOT = { onBoard: true, x: 0.25, y: 0.75, scale: 0.3, rotation: -4, z: 2 };
+/** Back in the sticker tray, with every value moved from SPOT. */
+const IN_TRAY = { onBoard: false, x: 0.6, y: 0.1, scale: 0.8, rotation: 12, z: 5 };
+/** Past the board field's far edge. */
+const OFF_THE_FIELD = { ...SPOT, x: 1.5 };
+/** A sticker with no size. */
+const NO_SIZE = { ...SPOT, scale: 0 };
+const MINUTE_MS = 60 * 1000;
+/** When the first sticker in a test's sticker tray arrived. */
+const FIRST_ARRIVAL = new Date("2026-09-01T00:00:00.000Z");
+
+const placementResponseSchema = z.object({ stickerPlacement: stickerPlacementSchema });
+const seenResponseSchema = z.object({ newStickerCount: z.number().int().nonnegative() });
+
+let test: TestApp;
+beforeEach(async () => {
+  test = await createTestApp();
+});
+
+const request = async (userId: string, method: string, path: string, body?: unknown) =>
+  test.app.request(path, {
+    method,
+    headers: { ...(await test.signInAs(userId)), "content-type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+
+/** A 200's body, parsed by its schema. */
+async function okBody<Schema extends z.ZodType>(response: Response, schema: Schema) {
+  const body: unknown = await response.json();
+  expect(response.status, JSON.stringify(body)).toBe(200);
+  return schema.parse(body);
+}
+
+/** The status and ErrorBody a request was refused with. */
+const refusal = async (response: Response) => ({
+  status: response.status,
+  ...errorBodySchema.parse(await response.json()),
+});
+
+const boardOf = async (viewerId: string, userId: string) =>
+  okBody(await request(viewerId, "GET", `/api/sticker-boards/${userId}`), stickerBoardSchema);
+
+const patchPlacement = (userId: string, stickerId: string, placement: unknown) =>
+  request(userId, "PATCH", `/api/sticker-boards/me/sticker-placements/${stickerId}`, placement);
+
+const postSeen = (userId: string, stickerIds: string[]) =>
+  request(userId, "POST", "/api/sticker-boards/me/sticker-tray/seen", { stickerIds });
+
+const placementOf = (userId: string, stickerId: string) =>
+  and(eq(stickerPlacements.userId, userId), eq(stickerPlacements.stickerId, stickerId));
+
+const seal = (artistId: string) => insertSealedSticker(test.db, artistId);
+
+/** `giverId` gives `stickerId` to `receiverId`: packed, then received. */
+const give = (stickerId: string, giverId: string, receiverId: string) =>
+  receiveGift(test.db, packGift(test.db, stickerId, giverId), receiverId);
+
+/** Sets when each sticker reached `userId`, a minute apart in the order given. */
+function arriveInOrder(userId: string, stickerIds: string[]) {
+  stickerIds.forEach((stickerId, index) => {
+    const createdAt = new Date(FIRST_ARRIVAL.getTime() + index * MINUTE_MS);
+    test.db
+      .update(stickerPlacements)
+      .set({ createdAt })
+      .where(placementOf(userId, stickerId))
+      .run();
+  });
+}
+
+const byStickerId = <Row extends StickerPlacement>(rows: Row[]) =>
+  new Map(rows.map((row) => [row.stickerId, row]));
+
+describe("GET /api/sticker-boards/:userId", () => {
+  it("lists every sticker that reached you, by me and by your id, in arrival order", async () => {
+    const me = insertUser(test.db);
+    const friend = insertUser(test.db);
+    const kept = seal(me);
+    const packed = seal(me);
+    const packedGiftId = packGift(test.db, packed, me);
+    const sent = seal(me);
+    const sentGiftId = packGift(test.db, sent, me);
+    test.db
+      .update(gifts)
+      .set({ status: "sent", sentAt: new Date(), escrowStatus: "pending" })
+      .where(eq(gifts.id, sentGiftId))
+      .run();
+    const given = seal(me);
+    give(given, me, friend);
+    const received = seal(friend);
+    give(received, friend, me);
+    // Arrival runs against id order, so only ordering by arrival passes.
+    const arrival = [kept, packed, sent, given, received].sort().reverse();
+    arriveInOrder(me, arrival);
+
+    const board = await boardOf(me, "me");
+    expect(await boardOf(me, me)).toEqual(board);
+    expect(board.owner.id).toBe(me);
+    expect(board.boardStickers.map(({ stickerId }) => stickerId)).toEqual(arrival);
+    for (const boardSticker of board.boardStickers) {
+      expect(boardSticker.sticker.id).toBe(boardSticker.stickerId);
+    }
+    const stickers = byStickerId(board.boardStickers);
+    expect(stickers.get(kept)).toMatchObject({
+      placement: null,
+      seenAt: null,
+      held: true,
+      openGift: null,
+    });
+    expect(stickers.get(packed)?.openGift).toEqual({ id: packedGiftId, status: "packed" });
+    expect(stickers.get(sent)?.openGift).toEqual({ id: sentGiftId, status: "sent" });
+    expect(stickers.get(given)).toMatchObject({ held: false, openGift: null });
+    expect(stickers.get(received)).toMatchObject({ held: true, openGift: null });
+  });
+
+  it("shows someone else only their on-board stickers, without their bag or NEW", async () => {
+    const me = insertUser(test.db);
+    const friend = insertUser(test.db);
+    const onBoard = seal(friend);
+    packGift(test.db, onBoard, friend);
+    const givenAway = seal(friend);
+    const inTray = seal(friend);
+    const unplaced = seal(friend);
+    for (const [stickerId, spot] of [
+      [onBoard, SPOT],
+      [givenAway, SPOT],
+      [inTray, IN_TRAY],
+    ] as const) {
+      test.db
+        .update(stickerPlacements)
+        .set({ ...spot, seenAt: new Date() })
+        .where(placementOf(friend, stickerId))
+        .run();
+    }
+    give(givenAway, friend, insertUser(test.db));
+
+    const board = await boardOf(me, friend);
+    expect(board.owner.id).toBe(friend);
+    expect(board.boardStickers.map(({ stickerId }) => stickerId).sort()).toEqual(
+      [onBoard, givenAway].sort(),
+    );
+    expect(board.boardStickers.map(({ stickerId }) => stickerId)).not.toContain(unplaced);
+    const stickers = byStickerId(board.boardStickers);
+    expect(stickers.get(onBoard)).toMatchObject({ held: true, openGift: null, seenAt: null });
+    expect(stickers.get(givenAway)).toMatchObject({ held: false, openGift: null, seenAt: null });
+  });
+
+  it("refuses a person who doesn't exist", async () => {
+    const me = insertUser(test.db);
+    expect(await refusal(await request(me, "GET", "/api/sticker-boards/nobody"))).toMatchObject({
+      status: 404,
+      error: "user_not_found",
+    });
+  });
+});
+
+describe("PATCH /api/sticker-boards/me/sticker-placements/:stickerId", () => {
+  it("saves a placement whole on any sticker that reached you, and returns it", async () => {
+    const me = insertUser(test.db);
+    const kept = seal(me);
+    const given = seal(me);
+    give(given, me, insertUser(test.db));
+    for (const stickerId of [kept, given]) {
+      for (const placement of [SPOT, IN_TRAY]) {
+        const saved = await okBody(
+          await patchPlacement(me, stickerId, placement),
+          placementResponseSchema,
+        );
+        expect(saved.stickerPlacement).toMatchObject({ stickerId, placement });
+      }
+    }
+    const board = await boardOf(me, "me");
+    expect(board.boardStickers.map(({ placement }) => placement)).toEqual([IN_TRAY, IN_TRAY]);
+  });
+
+  it("refuses a sticker that never reached you, and a placement outside the board", async () => {
+    const me = insertUser(test.db);
+    const theirs = seal(insertUser(test.db));
+    expect(await refusal(await patchPlacement(me, theirs, SPOT))).toMatchObject({
+      status: 404,
+      error: "sticker_placement_not_found",
+    });
+    const mine = seal(me);
+    for (const outside of [OFF_THE_FIELD, NO_SIZE]) {
+      expect(await refusal(await patchPlacement(me, mine, outside))).toMatchObject({
+        status: 400,
+        error: "invalid_request",
+      });
+    }
+  });
+});
+
+describe("POST /api/sticker-boards/me/sticker-tray/seen", () => {
+  it("marks the listed stickers seen once, leaves the rest NEW, and answers the NEW count", async () => {
+    const me = insertUser(test.db);
+    const friend = insertUser(test.db);
+    const first = seal(me);
+    const second = seal(me);
+    const left = seal(me);
+    const theirs = seal(friend);
+    const firstSeenAt = test.clock.now().toISOString();
+
+    const answer = await okBody(await postSeen(me, [first, second, theirs]), seenResponseSchema);
+    expect(answer.newStickerCount).toBe([left].length);
+    test.clock.advance(MINUTE_MS);
+    await postSeen(me, [first]);
+
+    const stickers = byStickerId((await boardOf(me, "me")).boardStickers);
+    expect(stickers.get(first)?.seenAt).toBe(firstSeenAt);
+    expect(stickers.get(second)?.seenAt).toBe(firstSeenAt);
+    expect(stickers.get(left)?.seenAt).toBeNull();
+    expect(newStickerCount(test.db, friend)).toBe([theirs].length);
+  });
+
+  it("takes from 1 to MAX_SEEN_BATCH sticker ids at once", async () => {
+    const me = insertUser(test.db);
+    const ids = (length: number) => Array.from({ length }, (_, index) => `not-a-sticker-${index}`);
+    expect((await postSeen(me, ids(MAX_SEEN_BATCH))).status).toBe(200);
+    for (const stickerIds of [[], ids(MAX_SEEN_BATCH + 1), [""]]) {
+      expect(await refusal(await postSeen(me, stickerIds))).toMatchObject({
+        status: 400,
+        error: "invalid_request",
+      });
+    }
+  });
+});
+
+describe("sticker board routes", () => {
+  it("refuse a request without the session cookie", async () => {
+    const routes = [
+      ["GET", "/api/sticker-boards/me"],
+      ["PATCH", "/api/sticker-boards/me/sticker-placements/any-sticker"],
+      ["POST", "/api/sticker-boards/me/sticker-tray/seen"],
+    ];
+    for (const [method, path] of routes) {
+      expect(await refusal(await test.app.request(path, { method }))).toMatchObject({
+        status: 401,
+        error: "signed_out",
+      });
+    }
+  });
+});

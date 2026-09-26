@@ -1,12 +1,15 @@
+import { stickers, users } from "@drawing-app/db";
 import { insertUser, packGift } from "@drawing-app/db/testing";
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { LineTokenInvalidError, type LineProfile } from "../deps.ts";
 import { errorBodySchema } from "../errors.ts";
 import { HANDLE_MAX_LENGTH } from "../session/handles.ts";
+import { SESSION_COOKIE } from "../session.ts";
 import { meSchema } from "../shapes.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
-import { fakeLineIdToken } from "../testing/fakes.ts";
+import { fakeLineIdToken, fakeSmartWallets } from "../testing/fakes.ts";
 import { insertGratitude, insertSealedSticker, receiveGift } from "../testing/rows.ts";
 import { ID_TOKEN_MAX_LENGTH } from "./session.ts";
 
@@ -57,6 +60,9 @@ const refusal = async (response: Response) => ({
   status: response.status,
   ...errorBodySchema.parse(await response.json()),
 });
+
+const setHandle = (headers: Record<string, string>, handle: unknown) =>
+  call("POST", "/api/me/handle", headers, { handle });
 
 describe("signing in", () => {
   it("makes the person at their first sign-in, with their LINE name as handle and the device's zone", async () => {
@@ -134,5 +140,86 @@ describe("me", () => {
       newStickerCount: unseen.length,
       unseenGratitudeCount: thanked.length,
     });
+  });
+});
+
+describe("your handle", () => {
+  it("is stored trimmed, ends the prompt, and can change to itself in another letter case", async () => {
+    const headers = await test.signInAs(insertUser(test.db));
+    const set = await meIn(await setHandle(headers, "  sakura  "));
+    expect(set).toMatchObject({ handle: "sakura", needsHandle: false });
+    expect(await meIn(await setHandle(headers, "Sakura"))).toMatchObject({ handle: "Sakura" });
+    // Each emoji is two UTF-16 units but one code point.
+    const emoji = "🎨".repeat(HANDLE_MAX_LENGTH);
+    expect(await meIn(await setHandle(headers, emoji))).toMatchObject({ handle: emoji });
+  });
+
+  it("refuses someone else's handle in another letter case, and a handle that breaks the rules", async () => {
+    insertUser(test.db, { handle: "sakura" });
+    const headers = await test.signInAs(insertUser(test.db));
+    expect(await refusal(await setHandle(headers, "SAKURA"))).toMatchObject({
+      status: 409,
+      error: "handle_taken",
+    });
+    for (const handle of ["   ", "a".repeat(HANDLE_MAX_LENGTH + 1), "@sakura2"]) {
+      expect(await refusal(await setHandle(headers, handle))).toMatchObject({
+        status: 400,
+        error: "handle_invalid",
+      });
+    }
+    expect(await refusal(await setHandle(headers, null))).toMatchObject({
+      status: 400,
+      error: "invalid_request",
+    });
+  });
+});
+
+describe("deleting your account", () => {
+  it("forgets LINE and the handle, keeps the rest, ends the session, and a new sign-in makes a new person", async () => {
+    const signedIn = await signIn(ALICE);
+    const { id } = await meIn(signedIn);
+    const headers = sessionCookie(signedIn);
+    const wallet = await fakeSmartWallets().addressFor(id);
+    test.db.update(users).set({ smartAccountAddress: wallet }).where(eq(users.id, id)).run();
+    const stickerId = insertSealedSticker(test.db, id);
+
+    const deleted = await call("DELETE", "/api/me", headers);
+    expect(deleted.status).toBe(204);
+    const cleared = deleted.headers.get("set-cookie") ?? "";
+    expect(cleared.startsWith(`${SESSION_COOKIE}=;`)).toBe(true);
+    expect(cleared).toContain("Max-Age=0");
+    expect(test.db.select().from(users).where(eq(users.id, id)).get()).toMatchObject({
+      deletedAt: test.clock.now(),
+      lineUserId: null,
+      lineDisplayName: null,
+      linePictureUrl: null,
+      handle: null,
+      smartAccountAddress: wallet,
+    });
+    expect(test.db.select().from(stickers).where(eq(stickers.id, stickerId)).get()).toMatchObject({
+      artistId: id,
+      ownerId: id,
+    });
+
+    expect(await refusal(await call("GET", "/api/me", headers))).toMatchObject({
+      status: 401,
+      error: "signed_out",
+    });
+    const again = await meIn(await signIn(ALICE));
+    expect(again.id).not.toBe(id);
+    expect(again.handle).toBe(ALICE.name);
+  });
+});
+
+describe("without a session", () => {
+  it("you can't read, rename or delete your account", async () => {
+    const responses = [
+      await call("GET", "/api/me"),
+      await setHandle({}, "sakura"),
+      await call("DELETE", "/api/me"),
+    ];
+    for (const response of responses) {
+      expect(await refusal(response)).toMatchObject({ status: 401, error: "signed_out" });
+    }
   });
 });
