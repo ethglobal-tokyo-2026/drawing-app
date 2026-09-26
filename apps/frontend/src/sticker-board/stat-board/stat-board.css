@@ -299,7 +299,7 @@
   border-radius: 50%;
 }
 
-.stat-board__receipt-dot.is-daily {
+.stat-board__receipt-dot.is-asOriginalArtist {
   background: var(--seal);
   box-shadow: 0 0 0 1px var(--seal-deep);
 }
@@ -636,18 +636,6 @@
   clip-path: polygon(0 6%, 100% 0, 98.5% 100%, 1.5% 94%);
   filter: drop-shadow(1px 2px 1.5px rgba(28, 24, 36, 0.35));
   transform: rotate(0.8deg) translateX(10px);
-}
-
-/* Their board address: the same tape, as a button that copies it. */
-.stat-board__tape--address {
-  border: 0;
-  cursor: pointer;
-  transform: rotate(-1deg);
-}
-
-.stat-board__tape--address svg {
-  margin-left: 6px;
-  vertical-align: -2px;
 }
 
 .stat-board__tape-text {

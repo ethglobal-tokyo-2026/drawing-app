@@ -331,8 +331,12 @@
   z-index: 960;
   left: 0;
   top: 0;
+  /* Rows, not a wrapping line: iOS Safari sizes a wrapping flex box as if nothing wrapped, which made
+     it too wide to fit on the board. Stacked, it's as wide as its widest row. */
   display: flex;
+  flex-direction: column;
   gap: 6px;
+  width: max-content;
   padding: 5px;
   border-radius: 10px;
   background: var(--liner-lift);
@@ -341,7 +345,11 @@
     var(--shadow-lift);
 }
 
-/* A 36px face on its lip. */
+.sticker-toolbar__acts {
+  display: flex;
+  gap: 6px;
+}
+
 /* Gifts on their way sit in the header, opposite your name, above the sticker tray's pull. */
 .board-pending {
   position: absolute;
@@ -350,15 +358,7 @@
   top: 12px;
 }
 
-/* The artist of a sticker someone else drew heads its toolbar, on a row of its own. */
-.sticker-toolbar:has(.sticker-toolbar__by) {
-  flex-wrap: wrap;
-}
-
-.sticker-toolbar__by {
-  flex-basis: 100%;
-}
-
+/* A 36px face on its lip. */
 .sticker-toolbar .label-btn {
   min-height: calc(36px + var(--lip));
   padding: 0 13px 0 11px;

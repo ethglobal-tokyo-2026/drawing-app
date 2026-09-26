@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../api/apiClient";
-import type { GiftPreviewResponse, ReceiveGiftResponse } from "../api/contract";
-import { people, sticker } from "../api/mock/fixtures";
+import type { GiftPreview, ReceivedGift } from "@drawing-app/api/client";
+import { people, sticker } from "../api/testFixtures";
 import { toMs, toPerson, toSticker } from "../api/views";
 import { receiveFlow, type ReceiveEvent, type ReceiveScreen } from "./receiveFlow";
 
 const giver = people.mika;
 const gifted = sticker({ number: 147 });
 
-const preview = (overrides: Partial<GiftPreviewResponse> = {}): GiftPreviewResponse => ({
+const preview = (overrides: Partial<GiftPreview> = {}): GiftPreview => ({
   giver,
   expiresAt: "2026-09-30T12:00:00.000Z",
   receivable: true,
@@ -17,7 +17,7 @@ const preview = (overrides: Partial<GiftPreviewResponse> = {}): GiftPreviewRespo
   ...overrides,
 });
 
-const received: ReceiveGiftResponse = {
+const received: ReceivedGift = {
   gift: {
     id: "gift-1",
     stickerId: gifted.id,

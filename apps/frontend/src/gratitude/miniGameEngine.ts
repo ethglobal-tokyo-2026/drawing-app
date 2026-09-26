@@ -1,4 +1,5 @@
-import type { ReplayV1 } from "../api/contract";
+import type { ReplayV1 } from "@drawing-app/api/client";
+import { notePerformance, timeOurWork } from "../performance/performanceRecorder";
 import { seededRandom } from "../ui/seededRandom";
 import {
   createGratitudeCombo,
@@ -150,6 +151,8 @@ export function mountMiniGameEngine(
   const art = bigHeartLayers(`h${mount}`);
   body.innerHTML = `<div class="gr-heart-layers" aria-hidden="true">${art.body}${art.flush}${art.pale}${art.gloss}${art.ink}${art.face}</div>`;
   const ink = body.querySelector(".h-ink");
+  // Only the heart's gloss reads the light, so a thumb's light goes on it, not on the whole game.
+  const gloss = body.querySelector<SVGElement>(".h-gloss");
   const button = document.createElement("button");
   button.type = "button";
   button.className = "gr-heart-btn";
@@ -208,7 +211,9 @@ export function mountMiniGameEngine(
     if ((combo.view.tier ?? 0) >= FEEL_CONFIG.miniHearts.fromTier && !reduced) {
       const { normal } = hit;
       const from = { x: hit.x + normal.x * 10, y: hit.y + normal.y * 10 };
-      physics.knockOffWall(from.x, from.y, normal, hit.speed, throwCount());
+      const count = throwCount();
+      physics.knockOffWall(from.x, from.y, normal, hit.speed, count);
+      markThrow(`knock ${count}`);
     } else if (random() < 0.6) effects.burst(2, hit);
   };
   const heart = createHeartMotion(L, random, onWallHit);
@@ -264,6 +269,7 @@ export function mountMiniGameEngine(
   root.dataset.phase = "ready";
   root.dataset.tier = "";
   root.dataset.reduced = reduced ? "1" : "0";
+  notePerformance("gratitude", "phase ready");
   // The HUD shows from the start: a full bar holding the catch window's seconds, until the first tap.
   root.dataset.hud = "on";
   hud.show(true);
@@ -338,6 +344,7 @@ export function mountMiniGameEngine(
   const finish = (caught: boolean, record: ComboRecord) => {
     if (!alive) return;
     root.dataset.phase = "done";
+    notePerformance("gratitude", "phase done");
     root.dataset.hud = "off";
     hud.show(false);
     options.onFinished({ caught, record });
@@ -348,6 +355,10 @@ export function mountMiniGameEngine(
     ending = true;
     stopHints();
     root.dataset.phase = "ending";
+    notePerformance(
+      "gratitude",
+      `phase ending, ${caught ? "caught" : "sent"} after ${record.hits} hits`,
+    );
     // The heart leaves: nothing can tap it, and focus can't stay on it.
     button.disabled = true;
     try {
@@ -368,6 +379,7 @@ export function mountMiniGameEngine(
 
   const onCaught = () => {
     root.dataset.phase = "running";
+    notePerformance("gratitude", `phase running, ${combo.view.method}`);
     root.dataset.hud = "on";
     hud.show(true);
     // The catch's words stand before the score's; a stroke or shake that starts the combo says its own.
@@ -376,6 +388,7 @@ export function mountMiniGameEngine(
   };
 
   const onTierUp = (tier: Tier) => {
+    notePerformance("gratitude", `tier-up ${TIER_NAMES[tier].jp}`);
     root.dataset.tier = String(tier);
     background.show(tier, intensity, combo.view.method);
     if (!reduced) heart.punch(0.035 * (0.6 + intensity));
@@ -391,6 +404,9 @@ export function mountMiniGameEngine(
 
   /** Mini hearts a spray, a fling or a knock throws: more as the multiplier climbs. */
   const throwCount = () => Math.min(3, 1 + Math.floor((combo.view.multiplier - 1) / 3));
+  /** Marks mini hearts thrown for the performance recorder, with the pile they join. */
+  const markThrow = (what: string) =>
+    notePerformance("gratitude", `${what}, ${physics.hearts.length} mini hearts`);
 
   const onHit = (secondsAdded: number, x: number, y: number, tierUp: boolean) => {
     const view = combo.view;
@@ -413,10 +429,15 @@ export function mountMiniGameEngine(
     if (tier >= 2 && !reduced) heart.shake(tier >= 3 ? 5 * intensity : 2 * intensity);
     if (tier === 2 && hits % 5 === 0) effects.burst(2, heartAt);
     if (tier >= 3 && hits % 2 === 0) effects.steam(Math.max(1, Math.round(intensity * 2)), box);
-    if (tier >= 3 && hits % 2 === 1 && method !== "stroke" && !reduced) physics.rainFromTop();
+    if (tier >= 3 && hits % 2 === 1 && method !== "stroke" && !reduced) {
+      physics.rainFromTop();
+      markThrow("rain");
+    }
     if (tapped && !reduced && physics.hearts.length > 0) physics.shoveAwayFrom(x, y);
     if (tapped && tier >= FEEL_CONFIG.miniHearts.fromTier && !reduced) {
-      physics.sprayFromTap(x, y, box, throwCount());
+      const count = throwCount();
+      physics.sprayFromTap(x, y, box, count);
+      markThrow(`spray ${count}`);
     }
     if (tier === 4 && hits % 3 === 0) effects.glint(box);
     if (play - lastAnnounce > 1.6) {
@@ -630,7 +651,9 @@ export function mountMiniGameEngine(
       const counted = events.some((e) => e.kind === "hit");
       const tier = combo.view.tier ?? 0;
       if (counted && tier >= FEEL_CONFIG.miniHearts.fromTier && !reduced) {
-        physics.flingAlongStroke(pass, throwCount());
+        const count = throwCount();
+        physics.flingAlongStroke(pass, count);
+        markThrow(`fling ${count}`);
       }
       return;
     }
@@ -753,6 +776,7 @@ export function mountMiniGameEngine(
     if (!events.some((e) => e.kind === "hit")) return;
     sendingSince = t;
     root.dataset.phase = "sending";
+    notePerformance("gratitude", "phase sending");
     effects.stamp(x, y);
     effects.rise(1, heartBox());
     handle(
@@ -877,123 +901,131 @@ export function mountMiniGameEngine(
     if (!running) return;
     raf = requestAnimationFrame(frame);
     try {
-      const realMs = last ? now - last : 16;
-      last = now;
-      readout?.frame(realMs);
-      const real = Math.min(0.05, realMs / 1000);
-      wall += real;
-      const due = combo.advanceTo(now);
-      if (due.length > 0) handle(due, L.rest.x, L.rest.y);
-      const view = combo.view;
-      const dt = view.frozen || now < heldUntil ? 0 : real;
-      play += dt;
-      for (const w of waits.filter((x) => play >= x.at)) {
-        waits.splice(waits.indexOf(w), 1);
-        w.resolve();
-      }
-
-      const tier = view.tier ?? 0;
-      if (view.phase === "running" && tier >= 2 && !reduced) {
-        sweat += FEEL_CONFIG.miniHearts.sweatPerSecond[tier] * (0.7 + 0.5 * intensity) * dt;
-        for (; sweat >= 1; sweat -= 1) physics.sweatFromHeart(heartBox());
-      }
-      physics.step(dt);
-      miniHearts.draw(physics.hearts);
-
-      const sendingProgress =
-        view.phase === "sending" ? Math.min(1, (now - sendingSince) / FEEL_CONFIG.windUpMs) : 0;
-      if (flash && now >= flash.until) {
-        flash = null;
-        writeFace();
-      }
-      if (tipShown && wall > tipUntil) hideTip();
-      // A shake given up: its run has lapsed, and the corner it lifted comes down.
-      if (cornerUntil && now >= cornerUntil) lowerCorner();
-      const shakingNow = now < shakingUntil ? "1" : "0";
-      if (root.dataset.shaking !== shakingNow) root.dataset.shaking = shakingNow;
-
-      // A thumb holding the heart, or stroking once stroke is unlocked: the heart leans to it,
-      // its light follows it and a glow sits under it.
-      const stroking = view.method === "stroke";
-      const thumb = stroke && !ending && (stroking || stroke.onHeart) ? stroke.last : null;
-      const thumbRecent = stroke !== null && now - lastMoveAt < THUMB_RECENT_MS;
-      const f = heart.step(dt, real, {
-        phase: view.phase,
-        tier: view.tier,
-        intensity,
-        reduced,
-        sendingProgress,
-        leanToward: thumb ? { x: thumb.x, degrees: stroking ? 7 : 3 } : null,
-        strokeStretch: stroking && thumbRecent ? { speed: strokeSpeed, angle: strokeAngle } : null,
-      });
-      if (stroking) {
-        const opacity = thumbRecent ? Math.min(1, strokeSpeed / 1.1) * (0.2 + 0.4 * intensity) : 0;
-        showSpeedField(opacity, strokeAngle);
-      }
-      if (thumb) {
-        thumbGlow.style.opacity = stroking ? "0.9" : "0.4";
-        thumbGlow.style.transform = `translate(${thumb.x.toFixed(1)}px, ${thumb.y.toFixed(1)}px)`;
-      } else if (thumbGlow.style.opacity !== "0") thumbGlow.style.opacity = "0";
-      // The heart's light follows the thumb, except with reduced motion.
-      if (thumb && !reduced) {
-        if (now - lightAt > LIGHT_MS) {
-          lightAt = now;
-          lightOwned = true;
-          root.style.setProperty("--lx", clamp((thumb.x / size.width) * 2 - 1, -1, 1).toFixed(3));
-          root.style.setProperty("--ly", clamp((thumb.y / size.height) * 2 - 1, -1, 1).toFixed(3));
-        }
-      } else if (lightOwned) {
-        lightOwned = false;
-        root.style.removeProperty("--lx");
-        root.style.removeProperty("--ly");
-      }
-      heartAt = { x: f.x, y: f.y, scale: f.scale };
-      page.style.transform = f.page;
-      anchor.style.transform = f.anchor;
-      anchor.style.opacity = String(f.opacity);
-      body.style.transform = f.body;
-      if (face.ink && !reduced) ink?.setAttribute("data-v", String(Math.floor(wall * 12) % 3));
-
-      background.step(real);
-      // Before the catch the bar is the catch window: full at ready, emptying once the heart is sent.
-      // From the catch it's the combo's own.
-      if (view.phase === "ready") {
-        if (!readyDrawn) {
-          readyDrawn = true;
-          hud.step(real, {
-            total: 0,
-            multiplier: 1,
-            secondsLeft: GAME_CONFIG.catchWindowMs / 1000,
-            barFill: 1,
-            running: false,
-          });
-        }
-      } else if (view.phase === "sending") {
-        const leftMs = Math.max(0, GAME_CONFIG.catchWindowMs - (now - sendingSince));
-        hud.step(real, {
-          total: view.total,
-          multiplier: view.multiplier,
-          secondsLeft: leftMs / 1000,
-          barFill: leftMs / GAME_CONFIG.catchWindowMs,
-          running: false,
-        });
-      } else {
-        hud.step(real, {
-          total: view.total,
-          multiplier: view.multiplier,
-          secondsLeft: view.secondsLeft,
-          barFill: view.barFill,
-          running: view.phase === "running",
-        });
-      }
-
-      // Once the receipt is up and the pile has melted, nothing moves: the loop sleeps.
-      if (root.dataset.phase === "done" && physics.hearts.length === 0 && !readout) {
-        running = false;
-        cancelAnimationFrame(raf);
-      }
+      timeOurWork("gratitude", () => drawFrame(now));
     } catch (error) {
       fail(error);
+    }
+  };
+
+  /** One frame: the combo's clock, the mini hearts, the heart, the ground and the HUD. */
+  const drawFrame = (now: number) => {
+    const realMs = last ? now - last : 16;
+    last = now;
+    readout?.frame(realMs);
+    const real = Math.min(0.05, realMs / 1000);
+    wall += real;
+    const due = combo.advanceTo(now);
+    if (due.length > 0) handle(due, L.rest.x, L.rest.y);
+    const view = combo.view;
+    const dt = view.frozen || now < heldUntil ? 0 : real;
+    play += dt;
+    for (const w of waits.filter((x) => play >= x.at)) {
+      waits.splice(waits.indexOf(w), 1);
+      w.resolve();
+    }
+
+    const tier = view.tier ?? 0;
+    if (view.phase === "running" && tier >= 2 && !reduced) {
+      sweat += FEEL_CONFIG.miniHearts.sweatPerSecond[tier] * (0.7 + 0.5 * intensity) * dt;
+      for (; sweat >= 1; sweat -= 1) {
+        physics.sweatFromHeart(heartBox());
+        markThrow("sweat");
+      }
+    }
+    physics.step(dt);
+    miniHearts.draw(physics.hearts);
+
+    const sendingProgress =
+      view.phase === "sending" ? Math.min(1, (now - sendingSince) / FEEL_CONFIG.windUpMs) : 0;
+    if (flash && now >= flash.until) {
+      flash = null;
+      writeFace();
+    }
+    if (tipShown && wall > tipUntil) hideTip();
+    // A shake given up: its run has lapsed, and the corner it lifted comes down.
+    if (cornerUntil && now >= cornerUntil) lowerCorner();
+    const shakingNow = now < shakingUntil ? "1" : "0";
+    if (root.dataset.shaking !== shakingNow) root.dataset.shaking = shakingNow;
+
+    // A thumb holding the heart, or stroking once stroke is unlocked: the heart leans to it,
+    // its light follows it and a glow sits under it.
+    const stroking = view.method === "stroke";
+    const thumb = stroke && !ending && (stroking || stroke.onHeart) ? stroke.last : null;
+    const thumbRecent = stroke !== null && now - lastMoveAt < THUMB_RECENT_MS;
+    const f = heart.step(dt, real, {
+      phase: view.phase,
+      tier: view.tier,
+      intensity,
+      reduced,
+      sendingProgress,
+      leanToward: thumb ? { x: thumb.x, degrees: stroking ? 7 : 3 } : null,
+      strokeStretch: stroking && thumbRecent ? { speed: strokeSpeed, angle: strokeAngle } : null,
+    });
+    if (stroking) {
+      const opacity = thumbRecent ? Math.min(1, strokeSpeed / 1.1) * (0.2 + 0.4 * intensity) : 0;
+      showSpeedField(opacity, strokeAngle);
+    }
+    if (thumb) {
+      thumbGlow.style.opacity = stroking ? "0.9" : "0.4";
+      thumbGlow.style.transform = `translate(${thumb.x.toFixed(1)}px, ${thumb.y.toFixed(1)}px)`;
+    } else if (thumbGlow.style.opacity !== "0") thumbGlow.style.opacity = "0";
+    // The heart's light follows the thumb, except with reduced motion.
+    if (thumb && !reduced) {
+      if (now - lightAt > LIGHT_MS) {
+        lightAt = now;
+        lightOwned = true;
+        gloss?.style.setProperty("--lx", clamp((thumb.x / size.width) * 2 - 1, -1, 1).toFixed(3));
+        gloss?.style.setProperty("--ly", clamp((thumb.y / size.height) * 2 - 1, -1, 1).toFixed(3));
+      }
+    } else if (lightOwned) {
+      lightOwned = false;
+      gloss?.style.removeProperty("--lx");
+      gloss?.style.removeProperty("--ly");
+    }
+    heartAt = { x: f.x, y: f.y, scale: f.scale };
+    page.style.transform = f.page;
+    anchor.style.transform = f.anchor;
+    anchor.style.opacity = String(f.opacity);
+    body.style.transform = f.body;
+    if (face.ink && !reduced) ink?.setAttribute("data-v", String(Math.floor(wall * 12) % 3));
+
+    background.step(real);
+    // Before the catch the bar is the catch window: full at ready, emptying once the heart is sent.
+    // From the catch it's the combo's own.
+    if (view.phase === "ready") {
+      if (!readyDrawn) {
+        readyDrawn = true;
+        hud.step(real, {
+          total: 0,
+          multiplier: 1,
+          secondsLeft: GAME_CONFIG.catchWindowMs / 1000,
+          barFill: 1,
+          running: false,
+        });
+      }
+    } else if (view.phase === "sending") {
+      const leftMs = Math.max(0, GAME_CONFIG.catchWindowMs - (now - sendingSince));
+      hud.step(real, {
+        total: view.total,
+        multiplier: view.multiplier,
+        secondsLeft: leftMs / 1000,
+        barFill: leftMs / GAME_CONFIG.catchWindowMs,
+        running: false,
+      });
+    } else {
+      hud.step(real, {
+        total: view.total,
+        multiplier: view.multiplier,
+        secondsLeft: view.secondsLeft,
+        barFill: view.barFill,
+        running: view.phase === "running",
+      });
+    }
+
+    // Once the receipt is up and the pile has melted, nothing moves: the loop sleeps.
+    if (root.dataset.phase === "done" && physics.hearts.length === 0 && !readout) {
+      running = false;
+      cancelAnimationFrame(raf);
     }
   };
   raf = requestAnimationFrame(frame);
@@ -1026,8 +1058,6 @@ export function mountMiniGameEngine(
       readout?.destroy();
       tipAnimation?.cancel();
       tip.remove();
-      root.style.removeProperty("--lx");
-      root.style.removeProperty("--ly");
       lettering.clear();
       effects.tidy();
       miniHearts.clear();

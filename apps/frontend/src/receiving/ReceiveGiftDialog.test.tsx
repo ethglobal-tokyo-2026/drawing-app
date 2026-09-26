@@ -2,8 +2,8 @@
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
-import type { GiftPreviewResponse, ReceiveGiftResponse, ReceiveRefusal } from "../api/contract";
-import { people, sticker } from "../api/mock/fixtures";
+import type { GiftPreview, ReceivedGift, ReceiveRefusal } from "@drawing-app/api/client";
+import { people, sticker } from "../api/testFixtures";
 import { emptyApi, renderWithApi } from "../api/testing";
 import { toPerson } from "../api/views";
 import { PULL } from "./pullTab";
@@ -33,7 +33,7 @@ const giver = people.mika;
 const gifted = sticker({ number: 147 });
 const claim = { giftClaimToken: "t0k3n", liffContextType: "utou" };
 
-const receivable: GiftPreviewResponse = {
+const receivable: GiftPreview = {
   giver,
   expiresAt: "2026-09-30T12:00:00.000Z",
   receivable: true,
@@ -41,7 +41,7 @@ const receivable: GiftPreviewResponse = {
   sticker: gifted,
 };
 
-const received: ReceiveGiftResponse = {
+const received: ReceivedGift = {
   gift: {
     id: "gift-1",
     stickerId: gifted.id,

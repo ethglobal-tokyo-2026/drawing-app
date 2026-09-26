@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { boardSticker, people, sticker } from "../api/mock/fixtures";
-import { toPerson } from "../api/views";
-import { fromApiPlacement, placeUnplaced, toApiPlacement, toBoardSticker } from "./boardSticker";
+import { boardSticker, people, sticker } from "../api/testFixtures";
+import { toApiPlacement, toPerson, toRecordPlacement } from "../api/views";
+import { placeUnplaced, toBoardSticker } from "./boardSticker";
 
 describe("toBoardSticker", () => {
   it("draws the API's board sticker with the app's names and milliseconds", () => {
@@ -39,7 +39,7 @@ describe("placeUnplaced", () => {
       toBoardSticker,
     );
     const { stickers, placed } = placeUnplaced(list);
-    expect(stickers[0].placement).toEqual(fromApiPlacement(at));
+    expect(stickers[0].placement).toEqual(toRecordPlacement(at));
     expect(placed.map((s) => s.id)).toEqual([list[1].id, list[2].id]);
     const [a, b] = placed.map((s) => s.placement);
     expect([a.x, a.y]).not.toEqual([b.x, b.y]);

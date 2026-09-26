@@ -1,7 +1,7 @@
 import { Heart, Wind, X } from "@phosphor-icons/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { RecordGratitude, ReplayV1 } from "../api/contract";
+import type { RecordGratitude, ReplayV1 } from "@drawing-app/api/client";
 import { useApi } from "../api/useApi";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Duration } from "../stickers/Duration";
@@ -68,18 +68,23 @@ function gratitudeFor(giftId: string, record: ComboRecord, replay: ReplayV1): Re
 
 /**
  * While the game covers the phone, the phone's other children (the board's screen, the tab bar and
- * anything else open) go inert, so assistive tech and Tab reach only the game. Returns what undoes
- * it, which takes off only the `inert` it added.
+ * anything else open) go inert and hidden: assistive tech and Tab reach only the game, and the
+ * browser stops painting what it covers. Returns what undoes it, which takes off only the `inert`
+ * it added and puts back each child's own visibility.
  */
 function setPhoneAside(game: HTMLElement): () => void {
   const phone = game.parentElement;
   if (!phone?.classList.contains("phone")) return () => {};
-  const added = [...phone.children].filter(
-    (child) => child !== game && !child.hasAttribute("inert"),
+  const others = [...phone.children].filter(
+    (child): child is HTMLElement => child !== game && child instanceof HTMLElement,
   );
-  for (const child of added) child.setAttribute("inert", "");
+  const madeInert = others.filter((child) => !child.hasAttribute("inert"));
+  const visibility = others.map((child) => ({ child, was: child.style.visibility }));
+  for (const child of madeInert) child.setAttribute("inert", "");
+  for (const child of others) child.style.visibility = "hidden";
   return () => {
-    for (const child of added.splice(0)) child.removeAttribute("inert");
+    for (const child of madeInert.splice(0)) child.removeAttribute("inert");
+    for (const { child, was } of visibility.splice(0)) child.style.visibility = was;
   };
 }
 

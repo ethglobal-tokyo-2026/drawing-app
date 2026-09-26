@@ -1,7 +1,7 @@
 import { CaretLeft, CaretRight, Gift, Heart } from "@phosphor-icons/react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
-import type { StickerDetailResponse } from "../api/contract";
+import type { StickerDetail as StickerDetailResponse } from "@drawing-app/api/client";
 import { useApiQuery } from "../api/useApiQuery";
 import { toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";

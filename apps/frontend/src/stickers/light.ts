@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { notePerformance, timeOurWork } from "../performance/performanceRecorder";
 import { sheenIn, sweepSheen } from "./resinSheen";
 
 /**
@@ -29,13 +30,15 @@ const clamp11 = (v: number) => (v < -1 ? -1 : v > 1 ? 1 : v);
 let light: { on: () => void; off: () => void; relight: () => void } | null = null;
 let holders = 0;
 
-/** Sweeps a sheen across each live resin big enough to see on screen. */
-function sweepVisible(doc: Document, win: Window) {
-  for (const resin of doc.querySelectorAll(LIT)) {
+/** Sweeps a sheen across each live resin big enough to see on screen; returns how many it measured. */
+function sweepVisible(doc: Document, win: Window): number {
+  const resins = doc.querySelectorAll(LIT);
+  for (const resin of resins) {
     const r = resin.getBoundingClientRect();
     const sheen = sheenIn(resin);
     if (sheen && r.width > 30 && r.bottom > 0 && r.top < win.innerHeight) sweepSheen(sheen);
   }
+  return resins.length;
 }
 
 /** Starts the light; returns what stops it. */
@@ -48,8 +51,10 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
   let frame = 0;
   let lastWrite = -Infinity;
 
+  /** Sets the light on every live resin, or clears it with null; returns how many. */
   const setOnResins = (lx: string | null, ly: string | null) => {
-    for (const resin of root.querySelectorAll<HTMLElement>(LIT)) {
+    const resins = root.querySelectorAll<HTMLElement>(LIT);
+    for (const resin of resins) {
       if (lx === null || ly === null) {
         resin.style.removeProperty("--lx");
         resin.style.removeProperty("--ly");
@@ -58,6 +63,13 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
         resin.style.setProperty("--ly", ly);
       }
     }
+    return resins.length;
+  };
+
+  /** Lights the resins from `at` as our work, and marks how many it lit. */
+  const lightResins = (at: { x: number; y: number }, why: string) => {
+    const count = timeOurWork("light", () => setOnResins(at.x.toFixed(3), at.y.toFixed(3)));
+    notePerformance("light", `${why} ${count} resins`);
   };
 
   const write = (now: number) => {
@@ -68,7 +80,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
     }
     lastWrite = now;
     lit = { x, y };
-    setOnResins(x.toFixed(3), y.toFixed(3));
+    lightResins(lit, "write to");
   };
 
   const aim = (nx: number, ny: number) => {
@@ -81,7 +93,7 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
 
   // A screen's resins come in at the middle; they start where the light already is.
   const relight = () => {
-    if (lit && !reduced.matches) setOnResins(lit.x.toFixed(3), lit.y.toFixed(3));
+    if (lit && !reduced.matches) lightResins(lit, "relight");
   };
 
   const fromPointer = (e: PointerEvent) =>
@@ -100,7 +112,8 @@ export function installLight(root: HTMLElement, win: typeof window = window): ()
       !reduced.matches
     ) {
       lastSweep = now;
-      sweepVisible(root.ownerDocument, win);
+      const measured = timeOurWork("light sweep", () => sweepVisible(root.ownerDocument, win));
+      notePerformance("light", `sweep measured ${measured} resins`);
     }
     lastGamma = e.gamma;
   };

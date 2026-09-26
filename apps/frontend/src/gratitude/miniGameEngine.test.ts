@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReplayV1 } from "../api/contract";
+import type { ReplayV1 } from "@drawing-app/api/client";
 import type { ComboRecord } from "./combo";
 import { GAME_CONFIG } from "./gameConfig";
 import { mountMiniGameEngine, type MiniGameEngine } from "./miniGameEngine";
@@ -78,6 +78,9 @@ let stage: HTMLElement;
 let engine: MiniGameEngine;
 /** The heart's resting middle in a test's DOM, which has no size of its own. */
 const REST = { x: 195, y: 440 };
+/** The heart's light, as its gloss reads it. */
+const glossLight = () =>
+  stage.querySelector<SVGElement>(".h-gloss")?.style.getPropertyValue("--lx") ?? "";
 const OFF_HEART = { x: 195, y: 680 };
 
 /** A pointer event on the stage at (x, y), at `t` or now. */
@@ -425,11 +428,11 @@ describe("stroking", () => {
     engine.setReduced(true);
     pointer("pointerdown", REST.x, REST.y);
     await strokeFrom(REST, 1, 300);
-    expect(host.style.getPropertyValue("--lx")).toBe("");
+    expect(glossLight()).toBe("");
     await strokeFrom(REST, 30, 40);
     expect(host.dataset.phase).toBe("running");
     expect(callsTo("setSpeedField")).toHaveLength(0);
-    expect(host.style.getPropertyValue("--lx")).toBe("");
+    expect(glossLight()).toBe("");
   });
 });
 
@@ -454,11 +457,12 @@ describe("shaking", () => {
     const glow = stage.querySelector<HTMLElement>(".gr-thumb-glow");
     if (!glow) throw new Error("No thumb glow on the stage");
     expect(glow.style.opacity).toBe("0.4");
-    expect(host.style.getPropertyValue("--lx")).not.toBe("");
+    expect(glossLight()).not.toBe("");
+    expect(host.style.getPropertyValue("--lx")).toBe("");
     await shake(17);
     await play(50);
     expect(glow.style.opacity).toBe("0");
-    expect(host.style.getPropertyValue("--lx")).toBe("");
+    expect(glossLight()).toBe("");
   });
 
   it("says the shake unlocked, not that the heart is loose, when reduced motion keeps it put", async () => {

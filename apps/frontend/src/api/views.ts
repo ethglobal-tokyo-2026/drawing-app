@@ -1,7 +1,7 @@
 import { formatHandle } from "../stickers/format";
-import type { Placement as RecordPlacement } from "../stickers/stickerStorage";
+import type { Placement as RecordPlacement } from "../sticker-board/placement";
 import type { StickerUrls } from "../stickers/stickerUrls";
-import type { IsoTime, Person, Placement, Sticker } from "./contract";
+import type { IsoTime, Person, Placement, Sticker } from "@drawing-app/api/client";
 
 /** Someone, as a screen shows them. */
 export interface PersonView {

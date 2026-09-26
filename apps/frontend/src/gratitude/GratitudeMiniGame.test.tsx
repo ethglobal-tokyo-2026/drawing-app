@@ -4,7 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { ApiProvider } from "../api/ApiProvider";
-import { gratitudeOf } from "../api/mock/gratitude";
+import { gratitudeOf } from "../api/testing";
 import { emptyApi } from "../api/testing";
 import { GratitudeMiniGame, type GratitudeResult } from "./GratitudeMiniGame";
 
@@ -75,9 +75,7 @@ beforeEach(() => {
     value: { ready: Promise.resolve() },
     configurable: true,
   });
-  recordGratitude.mockImplementation((body) =>
-    Promise.resolve({ gratitude: gratitudeOf(body, 0) }),
-  );
+  recordGratitude.mockImplementation((body) => Promise.resolve(gratitudeOf(body)));
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -200,12 +198,13 @@ describe("GratitudeMiniGame", () => {
     expect(sub).not.toMatch(/\d\.\ds|\btap\b/);
   });
 
-  it("is modal: the rest of the phone goes inert while it's open, and only what it made inert comes back", () => {
+  it("is modal: the rest of the phone goes inert and unseen while it's open, and comes back as it was", () => {
     const phone = document.createElement("div");
     phone.className = "phone";
     const board = phone.appendChild(document.createElement("div"));
     const tabs = phone.appendChild(document.createElement("nav"));
     tabs.setAttribute("inert", "");
+    const seen = () => [board.style.visibility, tabs.style.visibility];
     document.body.append(phone);
     try {
       open();
@@ -213,17 +212,21 @@ describe("GratitudeMiniGame", () => {
       expect(dialog?.getAttribute("aria-modal")).toBe("true");
       expect(dialog?.parentElement).toBe(phone);
       expect(board.hasAttribute("inert")).toBe(true);
+      expect(seen()).toEqual(["hidden", "hidden"]);
       act(() => document.querySelector<HTMLButtonElement>(".gr-close")?.click());
       expect(board.hasAttribute("inert")).toBe(false);
       expect(tabs.hasAttribute("inert")).toBe(true);
+      expect(seen()).toEqual(["", ""]);
 
       // A fresh screen, unmounted without its X.
       act(() => root.render(null));
       open();
       expect(board.hasAttribute("inert")).toBe(true);
+      expect(seen()).toEqual(["hidden", "hidden"]);
       act(() => root.render(null));
       expect(board.hasAttribute("inert")).toBe(false);
       expect(tabs.hasAttribute("inert")).toBe(true);
+      expect(seen()).toEqual(["", ""]);
     } finally {
       phone.remove();
     }

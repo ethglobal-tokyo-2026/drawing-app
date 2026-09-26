@@ -2,7 +2,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { people, sticker } from "../api/mock/fixtures";
+import { people, sticker } from "../api/testFixtures";
 import { toPerson, toSticker } from "../api/views";
 import { GiftReceivedNotice } from "./GiftReceivedNotice";
 

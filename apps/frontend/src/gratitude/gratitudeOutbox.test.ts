@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
-import { gratitudeOf } from "../api/mock/gratitude";
+import { gratitudeOf } from "../api/testing";
 import { recordGratitudeBody } from "../api/testing";
 import { newIdempotencyKey, resendPendingGratitude, sendGratitude } from "./gratitudeOutbox";
 
@@ -10,7 +10,7 @@ const body = recordGratitudeBody();
 /** A server that answers every recordGratitude the same way: it records, it fails, or it never answers. */
 const server = (answer: "records" | "never" | Error) => ({
   recordGratitude: vi.fn<ApiClient["recordGratitude"]>((sent) => {
-    if (answer === "records") return Promise.resolve({ gratitude: gratitudeOf(sent, 0) });
+    if (answer === "records") return Promise.resolve(gratitudeOf(sent));
     if (answer === "never") return new Promise(() => {});
     return Promise.reject(answer);
   }),

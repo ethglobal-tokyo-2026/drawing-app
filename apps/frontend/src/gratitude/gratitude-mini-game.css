@@ -588,7 +588,7 @@
   position: relative;
   height: auto;
 }
-/* the heart catches the app's one shared light like every dome; translate follows it and glides, with a slow sway to keep stills alive */
+/* the gloss follows a thumb on the heart, whose light the engine writes on it; translate glides between writes, with a slow sway to keep stills alive */
 .gr-heart-layers .h-gloss {
   translate: calc(var(--lx, 0) * 14px) calc(var(--ly, 0) * 10px);
   transition: translate 280ms var(--ease-out);
