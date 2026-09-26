@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import { Trans, useTranslation } from "../../i18n/react";
-import { DrawIcon, ShopIcon, StickerBoardIcon } from "../../icons";
+import { BuyTicketsIcon, DrawIcon, StickerBoardIcon } from "../../icons";
 import { Duration } from "../../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../../stickers/format";
 import type { Sticker } from "@drawing-app/api/client";
@@ -41,8 +41,8 @@ interface Props {
 
 /**
  * The tickets the next drawing can use (ticketView), small, under the key: the day's stubs with any reserve tickets
- * as one reserve ticket and its count, or that reserve ticket alone once the daily ones are used. Under them, a line
- * when this sticker used the day's last daily ticket, or the last ticket of all.
+ * as one reserve ticket and its count, or that reserve ticket alone once the daily ones are used. When this sticker
+ * used the day's last daily ticket, or the last ticket of all, the day ends under them on when new ones come.
  */
 function TicketRow({ tickets, peel }: { tickets: Tickets; peel: boolean }) {
   const { t } = useTranslation();
@@ -67,11 +67,10 @@ function TicketRow({ tickets, peel }: { tickets: Tickets; peel: boolean }) {
           </span>
         )}
       </div>
-      {view.show === "none" && (
-        <p>{t(($) => $.stickerCreation.sealedCard.lastTicket, { time: refillTime })}</p>
-      )}
-      {usedLastDaily && (
-        <p>{t(($) => $.stickerCreation.sealedCard.lastDailyTicket, { time: refillTime })}</p>
+      {(view.show === "none" || usedLastDaily) && (
+        <p className="sealed-card__refill">
+          {t(($) => $.stickerCreation.sealedCard.refill, { time: refillTime })}
+        </p>
       )}
     </div>
   );
@@ -79,8 +78,9 @@ function TicketRow({ tickets, peel }: { tickets: Tickets; peel: boolean }) {
 
 /**
  * The backing card the sticker lands on: its slot, "Sealed", the fine print, then the way on. With
- * tickets left, the key keeps drawing; on the last one, the key goes to the sticker board and buying
- * reserve tickets waits on label stock under it. Every line carries `data-card-line`, which the ceremony fades up.
+ * tickets left, the key keeps drawing; on the last one, the key goes to the sticker board, the day ends
+ * on when new daily tickets come, and buying reserve tickets waits quietly on small label stock under it.
+ * Every line carries `data-card-line`, which the ceremony fades up.
  */
 export function SealedCard({
   sealed,
@@ -142,8 +142,9 @@ export function SealedCard({
           values={{ no: formatNo(sealed.number), day: formatDay(Date.parse(sealed.sealedAt)) }}
           components={{
             duration: <Duration seconds={sealed.timeUsed} />,
-            // A handle is a component's text, not a value: Trans would read markup in a value.
-            handle: <>{formatHandle(handle)}</>,
+            // A handle is a component's text, not a value: Trans would read markup in a value. It
+            // keeps its own case in the fine print's capitals.
+            handle: <span className="handle">{formatHandle(handle)}</span>,
           }}
         />
       </p>
@@ -172,9 +173,12 @@ export function SealedCard({
       {/* Keep drawing spends the next daily ticket: it peels off as the card leaves. */}
       {tickets && <TicketRow tickets={tickets} peel={leaving && !last} />}
       {last ? (
-        <LabelButton block icon={<ShopIcon />} data-card-line onClick={act(onShop, { now: true })}>
-          {t(($) => $.stickerCreation.sealedCard.buyReserveTickets)}
-        </LabelButton>
+        // The day's peak isn't a sales pitch: small label stock, under the refill line.
+        <div className="sealed-card__buy" data-card-line>
+          <LabelButton size="sm" icon={<BuyTicketsIcon />} onClick={act(onShop, { now: true })}>
+            {t(($) => $.stickerCreation.sealedCard.buyReserveTickets)}
+          </LabelButton>
+        </div>
       ) : (
         <LabelButton block icon={<StickerBoardIcon />} data-card-line onClick={act(onBoard)}>
           {t(($) => $.stickerCreation.sealedCard.goToStickerBoard)}

@@ -9,7 +9,7 @@ import {
   type Ref,
 } from "react";
 import { useMyAgeStatus } from "../identity/useMyAgeStatus";
-import type { Sticker } from "@drawing-app/api/client";
+import type { Sticker, TicketUse } from "@drawing-app/api/client";
 import { ApiError, apiError } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
@@ -336,12 +336,18 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     onNewSticker();
   };
 
-  const start = (kind: TicketKind, { asked = true } = {}) => {
+  /** Spends a ticket of `kind` on this sheet, or takes `spent`, the one Draw already spent on the board. */
+  const start = (
+    kind: TicketKind | null,
+    { asked = true, spent }: { asked?: boolean; spent?: Promise<TicketUse> } = {},
+  ) => {
     if (spending) return;
+    const spend = spent ?? (kind && tickets.spend(kind));
+    if (!spend) return;
     setSpending(true);
     setRightAway(!asked);
     setStartProblem(null);
-    tickets.spend(kind).then(
+    spend.then(
       (use) => {
         setSpending(false);
         setRightAway(false);
@@ -350,7 +356,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       },
       (error: unknown) => {
         const failure = apiError(error);
-        console.error(`Spending a ${kind} ticket failed`, failure);
+        console.error(`Spending a ${kind ?? "sheet's"} ticket failed`, failure);
         setSpending(false);
         setRightAway(false);
         setStartProblem(
@@ -362,8 +368,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   };
 
   /**
-   * Keep drawing already chose to spend a daily ticket, so it skips the ask; a reserve ticket is always
-   * asked for. Draw right after a purchase chose to spend either.
+   * A daily ticket is never asked for: Draw and Keep drawing spend it at once. A reserve ticket is
+   * asked for, unless Draw comes right after a purchase, which chose to spend either.
    */
   const startRightAway = ({ reserve }: { reserve: boolean }) => {
     const kind = tickets.tickets && nextKind(tickets.tickets);
@@ -439,12 +445,11 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     };
   }, []);
 
-  // "Picked up" stays until the clock runs again; word of a lost drawing, until the next one starts;
-  // a carried-over ticket's, until the first stroke.
+  // "Picked up" stays until the clock runs again; word of a lost drawing, or of a carried-over
+  // ticket, until the first stroke.
   const waiting = session.phase === "blank" || session.phase === "primed";
   if (pickedUp === "restored" && !paused) setPickedUp(null);
-  if (pickedUp === "lost" && session.phase !== "blank") setPickedUp(null);
-  if (pickedUp === "carried" && !waiting) setPickedUp(null);
+  if ((pickedUp === "lost" || pickedUp === "carried") && !waiting) setPickedUp(null);
   if (startsNote && !waiting) setStartsNote(false);
 
   // Before the first stroke there's nothing to pause: a tap on the timer says when it starts.
@@ -479,14 +484,40 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // a way on, even if tickets come back meanwhile.
   const fresh = session.phase === "blank" && !restoring;
   const loaded = tickets.tickets;
-  if (active && fresh && loaded && ticketsLeft(loaded) === 0 && !overlay) setOverlay("out");
+  // The last ticket, spent by Draw on the board or on its way here, isn't a reason for the card.
+  const spentForSheet = spending || tickets.hasSheetSpend();
+  if (active && fresh && loaded && ticketsLeft(loaded) === 0 && !overlay && !spentForSheet)
+    setOverlay("out");
   const paywall = active && fresh && overlay !== null;
-  // A fresh sheet asks before a ticket is spent, and takes no ink until then.
+  // A fresh sheet takes no ink until its ticket is spent.
   const asking = active && fresh && !paywall;
+  // A daily ticket is spent at once, with no card: the one Draw spent on the board, or one spent now.
+  // The card asks only before a reserve ticket is spent, or says why a spend failed and tries again.
+  const next = loaded && nextKind(loaded);
+  const spendAtOnce = useEffectEvent(() => {
+    const spent = tickets.takeSheetSpend();
+    if (spent) start(null, { asked: false, spent });
+    else if (next === "daily") start("daily", { asked: false });
+  });
+  useEffect(() => {
+    if (!asking || !loaded || spending || startProblem) return;
+    // The spend goes to the server once this render is on screen; its busy state is a render of its own.
+    let cancelled = false;
+    void Promise.resolve().then(() => {
+      if (!cancelled) spendAtOnce();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [asking, loaded, spending, startProblem]);
+  const asks =
+    (next === "reserve" && !tickets.hasSheetSpend()) ||
+    startProblem !== null ||
+    (spending && !rightAway);
   // Once its ticket is spent, the ask drops away over the sheet, showing the tickets it asked about:
   // the spend it answers mustn't turn it into another ask on its way out. When the shop takes its
   // place, or the board covers it, it simply goes: the next card's rise carries that change.
-  const ask = asking && !rightAway ? loaded : null;
+  const ask = asking && !rightAway && asks ? loaded : null;
   const [askShown, setAskShown] = useState<Tickets | null>(null);
   if (ask && askShown !== ask) setAskShown(ask);
   if (!ask && askShown && (!active || paywall)) setAskShown(null);
@@ -501,9 +532,23 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       ? t(($) => $.stickerCreation.timer.note.pickedUp)
       : pickedUp === "carried"
         ? t(($) => $.stickerCreation.timer.note.ticketCarriesOver)
-        : startsLabel
-          ? t(($) => $.stickerCreation.timer.note.startsWhenYouDraw)
-          : null;
+        : pickedUp === "lost"
+          ? t(($) => $.stickerCreation.timer.note.lost)
+          : startsLabel
+            ? t(($) => $.stickerCreation.timer.note.startsWhenYouDraw)
+            : null;
+
+  // Tells the sticker board what Draw means for this sheet: a fresh one spends a ticket (after a seal,
+  // Draw starts one), while a drawing in progress, or a spend on its way, already has one.
+  const sheet =
+    restoring || !tickets.tickets
+      ? null
+      : (session.phase === "blank" && !spending) || session.phase === "sealed"
+        ? "fresh"
+        : "held";
+  const { setSheet } = tickets;
+  useEffect(() => setSheet(sheet), [setSheet, sheet]);
+  useEffect(() => () => setSheet(null), [setSheet]);
 
   const sizeKey = tool === "eraser" ? "eraser" : "brush";
   const setSize = (value: number) => setSizes((s) => ({ ...s, [sizeKey]: value }));
@@ -669,11 +714,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           leaving={!ask}
           onLeft={() => setAskShown(null)}
           busy={spending}
-          note={
-            startProblem ??
-            (pickedUp === "lost" ? t(($) => $.stickerCreation.startNote.lost) : null)
-          }
-          onStart={start}
+          note={startProblem}
+          onStart={(kind) => start(kind)}
           onShop={() => setOverlay("shop")}
           onBoard={onGoToBoard}
         />

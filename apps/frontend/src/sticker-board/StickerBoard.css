@@ -475,6 +475,11 @@
   display: flex;
 }
 
+/* Draw with no tickets: the out-of-tickets card, and the checkout it opens, over everything on the board. */
+.board > .out-of-tickets {
+  z-index: 1000;
+}
+
 /* A new artist's first visit: the key hops and a ring pulses round it. */
 .board-draw.is-fresh {
   animation: board-hop 1.8s var(--ease-out) 0.5s 4;

@@ -34,16 +34,20 @@ export const tickets = {
     /** Out-of-tickets card: the countdown after the refill time, in the last hour, such as "in 42m" */
     minutes: { en: "in {{minutes}}m", ja: "あと{{minutes}}分" },
   },
+  /** Sticker board, the empty ticket backing behind the Draw key when no tickets of either kind are left, in small capitals: when new daily tickets arrive; {{time}} is the refill time, such as "12:00 AM" */
+  newAt: { en: "New at {{time}}", ja: "{{time}}に届く" },
   /** Start card, while daily tickets are left and you hold reserve ones: the small caption after the small reserve ticket and its count, under the daily ticket stubs */
   reserve: { en: "Reserve", ja: "有償" },
   /** The Draw key on the out-of-tickets card once the refill brings tickets back, and in the ticket shop (card or Shop tab) after a purchase */
   draw: { en: "Draw", ja: "かく" },
   /** Screen-reader name of that Draw key (refilled out-of-tickets card, ticket shop after a purchase); `tickets` names what's left, such as "2 daily tickets left" */
   drawWithTickets: { en: "Draw: {{tickets}}", ja: "かく：{{tickets}}" },
-  /** Start card when only reserve tickets are left, and the out-of-tickets card: the button under the key, with the Shop's tag icon, that opens the reserve ticket checkout */
+  /** Start card when only reserve tickets are left, and the out-of-tickets card: the button under the key, with a ticket icon, that opens the reserve ticket checkout */
   buyReserveTickets: { en: "Buy reserve tickets", ja: "有償チケットを買う" },
   /** Out-of-tickets card (the main key, or the button under Draw once refilled) and the card shown while tickets load: goes back to the sticker board */
   goToStickerBoard: { en: "Go to sticker board", ja: "シールボードへ" },
+  /** Out-of-tickets card over the sticker board, when Draw finds no tickets (the main key, or the button under Draw once refilled): closes the card, back to the board; named like the My board tab, and short enough for the card's key */
+  backToStickerBoard: { en: "Back to my board", ja: "マイボードに戻る" },
   /** Quiet link at the foot of the start card, the tickets-didn't-load card and the ticket shop's card: closes the card without spending or buying */
   notNow: { en: "Not now", ja: "あとで" },
   /** Key on the card when tickets didn't load, and the link after the ticket shop's balance or price problem: tries again */
@@ -56,14 +60,14 @@ export const tickets = {
       title: { en: "Use a ticket to draw?", ja: "チケットを使ってかきますか？" },
       /** Start card, daily ticket variant: the bold line under the title, when one daily ticket is left */
       left_one: { en: "You have {{count}} daily ticket left." },
-      /** Start card, daily ticket variant: the bold line under the title saying how many daily tickets are left */
+      /** Start card, daily ticket variant: the bold line under the title saying how many daily tickets are left; it has a line of its own */
       left_other: {
         en: "You have {{count}} daily tickets left.",
         ja: "無償チケットは残り{{count}}枚です。",
       },
-      /** Start card, daily ticket variant: the quiet line after the count, about the drawing timer */
+      /** Start card, daily ticket variant: the quiet line under the count, about the drawing timer; "3‑minute" is joined by a non-breaking hyphen (U+2011), so it never breaks at the hyphen */
       timer: {
-        en: "Your {{minutes}}-minute timer starts with your first stroke.",
+        en: "Your {{minutes}}‑minute timer starts with your first stroke.",
         ja: "最初のひと筆で{{minutes}}分のタイマーが始まります。",
       },
       /** Start card, daily ticket variant: the key that spends a daily ticket and opens the sheet */
@@ -73,12 +77,12 @@ export const tickets = {
     reserve: {
       /** Start card on the drawing screen once today's daily tickets are used: the title asking before a reserve ticket is spent */
       title: { en: "Use a reserve ticket?", ja: "有償チケットを使いますか？" },
-      /** Start card, reserve ticket variant: the bold line under the title saying the daily tickets are gone */
+      /** Start card, reserve ticket variant: the bold line under the title saying the daily tickets are gone; it has a line of its own, so keep it short */
       used: {
         en: "Today’s daily tickets are used.",
         ja: "今日の無償チケットは使い切りました。",
       },
-      /** Start card, reserve ticket variant: the quiet line after "used", saying when new daily tickets arrive (midnight in Tokyo, in the person's own time) */
+      /** Start card, reserve ticket variant: the quiet line under "used", saying when new daily tickets arrive (midnight in Tokyo, in the person's own time) */
       refillAt: { en: "New ones at {{time}}.", ja: "{{time}}に新しく届きます。" },
       /** Start card, reserve ticket variant: read by screen readers only, since the count is on the ticket's badge (one) */
       left_one: { en: "You have {{count}} reserve ticket." },

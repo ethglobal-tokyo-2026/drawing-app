@@ -56,16 +56,16 @@ export const stickerCreation = {
         en: "Couldn’t pick up your drawing,\nso its ticket carries over",
         ja: "続きから再開できなかったので、\nチケットはそのまま使えます",
       },
+      /** Drawing screen, top left: the white label under the timer when a reload couldn't bring back your drawing in progress, and it had no ticket to carry over, until the first stroke; also announced */
+      lost: {
+        en: "Couldn’t pick up where you left off",
+        ja: "前回の続きから再開できませんでした",
+      },
     },
   },
   /** The start card's notes about this sheet. */
   startNote: {
-    /** Drawing screen, the start card that asks before a ticket is spent: a note under its line when a reload couldn't bring back your drawing in progress */
-    lost: {
-      en: "Couldn’t pick up where you left off.",
-      ja: "前回の続きから再開できませんでした。",
-    },
-    /** Drawing screen, the start card that asks before a ticket is spent: a note under its line when tapping Start couldn't spend the ticket; {{reason}} is the server's error message */
+    /** Drawing screen, the card that comes up when a ticket couldn't be spent on a fresh sheet (Draw, Keep drawing, or the reserve ask's key): a note under its line; {{reason}} is the server's error message */
     ticketFailed: {
       en: "Couldn’t use a ticket. {{reason}}",
       ja: "チケットを使えませんでした。{{reason}}",
@@ -268,17 +268,12 @@ export const stickerCreation = {
     keepDrawing: { en: "Keep drawing", ja: "もう1枚かく" },
     /** Sealed card: the button at the bottom while you have tickets left, or the main key after your last ticket; it goes to your sticker board */
     goToStickerBoard: { en: "Go to sticker board", ja: "シールボードへ" },
-    /** Sealed card: the button at the bottom after your last ticket, with the Shop's tag icon; it opens the reserve ticket checkout */
+    /** Sealed card: the small button at the bottom after your last ticket, with a ticket icon; it opens the reserve ticket checkout */
     buyReserveTickets: { en: "Buy reserve tickets", ja: "有償チケットを買う" },
-    /** Sealed card: the line under the tickets after you used your last ticket of either kind; {{time}} is when daily tickets refill (0:00 in Japanese) */
-    lastTicket: {
-      en: "That was today’s last ticket · new ones at {{time}}",
-      ja: "これが今日最後のチケットでした。{{time}}に新しい無償チケットが届きます",
-    },
-    /** Sealed card: the line under the tickets after the day's last daily ticket, while reserve tickets remain; {{time}} is when daily tickets refill (0:00 in Japanese) */
-    lastDailyTicket: {
-      en: "That was today’s last daily ticket · new ones at {{time}}",
-      ja: "これが今日最後の無償チケットでした。{{time}}に新しい無償チケットが届きます",
+    /** Sealed card: the line under the tickets once this sticker used the day's last daily ticket, whether or not reserve tickets remain; {{time}} is when daily tickets refill (0:00 in Japanese) */
+    refill: {
+      en: "New daily tickets at {{time}}",
+      ja: "{{time}}に新しい無償チケットが届きます",
     },
   },
 } as const satisfies Section;

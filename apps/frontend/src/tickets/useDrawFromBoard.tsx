@@ -1,0 +1,76 @@
+import { useEffect, useRef, useState } from "react";
+import { useReducedMotion } from "../ui/useReducedMotion";
+import { OutOfTickets } from "./OutOfTickets";
+import { ReserveTicketCheckout } from "./ReserveTicketCheckout";
+import { nextKind, ticketsLeft, type Tickets } from "./tickets";
+import { useTickets } from "./useTickets";
+
+/** The key's front ticket peels off in the small stubs' time, --t-stick. */
+const PEEL_MS = 220;
+
+/**
+ * Draw on the sticker board, with zero steps to the canvas. On a fresh sheet with a daily ticket left, Draw spends it
+ * at once: the key's front ticket peels off, and the canvas opens as it goes, taking the spend the board started. A
+ * reserve ticket is still asked for, on the canvas. With no tickets at all, the out-of-tickets card comes up over the
+ * board, and the canvas doesn't load. A drawing in progress already has its ticket, so Draw just opens it, as it
+ * does whenever the drawing screen hasn't said what its sheet needs.
+ */
+export function useDrawFromBoard(onDraw: () => void) {
+  const tickets = useTickets();
+  const reduced = useReducedMotion();
+  // The tickets as Draw found them, shown while the front one peels, whatever the spend does meanwhile.
+  const [peeling, setPeeling] = useState<Tickets | null>(null);
+  const [card, setCard] = useState<"out" | "shop" | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  /** `reserve`: Draw right after a purchase, which chose to spend a reserve ticket too. */
+  const draw = ({ reserve = false } = {}) => {
+    if (peeling) return;
+    const now = tickets.tickets;
+    const kind = tickets.sheet === "fresh" && now ? nextKind(now) : undefined;
+    if (kind === null) {
+      setCard("out");
+      return;
+    }
+    if (now && (kind === "daily" || (kind === "reserve" && reserve))) {
+      tickets.spendForSheet(kind);
+      setPeeling(now);
+      timer.current = setTimeout(
+        () => {
+          setPeeling(null);
+          onDraw();
+        },
+        reduced ? 0 : PEEL_MS,
+      );
+      return;
+    }
+    onDraw();
+  };
+
+  const loaded = tickets.tickets;
+  const overBoard =
+    card === "out" && loaded ? (
+      <OutOfTickets
+        tickets={loaded}
+        overBoard
+        onShop={() => setCard("shop")}
+        onStartDrawing={() => {
+          setCard(null);
+          draw();
+        }}
+        onBoard={() => setCard(null)}
+      />
+    ) : card === "shop" ? (
+      // Leaving the checkout with no tickets brings the out-of-tickets card back; with some, the board.
+      <ReserveTicketCheckout
+        onDraw={() => {
+          setCard(null);
+          draw({ reserve: true });
+        }}
+        onClose={() => setCard(loaded && ticketsLeft(loaded) === 0 ? "out" : null)}
+      />
+    ) : null;
+
+  return { draw: () => draw(), shown: peeling ?? loaded, peeling: peeling !== null, overBoard };
+}
