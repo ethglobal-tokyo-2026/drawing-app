@@ -375,6 +375,15 @@
   text-wrap: balance;
 }
 
+/* What the browser said, under the plain sentence, selectable for a bug report. */
+.board-problem-reason {
+  position: relative;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 /* A spot that didn't save stays in view, over the board and above Draw, until a save of it succeeds. */
 .board-unsaved {
   position: absolute;

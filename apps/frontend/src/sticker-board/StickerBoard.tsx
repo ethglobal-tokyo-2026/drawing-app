@@ -395,7 +395,8 @@ export function StickerBoard({ freshId, onDraw }: Props) {
       {loadError && (
         <div className="board-blank board-problem" role="alert">
           <span className="board-blank-cut" aria-hidden />
-          <span className="board-blank-note">Your stickers didn’t load: {loadError}</span>
+          <span className="board-blank-note">Your stickers didn’t load.</span>
+          <span className="fine board-problem-reason">{loadError}</span>
           <LabelButton
             size="sm"
             onClick={() => {
