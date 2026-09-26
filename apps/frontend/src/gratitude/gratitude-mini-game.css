@@ -1,0 +1,862 @@
+/* ------------------------------------------------------------------ root */
+.gr {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--liner);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-stretch: var(--w-ui, 100%);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  overscroll-behavior: none;
+  font-variant-numeric: tabular-nums;
+  z-index: var(--z-sheet); /* portaled over the phone, like the sticker detail */
+}
+.gr ::selection {
+  background: var(--pink);
+  color: var(--ink);
+}
+.gr button:where(:not(.dome, .btn)) {
+  font: inherit;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+} /* label stock and domes keep their own type */
+.gr :focus-visible {
+  outline: 3px solid var(--pink);
+  outline-offset: 3px;
+  border-radius: var(--r-label);
+}
+.gr-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.gr [hidden] {
+  display: none !important;
+}
+
+.gr-page {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
+/* ------------------------------------------------------------------ the ground escalates with the tier
+   calm liner → a warm blush → 集中線 focus lines → heat haze → 昇天's white-out rays */
+.gr-ground {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.gr-bg {
+  position: absolute;
+  inset: 0;
+}
+.gr-bg-blush {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 900ms var(--ease-out);
+}
+.gr-haze {
+  position: absolute;
+  inset: -10% -10% 0;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse at 50% 120%,
+    rgba(255, 90, 54, 0.22),
+    rgba(255, 90, 54, 0) 60%
+  );
+  animation: gr-haze 2.6s ease-in-out infinite;
+}
+@keyframes gr-haze {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-2%) scale(1.04);
+  }
+}
+.gr-white {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+}
+
+/* ------------------------------------------------------------------ manga layers behind the heart */
+.gr-focus {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+.gr-speedfield {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+.gr-beam-shaft {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 2px;
+  height: var(--beam-h, 520px);
+  margin-left: -1px;
+  transform-origin: 50% 100%;
+  opacity: 0;
+}
+.gr-beam-rays {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+/* ------------------------------------------------------------------ the top: the received sticker and its giver */
+.gr-top {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: var(--gr-top, 176px);
+}
+.gr-piece {
+  position: absolute;
+  left: 20px;
+  top: 18px;
+  width: 112px;
+  margin: 0;
+  transform: rotate(-3deg);
+  transform-origin: 40% 60%;
+}
+.gr-piece-art {
+  display: block;
+  width: 112px;
+  height: 112px;
+  filter: var(--sticker-cut) var(--sticker-cast);
+}
+.gr-piece-art svg,
+.gr-piece-art img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.gr-photo {
+  position: absolute;
+  left: 100px;
+  top: 92px;
+  width: 56px;
+  height: 56px;
+}
+.gr-photo-dot {
+  position: absolute;
+  right: -7px;
+  top: -6px;
+  width: 24px;
+  height: 24px;
+  opacity: 0;
+  transform: scale(0) rotate(var(--tilt));
+}
+/* a heart dot: Phosphor heart (fill) on the world's pink dot badge */
+.gr-dot {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: var(--pink);
+  border: 2.5px solid #fff;
+  color: #fff;
+}
+.gr-dot svg {
+  width: 58%;
+  height: 58%;
+  display: block;
+}
+.gr-photo-dot .gr-dot {
+  filter: var(--sticker-cut) drop-shadow(1px 2px 1.5px rgba(28, 24, 36, 0.2));
+}
+.gr-from {
+  position: absolute;
+  left: 168px;
+  top: 44px;
+  right: 60px;
+}
+.gr-from .gr-royal {
+  margin-top: 4px;
+  color: var(--ink);
+} /* what came to the viewer, as its artist */
+.gr-from-name {
+  margin: 2px 0 6px;
+  font-size: 19px;
+  line-height: 1.1;
+  font-weight: 780;
+  font-stretch: var(--w-title, 112%);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.gr-close {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-label);
+  background: var(--liner-lift);
+  box-shadow: var(--shadow-label);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  z-index: 5;
+  transition: transform var(--t-press) linear;
+}
+.gr-close:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+.gr-close svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+/* ------------------------------------------------------------------ HUD: a timer bar that only goes down,
+   the gratitude amount counting up under it, the multiplier beside the amount. Never on the heart. */
+.gr-hud {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  top: var(--hud-top, 172px);
+}
+.gr-timer {
+  position: relative;
+}
+.gr-timer-track {
+  position: relative;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--liner-deep);
+  box-shadow:
+    inset 0 1px 2px rgba(28, 24, 36, 0.16),
+    inset 0 0 0 1px var(--rule);
+  overflow: hidden;
+}
+.gr-timer-fill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  border-radius: 8px;
+  background: var(--pink);
+  transform-origin: 0 50%;
+}
+.gr-timer.is-hot .gr-timer-fill {
+  background: linear-gradient(90deg, var(--tomato), var(--seal));
+}
+/* the fuse's lit end: it glows as the bar runs low */
+.gr-timer-head {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 6px 2px rgba(255, 255, 255, 0.7);
+  opacity: 0;
+}
+.gr-timer.is-hot .gr-timer-head {
+  opacity: 1;
+}
+.gr-amount-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 8px;
+}
+.gr-amount {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 800;
+  font-stretch: var(--w-figure, 125%);
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.gr-mult {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  padding: 2px 8px 1px;
+  border-radius: 999px;
+  background: var(--pink-soft);
+  color: var(--pink);
+  font-size: 13px;
+  font-weight: 700;
+}
+.gr-mult b {
+  font-family: var(--font-puffy);
+  font-size: 15px;
+}
+/* the tap's worth, shown, but nothing added: the bar was already full */
+.gr-tick.is-capped {
+  opacity: 0.5;
+}
+.gr[data-replay="1"] .gr-hud {
+  opacity: 0.001;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------ the heart (the screen's one dome) */
+.gr-stage {
+  position: absolute;
+  inset: 0;
+}
+.gr-heart-anchor {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
+.gr-heart-body {
+  position: absolute;
+}
+.gr-heart-btn {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  z-index: 2;
+}
+/* each heart layer is its own root svg stacked in this box, so animating one is a compositor move, not a paint inside a shared svg */
+.gr-heart-layers {
+  position: relative;
+  filter: drop-shadow(2px 10px 12px rgba(28, 24, 36, 0.18))
+    drop-shadow(1px 2px 2px rgba(28, 24, 36, 0.16));
+}
+.gr-heart-layers > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.gr-heart-layers > .h-body {
+  position: relative;
+  height: auto;
+}
+/* the heart catches the app's one shared light like every dome; translate follows it and glides, with a slow sway to keep stills alive */
+.gr-heart-layers .h-gloss {
+  transform: translate(calc(var(--lx, 0) * 6px), calc(var(--ly, 0) * 6px));
+  animation: gr-gloss-sway 5s ease-in-out infinite;
+}
+@keyframes gr-gloss-sway {
+  0%,
+  100% {
+    transform: translate(calc(var(--lx, 0) * 6px), calc(var(--ly, 0) * 6px)) rotate(0deg);
+  }
+  50% {
+    transform: translate(calc(var(--lx, 0) * 6px), calc(var(--ly, 0) * 6px - 2px)) rotate(-2deg);
+  }
+}
+/* expressions snap like anime; layers ease */
+.gr-heart-layers .f,
+.gr-heart-layers .f-hatch,
+.gr-heart-layers .f-hatch-full,
+.gr-heart-layers .h-flush,
+.gr-heart-layers .h-pale,
+.gr-heart-layers .h-sweat,
+.gr-heart-layers .h-nose,
+.gr-heart-layers .h-ink {
+  opacity: 0;
+}
+.gr-heart-layers .f {
+  transition: opacity 70ms linear;
+}
+.gr-heart-layers .f-hatch,
+.gr-heart-layers .f-hatch-full,
+.gr-heart-layers .h-sweat {
+  transition: opacity 160ms linear;
+}
+.gr-heart-layers .h-flush {
+  transition: opacity 500ms var(--ease-out);
+}
+.gr-heart-layers .h-pale {
+  transition: opacity 650ms var(--ease-out);
+}
+.gr-heart-layers .h-ink path {
+  opacity: 0;
+}
+.gr-heart-layers .h-ink[data-v="0"] path:nth-child(1),
+.gr-heart-layers .h-ink[data-v="1"] path:nth-child(2),
+.gr-heart-layers .h-ink[data-v="2"] path:nth-child(3) {
+  opacity: 1;
+}
+.gr-heart-layers .h-nose-line {
+  stroke-dasharray: 3 3;
+}
+.gr-heart-layers .h-nose-drop {
+  animation: gr-drip 900ms var(--ease-peel) infinite;
+}
+@keyframes gr-drip {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+}
+/* the soul: a small translucent heart with a halo, for 昇天 */
+.gr-soul {
+  position: absolute;
+  opacity: 0;
+}
+.gr-soul svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* ------------------------------------------------------------------ particles, stamps */
+.gr-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.gr-p {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform, opacity;
+}
+.gr-p svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.gr-p img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.gr-line {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 3px;
+  border-radius: 3px;
+  transform-origin: 0 50%;
+  background: linear-gradient(
+    90deg,
+    rgba(28, 24, 36, 0),
+    rgba(28, 24, 36, 0.92) 35%,
+    rgba(28, 24, 36, 0.92) 70%,
+    rgba(28, 24, 36, 0)
+  );
+}
+
+/* 袋文字: outlined bag letters (Ink ring, white ring, pink fill).
+   Pop-ins and tier slams are transient: they scale in, drift, and fade. */
+.gr-cap {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  pointer-events: none;
+  isolation: isolate;
+  font-family: var(--font-puffy);
+  font-size: 46px;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  color: var(--pink);
+  will-change: transform, opacity;
+  opacity: 0;
+}
+.gr-cap::before,
+.gr-cap::after {
+  content: attr(data-t);
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.gr-cap::before {
+  z-index: -2;
+  color: var(--ink);
+  -webkit-text-stroke: 0.27em var(--ink);
+  text-shadow: 2px 4px 3px rgba(28, 24, 36, 0.24);
+}
+.gr-cap::after {
+  z-index: -1;
+  color: #fff;
+  -webkit-text-stroke: 0.155em #fff;
+}
+.gr-slam {
+  z-index: 2;
+}
+.gr-cap-gloss {
+  position: absolute;
+  left: 14%;
+  top: 100%;
+  margin-top: 6px;
+  padding: 3px 6px 2px;
+  border-radius: 3px;
+  background: #fff;
+  box-shadow: var(--shadow-label);
+  transform: rotate(3deg);
+  font-family: var(--font-ui);
+  font-size: var(--fs-fine, 11px);
+  font-weight: 650;
+  font-stretch: var(--w-fine, 87.5%);
+  letter-spacing: 0.05em;
+  color: var(--ink);
+  font-style: italic;
+}
+.gr-pop .gr-cap-gloss {
+  margin-top: 3px;
+  left: 8%;
+}
+
+/* ------------------------------------------------------------------ hint, corner, dents */
+.gr-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  pointer-events: none;
+  font-size: 21px;
+  line-height: 1.2;
+  font-weight: 760;
+  font-stretch: var(--w-title, 112%);
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  transition:
+    opacity 200ms var(--ease-out),
+    transform 200ms var(--ease-out);
+}
+.gr[data-phase]:not([data-phase="idle"]) .gr-hint {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.gr[data-tip="on"] .gr-hint {
+  opacity: 0;
+}
+
+/* the tip: what to do, said only after tries (stroke) or during a hard shake (shake). Never unprompted. */
+.gr-tip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  width: max-content;
+  max-width: calc(100% - 40px);
+  margin: 0 auto;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px 8px 11px;
+  border-radius: var(--r-label);
+  background: #fff;
+  box-shadow: var(--shadow-label);
+  color: var(--ink);
+  pointer-events: none;
+  font-size: 15px;
+  line-height: 1.15;
+  font-weight: 760;
+  font-stretch: var(--w-title, 112%);
+  letter-spacing: -0.005em;
+  opacity: 0;
+  transform: rotate(-2deg);
+  will-change: transform, opacity;
+}
+.gr-tip-ic {
+  display: grid;
+  flex: none;
+}
+.gr-tip-ic svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.gr-corner {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 132px;
+  height: 132px;
+  pointer-events: none;
+}
+.gr-corner-under,
+.gr-corner-flapwrap {
+  position: absolute;
+  inset: 0;
+  transform-origin: 100% 0;
+  transform: scale(0);
+}
+.gr-corner-under {
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+  background: linear-gradient(225deg, #d8d4e1 0%, var(--liner-deep) 60%);
+  box-shadow: inset 6px -6px 14px rgba(28, 24, 36, 0.12);
+}
+.gr-corner-flapwrap {
+  filter: drop-shadow(-3px 5px 4px rgba(28, 24, 36, 0.2));
+}
+.gr-corner-flap {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(0 0, 0 100%, 100% 100%);
+  background: linear-gradient(45deg, #e4e1ec 0%, #f7f6fa 55%, #ffffff 100%);
+}
+
+.gr-dent {
+  position: absolute;
+  width: 112px;
+  height: 30px;
+  margin-left: -56px;
+  pointer-events: none;
+  transform-origin: 50% 0;
+  opacity: 0;
+}
+.gr-dent svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.gr-shakemarks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 160ms linear;
+  color: var(--ink);
+}
+.gr-shakemarks svg {
+  position: absolute;
+  top: 50%;
+  width: 30px;
+  height: 30px;
+  margin-top: -15px;
+  opacity: 0.8;
+  animation: gr-wiggle 0.23s linear infinite;
+}
+.gr-shakemarks svg:first-child {
+  left: 6px;
+}
+.gr-shakemarks svg:last-child {
+  right: 6px;
+  animation-delay: -0.11s;
+}
+@keyframes gr-wiggle {
+  0% {
+    transform: rotate(-11deg);
+  }
+  50% {
+    transform: rotate(11deg);
+  }
+  100% {
+    transform: rotate(-11deg);
+  }
+}
+.gr[data-shaking="1"] .gr-shakemarks {
+  opacity: 1;
+}
+
+/* ------------------------------------------------------------------ endings: fuu, receipt */
+.gr-fuu {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+  font-size: 26px;
+  font-weight: 560;
+  font-stretch: var(--w-title, 112%);
+  font-style: italic;
+  letter-spacing: 0.02em;
+  color: var(--graphite);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.gr-fuu svg {
+  width: 26px;
+  height: 26px;
+  display: block;
+}
+
+.gr-receipt {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: var(--rc-top, 300px);
+  opacity: 0;
+  pointer-events: none;
+  background: var(--liner-lift);
+  border-radius: var(--r-label);
+  box-shadow: var(--shadow-lift);
+  padding: 22px 20px 18px;
+  transform-origin: 50% 0;
+}
+.gr-receipt.is-on {
+  pointer-events: auto;
+  opacity: 1;
+  animation: gr-receipt-in 380ms var(--ease-peel);
+}
+@keyframes gr-receipt-in {
+  from {
+    transform: scale(1.06) translateY(-6px);
+    opacity: 0;
+  }
+}
+.gr-receipt::before {
+  /* perforation row: the grab edge of a backing card */
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 8px;
+  height: 2px;
+  background: radial-gradient(circle, rgba(110, 104, 120, 0.45) 1px, transparent 1.4px) 0 0 / 8px
+    2px repeat-x;
+}
+.gr-rc-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.gr-rc-text {
+  min-width: 0;
+}
+.gr-rc-photo {
+  position: relative;
+  flex: none;
+  width: 58px;
+  height: 58px;
+  transform: rotate(var(--tilt));
+  filter: var(--sticker-cut) var(--sticker-cast);
+}
+.gr-rc-photo .photo-sticker {
+  width: 100%;
+  height: 100%;
+}
+.gr-rc-photo .gr-photo-dot {
+  opacity: 1;
+  transform: rotate(var(--tilt));
+}
+.gr-rc-head {
+  margin: 0;
+  font-size: 23px;
+  line-height: 1.12;
+  font-weight: 800;
+  font-stretch: var(--w-title, 112%);
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+.gr-rc-sub {
+  margin: 5px 0 0;
+  white-space: pre-line;
+}
+.gr-rc-figure {
+  display: none;
+  margin: 0;
+  font-size: 52px;
+  line-height: 0.95;
+  font-weight: 900;
+  font-stretch: var(--w-figure, 125%);
+  letter-spacing: -0.035em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.gr-rc-figure small {
+  font-size: 0.46em;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--pink);
+}
+.gr-rc-actions {
+  display: flex;
+  margin-top: 18px;
+}
+.gr-receipt[data-kind="combo"] .gr-rc-row {
+  align-items: flex-start;
+}
+.gr-receipt[data-kind="combo"] .gr-rc-figure {
+  display: block;
+}
+.gr-receipt[data-kind="combo"] .gr-rc-head {
+  margin-top: 6px;
+  font-size: 19px;
+}
+
+/* ------------------------------------------------------------------ frame timing and the stopped-round message */
+.gr-frames {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 60;
+  background: rgba(28, 24, 36, 0.82);
+  color: #f2f1f6;
+  pointer-events: none;
+}
+.gr-failure {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 24px;
+  z-index: 60;
+  background: var(--liner-lift);
+  box-shadow: var(--shadow-lift);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* ------------------------------------------------------------------ reduced motion: no shake, no haze */
+.gr[data-reduced="1"] .gr-page {
+  transform: none !important;
+}
+.gr[data-reduced="1"] .gr-haze,
+.gr[data-reduced="1"] .gr-beam-rays {
+  display: none;
+}
+.gr[data-reduced="1"] .gr-timer {
+  transform: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gr-page,
+  .gr-timer {
+    transform: none !important;
+  }
+  .gr-beam-rays,
+  .gr-haze {
+    display: none;
+  }
+  [data-nose="1"] .h-nose-drop,
+  .gr-heart-layers .h-gloss,
+  .gr-shakemarks svg,
+  .gr-receipt.is-on {
+    animation: none;
+  }
+}
