@@ -17,7 +17,8 @@ if grep -q DEV_SIGN_IN "$ROOT/deploy/drawing-api.env"; then
     "goes on the box. Remove it and deploy again." >&2
   exit 1
 fi
-if [ -f "$ROOT/deploy/.env" ]; then
+ENV_FILE="${DEPLOY_ENV_FILE:-$ROOT/deploy/.env}"
+if [ -f "$ENV_FILE" ]; then
   # shellcheck source=/dev/null
   . "$ENV_FILE"
 fi
