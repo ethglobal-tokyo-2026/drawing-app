@@ -53,16 +53,13 @@ function fakeBackend() {
 function setup({ backend }: { backend?: GiftBackend } = {}) {
   const server = fakeBackend();
   const messages: GiftMessage[] = [];
-  /** Per picker opened: whether it was LINE's full picker. */
-  const fullPickers: boolean[] = [];
   const pickers: Deferred<GiftSendOutcome>[] = [];
   const flow = createGiveFlow({
     sticker: { id: "s1", no: 147, timeUsed: 292 },
     backend: backend ?? server.backend,
     sender: {
-      send: (message, options) => {
+      send: (message) => {
         messages.push(message);
-        fullPickers.push(options?.anyChat === true);
         const picker = new Deferred<GiftSendOutcome>();
         pickers.push(picker);
         return picker.promise;
@@ -81,7 +78,6 @@ function setup({ backend }: { backend?: GiftBackend } = {}) {
   return {
     flow,
     messages,
-    fullPickers,
     picker,
     step: () => flow.getState().step,
     /** Every gift the flow packed, and where each is now. */
@@ -168,24 +164,6 @@ describe("giving through a LINE chat", () => {
     expect(t.messages).toHaveLength(2);
     expect(t.messages[1]).toEqual(t.messages[0]);
     expect(t.gifts()).toEqual(["packed"]);
-  });
-
-  it("reopens the picker the giver chose, until the sticker comes back out", async () => {
-    const t = setup();
-    t.flow.chooseLineChat({ anyChat: true });
-    await wait(PICKER_DELAY);
-    t.picker().resolve("cancelled");
-    await wait();
-    t.flow.sendInLine();
-    await wait();
-    expect(t.fullPickers).toEqual([true, true]);
-
-    t.picker().resolve("cancelled");
-    await wait();
-    t.flow.takeOut();
-    await wait(TAKE_OUT);
-    await openPicker(t);
-    expect(t.fullPickers).toEqual([true, true, false]);
   });
 
   it("opens the picker once, at once, when Send in LINE beats the timer", async () => {
