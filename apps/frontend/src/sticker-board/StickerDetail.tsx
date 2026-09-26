@@ -3,7 +3,8 @@ import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent } from 
 import { createPortal } from "react-dom";
 import type { StickerGiftStatus } from "../giving/giftStore";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
-import { formatClock, formatDay, formatHandle, formatNo } from "../stickers/format";
+import { Duration } from "../stickers/Duration";
+import { formatDay, formatHandle, formatNo } from "../stickers/format";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { Key } from "../ui/Key";
 import { useFocusTrap } from "../ui/useFocusTrap";
@@ -247,8 +248,7 @@ export function StickerDetail({
               <p className="fine sticker-detail__fine-print">
                 <span className="sticker-detail__by">by {formatHandle(handle)}</span>{" "}
                 <span>
-                  · <span className="visually-hidden">drawn in </span>
-                  {formatClock(sticker.timeUsed)}
+                  · drawn in <Duration seconds={sticker.timeUsed} />
                 </span>{" "}
                 <span>· {formatDay(sticker.createdAt)}</span>
               </p>

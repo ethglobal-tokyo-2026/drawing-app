@@ -1,6 +1,6 @@
 import { ArrowClockwise } from "@phosphor-icons/react";
 import { memo, useEffectEvent, useLayoutEffect, useRef } from "react";
-import { formatClock, formatNo } from "../stickers/format";
+import { formatNo, spokenDuration } from "../stickers/format";
 import { useFold } from "../stickers/liftedCorner";
 import { playStick } from "../stickers/stick";
 import { StickerFigure } from "../stickers/StickerFigure";
@@ -77,7 +77,7 @@ export const PlacedSticker = memo(function PlacedSticker({
     held === "handle" && "is-handling",
     landing && "is-landing",
   ];
-  const label = `${formatNo(sticker.no)}, drawn in ${formatClock(sticker.timeUsed)}`;
+  const label = `${formatNo(sticker.no)}, drawn in ${spokenDuration(sticker.timeUsed)}`;
   return (
     <div
       className={classes.filter(Boolean).join(" ")}

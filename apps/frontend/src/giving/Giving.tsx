@@ -8,7 +8,8 @@ import {
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
-import { formatClock, formatDay, formatHandle, formatNo } from "../stickers/format";
+import { Duration } from "../stickers/Duration";
+import { formatDay, formatHandle, formatNo } from "../stickers/format";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
@@ -237,8 +238,8 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
           />
         )}
         <p className="fine giving__meta">
-          {formatNo(sticker.no)} · {formatClock(sticker.timeUsed)} · {formatDay(sticker.createdAt)}{" "}
-          · {formatHandle(fromHandle)}
+          {formatNo(sticker.no)} · <Duration seconds={sticker.timeUsed} /> ·{" "}
+          {formatDay(sticker.createdAt)} · {formatHandle(fromHandle)}
         </p>
       </div>
       <div className="giving__scrim" onClick={close} />

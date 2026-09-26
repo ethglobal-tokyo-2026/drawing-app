@@ -2,7 +2,8 @@ import { Ticket } from "@phosphor-icons/react";
 import { useEffect, useId, useRef, type RefObject } from "react";
 import { DrawIcon } from "../../icons/DrawIcon";
 import { StickerBoardIcon } from "../../icons/StickerBoardIcon";
-import { formatClock, formatDay, formatHandle, formatNo } from "../../stickers/format";
+import { Duration } from "../../stickers/Duration";
+import { formatDay, formatHandle, formatNo } from "../../stickers/format";
 import type { StickerRecord } from "../../stickers/stickerStorage";
 import { formatRefillTime } from "../../tickets/refill";
 import { TicketStubs } from "../../tickets/TicketStubs";
@@ -81,8 +82,8 @@ export function SealedCard({
         Sealed
       </h2>
       <p className="fine sealed-card__fine" data-card-line>
-        {formatNo(record.no)} · {formatClock(record.timeUsed)} · {formatDay(record.createdAt)} ·{" "}
-        {formatHandle(handle)}
+        {formatNo(record.no)} · <Duration seconds={record.timeUsed} /> ·{" "}
+        {formatDay(record.createdAt)} · {formatHandle(handle)}
       </p>
       <div data-card-line>
         <TearLine />
