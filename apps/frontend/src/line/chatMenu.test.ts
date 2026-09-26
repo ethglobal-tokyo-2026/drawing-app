@@ -22,8 +22,10 @@ afterEach(() => {
 });
 
 describe("asking for the returning-user chat menu", () => {
-  it("sends LINE's ID token once per page load, and records the menu the server set", async () => {
+  it("sends LINE's ID token and the app's language once per page load, and records the menu the server set", async () => {
     const { requestReturningMenu, chatMenuStatus } = await freshChatMenu();
+    const { i18next } = await import("../i18n/i18n");
+    await i18next.changeLanguage("ja");
     const fetch = server(200, { menu: "returning" });
     vi.stubGlobal("fetch", fetch);
     await requestReturningMenu();
@@ -33,7 +35,7 @@ describe("asking for the returning-user chat menu", () => {
       "/v1/auth/line-menu",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ idToken: "line-id-token" }),
+        body: JSON.stringify({ idToken: "line-id-token", language: "ja" }),
       }),
     );
     expect(chatMenuStatus()).toEqual({ state: "returning" });

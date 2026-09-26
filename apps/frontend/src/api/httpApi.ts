@@ -1,5 +1,5 @@
 import type { AppType, ErrorBody, Me, TicketKind } from "@drawing-app/api/client";
-import { hc } from "hono/client";
+import { hc, type InferRequestType } from "hono/client";
 import { ApiError, type ApiClient, type GiftOpening } from "./apiClient";
 
 /** A request that hasn't answered by then fails with Try again, rather than hanging the screen. */
@@ -88,7 +88,9 @@ function claimOf(body: GiftOpening) {
 /** Signing in and your account, which the app needs before any screen can load. */
 export interface SessionApi {
   /** POST /api/session */
-  signIn: (request: { idToken: string; timeZone: string }) => Promise<{ me: Me }>;
+  signIn: (
+    request: InferRequestType<ServerClient["session"]["$post"]>["json"],
+  ) => Promise<{ me: Me }>;
   /** GET /api/me */
   me: () => Promise<{ me: Me }>;
   /** POST /api/me/handle */

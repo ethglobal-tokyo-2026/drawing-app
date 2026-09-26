@@ -1,4 +1,5 @@
 import type { ReplayV1 } from "@drawing-app/api/client";
+import { formatCount } from "../i18n/format";
 import {
   isPerformanceRecorderOn,
   notePerformance,
@@ -456,7 +457,7 @@ export function mountMiniGameEngine(
     if (tier === 4 && hits % 3 === 0) effects.glint(box);
     if (play - lastAnnounce > 1.6) {
       lastAnnounce = play;
-      say(`${view.total.toLocaleString("en-US")} gratitude, times ${view.multiplier.toFixed(1)}`);
+      say(`${formatCount(view.total)} gratitude, times ${view.multiplier.toFixed(1)}`);
     }
   };
 

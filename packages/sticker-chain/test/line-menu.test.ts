@@ -14,6 +14,7 @@ const MESSAGING_CHANNEL_SECRET = "messaging-channel-secret-abc";
 const CHANNEL_TOKEN = "channel-access-token-def";
 const CHANNEL_TOKEN_LIFETIME_S = 900;
 const RICH_MENU_ID = "richmenu-returning";
+const JA_RICH_MENU_ID = "richmenu-returning-ja";
 
 // The fake fetch answers each upstream request by its method and URL.
 const VERIFY = "POST https://api.line.me/oauth2/v2.1/verify";
@@ -62,7 +63,13 @@ function postLineMenu(url: string, body: object = { idToken: ID_TOKEN }, origin 
  * returning friend's answers, and records each request. After the test it checks that no ID
  * token, secret, channel token or user ID reached the log.
  */
-async function startMenuServer(upstreams: Record<string, Upstream> = {}, now?: () => number) {
+async function startMenuServer(
+  upstreams: Record<string, Upstream> = {},
+  {
+    now,
+    returningRichMenuIds = { en: RICH_MENU_ID, ja: JA_RICH_MENU_ID },
+  }: { now?: () => number; returningRichMenuIds?: { en: string; ja?: string } } = {},
+) {
   const requests: { key: string; request: Request; signal: AbortSignal | null | undefined }[] = [];
   const fetchImpl: typeof fetch = async (input, init) => {
     const request = new Request(input, init);
@@ -80,7 +87,7 @@ async function startMenuServer(upstreams: Record<string, Upstream> = {}, now?: (
       privyAppSecret: PRIVY_APP_SECRET,
       messagingChannelId: MESSAGING_CHANNEL_ID,
       messagingChannelSecret: MESSAGING_CHANNEL_SECRET,
-      returningRichMenuId: RICH_MENU_ID,
+      returningRichMenuIds,
       fetchImpl,
       now,
     }),
@@ -122,6 +129,31 @@ describe("LINE chat menu switch", () => {
     expect(menu.requested()).toEqual([VERIFY, PRIVY_LOOKUP, ISSUE_TOKEN, LINK, READ_BACK]);
     expect(menu.signals().every((signal) => signal instanceof AbortSignal)).toBe(true);
     expect(menu.info).toEqual([expect.stringContaining("returning")]);
+  });
+
+  it("links the menu in the app's language, and English for a missing or unknown one", async () => {
+    const LINK_JA = `POST https://api.line.me/v2/bot/user/${LINE_USER_ID}/richmenu/${JA_RICH_MENU_ID}`;
+    const japanese = await startMenuServer({
+      [LINK_JA]: () => Response.json({}),
+      [READ_BACK]: () => Response.json({ richMenuId: JA_RICH_MENU_ID }),
+    });
+    const answer = await japanese.post({ idToken: ID_TOKEN, language: "ja" });
+    await expect(answer.json()).resolves.toEqual({ menu: "returning" });
+    expect(japanese.requested()).toContain(LINK_JA);
+
+    for (const body of [{ idToken: ID_TOKEN }, { idToken: ID_TOKEN, language: "fr" }]) {
+      const english = await startMenuServer();
+      await english.post(body);
+      expect(english.requested()).toContain(LINK);
+    }
+  });
+
+  it("links the English menu for Japanese until a Japanese menu exists", async () => {
+    const menu = await startMenuServer({}, { returningRichMenuIds: { en: RICH_MENU_ID } });
+    const answer = await menu.post({ idToken: ID_TOKEN, language: "ja" });
+
+    await expect(answer.json()).resolves.toEqual({ menu: "returning" });
+    expect(menu.requested()).toContain(LINK);
   });
 
   it("sends Privy and LINE the subject, credentials and token each expects", async () => {
@@ -276,7 +308,7 @@ describe("LINE chat menu switch", () => {
 
   it("reuses the channel access token until shortly before it expires", async () => {
     let now = 0;
-    const menu = await startMenuServer({}, () => now);
+    const menu = await startMenuServer({}, { now: () => now });
     const switchAt = async (time: number) => {
       now = time;
       await expect((await menu.post()).json()).resolves.toEqual({ menu: "returning" });

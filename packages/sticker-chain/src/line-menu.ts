@@ -14,7 +14,16 @@ type LineMenuOutcome =
 
 export type LineMenuFailure = "line_auth_failed" | "privy_lookup_failed" | "line_menu_link_failed";
 
-export type SwitchLineMenu = (lineIdToken: string) => Promise<LineMenuOutcome>;
+/** The languages the returning-user menu is drawn in. */
+export type MenuLanguage = "en" | "ja";
+
+/** The menu language for the app's language: Japanese for `ja`, English for anything else. */
+export const menuLanguageOf = (value: unknown): MenuLanguage => (value === "ja" ? "ja" : "en");
+
+export type SwitchLineMenu = (
+  lineIdToken: string,
+  language: MenuLanguage,
+) => Promise<LineMenuOutcome>;
 
 /** A switch that failed, named by the step that failed and carrying that step's error as its cause. */
 export class LineMenuSwitchError extends Error {
@@ -33,7 +42,8 @@ interface LineMenuSwitchOptions {
   privyAppSecret: string;
   messagingChannelId: string;
   messagingChannelSecret: string;
-  returningRichMenuId: string;
+  /** The returning-user menu in each language; without a Japanese one, Japanese gets English. */
+  returningRichMenuIds: { en: string; ja?: string };
   fetchImpl?: typeof fetch;
   now?: () => number;
 }
@@ -72,7 +82,7 @@ export function createLineMenuSwitch({
   privyAppSecret,
   messagingChannelId,
   messagingChannelSecret,
-  returningRichMenuId,
+  returningRichMenuIds,
   fetchImpl = fetch,
   now = Date.now,
 }: LineMenuSwitchOptions): SwitchLineMenu {
@@ -82,7 +92,7 @@ export function createLineMenuSwitch({
     !privyAppSecret ||
     !messagingChannelId ||
     !messagingChannelSecret ||
-    !returningRichMenuId
+    !returningRichMenuIds.en
   ) {
     throw new Error("LINE chat menu switching configuration is incomplete");
   }
@@ -139,9 +149,9 @@ export function createLineMenuSwitch({
     return `${LINE_USER_URL}/${encodeURIComponent(lineUserId)}/richmenu`;
   }
 
-  async function linkReturningMenu(lineUserId: string, token: string) {
+  async function linkReturningMenu(lineUserId: string, richMenuId: string, token: string) {
     const response = await fetchImpl(
-      `${userMenuUrl(lineUserId)}/${encodeURIComponent(returningRichMenuId)}`,
+      `${userMenuUrl(lineUserId)}/${encodeURIComponent(richMenuId)}`,
       {
         method: "POST",
         headers: { authorization: `Bearer ${token}` },
@@ -152,7 +162,7 @@ export function createLineMenuSwitch({
     await discardBody(response);
   }
 
-  async function hasReturningMenu(lineUserId: string, token: string) {
+  async function hasReturningMenu(lineUserId: string, richMenuId: string, token: string) {
     const response = await fetchImpl(userMenuUrl(lineUserId), {
       headers: { authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
@@ -163,10 +173,10 @@ export function createLineMenuSwitch({
       return false;
     }
     if (!response.ok) throw await responseError(response, "message");
-    return field(await response.json(), "richMenuId") === returningRichMenuId;
+    return field(await response.json(), "richMenuId") === richMenuId;
   }
 
-  return async function switchLineMenu(lineIdToken) {
+  return async function switchLineMenu(lineIdToken, language) {
     const { sub } = await step("line_auth_failed", "LINE ID token verification", () =>
       verifyLineIdToken(lineIdToken),
     );
@@ -179,11 +189,14 @@ export function createLineMenuSwitch({
       "LINE channel access token request",
       channelAccessToken,
     );
+    const richMenuId = returningRichMenuIds[language] ?? returningRichMenuIds.en;
     // The Login and Messaging API channels share a provider, so both know the person by this user ID.
-    await step("line_menu_link_failed", "LINE rich menu link", () => linkReturningMenu(sub, token));
+    await step("line_menu_link_failed", "LINE rich menu link", () =>
+      linkReturningMenu(sub, richMenuId, token),
+    );
     // LINE also answers 200 when it links nothing: the person hasn't added the account as a friend, or blocked it.
     const linked = await step("line_menu_link_failed", "LINE rich menu read-back", () =>
-      hasReturningMenu(sub, token),
+      hasReturningMenu(sub, richMenuId, token),
     );
     return linked ? { menu: "returning" } : { menu: "new", reason: "not_a_friend" };
   };

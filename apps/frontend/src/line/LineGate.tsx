@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "../i18n/react";
 import { Key } from "../ui/Key";
 import { lineLogin, useLine } from "./liff";
 import "./LineGate.css";
@@ -6,26 +7,25 @@ import "./LineGate.css";
 /** Holds the app until LINE has logged the person in, and says so when it can't. */
 export function LineGate({ children }: { children: ReactNode }) {
   const line = useLine();
+  const { t } = useTranslation();
   if (line.status === "ready") return children;
   return (
     <main className="line-gate" aria-busy={line.status === "loading"}>
       {line.status === "loading" ? (
         <p className="fine line-gate__opening" role="status">
-          Opening your sticker board…
+          {t(($) => $.line.gate.opening)}
         </p>
       ) : line.status === "logged-out" ? (
         <>
-          <h1 className="title-label">Your sticker board</h1>
-          <p className="line-gate__lead">It opens with your LINE account.</p>
-          <Key onClick={lineLogin}>Log in with LINE</Key>
+          <h1 className="title-label">{t(($) => $.line.gate.title)}</h1>
+          <p className="line-gate__lead">{t(($) => $.line.gate.lead)}</p>
+          <Key onClick={lineLogin}>{t(($) => $.line.gate.logIn)}</Key>
         </>
       ) : (
         <>
-          <h1 className="title-label">LINE didn’t start</h1>
-          <p className="line-gate__lead">
-            Your sticker board opens once it does. Check your connection, then try again.
-          </p>
-          <Key onClick={() => location.reload()}>Try again</Key>
+          <h1 className="title-label">{t(($) => $.line.gate.didntStart)}</h1>
+          <p className="line-gate__lead">{t(($) => $.line.gate.didntStartLead)}</p>
+          <Key onClick={() => location.reload()}>{t(($) => $.line.gate.tryAgain)}</Key>
           <p className="fine line-gate__reason">{line.message}</p>
         </>
       )}

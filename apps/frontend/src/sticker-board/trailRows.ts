@@ -1,5 +1,6 @@
 import type { TransferTrailEntry } from "@drawing-app/api/client";
 import { toMs, toPerson, type PersonView } from "../api/views";
+import { formatCount } from "../i18n/format";
 
 /** One hand-off on a sticker's Transfer Trail, as its detail shows it. */
 export interface TrailRow {
@@ -56,12 +57,11 @@ export function artistShareLine(
 ): string | null {
   const g = row.gratitude;
   if (!g || g.artistShare <= 0 || row.giver.id === artist.id) return null;
-  const n = (v: number) => v.toLocaleString("en-US");
-  if (artist.id === viewerId) return `${n(g.artistShare)} of it came to you, its artist`;
-  const kept = n(g.total - g.artistShare);
+  if (artist.id === viewerId) return `${formatCount(g.artistShare)} of it came to you, its artist`;
+  const kept = formatCount(g.total - g.artistShare);
   const giverPart =
     row.giver.id === viewerId
       ? `${kept} came to you`
       : `${kept} to ${trailName(row.giver, viewerId)}`;
-  return `${giverPart} · ${n(g.artistShare)} to ${trailName(artist, viewerId)}, its artist`;
+  return `${giverPart} · ${formatCount(g.artistShare)} to ${trailName(artist, viewerId)}, its artist`;
 }

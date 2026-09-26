@@ -1,3 +1,4 @@
+import { formatCount } from "../i18n/format";
 import { notePerformance } from "../performance/performanceRecorder";
 import type { ComboHud } from "./comboHud";
 import { EASE_OUT, EASE_PEEL, clamp, easeInOutSine, lerp } from "./easing";
@@ -104,7 +105,7 @@ function hitGiver(parts: EndingParts, total: number) {
     );
   }
   parts.effects.burst(6, parts.giverPoint());
-  parts.say(`Sent ${total.toLocaleString("en-US")} gratitude to ${parts.giverHandle}.`);
+  parts.say(`Sent ${formatCount(total)} gratitude to ${parts.giverHandle}.`);
 }
 
 /**

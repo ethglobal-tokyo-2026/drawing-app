@@ -1,4 +1,6 @@
 import type liff from "@line/liff";
+import { i18next } from "../i18n/i18n";
+import type { Language } from "../i18n/language";
 import { formatDuration, formatNo } from "../stickers/format";
 import { giftTag } from "./giftTag";
 
@@ -24,6 +26,8 @@ export interface GiftMessageInput {
    * LINE fetches only HTTPS images, so any other URL goes without.
    */
   heroUrl?: string;
+  /** The giver's language: LINE's picker never says who receives the gift. */
+  language: Language;
 }
 
 // LINE draws the gift message and can't read CSS variables, so the world's colors are written out.
@@ -58,6 +62,7 @@ export function buildGiftMessage({
   no,
   timeUsed,
   heroUrl,
+  language,
 }: GiftMessageInput): GiftMessage {
   const tag = giftTag(fromHandle);
   if (tag.name === "@") throw new Error("Gift message: the giver has no handle");
@@ -69,14 +74,14 @@ export function buildGiftMessage({
   }
   const open = {
     type: "uri",
-    label: "Open your gift",
+    label: i18next.t(($) => $.giving.giftMessage.open, { lng: language }),
     uri: giftLink(liffId, giftClaimToken),
   } as const;
 
   return {
     type: "flex",
     // What the chat list and LINE's notification show.
-    altText: `${tag.name} sent you a sticker`,
+    altText: i18next.t(($) => $.giving.giftMessage.altText, { name: tag.name, lng: language }),
     contents: {
       type: "bubble",
       ...(hero && {
@@ -98,13 +103,13 @@ export function buildGiftMessage({
           // Printed in capitals: LINE draws no fine print of its own.
           {
             type: "text",
-            text: `${formatNo(no).toUpperCase()} · ONE OF ONE`,
+            text: `${formatNo(no).toUpperCase()} · ${i18next.t(($) => $.giving.giftMessage.oneOfOne, { lng: language })}`,
             size: "xs",
             color: GRAPHITE,
           },
           {
             type: "text",
-            text: `${tag.label} ${tag.name}`,
+            text: `${i18next.t(($) => $.giving.tag[tag.label], { lng: language })} ${tag.name}`,
             weight: "bold",
             size: "lg",
             color: INK,
@@ -113,7 +118,10 @@ export function buildGiftMessage({
           },
           {
             type: "text",
-            text: `A one-of-one sticker, drawn in ${formatDuration(timeUsed)}. It opens once.`,
+            text: i18next.t(($) => $.giving.giftMessage.body, {
+              duration: formatDuration(timeUsed, language),
+              lng: language,
+            }),
             size: "sm",
             color: GRAPHITE,
             wrap: true,

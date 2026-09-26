@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import { flushSync } from "react-dom";
-import { apiError, type ApiError } from "../api/apiClient";
+import { apiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
 import { useApiQuery } from "../api/useApiQuery";
 import {
@@ -27,6 +27,7 @@ import { useGiftSender } from "../giving/useGiftSender";
 import { FEEL_CONFIG } from "../gratitude/gameConfig";
 import { GratitudeMiniGame } from "../gratitude/GratitudeMiniGame";
 import { readMiniGameDemoSettings } from "../gratitude/miniGameDemoSettings";
+import { errorReason } from "../i18n/errorMessage";
 import { DrawIcon } from "../icons/DrawIcon";
 import { useMe } from "../api/meContext";
 import { useIdentity } from "../identity/useIdentity";
@@ -140,8 +141,6 @@ const kept = (was: Box | null, now: Box) =>
   was.bottom === now.bottom
     ? was
     : now;
-
-const reasonOf = (error: ApiError) => error.detail ?? error.code;
 
 interface LoadedBoard {
   owner: PersonView;
@@ -265,7 +264,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         (error: unknown) => {
           const failure = apiError(error);
           console.error(`Saving where ${formatNo(sticker.no)} sits failed`, failure);
-          setUnsaved((was) => new Map(was).set(sticker.id, reasonOf(failure)));
+          setUnsaved((was) => new Map(was).set(sticker.id, errorReason(failure)));
         },
       );
     },
@@ -676,7 +675,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         <div className="board-blank board-problem" role="alert" style={blankStyle}>
           <span className="board-blank-cut" aria-hidden />
           <span className="board-blank-note">Your stickers didn’t load.</span>
-          <span className="fine board-problem-reason">{reasonOf(board.error)}</span>
+          <span className="fine board-problem-reason">{errorReason(board.error)}</span>
           <LabelButton size="sm" onClick={board.retry}>
             Try again
           </LabelButton>
