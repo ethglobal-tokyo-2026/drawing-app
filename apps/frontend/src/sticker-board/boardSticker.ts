@@ -1,5 +1,6 @@
 import type { BoardSticker as ApiBoardSticker, Placement as ApiPlacement } from "../api/contract";
 import { toMs, toPerson, toSticker, type PersonView } from "../api/views";
+import { formatHandle } from "../stickers/format";
 import type { Placement } from "../stickers/stickerStorage";
 import type { StickerUrls } from "../stickers/stickerUrls";
 import { freeSpot, nextZ } from "./placement";
@@ -91,14 +92,27 @@ export function toBoardSticker(b: ApiBoardSticker): UnplacedBoardSticker {
   };
 }
 
+/** Sent and not received yet: it has left the board and the tray for the badge. */
+export const onItsWay = (s: Pick<BoardStickerView, "held" | "openGift">) =>
+  s.held && s.openGift?.status === "sent";
+
+/** How a person is printed: their handle, or their name until they've chosen one. */
+export const handleOf = (p: PersonView) => (p.handle === null ? p.name : formatHandle(p.handle));
+
 /**
- * Every sticker at a spot: one never placed goes to a free spot on top of the others, and is listed
+ * Every sticker at a spot. One the board already holds keeps its spot there, since the board's moves
+ * are newer than any load; one never placed goes to a free spot on top of the others, and is listed
  * in `placed` for saving, so it stays put when others move.
  */
-export function placeUnplaced(list: readonly UnplacedBoardSticker[]): {
+export function placeUnplaced(
+  loaded: readonly UnplacedBoardSticker[],
+  held: readonly BoardStickerView[] = [],
+): {
   stickers: BoardStickerView[];
   placed: BoardStickerView[];
 } {
+  const spots = new Map(held.map((s) => [s.id, s.placement]));
+  const list = loaded.map((s) => ({ ...s, placement: spots.get(s.id) ?? s.placement }));
   const placements = list.flatMap((s) => (s.placement ? [s.placement] : []));
   const placed: BoardStickerView[] = [];
   const stickers = list.map((s): BoardStickerView => {

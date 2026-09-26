@@ -59,7 +59,6 @@ const render = (
         board={board}
         stickers={stickers}
         ownerId="me"
-        gifts={new Map()}
         api={{ ...api, ...side }}
         onSeen={onSeen}
       />,
