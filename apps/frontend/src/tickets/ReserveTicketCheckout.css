@@ -140,6 +140,30 @@
   font-weight: 700;
 }
 
+/* The payment whose tickets weren't added, in fine print under the key: its ID in its own case, cut short on screen,
+   and Copy beside it, which copies it whole. */
+.reserve-checkout__payment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.reserve-checkout__payment-id {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A transaction ID is case-sensitive, so fine print's capitals would change it; it can be selected by hand. */
+.reserve-checkout__digest {
+  text-transform: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 /* Under Pay, where the payment happens. */
 .reserve-checkout__credit {
   margin-top: 6px;

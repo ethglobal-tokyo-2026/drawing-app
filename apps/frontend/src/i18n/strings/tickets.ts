@@ -174,10 +174,25 @@ export const tickets = {
     buyMore: { en: "Buy more tickets", ja: "チケットをもっと買う" },
     /** Reserve ticket checkout when a payment fails: the title, above the reason */
     paymentFailed: { en: "Payment didn’t go through", ja: "支払いが完了しませんでした" },
-    /** Reserve ticket checkout when a payment fails after the money moved: the line under the title; `digest` is the transaction's ID, `reason` the error */
-    paidButNotAdded: {
-      en: "The payment went through ({{digest}}), but the tickets weren’t added: {{reason}}",
-      ja: "支払いは完了しました（{{digest}}）が、チケットは追加されませんでした：{{reason}}",
+    /** When the payment went through but the server didn't add its tickets: asking the server again never pays again. */
+    notAdded: {
+      /** Reserve ticket checkout after paying, when the payment went through but the tickets weren't added: the title */
+      title: { en: "Tickets not added yet", ja: "チケットがまだ追加されていません" },
+      /** Reserve ticket checkout, tickets not added: the bold line under the title, before the reason in quiet type */
+      line: {
+        en: "Your payment went through. Adding the tickets again won’t charge you twice.",
+        ja: "支払いは完了しています。チケットをもう一度追加しても、二重に請求されることはありません。",
+      },
+      /** Reserve ticket checkout, tickets not added: the blue key that asks again for the tickets the payment bought */
+      add: { en: "Add the tickets", ja: "チケットを追加する" },
+      /** Reserve ticket checkout, tickets not added: that key while it asks */
+      adding: { en: "Adding…", ja: "追加中…" },
+      /** Reserve ticket checkout, tickets not added: fine print under the key naming the payment; `<id>` holds its Sui transaction ID, cut short on screen */
+      payment: { en: "Payment <id>{{digest}}</id>", ja: "支払い<id>{{digest}}</id>" },
+      /** Reserve ticket checkout, tickets not added: the small button beside the payment that copies its whole ID */
+      copy: { en: "Copy", ja: "コピー" },
+      /** Reserve ticket checkout, tickets not added: that button once the ID is copied */
+      copied: { en: "Copied", ja: "コピーしました" },
     },
     /** Reserve ticket checkout when a payment fails: the key that goes back to the packs */
     backToPacks: { en: "Back to the packs", ja: "パック選びに戻る" },
