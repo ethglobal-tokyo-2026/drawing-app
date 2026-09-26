@@ -3,6 +3,7 @@
   "ignorePatterns": [
     "**/src/generated/**",
     "packages/sticker-chain/lib/**",
-    "contracts/sui-payment-contract/**"
+    "contracts/sui-payment-contract/**",
+    "packages/db/drizzle/meta/**"
   ]
 }

@@ -15,3 +15,8 @@ allowBuilds:
   keccak: false
 minimumReleaseAgeExclude:
   - viem@2.56.9
+# drizzle-kit/api's types import zod, which drizzle-kit doesn't declare, so they'd resolve to `any`.
+packageExtensions:
+  drizzle-kit:
+    dependencies:
+      zod: 3.25.76
