@@ -24,15 +24,7 @@
       main {
         max-width: 38em;
         margin: 0 auto;
-      }
-      .placeholder {
-        display: inline-block;
-        margin: 0 0 20px;
-        padding: 6px 10px;
-        border-radius: 6px;
-        background: #ffd93b;
-        font-weight: 700;
-        transform: rotate(-1.5deg);
+        text-wrap: pretty;
       }
       h1 {
         margin: 0 0 12px;
@@ -41,31 +33,39 @@
         font-stretch: 112%;
         line-height: 1.1;
       }
-      a {
-        color: inherit;
-      }
-      .credit {
-        margin: 0 0 20px;
-        color: #6e6878;
-        font-size: 13px;
-      }
-      .speech {
-        text-wrap: pretty;
-      }
-      .speech p,
-      .speech ul {
-        margin: 0 0 12px;
-      }
-      .speech .shout {
+      h2 {
+        margin: 28px 0 8px;
         text-wrap: balance;
         font-size: 18px;
         font-weight: 800;
         font-stretch: 112%;
         line-height: 1.2;
       }
-      .speech .stage {
+      a {
+        color: inherit;
+      }
+      blockquote,
+      blockquote p,
+      dl {
+        margin: 0 0 8px;
+      }
+      dt {
+        font-weight: 700;
+      }
+      dd {
+        margin: 0 0 8px;
+      }
+      .credit,
+      .source {
+        margin: 0 0 20px;
         color: #6e6878;
-        font-style: italic;
+        font-size: 13px;
+      }
+      .source {
+        margin: 0;
+      }
+      .notices {
+        margin-top: 32px;
       }
       .back {
         display: inline-block;
@@ -76,60 +76,138 @@
   </head>
   <body>
     <main>
-      <p class="placeholder">Placeholder: the real Terms of Use aren&rsquo;t written yet</p>
       <h1>Terms of Use</h1>
       <p class="credit">
-        An address to the artists of the Sticker Board, after Gihren Zabi at Garma&rsquo;s funeral
-        (<cite>Mobile Suit Gundam</cite>, episode 12, 1979). The real speech&rsquo;s ending is on
-        <a
-          href="https://en.wikiquote.org/wiki/Mobile_Suit_Gundam#Gihren_Zabi.27s_Famous_.22Sieg_Zeon.21.22_Speech"
-          >Wikiquote</a
+        By using the app you agree to the following. Each clause is quoted from Richard Stallman, or
+        attributed to him, and linked to its source.
+      </p>
+
+      <h2>0. Interjection</h2>
+      <blockquote>
+        <p>
+          I&rsquo;d just like to interject for a moment. What you&rsquo;re referring to as Linux, is
+          in fact, GNU/Linux, or as I&rsquo;ve recently taken to calling it, GNU plus Linux. Linux
+          is not an operating system unto itself, but rather another free component of a fully
+          functioning GNU system made useful by the GNU corelibs, shell utilities and vital system
+          components comprising a full OS as defined by POSIX. Many computer users run a modified
+          version of the GNU system every day, without realizing it. Through a peculiar turn of
+          events, the version of GNU which is widely used today is often called &ldquo;Linux&rdquo;,
+          and many of its users are not aware that it is basically the GNU system, developed by the
+          GNU Project. There really is a Linux, and these people are using it, but it is just a part
+          of the system they use. Linux is the kernel: the program in the system that allocates the
+          machine&rsquo;s resources to the other programs that you run. The kernel is an essential
+          part of an operating system, but useless by itself; it can only function in the context of
+          a complete operating system. Linux is normally used in combination with the GNU operating
+          system: the whole system is basically GNU with Linux added, or GNU/Linux. All the
+          so-called &ldquo;Linux&rdquo; distributions are really distributions of GNU/Linux.
+        </p>
+      </blockquote>
+      <p class="source">
+        An internet copypasta attributed to Richard Stallman.
+        <a href="https://www.gnu.org/gnu/incorrect-quotation.en.html"
+          >He says he didn&rsquo;t write it</a
         >.
       </p>
-      <div class="speech">
-        <p class="shout">Citizens of the Sticker Board!</p>
-        <p>We have lost our Terms of Use.</p>
+
+      <h2>1. Definitions</h2>
+      <dl>
+        <dt>Internet of Stings</dt>
+        <dd>
+          short for &ldquo;Internet of Stings, Snoops, Cheats and Telemarketers.&rdquo; Those trying
+          to suck you into it call it the &ldquo;Internet of Things&rdquo;.
+        </dd>
+        <dt>Useds of Facebook</dt>
+        <dd>
+          People may think they use Facebook, but really Facebook uses them. So I call them
+          &ldquo;useds&rdquo; of Facebook.
+        </dd>
+        <dt>zucker</dt>
+        <dd>someone who is used by Facebook. Don&rsquo;t be a zucker!</dd>
+      </dl>
+      <p class="source"><a href="https://stallman.org/glossary.html">Glossary</a>, stallman.org</p>
+
+      <h2>2. Acceptable use</h2>
+      <blockquote cite="https://stallman.org/stallman-computing.html">
         <p>
-          They were to run forty pages. They would have defined &ldquo;you,&rdquo; &ldquo;us&rdquo;
-          and &ldquo;the Service.&rdquo; They would have reserved every right, disclaimed every
-          warranty and sent every dispute to arbitration in a city you have never visited. They were
-          never written, and this hackathon will end before they are.
+          I generally do not connect to web sites from my own machine, aside from a few sites I have
+          some special relationship with. I usually fetch web pages from other sites by sending mail
+          to a program [&hellip;] that fetches them, much like wget, and then mails them back to me.
+          Then I look at them using a web browser, unless it is easy to see the text in the HTML
+          page directly.
         </p>
-        <p class="shout">But does this mean defeat? No! It is the beginning!</p>
+      </blockquote>
+      <p class="source">
+        <a href="https://stallman.org/stallman-computing.html">How I do my Computing</a>,
+        stallman.org
+      </p>
+
+      <h2>3. Third-party services</h2>
+      <blockquote cite="https://stallman.org/facebook.html">
         <p>
-          For too long, the Federation of Fine Print has ruled over the apps you love. Each one asks
-          you to scroll past a wall of clauses and tap &ldquo;I agree,&rdquo; and it calls that
-          consent. The Federation draws nothing. It seals nothing. It has never once given a sticker
-          to a friend.
+          Facebook is not your friend. Its &lsquo;real name&rsquo; policy is enough reason to refuse
+          to let it use you, but there is so much more nastiness in Facebook.
+        </p>
+      </blockquote>
+      <p class="source">
+        <a href="https://stallman.org/facebook.html"
+          >Reasons not to use (i.e., be used by) Facebook</a
+        >, stallman.org
+      </p>
+
+      <h2>4. Hospitality</h2>
+      <blockquote cite="https://github.com/ddol/rre-rms/blob/master/rider.txt">
+        <p>
+          If you can find a host for me that has a friendly parrot, I will be very very glad. If you
+          can find someone who has a friendly parrot I can visit with, that will be nice too.
         </p>
         <p>
-          We ask far less of you. Draw one sticker before the timer runs out. Seal it, so that no
-          hand, not even yours, can change it again. Put it in a gift bag and send it through LINE
-          to one friend. When they pull the tab, they will play for its heart and send back
-          Gratitude. Gratitude cannot be bought. It is earned with the fingertip, one hit at a time.
+          DON&rsquo;T buy a parrot figuring that it will be a fun surprise for me. To acquire a
+          parrot is a major decision: it is likely to outlive you. If you don&rsquo;t know how to
+          treat the parrot, it could be emotionally scarred and spend many decades feeling
+          frightened and unhappy. If you buy a captured wild parrot, you will promote a cruel and
+          devastating practice, and the parrot will be emotionally scarred before you get it.
+          Meeting that sad animal is not an agreeable surprise.
         </p>
-        <p class="shout">Our Terms of Use have fallen. Why?</p>
-        <p class="stage">
-          Somewhere, in a bar, the Red Comet raises his glass: &ldquo;Because it was a
-          hackathon.&rdquo;
+      </blockquote>
+      <p class="source">
+        The info packet he sends to people who organize his speeches:
+        <a href="https://github.com/ddol/rre-rms/blob/master/rider.txt"
+          >the rider, as circulated in 2011</a
+        >
+      </p>
+
+      <h2>5. Religion</h2>
+      <blockquote cite="https://stallman.org/saint.html">
+        <p>I bless your computer, my child!</p>
+        <p>
+          Sainthood in the Church of Emacs requires living a life of purity&mdash;but in the Church
+          of Emacs, this does not require celibacy (a sigh of relief is heard).
         </p>
         <p>
-          Artists! Turn your sorrow into stickers! Rise, and take up your finger, or your Pencil if
-          you have one. Let the Federation draft its clauses. We will be sticking things on the
-          backs of laptops.
+          That is no computer disk, that is my halo &mdash; but it was a disk platter in a former
+          life.
         </p>
-        <p>Until the Terms are written, these are the Terms:</p>
-        <ul>
-          <li>Draw your own stickers.</li>
-          <li>A sealed sticker is final.</li>
-          <li>A gift opens once, for the friend it was sent to.</li>
-          <li>Give Gratitude generously.</li>
-        </ul>
-        <p class="shout">Sieg Sticker!</p>
-        <p class="stage">
-          The crowd, who came for the other speech: Sieg Zeon! Sieg Zeon! Sieg Zeon!
+      </blockquote>
+      <p class="source">
+        <a href="https://stallman.org/saint.html">Saint IGNUcius</a>, stallman.org
+      </p>
+
+      <h2>6. Disclaimer of warranty</h2>
+      <blockquote cite="https://stallman.org/saint.html">
+        <p>
+          Warning: taking the Church of Emacs (or any church) too seriously may be hazardous to your
+          health.
         </p>
-      </div>
+      </blockquote>
+      <p class="source">
+        <a href="https://stallman.org/saint.html">Saint IGNUcius</a>, stallman.org
+      </p>
+
+      <p class="source notices">
+        Quoted passages &copy; Richard Stallman, from the pages linked under each clause.
+        &ldquo;Reasons not to use (i.e., be used by) Facebook&rdquo; is released under
+        <a href="https://creativecommons.org/licenses/by-nd/3.0/">CC BY-ND 3.0</a>.
+      </p>
       <a class="back" href="/">Back to the app</a>
     </main>
   </body>
