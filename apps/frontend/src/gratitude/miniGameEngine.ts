@@ -406,14 +406,14 @@ export function mountMiniGameEngine(
     background.show(tier, intensity, combo.view.method);
     if (!reduced) heart.punch(0.035 * (0.6 + intensity));
     const { jp, en } = TIER_NAMES[tier];
-    const gloss = shownGloss(en);
-    lettering.slamTierName(jp, gloss);
+    const tierGloss = shownGloss(en);
+    lettering.slamTierName(jp, tierGloss);
     if (tier === 2) effects.burst(5, heartAt);
     // ありがと comes with the catch, whose words it leaves; each tier after it is said by name: its
     // gloss where the app shows one, otherwise the word itself.
     if (tier > 0) {
       lastAnnounce = play;
-      say(gloss ? `${gloss.charAt(0).toUpperCase()}${gloss.slice(1)}.` : jp);
+      say(tierGloss ? `${tierGloss.charAt(0).toUpperCase()}${tierGloss.slice(1)}.` : jp);
     }
   };
 

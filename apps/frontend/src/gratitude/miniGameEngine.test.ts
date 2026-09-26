@@ -1,9 +1,11 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReplayV1 } from "@drawing-app/api/client";
+import { i18next } from "../i18n/i18n";
 import type { ComboRecord } from "./combo";
 import { GAME_CONFIG } from "./gameConfig";
 import { mountMiniGameEngine, type MiniGameEngine } from "./miniGameEngine";
+import { TIER_NAMES } from "./tierNames";
 
 const { log, watch } = vi.hoisted(() => {
   const log: { name: string; args: unknown[]; result: unknown; at: number }[] = [];
@@ -344,6 +346,22 @@ describe("mountMiniGameEngine", () => {
     await mash(40);
     expect(Number(host.dataset.tier)).toBeGreaterThanOrEqual(3);
     expect(callsTo("rainFromTop")).toHaveLength(0);
+  });
+});
+
+describe("in Japanese", () => {
+  afterEach(() => i18next.changeLanguage("en"));
+
+  it("slams a tier-up's name and pops words in with no gloss, and says the name itself", async () => {
+    await i18next.changeLanguage("ja");
+    for (let i = 0; i < 30 && host.dataset.tier !== "1"; i++) await mash(1);
+    expect(host.dataset.tier).toBe("1");
+    const { jp } = TIER_NAMES[1];
+    expect(stage.querySelector(".gr-slam")?.textContent).toBe(jp);
+    const pops = [...stage.querySelectorAll(".gr-pop")];
+    expect(pops.length).toBeGreaterThan(0);
+    for (const pop of pops) expect(pop.querySelector(".gr-cap-gloss")?.textContent).toBe("");
+    expect(live()).toBe(jp);
   });
 });
 
