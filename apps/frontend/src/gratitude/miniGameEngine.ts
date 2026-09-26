@@ -11,12 +11,14 @@ import { EASE_OUT, EASE_SPRING, clamp } from "./easing";
 import { createFrameTimeReadout } from "./frameTimeReadout";
 import { FEEL_CONFIG, GAME_CONFIG } from "./gameConfig";
 import { flyHeartToGiver, playAscension, sighAndTidy, type EndingParts } from "./gameEndings";
-import { bigHeartLayers, HAND_SWIPE_SVG, SOUL_SVG } from "./heartArt";
+import { bigHeartLayers, HAND_SWIPE_SVG, SOUL_SVG, VIBRATE_SVG } from "./heartArt";
 import { heartFaceFor, type HeartFace } from "./heartFaces";
-import { createHeartMotion, type HeartLayout } from "./heartMotion";
+import { createHeartMotion, type HeartLayout, type WallHit } from "./heartMotion";
 import { createMiniHeartLayer } from "./miniHeartLayer";
 import { createMiniHeartPhysics, type HeartBox } from "./miniHeartPhysics";
 import { createParticleEffects } from "./particleEffects";
+import { listenToPhoneMotion } from "./phoneMotion";
+import { createShakeDetector, type ShakeReversal } from "./shakeDetector";
 import { createStrokeDetector } from "./strokeDetector";
 import { createTierBackground } from "./tierBackground";
 import { TIER_NAMES } from "./tierNames";
@@ -73,6 +75,7 @@ const HUD_HEIGHT = 80;
 /** The tips: what to do, said only once the person is trying, and held this long in s. */
 const TIPS = {
   stroke: { text: "Stroke it back and forth, fast", icon: HAND_SWIPE_SVG, holdS: 6 },
+  shake: { text: "Keep shaking!", icon: VIBRATE_SVG, holdS: 2.4 },
 };
 type TipKind = keyof typeof TIPS;
 /** ms a stroke finger counts as moving after its latest move. */
@@ -145,7 +148,7 @@ export function mountMiniGameEngine(
   anchor.append(body);
 
   const hud = createComboHud(parts.hud, { reduced: () => reduced, random });
-  const background = createTierBackground(ground, () => reduced);
+  const background = createTierBackground(ground, page, () => reduced);
   const lettering = createLettering(captions, { intensity, random });
   const effects = createParticleEffects(
     { stamps: stampsLayer, effects: effectsLayer, lines: linesLayer },
@@ -180,10 +183,21 @@ export function mountMiniGameEngine(
         y: giverPhoto.offsetTop + giverPhoto.offsetHeight / 2 || 120,
       },
       screen: { width, height },
+      ceiling: top - 20,
     };
   };
   let L = layoutFor(size.width, size.height);
-  const heart = createHeartMotion(L, random);
+  // A hard hit on an edge dents it and shakes the screen; from ドキドキ up it knocks mini hearts off.
+  const onWallHit = (hit: WallHit) => {
+    background.dent(hit.edge, hit.edge === "top" || hit.edge === "bottom" ? hit.x : hit.y);
+    heart.shake(Math.min(5, hit.speed / 260) * (0.4 + intensity * 0.6));
+    if ((combo.view.tier ?? 0) >= FEEL_CONFIG.miniHearts.fromTier && !reduced) {
+      const { normal } = hit;
+      const from = { x: hit.x + normal.x * 10, y: hit.y + normal.y * 10 };
+      physics.knockOffWall(from.x, from.y, normal, hit.speed, throwCount());
+    } else if (random() < 0.6) effects.burst(2, hit);
+  };
+  const heart = createHeartMotion(L, random, onWallHit);
   const applyLayout = () => {
     size = {
       width: root.clientWidth || FALLBACK.width,
@@ -553,12 +567,64 @@ export function mountMiniGameEngine(
     if (strokeTries >= FEEL_CONFIG.stroke.triesForTip) showTip("stroke");
   };
 
+  // Shaking: before the unlock the heart answers the wrist in place, and a hard shake in a rhythm
+  // builds to the tip, a lifting corner, then the heart coming loose. Reduced motion keeps it in place.
+  const shakes = createShakeDetector(FEEL_CONFIG.shake);
+  /** performance.now() until which the shake marks show. */
+  let shakingUntil = 0;
+
+  const unlockShake = (t: number, reversal: ShakeReversal) => {
+    const events = combo.commitTo("shake", t);
+    if (!events.some((e) => e.kind === "hit")) return;
+    hideTip();
+    background.liftCorner(0);
+    shakingUntil = t + FEEL_CONFIG.shake.resetMs;
+    // The combo's own look first, so the unlock's slam is the one that shows.
+    handle(events, heartAt.x, heartAt.y);
+    if (!reduced) {
+      heart.comeLoose();
+      heart.kickLoose(reversal.direction, reversal.strength);
+    }
+    lettering.slamTierName("ポンッ", "*pop*");
+    flash = { face: "wide", until: performance.now() + 600 };
+    writeFace();
+    effects.burst(8, heartAt);
+    say("The heart is loose.");
+  };
+
+  const onMotion = (ax: number, ay: number, gx: number | null, t: number) => {
+    const view = combo.view;
+    if (!running || ending || view.phase === "ended" || view.method === "stroke") return;
+    const shaking = view.method === "shake";
+    if (!shaking) {
+      heart.swayWith(ax, gx);
+      const size = Math.hypot(ax, ay);
+      if (size > 1.5) heart.wobble(Math.min(0.1, size * 0.005));
+    }
+    const reversal = shakes.addMotionSample(ax, ay, t);
+    if (!reversal) return;
+    if (shaking) {
+      shakingUntil = t + FEEL_CONFIG.shake.resetMs;
+      if (reduced) heart.jiggle();
+      else heart.kickLoose(reversal.direction, reversal.strength);
+      handle(combo.countShakeReversal(t), heartAt.x, heartAt.y);
+      return;
+    }
+    heart.jiggle();
+    if (reversal.run >= FEEL_CONFIG.shake.keepShakingAt) showTip("shake");
+    if (reversal.run >= FEEL_CONFIG.shake.cornerAt) background.liftCorner(0.3);
+    if (reversal.run >= FEEL_CONFIG.shake.unlockAt) unlockShake(t, reversal);
+  };
+  const stopMotion = listenToPhoneMotion(onMotion);
+
   /** The combo is over: nothing more is hinted at or held. */
   const stopHints = () => {
     hideTip();
     stroke = null;
-    heart.pullTo(0, null);
+    heart.calm();
     background.setSpeedField(0, strokeAngle);
+    background.liftCorner(0);
+    shakingUntil = 0;
   };
 
   const firstTap = (t: number, x: number, y: number) => {
@@ -677,6 +743,8 @@ export function mountMiniGameEngine(
         writeFace();
       }
       if (tipShown && wall > tipUntil) hideTip();
+      const shakingNow = now < shakingUntil ? "1" : "0";
+      if (root.dataset.shaking !== shakingNow) root.dataset.shaking = shakingNow;
 
       // A thumb holding the heart, or stroking once stroke is unlocked: the heart leans to it,
       // its light follows it and a glow sits under it.
@@ -751,6 +819,8 @@ export function mountMiniGameEngine(
       running = false;
       cancelAnimationFrame(raf);
       stopTouches();
+      stopMotion();
+      background.destroy();
       button.removeEventListener("keydown", onKey);
       parts.stage.removeEventListener("touchmove", holdStill);
       document.removeEventListener("visibilitychange", onHidden);
@@ -769,7 +839,9 @@ export function mountMiniGameEngine(
       parts.hud.replaceChildren();
       ground.replaceChildren();
       page.style.transform = "";
-      for (const key of ["phase", "tier", "hud", "reduced", "tip"]) delete root.dataset[key];
+      for (const key of ["phase", "tier", "hud", "reduced", "tip", "shaking"]) {
+        delete root.dataset[key];
+      }
     },
   };
 }

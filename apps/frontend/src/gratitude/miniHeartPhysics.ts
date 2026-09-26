@@ -52,6 +52,14 @@ export interface MiniHeartPhysics {
   setBounds: (bounds: PileBounds) => void;
   sprayFromTap: (x: number, y: number, heart: HeartBox, count: number) => void;
   flingAlongStroke: (pass: StrokeThrow, count: number) => void;
+  /** `speed`: how hard the loose heart hit the wall, in px/s; `normal` points off the wall. */
+  knockOffWall: (
+    x: number,
+    y: number,
+    normal: { x: number; y: number },
+    speed: number,
+    count: number,
+  ) => void;
   sweatFromHeart: (heart: HeartBox) => void;
   rainFromTop: () => void;
   shoveAwayFrom: (x: number, y: number) => void;
@@ -69,6 +77,8 @@ const CELL = 28;
 const CELL_STRIDE = 4096;
 /** A stroke's throw: its speed times `share`, kept within min–max px/s, within `aimDeg` of its direction. */
 const STROKE_THROW = { share: 0.6, min: 320, max: 1000, aimDeg: 12 };
+/** A ricochet's throw: the hit's speed times `share`, kept within min–max px/s. */
+const IMPACT_THROW = { share: 0.55, min: 260, max: 900 };
 /** s one spray fans out before its hearts can knock into each other. */
 const FAN_OUT_S = 0.4;
 /** s held up and slow before a heart settles. */
@@ -429,6 +439,19 @@ export function createMiniHeartPhysics(bounds: PileBounds, random: () => number)
         const sy = pass.end.y + (random() - 0.5) * 6;
         const angle = base + (random() - 0.5) * 2 * aim;
         throwMini(sx, sy, angle, speed * lerp(0.88, 1.08, random()), batch);
+      }
+    },
+    // From where the heart hit the wall, off it along its normal, as hard as the hit.
+    knockOffWall: (x, y, normal, speed, count) => {
+      const base = Math.atan2(normal.y, normal.x);
+      const spray = (MINI.sprayDeg * Math.PI) / 180;
+      const thrown = clamp(speed * IMPACT_THROW.share, IMPACT_THROW.min, IMPACT_THROW.max);
+      const batch = nextBatch++;
+      for (let i = 0; i < count; i++) {
+        const sx = x + (random() - 0.5) * 8;
+        const sy = y + (random() - 0.5) * 8;
+        const angle = base + (random() - 0.5) * 2 * spray;
+        throwMini(sx, sy, angle, thrown * lerp(0.85, 1.08, random()), batch);
       }
     },
     // A drop swells on the heart's edge, lets go and falls into the heap.

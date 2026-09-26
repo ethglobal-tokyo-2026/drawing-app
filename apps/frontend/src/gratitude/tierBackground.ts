@@ -1,6 +1,7 @@
 import type { Method, Tier } from "./combo";
-import { clamp } from "./easing";
-import { focusLinesSvg, HAZE_WAVE_SVG, speedFieldSvg } from "./heartArt";
+import { EASE_PEEL, clamp } from "./easing";
+import { DENT_SVG, focusLinesSvg, HAZE_WAVE_SVG, speedFieldSvg, VIBRATE_SVG } from "./heartArt";
+import type { ScreenEdge } from "./heartMotion";
 
 export interface TierBackground {
   setLayout: (
@@ -18,6 +19,12 @@ export interface TierBackground {
   ascend: (on: boolean, intensity: number) => void;
   flash: () => void;
   hideAll: () => void;
+  /** The screen's corner peels up by `amount`, 0–1: a hard shake could shake the heart loose. */
+  liftCorner: (amount: number) => void;
+  /** Where the loose heart hit an edge, `along` px along it, the edge dents in. */
+  dent: (edge: ScreenEdge, along: number) => void;
+  /** Takes what it put in `front` away; the engine empties the ground. */
+  destroy: () => void;
 }
 
 /** The focus lines' two drawings, which alternate so the lines flicker like a hand-drawn loop. */
@@ -26,6 +33,10 @@ const FOCUS_FPS = 8;
 const RAYS_DEG_PER_S = 6;
 const FLASH = { opacity: 0.7, seconds: 0.32 };
 const SPEED_FIELD_SEED = 31;
+/** Dents on screen at most; past this the oldest is reused. */
+const DENTS = 6;
+/** How fast the corner follows its lift, a second. */
+const CORNER_RATE = 10;
 
 const layer = (className: string) => {
   const el = document.createElement("div");
@@ -43,7 +54,30 @@ const setOpacity = (el: HTMLElement, value: number) => {
  * The ground behind the heart, escalating with the tier: the calm liner, a warm blush, 集中線 focus
  * lines, heat haze, then 昇天's light beams and white-out. Each layer fades in and out on its own.
  */
-export function createTierBackground(ground: HTMLElement, reduced: () => boolean): TierBackground {
+/** Cancelling an animation rejects its `finished`: browsers mark that handled, happy-dom doesn't. */
+function animate(
+  el: HTMLElement,
+  frames: Keyframe[],
+  options: KeyframeAnimationOptions,
+): Animation {
+  const animation = el.animate(frames, options);
+  void animation.finished.catch(rethrowUnlessCancelled);
+  return animation;
+}
+
+function rethrowUnlessCancelled(error: unknown) {
+  if (!(error instanceof Error && error.name === "AbortError")) throw error;
+}
+
+/**
+ * `front` takes what sits over the heart: the peeling corner, the dents and the shake marks, which
+ * the stylesheet shows while the screen's `data-shaking` is on.
+ */
+export function createTierBackground(
+  ground: HTMLElement,
+  front: HTMLElement,
+  reduced: () => boolean,
+): TierBackground {
   const blush = layer("gr-bg gr-bg-blush");
   const focus = layer("gr-focus");
   focus.dataset.v = "0";
@@ -71,6 +105,21 @@ export function createTierBackground(ground: HTMLElement, reduced: () => boolean
   flashCover.style.opacity = "0";
   ground.append(blush, focus, speedField, haze, beam, white, flashCover);
 
+  const cornerUnder = layer("gr-corner-under");
+  const cornerFlap = layer("gr-corner-flapwrap");
+  cornerFlap.append(layer("gr-corner-flap"));
+  const corner = layer("gr-corner");
+  corner.append(cornerUnder, cornerFlap);
+  const dentLayer = layer("gr-layer");
+  const shakeMarks = layer("gr-shakemarks");
+  shakeMarks.setAttribute("aria-hidden", "true");
+  shakeMarks.innerHTML = VIBRATE_SVG + VIBRATE_SVG;
+  front.append(corner, dentLayer, shakeMarks);
+  const dents: { el: HTMLElement; animation: Animation | null }[] = [];
+  let screen = { width: 390, height: 741 };
+  let cornerLift = 0;
+  let cornerShown = 0;
+
   let clock = 0;
   let focusOn = false;
   let beamOn = false;
@@ -80,6 +129,7 @@ export function createTierBackground(ground: HTMLElement, reduced: () => boolean
 
   return {
     setLayout(width, height, heart) {
+      screen = { width, height };
       focus.innerHTML = FOCUS_SEEDS.map((seed) =>
         focusLinesSvg(width, height, heart.x, heart.y, seed),
       ).join("");
@@ -116,6 +166,13 @@ export function createTierBackground(ground: HTMLElement, reduced: () => boolean
 
     step(real) {
       clock += real;
+      if (cornerShown !== cornerLift) {
+        cornerShown += (cornerLift - cornerShown) * Math.min(1, real * CORNER_RATE);
+        if (Math.abs(cornerLift - cornerShown) < 0.005) cornerShown = cornerLift;
+        const scale = `scale(${(cornerShown < 0.005 ? 0 : cornerShown).toFixed(3)})`;
+        cornerUnder.style.transform = scale;
+        cornerFlap.style.transform = scale;
+      }
       if (focusOn && !reduced()) {
         const v = String(Math.floor(clock * FOCUS_FPS) % 2);
         if (focus.dataset.v !== v) focus.dataset.v = v;
@@ -150,6 +207,44 @@ export function createTierBackground(ground: HTMLElement, reduced: () => boolean
     hideAll() {
       for (const el of [blush, focus, speedField, haze, beam, white]) setOpacity(el, 0);
       speedFieldShown = { opacity: "0", angle: speedFieldShown.angle };
+      cornerLift = 0;
+    },
+
+    destroy() {
+      for (const dent of dents) dent.animation?.cancel();
+      for (const el of [corner, dentLayer, shakeMarks]) el.remove();
+    },
+
+    liftCorner(amount) {
+      cornerLift = clamp(amount, 0, 1);
+    },
+
+    dent(edge, along) {
+      const { width, height } = screen;
+      const at =
+        edge === "top"
+          ? `translate(${along}px,0) rotate(0deg)`
+          : edge === "bottom"
+            ? `translate(${along}px,${height}px) rotate(180deg)`
+            : edge === "left"
+              ? `translate(0,${along}px) rotate(-90deg)`
+              : `translate(${width}px,${along}px) rotate(90deg)`;
+      const dent = (dents.length >= DENTS ? dents.shift() : undefined) ?? {
+        el: Object.assign(dentLayer.appendChild(layer("gr-dent")), { innerHTML: DENT_SVG }),
+        animation: null,
+      };
+      dents.push(dent);
+      dent.animation?.cancel();
+      dent.animation = animate(
+        dent.el,
+        [
+          { transform: `${at} scale(1.3, 1.6)`, opacity: 1 },
+          { offset: 0.12, transform: `${at} scale(1, 1)`, opacity: 1 },
+          { offset: 0.6, transform: `${at} scale(.9, .7)`, opacity: 0.9 },
+          { transform: `${at} scale(.7, .2)`, opacity: 0 },
+        ],
+        { duration: 1500, easing: EASE_PEEL, fill: "both" },
+      );
       focusOn = false;
       beamOn = false;
     },
