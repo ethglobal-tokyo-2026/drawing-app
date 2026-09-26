@@ -52,19 +52,19 @@ Fixes from the 2026-09-26 whole-app critique (27/40, Acceptable), plus the owner
 
 ## Drawing
 
-- [ ] D1 (P1) Keep the drawing across a reload.
+- [x] D1 (P1) Keep the drawing across a reload.
   - Save the ops and the elapsed clock to IndexedDB after each committed stroke and when the page hides.
   - On Draw, restore them paused, with a white label: "Picked up where you left off".
   - Wipe at seal, and when time runs out on an empty sheet.
   - If restoring fails, say so and give the ticket back.
-- [ ] D2 (P2) First run:
+- [x] D2 (P2) First run:
   - For the first few visits, a white label under the timer reads "Starts when you draw"; the first stroke peels it off.
   - The grabber reaches at least 3:1 contrast and gets a 44px touch band.
   - It shows as a label-stock pull tab reading "Board" until it's been used once.
   - It comes after the tools in Tab order.
-- [ ] D3 The PAUSED tag shows only once the clock has started.
-- [ ] D4 Focus stays within the drawing screen's controls; it never falls to the page body.
-- [ ] D5 The light listens for tilt only while a screen with stickers is showing.
+- [x] D3 The PAUSED tag shows only once the clock has started.
+- [x] D4 Focus stays within the drawing screen's controls; it never falls to the page body.
+- [x] D5 The light listens for tilt only while a screen with stickers is showing.
 
 Another branch changes the session to 3 minutes, so no new code or copy assumes 5:00.
 

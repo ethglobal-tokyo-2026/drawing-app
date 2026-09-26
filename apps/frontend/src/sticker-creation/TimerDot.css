@@ -143,8 +143,8 @@
   opacity: 1;
 }
 
-/* The paused hint: a label stuck just under the timer, with an arrow pointing up at it. It sticks on
-   as the dot nudges and peels off by itself. Placed from the top row's corner. */
+/* The paused hint, or a note: a label stuck just under the timer, with an arrow pointing up at it.
+   The hint sticks on as the dot nudges and peels off by itself. Placed from the top row's corner. */
 .timer-hint {
   position: absolute;
   left: 4px;
@@ -184,7 +184,8 @@
   font-size: 13.5px;
   font-weight: 700;
   line-height: 1.3;
-  white-space: nowrap;
+  /* Lines break where the words say, and nowhere else. */
+  white-space: pre;
   transform: rotate(-2deg);
   transform-origin: 0 0;
 }

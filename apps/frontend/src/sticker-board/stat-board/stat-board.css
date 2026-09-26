@@ -660,8 +660,9 @@
 
 /* Far enough below Try again that their touch bands don't overlap. */
 .stat-board__logout {
-  justify-self: start;
-  margin-top: 4px;
+  align-self: stretch;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 /* Privy's sign-in starts its own part of the slip, as a sentence with Try again after a failure. */

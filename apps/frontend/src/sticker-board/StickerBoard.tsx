@@ -16,6 +16,7 @@ import { DrawIcon } from "../icons/DrawIcon";
 import { useIdentity } from "../identity/useIdentity";
 import { LIFF_ID } from "../line/liff";
 import { formatNo } from "../stickers/format";
+import { useLight } from "../stickers/light";
 import { playStick } from "../stickers/stick";
 import { updatePlacement, type Placement, type StickerRecord } from "../stickers/stickerStorage";
 import { releaseStickerUrls } from "../stickers/stickerUrls";
@@ -156,6 +157,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   const giftSender = useGiftSender();
   const reduced = useReducedMotion();
   const hints = useId();
+  useLight(!turned);
 
   const save = useCallback((sticker: Pick<StickerRecord, "id" | "no">, placement: Placement) => {
     updatePlacement(sticker.id, placement).then(

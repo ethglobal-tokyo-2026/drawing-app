@@ -278,13 +278,23 @@ export class InkEngine {
     this.endStroke(false);
   }
 
+  /** The ops on the ink, oldest first. */
+  get ops(): readonly Op[] {
+    return this.history.committed;
+  }
+
   /** A fresh sheet: no ink, nothing to undo or redo. */
   reset(): void {
+    this.load([]);
+  }
+
+  /** A sheet with these ops on it and nothing to redo, as a drawing picked up after a reload has. */
+  load(ops: readonly Op[]): void {
     this.endStroke(true);
     this.fillTap = null;
     this.blocked = null;
     this.swallowed.clear();
-    this.history.reset();
+    this.history.load(ops);
     this.notifyHistory();
   }
 

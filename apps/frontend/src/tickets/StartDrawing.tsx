@@ -13,6 +13,8 @@ import "./tickets.css";
 interface Props {
   /** How long the drawing timer runs, for the card's line. */
   minutes: number;
+  /** Said under the line, such as what became of a drawing a reload interrupted; null for nothing. */
+  note: string | null;
   /** Spend a ticket on this sheet. */
   onStart: () => void;
   /** Keep the ticket; also what Escape does. */
@@ -23,7 +25,7 @@ interface Props {
  * Asks before a ticket is spent on a fresh sheet. It shares the out-of-tickets card's look: the day's
  * stubs, a line, the tear line and one key.
  */
-export function StartDrawing({ minutes, onStart, onBoard }: Props) {
+export function StartDrawing({ minutes, note, onStart, onBoard }: Props) {
   const state = useTicketState();
   const stubs = useDailyTicketStubs(state);
   const left = ticketsLeft(state);
@@ -44,7 +46,7 @@ export function StartDrawing({ minutes, onStart, onBoard }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${id}-title`}
-        aria-describedby={`${id}-line`}
+        aria-describedby={note ? `${id}-line ${id}-note` : `${id}-line`}
         tabIndex={-1}
       >
         <TicketStubs className="out-of-tickets__art" size="large" stubs={stubs} />
@@ -59,6 +61,11 @@ export function StartDrawing({ minutes, onStart, onBoard }: Props) {
             Your {minutes}-minute timer starts with your first stroke.
           </span>
         </p>
+        {note && (
+          <p className="out-of-tickets__note" id={`${id}-note`}>
+            {note}
+          </p>
+        )}
         <TearLine />
         <Key className="out-of-tickets__key" icon={<DrawIcon />} onClick={onStart}>
           Start drawing

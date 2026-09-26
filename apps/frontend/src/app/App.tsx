@@ -4,6 +4,7 @@ import { DrawingScreen, type DrawingScreenHandle } from "../sticker-creation/Dra
 import { ExploreScreen } from "./ExploreScreen";
 import { viewFromPath, type View } from "./openedView";
 import { TabBar } from "./TabBar";
+import { useFocusLoop } from "./useFocusLoop";
 import "./App.css";
 
 /** LINE's header shows the page title. */
@@ -14,6 +15,7 @@ const TITLES: Record<View, string> = {
 };
 
 export default function App() {
+  const phone = useRef<HTMLDivElement>(null);
   const drawingScreen = useRef<DrawingScreenHandle>(null);
   // The sticker board is home. Draw is the board's key, not a tab. A chat menu link opens its own screen.
   const [view, setView] = useState<View>(() => viewFromPath(location.pathname));
@@ -33,6 +35,9 @@ export default function App() {
     history.replaceState(history.state, "", url);
   }, []);
 
+  // While drawing, the drawing screen's controls and the grabber are all there is to focus.
+  useFocusLoop(phone, drawing);
+
   // After a seal, Draw starts a new sticker; otherwise it resumes the one in progress.
   const openDrawing = () => {
     if (sealedId) drawingScreen.current?.startNewSticker();
@@ -41,7 +46,7 @@ export default function App() {
 
   // The drawing screen tucks the tabs away so the sheet gets the room.
   return (
-    <div className={`phone ${drawing ? "has-tucked-tabs" : ""}`}>
+    <div ref={phone} className={`phone ${drawing ? "has-tucked-tabs" : ""}`}>
       <div className="screen">
         <DrawingScreen
           ref={drawingScreen}

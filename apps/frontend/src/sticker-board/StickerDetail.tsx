@@ -5,6 +5,7 @@ import type { StickerGiftStatus } from "../giving/giftStore";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
+import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { Key } from "../ui/Key";
 import { useBackToClose } from "../ui/useBackToClose";
@@ -58,6 +59,7 @@ export function StickerDetail({
   returnFocus,
 }: Props) {
   const reduced = useReducedMotion();
+  useLight();
   useBackToClose(true, onClose);
   const [shownId, setShownId] = useState(startId);
   const index = Math.max(
