@@ -58,6 +58,6 @@ describe("REST actions that require a smart account", () => {
         rim: image,
         flat: image,
       }),
-    ).rejects.toThrow("Please try Sealing again");
+    ).rejects.toMatchObject({ code: "mint_failed" });
   });
 });
