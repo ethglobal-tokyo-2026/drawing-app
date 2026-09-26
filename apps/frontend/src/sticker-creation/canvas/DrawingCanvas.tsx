@@ -24,6 +24,8 @@ export interface DrawingCanvasHandle {
   finishStroke: () => void;
   /** A copy of the ink, transparent where nothing is drawn, to read pixels from. */
   inkForReading: () => HTMLCanvasElement | null;
+  /** Device pixels per sheet pixel: the ink canvas's density. */
+  inkDensity: () => number;
 }
 
 interface Props extends InkEvents {
@@ -105,6 +107,7 @@ export function DrawingCanvas({ ref, settings, active, ...events }: Props) {
       ops: () => ink.current?.engine.ops ?? [],
       finishStroke: () => ink.current?.engine.finishStroke(),
       inkForReading: () => ink.current?.surface.copyForReading() ?? null,
+      inkDensity: () => ink.current?.surface.density ?? 1,
     }),
     [],
   );

@@ -11,9 +11,10 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-if [ -f "$ROOT/deploy/.env" ]; then
+ENV_FILE="${DEPLOY_ENV_FILE:-$ROOT/deploy/.env}"
+if [ -f "$ENV_FILE" ]; then
   # shellcheck source=/dev/null
-  . "$ROOT/deploy/.env"
+  . "$ENV_FILE"
 fi
 TARGET="${DEPLOY_TARGET:?set DEPLOY_TARGET (user@host) in deploy/.env}"
 VERSION="$(node -p "require('$ROOT/package.json').devEngines.runtime.version")"

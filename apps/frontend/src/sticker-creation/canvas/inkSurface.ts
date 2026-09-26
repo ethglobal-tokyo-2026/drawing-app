@@ -35,6 +35,11 @@ export class InkSurface implements Surface<HTMLCanvasElement> {
     this.ctx = context2d(canvas);
   }
 
+  /** Device pixels per sheet pixel. */
+  get density(): number {
+    return this.dpr;
+  }
+
   /** Sizes the canvas to the sheet, which clears it; says whether the size changed. */
   resize(width: number, height: number, devicePixelRatio: number): boolean {
     const dpr = Math.min(devicePixelRatio || 1, MAX_DPR);

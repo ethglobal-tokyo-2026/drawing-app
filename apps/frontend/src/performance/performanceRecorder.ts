@@ -378,6 +378,13 @@ const isLongAnimationFrame = (entry: PerformanceEntry): entry is LongAnimationFr
   entry.entryType === "long-animation-frame";
 const isSlowInput = (entry: PerformanceEntry): entry is PerformanceEventTiming =>
   entry.entryType === "event";
+/**
+ * The events of a tap or a key press. Hover and mouse compatibility events are left out: they fire
+ * once per element under the finger, and would bury the report.
+ */
+const INPUT_EVENTS = new Set(["pointerdown", "pointerup", "click", "keydown", "keyup"]);
+/** Taps and key presses already noted, by the browser's interaction ID; forgotten past this many. */
+const INPUTS_KEPT = 256;
 
 const ms = (value: number) => `${Math.round(value)}ms`;
 
@@ -531,9 +538,18 @@ function startListening(log: PerformanceLog, stops: (() => void)[]): void {
       note("long frame", describeLongFrame(entry), entry.startTime, entry.duration);
     }
   });
+  // One line per tap or key press: its events share one interaction ID, where the browser gives one.
+  const inputsNoted = new Set<number>();
   observe("event", { buffered: true, durationThreshold: SLOW_INPUT_MS }, (entry) => {
-    if (isSlowInput(entry) && entry.duration >= SLOW_INPUT_MS) {
-      note("slow input", describeSlowInput(entry), entry.startTime, entry.duration);
+    if (!isSlowInput(entry) || entry.duration < SLOW_INPUT_MS || !INPUT_EVENTS.has(entry.name)) {
+      return;
     }
+    const interaction = entry.interactionId ?? 0;
+    if (interaction > 0) {
+      if (inputsNoted.has(interaction)) return;
+      if (inputsNoted.size >= INPUTS_KEPT) inputsNoted.clear();
+      inputsNoted.add(interaction);
+    }
+    note("slow input", describeSlowInput(entry), entry.startTime, entry.duration);
   });
 }

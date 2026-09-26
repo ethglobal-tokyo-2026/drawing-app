@@ -99,3 +99,40 @@ describe("the app's client over the server", () => {
     expect(JSON.parse(body)).toMatchObject({ giftClaimToken });
   });
 });
+
+describe("sealing", () => {
+  const sealRequest = {
+    ticketUseId: 1,
+    timeUsed: 60,
+    width: 10,
+    height: 10,
+    outline: "M0 0L1 1Z",
+    png: new Blob(["png"]),
+    mask: new Blob(["mask"]),
+    spec: new Blob(["spec"]),
+    rim: new Blob(["rim"]),
+    flat: new Blob(["flat"]),
+  };
+
+  /** The multipart body the seal sent. */
+  const formOf = (fetch: ReturnType<typeof answering>) => {
+    const body = fetch.mock.calls[0]?.[1]?.body;
+    if (!(body instanceof FormData)) throw new Error("expected a multipart body");
+    return body;
+  };
+
+  it("uploads the timelapse with the sticker", async () => {
+    const fetch = answering(201, {});
+    const timelapse = new Blob(["gzipped"], { type: "application/gzip" });
+    await createHttpApi(createServerClient(fetch)).seal({ ...sealRequest, timelapse });
+    const part = formOf(fetch).get("timelapse");
+    if (!(part instanceof File)) throw new Error("expected the timelapse as a file part");
+    expect(await part.text()).toBe("gzipped");
+  });
+
+  it("seals without a timelapse part when there's none", async () => {
+    const fetch = answering(201, {});
+    await createHttpApi(createServerClient(fetch)).seal(sealRequest);
+    expect(formOf(fetch).has("timelapse")).toBe(false);
+  });
+});
