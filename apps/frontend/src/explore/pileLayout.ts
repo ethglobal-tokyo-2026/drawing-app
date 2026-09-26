@@ -15,23 +15,27 @@ import { seededRandom } from "../ui/seededRandom";
 
 /** The pile's width in units on every phone; the screen scales it to fit. */
 export const PILE_WIDTH = 360;
-/** A name tag's height: a 16-unit photo sticker in a pill. */
-export const TAG_H = 20;
+/** A name tag's height on one line: a 12-unit line of 11-unit text in a pill round a 13-unit photo. */
+export const TAG_H = 17;
+/** Each further line a long name runs onto adds this. */
+export const TAG_LINE = 12;
+/** The widest a tag's line of text gets; a longer name runs onto another line, never cut short. */
+export const TAG_LINE_MAX = 112;
 /** The "to @x" tag sits this far right of the name tag above it, */
-export const TO_TAG_INDENT = 10;
-/** and this far below it. */
-export const TO_TAG_DROP = TAG_H + 2;
-/** The widest a tag gets; a longer name is cut short. */
-export const TAG_MAX_W = 124;
+const TO_TAG_INDENT = 10;
+/** and this far below its foot. */
+const TO_TAG_GAP = 2;
 
-/** A name tag's width around its text: padding, the photo and its gap. */
-const TAG_CHROME = 30;
+/** A name tag's width round its text: its padding, the photo and its gap. */
+const TAG_CHROME = 26;
 /** The "to @x" tag has no photo. */
-const TO_TAG_CHROME = 16;
+const TO_TAG_CHROME = 14;
+/** The widest a tag gets. */
+export const TAG_MAX_W = TAG_CHROME + TAG_LINE_MAX;
 /** How far a tag reaches left of its sticker's cut. */
 const TAG_OUT = 8;
-/** How much of a tag's height lies over its sticker's edge. */
-const TAG_OVER = 9;
+/** How much of a tag's first line lies over its sticker's edge. */
+const TAG_OVER = 8;
 /** Kept clear around each tag, for its turn's rounding and its NEW pip. */
 const TAG_CLEAR = 3;
 /** Cut lines and tags keep this far from the pile's sides. */
@@ -56,33 +60,116 @@ const BALANCE = 0.06;
 /** A hair more than rounding, so a sticker that rises clear of a tag doesn't still touch it. */
 const EDGE = 1e-6;
 
-/** A name's width in 11px bold, over-reckoned so the pill never needs more than its room. */
-function textWidth(text: string): number {
+const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+
+/**
+ * A character's width in pile units, in the tags' 11-unit Mona Sans: the widest of its kind as
+ * measured at weights 550 to 750, and a little more, so a line never needs more than its room. A
+ * grapheme counts as its first character, so an emoji sequence or an accented letter counts once.
+ */
+function charWidth(ch: string): number {
+  const code = ch.codePointAt(0) ?? 0;
+  // Emoji, and the arrows, symbols and dingbats that draw as emoji.
+  if (code >= 0x1f000 || (code >= 0x2190 && code <= 0x2bff)) return 17;
+  // Full width: kana, kanji, hangul and their punctuation; and W, the widest Latin letter.
+  if (code >= 0x1100 || ch === "W") return 12;
+  if (code >= 0x80) return 9.8;
+  if ("ijlI.,:;'`!| ".includes(ch)) return 3.5;
+  if ('frt1J()[]{}/\\*"-_'.includes(ch)) return 5.3;
+  if ("mM@%".includes(ch)) return 11.3;
+  if ("ABCDGHKNOQRUVXYw&".includes(ch)) return 9.8;
+  if (ch >= "a" && ch <= "z") return 7.3;
+  return 7.8;
+}
+
+/** A text's width in pile units, set as a tag sets it. */
+export function textWidth(text: string): number {
   let w = 0;
-  for (const ch of text) {
-    const code = ch.codePointAt(0) ?? 0;
-    if (code >= 0x1100) w += 12;
-    else if (ch >= "A" && ch <= "Z") w += 8.8;
-    else if (ch === "i" || ch === "l" || ch === "." || ch === "_" || ch === "'") w += 4.4;
-    else if (ch === "m" || ch === "w" || ch === "@") w += 11.5;
-    else w += 7.4;
-  }
+  for (const { segment } of graphemes.segment(text)) w += charWidth(segment);
   return w;
 }
 
-/** A tag group's size: the name tag, and under it the "to @x" tag when the sticker was given. */
-export function tagSize(name: string, givenTo: string | null): { w: number; h: number } {
-  const nameW = Math.min(TAG_MAX_W, Math.ceil(TAG_CHROME + textWidth(name)));
-  if (givenTo === null) return { w: nameW, h: TAG_H };
-  const toW = Math.min(TAG_MAX_W, Math.ceil(TO_TAG_CHROME + textWidth(givenTo)));
-  return { w: Math.max(nameW, TO_TAG_INDENT + toW), h: TO_TAG_DROP + TAG_H };
+/** A name may run onto its next line after one of these, or after any full-width character. */
+const BREAKS_AFTER = " _.-/・、。";
+/** A natural break is taken only when it leaves at least this share of a line on the line. */
+const BREAK_FILL = 0.6;
+
+/**
+ * A tag's words as lines at most `max` units wide, so a long name shows whole. Each line breaks at
+ * its last natural break, when that leaves it well filled, and otherwise between two characters.
+ */
+export function tagLines(text: string, max = TAG_LINE_MAX): string[] {
+  const parts = [...graphemes.segment(text)].map(({ segment }) => ({
+    g: segment,
+    w: charWidth(segment),
+    breaks: BREAKS_AFTER.includes(segment) || (segment.codePointAt(0) ?? 0) >= 0x1100,
+  }));
+  const join = (from: number, to?: number) =>
+    parts
+      .slice(from, to)
+      .map(({ g }) => g)
+      .join("");
+  const lines: string[] = [];
+  let start = 0;
+  let width = 0;
+  // The last place this line may break after, and its width up to there.
+  let fits = -1;
+  let fitsWidth = 0;
+  parts.forEach(({ w, breaks }, i) => {
+    if (width + w > max && i > start) {
+      const at = fits >= start && fitsWidth >= max * BREAK_FILL ? fits + 1 : i;
+      lines.push(join(start, at).trimEnd());
+      width = parts.slice(at, i).reduce((sum, part) => sum + part.w, 0);
+      start = at;
+      fits = -1;
+    }
+    width += w;
+    if (breaks) {
+      fits = i;
+      fitsWidth = width;
+    }
+  });
+  lines.push(join(start));
+  return lines;
 }
 
-/** The width each tag in a group gets. */
-export function tagWidths(name: string, givenTo: string | null) {
+/** One tag: its lines, its top left within its group, and its size, in pile units. */
+export interface Tag {
+  lines: string[];
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** A sticker's tag group: the name tag, and under it the "to @x" tag when the sticker was given. */
+export interface TagGroup {
+  name: Tag;
+  to: Tag | null;
+  /** The group's size, which no later sticker or tag covers. */
+  w: number;
+  h: number;
+}
+
+function tagOf(text: string, chrome: number, x: number, y: number): Tag {
+  const lines = tagLines(text);
+  const w = Math.ceil(chrome + Math.max(...lines.map(textWidth)));
+  return { lines, x, y, w, h: TAG_H + (lines.length - 1) * TAG_LINE };
+}
+
+/**
+ * A sticker's tags, each measured round its whole label: the name tag round `name`, and when the
+ * sticker was given, the "to @x" tag round `to`, such as "to @ken" or "@kenさんへ".
+ */
+export function tagGroup(name: string, to: string | null): TagGroup {
+  const nameTag = tagOf(name, TAG_CHROME, 0, 0);
+  if (to === null) return { name: nameTag, to: null, w: nameTag.w, h: nameTag.h };
+  const toTag = tagOf(to, TO_TAG_CHROME, TO_TAG_INDENT, nameTag.h + TO_TAG_GAP);
   return {
-    name: Math.min(TAG_MAX_W, Math.ceil(TAG_CHROME + textWidth(name))),
-    to: givenTo === null ? 0 : Math.min(TAG_MAX_W, Math.ceil(TO_TAG_CHROME + textWidth(givenTo))),
+    name: nameTag,
+    to: toTag,
+    w: Math.max(nameTag.w, toTag.x + toTag.w),
+    h: toTag.y + toTag.h,
   };
 }
 
@@ -90,7 +177,7 @@ export interface PileItem {
   id: string;
   /** Its cut line inside its image. */
   shape: Shape;
-  /** Its tag group's size, from `tagSize`. */
+  /** Its tag group's size, from `tagGroup`. */
   tag: { w: number; h: number };
 }
 
