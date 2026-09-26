@@ -7,8 +7,8 @@ import type { Tickets } from "../shapes.ts";
  * Each language's chat menus: the plain one, whose Draw key shows no count, and one for each thing
  * the Draw key can show: 3, 2 or 1 daily tickets left, reserve tickets only, or none.
  */
-export const CHAT_MENUS = ["plain", "3", "2", "1", "reserve", "none"] as const;
-export const chatMenuSchema = z.enum(CHAT_MENUS);
+const CHAT_MENUS = ["plain", "3", "2", "1", "reserve", "none"] as const;
+const chatMenuSchema = z.enum(CHAT_MENUS);
 export type ChatMenu = z.infer<typeof chatMenuSchema>;
 
 type Language = (typeof users.$inferSelect)["language"];
@@ -33,7 +33,7 @@ const languageMenusSchema = z.object({
  * deploy/line/menus.json: each language's chat menus by name, and `default`, the menu LINE shows
  * anyone with no menu of their own. The API links only the languages' menus.
  */
-export const chatMenuIdsSchema = z.object({
+const chatMenuIdsSchema = z.object({
   en: languageMenusSchema.optional(),
   ja: languageMenusSchema.optional(),
   default: menuIdSchema,
@@ -89,7 +89,7 @@ export function midnightMoves(ids: ChatMenuIds) {
 }
 
 /** Why nothing was linked: no Messaging API channel, dev sign-in, or no menu for the language. */
-export const chatMenuOffReasons = ["not_configured", "dev_sign_in", "no_menu"] as const;
+const chatMenuOffReasons = ["not_configured", "dev_sign_in", "no_menu"] as const;
 
 /** POST /api/line-menu's answer: the chat menu LINE shows you now. */
 export const chatMenuLinkSchema = z.discriminatedUnion("status", [
