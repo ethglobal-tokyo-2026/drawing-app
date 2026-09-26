@@ -318,6 +318,9 @@ importers:
       happy-dom:
         specifier: ^20.14.5
         version: 20.14.5(bufferutil@4.1.0)(utf-8-validate@5.0.7)
+      oxc-parser:
+        specifier: 0.150.0
+        version: 0.150.0
       oxlint:
         specifier: ^1.85.0
         version: 1.85.0(oxlint-tsgolint@7.0.2002)
