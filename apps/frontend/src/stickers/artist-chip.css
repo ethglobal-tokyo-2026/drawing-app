@@ -1,0 +1,141 @@
+/* The artist chip: a Liner Lift pill, sized to what it says, never stretched. Its picture sits in a
+   ring of the foil's colors whose light turns, by transform only, and holds still under reduced
+   motion. The copy says "artist" or "By", never "from". */
+.artist-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  height: 34px;
+  padding: 0 12px 0 4px;
+  border-radius: 999px;
+  background: var(--liner-lift);
+  box-shadow:
+    inset 0 0 0 1px var(--rule-strong),
+    1px 3px 8px rgba(28, 24, 36, 0.18);
+  color: var(--ink);
+  font: 650 13px/1.1 var(--font-ui);
+  font-stretch: var(--w-ui);
+  white-space: nowrap;
+}
+
+.artist-chip__picture {
+  position: relative;
+  isolation: isolate;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.artist-chip__picture::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  z-index: -1;
+  background: conic-gradient(
+    var(--foil-pink),
+    var(--foil-peach),
+    var(--foil-lemon),
+    var(--foil-aqua),
+    var(--foil-sky),
+    var(--foil-lilac),
+    var(--foil-pink)
+  );
+  animation: artist-chip-ring 5s linear infinite;
+}
+
+/* The picture's white edge, as a sticker's; paper where there's no picture. */
+.artist-chip__face {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--liner-deep);
+  box-shadow: 0 0 0 2px var(--canvas);
+}
+
+.artist-chip__text {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+
+.artist-chip__caption {
+  font-weight: 800;
+}
+
+.artist-chip__name {
+  min-width: 0;
+  max-width: 15ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ARTIST in fine print over the handle. */
+.artist-chip--artist {
+  height: 40px;
+  padding-right: 14px;
+}
+
+.artist-chip--artist .artist-chip__picture {
+  width: 32px;
+  height: 32px;
+}
+
+.artist-chip--artist .artist-chip__face {
+  width: 26px;
+  height: 26px;
+}
+
+.artist-chip--artist .artist-chip__text {
+  display: grid;
+  gap: 2px;
+}
+
+.artist-chip--artist .artist-chip__caption {
+  font: 700 var(--fs-fine) / 1 var(--font-ui);
+  font-stretch: var(--w-fine);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--graphite);
+}
+
+.artist-chip--artist .artist-chip__name {
+  font: 760 14px/1.1 var(--font-ui);
+}
+
+/* In a toolbar, whose surface is the pill. */
+.artist-chip--bare {
+  height: auto;
+  padding: 0 6px 0 0;
+  background: none;
+  box-shadow: none;
+  animation: artist-chip-in 220ms var(--ease-out) both;
+}
+
+@keyframes artist-chip-ring {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@keyframes artist-chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.92);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .artist-chip__picture::before,
+  .artist-chip--bare {
+    animation: none;
+  }
+}
