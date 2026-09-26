@@ -16,11 +16,6 @@ export type Section = { readonly [key: string]: Leaf | Section } & {
   readonly developer?: EnglishOnly;
 };
 
-/** A section's English, as i18next's types read it: `t` takes its keys and `{{variables}}` from these literals. */
-export type English<T> = {
-  readonly [K in keyof T]: T[K] extends Leaf ? T[K]["en"] : English<T[K]>;
-};
-
 /** One language's strings, in the catalog's shape, as i18next's resources hold them. */
 export interface Strings {
   readonly [key: string]: string | Strings;

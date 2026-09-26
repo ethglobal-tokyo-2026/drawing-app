@@ -111,7 +111,7 @@ const entryProblem = (
 };
 
 /** A section the file changes: the keys whose Japanese it adds, changes or removes, or whose comment it sets. */
-export interface SectionChange {
+interface SectionChange {
   section: string;
   added: string[];
   changed: string[];
