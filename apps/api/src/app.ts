@@ -3,6 +3,7 @@ import { Hono, type Context } from "hono";
 import { except } from "hono/combine";
 import type { AppDeps } from "./deps.ts";
 import { apiError, notFound, onError } from "./errors.ts";
+import { ageVerificationRoutes } from "./routes/ageVerification.ts";
 import { ensRoutes } from "./routes/ens.ts";
 import { exploreRoutes } from "./routes/explore.ts";
 import { giftRoutes } from "./routes/gifts.ts";
@@ -34,6 +35,8 @@ export function createApp(deps: AppDeps) {
       .use(except([isSignInOrOut, isEnsGateway], requireSession(deps)))
       // /session and /me
       .route("/", sessionRoutes(deps))
+      // /me/age-verification
+      .route("/", ageVerificationRoutes(deps))
       // /line-menu
       .route("/", lineMenuRoutes(deps))
       // /tickets and /ticket-purchases

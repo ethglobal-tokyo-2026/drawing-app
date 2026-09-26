@@ -110,3 +110,14 @@ await test("an explicit invalid credential cannot erase an existing configuratio
   assert.notEqual(result.status, 0);
   assert.equal(readFileSync(chain, "utf8"), previous);
 });
+
+await test("takes age verification's World ID app only whole", (t) => {
+  const { input, run } = setup(t);
+  const base = `${input}\nPRIVY_APP_SECRET=s\n`;
+  const app = `WORLD_ID_APP_ID=app_test\nWORLD_ID_RP_ID=rp_test\nWORLD_ID_SIGNING_KEY=0x${"7".repeat(64)}\n`;
+  const whole = run(base + app, "check");
+  assert.equal(whole.status, 0, whole.stderr);
+  const partial = run(base + "WORLD_ID_APP_ID=app_test\n", "check");
+  assert.notEqual(partial.status, 0);
+  assert.match(partial.stderr, /Missing or invalid WORLD_ID_RP_ID/);
+});

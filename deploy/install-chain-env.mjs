@@ -59,6 +59,17 @@ if (lineChannelId || lineChannelSecret) {
     throw new Error("Missing or invalid LINE_MESSAGING_CHANNEL_SECRET");
   }
 }
+// Age verification's World ID app, optional: without it age verification is off.
+const worldId = ["WORLD_ID_APP_ID", "WORLD_ID_RP_ID", "WORLD_ID_SIGNING_KEY"];
+if (worldId.some((key) => values[key])) {
+  if (!/^app_\w+$/.test(values.WORLD_ID_APP_ID ?? ""))
+    throw new Error("Missing or invalid WORLD_ID_APP_ID");
+  if (!/^rp_\w+$/.test(values.WORLD_ID_RP_ID ?? ""))
+    throw new Error("Missing or invalid WORLD_ID_RP_ID");
+  if (!/^(0x)?[0-9a-fA-F]{64}$/.test(values.WORLD_ID_SIGNING_KEY ?? "")) {
+    throw new Error("Missing or invalid WORLD_ID_SIGNING_KEY");
+  }
+}
 // One URL, or several separated by commas, which the API tries in turn.
 const rpcUrls = (values.ETHEREUM_SEPOLIA_RPC_URL ?? "")
   .split(",")

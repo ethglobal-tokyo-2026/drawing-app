@@ -29,6 +29,36 @@ export interface AppDeps {
   serverLog: ServerLog;
   /** Off without the Messaging API channel, or under dev sign-in: every call then does nothing. */
   lineChatMenu: LineChatMenu;
+  /** Null when the server has no World ID app: age verification is off. */
+  worldId: WorldId | null;
+}
+
+/** A World ID request's signature, which World App checks came from our app: IDKit's `rp_context`. */
+export interface WorldIdRpContext {
+  rp_id: string;
+  nonce: string;
+  /** Unix seconds. */
+  created_at: number;
+  /** Unix seconds. */
+  expires_at: number;
+  signature: string;
+}
+
+/**
+ * World's verdict on a proof: when it holds, the nullifier if World names one; World's code and
+ * detail when it doesn't.
+ */
+export type WorldIdVerdict =
+  | { verified: true; nullifier: string | null }
+  | { verified: false; code: string; detail: string };
+
+/** Our app in World's Developer Portal, which age verification asks for proofs and checks them with. */
+export interface WorldId {
+  appId: `app_${string}`;
+  environment: "production" | "staging";
+  signRequest: (action: string) => WorldIdRpContext;
+  /** Sends IDKit's result, as the app got it, to World to check. Rejects when World can't be asked. */
+  verifyProof: (proof: Record<string, unknown>) => Promise<WorldIdVerdict>;
 }
 
 /**
