@@ -1,16 +1,14 @@
-import { Storefront } from "@phosphor-icons/react";
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "../i18n/react";
-import { DrawIcon } from "../icons/DrawIcon";
+import { DrawIcon, ShopIcon } from "../icons";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
 import { TearLine } from "../ui/TearLine";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { formatRefillTime } from "./refill";
-import { TicketCount } from "./TicketCount";
-import { TicketStubs } from "./TicketStubs";
-import { dailyTickets, nextRefill, type TicketKind, type Tickets } from "./tickets";
+import { TicketArt } from "./TicketArt";
+import { nextRefill, ticketView, type TicketKind, type Tickets } from "./tickets";
 import "./tickets.css";
 
 interface Props {
@@ -28,17 +26,17 @@ interface Props {
   note: string | null;
   /** Spend a ticket of this kind on this sheet. */
   onStart: (kind: TicketKind) => void;
-  /** Open the ticket shop. */
+  /** Open the reserve ticket checkout. */
   onShop: () => void;
   /** Keep the ticket; also what Escape does. */
   onBoard: () => void;
 }
 
 /**
- * Asks before a ticket is spent on a fresh sheet, showing the day's daily stubs and the reserve count.
- * With daily tickets left it spends one; once they're gone it asks before spending a reserve ticket,
- * with the ticket shop as the other way on. It shares the out-of-tickets card's look. Once the
- * ticket is spent it drops away, and the sheet under it takes ink at once.
+ * Asks before a ticket is spent on a fresh sheet, showing the tickets it can use (ticketView). With daily tickets left
+ * it spends one; once they're gone it asks before spending a reserve ticket, with that ticket as the picture and the
+ * checkout as the other way on. It shares the out-of-tickets card's look. Once the ticket is spent it drops away, and
+ * the sheet under it takes ink at once.
  */
 export function StartDrawing({
   tickets,
@@ -53,9 +51,9 @@ export function StartDrawing({
   onBoard,
 }: Props) {
   const { t } = useTranslation();
-  const stubs = dailyTickets(tickets);
+  const view = ticketView(tickets);
   const daily = tickets.dailyLeft;
-  const reserveAsk = daily === 0;
+  const reserveAsk = view.show !== "daily";
   const card = useRef<HTMLElement>(null);
   const id = useId();
   // Read once, as it comes up: it decides only how the card rises.
@@ -66,9 +64,12 @@ export function StartDrawing({
     card.current?.querySelector<HTMLElement>("button")?.focus();
   }, [reserveAsk]);
 
+  // The reserve ask's count is on the ticket's badge, so screen readers hear it with the line.
+  const described = [`${id}-line`, reserveAsk && `${id}-held`, note && `${id}-note`];
   // aria-disabled rather than disabled, so the busy key keeps its face rather than sinking grey.
   const busyKey = busy ? ({ "aria-busy": true, "aria-disabled": true } as const) : {};
   const classes = ["out-of-tickets", follows && "out-of-tickets--follows", leaving && "is-leaving"];
+
   return (
     <div className={classes.filter(Boolean).join(" ")} inert={leaving}>
       <div className="out-of-tickets__scrim" />
@@ -78,18 +79,14 @@ export function StartDrawing({
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${id}-title`}
-        aria-describedby={note ? `${id}-line ${id}-note` : `${id}-line`}
+        aria-describedby={described.filter(Boolean).join(" ")}
         tabIndex={-1}
         onAnimationEnd={(e) => {
           if (leaving && e.target === e.currentTarget && e.animationName === "out-of-tickets-drop")
             onLeft?.();
         }}
       >
-        <TicketStubs className="out-of-tickets__art" size="large" stubs={stubs} />
-        <p className="out-of-tickets__reserve">
-          <TicketCount kind="reserve" count={tickets.reserveLeft} />
-          <span className="fine">{t(($) => $.tickets.reserve)}</span>
-        </p>
+        <TicketArt view={view} pop />
         <h2 className="out-of-tickets__title" id={`${id}-title`}>
           {reserveAsk
             ? t(($) => $.tickets.startDrawing.reserve.title)
@@ -98,9 +95,7 @@ export function StartDrawing({
         <p className="out-of-tickets__line" id={`${id}-line`}>
           {reserveAsk ? (
             <>
-              <strong>
-                {t(($) => $.tickets.startDrawing.reserve.left, { count: tickets.reserveLeft })}
-              </strong>{" "}
+              <strong>{t(($) => $.tickets.startDrawing.reserve.used)}</strong>{" "}
               <span className="out-of-tickets__quiet">
                 {t(($) => $.tickets.startDrawing.reserve.refillAt, {
                   time: formatRefillTime(nextRefill(new Date())),
@@ -116,6 +111,11 @@ export function StartDrawing({
             </>
           )}
         </p>
+        {reserveAsk && (
+          <p className="visually-hidden" id={`${id}-held`}>
+            {t(($) => $.tickets.startDrawing.reserve.left, { count: tickets.reserveLeft })}
+          </p>
+        )}
         {note && (
           <p className="out-of-tickets__note" id={`${id}-note`}>
             {note}
@@ -126,15 +126,15 @@ export function StartDrawing({
           <>
             <Key
               className="out-of-tickets__key"
-              tone="grape"
+              tone="blue"
               icon={<DrawIcon />}
               {...busyKey}
               onClick={() => onStart("reserve")}
             >
               {t(($) => $.tickets.startDrawing.reserve.use)}
             </Key>
-            <LabelButton block icon={<Storefront />} onClick={onShop}>
-              {t(($) => $.tickets.shopForTickets)}
+            <LabelButton block icon={<ShopIcon />} onClick={onShop}>
+              {t(($) => $.tickets.buyReserveTickets)}
             </LabelButton>
           </>
         ) : (

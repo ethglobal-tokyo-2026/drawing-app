@@ -132,6 +132,11 @@
   --deep: var(--grape-deep);
 }
 
+.key--blue {
+  --face: var(--blue);
+  --deep: var(--blue-deep);
+}
+
 .key--lg {
   --r: 18px;
   min-height: calc(68px + var(--lip));

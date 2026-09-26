@@ -77,15 +77,31 @@ const ceremony = (
   />
 );
 
-/** Opens the ceremony as `handle`, with `used` of the day's three tickets used. */
-async function seal(used: number, handle = "alice", answer: Sticker | null = sealed) {
-  const usedToday = Array.from({ length: used }, (_, i) => ({
-    id: i + 1,
-    dayIndex: i,
-    kind: "daily" as const,
-    sticker: null,
-  }));
-  const tickets = { ...FRESH_TICKETS, dailyLeft: 3 - used, usedToday };
+/** The day's `dayIndex`th ticket use, of `kind`. */
+const use = (dayIndex: number, kind: "daily" | "reserve" = "daily") => ({
+  id: dayIndex + 1,
+  dayIndex,
+  kind,
+  sticker: null,
+});
+
+/**
+ * Opens the ceremony as `handle`, with `used` of the day's three tickets used, then `reserveUsed` reserve tickets,
+ * and `reserveLeft` held. `answer` is the server's: null while the seal is on its way.
+ */
+async function seal(
+  used: number,
+  handle = "alice",
+  {
+    answer = sealed,
+    reserveLeft = 0,
+    reserveUsed = 0,
+  }: { answer?: Sticker | null; reserveLeft?: number; reserveUsed?: number } = {},
+) {
+  const usedToday = Array.from({ length: used + reserveUsed }, (_, i) =>
+    use(i, i < used ? "daily" : "reserve"),
+  );
+  const tickets = { ...FRESH_TICKETS, dailyLeft: 3 - used, reserveLeft, usedToday };
   view = renderWithApi(
     ceremony(answer, { handle }),
     emptyApi({ tickets: () => Promise.resolve(tickets) }),
@@ -233,20 +249,20 @@ describe("SealCeremony", () => {
     expect(host.textContent).not.toContain("That was today’s last ticket");
   });
 
-  it("leads to the sticker board and the ticket shop on the last ticket", async () => {
+  it("leads to the sticker board and reserve tickets on the last ticket", async () => {
     await seal(1);
     playThrough();
     expect(button("Keep drawing")).toBeTruthy();
     expect(button("Go to sticker board").classList.contains("label-btn")).toBe(true);
     expect(host.querySelector('[role="img"]')?.getAttribute("aria-label")).toBe(
-      "2 daily tickets left today",
+      "2 daily tickets left",
     );
     view?.unmount();
 
     await seal(3);
     playThrough();
     expect(button("Go to sticker board").classList.contains("key")).toBe(true);
-    act(() => button("Shop for tickets").click());
+    act(() => button("Buy reserve tickets").click());
     wait(1000);
     expect(onShop).toHaveBeenCalledOnce();
     expect(host.textContent).toContain(
@@ -255,7 +271,7 @@ describe("SealCeremony", () => {
   });
 
   it("waits at the cut while the seal is on its way, then peels onto the card", async () => {
-    await seal(1, "alice", null);
+    await seal(1, "alice", { answer: null });
     wait(20_000);
     expect(card()).toBeNull();
     expect(root()?.hasAttribute("data-lifted")).toBe(false);
@@ -272,7 +288,7 @@ describe("SealCeremony", () => {
   });
 
   it("skips to the wait at a tap, and on to the card once sealed", async () => {
-    await seal(1, "alice", null);
+    await seal(1, "alice", { answer: null });
     wait(100);
     tap();
     expect(host.querySelector<HTMLElement>(".seal-ceremony__plain")?.style.opacity).toBe("1");
@@ -283,12 +299,31 @@ describe("SealCeremony", () => {
   });
 
   it("fades back to the drawing when the seal fails", async () => {
-    await seal(1, "alice", null);
+    await seal(1, "alice", { answer: null });
     wait(3000);
     view?.rerender(ceremony(null, { failed: true }));
     expect(root()?.classList.contains("is-failed")).toBe(true);
     expect(root()?.hasAttribute("data-lifted")).toBe(false);
     expect(card()).toBeNull();
+  });
+
+  it("says the day's last daily ticket went only when this sticker used it", async () => {
+    const line = `That was today’s last daily ticket · new ones at ${formatRefillTime(nextRefill(NOW))}`;
+    await seal(3, "alice", { reserveLeft: 2 });
+    playThrough();
+    expect(host.textContent).toContain(line);
+    // One reserve ticket in the daily slots' place, with its count.
+    expect(host.querySelectorAll(".ticket-stub")).toHaveLength(1);
+    expect(host.querySelector('[role="img"]')?.getAttribute("aria-label")).toBe(
+      "2 reserve tickets left",
+    );
+    view?.unmount();
+
+    // Drawn on a reserve ticket: the daily ones went earlier.
+    await seal(3, "alice", { reserveLeft: 1, reserveUsed: 1 });
+    playThrough();
+    expect(host.textContent).not.toContain("last daily ticket");
+    expect(button("Keep drawing")).toBeTruthy();
   });
 
   it("prints a handle that reads as markup as it is, in the card's fine print", async () => {

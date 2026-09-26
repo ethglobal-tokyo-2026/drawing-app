@@ -1,5 +1,7 @@
 import { useMemo } from "react";
+import { useTranslation } from "../i18n/react";
 import { DrawIcon } from "../icons/DrawIcon";
+import { ReserveStar, ResinCoat } from "./ReserveResin";
 import { fitOutline, type Box } from "./stubOutline";
 import { ticketPath } from "./ticketShape";
 import type { TicketKind } from "./tickets";
@@ -12,14 +14,23 @@ export interface TicketStub {
   kind?: TicketKind;
   /** The cut outline of the sticker a used ticket became: an SVG path in any units, fitted to the stub. */
   outline?: string;
+  /** How many tickets this one stands for, on a dot badge stuck over its corner. */
+  count?: number;
 }
+
+type Size = "hero" | "large" | "small";
 
 interface Props {
   stubs: readonly TicketStub[];
-  /** "large": the out-of-tickets card's tossed stubs. "small": the strip under the sealed card's key. */
-  size: "large" | "small";
-  /** What the row says, such as "2 of 3 tickets left today". Without it the row is decorative and hidden from screen readers. */
+  /**
+   * "hero": the one reserve ticket a card is about. "large": the out-of-tickets card's tossed stubs. "small": the
+   * strip under the sealed card's key, and the reserve ticket beside a count.
+   */
+  size: Size;
+  /** What the row says, such as "2 daily tickets left". Without it the row is decorative and hidden from screen readers. */
   label?: string;
+  /** A reserve ticket's star pops in, once: the ticket was just bought, or has just come to the front. */
+  pop?: boolean;
   className?: string;
 }
 
@@ -33,9 +44,23 @@ interface Geometry {
   /** Where a used ticket's sticker outline sits. */
   outline: Box;
   glyph: number;
+  /** A reserve ticket's Ink outline, and its star. */
+  edge: number;
+  star: number;
 }
 
-const GEOMETRY: Record<Props["size"], Geometry> = {
+const GEOMETRY: Record<Size, Geometry> = {
+  hero: {
+    w: 148,
+    h: 90,
+    corner: 9,
+    notch: 12,
+    perf: 42,
+    outline: { x: 52, y: 12, w: 78, h: 66 },
+    glyph: 34,
+    edge: 2,
+    star: 24,
+  },
   large: {
     w: 88,
     h: 56,
@@ -44,6 +69,8 @@ const GEOMETRY: Record<Props["size"], Geometry> = {
     perf: 26,
     outline: { x: 32, y: 7, w: 46, h: 42 },
     glyph: 22,
+    edge: 2,
+    star: 20,
   },
   small: {
     w: 40,
@@ -53,50 +80,71 @@ const GEOMETRY: Record<Props["size"], Geometry> = {
     perf: 12,
     outline: { x: 15, y: 3.5, w: 20, h: 18 },
     glyph: 12,
+    edge: 1.5,
+    star: 11,
   },
 };
 
-function Stub({ stub, geometry }: { stub: TicketStub; geometry: Geometry }) {
-  const { w, h, perf, glyph, notch } = geometry;
+function Stub({ stub, geometry, pop }: { stub: TicketStub; geometry: Geometry; pop: boolean }) {
+  const { t } = useTranslation();
+  const { w, h, perf, glyph, notch, edge, star } = geometry;
   const shape = useMemo(() => ticketPath(geometry), [geometry]);
   const outline = useMemo(
     () => (stub.used && stub.outline ? fitOutline(stub.outline, geometry.outline) : ""),
     [stub.used, stub.outline, geometry],
   );
+  const kind = stub.kind ?? "daily";
+  const reserve = kind === "reserve";
   const bodyCenter = (perf + w - notch) / 2;
+  const layer = { viewBox: `0 0 ${w} ${h}`, width: w, height: h, "aria-hidden": true } as const;
+  const perforation = (
+    <line className="ticket-stub__perf" x1={perf} y1={h * 0.12} x2={perf} y2={h * 0.88} />
+  );
 
   return (
-    <svg
-      className={`ticket-stub ticket-stub--${stub.kind ?? "daily"} ${stub.used ? "is-used" : "is-fresh"}`}
-      viewBox={`0 0 ${w} ${h}`}
-      width={w}
-      height={h}
-      aria-hidden
-      focusable="false"
+    <span
+      className={`ticket-stub ticket-stub--${kind} ${stub.used ? "is-used" : "is-fresh"}`}
+      style={reserve ? { "--edge": `${edge}px` } : undefined}
     >
-      <path className="ticket-stub__face" d={shape} />
-      <line className="ticket-stub__perf" x1={perf} y1={h * 0.12} x2={perf} y2={h * 0.88} />
-      <path className="ticket-stub__edge" d={shape} />
-      {stub.used ? (
-        outline && <path className="ticket-stub__outline" d={outline} />
-      ) : (
-        // A fresh ticket is printed with the Draw mark, the act it's spent on.
-        <g
-          className="ticket-stub__glyph"
-          transform={`translate(${bodyCenter - glyph / 2} ${(h - glyph) / 2})`}
-        >
-          <DrawIcon size={glyph} />
-        </g>
+      {/* The backing: what a ticket leaves once it's used, with the kiss-cut outline of the sticker it became. */}
+      <svg className="ticket-stub__backing" {...layer} focusable="false">
+        <path className="ticket-stub__paper" d={shape} />
+        {perforation}
+        <path className="ticket-stub__edge" d={shape} />
+        {outline && <path className="ticket-stub__outline" d={outline} />}
+      </svg>
+      {!stub.used && (
+        // A fresh ticket's face, printed with the Draw mark, the act it's spent on. Spending peels it off the backing.
+        // A reserve ticket's wears the stickers' resin, a full Ink outline and a star.
+        <svg className="ticket-stub__face" {...layer} focusable="false">
+          <path className="ticket-stub__paper" d={shape} />
+          {perforation}
+          {reserve && <ResinCoat shape={shape} w={w} h={h} edge={edge} />}
+          <path className="ticket-stub__edge" d={shape} />
+          <g
+            className="ticket-stub__glyph"
+            transform={`translate(${bodyCenter - glyph / 2} ${(h - glyph) / 2})`}
+          >
+            <DrawIcon size={glyph} />
+          </g>
+          {reserve && <ReserveStar x={w - star * 0.22} y={star * 0.14} size={star} pop={pop} />}
+        </svg>
       )}
-    </svg>
+      {stub.count !== undefined && (
+        <span className={`ticket-stub__badge ticket-stub__badge--${kind}`}>
+          {t(($) => $.tickets.count, { count: stub.count })}
+        </span>
+      )}
+    </span>
   );
 }
 
 /**
- * Drawing tickets as paper stubs: fresh ones are ticket stock (daily Seal Yellow, reserve Grape), used ones the empty backing
- * they left, carrying the kiss-cut outline of the sticker each became.
+ * Drawing tickets as paper stubs: fresh ones are ticket stock over a backing, used ones the empty backing they left,
+ * carrying the kiss-cut outline of the sticker each became. Daily tickets are matte Seal Yellow stock; reserve
+ * tickets are Blue, in the stickers' resin with an Ink outline and a star.
  */
-export function TicketStubs({ stubs, size, label, className }: Props) {
+export function TicketStubs({ stubs, size, label, pop = false, className }: Props) {
   const geometry = GEOMETRY[size];
   const a11y = label ? { role: "img", "aria-label": label } : { "aria-hidden": true };
   return (
@@ -105,7 +153,7 @@ export function TicketStubs({ stubs, size, label, className }: Props) {
       {...a11y}
     >
       {stubs.map((stub, i) => (
-        <Stub key={i} stub={stub} geometry={geometry} />
+        <Stub key={i} stub={stub} geometry={geometry} pop={pop} />
       ))}
     </div>
   );
