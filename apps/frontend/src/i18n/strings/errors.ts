@@ -1,5 +1,5 @@
 import type { ErrorCode } from "../../api/apiClient";
-import type { Leaf, Section } from "../catalog";
+import type { Leaf } from "../catalog";
 
 /** One message per error code, for people; the server's `detail` stays English, for developers. */
 export const errors = {
@@ -134,6 +134,16 @@ export const errors = {
     en: "That payment was already counted.",
     ja: "その支払いは、すでに反映されています。",
   },
+  /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) when Sui has no such transaction, or it paid no JPYC into the ticket vault, in “…the tickets weren’t added” through errorReason */
+  payment_not_found: {
+    en: "That payment didn't reach the ticket shop.",
+    ja: "この支払いはチケットショップに届いていません。",
+  },
+  /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) for a payment into the ticket vault that names someone else, in “…the tickets weren’t added” through errorReason */
+  payment_not_yours: {
+    en: "That payment was made for someone else's tickets.",
+    ja: "この支払いは別の人のチケットのものです。",
+  },
   /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) when the payment is below the pack's price at every quote still valid, in “…the tickets weren’t added” through errorReason */
   payment_short: { en: "The payment was short.", ja: "支払い額が足りませんでした。" },
   /** Gratitude Mini-game: recording a combo (POST /api/gratitude) whose replay fails the server's checks; the Mini-game shows its own “didn’t reach” line instead, so this is errorMessage's fallback */
@@ -150,10 +160,10 @@ export const errors = {
     en: "That sticker isn't on your sticker board.",
     ja: "そのシールは、あなたのシールボードにありません。",
   },
-  /** Ticket shop: getting the SUI price quote (GET /api/ticket-quote) when no SUI/JPY price is available, in “Couldn’t get today’s prices” through errorReason */
-  sui_price_unavailable: {
-    en: "Today's prices aren't available right now.",
-    ja: "今日の価格を、いまは取得できません。",
+  /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) when the server couldn't read the payment from Sui, in “…the tickets weren’t added” through errorReason */
+  sui_unavailable: {
+    en: "Sui didn't answer. Your tickets weren't added yet; try again.",
+    ja: "Suiから応答がありません。チケットはまだ追加されていません。もう一度お試しください。",
   },
   /** Receiving: opening a gift message's link (POST /api/gifts/preview or /receive) after the giver took the gift back; the Receive gift dialog shows its own “took this one back” screen instead */
   taken_back: { en: "The giver took this gift back.", ja: "贈り主がこのギフトを取り消しました。" },
@@ -191,4 +201,4 @@ export const errors = {
   },
   /** An artist's sticker board: loading their board or stats (GET /api/sticker-boards/:userId, …/user-stats) for a person who doesn't exist, in “Couldn’t load …’s board” or “Their stats didn’t load” through errorReason */
   user_not_found: { en: "That artist isn't here.", ja: "そのアーティストは見つかりませんでした。" },
-} as const satisfies Section & Record<ErrorCode | "unknown", Leaf>;
+} as const satisfies Record<ErrorCode | "unknown", Leaf>;

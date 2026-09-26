@@ -76,7 +76,8 @@ export function createStickerChain({
   // Historical state locates the transition without asking a provider to search the whole chain.
   const eventBlock = async (contract: Address, happened: (block: bigint) => Promise<boolean>) => {
     let first = 0n;
-    let last = await publicClient.getBlockNumber();
+    // Uncached: viem reuses a block number for its polling interval, which can predate the transition.
+    let last = await publicClient.getBlockNumber({ cacheTime: 0 });
     if (!(await happened(last))) {
       throw new Error("The confirmed chain state is not visible at the latest block");
     }

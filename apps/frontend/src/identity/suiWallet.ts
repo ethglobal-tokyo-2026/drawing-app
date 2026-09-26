@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-// Why Privy couldn't make the Sui wallet, for the developer slip: LINE's browser has no console.
+// Why the Sui wallet couldn't be made or can't sign, for the developer slip: LINE's browser has no console.
 let failure: string | undefined;
 const listeners = new Set<() => void>();
 

@@ -16,6 +16,7 @@
   "dependencies": {
     "@drawing-app/sticker-chain": "workspace:*",
     "@line/liff": "^2.31.0",
+    "@mysten/sui": "2.31.3",
     "@paulmillr/qr": "0.3.0",
     "@phosphor-icons/react": "2.1.10",
     "@privy-io/react-auth": "3.45.0",

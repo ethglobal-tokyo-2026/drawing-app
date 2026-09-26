@@ -11,6 +11,8 @@
   --pink: #ff4f9a;
   --grape: #9b7bff;
   --tomato: #ff5a36;
+  --blue: #298dff; /* the Shop and reserve tickets */
+  --tangerine: #ff9b3d; /* the streak */
   --font-ui: "Mona Sans", "Zen Kaku Gothic New", system-ui, sans-serif;
   --font-puffy: "Dela Gothic One", var(--font-ui);
   --r-label: 6px;
@@ -57,6 +59,8 @@
   --pink-soft: color-mix(in srgb, var(--pink) 30%, var(--liner));
   --grape-soft: color-mix(in srgb, var(--grape) 34%, var(--liner));
   --tomato-soft: color-mix(in srgb, var(--tomato) 30%, var(--liner));
+  --blue-soft: color-mix(in srgb, var(--blue) 34%, var(--liner));
+  --tangerine-soft: color-mix(in srgb, var(--tangerine) 38%, var(--liner));
 
   /* One light, top-left: every shadow falls down and to the right */
   --shadow-label: 0 1px 0 rgba(28, 24, 36, 0.1), 1px 2px 3px rgba(28, 24, 36, 0.08);
@@ -71,6 +75,7 @@
   --t-turn: 500ms;
   --ease-turn: cubic-bezier(0.3, 0.7, 0.2, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* exponential ease-out */
+  --ease-soft: cubic-bezier(0.3, 0.7, 0.3, 1); /* gentle out, for a screen changing */
   --ease-spring: cubic-bezier(0.34, 1.7, 0.5, 1); /* press release, springs past 1.03 */
 
   /* The phone: iPhone 13/14 viewport, LINE's LIFF header, index tabs */
@@ -112,6 +117,8 @@
   --pink-deep: #cc2a72;
   --grape-deep: #6d4fd6;
   --tomato-deep: #c63c1e;
+  --blue-deep: #1b65cc;
+  --tangerine-deep: #cc6a12;
   --label-deep: #d3d0dc;
   --ink-deep: #07060a;
   /* Foil: a material, never a fill, worn only by stickers someone other than the board's owner drew. */

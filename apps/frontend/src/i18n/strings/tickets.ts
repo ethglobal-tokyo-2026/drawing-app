@@ -106,8 +106,8 @@ export const tickets = {
     title: { en: "Ticket shop", ja: "チケットショップ" },
     /** Ticket shop: the bold line under the title */
     lead: { en: "Reserve tickets never expire.", ja: "有償チケットに有効期限はありません。" },
-    /** Ticket shop: the small label on the wallet row, beside the balance shown in yen */
-    balance: { en: "Your JPY", ja: "残高" },
+    /** Ticket shop: the small label on the wallet row, beside your JPYC balance shown in yen */
+    balance: { en: "Your JPYC", ja: "JPYC残高" },
     /** Ticket shop: the wallet row while the balance loads */
     readingBalance: { en: "Reading your balance…", ja: "残高を確認しています…" },
     /** Ticket shop: the wallet row when the balance couldn't be read, before a Try again link; `reason` is the wallet's own words */
@@ -138,8 +138,8 @@ export const tickets = {
     payPrice: { en: "Pay {{price}}", ja: "{{price}}を支払う" },
     /** Ticket shop: the pay key while the payment goes through */
     paying: { en: "Paying…", ja: "支払い中…" },
-    /** Ticket shop: the pay key, disabled, when the balance is less than the chosen pack's price */
-    notEnoughYen: { en: "Not enough yen", ja: "残高不足" },
+    /** Ticket shop: the pay key, disabled, when your JPYC is less than the chosen pack's price */
+    notEnoughJpyc: { en: "Not enough JPYC", ja: "JPYC残高不足" },
     /** Ticket shop after a purchase: the title, when one reserve ticket was added */
     added_one: { en: "{{count}} reserve ticket added" },
     /** Ticket shop after a purchase: the title saying how many reserve tickets were added */
@@ -147,8 +147,8 @@ export const tickets = {
       en: "{{count}} reserve tickets added",
       ja: "有償チケットを{{count}}枚追加しました",
     },
-    /** Ticket shop after a purchase: the quiet line under the title with the price paid */
-    paid: { en: "Paid {{price}}.", ja: "{{price}}を支払いました。" },
+    /** Ticket shop after a purchase: the quiet line under the title with the price paid, in yen */
+    paid: { en: "Paid {{price}} in JPYC.", ja: "{{price}}をJPYCで支払いました。" },
     /** Ticket shop after a purchase: the button under Draw that goes back to the packs */
     buyMore: { en: "Buy more tickets", ja: "チケットをもっと買う" },
     /** Ticket shop when a payment fails: the title, above the reason */
@@ -160,5 +160,20 @@ export const tickets = {
     },
     /** Ticket shop when a payment fails: the key that goes back to the packs */
     backToShop: { en: "Back to the shop", ja: "ショップに戻る" },
+    /** Ticket shop: the wallet row, in the balance's place, when your Privy Sui wallet can't be used; `reason` is Privy's or the signer's own words */
+    walletBroken: {
+      en: "Your Sui wallet isn’t working ({{reason}}).",
+      ja: "Suiウォレットが使えません（{{reason}}）。",
+    },
+    /** Ticket shop: the wallet row, in the balance's place, when the Privy sign-in behind your wallet failed; `reason` is Privy's own words */
+    walletSignInFailed: {
+      en: "Your wallet didn’t sign in ({{reason}}).",
+      ja: "ウォレットにサインインできませんでした（{{reason}}）。",
+    },
+    /** Ticket shop on the dev server: the wallet row, in the balance's place, when LIFF Mock signed you in, so there's no Privy wallet to pay from */
+    walletNeedsLine: {
+      en: "Paying needs LINE’s sign-in, which LIFF Mock skips.",
+      ja: "支払いにはLINEでのサインインが必要ですが、LIFF Mockでは省略されます。",
+    },
   },
 } as const satisfies Section;
