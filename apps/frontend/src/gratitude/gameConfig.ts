@@ -156,4 +156,12 @@ export const FEEL_CONFIG = {
     rainGravity: 1500,
     rainMax: 24,
   },
+  /** Pop-in words land round the heart, never on it. */
+  popIns: {
+    /** Words keep out of the heart's box drawn in by this share at each side, about where its outline runs. */
+    heartInset: 0.1,
+    /** A word that fits no free slot shrinks a step at a time, to this at the least. */
+    minScale: 0.7,
+    scaleStep: 0.1,
+  },
 } as const;

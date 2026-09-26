@@ -5,7 +5,8 @@ export interface PopInWord {
   gloss: string;
 }
 
-export type PopInBank = Tier | "stroke" | "shake";
+/** A tier's words, stroking's, shaking's, or 昇天's climax: short words that keep clear of the limp face. */
+export type PopInBank = Tier | "stroke" | "shake" | "climax";
 
 /** Onomatopoeia that flash up for a moment, never labels. Suggestive, never explicit. */
 export const POP_IN_WORDS: Record<PopInBank, readonly PopInWord[]> = {
@@ -76,16 +77,27 @@ export const POP_IN_WORDS: Record<PopInBank, readonly PopInWord[]> = {
     { jp: "ガクガク", gloss: "*rattle*" },
     { jp: "ぐわんぐわん", gloss: "*dizzy*" },
   ],
+  climax: [
+    { jp: "尊い…", gloss: "*too precious…*" },
+    { jp: "天国…", gloss: "heaven…" },
+  ],
 };
 
-/** Picks a word from a bank at random, never the one it last picked from that bank. */
-export function createPopInPicker(random: () => number): (bank: PopInBank) => PopInWord {
-  const lastPicked = new Map<PopInBank, number>();
-  return (bank) => {
-    const words = POP_IN_WORDS[bank];
-    let i = Math.floor(random() * words.length);
-    if (words.length > 1 && i === lastPicked.get(bank)) i = (i + 1) % words.length;
-    lastPicked.set(bank, i);
-    return words[i];
+/**
+ * Picks a word from a bank at random: never one already on screen, and not the one it last picked
+ * from that bank while another will do. Null when every word in the bank is on screen.
+ */
+export function createPopInPicker(
+  random: () => number,
+): (bank: PopInBank, onScreen: ReadonlySet<string>) => PopInWord | null {
+  const lastPicked = new Map<PopInBank, PopInWord>();
+  return (bank, onScreen) => {
+    const words = POP_IN_WORDS[bank].filter((word) => !onScreen.has(word.jp));
+    const fresh = words.filter((word) => word !== lastPicked.get(bank));
+    const choices = fresh.length > 0 ? fresh : words;
+    if (choices.length === 0) return null;
+    const word = choices[Math.floor(random() * choices.length)];
+    lastPicked.set(bank, word);
+    return word;
   };
 }
