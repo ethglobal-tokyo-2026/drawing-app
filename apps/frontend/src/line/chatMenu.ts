@@ -1,5 +1,6 @@
 import liff from "@line/liff";
 import { useSyncExternalStore } from "react";
+import { jsonField } from "../identity/privy";
 
 /** The menu under the official account's chat: one "Open Sticker Board" button for someone new, three tiles after. */
 export type ChatMenuStatus =
@@ -28,7 +29,8 @@ export function useChatMenuStatus(): ChatMenuStatus {
   return useSyncExternalStore(subscribe, chatMenuStatus);
 }
 
-const SWITCH_TIMEOUT_MS = 10_000;
+// Longer than the server's worst case, five upstream calls of up to 5 s each, so a slow switch isn't called a failure.
+const SWITCH_TIMEOUT_MS = 30_000;
 let asked = false;
 
 function fail(reason: string) {
@@ -36,18 +38,16 @@ function fail(reason: string) {
   set({ state: "failed", reason });
 }
 
-const field = (body: unknown, key: string): unknown =>
-  body && typeof body === "object" ? Reflect.get(body, key) : undefined;
-
 /**
  * Asks the auth server to give this person the returning-user chat menu, once per page load. The server
  * checks with LINE and Privy itself; the outcome goes to the status, and this never throws.
  */
 export async function requestReturningMenu(): Promise<void> {
   if (asked) return;
-  asked = true;
   const idToken = liff.getIDToken();
+  // Without a token nothing was asked, so a later sign-in can still try.
   if (!idToken) return fail("LINE gave no ID token");
+  asked = true;
   set({ state: "switching" });
   try {
     const response = await fetch("/v1/auth/line-menu", {
@@ -57,8 +57,8 @@ export async function requestReturningMenu(): Promise<void> {
       signal: AbortSignal.timeout(SWITCH_TIMEOUT_MS),
     });
     const body: unknown = await response.json().catch(() => null);
-    const menu = field(body, "menu");
-    const reason = field(body, "reason");
+    const menu = jsonField(body, "menu");
+    const reason = jsonField(body, "reason");
     if (response.ok && menu === "returning") return set({ state: "returning" });
     if (
       response.ok &&
@@ -67,7 +67,7 @@ export async function requestReturningMenu(): Promise<void> {
     ) {
       return set({ state: "new", reason });
     }
-    const error = field(body, "error");
+    const error = jsonField(body, "error");
     fail(`HTTP ${response.status}${typeof error === "string" ? ` ${error}` : ""}`);
   } catch (error) {
     fail(

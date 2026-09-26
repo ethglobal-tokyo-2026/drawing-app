@@ -59,7 +59,7 @@ describe("asking for the returning-user chat menu", () => {
     expect(unreachable.chatMenuStatus()).toMatchObject({ state: "failed" });
   });
 
-  it("asks nothing without an ID token", async () => {
+  it("asks nothing without an ID token, and asks once a later sign-in has one", async () => {
     const { requestReturningMenu, chatMenuStatus } = await freshChatMenu();
     const fetch = server(200, { menu: "returning" });
     vi.stubGlobal("fetch", fetch);
@@ -67,5 +67,10 @@ describe("asking for the returning-user chat menu", () => {
     await requestReturningMenu();
     expect(fetch).not.toHaveBeenCalled();
     expect(chatMenuStatus()).toMatchObject({ state: "failed" });
+
+    liff.getIDToken.mockReturnValue("line-id-token");
+    await requestReturningMenu();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(chatMenuStatus()).toEqual({ state: "returning" });
   });
 });
