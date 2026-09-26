@@ -13,6 +13,7 @@ import { noteBootMilestone } from "../performance/bootMilestones";
 import { markBoardComplete, usePreloadAfterBoard } from "../sticker-board/boardComplete";
 import { forgetBoardUnlessFor } from "../sticker-board/lastBoard";
 import { ReserveTicketCheckout } from "../tickets/ReserveTicketCheckout";
+import { useAddUnaddedPurchases } from "../tickets/unaddedPurchases";
 import { lazyWithPreload } from "../ui/lazyWithPreload";
 import { MotionPermissionCard } from "./MotionPermissionCard";
 import type { GiftFrom } from "../receiving/ReceiveGiftDialog";
@@ -114,6 +115,8 @@ export default function App() {
   useEffect(() => {
     void resendPendingGratitude(api);
   }, [api]);
+  // Paid packs whose tickets the server hadn't added are asked for again too.
+  useAddUnaddedPurchases();
 
   // Privy's SDK waits for the board to settle, so it doesn't hold up the stickers. A gift needs
   // it at once, and any other screen has no board to wait for.

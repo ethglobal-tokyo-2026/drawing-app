@@ -2,6 +2,7 @@
 import type { Tickets, TicketShop as Shop } from "@drawing-app/api/client";
 import { act, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi } from "../api/testing";
 import { setPrivyStatus } from "../identity/privy";
 import { getJpycBalance, getTicketPayments, payForTickets } from "../payments/jpyc";
@@ -9,6 +10,12 @@ import { OutOfTickets } from "./OutOfTickets";
 import { formatRefillTime } from "./refill";
 import { ReserveTicketCheckout } from "./ReserveTicketCheckout";
 import { StartDrawing } from "./StartDrawing";
+import {
+  addUnaddedPurchases,
+  keepUnaddedPurchase,
+  readUnaddedPurchasesAgain,
+  unaddedPurchasesFor,
+} from "./unaddedPurchases";
 import { useTickets } from "./useTickets";
 
 vi.mock("../payments/jpyc", () => ({
@@ -239,7 +246,12 @@ const SHOP: Shop = {
 describe("ReserveTicketCheckout", () => {
   const checkout = () => <ReserveTicketCheckout onDraw={onDraw} onClose={onBoard} />;
 
+  /** The payments this phone keeps for you until their tickets are added. */
+  const kept = () => unaddedPurchasesFor("me").map((p) => p.digest);
+
   beforeEach(() => {
+    localStorage.clear();
+    readUnaddedPurchasesAgain();
     setPrivyStatus({ state: "signed-in", userId: "privy-me", suiWallet: SUI_WALLET });
     vi.mocked(getJpycBalance).mockResolvedValue(1000n * JPYC);
     vi.mocked(payForTickets).mockResolvedValue(TX_DIGEST);
@@ -279,6 +291,7 @@ describe("ReserveTicketCheckout", () => {
     expect(document.querySelector(".ticket-stub__badge")?.textContent).toBe("×4");
     expect(payForTickets).toHaveBeenCalledWith(expect.anything(), SHOP.payment, 270n * JPYC);
     expect(bought).toHaveBeenCalledWith({ tickets: 3, txDigest: TX_DIGEST });
+    expect(kept()).toEqual([]);
     expect(buttonNamed("Draw")?.getAttribute("aria-label")).toContain("4 reserve tickets");
     click("Draw");
     expect(onDraw).toHaveBeenCalledOnce();
@@ -370,10 +383,12 @@ describe("ReserveTicketCheckout", () => {
     click("Pay");
     await settle(500);
     expect(title()).toBe("Tickets not added yet");
+    expect(kept()).toEqual([TX_DIGEST]);
     // The payment's ID is fine print under the key, never in the alert.
     expect(document.querySelector("[role=alert]")?.textContent).not.toContain(TX_DIGEST);
     expect(document.querySelector(".reserve-checkout__digest")?.textContent).toBe(TX_DIGEST);
-    expect(buttonNamed("Back to the packs")).toBeUndefined();
+    // The way back to the packs is only a quiet link, under the key that asks again.
+    expect(buttonNamed("Back to the packs")?.classList.contains("label-btn--quiet")).toBe(true);
     click("Copy");
     await settle(0);
     expect(write).toHaveBeenCalledWith(TX_DIGEST);
@@ -384,5 +399,126 @@ describe("ReserveTicketCheckout", () => {
     expect(bought).toHaveBeenCalledTimes(2);
     expect(bought).toHaveBeenLastCalledWith({ tickets: 1, txDigest: TX_DIGEST });
     expect(payForTickets).toHaveBeenCalledOnce();
+    expect(kept()).toEqual([]);
+  });
+
+  it("opens on a kept payment whose tickets weren't added, after the card was closed, and asks for them at once", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const bought = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Sui didn’t answer."))
+      .mockRejectedValueOnce(new ApiError(502, { error: "sui_unavailable" }))
+      .mockResolvedValueOnce(tickets(3, 3));
+    const api = emptyApi({ ticketShop: () => Promise.resolve(SHOP), buyTickets: bought });
+    await render(checkout(), api);
+    await settle(500);
+    click("3 tickets");
+    click("Pay");
+    await settle(500);
+    expect(title()).toBe("Tickets not added yet");
+    click("Not now");
+    expect(onBoard).toHaveBeenCalledOnce();
+    view?.unmount();
+
+    // The app opens again, and the checkout with it: on the payment, never on the packs.
+    readUnaddedPurchasesAgain();
+    view = renderWithApi(checkout(), api);
+    expect(title()).toBe("Tickets not added yet");
+    expect(document.querySelector(".reserve-checkout__digest")?.textContent).toBe(TX_DIGEST);
+    expect(buttonNamed("Adding…")?.getAttribute("aria-busy")).toBe("true");
+    await settle(500);
+    expect(bought).toHaveBeenCalledTimes(2);
+    expect(document.querySelector("[role=alert]")?.textContent).toContain(
+      "Sui didn't answer. Your tickets weren't added yet; try again.",
+    );
+    expect(kept()).toEqual([TX_DIGEST]);
+
+    click("Add the tickets");
+    await settle(500);
+    expect(title()).toBe("3 reserve tickets added");
+    // The phone kept what it cost, too.
+    expect(document.body.textContent).toContain("Paid ¥270 in JPYC.");
+    expect(bought).toHaveBeenCalledTimes(3);
+    expect(bought).toHaveBeenLastCalledWith({ tickets: 3, txDigest: TX_DIGEST });
+    expect(payForTickets).toHaveBeenCalledOnce();
+    expect(kept()).toEqual([]);
+  });
+
+  it("leaves a payment whose tickets weren't added for the packs, still kept, so it never blocks buying", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const api = emptyApi({
+      ticketShop: () => Promise.resolve(SHOP),
+      buyTickets: () => Promise.reject(new ApiError(502, { error: "sui_unavailable" })),
+    });
+    await render(checkout(), api);
+    await settle(500);
+    click("Pay");
+    await settle(500);
+    expect(title()).toBe("Tickets not added yet");
+    click("Back to the packs");
+    expect(title()).toBe("Pick a pack");
+    expect(buttonNamed("Pay ¥100")?.disabled).toBe(false);
+    expect(kept()).toEqual([TX_DIGEST]);
+  });
+
+  it("says once, with the server's reason and the payment's ID, when the server refuses a payment for good", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const refusal = new ApiError(403, {
+      error: "payment_not_yours",
+      detail: `txDigest: ${TX_DIGEST}`,
+    });
+    const bought = vi
+      .fn()
+      .mockRejectedValueOnce(new ApiError(502, { error: "sui_unavailable" }))
+      .mockRejectedValueOnce(refusal);
+    const api = emptyApi({ ticketShop: () => Promise.resolve(SHOP), buyTickets: bought });
+    await render(checkout(), api);
+    await settle(500);
+    click("Pay");
+    await settle(500);
+    expect(title()).toBe("Tickets not added yet");
+    click("Add the tickets");
+    await settle(500);
+    expect(title()).toBe("Tickets can’t be added");
+    // The card turned over under the key that was pressed, so its own key takes focus.
+    expect(document.activeElement?.textContent).toBe("Back to the packs");
+    expect(document.querySelector("[role=alert]")?.textContent).toBe(
+      "Asking again won’t add them. That payment was made for someone else's tickets.",
+    );
+    expect(document.querySelector(".reserve-checkout__digest")?.textContent).toBe(TX_DIGEST);
+    expect(buttonNamed("Copy")).toBeDefined();
+    expect(buttonNamed("Add the tickets")).toBeUndefined();
+    // Refused for good, so it's no longer kept or asked for again.
+    expect(kept()).toEqual([]);
+    click("Back to the packs");
+    expect(title()).toBe("Pick a pack");
+    expect(bought).toHaveBeenCalledTimes(2);
+  });
+
+  it("says once, as it opens, why the server refused a kept payment while it was closed", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    keepUnaddedPurchase("me", { digest: TX_DIGEST, tickets: 3, priceYen: 270, paidAt: 0 });
+    const bought = vi.fn(() =>
+      Promise.reject(
+        new ApiError(422, { error: "payment_not_found", detail: "no such transaction" }),
+      ),
+    );
+    const api = emptyApi({ ticketShop: () => Promise.resolve(SHOP), buyTickets: bought });
+    // The app's own ask, as it opened, met the refusal.
+    await addUnaddedPurchases(api, "me");
+    await render(checkout(), api);
+    expect(title()).toBe("Tickets can’t be added");
+    expect(document.querySelector("[role=alert]")?.textContent).toContain(
+      "That payment didn't reach the ticket shop.",
+    );
+    expect(kept()).toEqual([]);
+    view?.unmount();
+
+    await render(checkout(), api);
+    expect(title()).toBe("Pick a pack");
+    expect(bought).toHaveBeenCalledOnce();
   });
 });

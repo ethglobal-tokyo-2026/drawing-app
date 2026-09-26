@@ -1,0 +1,266 @@
+import type { Tickets } from "@drawing-app/api/client";
+import { useEffect } from "react";
+import { ApiError, apiError, type ApiClient } from "../api/apiClient";
+import { useMe } from "../api/meContext";
+import { useApi } from "../api/useApi";
+import { useTickets } from "./useTickets";
+
+/**
+ * Paid packs whose tickets the server hasn't added yet, kept in this phone's storage for the person
+ * who paid, so closing the checkout or the app never loses a payment. Each is kept from the moment
+ * its payment goes through until the server adds its tickets, or refuses it for good. The server
+ * counts a payment once, so asking again is safe: the app, the Shop and the checkout ask again for
+ * every kept one as they open, and the checkout opens on one still kept.
+ */
+export interface UnaddedPurchase {
+  /** The Sui transaction that paid for the pack. */
+  digest: string;
+  /** How many tickets the pack has. */
+  tickets: number;
+  /** What the pack cost, in yen. */
+  priceYen: number;
+  /** When it was paid, in ms since the epoch. */
+  paidAt: number;
+  /**
+   * Why the server refused it for good, once it has. It's never asked for again, and stays only
+   * until the checkout says why, once.
+   */
+  refusal?: Refusal;
+}
+
+/** A refusal's status and error body, so the checkout can say why in the language of the day. */
+interface Refusal {
+  status: number;
+  error: string;
+  detail?: string;
+}
+
+/** The most payments kept for one person; past it, the oldest goes, named in the log. */
+export const UNADDED_KEPT_MAX = 10;
+
+/** Refusals asking again can't change: the checkout says why once, and the payment goes. */
+export const REFUSAL_STATUSES: readonly number[] = [400, 402, 403, 404, 410, 422];
+
+/** Failures asking again can get past, as can no answer at all (status 0) and any 5xx. */
+export const PASSING_FAILURE_STATUSES: readonly number[] = [408, 425, 429];
+
+/** One key per person, so signing in as someone else leaves another's payments be. */
+const keyFor = (userId: string) => `draw.unaddedPurchases.${userId}`;
+
+type TicketBuyer = Pick<ApiClient, "buyTickets" | "tickets">;
+
+/** Whether the server refused a payment for good. */
+export const isRefusal = (error: unknown): error is ApiError =>
+  error instanceof ApiError && REFUSAL_STATUSES.includes(error.status);
+
+const canPass = (error: ApiError) =>
+  error.status === 0 || error.status >= 500 || PASSING_FAILURE_STATUSES.includes(error.status);
+
+/** The refusal kept with a payment, as the error the server answered. */
+export const refusalError = ({ status, error, detail }: Refusal): ApiError =>
+  new ApiError(status, { error, detail });
+
+const isKeptRefusal = (value: unknown): value is Refusal =>
+  typeof value === "object" &&
+  value !== null &&
+  "status" in value &&
+  typeof value.status === "number" &&
+  "error" in value &&
+  typeof value.error === "string" &&
+  (!("detail" in value) || typeof value.detail === "string");
+
+const isUnaddedPurchase = (value: unknown): value is UnaddedPurchase =>
+  typeof value === "object" &&
+  value !== null &&
+  "digest" in value &&
+  typeof value.digest === "string" &&
+  value.digest !== "" &&
+  "tickets" in value &&
+  typeof value.tickets === "number" &&
+  Number.isInteger(value.tickets) &&
+  value.tickets > 0 &&
+  "priceYen" in value &&
+  typeof value.priceYen === "number" &&
+  Number.isFinite(value.priceYen) &&
+  "paidAt" in value &&
+  typeof value.paidAt === "number" &&
+  Number.isFinite(value.paidAt) &&
+  (!("refusal" in value) || isKeptRefusal(value.refusal));
+
+/** `userId`'s kept payments as storage has them; none when storage can't be read. */
+function read(userId: string): UnaddedPurchase[] {
+  // Tests outside a browser have no storage.
+  if (typeof localStorage === "undefined") return [];
+  let text: string | null;
+  try {
+    text = localStorage.getItem(keyFor(userId));
+  } catch (error) {
+    console.error("The payments kept on this phone couldn't be read", error);
+    return [];
+  }
+  if (text === null) return [];
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    value = undefined;
+  }
+  const purchases = Array.isArray(value) ? value.filter(isUnaddedPurchase) : [];
+  // Logged whole, so a payment's ID can still be found and its tickets added by hand.
+  if (!Array.isArray(value) || purchases.length !== value.length) {
+    console.error(
+      "Payments kept on this phone are unreadable, so they aren't asked for again:",
+      text,
+    );
+  }
+  return purchases;
+}
+
+/** Each person's kept payments, read from storage the first time they're asked for. */
+const kept = new Map<string, readonly UnaddedPurchase[]>();
+
+/** Keeps `purchases` as `userId`'s, in memory even when storage refuses them. */
+function write(userId: string, purchases: readonly UnaddedPurchase[]) {
+  kept.set(userId, purchases);
+  try {
+    if (purchases.length === 0) localStorage.removeItem(keyFor(userId));
+    else localStorage.setItem(keyFor(userId), JSON.stringify(purchases));
+  } catch (error) {
+    const digests = purchases.map((p) => p.digest).join(", ") || "none";
+    console.error(`The payments kept on this phone couldn't be saved (${digests})`, error);
+  }
+}
+
+/** The payments kept for `userId` whose tickets aren't added yet, oldest first. */
+export function unaddedPurchasesFor(userId: string): readonly UnaddedPurchase[] {
+  let purchases = kept.get(userId);
+  if (!purchases) {
+    purchases = read(userId);
+    kept.set(userId, purchases);
+  }
+  return purchases;
+}
+
+/** Keeps a payment that went through until the server adds its tickets. */
+export function keepUnaddedPurchase(userId: string, purchase: UnaddedPurchase): void {
+  const purchases = [
+    ...unaddedPurchasesFor(userId).filter((p) => p.digest !== purchase.digest),
+    purchase,
+  ];
+  const over = Math.max(0, purchases.length - UNADDED_KEPT_MAX);
+  for (const dropped of purchases.splice(0, over)) {
+    console.error(
+      `More than ${UNADDED_KEPT_MAX} payments are waiting for their tickets, so this phone stops asking for the oldest:`,
+      dropped,
+    );
+  }
+  write(userId, purchases);
+}
+
+/** Lets a payment go: its tickets were added, or the checkout has said why they never will be. */
+export function forgetUnaddedPurchase(userId: string, digest: string): void {
+  const purchases = unaddedPurchasesFor(userId);
+  if (purchases.some((p) => p.digest === digest)) {
+    write(
+      userId,
+      purchases.filter((p) => p.digest !== digest),
+    );
+  }
+}
+
+/** Marks a payment refused for good, so it's never asked for again and the checkout says why once. */
+function refuse(userId: string, digest: string, { status, code, detail }: ApiError) {
+  const purchases = unaddedPurchasesFor(userId);
+  if (!purchases.some((p) => p.digest === digest)) return;
+  const refusal: Refusal =
+    detail === undefined ? { status, error: code } : { status, error: code, detail };
+  console.error(
+    `The server refused ${digest} for good, so this phone stops asking for its tickets`,
+    refusal,
+  );
+  write(
+    userId,
+    purchases.map((p) => (p.digest === digest ? { ...p, refusal } : p)),
+  );
+}
+
+/** For tests: reads storage again, as the app's code does when it starts. */
+export function readUnaddedPurchasesAgain(): void {
+  kept.clear();
+}
+
+/** Asks with a request still out, by payment ID, so asking again joins it instead of sending another. */
+const asking = new Map<string, Promise<Tickets>>();
+
+async function ask(api: TicketBuyer, userId: string, { digest, tickets }: UnaddedPurchase) {
+  try {
+    const added = await api.buyTickets({ tickets, txDigest: digest });
+    forgetUnaddedPurchase(userId, digest);
+    return added;
+  } catch (caught) {
+    const error = apiError(caught);
+    // An earlier ask added them, and only its answer was lost.
+    if (error.code !== "payment_already_counted") {
+      if (isRefusal(error)) refuse(userId, digest, error);
+      else if (!canPass(error)) {
+        // The server never judged the payment, so it stays kept rather than lost.
+        console.error(
+          `Asking for the tickets ${digest} paid for failed in a way asking again may not get past; this phone keeps it`,
+          error,
+        );
+      }
+      throw caught;
+    }
+  }
+  forgetUnaddedPurchase(userId, digest);
+  return api.tickets();
+}
+
+/**
+ * Asks the server for the tickets `purchase` paid for, with the same payment, and resolves to your
+ * tickets once they're added; a payment already counted counts as added. On any other failure this
+ * rejects: a refusal for good (see isRefusal) marks the payment refused, and anything else keeps it.
+ */
+export function addUnaddedPurchase(
+  api: TicketBuyer,
+  userId: string,
+  purchase: UnaddedPurchase,
+): Promise<Tickets> {
+  const out = asking.get(purchase.digest);
+  if (out) return out;
+  const asked = ask(api, userId, purchase).finally(() => asking.delete(purchase.digest));
+  asking.set(purchase.digest, asked);
+  return asked;
+}
+
+/**
+ * Asks again, one at a time, for the tickets of every payment kept for `userId` and not refused.
+ * Resolves to your tickets after the last one added, or null when none was.
+ */
+export async function addUnaddedPurchases(
+  api: TicketBuyer,
+  userId: string,
+): Promise<Tickets | null> {
+  let tickets: Tickets | null = null;
+  for (const purchase of unaddedPurchasesFor(userId)) {
+    if (purchase.refusal) continue;
+    try {
+      tickets = await addUnaddedPurchase(api, userId, purchase);
+    } catch (error) {
+      console.warn(`The tickets ${purchase.digest} paid for still aren't added`, error);
+    }
+  }
+  return tickets;
+}
+
+/** Quietly asks again for the tickets of every payment kept for you, as whatever calls it opens. */
+export function useAddUnaddedPurchases(): void {
+  const api = useApi();
+  const { id } = useMe();
+  const { set } = useTickets();
+  useEffect(() => {
+    void addUnaddedPurchases(api, id).then((tickets) => {
+      if (tickets) set(tickets);
+    });
+  }, [api, id, set]);
+}
