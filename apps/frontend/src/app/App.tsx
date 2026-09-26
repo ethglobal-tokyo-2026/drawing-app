@@ -107,7 +107,11 @@ export default function App() {
         {/* Each in its own boundary, so Explore stays up while an artist's board loads over it. */}
         {view === "explore" && (
           <Suspense fallback={null}>
-            <ExploreScreen onOpenArtist={setVisiting} onOpenMyBoard={() => setView("board")} />
+            <ExploreScreen
+              boardOf={opened.boardOf}
+              onOpenArtist={setVisiting}
+              onOpenMyBoard={() => setView("board")}
+            />
           </Suspense>
         )}
         {view === "explore" && visiting && (

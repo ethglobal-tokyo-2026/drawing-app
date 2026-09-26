@@ -301,5 +301,10 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       if (!response.ok) throw await refusal(response, `GET /api/users?handle=${handle}`);
       return (await response.json()).users;
     },
+    personByEnsLabel: async (label) => {
+      const response = await api.ens.people[":label"].$get({ param: { label } });
+      if (!response.ok) throw await refusal(response, `GET /api/ens/people/${label}`);
+      return (await response.json()).person;
+    },
   };
 }

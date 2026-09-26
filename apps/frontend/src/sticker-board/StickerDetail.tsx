@@ -5,6 +5,7 @@ import type { StickerDetail as StickerDetailResponse } from "@drawing-app/api/cl
 import { useApiQuery } from "../api/useApiQuery";
 import { toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
 import { errorReason } from "../i18n/errorMessage";
+import { EnsNameLink } from "../identity/EnsNameLink";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatMonthDay, formatNo } from "../stickers/format";
@@ -53,20 +54,6 @@ interface Swipe {
   y: number;
   dx: number;
   lock: ReturnType<typeof swipeLock>;
-}
-
-/**
- * The sticker's .eth name, as the prototype shapes it: `{name}.{artist}.sketch.eth`. A stand-in
- * built from its number and artist until the chain gives stickers their names.
- */
-function placeholderEnsName(sticker: BoardStickerView): string {
-  const label = (v: string) =>
-    v
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "") || "someone";
-  const artist = label(sticker.artist.handle ?? sticker.artist.name);
-  return `sticker-${String(sticker.no).padStart(4, "0")}.${artist}.sketch.eth`;
 }
 
 /** The --ease-out curve, spelled out: Web Animations can't read CSS variables. */
@@ -311,7 +298,11 @@ export function StickerDetail({
               <h2 className="title-label sticker-detail__title">
                 sticker <span className="sticker-detail__no">{formatNo(sticker.no)}</span>
               </h2>
-              <p className="sticker-detail__ens">{placeholderEnsName(sticker)}</p>
+              {sticker.ensName && (
+                <p className="sticker-detail__ens">
+                  <EnsNameLink name={sticker.ensName} />
+                </p>
+              )}
               <p className="fine sticker-detail__fine-print">
                 {byOther ? (
                   <ArtistChip artist={sticker.artist} />

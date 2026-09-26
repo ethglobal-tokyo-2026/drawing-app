@@ -1,3 +1,6 @@
 [submodule "packages/sticker-chain/lib/forge-std"]
 	path = packages/sticker-chain/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "packages/sticker-chain/lib/ens-contracts-v2"]
+	path = packages/sticker-chain/lib/ens-contracts-v2
+	url = https://github.com/ensdomains/contracts-v2

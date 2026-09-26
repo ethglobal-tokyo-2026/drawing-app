@@ -1,10 +1,12 @@
 import type {
+  EnsDeps,
   EscrowGift,
   GiftChain,
   Ids,
   ImageStore,
   Mint,
   MintedToken,
+  NameWriter,
   SmartWallets,
   SuiPayments,
   SuiPrice,
@@ -13,7 +15,9 @@ import { keccak256 } from "../keccak256.ts";
 import { createDevLineVerifier } from "../services/devSignIn.ts";
 import { stickerImageUrls } from "../services/imageStore.ts";
 import type { StickerImages } from "../shapes.ts";
-import { isHex } from "viem";
+import { isHex, type Hex } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { createNamingQueue } from "../ens/naming.ts";
 
 /** A made-up 32-byte hex value, the same for the same seed. */
 const fakeBytes32 = (seed: string) => keccak256(new TextEncoder().encode(seed));
@@ -149,3 +153,45 @@ export const fakeSuiPrice =
   (yenPerSui: string | null): SuiPrice =>
   () =>
     Promise.resolve(yenPerSui);
+
+/** A name writer that records each call, and throws at `failAt` when that step comes up. */
+export function fakeNameWriter({ failAt }: { failAt?: string } = {}) {
+  const calls: string[] = [];
+  const named = new Set<string>();
+  const step = (call: string) => {
+    if (call === failAt) throw new Error(`Naming failed at ${call}`);
+    calls.push(call);
+  };
+  const writer: NameWriter = {
+    ensurePersonName: (person, label) => {
+      // Like CroquisNames, a person keeps the name they already have.
+      if (named.has(person)) return Promise.resolve({ label, created: false });
+      step(`person ${label}`);
+      named.add(person);
+      return Promise.resolve({ label, created: true });
+    },
+    ensureStickerName: (tokenId, label) => {
+      step(`sticker ${tokenId} ${label}`);
+      return Promise.resolve({ label, created: true });
+    },
+    setAvatar: (_person, avatar) => {
+      step(`avatar ${avatar}`);
+      return Promise.resolve();
+    },
+  };
+  return { writer, calls };
+}
+
+/** The gateway signer's key in tests. */
+export const TEST_GATEWAY_KEY: Hex = `0x${"6a".repeat(32)}`;
+
+/** The names under croquis.eth with a fixed gateway signer, writing through `writer`. */
+export const fakeEns = (writer: NameWriter | null = null): EnsDeps => ({
+  resolverAddress: fakeAddress("CroquisResolver"),
+  gatewaySigner: privateKeyToAccount(TEST_GATEWAY_KEY),
+  appLinkBase: "https://liff.line.me/test-liff",
+  chainId: 11155111,
+  stickerContract: fakeAddress("StickerNFT"),
+  writer,
+  naming: createNamingQueue(),
+});

@@ -1,6 +1,7 @@
 import { gifts, stickerPlacements, stickers, users } from "@drawing-app/db";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
+import { queueNaming } from "../ens/naming.ts";
 import type { AppDeps } from "../deps.ts";
 import { keccak256 } from "../keccak256.ts";
 import { isoTimeSchema, personSchema, toIsoTime, toPerson } from "../shapes.ts";
@@ -211,6 +212,7 @@ export async function receiveGift(
     { behavior: "immediate" },
   );
   if (receiving.refusal !== null) return receiving;
+  queueNaming(deps, userId);
   const { gift, placement } = receiving;
   const sticker = loadStickers(db, [gift.stickerId], images.urls).get(gift.stickerId);
   if (!sticker) throw new Error(`Gift ${gift.id}'s sticker ${gift.stickerId} is missing`);

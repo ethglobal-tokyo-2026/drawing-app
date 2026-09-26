@@ -46,6 +46,7 @@ export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref
   const figures: CorkFigures = {
     name: me.displayName,
     handle: account.handle ?? me.displayName,
+    ensName: account.ensName,
     picture: <PhotoSticker src={me.pictureUrl} name={me.displayName} size={42} />,
     own: true,
     ...statFigures(stats.state === "ready" ? stats.data : null, true, new Date()),
