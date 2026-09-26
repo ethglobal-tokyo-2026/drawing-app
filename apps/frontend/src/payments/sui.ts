@@ -30,7 +30,7 @@ export async function getSuiBalance(): Promise<bigint> {
 export async function payForTickets(priceMist: bigint): Promise<PaymentResult> {
   if (priceMist <= 0n) throw new Error(`Invalid price: ${priceMist} MIST`);
   await new Promise((r) => setTimeout(r, WALLET_DELAY_MS));
-  if (priceMist > mockBalanceMist) throw new Error("Your wallet doesn’t have enough SUI.");
+  if (priceMist > mockBalanceMist) throw new Error("You don’t have enough yen for this pack.");
   mockBalanceMist -= priceMist;
   const digest = Array.from(
     { length: 44 },

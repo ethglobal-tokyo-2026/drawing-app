@@ -494,7 +494,7 @@ The canvas is just for drawing.
 
 ### Out of tickets
 
-Three empty ticket stubs say "used up" without a number. Each used ticket keeps a faint kiss-cut outline of the sticker it became (a 1px graphite line at 62%, dashed on the large stubs), fading in over 700ms: the cut line a sticker leaves on its backing. The small stubs on the seal screen carry the same outlines. Under the stubs, the reserve count: a Grape ticket mark × count. Under the title, a printed refill line reads "New daily tickets at 12:00 AM," in bold Ink followed by the countdown ("in 6h 56m") in Graphite, in tabular figures. It never borrows the timer dot's look: no dot, no color field, no tilt, no Dela numerals. Then the perforation, Go to sticker board as the key and Shop for tickets with Sui on label stock. The card doesn't restate the three-a-day rule.
+Three empty ticket stubs say "used up" without a number. Each used ticket keeps a faint kiss-cut outline of the sticker it became (a 1px graphite line at 62%, dashed on the large stubs), fading in over 700ms: the cut line a sticker leaves on its backing. The small stubs on the seal screen carry the same outlines. Under the stubs, the reserve count: a Grape ticket mark × count. Under the title, a printed refill line reads "New daily tickets at 12:00 AM," in bold Ink followed by the countdown ("in 6h 56m") in Graphite, in tabular figures. It never borrows the timer dot's look: no dot, no color field, no tilt, no Dela numerals. Then the perforation, Go to sticker board as the key and Shop for tickets on label stock. The card doesn't restate the three-a-day rule.
 
 With daily tickets gone but reserve ones left, the start screen asks "Use a reserve ticket?" instead, with a Grape key and the ticket shop on label stock.
 
@@ -504,7 +504,7 @@ Every Draw key carries daily and reserve tickets left after its label, on a Line
 
 ### Ticket shop
 
-The out-of-tickets card's stock. The wallet's SUI balance sits in a Liner Lift well with its yen value in Graphite. Packs are label rows: a Grape ticket mark, the name, a Pink sale sticker at the house tilt ("−40%"), and the price stacked right (struck-through full price, yen in bold, SUI in Graphite). The picked pack is stuck on in Grape Soft with a Grape ring. Fine print under the packs gives the SUI/JPY rate. The smallest pack is picked to start.
+The out-of-tickets card's stock. The balance sits in a Liner Lift well in yen, worth its SUI at the quote. Packs are label rows: a Grape ticket mark, the name, a Pink sale sticker at the house tilt ("−40%"), and the price stacked right (struck-through full price, yen in bold). The picked pack is stuck on in Grape Soft with a Grape ring. Every amount shows in yen; SUI never shows. The smallest pack is picked to start.
 
 ### Stickers
 

@@ -148,7 +148,7 @@ ad0ll's hand-drawn sketch (a photo in the 2026-09-22 conversation; the file is n
   - It offers **Keep drawing** (spends a daily ticket) or **Go to sticker board**.
   - With no daily tickets left, drawing asks before spending a reserve ticket, or offers the **ticket shop**.
   - An **out-of-tickets** dialog appears when daily and reserve tickets are all used.
-  - **Ticket shop:** packs of 1, 3, 5 and 10 for ¥100, ¥270 (10% off), ¥375 (25% off) and ¥600 (40% off), paid in SUI at the 5-minute average SUI/JPY price. It shows the wallet's SUI balance in SUI and yen. The payment is a mock for now.
+  - **Ticket shop:** packs of 1, 3, 5 and 10 for ¥100, ¥270 (10% off), ¥375 (25% off) and ¥600 (40% off), paid in SUI at the 5-minute average SUI/JPY price. It shows every amount, the balance included, in yen only. The payment is a mock for now.
   - Every Draw key shows daily and reserve tickets left as ticket mark × count.
   - A **Shop** tab signals a Sui-backed in-app store; tickets are the only item for now.
 - **On-chain copy is allowed in the hackathon build** (for example, in the seal dialog). The real app would hide the complexity.
