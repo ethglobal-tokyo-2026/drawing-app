@@ -1,10 +1,6 @@
 import { createHash } from "node:crypto";
 import Database from "better-sqlite3";
-import {
-  generateSQLiteDrizzleJson,
-  generateSQLiteMigration,
-  type DrizzleSQLiteSnapshotJSON,
-} from "drizzle-kit/api";
+import { generateSQLiteDrizzleJson, generateSQLiteMigration } from "drizzle-kit/api";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema/index.ts";
 import { GIFT_EXPIRY_MS } from "./schema/limits.ts";
@@ -14,13 +10,11 @@ import { updatedAtTriggerStatements } from "./schema/updatedAtTriggers.ts";
 export async function createTestDb() {
   const sqlite = new Database(":memory:");
   sqlite.pragma("foreign_keys = ON");
-  // drizzle-kit/api's SQLiteSchema is a deep Zod-inferred type the type-aware linter can't resolve;
-  // the annotations name the real type for readers even though the linter can't check them.
-  // oxlint-disable-next-line typescript/no-unsafe-assignment -- see above
-  const empty: DrizzleSQLiteSnapshotJSON = await generateSQLiteDrizzleJson({});
-  // oxlint-disable-next-line typescript/no-unsafe-assignment -- see above
-  const current: DrizzleSQLiteSnapshotJSON = await generateSQLiteDrizzleJson({ ...schema });
-  for (const statement of await generateSQLiteMigration(empty, current)) sqlite.exec(statement);
+  const migration = await generateSQLiteMigration(
+    await generateSQLiteDrizzleJson({}),
+    await generateSQLiteDrizzleJson({ ...schema }),
+  );
+  for (const statement of migration) sqlite.exec(statement);
   for (const statement of updatedAtTriggerStatements(schema.allTables)) sqlite.exec(statement);
   return { db: drizzle({ client: sqlite, schema }), sqlite };
 }
