@@ -336,6 +336,14 @@
 }
 
 /* A 36px face on its lip. */
+/* Gifts on their way sit in the header, opposite your name, above the sticker tray's pull. */
+.board-pending {
+  position: absolute;
+  z-index: 800;
+  right: 12px;
+  top: 12px;
+}
+
 /* The artist of a sticker someone else drew heads its toolbar, on a row of its own. */
 .sticker-toolbar:has(.sticker-toolbar__by) {
   flex-wrap: wrap;

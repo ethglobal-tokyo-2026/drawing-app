@@ -1,27 +1,29 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from "vitest";
-import { nextToNotice } from "./noticedGifts";
+import { markNoticed, newestUnnoticed } from "./noticedGifts";
 
 const received = (stickerId: string, receivedAt: number) => ({ stickerId, receivedAt });
 
 afterEach(() => localStorage.clear());
 
-describe("nextToNotice", () => {
-  it("shows the newest received gift once, and marks the rest as noticed with it", () => {
+describe("noticed gifts", () => {
+  it("picks the newest received gift until it's marked, and marks the rest with it", () => {
     const gifts = [received("a", 1), received("b", 3), received("c", 2)];
-    expect(nextToNotice(gifts)).toBe(gifts[1]);
-    expect(nextToNotice(gifts)).toBeNull();
+    expect(newestUnnoticed(gifts)).toBe(gifts[1]);
+    expect(newestUnnoticed(gifts)).toBe(gifts[1]);
+    markNoticed(gifts);
+    expect(newestUnnoticed(gifts)).toBeNull();
   });
 
-  it("shows a gift received after the last notice", () => {
-    nextToNotice([received("a", 1)]);
+  it("picks a gift received after the last notice", () => {
+    markNoticed([received("a", 1)]);
     const later = received("b", 2);
-    expect(nextToNotice([received("a", 1), later])).toBe(later);
+    expect(newestUnnoticed([received("a", 1), later])).toBe(later);
   });
 
-  it("shows a sticker's notice again when it's given again", () => {
-    nextToNotice([received("a", 1)]);
+  it("picks a sticker again when it's given again", () => {
+    markNoticed([received("a", 1)]);
     const again = received("a", 5);
-    expect(nextToNotice([again])).toBe(again);
+    expect(newestUnnoticed([again])).toBe(again);
   });
 });

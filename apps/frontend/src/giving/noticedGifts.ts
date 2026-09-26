@@ -33,11 +33,8 @@ function saveNoticed(noticed: ReadonlySet<string>) {
   }
 }
 
-/**
- * The newest received gift whose notice this device hasn't shown, or null. Every gift passed in is
- * then marked as noticed: their silhouettes already say where the others went.
- */
-export function nextToNotice<T extends { stickerId: string; receivedAt: number }>(
+/** The newest received gift whose notice this device hasn't shown, or null. Reads only. */
+export function newestUnnoticed<T extends { stickerId: string; receivedAt: number }>(
   received: readonly T[],
 ): T | null {
   const noticed = readNoticed();
@@ -45,9 +42,12 @@ export function nextToNotice<T extends { stickerId: string; receivedAt: number }
   for (const g of received) {
     if (!noticed.has(keyOf(g)) && (!next || g.receivedAt > next.receivedAt)) next = g;
   }
-  if (next) {
-    for (const g of received) noticed.add(keyOf(g));
-    saveNoticed(noticed);
-  }
   return next;
+}
+
+/** Marks every gift passed in as noticed: once one notice has shown, the silhouettes say the rest. */
+export function markNoticed(received: readonly { stickerId: string; receivedAt: number }[]) {
+  const noticed = readNoticed();
+  for (const g of received) noticed.add(keyOf(g));
+  saveNoticed(noticed);
 }

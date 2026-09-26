@@ -8,6 +8,7 @@ import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatMonthDay, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
+import { ArtistChip } from "../stickers/ArtistChip";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
@@ -36,6 +37,8 @@ interface Props {
   returnFocus?: () => HTMLElement | null;
   /** Where a sticker sits on the board, which it lifts off from and sticks back onto. */
   originOf?: (id: string) => HTMLElement | null;
+  /** The board's owner: a sticker someone else drew wears foil and names its Original Artist. */
+  ownerId?: string;
 }
 
 interface Swipe {
@@ -70,6 +73,7 @@ export function StickerDetail({
   onSendGratitude,
   returnFocus,
   originOf,
+  ownerId,
 }: Props) {
   const reduced = useReducedMotion();
   useLight();
@@ -186,6 +190,7 @@ export function StickerDetail({
       });
   };
 
+  const byOther = Boolean(ownerId && sticker && sticker.artist.id !== ownerId);
   const detail = (
     <div
       ref={root}
@@ -242,6 +247,8 @@ export function StickerDetail({
                   urls={sticker.urls}
                   width={sticker.width}
                   height={sticker.height}
+                  foil={byOther ? "detail" : undefined}
+                  no={sticker.no}
                 />
               </div>
             </div>
@@ -278,7 +285,11 @@ export function StickerDetail({
             <section className="sticker-detail__meta">
               <h2 className="title-label sticker-detail__title">{formatNo(sticker.no)}</h2>
               <p className="fine sticker-detail__fine-print">
-                <span className="sticker-detail__by">by {handleOf(sticker.artist)}</span>{" "}
+                {byOther ? (
+                  <ArtistChip artist={sticker.artist} />
+                ) : (
+                  <span className="sticker-detail__by">by {handleOf(sticker.artist)}</span>
+                )}{" "}
                 <span>
                   · drawn in <Duration seconds={sticker.timeUsed} />
                 </span>{" "}

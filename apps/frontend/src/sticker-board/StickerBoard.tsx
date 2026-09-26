@@ -13,7 +13,10 @@ import { flushSync } from "react-dom";
 import { apiError, type ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
 import { useApiQuery } from "../api/useApiQuery";
-import { toPerson, type PersonView } from "../api/views";
+import { toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
+import { GiftReceivedNotice } from "../giving/GiftReceivedNotice";
+import { markNoticed, newestUnnoticed } from "../giving/noticedGifts";
+import { PendingGiftsNotificationBadge } from "../giving/PendingGiftsNotificationBadge";
 import { useGiftSender } from "../giving/useGiftSender";
 import { useStickerGifts } from "../giving/useStickerGifts";
 import { FEEL_CONFIG } from "../gratitude/gameConfig";
@@ -22,7 +25,7 @@ import { readMiniGameDemoSettings } from "../gratitude/miniGameDemoSettings";
 import { DrawIcon } from "../icons/DrawIcon";
 import { useIdentity } from "../identity/useIdentity";
 import { LIFF_ID } from "../line/liff";
-import { formatNo } from "../stickers/format";
+import { formatHandle, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { playStick } from "../stickers/stick";
 import type { Placement } from "../stickers/stickerStorage";
@@ -62,6 +65,8 @@ import { BoardFlip } from "./stat-board/BoardFlip";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
 import { readingOrder } from "./stickerOrder";
 import { StickerToolbar } from "./StickerToolbar";
+import { SendGratitudeSheet } from "../receiving/SendGratitudeSheet";
+import { ArtistChipLayer } from "./ArtistChipLayer";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
 import { useBoardGestures } from "./useBoardGestures";
@@ -163,6 +168,31 @@ const stackOf = (stickers: readonly BoardSticker[]) =>
       .map((s, i) => [s.id, i]),
   );
 
+/** Received stickers already asked about thanks this session, so the question comes once. */
+const askedToThank = new Set<string>();
+
+/** Someone as the gratitude Mini-game names them. */
+const asGiver = (p: PersonView) => ({
+  handle: p.handle ?? p.name,
+  displayName: p.name,
+  ...(p.pictureUrl && { pictureUrl: p.pictureUrl }),
+});
+
+/** A board sticker as the gift screens draw it. */
+const viewOf = (s: BoardStickerView): StickerView => ({
+  id: s.id,
+  no: s.no,
+  artist: s.artist,
+  timeUsed: s.timeUsed,
+  width: s.width,
+  height: s.height,
+  outline: s.outline ?? "",
+  urls: s.urls,
+  sealedAt: s.createdAt,
+});
+
+type Thanking = { sticker: BoardSticker; giver: ReturnType<typeof asGiver> };
+
 export function StickerBoard({ freshId, onDraw }: Props) {
   const stage = useRef<HTMLDivElement>(null);
   /** The board's face, which the sticker tray runs down the right edge of. */
@@ -201,7 +231,13 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   /** The board has turned over before, so its stat board stays mounted for every turn after. */
   const [wasTurned, setWasTurned] = useState(false);
   /** The sticker the gratitude mini-game is open for, from the stat board's developer slip. */
-  const [thanking, setThanking] = useState<BoardSticker | null>(null);
+  const [thanking, setThanking] = useState<Thanking | null>(null);
+  /** A received gift's notice, closed: the silhouettes say the rest. */
+  const [noticeClosed, setNoticeClosed] = useState(false);
+  /** A sticker that just reached you, and who to thank for it, when it hasn't been thanked. */
+  const [owed, setOwed] = useState<{ gift: { id: string }; giver: PersonView } | null>(null);
+  /** The first-load artist chips have played, or a sticker was selected, which clears them. */
+  const [chipsDone, setChipsDone] = useState(false);
   const me = useIdentity();
   const tickets = useTicketState();
   const gifts = useStickerGifts();
@@ -248,6 +284,48 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     // Moves made while it loaded stay.
     setStickers(placeUnplaced(loaded.stickers, stickers ?? []).stickers);
   }
+
+  const pending = useApiQuery("pending-gifts", (client) => client.pendingGifts());
+  const onTheirWay =
+    pending.state === "ready"
+      ? pending.data.gifts
+          .filter((p) => p.gift.status === "sent")
+          .map((p) => ({ giftId: p.gift.id, sticker: toSticker(p.sticker) }))
+      : [];
+
+  // Once per board opening: the newest gift someone received since this device last said so.
+  const receivedGifts = (adopted?.stickers ?? []).flatMap((s) =>
+    !s.held && s.givenTo
+      ? [
+          {
+            stickerId: s.id,
+            receivedAt: s.givenTo.receivedAt,
+            sticker: viewOf(s),
+            receiver: s.givenTo.receiver,
+            ...(s.urls.mask && { mask: s.urls.mask }),
+          },
+        ]
+      : [],
+  );
+  const notice = noticeClosed ? null : newestUnnoticed(receivedGifts);
+
+  // A sticker that just reached you asks about thanks, when its newest hand-off to you has none.
+  useEffect(() => {
+    if (!freshId || askedToThank.has(freshId)) return;
+    let current = true;
+    api.stickerDetail(freshId).then(
+      (detail) => {
+        const [entry] = detail.transferTrail;
+        if (current && entry && entry.receiver.id === detail.owner.id && !entry.gratitude)
+          setOwed({ gift: { id: entry.giftId }, giver: toPerson(entry.giver) });
+      },
+      (error: unknown) =>
+        console.error(`Checking whether ${freshId} has been thanked failed`, apiError(error)),
+    );
+    return () => {
+      current = false;
+    };
+  }, [api, freshId]);
 
   // The open sticker tray's NEW marks, which the tray takes off at once.
   const markSeen = (ids: readonly string[]) => {
@@ -300,6 +378,23 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   });
   const field = useMemo(() => size && fieldOf(size.W, size.H), [size]);
   const landedNow = useCallback(() => setLandingId(undefined), []);
+  /** Drawn by someone other than the board's owner: it wears foil and names its artist. */
+  const byOther = (s: BoardStickerView) => owner !== null && s.artist.id !== owner.id;
+  const printedArtist = (s: BoardStickerView) =>
+    s.artist.handle ? formatHandle(s.artist.handle) : s.artist.name;
+  // A received sticker landing names its artist alone; otherwise every foil sticker does, once.
+  const landingByOther = onBoard.find((s) => s.id === landingId && byOther(s));
+  const chips =
+    chipsDone || !field || !size
+      ? []
+      : onBoard
+          .filter((s) => byOther(s) && (!landingByOther || s.id === landingByOther.id))
+          .map((s) => ({
+            id: s.id,
+            artist: s.artist,
+            box: stickerBox(field, size.W, s.placement, s),
+          }));
+  const freshSticker = freshId ? stickers?.find((s) => s.id === freshId) : undefined;
 
   const setPlacement = (id: string, placement: Placement) =>
     setStickers((list) => list?.map((s) => (s.id === id ? { ...s, placement } : s)) ?? null);
@@ -307,6 +402,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   // Selecting raises a sticker above the rest; the raise is saved with its next move.
   const select = (id: string | null) => {
     setSelected(id);
+    if (id) setChipsDone(true);
     if (!id || !stickers) return;
     settled.add(id);
     const sticker = stickers.find((s) => s.id === id);
@@ -445,6 +541,15 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         <span className="board-who-name">{me.displayName}</span>
       </button>
 
+      {onTheirWay.length > 0 && (
+        <div className="board-pending">
+          <PendingGiftsNotificationBadge
+            gifts={onTheirWay}
+            onOpen={(id) => setOpen({ id, mode: "yours" })}
+          />
+        </div>
+      )}
+
       {/* The slot carries the first-sticker hop and ring, so the key keeps its own lip and press. */}
       <span ref={drawSlot} className={`board-draw ${firstVisit ? "is-fresh" : ""}`}>
         <Key
@@ -508,7 +613,8 @@ export function StickerBoard({ freshId, onDraw }: Props) {
                 tabbable={s.id === tabbable}
                 position={`${order.indexOf(s.id) + 1} of ${order.length}`}
                 hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
-                foil={owner !== null && s.artist.id !== owner.id}
+                foil={byOther(s)}
+                by={byOther(s) ? printedArtist(s) : undefined}
               />
               {/* Right after its sticker, so Tab reaches it next. */}
               {s.id === selected && !hold && (
@@ -522,6 +628,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
                   onGive={() => setGiving(s)}
                   onView={() => setOpen({ id: s.id, mode: "yours" })}
                   onRemove={() => stow(s.id)}
+                  {...(byOther(s) && { artist: s.artist })}
                   onEscape={() =>
                     stage.current
                       ?.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(s.id)}"]`)
@@ -533,6 +640,15 @@ export function StickerBoard({ freshId, onDraw }: Props) {
             </Fragment>
           ))}
       </div>
+
+      {chips.length > 0 && size && (
+        <ArtistChipLayer
+          chips={chips}
+          board={size}
+          onDone={() => setChipsDone(true)}
+          reduced={reduced}
+        />
+      )}
 
       {stickers && owner && (
         <Suspense fallback={null}>
@@ -598,15 +714,46 @@ export function StickerBoard({ freshId, onDraw }: Props) {
                     ) ?? null,
                 );
               if (board.state === "ready") board.refresh();
+              if (pending.state === "ready") pending.refresh();
             }}
           />
         </Suspense>
       )}
 
+      {notice && (
+        <GiftReceivedNotice
+          sticker={notice.sticker}
+          receiver={notice.receiver}
+          receivedAt={notice.receivedAt}
+          {...(notice.mask && { mask: notice.mask })}
+          onClose={() => {
+            markNoticed(receivedGifts);
+            setNoticeClosed(true);
+          }}
+        />
+      )}
+
+      {owed && freshSticker && !landingId && !askedToThank.has(freshSticker.id) && (
+        <SendGratitudeSheet
+          gift={owed.gift}
+          sticker={viewOf(freshSticker)}
+          giver={owed.giver}
+          onSend={() => {
+            askedToThank.add(freshSticker.id);
+            setOwed(null);
+            setThanking({ sticker: freshSticker, giver: asGiver(owed.giver) });
+          }}
+          onLater={() => {
+            askedToThank.add(freshSticker.id);
+            setOwed(null);
+          }}
+        />
+      )}
+
       {thanking && (
         <GratitudeMiniGame
-          sticker={thanking}
-          giver={{ handle: me.handle, displayName: me.displayName, pictureUrl: me.pictureUrl }}
+          sticker={thanking.sticker}
+          giver={thanking.giver}
           intensity={
             readMiniGameDemoSettings().fullEffects
               ? FEEL_CONFIG.intensity.full
@@ -630,6 +777,13 @@ export function StickerBoard({ freshId, onDraw }: Props) {
                 ".placed-sticker__lift, .given-sticker-silhouette__art",
               ) ?? null
             }
+            {...(owner && { ownerId: owner.id })}
+            onSendGratitude={(_gift, sticker, giver) => {
+              const s = stickers?.find((x) => x.id === sticker.id);
+              if (!s) return;
+              setOpen(null);
+              setThanking({ sticker: s, giver: asGiver(giver) });
+            }}
             onClose={() => setOpen(null)}
             // Back to the sticker it opened from: on the board, or its given sticker silhouette.
             returnFocus={() =>
@@ -678,7 +832,19 @@ export function StickerBoard({ freshId, onDraw }: Props) {
               gifts={gifts}
               onFlipBack={() => turn(false)}
               flipBackRef={flipBack}
-              onTryGratitudeMiniGame={newest ? () => setThanking(newest) : null}
+              onTryGratitudeMiniGame={
+                newest
+                  ? () =>
+                      setThanking({
+                        sticker: newest,
+                        giver: {
+                          handle: me.handle,
+                          displayName: me.displayName,
+                          pictureUrl: me.pictureUrl,
+                        },
+                      })
+                  : null
+              }
             />
           </Suspense>
         )
