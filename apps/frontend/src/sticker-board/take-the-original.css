@@ -66,9 +66,17 @@
 }
 
 /* The key held to tear: Tomato stock with a stub past its perforation that tears off. */
+/* iOS Safari draws a <button> as a native control, rounding and recoloring it, unless its appearance is
+   turned off; a long press there also selects text and opens the callout, which a hold must not. */
 .hold-to-tear {
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
   position: relative;
   display: flex;
+  align-items: stretch;
+  box-sizing: border-box;
   width: 100%;
   height: 62px;
   margin: 18px 0 0;
@@ -91,7 +99,9 @@
 
 .hold-to-tear__main {
   display: grid;
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  box-sizing: border-box;
   align-content: center;
   justify-items: start;
   gap: 4px;
@@ -118,7 +128,8 @@
 .hold-to-tear__stub {
   position: relative;
   display: grid;
-  flex: none;
+  flex: 0 0 66px;
+  box-sizing: border-box;
   place-items: center;
   width: 66px;
   border-radius: 0 var(--r-label) var(--r-label) 0;
