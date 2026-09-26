@@ -10,6 +10,7 @@
  * Each sheet keeps a skyline, every column's highest point grown by the clearance. A new sticker is
  * lowered onto it at every x and settles on its own cut line, nesting into the valleys below.
  */
+import { seededRandom } from "../../ui/seededRandom";
 
 type Point = [x: number, y: number];
 
@@ -131,16 +132,6 @@ function hash(str: string) {
     h = Math.imul(h, 16777619);
   }
   return h >>> 0;
-}
-
-function rng(seed: number) {
-  let a = seed | 0;
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }
 
 /** Douglas-Peucker on an open chain, keeping both ends. */
@@ -500,7 +491,7 @@ export function packSheets(items: readonly PackItem[], opts: PackOptions): Packe
 
   items.forEach((it, n) => {
     const sh = normShape(it.shape);
-    const rnd = rng(hash(it.id));
+    const rnd = seededRandom(hash(it.id));
     const u = [rnd(), rnd(), rnd(), rnd(), rnd(), rnd()];
     const r = Math.round((u[0] < 0.5 ? -1 : 1) * (0.3 + 0.7 * u[1]) * o.turn * 100) / 100;
     let s = Math.min(o.fit.w / sh.w, o.fit.h / sh.h) * (1 + o.vary * (2 * u[2] - 1));
