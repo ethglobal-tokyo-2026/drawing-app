@@ -29,6 +29,11 @@
   text-align: right;
 }
 
+/* The label keeps its line, even beside a long problem; Japanese would otherwise break between its characters. */
+.reserve-checkout__balance-label {
+  flex: none;
+}
+
 /* The balance's placeholder sits where the figure will, at the well's right. */
 .reserve-checkout__loading {
   display: flex;

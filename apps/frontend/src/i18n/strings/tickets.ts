@@ -116,8 +116,8 @@ export const tickets = {
     title: { en: "Pick a pack", ja: "パックを選んでください" },
     /** Reserve ticket checkout: the bold line under the title */
     lead: { en: "Reserve tickets never expire.", ja: "有償チケットに有効期限はありません。" },
-    /** Reserve ticket checkout: the small label on the wallet row, beside your JPYC balance shown in yen */
-    balance: { en: "Your JPYC", ja: "JPYC残高" },
+    /** Reserve ticket checkout: the small label on the wallet row, beside your balance in yen (the JPYC in your Sui account, never named here) */
+    balance: { en: "Balance", ja: "残高" },
     /** Reserve ticket checkout: the wallet row while the balance loads */
     readingBalance: { en: "Reading your balance…", ja: "残高を確認しています…" },
     /** Reserve ticket checkout: the wallet row when the balance couldn't be read, before a Try again link; `reason` is the wallet's own words */

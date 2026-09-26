@@ -232,7 +232,9 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
           <strong>{t(($) => $.tickets.checkout.lead)}</strong>
         </p>
         <div className="reserve-checkout__balance">
-          <span className="fine">{t(($) => $.tickets.checkout.balance)}</span>
+          <span className="fine reserve-checkout__balance-label">
+            {t(($) => $.tickets.checkout.balance)}
+          </span>
           {sui.problem ? (
             <span role="alert">{sui.problem}</span>
           ) : jpyc.error ? (
