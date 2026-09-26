@@ -29,7 +29,7 @@ import { makeSticker, type SealedSticker } from "./sealing/makeSticker";
 import { SealCeremony } from "./sealing/SealCeremony";
 import type { Box } from "./sealing/sealTimeline";
 import { encodeTimelapse, gzipTimelapse } from "./sealing/timelapse";
-import { loadKeptSession, SessionKeeper, type KeptSession } from "./session/keptSession";
+import { keptColor, loadKeptSession, SessionKeeper, type KeptSession } from "./session/keptSession";
 import {
   ARM_WINDOW_MS,
   FRESH_SESSION,
@@ -42,7 +42,7 @@ import { useSessionClock } from "./session/useSessionClock";
 import { TimerDot, type TimerDotHandle } from "./TimerDot";
 import { ColorSheet } from "./tools/ColorSheet";
 import { HistoryButtons } from "./tools/HistoryButtons";
-import { FIRST_COLOR, FIRST_RECENT, withRecent } from "./tools/palette";
+import { FIRST_RECENT, startingColor, withRecent } from "./tools/palette";
 import { SizeRail } from "./tools/SizeRail";
 import { SmoothingBar } from "./tools/SmoothingBar";
 import { ToolStrip, type Panel } from "./tools/ToolStrip";
@@ -110,7 +110,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const smoothingBarId = useId();
 
   const [tool, setTool] = useState<Tool>("brush");
-  const [color, setColor] = useState(FIRST_COLOR);
+  const [color, setColor] = useState(() => startingColor());
+  // The color this drawing started in. The next drawing starts in another.
+  const startedIn = useRef(color);
   const [recent, setRecent] = useState(FIRST_RECENT);
   const [sizes, setSizes] = useState(FIRST_SIZES);
   const [smoothing, setSmoothing] = useState(FIRST_SMOOTHING);
@@ -164,7 +166,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       case "resume-clock":
         clock.resume();
         return;
-      case "reset-sheet":
+      case "reset-sheet": {
         canvas.current?.reset();
         clock.reset();
         keeper.wipe();
@@ -177,7 +179,12 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         setSealed(null);
         setSealProblem(null);
         setStartProblem(null);
+        // A fresh sheet starts in a new color, whatever the last one ended in.
+        const next = startingColor([startedIn.current, color]);
+        startedIn.current = next;
+        setColor(next);
         return;
+      }
     }
   }
 
@@ -325,6 +332,12 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       // Nothing drawn and no time counted: Start spent the ticket and the clock still waits.
       const drawn = kept.ops.length > 0 || kept.elapsedMs > 0;
       canvas.current?.load(kept.ops);
+      // It keeps its own color rather than the one a fresh sheet would start in.
+      const own = keptColor(kept.ops);
+      if (own) {
+        setColor(own);
+        startedIn.current = own;
+      }
       keeper.resume(kept.ticket, kept.ops);
       ticket.current = kept.ticket;
       send({ type: "restored", drawn });
