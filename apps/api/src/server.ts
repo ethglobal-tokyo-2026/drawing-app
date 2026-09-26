@@ -8,6 +8,8 @@ import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { z } from "zod";
 import { createServer } from "./app.ts";
+import { chatMenuFromEnvironment } from "./chatMenu/fromEnvironment.ts";
+import { startMidnightBatches } from "./chatMenu/midnight.ts";
 import type { AppDeps, EnsDeps } from "./deps.ts";
 import { logInfo } from "./diagnostics.ts";
 import { createNamingQueue } from "./ens/naming.ts";
@@ -37,6 +39,11 @@ const envSchema = z.object({
   JPYC_DECIMALS: z.coerce.number().int().nonnegative(),
   JPYC_PAYMENT_PACKAGE: z.string().regex(/^0x[0-9a-f]{64}$/),
   JPYC_PAYMENT_VAULT: z.string().regex(/^0x[0-9a-f]{64}$/),
+  // The chat menu: the Messaging API channel's ID and secret, and deploy/line/menus.json. Without
+  // them, the menu is off.
+  LINE_MESSAGING_CHANNEL_ID: z.string().optional(),
+  LINE_MESSAGING_CHANNEL_SECRET: z.string().optional(),
+  LINE_CHAT_MENUS_FILE: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -115,10 +122,20 @@ const chain = (() => {
   return { mint, giftChain, smartWallets, ens };
 })();
 
+const clock = { now: () => new Date() };
+const chatMenu = chatMenuFromEnvironment({
+  db,
+  clock,
+  devSignIn: env.DEV_SIGN_IN,
+  channelId: env.LINE_MESSAGING_CHANNEL_ID,
+  channelSecret: env.LINE_MESSAGING_CHANNEL_SECRET,
+  menusFile: env.LINE_CHAT_MENUS_FILE,
+});
+
 const deps: AppDeps = {
   db,
   sessionSecret: env.SESSION_SECRET,
-  clock: { now: () => new Date() },
+  clock,
   ids: { uuid: () => randomUUID() },
   line: chooseLineVerifier(env.DEV_SIGN_IN, createLineVerifier(env.LINE_CHANNEL_ID)),
   images,
@@ -131,9 +148,15 @@ const deps: AppDeps = {
     vault: env.JPYC_PAYMENT_VAULT,
   }),
   serverLog: journalLog,
+  lineChatMenu: chatMenu.lineChatMenu,
 };
 
 logInfo("api.configured", { mode: env.STICKER_CHAIN_MODE });
+
+// The chat menu's batch at each midnight, Tokyo time, and today's now if it hasn't run.
+if (chatMenu.on) {
+  startMidnightBatches({ db, clock, ...chatMenu.on, chatMenu: chatMenu.lineChatMenu });
+}
 
 // Only a proxy on this machine reaches it: Vite's in development, HAProxy's on the box.
 serve(
