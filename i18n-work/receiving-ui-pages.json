@@ -1,14 +1,14 @@
 {
   "receiving.title": {
-    "where": "Receive gift dialog, once the gift's preview names the giver: the dialog's name for assistive tech and LINE's header while it's open",
+    "where": "Receive gift dialog, once the gift's preview names the giver: LINE's header and the dialog's name for assistive tech",
     "ja": "{{name}}さんからのギフト"
   },
   "receiving.title_unknownGiver": {
-    "where": "Receive gift dialog, while the preview is loading or when a refusal came without the giver: the dialog's name and LINE's header",
+    "where": "Receive gift dialog, while the gift loads, when loading it failed, or on a refusal that came without the giver: LINE's header and the dialog's name for assistive tech",
     "ja": "ギフト"
   },
   "receiving.gift.title": {
-    "where": "Receive gift dialog, sealed bag through the reveal: the heading beside the giver's picture",
+    "where": "Receive gift dialog, from the sealed bag through Accept: the heading beside the giver's picture",
     "ja": "{{name}}さんからシールが届きました"
   },
   "receiving.gift.pullTabHint": {
@@ -45,7 +45,7 @@
   },
   "receiving.termsLine": {
     "where": "Receive gift dialog, Accept sheet: the small line at the bottom, naming the giver, with links to the Terms and Privacy Policy pages",
-    "ja": "受け取ると、あなたのLINEの名前とプロフィール画像が<name/>さんに表示されます。<terms>利用規約</terms>と<privacy>プライバシーポリシー</privacy>に同意したものとみなされます。"
+    "ja": "受け取ると、<name/>さんにあなたのLINEの名前とプロフィール画像が表示され、<terms>利用規約</terms>と<privacy>プライバシーポリシー</privacy>に同意したことになります。"
   },
   "receiving.refusals.groupChat.title": {
     "where": "Gift refusal screen, when the gift message was opened in a group chat: the title",
@@ -57,11 +57,11 @@
   },
   "receiving.refusals.groupChat.line": {
     "where": "Gift refusal screen, when the gift message was opened in a group chat: the line under the title",
-    "ja": "ギフトは、送られた1対1のトークでしかひらけません。{{name}}さんからあなたに届いたギフトなら、そちらでひらいてください。"
+    "ja": "ギフトは、送られてきた1対1のトークでしかひらけません。{{name}}さんからあなたに届いたギフトなら、そのトークでひらいてください。"
   },
   "receiving.refusals.groupChat.line_unknownGiver": {
     "where": "Gift refusal screen, when the gift message was opened in a group chat and the refusal came without the giver: the line under the title",
-    "ja": "ギフトは、送られた1対1のトークでしかひらけません。贈り主からあなたに届いたギフトなら、そちらでひらいてください。"
+    "ja": "ギフトは、送られてきた1対1のトークでしかひらけません。贈り主からあなたに届いたギフトなら、そのトークでひらいてください。"
   },
   "receiving.refusals.alreadyReceived.title": {
     "where": "Gift refusal screen, when the gift was already received: the title, over the open, empty bag",
@@ -77,7 +77,7 @@
   },
   "receiving.refusals.ownGift.line": {
     "where": "Gift refusal screen, when the giver opens their own gift message: the line under the title",
-    "ja": "ひらけるのは、贈った友だちだけです。"
+    "ja": "ひらけるのは、贈り先の友だちだけです。"
   },
   "receiving.refusals.takenBack.title": {
     "where": "Gift refusal screen, when the giver took the gift back before anyone received it: the title",
@@ -144,7 +144,7 @@
     "ja": "LINEに戻る"
   },
   "receiving.goToStickerBoard": {
-    "where": "Gift refusal screen: the button when the gift was already received or is your own, and the way out in place of Back to LINE outside LINE's app",
+    "where": "Gift refusal screen: the button when the gift was already received or is your own; outside LINE's app, also in Back to LINE's place",
     "ja": "自分のシールボードへ"
   },
   "receiving.tryAgain": {
@@ -157,22 +157,22 @@
   },
   "receiving.sendGratitude.line": {
     "where": "Send gratitude sheet, when the giver isn't the sticker's Original Artist: the line under the title",
-    "ja": "{{name}}さんからのシールが、シールボードに貼られました。感謝に期限はありません。"
+    "ja": "{{name}}さんからのシールが、シールボードに貼られました。感謝はいつでも送れます。"
   },
   "receiving.sendGratitude.lineFromOriginalArtist": {
     "where": "Send gratitude sheet, when the giver is the sticker's Original Artist: the line under the title, with their drawing time",
-    "ja": "シールボードに貼られました。<name/>さんが<duration/>でかいたシールです。感謝に期限はありません。"
+    "ja": "シールボードに貼られました。<name/>さんが<duration/>でかいたシールです。感謝はいつでも送れます。"
   },
   "receiving.sendGratitude.send": {
     "where": "Send gratitude sheet: the pink key that starts the Gratitude Mini-game for the giver",
     "ja": "感謝を送る"
   },
   "receiving.sendGratitude.later": {
-    "where": "Send gratitude sheet: the quiet link that closes the sheet without sending gratitude",
+    "where": "Send gratitude sheet: the quiet link under Send gratitude, which closes the sheet without sending gratitude",
     "ja": "あとで"
   },
   "ui.sheet.close": {
-    "where": "Every bottom sheet: the perforation's name for assistive tech, a button that closes the sheet when tapped or dragged down; label is the sheet's name",
+    "where": "Every bottom sheet, such as Accept and Send gratitude: the perforation's name for assistive tech, a button that closes the sheet when tapped or dragged down; {{label}} is the sheet's name",
     "ja": "「{{label}}」を閉じる"
   },
   "pages.terms": {
