@@ -1,5 +1,6 @@
 import { Vibrate } from "@phosphor-icons/react";
 import { useEffect, useRef } from "react";
+import { useTranslation } from "../i18n/react";
 import { Key } from "../ui/Key";
 import { QuietLink } from "../ui/QuietLink";
 import { Sheet } from "../ui/Sheet";
@@ -12,6 +13,7 @@ import "./motion-permission-card.css";
  * the release, so Allow asks on pointerup as well; asking twice doesn't prompt twice.
  */
 export function MotionPermissionCard() {
+  const { t } = useTranslation();
   const permission = useMotionPermission();
   const root = useRef<HTMLDivElement>(null);
   // The card appears with no other way in but a tap, so Allow takes focus as soon as it's shown.
@@ -21,16 +23,13 @@ export function MotionPermissionCard() {
   if (permission !== "unasked") return null;
   const allow = () => void askForMotion();
   return (
-    <Sheet label="Motion permission" onClose={declineMotion}>
+    <Sheet label={t(($) => $.app.motionPermission.label)} onClose={declineMotion}>
       <div className="motion-card" ref={root}>
-        <p className="motion-card__text">
-          Sticker Board uses motion for some animations and interactions in the app. Would you like
-          to grant permissions for motion controls?
-        </p>
+        <p className="motion-card__text">{t(($) => $.app.motionPermission.question)}</p>
         <Key icon={<Vibrate />} onPointerUp={allow} onClick={allow} data-autofocus>
-          Allow
+          {t(($) => $.app.motionPermission.allow)}
         </Key>
-        <QuietLink onClick={declineMotion}>Don’t allow</QuietLink>
+        <QuietLink onClick={declineMotion}>{t(($) => $.app.motionPermission.dontAllow)}</QuietLink>
       </div>
     </Sheet>
   );
