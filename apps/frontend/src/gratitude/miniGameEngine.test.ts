@@ -126,15 +126,8 @@ const motion = (ax: number, t = performance.now()) => {
   });
   window.dispatchEvent(e);
 };
-/**
- * A hard shake in a rhythm: `samples` reversals, `gapMs` apart, from `at` without time passing. The
- * phone rests first for longer than phoneMotion holds its first samples back.
- */
+/** A hard shake in a rhythm: `samples` reversals, `gapMs` apart, from `at` without time passing. */
 const shake = async (samples: number, gapMs = 100, at?: number) => {
-  if (at === undefined) {
-    motion(0);
-    await play(600);
-  } else motion(0, at - 600);
   for (let i = 0; i < samples; i++) {
     if (at === undefined) {
       await play(gapMs);
