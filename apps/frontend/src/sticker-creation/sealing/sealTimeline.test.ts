@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { ceremonyTime, flight, sealFrame, T, TOTAL, type SealFrame } from "./sealTimeline";
+import {
+  ceremonyTime,
+  cutterAt,
+  flight,
+  HOLD,
+  sealFrame,
+  T,
+  TOTAL,
+  type SealFrame,
+} from "./sealTimeline";
 
 // A 300 × 260 sticker on the sheet, and the card's slot lower down.
 const box = { x: 40, y: 120, w: 300, h: 260 };
@@ -55,10 +64,41 @@ describe("sealTimeline", () => {
     expect(frameAt(TOTAL).done).toBe(true);
   });
 
-  it("jumps to the end when skipped, and starts there under reduced motion", () => {
-    expect(ceremonyTime(400, { skipped: true, reduced: false })).toBe(TOTAL);
-    expect(ceremonyTime(0, { skipped: false, reduced: true })).toBe(TOTAL);
-    expect(ceremonyTime(400, { skipped: false, reduced: false })).toBe(400);
-    expect(ceremonyTime(TOTAL + 900, { skipped: false, reduced: false })).toBe(TOTAL);
+  it("waits with the cut made, before anything that says it's sealed", () => {
+    const f = frameAt(HOLD);
+    expect(f.cut).toEqual({ progress: 1, alpha: 1 });
+    expect(f.pour.opacity).toBe(0);
+    expect(f.tint).toBe(0);
+    expect(f.lifted).toBe(false);
+    expect(f.card.opacity).toBe(0);
+  });
+
+  it("waits at the cut until the seal is recorded, then runs to the end", () => {
+    const waiting = { recorded: false, reduced: false };
+    const recorded = { recorded: true, reduced: false };
+    expect(ceremonyTime(0, 400, waiting)).toBe(400);
+    expect(ceremonyTime(600, 400, waiting)).toBe(HOLD);
+    expect(ceremonyTime(HOLD, 20_000, waiting)).toBe(HOLD);
+    expect(ceremonyTime(HOLD, 400, recorded)).toBe(HOLD + 400);
+    // Recorded before the cut is made, it never waits.
+    expect(ceremonyTime(600, 400, recorded)).toBe(1000);
+    expect(ceremonyTime(TOTAL - 10, 400, recorded)).toBe(TOTAL);
+  });
+
+  it("starts at the wait under reduced motion, and goes to the end once recorded", () => {
+    expect(ceremonyTime(0, 16, { recorded: false, reduced: true })).toBe(HOLD);
+    expect(ceremonyTime(HOLD, 16, { recorded: true, reduced: true })).toBe(TOTAL);
+  });
+
+  it("keeps the cutter running round the cut while it waits, from rest, a lap at a time", () => {
+    // 840 px at the cutter's speed is a 2 s lap, which starts after half the 500 ms ramp.
+    expect(cutterAt(0, 840)).toBe(0);
+    expect(cutterAt(1250, 840)).toBeCloseTo(0.5);
+    expect(cutterAt(2250, 840)).toBeCloseTo(0);
+    // It gets up to speed: its first 100 ms cover less than 100 ms at full speed.
+    expect(cutterAt(100, 840)).toBeLessThan(cutterAt(1100, 840) - cutterAt(1000, 840));
+    // However long or short the line, a lap takes 1.3–2.6 s.
+    expect(cutterAt(250 + 1300, 20_000)).toBeCloseTo(0.5);
+    expect(cutterAt(250 + 650, 40)).toBeCloseTo(0.5);
   });
 });
