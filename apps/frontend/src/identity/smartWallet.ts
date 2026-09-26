@@ -1,4 +1,5 @@
 import type { Address, Hash, Hex } from "viem";
+import { startPrivy } from "./privyStart";
 
 export interface SmartWalletClient {
   address: Address;
@@ -15,7 +16,9 @@ export function setSmartWallet(wallet: SmartWalletClient | null) {
   listeners.forEach((listener) => listener());
 }
 
+/** Sealing, giving and receiving wait here, and start Privy if the board hasn't yet. */
 export function waitForSmartWallet(): Promise<SmartWalletClient> {
+  startPrivy("wallet-needed");
   if (active) return Promise.resolve(active);
   return new Promise((resolve, reject) => {
     const ready = () => {

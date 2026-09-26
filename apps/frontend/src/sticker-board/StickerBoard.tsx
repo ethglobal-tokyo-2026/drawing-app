@@ -69,6 +69,7 @@ import {
   type Placement,
 } from "./placement";
 import { BoardLoading } from "./BoardLoading";
+import { useSettleBoard } from "./boardSettled";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
 import { readingOrder } from "./stickerOrder";
@@ -513,6 +514,12 @@ export function StickerBoard({ freshId, onDraw }: Props) {
     ? readingOrder(onBoard.map((s) => ({ id: s.id, ...toPx(field, s.placement) })))
     : [];
   const inOrder = order.flatMap((id) => onBoard.filter((s) => s.id === id));
+  // Its stickers in and its chips played, the board lets heavier work start, like Privy's SDK.
+  useSettleBoard(stage, {
+    stickers: field && stickers ? inOrder.map((s) => s.id).join(" ") : null,
+    failed: board.state === "failed",
+    chipsPlaying: chips.length > 0,
+  });
   // The stickers' one Tab stop: the one last focused, else the selected one, else the first.
   const tabbable = [tabStop, selected].find((id) => id && order.includes(id)) ?? order[0];
   const chosen = onBoard.find((s) => s.id === selected);

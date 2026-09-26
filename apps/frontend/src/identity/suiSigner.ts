@@ -1,6 +1,7 @@
 import { Signer } from "@mysten/sui/cryptography";
 import { Ed25519PublicKey } from "@mysten/sui/keypairs/ed25519";
 import { fromBase58, fromBase64, fromHex, normalizeSuiAddress, toHex } from "@mysten/sui/utils";
+import { startPrivy } from "./privyStart";
 import { suiWalletFailure } from "./suiWallet";
 
 let signer: Signer | null = null;
@@ -13,7 +14,9 @@ export function setSuiSigner(next: Signer | null) {
   signerListeners.forEach((l) => l());
 }
 
+/** Paying for reserve tickets waits here, and starts Privy if nothing has yet. */
 export function waitForSuiSigner(): Promise<Signer> {
+  startPrivy("wallet-needed");
   if (signer) return Promise.resolve(signer);
   return new Promise((resolve, reject) => {
     const ready = () => {
