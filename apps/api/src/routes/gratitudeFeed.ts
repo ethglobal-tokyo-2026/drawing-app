@@ -1,13 +1,26 @@
 import { Hono } from "hono";
 import type { AppDeps } from "../deps.ts";
 import { apiError, validate } from "../errors.ts";
-import { giftIdParam, gratitudeWithGiver, markSeen, unseenGratitude } from "../gratitude/feed.ts";
+import {
+  giftIdParam,
+  gratitudeWithGiver,
+  gratitudeWithReplay,
+  markSeen,
+  unseenGratitude,
+} from "../gratitude/feed.ts";
 import type { AppEnv } from "../session.ts";
 
 /** The giver's side of gratitude: unseen combos, one combo with its replay, and marking one watched. */
 export const gratitudeFeedRoutes = (deps: AppDeps) =>
   new Hono<AppEnv>()
     .get("/unseen", (c) => c.json(unseenGratitude(deps.db, c.var.userId, deps.images.urls), 200))
+    .get("/:giftId", validate("param", giftIdParam), (c) => {
+      const { giftId } = c.req.valid("param");
+      const thanks = gratitudeWithReplay(deps.db, giftId);
+      if (!thanks)
+        return apiError(c, 404, "gratitude_not_found", `No gratitude for gift ${giftId}`);
+      return c.json(thanks, 200);
+    })
     .post("/:giftId/seen", validate("param", giftIdParam), (c) => {
       const { giftId } = c.req.valid("param");
       const found = gratitudeWithGiver(deps.db, giftId);

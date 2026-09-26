@@ -1,5 +1,6 @@
 import { gifts, gratitude, users, type Db } from "@drawing-app/db";
 import { and, asc, eq, isNull } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 import { bytes32Schema, personSchema, toPerson, type StickerImages } from "../shapes.ts";
 import {
@@ -9,8 +10,10 @@ import {
   toGratitude,
   type Gratitude,
 } from "../views.ts";
+import { gunzipReplay, replayV1Schema } from "./replay.ts";
 
-// The giver's side of gratitude: the pink tag's unseen feed, and marking a combo watched.
+// The giver's side of gratitude: the pink tag's unseen feed, one combo with its replay, and marking a
+// combo watched.
 
 /** A gift ID that isn't 0x and 64 lowercase hex digits is invalid_request. */
 export const giftIdParam = z.object({ giftId: bytes32Schema });
@@ -26,6 +29,15 @@ export type UnseenGratitude = z.infer<typeof unseenGratitudeSchema>;
 
 /** POST /api/gratitude/:giftId/seen's answer. */
 export const seenGratitudeSchema = z.object({ gratitude: gratitudeSchema });
+
+/** GET /api/gratitude/:giftId's answer. */
+export const gratitudeWithReplaySchema = z.object({
+  gratitude: gratitudeSchema,
+  replay: replayV1Schema,
+  giver: personSchema,
+  receiver: personSchema,
+});
+export type GratitudeWithReplay = z.infer<typeof gratitudeWithReplaySchema>;
 
 /** The pink tag's feed: gratitude on gifts the giver gave that they haven't watched, oldest first. */
 export function unseenGratitude(
@@ -72,4 +84,28 @@ export function markSeen(db: Db, thanks: typeof gratitude.$inferSelect, now: Dat
   if (thanks.seenByGiverAt !== null) return toGratitude(thanks);
   db.update(gratitude).set({ seenByGiverAt: now }).where(eq(gratitude.giftId, thanks.giftId)).run();
   return toGratitude({ ...thanks, seenByGiverAt: now });
+}
+
+/**
+ * A gift's gratitude with its replay, and who gave and received the gift; null when nobody has
+ * thanked it. Any signed-in person may read it.
+ */
+export function gratitudeWithReplay(db: Db, giftId: string): GratitudeWithReplay | null {
+  const giverUsers = alias(users, "giver");
+  const receiverUsers = alias(users, "receiver");
+  const row = db
+    .select({ thanks: gratitude, giver: giverUsers, receiver: receiverUsers })
+    .from(gratitude)
+    .innerJoin(gifts, eq(gifts.id, gratitude.giftId))
+    .innerJoin(giverUsers, eq(giverUsers.id, gifts.giverId))
+    .innerJoin(receiverUsers, eq(receiverUsers.id, gifts.receiverId))
+    .where(eq(gratitude.giftId, giftId))
+    .get();
+  if (!row) return null;
+  return {
+    gratitude: toGratitude(row.thanks),
+    replay: gunzipReplay(row.thanks.replay),
+    giver: toPerson(row.giver),
+    receiver: toPerson(row.receiver),
+  };
 }

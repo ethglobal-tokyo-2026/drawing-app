@@ -3,7 +3,12 @@ import { insertUser, packGift } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { refusalOf } from "../gifts/testGifts.ts";
-import { seenGratitudeSchema, unseenGratitudeSchema } from "../gratitude/feed.ts";
+import {
+  gratitudeWithReplaySchema,
+  seenGratitudeSchema,
+  unseenGratitudeSchema,
+} from "../gratitude/feed.ts";
+import { gzipReplay, type ReplayV1 } from "../gratitude/replay.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { insertGratitude, insertSealedSticker, receiveGift } from "../testing/rows.ts";
 
@@ -11,6 +16,20 @@ const HOUR_MS = 60 * 60 * 1000;
 /** When the older and newer combos were recorded. */
 const OLDER = new Date("2026-09-25T01:00:00.000Z");
 const NEWER = new Date("2026-09-25T02:00:00.000Z");
+
+/** A tap combo as played: a counted touch, then one that didn't count, then sent. */
+const REPLAY: ReplayV1 = {
+  v: 1,
+  seed: 20_260_926,
+  intensity: 0.5,
+  stage: [390, 844],
+  durationMs: 1200,
+  endReason: "sent",
+  switchedAtHit: null,
+  hits: [0, 5000, 5000, 1, 250, 100, -200, 0],
+  strokes: [],
+  shakes: [],
+};
 
 let test: TestApp;
 beforeEach(async () => {
@@ -38,6 +57,7 @@ const request = async (userId: string, method: "GET" | "POST", path: string) =>
   test.app.request(`/api/gratitude${path}`, { method, headers: await test.signInAs(userId) });
 
 const markWatched = (userId: string, giftId: string) => request(userId, "POST", `/${giftId}/seen`);
+const readGratitude = (userId: string, giftId: string) => request(userId, "GET", `/${giftId}`);
 
 const storedSeenAt = (giftId: string) =>
   test.db
@@ -76,6 +96,24 @@ describe("GET /api/gratitude/unseen", () => {
   });
 });
 
+describe("GET /api/gratitude/:giftId", () => {
+  it("shows anyone signed in the gratitude, its replay, and who gave and received the gift", async () => {
+    const giverId = insertUser(test.db);
+    const receiverId = insertUser(test.db);
+    const { giftId } = thankedGift(giverId, receiverId, { replay: gzipReplay(REPLAY) });
+
+    const response = await readGratitude(insertUser(test.db), giftId);
+    expect(response.status).toBe(200);
+    const answer = gratitudeWithReplaySchema.parse(await response.json());
+    expect(answer).toMatchObject({
+      gratitude: { giftId },
+      giver: { id: giverId },
+      receiver: { id: receiverId },
+    });
+    expect(answer.replay).toEqual(REPLAY);
+  });
+});
+
 describe("POST /api/gratitude/:giftId/seen", () => {
   it("marks the gratitude watched at the clock's time, and keeps that first time when it's watched again", async () => {
     const giverId = insertUser(test.db);
@@ -107,7 +145,10 @@ describe("POST /api/gratitude/:giftId/seen", () => {
 });
 
 /** The routes that name one gift's gratitude, as `userId` sends them. */
-const oneGratitudeRoutes = [{ route: "POST /api/gratitude/:giftId/seen", send: markWatched }];
+const oneGratitudeRoutes = [
+  { route: "GET /api/gratitude/:giftId", send: readGratitude },
+  { route: "POST /api/gratitude/:giftId/seen", send: markWatched },
+];
 
 describe.each(oneGratitudeRoutes)("$route", ({ send }) => {
   it("refuses a received gift nobody thanked with gratitude_not_found", async () => {
@@ -133,6 +174,7 @@ describe("the giver's gratitude routes", () => {
     const { giftId } = thankedGift(insertUser(test.db), insertUser(test.db));
     const responses = [
       await test.app.request("/api/gratitude/unseen"),
+      await test.app.request(`/api/gratitude/${giftId}`),
       await test.app.request(`/api/gratitude/${giftId}/seen`, { method: "POST" }),
     ];
     for (const response of responses) {
