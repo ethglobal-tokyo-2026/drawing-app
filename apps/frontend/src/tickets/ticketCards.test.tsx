@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { Tickets } from "@drawing-app/api/client";
+import type { TicketQuote, Tickets } from "@drawing-app/api/client";
 import { act, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyApi, FRESH_TICKETS, renderWithApi } from "../api/testing";
@@ -129,21 +129,38 @@ describe("StartDrawing", () => {
   });
 });
 
+/** Today's prices for two packs, at 300 yen a SUI. */
+const QUOTE: TicketQuote = {
+  suiYen: "300",
+  quotedAt: EVENING.toISOString(),
+  expiresAt: new Date(EVENING.getTime() + 60_000).toISOString(),
+  packs: [
+    { tickets: 1, priceYen: 100, discountPercent: 0, priceMist: "333333334" },
+    { tickets: 3, priceYen: 270, discountPercent: 10, priceMist: "900000000" },
+  ],
+};
+
 describe("TicketShop", () => {
+  it("outlines the balance and the packs until the wallet and today's prices are in", async () => {
+    const api = emptyApi({
+      ticketQuote: () => new Promise((resolve) => setTimeout(() => resolve(QUOTE), 1000)),
+    });
+    await render(<TicketShop layout="page" onDraw={onDraw} />, api);
+    const skeletons = () => document.querySelectorAll(".skeleton").length;
+    expect(skeletons()).toBeGreaterThan(1);
+    expect(document.querySelector(".ticket-shop__packs [role=status]")?.textContent).toBe(
+      "Getting today’s prices…",
+    );
+    await settle(3000);
+    expect(skeletons()).toBe(0);
+    expect(buttonNamed("3 tickets")).toBeDefined();
+  });
+
   it("buys the chosen pack with SUI at the quote, and shows the tickets the server added", async () => {
     const bought = vi.fn(() => Promise.resolve(tickets(3, 4)));
     const api = emptyApi({
       tickets: () => Promise.resolve(tickets(3, 1)),
-      ticketQuote: () =>
-        Promise.resolve({
-          suiYen: "300",
-          quotedAt: EVENING.toISOString(),
-          expiresAt: new Date(EVENING.getTime() + 60_000).toISOString(),
-          packs: [
-            { tickets: 1, priceYen: 100, discountPercent: 0, priceMist: "333333334" },
-            { tickets: 3, priceYen: 270, discountPercent: 10, priceMist: "900000000" },
-          ],
-        }),
+      ticketQuote: () => Promise.resolve(QUOTE),
       buyTickets: bought,
     });
     await render(<TicketShop layout="card" onDraw={onDraw} onClose={onBoard} />, api);

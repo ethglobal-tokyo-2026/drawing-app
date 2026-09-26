@@ -374,6 +374,14 @@
 
 /* The empty board: a quiet die-cut spot in the field, where the first sticker lands. Draw is the
    way in. The board places it on that sticker's spot. */
+/* While the stickers load: faint die-cut shapes where stickers usually sit (BoardLoading.tsx). */
+.board-loading-sticker {
+  position: absolute;
+  translate: -50% -50%;
+  border-radius: 52% 48% 46% 54% / 50% 56% 44% 50%;
+  opacity: 0.7;
+}
+
 .board-blank {
   position: absolute;
   left: 50%;

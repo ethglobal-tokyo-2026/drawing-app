@@ -73,6 +73,32 @@ export function createStickerChain({
   const publicClient = createPublicClient({ chain: sepolia, transport });
   const walletClient = createWalletClient({ chain: sepolia, transport, account: sealerAccount });
 
+  // Historical state locates the transition without asking a provider to search the whole chain.
+  const eventBlock = async (contract: Address, happened: (block: bigint) => Promise<boolean>) => {
+    let first = 0n;
+    let last = await publicClient.getBlockNumber();
+    if (!(await happened(last))) {
+      throw new Error("The confirmed chain state is not visible at the latest block");
+    }
+    const deadline = Date.now() + 30_000;
+    let probes = 0;
+    while (first < last) {
+      if (Date.now() >= deadline) throw new Error("Finding the Sticker event block timed out");
+      const block = (first + last) / 2n;
+      const code = await publicClient.getCode({ address: contract, blockNumber: block });
+      if (code && code !== "0x" && (await happened(block))) last = block;
+      else first = block + 1n;
+      probes += 1;
+      if (probes % 8 === 0) {
+        logInfo("chain.event_lookup.progress", {
+          contractAddress: contract,
+          blockNumber: block.toString(),
+        });
+      }
+    }
+    return first;
+  };
+
   const mint: Mint = async (sticker) => {
     const fields = {
       stickerId: sticker.stickerId,
@@ -131,13 +157,25 @@ export function createStickerChain({
     let txHash = "transactionHash" in result ? result.transactionHash : undefined;
     if (!txHash) {
       txHash = await diagnosticStep("chain.mint.event_lookup", fields, async () => {
+        const stickerId = keccak256(stringToBytes(sticker.stickerId));
+        const block = await eventBlock(
+          stickerAddress,
+          async (blockNumber) =>
+            (await publicClient.readContract({
+              address: stickerAddress,
+              abi: stickerNftAbi,
+              functionName: "tokenIdForSticker",
+              args: [stickerId],
+              blockNumber,
+            })) !== 0n,
+        );
         const [event] = await publicClient.getContractEvents({
           address: stickerAddress,
           abi: stickerNftAbi,
           eventName: "StickerSealed",
-          args: { stickerId: keccak256(stringToBytes(sticker.stickerId)) },
-          fromBlock: 0n,
-          toBlock: "latest",
+          args: { stickerId },
+          fromBlock: block,
+          toBlock: block,
         });
         return event?.transactionHash;
       });
@@ -212,15 +250,26 @@ export function createStickerChain({
     const events = await diagnosticStep(
       "chain.claim.event_lookup",
       { giftId, chainId: sepolia.id, contractAddress: escrowAddress },
-      () =>
-        publicClient.getContractEvents({
+      async () => {
+        const block = await eventBlock(escrowAddress, async (blockNumber) => {
+          const gift = await publicClient.readContract({
+            address: escrowAddress,
+            abi: stickerGiftEscrowAbi,
+            functionName: "gifts",
+            args: [giftId],
+            blockNumber,
+          });
+          return gift[5] === 2;
+        });
+        return publicClient.getContractEvents({
           address: escrowAddress,
           abi: stickerGiftEscrowAbi,
           eventName: "GiftClaimed",
           args: { giftId },
-          fromBlock: 0n,
-          toBlock: "latest",
-        }),
+          fromBlock: block,
+          toBlock: block,
+        });
+      },
     );
     const event = events.at(-1);
     if (!event) throw new Error(`Claimed gift ${giftId} has no GiftClaimed event`);

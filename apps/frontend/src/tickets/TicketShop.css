@@ -28,6 +28,12 @@
   text-align: right;
 }
 
+/* The balance's placeholder sits where the figure will, at the well's right. */
+.ticket-shop__loading {
+  display: flex;
+  align-self: center;
+}
+
 .ticket-shop__packs {
   display: grid;
   gap: 8px;
