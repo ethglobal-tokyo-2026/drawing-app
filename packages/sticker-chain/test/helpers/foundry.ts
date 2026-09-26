@@ -10,6 +10,10 @@ import { mnemonicToAccount, type HDAccount } from "viem/accounts";
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const mnemonic = "test test test test test test test test test test test junk";
 
+// Anvil can answer a sent transaction before mining it, so a receipt may need a second poll; viem's default
+// 4 s between polls suits a real chain's blocks, not a test's time limit.
+export const anvilPollingInterval = 50;
+
 interface FoundryArtifact {
   abi: Abi;
   bytecode: { object: Hex };

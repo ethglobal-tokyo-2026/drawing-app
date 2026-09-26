@@ -12,7 +12,12 @@ import {
 import { sepolia } from "viem/chains";
 import { afterEach, describe, expect, it } from "vitest";
 import { createGiftAuthorizer, createGiftClaim, prepareGiftTransfer } from "../src/gift-sticker.js";
-import { readFoundryArtifact, startAnvil, type AnvilInstance } from "./helpers/foundry.js";
+import {
+  anvilPollingInterval,
+  readFoundryArtifact,
+  startAnvil,
+  type AnvilInstance,
+} from "./helpers/foundry.js";
 
 const stickerArtifact = readFoundryArtifact("StickerNFT", "StickerNFT");
 const escrowArtifact = readFoundryArtifact("StickerGiftEscrow", "StickerGiftEscrow");
@@ -33,7 +38,11 @@ async function setup() {
   const anvil = await startAnvil(chain.id);
   activeAnvils.push(anvil);
   const transport = http(anvil.rpcUrl);
-  const publicClient = createPublicClient({ chain, transport });
+  const publicClient = createPublicClient({
+    chain,
+    transport,
+    pollingInterval: anvilPollingInterval,
+  });
   const testClient = createTestClient({ chain, mode: "anvil", transport });
   const accounts = anvil.accounts;
   const [admin, artist, recipient, claimSigner, stranger, relayer] = accounts;
