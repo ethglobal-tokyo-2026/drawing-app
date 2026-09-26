@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReplayV1 } from "@drawing-app/api/client";
-import type { ComboRecord } from "./combo";
+import { fullBarSeconds, type ComboRecord } from "./combo";
 import { GAME_CONFIG } from "./gameConfig";
 import { mountMiniGameEngine, type MiniGameEngine } from "./miniGameEngine";
 
@@ -162,6 +162,8 @@ const mash = async (times: number, gapMs = 70) => {
   }
 };
 const live = () => document.getElementById("live")?.textContent;
+/** Long enough for one tap's combo to run its bar out. */
+const ONE_TAP_RUNS_OUT_MS = 3000;
 
 beforeEach(() => {
   vi.useFakeTimers({
@@ -222,9 +224,9 @@ afterEach(() => {
 });
 
 describe("mountMiniGameEngine", () => {
-  it("passes a one-tap send's replay out with its record", async () => {
+  it("passes a one-tap combo's replay out with its record", async () => {
     pressHeart();
-    await play(GAME_CONFIG.catchWindowMs + 200);
+    await play(ONE_TAP_RUNS_OUT_MS);
     expect(onRecord).toHaveBeenCalledTimes(1);
     const [record, replay] = onRecord.mock.calls[0];
     expect(record.hits).toBe(1);
@@ -232,7 +234,7 @@ describe("mountMiniGameEngine", () => {
       v: 1,
       intensity: 0.7,
       durationMs: record.durationMs,
-      endReason: "sent",
+      endReason: "empty",
       switchedAtHit: null,
       strokes: [],
       shakes: [],
@@ -308,15 +310,14 @@ describe("mountMiniGameEngine", () => {
   it("disables the heart as the combo ends, so focus can't stay on it", async () => {
     pressHeart();
     expect(heartButton().disabled).toBe(false);
-    await play(GAME_CONFIG.catchWindowMs + 200);
+    await play(ONE_TAP_RUNS_OUT_MS);
     expect(heartButton().disabled).toBe(true);
   });
 
-  it("lets the catch's words stand, not the score's", async () => {
+  it("asks for more taps as the first tap starts the bar, before any score", async () => {
     pressHeart();
-    await play(100);
-    pressHeart();
-    expect(live()).toBe("Caught it. Keep tapping before the bar runs out.");
+    expect(host.dataset.phase).toBe("running");
+    expect(live()).toBe("Keep tapping before the bar runs out.");
   });
 
   it("says a tier-up's name", async () => {
@@ -347,24 +348,24 @@ describe("mountMiniGameEngine", () => {
   });
 });
 
-describe("a stroke or shake unlock after the combo has ended", () => {
-  it("plays a one-tap send's end, recorded once, when stroke unlocks after the catch window", async () => {
+describe("a stroke or shake unlock after the bar ran out", () => {
+  it("plays the ended combo's end, recorded once, when stroke unlocks after the bar ran out", async () => {
     pressHeart();
-    const late = performance.now() + GAME_CONFIG.catchWindowMs + 100;
+    const late = performance.now() + ONE_TAP_RUNS_OUT_MS;
     pointer("pointerdown", OFF_HEART.x, OFF_HEART.y, late);
     await strokeFrom(OFF_HEART, 6, 40, late);
     expect(onRecord).toHaveBeenCalledTimes(1);
-    expect(onRecord.mock.calls[0]?.[1].endReason).toBe("sent");
+    expect(onRecord.mock.calls[0]?.[1].endReason).toBe("empty");
     await play(3000);
     expect(onFinished).toHaveBeenCalledTimes(1);
     expect(onRecord).toHaveBeenCalledTimes(1);
   });
 
-  it("plays a one-tap send's end, recorded once, when shake unlocks after the catch window", async () => {
+  it("plays the ended combo's end, recorded once, when shake unlocks after the bar ran out", async () => {
     pressHeart();
-    await shake(17, 100, performance.now() + GAME_CONFIG.catchWindowMs + 100);
+    await shake(17, 100, performance.now() + ONE_TAP_RUNS_OUT_MS);
     expect(onRecord).toHaveBeenCalledTimes(1);
-    expect(onRecord.mock.calls[0]?.[1].endReason).toBe("sent");
+    expect(onRecord.mock.calls[0]?.[1].endReason).toBe("empty");
     await play(3000);
     expect(onFinished).toHaveBeenCalledTimes(1);
     expect(onRecord).toHaveBeenCalledTimes(1);
@@ -489,7 +490,7 @@ describe("shaking", () => {
   });
 });
 
-describe("the HUD before the catch", () => {
+describe("the HUD", () => {
   const text = (selector: string) => host.querySelector(selector)?.textContent;
   /** How full the bar is drawn, 0–1. */
   const fill = () => {
@@ -497,31 +498,51 @@ describe("the HUD before the catch", () => {
     return Number(/scaleX\(([\d.]+)\)/.exec(transform)?.[1]);
   };
 
-  it("shows a full bar holding the catch window, with nothing counted, before the first tap", async () => {
+  it("shows a full bar, with nothing counted, before the first tap", async () => {
     await play(100);
     expect(host.dataset.hud).toBe("on");
     expect(fill()).toBe(1);
-    expect(text(".gr-timer-s")).toBe(`${(GAME_CONFIG.catchWindowMs / 1000).toFixed(1)}s`);
+    expect(text(".gr-timer-s")).toBe(`${fullBarSeconds().toFixed(1)}s`);
     expect(text(".gr-amount")).toBe("0♡");
     expect(text(".gr-mult")).toBe("×1.0");
   });
 
-  it("empties the bar over the catch window once the heart is sent, and the catch refills it", async () => {
-    pressHeart();
-    await play(GAME_CONFIG.catchWindowMs / 2);
-    expect(fill()).toBeGreaterThan(0.35);
-    expect(fill()).toBeLessThan(0.65);
-    expect(text(".gr-amount")).toBe(`${GAME_CONFIG.gratitudePerHit}♡`);
+  it("starts the bar on the first tap, and runs it out when no tap follows", async () => {
     pressHeart();
     await play(50);
     expect(host.dataset.phase).toBe("running");
     expect(fill()).toBeGreaterThan(0.9);
+    // The amount counts up to the tap's gratitude.
+    await play(400);
+    expect(text(".gr-amount")).toBe(`${GAME_CONFIG.gratitudePerHit}♡`);
+    await play(ONE_TAP_RUNS_OUT_MS);
+    expect(fill()).toBeLessThan(0.01);
+    expect(onRecord.mock.calls[0]?.[1].endReason).toBe("empty");
+  });
+});
+
+// Last in the file: each mount seeds its own randomness, and the wall test above was written for
+// the seed its place gives it.
+describe("switching to stroke or shake after the first tap", () => {
+  it("unlocks stroke in fewer passes once the bar is running, before it runs out", async () => {
+    pressHeart();
+    pointer("pointerdown", OFF_HEART.x, OFF_HEART.y);
+    await strokeFrom(OFF_HEART, 3, 40);
+    expect(live()).toBe("Stroke unlocked.");
+    expect(onRecord).not.toHaveBeenCalled();
   });
 
-  it("runs the bar out when the heart isn't caught, and the heart is sent", async () => {
+  it("unlocks shake in fewer reversals once the bar is running, before it runs out", async () => {
     pressHeart();
-    await play(GAME_CONFIG.catchWindowMs + 50);
-    expect(fill()).toBeLessThan(0.01);
-    expect(onRecord.mock.calls[0]?.[1].endReason).toBe("sent");
+    await shake(7);
+    expect(live()).toBe("The heart is loose.");
+    expect(onRecord).not.toHaveBeenCalled();
+  });
+
+  it("keeps the full unlock before any tap", async () => {
+    pointer("pointerdown", OFF_HEART.x, OFF_HEART.y);
+    await strokeFrom(OFF_HEART, 3, 40);
+    await shake(7);
+    expect(host.dataset.phase).toBe("ready");
   });
 });

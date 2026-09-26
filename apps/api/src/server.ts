@@ -51,7 +51,12 @@ const chain = (() => {
   }
   const live = z
     .object({
-      ETHEREUM_SEPOLIA_RPC_URL: z.url(),
+      // One URL, or several separated by commas, tried in turn.
+      ETHEREUM_SEPOLIA_RPC_URL: z
+        .string()
+        .refine((value) => value.split(",").every((url) => URL.canParse(url.trim())), {
+          message: "Expected a URL, or URLs separated by commas",
+        }),
       STICKER_NFT_ADDRESS: z.string().min(1),
       STICKER_GIFT_ESCROW_ADDRESS: z.string().min(1),
       STICKER_SEALER_PRIVATE_KEY: z.string().regex(/^0x[0-9a-fA-F]{64}$/),

@@ -577,7 +577,7 @@ A sticker's detail shows where it has been, one quiet row per hand-off, newest f
 
 One experience for everyone, on plain Liner, once per hand-off.
 
-- **The combo:** one tap sends; a second catches the heart and starts a timer game. A drain bar appears full and runs down; each tap adds less time than the last. The amount counts up in Figure type beside a puffy multiplier sticker (×1 to ×8) driven by tap speed. Nothing sits on or over the heart, and the heart holds its spot.
+- **The combo:** the first tap starts a timer game. A drain bar appears full and runs down; each tap adds less time than the last. The amount counts up in Figure type beside a puffy multiplier sticker (×1 to ×8) driven by tap speed. Nothing sits on or over the heart, and the heart holds its spot.
 - **Tiers:** reached by the amount (ありがと, 照れ, ドキドキ, オーバーヒート, 昇天). Each new tier slams its name in outlined 袋文字, and pop-in words from a per-tier bank appear and go. The ground escalates from calm Liner to a blush, focus lines, heat haze and a white-out.
 - **Mini hearts:** from ドキドキ up, taps spray small pink hearts that bounce, collide and pile along the bottom before fading. A tap shoves nearby hearts away, harder the closer they are. The heart sweats hearts: a slow drip at ドキドキ, a real sweat at オーバーヒート, heavier at 昇天, all landing in the same pile with 昇天's rain.
 - **Discovery:** stroking the heart stretches it along the drag, and after three tries a tip says what to do. After the one motion opt-in, it sways with the wrist, and shaking hard says "Keep shaking!".

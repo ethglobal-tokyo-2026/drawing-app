@@ -8,6 +8,7 @@ import {
 import { seededRandom } from "../ui/seededRandom";
 import {
   createGratitudeCombo,
+  fullBarSeconds,
   type ComboEvent,
   type ComboRecord,
   type Method,
@@ -58,7 +59,7 @@ export interface MiniGameOptions {
   /** The finished combo and its replay, before its ending plays. */
   onRecord: (record: ComboRecord, replay: ReplayV1) => void;
   /** The ending has played, or the page went hidden: time for the receipt. */
-  onFinished: (ending: { caught: boolean; record: ComboRecord }) => void;
+  onFinished: (record: ComboRecord) => void;
   /** The frame loop failed and stopped. */
   onError: (message: string) => void;
 }
@@ -275,7 +276,7 @@ export function mountMiniGameEngine(
   root.dataset.tier = "";
   root.dataset.reduced = reduced ? "1" : "0";
   notePerformance("gratitude", "phase ready");
-  // The HUD shows from the start: a full bar holding the catch window's seconds, until the first tap.
+  // The HUD shows from the start: a full bar, until the first tap starts it.
   root.dataset.hud = "on";
   hud.show(true);
   /** The HUD as last drawn at ready, which holds still until the first tap. */
@@ -308,7 +309,6 @@ export function mountMiniGameEngine(
   const waits: { at: number; resolve: () => void }[] = [];
   let sweat = 0;
   let lastAnnounce = -Infinity;
-  let sendingSince = 0;
   let ending = false;
   let alive = true;
   let running = true;
@@ -346,25 +346,22 @@ export function mountMiniGameEngine(
     giverHandle: options.giverHandle,
   };
 
-  const finish = (caught: boolean, record: ComboRecord) => {
+  const finish = (record: ComboRecord) => {
     if (!alive) return;
     root.dataset.phase = "done";
     notePerformance("gratitude", "phase done");
     root.dataset.hud = "off";
     hud.show(false);
-    options.onFinished({ caught, record });
+    options.onFinished(record);
   };
 
   async function end(ended: Ended, hidden: boolean) {
-    const { record, caught } = ended;
+    const { record } = ended;
     ending = true;
     stopHints();
     root.dataset.phase = "ending";
     if (isPerformanceRecorderOn()) {
-      notePerformance(
-        "gratitude",
-        `phase ending, ${caught ? "caught" : "sent"} after ${record.hits} hits`,
-      );
+      notePerformance("gratitude", `phase ending after ${record.hits} hits`);
     }
     // The heart leaves: nothing can tap it, and focus can't stay on it.
     button.disabled = true;
@@ -374,26 +371,23 @@ export function mountMiniGameEngine(
       // The record is the app's to keep; its failure shouldn't strand the person mid-ending.
       console.error("Keeping the gratitude failed; the ending plays on", error);
     }
-    if (hidden) return finish(caught, record);
-    if (!caught) await flyHeartToGiver(endingParts, record.total);
-    else {
-      if (combo.view.tier === 4 && !reduced) await playAscension(endingParts, record.total);
-      else await flyHeartToGiver(endingParts, record.total);
-      await sighAndTidy(endingParts);
-    }
-    finish(caught, record);
+    if (hidden) return finish(record);
+    if (combo.view.tier === 4 && !reduced) await playAscension(endingParts, record.total);
+    else await flyHeartToGiver(endingParts, record.total);
+    await sighAndTidy(endingParts);
+    finish(record);
   }
 
-  const onCaught = () => {
+  const onStarted = () => {
     root.dataset.phase = "running";
     if (isPerformanceRecorderOn()) {
       notePerformance("gratitude", `phase running, ${combo.view.method}`);
     }
     root.dataset.hud = "on";
     hud.show(true);
-    // The catch's words stand before the score's; a stroke or shake that starts the combo says its own.
+    // The start's words stand before the score's; a stroke or shake that starts the combo says its own.
     lastAnnounce = play;
-    if (combo.view.method === "tap") say("Caught it. Keep tapping before the bar runs out.");
+    if (combo.view.method === "tap") say("Keep tapping before the bar runs out.");
   };
 
   const onTierUp = (tier: Tier) => {
@@ -403,7 +397,7 @@ export function mountMiniGameEngine(
     if (!reduced) heart.punch(0.035 * (0.6 + intensity));
     lettering.slamTierName(TIER_NAMES[tier].jp, TIER_NAMES[tier].en);
     if (tier === 2) effects.burst(5, heartAt);
-    // ありがと comes with the catch, whose words it leaves; each tier after it is said by name.
+    // ありがと comes with the first hit, whose words it leaves; each tier after it is said by name.
     if (tier > 0) {
       const { en } = TIER_NAMES[tier];
       lastAnnounce = play;
@@ -464,7 +458,7 @@ export function mountMiniGameEngine(
   const handle = (events: readonly ComboEvent[], x: number, y: number, hidden = false) => {
     const tierUp = events.some((e) => e.kind === "tier");
     for (const e of events) {
-      if (e.kind === "caught") onCaught();
+      if (e.kind === "started") onStarted();
       else if (e.kind === "hit") onHit(e.secondsAdded, x, y, tierUp);
       else if (e.kind === "limited") {
         // A tap past the limit still presses the heart; a stroke pass or shake reversal past it shows
@@ -684,7 +678,9 @@ export function mountMiniGameEngine(
       // Trying again: the tip stays.
       if (tipShown === "stroke") tipUntil = Math.max(tipUntil, wall + 4);
     }
-    if (pass?.fast && pass.fastStreak >= FEEL_CONFIG.stroke.unlockPasses) unlockStroke(t, x, y);
+    const { unlockPasses, unlockPassesMidCombo } = FEEL_CONFIG.stroke;
+    const passesToUnlock = combo.view.phase === "running" ? unlockPassesMidCombo : unlockPasses;
+    if (pass?.fast && pass.fastStreak >= passesToUnlock) unlockStroke(t, x, y);
   };
 
   const onStrokeEnd = () => {
@@ -765,7 +761,10 @@ export function mountMiniGameEngine(
       background.liftCorner(0.3);
       cornerUntil = t + FEEL_CONFIG.shake.resetMs;
     }
-    if (reversal.run >= FEEL_CONFIG.shake.unlockAt) unlockShake(t, reversal);
+    const { unlockAt, unlockAtMidCombo } = FEEL_CONFIG.shake;
+    if (reversal.run >= (view.phase === "running" ? unlockAtMidCombo : unlockAt)) {
+      unlockShake(t, reversal);
+    }
   };
   const stopMotion = listenToPhoneMotion(onMotion);
 
@@ -786,21 +785,6 @@ export function mountMiniGameEngine(
     return events;
   };
 
-  const firstTap = (t: number, x: number, y: number) => {
-    const events = tapHeart(t, x, y);
-    if (!events.some((e) => e.kind === "hit")) return;
-    sendingSince = t;
-    root.dataset.phase = "sending";
-    notePerformance("gratitude", "phase sending");
-    effects.stamp(x, y);
-    effects.rise(1, heartBox());
-    handle(
-      events.filter((e) => e.kind !== "hit"),
-      x,
-      y,
-    );
-  };
-
   const stopTouches = listenForTouches(
     parts.stage,
     {
@@ -817,10 +801,10 @@ export function mountMiniGameEngine(
         if (!running || ending) return;
         const phase = combo.view.phase;
         if (phase === "ready") heart.squash(3.6);
-        else if (phase === "sending" || phase === "running") handle(tapHeart(t, x, y), x, y);
+        else if (phase === "running") handle(tapHeart(t, x, y), x, y);
       },
       onHeartTap: (t, x, y) => {
-        if (running && !ending && combo.view.phase === "ready") firstTap(t, x, y);
+        if (running && !ending && combo.view.phase === "ready") handle(tapHeart(t, x, y), x, y);
       },
       onStrokeStart,
       onStrokeMove,
@@ -837,12 +821,8 @@ export function mountMiniGameEngine(
     const x = L.rest.x;
     const y = L.rest.y + 10;
     const phase = combo.view.phase;
-    if (phase === "ready") {
-      heart.squash(3.6);
-      firstTap(performance.now(), x, y);
-    } else if (phase === "sending" || phase === "running") {
-      handle(tapHeart(performance.now(), x, y), x, y);
-    }
+    if (phase === "ready") heart.squash(3.6);
+    if (phase === "ready" || phase === "running") handle(tapHeart(performance.now(), x, y), x, y);
   };
 
   // A finger, a mouse or a key on the heart makes its own taps, and the browser's click after it is
@@ -898,7 +878,7 @@ export function mountMiniGameEngine(
   const onPageHide = () => endNow(true);
   const endNow = (hidden: boolean) => {
     const phase = combo.view.phase;
-    if (ending || (phase !== "sending" && phase !== "running")) return;
+    if (ending || phase !== "running") return;
     const reason = hidden ? "hidden" : "closed";
     handle(combo.endCombo(performance.now(), reason), L.rest.x, L.rest.y, hidden);
   };
@@ -954,8 +934,6 @@ export function mountMiniGameEngine(
     physics.step(dt);
     miniHearts.draw(physics.hearts);
 
-    const sendingProgress =
-      view.phase === "sending" ? Math.min(1, (now - sendingSince) / FEEL_CONFIG.windUpMs) : 0;
     if (flash && now >= flash.until) {
       flash = null;
       writeFace();
@@ -976,7 +954,6 @@ export function mountMiniGameEngine(
       tier: view.tier,
       intensity,
       reduced,
-      sendingProgress,
       leanToward: thumb ? { x: thumb.x, degrees: stroking ? 7 : 3 } : null,
       strokeStretch: stroking && thumbRecent ? { speed: strokeSpeed, angle: strokeAngle } : null,
     });
@@ -1009,28 +986,18 @@ export function mountMiniGameEngine(
     if (face.ink && !reduced) ink?.setAttribute("data-v", String(Math.floor(wall * 12) % 3));
 
     background.step(real);
-    // Before the catch the bar is the catch window: full at ready, emptying once the heart is sent.
-    // From the catch it's the combo's own.
+    // Before the first tap the bar shows, full, what the combo starts with.
     if (view.phase === "ready") {
       if (!readyDrawn) {
         readyDrawn = true;
         hud.step(real, {
           total: 0,
           multiplier: 1,
-          secondsLeft: GAME_CONFIG.catchWindowMs / 1000,
+          secondsLeft: fullBarSeconds(),
           barFill: 1,
           running: false,
         });
       }
-    } else if (view.phase === "sending") {
-      const leftMs = Math.max(0, GAME_CONFIG.catchWindowMs - (now - sendingSince));
-      hud.step(real, {
-        total: view.total,
-        multiplier: view.multiplier,
-        secondsLeft: leftMs / 1000,
-        barFill: leftMs / GAME_CONFIG.catchWindowMs,
-        running: false,
-      });
     } else {
       hud.step(real, {
         total: view.total,
