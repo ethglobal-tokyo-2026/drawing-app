@@ -1,8 +1,8 @@
 import { context2d } from "../canvas/context2d";
-import { dieCut, type Point } from "./dieCut";
-import { stickerLayers, type Rect } from "./stickerLayers";
-
-type LayerName = "plain" | "tint" | "gloss" | "shadow" | "mask" | "spec" | "rim";
+import { cutSticker, type CutSticker, type LayerName, type MakeCanvas } from "./cutSticker";
+import type { Point } from "./dieCut";
+import type { SealReply, SealRequest } from "./sealWorker";
+import type { Rect } from "./stickerLayers";
 
 /** A sealed sticker: what's stored, and what the ceremony plays with. */
 export interface SealedSticker {
@@ -36,17 +36,14 @@ export interface SealedSticker {
   dispose: () => void;
 }
 
-/** The long side of the flat sheet, at most. */
-const FLAT_SIDE = 1100;
-/** Image pixels between the stored outline's points: finer than a ticket stub or a sheet can show. */
-const OUTLINE_STEP = 2;
+/** Far longer than a slow phone takes, so only a stalled worker fails the seal, with Try again. */
+const WORKER_TIMEOUT_MS = 60_000;
 
-function canvasOf(pixels: Uint8ClampedArray<ArrayBuffer>, width: number, height: number) {
+function blankCanvas(width: number, height: number) {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
-  context2d(canvas).putImageData(new ImageData(pixels, width, height), 0, 0);
-  return canvas;
+  return { canvas, g: context2d(canvas) };
 }
 
 const encode = (canvas: HTMLCanvasElement) =>
@@ -66,92 +63,99 @@ const release = (canvas: HTMLCanvasElement) => {
   canvas.height = 0;
 };
 
-/** The sheet as drawn, on white paper. */
-function flatten(ink: HTMLCanvasElement): HTMLCanvasElement {
-  const s = Math.min(1, FLAT_SIDE / Math.max(ink.width, ink.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(ink.width * s));
-  canvas.height = Math.max(1, Math.round(ink.height * s));
-  const g = context2d(canvas);
-  g.fillStyle = "#fff";
-  g.fillRect(0, 0, canvas.width, canvas.height);
-  g.imageSmoothingQuality = "high";
-  g.drawImage(ink, 0, 0, canvas.width, canvas.height);
-  return canvas;
+const elementCanvas: MakeCanvas = (width, height) => {
+  const { canvas, g } = blankCanvas(width, height);
+  return { g, png: () => encode(canvas).finally(() => release(canvas)) };
+};
+
+/** The sealing worker paints on OffscreenCanvas, which older iOS lacks: there the cut runs here. */
+const workerCanCut = () =>
+  typeof Worker === "function" &&
+  typeof OffscreenCanvas === "function" &&
+  new OffscreenCanvas(1, 1).getContext("2d") !== null;
+
+/** The cut in the sealing worker: this thread only snapshots the ink and hands it over. */
+async function cutInWorker(ink: HTMLCanvasElement): Promise<CutSticker | null> {
+  const image = await createImageBitmap(ink);
+  // A worker per seal, stopped once it answers, fails or times out, so none sits holding memory.
+  const worker = new Worker(new URL("./sealWorker.ts", import.meta.url), { type: "module" });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await new Promise<CutSticker | null>((resolve, reject) => {
+      worker.onmessage = ({ data }: MessageEvent<SealReply>) => {
+        if (data.ok) resolve(data.cut);
+        else reject(new Error(data.error));
+      };
+      // A script that didn't load reports a bare event, with no message.
+      worker.onerror = (event) =>
+        reject(
+          new Error(`The sealing worker failed: ${event.message || "its script didn't load"}`),
+        );
+      worker.onmessageerror = () =>
+        reject(new Error("The sealing worker's answer couldn't be read"));
+      timer = setTimeout(
+        () =>
+          reject(
+            new Error(
+              `The sealing worker didn't finish within ${WORKER_TIMEOUT_MS / 1000} s, so it was stopped`,
+            ),
+          ),
+        WORKER_TIMEOUT_MS,
+      );
+      const request: SealRequest = { ink: image };
+      worker.postMessage(request, [image]);
+    });
+  } finally {
+    clearTimeout(timer);
+    worker.terminate();
+  }
 }
 
-function outlinePath(points: Point[]): string {
-  const kept: Point[] = [];
-  for (const p of points) {
-    const last = kept.at(-1);
-    if (!last || Math.hypot(p[0] - last[0], p[1] - last[1]) >= OUTLINE_STEP) kept.push(p);
-  }
-  return `M${kept.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join("L")}Z`;
+/** The cut on this thread, where the sealing worker can't run. */
+function cutHere(ink: HTMLCanvasElement): Promise<CutSticker | null> {
+  const pixels = context2d(ink, { willReadFrequently: true }).getImageData(
+    0,
+    0,
+    ink.width,
+    ink.height,
+  );
+  return cutSticker({ pixels, image: ink }, elementCanvas);
 }
 
 /**
  * Cuts the sticker from a copy of the ink made for reading, which is read back once. Null when
- * there's no ink on it.
+ * there's no ink on it. The cut runs in the sealing worker where the browser can, so the screen
+ * keeps moving.
  */
 export async function makeSticker(ink: HTMLCanvasElement): Promise<SealedSticker | null> {
-  const { width: inkWidth, height: inkHeight } = ink;
-  const pixels = context2d(ink, { willReadFrequently: true }).getImageData(
-    0,
-    0,
-    inkWidth,
-    inkHeight,
-  );
-  const cut = dieCut(pixels);
+  const cut = workerCanCut() ? await cutInWorker(ink) : await cutHere(ink);
   if (!cut) return null;
-  const layers = stickerLayers(pixels, cut);
-  const { width, height, place, bands } = layers;
-
-  const contour = cut.contour.map(([x, y]): Point => [
-    (x - cut.pad) / cut.scale,
-    (y - cut.pad) / cut.scale,
-  ]);
-  const inImage = contour.map(([x, y]): Point => [
-    ((x - place.x) * width) / place.w,
-    ((y - place.y) * height) / place.h,
-  ]);
-
-  const maskImage = canvasOf(layers.mask, width, height);
-  const passing = [
-    canvasOf(layers.sticker, width, height),
-    flatten(ink),
-    canvasOf(layers.plain, width, height),
-    canvasOf(layers.tint, width, height),
-    canvasOf(layers.gloss, width, height),
-    canvasOf(layers.shadow, width, height),
-    canvasOf(bands.spec, bands.width, bands.height),
-    canvasOf(bands.rim, bands.width, bands.height),
-  ];
-  const [png, flat, plain, tint, gloss, shadow, spec, rim, mask] = await Promise.all(
-    [...passing, maskImage].map(encode),
-  ).finally(() => passing.forEach(release));
+  const { width, height, layers } = cut;
+  const { canvas: maskImage, g } = blankCanvas(width, height);
+  g.putImageData(new ImageData(cut.maskPixels, width, height), 0, 0);
 
   const urls: Record<LayerName, string> = {
-    plain: URL.createObjectURL(plain),
-    tint: URL.createObjectURL(tint),
-    gloss: URL.createObjectURL(gloss),
-    shadow: URL.createObjectURL(shadow),
-    mask: URL.createObjectURL(mask),
-    spec: URL.createObjectURL(spec),
-    rim: URL.createObjectURL(rim),
+    plain: URL.createObjectURL(layers.plain),
+    tint: URL.createObjectURL(layers.tint),
+    gloss: URL.createObjectURL(layers.gloss),
+    shadow: URL.createObjectURL(layers.shadow),
+    mask: URL.createObjectURL(layers.mask),
+    spec: URL.createObjectURL(layers.spec),
+    rim: URL.createObjectURL(layers.rim),
   };
   return {
-    png,
-    mask,
-    spec,
-    rim,
-    flat,
-    outline: outlinePath(inImage),
+    png: cut.png,
+    mask: layers.mask,
+    spec: layers.spec,
+    rim: layers.rim,
+    flat: cut.flat,
+    outline: cut.outline,
     width,
     height,
-    pad: layers.pad,
-    inkWidth,
-    place,
-    contour,
+    pad: cut.pad,
+    inkWidth: cut.inkWidth,
+    place: cut.place,
+    contour: cut.contour,
     layers: urls,
     maskImage,
     dispose: () => {
