@@ -7,7 +7,7 @@ import { paintStroke } from "../../sticker-creation/canvas/paintStroke";
 import { decodeTimelapse } from "../../sticker-creation/sealing/timelapse";
 import { browserFrames, type FrameSource } from "../../ui/frameSource";
 import { prepareFillSnapshots, release, type FillSnapshot } from "./fillSnapshots";
-import { displayPoint, drawingDensity, revealRadius } from "./timelapseCrop";
+import { displayCanvas, displayPoint, drawingDensity, revealRadius } from "./timelapseCrop";
 import {
   playbackDone,
   scheduleTimelapse,
@@ -21,10 +21,10 @@ export const MAX_FRAME_MS = 50;
 
 export interface TimelapsePlayerOptions {
   timelapse: TimelapseV1;
-  /** The canvas the ink plays on. The player sizes its backing store to `box` at the screen's density. */
+  /** The canvas the ink plays on. The player sizes its backing store to `width` at the screen's density. */
   canvas: HTMLCanvasElement;
-  /** The sticker figure's box, CSS px: the canvas covers it exactly. */
-  box: { width: number; height: number };
+  /** The sticker figure's width, CSS px: the canvas covers the figure's box exactly. */
+  width: number;
   /** The sealed image's size, px: estimates the drawing's density when the timelapse has none. */
   image: { width: number; height: number };
   reduced: boolean;
@@ -56,17 +56,17 @@ const messageOf = (error: unknown) => (error instanceof Error ? error.message : 
  * skipped before it plays, it paints the finished ink as soon as `play` is called.
  */
 export function createTimelapsePlayer(options: TimelapsePlayerOptions): TimelapsePlayer {
-  const { canvas, box, frames = browserFrames } = options;
+  const { canvas, frames = browserFrames } = options;
   const timelapse = decodeTimelapse(options.timelapse);
   const { place } = timelapse;
   const schedule = scheduleTimelapse(timelapse.ops, { reduced: options.reduced });
   // Turned on mid-play, fills appear whole but keep their beats, so the strokes' pace never jumps.
   let reduced = options.reduced;
-  const screenDensity = Math.min(devicePixelRatio || 1, MAX_DPR);
-  canvas.width = Math.max(1, Math.round(box.width * screenDensity));
-  canvas.height = Math.max(1, Math.round(box.height * screenDensity));
+  const display = displayCanvas(place, options.width, Math.min(devicePixelRatio || 1, MAX_DPR));
+  canvas.width = display.width;
+  canvas.height = display.height;
   /** Display px per sheet px. */
-  const scale = (screenDensity * box.width) / place.w;
+  const { scale } = display;
   const g = context2d(canvas);
   g.setTransform(scale, 0, 0, scale, -place.x * scale, -place.y * scale);
 
@@ -178,7 +178,7 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
         ink: timelapse.ink,
         place,
         density: drawingDensity(timelapse, options.image),
-        display: { width: canvas.width, height: canvas.height, scale },
+        display,
       },
       { now: () => frames.now(), stopped: () => outcome !== null },
     );

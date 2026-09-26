@@ -191,7 +191,7 @@ export function useTimelapse({
       s.player = create({
         timelapse,
         canvas: ink,
-        box: { width: box.offsetWidth, height: box.offsetHeight },
+        width: box.offsetWidth,
         image: { width: target.width, height: target.height },
         reduced: still,
         frames: clock,

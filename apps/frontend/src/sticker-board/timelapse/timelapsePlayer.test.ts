@@ -77,7 +77,7 @@ function setup(ops: Op[], { reduced = false } = {}) {
   const player = createTimelapsePlayer({
     timelapse,
     canvas,
-    box: BOX,
+    width: BOX.width,
     image: { width: PLACE.w, height: PLACE.h },
     reduced,
     frames: clock.frames,
