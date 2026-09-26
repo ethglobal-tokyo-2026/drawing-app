@@ -60,7 +60,7 @@ export const tickets = {
   shop: {
     title: "Ticket shop",
     lead: "Reserve tickets never expire.",
-    balance: "Your JPY",
+    balance: "Your JPYC",
     readingBalance: "Reading your balance…",
     /** `reason` is the wallet's own words. */
     balanceProblem: "Couldn’t read your balance ({{reason}}).",
@@ -75,14 +75,18 @@ export const tickets = {
     pay: "Pay",
     payPrice: "Pay {{price}}",
     paying: "Paying…",
-    notEnoughYen: "Not enough yen",
+    notEnoughJpyc: "Not enough JPYC",
     added_one: "{{count}} reserve ticket added",
     added_other: "{{count}} reserve tickets added",
-    paid: "Paid {{price}}.",
+    paid: "Paid {{price}} in JPYC.",
     buyMore: "Buy more tickets",
     paymentFailed: "Payment didn’t go through",
     paidButNotAdded:
       "The payment went through ({{digest}}), but the tickets weren’t added: {{reason}}",
     backToShop: "Back to the shop",
+    /** `reason` is Privy's or the signer's own words. */
+    walletBroken: "Your Sui wallet isn’t working ({{reason}}).",
+    walletSignInFailed: "Your wallet didn’t sign in ({{reason}}).",
+    walletNeedsLine: "Paying needs LINE’s sign-in, which LIFF Mock skips.",
   },
 } as const;

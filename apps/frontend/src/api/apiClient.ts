@@ -19,7 +19,7 @@ import type {
   StickerDetail,
   StickerPlacement,
   TicketKind,
-  TicketQuote,
+  TicketShop,
   Tickets,
   TicketUse,
   TimelapseV1,
@@ -46,11 +46,10 @@ interface SealRequest {
 /** Opening a Gift Message's link: its token as the link carries it, which the client checks. */
 export type GiftOpening = Omit<OpenGiftBody, "giftClaimToken"> & { giftClaimToken: string };
 
-/** A pack bought with a Sui payment. */
+/** A pack bought with a JPYC payment on Sui. */
 interface TicketPurchase {
   tickets: number;
   txDigest: string;
-  paidMist: string;
 }
 
 /** The REST API, one method per route the app calls. */
@@ -78,8 +77,8 @@ export interface ApiClient {
   tickets: () => Promise<Tickets>;
   /** POST /api/tickets/spend */
   spendTicket: (kind: TicketKind) => Promise<{ ticketUse: TicketUse; tickets: Tickets }>;
-  /** GET /api/ticket-quote */
-  ticketQuote: () => Promise<TicketQuote>;
+  /** GET /api/ticket-shop */
+  ticketShop: () => Promise<TicketShop>;
   /** POST /api/ticket-purchases */
   buyTickets: (purchase: TicketPurchase) => Promise<Tickets>;
 

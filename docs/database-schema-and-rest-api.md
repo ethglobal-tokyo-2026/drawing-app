@@ -15,9 +15,9 @@ What the server stores and serves. `packages/db` holds the schema and `apps/api`
 ### Tickets
 
 - **Daily tickets:** three free ones per ticket day. A ticket day runs midnight to midnight, Tokyo time, for everyone; unused daily tickets expire with it.
-- **Reserve tickets:** bought with SUI, no limit, never expire. Daily tickets are always spent first.
+- **Reserve tickets:** bought with JPYC on Sui, no limit, never expire. Daily tickets are always spent first.
 - **Start screen:** drawing starts from a screen that shows the tickets left and a button that spends one (`StartDrawing`). The 3-minute clock then waits for the first stroke. Keep drawing on the sealed card spends a daily ticket without asking; with none left, the start screen asks before spending a reserve ticket, or offers the ticket shop. Draw right after a purchase spends one without asking.
-- **Ticket shop:** packs of 1, 3, 5 or 10 for ¥100, ¥270, ¥375 or ¥600, shown with their discount off ¥100 each. Prices are in yen and paid in SUI, converted at the server's 5-minute time-weighted average SUI/JPY price. The payment is a mock for now.
+- **Ticket shop:** packs of 1, 3, 5 or 10 for ¥100, ¥270, ¥375 or ¥600, shown with their discount off ¥100 each. Prices are in yen and paid in JPYC (one JPYC is one yen) from the person's Privy Sui wallet, through the payment contract's `pay` into its vault. The wallet pays gas in SUI.
 - **Draw keys** show daily and reserve tickets left, each as its ticket mark × count. Daily tickets are Seal Yellow, reserve tickets Grape.
 
 ### Sealing
@@ -85,7 +85,6 @@ What the server stores and serves. `packages/db` holds the schema and `apps/api`
 | Drawing clock (`MAX_TIME_USED_S`) | 180 s                                                        |
 | Daily tickets                     | 3 per ticket day; the day turns over at midnight, Tokyo time |
 | Ticket packs                      | 1, 3, 5, 10 tickets for ¥100, ¥270, ¥375, ¥600               |
-| SUI/JPY price                     | 5-minute time-weighted average; a quote holds for 60 s       |
 | Gift expiry (`GIFT_EXPIRY_MS`)    | 7 days after Packaging                                       |
 | Hits per combo (`MAX_HITS`)       | 1–120                                                        |
 | Gratitude multiplier              | 1–8                                                          |
@@ -168,19 +167,18 @@ Inserted when the start screen's button spends a ticket.
 
 ### `ticket_purchases`: one row per pack bought
 
-| Column        | Type           | Values             | Set when                                           | Meaning                      |
-| ------------- | -------------- | ------------------ | -------------------------------------------------- | ---------------------------- |
-| `id`          | int, PK        | auto               | purchase                                           |                              |
-| `user_id`     | text → users   |                    | purchase                                           |                              |
-| `tickets`     | int            | 1, 3, 5, 10        | purchase                                           | the pack                     |
-| `price_yen`   | int            | 100, 270, 375, 600 | purchase                                           |                              |
-| `sui_yen`     | text           | decimal            | purchase                                           | the quote's SUI/JPY price    |
-| `paid_mist`   | text           | decimal MIST       | purchase                                           | what the Sui payment carried |
-| `tx_digest`   | text           | Sui digest; unique | purchase                                           | one payment counts once      |
-| `verified_at` | int (ms), null |                    | the server checks it on Sui (at once for the mock) | its tickets count from then  |
+| Column        | Type           | Values             | Set when                    | Meaning                                                         |
+| ------------- | -------------- | ------------------ | --------------------------- | --------------------------------------------------------------- |
+| `id`          | int, PK        | auto               | purchase                    |                                                                 |
+| `user_id`     | text → users   |                    | purchase                    |                                                                 |
+| `tickets`     | int            | 1, 3, 5, 10        | purchase                    | the pack                                                        |
+| `price_yen`   | int            | 100, 270, 375, 600 | purchase                    |                                                                 |
+| `paid_jpyc`   | text           | decimal base units | purchase                    | what the payment carried; `0` for packs paid in SUI before JPYC |
+| `tx_digest`   | text           | Sui digest; unique | purchase                    | one payment counts once                                         |
+| `verified_at` | int (ms), null |                    | the server checks it on Sui | its tickets count from then                                     |
 
 - Reserve tickets left = verified purchases' `tickets` minus `reserve` uses. They carry over from day to day.
-- A purchase counts only if `paid_mist` covers the pack at a quote the server issued within the last 60 s.
+- A purchase counts only if its transaction emitted the payment contract's `PaymentReceived` into the ticket vault, with the buyer's reference (`tickets:<user id>`) and at least the pack's price in JPYC.
 
 ### `sticker_placements`: one row per person and sticker that has reached them
 
@@ -379,16 +377,21 @@ interface Tickets {
   }>;
 }
 
-interface TicketQuote {
-  suiYen: string; // decimal: yen per SUI, 5-minute time-weighted average
-  quotedAt: IsoTime;
-  expiresAt: IsoTime; // 60 s after quotedAt
+interface TicketShop {
   packs: Array<{
     tickets: 1 | 3 | 5 | 10;
     priceYen: number;
     discountPercent: number; // off ¥100 per ticket: 0, 10, 25, 40
-    priceMist: string; // decimal MIST, rounded up
+    priceJpyc: string; // decimal JPYC base units: one JPYC is one yen
   }>;
+  payment: {
+    network: "testnet" | "mainnet" | "devnet";
+    coinType: string; // <package>::jpy_coin::JPY_COIN
+    decimals: number;
+    paymentPackage: string; // calls <paymentPackage>::payment::pay
+    vault: string; // the shared Vault
+    reference: string; // pay's reference; names the signed-in person
+  };
 }
 
 interface UserStats {
@@ -450,12 +453,12 @@ interface TimelapseV1 {
 
 ### Tickets
 
-| Route                        | Request                                                              | Response                                                                                                                                 | Errors                                                                                  |
-| ---------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `GET /api/tickets`           | none                                                                 | 200 `{ tickets: Tickets }`                                                                                                               |                                                                                         |
-| `POST /api/tickets/spend`    | `{ kind: "daily" \| "reserve" }`: the kind the start screen offered  | 201 `{ ticketUse: { id: number; ticketDay: string; dayIndex: number; kind: "daily" \| "reserve"; spentAt: IsoTime }; tickets: Tickets }` | 409 `no_tickets_left`; 409 `ticket_kind_changed` when the next ticket is the other kind |
-| `GET /api/ticket-quote`      | none                                                                 | 200 `{ quote: TicketQuote }`                                                                                                             | 503 `sui_price_unavailable`                                                             |
-| `POST /api/ticket-purchases` | `{ tickets: 1 \| 3 \| 5 \| 10; txDigest: string; paidMist: string }` | 201 `{ tickets: Tickets }`                                                                                                               | 400 `pack_unknown`; 402 `payment_short`; 409 `payment_already_counted`                  |
+| Route                        | Request                                                             | Response                                                                                                                                 | Errors                                                                                                                                          |
+| ---------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/tickets`           | none                                                                | 200 `{ tickets: Tickets }`                                                                                                               |                                                                                                                                                 |
+| `POST /api/tickets/spend`    | `{ kind: "daily" \| "reserve" }`: the kind the start screen offered | 201 `{ ticketUse: { id: number; ticketDay: string; dayIndex: number; kind: "daily" \| "reserve"; spentAt: IsoTime }; tickets: Tickets }` | 409 `no_tickets_left`; 409 `ticket_kind_changed` when the next ticket is the other kind                                                         |
+| `GET /api/ticket-shop`       | none                                                                | 200 `{ shop: TicketShop }`                                                                                                               |                                                                                                                                                 |
+| `POST /api/ticket-purchases` | `{ tickets: 1 \| 3 \| 5 \| 10; txDigest: string }`                  | 201 `{ tickets: Tickets }`                                                                                                               | 400 `pack_unknown`; 402 `payment_short`; 403 `payment_not_yours`; 409 `payment_already_counted`; 422 `payment_not_found`; 502 `sui_unavailable` |
 
 ### Stickers
 

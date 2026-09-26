@@ -17,7 +17,7 @@ import { journalLog } from "./services/journal.ts";
 import { createLineVerifier } from "./services/lineVerifier.ts";
 import { mintStub } from "./services/mint.ts";
 import { noSmartWallets } from "./services/smartWallets.ts";
-import { mockSuiPayments } from "./services/suiPayments.ts";
+import { createJpycPayments } from "./services/jpycPayments.ts";
 import { createPrivySmartWallets } from "./services/privySmartWallets.ts";
 import { createStickerChain } from "./services/stickerChain.ts";
 
@@ -31,6 +31,12 @@ const envSchema = z.object({
   STICKER_CHAIN_MODE: z.enum(["mock", "sepolia"]),
   // Empty is how .env switches off what .env.example switches on.
   DEV_SIGN_IN: z.enum(["on", "off", ""]).optional(),
+  // The ticket shop's JPYC and payment contract on Sui.
+  SUI_NETWORK: z.enum(["testnet", "mainnet", "devnet"]),
+  JPYC_COIN_TYPE: z.string().regex(/^0x[0-9a-f]{64}::[A-Za-z_]\w*::[A-Za-z_]\w*$/),
+  JPYC_DECIMALS: z.coerce.number().int().nonnegative(),
+  JPYC_PAYMENT_PACKAGE: z.string().regex(/^0x[0-9a-f]{64}$/),
+  JPYC_PAYMENT_VAULT: z.string().regex(/^0x[0-9a-f]{64}$/),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -109,9 +115,6 @@ const chain = (() => {
   return { mint, giftChain, smartWallets, ens };
 })();
 
-/** A stand-in SUI/JPY price, not a market one, until the server reads a price feed. */
-const MOCK_SUI_YEN = "300";
-
 const deps: AppDeps = {
   db,
   sessionSecret: env.SESSION_SECRET,
@@ -120,8 +123,13 @@ const deps: AppDeps = {
   line: chooseLineVerifier(env.DEV_SIGN_IN, createLineVerifier(env.LINE_CHANNEL_ID)),
   images,
   ...chain,
-  sui: mockSuiPayments,
-  suiPrice: () => Promise.resolve(MOCK_SUI_YEN),
+  ticketPayments: createJpycPayments({
+    network: env.SUI_NETWORK,
+    coinType: env.JPYC_COIN_TYPE,
+    decimals: env.JPYC_DECIMALS,
+    paymentPackage: env.JPYC_PAYMENT_PACKAGE,
+    vault: env.JPYC_PAYMENT_VAULT,
+  }),
   serverLog: journalLog,
 };
 

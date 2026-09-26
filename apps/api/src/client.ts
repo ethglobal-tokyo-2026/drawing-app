@@ -12,8 +12,13 @@ type ErrorOutput = Extract<
   { status: ClientErrorStatusCode | ServerErrorStatusCode }
 >["output"];
 
-/** Every `error` code a route answers, from the routes' own types: `apiError` keeps each code's literal. */
-export type ApiErrorCode = ErrorOutput extends { error: infer Code extends string } ? Code : never;
+/**
+ * Every `error` code a route answers, from the routes' own types: `apiError` keeps each code's literal.
+ * internal_error comes from the app's error handler, which any route can reach.
+ */
+export type ApiErrorCode =
+  | (ErrorOutput extends { error: infer Code extends string } ? Code : never)
+  | "internal_error";
 export { MAX_TIMELAPSE_BYTES } from "./stickers/timelapseLimit.ts";
 
 // The contract's shapes, for the app's screens: each is the type its route's schema checks.
@@ -38,8 +43,8 @@ export type {
   Me,
   Person,
   StickerImages,
-  TicketQuote,
   Tickets,
+  TicketShop,
   UserStats,
 } from "./shapes.ts";
 export type { BoardSticker, StickerBoard } from "./stickerBoards/board.ts";
