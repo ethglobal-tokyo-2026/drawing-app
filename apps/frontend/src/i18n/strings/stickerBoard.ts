@@ -305,6 +305,8 @@ export const stickerBoard = {
       en: "Stickers you make or receive land here.",
       ja: "つくったシールや受け取ったシールは、ここに貼られます。",
     },
+    /** Your sticker board while its stickers load: read out to screen readers as faint placeholder stickers show */
+    loading: { en: "Loading your stickers", ja: "シールを読み込んでいます" },
     /** Your sticker board, when your stickers fail to load: the alert in the dashed spot, above the reason and Try again */
     didntLoad: { en: "Your stickers didn’t load.", ja: "シールを読み込めませんでした。" },
     /** Your sticker board: the alert when one moved sticker's new position didn't save; {{stickers}} is its number, {{reasons}} why */

@@ -183,7 +183,7 @@ export const stickerCreation = {
       lilac: { en: "Lilac", ja: "藤色" },
       /** Color sheet: screen readers' name for the Grape preset color, #9B7BFF, a violet */
       grape: { en: "Grape", ja: "紫" },
-      /** Color sheet: screen readers' name for the Navy preset color, #3B3F8F, the color a first session starts with */
+      /** Color sheet: screen readers' name for the Navy preset color, #3B3F8F, a deep indigo */
       navy: { en: "Navy", ja: "紺色" },
       /** Color sheet: screen readers' name for the Blue preset color, #2F6BFF */
       blue: { en: "Blue", ja: "青" },
@@ -193,6 +193,26 @@ export const stickerCreation = {
       aqua: { en: "Aqua", ja: "アクア" },
       /** Color sheet: screen readers' name for the Ice preset color, #BDEFF2, a pale aqua */
       ice: { en: "Ice", ja: "水色" },
+      /** Color sheet: screen readers' name for the Pumpkin preset color, #D96A00, a deep orange */
+      pumpkin: { en: "Pumpkin", ja: "かぼちゃ色" },
+      /** Color sheet: screen readers' name for the Ochre preset color, #B07F00, a dark mustard yellow */
+      ochre: { en: "Ochre", ja: "黄土色" },
+      /** Color sheet: screen readers' name for the Leaf preset color, #4E9A1C, a yellow green */
+      leaf: { en: "Leaf", ja: "黄緑" },
+      /** Color sheet: screen readers' name for the Green preset color, #0E9A6E, an emerald green */
+      green: { en: "Green", ja: "緑" },
+      /** Color sheet: screen readers' name for the Forest preset color, #1B6E47, a dark green */
+      forest: { en: "Forest", ja: "深緑" },
+      /** Color sheet: screen readers' name for the Teal preset color, #00868B, a blue green */
+      teal: { en: "Teal", ja: "青緑" },
+      /** Color sheet: screen readers' name for the Cerulean preset color, #1478C8, a mid blue */
+      cerulean: { en: "Cerulean", ja: "セルリアンブルー" },
+      /** Color sheet: screen readers' name for the Violet preset color, #6C3AC4, a deep purple */
+      violet: { en: "Violet", ja: "すみれ色" },
+      /** Color sheet: screen readers' name for the Magenta preset color, #B4299A, a purple pink */
+      magenta: { en: "Magenta", ja: "マゼンタ" },
+      /** Color sheet: screen readers' name for the Plum preset color, #9C2067, a dark berry red */
+      plum: { en: "Plum", ja: "プラム" },
     },
   },
   sizeRail: {
