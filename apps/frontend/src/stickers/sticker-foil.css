@@ -65,13 +65,6 @@
   animation-delay: calc(var(--foil-i, 0) * -2.3s);
 }
 
-/* Only the sticker in hand and the sticker's detail shimmer: foil moving under its mask on every
-   sticker at once would keep the board and the sticker tray repainting. */
-.sticker-foil--sheet :is(.sticker-foil__sheen, .sticker-foil__glint),
-.placed-sticker:not(.is-selected, .is-dragging) :is(.sticker-foil__sheen, .sticker-foil__glint) {
-  animation: none;
-}
-
 /* A white glint that sweeps across now and then. */
 .sticker-foil__glint {
   position: absolute;
