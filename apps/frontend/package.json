@@ -9,6 +9,8 @@
     "lint": "oxlint --type-check",
     "typecheck": "tsc -b",
     "test": "vitest run",
+    "i18n:export": "tsx scripts/i18nExport.ts",
+    "i18n:import": "tsx scripts/i18nImport.ts",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -36,6 +38,7 @@
     "happy-dom": "^20.14.5",
     "oxlint": "^1.85.0",
     "oxlint-tsgolint": "^7.0.2002",
+    "tsx": "4.23.15",
     "typescript": "~7.0.2",
     "vite": "^8.3.0",
     "vitest": "^5.0.1"

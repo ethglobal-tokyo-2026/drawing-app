@@ -55,7 +55,7 @@ Each has a recommendation. "Go with the recommendations" settles all of them; na
 
 ### Page changes and loading
 
-16. **How pages hand over.** A sideways slide in tab order (My board, Explore, Shop): 240 ms in, 120 ms out, built in CSS on the live page. _Recommend._ React 19.3's `ViewTransition` works in WebKit from iOS 18.2, but a tap during a running view transition never reaches the page (verified in WebKit 26.5 and Chromium), and on older iOS it falls back to today's cut. The bolder alternative, "the page pulled up by its tab", is in the transitions findings.
+16. **How pages hand over.** Since the research, Favio's a940496 opens each tab's screen from a Liner veil that fades away in 160 ms. _Recommend_ keeping his fade (DESIGN.md already says tab changes fade), and adding the sideways slide in tab order (240 ms in, 120 ms out, CSS on the live page) only if tab changes still feel hard on the phone. React 19.3's `ViewTransition` stays out either way: a tap during a running view transition never reaches the page (verified in WebKit 26.5 and Chromium), and on iOS before 18.2 it falls back to a cut.
 17. **The first open.** The board's shell (header, zipper, Draw, tabs) shows while you're signed in, instead of bare paper; then the stickers stick on in reading order. The first-sticker ring, hop and note, and the artist chips, play once per app open, not on every return to My board. _Recommend both._
 18. **Small ones**, all _recommended_: keep Explore alive between tabs so its search and scroll survive; prefetch the Shop's price quote once the board is idle; re-deal the leaderboard rows on a tab change now, and slide people to their new rank later.
 
@@ -133,17 +133,20 @@ Your items: tickets attached to the Draw key, not inside it; one model for daily
 Your items: the board's buttons pop in on first open; the Shop takes a while with no loading animation; hard cuts and popping data between My board, Explore and Shop; hard cuts on the tray's folder tabs and Explore's tabs.
 
 - **What's wrong.** `App.tsx:104-122` mounts only the current screen, and each screen keeps its data in its own state, so every return fetches again and pops (`/api/sticker-boards/me`, `/api/gifts/pending`, the user stats, `/api/explore` and the ticket quote, on every visit). The first open arrives in three pops: bare paper, then the header, Draw and tabs, then the zipper, ticket counts and stickers at once, with a one-frame see-through ghost of each sticker before its image. The first-sticker ring, hop and note replay on every return. The Shop shows two "loading" lines, then the packs pop in and Pay jumps about 270px down. The tray's folder tabs and the leaderboard tabs change color in one frame.
-- **The fix.** One motion system, shared with W1's tokens:
-  - A query cache in `api/useApiQuery.ts`: the last answer per key, shown at once and refreshed quietly, plus `prefetchApiQuery`. This alone removes the second pop on every return.
-  - `app/ScreenTransition.tsx`: the slide in tab order (decision 16). Both pages are live DOM, so taps work from the first frame; LINE's header and the tab strip never move. The tapped tab sticks on: its fill, then its lift with a small settle.
-  - Placeholders in the world's materials, never grey boxes or spinners: blank label-stock rows at their real heights and kiss-cut outlines where stickers will sit. Anything still waiting after 400 ms breathes, row by row. Data then sticks on in reading order, the whole batch within 465 ms.
-  - The first open (decision 17): a `BoardShell` from the moment LINE is ready; Draw springs up when the app can draw; the tray mounts before data; stickers stick on after `img.decode()`, so no ghost shows.
-  - The Shop prints in: blank rows, then the packs top to bottom, then the smallest pack sticks on as picked, then Pay springs up. The quote is cached until it expires and prefetched once the board is idle.
-  - Tabs: the folder tab's fill, shadow and stand-up move together in 160–220 ms and take the shared press; the leaderboard tab becomes one pink label that slides along its track, and the rows re-deal.
+- **Built since the plan: Favio's a940496** (2026-09-27, with a new Loading section in DESIGN.md):
+  - A shared skeleton, pressed liner with a slow shine, replaces "Loading…". It outlines Explore's sections and search rows, the Shop's balance and pack rows, and faint die-cut shapes where board stickers sit (`ui/Skeleton.tsx`, `ui/skeleton.css`, `sticker-board/BoardLoading.tsx`).
+  - Loaded content rises in, and pictures and stickers fade in only once their image has loaded, so the see-through sticker frame is gone (`ui/reveal.ts`).
+  - A tab's screen opens from a Liner veil that fades in 160 ms.
+  - Reduced motion drops the shine, the rise and the fades; screen readers hear one status line.
+- **What's left.** Build on Favio's skeleton and reveal rather than the blank stock this plan first proposed, and coordinate with him, since he's in these files:
+  - A query cache in `api/useApiQuery.ts`: the last answer per key, shown at once and refreshed quietly, plus `prefetchApiQuery`. Returning to a tab still fetches everything again, so this removes the second pop on every return.
+  - The first open (decision 17): a `BoardShell` from the moment LINE is ready, so the header, zipper, Draw and tabs show during sign-in instead of bare paper; Draw springs up when the app can draw; the tray mounts before data. The first-sticker ring, hop and note, and the artist chips, play once per app open.
+  - The tapped tab sticks on: its fill, then its lift with a small settle. Then the tray's folder tabs (fill, shadow and stand-up together in 160–220 ms, with the shared press) and Explore's leaderboard tabs (one pink label sliding along its track, the rows re-dealt).
+  - Keep Explore alive between tabs, and cache and prefetch the Shop's quote (decision 18).
   - Reduced motion: 120 ms fades and no travel. Budgets: nothing blocks input, and only transform and opacity animate.
-- **Impeccable:** `shape` (the motion system), `animate`, `bolder` scoped to the first open only, `harden` for loading, empty and failed states, `polish`.
-- **Size:** about two days: cache S–M, `ScreenTransition` M, first open L, Shop print-in M, tabs S.
-- **Files:** `app/App.tsx`, `app/ScreenTransition.tsx` (new), `app/TabBar.css`, `api/useApiQuery.ts`, `api/SessionGate.tsx`, `sticker-board/BoardShell.tsx` (new), `sticker-board/StickerBoard.tsx`, `stickers/stick.ts`, `ui/stickOn.ts` (new), `ui/BlankLabelRow.tsx` and `ui/BlankStickerSpot.tsx` (new), `sticker-board/tray/sticker-tray.css`, `explore/ExploreScreen.*`, `styles/tokens.css`.
+- **Impeccable:** `animate`, `bolder` scoped to the first open only, `harden` for loading, empty and failed states, `polish`.
+- **Size:** about a day: cache S–M, first open M–L, tabs S.
+- **Files:** `api/useApiQuery.ts`, `api/SessionGate.tsx`, `sticker-board/BoardShell.tsx` (new), `sticker-board/StickerBoard.tsx`, `sticker-board/BoardLoading.tsx`, `app/App.tsx`, `app/TabBar.css`, `sticker-board/tray/sticker-tray.css`, `explore/ExploreScreen.*`, `styles/tokens.css`.
 - Findings: [transitions.md](2026-09-26-frontend-feedback/transitions.md).
 
 ### W3 Performance
@@ -291,7 +294,7 @@ After decisions 6, 7, 11 and 15:
 
 1. **Before any build.**
    - Land PR #10 (`i18n/handoff`, 71+ frontend files). It now also carries the sticker board's, Explore's and the tickets' text (`i18n/sticker-board`, `i18n/explore` and `i18n/tickets` were merged into it). Almost every workstream edits the same files for text.
-   - Tell Favio about W4 (his Shop changes) and the foil work in W3 (his 753aa9f is in the same files), and Spencer about the dev sealing fix and the "wallet" copy (his sponsored-account code).
+   - Tell Favio about W2 (his a940496 built the loading outlines and tab fades), W4 (his Shop changes) and the foil work in W3 (his 753aa9f is in the same files), and Spencer about the dev sealing fix and the "wallet" copy (his sponsored-account code).
    - Run `git fetch` and look at open PRs again, since both teammates merge too.
 2. **Foundations**, each small and committed early so the lanes can start:
    - the dev sealing fix;
@@ -316,7 +319,7 @@ W1, W2, W5 and W6 each take a day or two; the rest are shorter. With the lanes i
 | Workstream                   | Commands, in order                                                 |
 | ---------------------------- | ------------------------------------------------------------------ |
 | W1 Tickets                   | shape → bolder → animate → adapt → clarify → polish                |
-| W2 Page changes and loading  | shape → animate → bolder (first open only) → harden → polish       |
+| W2 Page changes and loading  | animate → bolder (first open only) → harden → polish               |
 | W3 Performance               | optimize → animate (the foil) → polish                             |
 | W4 The Shop                  | shape → bolder (the reserve tickets section) → clarify → polish    |
 | W5 Explore                   | shape → overdrive → animate → delight → harden → optimize → polish |

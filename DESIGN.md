@@ -474,6 +474,7 @@ The board's back, where a person's figures are pinned up as paper. It's the only
 - **Bests:** a torn notebook scrap with grape rules, held by washi. Best combo on it is the hit counter.
 - **About:** the ENS name and the joined date on Ink label-maker tape with raised letters; the ENS strip copies the name.
 - **Controls:** Flip back is label stock at the foot of the right column. Bare cork, Escape and LINE's Back also flip back. Your own back adds Share my board (aqua label) and QR code. The back has no key.
+- **Settings:** your own back's last paper, a clean-cut index card taped at both top corners, its Title-type heading over an Ink rule. Until it scrolls into view its heading peeks above the cork's foot; a tap or focus scrolls it in. Language is ruled 44px radio rows (Same as LINE, English, 日本語) with an Ink dot in a ring for the pick; a failed save shows its reason on Tomato Soft.
 - **Empty values** read in words: "No gratitude yet", "Not started", "None yet".
 
 ### Someone else's board
@@ -487,7 +488,7 @@ The canvas is just for drawing.
 - **Top row:** the timer dot and the tool strip share one row. The timer is a 48px yellow dot at -4° with puffy numerals; tapping it pauses.
 - **Paused:** the dot stays whole and bright, and a white label-stock tag reading PAUSED, with Phosphor's pause (fill), sticks across its lower edge at a counter-angle of 8°. It sticks on when the clock holds and peels off when it runs. There's one paused look for every hold: tapped, the page hidden, the color sheet open, the Smoothing panel open, or a finger on the size rail. Only the tap is the person's pause; the other holds release on their own.
 - **Paused hint:** while paused the canvas takes no marks. A stroke nudges the dot and sticks a white label under it, turned -2°, reading "Tap the timer to keep drawing", with Phosphor's arrow-bend-left-up (bold, 28px) pointing up at the timer. It peels off by itself. Tools can still switch.
-- **Tools:** brush, eraser, fill, a color control (a Phosphor dot inked in the current color on a thin ring) and Smoothing, as flat 38px tiles padded to 44px. The current tool is an Ink tile with the fill-weight icon.
+- **Tools:** brush, eraser, fill, a color control (a Phosphor dot inked in the current color on a thin ring; each new drawing starts in a random starting color) and Smoothing, as flat 38px tiles padded to 44px. The current tool is an Ink tile with the fill-weight icon.
 - **Smoothing:** an icon button that opens a compact Liner Lift bar under the tools. Its small title, "Smoothing", shows only while it's open, with Raw and Smooth at the ends.
 - **Size rail:** the left edge, with a live number of the brush size in px.
 - **Foot:** flat undo and redo at the bottom left, the seal check at the bottom right. The canvas shows no ticket count.

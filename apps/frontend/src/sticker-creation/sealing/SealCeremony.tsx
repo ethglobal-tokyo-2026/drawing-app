@@ -1,4 +1,12 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+import { useTranslation } from "../../i18n/react";
 import { useLight } from "../../stickers/light";
 import { LiveResin } from "../../stickers/LiveResin";
 import { sweepSheen } from "../../stickers/resinSheen";
@@ -83,8 +91,11 @@ export function SealCeremony({
   onBoard,
   onShop,
 }: Props) {
+  const { t } = useTranslation();
   const reduced = useReducedMotion();
   useLight();
+  // Read as the ceremony starts, so the language isn't one of the things that restart it.
+  const sealingStatus = useEffectEvent(() => t(($) => $.stickerCreation.sealCeremony.sealing));
   const [done, setDone] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const skip = useRef<() => void>(() => {});
@@ -184,7 +195,7 @@ export function SealCeremony({
     let skipped = false;
     const tick = (now: number) => {
       // Said a frame after the status line exists, so screen readers hear the change.
-      if (start === null) parts.status.textContent = "Sealing your sticker";
+      if (start === null) parts.status.textContent = sealingStatus();
       start ??= now;
       const t = ceremonyTime(now - start, { skipped, reduced });
       show(t);

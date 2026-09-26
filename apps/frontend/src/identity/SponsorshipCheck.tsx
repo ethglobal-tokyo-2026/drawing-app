@@ -3,6 +3,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { createPublicClient, http } from "viem";
 import { sepolia } from "viem/chains";
+import { useTranslation } from "../i18n/react";
 import { QuietLink } from "../ui/QuietLink";
 import { etherscanTxUrl } from "./explorers";
 import { checkSponsorship, type SponsorshipResult } from "./sponsorship";
@@ -18,6 +19,7 @@ type CheckState =
 
 /** Developer-only proof that Privy's paymaster sponsors a real smart-account transaction. */
 export function SponsorshipCheck() {
+  const { t } = useTranslation();
   const { client, getClientForChain } = useSmartWallets();
   const [check, setCheck] = useState<CheckState>({ state: "ready" });
 
@@ -53,17 +55,25 @@ export function SponsorshipCheck() {
   return createPortal(
     <div className="stat-board__privy">
       <QuietLink onClick={run} disabled={!client || check.state === "sending"}>
-        {check.state === "sending" ? "Checking sponsored gas…" : "Check sponsored gas"}
+        {check.state === "sending"
+          ? t(($) => $.identity.developer.sponsorshipCheck.checking)
+          : t(($) => $.identity.developer.sponsorshipCheck.check)}
       </QuietLink>
-      {!client && <p className="stat-board__privy-status">Waiting for the smart account…</p>}
+      {!client && (
+        <p className="stat-board__privy-status">
+          {t(($) => $.identity.developer.sponsorshipCheck.waitingForSmartAccount)}
+        </p>
+      )}
       {check.state === "failed" && (
-        <p className="stat-board__privy-status">Gas check failed: {check.reason}</p>
+        <p className="stat-board__privy-status">
+          {t(($) => $.identity.developer.sponsorshipCheck.failed, { reason: check.reason })}
+        </p>
       )}
       {check.state === "passed" && (
         <p className="stat-board__privy-status">
-          Sponsored with no ETH spent.{" "}
+          {t(($) => $.identity.developer.sponsorshipCheck.passed)}{" "}
           <a href={etherscanTxUrl(check.result.hash)} target="_blank" rel="noopener noreferrer">
-            View transaction
+            {t(($) => $.identity.developer.sponsorshipCheck.viewTransaction)}
           </a>
         </p>
       )}

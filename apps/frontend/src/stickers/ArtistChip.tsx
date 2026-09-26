@@ -1,4 +1,5 @@
 import type { PersonView } from "../api/views";
+import { useTranslation } from "../i18n/react";
 import { formatHandle } from "./format";
 import "./artist-chip.css";
 
@@ -16,11 +17,16 @@ interface Props {
  * inside a turning foil ring, then their handle.
  */
 export function ArtistChip({ artist, variant = "artist", bare = false }: Props) {
+  const { t } = useTranslation();
   // Until the handle prompt is answered, their LINE name stands in.
   const name = artist.handle === null ? artist.name : formatHandle(artist.handle);
   const classes = ["artist-chip", `artist-chip--${variant}`, bare && "artist-chip--bare"];
   return (
-    <span className={classes.filter(Boolean).join(" ")} role="note" aria-label={`Artist: ${name}`}>
+    <span
+      className={classes.filter(Boolean).join(" ")}
+      role="note"
+      aria-label={t(($) => $.stickers.artistChip.label, { name })}
+    >
       <span className="artist-chip__picture">
         {artist.pictureUrl ? (
           <img className="artist-chip__face" src={artist.pictureUrl} alt="" draggable={false} />
@@ -29,7 +35,7 @@ export function ArtistChip({ artist, variant = "artist", bare = false }: Props) 
         )}
       </span>
       <span className="artist-chip__text">
-        <span className="artist-chip__caption">{variant === "by" ? "By" : "Artist"}</span>{" "}
+        <span className="artist-chip__caption">{t(($) => $.stickers.artistChip[variant])}</span>{" "}
         <span className="artist-chip__name">{name}</span>
       </span>
     </span>

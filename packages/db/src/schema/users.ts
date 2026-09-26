@@ -46,6 +46,8 @@ export const users = sqliteTable(
     ensLabel: text("ens_label").unique(),
     /** When CroquisNames confirmed the person's name onchain. */
     ensNamedAt: integer("ens_named_at", { mode: "timestamp_ms" }),
+    /** The language picked in Settings, which the app starts in on every device; null follows LINE's. */
+    languageChoice: text("language_choice", { enum: ["en", "ja"] }),
   },
   (t) => [
     uniqueIndex("users_handle").on(sql`lower(${t.handle})`),

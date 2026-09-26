@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/react";
 import { Skeleton } from "../ui/Skeleton";
 
 /** Where the placeholder stickers sit, as shares of the board, turned as a hand would stick them. */
@@ -10,10 +11,11 @@ const SPOTS = [
 
 /** Faint sticker shapes on the board while its stickers load, where stickers usually sit. */
 export function BoardLoading() {
+  const { t } = useTranslation();
   return (
     <>
       <p className="visually-hidden" role="status">
-        Loading your stickers
+        {t(($) => $.stickerBoard.board.loading)}
       </p>
       {SPOTS.map((spot) => (
         <Skeleton

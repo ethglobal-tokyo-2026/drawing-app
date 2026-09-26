@@ -170,7 +170,7 @@ describe("TicketShop", () => {
     const skeletons = () => document.querySelectorAll(".skeleton").length;
     expect(skeletons()).toBeGreaterThan(1);
     expect(document.querySelector(".ticket-shop__packs [role=status]")?.textContent).toBe(
-      "Getting today’s prices",
+      "Getting today’s prices…",
     );
     await settle(3000);
     expect(skeletons()).toBe(0);

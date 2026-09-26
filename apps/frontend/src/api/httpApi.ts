@@ -131,6 +131,12 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
   const gift = (giftId: string) => ({ param: { giftId } });
 
   return {
+    setLanguageChoice: async (languageChoice) => {
+      const response = await api.me["language-choice"].$post({ json: { languageChoice } });
+      if (!response.ok) throw await refusal(response, "POST /api/me/language-choice");
+      return (await response.json()).me;
+    },
+
     stickerBoard: async (userId = "me") => {
       const response = await boards[":userId"].$get({ param: { userId } });
       if (!response.ok) throw await refusal(response, `GET /api/sticker-boards/${userId}`);

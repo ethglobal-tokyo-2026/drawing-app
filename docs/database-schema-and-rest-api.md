@@ -443,12 +443,13 @@ interface TimelapseV1 {
 
 ### Session and you
 
-| Route                 | Request                                                      | Response                              | Errors                                   |
-| --------------------- | ------------------------------------------------------------ | ------------------------------------- | ---------------------------------------- |
-| `POST /api/session`   | `{ idToken: string }`: from `liff.getIDToken()`              | 200 `{ me: Me }`, and sets the cookie | 401 `line_token_invalid`                 |
-| `GET /api/me`         | none                                                         | 200 `{ me: Me }`                      |                                          |
-| `POST /api/me/handle` | `{ handle: string }`: 1–32 characters after trimming, no `@` | 200 `{ me: Me }`                      | 400 `handle_invalid`; 409 `handle_taken` |
-| `DELETE /api/me`      | none                                                         | 204, and clears the cookie            |                                          |
+| Route                          | Request                                                                             | Response                              | Errors                                   |
+| ------------------------------ | ----------------------------------------------------------------------------------- | ------------------------------------- | ---------------------------------------- |
+| `POST /api/session`            | `{ idToken: string }`: from `liff.getIDToken()`                                     | 200 `{ me: Me }`, and sets the cookie | 401 `line_token_invalid`                 |
+| `GET /api/me`                  | none                                                                                | 200 `{ me: Me }`                      |                                          |
+| `POST /api/me/handle`          | `{ handle: string }`: 1–32 characters after trimming, no `@`                        | 200 `{ me: Me }`                      | 400 `handle_invalid`; 409 `handle_taken` |
+| `POST /api/me/language-choice` | `{ languageChoice: "en" \| "ja" \| null }`: Settings' language; null follows LINE's | 200 `{ me: Me }`                      | 400 `invalid_request`                    |
+| `DELETE /api/me`               | none                                                                                | 204, and clears the cookie            |                                          |
 
 ### Tickets
 

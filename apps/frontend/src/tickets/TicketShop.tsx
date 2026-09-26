@@ -1,7 +1,10 @@
 import type { TicketShop as Shop } from "@drawing-app/api/client";
 import { Ticket } from "@phosphor-icons/react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
+import { errorReason } from "../i18n/errorMessage";
+import { useTranslation } from "../i18n/react";
 import { DrawIcon } from "../icons/DrawIcon";
 import { usePrivyStatus } from "../identity/privy";
 import { useSuiWalletFailure } from "../identity/suiWallet";
@@ -35,9 +38,13 @@ interface Props {
   closeLabel?: string;
 }
 
+/** Why something failed: an API error in the app's language, anything else in its own words. */
 const reason = (error: unknown) =>
-  error instanceof Error && error.message ? error.message : String(error);
-const tickets = (n: number) => `${n} ${n === 1 ? "ticket" : "tickets"}`;
+  error instanceof ApiError
+    ? errorReason(error)
+    : error instanceof Error && error.message
+      ? error.message
+      : String(error);
 /** One outline row per pack the shop sells, while today's prices load. */
 const PACKS_LOADING = [1, 2, 3, 4];
 
@@ -71,12 +78,14 @@ function useTicketShop() {
 
 /** The person's Privy Sui wallet: its address, or why there's none yet. */
 function useSuiWallet(): { address?: string; problem?: string } {
+  const { t } = useTranslation();
   const privy = usePrivyStatus();
   const failure = useSuiWalletFailure();
-  if (failure) return { problem: `Your Sui wallet isn’t working (${failure})` };
-  if (privy.state === "failed") return { problem: `Your wallet didn’t sign in (${privy.reason})` };
-  if (privy.state === "off")
-    return { problem: "Paying needs LINE’s sign-in, which LIFF Mock skips" };
+  if (failure) return { problem: t(($) => $.tickets.shop.walletBroken, { reason: failure }) };
+  if (privy.state === "failed") {
+    return { problem: t(($) => $.tickets.shop.walletSignInFailed, { reason: privy.reason }) };
+  }
+  if (privy.state === "off") return { problem: t(($) => $.tickets.shop.walletNeedsLine) };
   return { address: privy.state === "signed-in" ? privy.suiWallet : undefined };
 }
 
@@ -114,7 +123,8 @@ function useJpycBalance(owner: string | undefined, payment: JpycPayment | undefi
  * The ticket shop: reserve ticket packs priced in yen and paid in JPYC from the person's Sui wallet,
  * with its JPYC balance up top in yen. The smallest pack is picked to start, so no pack is pushed.
  */
-export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: Props) {
+export function TicketShop({ layout, onDraw, onClose, closeLabel }: Props) {
+  const { t } = useTranslation();
   const [step, setStep] = useState<Step>("choose");
   const [chosen, setChosen] = useState<Pack["tickets"]>(1);
   const [bought, setBought] = useState<Pack | null>(null);
@@ -146,7 +156,7 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
       console.error(`Buying a pack of ${p.tickets} tickets with JPYC failed`, { digest, error: e });
       setError(
         digest
-          ? `The payment went through (${digest}), but the tickets weren’t added: ${reason(e)}`
+          ? t(($) => $.tickets.shop.paidButNotAdded, { digest, reason: reason(e) })
           : reason(e),
       );
       setStep("error");
@@ -175,7 +185,7 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
       disabled={step === "paying"}
       onClick={onClose}
     >
-      {closeLabel}
+      {closeLabel ?? t(($) => $.tickets.notNow)}
     </QuietLink>
   );
 
@@ -192,23 +202,27 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
           }))}
         />
         <h2 className="out-of-tickets__title" id={`${id}-title`}>
-          {bought.tickets} reserve {bought.tickets === 1 ? "ticket" : "tickets"} added
+          {t(($) => $.tickets.shop.added, { count: bought.tickets })}
         </h2>
         <p className="out-of-tickets__line out-of-tickets__quiet">
-          Paid {formatYen(bought.priceYen)} in JPYC.
+          {t(($) => $.tickets.shop.paid, { price: formatYen(bought.priceYen) })}
         </p>
         <TearLine />
         <Key
           className="out-of-tickets__key"
           icon={<DrawIcon />}
-          aria-label={state ? `Draw: you have ${describeTickets(state)}` : "Draw"}
+          aria-label={
+            state
+              ? t(($) => $.tickets.drawWithTickets, { tickets: describeTickets(state) })
+              : t(($) => $.tickets.draw)
+          }
           onClick={onDraw}
         >
-          Draw
+          {t(($) => $.tickets.draw)}
           {state && <TicketCounts state={state} className="ticket-counts--on-key" />}
         </Key>
         <LabelButton block icon={<Ticket />} onClick={() => setStep("choose")}>
-          Buy more tickets
+          {t(($) => $.tickets.shop.buyMore)}
         </LabelButton>
         {close}
       </>
@@ -217,14 +231,14 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
     body = (
       <>
         <h2 className="out-of-tickets__title out-of-tickets__title--top" id={`${id}-title`}>
-          Payment didn’t go through
+          {t(($) => $.tickets.shop.paymentFailed)}
         </h2>
         <p className="out-of-tickets__line" role="alert">
           <strong>{error}</strong>
         </p>
         <TearLine />
         <Key className="out-of-tickets__key" icon={<Ticket />} onClick={() => setStep("choose")}>
-          Back to the shop
+          {t(($) => $.tickets.shop.backToShop)}
         </Key>
         {close}
       </>
@@ -234,24 +248,24 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
     body = (
       <>
         <h2 className="out-of-tickets__title out-of-tickets__title--top" id={`${id}-title`}>
-          Ticket shop
+          {t(($) => $.tickets.shop.title)}
         </h2>
         <p className="out-of-tickets__line">
-          <strong>Reserve tickets never expire.</strong>
+          <strong>{t(($) => $.tickets.shop.lead)}</strong>
         </p>
         <div className="ticket-shop__wallet">
-          <span className="fine">Your JPYC</span>
+          <span className="fine">{t(($) => $.tickets.shop.balance)}</span>
           {sui.problem ? (
-            <span role="alert">{sui.problem}.</span>
+            <span role="alert">{sui.problem}</span>
           ) : wallet.error ? (
             <span role="alert">
-              Couldn’t read your balance ({wallet.error}).{" "}
-              <QuietLink onClick={wallet.refresh}>Try again</QuietLink>
+              {t(($) => $.tickets.shop.balanceProblem, { reason: wallet.error })}{" "}
+              <QuietLink onClick={wallet.refresh}>{t(($) => $.tickets.tryAgain)}</QuietLink>
             </span>
           ) : wallet.balance === null || !shop ? (
             <span className="ticket-shop__loading">
               <span className="visually-hidden" role="status">
-                Reading your balance
+                {t(($) => $.tickets.shop.readingBalance)}
               </span>
               <Skeleton width={84} height={18} />
             </span>
@@ -263,13 +277,13 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
         </div>
         {shopError ? (
           <p className="ticket-shop__problem" role="alert">
-            Couldn’t get today’s prices ({shopError}).{" "}
-            <QuietLink onClick={retry}>Try again</QuietLink>
+            {t(($) => $.tickets.shop.pricesProblem, { reason: shopError })}{" "}
+            <QuietLink onClick={retry}>{t(($) => $.tickets.tryAgain)}</QuietLink>
           </p>
         ) : !shop ? (
           <div className="ticket-shop__packs">
             <p className="visually-hidden" role="status">
-              Getting today’s prices
+              {t(($) => $.tickets.shop.gettingPrices)}
             </p>
             {/* The packs' own rows in outline, so nothing jumps as the prices come in. */}
             {PACKS_LOADING.map((n) => (
@@ -282,7 +296,11 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
             ))}
           </div>
         ) : (
-          <div className={`${REVEAL} ticket-shop__packs`} role="group" aria-label="Ticket packs">
+          <div
+            className={`${REVEAL} ticket-shop__packs`}
+            role="group"
+            aria-label={t(($) => $.tickets.shop.packs)}
+          >
             {shop.packs.map((p) => (
               <button
                 key={p.tickets}
@@ -293,13 +311,21 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
                 onClick={() => setChosen(p.tickets)}
               >
                 <TicketCount kind="reserve" />
-                <span className="ticket-shop__pack-name">{tickets(p.tickets)}</span>
+                <span className="ticket-shop__pack-name">
+                  {t(($) => $.tickets.shop.pack, { count: p.tickets })}
+                </span>
                 {p.discountPercent > 0 && (
-                  <span className="ticket-shop__discount">−{p.discountPercent}%</span>
+                  <span className="ticket-shop__discount">
+                    {t(($) => $.tickets.shop.discount, { percent: p.discountPercent })}
+                  </span>
                 )}
                 <span className="ticket-shop__price">
                   {p.discountPercent > 0 && (
-                    <s aria-label={`was ${formatYen(p.tickets * TICKET_PRICE_YEN)}`}>
+                    <s
+                      aria-label={t(($) => $.tickets.shop.was, {
+                        price: formatYen(p.tickets * TICKET_PRICE_YEN),
+                      })}
+                    >
                       {formatYen(p.tickets * TICKET_PRICE_YEN)}
                     </s>
                   )}
@@ -318,12 +344,12 @@ export function TicketShop({ layout, onDraw, onClose, closeLabel = "Not now" }: 
           onClick={() => pack && shop && void pay(pack, shop.payment)}
         >
           {paying
-            ? "Paying…"
+            ? t(($) => $.tickets.shop.paying)
             : short
-              ? "Not enough JPYC"
+              ? t(($) => $.tickets.shop.notEnoughJpyc)
               : pack
-                ? `Pay ${formatYen(pack.priceYen)}`
-                : "Pay"}
+                ? t(($) => $.tickets.shop.payPrice, { price: formatYen(pack.priceYen) })
+                : t(($) => $.tickets.shop.pay)}
         </Key>
         {close}
       </>

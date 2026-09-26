@@ -1,5 +1,9 @@
 import { SignOut } from "@phosphor-icons/react";
 import { useRef, useState, type Ref } from "react";
+import { useMe } from "../../api/meContext";
+import { useApiQuery } from "../../api/useApiQuery";
+import { errorReason } from "../../i18n/errorMessage";
+import { useTranslation } from "../../i18n/react";
 import { retryPrivySignIn, usePrivyStatus, type PrivyStatus } from "../../identity/privy";
 import { PrivyAccount } from "../../identity/PrivyAccount";
 import { useIdentity } from "../../identity/useIdentity";
@@ -9,14 +13,12 @@ import { SendTestMessage } from "../../line/SendTestMessage";
 import { LabelButton } from "../../ui/LabelButton";
 import { PhotoSticker } from "../../ui/PhotoSticker";
 import { QuietLink } from "../../ui/QuietLink";
-import { useMe } from "../../api/meContext";
-import { useApiQuery } from "../../api/useApiQuery";
 import { AddressDialog } from "./AddressDialog";
 import { AddressPapers } from "./AddressPapers";
 import { useBoardAddress, useSuiAddress, type Chain } from "./addresses";
 import { GratitudeDemoControls } from "./GratitudeDemoControls";
-import { LanguageControls } from "./LanguageControls";
 import { PerformanceRecorderControls } from "./PerformanceRecorderControls";
+import { SettingsNote } from "./SettingsNote";
 import { StatCork, type CorkFigures, type StatCorkHandle } from "./StatCork";
 import { statFigures } from "./statFigures";
 
@@ -38,6 +40,7 @@ interface Props {
 
 /** Your stat board: the Sticker Board's back, with your User Stats pinned on the cork. */
 export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref }: Props) {
+  const { t } = useTranslation();
   const me = useIdentity();
   const account = useMe();
   // Loaded each time the board mounts, so a turn after drawing or giving shows the new counts.
@@ -52,8 +55,11 @@ export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref
     ...statFigures(stats.state === "ready" ? stats.data : null, true, new Date()),
     since: Date.parse(stats.state === "ready" ? stats.data.since : account.createdAt),
   };
-  if (stats.state === "failed")
-    figures.streakRule = `Your stats didn’t load: ${stats.error.message}`;
+  if (stats.state === "failed") {
+    figures.streakRule = t(($) => $.stickerBoard.statBoard.didntLoadOwnBecause, {
+      reason: errorReason(stats.error),
+    });
+  }
 
   const board = useBoardAddress();
   const sui = useSuiAddress();
@@ -83,7 +89,7 @@ export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref
               className="stat-board__logout"
               onClick={lineLogout}
             >
-              Log out of LINE
+              {t(($) => $.stickerBoard.statBoard.logOut)}
             </LabelButton>
           )
         }
@@ -96,20 +102,25 @@ export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref
           onOpen={setOpen}
         />
         {DEV_SLIP && (
-          <section className="stat-board__note stat-board__slip" aria-label="Developer tools">
+          <section
+            className="stat-board__note stat-board__slip"
+            aria-label={t(($) => $.stickerBoard.developer.label)}
+          >
             <div className="stat-board__paper">
-              <h3 className="fine stat-board__slip-h">LINE and Privy</h3>
+              <h3 className="fine stat-board__slip-h">
+                {t(($) => $.stickerBoard.developer.title)}
+              </h3>
               <SendTestMessage senderName={me.displayName} />
               <LineDetails />
               <PrivyLine />
               <PrivyAccount />
               <GratitudeDemoControls onTry={onTryGratitudeMiniGame} />
               <PerformanceRecorderControls />
-              <LanguageControls />
             </div>
             <i className="stat-board__washi" aria-hidden />
           </section>
         )}
+        <SettingsNote />
       </StatCork>
       {/* Beside the cork rather than in it, so its taps and Escape never reach the cork's own. */}
       {held && (
@@ -125,26 +136,33 @@ export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref
   );
 }
 
-function privyText(privy: PrivyStatus): string {
+type Translate = ReturnType<typeof useTranslation>["t"];
+
+function privyText(t: Translate, privy: PrivyStatus): string {
   switch (privy.state) {
     case "signed-in":
-      return "Signed in to Privy";
+      return t(($) => $.stickerBoard.developer.privy.signedIn);
     case "signing-in":
-      return "Signing in to Privy…";
+      return t(($) => $.stickerBoard.developer.privy.signingIn);
     case "failed":
-      return `Privy sign-in failed: ${privy.reason}`;
+      return t(($) => $.stickerBoard.developer.privy.failed, { reason: privy.reason });
     case "off":
-      return "Privy is off on the dev server, where LIFF Mock signs you in";
+      return t(($) => $.stickerBoard.developer.privy.off);
   }
 }
 
 /** The Privy sign-in. After a failure it waits for Try again, since Privy's SDK would retry in a loop. */
 function PrivyLine() {
+  const { t } = useTranslation();
   const privy = usePrivyStatus();
   return (
     <div className="stat-board__privy">
-      <p className="stat-board__privy-status">{privyText(privy)}</p>
-      {privy.state === "failed" && <QuietLink onClick={retryPrivySignIn}>Try again</QuietLink>}
+      <p className="stat-board__privy-status">{privyText(t, privy)}</p>
+      {privy.state === "failed" && (
+        <QuietLink onClick={retryPrivySignIn}>
+          {t(($) => $.stickerBoard.developer.privy.tryAgain)}
+        </QuietLink>
+      )}
     </div>
   );
 }

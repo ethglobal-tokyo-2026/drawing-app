@@ -56,6 +56,8 @@ export const toPerson = ({
 export const meSchema = personSchema.extend({
   timeZone: userRow.shape.timeZone,
   language: userRow.shape.language,
+  /** Settings' language; null follows LINE's. */
+  languageChoice: userRow.shape.languageChoice,
   /** The stat board's "Since". */
   createdAt: isoTimeSchema,
   /** True until the handle prompt is answered. */
@@ -74,6 +76,7 @@ export const toMe = (
   ...toPerson(user),
   timeZone: user.timeZone,
   language: user.language,
+  languageChoice: user.languageChoice,
   createdAt: toIsoTime(user.createdAt),
   needsHandle: user.handle === null,
   ...counts,

@@ -1,4 +1,5 @@
 import { formatCount } from "../i18n/format";
+import { i18next } from "../i18n/i18n";
 import { fullBarSeconds } from "./combo";
 import { EASE_OUT, EASE_PEEL, clamp } from "./easing";
 
@@ -92,7 +93,11 @@ export function createComboHud(
   const head = element("div", "gr-timer-head");
   const track = element("div", "gr-timer-track", fill, ticks, head);
   const seconds = document.createTextNode("0.0");
-  const unit = element("small", "", "s");
+  const unit = element(
+    "small",
+    "",
+    i18next.t(($) => $.gratitude.hud.secondsUnit),
+  );
   const row = element("div", "gr-timer", track, element("span", "gr-timer-s", seconds, unit));
   const amountNumber = document.createTextNode("0");
   const amount = element("div", "gr-amount", element("b", "", amountNumber), element("i", "", "♡"));
@@ -186,7 +191,9 @@ export function createComboHud(
           ? lastLabel.item
           : recycle(labels, LABELS, () => ticks.appendChild(element("span", "gr-tick")));
       lastLabel = { item: label, x: labelX };
-      label.el.textContent = `+${secondsAdded.toFixed(1)}s`;
+      label.el.textContent = i18next.t(($) => $.gratitude.hud.secondsAdded, {
+        seconds: secondsAdded.toFixed(1),
+      });
       // Over the bar's end, in the HUD's lane above the bar: it rises out of the bar, never past the HUD's top.
       const at = `translateX(${labelX.toFixed(1)}px) translateX(-50%)`;
       play(

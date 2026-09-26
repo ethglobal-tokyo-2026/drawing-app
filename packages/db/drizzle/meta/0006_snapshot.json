@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "792bbde0-40fd-40d7-a476-6c8da9995ab7",
+  "id": "884526fc-579f-4b22-a7a9-0fd3bb0df9ba",
   "prevId": "85fe9ffa-208a-4768-8581-39c75211feab",
   "tables": {
     "gifts": {
@@ -803,8 +803,15 @@
           "notNull": true,
           "autoincrement": false
         },
-        "paid_jpyc": {
-          "name": "paid_jpyc",
+        "sui_yen": {
+          "name": "sui_yen",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "paid_mist": {
+          "name": "paid_mist",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -1081,6 +1088,13 @@
         "ens_named_at": {
           "name": "ens_named_at",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "language_choice": {
+          "name": "language_choice",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false

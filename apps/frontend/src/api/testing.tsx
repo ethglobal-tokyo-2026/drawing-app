@@ -20,10 +20,12 @@ export const TEST_OWNER: Person = {
   ensName: "you.croquis.eth",
 };
 
-const TEST_ME: Me = {
+/** You in tests. */
+export const TEST_ME: Me = {
   ...TEST_OWNER,
   timeZone: "Asia/Tokyo",
   language: "en",
+  languageChoice: null,
   createdAt: "2026-09-01T00:00:00.000Z",
   needsHandle: false,
   newStickerCount: 0,
@@ -92,6 +94,7 @@ const unanswered = (method: string) => () =>
  */
 export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
   return {
+    setLanguageChoice: unanswered("setLanguageChoice"),
     stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [] }),
     userStats: unanswered("userStats"),
     saveStickerPlacement: (stickerId, placement) =>
@@ -123,6 +126,14 @@ export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
       Promise.reject(new ApiError(404, { error: "user_not_found", detail: label })),
     ...overrides,
   };
+}
+
+/** The text `selector`'s first match shows on screen, without what only screen readers hear. */
+export function shownText(selector: string): string {
+  const shown = document.querySelector(selector)?.cloneNode(true);
+  if (!(shown instanceof Element)) throw new Error(`Nothing on screen matches ${selector}`);
+  shown.querySelectorAll(".visually-hidden").forEach((hidden) => hidden.remove());
+  return shown.textContent;
 }
 
 /** Renders `ui` as you, under an ApiProvider, in a fresh host. `unmount` removes both. */

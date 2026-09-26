@@ -3,6 +3,7 @@ import { ApiError } from "../api/apiClient";
 import type { GiftPreview, ReceivedGift } from "@drawing-app/api/client";
 import { people, sticker } from "../api/testFixtures";
 import { toMs, toPerson, toSticker } from "../api/views";
+import { errorReason } from "../i18n/errorMessage";
 import { receiveFlow, type ReceiveEvent, type ReceiveScreen } from "./receiveFlow";
 
 const giver = people.mika;
@@ -97,7 +98,7 @@ describe("opening a gift", () => {
     const error = failed(0, "network", "Failed to fetch");
     expect(play({ type: "previewFailed", error })).toEqual({
       step: "failed",
-      message: error.message,
+      message: errorReason(error),
     });
   });
 
@@ -146,7 +147,7 @@ describe("receiving a gift", () => {
       step: "unpackaged",
       preview: sealedPreview,
       receiving: false,
-      failed: error.message,
+      failed: errorReason(error),
     });
     expect(receiveFlow(again, { type: "receive" })).toEqual({
       step: "unpackaged",

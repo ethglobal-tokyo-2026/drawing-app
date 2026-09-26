@@ -1,4 +1,5 @@
 import { ArrowClockwise, ArrowCounterClockwise } from "@phosphor-icons/react";
+import { useTranslation } from "../../i18n/react";
 import "./HistoryButtons.css";
 
 interface Props {
@@ -10,12 +11,13 @@ interface Props {
 
 /** Undo and redo: flat tiles at the bottom left, sunk while there's nothing to take back or bring back. */
 export function HistoryButtons({ canUndo, canRedo, onUndo, onRedo }: Props) {
+  const { t } = useTranslation();
   return (
     <div className="history-buttons">
       <button
         type="button"
         className="history-tile"
-        aria-label="Undo"
+        aria-label={t(($) => $.stickerCreation.history.undo)}
         disabled={!canUndo}
         onClick={onUndo}
       >
@@ -24,7 +26,7 @@ export function HistoryButtons({ canUndo, canRedo, onUndo, onRedo }: Props) {
       <button
         type="button"
         className="history-tile"
-        aria-label="Redo"
+        aria-label={t(($) => $.stickerCreation.history.redo)}
         disabled={!canRedo}
         onClick={onRedo}
       >

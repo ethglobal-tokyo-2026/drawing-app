@@ -10,10 +10,10 @@ describe("the page's language", () => {
     const setLiffLanguage = vi.fn(() => Promise.resolve());
     followLanguageOnPage(setLiffLanguage);
     expect(document.documentElement.lang).toBe("en");
-    expect(document.title).toBe("Sticker Board");
+    expect(document.title).toBe("Croquis");
     await i18next.changeLanguage("ja");
     expect(document.documentElement.lang).toBe("ja");
-    expect(document.title).toBe("シールボード");
+    expect(document.title).toBe("クロッキー");
     expect(setLiffLanguage).toHaveBeenLastCalledWith("ja");
   });
 });

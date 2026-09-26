@@ -6,6 +6,7 @@ import type {
   GiftPreview,
   Gratitude,
   GratitudeWithReplay,
+  Me,
   OpenGiftBody,
   PackagedGift,
   PendingGifts,
@@ -53,6 +54,9 @@ interface TicketPurchase {
 
 /** The REST API, one method per route the app calls. */
 export interface ApiClient {
+  /** POST /api/me/language-choice: Settings' language, or null to follow LINE's. */
+  setLanguageChoice: (languageChoice: Me["languageChoice"]) => Promise<Me>;
+
   /** GET /api/sticker-boards/:userId; `me` for your own. */
   stickerBoard: (userId?: string) => Promise<StickerBoard>;
   /** GET /api/sticker-boards/:userId/user-stats */

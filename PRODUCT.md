@@ -67,7 +67,7 @@ You can hand someone a physical drawing, but no existing system makes a _digital
 
 ## Capabilities and Constraints
 
-- **Drawing tools:** paintbrush and eraser, each with a resizable size, plus a **color picker for the brush** (ad0ll, 2026-09-22). **Brushes are fully opaque: no transparency or opacity control** (ad0ll, 2026-09-22). A fill tool is nice to have. **Stabilization** (stroke smoothing) as one slider (ad0ll, 2026-09-23: "nice to have if easy"; it is easy). **Anything beyond that is explicitly out of scope.** Autosave to temporary on-device storage. It must not lag.
+- **Drawing tools:** paintbrush and eraser, each with a resizable size, plus a **color picker for the brush** (ad0ll, 2026-09-22). Each new drawing starts in a random color from a curated set, so drawings vary (ad0ll, 2026-09-27). **Brushes are fully opaque: no transparency or opacity control** (ad0ll, 2026-09-22). A fill tool is nice to have. **Stabilization** (stroke smoothing) as one slider (ad0ll, 2026-09-23: "nice to have if easy"; it is easy). **Anything beyond that is explicitly out of scope.** Autosave to temporary on-device storage. It must not lag.
 - **Visual reference for drawing: Procreate** (Procreate Pocket on phones), **not ibisPaint** (ad0ll, 2026-09-23: "ibispaint is ugly as sin"). That means the canvas stays nearly bare, with a thin rail for size and a compact top-right cluster for brush, eraser and color.
 - **Rendering:** JavaScript on the standard 2D canvas, as Kleki's brush engine does, switching to WebGL only if strokes aren't smooth on a real phone. Undo is stored as strokes, not full snapshots.
 - **Gestures:** "whatever gestures people expect" (ad0ll, 2026-09-22). That means the convention Procreate, Magma and Kleki share: **two-finger tap to undo, three-finger tap to redo**. **[inferred]** Pinch to zoom and two-finger drag to pan, since Magma and Kleki have them and artists will try them; they change the view, not the tools. Small undo and redo buttons back the gestures up.
@@ -104,7 +104,8 @@ You can hand someone a physical drawing, but no existing system makes a _digital
 - **Notices go through the app's LINE Official Account** **[inferred]**; ad0ll was fine either way. It's the only way to reach someone outside the app, because LINE's browser has no web push. The same account's chat carries a Draw · Explore · You menu, which is how people come back daily. Pending gifts and offers also show inside the app.
 - **Navigation** (from the sketch): three tabs, **DRAW · Explore · You**.
 - **Sponsors** (backend only; never surfaced in consumer copy): ENS gives each artist a sub-registry that resolves their sticker board, and transfers update it. Sui/Walrus or Filecoin for file storage.
-- **Open, and not to be invented as settled:** what the sketch's "inspired" and "magic" gratitude categories measure; how the leaderboard is scoped; what happens to gratitude offered for a sticker; LIFF app or MINI App channel; the product name.
+- **Open, and not to be invented as settled:** what the sketch's "inspired" and "magic" gratitude categories measure; how the leaderboard is scoped; what happens to gratitude offered for a sticker; LIFF app or MINI App channel.
+- **The name is Croquis, クロッキー in Japanese** (ad0ll, 2026-09-26). A sticker board is a person's board of stickers, never the app.
 
 ## Brand Commitments
 
