@@ -98,7 +98,7 @@
     },
     {
       "files": ["apps/frontend/src/ui/**"],
-      "rules": { "react/jsx-no-literals": "off" }
+      "rules": { "react/jsx-no-literals": "error" }
     },
     // Last, so it wins over the folders above: tests render stand-in text that nobody sees.
     {
