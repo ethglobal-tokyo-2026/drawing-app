@@ -2,7 +2,12 @@ import { ApiError } from "../api/apiClient";
 import { errorReason } from "../i18n/errorMessage";
 import { i18next } from "../i18n/i18n";
 import { formatNo } from "../stickers/format";
-import type { GiftBackend, GiftSticker, PackedGift } from "./giftBackend";
+import {
+  GiftPackagingError,
+  type GiftBackend,
+  type GiftSticker,
+  type PackedGift,
+} from "./giftBackend";
 import type { GiftSender, GiftSendOutcome } from "./giftSender";
 
 /**
@@ -11,8 +16,10 @@ import type { GiftSender, GiftSendOutcome } from "./giftSender";
  */
 export type GiveFlowState =
   | { step: "sheet" }
-  /** In the bag. LINE's picker opens on its own after a beat. */
+  /** The bag animation has started while the sticker is prepared. */
   | { step: "packed" }
+  /** Waiting for the sticker to be ready before opening LINE's picker. */
+  | { step: "preparing" }
   /** LINE's picker is open. */
   | { step: "picking" }
   | { step: "sent"; sentAt: number; recordError?: string }
@@ -56,12 +63,14 @@ interface Attempt {
 }
 
 /** Why a step failed, as the screen says it: an API error in the app's language, else its own text. */
-const describe = (error: unknown) =>
-  error instanceof ApiError
-    ? errorReason(error)
-    : error instanceof Error
-      ? error.message
-      : String(error);
+const describe = (error: unknown): string =>
+  error instanceof GiftPackagingError
+    ? describe(error.cause)
+    : error instanceof ApiError
+      ? errorReason(error)
+      : error instanceof Error
+        ? error.message
+        : String(error);
 
 export function createGiveFlow({
   sticker,
@@ -90,6 +99,7 @@ export function createGiveFlow({
   };
   const after = (ms: number, run: () => void) => {
     clearTimer();
+    if (disposed) return;
     timer = setTimeout(() => {
       timer = undefined;
       run();
@@ -135,23 +145,19 @@ export function createGiveFlow({
     }
   };
 
-  const putBack = (a: Attempt) => {
-    if (!a.open) return;
-    a.open = false;
-    void a.gift.then(
-      (packed) => record("taking it out", () => backend.takeOut(packed.giftId)),
-      (error: unknown) => report(`${which} couldn’t be packed`, error),
-    );
-  };
-
   const openPicker = async () => {
-    if (state.step !== "packed" && state.step !== "notSent" && state.step !== "failed") return;
+    if (
+      disposed ||
+      (state.step !== "packed" && state.step !== "notSent" && state.step !== "failed")
+    )
+      return;
     clearTimer();
     const a = attempt?.open ? attempt : startAttempt();
-    set({ step: "picking" });
+    set({ step: "preparing" });
     const packed = await packedGift(a);
-    if (!packed) return;
+    if (!packed || disposed || !a.open) return;
 
+    set({ step: "picking" });
     let outcome: GiftSendOutcome;
     try {
       outcome = await sender.send(packed.message);
@@ -185,7 +191,7 @@ export function createGiveFlow({
       return () => listeners.delete(listener);
     },
     chooseLineChat: () => {
-      if (state.step !== "sheet") return;
+      if (disposed || state.step !== "sheet") return;
       const a = startAttempt();
       set({ step: "packed" });
       void packedGift(a);
@@ -193,16 +199,27 @@ export function createGiveFlow({
     },
     sendInLine: () => void openPicker(),
     takeOut: () => {
-      if (state.step !== "packed" && state.step !== "notSent" && state.step !== "failed") return;
+      if (
+        disposed ||
+        (state.step !== "packed" && state.step !== "notSent" && state.step !== "failed")
+      )
+        return;
       clearTimer();
       const a = attempt;
+      // A failed confirmation can still mean the take-out landed. Sending must prepare it again.
+      if (a) a.open = false;
       set({ step: "takingOut" });
       void (async () => {
         if (a) {
           try {
-            const packed = await a.gift;
-            await backend.takeOut(packed.giftId);
-            a.open = false;
+            let giftId: string;
+            try {
+              giftId = (await a.gift).giftId;
+            } catch (error) {
+              if (!(error instanceof GiftPackagingError)) throw error;
+              giftId = error.giftId;
+            }
+            await backend.takeOut(giftId);
           } catch (error) {
             report(`${which} couldn't be taken out`, error);
             set({
@@ -221,8 +238,7 @@ export function createGiveFlow({
     },
     dispose: () => {
       clearTimer();
-      // Closing with the sticker still in the bag puts it back; one on LINE's picker records its outcome.
-      if (state.step !== "picking" && attempt) putBack(attempt);
+      // Unmounting is not consent to move an NFT; the gift stays in the bag until an explicit action.
       disposed = true;
       listeners.clear();
     },

@@ -4,6 +4,7 @@ import type {
   Explore,
   Gift,
   GiftPreview,
+  GiftsForYou,
   Gratitude,
   GratitudeWithReplay,
   Me,
@@ -82,8 +83,11 @@ export interface ApiClient {
   /** POST /api/ticket-purchases */
   buyTickets: (purchase: TicketPurchase) => Promise<Tickets>;
 
-  /** POST /api/gifts: a new gift of the sticker, or the one already in the bag. */
-  packageGift: (stickerId: string) => Promise<PackagedGift>;
+  /**
+   * POST /api/gifts: a new gift of the sticker, or the one already in the bag; `forUserId` when the
+   * giver picked who it's for in the app, so it waits on their board.
+   */
+  packageGift: (stickerId: string, forUserId?: string) => Promise<PackagedGift>;
   /** POST /api/gifts/:giftId/deposit */
   reportDeposit: (giftId: string, txHash?: string) => Promise<Gift>;
   /** POST /api/gifts/:giftId/shared */
@@ -96,6 +100,10 @@ export interface ApiClient {
   previewGift: (body: GiftOpening) => Promise<GiftPreview>;
   /** POST /api/gifts/receive */
   receiveGift: (body: GiftOpening) => Promise<ReceivedGift>;
+  /** GET /api/gifts/for-you: gifts waiting for you, newest first. */
+  giftsForYou: () => Promise<GiftsForYou>;
+  /** POST /api/gifts/:giftId/receive: a gift waiting for you, received from your board. */
+  receiveGiftForYou: (giftId: string) => Promise<ReceivedGift>;
 
   /** POST /api/gratitude, sent with keepalive so it lands as the page closes. */
   recordGratitude: (combo: RecordGratitude) => Promise<Gratitude>;

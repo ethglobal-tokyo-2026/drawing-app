@@ -74,6 +74,14 @@ export const gifts = sqliteTable(
      */
     pushedToGiverAt: integer("pushed_to_giver_at", { mode: "timestamp_ms" }),
     ...timestamps(),
+    /**
+     * Who it waits for before anyone receives it: the person the giver picked in the app, or else
+     * the first person to open its Gift Message's link. It shows on their board, where they can
+     * receive it without the link. A stopgap until smart account permissions can authorize them on
+     * chain. Added in place, so it carries no foreign key or check: Giving and Receiving check that
+     * it's a person, and never the giver.
+     */
+    forUserId: text("for_user_id"),
   },
   (t) => [
     // One gift per sticker at a time: while it's in the bag or sent, and while the escrow still holds
@@ -83,6 +91,7 @@ export const gifts = sqliteTable(
       .where(sql`${t.status} in ('packed', 'sent') or ${t.escrowStatus} = 'pending'`),
     index("gifts_giver").on(t.giverId, t.status),
     index("gifts_receiver").on(t.receiverId),
+    index("gifts_for_user").on(t.forUserId, t.status),
     index("gifts_transfer_trail").on(t.stickerId, t.receivedAt),
     index("gifts_received").on(t.receivedAt),
     index("gifts_escrow_open")

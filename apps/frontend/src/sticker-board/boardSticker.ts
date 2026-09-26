@@ -39,8 +39,8 @@ export interface BoardStickerView extends Omit<BoardSticker, "blob"> {
   /** Set when `held` is false. */
   givenTo: GivenTo | null;
   /**
-   * Its gift while packed or on its way. `to` is known only for a gift given to an artist in the app;
-   * LINE's friend picker never says who was picked.
+   * Its gift while packed or on its way. `to` is the handle of who it waits for: the artist picked in
+   * the app, or whoever first opened its link, since LINE's friend picker never says who was picked.
    */
   openGift: { id: string; status: "packed" | "sent"; to?: string } | null;
   /** When the open sticker tray showed it, in milliseconds; null shows NEW. */
@@ -74,7 +74,11 @@ export function toBoardSticker(b: ApiBoardSticker): UnplacedBoardSticker {
       receiver: toPerson(b.givenTo.receiver),
       receivedAt: toMs(b.givenTo.receivedAt),
     },
-    openGift: b.openGift && { id: b.openGift.id, status: b.openGift.status },
+    openGift: b.openGift && {
+      id: b.openGift.id,
+      status: b.openGift.status,
+      ...(b.openGift.for?.handle && { to: b.openGift.for.handle }),
+    },
     seenAt: b.seenAt === null ? null : toMs(b.seenAt),
     arrivedAt: toMs(b.arrivedAt),
   };
