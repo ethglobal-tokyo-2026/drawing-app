@@ -1,0 +1,150 @@
+import { describe, expect, it } from "vitest";
+import { createGratitudeCombo, type ComboEvent, type ComboRecord } from "./combo";
+import { GAME_CONFIG, type GameConfig } from "./gameConfig";
+
+type Ended = Extract<ComboEvent, { kind: "ended" }>;
+const endOf = (events: readonly ComboEvent[]) => events.find((e): e is Ended => e.kind === "ended");
+
+/** A seeded random source, so a failing run can be repeated. */
+function seeded(seed: number) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let r = Math.imul(s ^ (s >>> 15), 1 | s);
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+    return ((r ^ (r >>> 14)) >>> 0) / 2 ** 32;
+  };
+}
+
+/**
+ * Taps the heart `rate` times a second from t = 0 until the combo ends, with a frame between taps.
+ * `jitter` spreads each gap and each frame by up to that share, from `seed`.
+ */
+function play(rate: number, { config = GAME_CONFIG, jitter = 0, seed = 1 } = {}) {
+  const random = seeded(seed);
+  const spread = () => 1 + jitter * (random() * 2 - 1);
+  const combo = createGratitudeCombo(config);
+  const events: ComboEvent[] = [];
+  let nextTap = 0;
+  for (let t = 0; t < 20_000; t += 16 * spread()) {
+    for (; nextTap <= t; nextTap += (1000 / rate) * spread())
+      events.push(...combo.tapHeart(nextTap));
+    events.push(...combo.advanceTo(t));
+    const end = endOf(events);
+    if (end)
+      return {
+        record: end.record,
+        events,
+        limited: events.filter((e) => e.kind === "limited").length,
+      };
+  }
+  throw new Error(`A combo at ${rate} taps a second never ended`);
+}
+
+/** Feeds a record's hit times, and nothing else, to a fresh combo. */
+function replay(record: ComboRecord): ComboRecord | undefined {
+  const combo = createGratitudeCombo();
+  const events = record.hitTimes.flatMap((t) => combo.tapHeart(t));
+  events.push(...combo.advanceTo(record.durationMs + 0.5));
+  if (!endOf(events)) events.push(...combo.endCombo(record.durationMs));
+  return endOf(events)?.record;
+}
+
+describe("createGratitudeCombo", () => {
+  it("sends with one tap when no second tap catches the heart", () => {
+    const combo = createGratitudeCombo();
+    combo.tapHeart(5000);
+    expect(combo.advanceTo(5000 + GAME_CONFIG.catchWindowMs - 1)).toEqual([]);
+    const end = endOf(combo.advanceTo(5000 + GAME_CONFIG.catchWindowMs));
+    expect(end).toMatchObject({
+      caught: false,
+      record: {
+        hits: 1,
+        hitTimes: [0],
+        durationMs: GAME_CONFIG.catchWindowMs,
+        total: GAME_CONFIG.gratitudePerHit,
+      },
+    });
+  });
+
+  it("starts the bar, full, when a second tap catches the heart", () => {
+    const combo = createGratitudeCombo();
+    combo.tapHeart(0);
+    expect(combo.tapHeart(300).map((e) => e.kind)).toEqual(["caught", "hit", "tier"]);
+    expect(combo.view).toMatchObject({ phase: "running", tier: 0, barFill: 1 });
+  });
+
+  it("lasts longer and reaches a higher tier and total the faster the taps", () => {
+    const [calm, eager, mashing] = [3, 6, 13].map((rate) => play(rate).record);
+    expect(calm.durationMs).toBeLessThan(eager.durationMs);
+    expect(eager.durationMs).toBeLessThan(mashing.durationMs);
+    expect(calm.total).toBeLessThan(eager.total);
+    expect(eager.total).toBeLessThan(mashing.total);
+    expect(calm.peakTier).toBeLessThan(mashing.peakTier);
+  });
+
+  it("counts no more hits than the rate limit allows", () => {
+    const { record, limited } = play(40);
+    expect(limited).toBeGreaterThan(0);
+    for (const start of record.hitTimes) {
+      const inOneSecond = record.hitTimes.filter((t) => t >= start && t < start + 1000).length;
+      expect(inOneSecond).toBeLessThanOrEqual(GAME_CONFIG.tapsPerSecond + GAME_CONFIG.burst);
+    }
+  });
+
+  it("only ever climbs the tiers", () => {
+    const tiers = play(13).events.flatMap((e) => (e.kind === "tier" ? [e.tier] : []));
+    expect(tiers.length).toBeGreaterThan(2);
+    tiers.slice(1).forEach((tier, i) => expect(tier).toBeGreaterThan(tiers[i]));
+  });
+
+  it("stops at the safety limit however long the bar would last", () => {
+    const slowDrain: GameConfig = { ...GAME_CONFIG, drainStart: 0.001 };
+    expect(play(10, { config: slowDrain }).record.durationMs).toBe(slowDrain.maxDurationMs);
+  });
+
+  it("ends at once, with its result, when the page goes hidden", () => {
+    const combo = createGratitudeCombo();
+    [0, 200, 400].forEach((t) => combo.tapHeart(t));
+    expect(endOf(combo.endCombo(500))).toMatchObject({
+      caught: true,
+      record: { hits: 3, durationMs: 500 },
+    });
+  });
+
+  it("ends without a record when closed before the first tap", () => {
+    const combo = createGratitudeCombo();
+    expect(combo.endCombo(100)).toEqual([]);
+    expect(combo.tapHeart(200)).toEqual([]);
+  });
+
+  it("records one time per hit, rising from 0, within the safety limit", () => {
+    for (const rate of [3, 8, 16]) {
+      const { record } = play(rate, { jitter: 0.2 });
+      expect(record.hitTimes).toHaveLength(record.hits);
+      expect(record.hitTimes[0]).toBe(0);
+      record.hitTimes
+        .slice(1)
+        .forEach((t, i) => expect(t).toBeGreaterThanOrEqual(record.hitTimes[i]));
+      expect(record.durationMs).toBeLessThanOrEqual(GAME_CONFIG.maxDurationMs);
+    }
+  });
+
+  it("brings 照れ no sooner than the 7th tap at any steady speed", () => {
+    for (let rate = 2; rate <= 16; rate++) {
+      let hits = 0;
+      for (const e of play(rate).events) {
+        if (e.kind === "hit") hits++;
+        if (e.kind === "tier" && e.tier === 1)
+          expect(hits, `at ${rate} taps a second`).toBeGreaterThanOrEqual(7);
+      }
+    }
+  });
+
+  it("gives the same record when replayed from its hit times, however the frames fell", () => {
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const { record } = play(4 + seed * 2, { jitter: 0.4, seed });
+      expect(replay(record)).toEqual(record);
+    }
+  });
+});
