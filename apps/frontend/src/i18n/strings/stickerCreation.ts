@@ -258,7 +258,7 @@ export const stickerCreation = {
     keepDrawing: { en: "Keep drawing", ja: "もう1枚かく" },
     /** Sealed card: the button at the bottom while you have tickets left, or the main key after your last ticket; it goes to your sticker board */
     goToStickerBoard: { en: "Go to sticker board", ja: "シールボードへ" },
-    /** Sealed card: the button at the bottom after your last ticket; it opens the reserve ticket checkout */
+    /** Sealed card: the button at the bottom after your last ticket, with the Shop's tag icon; it opens the reserve ticket checkout */
     buyReserveTickets: { en: "Buy reserve tickets", ja: "有償チケットを買う" },
     /** Sealed card: the line under the tickets after you used your last ticket of either kind; {{time}} is when daily tickets refill (0:00 in Japanese) */
     lastTicket: {

@@ -167,12 +167,10 @@ export const userStatsSchema = z.object({
   received: count,
   given: count,
   gratitude: z.object({
-    /** Your part of tap combos on gifts you gave. */
-    inspired: count,
-    /** Your part of stroke and shake combos. */
-    magic: count,
-    /** Original Artist Gratitude Shares. */
-    asOriginalArtist: count,
+    /** Your part of the combos on gifts you gave: each combo's total, less any Original Artist's share. */
+    direct: count,
+    /** Your Original Artist Gratitude Shares, from gifts of stickers you drew that others gave on. */
+    residual: count,
     total: count,
   }),
   bests: z.object({ bestCombo: count, mostGratitudeInADay: count, longestStreak: count }),

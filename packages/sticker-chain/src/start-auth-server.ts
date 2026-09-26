@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
 import { createAuthHttpServer } from "./auth-http.js";
-import { createLineMenuSwitch } from "./line-menu.js";
 import { createLineVerifier } from "./line.js";
 import { createLinePrivyJwtIssuer } from "./line-privy-jwt.js";
 
@@ -8,51 +7,6 @@ function requireEnvironment(name: string) {
   const value = process.env[name];
   if (!value) throw new Error(`${name} is required`);
   return value;
-}
-
-// Chat menu switching is optional: without it the server still signs people in, and its route answers 503.
-// The Japanese menu is optional too: without it, Japanese gets the English menu.
-function createLineMenuSwitchFromEnvironment(loginChannelId: string, privyAppId: string) {
-  const {
-    PRIVY_APP_SECRET,
-    LINE_MESSAGING_CHANNEL_ID,
-    LINE_MESSAGING_CHANNEL_SECRET,
-    LINE_RETURNING_RICH_MENU_ID_EN,
-    LINE_RETURNING_RICH_MENU_ID_JA,
-  } = process.env;
-  if (
-    PRIVY_APP_SECRET &&
-    LINE_MESSAGING_CHANNEL_ID &&
-    LINE_MESSAGING_CHANNEL_SECRET &&
-    LINE_RETURNING_RICH_MENU_ID_EN
-  ) {
-    const switchLineMenu = createLineMenuSwitch({
-      loginChannelId,
-      privyAppId,
-      privyAppSecret: PRIVY_APP_SECRET,
-      messagingChannelId: LINE_MESSAGING_CHANNEL_ID,
-      messagingChannelSecret: LINE_MESSAGING_CHANNEL_SECRET,
-      returningRichMenuIds: LINE_RETURNING_RICH_MENU_ID_JA
-        ? { en: LINE_RETURNING_RICH_MENU_ID_EN, ja: LINE_RETURNING_RICH_MENU_ID_JA }
-        : { en: LINE_RETURNING_RICH_MENU_ID_EN },
-    });
-    process.stdout.write(
-      LINE_RETURNING_RICH_MENU_ID_JA
-        ? "LINE chat menu switching is on, in English and Japanese\n"
-        : "LINE chat menu switching is on; LINE_RETURNING_RICH_MENU_ID_JA isn't set, so Japanese gets the English menu\n",
-    );
-    return switchLineMenu;
-  }
-  const missing = Object.entries({
-    PRIVY_APP_SECRET,
-    LINE_MESSAGING_CHANNEL_ID,
-    LINE_MESSAGING_CHANNEL_SECRET,
-    LINE_RETURNING_RICH_MENU_ID_EN,
-  })
-    .filter(([, value]) => !value)
-    .map(([name]) => name);
-  process.stdout.write(`LINE chat menu switching is off; not set: ${missing.join(", ")}\n`);
-  return undefined;
 }
 
 const channelId = requireEnvironment("LINE_CHANNEL_ID");
@@ -65,11 +19,7 @@ const issuer = createLinePrivyJwtIssuer({
   privateKeyPem: readFileSync(requireEnvironment("AUTH_SIGNING_KEY_FILE"), "utf8"),
   keyId: requireEnvironment("AUTH_KEY_ID"),
 });
-const server = createAuthHttpServer({
-  issuer,
-  switchLineMenu: createLineMenuSwitchFromEnvironment(channelId, privyAppId),
-  appOrigin: requireEnvironment("APP_ORIGIN"),
-});
+const server = createAuthHttpServer({ issuer, appOrigin: requireEnvironment("APP_ORIGIN") });
 const host = process.env.HOST ?? "127.0.0.1";
 const port = Number(process.env.PORT ?? "8787");
 server.listen(port, host, () => {

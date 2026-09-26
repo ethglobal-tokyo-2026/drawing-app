@@ -275,6 +275,11 @@ describe("SealCeremony", () => {
     await seal(3, "alice", { reserveLeft: 2 });
     playThrough();
     expect(host.textContent).toContain(lastDaily);
+    // One reserve ticket in the daily slots' place, with its count.
+    expect(host.querySelectorAll(".ticket-stub")).toHaveLength(1);
+    expect(host.querySelector('[role="img"]')?.getAttribute("aria-label")).toBe(
+      "2 reserve tickets left",
+    );
     view?.unmount();
 
     // A reserve ticket sealed this one: the daily tickets were already gone.
@@ -319,25 +324,6 @@ describe("SealCeremony", () => {
     expect(root()?.classList.contains("is-failed")).toBe(true);
     expect(root()?.hasAttribute("data-lifted")).toBe(false);
     expect(card()).toBeNull();
-  });
-
-  it("says the day's last daily ticket went only when this sticker used it", async () => {
-    const line = `That was today’s last daily ticket · new ones at ${formatRefillTime(nextRefill(NOW))}`;
-    await seal(3, "alice", { reserveLeft: 2 });
-    playThrough();
-    expect(host.textContent).toContain(line);
-    // One reserve ticket in the daily slots' place, with its count.
-    expect(host.querySelectorAll(".ticket-stub")).toHaveLength(1);
-    expect(host.querySelector('[role="img"]')?.getAttribute("aria-label")).toBe(
-      "2 reserve tickets left",
-    );
-    view?.unmount();
-
-    // Drawn on a reserve ticket: the daily ones went earlier.
-    await seal(3, "alice", { reserveLeft: 1, reserveUsed: 1 });
-    playThrough();
-    expect(host.textContent).not.toContain("last daily ticket");
-    expect(button("Keep drawing")).toBeTruthy();
   });
 
   it("prints a handle that reads as markup as it is, in the card's fine print", async () => {

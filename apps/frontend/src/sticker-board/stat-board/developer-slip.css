@@ -1,0 +1,113 @@
+/* ---------- The developer slip: LINE's and Privy's details, under the end of the cork ---------- */
+
+/* Collapsed to nothing under the last paper and clipped, so none of it scrolls into view. A pull grows
+   it through `--pull`; out, it takes the slip's whole height. It reaches to the cork's edges so the
+   slip's cast isn't cut at the sides while it's partly out. */
+.dev-slip {
+  display: flow-root;
+  height: var(--pull, 0px);
+  margin-inline: calc(-1 * var(--cork-inset));
+  padding-inline: var(--cork-inset);
+  overflow: hidden;
+}
+
+.dev-slip.is-out {
+  height: auto;
+  overflow: visible;
+}
+
+/* A cork with a slip under its end doesn't bounce there: the pull is its only give. */
+.stat-board__cork:has(> .dev-slip) {
+  overscroll-behavior: none;
+}
+
+/* The way in for keyboards and screen readers. Focused, it shows as a strip of label-maker tape. */
+.dev-slip__open {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: none;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.dev-slip__open:focus-visible {
+  position: relative;
+  display: block;
+  width: auto;
+  height: auto;
+  margin: 18px auto 0;
+  padding: 8px 12px 8px 13px;
+  background: var(--ink);
+  color: var(--liner);
+  clip-path: none;
+  font: 750 12px/1 var(--font-ui);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* A slip with a torn top, taped across the foot of the cork. */
+.stat-board__slip {
+  margin-top: 24px;
+  transform: rotate(-0.6deg);
+}
+
+.stat-board__slip:focus {
+  outline: none;
+}
+
+.stat-board__slip > .stat-board__paper {
+  display: grid;
+  gap: 10px;
+  padding: 18px 16px 16px;
+  clip-path: polygon(
+    0 3px,
+    8% 0,
+    17% 2px,
+    26% 0,
+    35% 3px,
+    44% 1px,
+    53% 3px,
+    62% 0,
+    71% 2px,
+    80% 0,
+    89% 3px,
+    100% 1px,
+    100% 100%,
+    0 100%
+  );
+}
+
+.stat-board__slip > .stat-board__washi {
+  left: 50%;
+  top: -7px;
+  width: 72px;
+  height: 18px;
+  margin-left: -36px;
+  transform: rotate(-2deg);
+}
+
+.stat-board__slip-h {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+
+/* Reduced motion: no rubber band and no glide; the slip fades in where it lies. */
+@media (prefers-reduced-motion: reduce) {
+  .dev-slip.is-out > .stat-board__slip {
+    animation: dev-slip-in 200ms ease-out both;
+  }
+}
+
+@keyframes dev-slip-in {
+  from {
+    opacity: 0;
+  }
+}

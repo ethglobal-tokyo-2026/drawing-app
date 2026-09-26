@@ -1,87 +1,146 @@
 #!/usr/bin/env bash
-# deploy/line/create-returning-menu.sh: create the returning-user rich menu (Draw, My board, Explore) in LINE, in
-# English or Japanese.
+# deploy/line/create-returning-menu.sh: create one of the official account's chat menus in LINE, and record its ID in
+# deploy/line/menus.json, which the app's server reads to link each person's menu.
 #
-#   ./deploy/line/create-returning-menu.sh en|ja           validate and create the menu, then upload its image
-#   ./deploy/line/create-returning-menu.sh en|ja --print   print the menu object, without calling LINE
+#   ./deploy/line/create-returning-menu.sh en|ja plain|3|2|1|reserve|none   a returning person's menu: Draw, My board
+#                                                                          and Explore, with that many daily tickets
+#                                                                          left, only reserve ones, none, or no count
+#   ./deploy/line/create-returning-menu.sh default [--set-default]         new people's menu: one bilingual key;
+#                                                                          --set-default makes it LINE's default too
+#   add --print to print the menu object without calling LINE
 #
-# en uploads returning-menu.png, and ja returning-menu.ja.png. Reusable: LINE can't replace a menu's image, so a new
-# image means running this again for a new menu. It never sets the default menu or links anyone; the auth server
-# links returning users to the menu in the app's language. Needs curl, jq, and the Messaging API channel's
-# LINE_MESSAGING_CHANNEL_ID and LINE_MESSAGING_CHANNEL_SECRET in deploy/.env (gitignored).
+# The images are deploy/line/images/returning-<language>-<state>.png and default.png, rendered from returning-menu.html
+# by `pnpm --filter frontend chat-menus`. LINE can't replace a menu's image, so a new image means running this again
+# for a new menu, whose ID replaces the old one in menus.json. It never links anyone. Needs curl, jq, and the Messaging
+# API channel's LINE_MESSAGING_CHANNEL_ID and LINE_MESSAGING_CHANNEL_SECRET in deploy/.env (gitignored).
 set -euo pipefail
 
 usage() {
-  echo "usage: $0 en|ja [--print]" >&2
+  echo "usage: $0 en|ja plain|3|2|1|reserve|none [--print]" >&2
+  echo "       $0 default [--set-default] [--print]" >&2
   exit 2
 }
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+MENUS_FILE="$ROOT/deploy/line/menus.json"
+LIFF_URL="https://liff.line.me/2011732197-P98cxGpu"
+
+MENU="${1:-}"
+STATE=""
+case "$MENU" in
+  en | ja)
+    STATE="${2:-}"
+    case "$STATE" in
+      plain | 3 | 2 | 1 | reserve | none) ;;
+      *) usage ;;
+    esac
+    shift 2
+    ;;
+  default) shift ;;
+  *) usage ;;
+esac
+PRINT=""
+SET_DEFAULT=""
+for option in "$@"; do
+  case "$option" in
+    --print) PRINT=1 ;;
+    --set-default) [ "$MENU" = default ] && SET_DEFAULT=1 || usage ;;
+    *) usage ;;
+  esac
+done
+
+command -v jq >/dev/null || { echo "✗ this needs jq to build the menu and read LINE's answers" >&2; exit 1; }
+
+# Screen readers read each area's label, LINE's chat bar shows chatBarText, and the app opens the screen a path names.
+# The labels say what the image shows: the key's word, and in words what its tickets say.
+case "$MENU" in
+  en)
+    CHAT_BAR_TEXT="Croquis"
+    case "$STATE" in
+      plain) DRAW="Draw" ;;
+      1) DRAW="Draw, 1 ticket left" ;;
+      2 | 3) DRAW="Draw, $STATE tickets left" ;;
+      reserve) DRAW="Draw, reserve ticket" ;;
+      none) DRAW="Draw, out of tickets" ;;
+    esac
+    MY_BOARD="My board"
+    EXPLORE="Explore"
+    ;;
+  ja)
+    CHAT_BAR_TEXT="クロッキー"
+    case "$STATE" in
+      plain) DRAW="かく" ;;
+      1 | 2 | 3) DRAW="かく（のこり${STATE}枚）" ;;
+      reserve) DRAW="かく（有償チケット）" ;;
+      none) DRAW="かく（チケットなし）" ;;
+    esac
+    MY_BOARD="マイボード"
+    EXPLORE="さがす"
+    ;;
+esac
+
+if [ "$MENU" = default ]; then
+  IMAGE="$ROOT/deploy/line/images/default.png"
+  # It can't know anyone's language, so it speaks Japanese first, as the greeting does (greeting.md).
+  MENU_JSON="$(jq -n --arg uri "$LIFF_URL" '{
+    size: { width: 2500, height: 843 },
+    selected: true,
+    name: "Default: Open Sticker Board",
+    chatBarText: "クロッキー Croquis",
+    areas: [
+      {
+        bounds: { x: 0, y: 0, width: 2500, height: 843 },
+        action: { type: "uri", label: "シールボードをひらく", uri: $uri }
+      }
+    ]
+  }')"
+  MENU_PATH='["default"]'
+else
+  IMAGE="$ROOT/deploy/line/images/returning-$MENU-$STATE.png"
+  # The areas the image draws: the Draw key and its tickets on the left, My board over Explore on the right.
+  MENU_JSON="$(jq -n --arg name "Returning ($MENU, $STATE): Draw · My board · Explore" \
+    --arg bar "$CHAT_BAR_TEXT" --arg draw "$DRAW" --arg board "$MY_BOARD" --arg explore "$EXPLORE" \
+    --arg uri "$LIFF_URL" '{
+    size: { width: 2500, height: 843 },
+    selected: true,
+    name: $name,
+    chatBarText: $bar,
+    areas: [
+      {
+        bounds: { x: 0, y: 0, width: 1409, height: 843 },
+        action: { type: "uri", label: $draw, uri: "\($uri)/draw" }
+      },
+      {
+        bounds: { x: 1409, y: 0, width: 1091, height: 421 },
+        action: { type: "uri", label: $board, uri: $uri }
+      },
+      {
+        bounds: { x: 1409, y: 421, width: 1091, height: 422 },
+        action: { type: "uri", label: $explore, uri: "\($uri)/explore" }
+      }
+    ]
+  }')"
+  MENU_PATH="[\"$MENU\", \"$STATE\"]"
+fi
+
+# LINE takes at most 14 characters on the chat bar and 20 in a label; jq counts characters, not bytes.
+too_long="$(printf '%s' "$MENU_JSON" | jq -r '
+  (.chatBarText | select(length > 14) | "the chat bar text \"\(.)\" is over 14 characters"),
+  (.areas[].action.label | select(length > 20) | "the label \"\(.)\" is over 20 characters")')"
+[ -z "$too_long" ] || { echo "✗ $too_long" >&2; exit 1; }
+
+if [ -n "$PRINT" ]; then
+  printf '%s\n' "$MENU_JSON"
+  exit 0
+fi
+
 if [ -f "$ROOT/deploy/.env" ]; then
   # shellcheck source=/dev/null
   . "$ROOT/deploy/.env"
 fi
-LIFF_URL="https://liff.line.me/2011732197-P98cxGpu"
-
-# The area labels are what screen readers read out; LINE takes at most 20 characters each.
-case "${1:-}" in
-  en)
-    IMAGE="$ROOT/deploy/line/returning-menu.png"
-    NAME="Returning: Draw · My board · Explore"
-    CHAT_BAR_TEXT="Croquis"
-    LABELS=("Draw" "My board" "Explore")
-    MENU_ID_SETTING="LINE_RETURNING_RICH_MENU_ID_EN"
-    ;;
-  ja)
-    IMAGE="$ROOT/deploy/line/returning-menu.ja.png"
-    NAME="Returning (ja): かく · マイボード · さがす"
-    CHAT_BAR_TEXT="クロッキー"
-    LABELS=("かく" "マイボード" "さがす")
-    MENU_ID_SETTING="LINE_RETURNING_RICH_MENU_ID_JA"
-    ;;
-  *) usage ;;
-esac
-
-# Three full-height columns, one over each tile of the image; the app opens the screen its path names.
-MENU="$(
-  cat <<JSON
-{
-  "size": { "width": 2500, "height": 843 },
-  "selected": true,
-  "name": "$NAME",
-  "chatBarText": "$CHAT_BAR_TEXT",
-  "areas": [
-    {
-      "bounds": { "x": 0, "y": 0, "width": 833, "height": 843 },
-      "action": { "type": "uri", "label": "${LABELS[0]}", "uri": "$LIFF_URL/draw" }
-    },
-    {
-      "bounds": { "x": 833, "y": 0, "width": 833, "height": 843 },
-      "action": { "type": "uri", "label": "${LABELS[1]}", "uri": "$LIFF_URL" }
-    },
-    {
-      "bounds": { "x": 1666, "y": 0, "width": 834, "height": 843 },
-      "action": { "type": "uri", "label": "${LABELS[2]}", "uri": "$LIFF_URL/explore" }
-    }
-  ]
-}
-JSON
-)"
-
-[ $# -le 2 ] || usage
-case "${2:-}" in
-  --print)
-    printf '%s\n' "$MENU"
-    exit 0
-    ;;
-  "") ;;
-  *) usage ;;
-esac
-
 CHANNEL_ID="${LINE_MESSAGING_CHANNEL_ID:?set LINE_MESSAGING_CHANNEL_ID in deploy/.env}"
 CHANNEL_SECRET="${LINE_MESSAGING_CHANNEL_SECRET:?set LINE_MESSAGING_CHANNEL_SECRET in deploy/.env}"
-command -v jq >/dev/null || { echo "✗ this needs jq to read LINE's answers" >&2; exit 1; }
-[ -f "$IMAGE" ] || { echo "✗ $IMAGE is missing" >&2; exit 1; }
+[ -f "$IMAGE" ] || { echo "✗ $IMAGE is missing: run pnpm --filter frontend chat-menus" >&2; exit 1; }
 # LINE sees the image only after the menu exists, so an oversized one is caught here instead.
 IMAGE_BYTES="$(wc -c <"$IMAGE" | tr -d ' ')"
 [ "$IMAGE_BYTES" -le 1000000 ] || { echo "✗ $IMAGE is $IMAGE_BYTES bytes; LINE takes at most 1 MB" >&2; exit 1; }
@@ -111,14 +170,14 @@ TOKEN="$(printf '%s' "$answer" | jq -r '.access_token // empty' 2>/dev/null)" ||
 
 echo "→ validating the menu"
 if ! answer="$(line_api https://api.line.me/v2/bot/richmenu/validate \
-  -H 'Content-Type: application/json' --data-binary "$MENU")"; then
+  -H 'Content-Type: application/json' --data-binary "$MENU_JSON")"; then
   echo "✗ LINE rejected the menu: $answer" >&2
   exit 1
 fi
 
 echo "→ creating the menu"
 if ! answer="$(line_api https://api.line.me/v2/bot/richmenu \
-  -H 'Content-Type: application/json' --data-binary "$MENU")"; then
+  -H 'Content-Type: application/json' --data-binary "$MENU_JSON")"; then
   echo "✗ LINE didn't create the menu: $answer" >&2
   exit 1
 fi
@@ -138,5 +197,24 @@ if ! answer="$(line_api "https://api-data.line.me/v2/bot/richmenu/$MENU_ID/conte
   exit 1
 fi
 
-echo "✓ created $MENU_ID"
-echo "Next: set $MENU_ID_SETTING=$MENU_ID in deploy/sticker-auth.env, then run ./deploy/deploy.sh"
+OLD_ID="$(jq -r --argjson path "$MENU_PATH" 'getpath($path) // empty' "$MENUS_FILE")"
+jq --argjson path "$MENU_PATH" --arg id "$MENU_ID" 'setpath($path; $id)' "$MENUS_FILE" >"$MENUS_FILE.tmp"
+mv "$MENUS_FILE.tmp" "$MENUS_FILE"
+echo "✓ created $MENU_ID, and recorded it in deploy/line/menus.json: commit that"
+
+if [ -n "$SET_DEFAULT" ]; then
+  echo "→ making it LINE's default menu"
+  if ! answer="$(line_api "https://api.line.me/v2/bot/user/all/richmenu/$MENU_ID" -X POST)"; then
+    echo "✗ LINE didn't make $MENU_ID the default: $answer" >&2
+    exit 1
+  fi
+  echo "✓ $MENU_ID is the default: everyone without a menu of their own sees it, once they reopen the chat"
+fi
+
+if [ -n "$OLD_ID" ] && [ "$OLD_ID" != "$MENU_ID" ]; then
+  echo "It replaces $OLD_ID, which stays in LINE, and on everyone linked to it, until it's deleted."
+fi
+if [ "$STATE" = plain ]; then
+  setting="LINE_RETURNING_RICH_MENU_ID_$(printf '%s' "$MENU" | tr '[:lower:]' '[:upper:]')"
+  echo "Until the API links menus from menus.json: set $setting=$MENU_ID in deploy/sticker-auth.env, then run ./deploy/deploy.sh"
+fi

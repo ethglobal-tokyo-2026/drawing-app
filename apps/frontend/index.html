@@ -11,11 +11,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Fetched early and applied when they arrive, so the fonts never block the first paint. -->
+    <!-- Fetched early and applied when they arrive, so the fonts never block the first paint. The
+         Japanese face comes only once the app is in Japanese (src/i18n/japaneseFont.ts). -->
     <link
       rel="preload"
       as="style"
-      href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@75..125,200..900&family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@75..125,200..900&family=Dela+Gothic+One&display=swap"
       onload="
         this.onload = null;
         this.rel = 'stylesheet';
@@ -24,7 +25,7 @@
     <noscript>
       <link
         rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@75..125,200..900&family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@75..125,200..900&family=Dela+Gothic+One&display=swap"
       />
     </noscript>
     <meta name="color-scheme" content="light" />

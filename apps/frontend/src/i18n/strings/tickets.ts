@@ -1,22 +1,17 @@
 import type { Section } from "../catalog";
 
 export const tickets = {
-  /** Ticket marks on the Draw keys, the ticket cards and the sealed card: how many of that kind are left, printed after the mark */
+  /** The tickets behind the board's Draw key, the reserve ticket's dot badge on the ticket cards, and the sealed card's reserve ticket: how many of that kind are left */
   count: { en: "×{{count}}", ja: "×{{count}}" },
-  /**
-   * The tickets the next drawing can use, in words for screen readers: "2 daily tickets left", "2 daily tickets and
-   * 5 reserve tickets left". A kind with none left isn't named.
-   */
+  /** The tickets the next drawing can use, in words for screen readers: "2 daily tickets left". A kind with none left isn't named. */
   summary: {
-    /** Screen-reader name of a Draw key and the sealed card's ticket row: one kind's count, such as "2 daily tickets", is left */
+    /** Screen-reader name of a Draw key (sticker board, refilled out-of-tickets card, ticket shop after a purchase) and of the sealed card's ticket row: one kind's count, such as "2 daily tickets", with what's left */
     left: { en: "{{tickets}} left", ja: "{{tickets}}が残っています" },
-    /** Screen-reader name of a Draw key (sticker board, refilled out-of-tickets card, ticket shop after a purchase): joins the two ticket counts */
+    /** Screen-reader name of a Draw key and of the sealed card's ticket row: both counts, while daily tickets are left and reserve tickets are held */
     dailyAndReserve: {
       en: "{{daily}} and {{reserve}} left",
       ja: "{{daily}}と{{reserve}}が残っています",
     },
-    /** Screen-reader name of a Draw key when neither kind is left; {{time}} is when the daily tickets come back */
-    none: { en: "no tickets until {{time}}", ja: "{{time}}までチケットはありません" },
     /** Screen-reader name of a Draw key: the daily ticket count, when one is left */
     daily_one: { en: "{{count}} daily ticket" },
     /** Screen-reader name of a Draw key: the daily ticket count */
@@ -25,6 +20,8 @@ export const tickets = {
     reserve_one: { en: "{{count}} reserve ticket" },
     /** Screen-reader name of a Draw key: the reserve ticket count */
     reserve_other: { en: "{{count}} reserve tickets", ja: "有償チケット{{count}}枚" },
+    /** Screen-reader name of the board's Draw key and the sealed card's ticket row with no tickets of either kind; {{time}} is when daily tickets refill, such as "12:00 AM" */
+    none: { en: "no tickets until {{time}}", ja: "{{time}}までチケットはありません" },
   },
   /** How long until the refill, in whole minutes rounded down. */
   refillIn: {
@@ -37,13 +34,13 @@ export const tickets = {
     /** Out-of-tickets card: the countdown after the refill time, in the last hour, such as "in 42m" */
     minutes: { en: "in {{minutes}}m", ja: "あと{{minutes}}分" },
   },
-  /** Start card and out-of-tickets card: the small label beside the reserve ticket count, under the daily ticket stubs */
+  /** Start card, while daily tickets are left and you hold reserve ones: the small caption after the small reserve ticket and its count, under the daily ticket stubs */
   reserve: { en: "Reserve", ja: "有償" },
   /** The Draw key on the out-of-tickets card once the refill brings tickets back, and in the ticket shop (card or Shop tab) after a purchase */
   draw: { en: "Draw", ja: "かく" },
-  /** Screen-reader name of that Draw key (refilled out-of-tickets card, ticket shop after a purchase); `tickets` is both counts in words */
+  /** Screen-reader name of that Draw key (refilled out-of-tickets card, ticket shop after a purchase); `tickets` names what's left, such as "2 daily tickets left" */
   drawWithTickets: { en: "Draw: {{tickets}}", ja: "かく：{{tickets}}" },
-  /** Start card when only reserve tickets are left, and the out-of-tickets card: the button under the key that opens the reserve ticket checkout */
+  /** Start card when only reserve tickets are left, and the out-of-tickets card: the button under the key, with the Shop's tag icon, that opens the reserve ticket checkout */
   buyReserveTickets: { en: "Buy reserve tickets", ja: "有償チケットを買う" },
   /** Out-of-tickets card (the main key, or the button under Draw once refilled) and the card shown while tickets load: goes back to the sticker board */
   goToStickerBoard: { en: "Go to sticker board", ja: "シールボードへ" },
@@ -72,22 +69,25 @@ export const tickets = {
       /** Start card, daily ticket variant: the key that spends a daily ticket and opens the sheet */
       start: { en: "Start drawing", ja: "かき始める" },
     },
-    /** Once they're used, a reserve ticket is spent only when asked. The ticket's badge shows the count. */
+    /** Once they're used, a reserve ticket is spent only when asked. The large reserve ticket's badge shows the count. */
     reserve: {
       /** Start card on the drawing screen once today's daily tickets are used: the title asking before a reserve ticket is spent */
       title: { en: "Use a reserve ticket?", ja: "有償チケットを使いますか？" },
       /** Start card, reserve ticket variant: the bold line under the title saying the daily tickets are gone */
-      used: { en: "Today’s daily tickets are used.", ja: "今日の無償チケットは使い切りました。" },
-      /** Start card, reserve ticket variant: the quiet half of that line, saying when new daily tickets arrive (midnight in Tokyo, in the person's own time) */
+      used: {
+        en: "Today’s daily tickets are used.",
+        ja: "今日の無償チケットは使い切りました。",
+      },
+      /** Start card, reserve ticket variant: the quiet line after "used", saying when new daily tickets arrive (midnight in Tokyo, in the person's own time) */
       refillAt: { en: "New ones at {{time}}.", ja: "{{time}}に新しく届きます。" },
-      /** Start card, reserve ticket variant: for screen readers, who can't see the count on the ticket's badge (one) */
+      /** Start card, reserve ticket variant: read by screen readers only, since the count is on the ticket's badge (one) */
       left_one: { en: "You have {{count}} reserve ticket." },
-      /** Start card, reserve ticket variant: for screen readers, who can't see the count on the ticket's badge */
+      /** Start card, reserve ticket variant: read by screen readers only, since the count is on the ticket's badge */
       left_other: {
         en: "You have {{count}} reserve tickets.",
         ja: "有償チケットは{{count}}枚あります。",
       },
-      /** Start card, reserve ticket variant: the grape key that spends a reserve ticket and opens the sheet */
+      /** Start card, reserve ticket variant: the blue key that spends a reserve ticket and opens the sheet */
       use: { en: "Use a reserve ticket", ja: "有償チケットを使う" },
     },
   },

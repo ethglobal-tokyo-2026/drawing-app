@@ -111,6 +111,8 @@ function Stub({
   const kind = stub.kind ?? "daily";
   const reserve = kind === "reserve";
   const bodyCenter = (perf + w - notch) / 2;
+  // The star sits over the top-right corner; a count's badge takes the corner, so the star sits just short of it.
+  const starX = stub.count === undefined ? w - star * 0.22 : w - star * 1.3;
   const layer = { viewBox: `0 0 ${w} ${h}`, width: w, height: h, "aria-hidden": true } as const;
   const perforation = (
     <line className="ticket-stub__perf" x1={perf} y1={h * 0.12} x2={perf} y2={h * 0.88} />
@@ -152,7 +154,7 @@ function Stub({
           >
             <DrawIcon size={glyph} />
           </g>
-          {reserve && <ReserveStar x={w - star * 0.22} y={star * 0.14} size={star} pop={pop} />}
+          {reserve && <ReserveStar x={starX} y={star * 0.1} size={star} pop={pop} />}
         </svg>
       )}
       {count !== undefined && count > 0 && (
