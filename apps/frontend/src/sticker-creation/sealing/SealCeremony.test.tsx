@@ -246,10 +246,10 @@ describe("SealCeremony", () => {
     // Keep drawing spends the last ticket as the card leaves: it doesn't turn into the last ticket's card.
     act(() => host.querySelector<HTMLButtonElement>("[data-spend]")?.click());
     expect(button("Keep drawing")).toBeTruthy();
-    expect(host.textContent).not.toContain("That was today’s last ticket");
+    expect(host.textContent).not.toContain("New daily tickets at");
   });
 
-  it("leads to the sticker board and reserve tickets on the last ticket", async () => {
+  it("ends the day on when new daily tickets come, with reserve tickets quiet under it", async () => {
     await seal(1);
     playThrough();
     expect(button("Keep drawing")).toBeTruthy();
@@ -262,19 +262,21 @@ describe("SealCeremony", () => {
     await seal(3);
     playThrough();
     expect(button("Go to sticker board").classList.contains("key")).toBe(true);
+    expect(host.querySelector(".sealed-card__refill")?.textContent).toBe(
+      `New daily tickets at ${formatRefillTime(nextRefill(NOW))}`,
+    );
+    // Small label stock, not a second full-width button.
+    expect(button("Buy reserve tickets").classList.contains("label-btn--sm")).toBe(true);
     act(() => button("Buy reserve tickets").click());
     wait(1000);
     expect(onShop).toHaveBeenCalledOnce();
-    expect(host.textContent).toContain(
-      `That was today’s last ticket · new ones at ${formatRefillTime(nextRefill(NOW))}`,
-    );
   });
 
-  it("says the day's last daily ticket is gone only when this sticker used it", async () => {
-    const lastDaily = `That was today’s last daily ticket · new ones at ${formatRefillTime(nextRefill(NOW))}`;
+  it("says when daily tickets come back only when this sticker used the day's last one", async () => {
+    const refill = `New daily tickets at ${formatRefillTime(nextRefill(NOW))}`;
     await seal(3, "alice", { reserveLeft: 2 });
     playThrough();
-    expect(host.textContent).toContain(lastDaily);
+    expect(host.textContent).toContain(refill);
     // One reserve ticket in the daily slots' place, with its count.
     expect(host.querySelectorAll(".ticket-stub")).toHaveLength(1);
     expect(host.querySelector('[role="img"]')?.getAttribute("aria-label")).toBe(
@@ -286,7 +288,7 @@ describe("SealCeremony", () => {
     await seal(3, "alice", { reserveLeft: 1, reserveUsed: 1 });
     playThrough();
     expect(button("Keep drawing")).toBeTruthy();
-    expect(host.textContent).not.toContain("last daily ticket");
+    expect(host.textContent).not.toContain("New daily tickets at");
   });
 
   it("waits at the cut while the seal is on its way, then peels onto the card", async () => {

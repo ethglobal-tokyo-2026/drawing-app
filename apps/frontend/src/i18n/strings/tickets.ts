@@ -40,7 +40,7 @@ export const tickets = {
   draw: { en: "Draw", ja: "かく" },
   /** Screen-reader name of that Draw key (refilled out-of-tickets card, ticket shop after a purchase); `tickets` names what's left, such as "2 daily tickets left" */
   drawWithTickets: { en: "Draw: {{tickets}}", ja: "かく：{{tickets}}" },
-  /** Start card when only reserve tickets are left, and the out-of-tickets card: the button under the key, with the Shop's tag icon, that opens the reserve ticket checkout */
+  /** Start card when only reserve tickets are left, and the out-of-tickets card: the button under the key, with a ticket icon, that opens the reserve ticket checkout */
   buyReserveTickets: { en: "Buy reserve tickets", ja: "有償チケットを買う" },
   /** Out-of-tickets card (the main key, or the button under Draw once refilled) and the card shown while tickets load: goes back to the sticker board */
   goToStickerBoard: { en: "Go to sticker board", ja: "シールボードへ" },

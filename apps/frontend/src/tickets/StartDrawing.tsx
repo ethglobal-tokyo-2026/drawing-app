@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "../i18n/react";
-import { DrawIcon, ShopIcon } from "../icons";
+import { BuyTicketsIcon, DrawIcon } from "../icons";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
@@ -133,7 +133,7 @@ export function StartDrawing({
             >
               {t(($) => $.tickets.startDrawing.reserve.use)}
             </Key>
-            <LabelButton block icon={<ShopIcon />} onClick={onShop}>
+            <LabelButton block icon={<BuyTicketsIcon />} onClick={onShop}>
               {t(($) => $.tickets.buyReserveTickets)}
             </LabelButton>
           </>

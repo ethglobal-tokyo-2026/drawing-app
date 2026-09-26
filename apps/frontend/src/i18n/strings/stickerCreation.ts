@@ -258,17 +258,12 @@ export const stickerCreation = {
     keepDrawing: { en: "Keep drawing", ja: "もう1枚かく" },
     /** Sealed card: the button at the bottom while you have tickets left, or the main key after your last ticket; it goes to your sticker board */
     goToStickerBoard: { en: "Go to sticker board", ja: "シールボードへ" },
-    /** Sealed card: the button at the bottom after your last ticket, with the Shop's tag icon; it opens the reserve ticket checkout */
+    /** Sealed card: the small button at the bottom after your last ticket, with a ticket icon; it opens the reserve ticket checkout */
     buyReserveTickets: { en: "Buy reserve tickets", ja: "有償チケットを買う" },
-    /** Sealed card: the line under the tickets after you used your last ticket of either kind; {{time}} is when daily tickets refill (0:00 in Japanese) */
-    lastTicket: {
-      en: "That was today’s last ticket · new ones at {{time}}",
-      ja: "これが今日最後のチケットでした。{{time}}に新しい無償チケットが届きます",
-    },
-    /** Sealed card: the line under the tickets after the day's last daily ticket, while reserve tickets remain; {{time}} is when daily tickets refill (0:00 in Japanese) */
-    lastDailyTicket: {
-      en: "That was today’s last daily ticket · new ones at {{time}}",
-      ja: "これが今日最後の無償チケットでした。{{time}}に新しい無償チケットが届きます",
+    /** Sealed card: the line under the tickets once this sticker used the day's last daily ticket, whether or not reserve tickets remain; {{time}} is when daily tickets refill (0:00 in Japanese) */
+    refill: {
+      en: "New daily tickets at {{time}}",
+      ja: "{{time}}に新しい無償チケットが届きます",
     },
   },
 } as const satisfies Section;

@@ -6,7 +6,7 @@
   left: 14px;
   right: 14px;
   bottom: 14px;
-  padding: 0 var(--card-pad) 18px;
+  padding: var(--card-pad) var(--card-pad) 18px;
   background: var(--liner);
   border-radius: 14px;
   box-shadow:
@@ -81,6 +81,17 @@
   margin: 8px 0 0;
 }
 
+/* After the day's last daily ticket, the day ends on when new ones come, in Ink. */
+.sealed-card__refill {
+  color: var(--ink);
+  font-weight: 600;
+}
+
 .sealed-card > .label-btn {
   margin-top: 10px;
+}
+
+/* Buying reserve tickets after the last ticket: small label stock, under the refill line. */
+.sealed-card__buy {
+  margin-top: 12px;
 }

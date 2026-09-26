@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Trans, useTranslation } from "../i18n/react";
-import { DrawIcon, ShopIcon, StickerBoardIcon } from "../icons";
+import { BuyTicketsIcon, DrawIcon, StickerBoardIcon } from "../icons";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { TearLine } from "../ui/TearLine";
@@ -105,7 +105,7 @@ export function OutOfTickets({ tickets: state, onShop, onStartDrawing, onBoard }
             {t(($) => $.tickets.goToStickerBoard)}
           </LabelButton>
         ) : (
-          <LabelButton block icon={<ShopIcon />} onClick={onShop}>
+          <LabelButton block icon={<BuyTicketsIcon />} onClick={onShop}>
             {t(($) => $.tickets.buyReserveTickets)}
           </LabelButton>
         )}
