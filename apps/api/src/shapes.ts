@@ -1,4 +1,4 @@
-import { escrowStatuses, giftStatuses, users } from "@drawing-app/db";
+import { escrowStatuses, giftStatuses, ticketKinds, users } from "@drawing-app/db";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -93,25 +93,45 @@ export type EscrowTransfer = z.infer<typeof escrowTransferSchema>;
 // Sticker, StickerPlacement, Gift and Gratitude are built from their tables in views.ts.
 
 export const ticketsSchema = z.object({
-  /** From 4:00 in your zone. */
+  /** Tokyo time: ticket days run midnight to midnight there, for everyone. */
   ticketDay: z.iso.date(),
-  freePerDay: count,
-  freeLeft: count,
-  paidLeft: count,
+  dailyPerDay: count,
+  dailyLeft: count,
+  reserveLeft: count,
+  /** The next midnight, Tokyo time. */
   nextRefillAt: isoTimeSchema,
   usedToday: z.array(
     z.object({
       id: z.number().int(),
       dayIndex: count,
+      kind: z.enum(ticketKinds),
       /** For the ticket stubs; null until its sticker is sealed. */
       sticker: z
         .object({ id: z.string(), outline: z.string(), width: positiveInt, height: positiveInt })
         .nullable(),
     }),
   ),
-  packs: z.array(z.object({ tickets: z.literal([1, 3, 5, 10]), priceYen: positiveInt })),
 });
 export type Tickets = z.infer<typeof ticketsSchema>;
+
+export const ticketQuoteSchema = z.object({
+  /** Yen per SUI, the 5-minute time-weighted average, as decimal text. */
+  suiYen: z.string().regex(/^[0-9]+(\.[0-9]+)?$/),
+  quotedAt: isoTimeSchema,
+  /** A purchase counts only at a quote that still holds. */
+  expiresAt: isoTimeSchema,
+  packs: z.array(
+    z.object({
+      tickets: z.literal([1, 3, 5, 10]),
+      priceYen: positiveInt,
+      /** Off ¥100 per ticket. */
+      discountPercent: count,
+      /** Decimal MIST, rounded up. */
+      priceMist: z.string().regex(/^[0-9]+$/),
+    }),
+  ),
+});
+export type TicketQuote = z.infer<typeof ticketQuoteSchema>;
 
 export const userStatsSchema = z.object({
   since: isoTimeSchema,

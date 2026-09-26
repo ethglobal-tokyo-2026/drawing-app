@@ -2,7 +2,7 @@ import { gifts, gratitude, stickers, users, type Db } from "@drawing-app/db";
 import { and, count, eq, max, or, type SQL } from "drizzle-orm";
 import { toIsoTime, type UserStats } from "../shapes.ts";
 import { streakOf } from "../streak.ts";
-import { ticketDay } from "../ticketDays.ts";
+import { tokyoTicketDay } from "../ticketDays.ts";
 
 /** Gifts matching `where` that were received: only a received gift counts as given or received. */
 const receivedGiftCount = (db: Db, where: SQL) =>
@@ -12,15 +12,14 @@ const receivedGiftCount = (db: Db, where: SQL) =>
     .where(and(eq(gifts.status, "received"), where))
     .get()?.n ?? 0;
 
-/** A person's User Stats, with ticket days in their own zone. */
+/** A person's User Stats. The streak and a day's thanks count Tokyo ticket days, as everyone's do. */
 export function loadUserStats(db: Db, user: typeof users.$inferSelect, now: Date): UserStats {
-  const zone = user.timeZone;
   const sealDays = db
     .select({ sealedAt: stickers.createdAt })
     .from(stickers)
     .where(eq(stickers.artistId, user.id))
     .all()
-    .map(({ sealedAt }) => ticketDay(sealedAt, zone));
+    .map(({ sealedAt }) => tokyoTicketDay(sealedAt));
   const bestCombo =
     db
       .select({ hits: max(gratitude.hits) })
@@ -52,10 +51,10 @@ export function loadUserStats(db: Db, user: typeof users.$inferSelect, now: Date
     if (combo.method === "tap") split.inspired += giversPart;
     else split.magic += giversPart;
     split.asOriginalArtist += share;
-    const day = ticketDay(combo.recordedAt, zone);
+    const day = tokyoTicketDay(combo.recordedAt);
     thanksByDay.set(day, (thanksByDay.get(day) ?? 0) + giversPart + share);
   }
-  const streak = streakOf(sealDays, ticketDay(now, zone));
+  const streak = streakOf(sealDays, tokyoTicketDay(now));
 
   return {
     since: toIsoTime(user.createdAt),

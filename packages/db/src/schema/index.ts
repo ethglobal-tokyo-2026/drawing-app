@@ -7,6 +7,7 @@ import { users } from "./users.ts";
 
 export { escrowStatuses, giftStatuses } from "./gifts.ts";
 export { gratitudeMethods } from "./gratitude.ts";
+export { ticketKinds } from "./tickets.ts";
 export {
   gifts,
   gratitude,
