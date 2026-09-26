@@ -31,7 +31,7 @@ interface Props {
   onClose: () => void;
   /** Give, where LINE's picker can send the sticker; without it there's no key. */
   onGive?: (sticker: BoardStickerView) => void;
-  /** Thanks for a received sticker; without it the detail doesn't check whether you owe any. */
+  /** Gratitude for a received sticker; without it the detail doesn't check whether any is owed. */
   onSendGratitude?: (gift: { id: string }, sticker: StickerView, giver: PersonView) => void;
   /** Where focus goes once it closes, when that isn't back to what opened it. */
   returnFocus?: () => HTMLElement | null;
@@ -52,8 +52,8 @@ interface Swipe {
 /** The --ease-out curve, spelled out: Web Animations can't read CSS variables. */
 const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 
-/** The thanks you owe for a sticker: its newest gift to you, while that has no gratitude. */
-function owedThanks({ sticker, owner, transferTrail }: StickerDetailResponse) {
+/** The gift you owe gratitude for: the sticker's newest gift to you, while that has no gratitude. */
+function owedGratitude({ sticker, owner, transferTrail }: StickerDetailResponse) {
   const toYou = transferTrail.find((entry) => entry.receiver.id === owner.id);
   return toYou && toYou.gratitude === null
     ? { gift: { id: toYou.giftId }, sticker: toSticker(sticker), giver: toPerson(toYou.giver) }
@@ -85,13 +85,13 @@ export function StickerDetail({
   const sticker: BoardStickerView | undefined = stickers[index];
   const last = stickers.length - 1;
 
-  // A sticker you hold may be one someone gave you and you haven't thanked yet.
+  // A sticker you hold may be one someone gave you, with no gratitude sent for it yet.
   const checkId =
     mode === "yours" && onSendGratitude && sticker && !onItsWay(sticker) ? sticker.id : null;
-  const thanks = useApiQuery(`sticker-detail:${checkId}`, (client) =>
-    checkId === null ? Promise.resolve(null) : client.stickerDetail(checkId).then(owedThanks),
+  const gratitude = useApiQuery(`sticker-detail:${checkId}`, (client) =>
+    checkId === null ? Promise.resolve(null) : client.stickerDetail(checkId).then(owedGratitude),
   );
-  const owed = thanks.state === "ready" ? thanks.data : null;
+  const owed = gratitude.state === "ready" ? gratitude.data : null;
 
   const root = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLElement>(null);
@@ -315,7 +315,7 @@ export function StickerDetail({
                   </p>
                 </div>
               ) : owed && onSendGratitude ? (
-                // Thanks come first; Give stays within reach as label stock.
+                // Gratitude comes first; Give stays within reach as label stock.
                 <div className="sticker-detail__acts sticker-detail__acts--stack">
                   <Key
                     tone="pink"
@@ -343,11 +343,11 @@ export function StickerDetail({
                   </div>
                 )
               ))}
-            {thanks.state === "failed" && (
+            {gratitude.state === "failed" && (
               <p className="fine sticker-detail__check-failed" role="alert">
                 Couldn’t check whether you’ve sent gratitude for it:{" "}
-                {thanks.error.detail ?? thanks.error.code}{" "}
-                <QuietLink onClick={thanks.retry}>Try again</QuietLink>
+                {gratitude.error.detail ?? gratitude.error.code}{" "}
+                <QuietLink onClick={gratitude.retry}>Try again</QuietLink>
               </p>
             )}
           </>

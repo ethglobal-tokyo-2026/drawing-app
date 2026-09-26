@@ -168,8 +168,8 @@ const stackOf = (stickers: readonly BoardSticker[]) =>
       .map((s, i) => [s.id, i]),
   );
 
-/** Received stickers already asked about thanks this session, so the question comes once. */
-const askedToThank = new Set<string>();
+/** Received stickers already asked about gratitude this session, so the question comes once. */
+const askedForGratitude = new Set<string>();
 
 /** Someone as the gratitude Mini-game names them. */
 const asGiver = (p: PersonView) => ({
@@ -191,7 +191,7 @@ const viewOf = (s: BoardStickerView): StickerView => ({
   sealedAt: s.createdAt,
 });
 
-type Thanking = { sticker: BoardSticker; giver: ReturnType<typeof asGiver> };
+type GratitudeFor = { sticker: BoardSticker; giver: ReturnType<typeof asGiver> };
 
 export function StickerBoard({ freshId, onDraw }: Props) {
   const stage = useRef<HTMLDivElement>(null);
@@ -231,10 +231,10 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   /** The board has turned over before, so its stat board stays mounted for every turn after. */
   const [wasTurned, setWasTurned] = useState(false);
   /** The sticker the gratitude mini-game is open for, from the stat board's developer slip. */
-  const [thanking, setThanking] = useState<Thanking | null>(null);
+  const [gratitudeFor, setGratitudeFor] = useState<GratitudeFor | null>(null);
   /** A received gift's notice, closed: the silhouettes say the rest. */
   const [noticeClosed, setNoticeClosed] = useState(false);
-  /** A sticker that just reached you, and who to thank for it, when it hasn't been thanked. */
+  /** A sticker that just reached you, and its giver, while it has no gratitude yet. */
   const [owed, setOwed] = useState<{ gift: { id: string }; giver: PersonView } | null>(null);
   /** The first-load artist chips have played, or a sticker was selected, which clears them. */
   const [chipsDone, setChipsDone] = useState(false);
@@ -309,9 +309,9 @@ export function StickerBoard({ freshId, onDraw }: Props) {
   );
   const notice = noticeClosed ? null : newestUnnoticed(receivedGifts);
 
-  // A sticker that just reached you asks about thanks, when its newest hand-off to you has none.
+  // A sticker that just reached you asks about gratitude, when its newest gift to you has none.
   useEffect(() => {
-    if (!freshId || askedToThank.has(freshId)) return;
+    if (!freshId || askedForGratitude.has(freshId)) return;
     let current = true;
     api.stickerDetail(freshId).then(
       (detail) => {
@@ -320,7 +320,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
           setOwed({ gift: { id: entry.giftId }, giver: toPerson(entry.giver) });
       },
       (error: unknown) =>
-        console.error(`Checking whether ${freshId} has been thanked failed`, apiError(error)),
+        console.error(`Checking whether ${freshId} has gratitude failed`, apiError(error)),
     );
     return () => {
       current = false;
@@ -366,7 +366,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
 
   // A sticker on its way has left the board for the badge.
   const onBoard = (stickers ?? []).filter((s) => s.placement.on && s.held && !onItsWay(s));
-  // The gratitude mini-game's demo always thanks whichever sticker landed most recently.
+  // The gratitude mini-game's demo always sends gratitude for whichever sticker landed most recently.
   const newest = onBoard.reduce<BoardSticker | null>(
     (latest, s) => (!latest || s.createdAt > latest.createdAt ? s : latest),
     null,
@@ -733,34 +733,34 @@ export function StickerBoard({ freshId, onDraw }: Props) {
         />
       )}
 
-      {owed && freshSticker && !landingId && !askedToThank.has(freshSticker.id) && (
+      {owed && freshSticker && !landingId && !askedForGratitude.has(freshSticker.id) && (
         <SendGratitudeSheet
           gift={owed.gift}
           sticker={viewOf(freshSticker)}
           giver={owed.giver}
           onSend={() => {
-            askedToThank.add(freshSticker.id);
+            askedForGratitude.add(freshSticker.id);
             setOwed(null);
-            setThanking({ sticker: freshSticker, giver: asGiver(owed.giver) });
+            setGratitudeFor({ sticker: freshSticker, giver: asGiver(owed.giver) });
           }}
           onLater={() => {
-            askedToThank.add(freshSticker.id);
+            askedForGratitude.add(freshSticker.id);
             setOwed(null);
           }}
         />
       )}
 
-      {thanking && (
+      {gratitudeFor && (
         <GratitudeMiniGame
-          sticker={thanking.sticker}
-          giver={thanking.giver}
+          sticker={gratitudeFor.sticker}
+          giver={gratitudeFor.giver}
           intensity={
             readMiniGameDemoSettings().fullEffects
               ? FEEL_CONFIG.intensity.full
               : FEEL_CONFIG.intensity.everyday
           }
           showFrameTimes={readMiniGameDemoSettings().showFrameTimes}
-          onClose={() => setThanking(null)}
+          onClose={() => setGratitudeFor(null)}
         />
       )}
 
@@ -782,7 +782,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
               const s = stickers?.find((x) => x.id === sticker.id);
               if (!s) return;
               setOpen(null);
-              setThanking({ sticker: s, giver: asGiver(giver) });
+              setGratitudeFor({ sticker: s, giver: asGiver(giver) });
             }}
             onClose={() => setOpen(null)}
             // Back to the sticker it opened from: on the board, or its given sticker silhouette.
@@ -835,7 +835,7 @@ export function StickerBoard({ freshId, onDraw }: Props) {
               onTryGratitudeMiniGame={
                 newest
                   ? () =>
-                      setThanking({
+                      setGratitudeFor({
                         sticker: newest,
                         giver: {
                           handle: me.handle,

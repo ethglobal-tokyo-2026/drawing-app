@@ -69,7 +69,7 @@ const open = (
 /** Lets the detail's check of the Transfer Trail answer. */
 const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 0)));
 
-/** A sticker @ken drew, received from @mika, thanked or not. */
+/** A sticker @ken drew, received from @mika, with or without gratitude. */
 function received(gratitude: Gratitude | null) {
   const drawn = apiSticker({ id: "s-133", artist: people.ken, ownerId: TEST_OWNER.id });
   const entry = {
@@ -159,7 +159,7 @@ describe("StickerDetail", () => {
     expect(onGive).toHaveBeenCalledExactlyOnceWith(packed);
   });
 
-  it("offers Send gratitude over Give for a received sticker you haven't thanked", async () => {
+  it("offers Send gratitude over Give for a received sticker with no gratitude yet", async () => {
     const onSendGratitude = vi.fn();
     const { drawn, client } = received(null);
     open({ onSendGratitude }, client);
@@ -173,8 +173,8 @@ describe("StickerDetail", () => {
     );
   });
 
-  it("keeps Give as the key once you've thanked", async () => {
-    const thanked: Gratitude = {
+  it("keeps Give as the key once gratitude is sent", async () => {
+    const sent: Gratitude = {
       giftId: "gift-133",
       method: "tap",
       hits: 64,
@@ -186,7 +186,7 @@ describe("StickerDetail", () => {
       recordedAt: "2026-09-23T12:05:00.000Z",
       seenByGiverAt: null,
     };
-    open({ onSendGratitude: vi.fn() }, received(thanked).client);
+    open({ onSendGratitude: vi.fn() }, received(sent).client);
     await settle();
     expect(button("Send gratitude")).toBeUndefined();
     expect(giveIsTheKey()).toBe(true);
