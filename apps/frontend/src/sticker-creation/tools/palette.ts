@@ -35,10 +35,11 @@ export const SWATCHES = [
 /** A swatch's name, or the hex of a color mixed on the pad. */
 export const colorName = (hex: string) => SWATCHES.find((s) => s.hex === hex)?.name ?? hex;
 
-export const FIRST_COLOR = "#1C1824";
+/** Navy, not Ink: every tool icon is Ink, so an Ink brush would read as one more icon on the color tile. */
+export const FIRST_COLOR = "#3B3F8F";
 
 /** The Recent row a first session starts with. */
-export const FIRST_RECENT = ["#1C1824", "#FF5A36", "#FFB547", "#3B3F8F", "#7CC6FF", "#FFB8C9"];
+export const FIRST_RECENT = ["#3B3F8F", "#1C1824", "#FF5A36", "#FFB547", "#7CC6FF", "#FFB8C9"];
 
 /** The Recent row holds this many colors. */
 const RECENT_MAX = 8;

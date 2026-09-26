@@ -15,7 +15,7 @@ What the server will store and serve, so UI work and mocks can line up with it w
 ### Tickets
 
 - Three free tickets per ticket day. A ticket day turns over at 4:00 in the person's time zone, taken from the device at sign-up.
-- **Start screen:** drawing starts from a screen that shows the tickets left and a button that spends one; the button starts the 3-minute clock. Not built: today's app spends the ticket and starts the clock at the first stroke.
+- **Start screen:** drawing starts from a screen that shows the tickets left and a button that spends one (`StartDrawing`). The 3-minute clock then waits for the first stroke. Keep drawing on the sealed card, and Draw after buying tickets, spend one without asking.
 - **Paid tickets:** packs of 1, 3, 5 or 10 for ¥100, ¥270, ¥350 or ¥500, paid in SUI. The payment is a mock for now. There's no daily limit, and paid tickets don't expire.
 - **Follow-up:** the UI for holding many paid tickets (the ticket stubs, the out-of-tickets card) needs design.
 
