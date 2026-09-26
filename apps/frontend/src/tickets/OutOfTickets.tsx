@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Trans, useTranslation } from "../i18n/react";
-import { DrawIcon, ShopIcon, StickerBoardIcon } from "../icons";
+import { BuyTicketsIcon, DrawIcon, StickerBoardIcon } from "../icons";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { TearLine } from "../ui/TearLine";
@@ -19,6 +19,8 @@ interface Props {
   onStartDrawing: () => void;
   /** The free way out, and what Escape does. */
   onBoard: () => void;
+  /** It's up over the sticker board (Draw with no tickets), so the way out goes back to the board. */
+  overBoard?: boolean;
 }
 
 /** Counts down to the refill the card opened with, waking only when the refill line would change. */
@@ -39,12 +41,21 @@ function useRefillCountdown(refillAt: string) {
  * free path leads: the key goes to the sticker board and buying reserve tickets is label stock under it. If
  * tickets come back while it's open, it turns over in place and the key becomes Draw.
  */
-export function OutOfTickets({ tickets: state, onShop, onStartDrawing, onBoard }: Props) {
+export function OutOfTickets({
+  tickets: state,
+  onShop,
+  onStartDrawing,
+  onBoard,
+  overBoard = false,
+}: Props) {
   const { t } = useTranslation();
   const { at, msLeft } = useRefillCountdown(state.nextRefillAt);
   const card = useRef<HTMLElement>(null);
   const id = useId();
   const refilled = ticketsLeft(state) > 0;
+  const boardLabel = overBoard
+    ? t(($) => $.tickets.backToStickerBoard)
+    : t(($) => $.tickets.goToStickerBoard);
 
   useFocusTrap(card, { onEscape: onBoard });
 
@@ -97,15 +108,15 @@ export function OutOfTickets({ tickets: state, onShop, onStartDrawing, onBoard }
           </Key>
         ) : (
           <Key className="out-of-tickets__key" icon={<StickerBoardIcon />} onClick={onBoard}>
-            {t(($) => $.tickets.goToStickerBoard)}
+            {boardLabel}
           </Key>
         )}
         {refilled ? (
           <LabelButton block icon={<StickerBoardIcon />} onClick={onBoard}>
-            {t(($) => $.tickets.goToStickerBoard)}
+            {boardLabel}
           </LabelButton>
         ) : (
-          <LabelButton block icon={<ShopIcon />} onClick={onShop}>
+          <LabelButton block icon={<BuyTicketsIcon />} onClick={onShop}>
             {t(($) => $.tickets.buyReserveTickets)}
           </LabelButton>
         )}

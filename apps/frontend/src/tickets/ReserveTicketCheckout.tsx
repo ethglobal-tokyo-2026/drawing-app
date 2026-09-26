@@ -1,10 +1,9 @@
-import { Ticket } from "@phosphor-icons/react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
-import { errorReason } from "../i18n/errorMessage";
-import { useTranslation } from "../i18n/react";
-import { DrawIcon } from "../icons/DrawIcon";
+import { errorMessage, errorReason } from "../i18n/errorMessage";
+import { Trans, useTranslation } from "../i18n/react";
+import { ArrowClockwise, BuyTicketsIcon, Copy, DrawIcon } from "../icons";
 import { usePrivyStatus } from "../identity/privy";
 import { useSuiWalletFailure } from "../identity/suiWallet";
 import type { JpycPayment } from "../payments/jpyc";
@@ -43,6 +42,17 @@ const reason = (error: unknown) =>
     : error instanceof Error && error.message
       ? error.message
       : String(error);
+/** Why adding a paid pack's tickets failed, in plain words: an API error's detail repeats the payment's ID. */
+const plainReason = (error: unknown) =>
+  error instanceof ApiError ? errorMessage(error) : reason(error);
+
+/** A payment that went through, whose tickets the server didn't add. */
+interface Unadded {
+  pack: ReservePack;
+  digest: string;
+  reason: string;
+}
+
 /** One outline row per pack on sale, while today's prices load. */
 const PACKS_LOADING = [1, 2, 3, 4];
 
@@ -100,6 +110,9 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   const [chosen, setChosen] = useState<ReservePack["tickets"]>(1);
   const [bought, setBought] = useState<ReservePack | null>(null);
   const [error, setError] = useState("");
+  const [unadded, setUnadded] = useState<Unadded | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [copied, setCopied] = useState(false);
   const packs = useReservePacks();
   const shop = packs.state === "ready" ? packs.data : null;
   const sui = useSuiAccount();
@@ -110,7 +123,25 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   const id = useId();
 
   const pack = shop?.packs.find((p) => p.tickets === chosen);
-  const short = pack && jpyc.balance !== null && jpyc.balance < BigInt(pack.priceJpyc);
+  const balance = jpyc.balance;
+  const short = pack && balance !== null && balance < BigInt(pack.priceJpyc);
+  // What to do when it's short: a smaller pack, if the balance covers one.
+  const coversSmaller =
+    balance !== null && !!shop?.packs.some((p) => BigInt(p.priceJpyc) <= balance);
+
+  /** Has the server add the tickets payment `digest` bought for pack `p`. */
+  const addTickets = async (p: ReservePack, digest: string) => {
+    try {
+      setTickets(await api.buyTickets({ tickets: p.tickets, txDigest: digest }));
+    } catch (e) {
+      // An earlier ask added them, and only its answer was lost.
+      if (!(e instanceof ApiError && e.code === "payment_already_counted")) throw e;
+      setTickets(await api.tickets());
+    }
+    setUnadded(null);
+    setBought(p);
+    setStep("done");
+  };
 
   const pay = async (p: ReservePack, payment: JpycPayment) => {
     setStep("paying");
@@ -121,25 +152,47 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
         import("../identity/suiSigner"),
       ]);
       digest = await payForTickets(await waitForSuiSigner(), payment, BigInt(p.priceJpyc));
-      setTickets(await api.buyTickets({ tickets: p.tickets, txDigest: digest }));
-      setBought(p);
-      setStep("done");
+      await addTickets(p, digest);
     } catch (e) {
       console.error(`Buying a pack of ${p.tickets} tickets with JPYC failed`, { digest, error: e });
-      setError(
-        digest
-          ? t(($) => $.tickets.checkout.paidButNotAdded, { digest, reason: reason(e) })
-          : reason(e),
-      );
+      if (digest) {
+        setUnadded({ pack: p, digest, reason: plainReason(e) });
+        setCopied(false);
+      } else {
+        setError(reason(e));
+      }
       setStep("error");
     } finally {
       jpyc.refresh();
     }
   };
 
+  /** Asks again for the tickets a payment bought; the payment itself is never made again. */
+  const addAgain = async ({ pack: p, digest }: Unadded) => {
+    setAdding(true);
+    try {
+      await addTickets(p, digest);
+    } catch (e) {
+      console.error(`Adding the tickets that ${digest} paid for failed again`, e);
+      setUnadded({ pack: p, digest, reason: plainReason(e) });
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const copyPayment = async (digest: string) => {
+    try {
+      await navigator.clipboard.writeText(digest);
+      setCopied(true);
+    } catch (e) {
+      // The ID stays selectable, so it can still be copied by hand.
+      console.error(`Couldn't copy the payment ${digest}`, e);
+    }
+  };
+
   useFocusTrap(card, {
     onEscape: () => {
-      if (step !== "paying") onClose();
+      if (step !== "paying" && !adding) onClose();
     },
   });
 
@@ -152,7 +205,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   const close = (
     <QuietLink
       className="out-of-tickets__quiet-link"
-      disabled={step === "paying"}
+      disabled={step === "paying" || adding}
       onClick={onClose}
     >
       {t(($) => $.tickets.notNow)}
@@ -195,9 +248,60 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
         >
           {t(($) => $.tickets.draw)}
         </Key>
-        <LabelButton block icon={<Ticket />} onClick={() => setStep("choose")}>
+        <LabelButton block icon={<BuyTicketsIcon />} onClick={() => setStep("choose")}>
           {t(($) => $.tickets.checkout.buyMore)}
         </LabelButton>
+        {close}
+      </>
+    );
+  } else if (step === "error" && unadded) {
+    // The payment went through, so the way on is asking for its tickets again, never back to the packs to pay again.
+    body = (
+      <>
+        <h2 className="out-of-tickets__title out-of-tickets__title--top" id={`${id}-title`}>
+          {t(($) => $.tickets.checkout.notAdded.title)}
+        </h2>
+        <p className="out-of-tickets__line" role="alert">
+          <Trans
+            i18nKey={($) => $.tickets.checkout.notAdded.line}
+            values={{ reason: unadded.reason }}
+            components={{ strong: <strong />, why: <span className="out-of-tickets__quiet" /> }}
+          />
+        </p>
+        <TearLine />
+        <Key
+          className="out-of-tickets__key"
+          tone="blue"
+          icon={<ArrowClockwise />}
+          aria-busy={adding}
+          aria-disabled={adding}
+          onClick={() => {
+            if (!adding) void addAgain(unadded);
+          }}
+        >
+          {adding
+            ? t(($) => $.tickets.checkout.notAdded.adding)
+            : t(($) => $.tickets.checkout.notAdded.add)}
+        </Key>
+        <div className="reserve-checkout__payment">
+          <span className="fine reserve-checkout__payment-id" id={`${id}-payment`}>
+            <Trans
+              i18nKey={($) => $.tickets.checkout.notAdded.payment}
+              values={{ digest: unadded.digest }}
+              components={{ id: <span className="reserve-checkout__digest" /> }}
+            />
+          </span>
+          <LabelButton
+            size="sm"
+            icon={<Copy />}
+            aria-describedby={`${id}-payment`}
+            onClick={() => void copyPayment(unadded.digest)}
+          >
+            {copied
+              ? t(($) => $.tickets.checkout.notAdded.copied)
+              : t(($) => $.tickets.checkout.notAdded.copy)}
+          </LabelButton>
+        </div>
         {close}
       </>
     );
@@ -214,7 +318,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
         <Key
           className="out-of-tickets__key"
           tone="blue"
-          icon={<Ticket />}
+          icon={<BuyTicketsIcon />}
           onClick={() => setStep("choose")}
         >
           {t(($) => $.tickets.checkout.backToPacks)}
@@ -233,7 +337,9 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
           <strong>{t(($) => $.tickets.checkout.lead)}</strong>
         </p>
         <div className="reserve-checkout__balance">
-          <span className="fine">{t(($) => $.tickets.checkout.balance)}</span>
+          <span className="fine reserve-checkout__balance-label">
+            {t(($) => $.tickets.checkout.balance)}
+          </span>
           {sui.problem ? (
             <span role="alert">{sui.problem}</span>
           ) : jpyc.error ? (
@@ -269,7 +375,6 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
               <div key={n} className="reserve-checkout__pack" aria-hidden="true">
                 <Skeleton width={24} height={16} />
                 <Skeleton width={72} height={14} />
-                <span />
                 <Skeleton width={56} height={18} />
               </div>
             ))}
@@ -293,20 +398,20 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
                 <span className="reserve-checkout__pack-name">
                   {t(($) => $.tickets.checkout.pack, { count: p.tickets })}
                 </span>
-                {p.discountPercent > 0 && (
-                  <span className="reserve-checkout__discount">
-                    {t(($) => $.tickets.checkout.discount, { percent: p.discountPercent })}
-                  </span>
-                )}
                 <span className="reserve-checkout__price">
                   {p.discountPercent > 0 && (
-                    <s
-                      aria-label={t(($) => $.tickets.checkout.was, {
-                        price: formatYen(p.tickets * TICKET_PRICE_YEN),
-                      })}
-                    >
-                      {formatYen(p.tickets * TICKET_PRICE_YEN)}
-                    </s>
+                    <span className="reserve-checkout__was">
+                      <span className="fine reserve-checkout__discount">
+                        {t(($) => $.tickets.checkout.discount, { percent: p.discountPercent })}
+                      </span>
+                      <s
+                        aria-label={t(($) => $.tickets.checkout.was, {
+                          price: formatYen(p.tickets * TICKET_PRICE_YEN),
+                        })}
+                      >
+                        {formatYen(p.tickets * TICKET_PRICE_YEN)}
+                      </s>
+                    </span>
                   )}
                   <strong>{formatYen(p.priceYen)}</strong>
                 </span>
@@ -314,21 +419,37 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
             ))}
           </div>
         )}
+        {/* Always there, so a screen reader hears the line as a pick brings it. */}
+        <div role="status">
+          {short && (
+            <p className="reserve-checkout__short">
+              {coversSmaller ? (
+                <Trans
+                  i18nKey={($) => $.tickets.checkout.short.pickSmaller}
+                  components={{ strong: <strong /> }}
+                />
+              ) : (
+                <Trans
+                  i18nKey={($) => $.tickets.checkout.short.addJpyc}
+                  components={{ strong: <strong /> }}
+                />
+              )}
+            </p>
+          )}
+        </div>
         <TearLine />
         <Key
           className="out-of-tickets__key"
           tone="blue"
-          icon={<Ticket />}
+          icon={<BuyTicketsIcon />}
           disabled={!pack || !shop || !sui.address || short || paying}
           onClick={() => pack && shop && void pay(pack, shop.payment)}
         >
           {paying
             ? t(($) => $.tickets.checkout.paying)
-            : short
-              ? t(($) => $.tickets.checkout.notEnoughJpyc)
-              : pack
-                ? t(($) => $.tickets.checkout.payPrice, { price: formatYen(pack.priceYen) })
-                : t(($) => $.tickets.checkout.pay)}
+            : pack
+              ? t(($) => $.tickets.checkout.payPrice, { price: formatYen(pack.priceYen) })
+              : t(($) => $.tickets.checkout.pay)}
         </Key>
         <SuiCredit className="reserve-checkout__credit" />
         {sui.address && shop && <TicketPurchases owner={sui.address} shop={shop} />}
@@ -346,7 +467,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${id}-title`}
-        aria-busy={step === "paying"}
+        aria-busy={step === "paying" || adding}
         tabIndex={-1}
       >
         {body}

@@ -132,7 +132,6 @@
   background: var(--seal);
   color: var(--ink);
   font: 400 15px/1 var(--font-puffy);
-  font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   white-space: nowrap;
   box-shadow:

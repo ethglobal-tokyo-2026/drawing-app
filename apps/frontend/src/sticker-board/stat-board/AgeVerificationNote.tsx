@@ -1,11 +1,11 @@
 import type { AgeProof, AgeVerificationRequest } from "@drawing-app/api/client";
-import { SealCheck } from "@phosphor-icons/react";
 import { Suspense, useId, useRef, useState } from "react";
 import { apiError, type ApiError } from "../../api/apiClient";
 import { useMe, useSetMe } from "../../api/meContext";
 import { useApi } from "../../api/useApi";
 import { errorReason } from "../../i18n/errorMessage";
 import { useTranslation } from "../../i18n/react";
+import { SealCheck } from "../../icons";
 import type { WorldIdFailure } from "../../identity/WorldIdAgeProof";
 import { LabelButton } from "../../ui/LabelButton";
 import { lazyWithPreload } from "../../ui/lazyWithPreload";

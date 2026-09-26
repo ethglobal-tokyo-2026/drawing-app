@@ -148,9 +148,15 @@ export function TransferTrail({ rows, viewerId, artist, mountReplay }: Props) {
                     {amount}
                   </span>
                   <span className="fine transfer-trail__from">
-                    {fromYou
-                      ? t(($) => $.stickerBoard.transferTrail.fromYou)
-                      : t(($) => $.stickerBoard.transferTrail.from, { name: from })}
+                    {/* The handle keeps its own case in the fine print's capitals. */}
+                    {fromYou ? (
+                      t(($) => $.stickerBoard.transferTrail.fromYou)
+                    ) : (
+                      <Trans
+                        i18nKey={($) => $.stickerBoard.transferTrail.from}
+                        components={{ name: <span className="handle">{from}</span> }}
+                      />
+                    )}
                   </span>
                 </span>
                 {/* One button throughout, Replay then Stop, so focus stays on it. */}

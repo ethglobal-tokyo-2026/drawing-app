@@ -257,9 +257,8 @@ describe("ReserveTicketCheckout", () => {
     );
     await settle(3000);
     expect(skeletons()).toBe(0);
-    expect(document.querySelector(".reserve-checkout__balance strong")?.textContent).toBe(
-      "￥1,000",
-    );
+    // The half-width yen sign, Mona Sans's own, though Node's ICU (like Chromium's) writes the full-width ￥.
+    expect(document.querySelector(".reserve-checkout__balance strong")?.textContent).toBe("¥1,000");
   });
 
   it("pays the chosen pack's JPYC from the Sui wallet, and shows the tickets the server added", async () => {
@@ -285,13 +284,29 @@ describe("ReserveTicketCheckout", () => {
     expect(onDraw).toHaveBeenCalledOnce();
   });
 
-  it("won't pay a pack the wallet's JPYC can't cover", async () => {
+  it("won't pay a pack the wallet's JPYC can't cover, and says what to do instead", async () => {
     vi.mocked(getJpycBalance).mockResolvedValue(150n * JPYC);
     await render(checkout(), emptyApi({ ticketShop: () => Promise.resolve(SHOP) }));
     await settle(500);
+    const line = () => document.querySelector(".reserve-checkout__short")?.textContent;
+    expect(line()).toBeUndefined();
     click("3 tickets");
-    expect(buttonNamed("Not enough JPYC")?.disabled).toBe(true);
+    expect(buttonNamed("Pay")?.disabled).toBe(true);
+    expect(line()).toBe(
+      "Not enough balance for this pack. Pick a smaller one, or add JPYC to your Sui account.",
+    );
+    click("Pay");
     expect(payForTickets).not.toHaveBeenCalled();
+  });
+
+  it("says to add JPYC when the balance covers no pack at all", async () => {
+    vi.mocked(getJpycBalance).mockResolvedValue(50n * JPYC);
+    await render(checkout(), emptyApi({ ticketShop: () => Promise.resolve(SHOP) }));
+    await settle(500);
+    expect(buttonNamed("Pay")?.disabled).toBe(true);
+    expect(document.querySelector(".reserve-checkout__short")?.textContent).toBe(
+      "Not enough balance for this pack. Add JPYC to your Sui account to buy it.",
+    );
   });
 
   it("opens the ticket purchases Sui lists under the ENS name, a page at a time", async () => {
@@ -323,19 +338,51 @@ describe("ReserveTicketCheckout", () => {
     expect(buttonNamed("Older purchases")).toBeUndefined();
   });
 
-  it("names the payment that went through when the server didn't add its tickets", async () => {
+  it("goes back to the packs when the payment itself fails", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
-    const api = emptyApi({
-      ticketShop: () => Promise.resolve(SHOP),
-      buyTickets: () => Promise.reject(new Error("sui_unavailable")),
-    });
-    await render(checkout(), api);
+    vi.mocked(payForTickets).mockRejectedValue(new Error("Sui didn’t answer the payment in time."));
+    await render(checkout(), emptyApi({ ticketShop: () => Promise.resolve(SHOP) }));
     await settle(500);
     click("Pay");
     await settle(500);
     expect(title()).toBe("Payment didn’t go through");
-    expect(document.querySelector("[role=alert]")?.textContent).toContain(TX_DIGEST);
+    expect(document.querySelector("[role=alert]")?.textContent).toBe(
+      "Sui didn’t answer the payment in time.",
+    );
     click("Back to the packs");
-    expect(title()).toBe("Reserve tickets");
+    expect(title()).toBe("Pick a pack");
+  });
+
+  it("asks again for the tickets a payment bought when the server didn't add them, and never pays twice", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const write = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: write },
+      configurable: true,
+    });
+    const bought = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("Sui didn’t answer."))
+      .mockResolvedValueOnce(tickets(3, 1));
+    const api = emptyApi({ ticketShop: () => Promise.resolve(SHOP), buyTickets: bought });
+    await render(checkout(), api);
+    await settle(500);
+    click("Pay");
+    await settle(500);
+    expect(title()).toBe("Tickets not added yet");
+    // The payment's ID is fine print under the key, never in the alert.
+    expect(document.querySelector("[role=alert]")?.textContent).not.toContain(TX_DIGEST);
+    expect(document.querySelector(".reserve-checkout__digest")?.textContent).toBe(TX_DIGEST);
+    expect(buttonNamed("Back to the packs")).toBeUndefined();
+    click("Copy");
+    await settle(0);
+    expect(write).toHaveBeenCalledWith(TX_DIGEST);
+    expect(buttonNamed("Copied")).toBeDefined();
+    click("Add the tickets");
+    await settle(500);
+    expect(title()).toBe("1 reserve ticket added");
+    expect(bought).toHaveBeenCalledTimes(2);
+    expect(bought).toHaveBeenLastCalledWith({ tickets: 1, txDigest: TX_DIGEST });
+    expect(payForTickets).toHaveBeenCalledOnce();
   });
 });

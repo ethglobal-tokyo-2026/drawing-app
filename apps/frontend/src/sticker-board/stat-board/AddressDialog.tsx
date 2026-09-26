@@ -1,7 +1,7 @@
-import { ArrowSquareOut, Copy, X } from "@phosphor-icons/react";
 import { useEffectEvent, useId, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "../../i18n/react";
+import { ArrowSquareOut, Copy, X } from "../../icons";
 import { etherscanAddressUrl, suiscanAccountUrl } from "../../identity/explorers";
 import { openLinkInLine } from "../../line/openLink";
 import { LabelButton } from "../../ui/LabelButton";

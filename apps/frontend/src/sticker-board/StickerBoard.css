@@ -44,7 +44,7 @@
   min-height: 48px;
   padding: 4px 8px 4px 2px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 8px;
   background: none;
   text-align: left;
   transition: transform 160ms var(--ease-out);
@@ -94,13 +94,18 @@
     opacity 170ms linear;
 }
 
-/* Gratitude glows behind a sticker, warming from pink toward amber as more gratitude arrives. */
+/* Gratitude glows behind a sticker, warming from pink toward amber as more gratitude arrives. The glow
+   is the world's one coloured light (DESIGN.md's Neutral Shadow Rule), not a coded field, so its two hues
+   are its own: a pink lighter than Bonbon Pink, and an amber that isn't the streak's Tangerine. */
 .placed-sticker.is-glowing .placed-sticker__lift {
+  --glow-pink: #ff7eb6; /* impeccable-disable-line design-system-color */
+  --glow-amber: #ffb13b; /* impeccable-disable-line design-system-color */
   filter: drop-shadow(
     0 0 calc(6px + 12px * var(--glow))
       color-mix(
         in srgb,
-        color-mix(in srgb, #ff7eb6, #ffb13b calc(var(--glow) * 60%)) calc(var(--glow) * 90%),
+        color-mix(in srgb, var(--glow-pink), var(--glow-amber) calc(var(--glow) * 60%))
+          calc(var(--glow) * 90%),
         transparent
       )
   );
@@ -362,7 +367,7 @@
 .sticker-toolbar .label-btn {
   min-height: calc(36px + var(--lip));
   padding: 0 13px 0 11px;
-  font-size: 13.5px;
+  font-size: 13px;
   gap: 8px;
 }
 
@@ -468,7 +473,11 @@
   left: 14px;
   bottom: 14px;
   display: flex;
-  border-radius: 19px;
+}
+
+/* Draw with no tickets: the out-of-tickets card, and the checkout it opens, over everything on the board. */
+.board > .out-of-tickets {
+  z-index: 1000;
 }
 
 /* A new artist's first visit: the key hops and a ring pulses round it. */
@@ -476,11 +485,12 @@
   animation: board-hop 1.8s var(--ease-out) 0.5s 4;
 }
 
+/* 5px out from the compact key, so its corners are the key's 14px plus 5px. */
 .board-draw.is-fresh::after {
   content: "";
   position: absolute;
   inset: -5px;
-  border-radius: inherit;
+  border-radius: calc(14px + 5px);
   box-shadow:
     0 0 0 2.5px var(--seal),
     0 0 0 3.5px rgba(28, 24, 36, 0.12);

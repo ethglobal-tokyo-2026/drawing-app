@@ -189,6 +189,11 @@ describe("ExploreScreen's This week", () => {
     await wait(500);
     expect(textsOf(host, ".figure small")).toEqual(["days", "day"]);
     expect(tab(host, "Longest streak").getAttribute("aria-selected")).toBe("true");
+    // The streak's own mark: its fire before each figure, and its tangerine on the tabs' label.
+    expect(host.querySelectorAll(".figure--streak svg")).toHaveLength(2);
+    expect(host.querySelector(".leaderboard-tabs")?.getAttribute("data-selected")).toBe(
+      "longestStreak",
+    );
 
     await searchFor(host, "k");
     expect(host.querySelector(".results-count")?.textContent).toBe("2 artists");

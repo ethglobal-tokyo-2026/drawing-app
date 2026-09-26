@@ -1,4 +1,3 @@
-import { Copy } from "@phosphor-icons/react";
 import { useEffect, useId, useRef, useState } from "react";
 import {
   clearPerformanceRecording,
@@ -11,6 +10,7 @@ import {
 import { readBootMilestones } from "../../performance/bootMilestones";
 import { formatPerformanceReport, formatSummaryLine } from "../../performance/performanceReport";
 import { useTranslation } from "../../i18n/react";
+import { Copy } from "../../icons";
 import { LabelButton } from "../../ui/LabelButton";
 import { QuietLink } from "../../ui/QuietLink";
 import "./performance-recorder-controls.css";

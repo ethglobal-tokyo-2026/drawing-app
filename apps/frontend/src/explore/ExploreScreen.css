@@ -17,7 +17,8 @@
   background: var(--liner);
 }
 
-/* White label stock with an aqua halo: the search sits on the page like a stuck-on label. */
+/* White label stock: the search sits on the page like a stuck-on label, and takes the house focus
+   ring while you type in it. */
 .artist-search {
   flex: none;
   display: flex;
@@ -28,11 +29,12 @@
   border: 1px solid var(--rule-strong);
   border-radius: 6px;
   background: var(--canvas);
-  box-shadow: 0 0 0 4px var(--aqua-soft);
+  box-shadow: var(--shadow-label);
 }
 
-.artist-search:focus-within {
-  border-color: var(--aqua-deep);
+.artist-search:has(input:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
 }
 
 .artist-search input {
@@ -111,7 +113,10 @@
   transition: transform 260ms var(--ease-out);
 }
 
+/* 34px to see and 44px to touch: invisible bands reach --hit above and below the face, as on a small
+   label, and across the gap to the next tab; the press measures its slop from their edge. */
 .sliding-tabs button {
+  --hit: 5px;
   position: relative;
   min-width: 0;
   height: 34px;
@@ -119,12 +124,18 @@
   border: none;
   border-radius: 6px;
   background: none;
-  color: var(--graphite);
+  color: var(--graphite-on-deep);
   font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
   touch-action: manipulation;
   transition: color 140ms linear;
+}
+
+.sliding-tabs button::before {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--hit)) -2px;
 }
 
 .sliding-tabs button.selected {
@@ -136,12 +147,15 @@
   outline-offset: 3px;
 }
 
-/* Explore's own hue for the view; pink for the leaderboards. */
+/* Explore's own hue for the view; pink for the leaderboards, and the streak's tangerine for Longest
+   streak. */
 .view-switch .sliding-tabs__label {
   background: var(--aqua);
 }
 
+/* 38px to see, 44px to touch. */
 .view-switch button {
+  --hit: 3px;
   height: 38px;
   font-size: 15px;
 }
@@ -150,8 +164,24 @@
   background: var(--pink);
 }
 
+/* Tangerine is a second face over the pink, which fades in as the label slides to Longest streak. */
+.leaderboard-tabs .sliding-tabs__label::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--tangerine);
+  opacity: 0;
+  transition: opacity 260ms var(--ease-out);
+}
+
+.leaderboard-tabs[data-selected="longestStreak"] .sliding-tabs__label::after {
+  opacity: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .sliding-tabs__label {
+  .sliding-tabs__label,
+  .leaderboard-tabs .sliding-tabs__label::after {
     transition: none;
   }
 
@@ -209,9 +239,11 @@
   padding: 6px 16px 6px 14px;
 }
 
-/* A leaderboard nobody is on yet says so at the rows' inset. */
+/* A leaderboard nobody is on yet says so at the rows' inset, as a supporting note. */
 .leaderboard-empty {
   padding: 14px 16px 14px 14px;
+  color: var(--graphite);
+  font-size: 13px;
 }
 
 .leaderboard li + li,
@@ -230,7 +262,6 @@
   color: var(--graphite);
   font-size: 15px;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
 }
 
 li.me .rank {
@@ -278,8 +309,19 @@ li.me .rank {
   font-size: 19px;
   font-weight: 900;
   line-height: 0.95;
-  font-variant-numeric: tabular-nums;
   font-stretch: var(--w-figure);
+}
+
+/* The streak's figure: its fire in the streak's tangerine, then the days in Ink. */
+.figure--streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.figure--streak svg {
+  flex: none;
+  color: var(--tangerine);
 }
 
 .figure small {
@@ -327,6 +369,11 @@ li.me .rank {
   content: "";
   position: absolute;
   inset: -6px;
+}
+
+.search-clear:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 
 .results-count {

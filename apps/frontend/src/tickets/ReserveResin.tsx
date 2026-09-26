@@ -1,5 +1,5 @@
-import { StarFour } from "@phosphor-icons/react";
 import { useId } from "react";
+import { StarFour } from "../icons";
 import "./ReserveResin.css";
 
 /**

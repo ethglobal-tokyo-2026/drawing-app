@@ -222,6 +222,8 @@
   --face: var(--ink);
   --deep: var(--ink-deep);
   --edge: var(--ink);
+  /* Shading an Ink face toward Ink shows nothing, so hover and press lift it 8% toward Liner. */
+  --face-shade: color-mix(in srgb, var(--ink) 92%, var(--liner));
   color: var(--liner);
 }
 
@@ -287,7 +289,7 @@
   }
 
   .label-btn--ink:hover::before {
-    background-color: #2c2736;
+    background-color: var(--face-shade);
   }
 
   .label-btn--quiet:hover {
@@ -302,7 +304,7 @@
 }
 
 .label-btn--ink[data-press-state="down"]::before {
-  background-color: #2c2736;
+  background-color: var(--face-shade);
 }
 
 /* Disabled: sunk flush into the page, with no lip, ink or shadow; enabling springs it up. */

@@ -1,4 +1,3 @@
-import { Heart } from "@phosphor-icons/react";
 import { useId, useState } from "react";
 import {
   readMiniGameDemoSettings,
@@ -6,6 +5,7 @@ import {
   type MiniGameDemoSettings,
 } from "../../gratitude/miniGameDemoSettings";
 import { useTranslation } from "../../i18n/react";
+import { GratitudeIcon } from "../../icons";
 import { LabelButton } from "../../ui/LabelButton";
 import "./gratitude-demo-controls.css";
 
@@ -32,7 +32,7 @@ export function GratitudeDemoControls({ onTry }: Props) {
       </h3>
       <LabelButton
         block
-        icon={<Heart />}
+        icon={<GratitudeIcon />}
         disabled={!onTry}
         aria-describedby={onTry ? undefined : `${id}-note`}
         onClick={onTry ?? undefined}

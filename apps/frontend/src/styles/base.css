@@ -56,7 +56,6 @@ button {
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--graphite);
-  font-variant-numeric: tabular-nums;
 }
 
 /* A handle keeps its own case, even inside fine print's capitals. */
@@ -75,10 +74,6 @@ button {
 .puffy {
   font-family: var(--font-puffy);
   font-weight: 400;
-}
-
-.num {
-  font-variant-numeric: tabular-nums;
 }
 
 .jp {

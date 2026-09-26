@@ -1,6 +1,6 @@
 /* ---------- Your addresses as QR codes on white label stock: the board address and your Sui address ---------- */
 
-/* A row under the stats, clear of Flip back's touch band. Two papers side by side fit a 360px phone. */
+/* A row under Settings. Two papers side by side fit a 360px phone. */
 .address-papers {
   display: flex;
   flex-wrap: wrap;
@@ -76,7 +76,6 @@
   margin-top: 4px;
   font: 800 15px/1.2 var(--font-ui);
   font-stretch: var(--w-ui);
-  font-variant-numeric: tabular-nums;
 }
 
 .address-papers__status {

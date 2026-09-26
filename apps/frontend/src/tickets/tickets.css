@@ -63,7 +63,6 @@
 .out-of-tickets__reserve-count {
   font: 850 15px/1 var(--font-ui);
   font-stretch: var(--w-figure);
-  font-variant-numeric: tabular-nums;
 }
 
 .out-of-tickets__title {
@@ -86,7 +85,6 @@
   font-size: 16px;
   line-height: 1.35;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
   text-wrap: balance;
 }
 
@@ -97,6 +95,12 @@
 .out-of-tickets__quiet {
   font-weight: 600;
   color: var(--graphite);
+}
+
+/* The start card says one fact per line: the bold one, then the quiet one under it, so neither
+   sentence breaks across the other. */
+.out-of-tickets__line--stacked > * {
+  display: block;
 }
 
 /* The countdown wraps as a unit. */

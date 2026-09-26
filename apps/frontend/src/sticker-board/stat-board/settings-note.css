@@ -1,7 +1,7 @@
-/* ---------- Settings: an index card taped across the foot of your cork back ---------- */
+/* ---------- Settings: an index card taped on your cork back, first under the stats ---------- */
 
 /* Until it scrolls into view it sticks to the cork's foot, tucked down so only its title peeks up
-   (SettingsNote measures the tuck). It's the last paper, so it rides over the ones above it. */
+   (SettingsNote measures the tuck). While it peeks it rides over the stats above it. */
 .stat-board__note.settings-note {
   position: sticky;
   z-index: 1;

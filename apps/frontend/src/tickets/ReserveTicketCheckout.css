@@ -1,6 +1,7 @@
 /* The reserve ticket checkout (ReserveTicketCheckout.tsx). The card borrows the out-of-tickets card's
    stock; packs are label stock rows, the picked one stuck on in blue, the Shop's and reserve tickets'
-   color. */
+   color. A discount is quiet fine print beside the struck-through price: the picked pack and Pay are
+   the loudest things on the card, and no pink, which means gratitude and you. */
 
 .reserve-checkout__card {
   max-height: 100%;
@@ -24,8 +25,12 @@
   box-shadow: inset 0 0 0 1px var(--rule);
   font-size: 15px;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
   text-align: right;
+}
+
+/* The label keeps its line, even beside a long problem; Japanese would otherwise break between its characters. */
+.reserve-checkout__balance-label {
+  flex: none;
 }
 
 /* The balance's placeholder sits where the figure will, at the well's right. */
@@ -42,7 +47,7 @@
 
 .reserve-checkout__pack {
   display: grid;
-  grid-template-columns: auto 1fr auto auto;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 10px;
   min-height: 52px;
@@ -81,28 +86,33 @@
   font-weight: 750;
 }
 
-/* A sale sticker, slapped on at the house tilt. */
-.reserve-checkout__discount {
-  padding: 3px 6px;
-  border-radius: 4px;
-  background: var(--pink);
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  rotate: var(--tilt);
-}
-
+/* The price keeps the last column on every row, with a discount or without, so the prices line up. */
 .reserve-checkout__price {
+  grid-column: 3;
   display: grid;
   justify-items: end;
   line-height: 1.15;
-  font-variant-numeric: tabular-nums;
+}
+
+/* The full price struck through, and the discount before it in plain Ink fine print. */
+.reserve-checkout__was {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.reserve-checkout__discount {
+  color: var(--ink);
 }
 
 .reserve-checkout__price s {
   font-size: 12px;
   color: var(--graphite);
+}
+
+/* Graphite reads only 3.3:1 on Blue Soft, so on the picked pack the struck price is Ink. */
+.reserve-checkout__pack[aria-pressed="true"] .reserve-checkout__price s {
+  color: var(--ink);
 }
 
 .reserve-checkout__price strong {
@@ -113,6 +123,43 @@
 .reserve-checkout__problem {
   margin: 14px 0 0;
   font-weight: 650;
+}
+
+/* Under the packs when the balance can't cover the picked one: what's wrong in bold, then what to do. */
+.reserve-checkout__short {
+  margin: 12px 0 0;
+  font-size: 15px;
+  line-height: 1.4;
+  font-weight: 500;
+  text-wrap: balance;
+}
+
+.reserve-checkout__short strong {
+  font-weight: 700;
+}
+
+/* The payment whose tickets weren't added, in fine print under the key: its ID in its own case, cut short on screen,
+   and Copy beside it, which copies it whole. */
+.reserve-checkout__payment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.reserve-checkout__payment-id {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A transaction ID is case-sensitive, so fine print's capitals would change it; it can be selected by hand. */
+.reserve-checkout__digest {
+  text-transform: none;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* Under Pay, where the payment happens. */
@@ -189,7 +236,6 @@
   align-items: center;
   gap: 6px;
   font-weight: 800;
-  font-variant-numeric: tabular-nums;
 }
 
 .ticket-purchases__note {

@@ -1,13 +1,12 @@
 import type { Person, Sticker } from "@drawing-app/api/client";
 import { useMyAgeStatus } from "../identity/useMyAgeStatus";
 import { veiledFor } from "../stickers/nsfw";
-import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useMe } from "../api/meContext";
 import { toPerson, toSticker } from "../api/views";
 import { Trans, useTranslation } from "../i18n/react";
-import { StickerBoardIcon } from "../icons";
+import { CaretLeft, CaretRight, StickerBoardIcon } from "../icons";
 import { useDetailLift, type LiftOrigin, type LiftView } from "../sticker-board/detailLift";
 import { useSwipePaging } from "../sticker-board/detailPaging";
 import { ArtistChip } from "../stickers/ArtistChip";
@@ -225,7 +224,10 @@ export function LiftedSticker({
               <Trans
                 i18nKey={($) => $.explore.lifted.captionGiven}
                 values={caption}
-                components={{ duration, receiver: <>{nameOf(entry.givenTo)}</> }}
+                components={{
+                  duration,
+                  receiver: <span className="handle">{nameOf(entry.givenTo)}</span>,
+                }}
               />
             ) : (
               <Trans

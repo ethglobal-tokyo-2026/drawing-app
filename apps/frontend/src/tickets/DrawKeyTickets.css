@@ -17,6 +17,25 @@
   display: flex;
 }
 
+/* Draw spends the front ticket: it peels up and away the way the ticket stubs do (TicketStubs.css), in
+   the small stubs' 220ms, and the canvas opens as it goes. Under reduced motion it simply goes. */
+.draw-key-tickets__front.is-peeling {
+  transform-origin: 0 100%;
+  animation: draw-key-ticket-peel var(--t-stick) var(--ease-peel) forwards;
+}
+
+@keyframes draw-key-ticket-peel {
+  60% {
+    opacity: 1;
+    animation-timing-function: linear;
+  }
+  to {
+    translate: 8px -24px;
+    rotate: -12deg;
+    opacity: 0;
+  }
+}
+
 /* One ticket, sized to its print; the print starts past the tucked end and stops short of the notch. */
 .draw-key-ticket {
   position: relative;
@@ -27,13 +46,14 @@
   filter: drop-shadow(0 1px 0 rgba(28, 24, 36, 0.1)) drop-shadow(1px 2px 3px rgba(28, 24, 36, 0.08));
 }
 
-/* The reserve ticket behind the daily one: 8px higher, fanned a little further, printed past the daily one's end. */
+/* The reserve ticket behind the daily one, fanned past its end like the next card in a hand: its own 16px end
+   tucks under the daily one's notch, and the rest of it shows whole, 5px higher and turned 3° further. */
 .draw-key-ticket.is-behind {
   position: absolute;
-  left: 0;
-  top: -8px;
-  padding-left: calc(var(--front-w, 42px) + 5px);
-  rotate: -2deg;
+  left: calc(var(--front-w, 42px) - 16px);
+  top: -5px;
+  padding-left: 25px;
+  rotate: -3deg;
   transform-origin: 0 100%;
 }
 
@@ -53,7 +73,6 @@
   color: var(--ink);
   font: 850 13px/1 var(--font-ui);
   font-stretch: var(--w-figure);
-  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 

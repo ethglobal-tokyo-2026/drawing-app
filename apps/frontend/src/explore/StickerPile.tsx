@@ -14,7 +14,7 @@ import {
 import { toPerson, toSticker } from "../api/views";
 import { useMyAgeStatus } from "../identity/useMyAgeStatus";
 import { currentLanguage } from "../i18n/i18n";
-import { Trans, useTranslation } from "../i18n/react";
+import { useTranslation } from "../i18n/react";
 import { handleOf } from "../sticker-board/boardSticker";
 import { hash, type Shape } from "../sticker-board/tray/sheetPacking";
 import { knownShape } from "../sticker-board/tray/stickerShape";
@@ -35,11 +35,10 @@ import {
 import {
   PILE_WIDTH,
   pileStickers,
-  tagSize,
-  tagWidths,
-  TO_TAG_DROP,
-  TO_TAG_INDENT,
+  tagGroup,
   type PiledSticker,
+  type Tag,
+  type TagGroup,
 } from "./pileLayout";
 import { arrivalsOf, lastSeen, markSeen } from "./pileVisits";
 import "./sticker-pile.css";
@@ -78,6 +77,7 @@ interface Laid {
   shape: Shape;
   name: string;
   givenTo: string | null;
+  tags: TagGroup;
 }
 
 interface LaidDay {
@@ -90,8 +90,17 @@ interface LaidDay {
 
 const nameOf = (person: Person) => handleOf(toPerson(person));
 
-/** Each day's heap, laid out once per payload. */
-function layDays(days: readonly PileDay[], today: number): LaidDay[] {
+/**
+ * The "to @x" tag's whole label, from its template's words round <handle/>, so the layout measures
+ * all of it: "to @ken", or "@kenさんへ".
+ */
+function toLabel(template: string, handle: string) {
+  const [before, after = ""] = template.split("<handle/>");
+  return `${before}${handle}${after}`;
+}
+
+/** Each day's heap, laid out once per payload and language. */
+function layDays(days: readonly PileDay[], today: number, toTemplate: string): LaidDay[] {
   // Today's floor shows even before anyone seals.
   const withToday = days[0]?.day === today ? days : [{ day: today, stickers: [] }, ...days];
   return withToday.map(({ day, stickers }) => {
@@ -106,7 +115,8 @@ function layDays(days: readonly PileDay[], today: number): LaidDay[] {
       }) ?? { w: sticker.width, h: sticker.height, poly: [] };
       const name = nameOf(sticker.artist);
       const givenTo = pile.givenTo && nameOf(pile.givenTo);
-      return { id: sticker.id, shape, tag: tagSize(name, givenTo), pile, name, givenTo };
+      const tags = tagGroup(name, givenTo === null ? null : toLabel(toTemplate, givenTo));
+      return { id: sticker.id, shape, tag: tags, tags, pile, name, givenTo };
     });
     const layer = pileStickers(items, { seed: dayKey(day) });
     const laid = layer.items.map((spot, i) => ({ ...items[i], spot })).reverse();
@@ -162,34 +172,44 @@ function spotStyle({ spot }: Laid, height: number): CSSProperties {
   } as CSSProperties;
 }
 
+/** A tag's place and size in its group, in pile units, for sticker-pile.css to scale. */
+const tagStyle = ({ x, y, w, h }: Tag) =>
+  ({ "--tag-x": x, "--tag-y": y, "--tag-w": w, "--tag-h": h }) as CSSProperties;
+
+/** A tag's words, a line at a time, as the layout broke them. */
+function TagLines({ tag }: { tag: Tag }) {
+  return (
+    <span className="pile-tag__name">
+      {tag.lines.map((line, i) => (
+        <span key={i} className="pile-tag__line">
+          {line}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/**
+ * The artist's name tag, with their picture, or a plain dot without one; and the aqua tag of who it
+ * was given to.
+ */
 function NameTags({ laid, fresh }: { laid: Laid; fresh: boolean }) {
-  const { artist } = laid.pile.sticker;
-  const view = toPerson(artist);
-  const widths = tagWidths(laid.name, laid.givenTo);
+  const view = toPerson(laid.pile.sticker.artist);
+  const { name, to } = laid.tags;
   return (
     <span className="pile-tags" aria-hidden="true">
-      <span className="pile-tag" style={{ "--tag-w": widths.name } as CSSProperties}>
-        <PhotoSticker src={view.pictureUrl} name={view.name} size={16} />
-        <span className="pile-tag__name">{laid.name}</span>
+      <span className="pile-tag" style={tagStyle(name)}>
+        {view.pictureUrl ? (
+          <PhotoSticker src={view.pictureUrl} name={view.name} size={13} />
+        ) : (
+          <span className="pile-tag__dot" />
+        )}
+        <TagLines tag={name} />
         {fresh && <span className="pile-tag__new" />}
       </span>
-      {laid.pile.givenTo && (
-        <span
-          className="pile-tag pile-tag--to"
-          style={
-            {
-              "--tag-w": widths.to,
-              "--tag-x": TO_TAG_INDENT,
-              "--tag-y": TO_TAG_DROP,
-            } as CSSProperties
-          }
-        >
-          <span className="pile-tag__name">
-            <Trans
-              i18nKey={($) => $.explore.pile.to}
-              components={{ handle: <>{laid.givenTo}</> }}
-            />
-          </span>
+      {to && (
+        <span className="pile-tag pile-tag--to" style={tagStyle(to)}>
+          <TagLines tag={to} />
         </span>
       )}
     </span>
@@ -373,7 +393,8 @@ export function StickerPile({ days, meId, liftedId, onLift }: Props) {
   const root = useRef<HTMLDivElement>(null);
   const [now] = useState(() => Date.now());
   const today = Math.max(exploreDay(now), days[0]?.day ?? -Infinity);
-  const laidDays = useMemo(() => layDays(days, today), [days, today]);
+  const toTemplate = t(($) => $.explore.pile.to);
+  const laidDays = useMemo(() => layDays(days, today, toTemplate), [days, today, toTemplate]);
   // Read once as the pile opens: what's new since the last look, and what falls.
   const [arrivals] = useState(() => arrivalsOf(days, today, lastSeen(meId)));
   const [dropping, setDropping] = useState<"waiting" | "falling" | "done">(

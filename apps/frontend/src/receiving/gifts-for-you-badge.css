@@ -34,7 +34,7 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  color: var(--canvas);
+  color: var(--ink);
   background: var(--pink);
   box-shadow: inset 0 0 0 1.5px var(--ink);
 }
@@ -80,12 +80,14 @@
 }
 
 .gifts-for-you-badge__title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
   line-height: 1.2;
 }
 
+/* In Ink: Graphite reads only 3.5:1 on Pink Soft. */
 .gifts-for-you-badge__from {
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

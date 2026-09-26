@@ -1,8 +1,8 @@
-import type { TicketKind, Tickets } from "@drawing-app/api/client";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import type { TicketKind, Tickets, TicketUse } from "@drawing-app/api/client";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { apiError, type ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
-import { TicketsContext } from "./ticketsContext";
+import { TicketsContext, type Sheet } from "./ticketsContext";
 
 /** A turnover that just passed can still read as the old day on the server for a moment. */
 const REFILL_MARGIN_MS = 1_000;
@@ -51,9 +51,38 @@ export function TicketsProvider({ children }: { children: ReactNode }) {
     [api],
   );
 
+  const [sheet, setSheet] = useState<Sheet>(null);
+  const sheetSpend = useRef<Promise<TicketUse> | null>(null);
+  const spendForSheet = useCallback(
+    (kind: TicketKind) => {
+      const spent = spend(kind);
+      // The drawing screen says what became of it once it takes it.
+      spent.catch(() => {});
+      sheetSpend.current = spent;
+    },
+    [spend],
+  );
+  const hasSheetSpend = useCallback(() => sheetSpend.current !== null, []);
+  const takeSheetSpend = useCallback(() => {
+    const spent = sheetSpend.current;
+    sheetSpend.current = null;
+    return spent;
+  }, []);
+
   const value = useMemo(
-    () => ({ tickets, error, refresh, spend, set: setTickets }),
-    [tickets, error, refresh, spend],
+    () => ({
+      tickets,
+      error,
+      refresh,
+      spend,
+      set: setTickets,
+      sheet,
+      setSheet,
+      spendForSheet,
+      hasSheetSpend,
+      takeSheetSpend,
+    }),
+    [tickets, error, refresh, spend, sheet, spendForSheet, hasSheetSpend, takeSheetSpend],
   );
   return <TicketsContext value={value}>{children}</TicketsContext>;
 }

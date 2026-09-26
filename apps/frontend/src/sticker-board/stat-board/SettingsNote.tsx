@@ -29,8 +29,8 @@ const reason = (error: unknown) => (error instanceof Error ? error.message : Str
  * tucks it down by the rest of its height, measured here whenever that changes. A sticky box keeps
  * clear of its scroller's padding, so the tuck reaches through the cork's too.
  *
- * Returns `reveal`, which scrolls the cork to its end, where the whole note shows. A tap on the tucked
- * note uses it, and so does focus, which the browser's own scrolling can't bring out of a tuck.
+ * Returns `reveal`, which scrolls the cork until the whole note shows above its foot. A tap on the
+ * tucked note uses it, and so does focus, which the browser's own scrolling can't bring out of a tuck.
  */
 function usePeek(note: RefObject<HTMLElement | null>, title: RefObject<HTMLElement | null>) {
   const reduced = useReducedMotion();
@@ -68,9 +68,9 @@ function usePeek(note: RefObject<HTMLElement | null>, title: RefObject<HTMLEleme
 }
 
 /**
- * Your Settings, the last paper on your cork back. A language is saved to your account, then kept on
- * this phone for the first screen of the next start, and the app restarts in it, so text built
- * outside React follows too.
+ * Your Settings, the first paper under the stats on your cork back. A language is saved to your
+ * account, then kept on this phone for the first screen of the next start, and the app restarts in
+ * it, so text built outside React follows too.
  */
 export function SettingsNote({ restart = () => location.reload() }: { restart?: () => void }) {
   const { t } = useTranslation();

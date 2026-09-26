@@ -57,7 +57,8 @@ const wordsIn = (language: Language) => {
     myBoard: word(app.tabs.myBoard),
     explore: word(app.tabs.explore),
     count: word(tickets.count),
-    refill: refillTime(language),
+    // As the Draw key's empty backing says it: "New at 12:00 AM".
+    refill: word(tickets.newAt).replace("{{time}}", refillTime(language)),
   };
 };
 
@@ -72,7 +73,7 @@ const content = {
     star: svg(StarFour, { weight: "fill" }),
   },
   // Each ticket is as long as what it prints needs, plus the 16px tucked under the key.
-  tickets: { daily: ticket(62), reserve: ticket(56), used: { en: ticket(78), ja: ticket(56) } },
+  tickets: { daily: ticket(62), reserve: ticket(56), used: { en: ticket(84), ja: ticket(86) } },
 };
 
 const TYPES: Record<string, string> = {

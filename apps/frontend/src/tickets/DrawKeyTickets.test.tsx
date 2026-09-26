@@ -76,7 +76,7 @@ describe("DrawKeyTickets", () => {
     open(tickets(0, 5));
     expect(shown()).toEqual(["reserve ×5"]);
     open(tickets(0, 0));
-    expect(shown()).toEqual([`backing ${formatRefillTime(REFILL)}`]);
+    expect(shown()).toEqual([`backing New at ${formatRefillTime(REFILL)}`]);
   });
 
   it("is paper behind the key: hidden from screen readers, and never a control", () => {
