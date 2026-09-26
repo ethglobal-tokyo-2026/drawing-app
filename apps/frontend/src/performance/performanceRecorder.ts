@@ -19,7 +19,7 @@ export interface SlowFrame {
   /** Its interval: when the frame before it began, and when it began. */
   start: number;
   end: number;
-  /** The typical frame it was judged against, in ms. */
+  /** The typical frame it was judged against, in ms, but never over 30 fps's. */
   typicalMs: number;
   screen: string;
   /** Our own script time in it, in ms by label. */
@@ -70,7 +70,10 @@ export interface PerformanceLog {
 const SLOW_FACTOR = 1.5;
 /** The typical frame is the median of this many latest intervals. */
 const TYPICAL_OF = 120;
-/** Before any interval, the typical frame is the slowest pace a phone keeps: 30 fps. */
+/**
+ * The slowest pace a phone keeps, 30 fps: the typical frame before any interval, and the most a frame
+ * is judged against, so a run of long frames, as at the app's start, can't raise the bar for itself.
+ */
 const FIRST_TYPICAL_MS = 1000 / 30;
 /** The timeline keeps this much. */
 const TIMELINE_MS = 5000;
@@ -147,7 +150,7 @@ export function createPerformanceLog(now: number): PerformanceLog {
         return;
       }
       const ms = now - before;
-      const typical = typicalMs();
+      const typical = Math.min(typicalMs(), FIRST_TYPICAL_MS);
       intervals.push(ms);
       if (intervals.length > TYPICAL_OF) intervals.shift();
       frames++;
@@ -168,10 +171,9 @@ export function createPerformanceLog(now: number): PerformanceLog {
         });
       }
       settle(now);
-      // What no slow frame can still take goes.
-      while (timeline.length > 0 && timeline[0].at + timeline[0].ms < now - TIMELINE_MS) {
-        timeline.shift();
-      }
+      // What no slow frame can still take goes; a stall longer than the timeline keeps its own.
+      const from = Math.min(now - TIMELINE_MS, (pending[0]?.start ?? Infinity) - BEFORE_SLOW_MS);
+      while (timeline.length > 0 && timeline[0].at + timeline[0].ms < from) timeline.shift();
     },
     pageHidden: () => {
       hidden = true;

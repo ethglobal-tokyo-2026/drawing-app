@@ -82,6 +82,31 @@ describe("the performance log", () => {
     expect(summary.typicalMs).toBeCloseTo(33.4);
   });
 
+  it("counts every frame of a run of long ones, as at the app's start", () => {
+    const log = createPerformanceLog(0);
+    const run = framesFor(log);
+    run([120, 150, 90, 200, 110, ...steady(60)]);
+    expect(log.summary().slow).toBe(5);
+  });
+
+  it("counts a frame over 50ms at a slower pace than 30 fps, and gives that pace as typical", () => {
+    const log = createPerformanceLog(0);
+    const run = framesFor(log);
+    run([...steady(60, 45), 60, ...steady(60, 45)]);
+    expect(log.summary()).toMatchObject({ slow: 1, typicalMs: 45 });
+  });
+
+  it("keeps a stall's own events when the stall is longer than the timeline", () => {
+    const log = createPerformanceLog(0);
+    const run = framesFor(log);
+    const start = run(steady(60));
+    log.note({ at: start - 100, ms: 0, kind: "mark", detail: "before" });
+    log.note({ at: start + 10, ms: 0, kind: "mark", detail: "during" });
+    run([6000, ...steady(90)]);
+    const [stall] = log.slowFrames();
+    expect(stall.events.map((e) => e.detail)).toEqual(["before", "during"]);
+  });
+
   it("skips the interval across a hidden page", () => {
     const log = createPerformanceLog(0);
     const run = framesFor(log);
