@@ -4,13 +4,13 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "../api/apiClient";
 import { ApiProvider } from "../api/ApiProvider";
-import type { Gratitude, StickerDetailResponse } from "../api/contract";
+import type { Gratitude, StickerDetail as StickerDetailResponse } from "@drawing-app/api/client";
 import {
   gratitude as gratitudeFixture,
   people,
   sticker as apiSticker,
   trailEntry,
-} from "../api/mock/fixtures";
+} from "../api/testFixtures";
 import { emptyApi, TEST_OWNER } from "../api/testing";
 import { toPerson, toSticker } from "../api/views";
 import type { BoardStickerView } from "./boardSticker";
@@ -33,6 +33,7 @@ const sticker = (
   id: `s-${no}`,
   no,
   createdAt,
+  arrivedAt: createdAt,
   timeUsed: 292,
   width: 120,
   height: 100,
@@ -43,7 +44,6 @@ const sticker = (
   givenTo: null,
   openGift: null,
   seenAt: createdAt,
-  arrivedAt: createdAt,
   ...extra,
 });
 const stickers = [sticker(147, day(20)), sticker(133, day(14)), sticker(117, day(9))];

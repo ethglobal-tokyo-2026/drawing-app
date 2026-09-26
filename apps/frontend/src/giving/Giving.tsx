@@ -8,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useApi } from "../api/useApi";
 import { StickerBoardIcon } from "../icons/StickerBoardIcon";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
@@ -21,10 +22,9 @@ import { useReducedMotion } from "../ui/useReducedMotion";
 import { CantFindThem } from "./CantFindThem";
 import { GiftBag } from "./GiftBag";
 import type { GiftSender } from "./giftSender";
-import { deviceGiftStore } from "./giftStore";
 import type { GiveFlowState } from "./giveFlow";
 import heroPng from "./gift-message-hero.png";
-import { createLocalGiftBackend } from "./localGiftBackend";
+import { createApiGiftBackend } from "./giftBackend";
 import { useGiveFlow } from "./useGiveFlow";
 import "./Giving.css";
 
@@ -67,11 +67,12 @@ type View = Screen | "cantFind";
 export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) {
   const reduced = useReducedMotion();
   const motion = reduced ? 1 : 0;
+  const api = useApi();
   const { state, flow } = useGiveFlow(() => ({
     sticker,
     sender,
-    backend: createLocalGiftBackend({
-      store: deviceGiftStore(),
+    backend: createApiGiftBackend({
+      api,
       fromHandle,
       liffId,
       // The sealed bag, never the sticker; the gift message drops it where the app isn't on HTTPS.
@@ -187,7 +188,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
         </p>
         {state.recordError && (
           <p className="giving__problem" role="alert">
-            It went out in LINE, but this device couldn’t record it: {state.recordError}
+            It went out in LINE, but the app’s server couldn’t record it: {state.recordError}
           </p>
         )}
         <LabelButton
@@ -207,10 +208,10 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose }: Props) 
       state.step === "failed"
         ? [
             state.error,
-            state.recordError && `This device couldn’t record that: ${state.recordError}`,
+            state.recordError && `The app’s server couldn’t record that: ${state.recordError}`,
           ]
         : state.step === "notSent" && state.recordError
-          ? [`This device couldn’t record that: ${state.recordError}`]
+          ? [`The app’s server couldn’t record that: ${state.recordError}`]
           : [];
     content = (
       <>

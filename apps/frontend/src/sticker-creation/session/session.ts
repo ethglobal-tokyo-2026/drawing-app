@@ -20,7 +20,7 @@ export interface Session {
 export const FRESH_SESSION: Session = { phase: "blank", armedAt: 0 };
 
 export type SessionEvent =
-  /** The person chose to spend a ticket on this sheet. */
+  /** A ticket was spent on this sheet, or carried over to it. */
   | { type: "start" }
   /** A stroke or fill landed on the sheet. */
   | { type: "ink" }
@@ -39,7 +39,8 @@ export type SessionEvent =
 
 /** What the drawing screen does on a transition, besides showing the new phase. */
 export type SessionEffect =
-  | "spend-ticket"
+  /** Keep the new session on this device, with its ticket. */
+  | "keep-session"
   | "start-clock"
   /** Stop the clock and build the sticker. */
   | "seal"
@@ -59,7 +60,7 @@ export function transition(session: Session, event: SessionEvent): Result {
   const unchanged = { session, effects: [] };
   switch (event.type) {
     case "start":
-      return phase === "blank" ? to("primed", ["spend-ticket"]) : unchanged;
+      return phase === "blank" ? to("primed", ["keep-session"]) : unchanged;
     case "ink":
       return phase === "primed" ? to("drawing", ["start-clock"]) : unchanged;
     case "restored":

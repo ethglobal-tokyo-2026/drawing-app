@@ -1,4 +1,4 @@
-import type { ReplayV1 } from "../api/contract";
+import type { ReplayV1 } from "@drawing-app/api/client";
 import { seededRandom } from "../ui/seededRandom";
 import {
   createGratitudeCombo,

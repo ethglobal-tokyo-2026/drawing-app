@@ -64,6 +64,8 @@ export const placementSchema = createSelectSchema(stickerPlacements, {
   z: z.int(),
 }).pick({ onBoard: true, x: true, y: true, scale: true, rotation: true, z: true });
 
+export type Placement = z.infer<typeof placementSchema>;
+
 export const stickerPlacementSchema = z.object({
   stickerId: createSelectSchema(stickerPlacements).shape.stickerId,
   placement: placementSchema.nullable(),

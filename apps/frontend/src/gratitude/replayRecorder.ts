@@ -1,4 +1,4 @@
-import type { ReplayV1 } from "../api/contract";
+import type { ReplayV1 } from "@drawing-app/api/client";
 import type { ComboEvent } from "./combo";
 
 /** Positions run from 0 to this, across the stage and down it. */

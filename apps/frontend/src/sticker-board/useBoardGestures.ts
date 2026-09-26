@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObje
 import { formatNo } from "../stickers/format";
 import { sheenIn, sweepSheen } from "../stickers/resinSheen";
 import { playStick } from "../stickers/stick";
-import type { Placement } from "../stickers/stickerStorage";
+import type { Placement } from "./placement";
 import {
   dragBounds,
   normalizeTurn,

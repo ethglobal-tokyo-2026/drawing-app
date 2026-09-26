@@ -15,6 +15,8 @@ export default defineConfig({
     // app's own origin, so the proxy presents that.
     proxy: {
       "/v1/auth": { target: LIVE_ORIGIN, changeOrigin: true, headers: { origin: LIVE_ORIGIN } },
+      // The REST API, which `pnpm dev` runs beside this server.
+      "/api": { target: "http://127.0.0.1:8788" },
     },
   },
 });

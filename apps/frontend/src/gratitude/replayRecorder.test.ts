@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ReplayV1 } from "../api/contract";
+import type { ReplayV1 } from "@drawing-app/api/client";
 import { seededRandom } from "../ui/seededRandom";
 import { createGratitudeCombo, type ComboEvent, type ComboRecord, type EndReason } from "./combo";
 import { FEEL_CONFIG, GAME_CONFIG, type GameConfig } from "./gameConfig";
