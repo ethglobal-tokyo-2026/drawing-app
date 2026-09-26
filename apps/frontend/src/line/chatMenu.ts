@@ -1,5 +1,6 @@
 import liff from "@line/liff";
 import { useSyncExternalStore } from "react";
+import { currentLanguage } from "../i18n/i18n";
 import { jsonField } from "../identity/privy";
 
 /** The menu under the official account's chat: one "Open Sticker Board" button for someone new, three tiles after. */
@@ -39,8 +40,9 @@ function fail(reason: string) {
 }
 
 /**
- * Asks the auth server to give this person the returning-user chat menu, once per page load. The server
- * checks with LINE and Privy itself; the outcome goes to the status, and this never throws.
+ * Asks the auth server to give this person the returning-user chat menu in the app's language, once per
+ * page load. The server checks with LINE and Privy itself; the outcome goes to the status, and this never
+ * throws.
  */
 export async function requestReturningMenu(): Promise<void> {
   if (asked) return;
@@ -53,7 +55,7 @@ export async function requestReturningMenu(): Promise<void> {
     const response = await fetch("/v1/auth/line-menu", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ idToken }),
+      body: JSON.stringify({ idToken, language: currentLanguage() }),
       signal: AbortSignal.timeout(SWITCH_TIMEOUT_MS),
     });
     const body: unknown = await response.json().catch(() => null);
