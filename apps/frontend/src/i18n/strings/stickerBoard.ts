@@ -160,9 +160,9 @@ export const stickerBoard = {
     /** Address dialog: the Copy address button under the card */
     copy: { en: "Copy address", ja: "アドレスをコピー" },
   },
-  /** The Settings note, the last paper on your cork back. */
+  /** The Settings note, the first paper under the stats on your cork back. */
   settings: {
-    /** Your stat board: the title of the Settings note, the last paper on the cork, which peeks up from the cork's foot until it's scrolled into view */
+    /** Your stat board: the title of the Settings note, the first paper under the stats on the cork, which peeks up from the cork's foot until it's scrolled into view */
     title: { en: "Settings", ja: "設定" },
     language: {
       /** Settings note: the heading over the language choices */

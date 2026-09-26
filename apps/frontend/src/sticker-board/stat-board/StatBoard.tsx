@@ -95,6 +95,8 @@ export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref
           )
         }
       >
+        {/* Settings first, since it's the paper people come back to. */}
+        <SettingsNote />
         <AddressPapers
           board={board}
           sui={sui}
@@ -103,7 +105,6 @@ export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref
           onOpen={setOpen}
         />
         <AgeVerificationNote />
-        <SettingsNote />
         {DEV_SLIP && (
           <DeveloperSlip>
             <SendTestMessage senderName={me.displayName} />
