@@ -56,14 +56,16 @@
 
 ### Task 3: Verify
 
-- [ ] Deploy: both JWKS checks pass once the route is in. A fake ID token at the public URL gets 401 `line_auth_failed`.
+- [x] Deploy: both JWKS checks pass once the route is in. A fake ID token at the public URL gets 401 `line_auth_failed`.
 - [ ] After ad0ll turns on custom auth and sets the JWKS URL: sign in on the live site, and the stat board shows the Privy user ID.
-- [ ] Merge into local main (no push). Tell drawing-app-f6.
+- [x] Merge into local main (no push). Tell drawing-app-f6.
 
-## Outcome so far
+## Outcome
 
-Merged into drawing-app's local main as 40f4fa0 (not pushed) and deployed. The auth server runs on the box as `sticker-auth`.
-
-- In the browser, the real PrivySession and SDK got Privy's answer: 401 "External auth providers are not enabled for your account.", which the card shows with Try again. The test used a JWT signed on the box by the real key, handed to the page by Playwright.
-- Found in testing: after a failed sign-in, Privy's `useSyncJwtBasedAuthState` re-syncs in a tight loop, about 2 authenticate calls a second, indefinitely. The fix: `enabled: false` after a failure, a kept JWT, and no exchange while failed.
-- Waiting on ad0ll: the HAProxy command (staged file hash 9d62c3d3…), and turning on custom auth in Privy with the JWKS URL.
+- The auth server runs on the box as `sticker-auth`, behind HAProxy (route installed 2026-09-26). Its signing key never leaves the box.
+- The Privy dashboard settings that work: JWT-based auth on, User ID claim `sub`, the JWKS endpoint, environment **Client side**, aud = the app ID, "Require aud" on. With "Server side", Privy answers "restricted to only server-side authentication".
+- Found in testing:
+  - After a failed sign-in, Privy's JWT sync re-syncs in a tight loop. It's stopped with `enabled: false` after a failure, a kept JWT, and Try again.
+  - With wallets made at login, Privy's SDK signs a new user out if its wallet frame isn't up yet ("User must be authenticated before creating a Privy wallet"). That was 1 of 3 fresh users. The fix waits for `useWallets().ready` and retries once after 1 s; 10 of 10 fresh users then signed in with a wallet.
+- Test users were deleted afterwards with the app secret.
+- Still open: ad0ll's own sign-in through real LINE, which exercises the one step the browser tests skip: LINE verifying a real ID token. Drop this plan once it passes.
