@@ -379,7 +379,7 @@ The gallery around the phones (a sticky flow index, a 260px story column beside 
 
 ## Elevation & Depth
 
-Depth is physical, and it comes from a single light at the top left. Every cast shadow falls down and to the right, uses neutral Ink alpha and is layered in two parts, a tight contact and a soft throw. Controls get their depth from thickness, not shading: a key sits on a 6px lip and a label on 3px of paper, and the base casts the shadow, so pressing never darkens the lip. Stickers get their edge from a 0.5px kiss-cut groove drawn as a drop-shadow on the alpha, so the silhouette casts the shadow rather than a box.
+Depth is physical, and it comes from a single light at the top left. Every cast shadow falls down and to the right, uses neutral Ink alpha and is layered in two parts, a tight contact and a soft throw. Controls get their depth from thickness, not shading: a key sits on a 6px lip and a label on 3px of paper, and the base casts the shadow, so pressing never darkens the lip. Stickers get their edge from a 0.5px kiss-cut groove drawn as a drop-shadow on the alpha, so the silhouette casts the shadow rather than a box. On a foil sticker the band is the edge: the kiss-cut and the cast fall from the band's outer edge, and nothing lies between the white edge and the foil.
 
 Stickers and the gratitude heart also respond to the app's one moving light. The shared light variables run from -1 to 1. They follow the pointer or touch, and device tilt where the browser already allows it without a prompt, and they idle-sway on an 11s loop so stills look alive. Buttons don't follow the light; they have no highlight to move.
 
@@ -390,15 +390,15 @@ Stickers and the gratitude heart also respond to the app's one moving light. The
 - **Label** (`box-shadow: 0 1px 0 rgba(28,24,36,.10), 1px 2px 3px rgba(28,24,36,.08)`): a flat label resting on the liner, such as the tool strip or a chip.
 - **Lift** (`box-shadow: 1px 3px 4px rgba(28,24,36,.12), 3px 10px 22px rgba(28,24,36,.14)`): something held above the page, like a toast or the Smoothing bar.
 - **Sheet** (`box-shadow: 0 -1px 0 rgba(28,24,36,.06), 2px -8px 28px rgba(28,24,36,.12)`): a bottom sheet rising over the page.
-- **Kiss-cut** (`filter: drop-shadow(0 0 .5px rgba(28,24,36,.55))`): the die-cut groove around every sticker.
-- **Sticker cast** (`filter: drop-shadow(1px 2px 1.5px rgba(28,24,36,.16)) drop-shadow(2px 6px 8px rgba(28,24,36,.10))`): a sticker stuck to the page. It's always paired with the kiss-cut.
+- **Kiss-cut** (`filter: drop-shadow(0 0 .5px rgba(28,24,36,.55))`): the die-cut groove around every sticker, round the foil band's outer edge on a foil sticker.
+- **Sticker cast** (`filter: drop-shadow(1px 2px 1.5px rgba(28,24,36,.16)) drop-shadow(2px 6px 8px rgba(28,24,36,.10))`): a sticker stuck to the page. It's always paired with the kiss-cut. A foil sticker casts it, and every lifted shadow, from a still copy of its band's shape.
 - **Peeling** (`filter: drop-shadow(3px 7px 5px rgba(28,24,36,.18)) drop-shadow(8px 16px 18px rgba(28,24,36,.12))`): a sticker lifting off, tilted in 3D by 11°.
 - **Floating sheet** (`box-shadow: 0 0 0 .5px rgba(28,24,36,.18), 3px 7px 8px rgba(28,24,36,.16), 8px 18px 30px rgba(28,24,36,.18)`): a sheet pulled out of the tray, hovering over the board.
 - **Pinned note** (`filter: drop-shadow(0 1px 0 rgba(28,24,36,.12)) drop-shadow(2px 5px 5px rgba(58,36,16,.26))`): paper hanging on the cork back, from its pin or tape.
 
 ### Named Rules
 
-**The One Light Rule.** There's one light for the whole app. Static shadows fall down and to the right from the top-left light, and every moving highlight (the sticker specular and sheen, the foil's glint, the heart's gloss) reads the shared light variables. Don't add a second light source. The foil's glint sits where the light falls, the same way on every sticker whatever its turn, and holds where the last tilt left it; before any tilt it rests top-left. Only the foil's bands run on their own clock, flowing on a 7s loop staggered per sticker. They hold still under reduced motion.
+**The One Light Rule.** There's one light for the whole app. Static shadows fall down and to the right from the top-left light, and every moving highlight (the sticker specular and sheen, the foil's glint, the heart's gloss) reads the shared light variables. Don't add a second light source. The foil's glint sits where the light falls, the same way on every sticker whatever its turn, and holds where the last tilt left it; before any tilt it rests top-left. Only the foil's bands run on their own clock, flowing on a 7s loop staggered per sticker, under a grating that never moves. They hold still under reduced motion.
 
 **The Neutral Shadow Rule.** Shadows are Ink alpha, never tinted. The one exception is the cork back: paper, stamps and pins cast a cork-brown throw (rgba(58,36,16,…)) over an Ink contact line, because a shadow on cork is darker cork. The only colored light in the world is a sticker's gratitude glow, warming from faint pink toward amber as more gratitude arrives.
 
@@ -457,7 +457,7 @@ Round flat stickers stuck at -4°: a 26px pill in a coded hue with Ink puffy num
 
 ### Index tabs
 
-Two tabs cut from label stock, side by side on the Liner strip: My board (pink) and Explore (aqua), each up to 176px wide and 46px tall with a 6px radius. Draw isn't a tab; the board has its own Draw key. An inactive tab is an outline (a 26% Ink edge) with graphite text; the current tab is stuck on in its full hue with Ink text, lifted 2px with a lift shadow. Each tab presses 1.5px through the shared press. Current is shown by fill and lift only, never by weight or case. My board's icon is the person's own LINE picture as a 24px photo sticker, the same whether current or not; Explore's is Phosphor's eyes, bold at rest and fill when current. On screens where the tabs hide, the whole strip slides away behind the grabber described in Layout.
+Three tabs cut from label stock, side by side on the Liner strip: My board (pink), Explore (aqua) and Shop (grape), each up to 176px wide and 46px tall with a 6px radius. Draw isn't a tab; the board has its own Draw key. An inactive tab is an outline (a 26% Ink edge) with graphite text; the current tab is stuck on in its full hue with Ink text, lifted 2px with a lift shadow. Each tab presses 1.5px through the shared press. Current is shown by fill and lift only, never by weight or case. My board's icon is the person's own LINE picture as a 24px photo sticker, the same whether current or not; Explore's is Phosphor's eyes and Shop's is Phosphor's storefront, both bold at rest and fill when current. On screens where the tabs hide, the whole strip slides away behind the grabber described in Layout.
 
 ### Board header
 
@@ -517,7 +517,7 @@ The out-of-tickets card's stock. The balance sits in a Liner Lift well in yen: t
 - **Die-cut:** the outline comes from the artist's own strokes, offset into a white border and bounded by the kiss-cut groove, with the sticker cast shadow beneath.
 - **Baked resin:** the gloss is baked into the image, with the print darker and more saturated where resin pools at the edge, a refraction band inside the cut edge, a rim light and a meniscus at the foot.
 - **Live resin:** on stickers that are showing, a live layer adds a specular along the top edge, a rim light and a sheen that sweeps when the sticker is placed, dragged or tilted.
-- **Foil:** a sticker drawn by someone other than the board's owner wears a foil band just outside its white edge: 5px on the board, 6px on the detail's big sticker, 3px on tray sheets. It's the silhouette dilated, so it follows the cut. The six foil bands flow along it and a white glint sits where the one light falls; holes hide it; it's decorative, and the sticker's own label names the artist. The seal ceremony adds nothing: a freshly sealed sticker is yours and plain.
+- **Foil:** a sticker drawn by someone other than the board's owner wears a foil band just outside its white edge: 5px on the board, 6px on the detail's big sticker, 3px on tray sheets. It's the silhouette dilated in sixteen directions, so it follows the cut at an even width round curves and points. The band is the sticker's edge: the white edge runs straight into it, the image shows only inside its own cut, and the kiss-cut and cast shadow fall from the band's outer edge. A fine diffraction grating lies over it and never moves: diagonal hairlines on a 2px period, lit white and shaded Ink at low alpha. The six foil bands flow under the grating, so the band glitters rather than crawls, and a white glint sits where the one light falls; holes hide it; it's decorative, and the sticker's own label names the artist. The seal ceremony adds nothing: a freshly sealed sticker is yours and plain.
 - **Glow:** gratitude shows on a sticker as a soft glow behind it, warmer and brighter with more gratitude.
 - **Peel and stick:** a sticker peels with a 3D lift toward the top right and sticks with a short settle from 1.06 scale.
 
@@ -603,10 +603,11 @@ An Ink slip with Liner text (600, 14px) and 6px corners on the lift shadow. It r
 
 ### Icons
 
-Every icon comes from one registry, copied byte for byte from the published SVGs: Phosphor Icons (MIT, @phosphor-icons/core 2.1.1), plus one Material Symbols glyph. The app's own controls use bold; fill marks an active or primary state, such as the current tool or the current tab; the mocked LINE and iOS screens use regular. The same action always gets the same icon (Give is gift, View is eye, Offer is handshake, Remove is tray-arrow-down). Brand marks (LINE's logo, from Simple Icons, CC0) and illustrations (the heart, stickers, avatars, pins, tape, stamps, zipper parts) are not icons.
+Every icon comes from one registry: Phosphor Icons (MIT) as `@phosphor-icons/react` 2.1.10 renders them, plus one Material Symbols glyph copied byte for byte from its published SVG. The app's own controls use bold; fill marks an active or primary state, such as the current tool or the current tab; the mocked LINE and iOS screens use regular. The same action always gets the same icon (Give is gift, View is eye, Offer is handshake, Remove is tray-arrow-down). Brand marks (LINE's logo, from Simple Icons, CC0) and illustrations (the heart, stickers, avatars, pins, tape, stamps, zipper parts) are not icons.
 
 - **My board:** the tab shows the person's own LINE picture as a photo sticker. The rich menu's My board tile uses Phosphor's smiley-sticker (fill), since the rich menu is one image for everyone and can't show each person's picture.
 - **Explore:** Phosphor's eyes, on the tab (bold, fill when current) and the rich menu tile (fill).
+- **Shop:** Phosphor's storefront, on the tab (bold, fill when current) and the keys that open the Shop.
 - **Sticker board:** one composed entry, Phosphor's square with Phosphor's sticker set at 64%, turned -12° and masked, in bold and fill only. It marks the board itself (Go to sticker board) and stands in on the My board tab when a person has no LINE picture.
 
 **The Never Hand-Drawn Rule.** Icons are never drawn by hand and published paths are never edited. If Phosphor doesn't have it, choose a different Phosphor icon or compose published paths by transform.

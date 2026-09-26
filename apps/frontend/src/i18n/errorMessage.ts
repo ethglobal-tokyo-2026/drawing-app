@@ -1,5 +1,5 @@
 import type { ApiError } from "../api/apiClient";
-import { errors } from "./en/errors";
+import { errors } from "./strings/errors";
 import { i18next } from "./i18n";
 
 const isKnown = (code: string): code is Exclude<keyof typeof errors, "unknown"> =>

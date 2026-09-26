@@ -13,3 +13,7 @@ const ENS_APP = "https://sepolia.app.ens.domains";
 export const ensAppUrl = (name: string) => `${ENS_APP}/${name}`;
 
 export const suiscanAccountUrl = (address: string) => `${SUISCAN}/account/${address}`;
+
+// A transaction lives on one network, unlike an address.
+export const suiscanTxUrl = (network: string, digest: string) =>
+  `https://suiscan.xyz/${network}/tx/${digest}`;

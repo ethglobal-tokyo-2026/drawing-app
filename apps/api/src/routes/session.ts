@@ -4,6 +4,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { Hono } from "hono";
 import { z } from "zod";
 import { LineTokenInvalidError, type AppDeps, type LineVerifier } from "../deps.ts";
+import { logFailure } from "../diagnostics.ts";
 import { syncEnsLabel } from "../ens/labels.ts";
 import { apiError, validate } from "../errors.ts";
 import { HANDLE_MAX_LENGTH, isHandleTaken, parseHandle } from "../session/handles.ts";
@@ -36,6 +37,8 @@ const signInBody = userInput
   .required()
   .extend({ idToken: z.string().min(1).max(ID_TOKEN_MAX_LENGTH) });
 
+const meHeaders = z.object({ "x-line-user-id": z.string().min(1).max(128).optional() });
+
 const handleBody = userInput.pick({ handle: true });
 
 // Required, so a body that leaves it out is refused rather than clearing the choice.
@@ -58,14 +61,14 @@ const meOf = (db: Db, user: UserRow) =>
     unseenGratitudeCount: unseenGratitudeCount(db, user.id),
   });
 
-/** Who LINE says the ID token names, or null when LINE refuses it. LINE's reason goes to the log only. */
+/** Who LINE says the ID token names, or its refusal. LINE's reason goes to the log only. */
 async function lineProfileOf(line: LineVerifier, idToken: string) {
   try {
     return await line.verifyIdToken(idToken);
   } catch (error) {
     if (!(error instanceof LineTokenInvalidError)) throw error;
-    console.warn(`LINE refused an ID token: ${error.message}`);
-    return null;
+    logFailure("line.token.refused", error);
+    return error;
   }
 }
 
@@ -75,7 +78,11 @@ export const sessionRoutes = (deps: AppDeps) =>
     .post("/session", validate("json", signInBody), async (c) => {
       const { idToken, timeZone, language } = c.req.valid("json");
       const profile = await lineProfileOf(deps.line, idToken);
-      if (!profile) return apiError(c, 401, "line_token_invalid", "LINE refused the ID token");
+      if (profile instanceof LineTokenInvalidError) {
+        return profile.reason === "expired"
+          ? apiError(c, 401, "line_token_expired", "LINE ID token expired")
+          : apiError(c, 401, "line_token_invalid", "LINE refused the ID token");
+      }
       const lineProfile = {
         lineDisplayName: profile.name,
         linePictureUrl: profile.picture ?? null,
@@ -111,9 +118,15 @@ export const sessionRoutes = (deps: AppDeps) =>
       await setSessionCookie(c, deps.sessionSecret, user.id);
       return c.json({ me: meOf(deps.db, user) }, 200);
     })
-    .get("/me", (c) => {
+    .get("/me", validate("header", meHeaders), (c) => {
+      c.header("Cache-Control", "no-store");
       const user = liveUser(deps.db, c.var.userId);
       if (!user) return apiError(c, 401, "signed_out");
+      // The signed cookie authenticates; LIFF's account only restricts which session can be reused.
+      const lineUserId = c.req.valid("header")["x-line-user-id"];
+      if (lineUserId !== undefined && user.lineUserId !== lineUserId) {
+        return apiError(c, 401, "signed_out");
+      }
       return c.json({ me: meOf(deps.db, user) }, 200);
     })
     .post("/me/handle", validate("json", handleBody), (c) => {

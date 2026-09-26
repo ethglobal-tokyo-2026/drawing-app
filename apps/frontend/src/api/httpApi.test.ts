@@ -35,6 +35,18 @@ const refusalOf = (promise: Promise<unknown>) =>
   );
 
 describe("the session client", () => {
+  it("matches the resumed session to the current LINE user without putting their ID in the URL", async () => {
+    const fetch = answering(200, { me });
+    const session = createSessionApi(createServerClient(fetch));
+    await expect(session.me("line-alice")).resolves.toEqual({ me });
+    const [input, init] = fetch.mock.calls[0] ?? [];
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input?.url;
+    expect(url).toMatch(/\/api\/me$/);
+    expect(new Headers(init?.headers).get("x-line-user-id")).toBe("line-alice");
+    expect(init?.credentials).toBe("same-origin");
+    expect(init?.cache).toBe("no-store");
+  });
+
   it("signs in with the token, zone and language, on this origin with the cookie", async () => {
     const fetch = answering(200, { me });
     const session = createSessionApi(createServerClient(fetch));

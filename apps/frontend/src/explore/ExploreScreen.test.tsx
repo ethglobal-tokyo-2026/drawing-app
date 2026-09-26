@@ -4,6 +4,7 @@ import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { people, sticker } from "../api/testFixtures";
 import { emptyApi, renderWithApi, TEST_OWNER } from "../api/testing";
+import { i18next } from "../i18n/i18n";
 import { ExploreScreen } from "./ExploreScreen";
 
 const NOW = Date.parse("2026-09-26T12:00:00.000Z");
@@ -23,10 +24,11 @@ let view: ReturnType<typeof renderWithApi> | undefined;
 beforeEach(() => {
   vi.useFakeTimers({ now: NOW });
 });
-afterEach(() => {
+afterEach(async () => {
   view?.unmount();
   view = undefined;
   vi.useRealTimers();
+  await i18next.changeLanguage("en");
 });
 
 const wait = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
@@ -88,6 +90,19 @@ describe("ExploreScreen", () => {
     ]);
     expect(textsOf(host, ".feed-head p b")).toEqual(["@mika", "@mika", "@ken", "@ken", "you"]);
     expect(textsOf(host, ".feed-head > .fine")).toEqual(["5 min", "3 hr", "2 d"]);
+  });
+
+  it("says just now for anything under a minute ago, in English and Japanese", async () => {
+    const host = await openExplore(
+      exploreWith([
+        { type: "sealed", at: new Date(NOW - MINUTE + 1000).toISOString(), sticker: sticker() },
+        { type: "sealed", at: minutesAgo(1), sticker: sticker() },
+      ]),
+    );
+
+    expect(textsOf(host, ".feed-head > .fine")).toEqual(["just now", "1 min"]);
+    await act(() => i18next.changeLanguage("ja"));
+    expect(textsOf(host, ".feed-head > .fine")[0]).toBe("たった今");
   });
 
   it("prints a handle as it is, even one that reads as markup or a variable", async () => {

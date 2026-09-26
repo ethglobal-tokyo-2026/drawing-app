@@ -12,7 +12,7 @@ type LineMenuOutcome =
   | { menu: "returning" }
   | { menu: "new"; reason: "not_signed_up" | "not_a_friend" };
 
-export type LineMenuFailure = "line_auth_failed" | "privy_lookup_failed" | "line_menu_link_failed";
+export type LineMenuFailure = "privy_lookup_failed" | "line_menu_link_failed";
 
 /** The languages the returning-user menu is drawn in. */
 export type MenuLanguage = "en" | "ja";
@@ -177,9 +177,7 @@ export function createLineMenuSwitch({
   }
 
   return async function switchLineMenu(lineIdToken, language) {
-    const { sub } = await step("line_auth_failed", "LINE ID token verification", () =>
-      verifyLineIdToken(lineIdToken),
-    );
+    const { sub } = await verifyLineIdToken(lineIdToken);
     const signedUp = await step("privy_lookup_failed", "Privy user lookup", () =>
       hasPrivyUser(privySubject(loginChannelId, sub)),
     );

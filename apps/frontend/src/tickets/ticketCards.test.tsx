@@ -4,14 +4,18 @@ import { act, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyApi, FRESH_TICKETS, renderWithApi } from "../api/testing";
 import { setPrivyStatus } from "../identity/privy";
-import { getJpycBalance, payForTickets } from "../payments/jpyc";
+import { getJpycBalance, getTicketPayments, payForTickets } from "../payments/jpyc";
 import { OutOfTickets } from "./OutOfTickets";
 import { formatRefillTime } from "./refill";
 import { StartDrawing } from "./StartDrawing";
 import { TicketShop } from "./TicketShop";
 import { useTickets } from "./useTickets";
 
-vi.mock("../payments/jpyc", () => ({ getJpycBalance: vi.fn(), payForTickets: vi.fn() }));
+vi.mock("../payments/jpyc", () => ({
+  getJpycBalance: vi.fn(),
+  getTicketPayments: vi.fn(),
+  payForTickets: vi.fn(),
+}));
 vi.mock("../identity/suiSigner", () => ({ waitForSuiSigner: () => Promise.resolve({}) }));
 
 const onBoard = vi.fn();
@@ -287,6 +291,38 @@ describe("TicketShop", () => {
     click("3 tickets");
     expect(buttonNamed("Not enough JPYC")?.disabled).toBe(true);
     expect(payForTickets).not.toHaveBeenCalled();
+  });
+
+  it("opens the ticket purchases Sui lists under the ENS name, a page at a time", async () => {
+    const OLDER = "E".repeat(44);
+    vi.mocked(getTicketPayments)
+      .mockResolvedValueOnce({
+        payments: [{ digest: TX_DIGEST, paidAt: EVENING.getTime(), amount: 270n * JPYC }],
+        cursor: "older",
+      })
+      .mockResolvedValueOnce({
+        payments: [{ digest: OLDER, paidAt: EVENING.getTime() - 60_000, amount: 100n * JPYC }],
+        cursor: null,
+      });
+    await render(
+      <TicketShop layout="page" onDraw={onDraw} />,
+      emptyApi({ ticketShop: () => Promise.resolve(SHOP) }),
+    );
+    await settle(500);
+    expect(getTicketPayments).not.toHaveBeenCalled();
+    click("you.croquis.eth");
+    await settle(500);
+    expect(getTicketPayments).toHaveBeenCalledWith(SUI_WALLET, SHOP.payment, null);
+    click("Older purchases");
+    await settle(500);
+    expect(getTicketPayments).toHaveBeenLastCalledWith(SUI_WALLET, SHOP.payment, "older");
+    const rows = [...document.querySelectorAll<HTMLAnchorElement>(".ticket-purchases a")];
+    expect(rows.map((a) => a.textContent)).toEqual([
+      expect.stringContaining("3 tickets"),
+      expect.stringContaining("1 ticket"),
+    ]);
+    expect(rows[1]?.href).toContain(OLDER);
+    expect(buttonNamed("Older purchases")).toBeUndefined();
   });
 
   it("names the payment that went through when the server didn't add its tickets", async () => {

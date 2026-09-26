@@ -270,6 +270,20 @@ describe("SealCeremony", () => {
     );
   });
 
+  it("says the day's last daily ticket is gone only when this sticker used it", async () => {
+    const lastDaily = `That was today’s last daily ticket · new ones at ${formatRefillTime(nextRefill(NOW))}`;
+    await seal(3, "alice", { reserveLeft: 2 });
+    playThrough();
+    expect(host.textContent).toContain(lastDaily);
+    view?.unmount();
+
+    // A reserve ticket sealed this one: the daily tickets were already gone.
+    await seal(3, "alice", { reserveLeft: 1, reserveUsed: 1 });
+    playThrough();
+    expect(button("Keep drawing")).toBeTruthy();
+    expect(host.textContent).not.toContain("last daily ticket");
+  });
+
   it("waits at the cut while the seal is on its way, then peels onto the card", async () => {
     await seal(1, "alice", { answer: null });
     wait(20_000);

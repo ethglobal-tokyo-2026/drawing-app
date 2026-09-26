@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { AuthError } from "../src/auth-error.js";
 import { createLineVerifier } from "../src/line.js";
 
 const channelId = "line-channel-123";
@@ -29,39 +30,62 @@ describe("LINE ID token verification", () => {
     expect(requestBody.get("id_token")).toBe("valid-line-id-token");
   });
 
-  it("rejects the wrong audience, expired tokens, and provider failures", async () => {
-    const wrongAudience = createLineVerifier({
-      channelId,
-      fetchImpl: async () => Response.json({ ...validClaims, aud: "another-channel" }),
+  it.each([
+    [{ ...validClaims, iss: "https://another.example" }, "issuer_mismatch"],
+    [{ ...validClaims, aud: "another-channel" }, "audience_mismatch"],
+    [{ ...validClaims, exp: 0 }, "token_expired"],
+  ])("rejects invalid verified claims with reason %s", async (claims, reason) => {
+    const verify = createLineVerifier({ channelId, fetchImpl: async () => Response.json(claims) });
+    await expect(verify("valid-line-id-token")).rejects.toMatchObject({
+      details: { code: "line_auth_failed", reason },
     });
-    const expired = createLineVerifier({
-      channelId,
-      fetchImpl: async () =>
-        Response.json({
-          ...validClaims,
-          exp: Math.floor(Date.now() / 1000) - 1,
-        }),
-    });
-    const rejected = createLineVerifier({
-      channelId,
-      fetchImpl: async () => new Response(null, { status: 401 }),
-    });
-
-    await expect(wrongAudience("valid-line-id-token")).rejects.toThrow("Invalid LINE token claims");
-    await expect(expired("valid-line-id-token")).rejects.toThrow("Invalid LINE token claims");
-    await expect(rejected("valid-line-id-token")).rejects.toThrow("status 401");
   });
 
-  it("keeps LINE's reason for a rejection, for the server log", async () => {
-    const rejected = createLineVerifier({
+  it.each([
+    ["IdToken expired.", "token_expired"],
+    ["Invalid IdToken.", "token_invalid"],
+    ["Invalid IdToken Audience.", "audience_mismatch"],
+    ["Invalid IdToken Issuer.", "issuer_mismatch"],
+    ["Invalid IdToken Nonce.", "nonce_mismatch"],
+    ["Invalid IdToken Subject Identifier.", "subject_mismatch"],
+  ])("records a fixed diagnostic label for LINE rejection %s", async (description, reason) => {
+    const verify = createLineVerifier({
       channelId,
       fetchImpl: async () =>
         Response.json(
-          { error: "invalid_request", error_description: "IdToken expired." },
+          { error: "invalid_request", error_description: description },
           { status: 400 },
         ),
     });
 
-    await expect(rejected("valid-line-id-token")).rejects.toThrow("status 400: IdToken expired.");
+    await expect(verify("valid-line-id-token")).rejects.toMatchObject({
+      details: { code: "line_auth_failed", reason, upstreamStatus: 400 },
+    });
   });
+
+  it.each([null, [], {}, { ...validClaims, sub: "" }, { ...validClaims, exp: "tomorrow" }])(
+    "treats malformed provider claims as unavailable",
+    async (claims) => {
+      const verify = createLineVerifier({
+        channelId,
+        fetchImpl: async () => Response.json(claims),
+      });
+      await expect(verify("valid-line-id-token")).rejects.toMatchObject({
+        details: { code: "line_unavailable", reason: "invalid_claims" },
+      });
+    },
+  );
+
+  it.each(["short", "x".repeat(6001)])(
+    "rejects malformed input before calling LINE",
+    async (token) => {
+      const fetchImpl = vi.fn<typeof fetch>();
+      const verify = createLineVerifier({ channelId, fetchImpl });
+
+      await expect(verify(token)).rejects.toEqual(
+        new AuthError({ code: "invalid_request", reason: "id_token_format" }),
+      );
+      expect(fetchImpl).not.toHaveBeenCalled();
+    },
+  );
 });
