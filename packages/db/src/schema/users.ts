@@ -34,6 +34,11 @@ export const users = sqliteTable(
     /** Set on account deletion. The row stays, as the Original Artist of their stickers. */
     deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
     ...timestamps(),
+    // Columns added after the table was made go last, where ALTER TABLE puts them.
+    /** The app's language at the last sign-in, for what the server writes to the person outside the app. */
+    language: text("language", { enum: ["en", "ja"] })
+      .notNull()
+      .default("en"),
   },
   (t) => [
     uniqueIndex("users_handle").on(sql`lower(${t.handle})`),
