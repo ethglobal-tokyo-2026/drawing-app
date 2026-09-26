@@ -259,6 +259,14 @@
   top: 0;
   height: 176px;
 }
+/* Its parts sit over the stage, so 昇天's rain and the mini hearts pass behind the giver's name. The
+   peeling corner and the dents stay over them, under the close button; at the end the heart lands
+   over them (see the heart). */
+.gr-piece,
+.gr-photo,
+.gr-from {
+  z-index: 1;
+}
 .gr-piece {
   position: absolute;
   left: 20px;
@@ -396,11 +404,15 @@
     inset 0 2px 0 rgba(255, 255, 255, 0.32);
 }
 .gr-timer-hot {
-  --ember-orange: #ff8a3c; /* the heat between tomato and seal as the bar runs low */
   position: absolute;
   inset: 0;
   opacity: 0;
-  background: linear-gradient(90deg, var(--tomato) 0%, var(--ember-orange) 55%, var(--seal) 100%);
+  background: linear-gradient(
+    90deg,
+    var(--tomato) 0%,
+    color-mix(in srgb, var(--tomato) 62%, var(--seal)) 55%,
+    var(--seal) 100%
+  );
 }
 .gr-timer-head {
   /* the fuse's lit end: it glows as the bar runs low */
@@ -508,6 +520,7 @@
   color: var(--ink);
   box-shadow: var(--shadow-label);
   transform: rotate(var(--tilt));
+  transform-origin: 100% 50%; /* its pulse grows inward from the screen's edge */
 }
 .gr-mult span {
   font-size: 17px;
@@ -534,6 +547,11 @@
   left: 0;
   top: 0;
   will-change: transform;
+}
+/* At the end the heart and its soul land on the giver's picture, over the header, with the burst
+   they land with; the words stay over them. In play the mini hearts in front stay over the heart. */
+.gr[data-phase="ending"] :is(.gr-heart-anchor, .gr-soul, .gr-p, .gr-pop) {
+  z-index: 2;
 }
 .gr-heart-body {
   position: relative;
@@ -808,7 +826,7 @@
   top: 100%;
   margin-top: 6px;
   padding: 3px 6px 2px;
-  border-radius: 3px;
+  border-radius: var(--r-label);
   background: var(--canvas);
   box-shadow: var(--shadow-label);
   transform: rotate(3deg);
@@ -895,6 +913,7 @@
   position: absolute;
   right: 0;
   top: 0;
+  z-index: 2;
   width: 132px;
   height: 132px;
   pointer-events: none;
@@ -928,6 +947,7 @@
 
 .gr-dent {
   position: absolute;
+  z-index: 2;
   width: 112px;
   height: 30px;
   margin-left: -56px;
@@ -999,6 +1019,7 @@
   position: absolute;
   left: 0;
   top: 0;
+  z-index: 2; /* over the heart, which the ending lifts over the header */
   opacity: 0;
   pointer-events: none;
   white-space: nowrap;
@@ -1007,7 +1028,7 @@
   font-stretch: var(--w-title, 112%);
   font-style: italic;
   letter-spacing: 0.02em;
-  color: var(--graphite);
+  color: var(--ink);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1077,7 +1098,7 @@
 }
 .gr-rc-head {
   margin: 0;
-  font-size: 23px;
+  font-size: 22px;
   line-height: 1.12;
   font-weight: 800;
   font-stretch: var(--w-title, 112%);
@@ -1136,6 +1157,8 @@
   right: 20px;
   bottom: 24px;
   z-index: 60;
+  padding: 11px 16px 12px;
+  border-radius: var(--r-label);
   background: var(--liner-lift);
   box-shadow: var(--shadow-lift);
   color: var(--ink);
