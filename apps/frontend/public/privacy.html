@@ -35,13 +35,15 @@
       a {
         color: inherit;
       }
-      #broadcast {
+      video {
         display: block;
         width: 100%;
         height: auto;
         margin-top: 20px;
         border-radius: 10px;
         background: #1c1824;
+        /* The picture is already in blocks; scaling keeps their edges hard. */
+        image-rendering: pixelated;
       }
       .back {
         display: inline-block;
@@ -54,34 +56,35 @@
     <main>
       <h1>Privacy Policy</h1>
       <video
-        id="broadcast"
-        src="/nice-boat.mp4"
-        poster="/nice-boat.jpg"
-        width="960"
-        height="540"
+        src="/rick-roll.mp4"
+        poster="/rick-roll.jpg"
+        width="1024"
+        height="768"
         loop
         playsinline
-        controls
         preload="auto"
-        aria-label="A ferry crossing a still Norwegian fjord to Air on the G String, under a notice that the scheduled program has been changed"
+        aria-label="A man dancing, in coarse pixels and inverted colors"
       ></video>
       <a class="back" href="/">Back to the app</a>
     </main>
     <script>
-      // With sound where the browser allows it, muted where it doesn't; the first tap anywhere but
-      // the video, whose own controls handle their taps, brings the sound back.
-      const broadcast = document.getElementById("broadcast");
-      const report = (error) => console.error("The broadcast didn't play", error);
-      broadcast.play().catch((error) => {
+      // With sound where the browser allows it before a tap, muted where it doesn't; the first tap
+      // anywhere then turns the sound on.
+      const video = document.querySelector("video");
+      const report = (error) => console.error("The video didn't play", error);
+      video.play().catch((error) => {
         if (error.name !== "NotAllowedError") return report(error);
-        broadcast.muted = true;
-        broadcast.play().catch(report);
+        video.muted = true;
+        video.play().catch(report);
       });
-      const unmute = (event) => {
-        if (event.target === broadcast) return;
-        broadcast.muted = false;
+      const unmute = () => {
+        removeEventListener("touchend", unmute);
         removeEventListener("click", unmute);
+        video.muted = false;
+        video.play().catch(report);
       };
+      // iOS sends no click to the page for a tap on something that isn't clickable, so touchend too.
+      addEventListener("touchend", unmute);
       addEventListener("click", unmute);
     </script>
   </body>
