@@ -851,7 +851,7 @@
     opacity 200ms var(--ease-out),
     transform 200ms var(--ease-out);
 }
-.gr[data-phase]:not([data-phase="idle"]) .gr-hint {
+.gr[data-phase]:not([data-phase="ready"]) .gr-hint {
   opacity: 0;
   transform: translateY(6px);
 }

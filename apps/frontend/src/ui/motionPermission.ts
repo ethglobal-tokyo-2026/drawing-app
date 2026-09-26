@@ -107,7 +107,14 @@ export function createMotionPermission(host: MotionHost): MotionPermissionStore 
 }
 
 /** iOS's motion prompt, which TypeScript's DOM types don't declare. */
+/** iPhone and iPad, iPadOS included, which reports itself as a Mac with a touch screen. */
+const isAppleMobile = () =>
+  /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+  (navigator.userAgent.includes("Macintosh") && navigator.maxTouchPoints > 1);
+
 function iosMotionPrompt(): (() => Promise<string>) | undefined {
+  // Some desktop browsers carry the prompt too; the ask is for phones that need it.
+  if (!isAppleMobile()) return undefined;
   const motion: unknown = window.DeviceMotionEvent;
   if (typeof motion !== "function" || !("requestPermission" in motion)) return undefined;
   const ask = motion.requestPermission;
