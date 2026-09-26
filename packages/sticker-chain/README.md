@@ -20,6 +20,20 @@ The API persists application records and sticker assets. Privy smart-wallet spon
 
 If minting cannot be confirmed, the live API returns `503 mint_failed`. The saved drawing and its ticket remain available for a retry on the same ticket. A retry reconciles an existing NFT instead of creating another. The frontend only completes Sealing once both a token ID and mint transaction hash are returned.
 
+## Diagnosing Sealing, Giving, and Receiving
+
+The browser logs `NFT API request` entries for these operations, including the route, elapsed time, HTTP status, and the API's `X-Request-ID` response header. Match that request ID to the backend's JSON console logs. A network failure has no response ID; use its route and time to find the server request, if it reached the API.
+
+On the server, follow the API service logs while reproducing one failure:
+
+```sh
+journalctl -u drawing-api -f -o cat
+```
+
+Backend events distinguish image storage, Privy wallet lookup, contract simulation, transaction submission, receipt waiting, verification, and database completion. A submitted transaction hash is logged immediately, so a later timeout can be investigated separately from a transaction that was never submitted. Failure events include sanitized error causes and provider error codes; `api.refused` records an expected API refusal such as `not_minted`.
+
+Logs exclude request bodies, Gift Claim Tokens, signatures, authentication headers, and credential-bearing URLs. Public transaction hashes and contract addresses are kept in named fields. These diagnostics do not change transaction or retry behavior, and both the frontend and API need the updated build before browser-to-server correlation is available.
+
 ## Giving and receiving
 
 `createGiftClaim` generates an opaque gift ID and one-time gift claim token. Persist only the claim commitment with the pending gift and put the gift claim token in the gift message's link.

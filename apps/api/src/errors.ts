@@ -3,6 +3,7 @@ import type { Context, ErrorHandler, NotFoundHandler, ValidationTargets } from "
 import { HTTPException } from "hono/http-exception";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
+import { logFailure, logInfo } from "./diagnostics.ts";
 
 /** Every error's body. The code is stable, so clients and mocks can switch on it. */
 export const errorBodySchema = z.object({
@@ -20,6 +21,7 @@ export function apiError<const Status extends ContentfulStatusCode, const Code e
   error: Code,
   detail?: string,
 ) {
+  logInfo("api.refused", { status, errorCode: error });
   const body: { error: Code; detail?: string } =
     detail === undefined ? { error } : { error, detail };
   return c.json(body, status);
@@ -61,7 +63,7 @@ export const onError: ErrorHandler = (error, c) => {
   if (error instanceof HTTPException && error.status === 400) {
     return apiError(c, 400, "invalid_request", error.message);
   }
-  console.error(`${c.req.method} ${c.req.path} failed:`, error);
+  logFailure("request.failed", error, { status: 500 });
   return apiError(c, 500, "internal_error");
 };
 
