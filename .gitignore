@@ -184,3 +184,5 @@ vite.config.ts.timestamp-*
 
 # npm lockfiles: the workspace installs with pnpm (pnpm-lock.yaml)
 package-lock.json
+
+.claude/data
