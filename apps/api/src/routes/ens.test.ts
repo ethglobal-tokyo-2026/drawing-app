@@ -14,7 +14,7 @@ import {
   type Hex,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import type { NameWriter } from "../deps.ts";
 import { labelFromHandle } from "../ens/labels.ts";
@@ -34,6 +34,10 @@ const gatewayBodySchema = z.object({ data: z.string() });
 const SMART_ACCOUNT = "0x00000000000000000000000000000000000a11ce";
 
 let test: TestApp;
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 async function setup(writer: NameWriter | null = null) {
   test = await createTestApp({ ens: fakeEns(writer) });
@@ -168,6 +172,17 @@ describe("the ENS gateway", () => {
     expect(
       decodeAbiParameters([{ type: "string" }], await verifiedResult(request, response))[0],
     ).toBe("");
+  });
+
+  it("answers a database failure as its own, not the caller's unsupported_request", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    test.sqlite.close();
+    const node = namehash("alice.croquis.eth");
+    const call = encodeFunctionData({ abi: profileAbi, functionName: "text", args: [node, "url"] });
+    const { response } = await askGateway("alice.croquis.eth", call);
+    expect(response.status).toBe(500);
+    expect(await response.json()).toMatchObject({ error: "internal_error" });
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("request.failed"));
   });
 
   it("answers only its own resolver", async () => {

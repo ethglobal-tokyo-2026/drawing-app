@@ -1,9 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { mkdirSync } from "node:fs";
 import { openDb } from "@drawing-app/db";
 import { migrateDatabase } from "@drawing-app/db/migrate";
 import { serve } from "@hono/node-server";
-import { isHex } from "viem";
+import type { Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { z } from "zod";
@@ -22,6 +21,12 @@ import { createJpycPayments } from "./services/jpycPayments.ts";
 import { createPrivySmartWallets } from "./services/privySmartWallets.ts";
 import { createStickerChain } from "./services/stickerChain.ts";
 import { createWorldId } from "./services/worldId.ts";
+
+/** A private key as viem takes one: 0x and 64 hexadecimal digits. */
+const privateKeySchema = z.custom<Hex>(
+  (v) => typeof v === "string" && /^0x[0-9a-fA-F]{64}$/.test(v),
+  "Expected 0x and 64 hexadecimal digits",
+);
 
 // DATABASE_URL is read by @drawing-app/db.
 const envSchema = z.object({
@@ -71,7 +76,6 @@ if (process.env.NODE_ENV === "production" && env.STICKER_CHAIN_MODE === "mock") 
 
 // Pending migrations go in before the first query.
 migrateDatabase();
-mkdirSync(env.IMAGE_DIR, { recursive: true });
 
 const db = openDb();
 const images = createDiskImageStore(env.IMAGE_DIR, env.CDN_BASE_URL);
@@ -90,10 +94,10 @@ const chain = (() => {
         }),
       STICKER_NFT_ADDRESS: z.string().min(1),
       STICKER_GIFT_ESCROW_ADDRESS: z.string().min(1),
-      STICKER_SEALER_PRIVATE_KEY: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+      STICKER_SEALER_PRIVATE_KEY: privateKeySchema,
       CROQUIS_NAMES_ADDRESS: z.string().min(1),
       CROQUIS_RESOLVER_ADDRESS: z.string().min(1),
-      ENS_GATEWAY_PRIVATE_KEY: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+      ENS_GATEWAY_PRIVATE_KEY: privateKeySchema,
       // The LIFF app's link, https://liff.line.me/<LIFF ID>: a person's name links to their board.
       APP_LINK_BASE: z.url(),
       PRIVY_APP_ID: z.string().min(1),
@@ -112,9 +116,6 @@ const chain = (() => {
     privyAppId: live.PRIVY_APP_ID,
     privyAppSecret: live.PRIVY_APP_SECRET,
   });
-  if (!isHex(live.STICKER_SEALER_PRIVATE_KEY) || !isHex(live.ENS_GATEWAY_PRIVATE_KEY)) {
-    throw new Error("STICKER_SEALER_PRIVATE_KEY and ENS_GATEWAY_PRIVATE_KEY must be hexadecimal");
-  }
   const { mint, giftChain, nameWriter } = createStickerChain({
     rpcUrl: live.ETHEREUM_SEPOLIA_RPC_URL,
     stickerContract: live.STICKER_NFT_ADDRESS,

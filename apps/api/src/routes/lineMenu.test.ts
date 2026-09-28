@@ -243,6 +243,15 @@ describe("the chat menu after a spend or a purchase", () => {
   });
 });
 
+describe("POST /api/me/language-choice", () => {
+  it("moves the chat menu to the chosen language at once, and keeps it there", async () => {
+    expect((await post("/api/me/language-choice", { languageChoice: "ja" })).status).toBe(200);
+    expect(await menuAfterLinks()).toBe(TEST_CHAT_MENU_IDS.ja["3"]);
+    expect(await linkedMenu()).toEqual({ status: "linked", menu: "3" });
+    expect(line.links.get(LINE_USER_ID)).toBe(TEST_CHAT_MENU_IDS.ja["3"]);
+  });
+});
+
 describe("DELETE /api/me", () => {
   it("unlinks the chat menu, so LINE shows the default one", async () => {
     await linkedMenu();

@@ -7,7 +7,10 @@ import type { CookieOptions } from "hono/utils/cookie";
 import type { AppDeps } from "./deps.ts";
 import { apiError } from "./errors.ts";
 
-/** What every route's context carries. requireSession sets userId on every route but POST /api/session. */
+/**
+ * What every route's context carries. requireSession sets userId on every route but signing in and
+ * out (POST and DELETE /api/session) and the ENS gateway (GET /api/ens/gateway/*).
+ */
 export type AppEnv = {
   Variables: { userId: string };
 };

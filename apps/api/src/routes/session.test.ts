@@ -3,16 +3,17 @@ import { insertUser, packGift } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { MAX_BODY_BYTES } from "../app.ts";
 import { LineTokenInvalidError, type LineProfile } from "../deps.ts";
 import { errorBodySchema } from "../errors.ts";
 import { devIdToken } from "../services/devSignIn.ts";
-import { HANDLE_MAX_LENGTH } from "../session/handles.ts";
+import { HANDLE_MAX_LENGTH } from "../session/handleLimit.ts";
 import { SESSION_COOKIE, SESSION_MAX_AGE_S } from "../session.ts";
 import { meSchema } from "../shapes.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { fakeSmartWallets } from "../testing/fakes.ts";
 import { insertGratitude, insertSealedSticker, receiveGift } from "../testing/rows.ts";
-import { ID_TOKEN_MAX_LENGTH } from "./session.ts";
+import { ID_TOKEN_MAX_LENGTH, LINE_USER_ID_MAX_LENGTH } from "./session.ts";
 
 const meBodySchema = z.object({ me: meSchema });
 
@@ -82,11 +83,10 @@ describe("signing in", () => {
     expect(await meIn(await call("GET", "/api/me", sessionCookie(response)))).toEqual(me);
   });
 
-  it("keeps the session for 30 days, and names LINE's user so the app can check it's still them", async () => {
+  it("keeps the session for SESSION_MAX_AGE_S, and names LINE's user so the app can check it's still them", async () => {
     const response = await signIn(ALICE);
     const cookie = response.headers.get("set-cookie") ?? "";
     expect(cookie).toContain(`Max-Age=${SESSION_MAX_AGE_S}`);
-    expect(SESSION_MAX_AGE_S).toBe(30 * 24 * 60 * 60);
     expect((await meIn(response)).lineUserId).toBe(ALICE.sub);
     expect((await meIn(await call("GET", "/api/me", sessionCookie(response)))).lineUserId).toBe(
       ALICE.sub,
@@ -170,6 +170,14 @@ describe("signing in", () => {
     expect(await refusal(response)).toMatchObject({ status: 500, error: "internal_error" });
   });
 
+  it("refuses a body over MAX_BODY_BYTES with invalid_request, though it's otherwise valid", async () => {
+    const valid = { idToken: devIdToken(ALICE), timeZone: DEVICE_ZONE, language: "en" };
+    const padded = { ...valid, padding: "x".repeat(MAX_BODY_BYTES) };
+    const response = await call("POST", "/api/session", {}, padded);
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(await refusal(response)).toMatchObject({ status: 400, error: "invalid_request" });
+  });
+
   it("refuses an unknown zone or language, and an ID token that's empty or too long", async () => {
     const valid = { idToken: devIdToken(ALICE), timeZone: DEVICE_ZONE, language: "en" };
     const bodies = [
@@ -210,7 +218,7 @@ describe("me", () => {
 
   it("rejects an empty or oversized LINE account header", async () => {
     const headers = sessionCookie(await signIn(ALICE));
-    for (const lineUserId of ["", "x".repeat(129)]) {
+    for (const lineUserId of ["", "x".repeat(LINE_USER_ID_MAX_LENGTH + 1)]) {
       expect(
         await refusal(await call("GET", "/api/me", { ...headers, "x-line-user-id": lineUserId })),
       ).toMatchObject({ status: 400, error: "invalid_request" });

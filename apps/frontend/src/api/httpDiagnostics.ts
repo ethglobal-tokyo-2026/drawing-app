@@ -12,7 +12,7 @@ function nftRequestPath(url: string, method: string): string | undefined {
   }
   if (path === "/api/stickers" || path === "/api/gifts") return path;
   if (path === "/api/gifts/preview" || path === "/api/gifts/receive") return path;
-  const action = /^\/api\/gifts\/[^/]+\/(deposit|shared|take-out)$/.exec(path)?.[1];
+  const action = /^\/api\/gifts\/[^/]+\/(deposit|shared|take-out|receive)$/.exec(path)?.[1];
   return action ? `/api/gifts/:giftId/${action}` : undefined;
 }
 

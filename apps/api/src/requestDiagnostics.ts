@@ -1,19 +1,30 @@
 import { randomUUID } from "node:crypto";
+import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
+import { matchedRoutes } from "hono/route";
 import { logInfo, withRequestDiagnostics } from "./diagnostics.ts";
 
-function nftRoute(path: string) {
-  if (path === "/api/stickers") return path;
-  if (/^\/api\/gifts\/(preview|receive|pending)$/.test(path)) return path;
-  if (path === "/api/gifts" || path === "/api/gifts/") return "/api/gifts";
-  const action = /^\/api\/gifts\/0x[a-f0-9]{64}\/(deposit|shared|take-out)$/i.exec(path)?.[1];
-  return action ? `/api/gifts/:giftId/${action}` : undefined;
-}
+/** Sealing, Giving and Receiving: their requests log when they start and when they finish. */
+const LOGGED_ROUTES = new Set([
+  "/api/stickers",
+  "/api/gifts",
+  "/api/gifts/pending",
+  "/api/gifts/preview",
+  "/api/gifts/receive",
+  "/api/gifts/:giftId/receive",
+  "/api/gifts/:giftId/deposit",
+  "/api/gifts/:giftId/shared",
+  "/api/gifts/:giftId/take-out",
+]);
+
+/** The template of the logged route a request asks for, so no URL parameter reaches the log. */
+const loggedRouteTemplate = (c: Context) =>
+  matchedRoutes(c).find(({ path }) => LOGGED_ROUTES.has(path))?.path;
 
 /** Server-generated IDs correlate browser failures without accepting user-controlled log text. */
 export const requestDiagnostics = createMiddleware(async (c, next) => {
   const requestId = randomUUID();
-  const route = nftRoute(c.req.path);
+  const route = loggedRouteTemplate(c);
   const started = performance.now();
   c.header("X-Request-ID", requestId);
   await withRequestDiagnostics(

@@ -1,6 +1,7 @@
 import { DAILY_TICKETS_PER_DAY, ticketPurchases, ticketUses } from "@drawing-app/db";
-import { Hono, type Context } from "hono";
+import { Hono } from "hono";
 import type { AppDeps } from "../deps.ts";
+import { failureCause, logFailure } from "../diagnostics.ts";
 import { apiError, validate } from "../errors.ts";
 import type { AppEnv } from "../session.ts";
 import {
@@ -8,7 +9,6 @@ import {
   paymentCounted,
   spendRequestSchema,
   TICKET_PACKS,
-  ticketHolder,
   ticketKindAt,
   ticketPaymentReference,
   ticketPurchaseRequestSchema,
@@ -17,10 +17,6 @@ import {
   toTicketUse,
 } from "../tickets/tickets.ts";
 
-/** requireSession found the account, so this answers only one that has since gone. */
-const noAccount = (c: Context<AppEnv>) =>
-  apiError(c, 401, "signed_out", `Person ${c.var.userId} has no account`);
-
 /**
  * Tickets: the day's tickets, spending one, the ticket shop, and buying its packs with JPYC. Once a
  * spend or a purchase commits, the chat menu's Draw key catches up in the background: LINE never
@@ -28,19 +24,14 @@ const noAccount = (c: Context<AppEnv>) =>
  */
 export const ticketRoutes = ({ db, clock, ticketPayments, lineChatMenu }: AppDeps) =>
   new Hono<AppEnv>()
-    .get("/tickets", (c) => {
-      const holder = ticketHolder(db, c.var.userId);
-      if (!holder) return noAccount(c);
-      return c.json({ tickets: ticketsOf(db, holder.id, clock.now()) }, 200);
-    })
+    .get("/tickets", (c) => c.json({ tickets: ticketsOf(db, c.var.userId, clock.now()) }, 200))
     .post("/tickets/spend", validate("json", spendRequestSchema), (c) => {
       const { kind } = c.req.valid("json");
+      const { userId } = c.var;
       const now = clock.now();
       const spent = db.transaction(
         (tx) => {
-          const holder = ticketHolder(tx, c.var.userId);
-          if (!holder) return noAccount(c);
-          const { ticketDay, dailyLeft, reserveLeft, usedToday } = ticketsOf(tx, holder.id, now);
+          const { ticketDay, dailyLeft, reserveLeft, usedToday } = ticketsOf(tx, userId, now);
           if (dailyLeft === 0 && reserveLeft === 0) {
             return apiError(
               c,
@@ -61,20 +52,17 @@ export const ticketRoutes = ({ db, clock, ticketPayments, lineChatMenu }: AppDep
               `kind: the next ticket is a ${next} ticket, not a ${kind} one`,
             );
           }
-          // The unique day index stops a double tap spending two.
+          // Immediate transactions spend one at a time, so each spend takes the day's next index.
           const use = tx
             .insert(ticketUses)
-            .values({ userId: holder.id, ticketDay, dayIndex, kind })
+            .values({ userId, ticketDay, dayIndex, kind })
             .returning()
             .get();
-          return c.json(
-            { ticketUse: toTicketUse(use), tickets: ticketsOf(tx, holder.id, now) },
-            201,
-          );
+          return c.json({ ticketUse: toTicketUse(use), tickets: ticketsOf(tx, userId, now) }, 201);
         },
         { behavior: "immediate" },
       );
-      if (spent.status === 201) void lineChatMenu.relink(c.var.userId);
+      if (spent.status === 201) void lineChatMenu.relink(userId);
       return spent;
     })
     .get("/ticket-shop", (c) =>
@@ -100,13 +88,12 @@ export const ticketRoutes = ({ db, clock, ticketPayments, lineChatMenu }: AppDep
       try {
         payments = await ticketPayments.paymentsIn(txDigest);
       } catch (error) {
-        console.error(`POST /api/ticket-purchases: couldn't read ${txDigest} from Sui`, error);
-        return apiError(
-          c,
-          502,
-          "sui_unavailable",
-          `Couldn't read transaction ${txDigest} from Sui: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        // Wrapped so the log names the transaction, which no diagnostic field holds.
+        const failure = new Error(`Couldn't read transaction ${txDigest} from Sui`, {
+          cause: error,
+        });
+        logFailure("sui.read.failed", failure, { userId: c.var.userId });
+        return apiError(c, 502, "sui_unavailable", `${failure.message}: ${failureCause(error)}`);
       }
       if (payments === null) {
         return apiError(
@@ -147,13 +134,11 @@ export const ticketRoutes = ({ db, clock, ticketPayments, lineChatMenu }: AppDep
       const now = clock.now();
       const bought = db.transaction(
         (tx) => {
-          const holder = ticketHolder(tx, c.var.userId);
-          if (!holder) return noAccount(c);
           // Checked again: another request could have counted it while Sui was asked.
           if (paymentCounted(tx, txDigest)) return alreadyCounted();
           tx.insert(ticketPurchases)
             .values({
-              userId: holder.id,
+              userId: c.var.userId,
               tickets,
               priceYen: pack.priceYen,
               paidJpyc: payment.amount.toString(),
@@ -161,7 +146,7 @@ export const ticketRoutes = ({ db, clock, ticketPayments, lineChatMenu }: AppDep
               verifiedAt: now,
             })
             .run();
-          return c.json({ tickets: ticketsOf(tx, holder.id, now) }, 201);
+          return c.json({ tickets: ticketsOf(tx, c.var.userId, now) }, 201);
         },
         { behavior: "immediate" },
       );

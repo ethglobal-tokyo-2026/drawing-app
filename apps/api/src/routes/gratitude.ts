@@ -1,8 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
-import { bodyLimit } from "hono/body-limit";
 import type { AppDeps } from "../deps.ts";
-import { apiError, validate } from "../errors.ts";
+import { apiError, limitBody, validate } from "../errors.ts";
 import {
   giftIdParam,
   gratitudeWithGiver,
@@ -27,12 +26,7 @@ export const gratitudeRoutes = (deps: AppDeps) =>
   new Hono<AppEnv>()
     .post(
       "/",
-      // The contract has no 413: an oversized body is invalid_request, in ErrorBody JSON.
-      bodyLimit({
-        maxSize: MAX_GRATITUDE_BODY_BYTES,
-        onError: (c) =>
-          apiError(c, 400, "invalid_request", `body: over ${MAX_GRATITUDE_BODY_BYTES} bytes`),
-      }),
+      limitBody(MAX_GRATITUDE_BODY_BYTES),
       zValidator("json", recordGratitudeSchema, replayInvalidHook),
       (c) => {
         const recording = recordGratitude(deps, c.var.userId, c.req.valid("json"));

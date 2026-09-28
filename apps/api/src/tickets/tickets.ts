@@ -3,7 +3,6 @@ import {
   stickers,
   ticketPurchases,
   ticketUses,
-  users,
   type Db,
 } from "@drawing-app/db";
 import { and, asc, count, eq, isNotNull, sum } from "drizzle-orm";
@@ -53,10 +52,6 @@ export type TicketKind = (typeof ticketUses.$inferSelect)["kind"];
 /** The kind the day's use at `dayIndex` spends: daily tickets always go first. */
 export const ticketKindAt = (dayIndex: number): TicketKind =>
   dayIndex < DAILY_TICKETS_PER_DAY ? "daily" : "reserve";
-
-/** The signed-in person's account; undefined if they have none. */
-export const ticketHolder = (db: DbOrTx, userId: string) =>
-  db.select({ id: users.id }).from(users).where(eq(users.id, userId)).get();
 
 /** The person's tickets at `now`: today's daily ones, Tokyo time, and every reserve one left. */
 export function ticketsOf(db: DbOrTx, userId: string, now: Date): Tickets {

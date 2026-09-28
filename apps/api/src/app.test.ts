@@ -140,6 +140,20 @@ describe("errors", () => {
     expect(response.headers.get("x-request-id")).toMatch(/^[a-f0-9-]{36}$/);
     expect(response.headers.get("x-request-id")).not.toBe("untrusted-client-value");
   });
+
+  it("logs a Receiving request's start and finish under its route's template", async () => {
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    const giftId = `0x${"ab".repeat(32)}`;
+    const response = await post(`/api/gifts/${giftId}/receive`, undefined, await signedIn());
+    const requestEvents = log.mock.calls
+      .map(([line]) => z.looseObject({ event: z.string() }).parse(JSON.parse(String(line))))
+      .filter(({ event }) => event.startsWith("request."));
+    const route = "/api/gifts/:giftId/receive";
+    expect(requestEvents).toEqual([
+      expect.objectContaining({ event: "request.started", route }),
+      expect.objectContaining({ event: "request.completed", route, status: response.status }),
+    ]);
+  });
 });
 
 describe("sticker images", () => {

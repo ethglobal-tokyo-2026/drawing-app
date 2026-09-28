@@ -316,10 +316,12 @@ describe("tickets", () => {
   it("count no tickets while Sui can't be asked, and log it", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const txDigest = newTxDigest();
-    transactions.set(txDigest, new Error("fullnode unreachable"));
+    const outage = new Error("fullnode unreachable");
+    transactions.set(txDigest, outage);
     const response = await buy({ tickets: PACK.tickets, txDigest });
     expect(await refusal(response)).toMatchObject({ status: 502, error: "sui_unavailable" });
-    expect(log).toHaveBeenCalledWith(expect.stringContaining(txDigest), expect.any(Error));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining(txDigest));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining(outage.message));
     expect(purchaseOf(txDigest)).toBeUndefined();
     expect((await getTickets()).reserveLeft).toBe(0);
   });
