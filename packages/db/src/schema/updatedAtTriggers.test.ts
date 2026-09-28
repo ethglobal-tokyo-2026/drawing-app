@@ -1,8 +1,7 @@
 import { eq } from "drizzle-orm";
-import { getTableConfig } from "drizzle-orm/sqlite-core";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createTestDb, insertUser } from "../testDb.ts";
-import { allTables, users } from "./index.ts";
+import { users } from "./index.ts";
 
 let test: Awaited<ReturnType<typeof createTestDb>>;
 let id: string;
@@ -30,13 +29,12 @@ describe("updated_at", () => {
     expect(row?.updatedAt.getTime()).toBeGreaterThanOrEqual(row?.createdAt.getTime() ?? Infinity);
   });
 
+  // The tables come from the database, which has every table the schema exports, so a table left
+  // out of allTables fails here.
   it("has a trigger on every table", () => {
-    const triggerTables = test.sqlite
-      .prepare("select tbl_name from sqlite_master where type = 'trigger'")
-      .pluck()
-      .all()
-      .map(String)
-      .sort();
-    expect(triggerTables).toEqual(allTables.map((table) => getTableConfig(table).name).sort());
+    const names = (query: string) => test.sqlite.prepare(query).pluck().all().map(String).sort();
+    expect(names("select tbl_name from sqlite_master where type = 'trigger'")).toEqual(
+      names("select name from sqlite_master where type = 'table' and name not like 'sqlite_%'"),
+    );
   });
 });

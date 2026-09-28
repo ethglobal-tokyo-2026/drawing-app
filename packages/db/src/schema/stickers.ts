@@ -4,7 +4,10 @@ import { isBytes32, literal, timestamps } from "./columns.ts";
 import { MAX_TIME_USED_S } from "./limits.ts";
 import { users } from "./users.ts";
 
-/** A sealed sticker. Everything but owner_id and the mint is fixed at seal; created_at is the seal. */
+/**
+ * A sealed sticker. Everything but owner_id, the mint and ens_named_at is fixed at seal; created_at
+ * is the seal.
+ */
 export const stickers = sqliteTable(
   "stickers",
   {
@@ -17,8 +20,8 @@ export const stickers = sqliteTable(
       .notNull()
       .references(() => users.id),
     /**
-     * Who holds it: the Original Artist at seal, then each receiver when they receive it. Indexes the
-     * NFT's owner as a person, a few seconds ahead of the chain while a claim lands.
+     * Who holds it: the Original Artist at seal, then each receiver once their claim lands. Indexes
+     * the NFT's owner as a person, and stays the giver while the escrow holds the NFT.
      */
     ownerId: text("owner_id")
       .notNull()
@@ -30,7 +33,7 @@ export const stickers = sqliteTable(
     height: integer("height").notNull(),
     /** The cut line as an SVG path in image pixels. */
     outline: text("outline").notNull(),
-    /** keccak256 of the sticker PNG. Names its five image files on the CDN, and goes to the mint. */
+    /** keccak256 of the sticker PNG. Names its image files on the CDN, and goes to the mint. */
     contentHash: text("content_hash").notNull(),
     /** The metadata JSON's CDN URL, known at seal. Goes to the mint as the NFT's tokenURI. */
     metadataUri: text("metadata_uri").notNull(),
@@ -59,10 +62,7 @@ export const stickerTimelapses = sqliteTable("sticker_timelapses", {
   stickerId: text("sticker_id")
     .primaryKey()
     .references(() => stickers.id),
-  /**
-   * Gzipped JSON with a format version: the ink canvas's size, where the sticker sits on it, and
-   * every op in the order drawn (the app's strokes and fills, with their times).
-   */
+  /** Gzipped TimelapseV1 JSON, as sent. */
   ops: blob("ops", { mode: "buffer" }).notNull(),
   ...timestamps(),
 });

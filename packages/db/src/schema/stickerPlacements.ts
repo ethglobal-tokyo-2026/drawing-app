@@ -7,8 +7,8 @@ import { users } from "./users.ts";
 /**
  * A sticker's placement on a person's Sticker Board: on the board, or waiting in its sticker tray.
  * Inserted when the sticker first reaches them (at seal, or when they receive it), so created_at
- * orders the tray. It stays after they give the sticker away: the board keeps its given sticker
- * silhouette, and its spot on the sticker sheet stays empty.
+ * orders the tray. It stays after they give the sticker away: the sticker leaves their board, and
+ * its spot on the sticker sheet stays empty.
  */
 export const stickerPlacements = sqliteTable(
   "sticker_placements",

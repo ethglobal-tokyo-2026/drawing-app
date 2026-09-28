@@ -10,7 +10,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { apiError } from "../api/apiClient";
-import type { GiftPreview } from "@drawing-app/api/client";
+import { GIFT_EXPIRY_MS, type GiftPreview } from "@drawing-app/api/client";
 import type { GiftOpening } from "../api/apiClient";
 import { useApi } from "../api/useApi";
 import type { PersonView } from "../api/views";
@@ -52,8 +52,6 @@ const OUT_AFTER = [720, 0] as const;
 const LEAVE_MS = [320, 150] as const;
 /** The box the sticker fills inside the bag, and rises out of it in. */
 const FIGURE_PX = 200;
-/** Gifts wait a week from the seal; the preview says when the wait ends, so the tape's date is a week before. */
-const GIFT_WAIT_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** Where the gift comes from: its gift message's link, or your board, where it waits for you. */
 type Opening = { claim: GiftOpening } | { gift: GiftForYou };
@@ -330,7 +328,7 @@ function Gift({
           state={sealed ? "sealed" : "torn"}
           stickerUrl={reveal === "out" ? undefined : sticker.urls.png}
           fromHandle={giver.handle ?? undefined}
-          sealedAt={preview.expiresAt - GIFT_WAIT_MS}
+          sealedAt={preview.expiresAt - GIFT_EXPIRY_MS}
           nsfw={sticker.nsfw}
           tear={pull.tear}
           pullTab={sealed ? pull.pullTab : undefined}

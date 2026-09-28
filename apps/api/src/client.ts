@@ -20,6 +20,7 @@ export type ApiErrorCode =
   | (ErrorOutput extends { error: infer Code extends string } ? Code : never)
   | "internal_error";
 export { MAX_TIMELAPSE_BYTES } from "./stickers/timelapseLimit.ts";
+export { GIFT_EXPIRY_MS, MAX_PEAK_MULT, MAX_TIME_USED_S } from "@drawing-app/db/limits";
 
 // The contract's shapes, for the app's screens: each is the type its route's schema checks.
 export type { AgeProof, AgeVerificationRequest } from "./routes/ageVerification.ts";
