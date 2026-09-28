@@ -1,4 +1,14 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignore": ["packages/sticker-chain/lib/**"]
+  "ignoreBinaries": ["forge", "anvil", "journalctl"],
+  "workspaces": {
+    ".": {
+      "entry": ["deploy/*.mjs"]
+    },
+    "packages/sticker-chain": {
+      "entry": ["wagmi.config.ts"],
+      "project": ["**/*.{js,mjs,cjs,ts,mts,cts}", "!lib/**"],
+      "ignoreDependencies": ["@openzeppelin/contracts"]
+    }
+  }
 }

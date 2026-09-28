@@ -1,18 +1,10 @@
 #!/usr/bin/env bash
 # deploy/line/create-returning-menu.sh: create one of the official account's chat menus in LINE, and record its ID in
-# deploy/line/menus.json, which the app's server reads to link each person's menu.
-#
-#   ./deploy/line/create-returning-menu.sh en|ja plain|3|2|1|reserve|none   a returning person's menu: Draw, My board
-#                                                                          and Explore, with that many daily tickets
-#                                                                          left, only reserve ones, none, or no count
-#   ./deploy/line/create-returning-menu.sh default [--set-default]         new people's menu: one bilingual key;
-#                                                                          --set-default makes it LINE's default too
-#   add --print to print the menu object without calling LINE
-#
-# The images are deploy/line/images/returning-<language>-<state>.png and default.png, rendered from returning-menu.html
-# by `pnpm --filter frontend chat-menus`. LINE can't replace a menu's image, so a new image means running this again
-# for a new menu, whose ID replaces the old one in menus.json. It never links anyone. Needs curl, jq, and the Messaging
-# API channel's LINE_MESSAGING_CHANNEL_ID and LINE_MESSAGING_CHANNEL_SECRET in deploy/.env (gitignored).
+# deploy/line/menus.json, from which the REST API links each person's menu; it never links anyone itself. A returning
+# person's menu (en|ja) has Draw, My board and Explore, with 3, 2 or 1 daily tickets left, only reserve ones, none, or
+# no count (plain); new people's (default) has one bilingual key, and --set-default makes it LINE's default too. --print
+# prints the menu without calling LINE. `pnpm --filter frontend chat-menus` renders the images; LINE can't replace a
+# menu's image, so a new image means a new menu. Needs curl, jq, and the Messaging API channel in deploy/.env.
 set -euo pipefail
 
 usage() {
@@ -200,7 +192,7 @@ fi
 OLD_ID="$(jq -r --argjson path "$MENU_PATH" 'getpath($path) // empty' "$MENUS_FILE")"
 jq --argjson path "$MENU_PATH" --arg id "$MENU_ID" 'setpath($path; $id)' "$MENUS_FILE" >"$MENUS_FILE.tmp"
 mv "$MENUS_FILE.tmp" "$MENUS_FILE"
-echo "✓ created $MENU_ID, and recorded it in deploy/line/menus.json: commit that"
+echo "✓ created $MENU_ID, and recorded it in deploy/line/menus.json: commit that, then run ./deploy/deploy-api.sh"
 
 if [ -n "$SET_DEFAULT" ]; then
   echo "→ making it LINE's default menu"
@@ -213,8 +205,4 @@ fi
 
 if [ -n "$OLD_ID" ] && [ "$OLD_ID" != "$MENU_ID" ]; then
   echo "It replaces $OLD_ID, which stays in LINE, and on everyone linked to it, until it's deleted."
-fi
-if [ "$STATE" = plain ]; then
-  setting="LINE_RETURNING_RICH_MENU_ID_$(printf '%s' "$MENU" | tr '[:lower:]' '[:upper:]')"
-  echo "Until the API links menus from menus.json: set $setting=$MENU_ID in deploy/sticker-auth.env, then run ./deploy/deploy.sh"
 fi

@@ -38,70 +38,10 @@
     // Method members get bivariant parameter checks; property members are checked strictly.
     "typescript/method-signature-style": ["error", "property"]
   },
-  // Text in JSX comes from the catalog (apps/frontend/src/i18n). A folder turns this on as its text moves there.
   "overrides": [
+    // Text in JSX comes from the catalog (apps/frontend/src/i18n).
     {
-      "files": ["apps/frontend/src/i18n/**"],
-      "rules": { "react/jsx-no-literals": "error" }
-    },
-    {
-      "files": ["apps/frontend/src/api/**"],
-      "rules": { "react/jsx-no-literals": "error" }
-    },
-    {
-      "files": ["apps/frontend/src/app/**"],
-      "rules": { "react/jsx-no-literals": "error" }
-    },
-    {
-      "files": ["apps/frontend/src/explore/**"],
-      "rules": { "react/jsx-no-literals": "error" }
-    },
-    {
-      "files": ["apps/frontend/src/giving/**"],
-      "rules": { "react/jsx-no-literals": "error" }
-    },
-    {
-      "files": ["apps/frontend/src/gratitude/**"],
-      "rules": { "react/jsx-no-literals": "error" }
-    },
-    {
-      "files": ["apps/frontend/src/identity/**"],
-      "rules": { "react/jsx-no-literals": "error" }
-    },
-    {
-      "files": ["apps/frontend/src/line/**"],
-      "rules": { "react/jsx-no-literals": "error" }
-    },
-    {
-      "files": ["apps/frontend/src/offers/**"],
-      "rules": { "react/jsx-no-literals": "error" }
-    },
-    {
-      "files": ["apps/frontend/src/receiving/**"],
-      "rules": { "react/jsx-no-literals": "error" }
-    },
-    {
-      "files": ["apps/frontend/src/shop/**"],
-      "rules": { "react/jsx-no-literals": "error" }
-    },
-    {
-      "files": ["apps/frontend/src/sticker-board/**"],
-      "rules": { "react/jsx-no-literals": "error" }
-    },
-    {
-      "files": ["apps/frontend/src/sticker-creation/**"],
-      "rules": { "react/jsx-no-literals": "error" }
-    },
-    {
-      "files": ["apps/frontend/src/stickers/**"],
-      "rules": { "react/jsx-no-literals": "error" }
-    },
-    {
-      "files": ["apps/frontend/src/tickets/**"],
-      "rules": { "react/jsx-no-literals": "error" }
-    },
-    {
-      "files": ["apps/frontend/src/ui/**"],
+      "files": ["apps/frontend/src/**"],
       "rules": { "react/jsx-no-literals": "error" }
     },
     // Icons come from the registry, where an icon with a meaning goes by it, so it's the same everywhere.
@@ -126,7 +66,7 @@
       "files": ["apps/frontend/src/icons/**", "apps/frontend/src/main.tsx"],
       "rules": { "no-restricted-imports": "off" }
     },
-    // Last, so it wins over the folders above: tests render stand-in text that nobody sees.
+    // Last, so it wins over the catalog rule above: tests render stand-in text that nobody sees.
     {
       "files": ["apps/frontend/src/**/*.test.tsx"],
       "rules": { "react/jsx-no-literals": "off" }

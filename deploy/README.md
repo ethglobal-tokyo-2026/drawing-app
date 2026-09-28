@@ -23,7 +23,7 @@ Publishes everything, in order:
 
 ## `./deploy/deploy-api.sh`
 
-Publishes the API alone; `--preflight-only` stops after checking the chain settings. It builds the API, installs `better-sqlite3` and `sharp` for the pinned Node on the box, and syncs the migrations, `drawing-api.env` and `deploy/line/menus.json`. It makes the session secret if it's missing, and installs the chain settings in the box's mode-600 `chain.env`, keeping values already there that `deploy/.env` leaves out. It restarts `drawing-api` when anything changed, then checks `/api/me` on the box and at `DEPLOY_URL`. `node --test deploy/install-chain-env.test.mjs` tests the chain settings' installer.
+Publishes the API alone; `--preflight-only` stops after checking the chain settings. It builds the API, installs `better-sqlite3` and `sharp` for the pinned Node on the box, and syncs the migrations, `drawing-api.env` and `deploy/line/menus.json`. It makes the session secret if it's missing, and installs the chain settings in the box's mode-600 `chain.env`, keeping values already there that `deploy/.env` leaves out. It restarts `drawing-api` when anything changed, then checks `/api/me` on the box and at `DEPLOY_URL`.
 
 Before replacing `server.mjs`, API deployment prepares any missing WebP Sticker images from
 the stored PNGs. It briefly stops an active API so no older Sealing request can add PNG-only
@@ -35,11 +35,12 @@ Inspect the reported image failure and retry deployment after correcting it.
 To inspect images without changing them, run `backfill-sticker-webp.mjs --dry-run` from the
 API's server directory with `IMAGE_DIR` set, using the API's Node runtime and user.
 
-The deployment regression test uses local temporary files and fake transport/service commands,
-never SSH or a running server:
+The deployment tests use local temporary files and fake transport/service commands, never SSH or a
+running server: `deployApi.test.ts` runs `deploy-api.sh`, and `installChainEnv.test.ts` the chain
+settings' installer. `pnpm check` runs both:
 
 ```sh
-pnpm --filter @drawing-app/api exec vitest run scripts/deployApi.test.ts
+pnpm --filter @drawing-app/api exec vitest run scripts/
 ```
 
 ## `bash deploy/deploy-contracts.sh`

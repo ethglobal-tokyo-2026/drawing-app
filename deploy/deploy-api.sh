@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
-# deploy/deploy-api.sh: build the REST API (apps/api) and run it on the box, behind the LIFF endpoint.
-#
-#   ./deploy/deploy-api.sh
-#   ./deploy/deploy-api.sh --preflight-only
-#
-# deploy/deploy.sh runs it too. HAProxy sends DEPLOY_URL's /api/ to 127.0.0.1:8788 (deploy/drawing-api.service).
-# The API ships as one bundle, with the box's own build of better-sqlite3 beside it, and runs on the Node that
-# package.json pins (deploy/install-node.sh). On start, it applies pending migrations from drizzle/, and it serves
-# the sticker images under /api/images/.
+# deploy/deploy-api.sh: build the REST API (apps/api) and run it on the box behind the LIFF endpoint; deploy.sh runs it
+# too. --preflight-only checks the chain configuration on the box and stops. HAProxy sends DEPLOY_URL's /api/ to
+# 127.0.0.1:8788 (drawing-api.service). The API ships as one bundle, with the box's own builds of its native modules
+# beside it, on the Node that package.json pins (install-node.sh). On start it applies pending migrations from drizzle/,
+# and it serves the sticker images under /api/images/.
 set -euo pipefail
 PREFLIGHT_ONLY=false
 if [ "${1:-}" = "--preflight-only" ] && [ "$#" -eq 1 ]; then
@@ -51,10 +47,16 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# One SSH connection for every ssh and rsync below: the box resets bursts of new ones.
-SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/cm-deploy-%C" -o ControlPersist=60)
+# One SSH connection for every ssh and rsync below: the box resets bursts of new ones. A box that doesn't answer, or
+# stops answering, fails the deploy instead of hanging it.
+SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/cm-deploy-%C" -o ControlPersist=60
+  -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
 ssh() { command ssh "${SSH_OPTS[@]}" "$@"; }
 export RSYNC_RSH="ssh ${SSH_OPTS[*]}"
+# The check on the box retries: the API refuses connections until it has applied its migrations and started.
+BOX_CURL="curl --retry 10 --retry-connrefused --retry-delay 1 --max-time 5"
+# A stalled registry or native build fails the deploy instead of hanging it.
+NPM_INSTALL_TIMEOUT=10m
 
 # Validate the merged credentials before replacing any running server code. Existing secrets stay on
 # the server; the auth service's Privy secret can be reused when this is the API's first chain deploy.
@@ -75,6 +77,8 @@ SQLITE_VERSION="$(cd "$ROOT/packages/db" && node -p "require('better-sqlite3/pac
 # sharp's exports don't include its package.json, so it's read as a file.
 SHARP_VERSION="$(cd "$ROOT/apps/api" && node -p "JSON.parse(require('fs').readFileSync('node_modules/sharp/package.json', 'utf8')).version")"
 NODE_VERSION="$(node -p "require('$ROOT/package.json').devEngines.runtime.version")"
+# install-node.sh links the pinned Node here, by major.
+NODE_BIN="/usr/local/lib/nodejs/node-${NODE_VERSION%%.*}/bin"
 pnpm --dir "$ROOT" --filter @drawing-app/api build
 "$ROOT/deploy/install-node.sh" drawing-api
 
@@ -90,8 +94,8 @@ printf '{ "private": true, "type": "module", "engines": { "node": "%s" }, "depen
 changed="$(rsync -ci "$STAGE/package.json" "$TARGET:$DIR/server/package.json")"
 if [ -n "$changed" ]; then
   # With the pinned Node's npm, so native modules match the Node that loads them.
-  ssh "$TARGET" "cd '$DIR/server' && PATH=/usr/local/lib/nodejs/node-24/bin:\$PATH \
-    /usr/local/lib/nodejs/node-24/bin/npm install --omit=dev --no-audit --no-fund --loglevel=error"
+  ssh "$TARGET" "cd '$DIR/server' && PATH=$NODE_BIN:\$PATH \
+    timeout $NPM_INSTALL_TIMEOUT $NODE_BIN/npm install --omit=dev --no-audit --no-fund --loglevel=error"
 fi
 # Keep the new API out of the active path until every existing sticker has the images it advertises.
 rsync -c "$ROOT/apps/api/dist/server.mjs" "$TARGET:$REMOTE_STAGE/server.mjs"
@@ -109,7 +113,7 @@ else
 fi
 echo "→ preparing existing sticker images before publishing the API"
 if ! ssh "$TARGET" "cd '$DIR/server' && IMAGE_DIR='$DIR/images' timeout 300s \
-  /usr/local/lib/nodejs/node-24/bin/node backfill-sticker-webp.mjs"; then
+  $NODE_BIN/node backfill-sticker-webp.mjs"; then
   echo "✗ sticker image preparation failed; the new API has not been published" >&2
   exit 1
 fi
@@ -118,10 +122,8 @@ changed+="$(ssh "$TARGET" "if ! cmp -s '$REMOTE_STAGE/server.mjs' '$DIR/server/s
 changed+="$(rsync -rci --delete "$ROOT/packages/db/drizzle/" "$TARGET:$DIR/drizzle/")"
 changed+="$(rsync -ci "$ROOT/deploy/drawing-api.env" "$TARGET:$DIR/api.env")"
 changed+="$(rsync -ci "$ROOT/deploy/drawing-api.service" "$TARGET:$DIR/")"
-# The chat menus' IDs, which LINE_CHAT_MENUS_FILE names; without the file, the API links no chat menu.
-if [ -f "$ROOT/deploy/line/menus.json" ]; then
-  changed+="$(rsync -ci "$ROOT/deploy/line/menus.json" "$TARGET:$DIR/line-menus.json")"
-fi
+# The chat menus' IDs, which LINE_CHAT_MENUS_FILE names.
+changed+="$(rsync -ci "$ROOT/deploy/line/menus.json" "$TARGET:$DIR/line-menus.json")"
 # The session cookie's secret is made on the box and never leaves it.
 changed+="$(ssh "$TARGET" "test -s '$DIR/secrets.env' || { umask 077 \
   && printf 'SESSION_SECRET=%s\n' \"\$(openssl rand -hex 32)\" > '$DIR/secrets.env' && echo 'made a session secret'; }")"
@@ -131,11 +133,10 @@ if [ -n "$changed" ] || [ "$RESUME_API" = true ]; then
     && sudo systemctl daemon-reload && sudo systemctl enable -q drawing-api && sudo systemctl restart drawing-api"
   echo "↻ restarted drawing-api"
   RESUME_API=false
-  sleep 2
 fi
 
 # A signed-out call must get the API's own refusal: serve.py answers unknown paths with the app, also with a 200.
-ssh "$TARGET" "curl -sS --max-time 5 http://127.0.0.1:8788/api/me" | grep -q '"signed_out"' \
+ssh "$TARGET" "$BOX_CURL -sS http://127.0.0.1:8788/api/me" | grep -q '"signed_out"' \
   || { echo "✗ the API on the box doesn't answer; see: journalctl -u drawing-api" >&2; exit 1; }
 echo "✓ 127.0.0.1:8788 on the box"
 curl -sS --max-time 15 "$URL/api/me" | grep -q '"signed_out"' || {

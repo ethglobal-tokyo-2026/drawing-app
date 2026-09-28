@@ -1,7 +1,7 @@
 # drawing-api.service: the REST API (apps/api) on 127.0.0.1:8788, for HAProxy's /api/.
 # deploy/deploy-api.sh copies it to /etc/systemd/system/ and restarts it whenever it, its config or its code changes.
 [Unit]
-Description=Sticker Board REST API
+Description=Croquis REST API
 After=network-online.target
 Wants=network-online.target
 
