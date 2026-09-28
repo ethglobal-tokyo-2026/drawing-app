@@ -39,7 +39,10 @@ export const users = sqliteTable(
     deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
     ...timestamps(),
     // Columns added after the table was made go last, where ALTER TABLE puts them.
-    /** The app's language at the last sign-in, for what the server writes to the person outside the app. */
+    /**
+     * The language the server writes to the person in outside the app: set at sign-in, and by a
+     * Settings choice.
+     */
     language: text("language", { enum: ["en", "ja"] })
       .notNull()
       .default("en"),
