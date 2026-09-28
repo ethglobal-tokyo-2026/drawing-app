@@ -10,7 +10,7 @@ export type ComboPhase = "ready" | "running" | "ended";
  */
 export type EndReason = "empty" | "cap" | "hidden" | "closed";
 
-/** A finished combo, as the draft schema's `gratitude` table records it. */
+/** A finished combo, as `POST /api/gratitude` records it. */
 export interface ComboRecord {
   /** The method the combo ended in. */
   method: Method;
