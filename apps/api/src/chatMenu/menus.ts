@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import type { users } from "@drawing-app/db";
+import { DAILY_TICKETS_PER_DAY, type users } from "@drawing-app/db";
 import { z } from "zod";
 import type { Tickets } from "../shapes.ts";
 
@@ -13,8 +13,8 @@ export type ChatMenu = z.infer<typeof chatMenuSchema>;
 
 type Language = (typeof users.$inferSelect)["language"];
 
-/** LINE's rich menu IDs are `richmenu-` and 32 hex digits; this catches a placeholder left in. */
-const richMenuIdSchema = z.string().regex(/^richmenu-[0-9A-Za-z-]+$/, "Expected a rich menu ID");
+/** LINE's rich menu IDs: `richmenu-` and 32 lowercase hex digits. Catches a placeholder left in. */
+const richMenuIdSchema = z.string().regex(/^richmenu-[0-9a-f]{32}$/, "Expected a rich menu ID");
 /** A menu not made yet may be left out, null or "". */
 const menuIdSchema = z
   .union([richMenuIdSchema, z.literal(""), z.null()])
@@ -54,7 +54,7 @@ export function chatMenuFor({
   dailyLeft,
   reserveLeft,
 }: Pick<Tickets, "dailyLeft" | "reserveLeft">): Exclude<ChatMenu, "plain"> {
-  if (dailyLeft >= 3) return "3";
+  if (dailyLeft >= DAILY_TICKETS_PER_DAY) return "3";
   if (dailyLeft === 2) return "2";
   if (dailyLeft === 1) return "1";
   return reserveLeft > 0 ? "reserve" : "none";

@@ -14,11 +14,11 @@ import { USER_SEARCH_SIZE } from "../explore/userSearch.ts";
 import { personSchema } from "../shapes.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { insertGratitude, insertSealedSticker, receiveGift } from "../testing/rows.ts";
-import { addDays, TICKET_DAY_START_HOUR, ticketDay, ticketDayStart } from "../ticketDays.ts";
+import { addDays, EXPLORE_DAY_START_HOUR, exploreDay, exploreDayStart } from "../ticketDays.ts";
 
 const MINUTE_MS = 60 * 1000;
 const WEEK_MS = 7 * 24 * 60 * MINUTE_MS;
-/** A zone whose ticket days start at another moment than Tokyo's. */
+/** A zone whose days start at another moment than Tokyo's. */
 const NEW_YORK = "America/New_York";
 /** A combo on a gift its Original Artist didn't give: their share comes out of the giver's part. */
 const SHARED_TAP = { method: "tap", total: 100, originalArtistGratitudeShare: 20 } as const;
@@ -70,7 +70,7 @@ const msAfter = (at: Date, ms: number) => new Date(at.getTime() + ms);
 
 /** When today began on Explore's clock. */
 const todayStart = () =>
-  ticketDayStart(ticketDay(test.clock.now(), EXPLORE_TIME_ZONE), EXPLORE_TIME_ZONE);
+  exploreDayStart(exploreDay(test.clock.now(), EXPLORE_TIME_ZONE), EXPLORE_TIME_ZONE);
 
 /** Moments a minute apart from `start`: each call answers the next. */
 function minuteByMinute(start: Date) {
@@ -175,12 +175,12 @@ describe("GET /api/explore", () => {
     expect(activity.map(({ sticker }) => sticker.id)).toEqual([...newer].reverse());
   });
 
-  it("starts the week at the start of Monday's ticket day in Tokyo, the last one before now", async () => {
+  it("starts the week at the start of Monday in Tokyo, the last one before now", async () => {
     const me = insertUser(test.db);
     const weekStart = await weekStartFor(me);
     expect(tokyoClock(weekStart)).toEqual({
       weekday: "Monday",
-      hour: TICKET_DAY_START_HOUR,
+      hour: EXPLORE_DAY_START_HOUR,
       minute: 0,
     });
     expect(weekStart.getTime()).toBeLessThanOrEqual(test.clock.now().getTime());
@@ -240,16 +240,16 @@ describe("GET /api/explore", () => {
     const tokyo = insertUser(test.db);
     const newYork = insertUser(test.db, { timeZone: NEW_YORK });
     const lapsed = insertUser(test.db);
-    const today = ticketDay(test.clock.now(), EXPLORE_TIME_ZONE);
+    const today = exploreDay(test.clock.now(), EXPLORE_TIME_ZONE);
     for (let daysAgo = 0; daysAgo < LONG_STREAK; daysAgo++) {
-      seal(tokyo, ticketDayStart(addDays(today, -daysAgo), EXPLORE_TIME_ZONE));
+      seal(tokyo, exploreDayStart(addDays(today, -daysAgo), EXPLORE_TIME_ZONE));
     }
-    // New York's yesterday and today, both within one of Tokyo's ticket days.
-    const newYorkToday = ticketDayStart(ticketDay(test.clock.now(), NEW_YORK), NEW_YORK);
+    // New York's yesterday and today, both within one of Tokyo's days.
+    const newYorkToday = exploreDayStart(exploreDay(test.clock.now(), NEW_YORK), NEW_YORK);
     const newYorkSeals = [msAfter(newYorkToday, -1), newYorkToday];
     for (const sealedAt of newYorkSeals) seal(newYork, sealedAt);
     const dayBeforeYesterday = addDays(addDays(today, -1), -1);
-    seal(lapsed, ticketDayStart(dayBeforeYesterday, EXPLORE_TIME_ZONE));
+    seal(lapsed, exploreDayStart(dayBeforeYesterday, EXPLORE_TIME_ZONE));
 
     const { longestStreak } = (await exploreAs(lapsed)).leaderboards;
     expect(idsAndValues(longestStreak)).toEqual([

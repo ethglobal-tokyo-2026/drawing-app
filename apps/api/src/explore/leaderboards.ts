@@ -2,9 +2,10 @@ import { gifts, gratitude, stickers, users, type Db } from "@drawing-app/db";
 import { and, asc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
+import { gratitudeParts } from "../gratitudeParts.ts";
 import { isoTimeSchema, personSchema, toIsoTime, toPerson, type Person } from "../shapes.ts";
 import { streakOf } from "../streak.ts";
-import { addDays, ticketDay, ticketDayStart } from "../ticketDays.ts";
+import { addDays, exploreDay, exploreDayStart } from "../ticketDays.ts";
 
 /** The most people each leaderboard lists. */
 export const LEADERBOARD_SIZE = 10;
@@ -23,7 +24,7 @@ const leaderboardRowSchema = z.object({ person: personSchema, value: z.number().
 export type LeaderboardRow = z.infer<typeof leaderboardRowSchema>;
 
 export const leaderboardsSchema = z.object({
-  /** When this week's Monday ticket day began, on Explore's clock. */
+  /** When this week's Monday began, on Explore's clock. */
   weekStart: isoTimeSchema,
   /** The giver's part plus Original Artist Gratitude Shares received this week. */
   mostGratitude: z.array(leaderboardRowSchema),
@@ -34,13 +35,13 @@ export const leaderboardsSchema = z.object({
 });
 type Leaderboards = z.infer<typeof leaderboardsSchema>;
 
-/** When the week `at` falls in began: the start of the Monday ticket day on or before it. */
+/** When the week `at` falls in began: the start of Explore's Monday on or before it. */
 function weekStart(at: Date, timeZone: string): Date {
-  const today = ticketDay(at, timeZone);
+  const today = exploreDay(at, timeZone);
   const [year, month, day] = today.split("-").map(Number);
   const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
   const monday = addDays(today, -((weekday - MONDAY + DAYS_IN_WEEK) % DAYS_IN_WEEK));
-  return ticketDayStart(monday, timeZone);
+  return exploreDayStart(monday, timeZone);
 }
 
 const addTo = (values: Map<string, number>, personId: string, value: number) =>
@@ -67,14 +68,15 @@ function gratitudeSince(db: Db, since: Date) {
   const gratitudeByPerson = new Map<string, number>();
   const bestCombo = new Map<string, number>();
   for (const combo of combos) {
-    addTo(gratitudeByPerson, combo.giverId, combo.total - combo.share);
-    addTo(gratitudeByPerson, combo.artistId, combo.share);
+    for (const { personId, value } of gratitudeParts(combo)) {
+      addTo(gratitudeByPerson, personId, value);
+    }
     bestCombo.set(combo.receiverId, Math.max(bestCombo.get(combo.receiverId) ?? 0, combo.hits));
   }
   return { gratitudeByPerson, bestCombo };
 }
 
-/** Each recent artist's current streak, over the ticket days of all their seals in their own zone. */
+/** Each recent artist's current streak, over Explore's days of all their seals in their own zone. */
 function currentStreaks(db: Db, now: Date): Map<string, number> {
   const recentArtists = db
     .selectDistinct({ artistId: stickers.artistId })
@@ -89,13 +91,13 @@ function currentStreaks(db: Db, now: Date): Map<string, number> {
   const artists = new Map<string, { timeZone: string; sealDays: string[] }>();
   for (const { artistId, sealedAt, timeZone } of seals) {
     const artist = artists.get(artistId) ?? { timeZone, sealDays: [] };
-    artist.sealDays.push(ticketDay(sealedAt, timeZone));
+    artist.sealDays.push(exploreDay(sealedAt, timeZone));
     artists.set(artistId, artist);
   }
   return new Map(
     [...artists].map(([artistId, { timeZone, sealDays }]) => [
       artistId,
-      streakOf(sealDays, ticketDay(now, timeZone)).current,
+      streakOf(sealDays, exploreDay(now, timeZone)).current,
     ]),
   );
 }

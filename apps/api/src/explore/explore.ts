@@ -4,7 +4,7 @@ import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 import type { ImageStore } from "../deps.ts";
 import { isoTimeSchema, personSchema, toIsoTime, toPerson } from "../shapes.ts";
-import { ticketDay, ticketDayStart } from "../ticketDays.ts";
+import { exploreDay, exploreDayStart } from "../ticketDays.ts";
 import { loadStickers, stickerSchema, type Sticker } from "../views.ts";
 import { leaderboardsSchema, loadLeaderboards } from "./leaderboards.ts";
 
@@ -119,7 +119,7 @@ function activity(db: Db, urls: ImageUrls): ActivityEntry[] {
 
 /** Explore as it stands at `now`. */
 export function loadExplore(db: Db, now: Date, urls: ImageUrls): Explore {
-  const todayStart = ticketDayStart(ticketDay(now, EXPLORE_TIME_ZONE), EXPLORE_TIME_ZONE);
+  const todayStart = exploreDayStart(exploreDay(now, EXPLORE_TIME_ZONE), EXPLORE_TIME_ZONE);
   return {
     todaysStickers: todaysStickers(db, todayStart, urls),
     activity: activity(db, urls),

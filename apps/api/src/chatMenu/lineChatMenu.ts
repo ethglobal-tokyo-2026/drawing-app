@@ -68,7 +68,7 @@ export function createLineChatMenu({
         // LINE also answers 200 when it links nothing: the person hasn't added the account, or blocked it.
         const shown = await line.linkedMenu(lineUserId);
         const status = shown === toLink.richMenuId ? "linked" : "not_a_friend";
-        logInfo("chat_menu.linked", { userId, status: `${status} ${toLink.menu}` });
+        logInfo("chat_menu.linked", { userId, status, menu: toLink.menu });
         return { status, menu: toLink.menu };
       }),
 
@@ -77,7 +77,7 @@ export function createLineChatMenu({
         const now = menuNow(userId);
         if (!now?.toLink) return;
         await line.linkMenu(now.lineUserId, now.toLink.richMenuId);
-        logInfo("chat_menu.relinked", { userId, status: now.toLink.menu });
+        logInfo("chat_menu.relinked", { userId, menu: now.toLink.menu });
       }).catch((error: unknown) => logFailure("chat_menu.relink_failed", error, { userId })),
 
     unlink: (userId, lineUserId) =>

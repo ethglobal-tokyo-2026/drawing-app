@@ -105,7 +105,7 @@ describe("the chat menu's midnight batch", () => {
       [CHO]: en["3"],
     });
     expect(batches()).toMatchObject([
-      { ticketDay: today(), lineRequestId: "fake-request-1", status: "done" },
+      { ticketDay: today(), lineRequestId: line.batches[0]?.requestId, status: "done" },
     ]);
     expect(waits).toEqual([FIRST_LOOK_MS]);
   });
@@ -156,10 +156,12 @@ describe("the chat menu's midnight batch", () => {
     expect(line.batches.map((batch) => batch.resumeRequestKey)).toEqual([today(), today()]);
     expect(waits).toEqual([FIRST_LOOK_MS, RETRY_AFTER_MS, FIRST_LOOK_MS]);
     expect(line.links.get(ANN)).toBe(en["3"]);
-    expect(batches()).toMatchObject([{ status: "done", lineRequestId: "fake-request-2" }]);
+    expect(batches()).toMatchObject([
+      { status: "done", lineRequestId: line.batches[1]?.requestId },
+    ]);
   });
 
-  it("gives up after three tries at a batch LINE doesn't take, and still links the day's spenders", async () => {
+  it("gives up after MAX_TRIES tries at a batch LINE doesn't take, and still links the day's spenders", async () => {
     const ann = await person(ANN);
     await spend(ann.headers);
     line.links.set(ANN, en["3"]);
@@ -169,7 +171,7 @@ describe("the chat menu's midnight batch", () => {
     await runChatMenuBatch(jobDeps(), today());
 
     expect(line.calls.filter((call) => call === "batch")).toHaveLength(MAX_TRIES);
-    expect(waits).toEqual([RETRY_AFTER_MS, RETRY_AFTER_MS]);
+    expect(waits).toEqual(Array.from({ length: MAX_TRIES - 1 }, () => RETRY_AFTER_MS));
     expect(line.links.get(ANN)).toBe(en["2"]);
     expect(batches()).toMatchObject([{ status: "failed", lineRequestId: null }]);
   });

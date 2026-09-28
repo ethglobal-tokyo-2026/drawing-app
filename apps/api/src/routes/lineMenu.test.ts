@@ -147,9 +147,9 @@ describe("POST /api/line-menu", () => {
   });
 
   it("falls back to the language's plain menu, and links nothing without one", async () => {
-    await start({ ids: { en: { plain: "richmenu-en-plain" } } });
+    await start({ ids: { en: { plain: TEST_CHAT_MENU_IDS.en.plain } } });
     expect(await linkedMenu()).toEqual({ status: "linked", menu: "plain" });
-    expect(line.links.get(LINE_USER_ID)).toBe("richmenu-en-plain");
+    expect(line.links.get(LINE_USER_ID)).toBe(TEST_CHAT_MENU_IDS.en.plain);
 
     await start({ ids: { ja: TEST_CHAT_MENU_IDS.ja } });
     expect(await linkedMenu()).toEqual({ status: "off", reason: "no_menu" });

@@ -22,7 +22,7 @@ export const MAX_SEEN_BATCH = 500;
 /** A gift is open while it's in the bag or on its way. */
 const openGiftStatusSchema = giftSchema.shape.status.extract(["packed", "sent"]);
 
-export const boardStickerSchema = stickerPlacementSchema.extend({
+const boardStickerSchema = stickerPlacementSchema.extend({
   /** Its outline simplified, which is all a sticker sheet packs by; the sticker's detail has it whole. */
   sticker: stickerSchema,
   /** False: given away; off the board, and an empty spot in the sticker tray. */
@@ -104,7 +104,8 @@ function givenToOf(db: Db, ownerId: string, stickerIds: string[]) {
 
 /**
  * A Sticker Board in sticker tray order. Your own lists every sticker that reached you, with NEW and
- * your open gifts; anyone else's lists only the stickers on it, since the bag and NEW are the owner's.
+ * your open gifts; anyone else's lists only the stickers on it that its owner holds, since the bag
+ * and NEW are the owner's.
  */
 export function loadStickerBoard(
   db: Db,
@@ -121,18 +122,21 @@ export function loadStickerBoard(
     .where(
       and(
         eq(stickerPlacements.userId, owner.id),
-        own ? undefined : eq(stickerPlacements.onBoard, true),
+        // Receiving writes only the receiver's placement, so a sticker given away keeps the giver's.
+        own ? undefined : and(eq(stickerPlacements.onBoard, true), eq(stickers.ownerId, owner.id)),
       ),
     )
     .orderBy(asc(stickerPlacements.createdAt), asc(stickerPlacements.stickerId))
     .all();
   const openGifts = own ? openGiftsOf(db, owner.id) : new Map<string, BoardSticker["openGift"]>();
   const givenAway = rows.filter(({ sticker }) => sticker.ownerId !== owner.id);
-  const givenTo = givenToOf(
-    db,
-    owner.id,
-    givenAway.map(({ sticker }) => sticker.id),
-  );
+  const givenTo = own
+    ? givenToOf(
+        db,
+        owner.id,
+        givenAway.map(({ sticker }) => sticker.id),
+      )
+    : new Map<string, BoardSticker["givenTo"]>();
   return {
     owner: toPerson(owner),
     boardStickers: rows.map(({ placement, sticker, artist }) => {
@@ -168,7 +172,7 @@ export const savePlacement = (
     .get();
 
 /** Clears NEW on the person's stickers among `stickerIds`, keeping the time each was first seen. */
-export function markSeen(db: Db, userId: string, stickerIds: string[], now: Date) {
+export function markStickersSeen(db: Db, userId: string, stickerIds: string[], now: Date) {
   db.update(stickerPlacements)
     .set({ seenAt: now })
     .where(

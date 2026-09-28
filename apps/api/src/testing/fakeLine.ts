@@ -6,25 +6,29 @@ import type { TestBase } from "./createTestApp.ts";
 /** A made-up Messaging API channel. */
 export const TEST_CHANNEL = { channelId: "2000000001", channelSecret: "test-channel-secret" };
 
+/** A rich menu ID as LINE writes them, `richmenu-` and 32 lowercase hex digits: `name` in hex. */
+const richMenuId = (name: string) =>
+  `richmenu-${Buffer.from(name).toString("hex").padEnd(32, "0")}`;
+
 /** Every chat menu in both languages, named for what it is, as deploy/line/menus.json maps them. */
 export const TEST_CHAT_MENU_IDS = {
   en: {
-    plain: "richmenu-en-plain",
-    "3": "richmenu-en-3",
-    "2": "richmenu-en-2",
-    "1": "richmenu-en-1",
-    reserve: "richmenu-en-reserve",
-    none: "richmenu-en-none",
+    plain: richMenuId("en-plain"),
+    "3": richMenuId("en-3"),
+    "2": richMenuId("en-2"),
+    "1": richMenuId("en-1"),
+    reserve: richMenuId("en-reserve"),
+    none: richMenuId("en-none"),
   },
   ja: {
-    plain: "richmenu-ja-plain",
-    "3": "richmenu-ja-3",
-    "2": "richmenu-ja-2",
-    "1": "richmenu-ja-1",
-    reserve: "richmenu-ja-reserve",
-    none: "richmenu-ja-none",
+    plain: richMenuId("ja-plain"),
+    "3": richMenuId("ja-3"),
+    "2": richMenuId("ja-2"),
+    "1": richMenuId("ja-1"),
+    reserve: richMenuId("ja-reserve"),
+    none: richMenuId("ja-none"),
   },
-  default: "richmenu-default",
+  default: richMenuId("default"),
 } satisfies ChatMenuIds;
 
 /** Every rich menu ID in `ids`. */

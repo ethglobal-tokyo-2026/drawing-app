@@ -1,8 +1,8 @@
 import { addDays } from "./ticketDays.ts";
 
 /**
- * Consecutive ticket days with a sealed sticker, over the ticket day of each seal. A missed day
- * resets it to 0; `today` isn't missed until it's over. `best` is the highest it has been.
+ * Consecutive days with a sealed sticker, over the `YYYY-MM-DD` day of each seal. A missed day resets
+ * it to 0; `today` isn't missed until it's over. `best` is the highest it has been.
  */
 export function streakOf(
   sealDays: Iterable<string>,

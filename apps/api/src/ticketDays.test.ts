@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   addDays,
-  nextTicketDayStart,
+  EXPLORE_DAY_START_HOUR,
+  exploreDay,
+  exploreDayStart,
   nextTokyoTicketDayStart,
-  TICKET_DAY_START_HOUR,
-  ticketDay,
-  ticketDayStart,
   tokyoTicketDay,
   tokyoTicketDayStart,
 } from "./ticketDays.ts";
@@ -40,27 +39,14 @@ const hourIn = (at: Date, timeZone: string) =>
     new Intl.DateTimeFormat("en-US", { timeZone, hour: "numeric", hourCycle: "h23" }).format(at),
   );
 
-describe("ticket days", () => {
-  it("begin at TICKET_DAY_START_HOUR on the person's own clock, even on days the clocks change", () => {
+describe("Explore's days", () => {
+  it("begin at EXPLORE_DAY_START_HOUR on the zone's own clock, even on days the clocks change", () => {
     for (const timeZone of ZONES) {
       for (const day of DAYS) {
-        const start = ticketDayStart(day, timeZone);
-        expect(hourIn(start, timeZone)).toBe(TICKET_DAY_START_HOUR);
-        expect(ticketDay(start, timeZone)).toBe(day);
-        expect(ticketDay(new Date(start.getTime() - 1), timeZone)).toBe(addDays(day, -1));
-      }
-    }
-  });
-
-  it("refill at the start of the next ticket day", () => {
-    for (const timeZone of ZONES) {
-      for (const day of DAYS) {
-        const start = ticketDayStart(day, timeZone).getTime();
-        for (const at of [start - 1, start, start + 12 * HOUR_MS].map((ms) => new Date(ms))) {
-          const next = nextTicketDayStart(at, timeZone);
-          expect(next.getTime()).toBeGreaterThan(at.getTime());
-          expect(ticketDay(next, timeZone)).toBe(addDays(ticketDay(at, timeZone), 1));
-        }
+        const start = exploreDayStart(day, timeZone);
+        expect(hourIn(start, timeZone)).toBe(EXPLORE_DAY_START_HOUR);
+        expect(exploreDay(start, timeZone)).toBe(day);
+        expect(exploreDay(new Date(start.getTime() - 1), timeZone)).toBe(addDays(day, -1));
       }
     }
   });

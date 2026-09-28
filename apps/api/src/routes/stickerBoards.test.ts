@@ -179,14 +179,14 @@ describe("GET /api/sticker-boards/:userId", () => {
     expect(onBoard?.sticker.outline.length).toBeLessThan(outline.length / 4);
   });
 
-  it("shows someone else only their on-board stickers, without their bag or NEW", async () => {
+  it("shows someone else only the stickers on the board its owner holds, without their bag or NEW", async () => {
     const me = insertUser(test.db);
     const friend = insertUser(test.db);
     const onBoard = seal(friend);
     packGift(test.db, onBoard, friend);
     const givenAway = seal(friend);
     const inTray = seal(friend);
-    const unplaced = seal(friend);
+    seal(friend);
     for (const [stickerId, spot] of [
       [onBoard, SPOT],
       [givenAway, SPOT],
@@ -198,19 +198,18 @@ describe("GET /api/sticker-boards/:userId", () => {
         .where(placementOf(friend, stickerId))
         .run();
     }
-    const receiver = insertUser(test.db);
-    give(givenAway, friend, receiver);
+    // Given away from its spot on the board, which the giver's placement keeps.
+    give(givenAway, friend, insertUser(test.db));
 
     const board = await boardOf(me, friend);
     expect(board.owner.id).toBe(friend);
-    expect(board.boardStickers.map(({ stickerId }) => stickerId).sort()).toEqual(
-      [onBoard, givenAway].sort(),
-    );
-    expect(board.boardStickers.map(({ stickerId }) => stickerId)).not.toContain(unplaced);
-    const stickers = byStickerId(board.boardStickers);
-    expect(stickers.get(onBoard)).toMatchObject({ held: true, openGift: null, seenAt: null });
-    expect(stickers.get(givenAway)).toMatchObject({ held: false, openGift: null, seenAt: null });
-    expect(stickers.get(givenAway)?.givenTo?.receiver.id).toBe(receiver);
+    expect(board.boardStickers.map(({ stickerId }) => stickerId)).toEqual([onBoard]);
+    expect(board.boardStickers[0]).toMatchObject({
+      held: true,
+      givenTo: null,
+      openGift: null,
+      seenAt: null,
+    });
   });
 
   it("names who received a sticker given away, the last time it left the board's owner", async () => {
@@ -370,6 +369,7 @@ describe("GET /api/sticker-boards/:userId/user-stats", () => {
     const drawn = seal(artist);
     give(drawn, artist, giver);
     giveAndSendGratitude(drawn, giver, receiver, SHARED_TAP);
+    // The giver drew these two: each combo is theirs as giver and as Original Artist, and counts once.
     giveAndSendGratitude(seal(giver), giver, receiver, STROKE);
     giveAndSendGratitude(seal(giver), giver, receiver, SHAKE);
 

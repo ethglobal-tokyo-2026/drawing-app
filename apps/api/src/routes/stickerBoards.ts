@@ -7,7 +7,7 @@ import { personSchema } from "../shapes.ts";
 import {
   findBoardOwner,
   loadStickerBoard,
-  markSeen,
+  markStickersSeen,
   savePlacement,
   seenRequestSchema,
 } from "../stickerBoards/board.ts";
@@ -56,6 +56,6 @@ export const stickerBoardRoutes = ({ db, clock, images }: AppDeps) =>
       },
     )
     .post("/me/sticker-tray/seen", validate("json", seenRequestSchema), (c) => {
-      markSeen(db, c.var.userId, c.req.valid("json").stickerIds, clock.now());
+      markStickersSeen(db, c.var.userId, c.req.valid("json").stickerIds, clock.now());
       return c.json({ newStickerCount: newStickerCount(db, c.var.userId) }, 200);
     });

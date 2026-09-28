@@ -1,8 +1,8 @@
 /**
- * The hour the zone-based days below turn over: Explore's day and week. Tickets use the Tokyo
- * ticket day at the bottom, which turns over at midnight.
+ * The hour Explore's day and week turn over, on a zone's own clock. Tickets use the Tokyo ticket day
+ * at the bottom, which turns over at midnight.
  */
-export const TICKET_DAY_START_HOUR = 4;
+export const EXPLORE_DAY_START_HOUR = 4;
 
 /** `timeZone`'s wall clock at `at`, to the second. */
 function wallClock(at: Date, timeZone: string) {
@@ -37,11 +37,11 @@ export function addDays(day: string, days: number): string {
   return dayKey(Date.UTC(year, month - 1, date + days));
 }
 
-/** The ticket day `at` falls in: `YYYY-MM-DD` on `timeZone`'s calendar, from TICKET_DAY_START_HOUR. */
-export function ticketDay(at: Date, timeZone: string): string {
+/** Explore's day `at` falls in: `YYYY-MM-DD` on `timeZone`'s calendar, from EXPLORE_DAY_START_HOUR. */
+export function exploreDay(at: Date, timeZone: string): string {
   const { year, month, day, hour } = wallClock(at, timeZone);
   const date = dayKey(Date.UTC(year, month - 1, day));
-  return hour < TICKET_DAY_START_HOUR ? addDays(date, -1) : date;
+  return hour < EXPLORE_DAY_START_HOUR ? addDays(date, -1) : date;
 }
 
 /** How far `timeZone`'s clock runs ahead of UTC at `atMs`, in ms. */
@@ -51,18 +51,14 @@ function zoneOffsetMs(atMs: number, timeZone: string): number {
   return wallMs - Math.floor(atMs / 1000) * 1000;
 }
 
-/** When `day` begins: TICKET_DAY_START_HOUR on that date, in `timeZone`. */
-export function ticketDayStart(day: string, timeZone: string): Date {
+/** When `day` begins: EXPLORE_DAY_START_HOUR on that date, in `timeZone`. */
+export function exploreDayStart(day: string, timeZone: string): Date {
   const [year, month, date] = day.split("-").map(Number);
-  const wallMs = Date.UTC(year, month - 1, date, TICKET_DAY_START_HOUR);
+  const wallMs = Date.UTC(year, month - 1, date, EXPLORE_DAY_START_HOUR);
   // The offset at a first guess, then at the corrected guess, which settles days the clocks change.
   const guess = wallMs - zoneOffsetMs(wallMs, timeZone);
   return new Date(wallMs - zoneOffsetMs(guess, timeZone));
 }
-
-/** When the ticket day after `at`'s begins: the next refill of free tickets. */
-export const nextTicketDayStart = (at: Date, timeZone: string): Date =>
-  ticketDayStart(addDays(ticketDay(at, timeZone), 1), timeZone);
 
 /** Ticket days run midnight to midnight, Tokyo time, for everyone. Japan keeps no daylight saving time. */
 const TOKYO_UTC_OFFSET_MS = 9 * 60 * 60 * 1000;

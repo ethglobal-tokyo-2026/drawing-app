@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
+  CAUSE_MAX_LENGTH,
   diagnosticStep,
   failureCause,
   logFailure,
@@ -146,7 +147,9 @@ describe("NFT diagnostics", () => {
       "request to https://eth-sepolia.g.alchemy.com/v2/rpc-key-secret timed out",
     );
     expect(failureCause(keyed)).toBe("request to [redacted-url] timed out");
-    expect(failureCause(new Error("x".repeat(400)))).toHaveLength(160);
+    expect(failureCause(new Error("x".repeat(CAUSE_MAX_LENGTH * 2)))).toHaveLength(
+      CAUSE_MAX_LENGTH,
+    );
   });
 
   it("does not serialize extra fields or repeat cyclic error causes", () => {
