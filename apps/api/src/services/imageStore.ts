@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
-import { access, link, readFile, unlink, writeFile } from "node:fs/promises";
+import { access, link, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import sharp from "sharp";
 import type { ImageStore } from "../deps.ts";
@@ -61,13 +61,14 @@ export function stickerImageUrls(cdnBaseUrl: string, contentHash: string): Stick
  */
 async function writeIfAbsent(path: string, bytes: Uint8Array) {
   const temporary = `${path}.${randomUUID()}.tmp`;
-  await writeFile(temporary, bytes);
   try {
+    await writeFile(temporary, bytes);
     await link(temporary, path);
   } catch (error) {
     if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) throw error;
   } finally {
-    await unlink(temporary);
+    // force: a write that failed to open made no file, and its own error is the one to report.
+    await rm(temporary, { force: true });
   }
 }
 

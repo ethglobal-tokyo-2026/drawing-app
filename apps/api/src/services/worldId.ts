@@ -2,7 +2,11 @@ import { signRequest } from "@worldcoin/idkit-server";
 import { z } from "zod";
 import type { WorldId } from "../deps.ts";
 
-const VERIFY_TIMEOUT_MS = 15_000;
+/**
+ * Must stay under the app's request timeout (REQUEST_TIMEOUT_MS in the frontend's httpApi.ts), or
+ * the app gives up first and the person never sees world_id_unavailable.
+ */
+const VERIFY_TIMEOUT_MS = 10_000;
 
 const verifiedSchema = z.object({ success: z.literal(true), nullifier: z.string().optional() });
 const refusedSchema = z.object({ success: z.literal(false), code: z.string(), detail: z.string() });

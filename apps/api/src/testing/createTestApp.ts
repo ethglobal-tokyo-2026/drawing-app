@@ -3,8 +3,7 @@ import { serializeSigned } from "hono/utils/cookie";
 import { createApp } from "../app.ts";
 import { chatMenuOff } from "../chatMenu/lineChatMenu.ts";
 import type { AppDeps } from "../deps.ts";
-import { mintStub } from "../services/mint.ts";
-import { noSmartWallets } from "../services/smartWallets.ts";
+import { mockChain } from "../services/mockChain.ts";
 import { SESSION_COOKIE } from "../session.ts";
 import {
   fakeClock,
@@ -39,10 +38,7 @@ export async function createTestApp(overrides: Overrides | ((base: TestBase) => 
     ids: sequentialIds(),
     line: fakeLineVerifier(),
     images,
-    mint: mintStub,
-    giftChain: null,
-    smartWallets: noSmartWallets,
-    ens: null,
+    ...mockChain,
     ticketPayments: fakeTicketPayments().ticketPayments,
     serverLog: fakeServerLog(),
     lineChatMenu: chatMenuOff("not_configured"),

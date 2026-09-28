@@ -17,8 +17,7 @@ import { chooseLineVerifier } from "./services/devSignIn.ts";
 import { createDiskImageStore } from "./services/imageStore.ts";
 import { journalLog } from "./services/journal.ts";
 import { createLineVerifier } from "./services/lineVerifier.ts";
-import { mintStub } from "./services/mint.ts";
-import { noSmartWallets } from "./services/smartWallets.ts";
+import { mockChain } from "./services/mockChain.ts";
 import { createJpycPayments } from "./services/jpycPayments.ts";
 import { createPrivySmartWallets } from "./services/privySmartWallets.ts";
 import { createStickerChain } from "./services/stickerChain.ts";
@@ -79,7 +78,7 @@ const images = createDiskImageStore(env.IMAGE_DIR, env.CDN_BASE_URL);
 const chain = (() => {
   if (env.STICKER_CHAIN_MODE === "mock") {
     console.warn("Sticker chain mode is mock; NFTs will not be minted or transferred");
-    return { mint: mintStub, giftChain: null, smartWallets: noSmartWallets, ens: null };
+    return mockChain;
   }
   const live = z
     .object({

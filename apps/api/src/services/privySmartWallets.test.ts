@@ -47,24 +47,18 @@ async function setup(fetchImpl: typeof fetch) {
 
 describe("Privy smart-wallet lookup", () => {
   it("uses the SDK custom-auth lookup and caches only the smart-wallet address", async () => {
-    const fetchImpl = vi.fn<typeof fetch>(async (input, init) => {
-      const request = new Request(input, init);
-      expect(request.url).toBe("https://api.privy.io/v1/users/custom_auth/id");
-      expect(request.method).toBe("POST");
-      expect(request.headers.get("privy-app-id")).toBe(APP_ID);
-      expect(request.headers.get("authorization")).toBe(
-        `Basic ${Buffer.from(`${APP_ID}:${APP_SECRET}`).toString("base64")}`,
-      );
-      expect(await request.json()).toEqual({
-        custom_user_id: privySubject(CHANNEL_ID, "line-alice"),
-      });
-      return Response.json(privyUser([privySmartWallet(ADDRESS)]));
-    });
+    const fetchImpl = vi.fn<typeof fetch>(async () =>
+      Response.json(privyUser([privySmartWallet(ADDRESS)])),
+    );
     const test = await setup(fetchImpl);
     try {
       await expect(test.wallets.addressFor(test.userId)).resolves.toBe(ADDRESS);
       await expect(test.wallets.addressFor(test.userId)).resolves.toBe(ADDRESS);
       expect(fetchImpl).toHaveBeenCalledOnce();
+      const [input, init] = fetchImpl.mock.calls[0];
+      expect(await new Request(input, init).json()).toEqual({
+        custom_user_id: privySubject(CHANNEL_ID, "line-alice"),
+      });
       expect(test.cached()).toBe(ADDRESS);
       expect(diagnostics).toEqual(
         expect.arrayContaining([

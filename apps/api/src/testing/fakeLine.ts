@@ -52,7 +52,8 @@ interface Batch {
   ran: boolean;
 }
 
-const TOKEN_LIFETIME_S = 900;
+/** How long the fake's channel access tokens last, in seconds. */
+export const TOKEN_LIFETIME_S = 900;
 const RESUME_KEY = /^[a-zA-Z0-9_-]{1,100}$/;
 const MAX_BATCH_OPERATIONS = 1000;
 

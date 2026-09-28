@@ -26,9 +26,6 @@ export function createPrivySmartWallets({
   privyAppSecret: string;
   fetchImpl?: typeof fetch;
 }): SmartWallets {
-  if (!lineChannelId || !privyAppId || !privyAppSecret) {
-    throw new Error("Privy smart-wallet lookup configuration is incomplete");
-  }
   const privy = new PrivyClient({
     appId: privyAppId,
     appSecret: privyAppSecret,

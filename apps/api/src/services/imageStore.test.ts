@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { keccak256 } from "../keccak256.ts";
 import { stickerPngsSchema, stickerWebpsSchema } from "../shapes.ts";
 import { sealImages, STICKER_SIZE } from "../stickers/testPngs.ts";
-import { FOIL_REACH } from "./foilMask.ts";
+import { foilMaskAlpha } from "./foilMask.ts";
 import { createDiskImageStore, missingWebps, writeMissingWebps } from "./imageStore.ts";
 
 const CDN_FOLDER = "/stickers/";
@@ -38,12 +38,27 @@ afterEach(() => {
 /** The file a CDN URL points at, in the image folder the store writes. */
 const fileAt = (url: string) => join(imageDir, new URL(url).pathname.slice(CDN_FOLDER.length));
 
+/** A disk image store with `pngs` saved in it under their content hash. */
+async function savedSticker(pngs = sealImages()) {
+  const store = createDiskImageStore(imageDir, `https://cdn.test${CDN_FOLDER}`);
+  const contentHash = keccak256(pngs.png);
+  await store.save(contentHash, pngs);
+  return { store, pngs, contentHash };
+}
+
+/** An image's alpha channel, a byte a pixel, and its size. */
+async function alphaOf(image: string | Uint8Array) {
+  const { data, info } = await sharp(image)
+    .ensureAlpha()
+    .extractChannel(3)
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  return { alpha: new Uint8Array(data), width: info.width, height: info.height };
+}
+
 describe("the disk image store", () => {
   it("writes each PNG and each WebP made from them where its CDN URL points", async () => {
-    const store = createDiskImageStore(imageDir, `https://cdn.test${CDN_FOLDER}`);
-    const pngs = sealImages();
-    const contentHash = keccak256(pngs.png);
-    await store.save(contentHash, pngs);
+    const { store, pngs, contentHash } = await savedSticker();
     const { webp, ...pngUrls } = store.urls(contentHash);
     for (const kind of pngKinds) {
       expect(new URL(pngUrls[kind]).pathname).toMatch(`${CDN_FOLDER}${contentHash}.`);
@@ -60,42 +75,27 @@ describe("the disk image store", () => {
   });
 
   it("keeps the images first saved under a content hash", async () => {
-    const store = createDiskImageStore(imageDir, "https://cdn.test");
-    const pngs = sealImages();
-    const contentHash = keccak256(pngs.png);
-    await store.save(contentHash, pngs);
+    const { store, pngs, contentHash } = await savedSticker();
     await store.save(contentHash, { ...pngs, mask: await squareMask(40) });
-    const maskFile = new URL(store.urls(contentHash).mask).pathname.slice(1);
-    expect(new Uint8Array(readFileSync(join(imageDir, maskFile)))).toEqual(pngs.mask);
+    expect(new Uint8Array(readFileSync(fileAt(store.urls(contentHash).mask)))).toEqual(pngs.mask);
     expect(readdirSync(imageDir)).toHaveLength(pngKinds.length + webpKinds.length);
   });
 
-  it("grows the cut into the foil band's mask, out to its reach", async () => {
-    const store = createDiskImageStore(imageDir, `https://cdn.test${CDN_FOLDER}`);
-    const side = 60;
-    const pngs = { ...sealImages(), mask: await squareMask(side) };
-    const contentHash = keccak256(pngs.png);
-    await store.save(contentHash, pngs);
-    const { data, info } = await sharp(fileAt(store.urls(contentHash).webp.foil))
-      .ensureAlpha()
-      .extractChannel(3)
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-    const reach = FOIL_REACH * Math.max(STICKER_SIZE.width, STICKER_SIZE.height);
-    const y = Math.round(info.height / 2);
-    // The first column right of the square: its pixels' centers are half a pixel past the cut.
-    const outside = (info.width + side) / 2;
-    const alphaAt = (x: number) => data[y * info.width + x];
-    expect(alphaAt(info.width / 2)).toBe(255);
-    expect(alphaAt(outside + Math.floor(reach - 1))).toBe(255);
-    expect(alphaAt(outside + Math.ceil(reach))).toBe(0);
+  it("makes the foil band's mask from the cut's alpha", async () => {
+    const { store, pngs, contentHash } = await savedSticker({
+      ...sealImages(),
+      mask: await squareMask(60),
+    });
+    const cut = await alphaOf(pngs.mask);
+    const foil = await alphaOf(fileAt(store.urls(contentHash).webp.foil));
+    const band = foilMaskAlpha(cut.alpha, cut.width, cut.height);
+    expect([foil.width, foil.height]).toEqual([cut.width, cut.height]);
+    // The first pixel that differs, as a whole image's diff takes too long to print.
+    expect(foil.alpha.findIndex((alpha, i) => alpha !== band[i])).toBe(-1);
   });
 
   it("makes only the WebP files a stored sticker lacks", async () => {
-    const store = createDiskImageStore(imageDir, `https://cdn.test${CDN_FOLDER}`);
-    const pngs = sealImages();
-    const contentHash = keccak256(pngs.png);
-    await store.save(contentHash, pngs);
+    const { store, contentHash } = await savedSticker();
     const foil = fileAt(store.urls(contentHash).webp.foil);
     const made = readFileSync(foil);
     unlinkSync(foil);
