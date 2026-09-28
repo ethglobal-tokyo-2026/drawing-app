@@ -19,8 +19,8 @@ const NO_RECIPIENT = `0x${"0".repeat(40)}`;
  */
 export async function createGiftsTestApp({ escrowChain = false } = {}) {
   const giftChain = fakeGiftChain();
-  const test = await createTestApp(
-    escrowChain ? { giftChain, smartWallets: fakeSmartWallets() } : {},
+  const test = await createTestApp(({ db }) =>
+    escrowChain ? { giftChain, smartWallets: fakeSmartWallets(db) } : {},
   );
   test.clock.set(new Date());
   let tokenCount = 0;

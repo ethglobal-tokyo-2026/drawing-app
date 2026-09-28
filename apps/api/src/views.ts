@@ -166,6 +166,16 @@ export function loadStickers(db: Db, ids: Iterable<string>, urls: ImageUrls): Ma
   return new Map(rows.map(({ sticker, artist }) => [sticker.id, toSticker(sticker, artist, urls)]));
 }
 
+/** Looks up stickers loaded by id. Every id comes from a row whose foreign key holds its sticker. */
+export function stickerLookup(db: Db, ids: Iterable<string>, urls: ImageUrls) {
+  const loaded = loadStickers(db, ids, urls);
+  return (id: string): Sticker => {
+    const sticker = loaded.get(id);
+    if (!sticker) throw new Error(`Sticker ${id} is missing`);
+    return sticker;
+  };
+}
+
 export function toStickerPlacement(row: typeof stickerPlacements.$inferSelect): StickerPlacement {
   const { onBoard, x, y, scale, rotation, z } = row;
   return {

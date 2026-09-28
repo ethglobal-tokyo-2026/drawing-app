@@ -9,7 +9,7 @@ import { giftSchema, gratitudeSchema, loadStickers, stickerSchema, toGratitude }
 /** Sticker ids aren't format-checked: an unknown one is sticker_not_found. */
 export const stickerIdParam = z.object({ stickerId: createSelectSchema(stickers).shape.id });
 
-export const transferTrailEntrySchema = z.object({
+const transferTrailEntrySchema = z.object({
   giftId: giftSchema.shape.id,
   giver: personSchema,
   receiver: personSchema,

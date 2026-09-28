@@ -22,7 +22,7 @@ import { nameEverything } from "../ens/naming.ts";
 import { devIdToken } from "../services/devSignIn.ts";
 import { meSchema, personSchema } from "../shapes.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
-import { fakeEns, fakeNameWriter, TEST_GATEWAY_KEY } from "../testing/fakes.ts";
+import { fakeEns, fakeNameWriter, fakeSmartWallets, TEST_GATEWAY_KEY } from "../testing/fakes.ts";
 import { insertSealedSticker } from "../testing/rows.ts";
 
 const profileAbi = parseAbi([
@@ -40,7 +40,10 @@ afterEach(() => {
 });
 
 async function setup(writer: NameWriter | null = null) {
-  test = await createTestApp({ ens: fakeEns(writer) });
+  test = await createTestApp(({ db }) => ({
+    ens: fakeEns(writer),
+    smartWallets: fakeSmartWallets(db),
+  }));
 }
 
 const signIn = async (name: string) => {

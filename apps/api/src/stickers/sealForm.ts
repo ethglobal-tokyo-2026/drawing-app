@@ -4,9 +4,9 @@ import { z } from "zod";
 import { MAX_TIMELAPSE_BYTES } from "./timelapseLimit.ts";
 
 // Generous bounds, not measured: makeSticker caps the sticker and its flat sheet well below them.
-export const MAX_IMAGE_SIDE = 4096;
-export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
-export const MAX_OUTLINE_LENGTH = 200_000;
+const MAX_IMAGE_SIDE = 4096;
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+const MAX_OUTLINE_LENGTH = 200_000;
 /** The whole multipart body. */
 export const MAX_SEAL_BYTES = 32 * 1024 * 1024;
 

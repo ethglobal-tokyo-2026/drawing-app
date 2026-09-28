@@ -3,10 +3,9 @@ import { Hono } from "hono";
 import type { AppDeps } from "../deps.ts";
 import { apiError, limitBody, validate } from "../errors.ts";
 import {
-  giftIdParam,
   gratitudeWithGiver,
   gratitudeWithReplay,
-  markSeen,
+  markGratitudeWatched,
   unseenGratitude,
 } from "../gratitude/feed.ts";
 import {
@@ -17,6 +16,7 @@ import {
   replayInvalidHook,
 } from "../gratitude/record.ts";
 import type { AppEnv } from "../session.ts";
+import { giftIdParam } from "../shapes.ts";
 
 /**
  * Gratitude: the receiver records a Mini-game combo; the giver sees the combos they haven't watched,
@@ -58,5 +58,8 @@ export const gratitudeRoutes = (deps: AppDeps) =>
           `Only gift ${giftId}'s giver marks its gratitude watched`,
         );
       }
-      return c.json({ gratitude: markSeen(deps.db, found.combo, deps.clock.now()) }, 200);
+      return c.json(
+        { gratitude: markGratitudeWatched(deps.db, found.combo, deps.clock.now()) },
+        200,
+      );
     });

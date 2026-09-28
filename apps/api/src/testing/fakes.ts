@@ -1,3 +1,6 @@
+import { users, type Db } from "@drawing-app/db";
+import { bytes32 } from "@drawing-app/db/testing";
+import { eq } from "drizzle-orm";
 import type {
   EnsDeps,
   EscrowGift,
@@ -15,18 +18,18 @@ import type {
   WorldId,
   WorldIdVerdict,
 } from "../deps.ts";
-import { keccak256 } from "../keccak256.ts";
 import { createDevLineVerifier } from "../services/devSignIn.ts";
 import { stickerImageUrls } from "../services/imageStore.ts";
 import type { StickerPngKind } from "../shapes.ts";
-import { isHex, type Hex } from "viem";
+import { isHex, keccak256, toBytes, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { sepolia } from "viem/chains";
 import { createNamingQueue } from "../ens/naming.ts";
 
-/** A made-up 32-byte hex value, the same for the same seed. */
-const fakeBytes32 = (seed: string) => keccak256(new TextEncoder().encode(seed));
 /** A made-up address, the same for the same seed. */
-const fakeAddress = (seed: string) => fakeBytes32(seed).slice(0, 42);
+const fakeAddress = (seed: string) => bytes32(seed).slice(0, 42);
+/** The smart wallet the fakes give a person, lowercase as Privy's lookup answers it. */
+const fakeSmartWalletAddress = (userId: string) => fakeAddress(`smart wallet ${userId}`);
 
 /** A clock that stands still until the test moves it. It starts at noon in Tokyo, far from 4:00. */
 export function fakeClock(start = new Date("2026-09-26T03:00:00.000Z")) {
@@ -72,7 +75,7 @@ export function fakeMint() {
   const mint: Mint = ({ stickerId }) => {
     const token = minted.get(stickerId) ?? {
       tokenId: String(minted.size + 1),
-      txHash: fakeBytes32(`mint ${stickerId}`),
+      txHash: bytes32(`mint ${stickerId}`),
     };
     minted.set(stickerId, token);
     return Promise.resolve(token);
@@ -101,27 +104,27 @@ export function fakeGiftChain() {
   const chain: GiftChain = {
     createGiftClaim: () => {
       claims += 1;
-      const giftClaimToken = fakeBytes32(`gift claim token ${claims}`);
+      const giftClaimToken = bytes32(`gift claim token ${claims}`);
       return {
-        giftId: fakeBytes32(`gift ${claims}`),
+        giftId: bytes32(`gift ${claims}`),
         giftClaimToken,
-        claimCommitment: keccak256(giftClaimToken),
+        claimCommitment: keccak256(toBytes(giftClaimToken)),
       };
     },
     prepareGiftTransfer: (gift) => ({
       to: fakeAddress("StickerNFT"),
-      data: fakeBytes32(JSON.stringify(gift)),
+      data: bytes32(JSON.stringify(gift)),
     }),
     readEscrowGift: (giftId) => Promise.resolve(escrow.get(giftId) ?? missingEscrowGift()),
     claimGift: ({ giftId, giftClaimToken, recipientId }) => {
       const gift = escrow.get(giftId) ?? missingEscrowGift();
-      const recipient = fakeAddress(`smart wallet ${recipientId}`);
+      const recipient = fakeSmartWalletAddress(recipientId);
       if (gift.status === "claimed") {
         return Promise.resolve(
           gift.recipient.toLowerCase() === recipient.toLowerCase()
             ? {
                 claimed: true as const,
-                txHash: claimTransactions.get(giftId) ?? fakeBytes32(giftId),
+                txHash: claimTransactions.get(giftId) ?? bytes32(giftId),
               }
             : { claimed: false as const },
         );
@@ -136,7 +139,7 @@ export function fakeGiftChain() {
           return Promise.reject(new Error("Gift claim token is invalid"));
         }
       }
-      const txHash = fakeBytes32(`claim ${giftId}`);
+      const txHash = bytes32(`claim ${giftId}`);
       claimTransactions.set(giftId, txHash);
       escrow.set(giftId, { ...gift, recipient, status: "claimed" });
       return Promise.resolve({ claimed: true as const, txHash });
@@ -145,10 +148,26 @@ export function fakeGiftChain() {
   return { ...chain, escrow, claimTransactions };
 }
 
-/** Gives everyone a smart wallet, its address made from their user id. */
-export const fakeSmartWallets = (): SmartWallets => ({
-  addressFor: (userId) => Promise.resolve(fakeAddress(`smart wallet ${userId}`)),
-});
+/**
+ * Gives everyone a smart wallet, its address made from their user id. With the app's database it
+ * answers as Privy's lookup does: the stored address first, else it stores the one it makes.
+ */
+export function fakeSmartWallets(db?: Db): SmartWallets {
+  return {
+    addressFor: (userId) => {
+      const byId = eq(users.id, userId);
+      const stored = db
+        ?.select({ address: users.smartAccountAddress })
+        .from(users)
+        .where(byId)
+        .get();
+      if (stored?.address) return Promise.resolve(stored.address);
+      const address = fakeSmartWalletAddress(userId);
+      db?.update(users).set({ smartAccountAddress: address }).where(byId).run();
+      return Promise.resolve(address);
+    },
+  };
+}
 
 /** A made-up JPYC payment contract on Sui. */
 export const TEST_PAYMENT_TARGET: TicketPaymentTarget = {
@@ -214,7 +233,7 @@ export const fakeEns = (writer: NameWriter | null = null): EnsDeps => ({
   resolverAddress: fakeAddress("CroquisResolver"),
   gatewaySigner: privateKeyToAccount(TEST_GATEWAY_KEY),
   appLinkBase: "https://liff.line.me/test-liff",
-  chainId: 11155111,
+  chainId: sepolia.id,
   stickerContract: fakeAddress("StickerNFT"),
   writer,
   naming: createNamingQueue(),

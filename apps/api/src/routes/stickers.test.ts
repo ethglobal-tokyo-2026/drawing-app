@@ -2,9 +2,9 @@ import { MAX_TIME_USED_S, stickers, stickerTimelapses, ticketUses } from "@drawi
 import { insertUser, packGift } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { gzipSync } from "node:zlib";
+import { keccak256 } from "viem";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { errorBodySchema } from "../errors.ts";
-import { keccak256 } from "../keccak256.ts";
 import { sealResponseSchema } from "../stickers/seal.ts";
 import { MAX_SEAL_BYTES } from "../stickers/sealForm.ts";
 import { stickerDetailSchema } from "../stickers/stickerDetail.ts";
@@ -314,6 +314,18 @@ describe("POST /api/stickers", () => {
       overrides: { png: pngFile(testPng(STICKER_SIZE.width + 1, STICKER_SIZE.height), "png") },
     },
     { part: "flat", why: "missing", overrides: { flat: undefined } },
+    {
+      part: "timelapse",
+      why: "not a timelapse",
+      overrides: {
+        timelapse: new File([gzipSync(JSON.stringify({ v: 1, ink: [1, 1] }))], "t.json.gz"),
+      },
+    },
+    {
+      part: "timelapse",
+      why: "not gzipped",
+      overrides: { timelapse: new File([JSON.stringify(TEST_TIMELAPSE)], "t.json.gz") },
+    },
   ];
 
   it.each(malformed)(
@@ -449,20 +461,6 @@ describe("GET /api/stickers/:stickerId/timelapse", () => {
   it("refuses an unknown sticker with sticker_not_found", async () => {
     const response = await getTimelapse(insertUser(test.db), "no-such-sticker");
     expect(await refusal(response)).toMatchObject({ status: 404, error: "sticker_not_found" });
-  });
-
-  it("fails loudly, naming the sticker, when what's stored isn't a timelapse", async () => {
-    const log = vi.spyOn(console, "error").mockImplementation(() => {});
-    const artistId = insertUser(test.db);
-    const notATimelapse = new File([gzipSync(JSON.stringify({ v: 1, ink: [1, 1] }))], "t.json.gz");
-    const { sticker } = await seal(artistId, { timelapse: notATimelapse });
-    expect(await refusal(await getTimelapse(artistId, sticker.id))).toMatchObject({
-      status: 500,
-      error: "internal_error",
-    });
-    expect(log).toHaveBeenCalledWith(
-      expect.stringContaining(`Sticker ${sticker.id}'s stored timelapse can't be read`),
-    );
   });
 });
 

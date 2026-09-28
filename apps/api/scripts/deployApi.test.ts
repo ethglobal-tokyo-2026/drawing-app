@@ -13,7 +13,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { keccak256 } from "../src/keccak256.ts";
+import { keccak256 } from "viem";
 import { sealImages } from "../src/stickers/testPngs.ts";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));

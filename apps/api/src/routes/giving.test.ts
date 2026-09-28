@@ -1,10 +1,10 @@
 import { GIFT_EXPIRY_MS, stickers, users } from "@drawing-app/db";
 import { bytes32, insertUser, packGift } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
+import { keccak256 } from "viem";
 import { assert, describe, expect, it } from "vitest";
 import { giftClaimTokenSchema, pendingGiftsSchema } from "../gifts/packaging.ts";
 import { createGiftsTestApp, giftOf, refusalOf, type GiftsTestApp } from "../gifts/testGifts.ts";
-import { keccak256 } from "../keccak256.ts";
 import { fakeSmartWallets } from "../testing/fakes.ts";
 import { receiveGift } from "../testing/rows.ts";
 

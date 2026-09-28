@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import sharp from "sharp";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { keccak256 } from "../keccak256.ts";
+import { keccak256 } from "viem";
 import { stickerPngsSchema, stickerWebpsSchema } from "../shapes.ts";
 import { sealImages, STICKER_SIZE } from "../stickers/testPngs.ts";
 import { foilMaskAlpha } from "./foilMask.ts";

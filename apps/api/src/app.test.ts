@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createServer, STICKER_IMAGES_PATH } from "./app.ts";
 import { errorBodySchema, validate } from "./errors.ts";
-import { keccak256 } from "./keccak256.ts";
+import { keccak256 } from "viem";
 import { createDiskImageStore } from "./services/imageStore.ts";
 import { setSessionCookie, type AppEnv } from "./session.ts";
 import { sealImages } from "./stickers/testPngs.ts";
