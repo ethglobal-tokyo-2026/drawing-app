@@ -1,4 +1,4 @@
-import { escrowStatuses, giftStatuses, ticketKinds, users } from "@drawing-app/db";
+import { escrowStatuses, ticketKinds, users } from "@drawing-app/db";
 import { personEnsName } from "@drawing-app/sticker-chain/croquis-names";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -150,8 +150,6 @@ export type StickerWebpKind = keyof z.infer<typeof stickerWebpsSchema>;
 /** A sticker's files on the CDN, named by its content hash. */
 export const stickerImagesSchema = stickerPngsSchema.extend({ webp: stickerWebpsSchema });
 export type StickerImages = z.infer<typeof stickerImagesSchema>;
-
-export type GiftStatus = (typeof giftStatuses)[number];
 
 /** StickerGiftEscrow's GiftStatus. */
 const escrowStatusSchema = z.enum(escrowStatuses);

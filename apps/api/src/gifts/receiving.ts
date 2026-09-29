@@ -27,7 +27,7 @@ import { giftClaimTokenSchema, giftHoldingSticker, type GiftRow } from "./packag
 
 /** `liff.getContext().type`: where the Gift Message was opened. */
 const liffContextTypeSchema = z.enum(["utou", "room", "group", "square_chat", "external", "none"]);
-export type LiffContextType = z.infer<typeof liffContextTypeSchema>;
+type LiffContextType = z.infer<typeof liffContextTypeSchema>;
 
 /** The preview's body and the receive's. */
 export const openGiftBodySchema = z.object({
