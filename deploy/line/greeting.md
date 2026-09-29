@@ -7,9 +7,9 @@ LINE sends this message when someone adds Croquis's official account as a friend
 Paste it as one text bubble, exactly:
 
 ```text
-5分でかいた絵が、シールになります。ボードにはるのも、友だちにあげるのも自由。下のメニューからシールボードをひらいてください。
+3分でかいた絵が、シールになります。ボードにはるのも、友だちにあげるのも自由。下のメニューからシールボードをひらいてください。
 
-Draw for five minutes, and your drawing becomes a sticker to keep on your board or give to a friend. Open Sticker Board from the menu below.
+Draw for three minutes, and your drawing becomes a sticker to keep on your board or give to a friend. Open Sticker Board from the menu below.
 ```
 
 - It says what the app is, what you do in it and where to tap, in the app's own words.
