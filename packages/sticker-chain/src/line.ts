@@ -1,6 +1,11 @@
 import { AuthError, type LineRejectionReason } from "./auth-error.js";
 
 const LINE_VERIFY_URL = "https://api.line.me/oauth2/v2.1/verify";
+const LINE_VERIFY_TIMEOUT_MS = 5_000;
+
+/** ID tokens outside these lengths are refused without asking LINE. */
+export const MIN_ID_TOKEN_LENGTH = 10;
+export const MAX_ID_TOKEN_LENGTH = 6000;
 
 // LINE's documented descriptions become fixed labels; unknown response text is never logged.
 const REJECTION_REASONS = new Map<string, LineRejectionReason>([
@@ -27,10 +32,14 @@ export function createLineVerifier({
   if (!channelId) throw new Error("LINE_CHANNEL_ID is required");
 
   return async function verifyLineIdToken(idToken: string) {
-    if (typeof idToken !== "string" || idToken.length < 10 || idToken.length > 6000) {
+    if (
+      typeof idToken !== "string" ||
+      idToken.length < MIN_ID_TOKEN_LENGTH ||
+      idToken.length > MAX_ID_TOKEN_LENGTH
+    ) {
       throw new AuthError({ code: "invalid_request", reason: "id_token_format" });
     }
-    const signal = AbortSignal.timeout(5000);
+    const signal = AbortSignal.timeout(LINE_VERIFY_TIMEOUT_MS);
     let response: Response;
     try {
       response = await fetchImpl(LINE_VERIFY_URL, {

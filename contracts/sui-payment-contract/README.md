@@ -1,6 +1,6 @@
 # Sui Contracts
 
-Move contracts for accepting JPY stablecoin payments on Sui, built for ETHGlobal Tokyo 2026.
+Move contracts for accepting JPY stablecoin payments on Sui.
 
 | Package | Description |
 | --- | --- |
@@ -36,15 +36,9 @@ Events:
 
 ## Testnet deployment
 
-| Object | ID |
-| --- | --- |
-| `jpy_coin` package | `0xf239f4711b8b6e5331a24174905e8412df01e6fe81abcdaa2613f5aaf35a6496` |
-| JPYC type | `0xf239f4711b8b6e5331a24174905e8412df01e6fe81abcdaa2613f5aaf35a6496::jpy_coin::JPY_COIN` |
-| `Treasury` (shared) | `0xfc78bec14ae3948a1a5a026abc458d46e1d958221c1ca006e9c5f2216e5afe43` |
-| `payment` package | `0xce54032ee3ee017f6cc5bcb64393a246c2d1250717dc5c1963f6b4c578f70aa5` |
-| `Vault` (shared) | `0x5198edbb873bc4d2f139c97be8c18784f997f92be784a715ec0239bf2295b97c` |
+Each package's `deployed.testnet.env` ([`jpy_coin`](jpy_coin/deployed.testnet.env), [`payment`](payment/deployed.testnet.env)) holds its testnet object IDs, including the admin and owner capabilities.
 
-All object IDs, including the admin and owner capabilities, are in each package's `deployed.testnet.env`.
+`payment` is compiled against the mock `JPY_COIN`, whose faucet mints freely on testnet, so taking real JPYC needs a new `payment` package published against it; the API's `JPYC_COIN_TYPE` and `JPYC_PAYMENT_PACKAGE` change together.
 
 ## Usage
 

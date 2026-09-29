@@ -25,7 +25,6 @@ interface IEnsRegistry {
     function setResolver(uint256 anyId, address resolver) external;
     function grantRootRoles(uint256 roleBitmap, address account) external returns (bool);
     function revokeRootRoles(uint256 roleBitmap, address account) external returns (bool);
-    function isEmancipated() external view returns (bool);
     function getOwner(uint256 anyId) external view returns (address);
     function getExpiry(uint256 anyId) external view returns (uint64);
 }
@@ -61,8 +60,6 @@ library EnsRoles {
     uint256 internal constant SET_PARENT_ADMIN = SET_PARENT << 128;
     uint256 internal constant UNREGISTER = 1 << 12;
     uint256 internal constant UNREGISTER_ADMIN = UNREGISTER << 128;
-    uint256 internal constant SET_SUBREGISTRY = 1 << 20;
-    uint256 internal constant CAN_TRANSFER_ADMIN = (1 << 28) << 128;
     uint256 internal constant SET_RESOLVER = 1 << 24;
     uint256 internal constant SET_RESOLVER_ADMIN = SET_RESOLVER << 128;
 

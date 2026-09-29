@@ -4,15 +4,16 @@ import {
   encodeAbiParameters,
   encodeFunctionData,
   isAddress,
-  isHex,
   keccak256,
   type Address,
   type Hex,
 } from "viem";
 import type { PrivateKeyAccount } from "viem/accounts";
-import { stickerGiftEscrowAbi, stickerNftAbi } from "@drawing-app/sticker-chain/contracts";
+import { bytes32 } from "@drawing-app/sticker-chain/bytes32";
+import { stickerNftAbi } from "@drawing-app/sticker-chain/contracts";
 
-export { stickerGiftEscrowAbi };
+/** How long a claim authorization stays valid, unless the gift expires first. */
+const CLAIM_AUTHORIZATION_WINDOW_S = 300;
 
 interface PendingGiftRecord {
   giftId: Hex;
@@ -21,19 +22,9 @@ interface PendingGiftRecord {
   status: "pending" | "claimed" | "rejected" | "expired_returned";
 }
 
-interface SmartWalletRecord {
-  address: Address;
-  kind: "smart_account" | "signer_eoa";
-  chainId: number;
-}
-
-function requireBytes32(value: string, field: string): asserts value is Hex {
-  if (!isHex(value) || value.length !== 66) throw new Error(`${field} must be 32 bytes`);
-}
-
 export function giftClaimTokenMatches(giftClaimToken: Hex, commitment: Hex) {
-  requireBytes32(giftClaimToken, "Gift claim token");
-  requireBytes32(commitment, "Claim commitment");
+  bytes32(giftClaimToken, "Gift claim token");
+  bytes32(commitment, "Claim commitment");
   return timingSafeEqual(
     Buffer.from(keccak256(giftClaimToken).slice(2), "hex"),
     Buffer.from(commitment.slice(2), "hex"),
@@ -41,10 +32,8 @@ export function giftClaimTokenMatches(giftClaimToken: Hex, commitment: Hex) {
 }
 
 export function createGiftClaim(randomBytesImpl: (size: number) => Uint8Array = randomBytes) {
-  const giftId = bytesToHex(randomBytesImpl(32));
-  const giftClaimToken = bytesToHex(randomBytesImpl(32));
-  requireBytes32(giftId, "Gift ID");
-  requireBytes32(giftClaimToken, "Gift claim token");
+  const giftId = bytes32(bytesToHex(randomBytesImpl(32)), "Gift ID");
+  const giftClaimToken = bytes32(bytesToHex(randomBytesImpl(32)), "Gift claim token");
   return { giftId, giftClaimToken, claimCommitment: keccak256(giftClaimToken) };
 }
 
@@ -70,8 +59,8 @@ export function prepareGiftTransfer({
   if (!isAddress(sender) || !isAddress(stickerContract) || !isAddress(escrowContract)) {
     throw new Error("Gift transfer contains an invalid address");
   }
-  requireBytes32(giftId, "Gift ID");
-  requireBytes32(claimCommitment, "Claim commitment");
+  bytes32(giftId, "Gift ID");
+  bytes32(claimCommitment, "Claim commitment");
   if (tokenId <= 0n || !Number.isSafeInteger(expiresAt) || expiresAt <= now()) {
     throw new Error("Gift transfer contains invalid token or expiration data");
   }
@@ -89,26 +78,6 @@ export function prepareGiftTransfer({
   };
 }
 
-/** Calldata the sender's smart account uses to take its pending sticker out of escrow. */
-export function prepareGiftTakeOut({
-  escrowContract,
-  giftId,
-}: {
-  escrowContract: Address;
-  giftId: Hex;
-}) {
-  if (!isAddress(escrowContract)) throw new Error("Gift take-out contains an invalid address");
-  requireBytes32(giftId, "Gift ID");
-  return {
-    to: escrowContract,
-    data: encodeFunctionData({
-      abi: stickerGiftEscrowAbi,
-      functionName: "takeOut",
-      args: [giftId],
-    }),
-  };
-}
-
 export function createGiftAuthorizer({
   signer,
   chainId,
@@ -121,7 +90,8 @@ export function createGiftAuthorizer({
   chainId: number;
   escrowContract: Address;
   findGift: (giftId: Hex) => Promise<PendingGiftRecord | null>;
-  findArtistSmartWallet: (artistId: string) => Promise<SmartWalletRecord | null>;
+  /** The person's smart wallet on `chainId`; null while they have none. */
+  findArtistSmartWallet: (artistId: string) => Promise<Address | null>;
   now?: () => number;
 }) {
   if (!isAddress(escrowContract) || !Number.isSafeInteger(chainId) || chainId <= 0) {
@@ -136,7 +106,7 @@ export function createGiftAuthorizer({
 
   /** A pending, unexpired gift; with a Gift Claim Token, only the gift that token opens. */
   async function requirePendingGift(giftId: Hex, giftClaimToken: Hex | null) {
-    requireBytes32(giftId, "Gift ID");
+    bytes32(giftId, "Gift ID");
     const gift = await findGift(giftId);
     if (!gift || gift.giftId !== giftId || gift.status !== "pending") {
       throw new Error("Gift is not pending");
@@ -151,15 +121,11 @@ export function createGiftAuthorizer({
   /** Signs a claim of a pending gift for the recipient's smart wallet. */
   async function signClaim(gift: PendingGiftRecord, giftId: Hex, recipientArtistId: string) {
     if (!recipientArtistId) throw new Error("Recipient artist is required");
-    const recipientWallet = await findArtistSmartWallet(recipientArtistId);
-    if (
-      recipientWallet?.kind !== "smart_account" ||
-      recipientWallet.chainId !== chainId ||
-      !isAddress(recipientWallet.address)
-    ) {
+    const recipient = await findArtistSmartWallet(recipientArtistId);
+    if (!recipient) {
       throw new Error("Recipient Ethereum smart wallet is unavailable on the configured chain");
     }
-    const authorizationDeadline = Math.min(gift.expiresAt, now() + 300);
+    const authorizationDeadline = Math.min(gift.expiresAt, now() + CLAIM_AUTHORIZATION_WINDOW_S);
     const authorization = await signer.signTypedData({
       domain,
       primaryType: "GiftClaim",
@@ -172,11 +138,11 @@ export function createGiftAuthorizer({
       },
       message: {
         giftId,
-        recipient: recipientWallet.address,
+        recipient,
         authorizationDeadline: BigInt(authorizationDeadline),
       },
     });
-    return { authorization, authorizationDeadline, recipient: recipientWallet.address };
+    return { authorization, authorizationDeadline, recipient };
   }
 
   return {
@@ -205,23 +171,6 @@ export function createGiftAuthorizer({
       recipientArtistId: string;
     }) {
       return signClaim(await requirePendingGift(giftId, null), giftId, recipientArtistId);
-    },
-
-    async authorizeRejection({ giftId, giftClaimToken }: { giftId: Hex; giftClaimToken: Hex }) {
-      const gift = await requirePendingGift(giftId, giftClaimToken);
-      const authorizationDeadline = Math.min(gift.expiresAt, now() + 300);
-      const authorization = await signer.signTypedData({
-        domain,
-        primaryType: "GiftReject",
-        types: {
-          GiftReject: [
-            { name: "giftId", type: "bytes32" },
-            { name: "authorizationDeadline", type: "uint256" },
-          ],
-        },
-        message: { giftId, authorizationDeadline: BigInt(authorizationDeadline) },
-      });
-      return { authorization, authorizationDeadline };
     },
   };
 }

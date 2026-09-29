@@ -23,7 +23,12 @@ type AuthFailureDetails =
       reason: "network_error" | "timeout" | "http_error" | "invalid_response" | "invalid_claims";
       upstreamStatus?: number;
     }
-  | { code: "auth_unavailable"; reason: "unexpected_error" };
+  | {
+      code: "auth_unavailable";
+      reason: "unexpected_error";
+      errorName?: string;
+      errorCode?: string;
+    };
 
 export const AUTH_FAILURE_STATUS: Record<AuthFailureDetails["code"], number> = {
   invalid_request: 400,
@@ -40,8 +45,16 @@ export class AuthError extends Error {
   }
 }
 
+/** An unexpected error keeps its name and a string code, which are labels; never its message. */
 export function authFailureOf(error: unknown): AuthFailureDetails {
-  return error instanceof AuthError
-    ? error.details
-    : { code: "auth_unavailable", reason: "unexpected_error" };
+  if (error instanceof AuthError) return error.details;
+  const failure: AuthFailureDetails = { code: "auth_unavailable", reason: "unexpected_error" };
+  if (typeof error !== "object" || error === null) return failure;
+  const name: unknown = Reflect.get(error, "name");
+  const code: unknown = Reflect.get(error, "code");
+  return {
+    ...failure,
+    ...(typeof name === "string" && { errorName: name }),
+    ...(typeof code === "string" && { errorCode: code }),
+  };
 }

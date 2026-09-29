@@ -1,12 +1,10 @@
 import {
   isAddress,
-  isHex,
   erc721Abi,
   keccak256,
   parseEventLogs,
   stringToBytes,
   zeroAddress,
-  type Abi,
   type Account,
   type Address,
   type Hex,
@@ -14,21 +12,8 @@ import {
   type TransactionReceipt,
   type WalletClient,
 } from "viem";
-import { sepolia } from "viem/chains";
-
-interface SealedSticker {
-  id: string;
-  artistId: string;
-  sealedAt: string;
-  contentHash: Hex;
-  metadataUri: string;
-}
-
-interface ArtistWalletRecord {
-  address: Address;
-  kind: "smart_account" | "signer_eoa";
-  chainId: number;
-}
+import { bytes32 } from "@drawing-app/sticker-chain/bytes32";
+import { stickerNftAbi } from "@drawing-app/sticker-chain/contracts";
 
 interface SealProgressFields {
   txHash?: Hex;
@@ -62,35 +47,10 @@ interface StickerSealerOptions {
   walletClient: Pick<WalletClient, "writeContract">;
   contractAddress: Address;
   sealerAccount: Account;
-  abi: Abi;
-  findSticker: (stickerId: string) => Promise<SealedSticker | null>;
-  findArtistSmartWallet: (artistId: string) => Promise<ArtistWalletRecord | null>;
+  /** The artist's Ethereum Sepolia smart wallet, which receives the NFT; null while they have none. */
+  findArtistSmartWallet: (artistId: string) => Promise<Address | null>;
   /** The host records diagnostics without the library choosing a logger or exposing request data. */
   onProgress?: (progress: SealProgress) => void;
-}
-
-function requireBigInt(value: unknown, field: string) {
-  if (typeof value !== "bigint") throw new Error(`${field} is not a bigint`);
-  return value;
-}
-
-function requireAddress(value: unknown, field: string) {
-  if (typeof value !== "string" || !isAddress(value)) {
-    throw new Error(`${field} is not an address`);
-  }
-  return value;
-}
-
-function requireHex(value: unknown, field: string) {
-  if (typeof value !== "string" || !isHex(value)) {
-    throw new Error(`${field} is not hexadecimal`);
-  }
-  return value;
-}
-
-function requireString(value: unknown, field: string) {
-  if (typeof value !== "string") throw new Error(`${field} is not a string`);
-  return value;
 }
 
 export function createStickerSealer({
@@ -98,8 +58,6 @@ export function createStickerSealer({
   walletClient,
   contractAddress,
   sealerAccount,
-  abi,
-  findSticker,
   findArtistSmartWallet,
   onProgress,
 }: StickerSealerOptions) {
@@ -137,44 +95,40 @@ export function createStickerSealer({
 
   async function findOnChainSticker(
     stickerKey: Hex,
-    sticker: SealedSticker,
+    sealed: { contentHash: Hex; metadataUri: string },
     artistWallet: Address,
   ) {
-    const tokenId = requireBigInt(
-      await publicClient.readContract({
-        address: contractAddress,
-        abi,
-        functionName: "tokenIdForSticker",
-        args: [stickerKey],
-      }),
-      "tokenIdForSticker",
-    );
+    const tokenId = await publicClient.readContract({
+      address: contractAddress,
+      abi: stickerNftAbi,
+      functionName: "tokenIdForSticker",
+      args: [stickerKey],
+    });
     if (tokenId === 0n) return null;
     const [artist, contentHash, metadataUri] = await Promise.all([
       publicClient.readContract({
         address: contractAddress,
-        abi,
+        abi: stickerNftAbi,
         functionName: "artistOf",
         args: [tokenId],
       }),
       publicClient.readContract({
         address: contractAddress,
-        abi,
+        abi: stickerNftAbi,
         functionName: "contentHashOf",
         args: [tokenId],
       }),
       publicClient.readContract({
         address: contractAddress,
-        abi,
+        abi: stickerNftAbi,
         functionName: "tokenURI",
         args: [tokenId],
       }),
     ]);
     if (
-      requireAddress(artist, "artistOf").toLowerCase() !== artistWallet.toLowerCase() ||
-      requireHex(contentHash, "contentHashOf").toLowerCase() !==
-        sticker.contentHash.toLowerCase() ||
-      requireString(metadataUri, "tokenURI") !== sticker.metadataUri
+      artist.toLowerCase() !== artistWallet.toLowerCase() ||
+      contentHash.toLowerCase() !== sealed.contentHash.toLowerCase() ||
+      metadataUri !== sealed.metadataUri
     ) {
       throw new Error("On-chain sticker conflicts with sealed sticker data");
     }
@@ -182,43 +136,31 @@ export function createStickerSealer({
   }
 
   return async function sealStickerForArtist({
-    artistId,
     stickerId,
+    artistId,
+    contentHash,
+    metadataUri,
   }: {
-    artistId: string;
     stickerId: string;
+    artistId: string;
+    contentHash: string;
+    metadataUri: string;
   }) {
-    if (!artistId || !stickerId) throw new Error("Artist and sticker are required");
-    const sticker = await findSticker(stickerId);
-    if (
-      !sticker ||
-      sticker.id !== stickerId ||
-      sticker.artistId !== artistId ||
-      !sticker.sealedAt
-    ) {
-      throw new Error("Sticker is not sealed for this artist");
-    }
-    if (!isHex(sticker.contentHash) || sticker.contentHash.length !== 66 || !sticker.metadataUri) {
-      throw new Error("Sealed sticker needs a content hash and metadata URI");
-    }
-    const walletRecord = await step(
+    if (!stickerId || !artistId) throw new Error("Artist and sticker are required");
+    if (!metadataUri) throw new Error("Sealed sticker needs a metadata URI");
+    const sealed = { contentHash: bytes32(contentHash, "Sticker content hash"), metadataUri };
+    const artistWallet = await step(
       "wallet_lookup",
       () => findArtistSmartWallet(artistId),
       {},
-      (wallet) => ({ address: wallet?.address, status: wallet ? "found" : "missing" }),
+      (wallet) => ({ address: wallet ?? undefined, status: wallet ? "found" : "missing" }),
     );
-    if (
-      walletRecord?.kind !== "smart_account" ||
-      walletRecord.chainId !== sepolia.id ||
-      !isAddress(walletRecord.address)
-    ) {
-      throw new Error("Artist Ethereum Sepolia smart wallet is unavailable");
-    }
+    if (!artistWallet) throw new Error("Artist Ethereum Sepolia smart wallet is unavailable");
 
-    const stickerKey = keccak256(stringToBytes(sticker.id));
+    const stickerKey = keccak256(stringToBytes(stickerId));
     const existing = await step(
       "chain_lookup",
-      () => findOnChainSticker(stickerKey, sticker, walletRecord.address),
+      () => findOnChainSticker(stickerKey, sealed, artistWallet),
       {},
       (found) => ({ tokenId: found?.tokenId.toString(), recovered: found !== null }),
     );
@@ -230,9 +172,9 @@ export function createStickerSealer({
       const { request } = await step("simulate", () =>
         publicClient.simulateContract({
           address: contractAddress,
-          abi,
+          abi: stickerNftAbi,
           functionName: "sealSticker",
-          args: [walletRecord.address, stickerKey, sticker.contentHash, sticker.metadataUri],
+          args: [artistWallet, stickerKey, sealed.contentHash, metadataUri],
           account: sealerAccount,
         }),
       );
@@ -258,7 +200,7 @@ export function createStickerSealer({
       onProgress?.({ stage: "transaction", phase: "failed", txHash: transactionHash, error });
       const raced = await step(
         "reconcile",
-        () => findOnChainSticker(stickerKey, sticker, walletRecord.address),
+        () => findOnChainSticker(stickerKey, sealed, artistWallet),
         { txHash: transactionHash },
         (found) => ({ tokenId: found?.tokenId.toString(), recovered: found !== null }),
       );
@@ -269,7 +211,7 @@ export function createStickerSealer({
     return step(
       "verify",
       async () => {
-        const minted = await findOnChainSticker(stickerKey, sticker, walletRecord.address);
+        const minted = await findOnChainSticker(stickerKey, sealed, artistWallet);
         if (!minted) throw new Error("Sealing transaction succeeded without a sticker NFT");
         // The mint receipt proves the initial recipient even if the artist later gives it away.
         const transfers = parseEventLogs({
@@ -281,7 +223,7 @@ export function createStickerSealer({
           (event) =>
             event.address.toLowerCase() === contractAddress.toLowerCase() &&
             event.args.from === zeroAddress &&
-            event.args.to.toLowerCase() === walletRecord.address.toLowerCase() &&
+            event.args.to.toLowerCase() === artistWallet.toLowerCase() &&
             event.args.tokenId === minted.tokenId,
         );
         if (!received)

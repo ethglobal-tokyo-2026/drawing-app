@@ -92,7 +92,7 @@ contract CroquisResolver is AccessControl, IExtendedResolver {
         emit GatewayChanged(gatewayUrls, gatewaySigner, true);
     }
 
-    /// @dev Set once both exist; each needs this resolver's address to be built.
+    /// @dev Set after both exist, since each needs this resolver's address to be built.
     function setSources(INameBook names_, IGiftRecords giftRecords_)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)

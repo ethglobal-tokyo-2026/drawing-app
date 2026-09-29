@@ -6,7 +6,7 @@
       "entry": ["deploy/*.mjs"]
     },
     "packages/sticker-chain": {
-      "entry": ["wagmi.config.ts"],
+      "entry": ["wagmi.config.ts", "src/start-auth-server.ts"],
       "project": ["**/*.{js,mjs,cjs,ts,mts,cts}", "!lib/**"],
       "ignoreDependencies": ["@openzeppelin/contracts"]
     }

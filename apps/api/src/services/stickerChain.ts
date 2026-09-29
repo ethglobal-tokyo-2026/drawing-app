@@ -1,3 +1,5 @@
+import { escrowStatuses } from "@drawing-app/db";
+import { bytes32 } from "@drawing-app/sticker-chain/bytes32";
 import { stickerGiftEscrowAbi, stickerNftAbi } from "@drawing-app/sticker-chain/contracts";
 import {
   createGiftAuthorizer,
@@ -5,7 +7,7 @@ import {
   giftClaimTokenMatches,
   prepareGiftTransfer,
 } from "@drawing-app/sticker-chain/gift-sticker";
-import { createCroquisNames } from "@drawing-app/sticker-chain/croquis-names";
+import { createCroquisNames, stickerLabel } from "@drawing-app/sticker-chain/croquis-names";
 import { createStickerSealer } from "@drawing-app/sticker-chain/seal-sticker";
 import {
   createPublicClient,
@@ -13,7 +15,6 @@ import {
   fallback,
   http,
   isAddress,
-  isHex,
   keccak256,
   nonceManager,
   stringToBytes,
@@ -26,23 +27,17 @@ import type { GiftChain, Mint, NameWriter, SmartWallets } from "../deps.ts";
 import { diagnosticStep, logFailure, logInfo } from "../diagnostics.ts";
 import type { DiskImageStore } from "./imageStore.ts";
 
-const escrowStatuses = ["missing", "pending", "claimed", "rejected", "expired_returned"] as const;
+/** How long finding the block a Sticker event landed in may take. */
+const EVENT_LOOKUP_TIMEOUT_MS = 30_000;
+/** Probes between the event lookup's progress logs. */
+const EVENT_LOOKUP_PROBES_PER_LOG = 8;
 
 function address(value: string, name: string): Address {
   if (!isAddress(value)) throw new Error(`${name} is not an Ethereum address`);
   return value;
 }
 
-function bytes32(value: string, name: string): Hex {
-  if (!isHex(value) || value.length !== 66) throw new Error(`${name} is not 32 bytes`);
-  return value;
-}
-
-/**
- * The RPC for one URL, or for several separated by commas, each tried in turn when the one before
- * refuses: free RPCs each refuse something (Tenderly's public gateway rate-limits sending
- * transactions; PublicNode's searches no more than 50,000 blocks for events).
- */
+/** One RPC URL, or several separated by commas, each tried when the one before fails. */
 export function rpcTransport(rpcUrl: string) {
   const urls = rpcUrl.split(",").map((url) => url.trim());
   return urls.length > 1 ? fallback(urls.map((url) => http(url))) : http(rpcUrl.trim());
@@ -81,7 +76,7 @@ export function createStickerChain({
     if (!(await happened(last))) {
       throw new Error("The confirmed chain state is not visible at the latest block");
     }
-    const deadline = Date.now() + 30_000;
+    const deadline = Date.now() + EVENT_LOOKUP_TIMEOUT_MS;
     let probes = 0;
     while (first < last) {
       if (Date.now() >= deadline) throw new Error("Finding the Sticker event block timed out");
@@ -90,7 +85,7 @@ export function createStickerChain({
       if (code && code !== "0x" && (await happened(block))) last = block;
       else first = block + 1n;
       probes += 1;
-      if (probes % 8 === 0) {
+      if (probes % EVENT_LOOKUP_PROBES_PER_LOG === 0) {
         logInfo("chain.event_lookup.progress", {
           contractAddress: contract,
           blockNumber: block.toString(),
@@ -98,6 +93,12 @@ export function createStickerChain({
       }
     }
     return first;
+  };
+
+  /** The person's Ethereum Sepolia smart wallet; smartWallets logs the lookup. */
+  const findSmartWallet = async (artistId: string) => {
+    const found = await smartWallets.addressFor(artistId);
+    return found && isAddress(found) ? found : null;
   };
 
   const mint: Mint = async (sticker) => {
@@ -111,15 +112,13 @@ export function createStickerChain({
     const image = images.urls(sticker.contentHash).png;
     await diagnosticStep("chain.mint.metadata", fields, () =>
       images.saveMetadata(sticker.stickerId, {
-        name: sticker.number ? `Sticker No.${String(sticker.number).padStart(4, "0")}` : "Sticker",
-        description: "A one-of-one sticker sealed in Daily Drawing App.",
+        name: `Sticker No.${stickerLabel(sticker.number)}`,
+        description: "A one-of-one sticker sealed in Croquis.",
         image,
         external_url: image,
         attributes: [
           { trait_type: "Content hash", value: sticker.contentHash },
-          ...(sticker.width && sticker.height
-            ? [{ trait_type: "Dimensions", value: `${sticker.width} × ${sticker.height}` }]
-            : []),
+          { trait_type: "Dimensions", value: `${sticker.width} × ${sticker.height}` },
         ],
       }),
     );
@@ -128,23 +127,7 @@ export function createStickerChain({
       walletClient,
       contractAddress: stickerAddress,
       sealerAccount,
-      abi: stickerNftAbi,
-      findSticker: async (stickerId) =>
-        stickerId === sticker.stickerId
-          ? {
-              id: sticker.stickerId,
-              artistId: sticker.artistId,
-              sealedAt: sticker.sealedAt?.toISOString() ?? new Date().toISOString(),
-              contentHash: bytes32(sticker.contentHash, "Sticker content hash"),
-              metadataUri: sticker.metadataUri,
-            }
-          : null,
-      findArtistSmartWallet: async (artistId) => {
-        const found = await smartWallets.addressFor(artistId);
-        return found && isAddress(found)
-          ? { address: found, kind: "smart_account", chainId: sepolia.id }
-          : null;
-      },
+      findArtistSmartWallet: findSmartWallet,
       onProgress: ({ stage, phase, error, ...progress }) => {
         const event = `chain.mint.${stage}.${phase}`;
         const context = { ...fields, ...progress };
@@ -152,9 +135,7 @@ export function createStickerChain({
         else logInfo(event, context);
       },
     });
-    const result = await diagnosticStep("chain.mint", fields, () =>
-      seal({ artistId: sticker.artistId, stickerId: sticker.stickerId }),
-    );
+    const result = await diagnosticStep("chain.mint", fields, () => seal(sticker));
     let txHash = "transactionHash" in result ? result.transactionHash : undefined;
     if (!txHash) {
       txHash = await diagnosticStep("chain.mint.event_lookup", fields, async () => {
@@ -216,19 +197,6 @@ export function createStickerChain({
     };
   };
 
-  const findSmartWallet = async (artistId: string) => {
-    const found = await diagnosticStep("chain.wallet.lookup", { artistId }, () =>
-      smartWallets.addressFor(artistId),
-    );
-    logInfo("chain.wallet.result", {
-      artistId,
-      address: found ?? undefined,
-      status: found ? "found" : "missing",
-    });
-    return found && isAddress(found)
-      ? { address: found, kind: "smart_account" as const, chainId: sepolia.id }
-      : null;
-  };
   const authorizer = createGiftAuthorizer({
     signer: sealerAccount,
     chainId: sepolia.id,
@@ -260,7 +228,7 @@ export function createStickerChain({
             args: [giftId],
             blockNumber,
           });
-          return gift[5] === 2;
+          return escrowStatuses[gift[5]] === "claimed";
         });
         return publicClient.getContractEvents({
           address: escrowAddress,
@@ -314,7 +282,7 @@ export function createStickerChain({
             throw new Error("Gift claim token is invalid");
           }
           if (gift.status !== "claimed") return null;
-          if (gift.recipient.toLowerCase() !== recipientWallet.address.toLowerCase()) {
+          if (gift.recipient.toLowerCase() !== recipientWallet.toLowerCase()) {
             return { claimed: false as const };
           }
           return { claimed: true as const, txHash: await claimTransactionHash(id) };

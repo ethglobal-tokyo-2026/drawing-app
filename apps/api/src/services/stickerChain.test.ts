@@ -37,6 +37,17 @@ const GIFT_ID = hex("3");
 const CONTENT = hex("4");
 const STICKER_ID = "00000000-0000-4000-8000-000000000001";
 const METADATA = `https://images.test/${STICKER_ID}.json`;
+const STICKER = {
+  stickerId: STICKER_ID,
+  artistId: "alice",
+  contentHash: CONTENT,
+  metadataUri: METADATA,
+  number: 42,
+  width: 256,
+  height: 256,
+};
+/** The block whose state first holds the sticker's NFT. */
+const MINT_BLOCK = 20n;
 const diagnostics: unknown[] = [];
 
 function captureDiagnostic(line: unknown) {
@@ -70,6 +81,24 @@ function mintReceipt(to: Hex = ALICE) {
       },
     ],
   };
+}
+
+/** StickerNFT holds STICKER once its mint's receipt, naming `to`, is read, and from MINT_BLOCK on. */
+function mockMintReads(to: Hex = ALICE) {
+  let minted = false;
+  rpc.readContract.mockImplementation(async ({ functionName, blockNumber }) => {
+    if (functionName === "tokenIdForSticker")
+      return blockNumber === undefined ? (minted ? 1n : 0n) : blockNumber >= MINT_BLOCK ? 1n : 0n;
+    if (functionName === "artistOf") return ALICE;
+    if (functionName === "contentHashOf") return CONTENT;
+    if (functionName === "tokenURI") return METADATA;
+    throw new Error(`Unexpected read ${functionName}`);
+  });
+  rpc.simulateContract.mockImplementation(async (request: object) => ({ request }));
+  rpc.waitForTransactionReceipt.mockImplementation(async () => {
+    minted = true;
+    return mintReceipt(to);
+  });
 }
 
 function adapter() {
@@ -126,33 +155,18 @@ describe("the RPC transport", () => {
 
 describe("Sepolia sticker adapter", () => {
   it("mints to the artist's smart wallet and recovers an existing mint without sending another", async () => {
-    let minted = false;
-    rpc.readContract.mockImplementation(async ({ functionName, blockNumber }) => {
-      if (functionName === "tokenIdForSticker")
-        return blockNumber === undefined ? (minted ? 1n : 0n) : blockNumber >= 20n ? 1n : 0n;
-      if (functionName === "artistOf") return ALICE;
-      if (functionName === "contentHashOf") return CONTENT;
-      if (functionName === "tokenURI") return METADATA;
-      throw new Error(`Unexpected read ${functionName}`);
-    });
-    rpc.simulateContract.mockImplementation(async (request: object) => ({ request }));
-    rpc.waitForTransactionReceipt.mockImplementation(async () => {
-      minted = true;
-      return mintReceipt();
-    });
+    mockMintReads();
     rpc.getContractEvents.mockResolvedValue([{ transactionHash: TX }]);
     const chain = adapter();
-    const sticker = {
-      stickerId: STICKER_ID,
-      artistId: "alice",
-      contentHash: CONTENT,
-      metadataUri: METADATA,
-    };
 
-    await expect(chain.mint(sticker)).resolves.toEqual({ tokenId: "1", txHash: TX });
-    await expect(chain.mint(sticker)).resolves.toEqual({ tokenId: "1", txHash: TX });
+    await expect(chain.mint(STICKER)).resolves.toEqual({ tokenId: "1", txHash: TX });
+    await expect(chain.mint(STICKER)).resolves.toEqual({ tokenId: "1", txHash: TX });
     expect(rpc.getContractEvents).toHaveBeenCalledWith(
-      expect.objectContaining({ eventName: "StickerSealed", fromBlock: 20n, toBlock: 20n }),
+      expect.objectContaining({
+        eventName: "StickerSealed",
+        fromBlock: MINT_BLOCK,
+        toBlock: MINT_BLOCK,
+      }),
     );
 
     expect(rpc.writeContract).toHaveBeenCalledOnce();
@@ -214,27 +228,10 @@ describe("Sepolia sticker adapter", () => {
   });
 
   it("does not confirm a mint whose receipt names a different recipient", async () => {
-    let minted = false;
-    rpc.readContract.mockImplementation(async ({ functionName }: { functionName: string }) => {
-      if (functionName === "tokenIdForSticker") return minted ? 1n : 0n;
-      if (functionName === "artistOf") return ALICE;
-      if (functionName === "contentHashOf") return CONTENT;
-      if (functionName === "tokenURI") return METADATA;
-      throw new Error(`Unexpected read ${functionName}`);
-    });
-    rpc.simulateContract.mockImplementation(async (request: object) => ({ request }));
-    rpc.waitForTransactionReceipt.mockImplementation(async () => {
-      minted = true;
-      return mintReceipt(BOB);
-    });
-    await expect(
-      adapter().mint({
-        stickerId: STICKER_ID,
-        artistId: "alice",
-        contentHash: CONTENT,
-        metadataUri: METADATA,
-      }),
-    ).rejects.toThrow("Mint receipt does not confirm the artist received the sticker");
+    mockMintReads(BOB);
+    await expect(adapter().mint(STICKER)).rejects.toThrow(
+      "Mint receipt does not confirm the artist received the sticker",
+    );
   });
 
   it("recovers a landed claim after a receipt timeout, but rejects a claim won by another wallet", async () => {
@@ -287,14 +284,7 @@ describe("Sepolia sticker adapter", () => {
     rpc.simulateContract.mockResolvedValue({ request: {} });
     rpc.writeContract.mockRejectedValue(submissionError);
 
-    await expect(
-      adapter().mint({
-        stickerId: STICKER_ID,
-        artistId: "alice",
-        contentHash: CONTENT,
-        metadataUri: METADATA,
-      }),
-    ).rejects.toBe(reconciliationError);
+    await expect(adapter().mint(STICKER)).rejects.toBe(reconciliationError);
 
     expectDiagnostic("chain.mint.transaction.failed", { stickerId: STICKER_ID });
     expectDiagnostic("chain.mint.reconcile.failed", { stickerId: STICKER_ID });

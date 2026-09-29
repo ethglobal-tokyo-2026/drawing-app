@@ -120,7 +120,6 @@ async function mintSticker(deps: AppDeps, stickerId: string): Promise<SealRefusa
       contentHash: sticker.contentHash,
       metadataUri: sticker.metadataUri,
       number: sticker.number,
-      sealedAt: sticker.createdAt,
       width: sticker.width,
       height: sticker.height,
     });

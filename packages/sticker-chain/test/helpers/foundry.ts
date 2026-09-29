@@ -4,8 +4,21 @@ import { createServer } from "node:net";
 import { dirname, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import type { Abi, Hex } from "viem";
+import {
+  createPublicClient,
+  defineChain,
+  http,
+  type Abi,
+  type Account,
+  type Chain,
+  type Hex,
+  type PublicClient,
+  type Transport,
+  type WalletClient,
+} from "viem";
 import { mnemonicToAccount, type HDAccount } from "viem/accounts";
+import { sepolia } from "viem/chains";
+import { onTestFinished } from "vitest";
 
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const mnemonic = "test test test test test test test test test test test junk";
@@ -128,4 +141,41 @@ export async function startAnvil(chainId: number): Promise<AnvilInstance> {
 
   await stopAnvil(process);
   throw new Error(`Anvil did not become ready: ${stderr.trim()}`);
+}
+
+/** Anvil under Ethereum Sepolia's chain ID, so signatures and avatars name the chain production uses. */
+export const localSepolia = defineChain({
+  id: sepolia.id,
+  name: "Local Ethereum Sepolia",
+  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: { default: { http: ["http://localhost"] } },
+});
+
+/** Starts Anvil for the current test, and stops it when the test finishes. */
+export async function startLocalChain() {
+  const anvil = await startAnvil(localSepolia.id);
+  onTestFinished(anvil.close);
+  const transport = http(anvil.rpcUrl);
+  const publicClient = createPublicClient({
+    chain: localSepolia,
+    transport,
+    pollingInterval: anvilPollingInterval,
+  });
+  return { accounts: anvil.accounts, transport, publicClient };
+}
+
+/** Deploys StickerNFT from the wallet's account, which administers it and can seal. */
+export async function deployStickerNft(
+  publicClient: PublicClient<Transport, Chain>,
+  walletClient: WalletClient<Transport, Chain, Account>,
+) {
+  const { abi, bytecode } = readFoundryArtifact("StickerNFT", "StickerNFT");
+  const hash = await walletClient.deployContract({
+    abi,
+    bytecode,
+    args: [walletClient.account.address],
+  });
+  const { contractAddress } = await publicClient.waitForTransactionReceipt({ hash });
+  if (!contractAddress) throw new Error("StickerNFT deployment returned no address");
+  return contractAddress;
 }

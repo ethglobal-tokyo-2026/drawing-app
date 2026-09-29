@@ -126,15 +126,14 @@ export interface ImageStore {
 }
 
 /** A sealed sticker's facts, as its NFT records them. */
-export interface MintRequest {
+interface MintRequest {
   stickerId: string;
   artistId: string;
   contentHash: string;
   metadataUri: string;
-  number?: number;
-  sealedAt?: Date;
-  width?: number;
-  height?: number;
+  number: number;
+  width: number;
+  height: number;
 }
 
 export interface MintedToken {
@@ -145,7 +144,7 @@ export interface MintedToken {
 /** Mints a sealed sticker's NFT to its Original Artist's smart wallet. Null: the sticker stays unminted. */
 export type Mint = (sticker: MintRequest) => Promise<MintedToken | null>;
 
-export interface GiftClaim {
+interface GiftClaim {
   /** The escrow's giftId. */
   giftId: string;
   giftClaimToken: string;
@@ -223,7 +222,7 @@ export interface EnsDeps {
   appLinkBase: string;
   chainId: number;
   stickerContract: string;
-  /** Null in mock chain mode: names resolve through the gateway, and none go onchain. */
+  /** Null only in tests: names resolve through the gateway, and none go onchain. */
   writer: NameWriter | null;
   naming: NamingQueue;
 }
