@@ -5,27 +5,15 @@
 # and a named unit on that link restarts until it runs the pinned version. A new major needs a new link: change it in
 # both units, and esbuild's target in apps/api/scripts/build.ts.
 set -euo pipefail
+# shellcheck source=deploy/lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ENV_FILE="${DEPLOY_ENV_FILE:-$ROOT/deploy/.env}"
-if [ -f "$ENV_FILE" ]; then
-  # shellcheck source=/dev/null
-  . "$ENV_FILE"
-fi
-TARGET="${DEPLOY_TARGET:?set DEPLOY_TARGET (user@host) in deploy/.env}"
-VERSION="$(node -p "require('$ROOT/package.json').devEngines.runtime.version")"
-[[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "✗ package.json pins Node '$VERSION', not a version" >&2; exit 1; }
+VERSION="$(pinned_node_version)"
 # A unit still on another major's link would pass every check on the old Node.
 for unit in "$@"; do
   grep -q "^ExecStart=/usr/local/lib/nodejs/node-${VERSION%%.*}/bin/node " "$ROOT/deploy/$unit.service" \
     || { echo "✗ deploy/$unit.service doesn't start from /usr/local/lib/nodejs/node-${VERSION%%.*}" >&2; exit 1; }
 done
-
-# One SSH connection for every ssh below: the box resets bursts of new ones. A box that doesn't answer, or stops
-# answering, fails the install instead of hanging it.
-SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/cm-deploy-%C" -o ControlPersist=60
-  -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
-ssh() { command ssh "${SSH_OPTS[@]}" "$@"; }
 
 ssh "$TARGET" "bash -s -- '$VERSION' $*" <<'BOX'
 set -euo pipefail

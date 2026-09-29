@@ -4,9 +4,13 @@ One box serves the app behind HAProxy at `DEPLOY_URL`: `/api/` goes to the REST 
 
 ## Settings
 
-- `deploy/.env`, gitignored (copy `deploy/.env.example`): the box's SSH login (`DEPLOY_TARGET`), the Sepolia RPC, keys and contract addresses, and the secrets for Privy, the Messaging API channel and World ID. `DEPLOY_ENV_FILE` points `deploy.sh` and `deploy-api.sh` at another gitignored file. `./deploy/create-sepolia-accounts.mjs` adds a deployer and a sealer key to it, unless it has them.
+- `deploy/.env`, gitignored (copy `deploy/.env.example`): the box's SSH login (`DEPLOY_TARGET`), the Sepolia RPC, keys and contract addresses, and the secrets for Privy, the Messaging API channel and World ID. `DEPLOY_ENV_FILE` points `deploy.sh` and `deploy-api.sh` at another gitignored file.
 - `deploy/drawing-api.env` and `deploy/sticker-auth.env`: the API's and the auth server's settings. They're tracked, so no secret goes in them, and both deploy scripts refuse a `drawing-api.env` that mentions `DEV_SIGN_IN`.
 - The box makes the auth server's signing key and the API's session secret itself, and they never leave it.
+
+## Main only
+
+`deploy.sh` and `deploy-api.sh` build whatever is checked out, so they refuse to deploy unless HEAD is the commit `main` points to and nothing is uncommitted, untracked files included. The contracts' submodules don't count: nothing the deploy builds reads them. Deploy from a clean checkout of main. In an emergency, `DEPLOY_ANY_CHECKOUT=on ./deploy/deploy.sh` deploys the checkout as it is. `deploy-api.sh --preflight-only` publishes nothing, so it runs from any checkout.
 
 ## `./deploy/deploy.sh`
 
@@ -24,16 +28,6 @@ Publishes everything, in order:
 ## `./deploy/deploy-api.sh`
 
 Publishes the API alone; `--preflight-only` stops after checking the chain settings. It builds the API, installs `better-sqlite3` and `sharp` for the pinned Node on the box, and syncs the migrations, `drawing-api.env` and `deploy/line/menus.json`. It makes the session secret if it's missing, and installs the chain settings in the box's mode-600 `chain.env`, keeping values already there that `deploy/.env` leaves out. It restarts `drawing-api` when anything changed, then checks `/api/me` on the box and at `DEPLOY_URL`.
-
-Before replacing `server.mjs`, API deployment prepares any missing WebP Sticker images from
-the stored PNGs. It briefly stops an active API so no older Sealing request can add PNG-only
-assets after the scan. Conversion only adds missing files; it never replaces existing images.
-The new server stays staged until conversion succeeds. A conversion failure or timeout aborts
-deployment and restarts the previous API; the enclosing deployment does not publish the frontend.
-Inspect the reported image failure and retry deployment after correcting it.
-
-To inspect images without changing them, run `backfill-sticker-webp.mjs --dry-run` from the
-API's server directory with `IMAGE_DIR` set, using the API's Node runtime and user.
 
 The deployment tests use local temporary files and fake transport/service commands, never SSH or a
 running server: `deployApi.test.ts` runs `deploy-api.sh`, and `installChainEnv.test.ts` the chain

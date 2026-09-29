@@ -4,27 +4,16 @@
 # API's secrets. HAProxy serves DEPLOY_URL: serve.py on 127.0.0.1:3003 (sticker-board.service) serves the app, and the
 # auth server on 127.0.0.1:8787 (sticker-auth.service) answers /v1/auth/ and /.well-known/jwks.json.
 set -euo pipefail
+# shellcheck source=deploy/lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+require_main_checkout
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ENV_FILE="${DEPLOY_ENV_FILE:-$ROOT/deploy/.env}"
-if [ -f "$ENV_FILE" ]; then
-  # shellcheck source=/dev/null
-  . "$ENV_FILE"
-fi
-TARGET="${DEPLOY_TARGET:?set DEPLOY_TARGET (user@host) in deploy/.env}"
 DIR=/srv/sticker-board
 AUTH_DIR=/srv/sticker-auth
 URL="${DEPLOY_URL:-https://sticker.195-201-8-147.sslip.io}"
 DIST="$ROOT/apps/frontend/dist"
 AUTH_BUILD="$ROOT/packages/sticker-chain/dist/auth-server"
 KEY_ID="$(sed -n 's/^AUTH_KEY_ID=//p' "$ROOT/deploy/sticker-auth.env")"
-
-# One SSH connection for every ssh and rsync below: the box resets bursts of new ones. A box that doesn't answer, or
-# stops answering, fails the deploy instead of hanging it.
-SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/cm-deploy-%C" -o ControlPersist=60
-  -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
-ssh() { command ssh "${SSH_OPTS[@]}" "$@"; }
-export RSYNC_RSH="ssh ${SSH_OPTS[*]}"
 # The checks on the box retry: a server that just restarted refuses connections until it has started.
 BOX_CURL="curl --retry 10 --retry-connrefused --retry-delay 1 --max-time 5"
 
@@ -60,11 +49,7 @@ rsync -a --delay-updates --delete-after --exclude='.DS_Store' "$DIST/" "$TARGET:
 # The server and its unit rarely change, so restart only when one did. By content, without times: a fresh checkout's
 # new timestamps alone would restart it.
 changed="$(rsync -ci "$ROOT/deploy/serve.py" "$ROOT/deploy/sticker-board.service" "$TARGET:$DIR/")"
-if [ -n "$changed" ]; then
-  ssh "$TARGET" "sudo install -m 644 '$DIR/sticker-board.service' /etc/systemd/system/sticker-board.service \
-    && sudo systemctl daemon-reload && sudo systemctl enable -q sticker-board && sudo systemctl restart sticker-board"
-  echo "↻ restarted sticker-board"
-fi
+if [ -n "$changed" ]; then install_and_restart_unit sticker-board "$DIR"; fi
 
 echo "→ rsync → $TARGET:$AUTH_DIR"
 # By content, without times: every deploy rebuilds the server, and a new timestamp alone would restart it, dropping
@@ -76,13 +61,7 @@ auth_changed+="$(rsync -ci "$ROOT/deploy/sticker-auth.service" "$TARGET:$AUTH_DI
 auth_changed+="$(ssh "$TARGET" "test -s '$AUTH_DIR/signing-key.pem' || { umask 077 \
   && openssl ecparam -name prime256v1 -genkey -noout | openssl pkcs8 -topk8 -nocrypt -out '$AUTH_DIR/signing-key.pem' \
   && echo 'made a signing key'; }")"
-# The auth server needs no secrets.env now that the REST API links chat menus; deploy-api.sh installs
-# the Messaging API channel's secrets for the API.
-if [ -n "$auth_changed" ]; then
-  ssh "$TARGET" "sudo install -m 644 '$AUTH_DIR/sticker-auth.service' /etc/systemd/system/sticker-auth.service \
-    && sudo systemctl daemon-reload && sudo systemctl enable -q sticker-auth && sudo systemctl restart sticker-auth"
-  echo "↻ restarted sticker-auth"
-fi
+if [ -n "$auth_changed" ]; then install_and_restart_unit sticker-auth "$AUTH_DIR"; fi
 
 # Compare what's served with the build, on the box and then publicly, so a wrong route can't pass as a 200.
 ssh "$TARGET" "$BOX_CURL -fsS http://127.0.0.1:3003/" | cmp -s - "$DIST/index.html" \

@@ -13,7 +13,6 @@ function setup() {
   const dir = mkdtempSync(join(tmpdir(), "drawing-chain-env-test-"));
   onTestFinished(() => rmSync(dir, { recursive: true, force: true }));
   const chain = join(dir, "chain.env");
-  const auth = join(dir, "auth.env");
   const input = [
     "ETHEREUM_SEPOLIA_RPC_URL=https://rpc.example/sepolia",
     `STICKER_NFT_ADDRESS=0x${"1".repeat(40)}`,
@@ -25,8 +24,8 @@ function setup() {
     "PRIVY_APP_ID=test-app",
   ].join("\n");
   const run = (value: string, mode: "check" | "install" = "install") =>
-    spawnSync(process.execPath, [installer, chain, auth, mode], { input: value, encoding: "utf8" });
-  return { chain, auth, input, run };
+    spawnSync(process.execPath, [installer, chain, mode], { input: value, encoding: "utf8" });
+  return { chain, input, run };
 }
 
 const LINE_CHANNEL = `LINE_MESSAGING_CHANNEL_ID=2000000001\nLINE_MESSAGING_CHANNEL_SECRET=${"ab".repeat(16)}\n`;
@@ -38,37 +37,21 @@ const LINE_CHANNEL = `LINE_MESSAGING_CHANNEL_ID=2000000001\nLINE_MESSAGING_CHANN
 const NODE_RUNS_TIMEOUT_MS = 30_000;
 
 describe("install-chain-env.mjs", { timeout: NODE_RUNS_TIMEOUT_MS }, () => {
-  it("reuses remote Privy credentials without replacing other chain values or exposing secrets", () => {
-    const { chain, auth, input, run } = setup();
-    writeFileSync(
-      auth,
-      "PRIVY_APP_SECRET=server-secret\nLINE_MESSAGING_CHANNEL_SECRET=keep-private\n",
-    );
-    writeFileSync(chain, "EXISTING_OPTION=preserved\n");
+  it("keeps what chain.env holds that the input leaves out, mode 600, and prints no secret", () => {
+    const { chain, input, run } = setup();
+    const onBox = `PRIVY_APP_SECRET=server-secret\n${LINE_CHANNEL}EXISTING_OPTION=preserved\n`;
+    writeFileSync(chain, onBox);
     const checked = run(input, "check");
     expect(checked.status, checked.stderr).toBe(0);
-    expect(readFileSync(chain, "utf8")).toBe("EXISTING_OPTION=preserved\n");
+    expect(readFileSync(chain, "utf8")).toBe(onBox);
     const installed = run(input);
     expect(installed.status, installed.stderr).toBe(0);
-    const config = parseEnv(readFileSync(chain, "utf8"));
-    expect(config.PRIVY_APP_SECRET).toBe(parseEnv(readFileSync(auth, "utf8")).PRIVY_APP_SECRET);
-    expect(config.EXISTING_OPTION).toBe("preserved");
+    const kept = parseEnv(onBox);
+    expect(parseEnv(readFileSync(chain, "utf8"))).toMatchObject(kept);
     expect(statSync(chain).mode & 0o777).toBe(0o600);
-    expect(config.PRIVY_APP_SECRET).toBeTruthy();
-    expect(installed.stdout).not.toContain(config.PRIVY_APP_SECRET);
+    expect(installed.stdout).not.toContain(kept.PRIVY_APP_SECRET);
+    expect(installed.stdout).not.toContain(kept.LINE_MESSAGING_CHANNEL_SECRET);
     expect(run("").stdout).toBe("");
-  });
-
-  it("takes the chat menu's Messaging API channel from the auth service's secrets, as a pair", () => {
-    const { chain, auth, input, run } = setup();
-    writeFileSync(auth, `PRIVY_APP_SECRET=server-secret\n${LINE_CHANNEL}`);
-    const installed = run(input);
-    expect(installed.status, installed.stderr).toBe(0);
-    const config = parseEnv(readFileSync(chain, "utf8"));
-    const channel = parseEnv(LINE_CHANNEL);
-    expect(config.LINE_MESSAGING_CHANNEL_ID).toBe(channel.LINE_MESSAGING_CHANNEL_ID);
-    expect(config.LINE_MESSAGING_CHANNEL_SECRET).toBe(channel.LINE_MESSAGING_CHANNEL_SECRET);
-    expect(installed.stdout).not.toContain(channel.LINE_MESSAGING_CHANNEL_SECRET);
   });
 
   it("installs no chat menu channel without one, and refuses half of one", () => {
