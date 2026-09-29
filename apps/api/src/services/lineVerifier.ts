@@ -1,6 +1,6 @@
 import { AuthError } from "@drawing-app/sticker-chain/auth-error";
 import { createLineVerifier as createLineIdTokenVerifier } from "@drawing-app/sticker-chain/line";
-import { LineTokenInvalidError, type LineVerifier } from "../deps.ts";
+import { LineTokenInvalidError, LineUnavailableError, type LineVerifier } from "../deps.ts";
 
 /** Sign-in's error for the verifier's: LINE refused the token, or LINE couldn't be asked. */
 function signInError({ details }: AuthError): Error {
@@ -14,8 +14,7 @@ function signInError({ details }: AuthError): Error {
     details.code === "line_unavailable" && details.upstreamStatus !== undefined
       ? `, HTTP ${details.upstreamStatus}`
       : "";
-  // LINE couldn't be asked: not the token's fault, so not a LineTokenInvalidError.
-  return new Error(`LINE's verify endpoint failed: ${details.reason}${status}`);
+  return new LineUnavailableError(`LINE's verify endpoint failed: ${details.reason}${status}`);
 }
 
 /** sticker-chain's LINE verifier, the auth server's too, with failures as sign-in reads them. */

@@ -162,8 +162,10 @@ describe("SessionGate", () => {
     },
   );
 
-  it("retries a temporary server failure without restarting LINE authentication", async () => {
-    const refusal = new ApiError(503, { error: "internal_error" });
+  it.each([
+    new ApiError(503, { error: "internal_error" }),
+    new ApiError(502, { error: "line_unavailable" }),
+  ])("retries $status $code without restarting LINE authentication", async (refusal) => {
     const reconnect = vi.fn<() => Promise<void>>().mockResolvedValue();
     const signIn = vi
       .fn<SessionApi["signIn"]>()
@@ -173,7 +175,7 @@ describe("SessionGate", () => {
     await settle();
     expect(host.textContent).toContain("Couldn’t sign you in");
     expect(host.textContent).toContain(errorMessage(refusal));
-    expect(host.textContent).toContain("internal_error");
+    expect(host.textContent).toContain(refusal.code);
     act(() => host.querySelector("button")?.click());
     await settle();
     expect(host.textContent).toContain("Board of @alice");

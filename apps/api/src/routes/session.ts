@@ -3,8 +3,13 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { Hono } from "hono";
 import { z } from "zod";
-import { LineTokenInvalidError, type AppDeps, type LineVerifier } from "../deps.ts";
-import { logFailure } from "../diagnostics.ts";
+import {
+  LineTokenInvalidError,
+  LineUnavailableError,
+  type AppDeps,
+  type LineVerifier,
+} from "../deps.ts";
+import { failureCause, logFailure } from "../diagnostics.ts";
 import { syncEnsLabel } from "../ens/labels.ts";
 import { apiError, validate } from "../errors.ts";
 import { HANDLE_MAX_LENGTH } from "../session/handleLimit.ts";
@@ -55,14 +60,23 @@ export const meOf = (db: Db, user: UserRow) =>
     unseenGratitudeCount: unseenGratitudeCount(db, user.id),
   });
 
-/** Who LINE says the ID token names, or its refusal. LINE's reason goes to the log only. */
+/**
+ * Who LINE says the ID token names, its refusal, or that LINE couldn't be asked. LINE's reason for a
+ * refusal goes to the log only.
+ */
 async function lineProfileOf(line: LineVerifier, idToken: string) {
   try {
     return await line.verifyIdToken(idToken);
   } catch (error) {
-    if (!(error instanceof LineTokenInvalidError)) throw error;
-    logFailure("line.token.refused", error);
-    return error;
+    if (error instanceof LineTokenInvalidError) {
+      logFailure("line.token.refused", error);
+      return error;
+    }
+    if (error instanceof LineUnavailableError) {
+      logFailure("line.token.unverified", error);
+      return error;
+    }
+    throw error;
   }
 }
 
@@ -72,6 +86,9 @@ export const sessionRoutes = (deps: AppDeps) =>
     .post("/session", validate("json", signInBody), async (c) => {
       const { idToken, language } = c.req.valid("json");
       const profile = await lineProfileOf(deps.line, idToken);
+      if (profile instanceof LineUnavailableError) {
+        return apiError(c, 502, "line_unavailable", `LINE didn't answer: ${failureCause(profile)}`);
+      }
       if (profile instanceof LineTokenInvalidError) {
         return profile.reason === "expired"
           ? apiError(c, 401, "line_token_expired", "LINE ID token expired")

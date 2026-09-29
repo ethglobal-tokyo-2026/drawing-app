@@ -1,6 +1,6 @@
 import { MIN_ID_TOKEN_LENGTH } from "@drawing-app/sticker-chain/line";
 import { describe, expect, it, vi } from "vitest";
-import { LineTokenInvalidError, type LineProfile } from "../deps.ts";
+import { LineTokenInvalidError, LineUnavailableError, type LineProfile } from "../deps.ts";
 import { createLineVerifier } from "./lineVerifier.ts";
 
 const CHANNEL_ID = "channel";
@@ -70,7 +70,7 @@ describe("the LINE verifier", () => {
     async ({ fetchImpl, reason }) => {
       const outage = createLineVerifier(CHANNEL_ID, fetchImpl).verifyIdToken(ID_TOKEN);
       await expect(outage).rejects.toThrow(reason);
-      await expect(outage).rejects.not.toBeInstanceOf(LineTokenInvalidError);
+      await expect(outage).rejects.toBeInstanceOf(LineUnavailableError);
     },
   );
 });

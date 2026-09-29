@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { MAX_BODY_BYTES } from "../app.ts";
-import { LineTokenInvalidError, type LineProfile } from "../deps.ts";
+import { LineTokenInvalidError, LineUnavailableError, type LineProfile } from "../deps.ts";
 import { devIdToken } from "../services/devSignIn.ts";
 import { HANDLE_MAX_LENGTH } from "../session/handleLimit.ts";
 import { SESSION_COOKIE, SESSION_MAX_AGE_S } from "../session.ts";
@@ -139,9 +139,20 @@ describe("signing in", () => {
     expect(log).not.toHaveBeenCalledWith(expect.stringContaining(credential));
   });
 
-  it("reports a provider outage as a server failure, not an expired token", async () => {
+  it("answers LINE being unreachable with line_unavailable, and logs why", async () => {
     test = await createTestApp({
-      line: { verifyIdToken: () => Promise.reject(new Error("LINE unavailable")) },
+      line: { verifyIdToken: () => Promise.reject(new LineUnavailableError("verify timed out")) },
+    });
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const response = await signIn(ALICE);
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(await refusalOf(response)).toMatchObject({ status: 502, error: "line_unavailable" });
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("line.token.unverified"));
+  });
+
+  it("answers any other failure while asking LINE as the server's own", async () => {
+    test = await createTestApp({
+      line: { verifyIdToken: () => Promise.reject(new Error("a bug")) },
     });
     vi.spyOn(console, "error").mockImplementation(() => {});
     const response = await signIn(ALICE);
