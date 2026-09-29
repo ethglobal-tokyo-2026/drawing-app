@@ -70,9 +70,6 @@ if (!parsed.success) {
   throw new Error(`The REST API's environment is incomplete:\n${z.prettifyError(parsed.error)}`);
 }
 const env = parsed.data;
-if (process.env.NODE_ENV === "production" && env.STICKER_CHAIN_MODE === "mock") {
-  throw new Error("Production requires STICKER_CHAIN_MODE=sepolia; mock minting is disabled");
-}
 
 // Pending migrations go in before the first query.
 migrateDatabase();
@@ -147,9 +144,6 @@ const worldId = (() => {
     throw new Error(
       "Age verification needs WORLD_ID_APP_ID, WORLD_ID_RP_ID and WORLD_ID_SIGNING_KEY",
     );
-  }
-  if (process.env.NODE_ENV === "production" && env.WORLD_ID_ENVIRONMENT !== "production") {
-    throw new Error("Production requires WORLD_ID_ENVIRONMENT=production");
   }
   return createWorldId({
     appId,

@@ -1,5 +1,5 @@
 import { stickers, users } from "@drawing-app/db";
-import { insertUser } from "@drawing-app/db/testing";
+import { bytes32, insertUser } from "@drawing-app/db/testing";
 import { gatewayDigest, encodeGatewayRequest } from "@drawing-app/sticker-chain/ens-gateway";
 import { eq } from "drizzle-orm";
 import {
@@ -90,6 +90,27 @@ async function verifiedResult(request: Hex, response: Response) {
   return result;
 }
 
+/** The `key` text record the gateway answers for `name`. */
+async function gatewayText(name: string, key: string) {
+  const call = encodeFunctionData({
+    abi: profileAbi,
+    functionName: "text",
+    args: [namehash(name), key],
+  });
+  const { request, response } = await askGateway(name, call);
+  return decodeAbiParameters([{ type: "string" }], await verifiedResult(request, response))[0];
+}
+
+/** ENSIP-12's avatar for the test sticker contract's token `tokenId`. */
+const avatarFor = (tokenId: string) => {
+  const ens = fakeEns();
+  return `eip155:${ens.chainId}/erc721:${ens.stickerContract.toLowerCase()}/${tokenId}`;
+};
+
+/** A sticker `artistId` sealed, minted as `tokenId`. */
+const mintedSticker = (artistId: string, tokenId: string, values: { nsfw?: boolean } = {}) =>
+  insertSealedSticker(test.db, artistId, { tokenId, mintTxHash: bytes32(tokenId), ...values });
+
 describe("ENS labels", () => {
   it.each([
     ["Alice", "alice"],
@@ -129,7 +150,7 @@ describe("the ENS gateway", () => {
   it("answers for a person without a session, signed by the key CroquisResolver trusts", async () => {
     const alice = insertUser(test.db, { ensLabel: "alice", smartAccountAddress: SMART_ACCOUNT });
     const tokenId = "7";
-    insertSealedSticker(test.db, alice, { tokenId, mintTxHash: `0x${"ab".repeat(32)}` });
+    mintedSticker(alice, tokenId);
     const node = namehash("alice.croquis.eth");
     const call = encodeFunctionData({
       abi: profileAbi,
@@ -150,20 +171,19 @@ describe("the ENS gateway", () => {
     expect(decodeAbiParameters([{ type: "bytes[]" }], result)[0]).toEqual([
       encodeAbiParameters([{ type: "address" }], [SMART_ACCOUNT]),
       encodeAbiParameters([{ type: "string" }], [`${ens.appLinkBase}/@alice`]),
-      encodeAbiParameters(
-        [{ type: "string" }],
-        [`eip155:${ens.chainId}/erc721:${ens.stickerContract.toLowerCase()}/${tokenId}`],
-      ),
+      encodeAbiParameters([{ type: "string" }], [avatarFor(tokenId)]),
     ]);
   });
 
+  it("leaves NSFW stickers out of the avatar, which ENS apps show unblurred", async () => {
+    const alice = insertUser(test.db, { ensLabel: "alice" });
+    mintedSticker(alice, "1");
+    mintedSticker(alice, "2", { nsfw: true });
+    expect(await gatewayText("alice.croquis.eth", "avatar")).toBe(avatarFor("1"));
+  });
+
   it("answers empty for a name nobody has", async () => {
-    const node = namehash("nobody.croquis.eth");
-    const call = encodeFunctionData({ abi: profileAbi, functionName: "text", args: [node, "url"] });
-    const { request, response } = await askGateway("nobody.croquis.eth", call);
-    expect(
-      decodeAbiParameters([{ type: "string" }], await verifiedResult(request, response))[0],
-    ).toBe("");
+    expect(await gatewayText("nobody.croquis.eth", "url")).toBe("");
   });
 
   it("answers a database failure as its own, not the caller's unsupported_request", async () => {
@@ -218,10 +238,7 @@ describe("naming", () => {
     const ens = fakeEns(writer);
     test.deps.ens = ens;
     await nameEverything(test.deps, alice);
-    expect(calls).toEqual([
-      "sticker 2 0002",
-      `avatar eip155:${ens.chainId}/erc721:${ens.stickerContract.toLowerCase()}/2`,
-    ]);
+    expect(calls).toEqual(["sticker 2 0002", `avatar ${avatarFor("2")}`]);
     expect(namedAt(second)).not.toBeNull();
   });
 

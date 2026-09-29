@@ -76,8 +76,11 @@ export interface LineChatMenu {
   idle: () => Promise<void>;
 }
 
-/** The server's whole log as text, newest line first. Rejects when the log can't be read. */
-export type ServerLog = () => Promise<ReadableStream<Uint8Array>>;
+/**
+ * The server log's newest `lines` lines as text, newest first; null while another request reads it.
+ * Rejects when the log can't be read.
+ */
+export type ServerLog = (lines: number) => Promise<ReadableStream<Uint8Array> | null>;
 
 export interface Clock {
   now: () => Date;
