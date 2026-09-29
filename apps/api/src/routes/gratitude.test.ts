@@ -1,10 +1,18 @@
-import { gratitude, MAX_HITS } from "@drawing-app/db";
+import {
+  gratitude,
+  GRATITUDE_PER_HIT,
+  MAX_HITS,
+  MAX_PEAK_MULT,
+  MAX_PEAK_TIER,
+  METHOD_WEIGHT,
+} from "@drawing-app/db";
 import { bytes32, insertUser, ONE_TAP, packGift } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import {
   gratitudeResponseSchema,
   MAX_GRATITUDE_BODY_BYTES,
+  MAX_GRATITUDE_PER_HIT,
   ORIGINAL_ARTIST_GRATITUDE_SHARE,
   type RecordGratitude,
 } from "../gratitude/record.ts";
@@ -179,6 +187,11 @@ const INVALID_REQUESTS: FieldBreak[] = [
     field: "giftId",
     body: { giftId: bytes32("gift").toUpperCase() },
   },
+  {
+    breaks: "a total one gratitude over the most its hits can score",
+    field: "total",
+    body: { total: ONE_TAP.hits * MAX_GRATITUDE_PER_HIT + 1 },
+  },
 ];
 
 /** A valid body with the break's fields over it is refused 400 with `error`, naming the field. */
@@ -239,6 +252,21 @@ describe("POST /api/gratitude", () => {
     });
     expect(await recorded(await post(test, receiverId, body), 201)).toMatchObject(comboOf(body));
     expect(storedReplay(test, giftId)).toEqual(body.replay);
+  });
+
+  it("records the largest combo the Mini-game can score: MAX_HITS hits, each at the multiplier's ceiling and a stroke pass's weight", async () => {
+    const { test, receiverId, giftId } = await receivedGift();
+    // The Mini-game's gratitude for one hit, rounded as it rounds it, weighed as a stroke pass.
+    const mostPerHit = Math.round(GRATITUDE_PER_HIT * MAX_PEAK_MULT * METHOD_WEIGHT);
+    const body = recordBody(giftId, {
+      method: "stroke",
+      hits: MAX_HITS,
+      total: MAX_HITS * mostPerHit,
+      peakMult: MAX_PEAK_MULT,
+      peakTier: MAX_PEAK_TIER,
+      replay: switchedToStroke(),
+    });
+    expect(await recorded(await post(test, receiverId, body), 201)).toMatchObject(comboOf(body));
   });
 
   it("answers the same idempotencyKey again with the stored record, whatever the body says", async () => {

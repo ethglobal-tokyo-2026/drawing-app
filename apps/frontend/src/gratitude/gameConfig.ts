@@ -1,4 +1,5 @@
-import { MAX_PEAK_MULT } from "@drawing-app/api/client";
+// The server holds a combo's total to what these scoring numbers allow, so they come from its limits.
+import { GRATITUDE_PER_HIT, MAX_PEAK_MULT, METHOD_WEIGHT } from "@drawing-app/api/client";
 
 /** The mini-game's rules as numbers. A finished combo records `version`, so a replay runs with the
  * numbers it was played with; change the version whenever a rule number changes. */
@@ -42,7 +43,7 @@ export interface GameConfig {
 
 export const GAME_CONFIG = {
   version: "2026-09-26.2",
-  gratitudePerHit: 10,
+  gratitudePerHit: GRATITUDE_PER_HIT,
   maxDurationMs: 8000,
   drainStart: 0.36,
   drainDoublingS: 1.6,
@@ -53,7 +54,7 @@ export const GAME_CONFIG = {
   passesPerSecond: 10,
   reversalsPerSecond: 14,
   burst: 4,
-  methodWeight: 1.5,
+  methodWeight: METHOD_WEIGHT,
   multiplier: {
     windowMs: 1000,
     freeHits: 2,
