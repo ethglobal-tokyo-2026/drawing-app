@@ -32,6 +32,12 @@ const EVENT_LOOKUP_TIMEOUT_MS = 30_000;
 /** Probes between the event lookup's progress logs. */
 const EVENT_LOOKUP_PROBES_PER_LOG = 8;
 /**
+ * How long after a mint starts its event lookup gives up, so Sealing answers within the app's wait,
+ * upload included. A retry that raced a pending mint starts its lookup after its own receipt wait,
+ * so it may run out; the next retry finds the mint with the whole lookup.
+ */
+export const MINT_LOOKUP_DEADLINE_MS = 40_000;
+/**
  * How long Receiving waits for its claim to land. Under the app's wait for Receiving, with room to
  * read the escrow and find a late claim's event, so Receiving answers before the app gives up.
  */
@@ -85,17 +91,21 @@ export function createStickerChain({
   const walletClient = createWalletClient({ chain: sepolia, transport, account: sealerAccount });
 
   // Historical state locates the transition without asking a provider to search the whole chain.
-  const eventBlock = async (contract: Address, happened: (block: bigint) => Promise<boolean>) => {
+  const eventBlock = async (
+    contract: Address,
+    happened: (block: bigint) => Promise<boolean>,
+    deadline = Number.POSITIVE_INFINITY,
+  ) => {
     let first = 0n;
     // Uncached: viem reuses a block number for its polling interval, which can predate the transition.
     let last = await publicClient.getBlockNumber({ cacheTime: 0 });
     if (!(await happened(last))) {
       throw new Error("The confirmed chain state is not visible at the latest block");
     }
-    const deadline = Date.now() + EVENT_LOOKUP_TIMEOUT_MS;
+    const giveUpAt = Math.min(Date.now() + EVENT_LOOKUP_TIMEOUT_MS, deadline);
     let probes = 0;
     while (first < last) {
-      if (Date.now() >= deadline) throw new Error("Finding the Sticker event block timed out");
+      if (Date.now() >= giveUpAt) throw new Error("Finding the Sticker event block timed out");
       const block = (first + last) / 2n;
       const code = await publicClient.getCode({ address: contract, blockNumber: block });
       if (code && code !== "0x" && (await happened(block))) last = block;
@@ -118,6 +128,7 @@ export function createStickerChain({
   };
 
   const mint: Mint = async (sticker) => {
+    const started = Date.now();
     const fields = {
       stickerId: sticker.stickerId,
       artistId: sticker.artistId,
@@ -166,6 +177,7 @@ export function createStickerChain({
               args: [stickerId],
               blockNumber,
             })) !== 0n,
+          started + MINT_LOOKUP_DEADLINE_MS,
         );
         const [event] = await publicClient.getContractEvents({
           address: stickerAddress,

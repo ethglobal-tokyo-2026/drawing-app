@@ -100,6 +100,7 @@ export type Packaging =
       | "sticker_not_found"
       | "not_yours"
       | "gift_in_transit"
+      | "gift_held"
       | "not_minted"
       | "user_not_found"
       | "own_gift"
@@ -156,6 +157,13 @@ export async function packageGift(
             : null;
         const packaged = { gift: toGift(open), giftClaimToken: null, escrowTransfer };
         return { refusal: null, created: false, packaged };
+      }
+      if (open?.status === "taken_out" && open.giverId === userId) {
+        return refuse(
+          "gift_held",
+          `The escrow holds sticker ${stickerId} for gift ${open.id} until its giver takes it out on chain`,
+          open.id,
+        );
       }
       if (open) {
         return refuse(

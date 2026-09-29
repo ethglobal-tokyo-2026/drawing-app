@@ -1,3 +1,4 @@
+import { i18next } from "../i18n/i18n";
 import { formatHandle } from "../stickers/format";
 import type { Placement as RecordPlacement } from "../sticker-board/placement";
 import type { StickerUrls } from "../stickers/stickerUrls";
@@ -42,7 +43,9 @@ export const toMs = (t: IsoTime): number => Date.parse(t);
 export const toPerson = (p: Person): PersonView => ({
   id: p.id,
   handle: p.handle,
-  name: p.lineDisplayName ?? (p.handle === null ? "Someone" : formatHandle(p.handle)),
+  name:
+    p.lineDisplayName ??
+    (p.handle === null ? i18next.t(($) => $.api.person.unnamed) : formatHandle(p.handle)),
   ...(p.linePictureUrl && { pictureUrl: p.linePictureUrl }),
   ...(p.ensName && { ensName: p.ensName }),
   ageStatus: p.ageStatus,

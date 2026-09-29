@@ -14,7 +14,8 @@ const isErrorBody = (v: unknown): v is ErrorBody =>
   v !== null &&
   "error" in v &&
   typeof v.error === "string" &&
-  (!("detail" in v) || v.detail === undefined || typeof v.detail === "string");
+  (!("detail" in v) || v.detail === undefined || typeof v.detail === "string") &&
+  (!("giftId" in v) || v.giftId === undefined || typeof v.giftId === "string");
 
 const urlOf = (input: RequestInfo | URL) =>
   typeof input === "string" ? input : input instanceof URL ? input.href : input.url;

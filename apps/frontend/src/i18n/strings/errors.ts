@@ -60,18 +60,28 @@ export const errors = {
     en: "Names aren't set up on this server yet.",
     ja: "このサーバーでは、まだ名前が使えません。",
   },
-  /** Giving, In the bag: packing a sticker when the escrow's deposit (POST /api/gifts/:giftId/deposit) isn't the one packaging issued, in “couldn’t be packed” through errorReason */
+  /** Giving, In the bag: packing a sticker when the escrow's deposit (POST /api/gifts/:giftId/deposit) isn't this sticker's, so the gift closed and the sticker can be given again, in “couldn’t be packed” through errorReason */
   deposit_mismatch: {
-    en: "The gift bag doesn't hold the sticker it should.",
-    ja: "ギフト袋に、入っているはずのシールが入っていません。",
+    en: "The gift bag didn't get your sticker. Give it again.",
+    ja: "ギフト袋にシールが入りませんでした。もう一度贈ってください。",
+  },
+  /** Giving, In the bag: packing a sticker when the escrow holds it under terms packaging didn't issue (POST /api/gifts/:giftId/deposit), so only taking it out frees it, in “couldn’t be packed” through errorReason */
+  deposit_held: {
+    en: "Your sticker went into the gift bag the wrong way. Take it out, then give it again.",
+    ja: "シールが正しくギフト袋に入りませんでした。取り出してから、もう一度贈ってください。",
   },
   /** Giving, In the bag: packing a sticker when the escrow still has no deposit after the app's retries (POST /api/gifts/:giftId/deposit), in “couldn’t be packed” through errorReason */
   deposit_not_landed: {
     en: "The gift bag isn't on the chain yet.",
     ja: "ギフト袋は、まだブロックチェーン上にありません。",
   },
-  /** Giving, In the bag: recording LINE's picker outcome (POST /api/gifts/:giftId/shared) or taking the gift out (POST …/take-out) once it's no longer packed or sent, in “couldn’t record” or “couldn’t be taken out” through errorReason */
+  /** Giving, In the bag: recording LINE's picker outcome (POST /api/gifts/:giftId/shared) for a gift that's no longer packed or sent, or taking out a gift already returned, in “couldn’t record” or “couldn’t be taken out” through errorReason */
   gift_closed: { en: "This gift is closed.", ja: "このギフトは、すでに終了しています。" },
+  /** Giving, In the bag: packing a sticker (POST /api/gifts) that an earlier gift still holds in the escrow until it's taken out, in “couldn’t be packed” through errorReason */
+  gift_held: {
+    en: "This sticker is still in an earlier gift bag. Take it out, then give it again.",
+    ja: "このシールは、前のギフト袋に入ったままです。取り出してから、もう一度贈ってください。",
+  },
   /** Receiving: opening a gift message's link (POST /api/gifts/preview or /receive) after the gift expired unopened; the Receive gift dialog shows its own returned-gift screen instead, so this is errorMessage's fallback */
   gift_expired: {
     en: "This gift wasn't opened in time.",
@@ -139,10 +149,10 @@ export const errors = {
     en: "Your LINE sign-in token has expired. Reconnect with LINE to continue.",
     ja: "LINEのログイン情報の有効期限が切れました。LINEで再ログインしてください。",
   },
-  /** Wherever errorMessage shows a refusal of POST /api/line-menu: LINE failed or didn't answer when the app's server linked your chat menu. The developer slip's Chat menu row shows the code instead */
+  /** Signing in (POST /api/session), and wherever errorMessage shows a refusal of POST /api/line-menu: LINE didn't answer when the app's server checked your sign-in or linked your chat menu. The developer slip's Chat menu row shows the code instead */
   line_unavailable: {
-    en: "LINE didn't answer, so the menu under your chat hasn't changed yet.",
-    ja: "LINEから応答がありません。トークのメニューはまだ変わっていません。",
+    en: "LINE didn't answer. Try again in a moment.",
+    ja: "LINEから応答がありません。少し待ってから、もう一度お試しください。",
   },
   /** Drawing screen, after tapping the check to seal: the seal chip's reason when the sticker saved but its NFT mint wasn't confirmed (POST /api/stickers), through errorReason */
   mint_failed: {

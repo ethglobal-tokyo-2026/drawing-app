@@ -23,7 +23,7 @@ Scripts: `flow.mjs` (real user, flip, scroll, seal attempt), `render.mjs` (mocke
   - All three rows show even at 0, though the spec says a row at 0 is left off (spec :47).
   - Screenshots: `b-today-receipt.png`; the empty state is `s0-el-receipt.png`.
 - **Cause (verified):**
-  - The API splits the giver's part by the combo's method: tap goes to `inspired`, stroke and shake to `magic` (apps/api/src/stickerBoards/userStats.ts:46-53; schema apps/api/src/shapes.ts:138-155; docs/database-schema-and-rest-api.md:391-392).
+  - The API splits the giver's part by the combo's method: tap goes to `inspired`, stroke and shake to `magic` (apps/api/src/stickerBoards/userStats.ts:46-53; schema apps/api/src/shapes.ts:138-155).
   - PRODUCT.md:79 and :107 say what "inspired" and "magic" measure is open and "not to be invented as settled". The build settled it anyway.
   - "Magic" is your part of stroke and shake combos: hidden input methods most people never find. That's why it reads as nothing.
 - **Data (verified): the split ad0ll wants already exists.**
@@ -36,7 +36,6 @@ Scripts: `flow.mjs` (real user, flip, scroll, seal attempt), `render.mjs` (mocke
     - In `shapes.ts` `userStatsSchema.gratitude`, change the fields to `{ direct, residual, total }`.
     - In `userStats.ts`, add `direct += giversPart; residual += share` and drop the tap/stroke branch. The `method` select can go too.
     - Rewrite apps/api/src/routes/stickerBoards.test.ts:312 and :354-366: B's `direct` is `total − share` across tap, stroke and shake; A's `residual` is the share.
-    - Update docs/database-schema-and-rest-api.md:385-395.
     - The frontend gets the type through `@drawing-app/api/client` (Hono RPC), so there's no hand-written type to change.
   - **Frontend:**
     - In StatCork.tsx, `CorkFigures.gratitude` becomes `{ direct; residual; total } | null`.
@@ -49,7 +48,6 @@ Scripts: `flow.mjs` (real user, flip, scroll, seal attempt), `render.mjs` (mocke
   - **Docs:**
     - AGENTS.MD vocabulary needs ad0ll's approval first (AGENTS.MD:5 says agents may not invent or redefine vocabulary). Rename "Original Artist Gratitude Share" to Residual, or give it Residual as its on-screen name, and add Direct.
     - DESIGN.md:471 (the cork back's Gratitude bullet).
-    - The spec's receipt table (docs/superpowers/specs/2026-09-26-stat-board-user-stats-design.md:39-47).
   - **Render:** `c-proposal-top.png`.
 - **Impeccable:** `/impeccable clarify` (labels, and the empty and failed states), then `/impeccable distill` (rows, dots, reasons), then `/impeccable polish`.
 - **Size:** M (API field change and its tests, the receipt, the catalog, docs).

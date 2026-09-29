@@ -138,7 +138,11 @@ export async function reportDeposit(
   deps: AppDeps,
   userId: string,
   giftId: string,
-): Promise<GiftStep<"gift_not_found" | "not_yours" | "deposit_not_landed" | "deposit_mismatch">> {
+): Promise<
+  GiftStep<
+    "gift_not_found" | "not_yours" | "deposit_not_landed" | "deposit_mismatch" | "deposit_held"
+  >
+> {
   const { db, giftChain } = deps;
   const owned = ownGift(db.select().from(gifts).where(eq(gifts.id, giftId)).get(), userId, giftId);
   if (owned.refusal !== null) return owned;
@@ -148,14 +152,17 @@ export async function reportDeposit(
   if (check === "not_landed") {
     return refuse("deposit_not_landed", `The escrow has no deposit for gift ${giftId} yet`);
   }
+  if (check === "mismatch" && gift.escrowStatus === "pending") {
+    return refuse(
+      "deposit_held",
+      `The escrow holds gift ${giftId}'s sticker under terms packaging didn't issue, so the gift is ${gift.status} and its giver must take the sticker out on chain`,
+      giftId,
+    );
+  }
   if (check === "mismatch") {
-    const sticker =
-      gift.escrowStatus === "pending"
-        ? "the escrow holds its sticker until the giver takes it out on chain"
-        : "its sticker can be given again";
     return refuse(
       "deposit_mismatch",
-      `The escrow's deposit for gift ${giftId} isn't the one packaging issued, so the gift is ${gift.status}, and ${sticker}`,
+      `The escrow's deposit for gift ${giftId} isn't this sticker's, so the gift is ${gift.status} and its sticker can be given again`,
     );
   }
   return { refusal: null, gift };

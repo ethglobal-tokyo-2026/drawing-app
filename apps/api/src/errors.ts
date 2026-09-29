@@ -12,6 +12,8 @@ export const errorBodySchema = z.object({
   error: z.string(),
   /** Human-readable; for 400, names the field. */
   detail: z.string().optional(),
+  /** gift_held's gift: the one whose sticker the escrow holds, which its giver can take out. */
+  giftId: z.string().optional(),
 });
 export type ErrorBody = z.infer<typeof errorBodySchema>;
 
@@ -21,10 +23,14 @@ export function apiError<const Status extends ContentfulStatusCode, const Code e
   status: Status,
   error: Code,
   detail?: string,
+  giftId?: string,
 ) {
   logInfo("api.refused", { status, errorCode: error });
-  const body: { error: Code; detail?: string } =
-    detail === undefined ? { error } : { error, detail };
+  const body: { error: Code; detail?: string; giftId?: string } = {
+    error,
+    ...(detail !== undefined && { detail }),
+    ...(giftId !== undefined && { giftId }),
+  };
   return c.json(body, status);
 }
 

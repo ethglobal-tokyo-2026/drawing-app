@@ -54,4 +54,9 @@ export const api = {
     /** Handle prompt: the submit button, disabled, while the handle input is empty */
     pick: { en: "Pick a handle", ja: "ユーザー名を決める" },
   },
+  /** How screens name a person. */
+  person: {
+    /** Anywhere a person is named, for someone with neither a LINE name nor a handle, such as a deleted account: the name shown */
+    unnamed: { en: "Someone", ja: "だれか" },
+  },
 } as const satisfies Section;

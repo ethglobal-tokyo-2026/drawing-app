@@ -35,6 +35,8 @@ const REFUSAL_STATUS = {
   take_out_not_landed: 409,
   deposit_not_landed: 409,
   deposit_mismatch: 409,
+  deposit_held: 409,
+  gift_held: 409,
   not_deposited: 409,
   gift_closed: 409,
   already_received: 409,
@@ -48,8 +50,8 @@ const REFUSAL_STATUS = {
 
 const refused = <Code extends keyof typeof REFUSAL_STATUS>(
   c: Context,
-  { refusal, detail }: Refusal<Code>,
-) => apiError(c, REFUSAL_STATUS[refusal], refusal, detail);
+  { refusal, detail, giftId }: Refusal<Code>,
+) => apiError(c, REFUSAL_STATUS[refusal], refusal, detail, giftId);
 
 /** A Receiving's answer: the sticker on the receiver's board, or why not. */
 function received(c: Context<AppEnv>, receiving: Receiving) {

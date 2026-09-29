@@ -125,6 +125,11 @@ export class LineTokenInvalidError extends Error {
   }
 }
 
+/** LINE couldn't be asked about the ID token: a timeout, a network failure, or LINE's own error. */
+export class LineUnavailableError extends Error {
+  name = "LineUnavailableError";
+}
+
 export interface LineVerifier {
   /**
    * Asks LINE who the token names. Rejects with LineTokenInvalidError when LINE refuses the token;
