@@ -24,12 +24,15 @@ export const giftIdParam = z.object({ giftId: bytes32Schema });
 export interface Refusal<Code extends string> {
   refusal: Code;
   detail: string;
+  /** The gift the refusal is about, when the app must act on it. */
+  giftId?: string;
 }
 
-export const refuse = <Code extends string>(refusal: Code, detail: string): Refusal<Code> => ({
-  refusal,
-  detail,
-});
+export const refuse = <Code extends string>(
+  refusal: Code,
+  detail: string,
+  giftId?: string,
+): Refusal<Code> => ({ refusal, detail, ...(giftId !== undefined && { giftId }) });
 
 const count = z.number().int().nonnegative();
 const positiveInt = z.number().int().positive();

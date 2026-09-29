@@ -169,7 +169,8 @@ async function takenOutForItsTerms(test: GiftsTestApp, otherTerms = anotherCommi
   test.landDeposit(gift.id, otherTerms(gift));
   expect(await refusalOf(await test.deposit(giverId, gift.id))).toMatchObject({
     status: 409,
-    error: "deposit_mismatch",
+    error: "deposit_held",
+    giftId: gift.id,
   });
   return { giverId, gift };
 }
@@ -247,7 +248,7 @@ describe("A deposit checked against the escrow's record", () => {
       expect(test.giftRow(gift.id)).toMatchObject({ status: "taken_out", escrowStatus: "pending" });
       expect(
         await refusalOf(await test.post(giverId, "", { stickerId: gift.stickerId })),
-      ).toMatchObject({ status: 409, error: "gift_in_transit" });
+      ).toMatchObject({ status: 409, error: "gift_held", giftId: gift.id });
       expect(await refusalOf(await test.takeOut(giverId, gift.id))).toMatchObject({
         status: 409,
         error: "take_out_not_landed",

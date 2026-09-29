@@ -147,6 +147,8 @@ export class ApiError extends Error {
   /** The body's `error`: stable, so screens switch on it. */
   readonly code: string;
   readonly detail?: string;
+  /** gift_held's gift: the one to take out before the sticker can be given again. */
+  readonly giftId?: string;
 
   constructor(status: number, body: ErrorBody) {
     super(body.detail ? `${body.error}: ${body.detail}` : body.error);
@@ -154,6 +156,7 @@ export class ApiError extends Error {
     this.status = status;
     this.code = body.error;
     this.detail = body.detail;
+    this.giftId = body.giftId;
   }
 }
 

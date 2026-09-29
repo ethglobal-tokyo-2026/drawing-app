@@ -60,18 +60,28 @@ export const errors = {
     en: "Names aren't set up on this server yet.",
     ja: "このサーバーでは、まだ名前が使えません。",
   },
-  /** Giving, In the bag: packing a sticker when the escrow's deposit (POST /api/gifts/:giftId/deposit) isn't the one packaging issued, in “couldn’t be packed” through errorReason */
+  /** Giving, In the bag: packing a sticker when the escrow's deposit (POST /api/gifts/:giftId/deposit) isn't this sticker's, so the gift closed and the sticker can be given again, in “couldn’t be packed” through errorReason */
   deposit_mismatch: {
-    en: "The gift bag doesn't hold the sticker it should.",
-    ja: "ギフト袋に、入っているはずのシールが入っていません。",
+    en: "The gift bag didn't get your sticker. Give it again.",
+    ja: "ギフト袋にシールが入りませんでした。もう一度贈ってください。",
+  },
+  /** Giving, In the bag: packing a sticker when the escrow holds it under terms packaging didn't issue (POST /api/gifts/:giftId/deposit), so only taking it out frees it, in “couldn’t be packed” through errorReason */
+  deposit_held: {
+    en: "Your sticker went into the gift bag the wrong way. Take it out, then give it again.",
+    ja: "シールが正しくギフト袋に入りませんでした。取り出してから、もう一度贈ってください。",
   },
   /** Giving, In the bag: packing a sticker when the escrow still has no deposit after the app's retries (POST /api/gifts/:giftId/deposit), in “couldn’t be packed” through errorReason */
   deposit_not_landed: {
     en: "The gift bag isn't on the chain yet.",
     ja: "ギフト袋は、まだブロックチェーン上にありません。",
   },
-  /** Giving, In the bag: recording LINE's picker outcome (POST /api/gifts/:giftId/shared) or taking the gift out (POST …/take-out) once it's no longer packed or sent, in “couldn’t record” or “couldn’t be taken out” through errorReason */
+  /** Giving, In the bag: recording LINE's picker outcome (POST /api/gifts/:giftId/shared) for a gift that's no longer packed or sent, or taking out a gift already returned, in “couldn’t record” or “couldn’t be taken out” through errorReason */
   gift_closed: { en: "This gift is closed.", ja: "このギフトは、すでに終了しています。" },
+  /** Giving, In the bag: packing a sticker (POST /api/gifts) that an earlier gift still holds in the escrow until it's taken out, in “couldn’t be packed” through errorReason */
+  gift_held: {
+    en: "This sticker is still in an earlier gift bag. Take it out, then give it again.",
+    ja: "このシールは、前のギフト袋に入ったままです。取り出してから、もう一度贈ってください。",
+  },
   /** Receiving: opening a gift message's link (POST /api/gifts/preview or /receive) after the gift expired unopened; the Receive gift dialog shows its own returned-gift screen instead, so this is errorMessage's fallback */
   gift_expired: {
     en: "This gift wasn't opened in time.",
