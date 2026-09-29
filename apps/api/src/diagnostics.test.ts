@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { z } from "zod";
 import {
   CAUSE_MAX_LENGTH,
   diagnosticStep,
@@ -8,27 +7,9 @@ import {
   logInfo,
   withRequestDiagnostics,
 } from "./diagnostics.ts";
+import { captureLogLines, type LogLines } from "./testing/logLines.ts";
 
-const entrySchema = z.object({
-  event: z.string(),
-  requestId: z.string().optional(),
-  stickerId: z.string().optional(),
-  txHash: z.string().optional(),
-  elapsedMs: z.number().optional(),
-  causes: z
-    .array(
-      z.object({
-        name: z.string(),
-        message: z.string(),
-        code: z.union([z.string(), z.number()]).optional(),
-        status: z.number().optional(),
-        details: z.string().optional(),
-      }),
-    )
-    .optional(),
-});
-let entries: z.infer<typeof entrySchema>[];
-let raw: string[];
+let logs: LogLines;
 
 function deferred() {
   let resolve: () => void = () => {
@@ -41,15 +22,7 @@ function deferred() {
 }
 
 beforeEach(() => {
-  entries = [];
-  raw = [];
-  const collect = (value: unknown) => {
-    if (typeof value !== "string") throw new Error("Expected one structured log line");
-    raw.push(value);
-    entries.push(entrySchema.parse(JSON.parse(value)));
-  };
-  vi.spyOn(console, "info").mockImplementation(collect);
-  vi.spyOn(console, "error").mockImplementation(collect);
+  logs = captureLogLines();
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -72,25 +45,17 @@ describe("NFT diagnostics", () => {
     first.resolve();
     await expect(a).resolves.toBe("request-a");
     expect(
-      entries.filter((entry) => entry.event === "mint.submitted").map((entry) => entry.requestId),
+      logs.entries
+        .filter((entry) => entry.event === "mint.submitted")
+        .map((entry) => entry.requestId),
     ).toEqual(["request-b", "request-a"]);
-    expect(entries.filter((entry) => entry.event === "mint.completed")).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          requestId: "request-a",
-          stickerId: "request-a",
-        }),
-        expect.objectContaining({
-          requestId: "request-b",
-          stickerId: "request-b",
-        }),
-      ]),
-    );
-    for (const entry of entries.filter((entry) => entry.event === "mint.completed")) {
+    logs.expectLogged("mint.completed", { requestId: "request-a", stickerId: "request-a" });
+    logs.expectLogged("mint.completed", { requestId: "request-b", stickerId: "request-b" });
+    for (const entry of logs.entries.filter((entry) => entry.event === "mint.completed")) {
       expect(entry.elapsedMs).toBeTypeOf("number");
     }
     logInfo("outside.request");
-    expect(entries.at(-1)?.requestId).toBeUndefined();
+    expect(logs.entries.at(-1)?.requestId).toBeUndefined();
   });
 
   it("preserves RPC causes and submitted hashes while omitting secrets and request payloads", async () => {
@@ -109,7 +74,7 @@ describe("NFT diagnostics", () => {
     await expect(
       diagnosticStep("mint.confirm", { txHash }, () => Promise.reject(failure)),
     ).rejects.toBe(failure);
-    const log = entries.find((entry) => entry.event === "mint.confirm.failed");
+    const log = logs.entries.find((entry) => entry.event === "mint.confirm.failed");
     expect(log).toMatchObject({
       txHash,
       causes: [
@@ -117,7 +82,7 @@ describe("NFT diagnostics", () => {
         { name: "Error", code: -32000, message: "nonce too low; privateKey=[redacted]" },
       ],
     });
-    const output = raw.join("\n");
+    const output = logs.raw.join("\n");
     for (const value of [
       secret,
       jwt,
@@ -157,7 +122,7 @@ describe("NFT diagnostics", () => {
     error.cause = error;
     const fields = { stickerId: "sticker-a", giftClaimToken: "must-stay-private" };
     logFailure("mint.failed", error, fields);
-    expect(entries[0]?.causes).toEqual([{ name: "Error", message: "cyclic cause" }]);
-    expect(raw[0]).not.toContain("must-stay-private");
+    expect(logs.entries[0]?.causes).toEqual([{ name: "Error", message: "cyclic cause" }]);
+    expect(logs.raw[0]).not.toContain("must-stay-private");
   });
 });
