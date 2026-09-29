@@ -405,7 +405,7 @@ Stickers and the gratitude heart also respond to the app's one moving light. The
 
 **The One Light Rule.** There's one light for the whole app. Static shadows fall down and to the right from the top-left light, and every moving highlight (the sticker specular and sheen, the foil's glint, the heart's gloss) reads the shared light variables. Don't add a second light source. The foil's glint sits where the light falls, the same way on every sticker whatever its turn, and holds where the last tilt left it; before any tilt it rests top-left. Only the foil's bands run on their own clock, flowing on a 7s loop staggered per sticker, under a grating that never moves. They hold still under reduced motion.
 
-**The Neutral Shadow Rule.** Shadows are Ink alpha, never tinted. The one exception is the cork back: paper, stamps and pins cast a cork-brown throw (rgba(58,36,16,…)) over an Ink contact line, because a shadow on cork is darker cork. The only colored light in the world is a sticker's gratitude glow, warming from faint pink (#FF7EB6) toward amber (#FFB13B) as more gratitude arrives; those two hues belong to the glow alone.
+**The Neutral Shadow Rule.** Shadows are Ink alpha, never tinted. The one exception is the cork back: paper, stamps and pins cast a cork-brown throw (rgba(58,36,16,…)) over an Ink contact line, because a shadow on cork is darker cork. The one colored light is kept for a sticker's gratitude glow (see Designed, not built yet): faint pink (#FF7EB6) warming toward amber (#FFB13B); those two hues belong to the glow alone.
 
 **The No Gloss Rule.** Controls have no gloss, highlight line or sheen: keys, labels, tabs, the zipper and the gift's tear tape are lit flat, with an edge and a contact shadow at most.
 
@@ -483,7 +483,7 @@ The board's back, where a person's figures are pinned up as paper. It's the only
 - **Stickers:** made, received and given as three postage stamps stuck on at small turns, each printed on its hue with an Ink rule.
 - **Bests:** a torn notebook scrap ruled in Ink at 14% every 24px, held by washi. Its heading and each row take whole 24px lines with no gaps between them, and each line's rule runs a pixel under the baseline, so the words sit on the rules the way handwriting sits on a notebook's lines. Best combo on it is the hit counter, with no note, and it fits inside its line.
 - **About:** the joined date and the ENS name, each on its own strip of Ink label-maker tape with raised letters; the ENS strip opens the name in the ENS app.
-- **Controls:** Flip back is label stock at the foot of the right column. Bare cork, Escape and LINE's Back also flip back. Your own back adds Share my board (aqua label) and QR code. The back has no key.
+- **Controls:** Flip back is label stock at the foot of the right column. Bare cork, Escape and LINE's Back also flip back. The back has no key.
 - **Settings:** your own back's first paper under the stats, above your two address papers and Age verification, since it's the one people come back to. It's a clean-cut index card taped at both top corners, its Title-type heading over an Ink rule. Until it scrolls into view its heading peeks above the cork's foot; a tap or focus scrolls it in. Language is ruled 44px radio rows (Same as LINE, English, 日本語) with an Ink dot in a ring for the pick; a failed save shows its reason on Tomato Soft.
 - **Developer slip:** LINE's and Privy's details on a torn-top slip, lying collapsed under the cork's end, after the last paper, in every build that has it. Pulling up past the end meets iOS's rubber band: the cork and its papers ride up together as the slip's top shows, and past 150px of travel the release brings it out and the cork glides up to it; short of that it settles back. Only a touch that starts at the end pulls, and the cork doesn't bounce there. A visually hidden "Developer tools" button, shown as label tape when focused, brings it out for keyboards and screen readers. Reduced motion: nothing moves, and it fades in. It goes back under once the board rests on its front.
 - **Empty values** read in words: "No gratitude yet", "Not started", "None yet" (a best at 0).
@@ -567,7 +567,6 @@ The one card that sells reserve tickets, in the out-of-tickets card's stock. The
 - **Baked resin:** the gloss is baked into the image, with the print darker and more saturated where resin pools at the edge, a refraction band inside the cut edge, a rim light and a meniscus at the foot.
 - **Live resin:** on stickers that are showing, a live layer adds a specular along the top edge, a rim light and a sheen that sweeps when the sticker is placed, dragged or tilted.
 - **Foil:** a sticker drawn by someone other than the board's owner wears a foil band just outside its white edge, 4% of the sticker's long side: about 5px on the board, wider on the detail's big sticker, narrower on tray sheets. It's the silhouette grown by that distance on the server, one mask per sticker, so it follows the cut at an even width round curves and points; a sticker without that mask dilates its silhouette in sixteen directions instead, 5px on the board, 6px on the detail, 3px on sheets. The band is the sticker's edge: the white edge runs straight into it, the image shows only inside its own cut, and the kiss-cut and cast shadow fall from the band's outer edge. A fine diffraction grating lies over it and never moves: diagonal hairlines on a 2px period, lit white and shaded Ink at low alpha. The six foil bands flow under the grating, so the band glitters rather than crawls, and a white glint sits where the one light falls; holes hide it; it's decorative, and the sticker's own label names the artist. The seal ceremony adds nothing: a freshly sealed sticker is yours and plain.
-- **Glow:** gratitude shows on a sticker as a soft glow behind it, warmer and brighter with more gratitude.
 - **Peel and stick:** a sticker peels with a 3D lift toward the top right and sticks with a short settle from 1.06 scale.
 
 ### Artist chip
@@ -692,7 +691,7 @@ One experience for everyone, on plain Liner, once per hand-off.
 - **Mini hearts:** from ドキドキ up, taps spray small pink hearts that bounce, collide and pile along the bottom before fading. A tap shoves nearby hearts away, harder the closer they are. The heart sweats hearts: a slow drip at ドキドキ, a real sweat at オーバーヒート, heavier at 昇天, all landing in the same pile with 昇天's rain.
 - **Discovery:** stroking the heart stretches it along the drag, and after three tries a tip says what to do. After the one motion opt-in, it sways with the wrist, and shaking hard says "Keep shaking!".
 - **After 昇天:** condensation fogs the glass in from the edges over 1.2s and clears on its own.
-- **After:** the receipt shows the amount, the best multiplier and the combo's length. The sticker's trail replays the combo inside its card (Gratitude replay). The giver will see a pink tag on the board's edge whose card plays the same replay.
+- **After:** the receipt shows the amount, the best multiplier and the combo's length. The sticker's trail replays the combo inside its card (Gratitude replay).
 
 ### Loading
 
@@ -735,6 +734,14 @@ The official account's menu under its chat in LINE, drawn as the board foot. LIN
 ### Mocked platform screens
 
 The LINE chat, the Gift Message, consent, share picker, Add friends screen and iOS notification banners use the platform's own native type, white and system greys, and LINE's green. They're faithful mimicry, and the world's materials (keys, labels, the press) never leak into them.
+
+### Designed, not built yet
+
+Designs the app doesn't show yet. PRODUCT.md's Not built yet lists them too.
+
+- **Gratitude glow:** gratitude shows on a sticker as a soft glow behind it, warmer and brighter with more gratitude, from faint pink (#FF7EB6) toward amber (#FFB13B).
+- **The giver's pink tag:** a pink tag on the board's edge tells the giver new Gratitude arrived; its card plays the combo's Gratitude replay.
+- **Share my board:** your own cork back's controls add Share my board (an aqua label) and QR code, sharing your sticker board as a link or a QR code.
 
 ## Do's and Don'ts
 
