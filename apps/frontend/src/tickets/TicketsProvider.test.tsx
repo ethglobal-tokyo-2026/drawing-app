@@ -1,8 +1,9 @@
 // @vitest-environment happy-dom
+import type { Me } from "@drawing-app/api/client";
 import { act, useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
-import { emptyApi, FRESH_TICKETS, renderWithApi } from "../api/testing";
+import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing";
 import type { TicketsValue } from "./ticketsContext";
 import { useTickets } from "./useTickets";
 
@@ -24,6 +25,8 @@ const NO_ANSWER = new ApiError(0, {
   error: "network",
   detail: "POST /api/tickets/spend got no answer",
 });
+/** Someone else, signed in on the same phone. */
+const SOMEONE_ELSE: Me = { ...TEST_ME, id: "someone-else", lineUserId: "U-someone-else" };
 
 /** Hands the test the tickets' spend. */
 function Spender({ onSpend }: { onSpend: (spend: Spend) => void }) {
@@ -32,20 +35,27 @@ function Spender({ onSpend }: { onSpend: (spend: Spend) => void }) {
   return null;
 }
 
+/** The server: every spend lands, unless a test answers the next one first. */
+const spendTicket = vi.fn<ApiClient["spendTicket"]>(() => Promise.resolve(SPENT));
+/** The key each spend has sent so far, in order, whichever open sent it. */
+const keys = () => spendTicket.mock.calls.map(([sent]) => sent.idempotencyKey);
+
 let view: ReturnType<typeof renderWithApi> | undefined;
-/**
- * Your tickets, over a client whose first spends fail with `failures` and the rest land. Answers
- * their spend, and the key each spend has sent so far, in order.
- */
-async function open(...failures: ApiError[]) {
-  const spendTicket = vi.fn<ApiClient["spendTicket"]>(() => Promise.resolve(SPENT));
-  for (const failure of failures) spendTicket.mockRejectedValueOnce(failure);
+/** Your tickets as `me`, in place of the page open before, as a reload does. Answers their spend. */
+async function open(me: Me = TEST_ME): Promise<Spend> {
+  view?.unmount();
   const onSpend = vi.fn<(spend: Spend) => void>();
-  view = renderWithApi(<Spender onSpend={onSpend} />, emptyApi({ spendTicket }));
+  view = renderWithApi(<Spender onSpend={onSpend} />, emptyApi({ spendTicket }), me);
   await act(async () => {});
   const spend = onSpend.mock.lastCall?.[0];
   if (!spend) throw new Error("The tickets gave no spend");
-  return { spend, keys: () => spendTicket.mock.calls.map(([sent]) => sent.idempotencyKey) };
+  return spend;
+}
+
+/** Opens the app as `me` and spends, but the page goes before the answer comes. */
+async function spendThenLeave(me: Me = TEST_ME) {
+  spendTicket.mockReturnValueOnce(new Promise(() => {}));
+  void (await open(me))("daily");
 }
 
 beforeEach(() => {
@@ -56,12 +66,15 @@ beforeEach(() => {
 afterEach(() => {
   view?.unmount();
   view = undefined;
+  spendTicket.mockReset();
+  localStorage.clear();
   vi.useRealTimers();
 });
 
 describe("spending a ticket", () => {
   it("sends a failed spend's key again when it's retried, and a new key for the next drawing", async () => {
-    const { spend, keys } = await open(NO_ANSWER);
+    spendTicket.mockRejectedValueOnce(NO_ANSWER);
+    const spend = await open();
     await expect(act(() => spend("daily"))).rejects.toBe(NO_ANSWER);
     await act(() => spend("daily"));
     await act(() => spend("daily"));
@@ -71,10 +84,40 @@ describe("spending a ticket", () => {
   });
 
   it("sends a second tap with the key of the spend still on its way", async () => {
-    const { spend, keys } = await open();
+    const spend = await open();
     await act(() => Promise.all([spend("daily"), spend("daily")]));
     const [first, second] = keys();
     expect(first).toEqual(expect.any(String));
     expect(second).toBe(first);
+  });
+});
+
+describe("a spend's key across a reload", () => {
+  it("sends the key again when the page went before the spend's answer came", async () => {
+    await spendThenLeave();
+    const spend = await open();
+    await act(() => spend("daily"));
+    const [sent, sentAgain] = keys();
+    expect(sentAgain).toBe(sent);
+  });
+
+  it("sends a new key once a spend has landed", async () => {
+    const spend = await open();
+    await act(() => spend("daily"));
+    const reloaded = await open();
+    await act(() => reloaded("daily"));
+    const [landed, next] = keys();
+    expect(next).not.toBe(landed);
+  });
+
+  it("keeps it for the person who spent, not someone else signing in on the phone", async () => {
+    await spendThenLeave();
+    const theirs = await open(SOMEONE_ELSE);
+    await act(() => theirs("daily"));
+    const yours = await open();
+    await act(() => yours("daily"));
+    const [sent, theirKey, sentAgain] = keys();
+    expect(theirKey).not.toBe(sent);
+    expect(sentAgain).toBe(sent);
   });
 });

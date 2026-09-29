@@ -1,8 +1,9 @@
 import type { TicketKind, Tickets, TicketUse } from "@drawing-app/api/client";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { apiError, type ApiError } from "../api/apiClient";
+import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
-import { newIdempotencyKey } from "../api/idempotencyKey";
+import { forgetSpendKey, spendKeyFor } from "./spendKey";
 import { TicketsContext, type Sheet } from "./ticketsContext";
 
 /** A turnover that just passed can still read as the old day on the server for a moment. */
@@ -11,6 +12,7 @@ const REFILL_MARGIN_MS = 1_000;
 /** Your tickets from the server, shared by every screen that shows or spends them. */
 export function TicketsProvider({ children }: { children: ReactNode }) {
   const api = useApi();
+  const { id: userId } = useMe();
   const [tickets, setTickets] = useState<Tickets | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -39,22 +41,25 @@ export function TicketsProvider({ children }: { children: ReactNode }) {
   const refillAt = tickets?.nextRefillAt;
   useEffect(() => {
     if (!refillAt) return;
-    const id = setTimeout(refresh, Date.parse(refillAt) - Date.now() + REFILL_MARGIN_MS);
+    const wait = Date.parse(refillAt) - Date.now() + REFILL_MARGIN_MS;
+    const id = setTimeout(refresh, Math.max(0, wait));
     return () => clearTimeout(id);
   }, [refillAt, refresh]);
 
-  // Kept until a spend lands, so a retry or a second tap sends the same key and gets the ticket use
-  // the first try spent, even when its answer was lost. The next drawing's spend makes a new one.
+  // Kept until a spend lands, in memory and on this device, so a retry, a second tap or the first
+  // spend after a reload sends the same key. Sending a kept key is always right: the server answers
+  // the ticket use it already spent, or spends a ticket if that try never reached it.
   const spendKey = useRef<string | null>(null);
   const spend = useCallback(
     async (kind: TicketKind) => {
-      const idempotencyKey = (spendKey.current ??= newIdempotencyKey());
+      const idempotencyKey = (spendKey.current ??= spendKeyFor(userId));
       const spent = await api.spendTicket({ kind, idempotencyKey });
       if (spendKey.current === idempotencyKey) spendKey.current = null;
+      forgetSpendKey(userId, idempotencyKey);
       setTickets(spent.tickets);
       return spent.ticketUse;
     },
-    [api],
+    [api, userId],
   );
 
   const [sheet, setSheet] = useState<Sheet>(null);
