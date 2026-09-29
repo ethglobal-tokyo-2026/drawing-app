@@ -39,9 +39,12 @@ export const AUTH_FAILURE_STATUS: Record<AuthFailureDetails["code"], number> = {
 
 /** Only fixed diagnostic labels belong here: provider bodies and error causes can contain tokens. */
 export class AuthError extends Error {
-  constructor(readonly details: AuthFailureDetails) {
+  readonly details: AuthFailureDetails;
+
+  constructor(details: AuthFailureDetails) {
     super(details.reason);
     this.name = "AuthError";
+    this.details = details;
   }
 }
 

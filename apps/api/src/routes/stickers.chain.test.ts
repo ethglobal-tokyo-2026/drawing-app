@@ -36,6 +36,7 @@ import { pngFile, sealFormData, sealParts } from "../stickers/testPngs.ts";
 import { createTestApp } from "../testing/createTestApp.ts";
 import { privySmartWallet, privyUser } from "../testing/privy.ts";
 import { bodyOf } from "../testing/responses.ts";
+import { spendBody } from "../tickets/testSpends.ts";
 import { ticketUseSchema } from "../tickets/tickets.ts";
 
 const chainRoot = fileURLToPath(new URL("../../../../packages/sticker-chain", import.meta.url));
@@ -109,11 +110,7 @@ describe("Sealing through the REST API and NFT contract", () => {
       const session = await app.request("/api/session", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          idToken: devIdToken(alice),
-          timeZone: "Asia/Tokyo",
-          language: "en",
-        }),
+        body: JSON.stringify({ idToken: devIdToken(alice), language: "en" }),
       });
       const { me } = await bodyOf(session, z.object({ me: meSchema }));
       const cookie = session.headers.get("set-cookie")?.split(";")[0];
@@ -121,7 +118,7 @@ describe("Sealing through the REST API and NFT contract", () => {
       const ticketResponse = await app.request("/api/tickets/spend", {
         method: "POST",
         headers: { Cookie: cookie, "content-type": "application/json" },
-        body: JSON.stringify({ kind: "daily" }),
+        body: JSON.stringify(spendBody("daily")),
       });
       const { ticketUse } = await bodyOf(
         ticketResponse,

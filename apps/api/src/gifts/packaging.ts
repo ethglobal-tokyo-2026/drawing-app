@@ -15,6 +15,7 @@ import {
   type Refusal,
 } from "../shapes.ts";
 import { giftSchema, stickerLookup, stickerSchema, toGift } from "../views.ts";
+import { checkDeposit, closingDates, ownGift } from "./deposit.ts";
 
 export type GiftRow = typeof gifts.$inferSelect;
 
@@ -114,6 +115,13 @@ export async function packageGift(
 ): Promise<Packaging> {
   const { db, clock, giftChain, smartWallets } = deps;
   const sender = giftChain ? await smartWallets.addressFor(userId) : null;
+  if (giftChain) {
+    // A gift the server took out while the escrow held its sticker: the escrow may have let go since.
+    const held = giftHoldingSticker(db, stickerId);
+    if (held?.status === "taken_out" && held.giverId === userId) {
+      await checkDeposit(deps, giftChain, held);
+    }
+  }
   const now = clock.now();
   return db.transaction(
     (tx): Packaging => {
@@ -122,7 +130,7 @@ export async function packageGift(
       if (sticker.ownerId !== userId) {
         return refuse("not_yours", `Sticker ${stickerId} is held by someone else`);
       }
-      // gifts.for_user_id carries no foreign key or check, so it's checked here.
+      // The table refuses these too; checking here answers with a refusal the app can show.
       if (forUserId === userId) return refuse("own_gift", "A gift can't be for its own giver");
       if (forUserId !== null) {
         const recipient = tx.select().from(users).where(eq(users.id, forUserId)).get();
@@ -183,17 +191,6 @@ export async function packageGift(
   );
 }
 
-/** A gift its giver is changing, or why it can't be: there's no such gift, or it's someone else's. */
-export function ownGift(
-  gift: GiftRow | undefined,
-  userId: string,
-  giftId: string,
-): GiftStep<"gift_not_found" | "not_yours"> {
-  if (!gift) return refuse("gift_not_found", `There's no gift ${giftId}`);
-  if (gift.giverId !== userId) return refuse("not_yours", `Gift ${giftId} is someone else's`);
-  return { refusal: null, gift };
-}
-
 const closed = (gift: GiftRow) =>
   refuse("gift_closed", `Gift ${gift.id} is already ${gift.status}`);
 
@@ -232,10 +229,12 @@ export function reportShared(
 
 /**
  * A take-out its gift's status already answers: one that landed before, answered again, or a
- * refusal. Null while the gift is packed or sent, so it can still be taken out.
+ * refusal. Null while the gift is packed or sent, so it can still be taken out, and while the server
+ * has taken it out but the escrow holds its sticker, so the giver's take-out on chain settles it.
  */
 function takeOutState(gift: GiftRow): GiftStep<"already_received" | "gift_closed"> | null {
-  if (gift.status === "taken_out" && gift.escrowStatus === "rejected") {
+  // Rejected, or never in the escrow.
+  if (gift.status === "taken_out" && gift.escrowStatus !== "pending") {
     return { refusal: null, gift };
   }
   if (gift.status === "returned" && gift.escrowStatus === "expired_returned") {
@@ -244,11 +243,16 @@ function takeOutState(gift: GiftRow): GiftStep<"already_received" | "gift_closed
   if (gift.status === "received") {
     return refuse("already_received", `Gift ${gift.id} was already received`);
   }
-  if (gift.status !== "packed" && gift.status !== "sent") return closed(gift);
+  if (gift.status !== "packed" && gift.status !== "sent" && gift.status !== "taken_out") {
+    return closed(gift);
+  }
   return null;
 }
 
-/** Takes a gift back before anyone receives it, from the bag or after sending. */
+/**
+ * Takes a gift back before anyone receives it, from the bag or after sending; or records the giver's
+ * take-out on chain of one the server took out.
+ */
 export async function takeOut(
   { db, clock, giftChain }: AppDeps,
   userId: string,
@@ -290,12 +294,12 @@ export async function takeOut(
       // Another request may have settled it while the chain was read.
       const settled = takeOutState(gift);
       if (settled) return settled;
+      const status = escrowStatus === "expired_returned" ? "returned" : "taken_out";
       const takenOut = tx
         .update(gifts)
         .set({
-          status: escrowStatus === "expired_returned" ? "returned" : "taken_out",
-          takenOutAt: escrowStatus === "expired_returned" ? undefined : clock.now(),
-          returnedAt: escrowStatus === "expired_returned" ? clock.now() : undefined,
+          status,
+          ...closingDates(status, gift, clock.now()),
           // The mock chain's reject lands at once, so the sticker can be given again.
           escrowStatus,
         })

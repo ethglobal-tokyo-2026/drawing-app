@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
-  bytes32,
   createTestDb,
   insertSticker,
   insertUser,
@@ -28,7 +27,12 @@ const update = (id: string, values: Partial<typeof gifts.$inferInsert>) =>
 const deposited = { escrowStatus: "pending" } as const;
 const sent = () => ({ status: "sent", sentAt: new Date() }) as const;
 const received = (by: string) =>
-  ({ status: "received", receiverId: by, receivedAt: new Date() }) as const;
+  ({
+    status: "received",
+    receiverId: by,
+    receivedAt: new Date(),
+    escrowStatus: "claimed",
+  }) as const;
 const takenOut = () => ({ status: "taken_out", takenOutAt: new Date() }) as const;
 
 describe("gifts", () => {
@@ -56,21 +60,30 @@ describe("gifts", () => {
     expect(refusal(() => packGift(db, sticker, giver))).toMatch(/gifts.sticker_id/);
     update(first, takenOut());
     expect(refusal(() => packGift(db, sticker, giver))).toMatch(/gifts.sticker_id/);
-    update(first, { escrowStatus: "rejected", rejectTxHash: bytes32("reject") });
+    update(first, { escrowStatus: "rejected" });
     expect(() => packGift(db, sticker, giver)).not.toThrow();
   });
 
-  it("keeps the receive when a claim misses the expiry and the gift returns", () => {
+  it("is received only once its claim has landed, and never returned after", () => {
     const id = packGift(db, sticker, giver, deposited);
+    expect(refusal(() => update(id, { ...received(receiver), ...deposited }))).toMatch(
+      /gifts_status_escrow/,
+    );
     update(id, received(receiver));
-    expect(() =>
-      update(id, {
-        status: "returned",
-        returnedAt: new Date(),
-        returnTxHash: bytes32("return"),
-        escrowStatus: "expired_returned",
-      }),
-    ).not.toThrow();
+    const returned = { status: "returned", returnedAt: new Date() } as const;
+    expect(refusal(() => update(id, { ...returned, escrowStatus: "expired_returned" }))).toMatch(
+      /gifts_status_dates/,
+    );
+  });
+
+  it("waits only for someone else, who has an account", () => {
+    expect(refusal(() => packGift(db, sticker, giver, { forUserId: giver }))).toMatch(
+      /gifts_not_for_self/,
+    );
+    expect(refusal(() => packGift(db, sticker, giver, { forUserId: "no such person" }))).toMatch(
+      /FOREIGN KEY/,
+    );
+    expect(() => packGift(db, sticker, giver, { forUserId: receiver })).not.toThrow();
   });
 
   it("refuses an expiry before packaging, and a gift received by its giver", () => {

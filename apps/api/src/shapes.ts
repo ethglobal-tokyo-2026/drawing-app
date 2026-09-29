@@ -94,7 +94,6 @@ export const meSchema = personSchema.extend({
    * LIFF logged in. Yours alone: Person leaves it out.
    */
   lineUserId: userRow.shape.lineUserId,
-  timeZone: userRow.shape.timeZone,
   language: userRow.shape.language,
   /** Settings' language; null follows LINE's. */
   languageChoice: userRow.shape.languageChoice,
@@ -117,7 +116,6 @@ export const toMe = (
 ): Me => ({
   ...toPerson(user),
   lineUserId: user.lineUserId,
-  timeZone: user.timeZone,
   language: user.language,
   languageChoice: user.languageChoice,
   createdAt: toIsoTime(user.createdAt),

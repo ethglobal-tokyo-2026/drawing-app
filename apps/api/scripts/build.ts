@@ -1,16 +1,12 @@
-// Bundles the REST API and the sticker image preparation required before publishing it.
-// better-sqlite3 and sharp stay out of the bundles: they're native, so deploy/deploy-api.sh installs the box's
-// own builds beside them.
+// Bundles the REST API as dist/server.mjs. better-sqlite3 and sharp stay out of the bundle: they're native, so
+// deploy/deploy-api.sh installs the box's own builds beside it.
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 
 const path = (relative: string) => fileURLToPath(new URL(relative, import.meta.url));
 
 await build({
-  entryPoints: {
-    server: path("../src/server.ts"),
-    "backfill-sticker-webp": path("./backfill-sticker-webp.ts"),
-  },
+  entryPoints: { server: path("../src/server.ts") },
   outdir: path("../dist"),
   outExtension: { ".js": ".mjs" },
   bundle: true,

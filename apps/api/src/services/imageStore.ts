@@ -125,35 +125,19 @@ async function makeWebp(
   }
 }
 
-/** The WebP files a stored sticker lacks. */
-export async function missingWebps(
-  imageDir: string,
-  contentHash: string,
-): Promise<StickerWebpKind[]> {
-  checkContentHash(contentHash);
-  const present = await Promise.all(
-    webpKinds.map((kind) => exists(join(imageDir, webpName(contentHash, kind)))),
-  );
-  return webpKinds.filter((_, i) => !present[i]);
-}
-
 /**
- * Makes the WebP files a stored sticker lacks from its PNGs on disk, the first seal's, and returns
- * the kinds it wrote.
+ * Makes the WebP files a stored sticker lacks from its PNGs on disk, the first seal's, so a save cut
+ * off before its WebPs is finished by the next one.
  */
-export async function writeMissingWebps(
-  imageDir: string,
-  contentHash: string,
-): Promise<StickerWebpKind[]> {
-  const missing = await missingWebps(imageDir, contentHash);
+async function writeMissingWebps(imageDir: string, contentHash: string) {
   const readPng = (kind: StickerPngKind) =>
     readFile(join(imageDir, pngName(contentHash, kind))).then((bytes) => new Uint8Array(bytes));
   await Promise.all(
-    missing.map(async (kind) =>
-      writeIfAbsent(join(imageDir, webpName(contentHash, kind)), await makeWebp(kind, readPng)),
-    ),
+    webpKinds.map(async (kind) => {
+      const path = join(imageDir, webpName(contentHash, kind));
+      if (!(await exists(path))) await writeIfAbsent(path, await makeWebp(kind, readPng));
+    }),
   );
-  return missing;
 }
 
 export interface DiskImageStore extends ImageStore {

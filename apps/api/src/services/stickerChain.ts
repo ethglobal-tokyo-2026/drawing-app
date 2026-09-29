@@ -31,6 +31,15 @@ import type { DiskImageStore } from "./imageStore.ts";
 const EVENT_LOOKUP_TIMEOUT_MS = 30_000;
 /** Probes between the event lookup's progress logs. */
 const EVENT_LOOKUP_PROBES_PER_LOG = 8;
+/**
+ * How long Receiving waits for its claim to land. Under the app's wait for Receiving, with room to
+ * read the escrow and find a late claim's event, so Receiving answers before the app gives up.
+ */
+export const CLAIM_RECEIPT_TIMEOUT_MS = 60_000;
+/** How long one RPC request may take, short enough that a hung provider leaves time to retry. */
+export const RPC_REQUEST_TIMEOUT_MS = 5_000;
+/** Retries of a failed RPC request; with several URLs, each retry tries them all again. */
+export const RPC_RETRY_COUNT = 1;
 
 function address(value: string, name: string): Address {
   if (!isAddress(value)) throw new Error(`${name} is not an Ethereum address`);
@@ -40,7 +49,14 @@ function address(value: string, name: string): Address {
 /** One RPC URL, or several separated by commas, each tried when the one before fails. */
 export function rpcTransport(rpcUrl: string) {
   const urls = rpcUrl.split(",").map((url) => url.trim());
-  return urls.length > 1 ? fallback(urls.map((url) => http(url))) : http(rpcUrl.trim());
+  const request = { timeout: RPC_REQUEST_TIMEOUT_MS };
+  // The fallback retries the list, so its URLs don't retry on their own.
+  return urls.length > 1
+    ? fallback(
+        urls.map((url) => http(url, request)),
+        { retryCount: RPC_RETRY_COUNT },
+      )
+    : http(rpcUrl.trim(), { ...request, retryCount: RPC_RETRY_COUNT });
 }
 
 export function createStickerChain({
@@ -334,7 +350,10 @@ export function createStickerChain({
         logInfo("chain.claim.submitted", { ...fields, txHash });
         const hash = txHash;
         await diagnosticStep("chain.claim.receipt", { ...fields, txHash }, async () => {
-          const receipt = await publicClient.waitForTransactionReceipt({ hash });
+          const receipt = await publicClient.waitForTransactionReceipt({
+            hash,
+            timeout: CLAIM_RECEIPT_TIMEOUT_MS,
+          });
           logInfo("chain.claim.receipt.result", {
             ...fields,
             txHash,

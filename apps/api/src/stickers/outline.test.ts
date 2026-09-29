@@ -1,5 +1,11 @@
+import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { simplifiedOutline, TOLERANCE } from "./outline.ts";
+import {
+  MAX_CACHED_OUTLINE_CHARS,
+  simplifiedOutline,
+  simplifiedOutlineOf,
+  TOLERANCE,
+} from "./outline.ts";
 
 type Point = [number, number];
 
@@ -65,5 +71,40 @@ describe("a simplified cut line", () => {
       SIZE,
     );
     expect(simplified.match(/M/g)).toHaveLength(2);
+  });
+});
+
+describe("a sealed sticker's simplified cut line", () => {
+  /** Two cut lines that simplify to different lines. */
+  const SQUARE = storedLine([
+    [10, 10],
+    [50, 10],
+    [50, 50],
+    [10, 50],
+  ]);
+  const TRIANGLE = storedLine([
+    [10, 10],
+    [50, 10],
+    [30, 50],
+  ]);
+  const sticker = (id: string, outline: string) => ({ id, outline, width: SIZE, height: SIZE });
+
+  it("is simplified once, then reused for the same sticker", () => {
+    const id = randomUUID();
+    expect(simplifiedOutlineOf(sticker(id, SQUARE))).toBe(simplifiedOutline(SQUARE, SIZE, SIZE));
+    // Sealing fixes the outline, so a repeat read answers from the cache, not from what it's passed.
+    expect(simplifiedOutlineOf(sticker(id, TRIANGLE))).toBe(simplifiedOutline(SQUARE, SIZE, SIZE));
+  });
+
+  it("keeps at most MAX_CACHED_OUTLINE_CHARS of cut lines, letting the first one cached go", () => {
+    const square = simplifiedOutline(SQUARE, SIZE, SIZE);
+    const fill = Math.floor(MAX_CACHED_OUTLINE_CHARS / square.length) + 1;
+    const ids = Array.from({ length: fill }, () => randomUUID());
+    for (const id of ids) simplifiedOutlineOf(sticker(id, SQUARE));
+    const [first, ...kept] = ids;
+    expect(kept.filter((id) => simplifiedOutlineOf(sticker(id, TRIANGLE)) !== square)).toEqual([]);
+    expect(simplifiedOutlineOf(sticker(first, TRIANGLE))).toBe(
+      simplifiedOutline(TRIANGLE, SIZE, SIZE),
+    );
   });
 });

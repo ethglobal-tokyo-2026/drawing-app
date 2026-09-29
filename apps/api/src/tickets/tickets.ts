@@ -10,7 +10,7 @@ import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import type { TicketPaymentTarget } from "../deps.ts";
 import { isoTimeSchema, toIsoTime, type Tickets, type TicketShop } from "../shapes.ts";
-import { simplifiedOutline } from "../stickers/outline.ts";
+import { simplifiedOutlineOf } from "../stickers/outline.ts";
 import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
 
 /** A single reserve ticket's price in yen; packs show their discount off it. */
@@ -94,14 +94,17 @@ export function ticketsOf(db: DbOrTx, userId: string, now: Date): Tickets {
       ...use,
       sticker: sticker && {
         ...sticker,
-        outline: simplifiedOutline(sticker.outline, sticker.width, sticker.height),
+        outline: simplifiedOutlineOf(sticker),
       },
     })),
   };
 }
 
-/** Spending a ticket: the kind the start screen offered. */
-export const spendRequestSchema = createInsertSchema(ticketUses).pick({ kind: true });
+/** Spending a ticket: the kind the start screen offered, and the key each retry sends again. */
+export const spendRequestSchema = createInsertSchema(ticketUses, {
+  idempotencyKey: z.uuid(),
+}).pick({ kind: true, idempotencyKey: true });
+export type SpendTicket = z.infer<typeof spendRequestSchema>;
 
 /** A spent ticket, as spending answers it. */
 export const ticketUseSchema = createSelectSchema(ticketUses, {
@@ -119,6 +122,14 @@ export const toTicketUse = (use: typeof ticketUses.$inferSelect): TicketUse => (
   kind: use.kind,
   spentAt: toIsoTime(use.createdAt),
 });
+
+/** The ticket use `userId` already spent with `idempotencyKey`, if any. */
+export const ticketUseSpentWith = (db: DbOrTx, userId: string, idempotencyKey: string) =>
+  db
+    .select()
+    .from(ticketUses)
+    .where(and(eq(ticketUses.userId, userId), eq(ticketUses.idempotencyKey, idempotencyKey)))
+    .get();
 
 /** A Sui transaction digest: 32 bytes in base58. */
 const SUI_TX_DIGEST = /^[1-9A-HJ-NP-Za-km-z]{43,44}$/;

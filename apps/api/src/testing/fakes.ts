@@ -31,7 +31,7 @@ const fakeAddress = (seed: string) => bytes32(seed).slice(0, 42);
 /** The smart wallet the fakes give a person, lowercase as Privy's lookup answers it. */
 const fakeSmartWalletAddress = (userId: string) => fakeAddress(`smart wallet ${userId}`);
 
-/** A clock that stands still until the test moves it. It starts at noon in Tokyo, far from 4:00. */
+/** A clock that stands still until the test moves it. It starts at noon in Tokyo, far from midnight. */
 export function fakeClock(start = new Date("2026-09-26T03:00:00.000Z")) {
   let now = start.getTime();
   return {

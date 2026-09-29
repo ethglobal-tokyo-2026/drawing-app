@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createTestDb, insertUser, refusal, type TestDb } from "../testDb.ts";
 import { ticketKinds, ticketPurchases, ticketUses } from "./index.ts";
@@ -14,7 +15,7 @@ beforeEach(async () => {
 });
 
 describe("tickets", () => {
-  it("spends each ticket slot of a day once, so a double tap can't spend two", () => {
+  it("spends each ticket slot of a day once", () => {
     const spend = () =>
       db
         .insert(ticketUses)
@@ -22,6 +23,18 @@ describe("tickets", () => {
         .run();
     spend();
     expect(refusal(spend)).toMatch(/UNIQUE constraint failed: ticket_uses/);
+  });
+
+  it("spends each key once per person, so a retry or a double tap can't spend two", () => {
+    const idempotencyKey = randomUUID();
+    const spend = (who: string, dayIndex: number) => () =>
+      db
+        .insert(ticketUses)
+        .values({ userId: who, ticketDay: TICKET_DAY, dayIndex, kind: "daily", idempotencyKey })
+        .run();
+    spend(userId, FIRST_USE)();
+    expect(refusal(spend(userId, FIRST_USE + 1))).toMatch(/ticket_uses.idempotency_key/);
+    spend(insertUser(db), FIRST_USE)();
   });
 
   it("makes a day's first uses daily tickets and the rest reserve ones", () => {

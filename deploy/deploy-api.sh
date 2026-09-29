@@ -13,53 +13,33 @@ elif [ "$#" -ne 0 ]; then
   exit 1
 fi
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=deploy/lib.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+# The preflight publishes nothing, so it runs from any checkout.
+if [ "$PREFLIGHT_ONLY" = false ]; then require_main_checkout; fi
 # Dev sign-in lets anyone sign in as anyone, so the box's config may not mention it, even commented out.
 if grep -q DEV_SIGN_IN "$ROOT/deploy/drawing-api.env"; then
   echo "✗ deploy/drawing-api.env mentions DEV_SIGN_IN: dev sign-in lets anyone sign in as anyone, so it never" \
     "goes on the box. Remove it and deploy again." >&2
   exit 1
 fi
-ENV_FILE="${DEPLOY_ENV_FILE:-$ROOT/deploy/.env}"
-if [ -f "$ENV_FILE" ]; then
-  # shellcheck source=/dev/null
-  . "$ENV_FILE"
-fi
-TARGET="${DEPLOY_TARGET:?set DEPLOY_TARGET (user@host) in deploy/.env}"
 DIR="${DEPLOY_API_DIR:-/srv/drawing-api}"
-AUTH_DIR="${DEPLOY_AUTH_DIR:-/srv/sticker-auth}"
 URL="${DEPLOY_URL:-https://sticker.195-201-8-147.sslip.io}"
 STAGE="$(mktemp -d)"
 REMOTE_STAGE=""
-RESUME_API=false
 cleanup() {
-  local status=$?
-  if [ "$RESUME_API" = true ]; then
-    echo "→ restoring drawing-api after interrupted image preparation" >&2
-    ssh "$TARGET" "sudo systemctl start drawing-api" || {
-      echo "✗ drawing-api could not be restored; run sudo systemctl start drawing-api on the box" >&2
-      status=1
-    }
-  fi
   rm -rf "$STAGE"
   if [ -n "$REMOTE_STAGE" ]; then ssh "$TARGET" "rm -rf '$REMOTE_STAGE'"; fi
-  exit "$status"
 }
 trap cleanup EXIT
 
-# One SSH connection for every ssh and rsync below: the box resets bursts of new ones. A box that doesn't answer, or
-# stops answering, fails the deploy instead of hanging it.
-SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/cm-deploy-%C" -o ControlPersist=60
-  -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
-ssh() { command ssh "${SSH_OPTS[@]}" "$@"; }
-export RSYNC_RSH="ssh ${SSH_OPTS[*]}"
 # The check on the box retries: the API refuses connections until it has applied its migrations and started.
 BOX_CURL="curl --retry 10 --retry-connrefused --retry-delay 1 --max-time 5"
 # A stalled registry or native build fails the deploy instead of hanging it.
 NPM_INSTALL_TIMEOUT=10m
 
-# Validate the merged credentials before replacing any running server code. Existing secrets stay on
-# the server; the auth service's Privy secret can be reused when this is the API's first chain deploy.
+# Validate the chain settings, deploy/.env's over what the box's chain.env already holds, before replacing any running
+# server code.
 REMOTE_STAGE="$(ssh "$TARGET" "mktemp -d /tmp/drawing-api-deploy.XXXXXXXX")"
 rsync -c "$ROOT/deploy/install-chain-env.mjs" "$TARGET:$REMOTE_STAGE/install-chain-env.mjs"
 chain_config() {
@@ -70,13 +50,13 @@ chain_config() {
     "${LINE_MESSAGING_CHANNEL_ID:-}" "${LINE_MESSAGING_CHANNEL_SECRET:-}" \
     "${WORLD_ID_APP_ID:-}" "${WORLD_ID_RP_ID:-}" "${WORLD_ID_SIGNING_KEY:-}"
 }
-chain_config | ssh "$TARGET" "node '$REMOTE_STAGE/install-chain-env.mjs' '$DIR/chain.env' '$AUTH_DIR/secrets.env' check"
+chain_config | ssh "$TARGET" "node '$REMOTE_STAGE/install-chain-env.mjs' '$DIR/chain.env' check"
 if [ "$PREFLIGHT_ONLY" = true ]; then exit 0; fi
 
 SQLITE_VERSION="$(cd "$ROOT/packages/db" && node -p "require('better-sqlite3/package.json').version")"
 # sharp's exports don't include its package.json, so it's read as a file.
 SHARP_VERSION="$(cd "$ROOT/apps/api" && node -p "JSON.parse(require('fs').readFileSync('node_modules/sharp/package.json', 'utf8')).version")"
-NODE_VERSION="$(node -p "require('$ROOT/package.json').devEngines.runtime.version")"
+NODE_VERSION="$(pinned_node_version)"
 # install-node.sh links the pinned Node here, by major.
 NODE_BIN="/usr/local/lib/nodejs/node-${NODE_VERSION%%.*}/bin"
 pnpm --dir "$ROOT" --filter @drawing-app/api build
@@ -97,28 +77,7 @@ if [ -n "$changed" ]; then
   ssh "$TARGET" "cd '$DIR/server' && PATH=$NODE_BIN:\$PATH \
     timeout $NPM_INSTALL_TIMEOUT $NODE_BIN/npm install --omit=dev --no-audit --no-fund --loglevel=error"
 fi
-# Keep the new API out of the active path until every existing sticker has the images it advertises.
-rsync -c "$ROOT/apps/api/dist/server.mjs" "$TARGET:$REMOTE_STAGE/server.mjs"
-rsync -c "$ROOT/apps/api/dist/backfill-sticker-webp.mjs" "$TARGET:$DIR/server/backfill-sticker-webp.mjs"
-# Stop new PNG-only seals from arriving during the scan. A failed conversion restarts the old API.
-if ssh "$TARGET" "sudo systemctl is-active --quiet drawing-api"; then
-  RESUME_API=true
-  ssh "$TARGET" "sudo systemctl stop drawing-api"
-else
-  api_status=$?
-  if [ "$api_status" -ne 3 ] && [ "$api_status" -ne 4 ]; then
-    echo "✗ could not determine whether drawing-api is running; image preparation was not started" >&2
-    exit 1
-  fi
-fi
-echo "→ preparing existing sticker images before publishing the API"
-if ! ssh "$TARGET" "cd '$DIR/server' && IMAGE_DIR='$DIR/images' timeout 300s \
-  $NODE_BIN/node backfill-sticker-webp.mjs"; then
-  echo "✗ sticker image preparation failed; the new API has not been published" >&2
-  exit 1
-fi
-changed+="$(ssh "$TARGET" "if ! cmp -s '$REMOTE_STAGE/server.mjs' '$DIR/server/server.mjs'; then \
-  mv '$REMOTE_STAGE/server.mjs' '$DIR/server/server.mjs' && echo 'updated server'; fi")"
+changed+="$(rsync -ci "$ROOT/apps/api/dist/server.mjs" "$TARGET:$DIR/server/server.mjs")"
 changed+="$(rsync -rci --delete "$ROOT/packages/db/drizzle/" "$TARGET:$DIR/drizzle/")"
 changed+="$(rsync -ci "$ROOT/deploy/drawing-api.env" "$TARGET:$DIR/api.env")"
 changed+="$(rsync -ci "$ROOT/deploy/drawing-api.service" "$TARGET:$DIR/")"
@@ -127,13 +86,8 @@ changed+="$(rsync -ci "$ROOT/deploy/line/menus.json" "$TARGET:$DIR/line-menus.js
 # The session cookie's secret is made on the box and never leaves it.
 changed+="$(ssh "$TARGET" "test -s '$DIR/secrets.env' || { umask 077 \
   && printf 'SESSION_SECRET=%s\n' \"\$(openssl rand -hex 32)\" > '$DIR/secrets.env' && echo 'made a session secret'; }")"
-changed+="$(chain_config | ssh "$TARGET" "node '$REMOTE_STAGE/install-chain-env.mjs' '$DIR/chain.env' '$AUTH_DIR/secrets.env' install")"
-if [ -n "$changed" ] || [ "$RESUME_API" = true ]; then
-  ssh "$TARGET" "sudo install -m 644 '$DIR/drawing-api.service' /etc/systemd/system/drawing-api.service \
-    && sudo systemctl daemon-reload && sudo systemctl enable -q drawing-api && sudo systemctl restart drawing-api"
-  echo "↻ restarted drawing-api"
-  RESUME_API=false
-fi
+changed+="$(chain_config | ssh "$TARGET" "node '$REMOTE_STAGE/install-chain-env.mjs' '$DIR/chain.env' install")"
+if [ -n "$changed" ]; then install_and_restart_unit drawing-api "$DIR"; fi
 
 # A signed-out call must get the API's own refusal: serve.py answers unknown paths with the app, also with a 200.
 ssh "$TARGET" "$BOX_CURL -sS http://127.0.0.1:8788/api/me" | grep -q '"signed_out"' \

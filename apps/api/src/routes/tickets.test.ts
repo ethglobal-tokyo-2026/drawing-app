@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { DAILY_TICKETS_PER_DAY, ticketPurchases, ticketUses } from "@drawing-app/db";
 import { bytes32, insertUser } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
@@ -10,6 +11,7 @@ import { fakeTicketPayments, TEST_PAYMENT_TARGET } from "../testing/fakes.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 import { insertSealedSticker } from "../testing/rows.ts";
 import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
+import { spendBody } from "../tickets/testSpends.ts";
 import {
   TICKET_PACKS,
   TICKET_PRICE_YEN,
@@ -80,11 +82,13 @@ afterEach(() => {
 const getTickets = async (as = userId) =>
   (await bodyOf(await test.send("GET", "/api/tickets", { as }), ticketsBodySchema)).tickets;
 
-const spend = (kind: TicketKind) =>
-  test.send("POST", "/api/tickets/spend", { as: userId, body: { kind } });
+/** Asks to spend a ticket of `kind`: a new spend, unless `idempotencyKey` repeats one. */
+const spend = (kind: TicketKind, idempotencyKey?: string, as = userId) =>
+  test.send("POST", "/api/tickets/spend", { as, body: spendBody(kind, idempotencyKey) });
 
 /** Spends a ticket of `kind`, which must be granted. */
-const spendTicket = async (kind: TicketKind) => bodyOf(await spend(kind), spendBodySchema, 201);
+const spendTicket = async (kind: TicketKind, idempotencyKey?: string) =>
+  bodyOf(await spend(kind, idempotencyKey), spendBodySchema, 201);
 
 /** Spends `times` tickets of `kind`, each of which must be granted, and returns the answers in order. */
 async function spendTickets(kind: TicketKind, times: number) {
@@ -204,6 +208,40 @@ describe("tickets", () => {
     expect(await refusalOf(await spend("daily"))).toMatchObject(kindChanged);
     expect(ticketUseCount()).toBe(DAILY_TICKETS_PER_DAY);
     expect((await getTickets()).reserveLeft).toBe(PACK.tickets);
+  });
+
+  it("answer a key already spent with its ticket use and the tickets now, whatever kind it asks, spending nothing more", async () => {
+    const key = randomUUID();
+    const first = await spendTicket("daily", key);
+    const next = await spendTicket("daily");
+    expect(next.ticketUse.dayIndex).toBe(first.ticketUse.dayIndex + 1);
+    // No reserve ticket is left, so a new spend of one would be refused: only the key grants it.
+    const again = await bodyOf(await spend("reserve", key), spendBodySchema, 200);
+    expect(again).toEqual({ ticketUse: first.ticketUse, tickets: next.tickets });
+    expect(ticketUseCount()).toBe(2);
+  });
+
+  it("spend the same key once for each person, and answer each their own ticket use again", async () => {
+    const key = randomUUID();
+    const someoneElse = insertUser(test.db);
+    const mine = await spendTicket("daily", key);
+    const theirs = await bodyOf(await spend("daily", key, someoneElse), spendBodySchema, 201);
+    for (const [as, spent] of [
+      [userId, mine],
+      [someoneElse, theirs],
+    ] as const) {
+      const again = await bodyOf(await spend("daily", key, as), spendBodySchema, 200);
+      expect(again.ticketUse).toEqual(spent.ticketUse);
+    }
+    expect(test.db.select().from(ticketUses).all()).toHaveLength(2);
+  });
+
+  it("refuse a spend without a UUID key, spending nothing", async () => {
+    for (const body of [{ kind: "daily" }, { kind: "daily", idempotencyKey: "spend-1" }]) {
+      const response = await test.send("POST", "/api/tickets/spend", { as: userId, body });
+      expect(await refusalOf(response)).toMatchObject({ status: 400, error: "invalid_request" });
+    }
+    expect(ticketUseCount()).toBe(0);
   });
 
   it("price each pack in JPYC at one yen each, and name the signed-in person as the payment's reference", async () => {

@@ -3,24 +3,15 @@
 import { existsSync, readFileSync, writeFileSync, renameSync, chmodSync } from "node:fs";
 import { parseEnv } from "node:util";
 
-const [chainPath, authPath, mode] = process.argv.slice(2);
-if (!chainPath || !authPath || !mode || !["check", "install"].includes(mode)) {
-  throw new Error("Expected chain.env path, auth secrets path, and check or install");
+const [chainPath, mode] = process.argv.slice(2);
+if (!chainPath || !mode || !["check", "install"].includes(mode)) {
+  throw new Error("Expected chain.env path, and check or install");
 }
-/** @param {string} path @returns {NodeJS.Dict<string>} */
-const readEnv = (path) => (existsSync(path) ? parseEnv(readFileSync(path, "utf8")) : {});
-const values = readEnv(chainPath);
+/** @type {NodeJS.Dict<string>} */
+const values = existsSync(chainPath) ? parseEnv(readFileSync(chainPath, "utf8")) : {};
 const supplied = parseEnv(readFileSync(0, "utf8"));
 for (const [key, value] of Object.entries(supplied)) {
   if (value) values[key] = value;
-}
-const authSecrets = readEnv(authPath);
-values.PRIVY_APP_SECRET ||= authSecrets.PRIVY_APP_SECRET ?? "";
-// The chat menu's Messaging API channel, optional: without it the API links no chat menu. The auth
-// service's secrets held it before the API linked chat menus, so it's taken from there, as a pair.
-const lineChannel = ["LINE_MESSAGING_CHANNEL_ID", "LINE_MESSAGING_CHANNEL_SECRET"];
-if (lineChannel.every((key) => !values[key]) && lineChannel.every((key) => authSecrets[key])) {
-  for (const key of lineChannel) values[key] = authSecrets[key];
 }
 values.STICKER_CHAIN_MODE = "sepolia";
 const required = [
@@ -51,6 +42,7 @@ for (const key of [
 for (const key of ["STICKER_SEALER_PRIVATE_KEY", "ENS_GATEWAY_PRIVATE_KEY"]) {
   if (!/^0x[0-9a-fA-F]{64}$/.test(values[key] ?? "")) throw new Error(`Invalid ${key}`);
 }
+// The chat menu's Messaging API channel, optional: without it the API links no chat menu.
 const lineChannelId = values.LINE_MESSAGING_CHANNEL_ID ?? "";
 const lineChannelSecret = values.LINE_MESSAGING_CHANNEL_SECRET ?? "";
 if (lineChannelId || lineChannelSecret) {

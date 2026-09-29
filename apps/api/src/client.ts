@@ -20,7 +20,13 @@ export type ApiErrorCode =
   | "internal_error";
 export { HANDLE_MAX_LENGTH } from "./session/handleLimit.ts";
 export { MAX_TIMELAPSE_BYTES } from "./stickers/timelapseLimit.ts";
-export { GIFT_EXPIRY_MS, MAX_PEAK_MULT, MAX_TIME_USED_S } from "@drawing-app/db/limits";
+export {
+  GIFT_EXPIRY_MS,
+  GRATITUDE_PER_HIT,
+  MAX_PEAK_MULT,
+  MAX_TIME_USED_S,
+  METHOD_WEIGHT,
+} from "@drawing-app/db/limits";
 
 // The contract's shapes, for the app's screens: each is the type its route's schema checks.
 export type { AgeProof, AgeVerificationRequest } from "./routes/ageVerification.ts";
@@ -44,5 +50,5 @@ export type { BoardSticker, StickerBoard } from "./stickerBoards/board.ts";
 export type { SealResponse } from "./stickers/seal.ts";
 export type { StickerDetail, TransferTrailEntry } from "./stickers/stickerDetail.ts";
 export type { TimelapseV1 } from "./stickers/timelapse.ts";
-export type { TicketKind, TicketUse } from "./tickets/tickets.ts";
+export type { SpendTicket, TicketKind, TicketUse } from "./tickets/tickets.ts";
 export type { Gift, Gratitude, Placement, Sticker, StickerPlacement } from "./views.ts";

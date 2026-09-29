@@ -9,6 +9,7 @@ import { devIdToken } from "./services/devSignIn.ts";
 import { ME } from "./stickerBoards/board.ts";
 import { sealUpload } from "./stickers/testPngs.ts";
 import { createTestApp, type TestApp } from "./testing/createTestApp.ts";
+import { spendBody } from "./tickets/testSpends.ts";
 
 /** Any origin will do: the test app answers every call itself. */
 const API_ORIGIN = "https://api.test";
@@ -17,8 +18,6 @@ const CREATED = 201;
 /** LINE accounts, as the fake LINE verifier reads them from their ID tokens. */
 const ALICE: LineProfile = { sub: "line-alice", name: "Alice" };
 const BOB: LineProfile = { sub: "line-bob", name: "Bob" };
-/** The zone both phones report at sign-in. */
-const DEVICE_ZONE = "Asia/Tokyo";
 /** A 1:1 chat, where a Gift Message is received. */
 const ONE_TO_ONE = "utou";
 /** The escrow transfer's hash, as Alice's smart wallet reports it. */
@@ -62,9 +61,7 @@ async function answered<Answer extends ClientResponse<unknown>>(
 async function signIn(test: TestApp, profile: LineProfile) {
   const api = clientFor(test);
   const { me } = await answered(
-    api.session.$post({
-      json: { idToken: devIdToken(profile), timeZone: DEVICE_ZONE, language: "en" },
-    }),
+    api.session.$post({ json: { idToken: devIdToken(profile), language: "en" } }),
     OK,
   );
   return { api, me };
@@ -96,7 +93,7 @@ describe("the REST API, through the typed client", () => {
     // Alice spends a daily ticket, and seals a sticker on it.
     const { tickets } = await answered(alice.api.tickets.$get(), OK);
     const spent = await answered(
-      alice.api.tickets.spend.$post({ json: { kind: "daily" } }),
+      alice.api.tickets.spend.$post({ json: spendBody("daily") }),
       CREATED,
     );
     expect(spent.tickets.dailyLeft).toBe(tickets.dailyLeft - ONE_TICKET);

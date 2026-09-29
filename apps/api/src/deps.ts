@@ -29,6 +29,8 @@ export interface AppDeps {
   serverLog: ServerLog;
   /** Off without the Messaging API channel, or under dev sign-in: every call then does nothing. */
   lineChatMenu: LineChatMenu;
+  /** Off as lineChatMenu is: every call then does nothing. */
+  giverNotice: GiverNotice;
   /** Null when the server has no World ID app: age verification is off. */
   worldId: WorldId | null;
 }
@@ -76,8 +78,24 @@ export interface LineChatMenu {
   idle: () => Promise<void>;
 }
 
-/** The server's whole log as text, newest line first. Rejects when the log can't be read. */
-export type ServerLog = () => Promise<ReadableStream<Uint8Array>>;
+/**
+ * The Official account's message telling a giver, in LINE, that their gift was received. What
+ * fails is retried by a sweep, and given up once a retry could send it twice.
+ */
+export interface GiverNotice {
+  /** Sends a gift's message once Receiving commits it. Never rejects: a failure is logged. */
+  send: (giftId: string) => Promise<void>;
+  /** Sends, or gives up, every received gift's message still due. Never rejects. */
+  sweep: () => Promise<void>;
+  /** Settles once every send and sweep started so far has. */
+  idle: () => Promise<void>;
+}
+
+/**
+ * The server log's newest `lines` lines as text, newest first; null while another request reads it.
+ * Rejects when the log can't be read.
+ */
+export type ServerLog = (lines: number) => Promise<ReadableStream<Uint8Array> | null>;
 
 export interface Clock {
   now: () => Date;

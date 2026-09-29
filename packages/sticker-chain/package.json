@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./auth-error": "./src/auth-error.ts",
     "./auth-http": "./src/auth-http.ts",
     "./bytes32": "./src/bytes32.ts",
     "./contracts": "./src/generated/contracts.ts",
@@ -16,7 +17,7 @@
   },
   "scripts": {
     "build": "pnpm generate-types",
-    "build:auth-server": "rm -rf dist/auth-server && tsc src/start-auth-server.ts --ignoreConfig --outDir dist/auth-server --module nodenext --moduleResolution nodenext --target es2023 --strict --skipLibCheck --types node && echo '{\"type\":\"module\"}' > dist/auth-server/package.json",
+    "build:auth-server": "rm -rf dist/auth-server && tsc src/start-auth-server.ts --ignoreConfig --outDir dist/auth-server --module nodenext --moduleResolution nodenext --rewriteRelativeImportExtensions --target es2023 --strict --skipLibCheck --types node && echo '{\"type\":\"module\"}' > dist/auth-server/package.json",
     "compile": "forge build",
     "generate-types": "pnpm compile && wagmi generate",
     "lint": "oxlint src test wagmi.config.ts",

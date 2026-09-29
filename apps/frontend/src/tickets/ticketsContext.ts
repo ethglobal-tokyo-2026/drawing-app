@@ -16,7 +16,10 @@ export interface TicketsValue {
   error: ApiError | null;
   /** Loads them again: after a seal, a failure, or the refill. */
   refresh: () => void;
-  /** Spends one of the kind the person agreed to; the server refuses it if that's not the next kind. */
+  /**
+   * Spends one of the kind the person agreed to; the server refuses it if that's not the next kind.
+   * Every try until one lands is the same spend, so a retry or a second tap never spends another.
+   */
   spend: (kind: TicketKind) => Promise<TicketUse>;
   /** Takes the tickets a purchase answered with. */
   set: (tickets: Tickets) => void;

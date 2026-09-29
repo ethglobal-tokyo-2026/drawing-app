@@ -1,9 +1,11 @@
 import {
   gifts,
   gratitude,
+  GRATITUDE_PER_HIT,
   MAX_HITS,
   MAX_PEAK_MULT,
   MAX_PEAK_TIER,
+  METHOD_WEIGHT,
   stickers,
 } from "@drawing-app/db";
 import { eq } from "drizzle-orm";
@@ -19,13 +21,21 @@ import { countedTouches, gzipReplay, replayV1Schema } from "./replay.ts";
 
 /** The part of a combo's total that goes to the Original Artist, out of the giver's part. */
 export const ORIGINAL_ARTIST_GRATITUDE_SHARE = 0.2;
+/**
+ * The most gratitude one hit can score. The Mini-game rounds gratitude per hit × multiplier × weight;
+ * this takes the multiplier's ceiling and the heaviest weight (a tap's is 1) and rounds up, so no
+ * real combo scores more than its hits times this.
+ */
+export const MAX_GRATITUDE_PER_HIT = Math.ceil(
+  GRATITUDE_PER_HIT * MAX_PEAK_MULT * Math.max(1, METHOD_WEIGHT),
+);
 /** The most a `keepalive` request can carry, and the Mini-game sends its combo with one. */
 export const MAX_GRATITUDE_BODY_BYTES = 64 * 1024;
 const MAX_GAME_CONFIG_VERSION_LENGTH = 64;
 
 /**
- * RecordGratitude: a Mini-game combo and its replay, which must agree. `total` isn't checked against
- * the hits; that waits for the server's recount.
+ * RecordGratitude: a Mini-game combo and its replay, which must agree. `total` isn't recounted, only
+ * held to the most its hits could score.
  */
 export const recordGratitudeSchema = createInsertSchema(gratitude, {
   idempotencyKey: z.uuid(),
@@ -47,6 +57,16 @@ export const recordGratitudeSchema = createInsertSchema(gratitude, {
     gameConfigVersion: true,
   })
   .extend({ replay: replayV1Schema })
+  .superRefine(({ hits, total }, ctx) => {
+    const most = hits * MAX_GRATITUDE_PER_HIT;
+    if (total > most) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["total"],
+        message: `${total}, over the ${most} its hits can score at ${MAX_GRATITUDE_PER_HIT} a hit`,
+      });
+    }
+  })
   .superRefine(({ method, hits, replay }, ctx) => {
     const report = (field: keyof typeof replay, message: string) =>
       ctx.addIssue({ code: "custom", path: ["replay", field], message });

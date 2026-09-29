@@ -3,6 +3,7 @@
  * far finer than a sticker sheet packs by or a ticket stub prints, so the board and the tickets send
  * this one instead.
  */
+import type { stickers } from "@drawing-app/db";
 
 type Point = [x: number, y: number];
 
@@ -90,4 +91,36 @@ export function simplifiedOutline(path: string, width: number, height: number): 
     .filter((loop) => loop.length > 0)
     .map((loop) => `M${loop.map(([x, y]) => `${coordinate(x)} ${coordinate(y)}`).join("L")}Z`)
     .join("");
+}
+
+/**
+ * How many characters of simplified cut line stay cached; the first one cached goes first. The bound
+ * counts characters, not stickers, since an outline drawn not to simplify can be as long as Sealing
+ * allows.
+ */
+export const MAX_CACHED_OUTLINE_CHARS = 2_000_000;
+
+/** Simplified cut lines by sticker ID, in the order they were cached. */
+const cachedOutlines = new Map<string, string>();
+let cachedChars = 0;
+
+/**
+ * A sealed sticker's simplified cut line. Sealing fixes its outline, so it's simplified once per
+ * sticker, not on every sticker board and tickets read.
+ */
+export function simplifiedOutlineOf(
+  sticker: Pick<typeof stickers.$inferSelect, "id" | "outline" | "width" | "height">,
+): string {
+  const cached = cachedOutlines.get(sticker.id);
+  if (cached !== undefined) return cached;
+  const outline = simplifiedOutline(sticker.outline, sticker.width, sticker.height);
+  if (outline.length > MAX_CACHED_OUTLINE_CHARS) return outline;
+  for (const [id, kept] of cachedOutlines) {
+    if (cachedChars + outline.length <= MAX_CACHED_OUTLINE_CHARS) break;
+    cachedOutlines.delete(id);
+    cachedChars -= kept.length;
+  }
+  cachedOutlines.set(sticker.id, outline);
+  cachedChars += outline.length;
+  return outline;
 }

@@ -10,12 +10,15 @@ import {
   type FakeLine,
 } from "../testing/fakeLine.ts";
 import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
+import { spendBody } from "../tickets/testSpends.ts";
 import type { ChatMenuIds } from "./menus.ts";
 import {
   AFTER_MIDNIGHT_MS,
   FIRST_LOOK_MS,
   LOOK_EVERY_MS,
+  MAX_LOOKS,
   MAX_TRIES,
+  RECHECK_AFTER_MS,
   RETRY_AFTER_MS,
   runChatMenuBatch,
   startMidnightBatches,
@@ -48,7 +51,7 @@ function person(lineUser: string, menu?: string, language: "en" | "ja" = "en") {
 const spend = async (userId: string) => {
   const response = await test.send("POST", "/api/tickets/spend", {
     as: userId,
-    body: { kind: "daily" },
+    body: spendBody("daily"),
   });
   expect(response.status).toBe(201);
   await test.deps.lineChatMenu.idle();
@@ -75,6 +78,9 @@ const jobDeps = (ids: ChatMenuIds = TEST_CHAT_MENU_IDS): MidnightDeps => ({
 
 const batches = () => test.db.select().from(chatMenuBatches).all();
 const today = () => tokyoTicketDay(test.clock.now());
+const nextMidnight = () => nextTokyoTicketDayStart(test.clock.now()).getTime();
+/** How long until the job's run just after the next midnight. */
+const untilMidnightRun = () => nextMidnight() + AFTER_MIDNIGHT_MS - test.clock.now().getTime();
 
 beforeEach(async () => {
   vi.spyOn(console, "info").mockImplementation(() => {});
@@ -193,6 +199,16 @@ describe("the chat menu's midnight batch", () => {
     expect(line.calls.filter((call) => call === "batch")).toHaveLength(1);
     expect(batches()).toEqual([]);
   });
+
+  it("stops looking at a batch LINE is still running once the day turns", async () => {
+    line.reportNextBatch(["ongoing"]);
+    duringWait = () => {
+      test.clock.set(nextTokyoTicketDayStart(test.clock.now()));
+      return Promise.resolve();
+    };
+    await runChatMenuBatch(jobDeps(), today());
+    expect(line.calls.filter((call) => call.startsWith("progress"))).toEqual([]);
+  });
 });
 
 describe("the midnight job", () => {
@@ -212,6 +228,38 @@ describe("the midnight job", () => {
     expect(line.batches.map((batch) => batch.resumeRequestKey)).toEqual([bootDay, today()]);
     expect(today()).not.toBe(bootDay);
     expect(timers).toHaveLength(2);
+    job.stop();
+  });
+
+  it("looks again at a batch LINE is still running, and links the day's spenders once it ends", async () => {
+    const ann = person(ANN);
+    await spend(ann);
+    // Still running at each of the job's looks, and done at the recheck's first.
+    line.reportNextBatch([
+      ...Array.from({ length: MAX_LOOKS }, () => "ongoing" as const),
+      "succeeded",
+    ]);
+    const job = startMidnightBatches(jobDeps());
+    await job.idle();
+    expect(batches()).toMatchObject([{ status: "sent" }]);
+    expect(timers.map((timer) => timer.ms)).toEqual([RECHECK_AFTER_MS]);
+
+    test.clock.advance(RECHECK_AFTER_MS);
+    timers[0]?.run();
+    await job.idle();
+    // The batch moved Ann from 2 to 3 as it ended, and relinking her put her back.
+    expect(line.links.get(ANN)).toBe(en["2"]);
+    expect(batches()).toMatchObject([{ status: "done" }]);
+    expect(timers.at(-1)?.ms).toBe(untilMidnightRun());
+    job.stop();
+  });
+
+  it("leaves a recheck that would land at midnight to the next day's batch", async () => {
+    test.clock.set(new Date(nextMidnight() - RECHECK_AFTER_MS));
+    line.reportNextBatch(["ongoing"]);
+    const job = startMidnightBatches(jobDeps());
+    await job.idle();
+    expect(timers.map((timer) => timer.ms)).toEqual([untilMidnightRun()]);
     job.stop();
   });
 

@@ -322,12 +322,11 @@ describe("GET /api/sticker-boards/:userId/user-stats", () => {
     const [given, packed, returned] = made;
     giveSticker(test.db, given, artist, friend);
     packGift(test.db, packed, artist);
-    const returnedGift = giveSticker(test.db, returned, artist, friend);
-    test.db
-      .update(gifts)
-      .set({ status: "returned", returnedAt: new Date(), escrowStatus: "expired_returned" })
-      .where(eq(gifts.id, returnedGift.id))
-      .run();
+    packGift(test.db, returned, artist, {
+      status: "returned",
+      escrowStatus: "expired_returned",
+      returnedAt: new Date(),
+    });
 
     expect(await statsOf(artist, "me")).toMatchObject({
       made: made.length,

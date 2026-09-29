@@ -14,5 +14,18 @@ export const MAX_PEAK_TIER = 4;
  * GAME_CONFIG version.
  */
 export const MAX_PEAK_MULT = 8;
-/** Daily tickets per ticket day: each day's first uses spend them. */
+/**
+ * Gratitude a hit earns at ×1, before its method's weight. The Mini-game scores with it, so changing
+ * it needs a new GAME_CONFIG version.
+ */
+export const GRATITUDE_PER_HIT = 10;
+/**
+ * A stroke pass or a shake reversal counts as this many hits, except as a combo's first hit. The
+ * Mini-game scores with it, so changing it needs a new GAME_CONFIG version.
+ */
+export const METHOD_WEIGHT = 1.5;
+/**
+ * Daily tickets per ticket day: each day's first uses spend them. The ticket_uses_kind CHECK is
+ * built from it, so changing it breaks that CHECK for past rows.
+ */
 export const DAILY_TICKETS_PER_DAY = 3;

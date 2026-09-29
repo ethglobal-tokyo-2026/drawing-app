@@ -368,6 +368,8 @@ async function completeReceive(
   }
   queueNaming(deps, userId);
   const { gift, placement } = receiving;
+  // Sent off the request, so the giver's message never holds up or fails Receiving.
+  void deps.giverNotice.send(gift.id);
   return {
     refusal: null,
     received: {

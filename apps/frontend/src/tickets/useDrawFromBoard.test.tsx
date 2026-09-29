@@ -58,7 +58,7 @@ describe("Draw on the sticker board", () => {
   it("spends a daily ticket at once, with no card: its ticket peels, then the canvas opens", async () => {
     await open(tickets(2, 5));
     tapDraw();
-    expect(spendTicket).toHaveBeenCalledWith("daily");
+    expect(spendTicket).toHaveBeenCalledWith(expect.objectContaining({ kind: "daily" }));
     expect(document.querySelector("[data-peeling]")?.getAttribute("data-peeling")).toBe("true");
     expect(document.querySelector("[role=dialog]")).toBeNull();
     expect(onDraw).not.toHaveBeenCalled();

@@ -7,13 +7,16 @@ import { logFailure, logInfo } from "../diagnostics.ts";
 import { syncEnsLabel } from "./labels.ts";
 
 /** A naming job's longest run: a person name, a few sticker names and an avatar, each a transaction. */
-const NAMING_JOB_TIMEOUT_MS = 10 * 60_000;
+export const NAMING_JOB_TIMEOUT_MS = 10 * 60_000;
 
 /** Where a person's name links: their Sticker Board, opened in the LIFF app. */
 export const boardUrl = (ens: Pick<EnsDeps, "appLinkBase">, label: string) =>
   `${ens.appLinkBase}/@${label}`;
 
-/** ENSIP-12's avatar for the newest minted sticker `userId` holds, or "" when they hold none. */
+/**
+ * ENSIP-12's avatar for the newest minted sticker `userId` holds, or "" when they hold none. Never
+ * an NSFW sticker: anyone can resolve the name, and ENS apps show the avatar unblurred.
+ */
 export function latestStickerAvatar(
   { db }: Pick<AppDeps, "db">,
   ens: Pick<EnsDeps, "chainId" | "stickerContract">,
@@ -22,7 +25,7 @@ export function latestStickerAvatar(
   const latest = db
     .select({ tokenId: stickers.tokenId })
     .from(stickers)
-    .where(and(eq(stickers.ownerId, userId), isNotNull(stickers.tokenId)))
+    .where(and(eq(stickers.ownerId, userId), isNotNull(stickers.tokenId), eq(stickers.nsfw, false)))
     .orderBy(desc(stickers.number))
     .get();
   if (!latest?.tokenId || !isAddress(ens.stickerContract)) return "";
@@ -98,8 +101,12 @@ export function queueNaming(deps: AppDeps, userId: string) {
   ens.naming.enqueue(userId, () => nameEverything(deps, userId));
 }
 
-/** Runs one job at a time, each with a timeout, and logs every failure. */
-export function createNamingQueue(timeoutMs = NAMING_JOB_TIMEOUT_MS): NamingQueue {
+/**
+ * Runs one job at a time and logs every failure. A job still running at NAMING_JOB_TIMEOUT_MS is
+ * logged then, and the next waits for it to end: nothing can stop a job, and two at once would send
+ * ENS transactions at once.
+ */
+export function createNamingQueue(): NamingQueue {
   const waiting = new Set<string>();
   let tail: Promise<void> = Promise.resolve();
   return {
@@ -109,26 +116,18 @@ export function createNamingQueue(timeoutMs = NAMING_JOB_TIMEOUT_MS): NamingQueu
       tail = tail.then(async () => {
         waiting.delete(key);
         const started = performance.now();
-        let timer: NodeJS.Timeout | undefined;
+        const fields = () => ({ userId: key, elapsedMs: Math.round(performance.now() - started) });
+        const timer = setTimeout(() => {
+          const overdue = new Error(
+            `Naming ${key} is still running after ${NAMING_JOB_TIMEOUT_MS} ms; the next job waits for it`,
+          );
+          logFailure("ens.naming.timed_out", overdue, fields());
+        }, NAMING_JOB_TIMEOUT_MS);
         try {
-          await Promise.race([
-            job(),
-            new Promise<never>((_, reject) => {
-              timer = setTimeout(
-                () => reject(new Error(`Naming ${key} took over ${timeoutMs} ms`)),
-                timeoutMs,
-              );
-            }),
-          ]);
-          logInfo("ens.naming.completed", {
-            userId: key,
-            elapsedMs: Math.round(performance.now() - started),
-          });
+          await job();
+          logInfo("ens.naming.completed", fields());
         } catch (error) {
-          logFailure("ens.naming.failed", error, {
-            userId: key,
-            elapsedMs: Math.round(performance.now() - started),
-          });
+          logFailure("ens.naming.failed", error, fields());
         } finally {
           clearTimeout(timer);
         }

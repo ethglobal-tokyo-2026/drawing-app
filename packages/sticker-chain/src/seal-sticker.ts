@@ -15,6 +15,12 @@ import {
 import { bytes32 } from "@drawing-app/sticker-chain/bytes32";
 import { stickerNftAbi } from "@drawing-app/sticker-chain/contracts";
 
+/**
+ * How long Sealing waits for its mint to land. Under the app's wait for Sealing, so Sealing answers
+ * with its own error, and the retry it offers finds a late mint on chain.
+ */
+export const SEAL_RECEIPT_TIMEOUT_MS = 30_000;
+
 interface SealProgressFields {
   txHash?: Hex;
   tokenId?: string;
@@ -187,7 +193,7 @@ export function createStickerSealer({
       const hash = transactionHash;
       receipt = await step(
         "receipt",
-        () => publicClient.waitForTransactionReceipt({ hash }),
+        () => publicClient.waitForTransactionReceipt({ hash, timeout: SEAL_RECEIPT_TIMEOUT_MS }),
         { txHash: hash },
         (confirmed) => ({
           status: confirmed.status,

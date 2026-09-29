@@ -20,6 +20,7 @@ const verifiedClaims = () => ({
   iss: "https://access.line.me",
   aud: CHANNEL_ID,
   sub: "private-line-user-id",
+  name: "Alice",
   exp: Math.floor(Date.now() / 1000) + 3600,
 });
 

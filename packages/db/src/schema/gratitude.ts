@@ -41,16 +41,10 @@ export const gratitude = sqliteTable(
     replay: blob("replay", { mode: "buffer" }).notNull(),
     /** The giver watched the replay: the pink tag's unseen feed. */
     seenByGiverAt: integer("seen_by_giver_at", { mode: "timestamp_ms" }),
-    /** Meant for a LINE push to the giver about it; no code writes it yet. */
-    pushedToGiverAt: integer("pushed_to_giver_at", { mode: "timestamp_ms" }),
     ...timestamps(),
   },
   (t) => [
     index("gratitude_created").on(t.createdAt),
-    // For the pushes to the giver, which no code sends yet.
-    index("gratitude_push_due")
-      .on(t.createdAt)
-      .where(sql`${t.pushedToGiverAt} is null`),
     check("gratitude_method", oneOf(t.method, gratitudeMethods)),
     check("gratitude_hits", sql`${t.hits} between 1 and ${literal(MAX_HITS)}`),
     check(

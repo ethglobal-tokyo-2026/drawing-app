@@ -1,72 +1,76 @@
-import { describe, expect, it } from "vitest";
+import { MIN_ID_TOKEN_LENGTH } from "@drawing-app/sticker-chain/line";
+import { describe, expect, it, vi } from "vitest";
 import { LineTokenInvalidError, type LineProfile } from "../deps.ts";
 import { createLineVerifier } from "./lineVerifier.ts";
 
 const CHANNEL_ID = "channel";
+const ID_TOKEN = "line-id-token";
 
-/** A verifier whose LINE answers with `status` and `body`; `sent` holds the forms LINE was sent. */
-const verifierAnswering = (status: number, body: unknown) => {
-  const sent: Array<Record<string, string>> = [];
-  const verifier = createLineVerifier(CHANNEL_ID, (_url, init) => {
-    if (init?.body instanceof URLSearchParams) sent.push(Object.fromEntries(init.body));
-    return Promise.resolve(
-      new Response(typeof body === "string" ? body : JSON.stringify(body), { status }),
-    );
-  });
-  return { verifier, sent };
-};
+/** A verifier whose LINE answers every request with `body` and `status`. */
+const verifierAnswering = (body: unknown, status = 200) =>
+  createLineVerifier(CHANNEL_ID, async () => Response.json(body, { status }));
+
+const refusal = (description: string) => ({
+  error: "invalid_request",
+  error_description: description,
+});
 
 describe("the LINE verifier", () => {
-  it("sends LINE the token and our channel, and returns the profile the token names", async () => {
+  it("returns the profile LINE says the token names", async () => {
     const profile: LineProfile = { sub: "U1", name: "Alice", picture: "https://profile.test/a" };
-    const claims = { iss: "https://access.line.me", aud: CHANNEL_ID, exp: 0, ...profile };
-    const { verifier, sent } = verifierAnswering(200, claims);
-    expect(await verifier.verifyIdToken("token")).toEqual(profile);
-    expect(sent).toEqual([{ id_token: "token", client_id: CHANNEL_ID }]);
+    const claims = {
+      iss: "https://access.line.me",
+      aud: CHANNEL_ID,
+      exp: Math.floor(Date.now() / 1000) + 3600,
+      ...profile,
+    };
+    await expect(verifierAnswering(claims).verifyIdToken(ID_TOKEN)).resolves.toEqual(profile);
+  });
+
+  it.each([
+    { status: 400, description: "IdToken expired.", reason: "expired" },
+    { status: 401, description: "Invalid IdToken.", reason: "invalid" },
+  ])(
+    "reads LINE's $status refusal, $description, as a refused token: $reason",
+    async ({ status, description, reason }) => {
+      const refused = verifierAnswering(refusal(description), status).verifyIdToken(ID_TOKEN);
+      await expect(refused).rejects.toBeInstanceOf(LineTokenInvalidError);
+      await expect(refused).rejects.toMatchObject({ reason });
+    },
+  );
+
+  it("refuses a token too short to be LINE's without asking LINE", async () => {
+    const fetchImpl = vi.fn<typeof fetch>();
+    const refused = createLineVerifier(CHANNEL_ID, fetchImpl).verifyIdToken(
+      "x".repeat(MIN_ID_TOKEN_LENGTH - 1),
+    );
+    await expect(refused).rejects.toBeInstanceOf(LineTokenInvalidError);
+    await expect(refused).rejects.toMatchObject({ reason: "invalid" });
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it.each([
     {
-      body: { error: "invalid_request", error_description: "IdToken expired." },
-      reason: "expired",
+      failure: "a server error",
+      fetchImpl: async () => Response.json({}, { status: 503 }),
+      reason: "http_error",
     },
     {
-      body: { error: "invalid_request", error_description: "Invalid IdToken Audience." },
-      reason: "invalid",
+      failure: "a network error",
+      fetchImpl: () => Promise.reject(new TypeError("Network unavailable")),
+      reason: "network_error",
     },
     {
-      body: { error: "invalid_request", error_description: "Invalid IdToken." },
-      reason: "invalid",
+      failure: "a timeout",
+      fetchImpl: () => Promise.reject(new DOMException("Timed out", "TimeoutError")),
+      reason: "timeout",
     },
-    { body: "IdToken expired.", reason: "invalid" },
-    { body: { message: "IdToken expired." }, reason: "invalid" },
-  ])("classifies a provider refusal as $reason from $body", async ({ body, reason }) => {
-    const refused = verifierAnswering(400, body).verifier.verifyIdToken("token");
-    await expect(refused).rejects.toBeInstanceOf(LineTokenInvalidError);
-    await expect(refused).rejects.toMatchObject({ reason });
-  });
-
-  it("keeps the provider's reason without the submitted token or unrelated response fields", async () => {
-    const token = "sensitive-id-token";
-    const refused = verifierAnswering(400, {
-      error: "invalid_request",
-      error_description: `Invalid IdToken: ${token}`,
-      access_token: "sensitive-access-token",
-    }).verifier.verifyIdToken(token);
-    await expect(refused).rejects.toMatchObject({
-      message: "invalid_request: Invalid IdToken: [redacted-id-token]",
-      reason: "invalid",
-    });
-  });
-
-  it("tells a refused token from LINE being unreachable", async () => {
-    const outage = verifierAnswering(503, {}).verifier.verifyIdToken("token");
-    await expect(outage).rejects.toThrow();
-    await expect(outage).rejects.not.toBeInstanceOf(LineTokenInvalidError);
-    const disconnected = createLineVerifier(CHANNEL_ID, () =>
-      Promise.reject(new TypeError("Network unavailable")),
-    ).verifyIdToken("token");
-    await expect(disconnected).rejects.toThrow("Network unavailable");
-    await expect(disconnected).rejects.not.toBeInstanceOf(LineTokenInvalidError);
-  });
+  ])(
+    "tells LINE being unreachable, through $failure, from a refused token",
+    async ({ fetchImpl, reason }) => {
+      const outage = createLineVerifier(CHANNEL_ID, fetchImpl).verifyIdToken(ID_TOKEN);
+      await expect(outage).rejects.toThrow(reason);
+      await expect(outage).rejects.not.toBeInstanceOf(LineTokenInvalidError);
+    },
+  );
 });

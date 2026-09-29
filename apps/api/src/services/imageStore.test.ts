@@ -7,7 +7,7 @@ import { keccak256 } from "viem";
 import { stickerPngsSchema, stickerWebpsSchema } from "../shapes.ts";
 import { sealImages, STICKER_SIZE } from "../stickers/testPngs.ts";
 import { foilMaskAlpha } from "./foilMask.ts";
-import { createDiskImageStore, missingWebps, writeMissingWebps } from "./imageStore.ts";
+import { createDiskImageStore } from "./imageStore.ts";
 
 const CDN_FOLDER = "/stickers/";
 const pngKinds = stickerPngsSchema.keyof().options;
@@ -94,21 +94,18 @@ describe("the disk image store", () => {
     expect(foil.alpha.findIndex((alpha, i) => alpha !== band[i])).toBe(-1);
   });
 
-  it("makes only the WebP files a stored sticker lacks", async () => {
-    const { store, contentHash } = await savedSticker();
+  it("makes a WebP file a stored sticker lacks from its stored PNGs on a later save", async () => {
+    const { store, pngs, contentHash } = await savedSticker();
     const foil = fileAt(store.urls(contentHash).webp.foil);
     const made = readFileSync(foil);
     unlinkSync(foil);
-    expect(await missingWebps(imageDir, contentHash)).toEqual(["foil"]);
-    expect(await writeMissingWebps(imageDir, contentHash)).toEqual(["foil"]);
+    await store.save(contentHash, { ...pngs, mask: await squareMask(40) });
     expect(readFileSync(foil)).toEqual(made);
-    expect(await writeMissingWebps(imageDir, contentHash)).toEqual([]);
   });
 
   it("refuses a name that isn't a content hash", async () => {
     const store = createDiskImageStore(imageDir, "https://cdn.test");
     await expect(store.save("../escape", sealImages())).rejects.toThrow(/content hash/);
-    await expect(writeMissingWebps(imageDir, "../escape")).rejects.toThrow(/content hash/);
   });
 
   it("writes immutable NFT metadata under the sticker id", async () => {

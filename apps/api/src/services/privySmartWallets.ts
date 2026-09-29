@@ -6,6 +6,9 @@ import { isAddress } from "viem";
 import type { SmartWallets } from "../deps.ts";
 import { logFailure, logInfo } from "../diagnostics.ts";
 
+/** One Privy user lookup's limit: Sealing and Receiving wait on it before their chain calls. */
+const PRIVY_LOOKUP_TIMEOUT_MS = 5_000;
+
 function smartWalletAddress(user: User): string | null {
   const wallet = user.linked_accounts.find(
     (account) => account.type === "smart_wallet" && isAddress(account.address),
@@ -30,7 +33,7 @@ export function createPrivySmartWallets({
     appId: privyAppId,
     appSecret: privyAppSecret,
     fetch: fetchImpl,
-    timeout: 5_000,
+    timeout: PRIVY_LOOKUP_TIMEOUT_MS,
     // Let the next Sealing/Receiving attempt retry without extending the API's lookup deadline.
     maxRetries: 0,
   });

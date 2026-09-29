@@ -1,5 +1,6 @@
 import { createLineChatMenu } from "../chatMenu/lineChatMenu.ts";
 import type { ChatMenuIds } from "../chatMenu/menus.ts";
+import { createGiverNotice } from "../gifts/giverNotice.ts";
 import { createLineMessaging, type BatchPhase, type MenuMove } from "../services/lineMessaging.ts";
 import type { TestBase } from "./createTestApp.ts";
 
@@ -38,7 +39,14 @@ const menuIdsIn = (ids: ChatMenuIds) =>
   );
 
 /** The calls a test can make fail. */
-type Route = "token" | "link" | "read" | "unlink" | "batch" | "progress";
+type Route = "token" | "link" | "read" | "unlink" | "batch" | "progress" | "push";
+
+/** A text message LINE took for someone, with the retry key it came with. */
+interface Push {
+  to: string;
+  text: string;
+  retryKey: string | null;
+}
 
 /** What a call names: a person and a menu, or a batch's request ID. */
 interface Target {
@@ -60,6 +68,9 @@ interface Batch {
 export const TOKEN_LIFETIME_S = 900;
 const RESUME_KEY = /^[a-zA-Z0-9_-]{1,100}$/;
 const MAX_BATCH_OPERATIONS = 1000;
+/** A retry key as LINE takes one: a UUID in hexadecimal. */
+const RETRY_KEY = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_TEXT_LENGTH = 5000;
 
 const field = (body: unknown, name: string): unknown =>
   body && typeof body === "object" ? Reflect.get(body, name) : undefined;
@@ -72,10 +83,11 @@ const isMove = (operation: unknown): operation is MenuMove & { type: "link" } =>
 const refuse = (status: number, message: string) => Response.json({ message }, { status });
 
 /**
- * LINE's Messaging API for chat menus, in memory, as a fetch function. It keeps who is linked to
- * which menu, and runs a batch's moves when its progress first reports it succeeded, as LINE runs
- * them some time after taking the batch. Linking someone in `strangers`, who hasn't added the
- * account, answers 200 and links nothing, as LINE does. `calls` lists every call, in order.
+ * LINE's Messaging API for chat menus and pushes, in memory, as a fetch function. It keeps who is
+ * linked to which menu, and runs a batch's moves when its progress first reports it succeeded, as
+ * LINE runs them some time after taking the batch. Linking someone in `strangers`, who hasn't added
+ * the account, answers 200 and links nothing, as LINE does. A push with a retry key it took before
+ * answers 409. `calls` lists every call, in order.
  */
 export function createFakeLine({ menus = menuIdsIn(TEST_CHAT_MENU_IDS) } = {}) {
   const links = new Map<string, string>();
@@ -83,7 +95,9 @@ export function createFakeLine({ menus = menuIdsIn(TEST_CHAT_MENU_IDS) } = {}) {
   const calls: string[] = [];
   const failures = new Map<Route, (Response | Error)[]>();
   const holds = new Map<Route, Promise<void>[]>();
+  const lostAnswers = new Map<Route, number>();
   const batches: Batch[] = [];
+  const pushes: Push[] = [];
   const tokens = new Set<string>();
   /** What the next batch's progress calls report. */
   let nextPhases: BatchPhase[] = ["succeeded"];
@@ -150,17 +164,37 @@ export function createFakeLine({ menus = menuIdsIn(TEST_CHAT_MENU_IDS) } = {}) {
     return Response.json({ phase, acceptedTime: "2026-09-27T15:00:00.000Z" });
   }
 
-  async function answer(
+  async function takePush(request: Request) {
+    const retryKey = request.headers.get("x-line-retry-key");
+    const body: unknown = await request.json();
+    const to = field(body, "to");
+    const messages = field(body, "messages");
+    const message: unknown = Array.isArray(messages) ? messages[0] : undefined;
+    const text = field(message, "text");
+    if (
+      (retryKey !== null && !RETRY_KEY.test(retryKey)) ||
+      typeof to !== "string" ||
+      !Array.isArray(messages) ||
+      messages.length !== 1 ||
+      field(message, "type") !== "text" ||
+      typeof text !== "string" ||
+      text.length === 0 ||
+      text.length > MAX_TEXT_LENGTH
+    ) {
+      return refuse(400, "The request body has 1 error(s)");
+    }
+    if (retryKey !== null && pushes.some((push) => push.retryKey === retryKey)) {
+      return refuse(409, "The retry key is already accepted");
+    }
+    pushes.push({ to, text, retryKey });
+    return Response.json({ sentMessages: [{ id: String(pushes.length) }] });
+  }
+
+  async function respond(
     route: Route,
     request: Request,
-    call: string,
-    { lineUserId = "", richMenuId = "", requestId }: Target = {},
+    { lineUserId = "", richMenuId = "", requestId }: Target,
   ): Promise<Response> {
-    calls.push(call);
-    await holds.get(route)?.shift();
-    const failure = failures.get(route)?.shift();
-    if (failure instanceof Error) throw failure;
-    if (failure) return failure;
     if (route === "token") return issueToken(request);
     const token = request.headers.get("authorization")?.replace(/^Bearer /, "");
     if (!token || !tokens.has(token)) return refuse(401, "Authentication failed");
@@ -182,7 +216,29 @@ export function createFakeLine({ menus = menuIdsIn(TEST_CHAT_MENU_IDS) } = {}) {
         return takeBatch(request);
       case "progress":
         return reportProgress(requestId);
+      case "push":
+        return takePush(request);
     }
+  }
+
+  async function answer(
+    route: Route,
+    request: Request,
+    call: string,
+    target: Target = {},
+  ): Promise<Response> {
+    calls.push(call);
+    await holds.get(route)?.shift();
+    const failure = failures.get(route)?.shift();
+    if (failure instanceof Error) throw failure;
+    if (failure) return failure;
+    const response = await respond(route, request, target);
+    const lost = lostAnswers.get(route) ?? 0;
+    if (lost > 0) {
+      lostAnswers.set(route, lost - 1);
+      throw new TypeError("fetch failed: the answer was lost");
+    }
+    return response;
   }
 
   const fetchImpl: typeof fetch = async (input, init) => {
@@ -217,6 +273,9 @@ export function createFakeLine({ menus = menuIdsIn(TEST_CHAT_MENU_IDS) } = {}) {
       const requestId = url.searchParams.get("requestId");
       return answer("progress", request, `progress ${requestId}`, { requestId });
     }
+    if (route === "POST https://api.line.me/v2/bot/message/push") {
+      return answer("push", request, `push ${request.headers.get("x-line-retry-key")}`);
+    }
     throw new Error(`The fake LINE has no answer for ${method} ${url.href}`);
   };
 
@@ -228,9 +287,15 @@ export function createFakeLine({ menus = menuIdsIn(TEST_CHAT_MENU_IDS) } = {}) {
     strangers,
     calls,
     batches,
+    /** The text messages LINE took, in order. */
+    pushes,
     /** The next call to `route` answers `failure`: a response, or an Error for no answer. */
     failNext(route: Route, failure: Response | Error) {
       failures.set(route, [...(failures.get(route) ?? []), failure]);
+    },
+    /** The next call to `route` does what it asks, but its answer never arrives. */
+    loseNextAnswer(route: Route) {
+      lostAnswers.set(route, (lostAnswers.get(route) ?? 0) + 1);
     },
     /** The next call to `route` waits to be answered until the returned function is called. */
     holdNext(route: Route) {
@@ -263,4 +328,11 @@ export const chatMenuThrough =
   (line: FakeLine, ids: ChatMenuIds = TEST_CHAT_MENU_IDS) =>
   ({ db, clock }: TestBase) => ({
     lineChatMenu: createLineChatMenu({ db, clock, ids, line: lineMessagingThrough(line) }),
+  });
+
+/** For createTestApp: the giver's messages, pushed through `line` on the test app's database and clock. */
+export const giverNoticeThrough =
+  (line: FakeLine) =>
+  ({ db, clock }: TestBase) => ({
+    giverNotice: createGiverNotice({ db, clock, line: lineMessagingThrough(line) }),
   });

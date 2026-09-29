@@ -18,10 +18,10 @@ import type {
   ReceivedGift,
   RecordGratitude,
   SealResponse,
+  SpendTicket,
   StickerBoard,
   StickerDetail,
   StickerPlacement,
-  TicketKind,
   TicketShop,
   Tickets,
   TicketUse,
@@ -84,8 +84,8 @@ export interface ApiClient {
 
   /** GET /api/tickets */
   tickets: () => Promise<Tickets>;
-  /** POST /api/tickets/spend */
-  spendTicket: (kind: TicketKind) => Promise<{ ticketUse: TicketUse; tickets: Tickets }>;
+  /** POST /api/tickets/spend: the same idempotencyKey again answers the ticket use it spent. */
+  spendTicket: (spend: SpendTicket) => Promise<{ ticketUse: TicketUse; tickets: Tickets }>;
   /** GET /api/ticket-shop */
   ticketShop: () => Promise<TicketShop>;
   /** POST /api/ticket-purchases */
@@ -141,7 +141,7 @@ type ClientErrorCode =
   | "smart_account_not_ready";
 export type ErrorCode = ApiErrorCode | ClientErrorCode;
 
-/** A refused or failed request: the HTTP status and the REST doc's error body. Status 0 is no answer. */
+/** A refused or failed request: the HTTP status and the API's error body. Status 0 is no answer. */
 export class ApiError extends Error {
   readonly status: number;
   /** The body's `error`: stable, so screens switch on it. */

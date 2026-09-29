@@ -4,12 +4,10 @@ import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 import type { ImageStore } from "../deps.ts";
 import { isoTimeSchema, personSchema, toIsoTime, toPerson } from "../shapes.ts";
-import { exploreDay, exploreDayStart } from "../ticketDays.ts";
+import { tokyoTicketDay, tokyoTicketDayStart } from "../ticketDays.ts";
 import { stickerLookup, stickerSchema, type Sticker } from "../views.ts";
 import { leaderboardsSchema, loadLeaderboards } from "./leaderboards.ts";
 
-/** Explore's day and week run on Tokyo's clock, the same for everyone. */
-export const EXPLORE_TIME_ZONE = "Asia/Tokyo";
 /** The most stickers today's stickers lists, and the most entries the activity feed lists. */
 export const EXPLORE_LIST_SIZE = 50;
 
@@ -26,7 +24,7 @@ const activityEntrySchema = z.discriminatedUnion("type", [
 export type ActivityEntry = z.infer<typeof activityEntrySchema>;
 
 export const exploreSchema = z.object({
-  /** Sealed since today began on Explore's clock, newest first. */
+  /** Sealed since today's ticket day began, newest first. */
   todaysStickers: z.array(stickerSchema),
   /** Seals and receives, newest first. */
   activity: z.array(activityEntrySchema),
@@ -109,10 +107,9 @@ function activity(db: Db, urls: ImageUrls): ActivityEntry[] {
 
 /** Explore as it stands at `now`. */
 export function loadExplore(db: Db, now: Date, urls: ImageUrls): Explore {
-  const todayStart = exploreDayStart(exploreDay(now, EXPLORE_TIME_ZONE), EXPLORE_TIME_ZONE);
   return {
-    todaysStickers: todaysStickers(db, todayStart, urls),
+    todaysStickers: todaysStickers(db, tokyoTicketDayStart(tokyoTicketDay(now)), urls),
     activity: activity(db, urls),
-    leaderboards: loadLeaderboards(db, now, EXPLORE_TIME_ZONE),
+    leaderboards: loadLeaderboards(db, now),
   };
 }

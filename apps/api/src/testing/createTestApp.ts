@@ -3,6 +3,7 @@ import { serializeSigned } from "hono/utils/cookie";
 import { createApp } from "../app.ts";
 import { chatMenuOff } from "../chatMenu/lineChatMenu.ts";
 import type { AppDeps } from "../deps.ts";
+import { giverNoticeOff } from "../gifts/giverNotice.ts";
 import { mockChain } from "../services/mockChain.ts";
 import { SESSION_COOKIE } from "../session.ts";
 import {
@@ -50,6 +51,7 @@ export async function createTestApp(overrides: Overrides | ((base: TestBase) => 
     ticketPayments: fakeTicketPayments().ticketPayments,
     serverLog: fakeServerLog(),
     lineChatMenu: chatMenuOff("not_configured"),
+    giverNotice: giverNoticeOff,
     worldId: null,
     ...(typeof overrides === "function" ? overrides({ db, clock }) : overrides),
   };

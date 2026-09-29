@@ -1,10 +1,10 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from "vitest";
 import { sticker } from "../api/testFixtures";
-import { exploreDay, type PileDay } from "./pileDays";
+import { ticketDayNumber, type PileDay } from "./pileDays";
 import { arrivalsOf, FALL_MAX, lastSeen, markSeen } from "./pileVisits";
 
-const TODAY = exploreDay(Date.parse("2026-09-26T12:00:00Z"));
+const TODAY = ticketDayNumber(Date.parse("2026-09-26T12:00:00Z"));
 /** `hour` o'clock in Tokyo on September `day`. */
 const at = (hour: number, day = 26) =>
   new Date(Date.UTC(2026, 8, day) + (hour - 9) * 3_600_000).toISOString();
