@@ -1,21 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { createFakeLine, lineMessagingThrough, TEST_CHAT_MENU_IDS } from "../testing/fakeLine.ts";
-import { createLineMessaging, LineApiError } from "./lineMessaging.ts";
+import {
+  createFakeLine,
+  lineMessagingThrough,
+  TEST_CHAT_MENU_IDS,
+  TOKEN_LIFETIME_S,
+} from "../testing/fakeLine.ts";
+import { LineApiError, TOKEN_REPLACE_MARGIN_MS } from "./lineMessaging.ts";
 
 const LINE_USER_ID = `U${"f".repeat(32)}`;
-const TOKEN_LIFETIME_S = 900;
 const { en } = TEST_CHAT_MENU_IDS;
 
 describe("the Messaging API channel's chat menu calls", () => {
-  it("issue one channel access token, and a new one a minute before it expires", async () => {
+  it("issue one channel access token, and a new one shortly before it expires", async () => {
     let now = 0;
     const line = createFakeLine();
     const messaging = lineMessagingThrough(line, () => now);
     await messaging.linkMenu(LINE_USER_ID, en["3"]);
-    now = (TOKEN_LIFETIME_S - 61) * 1000;
+    const replaceAt = TOKEN_LIFETIME_S * 1000 - TOKEN_REPLACE_MARGIN_MS;
+    now = replaceAt - 1;
     await messaging.linkMenu(LINE_USER_ID, en["2"]);
     expect(line.calls.filter((call) => call === "token")).toHaveLength(1);
-    now = (TOKEN_LIFETIME_S - 60) * 1000;
+    now = replaceAt;
     await messaging.linkMenu(LINE_USER_ID, en["1"]);
     expect(line.calls.filter((call) => call === "token")).toHaveLength(2);
   });
@@ -67,11 +72,5 @@ describe("the Messaging API channel's chat menu calls", () => {
       retryable: false,
       message: "LINE rich menu link: HTTP 404: Not found",
     });
-  });
-
-  it("refuse to start without the channel's ID and secret", () => {
-    expect(() => createLineMessaging({ channelId: "", channelSecret: "secret" })).toThrow(
-      /channel's ID and secret/,
-    );
   });
 });

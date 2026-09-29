@@ -1,13 +1,11 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
-import { bodyLimit } from "hono/body-limit";
 import type { AppDeps } from "../deps.ts";
-import { apiError, validate } from "../errors.ts";
+import { apiError, limitBody, validate } from "../errors.ts";
 import {
-  giftIdParam,
   gratitudeWithGiver,
   gratitudeWithReplay,
-  markSeen,
+  markGratitudeWatched,
   unseenGratitude,
 } from "../gratitude/feed.ts";
 import {
@@ -18,6 +16,7 @@ import {
   replayInvalidHook,
 } from "../gratitude/record.ts";
 import type { AppEnv } from "../session.ts";
+import { giftIdParam } from "../shapes.ts";
 
 /**
  * Gratitude: the receiver records a Mini-game combo; the giver sees the combos they haven't watched,
@@ -27,12 +26,7 @@ export const gratitudeRoutes = (deps: AppDeps) =>
   new Hono<AppEnv>()
     .post(
       "/",
-      // The contract has no 413: an oversized body is invalid_request, in ErrorBody JSON.
-      bodyLimit({
-        maxSize: MAX_GRATITUDE_BODY_BYTES,
-        onError: (c) =>
-          apiError(c, 400, "invalid_request", `body: over ${MAX_GRATITUDE_BODY_BYTES} bytes`),
-      }),
+      limitBody(MAX_GRATITUDE_BODY_BYTES),
       zValidator("json", recordGratitudeSchema, replayInvalidHook),
       (c) => {
         const recording = recordGratitude(deps, c.var.userId, c.req.valid("json"));
@@ -64,5 +58,8 @@ export const gratitudeRoutes = (deps: AppDeps) =>
           `Only gift ${giftId}'s giver marks its gratitude watched`,
         );
       }
-      return c.json({ gratitude: markSeen(deps.db, found.combo, deps.clock.now()) }, 200);
+      return c.json(
+        { gratitude: markGratitudeWatched(deps.db, found.combo, deps.clock.now()) },
+        200,
+      );
     });

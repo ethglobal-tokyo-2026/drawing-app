@@ -1,18 +1,19 @@
 import { stickers, users } from "@drawing-app/db";
-import { insertUser, packGift } from "@drawing-app/db/testing";
+import { insertUser } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { MAX_BODY_BYTES } from "../app.ts";
 import { LineTokenInvalidError, type LineProfile } from "../deps.ts";
-import { errorBodySchema } from "../errors.ts";
 import { devIdToken } from "../services/devSignIn.ts";
-import { HANDLE_MAX_LENGTH } from "../session/handles.ts";
+import { HANDLE_MAX_LENGTH } from "../session/handleLimit.ts";
 import { SESSION_COOKIE, SESSION_MAX_AGE_S } from "../session.ts";
 import { meSchema } from "../shapes.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { fakeSmartWallets } from "../testing/fakes.ts";
-import { insertGratitude, insertSealedSticker, receiveGift } from "../testing/rows.ts";
-import { ID_TOKEN_MAX_LENGTH } from "./session.ts";
+import { bodyOf, refusalOf } from "../testing/responses.ts";
+import { insertSealedSticker, sendGratitude } from "../testing/rows.ts";
+import { ID_TOKEN_MAX_LENGTH, LINE_USER_ID_MAX_LENGTH } from "./session.ts";
 
 const meBodySchema = z.object({ me: meSchema });
 
@@ -33,16 +34,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** Sends `method path`, with `body` as JSON when there is one. */
-const call = (method: string, path: string, headers: Record<string, string> = {}, body?: unknown) =>
-  test.app.request(path, {
-    method,
-    headers: body === undefined ? headers : { "content-type": "application/json", ...headers },
-    body: body === undefined ? undefined : JSON.stringify(body),
+const signIn = (profile: LineProfile, timeZone = DEVICE_ZONE, language = "en") =>
+  test.send("POST", "/api/session", {
+    body: { idToken: devIdToken(profile), timeZone, language },
   });
 
-const signIn = (profile: LineProfile, timeZone = DEVICE_ZONE, language = "en") =>
-  call("POST", "/api/session", {}, { idToken: devIdToken(profile), timeZone, language });
+const getMe = (headers: Record<string, string>) => test.send("GET", "/api/me", { headers });
 
 /** The Cookie header that sends back the session a response set. */
 function sessionCookie(response: Response) {
@@ -51,22 +48,13 @@ function sessionCookie(response: Response) {
 }
 
 /** `me` from a 200 answer. */
-async function meIn(response: Response) {
-  expect(response.status).toBe(200);
-  return meBodySchema.parse(await response.json()).me;
-}
-
-/** The status and ErrorBody a request was refused with. */
-const refusal = async (response: Response) => ({
-  status: response.status,
-  ...errorBodySchema.parse(await response.json()),
-});
+const meIn = async (response: Response) => (await bodyOf(response, meBodySchema)).me;
 
 const setHandle = (headers: Record<string, string>, handle: unknown) =>
-  call("POST", "/api/me/handle", headers, { handle });
+  test.send("POST", "/api/me/handle", { headers, body: { handle } });
 
 const setLanguageChoice = (headers: Record<string, string>, body: unknown) =>
-  call("POST", "/api/me/language-choice", headers, body);
+  test.send("POST", "/api/me/language-choice", { headers, body });
 
 describe("signing in", () => {
   it("makes the person at their first sign-in, with their LINE name as handle and the device's zone", async () => {
@@ -76,21 +64,17 @@ describe("signing in", () => {
       handle: ALICE.name,
       lineDisplayName: ALICE.name,
       linePictureUrl: ALICE.picture,
+      // So the app can check the session is still this LINE account's.
+      lineUserId: ALICE.sub,
       timeZone: DEVICE_ZONE,
       needsHandle: false,
     });
-    expect(await meIn(await call("GET", "/api/me", sessionCookie(response)))).toEqual(me);
+    expect(await meIn(await getMe(sessionCookie(response)))).toEqual(me);
   });
 
-  it("keeps the session for 30 days, and names LINE's user so the app can check it's still them", async () => {
-    const response = await signIn(ALICE);
-    const cookie = response.headers.get("set-cookie") ?? "";
+  it("keeps the session for SESSION_MAX_AGE_S", async () => {
+    const cookie = (await signIn(ALICE)).headers.get("set-cookie") ?? "";
     expect(cookie).toContain(`Max-Age=${SESSION_MAX_AGE_S}`);
-    expect(SESSION_MAX_AGE_S).toBe(30 * 24 * 60 * 60);
-    expect((await meIn(response)).lineUserId).toBe(ALICE.sub);
-    expect((await meIn(await call("GET", "/api/me", sessionCookie(response)))).lineUserId).toBe(
-      ALICE.sub,
-    );
   });
 
   it("asks for a handle when the LINE name is taken in another letter case, or breaks the rules", async () => {
@@ -139,7 +123,7 @@ describe("signing in", () => {
       const log = vi.spyOn(console, "error").mockImplementation(() => {});
       const response = await signIn(ALICE);
       expect(response.headers.get("set-cookie")).toBeNull();
-      const refused = await refusal(response);
+      const refused = await refusalOf(response);
       expect(refused).toMatchObject({ status: 401, error: code });
       expect(refused.detail).not.toContain(message);
       expect(log).toHaveBeenCalledWith(expect.stringContaining(message));
@@ -155,7 +139,7 @@ describe("signing in", () => {
       },
     });
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(await refusal(await signIn(ALICE))).toMatchObject({ error: "line_token_invalid" });
+    expect(await refusalOf(await signIn(ALICE))).toMatchObject({ error: "line_token_invalid" });
     expect(log).toHaveBeenCalledWith(expect.stringContaining("Invalid IdToken"));
     expect(log).not.toHaveBeenCalledWith(expect.stringContaining(credential));
   });
@@ -167,7 +151,15 @@ describe("signing in", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const response = await signIn(ALICE);
     expect(response.headers.get("set-cookie")).toBeNull();
-    expect(await refusal(response)).toMatchObject({ status: 500, error: "internal_error" });
+    expect(await refusalOf(response)).toMatchObject({ status: 500, error: "internal_error" });
+  });
+
+  it("refuses a body over MAX_BODY_BYTES with invalid_request, though it's otherwise valid", async () => {
+    const valid = { idToken: devIdToken(ALICE), timeZone: DEVICE_ZONE, language: "en" };
+    const padded = { ...valid, padding: "x".repeat(MAX_BODY_BYTES) };
+    const response = await test.send("POST", "/api/session", { body: padded });
+    expect(response.headers.get("set-cookie")).toBeNull();
+    expect(await refusalOf(response)).toMatchObject({ status: 400, error: "invalid_request" });
   });
 
   it("refuses an unknown zone or language, and an ID token that's empty or too long", async () => {
@@ -179,7 +171,7 @@ describe("signing in", () => {
       { ...valid, idToken: "x".repeat(ID_TOKEN_MAX_LENGTH + 1) },
     ];
     for (const body of bodies) {
-      expect(await refusal(await call("POST", "/api/session", {}, body))).toMatchObject({
+      expect(await refusalOf(await test.send("POST", "/api/session", { body }))).toMatchObject({
         status: 400,
         error: "invalid_request",
       });
@@ -192,27 +184,27 @@ describe("me", () => {
     const signedIn = await signIn(ALICE);
     const headers = sessionCookie(signedIn);
     const me = await meIn(signedIn);
-    expect(await meIn(await call("GET", "/api/me", headers))).toEqual(me);
-    const matching = await call("GET", "/api/me", { ...headers, "x-line-user-id": ALICE.sub });
+    const matching = await getMe({ ...headers, "x-line-user-id": ALICE.sub });
     expect(matching.headers.get("cache-control")).toBe("no-store");
     expect(await meIn(matching)).toEqual(me);
-    const mismatched = await call("GET", "/api/me", { ...headers, "x-line-user-id": "line-bob" });
+    const mismatched = await getMe({ ...headers, "x-line-user-id": "line-bob" });
     expect(mismatched.headers.get("cache-control")).toBe("no-store");
-    expect(await refusal(mismatched)).toMatchObject({ status: 401, error: "signed_out" });
+    expect(await refusalOf(mismatched)).toMatchObject({ status: 401, error: "signed_out" });
   });
 
   it("does not treat the requested LINE account as authentication", async () => {
     await signIn(ALICE);
-    expect(
-      await refusal(await call("GET", "/api/me", { "x-line-user-id": ALICE.sub })),
-    ).toMatchObject({ status: 401, error: "signed_out" });
+    expect(await refusalOf(await getMe({ "x-line-user-id": ALICE.sub }))).toMatchObject({
+      status: 401,
+      error: "signed_out",
+    });
   });
 
   it("rejects an empty or oversized LINE account header", async () => {
     const headers = sessionCookie(await signIn(ALICE));
-    for (const lineUserId of ["", "x".repeat(129)]) {
+    for (const lineUserId of ["", "x".repeat(LINE_USER_ID_MAX_LENGTH + 1)]) {
       expect(
-        await refusal(await call("GET", "/api/me", { ...headers, "x-line-user-id": lineUserId })),
+        await refusalOf(await getMe({ ...headers, "x-line-user-id": lineUserId })),
       ).toMatchObject({ status: 400, error: "invalid_request" });
     }
   });
@@ -220,10 +212,9 @@ describe("me", () => {
   it("counts NEW in your sticker tray and the pink tag", async () => {
     const userId = insertUser(test.db);
     const unseen = [insertSealedSticker(test.db, userId), insertSealedSticker(test.db, userId)];
-    const giftId = packGift(test.db, insertSealedSticker(test.db, userId), userId);
-    const withGratitude = [receiveGift(test.db, giftId, insertUser(test.db))];
-    for (const gift of withGratitude) insertGratitude(test.db, gift.id);
-    const me = await meIn(await call("GET", "/api/me", await test.signInAs(userId)));
+    const given = insertSealedSticker(test.db, userId);
+    const withGratitude = [sendGratitude(test.db, given, userId, insertUser(test.db))];
+    const me = await meIn(await test.send("GET", "/api/me", { as: userId }));
     expect(me).toMatchObject({
       newStickerCount: unseen.length,
       unseenGratitudeCount: withGratitude.length,
@@ -245,17 +236,17 @@ describe("your handle", () => {
   it("refuses someone else's handle in another letter case, and a handle that breaks the rules", async () => {
     insertUser(test.db, { handle: "sakura" });
     const headers = await test.signInAs(insertUser(test.db));
-    expect(await refusal(await setHandle(headers, "SAKURA"))).toMatchObject({
+    expect(await refusalOf(await setHandle(headers, "SAKURA"))).toMatchObject({
       status: 409,
       error: "handle_taken",
     });
     for (const handle of ["   ", "a".repeat(HANDLE_MAX_LENGTH + 1), "@sakura2"]) {
-      expect(await refusal(await setHandle(headers, handle))).toMatchObject({
+      expect(await refusalOf(await setHandle(headers, handle))).toMatchObject({
         status: 400,
         error: "handle_invalid",
       });
     }
-    expect(await refusal(await setHandle(headers, null))).toMatchObject({
+    expect(await refusalOf(await setHandle(headers, null))).toMatchObject({
       status: 400,
       error: "invalid_request",
     });
@@ -265,7 +256,7 @@ describe("your handle", () => {
 describe("your language choice", () => {
   it("is null until you choose, then comes with you, and null goes back to LINE's language", async () => {
     const headers = await test.signInAs(insertUser(test.db));
-    const me = () => call("GET", "/api/me", headers);
+    const me = () => getMe(headers);
     expect((await meIn(await me())).languageChoice).toBeNull();
     expect(await meIn(await setLanguageChoice(headers, { languageChoice: "ja" }))).toMatchObject({
       languageChoice: "ja",
@@ -280,7 +271,7 @@ describe("your language choice", () => {
   it("refuses a language the app doesn't speak, and a body that doesn't say", async () => {
     const headers = await test.signInAs(insertUser(test.db));
     for (const body of [{ languageChoice: "fr" }, {}]) {
-      expect(await refusal(await setLanguageChoice(headers, body))).toMatchObject({
+      expect(await refusalOf(await setLanguageChoice(headers, body))).toMatchObject({
         status: 400,
         error: "invalid_request",
       });
@@ -297,7 +288,7 @@ describe("deleting your account", () => {
     test.db.update(users).set({ smartAccountAddress: wallet }).where(eq(users.id, id)).run();
     const stickerId = insertSealedSticker(test.db, id);
 
-    const deleted = await call("DELETE", "/api/me", headers);
+    const deleted = await test.send("DELETE", "/api/me", { headers });
     expect(deleted.status).toBe(204);
     const cleared = deleted.headers.get("set-cookie") ?? "";
     expect(cleared.startsWith(`${SESSION_COOKIE}=;`)).toBe(true);
@@ -315,7 +306,7 @@ describe("deleting your account", () => {
       ownerId: id,
     });
 
-    expect(await refusal(await call("GET", "/api/me", headers))).toMatchObject({
+    expect(await refusalOf(await getMe(headers))).toMatchObject({
       status: 401,
       error: "signed_out",
     });
@@ -329,25 +320,11 @@ describe("signing out", () => {
   it("clears the cookie, with a session or without one", async () => {
     const headers = sessionCookie(await signIn(ALICE));
     for (const sent of [headers, {}]) {
-      const response = await call("DELETE", "/api/session", sent);
+      const response = await test.send("DELETE", "/api/session", { headers: sent });
       expect(response.status).toBe(204);
       const cleared = response.headers.get("set-cookie") ?? "";
       expect(cleared.startsWith(`${SESSION_COOKIE}=;`)).toBe(true);
       expect(cleared).toContain("Max-Age=0");
-    }
-  });
-});
-
-describe("without a session", () => {
-  it("you can't read, rename, set a language on or delete your account", async () => {
-    const responses = [
-      await call("GET", "/api/me"),
-      await setHandle({}, "sakura"),
-      await setLanguageChoice({}, { languageChoice: "ja" }),
-      await call("DELETE", "/api/me"),
-    ];
-    for (const response of responses) {
-      expect(await refusal(response)).toMatchObject({ status: 401, error: "signed_out" });
     }
   });
 });

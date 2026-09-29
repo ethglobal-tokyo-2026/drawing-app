@@ -1,9 +1,9 @@
 import { users } from "@drawing-app/db";
 import { and, eq, isNull } from "drizzle-orm";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { z } from "zod";
 import type { AppDeps, WorldId, WorldIdRpContext } from "../deps.ts";
-import { logFailure } from "../diagnostics.ts";
+import { failureCause, logFailure } from "../diagnostics.ts";
 import { apiError, validate } from "../errors.ts";
 import type { AppEnv } from "../session.ts";
 import { liveUser, meOf } from "./session.ts";
@@ -47,20 +47,17 @@ export interface AgeVerificationRequest {
 /** A nullifier as one decimal string, so two spellings of one hex value can't both be stored. */
 const decimalNullifier = (hex: string) => BigInt(hex).toString(10);
 
+/** The answer when this server has no World ID app, so age verification is off. */
+const notConfigured = (c: Context) =>
+  apiError(c, 404, "age_verification_not_configured", "This server has no World ID app");
+
 /** Age verification: proving with an Orb-verified World ID that you're 18 or older. */
 export const ageVerificationRoutes = (deps: AppDeps) =>
   new Hono<AppEnv>()
     /** What IDKit needs to ask World App for the proof, signed with our RP key. */
     .post("/me/age-verification/request", (c) => {
       const { worldId } = deps;
-      if (!worldId) {
-        return apiError(
-          c,
-          404,
-          "age_verification_not_configured",
-          "This server has no World ID app",
-        );
-      }
+      if (!worldId) return notConfigured(c);
       const user = liveUser(deps.db, c.var.userId);
       if (!user) return apiError(c, 401, "signed_out");
       if (user.ageVerifiedAt) return apiError(c, 409, "already_age_verified");
@@ -74,14 +71,7 @@ export const ageVerificationRoutes = (deps: AppDeps) =>
     })
     .post("/me/age-verification", validate("json", ageProofSchema), async (c) => {
       const { worldId } = deps;
-      if (!worldId) {
-        return apiError(
-          c,
-          404,
-          "age_verification_not_configured",
-          "This server has no World ID app",
-        );
-      }
+      if (!worldId) return notConfigured(c);
       const proof = c.req.valid("json");
       // One response only: World answers 200 when any one of several proofs holds.
       const [response, ...others] = proof.responses;
@@ -106,8 +96,12 @@ export const ageVerificationRoutes = (deps: AppDeps) =>
         verdict = await worldId.verifyProof(proof);
       } catch (error) {
         logFailure("world_id.verify.failed", error, { userId: c.var.userId });
-        const detail = error instanceof Error ? error.message : String(error);
-        return apiError(c, 502, "world_id_unavailable", detail);
+        return apiError(
+          c,
+          502,
+          "world_id_unavailable",
+          `World couldn't check the proof: ${failureCause(error)}`,
+        );
       }
       if (!verdict.verified) {
         return apiError(c, 422, "age_verification_refused", `${verdict.code}: ${verdict.detail}`);

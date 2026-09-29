@@ -7,11 +7,11 @@ import {
   type Db,
 } from "@drawing-app/db";
 import { and, eq, max } from "drizzle-orm";
+import { keccak256 } from "viem";
 import { z } from "zod";
 import { queueNaming } from "../ens/naming.ts";
 import type { AppDeps } from "../deps.ts";
 import { diagnosticStep, failureCause, logFailure, logInfo } from "../diagnostics.ts";
-import { keccak256 } from "../keccak256.ts";
 import { ageStatusOf, stickerPngsSchema, type StickerPngKind } from "../shapes.ts";
 import {
   loadStickers,
@@ -20,6 +20,7 @@ import {
   toStickerPlacement,
 } from "../views.ts";
 import type { SealForm } from "./sealForm.ts";
+import { timelapseProblem } from "./timelapse.ts";
 
 /** POST /api/stickers's answer. */
 export const sealResponseSchema = z.object({
@@ -119,7 +120,6 @@ async function mintSticker(deps: AppDeps, stickerId: string): Promise<SealRefusa
       contentHash: sticker.contentHash,
       metadataUri: sticker.metadataUri,
       number: sticker.number,
-      sealedAt: sticker.createdAt,
       width: sticker.width,
       height: sticker.height,
     });
@@ -160,8 +160,8 @@ function sealedSticker({ db, images }: AppDeps, userId: string, stickerId: strin
 }
 
 /**
- * Seals a drawing: checks the ticket and the images, stores the files, writes the sticker, then
- * mints it. The files go first, so no sticker row names a file that isn't stored.
+ * Seals a drawing: checks the ticket, the images and the timelapse, stores the files, writes the
+ * sticker, then mints it. The files go first, so no sticker row names a file that isn't stored.
  */
 export async function sealSticker(
   deps: AppDeps,
@@ -201,6 +201,9 @@ export async function sealSticker(
   };
   const imageRefusal = checkImages(pngs, form);
   if (imageRefusal) return { refused: imageRefusal };
+  const timelapse = form.timelapse ? Buffer.from(await form.timelapse.arrayBuffer()) : null;
+  const badTimelapse = timelapse && timelapseProblem(timelapse);
+  if (badTimelapse) return { refused: invalid(badTimelapse) };
 
   // Hashed here, never taken from the client: the hash names files other stickers may share. The
   // store keeps a name's first files, so a PNG sealed before keeps its first seal's images.
@@ -208,7 +211,6 @@ export async function sealSticker(
   await diagnosticStep("sticker.images.save", { userId }, () =>
     deps.images.save(contentHash, pngs),
   );
-  const timelapse = form.timelapse ? Buffer.from(await form.timelapse.arrayBuffer()) : null;
 
   const stickerId = deps.ids.uuid();
   // The NFT's metadata JSON sits beside the sticker's images on the CDN; the mint writes it.

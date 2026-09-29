@@ -1,61 +1,37 @@
 # Sticker chain package
 
-This package contains the first backend and contract boundaries for sealing stickers on Ethereum Sepolia.
+Croquis's contracts on Ethereum Sepolia, and the TypeScript the REST API and the LINE → Privy auth server use them with.
 
-## Behavior
+## Contracts
 
-- `StickerNFT.sol` creates one ERC-721 NFT for each sealed sticker.
-- `StickerGiftEscrow.sol` lets an artist complete Giving before the recipient has an account.
-- The artist's Ethereum Sepolia smart account receives the NFT when the sticker is sealed.
-- The original artist, content hash, and metadata URI remain immutable after later ownership transfers.
-- The backend reconciles repeat requests against the existing NFT instead of creating another NFT.
-- The LINE authentication server verifies the LIFF ID token with LINE before issuing a five-minute Privy Custom Auth JWT.
-- The REST API (`apps/api`) links each person's LINE chat menu, not this server.
-- `contracts/ens/` names people, stickers and pending gifts under croquis.eth on ENSv2. The design is `docs/superpowers/specs/2026-09-26-ens-names-design.md`.
+- `StickerNFT.sol` mints one ERC-721 NFT for each sealed sticker, to the artist's Ethereum Sepolia smart account. The Original Artist, content hash and metadata URI stay the same through every later transfer.
+- `StickerGiftEscrow.sol` holds a sticker between Giving and Receiving, so the giver can finish Giving before the recipient has an account. It never gets approval for the stickers in an artist's wallet, and no raw LINE ID or Gift Claim Token is stored onchain.
+- `contracts/ens/` names people, stickers and pending gifts under croquis.eth; see [ENS names](#ens-names).
 
-The API persists application records and sticker assets. Privy smart-wallet sponsorship is configured separately.
+## Exports
 
-## Authentication recovery
+- `./seal-sticker`: `createStickerSealer` mints from the funded sealer, so the artist neither signs nor pays gas. It waits for the receipt and checks the NFT's data and the mint's ERC-721 `Transfer` to the artist; a retry reconciles against the existing NFT instead of minting another. Each stage reaches the host through `onProgress`.
+- `./gift-sticker`: Giving and Receiving, below.
+- `./croquis-names` and `./ens-gateway`: ENS names, below.
+- `./line`, `./line-privy-jwt` and `./auth-http`: the LINE → Privy auth server, below.
+- `./contracts`: typed ABIs that Wagmi CLI generates from Forge's artifacts in `out/`. Application code imports these instead of writing ABI fragments.
+- `./bytes32`: the check that a value is a bytes32, for gift IDs, claim commitments and content hashes.
 
-The frontend starts Privy only after LINE and the app session are ready, and enables JWT synchronization only after Privy's wallet connection is ready. A loading flag alone does not delay the SDK's initial synchronization.
+## Giving and Receiving
 
-`POST /v1/auth/privy-jwt` distinguishes invalid requests (`400 invalid_request`), rejected LINE credentials (`401 line_auth_failed`), unavailable LINE verification (`502 line_unavailable`), and internal JWT issuance failures (`500 auth_unavailable`). Only an explicit LINE credential rejection offers LINE reconnection; service failures retry the exchange without restarting LINE authentication. JWT issuance diagnostics keep fixed failure reasons without tokens or raw provider responses.
+`createGiftClaim` makes an opaque gift ID and a one-time Gift Claim Token. Persist only the claim commitment with the pending gift, and put the Gift Claim Token in the Gift Message's link.
 
-## Sealing confirmation
+`prepareGiftTransfer` builds the transaction the giver's sponsored smart account sends while Giving. It transfers the sticker directly into the escrow, with the gift ID, claim commitment and expiry in the ERC-721 receiver data. The recipient needs no account yet.
 
-`POST /api/stickers` saves the drawing and uses the authenticated artist's Privy smart account as the mint recipient. The funded sealer signs `sealSticker`; the artist does not sign or pay mint gas. Before returning success, the backend waits for the receipt and verifies the NFT data and the mint's ERC-721 `Transfer` event to the artist.
+After the recipient signs in with LINE, the API finds their Ethereum Sepolia smart account, signs the claim with `authorizeClaim`, and relays `claimGift`. The authorization binds the gift ID, the recipient's smart account, the escrow, the chain ID and a deadline; the escrow accepts only signatures from `CLAIM_SIGNER_ROLE`. Anyone can return an expired gift to its sender.
 
-If minting cannot be confirmed, the live API returns `503 mint_failed`. The saved drawing and its ticket remain available for a retry on the same ticket. A retry reconciles an existing NFT instead of creating another. The frontend only completes Sealing once both a token ID and mint transaction hash are returned.
+`authorizeClaim` checks the Gift Claim Token against the gift's claim commitment. A stopgap, until smart account permissions can authorize the receiver on chain: `authorizeClaimForNamedRecipient` signs without the token, for the person the API says a gift waits for. To take a pending sticker out, the app sends `takeOut` from the sender's smart account; the escrow checks the caller is that gift's sender, so taking out needs no backend signature or Gift Claim Token.
 
-## Diagnosing Sealing, Giving, and Receiving
+## LINE → Privy authentication
 
-The browser logs `NFT API request` entries for these operations, including the route, elapsed time, HTTP status, and the API's `X-Request-ID` response header. Match that request ID to the backend's JSON console logs. A network failure has no response ID; use its route and time to find the server request, if it reached the API.
+`src/start-auth-server.ts` runs the auth server. `POST /v1/auth/privy-jwt` verifies a LIFF ID token with LINE, then issues a short-lived Privy Custom Auth JWT (`PRIVY_JWT_LIFETIME_S`); `GET /.well-known/jwks.json` serves the key Privy checks it with. A failure answers `400 invalid_request`, `401 line_auth_failed` (LINE rejected the credential), `502 line_unavailable` or `500 auth_unavailable`, and logs fixed labels: never a token, an error's message or a provider's response.
 
-On the server, follow the API service logs while reproducing one failure:
-
-```sh
-journalctl -u drawing-api -f -o cat
-```
-
-Backend events distinguish image storage, Privy wallet lookup, contract simulation, transaction submission, receipt waiting, verification, and database completion. A submitted transaction hash is logged immediately, so a later timeout can be investigated separately from a transaction that was never submitted. Failure events include sanitized error causes and provider error codes; `api.refused` records an expected API refusal such as `not_minted`.
-
-Logs exclude request bodies, Gift Claim Tokens, signatures, authentication headers, and credential-bearing URLs. Public transaction hashes and contract addresses are kept in named fields. These diagnostics do not change transaction or retry behavior, and both the frontend and API need the updated build before browser-to-server correlation is available.
-
-## Giving and receiving
-
-`createGiftClaim` generates an opaque gift ID and one-time gift claim token. Persist only the claim commitment with the pending gift and put the gift claim token in the gift message's link.
-
-`prepareGiftTransfer` creates the transaction that the artist's sponsored smart account sends while Giving. It transfers the sticker directly into the escrow with the gift ID, claim commitment, and expiration encoded in the ERC-721 receiver data. The recipient does not need an account at this point.
-
-After the recipient authenticates with LINE, the API resolves their Ethereum Sepolia smart account, calls `authorizeClaim`, and relays `claimGift`. The authorization binds the gift ID, recipient smart account, escrow contract, chain ID, and a deadline. The escrow accepts only signatures from `CLAIM_SIGNER_ROLE`. Rejection uses the same restricted authorization pattern, while anyone can return an expired gift to its sender.
-
-Receiving requests carry the Gift Claim Token so the API can validate it before authorizing a claim. A stopgap, until smart account permissions can authorize the receiver on chain: `authorizeClaimForNamedRecipient` signs without the token, for the person the API says a gift waits for (the one the giver picked in the app, or the first to open its link). The sender can take a pending sticker out with `prepareGiftTakeOut`; the escrow verifies the caller is that gift's sender, so taking out needs no backend signature or claim token.
-
-Giving confirms the NFT deposit before opening LINE's friend picker. Closing the Giving screen leaves an unsent gift in its bag; it does not withdraw the NFT. Submitted deposit and take-out hashes are retained for retries while the page stays open, and receipts must include the matching escrow event, not just a successful outer transaction. A missing Gift read is not proof of a completed take-out. If the Gift Claim Token is lost after a reload, recovery settles the existing deposit and takes it out before preparing a replacement gift.
-
-Receipt recovery retains replacement transaction hashes and does not require the smart wallet to initialize again. A completed take-out in contract state takes precedence over an unavailable old receipt. Failed preparation preserves its allocated Gift ID for Taking out; once Taking out starts, Send cannot reuse that gift's old message, even if confirmation fails.
-
-The escrow never receives approval for stickers that remain in an artist's wallet and cannot transfer them. Raw LINE IDs and gift claim tokens are not stored onchain.
+Configure Privy Custom Authentication with the deployed app's `/.well-known/jwks.json`, use `sub` as the user ID claim, and keep the P-256 private key outside the repository.
 
 ## ENS names
 
@@ -65,6 +41,7 @@ ENSv2 is vendored at the commit deployed to Sepolia (`lib/ens-contracts-v2`, 71a
 - `CroquisResolver` answers sticker and gift names from `StickerNFT` and the escrow, and everyone else under croquis.eth through CCIP-Read: the API's gateway answers with `src/ens-gateway.ts`.
 - `StickerGiftEscrow` registers `g-<gift ID>.gifts.croquis.eth` while a gift waits, removes it when the gift ends, and syncs the sticker's name whenever the sticker leaves.
 - `src/croquis-names.ts` writes names from the relayer. Each call reads the chain first, so a retry after a timeout does nothing when the first attempt landed.
+- Names are ERC-1155 tokens minted to smart accounts, so a smart account must accept them (Safe does, through its fallback handler).
 
 ## Commands
 
@@ -78,27 +55,13 @@ pnpm --filter @drawing-app/sticker-chain generate-types
 pnpm --filter @drawing-app/api exec vitest run src/routes/stickers.chain.test.ts
 ```
 
-Install Foundry before running these commands. `forge test` covers the contracts, while the TypeScript integration tests run against Anvil and consume the same Forge artifacts. Wagmi CLI reads the artifacts in `out/` and generates typed ABIs in `src/generated/contracts.ts`; application code imports these instead of maintaining handwritten ABI fragments. Configure Privy Custom Authentication with the deployed app's `/.well-known/jwks.json`, use `sub` as the user ID claim, and keep the P-256 private key outside the repository.
-
-The API chain integration test submits PNGs through Sealing, checks on-chain ownership and public metadata, and recovers a mint whose database update was lost. It uses local Anvil and mocked identity providers; it does not validate production LINE or Privy configuration.
+Install Foundry before running these commands. `forge test` covers the contracts, and the TypeScript tests run against Anvil with the same Forge artifacts. The API's chain test seals PNGs through the REST API against Anvil, with mocked identity providers, so it doesn't check production LINE or Privy configuration.
 
 ## Deploy to Ethereum Sepolia
 
 Set `DEPLOYER_PRIVATE_KEY`, `STICKER_SEALER_PRIVATE_KEY`, `ENS_GATEWAY_PRIVATE_KEY`, `ENS_GATEWAY_URL` and `ETHEREUM_SEPOLIA_RPC_URL` in the gitignored `deploy/.env`, then run `bash deploy/deploy-contracts.sh` from the repository root. With `STICKER_NFT_ADDRESS` set it keeps that StickerNFT; otherwise it deploys one. The deployer remains the administrator; the sealer receives mint, claim-signing and naming permissions, and the gateway key's address is the only signer `CroquisResolver` trusts. When the deployer owns croquis.eth, the script points croquis.eth at its registry and resolver; otherwise it prints the two addresses croquis.eth's owner sets. Record the printed addresses in `deploy/.env`.
 
-`deploy/deploy-api.sh` installs chain configuration in a private `chain.env` on the server. It preserves existing values when local values are omitted and can reuse `PRIVY_APP_SECRET` from the auth service. Incomplete configuration aborts before publishing the API. The sealer pays backend mint and Receiving gas; sponsored smart-wallet transactions cover Giving and taking out. Run the installer tests with `node --test deploy/install-chain-env.test.mjs`.
-
-`deploy/deploy.sh` validates the chain credentials, deploys the API, and then publishes the frontend with `VITE_STICKER_ESCROW_ADDRESS`. Set `DEPLOY_TARGET` to the server's SSH destination. `DEPLOY_ENV_FILE` can select an existing private environment file. The optional `VITE_STICKER_RPC_URL` must be safe to publish in the browser; the backend RPC URL is never copied into it.
-
-For Safe smart accounts, configure Sepolia's bundler and paymaster under Privy's **Advanced → Smart wallets** settings. The separate Fee sponsorship switch does not replace this paymaster configuration. Use the stat board's **Check sponsored gas** action from a wallet with no ETH, then test Giving and taking out against the configured contracts.
-
-## Required integration checks
-
-1. Persist immutable `artistId`, `sealedAt`, `contentHash`, and `metadataUri` values before minting.
-2. Store and verify the artist's Ethereum Sepolia smart account address. Do not mint to its Privy signer EOA.
-3. Configure an Ethereum Sepolia bundler and funded paymaster, then verify a transfer from a zero-balance artist wallet.
-4. Wait for Sealing's transaction receipt before adding the sticker to the tray; retry using the same ticket if the response is interrupted.
-5. Names are minted to smart accounts as ERC-1155 tokens, so the smart account must accept them (Safe does, through its fallback handler).
+`deploy/README.md` covers publishing the API and the frontend with them, and `deploy/.env.example` lists every setting. The sealer pays the gas for minting and Receiving; sponsored smart-wallet transactions pay for Giving and taking out. For Safe smart accounts, configure Sepolia's bundler and paymaster under Privy's **Advanced → Smart wallets** settings; the separate Fee sponsorship switch doesn't replace them. The stat board's **Check sponsored gas** action checks them: it sends a zero-value transaction and confirms the smart account's ETH paid none of its gas.
 
 References:
 

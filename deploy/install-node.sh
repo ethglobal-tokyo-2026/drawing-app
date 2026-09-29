@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
-# deploy/install-node.sh: put the Node that package.json pins (devEngines.runtime) on the box, next to the box's own
-# /usr/bin/node, NodeSource's Node 22, which the box's other projects still run on.
-#
-#   ./deploy/install-node.sh <unit>...
-#
-# deploy.sh runs it for sticker-auth, and deploy-api.sh for drawing-api. Both units start from
-# /usr/local/lib/nodejs/node-24/bin/node, and a named unit on that link restarts until it runs the pinned version.
-# A new major needs a new link: change node-24 in both units and in deploy-api.sh, and esbuild's target in
-# apps/api/scripts/build.ts.
+# deploy/install-node.sh <unit>...: put the Node that package.json pins (devEngines.runtime) on the box under
+# /usr/local/lib/nodejs/, and leave the box's own /usr/bin/node alone. deploy.sh runs it for sticker-auth, and
+# deploy-api.sh for drawing-api. Both units start from the major's link, /usr/local/lib/nodejs/node-<major>/bin/node,
+# and a named unit on that link restarts until it runs the pinned version. A new major needs a new link: change it in
+# both units, and esbuild's target in apps/api/scripts/build.ts.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -25,8 +21,10 @@ for unit in "$@"; do
     || { echo "✗ deploy/$unit.service doesn't start from /usr/local/lib/nodejs/node-${VERSION%%.*}" >&2; exit 1; }
 done
 
-# One SSH connection for every ssh below: the box resets bursts of new ones.
-SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/cm-deploy-%C" -o ControlPersist=60)
+# One SSH connection for every ssh below: the box resets bursts of new ones. A box that doesn't answer, or stops
+# answering, fails the install instead of hanging it.
+SSH_OPTS=(-o ControlMaster=auto -o "ControlPath=$HOME/.ssh/cm-deploy-%C" -o ControlPersist=60
+  -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
 ssh() { command ssh "${SSH_OPTS[@]}" "$@"; }
 
 ssh "$TARGET" "bash -s -- '$VERSION' $*" <<'BOX'
@@ -47,7 +45,9 @@ if [ ! -x "$dir/$name/bin/node" ]; then
   # deploy user's keyring out of it.
   export GNUPGHOME="$tmp/gnupg"
   install -d -m 700 "$GNUPGHOME"
-  get() { curl -fsS --retry 3 --connect-timeout 15 -L "$@"; }
+  # Per attempt: a stalled download fails the install instead of hanging it.
+  download_max_time=300
+  get() { curl -fsS --retry 3 --connect-timeout 15 --max-time "$download_max_time" -L "$@"; }
   get -o keyring.kbx https://github.com/nodejs/release-keys/raw/HEAD/gpg/pubring.kbx
   get -O "https://nodejs.org/dist/v$version/SHASUMS256.txt.asc"
   get -O "https://nodejs.org/dist/v$version/$name.tar.xz"

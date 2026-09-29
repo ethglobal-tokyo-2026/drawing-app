@@ -69,14 +69,26 @@ export const ensRoutes = (deps: AppDeps) =>
       if (!isHex(request) || !isAddress(sender)) {
         return apiError(c, 400, "invalid_request", "request: not hex calldata");
       }
+      // Only reading the calldata is the caller's error; a database failure reaches onError.
+      const unsupported = (error: unknown) =>
+        apiError(
+          c,
+          400,
+          "unsupported_request",
+          `request: ${error instanceof Error ? error.message : String(error)}`,
+        );
       let name: string;
-      let result;
       try {
         name = requestedName(request);
-        result = answerGatewayRequest(request, gatewayRecords(deps, ens, name));
       } catch (error) {
-        const detail = error instanceof Error ? error.message : String(error);
-        return apiError(c, 400, "unsupported_request", `request: ${detail}`);
+        return unsupported(error);
+      }
+      const records = gatewayRecords(deps, ens, name);
+      let result;
+      try {
+        result = answerGatewayRequest(request, records);
+      } catch (error) {
+        return unsupported(error);
       }
       const data = await signGatewayAnswer({
         signer: ens.gatewaySigner,

@@ -1,6 +1,10 @@
 import { createPublicKey, generateKeyPairSync, verify } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { createLinePrivyJwtIssuer, privySubject } from "../src/line-privy-jwt.js";
+import {
+  createLinePrivyJwtIssuer,
+  PRIVY_JWT_LIFETIME_S,
+  privySubject,
+} from "../src/line-privy-jwt.js";
 
 const { privateKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
 const privateKeyPem = privateKey.export({ type: "pkcs8", format: "pem" }).toString();
@@ -40,7 +44,7 @@ describe("LINE to Privy JWT", () => {
 
     const { jwt, subject, expiresAt } = await issuer.issue("line-id-token");
     expect(checkedToken).toBe("line-id-token");
-    expect(expiresAt).toBe(1_800_000_300);
+    expect(expiresAt).toBe(baseOptions.now() + PRIVY_JWT_LIFETIME_S);
     expect(subject).toMatch(/^line_[A-Za-z0-9_-]{43}$/);
     expect(issuer.jwks.keys[0]?.d).toBeUndefined();
 
@@ -52,7 +56,9 @@ describe("LINE to Privy JWT", () => {
     const payload = parseJsonObject(Buffer.from(payloadPart, "base64url").toString());
     expect(header).toEqual({ alg: "ES256", typ: "JWT", kid: baseOptions.keyId });
     expect(Reflect.get(payload, "sub")).toBe(subject);
-    expect(Number(Reflect.get(payload, "exp")) - Number(Reflect.get(payload, "iat"))).toBe(300);
+    expect(Number(Reflect.get(payload, "exp")) - Number(Reflect.get(payload, "iat"))).toBe(
+      PRIVY_JWT_LIFETIME_S,
+    );
     expect(
       verify(
         "sha256",
@@ -83,7 +89,7 @@ describe("LINE to Privy JWT", () => {
     );
   });
 
-  it("signs the subject that the chat menu switch looks up in Privy", async () => {
+  it("signs the subject the API's smart wallet lookup asks Privy for", async () => {
     const issuer = createLinePrivyJwtIssuer({
       ...baseOptions,
       verifyLineIdToken: async () => ({ sub: "line-user-1" }),

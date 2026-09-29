@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./auth-http": "./src/auth-http.ts",
+    "./bytes32": "./src/bytes32.ts",
     "./contracts": "./src/generated/contracts.ts",
     "./croquis-names": "./src/croquis-names.ts",
     "./ens-gateway": "./src/ens-gateway.ts",
@@ -19,7 +20,6 @@
     "compile": "forge build",
     "generate-types": "pnpm compile && wagmi generate",
     "lint": "oxlint src test wagmi.config.ts",
-    "start:auth": "tsx src/start-auth-server.ts",
     "test": "pnpm test:contracts && pnpm test:backend",
     "test:backend": "vitest run",
     "test:contracts": "forge test",
@@ -33,7 +33,6 @@
     "@types/node": "24.13.6",
     "@wagmi/cli": "2.10.0",
     "oxlint": "1.85.0",
-    "tsx": "4.23.15",
     "typescript": "7.0.2",
     "vitest": "5.0.1"
   }

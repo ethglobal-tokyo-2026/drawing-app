@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
+import { gzipSync } from "node:zlib";
 import Database from "better-sqlite3";
 import { generateSQLiteDrizzleJson, generateSQLiteMigration } from "drizzle-kit/api";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema/index.ts";
 import { GIFT_EXPIRY_MS } from "./schema/limits.ts";
@@ -94,4 +96,55 @@ export function packGift(
     })
     .run();
   return id;
+}
+
+/** Marks a gift received by `receiverId` with its claim landed, and hands them the sticker. */
+export function receiveGift(
+  db: TestDb,
+  giftId: string,
+  receiverId: string,
+  receivedAt = new Date(),
+) {
+  const gift = db
+    .update(schema.gifts)
+    .set({ status: "received", receiverId, receivedAt, escrowStatus: "claimed" })
+    .where(eq(schema.gifts.id, giftId))
+    .returning()
+    .get();
+  if (!gift) throw new Error(`There's no gift ${giftId} to receive`);
+  db.update(schema.stickers)
+    .set({ ownerId: receiverId })
+    .where(eq(schema.stickers.id, gift.stickerId))
+    .run();
+  db.insert(schema.stickerPlacements)
+    .values({ userId: receiverId, stickerId: gift.stickerId })
+    .onConflictDoNothing()
+    .run();
+  return gift;
+}
+
+/** The smallest combo: one tap that sends. */
+export const ONE_TAP = { method: "tap", hits: 1, total: 10, peakMult: 1, peakTier: 0 } as const;
+
+/** Records gratitude for a received gift: ONE_TAP, with `values` over it. Its replay is a placeholder. */
+export function insertGratitude(
+  db: TestDb,
+  giftId: string,
+  values: Partial<typeof schema.gratitude.$inferInsert> = {},
+) {
+  const row = db
+    .insert(schema.gratitude)
+    .values({
+      giftId,
+      idempotencyKey: newId("combo"),
+      ...ONE_TAP,
+      originalArtistGratitudeShare: 0,
+      gameConfigVersion: "test",
+      replay: gzipSync(JSON.stringify({ v: 1 })),
+      ...values,
+    })
+    .returning()
+    .get();
+  if (!row) throw new Error(`Gratitude for gift ${giftId} wasn't recorded`);
+  return row;
 }

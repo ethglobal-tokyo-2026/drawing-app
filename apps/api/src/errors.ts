@@ -1,5 +1,6 @@
 import { zValidator } from "@hono/zod-validator";
 import type { Context, ErrorHandler, NotFoundHandler, ValidationTargets } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { HTTPException } from "hono/http-exception";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
@@ -56,6 +57,16 @@ export const validate = <Target extends keyof ValidationTargets, Schema extends 
   target: Target,
   schema: Schema,
 ) => zValidator(target, schema, invalidRequest);
+
+/**
+ * Refuses a body over `maxBytes` before anything buffers it. The contract has no 413: an oversized
+ * body is invalid_request, in ErrorBody JSON.
+ */
+export const limitBody = (maxBytes: number) =>
+  bodyLimit({
+    maxSize: maxBytes,
+    onError: (c) => apiError(c, 400, "invalid_request", `body: over ${maxBytes} bytes`),
+  });
 
 /** Answers what a route didn't catch: a malformed body is the client's error, anything else is ours. */
 export const onError: ErrorHandler = (error, c) => {

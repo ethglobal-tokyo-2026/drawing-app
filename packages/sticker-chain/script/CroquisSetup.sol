@@ -14,7 +14,8 @@ import {
 import {StickerGiftEscrow} from "../contracts/StickerGiftEscrow.sol";
 
 /// @dev Builds everything under croquis.eth and the escrow. The deploy script and the tests share
-///      it, so tests run the wiring production gets. `self` is the account that sends each call.
+///      it, so tests deploy and grant roles exactly as production does. `self` is the account that
+///      sends each call.
 abstract contract CroquisSetup {
     uint64 internal constant FOREVER = type(uint64).max;
 
@@ -46,7 +47,7 @@ abstract contract CroquisSetup {
 
         uint256 croquisSetup = EnsRoles.REGISTRAR | EnsRoles.REGISTRAR_ADMIN | EnsRoles.SET_PARENT
             | EnsRoles.SET_PARENT_ADMIN;
-        c.croquisRegistry = _registry(ens, "croquis", self, croquisSetup);
+        c.croquisRegistry = _registry(ens, c.resolver, "croquis", self, croquisSetup);
         c.croquisRegistry.setParent(address(ens.ethRegistry), "croquis");
         c.names = new CroquisNames(
             self,
@@ -60,7 +61,7 @@ abstract contract CroquisSetup {
         );
 
         uint256 giftsSetup = croquisSetup | EnsRoles.UNREGISTER | EnsRoles.UNREGISTER_ADMIN;
-        c.giftsRegistry = _registry(ens, "gifts", self, giftsSetup);
+        c.giftsRegistry = _registry(ens, c.resolver, "gifts", self, giftsSetup);
         c.giftsRegistry.setParent(address(c.croquisRegistry), "gifts");
         c.croquisRegistry
             .register("gifts", self, address(c.giftsRegistry), address(c.resolver), 0, FOREVER);
@@ -87,17 +88,22 @@ abstract contract CroquisSetup {
         ens.ethRegistry.setResolver(labelId, address(c.resolver));
     }
 
-    function _registry(EnsV2 memory ens, string memory kind, address self, uint256 roles)
-        private
-        returns (IEnsRegistry)
-    {
+    /// @dev The factory salts only by sender, so the salt takes this run's resolver: a second deploy
+    ///      from the same account gets new registries instead of reverting on the first run's.
+    function _registry(
+        EnsV2 memory ens,
+        CroquisResolver resolver,
+        string memory kind,
+        address self,
+        uint256 roles
+    ) private returns (IEnsRegistry) {
         EnsGrant[] memory grants = new EnsGrant[](1);
         grants[0] = EnsGrant(self, roles);
         return IEnsRegistry(
             ens.factory
                 .deployProxy(
                     ens.registryImplementation,
-                    uint256(keccak256(abi.encode("croquis", kind))),
+                    uint256(keccak256(abi.encode(address(resolver), kind))),
                     abi.encodeCall(IEnsUserRegistry.initialize, (grants))
                 )
         );

@@ -79,7 +79,7 @@ async function relinkSpenders({ db, chatMenu }: MidnightDeps, ticketDay: string)
     .where(eq(ticketUses.ticketDay, ticketDay))
     .all();
   for (const { userId } of spenders) await chatMenu.relink(userId);
-  logInfo("chat_menu.spenders_relinked", { stage: ticketDay, status: spenders.length });
+  logInfo("chat_menu.spenders_relinked", { ticketDay, count: spenders.length });
 }
 
 /**
@@ -93,7 +93,7 @@ export async function runChatMenuBatch(deps: MidnightDeps, ticketDay: string): P
   const moves = midnightMoves(ids);
   const earlier = batchOf(db, ticketDay);
   if (moves.length === 0 || (earlier && earlier.status !== "sent")) return;
-  const fields = { stage: ticketDay };
+  const fields = { ticketDay };
   let requestId = earlier?.lineRequestId ?? null;
 
   for (let tries = 1; tries <= MAX_TRIES; tries++) {
@@ -149,7 +149,7 @@ export async function runChatMenuBatch(deps: MidnightDeps, ticketDay: string): P
 export function startMidnightBatches(deps: MidnightDeps) {
   const { clock, schedule = timer } = deps;
   if (midnightMoves(deps.ids).length === 0) {
-    logInfo("chat_menu.batch_off", { status: "no 3 menu to move anyone to" });
+    logInfo("chat_menu.batch_off", { status: "no_3_menu" });
     return { stop: () => {}, idle: () => Promise.resolve() };
   }
   let cancel = () => {};
@@ -163,7 +163,7 @@ export function startMidnightBatches(deps: MidnightDeps) {
       try {
         await runChatMenuBatch(deps, ticketDay);
       } catch (error) {
-        logFailure("chat_menu.batch_failed", error, { stage: ticketDay });
+        logFailure("chat_menu.batch_failed", error, { ticketDay });
       }
       if (tokyoTicketDay(clock.now()) === ticketDay) return;
     }

@@ -1,8 +1,9 @@
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono, type Context } from "hono";
 import { except } from "hono/combine";
+import { IMMUTABLE_MAX_AGE_S } from "./cacheControl.ts";
 import type { AppDeps } from "./deps.ts";
-import { apiError, notFound, onError } from "./errors.ts";
+import { apiError, limitBody, notFound, onError } from "./errors.ts";
 import { ageVerificationRoutes } from "./routes/ageVerification.ts";
 import { ensRoutes } from "./routes/ens.ts";
 import { exploreRoutes } from "./routes/explore.ts";
@@ -16,6 +17,14 @@ import { ticketRoutes } from "./routes/tickets.ts";
 import { requireSession, type AppEnv } from "./session.ts";
 import { requestDiagnostics } from "./requestDiagnostics.ts";
 
+/**
+ * The largest request body a route takes unless it sets its own: room for every JSON body the app
+ * sends, the largest being a Mini-game combo, which rides a keepalive request that carries no more.
+ */
+export const MAX_BODY_BYTES = 64 * 1024;
+
+/** Sealing sends a sticker's images, over MAX_BODY_BYTES, and sets its own limit. */
+const isSealing = (c: Context) => c.req.method === "POST" && c.req.path === "/api/stickers";
 /** Signing in, and signing out, which clears whatever cookie is there, live or not. */
 const isSignInOrOut = (c: Context) =>
   (c.req.method === "POST" || c.req.method === "DELETE") && c.req.path === "/api/session";
@@ -32,6 +41,7 @@ export function createApp(deps: AppDeps) {
     new Hono<AppEnv>()
       .basePath("/api")
       .use(requestDiagnostics)
+      .use(except(isSealing, limitBody(MAX_BODY_BYTES)))
       .use(except([isSignInOrOut, isEnsGateway], requireSession(deps)))
       // /session and /me
       .route("/", sessionRoutes(deps))
@@ -57,8 +67,6 @@ export type AppType = ReturnType<typeof createApp>;
 
 /** Where the server serves the sticker images; on the box, CDN_BASE_URL is the site's origin plus this. */
 export const STICKER_IMAGES_PATH = "/api/images";
-/** A year: an image's name is its content's hash, so the file never changes. */
-const IMAGE_MAX_AGE_S = 365 * 24 * 60 * 60;
 
 /**
  * The REST API as the server runs it, with the sticker images in `imageDir` served in front of it,
@@ -70,8 +78,9 @@ export function createServer(deps: AppDeps, imageDir: string) {
   return new Hono()
     .use(images, async (c, next) => {
       await next();
-      // serveStatic's onFound runs after it has made the response, too late to add a header.
-      if (c.res.ok) c.header("Cache-Control", `public, max-age=${IMAGE_MAX_AGE_S}, immutable`);
+      // serveStatic's onFound runs after it has made the response, too late to add a header. An
+      // image's name is its content's hash, so the file never changes.
+      if (c.res.ok) c.header("Cache-Control", `public, max-age=${IMMUTABLE_MAX_AGE_S}, immutable`);
     })
     .use(
       images,

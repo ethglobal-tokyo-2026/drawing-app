@@ -2,9 +2,10 @@ import { gunzipSync } from "node:zlib";
 import { stickers, stickerTimelapses, type Db } from "@drawing-app/db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { failureCause } from "../diagnostics.ts";
 
 /** A timelapse's JSON, unzipped, at most: a gzip that grows past it is refused, not read. */
-export const MAX_TIMELAPSE_JSON_BYTES = 16 * 1024 * 1024;
+const MAX_TIMELAPSE_JSON_BYTES = 16 * 1024 * 1024;
 
 /** A stroke's points: x, y and width in tenths of a pixel, plus ms, each a change from the point before. */
 const strokePoints = z
@@ -32,9 +33,28 @@ export const timelapseV1Schema = z.object({
 });
 export type TimelapseV1 = z.infer<typeof timelapseV1Schema>;
 
+/** A gzipped timelapse's JSON. Throws when it doesn't unzip within the limit, or isn't JSON. */
+const unzippedJson = (gzipped: Uint8Array): unknown =>
+  JSON.parse(gunzipSync(gzipped, { maxOutputLength: MAX_TIMELAPSE_JSON_BYTES }).toString());
+
+/** Why an uploaded timelapse can't be read back, naming the field; null when it can. */
+export function timelapseProblem(gzipped: Uint8Array): string | null {
+  let json: unknown;
+  try {
+    json = unzippedJson(gzipped);
+  } catch (error) {
+    return `timelapse: ${failureCause(error)}`;
+  }
+  const parsed = timelapseV1Schema.safeParse(json);
+  if (parsed.success) return null;
+  return parsed.error.issues
+    .map((issue) => `${["timelapse", ...issue.path].map(String).join(".")}: ${issue.message}`)
+    .join("; ");
+}
+
 /**
- * A sticker's timelapse, or why there's none. The stored bytes are the app's upload, unchecked at
- * seal, so one that isn't a timelapse throws, naming the sticker.
+ * A sticker's timelapse, or why there's none. Sealing stores only one that reads, so one that
+ * doesn't throws, naming the sticker.
  */
 export function readTimelapse(
   db: Pick<Db, "select">,
@@ -49,8 +69,7 @@ export function readTimelapse(
   if (!row) return "sticker_not_found";
   if (!row.ops) return "timelapse_not_found";
   try {
-    const json = gunzipSync(row.ops, { maxOutputLength: MAX_TIMELAPSE_JSON_BYTES }).toString();
-    return timelapseV1Schema.parse(JSON.parse(json));
+    return timelapseV1Schema.parse(unzippedJson(row.ops));
   } catch (error) {
     throw new Error(`Sticker ${stickerId}'s stored timelapse can't be read`, { cause: error });
   }

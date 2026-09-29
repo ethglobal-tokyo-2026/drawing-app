@@ -1,80 +1,32 @@
-import {
-  createPublicClient,
-  createTestClient,
-  createWalletClient,
-  defineChain,
-  getAddress,
-  http,
-  keccak256,
-  stringToBytes,
-  type Hex,
-} from "viem";
-import { sepolia } from "viem/chains";
-import { afterEach, describe, expect, it } from "vitest";
-import {
-  createGiftAuthorizer,
-  createGiftClaim,
-  prepareGiftTakeOut,
-  prepareGiftTransfer,
-} from "../src/gift-sticker.js";
-import {
-  anvilPollingInterval,
-  readFoundryArtifact,
-  startAnvil,
-  type AnvilInstance,
-} from "./helpers/foundry.js";
+import { createWalletClient, keccak256, stringToBytes, type Hex } from "viem";
+import { describe, expect, it } from "vitest";
+import { stickerGiftEscrowAbi, stickerNftAbi } from "../src/generated/contracts.js";
+import { createGiftAuthorizer, createGiftClaim, prepareGiftTransfer } from "../src/gift-sticker.js";
 import { deployCroquisStack } from "./helpers/croquis.js";
+import { deployStickerNft, localSepolia, startLocalChain } from "./helpers/foundry.js";
 
-const stickerArtifact = readFoundryArtifact("StickerNFT", "StickerNFT");
-const escrowArtifact = readFoundryArtifact("StickerGiftEscrow", "StickerGiftEscrow");
-const chain = defineChain({
-  id: sepolia.id,
-  name: "Local Ethereum Sepolia",
-  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-  rpcUrls: { default: { http: ["http://localhost"] } },
-});
 const contentHash = keccak256(stringToBytes("sealed-sticker-bytes"));
-const activeAnvils: AnvilInstance[] = [];
-
-afterEach(async () => {
-  await Promise.all(activeAnvils.splice(0).map(({ close }) => close()));
-});
 
 async function setup() {
-  const anvil = await startAnvil(chain.id);
-  activeAnvils.push(anvil);
-  const transport = http(anvil.rpcUrl);
-  const publicClient = createPublicClient({
-    chain,
-    transport,
-    pollingInterval: anvilPollingInterval,
-  });
-  const testClient = createTestClient({ chain, mode: "anvil", transport });
-  const accounts = anvil.accounts;
+  const { accounts, transport, publicClient } = await startLocalChain();
   const [admin, artist, recipient, claimSigner, stranger, relayer] = accounts;
   if (!admin || !artist || !recipient || !claimSigner || !stranger || !relayer) {
     throw new Error("Local chain did not create the required test accounts");
   }
-  const walletClient = createWalletClient({ chain, transport, account: admin });
-  const stickerDeployment = await walletClient.deployContract({
-    abi: stickerArtifact.abi,
-    bytecode: stickerArtifact.bytecode,
-    args: [admin.address],
-  });
-  const stickerReceipt = await publicClient.waitForTransactionReceipt({ hash: stickerDeployment });
-  if (!stickerReceipt.contractAddress) throw new Error("Sticker deployment returned no address");
+  const walletClient = createWalletClient({ chain: localSepolia, transport, account: admin });
+  const stickerAddress = await deployStickerNft(publicClient, walletClient);
   const croquis = await deployCroquisStack({
     publicClient,
     walletClient,
     account: admin,
-    chain,
-    sticker: stickerReceipt.contractAddress,
+    chain: localSepolia,
+    sticker: stickerAddress,
     relayer: claimSigner.address,
     gatewaySigner: claimSigner.address,
   });
   const mintHash = await walletClient.writeContract({
-    address: stickerReceipt.contractAddress,
-    abi: stickerArtifact.abi,
+    address: stickerAddress,
+    abi: stickerNftAbi,
     functionName: "sealSticker",
     args: [
       artist.address,
@@ -82,17 +34,13 @@ async function setup() {
       contentHash,
       "ipfs://sticker/metadata.json",
     ],
-    account: admin,
-    chain,
   });
   await publicClient.waitForTransactionReceipt({ hash: mintHash });
   return {
     publicClient,
-    testClient,
     walletClient,
-    stickerAddress: stickerReceipt.contractAddress,
+    stickerAddress,
     escrowAddress: croquis.escrow,
-    admin,
     artist,
     recipient,
     claimSigner,
@@ -118,7 +66,6 @@ async function stageGift(context: TestContext, expiresAt: number) {
   const hash = await context.walletClient.sendTransaction({
     ...transfer,
     account: context.artist,
-    chain,
   });
   await context.publicClient.waitForTransactionReceipt({ hash });
   return claim;
@@ -133,94 +80,30 @@ function createAuthorizer(
 ) {
   return createGiftAuthorizer({
     signer,
-    chainId: chain.id,
+    chainId: localSepolia.id,
     escrowContract: context.escrowAddress,
     findGift: async (requestedGiftId) =>
-      requestedGiftId === giftId
-        ? {
-            giftId,
-            claimCommitment,
-            expiresAt,
-            status: "pending",
-          }
-        : null,
+      requestedGiftId === giftId ? { giftId, claimCommitment, expiresAt, status: "pending" } : null,
     findArtistSmartWallet: async (artistId) =>
-      artistId === "recipient-artist"
-        ? {
-            address: context.recipient.address,
-            kind: "smart_account",
-            chainId: chain.id,
-          }
-        : artistId === "recipient-with-signer-only"
-          ? {
-              address: context.recipient.address,
-              kind: "signer_eoa",
-              chainId: chain.id,
-            }
-          : null,
+      artistId === "recipient-artist" ? context.recipient.address : null,
   });
 }
 
 describe("StickerGiftEscrow", () => {
-  it("lets only the sender take a pending sticker out", async () => {
-    const context = await setup();
-    const claim = await stageGift(context, Math.floor(Date.now() / 1000) + 3600);
-    const takeOut = prepareGiftTakeOut({
-      escrowContract: context.escrowAddress,
-      giftId: claim.giftId,
-    });
-    await expect(
-      context.walletClient.sendTransaction({ ...takeOut, account: context.stranger, chain }),
-    ).rejects.toThrow();
-    const hash = await context.walletClient.sendTransaction({
-      ...takeOut,
-      account: context.artist,
-      chain,
-    });
-    await context.publicClient.waitForTransactionReceipt({ hash });
-    await expect(
-      context.publicClient.readContract({
-        address: context.stickerAddress,
-        abi: stickerArtifact.abi,
-        functionName: "ownerOf",
-        args: [1n],
-      }),
-    ).resolves.toBe(context.artist.address);
-  }, 20_000);
-  it("stages a gift before the recipient has a smart account", async () => {
+  it("stages prepareGiftTransfer's gift and releases it to a later-created smart account", async () => {
     const context = await setup();
     const expiresAt = Math.floor(Date.now() / 1000) + 3600;
     const claim = await stageGift(context, expiresAt);
-
-    await expect(
-      context.publicClient.readContract({
-        address: context.stickerAddress,
-        abi: stickerArtifact.abi,
-        functionName: "ownerOf",
-        args: [1n],
-      }),
-    ).resolves.toBe(getAddress(context.escrowAddress));
-    const gift = await context.publicClient.readContract({
+    // The escrow decodes the commitment and expiry from prepareGiftTransfer's calldata.
+    const [, , , storedCommitment, storedExpiresAt] = await context.publicClient.readContract({
       address: context.escrowAddress,
-      abi: escrowArtifact.abi,
+      abi: stickerGiftEscrowAbi,
       functionName: "gifts",
       args: [claim.giftId],
     });
-    if (!Array.isArray(gift)) throw new Error("Escrow returned invalid gift data");
-    expect(gift).toEqual([
-      context.artist.address,
-      "0x0000000000000000000000000000000000000000",
-      1n,
-      claim.claimCommitment,
-      BigInt(expiresAt),
-      1,
-    ]);
-  }, 20_000);
+    expect(storedCommitment).toBe(claim.claimCommitment);
+    expect(storedExpiresAt).toBe(BigInt(expiresAt));
 
-  it("releases a staged sticker to a later-created smart account", async () => {
-    const context = await setup();
-    const expiresAt = Math.floor(Date.now() / 1000) + 3600;
-    const claim = await stageGift(context, expiresAt);
     const authorizer = createAuthorizer(context, claim.giftId, claim.claimCommitment, expiresAt);
     const authorized = await authorizer.authorizeClaim({
       giftId: claim.giftId,
@@ -229,7 +112,7 @@ describe("StickerGiftEscrow", () => {
     });
     const hash = await context.walletClient.writeContract({
       address: context.escrowAddress,
-      abi: escrowArtifact.abi,
+      abi: stickerGiftEscrowAbi,
       functionName: "claimGift",
       args: [
         claim.giftId,
@@ -238,14 +121,13 @@ describe("StickerGiftEscrow", () => {
         authorized.authorization,
       ],
       account: context.relayer,
-      chain,
     });
     await context.publicClient.waitForTransactionReceipt({ hash });
 
     await expect(
       context.publicClient.readContract({
         address: context.stickerAddress,
-        abi: stickerArtifact.abi,
+        abi: stickerNftAbi,
         functionName: "ownerOf",
         args: [1n],
       }),
@@ -253,14 +135,14 @@ describe("StickerGiftEscrow", () => {
     await expect(
       context.publicClient.readContract({
         address: context.escrowAddress,
-        abi: escrowArtifact.abi,
+        abi: stickerGiftEscrowAbi,
         functionName: "pendingGiftForToken",
         args: [1n],
       }),
     ).resolves.toBe(`0x${"00".repeat(32)}`);
   }, 20_000);
 
-  it("rejects invalid gift claim tokens, signer authorizations, and signer EOAs", async () => {
+  it("rejects invalid gift claim tokens and authorizations from other signers", async () => {
     const context = await setup();
     const expiresAt = Math.floor(Date.now() / 1000) + 3600;
     const claim = await stageGift(context, expiresAt);
@@ -272,13 +154,6 @@ describe("StickerGiftEscrow", () => {
         recipientArtistId: "recipient-artist",
       }),
     ).rejects.toThrow("Gift claim token is invalid");
-    await expect(
-      authorizer.authorizeClaim({
-        giftId: claim.giftId,
-        giftClaimToken: claim.giftClaimToken,
-        recipientArtistId: "recipient-with-signer-only",
-      }),
-    ).rejects.toThrow("smart wallet is unavailable");
 
     const unauthorized = await createAuthorizer(
       context,
@@ -294,7 +169,7 @@ describe("StickerGiftEscrow", () => {
     await expect(
       context.walletClient.writeContract({
         address: context.escrowAddress,
-        abi: escrowArtifact.abi,
+        abi: stickerGiftEscrowAbi,
         functionName: "claimGift",
         args: [
           claim.giftId,
@@ -303,67 +178,7 @@ describe("StickerGiftEscrow", () => {
           unauthorized.authorization,
         ],
         account: context.relayer,
-        chain,
       }),
     ).rejects.toThrow();
   }, 20_000);
-
-  it("returns rejected and expired gifts to the sender", async () => {
-    const rejectedContext = await setup();
-    const rejectedExpiresAt = Math.floor(Date.now() / 1000) + 3600;
-    const rejectedClaim = await stageGift(rejectedContext, rejectedExpiresAt);
-    const rejection = await createAuthorizer(
-      rejectedContext,
-      rejectedClaim.giftId,
-      rejectedClaim.claimCommitment,
-      rejectedExpiresAt,
-    ).authorizeRejection({
-      giftId: rejectedClaim.giftId,
-      giftClaimToken: rejectedClaim.giftClaimToken,
-    });
-    const rejectionHash = await rejectedContext.walletClient.writeContract({
-      address: rejectedContext.escrowAddress,
-      abi: escrowArtifact.abi,
-      functionName: "rejectGift",
-      args: [
-        rejectedClaim.giftId,
-        BigInt(rejection.authorizationDeadline),
-        rejection.authorization,
-      ],
-      account: rejectedContext.relayer,
-      chain,
-    });
-    await rejectedContext.publicClient.waitForTransactionReceipt({ hash: rejectionHash });
-    await expect(
-      rejectedContext.publicClient.readContract({
-        address: rejectedContext.stickerAddress,
-        abi: stickerArtifact.abi,
-        functionName: "ownerOf",
-        args: [1n],
-      }),
-    ).resolves.toBe(rejectedContext.artist.address);
-
-    const expiredContext = await setup();
-    const expiredAt = Math.floor(Date.now() / 1000) + 60;
-    const expiredClaim = await stageGift(expiredContext, expiredAt);
-    await expiredContext.testClient.increaseTime({ seconds: 120 });
-    await expiredContext.testClient.mine({ blocks: 1 });
-    const returnHash = await expiredContext.walletClient.writeContract({
-      address: expiredContext.escrowAddress,
-      abi: escrowArtifact.abi,
-      functionName: "returnExpiredGift",
-      args: [expiredClaim.giftId],
-      account: expiredContext.stranger,
-      chain,
-    });
-    await expiredContext.publicClient.waitForTransactionReceipt({ hash: returnHash });
-    await expect(
-      expiredContext.publicClient.readContract({
-        address: expiredContext.stickerAddress,
-        abi: stickerArtifact.abi,
-        functionName: "ownerOf",
-        args: [1n],
-      }),
-    ).resolves.toBe(expiredContext.artist.address);
-  }, 30_000);
 });

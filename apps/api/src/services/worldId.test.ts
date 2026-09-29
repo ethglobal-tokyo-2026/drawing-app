@@ -1,5 +1,11 @@
+import { computeRpSignatureMessage } from "@worldcoin/idkit-server";
+import { hexToBytes, isHex, recoverMessageAddress, type Hex } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import { describe, expect, it } from "vitest";
+import { AGE_VERIFICATION_ACTION } from "../routes/ageVerification.ts";
 import { createWorldId } from "./worldId.ts";
+
+const SIGNING_KEY: Hex = `0x${"11".repeat(32)}`;
 
 /** World ID whose verify endpoint answers `status` and `body`; `sent` holds each request. */
 function worldIdAnswering(status: number, body: string) {
@@ -13,7 +19,7 @@ function worldIdAnswering(status: number, body: string) {
     {
       appId: "app_test",
       rpId: "rp_test",
-      signingKey: `0x${"11".repeat(32)}`,
+      signingKey: SIGNING_KEY,
       environment: "production",
     },
     fetchImpl,
@@ -59,9 +65,19 @@ describe("World ID's verify endpoint", () => {
     ).rejects.toThrow(/answered 200/);
   });
 
-  it("signs requests as IDKit's rp_context for our RP", () => {
-    const context = worldIdAnswering(200, "{}").worldId.signRequest("croquis-age-18");
+  it("signs IDKit's rp_context for our RP with its key, over the action asked for", async () => {
+    const context = worldIdAnswering(200, "{}").worldId.signRequest(AGE_VERIFICATION_ACTION);
+    const { nonce, created_at, expires_at, signature } = context;
+    if (!isHex(nonce) || !isHex(signature)) throw new Error("Expected a hex nonce and signature");
+    const message = computeRpSignatureMessage(
+      hexToBytes(nonce),
+      created_at,
+      expires_at,
+      AGE_VERIFICATION_ACTION,
+    );
     expect(context.rp_id).toBe("rp_test");
-    expect(context.expires_at).toBeGreaterThan(context.created_at);
+    expect(await recoverMessageAddress({ message: { raw: message }, signature })).toBe(
+      privateKeyToAccount(SIGNING_KEY).address,
+    );
   });
 });

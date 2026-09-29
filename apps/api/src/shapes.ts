@@ -1,4 +1,4 @@
-import { escrowStatuses, giftStatuses, ticketKinds, users } from "@drawing-app/db";
+import { escrowStatuses, ticketKinds, users } from "@drawing-app/db";
 import { personEnsName } from "@drawing-app/sticker-chain/croquis-names";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -16,6 +16,20 @@ export function toIsoTime(date: Date | null): IsoTime | null {
 
 /** Gift ids, content hashes and transaction hashes: lowercase 0x-prefixed 32-byte hex. */
 export const bytes32Schema = z.string().regex(/^0x[0-9a-f]{64}$/);
+
+/** A gift ID that isn't 0x and 64 lowercase hex digits is invalid_request. */
+export const giftIdParam = z.object({ giftId: bytes32Schema });
+
+/** A refused step: the contract's code, and what failed for which item. */
+export interface Refusal<Code extends string> {
+  refusal: Code;
+  detail: string;
+}
+
+export const refuse = <Code extends string>(refusal: Code, detail: string): Refusal<Code> => ({
+  refusal,
+  detail,
+});
 
 const count = z.number().int().nonnegative();
 const positiveInt = z.number().int().positive();
@@ -50,7 +64,10 @@ export const personSchema = userRow
   });
 export type Person = z.infer<typeof personSchema>;
 
-/** Picks the public columns, so LINE's user ID and the smart wallet never reach other people. */
+/**
+ * Picks the public columns, so LINE's user ID never reaches other people. The smart wallet is left
+ * out too, though it isn't private: the ENS gateway answers it as <label>.croquis.eth's address.
+ */
 export const toPerson = ({
   id,
   handle,
@@ -134,11 +151,8 @@ export type StickerWebpKind = keyof z.infer<typeof stickerWebpsSchema>;
 export const stickerImagesSchema = stickerPngsSchema.extend({ webp: stickerWebpsSchema });
 export type StickerImages = z.infer<typeof stickerImagesSchema>;
 
-export const giftStatusSchema = z.enum(giftStatuses);
-export type GiftStatus = z.infer<typeof giftStatusSchema>;
-
 /** StickerGiftEscrow's GiftStatus. */
-export const escrowStatusSchema = z.enum(escrowStatuses);
+const escrowStatusSchema = z.enum(escrowStatuses);
 export type EscrowStatus = z.infer<typeof escrowStatusSchema>;
 
 /** Sent from the giver's smart wallet to move the sticker into the escrow. */

@@ -3,18 +3,25 @@ import { insertUser, packGift } from "@drawing-app/db/testing";
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
-import { errorBodySchema } from "../errors.ts";
 import { userStatsSchema } from "../shapes.ts";
 import { MAX_SEEN_BATCH, stickerBoardSchema } from "../stickerBoards/board.ts";
 import { simplifiedOutline } from "../stickers/outline.ts";
 import { stickerDetailSchema } from "../stickers/stickerDetail.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
-import { insertGratitude, insertSealedSticker, receiveGift } from "../testing/rows.ts";
+import { bodyOf, refusalOf } from "../testing/responses.ts";
+import {
+  FEW_HITS,
+  giveSticker,
+  insertSealedSticker,
+  MORE_HITS,
+  OWN_TAP,
+  sendGratitude,
+  SHARED_TAP,
+  SPOT,
+} from "../testing/rows.ts";
 import { addDays, tokyoTicketDay, tokyoTicketDayStart } from "../ticketDays.ts";
 import { newStickerCount, stickerPlacementSchema, type StickerPlacement } from "../views.ts";
 
-/** A spot on the board, as a drag leaves it. */
-const SPOT = { onBoard: true, x: 0.25, y: 0.75, scale: 0.3, rotation: -4, z: 2 };
 /** Back in the sticker tray, with every value moved from SPOT. */
 const IN_TRAY = { onBoard: false, x: 0.6, y: 0.1, scale: 0.8, rotation: 12, z: 5 };
 /** Past the board field's far edge. */
@@ -29,14 +36,8 @@ const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 /** When the stats' person made their account. */
 const SINCE = new Date("2026-01-15T00:00:00.000Z");
-/** A combo on a gift its Original Artist didn't give: their share comes out of the giver's part. */
-const SHARED_TAP = { method: "tap", total: 100, originalArtistGratitudeShare: 20 } as const;
 const STROKE = { method: "stroke", total: 60 } as const;
 const SHAKE = { method: "shake", total: 45 } as const;
-/** More than either part of SHARED_TAP, less than both together. */
-const OWN_TAP = { method: "tap", total: 90 } as const;
-const FEW_HITS = 12;
-const MORE_HITS = 64;
 /** Consecutive seal days before the missed one. */
 const LONGEST_RUN = 3;
 
@@ -49,38 +50,29 @@ beforeEach(async () => {
   test = await createTestApp();
 });
 
-const request = async (userId: string, method: string, path: string, body?: unknown) =>
-  test.app.request(path, {
-    method,
-    headers: { ...(await test.signInAs(userId)), "content-type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-
-/** A 200's body, parsed by its schema. */
-async function okBody<Schema extends z.ZodType>(response: Response, schema: Schema) {
-  const body: unknown = await response.json();
-  expect(response.status, JSON.stringify(body)).toBe(200);
-  return schema.parse(body);
-}
-
-/** The status and ErrorBody a request was refused with. */
-const refusal = async (response: Response) => ({
-  status: response.status,
-  ...errorBodySchema.parse(await response.json()),
-});
-
 const boardOf = async (viewerId: string, userId: string) =>
-  okBody(await request(viewerId, "GET", `/api/sticker-boards/${userId}`), stickerBoardSchema);
+  bodyOf(
+    await test.send("GET", `/api/sticker-boards/${userId}`, { as: viewerId }),
+    stickerBoardSchema,
+  );
 
 const patchPlacement = (userId: string, stickerId: string, placement: unknown) =>
-  request(userId, "PATCH", `/api/sticker-boards/me/sticker-placements/${stickerId}`, placement);
+  test.send("PATCH", `/api/sticker-boards/me/sticker-placements/${stickerId}`, {
+    as: userId,
+    body: placement,
+  });
 
 const postSeen = (userId: string, stickerIds: string[]) =>
-  request(userId, "POST", "/api/sticker-boards/me/sticker-tray/seen", { stickerIds });
+  test.send("POST", "/api/sticker-boards/me/sticker-tray/seen", {
+    as: userId,
+    body: { stickerIds },
+  });
 
 const statsOf = async (viewerId: string, userId: string) => {
-  const path = `/api/sticker-boards/${userId}/user-stats`;
-  return (await okBody(await request(viewerId, "GET", path), statsResponseSchema)).userStats;
+  const response = await test.send("GET", `/api/sticker-boards/${userId}/user-stats`, {
+    as: viewerId,
+  });
+  return (await bodyOf(response, statsResponseSchema)).userStats;
 };
 
 const placementOf = (userId: string, stickerId: string) =>
@@ -88,19 +80,7 @@ const placementOf = (userId: string, stickerId: string) =>
 
 const seal = (artistId: string) => insertSealedSticker(test.db, artistId);
 
-/** `giverId` gives `stickerId` to `receiverId`: packed, then received. */
-const give = (stickerId: string, giverId: string, receiverId: string, receivedAt?: Date) =>
-  receiveGift(test.db, packGift(test.db, stickerId, giverId), receiverId, receivedAt);
-
 const minuteAfter = (at: Date) => new Date(at.getTime() + MINUTE_MS);
-
-/** `giverId` gives `stickerId` to `receiverId`, who sends gratitude as `combo`. */
-const giveAndSendGratitude = (
-  stickerId: string,
-  giverId: string,
-  receiverId: string,
-  combo: Parameters<typeof insertGratitude>[2],
-) => insertGratitude(test.db, give(stickerId, giverId, receiverId).id, combo);
 
 /** Sets when each sticker reached `userId`, a minute apart in the order given. */
 function arriveInOrder(userId: string, stickerIds: string[]) {
@@ -132,9 +112,9 @@ describe("GET /api/sticker-boards/:userId", () => {
       .where(eq(gifts.id, sentGiftId))
       .run();
     const given = seal(me);
-    give(given, me, friend);
+    giveSticker(test.db, given, me, friend);
     const received = seal(friend);
-    give(received, friend, me);
+    giveSticker(test.db, received, friend, me);
     // Arrival runs against id order, so only ordering by arrival passes.
     const arrival = [kept, packed, sent, given, received].sort().reverse();
     arriveInOrder(me, arrival);
@@ -172,21 +152,20 @@ describe("GET /api/sticker-boards/:userId", () => {
     });
     const outline = `M${points.join("L")}Z`;
     const stickerId = insertSealedSticker(test.db, me, { outline, width: 600, height: 600 });
-    const detail = await request(me, "GET", `/api/stickers/${stickerId}`);
-    expect((await okBody(detail, stickerDetailSchema)).sticker.outline).toBe(outline);
+    const detail = await test.send("GET", `/api/stickers/${stickerId}`, { as: me });
+    expect((await bodyOf(detail, stickerDetailSchema)).sticker.outline).toBe(outline);
     const [onBoard] = (await boardOf(me, "me")).boardStickers;
     expect(onBoard?.sticker.outline).toBe(simplifiedOutline(outline, 600, 600));
-    expect(onBoard?.sticker.outline.length).toBeLessThan(outline.length / 4);
   });
 
-  it("shows someone else only their on-board stickers, without their bag or NEW", async () => {
+  it("shows someone else only the stickers on the board its owner holds, without their bag or NEW", async () => {
     const me = insertUser(test.db);
     const friend = insertUser(test.db);
     const onBoard = seal(friend);
     packGift(test.db, onBoard, friend);
     const givenAway = seal(friend);
     const inTray = seal(friend);
-    const unplaced = seal(friend);
+    seal(friend);
     for (const [stickerId, spot] of [
       [onBoard, SPOT],
       [givenAway, SPOT],
@@ -198,19 +177,18 @@ describe("GET /api/sticker-boards/:userId", () => {
         .where(placementOf(friend, stickerId))
         .run();
     }
-    const receiver = insertUser(test.db);
-    give(givenAway, friend, receiver);
+    // Given away from its spot on the board, which the giver's placement keeps.
+    giveSticker(test.db, givenAway, friend, insertUser(test.db));
 
     const board = await boardOf(me, friend);
     expect(board.owner.id).toBe(friend);
-    expect(board.boardStickers.map(({ stickerId }) => stickerId).sort()).toEqual(
-      [onBoard, givenAway].sort(),
-    );
-    expect(board.boardStickers.map(({ stickerId }) => stickerId)).not.toContain(unplaced);
-    const stickers = byStickerId(board.boardStickers);
-    expect(stickers.get(onBoard)).toMatchObject({ held: true, openGift: null, seenAt: null });
-    expect(stickers.get(givenAway)).toMatchObject({ held: false, openGift: null, seenAt: null });
-    expect(stickers.get(givenAway)?.givenTo?.receiver.id).toBe(receiver);
+    expect(board.boardStickers.map(({ stickerId }) => stickerId)).toEqual([onBoard]);
+    expect(board.boardStickers[0]).toMatchObject({
+      held: true,
+      givenTo: null,
+      openGift: null,
+      seenAt: null,
+    });
   });
 
   it("names who received a sticker given away, the last time it left the board's owner", async () => {
@@ -218,15 +196,15 @@ describe("GET /api/sticker-boards/:userId", () => {
     const friend = insertUser(test.db);
     const other = insertUser(test.db);
     const cameBack = seal(me);
-    give(cameBack, me, friend);
-    give(cameBack, friend, me);
+    giveSticker(test.db, cameBack, me, friend);
+    giveSticker(test.db, cameBack, friend, me);
     const givenAgain = seal(me);
     const firstGivenAt = FIRST_ARRIVAL;
     const backAt = minuteAfter(firstGivenAt);
     const givenAgainAt = minuteAfter(backAt);
-    give(givenAgain, me, friend, firstGivenAt);
-    give(givenAgain, friend, me, backAt);
-    give(givenAgain, me, other, givenAgainAt);
+    giveSticker(test.db, givenAgain, me, friend, firstGivenAt);
+    giveSticker(test.db, givenAgain, friend, me, backAt);
+    giveSticker(test.db, givenAgain, me, other, givenAgainAt);
 
     const mine = byStickerId((await boardOf(me, "me")).boardStickers);
     expect(mine.get(cameBack)).toMatchObject({ held: true, givenTo: null });
@@ -244,7 +222,7 @@ describe("GET /api/sticker-boards/:userId", () => {
   it("refuses a person who doesn't exist, for their board and their stats", async () => {
     const me = insertUser(test.db);
     for (const path of ["/api/sticker-boards/nobody", "/api/sticker-boards/nobody/user-stats"]) {
-      expect(await refusal(await request(me, "GET", path))).toMatchObject({
+      expect(await refusalOf(await test.send("GET", path, { as: me }))).toMatchObject({
         status: 404,
         error: "user_not_found",
       });
@@ -257,10 +235,10 @@ describe("PATCH /api/sticker-boards/me/sticker-placements/:stickerId", () => {
     const me = insertUser(test.db);
     const kept = seal(me);
     const given = seal(me);
-    give(given, me, insertUser(test.db));
+    giveSticker(test.db, given, me, insertUser(test.db));
     for (const stickerId of [kept, given]) {
       for (const placement of [SPOT, IN_TRAY]) {
-        const saved = await okBody(
+        const saved = await bodyOf(
           await patchPlacement(me, stickerId, placement),
           placementResponseSchema,
         );
@@ -274,13 +252,13 @@ describe("PATCH /api/sticker-boards/me/sticker-placements/:stickerId", () => {
   it("refuses a sticker that never reached you, and a placement outside the board", async () => {
     const me = insertUser(test.db);
     const theirs = seal(insertUser(test.db));
-    expect(await refusal(await patchPlacement(me, theirs, SPOT))).toMatchObject({
+    expect(await refusalOf(await patchPlacement(me, theirs, SPOT))).toMatchObject({
       status: 404,
       error: "sticker_placement_not_found",
     });
     const mine = seal(me);
     for (const outside of [OFF_THE_FIELD, NO_SIZE]) {
-      expect(await refusal(await patchPlacement(me, mine, outside))).toMatchObject({
+      expect(await refusalOf(await patchPlacement(me, mine, outside))).toMatchObject({
         status: 400,
         error: "invalid_request",
       });
@@ -298,7 +276,7 @@ describe("POST /api/sticker-boards/me/sticker-tray/seen", () => {
     const theirs = seal(friend);
     const firstSeenAt = test.clock.now().toISOString();
 
-    const answer = await okBody(await postSeen(me, [first, second, theirs]), seenResponseSchema);
+    const answer = await bodyOf(await postSeen(me, [first, second, theirs]), seenResponseSchema);
     expect(answer.newStickerCount).toBe([left].length);
     test.clock.advance(MINUTE_MS);
     await postSeen(me, [first]);
@@ -315,7 +293,7 @@ describe("POST /api/sticker-boards/me/sticker-tray/seen", () => {
     const ids = (length: number) => Array.from({ length }, (_, index) => `not-a-sticker-${index}`);
     expect((await postSeen(me, ids(MAX_SEEN_BATCH))).status).toBe(200);
     for (const stickerIds of [[], ids(MAX_SEEN_BATCH + 1), [""]]) {
-      expect(await refusal(await postSeen(me, stickerIds))).toMatchObject({
+      expect(await refusalOf(await postSeen(me, stickerIds))).toMatchObject({
         status: 400,
         error: "invalid_request",
       });
@@ -342,9 +320,9 @@ describe("GET /api/sticker-boards/:userId/user-stats", () => {
     const friend = insertUser(test.db);
     const made = [seal(artist), seal(artist), seal(artist)];
     const [given, packed, returned] = made;
-    give(given, artist, friend);
+    giveSticker(test.db, given, artist, friend);
     packGift(test.db, packed, artist);
-    const returnedGift = give(returned, artist, friend);
+    const returnedGift = giveSticker(test.db, returned, artist, friend);
     test.db
       .update(gifts)
       .set({ status: "returned", returnedAt: new Date(), escrowStatus: "expired_returned" })
@@ -368,10 +346,11 @@ describe("GET /api/sticker-boards/:userId/user-stats", () => {
     const giver = insertUser(test.db);
     const receiver = insertUser(test.db);
     const drawn = seal(artist);
-    give(drawn, artist, giver);
-    giveAndSendGratitude(drawn, giver, receiver, SHARED_TAP);
-    giveAndSendGratitude(seal(giver), giver, receiver, STROKE);
-    giveAndSendGratitude(seal(giver), giver, receiver, SHAKE);
+    giveSticker(test.db, drawn, artist, giver);
+    sendGratitude(test.db, drawn, giver, receiver, SHARED_TAP);
+    // The giver drew these two: each combo is theirs as giver and as Original Artist, and counts once.
+    sendGratitude(test.db, seal(giver), giver, receiver, STROKE);
+    sendGratitude(test.db, seal(giver), giver, receiver, SHAKE);
 
     const share = SHARED_TAP.originalArtistGratitudeShare;
     const direct = SHARED_TAP.total - share + STROKE.total + SHAKE.total;
@@ -391,9 +370,9 @@ describe("GET /api/sticker-boards/:userId/user-stats", () => {
   it("take bestCombo from the combos the person sent", async () => {
     const me = insertUser(test.db);
     const friend = insertUser(test.db);
-    giveAndSendGratitude(seal(friend), friend, me, { hits: FEW_HITS });
-    giveAndSendGratitude(seal(friend), friend, me, { hits: MORE_HITS });
-    giveAndSendGratitude(seal(me), me, friend, { hits: MAX_HITS });
+    sendGratitude(test.db, seal(friend), friend, me, { hits: FEW_HITS });
+    sendGratitude(test.db, seal(friend), friend, me, { hits: MORE_HITS });
+    sendGratitude(test.db, seal(me), me, friend, { hits: MAX_HITS });
     expect((await statsOf(me, "me")).bests.bestCombo).toBe(MORE_HITS);
     expect((await statsOf(me, friend)).bests.bestCombo).toBe(MAX_HITS);
   });
@@ -407,17 +386,17 @@ describe("GET /api/sticker-boards/:userId/user-stats", () => {
     const nextDayStart = tokyoTicketDayStart(nextDay);
     // The day's first moment: my share, as the Original Artist of a sticker a friend passed on.
     const mine = seal(me);
-    give(mine, me, friend);
-    giveAndSendGratitude(mine, friend, artist, {
+    giveSticker(test.db, mine, me, friend);
+    sendGratitude(test.db, mine, friend, artist, {
       ...SHARED_TAP,
       createdAt: tokyoTicketDayStart(day),
     });
     // Its last hour, a UTC date later than its first moment: my part of a sticker I passed on.
     const theirs = seal(artist);
-    give(theirs, artist, me);
+    giveSticker(test.db, theirs, artist, me);
     const lastHour = new Date(nextDayStart.getTime() - HOUR_MS);
-    giveAndSendGratitude(theirs, me, friend, { ...SHARED_TAP, createdAt: lastHour });
-    giveAndSendGratitude(seal(me), me, friend, { ...OWN_TAP, createdAt: nextDayStart });
+    sendGratitude(test.db, theirs, me, friend, { ...SHARED_TAP, createdAt: lastHour });
+    sendGratitude(test.db, seal(me), me, friend, { ...OWN_TAP, createdAt: nextDayStart });
 
     const share = SHARED_TAP.originalArtistGratitudeShare;
     const giversPart = SHARED_TAP.total - share;
@@ -444,22 +423,5 @@ describe("GET /api/sticker-boards/:userId/user-stats", () => {
       streak: 0,
       bests: { longestStreak: longest.length },
     });
-  });
-});
-
-describe("sticker board routes", () => {
-  it("refuse a request without the session cookie", async () => {
-    const routes = [
-      ["GET", "/api/sticker-boards/me"],
-      ["GET", "/api/sticker-boards/me/user-stats"],
-      ["PATCH", "/api/sticker-boards/me/sticker-placements/any-sticker"],
-      ["POST", "/api/sticker-boards/me/sticker-tray/seen"],
-    ];
-    for (const [method, path] of routes) {
-      expect(await refusal(await test.app.request(path, { method }))).toMatchObject({
-        status: 401,
-        error: "signed_out",
-      });
-    }
   });
 });

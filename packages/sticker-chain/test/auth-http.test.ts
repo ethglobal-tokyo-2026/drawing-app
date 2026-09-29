@@ -1,8 +1,9 @@
 import { generateKeyPairSync, sign } from "node:crypto";
 import { inspect } from "node:util";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MAX_AUTH_BODY_BYTES } from "../src/auth-http.js";
 import { createLinePrivyJwtIssuer, type LinePrivyJwtIssuer } from "../src/line-privy-jwt.js";
-import { createLineVerifier } from "../src/line.js";
+import { createLineVerifier, MAX_ID_TOKEN_LENGTH, MIN_ID_TOKEN_LENGTH } from "../src/line.js";
 import { APP_ORIGIN, startAuthServer } from "./helpers/auth-server.js";
 
 vi.mock("node:crypto", async (importOriginal) => {
@@ -79,6 +80,14 @@ describe("LINE authentication HTTP server", () => {
       body: JSON.stringify({ idToken: "verified-line-token" }),
     });
     expect(crossOrigin.status).toBe(403);
+  });
+
+  it("answers a path that isn't a URL with 404", async () => {
+    const { url } = await startVerifiedAuthServer(vi.fn<typeof fetch>());
+    const response = await fetch(`${url}//`);
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({ error: "not_found" });
   });
 
   it.each([
@@ -183,7 +192,9 @@ describe("LINE authentication HTTP server", () => {
   it("returns an internal failure if signing fails after successful LINE verification", async () => {
     const fetchImpl = vi.fn<typeof fetch>(async () => Response.json(verifiedClaims()));
     vi.mocked(sign).mockImplementationOnce(() => {
-      throw new Error(`Signing failed ${ID_TOKEN} ${privateKeyPem}`);
+      throw Object.assign(new TypeError(`Signing failed ${ID_TOKEN} ${privateKeyPem}`), {
+        code: "ERR_INVALID_ARG_TYPE",
+      });
     });
     const { url, errors } = await startVerifiedAuthServer(fetchImpl);
     const response = await postJwt(url);
@@ -192,7 +203,14 @@ describe("LINE authentication HTTP server", () => {
     await expect(response.json()).resolves.toEqual({ error: "auth_unavailable" });
     expect(fetchImpl).toHaveBeenCalledOnce();
     expect(sign).toHaveBeenCalledOnce();
-    expect(errors).toEqual([{ code: "auth_unavailable", reason: "unexpected_error" }]);
+    expect(errors).toEqual([
+      {
+        code: "auth_unavailable",
+        reason: "unexpected_error",
+        errorName: "TypeError",
+        errorCode: "ERR_INVALID_ARG_TYPE",
+      },
+    ]);
     expect(inspect(errors, { depth: null })).not.toContain(ID_TOKEN);
     expect(inspect(errors, { depth: null })).not.toContain(privateKeyPem);
   });
@@ -202,17 +220,18 @@ describe("LINE authentication HTTP server", () => {
     { body: "[]", contentType: "application/json", reason: "invalid_body" },
     { body: "{}", contentType: "application/json", reason: "id_token_required" },
     {
-      body: JSON.stringify({ idToken: "short" }),
+      body: JSON.stringify({ idToken: "x".repeat(MIN_ID_TOKEN_LENGTH - 1) }),
       contentType: "application/json",
       reason: "id_token_format",
     },
     {
-      body: JSON.stringify({ idToken: "x".repeat(6001) }),
+      body: JSON.stringify({ idToken: "x".repeat(MAX_ID_TOKEN_LENGTH + 1) }),
       contentType: "application/json",
       reason: "id_token_format",
     },
     {
-      body: JSON.stringify({ idToken: "あ".repeat(3000) }),
+      // Three bytes a character: under the limit in characters, over it in bytes.
+      body: JSON.stringify({ idToken: "あ".repeat(MAX_AUTH_BODY_BYTES / 2) }),
       contentType: "application/json",
       reason: "body_too_large",
     },

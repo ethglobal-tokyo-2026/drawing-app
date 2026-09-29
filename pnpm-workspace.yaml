@@ -13,8 +13,6 @@ allowBuilds:
   # optional native addon, and the browser uses its JavaScript version either way.
   "@reown/appkit": false
   keccak: false
-minimumReleaseAgeExclude:
-  - viem@2.56.9
 # drizzle-kit/api's types import zod, which drizzle-kit doesn't declare, so they'd resolve to `any`.
 packageExtensions:
   drizzle-kit:

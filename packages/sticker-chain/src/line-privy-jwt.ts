@@ -1,5 +1,8 @@
 import { createHash, createPrivateKey, createPublicKey, sign, type JsonWebKey } from "node:crypto";
 
+/** How long an issued Privy JWT stays valid. */
+export const PRIVY_JWT_LIFETIME_S = 300;
+
 function encode(value: object) {
   return Buffer.from(JSON.stringify(value)).toString("base64url");
 }
@@ -64,7 +67,7 @@ export function createLinePrivyJwtIssuer({
       aud: audience,
       sub: subject,
       iat: issuedAt,
-      exp: issuedAt + 300,
+      exp: issuedAt + PRIVY_JWT_LIFETIME_S,
     };
     const signingInput = `${encode(header)}.${encode(payload)}`;
     const signature = sign("sha256", Buffer.from(signingInput), {

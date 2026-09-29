@@ -13,7 +13,7 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
 import type { AppDeps } from "../deps.ts";
 import { apiError, invalidRequest } from "../errors.ts";
-import { bytes32Schema } from "../shapes.ts";
+import { bytes32Schema, refuse, type Refusal } from "../shapes.ts";
 import { gratitudeSchema, toGratitude, type Gratitude } from "../views.ts";
 import { countedTouches, gzipReplay, replayV1Schema } from "./replay.ts";
 
@@ -73,13 +73,12 @@ export type RecordGratitude = z.infer<typeof recordGratitudeSchema>;
 
 /**
  * The record body's validator hook: a replay that breaks its bounds or disagrees with the body is
- * replay_invalid, and any other field is the foundation's invalid_request. Both name the fields.
+ * replay_invalid, and a problem in any other field is invalid_request. Both name the fields.
  */
 export function replayInvalidHook(result: Parameters<typeof invalidRequest>[0], c: Context) {
   if (result.success) return undefined;
   const { issues } = result.error;
-  // The replay is the body's last field, so an issue in any other field comes first.
-  if (issues.at(0)?.path.at(0) !== "replay") return invalidRequest(result, c);
+  if (issues.some((issue) => issue.path[0] !== "replay")) return invalidRequest(result, c);
   const detail = issues
     .map((issue) => `${issue.path.map(String).join(".")}: ${issue.message}`)
     .join("; ");
@@ -97,7 +96,7 @@ export const RECORD_REFUSAL_STATUS = {
 } as const satisfies Record<string, ContentfulStatusCode>;
 
 export type Recording =
-  | { refusal: keyof typeof RECORD_REFUSAL_STATUS; detail: string }
+  | Refusal<keyof typeof RECORD_REFUSAL_STATUS>
   | { refusal: null; created: boolean; gratitude: Gratitude };
 
 /** None when the Original Artist gave or received the gift: gratitude to or from them is all theirs. */
@@ -132,10 +131,10 @@ export function recordGratitude(
         return { refusal: null, created: false, gratitude: toGratitude(sent.gratitude) };
       }
       if (sent) {
-        return {
-          refusal: "gratitude_already_recorded",
-          detail: `Combo ${idempotencyKey} was recorded by someone else`,
-        };
+        return refuse(
+          "gratitude_already_recorded",
+          `Combo ${idempotencyKey} was recorded by someone else`,
+        );
       }
       const given = tx
         .select({ gift: gifts, originalArtistId: stickers.artistId })
@@ -143,16 +142,13 @@ export function recordGratitude(
         .innerJoin(stickers, eq(stickers.id, gifts.stickerId))
         .where(eq(gifts.id, giftId))
         .get();
-      if (!given) return { refusal: "gift_not_found", detail: `There's no gift ${giftId}` };
+      if (!given) return refuse("gift_not_found", `There's no gift ${giftId}`);
       const { gift, originalArtistId } = given;
       if (gift.status !== "received") {
-        return {
-          refusal: "gift_not_received",
-          detail: `Gift ${giftId} is ${gift.status}, not received`,
-        };
+        return refuse("gift_not_received", `Gift ${giftId} is ${gift.status}, not received`);
       }
       if (gift.receiverId !== userId) {
-        return { refusal: "not_receiver", detail: `Gift ${giftId} was received by someone else` };
+        return refuse("not_receiver", `Gift ${giftId} was received by someone else`);
       }
       const recorded = tx
         .select({ giftId: gratitude.giftId })
@@ -160,10 +156,7 @@ export function recordGratitude(
         .where(eq(gratitude.giftId, giftId))
         .get();
       if (recorded) {
-        return {
-          refusal: "gratitude_already_recorded",
-          detail: `Gift ${giftId} already has gratitude`,
-        };
+        return refuse("gratitude_already_recorded", `Gift ${giftId} already has gratitude`);
       }
       const row = tx
         .insert(gratitude)

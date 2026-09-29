@@ -7,13 +7,16 @@ import { LineTokenInvalidError, type AppDeps, type LineVerifier } from "../deps.
 import { logFailure } from "../diagnostics.ts";
 import { syncEnsLabel } from "../ens/labels.ts";
 import { apiError, validate } from "../errors.ts";
-import { HANDLE_MAX_LENGTH, isHandleTaken, parseHandle } from "../session/handles.ts";
+import { HANDLE_MAX_LENGTH } from "../session/handleLimit.ts";
+import { isHandleTaken, parseHandle } from "../session/handles.ts";
 import { clearSessionCookie, setSessionCookie, type AppEnv } from "../session.ts";
 import { toMe } from "../shapes.ts";
 import { newStickerCount, unseenGratitudeCount } from "../views.ts";
 
 /** A LIFF ID token's longest accepted length. */
 export const ID_TOKEN_MAX_LENGTH = 6000;
+/** The x-line-user-id header's longest accepted length, far over LINE's own user IDs. */
+export const LINE_USER_ID_MAX_LENGTH = 128;
 
 const isTimeZone = (timeZone: string) => {
   try {
@@ -37,7 +40,9 @@ const signInBody = userInput
   .required()
   .extend({ idToken: z.string().min(1).max(ID_TOKEN_MAX_LENGTH) });
 
-const meHeaders = z.object({ "x-line-user-id": z.string().min(1).max(128).optional() });
+const meHeaders = z.object({
+  "x-line-user-id": z.string().min(1).max(LINE_USER_ID_MAX_LENGTH).optional(),
+});
 
 const handleBody = userInput.pick({ handle: true });
 
@@ -163,13 +168,17 @@ export const sessionRoutes = (deps: AppDeps) =>
       return c.json({ me: meOf(deps.db, user) }, 200);
     })
     .post("/me/language-choice", validate("json", languageChoiceBody), (c) => {
+      const { languageChoice } = c.req.valid("json");
+      // A choice is the person's language outside the app too, such as their chat menu's, from now
+      // on. Clearing it leaves that language to their next sign-in, which brings the device's.
       const user = deps.db
         .update(users)
-        .set({ languageChoice: c.req.valid("json").languageChoice })
+        .set({ languageChoice, ...(languageChoice && { language: languageChoice }) })
         .where(and(eq(users.id, c.var.userId), isNull(users.deletedAt)))
         .returning()
         .get();
       if (!user) return apiError(c, 401, "signed_out");
+      if (languageChoice) void deps.lineChatMenu.relink(user.id);
       return c.json({ me: meOf(deps.db, user) }, 200);
     })
     .delete("/me", (c) => {

@@ -2,6 +2,9 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { AuthError, AUTH_FAILURE_STATUS, authFailureOf } from "./auth-error.js";
 import type { LinePrivyJwtIssuer } from "./line-privy-jwt.js";
 
+/** The largest request body the Privy JWT route reads. */
+export const MAX_AUTH_BODY_BYTES = 8000;
+
 interface Logger {
   error: (message: string, details: { error: unknown }) => void;
 }
@@ -28,7 +31,7 @@ async function readIdToken(request: IncomingMessage) {
   let body = "";
   for await (const chunk of request) {
     body += String(chunk);
-    if (Buffer.byteLength(body) > 8000) {
+    if (Buffer.byteLength(body) > MAX_AUTH_BODY_BYTES) {
       throw new AuthError({ code: "invalid_request", reason: "body_too_large" });
     }
   }
@@ -50,7 +53,7 @@ async function readIdToken(request: IncomingMessage) {
 
 /**
  * The LINE → Privy auth server: trades LINE's ID token for a Privy JWT, and serves the keys Privy
- * checks it with. The REST API links chat menus.
+ * checks it with.
  */
 export function createAuthHttpServer({
   issuer,
@@ -74,16 +77,14 @@ export function createAuthHttpServer({
     }
   }
 
-  const postRoutes = new Map([["/v1/auth/privy-jwt", answerPrivyJwt]]);
-
-  return createServer(async (request, response) => {
-    const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+  async function answer(request: IncomingMessage, response: ServerResponse) {
+    // URL.parse returns null for a path such as "//", where new URL throws.
+    const pathname = URL.parse(request.url ?? "/", "http://localhost")?.pathname;
     if (request.method === "GET" && pathname === "/.well-known/jwks.json") {
       sendJson(response, 200, issuer.jwks, { "cache-control": "public, max-age=300" });
       return;
     }
-    const answer = request.method === "POST" ? postRoutes.get(pathname) : undefined;
-    if (!answer) {
+    if (request.method !== "POST" || pathname !== "/v1/auth/privy-jwt") {
       sendJson(response, 404, { error: "not_found" });
       return;
     }
@@ -91,6 +92,17 @@ export function createAuthHttpServer({
       sendJson(response, 403, { error: "origin_not_allowed" });
       return;
     }
-    await answer(request, response);
+    await answerPrivyJwt(request, response);
+  }
+
+  return createServer(async (request, response) => {
+    // A rejection escaping this async handler would be unhandled, and that ends the process.
+    try {
+      await answer(request, response);
+    } catch (error) {
+      logger.error("Auth request failed", { error: authFailureOf(error) });
+      if (response.headersSent) response.destroy();
+      else sendJson(response, AUTH_FAILURE_STATUS.auth_unavailable, { error: "auth_unavailable" });
+    }
   });
 }

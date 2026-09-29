@@ -6,9 +6,7 @@ import { stickers, stickerTimelapses } from "./stickers.ts";
 import { ticketPurchases, ticketUses } from "./tickets.ts";
 import { users } from "./users.ts";
 
-export { chatMenuBatchStatuses } from "./chatMenuBatches.ts";
 export { escrowStatuses, giftStatuses } from "./gifts.ts";
-export { gratitudeMethods } from "./gratitude.ts";
 export { ticketKinds } from "./tickets.ts";
 export {
   chatMenuBatches,

@@ -1,32 +1,28 @@
-import { stickers } from "@drawing-app/db";
 import { insertUser } from "@drawing-app/db/testing";
-import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { giftClaimTokenSchema, packagedGiftSchema } from "../gifts/packaging.ts";
+import {
+  giftClaimTokenSchema,
+  packagedGiftSchema,
+  pendingGiftsSchema,
+} from "../gifts/packaging.ts";
 import { giftsForYouSchema, receivedGiftSchema } from "../gifts/receiving.ts";
-import { createGiftsTestApp, refusalOf, type GiftsTestApp } from "../gifts/testGifts.ts";
+import { createGiftsTestApp, giftOf, type GiftsTestApp } from "../gifts/testGifts.ts";
+import { bodyOf, refusalOf } from "../testing/responses.ts";
 
 /** A gift of a sticker its giver drew, packaged for `forUserId` if given, and sent through LINE. */
 async function sentGift(test: GiftsTestApp, forUserId?: string) {
   const giverId = insertUser(test.db);
   const stickerId = test.sealSticker(giverId);
-  const response = await test.post(giverId, "", { stickerId, ...(forUserId && { forUserId }) });
-  const { gift, giftClaimToken } = packagedGiftSchema.parse(await response.json());
-  // On the escrow chain, the giver's wallet deposits it before LINE sends it.
-  if (test.giftRow(gift.id).escrowStatus === "missing") {
-    test.landDeposit(gift.id);
-    await test.post(giverId, `/${gift.id}/deposit`, {});
-  }
-  await test.post(giverId, `/${gift.id}/shared`, { outcome: "sent" });
+  const packaging = await test.post(giverId, "", { stickerId, ...(forUserId && { forUserId }) });
+  const { gift, giftClaimToken } = await bodyOf(packaging, packagedGiftSchema, 201);
+  await giftOf(await test.share(giverId, gift.id, "sent"));
   return { giverId, gift, giftClaimToken: giftClaimTokenSchema.parse(giftClaimToken) };
 }
 
 const waitingFor = async (test: GiftsTestApp, userId: string) =>
-  giftsForYouSchema.parse(await (await test.get(userId, "/for-you")).json()).gifts;
+  (await bodyOf(await test.get(userId, "/for-you"), giftsForYouSchema)).gifts;
 const receiveFromBoard = (test: GiftsTestApp, userId: string, giftId: string) =>
   test.post(userId, `/${giftId}/receive`);
-const ownerOf = (test: GiftsTestApp, stickerId: string) =>
-  test.db.select().from(stickers).where(eq(stickers.id, stickerId)).get()?.ownerId;
 
 describe("gifts waiting for you", () => {
   it("lists a gift picked for you in the app, and gives it to you from your board", async () => {
@@ -38,22 +34,13 @@ describe("gifts waiting for you", () => {
     ]);
     expect(await waitingFor(test, insertUser(test.db))).toEqual([]);
     // The giver's gifts on their way say who it went to.
-    const pending = await (await test.get(giverId, "/pending")).json();
-    expect(pending).toMatchObject({ gifts: [{ gift: { id: gift.id }, for: { id: bobId } }] });
+    const pending = await bodyOf(await test.get(giverId, "/pending"), pendingGiftsSchema);
+    expect(pending.gifts).toMatchObject([{ gift: { id: gift.id }, for: { id: bobId } }]);
 
-    const response = await receiveFromBoard(test, bobId, gift.id);
-    expect(response.status).toBe(200);
-    expect(receivedGiftSchema.parse(await response.json()).gift.receiverId).toBe(bobId);
-    expect(ownerOf(test, gift.stickerId)).toBe(bobId);
+    const received = await bodyOf(await receiveFromBoard(test, bobId, gift.id), receivedGiftSchema);
+    expect(received.gift.receiverId).toBe(bobId);
+    expect(test.ownerOf(gift.stickerId)).toBe(bobId);
     expect(await waitingFor(test, bobId)).toEqual([]);
-  });
-
-  it("claims it on the escrow chain without the link's token", async () => {
-    const test = await createGiftsTestApp({ escrowChain: true });
-    const bobId = insertUser(test.db);
-    const { gift } = await sentGift(test, bobId);
-    expect((await receiveFromBoard(test, bobId, gift.id)).status).toBe(200);
-    expect(test.giftChain.escrow.get(gift.id)?.status).toBe("claimed");
   });
 
   it("waits for the first person to open its link, and gives it to no one else", async () => {
@@ -76,8 +63,7 @@ describe("gifts waiting for you", () => {
   it("is an NSFW sticker only for an adult", async () => {
     const test = await createGiftsTestApp();
     const giverId = insertUser(test.db);
-    const stickerId = test.sealSticker(giverId);
-    test.db.update(stickers).set({ nsfw: true }).where(eq(stickers.id, stickerId)).run();
+    const stickerId = test.sealSticker(giverId, { nsfw: true });
     const give = (forUserId: string) => test.post(giverId, "", { stickerId, forUserId });
     expect(await refusalOf(await give(insertUser(test.db)))).toMatchObject({
       status: 403,

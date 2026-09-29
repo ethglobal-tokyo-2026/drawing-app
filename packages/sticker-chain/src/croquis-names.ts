@@ -4,7 +4,7 @@ import { croquisNamesAbi } from "@drawing-app/sticker-chain/contracts";
 /** How long a naming transaction may take to land before it counts as failed. */
 const RECEIPT_TIMEOUT_MS = 120_000;
 
-export interface NamingProgress {
+interface NamingProgress {
   stage: "person_name" | "sticker_name" | "avatar";
   phase: "skipped" | "submitted" | "completed" | "failed";
   txHash?: Hash;
@@ -86,8 +86,6 @@ export function createCroquisNames({
   }
 
   return {
-    read,
-
     /** Gives `person` its forever name, unless it has one. Returns the label it holds. */
     async ensurePersonName(
       person: Address,
@@ -147,5 +145,3 @@ export function createCroquisNames({
     },
   };
 }
-
-export type CroquisNamesWriter = ReturnType<typeof createCroquisNames>;

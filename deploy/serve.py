@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
-"""Serves the built web app on the Hetzner box, behind HAProxy.
+"""Serves the built web app on the box, behind HAProxy; sticker-board.service runs it.
 
-    python3 serve.py --port 3003 --dir /srv/sticker-board/site
-
-Any path that isn't a file gets index.html, so app routes such as /g/<gift claim token> load the app. A missing
-file under /assets/ stays a 404. index.html is never cached, because LINE's in-app browser keeps what it fetched
-and its cache can't be cleared: a cached page would outlive every deploy. Vite gives the files under /assets/
-content hashes, so they're cached for a year. A request for one byte range of a file gets a 206: Safari plays no
-video without one.
+Any path that isn't a file gets index.html, so app routes such as /g/<gift claim token> load the app; a missing file
+under /assets/ stays a 404. index.html is never cached: LINE's in-app browser keeps what it fetched and its cache can't
+be cleared, so a cached page would outlive every deploy. Vite names the files under /assets/ by content hash, so
+they're cached for a year. A request for one byte range gets a 206: Safari plays no video without one.
 """
 
 import argparse

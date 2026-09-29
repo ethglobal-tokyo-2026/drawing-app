@@ -1,5 +1,6 @@
 import { gifts, gratitude, stickers, users, type Db } from "@drawing-app/db";
-import { and, count, eq, max, or, type SQL } from "drizzle-orm";
+import { and, count, eq, max, type SQL } from "drizzle-orm";
+import { gratitudeParts } from "../gratitudeParts.ts";
 import { toIsoTime, type UserStats } from "../shapes.ts";
 import { streakOf } from "../streak.ts";
 import { tokyoTicketDay } from "../ticketDays.ts";
@@ -11,6 +12,23 @@ const receivedGiftCount = (db: Db, where: SQL) =>
     .from(gifts)
     .where(and(eq(gifts.status, "received"), where))
     .get()?.n ?? 0;
+
+/** Combos on gifts matching `where`, with each gift's giver and its sticker's Original Artist. */
+const combosWhere = (db: Db, where: SQL) =>
+  db
+    .select({
+      giftId: gratitude.giftId,
+      total: gratitude.total,
+      share: gratitude.originalArtistGratitudeShare,
+      recordedAt: gratitude.createdAt,
+      giverId: gifts.giverId,
+      artistId: stickers.artistId,
+    })
+    .from(gratitude)
+    .innerJoin(gifts, eq(gifts.id, gratitude.giftId))
+    .innerJoin(stickers, eq(stickers.id, gifts.stickerId))
+    .where(where)
+    .all();
 
 /** A person's User Stats. The streak and a day's gratitude count Tokyo ticket days, as everyone's do. */
 export function loadUserStats(db: Db, user: typeof users.$inferSelect, now: Date): UserStats {
@@ -27,31 +45,24 @@ export function loadUserStats(db: Db, user: typeof users.$inferSelect, now: Date
       .innerJoin(gifts, eq(gifts.id, gratitude.giftId))
       .where(eq(gifts.receiverId, user.id))
       .get()?.hits ?? 0;
-  // Every combo that gave the person something: as its gift's giver, or as the Original Artist.
-  const combos = db
-    .select({
-      total: gratitude.total,
-      share: gratitude.originalArtistGratitudeShare,
-      recordedAt: gratitude.createdAt,
-      giverId: gifts.giverId,
-      artistId: stickers.artistId,
-    })
-    .from(gratitude)
-    .innerJoin(gifts, eq(gifts.id, gratitude.giftId))
-    .innerJoin(stickers, eq(stickers.id, gifts.stickerId))
-    .where(or(eq(gifts.giverId, user.id), eq(stickers.artistId, user.id)))
-    .all();
+  // Every combo that gave the person something: as its gift's giver, or as the Original Artist. A
+  // select for each, since an OR across both can't use either index; a combo in both counts once.
+  const combos = new Map(
+    [
+      ...combosWhere(db, eq(gifts.giverId, user.id)),
+      ...combosWhere(db, eq(stickers.artistId, user.id)),
+    ].map((combo) => [combo.giftId, combo]),
+  );
 
-  let direct = 0;
-  let residual = 0;
+  const gratitudeTotals = { direct: 0, residual: 0 };
   const gratitudeByDay = new Map<string, number>();
-  for (const combo of combos) {
-    const giversPart = combo.giverId === user.id ? combo.total - combo.share : 0;
-    const share = combo.artistId === user.id ? combo.share : 0;
-    direct += giversPart;
-    residual += share;
+  for (const combo of combos.values()) {
     const day = tokyoTicketDay(combo.recordedAt);
-    gratitudeByDay.set(day, (gratitudeByDay.get(day) ?? 0) + giversPart + share);
+    for (const { personId, part, value } of gratitudeParts(combo)) {
+      if (personId !== user.id) continue;
+      gratitudeTotals[part] += value;
+      gratitudeByDay.set(day, (gratitudeByDay.get(day) ?? 0) + value);
+    }
   }
   const streak = streakOf(sealDays, tokyoTicketDay(now));
 
@@ -60,7 +71,7 @@ export function loadUserStats(db: Db, user: typeof users.$inferSelect, now: Date
     made: sealDays.length,
     received: receivedGiftCount(db, eq(gifts.receiverId, user.id)),
     given: receivedGiftCount(db, eq(gifts.giverId, user.id)),
-    gratitude: { direct, residual, total: direct + residual },
+    gratitude: { ...gratitudeTotals, total: gratitudeTotals.direct + gratitudeTotals.residual },
     bests: {
       bestCombo,
       mostGratitudeInADay: Math.max(0, ...gratitudeByDay.values()),

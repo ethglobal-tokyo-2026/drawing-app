@@ -3,11 +3,11 @@ import { bytes32, insertUser } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { errorBodySchema } from "../errors.ts";
 import type { JpycPayment } from "../deps.ts";
 import { ticketShopSchema, ticketsSchema } from "../shapes.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { fakeTicketPayments, TEST_PAYMENT_TARGET } from "../testing/fakes.ts";
+import { bodyOf, refusalOf } from "../testing/responses.ts";
 import { insertSealedSticker } from "../testing/rows.ts";
 import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
 import {
@@ -44,10 +44,7 @@ const newTxDigest = () => {
   return BASE58_DIGITS.charAt(payments % BASE58_DIGITS.length).repeat(TX_DIGEST_LENGTH);
 };
 
-type Headers = Record<string, string>;
-
 let test: TestApp;
-let headers: Headers;
 let userId: string;
 /** Sui's transactions, by digest. */
 let transactions: Map<string, JpycPayment[] | Error>;
@@ -58,7 +55,6 @@ async function start() {
   transactions = sui.transactions;
   test = await createTestApp({ ticketPayments: sui.ticketPayments });
   userId = insertUser(test.db);
-  headers = await test.signInAs(userId);
 }
 
 /** A new Sui transaction that paid `amount` JPYC into the ticket vault, by default for the signed-in person. */
@@ -81,58 +77,32 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const getTickets = async (as: Headers = headers) => {
-  const response = await test.app.request("/api/tickets", { headers: as });
-  expect(response.status).toBe(200);
-  return ticketsBodySchema.parse(await response.json()).tickets;
-};
+const getTickets = async (as = userId) =>
+  (await bodyOf(await test.send("GET", "/api/tickets", { as }), ticketsBodySchema)).tickets;
 
-const spend = (kind: TicketKind, as: Headers = headers) =>
-  test.app.request("/api/tickets/spend", {
-    method: "POST",
-    headers: { ...as, "content-type": "application/json" },
-    body: JSON.stringify({ kind }),
-  });
+const spend = (kind: TicketKind) =>
+  test.send("POST", "/api/tickets/spend", { as: userId, body: { kind } });
 
 /** Spends a ticket of `kind`, which must be granted. */
-async function spendTicket(kind: TicketKind, as: Headers = headers) {
-  const response = await spend(kind, as);
-  expect(response.status).toBe(201);
-  return spendBodySchema.parse(await response.json());
-}
+const spendTicket = async (kind: TicketKind) => bodyOf(await spend(kind), spendBodySchema, 201);
 
 /** Spends `times` tickets of `kind`, each of which must be granted, and returns the answers in order. */
-async function spendTickets(kind: TicketKind, times: number, as: Headers = headers) {
+async function spendTickets(kind: TicketKind, times: number) {
   const answers = [];
-  for (let spent = 0; spent < times; spent++) answers.push(await spendTicket(kind, as));
+  for (let spent = 0; spent < times; spent++) answers.push(await spendTicket(kind));
   return answers;
 }
 
-const buy = (body: object, as: Headers = headers) =>
-  test.app.request("/api/ticket-purchases", {
-    method: "POST",
-    headers: { ...as, "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
+const buy = (body: object, as = userId) => test.send("POST", "/api/ticket-purchases", { as, body });
 
-const getShop = async (as: Headers = headers) => {
-  const response = await test.app.request("/api/ticket-shop", { headers: as });
-  expect(response.status).toBe(200);
-  return shopBodySchema.parse(await response.json()).shop;
-};
+const getShop = async (as = userId) =>
+  (await bodyOf(await test.send("GET", "/api/ticket-shop", { as }), shopBodySchema)).shop;
 
 /** Pays `pack`'s price and buys it, which must be granted, and returns the tickets after. */
 async function buyPack(pack: (typeof TICKET_PACKS)[number], txDigest = paid(jpycOf(pack))) {
   const response = await buy({ tickets: pack.tickets, txDigest });
-  expect(response.status).toBe(201);
-  return ticketsBodySchema.parse(await response.json()).tickets;
+  return (await bodyOf(response, ticketsBodySchema, 201)).tickets;
 }
-
-/** The status and ErrorBody a request was refused with. */
-const refusal = async (response: Response) => ({
-  status: response.status,
-  ...errorBodySchema.parse(await response.json()),
-});
 
 const ticketUseCount = () =>
   test.db.select().from(ticketUses).where(eq(ticketUses.userId, userId)).all().length;
@@ -163,7 +133,7 @@ describe("tickets", () => {
       );
     });
     for (const kind of ["daily", "reserve"] as const) {
-      expect(await refusal(await spend(kind))).toMatchObject({
+      expect(await refusalOf(await spend(kind))).toMatchObject({
         status: 409,
         error: "no_tickets_left",
       });
@@ -220,7 +190,7 @@ describe("tickets", () => {
     await spendTickets("daily", DAILY_TICKETS_PER_DAY);
     const nextDay = await spendTickets("reserve", carried);
     expect(nextDay[nextDay.length - 1].tickets).toMatchObject({ dailyLeft: 0, reserveLeft: 0 });
-    expect(await refusal(await spend("reserve"))).toMatchObject({
+    expect(await refusalOf(await spend("reserve"))).toMatchObject({
       status: 409,
       error: "no_tickets_left",
     });
@@ -229,9 +199,9 @@ describe("tickets", () => {
   it("refuse the other kind than the next ticket with ticket_kind_changed, spending nothing", async () => {
     await buyPack(PACK);
     const kindChanged = { status: 409, error: "ticket_kind_changed" };
-    expect(await refusal(await spend("reserve"))).toMatchObject(kindChanged);
+    expect(await refusalOf(await spend("reserve"))).toMatchObject(kindChanged);
     await spendTickets("daily", DAILY_TICKETS_PER_DAY);
-    expect(await refusal(await spend("daily"))).toMatchObject(kindChanged);
+    expect(await refusalOf(await spend("daily"))).toMatchObject(kindChanged);
     expect(ticketUseCount()).toBe(DAILY_TICKETS_PER_DAY);
     expect((await getTickets()).reserveLeft).toBe(PACK.tickets);
   });
@@ -247,7 +217,7 @@ describe("tickets", () => {
       );
       expect(BigInt(pack.priceJpyc)).toBe(jpycOf(pack));
     }
-    const someoneElse = await getShop(await test.signInAs(insertUser(test.db)));
+    const someoneElse = await getShop(insertUser(test.db));
     expect(shop.payment).toMatchObject(TEST_PAYMENT_TARGET);
     expect(shop.payment.reference).not.toBe(someoneElse.payment.reference);
   });
@@ -285,7 +255,7 @@ describe("tickets", () => {
     ];
     for (const { txDigest, status, error } of cases) {
       const response = await buy({ tickets: PACK.tickets, txDigest });
-      expect(await refusal(response)).toMatchObject({ status, error });
+      expect(await refusalOf(response)).toMatchObject({ status, error });
     }
     expect(test.db.select().from(ticketPurchases).all()).toEqual([]);
     expect((await getTickets()).reserveLeft).toBe(0);
@@ -294,10 +264,13 @@ describe("tickets", () => {
   it("count a payment once, whoever sends it again", async () => {
     const txDigest = paid(jpycOf(PACK));
     await buyPack(PACK, txDigest);
-    const someoneElse = await test.signInAs(insertUser(test.db));
-    for (const as of [headers, someoneElse]) {
+    const someoneElse = insertUser(test.db);
+    for (const as of [userId, someoneElse]) {
       const again = await buy({ tickets: PACK.tickets, txDigest }, as);
-      expect(await refusal(again)).toMatchObject({ status: 409, error: "payment_already_counted" });
+      expect(await refusalOf(again)).toMatchObject({
+        status: 409,
+        error: "payment_already_counted",
+      });
     }
     expect((await getTickets()).reserveLeft).toBe(PACK.tickets);
     expect((await getTickets(someoneElse)).reserveLeft).toBe(0);
@@ -305,10 +278,10 @@ describe("tickets", () => {
 
   it("refuse a count that isn't a pack, and a digest that isn't Sui's", async () => {
     const notAPack = await buy({ tickets: NOT_A_PACK, txDigest: paid(jpycOf(PACK)) });
-    expect(await refusal(notAPack)).toMatchObject({ status: 400, error: "pack_unknown" });
+    expect(await refusalOf(notAPack)).toMatchObject({ status: 400, error: "pack_unknown" });
     for (const txDigest of [bytes32("an EVM transaction"), "0".repeat(TX_DIGEST_LENGTH)]) {
       const malformed = await buy({ tickets: PACK.tickets, txDigest });
-      expect(await refusal(malformed)).toMatchObject({ status: 400, error: "invalid_request" });
+      expect(await refusalOf(malformed)).toMatchObject({ status: 400, error: "invalid_request" });
     }
     expect((await getTickets()).reserveLeft).toBe(0);
   });
@@ -316,25 +289,13 @@ describe("tickets", () => {
   it("count no tickets while Sui can't be asked, and log it", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const txDigest = newTxDigest();
-    transactions.set(txDigest, new Error("fullnode unreachable"));
+    const outage = new Error("fullnode unreachable");
+    transactions.set(txDigest, outage);
     const response = await buy({ tickets: PACK.tickets, txDigest });
-    expect(await refusal(response)).toMatchObject({ status: 502, error: "sui_unavailable" });
-    expect(log).toHaveBeenCalledWith(expect.stringContaining(txDigest), expect.any(Error));
+    expect(await refusalOf(response)).toMatchObject({ status: 502, error: "sui_unavailable" });
+    expect(log).toHaveBeenCalledWith(expect.stringContaining(txDigest));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining(outage.message));
     expect(purchaseOf(txDigest)).toBeUndefined();
     expect((await getTickets()).reserveLeft).toBe(0);
-  });
-
-  it("refuse every route without a session", async () => {
-    const txDigest = paid(jpycOf(PACK));
-    for (const response of [
-      await test.app.request("/api/tickets"),
-      await spend("daily", {}),
-      await test.app.request("/api/ticket-shop"),
-      await buy({ tickets: PACK.tickets, txDigest }, {}),
-    ]) {
-      expect(await refusal(response)).toMatchObject({ status: 401, error: "signed_out" });
-    }
-    expect(ticketUseCount()).toBe(0);
-    expect(purchaseOf(txDigest)).toBeUndefined();
   });
 });

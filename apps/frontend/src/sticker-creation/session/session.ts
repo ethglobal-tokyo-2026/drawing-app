@@ -1,5 +1,7 @@
-/** A sticker gets three minutes of drawing. */
-export const SESSION_MS = 3 * 60_000;
+import { MAX_TIME_USED_S } from "@drawing-app/api/client";
+
+/** How long a sticker gets on the drawing clock; the server refuses a seal that used more. */
+export const SESSION_MS = MAX_TIME_USED_S * 1000;
 /** After the first tap on the seal key, a second tap within this long seals. */
 export const ARM_WINDOW_MS = 2_500;
 

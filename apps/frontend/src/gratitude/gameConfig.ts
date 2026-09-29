@@ -1,3 +1,5 @@
+import { MAX_PEAK_MULT } from "@drawing-app/api/client";
+
 /** The mini-game's rules as numbers. A finished combo records `version`, so a replay runs with the
  * numbers it was played with; change the version whenever a rule number changes. */
 export interface GameConfig {
@@ -56,7 +58,7 @@ export const GAME_CONFIG = {
     windowMs: 1000,
     freeHits: 2,
     perHit: 0.55,
-    max: 8,
+    max: MAX_PEAK_MULT,
     hitNudge: 0.35,
     rise: 6,
     fall: 2.5,

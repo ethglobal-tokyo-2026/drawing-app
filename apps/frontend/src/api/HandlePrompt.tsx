@@ -5,12 +5,9 @@ import { useTranslation } from "../i18n/react";
 import { At } from "../icons";
 import { Key } from "../ui/Key";
 import { apiError, type ApiError } from "./apiClient";
-import type { Me } from "@drawing-app/api/client";
+import { HANDLE_MAX_LENGTH, type Me } from "@drawing-app/api/client";
 import "../line/LineGate.css";
 import "./HandlePrompt.css";
-
-/** The server's longest handle, in code points; it checks too, answering handle_invalid. */
-const HANDLE_MAX_LENGTH = 32;
 
 interface Props {
   me: Me;

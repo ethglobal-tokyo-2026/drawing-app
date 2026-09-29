@@ -1,8 +1,8 @@
 const LINE_TOKEN_URL = "https://api.line.me/oauth2/v3/token";
 const LINE_BOT_URL = "https://api.line.me/v2/bot";
 const UPSTREAM_TIMEOUT_MS = 5000;
-// Replaced a minute early, so no request goes out with a token about to expire.
-const TOKEN_REPLACE_MARGIN_MS = 60_000;
+/** How early a channel access token is replaced, so no request goes out with one about to expire. */
+export const TOKEN_REPLACE_MARGIN_MS = 60_000;
 
 /** One move of LINE's batch: everyone whose chat menu is `from` gets `to`. */
 export interface MenuMove {
@@ -82,9 +82,6 @@ export function createLineMessaging({
   fetchImpl?: typeof fetch;
   now?: () => number;
 }): LineMessaging {
-  if (!channelId || !channelSecret) {
-    throw new Error("The Messaging API channel's ID and secret are required");
-  }
   let channelToken: { value: string; replaceAt: number } | undefined;
 
   /** One call to LINE, bounded in time; no answer is a LineApiError with status 0. */

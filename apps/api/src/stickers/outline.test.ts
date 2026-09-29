@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { simplifiedOutline } from "./outline.ts";
+import { simplifiedOutline, TOLERANCE } from "./outline.ts";
 
 type Point = [number, number];
 
 const SIZE = 600;
+/** How far the simplified line may stray: its tolerance, plus rounding to a tenth of a pixel. */
+const MAX_STRAY = TOLERANCE * SIZE + 0.1;
 
 /** A cut line as the seal stores it: a point every 2 px, to a tenth of a pixel. */
 function storedLine(points: Point[]) {
@@ -39,11 +41,13 @@ function distanceToLoop([px, py]: Point, loop: Point[]) {
 }
 
 describe("a simplified cut line", () => {
-  it("stays within a fraction of a pixel of the stored one, on far fewer points", () => {
+  it("stays within its tolerance of the stored one, on far fewer points", () => {
     const stored = storedLine(blob());
     const simplified = simplifiedOutline(stored, SIZE, SIZE);
     const kept = pointsOf(simplified);
-    for (const point of pointsOf(stored)) expect(distanceToLoop(point, kept)).toBeLessThan(1.5);
+    for (const point of pointsOf(stored)) {
+      expect(distanceToLoop(point, kept)).toBeLessThan(MAX_STRAY);
+    }
     expect(simplified.length).toBeLessThan(stored.length / 4);
     expect(simplified).toMatch(/^M[-\d. LZ]*Z$/);
   });

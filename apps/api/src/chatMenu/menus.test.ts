@@ -14,20 +14,17 @@ function menusFile(contents: unknown) {
 
 describe("the chat menu map", () => {
   it("reads deploy/line/menus.json, counting a menu left out, null or empty as not made yet", () => {
-    const path = menusFile({
-      en: { plain: "richmenu-0123abcd", "3": null, "2": "" },
-      default: "richmenu-default",
-    });
-    expect(readChatMenuIds(path)).toEqual({
-      en: { plain: "richmenu-0123abcd" },
-      default: "richmenu-default",
-    });
+    const { en, default: fallback } = TEST_CHAT_MENU_IDS;
+    const path = menusFile({ en: { plain: en.plain, "3": null, "2": "" }, default: fallback });
+    expect(readChatMenuIds(path)).toEqual({ en: { plain: en.plain }, default: fallback });
   });
 
   it("refuses a map with something other than a rich menu ID in it", () => {
-    expect(() => readChatMenuIds(menusFile({ en: { "3": "richmenu-…" } }))).toThrow(
-      /Expected a rich menu ID/,
-    );
+    for (const placeholder of ["richmenu-…", "richmenu-TODO"]) {
+      expect(() => readChatMenuIds(menusFile({ en: { "3": placeholder } }))).toThrow(
+        /Expected a rich menu ID/,
+      );
+    }
   });
 
   it("picks the menu for what the Draw key shows: daily tickets first, then reserve ones", () => {
@@ -38,9 +35,10 @@ describe("the chat menu map", () => {
   });
 
   it("links a missing menu's plain one, and nothing without that", () => {
-    const ids = { en: { plain: "richmenu-en-plain", "3": "richmenu-en-3" } };
-    expect(menuToLink(ids, "en", "3")).toEqual({ menu: "3", richMenuId: "richmenu-en-3" });
-    expect(menuToLink(ids, "en", "2")).toEqual({ menu: "plain", richMenuId: "richmenu-en-plain" });
+    const { en } = TEST_CHAT_MENU_IDS;
+    const ids = { en: { plain: en.plain, "3": en["3"] } };
+    expect(menuToLink(ids, "en", "3")).toEqual({ menu: "3", richMenuId: en["3"] });
+    expect(menuToLink(ids, "en", "2")).toEqual({ menu: "plain", richMenuId: en.plain });
     expect(menuToLink(ids, "ja", "2")).toBeNull();
   });
 
@@ -55,6 +53,6 @@ describe("the chat menu map", () => {
       ),
     );
     // A language without a 3 menu has nothing to move to.
-    expect(midnightMoves({ en: { plain: en.plain }, ja })).toHaveLength(5);
+    expect(midnightMoves({ en: { plain: en.plain }, ja })).toEqual(midnightMoves({ ja }));
   });
 });

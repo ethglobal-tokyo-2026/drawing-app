@@ -1,6 +1,6 @@
 # The official account's greeting
 
-LINE sends this message when someone adds Croquis's official account as a friend. It's set in LINE Official Account Manager, not in code, so this file keeps the text versioned beside the chat menus. It's text A from decision 25 of the frontend feedback plan (`docs/superpowers/plans/2026-09-26-frontend-feedback.md`): Japanese first, in one message.
+LINE sends this message when someone adds Croquis's official account as a friend. It's set in LINE Official Account Manager, not in code, so this file keeps the text versioned beside the chat menus. It's Japanese first, in one message.
 
 ## The text
 

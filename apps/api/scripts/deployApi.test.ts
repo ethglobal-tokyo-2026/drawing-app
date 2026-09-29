@@ -13,7 +13,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { keccak256 } from "../src/keccak256.ts";
+import { keccak256 } from "viem";
 import { sealImages } from "../src/stickers/testPngs.ts";
 
 const root = fileURLToPath(new URL("../../../", import.meta.url));
@@ -43,6 +43,7 @@ function setup() {
   write(join(remote, "chain.env"), "PRIVY_APP_SECRET=test-secret\n");
   write(join(repo, "deploy/drawing-api.env"), "IMAGE_DIR=unused\n");
   write(join(repo, "deploy/drawing-api.service"), "test service\n");
+  write(join(repo, "deploy/line/menus.json"), "{}\n");
   write(join(repo, "deploy/install-node.sh"), "#!/usr/bin/env bash\nexit 0\n", true);
   write(join(repo, "package.json"), readFileSync(join(root, "package.json")));
   copyFileSync(join(root, "deploy/deploy-api.sh"), join(repo, "deploy/deploy-api.sh"));
@@ -69,7 +70,6 @@ await import(${JSON.stringify(new URL("./backfill-sticker-webp.ts", import.meta.
     `const result = require("node:child_process").spawnSync(${JSON.stringify(process.execPath)}, process.argv.slice(2), { stdio: "inherit" }); process.exit(result.status ?? 1);`,
   );
   mock("pnpm", "process.exit(0);");
-  mock("sleep", "process.exit(0);");
   mock("install", "process.exit(0);");
   mock("curl", 'console.log(JSON.stringify({ error: "signed_out" }));');
   mock(
@@ -89,12 +89,12 @@ if (action === "start" || action === "restart") fs.writeFileSync(running, "activ
   );
   mock(
     "ssh",
-    `const args = process.argv.slice(2);
+    String.raw`const args = process.argv.slice(2);
 while (args[0] === "-o") args.splice(0, 2);
 if (args.shift() !== "local-test") throw new Error("Only the local fake host is allowed");
 const command = args.join(" ")
-  .replaceAll("/usr/local/lib/nodejs/node-24/bin/node", ${JSON.stringify(process.execPath)})
-  .replaceAll("/usr/local/lib/nodejs/node-24/bin/npm", "true")
+  .replace(/\/usr\/local\/lib\/nodejs\/node-\d+\/bin\/node/g, ${JSON.stringify(process.execPath)})
+  .replace(/\/usr\/local\/lib\/nodejs\/node-\d+\/bin\/npm/g, "true")
   .replaceAll("/tmp/drawing-api-deploy.XXXXXXXX", process.env.TEST_DEPLOY_TEMP + "/stage.XXXXXXXX");
 const result = require("node:child_process").spawnSync("bash", ["-c", command], { stdio: "inherit" });
 process.exit(result.status ?? 1);
@@ -118,8 +118,9 @@ for (const source of args) {
   );
   mock(
     "timeout",
-    `if (process.env.TEST_BACKFILL_TIMEOUT === "1") process.exit(124);
-const result = require("node:child_process").spawnSync(process.argv[3], process.argv.slice(4), { stdio: "inherit" });
+    `const [command, ...args] = process.argv.slice(3);
+if (process.env.TEST_BACKFILL_TIMEOUT === "1" && args.includes("backfill-sticker-webp.mjs")) process.exit(124);
+const result = require("node:child_process").spawnSync(command, args, { stdio: "inherit" });
 process.exit(result.status ?? 1);
 `,
   );

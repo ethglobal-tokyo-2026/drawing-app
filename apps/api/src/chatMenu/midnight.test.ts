@@ -38,18 +38,17 @@ let duringWait: (() => Promise<void>) | undefined;
 /** The midnight job's timers: when each would fire, and what it would run. */
 let timers: { ms: number; run: () => void }[];
 
-/** A person with a LINE account, signed in, whose chat menu LINE shows as `menu`. */
-async function person(lineUser: string, menu?: string, language: "en" | "ja" = "en") {
+/** A person with a LINE account, whose chat menu LINE shows as `menu`. */
+function person(lineUser: string, menu?: string, language: "en" | "ja" = "en") {
   const userId = insertUser(test.db, { lineUserId: lineUser, language });
   if (menu) line.links.set(lineUser, menu);
-  return { userId, headers: await test.signInAs(userId) };
+  return userId;
 }
 
-const spend = async (headers: Record<string, string>) => {
-  const response = await test.app.request("/api/tickets/spend", {
-    method: "POST",
-    headers: { ...headers, "content-type": "application/json" },
-    body: JSON.stringify({ kind: "daily" }),
+const spend = async (userId: string) => {
+  const response = await test.send("POST", "/api/tickets/spend", {
+    as: userId,
+    body: { kind: "daily" },
   });
   expect(response.status).toBe(201);
   await test.deps.lineChatMenu.idle();
@@ -92,9 +91,9 @@ afterEach(() => {
 
 describe("the chat menu's midnight batch", () => {
   it("moves everyone back to 3 daily tickets, in their language, with one batch keyed to the day", async () => {
-    await person(ANN, en["2"]);
-    await person(BEN, ja.none, "ja");
-    await person(CHO, en["3"]);
+    person(ANN, en["2"]);
+    person(BEN, ja.none, "ja");
+    person(CHO, en["3"]);
     await runChatMenuBatch(jobDeps(), today());
 
     expect(line.batches).toHaveLength(1);
@@ -105,20 +104,20 @@ describe("the chat menu's midnight batch", () => {
       [CHO]: en["3"],
     });
     expect(batches()).toMatchObject([
-      { ticketDay: today(), lineRequestId: "fake-request-1", status: "done" },
+      { ticketDay: today(), lineRequestId: line.batches[0]?.requestId, status: "done" },
     ]);
     expect(waits).toEqual([FIRST_LOOK_MS]);
   });
 
   it("then links everyone who spent since midnight to their count, even a spend made while it ran", async () => {
-    const ann = await person(ANN);
-    const ben = await person(BEN);
-    await spend(ann.headers);
+    const ann = person(ANN);
+    const ben = person(BEN);
+    await spend(ann);
     line.reportNextBatch(["ongoing", "succeeded"]);
     // Ben spends while LINE runs the batch, which then moves him from 2 back to 3.
     duringWait = async () => {
       duringWait = undefined;
-      await spend(ben.headers);
+      await spend(ben);
       expect(line.links.get(BEN)).toBe(en["2"]);
     };
     await runChatMenuBatch(jobDeps(), today());
@@ -149,19 +148,21 @@ describe("the chat menu's midnight batch", () => {
   });
 
   it("sends a batch LINE reports failed again with the same key, which resumes it", async () => {
-    await person(ANN, en.none);
+    person(ANN, en.none);
     line.reportNextBatch(["failed"]);
     await runChatMenuBatch(jobDeps(), today());
 
     expect(line.batches.map((batch) => batch.resumeRequestKey)).toEqual([today(), today()]);
     expect(waits).toEqual([FIRST_LOOK_MS, RETRY_AFTER_MS, FIRST_LOOK_MS]);
     expect(line.links.get(ANN)).toBe(en["3"]);
-    expect(batches()).toMatchObject([{ status: "done", lineRequestId: "fake-request-2" }]);
+    expect(batches()).toMatchObject([
+      { status: "done", lineRequestId: line.batches[1]?.requestId },
+    ]);
   });
 
-  it("gives up after three tries at a batch LINE doesn't take, and still links the day's spenders", async () => {
-    const ann = await person(ANN);
-    await spend(ann.headers);
+  it("gives up after MAX_TRIES tries at a batch LINE doesn't take, and still links the day's spenders", async () => {
+    const ann = person(ANN);
+    await spend(ann);
     line.links.set(ANN, en["3"]);
     for (let tries = 0; tries < MAX_TRIES; tries++) {
       line.failNext("batch", Response.json({ message: "Too many requests" }, { status: 429 }));
@@ -169,7 +170,7 @@ describe("the chat menu's midnight batch", () => {
     await runChatMenuBatch(jobDeps(), today());
 
     expect(line.calls.filter((call) => call === "batch")).toHaveLength(MAX_TRIES);
-    expect(waits).toEqual([RETRY_AFTER_MS, RETRY_AFTER_MS]);
+    expect(waits).toEqual(Array.from({ length: MAX_TRIES - 1 }, () => RETRY_AFTER_MS));
     expect(line.links.get(ANN)).toBe(en["2"]);
     expect(batches()).toMatchObject([{ status: "failed", lineRequestId: null }]);
   });

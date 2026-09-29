@@ -36,10 +36,6 @@ export interface GatewayRecords {
   texts: Record<string, string>;
 }
 
-export class UnsupportedGatewayCall extends Error {
-  name = "UnsupportedGatewayCall";
-}
-
 /** DNS-encoded name bytes as dotted text. */
 function dnsToText(name: Hex): string {
   const bytes = hexToBytes(name);
@@ -77,7 +73,7 @@ function answerCall(call: Hex, records: GatewayRecords): Hex {
   if (decoded.functionName === "addr") {
     return encodeAbiParameters([{ type: "address" }], [records.address ?? zeroAddress]);
   }
-  throw new UnsupportedGatewayCall(`The gateway doesn't answer ${call.slice(0, 10)}`);
+  throw new Error(`The gateway doesn't answer ${call.slice(0, 10)}`);
 }
 
 /** The result bytes `resolve(name, data)` returns for `request`, from `records`. */

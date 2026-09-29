@@ -1,25 +1,33 @@
 import { gifts, stickerPlacements, stickers, users, type Db } from "@drawing-app/db";
-import { and, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
+import { keccak256 } from "viem";
 import { z } from "zod";
 import { queueNaming } from "../ens/naming.ts";
 import type { AppDeps } from "../deps.ts";
 import { logInfo } from "../diagnostics.ts";
-import { keccak256 } from "../keccak256.ts";
-import { ageStatusOf, isoTimeSchema, personSchema, toIsoTime, toPerson } from "../shapes.ts";
+import {
+  ageStatusOf,
+  isoTimeSchema,
+  personSchema,
+  refuse,
+  toIsoTime,
+  toPerson,
+  type Refusal,
+} from "../shapes.ts";
 import {
   giftSchema,
-  loadStickers,
+  stickerLookup,
   stickerPlacementSchema,
   stickerSchema,
   toGift,
   toStickerPlacement,
 } from "../views.ts";
 import { checkDeposit } from "./deposit.ts";
-import { giftClaimTokenSchema, refuse, type GiftRow, type Refusal } from "./packaging.ts";
+import { giftClaimTokenSchema, giftHoldingSticker, type GiftRow } from "./packaging.ts";
 
 /** `liff.getContext().type`: where the Gift Message was opened. */
 const liffContextTypeSchema = z.enum(["utou", "room", "group", "square_chat", "external", "none"]);
-export type LiffContextType = z.infer<typeof liffContextTypeSchema>;
+type LiffContextType = z.infer<typeof liffContextTypeSchema>;
 
 /** The preview's body and the receive's. */
 export const openGiftBodySchema = z.object({
@@ -29,7 +37,7 @@ export const openGiftBodySchema = z.object({
 export type OpenGiftBody = z.infer<typeof openGiftBodySchema>;
 
 /** Why a gift can't be received, in the order they're checked. */
-export const receiveRefusalSchema = z.enum([
+const receiveRefusalSchema = z.enum([
   "group_chat",
   "own_gift",
   "already_received",
@@ -153,11 +161,7 @@ export async function previewGift(
       .where(and(eq(gifts.id, gift.id), isNull(gifts.forUserId)))
       .run();
   }
-  const sticker = refusal
-    ? null
-    : loadStickers(db, [gift.stickerId], images.urls).get(gift.stickerId);
-  if (sticker === undefined)
-    throw new Error(`Gift ${gift.id}'s sticker ${gift.stickerId} is missing`);
+  const sticker = refusal ? null : stickerLookup(db, [gift.stickerId], images.urls)(gift.stickerId);
   return {
     refusal: null,
     preview: {
@@ -179,21 +183,9 @@ function recordedReceive({ db, images }: AppDeps, userId: string, gift: GiftRow)
   if (gift.status !== "received" || gift.receiverId !== userId || gift.escrowStatus !== "claimed") {
     return null;
   }
-  const sticker = loadStickers(db, [gift.stickerId], images.urls).get(gift.stickerId);
-  if (!sticker) throw new Error(`Gift ${gift.id}'s sticker ${gift.stickerId} is missing`);
+  const sticker = stickerLookup(db, [gift.stickerId], images.urls)(gift.stickerId);
   // A later Giving must not look like a new arrival from this old receipt.
-  if (sticker.ownerId !== userId) return null;
-  const inAnotherGift = db
-    .select({ id: gifts.id })
-    .from(gifts)
-    .where(
-      and(
-        eq(gifts.stickerId, gift.stickerId),
-        or(inArray(gifts.status, ["packed", "sent"]), eq(gifts.escrowStatus, "pending")),
-      ),
-    )
-    .get();
-  if (inAnotherGift) return null;
+  if (sticker.ownerId !== userId || giftHoldingSticker(db, gift.stickerId)) return null;
   const placement = db
     .select()
     .from(stickerPlacements)
@@ -242,17 +234,17 @@ export function giftsForYou({ db, clock, images }: AppDeps, userId: string): Gif
     )
     .orderBy(desc(gifts.createdAt))
     .all();
-  const stickersById = loadStickers(
+  const stickerOf = stickerLookup(
     db,
     rows.map(({ gift }) => gift.stickerId),
     images.urls,
   );
   return {
-    gifts: rows.map(({ gift, giver }) => {
-      const sticker = stickersById.get(gift.stickerId);
-      if (!sticker) throw new Error(`Gift ${gift.id}'s sticker ${gift.stickerId} is missing`);
-      return { gift: toGift(gift), sticker, giver: toPerson(giver) };
-    }),
+    gifts: rows.map(({ gift, giver }) => ({
+      gift: toGift(gift),
+      sticker: stickerOf(gift.stickerId),
+      giver: toPerson(giver),
+    })),
   };
 }
 
@@ -376,10 +368,12 @@ async function completeReceive(
   }
   queueNaming(deps, userId);
   const { gift, placement } = receiving;
-  const sticker = loadStickers(db, [gift.stickerId], images.urls).get(gift.stickerId);
-  if (!sticker) throw new Error(`Gift ${gift.id}'s sticker ${gift.stickerId} is missing`);
   return {
     refusal: null,
-    received: { gift: toGift(gift), sticker, stickerPlacement: toStickerPlacement(placement) },
+    received: {
+      gift: toGift(gift),
+      sticker: stickerLookup(db, [gift.stickerId], images.urls)(gift.stickerId),
+      stickerPlacement: toStickerPlacement(placement),
+    },
   };
 }

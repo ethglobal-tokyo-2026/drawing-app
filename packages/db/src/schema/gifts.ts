@@ -18,7 +18,7 @@ export const escrowStatuses = [
 /**
  * One Giving of one sticker. Inserted at Packaging; the giver's smart wallet then sends the sticker
  * to the escrow. status says where it stands, and each step keeps its own date. The giver can take
- * it back until it's received; after GIFT_EXPIRY_MS the escrow returns it.
+ * it back until it's received, expired or not.
  */
 export const gifts = sqliteTable(
   "gifts",
@@ -38,13 +38,13 @@ export const gifts = sqliteTable(
     claimCommitment: text("claim_commitment").notNull().unique(),
     status: text("status", { enum: giftStatuses }).notNull().default("packed"),
     /**
-     * StickerGiftEscrow.gifts(id).status: `pending` once the deposit is read and checked; `claimed`,
-     * `rejected` or `expired_returned` when our claim, reject or return lands.
+     * StickerGiftEscrow.gifts(id).status: `pending` once the deposit is read and checked, `claimed`
+     * once Receiving's claim lands, and `rejected` or `expired_returned` as a take-out reads it.
      */
     escrowStatus: text("escrow_status", { enum: escrowStatuses }).notNull().default("missing"),
     /**
      * The escrow's expiry, GIFT_EXPIRY_MS after Packaging; the deposit carries it. Receiving is
-     * refused after it, and the worker has the escrow return the sticker.
+     * refused after it; the giver can still take the gift out.
      */
     expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
     /** LINE's picker reported the Gift Message sent. */
@@ -59,19 +59,13 @@ export const gifts = sqliteTable(
     receivedAt: integer("received_at", { mode: "timestamp_ms" }),
     /** The expiry passed before a receive landed on chain, so the escrow returned it to the giver. */
     returnedAt: integer("returned_at", { mode: "timestamp_ms" }),
-    /** Our relayer's claimGift, set when sent. */
+    /** Our relayer's claimGift, set with received_at once it lands. */
     claimTxHash: text("claim_tx_hash"),
-    /** Our relayer's rejectGift, set when sent. */
+    /** Meant for the escrow's rejectGift; no code sends one or writes this yet. */
     rejectTxHash: text("reject_tx_hash"),
-    /** Our relayer's returnExpiredGift, set when sent. */
+    /** Meant for the escrow's returnExpiredGift; no code sends one or writes this yet. */
     returnTxHash: text("return_tx_hash"),
-    /**
-     * The Official account's "Bob accepted your sticker ♡" push went out, or was given up on.
-     * Every push sends an X-Line-Retry-Key, a UUID made from what it announces (here the gift ID
-     * and "received"), so no two pushes share a key and a retry reuses it. LINE answers a repeat
-     * with 409, which counts as sent, and keeps a key 24 hours, so after 24 hours the worker stops
-     * retrying and sets this anyway.
-     */
+    /** Meant for a LINE push telling the giver it was received; no code writes it yet. */
     pushedToGiverAt: integer("pushed_to_giver_at", { mode: "timestamp_ms" }),
     ...timestamps(),
     /**
@@ -97,9 +91,11 @@ export const gifts = sqliteTable(
     index("gifts_escrow_open")
       .on(t.escrowStatus)
       .where(sql`${t.escrowStatus} in ('missing', 'pending')`),
+    // For returning expired gifts, which no code does yet.
     index("gifts_expiring")
       .on(t.expiresAt)
       .where(sql`${t.status} in ('packed', 'sent')`),
+    // For the pushes to the giver, which no code sends yet.
     index("gifts_push_due")
       .on(t.receivedAt)
       .where(sql`${t.status} = 'received' and ${t.pushedToGiverAt} is null`),

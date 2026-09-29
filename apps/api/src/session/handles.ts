@@ -1,8 +1,6 @@
 import { users, type Db } from "@drawing-app/db";
 import { and, ne, sql } from "drizzle-orm";
-
-/** A handle's longest length, in code points. */
-export const HANDLE_MAX_LENGTH = 32;
+import { HANDLE_MAX_LENGTH } from "./handleLimit.ts";
 
 /** `raw` trimmed, or null when that breaks a rule: 1 to HANDLE_MAX_LENGTH code points, and no `@`. */
 export function parseHandle(raw: string): string | null {

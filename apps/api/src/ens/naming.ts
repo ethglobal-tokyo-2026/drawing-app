@@ -43,7 +43,7 @@ export async function nameEverything(deps: AppDeps, userId: string): Promise<voi
     logInfo("ens.naming.skipped", { userId, status: "no_live_person" });
     return;
   }
-  const account = row.smartAccountAddress ?? (await deps.smartWallets.addressFor(userId));
+  const account = await deps.smartWallets.addressFor(userId);
   if (!account) {
     logInfo("ens.naming.skipped", { userId, status: "no_smart_account" });
     return;

@@ -1,4 +1,4 @@
-import { GIFT_EXPIRY_MS, gifts, stickerPlacements, stickers, users } from "@drawing-app/db";
+import { GIFT_EXPIRY_MS, gifts, stickerPlacements, users } from "@drawing-app/db";
 import { bytes32, insertUser } from "@drawing-app/db/testing";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
@@ -9,21 +9,14 @@ import {
   receiveGiftForYou,
   type ReceiveRefusal,
 } from "../gifts/receiving.ts";
-import { createGiftsTestApp, giftOf, refusalOf, type GiftsTestApp } from "../gifts/testGifts.ts";
+import { createGiftsTestApp, giftOf, type GiftsTestApp } from "../gifts/testGifts.ts";
+import { bodyOf, refusalOf } from "../testing/responses.ts";
+import { SPOT } from "../testing/rows.ts";
 
-/** A spot on the board, as a drag leaves it. */
-const SPOT = { onBoard: true, x: 0.25, y: 0.75, scale: 0.3, rotation: -4, z: 2 };
 const HOUR_MS = 60 * 60 * 1000;
 /** A 1:1 chat, where a Gift Message is received. */
 const ONE_TO_ONE = "utou";
 const GROUP_CHATS = ["group", "room", "square_chat"];
-
-/** A gift of a sticker its giver drew, packaged through the route, with its Gift Claim Token. */
-async function giftToOpen(test: GiftsTestApp, giverId = insertUser(test.db)) {
-  const packed = await test.packageSticker(giverId, test.sealSticker(giverId));
-  const giftClaimToken = giftClaimTokenSchema.parse(packed.giftClaimToken);
-  return { giverId, gift: packed.gift, giftClaimToken };
-}
 
 const preview = (
   test: GiftsTestApp,
@@ -38,15 +31,8 @@ const receive = (
   context = ONE_TO_ONE,
 ) => test.post(userId, "/receive", { giftClaimToken, liffContextType: context });
 
-async function previewOf(response: Response) {
-  expect(response.status).toBe(200);
-  return giftPreviewSchema.parse(await response.json());
-}
-
-async function receivedOf(response: Response) {
-  expect(response.status).toBe(200);
-  return receivedGiftSchema.parse(await response.json());
-}
+const previewOf = (response: Response) => bodyOf(response, giftPreviewSchema);
+const receivedOf = (response: Response) => bodyOf(response, receivedGiftSchema);
 
 /** Receiving answers `status` and `refusal`; the preview names the same refusal, and no sticker. */
 async function expectRefused(
@@ -68,15 +54,13 @@ async function expectRefused(
   });
 }
 
-const ownerOf = (test: GiftsTestApp, stickerId: string) =>
-  test.db.select().from(stickers).where(eq(stickers.id, stickerId)).get()?.ownerId;
 const termsAcceptedAt = (test: GiftsTestApp, userId: string) =>
   test.db.select().from(users).where(eq(users.id, userId)).get()?.termsAcceptedAt;
 
 describe("POST /api/gifts/preview", () => {
   it("shows the giver, the expiry and the sticker, and receives nothing", async () => {
     const test = await createGiftsTestApp();
-    const { giverId, gift, giftClaimToken } = await giftToOpen(test);
+    const { giverId, gift, giftClaimToken } = await test.packagedGift();
     const receiverId = insertUser(test.db);
     expect(await previewOf(await preview(test, receiverId, giftClaimToken))).toMatchObject({
       giver: { id: giverId },
@@ -92,7 +76,7 @@ describe("POST /api/gifts/preview", () => {
 describe("POST /api/gifts/receive", () => {
   it("gives the receiver the sticker, on their board as NEW, and records the terms line once", async () => {
     const test = await createGiftsTestApp();
-    const { gift, giftClaimToken } = await giftToOpen(test);
+    const { gift, giftClaimToken } = await test.packagedGift();
     const receiverId = insertUser(test.db);
     const acceptedAt = test.clock.now();
     expect(await receivedOf(await receive(test, receiverId, giftClaimToken))).toMatchObject({
@@ -108,24 +92,24 @@ describe("POST /api/gifts/receive", () => {
     });
     expect(termsAcceptedAt(test, receiverId)).toEqual(acceptedAt);
     test.clock.advance(HOUR_MS);
-    await receivedOf(await receive(test, receiverId, (await giftToOpen(test)).giftClaimToken));
+    await receivedOf(await receive(test, receiverId, (await test.packagedGift()).giftClaimToken));
     expect(termsAcceptedAt(test, receiverId)).toEqual(acceptedAt);
   });
 
   it("gives a forwarded link's sticker to the first person only", async () => {
     const test = await createGiftsTestApp();
-    const { gift, giftClaimToken } = await giftToOpen(test);
+    const { gift, giftClaimToken } = await test.packagedGift();
     const first = insertUser(test.db);
     await receivedOf(await receive(test, first, giftClaimToken));
     await expectRefused(test, insertUser(test.db), giftClaimToken, 409, "already_received");
-    expect(ownerOf(test, gift.stickerId)).toBe(first);
+    expect(test.ownerOf(gift.stickerId)).toBe(first);
   });
 
   it.each(["link", "board"])(
     "recovers a completed receive through the %s without repeating the claim or resetting placement",
     async (entry) => {
       const test = await createGiftsTestApp({ escrowChain: true });
-      const { gift, giftClaimToken } = await giftToOpen(test);
+      const { gift, giftClaimToken } = await test.packagedGift();
       test.landDeposit(gift.id);
       const receiverId = insertUser(test.db);
       await previewOf(await preview(test, receiverId, giftClaimToken));
@@ -161,7 +145,7 @@ describe("POST /api/gifts/receive", () => {
 
   it("shares overlapping Accept requests by the same recipient", async () => {
     const test = await createGiftsTestApp({ escrowChain: true });
-    const { gift, giftClaimToken } = await giftToOpen(test);
+    const { gift, giftClaimToken } = await test.packagedGift();
     test.landDeposit(gift.id);
     const receiverId = insertUser(test.db);
     await previewOf(await preview(test, receiverId, giftClaimToken));
@@ -183,7 +167,7 @@ describe("POST /api/gifts/receive", () => {
 
   it("does not restore an old receipt after its sticker has been given again", async () => {
     const test = await createGiftsTestApp();
-    const { gift, giftClaimToken } = await giftToOpen(test);
+    const { gift, giftClaimToken } = await test.packagedGift();
     const receiverId = insertUser(test.db);
     await receivedOf(await receive(test, receiverId, giftClaimToken));
     const next = await test.packageSticker(receiverId, gift.stickerId);
@@ -193,13 +177,13 @@ describe("POST /api/gifts/receive", () => {
       await receive(test, nextReceiver, giftClaimTokenSchema.parse(next.giftClaimToken)),
     );
     await expectRefused(test, receiverId, giftClaimToken, 409, "already_received");
-    expect(ownerOf(test, gift.stickerId)).toBe(nextReceiver);
+    expect(test.ownerOf(gift.stickerId)).toBe(nextReceiver);
   });
 
   it("returns a sticker coming back to its old spot in the tray, NEW again", async () => {
     const test = await createGiftsTestApp();
     const artistId = insertUser(test.db);
-    const { gift, giftClaimToken } = await giftToOpen(test, artistId);
+    const { gift, giftClaimToken } = await test.packagedGift(artistId);
     const artistsPlacement = and(
       eq(stickerPlacements.userId, artistId),
       eq(stickerPlacements.stickerId, gift.stickerId),
@@ -222,12 +206,12 @@ describe("POST /api/gifts/receive", () => {
       seenAt: null,
       arrivedAt: placed.createdAt.toISOString(),
     });
-    expect(ownerOf(test, gift.stickerId)).toBe(artistId);
+    expect(test.ownerOf(gift.stickerId)).toBe(artistId);
   });
 
   it("claims the escrowed sticker before recording it as received", async () => {
     const test = await createGiftsTestApp({ escrowChain: true });
-    const { gift, giftClaimToken } = await giftToOpen(test);
+    const { gift, giftClaimToken } = await test.packagedGift();
     test.landDeposit(gift.id);
     const receiverId = insertUser(test.db);
     const reads = vi.spyOn(test.giftChain, "readEscrowGift");
@@ -252,7 +236,7 @@ describe("POST /api/gifts/receive", () => {
 
   it("reconciles a claim that landed before its database update", async () => {
     const test = await createGiftsTestApp({ escrowChain: true });
-    const { gift, giftClaimToken } = await giftToOpen(test);
+    const { gift, giftClaimToken } = await test.packagedGift();
     test.landDeposit(gift.id);
     const receiverId = insertUser(test.db);
     await previewOf(await preview(test, receiverId, giftClaimToken));
@@ -274,7 +258,7 @@ describe("POST /api/gifts/receive", () => {
 
   it("leaves ownership unchanged when the escrow claim fails", async () => {
     const test = await createGiftsTestApp({ escrowChain: true });
-    const { giverId, gift, giftClaimToken } = await giftToOpen(test);
+    const { giverId, gift, giftClaimToken } = await test.packagedGift();
     test.landDeposit(gift.id);
     vi.spyOn(test.giftChain, "claimGift").mockRejectedValue(new Error("Sepolia unavailable"));
 
@@ -282,69 +266,64 @@ describe("POST /api/gifts/receive", () => {
 
     expect(response.status).toBe(500);
     expect(test.giftRow(gift.id)).toMatchObject({ status: "packed", escrowStatus: "pending" });
-    expect(ownerOf(test, gift.stickerId)).toBe(giverId);
+    expect(test.ownerOf(gift.stickerId)).toBe(giverId);
   });
 
   it("does not give database ownership to a second recipient after another wallet claimed", async () => {
     const test = await createGiftsTestApp({ escrowChain: true });
-    const { giverId, gift, giftClaimToken } = await giftToOpen(test);
+    const { giverId, gift, giftClaimToken } = await test.packagedGift();
     test.landDeposit(gift.id);
     const receiverId = insertUser(test.db);
     await previewOf(await preview(test, receiverId, giftClaimToken));
     await test.giftChain.claimGift({ giftId: gift.id, giftClaimToken, recipientId: receiverId });
 
     const loser = await receive(test, insertUser(test.db), giftClaimToken);
-    expect(loser.status).toBe(409);
-    expect(await loser.json()).toMatchObject({ error: "already_received" });
-    expect(ownerOf(test, gift.stickerId)).toBe(giverId);
+    expect(await refusalOf(loser)).toMatchObject({ status: 409, error: "already_received" });
+    expect(test.ownerOf(gift.stickerId)).toBe(giverId);
 
     await receivedOf(await receive(test, receiverId, giftClaimToken));
-    expect(ownerOf(test, gift.stickerId)).toBe(receiverId);
+    expect(test.ownerOf(gift.stickerId)).toBe(receiverId);
   });
 });
 
 describe("Receiving refuses", () => {
   it("a group, a multi-person chat and an OpenChat, changing nothing", async () => {
     const test = await createGiftsTestApp();
-    const { giverId, gift, giftClaimToken } = await giftToOpen(test);
+    const { giverId, gift, giftClaimToken } = await test.packagedGift();
     const receiverId = insertUser(test.db);
     for (const context of GROUP_CHATS) {
       await expectRefused(test, receiverId, giftClaimToken, 403, "group_chat", context);
     }
     expect(test.giftRow(gift.id).status).toBe("packed");
-    expect(ownerOf(test, gift.stickerId)).toBe(giverId);
+    expect(test.ownerOf(gift.stickerId)).toBe(giverId);
   });
 
   it("an NSFW sticker to anyone not adult, and gives it to an adult", async () => {
     const test = await createGiftsTestApp();
-    const giverId = insertUser(test.db);
-    const stickerId = test.sealSticker(giverId);
-    test.db.update(stickers).set({ nsfw: true }).where(eq(stickers.id, stickerId)).run();
-    const packed = await test.packageSticker(giverId, stickerId);
-    const giftClaimToken = giftClaimTokenSchema.parse(packed.giftClaimToken);
+    const { gift, giftClaimToken } = await test.packagedGift(insertUser(test.db), { nsfw: true });
 
     await expectRefused(test, insertUser(test.db), giftClaimToken, 403, "adults_only");
-    expect(test.giftRow(packed.gift.id).forUserId).toBeNull();
+    expect(test.giftRow(gift.id).forUserId).toBeNull();
     const adultId = insertUser(test.db, { ageVerifiedAt: test.clock.now() });
     expect((await receivedOf(await receive(test, adultId, giftClaimToken))).sticker).toMatchObject({
-      id: stickerId,
+      id: gift.stickerId,
       nsfw: true,
     });
   });
 
   it("your own gift", async () => {
     const test = await createGiftsTestApp();
-    const { giverId, giftClaimToken } = await giftToOpen(test);
+    const { giverId, giftClaimToken } = await test.packagedGift();
     await expectRefused(test, giverId, giftClaimToken, 403, "own_gift");
   });
 
   it("a gift taken back, or returned", async () => {
     const test = await createGiftsTestApp();
     const receiverId = insertUser(test.db);
-    const takenBack = await giftToOpen(test);
-    await giftOf(await test.post(takenBack.giverId, `/${takenBack.gift.id}/take-out`));
+    const takenBack = await test.packagedGift();
+    await giftOf(await test.takeOut(takenBack.giverId, takenBack.gift.id));
     await expectRefused(test, receiverId, takenBack.giftClaimToken, 409, "taken_back");
-    const returned = await giftToOpen(test);
+    const returned = await test.packagedGift();
     test.db
       .update(gifts)
       .set({ status: "returned", returnedAt: test.clock.now(), escrowStatus: "expired_returned" })
@@ -355,20 +334,20 @@ describe("Receiving refuses", () => {
 
   it("a gift past its expiry", async () => {
     const test = await createGiftsTestApp();
-    const { giftClaimToken } = await giftToOpen(test);
+    const { giftClaimToken } = await test.packagedGift();
     test.clock.advance(GIFT_EXPIRY_MS);
     await expectRefused(test, insertUser(test.db), giftClaimToken, 410, "gift_expired");
   });
 
   it("a gift whose deposit hasn't landed, on the escrow chain", async () => {
     const test = await createGiftsTestApp({ escrowChain: true });
-    const { giftClaimToken } = await giftToOpen(test);
+    const { giftClaimToken } = await test.packagedGift();
     await expectRefused(test, insertUser(test.db), giftClaimToken, 409, "not_deposited");
   });
 
   it("an unknown Gift Claim Token, and a malformed one", async () => {
     const test = await createGiftsTestApp();
-    const { giftClaimToken } = await giftToOpen(test);
+    const { giftClaimToken } = await test.packagedGift();
     const receiverId = insertUser(test.db);
     for (const open of [preview, receive]) {
       expect(await refusalOf(await open(test, receiverId, bytes32("no such gift")))).toMatchObject({
@@ -378,14 +357,6 @@ describe("Receiving refuses", () => {
       expect(
         await refusalOf(await open(test, receiverId, giftClaimToken.slice(0, -1))),
       ).toMatchObject({ status: 400, error: "invalid_request" });
-    }
-  });
-
-  it("anyone signed out", async () => {
-    const test = await createGiftsTestApp();
-    for (const path of ["/preview", "/receive"]) {
-      const response = await test.app.request(`/api/gifts${path}`, { method: "POST" });
-      expect(await refusalOf(response)).toMatchObject({ status: 401, error: "signed_out" });
     }
   });
 });

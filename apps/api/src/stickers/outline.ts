@@ -7,7 +7,7 @@
 type Point = [x: number, y: number];
 
 /** How far the simplified line may stray from the stored one, as a share of the image's long side. */
-const TOLERANCE = 0.002;
+export const TOLERANCE = 0.002;
 
 /** The stored line's loops: an SVG path of M, L and Z commands. */
 function loopsOf(path: string): Point[][] {

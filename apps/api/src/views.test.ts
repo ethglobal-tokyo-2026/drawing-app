@@ -1,9 +1,9 @@
 import { gratitude, stickerPlacements } from "@drawing-app/db";
-import { createTestDb, insertUser, packGift, type TestDb } from "@drawing-app/db/testing";
+import { createTestDb, insertGratitude, insertUser, type TestDb } from "@drawing-app/db/testing";
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { fakeImageStore } from "./testing/fakes.ts";
-import { insertGratitude, insertSealedSticker, receiveGift } from "./testing/rows.ts";
+import { giveSticker, insertSealedSticker, SPOT } from "./testing/rows.ts";
 import {
   giftSchema,
   gratitudeSchema,
@@ -19,8 +19,6 @@ import {
 
 /** The tests' CDN. */
 const { urls } = fakeImageStore();
-/** A spot on the board, as a drag leaves it. */
-const SPOT = { onBoard: true, x: 0.25, y: 0.75, scale: 0.3, rotation: -4, z: 2 };
 
 let db: TestDb;
 beforeEach(async () => {
@@ -29,11 +27,6 @@ beforeEach(async () => {
 
 const placementOf = (userId: string, stickerId: string) =>
   and(eq(stickerPlacements.userId, userId), eq(stickerPlacements.stickerId, stickerId));
-
-/** Packs a new sticker of `giverId`'s as a gift, and has `receiverId` receive it. */
-function receivedGift(giverId: string, receiverId: string) {
-  return receiveGift(db, packGift(db, insertSealedSticker(db, giverId), giverId), receiverId);
-}
 
 describe("views", () => {
   it("show a sticker with its Original Artist, and its images named by its content hash", () => {
@@ -68,7 +61,7 @@ describe("views", () => {
   it("show gifts and gratitude with the contract's names for their times", () => {
     const giverId = insertUser(db);
     const receiverId = insertUser(db);
-    const gift = receivedGift(giverId, receiverId);
+    const gift = giveSticker(db, insertSealedSticker(db, giverId), giverId, receiverId);
     expect(giftSchema.parse(toGift(gift))).toMatchObject({
       status: "received",
       receiverId,
@@ -89,7 +82,7 @@ describe("views", () => {
     const unseen = [insertSealedSticker(db, me), insertSealedSticker(db, me)];
     const seen = insertSealedSticker(db, me);
     db.update(stickerPlacements).set({ seenAt: new Date() }).where(placementOf(me, seen)).run();
-    const given = receivedGift(me, friend);
+    const given = giveSticker(db, insertSealedSticker(db, me), me, friend);
     expect(newStickerCount(db, me)).toBe(unseen.length);
     expect(newStickerCount(db, friend)).toBe([given].length);
   });
@@ -97,7 +90,8 @@ describe("views", () => {
   it("count the pink tag as gratitude on gifts you gave that you haven't watched", () => {
     const giverId = insertUser(db);
     const receiverId = insertUser(db);
-    const withGratitude = [receivedGift(giverId, receiverId), receivedGift(giverId, receiverId)];
+    const given = [insertSealedSticker(db, giverId), insertSealedSticker(db, giverId)];
+    const withGratitude = given.map((stickerId) => giveSticker(db, stickerId, giverId, receiverId));
     for (const gift of withGratitude) insertGratitude(db, gift.id);
     expect(unseenGratitudeCount(db, giverId)).toBe(withGratitude.length);
     expect(unseenGratitudeCount(db, receiverId)).toBe(0);

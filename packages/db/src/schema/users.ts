@@ -7,8 +7,8 @@ export const users = sqliteTable(
   {
     id: text("id").primaryKey(),
     /**
-     * The verified ID token's `sub`, set at the first sign-in. Finds a returning person, and is the
-     * Official account's push target. Cleared on account deletion.
+     * The verified ID token's `sub`, set at the first sign-in. Finds a returning person and their
+     * Privy user, and links their chat menu. Cleared on account deletion.
      */
     lineUserId: text("line_user_id").unique(),
     /**
@@ -19,10 +19,14 @@ export const users = sqliteTable(
     linePictureUrl: text("line_picture_url"),
     /**
      * Unique ignoring letter case. Set at the first sign-in to the LINE name when no one has it,
-     * otherwise from the handle prompt; null only until the prompt is answered.
+     * otherwise from the handle prompt; null until the prompt is answered. Cleared on account
+     * deletion.
      */
     handle: text("handle"),
-    /** IANA zone from the device at the first sign-in. Ticket days turn over at 4:00 here. */
+    /**
+     * IANA zone from the device at the first sign-in. Explore's longest streak counts the person's
+     * seal days in it.
+     */
     timeZone: text("time_zone").notNull().default("Asia/Tokyo"),
     /**
      * The Privy smart wallet on Ethereum Sepolia, lowercase. Stickers are minted and claimed to it, and it
@@ -35,7 +39,10 @@ export const users = sqliteTable(
     deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
     ...timestamps(),
     // Columns added after the table was made go last, where ALTER TABLE puts them.
-    /** The app's language at the last sign-in, for what the server writes to the person outside the app. */
+    /**
+     * The language the server writes to the person in outside the app: set at sign-in, and by a
+     * Settings choice.
+     */
     language: text("language", { enum: ["en", "ja"] })
       .notNull()
       .default("en"),

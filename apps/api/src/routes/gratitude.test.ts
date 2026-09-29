@@ -1,8 +1,7 @@
 import { gratitude, MAX_HITS } from "@drawing-app/db";
-import { bytes32, insertUser, packGift } from "@drawing-app/db/testing";
+import { bytes32, insertUser, ONE_TAP, packGift } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { refusalOf } from "../gifts/testGifts.ts";
 import {
   gratitudeResponseSchema,
   MAX_GRATITUDE_BODY_BYTES,
@@ -18,7 +17,8 @@ import {
   touch,
 } from "../gratitude/testReplays.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
-import { insertSealedSticker, ONE_TAP, receiveGift } from "../testing/rows.ts";
+import { bodyOf, refusalOf } from "../testing/responses.ts";
+import { giveSticker, insertSealedSticker } from "../testing/rows.ts";
 
 /** A tap combo of more than one hit. */
 const COMBO_HITS = 2;
@@ -27,18 +27,12 @@ const UNEVEN_TOTAL = 58;
 const NO_SHARE = 0;
 const UNKNOWN_REPLAY_VERSION = 2;
 
-const post = async (test: TestApp, userId: string, body: unknown) =>
-  test.app.request("/api/gratitude", {
-    method: "POST",
-    headers: { "content-type": "application/json", ...(await test.signInAs(userId)) },
-    body: JSON.stringify(body),
-  });
+const post = (test: TestApp, userId: string, body: unknown) =>
+  test.send("POST", "/api/gratitude", { as: userId, body });
 
 /** The gratitude a 201 or 200 answers with. */
-async function recorded(response: Response, status: 200 | 201) {
-  expect(response.status).toBe(status);
-  return gratitudeResponseSchema.parse(await response.json()).gratitude;
-}
+const recorded = async (response: Response, status: 200 | 201) =>
+  (await bodyOf(response, gratitudeResponseSchema, status)).gratitude;
 
 /** A combo's fields, as Gratitude answers them. */
 const comboOf = ({
@@ -51,19 +45,13 @@ const comboOf = ({
   gameConfigVersion,
 }: RecordGratitude) => ({ giftId, method, hits, total, peakMult, peakTier, gameConfigVersion });
 
-/** Gives the sticker from `giverId` to `receiverId`, received at once, and returns the gift's id. */
-function giveSticker(test: TestApp, stickerId: string, giverId: string, receiverId: string) {
-  const giftId = packGift(test.db, stickerId, giverId);
-  receiveGift(test.db, giftId, receiverId);
-  return giftId;
-}
-
 /** An app with one received gift of a sticker its giver drew. */
 async function receivedGift() {
   const test = await createTestApp();
   const giverId = insertUser(test.db);
   const receiverId = insertUser(test.db);
-  const giftId = giveSticker(test, insertSealedSticker(test.db, giverId), giverId, receiverId);
+  const stickerId = insertSealedSticker(test.db, giverId);
+  const giftId = giveSticker(test.db, stickerId, giverId, receiverId).id;
   return { test, giverId, receiverId, giftId };
 }
 
@@ -210,8 +198,8 @@ describe("POST /api/gratitude", () => {
       insertUser(test.db),
     ];
     const stickerId = insertSealedSticker(test.db, artistId);
-    giveSticker(test, stickerId, artistId, giverId);
-    const giftId = giveSticker(test, stickerId, giverId, receiverId);
+    giveSticker(test.db, stickerId, artistId, giverId);
+    const giftId = giveSticker(test.db, stickerId, giverId, receiverId).id;
     const body = recordBody(giftId, {
       hits: COMBO_HITS,
       total: UNEVEN_TOTAL,
@@ -230,8 +218,8 @@ describe("POST /api/gratitude", () => {
     const artistId = insertUser(test.db);
     const friendId = insertUser(test.db);
     const stickerId = insertSealedSticker(test.db, artistId);
-    const fromArtist = giveSticker(test, stickerId, artistId, friendId);
-    const backToArtist = giveSticker(test, stickerId, friendId, artistId);
+    const fromArtist = giveSticker(test.db, stickerId, artistId, friendId).id;
+    const backToArtist = giveSticker(test.db, stickerId, friendId, artistId).id;
     for (const [giftId, receiverId] of [
       [fromArtist, friendId],
       [backToArtist, artistId],
@@ -273,7 +261,8 @@ describe("POST /api/gratitude", () => {
       alreadyRecorded,
     );
     const otherId = insertUser(test.db);
-    const theirGift = giveSticker(test, insertSealedSticker(test.db, giverId), giverId, otherId);
+    const theirSticker = insertSealedSticker(test.db, giverId);
+    const theirGift = giveSticker(test.db, theirSticker, giverId, otherId).id;
     const withYourKey = recordBody(theirGift, { idempotencyKey: body.idempotencyKey });
     expect(await refusalOf(await post(test, otherId, withYourKey))).toMatchObject(alreadyRecorded);
   });
@@ -312,15 +301,5 @@ describe("POST /api/gratitude", () => {
       status: 400,
       error: "invalid_request",
     });
-  });
-
-  it("refuses a request with no session", async () => {
-    const { test, giftId } = await receivedGift();
-    const response = await test.app.request("/api/gratitude", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(recordBody(giftId)),
-    });
-    expect(await refusalOf(response)).toMatchObject({ status: 401, error: "signed_out" });
   });
 });

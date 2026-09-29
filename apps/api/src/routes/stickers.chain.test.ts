@@ -35,6 +35,7 @@ import { sealResponseSchema } from "../stickers/seal.ts";
 import { pngFile, sealFormData, sealParts } from "../stickers/testPngs.ts";
 import { createTestApp } from "../testing/createTestApp.ts";
 import { privySmartWallet, privyUser } from "../testing/privy.ts";
+import { bodyOf } from "../testing/responses.ts";
 import { ticketUseSchema } from "../tickets/tickets.ts";
 
 const chainRoot = fileURLToPath(new URL("../../../../packages/sticker-chain", import.meta.url));
@@ -84,13 +85,9 @@ describe("Sealing through the REST API and NFT contract", () => {
       if (!contractAddress) throw new Error("StickerNFT deployment returned no address");
       // A new smart account can receive an NFT before its first transaction deploys its code.
       const artistAddress = getContractAddress({ from: sealer.address, nonce: 100n });
-      const privyLookup = vi.fn<typeof fetch>(async (_input, init) => {
-        if (typeof init?.body !== "string") throw new Error("Privy lookup omitted its JSON body");
-        expect(JSON.parse(init.body)).toEqual({
-          custom_user_id: privySubject(lineChannelId, alice.sub),
-        });
-        return Response.json(privyUser([privySmartWallet(artistAddress)]));
-      });
+      const privyLookup = vi.fn<typeof fetch>(async () =>
+        Response.json(privyUser([privySmartWallet(artistAddress)])),
+      );
       const smartWallets = createPrivySmartWallets({
         db: test.db,
         lineChannelId,
@@ -118,8 +115,7 @@ describe("Sealing through the REST API and NFT contract", () => {
           language: "en",
         }),
       });
-      expect(session.status).toBe(200);
-      const { me } = z.object({ me: meSchema }).parse(await session.json());
+      const { me } = await bodyOf(session, z.object({ me: meSchema }));
       const cookie = session.headers.get("set-cookie")?.split(";")[0];
       if (!cookie) throw new Error("LINE sign-in did not create an API session");
       const ticketResponse = await app.request("/api/tickets/spend", {
@@ -127,10 +123,11 @@ describe("Sealing through the REST API and NFT contract", () => {
         headers: { Cookie: cookie, "content-type": "application/json" },
         body: JSON.stringify({ kind: "daily" }),
       });
-      expect(ticketResponse.status).toBe(201);
-      const { ticketUse } = z
-        .object({ ticketUse: ticketUseSchema })
-        .parse(await ticketResponse.json());
+      const { ticketUse } = await bodyOf(
+        ticketResponse,
+        z.object({ ticketUse: ticketUseSchema }),
+        201,
+      );
       const postSeal = () =>
         app.request("/api/stickers", {
           method: "POST",
@@ -145,9 +142,7 @@ describe("Sealing through the REST API and NFT contract", () => {
             }),
           ),
         });
-      const response = await postSeal();
-      expect(response.status).toBe(201);
-      const { sticker } = sealResponseSchema.parse(await response.json());
+      const { sticker } = await bodyOf(await postSeal(), sealResponseSchema, 201);
       if (!sticker.tokenId || !sticker.mintTxHash || !isHex(sticker.mintTxHash)) {
         throw new Error("Sealing returned without a confirmed NFT");
       }
@@ -206,9 +201,7 @@ describe("Sealing through the REST API and NFT contract", () => {
         .where(eq(stickers.id, sticker.id))
         .run();
       const nonceBeforeRetry = await publicClient.getTransactionCount({ address: sealer.address });
-      const retry = await postSeal();
-      expect(retry.status).toBe(200);
-      expect(sealResponseSchema.parse(await retry.json()).sticker).toEqual(sticker);
+      expect((await bodyOf(await postSeal(), sealResponseSchema)).sticker).toEqual(sticker);
       expect(persisted()).toMatchObject({
         tokenId: sticker.tokenId,
         mintTxHash: sticker.mintTxHash,
@@ -226,6 +219,10 @@ describe("Sealing through the REST API and NFT contract", () => {
       ).resolves.toBe(1n);
       expect(test.db.select().from(stickers).all()).toHaveLength(1);
       expect(privyLookup).toHaveBeenCalledOnce();
+      const [input, init] = privyLookup.mock.calls[0];
+      expect(await new Request(input, init).json()).toEqual({
+        custom_user_id: privySubject(lineChannelId, alice.sub),
+      });
       expect(await (await app.request(metadataUri)).json()).toEqual(metadata);
     } finally {
       test.sqlite.close();

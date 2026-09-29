@@ -25,6 +25,9 @@ export interface DiagnosticFields {
   mode?: string;
   stage?: string;
   errorCode?: string;
+  ticketDay?: string;
+  count?: number;
+  menu?: string;
 }
 
 const requests = new AsyncLocalStorage<RequestContext>();
@@ -87,7 +90,7 @@ function errorCauses(error: unknown) {
 }
 
 /** Longer causes are cut here, so the answer stays one line. */
-const CAUSE_MAX_LENGTH = 160;
+export const CAUSE_MAX_LENGTH = 160;
 
 /**
  * Why a failure happened, in the words of its innermost cause that says (an RPC's "rate limit
@@ -100,26 +103,37 @@ export function failureCause(error: unknown): string {
   return words.length > CAUSE_MAX_LENGTH ? `${words.slice(0, CAUSE_MAX_LENGTH - 1)}…` : words;
 }
 
-const fieldNames = [
-  "stickerId",
-  "giftId",
-  "userId",
-  "artistId",
-  "recipientId",
-  "chainId",
-  "contractAddress",
-  "address",
-  "txHash",
-  "tokenId",
-  "blockNumber",
-  "status",
-  "elapsedMs",
-  "cached",
-  "recovered",
-  "mode",
-  "stage",
-  "errorCode",
-] as const satisfies readonly (keyof DiagnosticFields)[];
+/**
+ * The fields a log line keeps; any other key is dropped. Keyed by DiagnosticFields, so a field added
+ * there can't be left out.
+ */
+const loggedFields = {
+  stickerId: true,
+  giftId: true,
+  userId: true,
+  artistId: true,
+  recipientId: true,
+  chainId: true,
+  contractAddress: true,
+  address: true,
+  txHash: true,
+  tokenId: true,
+  blockNumber: true,
+  status: true,
+  elapsedMs: true,
+  cached: true,
+  recovered: true,
+  mode: true,
+  stage: true,
+  errorCode: true,
+  ticketDay: true,
+  count: true,
+  menu: true,
+} satisfies Record<keyof DiagnosticFields, true>;
+
+const isLoggedField = (key: string): key is keyof DiagnosticFields =>
+  Object.hasOwn(loggedFields, key);
+const fieldNames = Object.keys(loggedFields).filter(isLoggedField);
 
 function record(event: string, fields: DiagnosticFields) {
   const selected: Record<string, string | number | boolean> = {};

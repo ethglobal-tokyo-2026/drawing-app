@@ -1,7 +1,7 @@
 # sticker-board.service: serves the built web app on 127.0.0.1:3003 for HAProxy.
 # deploy/deploy.sh copies it to /etc/systemd/system/ and restarts it whenever it or serve.py changes.
 [Unit]
-Description=Sticker Board web app (static files)
+Description=Croquis web app (static files)
 After=network.target
 
 [Service]

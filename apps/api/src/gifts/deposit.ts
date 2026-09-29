@@ -2,11 +2,14 @@ import { gifts, stickers, users } from "@drawing-app/db";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import type { AppDeps, EscrowGift, GiftChain } from "../deps.ts";
-import { bytes32Schema } from "../shapes.ts";
-import { ownGift, refuse, type GiftRow, type GiftStep } from "./packaging.ts";
+import { bytes32Schema, refuse } from "../shapes.ts";
+import { ownGift, type GiftRow, type GiftStep } from "./packaging.ts";
 
 export const depositBodySchema = z.object({
-  /** Optional after a lost response: the escrow record is authoritative. */
+  /**
+   * The escrow transfer's transaction, logged with the report so the deposit can be traced.
+   * Optional after a lost response: the escrow record is authoritative.
+   */
   txHash: bytes32Schema.optional(),
 });
 
@@ -33,8 +36,9 @@ function isIssuedDeposit(
 
 /**
  * Reads the escrow's record of a gift whose deposit hasn't been seen, and records that the escrow
- * holds it. A record that isn't the deposit packaging issued also takes the gift out, so the worker
- * rejects it back to the giver.
+ * holds it. A record that isn't the deposit packaging issued also takes the gift out. Nothing rejects
+ * it back to the giver yet, so it stays taken_out with the escrow pending, and its sticker stays
+ * locked in the escrow.
  */
 export async function checkDeposit(
   { db, clock }: Pick<AppDeps, "db" | "clock">,

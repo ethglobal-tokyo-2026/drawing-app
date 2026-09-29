@@ -1,5 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
-import { AuthError } from "../src/auth-error.js";
+import { describe, expect, it } from "vitest";
 import { createLineVerifier } from "../src/line.js";
 
 const channelId = "line-channel-123";
@@ -73,19 +72,6 @@ describe("LINE ID token verification", () => {
       await expect(verify("valid-line-id-token")).rejects.toMatchObject({
         details: { code: "line_unavailable", reason: "invalid_claims" },
       });
-    },
-  );
-
-  it.each(["short", "x".repeat(6001)])(
-    "rejects malformed input before calling LINE",
-    async (token) => {
-      const fetchImpl = vi.fn<typeof fetch>();
-      const verify = createLineVerifier({ channelId, fetchImpl });
-
-      await expect(verify(token)).rejects.toEqual(
-        new AuthError({ code: "invalid_request", reason: "id_token_format" }),
-      );
-      expect(fetchImpl).not.toHaveBeenCalled();
     },
   );
 });

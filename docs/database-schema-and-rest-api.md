@@ -9,6 +9,7 @@ What the server stores and serves. `packages/db` holds the schema and `apps/api`
 - **Sign-in:** every screen needs LINE Login; there are no public pages. The server verifies LIFF's ID token and sets a session cookie.
 - **Chain:** Ethereum Sepolia is the owner of record for each sticker (`StickerNFT`) and each gift in transit (`StickerGiftEscrow`). The server keeps a small index of chain state, so screens don't wait for the chain except where noted below.
 - **Images:** each sticker's five PNGs on our CDN, and the WebP files the app shows, named by the sticker PNG's content hash. The NFT's metadata is a JSON file on the same CDN. No IPFS.
+- **Not built yet:** nothing sends LINE notices to the giver (`pushedToGiverAt` is never written), and the API never calls `returnExpiredGift`.
 
 ## Rules that shape the UI
 
@@ -79,11 +80,12 @@ What the server stores and serves. `packages/db` holds the schema and `apps/api`
 
 ### ENS names
 
-- Everyone has `<label>.croquis.eth`, resolving from their first sign-in through the API's gateway. It goes onchain, forever, at their first seal or receive; a sticker is named `<number>.<artist>.croquis.eth` after its mint. The design: `docs/superpowers/specs/2026-09-26-ens-names-design.md`.
+- Everyone has `<label>.croquis.eth`, resolving from their first sign-in through the API's gateway. It goes onchain, forever, at their first seal or receive; a sticker is named `<number>.<artist>.croquis.eth` after its mint. The contracts: `packages/sticker-chain/contracts/ens/`.
 
 ### Account deletion
 
 - Not designed yet. LINE requires offering it, and deleting the person's LINE data when they use it.
+- A person's croquis.eth name can't be removed; what account deletion does to it is undecided.
 
 ## Limits and constants
 
