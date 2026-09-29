@@ -6,7 +6,8 @@ import type { FillOp } from "../../sticker-creation/canvas/ops";
 import { paintStroke } from "../../sticker-creation/canvas/paintStroke";
 import { decodeTimelapse } from "../../sticker-creation/sealing/timelapse";
 import { browserFrames, type FrameSource } from "../../ui/frameSource";
-import { prepareFillSnapshots, release, type FillSnapshot } from "./fillSnapshots";
+import { releaseCanvas } from "../../ui/releaseCanvas";
+import { prepareFillSnapshots, type FillSnapshot } from "./fillSnapshots";
 import { displayCanvas, displayPoint, drawingDensity, revealRadius } from "./timelapseCrop";
 import {
   playbackDone,
@@ -102,7 +103,7 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
     g.restore();
     if (progress < 1) return;
     snapshots.delete(index);
-    release(pixels);
+    releaseCanvas(pixels);
   };
 
   const paint = (step: PaintStep) => {
@@ -111,7 +112,7 @@ export function createTimelapsePlayer(options: TimelapsePlayerOptions): Timelaps
   };
 
   const letGoOfSnapshots = () => {
-    snapshots.forEach((snapshot) => release(snapshot.canvas));
+    snapshots.forEach((snapshot) => releaseCanvas(snapshot.canvas));
     snapshots.clear();
   };
 

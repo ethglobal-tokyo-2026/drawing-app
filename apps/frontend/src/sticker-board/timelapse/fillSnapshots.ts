@@ -7,6 +7,7 @@ import { context2d } from "../../sticker-creation/canvas/context2d";
 import { InkSurface } from "../../sticker-creation/canvas/inkSurface";
 import type { Op } from "../../sticker-creation/canvas/ops";
 import type { Rect } from "../../sticker-creation/sealing/stickerLayers";
+import { releaseCanvas } from "../../ui/releaseCanvas";
 import { changedArea, displayPoint, sheetCrop, type DisplayCanvas } from "./timelapseCrop";
 
 /** Far longer than a phone takes over a sticker's fills: only a runaway pass is given up on. */
@@ -39,12 +40,6 @@ export interface PrepareControl {
   yieldToPage?: () => Promise<void>;
 }
 
-/** Frees a canvas's memory now: iOS counts canvases against a small budget until they're collected. */
-export const release = (canvas: HTMLCanvasElement) => {
-  canvas.width = 0;
-  canvas.height = 0;
-};
-
 const nextTask = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 const messageOf = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
@@ -75,7 +70,7 @@ export async function prepareFillSnapshots(
   const lastFill = ops.findLastIndex((op) => op.tool === "fill");
   const snapshots = new Map<number, FillSnapshot>();
   const letGoOfSnapshots = () => {
-    snapshots.forEach((snapshot) => release(snapshot.canvas));
+    snapshots.forEach((snapshot) => releaseCanvas(snapshot.canvas));
     snapshots.clear();
   };
   const sheetCanvas = blankCanvas(1, 1);
@@ -141,6 +136,6 @@ export async function prepareFillSnapshots(
     letGoOfSnapshots();
     throw error;
   } finally {
-    [sheetCanvas, before, after].forEach(release);
+    [sheetCanvas, before, after].forEach(releaseCanvas);
   }
 }
