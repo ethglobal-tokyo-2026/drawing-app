@@ -196,7 +196,7 @@ the Shop's done step all render from it.
 - **Now** (every occurrence, verified):
   - "Daily tickets are always used first." is already gone from the app on main (removed in 2cbba77). The deployed
     build (deploy/live at 942d96e) still shows it under the Shop's title (`TicketShop.tsx:228` there); the next deploy
-    removes it. The docs that state the behavior (AGENTS.MD:11, PRODUCT.md:147, `docs/database-schema-and-rest-api.md:18`,
+    removes it. The docs that state the behavior (AGENTS.MD:11, PRODUCT.md:147,
     `apps/api/src/tickets/tickets.ts:88`, `packages/db/src/schema/tickets.ts:25`) describe what the code does, not
     copy: keep them.
   - "Reserve tickets never expire." shows under the title on the Shop tab and the Shop card, always
@@ -204,7 +204,7 @@ the Shop's done step all render from it.
   - "Ticket shop" on screen: the Shop's title, `TicketShop.tsx:224` (both layouts). The tab already says "Shop"
     (`i18n/en/app.ts:16`, 「ショップ」 in `i18n/ja/app.ts:10`), so the page and its tab disagree today.
   - "ticket shop" in docs: AGENTS.MD:12 and :13 (a vocabulary entry), DESIGN.md:293, :425, :499, :505 (the
-    "### Ticket shop" heading), PRODUCT.md:150, :152, `docs/database-schema-and-rest-api.md:19-20`.
+    "### Ticket shop" heading), PRODUCT.md:150, :152.
   - In code comments, log text and test names: `TicketShop.tsx:54` (log), `:102`, `TicketShop.css:1`,
     `StartDrawing.tsx:25`, `:36`, `OutOfTickets.tsx:18`, `:41`, `SealedCard.tsx:31`, `:38`, `DrawingScreen.tsx:128`,
     `ticketCards.test.tsx:92`, `SealCeremony.test.tsx:149`. The component and files are `TicketShop.tsx`/`.css`

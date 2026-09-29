@@ -67,6 +67,7 @@ You can hand someone a physical drawing, but nothing makes a digital drawing sca
 - Money for stickers or Gratitude: nothing sells a sticker, and Gratitude never converts to money.
 - Rarity, "limited" drops or resale prices.
 - AI restyling: a sticker is cut from its artist's own strokes.
+- Layers, textured brushes or filters on the drawing screen.
 - Web push, which LINE's browser doesn't have.
 
 ### Not built yet

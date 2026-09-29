@@ -244,7 +244,7 @@ Your items: Direct and Residual instead of the invented Inspired, Magic and Orig
 - **Impeccable:** `distill` (the notes, dots and card), `clarify` (labels, empty and failed states), `colorize` (the streak and the receipt), `animate` and `harden` (the pull on iOS), `polish`.
 - **Size:** about a day. Receipt with API M, pull M, the cuts S, colors S.
 - **Order, to avoid conflicts in `StatCork.tsx`:** the cuts, then the receipt, then colors, then the pull, which only shows once the cuts shorten the cork.
-- **Files:** `sticker-board/stat-board/` (`StatCork.tsx`, `statFigures.ts`, `stat-board.css`, `StatBoard.tsx`, `DeveloperSlip.tsx` and `usePullToReveal.ts` new), `ui/HitCounter.tsx` (new), `apps/api/src/shapes.ts`, `apps/api/src/stickerBoards/userStats.ts`, `apps/api/src/routes/stickerBoards.test.ts`, `docs/database-schema-and-rest-api.md`.
+- **Files:** `sticker-board/stat-board/` (`StatCork.tsx`, `statFigures.ts`, `stat-board.css`, `StatBoard.tsx`, `DeveloperSlip.tsx` and `usePullToReveal.ts` new), `ui/HitCounter.tsx` (new), `apps/api/src/shapes.ts`, `apps/api/src/stickerBoards/userStats.ts`, `apps/api/src/routes/stickerBoards.test.ts`.
 - Findings: [stat-board.md](2026-09-26-frontend-feedback/stat-board.md).
 
 ### W7 Icons
