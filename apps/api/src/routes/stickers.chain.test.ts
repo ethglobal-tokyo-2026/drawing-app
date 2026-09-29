@@ -36,6 +36,7 @@ import { pngFile, sealFormData, sealParts } from "../stickers/testPngs.ts";
 import { createTestApp } from "../testing/createTestApp.ts";
 import { privySmartWallet, privyUser } from "../testing/privy.ts";
 import { bodyOf } from "../testing/responses.ts";
+import { spendBody } from "../tickets/testSpends.ts";
 import { ticketUseSchema } from "../tickets/tickets.ts";
 
 const chainRoot = fileURLToPath(new URL("../../../../packages/sticker-chain", import.meta.url));
@@ -117,7 +118,7 @@ describe("Sealing through the REST API and NFT contract", () => {
       const ticketResponse = await app.request("/api/tickets/spend", {
         method: "POST",
         headers: { Cookie: cookie, "content-type": "application/json" },
-        body: JSON.stringify({ kind: "daily" }),
+        body: JSON.stringify(spendBody("daily")),
       });
       const { ticketUse } = await bodyOf(
         ticketResponse,

@@ -100,8 +100,11 @@ export function ticketsOf(db: DbOrTx, userId: string, now: Date): Tickets {
   };
 }
 
-/** Spending a ticket: the kind the start screen offered. */
-export const spendRequestSchema = createInsertSchema(ticketUses).pick({ kind: true });
+/** Spending a ticket: the kind the start screen offered, and the key each retry sends again. */
+export const spendRequestSchema = createInsertSchema(ticketUses, {
+  idempotencyKey: z.uuid(),
+}).pick({ kind: true, idempotencyKey: true });
+export type SpendTicket = z.infer<typeof spendRequestSchema>;
 
 /** A spent ticket, as spending answers it. */
 export const ticketUseSchema = createSelectSchema(ticketUses, {
@@ -119,6 +122,14 @@ export const toTicketUse = (use: typeof ticketUses.$inferSelect): TicketUse => (
   kind: use.kind,
   spentAt: toIsoTime(use.createdAt),
 });
+
+/** The ticket use `userId` already spent with `idempotencyKey`, if any. */
+export const ticketUseSpentWith = (db: DbOrTx, userId: string, idempotencyKey: string) =>
+  db
+    .select()
+    .from(ticketUses)
+    .where(and(eq(ticketUses.userId, userId), eq(ticketUses.idempotencyKey, idempotencyKey)))
+    .get();
 
 /** A Sui transaction digest: 32 bytes in base58. */
 const SUI_TX_DIGEST = /^[1-9A-HJ-NP-Za-km-z]{43,44}$/;

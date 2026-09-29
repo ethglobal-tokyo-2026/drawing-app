@@ -50,5 +50,5 @@ export type { BoardSticker, StickerBoard } from "./stickerBoards/board.ts";
 export type { SealResponse } from "./stickers/seal.ts";
 export type { StickerDetail, TransferTrailEntry } from "./stickers/stickerDetail.ts";
 export type { TimelapseV1 } from "./stickers/timelapse.ts";
-export type { TicketKind, TicketUse } from "./tickets/tickets.ts";
+export type { SpendTicket, TicketKind, TicketUse } from "./tickets/tickets.ts";
 export type { Gift, Gratitude, Placement, Sticker, StickerPlacement } from "./views.ts";

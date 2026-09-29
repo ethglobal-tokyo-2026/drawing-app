@@ -10,6 +10,7 @@ import {
   type FakeLine,
 } from "../testing/fakeLine.ts";
 import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
+import { spendBody } from "../tickets/testSpends.ts";
 import type { ChatMenuIds } from "./menus.ts";
 import {
   AFTER_MIDNIGHT_MS,
@@ -48,7 +49,7 @@ function person(lineUser: string, menu?: string, language: "en" | "ja" = "en") {
 const spend = async (userId: string) => {
   const response = await test.send("POST", "/api/tickets/spend", {
     as: userId,
-    body: { kind: "daily" },
+    body: spendBody("daily"),
   });
   expect(response.status).toBe(201);
   await test.deps.lineChatMenu.idle();

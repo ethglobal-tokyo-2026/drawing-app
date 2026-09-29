@@ -14,6 +14,7 @@ import {
 } from "../testing/fakeLine.ts";
 import { fakeTicketPayments, TEST_PAYMENT_TARGET } from "../testing/fakes.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
+import { spendBody } from "../tickets/testSpends.ts";
 import {
   jpycFor,
   TICKET_PACKS,
@@ -82,7 +83,7 @@ const linkedMenu = async () => (await bodyOf(await linkMenu(), linkBodySchema)).
 
 const post = (path: string, body: object) => test.send("POST", path, { as: userId, body });
 
-const spend = (kind: TicketKind) => post("/api/tickets/spend", { kind });
+const spend = (kind: TicketKind) => post("/api/tickets/spend", spendBody(kind));
 
 /** Spends a ticket of `kind`, which must be granted. */
 async function spendTicket(kind: TicketKind) {

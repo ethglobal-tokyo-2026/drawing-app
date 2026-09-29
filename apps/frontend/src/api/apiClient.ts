@@ -18,10 +18,10 @@ import type {
   ReceivedGift,
   RecordGratitude,
   SealResponse,
+  SpendTicket,
   StickerBoard,
   StickerDetail,
   StickerPlacement,
-  TicketKind,
   TicketShop,
   Tickets,
   TicketUse,
@@ -84,8 +84,8 @@ export interface ApiClient {
 
   /** GET /api/tickets */
   tickets: () => Promise<Tickets>;
-  /** POST /api/tickets/spend */
-  spendTicket: (kind: TicketKind) => Promise<{ ticketUse: TicketUse; tickets: Tickets }>;
+  /** POST /api/tickets/spend: the same idempotencyKey again answers the ticket use it spent. */
+  spendTicket: (spend: SpendTicket) => Promise<{ ticketUse: TicketUse; tickets: Tickets }>;
   /** GET /api/ticket-shop */
   ticketShop: () => Promise<TicketShop>;
   /** POST /api/ticket-purchases */

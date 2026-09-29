@@ -2,6 +2,7 @@ import type { TicketKind, Tickets, TicketUse } from "@drawing-app/api/client";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { apiError, type ApiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
+import { newIdempotencyKey } from "../api/idempotencyKey";
 import { TicketsContext, type Sheet } from "./ticketsContext";
 
 /** A turnover that just passed can still read as the old day on the server for a moment. */
@@ -42,9 +43,14 @@ export function TicketsProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(id);
   }, [refillAt, refresh]);
 
+  // Kept until a spend lands, so a retry or a second tap sends the same key and gets the ticket use
+  // the first try spent, even when its answer was lost. The next drawing's spend makes a new one.
+  const spendKey = useRef<string | null>(null);
   const spend = useCallback(
     async (kind: TicketKind) => {
-      const spent = await api.spendTicket(kind);
+      const idempotencyKey = (spendKey.current ??= newIdempotencyKey());
+      const spent = await api.spendTicket({ kind, idempotencyKey });
+      if (spendKey.current === idempotencyKey) spendKey.current = null;
       setTickets(spent.tickets);
       return spent.ticketUse;
     },

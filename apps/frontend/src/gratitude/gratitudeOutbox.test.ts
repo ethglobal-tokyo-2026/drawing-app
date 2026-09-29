@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { gratitudeOf } from "../api/testing";
 import { recordGratitudeBody } from "../api/testing";
-import { newIdempotencyKey, resendPendingGratitude, sendGratitude } from "./gratitudeOutbox";
+import { resendPendingGratitude, sendGratitude } from "./gratitudeOutbox";
 
 const body = recordGratitudeBody();
 
@@ -32,16 +32,6 @@ afterEach(() => {
   localStorage.clear();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
-});
-
-describe("newIdempotencyKey", () => {
-  it.each([
-    [0x00, "00000000-0000-4000-8000-000000000000"],
-    [0xff, "ffffffff-ffff-4fff-bfff-ffffffffffff"],
-  ])("makes a v4 UUID from random bytes where crypto.randomUUID is missing", (byte, uuid) => {
-    vi.stubGlobal("crypto", { getRandomValues: (bytes: Uint8Array) => bytes.fill(byte) });
-    expect(newIdempotencyKey()).toBe(uuid);
-  });
 });
 
 describe("the gratitude outbox", () => {

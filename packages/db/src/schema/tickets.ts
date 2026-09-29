@@ -28,10 +28,19 @@ export const ticketUses = sqliteTable(
       .unique()
       .references(() => stickers.id),
     ...timestamps(),
+    // Columns added after the table was made go last, where ALTER TABLE puts them.
+    /**
+     * Made on the device when a spend is first tried, and sent with each retry of it. The same key
+     * again gets this use, not another. Null on uses spent before spends had keys.
+     */
+    idempotencyKey: text("idempotency_key"),
   },
   (t) => [
     uniqueIndex("ticket_uses_day").on(t.userId, t.ticketDay, t.dayIndex),
+    uniqueIndex("ticket_uses_idempotency_key").on(t.userId, t.idempotencyKey),
     check("ticket_uses_day_index", sql`${t.dayIndex} >= 0`),
+    // Holds every row, past days' too, to the current DAILY_TICKETS_PER_DAY: changing it needs a
+    // migration that rewrites old rows to pass.
     check(
       "ticket_uses_kind",
       sql`${t.kind} = case when ${t.dayIndex} < ${literal(DAILY_TICKETS_PER_DAY)} then 'daily' else 'reserve' end`,

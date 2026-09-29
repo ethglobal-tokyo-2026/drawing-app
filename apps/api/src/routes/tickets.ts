@@ -14,6 +14,7 @@ import {
   ticketPurchaseRequestSchema,
   ticketShop,
   ticketsOf,
+  ticketUseSpentWith,
   toTicketUse,
 } from "../tickets/tickets.ts";
 
@@ -26,11 +27,20 @@ export const ticketRoutes = ({ db, clock, ticketPayments, lineChatMenu }: AppDep
   new Hono<AppEnv>()
     .get("/tickets", (c) => c.json({ tickets: ticketsOf(db, c.var.userId, clock.now()) }, 200))
     .post("/tickets/spend", validate("json", spendRequestSchema), (c) => {
-      const { kind } = c.req.valid("json");
+      const { kind, idempotencyKey } = c.req.valid("json");
       const { userId } = c.var;
       const now = clock.now();
       const spent = db.transaction(
         (tx) => {
+          // The same key again is a retry or a second tap: it gets the use the key spent, whatever
+          // kind it asks for, and spends nothing.
+          const repeat = ticketUseSpentWith(tx, userId, idempotencyKey);
+          if (repeat) {
+            return c.json(
+              { ticketUse: toTicketUse(repeat), tickets: ticketsOf(tx, userId, now) },
+              200,
+            );
+          }
           const { ticketDay, dailyLeft, reserveLeft, usedToday } = ticketsOf(tx, userId, now);
           if (dailyLeft === 0 && reserveLeft === 0) {
             return apiError(
@@ -52,10 +62,11 @@ export const ticketRoutes = ({ db, clock, ticketPayments, lineChatMenu }: AppDep
               `kind: the next ticket is a ${next} ticket, not a ${kind} one`,
             );
           }
-          // Immediate transactions spend one at a time, so each spend takes the day's next index.
+          // Immediate transactions spend one at a time, so each spend takes the day's next index,
+          // and a key sent twice at once finds its first use above.
           const use = tx
             .insert(ticketUses)
-            .values({ userId, ticketDay, dayIndex, kind })
+            .values({ userId, ticketDay, dayIndex, kind, idempotencyKey })
             .returning()
             .get();
           return c.json({ ticketUse: toTicketUse(use), tickets: ticketsOf(tx, userId, now) }, 201);

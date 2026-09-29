@@ -1,4 +1,4 @@
-import type { AppType, ErrorBody, Me, TicketKind } from "@drawing-app/api/client";
+import type { AppType, ErrorBody, Me } from "@drawing-app/api/client";
 import { hc, type InferRequestType } from "hono/client";
 import { ApiError, type ApiClient, type GiftOpening } from "./apiClient";
 import { startNftRequest } from "./httpDiagnostics";
@@ -235,8 +235,8 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       if (!response.ok) throw await refusal(response, "GET /api/tickets");
       return (await response.json()).tickets;
     },
-    spendTicket: async (kind: TicketKind) => {
-      const response = await api.tickets.spend.$post({ json: { kind } });
+    spendTicket: async (spend) => {
+      const response = await api.tickets.spend.$post({ json: spend });
       if (!response.ok) throw await refusal(response, "POST /api/tickets/spend");
       return response.json();
     },

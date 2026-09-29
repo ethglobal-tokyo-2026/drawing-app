@@ -9,6 +9,7 @@ import { devIdToken } from "./services/devSignIn.ts";
 import { ME } from "./stickerBoards/board.ts";
 import { sealUpload } from "./stickers/testPngs.ts";
 import { createTestApp, type TestApp } from "./testing/createTestApp.ts";
+import { spendBody } from "./tickets/testSpends.ts";
 
 /** Any origin will do: the test app answers every call itself. */
 const API_ORIGIN = "https://api.test";
@@ -92,7 +93,7 @@ describe("the REST API, through the typed client", () => {
     // Alice spends a daily ticket, and seals a sticker on it.
     const { tickets } = await answered(alice.api.tickets.$get(), OK);
     const spent = await answered(
-      alice.api.tickets.spend.$post({ json: { kind: "daily" } }),
+      alice.api.tickets.spend.$post({ json: spendBody("daily") }),
       CREATED,
     );
     expect(spent.tickets.dailyLeft).toBe(tickets.dailyLeft - ONE_TICKET);
