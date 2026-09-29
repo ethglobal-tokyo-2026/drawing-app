@@ -51,7 +51,7 @@ async function setup(writer: NameWriter | null = null) {
 const signIn = async (name: string) => {
   const idToken = devIdToken({ sub: `line-${name}`, name });
   const response = await test.send("POST", "/api/session", {
-    body: { idToken, timeZone: "Asia/Tokyo", language: "en" },
+    body: { idToken, language: "en" },
   });
   const [cookie = ""] = (response.headers.get("set-cookie") ?? "").split(";");
   return { me: (await bodyOf(response, meBodySchema)).me, headers: { Cookie: cookie } };

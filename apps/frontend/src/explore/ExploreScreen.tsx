@@ -25,7 +25,7 @@ import { Skeleton } from "../ui/Skeleton";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { HitCounter } from "../ui/HitCounter";
 import { LiftedSticker } from "./LiftedSticker";
-import { dayBadge, exploreDay, pileDays, type PileSticker } from "./pileDays";
+import { dayBadge, pileDays, ticketDayNumber, type PileSticker } from "./pileDays";
 import { textWidth } from "./pileLayout";
 import { pileOrigin } from "./pileOrigin";
 import { StickerPile } from "./StickerPile";
@@ -421,7 +421,7 @@ const LOADING_HEAP = [
 /** Today's floor in outline while the pile loads; the stickers fall in once it has. */
 function PileLoading() {
   const { t } = useTranslation();
-  const [date] = useState(() => dayBadge(exploreDay(Date.now())));
+  const [date] = useState(() => dayBadge(ticketDayNumber(Date.now())));
   return (
     <>
       <LoadingStatus />

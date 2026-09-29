@@ -18,25 +18,14 @@ export const ID_TOKEN_MAX_LENGTH = 6000;
 /** The x-line-user-id header's longest accepted length, far over LINE's own user IDs. */
 export const LINE_USER_ID_MAX_LENGTH = 128;
 
-const isTimeZone = (timeZone: string) => {
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone });
-    return true;
-  } catch {
-    // Intl throws a RangeError for a zone it doesn't know, which is the answer.
-    return false;
-  }
-};
-
 /** The users columns a request sets, with the checks the table can't make. */
 const userInput = createInsertSchema(users, {
-  timeZone: (schema) => schema.refine(isTimeZone, "must be an IANA time zone"),
   // Only a string here: a handle that breaks the rules answers handle_invalid, not invalid_request.
   handle: z.string(),
 });
 
 const signInBody = userInput
-  .pick({ timeZone: true, language: true })
+  .pick({ language: true })
   .required()
   .extend({ idToken: z.string().min(1).max(ID_TOKEN_MAX_LENGTH) });
 
@@ -81,7 +70,7 @@ async function lineProfileOf(line: LineVerifier, idToken: string) {
 export const sessionRoutes = (deps: AppDeps) =>
   new Hono<AppEnv>()
     .post("/session", validate("json", signInBody), async (c) => {
-      const { idToken, timeZone, language } = c.req.valid("json");
+      const { idToken, language } = c.req.valid("json");
       const profile = await lineProfileOf(deps.line, idToken);
       if (profile instanceof LineTokenInvalidError) {
         return profile.reason === "expired"
@@ -110,7 +99,6 @@ export const sessionRoutes = (deps: AppDeps) =>
               id: deps.ids.uuid(),
               lineUserId: profile.sub,
               ...lineProfile,
-              timeZone,
               language,
               handle: handle !== null && !isHandleTaken(tx, handle) ? handle : null,
             })

@@ -22,7 +22,6 @@ const me: Me = {
   ensName: "alice.croquis.eth",
   ageStatus: "adult",
   lineUserId: "line-alice",
-  timeZone: "Asia/Tokyo",
   language: "en",
   languageChoice: null,
   createdAt: "2026-09-26T00:00:00.000Z",
@@ -130,7 +129,7 @@ describe("SessionGate", () => {
     expect(host.textContent).toContain("Board of @alice");
   });
 
-  it("signs in with LINE's token, your zone and the app's language, then opens the app as you", async () => {
+  it("signs in with LINE's token and the app's language, then opens the app as you", async () => {
     await i18next.changeLanguage("ja");
     onTestFinished(async () => {
       await i18next.changeLanguage("en");
@@ -139,11 +138,7 @@ describe("SessionGate", () => {
     const host = render(session({ signIn }));
     expect(host.textContent).not.toContain("Board");
     await settle();
-    expect(signIn).toHaveBeenCalledWith({
-      idToken: "token",
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      language: "ja",
-    });
+    expect(signIn).toHaveBeenCalledWith({ idToken: "token", language: "ja" });
     expect(host.textContent).toContain("Board of @alice");
   });
 

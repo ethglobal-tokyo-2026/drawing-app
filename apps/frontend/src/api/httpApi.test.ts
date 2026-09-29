@@ -9,7 +9,6 @@ const me = {
   lineDisplayName: "Alice",
   linePictureUrl: null,
   lineUserId: "U-alice",
-  timeZone: "Asia/Tokyo",
   language: "en",
   languageChoice: null,
   createdAt: "2026-09-26T00:00:00.000Z",
@@ -48,10 +47,10 @@ describe("the session client", () => {
     expect(init?.cache).toBe("no-store");
   });
 
-  it("signs in with the token, zone and language, on this origin with the cookie", async () => {
+  it("signs in with the token and language, on this origin with the cookie", async () => {
     const fetch = answering(200, { me });
     const session = createSessionApi(createServerClient(fetch));
-    const request = { idToken: "t", timeZone: "Asia/Tokyo", language: "ja" } as const;
+    const request = { idToken: "t", language: "ja" } as const;
     await expect(session.signIn(request)).resolves.toEqual({ me });
     const [input, init] = fetch.mock.calls[0] ?? [];
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input?.url;

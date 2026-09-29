@@ -24,11 +24,6 @@ export const users = sqliteTable(
      */
     handle: text("handle"),
     /**
-     * IANA zone from the device at the first sign-in. Explore's longest streak counts the person's
-     * seal days in it.
-     */
-    timeZone: text("time_zone").notNull().default("Asia/Tokyo"),
-    /**
      * The Privy smart wallet on Ethereum Sepolia, lowercase. Stickers are minted and claimed to it, and it
      * maps chain events back to a person. Set from Privy the first time the server needs it.
      */

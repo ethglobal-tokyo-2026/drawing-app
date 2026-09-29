@@ -27,8 +27,8 @@ import { useReducedMotion } from "../ui/useReducedMotion";
 import {
   dayBadge,
   dayKey,
-  exploreDay,
   spokenDay,
+  ticketDayNumber,
   type PileDay,
   type PileSticker,
 } from "./pileDays";
@@ -392,7 +392,7 @@ export function StickerPile({ days, meId, liftedId, onLift }: Props) {
   const reduced = useReducedMotion();
   const root = useRef<HTMLDivElement>(null);
   const [now] = useState(() => Date.now());
-  const today = Math.max(exploreDay(now), days[0]?.day ?? -Infinity);
+  const today = Math.max(ticketDayNumber(now), days[0]?.day ?? -Infinity);
   const toTemplate = t(($) => $.explore.pile.to);
   const laidDays = useMemo(() => layDays(days, today, toTemplate), [days, today, toTemplate]);
   // Read once as the pile opens: what's new since the last look, and what falls.

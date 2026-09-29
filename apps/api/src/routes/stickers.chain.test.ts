@@ -109,11 +109,7 @@ describe("Sealing through the REST API and NFT contract", () => {
       const session = await app.request("/api/session", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          idToken: devIdToken(alice),
-          timeZone: "Asia/Tokyo",
-          language: "en",
-        }),
+        body: JSON.stringify({ idToken: devIdToken(alice), language: "en" }),
       });
       const { me } = await bodyOf(session, z.object({ me: meSchema }));
       const cookie = session.headers.get("set-cookie")?.split(";")[0];

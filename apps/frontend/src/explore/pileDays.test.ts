@@ -1,13 +1,14 @@
 import type { Explore } from "@drawing-app/api/client";
 import { describe, expect, it } from "vitest";
 import { people, sticker } from "../api/testFixtures";
-import { dayBadge, dayKey, exploreDay, pileDays, spokenDay } from "./pileDays";
+import { nextRefill, ticketDay } from "../tickets/tickets";
+import { dayBadge, dayKey, pileDays, spokenDay, ticketDayNumber } from "./pileDays";
 
 const explore = (overrides: Partial<Explore>): Explore => ({
   todaysStickers: [],
   activity: [],
   leaderboards: {
-    weekStart: "2026-09-20T19:00:00.000Z",
+    weekStart: "2026-09-20T15:00:00.000Z",
     mostGratitude: [],
     bestCombo: [],
     longestStreak: [],
@@ -15,15 +16,17 @@ const explore = (overrides: Partial<Explore>): Explore => ({
   ...overrides,
 });
 
-describe("exploreDay", () => {
-  it("turns over at 4:00 in Tokyo", () => {
-    // 3:59 and 4:00 on 9.27 in Tokyo.
-    expect(dayKey(exploreDay(Date.parse("2026-09-26T18:59:00Z")))).toBe("2026-09-26");
-    expect(dayKey(exploreDay(Date.parse("2026-09-26T19:00:00Z")))).toBe("2026-09-27");
+describe("ticketDayNumber", () => {
+  it("turns over with the ticket day, at midnight in Tokyo", () => {
+    const midnight = nextRefill(new Date("2026-09-26T12:00:00Z")).getTime();
+    for (const ms of [midnight - 1, midnight]) {
+      expect(dayKey(ticketDayNumber(ms))).toBe(ticketDay(new Date(ms)));
+    }
+    expect(ticketDayNumber(midnight) - ticketDayNumber(midnight - 1)).toBe(1);
   });
 
   it("prints a day's badge and says it in the app's language", () => {
-    const day = exploreDay(Date.parse("2026-09-24T03:00:00Z"));
+    const day = ticketDayNumber(Date.parse("2026-09-24T03:00:00Z"));
     expect(dayBadge(day)).toBe("9.24");
     expect(spokenDay(day, "en")).toBe("September 24");
     expect(spokenDay(day, "ja")).toBe("9月24日");

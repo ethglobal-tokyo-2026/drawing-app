@@ -23,8 +23,6 @@ const ALICE: LineProfile = {
   name: "Alice",
   picture: "https://profile.line-scdn.net/alice",
 };
-/** The device's zone at sign-up. It isn't the column's default, so a test sees it was stored. */
-const DEVICE_ZONE = "America/New_York";
 
 let test: TestApp;
 beforeEach(async () => {
@@ -34,10 +32,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const signIn = (profile: LineProfile, timeZone = DEVICE_ZONE, language = "en") =>
-  test.send("POST", "/api/session", {
-    body: { idToken: devIdToken(profile), timeZone, language },
-  });
+const signIn = (profile: LineProfile, language = "en") =>
+  test.send("POST", "/api/session", { body: { idToken: devIdToken(profile), language } });
 
 const getMe = (headers: Record<string, string>) => test.send("GET", "/api/me", { headers });
 
@@ -57,7 +53,7 @@ const setLanguageChoice = (headers: Record<string, string>, body: unknown) =>
   test.send("POST", "/api/me/language-choice", { headers, body });
 
 describe("signing in", () => {
-  it("makes the person at their first sign-in, with their LINE name as handle and the device's zone", async () => {
+  it("makes the person at their first sign-in, with their LINE name as handle", async () => {
     const response = await signIn(ALICE);
     const me = await meIn(response);
     expect(me).toMatchObject({
@@ -66,7 +62,6 @@ describe("signing in", () => {
       linePictureUrl: ALICE.picture,
       // So the app can check the session is still this LINE account's.
       lineUserId: ALICE.sub,
-      timeZone: DEVICE_ZONE,
       needsHandle: false,
     });
     expect(await meIn(await getMe(sessionCookie(response)))).toEqual(me);
@@ -86,10 +81,10 @@ describe("signing in", () => {
     }
   });
 
-  it("keeps a returning person's id, handle and zone, and takes their new LINE name and picture", async () => {
+  it("keeps a returning person's id and handle, and takes their new LINE name and picture", async () => {
     const first = await meIn(await signIn(ALICE));
     const renamed = { ...ALICE, name: "Alice B", picture: "https://profile.line-scdn.net/alice-b" };
-    const again = await meIn(await signIn(renamed, "Asia/Tokyo"));
+    const again = await meIn(await signIn(renamed));
     expect(again).toEqual({
       ...first,
       lineDisplayName: renamed.name,
@@ -98,14 +93,14 @@ describe("signing in", () => {
   });
 
   it("keeps the app's language, and takes a returning sign-in's new one", async () => {
-    expect((await meIn(await signIn(ALICE, DEVICE_ZONE, "ja"))).language).toBe("ja");
-    expect((await meIn(await signIn(ALICE, DEVICE_ZONE, "en"))).language).toBe("en");
+    expect((await meIn(await signIn(ALICE, "ja"))).language).toBe("ja");
+    expect((await meIn(await signIn(ALICE, "en"))).language).toBe("en");
   });
 
   it("keeps a returning person's language choice, which is their language whatever the device says", async () => {
     const headers = sessionCookie(await signIn(ALICE));
     await setLanguageChoice(headers, { languageChoice: "ja" });
-    expect(await meIn(await signIn(ALICE, DEVICE_ZONE, "en"))).toMatchObject({
+    expect(await meIn(await signIn(ALICE, "en"))).toMatchObject({
       languageChoice: "ja",
       language: "ja",
     });
@@ -155,17 +150,16 @@ describe("signing in", () => {
   });
 
   it("refuses a body over MAX_BODY_BYTES with invalid_request, though it's otherwise valid", async () => {
-    const valid = { idToken: devIdToken(ALICE), timeZone: DEVICE_ZONE, language: "en" };
+    const valid = { idToken: devIdToken(ALICE), language: "en" };
     const padded = { ...valid, padding: "x".repeat(MAX_BODY_BYTES) };
     const response = await test.send("POST", "/api/session", { body: padded });
     expect(response.headers.get("set-cookie")).toBeNull();
     expect(await refusalOf(response)).toMatchObject({ status: 400, error: "invalid_request" });
   });
 
-  it("refuses an unknown zone or language, and an ID token that's empty or too long", async () => {
-    const valid = { idToken: devIdToken(ALICE), timeZone: DEVICE_ZONE, language: "en" };
+  it("refuses an unknown language, and an ID token that's empty or too long", async () => {
+    const valid = { idToken: devIdToken(ALICE), language: "en" };
     const bodies = [
-      { ...valid, timeZone: "Mars/Olympus_Mons" },
       { ...valid, language: "fr" },
       { ...valid, idToken: "" },
       { ...valid, idToken: "x".repeat(ID_TOKEN_MAX_LENGTH + 1) },

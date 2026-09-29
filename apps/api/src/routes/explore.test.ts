@@ -2,15 +2,10 @@ import { MAX_HITS } from "@drawing-app/db";
 import { insertUser } from "@drawing-app/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
-import {
-  EXPLORE_LIST_SIZE,
-  EXPLORE_TIME_ZONE,
-  exploreSchema,
-  type Explore,
-} from "../explore/explore.ts";
+import { EXPLORE_LIST_SIZE, exploreSchema, type Explore } from "../explore/explore.ts";
 import { LEADERBOARD_SIZE, type LeaderboardRow } from "../explore/leaderboards.ts";
 import { USER_SEARCH_SIZE } from "../explore/userSearch.ts";
-import { personSchema } from "../shapes.ts";
+import { personSchema, userStatsSchema } from "../shapes.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 import {
@@ -22,12 +17,10 @@ import {
   sendGratitude,
   SHARED_TAP,
 } from "../testing/rows.ts";
-import { addDays, EXPLORE_DAY_START_HOUR, exploreDay, exploreDayStart } from "../ticketDays.ts";
+import { addDays, tokyoTicketDay, tokyoTicketDayStart } from "../ticketDays.ts";
 
 const MINUTE_MS = 60 * 1000;
 const WEEK_MS = 7 * 24 * 60 * MINUTE_MS;
-/** A zone whose days start at another moment than Tokyo's. */
-const NEW_YORK = "America/New_York";
 /** With SHARED_TAP's giver's part, more than OWN_TAP and SHARED_TAP's share together. */
 const SMALL_TAP = { method: "tap", total: 45 } as const;
 /** Fewer than MORE_HITS. */
@@ -36,6 +29,7 @@ const SOME_HITS = 30;
 const LONG_STREAK = 5;
 
 const userSearchSchema = z.object({ users: z.array(personSchema) });
+const userStatsResponseSchema = z.object({ userStats: userStatsSchema });
 
 let test: TestApp;
 beforeEach(async () => {
@@ -53,11 +47,19 @@ const exploreAs = async (viewerId: string) =>
 const weekStartFor = async (viewerId: string) =>
   new Date((await exploreAs(viewerId)).leaderboards.weekStart);
 
+/** `userId`'s current streak, as their stat board shows it. */
+const statBoardStreak = async (viewerId: string, userId: string) => {
+  const response = await test.send("GET", `/api/sticker-boards/${userId}/user-stats`, {
+    as: viewerId,
+  });
+  return (await bodyOf(response, userStatsResponseSchema)).userStats.streak;
+};
+
 const msAfter = (at: Date, ms: number) => new Date(at.getTime() + ms);
 
-/** When today began on Explore's clock. */
-const todayStart = () =>
-  exploreDayStart(exploreDay(test.clock.now(), EXPLORE_TIME_ZONE), EXPLORE_TIME_ZONE);
+/** When the ticket day `daysAgo` days before today's began. */
+const dayStart = (daysAgo = 0) =>
+  tokyoTicketDayStart(addDays(tokyoTicketDay(test.clock.now()), -daysAgo));
 
 /** Moments a minute apart from `start`: each call answers the next. */
 function minuteByMinute(start: Date) {
@@ -101,24 +103,16 @@ function summary(entry: Explore["activity"][number]) {
   };
 }
 
-/** Weekday, hour and minute on Tokyo's clock. */
-function tokyoClock(at: Date) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: EXPLORE_TIME_ZONE,
-    weekday: "long",
-    hour: "numeric",
-    minute: "numeric",
-    hourCycle: "h23",
-  }).formatToParts(at);
-  const part = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((found) => found.type === type)?.value;
-  return { weekday: part("weekday"), hour: Number(part("hour")), minute: Number(part("minute")) };
-}
+/** The weekday of the ticket day `at` falls in. */
+const weekdayOf = (at: Date) =>
+  new Intl.DateTimeFormat("en-US", { weekday: "long", timeZone: "UTC" }).format(
+    new Date(tokyoTicketDay(at)),
+  );
 
 describe("GET /api/explore", () => {
-  it("lists stickers sealed since today began in Tokyo, newest first, up to EXPLORE_LIST_SIZE", async () => {
+  it("lists stickers sealed since today's ticket day began, newest first, up to EXPLORE_LIST_SIZE", async () => {
     const me = insertUser(test.db);
-    const start = todayStart();
+    const start = dayStart();
     seal(me, msAfter(start, -1));
     const atStart = seal(me, start);
     expect(stickerIds((await exploreAs(me)).todaysStickers)).toEqual([atStart]);
@@ -131,7 +125,7 @@ describe("GET /api/explore", () => {
   it("interleaves seals and receives newest first, each receive with its giver and receiver, up to EXPLORE_LIST_SIZE", async () => {
     const artist = insertUser(test.db);
     const friend = insertUser(test.db);
-    const next = minuteByMinute(todayStart());
+    const next = minuteByMinute(dayStart());
     const first = seal(artist, next());
     const second = seal(artist, next());
     const firstGift = giveSticker(test.db, first, artist, friend, next());
@@ -158,14 +152,11 @@ describe("GET /api/explore", () => {
     expect(activity.map(({ sticker }) => sticker.id)).toEqual([...newer].reverse());
   });
 
-  it("starts the week at the start of Monday in Tokyo, the last one before now", async () => {
+  it("starts the week as Monday's ticket day starts, the last one before now", async () => {
     const me = insertUser(test.db);
     const weekStart = await weekStartFor(me);
-    expect(tokyoClock(weekStart)).toEqual({
-      weekday: "Monday",
-      hour: EXPLORE_DAY_START_HOUR,
-      minute: 0,
-    });
+    expect(weekdayOf(weekStart)).toBe("Monday");
+    expect(weekStart).toEqual(tokyoTicketDayStart(tokyoTicketDay(weekStart)));
     expect(weekStart.getTime()).toBeLessThanOrEqual(test.clock.now().getTime());
     expect(test.clock.now().getTime() - weekStart.getTime()).toBeLessThan(WEEK_MS);
 
@@ -219,26 +210,25 @@ describe("GET /api/explore", () => {
     ]);
   });
 
-  it("ranks longestStreak by current streaks, each in its person's own zone, leaving out people at 0", async () => {
-    const tokyo = insertUser(test.db);
-    const newYork = insertUser(test.db, { timeZone: NEW_YORK });
+  it("ranks longestStreak by current streaks over ticket days, as stat boards count them, leaving out people at 0", async () => {
+    const steady = insertUser(test.db);
+    const nightOwl = insertUser(test.db);
     const lapsed = insertUser(test.db);
-    const today = exploreDay(test.clock.now(), EXPLORE_TIME_ZONE);
-    for (let daysAgo = 0; daysAgo < LONG_STREAK; daysAgo++) {
-      seal(tokyo, exploreDayStart(addDays(today, -daysAgo), EXPLORE_TIME_ZONE));
-    }
-    // New York's yesterday and today, both within one of Tokyo's days.
-    const newYorkToday = exploreDayStart(exploreDay(test.clock.now(), NEW_YORK), NEW_YORK);
-    const newYorkSeals = [msAfter(newYorkToday, -1), newYorkToday];
-    for (const sealedAt of newYorkSeals) seal(newYork, sealedAt);
-    const dayBeforeYesterday = addDays(addDays(today, -1), -1);
-    seal(lapsed, exploreDayStart(dayBeforeYesterday, EXPLORE_TIME_ZONE));
+    for (let daysAgo = 0; daysAgo < LONG_STREAK; daysAgo++) seal(steady, dayStart(daysAgo));
+    // Just before and just after midnight in Tokyo: two ticket days.
+    const aroundMidnight = [msAfter(dayStart(), -1), dayStart()];
+    for (const sealedAt of aroundMidnight) seal(nightOwl, sealedAt);
+    // The last moment of the day before yesterday, so yesterday was missed.
+    seal(lapsed, msAfter(dayStart(1), -1));
 
     const { longestStreak } = (await exploreAs(lapsed)).leaderboards;
     expect(idsAndValues(longestStreak)).toEqual([
-      [tokyo, LONG_STREAK],
-      [newYork, newYorkSeals.length],
+      [steady, LONG_STREAK],
+      [nightOwl, aroundMidnight.length],
     ]);
+    for (const { person, value } of longestStreak) {
+      expect(await statBoardStreak(lapsed, person.id)).toBe(value);
+    }
   });
 
   it("lists at most LEADERBOARD_SIZE people per board, ties A to Z by handle, and no deleted account", async () => {

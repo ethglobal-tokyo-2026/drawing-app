@@ -81,11 +81,7 @@ export function SessionGate({
           detail: "LINE gave no ID token, though it's logged in",
         });
       }
-      return session.signIn({
-        idToken: token,
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        language: currentLanguage(),
-      });
+      return session.signIn({ idToken: token, language: currentLanguage() });
     };
     /** A session resumed without LINE's token; signing in again, behind it, brings LINE's news. */
     const resumed = async (me: Me) => {

@@ -94,7 +94,7 @@ export const explore = {
     /** Explore tab, This week view: screen readers' heading for the leaderboards */
     title: { en: "This week", ja: "今週" },
     /** Explore tab, This week view: fine print under the leaderboard, when the week's leaderboards start over */
-    resets: { en: "Resets Monday 4:00", ja: "月曜4:00にリセット" },
+    resets: { en: "Resets Monday 12:00 AM", ja: "月曜0:00にリセット" },
     /** Explore tab, This week view: screen readers' name for the row of three leaderboard tabs */
     leaderboards: { en: "This week's leaderboards", ja: "今週のランキング" },
     /** Explore tab, This week view: fine print in place of the rows when the chosen leaderboard has no one on it this week */

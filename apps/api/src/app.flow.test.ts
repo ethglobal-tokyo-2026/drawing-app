@@ -17,8 +17,6 @@ const CREATED = 201;
 /** LINE accounts, as the fake LINE verifier reads them from their ID tokens. */
 const ALICE: LineProfile = { sub: "line-alice", name: "Alice" };
 const BOB: LineProfile = { sub: "line-bob", name: "Bob" };
-/** The zone both phones report at sign-in. */
-const DEVICE_ZONE = "Asia/Tokyo";
 /** A 1:1 chat, where a Gift Message is received. */
 const ONE_TO_ONE = "utou";
 /** The escrow transfer's hash, as Alice's smart wallet reports it. */
@@ -62,9 +60,7 @@ async function answered<Answer extends ClientResponse<unknown>>(
 async function signIn(test: TestApp, profile: LineProfile) {
   const api = clientFor(test);
   const { me } = await answered(
-    api.session.$post({
-      json: { idToken: devIdToken(profile), timeZone: DEVICE_ZONE, language: "en" },
-    }),
+    api.session.$post({ json: { idToken: devIdToken(profile), language: "en" } }),
     OK,
   );
   return { api, me };
