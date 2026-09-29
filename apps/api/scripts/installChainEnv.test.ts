@@ -31,7 +31,13 @@ function setup() {
 
 const LINE_CHANNEL = `LINE_MESSAGING_CHANNEL_ID=2000000001\nLINE_MESSAGING_CHANNEL_SECRET=${"ab".repeat(16)}\n`;
 
-describe("install-chain-env.mjs", () => {
+/**
+ * Each test starts node several times, and `pnpm check` runs every package's tests at once, which
+ * can slow that past vitest's default timeout.
+ */
+const NODE_RUNS_TIMEOUT_MS = 30_000;
+
+describe("install-chain-env.mjs", { timeout: NODE_RUNS_TIMEOUT_MS }, () => {
   it("reuses remote Privy credentials without replacing other chain values or exposing secrets", () => {
     const { chain, auth, input, run } = setup();
     writeFileSync(
