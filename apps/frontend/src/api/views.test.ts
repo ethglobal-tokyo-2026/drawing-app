@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { i18next } from "../i18n/i18n";
+import { strings } from "../i18n/strings";
 import { people, sticker } from "./testFixtures";
 import { toPerson, toSticker } from "./views";
 
@@ -26,9 +28,19 @@ describe("toSticker", () => {
 });
 
 describe("toPerson", () => {
+  afterEach(() => i18next.changeLanguage("en"));
+
   it("names someone by their LINE name, then their handle", () => {
     expect(toPerson(people.bob).name).toBe("Bob Tanaka");
     expect(toPerson({ ...people.bob, lineDisplayName: null }).name).toBe("@bob");
-    expect(toPerson({ ...people.bob, lineDisplayName: null, handle: null }).name).toBe("Someone");
   });
+
+  it.each(["en", "ja"] as const)(
+    "names someone with neither in the catalog's %s",
+    async (language) => {
+      await i18next.changeLanguage(language);
+      const unnamed = toPerson({ ...people.bob, lineDisplayName: null, handle: null });
+      expect(unnamed.name).toBe(strings.api.person.unnamed[language]);
+    },
+  );
 });
