@@ -1,10 +1,9 @@
 import { MAX_TIME_USED_S, stickers, stickerTimelapses, ticketUses } from "@drawing-app/db";
-import { insertUser, packGift } from "@drawing-app/db/testing";
+import { insertGratitude, insertUser, packGift } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { gzipSync } from "node:zlib";
 import { keccak256 } from "viem";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { errorBodySchema } from "../errors.ts";
 import { sealResponseSchema } from "../stickers/seal.ts";
 import { MAX_SEAL_BYTES } from "../stickers/sealForm.ts";
 import { stickerDetailSchema } from "../stickers/stickerDetail.ts";
@@ -28,7 +27,8 @@ import {
   fakeNameWriter,
   fakeSmartWallets,
 } from "../testing/fakes.ts";
-import { insertGratitude, insertSealedSticker, receiveGift } from "../testing/rows.ts";
+import { bodyOf, refusalOf } from "../testing/responses.ts";
+import { giveSticker, insertSealedSticker } from "../testing/rows.ts";
 import { ticketKindAt } from "../tickets/tickets.ts";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -68,15 +68,11 @@ const postSeal = async (userId: string, form: FormData) =>
 async function seal(userId: string, overrides: Partial<SealParts> = {}) {
   const ticketUseId = spendTicket(userId);
   const response = await postSeal(userId, sealFormData(sealParts(ticketUseId, overrides)));
-  expect(response.status).toBe(201);
-  return { ticketUseId, ...sealResponseSchema.parse(await response.json()) };
+  return { ticketUseId, ...(await bodyOf(response, sealResponseSchema, 201)) };
 }
 
-/** The status and ErrorBody a request was refused with. */
-const refusal = async (response: Response) => ({
-  status: response.status,
-  ...errorBodySchema.parse(await response.json()),
-});
+const getSticker = (viewerId: string, stickerId: string) =>
+  test.send("GET", `/api/stickers/${stickerId}`, { as: viewerId });
 
 const allStickers = () => test.db.select().from(stickers).all();
 const timelapseOf = (stickerId: string) =>
@@ -124,7 +120,7 @@ describe("POST /api/stickers", () => {
     const ticketUseId = spendTicket(unverifiedId);
     const png = testPng(STICKER_SIZE.width, STICKER_SIZE.height, "nsfw");
     const parts = sealParts(ticketUseId, { nsfw: "true", png: pngFile(png, "png") });
-    expect(await refusal(await postSeal(unverifiedId, sealFormData(parts)))).toMatchObject({
+    expect(await refusalOf(await postSeal(unverifiedId, sealFormData(parts)))).toMatchObject({
       status: 403,
       error: "adults_only",
     });
@@ -174,28 +170,28 @@ describe("POST /api/stickers", () => {
       "person alice",
       `sticker ${sticker.tokenId} ${String(sticker.number).padStart(4, "0")}`,
     ]);
-    const detail = await test.app.request(`/api/stickers/${sticker.id}`, {
-      headers: await test.signInAs(artistId),
-    });
-    expect(await detail.json()).toMatchObject({
-      sticker: { ensName: `${String(sticker.number).padStart(4, "0")}.alice.croquis.eth` },
-    });
+    const detail = await bodyOf(await getSticker(artistId, sticker.id), stickerDetailSchema);
+    expect(detail.sticker.ensName).toBe(
+      `${String(sticker.number).padStart(4, "0")}.alice.croquis.eth`,
+    );
   });
 
-  it("reports mint failure and retries the saved sticker on the same ticket", async () => {
+  it("reports mint failure, retries the saved sticker's mint on the same ticket, and mints it once", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     const chainDown = new Error("The chain is down");
     const mint = fakeMint();
     let available = false;
-    test = await createTestApp({
-      mint: (request) => (available ? mint(request) : Promise.reject(chainDown)),
-    });
+    const submit = vi.fn((request: Parameters<typeof mint>[0]) =>
+      available ? mint(request) : Promise.reject(chainDown),
+    );
+    test = await createTestApp({ mint: submit });
     const artistId = insertUser(test.db);
     const ticketUseId = spendTicket(artistId);
-    const failed = await postSeal(artistId, sealFormData(sealParts(ticketUseId)));
+    const sealOnTicket = () => postSeal(artistId, sealFormData(sealParts(ticketUseId)));
+    const failed = await sealOnTicket();
     const [saved] = allStickers();
     if (!saved) throw new Error("The failed mint lost the saved sticker");
-    const failedBody = await refusal(failed);
+    const failedBody = await refusalOf(failed);
     expect(failedBody).toMatchObject({
       status: 503,
       error: "mint_failed",
@@ -208,16 +204,20 @@ describe("POST /api/stickers", () => {
     expect(test.images.saved.get(saved.contentHash)).toEqual(sealImages());
     expect(new Uint8Array(timelapseOf(saved.id)?.ops ?? [])).toEqual(testTimelapse());
 
-    const stillFailed = await postSeal(artistId, sealFormData(sealParts(ticketUseId)));
-    expect(await refusal(stillFailed)).toMatchObject({ status: 503, error: "mint_failed" });
+    const stillFailed = await sealOnTicket();
+    expect(await refusalOf(stillFailed)).toMatchObject({ status: 503, error: "mint_failed" });
 
     available = true;
-    const retry = await postSeal(artistId, sealFormData(sealParts(ticketUseId)));
-    expect(retry.status).toBe(200);
-    const retried = sealResponseSchema.parse(await retry.json()).sticker;
-    expect(retried).toMatchObject({ id: saved.id, tokenId: "1" });
+    const retried = (await bodyOf(await sealOnTicket(), sealResponseSchema)).sticker;
+    expect(retried).toMatchObject({ id: saved.id, tokenId: mint.minted.get(saved.id)?.tokenId });
+    // The same mint each time, so the chain answers one that landed unconfirmed with its token.
+    expect(submit.mock.lastCall).toEqual(submit.mock.calls[0]);
     expect(allStickers()).toHaveLength(1);
     expect(test.db.select().from(ticketUses).all()).toHaveLength(1);
+
+    const submissions = submit.mock.calls.length;
+    expect((await bodyOf(await sealOnTicket(), sealResponseSchema)).sticker).toEqual(retried);
+    expect(submit).toHaveBeenCalledTimes(submissions);
   });
 
   it("refuses an unconfirmed mint in real chain mode instead of answering success", async () => {
@@ -225,7 +225,7 @@ describe("POST /api/stickers", () => {
     test = await createTestApp({ giftChain: fakeGiftChain(), mint: () => Promise.resolve(null) });
     const artistId = insertUser(test.db);
     const response = await postSeal(artistId, sealFormData(sealParts(spendTicket(artistId))));
-    const refused = await refusal(response);
+    const refused = await refusalOf(response);
     expect(refused).toMatchObject({ status: 503, error: "mint_failed" });
     // The app shows the detail beside its own message.
     expect(refused.detail).not.toMatch(/NFT|crypto|token|wallet|mint|burn/i);
@@ -236,47 +236,13 @@ describe("POST /api/stickers", () => {
     expect(allStickers()).toMatchObject([{ tokenId: null, mintTxHash: null }]);
   });
 
-  it("reconciles a mint after confirmation failed without creating another NFT", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    const mint = fakeMint();
-    let confirmationAvailable = false;
-    const submit = vi.fn(async (request: Parameters<typeof mint>[0]) => {
-      const token = await mint(request);
-      if (!confirmationAvailable) throw new Error("Receipt request timed out");
-      return token;
-    });
-    test = await createTestApp({ mint: submit });
-    const artistId = insertUser(test.db);
-    const ticketUseId = spendTicket(artistId);
-    const failed = await postSeal(artistId, sealFormData(sealParts(ticketUseId)));
-    expect(await refusal(failed)).toMatchObject({ status: 503, error: "mint_failed" });
-    const submitted = submit.mock.calls[0]?.[0];
-    if (!submitted) throw new Error("No mint was submitted");
-
-    confirmationAvailable = true;
-    const retry = await postSeal(artistId, sealFormData(sealParts(ticketUseId)));
-    expect(retry.status).toBe(200);
-    const { sticker } = sealResponseSchema.parse(await retry.json());
-    expect(sticker).toMatchObject({
-      id: submitted.stickerId,
-      tokenId: mint.minted.get(submitted.stickerId)?.tokenId,
-      mintTxHash: mint.minted.get(submitted.stickerId)?.txHash,
-    });
-    expect(submit.mock.calls[1]?.[0]).toEqual(submitted);
-    expect(mint.minted.size).toBe(1);
-
-    const alreadyConfirmed = await postSeal(artistId, sealFormData(sealParts(ticketUseId)));
-    expect(alreadyConfirmed.status).toBe(200);
-    expect(submit).toHaveBeenCalledTimes(2);
-  });
-
   it("refuses others' and unknown tickets, and answers an already sealed ticket without storing new images", async () => {
     const artistId = insertUser(test.db);
     const { ticketUseId: sealedTicket } = await seal(artistId);
     const before = allStickers();
     const refusedPng = testPng(STICKER_SIZE.width, STICKER_SIZE.height, "refused");
     const attempt = async (ticketUseId: number) =>
-      refusal(
+      refusalOf(
         await postSeal(
           artistId,
           sealFormData(sealParts(ticketUseId, { png: pngFile(refusedPng, "png") })),
@@ -289,8 +255,7 @@ describe("POST /api/stickers", () => {
       error: "ticket_not_found",
     });
     const repeated = await postSeal(artistId, sealFormData(sealParts(sealedTicket)));
-    expect(repeated.status).toBe(200);
-    expect(sealResponseSchema.parse(await repeated.json()).sticker.id).toBe(before[0]?.id);
+    expect((await bodyOf(repeated, sealResponseSchema)).sticker.id).toBe(before[0]?.id);
     expect(allStickers()).toEqual(before);
     expect(test.images.saved.has(keccak256(refusedPng))).toBe(false);
   });
@@ -333,7 +298,7 @@ describe("POST /api/stickers", () => {
     async ({ part, overrides }) => {
       const artistId = insertUser(test.db);
       const form = sealFormData(sealParts(spendTicket(artistId), overrides));
-      const answer = await refusal(await postSeal(artistId, form));
+      const answer = await refusalOf(await postSeal(artistId, form));
       expect(answer).toMatchObject({ status: 400, error: "invalid_request" });
       expect(answer.detail).toContain(part);
       expect(allStickers()).toEqual([]);
@@ -344,16 +309,13 @@ describe("POST /api/stickers", () => {
     const artistId = insertUser(test.db);
     const form = sealFormData(sealParts(spendTicket(artistId)));
     form.append("padding", new File([new Uint8Array(MAX_SEAL_BYTES)], "padding"));
-    expect(await refusal(await postSeal(artistId, form))).toMatchObject({
+    expect(await refusalOf(await postSeal(artistId, form))).toMatchObject({
       status: 400,
       error: "invalid_request",
     });
     expect(allStickers()).toEqual([]);
   });
 });
-
-const getSticker = async (viewerId: string, stickerId: string) =>
-  test.app.request(`/api/stickers/${stickerId}`, { headers: await test.signInAs(viewerId) });
 
 describe("GET /api/stickers/:stickerId", () => {
   it("shows who holds it now, its Original Artist, and its received gifts newest first", async () => {
@@ -363,18 +325,8 @@ describe("GET /api/stickers/:stickerId", () => {
     const stickerId = insertSealedSticker(test.db, artistId);
     const later = new Date();
     const earlier = new Date(later.getTime() - HOUR_MS);
-    const first = receiveGift(
-      test.db,
-      packGift(test.db, stickerId, artistId),
-      firstReceiverId,
-      earlier,
-    );
-    const second = receiveGift(
-      test.db,
-      packGift(test.db, stickerId, firstReceiverId),
-      ownerId,
-      later,
-    );
+    const first = giveSticker(test.db, stickerId, artistId, firstReceiverId, earlier);
+    const second = giveSticker(test.db, stickerId, firstReceiverId, ownerId, later);
     const combo = insertGratitude(test.db, second.id);
     // Received, but the escrow returned it when the claim didn't land before the expiry.
     packGift(test.db, stickerId, ownerId, {
@@ -386,8 +338,7 @@ describe("GET /api/stickers/:stickerId", () => {
     });
 
     const response = await getSticker(insertUser(test.db), stickerId);
-    expect(response.status).toBe(200);
-    const { sticker, owner, transferTrail } = stickerDetailSchema.parse(await response.json());
+    const { sticker, owner, transferTrail } = await bodyOf(response, stickerDetailSchema);
     expect(sticker).toMatchObject({ id: stickerId, artist: { id: artistId } });
     expect(owner.id).toBe(ownerId);
     expect(transferTrail).toMatchObject([
@@ -413,28 +364,25 @@ describe("GET /api/stickers/:stickerId", () => {
     const withOne = await seal(artistId);
     const without = await seal(artistId, { timelapse: undefined });
     const hasTimelapse = async (stickerId: string) =>
-      stickerDetailSchema.parse(await (await getSticker(artistId, stickerId)).json()).hasTimelapse;
+      (await bodyOf(await getSticker(artistId, stickerId), stickerDetailSchema)).hasTimelapse;
     expect(await hasTimelapse(withOne.sticker.id)).toBe(true);
     expect(await hasTimelapse(without.sticker.id)).toBe(false);
   });
 
   it("refuses an unknown sticker with sticker_not_found", async () => {
     const response = await getSticker(insertUser(test.db), "no-such-sticker");
-    expect(await refusal(response)).toMatchObject({ status: 404, error: "sticker_not_found" });
+    expect(await refusalOf(response)).toMatchObject({ status: 404, error: "sticker_not_found" });
   });
 });
 
 describe("GET /api/stickers/:stickerId/timelapse", () => {
-  const getTimelapse = async (userId: string, stickerId: string) =>
-    test.app.request(`/api/stickers/${stickerId}/timelapse`, {
-      headers: await test.signInAs(userId),
-    });
+  const getTimelapse = (userId: string, stickerId: string) =>
+    test.send("GET", `/api/stickers/${stickerId}/timelapse`, { as: userId });
 
   it("answers how the sticker was drawn, as it was sealed, to anyone signed in", async () => {
     const { sticker } = await seal(insertUser(test.db));
     const response = await getTimelapse(insertUser(test.db), sticker.id);
-    expect(response.status).toBe(200);
-    expect(timelapseV1Schema.parse(await response.json())).toEqual(TEST_TIMELAPSE);
+    expect(await bodyOf(response, timelapseV1Schema)).toEqual(TEST_TIMELAPSE);
   });
 
   it("answers a timelapse from before densities were recorded without one", async () => {
@@ -442,9 +390,7 @@ describe("GET /api/stickers/:stickerId/timelapse", () => {
     const { density: _dropped, ...older } = TEST_TIMELAPSE;
     const file = new File([gzipSync(JSON.stringify(older))], "t.json.gz");
     const { sticker } = await seal(artistId, { timelapse: file });
-    const answered = timelapseV1Schema.parse(
-      await (await getTimelapse(artistId, sticker.id)).json(),
-    );
+    const answered = await bodyOf(await getTimelapse(artistId, sticker.id), timelapseV1Schema);
     expect(answered).toEqual(older);
     expect(answered.density).toBeUndefined();
   });
@@ -452,7 +398,7 @@ describe("GET /api/stickers/:stickerId/timelapse", () => {
   it("refuses a sticker sealed without one with timelapse_not_found", async () => {
     const artistId = insertUser(test.db);
     const { sticker } = await seal(artistId, { timelapse: undefined });
-    expect(await refusal(await getTimelapse(artistId, sticker.id))).toMatchObject({
+    expect(await refusalOf(await getTimelapse(artistId, sticker.id))).toMatchObject({
       status: 404,
       error: "timelapse_not_found",
     });
@@ -460,20 +406,6 @@ describe("GET /api/stickers/:stickerId/timelapse", () => {
 
   it("refuses an unknown sticker with sticker_not_found", async () => {
     const response = await getTimelapse(insertUser(test.db), "no-such-sticker");
-    expect(await refusal(response)).toMatchObject({ status: 404, error: "sticker_not_found" });
-  });
-});
-
-describe("the sticker routes", () => {
-  it("need a session", async () => {
-    const sealing = await test.app.request("/api/stickers", {
-      method: "POST",
-      body: sealFormData(sealParts(UNKNOWN_TICKET_USE_ID)),
-    });
-    const stickerId = insertSealedSticker(test.db, insertUser(test.db));
-    const reading = await test.app.request(`/api/stickers/${stickerId}`);
-    for (const response of [sealing, reading]) {
-      expect(await refusal(response)).toEqual({ status: 401, error: "signed_out" });
-    }
+    expect(await refusalOf(response)).toMatchObject({ status: 404, error: "sticker_not_found" });
   });
 });

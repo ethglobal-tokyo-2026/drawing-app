@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ONE_TAP } from "../testing/rows.ts";
+import { ONE_TAP } from "@drawing-app/db/testing";
 import type { RecordGratitude } from "./record.ts";
 import { STAGE_UNITS, type ReplayV1 } from "./replay.ts";
 

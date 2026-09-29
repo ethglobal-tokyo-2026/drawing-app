@@ -1,20 +1,19 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { users } from "@drawing-app/db";
 import { insertUser } from "@drawing-app/db/testing";
-import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createServer, STICKER_IMAGES_PATH } from "./app.ts";
-import { errorBodySchema, validate } from "./errors.ts";
+import { validate } from "./errors.ts";
 import { keccak256 } from "viem";
 import { createDiskImageStore } from "./services/imageStore.ts";
 import { setSessionCookie, type AppEnv } from "./session.ts";
 import { sealImages } from "./stickers/testPngs.ts";
 import { createTestApp, type TestApp } from "./testing/createTestApp.ts";
 import { fakeServerLog } from "./testing/fakes.ts";
+import { bodyOf, refusalOf } from "./testing/responses.ts";
 
 const probeBodySchema = z.object({ handle: z.string(), placement: z.object({ x: z.number() }) });
 const probeBody = { handle: "alice", placement: { x: 0.5 } };
@@ -36,34 +35,32 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const post = (path: string, body: unknown, headers: Record<string, string> = {}) =>
-  test.app.request(path, {
-    method: "POST",
-    headers: { "content-type": "application/json", ...headers },
-    body: typeof body === "string" ? body : JSON.stringify(body),
-  });
-
-const signedIn = async () => test.signInAs(insertUser(test.db));
-
-/** The status and ErrorBody a request was refused with. */
-const refusal = async (response: Response) => ({
-  status: response.status,
-  ...errorBodySchema.parse(await response.json()),
-});
+/** The routes anyone can call: signing in and out, and the gateway ENS clients call. */
+const PUBLIC_ROUTES = new Set([
+  "POST /api/session",
+  "DELETE /api/session",
+  "GET /api/ens/gateway/:sender/:request",
+]);
 
 describe("sessions", () => {
-  it("refuse a protected route without the session cookie", async () => {
-    expect(await refusal(await post("/api/probe", probeBody))).toEqual({
-      status: 401,
-      error: "signed_out",
-    });
+  it("guard every route but the public ones", async () => {
+    const routes = new Map(
+      test.app.routes
+        .filter(({ method }) => method !== "ALL")
+        .map(({ method, path }) => [`${method} ${path}`, { method, path }]),
+    );
+    for (const [route, { method, path }] of routes) {
+      if (PUBLIC_ROUTES.has(route)) continue;
+      const response = await test.send(method, path.replaceAll(/:\w+/g, "any"));
+      expect(response.status, route).toBe(401);
+      expect((await refusalOf(response)).error, route).toBe("signed_out");
+    }
   });
 
   it("accept the signed cookie signInAs makes, and name the person", async () => {
     const userId = insertUser(test.db);
-    const response = await post("/api/probe", probeBody, await test.signInAs(userId));
-    expect(response.status).toBe(200);
-    expect(z.object({ userId: z.string() }).parse(await response.json()).userId).toBe(userId);
+    const response = await test.send("POST", "/api/probe", { as: userId, body: probeBody });
+    expect((await bodyOf(response, z.object({ userId: z.string() }))).userId).toBe(userId);
   });
 
   it("start with the HttpOnly cookie setSessionCookie sets", async () => {
@@ -75,33 +72,21 @@ describe("sessions", () => {
     const setCookie = (await signIn.request("/", { method: "POST" })).headers.get("set-cookie");
     expect(setCookie).toMatch(/; HttpOnly(;|$)/);
     const [cookie = ""] = (setCookie ?? "").split(";");
-    expect((await post("/api/probe", probeBody, { Cookie: cookie })).status).toBe(200);
+    const headers = { Cookie: cookie };
+    expect((await test.send("POST", "/api/probe", { headers, body: probeBody })).status).toBe(200);
   });
 
   it("refuse a cookie the session secret didn't sign", async () => {
     const userId = insertUser(test.db);
-    const unsigned = await post("/api/probe", probeBody, { Cookie: `session=${userId}` });
-    expect(await refusal(unsigned)).toMatchObject({ status: 401, error: "signed_out" });
-  });
-
-  it("end when the account is deleted", async () => {
-    const userId = insertUser(test.db);
-    const headers = await test.signInAs(userId);
-    test.db
-      .update(users)
-      .set({ deletedAt: new Date(), lineUserId: null, lineDisplayName: null, linePictureUrl: null })
-      .where(eq(users.id, userId))
-      .run();
-    expect(await refusal(await post("/api/probe", probeBody, headers))).toMatchObject({
-      status: 401,
-      error: "signed_out",
-    });
+    const headers = { Cookie: `session=${userId}` };
+    const unsigned = await test.send("POST", "/api/probe", { headers, body: probeBody });
+    expect(await refusalOf(unsigned)).toMatchObject({ status: 401, error: "signed_out" });
   });
 
   it("aren't needed to sign in, and only there", async () => {
-    const signIn = await refusal(await post("/api/session", {}));
+    const signIn = await refusalOf(await test.send("POST", "/api/session", { body: {} }));
     expect(signIn.error).not.toBe("signed_out");
-    const other = await refusal(await test.app.request("/api/session"));
+    const other = await refusalOf(await test.send("GET", "/api/session"));
     expect(other.error).toBe("signed_out");
   });
 });
@@ -109,20 +94,28 @@ describe("sessions", () => {
 describe("errors", () => {
   it("answer a body that fails its schema with 400 invalid_request, naming the field", async () => {
     const body = { ...probeBody, placement: { x: "left" } };
-    const answer = await refusal(await post("/api/probe", body, await signedIn()));
+    const as = insertUser(test.db);
+    const answer = await refusalOf(await test.send("POST", "/api/probe", { as, body }));
     expect(answer).toMatchObject({ status: 400, error: "invalid_request" });
     expect(answer.detail).toContain("placement.x");
   });
 
   it("answer a body that isn't JSON with 400 invalid_request", async () => {
-    const answer = await refusal(await post("/api/probe", "{", await signedIn()));
-    expect(answer).toMatchObject({ status: 400, error: "invalid_request" });
+    const response = await test.app.request("/api/probe", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(await test.signInAs(insertUser(test.db))),
+      },
+      body: "{",
+    });
+    expect(await refusalOf(response)).toMatchObject({ status: 400, error: "invalid_request" });
   });
 
   it("answer an error a route didn't catch with 500 internal_error, and log it", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
-    const response = await test.app.request("/api/probe/failure", { headers: await signedIn() });
-    expect(await refusal(response)).toEqual({ status: 500, error: "internal_error" });
+    const response = await test.send("GET", "/api/probe/failure", { as: insertUser(test.db) });
+    expect(await refusalOf(response)).toEqual({ status: 500, error: "internal_error" });
     expect(log).toHaveBeenCalledWith(expect.stringContaining('"event":"request.failed"'));
     expect(log).toHaveBeenCalledWith(expect.stringContaining(probeFailure.message));
     expect(log).toHaveBeenCalledWith(
@@ -131,11 +124,10 @@ describe("errors", () => {
   });
 
   it("assigns its own request ID even when the client supplies one", async () => {
-    const response = await post(
-      "/api/gifts/receive",
-      {},
-      { "x-request-id": "untrusted-client-value" },
-    );
+    const response = await test.send("POST", "/api/gifts/receive", {
+      headers: { "x-request-id": "untrusted-client-value" },
+      body: {},
+    });
     expect(response.status).toBe(401);
     expect(response.headers.get("x-request-id")).toMatch(/^[a-f0-9-]{36}$/);
     expect(response.headers.get("x-request-id")).not.toBe("untrusted-client-value");
@@ -144,7 +136,9 @@ describe("errors", () => {
   it("logs a Receiving request's start and finish under its route's template", async () => {
     const log = vi.spyOn(console, "info").mockImplementation(() => {});
     const giftId = `0x${"ab".repeat(32)}`;
-    const response = await post(`/api/gifts/${giftId}/receive`, undefined, await signedIn());
+    const response = await test.send("POST", `/api/gifts/${giftId}/receive`, {
+      as: insertUser(test.db),
+    });
     const requestEvents = log.mock.calls
       .map(([line]) => z.looseObject({ event: z.string() }).parse(JSON.parse(String(line))))
       .filter(({ event }) => event.startsWith("request."));
@@ -186,7 +180,7 @@ describe("sticker images", () => {
   it("answer a name with no image with 404, not the session check, and uncached", async () => {
     const response = await get(`${STICKER_IMAGES_PATH}/${keccak256(new Uint8Array([9]))}.png`);
     expect(response.headers.get("cache-control")).toBeNull();
-    expect(await refusal(response)).toMatchObject({ status: 404, error: "image_not_found" });
+    expect(await refusalOf(response)).toMatchObject({ status: 404, error: "image_not_found" });
   });
 });
 

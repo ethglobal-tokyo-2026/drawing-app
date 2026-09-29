@@ -17,12 +17,13 @@ import { privateKeyToAccount } from "viem/accounts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import type { NameWriter } from "../deps.ts";
-import { labelFromHandle } from "../ens/labels.ts";
+import { fallbackLabel, labelFromHandle } from "../ens/labels.ts";
 import { nameEverything } from "../ens/naming.ts";
 import { devIdToken } from "../services/devSignIn.ts";
 import { meSchema, personSchema } from "../shapes.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { fakeEns, fakeNameWriter, fakeSmartWallets, TEST_GATEWAY_KEY } from "../testing/fakes.ts";
+import { bodyOf, refusalOf } from "../testing/responses.ts";
 import { insertSealedSticker } from "../testing/rows.ts";
 
 const profileAbi = parseAbi([
@@ -31,6 +32,7 @@ const profileAbi = parseAbi([
   "function multicall(bytes[] calls) view returns (bytes[])",
 ]);
 const gatewayBodySchema = z.object({ data: z.string() });
+const meBodySchema = z.object({ me: meSchema });
 const SMART_ACCOUNT = "0x00000000000000000000000000000000000a11ce";
 
 let test: TestApp;
@@ -47,29 +49,17 @@ async function setup(writer: NameWriter | null = null) {
 }
 
 const signIn = async (name: string) => {
-  const response = await test.app.request("/api/session", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      idToken: devIdToken({ sub: `line-${name}`, name }),
-      timeZone: "Asia/Tokyo",
-      language: "en",
-    }),
+  const idToken = devIdToken({ sub: `line-${name}`, name });
+  const response = await test.send("POST", "/api/session", {
+    body: { idToken, timeZone: "Asia/Tokyo", language: "en" },
   });
   const [cookie = ""] = (response.headers.get("set-cookie") ?? "").split(";");
-  return {
-    me: z.object({ me: meSchema }).parse(await response.json()).me,
-    headers: { Cookie: cookie },
-  };
+  return { me: (await bodyOf(response, meBodySchema)).me, headers: { Cookie: cookie } };
 };
 
 const setHandle = async (headers: Record<string, string>, handle: string) => {
-  const response = await test.app.request("/api/me/handle", {
-    method: "POST",
-    headers: { "content-type": "application/json", ...headers },
-    body: JSON.stringify({ handle }),
-  });
-  return z.object({ me: meSchema }).parse(await response.json()).me;
+  const response = await test.send("POST", "/api/me/handle", { headers, body: { handle } });
+  return (await bodyOf(response, meBodySchema)).me;
 };
 
 /** Asks the gateway what `call` answers for `name`, as an ENS client would. */
@@ -79,14 +69,13 @@ async function askGateway(
   resolver = test.deps.ens?.resolverAddress ?? "",
 ) {
   const request = encodeGatewayRequest(name, call);
-  const response = await test.app.request(`/api/ens/gateway/${resolver}/${request}.json`);
+  const response = await test.send("GET", `/api/ens/gateway/${resolver}/${request}.json`);
   return { request, response };
 }
 
 /** The answer's result, once its signature checks out the way CroquisResolver checks it. */
 async function verifiedResult(request: Hex, response: Response) {
-  expect(response.status).toBe(200);
-  const { data } = gatewayBodySchema.parse(await response.json());
+  const { data } = await bodyOf(response, gatewayBodySchema);
   const resolver = test.deps.ens?.resolverAddress;
   if (!isHex(data) || !resolver || !isAddress(resolver)) throw new Error("No gateway answer");
   const [result, expires, signature] = decodeAbiParameters(
@@ -128,7 +117,7 @@ describe("ENS labels", () => {
     await setup();
     insertUser(test.db, { handle: "Alice-Two", ensLabel: "alice" });
     const { me } = await signIn("ALICE");
-    expect(me.ensName).toMatch(/^artist-[0-9a-f]{8}\.croquis\.eth$/);
+    expect(me.ensName).toBe(`${fallbackLabel(me.id)}.croquis.eth`);
   });
 });
 
@@ -183,8 +172,7 @@ describe("the ENS gateway", () => {
     const node = namehash("alice.croquis.eth");
     const call = encodeFunctionData({ abi: profileAbi, functionName: "text", args: [node, "url"] });
     const { response } = await askGateway("alice.croquis.eth", call);
-    expect(response.status).toBe(500);
-    expect(await response.json()).toMatchObject({ error: "internal_error" });
+    expect(await refusalOf(response)).toMatchObject({ status: 500, error: "internal_error" });
     expect(log).toHaveBeenCalledWith(expect.stringContaining("request.failed"));
   });
 
@@ -195,8 +183,7 @@ describe("the ENS gateway", () => {
       args: [namehash("a.croquis.eth")],
     });
     const { response } = await askGateway("a.croquis.eth", call, `0x${"12".repeat(20)}`);
-    expect(response.status).toBe(404);
-    expect(await response.json()).toMatchObject({ error: "unknown_resolver" });
+    expect(await refusalOf(response)).toMatchObject({ status: 404, error: "unknown_resolver" });
   });
 });
 
@@ -228,11 +215,12 @@ describe("naming", () => {
     expect(namedAt(second)).toBeNull();
 
     const { writer, calls } = fakeNameWriter();
-    test.deps.ens = fakeEns(writer);
+    const ens = fakeEns(writer);
+    test.deps.ens = ens;
     await nameEverything(test.deps, alice);
     expect(calls).toEqual([
       "sticker 2 0002",
-      `avatar eip155:11155111/erc721:${fakeEns().stickerContract.toLowerCase()}/2`,
+      `avatar eip155:${ens.chainId}/erc721:${ens.stickerContract.toLowerCase()}/2`,
     ]);
     expect(namedAt(second)).not.toBeNull();
   });
@@ -240,9 +228,8 @@ describe("naming", () => {
   it("finds a person by their name", async () => {
     await setup();
     const { headers } = await signIn("Alice");
-    const response = await test.app.request("/api/ens/people/Alice", { headers });
-    expect(response.status).toBe(200);
-    expect(z.object({ person: personSchema }).parse(await response.json()).person).toMatchObject({
+    const response = await test.send("GET", "/api/ens/people/Alice", { headers });
+    expect((await bodyOf(response, z.object({ person: personSchema }))).person).toMatchObject({
       handle: "Alice",
       ensName: "alice.croquis.eth",
     });

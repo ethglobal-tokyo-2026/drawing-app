@@ -4,8 +4,6 @@ import { insertUser } from "@drawing-app/db/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { chatMenuLinkSchema, type ChatMenuIds } from "../chatMenu/menus.ts";
-import type { JpycPayment } from "../deps.ts";
-import { errorBodySchema } from "../errors.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import {
   chatMenuThrough,
@@ -15,22 +13,25 @@ import {
   type FakeLine,
 } from "../testing/fakeLine.ts";
 import { fakeTicketPayments, TEST_PAYMENT_TARGET } from "../testing/fakes.ts";
-import { TICKET_PACKS, ticketPaymentReference, type TicketKind } from "../tickets/tickets.ts";
+import { bodyOf, refusalOf } from "../testing/responses.ts";
+import {
+  jpycFor,
+  TICKET_PACKS,
+  ticketPaymentReference,
+  type TicketKind,
+} from "../tickets/tickets.ts";
 
 const linkBodySchema = z.object({ chatMenu: chatMenuLinkSchema });
 
 /** A LINE user ID as LINE writes them: U and 32 hex digits. */
 const LINE_USER_ID = `U${"0123456789abcdef".repeat(2)}`;
 const [ONE_TICKET] = TICKET_PACKS;
-/** A well-formed Sui transaction digest. */
+/** A well-formed Sui transaction digest: the person's payment for ONE_TICKET. */
 const TX_DIGEST = "1".repeat(44);
-
-type Headers = Record<string, string>;
 
 let test: TestApp;
 let line: FakeLine;
 let userId: string;
-let headers: Headers;
 let logged: unknown[][];
 
 /** A fresh app whose chat menu links through a fake LINE, and a person signed in to it. */
@@ -39,31 +40,20 @@ async function start({
   language = "en",
 }: { ids?: ChatMenuIds; language?: "en" | "ja" } = {}) {
   line = createFakeLine();
-  const sui = fakeTicketPayments(
-    new Map<string, JpycPayment[]>([
-      [
-        TX_DIGEST,
-        [
-          {
-            vault: TEST_PAYMENT_TARGET.vault,
-            payer: `0x${"d".repeat(64)}`,
-            amount: BigInt(ONE_TICKET.priceYen) * 10n ** BigInt(TEST_PAYMENT_TARGET.decimals),
-            reference: ticketPaymentReference("00000000-0000-4000-8000-000000000001"),
-          },
-        ],
-      ],
-    ]),
-  );
+  const sui = fakeTicketPayments();
   test = await createTestApp((base) => ({
     ...chatMenuThrough(line, ids)(base),
     ticketPayments: sui.ticketPayments,
   }));
-  userId = insertUser(test.db, {
-    id: "00000000-0000-4000-8000-000000000001",
-    lineUserId: LINE_USER_ID,
-    language,
-  });
-  headers = await test.signInAs(userId);
+  userId = insertUser(test.db, { lineUserId: LINE_USER_ID, language });
+  sui.transactions.set(TX_DIGEST, [
+    {
+      vault: TEST_PAYMENT_TARGET.vault,
+      payer: `0x${"d".repeat(64)}`,
+      amount: jpycFor(ONE_TICKET.priceYen, TEST_PAYMENT_TARGET.decimals),
+      reference: ticketPaymentReference(userId),
+    },
+  ]);
 }
 
 beforeEach(async () => {
@@ -85,22 +75,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const linkMenu = (as: Headers = headers) =>
-  test.app.request("/api/line-menu", { method: "POST", headers: as });
+const linkMenu = () => test.send("POST", "/api/line-menu", { as: userId });
 
 /** Asks for the chat menu, which must answer 200, and returns what LINE shows. */
-async function linkedMenu() {
-  const response = await linkMenu();
-  expect(response.status).toBe(200);
-  return linkBodySchema.parse(await response.json()).chatMenu;
-}
+const linkedMenu = async () => (await bodyOf(await linkMenu(), linkBodySchema)).chatMenu;
 
-const post = (path: string, body: object) =>
-  test.app.request(path, {
-    method: "POST",
-    headers: { ...headers, "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
+const post = (path: string, body: object) => test.send("POST", path, { as: userId, body });
 
 const spend = (kind: TicketKind) => post("/api/tickets/spend", { kind });
 
@@ -162,9 +142,10 @@ describe("POST /api/line-menu", () => {
       new TypeError("fetch failed"),
     ]) {
       line.failNext("link", failure);
-      const response = await linkMenu();
-      expect(response.status).toBe(502);
-      expect(errorBodySchema.parse(await response.json()).error).toBe("line_unavailable");
+      expect(await refusalOf(await linkMenu())).toMatchObject({
+        status: 502,
+        error: "line_unavailable",
+      });
     }
     expect(await linkedMenu()).toEqual({ status: "linked", menu: "3" });
   });
@@ -172,14 +153,7 @@ describe("POST /api/line-menu", () => {
   it("says the chat menu is off when the server has no Messaging API channel", async () => {
     test = await createTestApp();
     userId = insertUser(test.db, { lineUserId: LINE_USER_ID });
-    headers = await test.signInAs(userId);
     expect(await linkedMenu()).toEqual({ status: "off", reason: "not_configured" });
-  });
-
-  it("answers 401 signed_out without a session", async () => {
-    const response = await linkMenu({});
-    expect(response.status).toBe(401);
-    expect(line.calls).toEqual([]);
   });
 
   it("reuses the channel access token", async () => {
@@ -255,7 +229,7 @@ describe("POST /api/me/language-choice", () => {
 describe("DELETE /api/me", () => {
   it("unlinks the chat menu, so LINE shows the default one", async () => {
     await linkedMenu();
-    const response = await test.app.request("/api/me", { method: "DELETE", headers });
+    const response = await test.send("DELETE", "/api/me", { as: userId });
     expect(response.status).toBe(204);
     await test.deps.lineChatMenu.idle();
     expect(line.links.has(LINE_USER_ID)).toBe(false);
