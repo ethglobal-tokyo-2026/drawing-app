@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { SEAL_RECEIPT_TIMEOUT_MS } from "@drawing-app/sticker-chain/seal-sticker";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import {
   encodeAbiParameters,
   encodeEventTopics,
@@ -9,7 +10,13 @@ import {
 } from "viem";
 import { sepolia } from "viem/chains";
 import { captureLogLines, type LogLines } from "../testing/logLines.ts";
-import { createStickerChain, rpcTransport } from "./stickerChain.ts";
+import {
+  CLAIM_RECEIPT_TIMEOUT_MS,
+  createStickerChain,
+  RPC_REQUEST_TIMEOUT_MS,
+  RPC_RETRY_COUNT,
+  rpcTransport,
+} from "./stickerChain.ts";
 import { stickerImageUrls } from "./imageStore.ts";
 
 const rpc = vi.hoisted(() => ({
@@ -126,13 +133,45 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("the RPC transport", () => {
+  const ONE = "https://rpc.test/one";
+  const TWO = "https://rpc.test/two";
+  const BOTH = `${ONE}, ${TWO}`;
+  const membersOf = (transport: ReturnType<ReturnType<typeof rpcTransport>>) =>
+    transport.value && "transports" in transport.value ? transport.value.transports : [];
+
+  /** The URLs one request through `rpcUrl` asks, in order, while every URL answers 503. */
+  async function urlsAskedWhileDown(rpcUrl: string) {
+    const asked: string[] = [];
+    vi.stubGlobal("fetch", async (url: string) => {
+      asked.push(url);
+      return new Response(null, { status: 503 });
+    });
+    onTestFinished(() => {
+      vi.unstubAllGlobals();
+    });
+    await expect(
+      rpcTransport(rpcUrl)({ chain: sepolia }).request({ method: "eth_blockNumber" }),
+    ).rejects.toThrow();
+    return asked;
+  }
+
   it("is one URL's, or tries several separated by commas in turn", () => {
-    expect(rpcTransport("https://rpc.test/one")({ chain: sepolia }).config.type).toBe("http");
-    const several = rpcTransport("https://rpc.test/one, https://rpc.test/two")({ chain: sepolia });
+    expect(rpcTransport(ONE)({ chain: sepolia }).config.type).toBe("http");
+    const several = rpcTransport(BOTH)({ chain: sepolia });
     expect(several.config.type).toBe("fallback");
-    expect(several.value && "transports" in several.value && several.value.transports).toHaveLength(
-      2,
+    expect(membersOf(several)).toHaveLength(2);
+  });
+
+  it("bounds each request's time, and retries a failed one through every URL", async () => {
+    const attempts = RPC_RETRY_COUNT + 1;
+    expect(await urlsAskedWhileDown(ONE)).toEqual(Array.from({ length: attempts }, () => ONE));
+    expect(await urlsAskedWhileDown(BOTH)).toEqual(
+      Array.from({ length: attempts }, () => [ONE, TWO]).flat(),
     );
+    expect(rpcTransport(ONE)({ chain: sepolia }).config.timeout).toBe(RPC_REQUEST_TIMEOUT_MS);
+    expect(
+      membersOf(rpcTransport(BOTH)({ chain: sepolia })).map(({ config }) => config.timeout),
+    ).toEqual([RPC_REQUEST_TIMEOUT_MS, RPC_REQUEST_TIMEOUT_MS]);
   });
 });
 
@@ -153,6 +192,10 @@ describe("Sepolia sticker adapter", () => {
     );
 
     expect(rpc.writeContract).toHaveBeenCalledOnce();
+    expect(rpc.waitForTransactionReceipt).toHaveBeenCalledWith({
+      hash: TX,
+      timeout: SEAL_RECEIPT_TIMEOUT_MS,
+    });
     expect(rpc.simulateContract).toHaveBeenCalledWith(
       expect.objectContaining({
         functionName: "sealSticker",
@@ -200,7 +243,10 @@ describe("Sepolia sticker adapter", () => {
         args: [GIFT_ID, BOB, expect.any(BigInt), expect.stringMatching(/^0x/)],
       }),
     );
-    expect(rpc.waitForTransactionReceipt).toHaveBeenCalledWith({ hash: TX });
+    expect(rpc.waitForTransactionReceipt).toHaveBeenCalledWith({
+      hash: TX,
+      timeout: CLAIM_RECEIPT_TIMEOUT_MS,
+    });
     logs.expectLogged("chain.claim.submitted", {
       giftId: GIFT_ID,
       recipientId: "bob",

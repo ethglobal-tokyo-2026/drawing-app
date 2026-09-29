@@ -1,7 +1,10 @@
 import type { Account, Address, Hash, PublicClient, WalletClient } from "viem";
 import { croquisNamesAbi } from "@drawing-app/sticker-chain/contracts";
 
-/** How long a naming transaction may take to land before it counts as failed. */
+/**
+ * How long a naming transaction may take to land before it counts as failed. Naming runs after the
+ * request that queued it has answered, so the app never waits on it.
+ */
 const RECEIPT_TIMEOUT_MS = 120_000;
 
 interface NamingProgress {

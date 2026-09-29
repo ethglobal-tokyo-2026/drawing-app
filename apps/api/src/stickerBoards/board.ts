@@ -3,7 +3,7 @@ import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import type { ImageStore } from "../deps.ts";
 import { isoTimeSchema, personSchema, toIsoTime, toPerson } from "../shapes.ts";
-import { simplifiedOutline } from "../stickers/outline.ts";
+import { simplifiedOutlineOf } from "../stickers/outline.ts";
 import {
   giftSchema,
   placementSchema,
@@ -147,7 +147,7 @@ export function loadStickerBoard(
         seenAt: own ? stickerPlacement.seenAt : null,
         sticker: {
           ...toSticker(sticker, artist, urls),
-          outline: simplifiedOutline(sticker.outline, sticker.width, sticker.height),
+          outline: simplifiedOutlineOf(sticker),
         },
         held,
         givenTo: held ? null : (givenTo.get(sticker.id) ?? null),

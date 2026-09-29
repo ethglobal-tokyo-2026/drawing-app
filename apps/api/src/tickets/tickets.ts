@@ -10,7 +10,7 @@ import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import type { TicketPaymentTarget } from "../deps.ts";
 import { isoTimeSchema, toIsoTime, type Tickets, type TicketShop } from "../shapes.ts";
-import { simplifiedOutline } from "../stickers/outline.ts";
+import { simplifiedOutlineOf } from "../stickers/outline.ts";
 import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
 
 /** A single reserve ticket's price in yen; packs show their discount off it. */
@@ -94,7 +94,7 @@ export function ticketsOf(db: DbOrTx, userId: string, now: Date): Tickets {
       ...use,
       sticker: sticker && {
         ...sticker,
-        outline: simplifiedOutline(sticker.outline, sticker.width, sticker.height),
+        outline: simplifiedOutlineOf(sticker),
       },
     })),
   };
