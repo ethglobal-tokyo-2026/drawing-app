@@ -13,7 +13,8 @@ Croquis's contracts on Ethereum Sepolia, and the TypeScript the REST API and the
 - `./seal-sticker`: `createStickerSealer` mints from the funded sealer, so the artist neither signs nor pays gas. It waits for the receipt and checks the NFT's data and the mint's ERC-721 `Transfer` to the artist; a retry reconciles against the existing NFT instead of minting another. Each stage reaches the host through `onProgress`.
 - `./gift-sticker`: Giving and Receiving, below.
 - `./croquis-names` and `./ens-gateway`: ENS names, below.
-- `./line`, `./line-privy-jwt` and `./auth-http`: the LINE → Privy auth server, below.
+- `./line`: asks LINE who a LIFF ID token names, for the REST API's sign-in and the auth server; its failures are `./auth-error`'s `AuthError`.
+- `./line-privy-jwt` and `./auth-http`: the LINE → Privy auth server, below.
 - `./contracts`: typed ABIs that Wagmi CLI generates from Forge's artifacts in `out/`. Application code imports these instead of writing ABI fragments.
 - `./bytes32`: the check that a value is a bytes32, for gift IDs, claim commitments and content hashes.
 
