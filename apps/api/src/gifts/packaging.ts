@@ -130,7 +130,7 @@ export async function packageGift(
       if (sticker.ownerId !== userId) {
         return refuse("not_yours", `Sticker ${stickerId} is held by someone else`);
       }
-      // gifts.for_user_id carries no foreign key or check, so it's checked here.
+      // The table refuses these too; checking here answers with a refusal the app can show.
       if (forUserId === userId) return refuse("own_gift", "A gift can't be for its own giver");
       if (forUserId !== null) {
         const recipient = tx.select().from(users).where(eq(users.id, forUserId)).get();

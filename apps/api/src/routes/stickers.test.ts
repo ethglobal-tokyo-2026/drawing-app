@@ -328,12 +328,10 @@ describe("GET /api/stickers/:stickerId", () => {
     const first = giveSticker(test.db, stickerId, artistId, firstReceiverId, earlier);
     const second = giveSticker(test.db, stickerId, firstReceiverId, ownerId, later);
     const combo = insertGratitude(test.db, second.id);
-    // Received, but the escrow returned it when the claim didn't land before the expiry.
+    // Given again, but the escrow returned it after the expiry, unreceived.
     packGift(test.db, stickerId, ownerId, {
       status: "returned",
       escrowStatus: "expired_returned",
-      receiverId: insertUser(test.db),
-      receivedAt: later,
       returnedAt: later,
     });
 

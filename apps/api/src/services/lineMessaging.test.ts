@@ -5,10 +5,12 @@ import {
   TEST_CHAT_MENU_IDS,
   TOKEN_LIFETIME_S,
 } from "../testing/fakeLine.ts";
-import { LineApiError, TOKEN_REPLACE_MARGIN_MS } from "./lineMessaging.ts";
+import { LineApiError, retryKeyFor, TOKEN_REPLACE_MARGIN_MS } from "./lineMessaging.ts";
 
 const LINE_USER_ID = `U${"f".repeat(32)}`;
 const { en } = TEST_CHAT_MENU_IDS;
+/** A UUID LINE takes as a retry key, of the version made from a name. */
+const NAME_BASED_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 describe("the Messaging API channel's chat menu calls", () => {
   it("issue one channel access token, and a new one shortly before it expires", async () => {
@@ -72,5 +74,40 @@ describe("the Messaging API channel's chat menu calls", () => {
       retryable: false,
       message: "LINE rich menu link: HTTP 404: Not found",
     });
+  });
+
+  it("push a text with its retry key, and count LINE's 409 for a key it took as sent", async () => {
+    const line = createFakeLine();
+    const messaging = lineMessagingThrough(line);
+    const retryKey = retryKeyFor("a test announcement");
+    expect(await messaging.pushText(LINE_USER_ID, "Hello", retryKey)).toBe("sent");
+    expect(await messaging.pushText(LINE_USER_ID, "Hello", retryKey)).toBe("already_sent");
+    expect(line.pushes).toEqual([{ to: LINE_USER_ID, text: "Hello", retryKey }]);
+  });
+
+  it("say a push past the month's messages can't be fixed by asking again, unlike a rate limit", async () => {
+    const line = createFakeLine();
+    const messaging = lineMessagingThrough(line);
+    const retryableAfter = async (message: string) => {
+      line.failNext("push", Response.json({ message }, { status: 429 }));
+      const error = await messaging
+        .pushText(LINE_USER_ID, "Hello", retryKeyFor(message))
+        .catch((failed: unknown) => failed);
+      if (!(error instanceof LineApiError)) throw new Error("Expected a LineApiError");
+      return error.retryable;
+    };
+    expect(await retryableAfter("You have reached your monthly limit.")).toBe(false);
+    expect(await retryableAfter("The API rate limit has been exceeded. Try again later.")).toBe(
+      true,
+    );
+  });
+});
+
+describe("retryKeyFor", () => {
+  it("makes the same UUID for the same announcement, and another for another", () => {
+    const key = retryKeyFor("gift 1 received");
+    expect(key).toMatch(NAME_BASED_UUID);
+    expect(retryKeyFor("gift 1 received")).toBe(key);
+    expect(retryKeyFor("gift 2 received")).not.toBe(key);
   });
 });

@@ -1,8 +1,32 @@
+import { createHash } from "node:crypto";
+
 const LINE_TOKEN_URL = "https://api.line.me/oauth2/v3/token";
 const LINE_BOT_URL = "https://api.line.me/v2/bot";
 const UPSTREAM_TIMEOUT_MS = 5000;
 /** How early a channel access token is replaced, so no request goes out with one about to expire. */
 export const TOKEN_REPLACE_MARGIN_MS = 60_000;
+/** How long LINE keeps a retry key after the first push with it: a retry after that sends again. */
+export const RETRY_KEY_KEPT_MS = 24 * 60 * 60_000;
+/** LINE's error text for a message past the Official account's messages for the month. */
+const MONTHLY_LIMIT = /monthly limit/i;
+/** Croquis's own namespace for retry keys, so none can match a UUID made the same way elsewhere. */
+const RETRY_KEY_NAMESPACE = Buffer.from("711ba1e5776544bea56c3608ddc1b33d", "hex");
+
+/**
+ * A push's X-Line-Retry-Key, made from what it announces: the same announcement always makes the
+ * same key, so a retry can't send it twice, and another announcement makes another. A name-based
+ * UUID, version 5.
+ */
+export function retryKeyFor(announcement: string): string {
+  const bytes = createHash("sha1")
+    .update(RETRY_KEY_NAMESPACE)
+    .update(announcement)
+    .digest()
+    .subarray(0, 16);
+  bytes[6] = (bytes[6] & 0x0f) | 0x50;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  return bytes.toString("hex").replace(/^(.{8})(.{4})(.{4})(.{4})/, "$1-$2-$3-$4-");
+}
 
 /** One move of LINE's batch: everyone whose chat menu is `from` gets `to`. */
 export interface MenuMove {
@@ -15,7 +39,10 @@ export type BatchPhase = "ongoing" | "succeeded" | "failed";
 const isBatchPhase = (value: unknown): value is BatchPhase =>
   value === "ongoing" || value === "succeeded" || value === "failed";
 
-/** The Messaging API channel's calls that set each person's chat menu. */
+/** A push LINE took: this time, or a retry of one it took before. */
+type PushOutcome = "sent" | "already_sent";
+
+/** The Messaging API channel's calls: each person's chat menu, and the Official account's messages. */
 export interface LineMessaging {
   /** Links a person's chat menu. LINE also answers 200 for someone who hasn't added the account. */
   linkMenu: (lineUserId: string, richMenuId: string) => Promise<void>;
@@ -30,21 +57,33 @@ export interface LineMessaging {
   moveMenus: (moves: readonly MenuMove[], resumeRequestKey: string) => Promise<string>;
   /** The phase of the batch with that request ID. */
   batchPhase: (requestId: string) => Promise<BatchPhase>;
+  /**
+   * Sends a person a text message from the Official account, with `retryKey` (retryKeyFor) as its
+   * X-Line-Retry-Key: LINE answers a key it already took with 409, which counts as sent. LINE also
+   * answers 200 for someone who hasn't added the account, or blocked it, and delivers nothing.
+   */
+  pushText: (lineUserId: string, text: string, retryKey: string) => Promise<PushOutcome>;
 }
 
 /** LINE answered with an error, or didn't answer: `status` is 0 then. */
 export class LineApiError extends Error {
   name = "LineApiError";
   readonly status: number;
+  /** The Official account has sent its messages for the month. */
+  readonly monthlyLimit: boolean;
 
-  constructor(status: number, message: string, options?: ErrorOptions) {
+  constructor(status: number, message: string, options?: ErrorOptions & { lineText?: string }) {
     super(message, options);
     this.status = status;
+    this.monthlyLimit = status === 429 && MONTHLY_LIMIT.test(options?.lineText ?? "");
   }
 
-  /** Whether asking again later can help: no answer, a rate limit, or LINE's own failure. */
+  /**
+   * Whether asking again later can help: no answer, a rate limit, or LINE's own failure. The
+   * month's messages don't come back until the month turns.
+   */
   get retryable() {
-    return this.status === 0 || this.status === 429 || this.status >= 500;
+    return this.status === 0 || (this.status === 429 && !this.monthlyLimit) || this.status >= 500;
   }
 }
 
@@ -56,9 +95,11 @@ function field(body: unknown, name: string): unknown {
 async function responseError(step: string, response: Response, textField = "message") {
   const body: unknown = await response.json().catch(() => null);
   const text = field(body, textField);
+  const lineText = typeof text === "string" ? text : undefined;
   return new LineApiError(
     response.status,
-    `${step}: HTTP ${response.status}${typeof text === "string" ? `: ${text}` : ""}`,
+    `${step}: HTTP ${response.status}${lineText === undefined ? "" : `: ${lineText}`}`,
+    { lineText },
   );
 }
 
@@ -68,8 +109,8 @@ async function discardBody(response: Response) {
 }
 
 /**
- * The Messaging API channel's chat menu calls, with its channel access token: a stateless one,
- * issued from the channel's ID and secret and kept until shortly before it expires.
+ * The Messaging API channel's calls, with its channel access token: a stateless one, issued from
+ * the channel's ID and secret and kept until shortly before it expires.
  */
 export function createLineMessaging({
   channelId,
@@ -187,6 +228,23 @@ export function createLineMessaging({
         throw new LineApiError(response.status, `${step}: unknown phase ${String(phase)}`);
       }
       return phase;
+    },
+
+    async pushText(lineUserId, text, retryKey) {
+      const step = "LINE push message";
+      const response = await bot(step, "/message/push", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-line-retry-key": retryKey },
+        body: JSON.stringify({ to: lineUserId, messages: [{ type: "text", text }] }),
+      });
+      // 409: LINE took a push with this key before, whose answer never arrived.
+      if (response.status === 409) {
+        await discardBody(response);
+        return "already_sent";
+      }
+      if (!response.ok) throw await responseError(step, response);
+      await discardBody(response);
+      return "sent";
     },
   };
 }

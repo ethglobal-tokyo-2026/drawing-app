@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import type { z } from "zod";
 import type { EscrowGift } from "../deps.ts";
 import { createTestApp } from "../testing/createTestApp.ts";
+import { giverNoticeThrough, type FakeLine } from "../testing/fakeLine.ts";
 import { fakeGiftChain, fakeSmartWallets } from "../testing/fakes.ts";
 import { bodyOf } from "../testing/responses.ts";
 import { insertSealedSticker } from "../testing/rows.ts";
@@ -21,14 +22,18 @@ const DEPOSIT_TX = bytes32("deposit transaction");
 
 /**
  * The app for Giving and Receiving: the mock chain, or the escrow chain on the fake gift chain, where
- * everyone has a smart wallet. The clock starts at the real time, since the gifts_expiry CHECK
- * compares expires_at with the database's clock.
+ * everyone has a smart wallet. With `line`, the giver's messages go through it. The clock starts at
+ * the real time, since the gifts_expiry CHECK compares expires_at with the database's clock.
  */
-export async function createGiftsTestApp({ escrowChain = false } = {}) {
+export async function createGiftsTestApp({
+  escrowChain = false,
+  line,
+}: { escrowChain?: boolean; line?: FakeLine } = {}) {
   const giftChain = fakeGiftChain();
-  const test = await createTestApp(({ db }) =>
-    escrowChain ? { giftChain, smartWallets: fakeSmartWallets(db) } : {},
-  );
+  const test = await createTestApp((base) => ({
+    ...(escrowChain && { giftChain, smartWallets: fakeSmartWallets(base.db) }),
+    ...(line && giverNoticeThrough(line)(base)),
+  }));
   test.clock.set(new Date());
   let tokenCount = 0;
 

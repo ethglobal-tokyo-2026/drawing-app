@@ -7,11 +7,15 @@ import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { z } from "zod";
 import { createServer } from "./app.ts";
-import { chatMenuFromEnvironment } from "./chatMenu/fromEnvironment.ts";
+import {
+  chatMenuFromEnvironment,
+  messagingChannelFromEnvironment,
+} from "./chatMenu/fromEnvironment.ts";
 import { startMidnightBatches } from "./chatMenu/midnight.ts";
 import type { AppDeps, EnsDeps } from "./deps.ts";
 import { logInfo } from "./diagnostics.ts";
 import { createNamingQueue } from "./ens/naming.ts";
+import { giverNoticeFor, startGiverNoticeSweeps } from "./gifts/giverNotice.ts";
 import { chooseLineVerifier } from "./services/devSignIn.ts";
 import { createDiskImageStore } from "./services/imageStore.ts";
 import { journalLog } from "./services/journal.ts";
@@ -44,8 +48,8 @@ const envSchema = z.object({
   JPYC_DECIMALS: z.coerce.number().int().nonnegative(),
   JPYC_PAYMENT_PACKAGE: z.string().regex(/^0x[0-9a-f]{64}$/),
   JPYC_PAYMENT_VAULT: z.string().regex(/^0x[0-9a-f]{64}$/),
-  // The chat menu: the Messaging API channel's ID and secret, and deploy/line/menus.json. Without
-  // them, the menu is off.
+  // The Messaging API channel's ID and secret, for the chat menu and the giver's messages, and
+  // deploy/line/menus.json. Without the channel, both are off.
   LINE_MESSAGING_CHANNEL_ID: z.string().optional(),
   LINE_MESSAGING_CHANNEL_SECRET: z.string().optional(),
   LINE_CHAT_MENUS_FILE: z.string().optional(),
@@ -154,14 +158,18 @@ const worldId = (() => {
 })();
 
 const clock = { now: () => new Date() };
-const chatMenu = chatMenuFromEnvironment({
-  db,
-  clock,
+const messaging = messagingChannelFromEnvironment({
   devSignIn: env.DEV_SIGN_IN,
   channelId: env.LINE_MESSAGING_CHANNEL_ID,
   channelSecret: env.LINE_MESSAGING_CHANNEL_SECRET,
+});
+const chatMenu = chatMenuFromEnvironment({
+  db,
+  clock,
+  channel: messaging,
   menusFile: env.LINE_CHAT_MENUS_FILE,
 });
+const giverNotice = giverNoticeFor(messaging, { db, clock });
 
 const deps: AppDeps = {
   db,
@@ -180,6 +188,7 @@ const deps: AppDeps = {
   }),
   serverLog: journalLog,
   lineChatMenu: chatMenu.lineChatMenu,
+  giverNotice,
   worldId,
 };
 
@@ -189,6 +198,9 @@ logInfo("api.configured", { mode: env.STICKER_CHAIN_MODE });
 if (chatMenu.on) {
   startMidnightBatches({ db, clock, ...chatMenu.on, chatMenu: chatMenu.lineChatMenu });
 }
+
+// The giver's messages that failed, retried from boot on.
+if (messaging.line) startGiverNoticeSweeps(giverNotice);
 
 // Only a proxy on this machine reaches it: Vite's in development, HAProxy's on the box.
 serve(
