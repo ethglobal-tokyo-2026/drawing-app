@@ -108,6 +108,13 @@ export async function createGiftsTestApp({ escrowChain = false } = {}) {
         ...changes,
       });
     },
+
+    /** A landed deposit's escrow record moves to `status`, as a take-out, return or claim leaves it. */
+    setEscrowStatus: (giftId: string, status: EscrowGift["status"]) => {
+      const record = giftChain.escrow.get(giftId);
+      if (!record) throw new Error(`Gift ${giftId}'s deposit hasn't landed in the fake escrow`);
+      giftChain.escrow.set(giftId, { ...record, status });
+    },
   };
 }
 
