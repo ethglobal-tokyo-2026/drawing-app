@@ -13,6 +13,7 @@ import { captureLogLines, type LogLines } from "../testing/logLines.ts";
 import {
   CLAIM_RECEIPT_TIMEOUT_MS,
   createStickerChain,
+  MINT_LOOKUP_DEADLINE_MS,
   RPC_REQUEST_TIMEOUT_MS,
   RPC_RETRY_COUNT,
   rpcTransport,
@@ -43,6 +44,8 @@ const TX = hex("1");
 const TOKEN = hex("2");
 const GIFT_ID = hex("3");
 const CONTENT = hex("4");
+/** A Sealing retry's transaction, sent while the first seal's, TX, was pending. */
+const RETRY_TX = hex("6");
 const STICKER_ID = "00000000-0000-4000-8000-000000000001";
 const METADATA = `https://images.test/${STICKER_ID}.json`;
 const STICKER = {
@@ -75,8 +78,8 @@ function mintReceipt(to: Hex = ALICE) {
   };
 }
 
-/** StickerNFT holds STICKER once its mint's receipt, naming `to`, is read, and from MINT_BLOCK on. */
-function mockMintReads(to: Hex = ALICE) {
+/** StickerNFT holds STICKER once the mint's `receipt` is read, and from MINT_BLOCK on. */
+function mockMintReads(receipt: object = mintReceipt()) {
   let minted = false;
   rpc.readContract.mockImplementation(async ({ functionName, blockNumber }) => {
     if (functionName === "tokenIdForSticker")
@@ -89,8 +92,15 @@ function mockMintReads(to: Hex = ALICE) {
   rpc.simulateContract.mockImplementation(async (request: object) => ({ request }));
   rpc.waitForTransactionReceipt.mockImplementation(async () => {
     minted = true;
-    return mintReceipt(to);
+    return receipt;
   });
+}
+
+/** A Sealing retry: its transaction, RETRY_TX, reverts once the first seal's, TX, mints. */
+function mockRacedRetry() {
+  mockMintReads({ status: "reverted", logs: [] });
+  rpc.writeContract.mockResolvedValue(RETRY_TX);
+  rpc.getContractEvents.mockResolvedValue([{ transactionHash: TX }]);
 }
 
 function adapter() {
@@ -182,6 +192,8 @@ describe("Sepolia sticker adapter", () => {
     const chain = adapter();
 
     await expect(chain.mint(STICKER)).resolves.toEqual({ tokenId: "1", txHash: TX });
+    // A mint that lands records the hash its receipt proves, without looking up the event.
+    expect(rpc.getContractEvents).not.toHaveBeenCalled();
     await expect(chain.mint(STICKER)).resolves.toEqual({ tokenId: "1", txHash: TX });
     expect(rpc.getContractEvents).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -261,10 +273,33 @@ describe("Sepolia sticker adapter", () => {
   });
 
   it("does not confirm a mint whose receipt names a different recipient", async () => {
-    mockMintReads(BOB);
+    mockMintReads(mintReceipt(BOB));
     await expect(adapter().mint(STICKER)).rejects.toThrow(
       "Mint receipt does not confirm the artist received the sticker",
     );
+  });
+
+  it("records the first seal's mint, not a retry's transaction that reverted behind it", async () => {
+    mockRacedRetry();
+
+    await expect(adapter().mint(STICKER)).resolves.toEqual({ tokenId: "1", txHash: TX });
+    logs.expectLogged("chain.mint.receipt.completed", { txHash: RETRY_TX, status: "reverted" });
+  });
+
+  it("gives up finding a raced mint's transaction in time for Sealing to answer", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    mockRacedRetry();
+    // The retry's transaction takes the mint's time to land.
+    rpc.writeContract.mockImplementation(async () => {
+      vi.setSystemTime(Date.now() + MINT_LOOKUP_DEADLINE_MS);
+      return RETRY_TX;
+    });
+
+    await expect(adapter().mint(STICKER)).rejects.toThrow("timed out");
+    expect(rpc.getContractEvents).not.toHaveBeenCalled();
   });
 
   it("recovers a landed claim after a receipt timeout, but rejects a claim won by another wallet", async () => {

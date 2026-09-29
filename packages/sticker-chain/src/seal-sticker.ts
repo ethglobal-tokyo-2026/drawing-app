@@ -210,7 +210,9 @@ export function createStickerSealer({
         { txHash: transactionHash },
         (found) => ({ tokenId: found?.tokenId.toString(), recovered: found !== null }),
       );
-      if (raced) return { ...raced, transactionHash };
+      // Only a successful receipt proves our transaction is the mint: a retry's reverts once an
+      // earlier pending seal lands. The host finds the transaction that minted the sticker.
+      if (raced) return raced;
       throw error;
     }
 
