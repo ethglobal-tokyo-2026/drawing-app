@@ -116,7 +116,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-// The REST doc's refusals: a contract with the server.
+// The API's refusals: a contract with the server.
 const REFUSED_IN_THE_PREVIEW: ReceiveRefusal[] = [
   "group_chat",
   "own_gift",

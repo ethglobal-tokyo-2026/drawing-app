@@ -141,7 +141,7 @@ type ClientErrorCode =
   | "smart_account_not_ready";
 export type ErrorCode = ApiErrorCode | ClientErrorCode;
 
-/** A refused or failed request: the HTTP status and the REST doc's error body. Status 0 is no answer. */
+/** A refused or failed request: the HTTP status and the API's error body. Status 0 is no answer. */
 export class ApiError extends Error {
   readonly status: number;
   /** The body's `error`: stable, so screens switch on it. */

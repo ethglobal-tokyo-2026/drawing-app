@@ -118,7 +118,7 @@ describe("GratitudeMiniGame", () => {
     expect(recordGratitude).toHaveBeenCalledTimes(1);
     const [body] = recordGratitude.mock.calls[0] ?? [];
     if (!body) throw new Error("No gratitude recorded");
-    // The doc's fields and no others: the record's timings travel in the replay.
+    // RecordGratitude's fields and no others: the record's timings travel in the replay.
     expect(Object.keys(body).sort()).toEqual([
       "gameConfigVersion",
       "giftId",

@@ -4,7 +4,7 @@ import { toMs, toPerson, toSticker, type PersonView, type StickerView } from "..
 import { errorReason } from "../i18n/errorMessage";
 import { i18next } from "../i18n/i18n";
 
-/** Why a gift can't be received here: the REST doc's refusals, plus a link to no gift and no server. */
+/** Why a gift can't be received here: a refusal from the server, a link to no gift, or no server. */
 export type RefusalKind = ReceiveRefusal | "gift_not_found" | "needs_server";
 
 /** A receivable preview, mapped: `sticker` is set, since only a receivable preview has one. */

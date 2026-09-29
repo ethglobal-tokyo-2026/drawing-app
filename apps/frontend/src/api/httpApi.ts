@@ -54,7 +54,7 @@ export function createServerClient(fetchImpl: typeof fetch = fetch) {
 type ServerClient = ReturnType<typeof createServerClient>;
 
 /**
- * A refusal as an ApiError with the server's code. An answer that isn't the REST doc's error body
+ * A refusal as an ApiError with the server's code. An answer that isn't the API's error body
  * keeps its status, and says what came back instead.
  */
 async function refusal(response: Response, what: string): Promise<ApiError> {
