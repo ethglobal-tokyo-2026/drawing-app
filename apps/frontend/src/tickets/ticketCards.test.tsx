@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import type { Tickets, TicketShop as Shop } from "@drawing-app/api/client";
-import { act, useState } from "react";
+import { act, useState, type ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi } from "../api/testing";
@@ -125,17 +125,25 @@ describe("OutOfTickets", () => {
 });
 
 describe("StartDrawing", () => {
-  const start = (state: Tickets) =>
-    render(
-      <StartDrawing
-        tickets={state}
-        minutes={3}
-        note={null}
-        onStart={onStart}
-        onShop={onShop}
-        onBoard={onBoard}
-      />,
-    );
+  const card = (state: Tickets, props: Partial<ComponentProps<typeof StartDrawing>> = {}) => (
+    <StartDrawing
+      tickets={state}
+      minutes={3}
+      failure={null}
+      onStart={onStart}
+      onShop={onShop}
+      onBoard={onBoard}
+      {...props}
+    />
+  );
+  const start = (state: Tickets, props: Partial<ComponentProps<typeof StartDrawing>> = {}) =>
+    render(card(state, props));
+  const REASON = "Your tickets changed. Try again.";
+  /** The text of what the dialog says it's described by, for screen readers. */
+  const described = () => {
+    const ids = document.querySelector("[role=dialog]")?.getAttribute("aria-describedby") ?? "";
+    return ids.split(" ").map((id) => document.getElementById(id)?.textContent);
+  };
 
   it("spends a daily ticket while there are any", async () => {
     await start(tickets(1, 4));
@@ -164,11 +172,7 @@ describe("StartDrawing", () => {
     expect(document.querySelector(".out-of-tickets__line")?.textContent).toBe(
       `Today’s daily tickets are used. New ones at ${formatRefillTime(REFILL)}.`,
     );
-    const dialog = document.querySelector("[role=dialog]");
-    const described = dialog?.getAttribute("aria-describedby")?.split(" ") ?? [];
-    expect(described.map((id) => document.getElementById(id)?.textContent)).toContain(
-      "You have 4 reserve tickets.",
-    );
+    expect(described()).toContain("You have 4 reserve tickets.");
     expect(buttonNamed("Use a reserve ticket")?.classList.contains("key--blue")).toBe(true);
     click("Use a reserve ticket");
     expect(onStart).toHaveBeenCalledWith("reserve");
@@ -176,18 +180,42 @@ describe("StartDrawing", () => {
     expect(onShop).toHaveBeenCalledOnce();
   });
 
+  it("stops asking when a spend failed: it says so and why, and its key tries again", async () => {
+    await start(tickets(1, 4), { failure: REASON });
+    expect(title()).toBe("Couldn’t start your sticker");
+    expect(document.querySelector("[role=alert]")?.textContent).toBe(REASON);
+    // The daily count and timer lines belong to the ask, so the reason is the card's one line.
+    expect(document.querySelector(".out-of-tickets__line")).toBeNull();
+    expect(described()).toContain(REASON);
+    click("Start drawing");
+    expect(onStart).toHaveBeenCalledWith("daily");
+  });
+
+  it("tries a reserve ticket again from the failed card, still saying how many there are", async () => {
+    await start(tickets(3, 4), { failure: REASON });
+    expect(title()).toBe("Couldn’t start your sticker");
+    expect(described()).toEqual(expect.arrayContaining([REASON, "You have 4 reserve tickets."]));
+    click("Use a reserve ticket");
+    expect(onStart).toHaveBeenCalledWith("reserve");
+  });
+
+  it("keeps saying why while the retry is on its way and as the card drops away", async () => {
+    await start(tickets(1, 0), { failure: REASON });
+    // A retry clears the failure, and the card must not flip back to asking under the finger.
+    view?.rerender(card(tickets(1, 0), { busy: true }));
+    expect(title()).toBe("Couldn’t start your sticker");
+    view?.rerender(card(tickets(1, 0), { leaving: true }));
+    expect(title()).toBe("Couldn’t start your sticker");
+  });
+
+  it("asks, and never says it failed, while no spend has", async () => {
+    await start(tickets(1, 0), { busy: true });
+    expect(title()).toBe("Use a ticket to draw?");
+    expect(document.querySelector("[role=alert]")).toBeNull();
+  });
+
   it("keeps the key's face while the ticket is on its way: busy, not disabled", async () => {
-    await render(
-      <StartDrawing
-        tickets={tickets(1, 0)}
-        minutes={3}
-        busy
-        note={null}
-        onStart={onStart}
-        onShop={onShop}
-        onBoard={onBoard}
-      />,
-    );
+    await start(tickets(1, 0), { busy: true });
     const key = buttonNamed("Start drawing");
     expect(key?.disabled).toBe(false);
     expect(key?.getAttribute("aria-busy")).toBe("true");
@@ -197,18 +225,7 @@ describe("StartDrawing", () => {
 
   it("drops away once the ticket is spent, then lets go", async () => {
     const onLeft = vi.fn();
-    await render(
-      <StartDrawing
-        tickets={tickets(1, 0)}
-        minutes={3}
-        leaving
-        onLeft={onLeft}
-        note={null}
-        onStart={onStart}
-        onShop={onShop}
-        onBoard={onBoard}
-      />,
-    );
+    await start(tickets(1, 0), { leaving: true, onLeft });
     const root = document.querySelector(".out-of-tickets");
     expect(root?.classList.contains("is-leaving")).toBe(true);
     // The sheet under it takes the taps.

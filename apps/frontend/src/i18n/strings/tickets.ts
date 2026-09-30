@@ -94,6 +94,11 @@ export const tickets = {
       /** Start card, reserve ticket variant: the blue key that spends a reserve ticket and opens the sheet */
       use: { en: "Use a reserve ticket", ja: "有償チケットを使う" },
     },
+    /** When a ticket couldn't be spent on a fresh sheet, the card stops asking and says why; its key tries again. */
+    failed: {
+      /** Start card on the drawing screen, when a ticket couldn't be spent on a fresh sheet (Draw, Keep drawing or the card's own key): the title, over the reason in Ink */
+      title: { en: "Couldn’t start your sticker", ja: "シールをかき始められませんでした" },
+    },
   },
   /** Out of daily and reserve tickets, until the refill turns the card over. */
   outOfTickets: {

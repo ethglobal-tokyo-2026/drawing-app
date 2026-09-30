@@ -169,7 +169,7 @@ export const errors = {
     en: "Your sticker is saved, but it couldn't be sealed on-chain. Try again; it won't use another ticket.",
     ja: "シールは保存されましたが、ブロックチェーン上で仕上げられませんでした。もう一度お試しください。チケットを新たに使うことはありません。",
   },
-  /** Drawing screen, starting a sticker: spending a ticket (POST /api/tickets/spend) with no daily or reserve tickets left, in the start note's “Couldn’t use a ticket” through errorReason */
+  /** Drawing screen, starting a sticker: spending a ticket (POST /api/tickets/spend) with no daily or reserve tickets left, in the start card's “Couldn’t start your sticker” through errorMessage */
   no_tickets_left: { en: "You're out of tickets.", ja: "チケットが残っていません。" },
   /** Giving, In the bag: recording that the gift was sent (POST /api/gifts/:giftId/shared) before its deposit landed in the escrow, in “couldn’t record” through errorReason; the Receive gift dialog shows its own “Almost here” screen instead */
   not_deposited: {
@@ -257,7 +257,7 @@ export const errors = {
     en: "That ticket was already used.",
     ja: "そのチケットは、すでに使われています。",
   },
-  /** Drawing screen, starting a sticker: spending a ticket (POST /api/tickets/spend) when the next one isn't the daily or reserve kind the start card offered, in “Couldn’t use a ticket” through errorReason */
+  /** Drawing screen, starting a sticker: spending a ticket (POST /api/tickets/spend) when the next one isn't the daily or reserve kind the start card offered, in the start card's “Couldn’t start your sticker” through errorMessage */
   ticket_kind_changed: {
     en: "Your tickets changed. Try again.",
     ja: "チケットの状況が変わりました。もう一度お試しください。",

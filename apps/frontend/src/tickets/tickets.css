@@ -117,6 +117,23 @@
   text-wrap: balance;
 }
 
+/* Why a spend failed: Ink on Tomato Soft, the stopped-state field, so it reads as the card's news
+   and not as a footnote. A reason can be long, so it wraps and can be selected. */
+.out-of-tickets__problem {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--r-label);
+  background: var(--tomato-soft);
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 .out-of-tickets__card .tear-line {
   margin-top: 16px;
 }
