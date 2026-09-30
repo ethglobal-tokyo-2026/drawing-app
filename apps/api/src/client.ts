@@ -13,13 +13,15 @@ type ErrorOutput = Extract<
 
 /**
  * Every `error` code a route answers, from the routes' own types: `apiError` keeps each code's literal.
- * internal_error comes from the app's error handler, which any route can reach.
+ * internal_error and chain_unavailable come from the app's error handler, which any route can reach.
  */
 export type ApiErrorCode =
   | (ErrorOutput extends { error: infer Code extends string } ? Code : never)
-  | "internal_error";
+  | "internal_error"
+  | "chain_unavailable";
 export { HANDLE_MAX_LENGTH } from "./session/handleLimit.ts";
 export { MAX_TIMELAPSE_BYTES } from "./stickers/timelapseLimit.ts";
+export { TOKYO_UTC_OFFSET_MS, tokyoTicketDay } from "./ticketDays.ts";
 export {
   GIFT_EXPIRY_MS,
   GRATITUDE_PER_HIT,
@@ -45,10 +47,22 @@ export type {
 export type { GratitudeWithReplay, UnseenGratitude } from "./gratitude/feed.ts";
 export type { RecordGratitude } from "./gratitude/record.ts";
 export type { ReplayV1 } from "./gratitude/replay.ts";
-export type { AgeStatus, IsoTime, Me, Person, Tickets, TicketShop, UserStats } from "./shapes.ts";
+export type {
+  AgeStatus,
+  Gift,
+  Gratitude,
+  IsoTime,
+  Me,
+  Person,
+  Placement,
+  Sticker,
+  StickerPlacement,
+  Tickets,
+  TicketShop,
+  UserStats,
+} from "./shapes.ts";
 export type { BoardSticker, StickerBoard } from "./stickerBoards/board.ts";
 export type { SealResponse } from "./stickers/seal.ts";
 export type { StickerDetail, TransferTrailEntry } from "./stickers/stickerDetail.ts";
 export type { TimelapseV1 } from "./stickers/timelapse.ts";
 export type { SpendTicket, TicketKind, TicketUse } from "./tickets/tickets.ts";
-export type { Gift, Gratitude, Placement, Sticker, StickerPlacement } from "./views.ts";

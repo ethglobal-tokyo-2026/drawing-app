@@ -30,24 +30,31 @@ const render = (side: BoardSide = "back") =>
 const cork = () => host.querySelector<HTMLElement>(".stat-board__cork");
 const isOut = () => host.querySelector(".dev-slip")?.hasAttribute("inert") === false;
 
-/** A finger pulling up from the cork's end by `travel` px, then letting go. */
-function pull(travel: number) {
+/** Fingers on the cork, one at each y given: none once the last has lifted. */
+function touch(type: string, ...ys: number[]) {
   const target = cork();
   if (!target) throw new Error("No cork");
-  const touch = (type: string, y: number) =>
-    target.dispatchEvent(
-      new TouchEvent(type, {
-        bubbles: true,
-        cancelable: true,
-        touches: type === "touchend" ? [] : [new Touch({ identifier: 1, target, clientY: y })],
-      }),
-    );
-  act(() => {
-    touch("touchstart", 600);
-    for (let y = 600; y >= 600 - travel; y -= 10) touch("touchmove", y);
-    touch("touchend", 600 - travel);
-  });
+  target.dispatchEvent(
+    new TouchEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      touches: ys.map((clientY, i) => new Touch({ identifier: i + 1, target, clientY })),
+    }),
+  );
 }
+
+/** A finger pulling up from the cork's end by `travel` px, still down. */
+function pullUp(travel: number) {
+  touch("touchstart", 600);
+  for (let y = 600; y >= 600 - travel; y -= 10) touch("touchmove", y);
+}
+
+/** A finger pulling up from the cork's end by `travel` px, then letting go. */
+const pull = (travel: number) =>
+  act(() => {
+    pullUp(travel);
+    touch("touchend");
+  });
 
 beforeEach(() => {
   vi.spyOn(Element.prototype, "animate").mockImplementation(() => new Animation());
@@ -75,6 +82,23 @@ describe("DeveloperSlip", () => {
     expect(isOut()).toBe(false);
     pull(PULL_THRESHOLD + 20);
     expect(isOut()).toBe(true);
+  });
+
+  it("goes back under when a second finger lands mid-pull", () => {
+    render();
+    const shown = () =>
+      host.querySelector<HTMLElement>(".dev-slip")?.style.getPropertyValue("--pull");
+    act(() => {
+      pullUp(PULL_THRESHOLD / 2);
+      touch("touchstart", 600 - PULL_THRESHOLD / 2, 600);
+    });
+    expect(shown()).toBe("0px");
+    act(() => {
+      touch("touchend", 600);
+      touch("touchend");
+    });
+    expect(shown()).toBe("0px");
+    expect(isOut()).toBe(false);
   });
 
   it("comes out from its hidden button, with focus on the slip", () => {

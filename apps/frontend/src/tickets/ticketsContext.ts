@@ -18,9 +18,14 @@ export interface TicketsValue {
   refresh: () => void;
   /**
    * Spends one of the kind the person agreed to; the server refuses it if that's not the next kind.
-   * Every try until one lands is the same spend, so a retry or a second tap never spends another.
+   * Every try until its ticket use is kept is the same spend, so a retry or a second tap never spends
+   * another.
    */
   spend: (kind: TicketKind) => Promise<TicketUse>;
+  /** A spend's key is still kept: that spend may have landed, and no sheet has kept its ticket use. */
+  hasKeptSpend: () => boolean;
+  /** The drawing screen kept the ticket use a spend answered with, so that spend's key goes. */
+  forgetKeptSpend: () => void;
   /** Takes the tickets a purchase answered with. */
   set: (tickets: Tickets) => void;
   /** What Draw means for the drawing screen's sheet, as the drawing screen last said. */

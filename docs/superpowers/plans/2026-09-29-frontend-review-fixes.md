@@ -18,26 +18,26 @@ Fixed on main before the lanes: SHELL-5, by another session's `3a6286ac`.
 
 Wave 1:
 
-- [ ] Sealing and spending on the drawing screen: DRAW-1, DRAW-3, DRAW-7, DRAW-8, DRAW-9 (the app's side only: another branch changed the server's mint path), DRAW-10, DRAW-12, DRAW-15, DRAW-18, TIX-2, the timelapse half of DRAW-13, and keeping the ticket spend key until the drawing screen has recorded the ticket use
+- [x] Sealing and spending on the drawing screen: DRAW-1, DRAW-3, DRAW-7, DRAW-8, DRAW-9 (the app's side only: another branch changed the server's mint path), DRAW-10, DRAW-12, DRAW-15, DRAW-18, TIX-2, the timelapse half of DRAW-13, and keeping the ticket spend key until the drawing screen has recorded the ticket use
 - [x] The kept drawing and the ink engine: DRAW-2, DRAW-4, DRAW-5, DRAW-6, DRAW-11, DRAW-13
-- [ ] Sticker tray: TRAY-1, TRAY-2, TRAY-4 to TRAY-8
-- [ ] Sticker board and stat board: BOARD-1 to BOARD-7, CLEAN-18
+- [x] Sticker tray: TRAY-1, TRAY-2, TRAY-4 to TRAY-8
+- [x] Sticker board and stat board: BOARD-1 to BOARD-7, CLEAN-18
 - [x] Giving: GIFT-1 to GIFT-4, GIFT-9, GIFT-10, SHELL-4, CLEAN-12, and the API's `deposit_held` and `gift_held` answers
-- [ ] Receiving, and the gift link in the server log: GIFT-5, GIFT-7, GIFT-8
+- [x] Receiving, and the gift link in the server log: GIFT-5, GIFT-7, GIFT-8
 - [x] Gratitude records: GRAT-1, GRAT-2, GRAT-3, GRAT-8, GRAT-11
-- [ ] Tickets and payments: TIX-1, TIX-4 to TIX-9, CLEAN-8
+- [x] Tickets and payments: TIX-1, TIX-4 to TIX-9, CLEAN-8. For ad0ll to confirm: a signed payment Sui still hasn't shown an hour later counts as not gone through (PAYMENT_LANDS_WITHIN_MS, a guess)
 - [x] App shell and sign-in: SHELL-1, SHELL-2, SHELL-6 to SHELL-10, UI-1, CLEAN-10, CLEAN-16. A screen whose code fails to load shows a Reload note; a screen that crashes while rendering still unmounts the app, which needs an app-level boundary
-- [ ] Shared controls and the catalog import: UI-2 to UI-7, GIFT-6, CLEAN-1, CLEAN-9
+- [x] Shared controls and the catalog import: UI-2 to UI-7, GIFT-6, CLEAN-1, CLEAN-9
 
 Wave 2, as wave 1's lanes finish:
 
-- [ ] Seal ceremony: DRAW-14, DRAW-16, DRAW-17
-- [ ] Gratitude visuals: GRAT-4 to GRAT-7, GRAT-9, GRAT-10, GRAT-12, GRAT-13
-- [ ] Explore and dates: EXPL-1 to EXPL-3, TRAY-3, CLEAN-5, CLEAN-7, CLEAN-13, CLEAN-15
+- [x] Seal ceremony: DRAW-14, DRAW-16, DRAW-17
+- [x] Gratitude visuals: GRAT-4 to GRAT-7, GRAT-9, GRAT-10, GRAT-12, GRAT-13
+- [x] Dates in Tokyo's day: EXPL-3, TRAY-3, CLEAN-5, CLEAN-7, CLEAN-13, CLEAN-15 (EXPL-1 and EXPL-2 go with the frontend audit's `ux/explore` lane)
 
 Wave 3, once the lanes above are merged, since these touch every area:
 
 - [ ] Shared helpers: CLEAN-3, CLEAN-11, CLEAN-14, CLEAN-20, CLEAN-22
 - [ ] One device store, and a query cache: CLEAN-17, CLEAN-21
-- [ ] One ticket card shell: CLEAN-4, CLEAN-6
+- [x] One ticket card shell: CLEAN-4, CLEAN-6
 - [ ] Split trayEngine.ts: CLEAN-19

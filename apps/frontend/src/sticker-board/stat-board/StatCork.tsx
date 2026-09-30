@@ -128,8 +128,14 @@ export function StatCork({
     [reduced],
   );
 
+  // A window a paper opens, such as World ID's, is drawn outside the cork, yet React passes its taps
+  // and keys up through the cork: only the cork's own turn the board back.
+  const ownTarget = (e: { target: EventTarget; currentTarget: Element }) =>
+    e.target instanceof Element && e.currentTarget.contains(e.target) ? e.target : null;
+
   const onCorkClick = (e: MouseEvent<HTMLDivElement>) => {
-    if (e.target instanceof Element && !e.target.closest(ON_CORK)) onFlipBack();
+    const target = ownTarget(e);
+    if (target && !target.closest(ON_CORK)) onFlipBack();
   };
 
   // A tap on a note's paper nudges it. Its controls press, and its selectable text selects, without
@@ -146,7 +152,7 @@ export function StatCork({
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key !== "Escape") return;
+    if (e.key !== "Escape" || !ownTarget(e)) return;
     e.stopPropagation();
     if (!onEscape?.()) onFlipBack();
   };

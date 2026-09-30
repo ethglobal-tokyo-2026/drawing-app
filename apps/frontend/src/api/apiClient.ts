@@ -110,6 +110,8 @@ export interface ApiClient {
   receiveGift: (body: GiftOpening) => Promise<ReceivedGift>;
   /** GET /api/gifts/for-you: gifts waiting for you, newest first. */
   giftsForYou: () => Promise<GiftsForYou>;
+  /** GET /api/gifts/:giftId/preview: a gift waiting for you, checked as its link's preview is. */
+  previewGiftForYou: (giftId: string) => Promise<GiftPreview>;
   /** POST /api/gifts/:giftId/receive: a gift waiting for you, received from your board. */
   receiveGiftForYou: (giftId: string) => Promise<ReceivedGift>;
 

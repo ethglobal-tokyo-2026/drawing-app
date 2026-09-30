@@ -10,8 +10,6 @@ interface Props {
   picked: string | null;
   onPick: (id: string) => void;
   label: string;
-  /** Smaller tiles, for picking inside a sheet that already has other choices. */
-  compact?: boolean;
   /** Stickers that can't go to this recipient, such as an NSFW sticker for someone not adult. */
   blocked?: (sticker: KeptSticker) => boolean;
 }
@@ -20,21 +18,10 @@ interface Props {
  * Your stickers as a grid to choose one from; the picked one sits on an aqua tile with a check. NSFW
  * stickers wear a pink edge; a blocked one can't be picked and wears the 18+ mark.
  */
-export function StickerPicker({
-  stickers,
-  picked,
-  onPick,
-  label,
-  compact = false,
-  blocked = () => false,
-}: Props) {
+export function StickerPicker({ stickers, picked, onPick, label, blocked = () => false }: Props) {
   const { t } = useTranslation();
   return (
-    <div
-      className={`sticker-picker ${compact ? "compact" : ""}`}
-      role="radiogroup"
-      aria-label={label}
-    >
+    <div className="sticker-picker" role="radiogroup" aria-label={label}>
       {stickers.map((s) => {
         const off = blocked(s);
         return (

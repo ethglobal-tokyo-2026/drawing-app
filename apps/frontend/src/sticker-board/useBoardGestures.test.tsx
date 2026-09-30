@@ -70,7 +70,56 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+/** A pointer on `el` at (x, y). */
+const point = (el: Element, type: string, pointerId: number, x: number, y: number) =>
+  el.dispatchEvent(
+    new PointerEvent(type, { pointerId, clientX: x, clientY: y, button: 0, bubbles: true }),
+  );
+
 describe("useBoardGestures", () => {
+  it("hands a pinch to the fingers still down when one of its pair lifts, from where the sticker is", () => {
+    const onCommit = vi.fn<Options["onCommit"]>();
+    act(() =>
+      root.render(
+        <Board
+          stickers={[sticker]}
+          field={fieldOf(390, 657)}
+          size={{ W: 390, H: 657 }}
+          selected="a"
+          reduced
+          tray={noTray}
+          onSelect={() => {}}
+          onOpen={() => {}}
+          onCommit={onCommit}
+          onRemove={() => {}}
+        />,
+      ),
+    );
+    const stage = host.querySelector(".board-stage");
+    const el = host.querySelector(".placed-sticker");
+    if (!(stage instanceof HTMLElement) || !el) throw new Error("the board didn't render");
+    stage.getBoundingClientRect = () => new DOMRect(0, 0, 390, 657);
+
+    act(() => {
+      point(el, "pointerdown", 1, 100, 300);
+      point(el, "pointerdown", 2, 200, 300);
+      // A third finger lands, the first lifts, and the other two stay where they are.
+      point(el, "pointerdown", 3, 150, 400);
+      point(el, "pointerup", 1, 100, 300);
+      point(el, "pointermove", 3, 150, 400);
+      point(el, "pointerup", 2, 200, 300);
+      point(el, "pointerup", 3, 150, 400);
+    });
+    expect(onCommit).toHaveBeenCalledOnce();
+    const [, placement] = onCommit.mock.calls[0];
+    expect(placement).toMatchObject({
+      x: sticker.placement.x,
+      y: sticker.placement.y,
+      s: sticker.placement.s,
+      r: sticker.placement.r,
+    });
+  });
+
   it("lets a sticker on its way into the tray take no new gesture, so nothing done meanwhile is undone", async () => {
     let land: (into: boolean) => void = () => {};
     const boardDrop = vi

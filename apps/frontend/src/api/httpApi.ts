@@ -303,6 +303,11 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       if (!response.ok) throw await refusal(response, "GET /api/gifts/for-you");
       return response.json();
     },
+    previewGiftForYou: async (giftId) => {
+      const response = await api.gifts[":giftId"].preview.$get(gift(giftId));
+      if (!response.ok) throw await refusal(response, `GET /api/gifts/${giftId}/preview`);
+      return response.json();
+    },
     receiveGiftForYou: async (giftId) => {
       const response = await api.gifts[":giftId"].receive.$post(gift(giftId), {
         init: { signal: AbortSignal.timeout(RECEIVE_TIMEOUT_MS) },

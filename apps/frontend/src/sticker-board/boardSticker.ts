@@ -91,6 +91,11 @@ export function toBoardSticker(b: ApiBoardSticker): UnplacedBoardSticker {
 export const onItsWay = (s: Pick<BoardStickerView, "held" | "openGift">) =>
   s.held && s.openGift?.status === "sent";
 
+/** On the board: stuck on, and still held rather than given away or on its way. */
+export const onTheBoard = <S extends Pick<UnplacedBoardSticker, "placement" | "held" | "openGift">>(
+  s: S,
+): s is S & { placement: Placement } => s.placement?.on === true && s.held && !onItsWay(s);
+
 /** How a person is printed: their handle, or their name until they've chosen one. */
 export const handleOf = (p: PersonView) => (p.handle === null ? p.name : formatHandle(p.handle));
 

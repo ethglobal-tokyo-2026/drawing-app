@@ -1,24 +1,31 @@
 import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
-
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+import { tabStops, wrapTarget } from "./tabStops";
 
 interface Options {
   active?: boolean;
   onEscape?: () => void;
   /** Where focus goes when it deactivates, when that isn't back where it was. */
   returnFocus?: () => HTMLElement | null;
+  /** The dialog's view: a new one puts focus on its first control, since the old view's may be gone. */
+  refocus?: unknown;
 }
 
+/** The active traps, oldest first. Only the newest hears keys: its dialog is the one on top. */
+const traps: object[] = [];
+
+/** Whether a dialog's trap holds keyboard focus, so a screen's own focus loop stands aside. */
+export const focusTrapped = () => traps.length > 0;
+
 /**
- * Keeps keyboard focus inside a dialog while it's active: focuses its first control, wraps Tab and
- * Shift+Tab at the ends, calls `onEscape` on Escape, and gives focus back to where it was (or to
- * `returnFocus`'s element) when it deactivates. Give the container `tabIndex={-1}` so it can hold
- * focus when it has no controls.
+ * Keeps keyboard focus inside a dialog while it's active: focuses its first control (again whenever
+ * `refocus` changes), wraps Tab and Shift+Tab at the ends, calls `onEscape` on Escape, and gives
+ * focus back to where it was (or to `returnFocus`'s element) when it deactivates. It hears keys wherever focus is: focus left on the
+ * page, as when the control holding it goes, comes back to the dialog before the key is handled.
+ * Give the container `tabIndex={-1}` so it can hold focus when it has no controls.
  */
 export function useFocusTrap(
   ref: RefObject<HTMLElement | null>,
-  { active = true, onEscape, returnFocus }: Options = {},
+  { active = true, onEscape, returnFocus, refocus }: Options = {},
 ) {
   const latest = useRef({ onEscape, returnFocus });
   useLayoutEffect(() => {
@@ -29,35 +36,32 @@ export function useFocusTrap(
     const root = ref.current;
     if (!active || !root) return;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const focusables = () =>
-      [...root.querySelectorAll(FOCUSABLE)].filter((el) => el instanceof HTMLElement);
-    (focusables()[0] ?? root).focus();
+    const trap = {};
+    traps.push(trap);
 
     const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.key !== "Escape" && e.key !== "Tab") || traps.at(-1) !== trap) return;
+      if (!root.contains(document.activeElement)) root.focus({ preventScroll: true });
       if (e.key === "Escape") {
         latest.current.onEscape?.();
         return;
       }
-      if (e.key !== "Tab") return;
-      const list = focusables();
-      const first = list[0];
-      const last = list[list.length - 1];
-      if (!first || !last) {
-        e.preventDefault();
-        return;
-      }
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
+      const to = wrapTarget(root, document.activeElement, e.shiftKey);
+      // With nothing to Tab to, focus stays on the dialog.
+      if (to || !tabStops(root).length) e.preventDefault();
+      to?.focus();
     };
-    root.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", onKeyDown);
     return () => {
-      root.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keydown", onKeyDown);
+      traps.splice(traps.indexOf(trap), 1);
       (latest.current.returnFocus?.() ?? previous)?.focus({ preventScroll: true });
     };
   }, [active, ref]);
+
+  // After the effect above, so it has noted where focus was before the dialog took it.
+  useEffect(() => {
+    const root = ref.current;
+    if (active && root) (tabStops(root)[0] ?? root).focus();
+  }, [active, ref, refocus]);
 }

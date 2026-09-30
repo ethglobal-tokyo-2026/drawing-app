@@ -3,13 +3,12 @@ import { createPortal } from "react-dom";
 import type { PersonView, StickerView } from "../api/views";
 import { useTranslation } from "../i18n/react";
 import { ArrowRight, GratitudeIcon, StickerBoardIcon } from "../icons";
-import { formatHandle } from "../stickers/format";
+import { formatHandle, formatMonthDay } from "../stickers/format";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import { sealDate } from "./giftTag";
 import "./gift-received-notice.css";
 
 interface Props {
@@ -103,7 +102,7 @@ export function GiftReceivedNotice({ sticker, receiver, receivedAt, mask, onClos
             <ArrowRight size={12} aria-hidden="true" />
             {t(($) => $.giving.receivedNotice.caption, {
               name: who,
-              date: sealDate(receivedAt),
+              date: formatMonthDay(receivedAt),
             })}
           </span>
           <span ref={face} className="gift-received-notice__face">

@@ -72,6 +72,72 @@ const openAndShut = async () => {
 };
 const slotOf = (id: string) => board.querySelector(`.tray__slot[data-id="${id}"]`);
 const stateOf = (id: string) => slotOf(id)?.getAttribute("data-state");
+/** One finger's move at (x, y) in board pixels: the board is drawn at its own size. */
+const pointer = (on: Element | null, type: string, x: number, y: number, pointerId = 1) =>
+  act(() => {
+    on?.dispatchEvent(new PointerEvent(type, { pointerId, clientX: x, clientY: y, bubbles: true }));
+  });
+const stackEl = () => board.querySelector(".tray__stack");
+const frontSheet = () => board.querySelector(".tray__stack .tray__sheet.is-top");
+const pulledSheet = () => board.querySelector(".tray__pulled");
+const flyers = () => board.querySelectorAll(".tray__flyer");
+const openTray = () => act(async () => void (await tray.current?.open()));
+/** Every animation ends as it starts, so what waits on one plays out. */
+const endAnimationsAtOnce = () =>
+  vi.spyOn(Element.prototype, "animate").mockImplementation(() => {
+    const a = new Animation();
+    a.finish();
+    return a;
+  });
+/** The front sheet dragged out over the board by its paper, where it settles. */
+const pullOut = async () => {
+  pointer(frontSheet()?.querySelector(".tray__paper") ?? null, "pointerdown", 300, 300);
+  pointer(stackEl(), "pointermove", 180, 300);
+  pointer(stackEl(), "pointerup", 180, 300);
+  await act(async () => {});
+  return pulledSheet();
+};
+/** A sticker on `sheet` pressed and drawn out toward the board, free of its sheet. */
+const peelFrom = (sheet: Element | null, on: Element | null = sheet, pointerId = 1) => {
+  const slot = sheet?.querySelector('.tray__slot[data-state="here"]') ?? null;
+  pointer(slot, "pointerdown", 100, 200, pointerId);
+  pointer(on, "pointermove", 40, 200, pointerId);
+  return slot?.getAttribute("data-id");
+};
+/**
+ * Reduced motion until `animate` turns it off, and animations that end only when `finishAll` ends
+ * them, so a page turn can be caught partway.
+ */
+const holdAnimations = () => {
+  let reduce = true;
+  const motion = window.matchMedia("all");
+  Object.defineProperty(motion, "matches", { get: () => reduce });
+  vi.spyOn(window, "matchMedia").mockReturnValue(motion);
+  const held: Animation[] = [];
+  vi.spyOn(Element.prototype, "animate").mockImplementation(() => {
+    const a = new Animation();
+    held.push(a);
+    return a;
+  });
+  return {
+    animate: () => {
+      reduce = false;
+    },
+    finishAll: async () => {
+      while (held.length) {
+        for (const a of held.splice(0)) a.finish();
+        await act(async () => {});
+      }
+    },
+  };
+};
+const pageDown = () =>
+  act(() => {
+    stackEl()?.dispatchEvent(new KeyboardEvent("keydown", { key: "PageDown", bubbles: true }));
+  });
+/** Enough stickers for more than one sheet. */
+const manyStickers = (n: number) =>
+  Array.from({ length: n }, (_, i) => sticker(`s${i}`, i + 1, false));
 
 beforeEach(() => {
   // Reduced motion: the tray opens and shuts at once. happy-dom's own animations reject unhandled.
@@ -82,6 +148,7 @@ beforeEach(() => {
   vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(657);
   host = document.createElement("div");
   board = document.createElement("div");
+  vi.spyOn(board, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 390, 657));
   document.body.append(host, board);
   root = createRoot(host);
 });
@@ -148,6 +215,98 @@ describe("StickerTray", () => {
 
     act(() => spot?.click());
     expect(openGiven).toHaveBeenCalledExactlyOnceWith("given");
+  });
+
+  it("puts a sticker in hand back on its pulled-out sheet when the sheet is sent home", async () => {
+    endAnimationsAtOnce();
+    const place = vi.fn((_id: string) => Promise.resolve(null));
+    render([sticker("a", 1, false), sticker("b", 2, false)], { place });
+    await openTray();
+    const pulled = await pullOut();
+    const peeled = peelFrom(pulled);
+    expect(flyers()).toHaveLength(1);
+
+    // Escape shuts the tray with the finger still down: the sheet goes home with its sticker.
+    act(() => {
+      board
+        .querySelector(".tray")
+        ?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    expect(flyers()).toHaveLength(0);
+    expect(stateOf(peeled ?? "")).toBe("here");
+
+    // The tray takes the next press: a tap sticks a sticker on, at a free spot.
+    await openTray();
+    const tapped = frontSheet()?.querySelector('.tray__slot[data-state="here"]') ?? null;
+    pointer(tapped, "pointerdown", 100, 200);
+    pointer(stackEl(), "pointerup", 100, 200);
+    expect(place).toHaveBeenCalledExactlyOnceWith(tapped?.getAttribute("data-id"), undefined);
+  });
+
+  it("ignores a second finger on the pulled-out sheet while a sticker is peeled from the stack", async () => {
+    endAnimationsAtOnce();
+    const place = vi.fn((_id: string) => Promise.resolve(null));
+    render(manyStickers(30), { place });
+    await openTray();
+    const pulled = await pullOut();
+    const peeled = peelFrom(frontSheet(), stackEl());
+
+    // A tap on the pulled-out sheet by another finger.
+    const other = pulled?.querySelector('.tray__slot[data-state="here"]') ?? null;
+    pointer(other, "pointerdown", 100, 100, 2);
+    pointer(pulled, "pointerup", 100, 100, 2);
+
+    // The peel still ends where its own finger lifts: over the board, where it's stuck on.
+    pointer(stackEl(), "pointerup", 40, 200);
+    await act(async () => {});
+    expect(place).toHaveBeenCalledExactlyOnceWith(peeled, expect.anything());
+    expect(flyers()).toHaveLength(0);
+  });
+
+  it("catches up with stickers that changed under a hand once it lets go", async () => {
+    render([sticker("a", 1, false), sticker("b", 2, false)]);
+    await openTray();
+    pointer(frontSheet()?.querySelector(".tray__paper") ?? null, "pointerdown", 300, 300);
+    render([sticker("a", 1, true), sticker("b", 2, false)]);
+    pointer(stackEl(), "pointerup", 300, 300);
+    await act(async () => {});
+    expect(stateOf("a")).toBe("used");
+  });
+
+  it("keeps a sticker in hand off its pulled-out sheet while the stickers change", async () => {
+    endAnimationsAtOnce();
+    render([sticker("a", 1, false), sticker("b", 2, false)]);
+    await openTray();
+    const pulled = await pullOut();
+    const peeled = peelFrom(pulled);
+    const other = peeled === "a" ? "b" : "a";
+    render([sticker("a", 1, other === "a"), sticker("b", 2, other === "b")]);
+    expect(stateOf(peeled ?? "")).toBe("peeling");
+  });
+
+  it("turns one sheet at a time, however fast PageDown comes", async () => {
+    const motion = holdAnimations();
+    render(manyStickers(30));
+    await openTray();
+    motion.animate();
+    const next = board.querySelector(".tray__stack .tray__sheet.is-next")?.getAttribute("data-f");
+    pageDown();
+    pageDown();
+    await motion.finishAll();
+    expect(frontSheet()?.getAttribute("data-f")).toBe(next);
+  });
+
+  it("keeps the newest match in front when a folder tab is chosen mid-turn", async () => {
+    const motion = holdAnimations();
+    const friend = { id: "friend", handle: "friend", name: "Friend", ageStatus: "adult" as const };
+    render(manyStickers(30).map((s) => ({ ...s, artist: friend })));
+    await openTray();
+    motion.animate();
+    const newest = frontSheet()?.getAttribute("data-f");
+    pageDown();
+    act(() => board.querySelector<HTMLElement>('.tray__tab[data-filter="gifts"]')?.click());
+    await motion.finishAll();
+    expect(frontSheet()?.getAttribute("data-f")).toBe(newest);
   });
 
   it("reports what the open tray showed as seen once it shuts, once", async () => {

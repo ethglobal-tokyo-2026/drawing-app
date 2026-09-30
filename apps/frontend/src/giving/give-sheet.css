@@ -15,14 +15,9 @@
   gap: 14px;
 }
 
-.board-sheet-body > *,
-.board-sheet-body > .giving__sent > * {
+.board-sheet-body > * {
   margin-top: 0;
   margin-bottom: 0;
-}
-
-.sheet-fine {
-  color: var(--graphite);
 }
 
 .sheet-empty {
@@ -83,14 +78,6 @@
   background: var(--pink);
   color: #fff;
   font: 800 11px/1 var(--font-ui);
-}
-
-.sticker-picker.compact {
-  grid-template-columns: repeat(5, 1fr);
-}
-
-.sticker-picker.compact img {
-  max-height: 44px;
 }
 
 .pick.picked {

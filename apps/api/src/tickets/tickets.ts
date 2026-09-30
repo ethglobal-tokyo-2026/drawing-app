@@ -53,7 +53,40 @@ export type TicketKind = (typeof ticketUses.$inferSelect)["kind"];
 export const ticketKindAt = (dayIndex: number): TicketKind =>
   dayIndex < DAILY_TICKETS_PER_DAY ? "daily" : "reserve";
 
-/** The person's tickets at `now`: today's daily ones, Tokyo time, and every reserve one left. */
+/** How many tickets the person has left at `now`: today's daily ones, Tokyo time, and reserve ones. */
+export function ticketsLeftOf(
+  db: DbOrTx,
+  userId: string,
+  now: Date,
+): Pick<Tickets, "dailyLeft" | "reserveLeft"> {
+  const dailyUsed = db
+    .select({ n: count() })
+    .from(ticketUses)
+    .where(
+      and(
+        eq(ticketUses.userId, userId),
+        eq(ticketUses.ticketDay, tokyoTicketDay(now)),
+        eq(ticketUses.kind, "daily"),
+      ),
+    )
+    .get();
+  const bought = db
+    .select({ tickets: sum(ticketPurchases.tickets) })
+    .from(ticketPurchases)
+    .where(and(eq(ticketPurchases.userId, userId), isNotNull(ticketPurchases.verifiedAt)))
+    .get();
+  const reserveUses = db
+    .select({ n: count() })
+    .from(ticketUses)
+    .where(and(eq(ticketUses.userId, userId), eq(ticketUses.kind, "reserve")))
+    .get();
+  return {
+    dailyLeft: Math.max(0, DAILY_TICKETS_PER_DAY - (dailyUsed?.n ?? 0)),
+    reserveLeft: Math.max(0, Number(bought?.tickets ?? 0) - (reserveUses?.n ?? 0)),
+  };
+}
+
+/** The person's tickets at `now`: what's left, and today's uses with their stickers. */
 export function ticketsOf(db: DbOrTx, userId: string, now: Date): Tickets {
   const day = tokyoTicketDay(now);
   const usedToday = db
@@ -73,22 +106,10 @@ export function ticketsOf(db: DbOrTx, userId: string, now: Date): Tickets {
     .where(and(eq(ticketUses.userId, userId), eq(ticketUses.ticketDay, day)))
     .orderBy(asc(ticketUses.dayIndex))
     .all();
-  const bought = db
-    .select({ tickets: sum(ticketPurchases.tickets) })
-    .from(ticketPurchases)
-    .where(and(eq(ticketPurchases.userId, userId), isNotNull(ticketPurchases.verifiedAt)))
-    .get();
-  const reserveUses = db
-    .select({ n: count() })
-    .from(ticketUses)
-    .where(and(eq(ticketUses.userId, userId), eq(ticketUses.kind, "reserve")))
-    .get();
-  const dailyUsed = usedToday.filter((use) => use.kind === "daily").length;
   return {
     ticketDay: day,
     dailyPerDay: DAILY_TICKETS_PER_DAY,
-    dailyLeft: Math.max(0, DAILY_TICKETS_PER_DAY - dailyUsed),
-    reserveLeft: Math.max(0, Number(bought?.tickets ?? 0) - (reserveUses?.n ?? 0)),
+    ...ticketsLeftOf(db, userId, now),
     nextRefillAt: toIsoTime(nextTokyoTicketDayStart(now)),
     usedToday: usedToday.map(({ sticker, ...use }) => ({
       ...use,

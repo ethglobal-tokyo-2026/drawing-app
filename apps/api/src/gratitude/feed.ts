@@ -1,19 +1,21 @@
 import { gifts, gratitude, users, type Db } from "@drawing-app/db";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, count, eq, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
-import { personSchema, toPerson, type StickerImages } from "../shapes.ts";
 import {
   gratitudeSchema,
+  personSchema,
   stickerLookup,
   stickerSchema,
   toGratitude,
+  toPerson,
   type Gratitude,
-} from "../views.ts";
+  type StickerImages,
+} from "../shapes.ts";
 import { gunzipReplay, replayV1Schema } from "./replay.ts";
 
-// The giver's side of gratitude: the pink tag's unseen feed, one combo with its replay, and marking a
-// combo watched.
+// The giver's side of gratitude: the pink tag's unseen feed and count, one combo with its replay, and
+// marking a combo watched.
 
 /** GET /api/gratitude/unseen's answer. */
 export const unseenGratitudeSchema = z.object({
@@ -83,6 +85,17 @@ export function markGratitudeWatched(
   if (combo.seenByGiverAt !== null) return toGratitude(combo);
   db.update(gratitude).set({ seenByGiverAt: now }).where(eq(gratitude.giftId, combo.giftId)).run();
   return toGratitude({ ...combo, seenByGiverAt: now });
+}
+
+/** The pink tag: gratitude on gifts the person gave that they haven't watched. */
+export function unseenGratitudeCount(db: Db, userId: string): number {
+  const row = db
+    .select({ n: count() })
+    .from(gratitude)
+    .innerJoin(gifts, eq(gifts.id, gratitude.giftId))
+    .where(and(eq(gifts.giverId, userId), isNull(gratitude.seenByGiverAt)))
+    .get();
+  return row?.n ?? 0;
 }
 
 /**

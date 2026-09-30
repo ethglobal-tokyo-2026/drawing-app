@@ -15,7 +15,7 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 | sticker sheet                      | シールシート                           |                                                                                       |
 | Zipper                             | ファスナー                             |                                                                                       |
 | seal (a sticker)                   | 仕上げる                               | The Seal key: 仕上げ. Sealed: 仕上がった                                              |
-| draw                               | かく                                   | In hiragana, as the Draw tab                                                          |
+| draw                               | かく                                   | In hiragana, as on the Draw key                                                       |
 | gift / Gift Message                | ギフト / ギフトメッセージ              |                                                                                       |
 | give (a sticker)                   | 贈る                                   |                                                                                       |
 | receive                            | 受け取る                               |                                                                                       |

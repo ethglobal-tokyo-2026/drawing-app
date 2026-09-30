@@ -4,7 +4,7 @@ import { EASE_SPRING, clamp } from "./easing";
 import { FEEL_CONFIG } from "./gameConfig";
 import type { HeartBox } from "./miniHeartPhysics";
 import { POP_IN_WORDS, createPopInPicker, type PopInBank } from "./popInWords";
-import { shownGloss, TIER_NAMES } from "./tierNames";
+import { shownGloss, TIER_NAMES, type TierName } from "./tierNames";
 import { animate } from "./webAnimations";
 
 export interface Lettering {
@@ -19,6 +19,21 @@ export interface Lettering {
   showPopInWord: (bank: PopInBank, heart: HeartBox) => void;
   clear: () => void;
 }
+
+/** What an unlock slams in over the heart, with its English: stroke's, and shake's. */
+export const UNLOCK_SLAMS = {
+  stroke: { jp: "!?", en: "" },
+  shake: { jp: "ポンッ", en: "*pop*" },
+} as const satisfies Record<"stroke" | "shake", TierName>;
+
+/** Every word the lettering shows, with its English: what's slammed in, then the pop-in words. */
+export const LETTERING_WORDS: readonly TierName[] = [
+  ...TIER_NAMES,
+  ...Object.values(UNLOCK_SLAMS),
+  ...Object.values(POP_IN_WORDS).flatMap((bank) =>
+    bank.map(({ jp, gloss }) => ({ jp, en: gloss })),
+  ),
+];
 
 /** Where pop-ins land, in heart widths and heights from its middle: clear of the face. */
 const SLOTS: readonly (readonly [x: number, y: number])[] = [
@@ -100,10 +115,10 @@ interface PopSize {
   glossWidth: number | null;
 }
 
-/** Where a pop-in lands: its slot, its scale, its middle as it starts, and its drift over its life. */
+/** Where a pop-in lands: its slot, its shrink, its middle as it starts, and its drift over its life. */
 interface Placement {
   slot: number;
-  scale: number;
+  shrink: number;
   edges: Edges;
   cx: number;
   cy: number;
@@ -243,18 +258,8 @@ export function createLettering(
   const glossWidth = (text: string) => glossWidths.get(text) ?? text.length * GLOSS_PX_GUESS;
 
   function measure() {
-    const words = new Set<string>();
-    const glosses = new Set<string>();
-    for (const bank of Object.values(POP_IN_WORDS)) {
-      for (const { jp, gloss } of bank) {
-        words.add(jp);
-        glosses.add(gloss);
-      }
-    }
-    for (const { jp, en } of TIER_NAMES) {
-      words.add(jp);
-      glosses.add(en);
-    }
+    const words = new Set(LETTERING_WORDS.map(({ jp }) => jp));
+    const glosses = new Set(LETTERING_WORDS.map(({ en }) => en).filter(Boolean));
     const probe = document.createElement("div");
     probe.style.visibility = "hidden";
     const wordEls = [...words].map((text) => {
@@ -339,18 +344,19 @@ export function createLettering(
   }
 
   /**
-   * Where a word lands from `slot` at `scale`: kept on screen at the spring's peak, tilt and outline
-   * included, and drifting along an edge rather than off it.
+   * Where a word lands from `slot`, shrunk to `shrink`: kept on screen at the spring's peak, tilt
+   * and outline included, and drifting along an edge rather than off it. Its margins and drift keep
+   * to the stage's scale, whatever its shrink.
    */
   function place(
     slot: number,
-    scale: number,
+    shrink: number,
     size: PopSize,
     heart: HeartBox,
     draw: { jx: number; jy: number; rad: number; dxJitter: number; dy: number },
   ): Placement {
     const [sx, sy] = SLOTS[slot];
-    const edges = popEdges(size, scale);
+    const edges = popEdges(size, shrink);
     const rest = turnedReach(edges, draw.rad);
     const peak = turnedReach(
       {
@@ -375,7 +381,7 @@ export function createLettering(
     const dx = clamp(sx * 26 * scale + draw.dxJitter, xMin - cx, xMax - cx);
     // And it never rises out of the stage, under the HUD.
     const dy = Math.min(0, Math.max(draw.dy, yMin - cy));
-    return { slot, scale, edges, cx, cy, dx, dy };
+    return { slot, shrink, edges, cx, cy, dx, dy };
   }
 
   /** The drawn heart: its box drawn in at each side. */
@@ -490,9 +496,9 @@ export function createLettering(
       const tries = free.length > 0 ? free : slots.slice(0, 1);
       const { minScale, scaleStep } = FEEL_CONFIG.popIns;
       let p: Placement | null = null;
-      for (let scale = 1; !p && scale > minScale - 1e-6; scale -= scaleStep) {
+      for (let shrink = 1; !p && shrink > minScale - 1e-6; shrink -= scaleStep) {
         for (const slot of tries) {
-          const candidate = place(slot, Math.max(minScale, scale), size, heart, draw);
+          const candidate = place(slot, Math.max(minScale, shrink), size, heart, draw);
           if (!coversHeart(candidate, heart, draw.rad)) {
             p = candidate;
             break;
@@ -503,15 +509,15 @@ export function createLettering(
       caption.slot = p.slot;
       caption.until = now + duration;
       // The gloss stays at its fine-print size as the word shrinks.
-      caption.gloss.style.transformOrigin = p.scale < 1 ? "0 0" : "";
+      caption.gloss.style.transformOrigin = p.shrink < 1 ? "0 0" : "";
       caption.gloss.style.transform =
-        p.scale < 1 ? `rotate(3deg) scale(${(1 / p.scale).toFixed(3)})` : "";
+        p.shrink < 1 ? `rotate(3deg) scale(${(1 / p.shrink).toFixed(3)})` : "";
 
       const { cx, cy, dx, dy } = p;
       const rot = (draw.rad * 180) / Math.PI;
-      const fit = p.scale;
-      const at = (k: number, scale: number) =>
-        `translate(${(cx - size.w / 2 + dx * k).toFixed(1)}px,${(cy - size.ht / 2 + dy * k).toFixed(1)}px) rotate(${rot.toFixed(1)}deg) scale(${(scale * fit).toFixed(3)})`;
+      const fit = p.shrink;
+      const at = (k: number, spring: number) =>
+        `translate(${(cx - size.w / 2 + dx * k).toFixed(1)}px,${(cy - size.ht / 2 + dy * k).toFixed(1)}px) rotate(${rot.toFixed(1)}deg) scale(${(spring * fit).toFixed(3)})`;
       caption.animation = animate(
         caption.el,
         reduced()

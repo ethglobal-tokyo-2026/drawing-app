@@ -56,15 +56,6 @@ const FIGURE_PX = 200;
 /** Where the gift comes from: its gift message's link, or your board, where it waits for you. */
 type Opening = { claim: GiftOpening } | { gift: GiftForYou };
 
-/** A waiting gift came with everything its preview shows, and can be received. */
-const previewOfWaiting = ({ gift, giver, sticker }: GiftForYou): GiftPreview => ({
-  giver,
-  expiresAt: gift.expiresAt,
-  receivable: true,
-  refusal: null,
-  sticker,
-});
-
 /** How a person is printed: their handle, or their LINE name until they have one. */
 const printed = (p: PersonView) => (p.handle ? formatHandle(p.handle) : p.name);
 
@@ -98,14 +89,15 @@ export function ReceiveGiftDialog({ from, onClose }: Props) {
     latestClose.current = onClose;
   });
 
-  // One preview per attempt, which StrictMode's second run of the effect shares.
+  // One preview per attempt, which StrictMode's second run of the effect shares. A gift from the
+  // board is asked about again: its list may be older than a take-out, an expiry or a receive.
   const previewing = useRef<{ attempt: number; answer: Promise<GiftPreview> } | null>(null);
   useEffect(() => {
     if (previewing.current?.attempt !== attempt) {
       const answer =
         "claim" in opening
           ? api.previewGift(opening.claim)
-          : Promise.resolve(previewOfWaiting(opening.gift));
+          : api.previewGiftForYou(opening.gift.gift.id);
       previewing.current = { attempt, answer };
     }
     let current = true;
