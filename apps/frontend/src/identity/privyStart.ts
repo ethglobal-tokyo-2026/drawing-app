@@ -22,9 +22,6 @@ export function startPrivy(why: PrivyStart): void {
   listeners.forEach((l) => l());
 }
 
-/** Why Privy started, or null while it waits. */
-export const privyStart = () => started;
-
 const subscribe = (l: () => void) => {
   listeners.add(l);
   return () => listeners.delete(l);

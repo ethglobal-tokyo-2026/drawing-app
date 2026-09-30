@@ -46,6 +46,9 @@ async function openApp() {
   return { ...privyStart, ...smartWallet, settle };
 }
 
+/** How many times Privy started for `why`, as the performance recording saw it. */
+const startsFor = (why: string) => performance.getEntriesByName(`privy-start:${why}`).length;
+
 describe("PrivySignIn", () => {
   it("leaves Privy's SDK unloaded until Privy starts, then loads it once", async () => {
     const app = await openApp();
@@ -56,21 +59,20 @@ describe("PrivySignIn", () => {
     act(() => app.startPrivy("board-settled"));
     await app.settle();
     expect(host.textContent).toBe("privy");
-    expect(app.privyStart()).toBe("board-settled");
 
     // Already started: nothing mounts twice, and the first reason stays.
     act(() => app.startPrivy("gift-link"));
     await app.settle();
     expect(loadedSdk).toHaveBeenCalledOnce();
-    expect(app.privyStart()).toBe("board-settled");
-    expect(performance.getEntriesByName("privy-start:board-settled")).toHaveLength(1);
+    expect(startsFor("board-settled")).toBe(1);
+    expect(startsFor("gift-link")).toBe(0);
   });
 
   it("starts at once when sealing, giving or receiving waits for the wallet", async () => {
     const app = await openApp();
     void app.waitForSmartWallet().catch(() => {});
     await app.settle();
-    expect(app.privyStart()).toBe("wallet-needed");
+    expect(startsFor("wallet-needed")).toBe(1);
     expect(host.textContent).toBe("privy");
   });
 });
