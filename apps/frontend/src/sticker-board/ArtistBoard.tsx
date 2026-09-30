@@ -106,7 +106,7 @@ function StickerView({
             }}
           />
         </div>
-        {!drawnByOwner && <ArtistChip artist={sticker.artist} />}
+        {!drawnByOwner && <ArtistChip artist={sticker.artist} wrap />}
         <div className="visit-view-perf" />
         <QuietLink onClick={onClose}>{t(($) => $.stickerBoard.artistBoard.close)}</QuietLink>
       </div>
@@ -240,6 +240,7 @@ export function ArtistBoard({ person, onBack }: Props) {
     handle: person.handle ?? owner.name,
     ensName: person.ensName,
     own: false,
+    loading: stats.state === "loading",
     failure:
       stats.state === "failed"
         ? t(($) => $.stickerBoard.artistBoard.statsDidntLoad, {

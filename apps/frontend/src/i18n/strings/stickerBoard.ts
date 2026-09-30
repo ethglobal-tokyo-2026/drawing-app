@@ -10,6 +10,13 @@ export const stickerBoard = {
   statBoard: {
     /** Stat board (a sticker board's cork back, yours or someone else's): screen readers' name for the dialog; {{name}} is the board owner's LINE name */
     label: { en: "{{name}}’s stats", ja: "{{name}}さんの記録" },
+    /** Your stat board, while your User Stats load: the one line screen readers hear, in place of the figures */
+    loadingOwn: { en: "Loading your stats", ja: "あなたの記録を読み込んでいます" },
+    /** Someone else's stat board, while their User Stats load: the one line screen readers hear, in place of the figures */
+    loadingTheirs: {
+      en: "Loading {{name}}’s stats",
+      ja: "{{name}}さんの記録を読み込んでいます",
+    },
     /** A figure whose source didn't load: a dash on screen, words for screen readers. */
     notKnown: {
       /** Stat board: the dash in place of a figure whose data didn't load (hidden from screen readers) */

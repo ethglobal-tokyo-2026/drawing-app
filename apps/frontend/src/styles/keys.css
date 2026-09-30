@@ -311,7 +311,7 @@
 .key:disabled,
 .key[aria-disabled="true"]:not([aria-busy="true"]),
 .label-btn:disabled,
-.label-btn[aria-disabled="true"] {
+.label-btn[aria-disabled="true"]:not([aria-busy="true"]) {
   --face: var(--liner-deep);
   --edge: rgba(110, 104, 120, 0.34);
   cursor: not-allowed;
@@ -327,13 +327,14 @@
 .key:disabled::after,
 .key[aria-disabled="true"]:not([aria-busy="true"])::after,
 .label-btn:disabled::after,
-.label-btn[aria-disabled="true"]::after {
+.label-btn[aria-disabled="true"]:not([aria-busy="true"])::after {
   opacity: 0;
 }
 
 /* Busy: its act is under way. It keeps its face, lip and ink, and takes no second press, since the
    press skips anything aria-disabled. */
-.key[aria-busy="true"] {
+.key[aria-busy="true"],
+.label-btn[aria-busy="true"] {
   cursor: progress;
 }
 

@@ -221,7 +221,7 @@ export function TransferTrail({ rows, viewerId, artist, mountReplay }: Props) {
                 returnFocus={() => pill.current}
               />
               {replay.failure && (
-                <p className="fine transfer-trail__replay-note" role="alert">
+                <p className="problem-note transfer-trail__replay-note" role="alert">
                   {replay.failure.kind === "load" ? (
                     <>
                       {t(($) => $.stickerBoard.transferTrail.replaying.didntLoad, {
@@ -245,7 +245,7 @@ export function TransferTrail({ rows, viewerId, artist, mountReplay }: Props) {
                 </p>
               )}
               {replay.seenFailure && (
-                <p className="fine transfer-trail__replay-note">
+                <p className="problem-note transfer-trail__replay-note">
                   {t(($) => $.stickerBoard.transferTrail.replaying.notMarkedSeen, {
                     reason: errorReason(replay.seenFailure),
                   })}

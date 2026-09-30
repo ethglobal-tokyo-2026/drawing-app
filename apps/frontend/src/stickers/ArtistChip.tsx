@@ -12,6 +12,8 @@ interface Props {
   bare?: boolean;
   /** Without the foil ring, for surfaces that aren't a board, where foil never shows. */
   plain?: boolean;
+  /** Its whole handle, running onto a second line rather than cut short, for a sheet with room. */
+  wrap?: boolean;
 }
 
 // LINE names often start with an emoji; a grapheme keeps flags and joined emoji whole.
@@ -22,7 +24,13 @@ const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
  * inside a turning foil ring (just the white edge when plain), then their handle. Without a picture,
  * their LINE name's first letter stands in, as on a photo sticker.
  */
-export function ArtistChip({ artist, variant = "artist", bare = false, plain = false }: Props) {
+export function ArtistChip({
+  artist,
+  variant = "artist",
+  bare = false,
+  plain = false,
+  wrap = plain,
+}: Props) {
   const { t } = useTranslation();
   // Until the handle prompt is answered, their LINE name stands in.
   const name = artist.handle === null ? artist.name : formatHandle(artist.handle);
@@ -32,6 +40,7 @@ export function ArtistChip({ artist, variant = "artist", bare = false, plain = f
     `artist-chip--${variant}`,
     bare && "artist-chip--bare",
     plain && "artist-chip--plain",
+    wrap && "artist-chip--wrap",
   ];
   return (
     <span

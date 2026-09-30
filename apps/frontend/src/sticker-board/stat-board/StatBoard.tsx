@@ -52,6 +52,7 @@ export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref
     handle: account.handle ?? me.displayName,
     ensName: account.ensName,
     own: true,
+    loading: stats.state === "loading",
     failure:
       stats.state === "failed"
         ? t(($) => $.stickerBoard.statBoard.didntLoadOwnBecause, {

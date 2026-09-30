@@ -7,6 +7,7 @@ import { keepChosenLanguage, type Language } from "../../i18n/language";
 import { lineLanguage } from "../../i18n/pageLanguage";
 import { useTranslation } from "../../i18n/react";
 import { useReducedMotion } from "../../ui/useReducedMotion";
+import { statsClearPeek } from "./settingsPeek";
 import "./settings-note.css";
 
 /** A language, or null to follow LINE's. */
@@ -27,7 +28,8 @@ const reason = (error: unknown) => (error instanceof Error ? error.message : Str
 /**
  * Sticks the note to the cork's foot with only its title showing, until it scrolls into view: CSS
  * tucks it down by the rest of its height, measured here whenever that changes. A sticky box keeps
- * clear of its scroller's padding, so the tuck reaches through the cork's too.
+ * clear of its scroller's padding, so the tuck reaches through the cork's too. Where the stats run
+ * into that band it stays below them instead, and scrolling finds it.
  *
  * Returns `reveal`, which scrolls the cork until the whole note shows above its foot. A tap on the
  * tucked note uses it, and so does focus, which the browser's own scrolling can't bring out of a tuck.
@@ -38,16 +40,22 @@ function usePeek(note: RefObject<HTMLElement | null>, title: RefObject<HTMLEleme
     const paper = note.current;
     const heading = title.current;
     if (!paper || !heading) return;
+    const cork = paper.parentElement;
+    const stats = cork?.querySelector<HTMLElement>(".stat-board__stats");
     const tuck = () => {
-      const cork = paper.parentElement;
       const padding = cork ? parseFloat(getComputedStyle(cork).paddingBottom) || 0 : 0;
       const shown = heading.offsetTop + heading.offsetHeight + PEEK_UNDER_TITLE;
       const tucked = Math.max(0, paper.offsetHeight - shown + padding);
       paper.style.setProperty("--settings-tuck", `${tucked}px`);
+      if (cork && stats)
+        paper.toggleAttribute(
+          "data-below-stats",
+          !statsClearPeek(cork.clientHeight, stats.offsetTop + stats.offsetHeight, shown),
+        );
     };
     tuck();
     const resized = new ResizeObserver(tuck);
-    resized.observe(paper);
+    for (const el of [paper, cork, stats]) if (el) resized.observe(el);
     return () => resized.disconnect();
   }, [note, title]);
 
@@ -148,7 +156,7 @@ export function SettingsNote({ restart = () => location.reload() }: { restart?: 
             {status.step === "saving" ? t(($) => $.stickerBoard.settings.language.saving) : ""}
           </p>
           {status.step === "failed" && (
-            <p className="settings-note__problem" role="alert">
+            <p className="problem-note settings-note__problem" role="alert">
               {status.problem}
             </p>
           )}

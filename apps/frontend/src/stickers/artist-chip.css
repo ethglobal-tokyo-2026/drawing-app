@@ -142,14 +142,14 @@
 
 /* A sheet has the room, so the whole handle shows, up to the longest (32 characters), running onto a
    second line rather than being cut short. */
-.artist-chip--plain {
+.artist-chip--wrap {
   height: auto;
   min-height: 40px;
   max-width: 100%;
   padding-block: 4px;
 }
 
-.artist-chip--plain .artist-chip__name {
+.artist-chip--wrap .artist-chip__name {
   max-width: none;
   white-space: normal;
   overflow-wrap: anywhere;

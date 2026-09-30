@@ -8,6 +8,7 @@ import { errors } from "../../i18n/strings/errors";
 import { i18next } from "../../i18n/i18n";
 import { keepChosenLanguage, readChosenLanguage } from "../../i18n/language";
 import { SettingsNote } from "./SettingsNote";
+import { statsClearPeek } from "./settingsPeek";
 
 const restart = vi.fn();
 let unmount = () => {};
@@ -111,5 +112,14 @@ describe("the Settings note's language", () => {
       "English",
       "日本語",
     ]);
+  });
+});
+
+describe("the Settings note's peek", () => {
+  it("shows only where the stats end above the cork's foot band", () => {
+    // A cork 520px tall whose foot band is 60px: stats to 440px leave room, stats to 480px don't.
+    expect(statsClearPeek(520, 440, 60)).toBe(true);
+    expect(statsClearPeek(520, 480, 60)).toBe(false);
+    expect(statsClearPeek(900, 480, 60)).toBe(true);
   });
 });

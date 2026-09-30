@@ -91,6 +91,12 @@
   gap: 16px 12px;
 }
 
+/* An outline where a figure will be, sized to the figure's own type. */
+.stat-board__loading {
+  display: inline-block;
+  vertical-align: baseline;
+}
+
 .stat-board__col {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
