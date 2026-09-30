@@ -601,7 +601,7 @@ describe("ReserveTicketCheckout", () => {
     await settle(500);
     expect(bought).toHaveBeenCalledTimes(2);
     expect(document.querySelector("[role=alert]")?.textContent).toContain(
-      "Sui didn't answer. Your tickets weren't added yet; try again.",
+      "Sui didn’t answer. Your tickets weren’t added yet; try again.",
     );
     expect(kept()).toEqual([TX_DIGEST]);
 

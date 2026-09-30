@@ -163,12 +163,12 @@ export const receiving = {
     title: { en: "Couldn’t open the gift", ja: "ギフトをひらけませんでした" },
     /** Gift refusal screen, when the preview says the gift can be received but has no sticker: the line under the title */
     withoutSticker: {
-      en: "The gift's preview came without its sticker.",
+      en: "The gift’s preview came without its sticker.",
       ja: "ギフトのプレビューにシールが含まれていませんでした。",
     },
     /** Gift refusal screen, when the preview says the gift can't be received but gives no reason: the line under the title */
     withoutRefusal: {
-      en: "The gift's preview refused it without saying why.",
+      en: "The gift’s preview refused it without saying why.",
       ja: "ギフトを受け取れない理由が、プレビューに含まれていませんでした。",
     },
   },

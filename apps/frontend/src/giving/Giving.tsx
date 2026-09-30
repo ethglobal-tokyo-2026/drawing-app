@@ -13,6 +13,7 @@ import {
 } from "../icons";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
+import { Handle } from "../stickers/Handle";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
@@ -366,8 +367,7 @@ export function Giving({
             values={{ no: formatNo(sticker.no), day: formatDay(sticker.createdAt) }}
             components={{
               duration: <Duration seconds={sticker.timeUsed} />,
-              // A handle is a component's text, not a value: Trans would read markup in a value.
-              name: <>{formatHandle(fromHandle)}</>,
+              name: <Handle name={formatHandle(fromHandle)} />,
             }}
           />
         </p>

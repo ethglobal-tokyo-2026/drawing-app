@@ -75,7 +75,7 @@ describe("PerformanceRecorderControls", () => {
     writeText.mockRejectedValue(new DOMException("Not allowed here", "NotAllowedError"));
     await copyReport();
     expect(control('[role="alert"]').textContent).toBe(
-      "The report couldn't be copied: Not allowed here. It's below to copy by hand.",
+      "The report couldn’t be copied: Not allowed here. It’s below to copy by hand.",
     );
     expect(control<HTMLTextAreaElement>("textarea").value).toContain("Typical frame");
   });
@@ -104,6 +104,6 @@ describe("PerformanceRecorderControls", () => {
     const toggle = control<HTMLInputElement>("input[type=checkbox]");
     act(() => toggle.click());
     expect(toggle.checked).toBe(false);
-    expect(control('[role="alert"]').textContent).toBe("Recording couldn't start: observe failed");
+    expect(control('[role="alert"]').textContent).toBe("Recording couldn’t start: observe failed");
   });
 });

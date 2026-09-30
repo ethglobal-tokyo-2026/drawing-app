@@ -255,7 +255,7 @@ describe("ExploreScreen's This week", () => {
     expect(theirs?.hasAttribute("aria-label")).toBe(false);
     expect(theirs?.textContent).toContain("@mika.draws");
     expect(theirs?.textContent).toContain("1,234 gratitude");
-    expect(descriptionOf(theirs)).toBe("@mika.draws's sticker board");
+    expect(descriptionOf(theirs)).toBe("@mika.draws’s sticker board");
     // The handle's break marks would put a space in the row's name.
     expect(theirs?.querySelectorAll("wbr:not([aria-hidden=true])")).toHaveLength(0);
     expect(yours?.hasAttribute("aria-label")).toBe(false);

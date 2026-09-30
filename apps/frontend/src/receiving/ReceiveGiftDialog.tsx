@@ -20,6 +20,7 @@ import { ArrowSquareOut, HandHeart, StickerBoardIcon, X } from "../icons";
 import { useIdentity } from "../identity/useIdentity";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
+import { Handle } from "../stickers/Handle";
 import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { Key } from "../ui/Key";
@@ -378,7 +379,7 @@ function Gift({
                 values={{ no: formatNo(sticker.no), day: formatDay(sticker.sealedAt) }}
                 components={{
                   duration: <Duration seconds={sticker.timeUsed} />,
-                  artist: <>{printed(sticker.artist)}</>,
+                  artist: <Handle name={printed(sticker.artist)} />,
                 }}
               />
             </p>

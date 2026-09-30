@@ -267,9 +267,9 @@ export const stickerBoard = {
       /** It switched, but its setting wasn't kept for the next start. */
       onUntilRestart: { en: "Recording is on until the app restarts: {{reason}}" },
       offUntilRestart: { en: "Recording is off until the app restarts: {{reason}}" },
-      couldntStart: { en: "Recording couldn't start: {{reason}}" },
-      couldntStop: { en: "Recording couldn't stop: {{reason}}" },
-      notCopied: { en: "The report couldn't be copied: {{reason}}. It's below to copy by hand." },
+      couldntStart: { en: "Recording couldn’t start: {{reason}}" },
+      couldntStop: { en: "Recording couldn’t stop: {{reason}}" },
+      notCopied: { en: "The report couldn’t be copied: {{reason}}. It’s below to copy by hand." },
       report: { en: "Performance report" },
     },
   },
@@ -673,7 +673,7 @@ export const stickerBoard = {
   /** Someone else's sticker board, opened from Explore. */
   artistBoard: {
     /** Someone else's sticker board, opened from Explore: LINE's header, and screen readers' name for the board */
-    title: { en: "{{name}}'s sticker board", ja: "{{name}}さんのシールボード" },
+    title: { en: "{{name}}’s sticker board", ja: "{{name}}さんのシールボード" },
     /** Someone else's sticker board: screen readers' name for the button with their photo and name, which turns the board over to their stat board */
     theirStats: { en: "{{name}}: their stats", ja: "{{name}}さんの記録" },
     /** Someone else's stat board, Gratitude receipt: in place of its rows when their User Stats fail to load, with the reason */
