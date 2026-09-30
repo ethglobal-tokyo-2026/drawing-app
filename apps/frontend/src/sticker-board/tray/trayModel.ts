@@ -189,7 +189,7 @@ export interface TrayState {
   destroyed: boolean;
 }
 
-/** What every part of the sticker tray is given: its board, its elements and their helpers, and its state. */
+/** What every part of the sticker tray is given: its board, its elements and their helpers, its state. */
 export interface Tray {
   board: HTMLElement;
   api: TrayBoard;
