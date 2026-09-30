@@ -85,6 +85,8 @@ export default function App() {
   // screen; a gift message's link opens its gift over the board.
   const [opened] = useState(() => openedFrom(location.pathname));
   const [view, setView] = useState<View>(opened.view);
+  // A name's link is Explore's to open once; a later visit to Explore is plain Explore.
+  const [boardOf, setBoardOf] = useState(opened.boardOf);
   // The gift ReceiveGiftDialog shows over the board: a gift message's link's token, held in memory
   // while it's open, or a gift waiting for you, opened from the board's badge.
   const [giftOpening, setGiftOpening] = useState<GiftFrom | undefined>(() =>
@@ -202,7 +204,8 @@ export default function App() {
           >
             <Suspense fallback={null}>
               <ExploreScreen
-                boardOf={opened.boardOf}
+                boardOf={boardOf}
+                onBoardOfTaken={() => setBoardOf(undefined)}
                 onOpenArtist={setVisiting}
                 onOpenMyBoard={() => setView("board")}
               />

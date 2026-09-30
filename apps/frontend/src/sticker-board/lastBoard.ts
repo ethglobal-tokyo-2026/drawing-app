@@ -1,5 +1,6 @@
 import type { PersonView } from "../api/views";
 import { openedFrom } from "../app/openedView";
+import { parseStored, readStored, writeStored } from "../ui/deviceStorage";
 import { assemblyOf, decodeImage } from "./boardComplete";
 import type { BoardStickerView } from "./boardSticker";
 
@@ -43,33 +44,23 @@ const isKept = (value: unknown): value is Kept =>
 
 /** The kept board as storage has it; another build's, or one that can't be read, is forgotten. */
 function read(): Kept | null {
-  // Tests outside a browser have no storage.
-  if (typeof localStorage === "undefined") return null;
-  let text: string | null;
-  try {
-    text = localStorage.getItem(KEY);
-  } catch (error) {
-    console.error("The board kept on this phone couldn't be read", error);
-    return null;
-  }
+  const { text } = readStored(KEY, "The board kept on this phone couldn't be read");
   if (text === null) return null;
-  try {
-    const value: unknown = JSON.parse(text);
-    if (isKept(value)) return value;
-  } catch (error) {
-    console.error("The board kept on this phone isn't JSON, so it's forgotten", error);
-  }
-  forget();
+  const value = parseStored(text);
+  if (isKept(value)) return value;
+  if (value === undefined)
+    console.error("The board kept on this phone isn't JSON, so it's forgotten:", text);
+  // Not forget(): this runs as `kept` is first set, before it can be written.
+  removeKept();
   return null;
 }
 
+const removeKept = () =>
+  writeStored(KEY, null, "The board kept on this phone couldn't be forgotten");
+
 function forget() {
   kept = null;
-  try {
-    localStorage.removeItem(KEY);
-  } catch (error) {
-    console.error("The board kept on this phone couldn't be forgotten", error);
-  }
+  removeKept();
 }
 
 /** Read once, as the app's code starts; kept up to date in memory from then on. */
@@ -90,11 +81,11 @@ export function keptBoardFor(userId: string): KeptBoard | null {
 export function keepBoard(userId: string, board: KeptBoard): void {
   const stickers = board.stickers.map(({ outline: _outline, ...s }) => s);
   kept = { build: BUILD, userId, board: { owner: board.owner, stickers } };
-  try {
-    localStorage.setItem(KEY, JSON.stringify(kept));
-  } catch (error) {
-    console.error("The board couldn't be kept on this phone for its next open", error);
-  }
+  writeStored(
+    KEY,
+    JSON.stringify(kept),
+    "The board couldn't be kept on this phone for its next open",
+  );
 }
 
 /** For tests: reads storage again, as the app's code does when it starts. */

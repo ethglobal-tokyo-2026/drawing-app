@@ -1,4 +1,12 @@
-import { useId, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { apiError } from "../../api/apiClient";
 import { useMe } from "../../api/meContext";
 import { useApi } from "../../api/useApi";
@@ -7,6 +15,7 @@ import { keepChosenLanguage, type Language } from "../../i18n/language";
 import { lineLanguage } from "../../i18n/pageLanguage";
 import { useTranslation } from "../../i18n/react";
 import { useReducedMotion } from "../../ui/useReducedMotion";
+import { reopenOnSettingsNextStart } from "./reopenOnSettings";
 import { statsClearPeek } from "./settingsPeek";
 import "./settings-note.css";
 
@@ -59,7 +68,7 @@ function usePeek(note: RefObject<HTMLElement | null>, title: RefObject<HTMLEleme
     return () => resized.disconnect();
   }, [note, title]);
 
-  return () => {
+  return (behavior: ScrollBehavior = reduced ? "auto" : "smooth") => {
     const paper = note.current;
     const cork = paper?.parentElement;
     // Tucked, or partly scrolled in, the note's foot is below the cork's.
@@ -71,16 +80,50 @@ function usePeek(note: RefObject<HTMLElement | null>, title: RefObject<HTMLEleme
     const below = paper.getBoundingClientRect().bottom - edge;
     paper.style.removeProperty("position");
     const padding = parseFloat(getComputedStyle(cork).paddingBottom) || 0;
-    cork.scrollBy({ top: below + padding, behavior: reduced ? "auto" : "smooth" });
+    cork.scrollBy({ top: below + padding, behavior });
   };
+}
+
+/**
+ * The app restarted for a language change, so the note comes into view as the cork shows and stays
+ * there while the figures above it load and change height, until the person touches the cork.
+ */
+function useOpenInView(
+  note: RefObject<HTMLElement | null>,
+  reveal: (behavior?: ScrollBehavior) => void,
+  opened: boolean,
+) {
+  const revealNow = useEffectEvent(() => reveal("instant"));
+  useEffect(() => {
+    const cork = note.current?.parentElement;
+    const above = cork?.querySelector(".stat-board__stats");
+    if (!opened || !cork || !above) return;
+    revealNow();
+    const resized = new ResizeObserver(revealNow);
+    resized.observe(above);
+    const letGo = () => resized.disconnect();
+    const touches = ["pointerdown", "wheel", "keydown"] as const;
+    for (const type of touches) cork.addEventListener(type, letGo, { once: true, passive: true });
+    return () => {
+      resized.disconnect();
+      for (const type of touches) cork.removeEventListener(type, letGo);
+    };
+  }, [note, opened]);
 }
 
 /**
  * Your Settings, the first paper under the stats on your cork back. A language is saved to your
  * account, then kept on this phone for the first screen of the next start, and the app restarts in
- * it, so text built outside React follows too.
+ * it, so text built outside React follows too. The start after a language change opens on this note,
+ * so the person sees their pick took (`openedInView`).
  */
-export function SettingsNote({ restart = () => location.reload() }: { restart?: () => void }) {
+export function SettingsNote({
+  restart = () => location.reload(),
+  openedInView = false,
+}: {
+  restart?: () => void;
+  openedInView?: boolean;
+}) {
   const { t } = useTranslation();
   const api = useApi();
   const me = useMe();
@@ -90,6 +133,7 @@ export function SettingsNote({ restart = () => location.reload() }: { restart?: 
   const [saved, setSaved] = useState<Choice>(me.languageChoice);
   const [status, setStatus] = useState<Status>({ step: "idle" });
   const reveal = usePeek(note, title);
+  useOpenInView(note, reveal, openedInView);
 
   const choose = async (choice: Choice) => {
     if (status.step === "saving") return;
@@ -114,6 +158,7 @@ export function SettingsNote({ restart = () => location.reload() }: { restart?: 
       setStatus({ step: "failed", problem });
       return;
     }
+    reopenOnSettingsNextStart();
     restart();
   };
 
@@ -129,8 +174,8 @@ export function SettingsNote({ restart = () => location.reload() }: { restart?: 
       ref={note}
       className="stat-board__note settings-note"
       aria-labelledby={`${id}-title`}
-      onClick={reveal}
-      onFocus={reveal}
+      onClick={() => reveal()}
+      onFocus={() => reveal()}
     >
       <div className="stat-board__paper">
         <h3 ref={title} className="settings-note__title" id={`${id}-title`}>

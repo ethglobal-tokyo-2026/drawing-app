@@ -111,7 +111,7 @@
 }
 
 .pending-gifts-badge__line {
-  font: 750 14.5px/1.15 var(--font-ui);
+  font: 700 15px/1.15 var(--font-ui);
   font-stretch: var(--w-ui);
   color: var(--ink);
 }

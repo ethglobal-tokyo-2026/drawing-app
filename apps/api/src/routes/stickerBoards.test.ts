@@ -3,8 +3,8 @@ import { insertUser, packGift } from "@drawing-app/db/testing";
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
-import { userStatsSchema } from "../shapes.ts";
-import { MAX_SEEN_BATCH, stickerBoardSchema } from "../stickerBoards/board.ts";
+import { stickerPlacementSchema, userStatsSchema, type StickerPlacement } from "../shapes.ts";
+import { MAX_SEEN_BATCH, newStickerCount, stickerBoardSchema } from "../stickerBoards/board.ts";
 import { simplifiedOutline } from "../stickers/outline.ts";
 import { stickerDetailSchema } from "../stickers/stickerDetail.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
@@ -20,7 +20,6 @@ import {
   SPOT,
 } from "../testing/rows.ts";
 import { addDays, tokyoTicketDay, tokyoTicketDayStart } from "../ticketDays.ts";
-import { newStickerCount, stickerPlacementSchema, type StickerPlacement } from "../views.ts";
 
 /** Back in the sticker tray, with every value moved from SPOT. */
 const IN_TRAY = { onBoard: false, x: 0.6, y: 0.1, scale: 0.8, rotation: 12, z: 5 };
@@ -305,6 +304,21 @@ describe("POST /api/sticker-boards/me/sticker-tray/seen", () => {
         error: "invalid_request",
       });
     }
+  });
+
+  it("count NEW as the stickers you hold that you haven't seen in the open tray", () => {
+    const me = insertUser(test.db);
+    const friend = insertUser(test.db);
+    const unseen = [insertSealedSticker(test.db, me), insertSealedSticker(test.db, me)];
+    const seen = insertSealedSticker(test.db, me);
+    test.db
+      .update(stickerPlacements)
+      .set({ seenAt: new Date() })
+      .where(placementOf(me, seen))
+      .run();
+    const given = giveSticker(test.db, insertSealedSticker(test.db, me), me, friend);
+    expect(newStickerCount(test.db, me)).toBe(unseen.length);
+    expect(newStickerCount(test.db, friend)).toBe([given].length);
   });
 });
 

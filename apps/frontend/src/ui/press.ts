@@ -9,6 +9,7 @@
  * `el.click()`, so React's onClick still runs, and a cancelled press can't let a click slip through.
  * While it moves the element carries `data-press-state` (down | pop | lift); at rest it has none.
  */
+import { EASE_OUT, EASE_SPRING } from "./easing";
 
 const SELECTOR = ".key, .label-btn:not(.label-btn--quiet), [data-press]";
 /** Pixels past the touch target before a held press lets go. */
@@ -86,11 +87,6 @@ export const pressCommitted = (el: HTMLElement) => el.dataset.pressState === "po
 /** Installs the press on the document and returns a function that removes it. */
 export function installPress(): () => void {
   const root = document.documentElement;
-  const css = getComputedStyle(root);
-  const curves = {
-    out: css.getPropertyValue("--ease-out").trim() || "cubic-bezier(.16,1,.3,1)",
-    spring: css.getPropertyValue("--ease-spring").trim() || "cubic-bezier(.34,1.7,.5,1)",
-  };
 
   const running = new WeakMap<HTMLElement, (Animation | null)[]>();
   const timers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
@@ -127,7 +123,7 @@ export function installPress(): () => void {
     move(
       el,
       [
-        { o: 0, e: curves.out },
+        { o: 0, e: EASE_OUT },
         { o: T.down / total, y: d + BOTTOM, e: "ease-in-out" },
         { o: (T.down + T.bottom) / total, y: d, e: "ease-in-out" },
         { o: 1, y: d + CREEP },
@@ -142,7 +138,7 @@ export function installPress(): () => void {
     move(
       el,
       [
-        { o: 0, e: curves.spring },
+        { o: 0, e: EASE_SPRING },
         { o: 1, y: 0 },
       ],
       ms,
@@ -155,8 +151,8 @@ export function installPress(): () => void {
     move(
       el,
       [
-        { o: 0, e: curves.out },
-        { o: 0.36, y: over, e: curves.spring },
+        { o: 0, e: EASE_OUT },
+        { o: 0.36, y: over, e: EASE_SPRING },
         { o: 1, y: 0 },
       ],
       T.pop,

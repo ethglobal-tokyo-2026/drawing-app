@@ -7,21 +7,19 @@ import type { AppDeps } from "../deps.ts";
 import { failureCause, logFailure, logInfo } from "../diagnostics.ts";
 import {
   ageStatusOf,
+  giftSchema,
   isoTimeSchema,
   personSchema,
   refuse,
-  toIsoTime,
-  toPerson,
-  type Refusal,
-} from "../shapes.ts";
-import {
-  giftSchema,
   stickerLookup,
   stickerPlacementSchema,
   stickerSchema,
   toGift,
+  toIsoTime,
+  toPerson,
   toStickerPlacement,
-} from "../views.ts";
+  type Refusal,
+} from "../shapes.ts";
 import { checkDeposit } from "./deposit.ts";
 import { giftClaimTokenSchema, giftHoldingSticker, type GiftRow } from "./packaging.ts";
 

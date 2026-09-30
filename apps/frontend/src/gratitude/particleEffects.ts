@@ -1,4 +1,4 @@
-import { EASE_OUT, EASE_PEEL } from "./easing";
+import { EASE_OUT, EASE_PEEL } from "../ui/easing";
 import { BEAD_SVG, GLINT_SVG, PUFF_SVG, miniHeartSvg, stampHeartSvg, svgDataUrl } from "./heartArt";
 import type { HeartBox } from "./miniHeartPhysics";
 import { animate } from "./webAnimations";

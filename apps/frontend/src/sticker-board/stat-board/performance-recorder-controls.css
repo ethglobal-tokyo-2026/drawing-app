@@ -10,7 +10,7 @@
 .performance-recorder__h {
   margin: 0;
   color: var(--ink);
-  font-weight: 750;
+  font-weight: 700;
   letter-spacing: 0.1em;
 }
 
@@ -23,7 +23,7 @@
   align-items: center;
   gap: 10px;
   min-height: 44px;
-  font: 600 15px/1.2 var(--font-ui);
+  font: 700 15px/1.2 var(--font-ui);
 }
 
 .performance-recorder__switch input {
@@ -36,7 +36,7 @@
 /* Proportional figures, as everywhere in Mona Sans: its tabular zero is slashed. */
 .performance-recorder__summary {
   margin: 0;
-  font: 500 14px/1.4 var(--font-ui);
+  font: 500 13px/1.4 var(--font-ui);
 }
 
 .performance-recorder__actions {
@@ -48,7 +48,7 @@
 /* A failure's reason can be long: it wraps, and can be copied into a report. */
 .performance-recorder__problem {
   margin: 0;
-  font: 500 14px/1.4 var(--font-ui);
+  font: 500 13px/1.4 var(--font-ui);
   overflow-wrap: anywhere;
   -webkit-user-select: text;
   user-select: text;
@@ -57,7 +57,7 @@
 /* In the app's own face, not the system monospace, whose zero is slashed too. */
 .performance-recorder__report {
   min-height: 180px;
-  font: 500 12px/1.4 var(--font-ui);
+  font: 500 13px/1.4 var(--font-ui);
   -webkit-user-select: text;
   user-select: text;
 }

@@ -426,7 +426,7 @@
   position: relative;
   max-width: 22ch;
   color: var(--graphite);
-  font: 500 13.5px/1.4 var(--font-ui);
+  font: 500 13px/1.4 var(--font-ui);
   text-wrap: balance;
 }
 
@@ -531,7 +531,7 @@
   background: var(--ink);
   box-shadow: var(--shadow-lift);
   color: var(--liner);
-  font: 600 13.5px/1.2 var(--font-ui);
+  font: 700 13px/1.2 var(--font-ui);
   white-space: nowrap;
   pointer-events: none;
   transform-origin: 28px 100%;

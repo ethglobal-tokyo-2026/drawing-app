@@ -1,5 +1,5 @@
 import type { Method, Tier } from "./combo";
-import { EASE_PEEL, clamp } from "./easing";
+import { EASE_PEEL, clamp } from "../ui/easing";
 import { DENT_SVG, focusLinesSvg, HAZE_WAVE_SVG, speedFieldSvg, VIBRATE_SVG } from "./heartArt";
 import type { ScreenEdge } from "./heartMotion";
 import { animate } from "./webAnimations";

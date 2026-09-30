@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "../i18n/react";
 import { Key } from "../ui/Key";
-import { lineLogin, useLine } from "./liff";
+import { GateNotice, GateOpening } from "./GateParts";
+import { lineLogin, START_TIMEOUT_MS, useLine } from "./liff";
 import "./LineGate.css";
 
 /** Holds the app until LINE has logged the person in, and says so when it can't. */
@@ -12,22 +13,26 @@ export function LineGate({ children }: { children: ReactNode }) {
   return (
     <main className="line-gate" aria-busy={line.status === "loading"}>
       {line.status === "loading" ? (
-        <p className="fine line-gate__opening" role="status">
-          {t(($) => $.line.gate.opening)}
-        </p>
+        <GateOpening
+          label={t(($) => $.line.gate.opening)}
+          stillLabel={t(($) => $.line.gate.stillOpening)}
+        />
       ) : line.status === "logged-out" ? (
-        <>
-          <h1 className="title-label">{t(($) => $.line.gate.title)}</h1>
-          <p className="line-gate__lead">{t(($) => $.line.gate.lead)}</p>
+        <GateNotice title={t(($) => $.line.gate.title)} lead={t(($) => $.line.gate.lead)}>
           <Key onClick={lineLogin}>{t(($) => $.line.gate.logIn)}</Key>
-        </>
+        </GateNotice>
       ) : (
-        <>
-          <h1 className="title-label">{t(($) => $.line.gate.didntStart)}</h1>
-          <p className="line-gate__lead">{t(($) => $.line.gate.didntStartLead)}</p>
+        <GateNotice
+          title={t(($) => $.line.gate.didntStart)}
+          lead={t(($) => $.line.gate.didntStartLead)}
+          detail={
+            line.failure.kind === "no-answer"
+              ? t(($) => $.line.gate.noAnswer, { seconds: START_TIMEOUT_MS / 1000 })
+              : line.failure.message
+          }
+        >
           <Key onClick={() => location.reload()}>{t(($) => $.line.gate.tryAgain)}</Key>
-          <p className="fine line-gate__reason">{line.message}</p>
-        </>
+        </GateNotice>
       )}
     </main>
   );

@@ -14,15 +14,17 @@ function Dialog({
   active,
   onEscape,
   returnFocus,
+  refocus,
   middle = true,
 }: {
   active: boolean;
   onEscape: () => void;
   returnFocus?: () => HTMLElement | null;
+  refocus?: string;
   middle?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  useFocusTrap(ref, { active, onEscape, returnFocus });
+  useFocusTrap(ref, { active, onEscape, returnFocus, refocus });
   return (
     <div ref={ref} id="dialog" tabIndex={-1}>
       <button id="first">First</button>
@@ -68,6 +70,17 @@ afterEach(() => {
 describe("useFocusTrap", () => {
   it("moves focus to the first control when it activates", () => {
     render(true);
+    expect(document.activeElement).toBe(byId("first"));
+  });
+
+  it("moves focus to the first control again when its refocus key changes, and only then", () => {
+    const dialog = (refocus: string) =>
+      act(() => root.render(<Dialog active onEscape={onEscape} refocus={refocus} />));
+    dialog("asking");
+    byId("last")?.focus();
+    dialog("asking");
+    expect(document.activeElement).toBe(byId("last"));
+    dialog("answered");
     expect(document.activeElement).toBe(byId("first"));
   });
 

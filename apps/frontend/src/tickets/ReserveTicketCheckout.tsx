@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useEffectEvent, useId, useState, type ReactNode } from "react";
 import { ApiError } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
@@ -16,9 +16,9 @@ import { QuietLink } from "../ui/QuietLink";
 import { REVEAL } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
 import { TearLine } from "../ui/TearLine";
-import { useFocusTrap } from "../ui/useFocusTrap";
 import { formatYen, yenForJpyc } from "./prices";
 import { singleTicketPrice, useReservePacks, type ReservePack } from "./reservePacks";
+import { TicketCard } from "./TicketCard";
 import { TicketCount } from "./TicketCount";
 import { TicketPurchases } from "./TicketPurchases";
 import { describeTickets, ticketView } from "./tickets";
@@ -157,7 +157,6 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   const jpyc = useJpycBalance(sui.address, shop?.payment);
   const api = useApi();
   const { tickets: state, set: setTickets } = useTickets();
-  const card = useRef<HTMLElement>(null);
   const id = useId();
 
   const pack = shop?.packs.find((p) => p.tickets === chosen);
@@ -282,20 +281,6 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
       console.error(`Couldn't copy the payment ${digest}`, e);
     }
   };
-
-  useFocusTrap(card, {
-    onEscape: () => {
-      if (step !== "paying" && !adding) onClose();
-    },
-  });
-
-  // Each view's first control takes focus, so focus never drops out of the card when its controls
-  // change, as when a refusal turns the tickets-not-added card over.
-  const refused = unadded?.refused ?? false;
-  useEffect(() => {
-    const first = card.current?.querySelector<HTMLElement>("button:not(:disabled)");
-    (first ?? card.current)?.focus();
-  }, [step, refused]);
 
   const close = (
     <QuietLink
@@ -590,20 +575,20 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
     );
   }
 
+  // A refusal turns the tickets-not-added card over without a new step.
+  const view = unadded?.refused ? "refused" : step;
   return (
-    <div className="out-of-tickets reserve-checkout">
-      <div className="out-of-tickets__scrim" />
-      <section
-        ref={card}
-        className="out-of-tickets__card reserve-checkout__card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={`${id}-title`}
-        aria-busy={step === "paying" || adding}
-        tabIndex={-1}
-      >
-        {body}
-      </section>
-    </div>
+    <TicketCard
+      className="reserve-checkout"
+      cardClassName="reserve-checkout__card"
+      labelledBy={`${id}-title`}
+      busy={step === "paying" || adding}
+      onEscape={() => {
+        if (step !== "paying" && !adding) onClose();
+      }}
+      refocus={view}
+    >
+      {body}
+    </TicketCard>
   );
 }

@@ -42,7 +42,7 @@
 .send-gratitude-sheet__line {
   margin: 3px 0 0;
   color: var(--graphite);
-  font-size: 14.5px;
+  font-size: 15px;
   line-height: 1.45;
   text-wrap: pretty;
 }

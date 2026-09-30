@@ -124,7 +124,7 @@
 }
 
 .artist-chip--artist .artist-chip__name {
-  font: 760 14px/1.1 var(--font-ui);
+  font: 700 13px/1.1 var(--font-ui);
 }
 
 /* Off a board: no foil, so the picture is a photo sticker on the pill, its white edge cut from the

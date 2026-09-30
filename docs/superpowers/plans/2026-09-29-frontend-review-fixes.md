@@ -33,11 +33,11 @@ Wave 2, as wave 1's lanes finish:
 
 - [x] Seal ceremony: DRAW-14, DRAW-16, DRAW-17
 - [x] Gratitude visuals: GRAT-4 to GRAT-7, GRAT-9, GRAT-10, GRAT-12, GRAT-13
-- [ ] Dates in Tokyo's day: EXPL-3, TRAY-3, CLEAN-5, CLEAN-7, CLEAN-13, CLEAN-15 (EXPL-1 and EXPL-2 go with the frontend audit's `ux/explore` lane)
+- [x] Dates in Tokyo's day: EXPL-3, TRAY-3, CLEAN-5, CLEAN-7, CLEAN-13, CLEAN-15 (EXPL-1 and EXPL-2 go with the frontend audit's `ux/explore` lane)
 
 Wave 3, once the lanes above are merged, since these touch every area:
 
-- [ ] Shared helpers: CLEAN-3, CLEAN-11, CLEAN-14, CLEAN-20, CLEAN-22
-- [ ] One device store, and a query cache: CLEAN-17, CLEAN-21
-- [ ] One ticket card shell: CLEAN-4, CLEAN-6
+- [x] Shared helpers: CLEAN-3, CLEAN-11, CLEAN-14, CLEAN-20, CLEAN-22. explore/ keeps its private curve and clamp copies, since the frontend audit's Explore lane is working there
+- [x] One device store, and a query cache: CLEAN-17, CLEAN-21. explore/pileVisits.ts keeps its own storage code, since the frontend audit's Explore lane is working there
+- [x] One ticket card shell: CLEAN-4, CLEAN-6
 - [ ] Split trayEngine.ts: CLEAN-19

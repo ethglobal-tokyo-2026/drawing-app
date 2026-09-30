@@ -1,4 +1,5 @@
 import { useEffect, useRef, type RefObject } from "react";
+import { EASE_OUT } from "../../ui/easing";
 
 /** How far the rubber band can show what's under the end, in px: each px of pull shows less toward it. */
 const LIMIT = 120;
@@ -7,7 +8,6 @@ export const PULL_THRESHOLD = 150;
 /** Wheel events further apart than this, in ms, start a new wheel gesture. */
 const WHEEL_GAP_MS = 160;
 const SETTLE_MS = 320;
-const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 /** iOS's rubber band: `pull` px past the end shows this much, and never `LIMIT`. */
 const rubberBand = (pull: number) => LIMIT * (1 - 1 / ((pull * 0.55) / LIMIT + 1));

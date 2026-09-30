@@ -22,8 +22,7 @@ import {
   type Receiving,
 } from "../gifts/receiving.ts";
 import type { AppEnv } from "../session.ts";
-import { giftIdParam, type Refusal } from "../shapes.ts";
-import { toGift } from "../views.ts";
+import { giftIdParam, toGift, type Refusal } from "../shapes.ts";
 
 /** Each Giving and Receiving refusal's status. */
 const REFUSAL_STATUS = {

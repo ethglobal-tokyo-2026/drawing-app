@@ -13,11 +13,12 @@ import {
 import { failureCause, logFailure } from "../diagnostics.ts";
 import { syncEnsLabel } from "../ens/labels.ts";
 import { apiError, validate } from "../errors.ts";
+import { unseenGratitudeCount } from "../gratitude/feed.ts";
 import { HANDLE_MAX_LENGTH } from "../session/handleLimit.ts";
 import { isHandleTaken, parseHandle } from "../session/handles.ts";
 import { clearSessionCookie, setSessionCookie, type AppEnv } from "../session.ts";
 import { toMe } from "../shapes.ts";
-import { newStickerCount, unseenGratitudeCount } from "../views.ts";
+import { newStickerCount } from "../stickerBoards/board.ts";
 
 /** The x-line-user-id header's longest accepted length, far over LINE's own user IDs. */
 export const LINE_USER_ID_MAX_LENGTH = 128;

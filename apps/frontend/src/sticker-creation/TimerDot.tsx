@@ -9,6 +9,7 @@ import {
   type Ref,
 } from "react";
 import { useTranslation } from "../i18n/react";
+import { EASE_OUT } from "../ui/easing";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import type { Hold } from "./session/session";
 import type { SessionClock } from "./session/useSessionClock";
@@ -39,8 +40,6 @@ const HELD_STATUS = {
 
 const clockText = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
-
-const easeOut = (el: Element) => getComputedStyle(el).getPropertyValue("--ease-out").trim();
 
 export interface TimerDotHandle {
   /** A stroke met the paused sheet: nudge the dot and point at it. */
@@ -88,7 +87,7 @@ export function TimerDot({ ref, clock, paused, note, onToggle }: Props) {
         clearTimeout(hintTimer.current);
         hintTimer.current = setTimeout(() => setHint(false), HINT_MS);
         const el = dot.current;
-        if (el && !reduced) el.animate(NUDGE, { duration: 480, easing: easeOut(el) });
+        if (el && !reduced) el.animate(NUDGE, { duration: 480, easing: EASE_OUT });
       },
     }),
     [reduced],
@@ -98,7 +97,7 @@ export function TimerDot({ ref, clock, paused, note, onToggle }: Props) {
 
   useEffect(() => {
     const el = face.current;
-    if (el && view.late && !reduced) el.animate(TICK, { duration: 380, easing: easeOut(el) });
+    if (el && view.late && !reduced) el.animate(TICK, { duration: 380, easing: EASE_OUT });
   }, [view.late, view.secondsLeft, reduced]);
 
   const time = clockText(view.secondsLeft);

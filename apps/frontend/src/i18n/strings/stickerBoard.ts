@@ -118,10 +118,10 @@ export const stickerBoard = {
       },
       /** Address dialog for the board address: the toast after Copy address copies it */
       copied: { en: "Board address copied", ja: "ボードアドレスをコピーしました" },
-      /** Address dialog for the board address: the toast when Copy address can't copy it */
+      /** Address dialog for the board address: the line under Copy address when it can't copy the address, which stays until the next try */
       notCopied: {
-        en: "Couldn’t copy the board address",
-        ja: "ボードアドレスをコピーできませんでした",
+        en: "Couldn’t copy the board address. Touch and hold it to copy it yourself.",
+        ja: "ボードアドレスをコピーできませんでした。アドレスを長押しして、ご自身でコピーしてください。",
       },
       /** Address dialog for the board address: the link under Copy address that opens the address on Etherscan */
       viewOnExplorer: { en: "View on Etherscan", ja: "Etherscanで見る" },
@@ -150,8 +150,11 @@ export const stickerBoard = {
       note: { en: "Your address on Sui Testnet.", ja: "Sui Testnetでのあなたのアドレスです。" },
       /** Address dialog for the Sui address: the toast after Copy address copies it */
       copied: { en: "Sui address copied", ja: "Suiアドレスをコピーしました" },
-      /** Address dialog for the Sui address: the toast when Copy address can't copy it */
-      notCopied: { en: "Couldn’t copy the Sui address", ja: "Suiアドレスをコピーできませんでした" },
+      /** Address dialog for the Sui address: the line under Copy address when it can't copy the address, which stays until the next try */
+      notCopied: {
+        en: "Couldn’t copy the Sui address. Touch and hold it to copy it yourself.",
+        ja: "Suiアドレスをコピーできませんでした。アドレスを長押しして、ご自身でコピーしてください。",
+      },
       /** Address dialog for the Sui address: the link under Copy address that opens the address on Suiscan */
       viewOnExplorer: { en: "View on Suiscan", ja: "Suiscanで見る" },
       /** Address dialog for the Sui address: screen readers' name for the Suiscan link */
