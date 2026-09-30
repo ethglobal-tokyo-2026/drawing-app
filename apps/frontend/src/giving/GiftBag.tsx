@@ -1,5 +1,5 @@
 import { ArrowRight, HandPointing } from "../icons";
-import { Fragment, useLayoutEffect, useRef, type DOMAttributes } from "react";
+import { Fragment, useLayoutEffect, useRef, type DOMAttributes, type Ref } from "react";
 import { i18next } from "../i18n/i18n";
 import { Trans, useTranslation } from "../i18n/react";
 import { giftTag, sealDate, type GiftTag } from "./giftTag";
@@ -23,8 +23,6 @@ export interface PullTab {
   grip: "pull" | "hold" | null;
   /** A finger takes the tab and pulls a little, on a loop, until the first grab. */
   hinting: boolean;
-  /** Counts the ticks the tear front passed while pulling; each one shivers the strip. */
-  shivers: number;
 }
 
 interface Props {
@@ -52,6 +50,8 @@ interface Props {
   pullTab?: PullTab;
   /** An NSFW sticker's bag: pink, embossed, and sealed without a glimpse of the sticker. */
   nsfw?: boolean;
+  /** The bag's own box, which a pull writes the tear onto as it moves. */
+  ref?: Ref<HTMLDivElement>;
 }
 
 const STAMP_TONES: Record<GiftStamp, "ink" | "grape" | "pink" | "plain"> = {
@@ -100,6 +100,7 @@ export function GiftBag({
   stamp,
   pullTab,
   nsfw = false,
+  ref,
 }: Props) {
   const { t } = useTranslation();
   // Sealed, an NSFW sticker never shows through the frost or the film: the pull tab reveals it.
@@ -118,18 +119,16 @@ export function GiftBag({
     motion === "takeOut" && "is-taking-out",
     pullTab?.hinting && "is-hinting",
   ];
-  // Alternating names restart the shiver's animation on each tick.
-  const shiver = pullTab?.shivers ? (pullTab.shivers % 2 ? "a" : "b") : undefined;
   // With the slider, the picture is hidden part by part, so the slider isn't inside an image.
   const picture = pullTab
     ? {}
     : ({ role: "img", "aria-label": describeBag(state, tag, stamp, nsfw) } as const);
   return (
     <div
+      ref={ref}
       className={classes.filter(Boolean).join(" ")}
       data-state={state}
       data-grip={pullTab?.grip ?? undefined}
-      data-shiver={shiver}
       style={tear === undefined ? undefined : { "--gift-tear": tear }}
       {...picture}
     >

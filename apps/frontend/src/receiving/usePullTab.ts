@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -29,6 +30,8 @@ interface Physics {
   frame: number;
   last: number;
   torn: boolean;
+  /** The bag the tear is written onto, while it's on screen. */
+  bag: HTMLDivElement | null;
 }
 
 const ARROWS = new Set(["ArrowRight", "ArrowUp", "ArrowLeft", "ArrowDown"]);
@@ -38,12 +41,14 @@ const isArrow = (key: string): key is Parameters<typeof keyTear>[1] => ARROWS.ha
  * The pull tab, worked by a drag along the strip, a press and hold or a double-tap on the bag, or
  * the slider's keys, through pullTab.ts's physics. `onSnap` runs once, when the tab tears free.
  * Under reduced motion the tear follows the finger with no spring, ticks or hint.
+ *
+ * The tear and the strip's shiver change every frame of a pull, so they're written onto the bag
+ * (`holdBag`) as they move, and React hears of the tear only once it snaps.
  */
 export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () => void }) {
   const [tear, setTear] = useState(0);
   const [grip, setGrip] = useState<PullTab["grip"]>(null);
   const [hinting, setHinting] = useState(true);
-  const [shivers, setShivers] = useState(0);
   const latestSnap = useRef(onSnap);
   useLayoutEffect(() => {
     latestSnap.current = onSnap;
@@ -58,7 +63,11 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
     frame: 0,
     last: 0,
     torn: false,
+    bag: null,
   });
+  const holdBag = useCallback((el: HTMLDivElement | null) => {
+    physics.current.bag = el;
+  }, []);
 
   useEffect(() => {
     const p = physics.current;
@@ -70,7 +79,21 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
 
   const show = (next: number) => {
     physics.current.tear = next;
-    setTear(next);
+    const el = physics.current.bag;
+    if (!el) return;
+    el.style.setProperty("--gift-tear", String(next));
+    // The slider's value, for screen readers, follows the tear.
+    const slider = el.querySelector("[role=slider]");
+    const percent = String(Math.round(next * 100));
+    if (slider && slider.getAttribute("aria-valuenow") !== percent) {
+      slider.setAttribute("aria-valuenow", percent);
+    }
+  };
+
+  /** Each tick shivers the strip; alternating names restart the shiver's animation. */
+  const shiver = () => {
+    const el = physics.current.bag;
+    if (el) el.dataset.shiver = el.dataset.shiver === "a" ? "b" : "a";
   };
 
   const letGoOfBag = () => {
@@ -94,6 +117,7 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
     p.drag = null;
     stopMoving();
     show(1);
+    setTear(1);
     setGrip(null);
     setHinting(false);
     latestSnap.current();
@@ -106,7 +130,7 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
     const moved = reduced
       ? { tear: p.target, velocity: 0 }
       : springStep(p.tear, p.velocity, p.target, dt);
-    if (p.drag && !reduced && ticksBetween(p.tear, moved.tear) > 0) setShivers((n) => n + 1);
+    if (p.drag && !reduced && ticksBetween(p.tear, moved.tear) > 0) shiver();
     p.velocity = moved.velocity;
     show(moved.tear);
     if (p.drag && snapped(moved.tear)) return snap();
@@ -173,7 +197,7 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
       p.target = p.tear;
       setHinting(false);
       setGrip("pull");
-      setShivers(0);
+      delete p.bag?.dataset.shiver;
       kick();
     },
     onPointerMove: (e) => {
@@ -245,8 +269,11 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
   };
 
   return {
+    /** The tear React knows of: 0 until it snaps, then 1. */
     tear,
-    pullTab: { handlers, grip, hinting: hinting && !reduced, shivers } satisfies PullTab,
+    /** Goes on the bag's `ref`, so the tear can be written onto it as it moves. */
+    holdBag,
+    pullTab: { handlers, grip, hinting: hinting && !reduced } satisfies PullTab,
     stage,
   };
 }

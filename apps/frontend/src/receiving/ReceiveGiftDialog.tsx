@@ -136,7 +136,11 @@ export function ReceiveGiftDialog({ from, onClose }: Props) {
     return () => clearTimeout(timer);
   }, [screen, motion]);
 
-  const pull = usePullTab({ reduced, onSnap: () => dispatch({ type: "unpackaged" }) });
+  // The bag's callback ref travels on its own, so reading the pull's values stays plain.
+  const { holdBag, ...pull } = usePullTab({
+    reduced,
+    onSnap: () => dispatch({ type: "unpackaged" }),
+  });
 
   // The giver stays known through the leave, so LINE's header keeps naming them.
   const shownGiver =
@@ -240,6 +244,7 @@ export function ReceiveGiftDialog({ from, onClose }: Props) {
         sealed={screen.step === "sealed"}
         reveal={reveal}
         pull={pull}
+        holdBag={holdBag}
         opener={me.displayName}
         receiving={screen.step === "unpackaged" && screen.receiving}
         failed={screen.step === "unpackaged" ? screen.failed : undefined}
@@ -278,7 +283,9 @@ interface GiftProps {
   preview: GiftPreviewView;
   sealed: boolean;
   reveal: "snapped" | "rising" | "out";
-  pull: ReturnType<typeof usePullTab>;
+  pull: Omit<ReturnType<typeof usePullTab>, "holdBag">;
+  /** Goes on the bag, so the pull can write the tear onto it. */
+  holdBag: (bag: HTMLDivElement | null) => void;
   /** The opener's LINE name. */
   opener: string;
   receiving: boolean;
@@ -293,6 +300,7 @@ function Gift({
   sealed,
   reveal,
   pull,
+  holdBag,
   opener,
   receiving,
   failed,
@@ -324,6 +332,7 @@ function Gift({
           nsfw={sticker.nsfw}
           tear={pull.tear}
           pullTab={sealed ? pull.pullTab : undefined}
+          ref={holdBag}
         />
         {!sealed && (
           <span className="receive-gift__figure" aria-hidden="true">
