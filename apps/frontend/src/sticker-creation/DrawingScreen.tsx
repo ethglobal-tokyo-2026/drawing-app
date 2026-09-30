@@ -70,6 +70,8 @@ const FIRST_SIZES = { brush: 0.34, eraser: 0.52 };
 const FIRST_SMOOTHING = 30;
 /** How far [ and ] move the size rail. */
 const SIZE_STEP = 0.04;
+/** How long the seal key's hint stays, on the first visits, after the first stroke brings the key in. */
+const KEY_HINT_MS = 7_000;
 
 const afterPaint = () =>
   new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve)));
@@ -166,6 +168,11 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // Whether this device keeps the drawing in progress; the timer's note says so while it can't.
   const [kept, setKept] = useState(true);
   const [keeper] = useState(() => new SessionKeeper(me.id, setKept));
+  // The rail's sizes and Smoothing are kept with the drawing, so a reload brings them back too.
+  useEffect(
+    () => keeper.keepTools({ brushSize: sizes.brush, eraserSize: sizes.eraser, smoothing }),
+    [keeper, sizes, smoothing],
+  );
   // Until a session kept across a reload is back, or known lost, Draw doesn't ask for a ticket.
   const [restoring, setRestoring] = useState(true);
   // The 18+ switch; the seal reads the ref, since it runs from the clock's time-up too.
@@ -179,6 +186,14 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const [pickedUp, setPickedUp] = useState<"restored" | "lost" | "carried" | null>(null);
   // A tap on the waiting timer puts "Starts when you draw" under it, until the first stroke.
   const [startsNote, setStartsNote] = useState(false);
+  // On the first few visits the seal key says how it works, once, as the first stroke brings it in.
+  const [keyHint, setKeyHint] = useState(false);
+  const keyHinted = useRef(false);
+  useEffect(() => {
+    if (!keyHint) return;
+    const id = setTimeout(() => setKeyHint(false), KEY_HINT_MS);
+    return () => clearTimeout(id);
+  }, [keyHint]);
 
   const clock = useSessionClock(() => send({ type: "time-up" }));
 
@@ -513,8 +528,12 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       setColor(own);
       startedIn.current = own;
     }
-    keeper.resume(found.ticket, found.ops, found.elapsedMs, found.nsfw);
+    keeper.resume(found.ticket, found.ops, found.elapsedMs, found.nsfw, found.tools);
     keepNsfw(found.nsfw);
+    if (found.tools) {
+      setSizes({ brush: found.tools.brushSize, eraser: found.tools.eraserSize });
+      setSmoothing(found.tools.smoothing);
+    }
     ticket.current = found.ticket;
     send({ type: "restored", drawn, sealSent: sealWentOut(found.ticket) });
     if (!drawn) {
@@ -757,6 +776,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         }}
         onCommit={(op: Op) => {
           if (sealProblem) setSealProblem(null);
+          if (!keyHinted.current && isFirstVisit()) {
+            keyHinted.current = true;
+            setKeyHint(true);
+          }
           send({ type: "ink" });
           if (op.tool === "brush") setRecent((r) => withRecent(r, op.color));
         }}
@@ -824,7 +847,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         armed={session.phase === "armed"}
         nsfw={nsfwOn}
         problem={sealProblem ?? (retrying ? t(($) => $.stickerCreation.seal.interrupted) : null)}
+        hint={keyHint && session.phase === "drawing" ? t(($) => $.stickerCreation.seal.hint) : null}
         onTap={() => {
+          setKeyHint(false);
           setSealProblem(null);
           if (sealProblem && reconnectOnTap.current) {
             // The drawing is kept on this device, and the drawing screen picks it back up.

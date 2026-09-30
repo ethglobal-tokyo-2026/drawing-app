@@ -30,6 +30,13 @@ export function SmoothingBar({ id, open, value, onChange }: Props) {
     return () => input.removeEventListener("change", onCommit);
   }, []);
 
+  // The slider is the one that moves the value; a value that came from elsewhere, such as a kept
+  // drawing picked back up, moves the slider to it.
+  useEffect(() => {
+    const input = range.current;
+    if (input && input.valueAsNumber !== value) input.value = String(value);
+  }, [value]);
+
   return (
     <div
       id={id}

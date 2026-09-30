@@ -86,6 +86,11 @@ export const stickerCreation = {
     tapAgain: { en: "Tap again to seal", ja: "もう一度タップで仕上げ" },
     /** Drawing screen, bottom right: the chip beside the seal key after its first tap while the 18+ switch is on, announced to screen readers and the key's name until the second tap, which seals the sticker as 18+ */
     tapAgainNsfw: { en: "Tap again to seal as 18+", ja: "もう一度タップで18+として仕上げ" },
+    /** Drawing screen, bottom right: the chip beside the seal key, announced, for a few seconds after the first stroke on each of your first few visits; it says how the key works, and that two fingers tap to undo */
+    hint: {
+      en: "Tap the check twice to seal. Tap with two fingers to undo.",
+      ja: "チェックを2回タップで仕上げ。2本指でタップすると元に戻せます。",
+    },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when it's tapped but everything drawn was erased or undone */
     empty: {
       en: "The sheet is empty, so there’s nothing to seal.",

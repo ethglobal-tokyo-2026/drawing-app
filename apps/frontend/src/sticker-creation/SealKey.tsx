@@ -12,6 +12,8 @@ interface Props {
   nsfw: boolean;
   /** What went wrong with the last seal, until the next tap. */
   problem: string | null;
+  /** How the key works, said for a moment on the first visits; a problem or the armed prompt takes its place. */
+  hint: string | null;
   onTap: () => void;
 }
 
@@ -19,19 +21,19 @@ interface Props {
  * The seal check: the screen's one key, a round one. It springs in once there's ink. The first tap
  * arms it and a chip asks for the second, which seals.
  */
-export function SealKey({ shown, armed, nsfw, problem, onTap }: Props) {
+export function SealKey({ shown, armed, nsfw, problem, hint, onTap }: Props) {
   const { t } = useTranslation();
   const tapAgain = nsfw
     ? t(($) => $.stickerCreation.seal.tapAgainNsfw)
     : t(($) => $.stickerCreation.seal.tapAgain);
-  const chip = armed ? tapAgain : problem;
+  const chip = armed ? tapAgain : (problem ?? hint);
   // The chip keeps its words while it fades out.
   const [words, setWords] = useState(chip);
   if (chip && chip !== words) setWords(chip);
   return (
     <>
       <span
-        className={`seal-chip ${chip ? "is-on" : ""} ${words === problem ? "is-problem" : ""}`}
+        className={`seal-chip ${chip ? "is-on" : ""} ${words !== tapAgain ? "is-long" : ""}`}
         role="status"
       >
         {words}
