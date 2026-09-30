@@ -189,10 +189,15 @@ export const errors = {
     en: "That payment was already counted.",
     ja: "その支払いは、すでに反映されています。",
   },
-  /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) when Sui has no such transaction, or it paid no JPYC into the ticket vault, in “…the tickets weren’t added” through errorReason */
+  /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) for a Sui transaction that paid no JPYC into the ticket vault, in “…the tickets weren’t added” through errorReason */
   payment_not_found: {
     en: "That payment didn't reach the ticket shop.",
     ja: "この支払いはチケットショップに届いていません。",
+  },
+  /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) while Sui doesn't show the payment yet, in “Tickets not added yet” through errorReason, under the key that asks again */
+  payment_not_landed: {
+    en: "Sui doesn't show this payment yet. Try again in a moment.",
+    ja: "Suiでこの支払いがまだ確認できません。少し待ってから、もう一度お試しください。",
   },
   /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) for a payment into the ticket vault that names someone else, in “…the tickets weren’t added” through errorReason */
   payment_not_yours: {

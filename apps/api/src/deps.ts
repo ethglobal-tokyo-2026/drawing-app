@@ -229,8 +229,8 @@ export interface JpycPayment {
 export interface TicketPayments {
   target: TicketPaymentTarget;
   /**
-   * The payment contract's PaymentReceived events in a transaction that succeeded; null when Sui has
-   * no such transaction. Rejects when Sui can't be asked.
+   * The payment contract's PaymentReceived events in a transaction that succeeded; null when Sui
+   * still doesn't show the transaction after a short wait for it. Rejects when Sui can't be asked.
    */
   paymentsIn: (txDigest: string) => Promise<JpycPayment[] | null>;
 }
