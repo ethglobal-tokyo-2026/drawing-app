@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { boardSticker, people, trailEntry } from "../api/testFixtures";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
-import { toPerson } from "../api/views";
+import { toApiPlacement, toPerson } from "../api/views";
 import { markNoticed } from "../giving/noticedGifts";
 import { forgetBoardComplete } from "./boardComplete";
 import { placeUnplaced, toBoardSticker } from "./boardSticker";
@@ -44,6 +44,7 @@ afterEach(async () => {
   // The board loads its sheets, detail and stat board in the background; they land before it goes.
   await act(() => vi.dynamicImportSettled());
   unmount();
+  vi.restoreAllMocks();
 });
 
 beforeEach(() => {
@@ -176,6 +177,51 @@ describe("StickerBoard after a gift", () => {
     expect(title()).toBe("@mika received your sticker");
     close();
     expect(document.querySelector(".gift-received-notice")).toBeNull();
+  });
+});
+
+describe("StickerBoard saving where a sticker sits", () => {
+  it("keeps one save of a sticker in flight, then sends only its latest spot, whose failure stays", async () => {
+    // happy-dom lays nothing out: the board is given a phone's size, so each key press moves it.
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(390);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(657);
+    const a = boardSticker({ placement: at(0.5) });
+    let land = () => {};
+    const saveStickerPlacement = vi
+      .fn<ApiClient["saveStickerPlacement"]>()
+      .mockImplementationOnce(
+        (stickerId, placement) =>
+          new Promise((resolve) => {
+            land = () => resolve({ stickerId, placement, seenAt: null, arrivedAt: a.arrivedAt });
+          }),
+      )
+      .mockRejectedValue(new ApiError(503, { error: "not_in_test", detail: "The board is down" }));
+    const view = renderWithApi(
+      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
+      emptyApi({
+        stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [a] }),
+        saveStickerPlacement,
+      }),
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    const el = view.host.querySelector<HTMLElement>(`[data-sticker-id="${a.stickerId}"]`);
+    const press = (key: string) =>
+      act(() => {
+        el?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+      });
+    act(() => el?.focus());
+    press("Enter");
+    press("ArrowLeft");
+    press("ArrowLeft");
+    press("ArrowLeft");
+    expect(saveStickerPlacement).toHaveBeenCalledOnce();
+
+    await act(async () => land());
+    expect(saveStickerPlacement).toHaveBeenCalledTimes(2);
+    const shown = keptBoardFor(TEST_ME.id)?.stickers[0].placement;
+    expect(saveStickerPlacement.mock.lastCall?.[1]).toEqual(shown && toApiPlacement(shown));
+    expect(view.host.querySelector(".board-unsaved")).not.toBeNull();
   });
 });
 

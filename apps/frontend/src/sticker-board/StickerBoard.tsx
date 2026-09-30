@@ -296,22 +296,45 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // The gratitude mini-game covers the board, so the tilt and its sheen sweeps rest while it plays.
   useLight(!turned && !gratitudeFor);
 
+  /**
+   * Stickers whose spot is saving, each with the spot waiting to go once that save settles. One save
+   * at a time, so an older spot can't land on the server last, and only the latest answer counts.
+   */
+  const saving = useRef(new Map<string, Placement | null>());
   const save = useCallback(
     (sticker: Pick<BoardSticker, "id" | "no">, placement: Placement) => {
-      api.saveStickerPlacement(sticker.id, toApiPlacement(placement)).then(
-        () =>
-          setUnsaved((was) => {
-            if (!was.has(sticker.id)) return was;
-            const next = new Map(was);
-            next.delete(sticker.id);
-            return next;
-          }),
-        (error: unknown) => {
-          const failure = apiError(error);
-          console.error(`Saving where ${formatNo(sticker.no)} sits failed`, failure);
-          setUnsaved((was) => new Map(was).set(sticker.id, errorReason(failure)));
-        },
-      );
+      const inFlight = saving.current;
+      if (inFlight.has(sticker.id)) {
+        inFlight.set(sticker.id, placement);
+        return;
+      }
+      const send = (spot: Placement) => {
+        inFlight.set(sticker.id, null);
+        // A spot that waited goes next, and its answer is the one that sets or clears the note.
+        const settled = (answer: () => void) => {
+          const next = inFlight.get(sticker.id);
+          if (next) return send(next);
+          inFlight.delete(sticker.id);
+          answer();
+        };
+        api.saveStickerPlacement(sticker.id, toApiPlacement(spot)).then(
+          () =>
+            settled(() =>
+              setUnsaved((was) => {
+                if (!was.has(sticker.id)) return was;
+                const next = new Map(was);
+                next.delete(sticker.id);
+                return next;
+              }),
+            ),
+          (error: unknown) => {
+            const failure = apiError(error);
+            console.error(`Saving where ${formatNo(sticker.no)} sits failed`, failure);
+            settled(() => setUnsaved((was) => new Map(was).set(sticker.id, errorReason(failure))));
+          },
+        );
+      };
+      send(placement);
     },
     [api],
   );
