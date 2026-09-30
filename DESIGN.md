@@ -1,6 +1,6 @@
 ---
-name: Sticker Board (シール帳)
-description: A LINE drawing app where every five-minute drawing is sealed into a die-cut sticker you keep, give or trade.
+name: Croquis (クロッキー)
+description: A LINE drawing app where every three-minute drawing is sealed into a die-cut sticker you keep or give.
 colors:
   liner: "#F2F1F6"
   liner-deep: "#E5E3EC"
@@ -252,7 +252,7 @@ components:
     padding: "11px 16px 12px"
 ---
 
-# Design System: Sticker Board (シール帳)
+# Design System: Croquis (クロッキー)
 
 ## Overview
 
@@ -260,7 +260,7 @@ components:
 
 The app is a シール帳, a sticker trade book. The ground is release-liner backing paper, controls are printed label stock, and the one thing each screen wants pressed is a cartoon keycap: a flat coded face with an ink outline, like the drawings, sitting on a thick lip it sinks into. A finished drawing gets sealed: its own strokes become a die-cut outline, a white border and a kiss-cut groove. Then it peels off the page and sticks to a free-form sticker board, and your whole collection lives as a stack of loose sheets in a zipped canvas tray down the board's right edge. The board has a cork back, and your figures are paper pinned to it. Everything that moves lives in the same physical world. Keys press and pop, labels sink 2px, stickers peel and stick, zippers run tooth by tooth, a gift's seal tears off, and sheets have a perforation row you tear along.
 
-The surface is calm and orderly. Calm screens are almost all Liner and Ink, and color comes in flat coded fields where each hue has one meaning. The world only goes wild when you push it. Gratitude is one experience for everyone: the figures always show, and only people who keep mashing the heart reach the upper tiers, where it blushes, sweats hearts and finally fogs the glass. Nothing is hidden behind a second place: tap a person's picture or name on their board and the whole board turns over to its cork back, where their figures are pinned up as a receipt, a calendar leaf, stamps, a notebook scrap and label tape.
+The surface is calm and orderly. Calm screens are almost all Liner and Ink, and color comes in flat coded fields where each hue has one meaning. The world only goes wild when you push it. Gratitude is one experience for everyone: the figures always show, and only people who keep mashing the heart reach the upper tiers, where it blushes, sweats hearts and finally whites out. Nothing is hidden behind a second place: tap a person's picture or name on their board and the whole board turns over to its cork back, where their figures are pinned up as a receipt, a calendar leaf, stamps, a notebook scrap and label tape.
 
 The world refuses two category defaults. One is Procreate-grey tool chrome with a pixiv-style feed. The other is the sticker boom's gacha, rarity and "rate" market: foil marks who drew a sticker, never how rare it is, and gratitude is never described in money words.
 
@@ -288,13 +288,13 @@ The palette is Liner and Ink, plus five candy-bright coded fields, each with one
 ### Secondary
 
 - **Soda Aqua** (soda-aqua): giving. The Give key (including where Draw sits on someone else's board), the Explore tab, the gift bag's tear tape and its pull tab, and viewer hints mixed toward Liner.
-- **Bonbon Pink** (bonbon-pink): gratitude, and you. The Send gratitude key, the heart and its mini hearts, the My board tab, the tray's zip pull and its Mine folder tab, the open trail row's outline, the selected leaderboard tab (but Longest streak's, which is tangerine), and on the cork back the receipt's pushpin and heart, and the hit counter's speed lines.
+- **Bonbon Pink** (bonbon-pink): gratitude, and you. The Send gratitude key, the heart and its mini hearts, the My board tab, the tray's zip pull and its Mine folder tab, the open trail row's outline, the selected leaderboard tab (but Streak's, which is tangerine), and on the cork back the receipt's pushpin and heart, and the hit counter's speed lines.
 
 ### Tertiary
 
-- **Grape** (grape): received, and offers. The Accept key on a gift, the Send offer key, Offer for it on someone else's board, the tray's Gifts folder tab, received-sticker marks, and the received stamp on the cork back.
+- **Grape** (grape): received. The Accept key on a gift, the tray's Gifts folder tab, received-sticker marks, and the received stamp on the cork back.
 - **Blue** (blue): the Shop and reserve tickets. The Shop tab, the Pay key and picked pack, reserve tickets, and the Use a reserve ticket key. Opposite daily tickets' yellow, so the two kinds of ticket can't be confused.
-- **Tangerine** (tangerine): the streak. The streak leaf's band on the cork back, with the Fire icon, and the streak's figures elsewhere: Longest streak's selected leaderboard tab, and the fire before each of its figures, whose numerals stay Ink.
+- **Tangerine** (tangerine): the streak. The streak leaf's band on the cork back, with the Fire icon, and the streak's figures elsewhere: Streak's selected leaderboard tab, and the fire before each of its figures, whose numerals stay Ink.
 - **Tomato** (tomato): can't undo. Stopped states and warnings. It's never a key.
 - **Foil** (foil-pink, foil-peach, foil-lemon, foil-aqua, foil-sky, foil-lilac): six iridescent bands, one 96px period, that flow along a sticker's foil band and turn in the ring round the artist chip's picture. It isn't a fill color. It's a material worn only by a sticker drawn by someone other than the board's owner. It has no green.
 
@@ -328,7 +328,7 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 
 **The Ink-On-Color Rule.** Every flat coded field carries Ink text, never white. White on pink reads at 3.1:1; Ink reads at 5.7:1.
 
-**The One Meaning Rule.** Each hue means one thing: yellow is now, aqua is giving, pink is gratitude and you, grape is received and offers, blue is the Shop and reserve tickets, tangerine is the streak, and tomato is can't-undo. Don't pick a hue for looks.
+**The One Meaning Rule.** Each hue means one thing: yellow is now, aqua is giving, pink is gratitude and you, grape is received, blue is the Shop and reserve tickets, tangerine is the streak, and tomato is can't-undo. Don't pick a hue for looks.
 
 **The Other Hand Rule.** Foil appears only on a sticker drawn by someone other than the board's owner (on your tray's sheets, someone other than you). Your own stickers keep the plain white die-cut edge; the pearl rim is retired. Surfaces that aren't a board (Explore's sticker pile, the leaderboard) show no foil. It's never a rarity grade.
 
@@ -428,7 +428,7 @@ A cartoon keycap: the screen's one primary act.
 - **Busy:** while its act is on its way to the server, such as spending a ticket, the key keeps its face, lip and ink, and takes no second press. It's marked `aria-busy` and `aria-disabled`, never `disabled`, which would sink it grey as if the act weren't there.
 - **Hover and focus:** hover shades the face 6% toward Ink. Focus draws a 2px Ink outline at a 3px offset.
 - **Visiting:** on someone else's board, a Soda Aqua compact Give key sits in Draw's slot, and it's that board's one key.
-- **Where it goes:** Keep drawing, Buy reserve tickets in the Shop, Pay in the reserve ticket checkout, Use a reserve ticket, Give, Send in LINE, Accept, Send gratitude, Send offer, the seal check, Draw on your board and Give on someone else's. A can't-undo act never gets the key.
+- **Where it goes:** Keep drawing, Buy reserve tickets in the Shop, Pay in the reserve ticket checkout, Use a reserve ticket, Give, Send in LINE, Accept, Send gratitude, the seal check, Draw on your board and Give on someone else's. A can't-undo act never gets the key.
 
 ### Label stock
 
@@ -497,7 +497,7 @@ Opposite your name, top-right, stacked: gifts for you, then gifts on their way.
 
 ### Someone else's board
 
-The same board, read only, opened from Explore. Their stickers sit where they stuck them, with foil on the ones someone else drew. Nothing moves, so there are no handles and no rotate knob. There's no tray, since a tray is private; Give takes Draw's slot as the board's one key; an Explore back chip (a 32px Liner Lift pill with a caret) sits beside the name. Tapping a sticker opens its menu: the artist chip on top when someone else drew it, then View and Offer for it (grape label).
+The same board, read only, opened from Explore. Their stickers sit where they stuck them, with foil on the ones someone else drew. Nothing moves, so there are no handles and no rotate knob. There's no tray, since a tray is private; Give takes Draw's slot as the board's one key; an Explore back chip (a 32px Liner Lift pill with a caret) sits beside the name. Tapping a sticker opens its menu: the artist chip on top when someone else drew it, then View.
 
 ### Draw screen
 
@@ -510,6 +510,7 @@ The canvas is just for drawing.
 - **Smoothing:** an icon button that opens a compact Liner Lift bar under the tools. Its small title, "Smoothing", shows only while it's open, with Raw and Smooth at the ends.
 - **Size rail:** the left edge, with a live number of the brush size in px.
 - **Foot:** flat undo and redo at the bottom left, the seal check at the bottom right. The canvas shows no ticket count.
+- **18+ switch:** for an adult, a small pill just above the seal check marks the sticker for adults. On, it fills Bonbon Pink with Ink text, and the sticker seals as an NSFW sticker, a mark that never changes.
 - **Sealing:** the ceremony starts as soon as the sticker is cut: the cut runs round the ink behind a Seal Yellow blade, and the paper around it dims. It then waits there while the server seals the sticker, which takes 10–30 s. The blade keeps running round the cut, pass after pass, trailing a heavier stroke of fresh cut. Only once the seal is recorded does the resin pour, the sticker peel off and the sealed card come up, so nothing that says "sealed" shows early. A white label at the foot, turned -2°, sticks on after 1 s: "Sealing your sticker…". At 10 s a fresh label is pressed over it adding "It can take up to half a minute.", and at 30 s "It's taking longer than usual." It peels off when the seal lands. A tap skips to the wait but can't pass it. A failed seal fades back to the drawing, and the seal chip says what went wrong. Under reduced motion the cut shows at once, the blade stays hidden and the label still shows.
 - **Sealed card:** the sticker lands in its slot with the card's 18px padding above it, never against the card's top edge. Under "Sealed", the fine print keeps the handle's own case. With tickets left, Keep drawing is the key and Go to sticker board the label under it. Once the sticker used the day's last daily ticket, the line under the ticket row leads with the refill, "New daily tickets at 12:00 AM", in Ink. On the last ticket of all, Go to sticker board becomes the key and Buy reserve tickets drops to small label stock with the ticket icon under that line: the day's peak is no sales pitch.
 - **Keep drawing:** the hand-over overlaps rather than running in turn. On the press, the fresh sheet and the clock (3:00) are set up under the veil, and the day's next daily ticket is spent without asking. The sealed card carries the sticker down toward the Board grabber, 70% of the screen, over 280ms on the peel curve, fading over its last half, while the veil lifts linearly. The timer, tools, size rail and undo fade back in 120ms later, so the sheet is never bare. No card shows during that spend; one comes up only if the spend fails, with the reason. When the sticker used the last daily ticket and reserve ones are left, the reserve ask rises 120ms into the card's exit, its scrim taking over from the lifting veil. The shop from the last ticket's card leaves the same way. The fresh sheet takes ink as soon as the spend lands, even while the card is still leaving. Under reduced motion it's the same order in one frame.
@@ -583,10 +584,10 @@ Who drew a foil sticker: a Liner Lift pill (40px) with the artist's LINE picture
 Browse what everyone draws, see who drew each sticker, and get to that artist's board. Under the search, a two-way switch picks **Stickers** or **This week**. Search results replace both views.
 
 - **The search:** white label stock on the label shadow, "Search artists" beside an @, with no halo. Typing in it draws the house focus ring, 2px Ink at a 3px offset.
-- **The view switch:** a Liner Deep track with one label stuck on the current view, Soda Aqua for the switch and Bonbon Pink for the leaderboard tabs inside This week, except Longest streak's, which is the streak's Tangerine. The label slides to the tapped tab in 260ms on the ease-out, fading between pink and tangerine as it goes; the text changes color in 140ms. The tabs take the shared press and the arrow keys. Reduced motion moves the label at once.
+- **The view switch:** a Liner Deep track with one label stuck on the current view, Soda Aqua for the switch and Bonbon Pink for the leaderboard tabs inside This week, except Streak's, which is the streak's Tangerine. The label slides to the tapped tab in 260ms on the ease-out, fading between pink and tangerine as it goes; the text changes color in 140ms. The tabs take the shared press and the arrow keys. Reduced motion moves the label at once.
 - **Handles in rows:** a leaderboard or search row shows the whole handle, up to 32 characters, as the name tags do: it runs onto a second line after "_", ".", "-" or a space, and between letters only where it must. A long one steps down from 16px to fit two lines, never under 11px. The rank, picture and figure stay centered on the row, so their columns hold.
-- **This week:** the three leaderboards, moved as they were, with "Resets Monday 4:00" in fine print under the list. A board nobody is on yet says so as a sentence in a 13px supporting note, never in fine print's capitals. On a new board the old rows fade out in 90ms and the new ones stick on from the top, 25ms apart (the first five, the rest together), each rising 6px over 200ms. Reduced motion cross-fades them in 120ms. Best combo is the hit counter, and Longest streak's figures lead with the streak's fire (StreakIcon) in Tangerine.
-- **The pile:** Explore's stickers are a heap of real die-cut stickers, never a grid or a feed. Each Tokyo day (turning over at 4:00) is its own layer, newest first: a perforation row across the whole width as its top edge, with the day's dot badge stuck on it at the house tilt (Seal Yellow "Today 9.26", Liner Lift "9.25" for older days), then that day's heap resting on the next day's perforation. The last day ends on a bare perforation.
+- **This week:** the three leaderboards, moved as they were, with "Resets Monday 12:00 AM" in fine print under the list: Tokyo's midnight, in the person's own time. A board nobody is on yet says so as a sentence in a 13px supporting note, never in fine print's capitals. On a new board the old rows fade out in 90ms and the new ones stick on from the top, 25ms apart (the first five, the rest together), each rising 6px over 200ms. Reduced motion cross-fades them in 120ms. Best combo is the hit counter, and Streak's figures (each person's current streak, ties sharing a rank) lead with the streak's fire (StreakIcon) in Tangerine.
+- **The pile:** Explore's stickers are a heap of real die-cut stickers, never a grid or a feed. Each Tokyo day (turning over at midnight) is its own layer, newest first: a perforation row across the whole width as its top edge, with the day's dot badge stuck on it at the house tilt (Seal Yellow "Today 9.26", Liner Lift "9.25" for older days), then that day's heap resting on the next day's perforation. The last day ends on a bare perforation.
 - **The heap:** stickers drop onto the floor oldest first, so the newest lie on top: at a few seeded, middle-leaning spots, sliding off anything they can't balance on, sinking into what they land on and staying at the lowest of those drops, turned up to 17° either way. The layout is 360 units across on every phone, seeded by the day and the sticker, so the pile looks the same on every visit and a new sticker moves nothing beneath it. Stickers keep their size however many share a day.
 - **Flat:** pile stickers are the sealed image alone, with its own cut, white edge, cast and baked resin: no live light and no foil. Only the lifted sticker gets live resin. A tap lands only on the cut line or the tags, so a clear corner lets the tap through to the sticker beneath.
 - **Name tags:** every sticker wears one across its lower left edge, turned a little against the sticker, and quiet so the stickers lead: thin, flat Liner Lift stock with a hairline edge and no cast, 17 units tall, holding the artist's LINE picture as a 13-unit photo sticker (a plain dot without one, never a letter under the 11px floor) and "@handle" in 11px at 600. A given sticker adds a soft aqua "to @ken" tag under it ("@kenさんへ" in Japanese). Each tag is measured round its whole label, and a handle always shows whole, up to 32 characters: past 112 units a line runs onto the next, breaking after "_", ".", "-" or a space where that leaves the line well filled, and between letters otherwise. No later sticker or tag ever covers an earlier tag.
@@ -690,7 +691,6 @@ One experience for everyone, on plain Liner, once per hand-off.
 - **Tiers:** reached by the amount (ありがと, 照れ, ドキドキ, オーバーヒート, 昇天). Each new tier slams its name in outlined 袋文字, and pop-in words from a per-tier bank appear and go. The ground escalates from calm Liner to a blush, focus lines, heat haze and a white-out.
 - **Mini hearts:** from ドキドキ up, taps spray small pink hearts that bounce, collide and pile along the bottom before fading. A tap shoves nearby hearts away, harder the closer they are. The heart sweats hearts: a slow drip at ドキドキ, a real sweat at オーバーヒート, heavier at 昇天, all landing in the same pile with 昇天's rain.
 - **Discovery:** stroking the heart stretches it along the drag, and after three tries a tip says what to do. After the one motion opt-in, it sways with the wrist, and shaking hard says "Keep shaking!".
-- **After 昇天:** condensation fogs the glass in from the edges over 1.2s and clears on its own.
 - **After:** the receipt shows the amount, the best multiplier and the combo's length. The sticker's trail replays the combo inside its card (Gratitude replay).
 
 ### Loading
@@ -714,7 +714,7 @@ Every icon is Phosphor Icons (MIT) as `@phosphor-icons/react` 2.1.10 renders the
 - **My board:** smiley-sticker, on the tab (bold, fill when current), every "go to the board" action and the chat menu's My board tile (fill).
 - **Explore:** compass. **Shop:** tag, on the tab and every way into the Shop.
 - **Gratitude:** heart (fill) at every size, since it's a mark, not a control: Send gratitude, the Transfer Trail, the combo HUD and the receipt. **Streak:** fire (fill).
-- **Give** is gift, **View** eye, **Offer** handshake and **Remove** tray-arrow-down.
+- **Give** is gift, **View** eye and **Remove** tray-arrow-down.
 
 Screens that build their DOM from strings (the mini-game, the tray) carry copies of Phosphor's paths; `phosphorCopies.test.tsx` checks each against the installed package.
 
