@@ -96,6 +96,14 @@ describe("the timelapse", () => {
     expect(await gunzip(blob)).toEqual(timelapse);
   });
 
+  it("gzips it where the browser can't compress, so the sticker still seals with it", async () => {
+    vi.stubGlobal("CompressionStream", undefined);
+    const timelapse = encodeTimelapse(input);
+    const blob = await gzipTimelapse(timelapse).finally(() => vi.unstubAllGlobals());
+    if (!blob) throw new Error("expected a gzipped timelapse");
+    expect(await gunzip(blob)).toEqual(timelapse);
+  });
+
   it("goes without one over the server's limit, and says so", async () => {
     const report = vi.fn();
     const huge: TimelapseV1 = {

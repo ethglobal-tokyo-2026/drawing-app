@@ -9,6 +9,7 @@ import {
   type Hex,
 } from "viem";
 import { sepolia } from "viem/chains";
+import { ChainUnavailableError } from "../deps.ts";
 import { captureLogLines, type LogLines } from "../testing/logLines.ts";
 import {
   CLAIM_RECEIPT_TIMEOUT_MS,
@@ -337,6 +338,13 @@ describe("Sepolia sticker adapter", () => {
     });
   });
 
+  it("reports an escrow read the RPC failed as the chain being unavailable", async () => {
+    rpc.readContract.mockRejectedValue(new Error("fetch failed"));
+    await expect(adapter().giftChain.readEscrowGift(GIFT_ID)).rejects.toBeInstanceOf(
+      ChainUnavailableError,
+    );
+  });
+
   it("does not report a reverted claim as successful", async () => {
     rpc.readContract.mockResolvedValue(escrowGift(1));
     rpc.waitForTransactionReceipt.mockResolvedValue({ status: "reverted" });
@@ -374,7 +382,9 @@ describe("Sepolia sticker adapter", () => {
       throw new Error("Receipt timed out");
     });
 
-    await expect(adapter().giftChain.claimGift(claimInput)).rejects.toBe(reconciliationError);
+    await expect(adapter().giftChain.claimGift(claimInput)).rejects.toSatisfy(
+      (error) => error instanceof ChainUnavailableError && error.cause === reconciliationError,
+    );
 
     logs.expectLogged("chain.claim.transaction.failed", { giftId: GIFT_ID, txHash: TX });
     logs.expectLogged("chain.claim.reconcile.failed", { giftId: GIFT_ID });

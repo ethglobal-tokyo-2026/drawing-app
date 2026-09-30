@@ -1,13 +1,14 @@
 // @vitest-environment happy-dom
-import type { Me } from "@drawing-app/api/client";
+import type { Me, Tickets } from "@drawing-app/api/client";
 import { act, useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing";
 import type { TicketsValue } from "./ticketsContext";
+import { REFILL_RETRY_MAX_MS, REFILL_RETRY_MS } from "./TicketsProvider";
 import { useTickets } from "./useTickets";
 
-type Spend = TicketsValue["spend"];
+type Spender = Pick<TicketsValue, "spend" | "forgetKeptSpend">;
 
 /** The server's answer to a spend that lands. */
 const SPENT = {
@@ -28,10 +29,10 @@ const NO_ANSWER = new ApiError(0, {
 /** Someone else, signed in on the same phone. */
 const SOMEONE_ELSE: Me = { ...TEST_ME, id: "someone-else", lineUserId: "U-someone-else" };
 
-/** Hands the test the tickets' spend. */
-function Spender({ onSpend }: { onSpend: (spend: Spend) => void }) {
-  const { spend } = useTickets();
-  useEffect(() => onSpend(spend), [onSpend, spend]);
+/** Hands the test the tickets' spend, and what the drawing screen says once it keeps a ticket use. */
+function Spender({ onSpend }: { onSpend: (spender: Spender) => void }) {
+  const { spend, forgetKeptSpend } = useTickets();
+  useEffect(() => onSpend({ spend, forgetKeptSpend }), [onSpend, spend, forgetKeptSpend]);
   return null;
 }
 
@@ -42,20 +43,26 @@ const keys = () => spendTicket.mock.calls.map(([sent]) => sent.idempotencyKey);
 
 let view: ReturnType<typeof renderWithApi> | undefined;
 /** Your tickets as `me`, in place of the page open before, as a reload does. Answers their spend. */
-async function open(me: Me = TEST_ME): Promise<Spend> {
+async function open(me: Me = TEST_ME): Promise<Spender> {
   view?.unmount();
-  const onSpend = vi.fn<(spend: Spend) => void>();
+  const onSpend = vi.fn<(spender: Spender) => void>();
   view = renderWithApi(<Spender onSpend={onSpend} />, emptyApi({ spendTicket }), me);
   await act(async () => {});
-  const spend = onSpend.mock.lastCall?.[0];
-  if (!spend) throw new Error("The tickets gave no spend");
-  return spend;
+  const spender = onSpend.mock.lastCall?.[0];
+  if (!spender) throw new Error("The tickets gave no spend");
+  return spender;
+}
+
+/** A spend that lands, and its ticket use kept with a sheet, as the drawing screen does. */
+async function spendAndKeep({ spend, forgetKeptSpend }: Spender) {
+  await act(() => spend("daily"));
+  forgetKeptSpend();
 }
 
 /** Opens the app as `me` and spends, but the page goes before the answer comes. */
 async function spendThenLeave(me: Me = TEST_ME) {
   spendTicket.mockReturnValueOnce(new Promise(() => {}));
-  void (await open(me))("daily");
+  void (await open(me)).spend("daily");
 }
 
 beforeEach(() => {
@@ -74,17 +81,17 @@ afterEach(() => {
 describe("spending a ticket", () => {
   it("sends a failed spend's key again when it's retried, and a new key for the next drawing", async () => {
     spendTicket.mockRejectedValueOnce(NO_ANSWER);
-    const spend = await open();
-    await expect(act(() => spend("daily"))).rejects.toBe(NO_ANSWER);
-    await act(() => spend("daily"));
-    await act(() => spend("daily"));
+    const spender = await open();
+    await expect(act(() => spender.spend("daily"))).rejects.toBe(NO_ANSWER);
+    await spendAndKeep(spender);
+    await act(() => spender.spend("daily"));
     const [tried, retried, nextDrawing] = keys();
     expect(retried).toBe(tried);
     expect(nextDrawing).not.toBe(tried);
   });
 
   it("sends a second tap with the key of the spend still on its way", async () => {
-    const spend = await open();
+    const { spend } = await open();
     await act(() => Promise.all([spend("daily"), spend("daily")]));
     const [first, second] = keys();
     expect(first).toEqual(expect.any(String));
@@ -95,29 +102,129 @@ describe("spending a ticket", () => {
 describe("a spend's key across a reload", () => {
   it("sends the key again when the page went before the spend's answer came", async () => {
     await spendThenLeave();
-    const spend = await open();
+    const { spend } = await open();
     await act(() => spend("daily"));
     const [sent, sentAgain] = keys();
     expect(sentAgain).toBe(sent);
   });
 
-  it("sends a new key once a spend has landed", async () => {
-    const spend = await open();
+  it("sends the key again when the page went after the answer, before a sheet kept its ticket use", async () => {
+    const { spend } = await open();
     await act(() => spend("daily"));
     const reloaded = await open();
-    await act(() => reloaded("daily"));
-    const [landed, next] = keys();
-    expect(next).not.toBe(landed);
+    await act(() => reloaded.spend("daily"));
+    const [landed, sentAgain] = keys();
+    expect(sentAgain).toBe(landed);
+  });
+
+  it("sends a new key once a sheet has kept the ticket use", async () => {
+    await spendAndKeep(await open());
+    const reloaded = await open();
+    await act(() => reloaded.spend("daily"));
+    const [kept, next] = keys();
+    expect(next).not.toBe(kept);
   });
 
   it("keeps it for the person who spent, not someone else signing in on the phone", async () => {
     await spendThenLeave();
-    const theirs = await open(SOMEONE_ELSE);
-    await act(() => theirs("daily"));
+    await spendAndKeep(await open(SOMEONE_ELSE));
     const yours = await open();
-    await act(() => yours("daily"));
+    await act(() => yours.spend("daily"));
     const [sent, theirKey, sentAgain] = keys();
     expect(theirKey).not.toBe(sent);
     expect(sentAgain).toBe(sent);
+  });
+});
+
+/** Hands the test the tickets' value as each render leaves it. */
+function Holder({ onValue }: { onValue: (value: TicketsValue) => void }) {
+  const value = useTickets();
+  useEffect(() => {
+    onValue(value);
+  });
+  return null;
+}
+
+/** Your tickets, loaded with `load`; the latest value is `shown()`. */
+async function openWith(load: ApiClient["tickets"]) {
+  view?.unmount();
+  let latest: TicketsValue | undefined;
+  view = renderWithApi(
+    <Holder onValue={(value) => (latest = value)} />,
+    emptyApi({ tickets: load, spendTicket }),
+  );
+  await act(async () => {});
+  const shown = () => {
+    if (!latest) throw new Error("The tickets gave no value");
+    return latest;
+  };
+  return shown;
+}
+
+/** The day after FRESH_TICKETS's, as the server answers once its day has turned. */
+const NEXT_DAY: Tickets = {
+  ...FRESH_TICKETS,
+  ticketDay: "2026-09-27",
+  nextRefillAt: "2026-09-27T15:00:00.000Z",
+};
+const refill = Date.parse(FRESH_TICKETS.nextRefillAt);
+
+describe("answers that carry your tickets", () => {
+  it("keeps a spend's tickets when a load sent before it answers after it", async () => {
+    let answerLoad = (_: Tickets) => {};
+    const load = vi
+      .fn<ApiClient["tickets"]>()
+      .mockResolvedValueOnce(FRESH_TICKETS)
+      .mockReturnValueOnce(new Promise((resolve) => (answerLoad = resolve)));
+    const spentOne = { ...SPENT, tickets: { ...FRESH_TICKETS, dailyLeft: 2 } };
+    spendTicket.mockResolvedValueOnce(spentOne);
+    const shown = await openWith(load);
+    act(() => shown().refresh());
+    await act(() => shown().spend("daily"));
+    await act(async () => answerLoad(FRESH_TICKETS));
+    expect(shown().tickets?.dailyLeft).toBe(2);
+  });
+});
+
+describe("the refill", () => {
+  it("loads again until the server's day has turned, when this phone's clock runs ahead", async () => {
+    vi.setSystemTime(refill - REFILL_RETRY_MS);
+    const server = { tickets: FRESH_TICKETS };
+    const load = vi.fn(() => Promise.resolve(server.tickets));
+    const shown = await openWith(load);
+    await act(() => vi.advanceTimersByTimeAsync(REFILL_RETRY_MS * 2));
+    // The server's clock hasn't reached the refill, so it still answers the ended day.
+    expect(shown().tickets?.ticketDay).toBe(FRESH_TICKETS.ticketDay);
+    server.tickets = NEXT_DAY;
+    await act(() => vi.advanceTimersByTimeAsync(REFILL_RETRY_MAX_MS));
+    expect(shown().tickets?.ticketDay).toBe(NEXT_DAY.ticketDay);
+  });
+
+  it("loads again after a reload at the refill fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.setSystemTime(refill - REFILL_RETRY_MS);
+    const load = vi
+      .fn<ApiClient["tickets"]>()
+      .mockResolvedValueOnce(FRESH_TICKETS)
+      .mockRejectedValueOnce(NO_ANSWER)
+      .mockResolvedValue(NEXT_DAY);
+    const shown = await openWith(load);
+    // The reload at the refill fails, then the one after it lands.
+    await act(() => vi.advanceTimersByTimeAsync(REFILL_RETRY_MS * 2));
+    await act(() => vi.advanceTimersByTimeAsync(REFILL_RETRY_MS));
+    expect(shown().tickets?.ticketDay).toBe(NEXT_DAY.ticketDay);
+  });
+
+  it("loads as the app comes back into view after the refill, since a sleeping phone holds timers back", async () => {
+    vi.setSystemTime(refill - REFILL_RETRY_MS);
+    const load = vi
+      .fn<ApiClient["tickets"]>()
+      .mockResolvedValueOnce(FRESH_TICKETS)
+      .mockResolvedValue(NEXT_DAY);
+    const shown = await openWith(load);
+    // The clock moves on, but the refill's timer hasn't fired.
+    vi.setSystemTime(refill + REFILL_RETRY_MS);
+    await act(async () => void document.dispatchEvent(new Event("visibilitychange")));
+    expect(shown().tickets?.ticketDay).toBe(NEXT_DAY.ticketDay);
   });
 });

@@ -74,6 +74,8 @@ export interface MiniHeartPhysics {
   shoveAwayFrom: (x: number, y: number) => void;
   /** Advances the physics' own clock: 0 while the screen is frozen. */
   step: (dt: number) => void;
+  /** Every heart left fades out where it is, 昇天's rain included. */
+  melt: () => void;
   clear: () => void;
 }
 
@@ -553,6 +555,11 @@ export function createMiniHeartPhysics(
     step: (dt) => {
       now += dt;
       if (dt > 0 && bodies.length > 0) advance(dt);
+    },
+    melt: () => {
+      for (const b of bodies) {
+        b.fade ??= { from: now, duration: lerp(MINI.fade[0], MINI.fade[1], random()) };
+      }
     },
     clear: () => {
       bodies.length = 0;

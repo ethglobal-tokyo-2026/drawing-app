@@ -106,12 +106,13 @@ export const ticketRoutes = ({ db, clock, ticketPayments, lineChatMenu }: AppDep
         logFailure("sui.read.failed", failure, { userId: c.var.userId });
         return apiError(c, 502, "sui_unavailable", `${failure.message}: ${failureCause(error)}`);
       }
+      // No verdict: Sui may not have run a payment the app just sent yet, so the app asks again.
       if (payments === null) {
         return apiError(
           c,
-          422,
-          "payment_not_found",
-          `txDigest: Sui has no transaction ${txDigest}`,
+          409,
+          "payment_not_landed",
+          `txDigest: Sui doesn't show transaction ${txDigest} yet`,
         );
       }
       const { vault } = ticketPayments.target;

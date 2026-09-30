@@ -5,7 +5,6 @@
   "type": "module",
   "exports": {
     "./auth-error": "./src/auth-error.ts",
-    "./auth-http": "./src/auth-http.ts",
     "./bytes32": "./src/bytes32.ts",
     "./contracts": "./src/generated/contracts.ts",
     "./croquis-names": "./src/croquis-names.ts",

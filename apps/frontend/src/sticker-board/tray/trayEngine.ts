@@ -105,8 +105,11 @@ interface Slot extends TraySticker {
   pos?: PackedItem;
 }
 
+/** The tray's one press at a time, on the stack or on the pulled-out sheet. */
 interface Gesture {
   id: number;
+  /** The pulled-out sheet it's on; null on the stack. */
+  pulled: Pulled | null;
   p0: Point;
   mode: "maybe" | "page" | "peel" | "pull" | "move" | "none";
   slotEl: HTMLElement | null;
@@ -430,7 +433,8 @@ export function createTrayEngine(
   let model = modelOf(read());
   /** The stack's window is on show: the tray open, opening, or pulled to a crack. */
   let onShow = false;
-  /** The stickers changed while the stack was out of sight: it's rebuilt when it next shows. */
+  /** The stickers changed while the sheets were out of sight, under a hand or mid-turn: they're
+   * rebuilt once they show and that's over. */
   let stale = false;
   /** The sheet count the stack's order was dealt for. */
   let orderedFor = 0;
@@ -628,7 +632,6 @@ export function createTrayEngine(
   }
   /** The stack: the front sheet whole, the next ones a strip apart below it, the rest as a button. */
   function renderStack() {
-    stale = false;
     const active = doc.activeElement;
     const focused = active instanceof HTMLElement && stack.contains(active) ? active : null;
     const focusedId = focused?.closest<HTMLElement>(".tray__slot")?.dataset.id;
@@ -678,16 +681,28 @@ export function createTrayEngine(
       preventScroll: true,
     });
   }
-  /** Rebuilds the stack for the stickers as they are now; while it's out of sight, when it next shows. */
+  /**
+   * Rebuilds the sheets for the stickers as they are now. Out of sight, under a hand or mid-turn,
+   * they wait: a sheet redrawn there would drop what's being done to it.
+   */
   function redraw() {
     if (!onShow) {
       stale = true;
       return;
     }
     if (model.count !== orderedFor || ui.order.some((f) => f >= model.count)) resetOrder();
+    if (ui.g || ui.busy) {
+      stale = true;
+      return;
+    }
+    stale = false;
     rerenderPulled();
-    if (!ui.g && !ui.busy) renderStack();
+    renderStack();
   }
+  /** A press or a turn is over: the sheets catch up with what changed during it. */
+  const catchUp = () => {
+    if (stale) redraw();
+  };
   function sheetOf(el: Element | null) {
     const sheet = el?.closest<HTMLElement>(".tray__sheet");
     return sheet ? Number(sheet.dataset.f) : null;
@@ -804,13 +819,17 @@ export function createTrayEngine(
   const topSheet = () => stack.querySelector<HTMLElement>(".tray__sheet.is-top");
   const sheetEls = () => [...stack.querySelectorAll<HTMLElement>(".tray__sheet")];
   const depthOf = (el: HTMLElement) => Number(el.dataset.depth);
-  const settle = (el: HTMLElement, ms = 200) =>
-    ended(
-      el.animate([{ transform: el.style.transform }, { transform: restAt(depthOf(el)) }], {
+  /** A sheet a finger moved eases back to its place in the stack, and stays there. */
+  const settle = (el: HTMLElement, ms = 200) => {
+    const from = el.style.transform;
+    el.style.transform = restAt(depthOf(el));
+    return ended(
+      el.animate([{ transform: from }, { transform: el.style.transform }], {
         duration: ms,
         easing: EASE_OUT,
       }),
     );
+  };
   // As the CSS shades each level back; a sheet changing level eases between them.
   const shadeOf = (d: number) => clamp(d * 0.3, 0, 0.9);
   const shade = (
@@ -829,7 +848,10 @@ export function createTrayEngine(
       });
   /** One step: +1 sends the front sheet to the back, -1 brings the back one to the front. */
   async function page(dir: 1 | -1, { fromY = 0, quick = false } = {}) {
-    const n = ui.order.length;
+    // One turn at a time: a key held down, or pressed mid-shuffle, doesn't start another.
+    if (ui.busy) return;
+    const order = ui.order;
+    const n = order.length;
     const front = topSheet();
     if (n < 2) {
       if (front && fromY) await settle(front);
@@ -837,10 +859,9 @@ export function createTrayEngine(
     }
     const k = Math.min(PEEKS, n - 1);
     const T = quick ? 0.6 : 1;
-    const turned = () =>
-      dir > 0 ? [...ui.order.slice(1), ui.order[0]] : [ui.order[n - 1], ...ui.order.slice(0, -1)];
+    const turned = dir > 0 ? [...order.slice(1), order[0]] : [order[n - 1], ...order.slice(0, -1)];
     if (reduced() || !front) {
-      ui.order = turned();
+      ui.order = turned;
       renderStack();
       if (reduced()) stack.animate([{ opacity: 0.5 }, { opacity: 1 }], { duration: 150 });
       return;
@@ -874,11 +895,14 @@ export function createTrayEngine(
           fill: "forwards",
         }),
       );
-      ui.order = turned();
-      renderStack();
+      // A tab, or a sheet sent home, that dealt the stack anew mid-turn keeps its order.
+      if (ui.order === order) {
+        ui.order = turned;
+        renderStack();
+      }
     } else {
       // The back sheet comes up from behind the stack and settles in front; the rest step back.
-      ui.order = turned();
+      ui.order = turned;
       renderStack();
       const t = topSheet();
       for (const el of sheetEls()) {
@@ -911,6 +935,7 @@ export function createTrayEngine(
       }
     }
     ui.busy = false;
+    catchUp();
   }
   /** Brings a sheet to the front: a quick riffle through the ones before it. */
   async function bringToFront(f: number, { instant = false } = {}) {
@@ -933,18 +958,22 @@ export function createTrayEngine(
 
   /* ---------------------------------------------------------------- gestures on the stack. The first move decides:
    * up or down pages, from anywhere; toward the board on a sticker peels it, on the paper pulls the sheet out. */
-  listen(stack, "pointerdown", (e) => {
-    if (e.button > 0 || ui.busy || ui.g || !zip.isOpen) return;
-    const target = targetOf(e);
-    if (target?.closest(".tray__depth")) return;
-    const sheet = target?.closest<HTMLElement>(".tray__sheet");
+  /** A press begins on `on`, the stack or `pulled`'s sheet, which holds its pointer until it ends. */
+  function pressOn(
+    on: HTMLElement,
+    e: PointerEvent,
+    pulled: Pulled | null,
+    slotEl: HTMLElement | null,
+    depth: number,
+  ) {
     const p0 = local(e);
     ui.g = {
       id: e.pointerId,
+      pulled,
       p0,
       mode: "maybe",
-      slotEl: target?.closest<HTMLElement>(".tray__sheet.is-top .tray__slot") ?? null,
-      depth: sheet ? depthOf(sheet) : 0,
+      slotEl,
+      depth,
       last: p0,
       lt: win.performance.now(),
       vx: 0,
@@ -954,15 +983,82 @@ export function createTrayEngine(
       at: null,
     };
     try {
-      stack.setPointerCapture(e.pointerId);
+      on.setPointerCapture(e.pointerId);
     } catch {
       // Synthetic pointer events have no active pointer to capture; the gesture still works.
     }
     e.preventDefault();
+  }
+  /** The press this pointer holds on `pulled`'s sheet, or on the stack when null. */
+  const pressOf = (e: PointerEvent, pulled: Pulled | null) => {
+    const g = ui.g;
+    return g && g.id === e.pointerId && g.pulled === pulled ? g : null;
+  };
+  /** Let go: the press ends as its first move decided, and the sheets catch up once it's played out. */
+  const upOn = (pulled: Pulled | null) => (e: PointerEvent) => {
+    const g = pressOf(e, pulled);
+    if (!g) return;
+    ui.g = null;
+    freePress(g.slotEl);
+    void letGo(g, local(e)).then(catchUp);
+  };
+  /** Its pointer cancelled, or the capture it took lost: the press is called off. */
+  const cancelOn = (on: HTMLElement, pulled: Pulled | null) => (e: PointerEvent) => {
+    const g = pressOf(e, pulled);
+    // Capture handed to `on` from the part touched isn't lost; only its own is.
+    if (!g || (e.type === "lostpointercapture" && e.target !== on)) return;
+    void callOff(g).then(catchUp);
+  };
+  async function letGo(g: Gesture, pt: Point) {
+    if (g.mode === "maybe") {
+      if (g.depth === 0) tapSlot(g.slotEl);
+      else {
+        const f = ui.order[g.depth];
+        if (f !== undefined) await bringToFront(f);
+      }
+    } else if (g.mode === "page") {
+      if (g.dy < PAGE_UP.px || g.vy < PAGE_UP.speed) await page(1, { fromY: g.dy });
+      else if (g.dy > PAGE_DOWN.px || g.vy > PAGE_DOWN.speed) {
+        const el = topSheet();
+        if (el) el.style.transform = restAt(0);
+        await page(-1);
+      } else {
+        const el = topSheet();
+        if (el) await settle(el);
+      }
+    } else if (g.mode === "peel") await dropPeel(g, pt);
+    else if (g.mode === "pull") await releasePull(g, pt);
+    else if (g.mode === "move" && g.pulled) settlePulled(g.pulled);
+  }
+  /**
+   * Ends a press that wasn't let go, when its pointer is cancelled or its pulled-out sheet goes home:
+   * nothing is tapped, paged or stuck on, and a sticker in hand goes back to its slot.
+   */
+  async function callOff(g: Gesture) {
+    if (ui.g === g) ui.g = null;
+    freePress(g.slotEl);
+    const pk = g.peel;
+    if (g.mode === "peel" && pk) {
+      // Its sheet is on its way home: the sticker lies straight back down on it and goes too.
+      if (g.pulled && g.pulled !== ui.pulled) lieDown(pk, g.pulled);
+      else await putBack(pk);
+    } else if (g.mode === "page") {
+      const el = topSheet();
+      if (el) await settle(el);
+    } else if (g.mode === "pull") await sendHome({ quick: true });
+    else if (g.mode === "move" && g.pulled && g.pulled === ui.pulled) settlePulled(g.pulled);
+  }
+  listen(stack, "pointerdown", (e) => {
+    if (e.button > 0 || ui.busy || ui.g || !zip.isOpen) return;
+    const target = targetOf(e);
+    if (target?.closest(".tray__depth")) return;
+    const sheet = target?.closest<HTMLElement>(".tray__sheet");
+    const slot = target?.closest<HTMLElement>(".tray__sheet.is-top .tray__slot") ?? null;
+    pressOn(stack, e, null, slot, sheet ? depthOf(sheet) : 0);
   });
   listen(stack, "pointermove", (e) => {
-    const g = ui.g;
-    if (!g || g.id !== e.pointerId) return;
+    const g = pressOf(e, null);
+    if (!g) return;
     const pt = local(e);
     const t = win.performance.now();
     const dt = Math.max(1, t - g.lt);
@@ -990,35 +1086,10 @@ export function createTrayEngine(
     } else if (g.mode === "peel") movePeel(g, pt);
     else if (g.mode === "pull") movePull(g, pt);
   });
-  const stackUp = (e: PointerEvent) => {
-    const g = ui.g;
-    if (!g || g.id !== e.pointerId) return;
-    ui.g = null;
-    freePress(g.slotEl);
-    if (g.mode === "maybe") {
-      if (g.depth > 0) {
-        const f = ui.order[g.depth];
-        if (f !== undefined) void bringToFront(f);
-        return;
-      }
-      tapSlot(g.slotEl);
-      return;
-    }
-    if (g.mode === "page") {
-      if (g.dy < PAGE_UP.px || g.vy < PAGE_UP.speed) void page(1, { fromY: g.dy });
-      else if (g.dy > PAGE_DOWN.px || g.vy > PAGE_DOWN.speed) {
-        const el = topSheet();
-        if (el) el.style.transform = restAt(0);
-        void page(-1);
-      } else {
-        const el = topSheet();
-        if (el) void settle(el);
-      }
-    } else if (g.mode === "peel") void dropPeel(g, local(e));
-    else if (g.mode === "pull") void releasePull(g, local(e));
-  };
-  listen(stack, "pointerup", stackUp);
-  listen(stack, "pointercancel", stackUp);
+  listen(stack, "pointerup", upOn(null));
+  const cancelOnStack = cancelOn(stack, null);
+  listen(stack, "pointercancel", cancelOnStack);
+  listen(stack, "lostpointercapture", cancelOnStack);
   listen(stack, "click", (e) => {
     if (targetOf(e)?.closest(".tray__depth")) openSpread({ focus: e.detail === 0 });
     else openGivenAt(e);
@@ -1105,6 +1176,7 @@ export function createTrayEngine(
       renderStack();
       if (reduced() && zip.isOpen)
         stack.animate([{ opacity: 0.4 }, { opacity: 1 }], { duration: 160 });
+      if (again) catchUp();
       return;
     }
     const token = {};
@@ -1220,6 +1292,7 @@ export function createTrayEngine(
     if (shuffling === token) {
       shuffling = null;
       ui.busy = false;
+      catchUp();
     }
   }
 
@@ -1310,53 +1383,29 @@ export function createTrayEngine(
       type: K,
       fn: (e: HTMLElementEventMap[K]) => void,
     ) => wrap.addEventListener(type, fn, { signal: p.listening.signal });
-    /** A press on this sheet, and the sticker it started on. */
-    let g: Gesture | null = null;
-    let slot: HTMLElement | null = null;
     on("click", (e) => {
       if (targetOf(e)?.closest(".tray__x")) void sendHome();
       else openGivenAt(e);
     });
     on("pointerdown", (e) => {
       const target = targetOf(e);
-      if (e.button > 0 || g || !p.el.classList.contains("is-out") || target?.closest(".tray__x"))
+      // The tray takes one press at a time: a second finger is ignored.
+      if (e.button > 0 || ui.g || !wrap.classList.contains("is-out") || target?.closest(".tray__x"))
         return;
-      const p0 = local(e);
-      slot = target?.closest<HTMLElement>(".tray__slot") ?? null;
-      g = {
-        id: e.pointerId,
-        p0,
-        mode: "maybe",
-        slotEl: slot,
-        depth: 0,
-        last: p0,
-        lt: win.performance.now(),
-        vx: 0,
-        vy: 0,
-        dy: 0,
-        peel: null,
-        at: null,
-      };
-      try {
-        wrap.setPointerCapture(e.pointerId);
-      } catch {
-        // Synthetic pointer events have no active pointer to capture; the gesture still works.
-      }
-      e.preventDefault();
+      pressOn(wrap, e, p, target?.closest<HTMLElement>(".tray__slot") ?? null, 0);
     });
     on("pointermove", (e) => {
-      if (!g || e.pointerId !== g.id) return;
+      const g = pressOf(e, p);
+      if (!g) return;
       const pt = local(e);
       const dx = pt.x - g.p0.x;
       const dy = pt.y - g.p0.y;
       if (g.mode === "maybe") {
         if (Math.hypot(dx, dy) < DECIDE) return;
-        g.mode = slot?.dataset.state === "here" ? "peel" : "move";
-        holdPress(slot);
-        if (g.mode === "peel") {
-          ui.g = g;
-          startPeel(g);
-        } else g.at = { x: p.x, y: p.y };
+        g.mode = g.slotEl?.dataset.state === "here" ? "peel" : "move";
+        holdPress(g.slotEl);
+        if (g.mode === "peel") startPeel(g);
+        else g.at = { x: p.x, y: p.y };
       }
       if (g.mode === "peel") movePeel(g, pt);
       else if (g.mode === "move" && g.at) {
@@ -1365,18 +1414,10 @@ export function createTrayEngine(
         wrap.style.transform = pulledAt(p.x, p.y, 1.03);
       }
     });
-    const up = (e: PointerEvent) => {
-      const done = g;
-      if (!done || e.pointerId !== done.id) return;
-      g = null;
-      ui.g = null;
-      freePress(slot);
-      if (done.mode === "maybe") tapSlot(slot);
-      else if (done.mode === "peel") void dropPeel(done, local(e));
-      else if (done.mode === "move") settlePulled(p);
-    };
-    on("pointerup", up);
-    on("pointercancel", up);
+    on("pointerup", upOn(p));
+    const cancelOnSheet = cancelOn(wrap, p);
+    on("pointercancel", cancelOnSheet);
+    on("lostpointercapture", cancelOnSheet);
   }
   /** Let go after moving it: back over the tray it goes home, else it settles where it's wholly in reach. */
   function settlePulled(p: Pulled) {
@@ -1403,6 +1444,8 @@ export function createTrayEngine(
     const p = ui.pulled;
     if (!p) return;
     ui.pulled = null;
+    // A press on it can't outlive its listeners: it's called off, and its sticker goes home on it.
+    if (ui.g?.pulled === p) void callOff(ui.g);
     p.listening.abort();
     const focused = holdsFocus(p.el);
     ui.order = [p.f, ...ui.order.filter((o) => o !== p.f)];
@@ -1563,6 +1606,24 @@ export function createTrayEngine(
   async function dropPeel(g: Gesture, pt: Point) {
     const pk = g.peel;
     if (!pk) return;
+    if (pk.phase === "curl" || !overBoard(pt)) return putBack(pk);
+    win.cancelAnimationFrame(pk.raf);
+    showLanding(null);
+    const rot = Math.round(clamp(pk.rot, -8, 8) * 10) / 10;
+    ui.shown.add(pk.s.id);
+    if (!ui.pulled) holdOpen(420);
+    // In hand until the board has drawn it where it lands.
+    api.place(pk.s.id, { x: pk.x, y: pk.y, r: rot }).then(
+      () => pk.el.remove(),
+      (error: unknown) => {
+        reportPlace(pk.s, error);
+        pk.el.remove();
+        pressIn(pk.s.id);
+      },
+    );
+  }
+  /** A sticker in hand that isn't stuck on goes back into its slot. */
+  async function putBack(pk: Peel) {
     win.cancelAnimationFrame(pk.raf);
     showLanding(null);
     if (pk.phase === "curl") {
@@ -1578,21 +1639,6 @@ export function createTrayEngine(
       );
       pk.el.remove();
       setSlotState(pk.s.id, "here");
-      return;
-    }
-    if (overBoard(pt)) {
-      const rot = Math.round(clamp(pk.rot, -8, 8) * 10) / 10;
-      ui.shown.add(pk.s.id);
-      if (!ui.pulled) holdOpen(420);
-      // In hand until the board has drawn it where it lands.
-      api.place(pk.s.id, { x: pk.x, y: pk.y, r: rot }).then(
-        () => pk.el.remove(),
-        (error: unknown) => {
-          reportPlace(pk.s, error);
-          pk.el.remove();
-          pressIn(pk.s.id);
-        },
-      );
       return;
     }
     // Back into its used sticker silhouette as the mouth opens again, or onto the pulled-out sheet
@@ -1611,6 +1657,14 @@ export function createTrayEngine(
     );
     pk.el.remove();
     pressIn(pk.s.id);
+  }
+  /** A sticker in hand lies straight back down in its slot on `p`'s sheet. */
+  function lieDown(pk: Peel, p: Pulled) {
+    win.cancelAnimationFrame(pk.raf);
+    showLanding(null);
+    pk.el.remove();
+    const el = p.el.querySelector<HTMLElement>(`.tray__slot[data-id="${CSS.escape(pk.s.id)}"]`);
+    if (el) el.dataset.state = "here";
   }
   /** Its placing failed, so it stays in the tray. */
   const reportPlace = (s: Slot, error: unknown) =>

@@ -16,6 +16,7 @@ import {
   giftsForYou,
   openGiftBodySchema,
   previewGift,
+  previewGiftForYou,
   receiveGift,
   receiveGiftForYou,
   type Receiving,
@@ -46,6 +47,7 @@ const REFUSAL_STATUS = {
   gift_returned: 410,
   gift_expired: 410,
   adults_only: 403,
+  claim_failed: 503,
 } as const satisfies Record<string, ContentfulStatusCode>;
 
 const refused = <Code extends keyof typeof REFUSAL_STATUS>(
@@ -80,6 +82,11 @@ export const giftRoutes = (deps: AppDeps) =>
       return received(c, receiving);
     })
     .get("/for-you", (c) => c.json(giftsForYou(deps, c.var.userId), 200))
+    .get("/:giftId/preview", validate("param", giftIdParam), async (c) => {
+      const previewing = await previewGiftForYou(deps, c.var.userId, c.req.valid("param").giftId);
+      if (previewing.refusal !== null) return refused(c, previewing);
+      return c.json(previewing.preview, 200);
+    })
     .post("/:giftId/receive", validate("param", giftIdParam), async (c) => {
       const giftId = c.req.valid("param").giftId;
       const receiving = await diagnosticStep(

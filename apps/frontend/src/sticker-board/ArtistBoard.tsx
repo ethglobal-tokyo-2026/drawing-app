@@ -4,7 +4,6 @@ import { veiledFor } from "../stickers/nsfw";
 import {
   useEffect,
   useId,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -29,12 +28,13 @@ import { QuietLink } from "../ui/QuietLink";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import { toBoardSticker, type BoardStickerView } from "./boardSticker";
+import { onTheBoard, toBoardSticker, type BoardStickerView } from "./boardSticker";
 import { fieldOf, toPx, type Field } from "./placement";
 import { PlacedSticker } from "./PlacedSticker";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import { StatCork, type CorkFigures, type StatCorkHandle } from "./stat-board/StatCork";
 import { statFigures } from "./stat-board/statFigures";
+import { useBoardSize } from "./useBoardSize";
 import "./ArtistBoard.css";
 
 interface Props {
@@ -127,39 +127,24 @@ export function ArtistBoard({ person, onBack }: Props) {
   const nameButton = useRef<HTMLButtonElement>(null);
   const flipBack = useRef<HTMLButtonElement>(null);
   const cork = useRef<StatCorkHandle>(null);
-  const [size, setSize] = useState<{ W: number; H: number } | null>(null);
+  const size = useBoardSize(face);
   const [turned, setTurned] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const [viewing, setViewing] = useState<BoardStickerView | null>(null);
   const [giving, setGiving] = useState(false);
   useLight(!turned);
 
-  // What they hold and have stuck on, bottom of the stack first.
+  // What's on their board, bottom of the stack first.
   const stickers = useMemo(
     () =>
       (board.state === "ready" ? board.data.boardStickers : [])
         .map(toBoardSticker)
-        .flatMap((s) => (s.held && s.placement?.on ? [{ ...s, placement: s.placement }] : []))
+        .filter(onTheBoard)
         .sort((a, b) => a.placement.z - b.placement.z),
     [board],
   );
   const field = size && visitField(size.W, size.H);
   const menuSticker = selected === null ? null : stickers[selected];
-
-  useLayoutEffect(() => {
-    const el = face.current;
-    if (!el) return;
-    const measure = () =>
-      setSize((was) =>
-        was?.W === el.clientWidth && was.H === el.clientHeight
-          ? was
-          : { W: el.clientWidth, H: el.clientHeight },
-      );
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    measure();
-    return () => observer.disconnect();
-  }, []);
 
   // LINE's header shows the page title.
   useEffect(() => {

@@ -21,10 +21,10 @@ interface Physics {
   tear: number;
   velocity: number;
   target: number;
-  /** Where the drag started: the pointer's x and the tear then. */
-  drag: { x: number; tear: number } | null;
+  /** The one pointer dragging, where it started and the tear then. */
+  drag: { pointerId: number; x: number; tear: number } | null;
   /** A press on the bag that tears it by itself once it's held long enough. */
-  hold: { x: number; y: number; timer: ReturnType<typeof setTimeout> } | null;
+  hold: { pointerId: number; x: number; y: number; timer: ReturnType<typeof setTimeout> } | null;
   lastTap: number;
   frame: number;
   last: number;
@@ -144,9 +144,10 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
     p.frame = requestAnimationFrame(run);
   };
 
+  // Only the dragging pointer ends the drag: its lift, its cancel or its lost capture.
   const release = (e: ReactPointerEvent) => {
     const p = physics.current;
-    if (!p.drag) return;
+    if (p.drag?.pointerId !== e.pointerId) return;
     e.stopPropagation();
     p.drag = null;
     setGrip(null);
@@ -158,7 +159,8 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
   const handlers: PullTab["handlers"] = {
     onPointerDown: (e) => {
       const p = physics.current;
-      if (p.torn) return;
+      // One finger pulls: another on the tab meanwhile neither takes the drag nor ends it.
+      if (p.torn || p.drag) return;
       // The bag's own press and hold is for presses off the tab.
       e.stopPropagation();
       try {
@@ -167,7 +169,7 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
         // A synthetic pointer has nothing to capture; the drag still follows it.
       }
       stopMoving();
-      p.drag = { x: e.clientX, tear: p.tear };
+      p.drag = { pointerId: e.pointerId, x: e.clientX, tear: p.tear };
       p.target = p.tear;
       setHinting(false);
       setGrip("pull");
@@ -175,11 +177,14 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
       kick();
     },
     onPointerMove: (e) => {
-      const p = physics.current;
-      if (p.drag) p.target = tearTarget(p.drag.tear, e.clientX - p.drag.x);
+      const { drag } = physics.current;
+      if (drag?.pointerId === e.pointerId) {
+        physics.current.target = tearTarget(drag.tear, e.clientX - drag.x);
+      }
     },
     onPointerUp: release,
     onPointerCancel: release,
+    onLostPointerCapture: release,
     onKeyDown: (e) => {
       const p = physics.current;
       if (p.torn) return;
@@ -196,15 +201,20 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
     },
   };
 
-  /** On the bag around the tab: press and hold, or double-tap, and it tears by itself. */
+  const isHolding = (e: ReactPointerEvent) => physics.current.hold?.pointerId === e.pointerId;
+
+  /**
+   * On the bag around the tab: press and hold, or double-tap, and it tears by itself. One finger
+   * holds, as one pulls.
+   */
   const stage = {
     onPointerDown: (e: ReactPointerEvent) => {
       const p = physics.current;
-      if (p.torn || p.drag) return;
+      if (p.torn || p.drag || p.hold) return;
       setHinting(false);
       setGrip("hold");
-      letGoOfBag();
       p.hold = {
+        pointerId: e.pointerId,
         x: e.clientX,
         y: e.clientY,
         timer: setTimeout(tearByItself, PULL.holdMs),
@@ -212,21 +222,23 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
     },
     onPointerMove: (e: ReactPointerEvent) => {
       const { hold } = physics.current;
-      if (hold && Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > PULL.holdSlopPx) {
+      if (hold?.pointerId !== e.pointerId) return;
+      if (Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > PULL.holdSlopPx) {
         letGoOfBag();
         setGrip(null);
       }
     },
-    onPointerUp: () => {
+    onPointerUp: (e: ReactPointerEvent) => {
       const p = physics.current;
-      if (!p.hold) return;
+      if (!isHolding(e)) return;
       letGoOfBag();
       setGrip(null);
       const now = performance.now();
       if (now - p.lastTap < PULL.doubleTapMs) tearByItself();
       p.lastTap = now;
     },
-    onPointerCancel: () => {
+    onPointerCancel: (e: ReactPointerEvent) => {
+      if (!isHolding(e)) return;
       letGoOfBag();
       setGrip(null);
     },

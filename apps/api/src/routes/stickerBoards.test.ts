@@ -1,4 +1,4 @@
-import { gifts, MAX_HITS, stickerPlacements } from "@drawing-app/db";
+import { MAX_HITS, stickerPlacements } from "@drawing-app/db";
 import { insertUser, packGift } from "@drawing-app/db/testing";
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -80,6 +80,14 @@ const placementOf = (userId: string, stickerId: string) =>
 
 const seal = (artistId: string) => insertSealedSticker(test.db, artistId);
 
+/** `giverId` packs `stickerId` and sends it: in the escrow, on its way until someone receives it. */
+const sendGift = (stickerId: string, giverId: string) =>
+  packGift(test.db, stickerId, giverId, {
+    status: "sent",
+    sentAt: new Date(),
+    escrowStatus: "pending",
+  });
+
 const minuteAfter = (at: Date) => new Date(at.getTime() + MINUTE_MS);
 
 /** Sets when each sticker reached `userId`, a minute apart in the order given. */
@@ -105,12 +113,7 @@ describe("GET /api/sticker-boards/:userId", () => {
     const packed = seal(me);
     const packedGiftId = packGift(test.db, packed, me);
     const sent = seal(me);
-    const sentGiftId = packGift(test.db, sent, me);
-    test.db
-      .update(gifts)
-      .set({ status: "sent", sentAt: new Date(), escrowStatus: "pending" })
-      .where(eq(gifts.id, sentGiftId))
-      .run();
+    const sentGiftId = sendGift(sent, me);
     const given = seal(me);
     giveSticker(test.db, given, me, friend);
     const received = seal(friend);
@@ -164,11 +167,13 @@ describe("GET /api/sticker-boards/:userId", () => {
     const onBoard = seal(friend);
     packGift(test.db, onBoard, friend);
     const givenAway = seal(friend);
+    const onItsWay = seal(friend);
     const inTray = seal(friend);
     seal(friend);
     for (const [stickerId, spot] of [
       [onBoard, SPOT],
       [givenAway, SPOT],
+      [onItsWay, SPOT],
       [inTray, IN_TRAY],
     ] as const) {
       test.db
@@ -179,6 +184,8 @@ describe("GET /api/sticker-boards/:userId", () => {
     }
     // Given away from its spot on the board, which the giver's placement keeps.
     giveSticker(test.db, givenAway, friend, insertUser(test.db));
+    // Sent from its spot: still the giver's until it's received, but no longer on their board.
+    sendGift(onItsWay, friend);
 
     const board = await boardOf(me, friend);
     expect(board.owner.id).toBe(friend);

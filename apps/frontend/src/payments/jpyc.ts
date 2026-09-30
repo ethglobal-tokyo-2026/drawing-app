@@ -2,14 +2,17 @@ import type { TicketShop } from "@drawing-app/api/client";
 import type { Signer } from "@mysten/sui/cryptography";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
 import { SuiGraphQLClient } from "@mysten/sui/graphql";
-import { coinWithBalance, Transaction } from "@mysten/sui/transactions";
+import { coinWithBalance, Transaction, TransactionDataBuilder } from "@mysten/sui/transactions";
 import { normalizeSuiAddress } from "@mysten/sui/utils";
+import { i18next } from "../i18n/i18n";
 
 /** Where the ticket shop's packs are paid, as the server names it. */
 export type JpycPayment = TicketShop["payment"];
 
 const BALANCE_TIMEOUT_MS = 10_000;
 const PAYMENT_TIMEOUT_MS = 60_000;
+/** How long the phone waits for Sui to serve a payment it just ran; the server waits for it too. */
+const SERVED_TIMEOUT_MS = 10_000;
 const HISTORY_TIMEOUT_MS = 15_000;
 const HISTORY_PAGE = 20;
 
@@ -33,23 +36,53 @@ export async function getJpycBalance(owner: string, payment: JpycPayment): Promi
   return BigInt(balance.balance);
 }
 
-function withTimeout<T>(work: Promise<T>, ms: number, message: string): Promise<T> {
+function withTimeout<T>(work: Promise<T>, ms: number, timedOut: () => Error): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(message)), ms);
+    timer = setTimeout(() => reject(timedOut()), ms);
   });
   return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
 }
 
+/** Signing a ticket payment took too long, so it was never sent and no JPYC moved. */
+export class SigningTimedOut extends Error {
+  constructor() {
+    super(i18next.t(($) => $.tickets.checkout.signingTimedOut));
+  }
+}
+
+/** Sui ran a ticket payment and it failed, so no JPYC moved. */
+export class PaymentFailed extends Error {
+  constructor(digest: string, why: string) {
+    super(
+      i18next.t(($) => $.tickets.checkout.failedOnSui, { reason: why }),
+      {
+        cause: new Error(`Sui ran the payment ${digest}, and it failed: ${why}`),
+      },
+    );
+  }
+}
+
+/** A ticket payment signed and not yet sent, so its digest can be kept before Sui is asked to run it. */
+export interface SignedTicketPayment {
+  digest: string;
+  /**
+   * Asks Sui to run it, and resolves once Sui has. Rejects with PaymentFailed when it ran and failed;
+   * any other rejection leaves unknown whether it ran.
+   */
+  send: () => Promise<void>;
+}
+
 /**
- * Pays `amount` JPYC base units into the ticket vault with the payment contract's `pay`, naming the
- * server's reference, and resolves with the transaction digest once Sui serves it. Gas is paid in SUI.
+ * Builds and signs a payment of `amount` JPYC base units into the ticket vault, with the payment
+ * contract's `pay` naming the server's reference. Gas is paid in SUI. Rejects with SigningTimedOut
+ * when building and signing take too long: a signature that comes later is never sent.
  */
-export async function payForTickets(
+export async function signTicketPayment(
   signer: Signer,
   payment: JpycPayment,
   amount: bigint,
-): Promise<string> {
+): Promise<SignedTicketPayment> {
   const client = clientFor(payment.network);
   const tx = new Transaction();
   tx.setSender(signer.toSuiAddress());
@@ -70,21 +103,37 @@ export async function payForTickets(
     arguments: [coin],
   });
 
-  const result = await withTimeout(
-    signer.signAndExecuteTransaction({ transaction: tx, client }),
+  const { bytes, signature } = await withTimeout(
+    tx.build({ client }).then(async (built) => ({
+      bytes: built,
+      signature: (await signer.signTransaction(built)).signature,
+    })),
     PAYMENT_TIMEOUT_MS,
-    "Sui didn’t answer the payment in time. Check your JPYC balance before trying again.",
+    () => new SigningTimedOut(),
   );
-  if (result.$kind === "FailedTransaction") {
-    const { digest, status } = result.FailedTransaction;
-    throw new Error(
-      `Sui rejected the payment ${digest}: ${status.error?.message ?? "no reason given"}`,
-    );
-  }
-  const { digest } = result.Transaction;
-  // The server reads the payment back from Sui, so this waits until Sui serves it.
-  await client.waitForTransaction({ digest, timeout: PAYMENT_TIMEOUT_MS });
-  return digest;
+  const digest = TransactionDataBuilder.getDigestFromBytes(bytes);
+  return {
+    digest,
+    send: async () => {
+      const result = await client.executeTransaction({
+        transaction: bytes,
+        signatures: [signature],
+        signal: AbortSignal.timeout(PAYMENT_TIMEOUT_MS),
+      });
+      if (result.$kind === "FailedTransaction") {
+        throw new PaymentFailed(
+          digest,
+          result.FailedTransaction.status.error?.message ?? "no reason given",
+        );
+      }
+      // It ran, so Sui being slow to serve it is no failure: the server waits for Sui itself.
+      await client
+        .waitForTransaction({ digest, timeout: SERVED_TIMEOUT_MS })
+        .catch((error: unknown) => {
+          console.warn(`Sui ran the payment ${digest} but didn't serve it in time`, error);
+        });
+    },
+  };
 }
 
 // gRPC can't list an address's events, and public fullnodes no longer serve JSON-RPC.

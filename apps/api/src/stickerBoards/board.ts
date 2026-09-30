@@ -1,5 +1,5 @@
 import { gifts, stickerPlacements, stickers, users, type Db } from "@drawing-app/db";
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, notExists } from "drizzle-orm";
 import { z } from "zod";
 import type { ImageStore } from "../deps.ts";
 import { isoTimeSchema, personSchema, toIsoTime, toPerson } from "../shapes.ts";
@@ -102,10 +102,18 @@ function givenToOf(db: Db, ownerId: string, stickerIds: string[]) {
   return givenTo;
 }
 
+/** A sticker in one of the owner's sent gifts: on its way, so off their board until it's received. */
+const onItsWayFrom = (db: Db, ownerId: string) =>
+  db
+    .select({ id: gifts.id })
+    .from(gifts)
+    .where(
+      and(eq(gifts.stickerId, stickers.id), eq(gifts.giverId, ownerId), eq(gifts.status, "sent")),
+    );
+
 /**
  * A Sticker Board in sticker tray order. Your own lists every sticker that reached you, with NEW and
- * your open gifts; anyone else's lists only the stickers on it that its owner holds, since the bag
- * and NEW are the owner's.
+ * your open gifts; anyone else's lists only the stickers on it, since the bag and NEW are the owner's.
  */
 export function loadStickerBoard(
   db: Db,
@@ -123,7 +131,14 @@ export function loadStickerBoard(
       and(
         eq(stickerPlacements.userId, owner.id),
         // Receiving writes only the receiver's placement, so a sticker given away keeps the giver's.
-        own ? undefined : and(eq(stickerPlacements.onBoard, true), eq(stickers.ownerId, owner.id)),
+        // A visitor gets no open gifts to tell a sticker on its way by, so it's left off here.
+        own
+          ? undefined
+          : and(
+              eq(stickerPlacements.onBoard, true),
+              eq(stickers.ownerId, owner.id),
+              notExists(onItsWayFrom(db, owner.id)),
+            ),
       ),
     )
     .orderBy(asc(stickerPlacements.createdAt), asc(stickerPlacements.stickerId))

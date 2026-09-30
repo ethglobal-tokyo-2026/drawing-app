@@ -2,7 +2,7 @@
 
 2026-09-30. `/impeccable audit` (accessibility, performance, theming, responsive, implementation integrity) and `/impeccable critique` (Nielsen heuristics, cognitive load, emotional journey, personas) of all of `apps/frontend`, at main `9f541d12`. Nothing here is fixed yet.
 
-**In progress.** All eleven lanes are in: the shell and design system, copy and i18n, Explore, Gratitude, the stat board and sticker detail, tickets and the Shop, the sticker tray, the drawing screen, sign-in and identity, the sticker board, and Giving and Receiving. The detector pass is still running; its findings and the frontend's overall scores land here when it finishes.
+150 findings from eleven lanes: 20 P1, 62 P2, 68 P3, no P0. The lanes were the shell and design system, copy and i18n, Explore, Gratitude, the stat board and sticker detail, tickets and the Shop, the sticker tray, the drawing screen, sign-in and identity, the sticker board, and Giving and Receiving. The detector's verified results are under Detector. The fixes run as `ux/*` lanes, in step with the code review's fix lanes, each after that area's lane has merged; a fixed ID is marked here when it reaches main.
 
 - Each lane took a slice of `apps/frontend/src`, read every file in it, and checked the running app: a local dev server under LIFF Mock with its own database, Chromium at 390×741, 375×591 (iPhone SE inside LINE) and 430×829, in English and Japanese, with failures simulated by holding or failing API calls. Each did both lenses for its slice. The detector (`impeccable detect`) ran as its own pass, kept apart from the design review.
 - Every finding's impact, standard and evidence: the lane reports in [2026-09-30-frontend-audit/](2026-09-30-frontend-audit/). Screenshots and scripts are on ad0ll's Mac only, in `/tmp/impeccable-audit/`, which macOS clears after a few days.
@@ -10,7 +10,7 @@
 - Paths are under `apps/frontend/src/` unless they start with `apps/`, `index.html`, `public/` or `DESIGN.md`.
 - Severity: **P0** blocks the task · **P1** significant difficulty, or a WCAG AA failure · **P2** an annoyance with a way around it · **P3** polish.
 
-## Scores so far
+## Scores
 
 Audit, 0–4 per dimension:
 
@@ -28,7 +28,11 @@ Audit, 0–4 per dimension:
 | Sticker board                 | 2    | 3           | 3       | 3          | 3         | 14/20 |
 | Giving and Receiving          | 2    | 3           | 3       | 2          | 2         | 12/20 |
 
+**Frontend audit: 12/20, Acceptable.** Accessibility **2** (WCAG AA failures: several text contrasts under 4.5:1, focus lost in a handful of flows, rows named by labels that drop what they show; the primitives underneath are careful) · Performance **3** (drawing measured lag-free; motion stays on transform and opacity; the tray's images at board load and the idle sway are the gaps) · Theming **3** (a real token system; the type ladder, z-index scale and focus ring drift) · Responsive **2** (works at 390 wide, but the tray, the checkout, the stat board and the handle prompt break at 375×591 or with long handles) · Implementation integrity **2** (two false success states, joke legal pages behind a consent line, failures that only reach the console, developer text on screen). Lane totals run 12–14.
+
 Critique, Nielsen's heuristics, 0–4: 1 system status · 2 match with the real world · 3 user control · 4 consistency · 5 error prevention · 6 recognition over recall · 7 flexibility · 8 minimalist design · 9 error recovery · 10 help.
+
+**Frontend critique: 28/40, Good (70%)**, each heuristic the mean of the lanes, rounded: 3 · 3 · 3 · 3 · 3 · 3 · 3 · 3 · 2 · 2. Error recovery (mean 2.3) and help (2.2) are the weak two; minimalist design (3.4) and match with the real world (3.3) the strong two. Lane totals run 26–32.
 
 | Lane                          | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10  | Total  |
 | ----------------------------- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ------ |
@@ -46,16 +50,27 @@ Critique, Nielsen's heuristics, 0–4: 1 system status · 2 match with the real 
 
 Every lane found the design authored for Croquis, not interchangeable: the keycap and its press, label stock, perforations, the pile, the cork back, the ticket stubs, the tier ladder. Where it slips, it slips the same way everywhere: failures fall back to engineer text in fine print.
 
+## Decisions
+
+ad0ll's calls on the findings, 2026-09-30:
+
+- **Pinch zoom (UX-SHELL-1):** it already works inside LINE; no change.
+- **The consent line and the legal pages (UX-SHELL-3):** the joke pages stay as they are.
+- **The offer sheet (UX-GIFT-1, UX-GIFT-2, UX-GIFT-10):** removed from the code until offers are built.
+- **Gratitude's stroke words (UX-GRAT-5):** fine as they are. More stroke words are welcome where they fit, and sound effects and spoken phrases may overlap.
+- **The type ladder (pattern 7):** snap the code to DESIGN.md's steps, keeping the toast's 14px and the search field's 16px.
+- **Explore's streak board (UX-COPY-3):** renamed "Streak", ranking current streaks, with ties sharing a rank (the recommendation; not raised again).
+
 ## Fix first (P1)
 
 1. **UX-GRAT-1** A failed Gratitude send reads as "Gratitude sent", and Send gratitude comes back, inviting a duplicate combo for a once-per-gift act.
 2. **UX-ENTRY-1** A session that ends after boot leaves every screen on "You're signed out." with a Try again that can't work, and nothing says to reopen Croquis from LINE.
 3. **UX-COPY-1** "Confirm in your wallet if asked…" shows on every gift while it waits, in both languages.
-4. **UX-GIFT-1** The offer sheet confirms "Offer sent" and promises a reply in LINE while sending nothing.
+4. **UX-GIFT-1** The offer sheet confirms "Offer sent" and promises a reply in LINE while sending nothing. The offer sheet comes out of the code.
 5. **UX-TIX-1** A failed payment prints raw English exception text ("Sui rejected the payment … MoveAbort(…"), "wallet" and "Privy", and an ID that overflows the card.
 6. **UX-TIX-2** A payment is kept on the phone only after its confirmation wait returns; a slow one says "Payment didn't go through" (→ TIX-1, TIX-4).
-7. **UX-SHELL-3** The Accept sheet's "You agree to the Terms and Privacy Policy" links to joke pages; the privacy page autoplays looping audio with no controls.
-8. **UX-SHELL-1** Pinch zoom is off app-wide.
+7. **UX-SHELL-3** The Accept sheet's "You agree to the Terms and Privacy Policy" links to joke pages; the privacy page autoplays looping audio with no controls. ad0ll: the joke pages stay.
+8. **UX-SHELL-1** Pinch zoom is off app-wide. ad0ll: it already works inside LINE.
 9. **UX-SHELL-2** The shared Sheet isn't modal: no `aria-modal`, Escape, Back or focus trap.
 10. **UX-STAT-2** The Transfer Trail drops keyboard focus, and with it the sticker detail's Escape and paging (→ CLEAN-1).
 11. **UX-BOARD-1** Someone else's board leaves Explore live and focused underneath it, and Back drops focus to the page.
@@ -284,7 +299,18 @@ The reveal works every way in: a drag, a double-tap, a hold and a keyboard slide
 
 ### Detector
 
-The detector pass (`impeccable detect` over every folder, plus its overlay in a browser) is running; its verified findings land here.
+`impeccable detect` over every folder of `src`, `index.html` and `public/` found 133 findings, all advisory design-system checks: 59 font sizes, 43 corner radii and 31 colors. Each was verified at its line:
+
+- **11 true:** 10 text sizes off the steps, all in pattern 7's scope: `receiving/gifts-for-you-badge.css:52` (10px, under the floor), `explore/ExploreScreen.css:332,426`, `shop/ShopScreen.css:71,101,196`, `tickets/ReserveTicketCheckout.css:85,109`, `tickets/tickets.css:85` and `sticker-creation/sealing/SealedCard.css:69` (12.5px). Also the tray's folder tabs round at 7px where the token is 6px (`sticker-board/tray/sticker-tray.css:626`).
+- **11 needing judgment:** sizes no DESIGN.md step names: the leaderboard's 19px Gratitude figure (`explore/ExploreScreen.css:311`), the gift tag's 13px capitals (`giving/GiftBag.css:554`), the Mini-game's 14px failure slip (`gratitude/gratitude-mini-game.css:1195`), the sealed card's 19px key label (`SealedCard.css:64`), and the gift badge's 12px count in Mona Sans rather than the puffy face (`gifts-for-you-badge.css:69`). Also corners it doesn't name (`giving/gift-received-notice.css:106` at 4px, `sticker-creation/canvas/DrawingCanvas.css:7` at 3px) and the gift bag's hand-picked film tints (`giving/GiftBag.css:39,75,79`).
+- **111 false:**
+  - 47 sanctioned by DESIGN.md: the 13px step, titles, documented figures and radii.
+  - 53 materials, masks and props rather than controls: the zipper, the bag, cork paper, the color spectrum, mask alphas.
+  - 10 test fixtures.
+  - 1 desktop phone bezel.
+- **Cross-checks:** with the design-system checks off it finds nothing; without the project's config, only the four values `.impeccable/config.json` already sanctions.
+
+The overlay found nothing new on My board, the stat board, both Explore views, the Shop or the drawing screen, apart from one sentence set in fine print's capitals on the developer slip. A cold load without a session logs three 401s in the console before sign-in. Test files are 10 of the 133, so `.impeccable/config.json` could ignore `*.test.{ts,tsx}`.
 
 ## What to keep
 

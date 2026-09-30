@@ -13,10 +13,15 @@ import re
 import sys
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 # "bytes=a-b", "bytes=a-" or "bytes=-n". Any other Range, a multi-range one included, gets the whole file.
 BYTE_RANGE = re.compile(r"bytes=(\d*)-(\d*)")
+GIFT_CLAIM_TOKEN = re.compile(r"0x[0-9a-f]{64}", re.IGNORECASE)
+# Control characters, escaped as http.server's own log escapes them, so a decoded %0A can't start a
+# forged log line.
+LOG_ESCAPES = {c: f"\\x{c:02x}" for c in [*range(0x20), *range(0x7F, 0xA0)]}
+LOG_ESCAPES[ord("\\")] = "\\\\"
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -100,9 +105,10 @@ class Handler(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def log_message(self, fmt, *args):
-        # Gift claim tokens travel in the path, so they never reach the log.
-        line = re.sub(r"/g/[^\s\"?]+", "/g/<gift-claim-token>", fmt % args)
-        sys.stderr.write(f"{self.address_string()} {line}\n")
+        # Gift claim tokens never reach the log: they travel in the /g/ path, and percent-encoded in
+        # LIFF's liff.state query on the page load before it.
+        line = GIFT_CLAIM_TOKEN.sub("<gift-claim-token>", unquote(fmt % args))
+        sys.stderr.write(f"{self.address_string()} {line.translate(LOG_ESCAPES)}\n")
 
 
 def main():

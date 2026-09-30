@@ -13,11 +13,12 @@ type ErrorOutput = Extract<
 
 /**
  * Every `error` code a route answers, from the routes' own types: `apiError` keeps each code's literal.
- * internal_error comes from the app's error handler, which any route can reach.
+ * internal_error and chain_unavailable come from the app's error handler, which any route can reach.
  */
 export type ApiErrorCode =
   | (ErrorOutput extends { error: infer Code extends string } ? Code : never)
-  | "internal_error";
+  | "internal_error"
+  | "chain_unavailable";
 export { HANDLE_MAX_LENGTH } from "./session/handleLimit.ts";
 export { MAX_TIMELAPSE_BYTES } from "./stickers/timelapseLimit.ts";
 export {
