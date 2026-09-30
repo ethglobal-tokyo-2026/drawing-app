@@ -7,7 +7,7 @@ import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing"
 import type { TicketsValue } from "./ticketsContext";
 import { useTickets } from "./useTickets";
 
-type Spend = TicketsValue["spend"];
+type Spender = Pick<TicketsValue, "spend" | "forgetKeptSpend">;
 
 /** The server's answer to a spend that lands. */
 const SPENT = {
@@ -28,10 +28,10 @@ const NO_ANSWER = new ApiError(0, {
 /** Someone else, signed in on the same phone. */
 const SOMEONE_ELSE: Me = { ...TEST_ME, id: "someone-else", lineUserId: "U-someone-else" };
 
-/** Hands the test the tickets' spend. */
-function Spender({ onSpend }: { onSpend: (spend: Spend) => void }) {
-  const { spend } = useTickets();
-  useEffect(() => onSpend(spend), [onSpend, spend]);
+/** Hands the test the tickets' spend, and what the drawing screen says once it keeps a ticket use. */
+function Spender({ onSpend }: { onSpend: (spender: Spender) => void }) {
+  const { spend, forgetKeptSpend } = useTickets();
+  useEffect(() => onSpend({ spend, forgetKeptSpend }), [onSpend, spend, forgetKeptSpend]);
   return null;
 }
 
@@ -42,20 +42,26 @@ const keys = () => spendTicket.mock.calls.map(([sent]) => sent.idempotencyKey);
 
 let view: ReturnType<typeof renderWithApi> | undefined;
 /** Your tickets as `me`, in place of the page open before, as a reload does. Answers their spend. */
-async function open(me: Me = TEST_ME): Promise<Spend> {
+async function open(me: Me = TEST_ME): Promise<Spender> {
   view?.unmount();
-  const onSpend = vi.fn<(spend: Spend) => void>();
+  const onSpend = vi.fn<(spender: Spender) => void>();
   view = renderWithApi(<Spender onSpend={onSpend} />, emptyApi({ spendTicket }), me);
   await act(async () => {});
-  const spend = onSpend.mock.lastCall?.[0];
-  if (!spend) throw new Error("The tickets gave no spend");
-  return spend;
+  const spender = onSpend.mock.lastCall?.[0];
+  if (!spender) throw new Error("The tickets gave no spend");
+  return spender;
+}
+
+/** A spend that lands, and its ticket use kept with a sheet, as the drawing screen does. */
+async function spendAndKeep({ spend, forgetKeptSpend }: Spender) {
+  await act(() => spend("daily"));
+  forgetKeptSpend();
 }
 
 /** Opens the app as `me` and spends, but the page goes before the answer comes. */
 async function spendThenLeave(me: Me = TEST_ME) {
   spendTicket.mockReturnValueOnce(new Promise(() => {}));
-  void (await open(me))("daily");
+  void (await open(me)).spend("daily");
 }
 
 beforeEach(() => {
@@ -74,17 +80,17 @@ afterEach(() => {
 describe("spending a ticket", () => {
   it("sends a failed spend's key again when it's retried, and a new key for the next drawing", async () => {
     spendTicket.mockRejectedValueOnce(NO_ANSWER);
-    const spend = await open();
-    await expect(act(() => spend("daily"))).rejects.toBe(NO_ANSWER);
-    await act(() => spend("daily"));
-    await act(() => spend("daily"));
+    const spender = await open();
+    await expect(act(() => spender.spend("daily"))).rejects.toBe(NO_ANSWER);
+    await spendAndKeep(spender);
+    await act(() => spender.spend("daily"));
     const [tried, retried, nextDrawing] = keys();
     expect(retried).toBe(tried);
     expect(nextDrawing).not.toBe(tried);
   });
 
   it("sends a second tap with the key of the spend still on its way", async () => {
-    const spend = await open();
+    const { spend } = await open();
     await act(() => Promise.all([spend("daily"), spend("daily")]));
     const [first, second] = keys();
     expect(first).toEqual(expect.any(String));
@@ -95,27 +101,34 @@ describe("spending a ticket", () => {
 describe("a spend's key across a reload", () => {
   it("sends the key again when the page went before the spend's answer came", async () => {
     await spendThenLeave();
-    const spend = await open();
+    const { spend } = await open();
     await act(() => spend("daily"));
     const [sent, sentAgain] = keys();
     expect(sentAgain).toBe(sent);
   });
 
-  it("sends a new key once a spend has landed", async () => {
-    const spend = await open();
+  it("sends the key again when the page went after the answer, before a sheet kept its ticket use", async () => {
+    const { spend } = await open();
     await act(() => spend("daily"));
     const reloaded = await open();
-    await act(() => reloaded("daily"));
-    const [landed, next] = keys();
-    expect(next).not.toBe(landed);
+    await act(() => reloaded.spend("daily"));
+    const [landed, sentAgain] = keys();
+    expect(sentAgain).toBe(landed);
+  });
+
+  it("sends a new key once a sheet has kept the ticket use", async () => {
+    await spendAndKeep(await open());
+    const reloaded = await open();
+    await act(() => reloaded.spend("daily"));
+    const [kept, next] = keys();
+    expect(next).not.toBe(kept);
   });
 
   it("keeps it for the person who spent, not someone else signing in on the phone", async () => {
     await spendThenLeave();
-    const theirs = await open(SOMEONE_ELSE);
-    await act(() => theirs("daily"));
+    await spendAndKeep(await open(SOMEONE_ELSE));
     const yours = await open();
-    await act(() => yours("daily"));
+    await act(() => yours.spend("daily"));
     const [sent, theirKey, sentAgain] = keys();
     expect(theirKey).not.toBe(sent);
     expect(sentAgain).toBe(sent);

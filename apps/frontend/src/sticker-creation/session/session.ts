@@ -1,4 +1,5 @@
 import { MAX_TIME_USED_S } from "@drawing-app/api/client";
+import { ApiError } from "../../api/apiClient";
 
 /** How long a sticker gets on the drawing clock; the server refuses a seal that used more. */
 export const SESSION_MS = MAX_TIME_USED_S * 1000;
@@ -10,8 +11,10 @@ export const ARM_WINDOW_MS = 2_500;
  * primed: Start spent a ticket; the clock waits at 3:00 for the first stroke.
  * drawing: the first stroke or fill started the clock.
  * armed: the seal key took its first tap. sealing: building the sticker. sealed: done.
+ * retry: a seal failed where the sheet mustn't take ink again, since time is up or the server may
+ * already hold the seal: the sheet stays locked, and the seal key only tries the seal again.
  */
-type Phase = "blank" | "primed" | "drawing" | "armed" | "sealing" | "sealed";
+type Phase = "blank" | "primed" | "drawing" | "armed" | "sealing" | "sealed" | "retry";
 
 export interface Session {
   phase: Phase;
@@ -37,7 +40,11 @@ export type SessionEvent =
   | { type: "canvas-touch" }
   | { type: "time-up" }
   | { type: "sealed" }
-  | { type: "seal-failed" }
+  /**
+   * `mayHaveSealed`: the request may have reached the server, which then holds the seal whatever
+   * the sheet does next. `timeUp`: the clock had run out.
+   */
+  | { type: "seal-failed"; mayHaveSealed: boolean; timeUp: boolean }
   | { type: "reset" };
 
 /** What the drawing screen does on a transition, besides showing the new phase. */
@@ -71,6 +78,8 @@ export function transition(session: Session, event: SessionEvent): Result {
         ? to(event.drawn ? "drawing" : "primed")
         : unchanged;
     case "seal-tap":
+      // The sheet can't change any more, so there's no second tap to wait for.
+      if (phase === "retry") return to("sealing", ["seal"]);
       if (phase === "armed" && event.now - session.armedAt < ARM_WINDOW_MS)
         return to("sealing", ["seal"]);
       if ((phase === "drawing" || phase === "armed") && event.hasInk)
@@ -87,10 +96,26 @@ export function transition(session: Session, event: SessionEvent): Result {
     case "sealed":
       return phase === "sealing" ? to("sealed") : unchanged;
     case "seal-failed":
-      return phase === "sealing" ? to("drawing", ["resume-clock"]) : unchanged;
+      if (phase !== "sealing") return unchanged;
+      // Ink drawn after 0:00, or after the server took the seal, would never reach the sticker.
+      return event.mayHaveSealed || event.timeUp ? to("retry") : to("drawing", ["resume-clock"]);
     case "reset":
       return to("blank", ["reset-sheet"]);
   }
+}
+
+/**
+ * What a failed seal request says about the server. "refused": it answered that it holds no seal for
+ * this ticket, so the sheet may change. "unsent": the wait for the board address stopped it before it
+ * left the phone. "unknown": anything else, no answer above all, after which the server may hold it.
+ */
+export function sealFailure(error: unknown): "refused" | "unsent" | "unknown" {
+  if (!(error instanceof ApiError)) return "unknown";
+  // A seal already made on this ticket is what a retry of the same request answers with.
+  if (error.status >= 400 && error.status < 500)
+    return error.code === "ticket_already_used" ? "unknown" : "refused";
+  const unsent = error.code === "line_token_expired" || error.code === "smart_account_not_ready";
+  return error.status === 0 && unsent ? "unsent" : "unknown";
 }
 
 /**

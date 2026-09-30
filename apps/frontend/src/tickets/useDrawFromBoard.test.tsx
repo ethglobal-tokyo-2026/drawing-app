@@ -2,7 +2,8 @@
 import type { Tickets } from "@drawing-app/api/client";
 import { act, useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { emptyApi, FRESH_TICKETS, renderWithApi } from "../api/testing";
+import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing";
+import { spendKeyFor } from "./spendKey";
 import type { Sheet } from "./ticketsContext";
 import { useDrawFromBoard } from "./useDrawFromBoard";
 import { useTickets } from "./useTickets";
@@ -50,6 +51,7 @@ beforeEach(() => {
 afterEach(() => {
   view?.unmount();
   view = undefined;
+  localStorage.clear();
   vi.useRealTimers();
   vi.clearAllMocks();
 });
@@ -93,5 +95,14 @@ describe("Draw on the sticker board", () => {
     act(() => back?.click());
     expect(document.querySelector("[role=dialog]")).toBeNull();
     expect(onDraw).not.toHaveBeenCalled();
+  });
+
+  it("with no tickets left but a spend's key kept, opens the canvas, which sends the key again", async () => {
+    // A spend from before a reload, whose answer never came: it may have spent the last ticket.
+    spendKeyFor(TEST_ME.id);
+    await open(tickets(0, 0));
+    tapDraw();
+    expect(document.querySelector("[role=dialog]")).toBeNull();
+    expect(onDraw).toHaveBeenCalledOnce();
   });
 });

@@ -11,7 +11,7 @@ import {
 import { retryPrivySignIn } from "../identity/privy";
 import { useMyAgeStatus } from "../identity/useMyAgeStatus";
 import type { Sticker, TicketUse } from "@drawing-app/api/client";
-import { ApiError, apiError } from "../api/apiClient";
+import { ApiError, apiError, type ApiClient } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
 import { errorReason } from "../i18n/errorMessage";
@@ -22,6 +22,7 @@ import { nextKind, ticketsLeft, type TicketKind, type Tickets } from "../tickets
 import { ReserveTicketCheckout } from "../tickets/ReserveTicketCheckout";
 import { TicketsNotLoaded } from "../tickets/TicketsNotLoaded";
 import { useTickets } from "../tickets/useTickets";
+import { releaseCanvas } from "../ui/releaseCanvas";
 import { useToast } from "../ui/useToast";
 import { sizePx } from "./canvas/brush";
 import { DrawingCanvas, type DrawingCanvasHandle } from "./canvas/DrawingCanvas";
@@ -45,6 +46,7 @@ import {
 import {
   ARM_WINDOW_MS,
   FRESH_SESSION,
+  sealFailure,
   SESSION_MS,
   transition,
   type SessionEffect,
@@ -86,6 +88,14 @@ interface Ceremony {
   leaving: boolean;
   /** Where the sheet sat in the drawing screen when it was sealed. */
   sheet: Box;
+}
+
+type SealRequest = Parameters<ApiClient["seal"]>[0];
+
+/** A seal whose request may have reached the server: a retry sends it as it was, and plays its sticker. */
+interface SentSeal {
+  request: SealRequest;
+  sticker: SealedSticker;
 }
 
 export interface DrawingScreenHandle {
@@ -138,6 +148,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // The sealed sticker's layers are let go when a fresh sheet replaces it, or once its card has left.
   const lastCeremony = useRef<Ceremony | null>(null);
   const seals = useRef(0);
+  // Until the server answers it or refuses it, the sheet can't change: the server may already hold it.
+  const sentSeal = useRef<SentSeal | null>(null);
   const [sealProblem, setSealProblem] = useState<string | null>(null);
   /** The chip says LINE's sign-in expired, so tapping the check reconnects instead of sealing. */
   const reconnectOnTap = useRef(false);
@@ -149,6 +161,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // while it's on its way, and comes up only if it fails.
   const [rightAway, setRightAway] = useState(false);
   const [startProblem, setStartProblem] = useState<string | null>(null);
+  // The server refused the last spend, so its kept key has spent nothing yet.
+  const [spendRefused, setSpendRefused] = useState(false);
   // The session's ticket use, as the server numbers it: spent at Start, or before a reload.
   const ticket = useRef<number | null>(null);
   // Whether this device keeps the drawing in progress; the timer's note says so while it can't.
@@ -182,6 +196,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     switch (effect) {
       case "keep-session":
         keeper.start(ticket.current);
+        // The ticket use is kept with this sheet now, so the spend's key can go.
+        tickets.forgetKeptSpend();
         return;
       case "start-clock":
         clock.start();
@@ -203,6 +219,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         setPanel(null);
         lastCeremony.current?.sticker.dispose();
         lastCeremony.current = null;
+        sentSeal.current?.sticker.dispose();
+        sentSeal.current = null;
         // A sealed card handing over to this sheet stays up until it has left.
         setCeremony((c) => (c?.leaving ? c : null));
         setSealProblem(null);
@@ -231,15 +249,66 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   }
 
   /** How the sticker was drawn, gzipped; null when it can't be made, and the sticker seals without it. */
-  async function timelapseOf(sticker: SealedSticker, ink: HTMLCanvasElement) {
+  async function timelapseOf(
+    ops: readonly Op[],
+    ink: { width: number; height: number },
+    sticker: SealedSticker,
+    density: number,
+  ) {
     try {
-      const ops = canvas.current?.ops() ?? [];
-      const density = canvas.current?.inkDensity() ?? 1;
       return await gzipTimelapse(encodeTimelapse({ ops, ink, place: sticker.place, density }));
     } catch (error) {
       console.error("The timelapse couldn’t be made, so the sticker seals without it", error);
       return null;
     }
+  }
+
+  /**
+   * Cuts the sticker from the sheet as it is now, and makes its seal request once the timelapse is
+   * gzipped; null when nothing is drawn. The ops and the 18+ switch are read with the ink's copy, so
+   * nothing on the sheet after it reaches the sticker or its timelapse.
+   */
+  async function cutFromSheet(timeUsed: number) {
+    canvas.current?.finishStroke();
+    const ops = [...(canvas.current?.ops() ?? [])];
+    // The drawing kept on this device holds what the sticker is cut from, the stroke just ended too.
+    keeper.save(ops, clock.elapsed);
+    const density = canvas.current?.inkDensity() ?? 1;
+    const marked = nsfw.current;
+    const ink = canvas.current?.inkForReading();
+    if (!ink) return null;
+    const size = { width: ink.width, height: ink.height };
+    let sticker: SealedSticker | null;
+    try {
+      // Handing the ink to the sealing worker, or the whole cut where that can't run, holds the main
+      // thread a moment: the key's pop and the tools stepping back paint first.
+      await afterPaint();
+      sticker = await makeSticker(ink);
+    } finally {
+      releaseCanvas(ink);
+    }
+    if (!sticker) return null;
+    const ticketUseId = ticket.current;
+    if (ticketUseId === null) {
+      sticker.dispose();
+      throw new Error("this sheet has no ticket to seal it on");
+    }
+    const cut = sticker;
+    const request = timelapseOf(ops, size, cut, density).then((timelapse): SealRequest => ({
+      ticketUseId,
+      timeUsed,
+      width: cut.width,
+      height: cut.height,
+      outline: cut.outline,
+      png: cut.png,
+      mask: cut.mask,
+      spec: cut.spec,
+      rim: cut.rim,
+      flat: cut.flat,
+      ...(timelapse && { timelapse }),
+      nsfw: marked,
+    }));
+    return { sticker: cut, request };
   }
 
   /**
@@ -259,41 +328,54 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     gone.sticker.dispose();
   }
 
-  /** A failed seal's ceremony fades back to the drawing, then its layers are let go. */
-  function dismissCeremony(failed: Ceremony) {
+  /**
+   * A failed seal's ceremony fades back to the drawing, then its layers are let go, unless a retry of
+   * the same seal plays them again.
+   */
+  function dismissCeremony(failed: Ceremony, { keepSticker }: { keepSticker: boolean }) {
     setCeremony((c) => (c?.id === failed.id ? { ...c, failed: true } : c));
     setTimeout(() => {
       setCeremony((c) => (c?.id === failed.id ? null : c));
       if (lastCeremony.current === failed) lastCeremony.current = null;
-      failed.sticker.dispose();
+      if (!keepSticker) failed.sticker.dispose();
     }, LEAVE_MS);
   }
 
+  /**
+   * Seals the sheet, or sends again the seal that may have reached the server, which it answers from
+   * the ticket use. Any failure lands on the sheet; only one that proves the server holds no seal
+   * before 0:00 lets the sheet take ink again.
+   */
   async function seal() {
     setPanel(null);
-    canvas.current?.finishStroke();
-    const ink = canvas.current?.inkForReading() ?? null;
     const timeUsed = Math.min(SESSION_MS / 1000, Math.max(1, Math.round(clock.elapsed / 1000)));
     let sticker: SealedSticker | null = null;
+    let request: SealRequest | null = null;
     let shown: Ceremony | null = null;
+    let sent = false;
     try {
       const sheet = sheetBox();
-      // Handing the ink to the sealing worker, or the whole cut where that can't run, holds the main
-      // thread a moment: the key's pop and the tools stepping back paint first.
-      await afterPaint();
-      sticker = ink && (await makeSticker(ink));
-      if (!sticker) {
-        // Everything drawn was erased or undone. At 0:00 the sheet is spent; before that, draw on.
-        if (clock.elapsed >= SESSION_MS) {
-          toast(t(($) => $.stickerCreation.seal.emptyAtTimeUp));
-          send({ type: "reset" });
-        } else {
-          setSealProblem(t(($) => $.stickerCreation.seal.empty));
-          send({ type: "seal-failed" });
+      const again = sentSeal.current;
+      let made: Promise<SealRequest>;
+      if (again) {
+        sticker = again.sticker;
+        made = Promise.resolve(again.request);
+      } else {
+        const cut = await cutFromSheet(timeUsed);
+        if (!cut) {
+          // Everything drawn was erased or undone. At 0:00 the sheet is spent; before that, draw on.
+          if (clock.elapsed >= SESSION_MS) {
+            toast(t(($) => $.stickerCreation.seal.emptyAtTimeUp));
+            send({ type: "reset" });
+          } else {
+            setSealProblem(t(($) => $.stickerCreation.seal.empty));
+            send({ type: "seal-failed", mayHaveSealed: false, timeUp: false });
+          }
+          return;
         }
-        return;
+        sticker = cut.sticker;
+        made = cut.request;
       }
-      if (ticket.current === null) throw new Error("this sheet has no ticket to seal it on");
       // The ceremony starts as soon as the sticker is cut, and waits at the cut until the server has
       // sealed it.
       const started: Ceremony = {
@@ -307,21 +389,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       shown = started;
       lastCeremony.current = started;
       setCeremony(started);
-      const timelapse = ink && (await timelapseOf(sticker, ink));
-      const { sticker: sealedSticker } = await api.seal({
-        ticketUseId: ticket.current,
-        timeUsed,
-        width: sticker.width,
-        height: sticker.height,
-        outline: sticker.outline,
-        png: sticker.png,
-        mask: sticker.mask,
-        spec: sticker.spec,
-        rim: sticker.rim,
-        flat: sticker.flat,
-        ...(timelapse && { timelapse }),
-        nsfw: nsfw.current,
-      });
+      request = await made;
+      sent = true;
+      const { sticker: sealedSticker } = await api.seal(request);
+      sentSeal.current = null;
       ticket.current = null;
       keeper.wipe();
       // The used ticket's stub now carries this sticker's outline.
@@ -330,9 +401,14 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       send({ type: "sealed" });
       onSealed(sealedSticker.id);
     } catch (error) {
-      if (shown) dismissCeremony(shown);
-      else sticker?.dispose();
       console.error("Sealing the sticker failed", error);
+      const failure = sent ? sealFailure(error) : "unsent";
+      if (failure === "refused") sentSeal.current = null;
+      else if (failure === "unknown" && sticker && request) sentSeal.current = { request, sticker };
+      // One that never left keeps an earlier try's request: that one may still have reached the server.
+      const held = sentSeal.current?.sticker;
+      if (shown) dismissCeremony(shown, { keepSticker: shown.sticker === held });
+      else if (sticker !== held) sticker?.dispose();
       // Only reconnecting LINE renews its sign-in, and that leaves the page: the check does it.
       reconnectOnTap.current = error instanceof ApiError && error.code === "line_token_expired";
       setSealProblem(
@@ -342,7 +418,11 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
             ? t(($) => $.stickerCreation.seal.failed, { reason: errorReason(error) })
             : t(($) => $.stickerCreation.seal.failedHere, { reason: reason(error) }),
       );
-      send({ type: "seal-failed" });
+      send({
+        type: "seal-failed",
+        mayHaveSealed: sentSeal.current !== null,
+        timeUp: clock.elapsed >= SESSION_MS,
+      });
     }
   }
 
@@ -351,19 +431,21 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     onNewSticker();
   };
 
-  /** Spends a ticket of `kind` on this sheet, or takes `spent`, the one Draw already spent on the board. */
-  const start = (
-    kind: TicketKind | null,
-    { asked = true, spent }: { asked?: boolean; spent?: Promise<TicketUse> } = {},
-  ) => {
+  /**
+   * Spends a ticket of `kind` on this sheet, unless Draw on the board already spent one for it: that
+   * spend is this sheet's whatever kind was asked for, so the sheet never spends a second ticket.
+   */
+  const start = (kind: TicketKind | null, { asked = true }: { asked?: boolean } = {}) => {
     if (spending) return;
+    const spent = tickets.takeSheetSpend();
     const spend = spent ?? (kind && tickets.spend(kind));
     if (!spend) return;
     setSpending(true);
     setRightAway(!asked);
     setStartProblem(null);
+    setSpendRefused(false);
     spend.then(
-      (use) => {
+      (use: TicketUse) => {
         setSpending(false);
         setRightAway(false);
         ticket.current = use.id;
@@ -371,13 +453,17 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       },
       (error: unknown) => {
         const failure = apiError(error);
-        console.error(`Spending a ${kind ?? "sheet's"} ticket failed`, failure);
+        console.error(`Spending ${spent ? "the sheet's" : `a ${kind}`} ticket failed`, failure);
         setSpending(false);
         setRightAway(false);
         setStartProblem(
           t(($) => $.stickerCreation.startNote.ticketFailed, { reason: errorReason(failure) }),
         );
-        tickets.refresh();
+        // A refusal says the tickets changed. With no answer, the card goes on offering the spend it
+        // tried, whose key a retry sends again.
+        const refused = failure.status >= 400 && failure.status < 500;
+        setSpendRefused(refused);
+        if (refused) tickets.refresh();
       },
     );
   };
@@ -538,8 +624,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // a way on, even if tickets come back meanwhile.
   const fresh = session.phase === "blank" && !restoring;
   const loaded = tickets.tickets;
+  // A spend whose answer never came may have landed: its kept key gets back the ticket use it spent.
+  const keptSpend = tickets.hasKeptSpend() && !spendRefused;
   // The last ticket, spent by Draw on the board or on its way here, isn't a reason for the card.
-  const spentForSheet = spending || tickets.hasSheetSpend();
+  const spentForSheet = spending || tickets.hasSheetSpend() || keptSpend;
   if (active && fresh && loaded && ticketsLeft(loaded) === 0 && !overlay && !spentForSheet)
     setOverlay("out");
   const paywall = active && fresh && overlay !== null;
@@ -549,12 +637,13 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // The card asks only before a reserve ticket is spent, or says why a spend failed and tries again.
   const next = loaded && nextKind(loaded);
   const spendAtOnce = useEffectEvent(() => {
-    const spent = tickets.takeSheetSpend();
-    if (spent) start(null, { asked: false, spent });
-    else if (next === "daily") start("daily", { asked: false });
+    if (tickets.hasSheetSpend()) start(null, { asked: false });
+    else if (startProblem) return;
+    // With none left, sending a kept key again can only get back the ticket use it spent.
+    else if (next === "daily" || (next === null && keptSpend)) start("daily", { asked: false });
   });
   useEffect(() => {
-    if (!asking || !loaded || spending || startProblem) return;
+    if (!asking || !loaded || spending) return;
     // The spend goes to the server once this render is on screen; its busy state is a render of its own.
     let cancelled = false;
     void Promise.resolve().then(() => {
@@ -576,8 +665,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   if (ask && askShown !== ask) setAskShown(ask);
   if (!ask && askShown && (!active || paywall)) setAskShown(null);
   const sealing = session.phase === "sealing" || session.phase === "sealed";
-  // Until Start, and while a kept session loads, the sheet takes no ink.
-  const locked = !active || session.phase === "blank" || sealing;
+  const retrying = session.phase === "retry";
+  // Until Start, and while a kept session loads, the sheet takes no ink; nor once it's sealing.
+  const locked = !active || session.phase === "blank" || sealing || retrying;
 
   // On the first few visits, a started sheet says the timer waits for the first stroke, which peels it off.
   const startsLabel = startsNote || (active && session.phase === "primed" && isFirstVisit());
@@ -636,7 +726,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   return (
     <div
       ref={root}
-      className={`drawing-screen ${sealing ? "is-sealing" : ""}`}
+      className={`drawing-screen ${sealing ? "is-sealing" : ""} ${retrying ? "is-retrying" : ""}`}
       style={{ "--draw-color": color }}
       // It stays mounted under the board so a sticker in progress survives; covered, it takes no focus.
       inert={!active}
@@ -718,7 +808,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       />
       {adult && (
         <NsfwToggle
-          shown={history.canUndo && !sealing}
+          shown={history.canUndo && !sealing && !retrying}
           on={nsfwOn}
           onChange={(on) => {
             keepNsfw(on);
@@ -727,14 +817,19 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         />
       )}
       <SealKey
-        shown={history.canUndo && !sealing}
+        shown={retrying || (history.canUndo && !sealing)}
         armed={session.phase === "armed"}
         problem={sealProblem}
         onTap={() => {
           setSealProblem(null);
           if (sealProblem && reconnectOnTap.current) {
             // The drawing is kept on this device, and the drawing screen picks it back up.
-            retryPrivySignIn(new URL("/draw", location.href).href);
+            // Still here after a failed reconnect: the chip says why, and the check tries it again.
+            retryPrivySignIn(new URL("/draw", location.href).href, (failure) =>
+              setSealProblem(
+                t(($) => $.stickerCreation.seal.failed, { reason: errorReason(failure) }),
+              ),
+            );
             return;
           }
           send({ type: "seal-tap", now: performance.now(), hasInk: history.canUndo });

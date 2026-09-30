@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { apiError, type ApiError } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
-import { forgetSpendKey, spendKeyFor } from "./spendKey";
+import { forgetSpendKey, keptSpendKey, spendKeyFor } from "./spendKey";
 import { TicketsContext, type Sheet } from "./ticketsContext";
 
 /** A turnover that just passed can still read as the old day on the server for a moment. */
@@ -46,21 +46,29 @@ export function TicketsProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(id);
   }, [refillAt, refresh]);
 
-  // Kept until a spend lands, in memory and on this device, so a retry, a second tap or the first
-  // spend after a reload sends the same key. Sending a kept key is always right: the server answers
-  // the ticket use it already spent, or spends a ticket if that try never reached it.
+  // Kept in memory and on this device until the drawing screen has kept the ticket use with its
+  // sheet, so a retry, a second tap or the first spend after a reload, even one right after the
+  // answer came, sends the same key. Sending a kept key is always right: the server answers the ticket
+  // use it already spent, or spends a ticket if that try never reached it.
   const spendKey = useRef<string | null>(null);
   const spend = useCallback(
     async (kind: TicketKind) => {
       const idempotencyKey = (spendKey.current ??= spendKeyFor(userId));
       const spent = await api.spendTicket({ kind, idempotencyKey });
-      if (spendKey.current === idempotencyKey) spendKey.current = null;
-      forgetSpendKey(userId, idempotencyKey);
       setTickets(spent.tickets);
       return spent.ticketUse;
     },
     [api, userId],
   );
+  const hasKeptSpend = useCallback(
+    () => spendKey.current !== null || keptSpendKey(userId) !== null,
+    [userId],
+  );
+  const forgetKeptSpend = useCallback(() => {
+    const key = spendKey.current;
+    spendKey.current = null;
+    if (key !== null) forgetSpendKey(userId, key);
+  }, [userId]);
 
   const [sheet, setSheet] = useState<Sheet>(null);
   const sheetSpend = useRef<Promise<TicketUse> | null>(null);
@@ -86,6 +94,8 @@ export function TicketsProvider({ children }: { children: ReactNode }) {
       error,
       refresh,
       spend,
+      hasKeptSpend,
+      forgetKeptSpend,
       set: setTickets,
       sheet,
       setSheet,
@@ -93,7 +103,18 @@ export function TicketsProvider({ children }: { children: ReactNode }) {
       hasSheetSpend,
       takeSheetSpend,
     }),
-    [tickets, error, refresh, spend, sheet, spendForSheet, hasSheetSpend, takeSheetSpend],
+    [
+      tickets,
+      error,
+      refresh,
+      spend,
+      hasKeptSpend,
+      forgetKeptSpend,
+      sheet,
+      spendForSheet,
+      hasSheetSpend,
+      takeSheetSpend,
+    ],
   );
   return <TicketsContext value={value}>{children}</TicketsContext>;
 }

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { ApiError } from "../../api/apiClient";
 import {
   ARM_WINDOW_MS,
   FRESH_SESSION,
   heldBy,
+  sealFailure,
   transition,
   type Hold,
   type Session,
@@ -20,6 +22,10 @@ function run(...events: SessionEvent[]) {
 const start = { type: "start" } as const;
 const ink = { type: "ink" } as const;
 const tap = (now: number, hasInk = true) => ({ type: "seal-tap", now, hasInk }) as const;
+const failed = ({ mayHaveSealed = false, timeUp = false } = {}) =>
+  ({ type: "seal-failed", mayHaveSealed, timeUp }) as const;
+/** The seal key's second tap started a seal. */
+const sealing = [start, ink, tap(1000), tap(1500)] as const;
 
 describe("transition", () => {
   it("spends a ticket only at Start, and starts the clock only at the first stroke", () => {
@@ -79,13 +85,30 @@ describe("transition", () => {
     });
   });
 
-  it("goes back to drawing with the clock running again when a seal fails", () => {
-    const sealing = [start, ink, tap(1000), tap(1500)] as const;
-    expect(run(...sealing, { type: "seal-failed" })).toEqual({
-      phase: "drawing",
-      effects: ["resume-clock"],
-    });
+  it("goes back to drawing with the clock running again when the server refused the seal", () => {
+    expect(run(...sealing, failed())).toEqual({ phase: "drawing", effects: ["resume-clock"] });
     expect(run(...sealing, { type: "sealed" }).phase).toBe("sealed");
+  });
+
+  it("keeps the sheet locked after a seal the server may hold, or one at 0:00, until one lands", () => {
+    const timeUp = [start, ink, { type: "time-up" }] as const;
+    for (const held of [
+      [...sealing, failed({ mayHaveSealed: true })],
+      [...timeUp, failed({ timeUp: true })],
+    ]) {
+      expect(run(...held).phase).toBe("retry");
+      expect(run(...held, ink, { type: "canvas-touch" }).phase).toBe("retry");
+      // The key's first tap tries again, since the sheet can't change.
+      expect(run(...held, tap(9000))).toEqual({ phase: "sealing", effects: ["seal"] });
+      expect(run(...held, tap(9000), { type: "sealed" }).phase).toBe("sealed");
+    }
+    // A retry the server refuses proves it holds no seal, so before 0:00 the sheet draws on.
+    expect(run(...sealing, failed({ mayHaveSealed: true }), tap(9000), failed()).phase).toBe(
+      "drawing",
+    );
+    expect(
+      run(...timeUp, failed({ timeUp: true }), tap(9000), failed({ timeUp: true })).phase,
+    ).toBe("retry");
   });
 
   it("starts a fresh sheet on reset", () => {
@@ -93,6 +116,22 @@ describe("transition", () => {
       phase: "blank",
       effects: ["reset-sheet"],
     });
+  });
+});
+
+describe("sealFailure", () => {
+  const answered = (status: number, error: string) => sealFailure(new ApiError(status, { error }));
+
+  it("lets the sheet change only once the server has refused the seal itself", () => {
+    expect(answered(403, "adults_only")).toBe("refused");
+    expect(answered(400, "invalid_request")).toBe("refused");
+    // Saved, or maybe saved: sent again, the same request gets the sticker from the ticket use.
+    expect(answered(503, "mint_failed")).toBe("unknown");
+    expect(answered(0, "network")).toBe("unknown");
+    expect(answered(409, "ticket_already_used")).toBe("unknown");
+    expect(sealFailure(new SyntaxError("the answer isn't JSON"))).toBe("unknown");
+    // The wait for the board address stops it before it leaves the phone.
+    expect(answered(0, "line_token_expired")).toBe("unsent");
   });
 });
 

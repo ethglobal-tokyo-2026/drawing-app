@@ -12,8 +12,8 @@ const PEEL_MS = 220;
  * Draw on the sticker board, with zero steps to the canvas. On a fresh sheet with a daily ticket left, Draw spends it
  * at once: the key's front ticket peels off, and the canvas opens as it goes, taking the spend the board started. A
  * reserve ticket is still asked for, on the canvas. With no tickets at all, the out-of-tickets card comes up over the
- * board, and the canvas doesn't load. A drawing in progress already has its ticket, so Draw just opens it, as it
- * does whenever the drawing screen hasn't said what its sheet needs.
+ * board, and the canvas doesn't load, unless a spend's key is still kept. A drawing in progress already has its ticket,
+ * so Draw just opens it, as it does whenever the drawing screen hasn't said what its sheet needs.
  */
 export function useDrawFromBoard(onDraw: () => void) {
   const tickets = useTickets();
@@ -29,7 +29,8 @@ export function useDrawFromBoard(onDraw: () => void) {
     if (peeling) return;
     const now = tickets.tickets;
     const kind = tickets.sheet === "fresh" && now ? nextKind(now) : undefined;
-    if (kind === null) {
+    // A spend whose answer never came may have spent the last ticket: the canvas sends its key again.
+    if (kind === null && !tickets.hasKeptSpend()) {
       setCard("out");
       return;
     }
