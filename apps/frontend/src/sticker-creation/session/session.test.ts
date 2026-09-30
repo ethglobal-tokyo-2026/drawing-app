@@ -26,6 +26,8 @@ const failed = ({ mayHaveSealed = false, timeUp = false } = {}) =>
   ({ type: "seal-failed", mayHaveSealed, timeUp }) as const;
 /** The seal key's second tap started a seal. */
 const sealing = [start, ink, tap(1000), tap(1500)] as const;
+const restored = (drawn: boolean, sealSent = false) =>
+  ({ type: "restored", drawn, sealSent }) as const;
 
 describe("transition", () => {
   it("spends a ticket only at Start, and starts the clock only at the first stroke", () => {
@@ -37,9 +39,9 @@ describe("transition", () => {
   });
 
   it("picks a session kept across a reload back up without spending another ticket", () => {
-    expect(run({ type: "restored", drawn: true })).toEqual({ phase: "drawing", effects: [] });
-    expect(run({ type: "restored", drawn: false }, start).phase).toBe("primed");
-    expect(run({ type: "restored", drawn: false }, ink)).toEqual({
+    expect(run(restored(true))).toEqual({ phase: "drawing", effects: [] });
+    expect(run(restored(false), start).phase).toBe("primed");
+    expect(run(restored(false), ink)).toEqual({
       phase: "drawing",
       effects: ["start-clock"],
     });
@@ -102,6 +104,8 @@ describe("transition", () => {
       expect(run(...held, tap(9000))).toEqual({ phase: "sealing", effects: ["seal"] });
       expect(run(...held, tap(9000), { type: "sealed" }).phase).toBe("sealed");
     }
+    // A reload while the seal was on its way brings the sheet back locked too.
+    expect(run(restored(true, true)).phase).toBe("retry");
     // A retry the server refuses proves it holds no seal, so before 0:00 the sheet draws on.
     expect(run(...sealing, failed({ mayHaveSealed: true }), tap(9000), failed()).phase).toBe(
       "drawing",

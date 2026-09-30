@@ -43,6 +43,7 @@ import {
   type KeptDrawing,
   type KeptSession,
 } from "./session/keptSession";
+import { forgetSentSeal, keepSentSeal, sealWentOut } from "./session/sentSeal";
 import {
   ARM_WINDOW_MS,
   FRESH_SESSION,
@@ -213,6 +214,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         canvas.current?.reset();
         clock.reset();
         keeper.wipe();
+        forgetSentSeal();
         ticket.current = null;
         setPickedUp(null);
         setPaused(false);
@@ -353,6 +355,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     let request: SealRequest | null = null;
     let shown: Ceremony | null = null;
     let sent = false;
+    // A seal sent before, here or before a reload, may have reached the server.
+    const heldBefore = sentSeal.current !== null || sealWentOut(ticket.current);
     try {
       const sheet = sheetBox();
       const again = sentSeal.current;
@@ -391,8 +395,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       setCeremony(started);
       request = await made;
       sent = true;
+      keepSentSeal(request.ticketUseId);
       const { sticker: sealedSticker } = await api.seal(request);
       sentSeal.current = null;
+      forgetSentSeal();
       ticket.current = null;
       keeper.wipe();
       // The used ticket's stub now carries this sticker's outline.
@@ -405,7 +411,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       const failure = sent ? sealFailure(error) : "unsent";
       if (failure === "refused") sentSeal.current = null;
       else if (failure === "unknown" && sticker && request) sentSeal.current = { request, sticker };
-      // One that never left keeps an earlier try's request: that one may still have reached the server.
+      // One that never left changes nothing: an earlier try may still have reached the server.
+      const mayHaveSealed = failure === "unknown" || (failure === "unsent" && heldBefore);
+      if (!mayHaveSealed) forgetSentSeal();
       const held = sentSeal.current?.sticker;
       if (shown) dismissCeremony(shown, { keepSticker: shown.sticker === held });
       else if (sticker !== held) sticker?.dispose();
@@ -418,11 +426,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
             ? t(($) => $.stickerCreation.seal.failed, { reason: errorReason(error) })
             : t(($) => $.stickerCreation.seal.failedHere, { reason: reason(error) }),
       );
-      send({
-        type: "seal-failed",
-        mayHaveSealed: sentSeal.current !== null,
-        timeUp: clock.elapsed >= SESSION_MS,
-      });
+      send({ type: "seal-failed", mayHaveSealed, timeUp: clock.elapsed >= SESSION_MS });
     }
   }
 
@@ -513,7 +517,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     keeper.resume(found.ticket, found.ops, found.elapsedMs, found.nsfw);
     keepNsfw(found.nsfw);
     ticket.current = found.ticket;
-    send({ type: "restored", drawn });
+    send({ type: "restored", drawn, sealSent: sealWentOut(found.ticket) });
     if (!drawn) {
       setPickedUp(null);
       return;
@@ -541,7 +545,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       );
       ticket.current = kept.ticket;
       keeper.carry(kept.ticket);
-      send({ type: "restored", drawn: false });
+      send({ type: "restored", drawn: false, sealSent: false });
       setPickedUp("carried");
       return;
     }
@@ -550,7 +554,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     if (kept.ticket !== null) {
       ticket.current = kept.ticket;
       keeper.start(kept.ticket);
-      send({ type: "restored", drawn: false });
+      send({ type: "restored", drawn: false, sealSent: false });
       setPickedUp("carried");
       return;
     }
@@ -819,7 +823,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       <SealKey
         shown={retrying || (history.canUndo && !sealing)}
         armed={session.phase === "armed"}
-        problem={sealProblem}
+        problem={sealProblem ?? (retrying ? t(($) => $.stickerCreation.seal.interrupted) : null)}
         onTap={() => {
           setSealProblem(null);
           if (sealProblem && reconnectOnTap.current) {

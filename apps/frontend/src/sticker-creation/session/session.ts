@@ -32,9 +32,10 @@ export type SessionEvent =
   /**
    * A session kept across a reload is back, its ticket spent before the reload: drawn on, or only
    * started, with the clock still waiting for the first stroke. One read late comes back onto the
-   * sheet its ticket carried over to, before anything is drawn there.
+   * sheet its ticket carried over to, before anything is drawn there. `sealSent`: its seal had gone
+   * out with no answer, so the server may hold it.
    */
-  | { type: "restored"; drawn: boolean }
+  | { type: "restored"; drawn: boolean; sealSent: boolean }
   | { type: "seal-tap"; now: number; hasInk: boolean }
   | { type: "arm-expired"; now: number }
   | { type: "canvas-touch" }
@@ -74,9 +75,8 @@ export function transition(session: Session, event: SessionEvent): Result {
     case "ink":
       return phase === "primed" ? to("drawing", ["start-clock"]) : unchanged;
     case "restored":
-      return phase === "blank" || phase === "primed"
-        ? to(event.drawn ? "drawing" : "primed")
-        : unchanged;
+      if (phase !== "blank" && phase !== "primed") return unchanged;
+      return to(event.sealSent ? "retry" : event.drawn ? "drawing" : "primed");
     case "seal-tap":
       // The sheet can't change any more, so there's no second tap to wait for.
       if (phase === "retry") return to("sealing", ["seal"]);
