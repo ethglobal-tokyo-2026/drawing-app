@@ -43,7 +43,7 @@ import {
   type KeptDrawing,
   type KeptSession,
 } from "./session/keptSession";
-import { forgetSentSeal, keepSentSeal, sealWentOut } from "./session/sentSeal";
+import { forgetSentSeal, keepSentSeal, sealWentOut, sentSealOutcome } from "./session/sentSeal";
 import {
   ARM_WINDOW_MS,
   describeSealFailure,
@@ -183,7 +183,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     nsfw.current = on;
     setNsfwOn(on);
   };
-  const [pickedUp, setPickedUp] = useState<"restored" | "lost" | "carried" | null>(null);
+  const [pickedUp, setPickedUp] = useState<"restored" | "lost" | "carried" | "sealed" | null>(null);
   // A tap on the waiting timer puts "Starts when you draw" under it, until the first stroke.
   const [startsNote, setStartsNote] = useState(false);
   // On the first few visits the seal key says how it works, once, as the first stroke brings it in.
@@ -551,43 +551,118 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     setPickedUp("restored");
   }
 
+  /**
+   * A drawing that can't be put back gives its ticket, which never became a sticker, to a fresh sheet,
+   * which seals on it without spending another. `clear`: what's kept of it can't be read back, so it
+   * goes; a drawing that wasn't read stays kept, for a read that answers late or the next reload.
+   */
+  function carryOver(ticketUseId: number, clear: boolean) {
+    ticket.current = ticketUseId;
+    if (clear) keeper.start(ticketUseId);
+    else keeper.carry(ticketUseId);
+    send({ type: "restored", drawn: false, sealSent: false });
+    setPickedUp("carried");
+  }
+
+  // A drawing not read whose seal went out: the server may hold the seal, so a new drawing on its
+  // ticket could be answered with the old sticker. The sheet stays locked until the drawing is read
+  // or the tickets show what became of the seal. `reading`: a late read may still bring the drawing.
+  const unsettled = useRef<{ ticket: number; reading: boolean; clear: boolean } | null>(null);
+  const [sealUnsettled, setSealUnsettled] = useState(false);
+  const unsettle = (next: typeof unsettled.current) => {
+    unsettled.current = next;
+    setSealUnsettled(next !== null);
+  };
+
   // A session kept across a reload comes back without asking for another ticket, a drawing on it
   // paused; one that can't be read gives its ticket back.
   const pickUp = useEffectEvent((kept: KeptSession) => {
+    const notRead = kept.status === "unread" || kept.status === "lost";
+    if (notRead && kept.ticket !== null && sealWentOut(kept.ticket)) {
+      console.error(
+        "The drawing in progress wasn't read after a reload, and its seal had gone out, so its sheet waits for the drawing or the tickets",
+        kept.error,
+      );
+      const reading = kept.status === "unread" && kept.later !== null;
+      unsettle({ ticket: kept.ticket, reading, clear: kept.status === "lost" });
+      if (tickets.tickets) settleSentSeal(tickets.tickets);
+      return;
+    }
     setRestoring(false);
     if (kept.status === "none") return;
     if (kept.status === "found") {
       putBack(kept);
       return;
     }
-    // Its ticket never became a sticker, so a fresh sheet seals on it without spending another. A
-    // drawing that wasn't read stays kept, for a read that answers late or the next reload.
     if (kept.status === "unread") {
       console.error(
         "The drawing in progress wasn't read after a reload, so its ticket carries over and it stays kept",
         kept.error,
       );
-      ticket.current = kept.ticket;
-      keeper.carry(kept.ticket);
-      send({ type: "restored", drawn: false, sealSent: false });
-      setPickedUp("carried");
+      carryOver(kept.ticket, false);
       return;
     }
     console.error("The drawing in progress couldn't be picked up after a reload", kept.error);
-    // One that can't be read back is cleared, and its ticket carries over just the same.
     if (kept.ticket !== null) {
-      ticket.current = kept.ticket;
-      keeper.start(kept.ticket);
-      send({ type: "restored", drawn: false, sealSent: false });
-      setPickedUp("carried");
+      carryOver(kept.ticket, true);
       return;
     }
     keeper.wipe();
     setPickedUp("lost");
   });
+  const settleSentSeal = useEffectEvent((loaded: Tickets) => {
+    const waiting = unsettled.current;
+    if (!waiting) return;
+    const outcome = sentSealOutcome(waiting.ticket, loaded);
+    if (outcome === null && waiting.reading) return;
+    unsettle(null);
+    setRestoring(false);
+    forgetSentSeal();
+    if (outcome === "unsealed") {
+      carryOver(waiting.ticket, waiting.clear);
+      return;
+    }
+    // Sealed, the sticker is on the board. Not one of today's uses, the tickets can't say whether it
+    // was, and a ticket carried over could seal the next drawing as the old sticker: it's dropped.
+    keeper.wipe();
+    if (outcome === null)
+      console.error(
+        `Ticket use ${waiting.ticket}'s seal went out before a reload and the drawing can't be read, so its ticket is dropped`,
+      );
+    setPickedUp(outcome === "sealed" ? "sealed" : "lost");
+  });
+  useEffect(() => {
+    const loaded = tickets.tickets;
+    if (!loaded) return;
+    // Settled once this render is on screen, like the spend at once below.
+    let cancelled = false;
+    void Promise.resolve().then(() => {
+      if (!cancelled) settleSentSeal(loaded);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [tickets.tickets]);
   // A read that answers late still puts the drawing back, while the sheet its ticket carried over to
-  // has nothing drawn on it.
+  // has nothing drawn on it, or while its sent seal waits on it.
   const pickUpLate = useEffectEvent((late: KeptDrawing) => {
+    const waiting = unsettled.current;
+    if (waiting && late.ticket === waiting.ticket) {
+      if (late.status === "found") {
+        unsettle(null);
+        setRestoring(false);
+        // It comes back locked, for the seal key, since its seal went out.
+        putBack(late);
+        return;
+      }
+      console.error(
+        "The drawing in progress couldn't be read, so the tickets say what became of its seal",
+        late.error,
+      );
+      unsettle({ ...waiting, reading: false, clear: late.status === "lost" });
+      if (tickets.tickets) settleSentSeal(tickets.tickets);
+      return;
+    }
     if (latest.current.phase !== "primed" || late.ticket !== ticket.current) {
       console.warn("The drawing in progress was read after its sheet moved on, so it's dropped");
       return;
@@ -617,7 +692,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // ticket, until the first stroke.
   const waiting = session.phase === "blank" || session.phase === "primed";
   if (pickedUp === "restored" && !paused) setPickedUp(null);
-  if ((pickedUp === "lost" || pickedUp === "carried") && !waiting) setPickedUp(null);
+  if (pickedUp !== null && pickedUp !== "restored" && !waiting) setPickedUp(null);
   if (startsNote && !waiting) setStartsNote(false);
 
   // Before the first stroke there's nothing to pause: a tap on the timer says when it starts.
@@ -705,11 +780,13 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       ? t(($) => $.stickerCreation.timer.note.pickedUp)
       : pickedUp === "carried"
         ? t(($) => $.stickerCreation.timer.note.ticketCarriesOver)
-        : pickedUp === "lost"
-          ? t(($) => $.stickerCreation.timer.note.lost)
-          : startsLabel
-            ? t(($) => $.stickerCreation.timer.note.startsWhenYouDraw)
-            : null;
+        : pickedUp === "sealed"
+          ? t(($) => $.stickerCreation.timer.note.sealedBeforeReload)
+          : pickedUp === "lost"
+            ? t(($) => $.stickerCreation.timer.note.lost)
+            : startsLabel
+              ? t(($) => $.stickerCreation.timer.note.startsWhenYouDraw)
+              : null;
 
   // Tells the sticker board what Draw means for this sheet: a fresh one spends a ticket (after a seal,
   // Draw starts one), while a drawing in progress, or a spend on its way, already has one.
@@ -894,7 +971,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         />
       )}
       <SealingStatusLabel waiting={active && session.phase === "sealing"} />
-      {asking && !loaded && (
+      {/* A sheet waiting to learn what became of its sent seal needs the tickets too. */}
+      {(asking || (active && sealUnsettled)) && !loaded && (
         <TicketsNotLoaded error={tickets.error} onRetry={tickets.refresh} onBoard={onGoToBoard} />
       )}
       {askShown && (

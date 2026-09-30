@@ -58,6 +58,11 @@ export const stickerCreation = {
         en: "Couldn’t pick up your drawing,\nso its ticket carries over",
         ja: "続きから再開できなかったので、\nチケットはそのまま使えます",
       },
+      /** Drawing screen, top left: the white label under the timer when a reload couldn't bring back your drawing, but its seal had reached the server, so it's on your sticker board and a fresh sheet takes its place, until the first stroke; also announced */
+      sealedBeforeReload: {
+        en: "Your last sticker was sealed",
+        ja: "前回のシールは仕上がりました",
+      },
       /** Drawing screen, top left: the white label under the timer when a reload couldn't bring back your drawing in progress, and it had no ticket to carry over, until the first stroke; also announced */
       lost: {
         en: "Couldn’t pick up where you left off",

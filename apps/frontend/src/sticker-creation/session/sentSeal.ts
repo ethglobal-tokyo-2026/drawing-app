@@ -1,3 +1,4 @@
+import type { Tickets } from "@drawing-app/api/client";
 import { readStored, writeStored } from "../../ui/deviceStorage";
 
 /**
@@ -23,4 +24,17 @@ export function sealWentOut(ticketUseId: number | null): boolean {
   if (ticketUseId === null) return false;
   const { text } = readStored(SENT_SEAL_KEY, "Can't tell whether a seal went out from this device");
   return text === String(ticketUseId);
+}
+
+/**
+ * What the server's tickets say became of `ticketUseId`'s seal: it's a sticker, or it holds none.
+ * Null when it isn't one of today's ticket uses, the only ones the tickets list.
+ */
+export function sentSealOutcome(
+  ticketUseId: number,
+  tickets: Tickets,
+): "sealed" | "unsealed" | null {
+  const use = tickets.usedToday.find(({ id }) => id === ticketUseId);
+  if (!use) return null;
+  return use.sticker ? "sealed" : "unsealed";
 }
