@@ -336,7 +336,11 @@ export function Giving({
             {...busyKey}
             data-autofocus
           >
-            {preparing ? t(($) => $.giving.preparing.button) : t(($) => $.giving.inTheBag.send)}
+            {preparing
+              ? t(($) => $.giving.preparing.button)
+              : state.step === "takingOut"
+                ? t(($) => $.giving.takingOut.button)
+                : t(($) => $.giving.inTheBag.send)}
           </Key>
           <QuietLink onClick={takeOut} aria-disabled={!canTakeOut || undefined}>
             <ArrowUUpLeft /> {t(($) => $.giving.inTheBag.takeOut)}

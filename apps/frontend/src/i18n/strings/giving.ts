@@ -216,9 +216,11 @@ export const giving = {
     title: { en: "Taking it out", ja: "取り出し中" },
     /** Giving's “Taking it out” screen: the line under its title */
     lead: {
-      en: "Your sticker is coming back out of the gift bag. This can take a moment.",
-      ja: "シールをギフト袋から取り出しています。少しお待ちください。",
+      en: "Your sticker is coming back out of the gift bag. This can take a minute or two.",
+      ja: "シールをギフト袋から取り出しています。数分かかることもあります。",
     },
+    /** Giving's “Taking it out” screen: the send key's label while the sticker comes out */
+    button: { en: "Taking it out…", ja: "取り出し中…" },
   },
   /** The sticker in the open bag, until it's sent or taken out. */
   inTheBag: {

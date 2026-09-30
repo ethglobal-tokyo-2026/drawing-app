@@ -9,6 +9,7 @@ import {
 } from "./giftBackend";
 import { buildGiftMessage, type GiftMessage } from "./giftMessage";
 import type { GiftSendOutcome } from "./giftSender";
+import { GiftTransactionRevertedError } from "./giftTransactions";
 import { createGiveFlow, PICKER_ANSWER_MS, PICKER_RETURN_MS, PREPARING_SLOW_MS } from "./giveFlow";
 
 const PICKER_DELAY = 1150;
@@ -229,13 +230,24 @@ describe("giving through a LINE chat", () => {
     expect(t.gifts()).toEqual(["packed"]);
   });
 
-  it("shows what failed when the picker fails, and keeps the gift in the bag", async () => {
+  it("shows what failed when the picker fails, in plain words before the SDK's own text, and keeps the gift in the bag", async () => {
     const t = setup();
     await openPicker(t);
     t.picker().reject(new Error("EXCEPTION_IN_SUBWINDOW: the picker closed"));
     await wait();
-    expect(t.failure()).toMatch(/No\.0147.*EXCEPTION_IN_SUBWINDOW/);
+    expect(t.failure()).toMatch(/No\.0147.*Something went wrong\..*EXCEPTION_IN_SUBWINDOW/);
     expect(t.gifts()).toEqual(["packed"]);
+  });
+
+  it("names why a gift couldn't be packed in plain words, then the developer's detail", async () => {
+    const server = fakeBackend();
+    const reverted = new GiftPackagingError("gift-1", new GiftTransactionRevertedError("deposit"));
+    const t = setup({ backend: { ...server.backend, pack: () => Promise.reject(reverted) } });
+    t.flow.chooseLineChat();
+    await wait(PICKER_DELAY);
+    expect(t.failure()).toMatch(
+      /No\.0147 couldn’t be packed: .*didn’t make it into the gift bag.* \(The deposit transaction reverted\)$/,
+    );
   });
 
   it("sends the same gift again, straight away, after a cancel", async () => {
