@@ -85,10 +85,16 @@
   --ph-h: 844px;
   --ph-status: 47px;
   --ph-liff: 56px;
-  --ph-tabs: 84px;
   --ph-safe: 34px;
   --ph-radius: 47px;
   --ph-bezel: 11px;
+
+  /* The index-tab strip, which the tabs and the toast above them both read: 10px of paper over the
+     46px tabs, and under them the home indicator's safe area, or 12px where there is none. */
+  --tab-h: 46px;
+  --tabs-pad-top: 10px;
+  --tabs-pad-foot: max(12px, env(safe-area-inset-bottom));
+  --tabs-strip: calc(var(--tabs-pad-top) + var(--tab-h) + var(--tabs-pad-foot));
 
   /* Layers inside a phone */
   --z-screen: 1;
