@@ -70,9 +70,15 @@ export interface GiftBackend {
   pack: (sticker: GiftSticker, onWait?: (wait: PackWait) => void) => Promise<PackedGift>;
   /** LINE, or the giver, said the gift message went out. */
   markSent: (giftId: string) => Promise<void>;
-  /** The picker closed or failed without sending; the gift stays in the bag for another try. */
+  /**
+   * The picker closed, or failed before it opened, without sending: the gift stays in the bag for
+   * another try, and its maybe-sent mark goes.
+   */
   markCancelled: (giftId: string) => Promise<void>;
-  /** LINE didn't say whether the gift message went out, so it's never sent again. */
+  /**
+   * LINE's picker may send the gift message from now on. Kept, so until a cancel clears it the gift
+   * message is never sent again, even after a reload.
+   */
   markMaybeSent: (giftId: string) => void;
   /** The sticker came back out of the bag. */
   takeOut: (giftId: string) => Promise<void>;
@@ -398,7 +404,12 @@ export function createApiGiftBackend({
       return operation;
     },
     markSent,
-    markCancelled: async (giftId) => void (await api.reportShared(giftId, "cancelled")),
+    markCancelled: async (giftId) => {
+      // Nothing went out, so the same gift message can go into LINE again.
+      const attempt = attemptOf(giftId);
+      if (attempt?.message === "maybeSent") update(giftId, attempt, { message: undefined });
+      await api.reportShared(giftId, "cancelled");
+    },
     markMaybeSent: (giftId) => {
       const attempt = attemptOf(giftId);
       if (attempt) update(giftId, attempt, { message: "maybeSent" });

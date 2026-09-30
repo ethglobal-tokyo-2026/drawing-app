@@ -7,11 +7,13 @@ import { emptyApi, renderWithApi } from "../api/testing";
 import { gift } from "../api/testFixtures";
 import { useMyStickerBoard } from "../sticker-board/useMyStickerBoard";
 import { createApiGiftBackend, GiftPackagingError, type PackWait } from "./giftBackend";
+import type { GiftSendOutcome } from "./giftSender";
 import {
   GiftTransactionRevertedError,
   GiftTransactionUnconfirmedError,
   type GiftTransactions,
 } from "./giftTransactions";
+import { createGiveFlow } from "./giveFlow";
 
 const hash: Hash = `0x${"ab".repeat(32)}`;
 const takeOutHash: Hash = `0x${"ef".repeat(32)}`;
@@ -64,6 +66,21 @@ function setup() {
 async function reload() {
   vi.resetModules();
   return import("./giftBackend");
+}
+
+/** Gives the sticker in a LINE chat on this page, with fake timers, until LINE's picker has `answer`ed. */
+async function giveInLine(t: ReturnType<typeof setup>, answer: Promise<GiftSendOutcome>) {
+  const flow = createGiveFlow({
+    sticker: t.sticker,
+    backend: t.backend,
+    sender: { send: () => answer },
+    pickerDelayMs: 0,
+    takeOutMs: 0,
+    report: () => {},
+  });
+  flow.chooseLineChat();
+  await vi.advanceTimersByTimeAsync(0);
+  return flow;
 }
 
 /** What `work` fails with once every timer has run, or null when it doesn't fail. */
@@ -381,6 +398,16 @@ describe("Giving through the smart account", () => {
       "maybeSent",
       async (t: ReturnType<typeof setup>) => t.backend.markMaybeSent(t.packed.id),
     ],
+    [
+      "was in LINE's picker when the page went",
+      "maybeSent",
+      async (t: ReturnType<typeof setup>) => {
+        const flow = await giveInLine(t, new Promise(() => {}));
+        expect(flow.getState().step).toBe("picking");
+        // The page goes before LINE answers, and its timers with it.
+        vi.clearAllTimers();
+      },
+    ],
   ] as const)(
     "never takes out a gift whose message %s when its sticker is given after a reload",
     async (_, outcome, mark) => {
@@ -403,6 +430,17 @@ describe("Giving through the smart account", () => {
       if (outcome === "sent") expect(t.reportShared).toHaveBeenLastCalledWith(t.packed.id, "sent");
     },
   );
+
+  it("sends a gift whose picker was cancelled as it is when Giving opens again", async () => {
+    vi.useFakeTimers();
+    const t = setup();
+    const flow = await giveInLine(t, Promise.resolve("cancelled"));
+    expect(flow.getState().step).toBe("notSent");
+    t.packageGift.mockResolvedValue({ gift: t.packed, giftClaimToken: null, escrowTransfer: null });
+    await expect(createApiGiftBackend(t.options).pack(t.sticker)).resolves.toMatchObject({
+      giftId: t.packed.id,
+    });
+  });
 
   it("waits on a deposit sent before a reload instead of sending another", async () => {
     const t = setup();

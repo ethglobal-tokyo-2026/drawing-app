@@ -242,7 +242,6 @@ export function createGiveFlow({
     waiting = null;
     clearTimer();
     stopped.a.open = false;
-    backend.markMaybeSent(stopped.giftId);
     console.warn(`${which}: LINE didn't say whether the gift message went out`, stopped.giftId);
     if (attempt === stopped.a) set({ step: "maybeSent" });
   };
@@ -270,7 +269,6 @@ export function createGiveFlow({
       if (shown()) set({ step: "notSent", recordError });
     } else if (outcome === "unknown") {
       a.open = false;
-      backend.markMaybeSent(giftId);
       if (shown()) set({ step: "maybeSent" });
     } else {
       report(`${which} wasn’t sent`, outcome.failed);
@@ -303,6 +301,8 @@ export function createGiveFlow({
     set({ step: "picking" });
     waiting = { a, giftId: packed.giftId };
     after(PICKER_ANSWER_MS, stopWaiting);
+    // The picker may send from here on: a page that goes before LINE answers must ask, not send again.
+    backend.markMaybeSent(packed.giftId);
     let outcome: GiftSendOutcome | { failed: unknown };
     try {
       outcome = await sender.send(packed.message);

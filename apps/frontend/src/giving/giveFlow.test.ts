@@ -52,7 +52,9 @@ function fakeBackend() {
     markSent: async (giftId) => {
       gifts.set(giftId, "sent");
     },
-    markCancelled: () => Promise.resolve(),
+    markCancelled: async (giftId) => {
+      gifts.set(giftId, "packed");
+    },
     markMaybeSent: (giftId) => {
       gifts.set(giftId, "maybeSent");
     },
@@ -263,7 +265,8 @@ describe("giving through a LINE chat", () => {
     expect(t.step()).toBe("picking");
     expect(t.messages).toHaveLength(2);
     expect(t.messages[1]).toEqual(t.messages[0]);
-    expect(t.gifts()).toEqual(["packed"]);
+    // One gift, marked again while its picker is open.
+    expect(t.gifts()).toEqual(["maybeSent"]);
   });
 
   it("opens the picker once, at once, when Send in LINE beats the timer", async () => {
