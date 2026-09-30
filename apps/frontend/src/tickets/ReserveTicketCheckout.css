@@ -82,8 +82,8 @@
 }
 
 .reserve-checkout__pack-name {
-  font-size: 16px;
-  font-weight: 750;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 /* The price keeps the last column on every row, with a discount or without, so the prices line up. */
@@ -106,7 +106,7 @@
 }
 
 .reserve-checkout__price s {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--graphite);
 }
 
@@ -116,7 +116,7 @@
 }
 
 .reserve-checkout__price strong {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 800;
 }
 
