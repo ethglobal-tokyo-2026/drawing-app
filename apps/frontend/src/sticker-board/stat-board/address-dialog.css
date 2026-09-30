@@ -146,8 +146,8 @@
   gap: 10px;
 }
 
-/* Over the scrim an Ink ring would vanish, so the ring is the ink label's yellow. */
-.address-dialog__etherscan:focus-visible {
+/* Both actions sit on the scrim, where an Ink ring would vanish, so their ring is Seal Yellow. */
+.address-dialog__acts .label-btn:focus-visible {
   outline-color: var(--seal);
 }
 

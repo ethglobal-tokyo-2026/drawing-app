@@ -373,7 +373,7 @@ export function AddressDialog({ chain, address, from, onClose }: Props) {
               {t(($) => $.stickerBoard.addresses.copy)}
             </LabelButton>
             <a
-              className="label-btn label-btn--block address-dialog__rise address-dialog__etherscan"
+              className="label-btn label-btn--block address-dialog__rise"
               href={explorer(address)}
               target="_blank"
               rel="noopener noreferrer"

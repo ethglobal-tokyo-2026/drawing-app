@@ -246,10 +246,6 @@
   outline-offset: 2px;
 }
 
-.label-btn--ink:focus-visible {
-  outline-color: var(--seal);
-}
-
 /* The quiet link under a key: text on the page, with no stock, lip or travel. */
 .label-btn--quiet {
   --lip: 0px;
