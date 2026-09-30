@@ -10,6 +10,7 @@ import { useLight } from "../../stickers/light";
 import { LiveResin } from "../../stickers/LiveResin";
 import { sweepSheen } from "../../stickers/resinSheen";
 import type { Sticker } from "@drawing-app/api/client";
+import { releaseCanvas } from "../../ui/releaseCanvas";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 import { makeCutLine, paintDim, paintUsedStickerSilhouette, type Cutter } from "./ceremonyPaint";
 import type { SealedSticker } from "./makeSticker";
@@ -274,6 +275,7 @@ export function SealCeremony({
       cancelAnimationFrame(raf);
       stopKeys();
       host.removeAttribute("data-lifted");
+      [parts.dim, parts.usedStickerSilhouette, parts.cut].forEach(releaseCanvas);
     };
   }, [sticker, sheet]);
 

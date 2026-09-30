@@ -363,6 +363,20 @@ describe("SealCeremony", () => {
     );
   });
 
+  it("frees its canvases' memory as it closes", async () => {
+    // As big as a phone's screen, so every canvas has pixels to free.
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(SHEET.w);
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(SHEET.h);
+    await seal(1);
+    const canvases = [...host.querySelectorAll("canvas")];
+    const areas = () => canvases.map((c) => c.width * c.height);
+    expect(canvases.length).toBeGreaterThan(0);
+    expect(areas()).not.toContain(0);
+    view?.unmount();
+    view = undefined;
+    expect(areas()).toEqual(canvases.map(() => 0));
+  });
+
   it("fades back to the drawing when the seal fails", async () => {
     await seal(1, "alice", { answer: null });
     wait(3000);
