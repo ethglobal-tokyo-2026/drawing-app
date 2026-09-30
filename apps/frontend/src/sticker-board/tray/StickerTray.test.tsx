@@ -340,6 +340,27 @@ describe("StickerTray", () => {
     expect(frontSheet()?.getAttribute("data-f")).toBe(newest);
   });
 
+  it("brings forward the edge a press falls in the share of, though it lands below its thin strip", async () => {
+    render(manyStickers(60));
+    await openTray();
+    const deepest = board.querySelector<HTMLElement>(".tray__stack > .tray__sheet[data-depth='3']");
+    // The feet as a browser would lay them out: the front sheet's, then an edge every 15px.
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const depth = this.closest<HTMLElement>(".tray__sheet")?.dataset.depth;
+      const isFoot = this.classList.contains("tray__foot");
+      return isFoot && depth !== undefined
+        ? new DOMRect(0, 349 + 15 * Number(depth), 150, 15)
+        : new DOMRect();
+    });
+    // Under the deepest edge's own strip, where nothing is drawn.
+    pointer(stackEl(), "pointerdown", 100, 410.5);
+    pointer(stackEl(), "pointerup", 100, 410.5);
+    await act(async () => {});
+    expect(frontSheet()?.getAttribute("data-f")).toBe(deepest?.getAttribute("data-f"));
+  });
+
   it("keeps the stack drawn and focus on the sticker while the mouth sags to stick it on", async () => {
     render(manyStickers(8));
     await openTray();

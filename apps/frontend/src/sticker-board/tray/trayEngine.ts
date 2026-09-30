@@ -13,6 +13,7 @@ import type { StickerUrls } from "../../stickers/stickerUrls";
 import { ticketDay } from "../../tickets/tickets";
 import { packSheets, type PackedItem, type Shape } from "./sheetPacking";
 import { knownShape, stickerShape } from "./stickerShape";
+import { edgeAt } from "./edgeBands";
 import { inertBesides } from "./inertBesides";
 import { countVisit } from "./traySeen";
 import { newSlots, type TraySlot } from "./traySlots";
@@ -1142,13 +1143,23 @@ export function createTrayEngine(
     } else if (g.mode === "pull") await sendHome({ quick: true });
     else if (g.mode === "move" && g.pulled && g.pulled === ui.pulled) settlePulled(g.pulled);
   }
+  /** The dated edge, as its depth in the stack, that a press at this screen height is for. */
+  function edgeUnder(clientY: number) {
+    const feet = sheetEls().map((el) => el.querySelector<HTMLElement>(".tray__foot"));
+    const [front, ...edges] = feet.map((foot) => foot?.getBoundingClientRect());
+    if (!front || edges.some((r) => !r)) return null;
+    const behind = edges.flatMap((r) => (r ? [r] : []));
+    const i = edgeAt(clientY, front, behind);
+    return i === null ? null : i + 1;
+  }
   listen(stack, "pointerdown", (e) => {
     if (e.button > 0 || ui.busy || ui.g || !zip.isOpen) return;
     const target = targetOf(e);
     if (target?.closest(".tray__depth")) return;
     const sheet = target?.closest<HTMLElement>(".tray__sheet");
     const slot = target?.closest<HTMLElement>(".tray__sheet.is-top .tray__slot") ?? null;
-    pressOn(stack, e, null, slot, sheet ? depthOf(sheet) : 0);
+    const edge = slot ? null : edgeUnder(e.clientY);
+    pressOn(stack, e, null, slot, edge ?? (sheet ? depthOf(sheet) : 0));
   });
   listen(stack, "pointermove", (e) => {
     const g = pressOf(e, null);

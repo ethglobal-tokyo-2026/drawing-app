@@ -345,14 +345,14 @@
   pointer-events: auto;
 }
 
-/* A thumb's reach. */
+/* A thumb's reach, all below it: the deepest dated edge is right above. */
 .tray__depth::before {
   content: "";
   position: absolute;
   left: -6px;
   right: -6px;
-  top: -11px;
-  bottom: -11px;
+  top: 0;
+  bottom: -22px;
 }
 
 .tray__depth:active {
