@@ -1,3 +1,14 @@
+import { croquisNamesAbi } from "@drawing-app/sticker-chain/contracts";
+import {
+  ContractFunctionExecutionError,
+  ContractFunctionRevertedError,
+  encodeErrorResult,
+  getAddress,
+  keccak256,
+  stringToBytes,
+  type Abi,
+  type Hex,
+} from "viem";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CAUSE_MAX_LENGTH,
@@ -115,6 +126,43 @@ describe("NFT diagnostics", () => {
     expect(failureCause(new Error("x".repeat(CAUSE_MAX_LENGTH * 2)))).toHaveLength(
       CAUSE_MAX_LENGTH,
     );
+  });
+
+  it("logs a contract revert's decoded error, or its raw data when the ABI lacks the error", () => {
+    const relayer = getAddress(`0x${"65d3".repeat(10)}`);
+    const namerRole = keccak256(stringToBytes("NAMER_ROLE"));
+    /** claimPersonName reverting with `data`, as viem throws it when it reads the revert with `abi`. */
+    const reverted = (abi: Abi, data: Hex) =>
+      new ContractFunctionExecutionError(
+        new ContractFunctionRevertedError({ abi, data, functionName: "claimPersonName" }),
+        { abi, functionName: "claimPersonName", args: ["alice", relayer, "", ""] },
+      );
+    const unauthorized = encodeErrorResult({
+      abi: croquisNamesAbi,
+      errorName: "AccessControlUnauthorizedAccount",
+      args: [relayer, namerRole],
+    });
+    const alreadyNamed = encodeErrorResult({
+      abi: croquisNamesAbi,
+      errorName: "StickerAlreadyNamed",
+      args: [45n],
+    });
+
+    logFailure("chain.ens.person_name.failed", reverted(croquisNamesAbi, unauthorized));
+    logFailure("chain.ens.sticker_name.failed", reverted(croquisNamesAbi, alreadyNamed));
+    logFailure("chain.ens.person_name.failed", reverted([], unauthorized));
+
+    expect(logs.entries.map((entry) => entry.causes)).toEqual([
+      expect.arrayContaining([
+        expect.objectContaining({
+          revert: { errorName: "AccessControlUnauthorizedAccount", args: [relayer, namerRole] },
+        }),
+      ]),
+      expect.arrayContaining([
+        expect.objectContaining({ revert: { errorName: "StickerAlreadyNamed", args: ["45"] } }),
+      ]),
+      expect.arrayContaining([expect.objectContaining({ revert: { raw: unauthorized } })]),
+    ]);
   });
 
   it("does not serialize extra fields or repeat cyclic error causes", () => {

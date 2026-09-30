@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import { ContractFunctionRevertedError, isHex } from "viem";
 
 interface RequestContext {
   requestId: string;
@@ -59,10 +60,36 @@ function redact(message: string): string {
     .replace(/\bU[a-f0-9]{32}\b/g, "[redacted-line-id]");
 }
 
+/**
+ * A decoded revert's argument as JSON holds it: a bigint as a string, prose masked. Hex, such as an
+ * address or a role hash, is the contract's own answer, so it stays whole.
+ */
+function revertArgument(value: unknown): unknown {
+  if (typeof value === "bigint") return value.toString();
+  if (typeof value === "string") return isHex(value) ? value : redact(value);
+  if (Array.isArray(value)) return value.map(revertArgument);
+  if (typeof value === "object" && value !== null) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, revertArgument(item)]),
+    );
+  }
+  return value;
+}
+
+/** Why a contract reverted: the error its ABI names, or the raw revert data when the ABI lacks it. */
+function describeRevert(error: ContractFunctionRevertedError) {
+  if (error.data) {
+    const { errorName, args = [] } = error.data;
+    return { errorName, args: args.map(revertArgument) };
+  }
+  return error.raw && error.raw !== "0x" ? { raw: error.raw } : undefined;
+}
+
 function describeError(error: unknown) {
   if (typeof error !== "object" || error === null) {
     return { name: "ThrownValue", message: redact(String(error)) };
   }
+  const revert = error instanceof ContractFunctionRevertedError ? describeRevert(error) : undefined;
   const name = "name" in error && typeof error.name === "string" ? error.name : "Error";
   const message =
     "shortMessage" in error && typeof error.shortMessage === "string"
@@ -83,6 +110,7 @@ function describeError(error: unknown) {
     ...(code !== undefined && { code: typeof code === "string" ? redact(code) : code }),
     ...(status !== undefined && { status }),
     ...(details !== undefined && { details }),
+    ...(revert !== undefined && { revert }),
   };
 }
 
