@@ -296,7 +296,10 @@ export function Giving({
           : t(($) => $.giving.inTheBag.title);
     if (preparing) {
       lead = slow
-        ? `${t(($) => $.giving.preparing.slow[state.wait ?? "asking"])} ${t(($) => $.giving.preparing.slow.leave)}`
+        ? t(($) => $.giving.preparing.slow.lead, {
+            waiting: t(($) => $.giving.preparing.slow[state.wait ?? "asking"]),
+            leave: t(($) => $.giving.preparing.slow.leave),
+          })
         : t(($) => $.giving.preparing.lead);
     } else if (state.step === "takingOut") {
       lead = t(($) => $.giving.takingOut.lead);
@@ -384,7 +387,7 @@ export function Giving({
       </Sheet>
       {/* One status line for the whole flow, so each step is heard as it comes. */}
       <p className="visually-hidden" role="status">
-        {lead && `${title}. ${lead}`}
+        {lead && t(($) => $.giving.stepHeard, { title, lead })}
       </p>
     </div>
   );

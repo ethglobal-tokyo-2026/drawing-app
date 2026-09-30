@@ -204,8 +204,12 @@ export const giving = {
         en: "Nothing is sent until you pick a chat. You can take the sticker out to start over.",
         ja: "トークを選ぶまで、何も送られません。シールを取り出して、最初からやり直すこともできます。",
       },
+      /** Giving's “Preparing your gift” screen, after about ten seconds: the line under its title, joining what it waits on to the sentence after it */
+      lead: { en: "{{waiting}} {{leave}}", ja: "{{waiting}}{{leave}}" },
     },
   },
+  /** Giving, when the sheet moves to a new step: what screen readers hear, its title and then the line under it */
+  stepHeard: { en: "{{title}}. {{lead}}", ja: "{{title}}。{{lead}}" },
   /** The sticker lifting back out of the bag after Take it out. */
   takingOut: {
     /** Giving, while the sticker comes back out of the gift bag after Take it out: the sheet's title */
