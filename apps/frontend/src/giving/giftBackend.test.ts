@@ -369,6 +369,14 @@ describe("Giving through the smart account", () => {
       },
     ],
     [
+      "went out, its report refused while signed out",
+      "sent",
+      async (t: ReturnType<typeof setup>) => {
+        t.reportShared.mockRejectedValueOnce(new ApiError(401, { error: "signed_out" }));
+        expect(await failureOf(t.backend.markSent(t.packed.id))).toBeInstanceOf(ApiError);
+      },
+    ],
+    [
       "may have gone out",
       "maybeSent",
       async (t: ReturnType<typeof setup>) => t.backend.markMaybeSent(t.packed.id),
