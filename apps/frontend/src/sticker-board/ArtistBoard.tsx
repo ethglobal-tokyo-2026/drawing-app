@@ -1,4 +1,4 @@
-import { CaretLeft, GiveIcon, OfferIcon, ViewIcon } from "../icons";
+import { CaretLeft, GiveIcon, ViewIcon } from "../icons";
 import { useMyAgeStatus } from "../identity/useMyAgeStatus";
 import { veiledFor } from "../stickers/nsfw";
 import {
@@ -17,7 +17,6 @@ import { toPerson, type PersonView } from "../api/views";
 import { GiveSheet } from "../giving/GiveSheet";
 import { errorReason } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
-import { OfferSheet } from "../offers/OfferSheet";
 import { ArtistChip } from "../stickers/ArtistChip";
 import { Duration } from "../stickers/Duration";
 import { formatHandle, formatNo } from "../stickers/format";
@@ -133,7 +132,6 @@ export function ArtistBoard({ person, onBack }: Props) {
   const [selected, setSelected] = useState<number | null>(null);
   const [viewing, setViewing] = useState<BoardStickerView | null>(null);
   const [giving, setGiving] = useState(false);
-  const [offering, setOffering] = useState<BoardStickerView | null>(null);
   useLight(!turned);
 
   // What they hold and have stuck on, bottom of the stack first.
@@ -172,10 +170,10 @@ export function ArtistBoard({ person, onBack }: Props) {
     };
   }, [title]);
 
-  // The stat board and the give and offer sheets handle their own Escape; on the front it closes
-  // the sticker view, then the sticker menu.
+  // The stat board and the give sheet handle their own Escape; on the front it closes the sticker
+  // view, then the sticker menu.
   useEffect(() => {
-    if (turned || giving || offering) return;
+    if (turned || giving) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       if (viewing) setViewing(null);
@@ -183,7 +181,7 @@ export function ArtistBoard({ person, onBack }: Props) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [turned, giving, offering, viewing]);
+  }, [turned, giving, viewing]);
 
   const turn = (over: boolean) => {
     setSelected(null);
@@ -314,29 +312,16 @@ export function ArtistBoard({ person, onBack }: Props) {
           onClick={(e) => e.stopPropagation()}
         >
           {menuSticker.artist.id !== person.id && <ArtistChip artist={menuSticker.artist} />}
-          <div className="sticker-menu-actions">
-            <LabelButton
-              size="sm"
-              icon={<ViewIcon />}
-              onClick={() => {
-                setViewing(menuSticker);
-                setSelected(null);
-              }}
-            >
-              {t(($) => $.stickerBoard.artistBoard.view)}
-            </LabelButton>
-            <LabelButton
-              size="sm"
-              tone="grape"
-              icon={<OfferIcon />}
-              onClick={() => {
-                setOffering(menuSticker);
-                setSelected(null);
-              }}
-            >
-              {t(($) => $.stickerBoard.artistBoard.offer)}
-            </LabelButton>
-          </div>
+          <LabelButton
+            size="sm"
+            icon={<ViewIcon />}
+            onClick={() => {
+              setViewing(menuSticker);
+              setSelected(null);
+            }}
+          >
+            {t(($) => $.stickerBoard.artistBoard.view)}
+          </LabelButton>
         </div>
       )}
 
@@ -386,9 +371,6 @@ export function ArtistBoard({ person, onBack }: Props) {
           toAgeStatus={person.ageStatus}
           onClose={() => setGiving(false)}
         />
-      )}
-      {offering && (
-        <OfferSheet sticker={offering} holder={owner} onClose={() => setOffering(null)} />
       )}
     </div>
   );

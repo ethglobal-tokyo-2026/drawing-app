@@ -3,7 +3,6 @@ import {
   Eye,
   Fire,
   Gift,
-  Handshake,
   Heart,
   Tag,
   Ticket,
@@ -36,10 +35,6 @@ export const StreakIcon = (props: IconProps) => (
 export const GiveIcon = (props: IconProps) => <Gift aria-hidden focusable="false" {...props} />;
 /** View: a sticker up close, in its detail. */
 export const ViewIcon = (props: IconProps) => <Eye aria-hidden focusable="false" {...props} />;
-/** Offer: asking for someone else's sticker, or offering them something for it. */
-export const OfferIcon = (props: IconProps) => (
-  <Handshake aria-hidden focusable="false" {...props} />
-);
 /** Buying reserve tickets: every button that opens the reserve ticket checkout. */
 export const BuyTicketsIcon = (props: IconProps) => (
   <Ticket aria-hidden focusable="false" {...props} />
@@ -56,14 +51,12 @@ export {
   ArrowCounterClockwise,
   ArrowRight,
   ArrowSquareOut,
-  ArrowsLeftRight,
   ArrowUUpLeft,
   At,
   CaretDown,
   CaretLeft,
   CaretRight,
   CaretUp,
-  ChatCircleDots,
   Check,
   CheckFat,
   Circle,
