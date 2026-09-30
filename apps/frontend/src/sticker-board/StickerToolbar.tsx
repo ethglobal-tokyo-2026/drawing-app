@@ -1,9 +1,23 @@
-import { GiveIcon, RemoveIcon, ViewIcon } from "../icons";
+import {
+  CaretDown,
+  CaretLeft,
+  CaretRight,
+  CaretUp,
+  GiveIcon,
+  ArrowClockwise,
+  ArrowCounterClockwise,
+  Minus,
+  Plus,
+  RemoveIcon,
+  ViewIcon,
+  type Icon,
+} from "../icons";
 import { useEffectEvent, useLayoutEffect, useRef } from "react";
 import type { PersonView } from "../api/views";
 import { useTranslation } from "../i18n/react";
 import { ArtistChip } from "../stickers/ArtistChip";
 import { LabelButton } from "../ui/LabelButton";
+import type { Step } from "./boardGesture";
 import { toolbarSpot, type Box } from "./placement";
 
 interface Props {
@@ -24,12 +38,26 @@ interface Props {
   onView: () => void;
   /** Back into its used sticker silhouette in the sticker tray; someone else's board has none. */
   onRemove?: () => void;
+  /** Moves, turns or resizes it a step, for a press instead of a drag; someone else's board has none. */
+  onArrange?: (step: Step) => void;
   /** Escape hands focus back to the sticker. */
   onEscape: () => void;
   reduced: boolean;
   /** Its Original Artist, when someone other than the board's owner drew it: the chip heads the toolbar. */
   artist?: PersonView;
 }
+
+/** The Arrange row's buttons, in the order they read. */
+const ARRANGE: readonly { step: Step; Glyph: Icon }[] = [
+  { step: "left", Glyph: CaretLeft },
+  { step: "right", Glyph: CaretRight },
+  { step: "up", Glyph: CaretUp },
+  { step: "down", Glyph: CaretDown },
+  { step: "smaller", Glyph: Minus },
+  { step: "bigger", Glyph: Plus },
+  { step: "turnLeft", Glyph: ArrowCounterClockwise },
+  { step: "turnRight", Glyph: ArrowClockwise },
+];
 
 /** When a toolbar last went away; a new one within the handoff window is the same toolbar moving. */
 let lastHidden = -Infinity;
@@ -45,6 +73,7 @@ export function StickerToolbar({
   onGive,
   onView,
   onRemove,
+  onArrange,
   onEscape,
   reduced,
   artist,
@@ -114,6 +143,25 @@ export function StickerToolbar({
           </LabelButton>
         )}
       </div>
+      {onArrange && (
+        <div
+          className="sticker-toolbar__arrange"
+          role="group"
+          aria-label={t(($) => $.stickerBoard.toolbar.arrange.label)}
+        >
+          {ARRANGE.map(({ step, Glyph }) => (
+            <button
+              key={step}
+              type="button"
+              className="sticker-toolbar__step"
+              aria-label={t(($) => $.stickerBoard.toolbar.arrange[step])}
+              onClick={() => onArrange(step)}
+            >
+              <Glyph size={18} weight="bold" aria-hidden />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -79,6 +79,7 @@ import {
   markBoardComplete,
   usePreloadAfterBoard,
 } from "./boardComplete";
+import { markGreeted, owesGreeting } from "./artistChipGreeting";
 import { markChipsPlayed } from "./boardSettled";
 import { keepBoard, keptBoardFor } from "./lastBoard";
 import { BoardFlip } from "./stat-board/BoardFlip";
@@ -270,8 +271,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const [noticesClosed, setNoticesClosed] = useState<ReadonlySet<string>>(() => new Set());
   /** A sticker that just reached you, and its giver, while it has no gratitude yet. */
   const [owed, setOwed] = useState<{ gift: { id: string }; giver: PersonView } | null>(null);
-  /** The first-load artist chips have played, or a sticker was selected, which clears them. */
-  const [chipsDone, setChipsDone] = useState(false);
+  /** The artist chips have played on this app open, or a sticker was selected, which clears them. */
+  const [chipsDone, setChipsDone] = useState(() => !owesGreeting(account.id));
   const me = useIdentity();
   const giftSender = useGiftSender();
   const reduced = useReducedMotion();
@@ -479,7 +480,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // A received sticker landing names its artist alone; otherwise every foil sticker does, once.
   const landingByOther = onBoard.find((s) => s.id === landingId && byOther(s));
   const chips =
-    chipsDone || !field || !size
+    chipsDone || failed || !field || !size
       ? []
       : onBoard
           .filter((s) => byOther(s) && (!landingByOther || s.id === landingByOther.id))
@@ -488,6 +489,11 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
             artist: s.artist,
             box: stickerBox(field, size.W, s.placement, s),
           }));
+  // The greeting is spent as it starts, so coming back to the board, or leaving early, doesn't replay it.
+  const greeting = chips.length > 0;
+  useEffect(() => {
+    if (greeting) markGreeted(account.id);
+  }, [greeting, account.id]);
   const freshSticker = freshId ? stickers?.find((s) => s.id === freshId) : undefined;
 
   const setPlacement = (id: string, placement: Placement) =>
@@ -524,7 +530,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // Back turns the stat board back over, as LINE's Back does on any overlay.
   useBackToClose(turned, () => turn(false));
 
-  const { hold, stow, tabStop } = useBoardGestures({
+  const { hold, stow, arrange, tabStop } = useBoardGestures({
     stage,
     stickers: onBoard,
     field,
@@ -738,6 +744,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
                   {...(giftSender && { onGive: () => setGiving(s) })}
                   onView={() => openYours(s.id)}
                   onRemove={() => stow(s.id)}
+                  onArrange={(step) => arrange(s.id, step)}
                   {...(byOther(s) && { artist: s.artist })}
                   onEscape={() =>
                     stage.current
@@ -777,7 +784,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
         <div className="board-blank board-problem" role="alert" style={blankStyle}>
           <span className="board-blank-cut" aria-hidden />
           <span className="board-blank-note">{t(($) => $.stickerBoard.board.didntLoad)}</span>
-          <span className="fine board-problem-reason">{errorReason(board.error)}</span>
+          <p className="problem-note board-problem-reason">{errorReason(board.error)}</p>
           <LabelButton size="sm" onClick={board.retry}>
             {t(($) => $.stickerBoard.tryAgain)}
           </LabelButton>

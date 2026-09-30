@@ -9,11 +9,13 @@ import {
   passedSlop,
   pinchBy,
   scaleBy,
+  stepBy,
   turnBy,
   type Pt,
+  type Step,
 } from "./boardGesture";
 import type { BoardSticker } from "./boardSticker";
-import { clampS, sizeOf, toFrac, toPx, transformAt, type Field } from "./placement";
+import { sizeOf, toFrac, toPx, transformAt, type Field } from "./placement";
 import { focusStep, readingOrder } from "./stickerOrder";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 
@@ -62,17 +64,20 @@ const TAP_SLOP = 8;
 const EASE_PEEL = "cubic-bezier(0.2, 0.7, 0.2, 1)";
 /** Removed, a sticker rides to the tray's edge, this far in from the board's. */
 const STOW_EDGE = 30;
-const ARROWS: Record<string, Pt> = {
-  ArrowLeft: { x: -1, y: 0 },
-  ArrowRight: { x: 1, y: 0 },
-  ArrowUp: { x: 0, y: -1 },
-  ArrowDown: { x: 0, y: 1 },
+/** The step each key takes on the selected sticker. */
+const KEY_STEPS: Record<string, Step> = {
+  ArrowLeft: "left",
+  ArrowRight: "right",
+  ArrowUp: "up",
+  ArrowDown: "down",
+  "[": "turnLeft",
+  "]": "turnRight",
+  "-": "smaller",
+  "=": "bigger",
+  "+": "bigger",
 };
-/** How far one key press moves, turns or resizes a sticker. */
-const KEY_MOVE = 10;
-const KEY_TURN = 5;
-const KEY_GROW = 1.08;
-const KEY_SHRINK = 0.92;
+/** Steps apply as they come, and save once they've been quiet this long. */
+export const STEP_SAVE_IDLE_MS = 400;
 
 const round = (v: number, places: number) => Number(v.toFixed(places));
 
@@ -83,6 +88,7 @@ const round = (v: number, places: number) => Number(v.toFixed(places));
  *
  * The stickers take one Tab stop, `tabStop`, the one last focused. Focus alone doesn't select: the
  * arrow keys go between stickers until Enter or Space selects one, then they move it; Escape lets go.
+ * `arrange` takes the same steps for a button: moving, turning or resizing needs no drag.
  */
 export function useBoardGestures(options: Options) {
   const latest = useRef(options);
@@ -93,6 +99,7 @@ export function useBoardGestures(options: Options) {
   const [hold, setHold] = useState<Hold | null>(null);
   const [tabStop, setTabStop] = useState<string | null>(null);
   const stowing = useRef<(id: string) => void>(() => {});
+  const arranging = useRef<(id: string, step: Step) => void>(() => {});
 
   useEffect(() => {
     const stage = options.stage.current;
@@ -142,6 +149,32 @@ export function useBoardGestures(options: Options) {
 
     const focusSticker = (id: string) =>
       stage.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`)?.focus();
+
+    /** Steps on one sticker, drawn as they come and saved once, when they've been quiet. */
+    let stepped: { id: string; el: HTMLElement; live: Live; timer: number } | null = null;
+    const saveSteps = () => {
+      const s = stepped;
+      if (!s) return;
+      stepped = null;
+      clearTimeout(s.timer);
+      const sticker = stickerOf(s.id);
+      if (sticker) commit(s.el, sticker, s.live);
+    };
+    const step = (id: string, by: Step) => {
+      const { field } = latest.current;
+      const sticker = stickerOf(id);
+      const el = stage.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`);
+      if (!field || !sticker || !el || leaving.has(id)) return;
+      if (stepped && stepped.id !== id) saveSteps();
+      const from = stepped?.live ?? liveOf(sticker.placement, field);
+      const next = stepBy(from, by);
+      // Past the field's edge it holds at the edge, as a drag does.
+      const live = { ...next, ...toPx(field, toFrac(field, next)) };
+      draw(el, sticker, live);
+      if (stepped) clearTimeout(stepped.timer);
+      stepped = { id, el, live, timer: window.setTimeout(saveSteps, STEP_SAVE_IDLE_MS) };
+    };
+    arranging.current = step;
 
     /** The backing shows for a moment where a sticker was peeled up. */
     const peelMark = (sticker: BoardSticker, live: Live) => {
@@ -219,6 +252,7 @@ export function useBoardGestures(options: Options) {
      */
     let stowingId: string | null = null;
     const stow = async (id: string) => {
+      saveSteps();
       const { field, size, reduced } = latest.current;
       const sticker = stickerOf(id);
       if (!sticker || !field || !size || stowingId || leaving.has(id)) return;
@@ -287,6 +321,7 @@ export function useBoardGestures(options: Options) {
       if (e.button > 0 || !field || !(e.target instanceof Element)) return;
       // The toolbar's labels take their own presses.
       if (e.target.closest(".sticker-toolbar")) return;
+      saveSteps();
       if (pointers.size === 0) {
         const r = stage.getBoundingClientRect();
         origin = { left: r.left, top: r.top, k: r.width / (stage.offsetWidth || r.width || 1) };
@@ -429,11 +464,13 @@ export function useBoardGestures(options: Options) {
       if (!el || !sticker || leaving.has(sticker.id)) return;
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
+        saveSteps();
         if (selected === sticker.id) latest.current.onOpen(sticker.id);
         else latest.current.onSelect(sticker.id);
         return;
       }
       if (e.key === "Escape") {
+        saveSteps();
         // The tray's spread, or the tray, goes before the sticker is let go of; focus stays on it.
         if (latest.current.tray.current?.escape()) {
           e.preventDefault();
@@ -458,17 +495,14 @@ export function useBoardGestures(options: Options) {
         void stow(sticker.id);
         return;
       }
-      const b = liveOf(sticker.placement, field);
-      const arrow = ARROWS[e.key];
-      let next: Live | null = null;
-      if (arrow) next = { ...b, x: b.x + arrow.x * KEY_MOVE, y: b.y + arrow.y * KEY_MOVE };
-      else if (e.key === "[" || e.key === "]")
-        next = { ...b, r: b.r + (e.key === "]" ? KEY_TURN : -KEY_TURN) };
-      else if (e.key === "-" || e.key === "=" || e.key === "+")
-        next = { ...b, s: clampS(b.s * (e.key === "-" ? KEY_SHRINK : KEY_GROW)) };
-      if (!next) return;
+      const by = KEY_STEPS[e.key];
+      if (!by) return;
       e.preventDefault();
-      commit(el, sticker, next);
+      step(sticker.id, by);
+    };
+
+    const onBlur = (e: FocusEvent) => {
+      if (!(e.relatedTarget instanceof Node) || !stage.contains(e.relatedTarget)) saveSteps();
     };
 
     // The sticker last focused, by any means, is the one Tab comes back to.
@@ -484,7 +518,11 @@ export function useBoardGestures(options: Options) {
     stage.addEventListener("pointercancel", onUp);
     stage.addEventListener("keydown", onKey);
     stage.addEventListener("focusin", onFocus);
+    // Focus leaving the board takes the steps not yet saved with it.
+    stage.addEventListener("focusout", onBlur);
     return () => {
+      saveSteps();
+      stage.removeEventListener("focusout", onBlur);
       stage.removeEventListener("pointerdown", onDown);
       stage.removeEventListener("pointermove", onMove);
       stage.removeEventListener("pointerup", onUp);
@@ -492,9 +530,11 @@ export function useBoardGestures(options: Options) {
       stage.removeEventListener("keydown", onKey);
       stage.removeEventListener("focusin", onFocus);
       stowing.current = () => {};
+      arranging.current = () => {};
     };
   }, [options.stage]);
 
   const stow = useCallback((id: string) => stowing.current(id), []);
-  return { hold, stow, tabStop };
+  const arrange = useCallback((id: string, by: Step) => arranging.current(id, by), []);
+  return { hold, stow, arrange, tabStop };
 }

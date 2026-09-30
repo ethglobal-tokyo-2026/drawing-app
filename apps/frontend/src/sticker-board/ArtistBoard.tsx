@@ -31,6 +31,8 @@ import { QuietLink } from "../ui/QuietLink";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
+import { ArtistChipLayer } from "./ArtistChipLayer";
+import { markGreeted, owesGreeting } from "./artistChipGreeting";
 import { onTheBoard, toBoardSticker, type BoardStickerView } from "./boardSticker";
 import { boxOf, fieldOf, kept, stickerBox, toPx, type Box, type Field } from "./placement";
 import { PlacedSticker } from "./PlacedSticker";
@@ -145,6 +147,8 @@ export function ArtistBoard({ person, onBack }: Props) {
   const [tabStop, setTabStop] = useState<string | null>(null);
   const [viewing, setViewing] = useState<BoardStickerView | null>(null);
   const [giving, setGiving] = useState(false);
+  /** Their foil stickers' artist chips have played on this app open, or a sticker was selected. */
+  const [chipsDone, setChipsDone] = useState(() => !owesGreeting(person.id));
   useLight(!turned);
 
   // It opens over Explore, which goes inert, so focus starts on their name.
@@ -179,6 +183,19 @@ export function ArtistBoard({ person, onBack }: Props) {
   const inOrder = order.flatMap((id) => stickers.filter((s) => s.id === id));
   const tabbable = [tabStop, selected].find((id) => id && order.includes(id)) ?? order[0];
   const byOther = (s: BoardStickerView) => s.artist.id !== person.id;
+  const chips =
+    chipsDone || board.state === "failed" || !field || !size
+      ? []
+      : stickers.filter(byOther).map((s) => ({
+          id: s.id,
+          artist: s.artist,
+          box: stickerBox(field, size.W, s.placement, s),
+        }));
+  // The greeting is spent as it starts, so coming back to their board, or leaving early, doesn't replay it.
+  const greeting = chips.length > 0;
+  useEffect(() => {
+    if (greeting) markGreeted(person.id);
+  }, [greeting, person.id]);
 
   // LINE's header shows the page title.
   useEffect(() => {
@@ -212,6 +229,7 @@ export function ArtistBoard({ person, onBack }: Props) {
       return;
     }
     setSelected(tapped.id);
+    setChipsDone(true);
     tapped.el.focus({ preventScroll: true, focusVisible: false });
   };
   const onStageKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -220,6 +238,7 @@ export function ArtistBoard({ person, onBack }: Props) {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       setSelected(from.id === selected ? null : from.id);
+      setChipsDone(true);
     } else if (e.key === "Escape") {
       if (selected) setSelected(null);
     } else {
@@ -311,7 +330,7 @@ export function ArtistBoard({ person, onBack }: Props) {
           </div>
         )}
         {board.state === "failed" && (
-          <div className="board-blank" role="alert">
+          <div className="board-blank board-problem" role="alert">
             <span className="board-blank-note">
               {t(($) => $.stickerBoard.artistBoard.didntLoad, {
                 name: handle,
@@ -363,6 +382,15 @@ export function ArtistBoard({ person, onBack }: Props) {
             </Fragment>
           ))}
       </div>
+
+      {chips.length > 0 && size && (
+        <ArtistChipLayer
+          chips={chips}
+          board={size}
+          onDone={() => setChipsDone(true)}
+          reduced={reduced}
+        />
+      )}
     </div>
   );
 

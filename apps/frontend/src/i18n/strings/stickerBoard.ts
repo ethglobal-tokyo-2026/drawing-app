@@ -302,7 +302,10 @@ export const stickerBoard = {
     /** Your sticker board while its stickers load: read out to screen readers as faint placeholder stickers show */
     loading: { en: "Loading your stickers", ja: "シールを読み込んでいます" },
     /** Your sticker board, when your stickers fail to load: the alert in the dashed spot, above the reason and Try again */
-    didntLoad: { en: "Your stickers didn’t load.", ja: "シールを読み込めませんでした。" },
+    didntLoad: {
+      en: "Your stickers didn’t load. Try again in a moment.",
+      ja: "シールを読み込めませんでした。少し待ってから、もう一度お試しください。",
+    },
     /** Your sticker board: the alert when one moved sticker's new position didn't save; {{stickers}} is its number, {{reasons}} why */
     unsaved_one: { en: "Couldn’t save where {{stickers}} sits: {{reasons}}" },
     /** Your sticker board: the alert when moved stickers' new positions didn't save; {{stickers}} lists their numbers, {{reasons}} why */
@@ -334,6 +337,27 @@ export const stickerBoard = {
     view: { en: "View", ja: "見る" },
     /** Your sticker board, a sticker selected: the toolbar's Remove key, which takes it off the board and back into the sticker tray */
     remove: { en: "Remove", ja: "はがす" },
+    /** The toolbar's row of buttons that arrange the selected sticker without dragging it: each names what one press does. */
+    arrange: {
+      /** Your sticker board, a sticker selected: screen readers' name for the toolbar's row of arrange buttons */
+      label: { en: "Arrange", ja: "配置を変える" },
+      /** Your sticker board, a sticker selected: the arrange button that moves it a step to the left */
+      left: { en: "Move left", ja: "左へ動かす" },
+      /** Your sticker board, a sticker selected: the arrange button that moves it a step to the right */
+      right: { en: "Move right", ja: "右へ動かす" },
+      /** Your sticker board, a sticker selected: the arrange button that moves it a step up */
+      up: { en: "Move up", ja: "上へ動かす" },
+      /** Your sticker board, a sticker selected: the arrange button that moves it a step down */
+      down: { en: "Move down", ja: "下へ動かす" },
+      /** Your sticker board, a sticker selected: the arrange button that makes it a step smaller */
+      smaller: { en: "Smaller", ja: "小さくする" },
+      /** Your sticker board, a sticker selected: the arrange button that makes it a step bigger */
+      bigger: { en: "Bigger", ja: "大きくする" },
+      /** Your sticker board, a sticker selected: the arrange button that turns it a step counterclockwise */
+      turnLeft: { en: "Turn left", ja: "左に回す" },
+      /** Your sticker board, a sticker selected: the arrange button that turns it a step clockwise */
+      turnRight: { en: "Turn right", ja: "右に回す" },
+    },
   },
   /** The sticker tray, zipped down the board's right edge. */
   tray: {

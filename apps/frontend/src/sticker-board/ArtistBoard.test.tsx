@@ -4,6 +4,7 @@ import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { boardSticker, people, sticker } from "../api/testFixtures";
 import { emptyApi, renderWithApi } from "../api/testing";
+import { forgetGreetings } from "./artistChipGreeting";
 import { ArtistBoard } from "./ArtistBoard";
 
 // Someone's stat board mounts behind the front; nothing here needs LINE.
@@ -18,6 +19,7 @@ afterEach(() => {
 
 // The board's size sets where stickers sit and so their reading order; happy-dom measures none.
 beforeEach(() => {
+  forgetGreetings();
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(390);
   vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(741);
 });
@@ -54,6 +56,26 @@ const stickersIn = (host: HTMLElement) => [
 const focus = (el: HTMLElement) => act(() => el.focus());
 const press = (el: Element, key: string) =>
   act(() => void el.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true })));
+
+describe("ArtistBoard's greeting", () => {
+  const chipsIn = (host: HTMLElement) => host.querySelectorAll(".artist-chip-layer__chip").length;
+
+  it("names the artists of their foil stickers as it first opens, and not again on this app open", async () => {
+    const first = await visit(three());
+    // Two of the three were drawn by @mika, not by @ken whose board it is.
+    expect(chipsIn(first)).toBe(2);
+    unmount();
+
+    const again = await visit(three());
+    expect(chipsIn(again)).toBe(0);
+  });
+
+  it("clears the greeting once a sticker is selected", async () => {
+    const host = await visit(three());
+    act(() => stickersIn(host)[0]?.click());
+    expect(chipsIn(host)).toBe(0);
+  });
+});
 
 describe("ArtistBoard's keys", () => {
   it("starts on their name, and has the stickers one Tab stop, in reading order", async () => {

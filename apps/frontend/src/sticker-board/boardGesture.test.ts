@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { passedSlop, pinchBy, scaleBy, turnBy, type Pt } from "./boardGesture";
+import { passedSlop, pinchBy, scaleBy, stepBy, turnBy, type Pt } from "./boardGesture";
 import { S_MAX } from "./placement";
 
 const center = { x: 100, y: 100 };
@@ -19,6 +19,16 @@ describe("board gestures", () => {
     expect(turnBy(center, from, turned, 0)).toBeCloseTo(4);
     expect(turnBy(center, from, nudged, 358)).toBe(0);
     expect(turnBy(center, from, nudged, 350)).toBeCloseTo(352.5);
+  });
+
+  it("steps undo each other, and a size step stops at the board's limits", () => {
+    const at = { x: 100, y: 100, s: 0.3, r: 10 };
+    expect(stepBy(stepBy(at, "left"), "right")).toEqual(at);
+    expect(stepBy(stepBy(at, "up"), "down")).toEqual(at);
+    expect(stepBy(stepBy(at, "turnLeft"), "turnRight")).toEqual(at);
+    expect(stepBy(at, "bigger").s).toBeGreaterThan(at.s);
+    expect(stepBy(at, "smaller").s).toBeLessThan(at.s);
+    expect(stepBy({ ...at, s: S_MAX }, "bigger").s).toBe(S_MAX);
   });
 
   it("scales with the handle's distance from the centre, within the board's limits", () => {
