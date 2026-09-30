@@ -812,9 +812,10 @@
   font-size: calc(var(--fs-fine) / var(--k, 1));
 }
 
+/* The house ring, drawn at its own size on the shrunk sheet. */
 .tray__cell:focus-visible {
-  outline: 3px solid var(--seal);
-  outline-offset: 4px;
+  outline: calc(2px / var(--k, 1)) solid var(--ink);
+  outline-offset: calc(3px / var(--k, 1));
   border-radius: 4px;
 }
 

@@ -389,6 +389,8 @@ export const stickerBoard = {
       en: "Sheet {{number}}, {{dates}}, pulled out",
       ja: "シート{{number}}、{{dates}}、引き出し中",
     },
+    /** Sticker tray, sheets spread over the board: screen readers' name for the dialog that holds every sheet, one button each */
+    spread: { en: "Your sticker sheets, spread out", ja: "広げた手持ちのシールシート" },
     /** Sticker tray, sheets spread over the board: screen readers' name for the sheet that's in front now */
     sheetInFront: {
       en: "Sheet {{number}}, {{dates}}, in front now. Bring it to the front",

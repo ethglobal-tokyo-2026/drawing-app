@@ -340,6 +340,32 @@ describe("StickerTray", () => {
     expect(frontSheet()?.getAttribute("data-f")).toBe(newest);
   });
 
+  it("spreads the sheets as a named dialog of one button each, with the board inert behind it until it closes", async () => {
+    render(manyStickers(60));
+    const elsewhere = document.createElement("button");
+    board.append(elsewhere);
+    await openTray();
+    act(() => board.querySelector<HTMLElement>(".tray__depth")?.click());
+
+    const dialog = board.querySelector<HTMLElement>('[role="dialog"]');
+    expect(dialog?.getAttribute("aria-label")).toBeTruthy();
+    const cells = dialog?.querySelectorAll(".tray__cell") ?? [];
+    expect(cells.length).toBeGreaterThan(1);
+    // Nothing nested in a sheet: the stickers on it are pictures.
+    expect(dialog?.querySelectorAll("button")).toHaveLength(cells.length);
+    expect(dialog?.hasAttribute("inert")).toBe(false);
+    expect(elsewhere.hasAttribute("inert")).toBe(true);
+    expect(board.querySelector(".tray__col")?.hasAttribute("inert")).toBe(true);
+    // Opened from the keyboard, focus follows into the dialog.
+    expect(document.activeElement).toBe(cells[0]);
+
+    await act(async () => void tray.current?.escape());
+    expect(dialog?.hidden).toBe(true);
+    expect(elsewhere.hasAttribute("inert")).toBe(false);
+    expect(board.querySelector(".tray__col")?.hasAttribute("inert")).toBe(false);
+    expect(stackEl()?.contains(document.activeElement)).toBe(true);
+  });
+
   it("takes the folder tabs, then the front sheet's stickers, then the edges of the sheets behind in Tab order, and nothing hidden", async () => {
     // Enough sheets for the +N button.
     render(stickersWithGifts(60));

@@ -13,6 +13,7 @@ import type { StickerUrls } from "../../stickers/stickerUrls";
 import { ticketDay } from "../../tickets/tickets";
 import { packSheets, type PackedItem, type Shape } from "./sheetPacking";
 import { knownShape, stickerShape } from "./stickerShape";
+import { inertBesides } from "./inertBesides";
 import { countVisit } from "./traySeen";
 import { newSlots, type TraySlot } from "./traySlots";
 import { createZipper, mouthRange, showsFrom, type Zipper } from "./zipper";
@@ -405,7 +406,12 @@ export function createTrayEngine(
     new: i18next.t(($) => $.stickerBoard.tray.new),
     putBack: i18next.t(($) => $.stickerBoard.tray.putBack),
     slotHint: i18next.t(($) => $.stickerBoard.tray.slotHint),
+    spread: i18next.t(($) => $.stickerBoard.tray.spread),
   };
+  // The spread covers the board, which goes inert behind it. It isn't aria-modal: the tab bar, which
+  // it doesn't cover, stays reachable by every means.
+  spreadLayer.setAttribute("role", "dialog");
+  spreadLayer.setAttribute("aria-label", words.spread);
   /** What the sheet in front's stickers do, said once for the sheet instead of on every sticker. */
   const hint = make("p", "visually-hidden", words.slotHint);
   hint.id = `tray-hint-${++trays}`;
@@ -2043,9 +2049,13 @@ export function createTrayEngine(
     x: colLeft() + (ui.geo ? ui.geo.chainX : COL - 15) - 0.97 * GMAX + 3 + 3 + shrunkInset(),
     y: TOP + STACK_Y,
   });
+  /** Undoes the inert board behind the open spread. */
+  let endAside: (() => void) | null = null;
   function openSpread({ focus = false } = {}) {
     // Every sheet spreads out, the pulled-out one too, in front.
     if (ui.pulled) void sendHome({ instant: true });
+    // What had focus goes inert below, so focus follows into the spread.
+    const hadFocus = holdsFocus(stack);
     ui.spreadOpen = true;
     spreadLayer.hidden = false;
     spreadLayer.classList.add("is-on");
@@ -2095,7 +2105,9 @@ export function createTrayEngine(
     }
     mat.style.opacity = "1";
     zip.relax(0.55);
-    if (focus) els[0]?.focus({ preventScroll: true });
+    endAside?.();
+    endAside = inertBesides(spreadLayer, board);
+    if (focus || hadFocus) els[0]?.focus({ preventScroll: true });
   }
   /** Back into the tray, with sheet `f`, the one tapped, in front. */
   async function closeSpread(f = topF()) {
@@ -2143,6 +2155,8 @@ export function createTrayEngine(
     renderStack();
     spreadLayer.classList.remove("is-on");
     spreadLayer.hidden = true;
+    endAside?.();
+    endAside = null;
     for (const a of mat.getAnimations()) a.cancel();
     mat.style.opacity = "0";
     ui.spreadOpen = false;
@@ -2249,6 +2263,7 @@ export function createTrayEngine(
       const peel = ui.g?.peel;
       if (peel) win.cancelAnimationFrame(peel.raf);
       ui.pulled?.listening.abort();
+      endAside?.();
       listening.abort();
       zip.destroy();
       root.remove();
