@@ -111,10 +111,10 @@ export default function App() {
     if (view === "explore") void ArtistBoard.preload();
   }, [view]);
 
-  // Gratitude that hadn't reached the server when the app last closed goes again as it starts.
+  // Your gratitude that hadn't reached the server when the app last closed goes again as it starts.
   useEffect(() => {
-    void resendPendingGratitude(api);
-  }, [api]);
+    void resendPendingGratitude(api, me.id);
+  }, [api, me.id]);
   // Paid packs whose tickets the server hadn't added are asked for again too.
   useAddUnaddedPurchases();
 

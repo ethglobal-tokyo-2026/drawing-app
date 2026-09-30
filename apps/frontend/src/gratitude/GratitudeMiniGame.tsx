@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { RecordGratitude, ReplayV1 } from "@drawing-app/api/client";
+import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
 import { formatCount } from "../i18n/format";
 import { Trans, useTranslation } from "../i18n/react";
@@ -102,6 +103,7 @@ export function GratitudeMiniGame({
 }: Props) {
   const { t } = useTranslation();
   const api = useApi();
+  const { id: userId } = useMe();
   const reduced = useReducedMotion();
   /** The finished combo, once its ending has played: the receipt shows it. */
   const [ended, setEnded] = useState<ComboRecord | null>(null);
@@ -125,6 +127,7 @@ export function GratitudeMiniGame({
   // The engine mounts once per screen; its callbacks read the latest props through this.
   const latest = useRef({
     api,
+    userId,
     giftId,
     onEnd,
     stickerId: sticker.id,
@@ -136,6 +139,7 @@ export function GratitudeMiniGame({
   useLayoutEffect(() => {
     latest.current = {
       api,
+      userId,
       giftId,
       onEnd,
       stickerId: sticker.id,
@@ -149,9 +153,9 @@ export function GratitudeMiniGame({
   useLayoutEffect(() => {
     // The gratitude outbox keeps the combo on this device before its request goes.
     const record = (combo: ComboRecord, replay: ReplayV1) => {
-      const { api: client, giftId, onEnd: ended, stickerId } = latest.current;
+      const { api: client, userId, giftId, onEnd: ended, stickerId } = latest.current;
       if (giftId) {
-        void sendGratitude(client, gratitudeFor(giftId, combo, replay)).then((sent) => {
+        void sendGratitude(client, userId, gratitudeFor(giftId, combo, replay)).then((sent) => {
           if (sent.state === "refused") setRefused(true);
         });
       }

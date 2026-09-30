@@ -12,7 +12,7 @@ After receiving a sticker, the receiver taps, strokes or shakes a heart to make 
 
 **Where it opens:** from a received sticker. Once one sticks to your board, the Send gratitude sheet (`receiving/SendGratitudeSheet.tsx`) asks whether to send its giver gratitude now. Later leaves it for the sticker's detail, which offers Send gratitude until that gift has gratitude.
 
-**Where the result goes:** `gratitudeOutbox.ts` keeps the finished combo on the device, then sends it to `POST /api/gratitude`. A combo the server hasn't recorded or refused goes again each time the app starts.
+**Where the result goes:** `gratitudeOutbox.ts` keeps the finished combo on the device, in a list of the person who played it, then sends it to `POST /api/gratitude`. A combo the server hasn't recorded or refused goes again each time the app starts with that person signed in. An entry the outbox can't read stays as it is, unsent, and a list it can't read is never written over.
 
 **The demo:** "Try the gratitude mini-game", on the stat board's developer slip, opens it for your newest sticker on the board, with you as the giver, and records nothing. With no stickers it's disabled and says "Draw a sticker first". The dev server shows the slip unless `VITE_DEV_SLIP=off`, and a build shows it only with `VITE_DEV_SLIP=on`, which `deploy/deploy.sh` sets. Two switches, kept on the device, sit beside it: Full effects and Show frame times.
 

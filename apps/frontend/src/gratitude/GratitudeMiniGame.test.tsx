@@ -4,8 +4,9 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { ApiProvider } from "../api/ApiProvider";
+import { MeHolder } from "../api/MeHolder";
 import { gratitudeOf } from "../api/testing";
-import { emptyApi } from "../api/testing";
+import { emptyApi, TEST_ME } from "../api/testing";
 import { i18next } from "../i18n/i18n";
 import { GratitudeMiniGame, type GratitudeResult } from "./GratitudeMiniGame";
 import { TIER_NAMES } from "./tierNames";
@@ -36,17 +37,19 @@ let root: Root;
 const open = (props: Partial<ComponentProps<typeof GratitudeMiniGame>> = {}) =>
   act(() =>
     root.render(
-      <ApiProvider client={emptyApi({ recordGratitude })}>
-        <GratitudeMiniGame
-          sticker={sticker}
-          giver={giver}
-          intensity={0.7}
-          showFrameTimes={false}
-          onEnd={onEnd}
-          onClose={onClose}
-          {...props}
-        />
-      </ApiProvider>,
+      <MeHolder me={TEST_ME}>
+        <ApiProvider client={emptyApi({ recordGratitude })}>
+          <GratitudeMiniGame
+            sticker={sticker}
+            giver={giver}
+            intensity={0.7}
+            showFrameTimes={false}
+            onEnd={onEnd}
+            onClose={onClose}
+            {...props}
+          />
+        </ApiProvider>
+      </MeHolder>,
     ),
   );
 const heart = () => {
