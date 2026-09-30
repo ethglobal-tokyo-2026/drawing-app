@@ -18,6 +18,9 @@ Calls the lanes made that are merged, and want your yes:
 - **The stroke unlock.** Fast passes made before the first tap no longer count toward switching to stroke, so a replay switches where its combo did.
 - **The Back key.** A Back pressed within 250 ms of an overlay closing by itself is spent on the closed overlay (`STEP_BACK_HOLD_MS`, a guess), so it can't take a second history entry.
 - **A sheet's perforation.** A move over 8 px counts as a drag, not a tap (a guess).
+- **A seal retry turned away as signed out** keeps the sheet locked for the seal key, even on the first try, when the server can't hold a seal yet: only the seal route's own refusals reopen the sheet.
+- **A seal that went out before a reload, on a ticket spent before today**, whose drawing can't be read back: the ticket is dropped rather than risk a new drawing being answered with the old sticker. It costs that ticket.
+- **A cut that fails on the phone every time at 0:00** stays locked for the seal key instead of throwing the drawing away.
 - **A screen that crashes while rendering** still unmounts the app. Only a screen whose code fails to load shows the Reload note; catching render crashes needs an error boundary around the whole app.
 
 ## Fix lanes
@@ -56,7 +59,7 @@ Wave 3, once the lanes above are merged, since these touch every area:
 
 [The review of these lanes' fixes](../../review/2026-10-01-frontend-fixes-code-review.md) found 12 bugs in them: 2 high, 4 medium, 6 low. Follow-up lanes fix them:
 
-- [ ] Sealing: R2-1 to R2-4
+- [x] Sealing: R2-1 to R2-4
 - [ ] Your sticker board's kept answer: R4-1
 - [ ] Tickets: R1-1 to R1-3
 - [ ] Giving: R3-1 to R3-4
