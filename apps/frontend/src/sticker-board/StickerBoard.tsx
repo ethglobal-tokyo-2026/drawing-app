@@ -580,7 +580,10 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     remove: removeFromBoard,
     openGiven: (id) => setOpen({ id, mode: "given" }),
     pulse: (id) => {
-      const lift = stickerEl(id)?.querySelector<HTMLElement>(".placed-sticker__lift");
+      const sticker = stickerEl(id);
+      // Its hole's Show it: a screen reader can't see the pulse, so focus goes to the sticker.
+      sticker?.focus({ preventScroll: true });
+      const lift = sticker?.querySelector<HTMLElement>(".placed-sticker__lift");
       if (!lift) return;
       if (reduced)
         lift.animate([{ opacity: 1 }, { opacity: 0.4 }, { opacity: 1 }], { duration: 400 });

@@ -340,6 +340,49 @@ describe("StickerTray", () => {
     expect(frontSheet()?.getAttribute("data-f")).toBe(newest);
   });
 
+  describe("says in its one polite status line", () => {
+    const statusText = () => board.querySelector('[role="status"]')?.textContent;
+
+    it("how many sheets a folder tab shows", async () => {
+      render(stickersWithGifts(30));
+      await openTray();
+      expect(statusText()).toBe("");
+      act(() => board.querySelector<HTMLElement>('.tray__tab[data-filter="gifts"]')?.click());
+      expect(statusText()).toMatch(/^Gifts: \d+ sheets?$/);
+    });
+
+    it("which sheet is in front after paging", async () => {
+      render(manyStickers(30));
+      await openTray();
+      pageDown();
+      await act(async () => {});
+      expect(statusText()).toBe(
+        `Sheet ${Number(frontSheet()?.getAttribute("data-f")) + 1}, ${
+          frontSheet()?.querySelector(".tray__foot .fine")?.textContent
+        }, in front`,
+      );
+    });
+
+    it("that a sticker is on the board once it's stuck on", async () => {
+      // The board answers with the sticker's element once it has drawn it.
+      render(manyStickers(8), { place: () => Promise.resolve(document.createElement("div")) });
+      await openTray();
+      const slot = frontSheet()?.querySelector<HTMLElement>('.tray__slot[data-state="here"]');
+      const no = slot?.getAttribute("aria-label");
+      act(() => {
+        slot?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      });
+      await act(async () => {});
+      expect(statusText()).toBe(`${no} is on your board`);
+    });
+
+    it("that a sticker is back in the tray once it's put back", async () => {
+      render([sticker("a", 1, true)]);
+      await act(async () => void (await tray.current?.boardDrop("a", { x: 380, y: 300 })));
+      expect(statusText()).toBe("No.0001 is back in your tray");
+    });
+  });
+
   it("brings forward the edge a press falls in the share of, though it lands below its thin strip", async () => {
     render(manyStickers(60));
     await openTray();

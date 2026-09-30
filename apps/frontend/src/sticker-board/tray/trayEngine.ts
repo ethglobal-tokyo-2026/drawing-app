@@ -64,7 +64,7 @@ export interface TrayBoard {
   place: (id: string, at?: { x: number; y: number; r: number }) => Promise<HTMLElement | null>;
   /** A sticker went back into its used sticker silhouette. */
   remove: (id: string) => void;
-  /** Shows where a sticker is on the board. */
+  /** Shows where a sticker is on the board, and moves focus to it. */
   pulse: (id: string) => void;
   /** Opens a given sticker's detail, among the stickers you gave. */
   openGiven: (id: string) => void;
@@ -416,7 +416,13 @@ export function createTrayEngine(
   /** What the sheet in front's stickers do, said once for the sheet instead of on every sticker. */
   const hint = make("p", "visually-hidden", words.slotHint);
   hint.id = `tray-hint-${++trays}`;
-  root.append(hint);
+  /** What the tray tells screen readers as it changes: one polite status line. */
+  const status = make("p", "visually-hidden");
+  status.setAttribute("role", "status");
+  root.append(hint, status);
+  const say = (text: string) => {
+    status.textContent = text;
+  };
   const stack = make("div", "tray__stack");
   stack.setAttribute("role", "group");
   stack.setAttribute("aria-label", words.sheets);
@@ -663,6 +669,21 @@ export function createTrayEngine(
         return i18next.t(($) => $.stickerBoard.tray.pulledSheet, sheet);
     }
   };
+  /** Says which sheet is in front. */
+  const sayFront = () => say(sheetLabel(topF(), "front"));
+  /** Says a sticker went from its sheet onto the board, or from the board back into the tray. */
+  const sayStuckOn = (s: Slot) =>
+    say(i18next.t(($) => $.stickerBoard.tray.status.stuckOn, { no: formatNo(s.no) }));
+  const sayReturned = (s: Slot) =>
+    say(i18next.t(($) => $.stickerBoard.tray.status.returned, { no: formatNo(s.no) }));
+  /** Says how many sheets a folder tab shows, or that a filter shows none. */
+  const sayFilter = () =>
+    say(
+      i18next.t(($) => $.stickerBoard.tray.status.filtered, {
+        filter: i18next.t(($) => $.stickerBoard.tray.filters[ui.filter]),
+        count: Array.from({ length: model.count }, (_, f) => f).filter(sheetMatches).length,
+      }),
+    );
   /**
    * A loose sheet: a tear strip to grip at its top, stickers on their cut lines, its dates on its foot.
    * Behind the front sheet only its foot is a stop; in the spread the whole sheet is one button, so
@@ -936,7 +957,7 @@ export function createTrayEngine(
         fill,
       });
   /** One step: +1 sends the front sheet to the back, -1 brings the back one to the front. */
-  async function page(dir: 1 | -1, { fromY = 0, quick = false } = {}) {
+  async function page(dir: 1 | -1, { fromY = 0, quick = false, silent = false } = {}) {
     // One turn at a time: a key held down, or pressed mid-shuffle, doesn't start another.
     if (ui.busy) return;
     const order = ui.order;
@@ -953,6 +974,7 @@ export function createTrayEngine(
       ui.order = turned;
       renderStack();
       if (reduced()) stack.animate([{ opacity: 0.5 }, { opacity: 1 }], { duration: 150 });
+      if (!silent) sayFront();
       return;
     }
     ui.busy = true;
@@ -1025,6 +1047,7 @@ export function createTrayEngine(
     }
     ui.busy = false;
     catchUp();
+    if (!silent) sayFront();
   }
   /** How many times a folder tab has dealt the stack anew, so a riffle can tell it's out of date. */
   let deals = 0;
@@ -1041,6 +1064,7 @@ export function createTrayEngine(
     if (instant || !zip.isOpen || reduced()) {
       ui.order = [...ui.order.slice(i), ...ui.order.slice(0, i)];
       renderStack();
+      if (!instant) sayFront();
       return;
     }
     // A tab chosen mid-riffle deals the newest match to the front: the rest of the riffle would turn
@@ -1048,7 +1072,9 @@ export function createTrayEngine(
     const dealt = deals;
     const hops = i <= ui.order.length / 2 ? i : ui.order.length - i;
     const dir = i <= ui.order.length / 2 ? 1 : -1;
-    for (let hop = 0; hop < hops && deals === dealt; hop++) await page(dir, { quick: true });
+    for (let hop = 0; hop < hops && deals === dealt; hop++)
+      await page(dir, { quick: true, silent: true });
+    if (deals === dealt) sayFront();
   }
 
   /* ---------------------------------------------------------------- gestures on the stack. The first move decides:
@@ -1283,6 +1309,7 @@ export function createTrayEngine(
       if (reduced() && zip.isOpen)
         stack.animate([{ opacity: 0.4 }, { opacity: 1 }], { duration: 160 });
       if (again) catchUp();
+      sayFilter();
       return;
     }
     const token = {};
@@ -1399,6 +1426,7 @@ export function createTrayEngine(
       shuffling = null;
       ui.busy = false;
       catchUp();
+      sayFilter();
     }
   }
 
@@ -1721,7 +1749,10 @@ export function createTrayEngine(
     if (!ui.pulled) holdOpen(420);
     // In hand until the board has drawn it where it lands.
     api.place(pk.s.id, { x: pk.x, y: pk.y, r: rot }).then(
-      () => pk.el.remove(),
+      (placed) => {
+        pk.el.remove();
+        if (placed) sayStuckOn(pk.s);
+      },
       (error: unknown) => {
         reportPlace(pk.s, error);
         pk.el.remove();
@@ -1860,6 +1891,7 @@ export function createTrayEngine(
           { duration: 220, easing: EASE_PEEL },
         );
     }
+    if (onBoard) sayStuckOn(s);
     if (!ui.pulled) holdOpen(160);
   }
   /**
@@ -2051,6 +2083,7 @@ export function createTrayEngine(
         reduced() ? 500 : 900,
       );
     }
+    sayReturned(s);
     return true;
   }
 
@@ -2173,6 +2206,7 @@ export function createTrayEngine(
     ui.spreadOpen = false;
     for (const c of cells) c.remove();
     if (focused && zip.isOpen) keepFocus(undefined);
+    sayFront();
   }
   // A sheet tapped comes to the front; the lining puts them all back as they were.
   listen(spreadLayer, "click", (e) => {

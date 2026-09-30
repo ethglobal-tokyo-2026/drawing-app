@@ -398,6 +398,17 @@ export const stickerBoard = {
     },
     /** Sticker tray: screen readers' name for the X on a sheet pulled out over the board */
     putBack: { en: "Put this sheet back in the tray", ja: "このシートをシールトレイに戻す" },
+    /** Sticker tray: what screen readers are told as the tray changes, in one status line. */
+    status: {
+      /** Sticker tray, after a folder tab is chosen: what screen readers are told; {{filter}} is the tab's name, such as "Gifts", and {{count}} is how many sheets it shows */
+      filtered_one: { en: "{{filter}}: {{count}} sheet" },
+      /** Sticker tray, after a folder tab is chosen: what screen readers are told; {{filter}} is the tab's name, such as "Gifts", and {{count}} is how many sheets it shows */
+      filtered_other: { en: "{{filter}}: {{count}} sheets", ja: "{{filter}}：{{count}}枚のシート" },
+      /** Sticker tray, after a sticker is stuck on the board from a sheet: what screen readers are told; {{no}} is its number, such as "No.0147" */
+      stuckOn: { en: "{{no}} is on your board", ja: "{{no}}をボードに貼りました" },
+      /** Sticker tray, after a board sticker goes back into its sheet: what screen readers are told; {{no}} is its number, such as "No.0147" */
+      returned: { en: "{{no}} is back in your tray", ja: "{{no}}をトレイに戻しました" },
+    },
   },
   /** One sticker large, paging through the rest. */
   detail: {

@@ -179,6 +179,31 @@ describe("StickerBoard after a gift", () => {
   });
 });
 
+describe("StickerBoard's sticker tray", () => {
+  it("moves focus to a sticker on the board when its hole's Show it is pressed", async () => {
+    const a = boardSticker({ placement: at(0.3) });
+    const api = emptyApi({
+      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [a] }),
+    });
+    const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
+    unmount = view.unmount;
+    await act(async () => {});
+    await act(() => vi.dynamicImportSettled());
+    const hole = view.host.querySelector<HTMLElement>(`.tray__slot[data-id="${a.stickerId}"]`);
+    expect(hole?.getAttribute("aria-label")).toMatch(/on your board\. Show it$/);
+
+    act(() => {
+      hole?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(document.activeElement).toBe(
+      view.host.querySelector(`[data-sticker-id="${a.stickerId}"]`),
+    );
+  });
+});
+
 describe("StickerBoard after sending a gift", () => {
   it("loads again when its fresh load had failed, so the sticker on its way leaves the board", async () => {
     const a = boardSticker({ placement: at(0.3) });
