@@ -14,7 +14,7 @@ import type { Sticker, TicketUse } from "@drawing-app/api/client";
 import { ApiError, apiError, type ApiClient } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
-import { errorReason } from "../i18n/errorMessage";
+import { errorMessage, errorReason } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
 import { OutOfTickets } from "../tickets/OutOfTickets";
 import { StartDrawing } from "../tickets/StartDrawing";
@@ -460,9 +460,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         console.error(`Spending ${spent ? "the sheet's" : `a ${kind}`} ticket failed`, failure);
         setSpending(false);
         setRightAway(false);
-        setStartProblem(
-          t(($) => $.stickerCreation.startNote.ticketFailed, { reason: errorReason(failure) }),
-        );
+        // The server's own English detail is left to the log above: the card says it in the app's language.
+        setStartProblem(errorMessage(failure));
         // A refusal says the tickets changed. With no answer, the card goes on offering the spend it
         // tried, whose key a retry sends again.
         const refused = failure.status >= 400 && failure.status < 500;
@@ -873,7 +872,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           leaving={!ask}
           onLeft={() => setAskShown(null)}
           busy={spending}
-          note={startProblem}
+          failure={startProblem}
           onStart={(kind) => start(kind)}
           onShop={() => setOverlay("shop")}
           onBoard={onGoToBoard}

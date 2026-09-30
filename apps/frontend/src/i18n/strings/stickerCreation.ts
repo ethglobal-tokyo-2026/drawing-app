@@ -68,14 +68,6 @@ export const stickerCreation = {
       },
     },
   },
-  /** The start card's notes about this sheet. */
-  startNote: {
-    /** Drawing screen, the card that comes up when a ticket couldn't be spent on a fresh sheet (Draw, Keep drawing, or the reserve ask's key): a note under its line; {{reason}} is the server's error message */
-    ticketFailed: {
-      en: "Couldn’t use a ticket. {{reason}}",
-      ja: "チケットを使えませんでした。{{reason}}",
-    },
-  },
   /** The seal key, and the chip over it. */
   seal: {
     /** Drawing screen, bottom right: the seal key's name for screen readers until its first tap arms it; the key shows a check mark */

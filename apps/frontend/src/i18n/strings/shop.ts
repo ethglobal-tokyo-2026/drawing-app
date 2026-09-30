@@ -21,6 +21,11 @@ export const shop = {
       en: "You have {{count}} reserve tickets.",
       ja: "有償チケットを{{count}}枚持っています。",
     },
+    /** Reserve tickets section, in the held tickets' place, when your tickets didn't load, so the Shop can't say how many you hold; `reason` is why, in the app's language, before a Try again link */
+    heldProblem: {
+      en: "Couldn’t load your tickets: {{reason}}",
+      ja: "チケットを読み込めませんでした：{{reason}}",
+    },
     /** Reserve tickets section: the one-ticket price, while a bigger pack is discounted; `price` is in yen */
     priceWithPacks: {
       en: "{{price}} each, less in packs",
@@ -30,6 +35,23 @@ export const shop = {
     price: { en: "{{price}} each", ja: "1枚{{price}}" },
     /** Reserve tickets section: the blue key that opens the reserve ticket checkout */
     buy: { en: "Buy reserve tickets", ja: "有償チケットを買う" },
+  },
+  /** The strip under the Shop's title for a paid pack whose tickets weren't added, which opens the reserve ticket checkout on that payment */
+  unadded: {
+    /** Shop, the strip under the title while this phone keeps a payment whose tickets aren't added yet: its title */
+    title: { en: "Tickets not added yet", ja: "チケットが未追加です" },
+    /** Shop, that strip: the line under its title; `pack` is what was paid for, such as "3 tickets", and `price` is what it cost in yen */
+    line: {
+      en: "{{pack}}, {{price}}. Tap to add them; it won’t charge you twice.",
+      ja: "{{pack}}（{{price}}）。タップして追加できます。二重に請求されることはありません。",
+    },
+    /** Shop, the strip once the server refused that payment for good: its title */
+    refusedTitle: { en: "Tickets can’t be added", ja: "チケットを追加できません" },
+    /** Shop, that strip: the line under its title, since the checkout says why once; `pack` and `price` as above */
+    refusedLine: {
+      en: "{{pack}}, {{price}}. Tap to see why.",
+      ja: "{{pack}}（{{price}}）。タップして理由を確認できます。",
+    },
   },
   /** The Sui credit, under the checkout's Pay key and at the foot of the reserve tickets section; `<logo/>` is Sui's logo, which Japanese puts first */
   paymentsOn: { en: "Payments on <logo/>", ja: "<logo/>で決済" },
