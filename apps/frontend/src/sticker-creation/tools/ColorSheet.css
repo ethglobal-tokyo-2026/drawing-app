@@ -1,3 +1,32 @@
+/* The sheet never covers more than half the screen, so the sticker stays in view while a color is
+   chosen. Its content scrolls under the perforation, and the swatches, last, are what waits behind it. */
+.bottom-sheet.color-sheet {
+  display: flex;
+  flex-direction: column;
+  max-height: 52%;
+  padding-bottom: 0;
+}
+
+.color-sheet .perf {
+  flex: none;
+}
+
+/* Reaches the sheet's edges, so the rings and thumbs that overhang its content aren't clipped. */
+.color-picker {
+  min-height: 0;
+  margin: 0 -20px;
+  padding: 0 20px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* On a short screen the pad gives way, so the first row of swatches shows under the bar. */
+@media (max-height: 640px) {
+  .color-picker .color-pad {
+    height: 72px;
+  }
+}
+
 .color-head {
   display: flex;
   align-items: center;
@@ -30,7 +59,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
+  min-height: 44px;
 }
 
 .color-label {
@@ -46,17 +75,17 @@
 
 .color-recent-row {
   display: flex;
-  gap: 8px;
+  gap: 12px;
 }
 
-/* A sheet of dot labels. */
+/* A sheet of dot labels, a 44px row each. */
 .color-swatches {
   display: grid;
   grid-template-columns: repeat(10, 1fr);
-  gap: 8px 0;
+  gap: 18px 0;
   justify-items: center;
-  padding: 12px 8px;
-  margin-bottom: 12px;
+  padding: 9px 8px;
+  margin-top: 12px;
   background: var(--canvas);
   border-radius: 8px;
   box-shadow:
@@ -81,16 +110,20 @@
     box-shadow 140ms var(--ease-out);
 }
 
-/* Each dot takes taps across its whole cell, so a tap in the gap between two still picks one. */
+/* Each dot takes taps across its whole cell, 44px tall, so a tap in the gap between two still picks one. */
 .swatch::after {
   content: "";
   position: absolute;
-  inset: -4px;
+  inset: -9px -3px;
 }
 
 .swatch.is-small {
   width: 22px;
   height: 22px;
+}
+
+.swatch.is-small::after {
+  inset: -11px -6px;
 }
 
 .swatch:active {
@@ -134,15 +167,21 @@
   pointer-events: none;
 }
 
+/* A 44px touch band round a 22px bar. */
 .color-brightness {
   position: relative;
-  height: 22px;
-  margin-top: 10px;
+  height: 44px;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.color-brightness::before {
+  content: "";
+  position: absolute;
+  inset: 11px 0;
   border-radius: 999px;
   background: linear-gradient(90deg, #000, var(--full));
   box-shadow: inset 0 0 0 1px var(--rule);
-  cursor: ew-resize;
-  touch-action: none;
 }
 
 .color-brightness-thumb {

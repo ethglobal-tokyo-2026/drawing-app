@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import type { StickerDetail as StickerDetailResponse } from "@drawing-app/api/client";
 import { useApiQuery } from "../api/useApiQuery";
 import { toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
+import { isGratitudeWaiting, onGratitudeLeftOutbox } from "../gratitude/gratitudeOutbox";
 import { errorReason } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
 import { EnsNameLink } from "../identity/EnsNameLink";
@@ -81,10 +82,13 @@ const DETAIL: LiftView = {
   enter: enterAround,
 };
 
-/** The gift you owe gratitude for: the sticker's newest gift to you, while that has no gratitude. */
+/**
+ * The gift you owe gratitude for: the sticker's newest gift to you, while that has no gratitude. A
+ * combo still on its way to the server counts as sent: another would only be refused.
+ */
 function owedGratitude({ sticker, owner, transferTrail }: StickerDetailResponse) {
   const toYou = transferTrail.find((entry) => entry.receiver.id === owner.id);
-  return toYou && toYou.gratitude === null
+  return toYou && toYou.gratitude === null && !isGratitudeWaiting(owner.id, toYou.giftId)
     ? { gift: { id: toYou.giftId }, sticker: toSticker(sticker), giver: toPerson(toYou.giver) }
     : null;
 }
@@ -120,9 +124,28 @@ export function StickerDetail({
     shownStickerId ? api.stickerDetail(shownStickerId) : Promise.resolve(null),
   );
   const loaded = detail.state === "ready" ? detail.data : null;
+  // Gratitude kept on this phone that the server has now recorded or refused: the trail is read
+  // again, and until it lands, what was read before can't say whether gratitude is owed.
+  const [outOfDate, setOutOfDate] = useState<StickerDetailResponse | null>(null);
+  const readAgain = detail.state === "ready" ? detail.refresh : null;
+  useEffect(
+    () =>
+      readAgain
+        ? onGratitudeLeftOutbox(() => {
+            setOutOfDate(loaded);
+            readAgain();
+          })
+        : undefined,
+    [readAgain, loaded],
+  );
   const trail = useMemo(() => (loaded ? toTrailRows(loaded.transferTrail) : []), [loaded]);
   const owed =
-    mode === "yours" && onSendGratitude && sticker && !onItsWay(sticker) && loaded
+    mode === "yours" &&
+    onSendGratitude &&
+    sticker &&
+    !onItsWay(sticker) &&
+    loaded &&
+    loaded !== outOfDate
       ? owedGratitude(loaded)
       : null;
 

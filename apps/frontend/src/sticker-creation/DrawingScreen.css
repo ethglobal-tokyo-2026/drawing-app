@@ -48,6 +48,14 @@
   transition-duration: 220ms;
 }
 
+/* Once faded, the tools leave the tab order and the screen reader's too, so only the seal key is left. */
+.drawing-screen:is(.is-sealing, .is-retrying)
+  :is(.drawing-top, .smoothing-bar, .size-rail, .history-buttons) {
+  visibility: hidden;
+  transition-property: opacity, visibility;
+  transition-delay: 0s, 220ms;
+}
+
 /* Keep drawing: the fresh sheet's timer and tools come back a beat after the sealed card starts to
    leave, so the eye goes with the card first, and the sheet is never bare. */
 .drawing-screen:has(> .seal-ceremony.is-leaving) :is(.drawing-top, .size-rail, .history-buttons) {

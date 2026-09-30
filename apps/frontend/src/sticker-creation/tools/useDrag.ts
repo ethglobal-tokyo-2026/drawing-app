@@ -1,8 +1,8 @@
 import { useRef, type PointerEvent as ReactPointerEvent } from "react";
 
 interface Drag {
-  /** The drag began. */
-  onStart?: () => void;
+  /** The drag began where the pointer landed, in the element's box. */
+  onStart?: (x: number, y: number, box: DOMRect) => void;
   /** Each move of the drag, with the element's box as it began. Draws the drag; sets no React state. */
   onMove: (x: number, y: number, box: DOMRect) => void;
   /** The drag ended, lifted or taken by the browser: keep what it showed. */
@@ -26,7 +26,7 @@ export function useDrag({ onStart, onMove, onEnd }: Drag) {
       e.preventDefault();
       box.current = e.currentTarget.getBoundingClientRect();
       e.currentTarget.setPointerCapture(e.pointerId);
-      onStart?.();
+      onStart?.(e.clientX, e.clientY, box.current);
       onMove(e.clientX, e.clientY, box.current);
     },
     onPointerMove: (e: ReactPointerEvent<HTMLElement>) => {

@@ -68,9 +68,10 @@ interface Pending {
 
 /**
  * `userId`'s list, by idempotency key. Null when storage is blocked or holds something other than a
- * list: nothing in it can be sent, and nothing may be written over it.
+ * list: nothing in it can be sent, and nothing may be written over it. With `quiet`, what can't be
+ * read isn't logged: a screen only asking what waits would repeat it at every render.
  */
-function readPending(userId: string): Pending | null {
+function readPending(userId: string, quiet = false): Pending | null {
   const { text: raw, blocked } = readStored(
     keyFor(userId),
     "Gratitude waiting to be sent can't be read on this device",
@@ -79,15 +80,17 @@ function readPending(userId: string): Pending | null {
   if (raw === null) return { combos: new Map(), unreadable: [] };
   const value = parseStored(raw);
   if (!Array.isArray(value)) {
-    console.error(
-      "Gratitude waiting to be sent is unreadable, so none of it is sent and nothing is kept over it:",
-      raw,
-    );
+    if (!quiet) {
+      console.error(
+        "Gratitude waiting to be sent is unreadable, so none of it is sent and nothing is kept over it:",
+        raw,
+      );
+    }
     return null;
   }
   const entries: unknown[] = value;
   const unreadable = entries.filter((entry) => !isKept(entry));
-  if (unreadable.length > 0) {
+  if (unreadable.length > 0 && !quiet) {
     console.error(
       "Gratitude waiting to be sent has entries that are unreadable, so they stay on this device unsent:",
       JSON.stringify(unreadable),
@@ -114,8 +117,37 @@ function changePending(userId: string, edit: (combos: Map<string, Kept>) => bool
   return !edit(pending.combos) || writePending(userId, pending);
 }
 
-const forget = (userId: string, idempotencyKey: string) =>
-  changePending(userId, (combos) => combos.delete(idempotencyKey));
+/** A combo that has left the outbox, and how: the server recorded it, or refused it for good. */
+interface GratitudeLeft {
+  idempotencyKey: string;
+  result: Exclude<GratitudeSendResult, { state: "kept" }>;
+}
+
+/** Screens showing what waits, told when a combo has left the outbox. */
+const leftListeners = new Set<(left: GratitudeLeft) => void>();
+
+/**
+ * Calls `listener` whenever the server has recorded or refused a combo, on its first send or a
+ * later one, so a screen that showed it as waiting can say what became of it. Returns what stops it.
+ */
+export function onGratitudeLeftOutbox(listener: (left: GratitudeLeft) => void): () => void {
+  leftListeners.add(listener);
+  return () => void leftListeners.delete(listener);
+}
+
+function forget(userId: string, left: GratitudeLeft) {
+  changePending(userId, (combos) => combos.delete(left.idempotencyKey));
+  for (const listener of leftListeners) listener(left);
+}
+
+/**
+ * Whether `userId`'s outbox holds a combo for `giftId`, in play or finished: its gratitude is on its
+ * way to the server, so a second combo for the gift would only be refused.
+ */
+export function isGratitudeWaiting(userId: string, giftId: string): boolean {
+  const kept = readPending(userId, true)?.combos.values() ?? [];
+  return [...kept].some(({ body }) => body.giftId === giftId);
+}
 
 /** Keys with a request out, so a resend doesn't repeat a send still waiting on its answer. */
 const sending = new Set<string>();
@@ -130,12 +162,12 @@ async function send(
   sending.add(key);
   try {
     await api.recordGratitude(body);
-    forget(userId, key);
+    forget(userId, { idempotencyKey: key, result: { state: "recorded" } });
     return { state: "recorded" };
   } catch (caught) {
     const error = apiError(caught);
     if (isRefusal(error)) {
-      forget(userId, key);
+      forget(userId, { idempotencyKey: key, result: { state: "refused", error } });
       console.error(
         `The server refused the gratitude for gift ${body.giftId} (${describeError(error)}), so this device no longer keeps it:`,
         body,
@@ -143,7 +175,7 @@ async function send(
       return { state: "refused", error };
     }
     console.warn(
-      `The gratitude for gift ${body.giftId} didn't reach the server (${describeError(error)}); this device keeps it and sends it again when the app next opens`,
+      `The gratitude for gift ${body.giftId} didn't reach the server (${describeError(error)}); this device keeps it and sends it again when the phone is back online, the app comes back to the front or it next opens`,
     );
     return { state: "kept" };
   } finally {
@@ -185,7 +217,8 @@ export function sendGratitude(
 }
 
 /**
- * Sends every combo this device keeps for `userId`, one at a time. The app runs it once as it starts.
+ * Sends every combo this device keeps for `userId`, one at a time. The app runs it as it starts, and
+ * again whenever the phone comes back online or the app comes back to the front.
  * A combo kept in play was left by a page torn down mid-combo, unless another tab is still playing
  * it and sends it as it ends; so it goes once that tab would have ended it, as it's kept then.
  */
@@ -207,4 +240,23 @@ export async function resendPendingGratitude(api: Recorder, userId: string): Pro
     }
     await send(api, userId, kept.body);
   }
+}
+
+/**
+ * Sends `userId`'s kept combos now, and again whenever the phone comes back online or the app comes
+ * back to the front, so a combo kept for want of a connection doesn't wait for the next launch.
+ * Returns what stops it.
+ */
+export function resendGratitudeWhenReachable(api: Recorder, userId: string): () => void {
+  const resend = () => void resendPendingGratitude(api, userId);
+  const onVisibility = () => {
+    if (document.visibilityState === "visible") resend();
+  };
+  resend();
+  window.addEventListener("online", resend);
+  document.addEventListener("visibilitychange", onVisibility);
+  return () => {
+    window.removeEventListener("online", resend);
+    document.removeEventListener("visibilitychange", onVisibility);
+  };
 }

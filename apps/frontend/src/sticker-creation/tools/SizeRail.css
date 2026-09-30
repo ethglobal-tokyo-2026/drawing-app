@@ -5,9 +5,14 @@
   z-index: 3;
   width: 40px;
   height: 222px;
-  touch-action: none;
-  cursor: ns-resize;
+  /* The rail's box is paper: only the thumb takes a finger, so a stroke starting beside it draws. */
+  pointer-events: none;
   transition: opacity var(--t-pop) var(--ease-out);
+}
+
+/* While the ceremony or a seal to try again owns the screen, the rail is hidden and the thumb with it. */
+.drawing-screen:is(.is-sealing, .is-retrying) .size-thumb {
+  pointer-events: none;
 }
 
 .size-track {
@@ -80,7 +85,17 @@
   box-shadow:
     inset 0 0 0 1px var(--rule-strong),
     var(--shadow-label);
+  pointer-events: auto;
+  touch-action: none;
+  cursor: ns-resize;
   transition: transform 120ms var(--ease-out);
+}
+
+/* The thumb takes a finger from a 44px square round it. */
+.size-thumb::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
 }
 
 .size-rail.is-active .size-thumb,

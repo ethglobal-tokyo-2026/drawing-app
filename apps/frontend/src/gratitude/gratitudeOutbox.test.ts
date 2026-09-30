@@ -4,7 +4,14 @@ import { ApiError, type ApiClient } from "../api/apiClient";
 import { gratitudeOf } from "../api/testing";
 import { recordGratitudeBody } from "../api/testing";
 import { GAME_CONFIG } from "./gameConfig";
-import { keepGratitudeInPlay, resendPendingGratitude, sendGratitude } from "./gratitudeOutbox";
+import {
+  isGratitudeWaiting,
+  keepGratitudeInPlay,
+  onGratitudeLeftOutbox,
+  resendGratitudeWhenReachable,
+  resendPendingGratitude,
+  sendGratitude,
+} from "./gratitudeOutbox";
 
 const body = recordGratitudeBody();
 /** The person signed in, and someone else who signs in on the same device. */
@@ -129,5 +136,89 @@ describe("the gratitude outbox", () => {
     await expect(sendGratitude(api, ME, body)).resolves.toEqual({ state: "recorded" });
     expect(api.recordGratitude).toHaveBeenCalledExactlyOnceWith(body);
     expect(stored()).toBe("{not a list");
+  });
+});
+
+describe("gratitude waiting in the outbox", () => {
+  const noAnswer = () => server(new TypeError("Failed to fetch"));
+
+  it("is known for its gift from the moment it's kept until the server records or refuses it", async () => {
+    expect(isGratitudeWaiting(ME, body.giftId)).toBe(false);
+    await sendGratitude(noAnswer(), ME, body);
+    expect(isGratitudeWaiting(ME, body.giftId)).toBe(true);
+    // Only for that gift, and only for the person it was kept for.
+    expect(isGratitudeWaiting(ME, "another-gift")).toBe(false);
+    expect(isGratitudeWaiting(SOMEONE_ELSE, body.giftId)).toBe(false);
+    await nextOpenSends();
+    expect(isGratitudeWaiting(ME, body.giftId)).toBe(false);
+  });
+
+  it("counts a combo still in play, which a page torn down leaves to send", () => {
+    keepGratitudeInPlay(ME, body);
+    expect(isGratitudeWaiting(ME, body.giftId)).toBe(true);
+  });
+
+  it("asks without logging a list it can't read, which sending and keeping log", () => {
+    store("{not a list");
+    expect(isGratitudeWaiting(ME, body.giftId)).toBe(false);
+    expect(console.error).not.toHaveBeenCalled();
+  });
+
+  it("tells a screen when a kept combo has left, recorded or refused, but not when one is kept", async () => {
+    const left = vi.fn();
+    const stop = onGratitudeLeftOutbox(left);
+    await sendGratitude(noAnswer(), ME, body);
+    expect(left).not.toHaveBeenCalled();
+    await nextOpenSends();
+    expect(left).toHaveBeenCalledExactlyOnceWith({
+      idempotencyKey: body.idempotencyKey,
+      result: { state: "recorded" },
+    });
+    await sendGratitude(
+      server(new ApiError(409, { error: "gratitude_already_recorded" })),
+      ME,
+      body,
+    );
+    expect(left).toHaveBeenCalledTimes(2);
+    expect(left.mock.lastCall?.[0]).toMatchObject({
+      idempotencyKey: body.idempotencyKey,
+      result: { state: "refused", error: { status: 409 } },
+    });
+    stop();
+    await sendGratitude(server("records"), ME, body);
+    expect(left).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("sending kept gratitude again while the app stays open", () => {
+  /** The page's visibility, as the app sees it; `state` is what `document.visibilityState` says. */
+  const showPage = (state: "hidden" | "visible") => {
+    Object.defineProperty(document, "visibilityState", { value: state, configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+  };
+  afterEach(() => Reflect.deleteProperty(document, "visibilityState"));
+
+  it("sends what's kept as the app starts, and again when the phone is back online or the app is back in front", async () => {
+    await sendGratitude(server(new TypeError("Failed to fetch")), ME, body);
+    // Still no connection: each try keeps it.
+    const api = server(new TypeError("Failed to fetch"));
+    const stop = resendGratitudeWhenReachable(api, ME);
+    await vi.waitFor(() => expect(api.recordGratitude).toHaveBeenCalledTimes(1));
+
+    window.dispatchEvent(new Event("online"));
+    await vi.waitFor(() => expect(api.recordGratitude).toHaveBeenCalledTimes(2));
+
+    // Going to the background sends nothing; coming back does.
+    showPage("hidden");
+    showPage("visible");
+    await vi.waitFor(() => expect(api.recordGratitude).toHaveBeenCalledTimes(3));
+    expect(api.recordGratitude.mock.calls.map(([sent]) => sent)).toEqual([body, body, body]);
+
+    // Once stopped, nothing else sends it.
+    stop();
+    window.dispatchEvent(new Event("online"));
+    showPage("visible");
+    await Promise.resolve();
+    expect(api.recordGratitude).toHaveBeenCalledTimes(3);
   });
 });
