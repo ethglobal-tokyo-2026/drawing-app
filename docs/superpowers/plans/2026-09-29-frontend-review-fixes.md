@@ -33,7 +33,7 @@ Wave 2, as wave 1's lanes finish:
 
 - [x] Seal ceremony: DRAW-14, DRAW-16, DRAW-17
 - [x] Gratitude visuals: GRAT-4 to GRAT-7, GRAT-9, GRAT-10, GRAT-12, GRAT-13
-- [ ] Dates in Tokyo's day: EXPL-3, TRAY-3, CLEAN-5, CLEAN-7, CLEAN-13, CLEAN-15 (EXPL-1 and EXPL-2 go with the frontend audit's `ux/explore` lane)
+- [x] Dates in Tokyo's day: EXPL-3, TRAY-3, CLEAN-5, CLEAN-7, CLEAN-13, CLEAN-15 (EXPL-1 and EXPL-2 go with the frontend audit's `ux/explore` lane)
 
 Wave 3, once the lanes above are merged, since these touch every area:
 
