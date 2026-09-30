@@ -92,6 +92,48 @@ export function decodeTimelapse(timelapse: TimelapseV1): DecodedTimelapse {
   };
 }
 
+/** CRC-32 as gzip's trailer carries it, one table entry per byte value. */
+const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+
+function crc32(bytes: Uint8Array): number {
+  let crc = 0xffffffff;
+  for (const byte of bytes) crc = (CRC_TABLE[(crc ^ byte) & 0xff] ?? 0) ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+/** The most bytes one stored deflate block holds. */
+const STORED_BLOCK_BYTES = 0xffff;
+const GZIP_HEADER = [0x1f, 0x8b, 8, 0, 0, 0, 0, 0, 0, 0xff];
+
+/**
+ * `data` as gzip that stores it uncompressed, for browsers without CompressionStream (iOS before
+ * 16.4): the server reads it as any other gzip.
+ */
+function storedGzip(data: Uint8Array): Blob {
+  const parts: Uint8Array[] = [Uint8Array.from(GZIP_HEADER)];
+  let at = 0;
+  do {
+    const block = data.subarray(at, at + STORED_BLOCK_BYTES);
+    at += block.length;
+    const head = new Uint8Array(5);
+    const view = new DataView(head.buffer);
+    head[0] = at >= data.length ? 1 : 0;
+    view.setUint16(1, block.length, true);
+    view.setUint16(3, ~block.length & 0xffff, true);
+    parts.push(head, block);
+  } while (at < data.length);
+  const trailer = new Uint8Array(8);
+  const view = new DataView(trailer.buffer);
+  view.setUint32(0, crc32(data), true);
+  view.setUint32(4, data.length >>> 0, true);
+  parts.push(trailer);
+  return new Blob(parts.map((part) => part.slice()));
+}
+
 /**
  * The timelapse gzipped for POST /api/stickers, or null when it's over the server's limit: the
  * sticker then seals without one, rather than not at all.
@@ -100,10 +142,13 @@ export async function gzipTimelapse(
   timelapse: TimelapseV1,
   report: (message: string) => void = console.error,
 ): Promise<Blob | null> {
-  const gzipped = new Blob([JSON.stringify(timelapse)])
-    .stream()
-    .pipeThrough(new CompressionStream("gzip"));
-  const blob = await new Response(gzipped).blob();
+  const json = JSON.stringify(timelapse);
+  const blob =
+    typeof CompressionStream === "function"
+      ? await new Response(
+          new Blob([json]).stream().pipeThrough(new CompressionStream("gzip")),
+        ).blob()
+      : storedGzip(new TextEncoder().encode(json));
   if (blob.size <= MAX_TIMELAPSE_BYTES) return blob;
   report(
     `The timelapse is ${blob.size} bytes gzipped, over the server's limit of ${MAX_TIMELAPSE_BYTES}, so the sticker seals without it`,
