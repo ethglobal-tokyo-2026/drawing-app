@@ -28,9 +28,11 @@ import {
   type GiftChain,
   type Mint,
   type NameWriter,
+  type ReadContracts,
   type SmartWallets,
 } from "../deps.ts";
 import { diagnosticStep, logFailure, logInfo } from "../diagnostics.ts";
+import { readConfiguredContracts } from "./contractReads.ts";
 import type { DiskImageStore } from "./imageStore.ts";
 
 /** How long finding the block a Sticker event landed in may take. */
@@ -81,6 +83,7 @@ export function createStickerChain({
   stickerContract,
   escrowContract,
   namesContract,
+  resolverContract,
   sealerPrivateKey,
   smartWallets,
   images,
@@ -89,18 +92,27 @@ export function createStickerChain({
   stickerContract: string;
   escrowContract: string;
   namesContract: string;
+  resolverContract: string;
   sealerPrivateKey: Hex;
   smartWallets: SmartWallets;
   images: DiskImageStore;
-}): { mint: Mint; giftChain: GiftChain; nameWriter: NameWriter } {
+}): { mint: Mint; giftChain: GiftChain; nameWriter: NameWriter; readContracts: ReadContracts } {
   const stickerAddress = address(stickerContract, "STICKER_NFT_ADDRESS");
   const escrowAddress = address(escrowContract, "STICKER_GIFT_ESCROW_ADDRESS");
+  const namesAddress = address(namesContract, "CROQUIS_NAMES_ADDRESS");
   // Minting, Receiving and the expiry sweep share the relayer; concurrent requests need distinct
   // nonces.
   const sealerAccount = privateKeyToAccount(sealerPrivateKey, { nonceManager });
   const transport = rpcTransport(rpcUrl);
   const publicClient = createPublicClient({ chain: sepolia, transport });
   const walletClient = createWalletClient({ chain: sepolia, transport, account: sealerAccount });
+  const configured = {
+    relayer: sealerAccount.address,
+    stickers: stickerAddress,
+    escrow: escrowAddress,
+    names: namesAddress,
+    resolver: address(resolverContract, "CROQUIS_RESOLVER_ADDRESS"),
+  };
 
   // Historical state locates the transition without asking a provider to search the whole chain.
   const eventBlock = async (
@@ -433,7 +445,7 @@ export function createStickerChain({
     publicClient,
     walletClient,
     account: sealerAccount,
-    namesAddress: address(namesContract, "CROQUIS_NAMES_ADDRESS"),
+    namesAddress,
     onProgress: ({ stage, phase, txHash, error }) => {
       const fields = { chainId: sepolia.id, contractAddress: namesContract, txHash };
       if (phase === "failed") logFailure(`chain.ens.${stage}.failed`, error, fields);
@@ -447,5 +459,10 @@ export function createStickerChain({
     setAvatar: (person, avatar) => croquisNames.setAvatar(address(person, "Person"), avatar),
   };
 
-  return { mint, giftChain, nameWriter };
+  return {
+    mint,
+    giftChain,
+    nameWriter,
+    readContracts: () => readConfiguredContracts(publicClient, configured),
+  };
 }

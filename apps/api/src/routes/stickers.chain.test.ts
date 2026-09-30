@@ -102,6 +102,7 @@ describe("Sealing through the REST API and NFT contract", () => {
         stickerContract: contractAddress,
         escrowContract: zeroAddress,
         namesContract: zeroAddress,
+        resolverContract: zeroAddress,
         sealerPrivateKey: toHex(privateKey),
         smartWallets,
         images,

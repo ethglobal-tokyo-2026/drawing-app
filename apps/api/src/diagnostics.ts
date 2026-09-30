@@ -38,6 +38,20 @@ export interface DiagnosticFields {
   closed?: number;
   left?: number;
   failed?: number;
+  /** Why a step was skipped, in words. */
+  reason?: string;
+  /** Whether naming is on, as the contract check left it. */
+  naming?: "on" | "off";
+  /**
+   * The contract check's results, each true when the configured contracts agree: the relayer holds
+   * NAMER_ROLE; CroquisNames, CroquisResolver and the escrow read the configured StickerNFT; the
+   * escrow names the configured CroquisNames.
+   */
+  namerRole?: boolean;
+  namesStickers?: boolean;
+  resolverStickers?: boolean;
+  escrowSticker?: boolean;
+  escrowNames?: boolean;
 }
 
 const requests = new AsyncLocalStorage<RequestContext>();
@@ -171,6 +185,13 @@ const loggedFields = {
   closed: true,
   left: true,
   failed: true,
+  reason: true,
+  naming: true,
+  namerRole: true,
+  namesStickers: true,
+  resolverStickers: true,
+  escrowSticker: true,
+  escrowNames: true,
 } satisfies Record<keyof DiagnosticFields, true>;
 
 const isLoggedField = (key: string): key is keyof DiagnosticFields =>

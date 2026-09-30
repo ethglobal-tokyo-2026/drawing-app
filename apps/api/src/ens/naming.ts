@@ -1,9 +1,11 @@
-import { stickers, users } from "@drawing-app/db";
+import { stickers, users, type Db } from "@drawing-app/db";
 import { stickerAvatar, stickerLabel } from "@drawing-app/sticker-chain/croquis-names";
-import { and, asc, desc, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, or } from "drizzle-orm";
 import { isAddress } from "viem";
-import type { AppDeps, EnsDeps, NamingQueue } from "../deps.ts";
+import type { AppDeps, EnsDeps, NamingQueue, NamingState, ReadContracts } from "../deps.ts";
 import { logFailure, logInfo } from "../diagnostics.ts";
+import { startMidnightJob, type Schedule } from "../midnightJob.ts";
+import { checkContracts } from "./contractCheck.ts";
 import { syncEnsLabel } from "./labels.ts";
 
 /** A naming job's longest run: a person name, a few sticker names and an avatar, each a transaction. */
@@ -102,13 +104,87 @@ export function queueNaming(deps: AppDeps, userId: string) {
 }
 
 /**
+ * Live people with a smart wallet whose names aren't all onchain: theirs, or a minted sticker's
+ * they drew.
+ */
+const unnamedPeople = (db: Db) =>
+  db
+    .select({ id: users.id })
+    .from(users)
+    .where(
+      and(
+        isNull(users.deletedAt),
+        isNotNull(users.smartAccountAddress),
+        or(
+          isNull(users.ensNamedAt),
+          inArray(
+            users.id,
+            db
+              .select({ artistId: stickers.artistId })
+              .from(stickers)
+              .where(and(isNotNull(stickers.tokenId), isNull(stickers.ensNamedAt))),
+          ),
+        ),
+      ),
+    )
+    .orderBy(asc(users.createdAt))
+    .all();
+
+/**
+ * The naming catch-up: while naming is on, queues naming for everyone whose names aren't all
+ * onchain. Resolves how many it queued.
+ */
+export async function queueUnnamed(deps: AppDeps): Promise<number> {
+  const { ens } = deps;
+  if (!ens?.writer) return 0;
+  const state = await ens.naming.state();
+  if (!state.on) {
+    logInfo("ens.naming.catch_up.skipped", { status: "naming_off", reason: state.reason });
+    return 0;
+  }
+  const people = unnamedPeople(deps.db);
+  for (const { id } of people) queueNaming(deps, id);
+  logInfo("ens.naming.catch_up.queued", { count: people.length });
+  return people.length;
+}
+
+/**
+ * The contract check, then the naming catch-up: at boot, then just after each midnight, Tokyo time,
+ * so a name a failed or skipped job left undone waits a day at most, and naming comes back on once
+ * the contracts agree. Null without an ENS writer.
+ */
+export function startNamingCatchUp(
+  deps: AppDeps & { schedule?: Schedule },
+  readContracts: ReadContracts,
+) {
+  const { ens, clock, schedule } = deps;
+  if (!ens?.writer) return null;
+  const { naming } = ens;
+  return startMidnightJob(
+    { clock, schedule },
+    {
+      failedEvent: "ens.naming.catch_up_failed",
+      run: async () => {
+        const checked = naming.state().then((current) => checkContracts(readContracts, current));
+        naming.setState(checked);
+        await checked;
+        await queueUnnamed(deps);
+        return null;
+      },
+    },
+  );
+}
+
+/**
  * Runs one job at a time and logs every failure. A job still running at NAMING_JOB_TIMEOUT_MS is
  * logged then, and the next waits for it to end: nothing can stop a job, and two at once would send
- * ENS transactions at once.
+ * ENS transactions at once. While naming is off, each job is skipped instead of sending a
+ * transaction that reverts or names another StickerNFT's sticker.
  */
 export function createNamingQueue(): NamingQueue {
   const waiting = new Set<string>();
   let tail: Promise<void> = Promise.resolve();
+  let state: Promise<NamingState> = Promise.resolve({ on: true });
   return {
     enqueue(key, job) {
       if (waiting.has(key)) return;
@@ -124,6 +200,15 @@ export function createNamingQueue(): NamingQueue {
           logFailure("ens.naming.timed_out", overdue, fields());
         }, NAMING_JOB_TIMEOUT_MS);
         try {
+          const now = await state;
+          if (!now.on) {
+            logInfo("ens.naming.skipped", {
+              userId: key,
+              status: "naming_off",
+              reason: now.reason,
+            });
+            return;
+          }
           await job();
           logInfo("ens.naming.completed", fields());
         } catch (error) {
@@ -134,5 +219,9 @@ export function createNamingQueue(): NamingQueue {
       });
     },
     idle: () => tail,
+    setState(next) {
+      state = next;
+    },
+    state: () => state,
   };
 }
