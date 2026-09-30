@@ -103,6 +103,18 @@ async function pullTheTab() {
   await settle(1000);
 }
 
+/** Finger `pointerId` on the pull tab, at `clientX` along the strip. */
+const onTheTab = (
+  type: "pointerdown" | "pointermove" | "pointerup",
+  pointerId: number,
+  clientX: number,
+) =>
+  act(() => {
+    const tab = document.querySelector("[role=slider]");
+    if (!tab) throw new Error(`no pull tab; the heading is "${heading()}"`);
+    tab.dispatchEvent(new PointerEvent(type, { pointerId, clientX, bubbles: true }));
+  });
+
 beforeEach(() => {
   vi.useFakeTimers({
     toFake: ["setTimeout", "clearTimeout", "requestAnimationFrame", "cancelAnimationFrame"],
@@ -158,6 +170,21 @@ describe("ReceiveGiftDialog", () => {
     expect(document.querySelector("[role=slider]")).toBeNull();
     expect(button("Accept")).toBeDefined();
     expect(receiveGift).not.toHaveBeenCalled();
+  });
+
+  it("keeps the first finger's pull when a second finger touches the tab", async () => {
+    open({ previewGift: () => Promise.resolve(receivable) });
+    await settle();
+    // A drag this long tears the whole strip.
+    const across = PULL.travelPx / PULL.gain;
+    onTheTab("pointerdown", 1, 0);
+    onTheTab("pointermove", 1, across / 2);
+    onTheTab("pointerdown", 2, across);
+    onTheTab("pointerup", 2, across);
+    onTheTab("pointermove", 1, across);
+    await settle(1000);
+    await settle(1000);
+    expect(button("Accept")).toBeDefined();
   });
 
   it("receives the gift once on Accept and closes with its sticker", async () => {

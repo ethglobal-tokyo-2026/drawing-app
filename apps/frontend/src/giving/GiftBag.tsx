@@ -12,7 +12,12 @@ export type GiftStamp = "one-to-one" | "opened" | "taken-back" | "returned" | "a
 export interface PullTab {
   handlers: Pick<
     DOMAttributes<HTMLButtonElement>,
-    "onPointerDown" | "onPointerMove" | "onPointerUp" | "onPointerCancel" | "onKeyDown"
+    | "onPointerDown"
+    | "onPointerMove"
+    | "onPointerUp"
+    | "onPointerCancel"
+    | "onLostPointerCapture"
+    | "onKeyDown"
   >;
   /** Pulling the tab, or pressing and holding the bag. */
   grip: "pull" | "hold" | null;
