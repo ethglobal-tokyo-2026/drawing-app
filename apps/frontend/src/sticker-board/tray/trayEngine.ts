@@ -15,7 +15,7 @@ import { packSheets, type PackedItem, type Shape } from "./sheetPacking";
 import { knownShape, stickerShape } from "./stickerShape";
 import { countVisit } from "./traySeen";
 import { newSlots, type TraySlot } from "./traySlots";
-import { createZipper, type Zipper } from "./zipper";
+import { createZipper, mouthRange, showsFrom, type Zipper } from "./zipper";
 import "../../stickers/sticker-foil.css";
 import "./sticker-tray.css";
 
@@ -217,6 +217,12 @@ const COL = 205;
 const GMAX = 172;
 /** The stack's top in the open tray, under its folder tabs. */
 const STACK_Y = 72;
+/** Under the front sheet: the edges behind it, and the +N button with its gap. */
+const STACK_FOOT = PEEKS * PEEK + 3 + 22;
+/** However short the tray, the stack is shrunk to no less than this. */
+const MIN_SHRINK = 0.6;
+/** A pulled-out sheet turns and scales about this point, as the CSS sets it. */
+const PULLED_ORIGIN = { x: SHEET.w / 2, y: SHEET.h * 0.4 };
 /** The first move of a press on the stack decides what it does. */
 const DECIDE = 10;
 /** A page turn commits past this lift or this speed, up to the back of the stack or down to the front. */
@@ -270,10 +276,6 @@ function ended(a: Animation): Promise<void> {
     },
   );
 }
-
-/** A sheet's transform at a depth in the stack: lower, and narrower from its foot, the further back. */
-const restAt = (depth: number, dy = 0, r = 0) =>
-  `translateY(${(depth * PEEK + dy).toFixed(1)}px) rotate(${r.toFixed(2)}deg) scale(${(1 - INSET * depth).toFixed(4)})`;
 
 /** A sticker in hand's transform: a box this big, centered on `x`, `y`, scaled and turned. */
 const flyerAt = (x: number, y: number, size: Size, scale: number, r: number) =>
@@ -425,6 +427,20 @@ export function createTrayEngine(
   const c1 = make("div", "tray__c1", w2);
   const w1 = make("div", "tray__w1", c1, deepTop);
   zip.slot.append(w1);
+
+  /**
+   * How much the stack is shrunk to fit a short board, from 1 down. The sheets shrink; the edges behind
+   * the front one stay their own height on screen, so they stay something to tap.
+   */
+  let shrink = 1;
+  /** A sheet's transform at a depth in the stack: lower, and narrower from its foot, the further back. */
+  const restAt = (depth: number, dy = 0, r = 0) =>
+    `translateY(${((depth * PEEK) / shrink + dy).toFixed(1)}px) rotate(${r.toFixed(2)}deg) scale(${(1 - INSET * depth).toFixed(4)})`;
+  /** The stack's left inset when shrunk: the sheets stay centered in the mouth. */
+  const shrunkInset = () => (SHEET.w * (1 - shrink)) / 2;
+  /** A pulled-out sheet at `x`, `y` (its top left) and this scale: growing from the stack's size. */
+  const pulledFrom = (x: number, y: number, scale: number, turn = 0) =>
+    `translate(${px(x - PULLED_ORIGIN.x * (1 - scale))},${px(y - PULLED_ORIGIN.y * (1 - scale))}) rotate(${turn.toFixed(2)}deg) scale(${scale.toFixed(3)})`;
 
   const ui: TrayState = {
     filter: "all",
@@ -706,7 +722,7 @@ export function createTrayEngine(
     if (hidden > 0) {
       const more = make("button", "tray__depth", icon(ICONS.stack), make("span", "", `+${hidden}`));
       more.type = "button";
-      more.style.transform = `translateY(${SHEET.h + k * PEEK + 3}px)`;
+      more.style.transform = `translateY(${SHEET.h + (k * PEEK + 3) / shrink}px) scale(${(1 / shrink).toFixed(4)})`;
       const spread = i18next.t(($) => $.stickerBoard.tray.moreSheets, { count: hidden });
       more.setAttribute("aria-label", spread);
       kids.push(more);
@@ -792,20 +808,29 @@ export function createTrayEngine(
     w1.classList.toggle("is-shut", now);
     w1.toggleAttribute("inert", now);
   }
+  let shrunkFor = 0;
+  /**
+   * Shrinks the stack until its sheets, the edges behind them and the +N button all fit the open mouth:
+   * on a short board the mouth's window ends above where the stack would.
+   */
+  function shrinkStack(height: number) {
+    if (!height || height === shrunkFor) return;
+    shrunkFor = height;
+    const room = zip.openWindow();
+    const next = room ? clamp((room.bot - 2 - STACK_Y - STACK_FOOT) / SHEET.h, MIN_SHRINK, 1) : 1;
+    if (Math.abs(next - shrink) < 0.001) return;
+    shrink = next;
+    stack.style.setProperty("--shrink", shrink.toFixed(4));
+    if (model && ui.order.length) renderStack();
+  }
   function onFrame(g: Geometry) {
     ui.geo = g;
     const G = g.G;
-    const k = lerp(0.6, 0.97, g.spread);
+    const k = showsFrom(g.spread);
     const open = clamp(G / (0.97 * GMAX), 0, 1);
-    let aLo = -1;
-    let aHi = -1;
-    if (G > 3)
-      for (let a = 0; a <= g.sM; a += 3)
-        if (g.gap(a) >= k * G) {
-          if (aLo < 0) aLo = a;
-          aHi = a;
-        }
-    const show = aLo >= 0 && aHi - aLo > 4;
+    shrinkStack(g.H);
+    const range = G > 3 ? mouthRange(g, G, k) : null;
+    const show = range !== null;
     // A mouth sagged to a crack rings through shut for a few frames: the stack stays as it was, so it
     // doesn't blink and the sticker that was focused keeps its focus.
     const holding = !show && onShow && zip.isOpen && g.relax > 0;
@@ -815,10 +840,10 @@ export function createTrayEngine(
       onShow = show;
       if (showing && stale) redraw();
     }
-    if (show) {
+    if (range) {
       const xw = g.chainX - k * G + 3;
-      const yTop = Math.min(g.yOf(aHi), g.yOf(aLo));
-      const yBot = Math.max(g.yOf(aHi), g.yOf(aLo));
+      const yTop = Math.min(g.yOf(range.to), g.yOf(range.from));
+      const yBot = Math.max(g.yOf(range.to), g.yOf(range.from));
       w1.style.transform = `translate(${xw.toFixed(2)}px,${yTop.toFixed(2)}px)`;
       c1.style.transform = `translate(0px,${(-yTop).toFixed(2)}px)`;
       w2.style.transform = `translate(0px,${(yBot - g.H).toFixed(2)}px)`;
@@ -829,9 +854,9 @@ export function createTrayEngine(
       const deep = ((1 - 0.72 * g.spread) * clamp((yBot - yTop) / 150, 0.35, 1)).toFixed(3);
       deepTop.style.opacity = deep;
       deepBot.style.opacity = deep;
-      stack.style.transform =
-        tabsEl.style.transform = `translate(${bx.toFixed(2)}px,${by.toFixed(2)}px)`;
-      ui.stackAt = { x: xw + bx, y: by };
+      tabsEl.style.transform = `translate(${bx.toFixed(2)}px,${by.toFixed(2)}px)`;
+      stack.style.transform = `translate(${(bx + shrunkInset()).toFixed(2)}px,${by.toFixed(2)}px) scale(${shrink.toFixed(4)})`;
+      ui.stackAt = { x: xw + bx + shrunkInset(), y: by };
       ui.band = { top: yTop, bot: yBot };
     }
     const out = ui.spreadOpen
@@ -1245,7 +1270,7 @@ export function createTrayEngine(
     const drop = before.filter((el, i) => i === 0 || !shown.has(Number(el.dataset.f)));
     const pile = (d: number, dy = 0, r = 0) => restAt(d * 0.15, 30 + dy, r);
     // Far enough that a sheet's top is behind the fabric.
-    const DROP = Math.max(320, (ui.band ? ui.band.bot - ui.stackAt.y : 470) + 12);
+    const DROP = Math.max(320, ((ui.band ? ui.band.bot - ui.stackAt.y : 470) + 12) / shrink);
     stack
       .querySelector(".tray__depth")
       ?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 100, fill: "forwards" });
@@ -1373,7 +1398,7 @@ export function createTrayEngine(
     x.type = "button";
     x.setAttribute("aria-label", words.putBack);
     const wrap = make("div", "tray__pulled", sheetEl(f, "is-top is-pulled", 0), x);
-    wrap.style.transform = `translate(${px(x0)},${px(y0)})`;
+    wrap.style.transform = pulledFrom(x0, y0, shrink);
     fly.append(wrap);
     const pulled: Pulled = {
       f,
@@ -1404,10 +1429,12 @@ export function createTrayEngine(
       p.out = true;
       stepAside();
     }
-    p.el.style.transform = `translate(${px(p.x)},${px(p.y)}) rotate(${(p.out ? -1.5 : -2.5 * k).toFixed(2)}deg) scale(${(1 + 0.02 * (p.out ? 1 : k)).toFixed(3)})`;
+    // Full size by the time it comes free.
+    const grown = p.out ? 1 : lerp(shrink, 1, clamp(-dx / PULL_FREE, 0, 1));
+    const bump = 0.02 * (p.out ? 1 : k);
+    p.el.style.transform = pulledFrom(p.x, p.y, grown + bump, p.out ? -1.5 : -2.5 * k);
   }
-  const pulledAt = (x: number, y: number, scale = 1.02) =>
-    `translate(${px(x)},${px(y)}) rotate(-1.5deg) scale(${scale})`;
+  const pulledAt = (x: number, y: number, scale = 1.02) => pulledFrom(x, y, scale, -1.5);
   async function releasePull(g: Gesture, pt: Point) {
     const p = ui.pulled;
     if (!p) return;
@@ -1511,10 +1538,7 @@ export function createTrayEngine(
     if (!reduced() && !instant)
       await ended(
         p.el.animate(
-          [
-            { transform: p.el.style.transform },
-            { transform: `translate(${px(home.x)},${px(home.y)})` },
-          ],
+          [{ transform: p.el.style.transform }, { transform: pulledFrom(home.x, home.y, shrink) }],
           { duration: quick ? 180 : 320, easing: EASE_PEEL, fill: "forwards" },
         ),
       );
@@ -1530,11 +1554,13 @@ export function createTrayEngine(
     const r = fit.getBoundingClientRect();
     const b = board.getBoundingClientRect();
     const k = scaleK();
+    // A sheet on the stack is drawn shrunk; a pulled-out one is full size.
+    const shrunk = el.closest(".tray__stack") ? shrink : 1;
     return {
       x: (r.left + r.width / 2 - b.left) / k,
       y: (r.top + r.height / 2 - b.top) / k,
-      w: parseFloat(fit.style.width),
-      h: parseFloat(fit.style.height),
+      w: parseFloat(fit.style.width) * shrunk,
+      h: parseFloat(fit.style.height) * shrunk,
       r: parseFloat(el.style.getPropertyValue("--r")) || 0,
     };
   }
@@ -1731,7 +1757,13 @@ export function createTrayEngine(
   function slotHome(s: Slot): Box {
     const q = placeOf(s);
     const xw = (ui.geo ? ui.geo.chainX : COL - 15) - 0.97 * GMAX + 3;
-    return { x: colLeft() + xw + 3 + q.x, y: TOP + STACK_Y + q.y, w: q.w, h: q.h, r: q.r };
+    return {
+      x: colLeft() + xw + 3 + shrunkInset() + q.x * shrink,
+      y: TOP + STACK_Y + q.y * shrink,
+      w: q.w * shrink,
+      h: q.h * shrink,
+      r: q.r,
+    };
   }
   function pressIn(id: string) {
     const el = setSlotState(id, "here");
@@ -2001,7 +2033,7 @@ export function createTrayEngine(
   /* ---------------------------------------------------------------- the spread: the stack's depth button lays every sheet out */
   const stackOnBoard = () => ({ x: colLeft() + ui.stackAt.x, y: TOP + ui.stackAt.y });
   const stackOnBoardOpen = () => ({
-    x: colLeft() + (ui.geo ? ui.geo.chainX : COL - 15) - 0.97 * GMAX + 3 + 3,
+    x: colLeft() + (ui.geo ? ui.geo.chainX : COL - 15) - 0.97 * GMAX + 3 + 3 + shrunkInset(),
     y: TOP + STACK_Y,
   });
   function openSpread({ focus = false } = {}) {
@@ -2042,7 +2074,7 @@ export function createTrayEngine(
       els.forEach((c, d) =>
         c.animate(
           [
-            { transform: `translate(${px(from.x)},${px(from.y)})` },
+            { transform: `translate(${px(from.x)},${px(from.y)}) rotate(0deg) scale(${shrink})` },
             { transform: c.style.transform },
           ],
           {
@@ -2077,7 +2109,10 @@ export function createTrayEngine(
           c.animate(
             [
               { transform: c.style.transform, opacity: 1 },
-              { transform: `translate(${px(home.x)},${px(home.y)}) scale(.92)`, opacity: 0 },
+              {
+                transform: `translate(${px(home.x)},${px(home.y)}) scale(${(0.92 * shrink).toFixed(4)})`,
+                opacity: 0,
+              },
             ],
             { duration: 300, easing: EASE_PEEL, fill: "forwards" },
           );
@@ -2087,10 +2122,10 @@ export function createTrayEngine(
             [
               { transform: pick.style.transform },
               {
-                transform: `translate(${px(home.x)},${px(home.y)}) rotate(-2deg) scale(1.03)`,
+                transform: `translate(${px(home.x)},${px(home.y)}) rotate(-2deg) scale(${(1.03 * shrink).toFixed(4)})`,
                 offset: 0.78,
               },
-              { transform: `translate(${px(home.x)},${px(home.y)})` },
+              { transform: `translate(${px(home.x)},${px(home.y)}) rotate(0deg) scale(${shrink})` },
             ],
             { duration: 440, easing: EASE_PEEL, fill: "forwards" },
           ),

@@ -144,6 +144,8 @@ export interface Zipper {
   /** The pip on the pull that marks something new inside. */
   badge: (on: boolean) => void;
   geometry: () => ZipperGeometry;
+  /** Where the fully open mouth shows through, as the host's y from top to foot; null before it's laid out. */
+  openWindow: () => { top: number; bot: number } | null;
   on: <K extends keyof ZipperEvents>(event: K, fn: Listener<K>) => () => void;
   destroy: () => void;
 }
@@ -500,6 +502,48 @@ function pullFace(doc: Document, id: number, side: "front" | "back"): SVGElement
   );
 }
 
+/** The mouth's curve at one moment: see `setShape`. */
+interface MouthShape {
+  S: number;
+  sM: number;
+  Ts: number;
+  Te: number;
+  ms: number;
+  me: number;
+  G: number;
+}
+
+/** How far the left row stands off the chain at a place on the track. */
+const gapOf = (m: MouthShape, a: number) =>
+  a >= m.sM || a <= 0 ? 0 : m.G * hermite((m.sM - a) / m.Ts, m.ms) * hermite(a / m.Te, m.me);
+
+/** The mouth is wide enough to show through from this share of its width. */
+const SHOWS_FROM = { shut: 0.6, spread: 0.97 };
+/** The mouth's window is looked for this often along the track. */
+const WINDOW_STEP = 3;
+
+/**
+ * The stretch of the track where the mouth stands at least `share` of its width `G` wide, which is
+ * what shows through it: null while it's too narrow to.
+ */
+export function mouthRange(
+  m: Pick<ZipperGeometry, "sM" | "gap">,
+  G: number,
+  share: number,
+): { from: number; to: number } | null {
+  let from = -1;
+  let to = -1;
+  for (let a = 0; a <= m.sM; a += WINDOW_STEP)
+    if (m.gap(a) >= share * G) {
+      if (from < 0) from = a;
+      to = a;
+    }
+  return from >= 0 && to - from > 4 ? { from, to } : null;
+}
+
+/** The share of its width the mouth must stand at to show through, by how spread flat it is. */
+export const showsFrom = (spread: number) => lerp(SHOWS_FROM.shut, SHOWS_FROM.spread, spread);
+
 /** One tooth and its slice of tape, anchored where the chain's center line runs when shut. */
 interface Segment {
   el: HTMLElement;
@@ -755,30 +799,28 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
   /* The mouth this frame: a V from the slider that starts gentle, and a rounder corner at the top stop;
    * spread flat, both corners square up. `Ts` and `Te` are how far each curve reaches, `ms` and `me`
    * how steeply each starts. */
-  const shape = { S: 0, sM: 0, Ts: 1, Te: 1, ms: 0.8, me: 1.2, G: 0 };
-  function setShape() {
-    const S = S0 + st.p * travel + st.stut;
+  const shape: MouthShape = { S: 0, sM: 0, Ts: 1, Te: 1, ms: 0.8, me: 1.2, G: 0 };
+  function fillShape(into: MouthShape, p: number, spread: number, G: number, stut: number) {
+    const S = S0 + p * travel + stut;
     const sM = S - SHOULDER;
     const len = Math.max(0, sM);
-    let Ts = lerp(clamp(0.55 * len, 26, 150), 56, st.spread);
-    let Te = lerp(clamp(0.3 * len, 12, 72), 40, st.spread);
+    let Ts = lerp(clamp(0.55 * len, 26, 150), 56, spread);
+    let Te = lerp(clamp(0.3 * len, 12, 72), 40, spread);
     if (Ts + Te > len && len > 0) {
       const k = len / (Ts + Te);
       Ts *= k;
       Te *= k;
     }
-    shape.S = S;
-    shape.sM = sM;
-    shape.Ts = Math.max(1, Ts);
-    shape.Te = Math.max(1, Te);
-    shape.ms = lerp(0.8, 2.4, st.spread);
-    shape.me = lerp(1.2, 2.2, st.spread);
-    shape.G = st.G;
+    into.S = S;
+    into.sM = sM;
+    into.Ts = Math.max(1, Ts);
+    into.Te = Math.max(1, Te);
+    into.ms = lerp(0.8, 2.4, spread);
+    into.me = lerp(1.2, 2.2, spread);
+    into.G = G;
   }
-  const gap = (a: number) =>
-    a >= shape.sM || a <= 0
-      ? 0
-      : shape.G * hermite((shape.sM - a) / shape.Ts, shape.ms) * hermite(a / shape.Te, shape.me);
+  const setShape = () => fillShape(shape, st.p, st.spread, st.G, st.stut);
+  const gap = (a: number) => gapOf(shape, a);
   const gapTarget = () => {
     const len = Math.max(0, S0 + st.p * travel - SHOULDER);
     return (
@@ -1438,6 +1480,13 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
       pip.hidden = !on;
     },
     geometry,
+    openWindow() {
+      if (!L && !build()) return null;
+      const open: MouthShape = { S: 0, sM: 0, Ts: 1, Te: 1, ms: 0.8, me: 1.2, G: 0 };
+      fillShape(open, 1, 1, o.maxGap, 0);
+      const range = mouthRange({ sM: open.sM, gap: (a) => gapOf(open, a) }, open.G, showsFrom(1));
+      return range && { top: yOf(range.from), bot: yOf(range.to) };
+    },
     on(event, fn) {
       listeners[event].add(fn);
       return () => {

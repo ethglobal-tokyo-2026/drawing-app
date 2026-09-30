@@ -77,7 +77,7 @@ const pointer = (on: Element | null, type: string, x: number, y: number, pointer
   act(() => {
     on?.dispatchEvent(new PointerEvent(type, { pointerId, clientX: x, clientY: y, bubbles: true }));
   });
-const stackEl = () => board.querySelector(".tray__stack");
+const stackEl = () => board.querySelector<HTMLElement>(".tray__stack");
 const frontSheet = () => board.querySelector(".tray__stack .tray__sheet.is-top");
 const pulledSheet = () => board.querySelector(".tray__pulled");
 const flyers = () => board.querySelectorAll(".tray__flyer");
@@ -354,6 +354,26 @@ describe("StickerTray", () => {
     // A sticker's own name is its number, without the instruction.
     const slot = front?.querySelector(".tray__slot");
     expect(slot?.getAttribute("aria-label")).toMatch(/^No\.\d+$/);
+  });
+
+  describe("on a board of this height", () => {
+    /** How much the stack is shrunk, from 1, with the tray open on a board this tall. */
+    const shrinkAt = async (height: number) => {
+      vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(height);
+      render(manyStickers(30));
+      await openTray();
+      return Number(stackEl()?.style.getPropertyValue("--shrink") || 1);
+    };
+
+    it("leaves the stack full size when everything fits the mouth", async () => {
+      expect(await shrinkAt(700)).toBe(1);
+    });
+
+    it("shrinks the stack until everything fits the mouth", async () => {
+      const shrink = await shrinkAt(480);
+      expect(shrink).toBeLessThan(1);
+      expect(shrink).toBeGreaterThan(0);
+    });
   });
 
   it("leaves a shut tray inert, and reaches it again once it's open", async () => {

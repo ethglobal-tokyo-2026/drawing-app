@@ -137,6 +137,9 @@
   top: 0;
   width: 156px;
   height: 436px;
+  /* The engine shrinks the stack on a short board; its edges keep their size on screen. */
+  --shrink: 1;
+  transform-origin: 0 0;
   pointer-events: auto;
   touch-action: none;
   cursor: grab;
@@ -155,19 +158,19 @@
 }
 
 /* The front sheet is first in the page, so the sheets behind it stack under it by depth. */
-.tray__sheet[data-depth="0"] {
+.tray__stack > .tray__sheet[data-depth="0"] {
   z-index: 4;
 }
 
-.tray__sheet[data-depth="1"] {
+.tray__stack > .tray__sheet[data-depth="1"] {
   z-index: 3;
 }
 
-.tray__sheet[data-depth="2"] {
+.tray__stack > .tray__sheet[data-depth="2"] {
   z-index: 2;
 }
 
-.tray__sheet[data-depth="3"] {
+.tray__stack > .tray__sheet[data-depth="3"] {
   z-index: 1;
 }
 
@@ -231,7 +234,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 15px;
+  height: calc(15px / var(--shrink, 1));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -244,7 +247,7 @@
 
 .tray__foot .fine {
   position: relative;
-  font-size: var(--fs-fine);
+  font-size: calc(var(--fs-fine) / var(--shrink, 1));
   line-height: 1;
   letter-spacing: 0.05em;
   white-space: nowrap;
@@ -287,8 +290,8 @@
   background: rgba(28, 24, 36, 0.12);
 }
 
-/* Further back, a shade darker. Each level is also a little narrower, so its dates are set a touch
-   larger to land on the fine-print floor. */
+/* Further back, a shade darker. Each level is also a little narrower, and the stack may be shrunk to
+   fit, so its dates are set larger to land on the fine-print floor. */
 .tray__sheet[data-depth="1"] .tray__shade {
   opacity: 0.3;
 }
@@ -302,15 +305,15 @@
 }
 
 .tray__sheet[data-depth="1"] .tray__foot .fine {
-  font-size: calc(var(--fs-fine) / 0.975);
+  font-size: calc(var(--fs-fine) / (0.975 * var(--shrink, 1)));
 }
 
 .tray__sheet[data-depth="2"] .tray__foot .fine {
-  font-size: calc(var(--fs-fine) / 0.95);
+  font-size: calc(var(--fs-fine) / (0.95 * var(--shrink, 1)));
 }
 
 .tray__sheet[data-depth="3"] .tray__foot .fine {
-  font-size: calc(var(--fs-fine) / 0.925);
+  font-size: calc(var(--fs-fine) / (0.925 * var(--shrink, 1)));
 }
 
 /* The rest of the stack: a button, its depth, that spreads every sheet out. */
@@ -320,6 +323,8 @@
   top: 0;
   height: 22px;
   margin: 0 0 0 -30px;
+  /* The engine keeps it its own size when the stack is shrunk. */
+  transform-origin: 50% 0;
   padding: 0 9px 0 7px;
   border: 0;
   appearance: none;
