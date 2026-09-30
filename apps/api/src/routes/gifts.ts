@@ -16,6 +16,7 @@ import {
   giftsForYou,
   openGiftBodySchema,
   previewGift,
+  previewGiftForYou,
   receiveGift,
   receiveGiftForYou,
   type Receiving,
@@ -80,6 +81,11 @@ export const giftRoutes = (deps: AppDeps) =>
       return received(c, receiving);
     })
     .get("/for-you", (c) => c.json(giftsForYou(deps, c.var.userId), 200))
+    .get("/:giftId/preview", validate("param", giftIdParam), (c) => {
+      const previewing = previewGiftForYou(deps, c.var.userId, c.req.valid("param").giftId);
+      if (previewing.refusal !== null) return refused(c, previewing);
+      return c.json(previewing.preview, 200);
+    })
     .post("/:giftId/receive", validate("param", giftIdParam), async (c) => {
       const giftId = c.req.valid("param").giftId;
       const receiving = await diagnosticStep(

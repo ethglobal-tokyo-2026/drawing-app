@@ -63,6 +63,8 @@ const received: ReceivedGift = {
     arrivedAt: "2026-09-23T12:02:00.000Z",
   },
 };
+/** The gift as your board's list of gifts waiting for you has it. */
+const waiting: GiftFrom = { gift: { gift: received.gift, giver, sticker: gifted } };
 
 const onClose = vi.fn();
 let unmount = () => {};
@@ -191,11 +193,11 @@ describe("ReceiveGiftDialog", () => {
   });
 
   it("receives a gift waiting for you from the board, without its link", async () => {
+    const previewGiftForYou = vi.fn(() => Promise.resolve(receivable));
     const receiveGiftForYou = vi.fn(() => Promise.resolve(received));
-    const waiting = { gift: received.gift, giver, sticker: gifted };
-    // The board's list carried the preview: asking the server for one again would fail here.
-    open({ receiveGiftForYou }, { gift: waiting });
+    open({ previewGiftForYou, receiveGiftForYou }, waiting);
     await pullTheTab();
+    expect(previewGiftForYou).toHaveBeenCalledWith(received.gift.id);
     expect(heading()).toBe(`${toPerson(giver).name} sent you a sticker`);
     press("Accept");
     await settle();
@@ -203,6 +205,20 @@ describe("ReceiveGiftDialog", () => {
     expect(receiveGiftForYou).toHaveBeenCalledWith(received.gift.id);
     expect(onClose).toHaveBeenCalledWith(gifted.id);
     expect(liff.closeWindow).not.toHaveBeenCalled();
+  });
+
+  it("says why a gift from the board can't be received before its pull tab shows", async () => {
+    // Taken back after the board's list loaded.
+    const takenBack: GiftPreview = {
+      ...receivable,
+      receivable: false,
+      refusal: "taken_back",
+      sticker: null,
+    };
+    open({ previewGiftForYou: () => Promise.resolve(takenBack) }, waiting);
+    await settle();
+    expect(heading()).toBe(refusalScreen("taken_back", toPerson(giver)).title);
+    expect(document.querySelector("[role=slider]")).toBeNull();
   });
 
   it("closes on Not now without receiving it", async () => {

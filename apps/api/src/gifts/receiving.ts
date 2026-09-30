@@ -140,7 +140,32 @@ async function openGift(deps: AppDeps, giftClaimToken: OpenGiftBody["giftClaimTo
   return (await checkDeposit(deps, giftChain, gift)).gift;
 }
 
+/** The gift, if it waits for this person. */
+function giftWaitingFor(db: Pick<Db, "select">, userId: string, giftId: string) {
+  const gift = db.select().from(gifts).where(eq(gifts.id, giftId)).get();
+  return gift?.forUserId === userId ? gift : undefined;
+}
+
+const notWaiting = (giftId: string) => refuse("gift_not_found", `No gift ${giftId} waits for you`);
+
 export type Previewing = Refusal<"gift_not_found"> | { refusal: null; preview: GiftPreview };
+
+/** The preview of a gift this person opened: the sticker only when they can receive it. */
+function previewOf(
+  { db, images }: AppDeps,
+  gift: GiftRow,
+  refusal: Refusal<ReceiveRefusal> | null,
+): GiftPreview {
+  const giver = db.select().from(users).where(eq(users.id, gift.giverId)).get();
+  if (!giver) throw new Error(`Gift ${gift.id}'s giver ${gift.giverId} is missing`);
+  return {
+    giver: toPerson(giver),
+    expiresAt: toIsoTime(gift.expiresAt),
+    receivable: refusal === null,
+    refusal: refusal?.refusal ?? null,
+    sticker: refusal ? null : stickerLookup(db, [gift.stickerId], images.urls)(gift.stickerId),
+  };
+}
 
 /** What opening the Gift Message's link shows, before Accept. */
 export async function previewGift(
@@ -148,12 +173,11 @@ export async function previewGift(
   userId: string,
   { giftClaimToken, liffContextType }: OpenGiftBody,
 ): Promise<Previewing> {
-  const { db, clock, images } = deps;
+  const { db, clock } = deps;
   const gift = await openGift(deps, giftClaimToken);
   if (!gift) return notFound();
-  const giver = db.select().from(users).where(eq(users.id, gift.giverId)).get();
-  if (!giver) throw new Error(`Gift ${gift.id}'s giver ${gift.giverId} is missing`);
   const refusal = receiveRefusal(db, gift, userId, liffContextType, clock.now());
+  const preview = previewOf(deps, gift, refusal);
   // The first person to open it becomes who it waits for, so it stays on their board if they leave.
   if (!refusal && gift.forUserId === null) {
     db.update(gifts)
@@ -161,17 +185,18 @@ export async function previewGift(
       .where(and(eq(gifts.id, gift.id), isNull(gifts.forUserId)))
       .run();
   }
-  const sticker = refusal ? null : stickerLookup(db, [gift.stickerId], images.urls)(gift.stickerId);
-  return {
-    refusal: null,
-    preview: {
-      giver: toPerson(giver),
-      expiresAt: toIsoTime(gift.expiresAt),
-      receivable: refusal === null,
-      refusal: refusal?.refusal ?? null,
-      sticker,
-    },
-  };
+  return { refusal: null, preview };
+}
+
+/**
+ * What opening a gift waiting for you from your board shows, before Accept: the checks its link's
+ * preview runs, since the board's list may be older than a take-out, an expiry or a receive.
+ */
+export function previewGiftForYou(deps: AppDeps, userId: string, giftId: string): Previewing {
+  const gift = giftWaitingFor(deps.db, userId, giftId);
+  if (!gift) return notWaiting(giftId);
+  const refusal = receiveRefusal(deps.db, gift, userId, "none", deps.clock.now());
+  return { refusal: null, preview: previewOf(deps, gift, refusal) };
 }
 
 export type Receiving =
@@ -257,10 +282,8 @@ export async function receiveGiftForYou(
   userId: string,
   giftId: string,
 ): Promise<Receiving> {
-  const gift = deps.db.select().from(gifts).where(eq(gifts.id, giftId)).get();
-  if (!gift || gift.forUserId !== userId) {
-    return refuse("gift_not_found", `No gift ${giftId} waits for you`);
-  }
+  const gift = giftWaitingFor(deps.db, userId, giftId);
+  if (!gift) return notWaiting(giftId);
   return receiveOpened(deps, userId, gift, "none", null);
 }
 
