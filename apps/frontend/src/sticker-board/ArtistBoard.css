@@ -44,8 +44,10 @@
 
 /* ---------- Sticker menu ---------- */
 
+/* Its left is the sticker's center, so the menu sits centered on the sticker at any width. */
 .sticker-menu {
   position: absolute;
+  translate: -50% 0;
   z-index: 960;
   display: flex;
   flex-direction: column;
@@ -58,16 +60,6 @@
   background: var(--liner);
   box-shadow: var(--shadow-lift);
   animation: menu-in 0.2s var(--ease-out);
-}
-
-.sticker-menu-actions {
-  display: flex;
-  gap: 8px;
-}
-
-/* Each label keeps its own width, so the menu sizes to them rather than squeezing Offer for it. */
-.sticker-menu-actions .label {
-  flex: 1 0 auto;
 }
 
 @keyframes menu-in {
@@ -104,7 +96,7 @@
 
 .visit-view h2 {
   margin: 4px 0 0;
-  font-size: 23px;
+  font-size: 22px;
   font-weight: 800;
   line-height: 1.08;
   font-stretch: var(--w-title);

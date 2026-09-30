@@ -185,6 +185,11 @@ export interface EscrowGift {
   status: EscrowStatus;
 }
 
+/** The chain couldn't be read: its RPC failed, timed out, or gave an answer that doesn't decode. */
+export class ChainUnavailableError extends Error {
+  name = "ChainUnavailableError";
+}
+
 export interface GiftChain {
   /** sticker-chain's createGiftClaim. */
   createGiftClaim: () => GiftClaim;
@@ -196,10 +201,12 @@ export interface GiftChain {
     claimCommitment: string;
     expiresAt: Date;
   }) => EscrowTransfer;
+  /** Rejects with ChainUnavailableError when the escrow can't be read. */
   readEscrowGift: (giftId: string) => Promise<EscrowGift>;
   /**
    * Claims a pending gift for the recipient's smart wallet and waits for it to land. Without a Gift
-   * Claim Token, the recipient must be the person the gift waits for (gifts.for_user_id).
+   * Claim Token, the recipient must be the person the gift waits for (gifts.for_user_id). It reads
+   * the escrow first, so a call after a failed one finds a claim that landed late.
    */
   claimGift: (gift: {
     giftId: string;
@@ -229,8 +236,8 @@ export interface JpycPayment {
 export interface TicketPayments {
   target: TicketPaymentTarget;
   /**
-   * The payment contract's PaymentReceived events in a transaction that succeeded; null when Sui has
-   * no such transaction. Rejects when Sui can't be asked.
+   * The payment contract's PaymentReceived events in a transaction that succeeded; null when Sui
+   * still doesn't show the transaction after a short wait for it. Rejects when Sui can't be asked.
    */
   paymentsIn: (txDigest: string) => Promise<JpycPayment[] | null>;
 }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObje
 import { formatNo } from "../stickers/format";
 import { sheenIn, sweepSheen } from "../stickers/resinSheen";
 import { playStick } from "../stickers/stick";
+import { EASE_PEEL } from "../ui/easing";
 import type { Placement } from "./placement";
 import {
   dragBounds,
@@ -45,12 +46,20 @@ type Gesture =
   | { mode: "maybe"; id: string; el: HTMLElement; p0: Pt }
   | { mode: "drag"; id: string; el: HTMLElement; p0: Pt; b0: Live; live: Live }
   | { mode: "scale" | "rotate"; id: string; el: HTMLElement; from: Pt; b0: Live; live: Live }
-  | { mode: "pinch"; id: string; el: HTMLElement; start: [Pt, Pt]; b0: Live; live: Live }
+  | {
+      mode: "pinch";
+      id: string;
+      el: HTMLElement;
+      /** The pointers it follows, where `start` has them; a third finger isn't one of them. */
+      pair: [number, number];
+      start: [Pt, Pt];
+      b0: Live;
+      live: Live;
+    }
   | { mode: "bg"; p0: Pt };
 
 /** A tap on bare board may wander this far and still deselect. */
 const TAP_SLOP = 8;
-const EASE_PEEL = "cubic-bezier(0.2, 0.7, 0.2, 1)";
 /** Removed, a sticker rides to the tray's edge, this far in from the board's. */
 const STOW_EDGE = 30;
 const ARROWS: Record<string, Pt> = {
@@ -98,6 +107,12 @@ export function useBoardGestures(options: Options) {
       x: (e.clientX - origin.left) / origin.k,
       y: (e.clientY - origin.top) / origin.k,
     });
+
+    /** The first two fingers down, where they are now: a pinch's pair and its start. */
+    const pairOf = (): { pair: [number, number]; start: [Pt, Pt] } => {
+      const [[a, at], [b, bt]] = [...pointers.entries()];
+      return { pair: [a, b], start: [at, bt] };
+    };
 
     /** Puts the element where `live` says, without React. */
     const draw = (el: HTMLElement, sticker: BoardSticker, live: Live) => {
@@ -295,17 +310,9 @@ export function useBoardGestures(options: Options) {
           ? stage.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(pinchId)}"]`)
           : null);
       if (pointers.size === 2 && pinched && pinchEl) {
-        const [a, b] = [...pointers.values()];
         const b0 = inHand && "live" in inHand ? inHand.live : liveOf(pinched.placement, field);
         pick(pinched.id, pinchEl);
-        gesture.current = {
-          mode: "pinch",
-          id: pinched.id,
-          el: pinchEl,
-          start: [a, b],
-          b0,
-          live: b0,
-        };
+        gesture.current = { mode: "pinch", id: pinched.id, el: pinchEl, ...pairOf(), b0, live: b0 };
       } else if (pointers.size > 1) {
         return;
       } else if (el && id && handle && selected === id) {
@@ -361,8 +368,10 @@ export function useBoardGestures(options: Options) {
         g.live = { ...g.b0, s: scaleBy(g.b0, g.from, pt, g.b0.s) };
       } else if (g.mode === "rotate") {
         g.live = { ...g.b0, r: turnBy(g.b0, g.from, pt, g.b0.r) };
-      } else if (g.mode === "pinch" && pointers.size >= 2) {
-        const [a, b] = [...pointers.values()];
+      } else if (g.mode === "pinch") {
+        const a = pointers.get(g.pair[0]);
+        const b = pointers.get(g.pair[1]);
+        if (!a || !b) return;
         const next = pinchBy(g.start, [a, b], g.b0);
         const at = toPx(field, toFrac(field, next));
         g.live = { ...next, ...at };
@@ -374,8 +383,13 @@ export function useBoardGestures(options: Options) {
       if (!pointers.delete(e.pointerId)) return;
       const g = gesture.current;
       if (!g) return;
-      // A pinch ends with its last finger.
-      if (g.mode === "pinch" && pointers.size > 0) return;
+      // A pinch ends with its last finger. One of its pair lifting hands it to two fingers still down,
+      // from where the sticker is, so it doesn't jump to the new pair's spread and turn.
+      if (g.mode === "pinch" && pointers.size > 0) {
+        if (g.pair.includes(e.pointerId) && pointers.size >= 2)
+          gesture.current = { ...g, ...pairOf(), b0: g.live };
+        return;
+      }
       gesture.current = null;
       if (g.mode === "drag") {
         void dropHeld(g);

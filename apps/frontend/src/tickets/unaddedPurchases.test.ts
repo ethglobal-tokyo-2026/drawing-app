@@ -8,7 +8,9 @@ import {
   addUnaddedPurchases,
   forgetUnaddedPurchase,
   keepUnaddedPurchase,
+  keptRefusal,
   PASSING_FAILURE_STATUSES,
+  PAYMENT_LANDS_WITHIN_MS,
   readUnaddedPurchasesAgain,
   REFUSAL_STATUSES,
   refusalError,
@@ -97,6 +99,8 @@ describe("payments kept until their tickets are added", () => {
     ["a failed fetch", new TypeError("Failed to fetch")],
     // The server never judged the payment, so it isn't let go.
     ["a lapsed session, HTTP 401", new ApiError(401, { error: "signed_out" })],
+    // Another window signed this browser in as someone else, whose session the ask went out on.
+    ["someone else's session, HTTP 403", new ApiError(403, { error: "payment_not_yours" })],
   ];
 
   it.each(passing)("keeps a payment through %s, and asks again", async (_, failure) => {
@@ -113,14 +117,14 @@ describe("payments kept until their tickets are added", () => {
     "stops asking once the server refuses a payment for good (%i), keeping why until the checkout says it",
     async (status) => {
       keepUnaddedPurchase("me", purchase(1));
-      const refused = new ApiError(status, { error: "payment_not_yours", detail: "not yours" });
+      const refused = new ApiError(status, { error: "payment_short", detail: "short" });
       const api = server(refused);
       await expect(addUnaddedPurchases(api, "me")).resolves.toBeNull();
       const [kept] = keptAtNextOpen();
       expect(kept?.refusal && refusalError(kept.refusal)).toMatchObject({
         status,
-        code: "payment_not_yours",
-        detail: "not yours",
+        code: "payment_short",
+        detail: "short",
       });
       // Never asked for again, and gone once the checkout has said why.
       await addUnaddedPurchases(api, "me");
@@ -129,6 +133,20 @@ describe("payments kept until their tickets are added", () => {
       expect(keptAtNextOpen()).toEqual([]);
     },
   );
+
+  it("keeps asking while Sui doesn't show a payment, until long after it was signed", async () => {
+    const justSigned = { ...purchase(1), paidAt: Date.now() };
+    const longAgo = { ...purchase(2), paidAt: Date.now() - PAYMENT_LANDS_WITHIN_MS };
+    keepUnaddedPurchase("me", justSigned);
+    keepUnaddedPurchase("me", longAgo);
+    await addUnaddedPurchases(server(new ApiError(409, { error: "payment_not_landed" })), "me");
+    expect(keptAtNextOpen().map((p) => p.refusal?.error)).toEqual([
+      undefined,
+      "payment_not_landed",
+    ]);
+    expect(keptRefusal("me", justSigned.digest)).toBeNull();
+    expect(keptRefusal("me", longAgo.digest)?.code).toBe("payment_not_landed");
+  });
 
   it("asks for each kept payment in turn, and one that fails again stays", async () => {
     keepUnaddedPurchase("me", purchase(1));

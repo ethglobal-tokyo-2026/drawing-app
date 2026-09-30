@@ -1,4 +1,5 @@
 import { isHash, type Hash } from "viem";
+import { personKey, parseStored, readStored, writeStored } from "../ui/deviceStorage";
 
 /**
  * What Giving needs to pick a gift up again after a reload or a closed webview, kept on this device
@@ -15,7 +16,7 @@ export interface KeptGift {
   message?: "sent" | "maybeSent";
 }
 
-const keyFor = (userId: string) => `draw.gifts.kept.${userId}`;
+const keyFor = (userId: string) => personKey("draw.gifts.kept", userId);
 
 const isTime = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
@@ -52,20 +53,12 @@ function keptOf(value: unknown): KeptGift | null {
 /** `userId`'s kept gifts; none when storage is blocked. An unreadable entry is dropped, and said. */
 function readKept(userId: string): Map<string, KeptGift> {
   const kept = new Map<string, KeptGift>();
-  let raw: string | null;
-  try {
-    raw = localStorage.getItem(keyFor(userId));
-  } catch (error) {
-    console.error("Giving's kept gifts can't be read on this device", error);
-    return kept;
-  }
+  const { text: raw } = readStored(
+    keyFor(userId),
+    "Giving's kept gifts can't be read on this device",
+  );
   if (raw === null) return kept;
-  let value: unknown;
-  try {
-    value = JSON.parse(raw);
-  } catch {
-    value = undefined;
-  }
+  const value = parseStored(raw);
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     console.error("Giving's kept gifts are unreadable, so none is picked up again:", raw);
     return kept;
@@ -82,17 +75,12 @@ function readKept(userId: string): Map<string, KeptGift> {
   return kept;
 }
 
-function writeKept(userId: string, kept: ReadonlyMap<string, KeptGift>, giftId: string) {
-  try {
-    if (kept.size === 0) localStorage.removeItem(keyFor(userId));
-    else localStorage.setItem(keyFor(userId), JSON.stringify(Object.fromEntries(kept)));
-  } catch (error) {
-    console.error(
-      `Gift ${giftId}'s progress can't be kept on this device; a reload before it settles loses it`,
-      error,
-    );
-  }
-}
+const writeKept = (userId: string, kept: ReadonlyMap<string, KeptGift>, giftId: string) =>
+  writeStored(
+    keyFor(userId),
+    kept.size === 0 ? null : JSON.stringify(Object.fromEntries(kept)),
+    `Gift ${giftId}'s progress can't be kept on this device; a reload before it settles loses it`,
+  );
 
 /** What this device kept of `userId`'s gift, or null. */
 export function keptGift(userId: string, giftId: string): KeptGift | null {

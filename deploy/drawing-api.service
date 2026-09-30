@@ -9,7 +9,7 @@ Wants=network-online.target
 Type=simple
 User=bawler
 Group=bawler
-# /api/logs dumps this unit's and sticker-auth's journal; systemd-journal's members can read all of it.
+# /api/logs serves the newest lines of this unit's and sticker-auth's journal; systemd-journal's members can read all of it.
 SupplementaryGroups=systemd-journal
 WorkingDirectory=/srv/drawing-api
 EnvironmentFile=/srv/drawing-api/api.env

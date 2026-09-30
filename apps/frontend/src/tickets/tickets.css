@@ -82,7 +82,7 @@
 /* A printed line, never the drawing clock's look: no dot, no color field, no tilt, no Dela numerals. */
 .out-of-tickets__line {
   margin: 8px 0 0;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.35;
   font-weight: 700;
   text-wrap: balance;
@@ -93,7 +93,7 @@
 }
 
 .out-of-tickets__quiet {
-  font-weight: 600;
+  font-weight: 500;
   color: var(--graphite);
 }
 

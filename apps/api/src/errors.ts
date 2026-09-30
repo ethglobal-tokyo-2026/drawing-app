@@ -4,7 +4,8 @@ import { bodyLimit } from "hono/body-limit";
 import { HTTPException } from "hono/http-exception";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
-import { logFailure, logInfo } from "./diagnostics.ts";
+import { ChainUnavailableError } from "./deps.ts";
+import { failureCause, logFailure, logInfo } from "./diagnostics.ts";
 
 /** Every error's body. The code is stable, so clients and mocks can switch on it. */
 export const errorBodySchema = z.object({
@@ -79,6 +80,11 @@ export const onError: ErrorHandler = (error, c) => {
   // Hono's validators throw a 400 for a body that doesn't parse as JSON or form data.
   if (error instanceof HTTPException && error.status === 400) {
     return apiError(c, 400, "invalid_request", error.message);
+  }
+  // Any route that reads the escrow can meet this, so it's answered here rather than in each.
+  if (error instanceof ChainUnavailableError) {
+    logFailure("request.failed", error, { status: 502 });
+    return apiError(c, 502, "chain_unavailable", `${error.message}: ${failureCause(error)}`);
   }
   logFailure("request.failed", error, { status: 500 });
   return apiError(c, 500, "internal_error");

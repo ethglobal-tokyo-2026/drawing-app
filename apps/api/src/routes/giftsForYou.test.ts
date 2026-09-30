@@ -5,7 +5,7 @@ import {
   packagedGiftSchema,
   pendingGiftsSchema,
 } from "../gifts/packaging.ts";
-import { giftsForYouSchema, receivedGiftSchema } from "../gifts/receiving.ts";
+import { giftPreviewSchema, giftsForYouSchema, receivedGiftSchema } from "../gifts/receiving.ts";
 import { createGiftsTestApp, giftOf, type GiftsTestApp } from "../gifts/testGifts.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 
@@ -23,6 +23,8 @@ const waitingFor = async (test: GiftsTestApp, userId: string) =>
   (await bodyOf(await test.get(userId, "/for-you"), giftsForYouSchema)).gifts;
 const receiveFromBoard = (test: GiftsTestApp, userId: string, giftId: string) =>
   test.post(userId, `/${giftId}/receive`);
+const previewFromBoard = (test: GiftsTestApp, userId: string, giftId: string) =>
+  test.get(userId, `/${giftId}/preview`);
 
 describe("gifts waiting for you", () => {
   it("lists a gift picked for you in the app, and gives it to you from your board", async () => {
@@ -41,6 +43,30 @@ describe("gifts waiting for you", () => {
     expect(received.gift.receiverId).toBe(bobId);
     expect(test.ownerOf(gift.stickerId)).toBe(bobId);
     expect(await waitingFor(test, bobId)).toEqual([]);
+  });
+
+  it("previews a gift waiting for you with its link's checks, and no one else's", async () => {
+    const test = await createGiftsTestApp();
+    const bobId = insertUser(test.db);
+    const { giverId, gift } = await sentGift(test, bobId);
+    const previewed = async () =>
+      bodyOf(await previewFromBoard(test, bobId, gift.id), giftPreviewSchema);
+    expect(await previewed()).toMatchObject({
+      giver: { id: giverId },
+      receivable: true,
+      refusal: null,
+      sticker: { id: gift.stickerId },
+    });
+    expect(
+      await refusalOf(await previewFromBoard(test, insertUser(test.db), gift.id)),
+    ).toMatchObject({ status: 404, error: "gift_not_found" });
+
+    await giftOf(await test.takeOut(giverId, gift.id));
+    expect(await previewed()).toMatchObject({
+      receivable: false,
+      refusal: "taken_back",
+      sticker: null,
+    });
   });
 
   it("waits for the first person to open its link, and gives it to no one else", async () => {

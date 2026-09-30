@@ -1,5 +1,6 @@
 import { useRef, type CSSProperties, type KeyboardEvent } from "react";
 import { useTranslation } from "../../i18n/react";
+import { clamp01 } from "../../ui/easing";
 import { sizePx } from "../canvas/brush";
 import { useDrag } from "./useDrag";
 import "./SizeRail.css";
@@ -10,8 +11,6 @@ const THUMB_TOP = 18;
 const THUMB_BOTTOM = 44;
 /** How far one arrow key moves the size. */
 const KEY_STEP = 0.04;
-
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 /** The size as CSS draws it: the thumb's place, the tip's dot, the ghost's width and the px label. */
 function sizeStyle(value: number): CSSProperties {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { context2d } from "../sticker-creation/canvas/context2d";
+import { maskPixels } from "./maskPixels";
 
 /** A corner folded back along a straight line, as the CSS a `StickerFigure` takes. */
 export interface Fold {
@@ -77,25 +77,8 @@ export function foldOf(data: Uint8ClampedArray, width: number, height: number): 
 }
 
 async function readFold(maskUrl: string): Promise<Fold | null> {
-  const image = new Image();
-  image.src = maskUrl;
-  await image.decode();
-  const canvas = document.createElement("canvas");
-  canvas.width = image.naturalWidth;
-  canvas.height = image.naturalHeight;
-  try {
-    const g = context2d(canvas, { willReadFrequently: true });
-    g.drawImage(image, 0, 0);
-    return foldOf(
-      g.getImageData(0, 0, canvas.width, canvas.height).data,
-      canvas.width,
-      canvas.height,
-    );
-  } finally {
-    // iOS counts canvases against a small budget until they're collected.
-    canvas.width = 0;
-    canvas.height = 0;
-  }
+  const { data, width, height } = await maskPixels(maskUrl);
+  return foldOf(data, width, height);
 }
 
 // By sticker: a sticker's mask never changes, and its object URLs are made anew each time it's shown.

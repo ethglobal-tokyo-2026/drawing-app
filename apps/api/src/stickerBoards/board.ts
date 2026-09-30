@@ -1,17 +1,20 @@
 import { gifts, stickerPlacements, stickers, users, type Db } from "@drawing-app/db";
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull, notExists } from "drizzle-orm";
 import { z } from "zod";
 import type { ImageStore } from "../deps.ts";
-import { isoTimeSchema, personSchema, toIsoTime, toPerson } from "../shapes.ts";
-import { simplifiedOutlineOf } from "../stickers/outline.ts";
 import {
   giftSchema,
+  isoTimeSchema,
+  personSchema,
   placementSchema,
   stickerPlacementSchema,
   stickerSchema,
+  toIsoTime,
+  toPerson,
   toSticker,
   toStickerPlacement,
-} from "../views.ts";
+} from "../shapes.ts";
+import { simplifiedOutlineOf } from "../stickers/outline.ts";
 
 /** `me` in a board's path: the signed-in person. */
 export const ME = "me";
@@ -102,10 +105,18 @@ function givenToOf(db: Db, ownerId: string, stickerIds: string[]) {
   return givenTo;
 }
 
+/** A sticker in one of the owner's sent gifts: on its way, so off their board until it's received. */
+const onItsWayFrom = (db: Db, ownerId: string) =>
+  db
+    .select({ id: gifts.id })
+    .from(gifts)
+    .where(
+      and(eq(gifts.stickerId, stickers.id), eq(gifts.giverId, ownerId), eq(gifts.status, "sent")),
+    );
+
 /**
  * A Sticker Board in sticker tray order. Your own lists every sticker that reached you, with NEW and
- * your open gifts; anyone else's lists only the stickers on it that its owner holds, since the bag
- * and NEW are the owner's.
+ * your open gifts; anyone else's lists only the stickers on it, since the bag and NEW are the owner's.
  */
 export function loadStickerBoard(
   db: Db,
@@ -123,7 +134,14 @@ export function loadStickerBoard(
       and(
         eq(stickerPlacements.userId, owner.id),
         // Receiving writes only the receiver's placement, so a sticker given away keeps the giver's.
-        own ? undefined : and(eq(stickerPlacements.onBoard, true), eq(stickers.ownerId, owner.id)),
+        // A visitor gets no open gifts to tell a sticker on its way by, so it's left off here.
+        own
+          ? undefined
+          : and(
+              eq(stickerPlacements.onBoard, true),
+              eq(stickers.ownerId, owner.id),
+              notExists(onItsWayFrom(db, owner.id)),
+            ),
       ),
     )
     .orderBy(asc(stickerPlacements.createdAt), asc(stickerPlacements.stickerId))
@@ -183,4 +201,21 @@ export function markStickersSeen(db: Db, userId: string, stickerIds: string[], n
       ),
     )
     .run();
+}
+
+/** NEW in a sticker tray: stickers the person holds whose placement has no seen_at. */
+export function newStickerCount(db: Db, userId: string): number {
+  const row = db
+    .select({ n: count() })
+    .from(stickerPlacements)
+    .innerJoin(stickers, eq(stickers.id, stickerPlacements.stickerId))
+    .where(
+      and(
+        eq(stickerPlacements.userId, userId),
+        eq(stickers.ownerId, userId),
+        isNull(stickerPlacements.seenAt),
+      ),
+    )
+    .get();
+  return row?.n ?? 0;
 }

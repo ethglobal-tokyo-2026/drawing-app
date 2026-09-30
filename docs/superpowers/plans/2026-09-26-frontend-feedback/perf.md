@@ -91,7 +91,7 @@ pays today.
      - It has to be the server: WebKit can't encode WebP from a canvas (known platform limit), so the
        sealing worker on an iPhone can't make them.
      - PNGs stay the canonical files for the content hash and the NFT.
-     - Files: apps/api/src/stickers/seal.ts, services/imageStore.ts (sharp), views.ts (URLs),
+     - Files: apps/api/src/stickers/seal.ts, services/imageStore.ts (sharp), shapes.ts (URLs),
        frontend stickers/stickerUrls.ts, StickerFigure.tsx, plus a one-off backfill on the box.
   2. **F2: start Privy after the board settles.** Size S–M.
      - Mount `PrivySignIn` once the board's stickers are decoded and the first-load chips are done

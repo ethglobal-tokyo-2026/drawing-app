@@ -3,6 +3,7 @@
  * print under its resin, the baked gloss, the cast shadow, the mask, the finished sticker, and the bands
  * the live resin is masked by. Pure functions over pixel arrays.
  */
+import { clamp01 } from "../../ui/easing";
 import type { DieCut } from "./dieCut";
 import { boxResample, type Pixels } from "./pixels";
 
@@ -58,7 +59,6 @@ const LAVENDER = [222, 217, 238];
 /** The live resin's bands are measured at most this big; CSS stretches them to the sticker. */
 const BAND_SIDE = 420;
 
-const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 function norm3(x: number, y: number, z: number): [number, number, number] {
   const l = Math.hypot(x, y, z) || 1;
   return [x / l, y / l, z / l];

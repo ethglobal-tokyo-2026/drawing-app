@@ -1,5 +1,6 @@
 import liff from "@line/liff";
 import { useSyncExternalStore } from "react";
+import { ApiError } from "../api/apiClient";
 import { liffMockActive } from "../line/liff";
 import { reconnectLine } from "../line/reconnectLine";
 
@@ -54,9 +55,10 @@ let reconnecting = false;
 
 /**
  * The person's retry reconnects LINE when its credentials need replacing, coming back to `returnTo`
- * (this page, unless a screen says where it picks up).
+ * (this page, unless a screen says where it picks up). A failed reconnect goes to the status, and to
+ * `onFailed`, so the screen that asked can say so where the person tapped.
  */
-export function retryPrivySignIn(returnTo?: string): void {
+export function retryPrivySignIn(returnTo?: string, onFailed?: (failure: ApiError) => void): void {
   if (reconnecting) return;
   if (status.state === "failed" && status.reconnectLine) {
     reconnecting = true;
@@ -64,6 +66,8 @@ export function retryPrivySignIn(returnTo?: string): void {
     void reconnectLine(returnTo)
       .catch(() => {
         fail("LINE could not reconnect; try again", true);
+        // LINE's SDK errors can carry credentials, so none of it goes on screen.
+        onFailed?.(new ApiError(0, { error: "line_reconnect_failed" }));
       })
       .finally(() => {
         reconnecting = false;

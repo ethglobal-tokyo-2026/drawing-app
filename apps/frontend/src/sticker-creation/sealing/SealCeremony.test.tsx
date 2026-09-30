@@ -6,11 +6,11 @@ import { MARKUP_LIKE_NAME, sticker as apiSticker } from "../../api/testFixtures"
 import type { Sticker, Tickets } from "@drawing-app/api/client";
 import { formatDay, formatDuration, formatNo } from "../../stickers/format";
 import { formatRefillTime } from "../../tickets/refill";
-import { nextRefill } from "../../tickets/tickets";
 import { useTickets } from "../../tickets/useTickets";
+import { ReducedMotion } from "../../ui/testing";
 import type { SealedSticker } from "./makeSticker";
 import { SealCeremony } from "./SealCeremony";
-import { TOTAL } from "./sealTimeline";
+import { T, TOTAL } from "./sealTimeline";
 
 const NOW = new Date(2026, 8, 26, 21, 4);
 
@@ -110,6 +110,29 @@ async function seal(
   // The tickets load before the card can show them.
   await act(async () => {});
 }
+
+/** The ceremony, and a way to set the tickets to `next` behind its back, as a spend or a refresh does. */
+function WithTickets({ next, leaving = false }: { next: Tickets; leaving?: boolean }) {
+  const { set } = useTickets();
+  return (
+    <>
+      {ceremony(sealed, { leaving })}
+      <button type="button" data-set-tickets onClick={() => set(next)} />
+    </>
+  );
+}
+
+/** Opens WithTickets once `loaded` has loaded. */
+async function sealWithTickets(loaded: Tickets, next: Tickets) {
+  view = renderWithApi(
+    <WithTickets next={next} />,
+    emptyApi({ tickets: () => Promise.resolve(loaded) }),
+  );
+  host = view.host;
+  await act(async () => {});
+}
+const setTickets = () =>
+  act(() => host.querySelector<HTMLButtonElement>("[data-set-tickets]")?.click());
 
 const button = (name: string) => {
   const found = [...host.querySelectorAll("button")].find((b) => b.textContent === name);
@@ -225,28 +248,33 @@ describe("SealCeremony", () => {
 
   it("leaves as it was, whatever the spend it hands over to does to the tickets meanwhile", async () => {
     const oneLeft: Tickets = { ...FRESH_TICKETS, dailyLeft: 1 };
-    /** The ceremony, and a way to spend the last ticket behind its back. */
-    function Host({ leaving }: { leaving: boolean }) {
-      const { set } = useTickets();
-      return (
-        <>
-          {ceremony(sealed, { leaving })}
-          <button type="button" data-spend onClick={() => set({ ...oneLeft, dailyLeft: 0 })} />
-        </>
-      );
-    }
-    view = renderWithApi(
-      <Host leaving={false} />,
-      emptyApi({ tickets: () => Promise.resolve(oneLeft) }),
-    );
-    host = view.host;
-    await act(async () => {});
+    const spent: Tickets = { ...oneLeft, dailyLeft: 0 };
+    await sealWithTickets(oneLeft, spent);
     playThrough();
-    view.rerender(<Host leaving />);
+    view?.rerender(<WithTickets next={spent} leaving />);
     // Keep drawing spends the last ticket as the card leaves: it doesn't turn into the last ticket's card.
-    act(() => host.querySelector<HTMLButtonElement>("[data-spend]")?.click());
+    setTickets();
     expect(button("Keep drawing")).toBeTruthy();
     expect(host.textContent).not.toContain("New daily tickets at");
+  });
+
+  it("fades a line the card changes to mid-ceremony up in its turn", async () => {
+    // This sticker used the last ticket of all; the refresh after the seal brings a new day's tickets.
+    const lastOfAll: Tickets = {
+      ...FRESH_TICKETS,
+      dailyLeft: 0,
+      usedToday: [use(0), use(1), use(2)],
+    };
+    await sealWithTickets(lastOfAll, FRESH_TICKETS);
+    wait(T.card0);
+    expect(button("Buy reserve tickets")).toBeTruthy();
+    setTickets();
+    wait(50);
+    // The shop's line gives way to the board's, which waits below the lines still to fade up.
+    const board = button("Go to sticker board");
+    expect(board.style.opacity).toBe("0");
+    playThrough();
+    expect(board.style.opacity).toBe("1");
   });
 
   it("ends the day on when new daily tickets come, with reserve tickets quiet under it", async () => {
@@ -263,7 +291,7 @@ describe("SealCeremony", () => {
     playThrough();
     expect(button("Go to sticker board").classList.contains("key")).toBe(true);
     expect(host.querySelector(".sealed-card__refill")?.textContent).toBe(
-      `New daily tickets at ${formatRefillTime(nextRefill(NOW))}`,
+      `New daily tickets at ${formatRefillTime(new Date(FRESH_TICKETS.nextRefillAt))}`,
     );
     // Small label stock, not a second full-width button.
     expect(button("Buy reserve tickets").classList.contains("label-btn--sm")).toBe(true);
@@ -273,7 +301,7 @@ describe("SealCeremony", () => {
   });
 
   it("says when daily tickets come back only when this sticker used the day's last one", async () => {
-    const refill = `New daily tickets at ${formatRefillTime(nextRefill(NOW))}`;
+    const refill = `New daily tickets at ${formatRefillTime(new Date(FRESH_TICKETS.nextRefillAt))}`;
     await seal(3, "alice", { reserveLeft: 2 });
     playThrough();
     expect(host.textContent).toContain(refill);
@@ -317,6 +345,35 @@ describe("SealCeremony", () => {
     wait(100);
     tap();
     expect(card()?.hasAttribute("inert")).toBe(false);
+  });
+
+  it("stays where it is when reduced motion is switched off, rather than starting over", async () => {
+    const setting = new ReducedMotion(true);
+    vi.spyOn(window, "matchMedia").mockReturnValue(setting);
+    await seal(1);
+    wait(100);
+    // Reduced motion starts at the card.
+    expect(card()?.hasAttribute("inert")).toBe(false);
+    act(() => setting.change(false));
+    wait(100);
+    expect(host.querySelector<HTMLElement>(".sealed-card")?.style.opacity).toBe("1");
+    expect(host.querySelector<HTMLElement>(".seal-ceremony__sticker")?.style.transform).toContain(
+      "rotate(-2deg)",
+    );
+  });
+
+  it("frees its canvases' memory as it closes", async () => {
+    // As big as a phone's screen, so every canvas has pixels to free.
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(SHEET.w);
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(SHEET.h);
+    await seal(1);
+    const canvases = [...host.querySelectorAll("canvas")];
+    const areas = () => canvases.map((c) => c.width * c.height);
+    expect(canvases.length).toBeGreaterThan(0);
+    expect(areas()).not.toContain(0);
+    view?.unmount();
+    view = undefined;
+    expect(areas()).toEqual(canvases.map(() => 0));
   });
 
   it("fades back to the drawing when the seal fails", async () => {

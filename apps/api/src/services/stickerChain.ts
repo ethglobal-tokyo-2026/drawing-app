@@ -23,7 +23,13 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
-import type { GiftChain, Mint, NameWriter, SmartWallets } from "../deps.ts";
+import {
+  ChainUnavailableError,
+  type GiftChain,
+  type Mint,
+  type NameWriter,
+  type SmartWallets,
+} from "../deps.ts";
 import { diagnosticStep, logFailure, logInfo } from "../diagnostics.ts";
 import type { DiskImageStore } from "./imageStore.ts";
 
@@ -205,12 +211,18 @@ export function createStickerChain({
       "chain.escrow.read",
       { giftId, chainId: sepolia.id, contractAddress: escrowAddress },
       () =>
-        publicClient.readContract({
-          address: escrowAddress,
-          abi: stickerGiftEscrowAbi,
-          functionName: "gifts",
-          args: [bytes32(giftId, "Gift ID")],
-        }),
+        publicClient
+          .readContract({
+            address: escrowAddress,
+            abi: stickerGiftEscrowAbi,
+            functionName: "gifts",
+            args: [bytes32(giftId, "Gift ID")],
+          })
+          .catch((error: unknown) => {
+            throw new ChainUnavailableError(`Reading gift ${giftId} from the escrow failed`, {
+              cause: error,
+            });
+          }),
     );
     const named = escrowStatuses[status];
     if (!named) throw new Error(`Escrow returned unknown gift status ${status}`);

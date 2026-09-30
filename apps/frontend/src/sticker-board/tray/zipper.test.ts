@@ -78,6 +78,31 @@ describe("the Zipper", () => {
     expect(zip.isOpen).toBe(true);
   });
 
+  it("lets a touch the system takes go without a tap or a release", async () => {
+    const pointer = (type: string, clientY: number, on: Element = zip.slider) =>
+      on.dispatchEvent(new PointerEvent(type, { pointerId: 1, clientY, bubbles: true }));
+    // Still and short, it would have been a tap.
+    pointer("pointerdown", 20);
+    pointer("pointercancel", 20);
+    expect(zip.isOpen).toBe(false);
+
+    // Pulled well past the threshold when the slider loses the pointer: a lift after that is no one's.
+    pointer("pointerdown", 20);
+    pointer("pointermove", 400);
+    pointer("lostpointercapture", 400);
+    pointer("pointerup", 400);
+    await vi.advanceTimersByTimeAsync(SETTLE_MS);
+    expect(zip.isOpen).toBe(false);
+    expect(zip.progress).toBeCloseTo(0, 1);
+
+    // Capture handed to the slider from the part touched isn't lost: the drag goes on.
+    pointer("pointerdown", 20);
+    pointer("lostpointercapture", 20, zip.el.querySelector(".zip__pull") ?? zip.slider);
+    pointer("pointermove", 400);
+    pointer("pointerup", 400);
+    expect(zip.isOpen).toBe(true);
+  });
+
   it("swings its pull when the phone jolts, but not under reduced motion", async () => {
     const jolt = () =>
       window.dispatchEvent(

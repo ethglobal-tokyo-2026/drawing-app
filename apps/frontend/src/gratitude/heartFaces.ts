@@ -1,6 +1,6 @@
 import type { Tier } from "./combo";
 
-export type HeartFaceName = "none" | "dots" | "shy" | "hearts" | "over" | "bliss" | "wide" | "limp";
+type HeartFaceName = "none" | "dots" | "shy" | "hearts" | "over" | "bliss" | "wide" | "limp";
 
 /** What the heart's face layers show. */
 export interface HeartFace {

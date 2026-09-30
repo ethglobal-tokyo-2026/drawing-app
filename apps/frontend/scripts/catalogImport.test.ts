@@ -77,6 +77,7 @@ export const board = {
     blank: { en: "Nothing here yet.", ja: "まだ何もありません。" },
   },
   tag: { from: { en: "From {{name}}" }, for: { en: "For" } },
+  sealed: { en: "<b>Sealed</b> {{date}}" },
   developer: { debug: { en: "Debug" } },
 } as const satisfies Section;
 `;
@@ -154,7 +155,7 @@ describe("a work file", () => {
       "work.json",
       JSON.stringify({
         "board.own.title": { where: "Your board: its title", ja: "あなたのボード" },
-        "board.own.draw": { where: "Your board: the Draw key", ja: "かく" },
+        "board.own.draw": { where: "*Draw* key on your board", ja: "かく" },
         "board.own.blank": { where: "Your board, empty: the line in its spot" },
         "board.tag.from": { where: "A gift bag's tag: the giver", ja: "{{name}}から" },
       }),
@@ -180,7 +181,7 @@ export const board = {
   own: {
     /** Your board: its title */
     title: { en: "Your board", ja: "あなたのボード" },
-    /** Your board: the Draw key */
+    /** *Draw* key on your board */
     draw: { en: "Draw", ja: "かく" },
     /** Your board, empty: the line in its spot */
     blank: { en: "Nothing here yet." },
@@ -190,6 +191,7 @@ export const board = {
     from: { en: "From {{name}}", ja: "{{name}}から" },
     for: { en: "For" },
   },
+  sealed: { en: "<b>Sealed</b> {{date}}" },
   developer: { debug: { en: "Debug" } },
 } as const satisfies Section;
 `);
@@ -205,6 +207,7 @@ export const board = {
         "board.own.title": { where: "Two\nlines", ja: "ボード" },
         "board.own.draw": { where: "Your board: the Draw key", jp: "かく" },
         "board.tag.from": { where: "A gift bag's tag: the giver", ja: "から" },
+        "board.sealed": { where: "A sealed sticker: its date", ja: "</b>封印<b>{{date}}" },
       }),
     );
     expect(plan.problems.map((problem) => problem.slice(0, problem.indexOf(":")))).toEqual([
@@ -213,6 +216,7 @@ export const board = {
       "board.own.title",
       "board.own.draw",
       "board.tag.from",
+      "board.sealed",
     ]);
     expect(changedFiles()).toEqual([]);
   });

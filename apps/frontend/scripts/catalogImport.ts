@@ -72,15 +72,41 @@ const readWorkFile = (bytes: Uint8Array): Incoming[] => {
   });
 };
 
-/** How a translation's `{{variables}}` and `<tags>` differ from its English's, if they do. */
+/** How many times each token comes. */
+const tally = (tokens: readonly string[]) => {
+  const counts = new Map<string, number>();
+  for (const token of tokens) counts.set(token, (counts.get(token) ?? 0) + 1);
+  return counts;
+};
+
+/** Whether every `</tag>` closes the last `<tag>` still open, and none is left open. */
+const tagsNest = (tokens: readonly string[]) => {
+  const open: string[] = [];
+  for (const token of tokens) {
+    if (token.startsWith("</")) {
+      if (open.pop() !== `<${token.slice(2)}`) return false;
+    } else if (token.startsWith("<") && !token.endsWith("/>")) open.push(token);
+  }
+  return open.length === 0;
+};
+
+/**
+ * How a translation's `{{variables}}` and `<tags>` differ from its English's, if they do. Japanese
+ * may put them in another order, but each as many times, with its tags still opening before they close.
+ */
 const placeholderProblem = (english: string, japanese: string) => {
-  const expected = new Set(placeholders(english));
-  const found = new Set(placeholders(japanese));
-  const missing = [...expected].filter((token) => !found.has(token));
-  const extra = [...found].filter((token) => !expected.has(token));
+  const expected = tally(placeholders(english));
+  const found = tally(placeholders(japanese));
+  const fewer = (a: Map<string, number>, b: Map<string, number>) =>
+    [...a].filter(([token, n]) => (b.get(token) ?? 0) < n).map(([token]) => token);
+  const missing = fewer(expected, found);
+  const extra = fewer(found, expected);
   const problems = [
     ...(missing.length ? [`is missing ${list(missing)}`] : []),
-    ...(extra.length ? [`has ${list(extra)}, which the English doesn't`] : []),
+    ...(extra.length ? [`has ${list(extra)} more often than the English`] : []),
+    ...(!missing.length && !extra.length && !tagsNest(placeholders(japanese))
+      ? ["closes a tag before opening it, or leaves one open"]
+      : []),
   ];
   return problems.length ? `the Japanese ${problems.join(" and ")}` : undefined;
 };

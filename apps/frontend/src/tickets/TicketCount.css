@@ -3,7 +3,7 @@
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font: 800 14px/1 var(--font-ui);
+  font: 800 13px/1 var(--font-ui);
   font-stretch: var(--w-figure);
   color: var(--ink);
 }
