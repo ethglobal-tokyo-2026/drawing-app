@@ -5,6 +5,9 @@ import { i18next } from "../i18n/i18n";
 import { fullBarSeconds, type ComboRecord } from "./combo";
 import { GAME_CONFIG } from "./gameConfig";
 import { mountMiniGameEngine, type MiniGameEngine } from "./miniGameEngine";
+import { mountGratitudeReplay } from "./replay/mountGratitudeReplay";
+import { REPLAY_REAL_TIME_MS } from "./replay/replayFeed";
+import { handFrames } from "./replay/testing";
 import { TIER_NAMES } from "./tierNames";
 
 const { log, watch } = vi.hoisted(() => {
@@ -546,6 +549,38 @@ describe("switching to stroke or shake after the first tap", () => {
     await strokeFrom(OFF_HEART, 3, 40);
     await shake(7);
     expect(host.dataset.phase).toBe("ready");
+  });
+
+  it("switches where its replay does, though fast passes before the first tap aren't kept", async () => {
+    // Fast passes too few to unlock stroke, then the first tap, then stroking again straight away.
+    pointer("pointerdown", OFF_HEART.x, OFF_HEART.y);
+    await strokeFrom(OFF_HEART, 4, 40);
+    pointer("pointerup", OFF_HEART.x, OFF_HEART.y);
+    pressHeart();
+    pointer("pointerdown", OFF_HEART.x, OFF_HEART.y);
+    await strokeFrom(OFF_HEART, 4, 40);
+    engine.close();
+    const [record, replay] = onRecord.mock.calls[0] ?? [];
+    if (!record || !replay) throw new Error("The combo recorded nothing");
+    expect(record).toMatchObject({ method: "stroke", switchedAtHit: 1 });
+
+    // The replay runs on its own clock; a count that differs from the record's is warned of.
+    vi.useRealTimers();
+    const warn = vi.spyOn(console, "warn");
+    const card = document.body.appendChild(document.createElement("div"));
+    const { frames, run } = handFrames();
+    const replaying = mountGratitudeReplay(card, {
+      replay,
+      gratitude: { giftId: "g1", ...record },
+      landAt: () => null,
+      reduced: false,
+      frames,
+    });
+    await run(REPLAY_REAL_TIME_MS * 2);
+    expect(await replaying.finished).toBe("landed");
+    expect(warn).not.toHaveBeenCalled();
+    replaying.stop();
+    card.remove();
   });
 });
 

@@ -33,6 +33,8 @@ export interface StrokeDetector {
    */
   fingerMove: (x: number, y: number, t: number, forced?: boolean | null) => StrokePass | null;
   fingerUp: () => void;
+  /** Starts the streak of fast passes over, as a pause does. */
+  breakStreak: () => void;
   readonly fastStreak: number;
 }
 
@@ -115,6 +117,9 @@ export function createStrokeDetector(rules: StrokeRules): StrokeDetector {
       down = false;
       from = null;
       far = null;
+    },
+    breakStreak() {
+      streak = 0;
     },
   };
 }

@@ -587,6 +587,9 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
 
   const onStarted = () => {
     root.dataset.phase = "running";
+    // The replay keeps strokes from the first hit on, so passes before it never count toward a
+    // switch: it switches where the combo did.
+    strokes.breakStreak();
     if (isPerformanceRecorderOn()) {
       notePerformance("gratitude", `phase running, ${combo.view.method}`);
     }

@@ -26,6 +26,8 @@ export function session(config: GameConfig = GAME_CONFIG) {
   let ended: Ended | undefined;
   const hear = (events: ComboEvent[]) => {
     ended ??= endOf(events);
+    // As the engine does, the first hit starts the stroke streak over.
+    if (events.some((e) => e.kind === "started")) strokes.breakStreak();
     return events;
   };
   /** The engine lets the stroke finger go once the combo has ended or committed to shake. */

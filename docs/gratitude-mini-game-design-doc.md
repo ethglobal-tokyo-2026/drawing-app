@@ -76,6 +76,7 @@ Under `apps/frontend/src/gratitude/` unless a path says otherwise.
 - A run ends when the thumb doubles back by `turnPx`. A run of at least `minRunPx` is a pass, and a pass at `fastPxPerMs` or faster is fast. Runs are measured along their own direction, so any direction counts.
 - A slow pass, or a pause longer than `pauseMs`, breaks the streak of fast passes.
 - `unlockPasses` fast passes in a row unlock stroke: "!?" slams, and the combo commits to stroke, starting it first if need be. Once a tap combo's bar is running, `unlockPassesMidCombo` passes do it, so the switch lands before the bar runs out. After that, each fast pass is a hit.
+- The first tap starts the streak over: the replay keeps strokes only from the first hit on, so passes before it never count toward a switch, and a replay switches where the combo did.
 - Before the unlock, a drag on the heart stretches it. After `triesForTip` drags of `tryTravelPx` or more that don't unlock, the tip "Stroke it back and forth, fast" shows.
 - Once committed, the heart stretches and leans with the thumb, with speed lines, and flings mini hearts along each pass from ドキドキ up. Pop-ins sometimes come from the stroke words.
 
