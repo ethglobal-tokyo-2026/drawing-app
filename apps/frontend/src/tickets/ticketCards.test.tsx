@@ -656,7 +656,7 @@ describe("ReserveTicketCheckout", () => {
     // The card turned over under the key that was pressed, so its own key takes focus.
     expect(document.activeElement?.textContent).toBe("Back to the packs");
     expect(document.querySelector("[role=alert]")?.textContent).toBe(
-      "Asking again won’t add them. The payment was short.",
+      "Asking again won’t add them. The payment was less than the pack’s price.",
     );
     expect(document.querySelector(".reserve-checkout__digest")?.textContent).toBe(TX_DIGEST);
     expect(buttonNamed("Copy")).toBeDefined();
@@ -687,7 +687,7 @@ describe("ReserveTicketCheckout", () => {
     await render(checkout(), api);
     expect(title()).toBe("Tickets can’t be added");
     expect(document.querySelector("[role=alert]")?.textContent).toContain(
-      "That payment didn't reach the ticket shop.",
+      "The Shop didn’t receive that payment.",
     );
     expect(kept()).toEqual([]);
     view?.unmount();

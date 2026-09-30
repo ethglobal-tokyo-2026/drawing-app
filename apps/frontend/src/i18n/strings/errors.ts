@@ -4,11 +4,14 @@ import type { Leaf } from "../catalog";
 /** One message per error code, for people; the server's `detail` stays English, for developers. */
 export const errors = {
   /** Any screen that shows a failed request through errorMessage/errorReason, when the server answers a code this catalog lacks (such as route_not_found); {{code}} is that code */
-  unknown: { en: "Something went wrong ({{code}}).", ja: "問題が発生しました（{{code}}）。" },
-  /** Any screen, when a request gets no answer from the app's server (offline, or it failed before a reply): shown through errorMessage/errorReason by the screen that made it */
+  unknown: {
+    en: "Something went wrong ({{code}}). Try again. If it keeps happening, tell the Croquis Official account in LINE.",
+    ja: "問題が発生しました（{{code}}）。もう一度お試しください。続く場合は、LINEのクロッキー公式アカウントにお知らせください。",
+  },
+  /** Any screen, when a request gets no answer (offline, or it failed before a reply): shown through errorMessage/errorReason by the screen that made it */
   network: {
-    en: "The app's server didn't answer. Check your connection, then try again.",
-    ja: "アプリのサーバーから応答がありませんでした。接続を確認して、もう一度お試しください。",
+    en: "Couldn’t connect. Check your connection, then try again.",
+    ja: "つながりませんでした。接続を確認して、もう一度お試しください。",
   },
   /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: LINE is logged in but hands over no ID token to sign in to the app's server with (made by the app itself, shown through errorMessage) */
   no_line_token: {
@@ -32,8 +35,8 @@ export const errors = {
   },
   /** Your stat board, Age verification paper: tapping Verify your age (POST /api/me/age-verification/request) when this server has no World ID app, in “Your age couldn’t be verified” through errorReason */
   age_verification_not_configured: {
-    en: "Age verification isn't set up on this server yet.",
-    ja: "このサーバーでは、まだ年齢確認ができません。",
+    en: "Age verification isn’t available yet.",
+    ja: "年齢確認は、まだ利用できません。",
   },
   /** Your stat board, Age verification paper: sending World App's proof (POST /api/me/age-verification) when World refuses it, in “Your age couldn’t be verified” through errorReason */
   age_verification_refused: {
@@ -57,13 +60,13 @@ export const errors = {
   },
   /** Giving and Receiving: opening a gift's link, Accept, taking a gift out, or the deposit's check after Send, when the chain can't be read, through errorMessage or errorReason */
   chain_unavailable: {
-    en: "The chain didn't answer. Try again in a moment.",
-    ja: "ブロックチェーンから応答がありません。少し待ってから、もう一度お試しください。",
+    en: "Couldn’t check on the gift just now. Try again in a moment.",
+    ja: "ギフトの状態をいま確認できません。少し待ってから、もう一度お試しください。",
   },
   /** Receive gift dialog, Accept sheet: tapping Accept (POST /api/gifts/receive, or /:giftId/receive from the board) when the chain fails or doesn't confirm the sticker's claim in time, in “… wasn’t received” through errorReason */
   claim_failed: {
-    en: "The chain didn't confirm it. Trying again is safe: a gift is only ever received once.",
-    ja: "ブロックチェーン上で確認がとれませんでした。受け取りは一度きりなので、やり直しても大丈夫です。",
+    en: "It couldn’t be confirmed in time. Trying again is safe: a gift is only ever received once.",
+    ja: "時間内に確認できませんでした。受け取りは一度きりなので、やり直しても大丈夫です。",
   },
   /** Not shown in the app: the ENS gateway's answer to an outside ENS app looking up a croquis.eth name, when this server has no ENS set up */
   ens_not_configured: {
@@ -82,11 +85,14 @@ export const errors = {
   },
   /** Giving, In the bag: packing a sticker when the escrow still has no deposit after the app's retries (POST /api/gifts/:giftId/deposit), in “couldn’t be packed” through errorReason */
   deposit_not_landed: {
-    en: "The gift bag isn't on the chain yet.",
-    ja: "ギフト袋は、まだブロックチェーン上にありません。",
+    en: "Your sticker hasn’t reached the gift bag yet. Wait a moment, then tap Send in LINE to check again.",
+    ja: "シールがまだギフト袋に届いていません。少し待ってから、「LINEで送る」をタップして、もう一度確認してください。",
   },
   /** Giving, In the bag: recording LINE's picker outcome (POST /api/gifts/:giftId/shared) for a gift that's no longer packed or sent, or taking out a gift already returned, in “couldn’t record” or “couldn’t be taken out” through errorReason */
-  gift_closed: { en: "This gift is closed.", ja: "このギフトは、すでに終了しています。" },
+  gift_closed: {
+    en: "This gift is already closed. Go back to your board, and if your sticker is there, give it again.",
+    ja: "このギフトはすでに閉じられています。ボードに戻って、シールがあればもう一度贈ってください。",
+  },
   /** Giving, In the bag: packing a sticker (POST /api/gifts) that an earlier gift still holds in the escrow until it's taken out, in “couldn’t be packed” through errorReason */
   gift_held: {
     en: "This sticker is still in an earlier gift bag. Take it out, then give it again.",
@@ -103,7 +109,10 @@ export const errors = {
     ja: "このシールは、すでにギフトとして贈られている途中です。",
   },
   /** Giving, In the bag: a deposit, picker outcome or take-out (POST /api/gifts/:giftId/…) for a gift that doesn't exist, through errorReason; the Receive gift dialog and the Gratitude Mini-game show their own lines for it instead */
-  gift_not_found: { en: "This gift isn't here.", ja: "このギフトは見つかりませんでした。" },
+  gift_not_found: {
+    en: "Couldn’t find this gift. Go back to your board and give the sticker again.",
+    ja: "このギフトが見つかりませんでした。ボードに戻って、もう一度シールを贈ってください。",
+  },
   /** Gratitude Mini-game: recording a combo (POST /api/gratitude) for a gift not received yet; the Mini-game shows its own “didn’t reach” line instead, so this is errorMessage's fallback */
   gift_not_received: {
     en: "This gift hasn't been received yet.",
@@ -121,7 +130,7 @@ export const errors = {
   },
   /** Sticker detail's Transfer Trail: loading a gift's Gratitude replay (GET /api/gratitude/:giftId) when none was recorded, in “Couldn’t load the replay” through errorReason */
   gratitude_not_found: {
-    en: "There's no Gratitude for this gift yet.",
+    en: "There’s no gratitude for this gift yet.",
     ja: "このギフトへの感謝は、まだありません。",
   },
   /** Receiving: opening a gift message's link in a group chat (POST /api/gifts/preview or /receive); the Receive gift dialog shows its own “Open this in your chat” screen instead */
@@ -139,20 +148,20 @@ export const errors = {
     en: "Someone else has that handle.",
     ja: "そのユーザー名は、ほかの人が使っています。",
   },
-  /** Any screen, when the server fails unexpectedly (500), through errorMessage/errorReason; also the Ticket shop after paying, when Sui doesn't verify the payment (POST /api/ticket-purchases) */
+  /** Any screen, when the server fails unexpectedly (500), through errorMessage/errorReason; also the reserve ticket checkout after paying, when Sui doesn't verify the payment (POST /api/ticket-purchases) */
   internal_error: {
-    en: "The app's server ran into a problem.",
-    ja: "アプリのサーバーで問題が発生しました。",
+    en: "Something went wrong on our side. Try again in a moment.",
+    ja: "こちら側で問題が発生しました。少し待ってから、もう一度お試しください。",
   },
   /** Any screen, when the server can't read a request (400), through errorMessage/errorReason; e.g. the Drawing screen's seal chip when a seal's images are malformed (POST /api/stickers) */
   invalid_request: {
-    en: "The app sent something the server couldn't read.",
-    ja: "アプリが送った内容を、サーバーが読み取れませんでした。",
+    en: "Croquis couldn’t read that request. Try again. If it keeps happening, tell the Croquis Official account in LINE.",
+    ja: "クロッキーがそのリクエストを読み取れませんでした。もう一度お試しください。続く場合は、LINEのクロッキー公式アカウントにお知らせください。",
   },
   /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: signing in to the app's server (POST /api/session) when LINE refuses the ID token, through errorMessage */
   line_token_invalid: {
-    en: "LINE didn't accept this sign-in. Reconnect with LINE; if this continues, contact the team.",
-    ja: "LINEがログイン情報を確認できませんでした。再ログインしても続く場合は、チームにお問い合わせください。",
+    en: "LINE didn’t accept this sign-in. Reconnect with LINE. If it keeps happening, tell the Croquis Official account in LINE.",
+    ja: "LINEがログイン情報を確認できませんでした。LINEで再ログインしてください。続く場合は、LINEのクロッキー公式アカウントにお知らせください。",
   },
   /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: signing in to the app's server (POST /api/session) with an expired LINE ID token, through errorMessage. Also Giving, Receiving and the reserve ticket checkout, through errorReason, when a chain action or a payment waited on Privy and Privy couldn't sign in because LINE's ID token had expired (made by the app itself) */
   line_token_expired: {
@@ -173,8 +182,8 @@ export const errors = {
   no_tickets_left: { en: "You're out of tickets.", ja: "チケットが残っていません。" },
   /** Giving, In the bag: recording that the gift was sent (POST /api/gifts/:giftId/shared) before its deposit landed in the escrow, in “couldn’t record” through errorReason; the Receive gift dialog shows its own “Almost here” screen instead */
   not_deposited: {
-    en: "This gift hasn't been sent yet.",
-    ja: "このギフトは、まだ送られていません。",
+    en: "Your sticker hasn’t reached the gift bag yet. Wait a moment, then try again.",
+    ja: "シールがまだギフト袋に届いていません。少し待ってから、もう一度お試しください。",
   },
   /** Sticker detail's Transfer Trail: marking a Gratitude replay watched (POST /api/gratitude/:giftId/seen) by anyone but the gift's giver, in “Couldn’t mark this gratitude watched” through errorReason; the card marks it only for the giver */
   not_giver: { en: "Only the giver can do that.", ja: "それができるのは贈り主だけです。" },
@@ -192,33 +201,36 @@ export const errors = {
   not_yours: { en: "That sticker isn't yours.", ja: "そのシールは、あなたのものではありません。" },
   /** Receiving: the giver opening their own gift message's link (POST /api/gifts/preview or /receive); the Receive gift dialog shows its own “This gift is on its way” screen instead */
   own_gift: { en: "You can't open your own gift.", ja: "自分が贈ったギフトは、ひらけません。" },
-  /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) for a pack size the shop doesn't sell, in “The payment went through, but the tickets weren’t added” through errorReason */
+  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) for a pack size the shop doesn't sell, in “The payment went through, but the tickets weren’t added” through errorReason */
   pack_unknown: { en: "That ticket pack doesn't exist.", ja: "そのチケットパックはありません。" },
-  /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) for a Sui payment that already bought tickets, in “The payment went through, but the tickets weren’t added” through errorReason */
+  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) for a Sui payment that already bought tickets, in “The payment went through, but the tickets weren’t added” through errorReason */
   payment_already_counted: {
     en: "That payment was already counted.",
     ja: "その支払いは、すでに反映されています。",
   },
-  /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) for a Sui transaction that paid no JPYC into the ticket vault, in “…the tickets weren’t added” through errorReason */
+  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) for a Sui transaction that paid no JPYC into the ticket vault, in “…the tickets weren’t added” through errorReason */
   payment_not_found: {
-    en: "That payment didn't reach the ticket shop.",
-    ja: "この支払いはチケットショップに届いていません。",
+    en: "The Shop didn’t receive that payment.",
+    ja: "ショップでこの支払いを確認できませんでした。",
   },
-  /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) while Sui doesn't show the payment yet, in “Tickets not added yet” through errorReason, under the key that asks again */
+  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) while Sui doesn't show the payment yet, in “Tickets not added yet” through errorReason, under the key that asks again */
   payment_not_landed: {
     en: "Sui doesn't show this payment yet. Try again in a moment.",
     ja: "Suiでこの支払いがまだ確認できません。少し待ってから、もう一度お試しください。",
   },
-  /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) for a payment into the ticket vault that names someone else, in “…the tickets weren’t added” through errorReason */
+  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) for a payment into the ticket vault that names someone else, in “…the tickets weren’t added” through errorReason */
   payment_not_yours: {
     en: "That payment was made for someone else's tickets.",
     ja: "この支払いは別の人のチケットのものです。",
   },
-  /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) when the payment is below the pack's price at every quote still valid, in “…the tickets weren’t added” through errorReason */
-  payment_short: { en: "The payment was short.", ja: "支払い額が足りませんでした。" },
+  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) when the payment is below the pack's price at every quote still valid, in “…the tickets weren’t added” through errorReason */
+  payment_short: {
+    en: "The payment was less than the pack’s price.",
+    ja: "支払い額がパックの価格に足りませんでした。",
+  },
   /** Gratitude Mini-game: recording a combo (POST /api/gratitude) whose replay fails the server's checks; the Mini-game shows its own “didn’t reach” line instead, so this is errorMessage's fallback */
   replay_invalid: {
-    en: "The Gratitude replay couldn't be read.",
+    en: "The gratitude replay couldn’t be read.",
     ja: "感謝のリプレイを読み取れませんでした。",
   },
   /** Sign-in screen, under “Couldn’t sign you in”: a request found the session gone (the cookie expired, or the account was deleted) and signing in again didn't hold; the app signs in again by itself the first time, so this shows only on that second failure, through errorMessage */
@@ -232,13 +244,16 @@ export const errors = {
     ja: "ボードアドレスの準備に時間がかかっています。もう一度お試しください。",
   },
   /** Sticker detail: loading where it's been (GET /api/stickers/:stickerId), in “Couldn’t load where it’s been…”, or Giving: packing it (POST /api/gifts), in “couldn’t be packed”, through errorReason */
-  sticker_not_found: { en: "This sticker isn't here.", ja: "このシールは見つかりませんでした。" },
+  sticker_not_found: {
+    en: "Couldn’t find this sticker. Go back to your board and try again.",
+    ja: "このシールが見つかりませんでした。ボードに戻って、もう一度お試しください。",
+  },
   /** Your sticker board: saving where a sticker sits after you move it (PATCH /api/sticker-boards/me/sticker-placements/:stickerId) when it never reached you, in “Couldn’t save where … sits” through errorReason */
   sticker_placement_not_found: {
     en: "That sticker isn't on your sticker board.",
     ja: "そのシールは、あなたのシールボードにありません。",
   },
-  /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) when the server couldn't read the payment from Sui, in “…the tickets weren’t added” through errorReason */
+  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) when the server couldn't read the payment from Sui, in “…the tickets weren’t added” through errorReason */
   sui_unavailable: {
     en: "Sui didn't answer. Your tickets weren't added yet; try again.",
     ja: "Suiから応答がありません。チケットはまだ追加されていません。もう一度お試しください。",
@@ -266,7 +281,10 @@ export const errors = {
     ja: "チケットの状況が変わりました。もう一度お試しください。",
   },
   /** Drawing screen, after tapping the check to seal: the seal chip's reason when the ticket the drawing started on doesn't exist (POST /api/stickers), through errorReason */
-  ticket_not_found: { en: "That ticket isn't here.", ja: "そのチケットは見つかりませんでした。" },
+  ticket_not_found: {
+    en: "Couldn’t find that ticket. If it keeps happening, tell the Croquis Official account in LINE.",
+    ja: "そのチケットが見つかりませんでした。続く場合は、LINEのクロッキー公式アカウントにお知らせください。",
+  },
   /** Drawing screen, after tapping the check to seal: the seal chip's reason when the ticket the drawing started on is someone else's (POST /api/stickers), through errorReason */
   ticket_not_yours: {
     en: "That ticket isn't yours.",
@@ -288,7 +306,10 @@ export const errors = {
     ja: "この名前の問い合わせには答えられません。",
   },
   /** An artist's sticker board: loading their board or stats (GET /api/sticker-boards/:userId, …/user-stats) for a person who doesn't exist, in “Couldn’t load …’s board” or “Their stats didn’t load” through errorReason */
-  user_not_found: { en: "That artist isn't here.", ja: "そのアーティストは見つかりませんでした。" },
+  user_not_found: {
+    en: "Couldn’t find that artist. Search for them in Explore to check the handle.",
+    ja: "そのアーティストが見つかりませんでした。さがすでユーザー名を確認してください。",
+  },
   /** Your stat board, Age verification paper: sending World App's proof (POST /api/me/age-verification) when World's verify service doesn't answer, in “Your age couldn’t be verified” through errorReason */
   world_id_unavailable: {
     en: "World ID didn't answer. Try again in a moment.",

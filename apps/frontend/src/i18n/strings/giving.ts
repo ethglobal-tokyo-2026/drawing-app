@@ -177,10 +177,10 @@ export const giving = {
     button: { en: "Preparing…", ja: "準備中…" },
     /** What a long wait is waiting on, by step: the line under “Preparing your gift” once it has run long. */
     slow: {
-      /** Giving's “Preparing your gift” screen, after about ten seconds: the line under its title, while the app's server hasn't answered */
+      /** Giving's “Preparing your gift” screen, after about ten seconds: the line under its title, while Croquis hasn't answered */
       asking: {
-        en: "This is taking longer than usual. Still waiting on the app’s server.",
-        ja: "いつもより時間がかかっています。アプリのサーバーからの応答を待っています。",
+        en: "This is taking longer than usual. Still waiting for Croquis to answer.",
+        ja: "いつもより時間がかかっています。クロッキーからの応答を待っています。",
       },
       /** Giving's “Preparing your gift” screen, after about ten seconds: the line under its title, while the sticker comes out of an earlier gift bag first */
       earlier: {
@@ -240,7 +240,7 @@ export const giving = {
     send: { en: "Send in LINE", ja: "LINEで送る" },
     /** Giving, with the sticker in the open gift bag: the quiet link under Send in LINE that lifts it back out, back to the first screen */
     takeOut: { en: "Take it out", ja: "取り出す" },
-    /** Giving's "Not sent yet" screen: an alert when the app's server couldn't pack the gift, with why */
+    /** Giving's "Not sent yet" screen: an alert when Croquis couldn't pack the gift, with why */
     couldntPack: {
       en: "{{no}} couldn’t be packed: {{reason}}",
       ja: "{{no}}をギフト袋に入れられませんでした：{{reason}}",
@@ -252,10 +252,10 @@ export const giving = {
       en: "{{no}} couldn’t be taken out: {{reason}}",
       ja: "{{no}}を取り出せませんでした：{{reason}}",
     },
-    /** Giving's "Not sent yet" screen: an alert when the app's server couldn't record a cancelled or failed send, with why */
+    /** Giving's "Not sent yet" screen: an alert when Croquis couldn't record a cancelled or failed send, with why */
     couldntRecord: {
-      en: "The app’s server couldn’t record that: {{reason}}",
-      ja: "アプリのサーバーに記録できませんでした：{{reason}}",
+      en: "Croquis couldn’t record that: {{reason}}",
+      ja: "クロッキーに記録できませんでした：{{reason}}",
     },
   },
   /** LINE didn't say whether the Gift Message went out, so the same one isn't offered again. */
@@ -278,10 +278,10 @@ export const giving = {
       en: "It’s in your LINE chat now, and the gift message opens once. When they receive it, you’ll see who did.",
       ja: "ギフトメッセージをLINEのトークに送りました。ひらけるのは一度だけです。受け取られたら、誰が受け取ったかがわかります。",
     },
-    /** Giving's "Closed and sent" screen: an alert when the Gift Message went out but the app's server couldn't record it, with why */
+    /** Giving's "Closed and sent" screen: an alert when the Gift Message went out but Croquis couldn't record it, with why */
     couldntRecord: {
-      en: "It went out in LINE, but the app’s server couldn’t record it: {{reason}}",
-      ja: "LINEでは送れましたが、アプリのサーバーに記録できませんでした：{{reason}}",
+      en: "It went out in LINE, but Croquis couldn’t record it: {{reason}}",
+      ja: "LINEでは送れましたが、クロッキーに記録できませんでした：{{reason}}",
     },
   },
   /** The frosted gift bag. */

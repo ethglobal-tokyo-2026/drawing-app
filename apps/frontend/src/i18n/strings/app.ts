@@ -9,7 +9,7 @@ export const app = {
     board: { en: "Your sticker board", ja: "あなたのシールボード" },
     /** Page title in LINE's header while the Explore tab is open */
     explore: { en: "Explore", ja: "さがす" },
-    /** Page title in LINE's header while the Shop tab, the ticket shop, is open */
+    /** Page title in LINE's header while the Shop tab is open */
     shop: { en: "Shop", ja: "ショップ" },
     /** Page title in LINE's header while the drawing screen is open */
     draw: { en: "Draw", ja: "かく" },
