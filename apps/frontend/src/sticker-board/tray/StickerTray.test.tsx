@@ -2,6 +2,7 @@
 import { act, createRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { forgetBoardComplete, markBoardComplete, QUIET_MS } from "../boardComplete";
 import type { BoardStickerView } from "../boardSticker";
 import { StickerTray, type StickerTrayHandle } from "./StickerTray";
 import type { TrayBoard } from "./trayEngine";
@@ -157,6 +158,8 @@ const kindOf = (el: HTMLElement) =>
         : "more";
 
 beforeEach(() => {
+  // Each test starts with a board that hasn't assembled, as a new page would.
+  forgetBoardComplete();
   // Reduced motion: the tray opens and shuts at once. happy-dom's own animations reject unhandled.
   vi.spyOn(window, "matchMedia").mockReturnValue(window.matchMedia("all"));
   vi.spyOn(Element.prototype, "animate").mockImplementation(() => new Animation());
@@ -338,6 +341,34 @@ describe("StickerTray", () => {
     act(() => board.querySelector<HTMLElement>('.tray__tab[data-filter="gifts"]')?.click());
     await motion.finishAll();
     expect(frontSheet()?.getAttribute("data-f")).toBe(newest);
+  });
+
+  describe("asks for its sticker images", () => {
+    const imageCount = () => board.querySelectorAll(".tray__img").length;
+    const masked = () =>
+      board.querySelector<HTMLElement>(".tray__fit")?.style.getPropertyValue("--m");
+
+    it("only once the tray first shows, so a closed tray downloads nothing beside the board", async () => {
+      render(manyStickers(8));
+      expect(imageCount()).toBe(0);
+      expect(masked()).toBe("");
+      await openTray();
+      expect(imageCount()).toBeGreaterThan(0);
+      expect(masked()).toContain("-mask.png");
+    });
+
+    it("or once the board has assembled and had its quiet second, the tray still shut", async () => {
+      vi.useFakeTimers({ toFake: ["setTimeout"] });
+      try {
+        render(manyStickers(8));
+        markBoardComplete();
+        expect(imageCount()).toBe(0);
+        await vi.advanceTimersByTimeAsync(QUIET_MS + 10);
+        expect(imageCount()).toBeGreaterThan(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   describe("says in its one polite status line", () => {

@@ -7,6 +7,7 @@
  */
 import { i18next } from "../../i18n/i18n";
 import { timeOurWork } from "../../performance/performanceRecorder";
+import { whenBoardQuiet } from "../boardComplete";
 import { formatNo } from "../../stickers/format";
 import { lightUp } from "../../stickers/light";
 import type { StickerUrls } from "../../stickers/stickerUrls";
@@ -482,6 +483,20 @@ export function createTrayEngine(
   let stale = false;
   /** The sheet count the stack's order was dealt for. */
   let orderedFor = 0;
+  /**
+   * Slots ask for their images once the board has assembled or the tray first shows, so a closed tray
+   * doesn't download alongside the board's own stickers.
+   */
+  let imagesOn = false;
+  function loadImages() {
+    if (imagesOn || destroyed) return;
+    imagesOn = true;
+    if (ui.g || ui.busy) stale = true;
+    else {
+      rerenderPulled();
+      renderStack();
+    }
+  }
 
   function modelOf(list: readonly TraySticker[]) {
     for (const s of list) if (s.seen) seen.add(s.id);
@@ -612,8 +627,9 @@ export function createTrayEngine(
         silhouette,
       ),
     );
-    // A used sticker silhouette shows no sticker, so it loads none.
-    if (s.state !== "used") {
+    // A used sticker silhouette shows no sticker, so it loads none; nor does any slot before its
+    // images are let load.
+    if (s.state !== "used" && imagesOn) {
       // Drawn by someone else, or NSFW, it wears the sheet's foil under its image, as StickerFoil
       // draws it.
       if ((s.gift || s.nsfw) && s.urls.mask) {
@@ -636,6 +652,7 @@ export function createTrayEngine(
         fit.append(foil);
       }
       const img = make("img", "tray__img");
+      img.decoding = "async";
       img.src = s.urls.png;
       img.alt = "";
       img.draggable = false;
@@ -643,7 +660,7 @@ export function createTrayEngine(
     }
     fit.style.width = px(q.w);
     fit.style.height = px(q.h);
-    fit.style.setProperty("--m", cssUrl(maskOf(s)));
+    if (imagesOn) fit.style.setProperty("--m", cssUrl(maskOf(s)));
     el.append(fit);
     if (isNew) el.append(decorative(make("span", "tray__new", words.new)));
     return el;
@@ -866,7 +883,10 @@ export function createTrayEngine(
       setShut(!show);
       const showing = show && !onShow;
       onShow = show;
-      if (showing && stale) redraw();
+      if (showing) {
+        loadImages();
+        if (stale) redraw();
+      }
     }
     if (range) {
       const xw = g.chainX - k * G + 3;
@@ -2288,6 +2308,7 @@ export function createTrayEngine(
       (error: unknown) => console.error("Laying out the sticker sheets failed", error),
     );
   scheduleTug(2400);
+  void whenBoardQuiet().then(loadImages);
 
   return {
     get isOpen() {
