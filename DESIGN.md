@@ -395,7 +395,7 @@ Stickers and the gratitude heart also respond to the app's one moving light. The
 - **Label base** (`box-shadow: 0 1px 0 rgba(28,24,36,.06), 1px 3px 5px -2px rgba(28,24,36,.16)`): under label stock.
 - **Label** (`box-shadow: 0 1px 0 rgba(28,24,36,.10), 1px 2px 3px rgba(28,24,36,.08)`): a flat label resting on the liner, such as the tool strip or a chip.
 - **Lift** (`box-shadow: 1px 3px 4px rgba(28,24,36,.12), 3px 10px 22px rgba(28,24,36,.14)`): something held above the page, like a toast or the Smoothing bar.
-- **Sheet** (`box-shadow: 0 -1px 0 rgba(28,24,36,.06), 2px -8px 28px rgba(28,24,36,.12)`): a bottom sheet rising over the page.
+- **Sheet** (`box-shadow: 0 -1px 0 rgba(28,24,36,.06), 2px -8px 28px rgba(28,24,36,.12)`): a bottom sheet rising over the page. Every bottom sheet is a modal dialog: what it covers goes inert, focus stays inside, and Escape, Back and its perforation close it, unless its act is on its way.
 - **Kiss-cut** (`filter: drop-shadow(0 0 .5px rgba(28,24,36,.55))`): the die-cut groove around every sticker, round the foil band's outer edge on a foil sticker.
 - **Sticker cast** (`filter: drop-shadow(1px 2px 1.5px rgba(28,24,36,.16)) drop-shadow(2px 6px 8px rgba(28,24,36,.10))`): a sticker stuck to the page. It's always paired with the kiss-cut. A foil sticker casts it, and every lifted shadow, from a still copy of its band's shape.
 - **Peeling** (`filter: drop-shadow(3px 7px 5px rgba(28,24,36,.18)) drop-shadow(8px 16px 18px rgba(28,24,36,.12))`): a sticker lifting off, tilted in 3D by 11°.
