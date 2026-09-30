@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { noteBootMilestone } from "../performance/bootMilestones";
 import { watchFrames } from "../performance/performanceRecorder";
-import { onItsWay, type BoardStickerView } from "./boardSticker";
+import { onTheBoard, type BoardStickerView } from "./boardSticker";
 
 /**
  * Board complete: the first board of this app open has its stickers in. The fresh board has landed
@@ -74,7 +74,7 @@ export interface AssemblingSticker {
 /** What the board's assembly waits for: each sticker on it. A given sticker has left it. */
 export const assemblyOf = (stickers: readonly BoardStickerView[]): AssemblingSticker[] =>
   stickers.flatMap((s) => {
-    if (!s.placement.on || !s.held || onItsWay(s)) return [];
+    if (!onTheBoard(s)) return [];
     const { png, mask, spec, rim } = s.urls;
     return [{ urls: [png, mask, spec, rim].filter((url) => url !== undefined) }];
   });

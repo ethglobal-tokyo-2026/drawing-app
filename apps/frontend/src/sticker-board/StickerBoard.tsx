@@ -49,7 +49,7 @@ import { useBackToClose } from "../ui/useBackToClose";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { normalizeTurn } from "./boardGesture";
 import {
-  onItsWay,
+  onTheBoard,
   placeUnplaced,
   toBoardSticker,
   type BoardSticker,
@@ -447,7 +447,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   }, [landingId]);
 
   // A given sticker has left the board: on its way, for the badge; received, for good.
-  const onBoard = (stickers ?? []).filter((s) => s.placement.on && s.held && !onItsWay(s));
+  const onBoard = (stickers ?? []).filter(onTheBoard);
   // The gratitude mini-game's demo always sends gratitude for whichever sticker landed most recently.
   const newest = onBoard.reduce<BoardSticker | null>(
     (latest, s) => (!latest || s.createdAt > latest.createdAt ? s : latest),

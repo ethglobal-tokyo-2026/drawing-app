@@ -30,7 +30,7 @@ import { QuietLink } from "../ui/QuietLink";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import { toBoardSticker, type BoardStickerView } from "./boardSticker";
+import { onTheBoard, toBoardSticker, type BoardStickerView } from "./boardSticker";
 import { fieldOf, toPx, type Field } from "./placement";
 import { PlacedSticker } from "./PlacedSticker";
 import { BoardFlip } from "./stat-board/BoardFlip";
@@ -136,12 +136,12 @@ export function ArtistBoard({ person, onBack }: Props) {
   const [offering, setOffering] = useState<BoardStickerView | null>(null);
   useLight(!turned);
 
-  // What they hold and have stuck on, bottom of the stack first.
+  // What's on their board, bottom of the stack first.
   const stickers = useMemo(
     () =>
       (board.state === "ready" ? board.data.boardStickers : [])
         .map(toBoardSticker)
-        .flatMap((s) => (s.held && s.placement?.on ? [{ ...s, placement: s.placement }] : []))
+        .filter(onTheBoard)
         .sort((a, b) => a.placement.z - b.placement.z),
     [board],
   );
