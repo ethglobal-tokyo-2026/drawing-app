@@ -19,14 +19,14 @@ Fixed on main before the lanes: SHELL-5, by another session's `3a6286ac`.
 Wave 1:
 
 - [ ] Sealing and spending on the drawing screen: DRAW-1, DRAW-3, DRAW-7, DRAW-8, DRAW-9 (the app's side only: another branch changed the server's mint path), DRAW-10, DRAW-12, DRAW-15, DRAW-18, TIX-2, the timelapse half of DRAW-13, and keeping the ticket spend key until the drawing screen has recorded the ticket use
-- [ ] The kept drawing and the ink engine: DRAW-2, DRAW-4, DRAW-5, DRAW-6, DRAW-11, DRAW-13
+- [x] The kept drawing and the ink engine: DRAW-2, DRAW-4, DRAW-5, DRAW-6, DRAW-11, DRAW-13
 - [ ] Sticker tray: TRAY-1, TRAY-2, TRAY-4 to TRAY-8
 - [ ] Sticker board and stat board: BOARD-1 to BOARD-7, CLEAN-18
-- [ ] Giving: GIFT-1 to GIFT-4, GIFT-9, GIFT-10, SHELL-4, CLEAN-12, and the API's `deposit_held` and `gift_held` answers
+- [x] Giving: GIFT-1 to GIFT-4, GIFT-9, GIFT-10, SHELL-4, CLEAN-12, and the API's `deposit_held` and `gift_held` answers
 - [ ] Receiving, and the gift link in the server log: GIFT-5, GIFT-7, GIFT-8
-- [ ] Gratitude records: GRAT-1, GRAT-2, GRAT-3, GRAT-8, GRAT-11
+- [x] Gratitude records: GRAT-1, GRAT-2, GRAT-3, GRAT-8, GRAT-11
 - [ ] Tickets and payments: TIX-1, TIX-4 to TIX-9, CLEAN-8
-- [ ] App shell and sign-in: SHELL-1, SHELL-2, SHELL-6 to SHELL-10, UI-1, CLEAN-10, CLEAN-16
+- [x] App shell and sign-in: SHELL-1, SHELL-2, SHELL-6 to SHELL-10, UI-1, CLEAN-10, CLEAN-16. A screen whose code fails to load shows a Reload note; a screen that crashes while rendering still unmounts the app, which needs an app-level boundary
 - [ ] Shared controls and the catalog import: UI-2 to UI-7, GIFT-6, CLEAN-1, CLEAN-9
 
 Wave 2, as wave 1's lanes finish:
