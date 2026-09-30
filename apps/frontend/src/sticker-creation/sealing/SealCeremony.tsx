@@ -163,14 +163,12 @@ export function SealCeremony({
     // The card comes with the sealed sticker, so the flight to its slot is measured once it's there.
     let path: Flight | null = null;
     let cardEl: HTMLElement | null = null;
-    let lines: HTMLElement[] = [];
     const cardReady = () => {
       if (path) return true;
       const c = card.current;
       const s = slot.current;
       if (!c || !s) return false;
       cardEl = c;
-      lines = [...c.querySelectorAll<HTMLElement>("[data-card-line]")];
       path = flight(box, body, {
         x: c.offsetLeft + s.offsetLeft,
         y: c.offsetTop + s.offsetTop,
@@ -199,6 +197,9 @@ export function SealCeremony({
       };
     };
     const show = () => {
+      // Found every frame: a line the card mounts or swaps mid-fade, as a tickets refresh can, fades
+      // up in its turn.
+      const lines = cardEl ? [...cardEl.querySelectorAll<HTMLElement>("[data-card-line]")] : [];
       const f: SealFrame = sealFrame(t, path ?? ON_BACKING, lines.length);
       cutLine.draw(f.cut.progress, f.cut.alpha, cutter());
       opacity(parts.dim, f.dim);
