@@ -447,6 +447,18 @@
   letter-spacing: 0.04em;
 }
 
+/* The word already sits on the 11px floor, so a long Japanese one (受け取った) can't step down: it
+   drops the tracking, sets its kana proportionally, and the print takes a little more of the stamp's
+   width, to fit the print's face inside its border. */
+.stat-board__stamp-paper:lang(ja) {
+  padding-inline: 5px;
+}
+
+.stat-board__stamp-print .fine:lang(ja) {
+  letter-spacing: 0;
+  font-feature-settings: "palt";
+}
+
 /* Bests: a torn notebook scrap under a strip of washi. It hangs from its tape, top right. Its heading
    and every row take whole 24px lines, and each line's rule runs just under its baseline, so the
    words sit on the rules the way handwriting sits on a notebook's lines. */
