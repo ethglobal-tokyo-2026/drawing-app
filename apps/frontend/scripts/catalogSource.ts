@@ -74,12 +74,15 @@ const sectionObject = (program: Program, name: string): ObjectExpression | undef
   return undefined;
 };
 
-/** A `/** … *\/` comment's text on one line. */
+/**
+ * A `/** … *\/` comment's text on one line. Only the lines after the first start with the comment's
+ * own `*`, so a first line's `*`, as in "*Reserve* caption", is its text.
+ */
 const oneLine = (comment: Comment) =>
   comment.value
     .slice(1)
     .split("\n")
-    .map((line) => line.replace(/^\s*\*?/, "").trim())
+    .map((line, at) => (at === 0 ? line : line.replace(/^\s*\*/, "")).trim())
     .filter(Boolean)
     .join(" ");
 
