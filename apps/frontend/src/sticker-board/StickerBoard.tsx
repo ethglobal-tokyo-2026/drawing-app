@@ -88,6 +88,7 @@ import { GiftsForYouBadge, type GiftForYou } from "../receiving/GiftsForYouBadge
 import { ArtistChipLayer } from "./ArtistChipLayer";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
+import type { TrayProblem } from "./tray/trayProblem";
 import { useBoardGestures } from "./useBoardGestures";
 import { useBoardSize } from "./useBoardSize";
 import "./StickerBoard.css";
@@ -259,6 +260,22 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   });
   /** Stickers whose spot didn't save, and why; each goes once a save of it succeeds. */
   const [unsaved, setUnsaved] = useState<ReadonlyMap<string, string>>(() => new Map());
+  /** What the sticker tray couldn't do, said in an alert until it's dismissed. */
+  const [trayProblems, setTrayProblems] = useState<readonly TrayProblem[]>([]);
+  const addTrayProblem = useCallback(
+    (problem: TrayProblem) =>
+      setTrayProblems((was) =>
+        was.some(
+          (p) =>
+            p.kind === problem.kind &&
+            p.reason === problem.reason &&
+            p.nos.join() === problem.nos.join(),
+        )
+          ? was
+          : [...was, problem],
+      ),
+    [],
+  );
   const size = useBoardSize(stage);
   /** The name button's box on the board, which a sticker's knob must stay clear of. */
   const [name, setName] = useState<Box | null>(null);
@@ -427,10 +444,16 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // The open sticker tray's NEW marks, which the tray takes off at once.
   const markSeen = (ids: readonly string[]) => {
     api.markTraySeen(ids).catch((error: unknown) => {
+      const failure = apiError(error);
       console.error(
         `Saving that the sticker tray showed ${ids.join(", ")} failed, so they show NEW again next time`,
-        apiError(error),
+        failure,
       );
+      addTrayProblem({
+        kind: "seen",
+        nos: (stickers ?? []).filter((s) => ids.includes(s.id)).map((s) => s.no),
+        reason: errorReason(failure),
+      });
     });
   };
 
@@ -765,6 +788,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
             ownerId={owner.id}
             api={trayBoard}
             onSeen={markSeen}
+            onProblem={addTrayProblem}
           />
         </Suspense>
       )}
@@ -780,23 +804,44 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
         </div>
       )}
 
-      {unsavedStickers.length > 0 && (
-        <div className="board-unsaved" role="alert">
-          <p className="board-unsaved-note">
-            {t(($) => $.stickerBoard.board.unsaved, {
-              count: unsavedStickers.length,
-              stickers: new Intl.ListFormat(i18n.language).format(
-                unsavedStickers.map((s) => formatNo(s.no)),
-              ),
-              reasons: [...new Set(unsavedStickers.map((s) => unsaved.get(s.id)))].join("; "),
-            })}
-          </p>
-          <LabelButton
-            size="sm"
-            onClick={() => unsavedStickers.forEach((s) => save(s, s.placement))}
-          >
-            {t(($) => $.stickerBoard.tryAgain)}
-          </LabelButton>
+      {(unsavedStickers.length > 0 || trayProblems.length > 0) && (
+        <div className="board-alerts">
+          {unsavedStickers.length > 0 && (
+            <div className="board-unsaved" role="alert">
+              <p className="board-unsaved-note">
+                {t(($) => $.stickerBoard.board.unsaved, {
+                  count: unsavedStickers.length,
+                  stickers: new Intl.ListFormat(i18n.language).format(
+                    unsavedStickers.map((s) => formatNo(s.no)),
+                  ),
+                  reasons: [...new Set(unsavedStickers.map((s) => unsaved.get(s.id)))].join("; "),
+                })}
+              </p>
+              <LabelButton
+                size="sm"
+                onClick={() => unsavedStickers.forEach((s) => save(s, s.placement))}
+              >
+                {t(($) => $.stickerBoard.tryAgain)}
+              </LabelButton>
+            </div>
+          )}
+          {trayProblems.length > 0 && (
+            <div className="board-unsaved" role="alert">
+              <div className="board-unsaved-list">
+                {trayProblems.map((p) => (
+                  <p className="board-unsaved-note" key={`${p.kind}:${p.nos.join()}:${p.reason}`}>
+                    {t(($) => $.stickerBoard.tray.problem[p.kind], {
+                      stickers: new Intl.ListFormat(i18n.language).format(p.nos.map(formatNo)),
+                      reason: p.reason,
+                    })}
+                  </p>
+                ))}
+              </div>
+              <LabelButton size="sm" onClick={() => setTrayProblems([])}>
+                {t(($) => $.stickerBoard.tray.problem.dismiss)}
+              </LabelButton>
+            </div>
+          )}
         </div>
       )}
 

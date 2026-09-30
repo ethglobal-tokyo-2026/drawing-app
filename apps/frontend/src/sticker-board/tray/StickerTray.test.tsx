@@ -6,6 +6,7 @@ import { forgetBoardComplete, markBoardComplete, QUIET_MS } from "../boardComple
 import type { BoardStickerView } from "../boardSticker";
 import { StickerTray, type StickerTrayHandle } from "./StickerTray";
 import type { TrayBoard } from "./trayEngine";
+import type { TrayProblem } from "./trayProblem";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -54,6 +55,7 @@ const render = (
   stickers: BoardStickerView[],
   side: Partial<TrayBoard> = {},
   onSeen: (ids: readonly string[]) => void = () => {},
+  onProblem: (problem: TrayProblem) => void = () => {},
 ) =>
   act(() =>
     root.render(
@@ -64,6 +66,7 @@ const render = (
         ownerId="me"
         api={{ ...api, ...side }}
         onSeen={onSeen}
+        onProblem={onProblem}
       />,
     ),
   );
@@ -341,6 +344,47 @@ describe("StickerTray", () => {
     act(() => board.querySelector<HTMLElement>('.tray__tab[data-filter="gifts"]')?.click());
     await motion.finishAll();
     expect(frontSheet()?.getAttribute("data-f")).toBe(newest);
+  });
+
+  describe("tells the board what it couldn't do", () => {
+    const problems: TrayProblem[] = [];
+    beforeEach(() => {
+      problems.length = 0;
+      vi.spyOn(console, "error").mockImplementation(() => {});
+    });
+    const stickOnFirst = async () => {
+      await openTray();
+      const slot = frontSheet()?.querySelector<HTMLElement>('.tray__slot[data-state="here"]');
+      act(() => {
+        slot?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      });
+      await act(async () => {});
+      return slot?.dataset.id;
+    };
+
+    it("when the board can't take a sticker, which goes back to its sheet", async () => {
+      render(manyStickers(8), {}, undefined, (p) => problems.push(p));
+      const id = await stickOnFirst();
+      expect(problems.map((p) => [p.kind, p.nos, p.reason.length > 0])).toEqual([
+        ["place", [1], true],
+      ]);
+      expect(stateOf(id ?? "")).toBe("here");
+    });
+
+    it("when placing a sticker fails, with the reason", async () => {
+      const place = () => Promise.reject(new Error("the wallet is asleep"));
+      render(manyStickers(8), { place }, undefined, (p) => problems.push(p));
+      await stickOnFirst();
+      expect(problems).toEqual([{ kind: "place", nos: [1], reason: "the wallet is asleep" }]);
+    });
+
+    it("when a sticker's cut line can't be read, once, and packs it as a box", () => {
+      const cutless = sticker("cutless", 1, false, { outline: "M0 0" });
+      render([cutless], {}, undefined, (p) => problems.push(p));
+      render([cutless, sticker("b", 2, false)], {}, undefined, (p) => problems.push(p));
+      expect(problems.filter((p) => p.kind === "cut")).toHaveLength(1);
+      expect(problems[0]?.nos).toEqual([1]);
+    });
   });
 
   describe("asks for its sticker images", () => {

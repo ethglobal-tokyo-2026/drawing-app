@@ -13,9 +13,10 @@ import { lightUp } from "../../stickers/light";
 import type { StickerUrls } from "../../stickers/stickerUrls";
 import { ticketDay } from "../../tickets/tickets";
 import { packSheets, type PackedItem, type Shape } from "./sheetPacking";
-import { knownShape, stickerShape } from "./stickerShape";
+import { knownShape, stickerShape, unreadableCut } from "./stickerShape";
 import { edgeAt } from "./edgeBands";
 import { inertBesides } from "./inertBesides";
+import { reasonOf, type TrayProblem } from "./trayProblem";
 import { countVisit } from "./traySeen";
 import { newSlots, type TraySlot } from "./traySlots";
 import { createZipper, mouthRange, showsFrom, type Zipper } from "./zipper";
@@ -61,7 +62,10 @@ export interface TrayBoard {
   stickerRect: (id: string) => Box | null;
   /** How big a sticker is on the board. */
   sizeFor: (id: string) => Size;
-  /** Sticks a sticker on at `at`, or at a free spot; resolves with its element once it's drawn. */
+  /**
+   * Sticks a sticker on at `at`, or at a free spot; resolves with its element once it's drawn, or null
+   * when the board couldn't take it.
+   */
   place: (id: string, at?: { x: number; y: number; r: number }) => Promise<HTMLElement | null>;
   /** A sticker went back into its used sticker silhouette. */
   remove: (id: string) => void;
@@ -320,11 +324,14 @@ export function createTrayEngine(
     slots: read,
     api,
     markSeen,
+    problem,
   }: {
     slots: () => readonly TraySticker[];
     api: TrayBoard;
     /** Stickers the open tray showed that it hadn't before, once it zips shut. */
     markSeen: (ids: readonly string[]) => void;
+    /** Something the tray couldn't do, for the board to say. */
+    problem: (problem: TrayProblem) => void;
   },
 ): TrayEngine {
   const doc = board.ownerDocument;
@@ -483,6 +490,8 @@ export function createTrayEngine(
   let stale = false;
   /** The sheet count the stack's order was dealt for. */
   let orderedFor = 0;
+  /** Stickers whose unreadable cut line the board has been told of, once each. */
+  const toldCuts = new Set<string>();
   /**
    * Slots ask for their images once the board has assembled or the tray first shows, so a closed tray
    * doesn't download alongside the board's own stickers.
@@ -537,6 +546,11 @@ export function createTrayEngine(
       if (b) {
         s.sheet = b.f;
         s.pos = b;
+      }
+      const why = unreadableCut(s.id);
+      if (why !== undefined && !toldCuts.has(s.id)) {
+        toldCuts.add(s.id);
+        problem({ kind: "cut", nos: [s.no], reason: why });
       }
     }
     model.count = Math.max(1, sheets.length);
@@ -1770,17 +1784,20 @@ export function createTrayEngine(
     ui.shown.add(pk.s.id);
     if (!ui.pulled) holdOpen(420);
     // In hand until the board has drawn it where it lands.
-    api.place(pk.s.id, { x: pk.x, y: pk.y, r: rot }).then(
-      (placed) => {
-        pk.el.remove();
-        if (placed) sayStuckOn(pk.s);
-      },
-      (error: unknown) => {
-        reportPlace(pk.s, error);
-        pk.el.remove();
-        pressIn(pk.s.id);
-      },
-    );
+    api
+      .place(pk.s.id, { x: pk.x, y: pk.y, r: rot })
+      .then(placedOrThrow)
+      .then(
+        () => {
+          pk.el.remove();
+          sayStuckOn(pk.s);
+        },
+        (error: unknown) => {
+          reportPlace(pk.s, error);
+          pk.el.remove();
+          pressIn(pk.s.id);
+        },
+      );
   }
   /** A sticker in hand that isn't stuck on goes back into its slot. */
   async function putBack(pk: Peel) {
@@ -1827,8 +1844,15 @@ export function createTrayEngine(
     if (el) el.dataset.state = "here";
   }
   /** Its placing failed, so it stays in the tray. */
-  const reportPlace = (s: Slot, error: unknown) =>
+  const reportPlace = (s: Slot, error: unknown) => {
     console.error(`Sticking ${formatNo(s.no)} on the board failed; it's back in its sheet`, error);
+    problem({ kind: "place", nos: [s.no], reason: reasonOf(error) });
+  };
+  /** The board answers with nothing when it couldn't take the sticker, such as before it has a size. */
+  function placedOrThrow(placed: HTMLElement | null): HTMLElement {
+    if (!placed) throw new Error(i18next.t(($) => $.stickerBoard.tray.problem.boardNotReady));
+    return placed;
+  }
   const holdOpen = (ms: number) => later(() => zip.relax(1), ms);
   /** Where a slot's sticker sits with the tray wide open, in board pixels. */
   function slotHome(s: Slot): Box {
@@ -1868,9 +1892,9 @@ export function createTrayEngine(
     flyer.style.transform = flyerAt(r.x, r.y, size, r.w / size.w, r.r);
     if (!ui.pulled) zip.relax(CRACK);
     ui.shown.add(id);
-    let onBoard: HTMLElement | null;
+    let onBoard: HTMLElement;
     try {
-      onBoard = await api.place(id);
+      onBoard = placedOrThrow(await api.place(id));
     } catch (error) {
       reportPlace(s, error);
       flyer.remove();
@@ -1880,7 +1904,7 @@ export function createTrayEngine(
     }
     if (destroyed) return;
     const to = api.stickerRect(id) ?? { x: Wb() * 0.4, y: Hb() * 0.5, r: 0 };
-    if (onBoard) onBoard.style.opacity = "0";
+    onBoard.style.opacity = "0";
     if (!reduced())
       await ended(
         flyer.animate(
@@ -1902,18 +1926,16 @@ export function createTrayEngine(
         ),
       );
     flyer.remove();
-    if (onBoard) {
-      onBoard.style.opacity = "";
-      if (!reduced())
-        onBoard.animate(
-          [
-            { transform: `${onBoard.style.transform} scale(1.06)` },
-            { transform: onBoard.style.transform },
-          ],
-          { duration: 220, easing: EASE_PEEL },
-        );
-    }
-    if (onBoard) sayStuckOn(s);
+    onBoard.style.opacity = "";
+    if (!reduced())
+      onBoard.animate(
+        [
+          { transform: `${onBoard.style.transform} scale(1.06)` },
+          { transform: onBoard.style.transform },
+        ],
+        { duration: 220, easing: EASE_PEEL },
+      );
+    sayStuckOn(s);
     if (!ui.pulled) holdOpen(160);
   }
   /**

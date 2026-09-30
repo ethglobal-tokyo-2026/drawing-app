@@ -405,6 +405,31 @@ export const stickerBoard = {
     },
     /** Sticker tray: screen readers' name for the X on a sheet pulled out over the board */
     putBack: { en: "Put this sheet back in the tray", ja: "このシートをシールトレイに戻す" },
+    /** Your sticker board: the alert above Draw when the sticker tray couldn't do something, one line for each. */
+    problem: {
+      /** Your sticker board's alert: a sticker couldn't be stuck on from its sheet, so it stays there; {{stickers}} is its number, such as "No.0147", and {{reason}} why */
+      place: {
+        en: "Couldn’t stick {{stickers}} on the board, so it stays in its sheet: {{reason}}",
+        ja: "{{stickers}}をボードに貼れなかったので、シートに残ります：{{reason}}",
+      },
+      /** Your sticker board's alert: a sticker's cut line couldn't be read, so its sheet packs it as a box; {{stickers}} is its number, such as "No.0147", and {{reason}} why */
+      cut: {
+        en: "Couldn’t read the cut line of {{stickers}}, so its sheet packs it as a box: {{reason}}",
+        ja: "{{stickers}}の切り抜き線を読み取れなかったため、シートには四角で並べました：{{reason}}",
+      },
+      /** Your sticker board's alert: the sticker tray couldn't save which stickers it showed; {{stickers}} lists their numbers, such as "No.0147", and {{reason}} why */
+      seen: {
+        en: "Couldn’t save that the tray showed {{stickers}}, so NEW may show on them again: {{reason}}",
+        ja: "{{stickers}}を見たことを保存できなかったため、NEWがまた表示されることがあります：{{reason}}",
+      },
+      /** Your sticker board's alert about the sticker tray: why a sticker couldn't be stuck on when the board can't take it yet */
+      boardNotReady: {
+        en: "the board isn’t ready for it yet",
+        ja: "ボードの準備がまだできていません",
+      },
+      /** Your sticker board's alert about the sticker tray: the key that clears it */
+      dismiss: { en: "Dismiss", ja: "閉じる" },
+    },
     /** Sticker tray: what screen readers are told as the tray changes, in one status line. */
     status: {
       /** Sticker tray, after a folder tab is chosen: what screen readers are told; {{filter}} is the tab's name, such as "Gifts", and {{count}} is how many sheets it shows */

@@ -388,12 +388,18 @@
 }
 
 /* A spot that didn't save stays in view, over the board and above Draw, until a save of it succeeds. */
-.board-unsaved {
+/* The board's alerts, stacked over its foot above Draw: what didn't save, and what the tray couldn't do. */
+.board-alerts {
   position: absolute;
   z-index: 955;
   left: 14px;
   right: 44px;
   bottom: calc(14px + 70px);
+  display: grid;
+  gap: 8px;
+}
+
+.board-unsaved {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -401,6 +407,13 @@
   border-radius: var(--r-label);
   background: var(--tomato-soft);
   box-shadow: var(--shadow-label);
+}
+
+.board-unsaved-list {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 6px;
 }
 
 .board-unsaved-note {
