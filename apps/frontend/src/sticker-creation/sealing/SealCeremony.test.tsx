@@ -111,28 +111,26 @@ async function seal(
   await act(async () => {});
 }
 
-/** The ceremony, and a way to set the tickets to `next` behind its back, as a spend or a refresh does. */
-function WithTickets({ next, leaving = false }: { next: Tickets; leaving?: boolean }) {
-  const { set } = useTickets();
+/** The ceremony, and a way to change the tickets behind its back, as a spend or a refresh does. */
+function WithTickets({ leaving = false }: { leaving?: boolean }) {
+  const { refresh } = useTickets();
   return (
     <>
       {ceremony(sealed, { leaving })}
-      <button type="button" data-set-tickets onClick={() => set(next)} />
+      <button type="button" data-set-tickets onClick={refresh} />
     </>
   );
 }
 
-/** Opens WithTickets once `loaded` has loaded. */
+/** Opens WithTickets once `loaded` has loaded; the tickets change to `next` when they load again. */
 async function sealWithTickets(loaded: Tickets, next: Tickets) {
-  view = renderWithApi(
-    <WithTickets next={next} />,
-    emptyApi({ tickets: () => Promise.resolve(loaded) }),
-  );
+  const load = vi.fn(() => Promise.resolve(next)).mockResolvedValueOnce(loaded);
+  view = renderWithApi(<WithTickets />, emptyApi({ tickets: load }));
   host = view.host;
   await act(async () => {});
 }
 const setTickets = () =>
-  act(() => host.querySelector<HTMLButtonElement>("[data-set-tickets]")?.click());
+  act(async () => host.querySelector<HTMLButtonElement>("[data-set-tickets]")?.click());
 
 const button = (name: string) => {
   const found = [...host.querySelectorAll("button")].find((b) => b.textContent === name);
@@ -251,9 +249,9 @@ describe("SealCeremony", () => {
     const spent: Tickets = { ...oneLeft, dailyLeft: 0 };
     await sealWithTickets(oneLeft, spent);
     playThrough();
-    view?.rerender(<WithTickets next={spent} leaving />);
+    view?.rerender(<WithTickets leaving />);
     // Keep drawing spends the last ticket as the card leaves: it doesn't turn into the last ticket's card.
-    setTickets();
+    await setTickets();
     expect(button("Keep drawing")).toBeTruthy();
     expect(host.textContent).not.toContain("New daily tickets at");
   });
@@ -268,7 +266,7 @@ describe("SealCeremony", () => {
     await sealWithTickets(lastOfAll, FRESH_TICKETS);
     wait(T.card0);
     expect(button("Buy reserve tickets")).toBeTruthy();
-    setTickets();
+    await setTickets();
     wait(50);
     // The shop's line gives way to the board's, which waits below the lines still to fade up.
     const board = button("Back to My board");

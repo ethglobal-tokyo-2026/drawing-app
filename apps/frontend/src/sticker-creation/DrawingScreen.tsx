@@ -161,8 +161,6 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // while it's on its way, and comes up only if it fails.
   const [rightAway, setRightAway] = useState(false);
   const [startProblem, setStartProblem] = useState<string | null>(null);
-  // The server refused the last spend, so its kept key has spent nothing yet.
-  const [spendRefused, setSpendRefused] = useState(false);
   // The session's ticket use, as the server numbers it: spent at Start, or before a reload.
   const ticket = useRef<number | null>(null);
   // Whether this device keeps the drawing in progress; the timer's note says so while it can't.
@@ -468,7 +466,6 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     setSpending(true);
     setRightAway(!asked);
     setStartProblem(null);
-    setSpendRefused(false);
     spend.then(
       (use: TicketUse) => {
         setSpending(false);
@@ -486,7 +483,6 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         // A refusal says the tickets changed. With no answer, the card goes on offering the spend it
         // tried, whose key a retry sends again.
         const refused = failure.status >= 400 && failure.status < 500;
-        setSpendRefused(refused);
         if (refused) tickets.refresh();
       },
     );
@@ -728,7 +724,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const fresh = session.phase === "blank" && !restoring;
   const loaded = tickets.tickets;
   // A spend whose answer never came may have landed: its kept key gets back the ticket use it spent.
-  const keptSpend = tickets.hasKeptSpend() && !spendRefused;
+  const keptSpend = tickets.hasKeptSpend();
   // The last ticket, spent by Draw on the board or on its way here, isn't a reason for the card.
   const spentForSheet = spending || tickets.hasSheetSpend() || keptSpend;
   if (active && fresh && loaded && ticketsLeft(loaded) === 0 && !overlay && !spentForSheet)

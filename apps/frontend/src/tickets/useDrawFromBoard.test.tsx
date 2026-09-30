@@ -3,10 +3,11 @@ import type { Tickets } from "@drawing-app/api/client";
 import { act, useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
+import { newIdempotencyKey } from "../api/idempotencyKey";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing";
-import { spendKeyFor } from "./spendKey";
+import { keepSpend } from "./spendKey";
 import type { Sheet } from "./ticketsContext";
-import { useDrawFromBoard } from "./useDrawFromBoard";
+import { PEEL_MS, useDrawFromBoard } from "./useDrawFromBoard";
 import { useTickets } from "./useTickets";
 
 const onDraw = vi.fn();
@@ -34,16 +35,32 @@ function Board({ sheet }: { sheet: Sheet }) {
 }
 
 let view: ReturnType<typeof renderWithApi> | undefined;
+/** Lets the API answer. */
+const settle = () => act(async () => void (await vi.advanceTimersByTimeAsync(0)));
 const open = async (state: Tickets, sheet: Sheet = "fresh") => {
   spendTicket.mockResolvedValue({ ticketUse: { id: 7 }, tickets: state });
   view = renderWithApi(
     <Board sheet={sheet} />,
     emptyApi({ tickets: () => Promise.resolve(state), spendTicket }),
   );
-  await act(async () => void (await vi.advanceTimersByTimeAsync(0)));
+  await settle();
+};
+/** The board opens again, with the tickets as the server has them now. */
+const reload = async (state: Tickets) => {
+  view?.unmount();
+  onDraw.mockClear();
+  await open(state);
 };
 const tapDraw = () => act(() => document.querySelector<HTMLButtonElement>("[data-draw]")?.click());
 const wait = (ms: number) => act(() => void vi.advanceTimersByTime(ms));
+
+/** Draw on a phone still showing a ticket spent elsewhere: the server refuses its spend. */
+const drawRefused = async () => {
+  await open(tickets(1, 0));
+  spendTicket.mockRejectedValueOnce(new ApiError(409, { error: "no_tickets_left" }));
+  tapDraw();
+  await settle();
+};
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -80,7 +97,7 @@ describe("Draw on the sticker board", () => {
     expect(document.querySelector("[data-peeling]")?.getAttribute("data-peeling")).toBe("true");
     expect(document.querySelector("[role=dialog]")).toBeNull();
     expect(onDraw).not.toHaveBeenCalled();
-    wait(220);
+    wait(PEEL_MS);
     expect(onDraw).toHaveBeenCalledOnce();
   });
 
@@ -115,8 +132,28 @@ describe("Draw on the sticker board", () => {
 
   it("with no tickets left but a spend's key kept, opens the canvas, which sends the key again", async () => {
     // A spend from before a reload, whose answer never came: it may have spent the last ticket.
-    spendKeyFor(TEST_ME.id);
+    keepSpend(TEST_ME.id, { key: newIdempotencyKey(), refused: false });
     await open(tickets(0, 0));
+    tapDraw();
+    expect(document.querySelector("[role=dialog]")).toBeNull();
+    expect(onDraw).toHaveBeenCalledOnce();
+  });
+
+  it("with no tickets, puts the out-of-tickets card over the board once the server refused the kept key's spend, after a reload too", async () => {
+    await drawRefused();
+    await reload(tickets(0, 0));
+    tapDraw();
+    expect(onDraw).not.toHaveBeenCalled();
+    expect(document.querySelector("[role=dialog]")).not.toBeNull();
+  });
+
+  it("opens the canvas again with none left once the refused key is sent again and no answer comes, since that spend may have landed", async () => {
+    await drawRefused();
+    // A ticket came back, and Draw's spend with the same key got no answer.
+    await reload(tickets(1, 0));
+    spendTicket.mockReturnValueOnce(new Promise(() => {}));
+    tapDraw();
+    await reload(tickets(0, 0));
     tapDraw();
     expect(document.querySelector("[role=dialog]")).toBeNull();
     expect(onDraw).toHaveBeenCalledOnce();

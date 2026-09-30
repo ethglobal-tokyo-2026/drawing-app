@@ -8,7 +8,6 @@ import {
 } from "react";
 import { ApiError } from "../api/apiClient";
 import { useMe } from "../api/meContext";
-import { useApi } from "../api/useApi";
 import { errorDetail, errorMessage, problemOf, type Problem } from "../i18n/errorMessage";
 import { i18next } from "../i18n/i18n";
 import { Trans, useTranslation } from "../i18n/react";
@@ -186,8 +185,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   const shop = packs.state === "ready" ? packs.data : null;
   const sui = useSuiAccount();
   const jpyc = useJpycBalance(sui.address, shop?.payment);
-  const api = useApi();
-  const { tickets: state, set: setTickets } = useTickets();
+  const { tickets: state, buyer } = useTickets();
   const id = useId();
 
   const pack = shop?.packs.find((p) => p.tickets === chosen);
@@ -203,8 +201,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
 
   /** Has the server add the tickets a payment bought; it stays kept on this phone until they're added. */
   const addTickets = (purchase: UnaddedPurchase) =>
-    addUnaddedPurchase(api, me.id, purchase).then((added) => {
-      setTickets(added);
+    addUnaddedPurchase(buyer, me.id, purchase).then(() => {
       setUnadded(null);
       setBought(purchase);
       setStep("done");

@@ -42,13 +42,11 @@ const SHOP: Shop = {
 
 /** Stands in for the checkout over the Shop: buys PACK. */
 function Purchase() {
-  const { tickets, set } = useTickets();
+  const { buyer } = useTickets();
   return (
     <button
       type="button"
-      onClick={() =>
-        tickets && set({ ...tickets, reserveLeft: tickets.reserveLeft + PACK.tickets })
-      }
+      onClick={() => void buyer.buyTickets({ tickets: PACK.tickets, txDigest: "D".repeat(44) })}
     >
       Buy the pack
     </button>
@@ -88,7 +86,14 @@ describe("ShopScreen", () => {
         <ShopScreen onBuyReserveTickets={() => {}} />
         <Purchase />
       </>,
-      emptyApi({ ticketShop: () => Promise.resolve(SHOP) }),
+      emptyApi({
+        ticketShop: () => Promise.resolve(SHOP),
+        buyTickets: () =>
+          Promise.resolve({
+            ...FRESH_TICKETS,
+            reserveLeft: FRESH_TICKETS.reserveLeft + PACK.tickets,
+          }),
+      }),
     );
     await settle();
     expect(buttonNamed("you.croquis.eth")).toBeUndefined();
@@ -100,6 +105,7 @@ describe("ShopScreen", () => {
     expect(rows()).toEqual([expect.stringContaining(`${PACK.tickets} tickets`)]);
 
     click("Buy the pack");
+    await settle();
     expect(rows()).toEqual([]);
     click("you.croquis.eth");
     await settle();

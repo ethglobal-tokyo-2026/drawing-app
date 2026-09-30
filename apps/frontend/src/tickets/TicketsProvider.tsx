@@ -1,10 +1,11 @@
 import type { TicketKind, Tickets, TicketUse } from "@drawing-app/api/client";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { apiError, type ApiError } from "../api/apiClient";
+import { apiError, type ApiError, type ErrorCode } from "../api/apiClient";
+import { newIdempotencyKey } from "../api/idempotencyKey";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
-import { forgetSpendKey, keptSpendKey, spendKeyFor } from "./spendKey";
-import { TicketsContext, type Sheet } from "./ticketsContext";
+import { forgetSpendKey, keepSpend, keptSpend, type KeptSpend } from "./spendKey";
+import { TicketsContext, type Sheet, type TicketBuyer } from "./ticketsContext";
 
 /** A turnover that just passed can still read as the old day on the server for a moment. */
 const REFILL_MARGIN_MS = 1_000;
@@ -15,6 +16,9 @@ const REFILL_MARGIN_MS = 1_000;
  */
 export const REFILL_RETRY_MS = 5_000;
 export const REFILL_RETRY_MAX_MS = 5 * 60_000;
+
+/** The spend's refusals, which the server answers only once no ticket use was spent with the key. */
+const SPEND_REFUSALS: readonly ErrorCode[] = ["no_tickets_left", "ticket_kind_changed"];
 
 /** Your tickets from the server, shared by every screen that shows or spends them. */
 export function TicketsProvider({ children }: { children: ReactNode }) {
@@ -33,10 +37,12 @@ export function TicketsProvider({ children }: { children: ReactNode }) {
   // went out before can't put the spent ticket back.
   const sent = useRef(0);
   const shown = useRef(0);
+  /** Shows `answer` unless a later request's is on screen; whether it did. */
   const show = useCallback((request: number, answer: Tickets) => {
-    if (request < shown.current) return;
+    if (request < shown.current) return false;
     shown.current = request;
     setTickets(answer);
+    return true;
   }, []);
 
   useEffect(() => {
@@ -87,29 +93,63 @@ export function TicketsProvider({ children }: { children: ReactNode }) {
   // Kept in memory and on this device until the drawing screen has kept the ticket use with its
   // sheet, so a retry, a second tap or the first spend after a reload, even one right after the
   // answer came, sends the same key. Sending a kept key is always right: the server answers the ticket
-  // use it already spent, or spends a ticket if that try never reached it.
-  const spendKey = useRef<string | null>(null);
-  const spend = useCallback(
-    async (kind: TicketKind) => {
-      const idempotencyKey = (spendKey.current ??= spendKeyFor(userId));
-      const request = ++sent.current;
-      const spent = await api.spendTicket({ kind, idempotencyKey });
-      show(request, spent.tickets);
-      return spent.ticketUse;
+  // use it already spent, or spends a ticket if that try never reached it. A refusal is kept with it,
+  // since the server spent nothing with the key, until a spend sends it again.
+  const spendKey = useRef<KeptSpend | null>(null);
+  const keepSpendKey = useCallback(
+    (kept: KeptSpend) => {
+      spendKey.current = kept;
+      keepSpend(userId, kept);
     },
-    [api, userId, show],
-  );
-  const hasKeptSpend = useCallback(
-    () => spendKey.current !== null || keptSpendKey(userId) !== null,
     [userId],
   );
-  const forgetKeptSpend = useCallback(() => {
-    const key = spendKey.current;
-    spendKey.current = null;
-    if (key !== null) forgetSpendKey(userId, key);
+  const spend = useCallback(
+    async (kind: TicketKind) => {
+      const key = (spendKey.current ?? keptSpend(userId))?.key ?? newIdempotencyKey();
+      keepSpendKey({ key, refused: false });
+      const request = ++sent.current;
+      try {
+        const spent = await api.spendTicket({ kind, idempotencyKey: key });
+        show(request, spent.tickets);
+        return spent.ticketUse;
+      } catch (failure) {
+        const refused = SPEND_REFUSALS.some((code) => code === apiError(failure).code);
+        if (refused) keepSpendKey({ key, refused });
+        throw failure;
+      }
+    },
+    [api, userId, show, keepSpendKey],
+  );
+  const hasKeptSpend = useCallback(() => {
+    const kept = spendKey.current ?? keptSpend(userId);
+    return kept !== null && !kept.refused;
   }, [userId]);
-  // A purchase's answer comes from a request sent elsewhere, so it shows as the newest.
-  const set = useCallback((answer: Tickets) => show(++sent.current, answer), [show]);
+  const forgetKeptSpend = useCallback(() => {
+    const kept = spendKey.current;
+    spendKey.current = null;
+    if (kept !== null) forgetSpendKey(userId, kept.key);
+  }, [userId]);
+
+  // A purchase's requests are numbered as they go out too. The server reads Sui before it adds the
+  // tickets, so a purchase's answer older than the tickets on screen may still be the only one with
+  // them: they load again.
+  const buyer = useMemo<TicketBuyer>(
+    () => ({
+      buyTickets: async (purchase) => {
+        const request = ++sent.current;
+        const bought = await api.buyTickets(purchase);
+        if (!show(request, bought)) refresh();
+        return bought;
+      },
+      tickets: async () => {
+        const request = ++sent.current;
+        const loaded = await api.tickets();
+        show(request, loaded);
+        return loaded;
+      },
+    }),
+    [api, show, refresh],
+  );
 
   const [sheet, setSheet] = useState<Sheet>(null);
   const sheetSpend = useRef<Promise<TicketUse> | null>(null);
@@ -137,7 +177,7 @@ export function TicketsProvider({ children }: { children: ReactNode }) {
       spend,
       hasKeptSpend,
       forgetKeptSpend,
-      set,
+      buyer,
       sheet,
       setSheet,
       spendForSheet,
@@ -151,7 +191,7 @@ export function TicketsProvider({ children }: { children: ReactNode }) {
       spend,
       hasKeptSpend,
       forgetKeptSpend,
-      set,
+      buyer,
       sheet,
       spendForSheet,
       hasSheetSpend,
