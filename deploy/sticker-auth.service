@@ -18,6 +18,8 @@ MemoryMax=256M
 TasksMax=64
 
 # Sandboxing: it reads its own directory and calls LINE's API.
+# It runs as the same user as the REST API, so the API's keys and database are hidden from it.
+InaccessiblePaths=-/srv/drawing-api
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
