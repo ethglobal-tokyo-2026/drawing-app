@@ -292,14 +292,16 @@ export function AddressDialog({ chain, address, from, onClose }: Props) {
   useFocusTrap(root, { onEscape: close, returnFocus: () => from.current });
   useBackToClose(true, close);
 
+  // A failed copy stays under Copy until the next try, where a toast would be gone in seconds.
+  const [copyProblem, setCopyProblem] = useState<string | null>(null);
   const copy = async () => {
+    setCopyProblem(null);
     try {
       await navigator.clipboard.writeText(address);
       toast(t(($) => $.stickerBoard.addresses[chain].copied));
     } catch (error) {
-      // The address stays selectable, so it can still be copied by hand.
       console.error(`Couldn't copy the ${logName}`, error);
-      toast(t(($) => $.stickerBoard.addresses[chain].notCopied));
+      setCopyProblem(t(($) => $.stickerBoard.addresses[chain].notCopied));
     }
   };
 
@@ -372,6 +374,11 @@ export function AddressDialog({ chain, address, from, onClose }: Props) {
             >
               {t(($) => $.stickerBoard.addresses.copy)}
             </LabelButton>
+            {copyProblem && (
+              <p className="address-dialog__problem" role="alert">
+                {copyProblem}
+              </p>
+            )}
             <a
               className="label-btn label-btn--block address-dialog__rise"
               href={explorer(address)}

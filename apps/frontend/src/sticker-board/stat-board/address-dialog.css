@@ -146,6 +146,16 @@
   gap: 10px;
 }
 
+/* A failed copy, under Copy until the next try: Ink on Tomato Soft, as the Settings note's. */
+.address-dialog__problem {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-label);
+  background: var(--tomato-soft);
+  font: 500 13px/1.4 var(--font-ui);
+  text-wrap: pretty;
+}
+
 /* Both actions sit on the scrim, where an Ink ring would vanish, so their ring is Seal Yellow. */
 .address-dialog__acts .label-btn:focus-visible {
   outline-color: var(--seal);
