@@ -82,6 +82,14 @@ describe("the board kept on this phone", () => {
     expect(localStorage.getItem(KEY)).toBeNull();
   });
 
+  it("forgets one another build kept as the app's code starts", async () => {
+    localStorage.setItem(KEY, JSON.stringify({ build: "an older build", userId: "me", board }));
+    vi.resetModules();
+    const started = await import("./lastBoard");
+    expect(started.keptBoardFor("me")).toBeNull();
+    expect(localStorage.getItem(KEY)).toBeNull();
+  });
+
   it("still gives the board back in memory when storage refuses to keep it", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     // A stand-in storage: spying on happy-dom's own doesn't reach it.

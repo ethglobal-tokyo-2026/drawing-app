@@ -1,12 +1,13 @@
 import { apiError, type ApiClient, type ApiError } from "../api/apiClient";
 import type { RecordGratitude } from "@drawing-app/api/client";
+import { personKey, parseStored, readStored, writeStored } from "../ui/deviceStorage";
 import { GAME_CONFIG } from "./gameConfig";
 
 /**
  * Combos the server hasn't recorded yet, finished or still in play. One list per person, so someone
  * else signing in on this device never sends them, and their combos leave these be.
  */
-const keyFor = (userId: string) => `draw.gratitude.pending.${userId}`;
+const keyFor = (userId: string) => personKey("draw.gratitude.pending", userId);
 
 /**
  * The longest a combo kept in play can go on in another tab after it was last kept: twice its safety
@@ -70,20 +71,13 @@ interface Pending {
  * list: nothing in it can be sent, and nothing may be written over it.
  */
 function readPending(userId: string): Pending | null {
-  let raw: string | null;
-  try {
-    raw = localStorage.getItem(keyFor(userId));
-  } catch (error) {
-    console.error("Gratitude waiting to be sent can't be read on this device", error);
-    return null;
-  }
+  const { text: raw, blocked } = readStored(
+    keyFor(userId),
+    "Gratitude waiting to be sent can't be read on this device",
+  );
+  if (blocked) return null;
   if (raw === null) return { combos: new Map(), unreadable: [] };
-  let value: unknown;
-  try {
-    value = JSON.parse(raw);
-  } catch {
-    value = undefined;
-  }
+  const value = parseStored(raw);
   if (!Array.isArray(value)) {
     console.error(
       "Gratitude waiting to be sent is unreadable, so none of it is sent and nothing is kept over it:",
@@ -106,17 +100,11 @@ function readPending(userId: string): Pending | null {
 /** Whether the list was saved. */
 function writePending(userId: string, { combos, unreadable }: Pending): boolean {
   const entries = [...combos.values(), ...unreadable];
-  try {
-    if (entries.length === 0) localStorage.removeItem(keyFor(userId));
-    else localStorage.setItem(keyFor(userId), JSON.stringify(entries));
-    return true;
-  } catch (error) {
-    console.error(
-      `Gratitude waiting to be sent can't be saved on this device (${[...combos.keys()].join(", ")})`,
-      error,
-    );
-    return false;
-  }
+  return writeStored(
+    keyFor(userId),
+    entries.length === 0 ? null : JSON.stringify(entries),
+    `Gratitude waiting to be sent can't be saved on this device (${[...combos.keys()].join(", ")})`,
+  );
 }
 
 /** Edits `userId`'s combos; `edit` says whether it changed them. False when the change can't be kept. */

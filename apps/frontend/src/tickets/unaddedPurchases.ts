@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { ApiError, apiError, type ApiClient } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
+import { personKey, parseStored, readStored, writeStored } from "../ui/deviceStorage";
 import { useTickets } from "./useTickets";
 
 /**
@@ -55,7 +56,7 @@ export const PASSING_FAILURE_STATUSES: readonly number[] = [408, 425, 429];
 export const PAYMENT_LANDS_WITHIN_MS = 60 * 60_000;
 
 /** One key per person, so signing in as someone else leaves another's payments be. */
-const keyFor = (userId: string) => `draw.unaddedPurchases.${userId}`;
+const keyFor = (userId: string) => personKey("draw.unaddedPurchases", userId);
 
 type TicketBuyer = Pick<ApiClient, "buyTickets" | "tickets">;
 
@@ -106,22 +107,9 @@ const isUnaddedPurchase = (value: unknown): value is UnaddedPurchase =>
 
 /** `userId`'s kept payments as storage has them; none when storage can't be read. */
 function read(userId: string): UnaddedPurchase[] {
-  // Tests outside a browser have no storage.
-  if (typeof localStorage === "undefined") return [];
-  let text: string | null;
-  try {
-    text = localStorage.getItem(keyFor(userId));
-  } catch (error) {
-    console.error("The payments kept on this phone couldn't be read", error);
-    return [];
-  }
+  const { text } = readStored(keyFor(userId), "The payments kept on this phone couldn't be read");
   if (text === null) return [];
-  let value: unknown;
-  try {
-    value = JSON.parse(text);
-  } catch {
-    value = undefined;
-  }
+  const value = parseStored(text);
   const purchases = Array.isArray(value) ? value.filter(isUnaddedPurchase) : [];
   // Logged whole, so a payment's ID can still be found and its tickets added by hand.
   if (!Array.isArray(value) || purchases.length !== value.length) {
@@ -139,13 +127,12 @@ const kept = new Map<string, readonly UnaddedPurchase[]>();
 /** Keeps `purchases` as `userId`'s, in memory even when storage refuses them. */
 function write(userId: string, purchases: readonly UnaddedPurchase[]) {
   kept.set(userId, purchases);
-  try {
-    if (purchases.length === 0) localStorage.removeItem(keyFor(userId));
-    else localStorage.setItem(keyFor(userId), JSON.stringify(purchases));
-  } catch (error) {
-    const digests = purchases.map((p) => p.digest).join(", ") || "none";
-    console.error(`The payments kept on this phone couldn't be saved (${digests})`, error);
-  }
+  const digests = purchases.map((p) => p.digest).join(", ") || "none";
+  writeStored(
+    keyFor(userId),
+    purchases.length === 0 ? null : JSON.stringify(purchases),
+    `The payments kept on this phone couldn't be saved (${digests})`,
+  );
 }
 
 /** The payments kept for `userId` whose tickets aren't added yet, oldest first. */
