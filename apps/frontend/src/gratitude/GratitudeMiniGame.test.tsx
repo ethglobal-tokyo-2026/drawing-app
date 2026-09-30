@@ -2,13 +2,13 @@
 import { act, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Gratitude } from "@drawing-app/api/client";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { ApiProvider } from "../api/ApiProvider";
 import { MeHolder } from "../api/MeHolder";
-import { gratitudeOf } from "../api/testing";
-import { emptyApi, TEST_ME } from "../api/testing";
+import { emptyApi, gratitudeOf, recordGratitudeBody, TEST_ME } from "../api/testing";
 import { i18next } from "../i18n/i18n";
-import { GratitudeMiniGame, type GratitudeResult } from "./GratitudeMiniGame";
+import { GratitudeMiniGame } from "./GratitudeMiniGame";
 import { resendPendingGratitude } from "./gratitudeOutbox";
 import { TIER_NAMES } from "./tierNames";
 
@@ -29,7 +29,6 @@ const sticker = {
   height: 400,
 };
 const giver = { handle: "alice", displayName: "Alice Sato" };
-const onEnd = vi.fn<(result: GratitudeResult) => void>();
 const onClose = vi.fn();
 const recordGratitude = vi.fn<ApiClient["recordGratitude"]>();
 
@@ -45,7 +44,6 @@ const open = (props: Partial<ComponentProps<typeof GratitudeMiniGame>> = {}) =>
             giver={giver}
             intensity={0.7}
             showFrameTimes={false}
-            onEnd={onEnd}
             onClose={onClose}
             {...props}
           />
@@ -63,6 +61,15 @@ const tapOnce = () =>
     heart().dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
   });
 const play = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
+const live = () => document.querySelector(".gr-sr")?.textContent;
+const receiptText = (selector: string) =>
+  document.querySelector(`.gr-receipt ${selector}`)?.textContent ?? "";
+const receiptLabel = () => document.querySelector(".gr-receipt")?.getAttribute("aria-label");
+const closeButton = () => {
+  const el = document.querySelector<HTMLButtonElement>(".gr-close");
+  if (!el) throw new Error("No X on screen");
+  return el;
+};
 /** Taps `times` times, `gapMs` apart. */
 const tapFor = async (times: number, gapMs = 150) => {
   for (let i = 0; i < times; i++) {
@@ -113,7 +120,6 @@ afterEach(() => {
   localStorage.clear();
   vi.useRealTimers();
   vi.restoreAllMocks();
-  onEnd.mockReset();
   onClose.mockReset();
   recordGratitude.mockReset();
 });
@@ -126,11 +132,9 @@ describe("GratitudeMiniGame", () => {
     open();
     tapOnce();
     await play(ONE_TAP_ENDS_MS);
-    expect(onEnd).toHaveBeenCalledTimes(1);
-    expect(onEnd).toHaveBeenCalledWith(expect.objectContaining({ stickerId: "s1", hits: 1 }));
-    const receipt = document.querySelector(".gr-receipt")?.textContent;
-    expect(receipt).toContain("gratitude to @alice");
-    expect(receipt).toMatch(/\b1 hit(?!s)/);
+    expect(receiptText(".gr-rc-head")).toBe("gratitude to @alice");
+    expect(receiptText(".hit-counter")).toContain("1 hit");
+    expect(receiptText(".hit-counter")).not.toContain("1 hits");
     // Without a gift, as in the stat board's demo, nothing is recorded.
     expect(recordGratitude).not.toHaveBeenCalled();
   });
@@ -179,7 +183,6 @@ describe("GratitudeMiniGame", () => {
     // One touch, counted: [msSincePrevious, x, y, counted].
     expect(body.replay.hits).toHaveLength(4);
     expect(body.replay.hits[3]).toBe(1);
-    expect(onEnd).toHaveBeenCalledTimes(1);
   });
 
   it("keeps a combo on the device as it plays, so a page torn down mid-combo still sends it", async () => {
@@ -205,26 +208,106 @@ describe("GratitudeMiniGame", () => {
     expect(await nextOpenSends()).toEqual([finished]);
   });
 
-  it("says so in plain words when the server refuses the gratitude, and logs why", async () => {
-    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
-    recordGratitude.mockRejectedValue(new ApiError(409, { error: "gratitude_already_recorded" }));
+  it("says the gratitude sent once the receipt is up and the server has it", async () => {
     open({ giftId: "g1" });
     tapOnce();
     await play(ONE_TAP_ENDS_MS);
-    const failure = document.querySelector(".gr-failure")?.textContent;
-    expect(failure).toBe("Your gratitude didn't reach @alice. Close this and send it again.");
-    expect(logged).toHaveBeenCalled();
+    const total = receiptText(".gr-rc-figure");
+    expect(total).toMatch(/^[\d,]+$/);
+    expect(live()).toBe(`Sent ${total} gratitude to @alice.`);
+    expect(receiptLabel()).toBe("Gratitude sent");
+    expect(document.querySelector(".gr-rc-note")).toBeNull();
   });
 
-  it("says the gratitude sent as the heart reaches the giver", async () => {
-    open();
+  it("says the gratitude is saved on the phone, not sent, when the server can't be reached", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    recordGratitude.mockRejectedValue(new TypeError("Failed to fetch"));
+    open({ giftId: "g1" });
     tapOnce();
     await play(ONE_TAP_ENDS_MS);
-    const total = onEnd.mock.calls[0]?.[0].total ?? 0;
-    expect(total).toBeGreaterThan(0);
-    expect(document.querySelector(".gr-sr")?.textContent).toBe(
-      `Sent ${total.toLocaleString("en-US")} gratitude to @alice.`,
+    const kept = "Saved on this phone. It goes to @alice when you're back online.";
+    expect(receiptText(".gr-rc-note")).toBe(kept);
+    expect(receiptLabel()).toBe("Gratitude saved");
+    expect(live()).toBe(kept);
+    expect(live()).not.toMatch(/^Sent/);
+  });
+
+  it("updates the receipt of a saved combo once it's sent while the screen is still up", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    recordGratitude.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    open({ giftId: "g1" });
+    tapOnce();
+    await play(ONE_TAP_ENDS_MS);
+    expect(receiptText(".gr-rc-note")).toContain("Saved on this phone");
+    // The phone is back online, and the app sends what it kept.
+    await act(() => resendPendingGratitude({ recordGratitude }, TEST_ME.id));
+    expect(document.querySelector(".gr-rc-note")).toBeNull();
+    expect(receiptLabel()).toBe("Gratitude sent");
+    expect(live()).toMatch(/^Sent /);
+  });
+
+  it("says a send still going out is going out, then what became of it", async () => {
+    let answer: (gratitude: Gratitude) => void = () => {};
+    recordGratitude.mockImplementation(
+      (body) =>
+        new Promise((resolve) => {
+          answer = () => resolve(gratitudeOf(body));
+        }),
     );
+    open({ giftId: "g1" });
+    tapOnce();
+    await play(ONE_TAP_ENDS_MS);
+    expect(receiptText(".gr-rc-note")).toBe("Sending…");
+    expect(receiptLabel()).toBe("Sending gratitude");
+    expect(live()).not.toMatch(/^Sent/);
+    answer(gratitudeOf(recordGratitudeBody()));
+    await play(0);
+    expect(document.querySelector(".gr-rc-note")).toBeNull();
+    expect(live()).toMatch(/^Sent /);
+  });
+
+  it.each([
+    [409, "gratitude_already_recorded", /already with @alice/, false],
+    [403, "not_receiver", /received by someone else/, false],
+    [404, "gift_not_found", /isn't here anymore/, false],
+    [409, "gift_not_received", /isn't marked received yet/, true],
+    [400, "replay_invalid", /couldn't read your combo/, true],
+    [403, "something_new", /\(something_new\)/, false],
+  ])(
+    "says why the server refused the gratitude (%i %s), and offers sending again only where it can work",
+    async (status, code, reason, offersAgain) => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      recordGratitude.mockRejectedValue(new ApiError(status, { error: code }));
+      open({ giftId: "g1" });
+      tapOnce();
+      await play(ONE_TAP_ENDS_MS);
+      const note = receiptText(".gr-rc-note");
+      expect(note).toMatch(reason);
+      expect(note).toContain("wasn't sent");
+      expect(/(send|try) (it |your gratitude )?again/i.test(note)).toBe(offersAgain);
+      expect(receiptLabel()).toBe("Gratitude not sent");
+      expect(live()).toBe(note);
+    },
+  );
+
+  it("ends a combo in play at the X and shows its receipt, rather than closing on a send nobody saw", async () => {
+    open({ giftId: "g1" });
+    expect(closeButton().getAttribute("aria-label")).toBe("Close");
+    await tapFor(3, 100);
+    expect(closeButton().getAttribute("aria-label")).toBe("End and send gratitude");
+    act(() => closeButton().click());
+    expect(onClose).not.toHaveBeenCalled();
+    expect(recordGratitude).toHaveBeenCalledTimes(1);
+    expect(recordGratitude.mock.calls[0]?.[0]).toMatchObject({
+      hits: 3,
+      replay: { endReason: "closed" },
+    });
+    await play(ONE_TAP_ENDS_MS);
+    expect(receiptText(".gr-rc-figure")).toMatch(/^[\d,]+$/);
+    expect(closeButton().getAttribute("aria-label")).toBe("Close");
+    // Now the X closes the screen.
+    act(() => closeButton().click());
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("opens with focus on the heart, and gives it to the receipt once the heart has gone", async () => {
@@ -237,7 +320,7 @@ describe("GratitudeMiniGame", () => {
     expect(document.activeElement?.closest(".gr-receipt")).not.toBeNull();
   });
 
-  it("gives a caught combo's length in hits on the receipt, not its seconds or method", async () => {
+  it("gives a combo's length on the receipt as the hit counter, never with a ×, not its seconds or method", async () => {
     open();
     tapOnce();
     await play(100);
@@ -245,10 +328,10 @@ describe("GratitudeMiniGame", () => {
     await play(100);
     tapOnce();
     await play(8000);
-    const { hits } = onEnd.mock.calls[0]?.[0] ?? { hits: 0 };
-    expect(hits).toBe(3);
+    const counter = document.querySelector(".gr-receipt .hit-counter");
+    expect(counter?.textContent).toContain("3 hits");
+    expect(counter?.textContent).not.toContain("×");
     const sub = document.querySelector(".gr-rc-sub")?.textContent ?? "";
-    expect(sub).toContain("3 hits");
     expect(sub).not.toMatch(/\d\.\ds|\btap\b/);
   });
 
@@ -290,7 +373,6 @@ describe("GratitudeMiniGame", () => {
     open({ giftId: "g1" });
     act(() => document.querySelector<HTMLButtonElement>(".gr-close")?.click());
     expect(onClose).toHaveBeenCalledTimes(1);
-    expect(onEnd).not.toHaveBeenCalled();
     expect(recordGratitude).not.toHaveBeenCalled();
   });
 });
@@ -300,11 +382,10 @@ describe("GratitudeMiniGame in Japanese", () => {
 
   it("names the combo's peak tier on the receipt with no gloss", async () => {
     await i18next.changeLanguage("ja");
-    open();
+    open({ giftId: "g1" });
     tapOnce();
     await play(ONE_TAP_ENDS_MS);
-    const peakTier = onEnd.mock.calls[0]?.[0].peakTier ?? 0;
-    const sub = document.querySelector(".gr-rc-sub")?.textContent ?? "";
-    expect(sub.split("\n").at(-1)).toBe(TIER_NAMES[peakTier].jp);
+    const peakTier = recordGratitude.mock.calls[0]?.[0].peakTier ?? 0;
+    expect(receiptText(".gr-rc-sub > p")).toBe(TIER_NAMES[peakTier].jp);
   });
 });

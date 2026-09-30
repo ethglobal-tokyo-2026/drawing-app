@@ -1,7 +1,7 @@
 /**
  * The prepare pass. A fill floods whatever pixels are there, at the density it was drawn at, and
- * reads and writes the whole sheet, too slow for playback. So each fill floods once, beforehand, on
- * a full sheet at that density, and what it changed in the display canvas is kept to reveal.
+ * can read and write the whole sheet, too slow for playback. So each fill floods once, beforehand,
+ * on a full sheet at that density, and what it changed in the display canvas is kept to reveal.
  */
 import { context2d } from "../../sticker-creation/canvas/context2d";
 import { InkSurface } from "../../sticker-creation/canvas/inkSurface";

@@ -68,6 +68,13 @@ export const GAME_CONFIG = {
   tierUpFreezeMs: 60,
 } as const satisfies GameConfig;
 
+/**
+ * Every config a combo can have been played under that the app can still run, the current one
+ * included. A replay runs the config its record names, so when a rule number changes, give the new
+ * numbers a new version and keep the old config here.
+ */
+export const PLAYED_CONFIGS: readonly GameConfig[] = [GAME_CONFIG];
+
 /** How the game looks and answers a touch: the prototype's numbers. A combo doesn't record these. */
 export const FEEL_CONFIG = {
   /** The one dial every effect scales by: day to day, and for the presentation. */

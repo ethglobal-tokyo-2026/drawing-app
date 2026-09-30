@@ -1,5 +1,3 @@
-import { formatCount } from "../i18n/format";
-import { i18next } from "../i18n/i18n";
 import { notePerformance } from "../performance/performanceRecorder";
 import type { ComboHud } from "./comboHud";
 import { EASE_OUT, EASE_PEEL, clamp, easeInOutSine, lerp } from "../ui/easing";
@@ -44,10 +42,6 @@ export interface EndingParts {
   forceFace: (face: Partial<HeartFace> | null) => void;
   reduced: () => boolean;
   intensity: number;
-  /** Announces through the screen's polite live region. */
-  say: (text: string) => void;
-  /** As printed: "@alice". */
-  giverHandle: string;
 }
 
 /** tokens.css's --tilt, spelled out: Web Animations can't read CSS variables. */
@@ -56,10 +50,10 @@ const SOUL_RISE_MS = 1500;
 const SIGH_MS = 1000;
 
 /**
- * The giver's picture squashes as the heart lands in it and takes its heart dot, and the live region
- * says the gratitude sent. With reduced motion the picture holds still and the dot fades in.
+ * The giver's picture squashes as the heart lands in it and takes its heart dot. With reduced motion
+ * the picture holds still and the dot fades in. What became of the send is the receipt's to say.
  */
-function hitGiver(parts: EndingParts, total: number) {
+function hitGiver(parts: EndingParts) {
   if (parts.reduced()) {
     animate(
       parts.giverDot,
@@ -92,24 +86,18 @@ function hitGiver(parts: EndingParts, total: number) {
     );
   }
   parts.effects.burst(6, parts.giverPoint());
-  parts.say(
-    i18next.t(($) => $.gratitude.announcements.sent, {
-      total: formatCount(total),
-      handle: parts.giverHandle,
-    }),
-  );
 }
 
 /**
  * The heart flies into the giver's picture, or fades out with reduced motion, and the picture takes
- * it. `total`: the combo's gratitude, which the live region says.
+ * it.
  */
-export async function flyHeartToGiver(parts: EndingParts, total: number): Promise<void> {
+export async function flyHeartToGiver(parts: EndingParts): Promise<void> {
   notePerformance("gratitude", "ending: fly to the giver");
   // The finger stamps go with the heart, rather than hang where it was.
   parts.effects.tidy();
   await parts.heart.flyToGiver();
-  hitGiver(parts, total);
+  hitGiver(parts);
 }
 
 /**
@@ -142,11 +130,8 @@ function riseSoul(parts: EndingParts) {
   animate(parts.soul, frames, { duration: SOUL_RISE_MS, easing: "linear", fill: "both" });
 }
 
-/**
- * 昇天's climax: a flash, the heart goes limp and pale, 昇天 slams in, and its soul rises to the giver.
- * `total` as for flyHeartToGiver.
- */
-export async function playAscension(parts: EndingParts, total: number): Promise<void> {
+/** 昇天's climax: a flash, the heart goes limp and pale, 昇天 slams in, and its soul rises to the giver. */
+export async function playAscension(parts: EndingParts): Promise<void> {
   notePerformance("gratitude", "ending: 昇天");
   const { background, heart, lettering } = parts;
   parts.freeze(FEEL_CONFIG.climaxFreezeMs);
@@ -163,7 +148,7 @@ export async function playAscension(parts: EndingParts, total: number): Promise<
   lettering.showPopInWord("climax", parts.heartBox());
   riseSoul(parts);
   await parts.wait(SOUL_RISE_MS);
-  hitGiver(parts, total);
+  hitGiver(parts);
   background.ascend(false, parts.intensity);
   await parts.wait(250);
 }

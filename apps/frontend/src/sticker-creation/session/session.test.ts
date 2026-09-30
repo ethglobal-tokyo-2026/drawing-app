@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "../../api/apiClient";
 import {
   ARM_WINDOW_MS,
+  describeSealFailure,
   FRESH_SESSION,
   heldBy,
   sealFailure,
@@ -136,6 +137,28 @@ describe("sealFailure", () => {
     expect(sealFailure(new SyntaxError("the answer isn't JSON"))).toBe("unknown");
     // The wait for the board address stops it before it leaves the phone.
     expect(answered(0, "line_token_expired")).toBe("unsent");
+  });
+});
+
+describe("describeSealFailure", () => {
+  const problem = (status: number, error: string) =>
+    describeSealFailure(new ApiError(status, { error }), true).kind;
+
+  it("sorts a failed seal by what the chip can tell the artist", () => {
+    expect(problem(0, "network")).toBe("noAnswer");
+    expect(problem(500, "internal_error")).toBe("serverProblem");
+    expect(problem(503, "mint_failed")).toBe("notOnChain");
+    expect(problem(0, "smart_account_not_ready")).toBe("boardAddress");
+    expect(problem(0, "line_token_expired")).toBe("signInExpired");
+    // A refusal is worded by its own message.
+    expect(problem(403, "adults_only")).toBe("refused");
+  });
+
+  it("blames the phone only for a failure before the request left it", () => {
+    expect(describeSealFailure(new Error("the cut failed"), false).kind).toBe("onThisPhone");
+    expect(describeSealFailure(new SyntaxError("the answer isn't JSON"), true).kind).toBe(
+      "noAnswer",
+    );
   });
 });
 

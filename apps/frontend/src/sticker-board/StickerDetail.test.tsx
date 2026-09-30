@@ -4,15 +4,20 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { ApiProvider } from "../api/ApiProvider";
-import type { Gratitude, StickerDetail as StickerDetailResponse } from "@drawing-app/api/client";
+import type {
+  Gratitude,
+  RecordGratitude,
+  StickerDetail as StickerDetailResponse,
+} from "@drawing-app/api/client";
 import {
   gratitude as gratitudeFixture,
   people,
   sticker as apiSticker,
   trailEntry,
 } from "../api/testFixtures";
-import { emptyApi, TEST_OWNER } from "../api/testing";
+import { emptyApi, gratitudeOf, recordGratitudeBody, TEST_OWNER } from "../api/testing";
 import { toPerson, toSticker } from "../api/views";
+import { resendPendingGratitude, sendGratitude } from "../gratitude/gratitudeOutbox";
 import type { BoardStickerView } from "./boardSticker";
 import { StickerDetail } from "./StickerDetail";
 import { fakeTimelapsePlayers, TEST_TIMELAPSE } from "./timelapse/testTimelapse";
@@ -157,6 +162,8 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root.unmount());
   host.remove();
+  localStorage.clear();
+  vi.restoreAllMocks();
 });
 
 describe("StickerDetail", () => {
@@ -217,6 +224,60 @@ describe("StickerDetail", () => {
       toSticker(drawn),
       toPerson(people.mika),
     );
+  });
+
+  it("treats gratitude waiting on this phone as sent, and reads the trail again once the server has it", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const giftId = "gift-133";
+    let recorded: Gratitude | null = null;
+    /** Holds each answer until told, so the test sees the detail while the trail is read again. */
+    const answers: (() => void)[] = [];
+    const { drawn } = received(null);
+    const stickerDetail = vi.fn(
+      () =>
+        new Promise<StickerDetailResponse>((resolve) => {
+          const seen = recorded;
+          answers.push(() =>
+            resolve({
+              sticker: drawn,
+              owner: TEST_OWNER,
+              transferTrail: [
+                {
+                  giftId,
+                  giver: people.mika,
+                  receiver: TEST_OWNER,
+                  receivedAt: "2026-09-23T12:00:00.000Z",
+                  gratitude: seen,
+                },
+              ],
+              hasTimelapse: false,
+            }),
+          );
+        }),
+    );
+    // Played, and kept for want of a connection.
+    const offline = { recordGratitude: () => Promise.reject(new TypeError("Failed to fetch")) };
+    await sendGratitude(offline, TEST_OWNER.id, recordGratitudeBody({ giftId }));
+
+    open({ onSendGratitude: vi.fn() }, emptyApi({ stickerDetail }));
+    answers[0]?.();
+    await settle();
+    expect(button("Send gratitude")).toBeUndefined();
+
+    // Back online, the server records it, and the trail is read again. What was read before, which
+    // has no gratitude, never brings Send gratitude back while it is.
+    const online = {
+      recordGratitude: (body: RecordGratitude) => {
+        recorded = gratitudeOf(body);
+        return Promise.resolve(recorded);
+      },
+    };
+    await act(() => resendPendingGratitude(online, TEST_OWNER.id));
+    expect(stickerDetail).toHaveBeenCalledTimes(2);
+    expect(button("Send gratitude")).toBeUndefined();
+    answers[1]?.();
+    await settle();
+    expect(button("Send gratitude")).toBeUndefined();
   });
 
   it("says the check failed where the key would be, and Try again asks again", async () => {

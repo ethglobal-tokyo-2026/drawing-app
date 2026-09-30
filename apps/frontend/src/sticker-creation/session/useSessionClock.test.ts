@@ -95,6 +95,31 @@ describe("SessionClock", () => {
     expect(clock.getView()).toMatchObject({ secondsLeft: 10, late: true });
   });
 
+  it("warns as it counts down through 30 seconds and through 10, once each", () => {
+    const { clock, advance } = setup();
+    const warned: number[] = [];
+    clock.onWarning((secondsLeft) => warned.push(secondsLeft));
+    advance(SESSION_MS - 30_000 - 1);
+    expect(warned).toEqual([]);
+    advance(1);
+    expect(warned).toEqual([30]);
+    advance(20_000);
+    expect(warned).toEqual([30, 10]);
+    advance(9_000);
+    expect(warned).toEqual([30, 10]);
+  });
+
+  it("warns of nothing already past when a kept drawing comes back inside the last 30 seconds", () => {
+    const { clock, advance } = setup({ started: false });
+    const warned: number[] = [];
+    clock.onWarning((secondsLeft) => warned.push(secondsLeft));
+    clock.restore(SESSION_MS - 25_000);
+    advance(5_000);
+    expect(warned).toEqual([]);
+    advance(10_000);
+    expect(warned).toEqual([10]);
+  });
+
   it("calls time at 0:00, once, and stops asking for frames", () => {
     const { clock, onTimeUp, advance, hasFrame } = setup();
     advance(SESSION_MS + 1000);

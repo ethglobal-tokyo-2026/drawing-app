@@ -32,9 +32,12 @@ export interface TierBackground {
   destroy: () => void;
 }
 
-/** The focus lines' two drawings, which alternate so the lines flicker like a hand-drawn loop. */
+/**
+ * The focus lines' two drawings, which alternate like a hand-drawn loop, no faster than three swaps a
+ * second: quicker, high-contrast stripes flicker, which photosensitivity guidance advises against.
+ */
 const FOCUS_SEEDS = [4242, 7777];
-const FOCUS_FPS = 8;
+const FOCUS_SWAPS_PER_S = 3;
 const RAYS_DEG_PER_S = 6;
 const FLASH = { opacity: 0.7, seconds: 0.32 };
 const SPEED_FIELD_SEED = 31;
@@ -180,7 +183,7 @@ export function createTierBackground(
         cornerFlap.style.transform = scale;
       }
       if (focusOn && !reduced()) {
-        const v = String(Math.floor(clock * FOCUS_FPS) % 2);
+        const v = String(Math.floor(clock * FOCUS_SWAPS_PER_S) % 2);
         if (focus.dataset.v !== v) focus.dataset.v = v;
       }
       if (beamOn)

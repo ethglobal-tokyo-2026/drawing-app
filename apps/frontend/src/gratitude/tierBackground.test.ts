@@ -18,25 +18,37 @@ function setUp() {
   };
   const focus = find(ground, ".gr-focus");
   const rays = find(ground, ".gr-beam-rays");
-  /** Whether the focus lines flip between their two drawings over a few frames. */
-  const focusFlickers = () => {
-    const seen = new Set<string | undefined>();
-    for (let i = 0; i < 6; i++) {
-      background.step(0.05);
-      seen.add(focus.dataset.v);
+  /** How many times the focus lines swap between their two drawings over `seconds` of frames. */
+  const focusSwaps = (seconds: number) => {
+    let swaps = 0;
+    let shown = focus.dataset.v;
+    for (let i = 0; i < seconds * 60; i++) {
+      background.step(1 / 60);
+      if (focus.dataset.v !== shown) swaps++;
+      shown = focus.dataset.v;
     }
-    return seen.size > 1;
+    return swaps;
   };
+  /** Whether the focus lines swap between their two drawings over a couple of seconds. */
+  const focusFlickers = () => focusSwaps(2) > 0;
   /** Whether 昇天's rays turn over a frame. */
   const raysTurn = () => {
     const before = rays.style.transform;
     background.step(0.5);
     return rays.style.transform !== before;
   };
-  return { ground, front, background, find, focusFlickers, raysTurn };
+  return { ground, front, background, find, focusSwaps, focusFlickers, raysTurn };
 }
 
 describe("createTierBackground", () => {
+  it("swaps the focus lines' drawings no more than three times a second", () => {
+    const { background, focusSwaps } = setUp();
+    background.show(3, 1, "tap");
+    const swaps = focusSwaps(4);
+    expect(swaps).toBeGreaterThan(0);
+    expect(swaps / 4).toBeLessThanOrEqual(3);
+  });
+
   it("keeps the focus lines flickering after a dent, until everything hides", () => {
     const { background, focusFlickers } = setUp();
     background.show(2, 1, "shake");

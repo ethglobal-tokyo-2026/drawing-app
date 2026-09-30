@@ -9,6 +9,8 @@ const MAX_FRAME_MS = 5_000;
 const HIDDEN_RESUME_MS = 420;
 /** The timer turns Tomato for this last stretch. */
 const LATE_MS = 10_000;
+/** The clock warns, once each, as it counts down through these many seconds left. */
+const WARN_AT_SECONDS = [30, 10] as const;
 
 /** What the timer dot shows. A new object only when one of these changes. */
 export interface ClockView {
@@ -57,6 +59,7 @@ export class SessionClock {
   private onTimeUp: (() => void) | null = null;
   private view: ClockView;
   private readonly listeners = new Set<() => void>();
+  private readonly warnings = new Set<(secondsLeft: number) => void>();
 
   constructor(frames: FrameSource = browserFrames) {
     this.frames = frames;
@@ -73,6 +76,15 @@ export class SessionClock {
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  };
+
+  /**
+   * Hears each warning that time is nearly up, with the seconds left. Only counting down through one
+   * warns, so a kept drawing picked back up inside the last 30 seconds says nothing of it.
+   */
+  onWarning = (listener: (secondsLeft: number) => void): (() => void) => {
+    this.warnings.add(listener);
+    return () => this.warnings.delete(listener);
   };
 
   /** Frames run only while connected; returns the disconnect. */
@@ -150,7 +162,9 @@ export class SessionClock {
       // Null when the clock came back in this very frame, with nothing to count yet.
       if (this.last !== null) {
         const delta = Math.min(MAX_FRAME_MS, Math.max(0, t - this.last));
-        this.elapsedMs = Math.min(SESSION_MS, this.elapsedMs + delta);
+        const before = this.elapsedMs;
+        this.elapsedMs = Math.min(SESSION_MS, before + delta);
+        this.warn(before, this.elapsedMs);
       }
       this.last = t;
       if (this.elapsedMs >= SESSION_MS) {
@@ -160,6 +174,15 @@ export class SessionClock {
     }
     this.changed();
   };
+
+  /** Tells the listeners which warning, if any, the time from `before` to `after` counted through. */
+  private warn(before: number, after: number): void {
+    const crossed = WARN_AT_SECONDS.find((seconds) => {
+      const at = SESSION_MS - seconds * 1000;
+      return before < at && after >= at;
+    });
+    if (crossed !== undefined) this.warnings.forEach((listener) => listener(crossed));
+  }
 
   /** Marks when counting starts or stops, publishes a changed view, and asks for or withdraws the next frame. */
   private changed(): void {
