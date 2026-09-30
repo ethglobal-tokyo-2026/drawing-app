@@ -10,12 +10,25 @@ const fullnode = (showsOn = Infinity) => {
   return read;
 };
 
+/** A read the fullnode never answers, until the wait running out cuts it off. */
+const unanswered = (signal: AbortSignal) =>
+  new Promise<never>((_, reject) => {
+    signal.addEventListener("abort", () => reject(signal.reason));
+  });
+
 beforeEach(() => {
   vi.useFakeTimers();
+  // Node's own AbortSignal.timeout runs on the real clock, which the fake one doesn't move.
+  vi.spyOn(AbortSignal, "timeout").mockImplementation((ms) => {
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(new DOMException("The read timed out", "TimeoutError")), ms);
+    return controller.signal;
+  });
 });
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe("reading a payment from Sui", () => {
@@ -33,6 +46,23 @@ describe("reading a payment from Sui", () => {
     await vi.advanceTimersByTimeAsync(SUI_READ_TIMEOUT_MS);
     await expect(reading).resolves.toBeNull();
     expect(read.mock.calls.length).toBeGreaterThan(1);
+  });
+
+  it("answers null when the wait runs out mid-read, once Sui has said it doesn't show the transaction", async () => {
+    const read = vi.fn((signal: AbortSignal) =>
+      read.mock.calls.length === 1 ? Promise.resolve(null) : unanswered(signal),
+    );
+    const reading = readLanded(read);
+    await vi.advanceTimersByTimeAsync(SUI_READ_TIMEOUT_MS);
+    await expect(reading).resolves.toBeNull();
+    expect(read).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects when Sui answers no read before the wait runs out", async () => {
+    const reading = readLanded(unanswered);
+    const rejected = expect(reading).rejects.toMatchObject({ name: "TimeoutError" });
+    await vi.advanceTimersByTimeAsync(SUI_READ_TIMEOUT_MS);
+    await rejected;
   });
 
   it("rejects at the first failure to reach Sui, rather than waiting it out", async () => {
