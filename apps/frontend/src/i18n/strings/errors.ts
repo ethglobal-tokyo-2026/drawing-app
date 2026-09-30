@@ -155,8 +155,8 @@ export const errors = {
   },
   /** Any screen, when the server can't read a request (400), through errorMessage/errorReason; e.g. the Drawing screen's seal chip when a seal's images are malformed (POST /api/stickers) */
   invalid_request: {
-    en: "Croquis couldn’t read that request. Try again. If it keeps happening, tell the Croquis Official account in LINE.",
-    ja: "クロッキーがそのリクエストを読み取れませんでした。もう一度お試しください。続く場合は、LINEのクロッキー公式アカウントにお知らせください。",
+    en: "Croquis couldn’t read what your phone sent. Try again. If it keeps happening, tell the Croquis Official account in LINE.",
+    ja: "クロッキーがその内容を読み取れませんでした。もう一度お試しください。続く場合は、LINEのクロッキー公式アカウントにお知らせください。",
   },
   /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: signing in to the app's server (POST /api/session) when LINE refuses the ID token, through errorMessage */
   line_token_invalid: {
