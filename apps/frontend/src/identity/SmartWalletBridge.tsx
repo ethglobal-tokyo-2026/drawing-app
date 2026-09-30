@@ -1,5 +1,5 @@
 import { useSmartWallets } from "@privy-io/react-auth/smart-wallets";
-import { useEffect } from "react";
+import { useEffect, useEffectEvent } from "react";
 import { sepolia } from "viem/chains";
 import { setSmartWallet, smartWalletFailed, useSmartWalletAttempt } from "./smartWallet";
 
@@ -8,11 +8,15 @@ export function SmartWalletBridge() {
   const { client, getClientForChain } = useSmartWallets();
   // A chain action waiting on a client that failed to start asks for it again.
   const attempt = useSmartWalletAttempt();
+  // Privy's provider hands out a new client wrapper and getClientForChain on every render, so the
+  // client is asked for again only when the account changes: a render keeps the working one.
+  const account = client?.account.address;
+  const sepoliaClient = useEffectEvent(() => getClientForChain({ id: sepolia.id }));
   useEffect(() => {
     let current = true;
     setSmartWallet(null);
-    if (!client) return;
-    void getClientForChain({ id: sepolia.id }).then(
+    if (!account) return;
+    void sepoliaClient().then(
       (wallet) => {
         if (!current) return;
         if (!wallet?.account) {
@@ -33,6 +37,6 @@ export function SmartWalletBridge() {
       current = false;
       setSmartWallet(null);
     };
-  }, [client, getClientForChain, attempt]);
+  }, [account, attempt]);
   return null;
 }
