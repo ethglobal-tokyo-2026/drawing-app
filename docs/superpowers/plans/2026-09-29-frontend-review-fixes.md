@@ -50,4 +50,13 @@ Wave 3, once the lanes above are merged, since these touch every area:
 - [x] Shared helpers: CLEAN-3, CLEAN-11, CLEAN-14, CLEAN-20, CLEAN-22. explore/ keeps its private curve and clamp copies, since the frontend audit's Explore lane is working there
 - [x] One device store, and a query cache: CLEAN-17, CLEAN-21. explore/pileVisits.ts keeps its own storage code, since the frontend audit's Explore lane is working there
 - [x] One ticket card shell: CLEAN-4, CLEAN-6
-- [ ] Split trayEngine.ts: CLEAN-19
+- [x] Split trayEngine.ts: CLEAN-19. The sticker tray is trayEngine.ts and seven parts beside it, none over 450 lines
+
+## The fixes review
+
+[The review of these lanes' fixes](../../review/2026-10-01-frontend-fixes-code-review.md) found 12 bugs in them: 2 high, 4 medium, 6 low. Follow-up lanes fix them:
+
+- [ ] Sealing: R2-1 to R2-4
+- [ ] Your sticker board's kept answer: R4-1
+- [ ] Tickets: R1-1 to R1-3
+- [ ] Giving: R3-1 to R3-4
