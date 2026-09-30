@@ -112,8 +112,15 @@
 }
 
 /* Colors the design names but draws inline: each coded hue's deep partner (a key's lip), label stock's lip,
-   the ink key's lip, foil's bands, and backing paper's grain and maker print. */
+   the ink key's lip, the sticker tray's canvas, tape, lining and mat, foil's bands, and backing paper's grain
+   and maker print. */
 :root {
+  /* The sticker tray: the canvas edge the zipper is sewn on, the lighter tape so the pull stays the one
+     strong pink, the lining you see into, and the mat the spread lays the sheets on. */
+  --tray-canvas: #f9b3d1;
+  --tray-tape: #ffa6cd;
+  --tray-lining: #fbe3ee;
+  --tray-mat: #f6d6e4;
   --seal-deep: #d9a300;
   --aqua-deep: #1c9ea8;
   --pink-deep: #cc2a72;

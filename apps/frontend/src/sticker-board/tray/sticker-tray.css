@@ -4,11 +4,7 @@
    opacity only. */
 
 .tray {
-  /* The tray's material: a pink canvas edge, a lighter tape so the pull is the one strong pink, a
-     soft lining. Candy colors, no gloss; ink only in thin lines. */
-  --tray-canvas: #f9b3d1;
-  --tray-tape: #ffa6cd;
-  --tray-lining: #fbe3ee;
+  /* The tray's material, from the tokens: candy colors, no gloss; ink only in thin lines. */
   --tray-edge:
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.12) 0 1px, transparent 1px 3px),
     repeating-linear-gradient(0deg, rgba(120, 20, 70, 0.06) 0 1px, transparent 1px 3px),
@@ -16,7 +12,6 @@
   --tray-edge-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.4), -0.5px 0 0 rgba(120, 20, 70, 0.3);
   --tray-weave: rgba(255, 255, 255, 0.55);
   --tray-deep: rgba(150, 30, 90, 0.22);
-  --tray-mat: #f6d6e4;
   --tray-top: 64px;
   --tray-col: 205px;
   position: absolute;
@@ -30,13 +25,21 @@
   box-sizing: border-box;
 }
 
+/* Every part of the tray you can reach wears the house focus ring: 2px Ink at a 3px offset. A spread
+   sheet is drawn scaled by --k, so its ring is sized back; a dated edge sits on the paper's clipped
+   edge, so its ring is drawn inside it. The pull draws its own, round its body. */
+.tray :focus-visible:not(.zip__slider) {
+  outline: calc(2px / var(--k, 1)) solid var(--ink);
+  outline-offset: calc(var(--ring-offset, 3px) / var(--k, 1));
+}
+
 .tray .zip {
   --zip-tape: var(--tray-tape);
   --zip-weave: rgba(255, 255, 255, 0.2);
   --zip-selvedge: rgba(255, 255, 255, 0.3);
   --zip-stitch: rgba(255, 255, 255, 0.85);
-  --zip-tooth: #ffffff;
-  --zip-tooth-lit: #ffffff;
+  --zip-tooth: var(--canvas);
+  --zip-tooth-lit: var(--canvas);
   --zip-tooth-shade: #ebdde8;
   --zip-tooth-rim: rgba(150, 40, 95, 0.42);
   --zip-lining: var(--tray-lining);
@@ -230,6 +233,7 @@
 /* The sheet's bottom margin with its dates and number printed on it: all of a sheet that shows
    under the one in front. */
 .tray__foot {
+  --ring-offset: -2px;
   position: absolute;
   left: 0;
   right: 0;
@@ -271,11 +275,6 @@
     rgba(28, 24, 36, 0.07) 45%,
     rgba(28, 24, 36, 0)
   );
-}
-
-.tray__foot:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: -2px;
 }
 
 .tray__foot:active {
@@ -359,11 +358,6 @@
   transform: translateY(1px);
 }
 
-.tray__depth:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 2px;
-}
-
 .tray__ic {
   width: 14px;
   height: 14px;
@@ -442,11 +436,6 @@
   transform: none;
 }
 
-.tray__x:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 2px;
-}
-
 /* ---------- A slot: a sticker, its used sticker silhouette, or plain paper ---------- */
 
 .tray__slot {
@@ -458,6 +447,7 @@
   margin: -42px 0 0 -36px;
   padding: 0;
   border: 0;
+  border-radius: 10px;
   background: none;
   appearance: none;
   font: inherit;
@@ -473,12 +463,6 @@
 .tray__slot[data-state="used"],
 .tray__slot[data-state="given"] {
   cursor: pointer;
-}
-
-.tray__slot:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 1px;
-  border-radius: 10px;
 }
 
 .tray__slot.is-out {
@@ -628,6 +612,7 @@
   margin: -24px 0 0;
   padding: 0;
   border: 0;
+  border-radius: 7px 7px 0 0;
   appearance: none;
   display: grid;
   place-items: center;
@@ -675,7 +660,7 @@
 }
 
 .tray__tab[data-filter="all"] {
-  --tab: #ffffff;
+  --tab: var(--canvas);
 }
 
 .tray__tab[data-filter="mine"] {
@@ -700,12 +685,6 @@
 
 .tray__tab[aria-pressed="true"] span {
   transform: none;
-}
-
-.tray__tab:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 1px;
-  border-radius: 6px;
 }
 
 /* ---------- A sticker in hand, and its shadow on the board where it will land ---------- */
@@ -796,6 +775,7 @@
   margin: 0;
   padding: 0;
   border: 0;
+  border-radius: 4px;
   background: none;
   appearance: none;
   transform-origin: 0 0;
@@ -810,13 +790,6 @@
 /* A spread sheet is drawn smaller: its dates stay at the fine-print floor. */
 .tray__cell .tray__foot .fine {
   font-size: calc(var(--fs-fine) / var(--k, 1));
-}
-
-/* The house ring, drawn at its own size on the shrunk sheet. */
-.tray__cell:focus-visible {
-  outline: calc(2px / var(--k, 1)) solid var(--ink);
-  outline-offset: calc(3px / var(--k, 1));
-  border-radius: 4px;
 }
 
 .tray__cell.is-here .tray__paper {

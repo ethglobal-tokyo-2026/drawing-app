@@ -17,9 +17,9 @@
   --zip-body-deep: #a9a2b8;
   --zip-body-rim: rgba(28, 24, 36, 0.5);
   /* The pull is Bonbon Pink: the tray is yours. */
-  --zip-slider: #ff4f9a;
-  --zip-slider-lit: #ff8ebf;
-  --zip-slider-deep: #d2367d;
+  --zip-slider: var(--pink);
+  --zip-slider-lit: color-mix(in srgb, var(--pink) 65%, var(--canvas));
+  --zip-slider-deep: var(--pink-deep);
   --zip-slider-rim: rgba(96, 12, 52, 0.5);
   --zip-lining: #2a2434;
   --zip-lining-deep: #110e16;
@@ -380,7 +380,7 @@
   display: none;
 }
 
-/* Keyboard focus: a ring around the body. */
+/* Keyboard focus: the house ring, 2px Ink at a 3px offset, round the body. */
 .zip__ring {
   position: absolute;
   left: -17px;
@@ -390,13 +390,12 @@
   border-radius: 12px;
   opacity: 0;
   pointer-events: none;
-  box-shadow:
-    0 0 0 2px var(--seal),
-    0 0 0 3.5px var(--ink);
 }
 
 .zip__slider:focus-visible .zip__ring {
   opacity: 1;
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
 }
 
 /* The pull swings on for seconds after each run. On layers of their own, it and its shadow move
