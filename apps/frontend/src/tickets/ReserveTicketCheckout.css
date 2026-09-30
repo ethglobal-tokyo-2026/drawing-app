@@ -8,6 +8,27 @@
   overflow-y: auto;
 }
 
+/* The packs card: the packs scroll, and Pay and Not now stay under them, so a short phone never hides the way out. */
+.reserve-checkout__card--split {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+.reserve-checkout__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 6px var(--card-pad) 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.reserve-checkout__foot {
+  flex: none;
+  padding: 0 var(--card-pad) 18px;
+}
+
 /* Over the Shop the card sits on the phone itself, over the tabs, so it clears the home indicator. */
 .phone > .reserve-checkout {
   padding-bottom: calc(14px + env(safe-area-inset-bottom));
@@ -64,7 +85,7 @@
     transform 140ms var(--ease-out);
 }
 
-.reserve-checkout__pack[aria-pressed="true"] {
+.reserve-checkout__pack[aria-checked="true"] {
   background: var(--blue-soft);
   box-shadow:
     inset 0 0 0 2px var(--blue),
@@ -77,7 +98,7 @@
   outline-offset: 2px;
 }
 
-.reserve-checkout__pack:disabled {
+.reserve-checkout__pack[aria-disabled="true"] {
   cursor: default;
 }
 
@@ -111,7 +132,7 @@
 }
 
 /* Graphite reads only 3.3:1 on Blue Soft, so on the picked pack the struck price is Ink. */
-.reserve-checkout__pack[aria-pressed="true"] .reserve-checkout__price s {
+.reserve-checkout__pack[aria-checked="true"] .reserve-checkout__price s {
   color: var(--ink);
 }
 

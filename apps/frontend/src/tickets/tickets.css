@@ -33,7 +33,7 @@
     out-of-tickets-fade 320ms var(--ease-out) both;
 }
 
-/* The card holds focus only while it has no enabled control (mid-payment). */
+/* The card holds focus only while it has no control to hold it. */
 .out-of-tickets__card:focus {
   outline: none;
 }
@@ -129,8 +129,15 @@
   margin-top: 10px;
 }
 
+/* One to a line, so two quiet links never read as one phrase; a link's touch band reaches 7px past its box. */
 .out-of-tickets__quiet-link {
-  margin-top: 8px;
+  display: flex;
+  width: fit-content;
+  margin: 8px auto 0;
+}
+
+.out-of-tickets__quiet-link + .out-of-tickets__quiet-link {
+  margin-top: 14px;
 }
 
 @keyframes out-of-tickets-fade {

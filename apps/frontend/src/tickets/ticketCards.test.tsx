@@ -394,6 +394,78 @@ describe("ReserveTicketCheckout", () => {
     );
   });
 
+  it("shows the Sui address in place when the balance is short, whole and copyable", async () => {
+    vi.mocked(getJpycBalance).mockResolvedValue(50n * JPYC);
+    const write = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: write },
+      configurable: true,
+    });
+    await render(checkout(), emptyApi({ ticketShop: () => Promise.resolve(SHOP) }));
+    await settle(500);
+    expect(document.body.textContent).not.toContain(SUI_WALLET);
+    click("Show my Sui address");
+    expect(document.querySelector(".sui-address-reveal")?.textContent).toContain(SUI_WALLET);
+    click("Copy");
+    await settle(0);
+    expect(write).toHaveBeenCalledWith(SUI_WALLET);
+  });
+
+  it("picks a pack as a radio group does: one tab stop, arrows move the pick and focus", async () => {
+    await render(checkout(), emptyApi({ ticketShop: () => Promise.resolve(SHOP) }));
+    await settle(500);
+    const radios = () => [...document.querySelectorAll<HTMLElement>("[role=radio]")];
+    expect(document.querySelector("[role=radiogroup]")).not.toBeNull();
+    expect(radios().map((r) => r.getAttribute("aria-checked"))).toEqual(["true", "false"]);
+    expect(radios().map((r) => r.tabIndex)).toEqual([0, -1]);
+    // The packs' arrival puts focus on the picked one, not on the exit it started at.
+    expect(document.activeElement).toBe(radios()[0]);
+    const arrow = (key: string) =>
+      act(() => {
+        document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+      });
+    arrow("ArrowDown");
+    expect(radios().map((r) => r.getAttribute("aria-checked"))).toEqual(["false", "true"]);
+    expect(document.activeElement).toBe(radios()[1]);
+    expect(buttonNamed("Pay ¥270")).toBeDefined();
+    // The last wraps to the first.
+    arrow("ArrowRight");
+    expect(document.activeElement).toBe(radios()[0]);
+    arrow("ArrowUp");
+    expect(document.activeElement).toBe(radios()[1]);
+  });
+
+  it("keeps Pay's face and focus while paying, says what it waits on, and lets the scrim close the card only after", async () => {
+    let confirm = () => {};
+    vi.mocked(signTicketPayment).mockResolvedValue(
+      signed(() => new Promise<void>((resolve) => (confirm = resolve))),
+    );
+    const api = emptyApi({
+      ticketShop: () => Promise.resolve(SHOP),
+      buyTickets: () => Promise.resolve(tickets(3, 1)),
+    });
+    await render(checkout(), api);
+    await settle(500);
+    click("Pay");
+    await settle(0);
+    const paying = buttonNamed("Paying…");
+    // Busy, not disabled: it would sink grey and drop focus.
+    expect(paying?.disabled).toBe(false);
+    expect(paying?.getAttribute("aria-busy")).toBe("true");
+    expect(paying?.getAttribute("aria-disabled")).toBe("true");
+    expect(document.querySelector(".reserve-checkout__foot [role=status]")?.textContent).toContain(
+      "Waiting for Sui to confirm",
+    );
+    const scrim = () => document.querySelector<HTMLElement>(".out-of-tickets__scrim");
+    act(() => scrim()?.click());
+    expect(onBoard).not.toHaveBeenCalled();
+    confirm();
+    await settle(500);
+    expect(title()).toBe("1 reserve ticket added");
+    act(() => scrim()?.click());
+    expect(onBoard).toHaveBeenCalledOnce();
+  });
+
   it("opens the ticket purchases Sui lists under the ENS name, a page at a time", async () => {
     const OLDER = "E".repeat(44);
     vi.mocked(getTicketPayments)

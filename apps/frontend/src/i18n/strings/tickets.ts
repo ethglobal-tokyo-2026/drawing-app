@@ -124,10 +124,10 @@ export const tickets = {
     balance: { en: "Balance", ja: "残高" },
     /** Reserve ticket checkout: the wallet row while the balance loads */
     readingBalance: { en: "Reading your balance…", ja: "残高を確認しています…" },
-    /** Reserve ticket checkout: the wallet row when the balance couldn't be read, before a Try again link; `reason` is the wallet's own words */
+    /** Reserve ticket checkout: the balance row when the balance couldn't be read, before a Try again link; Sui's own words follow as fine print beside Copy */
     balanceProblem: {
-      en: "Couldn’t read your balance ({{reason}}).",
-      ja: "残高を確認できませんでした（{{reason}}）。",
+      en: "Couldn’t read your balance.",
+      ja: "残高を確認できませんでした。",
     },
     /** Reserve ticket checkout: in the packs' place while today's prices load */
     gettingPrices: { en: "Getting today’s prices…", ja: "今日の価格を確認しています…" },
@@ -164,6 +164,28 @@ export const tickets = {
         en: "<strong>Not enough balance for this pack.</strong> Add JPYC to your Sui account to buy it.",
         ja: "<strong>このパックには残高が足りません。</strong>購入するには、SuiアカウントにJPYCを追加してください。",
       },
+    },
+    /** Reserve ticket checkout, when your balance is less than the picked pack's price: your Sui address, in place under that line. */
+    address: {
+      /** Reserve ticket checkout, under the not-enough-balance line: the label that opens your Sui address in place; it reads the same whether open or shut */
+      show: { en: "Show my Sui address", ja: "Suiアドレスを表示" },
+      /** Reserve ticket checkout, once “Show my Sui address” is open: the line above the address, on where JPYC goes and what the network fee takes */
+      how: {
+        en: "To add JPYC, send it to this address on the Sui network. Paying also needs a little SUI in the account for the network fee.",
+        ja: "JPYCを追加するには、Suiネットワークでこのアドレスに送ってください。支払いには、ネットワーク手数料として少額のSUIも必要です。",
+      },
+    },
+    /** Reserve ticket checkout, after tapping Pay: what the payment in flight waits on, in a line above the Pay key, read aloud as it changes. */
+    waiting: {
+      /** Reserve ticket checkout, after tapping Pay: while the payment is built and signed */
+      signing: { en: "Signing the payment…", ja: "支払いに署名しています…" },
+      /** Reserve ticket checkout, after tapping Pay: while Sui runs the signed payment, which can take a minute; the payment is already kept on this phone */
+      confirming: {
+        en: "Waiting for Sui to confirm the payment. If you close Croquis, the payment is kept and its tickets are added when you’re back.",
+        ja: "Suiが支払いを確認するのを待っています。クロッキーを閉じても支払いは保管され、戻ったときにチケットが追加されます。",
+      },
+      /** Reserve ticket checkout, after tapping Pay: while the server adds the tickets Sui confirmed */
+      adding: { en: "Adding your tickets…", ja: "チケットを追加しています…" },
     },
     /** Reserve ticket checkout after a purchase: the title, when one reserve ticket was added */
     added_one: { en: "{{count}} reserve ticket added" },
@@ -253,17 +275,17 @@ export const tickets = {
     },
     /** Reserve ticket checkout: the key that goes back to the packs when a payment fails or its tickets are refused, and the quiet link above Not now when its tickets weren't added */
     backToPacks: { en: "Back to the packs", ja: "パック選びに戻る" },
-    /** Reserve ticket checkout: the wallet row, in the balance's place, when your Privy Sui wallet can't be used; `reason` is Privy's or the signer's own words */
+    /** Reserve ticket checkout: the balance row, in the balance's place, when your Sui account can't be used; the signer's own words follow as fine print beside Copy */
     walletBroken: {
-      en: "Your Sui account isn’t working ({{reason}}).",
-      ja: "Suiアカウントが使えません（{{reason}}）。",
+      en: "Your Sui account isn’t working.",
+      ja: "Suiアカウントが使えません。",
     },
-    /** Reserve ticket checkout: the wallet row, in the balance's place, when the Privy sign-in behind your wallet failed; `reason` is Privy's own words */
+    /** Reserve ticket checkout: the balance row, in the balance's place, when the sign-in behind your Sui account failed; the sign-in's own words follow as fine print beside Copy */
     walletSignInFailed: {
-      en: "Couldn’t sign you in to pay ({{reason}}).",
-      ja: "支払いのためのサインインができませんでした（{{reason}}）。",
+      en: "Couldn’t sign you in to pay.",
+      ja: "支払いのためのサインインができませんでした。",
     },
-    /** Reserve ticket checkout on the dev server: the wallet row, in the balance's place, when LIFF Mock signed you in, so there's no Privy wallet to pay from */
+    /** Reserve ticket checkout on the dev server: the balance row, in the balance's place, when LIFF Mock signed you in, so there's no Sui account to pay from */
     walletNeedsLine: {
       en: "Paying needs LINE’s sign-in, which LIFF Mock skips.",
       ja: "支払いにはLINEでのサインインが必要ですが、LIFF Mockでは省略されます。",

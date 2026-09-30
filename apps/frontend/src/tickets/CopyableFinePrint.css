@@ -8,25 +8,33 @@
   margin-top: 10px;
 }
 
-/* Cut short on screen, and Copy copies it whole. It breaks anywhere, so a long ID never widens the card. */
+/* Cut short on screen, and Copy copies it whole. It takes the row's leftover width outright, since text
+   that may break anywhere has no width of its own to ask for. */
 .copyable-fine-print__text {
-  display: -webkit-box;
+  flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
   overflow-wrap: anywhere;
-  -webkit-box-orient: vertical;
   text-align: left;
   text-transform: none;
   -webkit-user-select: text;
   user-select: text;
 }
 
-.copyable-fine-print__text--1 {
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
+.copyable-fine-print > .label-btn {
+  flex: none;
 }
 
+/* An ID reads as one string: a line, then an ellipsis. */
+.copyable-fine-print__text--1 {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Words wrap, and stop after three lines. */
 .copyable-fine-print__text--3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   line-clamp: 3;
 }

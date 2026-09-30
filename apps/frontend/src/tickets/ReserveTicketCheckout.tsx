@@ -1,4 +1,11 @@
-import { useEffect, useEffectEvent, useId, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { ApiError } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
@@ -17,12 +24,14 @@ import { QuietLink } from "../ui/QuietLink";
 import { REVEAL } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
 import { TearLine } from "../ui/TearLine";
+import { useBackToClose } from "../ui/useBackToClose";
 import { CopyableFinePrint } from "./CopyableFinePrint";
 import { paymentFailureOf, type PaymentFailure } from "./paymentFailure";
 import { formatYen, yenForJpyc } from "./prices";
 import { singleTicketPrice, useReservePacks, type ReservePack } from "./reservePacks";
 import { TicketCard } from "./TicketCard";
 import { TicketCount } from "./TicketCount";
+import { SuiAddressReveal } from "./SuiAddressReveal";
 import { TicketPurchases } from "./TicketPurchases";
 import { describeTickets, ticketView } from "./tickets";
 import { TicketStubs } from "./TicketStubs";
@@ -41,6 +50,9 @@ import "./tickets.css";
 import "./ReserveTicketCheckout.css";
 
 type Step = "choose" | "paying" | "done" | "error";
+
+/** What a payment in flight waits on, in order: the signature, Sui running it, the server adding its tickets. */
+type Waiting = "signing" | "confirming" | "adding";
 
 interface Props {
   /** Draw, after a purchase. */
@@ -93,16 +105,38 @@ function keptUnadded(userId: string): Unadded | null {
 /** One outline row per pack on sale, while today's prices load. */
 const PACKS_LOADING = [1, 2, 3, 4];
 
+/** How far each arrow key moves the pick, in a list read top to bottom. */
+const ARROWS: Record<string, 1 | -1 | undefined> = {
+  ArrowDown: 1,
+  ArrowRight: 1,
+  ArrowUp: -1,
+  ArrowLeft: -1,
+};
+
+/** Why the Sui account can't be used: a plain line, and the raw words for fine print beside Copy. */
+interface AccountProblem {
+  line: string;
+  detail: string;
+}
+
 /** The person's Privy Sui account: its address, or why there's none yet. */
-function useSuiAccount(): { address?: string; problem?: string } {
+function useSuiAccount(): { address?: string; problem?: AccountProblem } {
   const { t } = useTranslation();
   const privy = usePrivyStatus();
   const failure = useSuiWalletFailure();
-  if (failure) return { problem: t(($) => $.tickets.checkout.walletBroken, { reason: failure }) };
+  if (failure)
+    return { problem: { line: t(($) => $.tickets.checkout.walletBroken), detail: failure } };
   if (privy.state === "failed") {
-    return { problem: t(($) => $.tickets.checkout.walletSignInFailed, { reason: privy.reason }) };
+    return {
+      problem: {
+        line: t(($) => $.tickets.checkout.walletSignInFailed),
+        detail: privy.reason,
+      },
+    };
   }
-  if (privy.state === "off") return { problem: t(($) => $.tickets.checkout.walletNeedsLine) };
+  if (privy.state === "off") {
+    return { problem: { line: t(($) => $.tickets.checkout.walletNeedsLine), detail: "" } };
+  }
   return { address: privy.state === "signed-in" ? privy.suiWallet : undefined };
 }
 
@@ -148,6 +182,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   // to it: the checkout asks for its tickets again as it opens, or says once why they never will be.
   const [kept] = useState(() => keptUnadded(me.id));
   const [step, setStep] = useState<Step>(kept ? "error" : "choose");
+  const [waiting, setWaiting] = useState<Waiting>("signing");
   const [chosen, setChosen] = useState<ReservePack["tickets"]>(1);
   const [bought, setBought] = useState<UnaddedPurchase | null>(null);
   const [failure, setFailure] = useState<PaymentFailure | null>(null);
@@ -165,6 +200,8 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   // A discounted pack's full price is its tickets at the server's price for one alone.
   const single = shop && singleTicketPrice(shop.packs);
   const balance = jpyc.balance;
+  /** The raw words behind a problem with the account or the balance, when there are any. */
+  const balanceDetail = sui.problem ? sui.problem.detail : (jpyc.error ?? "");
   const short = pack && balance !== null && balance < BigInt(pack.priceJpyc);
   // What to do when it's short: a smaller pack, if the balance covers one.
   const coversSmaller =
@@ -193,6 +230,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
 
   const pay = async (p: ReservePack, payment: JpycPayment) => {
     setStep("paying");
+    setWaiting("signing");
     let paid: UnaddedPurchase | null = null;
     let landed = false;
     try {
@@ -213,6 +251,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
       };
       // Kept before Sui is asked to run it, so a lost answer or a closed card or app can't lose it.
       keepUnaddedPurchase(me.id, paid);
+      setWaiting("confirming");
       try {
         await signed.send();
         landed = true;
@@ -233,6 +272,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
       jpyc.refresh();
       return;
     }
+    setWaiting("adding");
     try {
       await addTickets(paid);
     } catch (e) {
@@ -273,17 +313,39 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   });
   useEffect(() => openOnKept(), []);
 
+  const paying = step === "paying";
+  const busy = paying || adding;
+  /** Closes the card, unless a payment is on its way: false tells Back it can't close yet. */
+  const leave = () => {
+    if (busy) return false;
+    onClose();
+    return true;
+  };
+  useBackToClose(true, leave);
+
   const close = (
-    <QuietLink
-      className="out-of-tickets__quiet-link"
-      disabled={step === "paying" || adding}
-      onClick={onClose}
-    >
+    <QuietLink className="out-of-tickets__quiet-link" disabled={busy} onClick={onClose}>
       {t(($) => $.tickets.notNow)}
     </QuietLink>
   );
 
+  /** Arrow keys move the pick through the packs, and focus with it, as a radio group's do. */
+  const pickWithArrows = (e: KeyboardEvent<HTMLDivElement>) => {
+    const onSale = shop?.packs;
+    const way = ARROWS[e.key];
+    if (!onSale || !way || busy) return;
+    e.preventDefault();
+    const from = onSale.findIndex((p) => p.tickets === chosen);
+    const to = (from + way + onSale.length) % onSale.length;
+    const next = onSale[to];
+    if (!next) return;
+    setChosen(next.tickets);
+    e.currentTarget.querySelectorAll<HTMLElement>("[role=radio]")[to]?.focus();
+  };
+
   let body: ReactNode;
+  /** The packs card, whose foot stays in view while its packs scroll. */
+  let packsCard = false;
   if (step === "done" && bought) {
     body = (
       <>
@@ -433,148 +495,176 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
       </>
     );
   } else {
-    const paying = step === "paying";
+    // The packs scroll on a short phone; the way to pay and the way out stay under them.
+    packsCard = true;
     body = (
       <>
-        <h2 className="out-of-tickets__title out-of-tickets__title--top" id={`${id}-title`}>
-          {t(($) => $.tickets.checkout.title)}
-        </h2>
-        <p className="out-of-tickets__line">
-          <strong>{t(($) => $.tickets.checkout.lead)}</strong>
-        </p>
-        <div className="reserve-checkout__balance">
-          <span className="fine reserve-checkout__balance-label">
-            {t(($) => $.tickets.checkout.balance)}
-          </span>
-          {sui.problem ? (
-            <span role="alert">{sui.problem}</span>
-          ) : jpyc.error ? (
-            <span role="alert">
-              {t(($) => $.tickets.checkout.balanceProblem, { reason: jpyc.error })}{" "}
-              <QuietLink onClick={jpyc.refresh}>{t(($) => $.tickets.tryAgain)}</QuietLink>
-            </span>
-          ) : jpyc.balance === null || !shop ? (
-            <span className="reserve-checkout__loading">
-              <span className="visually-hidden" role="status">
-                {t(($) => $.tickets.checkout.readingBalance)}
-              </span>
-              <Skeleton width={84} height={18} />
-            </span>
-          ) : (
-            <strong className={REVEAL}>
-              {formatYen(yenForJpyc(jpyc.balance, shop.payment.decimals))}
-            </strong>
-          )}
-        </div>
-        {packs.state === "failed" ? (
-          <p className="reserve-checkout__problem" role="alert">
-            {t(($) => $.tickets.checkout.pricesProblem, { reason: errorReason(packs.error) })}{" "}
-            <QuietLink onClick={packs.retry}>{t(($) => $.tickets.tryAgain)}</QuietLink>
+        <div className="reserve-checkout__body">
+          <h2 className="out-of-tickets__title out-of-tickets__title--top" id={`${id}-title`}>
+            {t(($) => $.tickets.checkout.title)}
+          </h2>
+          <p className="out-of-tickets__line">
+            <strong>{t(($) => $.tickets.checkout.lead)}</strong>
           </p>
-        ) : !shop ? (
-          <div className="reserve-checkout__packs">
-            <p className="visually-hidden" role="status">
-              {t(($) => $.tickets.checkout.gettingPrices)}
-            </p>
-            {/* The packs' own rows in outline, so nothing jumps as the prices come in. */}
-            {PACKS_LOADING.map((n) => (
-              <div key={n} className="reserve-checkout__pack" aria-hidden="true">
-                <Skeleton width={24} height={16} />
-                <Skeleton width={72} height={14} />
-                <Skeleton width={56} height={18} />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div
-            className={`${REVEAL} reserve-checkout__packs`}
-            role="group"
-            aria-label={t(($) => $.tickets.checkout.packs)}
-          >
-            {shop.packs.map((p) => (
-              <button
-                key={p.tickets}
-                type="button"
-                className="reserve-checkout__pack"
-                aria-pressed={p.tickets === chosen}
-                disabled={paying}
-                onClick={() => setChosen(p.tickets)}
-              >
-                <TicketCount kind="reserve" />
-                <span className="reserve-checkout__pack-name">
-                  {t(($) => $.tickets.checkout.pack, { count: p.tickets })}
+          <div className="reserve-checkout__balance">
+            <span className="fine reserve-checkout__balance-label">
+              {t(($) => $.tickets.checkout.balance)}
+            </span>
+            {sui.problem ? (
+              <span role="alert">{sui.problem.line}</span>
+            ) : jpyc.error ? (
+              <span role="alert">
+                {t(($) => $.tickets.checkout.balanceProblem)}{" "}
+                <QuietLink onClick={jpyc.refresh}>{t(($) => $.tickets.tryAgain)}</QuietLink>
+              </span>
+            ) : jpyc.balance === null || !shop ? (
+              <span className="reserve-checkout__loading">
+                <span className="visually-hidden" role="status">
+                  {t(($) => $.tickets.checkout.readingBalance)}
                 </span>
-                <span className="reserve-checkout__price">
-                  {p.discountPercent > 0 && single && (
-                    <span className="reserve-checkout__was">
-                      <span className="fine reserve-checkout__discount">
-                        {t(($) => $.tickets.checkout.discount, { percent: p.discountPercent })}
-                      </span>
-                      <s
-                        aria-label={t(($) => $.tickets.checkout.was, {
-                          price: formatYen(p.tickets * single.priceYen),
-                        })}
-                      >
-                        {formatYen(p.tickets * single.priceYen)}
-                      </s>
-                    </span>
-                  )}
-                  <strong>{formatYen(p.priceYen)}</strong>
-                </span>
-              </button>
-            ))}
+                <Skeleton width={84} height={18} />
+              </span>
+            ) : (
+              <strong className={REVEAL}>
+                {formatYen(yenForJpyc(jpyc.balance, shop.payment.decimals))}
+              </strong>
+            )}
           </div>
-        )}
-        {/* Always there, so a screen reader hears the line as a pick brings it. */}
-        <div role="status">
-          {short && (
-            <p className="reserve-checkout__short">
-              {coversSmaller ? (
-                <Trans
-                  i18nKey={($) => $.tickets.checkout.short.pickSmaller}
-                  components={{ strong: <strong /> }}
-                />
-              ) : (
-                <Trans
-                  i18nKey={($) => $.tickets.checkout.short.addJpyc}
-                  components={{ strong: <strong /> }}
-                />
-              )}
-            </p>
+          {balanceDetail && (
+            <CopyableFinePrint text={balanceDetail} lines={3}>
+              {balanceDetail}
+            </CopyableFinePrint>
           )}
+          {packs.state === "failed" ? (
+            <p className="reserve-checkout__problem" role="alert">
+              {t(($) => $.tickets.checkout.pricesProblem, { reason: errorReason(packs.error) })}{" "}
+              <QuietLink onClick={packs.retry}>{t(($) => $.tickets.tryAgain)}</QuietLink>
+            </p>
+          ) : !shop ? (
+            <div className="reserve-checkout__packs">
+              <p className="visually-hidden" role="status">
+                {t(($) => $.tickets.checkout.gettingPrices)}
+              </p>
+              {/* The packs' own rows in outline, so nothing jumps as the prices come in. */}
+              {PACKS_LOADING.map((n) => (
+                <div key={n} className="reserve-checkout__pack" aria-hidden="true">
+                  <Skeleton width={24} height={16} />
+                  <Skeleton width={72} height={14} />
+                  <Skeleton width={56} height={18} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div
+              className={`${REVEAL} reserve-checkout__packs`}
+              role="radiogroup"
+              aria-label={t(($) => $.tickets.checkout.packs)}
+              onKeyDown={pickWithArrows}
+            >
+              {shop.packs.map((p) => (
+                <button
+                  key={p.tickets}
+                  type="button"
+                  role="radio"
+                  className="reserve-checkout__pack"
+                  aria-checked={p.tickets === chosen}
+                  aria-disabled={paying}
+                  tabIndex={p.tickets === chosen ? 0 : -1}
+                  onClick={() => {
+                    if (!paying) setChosen(p.tickets);
+                  }}
+                >
+                  <TicketCount kind="reserve" />
+                  <span className="reserve-checkout__pack-name">
+                    {t(($) => $.tickets.checkout.pack, { count: p.tickets })}
+                  </span>
+                  <span className="reserve-checkout__price">
+                    {p.discountPercent > 0 && single && (
+                      <span className="reserve-checkout__was">
+                        <span className="fine reserve-checkout__discount">
+                          {t(($) => $.tickets.checkout.discount, { percent: p.discountPercent })}
+                        </span>
+                        <s
+                          aria-label={t(($) => $.tickets.checkout.was, {
+                            price: formatYen(p.tickets * single.priceYen),
+                          })}
+                        >
+                          {formatYen(p.tickets * single.priceYen)}
+                        </s>
+                      </span>
+                    )}
+                    <strong>{formatYen(p.priceYen)}</strong>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+          {/* Always there, so a screen reader hears the line as a pick brings it. */}
+          <div role="status">
+            {short && (
+              <p className="reserve-checkout__short">
+                {coversSmaller ? (
+                  <Trans
+                    i18nKey={($) => $.tickets.checkout.short.pickSmaller}
+                    components={{ strong: <strong /> }}
+                  />
+                ) : (
+                  <Trans
+                    i18nKey={($) => $.tickets.checkout.short.addJpyc}
+                    components={{ strong: <strong /> }}
+                  />
+                )}
+              </p>
+            )}
+          </div>
+          {short && sui.address && <SuiAddressReveal address={sui.address} />}
+          {sui.address && shop && <TicketPurchases owner={sui.address} shop={shop} />}
         </div>
-        <TearLine />
-        <Key
-          className="out-of-tickets__key"
-          tone="blue"
-          icon={<BuyTicketsIcon />}
-          disabled={!pack || !shop || !sui.address || short || paying}
-          onClick={() => pack && shop && void pay(pack, shop.payment)}
-        >
-          {paying
-            ? t(($) => $.tickets.checkout.paying)
-            : pack
-              ? t(($) => $.tickets.checkout.payPrice, { price: formatYen(pack.priceYen) })
-              : t(($) => $.tickets.checkout.pay)}
-        </Key>
-        <SuiCredit className="reserve-checkout__credit" />
-        {sui.address && shop && <TicketPurchases owner={sui.address} shop={shop} />}
-        {close}
+        <div className="reserve-checkout__foot">
+          <TearLine />
+          {/* Says what the payment waits on as it changes, and that closing the app is safe. */}
+          <div role="status">
+            {paying && (
+              <p className="out-of-tickets__note">
+                {t(($) => $.tickets.checkout.waiting[waiting])}
+              </p>
+            )}
+          </div>
+          <Key
+            className="out-of-tickets__key"
+            tone="blue"
+            icon={<BuyTicketsIcon />}
+            disabled={!pack || !shop || !sui.address || short}
+            aria-busy={paying}
+            aria-disabled={paying}
+            onClick={() => {
+              if (!paying && pack && shop) void pay(pack, shop.payment);
+            }}
+          >
+            {paying
+              ? t(($) => $.tickets.checkout.paying)
+              : pack
+                ? t(($) => $.tickets.checkout.payPrice, { price: formatYen(pack.priceYen) })
+                : t(($) => $.tickets.checkout.pay)}
+          </Key>
+          <SuiCredit className="reserve-checkout__credit" />
+          {close}
+        </div>
       </>
     );
   }
 
-  // A refusal turns the tickets-not-added card over without a new step.
-  const view = unadded?.refused ? "refused" : step;
+  // A refusal turns the tickets-not-added card over without a new step. The packs' arrival is a new
+  // view too, so focus lands on the picked pack, not on the exit it started at.
+  const view = unadded?.refused ? "refused" : step === "choose" && !shop ? "loading" : step;
   return (
     <TicketCard
       className="reserve-checkout"
-      cardClassName="reserve-checkout__card"
+      cardClassName={`reserve-checkout__card${packsCard ? " reserve-checkout__card--split" : ""}`}
       labelledBy={`${id}-title`}
-      busy={step === "paying" || adding}
-      onEscape={() => {
-        if (step !== "paying" && !adding) onClose();
-      }}
+      busy={busy}
+      onEscape={() => void leave()}
+      onScrimClick={() => void leave()}
       refocus={view}
     >
       {body}
