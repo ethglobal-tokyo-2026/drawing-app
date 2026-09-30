@@ -2,7 +2,7 @@
 
 2026-09-30. `/impeccable audit` (accessibility, performance, theming, responsive, implementation integrity) and `/impeccable critique` (Nielsen heuristics, cognitive load, emotional journey, personas) of all of `apps/frontend`, at main `9f541d12`. Nothing here is fixed yet.
 
-**In progress.** Seven of eleven lanes are in: the shell and design system, copy and i18n, Explore, Gratitude, the stat board and sticker detail, tickets and the Shop, and the sticker tray. The sticker board, drawing screen, Giving and Receiving, and sign-in and identity lanes, and the detector pass, are still running; their findings and the frontend's overall scores land here when they finish.
+**In progress.** Eight of eleven lanes are in: the shell and design system, copy and i18n, Explore, Gratitude, the stat board and sticker detail, tickets and the Shop, the sticker tray, and the drawing screen. The sticker board, Giving and Receiving, and sign-in and identity lanes, and the detector pass, are still running; their findings and the frontend's overall scores land here when they finish.
 
 - Each lane took a slice of `apps/frontend/src`, read every file in it, and checked the running app: a local dev server under LIFF Mock with its own database, Chromium at 390×741, 375×591 (iPhone SE inside LINE) and 430×829, in English and Japanese, with failures simulated by holding or failing API calls. Each did both lenses for its slice. The detector (`impeccable detect`) ran as its own pass, kept apart from the design review.
 - Every finding's impact, standard and evidence: the lane reports in [2026-09-30-frontend-audit/](2026-09-30-frontend-audit/). Screenshots and scripts are on ad0ll's Mac only, in `/tmp/impeccable-audit/`, which macOS clears after a few days.
@@ -23,22 +23,20 @@ Audit, 0–4 per dimension:
 | Stat board and sticker detail | 2    | 3           | 3       | 2          | 3         | 13/20 |
 | Tickets and Shop              | 3    | 3           | 3       | 3          | 2         | 14/20 |
 | Sticker tray                  | 2    | 3           | 3       | 2          | 3         | 13/20 |
+| Drawing screen                | 3    | 3           | 3       | 3          | 2         | 14/20 |
 
-Critique, Nielsen's heuristics, 0–4:
+Critique, Nielsen's heuristics, 0–4: 1 system status · 2 match with the real world · 3 user control · 4 consistency · 5 error prevention · 6 recognition over recall · 7 flexibility · 8 minimalist design · 9 error recovery · 10 help.
 
-| #   | Heuristic                       | Shell  | Copy   | Explore | Gratitude | Stat board | Tickets | Tray   |
-| --- | ------------------------------- | ------ | ------ | ------- | --------- | ---------- | ------- | ------ |
-| 1   | Visibility of system status     | 3      | 3      | 3       | 2         | 3          | 3       | 3      |
-| 2   | Match with the real world       | 4      | 3      | 3       | 3         | 3          | 3       | 4      |
-| 3   | User control and freedom        | 3      | 3      | 4       | 2         | 3          | 3       | 3      |
-| 4   | Consistency and standards       | 3      | 2      | 3       | 3         | 2          | 3       | 3      |
-| 5   | Error prevention                | 3      | 3      | 3       | 3         | 3          | 3       | 3      |
-| 6   | Recognition rather than recall  | 4      | 3      | 3       | 3         | 3          | 3       | 2      |
-| 7   | Flexibility and efficiency      | 2      | 3      | 3       | 4         | 3          | 3       | 3      |
-| 8   | Aesthetic and minimalist design | 4      | 3      | 4       | 3         | 3          | 3       | 3      |
-| 9   | Error recovery                  | 3      | 2      | 3       | 1         | 2          | 2       | 2      |
-| 10  | Help and documentation          | 3      | 2      | 2       | 3         | 2          | 2       | 1      |
-|     | **Total /40**                   | **32** | **27** | **31**  | **27**    | **27**     | **28**  | **27** |
+| Lane                          | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10  | Total  |
+| ----------------------------- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ------ |
+| Shell and design system       | 3   | 4   | 3   | 3   | 3   | 4   | 2   | 4   | 3   | 3   | **32** |
+| Copy and i18n                 | 3   | 3   | 3   | 2   | 3   | 3   | 3   | 3   | 2   | 2   | **27** |
+| Explore                       | 3   | 3   | 4   | 3   | 3   | 3   | 3   | 4   | 3   | 2   | **31** |
+| Gratitude                     | 2   | 3   | 2   | 3   | 3   | 3   | 4   | 3   | 1   | 3   | **27** |
+| Stat board and sticker detail | 3   | 3   | 3   | 2   | 3   | 3   | 3   | 3   | 2   | 2   | **27** |
+| Tickets and Shop              | 3   | 3   | 3   | 3   | 3   | 3   | 3   | 3   | 2   | 2   | **28** |
+| Sticker tray                  | 3   | 4   | 3   | 3   | 3   | 2   | 3   | 3   | 2   | 1   | **27** |
+| Drawing screen                | 3   | 3   | 3   | 3   | 2   | 3   | 3   | 4   | 3   | 2   | **29** |
 
 Every lane found the design authored for Croquis, not interchangeable: the keycap and its press, label stock, perforations, the pile, the cork back, the ticket stubs, the tier ladder. Where it slips, it slips the same way everywhere: failures fall back to engineer text in fine print.
 
@@ -64,7 +62,7 @@ Every lane found the design authored for Croquis, not interchangeable: the keyca
 
 Most findings are instances of a few causes; fixing the cause once closes them and keeps the next screen from repeating them.
 
-1. **Failures fall back to engineer text in fine print.** Raw exception and SDK messages reach cards and Japanese sentences (UX-TIX-1, UX-COPY-10); the sticker detail and Explore print reasons as 11px uppercase Graphite that garbles case-sensitive detail (UX-STAT-3, UX-EXPL-7); copy failures vanish as 2.4 s toasts (UX-SHELL-6); a kept Gratitude combo reads as sent (UX-GRAT-1); kept payments and failed ticket loads are console-only (UX-TIX-7, UX-TIX-10); many catalog errors name no next step and no one to ask (UX-COPY-7, UX-COPY-9). Settings and Age verification already have the right treatment: 13px Ink on Tomato Soft with `role="alert"`. One error line component, a catalog string per known failure, raw detail only as copyable fine print, and one named place to get help would close most of these. `/impeccable harden`, `/impeccable clarify`.
+1. **Failures fall back to engineer text in fine print.** Raw exception and SDK messages reach cards and Japanese sentences (UX-TIX-1, UX-COPY-10), and the failed-seal chip prints `POST /api/stickers` over the art (UX-DRAW-4); the sticker detail and Explore print reasons as 11px uppercase Graphite that garbles case-sensitive detail (UX-STAT-3, UX-EXPL-7); copy failures vanish as 2.4 s toasts (UX-SHELL-6); a kept Gratitude combo reads as sent (UX-GRAT-1); kept payments and failed ticket loads are console-only (UX-TIX-7, UX-TIX-10); many catalog errors name no next step and no one to ask (UX-COPY-7, UX-COPY-9). Settings and Age verification already have the right treatment: 13px Ink on Tomato Soft with `role="alert"`. One error line component, a catalog string per known failure, raw detail only as copyable fine print, and one named place to get help would close most of these. `/impeccable harden`, `/impeccable clarify`.
 2. **Crypto words leak through the plumbing.** "wallet" in Giving's wait (UX-COPY-1), "token" in sign-in errors (UX-COPY-2), "Privy", "MoveAbort" and "Sui rejected the payment" in payment failures (UX-TIX-1), "on the chain" and "transfer" in errors (UX-COPY-9), and ONE OF ONE on the Gift Message. Each alone is small; on the give and pay paths together they read as the racket PRODUCT.md warns about.
 3. **Screen readers get less than the screen shows.** `aria-label`s replace visible content: leaderboard rows (UX-EXPL-1), purchase rows (UX-TIX-3), the explorer link (UX-STAT-10), a NEW pip the pull's name never mentions (UX-TRAY-11). State changes go unannounced: search results (UX-EXPL-4), and everything in the sticker tray, which has no live region at all (UX-TRAY-8). Name controls from their visible text with hidden units, and give each surface one polite status line (WCAG 2.5.3, 4.1.3).
 4. **Focus is lost when the focused control goes away.** The Transfer Trail (UX-STAT-2), clearing the search (UX-EXPL-3), sticking a sticker on from the tray (UX-TRAY-5), Pay turning `disabled` (UX-TIX-4), Age verification turning `disabled` (UX-STAT-8); and it reaches what can't be seen, in the tray's covered sheets (UX-TRAY-2). The trap listens only on its root (→ CLEAN-1), and two keys break DESIGN.md's Busy rule (`aria-busy` and `aria-disabled`, never `disabled`).
@@ -199,9 +197,26 @@ The most authored surface in the app, and at rest it costs nothing: the Zipper's
 - **UX-TRAY-19** · P3 · `i18n/strings/stickerBoard.ts:356-364` · Every slot's name repeats "Drag it onto your board, or tap to stick it on", 26 times in a tray of 44 · `/impeccable clarify`
 - **UX-TRAY-20** · P3 · `sticker-board/tray/trayEngine.ts:95,2090`, `tray/zipper.ts:23-44,1357-1398` · Dead API: `TrayEngine.shake`, and the Zipper's generic surface the tray never uses · related CLEAN-19 · `/impeccable distill`
 
+### Drawing screen
+
+PRODUCT.md's hardest requirement holds: drawing doesn't lag. Input to the frame that paints it averaged about 15 ms (p95 17 ms) at 1×, 4× and 6× CPU throttle in Chromium with no frame over 20 ms, and 8 ms in WebKit; a reload brings back every stroke, the color and the ticket without spending again.
+
+- **UX-DRAW-1** · P2 · `sticker-creation/session/useSessionClock.ts:93-99,156-159`, `session/session.ts:82-87` · After the seal at 0:00 fails, the sheet goes back to drawing with the clock frozen at a Tomato 0:00 and no "Time's up": reproduced, two more strokes 8 s later, then a retry sealed with `timeUsed` 180. A flaky connection at the deadline, or a cut network, gives unlimited time · → DRAW-8 for the defect; for the screen: keep the sheet locked with only Seal again, and say "Time's up" on the chip · `/impeccable harden`
+- **UX-DRAW-2** · P2 · `sticker-creation/DrawingScreen.tsx:582-586,595`, `canvas/DrawingCanvas.tsx:98-99`, `canvas/inkEngine.ts:212-216` · A tap on the sheet that closes the Smoothing bar also draws a dot (or erases, or fills): the bar closes in a capture handler before the engine checks whether a panel was open (measured by counting kept ops; the Color sheet swallows the same tap correctly) · Fix: close the bar through the engine's dismiss path, as the Color sheet does · `/impeccable harden`
+- **UX-DRAW-3** · P2 · `sticker-creation/tools/SizeRail.css:1-11`, `tools/useDrag.ts:24-30` · The size rail's hit box is 40×222px over the left edge of the sheet, so a stroke that starts there changes the brush size and draws nothing (measured: 7px to 2px, no ink), along a third of the sheet's height; the visible rail is a 4px track and a 28px thumb · Fix: drag only from the thumb, with a 44px band round the track · `/impeccable adapt`
+- **UX-DRAW-4** · P2 · `sticker-creation/SealKey.css:81-86`, `i18n/strings/stickerCreation.ts:90-94`, `i18n/errorMessage.ts:16-18` · The failed-seal chip is a wall of developer text over the art: "Couldn't seal. The app's server didn't answer. Check your connection, then try again. (POST /api/stickers got no answer: Failed to fetch) Tap the check to try again.", 41% of a 375×591 screen in Japanese, with the English request line mid-sentence and もう一度お試しください twice. It lands when the artist is checking their sticker survived · Fix: one clause for what failed and one for what to do; the request line to the developer slip · `/impeccable clarify`
+- **UX-DRAW-5** · P2 · `sticker-creation/NsfwToggle.css:2-15`, `NsfwToggle.tsx`, `SealKey.tsx` · A sealed sticker's 18+ mark is permanent, but its switch is a 30px pill 6px above the seal key with no 44px band, and the armed chip says only "Tap again to seal". A stray tap seals a friend's gift as 18+, which the friend can't receive unless verified; the off state also sets Pink Deep as text, which DESIGN.md reserves for lips · Fix: "Tap again to seal as 18+" on the armed chip; a padded switch clear of the key's thumb path · `/impeccable harden`
+- **UX-DRAW-6** · P3 · `sticker-creation/tools/ColorSheet.css:67-84,137-146`, `tools/SmoothingBar.css:55-64` · Color swatches are 26px with a 34px band, recents about 34px, the brightness bar 22px and the Smoothing slider 28px: above WCAG's 24px, below DESIGN.md's 44px, where a finger mis-tap changes the color silently · `/impeccable adapt`
+- **UX-DRAW-7** · P3 · `sticker-creation/tools/ColorSheet.css` · At 375×591 the Color sheet covers 71% of the phone, leaving 59px of the sticker in view, so a color is picked without seeing the art · Fix: a compact sheet on short screens, or a preview strip · `/impeccable layout`
+- **UX-DRAW-8** · P3 · `sticker-creation/canvas/inkSurface.ts:62-76` · A fill stalls the canvas about 160 ms in WebKit (a full-canvas `getImageData` of 123–132 ms), against 2.5 ms in Chromium; iPhone unmeasured · Fix: read back only the region the fill can reach · `/impeccable optimize`
+- **UX-DRAW-9** · P3 · `sticker-creation/TimerDot.tsx:99-102` · Nothing tells a screen reader user that time is nearly up; the dot turns Tomato and pulses for the last ten seconds, then the sheet seals itself · WCAG 2.2.1 · Fix: a polite "30 seconds left" and "10 seconds left" · `/impeccable harden`
+- **UX-DRAW-10** · P3 · `sticker-creation/sealing/SealedCard.css:67-72` · The sealed card's ticket and refill lines are 12.5px (pattern 7) · `/impeccable typeset`
+- **UX-DRAW-11** · P3 · `sticker-creation/DrawingScreen.tsx:267,302` · The ink copy made for sealing is never released · → DRAW-15
+- **UX-DRAW-12** · P3 · The seal key has no visible word ("Seal: tap twice" is for screen readers only); two- and three-finger taps and the 18+ switch are never taught; a reload restores the ink but not the brush size or Smoothing; the timer, tools and Color and Smoothing entries sit in the top 60px, the far end of a one-handed thumb's reach · `/impeccable onboard`
+
 ### Pending
 
-The sticker board, drawing screen, Giving and Receiving, and sign-in and identity lanes, and the detector's verified findings.
+The sticker board, Giving and Receiving, and sign-in and identity lanes, and the detector's verified findings.
 
 ## What to keep
 
@@ -214,11 +229,12 @@ The sticker board, drawing screen, Giving and Receiving, and sign-in and identit
 - **The Mini-game** is fully playable by keyboard to 昇天, speaks its tiers and totals in both languages, and tears down completely; one engine plays both the live combo and its replay.
 - **Money in limbo is treated as the person's**: a paid-but-not-added payment is kept, retried safely and reopened with "Adding the tickets again won't charge you twice".
 - **The cork back and the Transfer Trail** put stats on paper and history in sentences, Direct alone for a friend-first artist.
+- **The canvas is fast and keeps every stroke**: pointer events never touch React, one frame paints the new segments, the seal's cut runs in a worker, and the timer explains every hold with one PAUSED tag; the ghost tip sizes the brush on the paper itself.
 - **The Zipper and the peel**: the pull's release rules match DESIGN.md (measured), a real button with `aria-expanded` and arrow keys drives it, and a sticker curls off its sheet under the thumb and sticks with the board's settle; the hole it leaves breathes when the sticker comes home.
 
 ## Recommended commands so far
 
-1. **[P1] `/impeccable harden`**: the error line and its catalog strings (pattern 1), then UX-GRAT-1, UX-TIX-1, UX-TIX-2, UX-TIX-3, UX-EXPL-1, UX-STAT-2, the tray's focus order (UX-TRAY-2), and Sheet modality (UX-SHELL-2).
+1. **[P1] `/impeccable harden`**: the error line and its catalog strings (pattern 1), then UX-GRAT-1, UX-TIX-1, UX-TIX-2, UX-TIX-3, UX-EXPL-1, UX-STAT-2, the tray's focus order (UX-TRAY-2), Sheet modality (UX-SHELL-2), and on the drawing screen the time-up lock, the stray dot and the 18+ switch (UX-DRAW-1, UX-DRAW-2, UX-DRAW-5).
 2. **[P1] `/impeccable clarify`**: the crypto words (pattern 2), the consent line (UX-SHELL-3), and the Gratitude words (UX-GRAT-5).
 3. **[P1] `/impeccable adapt`**: zoom (UX-SHELL-1), the tray at 591 tall (UX-TRAY-1), the Japanese Transfer Trail (UX-STAT-1), the checkout at 591 tall (UX-TIX-6).
 4. **[P1] `/impeccable colorize`**: one Ink-on-pink 18+ mark (UX-SHELL-4); `/impeccable polish` for the 3.45:1 row, the 1.75:1 radios and the yellow focus ring.
