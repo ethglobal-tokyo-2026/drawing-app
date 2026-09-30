@@ -7,6 +7,7 @@ import type {
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { boardSticker, people, trailEntry } from "../api/testFixtures";
+import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
 import { toPerson } from "../api/views";
 import { markNoticed } from "../giving/noticedGifts";
@@ -19,7 +20,17 @@ import { StickerBoard } from "./StickerBoard";
 vi.mock("@line/liff", () => ({ default: { isApiAvailable: () => false } }));
 // The stat board mounts once the board is idle; its developer slip's LINE details read LIFF's context.
 vi.mock("../line/LineDetails", () => ({ LineDetails: () => null }));
+// Giving itself isn't tested here: it closes as sent at a tap, from a board that can give.
+vi.mock("../giving/useGiftSender", () => ({ useGiftSender: () => ({}) }));
+vi.mock("../giving/Giving", () => ({
+  Giving: ({ onClose }: { onClose: (sent: boolean) => void }) => (
+    <button type="button" className="test-gift-sent" onClick={() => onClose(true)}>
+      Sent
+    </button>
+  ),
+}));
 vi.mock("../line/liff", () => ({
+  LIFF_ID: "test-liff",
   liffMockActive: true,
   useLine: () => ({
     status: "ready",
@@ -165,6 +176,41 @@ describe("StickerBoard after a gift", () => {
     expect(title()).toBe("@mika received your sticker");
     close();
     expect(document.querySelector(".gift-received-notice")).toBeNull();
+  });
+});
+
+describe("StickerBoard after sending a gift", () => {
+  it("loads again when its fresh load had failed, so the sticker on its way leaves the board", async () => {
+    const a = boardSticker({ placement: at(0.3) });
+    keep(TEST_ME.id, a);
+    const onItsWay = { ...a, openGift: { id: "g1", status: "sent" as const, for: null } };
+    const stickerBoard = vi
+      .fn<ApiClient["stickerBoard"]>()
+      .mockRejectedValueOnce(
+        new ApiError(503, { error: "not_in_test", detail: "The board is down" }),
+      )
+      .mockResolvedValue({ owner: TEST_OWNER, boardStickers: [onItsWay] });
+    const view = renderWithApi(
+      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
+      emptyApi({ stickerBoard }),
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    expect(view.host.querySelector(".board-problem")).not.toBeNull();
+
+    const el = view.host.querySelector<HTMLElement>(`[data-sticker-id="${a.stickerId}"]`);
+    act(() => {
+      el?.focus();
+      el?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    const give = [...view.host.querySelectorAll<HTMLElement>(".sticker-toolbar button")].find(
+      (button) => button.textContent === "Give",
+    );
+    act(() => give?.click());
+    await act(() => vi.dynamicImportSettled());
+    act(() => document.querySelector<HTMLElement>(".test-gift-sent")?.click());
+    await act(async () => {});
+    expect(shownIds(view.host)).toEqual([]);
   });
 });
 

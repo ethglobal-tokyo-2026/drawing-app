@@ -358,6 +358,16 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   useEffect(() => {
     if (failed) markBoardComplete();
   }, [failed]);
+  /**
+   * A gift went out, so the board loads again to leave its sticker off: at once, or once a load in
+   * flight lands, since that one may have read the board before the gift left.
+   */
+  const [reloadForGift, setReloadForGift] = useState(false);
+  if (reloadForGift && board.state !== "loading") {
+    setReloadForGift(false);
+    if (board.state === "ready") board.refresh();
+    else board.retry();
+  }
 
   const pending = useApiQuery("pending-gifts", (client) => client.pendingGifts());
   // A preview can make a gift wait here even when the person chooses Not now.
@@ -799,7 +809,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
               // Given, it has left the board, and the board loads where its gift is.
               if (sent) {
                 setSelected(null);
-                if (board.state === "ready") board.refresh();
+                setReloadForGift(true);
               }
               // The bag's gift may have been packed, sent or taken out.
               if (pending.state === "ready") pending.refresh();
