@@ -2,7 +2,7 @@ import type { Person } from "@drawing-app/api/client";
 import { Suspense, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
-import { resendPendingGratitude } from "../gratitude/gratitudeOutbox";
+import { resendGratitudeWhenReachable } from "../gratitude/gratitudeOutbox";
 import { useTranslation } from "../i18n/react";
 import { startPrivy } from "../identity/privyStart";
 import { ShopScreen } from "../shop/ShopScreen";
@@ -111,10 +111,9 @@ export default function App() {
     if (view === "explore") void ArtistBoard.preload();
   }, [view]);
 
-  // Your gratitude that hadn't reached the server when the app last closed goes again as it starts.
-  useEffect(() => {
-    void resendPendingGratitude(api, me.id);
-  }, [api, me.id]);
+  // Your gratitude that hadn't reached the server goes again as the app starts, and whenever the
+  // phone is back online or the app is back in front.
+  useEffect(() => resendGratitudeWhenReachable(api, me.id), [api, me.id]);
   // Paid packs whose tickets the server hadn't added are asked for again too.
   useAddUnaddedPurchases();
 
