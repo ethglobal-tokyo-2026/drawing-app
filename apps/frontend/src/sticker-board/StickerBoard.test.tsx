@@ -6,7 +6,7 @@ import type {
 } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { boardSticker, people } from "../api/testFixtures";
+import { boardSticker, people, trailEntry } from "../api/testFixtures";
 import { emptyApi, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
 import { toPerson } from "../api/views";
 import { markNoticed } from "../giving/noticedGifts";
@@ -165,6 +165,30 @@ describe("StickerBoard after a gift", () => {
     expect(title()).toBe("@mika received your sticker");
     close();
     expect(document.querySelector(".gift-received-notice")).toBeNull();
+  });
+});
+
+describe("StickerBoard after receiving", () => {
+  it("asks about gratitude for a sticker that came back to your sticker tray", async () => {
+    // Placed before you gave it, so it comes back to the tray rather than landing on the board.
+    const back = boardSticker({ placement: { ...at(0.3), onBoard: false } });
+    const api = emptyApi({
+      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [back] }),
+      stickerDetail: () =>
+        Promise.resolve({
+          sticker: back.sticker,
+          owner: TEST_OWNER,
+          transferTrail: [trailEntry({ giftId: "g1", receiver: TEST_OWNER })],
+          hasTimelapse: false,
+        }),
+    });
+    const view = renderWithApi(
+      <StickerBoard freshId={back.stickerId} onDraw={() => {}} onOpenGift={() => {}} />,
+      api,
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    expect(document.querySelector(".send-gratitude-sheet")).not.toBeNull();
   });
 });
 

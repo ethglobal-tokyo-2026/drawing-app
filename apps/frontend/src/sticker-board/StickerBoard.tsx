@@ -331,7 +331,11 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   if (loaded && loaded !== adopted) {
     setAdopted(loaded);
     // Moves made while it loaded stay.
-    setStickers(placeUnplaced(loaded.stickers, heldOver(stickers, adopted)).stickers);
+    const next = placeUnplaced(loaded.stickers, heldOver(stickers, adopted)).stickers;
+    setStickers(next);
+    // A sticker that comes back to you returns to the sticker tray, so there's no landing to wait for.
+    const landing = next.find((s) => s.id === landingId);
+    if (landing && !onTheBoard(landing)) setLandingId(undefined);
   }
   // The first open's board completes once the fresh board's stickers have all decoded; one from the
   // phone's storage starts them decoding. A board that didn't load has nothing more coming, so what
