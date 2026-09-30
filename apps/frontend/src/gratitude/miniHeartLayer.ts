@@ -19,14 +19,22 @@ const MAX_DPR = 2;
 const DEG = Math.PI / 180;
 
 /** Each tone's heart, then the rain stamp, as SVG at a size in px. */
-const ART: readonly { svg: (px: number) => string; px: number }[] = [
-  ...MINI.tones.map((tone) => ({ svg: (px: number) => miniHeartSvg(tone, px), px: MINI_PX })),
-  { svg: (px: number) => stampHeartSvg(px), px: RAIN_PX },
+const ART: readonly { name: string; svg: (px: number) => string; px: number }[] = [
+  ...MINI.tones.map((tone, i) => ({
+    name: `tone ${i}`,
+    svg: (px: number) => miniHeartSvg(tone, px),
+    px: MINI_PX,
+  })),
+  { name: "rain", svg: (px: number) => stampHeartSvg(px), px: RAIN_PX },
 ];
 const RAIN_ART = ART.length - 1;
+/** Bakes to try at one pixel ratio: after a failed one, the next draw bakes afresh, up to this. */
+const BAKE_TRIES = 3;
 
 /** The art drawn once per pixel ratio into small canvases, which each frame copies from. */
 const baked = new Map<number, (HTMLCanvasElement | null)[]>();
+/** Bakes started at each pixel ratio. */
+const bakesTried = new Map<number, number>();
 /** Art finished baking so far: a layer drawn before its art arrived draws again. */
 let bakes = 0;
 
@@ -34,20 +42,30 @@ let bakes = 0;
 function artAt(dpr: number): (HTMLCanvasElement | null)[] {
   const known = baked.get(dpr);
   if (known) return known;
+  const tries = (bakesTried.get(dpr) ?? 0) + 1;
+  bakesTried.set(dpr, tries);
   const art: (HTMLCanvasElement | null)[] = ART.map(() => null);
   baked.set(dpr, art);
-  ART.forEach(({ svg, px }, i) => {
+  ART.forEach(({ name, svg, px }, i) => {
     const size = Math.ceil(px * dpr);
+    const failed = (why: string) => {
+      const again = tries < BAKE_TRIES;
+      console.error(
+        `The ${name} mini heart didn't bake at ${dpr} device pixels per px: ${why}. ${again ? "The next draw bakes it again" : "Its hearts stay undrawn"}`,
+      );
+      if (again && baked.get(dpr) === art) baked.delete(dpr);
+    };
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement("canvas");
       canvas.width = canvas.height = size;
       const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+      if (!ctx) return failed(`no 2D context for its ${size}px canvas`);
       ctx.drawImage(img, 0, 0, size, size);
       art[i] = canvas;
       bakes++;
     };
+    img.onerror = () => failed("its image didn't load");
     img.src = svgDataUrl(svg(size));
   });
   return art;
