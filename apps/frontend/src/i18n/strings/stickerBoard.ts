@@ -316,6 +316,11 @@ export const stickerBoard = {
       en: "Your stickers didn’t load. Try again in a moment.",
       ja: "シールを読み込めませんでした。少し待ってから、もう一度お試しください。",
     },
+    /** Your sticker board: the alert, over Try again, when checking whether gratitude is waiting to be sent for the sticker that just arrived failed; {{reason}} why */
+    gratitudeCheckFailed: {
+      en: "Couldn’t check whether gratitude is waiting to be sent for your newest sticker: {{reason}}",
+      ja: "いちばん新しいシールに感謝を送れるか確認できませんでした：{{reason}}",
+    },
     /** Your sticker board: the alert when one moved sticker's new position didn't save; {{stickers}} is its number, {{reasons}} why */
     unsaved_one: { en: "Couldn’t save where {{stickers}} sits: {{reasons}}" },
     /** Your sticker board: the alert when moved stickers' new positions didn't save; {{stickers}} lists their numbers, {{reasons}} why */

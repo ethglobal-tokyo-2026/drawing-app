@@ -411,23 +411,31 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // Closed ones stay closed on this visit even when the device can't save that they were noticed.
   const notice = newestUnnoticed(receivedGifts.filter((g) => !noticesClosed.has(receiveOf(g))));
 
-  // A sticker that just reached you asks about gratitude, when its newest gift to you has none.
+  // A sticker that just reached you asks about gratitude, when its newest gift to you has none. When
+  // the check fails, the ask can't come, so the board says so, with a way to check again.
+  const [checkFailure, setCheckFailure] = useState<string | null>(null);
+  const [checks, setChecks] = useState(0);
   useEffect(() => {
     if (!freshId || askedForGratitude.has(freshId)) return;
     let current = true;
     api.stickerDetail(freshId).then(
       (detail) => {
+        if (!current) return;
+        setCheckFailure(null);
         const [entry] = detail.transferTrail;
-        if (current && entry && entry.receiver.id === detail.owner.id && !entry.gratitude)
+        if (entry && entry.receiver.id === detail.owner.id && !entry.gratitude)
           setOwed({ gift: { id: entry.giftId }, giver: toPerson(entry.giver) });
       },
-      (error: unknown) =>
-        console.error(`Checking whether ${freshId} has gratitude failed`, apiError(error)),
+      (error: unknown) => {
+        const failure = apiError(error);
+        console.error(`Checking whether ${freshId} has gratitude failed`, failure);
+        if (current) setCheckFailure(errorReason(failure));
+      },
     );
     return () => {
       current = false;
     };
-  }, [api, freshId]);
+  }, [api, freshId, checks]);
 
   // The sheet asking about gratitude starts the game's code while it's read.
   useEffect(() => {
@@ -815,6 +823,17 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
             size="sm"
             onClick={() => unsavedStickers.forEach((s) => save(s, s.placement))}
           >
+            {t(($) => $.stickerBoard.tryAgain)}
+          </LabelButton>
+        </div>
+      )}
+
+      {checkFailure && unsavedStickers.length === 0 && (
+        <div className="board-unsaved" role="alert">
+          <p className="board-unsaved-note">
+            {t(($) => $.stickerBoard.board.gratitudeCheckFailed, { reason: checkFailure })}
+          </p>
+          <LabelButton size="sm" onClick={() => setChecks((n) => n + 1)}>
             {t(($) => $.stickerBoard.tryAgain)}
           </LabelButton>
         </div>

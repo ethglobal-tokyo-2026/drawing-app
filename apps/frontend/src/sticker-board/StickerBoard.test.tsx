@@ -107,6 +107,37 @@ describe("StickerBoard with the board kept on this phone", () => {
   });
 });
 
+describe("StickerBoard's check for gratitude to send", () => {
+  it("says so when the check for the sticker that just arrived fails, and Try again asks again", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const a = boardSticker({ placement: at(0.3) });
+    const stickerDetail = vi
+      .fn<ApiClient["stickerDetail"]>()
+      .mockRejectedValueOnce(
+        new ApiError(503, { error: "unavailable", detail: "database is busy" }),
+      )
+      .mockRejectedValue(new ApiError(404, { error: "sticker_not_found", detail: "gone" }));
+    const api = emptyApi({
+      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [a] }),
+      stickerDetail,
+    });
+    const view = renderWithApi(
+      <StickerBoard freshId={a.stickerId} onDraw={() => {}} onOpenGift={() => {}} />,
+      api,
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    const alert = () => view.host.querySelector(".board-unsaved")?.textContent;
+    expect(alert()).toContain("Couldn’t check whether gratitude is waiting");
+    expect(alert()).toContain("database is busy");
+
+    const again = view.host.querySelector<HTMLElement>(".board-unsaved .label-btn");
+    await act(async () => again?.click());
+    expect(stickerDetail).toHaveBeenCalledTimes(2);
+    expect(alert()).toContain("gone");
+  });
+});
+
 describe("StickerBoard's artist chips", () => {
   it("name the artists of foil stickers once per app open, not on every visit to the board", () => {
     keep(

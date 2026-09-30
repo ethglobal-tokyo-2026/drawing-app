@@ -6,7 +6,7 @@ import type { BoardStickerView } from "./boardSticker";
 /**
  * The last board this phone showed, kept in its storage for the person signed in, so the next open
  * draws it at once and swaps in the fresh board when that lands. It can be one refresh out of date
- * (decision 29). One board, for one person: signing in as someone else forgets it.
+ * One board, for one person: signing in as someone else forgets it.
  *
  * It's kept for one build of the app, since the next may read a board's fields differently, and
  * without the stickers' outlines: they were most of its size, and the board draws without them.
