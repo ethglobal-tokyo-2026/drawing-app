@@ -2,6 +2,7 @@ import { users, type Db } from "@drawing-app/db";
 import { bytes32 } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import type {
+  Clock,
   EnsDeps,
   EscrowGift,
   GiftChain,
@@ -93,11 +94,14 @@ const missingEscrowGift = (): EscrowGift => ({
   status: "missing",
 });
 
+/** A time as a block's timestamp gives it: whole seconds. */
+const blockSeconds = (at: Date) => Math.floor(at.getTime() / 1000);
+
 /**
  * Chain mode without a chain. The escrow holds what the test puts in `escrow`; any other gift reads
- * as missing, as before its deposit lands.
+ * as missing, as before its deposit lands. Its blocks are stamped with `clock`'s time.
  */
-export function fakeGiftChain() {
+export function fakeGiftChain(clock: Clock = { now: () => new Date() }) {
   const escrow = new Map<string, EscrowGift>();
   const claimTransactions = new Map<string, string>();
   let claims = 0;
@@ -143,6 +147,16 @@ export function fakeGiftChain() {
       claimTransactions.set(giftId, txHash);
       escrow.set(giftId, { ...gift, recipient, status: "claimed" });
       return Promise.resolve({ claimed: true as const, txHash });
+    },
+    returnExpiredGift: (giftId) => {
+      const gift = escrow.get(giftId) ?? missingEscrowGift();
+      // The escrow's own checks: the gift is pending, and this block's second is past its expiry.
+      if (gift.status !== "pending") return Promise.reject(new Error("Gift is not pending"));
+      if (blockSeconds(clock.now()) <= blockSeconds(gift.expiresAt)) {
+        return Promise.reject(new Error("Gift has not expired"));
+      }
+      escrow.set(giftId, { ...gift, status: "expired_returned" });
+      return Promise.resolve({ txHash: bytes32(`return ${giftId}`) });
     },
   };
   return { ...chain, escrow, claimTransactions };

@@ -213,6 +213,11 @@ export interface GiftChain {
     giftClaimToken: string | null;
     recipientId: string;
   }) => Promise<{ claimed: true; txHash: string } | { claimed: false }>;
+  /**
+   * The escrow's returnExpiredGift: sends a pending gift past its expiry back to its sender, and
+   * waits for it to land. Rejects when the escrow refuses it, or it isn't confirmed in time.
+   */
+  returnExpiredGift: (giftId: string) => Promise<{ txHash: string }>;
 }
 
 export interface SmartWallets {
