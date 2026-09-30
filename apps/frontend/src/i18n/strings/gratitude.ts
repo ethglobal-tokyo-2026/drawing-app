@@ -111,13 +111,13 @@ export const gratitude = {
     },
     /** Gratitude Mini-game, receipt card's note when the server couldn't read the combo (replay_invalid, invalid_request), which a new combo can get past */
     unreadable: {
-      en: "The server couldn’t read your combo, so it wasn’t sent. Close this and send your gratitude again.",
-      ja: "サーバーが今回の感謝を読み取れなかったため、送られませんでした。閉じてから、もう一度感謝を送ってください。",
+      en: "Croquis couldn’t read your combo, so it wasn’t sent. Close this and send your gratitude again.",
+      ja: "クロッキーが今回の感謝を読み取れなかったため、送られませんでした。閉じてから、もう一度感謝を送ってください。",
     },
     /** Gratitude Mini-game, receipt card's note for any other refusal; {{code}} is the server's code for it */
     other: {
-      en: "The server refused your gratitude for {{handle}} ({{code}}), so this combo wasn’t sent.",
-      ja: "サーバーが{{handle}}さんへの感謝を受け付けなかったため（{{code}}）、今回の感謝は送られませんでした。",
+      en: "Croquis didn’t accept your gratitude for {{handle}} ({{code}}), so this combo wasn’t sent.",
+      ja: "クロッキーが{{handle}}さんへの感謝を受け付けなかったため（{{code}}）、今回の感謝は送られませんでした。",
     },
   },
 } as const satisfies Section;

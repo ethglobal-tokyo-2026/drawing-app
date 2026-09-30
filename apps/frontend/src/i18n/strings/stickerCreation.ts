@@ -102,13 +102,13 @@ export const stickerCreation = {
       },
       /** Drawing screen, bottom right: the chip beside the seal key, announced, when the app's server didn't answer the seal, or its answer couldn't be read; tapping the check sends the same seal again */
       noAnswer: {
-        en: "Couldn’t seal: no answer from the server. Tap the check to try again.",
-        ja: "仕上げられませんでした：サーバーの応答がありません。チェックをもう一度タップしてください。",
+        en: "Couldn’t seal: Croquis didn’t answer. Tap the check to try again.",
+        ja: "仕上げられませんでした：クロッキーから応答がありません。チェックをもう一度タップしてください。",
       },
       /** Drawing screen, bottom right: the chip beside the seal key, announced, when the app's server failed while sealing */
       serverProblem: {
-        en: "Couldn’t seal: the server ran into a problem. Tap the check to try again.",
-        ja: "仕上げられませんでした：サーバーで問題が起きました。チェックをもう一度タップしてください。",
+        en: "Couldn’t seal: something went wrong on our side. Tap the check to try again.",
+        ja: "仕上げられませんでした：こちら側で問題が発生しました。チェックをもう一度タップしてください。",
       },
       /** Drawing screen, bottom right: the chip beside the seal key, announced, when the sticker was saved but its on-chain seal wasn't confirmed; trying again doesn't use another ticket */
       notOnChain: {
