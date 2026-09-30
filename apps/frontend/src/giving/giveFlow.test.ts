@@ -10,7 +10,13 @@ import {
 import { buildGiftMessage, type GiftMessage } from "./giftMessage";
 import type { GiftSendOutcome } from "./giftSender";
 import { GiftTransactionRevertedError } from "./giftTransactions";
-import { createGiveFlow, PICKER_ANSWER_MS, PICKER_RETURN_MS, PREPARING_SLOW_MS } from "./giveFlow";
+import {
+  createGiveFlow,
+  PICKER_ANSWER_MS,
+  PICKER_RETURN_MS,
+  PREPARING_SLOW_MS,
+  type GiveFlow,
+} from "./giveFlow";
 
 const PICKER_DELAY = 1150;
 const TAKE_OUT = 380;
@@ -220,7 +226,7 @@ describe("giving through a LINE chat", () => {
     await wait();
     expect(t.state()).toEqual({ step: "picking" });
     await wait(PREPARING_SLOW_MS);
-    expect(t.state()).toEqual({ step: "picking" });
+    expect(t.state()).not.toHaveProperty("slow");
   });
 
   it("keeps the gift in the bag when the picker is cancelled", async () => {
@@ -438,24 +444,52 @@ describe("giving through a LINE chat", () => {
     expect(server.states()).toEqual(["packed"]);
   });
 
+  it("stops waiting on the picker when LINE never answers, and never sends that gift message again", async () => {
+    const t = setup();
+    await openPicker(t);
+    await wait(PICKER_ANSWER_MS);
+    expect(t.step()).toBe("maybeSent");
+    expect(t.gifts()).toEqual(["maybeSent"]);
+    t.flow.sendInLine();
+    await wait();
+    expect(t.messages).toHaveLength(1);
+    t.flow.takeOut();
+    await wait(TAKE_OUT);
+    expect(t.step()).toBe("sheet");
+  });
+
+  it("counts LINE's answer as late only while the page is in view, and still hears it after", async () => {
+    const t = setup();
+    await openPicker(t);
+    t.flow.pageHidden();
+    await wait(PICKER_RETURN_MS);
+    expect(t.state()).toEqual({ step: "picking" });
+    t.flow.pageShown();
+    await wait(PICKER_RETURN_MS);
+    expect(t.state()).toEqual({ step: "picking", late: true });
+    t.picker().resolve("cancelled");
+    await wait();
+    expect(t.step()).toBe("notSent");
+    expect(t.gifts()).toEqual(["packed"]);
+  });
+
   it.each([
-    ["the page comes back and LINE still says nothing", PICKER_RETURN_MS, true],
-    ["LINE never answers", PICKER_ANSWER_MS, false],
-  ])(
-    "stops waiting on the picker when %s, and never sends that gift message again",
-    async (_, ms, shown) => {
+    ["It went out", (flow: GiveFlow) => flow.itWentOut(), "sent", "sent"],
+    ["Take it out", (flow: GiveFlow) => flow.takeOut(), "sheet", "taken_out"],
+  ] as const)(
+    "lets the giver leave with %s once LINE's answer is late, even where the picker never hides the page",
+    async (_, leave, step, gift) => {
       const t = setup();
       await openPicker(t);
-      if (shown) t.flow.pageShown();
-      await wait(ms);
-      expect(t.step()).toBe("maybeSent");
-      expect(t.gifts()).toEqual(["maybeSent"]);
+      await wait(PICKER_RETURN_MS);
+      expect(t.state()).toEqual({ step: "picking", late: true });
+      leave(t.flow);
+      await wait(TAKE_OUT);
+      expect(t.step()).toBe(step);
+      expect(t.gifts()).toEqual([gift]);
       t.flow.sendInLine();
       await wait();
       expect(t.messages).toHaveLength(1);
-      t.flow.takeOut();
-      await wait(TAKE_OUT);
-      expect(t.step()).toBe("sheet");
     },
   );
 

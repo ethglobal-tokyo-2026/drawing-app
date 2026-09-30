@@ -17,8 +17,8 @@ export const PREPARING_SLOW_MS = 10_000;
 /** LIFF stops waiting on LINE's picker after ten minutes, so an answer missing past this won't come. */
 export const PICKER_ANSWER_MS = 11 * 60_000;
 /**
- * How long LINE's answer has once the page is back in view, as when LINE's picker closes: LIFF asks
- * LINE for it every half second.
+ * How long LINE's answer has with the page in view, as once LINE's picker closes: LIFF asks LINE for
+ * it every half second. Past it, the giver may stop waiting.
  */
 export const PICKER_RETURN_MS = 5_000;
 
@@ -40,8 +40,11 @@ export type GiveFlowState =
   | ({ step: "packed" } & PackingWait)
   /** Waiting for the sticker to be ready before opening LINE's picker. */
   | ({ step: "preparing" } & PackingWait)
-  /** LINE's picker is open. */
-  | { step: "picking" }
+  /**
+   * LINE's picker is open. `late`: LINE hasn't answered in PICKER_RETURN_MS with the page in view,
+   * so the giver may stop waiting, as when LINE didn't say; its answer still counts until they do.
+   */
+  | { step: "picking"; late?: true }
   | { step: "sent"; sentAt: number; recordError?: Problem }
   /** The picker closed without sending. */
   | { step: "notSent"; recordError?: Problem }
@@ -70,11 +73,13 @@ export interface GiveFlow {
   chooseLineChat: () => void;
   /** The Send in LINE key: LINE's picker, again. */
   sendInLine: () => void;
-  /** "It went out", when LINE didn't say: the giver says the gift message was sent. */
+  /** "It went out", when LINE didn't say or is late: the giver says the gift message was sent. */
   itWentOut: () => void;
   takeOut: () => void;
   /** The page is back in view, as when LINE's picker closes. */
   pageShown: () => void;
+  /** The page is out of view, as when LINE's picker covers it: LINE's answer isn't late meanwhile. */
+  pageHidden: () => void;
   /** Closes the flow. A gift message already in LINE's hands still records its outcome. */
   dispose: () => void;
 }
@@ -131,10 +136,16 @@ export function createGiveFlow({
   /** What the wait for the gift bag says of itself; it lasts until the flow leaves that wait. */
   let packing: PackingWait = {};
   let slowTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Runs while the page is in view with LINE's picker open, until its answer is late. */
+  let lateTimer: ReturnType<typeof setTimeout> | undefined;
 
   const clearSlowTimer = () => {
     clearTimeout(slowTimer);
     slowTimer = undefined;
+  };
+  const clearLateTimer = () => {
+    clearTimeout(lateTimer);
+    lateTimer = undefined;
   };
   const set = (next: GiveFlowState) => {
     if (disposed) return;
@@ -142,6 +153,7 @@ export function createGiveFlow({
       clearSlowTimer();
       packing = {};
     }
+    if (next.step !== "picking") clearLateTimer();
     state = next;
     listeners.forEach((l) => l());
   };
@@ -164,6 +176,15 @@ export function createGiveFlow({
   };
   const inTheBag = () =>
     state.step === "packed" || state.step === "notSent" || state.step === "failed";
+  const late = () => state.step === "picking" && state.late === true;
+  /** LINE's answer is due: without it by PICKER_RETURN_MS, the giver may stop waiting. */
+  const answerDue = () => {
+    clearLateTimer();
+    lateTimer = setTimeout(() => {
+      lateTimer = undefined;
+      if (waiting && state.step === "picking") set({ step: "picking", late: true });
+    }, PICKER_RETURN_MS);
+  };
 
   /** Runs a backend write; on failure, reports it and returns why. */
   const record = async (what: string, write: () => Promise<void>) => {
@@ -232,9 +253,9 @@ export function createGiveFlow({
   };
 
   /**
-   * No answer from LINE in time: the gift message may have gone out, so it isn't sent again, and
-   * only a later "sent" from LINE counts, since an empty answer by then can mean another picker cut
-   * this one off.
+   * No answer from LINE in time, or the giver stopped waiting: the gift message may have gone out,
+   * so it isn't sent again, and only a later "sent" from LINE counts, since an empty answer by then
+   * can mean another picker cut this one off.
    */
   const stopWaiting = () => {
     const stopped = waiting;
@@ -301,6 +322,8 @@ export function createGiveFlow({
     set({ step: "picking" });
     waiting = { a, giftId: packed.giftId };
     after(PICKER_ANSWER_MS, stopWaiting);
+    // Due now too, since LINE's picker may open over the page without hiding it.
+    answerDue();
     // The picker may send from here on: a page that goes before LINE answers must ask, not send again.
     backend.markMaybeSent(packed.giftId);
     let outcome: GiftSendOutcome | { failed: unknown };
@@ -328,7 +351,9 @@ export function createGiveFlow({
     sendInLine: () => void openPicker(),
     itWentOut: () => {
       const a = attempt;
-      if (disposed || !a || state.step !== "maybeSent" || state.confirming) return;
+      if (disposed || !a) return;
+      if (late()) stopWaiting();
+      if (state.step !== "maybeSent" || state.confirming) return;
       set({ step: "maybeSent", confirming: true });
       void (async () => {
         const giftId = await giftOf(a);
@@ -344,8 +369,10 @@ export function createGiveFlow({
       const leavable =
         inTheBag() ||
         state.step === "preparing" ||
+        late() ||
         (state.step === "maybeSent" && !state.confirming);
       if (disposed || !leavable) return;
+      if (late()) stopWaiting();
       clearTimer();
       const a = attempt;
       // A failed confirmation can still mean the take-out landed. Sending must prepare it again.
@@ -380,11 +407,15 @@ export function createGiveFlow({
       })();
     },
     pageShown: () => {
-      if (waiting && state.step === "picking") after(PICKER_RETURN_MS, stopWaiting);
+      if (!disposed && waiting && state.step === "picking" && !late()) answerDue();
+    },
+    pageHidden: () => {
+      if (!late()) clearLateTimer();
     },
     dispose: () => {
       clearTimer();
       clearSlowTimer();
+      clearLateTimer();
       // Unmounting is not consent to move an NFT; the gift stays in the bag until an explicit action.
       disposed = true;
       // A picker still open may yet send, and its gift message is never offered again.

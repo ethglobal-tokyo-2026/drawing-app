@@ -110,23 +110,26 @@ export function Giving({
   const view: View = screen === "sheet" && cantFind ? "cantFind" : screen;
   const preparing = state.step === "packed" || state.step === "preparing";
   const slow = (state.step === "packed" || state.step === "preparing") && state.slow === true;
+  // LINE's answer is late, so it asks as when LINE didn't say, while still hearing it.
+  const late = state.step === "picking" && state.late === true;
   // The gift's preparation and LINE's picker keep it open until their outcome is known.
   const busy =
     preparing ||
-    state.step === "picking" ||
+    (state.step === "picking" && !late) ||
     state.step === "takingOut" ||
     (state.step === "maybeSent" && Boolean(state.confirming));
   // A long wait for the gift bag can be left by taking the sticker back out.
   const canTakeOut = !busy || slow;
 
-  // LINE's picker covers the page; once the page is back in view, its answer is due.
+  // LINE's picker may cover the page, and its answer is due only once the page is in view.
   useEffect(() => {
     if (!flow) return;
-    const onVisible = () => {
+    const onVisibility = () => {
       if (document.visibilityState === "visible") flow.pageShown();
+      else flow.pageHidden();
     };
-    document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
   }, [flow]);
 
   const close = () => {
@@ -249,7 +252,7 @@ export function Giving({
         </LabelButton>
       </div>
     );
-  } else if (state.step === "maybeSent") {
+  } else if (state.step === "maybeSent" || late) {
     // No Send in LINE: if the gift message went out, a second one would put its link in two chats.
     title = t(($) => $.giving.maybeSent.title);
     lead = t(($) => $.giving.maybeSent.lead);
