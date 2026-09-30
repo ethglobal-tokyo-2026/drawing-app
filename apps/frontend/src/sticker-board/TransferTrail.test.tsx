@@ -16,6 +16,7 @@ import {
 } from "../gratitude/replay/testReplayEngine";
 import { LANDED_HOLD_MS } from "../gratitude/replay/useGratitudeReplay";
 import { errorReason } from "../i18n/errorMessage";
+import { ReducedMotion } from "../ui/testing";
 import { toTrailRows } from "./trailRows";
 import { TransferTrail } from "./TransferTrail";
 
@@ -67,22 +68,6 @@ const stage = () => container.querySelector(".transfer-trail__row.is-open .repla
 const liveLine = () => find(".transfer-trail__row.is-open [aria-live]").textContent;
 const note = () => find(".transfer-trail__row.is-open .transfer-trail__replay-note").textContent;
 
-/** prefers-reduced-motion as the phone reports it, switched by the test. */
-class ReducedMotion extends EventTarget implements MediaQueryList {
-  readonly media = "(prefers-reduced-motion: reduce)";
-  onchange = null;
-  matches: boolean;
-  constructor(reduced: boolean) {
-    super();
-    this.matches = reduced;
-  }
-  change(reduced: boolean) {
-    this.matches = reduced;
-    this.dispatchEvent(new Event("change"));
-  }
-  addListener() {}
-  removeListener() {}
-}
 const wait = (ms = 0) => act(() => vi.advanceTimersByTimeAsync(ms));
 const press = async (el: HTMLElement) => {
   act(() => el.click());

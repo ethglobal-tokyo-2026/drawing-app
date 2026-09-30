@@ -8,6 +8,7 @@ import { formatDay, formatDuration, formatNo } from "../../stickers/format";
 import { formatRefillTime } from "../../tickets/refill";
 import { nextRefill } from "../../tickets/tickets";
 import { useTickets } from "../../tickets/useTickets";
+import { ReducedMotion } from "../../ui/testing";
 import type { SealedSticker } from "./makeSticker";
 import { SealCeremony } from "./SealCeremony";
 import { TOTAL } from "./sealTimeline";
@@ -317,6 +318,21 @@ describe("SealCeremony", () => {
     wait(100);
     tap();
     expect(card()?.hasAttribute("inert")).toBe(false);
+  });
+
+  it("stays where it is when reduced motion is switched off, rather than starting over", async () => {
+    const setting = new ReducedMotion(true);
+    vi.spyOn(window, "matchMedia").mockReturnValue(setting);
+    await seal(1);
+    wait(100);
+    // Reduced motion starts at the card.
+    expect(card()?.hasAttribute("inert")).toBe(false);
+    act(() => setting.change(false));
+    wait(100);
+    expect(host.querySelector<HTMLElement>(".sealed-card")?.style.opacity).toBe("1");
+    expect(host.querySelector<HTMLElement>(".seal-ceremony__sticker")?.style.transform).toContain(
+      "rotate(-2deg)",
+    );
   });
 
   it("fades back to the drawing when the seal fails", async () => {

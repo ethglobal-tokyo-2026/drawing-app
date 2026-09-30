@@ -117,8 +117,9 @@ export function SealCeremony({
 }: Props) {
   const reduced = useReducedMotion();
   useLight();
-  // Read by the frame loop, so the seal's answer isn't one of the things that restart it.
+  // Read by the frame loop, so neither the seal's answer nor a change to reduced motion restarts it.
   const isSealed = useEffectEvent(() => sealed !== null);
+  const isReduced = useEffectEvent(() => reduced);
   const [done, setDone] = useState(false);
   const skip = useRef<() => void>(() => {});
   const wake = useRef<() => void>(() => {});
@@ -188,7 +189,7 @@ export function SealCeremony({
     let ended = false;
     let stopKeys = () => {};
     const cutter = (): Cutter | null => {
-      if (reduced || t < HOLD) return null;
+      if (isReduced() || t < HOLD) return null;
       const alpha = 1 - Math.min(1, (t - HOLD) / CUTTER_FADE_MS);
       if (alpha <= 0) return null;
       return {
@@ -227,7 +228,7 @@ export function SealCeremony({
         });
       }
       // It sticks with a sheen, unless it was skipped past.
-      if (!swept && t >= T.land && t < TOTAL - 1 && !reduced) {
+      if (!swept && t >= T.land && t < TOTAL - 1 && !isReduced()) {
         swept = true;
         sweepSheen(parts.sheen, 640);
       }
@@ -245,10 +246,11 @@ export function SealCeremony({
       const dt = last === null ? 0 : Math.min(MAX_FRAME_MS, now - last);
       last = now;
       if (t >= HOLD) waited += dt;
-      t = ceremonyTime(t, dt, { recorded: recorded(), reduced });
+      t = ceremonyTime(t, dt, { recorded: recorded(), reduced: isReduced() });
       show();
-      // Under reduced motion nothing moves while it waits: the next frame comes with the seal.
-      if (t < TOTAL && !(reduced && t === HOLD)) raf = requestAnimationFrame(tick);
+      // Under reduced motion nothing moves while it waits: the next frame comes with the seal, or
+      // with motion turned back on.
+      if (t < TOTAL && !(isReduced() && t === HOLD)) raf = requestAnimationFrame(tick);
     };
     wake.current = () => {
       if (!raf && !ended) raf = requestAnimationFrame(tick);
@@ -272,12 +274,12 @@ export function SealCeremony({
       stopKeys();
       host.removeAttribute("data-lifted");
     };
-  }, [sticker, sheet, reduced]);
+  }, [sticker, sheet]);
 
-  // The seal is recorded: the ceremony goes on from its wait.
+  // The seal is recorded, or motion is back on: the ceremony goes on from its wait.
   useEffect(() => {
-    if (sealed) wake.current();
-  }, [sealed]);
+    if (sealed || !reduced) wake.current();
+  }, [sealed, reduced]);
 
   const resin: CSSProperties = {
     ...boxStyle(box),
