@@ -19,6 +19,24 @@ Each reviewer reads its commits whole and the code around each change on main: c
 
 Severity is the review's: _high_ is lost data, money, a ticket, a gift or Gratitude, or the app unusable until a reload; _medium_ a wrong result or a stuck screen with a way out; _low_ cosmetic, or rare with little harm.
 
+## Fixed
+
+Every finding below is fixed on main, and `pnpm check:full` passes at d46f7ac2.
+
+| Findings   | Commits                                                                                                                                                                                                                                 |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1-1, R1-3 | 6aa7a16c                                                                                                                                                                                                                                |
+| R1-2       | 6074498f                                                                                                                                                                                                                                |
+| R2-1       | 009146d9                                                                                                                                                                                                                                |
+| R2-2       | 793504fc                                                                                                                                                                                                                                |
+| R2-3       | 86caa925                                                                                                                                                                                                                                |
+| R2-4       | 1b513895                                                                                                                                                                                                                                |
+| R3-1       | 274aa02f                                                                                                                                                                                                                                |
+| R3-2       | dc77ed2e                                                                                                                                                                                                                                |
+| R3-3       | b64c2ed0                                                                                                                                                                                                                                |
+| R3-4       | 8852b718: FORBIDDEN, UNAUTHORIZED and an offline phone now read as before the picker. Online, LIFF 2.31.0 rejects a failed token request and a failed result poll alike, so a token request that fails online still reads as maybe sent |
+| R4-1       | e81c8a14, and 6005a3a9 for the give sheet offering a sticker that just went into a gift, found while fixing it                                                                                                                          |
+
 ## Findings
 
 ### R1: Tickets and payments
