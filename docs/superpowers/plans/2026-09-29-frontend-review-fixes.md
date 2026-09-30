@@ -60,6 +60,6 @@ Wave 3, once the lanes above are merged, since these touch every area:
 [The review of these lanes' fixes](../../review/2026-10-01-frontend-fixes-code-review.md) found 12 bugs in them: 2 high, 4 medium, 6 low. Follow-up lanes fix them:
 
 - [x] Sealing: R2-1 to R2-4
-- [ ] Your sticker board's kept answer: R4-1
+- [x] Your sticker board's kept answer: R4-1, and the give sheet no longer offers a sticker that just went into a gift
 - [ ] Tickets: R1-1 to R1-3
 - [ ] Giving: R3-1 to R3-4
