@@ -230,32 +230,42 @@ describe("StickerDetail", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const giftId = "gift-133";
     let recorded: Gratitude | null = null;
+    /** Holds each answer until told, so the test sees the detail while the trail is read again. */
+    const answers: (() => void)[] = [];
     const { drawn } = received(null);
-    const stickerDetail = vi.fn(() =>
-      Promise.resolve({
-        sticker: drawn,
-        owner: TEST_OWNER,
-        transferTrail: [
-          {
-            giftId,
-            giver: people.mika,
-            receiver: TEST_OWNER,
-            receivedAt: "2026-09-23T12:00:00.000Z",
-            gratitude: recorded,
-          },
-        ],
-        hasTimelapse: false,
-      }),
+    const stickerDetail = vi.fn(
+      () =>
+        new Promise<StickerDetailResponse>((resolve) => {
+          const seen = recorded;
+          answers.push(() =>
+            resolve({
+              sticker: drawn,
+              owner: TEST_OWNER,
+              transferTrail: [
+                {
+                  giftId,
+                  giver: people.mika,
+                  receiver: TEST_OWNER,
+                  receivedAt: "2026-09-23T12:00:00.000Z",
+                  gratitude: seen,
+                },
+              ],
+              hasTimelapse: false,
+            }),
+          );
+        }),
     );
     // Played, and kept for want of a connection.
     const offline = { recordGratitude: () => Promise.reject(new TypeError("Failed to fetch")) };
     await sendGratitude(offline, TEST_OWNER.id, recordGratitudeBody({ giftId }));
 
     open({ onSendGratitude: vi.fn() }, emptyApi({ stickerDetail }));
+    answers[0]?.();
     await settle();
     expect(button("Send gratitude")).toBeUndefined();
 
-    // Back online, the server records it, and the trail shows it.
+    // Back online, the server records it, and the trail is read again. What was read before, which
+    // has no gratitude, never brings Send gratitude back while it is.
     const online = {
       recordGratitude: (body: RecordGratitude) => {
         recorded = gratitudeOf(body);
@@ -263,8 +273,10 @@ describe("StickerDetail", () => {
       },
     };
     await act(() => resendPendingGratitude(online, TEST_OWNER.id));
-    await settle();
     expect(stickerDetail).toHaveBeenCalledTimes(2);
+    expect(button("Send gratitude")).toBeUndefined();
+    answers[1]?.();
+    await settle();
     expect(button("Send gratitude")).toBeUndefined();
   });
 

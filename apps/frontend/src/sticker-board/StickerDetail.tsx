@@ -124,12 +124,28 @@ export function StickerDetail({
     shownStickerId ? api.stickerDetail(shownStickerId) : Promise.resolve(null),
   );
   const loaded = detail.state === "ready" ? detail.data : null;
-  // Gratitude kept on this phone that the server has now recorded or refused: read the trail again.
+  // Gratitude kept on this phone that the server has now recorded or refused: the trail is read
+  // again, and until it lands, what was read before can't say whether gratitude is owed.
+  const [outOfDate, setOutOfDate] = useState<StickerDetailResponse | null>(null);
   const readAgain = detail.state === "ready" ? detail.refresh : null;
-  useEffect(() => (readAgain ? onGratitudeLeftOutbox(readAgain) : undefined), [readAgain]);
+  useEffect(
+    () =>
+      readAgain
+        ? onGratitudeLeftOutbox(() => {
+            setOutOfDate(loaded);
+            readAgain();
+          })
+        : undefined,
+    [readAgain, loaded],
+  );
   const trail = useMemo(() => (loaded ? toTrailRows(loaded.transferTrail) : []), [loaded]);
   const owed =
-    mode === "yours" && onSendGratitude && sticker && !onItsWay(sticker) && loaded
+    mode === "yours" &&
+    onSendGratitude &&
+    sticker &&
+    !onItsWay(sticker) &&
+    loaded &&
+    loaded !== outOfDate
       ? owedGratitude(loaded)
       : null;
 
