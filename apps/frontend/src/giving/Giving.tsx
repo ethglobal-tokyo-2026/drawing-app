@@ -18,8 +18,6 @@ import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
 import { Sheet } from "../ui/Sheet";
 import { useBackToClose } from "../ui/useBackToClose";
-import { useFocusTrap } from "../ui/useFocusTrap";
-import { useModalDialog } from "../ui/useModalDialog";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { CantFindThem } from "./CantFindThem";
 import { GiftBag } from "./GiftBag";
@@ -109,6 +107,7 @@ export function Giving({
   const view: View = screen === "sheet" && cantFind ? "cantFind" : screen;
   const preparing = state.step === "packed" || state.step === "preparing";
   const slow = (state.step === "packed" || state.step === "preparing") && state.slow === true;
+  // The gift's preparation and LINE's picker keep it open until their outcome is known.
   const busy =
     preparing ||
     state.step === "picking" ||
@@ -140,14 +139,7 @@ export function Giving({
   };
   const busyKey = busy ? ({ "aria-busy": true, "aria-disabled": true } as const) : {};
 
-  const root = useRef<HTMLDivElement>(null);
-  useFocusTrap(root, { onEscape: () => (view === "cantFind" ? setCantFind(false) : close()) });
-  // The gift's preparation and LINE's picker keep it open until their outcome is known.
-  useBackToClose(true, () => {
-    close();
-    return !busy;
-  });
-  // Back on "Can’t find them?" returns to the give sheet, as its back button does.
+  // Back and Escape on "Can’t find them?" return to the give sheet, as its back button does.
   useBackToClose(view === "cantFind", () => setCantFind(false));
 
   // Each new view slides in, except the first, which comes up with the sheet.
@@ -157,8 +149,8 @@ export function Giving({
     setShownView(view);
     setSlideIn(true);
   }
+  const layer = useRef<HTMLDivElement>(null);
   const body = useRef<HTMLDivElement>(null);
-  useModalDialog(body, { layer: root });
   useEffect(() => {
     body.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus();
   }, [view]);
@@ -352,7 +344,7 @@ export function Giving({
 
   const phone = document.querySelector<HTMLElement>(".phone");
   const giving = (
-    <div className="giving" ref={root} tabIndex={-1}>
+    <div className="giving" ref={layer}>
       <div className="giving__scrim" onClick={close} />
       <div className="giving__sticker" aria-hidden="true">
         {screen === "sheet" ? (
@@ -380,7 +372,13 @@ export function Giving({
           />
         </p>
       </div>
-      <Sheet label={title} onClose={close}>
+      <Sheet
+        label={title}
+        layer={layer}
+        onClose={close}
+        onEscape={view === "cantFind" ? () => setCantFind(false) : undefined}
+        busy={busy}
+      >
         <div
           key={view}
           ref={body}

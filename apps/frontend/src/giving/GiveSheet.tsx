@@ -12,9 +12,6 @@ import { Key } from "../ui/Key";
 import { lazyWithPreload } from "../ui/lazyWithPreload";
 import { keepNameWhole } from "../ui/keepNameWhole";
 import { Sheet } from "../ui/Sheet";
-import { useBackToClose } from "../ui/useBackToClose";
-import { useFocusTrap } from "../ui/useFocusTrap";
-import { useModalDialog } from "../ui/useModalDialog";
 // Giving.css goes first, even ahead of the give-sheet.css StickerPicker brings, so the sheet's
 // resets come after its margins wherever this loads.
 import "./Giving.css";
@@ -46,11 +43,7 @@ export function GiveSheet({ to, toId, toAgeStatus, onClose }: Props) {
   const pickedSticker = stickers?.find((s) => s.id === picked);
   const me = useMe();
   const sender = useGiftSender();
-  const root = useRef<HTMLDivElement>(null);
-  const body = useRef<HTMLDivElement>(null);
-  useBackToClose(!giving, onClose);
-  useFocusTrap(root, { active: !giving, onEscape: onClose });
-  useModalDialog(body, { layer: root, active: !giving });
+  const layer = useRef<HTMLDivElement>(null);
 
   if (giving && sender) {
     return (
@@ -71,10 +64,15 @@ export function GiveSheet({ to, toId, toAgeStatus, onClose }: Props) {
   const name = formatHandle(to);
   const title = t(($) => $.giving.giveSheet.title, { name });
   return (
-    <div className="board-sheet-layer" ref={root} tabIndex={-1}>
+    <div className="board-sheet-layer" ref={layer}>
       <div className="giving__scrim" onClick={onClose} />
-      <Sheet label={title} onClose={onClose} className="giving__sheet giving__sheet--give">
-        <div className="board-sheet-body giving__pinned" ref={body}>
+      <Sheet
+        label={title}
+        layer={layer}
+        onClose={onClose}
+        className="giving__sheet giving__sheet--give"
+      >
+        <div className="board-sheet-body giving__pinned">
           <header className="giving__head">
             <h2 className="giving__title">{keepNameWhole(title, name)}</h2>
             <button

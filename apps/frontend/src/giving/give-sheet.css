@@ -1,11 +1,10 @@
 /* ---------- Sheets over a board ---------- */
 
-/* Over someone else's board: main's give sheet parts, as one layer that holds keyboard focus. */
+/* Over someone else's board: main's give sheet parts, as one layer. */
 .board-sheet-layer {
   position: absolute;
   inset: 0;
   z-index: var(--z-sheet);
-  outline: none;
 }
 
 /* The sheet's parts stack evenly; their own outer margins are for main's single-screen sheet. */

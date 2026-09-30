@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useRef, useState, type CSSProperties, type KeyboardEvent, type RefObject } from "react";
 import { useTranslation } from "../../i18n/react";
 import { clamp01 } from "../../ui/easing";
 import { Sheet } from "../../ui/Sheet";
@@ -29,6 +29,8 @@ function hsvStyle({ h, s, v }: Hsv): CSSProperties {
 interface Props {
   id: string;
   open: boolean;
+  /** The drawing screen: it stays live around the sheet, so a tap on the canvas closes it. */
+  layer: RefObject<HTMLElement | null>;
   color: string;
   recent: string[];
   onPick: (hex: string) => void;
@@ -38,12 +40,13 @@ interface Props {
 }
 
 /** The color sheet: recent colors, the swatches, a hue and saturation pad, and a brightness bar. */
-export function ColorSheet({ open, onClose, ...picker }: Props) {
+export function ColorSheet({ open, layer, onClose, ...picker }: Props) {
   const { t } = useTranslation();
   return (
     <Sheet
       label={t(($) => $.stickerCreation.colorSheet.title)}
       open={open}
+      layer={layer}
       className="color-sheet"
       onClose={onClose}
     >
@@ -52,7 +55,13 @@ export function ColorSheet({ open, onClose, ...picker }: Props) {
   );
 }
 
-function ColorPicker({ id, color, recent, onPick, onPreview }: Omit<Props, "open" | "onClose">) {
+function ColorPicker({
+  id,
+  color,
+  recent,
+  onPick,
+  onPreview,
+}: Omit<Props, "open" | "layer" | "onClose">) {
   const { t } = useTranslation();
   // Hue and saturation survive a trip through black or white here, which a hex can't carry.
   const [picked, setPicked] = useState(() => ({ color, hsv: hexToHsv(color) }));

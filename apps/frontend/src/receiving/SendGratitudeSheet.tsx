@@ -1,5 +1,4 @@
 import { Clock, GratitudeIcon } from "../icons";
-import { useRef } from "react";
 import type { PersonView, StickerView } from "../api/views";
 import { Trans, useTranslation } from "../i18n/react";
 import { Duration } from "../stickers/Duration";
@@ -9,9 +8,6 @@ import { PhotoSticker } from "../ui/PhotoSticker";
 import { keepNameWhole } from "../ui/keepNameWhole";
 import { QuietLink } from "../ui/QuietLink";
 import { Sheet } from "../ui/Sheet";
-import { useBackToClose } from "../ui/useBackToClose";
-import { useFocusTrap } from "../ui/useFocusTrap";
-import { useModalDialog } from "../ui/useModalDialog";
 import "./send-gratitude-sheet.css";
 
 interface Props {
@@ -31,44 +27,37 @@ interface Props {
  */
 export function SendGratitudeSheet({ sticker, giver, onSend, onLater }: Props) {
   const { t } = useTranslation();
-  const body = useRef<HTMLDivElement>(null);
-  useFocusTrap(body, { onEscape: onLater });
-  useModalDialog(body);
-  useBackToClose(true, onLater);
-
   const who = giver.handle === null ? giver.name : formatHandle(giver.handle);
   const title = t(($) => $.receiving.sendGratitude.title, { name: who });
   return (
     <Sheet label={title} onClose={onLater} className="send-gratitude-sheet">
-      <div ref={body}>
-        <div className="send-gratitude-sheet__from">
-          <PhotoSticker src={giver.pictureUrl} name={giver.name} size={60} />
-          <div className="send-gratitude-sheet__text">
-            <h2 className="title-label send-gratitude-sheet__title">{keepNameWhole(title, who)}</h2>
-            <p className="send-gratitude-sheet__line">
-              {giver.id === sticker.artist.id ? (
-                <Trans
-                  i18nKey={($) => $.receiving.sendGratitude.lineFromOriginalArtist}
-                  components={{
-                    // A name is a component's text, not a value: Trans would read markup in a value.
-                    name: <>{who}</>,
-                    duration: <Duration seconds={sticker.timeUsed} />,
-                  }}
-                />
-              ) : (
-                t(($) => $.receiving.sendGratitude.line, { name: who })
-              )}
-            </p>
-          </div>
+      <div className="send-gratitude-sheet__from">
+        <PhotoSticker src={giver.pictureUrl} name={giver.name} size={60} />
+        <div className="send-gratitude-sheet__text">
+          <h2 className="title-label send-gratitude-sheet__title">{keepNameWhole(title, who)}</h2>
+          <p className="send-gratitude-sheet__line">
+            {giver.id === sticker.artist.id ? (
+              <Trans
+                i18nKey={($) => $.receiving.sendGratitude.lineFromOriginalArtist}
+                components={{
+                  // A name is a component's text, not a value: Trans would read markup in a value.
+                  name: <>{who}</>,
+                  duration: <Duration seconds={sticker.timeUsed} />,
+                }}
+              />
+            ) : (
+              t(($) => $.receiving.sendGratitude.line, { name: who })
+            )}
+          </p>
         </div>
-        <div className="send-gratitude-sheet__acts">
-          <Key tone="pink" size="lg" icon={<GratitudeIcon />} onClick={onSend}>
-            {t(($) => $.receiving.sendGratitude.send)}
-          </Key>
-          <QuietLink onClick={onLater}>
-            <Clock /> {t(($) => $.receiving.sendGratitude.later)}
-          </QuietLink>
-        </div>
+      </div>
+      <div className="send-gratitude-sheet__acts">
+        <Key tone="pink" size="lg" icon={<GratitudeIcon />} onClick={onSend} data-autofocus>
+          {t(($) => $.receiving.sendGratitude.send)}
+        </Key>
+        <QuietLink onClick={onLater}>
+          <Clock /> {t(($) => $.receiving.sendGratitude.later)}
+        </QuietLink>
       </div>
     </Sheet>
   );

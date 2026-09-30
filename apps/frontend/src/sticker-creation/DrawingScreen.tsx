@@ -784,6 +784,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       <ColorSheet
         id={colorSheetId}
         open={panel === "color"}
+        layer={root}
         color={color}
         recent={recent}
         onPick={pickColor}

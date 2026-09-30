@@ -83,6 +83,13 @@ const tap = (label: string) =>
     target.click();
   });
 const wait = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
+const pressEscape = () =>
+  act(
+    () =>
+      void document.activeElement?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      ),
+  );
 const giftOf = (stickerId: string) => giftStatus.get(stickerId);
 
 // happy-dom has no font loading; every browser the app runs in does.
@@ -157,6 +164,7 @@ describe("Giving", () => {
     tap("Preparing…");
     tap("Take it out");
     tap("Close Preparing your gift");
+    pressEscape();
     expect(onClose).not.toHaveBeenCalled();
     expect(title()).toBe("Preparing your gift");
 
@@ -263,6 +271,16 @@ describe("Giving", () => {
       expect(title()).toBe("Can’t find them?");
       tap("Back");
       expect(title()).toBe("Give No.0147");
+    });
+
+    it("steps back to the give sheet on Escape, which closes Giving from there", () => {
+      open("s-escape");
+      tap("Can’t find them?");
+      pressEscape();
+      expect(title()).toBe("Give No.0147");
+      expect(onClose).not.toHaveBeenCalled();
+      pressEscape();
+      expect(onClose).toHaveBeenCalledExactlyOnceWith(false);
     });
 
     it("opens LINE's Add friends outside the app, and stays for when they come back", () => {

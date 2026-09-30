@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { act } from "react";
+import { act, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DISMISS_PX, Sheet } from "./Sheet";
@@ -11,17 +11,30 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 let host: HTMLDivElement;
 let root: Root;
+let opener: HTMLButtonElement;
 const onClose = vi.fn();
 
-const render = (open: boolean) =>
+const render = (open: boolean, props: Partial<ComponentProps<typeof Sheet>> = {}) =>
   act(() =>
     root.render(
-      <Sheet label="Color" open={open} onClose={onClose}>
+      <Sheet label="Color" open={open} onClose={onClose} {...props}>
         <p>Swatches</p>
+        <button id="last">Last</button>
       </Sheet>,
     ),
   );
 const sheet = () => host.querySelector(".bottom-sheet");
+const perf = () => host.querySelector<HTMLElement>(".perf");
+const press = (key: string, shiftKey = false) =>
+  act(
+    () =>
+      void document.activeElement?.dispatchEvent(
+        new KeyboardEvent("keydown", { key, shiftKey, bubbles: true, cancelable: true }),
+      ),
+  );
+/** The browser's Back: history lands on an entry that isn't the sheet's. */
+const back = () =>
+  act(() => void window.dispatchEvent(new PopStateEvent("popstate", { state: null })));
 const animationEnds = () =>
   act(() => void sheet()?.dispatchEvent(new Event("animationend", { bubbles: true })));
 
@@ -45,6 +58,11 @@ const drag = (...path: [dx: number, dy: number][]) => {
 };
 
 beforeEach(() => {
+  // A closed sheet's step back in history waits on a timer; none of these tests wants it to run.
+  vi.useFakeTimers();
+  opener = document.createElement("button");
+  document.body.append(opener);
+  opener.focus();
   host = document.createElement("div");
   document.body.append(host);
   root = createRoot(host);
@@ -54,6 +72,8 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root.unmount());
   host.remove();
+  opener.remove();
+  vi.useRealTimers();
 });
 
 describe("Sheet", () => {
@@ -93,5 +113,58 @@ describe("Sheet", () => {
     render(true);
     animationEnds();
     expect(sheet()?.classList.contains("is-leaving")).toBe(false);
+  });
+
+  describe("as a modal dialog", () => {
+    it("takes focus and makes the page behind inert while it's open, and gives both back as it starts to close", () => {
+      render(true);
+      expect(sheet()?.contains(document.activeElement)).toBe(true);
+      expect(opener.inert).toBe(true);
+      render(false);
+      expect(opener.inert).toBe(false);
+      expect(document.activeElement).toBe(opener);
+    });
+
+    it("keeps Tab inside, from its last control round to its perforation and back", () => {
+      render(true);
+      document.getElementById("last")?.focus();
+      press("Tab");
+      expect(document.activeElement).toBe(perf());
+      press("Tab", true);
+      expect(document.activeElement).toBe(document.getElementById("last"));
+    });
+
+    it("closes on Escape, wherever focus is, and on Back", () => {
+      render(true);
+      opener.focus();
+      press("Escape");
+      expect(onClose).toHaveBeenCalledTimes(1);
+      back();
+      expect(onClose).toHaveBeenCalledTimes(2);
+    });
+
+    it("steps back with Escape's own answer when it has one, and closes any other way", () => {
+      const onEscape = vi.fn();
+      render(true, { onEscape });
+      press("Escape");
+      expect(onEscape).toHaveBeenCalledTimes(1);
+      expect(onClose).not.toHaveBeenCalled();
+      back();
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("stays up while busy, whichever way it's asked to close, and Back can try again", () => {
+      render(true, { busy: true });
+      press("Escape");
+      back();
+      drag([0, DISMISS_PX * 2]);
+      drag();
+      expect(onClose).not.toHaveBeenCalled();
+      expect(perf()?.getAttribute("aria-disabled")).toBe("true");
+
+      render(true);
+      back();
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
   });
 });

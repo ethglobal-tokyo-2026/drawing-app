@@ -40,8 +40,7 @@ interface Options {
 
 /**
  * Makes a dialog modal while it's mounted: `aria-modal` on the `role="dialog"` around `inside`, and
- * everything outside its layer inert, so the page behind can't be focused, tapped or read. For a
- * sheet that can't carry `aria-modal` itself.
+ * everything outside its layer inert, so the page behind can't be focused, tapped or read.
  */
 export function useModalDialog(
   inside: RefObject<HTMLElement | null>,

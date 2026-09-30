@@ -80,6 +80,19 @@ describe("SendGratitudeSheet", () => {
     expect(host.querySelector("h2 .name-whole")?.textContent).toBe("@Giving-b");
   });
 
+  it("starts on its Send gratitude key, and leaves it for later on Escape", () => {
+    open(people.ken, people.mika);
+    expect(document.activeElement).toBe(button("Send gratitude"));
+    act(
+      () =>
+        void document.activeElement?.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+        ),
+    );
+    expect(onLater).toHaveBeenCalledOnce();
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
   it("sends gratitude from its key, and leaves it for later from Later or its perforation", () => {
     const { title } = open(people.ken, people.mika);
     act(() => button("Send gratitude").click());

@@ -359,6 +359,7 @@ function Gift({
         <Sheet
           label={t(($) => $.receiving.gift.acceptSheet)}
           onClose={onNotNow}
+          busy={receiving}
           className="receive-gift__sheet"
         >
           <div className="receive-gift__copy">
