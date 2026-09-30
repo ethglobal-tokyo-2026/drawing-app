@@ -10,6 +10,16 @@ Each has a recommendation. The fix lanes leave these three alone until you answe
 2. **Paid tickets that depend on the phone (TIX-3).** A pack's tickets reach the person only if their phone keeps the payment's digest until the server adds them. _Recommend_ the server recording each purchase (the person, the pack and its price) before the payment is signed, then adding its tickets once Sui shows the payment, so the phone's copy only makes it sooner. It needs a table and a migration. The other way, reading the vault's payment events, needs no client change but depends on Sui's event index.
 3. **Mona Sans's slashed zero (CLEAN-2).** The plain zero is patched site by site, with widths tuned to other tokens. _Recommend_ self-hosting a Mona Sans build whose tabular zero is the plain glyph, so `tabular-nums` works everywhere again; or setting the counting figures in another face. A design call.
 
+Calls the lanes made that are merged, and want your yes:
+
+- **A signed payment that never shows.** A payment is kept on the phone from the moment it's signed. If Sui still hasn't shown it an hour later (`PAYMENT_LANDS_WITHIN_MS`, a guess), the checkout says it didn't go through and drops it.
+- **Logging out mid-drawing** deletes the kept drawing, so its spent ticket use is lost: the server doesn't hand back an unsealed one.
+- **"Did it go out?"** A Gift Message LINE doesn't confirm sent gets this step, with It went out and Take it out, instead of a second Send in LINE. It gives up waiting on LINE 5 s after the app comes back into view (`PICKER_RETURN_MS`, a guess).
+- **The stroke unlock.** Fast passes made before the first tap no longer count toward switching to stroke, so a replay switches where its combo did.
+- **The Back key.** A Back pressed within 250 ms of an overlay closing by itself is spent on the closed overlay (`STEP_BACK_HOLD_MS`, a guess), so it can't take a second history entry.
+- **A sheet's perforation.** A move over 8 px counts as a drag, not a tap (a guess).
+- **A screen that crashes while rendering** still unmounts the app. Only a screen whose code fails to load shows the Reload note; catching render crashes needs an error boundary around the whole app.
+
 ## Fix lanes
 
 Each lane owns the files its findings live in, fixes them on its own branch and is merged to main once its checks pass. About six run at once. This checklist is updated as each lane merges.
