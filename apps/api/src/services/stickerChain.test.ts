@@ -15,6 +15,7 @@ import {
   CLAIM_RECEIPT_TIMEOUT_MS,
   createStickerChain,
   MINT_LOOKUP_DEADLINE_MS,
+  RETURN_RECEIPT_TIMEOUT_MS,
   RPC_REQUEST_TIMEOUT_MS,
   RPC_RETRY_COUNT,
   rpcTransport,
@@ -336,6 +337,28 @@ describe("Sepolia sticker adapter", () => {
       recovered: false,
       status: "other_recipient",
     });
+  });
+
+  it("returns an expired gift through the relayer, and rejects a return that reverts", async () => {
+    const chain = adapter();
+
+    await expect(chain.giftChain.returnExpiredGift(GIFT_ID)).resolves.toEqual({ txHash: TX });
+    expect(rpc.writeContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: ESCROW,
+        functionName: "returnExpiredGift",
+        args: [GIFT_ID],
+      }),
+    );
+    expect(rpc.waitForTransactionReceipt).toHaveBeenCalledWith({
+      hash: TX,
+      timeout: RETURN_RECEIPT_TIMEOUT_MS,
+    });
+    logs.expectLogged("chain.return.receipt.completed", { giftId: GIFT_ID, txHash: TX });
+
+    rpc.waitForTransactionReceipt.mockResolvedValue({ status: "reverted" });
+    await expect(chain.giftChain.returnExpiredGift(GIFT_ID)).rejects.toThrow("reverted");
+    logs.expectLogged("chain.return.receipt.failed", { giftId: GIFT_ID, txHash: TX });
   });
 
   it("reports an escrow read the RPC failed as the chain being unavailable", async () => {

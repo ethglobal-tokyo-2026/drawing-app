@@ -330,7 +330,7 @@ Candidates the lanes checked and found fine, so nobody raises them again.
 - `packages/sticker-chain/src/generated/contracts.ts` matches the contracts: the only contract edits since it was generated (`ab278c7f`) are a comment and interface members wagmi doesn't generate. The API and the app use it; only tests use `croquisResolverAbi`.
 - The auth server accepts a request with no Origin header: the LINE ID token is the credential, and the dev proxy sets Origin itself (`apps/frontend/vite.config.ts:17`).
 - `packages/sticker-chain/src/line.ts:140-148` re-checks `iss`, `aud` and `exp` after LINE's verify: cheap defense for sign-in and the auth server.
-- `returnExpiredGift` (`packages/sticker-chain/contracts/StickerGiftEscrow.sol:191`) is a safety valve anyone can call; nothing in the app calls it; keep it.
+- `returnExpiredGift` (`packages/sticker-chain/contracts/StickerGiftEscrow.sol:191`) is a safety valve anyone can call; the API's expiry sweep (`apps/api/src/gifts/expiry.ts`) calls it for each gift the escrow still holds past its expiry.
 - Events the apps never read (PersonNamed, StickerNamed, StickerNameSynced, NameTargetSet, GatewayChanged, ExpiredGiftReturned) let explorers and indexers follow the chain, and cost little.
 - `GIFT_PENDING = 1` in `packages/sticker-chain/contracts/ens/CroquisResolver.sol:50-51` copies the escrow's enum and says so; importing it would make an import cycle. `EnsRoles.ALL` is documented (`packages/sticker-chain/contracts/ens/EnsV2.sol:71-73`).
 - `privySubject` is shared with the API's smart wallet lookup (`apps/api/src/services/privySmartWallets.ts:2`) on purpose.

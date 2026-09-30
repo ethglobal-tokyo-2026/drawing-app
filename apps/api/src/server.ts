@@ -15,6 +15,7 @@ import { startMidnightBatches } from "./chatMenu/midnight.ts";
 import type { AppDeps, EnsDeps } from "./deps.ts";
 import { logInfo } from "./diagnostics.ts";
 import { createNamingQueue } from "./ens/naming.ts";
+import { startExpiredGiftReturns } from "./gifts/expiry.ts";
 import { giverNoticeFor, startGiverNoticeSweeps } from "./gifts/giverNotice.ts";
 import { chooseLineVerifier } from "./services/devSignIn.ts";
 import { createDiskImageStore } from "./services/imageStore.ts";
@@ -201,6 +202,10 @@ if (chatMenu.on) {
 
 // The giver's messages that failed, retried from boot on.
 if (messaging.line) startGiverNoticeSweeps(giverNotice);
+
+// Gifts the escrow still holds past their expiry go back to their givers: now, for what downtime
+// left, then just after each midnight, Tokyo time.
+startExpiredGiftReturns(deps);
 
 // Only a proxy on this machine reaches it: Vite's in development, HAProxy's on the box.
 serve(

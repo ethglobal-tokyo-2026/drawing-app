@@ -29,7 +29,8 @@ export async function createGiftsTestApp({
   escrowChain = false,
   line,
 }: { escrowChain?: boolean; line?: FakeLine } = {}) {
-  const giftChain = fakeGiftChain();
+  // The escrow's blocks keep the test's time, so a gift expires on chain as the test's clock moves.
+  const giftChain = fakeGiftChain({ now: () => test.clock.now() });
   const test = await createTestApp((base) => ({
     ...(escrowChain && { giftChain, smartWallets: fakeSmartWallets(base.db) }),
     ...(line && giverNoticeThrough(line)(base)),

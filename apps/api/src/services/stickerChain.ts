@@ -48,6 +48,11 @@ export const MINT_LOOKUP_DEADLINE_MS = 40_000;
  * read the escrow and find a late claim's event, so Receiving answers before the app gives up.
  */
 export const CLAIM_RECEIPT_TIMEOUT_MS = 60_000;
+/**
+ * How long the expiry sweep waits for a return to land. Longer than the claim's, since no one waits
+ * on it, and bounded, since the sweep's other gifts wait behind it.
+ */
+export const RETURN_RECEIPT_TIMEOUT_MS = 120_000;
 /** How long one RPC request may take, short enough that a hung provider leaves time to retry. */
 export const RPC_REQUEST_TIMEOUT_MS = 5_000;
 /** Retries of a failed RPC request; with several URLs, each retry tries them all again. */
@@ -90,7 +95,8 @@ export function createStickerChain({
 }): { mint: Mint; giftChain: GiftChain; nameWriter: NameWriter } {
   const stickerAddress = address(stickerContract, "STICKER_NFT_ADDRESS");
   const escrowAddress = address(escrowContract, "STICKER_GIFT_ESCROW_ADDRESS");
-  // Minting and Receiving share the relayer; concurrent requests need distinct nonces.
+  // Minting, Receiving and the expiry sweep share the relayer; concurrent requests need distinct
+  // nonces.
   const sealerAccount = privateKeyToAccount(sealerPrivateKey, { nonceManager });
   const transport = rpcTransport(rpcUrl);
   const publicClient = createPublicClient({ chain: sepolia, transport });
@@ -394,6 +400,32 @@ export function createStickerChain({
         if (reconciled) return reconciled;
         throw error;
       }
+    },
+    returnExpiredGift: async (giftId) => {
+      const fields = {
+        giftId,
+        chainId: sepolia.id,
+        contractAddress: escrowAddress,
+        address: sealerAccount.address,
+      };
+      const id = bytes32(giftId, "Gift ID");
+      const txHash = await diagnosticStep("chain.return.submit", fields, () =>
+        walletClient.writeContract({
+          address: escrowAddress,
+          abi: stickerGiftEscrowAbi,
+          functionName: "returnExpiredGift",
+          args: [id],
+          account: sealerAccount,
+        }),
+      );
+      await diagnosticStep("chain.return.receipt", { ...fields, txHash }, async () => {
+        const receipt = await publicClient.waitForTransactionReceipt({
+          hash: txHash,
+          timeout: RETURN_RECEIPT_TIMEOUT_MS,
+        });
+        if (receipt.status !== "success") throw new Error(`Returning gift ${id} reverted`);
+      });
+      return { txHash };
     },
   };
 

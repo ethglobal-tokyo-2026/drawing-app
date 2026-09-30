@@ -39,12 +39,13 @@ export const gifts = sqliteTable(
     status: text("status", { enum: giftStatuses }).notNull().default("packed"),
     /**
      * StickerGiftEscrow.gifts(id).status: `pending` once the deposit is read and checked, `claimed`
-     * once Receiving's claim lands, and `rejected` or `expired_returned` as a take-out reads it.
+     * once Receiving's claim lands, and `rejected` or `expired_returned` as a take-out or the
+     * expiry sweep reads it.
      */
     escrowStatus: text("escrow_status", { enum: escrowStatuses }).notNull().default("missing"),
     /**
      * The escrow's expiry, GIFT_EXPIRY_MS after Packaging; the deposit carries it. Receiving is
-     * refused after it; the giver can still take the gift out.
+     * refused after it; the giver can still take the gift out until the expiry sweep sends it back.
      */
     expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
     /** LINE's picker reported the Gift Message sent. */
