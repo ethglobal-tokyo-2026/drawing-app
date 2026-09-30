@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { FRESH_TICKETS } from "../api/testing";
 import { formatRefillTime } from "./refill";
-import { describeTickets, nextKind, nextRefill, ticketView, type Tickets } from "./tickets";
+import { describeTickets, nextKind, ticketView, type Tickets } from "./tickets";
 
 /** A moment in UTC; Tokyo is 9 hours ahead, so 15:00 UTC is Tokyo's midnight. */
 const utc = (d: number, h: number, m = 0) => new Date(Date.UTC(2026, 8, d, h, m));
@@ -15,12 +15,6 @@ const use = (dayIndex: number, kind: Use["kind"], outline?: string): Use => ({
 });
 
 describe("tickets", () => {
-  it("finds the next Tokyo midnight", () => {
-    expect(nextRefill(utc(24, 14, 59))).toEqual(utc(24, 15));
-    expect(nextRefill(utc(24, 15))).toEqual(utc(25, 15));
-    expect(nextRefill(utc(30, 16))).toEqual(new Date(Date.UTC(2026, 9, 1, 15)));
-  });
-
   it("spends daily tickets before reserve ones, then runs out", () => {
     expect(nextKind({ ...FRESH_TICKETS, reserveLeft: 2 })).toBe("daily");
     expect(nextKind({ ...FRESH_TICKETS, dailyLeft: 0, reserveLeft: 2 })).toBe("reserve");

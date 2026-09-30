@@ -6,7 +6,6 @@ import { MARKUP_LIKE_NAME, sticker as apiSticker } from "../../api/testFixtures"
 import type { Sticker, Tickets } from "@drawing-app/api/client";
 import { formatDay, formatDuration, formatNo } from "../../stickers/format";
 import { formatRefillTime } from "../../tickets/refill";
-import { nextRefill } from "../../tickets/tickets";
 import { useTickets } from "../../tickets/useTickets";
 import { ReducedMotion } from "../../ui/testing";
 import type { SealedSticker } from "./makeSticker";
@@ -292,7 +291,7 @@ describe("SealCeremony", () => {
     playThrough();
     expect(button("Go to sticker board").classList.contains("key")).toBe(true);
     expect(host.querySelector(".sealed-card__refill")?.textContent).toBe(
-      `New daily tickets at ${formatRefillTime(nextRefill(NOW))}`,
+      `New daily tickets at ${formatRefillTime(new Date(FRESH_TICKETS.nextRefillAt))}`,
     );
     // Small label stock, not a second full-width button.
     expect(button("Buy reserve tickets").classList.contains("label-btn--sm")).toBe(true);
@@ -302,7 +301,7 @@ describe("SealCeremony", () => {
   });
 
   it("says when daily tickets come back only when this sticker used the day's last one", async () => {
-    const refill = `New daily tickets at ${formatRefillTime(nextRefill(NOW))}`;
+    const refill = `New daily tickets at ${formatRefillTime(new Date(FRESH_TICKETS.nextRefillAt))}`;
     await seal(3, "alice", { reserveLeft: 2 });
     playThrough();
     expect(host.textContent).toContain(refill);

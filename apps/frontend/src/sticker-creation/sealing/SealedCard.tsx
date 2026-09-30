@@ -7,13 +7,7 @@ import type { Sticker } from "@drawing-app/api/client";
 import { toSticker } from "../../api/views";
 import { formatRefillTime } from "../../tickets/refill";
 import { TicketStubs } from "../../tickets/TicketStubs";
-import {
-  describeTickets,
-  nextRefill,
-  spentIndex,
-  ticketView,
-  type Tickets,
-} from "../../tickets/tickets";
+import { describeTickets, spentIndex, ticketView, type Tickets } from "../../tickets/tickets";
 import { useTickets } from "../../tickets/useTickets";
 import { Key } from "../../ui/Key";
 import { LabelButton } from "../../ui/LabelButton";
@@ -47,7 +41,7 @@ interface Props {
 function TicketRow({ tickets, peel }: { tickets: Tickets; peel: boolean }) {
   const { t } = useTranslation();
   const view = ticketView(tickets);
-  const refillTime = formatRefillTime(nextRefill(new Date()));
+  const refillTime = formatRefillTime(new Date(tickets.nextRefillAt));
   // The ticket this sticker was drawn on is the day's latest.
   const usedLastDaily = view.show === "reserve" && tickets.usedToday.at(-1)?.kind === "daily";
   return (

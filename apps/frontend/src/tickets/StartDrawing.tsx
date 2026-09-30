@@ -8,7 +8,7 @@ import { TearLine } from "../ui/TearLine";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { formatRefillTime } from "./refill";
 import { TicketArt } from "./TicketArt";
-import { nextRefill, ticketView, type TicketKind, type Tickets } from "./tickets";
+import { ticketView, type TicketKind, type Tickets } from "./tickets";
 import "./tickets.css";
 
 interface Props {
@@ -98,7 +98,7 @@ export function StartDrawing({
               <strong>{t(($) => $.tickets.startDrawing.reserve.used)}</strong>{" "}
               <span className="out-of-tickets__quiet">
                 {t(($) => $.tickets.startDrawing.reserve.refillAt, {
-                  time: formatRefillTime(nextRefill(new Date())),
+                  time: formatRefillTime(new Date(tickets.nextRefillAt)),
                 })}
               </span>
             </>

@@ -1,4 +1,4 @@
-import { TOKYO_UTC_OFFSET_MS, type TicketKind, type Tickets } from "@drawing-app/api/client";
+import type { TicketKind, Tickets } from "@drawing-app/api/client";
 import { i18next } from "../i18n/i18n";
 import { formatRefillTime } from "./refill";
 
@@ -18,13 +18,6 @@ export type TicketView =
   | { show: "reserve"; reserve: number }
   /** Nothing left: the day's used stubs, until the refill. */
   | { show: "none"; stubs: DailyTicket[]; reserve: 0; refillAt: Date };
-
-/** The next midnight in Tokyo. */
-export function nextRefill(now: Date): Date {
-  const tokyo = new Date(now.getTime() + TOKYO_UTC_OFFSET_MS);
-  const midnight = Date.UTC(tokyo.getUTCFullYear(), tokyo.getUTCMonth(), tokyo.getUTCDate() + 1);
-  return new Date(midnight - TOKYO_UTC_OFFSET_MS);
-}
 
 export const ticketsLeft = (t: Tickets) => t.dailyLeft + t.reserveLeft;
 
