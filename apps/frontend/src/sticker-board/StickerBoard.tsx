@@ -12,6 +12,7 @@ import {
 import { useMyAgeStatus } from "../identity/useMyAgeStatus";
 import { veiledFor } from "../stickers/nsfw";
 import { flushSync } from "react-dom";
+import { tokyoTicketDay } from "@drawing-app/api/client";
 import { apiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
 import { useApiQuery } from "../api/useApiQuery";
@@ -38,7 +39,7 @@ import { formatHandle, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { playStick } from "../stickers/stick";
 import { DrawKeyTickets } from "../tickets/DrawKeyTickets";
-import { describeTickets, ticketDay } from "../tickets/tickets";
+import { describeTickets } from "../tickets/tickets";
 import { useDrawFromBoard } from "../tickets/useDrawFromBoard";
 import { useTickets } from "../tickets/useTickets";
 import { Key } from "../ui/Key";
@@ -134,12 +135,12 @@ const settled = new Set<string>();
  * the next-newest once it's touched.
  */
 function curledToday(stickers: readonly BoardSticker[], now: Date) {
-  const today = ticketDay(now);
+  const today = tokyoTicketDay(now);
   let newest: BoardSticker | undefined;
   for (const s of stickers)
     if (
       !settled.has(s.id) &&
-      ticketDay(new Date(s.createdAt)) === today &&
+      tokyoTicketDay(new Date(s.createdAt)) === today &&
       (!newest || s.createdAt > newest.createdAt)
     )
       newest = s;

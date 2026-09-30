@@ -5,12 +5,12 @@
  * given, which opens it among the stickers you gave. You page the stack, pull a sheet out over the board, spread every sheet out, peel stickers
  * onto the board and put them back. Everything is in board pixels, in the board's stacking context.
  */
+import { tokyoTicketDay } from "@drawing-app/api/client";
 import { i18next } from "../../i18n/i18n";
 import { timeOurWork } from "../../performance/performanceRecorder";
 import { formatNo } from "../../stickers/format";
 import { lightUp } from "../../stickers/light";
 import type { StickerUrls } from "../../stickers/stickerUrls";
-import { ticketDay } from "../../tickets/tickets";
 import { packSheets, type PackedItem, type Shape } from "./sheetPacking";
 import { knownShape, stickerShape } from "./stickerShape";
 import { countVisit } from "./traySeen";
@@ -243,7 +243,7 @@ const cssUrl = (url: string) => `url("${url}")`;
 const px = (v: number) => `${v.toFixed(1)}px`;
 const isShape = (s: Shape | undefined): s is Shape => s !== undefined;
 const maskOf = (s: Slot) => s.urls.mask ?? s.urls.png;
-const dayOf = (t: number) => ticketDay(new Date(t));
+const dayOf = (t: number) => tokyoTicketDay(new Date(t));
 const monthDay = (t: number) => {
   const d = new Date(t);
   return `${d.getMonth() + 1}.${d.getDate()}`;

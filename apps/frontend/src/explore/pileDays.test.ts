@@ -1,7 +1,6 @@
-import type { Explore } from "@drawing-app/api/client";
+import { TOKYO_UTC_OFFSET_MS, tokyoTicketDay, type Explore } from "@drawing-app/api/client";
 import { describe, expect, it } from "vitest";
 import { people, sticker } from "../api/testFixtures";
-import { nextRefill, ticketDay } from "../tickets/tickets";
 import { dayBadge, dayKey, pileDays, spokenDay, ticketDayNumber } from "./pileDays";
 
 const explore = (overrides: Partial<Explore>): Explore => ({
@@ -18,9 +17,9 @@ const explore = (overrides: Partial<Explore>): Explore => ({
 
 describe("ticketDayNumber", () => {
   it("turns over with the ticket day, at midnight in Tokyo", () => {
-    const midnight = nextRefill(new Date("2026-09-26T12:00:00Z")).getTime();
+    const midnight = Date.parse("2026-09-27") - TOKYO_UTC_OFFSET_MS;
     for (const ms of [midnight - 1, midnight]) {
-      expect(dayKey(ticketDayNumber(ms))).toBe(ticketDay(new Date(ms)));
+      expect(dayKey(ticketDayNumber(ms))).toBe(tokyoTicketDay(new Date(ms)));
     }
     expect(ticketDayNumber(midnight) - ticketDayNumber(midnight - 1)).toBe(1);
   });
