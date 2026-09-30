@@ -391,20 +391,25 @@ function Gift({
                 })}
               </p>
             )}
+            {/* Busy, the key keeps its face and its focus: aria-disabled, never disabled. The handlers
+                ignore a second press. */}
             <Key
               tone="grape"
               size="lg"
               icon={<HandHeart />}
               onClick={onAccept}
-              disabled={receiving}
               aria-busy={receiving || undefined}
+              aria-disabled={receiving || undefined}
               data-autofocus
             >
               {receiving ? t(($) => $.receiving.gift.accepting) : t(($) => $.receiving.gift.accept)}
             </Key>
-            <QuietLink onClick={onNotNow} disabled={receiving}>
+            <QuietLink onClick={onNotNow} aria-disabled={receiving || undefined}>
               <X /> {t(($) => $.receiving.gift.notNow)}
             </QuietLink>
+            <p className="visually-hidden" role="status">
+              {receiving && t(($) => $.receiving.gift.accepting)}
+            </p>
             <p className="receive-gift__terms">
               <Trans
                 i18nKey={($) => $.receiving.termsLine}

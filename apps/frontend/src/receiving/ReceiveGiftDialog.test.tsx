@@ -211,7 +211,13 @@ describe("ReceiveGiftDialog", () => {
     const receiveGift = vi.fn(() => Promise.resolve(received));
     await unpackage(receiveGift);
     press("Accept");
-    await act(async () => button("Accepting…")?.click());
+    // Busy, the key keeps its face and its focus, and a second press does nothing.
+    const busy = button("Accepting…");
+    expect(busy?.disabled).toBe(false);
+    expect(busy?.getAttribute("aria-busy")).toBe("true");
+    expect(busy?.getAttribute("aria-disabled")).toBe("true");
+    expect(document.activeElement).toBe(busy);
+    await act(async () => busy?.click());
     await settle();
     await settle(1000);
     expect(receiveGift).toHaveBeenCalledTimes(1);
