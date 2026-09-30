@@ -617,9 +617,9 @@ describe("StickerTray", () => {
 
   describe("on a board of this height", () => {
     /** How much the stack is shrunk, from 1, with the tray open on a board this tall. */
-    const shrinkAt = async (height: number) => {
+    const shrinkAt = async (height: number, stickers = 30) => {
       vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(height);
-      render(manyStickers(30));
+      render(manyStickers(stickers));
       await openTray();
       return Number(stackEl()?.style.getPropertyValue("--shrink") || 1);
     };
@@ -632,6 +632,24 @@ describe("StickerTray", () => {
       const shrink = await shrinkAt(480);
       expect(shrink).toBeLessThan(1);
       expect(shrink).toBeGreaterThan(0);
+    });
+
+    it.each([480, 700])("spreads every sheet inside the board", async (height) => {
+      // Enough sheets for the +N button and two rows in the spread.
+      await shrinkAt(height, 60);
+      act(() => board.querySelector<HTMLElement>(".tray__depth")?.click());
+      const cells = [...board.querySelectorAll<HTMLElement>(".tray__cell")];
+      expect(cells.length).toBeGreaterThan(3);
+      for (const cell of cells) {
+        const [, y, turn, k] =
+          /translate\([\d.-]+px,([\d.-]+)px\) rotate\(([\d.-]+)deg\) scale\(([\d.]+)\)/
+            .exec(cell.style.transform)
+            ?.map(Number) ?? [NaN];
+        expect(turn).toBeDefined();
+        // Below the header and above the board's foot.
+        expect(y).toBeGreaterThanOrEqual(0);
+        expect(y + 364 * k).toBeLessThanOrEqual(height);
+      }
     });
   });
 

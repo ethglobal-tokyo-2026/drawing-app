@@ -307,14 +307,14 @@ function spreadCells(n: number, W: number, H: number) {
   const margin = 18;
   const gap = 14;
   const cols = n <= 1 ? 1 : n <= 2 ? 2 : n <= 6 ? 3 : 4;
+  const rows = Math.ceil(n / cols);
   const k = Math.min(
     n <= 2 ? 0.95 : 0.8,
     (W - margin * 2 - gap * (cols - 1)) / cols / SHEET.w,
-    (H - TOP - 30) / SHEET.h,
+    (H - TOP - 30 - (rows - 1) * 18) / (rows * SHEET.h),
   );
   const cw = SHEET.w * k;
   const ch = SHEET.h * k;
-  const rows = Math.ceil(n / cols);
   const totalH = rows * ch + (rows - 1) * 18;
   const left0 = (W - (cols * cw + (cols - 1) * gap)) / 2;
   const top0 = Math.max(TOP - 6, (H - totalH) / 2);
