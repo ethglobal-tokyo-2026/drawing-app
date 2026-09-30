@@ -1,13 +1,16 @@
 /* ---------- The handle prompt, on the bare paper before the app opens ---------- */
 
+/* One track that can shrink, so a long handle in the key or the field never widens the form past the
+   screen: the gate is fixed and doesn't scroll. */
 .handle-prompt__form {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   justify-items: center;
   gap: 10px;
   width: min(320px, 100%);
 }
 
-/* White label stock with an aqua halo, like Explore's search. */
+/* White label stock, as Explore's search: it takes the house focus ring while you type in it. */
 .handle-prompt__field {
   display: flex;
   align-items: center;
@@ -18,11 +21,12 @@
   border: 1px solid var(--rule-strong);
   border-radius: var(--r-label);
   background: var(--canvas);
-  box-shadow: 0 0 0 4px var(--aqua-soft);
+  box-shadow: var(--shadow-label);
 }
 
-.handle-prompt__field:focus-within {
-  border-color: var(--aqua-deep);
+.handle-prompt__field:has(input:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
 }
 
 .handle-prompt__field input {
@@ -39,6 +43,10 @@
   user-select: text;
 }
 
+.handle-prompt__field input::placeholder {
+  color: var(--graphite);
+}
+
 /* A problem stays until the next try; it never vanishes as a toast. */
 .handle-prompt__problem {
   min-height: 1.4em;
@@ -46,4 +54,17 @@
   color: var(--ink);
   font-size: 13px;
   text-wrap: pretty;
+}
+
+/* The key's label names the handle, so a long one shortens with an ellipsis rather than growing the
+   key past the form. The field above holds the whole handle. */
+.handle-prompt__key {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.handle-prompt__use {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
