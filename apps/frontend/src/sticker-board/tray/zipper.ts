@@ -1238,16 +1238,27 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
     emit("drag", { progress: st.p, velocity: st.fingerV });
     wake();
   };
-  const onUp = (e: PointerEvent) => {
+  /** The hand leaves the pull. A touch the system took was never let go: it runs back where it began. */
+  const letGo = (e: PointerEvent, cancelled: boolean) => {
     const g = st.grab;
     if (!g || g.id !== e.pointerId) return;
     st.grab = null;
     root.classList.remove("is-dragging");
-    const tap = g.moved < TAP.px && win.performance.now() - g.t0 < TAP.ms;
-    const open = tap ? !g.startOpen : releaseOpens(st.p, st.fingerV, g.startOpen, o);
-    st.pv = clamp(st.fingerV, -RELEASE_MAX, RELEASE_MAX);
+    const tap = !cancelled && g.moved < TAP.px && win.performance.now() - g.t0 < TAP.ms;
+    const open = cancelled
+      ? g.startOpen
+      : tap
+        ? !g.startOpen
+        : releaseOpens(st.p, st.fingerV, g.startOpen, o);
+    if (!cancelled) st.pv = clamp(st.fingerV, -RELEASE_MAX, RELEASE_MAX);
     emit("release", { progress: st.p, open, tap });
     void run(open);
+  };
+  const onUp = (e: PointerEvent) => letGo(e, false);
+  const onCancel = (e: PointerEvent) => letGo(e, true);
+  // Capture handed to the slider from the part touched isn't lost; only the slider's own is.
+  const onLostCapture = (e: PointerEvent) => {
+    if (e.target === slider) letGo(e, true);
   };
   const onEnter = (e: PointerEvent) => {
     if (e.pointerType !== "mouse") return;
@@ -1275,7 +1286,8 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
   slider.addEventListener("pointerdown", onDown);
   slider.addEventListener("pointermove", onMove);
   slider.addEventListener("pointerup", onUp);
-  slider.addEventListener("pointercancel", onUp);
+  slider.addEventListener("pointercancel", onCancel);
+  slider.addEventListener("lostpointercapture", onLostCapture);
   slider.addEventListener("pointerenter", onEnter);
   slider.addEventListener("pointerleave", onLeave);
   slider.addEventListener("click", onClick);
@@ -1445,7 +1457,8 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
       slider.removeEventListener("pointerdown", onDown);
       slider.removeEventListener("pointermove", onMove);
       slider.removeEventListener("pointerup", onUp);
-      slider.removeEventListener("pointercancel", onUp);
+      slider.removeEventListener("pointercancel", onCancel);
+      slider.removeEventListener("lostpointercapture", onLostCapture);
       slider.removeEventListener("pointerenter", onEnter);
       slider.removeEventListener("pointerleave", onLeave);
       slider.removeEventListener("click", onClick);
