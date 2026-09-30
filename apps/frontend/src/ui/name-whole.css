@@ -1,0 +1,7 @@
+/* A name inside a balanced title stays on one line unless it's longer than the line, and then it
+   breaks where it must. */
+.name-whole {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
