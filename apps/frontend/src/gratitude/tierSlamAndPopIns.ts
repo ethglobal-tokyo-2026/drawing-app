@@ -1,6 +1,6 @@
 import { isPerformanceRecorderOn, notePerformance } from "../performance/performanceRecorder";
 import type { Tier } from "./combo";
-import { EASE_SPRING, clamp } from "./easing";
+import { EASE_SPRING, clamp } from "../ui/easing";
 import { FEEL_CONFIG } from "./gameConfig";
 import type { HeartBox } from "./miniHeartPhysics";
 import { POP_IN_WORDS, createPopInPicker, type PopInBank } from "./popInWords";

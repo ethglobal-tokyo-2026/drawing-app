@@ -1,4 +1,4 @@
-import { clamp, easeOutCubic, lerp } from "./easing";
+import { clamp, easeOutCubic, lerp } from "../ui/easing";
 import { FEEL_CONFIG } from "./gameConfig";
 import { HEART_VIEWBOX, heartOutline } from "./heartArt";
 

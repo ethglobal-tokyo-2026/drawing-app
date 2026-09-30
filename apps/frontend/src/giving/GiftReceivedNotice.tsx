@@ -4,6 +4,7 @@ import type { PersonView, StickerView } from "../api/views";
 import { useTranslation } from "../i18n/react";
 import { ArrowRight, GratitudeIcon, StickerBoardIcon } from "../icons";
 import { formatHandle, formatMonthDay } from "../stickers/format";
+import { EASE_OUT } from "../ui/easing";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { useBackToClose } from "../ui/useBackToClose";
@@ -21,8 +22,6 @@ interface Props {
   onClose: () => void;
 }
 
-/** The --ease-out curve, spelled out: Web Animations can't read CSS variables. */
-const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 const ARC_MS = 820;
 /** The flying sticker's size. */
 const FLYER_PX = 56;

@@ -1,3 +1,5 @@
+import { clamp01 } from "../ui/easing";
+
 /**
  * The pull tab's physics: a drag tears the strip with resistance through a spring, the tear front
  * advances in ticks, and past the snap the tab tears free. Tears run from 0 (sealed) to 1.
@@ -25,8 +27,6 @@ export const PULL = {
 const MAX_STEP_MS = 32;
 /** Closer than these to the target, the spring has settled. */
 const REST = { tear: 0.0008, velocity: 0.002 };
-
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 /** The tear a drag asks for: from where it started, dx along the strip, clamped to 0..1. */
 export function tearTarget(start: number, dx: number): number {

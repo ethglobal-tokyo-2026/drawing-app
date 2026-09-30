@@ -11,6 +11,7 @@ import { timeOurWork } from "../../performance/performanceRecorder";
 import { formatMonthDay, formatNo } from "../../stickers/format";
 import { lightUp } from "../../stickers/light";
 import type { StickerUrls } from "../../stickers/stickerUrls";
+import { EASE_OUT, EASE_PEEL, clamp, lerp } from "../../ui/easing";
 import { packSheets, type PackedItem, type Shape } from "./sheetPacking";
 import { knownShape, stickerShape } from "./stickerShape";
 import { countVisit } from "./traySeen";
@@ -226,8 +227,6 @@ const CRACK = 0.12;
 const FILTERS: readonly Filter[] = ["all", "mine", "gifts"];
 /** Where the spread lays each sheet down: a slight turn apiece. */
 const SPREAD_TURNS = [-1.2, 0.8, -0.5, 1.1, -0.9, 0.6, 1.3, -0.7];
-const EASE_OUT = "cubic-bezier(.16,1,.3,1)";
-const EASE_PEEL = "cubic-bezier(.2,.7,.2,1)";
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 const SVG_NS = "http://www.w3.org/2000/svg";
 /** Phosphor's Stack and X icons, bold. */
@@ -237,8 +236,6 @@ export const ICONS = {
   x: "M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z",
 };
 
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const cssUrl = (url: string) => `url("${url}")`;
 const px = (v: number) => `${v.toFixed(1)}px`;
 const isShape = (s: Shape | undefined): s is Shape => s !== undefined;

@@ -1,5 +1,6 @@
 import { useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import { useTranslation } from "../../i18n/react";
+import { clamp01 } from "../../ui/easing";
 import { Sheet } from "../../ui/Sheet";
 import { hexToHsv, hsvToHex, type Hsv } from "../canvas/color";
 import { colorName, SWATCHES } from "./palette";
@@ -13,7 +14,6 @@ const LIFT_TO = 0.85;
 const HUE_STEP = 6;
 const STEP = 0.05;
 
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const SWATCH_HEXES = SWATCHES.map((s) => s.hex);
 
 /** Where the pad's cursor and the brightness thumb sit for a color, as CSS draws them. */

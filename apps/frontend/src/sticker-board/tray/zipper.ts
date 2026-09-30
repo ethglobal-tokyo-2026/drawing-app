@@ -14,6 +14,7 @@
  */
 import { i18next } from "../../i18n/i18n";
 import { timeOurWork } from "../../performance/performanceRecorder";
+import { clamp, lerp } from "../../ui/easing";
 import "./zipper.css";
 
 type ZipperState = "rest" | "drag" | "run" | "hint";
@@ -300,8 +301,6 @@ const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 let uid = 0;
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 /** An ease from nothing to the full span that starts at slope `m0`, in spans, and arrives flat: a gentle
  * start makes the V at the slider, a steep one the tight corner of a mouth spread flat. */
 const hermite = (t: number, m0: number) => {

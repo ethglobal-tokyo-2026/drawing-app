@@ -12,6 +12,7 @@ import { formatDay, formatHandle, formatMonthDay, formatNo } from "../stickers/f
 import { useLight } from "../stickers/light";
 import { ArtistChip } from "../stickers/ArtistChip";
 import { StickerFigure } from "../stickers/StickerFigure";
+import { EASE_OUT } from "../ui/easing";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
@@ -50,9 +51,6 @@ interface Props {
    */
   ownerId?: string;
 }
-
-/** The --ease-out curve, spelled out: Web Animations can't read CSS variables. */
-const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 /** The ground fades in, the strip slides in from the left, then the fine print and Give rise. */
 function enterAround(detail: HTMLElement): Animation[] {

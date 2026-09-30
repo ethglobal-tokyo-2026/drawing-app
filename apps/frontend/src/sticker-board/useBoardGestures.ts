@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObje
 import { formatNo } from "../stickers/format";
 import { sheenIn, sweepSheen } from "../stickers/resinSheen";
 import { playStick } from "../stickers/stick";
+import { EASE_PEEL } from "../ui/easing";
 import type { Placement } from "./placement";
 import {
   dragBounds,
@@ -59,7 +60,6 @@ type Gesture =
 
 /** A tap on bare board may wander this far and still deselect. */
 const TAP_SLOP = 8;
-const EASE_PEEL = "cubic-bezier(0.2, 0.7, 0.2, 1)";
 /** Removed, a sticker rides to the tray's edge, this far in from the board's. */
 const STOW_EDGE = 30;
 const ARROWS: Record<string, Pt> = {
