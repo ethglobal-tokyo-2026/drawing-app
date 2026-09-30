@@ -8,10 +8,10 @@ export function addDays(day: string, days: number): string {
 }
 
 /**
- * Days run midnight to midnight, Tokyo time, for everyone: daily tickets, streaks, and Explore's
- * today and week. Japan keeps no daylight saving time.
+ * Days run midnight to midnight, Tokyo time, for everyone: daily tickets, streaks, Explore's today
+ * and week, and every date the app prints. Japan keeps no daylight saving time.
  */
-const TOKYO_UTC_OFFSET_MS = 9 * 60 * 60 * 1000;
+export const TOKYO_UTC_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 /** The ticket day `at` falls in: its `YYYY-MM-DD` in Tokyo. */
 export const tokyoTicketDay = (at: Date): string => dayKey(at.getTime() + TOKYO_UTC_OFFSET_MS);

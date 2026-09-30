@@ -2,9 +2,10 @@ import { GiveIcon, X } from "../icons";
 import { Suspense, useRef, useState } from "react";
 import { useMe } from "../api/meContext";
 import type { AgeStatus } from "@drawing-app/api/client";
-import { useTranslation } from "../i18n/react";
+import { Trans, useTranslation } from "../i18n/react";
 import { LIFF_ID } from "../line/liff";
 import { formatHandle, formatNo } from "../stickers/format";
+import { Handle } from "../stickers/Handle";
 import { canGiveTo } from "../stickers/nsfw";
 import { useKeptStickers, type KeptSticker } from "../stickers/useKeptStickers";
 import { Key } from "../ui/Key";
@@ -105,7 +106,12 @@ export function GiveSheet({ to, toId, toAgeStatus, onClose }: Props) {
             />
           )}
           {stickers?.some((s) => !canGiveTo(s, toAgeStatus)) && (
-            <p className="fine giving__nsfw-note">{t(($) => $.giving.nsfw.adultsOnly, { name })}</p>
+            <p className="fine giving__nsfw-note">
+              <Trans
+                i18nKey={($) => $.giving.nsfw.adultsOnly}
+                components={{ name: <Handle name={name} /> }}
+              />
+            </p>
           )}
           {!sender && (
             <p className="giving__problem" role="alert">

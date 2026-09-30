@@ -21,6 +21,11 @@ export const shop = {
       en: "You have {{count}} reserve tickets.",
       ja: "有償チケットを{{count}}枚持っています。",
     },
+    /** Reserve tickets section, in the held tickets' place, when your tickets didn't load, so the Shop can't say how many you hold; `reason` is why, in the app's language, before a Try again link */
+    heldProblem: {
+      en: "Couldn’t load your tickets: {{reason}}",
+      ja: "チケットを読み込めませんでした：{{reason}}",
+    },
     /** Reserve tickets section: the one-ticket price, while a bigger pack is discounted; `price` is in yen */
     priceWithPacks: {
       en: "{{price}} each, less in packs",
@@ -30,6 +35,23 @@ export const shop = {
     price: { en: "{{price}} each", ja: "1枚{{price}}" },
     /** Reserve tickets section: the blue key that opens the reserve ticket checkout */
     buy: { en: "Buy reserve tickets", ja: "有償チケットを買う" },
+  },
+  /** The strip under the Shop's title for a paid pack whose tickets weren't added, which opens the reserve ticket checkout on that payment */
+  unadded: {
+    /** Shop, the strip under the title while this phone keeps a payment whose tickets aren't added yet: its title */
+    title: { en: "Tickets not added yet", ja: "チケットが未追加です" },
+    /** Shop, that strip: the line under its title; `pack` is what was paid for, such as "3 tickets", and `price` is what it cost in yen */
+    line: {
+      en: "{{pack}}, {{price}}. Tap to add them; it won’t charge you twice.",
+      ja: "{{pack}}（{{price}}）。タップして追加できます。二重に請求されることはありません。",
+    },
+    /** Shop, the strip once the server refused that payment for good: its title */
+    refusedTitle: { en: "Tickets can’t be added", ja: "チケットを追加できません" },
+    /** Shop, that strip: the line under its title, since the checkout says why once; `pack` and `price` as above */
+    refusedLine: {
+      en: "{{pack}}, {{price}}. Tap to see why.",
+      ja: "{{pack}}（{{price}}）。タップして理由を確認できます。",
+    },
   },
   /** The Sui credit, under the checkout's Pay key and at the foot of the reserve tickets section; `<logo/>` is Sui's logo, which Japanese puts first */
   paymentsOn: { en: "Payments on <logo/>", ja: "<logo/>で決済" },
@@ -47,11 +69,14 @@ export const shop = {
         en: "The finish your stickers are sealed with.",
         ja: "シールを仕上げるときの表面加工です。",
       },
-      /** Laminates shelf: the swatches' names, gloss first as the one every sticker has now */
       items: {
+        /** Laminates shelf: the first swatch's name, the laminate every sticker is sealed with now */
         gloss: { en: "Gloss", ja: "グロス" },
+        /** Laminates shelf: the matte laminate swatch's name, coming soon */
         matte: { en: "Matte", ja: "マット" },
+        /** Laminates shelf: the glitter laminate swatch's name, coming soon */
         glitter: { en: "Glitter", ja: "ラメ" },
+        /** Laminates shelf: the prism laminate swatch's name, coming soon */
         prism: { en: "Prism", ja: "プリズム" },
       },
     },
@@ -60,11 +85,14 @@ export const shop = {
       title: { en: "Brushes", ja: "ブラシ" },
       /** Brushes shelf: the line under its name */
       lead: { en: "More ways to lay down ink.", ja: "もっといろいろな線がかけます。" },
-      /** Brushes shelf: the swatches' names, the brush first as the one the drawing screen has now */
       items: {
+        /** Brushes shelf: the first swatch's name, the brush the drawing screen has now */
         brush: { en: "Brush", ja: "ブラシ" },
+        /** Brushes shelf: the marker swatch's name, coming soon */
         marker: { en: "Marker", ja: "マーカー" },
+        /** Brushes shelf: the fineliner swatch's name, coming soon */
         fineliner: { en: "Fineliner", ja: "ミリペン" },
+        /** Brushes shelf: the pixel pen swatch's name, coming soon */
         pixelPen: { en: "Pixel pen", ja: "ドットペン" },
       },
     },
@@ -76,11 +104,14 @@ export const shop = {
         en: "The foil your stickers wear on other people’s sticker boards.",
         ja: "ほかの人のシールボードで、あなたのシールのふちに光るホイルです。",
       },
-      /** Backing foils shelf: the swatches' names, holo first as the foil every sticker wears now */
       items: {
+        /** Backing foils shelf: the first swatch's name, the foil every sticker wears now */
         holo: { en: "Holo", ja: "ホロ" },
+        /** Backing foils shelf: the gold foil swatch's name, coming soon */
         gold: { en: "Gold", ja: "ゴールド" },
+        /** Backing foils shelf: the silver foil swatch's name, coming soon */
         silver: { en: "Silver", ja: "シルバー" },
+        /** Backing foils shelf: the rose gold foil swatch's name, coming soon */
         roseGold: { en: "Rose gold", ja: "ローズゴールド" },
       },
     },

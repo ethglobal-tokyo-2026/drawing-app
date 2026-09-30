@@ -3,7 +3,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { Clock, LineChatMenu } from "../deps.ts";
 import { logFailure, logInfo } from "../diagnostics.ts";
 import type { LineMessaging } from "../services/lineMessaging.ts";
-import { ticketsOf } from "../tickets/tickets.ts";
+import { ticketsLeftOf } from "../tickets/tickets.ts";
 import { chatMenuFor, menuToLink, type ChatMenuIds, type ChatMenuOffReason } from "./menus.ts";
 
 /** The chat menu with nothing to link with: every call does nothing, and `link` says why. */
@@ -53,7 +53,7 @@ export function createLineChatMenu({
       .where(and(eq(users.id, userId), isNull(users.deletedAt)))
       .get();
     if (!user?.lineUserId) return null;
-    const wanted = chatMenuFor(ticketsOf(db, userId, clock.now()));
+    const wanted = chatMenuFor(ticketsLeftOf(db, userId, clock.now()));
     return { lineUserId: user.lineUserId, toLink: menuToLink(ids, user.language, wanted) };
   }
 

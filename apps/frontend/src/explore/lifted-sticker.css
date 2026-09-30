@@ -110,7 +110,8 @@
 }
 
 .lifted-sticker__turn[aria-disabled="true"] {
-  color: rgba(110, 104, 120, 0.4);
+  color: var(--graphite);
+  opacity: 0.4;
   cursor: default;
 }
 

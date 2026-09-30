@@ -5,13 +5,15 @@ import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { errorMessage } from "../i18n/errorMessage";
 import { currentLanguage, i18next } from "../i18n/i18n";
 import { keepChosenLanguage, readChosenLanguage } from "../i18n/language";
+import { STILL_OPENING_MS } from "../line/GateParts";
 import type { LineClaims } from "../line/liff";
 import { ApiError } from "./apiClient";
 import type { Me } from "@drawing-app/api/client";
 import { openEarly, type EarlySession } from "./earlySession";
 import type { SessionApi } from "./httpApi";
 import { useMe } from "./meContext";
-import { SessionGate } from "./SessionGate";
+import { RECOVERY_HOLD_MS, SessionGate } from "./SessionGate";
+import { reportSessionLost } from "./sessionLoss";
 import { emptyApi } from "./testing";
 
 const me: Me = {
@@ -292,6 +294,51 @@ describe("SessionGate", () => {
     await settle();
     expect(host.textContent).toContain("Board of @alice2");
   });
+
+  it("names a LINE name that can't be the handle as it is, without putting an @ in front of it", async () => {
+    const host = render(
+      session({
+        signIn: () =>
+          Promise.resolve({
+            me: { ...me, handle: null, needsHandle: true, lineDisplayName: "Ali@ce" },
+          }),
+      }),
+    );
+    await settle();
+    const lead = host.querySelector(".line-gate__lead")?.textContent ?? "";
+    expect(lead).toContain("Ali@ce");
+    expect(lead).not.toContain("@Ali@ce");
+  });
+
+  it("keeps the handle key lit while the handle saves, and takes no second try", async () => {
+    let finish = (_saved: { me: Me }) => {};
+    const setHandle = vi.fn<SessionApi["setHandle"]>(
+      () => new Promise((resolve) => (finish = resolve)),
+    );
+    const host = render(
+      session({
+        signIn: () => Promise.resolve({ me: { ...me, handle: null, needsHandle: true } }),
+        setHandle,
+      }),
+    );
+    await settle();
+    const input = host.querySelector("input");
+    if (!input) throw new Error("no handle field");
+    type(input, "alice2");
+    submit(host);
+    await settle();
+    const key = host.querySelector<HTMLButtonElement>("button[type=submit]");
+    expect(key?.disabled).toBe(false);
+    expect(key?.getAttribute("aria-busy")).toBe("true");
+    expect(key?.getAttribute("aria-disabled")).toBe("true");
+
+    submit(host);
+    await settle();
+    expect(setHandle).toHaveBeenCalledOnce();
+    finish({ me: { ...me, handle: "alice2" } });
+    await settle();
+    expect(host.textContent).toContain("Board of @alice2");
+  });
 });
 
 describe("SessionGate with the cookie from the last visit", () => {
@@ -402,5 +449,116 @@ describe("SessionGate with the cookie from the last visit", () => {
     await settle();
     expect(host.querySelector("form")).toBeNull();
     expect(host.textContent).toContain("Board of @alice2");
+  });
+});
+
+describe("SessionGate when a request finds the session gone", () => {
+  const gone = () => new ApiError(401, { error: "signed_out" });
+
+  /** The gate open on Alice, whose session then ends: every check of the cookie after the first says so. */
+  function openThenLose(signIn: SessionApi["signIn"]) {
+    const resume = vi
+      .fn<SessionApi["me"]>()
+      .mockResolvedValueOnce({ me })
+      .mockRejectedValue(gone());
+    const reconnect = vi.fn<() => Promise<void>>().mockResolvedValue();
+    const host = render(session({ me: resume, signIn }), () => "token", reconnect);
+    return { host, reconnect };
+  }
+  const lose = async () => {
+    act(() => reportSessionLost(gone()));
+    await settle();
+  };
+
+  it("signs in again with LINE and reopens the app, once however many requests found it", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const signIn = vi.fn<SessionApi["signIn"]>().mockResolvedValue({ me });
+    const { host } = openThenLose(signIn);
+    await settle();
+    expect(host.textContent).toContain("Board of @alice");
+    expect(signIn).not.toHaveBeenCalled();
+
+    act(() => {
+      reportSessionLost(gone());
+      reportSessionLost(gone());
+    });
+    expect(host.textContent).not.toContain("Board");
+    await settle();
+    expect(signIn).toHaveBeenCalledExactlyOnceWith({ idToken: "token", language: "en" });
+    expect(host.textContent).toContain("Board of @alice");
+  });
+
+  it("asks to reconnect LINE when LINE's ID token has expired too, and doesn't resubmit it", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const signIn = vi
+      .fn<SessionApi["signIn"]>()
+      .mockRejectedValue(new ApiError(401, { error: "line_token_expired" }));
+    const { host, reconnect } = openThenLose(signIn);
+    await settle();
+    await lose();
+    expect(host.querySelector("h1")?.textContent).toBe("Couldn’t sign you in");
+    expect(host.querySelector("button")?.textContent).toBe("Reconnect with LINE");
+    expect(signIn).toHaveBeenCalledOnce();
+    expect(reconnect).not.toHaveBeenCalled();
+    act(() => host.querySelector("button")?.click());
+    await settle();
+    expect(reconnect).toHaveBeenCalledOnce();
+    expect(signIn).toHaveBeenCalledOnce();
+  });
+
+  it("stops at the failure screen, and doesn't loop, when the session is lost again right after", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const signIn = vi.fn<SessionApi["signIn"]>().mockResolvedValue({ me });
+    const { host } = openThenLose(signIn);
+    await settle();
+    await lose();
+    expect(host.textContent).toContain("Board of @alice");
+    await lose();
+    expect(signIn).toHaveBeenCalledOnce();
+    expect(host.textContent).toContain(errorMessage(gone()));
+    expect(host.querySelector("button")?.textContent).toBe("Reconnect with LINE");
+  });
+
+  it("signs in again for a loss long after the last recovery", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.useFakeTimers({ toFake: ["Date"] });
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const signIn = vi.fn<SessionApi["signIn"]>().mockResolvedValue({ me });
+    const { host } = openThenLose(signIn);
+    await settle();
+    await lose();
+    vi.setSystemTime(Date.now() + RECOVERY_HOLD_MS);
+    await lose();
+    expect(signIn).toHaveBeenCalledTimes(2);
+    expect(host.textContent).toContain("Board of @alice");
+  });
+});
+
+describe("SessionGate's waiting and failure screens", () => {
+  it("says it's still opening, in the same status line, once the wait runs long", async () => {
+    vi.useFakeTimers();
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
+    const { signIn } = pendingSignIn(me);
+    const host = render(session({ signIn }));
+    await settle();
+    const status = () => host.querySelector('[role="status"]')?.textContent;
+    expect(status()).toBe("Opening your sticker board…");
+    await act(() => vi.advanceTimersByTimeAsync(STILL_OPENING_MS));
+    expect(status()).toContain("Still opening");
+  });
+
+  it("moves focus to the failure's heading, so it's announced, with the details apart from the message", async () => {
+    const failure = new ApiError(0, { error: "network", detail: "GET /api/me got no answer" });
+    const host = render(session({ signIn: () => Promise.reject(failure) }));
+    await settle();
+    expect(document.activeElement).toBe(host.querySelector("h1"));
+    expect(host.querySelector(".line-gate__lead")?.textContent).toBe(errorMessage(failure));
+    expect(host.querySelector(".line-gate__detail")?.textContent).toContain(
+      "GET /api/me got no answer",
+    );
   });
 });

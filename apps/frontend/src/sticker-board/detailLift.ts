@@ -1,16 +1,13 @@
 import { useEffectEvent, useLayoutEffect, useRef, type RefObject } from "react";
 import { playStick } from "../stickers/stick";
+import { EASE_OUT, EASE_PEEL_POINTS } from "../ui/easing";
 import "./detail-lift.css";
 
 // Motion tokens spelled out: Web Animations can't read CSS variables.
 /** --t-peel: the flight off the board. */
 const PEEL_MS = 280;
-/** --ease-peel's control points. */
-const EASE_PEEL = [0.2, 0.7, 0.2, 1] as const;
 /** --t-stick: the flight back, which is the opening played backward. */
 const STICK_MS = 220;
-/** --ease-out, for a spot fading to or from its ghost. */
-const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 /** On its way the sticker rises and turns toward you, most at this share of the flight's time. */
 const LIFT = { at: 0.35, rise: -8, turnY: -11, perspective: 900 };
@@ -120,7 +117,7 @@ export function splitEasing(
   return { progress: cut[1], before: easing(p0, a, d, cut), after: easing(cut, e, c, p3) };
 }
 
-const LIFT_EASING = splitEasing(EASE_PEEL, LIFT.at);
+const LIFT_EASING = splitEasing(EASE_PEEL_POINTS, LIFT.at);
 
 /**
  * The flyer's frames from the sticker's spot and turn to its place in the view, along --ease-peel.

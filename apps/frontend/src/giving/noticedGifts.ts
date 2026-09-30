@@ -1,5 +1,6 @@
-/** Which received gifts this device has shown the giver's notice for, so each shows once. */
+import { parseStored, readStored, writeStored } from "../ui/deviceStorage";
 
+/** Which received gifts this device has shown the giver's notice for, so each shows once. */
 const KEY = "draw.gifts.noticed";
 
 /** A sticker can come back to you and be given again, so a receive is its sticker and its time. */
@@ -18,21 +19,11 @@ interface NoticeRecord {
 }
 
 function readRecord(): NoticeRecord {
-  let raw: string | null;
-  try {
-    raw = localStorage.getItem(KEY);
-  } catch (error) {
-    // Storage that can't be read can't be started either, so notices go on without a start.
-    console.error(`Can't read ${KEY} on this device`, error);
-    return { noticed: new Set(noticedHere), recorded: true };
-  }
+  const { text: raw, blocked } = readStored(KEY, `Can't read ${KEY} on this device`);
+  // Storage that can't be read can't be started either, so notices go on without a start.
+  if (blocked) return { noticed: new Set(noticedHere), recorded: true };
   if (raw === null) return { noticed: new Set(noticedHere), recorded: startedHere };
-  let value: unknown;
-  try {
-    value = JSON.parse(raw);
-  } catch {
-    value = undefined;
-  }
+  const value = parseStored(raw);
   if (Array.isArray(value) && value.every((k) => typeof k === "string")) {
     return { noticed: new Set([...value, ...noticedHere]), recorded: true };
   }
@@ -40,13 +31,8 @@ function readRecord(): NoticeRecord {
   return { noticed: new Set(noticedHere), recorded: true };
 }
 
-function saveNoticed(noticed: ReadonlySet<string>) {
-  try {
-    localStorage.setItem(KEY, JSON.stringify([...noticed]));
-  } catch (error) {
-    console.error(`Can't save ${KEY} on this device`, error);
-  }
-}
+const saveNoticed = (noticed: ReadonlySet<string>) =>
+  writeStored(KEY, JSON.stringify([...noticed]), `Can't save ${KEY} on this device`);
 
 /**
  * The newest received gift whose notice this device hasn't shown, or null. Reads only. A device

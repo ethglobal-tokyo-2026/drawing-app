@@ -3,11 +3,19 @@ import { act, useLayoutEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "./apiClient";
 import { emptyApi, renderWithApi } from "./testing";
-import { useApiQuery, type Query } from "./useApiQuery";
+import { QueryAnswers, useApiQuery, type Query } from "./useApiQuery";
 
 const probe: { query: Query<string> } = { query: { state: "loading" } };
-function Probe({ id, load }: { id: string; load: (api: ApiClient) => Promise<string> }) {
-  const query = useApiQuery(id, load);
+function Probe({
+  id,
+  load,
+  answers,
+}: {
+  id: string;
+  load: (api: ApiClient) => Promise<string>;
+  answers?: QueryAnswers<string>;
+}) {
+  const query = useApiQuery(id, load, answers);
   useLayoutEffect(() => {
     probe.query = query;
   });
@@ -70,6 +78,21 @@ describe("useApiQuery", () => {
     calls[1]?.resolve("for b");
     await settle();
     expect(probe.query).toMatchObject({ state: "ready", data: "for b" });
+  });
+
+  it("with answers, shows the key's last answer at once on a remount, and loads it again", async () => {
+    const { load, calls } = pending();
+    const answers = new QueryAnswers<string>();
+    const view = renderWithApi(<Probe id="a" load={load} answers={answers} />, emptyApi());
+    unmount = view.unmount;
+    calls[0]?.resolve("first");
+    await settle();
+    view.rerender(null);
+    view.rerender(<Probe id="a" load={load} answers={answers} />);
+    expect(probe.query).toMatchObject({ state: "ready", data: "first" });
+    calls[1]?.resolve("second");
+    await settle();
+    expect(probe.query).toMatchObject({ state: "ready", data: "second" });
   });
 
   it("keeps the last data showing while it refreshes", async () => {

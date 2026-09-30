@@ -42,6 +42,7 @@
   --rule: rgba(28, 24, 36, 0.14); /* hairline kiss-cut rule */
   --rule-strong: rgba(28, 24, 36, 0.26);
   --ink-soft: rgba(28, 24, 36, 0.62);
+  --scrim: rgba(28, 24, 36, 0.46); /* the Ink veil behind a card or dialog */
   /* Graphite for fine text on Liner Deep, where Graphite itself reads only 4.2:1; this reads 5.0:1. */
   --graphite-on-deep: #635d6d;
   --grid-peek: rgba(
@@ -53,6 +54,7 @@
 
   /* Paper stock */
   --liner-deep: #e5e3ec; /* pressed label, binder cover */
+  --cork: #cfa476; /* the stat board's back */
   --liner-lift: #f8f7fb; /* a label lifted off the liner */
 
   /* Flat fields mixed toward the liner (inactive tabs, quiet chips) */
@@ -85,10 +87,16 @@
   --ph-h: 844px;
   --ph-status: 47px;
   --ph-liff: 56px;
-  --ph-tabs: 84px;
   --ph-safe: 34px;
   --ph-radius: 47px;
   --ph-bezel: 11px;
+
+  /* The index-tab strip, which the tabs and the toast above them both read: 10px of paper over the
+     46px tabs, and under them the home indicator's safe area, or 12px where there is none. */
+  --tab-h: 46px;
+  --tabs-pad-top: 10px;
+  --tabs-pad-foot: max(12px, env(safe-area-inset-bottom));
+  --tabs-strip: calc(var(--tabs-pad-top) + var(--tab-h) + var(--tabs-pad-foot));
 
   /* Layers inside a phone */
   --z-screen: 1;
@@ -130,6 +138,25 @@
   --foil-aqua: #5ed3d8;
   --foil-sky: #6fa8ff;
   --foil-lilac: #a98bff;
+  /* Backing foil metals, coming soon in the Shop: six bands each, in the holo foil's order (pink, peach, lemon, aqua, sky, lilac). */
+  --foil-gold-1: #fff3c4;
+  --foil-gold-2: #f0c357;
+  --foil-gold-3: #ffe597;
+  --foil-gold-4: #c38b28;
+  --foil-gold-5: #ffd670;
+  --foil-gold-6: #9c6a1b;
+  --foil-silver-1: var(--canvas);
+  --foil-silver-2: #c5c9d4;
+  --foil-silver-3: #eceef4;
+  --foil-silver-4: #969cad;
+  --foil-silver-5: #dde0e8;
+  --foil-silver-6: #787e8f;
+  --foil-rose-gold-1: #ffe5dd;
+  --foil-rose-gold-2: #e8a292;
+  --foil-rose-gold-3: #ffd3c5;
+  --foil-rose-gold-4: #c47b6c;
+  --foil-rose-gold-5: #f5bdac;
+  --foil-rose-gold-6: #a4625a;
   /* Pink foil: the foil an NSFW sticker wears, whoever drew it. */
   --foil-rose: #ff5c9f;
   --foil-blush: #ffa3c7;

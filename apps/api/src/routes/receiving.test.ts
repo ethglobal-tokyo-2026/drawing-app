@@ -1,7 +1,8 @@
 import { GIFT_EXPIRY_MS, gifts, stickerPlacements, users } from "@drawing-app/db";
 import { bytes32, insertUser } from "@drawing-app/db/testing";
 import { and, eq } from "drizzle-orm";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { ChainUnavailableError } from "../deps.ts";
 import { giftClaimTokenSchema } from "../gifts/packaging.ts";
 import {
   giftPreviewSchema,
@@ -10,6 +11,7 @@ import {
   type ReceiveRefusal,
 } from "../gifts/receiving.ts";
 import { createGiftsTestApp, giftOf, type GiftsTestApp } from "../gifts/testGifts.ts";
+import { captureLogLines } from "../testing/logLines.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 import { SPOT } from "../testing/rows.ts";
 
@@ -56,6 +58,10 @@ async function expectRefused(
 
 const termsAcceptedAt = (test: GiftsTestApp, userId: string) =>
   test.db.select().from(users).where(eq(users.id, userId)).get()?.termsAcceptedAt;
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("POST /api/gifts/preview", () => {
   it("shows the giver, the expiry and the sticker, and receives nothing", async () => {
@@ -256,17 +262,75 @@ describe("POST /api/gifts/receive", () => {
     expect(test.giftRow(gift.id).claimTxHash).toBe(landed.txHash);
   });
 
-  it("leaves ownership unchanged when the escrow claim fails", async () => {
+  it("answers a claim the chain didn't confirm with claim_failed, then receives the gift once the claim lands", async () => {
+    const logs = captureLogLines();
     const test = await createGiftsTestApp({ escrowChain: true });
     const { giverId, gift, giftClaimToken } = await test.packagedGift();
     test.landDeposit(gift.id);
-    vi.spyOn(test.giftChain, "claimGift").mockRejectedValue(new Error("Sepolia unavailable"));
+    const receiverId = insertUser(test.db);
+    const claim = test.giftChain.claimGift;
+    const receiptTimeout = new Error("Timed out waiting for the claim to be confirmed");
+    vi.spyOn(test.giftChain, "claimGift").mockRejectedValueOnce(receiptTimeout);
 
-    const response = await receive(test, insertUser(test.db), giftClaimToken);
-
-    expect(response.status).toBe(500);
-    expect(test.giftRow(gift.id)).toMatchObject({ status: "packed", escrowStatus: "pending" });
+    const failed = await refusalOf(await receive(test, receiverId, giftClaimToken));
+    expect(failed).toMatchObject({ status: 503, error: "claim_failed" });
+    expect(failed.detail).toContain(gift.id);
+    expect(failed.detail).toContain(`(${receiptTimeout.message})`);
+    logs.expectLogged("gift.claim.failed", { giftId: gift.id, userId: receiverId });
+    expect(logs.raw.join("\n")).toContain(receiptTimeout.message);
+    expect(test.giftRow(gift.id)).toMatchObject({
+      status: "packed",
+      escrowStatus: "pending",
+      receiverId: null,
+    });
     expect(test.ownerOf(gift.stickerId)).toBe(giverId);
+
+    const landed = await claim({ giftId: gift.id, giftClaimToken, recipientId: receiverId });
+    if (!landed.claimed) throw new Error("The fake escrow did not claim the gift");
+    await receivedOf(await receive(test, receiverId, giftClaimToken));
+    expect(test.giftRow(gift.id)).toMatchObject({ status: "received", claimTxHash: landed.txHash });
+    expect(test.ownerOf(gift.stickerId)).toBe(receiverId);
+  });
+
+  it("answers an escrow the chain can't read with chain_unavailable, and its cause", async () => {
+    const test = await createGiftsTestApp({ escrowChain: true });
+    const { giftClaimToken } = await test.packagedGift();
+    const cause = new Error("fetch failed");
+    vi.spyOn(test.giftChain, "readEscrowGift").mockRejectedValueOnce(
+      new ChainUnavailableError("Reading the escrow failed", { cause }),
+    );
+
+    const refused = await refusalOf(await preview(test, insertUser(test.db), giftClaimToken));
+    expect(refused).toMatchObject({ status: 502, error: "chain_unavailable" });
+    expect(refused.detail).toContain(cause.message);
+  });
+
+  it("records a claim that landed before the gift expired, when Accept comes only after", async () => {
+    const test = await createGiftsTestApp({ escrowChain: true });
+    const claimed = await test.packagedGift();
+    const unclaimed = await test.packagedGift();
+    test.landDeposit(claimed.gift.id);
+    test.landDeposit(unclaimed.gift.id);
+    const receiverId = insertUser(test.db);
+    const landed = await test.giftChain.claimGift({
+      giftId: claimed.gift.id,
+      giftClaimToken: claimed.giftClaimToken,
+      recipientId: receiverId,
+    });
+    if (!landed.claimed) throw new Error("The fake escrow did not claim the gift");
+    test.clock.advance(GIFT_EXPIRY_MS);
+
+    await expectRefused(test, receiverId, unclaimed.giftClaimToken, 410, "gift_expired");
+    const someoneElse = await receive(test, insertUser(test.db), claimed.giftClaimToken);
+    expect(await refusalOf(someoneElse)).toMatchObject({ status: 409, error: "already_received" });
+    const opened = await previewOf(await preview(test, receiverId, claimed.giftClaimToken));
+    expect(opened.receivable).toBe(true);
+    await receivedOf(await receive(test, receiverId, claimed.giftClaimToken));
+    expect(test.giftRow(claimed.gift.id)).toMatchObject({
+      status: "received",
+      claimTxHash: landed.txHash,
+    });
+    expect(test.ownerOf(claimed.gift.stickerId)).toBe(receiverId);
   });
 
   it("does not give database ownership to a second recipient after another wallet claimed", async () => {

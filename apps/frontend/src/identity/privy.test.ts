@@ -175,7 +175,9 @@ describe("trading LINE's ID token for a Privy JWT", () => {
     reconnectLine.mockRejectedValueOnce(failure);
     await fetchPrivyJwt();
 
-    retryPrivySignIn();
+    // The screen that asked hears it too, so it can say so where the person tapped.
+    const onFailed = vi.fn();
+    retryPrivySignIn(undefined, onFailed);
     await vi.waitFor(() => {
       expect(privyStatus()).toEqual({
         state: "failed",
@@ -183,6 +185,9 @@ describe("trading LINE's ID token for a Privy JWT", () => {
         reconnectLine: true,
       });
     });
+    expect(onFailed).toHaveBeenCalledWith(
+      expect.objectContaining({ code: "line_reconnect_failed" }),
+    );
     expect(vi.mocked(console.error).mock.calls.flat()).not.toContain(failure);
     expect(vi.mocked(console.error).mock.calls.flat().join(" ")).not.toContain(failure.message);
 

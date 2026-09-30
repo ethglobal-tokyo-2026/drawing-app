@@ -124,7 +124,7 @@
 }
 
 .artist-chip--artist .artist-chip__name {
-  font: 760 14px/1.1 var(--font-ui);
+  font: 700 13px/1.1 var(--font-ui);
 }
 
 /* Off a board: no foil, so the picture is a photo sticker on the pill, its white edge cut from the
@@ -142,14 +142,14 @@
 
 /* A sheet has the room, so the whole handle shows, up to the longest (32 characters), running onto a
    second line rather than being cut short. */
-.artist-chip--plain {
+.artist-chip--wrap {
   height: auto;
   min-height: 40px;
   max-width: 100%;
   padding-block: 4px;
 }
 
-.artist-chip--plain .artist-chip__name {
+.artist-chip--wrap .artist-chip__name {
   max-width: none;
   white-space: normal;
   overflow-wrap: anywhere;

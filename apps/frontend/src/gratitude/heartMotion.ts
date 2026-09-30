@@ -1,5 +1,5 @@
 import type { ComboPhase, Tier } from "./combo";
-import { clamp, lerp } from "./easing";
+import { clamp, lerp } from "../ui/easing";
 import { FEEL_CONFIG } from "./gameConfig";
 
 export interface HeartLayout {
@@ -155,11 +155,14 @@ const LIMP = { seconds: 0.5, leanDeg: 9, sag: 0.08 };
 /** How fast the shake and the punch die away, a second. */
 const SHAKE_DECAY = 14;
 const PUNCH_DECAY = 12;
-/** It arcs up and out, shrinks into the picture, and stretches along its path with its speed. */
+/**
+ * It arcs up and out, shrinks into the picture, and stretches along its path with its speed: by its
+ * whole length at `stretchSpeed` px/s on the live game's stage, up to `maxStretch`.
+ */
 const FLIGHT = {
   seconds: 0.38,
   endScale: 0.2,
-  stretchPx: 40,
+  stretchSpeed: 2400,
   maxStretch: 0.5,
   along: 0.2,
   outPx: 30,
@@ -404,7 +407,8 @@ export function createHeartMotion(
       const tier = state.tier ?? -1;
       const h = Math.min(dt, 1 / 30);
       let rotate = 0;
-      let scale = 1;
+      /** Its size this frame, as a share of its resting size. */
+      let size = 1;
 
       const f = flight;
       if (f) {
@@ -414,14 +418,15 @@ export function createHeartMotion(
         const y = bezier(f.from.y, f.via.y, f.to.y, e);
         const vx = x - pos.x;
         const vy = y - pos.y;
-        if (vx !== 0 || vy !== 0) {
+        if (dt > 0 && (vx !== 0 || vy !== 0)) {
           stretch.angle = degrees(Math.atan2(vy, vx));
-          const moved = Math.hypot(vx, vy) / (FLIGHT.stretchPx * scale);
-          stretch.scale = 1 + Math.min(FLIGHT.maxStretch, moved);
+          // By speed, not this frame's step, so it stretches alike at any frame rate and stage size.
+          const speed = Math.hypot(vx, vy) / dt;
+          stretch.scale = 1 + Math.min(FLIGHT.maxStretch, speed / (FLIGHT.stretchSpeed * scale));
         }
         pos.x = x;
         pos.y = y;
-        scale = lerp(f.fromScale, FLIGHT.endScale, e);
+        size = lerp(f.fromScale, FLIGHT.endScale, e);
         if (k >= 1) {
           flight = null;
           opacity = 0;
@@ -431,11 +436,11 @@ export function createHeartMotion(
         stepLoose(loose, dt);
         pos.x = loose.x;
         pos.y = loose.y;
-        scale = loose.scale;
+        size = loose.scale;
       } else if (settled) {
         pos.x = settled.x;
         pos.y = settled.y;
-        scale = settled.scale;
+        size = settled.scale;
       } else {
         const damping = 2 * Math.sqrt(HOLD.stiffness) * HOLD.damping;
         pos.vx += (-(pos.x - L.rest.x) * HOLD.stiffness - pos.vx * damping) * h;
@@ -528,6 +533,12 @@ export function createHeartMotion(
         sway.angle = clamp(sway.angle + sway.speed * r, -SWAY.most, SWAY.most);
         sway.drive *= Math.exp(-r * SWAY.driveDecay);
         tilt.now += (tilt.target - tilt.now) * Math.min(1, r * TILT.rate);
+      } else if (r > 0) {
+        // The wrist moves nothing with reduced motion: a sway or tilt it had eases back upright.
+        const k = Math.min(1, r * TILT.rate);
+        sway.speed = 0;
+        sway.angle -= sway.angle * k;
+        tilt.now -= tilt.now * k;
       }
       if (!loose && !flight) rotate += sway.angle + tilt.now;
 
@@ -564,16 +575,16 @@ export function createHeartMotion(
       // The page moves and scales about its middle; the heart takes the inverse, so it stays put.
       let hx = pos.x;
       let hy = pos.y;
-      let hs = scale;
+      let hs = size;
       if (pageMoved) {
         const ox = L.screen.width / 2;
         const oy = L.screen.height / 2;
         hx = ox + (pos.x - ox - px) / ps;
         hy = oy + (pos.y - oy - py) / ps;
-        hs = scale / ps;
+        hs = size / ps;
       }
 
-      drawnScale = scale;
+      drawnScale = size;
       const fading = fade;
       if (fading) {
         fading.elapsed += real;
@@ -594,7 +605,7 @@ export function createHeartMotion(
         opacity,
         x: pos.x,
         y: pos.y,
-        scale,
+        scale: size,
       };
     },
   };

@@ -2,6 +2,7 @@ import type { AppType, ErrorBody, Me } from "@drawing-app/api/client";
 import { hc, type InferRequestType } from "hono/client";
 import { ApiError, type ApiClient, type GiftOpening } from "./apiClient";
 import { startNftRequest } from "./httpDiagnostics";
+import { reportSessionLost } from "./sessionLoss";
 
 /** A request that hasn't answered by then fails with Try again, rather than hanging the screen. */
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -66,7 +67,7 @@ async function refusal(response: Response, what: string): Promise<ApiError> {
   } catch {
     body = undefined;
   }
-  return new ApiError(
+  const error = new ApiError(
     response.status,
     isErrorBody(body)
       ? body
@@ -75,6 +76,8 @@ async function refusal(response: Response, what: string): Promise<ApiError> {
           detail: `${what} answered ${response.status}: ${text}`,
         },
   );
+  if (error.status === 401 && error.code === "signed_out") reportSessionLost(error);
+  return error;
 }
 
 type GiftClaimToken = `0x${string}`;

@@ -90,7 +90,7 @@ export function TimelapseFailure({ timelapse }: { timelapse: Timelapse }) {
       ? errorReason(failure)
       : t(($) => $.stickerBoard.timelapse.notPlayed, { detail: failure.message });
   return (
-    <p className="fine timelapse-failed" role="alert">
+    <p className="problem-note timelapse-failed" role="alert">
       {t(($) => $.stickerBoard.timelapse.failed, { reason })}{" "}
       <QuietLink onClick={retry}>{t(($) => $.stickerBoard.tryAgain)}</QuietLink>
     </p>

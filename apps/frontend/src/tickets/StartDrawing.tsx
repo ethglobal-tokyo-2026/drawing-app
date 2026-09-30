@@ -1,14 +1,14 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "../i18n/react";
 import { BuyTicketsIcon, DrawIcon } from "../icons";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
 import { TearLine } from "../ui/TearLine";
-import { useFocusTrap } from "../ui/useFocusTrap";
 import { formatRefillTime } from "./refill";
 import { TicketArt } from "./TicketArt";
-import { nextRefill, ticketView, type TicketKind, type Tickets } from "./tickets";
+import { TicketCard } from "./TicketCard";
+import { ticketView, type TicketKind, type Tickets } from "./tickets";
 import "./tickets.css";
 
 interface Props {
@@ -22,8 +22,8 @@ interface Props {
   /** The ticket is spent: the card drops away over the sheet, then `onLeft` lets it go. */
   leaving?: boolean;
   onLeft?: () => void;
-  /** Said under the line, such as what became of a drawing a reload interrupted; null for nothing. */
-  note: string | null;
+  /** Why the last spend failed, in the app's words: the card stops asking and says so. Null while none has. */
+  failure: string | null;
   /** Spend a ticket of this kind on this sheet. */
   onStart: (kind: TicketKind) => void;
   /** Open the reserve ticket checkout. */
@@ -35,8 +35,9 @@ interface Props {
 /**
  * Asks before a ticket is spent on a fresh sheet, showing the tickets it can use (ticketView). With daily tickets left
  * it spends one; once they're gone it asks before spending a reserve ticket, with that ticket as the picture and the
- * checkout as the other way on. It shares the out-of-tickets card's look. Once the ticket is spent it drops away, and
- * the sheet under it takes ink at once.
+ * checkout as the other way on. When the spend fails it stops asking: it says why, still showing the tickets it tried,
+ * and its key tries again. It shares the out-of-tickets card's look. Once the ticket is spent it drops away, and the
+ * sheet under it takes ink at once.
  */
 export function StartDrawing({
   tickets,
@@ -45,7 +46,7 @@ export function StartDrawing({
   busy = false,
   leaving = false,
   onLeft,
-  note,
+  failure,
   onStart,
   onShop,
   onBoard,
@@ -54,51 +55,50 @@ export function StartDrawing({
   const view = ticketView(tickets);
   const daily = tickets.dailyLeft;
   const reserveAsk = view.show !== "daily";
-  const card = useRef<HTMLElement>(null);
   const id = useId();
   // Read once, as it comes up: it decides only how the card rises.
   const [follows] = useState(followsSealedCard);
-  useFocusTrap(card, { active: !leaving, onEscape: onBoard });
-
-  useEffect(() => {
-    card.current?.querySelector<HTMLElement>("button")?.focus();
-  }, [reserveAsk]);
+  // A retry clears the failure while its spend is on the way, and the card mustn't flip back to
+  // asking under the person's finger, nor as it drops away.
+  const [lastFailure, setLastFailure] = useState<string | null>(null);
+  if (failure && failure !== lastFailure) setLastFailure(failure);
+  const shownFailure = failure ?? (busy || leaving ? lastFailure : null);
 
   // The reserve ask's count is on the ticket's badge, so screen readers hear it with the line.
-  const described = [`${id}-line`, reserveAsk && `${id}-held`, note && `${id}-note`];
+  const described = [`${id}-line`, reserveAsk && `${id}-held`];
   // aria-disabled rather than disabled, so the busy key keeps its face rather than sinking grey.
   const busyKey = busy ? ({ "aria-busy": true, "aria-disabled": true } as const) : {};
-  const classes = ["out-of-tickets", follows && "out-of-tickets--follows", leaving && "is-leaving"];
 
   return (
-    <div className={classes.filter(Boolean).join(" ")} inert={leaving}>
-      <div className="out-of-tickets__scrim" />
-      <section
-        ref={card}
-        className="out-of-tickets__card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={`${id}-title`}
-        aria-describedby={described.filter(Boolean).join(" ")}
-        tabIndex={-1}
-        onAnimationEnd={(e) => {
-          if (leaving && e.target === e.currentTarget && e.animationName === "out-of-tickets-drop")
-            onLeft?.();
-        }}
-      >
-        <TicketArt view={view} pop spend={leaving ? "peel" : busy ? "lift" : null} />
-        <h2 className="out-of-tickets__title" id={`${id}-title`}>
-          {reserveAsk
+    <TicketCard
+      className={follows ? "out-of-tickets--follows" : undefined}
+      labelledBy={`${id}-title`}
+      describedBy={described.filter(Boolean).join(" ")}
+      onEscape={onBoard}
+      refocus={reserveAsk}
+      leaving={leaving}
+      onLeft={onLeft}
+    >
+      <TicketArt view={view} pop spend={leaving ? "peel" : busy ? "lift" : null} />
+      <h2 className="out-of-tickets__title" id={`${id}-title`}>
+        {shownFailure
+          ? t(($) => $.tickets.startDrawing.failed.title)
+          : reserveAsk
             ? t(($) => $.tickets.startDrawing.reserve.title)
             : t(($) => $.tickets.startDrawing.daily.title)}
-        </h2>
+      </h2>
+      {shownFailure ? (
+        <p className="out-of-tickets__problem" id={`${id}-line`} role="alert">
+          {shownFailure}
+        </p>
+      ) : (
         <p className="out-of-tickets__line out-of-tickets__line--stacked" id={`${id}-line`}>
           {reserveAsk ? (
             <>
               <strong>{t(($) => $.tickets.startDrawing.reserve.used)}</strong>{" "}
               <span className="out-of-tickets__quiet">
                 {t(($) => $.tickets.startDrawing.reserve.refillAt, {
-                  time: formatRefillTime(nextRefill(new Date())),
+                  time: formatRefillTime(new Date(tickets.nextRefillAt)),
                 })}
               </span>
             </>
@@ -111,46 +111,41 @@ export function StartDrawing({
             </>
           )}
         </p>
-        {reserveAsk && (
-          <p className="visually-hidden" id={`${id}-held`}>
-            {t(($) => $.tickets.startDrawing.reserve.left, { count: tickets.reserveLeft })}
-          </p>
-        )}
-        {note && (
-          <p className="out-of-tickets__note" id={`${id}-note`}>
-            {note}
-          </p>
-        )}
-        <TearLine />
-        {reserveAsk ? (
-          <>
-            <Key
-              className="out-of-tickets__key"
-              tone="blue"
-              icon={<DrawIcon />}
-              {...busyKey}
-              onClick={() => onStart("reserve")}
-            >
-              {t(($) => $.tickets.startDrawing.reserve.use)}
-            </Key>
-            <LabelButton block icon={<BuyTicketsIcon />} onClick={onShop}>
-              {t(($) => $.tickets.buyReserveTickets)}
-            </LabelButton>
-          </>
-        ) : (
+      )}
+      {reserveAsk && (
+        <p className="visually-hidden" id={`${id}-held`}>
+          {t(($) => $.tickets.startDrawing.reserve.left, { count: tickets.reserveLeft })}
+        </p>
+      )}
+      <TearLine />
+      {reserveAsk ? (
+        <>
           <Key
             className="out-of-tickets__key"
+            tone="blue"
             icon={<DrawIcon />}
             {...busyKey}
-            onClick={() => onStart("daily")}
+            onClick={() => onStart("reserve")}
           >
-            {t(($) => $.tickets.startDrawing.daily.start)}
+            {t(($) => $.tickets.startDrawing.reserve.use)}
           </Key>
-        )}
-        <QuietLink className="out-of-tickets__quiet-link" onClick={onBoard}>
-          {t(($) => $.tickets.notNow)}
-        </QuietLink>
-      </section>
-    </div>
+          <LabelButton block icon={<BuyTicketsIcon />} onClick={onShop}>
+            {t(($) => $.tickets.buyReserveTickets)}
+          </LabelButton>
+        </>
+      ) : (
+        <Key
+          className="out-of-tickets__key"
+          icon={<DrawIcon />}
+          {...busyKey}
+          onClick={() => onStart("daily")}
+        >
+          {t(($) => $.tickets.startDrawing.daily.start)}
+        </Key>
+      )}
+      <QuietLink className="out-of-tickets__quiet-link" onClick={onBoard}>
+        {t(($) => $.tickets.notNow)}
+      </QuietLink>
+    </TicketCard>
   );
 }

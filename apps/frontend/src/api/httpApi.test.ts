@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { ApiError } from "./apiClient";
 import { createHttpApi, createServerClient, createSessionApi } from "./httpApi";
 import { startNftRequest } from "./httpDiagnostics";
+import { onSessionLost } from "./sessionLoss";
 
 const me = {
   id: "u1",
@@ -117,6 +118,28 @@ describe("the app's client over the server", () => {
     const init = fetch.mock.calls[0]?.[1];
     const body = typeof init?.body === "string" ? init.body : "";
     expect(JSON.parse(body)).toMatchObject({ giftClaimToken });
+  });
+});
+
+describe("a session found gone", () => {
+  it("reaches whoever listens from any request, and only for a signed_out refusal", async () => {
+    const lost = vi.fn();
+    onTestFinished(onSessionLost(lost));
+    const gone = createHttpApi(createServerClient(answering(401, { error: "signed_out" })));
+    await refusalOf(gone.tickets());
+    await refusalOf(gone.explore());
+    expect(lost).toHaveBeenCalledTimes(2);
+    expect(lost).toHaveBeenLastCalledWith(expect.objectContaining({ code: "signed_out" }));
+
+    const otherRefusals = [
+      answering(401, { error: "line_token_expired" }),
+      answering(409, { error: "handle_taken" }),
+      answering(503, "Service Unavailable"),
+    ];
+    for (const fetch of otherRefusals) {
+      await refusalOf(createHttpApi(createServerClient(fetch)).tickets());
+    }
+    expect(lost).toHaveBeenCalledTimes(2);
   });
 });
 

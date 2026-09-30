@@ -1,7 +1,22 @@
-import { describe, expect, it } from "vitest";
-import { formatDuration, formatHandle, spokenDuration } from "./format";
+import { TOKYO_UTC_OFFSET_MS } from "@drawing-app/api/client";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { formatDay, formatDuration, formatHandle, formatMonthDay, spokenDuration } from "./format";
 
 const MINUTE = 60;
+
+describe("dates", () => {
+  // A phone that isn't on Tokyo time.
+  beforeAll(() => vi.stubEnv("TZ", "America/Los_Angeles"));
+  afterAll(() => vi.unstubAllEnvs());
+
+  it("print the day in Tokyo, where the app's days turn over, whatever the phone's zone", () => {
+    const midnight = Date.parse("2026-09-26") - TOKYO_UTC_OFFSET_MS;
+    expect(formatDay(midnight - 1)).toBe("2026.09.25");
+    expect(formatDay(midnight)).toBe("2026.09.26");
+    expect(formatMonthDay(midnight - 1)).toBe("9.25");
+    expect(formatMonthDay(midnight)).toBe("9.26");
+  });
+});
 
 describe("formatHandle", () => {
   it("prints a handle with one @, however many it came with", () => {

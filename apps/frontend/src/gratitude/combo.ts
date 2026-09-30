@@ -43,7 +43,7 @@ export type ComboEvent =
   | { kind: "ended"; record: ComboRecord; reason: EndReason; startedAt: number };
 
 /** The combo as of the latest call, for drawing. */
-export interface ComboView {
+interface ComboView {
   phase: ComboPhase;
   /** Tap until the combo commits to stroke or shake. */
   method: Method;

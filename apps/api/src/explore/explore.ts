@@ -3,9 +3,16 @@ import { desc, eq, gte } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 import type { ImageStore } from "../deps.ts";
-import { isoTimeSchema, personSchema, toIsoTime, toPerson } from "../shapes.ts";
+import {
+  isoTimeSchema,
+  personSchema,
+  stickerLookup,
+  stickerSchema,
+  toIsoTime,
+  toPerson,
+  type Sticker,
+} from "../shapes.ts";
 import { tokyoTicketDay, tokyoTicketDayStart } from "../ticketDays.ts";
-import { stickerLookup, stickerSchema, type Sticker } from "../views.ts";
 import { leaderboardsSchema, loadLeaderboards } from "./leaderboards.ts";
 
 /** The most stickers today's stickers lists, and the most entries the activity feed lists. */

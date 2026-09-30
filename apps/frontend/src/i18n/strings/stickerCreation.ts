@@ -68,14 +68,6 @@ export const stickerCreation = {
       },
     },
   },
-  /** The start card's notes about this sheet. */
-  startNote: {
-    /** Drawing screen, the card that comes up when a ticket couldn't be spent on a fresh sheet (Draw, Keep drawing, or the reserve ask's key): a note under its line; {{reason}} is the server's error message */
-    ticketFailed: {
-      en: "Couldn’t use a ticket. {{reason}}",
-      ja: "チケットを使えませんでした。{{reason}}",
-    },
-  },
   /** The seal key, and the chip over it. */
   seal: {
     /** Drawing screen, bottom right: the seal key's name for screen readers until its first tap arms it; the key shows a check mark */
@@ -101,6 +93,11 @@ export const stickerCreation = {
     reconnect: {
       en: "Couldn’t seal: your LINE sign-in has expired. Tap the check to reconnect with LINE, then pick up where you left off.",
       ja: "仕上げられませんでした。LINEのログイン情報の有効期限が切れました。チェックをタップしてLINEで再ログインすると、続きから再開できます。",
+    },
+    /** Drawing screen, bottom right: the chip beside the seal key, announced, when a reload brings back a drawing whose seal was on its way, so the sheet stays as it was sealed; tapping the check finishes the seal */
+    interrupted: {
+      en: "Your sticker was being sealed. Tap the check to finish sealing it.",
+      ja: "シールを仕上げている途中でした。チェックをタップして仕上げてください。",
     },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing failed on the phone before the server was asked; {{reason}} is a technical message that stays English */
     failedHere: {

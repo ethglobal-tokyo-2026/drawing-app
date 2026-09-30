@@ -4,24 +4,22 @@ import { keccak256 } from "viem";
 import { z } from "zod";
 import { queueNaming } from "../ens/naming.ts";
 import type { AppDeps } from "../deps.ts";
-import { logInfo } from "../diagnostics.ts";
+import { failureCause, logFailure, logInfo } from "../diagnostics.ts";
 import {
   ageStatusOf,
+  giftSchema,
   isoTimeSchema,
   personSchema,
   refuse,
-  toIsoTime,
-  toPerson,
-  type Refusal,
-} from "../shapes.ts";
-import {
-  giftSchema,
   stickerLookup,
   stickerPlacementSchema,
   stickerSchema,
   toGift,
+  toIsoTime,
+  toPerson,
   toStickerPlacement,
-} from "../views.ts";
+  type Refusal,
+} from "../shapes.ts";
 import { checkDeposit } from "./deposit.ts";
 import { giftClaimTokenSchema, giftHoldingSticker, type GiftRow } from "./packaging.ts";
 
@@ -99,13 +97,17 @@ function adultsOnlyRefusal(db: Pick<Db, "select">, gift: GiftRow, userId: string
   return refuse("adults_only", `Gift ${gift.id} is an NSFW sticker, for adults only`);
 }
 
-/** The first reason this person can't receive this gift now, or null. */
+/**
+ * The first reason this person can't receive this gift now, or null. `claimLanded`: the escrow shows
+ * the gift claimed, so its expiry no longer matters.
+ */
 function receiveRefusal(
   db: Pick<Db, "select">,
   gift: GiftRow,
   userId: string,
   liffContextType: LiffContextType,
   now: Date,
+  claimLanded = false,
 ): Refusal<ReceiveRefusal> | null {
   const groupChat = groupChatRefusal(liffContextType);
   if (groupChat) return groupChat;
@@ -119,13 +121,23 @@ function receiveRefusal(
   if (gift.status === "returned") {
     return refuse("gift_returned", `Gift ${gift.id} expired and went back to its giver`);
   }
-  if (now.getTime() >= gift.expiresAt.getTime()) {
+  if (!claimLanded && now.getTime() >= gift.expiresAt.getTime()) {
     return refuse("gift_expired", `Gift ${gift.id} expired at ${toIsoTime(gift.expiresAt)}`);
   }
   if (gift.escrowStatus !== "pending") {
     return refuse("not_deposited", `Gift ${gift.id}'s deposit hasn't landed in the escrow`);
   }
   return adultsOnlyRefusal(db, gift, userId);
+}
+
+/**
+ * Whether an expired gift's claim landed anyway: after Receiving stopped waiting for it, and before
+ * the expiry, since the escrow refuses a claim after it. Accept still has to record that claim.
+ */
+async function claimLandedBeforeExpiry({ giftChain, clock }: AppDeps, gift: GiftRow) {
+  if (!giftChain || gift.escrowStatus !== "pending") return false;
+  if (clock.now().getTime() < gift.expiresAt.getTime()) return false;
+  return (await giftChain.readEscrowGift(gift.id)).status === "claimed";
 }
 
 /**
@@ -176,7 +188,8 @@ export async function previewGift(
   const { db, clock } = deps;
   const gift = await openGift(deps, giftClaimToken);
   if (!gift) return notFound();
-  const refusal = receiveRefusal(db, gift, userId, liffContextType, clock.now());
+  const claimLanded = await claimLandedBeforeExpiry(deps, gift);
+  const refusal = receiveRefusal(db, gift, userId, liffContextType, clock.now(), claimLanded);
   const preview = previewOf(deps, gift, refusal);
   // The first person to open it becomes who it waits for, so it stays on their board if they leave.
   if (!refusal && gift.forUserId === null) {
@@ -192,15 +205,20 @@ export async function previewGift(
  * What opening a gift waiting for you from your board shows, before Accept: the checks its link's
  * preview runs, since the board's list may be older than a take-out, an expiry or a receive.
  */
-export function previewGiftForYou(deps: AppDeps, userId: string, giftId: string): Previewing {
+export async function previewGiftForYou(
+  deps: AppDeps,
+  userId: string,
+  giftId: string,
+): Promise<Previewing> {
   const gift = giftWaitingFor(deps.db, userId, giftId);
   if (!gift) return notWaiting(giftId);
-  const refusal = receiveRefusal(deps.db, gift, userId, "none", deps.clock.now());
+  const claimLanded = await claimLandedBeforeExpiry(deps, gift);
+  const refusal = receiveRefusal(deps.db, gift, userId, "none", deps.clock.now(), claimLanded);
   return { refusal: null, preview: previewOf(deps, gift, refusal) };
 }
 
 export type Receiving =
-  | Refusal<ReceiveRefusal | "gift_not_found">
+  | Refusal<ReceiveRefusal | "gift_not_found" | "claim_failed">
   | { refusal: null; received: ReceivedGift };
 
 /** A lost HTTP response must not repeat the claim or change a placement the recipient already used. */
@@ -319,7 +337,8 @@ async function completeReceive(
 ): Promise<Receiving> {
   const { db, clock, giftChain, images } = deps;
   const now = clock.now();
-  const beforeClaim = receiveRefusal(db, opened, userId, liffContextType, now);
+  const claimLanded = await claimLandedBeforeExpiry(deps, opened);
+  const beforeClaim = receiveRefusal(db, opened, userId, liffContextType, now, claimLanded);
   if (beforeClaim) {
     return beforeClaim.refusal === "already_received"
       ? (recordedReceive(deps, userId, opened) ?? beforeClaim)
@@ -328,11 +347,22 @@ async function completeReceive(
 
   let claimTxHash: string | undefined;
   if (giftChain) {
-    const claimed = await giftChain.claimGift({
-      giftId: opened.id,
-      giftClaimToken,
-      recipientId: userId,
-    });
+    let claimed;
+    try {
+      claimed = await giftChain.claimGift({
+        giftId: opened.id,
+        giftClaimToken,
+        recipientId: userId,
+      });
+    } catch (error) {
+      logFailure("gift.claim.failed", error, { giftId: opened.id, userId });
+      // Nothing is recorded, so the gift stays receivable. The escrow lets a gift go only once, so
+      // trying again can't claim it twice.
+      return refuse(
+        "claim_failed",
+        `Gift ${opened.id} wasn't received: its claim wasn't confirmed on the chain (${failureCause(error)})`,
+      );
+    }
     if (!claimed.claimed) {
       return refuse("already_received", `Gift ${opened.id} was already received`);
     }
@@ -343,7 +373,7 @@ async function completeReceive(
     (tx) => {
       const gift = tx.select().from(gifts).where(eq(gifts.id, opened.id)).get();
       if (!gift) return refuse("gift_not_found", `Gift ${opened.id} is gone`);
-      const refusal = receiveRefusal(tx, gift, userId, liffContextType, now);
+      const refusal = receiveRefusal(tx, gift, userId, liffContextType, now, claimLanded);
       if (refusal) return refusal;
       const received = tx
         .update(gifts)

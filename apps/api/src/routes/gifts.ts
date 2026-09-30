@@ -22,8 +22,7 @@ import {
   type Receiving,
 } from "../gifts/receiving.ts";
 import type { AppEnv } from "../session.ts";
-import { giftIdParam, type Refusal } from "../shapes.ts";
-import { toGift } from "../views.ts";
+import { giftIdParam, toGift, type Refusal } from "../shapes.ts";
 
 /** Each Giving and Receiving refusal's status. */
 const REFUSAL_STATUS = {
@@ -47,6 +46,7 @@ const REFUSAL_STATUS = {
   gift_returned: 410,
   gift_expired: 410,
   adults_only: 403,
+  claim_failed: 503,
 } as const satisfies Record<string, ContentfulStatusCode>;
 
 const refused = <Code extends keyof typeof REFUSAL_STATUS>(
@@ -81,8 +81,8 @@ export const giftRoutes = (deps: AppDeps) =>
       return received(c, receiving);
     })
     .get("/for-you", (c) => c.json(giftsForYou(deps, c.var.userId), 200))
-    .get("/:giftId/preview", validate("param", giftIdParam), (c) => {
-      const previewing = previewGiftForYou(deps, c.var.userId, c.req.valid("param").giftId);
+    .get("/:giftId/preview", validate("param", giftIdParam), async (c) => {
+      const previewing = await previewGiftForYou(deps, c.var.userId, c.req.valid("param").giftId);
       if (previewing.refusal !== null) return refused(c, previewing);
       return c.json(previewing.preview, 200);
     })

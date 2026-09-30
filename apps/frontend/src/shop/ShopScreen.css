@@ -68,9 +68,18 @@
   align-items: center;
   gap: 6px;
   margin: 0 0 10px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1.2;
+}
+
+/* Tickets that didn't load: words and a Try again link, which wrap, rather than the count's one row. */
+.reserve-hero__held--problem {
+  display: block;
+  font-weight: 500;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 .reserve-hero__title {
@@ -98,7 +107,7 @@
   align-items: center;
   min-height: 22px;
   margin: 8px 0 0;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
 }
 
@@ -193,7 +202,7 @@
 }
 
 .shelf-item__name {
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.2;
   font-weight: 700;
 }
@@ -267,7 +276,7 @@
 .laminate-film--glitter > i > b {
   inset: -20%;
   background-image:
-    radial-gradient(circle, #fff 0 0.7px, rgba(255, 255, 255, 0) 1.2px),
+    radial-gradient(circle, var(--canvas) 0 0.7px, rgba(255, 255, 255, 0) 1.2px),
     radial-gradient(circle, var(--foil-lemon) 0 0.8px, rgba(255, 255, 255, 0) 1.3px),
     radial-gradient(circle, var(--foil-aqua) 0 0.7px, rgba(255, 255, 255, 0) 1.2px),
     radial-gradient(circle, var(--foil-pink) 0 0.8px, rgba(255, 255, 255, 0) 1.3px);
@@ -323,30 +332,30 @@
 
 /* Backing foils: the foil's six bands in metal. Holo is the foil as it is. */
 .backing-foil--gold {
-  --foil-pink: #fff3c4;
-  --foil-peach: #f0c357;
-  --foil-lemon: #ffe597;
-  --foil-aqua: #c38b28;
-  --foil-sky: #ffd670;
-  --foil-lilac: #9c6a1b;
+  --foil-pink: var(--foil-gold-1);
+  --foil-peach: var(--foil-gold-2);
+  --foil-lemon: var(--foil-gold-3);
+  --foil-aqua: var(--foil-gold-4);
+  --foil-sky: var(--foil-gold-5);
+  --foil-lilac: var(--foil-gold-6);
 }
 
 .backing-foil--silver {
-  --foil-pink: #ffffff;
-  --foil-peach: #c5c9d4;
-  --foil-lemon: #eceef4;
-  --foil-aqua: #969cad;
-  --foil-sky: #dde0e8;
-  --foil-lilac: #787e8f;
+  --foil-pink: var(--foil-silver-1);
+  --foil-peach: var(--foil-silver-2);
+  --foil-lemon: var(--foil-silver-3);
+  --foil-aqua: var(--foil-silver-4);
+  --foil-sky: var(--foil-silver-5);
+  --foil-lilac: var(--foil-silver-6);
 }
 
 .backing-foil--rose-gold {
-  --foil-pink: #ffe5dd;
-  --foil-peach: #e8a292;
-  --foil-lemon: #ffd3c5;
-  --foil-aqua: #c47b6c;
-  --foil-sky: #f5bdac;
-  --foil-lilac: #a4625a;
+  --foil-pink: var(--foil-rose-gold-1);
+  --foil-peach: var(--foil-rose-gold-2);
+  --foil-lemon: var(--foil-rose-gold-3);
+  --foil-aqua: var(--foil-rose-gold-4);
+  --foil-sky: var(--foil-rose-gold-5);
+  --foil-lilac: var(--foil-rose-gold-6);
 }
 
 @media (prefers-reduced-motion: reduce) {

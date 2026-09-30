@@ -1,7 +1,7 @@
-import { useApiQuery } from "../api/useApiQuery";
 import { toSticker } from "../api/views";
 import { errorReason } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
+import { useMyStickerBoard } from "../sticker-board/useMyStickerBoard";
 
 export interface KeptSticker {
   id: string;
@@ -19,7 +19,7 @@ export interface KeptSticker {
 /** Your stickers not packed or sent as gifts, newest first. */
 export function useKeptStickers() {
   const { t } = useTranslation();
-  const board = useApiQuery("sticker-board/me", (api) => api.stickerBoard());
+  const board = useMyStickerBoard();
   if (board.state === "loading") return { stickers: null, error: null };
   if (board.state === "failed") {
     const reason = errorReason(board.error);

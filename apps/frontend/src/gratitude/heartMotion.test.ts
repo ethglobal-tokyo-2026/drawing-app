@@ -116,6 +116,55 @@ describe("createHeartMotion", () => {
     expect(Math.abs(rotation(last(run(heart, 2))))).toBeLessThan(0.5);
   });
 
+  it("eases its tilt back upright as reduced motion comes on", () => {
+    const heart = heartWith();
+    heart.swayWith(0, 9.8);
+    expect(Math.abs(rotation(last(run(heart, 2))))).toBeGreaterThan(6);
+    expect(Math.abs(rotation(last(run(heart, 2, { reduced: true }))))).toBeLessThan(0.5);
+  });
+
+  it("stretches its flight to the giver alike at any frame rate, and on a smaller stage", () => {
+    /** The stretch of each frame of the flight at `hz`, on a stage `scale` of the live game's size. */
+    const flight = (hz: number, scale: number) => {
+      const at = ({ x, y }: { x: number; y: number }) => ({ x: x * scale, y: y * scale });
+      const { screen } = LAYOUT;
+      const heart = createHeartMotion(
+        {
+          rest: at(LAYOUT.rest),
+          width: LAYOUT.width * scale,
+          height: LAYOUT.height * scale,
+          giver: at(LAYOUT.giver),
+          screen: { width: screen.width * scale, height: screen.height * scale },
+          ceiling: LAYOUT.ceiling * scale,
+        },
+        () => 0.5,
+        () => {},
+        scale,
+      );
+      void heart.flyToGiver();
+      const stretches: number[] = [];
+      for (let landed = false; !landed;) {
+        const frame = heart.step(1 / hz, 1 / hz, RUNNING);
+        stretches.push(stretch(frame));
+        landed = frame.opacity === 0;
+      }
+      return {
+        peak: Math.max(...stretches),
+        mean: stretches.reduce((sum, s) => sum + s, 0) / stretches.length,
+      };
+    };
+    const live = flight(60, 1);
+    for (const [hz, scale] of [
+      [120, 1],
+      [60, 0.69],
+      [120, 0.69],
+    ]) {
+      const other = flight(hz, scale);
+      expect(other.peak).toBeCloseTo(live.peak, 1);
+      expect(other.mean).toBeCloseTo(live.mean, 1);
+    }
+  });
+
   it("stretches a stroked heart only a little with reduced motion", () => {
     const stroked = { strokeStretch: { speed: 5, angle: 90 } };
     expect(stretch(last(run(heartWith(), 1, stroked)))).toBeGreaterThan(1.2);

@@ -63,6 +63,26 @@ button {
   text-transform: none;
 }
 
+/* A failure's reason, where it happened: sentence case in Ink on Tomato Soft, wrapping, and
+   selectable so it can go into a report. */
+.problem-note {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-label);
+  background: var(--tomato-soft);
+  color: var(--ink);
+  font: 500 13px/1.4 var(--font-ui);
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Graphite would read 3.5:1 on Tomato Soft. */
+.problem-note .label-btn--quiet {
+  color: var(--ink);
+  text-decoration-color: var(--ink);
+}
+
 .title-label {
   font-stretch: var(--w-title);
   font-weight: 800;

@@ -16,6 +16,7 @@ import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
+import { EASE_OUT, EASE_PEEL, clamp } from "../ui/easing";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
@@ -43,10 +44,6 @@ interface Props {
    */
   originOf?: (id: string) => LiftOrigin | null;
 }
-
-// Motion tokens spelled out: Web Animations can't read CSS variables.
-const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
-const EASE_PEEL = "cubic-bezier(0.2, 0.7, 0.2, 1)";
 
 /**
  * The scrim comes up and the sheet rises under the sticker as it flies in, both landing with it, then
@@ -114,7 +111,7 @@ export function LiftedSticker({
   useLight();
   const root = useRef<HTMLDivElement>(null);
   const count = stickers.length;
-  const shown = Math.min(Math.max(0, index), count - 1);
+  const shown = clamp(index, 0, count - 1);
   const entry = stickers[shown];
 
   const close = useDetailLift({

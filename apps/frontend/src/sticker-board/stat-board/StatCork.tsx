@@ -1,4 +1,6 @@
 import {
+  createContext,
+  useContext,
   useId,
   useImperativeHandle,
   useRef,
@@ -16,6 +18,7 @@ import { EnsNameLink } from "../../identity/EnsNameLink";
 import { formatDay, formatHandle } from "../../stickers/format";
 import { HitCounter } from "../../ui/HitCounter";
 import { LabelButton } from "../../ui/LabelButton";
+import { Skeleton } from "../../ui/Skeleton";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 import "./stat-board.css";
 
@@ -34,6 +37,8 @@ export interface CorkFigures {
   own: boolean;
   /** Why the figures didn't load, printed on the receipt; null while they load and once they have. */
   failure: string | null;
+  /** The figures are on their way: outlines stand where they'll be. */
+  loading: boolean;
   /** Null when it didn't load; zeros read as "No gratitude yet". */
   gratitude: { direct: number; residual: number; total: number } | null;
   streak: { current: number; best: number } | null;
@@ -57,9 +62,13 @@ interface Props {
   ref?: Ref<StatCorkHandle>;
 }
 
-/** A figure that can't be known, because what it's drawn from didn't load. */
+const Loading = createContext(false);
+
+/** A figure that isn't there: an outline while it loads, else a dash, since what it's drawn from didn't load. */
 function Unknown() {
   const { t } = useTranslation();
+  if (useContext(Loading))
+    return <Skeleton width="2.2ch" height="0.85em" className="stat-board__loading" />;
   return (
     <>
       <span aria-hidden>{t(($) => $.stickerBoard.statBoard.notKnown.mark)}</span>
@@ -69,6 +78,7 @@ function Unknown() {
 }
 
 const figure = (n: number | null) => (n === null ? <Unknown /> : formatCount(n));
+const figureText = (n: number | null) => (n === null ? "" : formatCount(n));
 
 // A kind at 0 is left off the receipt, so a friend-first artist sees Direct alone.
 const GRATITUDE_KINDS = ["direct", "residual"] as const;
@@ -128,8 +138,14 @@ export function StatCork({
     [reduced],
   );
 
+  // A window a paper opens, such as World ID's, is drawn outside the cork, yet React passes its taps
+  // and keys up through the cork: only the cork's own turn the board back.
+  const ownTarget = (e: { target: EventTarget; currentTarget: Element }) =>
+    e.target instanceof Element && e.currentTarget.contains(e.target) ? e.target : null;
+
   const onCorkClick = (e: MouseEvent<HTMLDivElement>) => {
-    if (e.target instanceof Element && !e.target.closest(ON_CORK)) onFlipBack();
+    const target = ownTarget(e);
+    if (target && !target.closest(ON_CORK)) onFlipBack();
   };
 
   // A tap on a note's paper nudges it. Its controls press, and its selectable text selects, without
@@ -146,193 +162,214 @@ export function StatCork({
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key !== "Escape") return;
+    if (e.key !== "Escape" || !ownTarget(e)) return;
     e.stopPropagation();
     if (!onEscape?.()) onFlipBack();
   };
 
   return (
-    <div
-      className="stat-board"
-      role="dialog"
-      aria-label={t(($) => $.stickerBoard.statBoard.label, { name: f.name })}
-      tabIndex={-1}
-      onKeyDown={onKeyDown}
-    >
-      <div className="stat-board__cork" ref={cork} onClick={onCorkClick} onPointerDown={nudge}>
-        <div className="stat-board__stats">
-          <div className="stat-board__col stat-board__col--a">
-            <section
-              className="stat-board__note stat-board__receipt"
-              aria-labelledby={`${id}-gratitude`}
-            >
-              <i className="stat-board__pin stat-board__pin--pink" aria-hidden />
-              <div className="stat-board__paper">
-                <p className="fine stat-board__receipt-top" aria-hidden>
-                  <span className="handle">{formatHandle(f.handle)}</span>
-                  <span>{formatDay(printedAt)}</span>
-                </p>
-                <h3 className="fine stat-board__receipt-h" id={`${id}-gratitude`}>
-                  <GratitudeIcon className="stat-board__receipt-heart" size={14} />
-                  {t(($) => $.stickerBoard.statBoard.gratitude.title)}
-                </h3>
-                {gratitude && gratitude.total > 0 ? (
-                  <dl className="stat-board__receipt-rows">
-                    {GRATITUDE_KINDS.filter((kind) => gratitude[kind] > 0).map((kind) => (
-                      <div key={kind}>
-                        <dt>{t(($) => $.stickerBoard.statBoard.gratitude[kind])}</dt>
-                        <dd>{formatCount(gratitude[kind])}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                ) : (
-                  <p className="stat-board__receipt-none">
-                    {!gratitude
-                      ? f.failure
-                      : f.own
-                        ? t(($) => $.stickerBoard.statBoard.gratitude.noneYetOwn)
-                        : t(($) => $.stickerBoard.statBoard.gratitude.noneYet)}
+    <Loading value={f.loading}>
+      <div
+        className="stat-board"
+        role="dialog"
+        aria-label={t(($) => $.stickerBoard.statBoard.label, { name: f.name })}
+        tabIndex={-1}
+        onKeyDown={onKeyDown}
+      >
+        <div className="stat-board__cork" ref={cork} onClick={onCorkClick} onPointerDown={nudge}>
+          <p className="visually-hidden" role="status">
+            {f.loading
+              ? f.own
+                ? t(($) => $.stickerBoard.statBoard.loadingOwn)
+                : t(($) => $.stickerBoard.statBoard.loadingTheirs, { name: f.name })
+              : ""}
+          </p>
+          <div className="stat-board__stats">
+            <div className="stat-board__col stat-board__col--a">
+              <section
+                className="stat-board__note stat-board__receipt"
+                aria-labelledby={`${id}-gratitude`}
+              >
+                <i className="stat-board__pin stat-board__pin--pink" aria-hidden />
+                <div className="stat-board__paper">
+                  <p className="fine stat-board__receipt-top" aria-hidden>
+                    <span className="handle">{formatHandle(f.handle)}</span>
+                    <span>{formatDay(printedAt)}</span>
                   </p>
-                )}
-                <p className="stat-board__receipt-total">
-                  <span className="fine">{t(($) => $.stickerBoard.statBoard.gratitude.total)}</span>
-                  <b>{gratitude ? formatCount(gratitude.total) : <Unknown />}</b>
-                </p>
-              </div>
-            </section>
-
-            <section className="stat-board__note stat-board__scrap" aria-labelledby={`${id}-bests`}>
-              <div className="stat-board__paper">
-                <h3 className="stat-board__scrap-h" id={`${id}-bests`}>
-                  {t(($) => $.stickerBoard.statBoard.bests.title)}
-                </h3>
-                <dl className="stat-board__scrap-rows">
-                  <div>
-                    <dt>{t(($) => $.stickerBoard.statBoard.bests.longestStreak)}</dt>
-                    <dd>
-                      {!f.streak ? (
-                        <Unknown />
-                      ) : f.streak.best > 0 ? (
-                        t(($) => $.stickerBoard.statBoard.bests.days, {
-                          count: f.streak.best,
-                          days: formatCount(f.streak.best),
-                        })
-                      ) : (
-                        t(($) => $.stickerBoard.statBoard.bests.noneYet)
-                      )}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>{t(($) => $.stickerBoard.statBoard.bests.bestCombo)}</dt>
-                    <dd>
-                      {f.bestCombo === null ? (
-                        <Unknown />
-                      ) : f.bestCombo > 0 ? (
-                        <HitCounter hits={f.bestCombo} size={20} />
-                      ) : (
-                        t(($) => $.stickerBoard.statBoard.bests.noneYet)
-                      )}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>{t(($) => $.stickerBoard.statBoard.bests.mostGratitudeInADay)}</dt>
-                    <dd>
-                      {f.mostGratitudeInADay === null ? (
-                        <Unknown />
-                      ) : f.mostGratitudeInADay > 0 ? (
-                        formatCount(f.mostGratitudeInADay)
-                      ) : (
-                        t(($) => $.stickerBoard.statBoard.bests.noneYet)
-                      )}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-              <i className="stat-board__washi" aria-hidden />
-            </section>
-
-            {since && (
-              <p className="stat-board__tape">
-                <span className="visually-hidden">
-                  {t(($) => $.stickerBoard.statBoard.sinceSpoken, { day: since })}
-                </span>
-                <span className="stat-board__tape-text" aria-hidden>
-                  {t(($) => $.stickerBoard.statBoard.since, { day: since })}
-                </span>
-              </p>
-            )}
-            {f.ensName && (
-              <EnsNameLink className="stat-board__ens" name={f.ensName}>
-                <span className="stat-board__tape stat-board__tape--ens">
-                  <span className="stat-board__tape-text">{f.ensName}</span>
-                </span>
-              </EnsNameLink>
-            )}
-          </div>
-
-          <div className="stat-board__col stat-board__col--b">
-            <section className="stat-board__note stat-board__leaf" aria-labelledby={`${id}-streak`}>
-              <i className="stat-board__pin" aria-hidden />
-              <div className="stat-board__paper">
-                <h3 className="fine stat-board__leaf-band" id={`${id}-streak`}>
-                  <StreakIcon size={13} />
-                  {t(($) => $.stickerBoard.statBoard.streak.title)}
-                </h3>
-                {!f.streak ? (
-                  <p className="stat-board__leaf-n">
-                    <b>
-                      <Unknown />
-                    </b>
-                  </p>
-                ) : f.streak.current > 0 ? (
-                  <p className="stat-board__leaf-n">
-                    <b>{formatCount(f.streak.current)}</b>
+                  <h3 className="fine stat-board__receipt-h" id={`${id}-gratitude`}>
+                    <GratitudeIcon className="stat-board__receipt-heart" size={14} />
+                    {t(($) => $.stickerBoard.statBoard.gratitude.title)}
+                  </h3>
+                  {gratitude && gratitude.total > 0 ? (
+                    <dl className="stat-board__receipt-rows">
+                      {GRATITUDE_KINDS.filter((kind) => gratitude[kind] > 0).map((kind) => (
+                        <div key={kind}>
+                          <dt>{t(($) => $.stickerBoard.statBoard.gratitude[kind])}</dt>
+                          <dd>{formatCount(gratitude[kind])}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  ) : (
+                    <p className="stat-board__receipt-none">
+                      {!gratitude
+                        ? (f.failure ?? <Skeleton width="80%" height="1em" />)
+                        : f.own
+                          ? t(($) => $.stickerBoard.statBoard.gratitude.noneYetOwn)
+                          : t(($) => $.stickerBoard.statBoard.gratitude.noneYet)}
+                    </p>
+                  )}
+                  <p className="stat-board__receipt-total">
                     <span className="fine">
-                      {t(($) => $.stickerBoard.statBoard.streak.days, { count: f.streak.current })}
+                      {t(($) => $.stickerBoard.statBoard.gratitude.total)}
                     </span>
+                    <b>{gratitude ? formatCount(gratitude.total) : <Unknown />}</b>
                   </p>
-                ) : (
-                  <p className="stat-board__leaf-n stat-board__leaf-n--none">
-                    <b>{t(($) => $.stickerBoard.statBoard.streak.notStarted)}</b>
-                  </p>
-                )}
-              </div>
-            </section>
+                </div>
+              </section>
 
-            <div
-              className="stat-board__stamps"
-              role="group"
-              aria-label={t(($) => $.stickerBoard.statBoard.stamps.label)}
-            >
-              {STAMPS.map(({ kind, hue }, i) => (
-                <p key={kind} className={`stat-board__stamp stat-board__stamp--${i}`}>
-                  <span className="stat-board__stamp-paper">
-                    <span className="stat-board__stamp-print" style={{ "--c": hue }}>
-                      <b>{figure(f.stamps[kind])}</b>
-                      <span className="fine">
-                        {t(($) => $.stickerBoard.statBoard.stamps[kind])}
-                      </span>
-                    </span>
+              <section
+                className="stat-board__note stat-board__scrap"
+                aria-labelledby={`${id}-bests`}
+              >
+                <div className="stat-board__paper">
+                  <h3 className="stat-board__scrap-h" id={`${id}-bests`}>
+                    {t(($) => $.stickerBoard.statBoard.bests.title)}
+                  </h3>
+                  <dl className="stat-board__scrap-rows">
+                    <div>
+                      <dt>{t(($) => $.stickerBoard.statBoard.bests.longestStreak)}</dt>
+                      <dd>
+                        {!f.streak ? (
+                          <Unknown />
+                        ) : f.streak.best > 0 ? (
+                          t(($) => $.stickerBoard.statBoard.bests.days, {
+                            count: f.streak.best,
+                            days: formatCount(f.streak.best),
+                          })
+                        ) : (
+                          t(($) => $.stickerBoard.statBoard.bests.noneYet)
+                        )}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{t(($) => $.stickerBoard.statBoard.bests.bestCombo)}</dt>
+                      <dd>
+                        {f.bestCombo === null ? (
+                          <Unknown />
+                        ) : f.bestCombo > 0 ? (
+                          <HitCounter hits={f.bestCombo} size={20} />
+                        ) : (
+                          t(($) => $.stickerBoard.statBoard.bests.noneYet)
+                        )}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{t(($) => $.stickerBoard.statBoard.bests.mostGratitudeInADay)}</dt>
+                      <dd>
+                        {f.mostGratitudeInADay === null ? (
+                          <Unknown />
+                        ) : f.mostGratitudeInADay > 0 ? (
+                          formatCount(f.mostGratitudeInADay)
+                        ) : (
+                          t(($) => $.stickerBoard.statBoard.bests.noneYet)
+                        )}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+                <i className="stat-board__washi" aria-hidden />
+              </section>
+
+              {since && (
+                <p className="stat-board__tape">
+                  <span className="visually-hidden">
+                    {t(($) => $.stickerBoard.statBoard.sinceSpoken, { day: since })}
+                  </span>
+                  <span className="stat-board__tape-text" aria-hidden>
+                    {t(($) => $.stickerBoard.statBoard.since, { day: since })}
                   </span>
                 </p>
-              ))}
+              )}
+              {f.ensName && (
+                <EnsNameLink className="stat-board__ens" name={f.ensName}>
+                  <span className="stat-board__tape stat-board__tape--ens">
+                    <span className="stat-board__tape-text">{f.ensName}</span>
+                  </span>
+                </EnsNameLink>
+              )}
             </div>
 
-            <LabelButton
-              ref={flipBackRef}
-              size="sm"
-              icon={<ArrowUUpLeft />}
-              className="stat-board__flip-back"
-              onClick={onFlipBack}
-            >
-              {t(($) => $.stickerBoard.statBoard.flipBack)}
-            </LabelButton>
-            {afterFlipBack}
-          </div>
-        </div>
+            <div className="stat-board__col stat-board__col--b">
+              <section
+                className="stat-board__note stat-board__leaf"
+                aria-labelledby={`${id}-streak`}
+              >
+                <i className="stat-board__pin" aria-hidden />
+                <div className="stat-board__paper">
+                  <h3 className="fine stat-board__leaf-band" id={`${id}-streak`}>
+                    <StreakIcon size={13} />
+                    {t(($) => $.stickerBoard.statBoard.streak.title)}
+                  </h3>
+                  {!f.streak ? (
+                    <p className="stat-board__leaf-n">
+                      <b>
+                        <Unknown />
+                      </b>
+                    </p>
+                  ) : f.streak.current > 0 ? (
+                    <p className="stat-board__leaf-n">
+                      <b>{formatCount(f.streak.current)}</b>
+                      <span className="fine">
+                        {t(($) => $.stickerBoard.statBoard.streak.days, {
+                          count: f.streak.current,
+                        })}
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="stat-board__leaf-n stat-board__leaf-n--none">
+                      <b>{t(($) => $.stickerBoard.statBoard.streak.notStarted)}</b>
+                    </p>
+                  )}
+                </div>
+              </section>
 
-        {children}
+              <div
+                className="stat-board__stamps"
+                role="group"
+                aria-label={t(($) => $.stickerBoard.statBoard.stamps.label)}
+              >
+                {STAMPS.map(({ kind, hue }, i) => (
+                  <p key={kind} className={`stat-board__stamp stat-board__stamp--${i}`}>
+                    <span className="stat-board__stamp-paper">
+                      <span className="stat-board__stamp-print" style={{ "--c": hue }}>
+                        <b style={{ "--len": String(figureText(f.stamps[kind]).length) }}>
+                          {figure(f.stamps[kind])}
+                        </b>
+                        <span className="fine">
+                          {t(($) => $.stickerBoard.statBoard.stamps[kind])}
+                        </span>
+                      </span>
+                    </span>
+                  </p>
+                ))}
+              </div>
+
+              <LabelButton
+                ref={flipBackRef}
+                size="sm"
+                icon={<ArrowUUpLeft />}
+                className="stat-board__flip-back"
+                onClick={onFlipBack}
+              >
+                {t(($) => $.stickerBoard.statBoard.flipBack)}
+              </LabelButton>
+              {afterFlipBack}
+            </div>
+          </div>
+
+          {children}
+        </div>
       </div>
-    </div>
+    </Loading>
   );
 }

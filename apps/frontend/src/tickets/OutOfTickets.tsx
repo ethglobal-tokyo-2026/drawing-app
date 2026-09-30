@@ -1,12 +1,12 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Trans, useTranslation } from "../i18n/react";
 import { BuyTicketsIcon, DrawIcon, StickerBoardIcon } from "../icons";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { TearLine } from "../ui/TearLine";
-import { useFocusTrap } from "../ui/useFocusTrap";
 import { formatRefillIn, formatRefillTime, msUntilRefillLineChanges } from "./refill";
 import { TicketArt } from "./TicketArt";
+import { TicketCard } from "./TicketCard";
 import { describeTickets, ticketsLeft, ticketView, type Tickets } from "./tickets";
 import "./tickets.css";
 
@@ -50,14 +50,11 @@ export function OutOfTickets({
 }: Props) {
   const { t } = useTranslation();
   const { at, msLeft } = useRefillCountdown(state.nextRefillAt);
-  const card = useRef<HTMLElement>(null);
   const id = useId();
   const refilled = ticketsLeft(state) > 0;
   const boardLabel = overBoard
     ? t(($) => $.tickets.backToStickerBoard)
     : t(($) => $.tickets.goToStickerBoard);
-
-  useFocusTrap(card, { onEscape: onBoard });
 
   // Over the board the card dims the tab strip too (App.css), and a tap there closes it like its scrim.
   useEffect(() => {
@@ -72,72 +69,58 @@ export function OutOfTickets({
     return () => document.removeEventListener("click", onClick, true);
   }, [overBoard, onBoard]);
 
-  // Each view's first control takes focus, so focus never drops out of the card when its controls change.
-  useEffect(() => {
-    const first = card.current?.querySelector<HTMLElement>("button:not(:disabled)");
-    (first ?? card.current)?.focus();
-  }, [refilled]);
-
   return (
-    <div className={`out-of-tickets ${overBoard ? "out-of-tickets--over-board" : ""}`}>
-      <div
-        className="out-of-tickets__scrim"
-        aria-hidden="true"
-        onClick={overBoard ? onBoard : undefined}
-      />
-      <section
-        ref={card}
-        className="out-of-tickets__card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={`${id}-title`}
-        aria-describedby={refilled ? undefined : `${id}-line`}
-        tabIndex={-1}
-      >
-        <TicketArt view={ticketView(state)} />
-        {/* One title element for both, so screen readers hear it turn over. */}
-        <h2 className="out-of-tickets__title" id={`${id}-title`} aria-live="polite">
-          {refilled
-            ? t(($) => $.tickets.outOfTickets.refilled)
-            : t(($) => $.tickets.outOfTickets.title)}
-        </h2>
-        {!refilled && (
-          <p className="out-of-tickets__line" id={`${id}-line`}>
-            <Trans
-              i18nKey={($) => $.tickets.outOfTickets.refillLine}
-              values={{ time: formatRefillTime(at), countdown: formatRefillIn(msLeft) }}
-              components={{
-                strong: <strong />,
-                countdown: <span className="out-of-tickets__quiet out-of-tickets__countdown" />,
-              }}
-            />
-          </p>
-        )}
-        <TearLine />
-        {refilled ? (
-          <Key
-            className="out-of-tickets__key"
-            icon={<DrawIcon />}
-            aria-label={t(($) => $.tickets.drawWithTickets, { tickets: describeTickets(state) })}
-            onClick={onStartDrawing}
-          >
-            {t(($) => $.tickets.draw)}
-          </Key>
-        ) : (
-          <Key className="out-of-tickets__key" icon={<StickerBoardIcon />} onClick={onBoard}>
-            {boardLabel}
-          </Key>
-        )}
-        {refilled ? (
-          <LabelButton block icon={<StickerBoardIcon />} onClick={onBoard}>
-            {boardLabel}
-          </LabelButton>
-        ) : (
-          <LabelButton block icon={<BuyTicketsIcon />} onClick={onShop}>
-            {t(($) => $.tickets.buyReserveTickets)}
-          </LabelButton>
-        )}
-      </section>
-    </div>
+    <TicketCard
+      className={overBoard ? "out-of-tickets--over-board" : undefined}
+      labelledBy={`${id}-title`}
+      describedBy={refilled ? undefined : `${id}-line`}
+      onEscape={onBoard}
+      refocus={refilled}
+      onScrimClick={overBoard ? onBoard : undefined}
+    >
+      <TicketArt view={ticketView(state)} />
+      {/* One title element for both, so screen readers hear it turn over. */}
+      <h2 className="out-of-tickets__title" id={`${id}-title`} aria-live="polite">
+        {refilled
+          ? t(($) => $.tickets.outOfTickets.refilled)
+          : t(($) => $.tickets.outOfTickets.title)}
+      </h2>
+      {!refilled && (
+        <p className="out-of-tickets__line" id={`${id}-line`}>
+          <Trans
+            i18nKey={($) => $.tickets.outOfTickets.refillLine}
+            values={{ time: formatRefillTime(at), countdown: formatRefillIn(msLeft) }}
+            components={{
+              strong: <strong />,
+              countdown: <span className="out-of-tickets__quiet out-of-tickets__countdown" />,
+            }}
+          />
+        </p>
+      )}
+      <TearLine />
+      {refilled ? (
+        <Key
+          className="out-of-tickets__key"
+          icon={<DrawIcon />}
+          aria-label={t(($) => $.tickets.drawWithTickets, { tickets: describeTickets(state) })}
+          onClick={onStartDrawing}
+        >
+          {t(($) => $.tickets.draw)}
+        </Key>
+      ) : (
+        <Key className="out-of-tickets__key" icon={<StickerBoardIcon />} onClick={onBoard}>
+          {boardLabel}
+        </Key>
+      )}
+      {refilled ? (
+        <LabelButton block icon={<StickerBoardIcon />} onClick={onBoard}>
+          {boardLabel}
+        </LabelButton>
+      ) : (
+        <LabelButton block icon={<BuyTicketsIcon />} onClick={onShop}>
+          {t(($) => $.tickets.buyReserveTickets)}
+        </LabelButton>
+      )}
+    </TicketCard>
   );
 }

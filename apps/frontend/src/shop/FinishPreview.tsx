@@ -1,4 +1,5 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { lightUp } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import type { ShopSticker } from "./shopSticker";
 
@@ -37,6 +38,22 @@ function useImageLoaded(url: string): boolean {
   return loaded === url;
 }
 
+/** A glitter or prism laminate's film, live resin that the app's one light lights. */
+function LaminateFilm({ laminate }: { laminate: "glitter" | "prism" }) {
+  const film = useRef<HTMLSpanElement>(null);
+  // It shows once the mask loads, after the screen's light last moved, so it starts where the light is.
+  useLayoutEffect(() => {
+    if (film.current) lightUp(film.current);
+  }, []);
+  return (
+    <span ref={film} className={`live-resin laminate-film laminate-film--${laminate}`}>
+      <i>
+        <b />
+      </i>
+    </span>
+  );
+}
+
 /**
  * Your sticker in a coming finish: a laminate over it, or a backing foil round it the way someone
  * else's sticker board would show it. A laminate is live resin of another kind, so the app's one
@@ -62,7 +79,6 @@ export function FinishPreview({
   const foil = "foil" in finish ? finish.foil : null;
   // The haze and the film are shaped by the sticker's mask, so neither shows until it's in.
   const masked = useImageLoaded(urls.mask);
-  const film = masked && (laminate === "glitter" || laminate === "prism");
   const finishClass =
     "laminate" in finish ? `laminate--${finish.laminate}` : `backing-foil--${kebab(finish.foil)}`;
   return (
@@ -78,12 +94,8 @@ export function FinishPreview({
           reveal
         />
         {masked && laminate === "matte" && <span className="laminate-haze" />}
-        {film && (
-          <span className={`live-resin laminate-film laminate-film--${laminate}`}>
-            <i>
-              <b />
-            </i>
-          </span>
+        {masked && (laminate === "glitter" || laminate === "prism") && (
+          <LaminateFilm laminate={laminate} />
         )}
       </span>
     </span>

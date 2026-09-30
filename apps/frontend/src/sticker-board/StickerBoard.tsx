@@ -12,6 +12,7 @@ import {
 import { useMyAgeStatus } from "../identity/useMyAgeStatus";
 import { veiledFor } from "../stickers/nsfw";
 import { flushSync } from "react-dom";
+import { tokyoTicketDay } from "@drawing-app/api/client";
 import { apiError } from "../api/apiClient";
 import { useApi } from "../api/useApi";
 import { useApiQuery } from "../api/useApiQuery";
@@ -38,14 +39,16 @@ import { useTranslation } from "../i18n/react";
 import { DrawIcon } from "../icons/DrawIcon";
 import { useMe } from "../api/meContext";
 import { useIdentity } from "../identity/useIdentity";
+import { CaretRight } from "../icons";
 import { LIFF_ID } from "../line/liff";
 import { formatHandle, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { playStick } from "../stickers/stick";
 import { DrawKeyTickets } from "../tickets/DrawKeyTickets";
-import { describeTickets, ticketDay } from "../tickets/tickets";
+import { describeTickets } from "../tickets/tickets";
 import { useDrawFromBoard } from "../tickets/useDrawFromBoard";
 import { useTickets } from "../tickets/useTickets";
+import { EASE_OUT } from "../ui/easing";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { lazyWithPreload } from "../ui/lazyWithPreload";
@@ -54,7 +57,7 @@ import { useBackToClose } from "../ui/useBackToClose";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { normalizeTurn } from "./boardGesture";
 import {
-  onItsWay,
+  onTheBoard,
   placeUnplaced,
   toBoardSticker,
   type BoardSticker,
@@ -63,8 +66,10 @@ import {
 import { PlacedSticker } from "./PlacedSticker";
 import {
   FIRST_SPOT,
+  boxOf,
   fieldOf,
   freeSpot,
+  kept,
   knobHidden,
   nextZ,
   sizeOf,
@@ -82,9 +87,11 @@ import {
   markBoardComplete,
   usePreloadAfterBoard,
 } from "./boardComplete";
+import { markGreeted, owesGreeting } from "./artistChipGreeting";
 import { markChipsPlayed } from "./boardSettled";
 import { keepBoard, keptBoardFor } from "./lastBoard";
 import { BoardFlip } from "./stat-board/BoardFlip";
+import { takeReopenOnSettings } from "./stat-board/reopenOnSettings";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
 import { readingOrder } from "./stickerOrder";
 import { StickerToolbar } from "./StickerToolbar";
@@ -94,6 +101,8 @@ import { ArtistChipLayer } from "./ArtistChipLayer";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
 import { useBoardGestures } from "./useBoardGestures";
+import { useBoardSize } from "./useBoardSize";
+import { useMyStickerBoard } from "./useMyStickerBoard";
 import "./StickerBoard.css";
 
 // The Zipper shows on the board at rest, so the sticker tray's code starts loading with the board's.
@@ -138,12 +147,12 @@ const settled = new Set<string>();
  * the next-newest once it's touched.
  */
 function curledToday(stickers: readonly BoardSticker[], now: Date) {
-  const today = ticketDay(now);
+  const today = tokyoTicketDay(now);
   let newest: BoardSticker | undefined;
   for (const s of stickers)
     if (
       !settled.has(s.id) &&
-      ticketDay(new Date(s.createdAt)) === today &&
+      tokyoTicketDay(new Date(s.createdAt)) === today &&
       (!newest || s.createdAt > newest.createdAt)
     )
       newest = s;
@@ -151,23 +160,6 @@ function curledToday(stickers: readonly BoardSticker[], now: Date) {
 }
 
 const round4 = (v: number) => Number(v.toFixed(4));
-
-/** An element's box on the board, which is its offset parent. */
-const boxOf = (el: HTMLElement): Box => ({
-  left: el.offsetLeft,
-  top: el.offsetTop,
-  right: el.offsetLeft + el.offsetWidth,
-  bottom: el.offsetTop + el.offsetHeight,
-});
-
-/** The box as it was when it hasn't moved, so measuring again doesn't re-render the board. */
-const kept = (was: Box | null, now: Box) =>
-  was?.left === now.left &&
-  was.top === now.top &&
-  was.right === now.right &&
-  was.bottom === now.bottom
-    ? was
-    : now;
 
 interface LoadedBoard {
   owner: PersonView;
@@ -270,16 +262,9 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     () => fromPhone && { ...fromPhone, fromPhone: true },
   );
   const owner = adopted?.owner ?? null;
-  /** The stickers as last drawn, and their load, for a reload to keep the spots the board has given them. */
-  const latestStickers = useRef(stickers);
-  const latestAdopted = useRef(adopted);
-  useLayoutEffect(() => {
-    latestStickers.current = stickers;
-    latestAdopted.current = adopted;
-  });
   /** Stickers whose spot didn't save, and why; each goes once a save of it succeeds. */
   const [unsaved, setUnsaved] = useState<ReadonlyMap<string, string>>(() => new Map());
-  const [size, setSize] = useState<{ W: number; H: number } | null>(null);
+  const size = useBoardSize(stage);
   /** The name button's box on the board, which a sticker's knob must stay clear of. */
   const [name, setName] = useState<Box | null>(null);
   /** Draw's box on the board, which the selected sticker's toolbar keeps clear of. */
@@ -292,10 +277,12 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const [open, setOpen] = useState<{ id: string; mode: "yours" | "given" } | null>(null);
   const openYours = (id: string) => setOpen({ id, mode: "yours" });
   const [giving, setGiving] = useState<BoardSticker | null>(null);
+  /** The app restarted for a language change, so it opens on the stat board, at Settings. */
+  const [reopenedOnSettings] = useState(takeReopenOnSettings);
   /** The board is turned over to its stat board. */
-  const [turned, setTurned] = useState(false);
+  const [turned, setTurned] = useState(reopenedOnSettings);
   /** The board has turned over before, so its stat board stays mounted for every turn after. */
-  const [wasTurned, setWasTurned] = useState(false);
+  const [wasTurned, setWasTurned] = useState(reopenedOnSettings);
   const { tickets } = useTickets();
   // Draw spends a daily ticket at once, its ticket peeling off the key; with none at all, a card says when.
   const drawKey = useDrawFromBoard(onDraw);
@@ -305,8 +292,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const [noticesClosed, setNoticesClosed] = useState<ReadonlySet<string>>(() => new Set());
   /** A sticker that just reached you, and its giver, while it has no gratitude yet. */
   const [owed, setOwed] = useState<{ gift: { id: string }; giver: PersonView } | null>(null);
-  /** The first-load artist chips have played, or a sticker was selected, which clears them. */
-  const [chipsDone, setChipsDone] = useState(false);
+  /** The artist chips have played on this app open, or a sticker was selected, which clears them. */
+  const [chipsDone, setChipsDone] = useState(() => !owesGreeting(account.id));
   const me = useIdentity();
   const giftSender = useGiftSender();
   const reduced = useReducedMotion();
@@ -316,44 +303,74 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // The gratitude mini-game covers the board, so the tilt and its sheen sweeps rest while it plays.
   useLight(!turned && !gratitudeFor);
 
+  /**
+   * Stickers whose spot is saving, each with the spot waiting to go once that save settles. One save
+   * at a time, so an older spot can't land on the server last, and only the latest answer counts.
+   */
+  const saving = useRef(new Map<string, Placement | null>());
   const save = useCallback(
     (sticker: Pick<BoardSticker, "id" | "no">, placement: Placement) => {
-      api.saveStickerPlacement(sticker.id, toApiPlacement(placement)).then(
-        () =>
-          setUnsaved((was) => {
-            if (!was.has(sticker.id)) return was;
-            const next = new Map(was);
-            next.delete(sticker.id);
-            return next;
-          }),
-        (error: unknown) => {
-          const failure = apiError(error);
-          console.error(`Saving where ${formatNo(sticker.no)} sits failed`, failure);
-          setUnsaved((was) => new Map(was).set(sticker.id, errorReason(failure)));
-        },
-      );
+      const inFlight = saving.current;
+      if (inFlight.has(sticker.id)) {
+        inFlight.set(sticker.id, placement);
+        return;
+      }
+      const send = (spot: Placement) => {
+        inFlight.set(sticker.id, null);
+        // A spot that waited goes next, and its answer is the one that sets or clears the note.
+        const settled = (answer: () => void) => {
+          const next = inFlight.get(sticker.id);
+          if (next) return send(next);
+          inFlight.delete(sticker.id);
+          answer();
+        };
+        api.saveStickerPlacement(sticker.id, toApiPlacement(spot)).then(
+          () =>
+            settled(() =>
+              setUnsaved((was) => {
+                if (!was.has(sticker.id)) return was;
+                const next = new Map(was);
+                next.delete(sticker.id);
+                return next;
+              }),
+            ),
+          (error: unknown) => {
+            const failure = apiError(error);
+            console.error(`Saving where ${formatNo(sticker.no)} sits failed`, failure);
+            settled(() => setUnsaved((was) => new Map(was).set(sticker.id, errorReason(failure))));
+          },
+        );
+      };
+      send(placement);
     },
     [api],
   );
 
-  // The board mounts anew on every visit, so its load is its refresh. A sticker the board has never
-  // placed gets a spot as it loads, saved so it stays there.
-  const board = useApiQuery("sticker-board", async (client): Promise<LoadedBoard> => {
-    const data = await client.stickerBoard();
-    noteBootMilestone("board JSON", `${data.boardStickers.length} stickers`);
-    const { stickers: list, placed } = placeUnplaced(
-      data.boardStickers.map(toBoardSticker),
-      heldOver(latestStickers.current, latestAdopted.current),
-    );
-    for (const s of placed) save(s, s.placement);
-    return { owner: toPerson(data.owner), stickers: list };
-  });
-  const loaded = board.state === "ready" ? board.data : null;
-  if (loaded && loaded !== adopted) {
-    setAdopted(loaded);
+  // The board mounts anew on every visit, so its load is its refresh.
+  const board = useMyStickerBoard();
+  const answer = board.state === "ready" ? board.data : null;
+  /** The server's answer the stickers were last adopted from. */
+  const [adoptedAnswer, setAdoptedAnswer] = useState<typeof answer>(null);
+  /** Stickers the board had never placed, given a spot as their answer was adopted. */
+  const [newlyPlaced, setNewlyPlaced] = useState<readonly BoardStickerView[]>([]);
+  if (answer && answer !== adoptedAnswer) {
+    setAdoptedAnswer(answer);
     // Moves made while it loaded stay.
-    setStickers(placeUnplaced(loaded.stickers, heldOver(stickers, adopted)).stickers);
+    const { stickers: next, placed } = placeUnplaced(
+      answer.boardStickers.map(toBoardSticker),
+      heldOver(stickers, adopted),
+    );
+    setAdopted({ owner: toPerson(answer.owner), stickers: next });
+    setStickers(next);
+    setNewlyPlaced(placed);
+    // A sticker that comes back to you returns to the sticker tray, so there's no landing to wait for.
+    const landing = next.find((s) => s.id === landingId);
+    if (landing && !onTheBoard(landing)) setLandingId(undefined);
   }
+  // Each spot the board gave is saved, so the sticker stays there.
+  useEffect(() => {
+    for (const s of newlyPlaced) save(s, s.placement);
+  }, [newlyPlaced, save]);
   // The first open's board completes once the fresh board's stickers have all decoded; one from the
   // phone's storage starts them decoding. A board that didn't load has nothing more coming, so what
   // waited for it goes ahead.
@@ -374,6 +391,16 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   useEffect(() => {
     if (failed) markBoardComplete();
   }, [failed]);
+  /**
+   * A gift went out, so the board loads again to leave its sticker off: at once, or once a load in
+   * flight lands, since that one may have read the board before the gift left.
+   */
+  const [reloadForGift, setReloadForGift] = useState(false);
+  if (reloadForGift && board.state !== "loading") {
+    setReloadForGift(false);
+    if (board.state === "ready") board.refresh();
+    else board.retry();
+  }
 
   const pending = useApiQuery("pending-gifts", (client) => client.pendingGifts());
   // A preview can make a gift wait here even when the person chooses Not now.
@@ -401,23 +428,31 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     if (adopted) noticeReceivesFromNow(receivedGiftsOf(adopted.stickers));
   }, [adopted]);
 
-  // A sticker that just reached you asks about gratitude, when its newest gift to you has none.
+  // A sticker that just reached you asks about gratitude, when its newest gift to you has none. When
+  // the check fails, the ask can't come, so the board says so, with a way to check again.
+  const [checkFailure, setCheckFailure] = useState<string | null>(null);
+  const [checks, setChecks] = useState(0);
   useEffect(() => {
     if (!freshId || askedForGratitude.has(freshId)) return;
     let current = true;
     api.stickerDetail(freshId).then(
       (detail) => {
+        if (!current) return;
+        setCheckFailure(null);
         const [entry] = detail.transferTrail;
-        if (current && entry && entry.receiver.id === detail.owner.id && !entry.gratitude)
+        if (entry && entry.receiver.id === detail.owner.id && !entry.gratitude)
           setOwed({ gift: { id: entry.giftId }, giver: toPerson(entry.giver) });
       },
-      (error: unknown) =>
-        console.error(`Checking whether ${freshId} has gratitude failed`, apiError(error)),
+      (error: unknown) => {
+        const failure = apiError(error);
+        console.error(`Checking whether ${freshId} has gratitude failed`, failure);
+        if (current) setCheckFailure(errorReason(failure));
+      },
     );
     return () => {
       current = false;
     };
-  }, [api, freshId]);
+  }, [api, freshId, checks]);
 
   // The sheet asking about gratitude starts the game's code while it's read.
   useEffect(() => {
@@ -434,35 +469,29 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     });
   };
 
+  // The name's width follows the person's name, which arrives after the board; Draw's, its font. Draw
+  // sits at the board's foot, so a new board size moves it too.
   useLayoutEffect(() => {
-    const el = stage.current;
     const who = nameButton.current;
     const key = drawSlot.current;
-    if (!el || !who || !key) return;
+    if (!who || !key) return;
     const measure = () => {
-      setSize((was) =>
-        was?.W === el.clientWidth && was.H === el.clientHeight
-          ? was
-          : { W: el.clientWidth, H: el.clientHeight },
-      );
       setName((was) => kept(was, boxOf(who)));
       setDraw((was) => kept(was, boxOf(key)));
     };
-    // The name's width follows the person's name, which arrives after the board; Draw's, its font.
     const observer = new ResizeObserver(measure);
-    observer.observe(el);
     observer.observe(who);
     observer.observe(key);
     measure();
     return () => observer.disconnect();
-  }, []);
+  }, [size]);
 
   useEffect(() => {
     if (landingId) landed.add(landingId);
   }, [landingId]);
 
   // A given sticker has left the board: on its way, for the badge; received, for good.
-  const onBoard = (stickers ?? []).filter((s) => s.placement.on && s.held && !onItsWay(s));
+  const onBoard = (stickers ?? []).filter(onTheBoard);
   // The gratitude mini-game's demo always sends gratitude for whichever sticker landed most recently.
   const newest = onBoard.reduce<BoardSticker | null>(
     (latest, s) => (!latest || s.createdAt > latest.createdAt ? s : latest),
@@ -477,7 +506,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // A received sticker landing names its artist alone; otherwise every foil sticker does, once.
   const landingByOther = onBoard.find((s) => s.id === landingId && byOther(s));
   const chips =
-    chipsDone || !field || !size
+    chipsDone || failed || !field || !size
       ? []
       : onBoard
           .filter((s) => byOther(s) && (!landingByOther || s.id === landingByOther.id))
@@ -486,6 +515,11 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
             artist: s.artist,
             box: stickerBox(field, size.W, s.placement, s),
           }));
+  // The greeting is spent as it starts, so coming back to the board, or leaving early, doesn't replay it.
+  const greeting = chips.length > 0;
+  useEffect(() => {
+    if (greeting) markGreeted(account.id);
+  }, [greeting, account.id]);
   const freshSticker = freshId ? stickers?.find((s) => s.id === freshId) : undefined;
 
   const setPlacement = (id: string, placement: Placement) =>
@@ -522,7 +556,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // Back turns the stat board back over, as LINE's Back does on any overlay.
   useBackToClose(turned, () => turn(false));
 
-  const { hold, stow, tabStop } = useBoardGestures({
+  const { hold, stow, arrange, tabStop } = useBoardGestures({
     stage,
     stickers: onBoard,
     field,
@@ -598,7 +632,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
             { transform: "scale(0.98)", offset: 0.7 },
             { transform: "scale(1)" },
           ],
-          { duration: 520, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
+          { duration: 520, easing: EASE_OUT },
         );
     },
   };
@@ -628,14 +662,17 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const blankStyle = blankAt ? { left: blankAt.x, top: blankAt.y } : undefined;
   // Until the first sticker, Draw says where to start.
   const firstVisit = stickers?.length === 0;
+  // An empty board that still has stickers in the sticker tray points to the tray, not to Draw.
+  const inTray = (stickers ?? []).some((s) => s.held && !onTheBoard(s));
   const unsavedStickers = (stickers ?? []).filter((s) => unsaved.has(s.id));
 
   const front = (
-    <div className="board" ref={setFace}>
+    <div className="board" ref={setFace} data-resting={turned || gratitudeFor ? "" : undefined}>
       {/* Your name and Draw come before the stickers, so Tab reaches them first. */}
       <button
         ref={nameButton}
-        className="board-who"
+        // Its width is its own until a gifts badge needs the room opposite.
+        className={`board-who ${waiting.length > 0 || onTheirWay.length > 0 ? "" : "is-roomy"}`}
         onClick={() => turn(!turned)}
         onPointerDown={() => void StatBoard.preload()}
         onFocus={() => void StatBoard.preload()}
@@ -645,6 +682,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       >
         <PhotoSticker src={me.pictureUrl} name={me.displayName} size={42} />
         <span className="board-who-name">{me.displayName}</span>
+        <CaretRight className="board-who-cue" size={14} weight="bold" aria-hidden />
       </button>
 
       {(waiting.length > 0 || onTheirWay.length > 0) && (
@@ -698,7 +736,11 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
         {stickers && onBoard.length === 0 && (
           <div className="board-blank" style={blankStyle}>
             <span className="board-blank-cut" aria-hidden />
-            <span className="board-blank-note">{t(($) => $.stickerBoard.board.blank)}</span>
+            <span className="board-blank-note">
+              {inTray
+                ? t(($) => $.stickerBoard.board.blankWithTray)
+                : t(($) => $.stickerBoard.board.blank)}
+            </span>
           </div>
         )}
         {field &&
@@ -733,10 +775,10 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
                   board={size}
                   knobBelow={knobBelow}
                   clearOf={draw}
-                  give={giftSender !== null}
-                  onGive={() => setGiving(s)}
+                  {...(giftSender && { onGive: () => setGiving(s) })}
                   onView={() => openYours(s.id)}
                   onRemove={() => stow(s.id)}
+                  onArrange={(step) => arrange(s.id, step)}
                   {...(byOther(s) && { artist: s.artist })}
                   onEscape={() =>
                     stage.current
@@ -776,7 +818,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
         <div className="board-blank board-problem" role="alert" style={blankStyle}>
           <span className="board-blank-cut" aria-hidden />
           <span className="board-blank-note">{t(($) => $.stickerBoard.board.didntLoad)}</span>
-          <span className="fine board-problem-reason">{errorReason(board.error)}</span>
+          <p className="problem-note board-problem-reason">{errorReason(board.error)}</p>
           <LabelButton size="sm" onClick={board.retry}>
             {t(($) => $.stickerBoard.tryAgain)}
           </LabelButton>
@@ -803,6 +845,17 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
         </div>
       )}
 
+      {checkFailure && unsavedStickers.length === 0 && (
+        <div className="board-unsaved" role="alert">
+          <p className="board-unsaved-note">
+            {t(($) => $.stickerBoard.board.gratitudeCheckFailed, { reason: checkFailure })}
+          </p>
+          <LabelButton size="sm" onClick={() => setChecks((n) => n + 1)}>
+            {t(($) => $.stickerBoard.tryAgain)}
+          </LabelButton>
+        </div>
+      )}
+
       {giving && giftSender && (
         <Suspense fallback={null}>
           <Giving
@@ -815,7 +868,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
               // Given, it has left the board, and the board loads where its gift is.
               if (sent) {
                 setSelected(null);
-                if (board.state === "ready") board.refresh();
+                setReloadForGift(true);
               }
               // The bag's gift may have been packed, sent or taken out.
               if (pending.state === "ready") pending.refresh();
@@ -931,6 +984,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
               ref={statBoard}
               onFlipBack={() => turn(false)}
               flipBackRef={flipBack}
+              reopenedOnSettings={reopenedOnSettings}
               onTryGratitudeMiniGame={
                 newest
                   ? () =>

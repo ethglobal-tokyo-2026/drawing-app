@@ -1,31 +1,18 @@
+import { personKey, readStored, writeStored } from "../ui/deviceStorage";
 import type { PileDay } from "./pileDays";
 
 /** What Explore's sticker pile remembers on this device: the newest sticker each person has seen. */
-const SEEN_KEY = "explore.pile.seen";
+const seenKey = (meId: string) => personKey("explore.pile.seen", meId);
 
 /** At most this many stickers fall at once; any others are already in the pile. */
 export const FALL_MAX = 14;
 
-function read(key: string): string | null {
-  try {
-    return localStorage.getItem(key);
-  } catch (error) {
-    console.error(`Explore's sticker pile can't read ${key} on this device`, error);
-    return null;
-  }
-}
-
-function write(key: string, value: string) {
-  try {
-    localStorage.setItem(key, value);
-  } catch (error) {
-    console.error(`Explore's sticker pile can't save ${key} on this device`, error);
-  }
-}
-
 /** When the newest sticker `meId` has seen in the pile was sealed, or null before their first look. */
 export function lastSeen(meId: string): number | null {
-  const raw = read(`${SEEN_KEY}.${meId}`);
+  const { text: raw } = readStored(
+    seenKey(meId),
+    "Explore's sticker pile can't read its last look on this device",
+  );
   if (raw === null) return null;
   const ms = Number(raw);
   if (Number.isFinite(ms)) return ms;
@@ -35,7 +22,11 @@ export function lastSeen(meId: string): number | null {
 
 /** Remembers that `meId` has seen every sticker sealed up to `ms`. */
 export function markSeen(meId: string, ms: number) {
-  write(`${SEEN_KEY}.${meId}`, String(ms));
+  writeStored(
+    seenKey(meId),
+    String(ms),
+    "Explore's sticker pile can't save its last look on this device",
+  );
 }
 
 export interface Arrivals {

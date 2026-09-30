@@ -1,5 +1,6 @@
 import { stickers, users } from "@drawing-app/db";
 import { insertUser } from "@drawing-app/db/testing";
+import { MAX_ID_TOKEN_LENGTH } from "@drawing-app/sticker-chain/line";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -13,7 +14,7 @@ import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { fakeSmartWallets } from "../testing/fakes.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 import { insertSealedSticker, sendGratitude } from "../testing/rows.ts";
-import { ID_TOKEN_MAX_LENGTH, LINE_USER_ID_MAX_LENGTH } from "./session.ts";
+import { LINE_USER_ID_MAX_LENGTH } from "./session.ts";
 
 const meBodySchema = z.object({ me: meSchema });
 
@@ -173,7 +174,7 @@ describe("signing in", () => {
     const bodies = [
       { ...valid, language: "fr" },
       { ...valid, idToken: "" },
-      { ...valid, idToken: "x".repeat(ID_TOKEN_MAX_LENGTH + 1) },
+      { ...valid, idToken: "x".repeat(MAX_ID_TOKEN_LENGTH + 1) },
     ];
     for (const body of bodies) {
       expect(await refusalOf(await test.send("POST", "/api/session", { body }))).toMatchObject({

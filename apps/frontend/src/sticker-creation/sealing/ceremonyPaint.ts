@@ -1,3 +1,4 @@
+import { releaseCanvas } from "../../ui/releaseCanvas";
 import type { Box } from "./sealTimeline";
 
 /** The paper's backing, and what its maker printed on it. */
@@ -90,8 +91,8 @@ export function paintUsedStickerSilhouette(
       g.drawImage(wall, 0, 0);
       g.globalAlpha = 1;
     }
-    wall.width = wall.height = 0;
   }
+  releaseCanvas(wall);
   g.globalCompositeOperation = "destination-in";
   g.drawImage(mask, 0, 0, W, H);
   g.globalCompositeOperation = "source-over";

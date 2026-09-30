@@ -103,6 +103,8 @@ describe("placement", () => {
     expect(knobOff(80, 150)).toBe(true);
     expect(knobOff(250, 150)).toBe(false);
     expect(knobOff(250, 80, 180)).toBe(false);
+    // Its disc clears the name here, but its touch area doesn't, so a tap would turn the board over.
+    expect(knobOff(80, 178)).toBe(true);
   });
 
   it("stacks a raised sticker above all the others", () => {

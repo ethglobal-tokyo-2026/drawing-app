@@ -6,20 +6,33 @@ import type {
 } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { boardSticker, people } from "../api/testFixtures";
+import { boardSticker, people, sticker, trailEntry } from "../api/testFixtures";
+import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
-import { toPerson } from "../api/views";
+import { toApiPlacement, toPerson } from "../api/views";
 import { forgetNoticedHere, markNoticed, noticeReceivesFromNow } from "../giving/noticedGifts";
+import { forgetGreetings } from "./artistChipGreeting";
 import { forgetBoardComplete } from "./boardComplete";
 import { placeUnplaced, toBoardSticker } from "./boardSticker";
 import { keepBoard, keptBoardFor, readKeptBoardAgain } from "./lastBoard";
 import { StickerBoard } from "./StickerBoard";
+import { STEP_SAVE_IDLE_MS } from "./useBoardGestures";
 
 // The board's chat menu and Privy reach LINE's SDK; nothing here needs it to answer.
 vi.mock("@line/liff", () => ({ default: { isApiAvailable: () => false } }));
 // The stat board mounts once the board is idle; its developer slip's LINE details read LIFF's context.
 vi.mock("../line/LineDetails", () => ({ LineDetails: () => null }));
+// Giving itself isn't tested here: it closes as sent at a tap, from a board that can give.
+vi.mock("../giving/useGiftSender", () => ({ useGiftSender: () => ({}) }));
+vi.mock("../giving/Giving", () => ({
+  Giving: ({ onClose }: { onClose: (sent: boolean) => void }) => (
+    <button type="button" className="test-gift-sent" onClick={() => onClose(true)}>
+      Sent
+    </button>
+  ),
+}));
 vi.mock("../line/liff", () => ({
+  LIFF_ID: "test-liff",
   liffMockActive: true,
   useLine: () => ({
     status: "ready",
@@ -33,6 +46,7 @@ afterEach(async () => {
   // The board loads its sheets, detail and stat board in the background; they land before it goes.
   await act(() => vi.dynamicImportSettled());
   unmount();
+  vi.restoreAllMocks();
 });
 
 beforeEach(() => {
@@ -40,6 +54,7 @@ beforeEach(() => {
   forgetNoticedHere();
   readKeptBoardAgain();
   forgetBoardComplete();
+  forgetGreetings();
 });
 
 const at = (x: number) => ({ onBoard: true, x, y: 0.5, scale: 0.3, rotation: 0, z: 1 });
@@ -90,6 +105,55 @@ describe("StickerBoard with the board kept on this phone", () => {
     expect(shownIds(view.host)).toEqual([]);
     expect(view.host.querySelectorAll(".board-loading-sticker").length).toBeGreaterThan(0);
     expect(localStorage.getItem("draw.lastBoard")).toBeNull();
+  });
+});
+
+describe("StickerBoard's check for gratitude to send", () => {
+  it("says so when the check for the sticker that just arrived fails, and Try again asks again", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const a = boardSticker({ placement: at(0.3) });
+    const stickerDetail = vi
+      .fn<ApiClient["stickerDetail"]>()
+      .mockRejectedValueOnce(
+        new ApiError(503, { error: "unavailable", detail: "database is busy" }),
+      )
+      .mockRejectedValue(new ApiError(404, { error: "sticker_not_found", detail: "gone" }));
+    const api = emptyApi({
+      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [a] }),
+      stickerDetail,
+    });
+    const view = renderWithApi(
+      <StickerBoard freshId={a.stickerId} onDraw={() => {}} onOpenGift={() => {}} />,
+      api,
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    const alert = () => view.host.querySelector(".board-unsaved")?.textContent;
+    expect(alert()).toContain("Couldn’t check whether gratitude is waiting");
+    expect(alert()).toContain("database is busy");
+
+    const again = view.host.querySelector<HTMLElement>(".board-unsaved .label-btn");
+    await act(async () => again?.click());
+    expect(stickerDetail).toHaveBeenCalledTimes(2);
+    expect(alert()).toContain("gone");
+  });
+});
+
+describe("StickerBoard's artist chips", () => {
+  it("name the artists of foil stickers once per app open, not on every visit to the board", () => {
+    keep(
+      TEST_ME.id,
+      boardSticker({ placement: at(0.3), sticker: sticker({ artist: people.mika }) }),
+    );
+    const visit = () => {
+      const api = emptyApi({ stickerBoard: () => new Promise(() => {}) });
+      const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
+      const chips = view.host.querySelectorAll(".artist-chip-layer__chip").length;
+      view.unmount();
+      return chips;
+    };
+    expect(visit()).toBe(1);
+    expect(visit()).toBe(0);
   });
 });
 
@@ -178,6 +242,115 @@ describe("StickerBoard after a gift", () => {
     expect(title()).toBe("@mika received your sticker");
     close();
     expect(document.querySelector(".gift-received-notice")).toBeNull();
+  });
+});
+
+describe("StickerBoard saving where a sticker sits", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("keeps one save of a sticker in flight, then sends only its latest spot, whose failure stays", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    // happy-dom lays nothing out: the board is given a phone's size, so each key press moves it.
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(390);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(657);
+    const a = boardSticker({ placement: at(0.5) });
+    let land = () => {};
+    const saveStickerPlacement = vi
+      .fn<ApiClient["saveStickerPlacement"]>()
+      .mockImplementationOnce(
+        (stickerId, placement) =>
+          new Promise((resolve) => {
+            land = () => resolve({ stickerId, placement, seenAt: null, arrivedAt: a.arrivedAt });
+          }),
+      )
+      .mockRejectedValue(new ApiError(503, { error: "not_in_test", detail: "The board is down" }));
+    const view = renderWithApi(
+      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
+      emptyApi({
+        stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [a] }),
+        saveStickerPlacement,
+      }),
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    const el = view.host.querySelector<HTMLElement>(`[data-sticker-id="${a.stickerId}"]`);
+    const press = (key: string) =>
+      act(() => {
+        el?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+      });
+    act(() => el?.focus());
+    press("Enter");
+    // Each burst of keys is one save, so three bursts are three saves, the first in flight.
+    for (let burst = 0; burst < 3; burst++) {
+      press("ArrowLeft");
+      act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+    }
+    expect(saveStickerPlacement).toHaveBeenCalledOnce();
+
+    await act(async () => land());
+    expect(saveStickerPlacement).toHaveBeenCalledTimes(2);
+    const shown = keptBoardFor(TEST_ME.id)?.stickers[0].placement;
+    expect(saveStickerPlacement.mock.lastCall?.[1]).toEqual(shown && toApiPlacement(shown));
+    expect(view.host.querySelector(".board-unsaved")).not.toBeNull();
+  });
+});
+
+describe("StickerBoard after sending a gift", () => {
+  it("loads again when its fresh load had failed, so the sticker on its way leaves the board", async () => {
+    const a = boardSticker({ placement: at(0.3) });
+    keep(TEST_ME.id, a);
+    const onItsWay = { ...a, openGift: { id: "g1", status: "sent" as const, for: null } };
+    const stickerBoard = vi
+      .fn<ApiClient["stickerBoard"]>()
+      .mockRejectedValueOnce(
+        new ApiError(503, { error: "not_in_test", detail: "The board is down" }),
+      )
+      .mockResolvedValue({ owner: TEST_OWNER, boardStickers: [onItsWay] });
+    const view = renderWithApi(
+      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
+      emptyApi({ stickerBoard }),
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    expect(view.host.querySelector(".board-problem")).not.toBeNull();
+
+    const el = view.host.querySelector<HTMLElement>(`[data-sticker-id="${a.stickerId}"]`);
+    act(() => {
+      el?.focus();
+      el?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    const give = [...view.host.querySelectorAll<HTMLElement>(".sticker-toolbar button")].find(
+      (button) => button.textContent === "Give",
+    );
+    act(() => give?.click());
+    await act(() => vi.dynamicImportSettled());
+    act(() => document.querySelector<HTMLElement>(".test-gift-sent")?.click());
+    await act(async () => {});
+    expect(shownIds(view.host)).toEqual([]);
+  });
+});
+
+describe("StickerBoard after receiving", () => {
+  it("asks about gratitude for a sticker that came back to your sticker tray", async () => {
+    // Placed before you gave it, so it comes back to the tray rather than landing on the board.
+    const back = boardSticker({ placement: { ...at(0.3), onBoard: false } });
+    const api = emptyApi({
+      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [back] }),
+      stickerDetail: () =>
+        Promise.resolve({
+          sticker: back.sticker,
+          owner: TEST_OWNER,
+          transferTrail: [trailEntry({ giftId: "g1", receiver: TEST_OWNER })],
+          hasTimelapse: false,
+        }),
+    });
+    const view = renderWithApi(
+      <StickerBoard freshId={back.stickerId} onDraw={() => {}} onOpenGift={() => {}} />,
+      api,
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    expect(document.querySelector(".send-gratitude-sheet")).not.toBeNull();
   });
 });
 

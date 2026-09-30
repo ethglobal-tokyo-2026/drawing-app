@@ -39,8 +39,6 @@ interface Props {
   veiled?: boolean;
   /** Who drew it, as printed, when that isn't the board's owner: its label names them. */
   by?: string;
-  /** Its gratitude glow, from 0 (none) to 1 (brightest). */
-  glow?: number;
 }
 
 const CORNERS = ["nw", "ne", "sw", "se"] as const;
@@ -68,7 +66,6 @@ export const PlacedSticker = memo(function PlacedSticker({
   foil = false,
   veiled = false,
   by,
-  glow = 0,
 }: Props) {
   const { t } = useTranslation();
   const lift = useRef<HTMLDivElement>(null);
@@ -99,7 +96,6 @@ export const PlacedSticker = memo(function PlacedSticker({
     held === "drag" && "is-dragging",
     held === "handle" && "is-handling",
     landing && "is-landing",
-    glow > 0 && "is-glowing",
   ];
   const named = {
     no: formatNo(sticker.no),
@@ -129,7 +125,6 @@ export const PlacedSticker = memo(function PlacedSticker({
         height: box.h,
         transform: box.transform,
         zIndex: 10 + stack,
-        ...(glow > 0 && { "--glow": glow.toFixed(2) }),
       }}
     >
       <div className="placed-sticker__lift" ref={lift}>

@@ -2,7 +2,7 @@ import type { Section } from "../catalog";
 
 export const stickers = {
   duration: {
-    /** A sticker's drawing time in fine print, like 4m 52s: on the offer sheet, the sealed card, the Explore feed, a sticker's view on someone else's board, the giving screen and the Mini-game, and in a Gift Message's text */
+    /** A sticker's drawing time in fine print, like 4m 52s: on the sealed card, the Explore feed, a sticker's view on someone else's board, the giving screen and the Mini-game, and in a Gift Message's text */
     minutesAndSeconds: { en: "{{minutes}}m {{seconds}}s", ja: "{{minutes}}分{{seconds}}秒" },
     /** A sticker's drawing time in fine print on the minute, like 5m, wherever the 4m 52s form shows */
     minutes: { en: "{{minutes}}m", ja: "{{minutes}}分" },
@@ -32,7 +32,7 @@ export const stickers = {
   },
   /** An NSFW sticker, which only adults see plainly. */
   nsfw: {
-    /** Over an NSFW sticker that's blurred because you aren't verified as an adult, on a sticker board, Explore, and the give and offer sheets' pickers: the small mark in its middle */
+    /** Over an NSFW sticker that's blurred because you aren't verified as an adult, on a sticker board, Explore, and the give sheet's picker: the small mark in its middle */
     mark: { en: "18+", ja: "18+" },
     /** Screen readers only: an NSFW sticker that's blurred because you aren't verified as an adult, wherever the 18+ mark shows */
     veiled: {
@@ -40,9 +40,9 @@ export const stickers = {
       ja: "ぼかし表示：成人向け",
     },
   },
-  /** The stickers the give and offer sheets pick from. */
+  /** The stickers the give sheet picks from. */
   keptStickers: {
-    /** Give sheet, and the offer sheet with Swap chosen: alert when your stickers fail to load; {{reason}} is the error message */
+    /** Give sheet: alert when your stickers fail to load; {{reason}} is the error message */
     notLoaded: {
       en: "Couldn’t load your stickers: {{reason}}",
       ja: "手持ちのシールを読み込めませんでした：{{reason}}",

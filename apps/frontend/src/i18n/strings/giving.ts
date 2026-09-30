@@ -107,15 +107,15 @@ export const giving = {
   },
   /** Giving an NSFW sticker, which only adults can receive. */
   nsfw: {
-    /** The give sheet on someone else's sticker board, and the offer sheet's swap picker: said by assistive tech on an NSFW sticker that can't be picked because they aren't verified as an adult */
+    /** The give sheet on someone else's sticker board: said by assistive tech on an NSFW sticker that can't be picked because they aren't verified as an adult */
     blocked: {
       en: "for adults only, can’t be given to them",
       ja: "成人向けのため、この人には贈れません",
     },
-    /** The give sheet on someone else's sticker board: fine print under the grid when some of your stickers are NSFW and {{name}} isn't verified as an adult */
+    /** The give sheet on someone else's sticker board: fine print under the grid when some of your stickers are NSFW and <name/> isn't verified as an adult; <name/> is their handle, which keeps its own case in the capitals */
     adultsOnly: {
-      en: "18+ stickers can only go to adults verified with World ID, and {{name}} isn’t.",
-      ja: "18+のシールは、World IDで年齢確認済みの成人にだけ贈れます。{{name}}さんはまだ確認されていません。",
+      en: "18+ stickers can only go to adults verified with World ID, and <name/> isn’t.",
+      ja: "18+のシールは、World IDで年齢確認済みの成人にだけ贈れます。<name/>さんはまだ確認されていません。",
     },
     /** Giving's first screen, for an NSFW sticker: fine print on who can open the gift */
     whoCanOpen: {

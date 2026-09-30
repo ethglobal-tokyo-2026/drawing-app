@@ -3,6 +3,7 @@
  * rises and forms, the sticker peels off its backing and flies onto the card, then the card's lines
  * fade up. SealCeremony writes one frame to the page per animation frame.
  */
+import { clamp01, easeOutCubic as easeOut } from "../../ui/easing";
 
 export const TOTAL = 2580;
 
@@ -31,8 +32,6 @@ export const T = {
   txt0: 2080,
 };
 
-const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
-const easeOut = (u: number) => 1 - Math.pow(1 - u, 3);
 const easeInOut = (u: number) => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
 
 export interface Box {

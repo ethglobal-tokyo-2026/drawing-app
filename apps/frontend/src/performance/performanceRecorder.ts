@@ -18,7 +18,7 @@ interface TimelineEvent {
  * Our work under one label in a frame: its time, and how many `timeOurWork` calls it took. The
  * calls tell work apart from none where the clock moves in whole ms, as WebKit's does.
  */
-export interface OurWork {
+interface OurWork {
   ms: number;
   calls: number;
 }
