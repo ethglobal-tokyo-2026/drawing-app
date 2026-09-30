@@ -21,6 +21,7 @@ import { At, StreakIcon, X } from "../icons";
 import { formatHandle } from "../stickers/format";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
+import { EASE_OUT } from "../ui/easing";
 import { REVEAL } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
 import { useReducedMotion } from "../ui/useReducedMotion";
@@ -64,7 +65,6 @@ const ROW_GAP_MS = 25;
 const ROWS_DEALT = 5;
 /** Reduced motion: the rows cross-fade. */
 const ROWS_FADE_MS = 120;
-const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 /** Opens someone's sticker board: yours, or theirs. */
 type Open = (person: Person) => void;

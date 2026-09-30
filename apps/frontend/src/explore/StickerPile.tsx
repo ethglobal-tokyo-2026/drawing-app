@@ -22,6 +22,7 @@ import { formatNo } from "../stickers/format";
 import { veiledFor } from "../stickers/nsfw";
 import "../stickers/nsfw-img.css";
 import { PhotoSticker } from "../ui/PhotoSticker";
+import { EASE_PEEL } from "../ui/easing";
 import { REVEAL, revealOnLoad } from "../ui/reveal";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import {
@@ -56,7 +57,6 @@ const LAND_MS = 280;
 const FALL_GAP_MS = 55;
 /** Gravity: slow off the top, fastest as it lands. */
 const EASE_FALL = "cubic-bezier(0.55, 0, 1, 0.45)";
-const EASE_PEEL = "cubic-bezier(0.2, 0.7, 0.2, 1)";
 /** It spins this far into its turn as it falls. */
 const SPIN_DEG = 24;
 /** Reduced motion: the pile fades in instead. */

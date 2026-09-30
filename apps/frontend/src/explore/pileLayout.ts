@@ -11,6 +11,7 @@
  * Units: x runs from 0 to `width`, and y from the floor at 0 up, so a heap's y is negative.
  */
 import { boxShape, hash, profileOf, type Shape } from "../sticker-board/tray/sheetPacking";
+import { clamp } from "../ui/easing";
 import { seededRandom } from "../ui/seededRandom";
 
 /** The pile's width in units on every phone; the screen scales it to fit. */
@@ -340,15 +341,15 @@ export function pileStickers(items: readonly PileItem[], opts: PileOptions): Pil
 
     const lo = Math.ceil(SIDE - Math.min(pf.minx, clear.x0));
     const hi = Math.floor(W - SIDE - Math.max(pf.maxx, clear.x1));
-    const clamp = (x: number) =>
-      hi < lo ? Math.round((lo + hi) / 2) : Math.min(hi, Math.max(lo, x));
+    // A sticker too wide for the floor's sides sits in the middle of them.
+    const withinSides = (x: number) => (hi < lo ? Math.round((lo + hi) / 2) : clamp(x, lo, hi));
     const sink = overlap * (Math.max(pf.w, pf.h) / 2);
     const step = Math.max(2, Math.round(pf.w * SLIDE_STEP));
 
     let best: { x: number; y: number; depth: number } | null = null;
     for (let tries = 0; tries < TRIES; tries++) {
       // Three randoms summed: most drops fall near the middle, so the day heaps into a mound.
-      let x = clamp(Math.round(((rnd() + rnd() + rnd()) / 3) * W));
+      let x = withinSides(Math.round(((rnd() + rnd() + rnd()) / 3) * W));
       // It slides off anything it can't balance on: while all it rests on lies to one side of its
       // middle, it moves a step the other way.
       for (let slides = 0; slides < SLIDES; slides++) {
@@ -362,7 +363,8 @@ export function pileStickers(items: readonly PileItem[], opts: PileOptions): Pil
           }
         }
         const balance = pf.w * BALANCE;
-        const next = last < -balance ? clamp(x + step) : first > balance ? clamp(x - step) : x;
+        const next =
+          last < -balance ? withinSides(x + step) : first > balance ? withinSides(x - step) : x;
         if (next === x) break;
         x = next;
       }
@@ -374,7 +376,7 @@ export function pileStickers(items: readonly PileItem[], opts: PileOptions): Pil
       const low = y + (depth >= FULL ? 0 : -sink);
       if (!best || low > best.depth) best = { x, y, depth: low };
     }
-    const middle = clamp(Math.round(W / 2));
+    const middle = withinSides(Math.round(W / 2));
     const { x, y } = best ?? { x: middle, y: clearAt(middle, touch(middle)) };
 
     for (let t = 0, c = x + pf.j0; t < pf.m; t++, c++) {
