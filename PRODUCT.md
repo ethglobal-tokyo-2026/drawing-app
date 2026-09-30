@@ -47,7 +47,7 @@ You can hand someone a physical drawing, but nothing makes a digital drawing sca
   - Tap the heart, stroke it back and forth anywhere on the screen, or shake the phone. Stroke and shake are hidden: the heart hints as input heads toward one, and a run of fast passes or reversals unlocks it. Once a combo commits to stroke or shake, other input stops counting. Shake needs iPhone's motion permission, which the app asks for once after sign-in.
   - Effects escalate with the total through the tiers ありがと, 照れ, ドキドキ, オーバーヒート and 昇天, from a blush to over-the-top anime reactions. The ceiling is suggestive comedy with plausible deniability, never explicit: no bodies, undressing, explicit words or moaning audio. LINE's MINI App Policy bans sexual content.
   - The phone keeps each finished combo and sends it to the server until it's recorded or refused. The giver gets its Gratitude as Direct. When the Original Artist is neither giver nor receiver, 20% of it goes to them out of the giver's part, as the Original Artist Gratitude Share (Residual).
-- **Explore:** search artists by handle; Stickers, recent stickers heaped in a pile by the Tokyo day they were sealed, newest day first, tagged with who drew each and who a given one went to; and This week's leaderboards: most Gratitude, best combo in hits, longest streak. A search result, a leaderboard row or a lifted sticker opens that artist's sticker board, read only, with Give and, on each sticker, Offer for it.
+- **Explore:** search artists by handle; Stickers, recent stickers heaped in a pile by the Tokyo day they were sealed, newest day first, tagged with who drew each and who a given one went to; and This week's leaderboards: most Gratitude, best combo in hits, and the current streak. A search result, a leaderboard row or a lifted sticker opens that artist's sticker board, read only, with Give.
 - **The Shop** sells reserve tickets through the reserve ticket checkout, which the drawing screen's ticket cards open too: packs priced in yen, bigger packs costing less a ticket, paid in JPYC from the person's Sui account. It lists their ticket purchases, read from Sui. Laminates, brushes and backing foils are shelves marked coming soon, each led by what everyone has now (gloss, the brush, holo), with no prices; nothing on them can be bought.
 - **The Official account** is how people come back. Its chat menu, in the person's language, shows Draw with the tickets they have left, My board and Explore; someone without an account sees Open Sticker Board.
 
@@ -76,7 +76,7 @@ You can hand someone a physical drawing, but nothing makes a digital drawing sca
 - Gratitude recorded on chain.
 - Telling the giver about new Gratitude, by a LINE message or a mark on their board. They find it only on their stat board and in the sticker's Transfer Trail.
 - A sticker's Gratitude shown as a glow behind it.
-- Offers: the offer sheet (ask for it, swap one of yours, offer Gratitude) sends nothing.
+- Offers: asking for someone's sticker, swapping one of yours for it, or offering Gratitude for it.
 - Posts: a feed of text posts with stickers, links and embeds, and posting after a seal or a gift.
 - Giving to a random artist.
 - Sharing your sticker board as a link or a QR code.
