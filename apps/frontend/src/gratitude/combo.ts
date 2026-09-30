@@ -77,6 +77,14 @@ export interface GratitudeCombo {
    * a rule ended it first. Before the first tap it ends without a record.
    */
   endCombo: (t: number, reason: "hidden" | "closed") => ComboEvent[];
+  /**
+   * The `ended` event `endCombo(t, reason)` would give, leaving the combo running: a combo still in
+   * play, as the device keeps it. Null unless it's running.
+   */
+  endedAt: (
+    t: number,
+    reason: "hidden" | "closed",
+  ) => Extract<ComboEvent, { kind: "ended" }> | null;
 }
 
 function tierFor(total: number, starts: GameConfig["tierStarts"]): Tier {
@@ -182,26 +190,26 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
     return next;
   }
 
+  /** The record as it stands, ending at `end`. */
+  function recordAt(end: number): ComboRecord {
+    return {
+      method,
+      switchedAtHit,
+      hits: hitTimes.length,
+      hitTimes: [...hitTimes],
+      durationMs: Math.round(end),
+      total,
+      peakMult: Math.round(peakMult * 100) / 100,
+      peakTier: tierFor(total, config.tierStarts),
+      gameConfigVersion: config.version,
+    };
+  }
+
   function finish(end: number, reason: EndReason, events: ComboEvent[]) {
     settleAt(end);
     phase = "ended";
     latest = end;
-    events.push({
-      kind: "ended",
-      reason,
-      startedAt: origin,
-      record: {
-        method,
-        switchedAtHit,
-        hits: hitTimes.length,
-        hitTimes: [...hitTimes],
-        durationMs: Math.round(end),
-        total,
-        peakMult: Math.round(peakMult * 100) / 100,
-        peakTier: tierFor(total, config.tierStarts),
-        gameConfigVersion: config.version,
-      },
-    });
+    events.push({ kind: "ended", reason, startedAt: origin, record: recordAt(end) });
   }
 
   /** Runs every event due by `x`; true if one of them ended the combo. */
@@ -320,6 +328,13 @@ export function createGratitudeCombo(config: GameConfig = GAME_CONFIG): Gratitud
       const x = Math.max(Math.round(t - origin), at);
       if (!advance(x, events)) finish(x, reason, events);
       return events;
+    },
+
+    endedAt(t, reason) {
+      if (phase !== "running") return null;
+      // Its hits played again on a fresh combo end as this one would, and this one runs on untouched.
+      const record = replayGratitudeCombo(recordAt(Math.max(Math.round(t - origin), at)), config);
+      return { kind: "ended", reason, startedAt: origin, record };
     },
   };
 }

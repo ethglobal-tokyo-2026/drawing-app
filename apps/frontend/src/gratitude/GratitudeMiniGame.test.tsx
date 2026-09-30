@@ -9,6 +9,7 @@ import { gratitudeOf } from "../api/testing";
 import { emptyApi, TEST_ME } from "../api/testing";
 import { i18next } from "../i18n/i18n";
 import { GratitudeMiniGame, type GratitudeResult } from "./GratitudeMiniGame";
+import { resendPendingGratitude } from "./gratitudeOutbox";
 import { TIER_NAMES } from "./tierNames";
 
 declare global {
@@ -62,6 +63,26 @@ const tapOnce = () =>
     heart().dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
   });
 const play = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
+/** Taps `times` times, `gapMs` apart. */
+const tapFor = async (times: number, gapMs = 150) => {
+  for (let i = 0; i < times; i++) {
+    tapOnce();
+    await play(gapMs);
+  }
+};
+/** The page goes, as a webview torn down does: the screen with it, and a combo in play never ends. */
+const pageGoes = () => {
+  act(() => root.unmount());
+  root = createRoot(host);
+};
+/** The next app open, as you: what it sends, once a combo kept in play may go. */
+async function nextOpenSends() {
+  const next = vi.fn<ApiClient["recordGratitude"]>((body) => Promise.resolve(gratitudeOf(body)));
+  const resent = resendPendingGratitude({ recordGratitude: next }, TEST_ME.id);
+  await vi.runAllTimersAsync();
+  await resent;
+  return next.mock.calls.map(([body]) => body);
+}
 
 beforeEach(() => {
   vi.useFakeTimers({
@@ -159,6 +180,29 @@ describe("GratitudeMiniGame", () => {
     expect(body.replay.hits).toHaveLength(4);
     expect(body.replay.hits[3]).toBe(1);
     expect(onEnd).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a combo on the device as it plays, so a page torn down mid-combo still sends it", async () => {
+    open({ giftId: "g1" });
+    await tapFor(10);
+    pageGoes();
+    expect(recordGratitude).not.toHaveBeenCalled();
+    const [sent, ...more] = await nextOpenSends();
+    expect(more).toEqual([]);
+    expect(sent).toMatchObject({ giftId: "g1", method: "tap", replay: { endReason: "hidden" } });
+    // Kept as it grew, not only at its first hit.
+    expect(sent?.hits).toBeGreaterThan(1);
+  });
+
+  it("sends a finished combo once, in place of what was kept of it in play", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    recordGratitude.mockRejectedValue(new TypeError("Failed to fetch"));
+    open({ giftId: "g1" });
+    await tapFor(5);
+    await play(ONE_TAP_ENDS_MS);
+    const [finished] = recordGratitude.mock.calls[0] ?? [];
+    pageGoes();
+    expect(await nextOpenSends()).toEqual([finished]);
   });
 
   it("says so in plain words when the server refuses the gratitude, and logs why", async () => {

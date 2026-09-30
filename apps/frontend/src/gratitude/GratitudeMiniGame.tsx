@@ -16,7 +16,7 @@ import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import type { ComboRecord } from "./combo";
 import { newIdempotencyKey } from "../api/idempotencyKey";
-import { sendGratitude } from "./gratitudeOutbox";
+import { keepGratitudeInPlay, sendGratitude } from "./gratitudeOutbox";
 import { loadLetteringFonts } from "./letteringFonts";
 import { mountMiniGameEngine, type MiniGameEngine } from "./miniGameEngine";
 import { shownGloss, TIER_NAMES } from "./tierNames";
@@ -55,9 +55,14 @@ function need<E extends Element>(el: E | null, what: string): E {
 }
 
 /** POST /api/gratitude's body: the record's scored fields, not its timings, which the replay holds. */
-function gratitudeFor(giftId: string, record: ComboRecord, replay: ReplayV1): RecordGratitude {
+function gratitudeFor(
+  idempotencyKey: string,
+  giftId: string,
+  record: ComboRecord,
+  replay: ReplayV1,
+): RecordGratitude {
   return {
-    idempotencyKey: newIdempotencyKey(),
+    idempotencyKey,
     giftId,
     method: record.method,
     hits: record.hits,
@@ -151,11 +156,19 @@ export function GratitudeMiniGame({
   });
 
   useLayoutEffect(() => {
-    // The gratitude outbox keeps the combo on this device before its request goes.
+    // One combo per engine: what's kept of it in play and its finished record share a key, so the
+    // record takes the kept one's place and the server gets the combo once.
+    const idempotencyKey = newIdempotencyKey();
+    // The gratitude outbox keeps the combo on this device as it plays, and before its request goes.
+    const keepInPlay = (combo: ComboRecord, replay: ReplayV1) => {
+      const { userId, giftId } = latest.current;
+      if (giftId) keepGratitudeInPlay(userId, gratitudeFor(idempotencyKey, giftId, combo, replay));
+    };
     const record = (combo: ComboRecord, replay: ReplayV1) => {
       const { api: client, userId, giftId, onEnd: ended, stickerId } = latest.current;
       if (giftId) {
-        void sendGratitude(client, userId, gratitudeFor(giftId, combo, replay)).then((sent) => {
+        const body = gratitudeFor(idempotencyKey, giftId, combo, replay);
+        void sendGratitude(client, userId, body).then((sent) => {
           if (sent.state === "refused") setRefused(true);
         });
       }
@@ -181,6 +194,7 @@ export function GratitudeMiniGame({
         reduced: latest.current.reduced,
         showFrameTimes: latest.current.showFrameTimes,
         onRecord: record,
+        onInPlay: keepInPlay,
         onFinished: setEnded,
         onError: () => setFailed(true),
       },

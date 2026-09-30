@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { gratitudeOf } from "../api/testing";
 import { recordGratitudeBody } from "../api/testing";
-import { resendPendingGratitude, sendGratitude } from "./gratitudeOutbox";
+import { GAME_CONFIG } from "./gameConfig";
+import { keepGratitudeInPlay, resendPendingGratitude, sendGratitude } from "./gratitudeOutbox";
 
 const body = recordGratitudeBody();
 /** The person signed in, and someone else who signs in on the same device. */
@@ -29,6 +30,11 @@ async function nextOpenSends(userId = ME) {
 /** Your outbox as this device stores it, and storage the app didn't write, put there. */
 const PENDING_KEY = `draw.gratitude.pending.${ME}`;
 const stored = () => localStorage.getItem(PENDING_KEY);
+const storedEntries = (): unknown[] => {
+  const entries: unknown = JSON.parse(stored() ?? "[]");
+  if (!Array.isArray(entries)) throw new Error(`The outbox isn't a list: ${stored()}`);
+  return entries.map((entry: unknown) => entry);
+};
 const store = (raw: string) => localStorage.setItem(PENDING_KEY, raw);
 
 beforeEach(() => {
@@ -38,6 +44,7 @@ beforeEach(() => {
 
 afterEach(() => {
   localStorage.clear();
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
@@ -95,13 +102,25 @@ describe("the gratitude outbox", () => {
   });
 
   it("sends the combos it can read, and keeps the entries it can't as they were", async () => {
+    await sendGratitude(server(new TypeError("Failed to fetch")), ME, body);
     const unreadable = { giftId: "g2" };
-    store(JSON.stringify([body, unreadable]));
+    store(JSON.stringify([...storedEntries(), unreadable]));
     expect(await nextOpenSends()).toEqual([body]);
-    // Recorded and forgotten; the entry it can't read stays, and so does the next combo kept beside it.
-    const next = recordGratitudeBody({ idempotencyKey: crypto.randomUUID() });
-    await sendGratitude(server(new TypeError("Failed to fetch")), ME, next);
-    expect(JSON.parse(stored() ?? "null")).toEqual([next, unreadable]);
+    // Recorded and forgotten, and the entry it can't read is written back as it was.
+    expect(storedEntries()).toEqual([unreadable]);
+  });
+
+  it("sends a combo kept in play once no other tab can still be playing it", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    keepGratitudeInPlay(ME, body);
+    const next = server("records");
+    const resent = resendPendingGratitude(next, ME);
+    // A tab still playing it would end it by its safety stop, and send it itself.
+    await vi.advanceTimersByTimeAsync(GAME_CONFIG.maxDurationMs);
+    expect(next.recordGratitude).not.toHaveBeenCalled();
+    await vi.runAllTimersAsync();
+    await resent;
+    expect(next.recordGratitude).toHaveBeenCalledExactlyOnceWith(body);
   });
 
   it("writes nothing over a list it can't read, and still sends the combo", async () => {

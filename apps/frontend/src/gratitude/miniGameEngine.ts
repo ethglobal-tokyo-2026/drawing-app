@@ -73,6 +73,11 @@ export interface MiniGameOptions {
   showFrameTimes: boolean;
   /** The finished combo and its replay, before its ending plays. */
   onRecord: (record: ComboRecord, replay: ReplayV1) => void;
+  /**
+   * The combo in play and its replay as they stand, ended as the page going hidden would end them:
+   * from the first hit, then now and then as hits come. What's left if the page goes without a word.
+   */
+  onInPlay: (record: ComboRecord, replay: ReplayV1) => void;
   /** The ending has played, or the page went hidden: time for the receipt. */
   onFinished: (record: ComboRecord) => void;
   /** The frame loop failed and stopped. */
@@ -155,6 +160,7 @@ interface LiveInput {
   kind: "live";
   parts: Omit<MiniGameParts, keyof StageParts>;
   onRecord: MiniGameOptions["onRecord"];
+  onInPlay: MiniGameOptions["onInPlay"];
 }
 
 /** A recorded combo, its inputs fed each frame; it ends in a landing. */
@@ -210,6 +216,8 @@ const THUMB_RECENT_MS = 250;
 const LIGHT_MS = 45;
 /** A replayed shake reversal's strength in m/s²: a reversal's own isn't recorded. */
 const REPLAYED_REVERSAL_STRENGTH = 14;
+/** ms between keeps of a combo in play as hits come: each one writes the device's storage. */
+const IN_PLAY_KEEP_MS = 500;
 /**
  * Salts for the streams of the seed that the combo's own effects draw from, one each, so the same
  * hits draw the same words, word places and particles however the frames fall.
@@ -227,7 +235,7 @@ export function mountMiniGameEngine(
   parts: MiniGameParts,
   options: MiniGameOptions,
 ): MiniGameEngine {
-  const { onRecord, frames, ...rest } = options;
+  const { onRecord, onInPlay, frames, ...rest } = options;
   return mountEngine(parts, {
     ...rest,
     frames: frames ?? browserFrames,
@@ -236,7 +244,7 @@ export function mountMiniGameEngine(
     scale: 1,
     inputScale: 1,
     miniHearts: FEEL_CONFIG.miniHearts.live,
-    input: { kind: "live", parts, onRecord },
+    input: { kind: "live", parts, onRecord, onInPlay },
   });
 }
 
@@ -584,6 +592,26 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
     await sighAndTidy(endingParts);
     finish(record);
   }
+
+  /** The hits of the combo in play as last kept, and when, on the engine's clock. */
+  let keptInPlay = { hits: 0, at: -Infinity };
+  /**
+   * Keeps the combo in play as it stands, `hits` long, as its hits come: a page torn down without a
+   * visibilitychange or pagehide, which would end it, still leaves it to send.
+   */
+  const keepInPlay = (now: number, hits: number) => {
+    if (!liveInput || !recorder || hits === keptInPlay.hits) return;
+    if (now - keptInPlay.at < IN_PLAY_KEEP_MS) return;
+    const ended = combo.endedAt(now, "hidden");
+    if (!ended) return;
+    keptInPlay = { hits, at: now };
+    try {
+      liveInput.onInPlay(ended.record, recorder.soFar(ended));
+    } catch (error) {
+      // As with the record: keeping it is the app's, and its failure shouldn't stop the game.
+      console.error("Keeping the combo in play on this device failed; it plays on", error);
+    }
+  };
 
   const onStarted = () => {
     root.dataset.phase = "running";
@@ -1101,7 +1129,8 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
   // touch-action stops panning and zooming; this also keeps WebKit from bouncing the page mid-mash.
   const holdStill = (e: TouchEvent) => e.preventDefault();
 
-  // A combo in play ends the moment the page is hidden or goes away, so its record is sent in time.
+  // A combo in play ends the moment the page is hidden or goes away, so its record is sent in time;
+  // one that goes without either event leaves what keepInPlay last kept.
   const onHidden = () => {
     if (document.visibilityState !== "hidden") return;
     endNow(true);
@@ -1197,6 +1226,7 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
     const due = combo.advanceTo(now);
     if (due.length > 0) handle(due, L.rest.x, L.rest.y);
     const view = combo.view;
+    if (view.phase === "running") keepInPlay(now, view.hits);
     const dt = view.frozen || now < heldUntil ? 0 : real;
     play += dt;
     for (const w of waits.filter((x) => play >= x.at)) {

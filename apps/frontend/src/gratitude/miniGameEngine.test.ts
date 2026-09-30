@@ -212,6 +212,7 @@ beforeEach(() => {
       reduced: false,
       showFrameTimes: false,
       onRecord,
+      onInPlay: vi.fn(),
       onFinished,
       onError: vi.fn(),
     },

@@ -1,11 +1,18 @@
 import { apiError, type ApiClient, type ApiError } from "../api/apiClient";
 import type { RecordGratitude } from "@drawing-app/api/client";
+import { GAME_CONFIG } from "./gameConfig";
 
 /**
- * Finished combos the server hasn't recorded yet. One list per person, so someone else signing in on
- * this device never sends them, and their combos leave these be.
+ * Combos the server hasn't recorded yet, finished or still in play. One list per person, so someone
+ * else signing in on this device never sends them, and their combos leave these be.
  */
 const keyFor = (userId: string) => `draw.gratitude.pending.${userId}`;
+
+/**
+ * The longest a combo kept in play can go on in another tab after it was last kept: twice its safety
+ * stop, so a late frame there has still ended it.
+ */
+const IN_PLAY_MAX_MS = 2 * GAME_CONFIG.maxDurationMs;
 
 type Recorder = Pick<ApiClient, "recordGratitude">;
 
@@ -30,6 +37,13 @@ const isRefusal = (error: ApiError) =>
 const describeError = (error: ApiError) =>
   `${error.status === 0 ? "no answer" : `HTTP ${error.status}`}: ${error.message}`;
 
+/** A combo kept on this device: finished, or still in play when it was last kept. */
+interface Kept {
+  body: RecordGratitude;
+  /** When a combo still in play was last kept, ms since the epoch. A finished one has none. */
+  inPlayAt?: number;
+}
+
 const isRecordGratitude = (value: unknown): value is RecordGratitude =>
   typeof value === "object" &&
   value !== null &&
@@ -38,9 +52,16 @@ const isRecordGratitude = (value: unknown): value is RecordGratitude =>
   "giftId" in value &&
   typeof value.giftId === "string";
 
+const isKept = (value: unknown): value is Kept =>
+  typeof value === "object" &&
+  value !== null &&
+  "body" in value &&
+  isRecordGratitude(value.body) &&
+  (!("inPlayAt" in value) || typeof value.inPlayAt === "number");
+
 /** One person's list as stored: the combos it can send, and the entries it can't read, as they were. */
 interface Pending {
-  combos: Map<string, RecordGratitude>;
+  combos: Map<string, Kept>;
   unreadable: unknown[];
 }
 
@@ -71,15 +92,15 @@ function readPending(userId: string): Pending | null {
     return null;
   }
   const entries: unknown[] = value;
-  const unreadable = entries.filter((entry) => !isRecordGratitude(entry));
+  const unreadable = entries.filter((entry) => !isKept(entry));
   if (unreadable.length > 0) {
     console.error(
       "Gratitude waiting to be sent has entries that are unreadable, so they stay on this device unsent:",
       JSON.stringify(unreadable),
     );
   }
-  const combos = entries.filter(isRecordGratitude);
-  return { combos: new Map(combos.map((body) => [body.idempotencyKey, body])), unreadable };
+  const combos = entries.filter(isKept);
+  return { combos: new Map(combos.map((kept) => [kept.body.idempotencyKey, kept])), unreadable };
 }
 
 /** Whether the list was saved. */
@@ -99,10 +120,7 @@ function writePending(userId: string, { combos, unreadable }: Pending): boolean 
 }
 
 /** Edits `userId`'s combos; `edit` says whether it changed them. False when the change can't be kept. */
-function changePending(
-  userId: string,
-  edit: (combos: Map<string, RecordGratitude>) => boolean,
-): boolean {
+function changePending(userId: string, edit: (combos: Map<string, Kept>) => boolean): boolean {
   const pending = readPending(userId);
   if (!pending) return false;
   return !edit(pending.combos) || writePending(userId, pending);
@@ -146,6 +164,18 @@ async function send(
 }
 
 /**
+ * Keeps `userId`'s combo still in play on this device as it stands, unsent, so a page torn down
+ * before the combo ends leaves it to send. Its finished record, under the same idempotency key,
+ * takes its place.
+ */
+export function keepGratitudeInPlay(userId: string, body: RecordGratitude): void {
+  changePending(userId, (combos) => {
+    combos.set(body.idempotencyKey, { body, inPlayAt: Date.now() });
+    return true;
+  });
+}
+
+/**
  * Keeps `userId`'s finished combo on this device, then sends it. It stays until the server records
  * or refuses it, so a page that closes mid-request sends it again when the app next opens.
  */
@@ -155,7 +185,7 @@ export function sendGratitude(
   body: RecordGratitude,
 ): Promise<GratitudeSendResult> {
   const kept = changePending(userId, (combos) => {
-    combos.set(body.idempotencyKey, body);
+    combos.set(body.idempotencyKey, { body });
     return true;
   });
   if (!kept) {
@@ -166,7 +196,27 @@ export function sendGratitude(
   return send(api, userId, body);
 }
 
-/** Sends every combo this device keeps for `userId`, one at a time. The app runs it once as it starts. */
+/**
+ * Sends every combo this device keeps for `userId`, one at a time. The app runs it once as it starts.
+ * A combo kept in play was left by a page torn down mid-combo, unless another tab is still playing
+ * it and sends it as it ends; so it goes once that tab would have ended it, as it's kept then.
+ */
 export async function resendPendingGratitude(api: Recorder, userId: string): Promise<void> {
-  for (const body of readPending(userId)?.combos.values() ?? []) await send(api, userId, body);
+  const inPlay: { key: string; at: number }[] = [];
+  for (const { body, inPlayAt } of readPending(userId)?.combos.values() ?? []) {
+    if (inPlayAt === undefined) await send(api, userId, body);
+    else inPlay.push({ key: body.idempotencyKey, at: inPlayAt });
+  }
+  for (const { key, at } of inPlay) {
+    const wait = Math.min(IN_PLAY_MAX_MS, at + IN_PLAY_MAX_MS - Date.now());
+    if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+    const kept = readPending(userId)?.combos.get(key);
+    if (!kept) continue;
+    if (kept.inPlayAt !== undefined) {
+      console.warn(
+        `The gratitude for gift ${kept.body.giftId} was still in play when its page went; it's sent as it was last kept`,
+      );
+    }
+    await send(api, userId, kept.body);
+  }
 }

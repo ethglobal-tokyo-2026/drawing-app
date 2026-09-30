@@ -45,6 +45,11 @@ export interface ReplayRecorder {
   /** The stroke finger moved. `fastPass`: the move ended a fast pass. */
   strokeMove: (t: number, x: number, y: number, fastPass: boolean) => void;
   strokeEnd: () => void;
+  /**
+   * The replay `finish` would give for `ended` from what it has heard so far, leaving the recording
+   * open: a combo still in play, as the device keeps it.
+   */
+  soFar: (ended: Ended) => ReplayV1;
   /** The combo's replay, from what it heard and the `ended` event that closed it. */
   finish: (ended: Ended) => ReplayV1;
 }
@@ -101,6 +106,44 @@ export function createReplayRecorder(options: ReplayRecorderOptions): ReplayReco
     unkept = null;
   };
 
+  /** The replay for `ended`, the open gesture's latest move included as closing it would keep it. */
+  const replayFor = ({ record, reason, startedAt }: Ended): ReplayV1 => {
+    const end = record.durationMs;
+    // Samples from the first hit to the end, on the record's clock. A pass is the index of its
+    // sample as stored, so it counts only the samples kept.
+    const strokes: number[][] = [];
+    const strokePasses: number[][] = [];
+    for (const kept of gestures) {
+      const samples = kept === gesture && unkept ? [...kept, unkept] : kept;
+      const rows: number[][] = [];
+      const passes: number[] = [];
+      for (const s of samples) {
+        const at = Math.round(s.t - startedAt);
+        if (at < 0 || at > end) continue;
+        const previous = rows.length > 0 ? rows[rows.length - 1][0] : 0;
+        if (s.fastPass) passes.push(rows.length);
+        rows.push([Math.max(previous, at), s.x, s.y]);
+      }
+      if (rows.length === 0) continue;
+      strokes.push(changes(rows, 3));
+      strokePasses.push(passes);
+    }
+    return {
+      v: 1,
+      seed: options.seed >>> 0,
+      intensity: Math.min(1, Math.max(0, options.intensity)),
+      stage: [Math.max(1, Math.round(width)), Math.max(1, Math.round(height))],
+      durationMs: end,
+      endReason: reason,
+      switchedAtHit: record.switchedAtHit,
+      hits: changes(inTimeOrder(touches, end), 3),
+      strokes,
+      shakes: changes(inTimeOrder(reversals, end), 1),
+      // A replay with no strokes has no passes to say, and keeps the shape it always had.
+      ...(strokes.length > 0 ? { strokePasses } : {}),
+    };
+  };
+
   return {
     resize(w, h) {
       width = w;
@@ -134,41 +177,11 @@ export function createReplayRecorder(options: ReplayRecorderOptions): ReplayReco
 
     strokeEnd: closeGesture,
 
-    finish({ record, reason, startedAt }) {
+    soFar: replayFor,
+
+    finish(ended) {
       closeGesture();
-      const end = record.durationMs;
-      // Samples from the first hit to the end, on the record's clock. A pass is the index of its
-      // sample as stored, so it counts only the samples kept.
-      const strokes: number[][] = [];
-      const strokePasses: number[][] = [];
-      for (const samples of gestures) {
-        const rows: number[][] = [];
-        const passes: number[] = [];
-        for (const s of samples) {
-          const at = Math.round(s.t - startedAt);
-          if (at < 0 || at > end) continue;
-          const previous = rows.length > 0 ? rows[rows.length - 1][0] : 0;
-          if (s.fastPass) passes.push(rows.length);
-          rows.push([Math.max(previous, at), s.x, s.y]);
-        }
-        if (rows.length === 0) continue;
-        strokes.push(changes(rows, 3));
-        strokePasses.push(passes);
-      }
-      return {
-        v: 1,
-        seed: options.seed >>> 0,
-        intensity: Math.min(1, Math.max(0, options.intensity)),
-        stage: [Math.max(1, Math.round(width)), Math.max(1, Math.round(height))],
-        durationMs: end,
-        endReason: reason,
-        switchedAtHit: record.switchedAtHit,
-        hits: changes(inTimeOrder(touches, end), 3),
-        strokes,
-        shakes: changes(inTimeOrder(reversals, end), 1),
-        // A replay with no strokes has no passes to say, and keeps the shape it always had.
-        ...(strokes.length > 0 ? { strokePasses } : {}),
-      };
+      return replayFor(ended);
     },
   };
 }
