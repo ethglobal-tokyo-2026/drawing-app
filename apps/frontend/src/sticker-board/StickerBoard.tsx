@@ -650,7 +650,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       {(waiting.length > 0 || onTheirWay.length > 0) && (
         <div className="board-gifts">
           {/* Gifts for you first: they ask to be opened, where gifts on their way only report. */}
-          <GiftsForYouBadge gifts={waiting} onOpen={onOpenGift} />
+          <GiftsForYouBadge gifts={waiting} onOpen={onOpenGift} nudging={idle} />
           <PendingGiftsNotificationBadge gifts={onTheirWay} onOpen={openYours} />
         </div>
       )}
