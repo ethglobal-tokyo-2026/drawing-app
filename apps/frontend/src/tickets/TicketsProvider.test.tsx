@@ -186,6 +186,24 @@ describe("answers that carry your tickets", () => {
   });
 });
 
+describe("a failed load", () => {
+  it("is cleared while its retry is on the way, so a retry that fails again shows as a new failure", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    let failAgain = (_: unknown) => {};
+    const load = vi
+      .fn<ApiClient["tickets"]>()
+      .mockRejectedValueOnce(NO_ANSWER)
+      .mockReturnValueOnce(new Promise((_, reject) => (failAgain = reject)));
+    const shown = await openWith(load);
+    expect(shown().error).toBe(NO_ANSWER);
+
+    act(() => shown().refresh());
+    expect(shown().error).toBeNull();
+    await act(async () => failAgain(NO_ANSWER));
+    expect(shown().error).toBe(NO_ANSWER);
+  });
+});
+
 describe("the refill", () => {
   it("loads again until the server's day has turned, when this phone's clock runs ahead", async () => {
     vi.setSystemTime(refill - REFILL_RETRY_MS);

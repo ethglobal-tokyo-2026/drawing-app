@@ -82,7 +82,7 @@ export function HandlePrompt({ me, setHandle, onChosen }: Props) {
             placeholder={t(($) => $.api.handle.placeholder)}
             aria-label={t(($) => $.api.handle.field)}
             aria-invalid={Boolean(failedSave) || tooLong}
-            aria-describedby="handle-prompt-problem"
+            aria-describedby={problem ? "handle-prompt-problem" : undefined}
             autoCapitalize="off"
             autoCorrect="off"
             spellCheck={false}
