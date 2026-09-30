@@ -29,11 +29,12 @@ export interface DiagnosticFields {
   count?: number;
   menu?: string;
   /**
-   * The expiry sweep's tally: gifts it sent back, recorded as the escrow left them, left alone, or
-   * failed on.
+   * The expiry sweep's tally: gifts it sent back, recorded as the escrow left them, closed with no
+   * deposit, left alone, or failed on.
    */
   returned?: number;
   recorded?: number;
+  closed?: number;
   left?: number;
   failed?: number;
 }
@@ -139,6 +140,7 @@ const loggedFields = {
   menu: true,
   returned: true,
   recorded: true,
+  closed: true,
   left: true,
   failed: true,
 } satisfies Record<keyof DiagnosticFields, true>;

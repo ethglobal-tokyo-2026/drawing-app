@@ -45,14 +45,14 @@ export const gifts = sqliteTable(
     escrowStatus: text("escrow_status", { enum: escrowStatuses }).notNull().default("missing"),
     /**
      * The escrow's expiry, GIFT_EXPIRY_MS after Packaging; the deposit carries it. Receiving is
-     * refused after it; the giver can still take the gift out until the expiry sweep sends it back.
+     * refused after it; the giver can still take the gift out until the expiry sweep settles it.
      */
     expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
     /** LINE's picker reported the Gift Message sent. */
     sentAt: integer("sent_at", { mode: "timestamp_ms" }),
     /**
      * Taken back before anyone received it, from the bag or after sending; or by the server, for a
-     * deposit that didn't match.
+     * deposit that didn't match, or that never landed before the expiry.
      */
     takenOutAt: integer("taken_out_at", { mode: "timestamp_ms" }),
     /** Set with received_at when someone receives it. */
