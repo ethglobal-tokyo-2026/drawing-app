@@ -1,6 +1,7 @@
 import { useId, useState } from "react";
 import { useTranslation } from "../i18n/react";
 import { BuyTicketsIcon, DrawIcon } from "../icons";
+import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
@@ -88,9 +89,9 @@ export function StartDrawing({
             : t(($) => $.tickets.startDrawing.daily.title)}
       </h2>
       {shownFailure ? (
-        <p className="out-of-tickets__problem" id={`${id}-line`} role="alert">
+        <ErrorLine className="out-of-tickets__problem" id={`${id}-line`}>
           {shownFailure}
-        </p>
+        </ErrorLine>
       ) : (
         <p className="out-of-tickets__line out-of-tickets__line--stacked" id={`${id}-line`}>
           {reserveAsk ? (

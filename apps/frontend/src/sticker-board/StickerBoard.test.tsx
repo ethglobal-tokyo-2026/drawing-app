@@ -8,7 +8,7 @@ import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { boardSticker, people, sticker, trailEntry } from "../api/testFixtures";
 import { ApiError, type ApiClient } from "../api/apiClient";
-import { emptyApi, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
+import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
 import { toApiPlacement, toPerson } from "../api/views";
 import { forgetNoticedHere, markNoticed, noticeReceivesFromNow } from "../giving/noticedGifts";
 import { forgetGreetings } from "./artistChipGreeting";
@@ -136,6 +136,31 @@ describe("StickerBoard's check for gratitude to send", () => {
     await act(async () => again?.click());
     expect(stickerDetail).toHaveBeenCalledTimes(2);
     expect(alert()).toContain("gone");
+  });
+});
+
+describe("StickerBoard's tickets", () => {
+  it("says so over Draw when they didn't load, and Try again loads them again", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const tickets = vi
+      .fn<ApiClient["tickets"]>()
+      .mockRejectedValueOnce(new ApiError(0, { error: "network", detail: "Failed to fetch" }))
+      .mockResolvedValue(FRESH_TICKETS);
+    const api = emptyApi({
+      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [] }),
+      tickets,
+    });
+    const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
+    unmount = view.unmount;
+    await act(async () => {});
+    const alert = () => view.host.querySelector('.board-alerts [role="alert"]')?.textContent;
+    expect(alert()).toContain("Couldn’t load your tickets");
+    expect(view.host.textContent).toContain("Failed to fetch");
+
+    const again = view.host.querySelector<HTMLElement>(".board-alerts .label-btn--quiet");
+    await act(async () => again?.click());
+    expect(tickets).toHaveBeenCalledTimes(2);
+    expect(alert()).toBeUndefined();
   });
 });
 

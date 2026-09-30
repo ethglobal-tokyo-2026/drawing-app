@@ -2,6 +2,7 @@
 import type { Tickets } from "@drawing-app/api/client";
 import { act, useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing";
 import { spendKeyFor } from "./spendKey";
 import type { Sheet } from "./ticketsContext";
@@ -57,6 +58,21 @@ afterEach(() => {
 });
 
 describe("Draw on the sticker board", () => {
+  it("asks for the tickets again as it opens the canvas when they didn't load", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const load = vi
+      .fn<ApiClient["tickets"]>()
+      .mockRejectedValueOnce(new ApiError(0, { error: "network" }))
+      .mockResolvedValue(tickets(2, 0));
+    view = renderWithApi(<Board sheet="fresh" />, emptyApi({ tickets: load, spendTicket }));
+    await act(async () => void (await vi.advanceTimersByTimeAsync(0)));
+    expect(load).toHaveBeenCalledOnce();
+    tapDraw();
+    expect(load).toHaveBeenCalledTimes(2);
+    expect(onDraw).toHaveBeenCalledOnce();
+    expect(spendTicket).not.toHaveBeenCalled();
+  });
+
   it("spends a daily ticket at once, with no card: its ticket peels, then the canvas opens", async () => {
     await open(tickets(2, 5));
     tapDraw();

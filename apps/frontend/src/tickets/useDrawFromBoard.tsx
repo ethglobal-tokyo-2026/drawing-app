@@ -28,6 +28,8 @@ export function useDrawFromBoard(onDraw: () => void) {
   const draw = ({ reserve = false } = {}) => {
     if (peeling) return;
     const now = tickets.tickets;
+    // A failed load leaves them unknown: Draw asks again as it opens the canvas, which waits on the answer.
+    if (!now && tickets.error) tickets.refresh();
     const kind = tickets.sheet === "fresh" && now ? nextKind(now) : undefined;
     // A spend whose answer never came may have spent the last ticket: the canvas sends its key again.
     if (kind === null && !tickets.hasKeptSpend()) {

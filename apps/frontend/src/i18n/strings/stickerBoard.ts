@@ -324,6 +324,11 @@ export const stickerBoard = {
       en: "Couldn’t check whether gratitude is waiting to be sent for your newest sticker: {{reason}}",
       ja: "いちばん新しいシールに感謝を送れるか確認できませんでした：{{reason}}",
     },
+    /** Your sticker board, over the Draw key: the alert when your tickets didn't load, so nothing sits behind Draw, before Try again; Draw asks for them again too; {{reason}} is why */
+    ticketsDidntLoad: {
+      en: "Couldn’t load your tickets: {{reason}}",
+      ja: "チケットを読み込めませんでした：{{reason}}",
+    },
     /** Your sticker board: the alert when one moved sticker's new position didn't save; {{stickers}} is its number, {{reasons}} why */
     unsaved_one: { en: "Couldn’t save where {{stickers}} sits: {{reasons}}" },
     /** Your sticker board: the alert when moved stickers' new positions didn't save; {{stickers}} lists their numbers, {{reasons}} why */

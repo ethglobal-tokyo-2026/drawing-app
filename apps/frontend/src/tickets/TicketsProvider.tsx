@@ -23,7 +23,11 @@ export function TicketsProvider({ children }: { children: ReactNode }) {
   const [tickets, setTickets] = useState<Tickets | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const refresh = useCallback(() => setAttempt((n) => n + 1), []);
+  const refresh = useCallback(() => {
+    // A load on its way isn't a failed one, so a retry that fails again shows as a new failure.
+    setError(null);
+    setAttempt((n) => n + 1);
+  }, []);
 
   // Answers show in the order their requests went out, so a load that answers after a spend it
   // went out before can't put the spent ticket back.

@@ -307,7 +307,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const [turned, setTurned] = useState(reopenedOnSettings);
   /** The board has turned over before, so its stat board stays mounted for every turn after. */
   const [wasTurned, setWasTurned] = useState(reopenedOnSettings);
-  const { tickets } = useTickets();
+  const { tickets, error: ticketsError, refresh: refreshTickets } = useTickets();
   // Draw spends a daily ticket at once, its ticket peeling off the key; with none at all, a card says when.
   const drawKey = useDrawFromBoard(onDraw);
   /** The sticker the gratitude mini-game is open for, from the stat board's developer slip. */
@@ -857,8 +857,15 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
         </div>
       )}
 
-      {(unsavedStickers.length > 0 || trayProblems.length > 0 || checkFailure) && (
+      {(unsavedStickers.length > 0 || trayProblems.length > 0 || checkFailure || ticketsError) && (
         <div className="board-alerts">
+          {ticketsError && (
+            <ErrorLine detail={errorDetail(ticketsError)} onRetry={refreshTickets}>
+              {t(($) => $.stickerBoard.board.ticketsDidntLoad, {
+                reason: errorMessage(ticketsError),
+              })}
+            </ErrorLine>
+          )}
           {unsavedStickers.length > 0 && (
             <ErrorLine
               detail={joinedDetails(unsavedStickers.map((s) => unsaved.get(s.id)?.detail))}

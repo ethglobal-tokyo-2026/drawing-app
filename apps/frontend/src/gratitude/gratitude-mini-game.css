@@ -1225,15 +1225,7 @@
   right: 20px;
   bottom: 24px;
   z-index: 60;
-  padding: 11px 16px 12px;
-  border-radius: var(--r-label);
-  background: var(--liner-lift);
   box-shadow: var(--shadow-lift);
-  color: var(--ink);
-  font-size: 15px;
-  font-weight: 500;
-  -webkit-user-select: text;
-  user-select: text;
 }
 
 /* ------------------------------------------------------------------ a replay, inline in its card

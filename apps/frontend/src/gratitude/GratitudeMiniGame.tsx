@@ -12,6 +12,7 @@ import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
 import { StickerFigure } from "../stickers/StickerFigure";
 import type { StickerUrls } from "../stickers/stickerUrls";
+import { ErrorLine } from "../ui/ErrorLine";
 import { HitCounter } from "../ui/HitCounter";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
@@ -427,11 +428,11 @@ export function GratitudeMiniGame({
       )}
       {/* In plain words: the engine logs what went wrong to the console. */}
       {failed && (
-        <p className="gr-failure" role="alert">
+        <ErrorLine className="gr-failure">
           {ended
             ? t(($) => $.gratitude.failures.stoppedInPlay)
             : t(($) => $.gratitude.failures.stopped)}
-        </p>
+        </ErrorLine>
       )}
     </div>
   );
