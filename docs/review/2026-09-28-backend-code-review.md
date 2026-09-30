@@ -12,10 +12,9 @@ Nine read-only lanes each took an area, and every finding was checked against th
 
 What's left, and what each waits for:
 
+- **The next contract deploy**, which goes with the next app deploy, since the app switches escrows then: CHAIN-3 and CHAIN-4 are fixed in the contracts' source and reach Sepolia with it. Gifts still in the old escrow then can't be received or taken back through the app; return them to their givers once they expire.
 - **DB-1** · cleanup: `ticket_purchases.verified_at` is never null. Waits for the owner's answer to the frontend review's TIX-3.
-- **DOMAIN-1** · low: Explore's recent artists come from an index scan. Once Explore gets slow.
-- **CHAIN-3**, **CHAIN-4** · cleanup: unused escrow and resolver code. At the next contract redeploy.
-- **DEPLOY-1** and **OWNER-1** to **OWNER-5**: the owner's, under Needs the owner.
+- **DEPLOY-1**, **OWNER-1** and **OWNER-5**: the owner's, under Needs the owner.
 
 ## Owner's decisions
 
@@ -71,12 +70,7 @@ What's left, and what each waits for:
 
 ## Gifts, Gratitude, stickers, tickets and Explore (API)
 
-**DOMAIN-1** · low · open · `apps/api/src/explore/leaderboards.ts:77`  
-Explore's Longest streak finds the artists who sealed today or yesterday with a subquery that SQLite runs as a scan of the whole `stickers_artist` index, then loads every seal those artists ever made. On a database built from the migrations, EXPLAIN still shows `SCAN stickers USING COVERING INDEX stickers_artist` for the subquery, despite its recent `created_at` bound; the box's database, with its own statistics, may plan it differently.
-
-- Trigger: every GET /api/explore; the scan grows with the stickers table.
-- Fix: if Explore gets slow, read the recent artist IDs through `stickers_created` first, then their seals.
-
+- **DOMAIN-1** · low · dropped · Explore's Longest streak finds the recent artists with a subquery SQLite runs as a scan of the covering `stickers_artist` index; at this data size that costs nothing, so it's worth changing only once Explore gets slow.
 - **DOMAIN-2** · cleanup · fixed `96eda34d` · The midnight batch moved people off the plain chat menu "so a menu linked before the counts existed turns into one", a reason from before the count menus; plain stays as the menu `menuToLink` falls back to when a count menu is missing from menus.json, and the comment says that's why it moves.
 - **DOMAIN-3** · high · fixed `12086538`, `18a4a546`, `35dbf1a2` · A deposit that didn't match left its gift `taken_out` with the escrow `pending`, which locked its sticker for good (the database lane reported it too); `12086538` records what the escrow says (taken out, returned, not our token, or our token under other terms), `18a4a546` answers `deposit_held` or `gift_held` naming the gift, and `35dbf1a2` has Giving take that gift out on chain and package the sticker again.
 - **DOMAIN-4** · medium · fixed `0ac19ec7` · The stat board counted streaks in Tokyo ticket days and Explore's Longest streak in each person's zone from 4:00, so one person could show two current streaks (the database and tests lanes reported it too); both now count Tokyo days, and `users.time_zone` is gone (owner's decision 1; migration `5bc78c69`).
@@ -157,18 +151,8 @@ Severity here is the cost of leaving it: high invites a bug soon, medium is a re
 
 ## Sticker chain, auth server and Sui packages
 
-**CHAIN-3** · cleanup · open · `packages/sticker-chain/contracts/StickerGiftEscrow.sol:154`  
-Gift rejection is no longer a feature, and nothing signs a rejection since `ab278c7f` removed `authorizeRejection`, its test and the README's line (`ef5d47bf` dropped `gifts.reject_tx_hash`). The escrow still has `rejectGift` (:154-174), `REJECT_TYPEHASH` (:21-22) and `GiftRejected` (:58), tested by `packages/sticker-chain/test/foundry/StickerGiftEscrow.t.sol:95` and its helper at :217-225. Removing them waits for the next contract redeploy.
-
-- Cost: deployed code that only `CLAIM_SIGNER_ROLE` could call and nothing does; its ABI stays in `src/generated/contracts.ts`, and the contract's `@notice` (:15) and `takeOut`'s comment (:181-182) still describe a rejection.
-- Fix: at the redeploy, drop the three, their Forge test and helper, reword :15 and :181-182, and regenerate the ABIs. `GiftStatus.Rejected` stays, since `takeOut` sets it.
-
-**CHAIN-4** · cleanup · open · `packages/sticker-chain/contracts/ens/CroquisResolver.sol:123`  
-`targetOf` has no caller outside its generated ABI, and `setSources` (:96-102) lets the admin repoint `names` and `giftRecords` at any time. `ab278c7f` dropped the unused EnsV2 interface members and reworded `setSources`'s comment, which no longer says "Set once". Both remaining changes wait for the next contract redeploy.
-
-- Cost: dead code in the resolver; the deployer's admin key can swap the name book and gift records that every sticker and gift name reads.
-- Fix: at the redeploy, drop `targetOf`, and decide whether `setSources` refuses a second call (for example, revert once `names` is set).
-
+- **CHAIN-3** · cleanup · fixed `dca8e3b8` · Gift rejection was dropped as a feature, but the escrow kept `rejectGift`, `REJECT_TYPEHASH` and `GiftRejected`; they're gone from the source with their Forge test, and from Sepolia at the next contract deploy.
+- **CHAIN-4** · cleanup · fixed `dca8e3b8` · `CroquisResolver.targetOf` had no caller, and `setSources` let the admin repoint the name book and gift records at any time; `targetOf` is gone, and `setSources` reverts `SourcesAlreadySet` after setup's one call. On Sepolia at the next contract deploy.
 - **CHAIN-1** · cleanup · fixed `96eda34d` · Sign-in's body schema capped the LIFF ID token with its own `ID_TOKEN_MAX_LENGTH`, a copy of sticker-chain's `MAX_ID_TOKEN_LENGTH`, which the verifier enforces again; the schema and its test use the package's constant.
 - **CHAIN-2** · cleanup · fixed `96eda34d` · `./auth-http` was a package export nothing imported (the auth server's entry and its test import the file by path); the export and the README's mention are gone.
 - **CHAIN-5** · high · fixed `ab278c7f` · A path such as `//` made `new URL` throw inside the auth server's async handler, and the unhandled rejection ended the process (latent: HAProxy forwards only paths that parse); it now parses with `URL.parse` and answers 404, and a try/catch turns any escaped throw into a logged 500.
@@ -192,10 +176,10 @@ Gift rejection is no longer a feature, and nothing signs a rejection since `ab27
 ## Deploy scripts and root tooling
 
 **DEPLOY-1** · low · open · `/srv/sticker-auth/secrets.env` on the box (owner action)  
-The auth server no longer loads this file (`6e4c2ae1`), and install-chain-env.mjs no longer falls back to it (`1beec8a3`). The file is still on the box, though, with old copies of the Privy app secret and the Messaging API channel secret that nothing reads.
+The auth server no longer loads this file (`6e4c2ae1`), and install-chain-env.mjs no longer falls back to it (`1beec8a3`), but it's still in the auth server's own folder, with old copies of the Privy app secret and the Messaging API channel secret. Once LATE-4 hides the API's folder from the auth server, this copy is the only way it could read either secret.
 
-- Trigger: anyone who can read /srv/sticker-auth on the box gets both secrets, and rotating either one leaves its old value there.
-- Fix: the owner checks that chain.env has PRIVY_APP_SECRET and both LINE_MESSAGING_CHANNEL_* keys (key names only), then runs `rm /srv/sticker-auth/secrets.env` on the box.
+- Trigger: an attacker who takes over the internet-facing auth server reads both secrets from its own folder.
+- Fix: delete the file; chain.env has both keys (checked by name on the box). Auto mode can't change files on the box, so the owner runs it (under Needs the owner).
 
 - **DEPLOY-2** · low · fixed `96eda34d` · deploy.sh exported `VITE_STICKER_RPC_URL` only when deploy/.env set it, so otherwise the build took one from the gitignored apps/frontend/.env, which the main-only guard can't see; it's now exported even when empty, and Vite lets the environment win over its .env files.
 - **DEPLOY-3** · cleanup · fixed `96eda34d` · drawing-api.service's comment said /api/logs "dumps" both units' journal, though since `2da41d2c` it serves only the newest lines; it says so now.
@@ -251,14 +235,16 @@ The auth server no longer loads this file (`6e4c2ae1`), and install-chain-env.mj
 - **LATE-1** · medium · fixed `eabaad30` · A claim the chain failed or didn't confirm in time reached `onError`, so Accept got 500 `internal_error`, which says nothing; Receiving logs it as `gift.claim.failed` and answers 503 `claim_failed` with the cause, records nothing, and trying again finds a claim that landed late.
 - **LATE-2** · medium · fixed `eabaad30` · An escrow read that failed (opening a gift's link, Accept, taking a gift out, the deposit's check) answered 500 `internal_error`; `readEscrowGift` rejects with `ChainUnavailableError`, which the error handler answers 502 `chain_unavailable` with the cause.
 - **LATE-3** · high · fixed `d7000334` · A claim whose receipt wait (`CLAIM_RECEIPT_TIMEOUT_MS`) ran out while its transaction was pending lands later, unrecorded; if nobody tapped Accept again before the gift expired, the previews and Accept refused `gift_expired` before reading the escrow, so the receiver's wallet held a sticker no board showed as theirs, and the giver's still showed it on its way. Both previews and Accept now read the escrow for an expired gift the database has pending, and once it shows the gift claimed, `claimGift`'s own read records the claim for the recipient's wallet or answers `already_received` for anyone else. The board's gifts waiting for you still leave expired gifts out, so the Gift Message's link is the way back to one.
+- **LATE-4** · medium · fixed `8ba590d7` · The API and the auth server both run as `bawler`, so the internet-facing auth server could read chain.env (the relayer's key and the Privy, LINE and World ID secrets), and the API could read the key that signs Privy logins for anyone; `InaccessiblePaths` hides each service's folder from the other, checked on the box with throwaway units under the same sandbox. Live at the next deploy.
+- **LATE-5** · medium · fixed `880fcade` · With Forge's default dynamic test linking, an edit to `CroquisResolver` recompiled three files, and the tests kept deploying its old bytecode through `script/CroquisSetup.sol` until a forced build, so a broken contract change could pass `pnpm check`; `foundry.toml` turns it off, and an edit now recompiles every file that embeds the contract.
 
 ## Needs the owner
 
-- **DEPLOY-1**, above: delete `/srv/sticker-auth/secrets.env` on the box. Auto mode can't change files on the box, so it's a command to paste: `! set -a; . deploy/.env; set +a; ssh "$DEPLOY_TARGET" rm /srv/sticker-auth/secrets.env`.
+- **DEPLOY-1**, above: `! set -a; . deploy/.env; set +a; ssh "$DEPLOY_TARGET" rm /srv/sticker-auth/secrets.env`
 - **OWNER-1** · low · open · The Official account's greeting still says a drawing takes five minutes. Paste `deploy/line/greeting.md` into LINE Official Account Manager.
 - **OWNER-2** · medium · open · Expired gifts: after a week a gift can't be received and the receiver is told it went back to the giver, but nothing returns it, and the giver's board still shows it on its way. Recommended: the app offers take-back on an expired gift (the API allows it), and the receiver's copy says it expired. Frontend work once decided.
-- **OWNER-3** · low · open · Words the interface isn't supposed to use: Giving says "Confirm in your wallet if asked", and two sign-in errors say "sign-in token". Recommended: reword the copy rather than relax the rule.
-- **OWNER-4** · low · open · PRODUCT.md's Users no longer lists hackathon judges, a one-event audience. Recommended: leave them out.
+- **OWNER-3** · low · fixed `18057b84`, `ac3c3634` · Giving said "Confirm in your wallet if asked", and two sign-in errors said "sign-in token", words the interface isn't supposed to use; the frontend fixes reworded all three.
+- **OWNER-4** · low · decided · PRODUCT.md's Users leaves out hackathon judges, a one-event audience; nothing to change.
 - **OWNER-5** · low · open · Two AGENTS.MD vocabulary entries need the owner's approval:
   - Age verification ends "It unlocks nothing yet", but it decides who marks, sees and receives NSFW stickers. Proposed ending: "It's what lets an adult mark, see and receive NSFW stickers."
   - Gift Message says it goes "into one 1:1 chat", but the picker lets the giver pick several chats, groups included (the frontend review's SHELL-3). Proposed: "…into the chats the giver picks; it can't be received from a group chat." Or, per SHELL-3, limit the picker to one friend and keep the entry.
