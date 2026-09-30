@@ -136,7 +136,7 @@ function AddressPaper({ chain, address, lifted, paperRef, onOpen }: PaperProps) 
         <div className="stat-board__paper address-papers__face">
           <CodePlaceholder />
           {caption}
-          <span className="address-papers__status">
+          <span className="address-papers__status keep-phrases">
             {address.state === "loading"
               ? t(($) => $.stickerBoard.addresses[chain].loading)
               : t(($) => $.stickerBoard.addresses[chain].didntLoad)}

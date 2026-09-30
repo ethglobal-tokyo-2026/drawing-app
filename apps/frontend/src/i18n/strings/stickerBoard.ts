@@ -113,9 +113,12 @@ export const stickerBoard = {
       /** Your stat board: screen readers' name for the board address paper, a button that holds its QR code up in the address dialog */
       open: { en: "Show your board address as a QR code", ja: "ボードアドレスをQRコードで表示" },
       /** Your stat board: on the board address paper while the address loads */
-      loading: { en: "Getting your board address…", ja: "ボードアドレスを取得しています…" },
+      loading: { en: "Getting your board address…", ja: "ボードアドレスを<wbr/>取得しています…" },
       /** Your stat board: on the board address paper when the address didn't load, over Try again */
-      didntLoad: { en: "Board address didn’t load", ja: "ボードアドレスを読み込めませんでした" },
+      didntLoad: {
+        en: "Board address didn’t load",
+        ja: "ボードアドレスを<wbr/>読み込めませんでした",
+      },
       /** Address dialog for the board address: its heading, under the large QR code */
       title: { en: "Your board address", ja: "あなたのボードアドレス" },
       /** Address dialog for the board address: screen readers' name for the large QR code */
@@ -150,9 +153,9 @@ export const stickerBoard = {
       /** Your stat board: screen readers' name for the Sui address paper, a button that holds its QR code up in the address dialog */
       open: { en: "Show your Sui address as a QR code", ja: "SuiアドレスをQRコードで表示" },
       /** Your stat board: on the Sui address paper while the address loads */
-      loading: { en: "Getting your Sui address…", ja: "Suiアドレスを取得しています…" },
+      loading: { en: "Getting your Sui address…", ja: "Suiアドレスを<wbr/>取得しています…" },
       /** Your stat board: on the Sui address paper when the address didn't load, over Try again */
-      didntLoad: { en: "Sui address didn’t load", ja: "Suiアドレスを読み込めませんでした" },
+      didntLoad: { en: "Sui address didn’t load", ja: "Suiアドレスを<wbr/>読み込めませんでした" },
       /** Address dialog for the Sui address: its heading, under the large QR code */
       title: { en: "Your Sui address", ja: "あなたのSuiアドレス" },
       /** Address dialog for the Sui address: screen readers' name for the large QR code */
