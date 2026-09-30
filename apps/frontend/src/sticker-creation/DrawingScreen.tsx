@@ -11,10 +11,10 @@ import {
 import { retryPrivySignIn } from "../identity/privy";
 import { useMyAgeStatus } from "../identity/useMyAgeStatus";
 import type { Sticker, TicketUse } from "@drawing-app/api/client";
-import { ApiError, apiError, type ApiClient } from "../api/apiClient";
+import { apiError, type ApiClient } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
-import { errorReason } from "../i18n/errorMessage";
+import { errorMessage, errorReason } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
 import { OutOfTickets } from "../tickets/OutOfTickets";
 import { StartDrawing } from "../tickets/StartDrawing";
@@ -24,7 +24,6 @@ import { TicketsNotLoaded } from "../tickets/TicketsNotLoaded";
 import { useTickets } from "../tickets/useTickets";
 import { clamp01 } from "../ui/easing";
 import { releaseCanvas } from "../ui/releaseCanvas";
-import { useToast } from "../ui/useToast";
 import { sizePx } from "./canvas/brush";
 import { DrawingCanvas, type DrawingCanvasHandle } from "./canvas/DrawingCanvas";
 import { isFirstVisit } from "./drawVisits";
@@ -47,6 +46,7 @@ import {
 import { forgetSentSeal, keepSentSeal, sealWentOut } from "./session/sentSeal";
 import {
   ARM_WINDOW_MS,
+  describeSealFailure,
   FRESH_SESSION,
   sealFailure,
   SESSION_MS,
@@ -73,8 +73,6 @@ const SIZE_STEP = 0.04;
 
 const afterPaint = () =>
   new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve)));
-const reason = (error: unknown) =>
-  error instanceof Error && error.message ? error.message : String(error);
 
 /** A seal's ceremony: from the moment the sticker is cut, through the server's answer. */
 interface Ceremony {
@@ -127,7 +125,6 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const api = useApi();
   const tickets = useTickets();
   const me = useMe();
-  const toast = useToast();
   const colorSheetId = useId();
   const smoothingBarId = useId();
 
@@ -369,8 +366,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         if (!cut) {
           // Everything drawn was erased or undone. At 0:00 the sheet is spent; before that, draw on.
           if (clock.elapsed >= SESSION_MS) {
-            toast(t(($) => $.stickerCreation.seal.emptyAtTimeUp));
             send({ type: "reset" });
+            // The fresh sheet says so in the chip, since the reset just cleared it.
+            setSealProblem(t(($) => $.stickerCreation.seal.emptyAtTimeUp));
           } else {
             setSealProblem(t(($) => $.stickerCreation.seal.empty));
             send({ type: "seal-failed", mayHaveSealed: false, timeUp: false });
@@ -417,16 +415,17 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       const held = sentSeal.current?.sticker;
       if (shown) dismissCeremony(shown, { keepSticker: shown.sticker === held });
       else if (sticker !== held) sticker?.dispose();
+      const problem = describeSealFailure(error, sent);
       // Only reconnecting LINE renews its sign-in, and that leaves the page: the check does it.
-      reconnectOnTap.current = error instanceof ApiError && error.code === "line_token_expired";
-      setSealProblem(
-        reconnectOnTap.current
-          ? t(($) => $.stickerCreation.seal.reconnect)
-          : error instanceof ApiError
-            ? t(($) => $.stickerCreation.seal.failed, { reason: errorReason(error) })
-            : t(($) => $.stickerCreation.seal.failedHere, { reason: reason(error) }),
-      );
-      send({ type: "seal-failed", mayHaveSealed, timeUp: clock.elapsed >= SESSION_MS });
+      reconnectOnTap.current = problem.kind === "signInExpired";
+      const timeUp = clock.elapsed >= SESSION_MS;
+      // The chip says what failed and what to do; the error's own detail is in the console above.
+      const words =
+        problem.kind === "refused"
+          ? t(($) => $.stickerCreation.seal.refused, { reason: errorMessage(problem.error) })
+          : t(($) => $.stickerCreation.seal.failed[problem.kind]);
+      setSealProblem(timeUp ? t(($) => $.stickerCreation.seal.timeUp, { problem: words }) : words);
+      send({ type: "seal-failed", mayHaveSealed, timeUp });
     }
   }
 
@@ -823,6 +822,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       <SealKey
         shown={retrying || (history.canUndo && !sealing)}
         armed={session.phase === "armed"}
+        nsfw={nsfwOn}
         problem={sealProblem ?? (retrying ? t(($) => $.stickerCreation.seal.interrupted) : null)}
         onTap={() => {
           setSealProblem(null);
@@ -831,7 +831,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
             // Still here after a failed reconnect: the chip says why, and the check tries it again.
             retryPrivySignIn(new URL("/draw", location.href).href, (failure) =>
               setSealProblem(
-                t(($) => $.stickerCreation.seal.failed, { reason: errorReason(failure) }),
+                t(($) => $.stickerCreation.seal.refused, { reason: errorMessage(failure) }),
               ),
             );
             return;
