@@ -5,7 +5,7 @@ export const tickets = {
   count: { en: "×{{count}}", ja: "×{{count}}" },
   /** The tickets the next drawing can use, in words for screen readers: "2 daily tickets left". A kind with none left isn't named. */
   summary: {
-    /** Screen-reader name of a Draw key (sticker board, refilled out-of-tickets card, ticket shop after a purchase) and of the sealed card's ticket row: one kind's count, such as "2 daily tickets", with what's left */
+    /** Screen-reader name of a Draw key (sticker board, refilled out-of-tickets card, reserve ticket checkout after a purchase) and of the sealed card's ticket row: one kind's count, such as "2 daily tickets", with what's left */
     left: { en: "{{tickets}} left", ja: "{{tickets}}が残っています" },
     /** Screen-reader name of a Draw key and of the sealed card's ticket row: both counts, while daily tickets are left and reserve tickets are held */
     dailyAndReserve: {
@@ -38,19 +38,15 @@ export const tickets = {
   newAt: { en: "New at {{time}}", ja: "{{time}}に届く" },
   /** Start card, while daily tickets are left and you hold reserve ones: the small caption after the small reserve ticket and its count, under the daily ticket stubs */
   reserve: { en: "Reserve", ja: "有償" },
-  /** The Draw key on the out-of-tickets card once the refill brings tickets back, and in the ticket shop (card or Shop tab) after a purchase */
+  /** The Draw key on the out-of-tickets card once the refill brings tickets back, and in the reserve ticket checkout (card or Shop tab) after a purchase */
   draw: { en: "Draw", ja: "かく" },
-  /** Screen-reader name of that Draw key (refilled out-of-tickets card, ticket shop after a purchase); `tickets` names what's left, such as "2 daily tickets left" */
+  /** Screen-reader name of that Draw key (refilled out-of-tickets card, reserve ticket checkout after a purchase); `tickets` names what's left, such as "2 daily tickets left" */
   drawWithTickets: { en: "Draw: {{tickets}}", ja: "かく：{{tickets}}" },
   /** Start card when only reserve tickets are left, and the out-of-tickets card: the button under the key, with a ticket icon, that opens the reserve ticket checkout */
   buyReserveTickets: { en: "Buy reserve tickets", ja: "有償チケットを買う" },
-  /** Out-of-tickets card (the main key, or the button under Draw once refilled) and the card shown while tickets load: goes back to the sticker board */
-  goToStickerBoard: { en: "Go to sticker board", ja: "シールボードへ" },
-  /** Out-of-tickets card over the sticker board, when Draw finds no tickets (the main key, or the button under Draw once refilled): closes the card, back to the board; named like the My board tab, and short enough for the card's key */
-  backToStickerBoard: { en: "Back to my board", ja: "マイボードに戻る" },
-  /** Quiet link at the foot of the start card, the tickets-didn't-load card and the ticket shop's card: closes the card without spending or buying */
+  /** Quiet link at the foot of the start card, the tickets-didn't-load card and the reserve ticket checkout's card: closes the card without spending or buying */
   notNow: { en: "Not now", ja: "あとで" },
-  /** Key on the card when tickets didn't load, the link after the Shop's tickets problem, and the link after the ticket shop's balance or price problem: tries again */
+  /** Key on the card when tickets didn't load, the link after the Shop's tickets problem, and the link after the reserve ticket checkout's balance or price problem: tries again */
   tryAgain: { en: "Try again", ja: "もう一度" },
   /** The card that asks before a ticket is spent on a fresh sheet. */
   startDrawing: {

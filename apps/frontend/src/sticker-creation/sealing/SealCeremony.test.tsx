@@ -194,7 +194,7 @@ describe("SealCeremony", () => {
 
   it.each([
     ["Keep drawing", onKeepDrawing],
-    ["Go to sticker board", onBoard],
+    ["Back to My board", onBoard],
   ])("acts on %s once, and only once the ceremony has played", async (name, action) => {
     await seal(1);
     wait(1000);
@@ -217,7 +217,7 @@ describe("SealCeremony", () => {
 
     await seal(1);
     playThrough();
-    act(() => button("Go to sticker board").click());
+    act(() => button("Back to My board").click());
     expect(onBoard).not.toHaveBeenCalled();
     wait(200);
     expect(onBoard).toHaveBeenCalledOnce();
@@ -271,7 +271,7 @@ describe("SealCeremony", () => {
     setTickets();
     wait(50);
     // The shop's line gives way to the board's, which waits below the lines still to fade up.
-    const board = button("Go to sticker board");
+    const board = button("Back to My board");
     expect(board.style.opacity).toBe("0");
     playThrough();
     expect(board.style.opacity).toBe("1");
@@ -281,7 +281,7 @@ describe("SealCeremony", () => {
     await seal(1);
     playThrough();
     expect(button("Keep drawing")).toBeTruthy();
-    expect(button("Go to sticker board").classList.contains("label-btn")).toBe(true);
+    expect(button("Back to My board").classList.contains("label-btn")).toBe(true);
     expect(host.querySelector('[role="img"]')?.getAttribute("aria-label")).toBe(
       "2 daily tickets left",
     );
@@ -289,7 +289,7 @@ describe("SealCeremony", () => {
 
     await seal(3);
     playThrough();
-    expect(button("Go to sticker board").classList.contains("key")).toBe(true);
+    expect(button("Back to My board").classList.contains("key")).toBe(true);
     expect(host.querySelector(".sealed-card__refill")?.textContent).toBe(
       `New daily tickets at ${formatRefillTime(new Date(FRESH_TICKETS.nextRefillAt))}`,
     );

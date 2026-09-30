@@ -152,8 +152,8 @@ export const receiving = {
       title: { en: "Gifts can’t be opened yet", ja: "ギフトはまだひらけません" },
       /** Gift refusal screen, when the app is running without its server: the line under the title */
       line: {
-        en: "Opening a gift needs the app’s server, which isn’t running yet.",
-        ja: "ギフトをひらくにはアプリのサーバーが必要ですが、まだ動いていません。",
+        en: "Opening a gift needs a connection to Croquis, which isn’t set up here yet.",
+        ja: "ギフトをひらくにはクロッキーとの接続が必要ですが、ここではまだ使えません。",
       },
     },
   },
@@ -163,19 +163,17 @@ export const receiving = {
     title: { en: "Couldn’t open the gift", ja: "ギフトをひらけませんでした" },
     /** Gift refusal screen, when the preview says the gift can be received but has no sticker: the line under the title */
     withoutSticker: {
-      en: "The gift's preview came without its sticker.",
+      en: "The gift’s preview came without its sticker.",
       ja: "ギフトのプレビューにシールが含まれていませんでした。",
     },
     /** Gift refusal screen, when the preview says the gift can't be received but gives no reason: the line under the title */
     withoutRefusal: {
-      en: "The gift's preview refused it without saying why.",
+      en: "The gift’s preview refused it without saying why.",
       ja: "ギフトを受け取れない理由が、プレビューに含まれていませんでした。",
     },
   },
   /** Gift refusal screen, inside LINE's app: the button that closes LINE's window, or the quiet link under Try again */
   backToLine: { en: "Back to LINE", ja: "LINEに戻る" },
-  /** Gift refusal screen: the button when the gift was already received or is your own; outside LINE's app, also in Back to LINE's place */
-  goToStickerBoard: { en: "Go to my sticker board", ja: "自分のシールボードへ" },
   /** Gift refusal screen, when the gift is still on its way or its preview failed: the button that loads the gift again */
   tryAgain: { en: "Try again", ja: "もう一度" },
   /** Asks, once a received sticker is on the board, whether to send its giver gratitude now. */

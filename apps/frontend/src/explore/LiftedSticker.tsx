@@ -239,7 +239,7 @@ export function LiftedSticker({
         <div className="lifted-sticker__acts lifted-sticker__rise">
           <LabelButton icon={<StickerBoardIcon size={18} />} onClick={() => onGoToBoard(artist)}>
             {artist.id === me.id
-              ? t(($) => $.explore.lifted.goToYourBoard)
+              ? t(($) => $.ui.backToBoard)
               : t(($) => $.explore.lifted.goToBoard, { artist: nameOf(artist) })}
           </LabelButton>
           <QuietLink onClick={close}>{t(($) => $.explore.lifted.putBack)}</QuietLink>

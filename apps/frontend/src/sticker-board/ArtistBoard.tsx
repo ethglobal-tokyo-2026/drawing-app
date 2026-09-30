@@ -22,6 +22,7 @@ import { Trans, useTranslation } from "../i18n/react";
 import { ArtistChip } from "../stickers/ArtistChip";
 import { Duration } from "../stickers/Duration";
 import { formatHandle, formatNo } from "../stickers/format";
+import { Handle } from "../stickers/Handle";
 import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { ErrorLine } from "../ui/ErrorLine";
@@ -99,12 +100,11 @@ function StickerView({
         />
         <h2>{formatNo(sticker.no)}</h2>
         <div className="visit-view-meta fine">
-          {/* Their name is a component's text, which Trans never reads as markup. */}
           <Trans
             i18nKey={($) => $.stickerBoard.artistBoard.drawnIn}
             components={{
               duration: <Duration seconds={sticker.timeUsed} />,
-              artist: <>{artistName(sticker.artist)}</>,
+              artist: <Handle name={artistName(sticker.artist)} />,
             }}
           />
         </div>

@@ -232,7 +232,7 @@ describe("SessionGate", () => {
     await settle();
     act(() => host.querySelector("button")?.click());
     await settle();
-    expect(host.textContent).toContain("Couldn't reconnect with LINE");
+    expect(host.textContent).toContain("Couldn’t reconnect with LINE");
     expect(host.textContent).not.toContain("private-login-url");
     expect(signIn).toHaveBeenCalledOnce();
     expect(reconnect).toHaveBeenCalledOnce();

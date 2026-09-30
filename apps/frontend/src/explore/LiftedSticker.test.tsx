@@ -109,12 +109,12 @@ describe("LiftedSticker", () => {
 
   it("goes to the artist's sticker board, or to yours on a sticker you drew", () => {
     lift(0);
-    press("Go to @mika's sticker board");
+    press("Go to @mika’s sticker board");
     expect(onGoToBoard).toHaveBeenCalledExactlyOnceWith(people.mika);
 
     press("Next sticker");
     press("Next sticker");
-    press("Go to your sticker board");
+    press("Back to My board");
     expect(onGoToBoard).toHaveBeenLastCalledWith(TEST_OWNER);
   });
 

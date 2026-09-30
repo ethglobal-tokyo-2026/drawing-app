@@ -152,7 +152,7 @@ export function SealedCard({
           data-card-line
           onClick={act(onBoard)}
         >
-          {t(($) => $.stickerCreation.sealedCard.goToStickerBoard)}
+          {t(($) => $.ui.backToBoard)}
         </Key>
       ) : (
         <Key
@@ -175,7 +175,7 @@ export function SealedCard({
         </div>
       ) : (
         <LabelButton block icon={<StickerBoardIcon />} data-card-line onClick={act(onBoard)}>
-          {t(($) => $.stickerCreation.sealedCard.goToStickerBoard)}
+          {t(($) => $.ui.backToBoard)}
         </LabelButton>
       )}
     </section>

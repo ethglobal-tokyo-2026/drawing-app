@@ -77,8 +77,6 @@ export const giving = {
   give: { en: "Give {{no}}", ja: "{{no}}を贈る" },
   /** Giving's first screen and the give sheet: the X button's name for assistive tech */
   close: { en: "Close", ja: "閉じる" },
-  /** Giving's "Sealed and sent" screen, and the giver's received notice: the button that closes it */
-  backToBoard: { en: "Back to my sticker board", ja: "シールボードに戻る" },
   /** Giving from someone else's sticker board: picking one of yours first. */
   giveSheet: {
     /** The give sheet, opened by Give on someone else's sticker board: its title */
@@ -177,10 +175,10 @@ export const giving = {
     button: { en: "Preparing…", ja: "準備中…" },
     /** What a long wait is waiting on, by step: the line under “Preparing your gift” once it has run long. */
     slow: {
-      /** Giving's “Preparing your gift” screen, after about ten seconds: the line under its title, while the app's server hasn't answered */
+      /** Giving's “Preparing your gift” screen, after about ten seconds: the line under its title, while Croquis hasn't answered */
       asking: {
-        en: "This is taking longer than usual. Still waiting on the app’s server.",
-        ja: "いつもより時間がかかっています。アプリのサーバーからの応答を待っています。",
+        en: "This is taking longer than usual. Still waiting for Croquis to answer.",
+        ja: "いつもより時間がかかっています。クロッキーからの応答を待っています。",
       },
       /** Giving's “Preparing your gift” screen, after about ten seconds: the line under its title, while the sticker comes out of an earlier gift bag first */
       earlier: {
@@ -226,21 +224,21 @@ export const giving = {
     title: { en: "In the bag", ja: "ギフト袋に入れました" },
     /** Giving, with the sticker in the open gift bag: the line under "In the bag" */
     lead: {
-      en: "It seals when it’s sent. Pick your chat with them in LINE: whoever opens it first gets it.",
+      en: "The bag closes when it’s sent. Pick your chat with them in LINE: whoever opens it first gets it.",
       ja: "送ると袋に封がされます。LINEで相手とのトークを選んでください。最初にひらいた人が受け取れます。",
     },
     /** Giving, after LINE's friend picker closed without sending, or a step failed: the sheet's title over the open gift bag */
     notSent: { en: "Not sent yet", ja: "まだ送っていません" },
     /** Giving's "Not sent yet" screen: the line under its title */
     notSentLead: {
-      en: "It’s still in the bag, unsealed. Pick a chat again, or take it out.",
+      en: "It’s still in the open bag. Pick a chat again, or take it out.",
       ja: "封をしないまま、まだ袋の中にあります。もう一度トークを選ぶか、取り出してください。",
     },
     /** Giving, with the sticker in the open gift bag: the aqua key that opens LINE's friend picker (again) */
     send: { en: "Send in LINE", ja: "LINEで送る" },
     /** Giving, with the sticker in the open gift bag: the quiet link under Send in LINE that lifts it back out, back to the first screen */
     takeOut: { en: "Take it out", ja: "取り出す" },
-    /** Giving's "Not sent yet" screen: an alert when the app's server couldn't pack the gift, with why */
+    /** Giving's "Not sent yet" screen: an alert when Croquis couldn't pack the gift, with why */
     couldntPack: {
       en: "{{no}} couldn’t be packed: {{reason}}",
       ja: "{{no}}をギフト袋に入れられませんでした：{{reason}}",
@@ -252,10 +250,10 @@ export const giving = {
       en: "{{no}} couldn’t be taken out: {{reason}}",
       ja: "{{no}}を取り出せませんでした：{{reason}}",
     },
-    /** Giving's "Not sent yet" screen: an alert when the app's server couldn't record a cancelled or failed send, with why */
+    /** Giving's "Not sent yet" screen: an alert when Croquis couldn't record a cancelled or failed send, with why */
     couldntRecord: {
-      en: "The app’s server couldn’t record that: {{reason}}",
-      ja: "アプリのサーバーに記録できませんでした：{{reason}}",
+      en: "Croquis couldn’t record that: {{reason}}",
+      ja: "クロッキーに記録できませんでした：{{reason}}",
     },
   },
   /** LINE didn't say whether the Gift Message went out, so the same one isn't offered again. */
@@ -271,17 +269,17 @@ export const giving = {
     itWentOut: { en: "It went out", ja: "送れました" },
   },
   sent: {
-    /** Giving, once the Gift Message went out through LINE: the title under the gift bag as it seals */
-    title: { en: "Sealed and sent", ja: "封をして送りました" },
-    /** Giving's "Sealed and sent" screen: the line under its title */
+    /** Giving, once the Gift Message went out through LINE: the title under the gift bag as it closes */
+    title: { en: "Closed and sent", ja: "封をして送りました" },
+    /** Giving's "Closed and sent" screen: the line under its title */
     lead: {
       en: "It’s in your LINE chat now, and the gift message opens once. When they receive it, you’ll see who did.",
       ja: "ギフトメッセージをLINEのトークに送りました。ひらけるのは一度だけです。受け取られたら、誰が受け取ったかがわかります。",
     },
-    /** Giving's "Sealed and sent" screen: an alert when the Gift Message went out but the app's server couldn't record it, with why */
+    /** Giving's "Closed and sent" screen: an alert when the Gift Message went out but Croquis couldn't record it, with why */
     couldntRecord: {
-      en: "It went out in LINE, but the app’s server couldn’t record it: {{reason}}",
-      ja: "LINEでは送れましたが、アプリのサーバーに記録できませんでした：{{reason}}",
+      en: "It went out in LINE, but Croquis couldn’t record it: {{reason}}",
+      ja: "LINEでは送れましたが、クロッキーに記録できませんでした：{{reason}}",
     },
   },
   /** The frosted gift bag. */
@@ -290,8 +288,8 @@ export const giving = {
     pictured: {
       /** The gift bag's picture named for assistive tech: in Giving, with the sticker in the open bag */
       open: { en: "The sticker in an open gift bag", ja: "口のあいたギフト袋に入ったシール" },
-      /** The gift bag's picture named for assistive tech, sealed: Giving's "Sealed and sent" screen, and a gift that can't be received yet or here */
-      sealed: { en: "The gift bag, sealed", ja: "封をしたギフト袋" },
+      /** The gift bag's picture named for assistive tech, closed: Giving's "Closed and sent" screen, and a gift that can't be received yet or here */
+      sealed: { en: "The gift bag, closed", ja: "封をしたギフト袋" },
       /** The gift bag's picture named for assistive tech: in the gift a recipient opens, once they've torn it open */
       torn: { en: "The gift bag, torn open", ja: "破ってひらいたギフト袋" },
       /** The gift bag's picture named for assistive tech: a gift that can't be received because it was already opened, taken back or returned */
@@ -309,8 +307,8 @@ export const giving = {
       en: "{{pictured}}, tagged {{label}} {{name}}, stamped {{stamp}}",
       ja: "{{pictured}}、タグに「{{label}} {{name}}」、はんこに「{{stamp}}」",
     },
-    /** The gift bag: printed again and again along the aqua tear tape, with the day it was sealed ("SEALED 9.23") */
-    sealed: { en: "<b>Sealed</b> {{date}}", ja: "<b>封印</b>{{date}}" },
+    /** The gift bag: printed again and again along the aqua tear tape, with the day it was closed ("CLOSED 9.23") */
+    sealed: { en: "<b>Closed</b> {{date}}", ja: "<b>封印</b>{{date}}" },
     /** The gift a recipient opens: the pull tab's name for assistive tech, as a slider */
     pullTab: { en: "Pull the tab to open the gift", ja: "つまみを引いてギフトをひらく" },
     /** The gift bag: printed on the pull tab, beside its grip ribs */

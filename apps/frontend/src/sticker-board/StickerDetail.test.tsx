@@ -466,7 +466,7 @@ describe("StickerDetail", () => {
 
     it.each([
       ["paging", () => press("Next sticker")],
-      ["the Sticker board button", () => press("Sticker board")],
+      ["the back button", () => press("Back to My board")],
       ["Escape", () => key("Escape")],
     ])("stops on %s, lets go of its canvas, and leaves no layer behind", async (_, leave) => {
       const player = await playing();

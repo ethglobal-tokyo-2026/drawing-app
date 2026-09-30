@@ -36,7 +36,7 @@ export const explore = {
     /** Explore tab: screen readers' description of your search result or leaderboard row, after the row's own text: it opens your sticker board when tapped */
     yours: { en: "Your sticker board", ja: "あなたのシールボード" },
     /** Explore tab: screen readers' description of someone's search result or leaderboard row, after the row's own text: it opens their sticker board when tapped */
-    theirs: { en: "{{handle}}'s sticker board", ja: "{{handle}}さんのシールボード" },
+    theirs: { en: "{{handle}}’s sticker board", ja: "{{handle}}さんのシールボード" },
   },
   /** The switch under the search between Explore's two views. */
   views: {
@@ -96,7 +96,7 @@ export const explore = {
     /** Explore tab, This week view: fine print under the Most gratitude and Best combo leaderboards, when they start over; {{day}} and {{time}} are that moment in the person's own time zone, such as "Monday" and "12:00 AM" */
     resets: { en: "Resets {{day}} {{time}}", ja: "{{day}}{{time}}にリセット" },
     /** Explore tab, This week view: screen readers' name for the row of three leaderboard tabs */
-    leaderboards: { en: "This week's leaderboards", ja: "今週のランキング" },
+    leaderboards: { en: "This week’s leaderboards", ja: "今週のランキング" },
     /** A leaderboard nobody is on: a supporting note in place of the rows, saying so and how to get on. */
     empty: {
       /** Explore tab, This week view, Most gratitude leaderboard with no one on it: the note in place of the rows */
@@ -107,7 +107,7 @@ export const explore = {
       /** Explore tab, This week view, Best combo leaderboard with no one on it: the note in place of the rows */
       bestCombo: {
         en: "No one is on it yet this week. Receive a sticker and send gratitude: your best combo counts here.",
-        ja: "今週はまだ誰もランクインしていません。シールを受け取って感謝を送ると、最大コンボがここに載ります。",
+        ja: "今週はまだ誰もランクインしていません。シールを受け取って感謝を送ると、最高コンボがここに載ります。",
       },
       /** Explore tab, This week view, Streak leaderboard with no one on it: the note in place of the rows */
       longestStreak: {
@@ -121,7 +121,7 @@ export const explore = {
     /** Explore tab, This week view: the first tab, ranking people by the gratitude they earned this week */
     mostGratitude: { en: "Most gratitude", ja: "感謝の数" },
     /** Explore tab, This week view: the second tab, ranking people by the most hits in one gratitude combo this week */
-    bestCombo: { en: "Best combo", ja: "最大コンボ" },
+    bestCombo: { en: "Best combo", ja: "最高コンボ" },
     /** Explore tab, This week view: the third tab, ranking people by their current streak of days sealing a sticker */
     longestStreak: { en: "Streak", ja: "連続日数" },
   },
@@ -170,11 +170,9 @@ export const explore = {
       ja: "{{no}}・<duration/>・{{day}}・<receiver/>さんへ",
     },
     /** Explore tab, lifted sticker: label stock under the fine print that opens the artist's sticker board */
-    goToBoard: { en: "Go to {{artist}}'s sticker board", ja: "{{artist}}さんのシールボードへ" },
-    /** Explore tab, lifted sticker: the same label stock on a sticker you drew, opening your own board */
-    goToYourBoard: { en: "Go to your sticker board", ja: "あなたのシールボードへ" },
+    goToBoard: { en: "Go to {{artist}}’s sticker board", ja: "{{artist}}さんのシールボードへ" },
     /** Explore tab, lifted sticker: the quiet link at the sheet's foot that puts the sticker back on the pile */
-    putBack: { en: "Put back", ja: "もどす" },
+    putBack: { en: "Put back", ja: "戻す" },
     /** Explore tab, lifted sticker: screen readers' name for the small arrow left of the sticker, which lifts the one before it */
     previous: { en: "Previous sticker", ja: "前のシール" },
     /** Explore tab, lifted sticker: screen readers' name for the small arrow right of the sticker, which lifts the one after it */

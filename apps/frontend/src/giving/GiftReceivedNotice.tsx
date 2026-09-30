@@ -120,7 +120,7 @@ export function GiftReceivedNotice({ sticker, receiver, receivedAt, mask, onClos
       </div>
       <div className="gift-received-notice__act">
         <LabelButton block icon={<StickerBoardIcon size={18} />} onClick={onClose}>
-          {t(($) => $.giving.backToBoard)}
+          {t(($) => $.ui.backToBoard)}
         </LabelButton>
       </div>
     </div>

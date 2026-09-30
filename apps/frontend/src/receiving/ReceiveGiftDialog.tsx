@@ -21,6 +21,7 @@ import { ArrowSquareOut, HandHeart, StickerBoardIcon, X } from "../icons";
 import { useIdentity } from "../identity/useIdentity";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
+import { Handle } from "../stickers/Handle";
 import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { ErrorDetail, ErrorLine } from "../ui/ErrorLine";
@@ -187,7 +188,7 @@ export function ReceiveGiftDialog({ from, onClose }: Props) {
   const leave =
     me.inClient && !fromBoard
       ? { label: t(($) => $.receiving.backToLine), icon: <ArrowSquareOut /> }
-      : { label: t(($) => $.receiving.goToStickerBoard), icon: <StickerBoardIcon size={18} /> };
+      : { label: t(($) => $.ui.backToBoard), icon: <StickerBoardIcon size={18} /> };
   const backToLine = () => {
     // Outside LINE's app there's no window to close, so the board shows instead.
     if (me.inClient && !fromBoard) liff.closeWindow();
@@ -380,7 +381,7 @@ function Gift({
                 values={{ no: formatNo(sticker.no), day: formatDay(sticker.sealedAt) }}
                 components={{
                   duration: <Duration seconds={sticker.timeUsed} />,
-                  artist: <>{printed(sticker.artist)}</>,
+                  artist: <Handle name={printed(sticker.artist)} />,
                 }}
               />
             </p>
@@ -472,7 +473,7 @@ function Refusal({ end, giverHandle, leave, onLeave, onBoard, onTryAgain }: Refu
           </>
         ) : end.action === "board" ? (
           <LabelButton block icon={<StickerBoardIcon size={18} />} onClick={onBoard} data-autofocus>
-            {t(($) => $.receiving.goToStickerBoard)}
+            {t(($) => $.ui.backToBoard)}
           </LabelButton>
         ) : (
           <LabelButton block icon={leave.icon} onClick={onLeave} data-autofocus>
