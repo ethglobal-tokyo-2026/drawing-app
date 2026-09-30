@@ -1,10 +1,11 @@
 // @vitest-environment happy-dom
-import type { Me } from "@drawing-app/api/client";
+import type { Me, Tickets } from "@drawing-app/api/client";
 import { act, useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing";
 import type { TicketsValue } from "./ticketsContext";
+import { REFILL_RETRY_MAX_MS, REFILL_RETRY_MS } from "./TicketsProvider";
 import { useTickets } from "./useTickets";
 
 type Spender = Pick<TicketsValue, "spend" | "forgetKeptSpend">;
@@ -132,5 +133,98 @@ describe("a spend's key across a reload", () => {
     const [sent, theirKey, sentAgain] = keys();
     expect(theirKey).not.toBe(sent);
     expect(sentAgain).toBe(sent);
+  });
+});
+
+/** Hands the test the tickets' value as each render leaves it. */
+function Holder({ onValue }: { onValue: (value: TicketsValue) => void }) {
+  const value = useTickets();
+  useEffect(() => {
+    onValue(value);
+  });
+  return null;
+}
+
+/** Your tickets, loaded with `load`; the latest value is `shown()`. */
+async function openWith(load: ApiClient["tickets"]) {
+  view?.unmount();
+  let latest: TicketsValue | undefined;
+  view = renderWithApi(
+    <Holder onValue={(value) => (latest = value)} />,
+    emptyApi({ tickets: load, spendTicket }),
+  );
+  await act(async () => {});
+  const shown = () => {
+    if (!latest) throw new Error("The tickets gave no value");
+    return latest;
+  };
+  return shown;
+}
+
+/** The day after FRESH_TICKETS's, as the server answers once its day has turned. */
+const NEXT_DAY: Tickets = {
+  ...FRESH_TICKETS,
+  ticketDay: "2026-09-27",
+  nextRefillAt: "2026-09-27T15:00:00.000Z",
+};
+const refill = Date.parse(FRESH_TICKETS.nextRefillAt);
+
+describe("answers that carry your tickets", () => {
+  it("keeps a spend's tickets when a load sent before it answers after it", async () => {
+    let answerLoad = (_: Tickets) => {};
+    const load = vi
+      .fn<ApiClient["tickets"]>()
+      .mockResolvedValueOnce(FRESH_TICKETS)
+      .mockReturnValueOnce(new Promise((resolve) => (answerLoad = resolve)));
+    const spentOne = { ...SPENT, tickets: { ...FRESH_TICKETS, dailyLeft: 2 } };
+    spendTicket.mockResolvedValueOnce(spentOne);
+    const shown = await openWith(load);
+    act(() => shown().refresh());
+    await act(() => shown().spend("daily"));
+    await act(async () => answerLoad(FRESH_TICKETS));
+    expect(shown().tickets?.dailyLeft).toBe(2);
+  });
+});
+
+describe("the refill", () => {
+  it("loads again until the server's day has turned, when this phone's clock runs ahead", async () => {
+    vi.setSystemTime(refill - REFILL_RETRY_MS);
+    const server = { tickets: FRESH_TICKETS };
+    const load = vi.fn(() => Promise.resolve(server.tickets));
+    const shown = await openWith(load);
+    await act(() => vi.advanceTimersByTimeAsync(REFILL_RETRY_MS * 2));
+    // The server's clock hasn't reached the refill, so it still answers the ended day.
+    expect(shown().tickets?.ticketDay).toBe(FRESH_TICKETS.ticketDay);
+    server.tickets = NEXT_DAY;
+    await act(() => vi.advanceTimersByTimeAsync(REFILL_RETRY_MAX_MS));
+    expect(shown().tickets?.ticketDay).toBe(NEXT_DAY.ticketDay);
+  });
+
+  it("loads again after a reload at the refill fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.setSystemTime(refill - REFILL_RETRY_MS);
+    const load = vi
+      .fn<ApiClient["tickets"]>()
+      .mockResolvedValueOnce(FRESH_TICKETS)
+      .mockRejectedValueOnce(NO_ANSWER)
+      .mockResolvedValue(NEXT_DAY);
+    const shown = await openWith(load);
+    // The reload at the refill fails, then the one after it lands.
+    await act(() => vi.advanceTimersByTimeAsync(REFILL_RETRY_MS * 2));
+    await act(() => vi.advanceTimersByTimeAsync(REFILL_RETRY_MS));
+    expect(shown().tickets?.ticketDay).toBe(NEXT_DAY.ticketDay);
+  });
+
+  it("loads as the app comes back into view after the refill, since a sleeping phone holds timers back", async () => {
+    vi.setSystemTime(refill - REFILL_RETRY_MS);
+    const load = vi
+      .fn<ApiClient["tickets"]>()
+      .mockResolvedValueOnce(FRESH_TICKETS)
+      .mockResolvedValue(NEXT_DAY);
+    const shown = await openWith(load);
+    // The clock moves on, but the refill's timer hasn't fired.
+    vi.setSystemTime(refill + REFILL_RETRY_MS);
+    await act(async () => void document.dispatchEvent(new Event("visibilitychange")));
+    expect(shown().tickets?.ticketDay).toBe(NEXT_DAY.ticketDay);
   });
 });
