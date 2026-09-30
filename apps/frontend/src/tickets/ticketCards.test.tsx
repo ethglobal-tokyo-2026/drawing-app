@@ -5,12 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi } from "../api/testing";
 import { setPrivyStatus } from "../identity/privy";
-import {
-  getJpycBalance,
-  getTicketPayments,
-  PaymentFailed,
-  signTicketPayment,
-} from "../payments/jpyc";
+import { getJpycBalance, getTicketPayments, signTicketPayment } from "../payments/jpyc";
+import { PaymentFailed } from "../payments/paymentErrors";
 import { OutOfTickets } from "./OutOfTickets";
 import { formatRefillTime } from "./refill";
 import { ReserveTicketCheckout } from "./ReserveTicketCheckout";
@@ -27,11 +23,6 @@ vi.mock("../payments/jpyc", () => ({
   getJpycBalance: vi.fn(),
   getTicketPayments: vi.fn(),
   signTicketPayment: vi.fn(),
-  PaymentFailed: class PaymentFailed extends Error {
-    constructor(_digest: string, why: string) {
-      super(why);
-    }
-  },
 }));
 vi.mock("../identity/suiSigner", () => ({ waitForSuiSigner: () => Promise.resolve({}) }));
 
@@ -285,6 +276,26 @@ describe("ReserveTicketCheckout", () => {
     expect(kept()).toEqual([]);
   });
 
+  it("opens Tickets not added yet, never a failed payment, when Sui's confirmation is slow and the server doesn't see the payment yet", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(signTicketPayment).mockResolvedValue(
+      signed(() => Promise.reject(new DOMException("The operation timed out.", "TimeoutError"))),
+    );
+    const bought = vi.fn(() => Promise.reject(new ApiError(409, { error: "payment_not_landed" })));
+    await render(
+      checkout(),
+      emptyApi({ ticketShop: () => Promise.resolve(SHOP), buyTickets: bought }),
+    );
+    await settle(500);
+    click("Pay");
+    await settle(500);
+    expect(title()).toBe("Tickets not added yet");
+    expect(document.body.textContent).not.toContain("Payment didn’t go through");
+    // Kept, so asking again later can still add them.
+    expect(kept()).toEqual([TX_DIGEST]);
+  });
+
   it("lets go of a payment Sui ran and failed, and says nothing was spent", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(signTicketPayment).mockResolvedValue(
@@ -299,7 +310,13 @@ describe("ReserveTicketCheckout", () => {
     click("Pay");
     await settle(500);
     expect(title()).toBe("Payment didn’t go through");
-    expect(document.querySelector("[role=alert]")?.textContent).toBe("Sui ran it, and it failed.");
+    // One catalog line for the known failure; Sui's own words are fine print, copyable.
+    expect(document.querySelector("[role=alert]")?.textContent).toBe(
+      "Sui ran the payment, but it failed, so no JPYC was spent.",
+    );
+    expect(document.querySelector(".copyable-fine-print__text")?.textContent).toBe(
+      "Sui ran it, and it failed.",
+    );
     expect(bought).not.toHaveBeenCalled();
     expect(kept()).toEqual([]);
   });
@@ -417,6 +434,9 @@ describe("ReserveTicketCheckout", () => {
     await settle(500);
     expect(title()).toBe("Payment didn’t go through");
     expect(document.querySelector("[role=alert]")?.textContent).toBe(
+      "Something went wrong, so nothing was paid. Try again.",
+    );
+    expect(document.querySelector(".copyable-fine-print__text")?.textContent).toBe(
       "Sui didn’t answer the payment in time.",
     );
     click("Back to the packs");
@@ -546,6 +566,10 @@ describe("ReserveTicketCheckout", () => {
     );
     expect(document.querySelector(".reserve-checkout__digest")?.textContent).toBe(TX_DIGEST);
     expect(buttonNamed("Copy")).toBeDefined();
+    // Names who to send the ID to.
+    expect(document.querySelector(".out-of-tickets__note")?.textContent).toContain(
+      "Croquis Official account",
+    );
     expect(buttonNamed("Add the tickets")).toBeUndefined();
     // Refused for good, so it's no longer kept or asked for again.
     expect(kept()).toEqual([]);

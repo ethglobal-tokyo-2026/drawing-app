@@ -5,10 +5,11 @@ import { useApi } from "../api/useApi";
 import { errorMessage, errorReason } from "../i18n/errorMessage";
 import { i18next } from "../i18n/i18n";
 import { Trans, useTranslation } from "../i18n/react";
-import { ArrowClockwise, BuyTicketsIcon, Copy, DrawIcon } from "../icons";
+import { ArrowClockwise, BuyTicketsIcon, DrawIcon } from "../icons";
 import { usePrivyStatus } from "../identity/privy";
 import { useSuiWalletFailure } from "../identity/suiWallet";
 import type { JpycPayment } from "../payments/jpyc";
+import { PaymentFailed } from "../payments/paymentErrors";
 import { SuiCredit } from "../shop/SuiCredit";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
@@ -16,6 +17,8 @@ import { QuietLink } from "../ui/QuietLink";
 import { REVEAL } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
 import { TearLine } from "../ui/TearLine";
+import { CopyableFinePrint } from "./CopyableFinePrint";
+import { paymentFailureOf, type PaymentFailure } from "./paymentFailure";
 import { formatYen, yenForJpyc } from "./prices";
 import { singleTicketPrice, useReservePacks, type ReservePack } from "./reservePacks";
 import { TicketCard } from "./TicketCard";
@@ -147,10 +150,9 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   const [step, setStep] = useState<Step>(kept ? "error" : "choose");
   const [chosen, setChosen] = useState<ReservePack["tickets"]>(1);
   const [bought, setBought] = useState<UnaddedPurchase | null>(null);
-  const [error, setError] = useState("");
+  const [failure, setFailure] = useState<PaymentFailure | null>(null);
   const [unadded, setUnadded] = useState<Unadded | null>(kept);
   const [adding, setAdding] = useState(kept !== null && !kept.refused);
-  const [copied, setCopied] = useState(false);
   const packs = useReservePacks();
   const shop = packs.state === "ready" ? packs.data : null;
   const sui = useSuiAccount();
@@ -194,7 +196,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
     let paid: UnaddedPurchase | null = null;
     let landed = false;
     try {
-      const [{ signTicketPayment, PaymentFailed }, { waitForSuiSigner }] = await Promise.all([
+      const [{ signTicketPayment }, { waitForSuiSigner }] = await Promise.all([
         import("../payments/jpyc"),
         import("../identity/suiSigner"),
       ]);
@@ -226,7 +228,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
       });
       // Never signed, or Sui ran it and it failed: no JPYC moved either way.
       if (paid) forgetUnaddedPurchase(me.id, paid.digest);
-      setError(reason(e));
+      setFailure(paymentFailureOf(e));
       setStep("error");
       jpyc.refresh();
       return;
@@ -236,7 +238,6 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
     } catch (e) {
       console.error(`Adding the tickets that ${paid.digest} paid for failed`, e);
       showUnadded(paid, e, landed);
-      setCopied(false);
       setStep("error");
     } finally {
       jpyc.refresh();
@@ -271,16 +272,6 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
     else void askAgain(kept.purchase, false);
   });
   useEffect(() => openOnKept(), []);
-
-  const copyPayment = async (digest: string) => {
-    try {
-      await navigator.clipboard.writeText(digest);
-      setCopied(true);
-    } catch (e) {
-      // The ID stays selectable, so it can still be copied by hand.
-      console.error(`Couldn't copy the payment ${digest}`, e);
-    }
-  };
 
   const close = (
     <QuietLink
@@ -337,25 +328,13 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   } else if (step === "error" && unadded) {
     // The payment's ID, fine print under the key in its own case, with a small Copy beside it.
     const payment = (
-      <div className="reserve-checkout__payment">
-        <span className="fine reserve-checkout__payment-id" id={`${id}-payment`}>
-          <Trans
-            i18nKey={($) => $.tickets.checkout.notAdded.payment}
-            values={{ digest: unadded.purchase.digest }}
-            components={{ id: <span className="reserve-checkout__digest" /> }}
-          />
-        </span>
-        <LabelButton
-          size="sm"
-          icon={<Copy />}
-          aria-describedby={`${id}-payment`}
-          onClick={() => void copyPayment(unadded.purchase.digest)}
-        >
-          {copied
-            ? t(($) => $.tickets.checkout.notAdded.copied)
-            : t(($) => $.tickets.checkout.notAdded.copy)}
-        </LabelButton>
-      </div>
+      <CopyableFinePrint text={unadded.purchase.digest} lines={1}>
+        <Trans
+          i18nKey={($) => $.tickets.checkout.notAdded.payment}
+          values={{ digest: unadded.purchase.digest }}
+          components={{ id: <span className="reserve-checkout__digest" /> }}
+        />
+      </CopyableFinePrint>
     );
     body = unadded.refused ? (
       // Refused for good, said once: asking again can't change it, so the way on is the packs.
@@ -370,6 +349,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
             components={{ strong: <strong />, why: <span className="out-of-tickets__quiet" /> }}
           />
         </p>
+        <p className="out-of-tickets__note">{t(($) => $.tickets.checkout.refused.help)}</p>
         <TearLine />
         <Key
           className="out-of-tickets__key"
@@ -422,14 +402,18 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
         {close}
       </>
     );
-  } else if (step === "error") {
+  } else if (step === "error" && failure) {
     body = (
       <>
         <h2 className="out-of-tickets__title out-of-tickets__title--top" id={`${id}-title`}>
           {t(($) => $.tickets.checkout.paymentFailed)}
         </h2>
         <p className="out-of-tickets__line" role="alert">
-          <strong>{error}</strong>
+          <strong>
+            {failure.kind === "app"
+              ? errorMessage(failure.error)
+              : t(($) => $.tickets.checkout.paymentFailure[failure.kind])}
+          </strong>
         </p>
         <TearLine />
         <Key
@@ -440,6 +424,11 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
         >
           {t(($) => $.tickets.checkout.backToPacks)}
         </Key>
+        {failure.detail && (
+          <CopyableFinePrint text={failure.detail} lines={3}>
+            {failure.detail}
+          </CopyableFinePrint>
+        )}
         {close}
       </>
     );

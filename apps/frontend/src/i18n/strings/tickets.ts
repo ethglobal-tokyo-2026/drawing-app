@@ -178,15 +178,33 @@ export const tickets = {
     buyMore: { en: "Buy more tickets", ja: "チケットをもっと買う" },
     /** Reserve ticket checkout when a payment fails: the title, above the reason */
     paymentFailed: { en: "Payment didn’t go through", ja: "支払いが完了しませんでした" },
-    /** Reserve ticket checkout, under “Payment didn’t go through”: why, when building and signing the payment took too long, so it was never sent */
-    signingTimedOut: {
-      en: "Signing the payment took too long, so it wasn’t sent. Nothing was paid.",
-      ja: "支払いの署名に時間がかかったため、送信されませんでした。支払いは行われていません。",
-    },
-    /** Reserve ticket checkout, under “Payment didn’t go through”: why, when Sui ran the payment and it failed; `reason` is Sui's own words */
-    failedOnSui: {
-      en: "Sui ran the payment, but it failed, so no JPYC was spent ({{reason}}).",
-      ja: "Suiで支払いが失敗したため、JPYCは使われていません（{{reason}}）。",
+    /** Reserve ticket checkout, under “Payment didn’t go through”: one bold line per known reason, then Sui's or the phone's own words as fine print beside Copy. No JPYC moved in any of them. */
+    paymentFailure: {
+      /** Reserve ticket checkout, payment failed: when building and signing the payment took too long, so it was never sent */
+      timedOut: {
+        en: "Signing the payment took too long, so it wasn’t sent. Nothing was paid.",
+        ja: "支払いの署名に時間がかかったため、送信されませんでした。支払いは行われていません。",
+      },
+      /** Reserve ticket checkout, payment failed: when Sui ran the payment and it failed */
+      rejected: {
+        en: "Sui ran the payment, but it failed, so no JPYC was spent.",
+        ja: "Suiで支払いが失敗したため、JPYCは使われていません。",
+      },
+      /** Reserve ticket checkout, payment failed: when the Sui account has no SUI to pay the network fee with */
+      noNetworkFee: {
+        en: "Your Sui account needs a little SUI to pay the network fee. Nothing was paid.",
+        ja: "ネットワーク手数料を支払うには、Suiアカウントに少額のSUIが必要です。支払いは行われていません。",
+      },
+      /** Reserve ticket checkout, payment failed: when the phone couldn't reach Sui */
+      offline: {
+        en: "Couldn’t reach Sui, so nothing was paid. Check your connection and try again.",
+        ja: "Suiに接続できなかったため、支払いは行われていません。接続を確認して、もう一度お試しください。",
+      },
+      /** Reserve ticket checkout, payment failed: for any other reason */
+      other: {
+        en: "Something went wrong, so nothing was paid. Try again.",
+        ja: "問題が発生したため、支払いは行われていません。もう一度お試しください。",
+      },
     },
     /** When a payment was sent but the server didn't add its tickets: asking the server again never pays again. The phone keeps the payment from the moment it's signed until they're added or refused for good, and the checkout opens on it. */
     notAdded: {
@@ -208,11 +226,11 @@ export const tickets = {
       adding: { en: "Adding…", ja: "追加中…" },
       /** Reserve ticket checkout, tickets not added or refused: fine print under the key naming the payment; `<id>` holds its Sui transaction ID, cut short on screen */
       payment: { en: "Payment <id>{{digest}}</id>", ja: "支払い<id>{{digest}}</id>" },
-      /** Reserve ticket checkout, tickets not added or refused: the small button beside the payment that copies its whole ID */
-      copy: { en: "Copy", ja: "コピー" },
-      /** Reserve ticket checkout, tickets not added or refused: that button once the ID is copied */
-      copied: { en: "Copied", ja: "コピー済み" },
     },
+    /** Reserve ticket checkout, beside the payment ID on the tickets-not-added and tickets-refused cards, and beside the raw words on the payment-failed card: the small button that copies them whole */
+    copy: { en: "Copy", ja: "コピー" },
+    /** Reserve ticket checkout: that button once they're copied */
+    copied: { en: "Copied", ja: "コピー済み" },
     /** When the server refused a payment's tickets for good, or Sui never showed the payment: said once, and the phone stops keeping the payment. */
     refused: {
       /** Reserve ticket checkout, once, when the server refused for good to add the tickets a payment bought (after paying, after asking again, or as it opens on a kept payment refused since): the title */
@@ -226,6 +244,11 @@ export const tickets = {
       neverLanded: {
         en: "Sui never showed this payment, so it didn’t go through.",
         ja: "Suiでこの支払いが確認できなかったため、支払いは完了していません。",
+      },
+      /** Reserve ticket checkout, tickets refused: the note under the line, saying where to send the payment ID shown below the key */
+      help: {
+        en: "Need help? Copy the payment ID below and send it in your LINE chat with the Croquis Official account.",
+        ja: "お困りの場合は、下の支払いIDをコピーして、LINEのクロッキー公式アカウントとのトークに送ってください。",
       },
     },
     /** Reserve ticket checkout: the key that goes back to the packs when a payment fails or its tickets are refused, and the quiet link above Not now when its tickets weren't added */

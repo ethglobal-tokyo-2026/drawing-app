@@ -1,0 +1,32 @@
+/* Fine print with Copy beside it (CopyableFinePrint.tsx): under a card's key, for a payment's ID or the raw
+   words of a failure, both case-sensitive and long. */
+.copyable-fine-print {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* Cut short on screen, and Copy copies it whole. It breaks anywhere, so a long ID never widens the card. */
+.copyable-fine-print__text {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  text-align: left;
+  text-transform: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.copyable-fine-print__text--1 {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+.copyable-fine-print__text--3 {
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
