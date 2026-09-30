@@ -1,6 +1,6 @@
 # Frontend code review
 
-2026-09-29. The findings of a max-effort review of all of `apps/frontend` at main `9f541d12`, grouped by area. Nothing here is fixed yet.
+2026-09-29. The findings of a max-effort review of all of `apps/frontend` at main `9f541d12`, grouped by area. The plan that fixes them, and what it has fixed so far, is [docs/superpowers/plans/2026-09-29-frontend-review-fixes.md](../superpowers/plans/2026-09-29-frontend-review-fixes.md).
 
 Finder lanes each took an area or an angle: line by line, behavior removed in the history's merges, frontend and API contracts, React and JavaScript pitfalls, wrappers, reuse, simplification, efficiency, root causes and AGENTS.md's rules. A second agent that hadn't found a candidate then checked it against the code, running a scratch script where one could settle it, and gap sweepers looked for what the lanes missed. A defect found by several lanes is one finding here.
 
@@ -42,44 +42,6 @@ Most findings are instances of a few causes. Fixing the cause once, where it liv
 5. **Dates in the phone's time zone.** The app's day ends at midnight in Tokyo, but sheet feet, the lifted sticker's caption and the start and sealed cards' refill time use the phone's clock and zone (**TRAY-3**, **EXPL-3**, **CLEAN-5**), and the Tokyo offset itself is a hand copy of the server's (**CLEAN-7**). One Tokyo-day date module, fed by the server's offset, for every printed date.
 6. **iOS canvas memory released in some places only.** The fill copy and the cut's canvases are freed at once; the seal's ink copy, the undo checkpoints and the mini-heart layer aren't (**DRAW-15**, **DRAW-11**, **GRAT-13**), and running out is what makes **DRAW-3** fire. Call the existing `release(canvas)` wherever a canvas leaves use.
 7. **Focus fixed per dialog.** useFocusTrap wraps only from its first and last control and loses Escape once focus falls to the page (**UI-7**, **CLEAN-1**), so each dialog re-adds its own refocus effect, those copies have drifted (**CLEAN-4**), and the screen-level focus loop keeps its own idea of a tab stop (**CLEAN-9**). Fix the trap once and delete the per-dialog effects.
-
-## Decisions for ad0ll
-
-Each has a recommendation. The fix lanes leave these three alone until you answer.
-
-1. **The friend picker (**SHELL-3**).** Gift Messages go out through LINE's full picker on purpose, because its one-pick mode lists friends only and can come up empty. So one message can reach several chats, group chats included, and the first person to open it in a 1:1 chat receives the sticker. AGENTS.MD says a Gift Message goes into one 1:1 chat. _Recommend_ keeping the full picker, rewording the Gift Message row to say the first person to open it receives it, and saying so on the give sheet.
-2. **Paid tickets that depend on the phone (**TIX-3**).** A pack's tickets reach the person only if their phone keeps the payment's digest until the server adds them. _Recommend_ the server recording each purchase (the person, the pack and its price) before the payment is signed, then adding its tickets once Sui shows the payment, so the phone's copy only makes it sooner. It needs a table and a migration. The other way, reading the vault's payment events, needs no client change but depends on Sui's event index.
-3. **Mona Sans's slashed zero (**CLEAN-2**).** The plain zero is patched site by site, with widths tuned to other tokens. _Recommend_ self-hosting a Mona Sans build whose tabular zero is the plain glyph, so `tabular-nums` works everywhere again; or setting the counting figures in another face. A design call.
-
-## Fix lanes
-
-Each lane owns the files its findings live in, fixes them on its own branch and is merged to main once its checks pass. This checklist is updated as each lane merges.
-
-Wave 1:
-
-- [ ] Sealing and spending on the drawing screen: DRAW-1, DRAW-3, DRAW-7, DRAW-8, DRAW-9 (the app's side only: another branch is changing the server's mint path), DRAW-10, DRAW-12, DRAW-15, DRAW-18, TIX-2, and the timelapse half of DRAW-13
-- [ ] The kept drawing and the ink engine: DRAW-2, DRAW-4, DRAW-5, DRAW-6, DRAW-11, DRAW-13
-- [ ] Sticker tray: TRAY-1, TRAY-2, TRAY-4 to TRAY-8
-- [ ] Sticker board and stat board: BOARD-1 to BOARD-7, CLEAN-18
-- [ ] Giving: GIFT-1 to GIFT-4, GIFT-9, GIFT-10, SHELL-4, CLEAN-12
-- [ ] Receiving, and the gift link in the server log: GIFT-5, GIFT-7, GIFT-8
-- [ ] Gratitude records: GRAT-1, GRAT-2, GRAT-3, GRAT-8, GRAT-11
-- [ ] Tickets and payments: TIX-1, TIX-4 to TIX-9, CLEAN-8
-- [ ] App shell and sign-in: SHELL-1, SHELL-2, SHELL-5 to SHELL-10, UI-1, CLEAN-10, CLEAN-16
-- [ ] Shared controls and the catalog import: UI-2 to UI-7, GIFT-6, CLEAN-1, CLEAN-9
-
-Wave 2, as wave 1's lanes finish:
-
-- [ ] Seal ceremony: DRAW-14, DRAW-16, DRAW-17
-- [ ] Gratitude visuals: GRAT-4 to GRAT-7, GRAT-9, GRAT-10, GRAT-12, GRAT-13
-- [ ] Explore and dates: EXPL-1 to EXPL-3, TRAY-3, CLEAN-5, CLEAN-7, CLEAN-13, CLEAN-15
-
-Wave 3, once the lanes above are merged, since these touch every area:
-
-- [ ] Shared helpers: CLEAN-3, CLEAN-11, CLEAN-14, CLEAN-20, CLEAN-22
-- [ ] One device store, and a query cache: CLEAN-17, CLEAN-21
-- [ ] One ticket card shell: CLEAN-4, CLEAN-6
-- [ ] Split trayEngine.ts: CLEAN-19
 
 ## Drawing screen and sealing
 
