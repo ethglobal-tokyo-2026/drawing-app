@@ -7,6 +7,8 @@ export interface Surface<S> {
   /** Restore a snapshot, or blank the surface when `null`. */
   restore(snapshot: S | null): void;
   snapshot(): S;
+  /** Lets go of a snapshot history has dropped. */
+  discard(snapshot: S): void;
   /** Roughly what replaying the op costs, counted in strokes. */
   cost(op: Op): number;
 }
@@ -58,7 +60,7 @@ export class History<S> {
   commit(op: Op): void {
     this.undone = [];
     // Snapshots past this point belong to the ops that were undone.
-    for (const k of this.checkpoints.keys()) if (k > this.ops.length) this.checkpoints.delete(k);
+    this.drop((k) => k > this.ops.length);
     this.record(op);
   }
 
@@ -82,8 +84,13 @@ export class History<S> {
   reset(): void {
     this.ops = [];
     this.undone = [];
-    this.checkpoints.clear();
+    this.release();
     this.surface.restore(null);
+  }
+
+  /** Lets go of every snapshot, as when the sheet goes; an undo after it replays from the start. */
+  release(): void {
+    this.drop(() => true);
   }
 
   /** Starts over with these ops painted on, as a drawing picked up after a reload does. */
@@ -102,8 +109,17 @@ export class History<S> {
 
   /** Repaints every op, as after a resize, when the snapshots no longer fit. */
   invalidate(): void {
-    this.checkpoints.clear();
+    this.release();
     this.rebuild();
+  }
+
+  /** Drops the snapshots `which` picks, and lets the surface free each. */
+  private drop(which: (k: number) => boolean): void {
+    for (const [k, snapshot] of this.checkpoints) {
+      if (!which(k)) continue;
+      this.checkpoints.delete(k);
+      this.surface.discard(snapshot);
+    }
   }
 
   private latestCheckpoint(len: number): number {
@@ -126,7 +142,9 @@ export class History<S> {
     for (let i = this.latestCheckpoint(len); i < len; i++) cost += this.surface.cost(this.ops[i]);
     if (cost < this.checkpointCost) return;
     this.checkpoints.set(len, this.surface.snapshot());
-    if (this.checkpoints.size > this.maxCheckpoints)
-      this.checkpoints.delete(Math.min(...this.checkpoints.keys()));
+    if (this.checkpoints.size > this.maxCheckpoints) {
+      const oldest = Math.min(...this.checkpoints.keys());
+      this.drop((k) => k === oldest);
+    }
   }
 }

@@ -16,6 +16,7 @@ class FakeLayer implements InkLayer {
   snapshot() {
     return null;
   }
+  discard() {}
   cost() {
     return 1;
   }
@@ -164,5 +165,44 @@ describe("InkEngine", () => {
     stroke("touch", 1, [40, 40], [46, 40]);
     stroke("touch", 2, [40, 40], [80, 40], 1000);
     expect(committed()).toEqual([expect.objectContaining({ tool: "fill", x: 40, y: 40 })]);
+  });
+
+  it("lets fingers draw again after a tap finger's lift goes missing", () => {
+    const { engine, at, stroke, committed } = setup();
+    /** Two fingers land for a tap, and the second one's lift never reaches the sheet. */
+    const loseAFinger = (t: number) => {
+      engine.down(at("touch", 1, 0, 0, t));
+      engine.down(at("touch", 2, 60, 0, t + 10));
+      engine.up(at("touch", 1, 0, 0, t + 100));
+    };
+    loseAFinger(0);
+    // The last finger leaves the screen, so the next one to land is the only one down.
+    engine.screenClear();
+    stroke("touch", 3, [0, 50], [100, 50], 1000);
+    expect(committed()).toHaveLength(1);
+    loseAFinger(2000);
+    engine.reset();
+    stroke("touch", 4, [0, 50], [100, 50], 3000);
+    expect(committed()).toHaveLength(2);
+  });
+
+  it("takes nothing back and brings nothing back while the sheet is locked", () => {
+    const { engine, at, stroke, events } = setup();
+    stroke("mouse", 1, [0, 0], [100, 0]);
+    stroke("mouse", 1, [0, 20], [100, 20], 500);
+    engine.undo();
+    // Two fingers land for an undo as the sheet locks, and lift within the tap window.
+    engine.down(at("touch", 2, 0, 50, 1000));
+    engine.down(at("touch", 3, 60, 50, 1010));
+    engine.settings = { ...engine.settings, locked: true };
+    engine.up(at("touch", 2, 0, 50, 1100));
+    engine.up(at("touch", 3, 60, 50, 1110));
+    expect(engine.ops).toHaveLength(1);
+    // The undo and redo tiles, or their keys.
+    engine.undo();
+    expect(engine.ops).toHaveLength(1);
+    engine.redo();
+    expect(engine.ops).toHaveLength(1);
+    expect(events.onHistory).toHaveBeenLastCalledWith(true, true);
   });
 });

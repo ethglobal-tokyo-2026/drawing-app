@@ -117,6 +117,8 @@ export class InkEngine {
   /** A touch on a paused sheet, waiting a beat before the hint in case a second finger makes a tap. */
   private blocked: { id: number; cx: number; cy: number } | null = null;
   private penSeen = false;
+  /** Every finger left the screen: the next touch to land is the only one down. */
+  private fingersGone = false;
   private cancelFrame: (() => void) | null = null;
   private locate: () => { left: number; top: number } = () => ({ left: 0, top: 0 });
   private origin = { left: 0, top: 0 };
@@ -155,6 +157,12 @@ export class InkEngine {
     };
     const prevent = (e: Event) => e.preventDefault();
     const touch = { passive: false };
+    // The screen's own count of fingers, heard wherever they lift, outlasts a lift the sheet missed.
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length === 0) this.screenClear();
+    };
+    document.addEventListener("touchend", onTouchEnd);
+    document.addEventListener("touchcancel", onTouchEnd);
     sheet.addEventListener("pointerdown", onDown);
     sheet.addEventListener("pointermove", onMove);
     sheet.addEventListener("pointerup", onUp);
@@ -176,9 +184,16 @@ export class InkEngine {
       sheet.removeEventListener("touchstart", prevent);
       sheet.removeEventListener("touchmove", prevent);
       document.removeEventListener("gesturestart", prevent);
+      document.removeEventListener("touchend", onTouchEnd);
+      document.removeEventListener("touchcancel", onTouchEnd);
       this.cancelFrame?.();
       this.cancelFrame = null;
     };
+  }
+
+  /** Every finger left the screen, so whatever lifts went missing, the next touch is the only one down. */
+  screenClear(): void {
+    this.fingersGone = true;
   }
 
   down(e: PointerInput): void {
@@ -189,6 +204,7 @@ export class InkEngine {
     this.swallowed.delete(id);
     if (s.armed) this.events.onDisarm();
     if (pointerType === "touch") {
+      if (this.fingersGone) this.forgetTouches();
       if (this.live?.pointerType === "pen") return;
       const stroke = this.live?.pointerType === "touch" ? this.live : null;
       const result = this.taps.down(
@@ -263,12 +279,15 @@ export class InkEngine {
     this.lift(e, true);
   }
 
+  /** Nothing while the sheet is locked: a seal is cut from the ink as it stands. */
   undo(): void {
+    if (this.settings.locked) return;
     this.endStroke(true);
     if (this.history.undo()) this.notifyHistory();
   }
 
   redo(): void {
+    if (this.settings.locked) return;
     this.endStroke(true);
     if (this.history.redo()) this.notifyHistory();
   }
@@ -294,6 +313,7 @@ export class InkEngine {
     this.fillTap = null;
     this.blocked = null;
     this.swallowed.clear();
+    this.taps.clear();
     this.history.load(ops);
     this.notifyHistory();
   }
@@ -304,12 +324,30 @@ export class InkEngine {
     if (this.live) this.layer.paint(this.live.builder.op, 0, this.live.painted);
   }
 
+  /** The sheet is going: its undo snapshots are freed now rather than when they're collected. */
+  dispose(): void {
+    this.history.release();
+  }
+
+  /** Every touch pointer is taken as lifted: a finger's stroke stays, and a tap or fill in progress goes. */
+  private forgetTouches(): void {
+    this.fingersGone = false;
+    for (const id of this.taps.clear()) {
+      this.swallowed.delete(id);
+      if (this.fillTap?.id === id) this.fillTap = null;
+    }
+    this.blocked = null;
+    if (this.live?.pointerType === "touch") this.endStroke(false);
+  }
+
+  // Every finger the tap recognizer holds is captured too, so its lift or lost capture comes here.
   private tracks(id: number): boolean {
     return (
       this.live?.id === id ||
       this.fillTap?.id === id ||
       this.blocked?.id === id ||
-      this.swallowed.has(id)
+      this.swallowed.has(id) ||
+      this.taps.holds(id)
     );
   }
 

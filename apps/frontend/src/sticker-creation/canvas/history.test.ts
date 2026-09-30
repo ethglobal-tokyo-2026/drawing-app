@@ -6,15 +6,23 @@ import type { Op } from "./ops";
 class FakeSurface implements Surface<string[]> {
   drawn: string[] = [];
   applied: string[] = [];
+  taken: string[][] = [];
+  discarded: string[][] = [];
   apply(op: Op) {
     this.drawn.push(op.color);
     this.applied.push(op.color);
   }
   restore(snapshot: string[] | null) {
+    if (snapshot && this.discarded.includes(snapshot)) throw new Error("Restored a freed snapshot");
     this.drawn = snapshot ? [...snapshot] : [];
   }
   snapshot() {
-    return [...this.drawn];
+    const snapshot = [...this.drawn];
+    this.taken.push(snapshot);
+    return snapshot;
+  }
+  discard(snapshot: string[]) {
+    this.discarded.push(snapshot);
   }
   cost(op: Op) {
     return op.tool === "fill" ? 5 : 1;
@@ -102,6 +110,20 @@ describe("History", () => {
     expect(history.canRedo).toBe(false);
     history.undo();
     expect(surface.drawn).toEqual(["a", "b"]);
+  });
+
+  it("frees each snapshot once as it drops it, and never one it still restores from", () => {
+    // A snapshot every five strokes, the oldest dropped past four.
+    const { surface, history } = setup(strokes(30), 5);
+    for (let i = 0; i < 7; i++) history.undo();
+    // Drawing after an undo drops the undone strokes' snapshots.
+    surface.apply(stroke("x"));
+    history.commit(stroke("x"));
+    history.invalidate();
+    history.load(strokes(6));
+    history.reset();
+    expect(surface.discarded).toHaveLength(surface.taken.length);
+    expect(new Set(surface.discarded)).toEqual(new Set(surface.taken));
   });
 
   it("repaints every op after a resize", () => {

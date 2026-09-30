@@ -1,3 +1,4 @@
+import { releaseCanvas } from "../../ui/releaseCanvas";
 import { hexToRgb } from "./color";
 import { context2d } from "./context2d";
 import { floodFill } from "./fill";
@@ -69,9 +70,7 @@ export class InkSurface implements Surface<HTMLCanvasElement> {
       this.ctx.putImageData(pixels, 0, 0);
       return true;
     } finally {
-      // iOS counts canvases against a small budget until they're collected, so this one goes now.
-      copy.width = 0;
-      copy.height = 0;
+      releaseCanvas(copy);
     }
   }
 
@@ -91,6 +90,10 @@ export class InkSurface implements Surface<HTMLCanvasElement> {
 
   snapshot(): HTMLCanvasElement {
     return copyOf(this.canvas).copy;
+  }
+
+  discard(snapshot: HTMLCanvasElement): void {
+    releaseCanvas(snapshot);
   }
 
   restore(snapshot: HTMLCanvasElement | null): void {

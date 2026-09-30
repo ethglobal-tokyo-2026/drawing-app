@@ -60,6 +60,19 @@ export class TapRecognizer {
     return this.gesture !== null && this.touches.has(id);
   }
 
+  /** Whether this finger is down, as far as the recognizer has heard. */
+  holds(id: number): boolean {
+    return this.touches.has(id);
+  }
+
+  /** Forgets every finger and any tap in progress; returns the fingers it held. */
+  clear(): number[] {
+    const ids = [...this.touches.keys()];
+    this.touches.clear();
+    this.gesture = null;
+    return ids;
+  }
+
   /** The gesture the last lifting finger completes, if any. */
   up(id: number, t: number): TapGesture | null {
     this.touches.delete(id);

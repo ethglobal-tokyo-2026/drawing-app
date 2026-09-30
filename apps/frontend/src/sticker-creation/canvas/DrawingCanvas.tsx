@@ -84,6 +84,7 @@ export function DrawingCanvas({ ref, settings, active, ...events }: Props) {
       observer.disconnect();
       measureAgain.current = null;
       detach();
+      engine.dispose();
       ink.current = null;
     };
   }, []);
