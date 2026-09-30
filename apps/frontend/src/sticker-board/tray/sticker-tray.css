@@ -154,6 +154,23 @@
   transform-origin: 50% 100%;
 }
 
+/* The front sheet is first in the page, so the sheets behind it stack under it by depth. */
+.tray__sheet[data-depth="0"] {
+  z-index: 4;
+}
+
+.tray__sheet[data-depth="1"] {
+  z-index: 3;
+}
+
+.tray__sheet[data-depth="2"] {
+  z-index: 2;
+}
+
+.tray__sheet[data-depth="3"] {
+  z-index: 1;
+}
+
 .tray__paper {
   position: absolute;
   inset: 0;
@@ -581,6 +598,8 @@
 
 .tray__tabs {
   position: absolute;
+  /* Before the stack in the page, above it on the tray. */
+  z-index: 1;
   left: 0;
   top: 0;
   width: 156px;
@@ -662,7 +681,7 @@
   --tab: var(--grape);
 }
 
-.tray__tab[aria-selected="true"]::before {
+.tray__tab[aria-pressed="true"]::before {
   transform: none;
   background: var(--tab);
   box-shadow:
@@ -670,11 +689,11 @@
     0 -1px 2px rgba(28, 24, 36, 0.12);
 }
 
-.tray__tab[data-filter="all"][aria-selected="true"]::before {
+.tray__tab[data-filter="all"][aria-pressed="true"]::before {
   background: var(--liner-lift);
 }
 
-.tray__tab[aria-selected="true"] span {
+.tray__tab[aria-pressed="true"] span {
   transform: none;
 }
 

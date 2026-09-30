@@ -352,16 +352,10 @@ export const stickerBoard = {
         en: "{{no}}, on your board. Show it",
         ja: "{{no}}、ボードに貼ってあります。ボードで見る",
       },
-      /** Sticker tray: screen readers' name for a sticker on a sheet, which can be dragged onto the board or tapped to stick on */
-      onSheet: {
-        en: "{{no}}. Drag it onto your board, or tap to stick it on",
-        ja: "{{no}}。ボードへドラッグするか、タップすると貼れます",
-      },
-      /** Sticker tray: screen readers' name for a sticker on a sheet that the tray hasn't shown before */
-      newOnSheet: {
-        en: "{{no}}, new. Drag it onto your board, or tap to stick it on",
-        ja: "{{no}}、新着。ボードへドラッグするか、タップすると貼れます",
-      },
+      /** Sticker tray, the sheet in front: screen readers' name for a sticker on it; the sheet's description says what to do with it */
+      onSheet: { en: "{{no}}", ja: "{{no}}" },
+      /** Sticker tray, the sheet in front: screen readers' name for a sticker on it that the tray hasn't shown before */
+      newOnSheet: { en: "{{no}}, new", ja: "{{no}}、新着" },
       /** Sticker tray: screen readers' name for the blank spot a sticker you gave left on its sheet, a button that opens it among the stickers you gave; {{recipient}} is who received it, such as "@bob" */
       given: {
         en: "{{no}}, given to {{recipient}}. Open it",
@@ -379,6 +373,21 @@ export const stickerBoard = {
     sheet: {
       en: "Sheet {{number}}, {{dates}}. Bring it to the front",
       ja: "シート{{number}}、{{dates}}。手前に出す",
+    },
+    /** Sticker tray, the sheet in front: what screen readers say about it after its name, once for every sticker on it */
+    slotHint: {
+      en: "Drag a sticker onto your board, or tap it to stick it on",
+      ja: "シールはボードへドラッグするか、タップすると貼れます",
+    },
+    /** Sticker tray: screen readers' name for the sheet in front, which holds the stickers you can stick on; {{dates}} is when its stickers came, such as "9.20–9.23" */
+    frontSheet: {
+      en: "Sheet {{number}}, {{dates}}, in front",
+      ja: "シート{{number}}、{{dates}}、手前",
+    },
+    /** Sticker tray: screen readers' name for the sheet pulled out over the board; {{dates}} is when its stickers came, such as "9.20–9.23" */
+    pulledSheet: {
+      en: "Sheet {{number}}, {{dates}}, pulled out",
+      ja: "シート{{number}}、{{dates}}、引き出し中",
     },
     /** Sticker tray, sheets spread over the board: screen readers' name for the sheet that's in front now */
     sheetInFront: {

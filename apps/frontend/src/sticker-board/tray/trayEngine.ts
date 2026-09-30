@@ -97,6 +97,13 @@ export interface TrayEngine {
 }
 
 type Geometry = ReturnType<Zipper["geometry"]>;
+/**
+ * How a sheet's stickers take a press: on the sheet in front, inert behind it, or as pictures inside
+ * a spread cell, which is one button.
+ */
+type SlotUse = "live" | "behind" | "picture";
+/** How a sheet is named: a button behind the front one, or the sheet in front or pulled out. */
+type SheetName = "back" | "spreadFront" | "front" | "pulled";
 type Filter = "all" | "mine" | "gifts";
 type SlotState = TraySlot["state"] | "peeling";
 
@@ -237,6 +244,8 @@ export const ICONS = {
   x: "M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z",
 };
 
+/** Trays made so far, which keeps each one's ids its own. */
+let trays = 0;
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const cssUrl = (url: string) => `url("${url}")`;
@@ -393,19 +402,25 @@ export function createTrayEngine(
     tabs: i18next.t(($) => $.stickerBoard.tray.tabs),
     new: i18next.t(($) => $.stickerBoard.tray.new),
     putBack: i18next.t(($) => $.stickerBoard.tray.putBack),
+    slotHint: i18next.t(($) => $.stickerBoard.tray.slotHint),
   };
+  /** What the sheet in front's stickers do, said once for the sheet instead of on every sticker. */
+  const hint = make("p", "visually-hidden", words.slotHint);
+  hint.id = `tray-hint-${++trays}`;
+  root.append(hint);
   const stack = make("div", "tray__stack");
   stack.setAttribute("role", "group");
   stack.setAttribute("aria-label", words.sheets);
   // It holds focus when paging leaves nothing else to hold it.
   stack.tabIndex = -1;
   const tabsEl = make("div", "tray__tabs");
-  tabsEl.setAttribute("role", "tablist");
+  tabsEl.setAttribute("role", "group");
   tabsEl.setAttribute("aria-label", words.tabs);
   const deepTop = make("i", "tray__deep tray__deep--top");
   const deepBot = make("i", "tray__deep tray__deep--bot");
   // The stack shows through a window clipped to the mouth: w1 and c1 cut its top, w2 and c2 its foot.
-  const c2 = make("div", "tray__c2", make("i", "tray__fabric"), stack, tabsEl);
+  // The tabs come first, so Tab and screen readers meet them before the sheets they filter.
+  const c2 = make("div", "tray__c2", make("i", "tray__fabric"), tabsEl, stack);
   const w2 = make("div", "tray__w2", c2, deepBot);
   const c1 = make("div", "tray__c1", w2);
   const w1 = make("div", "tray__w1", c1, deepTop);
@@ -518,10 +533,16 @@ export function createTrayEngine(
     const [x, y, r] = STAND_IN[s.slot];
     return { x, y, r, ...fitOf(s) };
   }
-  function slotEl(s: Slot, isNew: boolean) {
+  function slotEl(s: Slot, isNew: boolean, use: SlotUse) {
     const q = placeOf(s);
-    const el = make("button", `tray__slot${matches(s) ? "" : " is-out"}`);
-    el.type = "button";
+    const el: HTMLElement = make(
+      use === "picture" ? "span" : "button",
+      `tray__slot${matches(s) ? "" : " is-out"}`,
+    );
+    if (el instanceof HTMLButtonElement) el.type = "button";
+    if (use === "picture") decorative(el);
+    // Behind the front sheet a sticker can't be reached, so nothing visits it.
+    else if (use === "behind") el.setAttribute("inert", "");
     el.dataset.id = s.id;
     el.dataset.state = s.state;
     el.style.setProperty("--x", px(q.x));
@@ -533,21 +554,24 @@ export function createTrayEngine(
     const no = { no: formatNo(s.no) };
     // A given sticker's spot stays blank: a button with nothing on it, which takes the shared press.
     if (s.givenTo !== undefined) {
-      el.dataset.press = "";
-      el.setAttribute(
-        "aria-label",
-        i18next.t(($) => $.stickerBoard.tray.slot.given, { ...no, recipient: s.givenTo }),
-      );
+      if (use !== "picture") {
+        el.dataset.press = "";
+        el.setAttribute(
+          "aria-label",
+          i18next.t(($) => $.stickerBoard.tray.slot.given, { ...no, recipient: s.givenTo }),
+        );
+      }
       return el;
     }
-    el.setAttribute(
-      "aria-label",
-      s.state === "used"
-        ? i18next.t(($) => $.stickerBoard.tray.slot.used, no)
-        : isNew
-          ? i18next.t(($) => $.stickerBoard.tray.slot.newOnSheet, no)
-          : i18next.t(($) => $.stickerBoard.tray.slot.onSheet, no),
-    );
+    if (use !== "picture")
+      el.setAttribute(
+        "aria-label",
+        s.state === "used"
+          ? i18next.t(($) => $.stickerBoard.tray.slot.used, no)
+          : isNew
+            ? i18next.t(($) => $.stickerBoard.tray.slot.newOnSheet, no)
+            : i18next.t(($) => $.stickerBoard.tray.slot.onSheet, no),
+      );
     const silhouette = make("span", "tray__used-sticker-silhouette", make("i", ""));
     const fit = make(
       "span",
@@ -602,35 +626,65 @@ export function createTrayEngine(
     const hi = Math.max(...ats);
     return sameDay(lo, hi) ? monthDay(lo) : `${monthDay(lo)}–${monthDay(hi)}`;
   }
-  /** A sheet's name, as a button that brings it to the front. */
-  const sheetLabel = (f: number, inFront = false) => {
+  /** A sheet's name: as a button that brings it to the front, or as the sheet that is in front or out. */
+  const sheetLabel = (f: number, name: SheetName = "back") => {
     const sheet = { number: f + 1, dates: rangeOf(f) };
-    return inFront
-      ? i18next.t(($) => $.stickerBoard.tray.sheetInFront, sheet)
-      : i18next.t(($) => $.stickerBoard.tray.sheet, sheet);
+    switch (name) {
+      case "back":
+        return i18next.t(($) => $.stickerBoard.tray.sheet, sheet);
+      case "spreadFront":
+        return i18next.t(($) => $.stickerBoard.tray.sheetInFront, sheet);
+      case "front":
+        return i18next.t(($) => $.stickerBoard.tray.frontSheet, sheet);
+      case "pulled":
+        return i18next.t(($) => $.stickerBoard.tray.pulledSheet, sheet);
+    }
   };
-  /** A loose sheet: a tear strip to grip at its top, stickers on their cut lines, its dates on its foot. */
-  function sheetEl(f: number, cls: string, depth: number, news: ReadonlySet<string> = newIds()) {
+  /**
+   * A loose sheet: a tear strip to grip at its top, stickers on their cut lines, its dates on its foot.
+   * Behind the front sheet only its foot is a stop; in the spread the whole sheet is one button, so
+   * its stickers are pictures.
+   */
+  function sheetEl(
+    f: number,
+    cls: string,
+    depth: number,
+    news: ReadonlySet<string> = newIds(),
+    use: SlotUse = depth > 0 ? "behind" : "live",
+  ) {
     const paper = make("div", "tray__paper", decorative(make("i", "tray__tear")));
     // A sticker on its way leaves nothing; one received leaves its blank spot, which opens it.
     for (const s of sheetItems(f))
-      if (s.state !== "given" || s.givenTo !== undefined) paper.append(slotEl(s, news.has(s.id)));
-    paper.append(
-      make(
-        "div",
-        "tray__foot",
-        make("span", "fine", rangeOf(f)),
-        make("span", "fine", String(f + 1).padStart(2, "0")),
-      ),
-      make("i", "tray__shade"),
+      if (s.state !== "given" || s.givenTo !== undefined)
+        paper.append(slotEl(s, news.has(s.id), use));
+    const foot = make(
+      "div",
+      "tray__foot",
+      make("span", "fine", rangeOf(f)),
+      make("span", "fine", String(f + 1).padStart(2, "0")),
     );
+    if (use === "behind") {
+      foot.setAttribute("role", "button");
+      foot.tabIndex = 0;
+      foot.setAttribute("aria-label", sheetLabel(f));
+    }
+    paper.append(foot, make("i", "tray__shade"));
     const el = make("div", `tray__sheet ${cls}`, paper);
+    if (use === "live") {
+      el.setAttribute("role", "group");
+      el.setAttribute("aria-label", sheetLabel(f, cls.includes("is-pulled") ? "pulled" : "front"));
+      el.setAttribute("aria-describedby", hint.id);
+    }
     el.dataset.f = String(f);
     el.dataset.depth = String(depth);
     el.style.transform = restAt(depth);
     return el;
   }
-  /** The stack: the front sheet whole, the next ones a strip apart below it, the rest as a button. */
+  /**
+   * The stack: the front sheet whole, the next ones a strip apart below it, the rest as a button. The
+   * front sheet comes first in the page, so Tab and screen readers take its stickers before the
+   * edges of the sheets behind it; the CSS stacks them the other way.
+   */
   function renderStack() {
     const active = doc.activeElement;
     const focused = active instanceof HTMLElement && stack.contains(active) ? active : null;
@@ -646,10 +700,9 @@ export function createTrayEngine(
     const k = Math.min(PEEKS, order.length - 1);
     const hidden = order.length - 1 - k;
     const news = newIds();
-    const kids: HTMLElement[] = [];
-    for (let i = k; i >= 1; i--)
+    const kids: HTMLElement[] = [sheetEl(order[0], "is-top", 0, news)];
+    for (let i = 1; i <= k; i++)
       kids.push(sheetEl(order[i], i === 1 ? "is-next" : "is-peek", i, news));
-    kids.push(sheetEl(order[0], "is-top", 0, news));
     if (hidden > 0) {
       const more = make("button", "tray__depth", icon(ICONS.stack), make("span", "", `+${hidden}`));
       more.type = "button";
@@ -660,14 +713,6 @@ export function createTrayEngine(
     }
     stack.replaceChildren(...kids);
     if (focused) keepFocus(focusedId);
-    for (const foot of stack.querySelectorAll<HTMLElement>(
-      ".tray__sheet:not(.is-top) .tray__foot",
-    )) {
-      const f = sheetOf(foot);
-      foot.setAttribute("role", "button");
-      foot.tabIndex = 0;
-      if (f !== null) foot.setAttribute("aria-label", sheetLabel(f));
-    }
     markShown();
   }
   const holdsFocus = (el: Element | undefined) => el?.contains(doc.activeElement) === true;
@@ -722,10 +767,9 @@ export function createTrayEngine(
     const name = i18next.t(($) => $.stickerBoard.tray.filters[f]);
     const t = make("button", "tray__tab", make("span", "", name));
     t.type = "button";
-    t.setAttribute("role", "tab");
     t.dataset.filter = f;
     t.dataset.press = "";
-    t.setAttribute("aria-selected", String(ui.filter === f));
+    t.setAttribute("aria-pressed", String(ui.filter === f));
     return t;
   });
   tabsEl.append(...tabs);
@@ -740,6 +784,14 @@ export function createTrayEngine(
   });
 
   /* ---------------------------------------------------------------- the mouth: the stack's window, every frame */
+  let shut = false;
+  /** A shut mouth's stack isn't drawn, and nothing in it takes focus or is read out. */
+  function setShut(now: boolean) {
+    if (now === shut) return;
+    shut = now;
+    w1.classList.toggle("is-shut", now);
+    w1.toggleAttribute("inert", now);
+  }
   function onFrame(g: Geometry) {
     ui.geo = g;
     const G = g.G;
@@ -754,10 +806,15 @@ export function createTrayEngine(
           aHi = a;
         }
     const show = aLo >= 0 && aHi - aLo > 4;
-    w1.classList.toggle("is-shut", !show);
-    const showing = show && !onShow;
-    onShow = show;
-    if (showing && stale) redraw();
+    // A mouth sagged to a crack rings through shut for a few frames: the stack stays as it was, so it
+    // doesn't blink and the sticker that was focused keeps its focus.
+    const holding = !show && onShow && zip.isOpen && g.relax > 0;
+    if (!holding) {
+      setShut(!show);
+      const showing = show && !onShow;
+      onShow = show;
+      if (showing && stale) redraw();
+    }
     if (show) {
       const xw = g.chainX - k * G + 3;
       const yTop = Math.min(g.yOf(aHi), g.yOf(aLo));
@@ -1151,7 +1208,7 @@ export function createTrayEngine(
    * The stack dips into the mouth and squares up; the front sheet, then each without a match, slides down
    * behind the fabric; the rest riffle; and the newest match is dealt onto the front. */
   function syncTabs() {
-    for (const t of tabs) t.setAttribute("aria-selected", String(t.dataset.filter === ui.filter));
+    for (const t of tabs) t.setAttribute("aria-pressed", String(t.dataset.filter === ui.filter));
   }
   const fadeSlots = (els: readonly HTMLElement[], f: Filter) => {
     for (const el of els)
@@ -1182,7 +1239,7 @@ export function createTrayEngine(
     const token = {};
     shuffling = token;
     ui.busy = true;
-    const before = sheetEls().reverse();
+    const before = sheetEls();
     const shown = new Set(ui.order.slice(0, Math.min(PEEKS, ui.order.length - 1) + 1));
     // The front, and every sheet without a match.
     const drop = before.filter((el, i) => i === 0 || !shown.has(Number(el.dataset.f)));
@@ -1963,11 +2020,11 @@ export function createTrayEngine(
       const c = make(
         "button",
         `tray__cell${d === 0 ? " is-here" : ""}`,
-        sheetEl(f, "is-top", 0, news),
+        sheetEl(f, "is-top", 0, news, "picture"),
       );
       c.type = "button";
       c.dataset.f = String(f);
-      c.setAttribute("aria-label", sheetLabel(f, d === 0));
+      c.setAttribute("aria-label", sheetLabel(f, d === 0 ? "spreadFront" : "back"));
       c.style.transform = `translate(${px(cell.x)},${px(cell.y)}) rotate(${cell.rot}deg) scale(${cell.k.toFixed(4)})`;
       // The CSS keeps a spread sheet's dates at the fine-print floor at this scale.
       c.style.setProperty("--k", cell.k.toFixed(4));

@@ -138,6 +138,23 @@ const pageDown = () =>
 /** Enough stickers for more than one sheet. */
 const manyStickers = (n: number) =>
   Array.from({ length: n }, (_, i) => sticker(`s${i}`, i + 1, false));
+const friend = { id: "friend", handle: "friend", name: "Friend", ageStatus: "adult" as const };
+/** Stickers spread over several sheets, every third one a gift, so the folder tabs show. */
+const stickersWithGifts = (n: number) =>
+  manyStickers(n).map((s, i) => (i % 3 === 0 ? { ...s, artist: friend } : s));
+/** What Tab and a screen reader meet in the open tray, in page order. */
+const stops = () =>
+  [...board.querySelectorAll<HTMLElement>(".tray__c2 button, .tray__c2 [tabindex='0']")].filter(
+    (el) => !el.closest("[inert], [hidden]"),
+  );
+const kindOf = (el: HTMLElement) =>
+  el.classList.contains("tray__tab")
+    ? "tab"
+    : el.classList.contains("tray__slot")
+      ? "slot"
+      : el.classList.contains("tray__foot")
+        ? "foot"
+        : "more";
 
 beforeEach(() => {
   // Reduced motion: the tray opens and shuts at once. happy-dom's own animations reject unhandled.
@@ -298,7 +315,6 @@ describe("StickerTray", () => {
 
   it("keeps the newest match in front when a folder tab is chosen mid-turn", async () => {
     const motion = holdAnimations();
-    const friend = { id: "friend", handle: "friend", name: "Friend", ageStatus: "adult" as const };
     render(manyStickers(30).map((s) => ({ ...s, artist: friend })));
     await openTray();
     motion.animate();
@@ -307,6 +323,59 @@ describe("StickerTray", () => {
     act(() => board.querySelector<HTMLElement>('.tray__tab[data-filter="gifts"]')?.click());
     await motion.finishAll();
     expect(frontSheet()?.getAttribute("data-f")).toBe(newest);
+  });
+
+  it("takes the folder tabs, then the front sheet's stickers, then the edges of the sheets behind in Tab order, and nothing hidden", async () => {
+    // Enough sheets for the +N button.
+    render(stickersWithGifts(60));
+    await openTray();
+    const list = stops();
+    // Each kind once in a row: no sticker from a sheet behind sits among them.
+    const kinds = list.map(kindOf).filter((kind, i, all) => kind !== all[i - 1]);
+    expect(kinds).toEqual(["tab", "slot", "foot", "more"]);
+    for (const el of list.filter((e) => kindOf(e) === "slot"))
+      expect(el.closest<HTMLElement>(".tray__sheet")?.dataset.depth).toBe("0");
+    // Their edges, shallow to deep, and every one named.
+    const feet = list.filter((e) => kindOf(e) === "foot");
+    expect(feet.map((e) => e.closest<HTMLElement>(".tray__sheet")?.dataset.depth)).toEqual(
+      feet.map((_, i) => String(i + 1)),
+    );
+    for (const foot of feet) expect(foot.getAttribute("aria-label")).toMatch(/^Sheet \d+, /);
+  });
+
+  it("names the sheet in front and says once what its stickers do", async () => {
+    render(manyStickers(30));
+    await openTray();
+    const front = frontSheet();
+    expect(front?.getAttribute("role")).toBe("group");
+    expect(front?.getAttribute("aria-label")).toMatch(/^Sheet \d+, .*in front$/);
+    const described = front?.getAttribute("aria-describedby");
+    expect(document.getElementById(described ?? "")?.textContent).toMatch(/stick it on/);
+    // A sticker's own name is its number, without the instruction.
+    const slot = front?.querySelector(".tray__slot");
+    expect(slot?.getAttribute("aria-label")).toMatch(/^No\.\d+$/);
+  });
+
+  it("leaves a shut tray inert, and reaches it again once it's open", async () => {
+    render(manyStickers(8));
+    const window1 = () => board.querySelector(".tray__w1");
+    expect(window1()?.hasAttribute("inert")).toBe(true);
+    await openTray();
+    expect(window1()?.hasAttribute("inert")).toBe(false);
+    await act(async () => void (await tray.current?.close()));
+    expect(window1()?.hasAttribute("inert")).toBe(true);
+  });
+
+  it("picks a folder tab as a pressed button that filters the sheets", async () => {
+    render(stickersWithGifts(30));
+    await openTray();
+    expect(board.querySelector(".tray__tabs")?.getAttribute("role")).toBe("group");
+    const tab = (filter: string) =>
+      board.querySelector<HTMLElement>(`.tray__tab[data-filter="${filter}"]`);
+    expect(tab("all")?.getAttribute("aria-pressed")).toBe("true");
+    act(() => tab("gifts")?.click());
+    expect(tab("gifts")?.getAttribute("aria-pressed")).toBe("true");
+    expect(tab("all")?.getAttribute("aria-pressed")).toBe("false");
   });
 
   it("reports what the open tray showed as seen once it shuts, once", async () => {
