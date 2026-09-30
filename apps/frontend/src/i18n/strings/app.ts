@@ -39,7 +39,7 @@ export const app = {
     /** Motion permission card, shown once over the app on iPhone: the question it asks, naming what shaking does and that iPhone asks once more after Allow */
     question: {
       en: "Shake your phone to send Gratitude? After you allow it, iPhone asks once more.",
-      ja: "スマホを振って感謝を送りませんか？許可すると、iPhoneがもう一度確認します。",
+      ja: "端末を振って感謝を送りませんか？許可すると、iPhoneがもう一度確認します。",
     },
     /** Motion permission card: the key that grants motion access, after which iOS shows its own prompt */
     allow: { en: "Allow", ja: "許可する" },
