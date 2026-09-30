@@ -77,6 +77,12 @@ describe("the session client", () => {
     expect(error.detail).toContain("Bad Gateway");
   });
 
+  it("keeps the whole of an answer that isn't the error body, down to what failed", async () => {
+    const page = `<html><head>${"<meta>".repeat(60)}</head><body>upstream drawing-api is down</body></html>`;
+    const error = await refusalOf(createSessionApi(createServerClient(answering(502, page))).me());
+    expect(error.detail).toContain("upstream drawing-api is down");
+  });
+
   it("reports no answer at all as status 0, naming the request", async () => {
     const offline = vi.fn<typeof fetch>(() => Promise.reject(new TypeError("Failed to fetch")));
     const error = await refusalOf(createSessionApi(createServerClient(offline)).me());

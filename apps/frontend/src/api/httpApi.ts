@@ -72,7 +72,7 @@ async function refusal(response: Response, what: string): Promise<ApiError> {
       ? body
       : {
           error: `http_${response.status}`,
-          detail: `${what} answered ${response.status}: ${text.slice(0, 200)}`,
+          detail: `${what} answered ${response.status}: ${text}`,
         },
   );
 }
