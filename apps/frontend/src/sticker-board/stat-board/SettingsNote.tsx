@@ -152,6 +152,9 @@ export function SettingsNote({ restart = () => location.reload() }: { restart?: 
               <span lang={choice ?? undefined}>{label(choice)}</span>
             </label>
           ))}
+          <p className="fine settings-note__restarts">
+            {t(($) => $.stickerBoard.settings.language.restarts)}
+          </p>
           <p className="fine settings-note__status" role="status">
             {status.step === "saving" ? t(($) => $.stickerBoard.settings.language.saving) : ""}
           </p>

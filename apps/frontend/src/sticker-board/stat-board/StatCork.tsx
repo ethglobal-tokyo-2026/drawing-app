@@ -78,6 +78,7 @@ function Unknown() {
 }
 
 const figure = (n: number | null) => (n === null ? <Unknown /> : formatCount(n));
+const figureText = (n: number | null) => (n === null ? "" : formatCount(n));
 
 // A kind at 0 is left off the receipt, so a friend-first artist sees Direct alone.
 const GRATITUDE_KINDS = ["direct", "residual"] as const;
@@ -341,7 +342,9 @@ export function StatCork({
                   <p key={kind} className={`stat-board__stamp stat-board__stamp--${i}`}>
                     <span className="stat-board__stamp-paper">
                       <span className="stat-board__stamp-print" style={{ "--c": hue }}>
-                        <b>{figure(f.stamps[kind])}</b>
+                        <b style={{ "--len": String(figureText(f.stamps[kind]).length) }}>
+                          {figure(f.stamps[kind])}
+                        </b>
                         <span className="fine">
                           {t(($) => $.stickerBoard.statBoard.stamps[kind])}
                         </span>

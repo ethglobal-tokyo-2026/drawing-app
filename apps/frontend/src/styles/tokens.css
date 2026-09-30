@@ -53,6 +53,7 @@
 
   /* Paper stock */
   --liner-deep: #e5e3ec; /* pressed label, binder cover */
+  --cork: #cfa476; /* the stat board's back */
   --liner-lift: #f8f7fb; /* a label lifted off the liner */
 
   /* Flat fields mixed toward the liner (inactive tabs, quiet chips) */
