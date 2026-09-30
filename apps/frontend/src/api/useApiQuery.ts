@@ -33,13 +33,15 @@ export class QueryAnswers<T> {
 
 /**
  * Loads once per `key`, and again on `retry` or `refresh`. An answer for a key that has moved on is
- * dropped; a refresh keeps the last data showing until the new data lands, and with `answers`, so
- * does a mount.
+ * dropped; a refresh keeps the last data showing until the new data lands. With `answers`, each
+ * answer is kept for the query's other readers, and a mount shows the last one at once, unless
+ * `ownLoadOnly`: for a reader whose own copy of the data holds changes a kept answer lacks.
  */
 export function useApiQuery<T>(
   key: string,
   load: (api: ApiClient) => Promise<T>,
   answers?: QueryAnswers<T>,
+  { ownLoadOnly = false }: { ownLoadOnly?: boolean } = {},
 ): Query<T> {
   const api = useApi();
   const latest = useRef(load);
@@ -71,7 +73,7 @@ export function useApiQuery<T>(
   const again = useCallback(() => setAttempt((n) => n + 1), []);
 
   if (!loaded || loaded.key !== key) {
-    const last = answers?.last(api, key);
+    const last = ownLoadOnly ? undefined : answers?.last(api, key);
     return last ? { state: "ready", data: last.data, refresh: again } : { state: "loading" };
   }
   if (loaded.outcome.ok) return { state: "ready", data: loaded.outcome.data, refresh: again };

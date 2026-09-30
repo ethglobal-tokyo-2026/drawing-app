@@ -65,6 +65,22 @@ const keep = (userId: string, ...stickers: ApiBoardSticker[]) =>
     owner: toPerson(TEST_OWNER),
     stickers: placeUnplaced(stickers.map(toBoardSticker)).stickers,
   });
+/** happy-dom lays nothing out: the board is given a phone's size, so each arrow key moves a sticker. */
+const onAPhone = () => {
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(390);
+  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(657);
+};
+/** Selects the sticker from the keyboard, and returns its key presses. */
+function selectByKeys(host: HTMLElement, stickerId: string) {
+  const el = host.querySelector<HTMLElement>(`[data-sticker-id="${stickerId}"]`);
+  const press = (key: string) =>
+    act(() => {
+      el?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+    });
+  act(() => el?.focus());
+  press("Enter");
+  return press;
+}
 
 describe("StickerBoard with the board kept on this phone", () => {
   it("draws the last board at once, with no loading shapes, then swaps in the fresh board", async () => {
@@ -300,9 +316,7 @@ describe("StickerBoard saving where a sticker sits", () => {
 
   it("keeps one save of a sticker in flight, then sends only its latest spot, whose failure stays", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-    // happy-dom lays nothing out: the board is given a phone's size, so each key press moves it.
-    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(390);
-    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(657);
+    onAPhone();
     const a = boardSticker({ placement: at(0.5) });
     let land = () => {};
     const saveStickerPlacement = vi
@@ -323,13 +337,7 @@ describe("StickerBoard saving where a sticker sits", () => {
     );
     unmount = view.unmount;
     await act(async () => {});
-    const el = view.host.querySelector<HTMLElement>(`[data-sticker-id="${a.stickerId}"]`);
-    const press = (key: string) =>
-      act(() => {
-        el?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
-      });
-    act(() => el?.focus());
-    press("Enter");
+    const press = selectByKeys(view.host, a.stickerId);
     // Each burst of keys is one save, so three bursts are three saves, the first in flight.
     for (let burst = 0; burst < 3; burst++) {
       press("ArrowLeft");
@@ -342,6 +350,69 @@ describe("StickerBoard saving where a sticker sits", () => {
     const shown = keptBoardFor(TEST_ME.id)?.stickers[0].placement;
     expect(saveStickerPlacement.mock.lastCall?.[1]).toEqual(shown && toApiPlacement(shown));
     expect(view.host.querySelector(".board-alerts")).not.toBeNull();
+  });
+});
+
+describe("StickerBoard on the visit after a move", () => {
+  afterEach(() => vi.useRealTimers());
+
+  /**
+   * Two visits with one client, as leaving the board and coming back makes them: the first moves
+   * the sticker and saves it, to a server that keeps the spot saved last.
+   */
+  async function visitAfterAMove(sticker: ApiBoardSticker) {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    onAPhone();
+    let onServer = sticker.placement;
+    const api = emptyApi({
+      stickerBoard: () =>
+        Promise.resolve({
+          owner: TEST_OWNER,
+          boardStickers: [{ ...sticker, placement: onServer }],
+        }),
+      saveStickerPlacement: (stickerId, placement) => {
+        onServer = placement;
+        return Promise.resolve({
+          stickerId,
+          placement,
+          seenAt: null,
+          arrivedAt: sticker.arrivedAt,
+        });
+      },
+    });
+    const visit = async () => {
+      const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
+      unmount = view.unmount;
+      // The board loads, and saves any spot it gives.
+      await act(async () => {});
+      await act(async () => {});
+      return view;
+    };
+    const first = await visit();
+    const before = onServer;
+    selectByKeys(first.host, sticker.stickerId)("ArrowLeft");
+    act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+    await act(async () => {});
+    const moved = onServer;
+    expect(moved).not.toEqual(before);
+    await act(() => vi.dynamicImportSettled());
+    first.unmount();
+
+    await visit();
+    const shown = keptBoardFor(TEST_ME.id)?.stickers[0].placement;
+    return { moved, onServer, shown: shown && toApiPlacement(shown) };
+  }
+
+  it("shows the sticker where it was moved", async () => {
+    const { moved, shown } = await visitAfterAMove(boardSticker({ placement: at(0.5) }));
+    expect(shown).toEqual(moved);
+  });
+
+  it("leaves a sticker the board placed itself where it was moved, on the server too", async () => {
+    // Received: it has no spot until the board gives it one.
+    const { moved, onServer, shown } = await visitAfterAMove(boardSticker({ placement: null }));
+    expect(shown).toEqual(moved);
+    expect(onServer).toEqual(moved);
   });
 });
 

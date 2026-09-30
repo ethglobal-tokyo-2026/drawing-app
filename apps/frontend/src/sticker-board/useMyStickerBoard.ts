@@ -6,9 +6,10 @@ const answers = new QueryAnswers<StickerBoard>();
 
 /**
  * Your sticker board as the server has it. The board, the Shop's previews, the give sheet and the
- * offer sheet share one answer, so each shows the last one at once while it loads again.
+ * offer sheet share one answer, so each shows the last one at once while it loads again, but for
+ * the board with `ownLoadOnly`, which draws the phone's board until a load of its own lands.
  */
-export const useMyStickerBoard = (): Query<StickerBoard> =>
+export const useMyStickerBoard = ({ ownLoadOnly = false } = {}): Query<StickerBoard> =>
   useApiQuery(
     "sticker-board/me",
     async (api) => {
@@ -17,4 +18,5 @@ export const useMyStickerBoard = (): Query<StickerBoard> =>
       return board;
     },
     answers,
+    { ownLoadOnly },
   );

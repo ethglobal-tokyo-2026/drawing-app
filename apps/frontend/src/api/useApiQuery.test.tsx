@@ -10,12 +10,14 @@ function Probe({
   id,
   load,
   answers,
+  ownLoadOnly,
 }: {
   id: string;
   load: (api: ApiClient) => Promise<string>;
   answers?: QueryAnswers<string>;
+  ownLoadOnly?: boolean;
 }) {
-  const query = useApiQuery(id, load, answers);
+  const query = useApiQuery(id, load, answers, { ownLoadOnly });
   useLayoutEffect(() => {
     probe.query = query;
   });
@@ -92,6 +94,23 @@ describe("useApiQuery", () => {
     expect(probe.query).toMatchObject({ state: "ready", data: "first" });
     calls[1]?.resolve("second");
     await settle();
+    expect(probe.query).toMatchObject({ state: "ready", data: "second" });
+  });
+
+  it("with answers and ownLoadOnly, waits for its own load on a remount, and keeps it for the others", async () => {
+    const { load, calls } = pending();
+    const answers = new QueryAnswers<string>();
+    const view = renderWithApi(<Probe id="a" load={load} answers={answers} />, emptyApi());
+    unmount = view.unmount;
+    calls[0]?.resolve("first");
+    await settle();
+    view.rerender(null);
+    view.rerender(<Probe id="a" load={load} answers={answers} ownLoadOnly />);
+    expect(probe.query.state).toBe("loading");
+    calls[1]?.resolve("second");
+    await settle();
+    view.rerender(null);
+    view.rerender(<Probe id="a" load={load} answers={answers} />);
     expect(probe.query).toMatchObject({ state: "ready", data: "second" });
   });
 
