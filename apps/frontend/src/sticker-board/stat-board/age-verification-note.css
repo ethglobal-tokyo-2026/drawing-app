@@ -41,16 +41,3 @@
   width: 24px;
   height: 24px;
 }
-
-/* A failure's reason can be long: it wraps, and can be copied into a report. */
-.age-verification-note__problem {
-  margin: 0;
-  padding: 10px 12px;
-  border-radius: var(--r-label);
-  background: var(--tomato-soft);
-  color: var(--ink);
-  font: 500 13px/1.4 var(--font-ui);
-  overflow-wrap: anywhere;
-  -webkit-user-select: text;
-  user-select: text;
-}

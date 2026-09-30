@@ -9,26 +9,40 @@ export const receiveOf = (g: { stickerId: string; receivedAt: number }) =>
 
 /** Noticed on this page, so a notice this device can't save still shows once per session. */
 const noticedHere = new Set<string>();
+/** The record was started on this page, so a device that can't save it still counts as started. */
+let startedHere = false;
 
-function readNoticed(): Set<string> {
-  const { text: raw } = readStored(KEY, `Can't read ${KEY} on this device`);
-  if (raw === null) return new Set(noticedHere);
+interface NoticeRecord {
+  noticed: Set<string>;
+  /** Whether this device has a record at all: one with none has shown no notice yet. */
+  recorded: boolean;
+}
+
+function readRecord(): NoticeRecord {
+  const { text: raw, blocked } = readStored(KEY, `Can't read ${KEY} on this device`);
+  // Storage that can't be read can't be started either, so notices go on without a start.
+  if (blocked) return { noticed: new Set(noticedHere), recorded: true };
+  if (raw === null) return { noticed: new Set(noticedHere), recorded: startedHere };
   const value = parseStored(raw);
   if (Array.isArray(value) && value.every((k) => typeof k === "string")) {
-    return new Set([...value, ...noticedHere]);
+    return { noticed: new Set([...value, ...noticedHere]), recorded: true };
   }
   console.error("Noticed gifts are unreadable, so the newest received gift shows again:", raw);
-  return new Set(noticedHere);
+  return { noticed: new Set(noticedHere), recorded: true };
 }
 
 const saveNoticed = (noticed: ReadonlySet<string>) =>
   writeStored(KEY, JSON.stringify([...noticed]), `Can't save ${KEY} on this device`);
 
-/** The newest received gift whose notice this device hasn't shown, or null. Reads only. */
+/**
+ * The newest received gift whose notice this device hasn't shown, or null. Reads only. A device
+ * with no record has none until `noticeReceivesFromNow` starts one.
+ */
 export function newestUnnoticed<T extends { stickerId: string; receivedAt: number }>(
   received: readonly T[],
 ): T | null {
-  const noticed = readNoticed();
+  const { noticed, recorded } = readRecord();
+  if (!recorded) return null;
   let next: T | null = null;
   for (const g of received) {
     if (!noticed.has(receiveOf(g)) && (!next || g.receivedAt > next.receivedAt)) next = g;
@@ -38,10 +52,29 @@ export function newestUnnoticed<T extends { stickerId: string; receivedAt: numbe
 
 /** Marks the gifts passed in as noticed: each gets its own notice, one after another. */
 export function markNoticed(received: readonly { stickerId: string; receivedAt: number }[]) {
-  const noticed = readNoticed();
+  const { noticed } = readRecord();
   for (const g of received) {
     noticed.add(receiveOf(g));
     noticedHere.add(receiveOf(g));
   }
   saveNoticed(noticed);
+}
+
+/**
+ * A device with no record would show a notice for every gift ever received, one after another, as
+ * on a new phone. On its first board, what's already received counts as noticed, and only later
+ * receives show one. Does nothing once the device has a record.
+ */
+export function noticeReceivesFromNow(
+  received: readonly { stickerId: string; receivedAt: number }[],
+) {
+  if (readRecord().recorded) return;
+  startedHere = true;
+  markNoticed(received);
+}
+
+/** Forgets what this page noticed and started, as a page loaded anew would. */
+export function forgetNoticedHere() {
+  noticedHere.clear();
+  startedHere = false;
 }

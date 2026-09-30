@@ -1,5 +1,4 @@
 import { Vibrate } from "../icons";
-import { useEffect, useRef } from "react";
 import { useTranslation } from "../i18n/react";
 import { Key } from "../ui/Key";
 import { QuietLink } from "../ui/QuietLink";
@@ -17,16 +16,11 @@ import "./motion-permission-card.css";
 export function MotionPermissionCard() {
   const { t } = useTranslation();
   const permission = useMotionPermission();
-  const root = useRef<HTMLDivElement>(null);
-  // The card appears with no other way in but a tap, so Allow takes focus as soon as it's shown.
-  useEffect(() => {
-    root.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus();
-  }, [permission]);
   if (permission !== "unasked") return null;
   const allow = () => void askForMotion();
   return (
     <Sheet label={t(($) => $.app.motionPermission.label)} onClose={declineMotion}>
-      <div className="motion-card" ref={root}>
+      <div className="motion-card">
         <p className="motion-card__text">{t(($) => $.app.motionPermission.question)}</p>
         <Key
           icon={<Vibrate />}
@@ -34,6 +28,7 @@ export function MotionPermissionCard() {
             if (pressCommitted(e.currentTarget)) allow();
           }}
           onClick={allow}
+          // The card appears with no other way in but a tap, so Allow takes focus as it's shown.
           data-autofocus
         >
           {t(($) => $.app.motionPermission.allow)}

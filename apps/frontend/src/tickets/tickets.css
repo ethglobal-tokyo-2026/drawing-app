@@ -11,7 +11,7 @@
 .out-of-tickets__scrim {
   position: absolute;
   inset: 0;
-  background: rgba(28, 24, 36, 0.46);
+  background: var(--scrim);
   animation: out-of-tickets-fade 320ms var(--ease-out) both;
 }
 
@@ -33,7 +33,7 @@
     out-of-tickets-fade 320ms var(--ease-out) both;
 }
 
-/* The card holds focus only while it has no enabled control (mid-payment). */
+/* The card holds focus only while it has no control to hold it. */
 .out-of-tickets__card:focus {
   outline: none;
 }
@@ -85,6 +85,7 @@
   font-size: 15px;
   line-height: 1.35;
   font-weight: 700;
+  overflow-wrap: anywhere;
   text-wrap: balance;
 }
 
@@ -116,6 +117,23 @@
   text-wrap: balance;
 }
 
+/* Why a spend failed: Ink on Tomato Soft, the stopped-state field, so it reads as the card's news
+   and not as a footnote. A reason can be long, so it wraps and can be selected. */
+.out-of-tickets__problem {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--r-label);
+  background: var(--tomato-soft);
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.35;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 .out-of-tickets__card .tear-line {
   margin-top: 16px;
 }
@@ -128,8 +146,15 @@
   margin-top: 10px;
 }
 
+/* One to a line, so two quiet links never read as one phrase; a link's touch band reaches 7px past its box. */
 .out-of-tickets__quiet-link {
-  margin-top: 8px;
+  display: flex;
+  width: fit-content;
+  margin: 8px auto 0;
+}
+
+.out-of-tickets__quiet-link + .out-of-tickets__quiet-link {
+  margin-top: 14px;
 }
 
 @keyframes out-of-tickets-fade {

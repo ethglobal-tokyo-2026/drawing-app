@@ -36,13 +36,29 @@
   text-wrap: pretty;
 }
 
-/* LINE's own words under the key, for a report: case kept, wrapping anywhere, and selectable. */
-.line-gate__reason {
+/* The heading takes focus when a gate can't open the app, so screen readers announce it; it's no
+   control, so it draws no ring. */
+.line-gate h1:focus {
+  outline: none;
+}
+
+/* The technical details under the key, for a report: case kept, wrapping anywhere, and selectable. */
+.line-gate__details {
+  display: grid;
+  gap: 2px;
   max-width: 36ch;
   margin: 6px 0 0;
-  letter-spacing: 0.02em;
-  text-transform: none;
+}
+
+.line-gate__details p {
+  margin: 0;
+}
+
+.line-gate__detail {
+  color: var(--graphite);
+  font-size: 13px;
   overflow-wrap: anywhere;
+  text-wrap: pretty;
   -webkit-user-select: text;
   user-select: text;
 }
@@ -50,8 +66,23 @@
 /* LIFF usually starts within a second, so the paper shows alone at first and the line only comes in
    when it takes longer. */
 .line-gate__opening {
-  margin: 0;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
   animation: line-gate-appear 400ms var(--ease-out) 1200ms both;
+}
+
+.line-gate__opening p {
+  margin: 0;
+}
+
+/* A wait that runs long says so under the status line, as a sentence rather than fine print. */
+.line-gate__still {
+  max-width: 30ch;
+  color: var(--graphite);
+  font-size: 13px;
+  text-wrap: pretty;
+  animation: line-gate-appear 400ms var(--ease-out) both;
 }
 
 @keyframes line-gate-appear {
@@ -64,5 +95,9 @@
 @media (prefers-reduced-motion: reduce) {
   .line-gate__opening {
     animation: line-gate-appear 1ms linear 1200ms both;
+  }
+
+  .line-gate__still {
+    animation-duration: 1ms;
   }
 }

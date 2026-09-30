@@ -32,6 +32,23 @@ export interface Box {
   bottom: number;
 }
 
+/** An element's box on the board, which is its offset parent. */
+export const boxOf = (el: HTMLElement): Box => ({
+  left: el.offsetLeft,
+  top: el.offsetTop,
+  right: el.offsetLeft + el.offsetWidth,
+  bottom: el.offsetTop + el.offsetHeight,
+});
+
+/** The box as it was when it hasn't moved, so measuring again doesn't re-render the board. */
+export const kept = (was: Box | null, now: Box) =>
+  was?.left === now.left &&
+  was.top === now.top &&
+  was.right === now.right &&
+  was.bottom === now.bottom
+    ? was
+    : now;
+
 /** The header band: your name, and the sticker tray's top. */
 const HEADER = 86;
 const INSET = 12;
@@ -87,7 +104,8 @@ export function stickerBox(
 
 /** The rotate knob's center stands this far past the sticker's edge, turned with it (see the CSS). */
 const KNOB_REACH = 42.5;
-const KNOB_RADIUS = 14;
+/** The knob's touch area reaches this far from its center. */
+const KNOB_TOUCH = 22;
 
 /**
  * Whether the rotate knob, which stands past the sticker's top edge and turns with it, would sit off
@@ -98,12 +116,12 @@ export function knobHidden(sticker: { x: number; y: number; h: number; r: number
   const reach = sticker.h / 2 + KNOB_REACH;
   const x = sticker.x + Math.sin(turn) * reach;
   const y = sticker.y - Math.cos(turn) * reach;
-  if (y - KNOB_RADIUS < 0) return true;
+  if (y - KNOB_TOUCH < 0) return true;
   return (
-    x + KNOB_RADIUS > name.left &&
-    x - KNOB_RADIUS < name.right &&
-    y + KNOB_RADIUS > name.top &&
-    y - KNOB_RADIUS < name.bottom
+    x + KNOB_TOUCH > name.left &&
+    x - KNOB_TOUCH < name.right &&
+    y + KNOB_TOUCH > name.top &&
+    y - KNOB_TOUCH < name.bottom
   );
 }
 

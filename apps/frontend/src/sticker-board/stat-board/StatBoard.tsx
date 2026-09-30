@@ -36,11 +36,19 @@ interface Props {
   flipBackRef: Ref<HTMLButtonElement>;
   /** Opens the gratitude mini-game for the newest sticker, from the developer slip; null with none. */
   onTryGratitudeMiniGame: (() => void) | null;
+  /** The app restarted for a language change, so Settings comes into view. */
+  reopenedOnSettings?: boolean;
   ref?: Ref<StatBoardHandle>;
 }
 
 /** Your stat board: the Sticker Board's back, with your User Stats pinned on the cork. */
-export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref }: Props) {
+export function StatBoard({
+  onFlipBack,
+  flipBackRef,
+  onTryGratitudeMiniGame,
+  reopenedOnSettings = false,
+  ref,
+}: Props) {
   const { t } = useTranslation();
   const me = useIdentity();
   const account = useMe();
@@ -52,6 +60,7 @@ export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref
     handle: account.handle ?? me.displayName,
     ensName: account.ensName,
     own: true,
+    loading: stats.state === "loading",
     failure:
       stats.state === "failed"
         ? t(($) => $.stickerBoard.statBoard.didntLoadOwnBecause, {
@@ -96,7 +105,7 @@ export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref
         }
       >
         {/* Settings first, since it's the paper people come back to. */}
-        <SettingsNote />
+        <SettingsNote openedInView={reopenedOnSettings} />
         <AddressPapers
           board={board}
           sui={sui}

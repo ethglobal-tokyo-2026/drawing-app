@@ -43,7 +43,7 @@ describe("traySlots", () => {
 });
 
 describe("newSlots", () => {
-  it("marks as new what's in the tray, arrived today and hasn't been seen", () => {
+  it("marks as new what arrived today and the open tray hasn't shown, on its sheet or as its hole", () => {
     const slots = traySlots([
       sticker("old", 1),
       sticker("seen", 2),
@@ -56,6 +56,7 @@ describe("newSlots", () => {
       dayOf: (t) => (t === 2 ? "2026-09-26" : "2026-09-25"),
       seen: new Set(["seen"]),
     });
-    expect([...isNew]).toEqual(["new"]);
+    // A sticker sealed or received lands on the board, so its hole is NEW until the tray shows it.
+    expect([...isNew]).toEqual(["on the board", "new"]);
   });
 });

@@ -2,7 +2,7 @@
 import { act, type ComponentProps } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ApiClient } from "../api/apiClient";
+import { ApiError, type ApiClient } from "../api/apiClient";
 import { ApiProvider } from "../api/ApiProvider";
 import type {
   Gratitude,
@@ -278,6 +278,38 @@ describe("StickerDetail", () => {
     answers[1]?.();
     await settle();
     expect(button("Send gratitude")).toBeUndefined();
+  });
+
+  it("says the check failed where the key would be, and Try again asks again", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const stickerDetail = vi.fn<ApiClient["stickerDetail"]>(() =>
+      Promise.reject(new ApiError(503, { error: "unavailable", detail: "database is busy" })),
+    );
+    open({ onSendGratitude: vi.fn() }, emptyApi({ stickerDetail }));
+    await settle();
+    const note = document.querySelector(".problem-note");
+    expect(note?.getAttribute("role")).toBe("alert");
+    expect(note?.textContent).toContain("Couldn’t load where it’s been");
+    // Ahead of Give, since without the check the call to send gratitude can't show.
+    const acts = document.querySelector(".sticker-detail__acts");
+    if (!note || !acts) throw new Error("The detail shows no failure line or no Give");
+    expect(note.compareDocumentPosition(acts)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    const calls = stickerDetail.mock.calls.length;
+    press("Try again");
+    expect(stickerDetail.mock.calls.length).toBeGreaterThan(calls);
+  });
+
+  it("names someone else's artist on a line of its own, outside the fine print", () => {
+    const artist = {
+      id: "artist-mika",
+      handle: "Mika_draws_every_day_in_tokyo_32",
+      name: "Mika",
+      ageStatus: "adult" as const,
+    };
+    open({ ownerId: TEST_OWNER.id, stickers: [sticker(133, day(14), { artist })] });
+    const chip = document.querySelector(".sticker-detail__artist .artist-chip");
+    expect(chip?.textContent).toContain("@Mika_draws_every_day_in_tokyo_32");
+    expect(chip?.closest(".fine")).toBeNull();
   });
 
   it("keeps Give as the key once gratitude is sent", async () => {

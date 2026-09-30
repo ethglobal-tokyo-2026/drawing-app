@@ -3,6 +3,7 @@ import type { TFunction } from "i18next";
 import {
   useEffect,
   useEffectEvent,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -14,16 +15,19 @@ import { useMe } from "../api/meContext";
 import { useApiQuery, type Query } from "../api/useApiQuery";
 import { toPerson } from "../api/views";
 import { errorReason } from "../i18n/errorMessage";
-import { formatCount } from "../i18n/format";
+import { formatCount, formatTimeOfDay, formatWeekday } from "../i18n/format";
 import { Trans, useTranslation } from "../i18n/react";
 import { At, StreakIcon, X } from "../icons";
 import { formatHandle } from "../stickers/format";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
+import { EASE_OUT } from "../ui/easing";
 import { REVEAL } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { HitCounter } from "../ui/HitCounter";
+import { matchIn } from "./handleMatch";
+import { competitionRanks } from "./leaderboardRanks";
 import { LiftedSticker } from "./LiftedSticker";
 import { dayBadge, pileDays, ticketDayNumber, type PileSticker } from "./pileDays";
 import { textWidth } from "./pileLayout";
@@ -34,12 +38,16 @@ import "./ExploreScreen.css";
 interface Props {
   /** A name's link opened the app: <boardOf>.croquis.eth's Sticker Board opens once it's found. */
   boardOf?: string;
+  /** Called as Explore takes `boardOf`, so a later visit doesn't open that board again. */
+  onBoardOfTaken: () => void;
   onOpenArtist: (person: Person) => void;
   onOpenMyBoard: () => void;
 }
 
 /** Search waits for a pause in typing before it asks the server. */
 const SEARCH_AFTER_MS = 250;
+/** A week's leaderboards run from a Monday's start to the next one's, Japan keeping no daylight saving. */
+const WEEK_MS = 7 * 24 * 60 * 60_000;
 
 type View = "stickers" | "thisWeek";
 
@@ -57,35 +65,9 @@ const ROW_GAP_MS = 25;
 const ROWS_DEALT = 5;
 /** Reduced motion: the rows cross-fade. */
 const ROWS_FADE_MS = 120;
-const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 /** Opens someone's sticker board: yours, or theirs. */
 type Open = (person: Person) => void;
-
-/** A tappable area that opens someone's sticker board; `data-press` gives it the shared press. */
-function Pressable({
-  onClick,
-  className,
-  label,
-  children,
-}: {
-  onClick: () => void;
-  className: string;
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      className={`pressable ${className}`}
-      aria-label={label}
-      data-press
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  );
-}
 
 const boardLabel = (person: Person, meId: string, t: TFunction) =>
   person.id === meId
@@ -97,9 +79,14 @@ function Avatar({ person, size }: { person: Person; size: number }) {
   return <PhotoSticker src={view.pictureUrl} name={view.name} size={size} />;
 }
 
-/** A handle with its natural breaks marked: after "_", "." or "-", as on the pile's name tags. */
+/**
+ * A handle with its natural breaks marked: after "_", "." or "-", as on the pile's name tags. The marks
+ * are hidden from assistive tech, which would otherwise name the row with a space in the handle.
+ */
 function breakable(text: string): ReactNode[] {
-  return text.split(/(?<=[_.-])/).flatMap((part, i) => (i ? [<wbr key={i} />, part] : [part]));
+  return text
+    .split(/(?<=[_.-])/)
+    .flatMap((part, i) => (i ? [<wbr key={i} aria-hidden="true" />, part] : [part]));
 }
 
 function PersonRow({
@@ -118,14 +105,19 @@ function PersonRow({
   open: Open;
 }) {
   const { t } = useTranslation();
+  const boardId = useId();
   const isMe = person.id === meId;
   const handle = formatHandle(person.handle ?? "");
   return (
     <li className={isMe ? "me" : ""}>
-      <Pressable
-        className="artist-row"
+      {/* The row's own text names it, so voice control can say what it sees. Where it goes is its
+          description, kept outside the button so it stays out of the name. */}
+      <button
+        type="button"
+        className="pressable artist-row"
+        aria-describedby={boardId}
+        data-press
         onClick={() => open(person)}
-        label={boardLabel(person, meId, t)}
       >
         {lead}
         <span className="row-names">
@@ -133,27 +125,42 @@ function PersonRow({
           <span>{isMe ? t(($) => $.explore.you) : toPerson(person).name}</span>
         </span>
         {trail}
-      </Pressable>
+      </button>
+      <span id={boardId} hidden>
+        {boardLabel(person, meId, t)}
+      </span>
     </li>
   );
 }
 
 function Figure({ board, value }: { board: Leaderboard; value: number }) {
+  const { t } = useTranslation();
   if (board === "bestCombo") return <HitCounter hits={value} size={23} className="figure" />;
   if (board === "longestStreak")
     return (
       <span className="figure figure--streak">
         <StreakIcon size={17} />
-        <span>
+        <span aria-hidden="true">
           <Trans
             i18nKey={($) => $.explore.figure.streak}
             count={value}
             components={{ small: <small /> }}
           />
         </span>
+        <span className="visually-hidden">
+          {t(($) => $.explore.figure.streakSpoken, { count: value })}
+        </span>
       </span>
     );
-  return <span className="figure">{formatCount(value)}</span>;
+  return (
+    <span className="figure">
+      <Trans
+        i18nKey={($) => $.explore.figure.gratitude}
+        values={{ amount: formatCount(value) }}
+        components={{ hidden: <span className="visually-hidden" /> }}
+      />
+    </span>
+  );
 }
 
 /**
@@ -317,6 +324,9 @@ function ThisWeek({
   const { t } = useTranslation();
   const { board, shown, select, list } = useRowDeal("mostGratitude");
   const rows: LeaderboardRow[] = leaderboards[shown];
+  const ranks = competitionRanks(rows.map((row) => row.value));
+  // In the person's own time, as the tickets' refill line is, from the week that began in Tokyo.
+  const resets = new Date(Date.parse(leaderboards.weekStart) + WEEK_MS);
 
   return (
     <section className={`${REVEAL} explore-section`}>
@@ -333,7 +343,7 @@ function ThisWeek({
       <div role="tabpanel" id="leaderboard-panel" aria-labelledby={`leaderboard-${board}`}>
         <ol ref={list} className="leaderboard">
           {rows.length === 0 && (
-            <li className="leaderboard-empty">{t(($) => $.explore.thisWeek.empty)}</li>
+            <li className="leaderboard-empty">{t(($) => $.explore.thisWeek.empty[shown])}</li>
           )}
           {rows.map((row, i) => (
             <PersonRow
@@ -343,7 +353,7 @@ function ThisWeek({
               open={open}
               lead={
                 <>
-                  <span className="rank">{i + 1}</span>
+                  <span className="rank">{ranks[i]}</span>
                   <Avatar person={row.person} size={40} />
                 </>
               }
@@ -352,7 +362,15 @@ function ThisWeek({
           ))}
         </ol>
       </div>
-      <p className="fine muted week-resets">{t(($) => $.explore.thisWeek.resets)}</p>
+      {/* Streaks are counted as they stand, so they don't start over with the week. */}
+      {shown !== "longestStreak" && (
+        <p className="fine muted week-resets">
+          {t(($) => $.explore.thisWeek.resets, {
+            day: formatWeekday(resets),
+            time: formatTimeOfDay(resets),
+          })}
+        </p>
+      )}
     </section>
   );
 }
@@ -454,7 +472,7 @@ function Failed({ title, query }: { title: string; query: Query<unknown> }) {
   return (
     <section className="explore-section" role="alert">
       <h2>{title}</h2>
-      <p className="fine muted">{errorReason(query.error)}</p>
+      <p className="failed-reason">{errorReason(query.error)}</p>
       <LabelButton size="sm" onClick={query.retry}>
         {t(($) => $.explore.failed.tryAgain)}
       </LabelButton>
@@ -462,16 +480,40 @@ function Failed({ title, query }: { title: string; query: Query<unknown> }) {
   );
 }
 
+/** What the status line says of a search: that it's out, how many it found, or that it found no one. */
+function searchSaid(results: Query<Person[]>, query: string, t: TFunction): string {
+  if (results.state === "loading") return t(($) => $.explore.search.searching);
+  // A failure speaks for itself, as an alert.
+  if (results.state === "failed") return "";
+  if (!results.data.length)
+    return t(($) => $.explore.search.notFound.title, { handle: formatHandle(query) });
+  return t(($) => $.explore.search.artists, { count: results.data.length });
+}
+
 /** Handles starting with the search first, then ones containing it, A to Z, as the server sorts. */
-function SearchResults({ query, meId, open }: { query: string; meId: string; open: Open }) {
+function SearchResults({
+  query,
+  meId,
+  open,
+  announce,
+}: {
+  query: string;
+  meId: string;
+  open: Open;
+  /** Sets Explore's status line, which is in the page before a search says anything. */
+  announce: (text: string) => void;
+}) {
   const { t } = useTranslation();
   const results = useApiQuery(`users?handle=${query}`, (api) => api.searchUsers(query));
+  const said = searchSaid(results, query, t);
+  useEffect(() => {
+    announce(said);
+    return () => announce("");
+  }, [announce, said]);
+
   if (results.state === "loading")
     return (
       <section className="explore-section">
-        <p className="visually-hidden" role="status">
-          {t(($) => $.explore.search.searching)}
-        </p>
         <ul className="search-results" aria-hidden="true">
           <PersonRowsLoading rows={3} ranked={false} />
         </ul>
@@ -496,8 +538,7 @@ function SearchResults({ query, meId, open }: { query: string; meId: string; ope
       </p>
       <ul className="search-results">
         {people.map((person) => {
-          const handle = person.handle ?? "";
-          const at = handle.toLowerCase().indexOf(query.toLowerCase());
+          const found = matchIn(person.handle ?? "", query);
           return (
             <PersonRow
               key={person.id}
@@ -505,13 +546,11 @@ function SearchResults({ query, meId, open }: { query: string; meId: string; ope
               meId={meId}
               open={open}
               name={
-                at < 0 ? (
-                  breakable(formatHandle(handle))
-                ) : (
+                found && (
                   <>
-                    {breakable(formatHandle(handle.slice(0, at)))}
-                    <mark>{breakable(handle.slice(at, at + query.length))}</mark>
-                    {breakable(handle.slice(at + query.length))}
+                    {breakable(formatHandle(found.before))}
+                    <mark>{breakable(found.match)}</mark>
+                    {breakable(found.after)}
                   </>
                 )
               }
@@ -575,10 +614,20 @@ function OpenBoardOf({ label, open }: { label: string; open: Open }) {
   );
 }
 
-export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
+export function ExploreScreen({ boardOf, onBoardOfTaken, onOpenArtist, onOpenMyBoard }: Props) {
   const { t } = useTranslation();
   const me = useMe();
+  // The link is for this visit: held here as App lets go of it, so it isn't there on the next one.
+  const [link] = useState(boardOf);
+  const linkTaken = useEffectEvent(onBoardOfTaken);
+  useEffect(() => {
+    if (link) linkTaken();
+  }, [link]);
   const [query, setQuery] = useState("");
+  const field = useRef<HTMLInputElement>(null);
+  // What a search says to screen readers. Its line is in the page from the start, so a change to it
+  // is heard.
+  const [searchStatus, setSearchStatus] = useState("");
   const q = query.trim().replace(/^@/, "");
   const [searched, setSearched] = useState(q);
   useEffect(() => {
@@ -606,10 +655,11 @@ export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
 
   return (
     <div className="explore">
-      {boardOf && <OpenBoardOf label={boardOf} open={open} />}
+      {link && <OpenBoardOf label={link} open={open} />}
       <label className="artist-search">
         <At size={20} aria-hidden />
         <input
+          ref={field}
           type="search"
           placeholder={t(($) => $.explore.search.placeholder)}
           aria-label={t(($) => $.explore.search.label)}
@@ -624,15 +674,24 @@ export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
             type="button"
             className="search-clear"
             aria-label={t(($) => $.explore.search.clear)}
-            onClick={() => setQuery("")}
+            onClick={() => {
+              setQuery("");
+              // The button goes with the query, so focus moves to where a new search starts.
+              field.current?.focus();
+            }}
           >
             <X size={16} aria-hidden />
           </button>
         )}
       </label>
+      <p className="visually-hidden" role="status">
+        {searchStatus}
+      </p>
 
       {q ? (
-        searched && <SearchResults query={searched} meId={me.id} open={open} />
+        searched && (
+          <SearchResults query={searched} meId={me.id} open={open} announce={setSearchStatus} />
+        )
       ) : (
         <>
           <SlidingTabs

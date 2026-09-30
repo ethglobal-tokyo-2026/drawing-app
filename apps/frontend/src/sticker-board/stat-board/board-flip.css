@@ -42,7 +42,7 @@
 .board-rear {
   overflow: hidden;
   transform: rotateY(180deg);
-  background: #cfa476;
+  background: var(--cork);
 }
 
 /* Each face darkens toward the Ink table as it turns away from the top-left light. */

@@ -3,7 +3,7 @@ import type { ActivityEntry, Explore, Person } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { people, sticker } from "../api/testFixtures";
-import { emptyApi, renderWithApi } from "../api/testing";
+import { emptyApi, renderWithApi, TEST_OWNER } from "../api/testing";
 import { i18next } from "../i18n/i18n";
 import { ExploreScreen } from "./ExploreScreen";
 
@@ -14,11 +14,17 @@ const minutesAgo = (minutes: number) => new Date(NOW - minutes * MINUTE).toISOSt
 
 const exploreWith = (
   activity: ActivityEntry[],
-  longestStreak: Explore["leaderboards"]["longestStreak"] = [],
+  boards: Partial<Explore["leaderboards"]> = {},
 ): Explore => ({
   todaysStickers: [],
   activity,
-  leaderboards: { weekStart: minutesAgo(0), mostGratitude: [], bestCombo: [], longestStreak },
+  leaderboards: {
+    weekStart: minutesAgo(0),
+    mostGratitude: [],
+    bestCombo: [],
+    longestStreak: [],
+    ...boards,
+  },
 });
 
 let view: ReturnType<typeof renderWithApi> | undefined;
@@ -37,6 +43,7 @@ afterEach(async () => {
   view?.unmount();
   view = undefined;
   vi.useRealTimers();
+  vi.unstubAllEnvs();
   localStorage.clear();
   await i18next.changeLanguage("en");
 });
@@ -51,7 +58,11 @@ const labelsOf = (host: HTMLElement, selector: string) =>
 async function openExplore(explore: Explore, onOpenArtist: (person: Person) => void = () => {}) {
   const everyone: Person[] = Object.values(people);
   view = renderWithApi(
-    <ExploreScreen onOpenArtist={onOpenArtist} onOpenMyBoard={() => {}} />,
+    <ExploreScreen
+      onBoardOfTaken={() => {}}
+      onOpenArtist={onOpenArtist}
+      onOpenMyBoard={() => {}}
+    />,
     emptyApi({
       explore: () => Promise.resolve(explore),
       searchUsers: (handle) => Promise.resolve(everyone.filter((p) => p.handle?.includes(handle))),
@@ -154,6 +165,24 @@ describe("ExploreScreen's sticker pile", () => {
     expect(document.querySelector('[role="dialog"]')).not.toBeNull();
   });
 
+  it("lets go of the fall-in once the stickers have landed", async () => {
+    const animate = vi.spyOn(Element.prototype, "animate");
+    onTestFinished(() => animate.mockRestore());
+    const drawn = sticker({ sealedAt: minutesAgo(5) });
+    const host = await openExplore(
+      exploreWith([{ type: "sealed", at: drawn.sealedAt, sticker: drawn }]),
+    );
+    await wait(1000);
+    expect(host.querySelector("[data-falling]")).not.toBeNull();
+
+    // happy-dom ends an animation on a real timer, which fake timers don't move.
+    for (const played of animate.mock.results) if (played.type === "return") played.value.finish();
+    await wait(0);
+    expect(host.querySelector("[data-falling]")).toBeNull();
+    expect(host.querySelector(".pile-sticker__air")).toBeNull();
+    expect(host.querySelector(".pile-sticker__image")?.getAttribute("loading")).toBe("lazy");
+  });
+
   it("shows today's empty floor before anyone seals", async () => {
     const host = await openExplore(exploreWith([]));
     expect(textsOf(host, ".pile-day h2")).toEqual(["Today"]);
@@ -163,32 +192,39 @@ describe("ExploreScreen's sticker pile", () => {
   });
 });
 
+/** Reduced motion swaps a leaderboard's rows at once, rather than after the old ones fade out. */
+function reduceMotion() {
+  const matchMedia = window.matchMedia;
+  window.matchMedia = (query: string) => {
+    const list = matchMedia.call(window, query);
+    Object.defineProperty(list, "matches", { value: query.includes("reduce") });
+    return list;
+  };
+  onTestFinished(() => {
+    window.matchMedia = matchMedia;
+  });
+}
+
+/** Opens This week on `boards`, and the leaderboard named `board` on it. */
+async function openBoard(board: string, boards: Partial<Explore["leaderboards"]> = {}) {
+  reduceMotion();
+  const host = await openExplore(exploreWith([], boards));
+  act(() => tab(host, "This week").click());
+  act(() => tab(host, board).click());
+  await wait(500);
+  return host;
+}
+
 describe("ExploreScreen's This week", () => {
   it("counts streak days and found artists in the singular and the plural", async () => {
-    // Reduced motion swaps the rows at once, rather than after the old ones fade out.
-    const matchMedia = window.matchMedia;
-    window.matchMedia = (query: string) => {
-      const list = matchMedia.call(window, query);
-      Object.defineProperty(list, "matches", { value: query.includes("reduce") });
-      return list;
-    };
-    onTestFinished(() => {
-      window.matchMedia = matchMedia;
+    const host = await openBoard("Streak", {
+      longestStreak: [
+        { person: people.mika, value: 3 },
+        { person: people.ken, value: 1 },
+      ],
     });
-    const host = await openExplore(
-      exploreWith(
-        [],
-        [
-          { person: people.mika, value: 3 },
-          { person: people.ken, value: 1 },
-        ],
-      ),
-    );
-    act(() => tab(host, "This week").click());
-    act(() => tab(host, "Longest streak").click());
-    await wait(500);
     expect(textsOf(host, ".figure small")).toEqual(["days", "day"]);
-    expect(tab(host, "Longest streak").getAttribute("aria-selected")).toBe("true");
+    expect(tab(host, "Streak").getAttribute("aria-selected")).toBe("true");
     // The streak's own mark: its fire before each figure, and its tangerine on the tabs' label.
     expect(host.querySelectorAll(".figure--streak svg")).toHaveLength(2);
     expect(host.querySelector(".leaderboard-tabs")?.getAttribute("data-selected")).toBe(
@@ -199,6 +235,68 @@ describe("ExploreScreen's This week", () => {
     expect(host.querySelector(".results-count")?.textContent).toBe("2 artists");
     await searchFor(host, "bo");
     expect(host.querySelector(".results-count")?.textContent).toBe("1 artist");
+  });
+
+  it("names a row from what it shows, and says where it goes as its description", async () => {
+    const dotted = { ...people.mika, handle: "mika.draws" };
+    const host = await openExplore(
+      exploreWith([], {
+        mostGratitude: [
+          { person: dotted, value: 1234 },
+          { person: TEST_OWNER, value: 12 },
+        ],
+      }),
+    );
+    act(() => tab(host, "This week").click());
+    const [theirs, yours] = [...host.querySelectorAll<HTMLButtonElement>(".leaderboard button")];
+    const descriptionOf = (row: HTMLElement) =>
+      document.getElementById(row.getAttribute("aria-describedby") ?? "")?.textContent;
+
+    expect(theirs?.hasAttribute("aria-label")).toBe(false);
+    expect(theirs?.textContent).toContain("@mika.draws");
+    expect(theirs?.textContent).toContain("1,234 gratitude");
+    expect(descriptionOf(theirs)).toBe("@mika.draws's sticker board");
+    // The handle's break marks would put a space in the row's name.
+    expect(theirs?.querySelectorAll("wbr:not([aria-hidden=true])")).toHaveLength(0);
+    expect(yours?.hasAttribute("aria-label")).toBe(false);
+    expect(yours?.textContent).toContain("You");
+    expect(descriptionOf(yours)).toBe("Your sticker board");
+  });
+
+  it("gives people on equal figures one rank, and the next place after them", async () => {
+    const host = await openBoard("Streak", {
+      longestStreak: [
+        { person: people.bob, value: 4 },
+        { person: people.ken, value: 4 },
+        { person: people.mika, value: 1 },
+      ],
+    });
+    expect(textsOf(host, ".rank")).toEqual(["1", "1", "3"]);
+  });
+
+  it("tells an empty board how to get on it, each in its own way", async () => {
+    reduceMotion();
+    const host = await openExplore(exploreWith([]));
+    act(() => tab(host, "This week").click());
+    const notes = [];
+    for (const board of ["Most gratitude", "Best combo", "Streak"]) {
+      act(() => tab(host, board).click());
+      await wait(500);
+      notes.push(host.querySelector(".leaderboard-empty")?.textContent);
+    }
+    expect(notes.every(Boolean)).toBe(true);
+    expect(new Set(notes).size).toBe(notes.length);
+  });
+
+  it("says when the weekly boards reset in the person's own time, and not on streaks", async () => {
+    vi.stubEnv("TZ", "America/Los_Angeles");
+    // A week began at 00:00 on Monday 9.21 in Tokyo, so the next begins 8:00 AM Sunday in Los Angeles.
+    const host = await openBoard("Best combo", { weekStart: "2026-09-20T15:00:00.000Z" });
+    expect(host.querySelector(".week-resets")?.textContent).toBe("Resets Sunday 8:00 AM");
+
+    act(() => tab(host, "Streak").click());
+    await wait(500);
+    expect(host.querySelector(".week-resets")).toBeNull();
   });
 
   it("moves between the views with the arrow keys", async () => {
@@ -214,10 +312,16 @@ describe("ExploreScreen's This week", () => {
 });
 
 describe("a name's link", () => {
-  it("opens the board of whoever holds the name, once", async () => {
+  it("opens the board of whoever holds the name, once, and hands the link back to App", async () => {
     const onOpenArtist = vi.fn();
+    const onBoardOfTaken = vi.fn();
     view = renderWithApi(
-      <ExploreScreen boardOf="mika" onOpenArtist={onOpenArtist} onOpenMyBoard={vi.fn()} />,
+      <ExploreScreen
+        boardOf="mika"
+        onBoardOfTaken={onBoardOfTaken}
+        onOpenArtist={onOpenArtist}
+        onOpenMyBoard={vi.fn()}
+      />,
       emptyApi({
         explore: () => new Promise(() => {}),
         personByEnsLabel: (label) =>
@@ -227,11 +331,17 @@ describe("a name's link", () => {
     await wait(0);
     await wait(0);
     expect(onOpenArtist.mock.calls).toEqual([[people.mika]]);
+    expect(onBoardOfTaken).toHaveBeenCalled();
   });
 
   it("says so when nobody holds the name", async () => {
     view = renderWithApi(
-      <ExploreScreen boardOf="nobody" onOpenArtist={vi.fn()} onOpenMyBoard={vi.fn()} />,
+      <ExploreScreen
+        boardOf="nobody"
+        onBoardOfTaken={vi.fn()}
+        onOpenArtist={vi.fn()}
+        onOpenMyBoard={vi.fn()}
+      />,
       emptyApi({ explore: () => new Promise(() => {}) }),
     );
     await wait(0);
@@ -253,18 +363,26 @@ const EXPLORE: Explore = exploreWith([
 ]);
 
 function show(client: Parameters<typeof renderWithApi>[1]) {
-  view = renderWithApi(<ExploreScreen onOpenArtist={vi.fn()} onOpenMyBoard={vi.fn()} />, client);
+  view = renderWithApi(
+    <ExploreScreen onBoardOfTaken={vi.fn()} onOpenArtist={vi.fn()} onOpenMyBoard={vi.fn()} />,
+    client,
+  );
   return view.host;
 }
 
 const skeletons = (host: HTMLElement) => host.querySelectorAll(".skeleton").length;
-const status = (host: HTMLElement) => host.querySelector('[role="status"]')?.textContent;
+/** The one line a screen reader hears while a view loads. */
+const loadingLine = (host: HTMLElement) =>
+  host.querySelector('.explore-view [role="status"]')?.textContent;
+/** What a search says to screen readers: a line that's in the page before the search starts. */
+const searchLine = (host: HTMLElement) =>
+  host.querySelector<HTMLElement>('.artist-search + [role="status"]');
 
 describe("ExploreScreen while it loads", () => {
   it("outlines today's floor, then shows the pile once Explore arrives", async () => {
     const explore = inFlight<Explore>();
     const host = show(emptyApi({ explore: () => explore.promise }));
-    expect(status(host)).toBe("Loading…");
+    expect(loadingLine(host)).toBe("Loading Explore");
     expect(skeletons(host)).toBeGreaterThan(0);
 
     await act(async () => explore.answer(EXPLORE));
@@ -278,10 +396,46 @@ describe("ExploreScreen while it loads", () => {
       emptyApi({ explore: () => Promise.resolve(EXPLORE), searchUsers: () => search.promise }),
     );
     await searchFor(host, "ali");
-    expect(status(host)).toBe("Searching…");
     expect(skeletons(host)).toBeGreaterThan(0);
 
     await act(async () => search.answer([]));
     expect(skeletons(host)).toBe(0);
+  });
+});
+
+describe("ExploreScreen's search", () => {
+  it("says it's searching, then what it found, on a line that was in the page before", async () => {
+    const search = inFlight<Person[]>();
+    const host = show(
+      emptyApi({ explore: () => Promise.resolve(EXPLORE), searchUsers: () => search.promise }),
+    );
+    const line = searchLine(host);
+    expect(line?.textContent).toBe("");
+
+    await searchFor(host, "ali");
+    expect(line?.textContent).toBe("Searching…");
+    await act(async () => search.answer([people.mika, people.ken]));
+    expect(line?.textContent).toBe("2 artists");
+    expect(searchLine(host)).toBe(line);
+  });
+
+  it("says when it found no one, and goes quiet once the search is cleared", async () => {
+    const host = await openExplore(exploreWith([]));
+    await searchFor(host, "zzz");
+    expect(searchLine(host)?.textContent).toBe("No one here is @zzz yet");
+
+    await searchFor(host, "");
+    expect(searchLine(host)?.textContent).toBe("");
+  });
+
+  it("puts focus back in the field when clearing takes the clear button away", async () => {
+    const host = await openExplore(exploreWith([]));
+    await searchFor(host, "mi");
+    const clear = host.querySelector<HTMLButtonElement>(".search-clear");
+    clear?.focus();
+    act(() => clear?.click());
+
+    expect(host.querySelector(".search-clear")).toBeNull();
+    expect(document.activeElement).toBe(host.querySelector('input[type="search"]'));
   });
 });

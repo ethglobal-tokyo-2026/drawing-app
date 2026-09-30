@@ -10,6 +10,13 @@ export const stickerBoard = {
   statBoard: {
     /** Stat board (a sticker board's cork back, yours or someone else's): screen readers' name for the dialog; {{name}} is the board owner's LINE name */
     label: { en: "{{name}}’s stats", ja: "{{name}}さんの記録" },
+    /** Your stat board, while your User Stats load: the one line screen readers hear, in place of the figures */
+    loadingOwn: { en: "Loading your stats", ja: "あなたの記録を読み込んでいます" },
+    /** Someone else's stat board, while their User Stats load: the one line screen readers hear, in place of the figures */
+    loadingTheirs: {
+      en: "Loading {{name}}’s stats",
+      ja: "{{name}}さんの記録を読み込んでいます",
+    },
     /** A figure whose source didn't load: a dash on screen, words for screen readers. */
     notKnown: {
       /** Stat board: the dash in place of a figure whose data didn't load (hidden from screen readers) */
@@ -111,16 +118,16 @@ export const stickerBoard = {
       },
       /** Address dialog for the board address: the toast after Copy address copies it */
       copied: { en: "Board address copied", ja: "ボードアドレスをコピーしました" },
-      /** Address dialog for the board address: the toast when Copy address can't copy it */
+      /** Address dialog for the board address: the line under Copy address when it can't copy the address, which stays until the next try */
       notCopied: {
-        en: "Couldn’t copy the board address",
-        ja: "ボードアドレスをコピーできませんでした",
+        en: "Couldn’t copy the board address. Touch and hold it to copy it yourself.",
+        ja: "ボードアドレスをコピーできませんでした。アドレスを長押しして、ご自身でコピーしてください。",
       },
       /** Address dialog for the board address: the link under Copy address that opens the address on Etherscan */
       viewOnExplorer: { en: "View on Etherscan", ja: "Etherscanで見る" },
       /** Address dialog for the board address: screen readers' name for the Etherscan link */
       viewOnExplorerLabel: {
-        en: "View your board address on Etherscan",
+        en: "View on Etherscan: your board address",
         ja: "ボードアドレスをEtherscanで見る",
       },
     },
@@ -143,13 +150,16 @@ export const stickerBoard = {
       note: { en: "Your address on Sui Testnet.", ja: "Sui Testnetでのあなたのアドレスです。" },
       /** Address dialog for the Sui address: the toast after Copy address copies it */
       copied: { en: "Sui address copied", ja: "Suiアドレスをコピーしました" },
-      /** Address dialog for the Sui address: the toast when Copy address can't copy it */
-      notCopied: { en: "Couldn’t copy the Sui address", ja: "Suiアドレスをコピーできませんでした" },
+      /** Address dialog for the Sui address: the line under Copy address when it can't copy the address, which stays until the next try */
+      notCopied: {
+        en: "Couldn’t copy the Sui address. Touch and hold it to copy it yourself.",
+        ja: "Suiアドレスをコピーできませんでした。アドレスを長押しして、ご自身でコピーしてください。",
+      },
       /** Address dialog for the Sui address: the link under Copy address that opens the address on Suiscan */
       viewOnExplorer: { en: "View on Suiscan", ja: "Suiscanで見る" },
       /** Address dialog for the Sui address: screen readers' name for the Suiscan link */
       viewOnExplorerLabel: {
-        en: "View your Sui address on Suiscan",
+        en: "View on Suiscan: your Sui address",
         ja: "SuiアドレスをSuiscanで見る",
       },
     },
@@ -175,6 +185,11 @@ export const stickerBoard = {
         en: { en: "English", ja: "English" },
         /** Settings note: the Japanese choice, named in Japanese; also LINE's language in Same as LINE */
         ja: { en: "日本語", ja: "日本語" },
+      },
+      /** Settings note: the fine print under the language choices, saying that choosing one restarts the app */
+      restarts: {
+        en: "Choosing a language restarts Croquis.",
+        ja: "言語を選ぶと、クロッキーが再起動します。",
       },
       /** Settings note: the status line while a language choice saves, which screen readers announce */
       saving: { en: "Saving…", ja: "保存しています…" },
@@ -287,6 +302,11 @@ export const stickerBoard = {
       en: "Selected. Enter opens it, and Tab reaches its toolbar. Arrow keys move it, [ and ] turn it, minus and plus resize it, Delete takes it off the board, and Escape lets go of it.",
       ja: "選択中です。Enterキーでひらき、Tabキーでツールバーに移動します。矢印キーで動かし、[キーと]キーで回し、マイナスキーとプラスキーで大きさを変え、Deleteキーでボードからはがし、Escapeキーで選択を解除します。",
     },
+    /** Your sticker board with no sticker on it but some in the sticker tray: the note in the dashed spot, pointing to the Zipper */
+    blankWithTray: {
+      en: "Your stickers are in the tray. Pull the zipper to stick one on.",
+      ja: "シールはシールトレイの中です。ファスナーを引いて、貼ってみましょう。",
+    },
     /** Your empty sticker board: the note in the dashed spot where the first sticker lands */
     blank: {
       en: "Stickers you make or receive land here.",
@@ -295,7 +315,15 @@ export const stickerBoard = {
     /** Your sticker board while its stickers load: read out to screen readers as faint placeholder stickers show */
     loading: { en: "Loading your stickers", ja: "シールを読み込んでいます" },
     /** Your sticker board, when your stickers fail to load: the alert in the dashed spot, above the reason and Try again */
-    didntLoad: { en: "Your stickers didn’t load.", ja: "シールを読み込めませんでした。" },
+    didntLoad: {
+      en: "Your stickers didn’t load. Try again in a moment.",
+      ja: "シールを読み込めませんでした。少し待ってから、もう一度お試しください。",
+    },
+    /** Your sticker board: the alert, over Try again, when checking whether gratitude is waiting to be sent for the sticker that just arrived failed; {{reason}} why */
+    gratitudeCheckFailed: {
+      en: "Couldn’t check whether gratitude is waiting to be sent for your newest sticker: {{reason}}",
+      ja: "いちばん新しいシールに感謝を送れるか確認できませんでした：{{reason}}",
+    },
     /** Your sticker board: the alert when one moved sticker's new position didn't save; {{stickers}} is its number, {{reasons}} why */
     unsaved_one: { en: "Couldn’t save where {{stickers}} sits: {{reasons}}" },
     /** Your sticker board: the alert when moved stickers' new positions didn't save; {{stickers}} lists their numbers, {{reasons}} why */
@@ -327,11 +355,39 @@ export const stickerBoard = {
     view: { en: "View", ja: "見る" },
     /** Your sticker board, a sticker selected: the toolbar's Remove key, which takes it off the board and back into the sticker tray */
     remove: { en: "Remove", ja: "はがす" },
+    /** The toolbar's row of buttons that arrange the selected sticker without dragging it: each names what one press does. */
+    arrange: {
+      /** Your sticker board, a sticker selected: screen readers' name for the toolbar's row of arrange buttons */
+      label: { en: "Arrange", ja: "配置を変える" },
+      /** Your sticker board, a sticker selected: the arrange button that moves it a step to the left */
+      left: { en: "Move left", ja: "左へ動かす" },
+      /** Your sticker board, a sticker selected: the arrange button that moves it a step to the right */
+      right: { en: "Move right", ja: "右へ動かす" },
+      /** Your sticker board, a sticker selected: the arrange button that moves it a step up */
+      up: { en: "Move up", ja: "上へ動かす" },
+      /** Your sticker board, a sticker selected: the arrange button that moves it a step down */
+      down: { en: "Move down", ja: "下へ動かす" },
+      /** Your sticker board, a sticker selected: the arrange button that makes it a step smaller */
+      smaller: { en: "Smaller", ja: "小さくする" },
+      /** Your sticker board, a sticker selected: the arrange button that makes it a step bigger */
+      bigger: { en: "Bigger", ja: "大きくする" },
+      /** Your sticker board, a sticker selected: the arrange button that turns it a step counterclockwise */
+      turnLeft: { en: "Turn left", ja: "左に回す" },
+      /** Your sticker board, a sticker selected: the arrange button that turns it a step clockwise */
+      turnRight: { en: "Turn right", ja: "右に回す" },
+    },
   },
   /** The sticker tray, zipped down the board's right edge. */
   tray: {
     /** Your sticker board: screen readers' name for the Zipper's pull down the right edge, which opens the sticker tray */
     zipper: { en: "Your stickers", ja: "手持ちのシール" },
+    /** Your sticker board: screen readers' name for the Zipper's pull while the sticker tray holds something new, which a yellow pip on the pull shows */
+    zipperNew: { en: "Your stickers, something new inside", ja: "手持ちのシール、新着あり" },
+    /** Sticker tray, before any sticker: the note printed on its one blank sheet */
+    empty: {
+      en: "Stickers you make or receive collect here",
+      ja: "つくったシールや受け取ったシールがここにたまります",
+    },
     /** Sticker tray: screen readers' name for the stack of sticker sheets */
     sheets: { en: "Your sticker sheets", ja: "手持ちのシールシート" },
     /** Sticker tray: screen readers' name for the folder tabs (All, Mine, Gifts), which pick the stickers shown; the tabs show once the tray holds a gift */
@@ -352,16 +408,15 @@ export const stickerBoard = {
         en: "{{no}}, on your board. Show it",
         ja: "{{no}}、ボードに貼ってあります。ボードで見る",
       },
-      /** Sticker tray: screen readers' name for a sticker on a sheet, which can be dragged onto the board or tapped to stick on */
-      onSheet: {
-        en: "{{no}}. Drag it onto your board, or tap to stick it on",
-        ja: "{{no}}。ボードへドラッグするか、タップすると貼れます",
+      /** Sticker tray, the sheet in front: screen readers' name for a sticker on it; the sheet's description says what to do with it */
+      onSheet: { en: "{{no}}", ja: "{{no}}" },
+      /** Sticker tray: screen readers' name for a used sticker silhouette whose sticker just arrived on the board and the tray hasn't shown before */
+      usedNew: {
+        en: "{{no}}, new, on your board. Show it",
+        ja: "{{no}}、新着、ボードに貼ってあります。ボードで見る",
       },
-      /** Sticker tray: screen readers' name for a sticker on a sheet that the tray hasn't shown before */
-      newOnSheet: {
-        en: "{{no}}, new. Drag it onto your board, or tap to stick it on",
-        ja: "{{no}}、新着。ボードへドラッグするか、タップすると貼れます",
-      },
+      /** Sticker tray, the sheet in front: screen readers' name for a sticker on it that the tray hasn't shown before */
+      newOnSheet: { en: "{{no}}, new", ja: "{{no}}、新着" },
       /** Sticker tray: screen readers' name for the blank spot a sticker you gave left on its sheet, a button that opens it among the stickers you gave; {{recipient}} is who received it, such as "@bob" */
       given: {
         en: "{{no}}, given to {{recipient}}. Open it",
@@ -380,6 +435,23 @@ export const stickerBoard = {
       en: "Sheet {{number}}, {{dates}}. Bring it to the front",
       ja: "シート{{number}}、{{dates}}。手前に出す",
     },
+    /** Sticker tray, the sheet in front: what screen readers say about it after its name, once for every sticker on it */
+    slotHint: {
+      en: "Drag a sticker onto your board, or tap it to stick it on",
+      ja: "シールはボードへドラッグするか、タップすると貼れます",
+    },
+    /** Sticker tray: screen readers' name for the sheet in front, which holds the stickers you can stick on; {{dates}} is when its stickers came, such as "9.20–9.23" */
+    frontSheet: {
+      en: "Sheet {{number}}, {{dates}}, in front",
+      ja: "シート{{number}}、{{dates}}、手前",
+    },
+    /** Sticker tray: screen readers' name for the sheet pulled out over the board; {{dates}} is when its stickers came, such as "9.20–9.23" */
+    pulledSheet: {
+      en: "Sheet {{number}}, {{dates}}, pulled out",
+      ja: "シート{{number}}、{{dates}}、引き出し中",
+    },
+    /** Sticker tray, sheets spread over the board: screen readers' name for the dialog that holds every sheet, one button each */
+    spread: { en: "Your sticker sheets, spread out", ja: "広げた手持ちのシールシート" },
     /** Sticker tray, sheets spread over the board: screen readers' name for the sheet that's in front now */
     sheetInFront: {
       en: "Sheet {{number}}, {{dates}}, in front now. Bring it to the front",
@@ -387,6 +459,42 @@ export const stickerBoard = {
     },
     /** Sticker tray: screen readers' name for the X on a sheet pulled out over the board */
     putBack: { en: "Put this sheet back in the tray", ja: "このシートをシールトレイに戻す" },
+    /** Your sticker board: the alert above Draw when the sticker tray couldn't do something, one line for each. */
+    problem: {
+      /** Your sticker board's alert: a sticker couldn't be stuck on from its sheet, so it stays there; {{stickers}} is its number, such as "No.0147", and {{reason}} why */
+      place: {
+        en: "Couldn’t stick {{stickers}} on the board, so it stays in its sheet: {{reason}}",
+        ja: "{{stickers}}をボードに貼れなかったので、シートに残ります：{{reason}}",
+      },
+      /** Your sticker board's alert: a sticker's cut line couldn't be read, so its sheet packs it as a box; {{stickers}} is its number, such as "No.0147", and {{reason}} why */
+      cut: {
+        en: "Couldn’t read the cut line of {{stickers}}, so its sheet packs it as a box: {{reason}}",
+        ja: "{{stickers}}の切り抜き線を読み取れなかったため、シートには四角で並べました：{{reason}}",
+      },
+      /** Your sticker board's alert: the sticker tray couldn't save which stickers it showed; {{stickers}} lists their numbers, such as "No.0147", and {{reason}} why */
+      seen: {
+        en: "Couldn’t save that the tray showed {{stickers}}, so NEW may show on them again: {{reason}}",
+        ja: "{{stickers}}を見たことを保存できなかったため、NEWがまた表示されることがあります：{{reason}}",
+      },
+      /** Your sticker board's alert about the sticker tray: why a sticker couldn't be stuck on when the board can't take it yet */
+      boardNotReady: {
+        en: "the board isn’t ready for it yet",
+        ja: "ボードの準備がまだできていません",
+      },
+      /** Your sticker board's alert about the sticker tray: the key that clears it */
+      dismiss: { en: "Dismiss", ja: "閉じる" },
+    },
+    /** Sticker tray: what screen readers are told as the tray changes, in one status line. */
+    status: {
+      /** Sticker tray, after a folder tab is chosen: what screen readers are told; {{filter}} is the tab's name, such as "Gifts", and {{count}} is how many sheets it shows */
+      filtered_one: { en: "{{filter}}: {{count}} sheet" },
+      /** Sticker tray, after a folder tab is chosen: what screen readers are told; {{filter}} is the tab's name, such as "Gifts", and {{count}} is how many sheets it shows */
+      filtered_other: { en: "{{filter}}: {{count}} sheets", ja: "{{filter}}：{{count}}枚のシート" },
+      /** Sticker tray, after a sticker is stuck on the board from a sheet: what screen readers are told; {{no}} is its number, such as "No.0147" */
+      stuckOn: { en: "{{no}} is on your board", ja: "{{no}}をボードに貼りました" },
+      /** Sticker tray, after a board sticker goes back into its sheet: what screen readers are told; {{no}} is its number, such as "No.0147" */
+      returned: { en: "{{no}} is back in your tray", ja: "{{no}}をトレイに戻しました" },
+    },
   },
   /** One sticker large, paging through the rest. */
   detail: {
@@ -576,9 +684,14 @@ export const stickerBoard = {
       ja: "記録を読み込めませんでした：{{reason}}",
     },
     /** Someone else's sticker board: read out by screen readers when keyboard focus lands on a sticker */
-    hint: {
-      en: "Enter opens its menu, where you can view it",
-      ja: "Enterキーでメニューをひらきます。シールを見ることができます。",
+    focusHint: {
+      en: "Enter selects it. Arrow keys go to the other stickers.",
+      ja: "Enterキーで選択します。矢印キーでほかのシールに移動します。",
+    },
+    /** Someone else's sticker board: read out by screen readers for the selected sticker, whose toolbar holds View */
+    selectedHint: {
+      en: "Selected. Tab reaches its toolbar, where you can view it. Escape lets go of it.",
+      ja: "選択中です。Tabキーでツールバーに移動すると、シールを見ることができます。Escapeキーで選択を解除します。",
     },
     /** Someone else's empty sticker board: the note in the dashed spot */
     blank: {
@@ -590,6 +703,8 @@ export const stickerBoard = {
       en: "Couldn’t load {{name}}’s board: {{reason}}",
       ja: "{{name}}さんのシールボードを読み込めませんでした：{{reason}}",
     },
+    /** Someone else's sticker board: screen readers' name for the back chip at the top, which returns to Explore */
+    backToExplore: { en: "Back to Explore", ja: "さがすに戻る" },
     /** Someone else's sticker board: the back chip at the top that returns to Explore */
     explore: { en: "Explore", ja: "さがす" },
     /** Someone else's sticker board, a sticker tapped: the menu's View button, which opens it large */

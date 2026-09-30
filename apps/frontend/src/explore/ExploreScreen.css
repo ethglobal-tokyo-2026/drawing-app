@@ -68,23 +68,10 @@
   gap: 12px;
 }
 
-.section-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.section-head h2 {
-  margin: 0;
-  font-size: 19px;
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -0.012em;
-  font-stretch: var(--w-title);
-}
-
-.section-head .fine {
-  margin-left: auto;
+/* Why it failed is a sentence to read: a supporting note in its own case, not fine print. */
+.failed-reason {
+  color: var(--graphite);
+  font-size: 13px;
 }
 
 /* ---------- Sliding tabs: the view switch and the leaderboards ---------- */
@@ -147,8 +134,7 @@
   outline-offset: 3px;
 }
 
-/* Explore's own hue for the view; pink for the leaderboards, and the streak's tangerine for Longest
-   streak. */
+/* Explore's own hue for the view; pink for the leaderboards, and the streak's tangerine for Streak. */
 .view-switch .sliding-tabs__label {
   background: var(--aqua);
 }
@@ -164,7 +150,7 @@
   background: var(--pink);
 }
 
-/* Tangerine is a second face over the pink, which fades in as the label slides to Longest streak. */
+/* Tangerine is a second face over the pink, which fades in as the label slides to Streak. */
 .leaderboard-tabs .sliding-tabs__label::after {
   content: "";
   position: absolute;
@@ -220,7 +206,7 @@
   box-shadow: var(--shadow-label);
 }
 
-/* Rows, today's stickers and feed heads press 1px like a tile and open that artist's board. */
+/* Leaderboard and search rows press 1px like a tile and open that artist's board. */
 .pressable {
   padding: 0;
   border: none;
@@ -264,15 +250,15 @@
   font-weight: 700;
 }
 
-li.me .rank {
+/* Graphite is too pale on Pink Soft, so what's small on your row is Ink, as its rank is. */
+.leaderboard li.me .rank,
+.leaderboard li.me .row-names span,
+.leaderboard li.me .figure small {
   color: var(--ink);
-  font-weight: 800;
 }
 
-.row-art {
-  flex: none;
-  width: 44px;
-  height: 44px;
+.leaderboard li.me .rank {
+  font-weight: 800;
 }
 
 /* Its width sizes a long handle. */
@@ -332,21 +318,6 @@ li.me .rank {
   font-size: 11px;
   font-weight: 700;
   font-stretch: var(--w-ui);
-}
-
-/* Ranks skipped between the top five and yours. */
-.rank-gap {
-  display: grid;
-  place-items: center;
-  height: 22px;
-  border-top: 1px solid var(--rule);
-  color: var(--graphite);
-  font-size: 11px;
-  letter-spacing: 0.3em;
-}
-
-.rank-gap::before {
-  content: "•••";
 }
 
 /* ---------- Search ---------- */

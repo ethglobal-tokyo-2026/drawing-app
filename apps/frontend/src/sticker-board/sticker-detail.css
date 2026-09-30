@@ -236,6 +236,11 @@
   text-underline-offset: 3px;
 }
 
+/* Who drew it, on a line of its own. */
+.sticker-detail__artist {
+  margin: 5px 0 0;
+}
+
 /* The line people read: caps kept, but at full width, wrapping between facts. */
 .sticker-detail__fine-print {
   margin: 5px 0 0;
@@ -285,8 +290,7 @@
 }
 
 .sticker-detail__check-failed {
-  margin: 12px 0 0;
-  color: var(--graphite);
+  margin: 18px 0 0;
 }
 
 /* A sent sticker's note, on a label lifted off the liner: its sleeve, then "On its way". */

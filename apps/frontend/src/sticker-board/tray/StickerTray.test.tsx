@@ -1,10 +1,12 @@
 // @vitest-environment happy-dom
 import { act, createRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import { forgetBoardComplete, markBoardComplete, QUIET_MS } from "../boardComplete";
 import type { BoardStickerView } from "../boardSticker";
 import { StickerTray, type StickerTrayHandle } from "./StickerTray";
 import type { TrayBoard } from "./trayEngine";
+import type { TrayProblem } from "./trayProblem";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -13,6 +15,8 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 let host: HTMLDivElement;
 let board: HTMLDivElement;
+/** How often the board's place on screen has been read. */
+let boardReads: MockInstance<() => DOMRect>;
 let root: Root;
 const tray = createRef<StickerTrayHandle>();
 
@@ -53,6 +57,7 @@ const render = (
   stickers: BoardStickerView[],
   side: Partial<TrayBoard> = {},
   onSeen: (ids: readonly string[]) => void = () => {},
+  onProblem: (problem: TrayProblem) => void = () => {},
 ) =>
   act(() =>
     root.render(
@@ -63,6 +68,7 @@ const render = (
         ownerId="me"
         api={{ ...api, ...side }}
         onSeen={onSeen}
+        onProblem={onProblem}
       />,
     ),
   );
@@ -77,7 +83,7 @@ const pointer = (on: Element | null, type: string, x: number, y: number, pointer
   act(() => {
     on?.dispatchEvent(new PointerEvent(type, { pointerId, clientX: x, clientY: y, bubbles: true }));
   });
-const stackEl = () => board.querySelector(".tray__stack");
+const stackEl = () => board.querySelector<HTMLElement>(".tray__stack");
 const frontSheet = () => board.querySelector(".tray__stack .tray__sheet.is-top");
 const pulledSheet = () => board.querySelector(".tray__pulled");
 const flyers = () => board.querySelectorAll(".tray__flyer");
@@ -138,8 +144,27 @@ const pageDown = () =>
 /** Enough stickers for more than one sheet. */
 const manyStickers = (n: number) =>
   Array.from({ length: n }, (_, i) => sticker(`s${i}`, i + 1, false));
+const friend = { id: "friend", handle: "friend", name: "Friend", ageStatus: "adult" as const };
+/** Stickers spread over several sheets, every third one a gift, so the folder tabs show. */
+const stickersWithGifts = (n: number) =>
+  manyStickers(n).map((s, i) => (i % 3 === 0 ? { ...s, artist: friend } : s));
+/** What Tab and a screen reader meet in the open tray, in page order. */
+const stops = () =>
+  [...board.querySelectorAll<HTMLElement>(".tray__c2 button, .tray__c2 [tabindex='0']")].filter(
+    (el) => !el.closest("[inert], [hidden]"),
+  );
+const kindOf = (el: HTMLElement) =>
+  el.classList.contains("tray__tab")
+    ? "tab"
+    : el.classList.contains("tray__slot")
+      ? "slot"
+      : el.classList.contains("tray__foot")
+        ? "foot"
+        : "more";
 
 beforeEach(() => {
+  // Each test starts with a board that hasn't assembled, as a new page would.
+  forgetBoardComplete();
   // Reduced motion: the tray opens and shuts at once. happy-dom's own animations reject unhandled.
   vi.spyOn(window, "matchMedia").mockReturnValue(window.matchMedia("all"));
   vi.spyOn(Element.prototype, "animate").mockImplementation(() => new Animation());
@@ -148,7 +173,9 @@ beforeEach(() => {
   vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(657);
   host = document.createElement("div");
   board = document.createElement("div");
-  vi.spyOn(board, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 390, 657));
+  boardReads = vi
+    .spyOn(board, "getBoundingClientRect")
+    .mockReturnValue(new DOMRect(0, 0, 390, 657));
   document.body.append(host, board);
   root = createRoot(host);
 });
@@ -298,7 +325,6 @@ describe("StickerTray", () => {
 
   it("keeps the newest match in front when a folder tab is chosen mid-turn", async () => {
     const motion = holdAnimations();
-    const friend = { id: "friend", handle: "friend", name: "Friend", ageStatus: "adult" as const };
     render(manyStickers(30).map((s) => ({ ...s, artist: friend })));
     await openTray();
     motion.animate();
@@ -307,6 +333,362 @@ describe("StickerTray", () => {
     act(() => board.querySelector<HTMLElement>('.tray__tab[data-filter="gifts"]')?.click());
     await motion.finishAll();
     expect(frontSheet()?.getAttribute("data-f")).toBe(newest);
+  });
+
+  it("keeps the newest match in front when a folder tab is chosen mid-riffle", async () => {
+    const motion = holdAnimations();
+    render(stickersWithGifts(60));
+    await openTray();
+    motion.animate();
+    const newest = frontSheet()?.getAttribute("data-f");
+    // The deepest edge riffles through the sheets before it.
+    const edge = board.querySelector(".tray__stack > .tray__sheet[data-depth='3'] .tray__foot");
+    pointer(edge, "pointerdown", 100, 200);
+    pointer(stackEl(), "pointerup", 100, 200);
+    act(() => board.querySelector<HTMLElement>('.tray__tab[data-filter="gifts"]')?.click());
+    await motion.finishAll();
+    expect(frontSheet()?.getAttribute("data-f")).toBe(newest);
+  });
+
+  it("says on its one blank sheet what an empty tray is for, until a sticker arrives", async () => {
+    render([]);
+    expect(board.querySelector(".tray__empty")?.textContent).toBeTruthy();
+    render([sticker("a", 1, false)]);
+    // Shut, the sheets catch up as the tray shows.
+    await openTray();
+    expect(board.querySelector(".tray__empty")).toBeNull();
+  });
+
+  it("counts a visit to the tray when it's opened, not when the board shows", async () => {
+    const visits = () => localStorage.getItem("draw.tray.visits");
+    localStorage.clear();
+    render(manyStickers(8));
+    expect(visits()).toBeNull();
+    await openAndShut();
+    await openAndShut();
+    // Once for each time the board shows the tray opened, however often it opens meanwhile.
+    expect(visits()).toBe("1");
+  });
+
+  it("fades the stack's foot while a sheet out over the board leaves the mouth a crack", async () => {
+    endAnimationsAtOnce();
+    render(manyStickers(30));
+    await openTray();
+    const foot = () => Number.parseFloat(stackEl()?.style.getPropertyValue("--foot") || "1");
+    expect(foot()).toBe(1);
+    await pullOut();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 700));
+    });
+    expect(foot()).toBeLessThan(1);
+  });
+
+  it("reads the board's place once for a gesture, however many moves it makes", async () => {
+    endAnimationsAtOnce();
+    const reads = () => boardReads.mock.calls.length;
+    const peelWith = async (moves: number) => {
+      render(manyStickers(30));
+      await openTray();
+      const slot = frontSheet()?.querySelector<HTMLElement>('.tray__slot[data-state="here"]');
+      const before = reads();
+      pointer(slot ?? null, "pointerdown", 100, 200);
+      for (let i = 1; i <= moves; i++) pointer(stackEl(), "pointermove", 100 - i * 12, 200);
+      pointer(stackEl(), "pointerup", 100 - moves * 12, 200);
+      await act(async () => {});
+      return reads() - before;
+    };
+    const few = await peelWith(5);
+    expect(await peelWith(30)).toBe(few);
+  });
+
+  describe("tells the board what it couldn't do", () => {
+    const problems: TrayProblem[] = [];
+    beforeEach(() => {
+      problems.length = 0;
+      vi.spyOn(console, "error").mockImplementation(() => {});
+    });
+    const stickOnFirst = async () => {
+      await openTray();
+      const slot = frontSheet()?.querySelector<HTMLElement>('.tray__slot[data-state="here"]');
+      act(() => {
+        slot?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      });
+      await act(async () => {});
+      return slot?.dataset.id;
+    };
+
+    it("when the board can't take a sticker, which goes back to its sheet", async () => {
+      render(manyStickers(8), {}, undefined, (p) => problems.push(p));
+      const id = await stickOnFirst();
+      expect(problems.map((p) => [p.kind, p.nos, p.reason.length > 0])).toEqual([
+        ["place", [1], true],
+      ]);
+      expect(stateOf(id ?? "")).toBe("here");
+    });
+
+    it("when placing a sticker fails, with the reason", async () => {
+      const place = () => Promise.reject(new Error("the wallet is asleep"));
+      render(manyStickers(8), { place }, undefined, (p) => problems.push(p));
+      await stickOnFirst();
+      expect(problems).toEqual([{ kind: "place", nos: [1], reason: "the wallet is asleep" }]);
+    });
+
+    it("when a sticker's cut line can't be read, once, and packs it as a box", () => {
+      const cutless = sticker("cutless", 1, false, { outline: "M0 0" });
+      render([cutless], {}, undefined, (p) => problems.push(p));
+      render([cutless, sticker("b", 2, false)], {}, undefined, (p) => problems.push(p));
+      expect(problems.filter((p) => p.kind === "cut")).toHaveLength(1);
+      expect(problems[0]?.nos).toEqual([1]);
+    });
+  });
+
+  describe("asks for its sticker images", () => {
+    const imageCount = () => board.querySelectorAll(".tray__img").length;
+    const masked = () =>
+      board.querySelector<HTMLElement>(".tray__fit")?.style.getPropertyValue("--m");
+
+    it("only once the tray first shows, so a closed tray downloads nothing beside the board", async () => {
+      render(manyStickers(8));
+      expect(imageCount()).toBe(0);
+      expect(masked()).toBe("");
+      await openTray();
+      expect(imageCount()).toBeGreaterThan(0);
+      expect(masked()).toContain("-mask.png");
+    });
+
+    it("or once the board has assembled and had its quiet second, the tray still shut", async () => {
+      vi.useFakeTimers({ toFake: ["setTimeout"] });
+      try {
+        render(manyStickers(8));
+        markBoardComplete();
+        expect(imageCount()).toBe(0);
+        await vi.advanceTimersByTimeAsync(QUIET_MS + 10);
+        expect(imageCount()).toBeGreaterThan(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
+  describe("says in its one polite status line", () => {
+    const statusText = () => board.querySelector('[role="status"]')?.textContent;
+
+    it("how many sheets a folder tab shows", async () => {
+      render(stickersWithGifts(30));
+      await openTray();
+      expect(statusText()).toBe("");
+      act(() => board.querySelector<HTMLElement>('.tray__tab[data-filter="gifts"]')?.click());
+      expect(statusText()).toMatch(/^Gifts: \d+ sheets?$/);
+    });
+
+    it("which sheet is in front after paging", async () => {
+      render(manyStickers(30));
+      await openTray();
+      pageDown();
+      await act(async () => {});
+      expect(statusText()).toBe(
+        `Sheet ${Number(frontSheet()?.getAttribute("data-f")) + 1}, ${
+          frontSheet()?.querySelector(".tray__foot .fine")?.textContent
+        }, in front`,
+      );
+    });
+
+    it("that a sticker is on the board once it's stuck on", async () => {
+      // The board answers with the sticker's element once it has drawn it.
+      render(manyStickers(8), { place: () => Promise.resolve(document.createElement("div")) });
+      await openTray();
+      const slot = frontSheet()?.querySelector<HTMLElement>('.tray__slot[data-state="here"]');
+      const no = slot?.getAttribute("aria-label");
+      act(() => {
+        slot?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      });
+      await act(async () => {});
+      expect(statusText()).toBe(`${no} is on your board`);
+    });
+
+    it("that a sticker is back in the tray once it's put back", async () => {
+      render([sticker("a", 1, true)]);
+      await act(async () => void (await tray.current?.boardDrop("a", { x: 380, y: 300 })));
+      expect(statusText()).toBe("No.0001 is back in your tray");
+    });
+  });
+
+  it("brings forward the edge a press falls in the share of, though it lands below its thin strip", async () => {
+    render(manyStickers(60));
+    await openTray();
+    const deepest = board.querySelector<HTMLElement>(".tray__stack > .tray__sheet[data-depth='3']");
+    // The feet as a browser would lay them out: the front sheet's, then an edge every 15px.
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const depth = this.closest<HTMLElement>(".tray__sheet")?.dataset.depth;
+      const isFoot = this.classList.contains("tray__foot");
+      return isFoot && depth !== undefined
+        ? new DOMRect(0, 349 + 15 * Number(depth), 150, 15)
+        : new DOMRect();
+    });
+    // Under the deepest edge's own strip, where nothing is drawn.
+    pointer(stackEl(), "pointerdown", 100, 410.5);
+    pointer(stackEl(), "pointerup", 100, 410.5);
+    await act(async () => {});
+    expect(frontSheet()?.getAttribute("data-f")).toBe(deepest?.getAttribute("data-f"));
+  });
+
+  it("keeps the stack drawn and focus on the sticker while the mouth sags to stick it on", async () => {
+    render(manyStickers(8));
+    await openTray();
+    const window1 = board.querySelector(".tray__w1");
+    let shutSeen = false;
+    const watch = new MutationObserver(() => {
+      if (window1?.classList.contains("is-shut")) shutSeen = true;
+    });
+    watch.observe(window1 ?? board, { attributes: true, attributeFilter: ["class"] });
+    const slot = frontSheet()?.querySelector<HTMLElement>('.tray__slot[data-state="here"]');
+    act(() => slot?.focus());
+
+    // Enter sticks it on; the mouth's spring rings through shut and settles while frames run.
+    act(() => {
+      slot?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 700));
+    });
+    watch.disconnect();
+    expect(shutSeen).toBe(false);
+    expect(stackEl()?.contains(document.activeElement)).toBe(true);
+  });
+
+  it("spreads the sheets as a named dialog of one button each, with the board inert behind it until it closes", async () => {
+    render(manyStickers(60));
+    const elsewhere = document.createElement("button");
+    board.append(elsewhere);
+    await openTray();
+    act(() => board.querySelector<HTMLElement>(".tray__depth")?.click());
+
+    const dialog = board.querySelector<HTMLElement>('[role="dialog"]');
+    expect(dialog?.getAttribute("aria-label")).toBeTruthy();
+    const cells = dialog?.querySelectorAll(".tray__cell") ?? [];
+    expect(cells.length).toBeGreaterThan(1);
+    // Nothing nested in a sheet: the stickers on it are pictures.
+    expect(dialog?.querySelectorAll("button")).toHaveLength(cells.length);
+    expect(dialog?.hasAttribute("inert")).toBe(false);
+    expect(elsewhere.hasAttribute("inert")).toBe(true);
+    expect(board.querySelector(".tray__col")?.hasAttribute("inert")).toBe(true);
+    // Opened from the keyboard, focus follows into the dialog.
+    expect(document.activeElement).toBe(cells[0]);
+
+    await act(async () => void tray.current?.escape());
+    expect(dialog?.hidden).toBe(true);
+    expect(elsewhere.hasAttribute("inert")).toBe(false);
+    expect(board.querySelector(".tray__col")?.hasAttribute("inert")).toBe(false);
+    expect(stackEl()?.contains(document.activeElement)).toBe(true);
+  });
+
+  it("takes the folder tabs, then the front sheet's stickers, then the edges of the sheets behind in Tab order, and nothing hidden", async () => {
+    // Enough sheets for the +N button.
+    render(stickersWithGifts(60));
+    await openTray();
+    const list = stops();
+    // Each kind once in a row: no sticker from a sheet behind sits among them.
+    const kinds = list.map(kindOf).filter((kind, i, all) => kind !== all[i - 1]);
+    expect(kinds).toEqual(["tab", "slot", "foot", "more"]);
+    for (const el of list.filter((e) => kindOf(e) === "slot"))
+      expect(el.closest<HTMLElement>(".tray__sheet")?.dataset.depth).toBe("0");
+    // Their edges, shallow to deep, and every one named.
+    const feet = list.filter((e) => kindOf(e) === "foot");
+    expect(feet.map((e) => e.closest<HTMLElement>(".tray__sheet")?.dataset.depth)).toEqual(
+      feet.map((_, i) => String(i + 1)),
+    );
+    for (const foot of feet) expect(foot.getAttribute("aria-label")).toMatch(/^Sheet \d+, /);
+  });
+
+  it("names the sheet in front and says once what its stickers do", async () => {
+    render(manyStickers(30));
+    await openTray();
+    const front = frontSheet();
+    expect(front?.getAttribute("role")).toBe("group");
+    expect(front?.getAttribute("aria-label")).toMatch(/^Sheet \d+, .*in front$/);
+    const described = front?.getAttribute("aria-describedby");
+    expect(document.getElementById(described ?? "")?.textContent).toMatch(/stick it on/);
+    // A sticker's own name is its number, without the instruction.
+    const slot = front?.querySelector(".tray__slot");
+    expect(slot?.getAttribute("aria-label")).toMatch(/^No\.\d+$/);
+  });
+
+  describe("on a board of this height", () => {
+    /** How much the stack is shrunk, from 1, with the tray open on a board this tall. */
+    const shrinkAt = async (height: number, stickers = 30) => {
+      vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(height);
+      render(manyStickers(stickers));
+      await openTray();
+      return Number(stackEl()?.style.getPropertyValue("--shrink") || 1);
+    };
+
+    it("leaves the stack full size when everything fits the mouth", async () => {
+      expect(await shrinkAt(700)).toBe(1);
+    });
+
+    it("shrinks the stack until everything fits the mouth", async () => {
+      const shrink = await shrinkAt(480);
+      expect(shrink).toBeLessThan(1);
+      expect(shrink).toBeGreaterThan(0);
+    });
+
+    it.each([480, 700])("spreads every sheet inside the board", async (height) => {
+      // Enough sheets for the +N button and two rows in the spread.
+      await shrinkAt(height, 60);
+      act(() => board.querySelector<HTMLElement>(".tray__depth")?.click());
+      const cells = [...board.querySelectorAll<HTMLElement>(".tray__cell")];
+      expect(cells.length).toBeGreaterThan(3);
+      for (const cell of cells) {
+        const [, y, turn, k] =
+          /translate\([\d.-]+px,([\d.-]+)px\) rotate\(([\d.-]+)deg\) scale\(([\d.]+)\)/
+            .exec(cell.style.transform)
+            ?.map(Number) ?? [NaN];
+        expect(turn).toBeDefined();
+        // Below the header and above the board's foot.
+        expect(y).toBeGreaterThanOrEqual(0);
+        expect(y + 364 * k).toBeLessThanOrEqual(height);
+      }
+    });
+  });
+
+  it("leaves a shut tray inert, and reaches it again once it's open", async () => {
+    render(manyStickers(8));
+    const window1 = () => board.querySelector(".tray__w1");
+    expect(window1()?.hasAttribute("inert")).toBe(true);
+    await openTray();
+    expect(window1()?.hasAttribute("inert")).toBe(false);
+    await act(async () => void (await tray.current?.close()));
+    expect(window1()?.hasAttribute("inert")).toBe(true);
+  });
+
+  it("picks a folder tab as a pressed button that filters the sheets", async () => {
+    render(stickersWithGifts(30));
+    await openTray();
+    expect(board.querySelector(".tray__tabs")?.getAttribute("role")).toBe("group");
+    const tab = (filter: string) =>
+      board.querySelector<HTMLElement>(`.tray__tab[data-filter="${filter}"]`);
+    expect(tab("all")?.getAttribute("aria-pressed")).toBe("true");
+    act(() => tab("gifts")?.click());
+    expect(tab("gifts")?.getAttribute("aria-pressed")).toBe("true");
+    expect(tab("all")?.getAttribute("aria-pressed")).toBe("false");
+  });
+
+  it("marks a sticker that just landed on the board as new, on its hole and on the pull, until the tray shows it", async () => {
+    render([sticker("fresh", Date.now(), true)]);
+    const pull = board.querySelector(".zip__slider");
+    const pip = board.querySelector<HTMLElement>(".zip__pip");
+    const hole = () => board.querySelector(".tray__slot");
+    expect(pip?.hidden).toBe(false);
+    expect(pull?.getAttribute("aria-label")).toBe("Your stickers, something new inside");
+    expect(hole()?.querySelector(".tray__new")).not.toBeNull();
+    expect(hole()?.getAttribute("aria-label")).toMatch(/, new, on your board\. Show it$/);
+
+    await openAndShut();
+    expect(pip?.hidden).toBe(true);
+    expect(pull?.getAttribute("aria-label")).toBe("Your stickers");
+    expect(hole()?.querySelector(".tray__new")).toBeNull();
   });
 
   it("reports what the open tray showed as seen once it shuts, once", async () => {

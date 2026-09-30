@@ -17,6 +17,8 @@ import "./TimerDot.css";
 
 /** How long the paused hint stays after a stroke meets a paused sheet. */
 const HINT_MS = 2600;
+/** A time warning stays in its live region this long, then the region empties so no stale one is read later. */
+const WARNING_MS = 6000;
 
 /** A stroke on a paused sheet: the dot turns toward the hint and back, on top of its tilt. */
 const NUDGE: Keyframe[] = [
@@ -95,6 +97,21 @@ export function TimerDot({ ref, clock, paused, note, onToggle }: Props) {
 
   useEffect(() => () => clearTimeout(hintTimer.current), []);
 
+  // The dot turns Tomato in the last ten seconds, which a screen reader never sees: it hears them.
+  const [warning, setWarning] = useState<number | null>(null);
+  useEffect(() => {
+    let clear: ReturnType<typeof setTimeout> | undefined;
+    const stopListening = clock.onWarning((seconds) => {
+      setWarning(seconds);
+      clearTimeout(clear);
+      clear = setTimeout(() => setWarning(null), WARNING_MS);
+    });
+    return () => {
+      stopListening();
+      clearTimeout(clear);
+    };
+  }, [clock]);
+
   useEffect(() => {
     const el = face.current;
     if (el && view.late && !reduced) el.animate(TICK, { duration: 380, easing: EASE_OUT });
@@ -147,6 +164,9 @@ export function TimerDot({ ref, clock, paused, note, onToggle }: Props) {
       </div>
       <span className="visually-hidden" role="status">
         {label ?? ""}
+      </span>
+      <span className="visually-hidden" role="status">
+        {warning === null ? "" : t(($) => $.stickerCreation.timer.warning, { seconds: warning })}
       </span>
     </>
   );

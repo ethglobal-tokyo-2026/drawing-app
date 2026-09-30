@@ -28,7 +28,7 @@
 
 /* The reserve ticket's resin, at mark size: only its rim of light from the top left. */
 .ticket-count__rim {
-  stroke: #fff;
+  stroke: var(--canvas);
   stroke-width: 1;
   stroke-linecap: round;
   stroke-opacity: 0.85;

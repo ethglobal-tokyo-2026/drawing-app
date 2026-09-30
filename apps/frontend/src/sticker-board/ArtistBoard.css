@@ -39,34 +39,7 @@
 .explore-chip::after {
   content: "";
   position: absolute;
-  inset: -6px -2px;
-}
-
-/* ---------- Sticker menu ---------- */
-
-/* Its left is the sticker's center, so the menu sits centered on the sticker at any width. */
-.sticker-menu {
-  position: absolute;
-  translate: -50% 0;
-  z-index: 960;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: max-content;
-  max-width: calc(100% - 16px);
-  padding: 10px;
-  border: 1px solid var(--rule);
-  border-radius: 10px;
-  background: var(--liner);
-  box-shadow: var(--shadow-lift);
-  animation: menu-in 0.2s var(--ease-out);
-}
-
-@keyframes menu-in {
-  from {
-    opacity: 0;
-    transform: translateY(-10px) scale(0.98);
-  }
+  inset: -7px -3px;
 }
 
 /* ---------- Viewing one of their stickers ---------- */

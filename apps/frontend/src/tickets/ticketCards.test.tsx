@@ -1,16 +1,12 @@
 // @vitest-environment happy-dom
 import type { Tickets, TicketShop as Shop } from "@drawing-app/api/client";
-import { act, useState } from "react";
+import { act, useState, type ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi } from "../api/testing";
 import { setPrivyStatus } from "../identity/privy";
-import {
-  getJpycBalance,
-  getTicketPayments,
-  PaymentFailed,
-  signTicketPayment,
-} from "../payments/jpyc";
+import { getJpycBalance, getTicketPayments, signTicketPayment } from "../payments/jpyc";
+import { PaymentFailed } from "../payments/paymentErrors";
 import { OutOfTickets } from "./OutOfTickets";
 import { formatRefillTime } from "./refill";
 import { ReserveTicketCheckout } from "./ReserveTicketCheckout";
@@ -27,11 +23,6 @@ vi.mock("../payments/jpyc", () => ({
   getJpycBalance: vi.fn(),
   getTicketPayments: vi.fn(),
   signTicketPayment: vi.fn(),
-  PaymentFailed: class PaymentFailed extends Error {
-    constructor(_digest: string, why: string) {
-      super(why);
-    }
-  },
 }));
 vi.mock("../identity/suiSigner", () => ({ waitForSuiSigner: () => Promise.resolve({}) }));
 
@@ -134,17 +125,25 @@ describe("OutOfTickets", () => {
 });
 
 describe("StartDrawing", () => {
-  const start = (state: Tickets) =>
-    render(
-      <StartDrawing
-        tickets={state}
-        minutes={3}
-        note={null}
-        onStart={onStart}
-        onShop={onShop}
-        onBoard={onBoard}
-      />,
-    );
+  const card = (state: Tickets, props: Partial<ComponentProps<typeof StartDrawing>> = {}) => (
+    <StartDrawing
+      tickets={state}
+      minutes={3}
+      failure={null}
+      onStart={onStart}
+      onShop={onShop}
+      onBoard={onBoard}
+      {...props}
+    />
+  );
+  const start = (state: Tickets, props: Partial<ComponentProps<typeof StartDrawing>> = {}) =>
+    render(card(state, props));
+  const REASON = "Your tickets changed. Try again.";
+  /** The text of what the dialog says it's described by, for screen readers. */
+  const described = () => {
+    const ids = document.querySelector("[role=dialog]")?.getAttribute("aria-describedby") ?? "";
+    return ids.split(" ").map((id) => document.getElementById(id)?.textContent);
+  };
 
   it("spends a daily ticket while there are any", async () => {
     await start(tickets(1, 4));
@@ -173,11 +172,7 @@ describe("StartDrawing", () => {
     expect(document.querySelector(".out-of-tickets__line")?.textContent).toBe(
       `Today’s daily tickets are used. New ones at ${formatRefillTime(REFILL)}.`,
     );
-    const dialog = document.querySelector("[role=dialog]");
-    const described = dialog?.getAttribute("aria-describedby")?.split(" ") ?? [];
-    expect(described.map((id) => document.getElementById(id)?.textContent)).toContain(
-      "You have 4 reserve tickets.",
-    );
+    expect(described()).toContain("You have 4 reserve tickets.");
     expect(buttonNamed("Use a reserve ticket")?.classList.contains("key--blue")).toBe(true);
     click("Use a reserve ticket");
     expect(onStart).toHaveBeenCalledWith("reserve");
@@ -185,18 +180,42 @@ describe("StartDrawing", () => {
     expect(onShop).toHaveBeenCalledOnce();
   });
 
+  it("stops asking when a spend failed: it says so and why, and its key tries again", async () => {
+    await start(tickets(1, 4), { failure: REASON });
+    expect(title()).toBe("Couldn’t start your sticker");
+    expect(document.querySelector("[role=alert]")?.textContent).toBe(REASON);
+    // The daily count and timer lines belong to the ask, so the reason is the card's one line.
+    expect(document.querySelector(".out-of-tickets__line")).toBeNull();
+    expect(described()).toContain(REASON);
+    click("Start drawing");
+    expect(onStart).toHaveBeenCalledWith("daily");
+  });
+
+  it("tries a reserve ticket again from the failed card, still saying how many there are", async () => {
+    await start(tickets(3, 4), { failure: REASON });
+    expect(title()).toBe("Couldn’t start your sticker");
+    expect(described()).toEqual(expect.arrayContaining([REASON, "You have 4 reserve tickets."]));
+    click("Use a reserve ticket");
+    expect(onStart).toHaveBeenCalledWith("reserve");
+  });
+
+  it("keeps saying why while the retry is on its way and as the card drops away", async () => {
+    await start(tickets(1, 0), { failure: REASON });
+    // A retry clears the failure, and the card must not flip back to asking under the finger.
+    view?.rerender(card(tickets(1, 0), { busy: true }));
+    expect(title()).toBe("Couldn’t start your sticker");
+    view?.rerender(card(tickets(1, 0), { leaving: true }));
+    expect(title()).toBe("Couldn’t start your sticker");
+  });
+
+  it("asks, and never says it failed, while no spend has", async () => {
+    await start(tickets(1, 0), { busy: true });
+    expect(title()).toBe("Use a ticket to draw?");
+    expect(document.querySelector("[role=alert]")).toBeNull();
+  });
+
   it("keeps the key's face while the ticket is on its way: busy, not disabled", async () => {
-    await render(
-      <StartDrawing
-        tickets={tickets(1, 0)}
-        minutes={3}
-        busy
-        note={null}
-        onStart={onStart}
-        onShop={onShop}
-        onBoard={onBoard}
-      />,
-    );
+    await start(tickets(1, 0), { busy: true });
     const key = buttonNamed("Start drawing");
     expect(key?.disabled).toBe(false);
     expect(key?.getAttribute("aria-busy")).toBe("true");
@@ -206,18 +225,7 @@ describe("StartDrawing", () => {
 
   it("drops away once the ticket is spent, then lets go", async () => {
     const onLeft = vi.fn();
-    await render(
-      <StartDrawing
-        tickets={tickets(1, 0)}
-        minutes={3}
-        leaving
-        onLeft={onLeft}
-        note={null}
-        onStart={onStart}
-        onShop={onShop}
-        onBoard={onBoard}
-      />,
-    );
+    await start(tickets(1, 0), { leaving: true, onLeft });
     const root = document.querySelector(".out-of-tickets");
     expect(root?.classList.contains("is-leaving")).toBe(true);
     // The sheet under it takes the taps.
@@ -285,6 +293,26 @@ describe("ReserveTicketCheckout", () => {
     expect(kept()).toEqual([]);
   });
 
+  it("opens Tickets not added yet, never a failed payment, when Sui's confirmation is slow and the server doesn't see the payment yet", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(signTicketPayment).mockResolvedValue(
+      signed(() => Promise.reject(new DOMException("The operation timed out.", "TimeoutError"))),
+    );
+    const bought = vi.fn(() => Promise.reject(new ApiError(409, { error: "payment_not_landed" })));
+    await render(
+      checkout(),
+      emptyApi({ ticketShop: () => Promise.resolve(SHOP), buyTickets: bought }),
+    );
+    await settle(500);
+    click("Pay");
+    await settle(500);
+    expect(title()).toBe("Tickets not added yet");
+    expect(document.body.textContent).not.toContain("Payment didn’t go through");
+    // Kept, so asking again later can still add them.
+    expect(kept()).toEqual([TX_DIGEST]);
+  });
+
   it("lets go of a payment Sui ran and failed, and says nothing was spent", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(signTicketPayment).mockResolvedValue(
@@ -299,7 +327,13 @@ describe("ReserveTicketCheckout", () => {
     click("Pay");
     await settle(500);
     expect(title()).toBe("Payment didn’t go through");
-    expect(document.querySelector("[role=alert]")?.textContent).toBe("Sui ran it, and it failed.");
+    // One catalog line for the known failure; Sui's own words are fine print, copyable.
+    expect(document.querySelector("[role=alert]")?.textContent).toBe(
+      "Sui ran the payment, but it failed, so no JPYC was spent.",
+    );
+    expect(document.querySelector(".copyable-fine-print__text")?.textContent).toBe(
+      "Sui ran it, and it failed.",
+    );
     expect(bought).not.toHaveBeenCalled();
     expect(kept()).toEqual([]);
   });
@@ -377,6 +411,78 @@ describe("ReserveTicketCheckout", () => {
     );
   });
 
+  it("shows the Sui address in place when the balance is short, whole and copyable", async () => {
+    vi.mocked(getJpycBalance).mockResolvedValue(50n * JPYC);
+    const write = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: write },
+      configurable: true,
+    });
+    await render(checkout(), emptyApi({ ticketShop: () => Promise.resolve(SHOP) }));
+    await settle(500);
+    expect(document.body.textContent).not.toContain(SUI_WALLET);
+    click("Show my Sui address");
+    expect(document.querySelector(".sui-address-reveal")?.textContent).toContain(SUI_WALLET);
+    click("Copy");
+    await settle(0);
+    expect(write).toHaveBeenCalledWith(SUI_WALLET);
+  });
+
+  it("picks a pack as a radio group does: one tab stop, arrows move the pick and focus", async () => {
+    await render(checkout(), emptyApi({ ticketShop: () => Promise.resolve(SHOP) }));
+    await settle(500);
+    const radios = () => [...document.querySelectorAll<HTMLElement>("[role=radio]")];
+    expect(document.querySelector("[role=radiogroup]")).not.toBeNull();
+    expect(radios().map((r) => r.getAttribute("aria-checked"))).toEqual(["true", "false"]);
+    expect(radios().map((r) => r.tabIndex)).toEqual([0, -1]);
+    // The packs' arrival puts focus on the picked one, not on the exit it started at.
+    expect(document.activeElement).toBe(radios()[0]);
+    const arrow = (key: string) =>
+      act(() => {
+        document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+      });
+    arrow("ArrowDown");
+    expect(radios().map((r) => r.getAttribute("aria-checked"))).toEqual(["false", "true"]);
+    expect(document.activeElement).toBe(radios()[1]);
+    expect(buttonNamed("Pay ¥270")).toBeDefined();
+    // The last wraps to the first.
+    arrow("ArrowRight");
+    expect(document.activeElement).toBe(radios()[0]);
+    arrow("ArrowUp");
+    expect(document.activeElement).toBe(radios()[1]);
+  });
+
+  it("keeps Pay's face and focus while paying, says what it waits on, and lets the scrim close the card only after", async () => {
+    let confirm = () => {};
+    vi.mocked(signTicketPayment).mockResolvedValue(
+      signed(() => new Promise<void>((resolve) => (confirm = resolve))),
+    );
+    const api = emptyApi({
+      ticketShop: () => Promise.resolve(SHOP),
+      buyTickets: () => Promise.resolve(tickets(3, 1)),
+    });
+    await render(checkout(), api);
+    await settle(500);
+    click("Pay");
+    await settle(0);
+    const paying = buttonNamed("Paying…");
+    // Busy, not disabled: it would sink grey and drop focus.
+    expect(paying?.disabled).toBe(false);
+    expect(paying?.getAttribute("aria-busy")).toBe("true");
+    expect(paying?.getAttribute("aria-disabled")).toBe("true");
+    expect(document.querySelector(".reserve-checkout__foot [role=status]")?.textContent).toContain(
+      "Waiting for Sui to confirm",
+    );
+    const scrim = () => document.querySelector<HTMLElement>(".out-of-tickets__scrim");
+    act(() => scrim()?.click());
+    expect(onBoard).not.toHaveBeenCalled();
+    confirm();
+    await settle(500);
+    expect(title()).toBe("1 reserve ticket added");
+    act(() => scrim()?.click());
+    expect(onBoard).toHaveBeenCalledOnce();
+  });
+
   it("opens the ticket purchases Sui lists under the ENS name, a page at a time", async () => {
     const OLDER = "E".repeat(44);
     vi.mocked(getTicketPayments)
@@ -391,6 +497,8 @@ describe("ReserveTicketCheckout", () => {
     await render(checkout(), emptyApi({ ticketShop: () => Promise.resolve(SHOP) }));
     await settle(500);
     expect(getTicketPayments).not.toHaveBeenCalled();
+    // The button says what it opens, not only whose name it carries.
+    expect(buttonNamed("you.croquis.eth")?.textContent).toContain("Purchases");
     click("you.croquis.eth");
     await settle(500);
     expect(getTicketPayments).toHaveBeenCalledWith(SUI_WALLET, SHOP.payment, null);
@@ -403,6 +511,9 @@ describe("ReserveTicketCheckout", () => {
       expect.stringContaining("1 ticket"),
     ]);
     expect(rows[1]?.href).toContain(OLDER);
+    // A row is named by what it shows, with where it goes after it, never by its transaction ID.
+    expect(rows.some((a) => a.hasAttribute("aria-label"))).toBe(false);
+    expect(rows[0]?.textContent).toMatch(/3 tickets.*¥270.*Opens Suiscan/);
     expect(buttonNamed("Older purchases")).toBeUndefined();
   });
 
@@ -417,6 +528,9 @@ describe("ReserveTicketCheckout", () => {
     await settle(500);
     expect(title()).toBe("Payment didn’t go through");
     expect(document.querySelector("[role=alert]")?.textContent).toBe(
+      "Something went wrong, so nothing was paid. Try again.",
+    );
+    expect(document.querySelector(".copyable-fine-print__text")?.textContent).toBe(
       "Sui didn’t answer the payment in time.",
     );
     click("Back to the packs");
@@ -546,6 +660,10 @@ describe("ReserveTicketCheckout", () => {
     );
     expect(document.querySelector(".reserve-checkout__digest")?.textContent).toBe(TX_DIGEST);
     expect(buttonNamed("Copy")).toBeDefined();
+    // Names who to send the ID to.
+    expect(document.querySelector(".out-of-tickets__note")?.textContent).toContain(
+      "Croquis Official account",
+    );
     expect(buttonNamed("Add the tickets")).toBeUndefined();
     // Refused for good, so it's no longer kept or asked for again.
     expect(kept()).toEqual([]);

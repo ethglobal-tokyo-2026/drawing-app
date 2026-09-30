@@ -1,23 +1,36 @@
 import { releaseCanvas } from "../../ui/releaseCanvas";
+import type { Rect } from "../sealing/stickerLayers";
 import { hexToRgb } from "./color";
 import { context2d } from "./context2d";
-import { floodFill } from "./fill";
+import { floodSheet } from "./fill";
 import type { Surface } from "./history";
 import type { FillOp, Op, StrokeOp } from "./ops";
 import { paintStroke } from "./paintStroke";
 
 /** Past this density a sharper canvas costs memory and shows nothing more. */
 export const MAX_DPR = 3;
-/** A fill rereads and rewrites every pixel, far more work than painting a stroke. */
+/** A fill reads, floods and rewrites pixels, far more work than painting a stroke. */
 const FILL_COST = 24;
+/**
+ * Sheet px on a side of the square a fill reads first, around its seed: room for a shape drawn to be
+ * filled. A region reaching past it costs one more read, of the whole sheet.
+ */
+const FILL_NEAR = 160;
 
-/** A blank canvas the size of `source`, holding a copy of it. */
-function copyOf(source: HTMLCanvasElement, settings?: CanvasRenderingContext2DSettings) {
+const wholeOf = (canvas: HTMLCanvasElement): Rect => ({
+  x: 0,
+  y: 0,
+  w: canvas.width,
+  h: canvas.height,
+});
+
+/** A blank canvas the size of `box`, holding a copy of that box of `source`. */
+function copyOf(source: HTMLCanvasElement, box: Rect, settings?: CanvasRenderingContext2DSettings) {
   const copy = document.createElement("canvas");
-  copy.width = source.width;
-  copy.height = source.height;
+  copy.width = box.w;
+  copy.height = box.h;
   const ctx = context2d(copy, settings);
-  ctx.drawImage(source, 0, 0);
+  ctx.drawImage(source, box.x, box.y, box.w, box.h, 0, 0, box.w, box.h);
   return { copy, ctx };
 }
 
@@ -61,22 +74,31 @@ export class InkSurface implements Surface<HTMLCanvasElement> {
 
   /** Floods from the op's point; false when nothing changed. */
   fill(op: FillOp): boolean {
-    const { copy, ctx: reader } = copyOf(this.canvas, { willReadFrequently: true });
-    try {
-      const pixels = reader.getImageData(0, 0, this.canvas.width, this.canvas.height);
-      const x = Math.floor(op.x * this.dpr);
-      const y = Math.floor(op.y * this.dpr);
-      if (!floodFill(pixels, x, y, hexToRgb(op.color))) return false;
-      this.ctx.putImageData(pixels, 0, 0);
-      return true;
-    } finally {
-      releaseCanvas(copy);
-    }
+    const read = (box: Rect) => {
+      const { copy, ctx } = copyOf(this.canvas, box, { willReadFrequently: true });
+      try {
+        return ctx.getImageData(0, 0, box.w, box.h);
+      } finally {
+        releaseCanvas(copy);
+      }
+    };
+    const flood = floodSheet(
+      this.canvas,
+      read,
+      Math.floor(op.x * this.dpr),
+      Math.floor(op.y * this.dpr),
+      hexToRgb(op.color),
+      Math.round(FILL_NEAR * this.dpr),
+    );
+    if (!flood) return false;
+    const { pixels, at, changed } = flood;
+    this.ctx.putImageData(pixels, at.x, at.y, changed.x, changed.y, changed.w, changed.h);
+    return true;
   }
 
   /** A copy of the ink to read pixels from, as sealing does. */
   copyForReading(): HTMLCanvasElement {
-    return copyOf(this.canvas, { willReadFrequently: true }).copy;
+    return copyOf(this.canvas, wholeOf(this.canvas), { willReadFrequently: true }).copy;
   }
 
   apply(op: Op): void {
@@ -89,7 +111,7 @@ export class InkSurface implements Surface<HTMLCanvasElement> {
   }
 
   snapshot(): HTMLCanvasElement {
-    return copyOf(this.canvas).copy;
+    return copyOf(this.canvas, wholeOf(this.canvas)).copy;
   }
 
   discard(snapshot: HTMLCanvasElement): void {

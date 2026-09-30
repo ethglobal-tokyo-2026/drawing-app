@@ -22,12 +22,21 @@ export const LOAD_TIMEOUT_MS = 5_000;
 /** Logging out waits this long for the kept drawing to go, then goes ahead. */
 const FORGET_TIMEOUT_MS = 5_000;
 
-/** The ticket use the session spent (the server's id), the time drawn, and 18+. */
+/** How the artist set the size rail, for the brush and for the eraser (0 to 1 along it), and Smoothing (0 to 100). */
+export interface KeptTools {
+  brushSize: number;
+  eraserSize: number;
+  smoothing: number;
+}
+
+/** The ticket use the session spent (the server's id), the time drawn, 18+, and the tools' settings. */
 interface SessionRecord {
   ticket: number;
   elapsedMs: number;
   /** The 18+ switch: it seals as an NSFW sticker. */
   nsfw: boolean;
+  /** Absent when what's kept holds none, or none that can be read: the drawing still comes back. */
+  tools?: KeptTools;
 }
 
 /** What's kept of a drawing that was in progress. */
@@ -139,6 +148,8 @@ export class SessionKeeper {
   private ticket: number | null = null;
   private nsfw = false;
   private elapsedMs = 0;
+  /** The tools as the artist last set them: they outlast a sheet, so a new session keeps them too. */
+  private tools: KeptTools | undefined;
   /** The ops as last written, by reference; null when a write failed and what landed is unknown. */
   private written: readonly Op[] | null = [];
   /** Whether the last record written landed. */
@@ -172,10 +183,17 @@ export class SessionKeeper {
   }
 
   /** A session picked back up after a reload, whose ops are already kept. */
-  resume(ticket: number, ops: readonly Op[], elapsedMs: number, nsfw: boolean): void {
+  resume(
+    ticket: number,
+    ops: readonly Op[],
+    elapsedMs: number,
+    nsfw: boolean,
+    tools: KeptTools | undefined,
+  ): void {
     this.ticket = ticket;
     this.elapsedMs = elapsedMs;
     this.nsfw = nsfw;
+    this.tools = tools ?? this.tools;
     this.written = [...ops];
   }
 
@@ -195,6 +213,15 @@ export class SessionKeeper {
   keepNsfw(nsfw: boolean): void {
     this.nsfw = nsfw;
     this.keepRecord();
+  }
+
+  /**
+   * Keeps how the tools are set, with the session once there is one. Before that it only remembers
+   * them: a session kept from before a reload mustn't be cleared by the screen's first render.
+   */
+  keepTools(tools: KeptTools): void {
+    this.tools = tools;
+    if (this.ticket !== null) this.keepRecord();
   }
 
   /** Keeps the time drawn, and any ops that changed since the last save. */
@@ -233,6 +260,7 @@ export class SessionKeeper {
         ticket: this.ticket,
         elapsedMs: this.elapsedMs,
         nsfw: this.nsfw,
+        ...(this.tools && { tools: this.tools }),
       });
     this.changed();
   }
@@ -390,10 +418,30 @@ function readRecord(userId: string): SessionRecord | "unreadable" | null {
     isFiniteNumber(value.elapsedMs) &&
     "nsfw" in value &&
     typeof value.nsfw === "boolean"
-  )
-    return { ticket: value.ticket, elapsedMs: value.elapsedMs, nsfw: value.nsfw };
+  ) {
+    const tools = "tools" in value ? readTools(value.tools) : undefined;
+    return {
+      ticket: value.ticket,
+      elapsedMs: value.elapsedMs,
+      nsfw: value.nsfw,
+      ...(tools && { tools }),
+    };
+  }
   console.error("The record of the drawing in progress is unreadable:", raw);
   return "unreadable";
+}
+
+const isBetween = (v: unknown, min: number, max: number): v is number =>
+  isFiniteNumber(v) && v >= min && v <= max;
+
+/** The tools' settings a record holds, or undefined when it holds none it can read. */
+function readTools(v: unknown): KeptTools | undefined {
+  if (typeof v !== "object" || v === null) return undefined;
+  if (!("brushSize" in v) || !("eraserSize" in v) || !("smoothing" in v)) return undefined;
+  const { brushSize, eraserSize, smoothing } = v;
+  return isBetween(brushSize, 0, 1) && isBetween(eraserSize, 0, 1) && isBetween(smoothing, 0, 100)
+    ? { brushSize, eraserSize, smoothing }
+    : undefined;
 }
 
 /** Whether it's written. */
