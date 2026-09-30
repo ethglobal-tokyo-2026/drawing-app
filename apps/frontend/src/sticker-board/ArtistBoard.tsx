@@ -43,7 +43,7 @@ interface Props {
   onBack: () => void;
 }
 
-/** The sticker menu's width, for keeping it on the board. */
+/** The room the sticker menu needs at most, for keeping it on the board; it sizes to its artist chip. */
 const MENU_W = 250;
 
 /** Their handle, or their LINE name until they've picked one. */
@@ -208,7 +208,7 @@ export function ArtistBoard({ person, onBack }: Props) {
     const c = toPx(field, s.placement);
     const half = (s.placement.s * size.W) / 2;
     return {
-      left: Math.min(Math.max(8, c.x - MENU_W / 2), size.W - MENU_W - 8),
+      left: Math.min(Math.max(8 + MENU_W / 2, c.x), size.W - 8 - MENU_W / 2),
       top: s.placement.y > 0.6 ? c.y - half - 136 : c.y + half + 12,
     };
   };
