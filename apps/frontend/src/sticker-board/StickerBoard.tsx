@@ -33,6 +33,7 @@ import { useTranslation } from "../i18n/react";
 import { DrawIcon } from "../icons/DrawIcon";
 import { useMe } from "../api/meContext";
 import { useIdentity } from "../identity/useIdentity";
+import { CaretRight } from "../icons";
 import { LIFF_ID } from "../line/liff";
 import { formatHandle, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
@@ -636,14 +637,17 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const blankStyle = blankAt ? { left: blankAt.x, top: blankAt.y } : undefined;
   // Until the first sticker, Draw says where to start.
   const firstVisit = stickers?.length === 0;
+  // An empty board that still has stickers in the sticker tray points to the tray, not to Draw.
+  const inTray = (stickers ?? []).some((s) => s.held && !onTheBoard(s));
   const unsavedStickers = (stickers ?? []).filter((s) => unsaved.has(s.id));
 
   const front = (
-    <div className="board" ref={setFace}>
+    <div className="board" ref={setFace} data-resting={turned || gratitudeFor ? "" : undefined}>
       {/* Your name and Draw come before the stickers, so Tab reaches them first. */}
       <button
         ref={nameButton}
-        className="board-who"
+        // Its width is its own until a gifts badge needs the room opposite.
+        className={`board-who ${waiting.length > 0 || onTheirWay.length > 0 ? "" : "is-roomy"}`}
         onClick={() => turn(!turned)}
         onPointerDown={() => void StatBoard.preload()}
         onFocus={() => void StatBoard.preload()}
@@ -653,6 +657,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       >
         <PhotoSticker src={me.pictureUrl} name={me.displayName} size={42} />
         <span className="board-who-name">{me.displayName}</span>
+        <CaretRight className="board-who-cue" size={14} weight="bold" aria-hidden />
       </button>
 
       {(waiting.length > 0 || onTheirWay.length > 0) && (
@@ -706,7 +711,11 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
         {stickers && onBoard.length === 0 && (
           <div className="board-blank" style={blankStyle}>
             <span className="board-blank-cut" aria-hidden />
-            <span className="board-blank-note">{t(($) => $.stickerBoard.board.blank)}</span>
+            <span className="board-blank-note">
+              {inTray
+                ? t(($) => $.stickerBoard.board.blankWithTray)
+                : t(($) => $.stickerBoard.board.blank)}
+            </span>
           </div>
         )}
         {field &&

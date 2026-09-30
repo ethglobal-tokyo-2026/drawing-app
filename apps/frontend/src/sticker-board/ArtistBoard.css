@@ -39,7 +39,7 @@
 .explore-chip::after {
   content: "";
   position: absolute;
-  inset: -6px -2px;
+  inset: -7px -3px;
 }
 
 /* ---------- Viewing one of their stickers ---------- */

@@ -1,4 +1,4 @@
-import { CaretLeft, GiveIcon } from "../icons";
+import { CaretLeft, CaretRight, GiveIcon } from "../icons";
 import { useMyAgeStatus } from "../identity/useMyAgeStatus";
 import { veiledFor } from "../stickers/nsfw";
 import {
@@ -271,7 +271,7 @@ export function ArtistBoard({ person, onBack }: Props) {
   };
 
   const front = (
-    <div className="board visit" ref={face}>
+    <div className="board visit" ref={face} data-resting={turned ? "" : undefined}>
       {/* Their name, the Explore chip and Give come before the stickers, so Tab reaches them first. */}
       <button
         type="button"
@@ -284,8 +284,15 @@ export function ArtistBoard({ person, onBack }: Props) {
       >
         <PhotoSticker src={owner.pictureUrl} name={owner.name} size={42} />
         <span className="board-who-name">{owner.name}</span>
+        <CaretRight className="board-who-cue" size={14} weight="bold" aria-hidden />
       </button>
-      <button type="button" className="explore-chip" data-press onClick={onBack}>
+      <button
+        type="button"
+        className="explore-chip"
+        data-press
+        onClick={onBack}
+        aria-label={t(($) => $.stickerBoard.artistBoard.backToExplore)}
+      >
         <CaretLeft size={14} />
         {t(($) => $.stickerBoard.artistBoard.explore)}
       </button>

@@ -127,7 +127,7 @@ export const stickerBoard = {
       viewOnExplorer: { en: "View on Etherscan", ja: "Etherscanで見る" },
       /** Address dialog for the board address: screen readers' name for the Etherscan link */
       viewOnExplorerLabel: {
-        en: "View your board address on Etherscan",
+        en: "View on Etherscan: your board address",
         ja: "ボードアドレスをEtherscanで見る",
       },
     },
@@ -156,7 +156,7 @@ export const stickerBoard = {
       viewOnExplorer: { en: "View on Suiscan", ja: "Suiscanで見る" },
       /** Address dialog for the Sui address: screen readers' name for the Suiscan link */
       viewOnExplorerLabel: {
-        en: "View your Sui address on Suiscan",
+        en: "View on Suiscan: your Sui address",
         ja: "SuiアドレスをSuiscanで見る",
       },
     },
@@ -182,6 +182,11 @@ export const stickerBoard = {
         en: { en: "English", ja: "English" },
         /** Settings note: the Japanese choice, named in Japanese; also LINE's language in Same as LINE */
         ja: { en: "日本語", ja: "日本語" },
+      },
+      /** Settings note: the fine print under the language choices, saying that choosing one restarts the app */
+      restarts: {
+        en: "Choosing a language restarts Croquis.",
+        ja: "言語を選ぶと、クロッキーが再起動します。",
       },
       /** Settings note: the status line while a language choice saves, which screen readers announce */
       saving: { en: "Saving…", ja: "保存しています…" },
@@ -293,6 +298,11 @@ export const stickerBoard = {
     selectedHint: {
       en: "Selected. Enter opens it, and Tab reaches its toolbar. Arrow keys move it, [ and ] turn it, minus and plus resize it, Delete takes it off the board, and Escape lets go of it.",
       ja: "選択中です。Enterキーでひらき、Tabキーでツールバーに移動します。矢印キーで動かし、[キーと]キーで回し、マイナスキーとプラスキーで大きさを変え、Deleteキーでボードからはがし、Escapeキーで選択を解除します。",
+    },
+    /** Your sticker board with no sticker on it but some in the sticker tray: the note in the dashed spot, pointing to the Zipper */
+    blankWithTray: {
+      en: "Your stickers are in the tray. Pull the zipper to stick one on.",
+      ja: "シールはシールトレイの中です。ファスナーを引いて、貼ってみましょう。",
     },
     /** Your empty sticker board: the note in the dashed spot where the first sticker lands */
     blank: {
@@ -626,6 +636,8 @@ export const stickerBoard = {
       en: "Couldn’t load {{name}}’s board: {{reason}}",
       ja: "{{name}}さんのシールボードを読み込めませんでした：{{reason}}",
     },
+    /** Someone else's sticker board: screen readers' name for the back chip at the top, which returns to Explore */
+    backToExplore: { en: "Back to Explore", ja: "さがすに戻る" },
     /** Someone else's sticker board: the back chip at the top that returns to Explore */
     explore: { en: "Explore", ja: "さがす" },
     /** Someone else's sticker board, a sticker tapped: the menu's View button, which opens it large */

@@ -50,6 +50,17 @@
   transition: transform 160ms var(--ease-out);
 }
 
+/* A cue that the name opens something: it turns the board over to the stats. */
+.board-who-cue {
+  flex: none;
+  color: var(--graphite);
+}
+
+/* With no gifts badge opposite, the name has the whole header, since LINE names run long. */
+.board-who.is-roomy {
+  max-width: calc(100% - 28px);
+}
+
 .board-who:hover {
   transform: translateY(-1px);
 }
@@ -73,6 +84,12 @@
   text-overflow: ellipsis;
 }
 
+/* Behind the stat board or a game, nothing on the front needs to move: the resin's sway and the foil's
+   flow wait, and go on from where they were. */
+.board[data-resting] :is(.live-resin__spec > b, .sticker-foil__sheen) {
+  animation-play-state: paused;
+}
+
 /* A sticker at its placement. The lift is what rises in your hand and what sticks. */
 .placed-sticker {
   position: absolute;
@@ -82,6 +99,10 @@
   cursor: grab;
   touch-action: none;
   outline: none;
+}
+
+/* A layer of its own only while it moves; at rest every sticker's would sit in memory for nothing. */
+.placed-sticker:is(.is-dragging, .is-handling, .is-landing) {
   will-change: transform;
 }
 
@@ -92,23 +113,6 @@
   transition:
     transform 170ms var(--ease-out),
     opacity 170ms linear;
-}
-
-/* Gratitude glows behind a sticker, warming from pink toward amber as more gratitude arrives. The glow
-   is the world's one coloured light (DESIGN.md's Neutral Shadow Rule), not a coded field, so its two hues
-   are its own: a pink lighter than Bonbon Pink, and an amber that isn't the streak's Tangerine. */
-.placed-sticker.is-glowing .placed-sticker__lift {
-  --glow-pink: #ff7eb6; /* impeccable-disable-line design-system-color */
-  --glow-amber: #ffb13b; /* impeccable-disable-line design-system-color */
-  filter: drop-shadow(
-    0 0 calc(6px + 12px * var(--glow))
-      color-mix(
-        in srgb,
-        color-mix(in srgb, var(--glow-pink), var(--glow-amber) calc(var(--glow) * 60%))
-          calc(var(--glow) * 90%),
-        transparent
-      )
-  );
 }
 
 /* In your hand it rides above everything on the board. */
