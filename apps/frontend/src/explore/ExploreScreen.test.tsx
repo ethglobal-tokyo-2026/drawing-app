@@ -238,10 +238,11 @@ describe("ExploreScreen's This week", () => {
   });
 
   it("names a row from what it shows, and says where it goes as its description", async () => {
+    const dotted = { ...people.mika, handle: "mika.draws" };
     const host = await openExplore(
       exploreWith([], {
         mostGratitude: [
-          { person: people.mika, value: 1234 },
+          { person: dotted, value: 1234 },
           { person: TEST_OWNER, value: 12 },
         ],
       }),
@@ -252,9 +253,11 @@ describe("ExploreScreen's This week", () => {
       document.getElementById(row.getAttribute("aria-describedby") ?? "")?.textContent;
 
     expect(theirs?.hasAttribute("aria-label")).toBe(false);
-    expect(theirs?.textContent).toContain("@mika");
+    expect(theirs?.textContent).toContain("@mika.draws");
     expect(theirs?.textContent).toContain("1,234 gratitude");
-    expect(descriptionOf(theirs)).toBe("@mika's sticker board");
+    expect(descriptionOf(theirs)).toBe("@mika.draws's sticker board");
+    // The handle's break marks would put a space in the row's name.
+    expect(theirs?.querySelectorAll("wbr:not([aria-hidden=true])")).toHaveLength(0);
     expect(yours?.hasAttribute("aria-label")).toBe(false);
     expect(yours?.textContent).toContain("You");
     expect(descriptionOf(yours)).toBe("Your sticker board");

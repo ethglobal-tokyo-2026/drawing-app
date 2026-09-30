@@ -79,9 +79,14 @@ function Avatar({ person, size }: { person: Person; size: number }) {
   return <PhotoSticker src={view.pictureUrl} name={view.name} size={size} />;
 }
 
-/** A handle with its natural breaks marked: after "_", "." or "-", as on the pile's name tags. */
+/**
+ * A handle with its natural breaks marked: after "_", "." or "-", as on the pile's name tags. The marks
+ * are hidden from assistive tech, which would otherwise name the row with a space in the handle.
+ */
 function breakable(text: string): ReactNode[] {
-  return text.split(/(?<=[_.-])/).flatMap((part, i) => (i ? [<wbr key={i} />, part] : [part]));
+  return text
+    .split(/(?<=[_.-])/)
+    .flatMap((part, i) => (i ? [<wbr key={i} aria-hidden="true" />, part] : [part]));
 }
 
 function PersonRow({
