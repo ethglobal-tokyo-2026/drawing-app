@@ -165,6 +165,24 @@ describe("ExploreScreen's sticker pile", () => {
     expect(document.querySelector('[role="dialog"]')).not.toBeNull();
   });
 
+  it("lets go of the fall-in once the stickers have landed", async () => {
+    const animate = vi.spyOn(Element.prototype, "animate");
+    onTestFinished(() => animate.mockRestore());
+    const drawn = sticker({ sealedAt: minutesAgo(5) });
+    const host = await openExplore(
+      exploreWith([{ type: "sealed", at: drawn.sealedAt, sticker: drawn }]),
+    );
+    await wait(1000);
+    expect(host.querySelector("[data-falling]")).not.toBeNull();
+
+    // happy-dom ends an animation on a real timer, which fake timers don't move.
+    for (const played of animate.mock.results) if (played.type === "return") played.value.finish();
+    await wait(0);
+    expect(host.querySelector("[data-falling]")).toBeNull();
+    expect(host.querySelector(".pile-sticker__air")).toBeNull();
+    expect(host.querySelector(".pile-sticker__image")?.getAttribute("loading")).toBe("lazy");
+  });
+
   it("shows today's empty floor before anyone seals", async () => {
     const host = await openExplore(exploreWith([]));
     expect(textsOf(host, ".pile-day h2")).toEqual(["Today"]);
