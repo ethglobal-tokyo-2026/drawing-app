@@ -743,7 +743,8 @@ export function createTrayEngine(
       if (s.state !== "given" || s.givenTo !== undefined)
         paper.append(slotEl(s, news.has(s.id), use));
     // Nothing to put on the only sheet yet: it says what will be.
-    if (model.slots.length === 0) paper.append(make("p", "fine tray__empty", words.empty));
+    if (model.slots.length === 0)
+      paper.append(make("p", "fine tray__empty keep-phrases", words.empty));
     const foot = make(
       "div",
       "tray__foot",

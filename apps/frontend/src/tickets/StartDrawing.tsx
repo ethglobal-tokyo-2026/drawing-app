@@ -93,7 +93,10 @@ export function StartDrawing({
           {shownFailure}
         </ErrorLine>
       ) : (
-        <p className="out-of-tickets__line out-of-tickets__line--stacked" id={`${id}-line`}>
+        <p
+          className="out-of-tickets__line out-of-tickets__line--stacked keep-phrases"
+          id={`${id}-line`}
+        >
           {reserveAsk ? (
             <>
               <strong>{t(($) => $.tickets.startDrawing.reserve.used)}</strong>{" "}

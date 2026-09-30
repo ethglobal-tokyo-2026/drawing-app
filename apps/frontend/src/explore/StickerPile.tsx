@@ -495,7 +495,7 @@ function EmptyFloor({ height, children }: { height: number; children: ReactNode 
       <svg className="pile-day__outline" viewBox="0 0 100 86" aria-hidden="true">
         <path d="M50 4c14 0 22 9 30 12s17 9 16 24-9 20-12 28-14 15-32 14S16 76 10 66 2 50 5 38s12-20 21-26S38 4 50 4Z" />
       </svg>
-      <p>{children}</p>
+      <p className="keep-phrases">{children}</p>
     </div>
   );
 }

@@ -67,7 +67,7 @@ export const explore = {
     /** Explore tab, Stickers view: the line under a faint sticker outline on today's floor while no one has sealed a sticker today */
     empty: {
       en: "The first sticker sealed today lands here.",
-      ja: "今日さいしょに仕上がったシールが、ここに落ちてきます。",
+      ja: "今日<wbr/>さいしょに仕上がったシールが、<wbr/>ここに落ちてきます。",
     },
     /** Explore tab, Stickers view: what screen readers hear once as the pile opens, when one sticker arrived since your last look */
     arrivals_one: { en: "{{count}} new sticker since you last looked" },

@@ -59,12 +59,12 @@ export const tickets = {
       /** Start card, daily ticket variant: the bold line under the title saying how many daily tickets are left; it has a line of its own */
       left_other: {
         en: "You have {{count}} daily tickets left.",
-        ja: "無償チケットは残り{{count}}枚です。",
+        ja: "無償チケットは<wbr/>残り{{count}}枚です。",
       },
       /** Start card, daily ticket variant: the quiet line under the count, about the drawing timer; "3‑minute" is joined by a non-breaking hyphen (U+2011), so it never breaks at the hyphen */
       timer: {
         en: "Your {{minutes}}‑minute timer starts with your first stroke.",
-        ja: "最初のひと筆で{{minutes}}分のタイマーが始まります。",
+        ja: "最初のひと筆で<wbr/>{{minutes}}分のタイマーが<wbr/>始まります。",
       },
       /** Start card, daily ticket variant: the key that spends a daily ticket and opens the sheet */
       start: { en: "Start drawing", ja: "かき始める" },
@@ -76,10 +76,10 @@ export const tickets = {
       /** Start card, reserve ticket variant: the bold line under the title saying the daily tickets are gone; it has a line of its own, so keep it short */
       used: {
         en: "Today’s daily tickets are used.",
-        ja: "今日の無償チケットは使い切りました。",
+        ja: "今日の無償チケットは<wbr/>使い切りました。",
       },
       /** Start card, reserve ticket variant: the quiet line under "used", saying when new daily tickets arrive (midnight in Tokyo, in the person's own time) */
-      refillAt: { en: "New ones at {{time}}.", ja: "{{time}}に新しく届きます。" },
+      refillAt: { en: "New ones at {{time}}.", ja: "{{time}}に<wbr/>新しく届きます。" },
       /** Start card, reserve ticket variant: read by screen readers only, since the count is on the ticket's badge (one) */
       left_one: { en: "You have {{count}} reserve ticket." },
       /** Start card, reserve ticket variant: read by screen readers only, since the count is on the ticket's badge */
@@ -103,7 +103,7 @@ export const tickets = {
     /** Out-of-tickets card: the line under the title, when new daily tickets arrive (bold) and the countdown to it (quiet) */
     refillLine: {
       en: "<strong>New daily tickets at {{time}},</strong> <countdown>{{countdown}}</countdown>",
-      ja: "<strong>{{time}}に新しい無償チケットが届きます</strong><countdown>（{{countdown}}）</countdown>",
+      ja: "<strong>{{time}}に<wbr/>新しい無償チケットが<wbr/>届きます</strong><countdown>（{{countdown}}）</countdown>",
     },
     /** Out-of-tickets card: the title once the refill brings tickets back while it's open, as the card turns over */
     refilled: { en: "New tickets are here", ja: "新しいチケットが届きました" },

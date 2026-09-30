@@ -769,7 +769,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
         {stickers && onBoard.length === 0 && (
           <div className="board-blank" style={blankStyle}>
             <span className="board-blank-cut" aria-hidden />
-            <span className="board-blank-note">
+            <span className="board-blank-note keep-phrases">
               {inTray
                 ? t(($) => $.stickerBoard.board.blankWithTray)
                 : t(($) => $.stickerBoard.board.blank)}

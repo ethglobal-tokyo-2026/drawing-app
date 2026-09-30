@@ -84,7 +84,7 @@ export function OutOfTickets({
           : t(($) => $.tickets.outOfTickets.title)}
       </h2>
       {!refilled && (
-        <p className="out-of-tickets__line" id={`${id}-line`}>
+        <p className="out-of-tickets__line keep-phrases" id={`${id}-line`}>
           <Trans
             i18nKey={($) => $.tickets.outOfTickets.refillLine}
             values={{ time: formatRefillTime(at), countdown: formatRefillIn(msLeft) }}

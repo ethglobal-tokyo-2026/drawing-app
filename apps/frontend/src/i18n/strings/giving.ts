@@ -274,7 +274,7 @@ export const giving = {
     /** Giving's "Closed and sent" screen: the line under its title */
     lead: {
       en: "It’s in your LINE chat now, and the gift message opens once. When they receive it, you’ll see who did.",
-      ja: "ギフトメッセージをLINEのトークに送りました。ひらけるのは一度だけです。受け取られたら、誰が受け取ったかがわかります。",
+      ja: "ギフトメッセージを<wbr/>LINEのトークに送りました。<wbr/>ひらけるのは一度だけです。<wbr/>受け取られたら、<wbr/>誰が受け取ったかがわかります。",
     },
     /** Giving's "Closed and sent" screen: an alert when the Gift Message went out but Croquis couldn't record it, with why */
     couldntRecord: {

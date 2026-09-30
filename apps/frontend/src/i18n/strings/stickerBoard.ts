@@ -324,12 +324,12 @@ export const stickerBoard = {
     /** Your sticker board with no sticker on it but some in the sticker tray: the note in the dashed spot, pointing to the Zipper */
     blankWithTray: {
       en: "Your stickers are in the tray. Pull the zipper to stick one on.",
-      ja: "シールはシールトレイの中です。ファスナーを引いて、貼ってみましょう。",
+      ja: "シールは<wbr/>シールトレイの中です。<wbr/>ファスナーを引いて、<wbr/>貼ってみましょう。",
     },
     /** Your empty sticker board: the note in the dashed spot where the first sticker lands */
     blank: {
       en: "Stickers you make or receive land here.",
-      ja: "つくったシールや受け取ったシールは、ここに貼られます。",
+      ja: "つくったシールや<wbr/>受け取ったシールは、<wbr/>ここに貼られます。",
     },
     /** Your sticker board while its stickers load: read out to screen readers as faint placeholder stickers show */
     loading: { en: "Loading your stickers", ja: "シールを読み込んでいます" },
@@ -410,7 +410,7 @@ export const stickerBoard = {
     /** Sticker tray, before any sticker: the note printed on its one blank sheet */
     empty: {
       en: "Stickers you make or receive collect here",
-      ja: "つくったシールや受け取ったシールがここにたまります",
+      ja: "つくったシールや<wbr/>受け取ったシールが<wbr/>ここにたまります",
     },
     /** Sticker tray: screen readers' name for the stack of sticker sheets */
     sheets: { en: "Your sticker sheets", ja: "手持ちのシールシート" },

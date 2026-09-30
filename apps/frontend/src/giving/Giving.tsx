@@ -232,7 +232,7 @@ export function Giving({
         <div className="giving__scroll giving__sent-body">
           {bag(sealed ? "sealed" : "open", state.sentAt)}
           <h2 className="giving__title">{title}</h2>
-          <p className="giving__sub">{lead}</p>
+          <p className="giving__sub keep-phrases">{lead}</p>
           {state.recordError && (
             <ErrorLine className="giving__problem" detail={state.recordError.detail}>
               {t(($) => $.giving.sent.couldntRecord, { reason: state.recordError.message })}
