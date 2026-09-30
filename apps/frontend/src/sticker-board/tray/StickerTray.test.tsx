@@ -340,6 +340,30 @@ describe("StickerTray", () => {
     expect(frontSheet()?.getAttribute("data-f")).toBe(newest);
   });
 
+  it("keeps the stack drawn and focus on the sticker while the mouth sags to stick it on", async () => {
+    render(manyStickers(8));
+    await openTray();
+    const window1 = board.querySelector(".tray__w1");
+    let shutSeen = false;
+    const watch = new MutationObserver(() => {
+      if (window1?.classList.contains("is-shut")) shutSeen = true;
+    });
+    watch.observe(window1 ?? board, { attributes: true, attributeFilter: ["class"] });
+    const slot = frontSheet()?.querySelector<HTMLElement>('.tray__slot[data-state="here"]');
+    act(() => slot?.focus());
+
+    // Enter sticks it on; the mouth's spring rings through shut and settles while frames run.
+    act(() => {
+      slot?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 700));
+    });
+    watch.disconnect();
+    expect(shutSeen).toBe(false);
+    expect(stackEl()?.contains(document.activeElement)).toBe(true);
+  });
+
   it("spreads the sheets as a named dialog of one button each, with the board inert behind it until it closes", async () => {
     render(manyStickers(60));
     const elsewhere = document.createElement("button");

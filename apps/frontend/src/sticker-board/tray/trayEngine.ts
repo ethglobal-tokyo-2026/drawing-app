@@ -838,8 +838,8 @@ export function createTrayEngine(
     const range = G > 3 ? mouthRange(g, G, k) : null;
     const show = range !== null;
     // A mouth sagged to a crack rings through shut for a few frames: the stack stays as it was, so it
-    // doesn't blink and the sticker that was focused keeps its focus.
-    const holding = !show && onShow && zip.isOpen && g.relax > 0;
+    // doesn't blink and the sticker that was focused keeps its focus. A pull dragged up shuts it.
+    const holding = !show && onShow && zip.isOpen && g.mode !== "drag";
     if (!holding) {
       setShut(!show);
       const showing = show && !onShow;
