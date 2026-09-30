@@ -38,14 +38,14 @@ export const shop = {
   },
   /** The strip under the Shop's title for a paid pack whose tickets weren't added, which opens the reserve ticket checkout on that payment */
   unadded: {
-    /** Shop, the strip under the title while this phone keeps a payment whose tickets aren't added yet: its title */
+    /** Shop, the strip under the title while this phone keeps a payment whose tickets aren't added yet: its title; the Shop tab's pip is described by it too, for screen readers */
     title: { en: "Tickets not added yet", ja: "チケットが未追加です" },
     /** Shop, that strip: the line under its title; `pack` is what was paid for, such as "3 tickets", and `price` is what it cost in yen */
     line: {
       en: "{{pack}}, {{price}}. Tap to add them; it won’t charge you twice.",
       ja: "{{pack}}（{{price}}）。タップして追加できます。二重に請求されることはありません。",
     },
-    /** Shop, the strip once the server refused that payment for good: its title */
+    /** Shop, the strip once the server refused that payment for good: its title; the Shop tab's pip is described by it too, for screen readers */
     refusedTitle: { en: "Tickets can’t be added", ja: "チケットを追加できません" },
     /** Shop, that strip: the line under its title, since the checkout says why once; `pack` and `price` as above */
     refusedLine: {
