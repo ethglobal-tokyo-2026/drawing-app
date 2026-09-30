@@ -91,6 +91,7 @@ import type { StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
 import { useBoardGestures } from "./useBoardGestures";
 import { useBoardSize } from "./useBoardSize";
+import { useMyStickerBoard } from "./useMyStickerBoard";
 import "./StickerBoard.css";
 
 // The Zipper shows on the board at rest, so the sticker tray's code starts loading with the board's.
@@ -251,13 +252,6 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     () => fromPhone && { ...fromPhone, fromPhone: true },
   );
   const owner = adopted?.owner ?? null;
-  /** The stickers as last drawn, and their load, for a reload to keep the spots the board has given them. */
-  const latestStickers = useRef(stickers);
-  const latestAdopted = useRef(adopted);
-  useLayoutEffect(() => {
-    latestStickers.current = stickers;
-    latestAdopted.current = adopted;
-  });
   /** Stickers whose spot didn't save, and why; each goes once a save of it succeeds. */
   const [unsaved, setUnsaved] = useState<ReadonlyMap<string, string>>(() => new Map());
   const size = useBoardSize(stage);
@@ -340,28 +334,31 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     [api],
   );
 
-  // The board mounts anew on every visit, so its load is its refresh. A sticker the board has never
-  // placed gets a spot as it loads, saved so it stays there.
-  const board = useApiQuery("sticker-board", async (client): Promise<LoadedBoard> => {
-    const data = await client.stickerBoard();
-    noteBootMilestone("board JSON", `${data.boardStickers.length} stickers`);
-    const { stickers: list, placed } = placeUnplaced(
-      data.boardStickers.map(toBoardSticker),
-      heldOver(latestStickers.current, latestAdopted.current),
-    );
-    for (const s of placed) save(s, s.placement);
-    return { owner: toPerson(data.owner), stickers: list };
-  });
-  const loaded = board.state === "ready" ? board.data : null;
-  if (loaded && loaded !== adopted) {
-    setAdopted(loaded);
+  // The board mounts anew on every visit, so its load is its refresh.
+  const board = useMyStickerBoard();
+  const answer = board.state === "ready" ? board.data : null;
+  /** The server's answer the stickers were last adopted from. */
+  const [adoptedAnswer, setAdoptedAnswer] = useState<typeof answer>(null);
+  /** Stickers the board had never placed, given a spot as their answer was adopted. */
+  const [newlyPlaced, setNewlyPlaced] = useState<readonly BoardStickerView[]>([]);
+  if (answer && answer !== adoptedAnswer) {
+    setAdoptedAnswer(answer);
     // Moves made while it loaded stay.
-    const next = placeUnplaced(loaded.stickers, heldOver(stickers, adopted)).stickers;
+    const { stickers: next, placed } = placeUnplaced(
+      answer.boardStickers.map(toBoardSticker),
+      heldOver(stickers, adopted),
+    );
+    setAdopted({ owner: toPerson(answer.owner), stickers: next });
     setStickers(next);
+    setNewlyPlaced(placed);
     // A sticker that comes back to you returns to the sticker tray, so there's no landing to wait for.
     const landing = next.find((s) => s.id === landingId);
     if (landing && !onTheBoard(landing)) setLandingId(undefined);
   }
+  // Each spot the board gave is saved, so the sticker stays there.
+  useEffect(() => {
+    for (const s of newlyPlaced) save(s, s.placement);
+  }, [newlyPlaced, save]);
   // The first open's board completes once the fresh board's stickers have all decoded; one from the
   // phone's storage starts them decoding. A board that didn't load has nothing more coming, so what
   // waited for it goes ahead.

@@ -1,6 +1,6 @@
 import type { StickerBoard } from "@drawing-app/api/client";
-import { useApiQuery } from "../api/useApiQuery";
 import { toSticker } from "../api/views";
+import { useMyStickerBoard } from "../sticker-board/useMyStickerBoard";
 import type { StickerUrls } from "../stickers/stickerUrls";
 import sampleMask from "./sample-sticker/mask.png";
 import samplePng from "./sample-sticker/sticker.png";
@@ -48,7 +48,7 @@ function newestOwnSticker(board: StickerBoard): ShopSticker | null {
  * your board loads, so no stand-in shows first and then turns into yours.
  */
 export function useShopSticker(): ShopSticker | null {
-  const board = useApiQuery("sticker-board/me", (api) => api.stickerBoard());
+  const board = useMyStickerBoard();
   if (board.state === "loading") return null;
   // The previews are decoration and useApiQuery logs the failure, so the sample stands in.
   if (board.state === "failed") return SAMPLE_STICKER;
