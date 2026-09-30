@@ -31,11 +31,11 @@ export const explore = {
   loading: { en: "Loading…", ja: "読み込み中…" },
   /** Explore tab, a search result or leaderboard row that is you: under your handle, where other people's rows show their LINE name */
   you: { en: "You", ja: "あなた" },
-  /** Names the sticker board a tap opens, for assistive tech. */
+  /** Says which sticker board a tap opens, for assistive tech. */
   stickerBoard: {
-    /** Explore tab: screen readers' name for your search result or leaderboard row, which opens your sticker board when tapped */
+    /** Explore tab: screen readers' description of your search result or leaderboard row, after the row's own text: it opens your sticker board when tapped */
     yours: { en: "Your sticker board", ja: "あなたのシールボード" },
-    /** Explore tab: screen readers' name for someone's search result or leaderboard row, which opens their sticker board when tapped */
+    /** Explore tab: screen readers' description of someone's search result or leaderboard row, after the row's own text: it opens their sticker board when tapped */
     theirs: { en: "{{handle}}'s sticker board", ja: "{{handle}}さんのシールボード" },
   },
   /** The switch under the search between Explore's two views. */
@@ -111,10 +111,19 @@ export const explore = {
   },
   /** A leaderboard row's figure. A unit in <small> is set small beside its number. */
   figure: {
+    /** Explore tab, Most gratitude leaderboard: the figure at the end of each row, that person's gratitude this week; the <hidden> words are for screen readers only */
+    gratitude: {
+      en: "{{amount}}<hidden> gratitude</hidden>",
+      ja: "<hidden>感謝</hidden>{{amount}}",
+    },
     /** Explore tab, Longest streak leaderboard: the figure at the end of a row whose streak is one day, the unit set small */
     streak_one: { en: "{{count}}<small>day</small>" },
     /** Explore tab, Longest streak leaderboard: the figure at the end of each row, that person's streak in days, the unit set small */
     streak_other: { en: "{{count}}<small>days</small>", ja: "{{count}}<small>日</small>" },
+    /** Explore tab, Longest streak leaderboard: what screen readers say in place of the figure when the streak is one day */
+    streakSpoken_one: { en: "{{count}} day" },
+    /** Explore tab, Longest streak leaderboard: what screen readers say in place of the figure, that person's streak in days */
+    streakSpoken_other: { en: "{{count}} days", ja: "{{count}}日" },
   },
   failed: {
     /** Explore tab, when it fails to load: the heading of the error, over the reason and a Try again button */

@@ -264,8 +264,14 @@
   font-weight: 700;
 }
 
-li.me .rank {
+/* Graphite is too pale on Pink Soft, so what's small on your row is Ink, as its rank is. */
+.leaderboard li.me .rank,
+.leaderboard li.me .row-names span,
+.leaderboard li.me .figure small {
   color: var(--ink);
+}
+
+.leaderboard li.me .rank {
   font-weight: 800;
 }
 

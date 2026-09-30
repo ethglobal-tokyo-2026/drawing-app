@@ -3,7 +3,7 @@ import type { ActivityEntry, Explore, Person } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { people, sticker } from "../api/testFixtures";
-import { emptyApi, renderWithApi } from "../api/testing";
+import { emptyApi, renderWithApi, TEST_OWNER } from "../api/testing";
 import { i18next } from "../i18n/i18n";
 import { ExploreScreen } from "./ExploreScreen";
 
@@ -14,11 +14,17 @@ const minutesAgo = (minutes: number) => new Date(NOW - minutes * MINUTE).toISOSt
 
 const exploreWith = (
   activity: ActivityEntry[],
-  longestStreak: Explore["leaderboards"]["longestStreak"] = [],
+  boards: Partial<Explore["leaderboards"]> = {},
 ): Explore => ({
   todaysStickers: [],
   activity,
-  leaderboards: { weekStart: minutesAgo(0), mostGratitude: [], bestCombo: [], longestStreak },
+  leaderboards: {
+    weekStart: minutesAgo(0),
+    mostGratitude: [],
+    bestCombo: [],
+    longestStreak: [],
+    ...boards,
+  },
 });
 
 let view: ReturnType<typeof renderWithApi> | undefined;
@@ -176,13 +182,12 @@ describe("ExploreScreen's This week", () => {
       window.matchMedia = matchMedia;
     });
     const host = await openExplore(
-      exploreWith(
-        [],
-        [
+      exploreWith([], {
+        longestStreak: [
           { person: people.mika, value: 3 },
           { person: people.ken, value: 1 },
         ],
-      ),
+      }),
     );
     act(() => tab(host, "This week").click());
     act(() => tab(host, "Longest streak").click());
@@ -199,6 +204,29 @@ describe("ExploreScreen's This week", () => {
     expect(host.querySelector(".results-count")?.textContent).toBe("2 artists");
     await searchFor(host, "bo");
     expect(host.querySelector(".results-count")?.textContent).toBe("1 artist");
+  });
+
+  it("names a row from what it shows, and says where it goes as its description", async () => {
+    const host = await openExplore(
+      exploreWith([], {
+        mostGratitude: [
+          { person: people.mika, value: 1234 },
+          { person: TEST_OWNER, value: 12 },
+        ],
+      }),
+    );
+    act(() => tab(host, "This week").click());
+    const [theirs, yours] = [...host.querySelectorAll<HTMLButtonElement>(".leaderboard button")];
+    const descriptionOf = (row: HTMLElement) =>
+      document.getElementById(row.getAttribute("aria-describedby") ?? "")?.textContent;
+
+    expect(theirs?.hasAttribute("aria-label")).toBe(false);
+    expect(theirs?.textContent).toContain("@mika");
+    expect(theirs?.textContent).toContain("1,234 gratitude");
+    expect(descriptionOf(theirs)).toBe("@mika's sticker board");
+    expect(yours?.hasAttribute("aria-label")).toBe(false);
+    expect(yours?.textContent).toContain("You");
+    expect(descriptionOf(yours)).toBe("Your sticker board");
   });
 
   it("moves between the views with the arrow keys", async () => {

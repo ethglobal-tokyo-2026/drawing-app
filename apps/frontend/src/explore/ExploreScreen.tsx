@@ -3,6 +3,7 @@ import type { TFunction } from "i18next";
 import {
   useEffect,
   useEffectEvent,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -62,31 +63,6 @@ const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 /** Opens someone's sticker board: yours, or theirs. */
 type Open = (person: Person) => void;
 
-/** A tappable area that opens someone's sticker board; `data-press` gives it the shared press. */
-function Pressable({
-  onClick,
-  className,
-  label,
-  children,
-}: {
-  onClick: () => void;
-  className: string;
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      className={`pressable ${className}`}
-      aria-label={label}
-      data-press
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  );
-}
-
 const boardLabel = (person: Person, meId: string, t: TFunction) =>
   person.id === meId
     ? t(($) => $.explore.stickerBoard.yours)
@@ -118,14 +94,19 @@ function PersonRow({
   open: Open;
 }) {
   const { t } = useTranslation();
+  const boardId = useId();
   const isMe = person.id === meId;
   const handle = formatHandle(person.handle ?? "");
   return (
     <li className={isMe ? "me" : ""}>
-      <Pressable
-        className="artist-row"
+      {/* The row's own text names it, so voice control can say what it sees. Where it goes is its
+          description, kept outside the button so it stays out of the name. */}
+      <button
+        type="button"
+        className="pressable artist-row"
+        aria-describedby={boardId}
+        data-press
         onClick={() => open(person)}
-        label={boardLabel(person, meId, t)}
       >
         {lead}
         <span className="row-names">
@@ -133,27 +114,42 @@ function PersonRow({
           <span>{isMe ? t(($) => $.explore.you) : toPerson(person).name}</span>
         </span>
         {trail}
-      </Pressable>
+      </button>
+      <span id={boardId} hidden>
+        {boardLabel(person, meId, t)}
+      </span>
     </li>
   );
 }
 
 function Figure({ board, value }: { board: Leaderboard; value: number }) {
+  const { t } = useTranslation();
   if (board === "bestCombo") return <HitCounter hits={value} size={23} className="figure" />;
   if (board === "longestStreak")
     return (
       <span className="figure figure--streak">
         <StreakIcon size={17} />
-        <span>
+        <span aria-hidden="true">
           <Trans
             i18nKey={($) => $.explore.figure.streak}
             count={value}
             components={{ small: <small /> }}
           />
         </span>
+        <span className="visually-hidden">
+          {t(($) => $.explore.figure.streakSpoken, { count: value })}
+        </span>
       </span>
     );
-  return <span className="figure">{formatCount(value)}</span>;
+  return (
+    <span className="figure">
+      <Trans
+        i18nKey={($) => $.explore.figure.gratitude}
+        values={{ amount: formatCount(value) }}
+        components={{ hidden: <span className="visually-hidden" /> }}
+      />
+    </span>
+  );
 }
 
 /**
