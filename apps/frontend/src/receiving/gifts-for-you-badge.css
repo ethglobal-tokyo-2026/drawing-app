@@ -38,19 +38,12 @@
   box-shadow: inset 0 0 0 1.5px var(--ink);
 }
 
-/* The newest gift holds an NSFW sticker. */
+/* The newest gift holds an NSFW sticker. Its pink mark sits on the pink seal, so an Ink ring parts them. */
 .gifts-for-you-badge__nsfw {
   position: absolute;
   bottom: -5px;
   left: -6px;
-  padding: 2px 4px;
-  border-radius: 999px;
-  color: var(--canvas);
-  background: var(--pink-deep);
   box-shadow: inset 0 0 0 1.5px var(--ink);
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 1;
 }
 
 /* How many are waiting, as a dot badge at the house tilt. */

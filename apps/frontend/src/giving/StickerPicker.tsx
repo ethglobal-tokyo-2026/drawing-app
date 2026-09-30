@@ -3,6 +3,7 @@ import { useTranslation } from "../i18n/react";
 import { formatNo } from "../stickers/format";
 import type { KeptSticker } from "../stickers/useKeptStickers";
 import "../stickers/nsfw-img.css";
+import "../stickers/nsfw-mark.css";
 import "./give-sheet.css";
 
 interface Props {
@@ -58,7 +59,7 @@ export function StickerPicker({
             />
             <span className="fine">{formatNo(s.no)}</span>
             {off && (
-              <span className="pick-mark" aria-hidden>
+              <span className="nsfw-mark pick-mark" aria-hidden>
                 {t(($) => $.stickers.nsfw.mark)}
               </span>
             )}

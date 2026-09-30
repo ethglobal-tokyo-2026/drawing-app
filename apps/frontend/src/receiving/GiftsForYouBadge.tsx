@@ -3,6 +3,7 @@ import { toPerson, toSticker } from "../api/views";
 import { Trans, useTranslation } from "../i18n/react";
 import { GiveIcon } from "../icons";
 import { formatHandle } from "../stickers/format";
+import "../stickers/nsfw-mark.css";
 import "./gifts-for-you-badge.css";
 
 export type GiftForYou = GiftsForYou["gifts"][number];
@@ -41,7 +42,9 @@ export function GiftsForYouBadge({ gifts, onOpen, nudging = false }: Props) {
         <GiveIcon weight="fill" size={24} />
         {count > 1 && <span className="gifts-for-you-badge__count">{count}</span>}
         {nsfw && (
-          <span className="gifts-for-you-badge__nsfw">{t(($) => $.stickers.nsfw.mark)}</span>
+          <span className="nsfw-mark gifts-for-you-badge__nsfw">
+            {t(($) => $.stickers.nsfw.mark)}
+          </span>
         )}
       </span>
       <span className="gifts-for-you-badge__text" aria-hidden="true">
