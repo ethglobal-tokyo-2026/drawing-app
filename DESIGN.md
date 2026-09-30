@@ -612,7 +612,7 @@ A combo's length, shown the way fighting games show it: "64 HITS" (`UI.hits`).
 
 - **The look:** Figure numerals leaning 11°, HITS after them in small caps, and three pink speed lines trailing off the number's left side as if it had just slammed in.
 - **The pink stays off the digits,** so a count never reads as struck out.
-- **Where:** the Best combo figure on Explore's leaderboard (23px) and in the cork back's Bests (20px).
+- **Where:** the Best combo figure on Explore's leaderboard (23px) and in the cork back's Bests (20px); in the Mini-game, beside the multiplier from the second hit (20px), and on its receipt.
 - **Nothing like the multiplier:** no ×, no tag and no puffy face.
 
 ### Selection handles
@@ -675,7 +675,7 @@ A sticker's detail shows where it has been, one quiet row per hand-off, newest f
 The trail's open row plays its gratitude combo back inside the card, never in a modal.
 
 - **Replay:** the pill turns to Stop (Phosphor's stop), and a stage eases open inside the card, between the amount and the artist's share (200ms, height and opacity): the card's inner width by 300px, on the Mini-game's Liner with a hairline edge. The amount and the heart dot stay above it as the card's header. The replay loads on the press; until it arrives the stage is plain Liner.
-- **What plays:** the combo as it was recorded, through the Mini-game's own rules and effects at the stage's scale: the drain bar and amount along the stage's top, the multiplier, the tiers, pop-in words and mini hearts. Every tap plays where and when it landed; a shake plays from its unlock; a stroke plays its recorded passes. The same combo draws the same words every time.
+- **What plays:** the combo as it was recorded, through the Mini-game's rules as they were when it was played and its effects, at the stage's scale: the drain bar and amount along the stage's top, the multiplier, the tiers, pop-in words and mini hearts. Every tap plays where and when it landed; a shake plays from its unlock; a stroke plays its recorded passes. The same combo draws the same words every time.
 - **Length:** a combo of up to 4s plays in real time; a longer one plays sped up to take 4s, at most twice as fast.
 - **The landing:** no receipt. The heart shrinks into the card's pink heart dot, the 27px amount pulses once, and after a 600ms beat the stage eases shut, with the landed heart and total still in it, and the pill reads Replay again.
 - **The amount is the record's:** the card always shows the stored total, and a replay that counts differently ends its bar on it.
@@ -689,11 +689,11 @@ The trail's open row plays its gratitude combo back inside the card, never in a 
 
 One experience for everyone, on plain Liner, once per hand-off.
 
-- **The combo:** the first tap starts a timer game. A drain bar appears full and runs down; each tap adds less time than the last. The amount counts up in Figure type beside a puffy multiplier sticker (×1 to ×8) driven by tap speed. Nothing sits on or over the heart, and the heart holds its spot.
-- **Tiers:** reached by the amount (ありがと, 照れ, ドキドキ, オーバーヒート, 昇天). Each new tier slams its name in outlined 袋文字, and pop-in words from a per-tier bank appear and go. The ground escalates from calm Liner to a blush, focus lines, heat haze and a white-out.
+- **The combo:** the first tap starts a timer game. A drain bar appears full and runs down; each tap adds less time than the last. The amount counts up in Figure type beside a puffy multiplier sticker (×1 to ×8) driven by tap speed, and from the second hit the hit counter beside it. Nothing sits on or over the heart, and the heart holds its spot. The X ends a combo in play and shows its receipt; before the first tap it closes.
+- **Tiers:** reached by the amount (ありがと, 照れ, ドキドキ, オーバーヒート, 昇天). Each new tier slams its name in outlined 袋文字, and pop-in words from a per-tier bank appear and go, never on the heart, another word or a slam; a slam hurries the words in its band away. The ground escalates from calm Liner to a blush, focus lines, heat haze and a white-out.
 - **Mini hearts:** from ドキドキ up, taps spray small pink hearts that bounce, collide and pile along the bottom before fading. A tap shoves nearby hearts away, harder the closer they are. The heart sweats hearts: a slow drip at ドキドキ, a real sweat at オーバーヒート, heavier at 昇天, all landing in the same pile with 昇天's rain.
 - **Discovery:** stroking the heart stretches it along the drag, and after three tries a tip says what to do. After the one motion opt-in, it sways with the wrist, and shaking hard says "Keep shaking!".
-- **After:** the receipt shows the amount, the best multiplier and the combo's length. The sticker's trail replays the combo inside its card (Gratitude replay).
+- **After:** the receipt shows the amount, the best multiplier and the combo's length as the hit counter. Its title and a note say what became of the send: sent, still sending, saved on this phone to go when it can, or refused and why. The sticker's trail replays the combo inside its card (Gratitude replay).
 
 ### Loading
 
