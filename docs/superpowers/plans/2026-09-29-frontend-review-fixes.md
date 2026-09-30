@@ -39,5 +39,5 @@ Wave 3, once the lanes above are merged, since these touch every area:
 
 - [ ] Shared helpers: CLEAN-3, CLEAN-11, CLEAN-14, CLEAN-20, CLEAN-22
 - [ ] One device store, and a query cache: CLEAN-17, CLEAN-21
-- [ ] One ticket card shell: CLEAN-4, CLEAN-6
+- [x] One ticket card shell: CLEAN-4, CLEAN-6
 - [ ] Split trayEngine.ts: CLEAN-19
