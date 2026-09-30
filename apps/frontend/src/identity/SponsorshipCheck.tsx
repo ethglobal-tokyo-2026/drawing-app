@@ -7,7 +7,7 @@ import { useTranslation } from "../i18n/react";
 import { QuietLink } from "../ui/QuietLink";
 import { etherscanTxUrl } from "./explorers";
 import { checkSponsorship, type SponsorshipResult } from "./sponsorship";
-import { SPONSORSHIP_CHECK_TARGET_ID } from "./sponsorship-target";
+import { useSponsorshipTarget } from "./sponsorship-target";
 
 const publicClient = createPublicClient({ chain: sepolia, transport: http() });
 
@@ -22,9 +22,8 @@ export function SponsorshipCheck() {
   const { t } = useTranslation();
   const { client, getClientForChain } = useSmartWallets();
   const [check, setCheck] = useState<CheckState>({ state: "ready" });
-
-  // PrivySession is lazy, so the board and this developer-only target are already mounted.
-  const target = document.getElementById(SPONSORSHIP_CHECK_TARGET_ID);
+  // PrivyAccount mounts its place only while Privy is signed in, and again after each re-sync.
+  const target = useSponsorshipTarget();
   if (!target) return null;
 
   const run = async () => {

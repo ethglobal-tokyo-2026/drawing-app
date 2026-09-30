@@ -2,7 +2,7 @@ import { useTranslation } from "../i18n/react";
 import { AccountRow } from "./AccountRow";
 import { etherscanAddressUrl, suiscanAccountUrl } from "./explorers";
 import { usePrivyStatus } from "./privy";
-import { SPONSORSHIP_CHECK_TARGET_ID } from "./sponsorship-target";
+import { setSponsorshipTarget } from "./sponsorship-target";
 import { useSuiWalletFailure } from "./suiWallet";
 
 interface Explorer {
@@ -50,7 +50,7 @@ export function PrivyAccount() {
           )
         )}
       </dl>
-      <div id={SPONSORSHIP_CHECK_TARGET_ID} />
+      <div ref={setSponsorshipTarget} />
     </>
   );
 }
