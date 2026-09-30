@@ -77,6 +77,17 @@ describe("trading LINE's ID token for a Privy JWT", () => {
     expect(reconnectLine).not.toHaveBeenCalled();
   });
 
+  it("stays signed in while a lapsed JWT is renewed in the background", async () => {
+    lineToken(3600);
+    // Kept, but within the expiry margin, so the next ask goes to the auth server.
+    vi.stubGlobal("fetch", server(200, { jwt: "privy.jwt", expiresAt: nowS() + 30 }));
+    await fetchPrivyJwt();
+    setPrivyStatus({ state: "signed-in", userId: "did:privy:1" });
+    const renewed = fetchPrivyJwt();
+    expect(privyStatus()).toEqual({ state: "signed-in", userId: "did:privy:1" });
+    expect(await renewed).toBe("privy.jwt");
+  });
+
   // Privy logs the person out when this throws, so failures resolve and say why.
   it("resolves to nothing when the auth server refuses, and keeps its reason", async () => {
     lineToken(3600);

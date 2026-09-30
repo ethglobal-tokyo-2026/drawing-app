@@ -124,7 +124,8 @@ export async function fetchPrivyJwt(): Promise<string | undefined> {
   if (expiresAt - EXPIRY_MARGIN_S <= Date.now() / 1000) {
     return fail("LINE’s ID token has expired; try again to reconnect LINE", true);
   }
-  setPrivyStatus({ state: "signing-in" });
+  // Privy renews a lapsed JWT in the background, and the person stays signed in unless that fails.
+  if (status.state !== "signed-in") setPrivyStatus({ state: "signing-in" });
   try {
     const response = await fetch("/v1/auth/privy-jwt", {
       method: "POST",
