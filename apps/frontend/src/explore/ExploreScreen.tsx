@@ -467,7 +467,7 @@ function Failed({ title, query }: { title: string; query: Query<unknown> }) {
   return (
     <section className="explore-section" role="alert">
       <h2>{title}</h2>
-      <p className="fine muted">{errorReason(query.error)}</p>
+      <p className="failed-reason">{errorReason(query.error)}</p>
       <LabelButton size="sm" onClick={query.retry}>
         {t(($) => $.explore.failed.tryAgain)}
       </LabelButton>

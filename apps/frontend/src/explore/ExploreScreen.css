@@ -68,23 +68,10 @@
   gap: 12px;
 }
 
-.section-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.section-head h2 {
-  margin: 0;
-  font-size: 19px;
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -0.012em;
-  font-stretch: var(--w-title);
-}
-
-.section-head .fine {
-  margin-left: auto;
+/* Why it failed is a sentence to read: a supporting note in its own case, not fine print. */
+.failed-reason {
+  color: var(--graphite);
+  font-size: 13px;
 }
 
 /* ---------- Sliding tabs: the view switch and the leaderboards ---------- */
@@ -219,7 +206,7 @@
   box-shadow: var(--shadow-label);
 }
 
-/* Rows, today's stickers and feed heads press 1px like a tile and open that artist's board. */
+/* Leaderboard and search rows press 1px like a tile and open that artist's board. */
 .pressable {
   padding: 0;
   border: none;
@@ -272,12 +259,6 @@
 
 .leaderboard li.me .rank {
   font-weight: 800;
-}
-
-.row-art {
-  flex: none;
-  width: 44px;
-  height: 44px;
 }
 
 /* Its width sizes a long handle. */
@@ -337,21 +318,6 @@
   font-size: 12px;
   font-weight: 700;
   font-stretch: var(--w-ui);
-}
-
-/* Ranks skipped between the top five and yours. */
-.rank-gap {
-  display: grid;
-  place-items: center;
-  height: 22px;
-  border-top: 1px solid var(--rule);
-  color: var(--graphite);
-  font-size: 11px;
-  letter-spacing: 0.3em;
-}
-
-.rank-gap::before {
-  content: "•••";
 }
 
 /* ---------- Search ---------- */
