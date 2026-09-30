@@ -12,7 +12,6 @@ Nine read-only lanes each took an area, and every finding was checked against th
 
 What's left, and what each waits for:
 
-- **API-1** · cleanup: one home for the response shapes, and the two unseen counts beside what clears them.
 - **DB-1** · cleanup: `ticket_purchases.verified_at` is never null. Waits for the owner's answer to the frontend review's TIX-3.
 - **DOMAIN-1** · low: Explore's recent artists come from an index scan. Once Explore gets slow.
 - **CHAIN-3**, **CHAIN-4** · cleanup: unused escrow and resolver code. At the next contract redeploy.
@@ -28,12 +27,7 @@ What's left, and what each waits for:
 
 ## REST API routes and app shell
 
-**API-1** · cleanup · open · `apps/api/src/views.ts:226`  
-Response shapes built from tables, and the functions that turn rows into them, are split between `shapes.ts` (Person, Me, Tickets, User Stats) and `views.ts` (Sticker, placements, Gift, Gratitude) by no rule, and each file's comment sends the reader to the other (`shapes.ts:168`, `views.ts:26-27`). `views.ts` also holds two count queries that aren't views: `newStickerCount` and `unseenGratitudeCount` (`views.ts:226`, `:243`), used by `meOf` in `routes/session.ts` and by `routes/stickerBoards.ts:60`.
-
-- Cost: whoever adds a shape has to guess its file, and callers import from both.
-- Fix: merge the two into one module, or split them by entity, and move the two counts next to `meOf`.
-
+- **API-1** · cleanup · fixed `5ca0d198` · Response shapes and the functions that build them from rows were split between `shapes.ts` and `views.ts` by no rule; `views.ts` is merged into `shapes.ts`, `newStickerCount` moved beside `markStickersSeen` in `stickerBoards/board.ts`, and `unseenGratitudeCount` beside `markGratitudeWatched` in `gratitude/feed.ts`.
 - **API-2** · high · fixed `9f7e4725` · Only Sealing and Gratitude capped their request bodies, so one anonymous oversized POST /api/session could exhaust the API's memory; `createApp` now refuses any body over `MAX_BODY_BYTES` before it's read, and Sealing keeps its own larger limit.
 - **API-3** · high · fixed `9c972cd9` · A double tap on Draw, or Try again after a lost 201, spent a second ticket, and the comment saying the unique day index stopped that was false; POST /api/tickets/spend now takes an idempotency key and answers a repeated key with the ticket use it already spent (`9f541d12` keeps the key on the device across reloads).
 - **API-4** · high · fixed `2da41d2c` · Each anonymous GET /api/logs started a journalctl that streamed both units' whole journal, with no limit on how many ran at once (the services lane reported it too); it now serves the newest `SERVER_LOG_LINES` lines (`?lines=` up to `MAX_SERVER_LOG_LINES`), runs one journalctl at a time (503 `server_log_busy`) and stops one that stalls.
