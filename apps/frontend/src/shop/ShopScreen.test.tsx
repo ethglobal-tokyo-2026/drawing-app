@@ -44,7 +44,7 @@ function Purchase() {
         tickets && set({ ...tickets, reserveLeft: tickets.reserveLeft + PACK.tickets })
       }
     >
-      Purchase
+      Buy the pack
     </button>
   );
 }
@@ -91,7 +91,7 @@ describe("ShopScreen", () => {
     expect(getTicketPayments).toHaveBeenCalledWith(SUI_WALLET, SHOP.payment, null);
     expect(rows()).toEqual([expect.stringContaining(`${PACK.tickets} tickets`)]);
 
-    click("Purchase");
+    click("Buy the pack");
     expect(rows()).toEqual([]);
     click("you.croquis.eth");
     await settle();
