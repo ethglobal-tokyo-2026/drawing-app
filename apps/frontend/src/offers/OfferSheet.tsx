@@ -2,7 +2,7 @@ import { canGiveTo } from "../stickers/nsfw";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { PersonView } from "../api/views";
 import { formatCount } from "../i18n/format";
-import { useTranslation } from "../i18n/react";
+import { Trans, useTranslation } from "../i18n/react";
 import { handleOf, type BoardStickerView } from "../sticker-board/boardSticker";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
@@ -22,6 +22,7 @@ import { Sheet } from "../ui/Sheet";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { Duration } from "../stickers/Duration";
+import { Handle } from "../stickers/Handle";
 import { formatDay, formatNo } from "../stickers/format";
 import { useKeptStickers } from "../stickers/useKeptStickers";
 import "../giving/give-sheet.css";
@@ -108,10 +109,13 @@ export function OfferSheet({ sticker, holder, onClose }: Props) {
                   {" · "}
                   {formatDay(sticker.createdAt)}
                   <br />
-                  {t(($) => $.offers.credit, {
-                    artist: handleOf(sticker.artist),
-                    holder: printedHolder,
-                  })}
+                  <Trans
+                    i18nKey={($) => $.offers.credit}
+                    components={{
+                      artist: <Handle name={handleOf(sticker.artist)} />,
+                      holder: <Handle name={printedHolder} />,
+                    }}
+                  />
                 </p>
               </div>
 

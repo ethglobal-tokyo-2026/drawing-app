@@ -5,8 +5,8 @@ export const offers = {
   title: { en: "Offer for {{no}}", ja: "{{no}}へのオファー" },
   /** Offer sheet: screen-reader label of the X button in the sheet's header, which closes it */
   close: { en: "Close", ja: "閉じる" },
-  /** Offer sheet: fine print beside the sticker, under its No., drawing time and day; {{artist}} is the Original Artist, {{holder}} the owner of the board it's on, each an @handle or LINE name */
-  credit: { en: "By {{artist}} · {{holder}} holds it", ja: "作者：{{artist}}・持ち主：{{holder}}" },
+  /** Offer sheet: fine print beside the sticker, under its No., drawing time and day; <artist/> is the Original Artist, <holder/> the owner of the board it's on, each an @handle or LINE name, which keeps its own case in the capitals */
+  credit: { en: "By <artist/> · <holder/> holds it", ja: "作者：<artist/>・持ち主：<holder/>" },
   kinds: {
     /** Offer sheet: screen-reader name of the three offer choices (ask, swap, Gratitude) */
     label: { en: "What to offer", ja: "オファーの内容" },
