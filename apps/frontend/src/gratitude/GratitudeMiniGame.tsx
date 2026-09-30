@@ -381,7 +381,11 @@ export function GratitudeMiniGame({
       </div>
       <p className="gr-sr" ref={live} aria-live="polite" />
       {ended && (
-        <section ref={receipt} className="gr-receipt is-on" aria-label={receiptLabel}>
+        <section
+          ref={receipt}
+          className={note ? "gr-receipt is-on has-note" : "gr-receipt is-on"}
+          aria-label={receiptLabel}
+        >
           <div className="gr-rc-row">
             <div className="gr-rc-photo">
               <PhotoSticker src={giver.pictureUrl} name={giver.displayName} size={58} />

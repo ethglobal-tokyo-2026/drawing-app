@@ -1094,6 +1094,10 @@
   opacity: 1;
   animation: gr-receipt-in 380ms var(--ease-peel);
 }
+/* Its note makes it taller: it rises a little, so its key stays on the shortest phone. */
+.gr-receipt.has-note {
+  top: calc(var(--rc-top, 300px) - 48px);
+}
 @keyframes gr-receipt-in {
   from {
     transform: scale(1.06) translateY(-6px);
