@@ -408,6 +408,8 @@ describe("ReserveTicketCheckout", () => {
     await render(checkout(), emptyApi({ ticketShop: () => Promise.resolve(SHOP) }));
     await settle(500);
     expect(getTicketPayments).not.toHaveBeenCalled();
+    // The button says what it opens, not only whose name it carries.
+    expect(buttonNamed("you.croquis.eth")?.textContent).toContain("Purchases");
     click("you.croquis.eth");
     await settle(500);
     expect(getTicketPayments).toHaveBeenCalledWith(SUI_WALLET, SHOP.payment, null);
@@ -420,6 +422,9 @@ describe("ReserveTicketCheckout", () => {
       expect.stringContaining("1 ticket"),
     ]);
     expect(rows[1]?.href).toContain(OLDER);
+    // A row is named by what it shows, with where it goes after it, never by its transaction ID.
+    expect(rows.some((a) => a.hasAttribute("aria-label"))).toBe(false);
+    expect(rows[0]?.textContent).toMatch(/3 tickets.*¥270.*Opens Suiscan/);
     expect(buttonNamed("Older purchases")).toBeUndefined();
   });
 

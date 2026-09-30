@@ -271,8 +271,8 @@ export const tickets = {
   },
   /** Shop, under the reserve tickets, and reserve ticket checkout, under the Pay key: your ENS name, which opens your ticket purchases read from Sui */
   purchases: {
-    /** Shop and reserve ticket checkout: screen-reader name of the ENS name button; `name` is your ENS name or short Sui address */
-    show: { en: "Ticket purchases by {{name}}", ja: "{{name}}のチケット購入履歴" },
+    /** Shop and reserve ticket checkout: the button that opens your ticket purchases, before your ENS name or short Sui address */
+    label: { en: "Purchases", ja: "購入履歴" },
     /** Shop and reserve ticket checkout, purchases list: screen-reader status while Sui is read */
     reading: {
       en: "Reading your ticket purchases from Sui…",
@@ -287,10 +287,7 @@ export const tickets = {
     none: { en: "No ticket purchases yet.", ja: "チケットの購入履歴はまだありません。" },
     /** Shop and reserve ticket checkout, purchases list: the link under the list that reads the next, older page */
     more: { en: "Older purchases", ja: "以前の購入" },
-    /** Shop and reserve ticket checkout, purchases list: screen-reader name of a row, which opens it on Suiscan; `digest` is the transaction's ID */
-    open: {
-      en: "Open the payment {{digest}} on Suiscan",
-      ja: "支払い{{digest}}をSuiscanで開く",
-    },
+    /** Shop and reserve ticket checkout, purchases list: read by screen readers only, after what a row shows (the pack, when and its price): where the row goes */
+    opensSuiscan: { en: "Opens Suiscan", ja: "Suiscanでひらく" },
   },
 } as const satisfies Section;
