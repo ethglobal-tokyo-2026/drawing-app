@@ -63,8 +63,8 @@ interface Props {
 /** Motion timings, in step with GiftBag.css: normal, then reduced. */
 const PICKER_DELAY = [1150, 300] as const;
 const TAKE_OUT = [380, 150] as const;
-/** The bag shows open for a beat before it seals. */
-const SEAL_AFTER = [280, 0] as const;
+/** The bag shows open for a beat before it closes. */
+const CLOSE_AFTER = [280, 0] as const;
 
 type Screen = "sheet" | "bag" | "sent";
 
@@ -74,7 +74,7 @@ const screenOf = (state: GiveFlowState): Screen =>
 /** What the sheet shows: a screen, or "Can’t find them?" in the give sheet's place. */
 type View = Screen | "cantFind";
 
-/** Giving a sticker through a LINE chat: the give sheet, the gift bag, and the seal on send. */
+/** Giving a sticker through a LINE chat: the give sheet, the gift bag, and its closing on send. */
 export function Giving({
   sticker,
   fromHandle,
@@ -98,7 +98,7 @@ export function Giving({
       userId,
       fromHandle,
       liffId,
-      // The sealed bag, never the sticker; the gift message drops it where the app isn't on HTTPS.
+      // The closed bag, never the sticker; the gift message drops it where the app isn't on HTTPS.
       heroUrl: new URL(sticker.nsfw ? nsfwHeroImage : heroImage, location.origin).href,
       ...(forUserId && { forUserId }),
     }),
@@ -158,21 +158,21 @@ export function Giving({
     body.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus();
   }, [view]);
 
-  const [sealed, setSealed] = useState(false);
+  const [closed, setClosed] = useState(false);
   useEffect(() => {
     if (screen !== "sent") return;
-    const timer = setTimeout(() => setSealed(true), SEAL_AFTER[motion]);
+    const timer = setTimeout(() => setClosed(true), CLOSE_AFTER[motion]);
     return () => clearTimeout(timer);
   }, [screen, motion]);
 
-  const bag = (bagState: "open" | "sealed", sealedAt?: number) => (
+  const bag = (bagState: "open" | "closed", closedAt?: number) => (
     <GiftBag
       stickerUrl={sticker.url}
       fromHandle={fromHandle}
       {...(toHandle && { toHandle })}
       state={bagState}
       motion={state.step === "packed" ? "drop" : state.step === "takingOut" ? "takeOut" : undefined}
-      sealedAt={sealedAt}
+      closedAt={closedAt}
       nsfw={sticker.nsfw}
     />
   );
@@ -232,7 +232,7 @@ export function Giving({
     content = (
       <div className="giving__sent">
         <div className="giving__scroll giving__sent-body">
-          {bag(sealed ? "sealed" : "open", state.sentAt)}
+          {bag(closed ? "closed" : "open", state.sentAt)}
           <h2 className="giving__title">{title}</h2>
           <p className="giving__sub keep-phrases">{lead}</p>
           {state.recordError && (

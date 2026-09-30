@@ -50,7 +50,7 @@ const previewed = (p = preview()): ReceiveEvent => ({ type: "previewed", preview
 const failed = (status: number, error: string, detail?: string) =>
   new ApiError(status, { error, ...(detail && { detail }) });
 
-const sealedPreview = {
+const closedPreview = {
   giver: toPerson(giver),
   sticker: toSticker(gifted),
   expiresAt: toMs(preview().expiresAt),
@@ -71,8 +71,8 @@ const REFUSED_BY_THE_SERVER = [
 ] as const;
 
 describe("opening a gift", () => {
-  it("shows the sealed bag for a gift that can be received, as screens draw it", () => {
-    expect(play(previewed())).toEqual({ step: "sealed", preview: sealedPreview });
+  it("shows the closed bag for a gift that can be received, as screens draw it", () => {
+    expect(play(previewed())).toEqual({ step: "closed", preview: closedPreview });
   });
 
   it("shows the refusal a preview gives, naming the giver", () => {
@@ -116,12 +116,12 @@ describe("receiving a gift", () => {
   const receiving = () => receiveFlow(unpackaged(), { type: "receive" });
 
   it("brings up Accept once the sticker is unpackaged", () => {
-    expect(unpackaged()).toEqual({ step: "unpackaged", preview: sealedPreview, receiving: false });
+    expect(unpackaged()).toEqual({ step: "unpackaged", preview: closedPreview, receiving: false });
   });
 
   it("waits on Accept's receive, and a second Accept meanwhile changes nothing", () => {
     const busy = receiving();
-    expect(busy).toEqual({ step: "unpackaged", preview: sealedPreview, receiving: true });
+    expect(busy).toEqual({ step: "unpackaged", preview: closedPreview, receiving: true });
     expect(receiveFlow(busy, { type: "receive" })).toBe(busy);
   });
 
@@ -146,13 +146,13 @@ describe("receiving a gift", () => {
     const again = receiveFlow(receiving(), { type: "receiveFailed", error });
     expect(again).toEqual({
       step: "unpackaged",
-      preview: sealedPreview,
+      preview: closedPreview,
       receiving: false,
       failed: problemOf(error),
     });
     expect(receiveFlow(again, { type: "receive" })).toEqual({
       step: "unpackaged",
-      preview: sealedPreview,
+      preview: closedPreview,
       receiving: true,
     });
   });

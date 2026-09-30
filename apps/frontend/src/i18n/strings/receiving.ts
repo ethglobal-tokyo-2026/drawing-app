@@ -5,11 +5,11 @@ export const receiving = {
   title: { en: "A gift from {{name}}", ja: "{{name}}さんからのギフト" },
   /** Receive gift dialog, while the gift loads, when loading it failed, or on a refusal that came without the giver: LINE's header and the dialog's name for assistive tech */
   title_unknownGiver: { en: "A gift", ja: "ギフト" },
-  /** The gift itself: the sealed bag and its pull tab, then the reveal and Accept. */
+  /** The gift itself: the closed bag and its pull tab, then the reveal and Accept. */
   gift: {
-    /** Receive gift dialog, from the sealed bag through Accept: the heading beside the giver's picture */
+    /** Receive gift dialog, from the closed bag through Accept: the heading beside the giver's picture */
     title: { en: "{{name}} sent you a sticker", ja: "{{name}}さんからシールが届きました" },
-    /** Receive gift dialog, sealed bag: the two-line hint under the bag, the pull tab first, then the other ways to open it; it fades as the sticker rises */
+    /** Receive gift dialog, closed bag: the two-line hint under the bag, the pull tab first, then the other ways to open it; it fades as the sticker rises */
     pullTabHint: {
       en: "<b>Pull the tab to open it</b><span>or double-tap, or press and hold</span>",
       ja: "<b>つまみを<wbr/>引いて<wbr/>ひらいてください</b><span>ダブルタップや<wbr/>長押しでも<wbr/>ひらけます</span>",

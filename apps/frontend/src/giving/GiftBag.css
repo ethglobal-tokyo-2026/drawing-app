@@ -1,5 +1,5 @@
 /* The gift bag: a frosted sleeve with no zipper. Packed, the sticker peeks out of the open mouth;
-   sealed (only once the send succeeded), it has settled in, the mouth is pressed shut, and a clear film
+   closed (only once the send succeeded), it has settled in, the mouth is pressed shut, and a clear film
    band with an aqua tear tape runs across it, the tape's loose end sticking out as the pull tab. An
    NSFW sticker's bag is pink: pink tape, pink frost and a faint bikini emboss.
    The parts share one sleeve box (--sx, --sy, --sw, --sh) inside the stage. --gift-tear (0 to 1)
@@ -115,8 +115,8 @@
   );
 }
 
-/* The mouth: a heat-seal seam when shut. Its open look (the dark inside between the back and front
-   edges) is a layer that fades, so sealing can press it shut. */
+/* The mouth: a heat-bonded seam when shut. Its open look (the dark inside between the back and front
+   edges) is a layer that fades, so closing can press it shut. */
 .gift-bag__mouth {
   height: 12px;
   border-radius: 5px 5px 0 0;
@@ -180,12 +180,12 @@
   transform: translateY(-320px) rotate(5deg);
 }
 
-/* Sealed on send: the sticker settles in, the mouth presses shut, then the seal goes on. */
-.gift-bag[data-state="sealed"] .gift-bag__sticker {
+/* Closed on send: the sticker settles in, the mouth presses shut, then the tear strip goes on. */
+.gift-bag[data-state="closed"] .gift-bag__sticker {
   transform: translateY(6px);
 }
 
-.gift-bag[data-state="sealed"] .gift-bag__mouth {
+.gift-bag[data-state="closed"] .gift-bag__mouth {
   animation: gift-bag-press-shut 300ms var(--ease-out) 300ms both;
 }
 
@@ -195,22 +195,22 @@
   }
 }
 
-.gift-seal {
+.gift-strip {
   transition:
     transform 360ms var(--ease-spring) 560ms,
     opacity 180ms var(--ease-out) 560ms;
 }
 
-.gift-bag[data-state="open"] .gift-seal {
+.gift-bag[data-state="open"] .gift-strip {
   opacity: 0;
   transform: translate(-40px, -16px) rotate(-5deg);
   transition: none;
 }
 
-/* The seal, built like a konbini wrapper's tear strip: a clear film band heat-sealed across the mouth,
-   an aqua tear tape through it printed with arrows and the date, and the tape's loose end sticking out
+/* The tear strip, built like a konbini wrapper's: a clear film band heat-bonded across the mouth, an
+   aqua tear tape through it printed with arrows and the date, and the tape's loose end sticking out
    past the bag's left edge as the pull tab. */
-.gift-seal {
+.gift-strip {
   --tape-h: 12px;
   --lobe-w: 49px;
   --lobe-h: 28px;
@@ -220,13 +220,13 @@
   border-radius: 0;
 }
 
-.gift-seal__clip {
+.gift-strip__clip {
   position: absolute;
   inset: 0;
   overflow: hidden;
 }
 
-.gift-seal__film {
+.gift-strip__film {
   position: absolute;
   inset: 0;
   background: linear-gradient(
@@ -243,7 +243,7 @@
 
 /* Where the tape has torn out, the film is split along its line onto the bag's pale inside wall, in
    the upper film's shadow, with the top edge of the sticker's paper sleeve standing inside. */
-.gift-seal__gap {
+.gift-strip__gap {
   --zigzag: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 16' preserveAspectRatio='none'%3E%3Cpath d='M0 1.4 1.5 0 3 1.2 4.5.3 6 1.4V14.6L4.5 16 3 14.8 1.5 15.7 0 14.6Z'/%3E%3C/svg%3E")
     0 0 / 6px 100% repeat-x;
   position: absolute;
@@ -258,7 +258,7 @@
   opacity: min(1, var(--gift-tear) * 40);
 }
 
-.gift-seal__gap::before {
+.gift-strip__gap::before {
   content: "";
   position: absolute;
   left: 0;
@@ -277,7 +277,7 @@
   mask: var(--zigzag);
 }
 
-.gift-seal__sleeve {
+.gift-strip__sleeve {
   position: absolute;
   left: 4%;
   right: 6%;
@@ -291,7 +291,7 @@
 }
 
 /* Warmed where the sticker's colors show through the paper. */
-.gift-seal__sleeve::after {
+.gift-strip__sleeve::after {
   content: "";
   position: absolute;
   inset: -6px;
@@ -302,7 +302,7 @@
 
 /* The tape slides out of the clip from the tab's side as it tears, while its print holds still, so
    the tape shortens behind the tab. */
-.gift-seal__tape {
+.gift-strip__tape {
   position: absolute;
   left: 0;
   right: 0;
@@ -316,7 +316,7 @@
 }
 
 /* Width 75 on purpose: the tape is too narrow for more. */
-.gift-seal__print {
+.gift-strip__print {
   position: absolute;
   left: 0;
   top: 0;
@@ -337,21 +337,21 @@
   transform: translateX(calc(var(--gift-tear) * var(--sw) * -1));
 }
 
-.gift-seal__print svg {
+.gift-strip__print svg {
   flex: none;
 }
 
-.gift-seal__print > span {
+.gift-strip__print > span {
   margin-right: 13px;
 }
 
-.gift-seal__print b {
+.gift-strip__print b {
   font-weight: 800;
 }
 
 /* The pull tab: a narrow neck leaves the film at the bag's edge and widens into a lobe, tipped up off
    the page, with grip ribs across its free end and PULL printed on it. */
-.gift-seal__tab {
+.gift-strip__tab {
   position: absolute;
   z-index: 2;
   right: calc(100% - 2px);
@@ -364,7 +364,7 @@
 }
 
 /* The tab as a slider the receiver pulls: a finger-sized target over the lobe. */
-.gift-seal__grip {
+.gift-strip__grip {
   position: absolute;
   z-index: 1;
   inset: -9px -4px -9px -10px;
@@ -378,21 +378,21 @@
   cursor: grab;
 }
 
-.gift-seal__grip:active {
+.gift-strip__grip:active {
   cursor: grabbing;
 }
 
-.gift-seal__grip:focus-visible {
+.gift-strip__grip:focus-visible {
   outline: none;
 }
 
-.gift-seal__grip:focus-visible ~ .gift-seal__lobe {
+.gift-strip__grip:focus-visible ~ .gift-strip__lobe {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
 
 /* The tape that has torn out hangs from the tab in a loop, longer the further it's pulled. */
-.gift-seal__loop {
+.gift-strip__loop {
   position: absolute;
   right: 3px;
   top: calc(50% + var(--tape-h) / 2 - 4px);
@@ -403,24 +403,24 @@
   opacity: clamp(0, (var(--gift-tear) - 0.16) * 12, 1);
 }
 
-.gift-seal__loop path {
+.gift-strip__loop path {
   fill: none;
   stroke-linecap: round;
   stroke-dasharray: 100px 200px;
   stroke-dashoffset: calc((1 - clamp(0, (var(--gift-tear) - 0.06) * 1.3, 1)) * 100px);
 }
 
-.gift-seal__loop-edge {
+.gift-strip__loop-edge {
   stroke: var(--tape-deep);
   stroke-width: 13;
 }
 
-.gift-seal__loop-body {
+.gift-strip__loop-body {
   stroke: var(--tape);
   stroke-width: 10.5;
 }
 
-.gift-seal__neck {
+.gift-strip__neck {
   position: absolute;
   right: 0;
   top: 50%;
@@ -433,7 +433,7 @@
     0 2px 3px -1px rgba(28, 24, 36, 0.3);
 }
 
-.gift-seal__lobe {
+.gift-strip__lobe {
   position: absolute;
   left: 0;
   top: 0;
@@ -464,7 +464,7 @@
     scale 160ms var(--ease-out);
 }
 
-.gift-seal__ribs {
+.gift-strip__ribs {
   flex: none;
   width: 11px;
   height: 13px;
@@ -643,7 +643,7 @@
   margin: 0;
 }
 
-.gift-bag--receive .gift-seal {
+.gift-bag--receive .gift-strip {
   --tape-h: 14px;
   --lobe-w: 52px;
   --lobe-h: 32px;
@@ -671,14 +671,14 @@
   transform: none;
 }
 
-/* The receiver's bag arrives sealed; it never presses shut on their screen. */
+/* The receiver's bag arrives closed; it never presses shut on their screen. */
 .gift-bag--receive .gift-bag__mouth {
   animation: none;
 }
 
 /* Torn: the tab snaps free and flies off, the split film falls away, and the mouth opens. Opened:
    open and empty. */
-.gift-bag[data-state="torn"] .gift-seal__tab {
+.gift-bag[data-state="torn"] .gift-strip__tab {
   opacity: 0;
   transform: translate(calc(var(--sw) + 80px), -120px) rotate(-40deg);
   transition:
@@ -686,7 +686,7 @@
     opacity 340ms var(--ease-out) 90ms;
 }
 
-.gift-bag[data-state="torn"] :is(.gift-seal__film, .gift-seal__gap) {
+.gift-bag[data-state="torn"] :is(.gift-strip__film, .gift-strip__gap) {
   opacity: 0;
   transition: opacity 200ms var(--ease-out) 140ms;
 }
@@ -696,7 +696,7 @@
 }
 
 /* Taken in the fingers, the lobe comes up off the page; held, the frost thins a little. */
-.gift-bag[data-grip] .gift-seal__lobe {
+.gift-bag[data-grip] .gift-strip__lobe {
   scale: 1.06;
   box-shadow:
     inset 0 -1.5px 0 rgba(28, 24, 36, 0.2),
@@ -709,11 +709,11 @@
 }
 
 /* The tear front advances in ticks; each shivers the strip a hair. */
-.gift-bag[data-shiver="a"] .gift-seal {
+.gift-bag[data-shiver="a"] .gift-strip {
   animation: gift-tick-a 80ms linear;
 }
 
-.gift-bag[data-shiver="b"] .gift-seal {
+.gift-bag[data-shiver="b"] .gift-strip {
   animation: gift-tick-b 80ms linear;
 }
 
@@ -733,19 +733,19 @@
    The parts the tear moves get their own keyframes on transform or opacity, which the compositor
    runs, where animating --gift-tear would restyle the whole bag every frame. Each is its part's
    rule at a tear of 0 and 0.16; the loop shows only past 0.16, so it has none. */
-.gift-bag.is-hinting :is(.gift-seal__tape, .gift-seal__tab) {
+.gift-bag.is-hinting :is(.gift-strip__tape, .gift-strip__tab) {
   animation: gift-hint-pull 2.8s var(--ease-peel) infinite;
 }
 
-.gift-bag.is-hinting .gift-seal__print {
+.gift-bag.is-hinting .gift-strip__print {
   animation: gift-hint-print 2.8s var(--ease-peel) infinite;
 }
 
-.gift-bag.is-hinting .gift-seal__lobe {
+.gift-bag.is-hinting .gift-strip__lobe {
   animation: gift-hint-lobe 2.8s var(--ease-peel) infinite;
 }
 
-.gift-bag.is-hinting .gift-seal__gap {
+.gift-bag.is-hinting .gift-strip__gap {
   animation: gift-hint-gap 2.8s var(--ease-peel) infinite;
 }
 
@@ -841,25 +841,31 @@
   }
 }
 
-/* Reduced motion: no drop, no press and no spring; the seal fades on. Pulled open, there's no loop
+/* Reduced motion: no drop, no press and no spring; the tear strip fades on. Pulled open, there's no loop
    and no hint, and the tab and the film fade rather than fly. */
 @media (prefers-reduced-motion: reduce) {
-  .gift-seal__loop {
+  .gift-strip__loop {
     display: none;
   }
 
   .gift-bag.is-hinting
-    :is(.gift-seal__gap, .gift-seal__tape, .gift-seal__print, .gift-seal__tab, .gift-seal__lobe),
+    :is(
+      .gift-strip__gap,
+      .gift-strip__tape,
+      .gift-strip__print,
+      .gift-strip__tab,
+      .gift-strip__lobe
+    ),
   .gift-bag__finger {
     animation: none;
   }
 
-  .gift-bag[data-state="torn"] .gift-seal__tab {
+  .gift-bag[data-state="torn"] .gift-strip__tab {
     transform: translateX(var(--sw));
     transition: opacity 150ms linear;
   }
 
-  .gift-bag[data-state="torn"] :is(.gift-seal__film, .gift-seal__gap) {
+  .gift-bag[data-state="torn"] :is(.gift-strip__film, .gift-strip__gap) {
     transition: opacity 150ms linear;
   }
 
@@ -875,15 +881,15 @@
     transform: translateY(-96px) rotate(-3deg);
   }
 
-  .gift-bag[data-state="sealed"] .gift-bag__mouth {
+  .gift-bag[data-state="closed"] .gift-bag__mouth {
     animation: none;
   }
 
-  .gift-seal {
+  .gift-strip {
     transition: opacity 200ms linear;
   }
 
-  .gift-bag[data-state="open"] .gift-seal {
+  .gift-bag[data-state="open"] .gift-strip {
     transform: none;
   }
 }

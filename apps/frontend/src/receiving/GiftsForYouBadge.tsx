@@ -18,7 +18,7 @@ interface Props {
 }
 
 /**
- * Gifts waiting for you: a sealed gift, never the sticker, so the pull tab still reveals it; an NSFW
+ * Gifts waiting for you: a closed gift, never the sticker, so the pull tab still reveals it; an NSFW
  * sticker's gift says 18+. It asks to be opened, where the badge for gifts on their way only reports.
  * With none waiting, nothing shows.
  */

@@ -136,7 +136,7 @@ describe("giving through a LINE chat", () => {
     expect(t.messages).toHaveLength(1);
   });
 
-  it("seals only once LINE reports the gift message sent", async () => {
+  it("closes the bag only once LINE reports the gift message sent", async () => {
     const t = setup();
     await openPicker(t);
     t.flow.takeOut();
@@ -456,7 +456,7 @@ describe("giving through a LINE chat", () => {
     },
   );
 
-  it("asks whether it went out when LINE's answer doesn't say, and seals once the giver says so", async () => {
+  it("asks whether it went out when LINE's answer doesn't say, and closes the bag once the giver says so", async () => {
     const t = setup();
     await openPicker(t);
     t.picker().resolve("unknown");

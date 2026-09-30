@@ -20,7 +20,7 @@ export interface GiftPreviewView {
  */
 export type ReceiveScreen =
   | { step: "opening" }
-  | { step: "sealed"; preview: GiftPreviewView }
+  | { step: "closed"; preview: GiftPreviewView }
   | { step: "unpackaged"; preview: GiftPreviewView; receiving: boolean; failed?: Problem }
   | { step: "received"; stickerId: string }
   | { step: "refused"; refusal: RefusalKind; giver: PersonView | null }
@@ -56,7 +56,7 @@ const isRefusal = (code: string): code is RefusalKind => Object.hasOwn(REFUSAL_K
 function opened({ giver, expiresAt, receivable, refusal, sticker }: GiftPreview): ReceiveScreen {
   if (receivable && sticker) {
     return {
-      step: "sealed",
+      step: "closed",
       preview: { giver: toPerson(giver), sticker: toSticker(sticker), expiresAt: toMs(expiresAt) },
     };
   }
@@ -84,7 +84,7 @@ export function receiveFlow(screen: ReceiveScreen, event: ReceiveEvent): Receive
     case "retry":
       return screen.step === "refused" || screen.step === "failed" ? { step: "opening" } : screen;
     case "unpackaged":
-      return screen.step === "sealed"
+      return screen.step === "closed"
         ? { step: "unpackaged", preview: screen.preview, receiving: false }
         : screen;
     case "receive":

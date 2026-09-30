@@ -108,7 +108,7 @@ afterEach(() => {
 });
 
 describe("Giving", () => {
-  it("packs the sticker, opens LINE's picker, and seals once it's sent", async () => {
+  it("packs the sticker, opens LINE's picker, and closes the bag once it's sent", async () => {
     open("s-sent");
     expect(title()).toBe("Give No.0147");
 
@@ -123,7 +123,7 @@ describe("Giving", () => {
     expect(title()).toBe("Closed and sent");
     expect(giftOf("s-sent")).toBe("sent");
     await wait(300);
-    expect(document.querySelector(".gift-bag")?.getAttribute("data-state")).toBe("sealed");
+    expect(document.querySelector(".gift-bag")?.getAttribute("data-state")).toBe("closed");
 
     tap("Back to My board");
     expect(onClose).toHaveBeenCalledWith(true);

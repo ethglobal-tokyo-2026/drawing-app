@@ -11,7 +11,7 @@ export interface EndScreen {
   /** The English words behind a failure, for a report. */
   detail?: string;
   /** The bag as a prop, or none; `nsfw` is an NSFW sticker's pink bag. */
-  bag: { state: "sealed" | "opened"; stamp?: GiftStamp; nsfw?: boolean } | null;
+  bag: { state: "closed" | "opened"; stamp?: GiftStamp; nsfw?: boolean } | null;
   /** Back to LINE; the sticker board; or Try again, with the way back to LINE under it. */
   action: "backToLine" | "board" | "tryAgain";
 }
@@ -32,7 +32,7 @@ export function refusalScreen(kind: RefusalKind, giver: PersonView | null): EndS
       return {
         title: t(($) => $.receiving.refusals.groupChat.title, giverOptions),
         line: t(($) => $.receiving.refusals.groupChat.line, giverOptions),
-        bag: { state: "sealed", stamp: "one-to-one" },
+        bag: { state: "closed", stamp: "one-to-one" },
         action: "backToLine",
       };
     case "already_received":
@@ -46,7 +46,7 @@ export function refusalScreen(kind: RefusalKind, giver: PersonView | null): EndS
       return {
         title: t(($) => $.receiving.refusals.ownGift.title),
         line: t(($) => $.receiving.refusals.ownGift.line),
-        bag: { state: "sealed" },
+        bag: { state: "closed" },
         action: "board",
       };
     case "taken_back":
@@ -68,7 +68,7 @@ export function refusalScreen(kind: RefusalKind, giver: PersonView | null): EndS
       return {
         title: t(($) => $.receiving.refusals.notDeposited.title),
         line: t(($) => $.receiving.refusals.notDeposited.line),
-        bag: { state: "sealed" },
+        bag: { state: "closed" },
         action: "tryAgain",
       };
     case "gift_not_found":
@@ -82,7 +82,7 @@ export function refusalScreen(kind: RefusalKind, giver: PersonView | null): EndS
       return {
         title: t(($) => $.receiving.refusals.adultsOnly.title),
         line: t(($) => $.receiving.refusals.adultsOnly.line, giverOptions),
-        bag: { state: "sealed", stamp: "adults-only", nsfw: true },
+        bag: { state: "closed", stamp: "adults-only", nsfw: true },
         action: "backToLine",
       };
     case "needs_server":

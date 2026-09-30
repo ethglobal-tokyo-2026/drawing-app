@@ -21,7 +21,7 @@ export interface GiftMessageInput {
   /** Seconds the sticker took to draw. */
   timeUsed: number;
   /**
-   * The sealed bag, the same image on every gift message, at a content-hashed URL because LINE
+   * The closed bag, the same image on every gift message, at a content-hashed URL because LINE
    * caches it for good. Gift messages may be forwarded, so the sticker itself is never on one.
    * LINE fetches only HTTPS images, so any other URL goes without.
    */

@@ -31,7 +31,7 @@ interface PackingWait {
 }
 
 /**
- * Giving through a LINE chat, from the give sheet to "Sealed and sent". `recordError` means
+ * Giving through a LINE chat, from the give sheet to "Closed and sent". `recordError` means
  * the step happened but the server couldn't record it; the gift may still read as packed.
  */
 export type GiveFlowState =

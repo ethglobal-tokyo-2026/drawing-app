@@ -27,29 +27,29 @@ export interface PullTab {
 }
 
 interface Props {
-  /** The sticker in the bag: packed, it peeks out of the mouth; sealed, the frost blurs it. */
+  /** The sticker in the bag: packed, it peeks out of the mouth; closed, the frost blurs it. */
   stickerUrl?: string;
   /** The giver's handle, printed on the tag when the recipient isn't known. Neither: no tag. */
   fromHandle?: string;
   /** The recipient chosen in the app, printed on the tag in place of the giver. */
   toHandle?: string;
   /**
-   * Open: the sticker peeks out of the mouth. Sealed: sent, pressed shut, with the seal on. Torn:
+   * Open: the sticker peeks out of the mouth. Closed: sent, pressed shut, with the tear strip on. Torn:
    * pulled open, the tab and the film leaving, the mouth open. Opened: open and empty.
    */
-  state: "open" | "sealed" | "torn" | "opened";
+  state: "open" | "closed" | "torn" | "opened";
   /** Drop: the sticker falls into the open bag. Take out: it lifts back out. */
   motion?: "drop" | "takeOut";
-  /** When it was sealed, printed on the tear tape. */
-  sealedAt?: number;
+  /** When it was closed, printed on the tear tape. */
+  closedAt?: number;
   /** Receive: the larger bag a gift is opened from, across its stage. */
   size?: "give" | "receive";
-  /** How far the tear tape has torn out, from 0 (sealed) to 1. */
+  /** How far the tear tape has torn out, from 0 (closed) to 1. */
   tear?: number;
   stamp?: GiftStamp;
   /** Makes the tab a slider the receiver pulls, outside the bag's picture. */
   pullTab?: PullTab;
-  /** An NSFW sticker's bag: pink, embossed, and sealed without a glimpse of the sticker. */
+  /** An NSFW sticker's bag: pink, embossed, and closed without a glimpse of the sticker. */
   nsfw?: boolean;
   /** The bag's own box, which a pull writes the tear onto as it moves. */
   ref?: Ref<HTMLDivElement>;
@@ -88,14 +88,14 @@ function describeBag(state: Props["state"], tag: GiftTag | null, stamp?: GiftSta
   });
 }
 
-/** The frosted gift bag. It has no zipper: it seals with a tear tape, only once the send succeeds. */
+/** The frosted gift bag. It has no zipper: it closes with a tear tape, only once the send succeeds. */
 export function GiftBag({
   stickerUrl,
   fromHandle,
   toHandle,
   state,
   motion,
-  sealedAt,
+  closedAt,
   size = "give",
   tear,
   stamp,
@@ -104,8 +104,8 @@ export function GiftBag({
   ref,
 }: Props) {
   const { t } = useTranslation();
-  // Sealed, an NSFW sticker never shows through the frost or the film: the pull tab reveals it.
-  const inside = nsfw && state === "sealed" ? undefined : stickerUrl;
+  // Closed, an NSFW sticker never shows through the frost or the film: the pull tab reveals it.
+  const inside = nsfw && state === "closed" ? undefined : stickerUrl;
   const tag = fromHandle || toHandle ? giftTag(fromHandle ?? "", toHandle) : null;
   const name = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
@@ -140,8 +140,8 @@ export function GiftBag({
       <i className="gift-bag__part gift-bag__streak" />
       <i className="gift-bag__part gift-bag__mouth" />
       {state !== "opened" && (
-        <SealStrip
-          date={sealedAt === undefined ? "" : formatMonthDay(sealedAt)}
+        <TearStrip
+          date={closedAt === undefined ? "" : formatMonthDay(closedAt)}
           insideUrl={inside}
           tear={tear ?? 0}
           pullTab={state === "torn" ? undefined : pullTab}
@@ -176,7 +176,7 @@ const BIKINI = [
   "M36 78L28 73M36 78L30 85M84 78L92 73M84 78L90 85",
 ].join("");
 
-/** A bikini pressed faintly into an NSFW sticker's bag, so it reads as 18+ while sealed. */
+/** A bikini pressed faintly into an NSFW sticker's bag, so it reads as 18+ while closed. */
 function BikiniEmboss() {
   return (
     <i className="gift-bag__part gift-bag__emboss" aria-hidden="true">
@@ -213,7 +213,7 @@ const PRINT_REPEATS = [0, 1, 2, 3, 4];
 /** The torn-out tape, hanging from the tab in a loop. */
 const LOOP = "M68 3C52 5 34 14 22 26C12 36 12 45 22 45C31 45 36 36 33 29";
 
-interface SealStripProps {
+interface TearStripProps {
   date: string;
   /** The sticker inside, which tints the bag's inside where the film splits. */
   insideUrl?: string;
@@ -227,26 +227,26 @@ interface SealStripProps {
  * A clear film band across the mouth, with the aqua tear tape through it and its pull tab. As the
  * tape tears out, the film splits behind it onto the bag's inside.
  */
-function SealStrip({ date, insideUrl, tear, pullTab, hidden }: SealStripProps) {
+function TearStrip({ date, insideUrl, tear, pullTab, hidden }: TearStripProps) {
   const { t } = useTranslation();
   return (
-    <span className="gift-bag__part gift-seal">
-      <span className="gift-seal__clip" aria-hidden={hidden || undefined}>
-        <i className="gift-seal__film" />
-        <i className="gift-seal__gap">
+    <span className="gift-bag__part gift-strip">
+      <span className="gift-strip__clip" aria-hidden={hidden || undefined}>
+        <i className="gift-strip__film" />
+        <i className="gift-strip__gap">
           <i
-            className="gift-seal__sleeve"
+            className="gift-strip__sleeve"
             style={insideUrl ? { "--inside": `url("${insideUrl}")` } : undefined}
           />
         </i>
-        <span className="gift-seal__tape">
-          <span className="gift-seal__print">
+        <span className="gift-strip__tape">
+          <span className="gift-strip__print">
             {PRINT_REPEATS.map((i) => (
               <Fragment key={i}>
                 <ArrowRight size={11} />
                 <span>
                   <Trans
-                    i18nKey={($) => $.giving.giftBag.sealed}
+                    i18nKey={($) => $.giving.giftBag.closed}
                     values={{ date }}
                     components={{ b: <b /> }}
                   />
@@ -256,11 +256,11 @@ function SealStrip({ date, insideUrl, tear, pullTab, hidden }: SealStripProps) {
           </span>
         </span>
       </span>
-      <span className="gift-seal__tab">
+      <span className="gift-strip__tab">
         {pullTab && (
           <button
             type="button"
-            className="gift-seal__grip"
+            className="gift-strip__grip"
             role="slider"
             aria-label={t(($) => $.giving.giftBag.pullTab)}
             aria-valuemin={0}
@@ -269,13 +269,13 @@ function SealStrip({ date, insideUrl, tear, pullTab, hidden }: SealStripProps) {
             {...pullTab.handlers}
           />
         )}
-        <svg className="gift-seal__loop" viewBox="0 0 72 48" aria-hidden="true">
-          <path className="gift-seal__loop-edge" d={LOOP} pathLength={100} />
-          <path className="gift-seal__loop-body" d={LOOP} pathLength={100} />
+        <svg className="gift-strip__loop" viewBox="0 0 72 48" aria-hidden="true">
+          <path className="gift-strip__loop-edge" d={LOOP} pathLength={100} />
+          <path className="gift-strip__loop-body" d={LOOP} pathLength={100} />
         </svg>
-        <i className="gift-seal__neck" />
-        <span className="gift-seal__lobe" aria-hidden={hidden || undefined}>
-          <svg className="gift-seal__ribs" viewBox="0 0 11 13" fill="currentColor">
+        <i className="gift-strip__neck" />
+        <span className="gift-strip__lobe" aria-hidden={hidden || undefined}>
+          <svg className="gift-strip__ribs" viewBox="0 0 11 13" fill="currentColor">
             <rect width="2" height="13" rx="1" />
             <rect x="4" width="2" height="13" rx="1" />
             <rect x="8" width="2" height="13" rx="1" />

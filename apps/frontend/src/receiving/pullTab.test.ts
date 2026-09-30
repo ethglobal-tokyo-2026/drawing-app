@@ -28,7 +28,7 @@ describe("the pull tab's drag", () => {
     expect(tearTarget(0.3, PULL.travelPx / 2)).toBeCloseTo(0.3 + PULL.gain / 2);
   });
 
-  it("keeps the tear between sealed and all the way", () => {
+  it("keeps the tear between closed and all the way", () => {
     expect(tearTarget(0.5, PULL.travelPx * 4)).toBe(1);
     expect(tearTarget(0.2, -PULL.travelPx)).toBe(0);
   });
@@ -46,7 +46,7 @@ describe("the pull tab's spring", () => {
     expect(springStep(0.05, -10, 0, 16)).toEqual({ tear: 0, velocity: 0 });
   });
 
-  it("settles back to sealed after a release under the snap", () => {
+  it("settles back to closed after a release under the snap", () => {
     expect(spring(0.6, 0).tear).toBeCloseTo(0, 3);
   });
 
@@ -74,7 +74,7 @@ describe("the snap", () => {
     expect(snapped(PULL.snapAt - 0.01)).toBe(false);
   });
 
-  it("snaps on the fifth arrow press from sealed", () => {
+  it("snaps on the fifth arrow press from closed", () => {
     let tear = 0;
     const snaps: boolean[] = [];
     for (let press = 0; press < 5; press++) {
@@ -84,14 +84,14 @@ describe("the snap", () => {
     expect(snaps).toEqual([false, false, false, false, true]);
   });
 
-  it("goes back a step on the other arrows, and no further than sealed", () => {
+  it("goes back a step on the other arrows, and no further than closed", () => {
     expect(keyTear(0.4, "ArrowLeft")).toBeCloseTo(0.4 - PULL.keyStep);
     expect(keyTear(0.1, "ArrowDown")).toBe(0);
   });
 });
 
 describe("tearing by itself", () => {
-  it("runs from sealed to all the way over its time, always forward", () => {
+  it("runs from closed to all the way over its time, always forward", () => {
     const steps = Array.from({ length: 13 }, (_, i) => autoTear((PULL.autoTearMs * i) / 12));
     expect(steps[0]).toBe(0);
     expect(steps.at(-1)).toBe(1);

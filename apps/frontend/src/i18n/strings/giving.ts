@@ -289,7 +289,7 @@ export const giving = {
       /** The gift bag's picture named for assistive tech: in Giving, with the sticker in the open bag */
       open: { en: "The sticker in an open gift bag", ja: "口のあいたギフト袋に入ったシール" },
       /** The gift bag's picture named for assistive tech, closed: Giving's "Closed and sent" screen, and a gift that can't be received yet or here */
-      sealed: { en: "The gift bag, closed", ja: "封をしたギフト袋" },
+      closed: { en: "The gift bag, closed", ja: "封をしたギフト袋" },
       /** The gift bag's picture named for assistive tech: in the gift a recipient opens, once they've torn it open */
       torn: { en: "The gift bag, torn open", ja: "破ってひらいたギフト袋" },
       /** The gift bag's picture named for assistive tech: a gift that can't be received because it was already opened, taken back or returned */
@@ -307,8 +307,8 @@ export const giving = {
       en: "{{pictured}}, tagged {{label}} {{name}}, stamped {{stamp}}",
       ja: "{{pictured}}、タグに「{{label}} {{name}}」、はんこに「{{stamp}}」",
     },
-    /** The gift bag: printed again and again along the aqua tear tape, with the day it was closed ("CLOSED 9.23") */
-    sealed: { en: "<b>Closed</b> {{date}}", ja: "<b>封印</b>{{date}}" },
+    /** The closed gift bag, in Giving's "Closed and sent" screen and in a gift a recipient opens: printed again and again along the aqua tear tape, with the day it was closed ("CLOSED 9.23") */
+    closed: { en: "<b>Closed</b> {{date}}", ja: "<b>封印</b>{{date}}" },
     /** The gift a recipient opens: the pull tab's name for assistive tech, as a slider */
     pullTab: { en: "Pull the tab to open the gift", ja: "つまみを引いてギフトをひらく" },
     /** The gift bag: printed on the pull tab, beside its grip ribs */

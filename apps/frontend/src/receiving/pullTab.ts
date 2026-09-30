@@ -2,7 +2,7 @@ import { clamp01 } from "../ui/easing";
 
 /**
  * The pull tab's physics: a drag tears the strip with resistance through a spring, the tear front
- * advances in ticks, and past the snap the tab tears free. Tears run from 0 (sealed) to 1.
+ * advances in ticks, and past the snap the tab tears free. Tears run from 0 (closed) to 1.
  */
 export const PULL = {
   /** The strip's length along the bag's mouth: a drag across it tears `gain` of it. */

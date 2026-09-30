@@ -63,7 +63,7 @@ type Opening = { claim: GiftOpening } | { gift: GiftForYou };
 const printed = (p: PersonView) => (p.handle ? formatHandle(p.handle) : p.name);
 
 /**
- * Opening a gift message's link, over the whole phone: the sealed bag, the pull tab, the reveal and
+ * Opening a gift message's link, over the whole phone: the closed bag, the pull tab, the reveal and
  * Accept, or the reason the gift can't be received here. On the Back stack, as Not now is.
  */
 export function ReceiveGiftDialog({ from, onClose }: Props) {
@@ -147,7 +147,7 @@ export function ReceiveGiftDialog({ from, onClose }: Props) {
 
   // The giver stays known through the leave, so LINE's header keeps naming them.
   const shownGiver =
-    screen.step === "sealed" || screen.step === "unpackaged"
+    screen.step === "closed" || screen.step === "unpackaged"
       ? screen.preview.giver
       : screen.step === "refused"
         ? screen.giver
@@ -155,7 +155,7 @@ export function ReceiveGiftDialog({ from, onClose }: Props) {
   const [giver, setGiver] = useState<PersonView | null>(null);
   if (shownGiver && shownGiver !== giver) setGiver(shownGiver);
   // The gift stays drawn through the leave after Accept, when the flow holds only its ID.
-  const preview = screen.step === "sealed" || screen.step === "unpackaged" ? screen.preview : null;
+  const preview = screen.step === "closed" || screen.step === "unpackaged" ? screen.preview : null;
   const [shownPreview, setShownPreview] = useState<GiftPreviewView | null>(null);
   if (preview && preview !== shownPreview) setShownPreview(preview);
   const title = t(($) => $.receiving.title, {
@@ -244,7 +244,7 @@ export function ReceiveGiftDialog({ from, onClose }: Props) {
     body = (
       <Gift
         preview={shownPreview}
-        sealed={screen.step === "sealed"}
+        closed={screen.step === "closed"}
         reveal={reveal}
         pull={pull}
         holdBag={holdBag}
@@ -284,7 +284,7 @@ export function ReceiveGiftDialog({ from, onClose }: Props) {
 
 interface GiftProps {
   preview: GiftPreviewView;
-  sealed: boolean;
+  closed: boolean;
   reveal: "snapped" | "rising" | "out";
   pull: Omit<ReturnType<typeof usePullTab>, "holdBag">;
   /** Goes on the bag, so the pull can write the tear onto it. */
@@ -297,10 +297,10 @@ interface GiftProps {
   onNotNow: () => void;
 }
 
-/** The gift itself: the sealed bag and its pull tab, then the reveal and Accept. */
+/** The gift itself: the closed bag and its pull tab, then the reveal and Accept. */
 function Gift({
   preview,
-  sealed,
+  closed,
   reveal,
   pull,
   holdBag,
@@ -325,19 +325,19 @@ function Gift({
           {t(($) => $.receiving.gift.title, { name: giver.name })}
         </h1>
       </header>
-      <div className="receive-gift__stage" {...(sealed ? pull.stage : {})}>
+      <div className="receive-gift__stage" {...(closed ? pull.stage : {})}>
         <GiftBag
           size="receive"
-          state={sealed ? "sealed" : "torn"}
+          state={closed ? "closed" : "torn"}
           stickerUrl={reveal === "out" ? undefined : sticker.urls.png}
           fromHandle={giver.handle ?? undefined}
-          sealedAt={preview.expiresAt - GIFT_EXPIRY_MS}
+          closedAt={preview.expiresAt - GIFT_EXPIRY_MS}
           nsfw={sticker.nsfw}
           tear={pull.tear}
-          pullTab={sealed ? pull.pullTab : undefined}
+          pullTab={closed ? pull.pullTab : undefined}
           ref={holdBag}
         />
-        {!sealed && (
+        {!closed && (
           <span className="receive-gift__figure" aria-hidden="true">
             <span style={{ width: sticker.width * fit, height: sticker.height * fit }}>
               <StickerFigure
@@ -352,13 +352,13 @@ function Gift({
           </span>
         )}
       </div>
-      <p className="receive-gift__hint keep-phrases" aria-hidden={!sealed || undefined}>
+      <p className="receive-gift__hint keep-phrases" aria-hidden={!closed || undefined}>
         <Trans
           i18nKey={($) => $.receiving.gift.pullTabHint}
           components={{ b: <b />, span: <span /> }}
         />
       </p>
-      {!sealed && reveal !== "snapped" && (
+      {!closed && reveal !== "snapped" && (
         <Sheet
           label={t(($) => $.receiving.gift.acceptSheet)}
           onClose={onNotNow}
