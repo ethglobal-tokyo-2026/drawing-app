@@ -12,7 +12,8 @@ export const ARM_WINDOW_MS = 2_500;
  * drawing: the first stroke or fill started the clock.
  * armed: the seal key took its first tap. sealing: building the sticker. sealed: done.
  * retry: a seal failed where the sheet mustn't take ink again, since time is up or the server may
- * already hold the seal: the sheet stays locked, and the seal key only tries the seal again.
+ * already hold the seal: the sheet stays locked, and the seal key only tries the seal again. A seal
+ * the server refuses at 0:00 gives way to a fresh sheet instead.
  */
 type Phase = "blank" | "primed" | "drawing" | "armed" | "sealing" | "sealed" | "retry";
 
@@ -43,9 +44,10 @@ export type SessionEvent =
   | { type: "sealed" }
   /**
    * `mayHaveSealed`: the request may have reached the server, which then holds the seal whatever
-   * the sheet does next. `timeUp`: the clock had run out.
+   * the sheet does next. `timeUp`: the clock had run out. `refused`: the server refused the seal
+   * itself, as it would the same seal sent again.
    */
-  | { type: "seal-failed"; mayHaveSealed: boolean; timeUp: boolean }
+  | { type: "seal-failed"; mayHaveSealed: boolean; timeUp: boolean; refused: boolean }
   | { type: "reset" };
 
 /** What the drawing screen does on a transition, besides showing the new phase. */
@@ -97,8 +99,11 @@ export function transition(session: Session, event: SessionEvent): Result {
       return phase === "sealing" ? to("sealed") : unchanged;
     case "seal-failed":
       if (phase !== "sealing") return unchanged;
-      // Ink drawn after 0:00, or after the server took the seal, would never reach the sticker.
-      return event.mayHaveSealed || event.timeUp ? to("retry") : to("drawing", ["resume-clock"]);
+      // Ink drawn after the server took the seal would never reach the sticker.
+      if (event.mayHaveSealed) return to("retry");
+      if (!event.timeUp) return to("drawing", ["resume-clock"]);
+      // At 0:00 the sheet takes no more ink, so a refused seal can't change: the sheet is spent.
+      return event.refused ? to("blank", ["reset-sheet"]) : to("retry");
     case "reset":
       return to("blank", ["reset-sheet"]);
   }

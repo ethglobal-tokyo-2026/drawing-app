@@ -386,7 +386,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
             setSealProblem(t(($) => $.stickerCreation.seal.emptyAtTimeUp));
           } else {
             setSealProblem(t(($) => $.stickerCreation.seal.empty));
-            send({ type: "seal-failed", mayHaveSealed: false, timeUp: false });
+            send({ type: "seal-failed", mayHaveSealed: false, timeUp: false, refused: false });
           }
           return;
         }
@@ -434,13 +434,20 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       // Only reconnecting LINE renews its sign-in, and that leaves the page: the check does it.
       reconnectOnTap.current = problem.kind === "signInExpired";
       const timeUp = clock.elapsed >= SESSION_MS;
+      const refused = failure === "refused";
+      // A refusal at 0:00 resets the sheet, which clears the chip, so the chip is set after it.
+      send({ type: "seal-failed", mayHaveSealed, timeUp, refused });
       // The chip says what failed and what to do; the error's own detail is in the console above.
+      if (timeUp && refused && problem.kind === "refused") {
+        const reason = errorMessage(problem.error);
+        setSealProblem(t(($) => $.stickerCreation.seal.refusedAtTimeUp, { reason }));
+        return;
+      }
       const words =
         problem.kind === "refused"
           ? t(($) => $.stickerCreation.seal.refused, { reason: errorMessage(problem.error) })
           : t(($) => $.stickerCreation.seal.failed[problem.kind]);
       setSealProblem(timeUp ? t(($) => $.stickerCreation.seal.timeUp, { problem: words }) : words);
-      send({ type: "seal-failed", mayHaveSealed, timeUp });
     }
   }
 

@@ -130,6 +130,11 @@ export const stickerCreation = {
     refused: { en: "Couldn’t seal. {{reason}}", ja: "仕上げられませんでした。{{reason}}" },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when a seal failed at 0:00, in front of that chip's words; {{problem}} is the words */
     timeUp: { en: "Time’s up. {{problem}}", ja: "時間切れです。{{problem}}" },
+    /** Drawing screen, bottom right: the chip beside the seal key, announced, when the server refused the seal at 0:00; the sheet is fresh again and the chip goes with its first stroke; {{reason}} is the refusal's message */
+    refusedAtTimeUp: {
+      en: "Time’s up. The server refused the seal, so nothing was sealed. {{reason}}",
+      ja: "時間切れです。サーバーが仕上げを受け付けなかったので、何も仕上がりませんでした。{{reason}}",
+    },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when a reload brings back a drawing whose seal was on its way, so the sheet stays as it was sealed; tapping the check finishes the seal */
     interrupted: {
       en: "Your sticker was being sealed. Tap the check to finish sealing it.",
