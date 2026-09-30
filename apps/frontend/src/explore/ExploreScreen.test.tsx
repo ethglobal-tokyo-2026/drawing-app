@@ -43,6 +43,7 @@ afterEach(async () => {
   view?.unmount();
   view = undefined;
   vi.useRealTimers();
+  vi.unstubAllEnvs();
   localStorage.clear();
   await i18next.changeLanguage("en");
 });
@@ -169,31 +170,39 @@ describe("ExploreScreen's sticker pile", () => {
   });
 });
 
+/** Reduced motion swaps a leaderboard's rows at once, rather than after the old ones fade out. */
+function reduceMotion() {
+  const matchMedia = window.matchMedia;
+  window.matchMedia = (query: string) => {
+    const list = matchMedia.call(window, query);
+    Object.defineProperty(list, "matches", { value: query.includes("reduce") });
+    return list;
+  };
+  onTestFinished(() => {
+    window.matchMedia = matchMedia;
+  });
+}
+
+/** Opens This week on `boards`, and the leaderboard named `board` on it. */
+async function openBoard(board: string, boards: Partial<Explore["leaderboards"]> = {}) {
+  reduceMotion();
+  const host = await openExplore(exploreWith([], boards));
+  act(() => tab(host, "This week").click());
+  act(() => tab(host, board).click());
+  await wait(500);
+  return host;
+}
+
 describe("ExploreScreen's This week", () => {
   it("counts streak days and found artists in the singular and the plural", async () => {
-    // Reduced motion swaps the rows at once, rather than after the old ones fade out.
-    const matchMedia = window.matchMedia;
-    window.matchMedia = (query: string) => {
-      const list = matchMedia.call(window, query);
-      Object.defineProperty(list, "matches", { value: query.includes("reduce") });
-      return list;
-    };
-    onTestFinished(() => {
-      window.matchMedia = matchMedia;
+    const host = await openBoard("Streak", {
+      longestStreak: [
+        { person: people.mika, value: 3 },
+        { person: people.ken, value: 1 },
+      ],
     });
-    const host = await openExplore(
-      exploreWith([], {
-        longestStreak: [
-          { person: people.mika, value: 3 },
-          { person: people.ken, value: 1 },
-        ],
-      }),
-    );
-    act(() => tab(host, "This week").click());
-    act(() => tab(host, "Longest streak").click());
-    await wait(500);
     expect(textsOf(host, ".figure small")).toEqual(["days", "day"]);
-    expect(tab(host, "Longest streak").getAttribute("aria-selected")).toBe("true");
+    expect(tab(host, "Streak").getAttribute("aria-selected")).toBe("true");
     // The streak's own mark: its fire before each figure, and its tangerine on the tabs' label.
     expect(host.querySelectorAll(".figure--streak svg")).toHaveLength(2);
     expect(host.querySelector(".leaderboard-tabs")?.getAttribute("data-selected")).toBe(
@@ -227,6 +236,42 @@ describe("ExploreScreen's This week", () => {
     expect(yours?.hasAttribute("aria-label")).toBe(false);
     expect(yours?.textContent).toContain("You");
     expect(descriptionOf(yours)).toBe("Your sticker board");
+  });
+
+  it("gives people on equal figures one rank, and the next place after them", async () => {
+    const host = await openBoard("Streak", {
+      longestStreak: [
+        { person: people.bob, value: 4 },
+        { person: people.ken, value: 4 },
+        { person: people.mika, value: 1 },
+      ],
+    });
+    expect(textsOf(host, ".rank")).toEqual(["1", "1", "3"]);
+  });
+
+  it("tells an empty board how to get on it, each in its own way", async () => {
+    reduceMotion();
+    const host = await openExplore(exploreWith([]));
+    act(() => tab(host, "This week").click());
+    const notes = [];
+    for (const board of ["Most gratitude", "Best combo", "Streak"]) {
+      act(() => tab(host, board).click());
+      await wait(500);
+      notes.push(host.querySelector(".leaderboard-empty")?.textContent);
+    }
+    expect(notes.every(Boolean)).toBe(true);
+    expect(new Set(notes).size).toBe(notes.length);
+  });
+
+  it("says when the weekly boards reset in the person's own time, and not on streaks", async () => {
+    vi.stubEnv("TZ", "America/Los_Angeles");
+    // A week began at 00:00 on Monday 9.21 in Tokyo, so the next begins 8:00 AM Sunday in Los Angeles.
+    const host = await openBoard("Best combo", { weekStart: "2026-09-20T15:00:00.000Z" });
+    expect(host.querySelector(".week-resets")?.textContent).toBe("Resets Sunday 8:00 AM");
+
+    act(() => tab(host, "Streak").click());
+    await wait(500);
+    expect(host.querySelector(".week-resets")).toBeNull();
   });
 
   it("moves between the views with the arrow keys", async () => {

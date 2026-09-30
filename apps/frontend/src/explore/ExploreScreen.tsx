@@ -15,7 +15,7 @@ import { useMe } from "../api/meContext";
 import { useApiQuery, type Query } from "../api/useApiQuery";
 import { toPerson } from "../api/views";
 import { errorReason } from "../i18n/errorMessage";
-import { formatCount } from "../i18n/format";
+import { formatCount, formatTimeOfDay, formatWeekday } from "../i18n/format";
 import { Trans, useTranslation } from "../i18n/react";
 import { At, StreakIcon, X } from "../icons";
 import { formatHandle } from "../stickers/format";
@@ -26,6 +26,7 @@ import { Skeleton } from "../ui/Skeleton";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { HitCounter } from "../ui/HitCounter";
 import { matchIn } from "./handleMatch";
+import { competitionRanks } from "./leaderboardRanks";
 import { LiftedSticker } from "./LiftedSticker";
 import { dayBadge, pileDays, ticketDayNumber, type PileSticker } from "./pileDays";
 import { textWidth } from "./pileLayout";
@@ -42,6 +43,8 @@ interface Props {
 
 /** Search waits for a pause in typing before it asks the server. */
 const SEARCH_AFTER_MS = 250;
+/** A week's leaderboards run from a Monday's start to the next one's, Japan keeping no daylight saving. */
+const WEEK_MS = 7 * 24 * 60 * 60_000;
 
 type View = "stickers" | "thisWeek";
 
@@ -314,6 +317,9 @@ function ThisWeek({
   const { t } = useTranslation();
   const { board, shown, select, list } = useRowDeal("mostGratitude");
   const rows: LeaderboardRow[] = leaderboards[shown];
+  const ranks = competitionRanks(rows.map((row) => row.value));
+  // In the person's own time, as the tickets' refill line is, from the week that began in Tokyo.
+  const resets = new Date(Date.parse(leaderboards.weekStart) + WEEK_MS);
 
   return (
     <section className={`${REVEAL} explore-section`}>
@@ -330,7 +336,7 @@ function ThisWeek({
       <div role="tabpanel" id="leaderboard-panel" aria-labelledby={`leaderboard-${board}`}>
         <ol ref={list} className="leaderboard">
           {rows.length === 0 && (
-            <li className="leaderboard-empty">{t(($) => $.explore.thisWeek.empty)}</li>
+            <li className="leaderboard-empty">{t(($) => $.explore.thisWeek.empty[shown])}</li>
           )}
           {rows.map((row, i) => (
             <PersonRow
@@ -340,7 +346,7 @@ function ThisWeek({
               open={open}
               lead={
                 <>
-                  <span className="rank">{i + 1}</span>
+                  <span className="rank">{ranks[i]}</span>
                   <Avatar person={row.person} size={40} />
                 </>
               }
@@ -349,7 +355,15 @@ function ThisWeek({
           ))}
         </ol>
       </div>
-      <p className="fine muted week-resets">{t(($) => $.explore.thisWeek.resets)}</p>
+      {/* Streaks are counted as they stand, so they don't start over with the week. */}
+      {shown !== "longestStreak" && (
+        <p className="fine muted week-resets">
+          {t(($) => $.explore.thisWeek.resets, {
+            day: formatWeekday(resets),
+            time: formatTimeOfDay(resets),
+          })}
+        </p>
+      )}
     </section>
   );
 }

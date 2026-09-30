@@ -93,12 +93,28 @@ export const explore = {
   thisWeek: {
     /** Explore tab, This week view: screen readers' heading for the leaderboards */
     title: { en: "This week", ja: "今週" },
-    /** Explore tab, This week view: fine print under the leaderboard, when the week's leaderboards start over */
-    resets: { en: "Resets Monday 12:00 AM", ja: "月曜0:00にリセット" },
+    /** Explore tab, This week view: fine print under the Most gratitude and Best combo leaderboards, when they start over; {{day}} and {{time}} are that moment in the person's own time zone, such as "Monday" and "12:00 AM" */
+    resets: { en: "Resets {{day}} {{time}}", ja: "{{day}}{{time}}にリセット" },
     /** Explore tab, This week view: screen readers' name for the row of three leaderboard tabs */
     leaderboards: { en: "This week's leaderboards", ja: "今週のランキング" },
-    /** Explore tab, This week view: fine print in place of the rows when the chosen leaderboard has no one on it this week */
-    empty: { en: "No one is on it yet this week.", ja: "今週はまだ誰もランクインしていません。" },
+    /** A leaderboard nobody is on: a supporting note in place of the rows, saying so and how to get on. */
+    empty: {
+      /** Explore tab, This week view, Most gratitude leaderboard with no one on it: the note in place of the rows */
+      mostGratitude: {
+        en: "No one is on it yet this week. Give someone a sticker: the gratitude they send back counts here.",
+        ja: "今週はまだ誰もランクインしていません。シールを贈ると、相手が送ってくれた感謝がここに数えられます。",
+      },
+      /** Explore tab, This week view, Best combo leaderboard with no one on it: the note in place of the rows */
+      bestCombo: {
+        en: "No one is on it yet this week. Receive a sticker and send gratitude: your best combo counts here.",
+        ja: "今週はまだ誰もランクインしていません。シールを受け取って感謝を送ると、最大コンボがここに載ります。",
+      },
+      /** Explore tab, This week view, Streak leaderboard with no one on it: the note in place of the rows */
+      longestStreak: {
+        en: "No one has a streak going. Seal a sticker today to start yours.",
+        ja: "連続している人はまだいません。今日シールを仕上げると、連続日数がはじまります。",
+      },
+    },
   },
   /** The leaderboards' tabs. */
   leaderboards: {
@@ -107,7 +123,7 @@ export const explore = {
     /** Explore tab, This week view: the second tab, ranking people by the most hits in one gratitude combo this week */
     bestCombo: { en: "Best combo", ja: "最大コンボ" },
     /** Explore tab, This week view: the third tab, ranking people by their current streak of days sealing a sticker */
-    longestStreak: { en: "Longest streak", ja: "連続日数" },
+    longestStreak: { en: "Streak", ja: "連続日数" },
   },
   /** A leaderboard row's figure. A unit in <small> is set small beside its number. */
   figure: {
@@ -116,13 +132,13 @@ export const explore = {
       en: "{{amount}}<hidden> gratitude</hidden>",
       ja: "<hidden>感謝</hidden>{{amount}}",
     },
-    /** Explore tab, Longest streak leaderboard: the figure at the end of a row whose streak is one day, the unit set small */
+    /** Explore tab, Streak leaderboard: the figure at the end of a row whose streak is one day, the unit set small */
     streak_one: { en: "{{count}}<small>day</small>" },
-    /** Explore tab, Longest streak leaderboard: the figure at the end of each row, that person's streak in days, the unit set small */
+    /** Explore tab, Streak leaderboard: the figure at the end of each row, that person's streak in days, the unit set small */
     streak_other: { en: "{{count}}<small>days</small>", ja: "{{count}}<small>日</small>" },
-    /** Explore tab, Longest streak leaderboard: what screen readers say in place of the figure when the streak is one day */
+    /** Explore tab, Streak leaderboard: what screen readers say in place of the figure when the streak is one day */
     streakSpoken_one: { en: "{{count}} day" },
-    /** Explore tab, Longest streak leaderboard: what screen readers say in place of the figure, that person's streak in days */
+    /** Explore tab, Streak leaderboard: what screen readers say in place of the figure, that person's streak in days */
     streakSpoken_other: { en: "{{count}} days", ja: "{{count}}日" },
   },
   failed: {

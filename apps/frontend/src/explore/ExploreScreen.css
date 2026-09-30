@@ -147,8 +147,7 @@
   outline-offset: 3px;
 }
 
-/* Explore's own hue for the view; pink for the leaderboards, and the streak's tangerine for Longest
-   streak. */
+/* Explore's own hue for the view; pink for the leaderboards, and the streak's tangerine for Streak. */
 .view-switch .sliding-tabs__label {
   background: var(--aqua);
 }
@@ -164,7 +163,7 @@
   background: var(--pink);
 }
 
-/* Tangerine is a second face over the pink, which fades in as the label slides to Longest streak. */
+/* Tangerine is a second face over the pink, which fades in as the label slides to Streak. */
 .leaderboard-tabs .sliding-tabs__label::after {
   content: "";
   position: absolute;
