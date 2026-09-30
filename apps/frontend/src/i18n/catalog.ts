@@ -1,5 +1,12 @@
 import type { Language } from "./language";
 
+/**
+ * Written in a Japanese string where its line may break, for a short centered line that should break
+ * between phrases. It's no placeholder: the English has none, and i18next hands it out as a
+ * zero-width space (see i18n.ts).
+ */
+export const BREAK_HINT = "<wbr/>";
+
 /** One string, in English and, once it's translated, Japanese. Without `ja`, Japanese shows the English. */
 export interface Leaf {
   readonly en: string;

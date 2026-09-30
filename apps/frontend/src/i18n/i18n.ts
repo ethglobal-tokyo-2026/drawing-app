@@ -1,12 +1,23 @@
-import i18next from "i18next";
+import i18next, { type PostProcessorModule } from "i18next";
 import { initReactI18next } from "react-i18next";
-import { resourcesIn } from "./catalog";
+import { BREAK_HINT, resourcesIn } from "./catalog";
 import { readChosenLanguage, type Language } from "./language";
 import { strings } from "./strings";
 
+const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b);
+
+/** A tag would show as text wherever a string isn't rendered as markup; a zero-width space breaks the line and shows nothing. */
+const breakHints: PostProcessorModule = {
+  type: "postProcessor",
+  name: "breakHints",
+  process: (text) => text.replaceAll(BREAK_HINT, ZERO_WIDTH_SPACE),
+};
+
 i18next
   .use(initReactI18next)
+  .use(breakHints)
   .init({
+    postProcess: breakHints.name,
     // The person's choice as this device keeps it, or English; main.tsx then applies LINE's language.
     lng: readChosenLanguage() ?? "en",
     fallbackLng: "en",

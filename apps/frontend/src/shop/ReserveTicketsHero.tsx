@@ -59,7 +59,7 @@ export function ReserveTicketsHero({ onBuy }: { onBuy: () => void }) {
       <h2 className="reserve-hero__title" id={`${id}-title`}>
         {t(($) => $.shop.reserve.title)}
       </h2>
-      <p className="reserve-hero__lead">{t(($) => $.shop.reserve.lead)}</p>
+      <p className="reserve-hero__lead keep-phrases">{t(($) => $.shop.reserve.lead)}</p>
       {/* Its line keeps its height while the price loads, or if it can't, so the key never jumps. */}
       <p className="reserve-hero__price">
         {price ? (

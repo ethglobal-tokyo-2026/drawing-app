@@ -10,7 +10,7 @@ export const shop = {
     /** Reserve tickets section: the one line under the headline, on what they're for */
     lead: {
       en: "Keep drawing after your daily tickets run out.",
-      ja: "無償チケットを使い切っても、かき続けられます。",
+      ja: "無償チケットを<wbr/>使い切っても、<wbr/>かき続けられます。",
     },
     /** Reserve tickets section, under the fanned tickets: the ones you hold; `<count/>` is the reserve ticket mark and ×count */
     held: { en: "You have <count/>", ja: "所持数<count/>" },

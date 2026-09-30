@@ -8,7 +8,7 @@ export const api = {
     /** Sign-in screen, once signing in to the app's server has taken about six seconds: the line that joins the status line to say the wait is long */
     stillOpening: {
       en: "Still opening. It’s taking longer than usual.",
-      ja: "まだひらいています。いつもより時間がかかっています。",
+      ja: "まだひらいています。<wbr/>いつもより<wbr/>時間が<wbr/>かかっています。",
     },
     /** Sign-in screen, when signing in to the app's server fails: the heading above the error's message and a Try again or Reconnect with LINE button */
     failed: { en: "Couldn’t sign you in", ja: "ログインできませんでした" },
