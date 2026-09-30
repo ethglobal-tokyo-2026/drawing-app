@@ -294,4 +294,9 @@ export const errors = {
     en: "World ID didn't answer. Try again in a moment.",
     ja: "World IDから応答がありませんでした。少し待ってから、もう一度お試しください。",
   },
-} as const satisfies Record<ErrorCode | "unknown", Leaf>;
+  /** Any error line, when what failed isn't the server's answer but something on this phone or in a library, such as LINE's picker; its own English words follow as details for a report (made by the app itself, shown through problemOf) */
+  unexpected: {
+    en: "Something went wrong. Try again in a moment.",
+    ja: "問題が発生しました。少し待ってから、もう一度お試しください。",
+  },
+} as const satisfies Record<ErrorCode | "unknown" | "unexpected", Leaf>;

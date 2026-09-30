@@ -1,8 +1,8 @@
 import { useId, useState, type ReactNode } from "react";
 import { useTranslation } from "../i18n/react";
 import { Copy } from "../icons";
-import { LabelButton } from "../ui/LabelButton";
-import "./CopyableFinePrint.css";
+import { LabelButton } from "./LabelButton";
+import "./copyable-fine-print.css";
 
 interface Props {
   /** What Copy copies, whole, though the fine print is cut short on screen. */
@@ -37,7 +37,7 @@ export function CopyableFinePrint({ text, lines, children }: Props) {
         {children}
       </span>
       <LabelButton size="sm" icon={<Copy />} aria-describedby={id} onClick={() => void copy()}>
-        {copied ? t(($) => $.tickets.checkout.copied) : t(($) => $.tickets.checkout.copy)}
+        {copied ? t(($) => $.ui.copy.copied) : t(($) => $.ui.copy.copy)}
       </LabelButton>
     </div>
   );

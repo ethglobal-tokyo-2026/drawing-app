@@ -237,6 +237,11 @@
   font: 500 13px/1.35 var(--font-ui);
 }
 
+/* Their words for why the figures didn't load: a line on the receipt, over the same margin. */
+.stat-board__receipt .error-line {
+  margin: 4px 0 0;
+}
+
 /* A line item per kind of gratitude, in Ink: the kind at the left, its amount at the right. */
 .stat-board__receipt-rows {
   display: grid;

@@ -8,6 +8,7 @@ import { formatHandle, formatNo } from "../stickers/format";
 import { Handle } from "../stickers/Handle";
 import { canGiveTo } from "../stickers/nsfw";
 import { useKeptStickers, type KeptSticker } from "../stickers/useKeptStickers";
+import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
 import { lazyWithPreload } from "../ui/lazyWithPreload";
 import { keepNameWhole } from "../ui/keepNameWhole";
@@ -87,9 +88,9 @@ export function GiveSheet({ to, toId, toAgeStatus, onClose }: Props) {
           <p className="giving__sub">{t(($) => $.giving.giveSheet.lead, { name })}</p>
 
           {loadError && (
-            <p className="giving__problem" role="alert">
-              {loadError}
-            </p>
+            <ErrorLine className="giving__problem" detail={loadError.detail}>
+              {loadError.message}
+            </ErrorLine>
           )}
           {stickers?.length === 0 && (
             <p className="sheet-empty">{t(($) => $.giving.giveSheet.none)}</p>
@@ -112,9 +113,9 @@ export function GiveSheet({ to, toId, toAgeStatus, onClose }: Props) {
             </p>
           )}
           {!sender && (
-            <p className="giving__problem" role="alert">
+            <ErrorLine className="giving__problem">
               {t(($) => $.giving.giveSheet.noPicker)}
-            </p>
+            </ErrorLine>
           )}
 
           <div className="giving__acts">

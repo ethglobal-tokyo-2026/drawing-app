@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "../i18n/react";
+import { ErrorLine } from "../ui/ErrorLine";
 import { QuietLink } from "../ui/QuietLink";
 import { useToast } from "../ui/useToast";
 import "./account-rows.css";
@@ -45,8 +46,8 @@ export function AccountRow({ label, value, children, copyable = false }: Props) 
         </dd>
       )}
       {problem && (
-        <dd className="account-rows__problem" role="alert">
-          {problem}
+        <dd className="account-rows__problem">
+          <ErrorLine>{problem}</ErrorLine>
         </dd>
       )}
     </div>

@@ -11,6 +11,7 @@ import { readBootMilestones } from "../../performance/bootMilestones";
 import { formatPerformanceReport, formatSummaryLine } from "../../performance/performanceReport";
 import { useTranslation } from "../../i18n/react";
 import { Copy } from "../../icons";
+import { ErrorLine } from "../../ui/ErrorLine";
 import { LabelButton } from "../../ui/LabelButton";
 import { QuietLink } from "../../ui/QuietLink";
 import "./performance-recorder-controls.css";
@@ -152,11 +153,7 @@ export function PerformanceRecorderControls() {
       <p className="fine performance-recorder__note" role="status">
         {copied ? t(($) => $.stickerBoard.developer.performance.copied) : ""}
       </p>
-      {problem && (
-        <p className="performance-recorder__problem" role="alert">
-          {problem}
-        </p>
-      )}
+      {problem && <ErrorLine className="performance-recorder__problem">{problem}</ErrorLine>}
       {uncopied && (
         <textarea
           className="performance-recorder__report"

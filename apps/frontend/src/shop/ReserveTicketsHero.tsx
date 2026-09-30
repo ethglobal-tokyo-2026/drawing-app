@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { errorReason } from "../i18n/errorMessage";
+import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
 import { BuyTicketsIcon } from "../icons";
 import { formatYen } from "../tickets/prices";
@@ -7,8 +7,8 @@ import { singleTicketPrice, useReservePacks } from "../tickets/reservePacks";
 import { TicketCount } from "../tickets/TicketCount";
 import { TicketStubs, type TicketStub } from "../tickets/TicketStubs";
 import { useTickets } from "../tickets/useTickets";
+import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
-import { QuietLink } from "../ui/QuietLink";
 import { REVEAL } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
 import { TearLine } from "../ui/TearLine";
@@ -38,10 +38,9 @@ export function ReserveTicketsHero({ onBuy }: { onBuy: () => void }) {
       <TicketStubs className="reserve-hero__fan" size="large" stubs={FAN} stars="front" />
       {/* With no tickets loaded the Shop would read as if you hold none, so a failed load says so. */}
       {error && (
-        <p className="reserve-hero__held reserve-hero__held--problem" role="alert">
-          {t(($) => $.shop.reserve.heldProblem, { reason: errorReason(error) })}{" "}
-          <QuietLink onClick={refresh}>{t(($) => $.tickets.tryAgain)}</QuietLink>
-        </p>
+        <ErrorLine className="reserve-hero__problem" detail={errorDetail(error)} onRetry={refresh}>
+          {t(($) => $.shop.reserve.heldProblem, { reason: errorMessage(error) })}
+        </ErrorLine>
       )}
       {held > 0 && (
         <p className="reserve-hero__held">

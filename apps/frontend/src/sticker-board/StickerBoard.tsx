@@ -34,7 +34,13 @@ import { PendingGiftsNotificationBadge } from "../giving/PendingGiftsNotificatio
 import { useGiftSender } from "../giving/useGiftSender";
 import { FEEL_CONFIG } from "../gratitude/gameConfig";
 import { readMiniGameDemoSettings } from "../gratitude/miniGameDemoSettings";
-import { errorReason } from "../i18n/errorMessage";
+import {
+  errorDetail,
+  errorMessage,
+  joinedDetails,
+  problemOf,
+  type Problem,
+} from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
 import { DrawIcon } from "../icons/DrawIcon";
 import { useMe } from "../api/meContext";
@@ -49,8 +55,8 @@ import { describeTickets } from "../tickets/tickets";
 import { useDrawFromBoard } from "../tickets/useDrawFromBoard";
 import { useTickets } from "../tickets/useTickets";
 import { EASE_OUT } from "../ui/easing";
+import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
-import { LabelButton } from "../ui/LabelButton";
 import { lazyWithPreload } from "../ui/lazyWithPreload";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { useBackToClose } from "../ui/useBackToClose";
@@ -100,7 +106,7 @@ import { GiftsForYouBadge, type GiftForYou } from "../receiving/GiftsForYouBadge
 import { ArtistChipLayer } from "./ArtistChipLayer";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
-import type { TrayProblem } from "./tray/trayProblem";
+import { reasonOf, type TrayProblem } from "./tray/trayProblem";
 import { useBoardGestures } from "./useBoardGestures";
 import { useBoardSize } from "./useBoardSize";
 import { useMyStickerBoard } from "./useMyStickerBoard";
@@ -264,7 +270,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   );
   const owner = adopted?.owner ?? null;
   /** Stickers whose spot didn't save, and why; each goes once a save of it succeeds. */
-  const [unsaved, setUnsaved] = useState<ReadonlyMap<string, string>>(() => new Map());
+  const [unsaved, setUnsaved] = useState<ReadonlyMap<string, Problem>>(() => new Map());
   /** What the sticker tray couldn't do, said in an alert until it's dismissed. */
   const [trayProblems, setTrayProblems] = useState<readonly TrayProblem[]>([]);
   const addTrayProblem = useCallback(
@@ -274,6 +280,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
           (p) =>
             p.kind === problem.kind &&
             p.reason === problem.reason &&
+            p.detail === problem.detail &&
             p.nos.join() === problem.nos.join(),
         )
           ? was
@@ -354,7 +361,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
           (error: unknown) => {
             const failure = apiError(error);
             console.error(`Saving where ${formatNo(sticker.no)} sits failed`, failure);
-            settled(() => setUnsaved((was) => new Map(was).set(sticker.id, errorReason(failure))));
+            settled(() => setUnsaved((was) => new Map(was).set(sticker.id, problemOf(failure))));
           },
         );
       };
@@ -447,7 +454,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
 
   // A sticker that just reached you asks about gratitude, when its newest gift to you has none. When
   // the check fails, the ask can't come, so the board says so, with a way to check again.
-  const [checkFailure, setCheckFailure] = useState<string | null>(null);
+  const [checkFailure, setCheckFailure] = useState<Problem | null>(null);
   const [checks, setChecks] = useState(0);
   useEffect(() => {
     if (!freshId || askedForGratitude.has(freshId)) return;
@@ -463,7 +470,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       (error: unknown) => {
         const failure = apiError(error);
         console.error(`Checking whether ${freshId} has gratitude failed`, failure);
-        if (current) setCheckFailure(errorReason(failure));
+        if (current) setCheckFailure(problemOf(failure));
       },
     );
     return () => {
@@ -487,7 +494,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       addTrayProblem({
         kind: "seen",
         nos: (stickers ?? []).filter((s) => ids.includes(s.id)).map((s) => s.no),
-        reason: errorReason(failure),
+        ...reasonOf(failure),
       });
     });
   };
@@ -842,65 +849,60 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       )}
 
       {board.state === "failed" && (
-        <div className="board-blank board-problem" role="alert" style={blankStyle}>
+        <div className="board-blank board-problem" style={blankStyle}>
           <span className="board-blank-cut" aria-hidden />
-          <span className="board-blank-note">{t(($) => $.stickerBoard.board.didntLoad)}</span>
-          <p className="problem-note board-problem-reason">{errorReason(board.error)}</p>
-          <LabelButton size="sm" onClick={board.retry}>
-            {t(($) => $.stickerBoard.tryAgain)}
-          </LabelButton>
+          <ErrorLine detail={errorDetail(board.error)} onRetry={board.retry}>
+            {t(($) => $.stickerBoard.board.didntLoad, { reason: errorMessage(board.error) })}
+          </ErrorLine>
         </div>
       )}
 
-      {(unsavedStickers.length > 0 || trayProblems.length > 0) && (
+      {(unsavedStickers.length > 0 || trayProblems.length > 0 || checkFailure) && (
         <div className="board-alerts">
           {unsavedStickers.length > 0 && (
-            <div className="board-unsaved" role="alert">
-              <p className="board-unsaved-note">
-                {t(($) => $.stickerBoard.board.unsaved, {
-                  count: unsavedStickers.length,
-                  stickers: new Intl.ListFormat(i18n.language).format(
-                    unsavedStickers.map((s) => formatNo(s.no)),
-                  ),
-                  reasons: [...new Set(unsavedStickers.map((s) => unsaved.get(s.id)))].join("; "),
-                })}
-              </p>
-              <LabelButton
-                size="sm"
-                onClick={() => unsavedStickers.forEach((s) => save(s, s.placement))}
-              >
-                {t(($) => $.stickerBoard.tryAgain)}
-              </LabelButton>
-            </div>
+            <ErrorLine
+              detail={joinedDetails(unsavedStickers.map((s) => unsaved.get(s.id)?.detail))}
+              onRetry={() => unsavedStickers.forEach((s) => save(s, s.placement))}
+            >
+              {t(($) => $.stickerBoard.board.unsaved, {
+                count: unsavedStickers.length,
+                stickers: new Intl.ListFormat(i18n.language).format(
+                  unsavedStickers.map((s) => formatNo(s.no)),
+                ),
+                reasons: [...new Set(unsavedStickers.map((s) => unsaved.get(s.id)?.message))].join(
+                  "; ",
+                ),
+              })}
+            </ErrorLine>
           )}
           {trayProblems.length > 0 && (
-            <div className="board-unsaved" role="alert">
-              <div className="board-unsaved-list">
-                {trayProblems.map((p) => (
-                  <p className="board-unsaved-note" key={`${p.kind}:${p.nos.join()}:${p.reason}`}>
-                    {t(($) => $.stickerBoard.tray.problem[p.kind], {
-                      stickers: new Intl.ListFormat(i18n.language).format(p.nos.map(formatNo)),
-                      reason: p.reason,
-                    })}
-                  </p>
-                ))}
-              </div>
-              <LabelButton size="sm" onClick={() => setTrayProblems([])}>
-                {t(($) => $.stickerBoard.tray.problem.dismiss)}
-              </LabelButton>
-            </div>
+            <ErrorLine
+              detail={joinedDetails(trayProblems.map((p) => p.detail))}
+              action={{
+                label: t(($) => $.stickerBoard.tray.problem.dismiss),
+                onClick: () => setTrayProblems([]),
+              }}
+            >
+              {trayProblems.map((p) => (
+                <span
+                  className="board-alerts__sentence"
+                  key={`${p.kind}:${p.nos.join()}:${p.reason}`}
+                >
+                  {t(($) => $.stickerBoard.tray.problem[p.kind], {
+                    stickers: new Intl.ListFormat(i18n.language).format(p.nos.map(formatNo)),
+                    reason: p.reason ?? "",
+                  })}
+                </span>
+              ))}
+            </ErrorLine>
           )}
-        </div>
-      )}
-
-      {checkFailure && unsavedStickers.length === 0 && (
-        <div className="board-unsaved" role="alert">
-          <p className="board-unsaved-note">
-            {t(($) => $.stickerBoard.board.gratitudeCheckFailed, { reason: checkFailure })}
-          </p>
-          <LabelButton size="sm" onClick={() => setChecks((n) => n + 1)}>
-            {t(($) => $.stickerBoard.tryAgain)}
-          </LabelButton>
+          {checkFailure && unsavedStickers.length === 0 && (
+            <ErrorLine detail={checkFailure.detail} onRetry={() => setChecks((n) => n + 1)}>
+              {t(($) => $.stickerBoard.board.gratitudeCheckFailed, {
+                reason: checkFailure.message,
+              })}
+            </ErrorLine>
+          )}
         </div>
       )}
 

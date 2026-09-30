@@ -63,11 +63,7 @@
 /* A failed copy, under the row until the next try: Ink on Tomato Soft, as the Settings note's. */
 .account-rows__problem {
   grid-area: problem;
-  margin-top: 6px;
-  padding: 8px 12px;
-  border-radius: var(--r-label);
-  background: var(--tomato-soft);
-  font: 500 13px/1.4 var(--font-ui);
+  margin: 6px 0 0;
 }
 
 /* Copy at the small labels' size, so it doesn't outweigh the value it copies. */

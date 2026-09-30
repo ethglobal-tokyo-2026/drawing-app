@@ -30,8 +30,6 @@ export const line = {
       en: "LINE didn’t answer within {{seconds}} s",
       ja: "LINEが{{seconds}}秒以内に応答しませんでした",
     },
-    /** Sign-in screens, when the app couldn't be opened: the small label above the technical details, which the person can copy into a report */
-    details: { en: "Details for a report", ja: "報告用の詳細" },
   },
   /** The developer slip's LINE details and test message. Never translated. */
   developer: {

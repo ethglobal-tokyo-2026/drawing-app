@@ -48,10 +48,6 @@
 /* A failure's reason can be long: it wraps, and can be copied into a report. */
 .performance-recorder__problem {
   margin: 0;
-  font: 500 13px/1.4 var(--font-ui);
-  overflow-wrap: anywhere;
-  -webkit-user-select: text;
-  user-select: text;
 }
 
 /* In the app's own face, not the system monospace, whose zero is slashed too. */

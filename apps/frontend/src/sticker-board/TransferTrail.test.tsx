@@ -15,7 +15,7 @@ import {
   replayAnswer,
 } from "../gratitude/replay/testReplayEngine";
 import { LANDED_HOLD_MS } from "../gratitude/replay/useGratitudeReplay";
-import { errorReason } from "../i18n/errorMessage";
+import { errorMessage } from "../i18n/errorMessage";
 import { ReducedMotion } from "../ui/testing";
 import { toTrailRows } from "./trailRows";
 import { TransferTrail } from "./TransferTrail";
@@ -66,7 +66,11 @@ const find = (selector: string) => {
 const pill = () => find(".transfer-trail__row.is-open .transfer-trail__replay");
 const stage = () => container.querySelector(".transfer-trail__row.is-open .replay-stage");
 const liveLine = () => find(".transfer-trail__row.is-open [aria-live]").textContent;
-const note = () => find(".transfer-trail__row.is-open .transfer-trail__replay-note").textContent;
+const note = () =>
+  find('.transfer-trail__row.is-open .transfer-trail__replay-note [role="alert"]').textContent;
+/** The whole note, with the words behind its sentence. */
+const noteWithDetail = () =>
+  find(".transfer-trail__row.is-open .transfer-trail__replay-note").textContent;
 
 const wait = (ms = 0) => act(() => vi.advanceTimersByTimeAsync(ms));
 const press = async (el: HTMLElement) => {
@@ -238,7 +242,8 @@ describe("TransferTrail's replay", () => {
     show();
     await press(pill());
     expect(pill().getAttribute("aria-label")).toBe(PLAY_LABEL);
-    expect(note()).toBe(`Couldn’t load the replay: ${errorReason(missing)} Try again`);
+    expect(note()).toBe(`Couldn’t load the replay: ${errorMessage(missing)} Try again`);
+    expect(noteWithDetail()).toContain("No gratitude for gift g-2");
     await wait(STAGE_EASE_MS);
     expect(stage()).toBeNull();
     const retry = find(".transfer-trail__replay-note button");
@@ -256,7 +261,8 @@ describe("TransferTrail's replay", () => {
     await press(pill());
     act(() => engine.last().fail(new Error("the stage's canvas was lost")));
     await wait();
-    expect(note()).toBe("The replay stopped: the stage's canvas was lost");
+    expect(note()).toBe("The replay stopped.");
+    expect(noteWithDetail()).toContain("the stage's canvas was lost");
     expect(pill().getAttribute("aria-label")).toBe(PLAY_LABEL);
   });
 
@@ -266,7 +272,8 @@ describe("TransferTrail's replay", () => {
     markSeen.mockRejectedValueOnce(failure);
     show();
     await playThrough();
-    expect(note()).toBe(`Couldn’t mark this gratitude watched: ${errorReason(failure)}`);
+    expect(note()).toBe(`Couldn’t mark this gratitude watched: ${errorMessage(failure)}`);
+    expect(noteWithDetail()).toContain("database is locked");
   });
 
   it("follows reduced motion: told to the engine, switched live, with no pulse or ease", async () => {

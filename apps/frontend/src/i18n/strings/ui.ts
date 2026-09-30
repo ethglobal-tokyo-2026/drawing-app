@@ -14,6 +14,19 @@ export const ui = {
     /** Every bottom sheet, such as Accept and Send gratitude: the perforation's name for assistive tech, a button that closes the sheet when tapped or dragged down; {{label}} is the sheet's name */
     close: { en: "Close {{label}}", ja: "「{{label}}」を閉じる" },
   },
+  /** The line every failure is told in, over Tomato Soft. */
+  errorLine: {
+    /** Any error line where trying again can work: the quiet link after the sentence that asks again */
+    tryAgain: { en: "Try again", ja: "もう一度" },
+    /** Under an error line's sentence, and on the sign-in screens when the app couldn't be opened: the small label above the English words behind the failure, which the person can copy into a report */
+    details: { en: "Details for a report", ja: "報告用の詳細" },
+  },
+  copy: {
+    /** Beside fine print that's long or case-sensitive, such as a payment's ID or an error's details: the small button that copies it whole */
+    copy: { en: "Copy", ja: "コピー" },
+    /** The same button once it has copied */
+    copied: { en: "Copied", ja: "コピー済み" },
+  },
   /** A gratitude combo's length, counted in hits the way fighting games count it. */
   hitCounter: {
     /** The hit counter, on the stat board's Bests and Explore's Best combo board: the word set in small caps after the count, when it's 1 */

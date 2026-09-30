@@ -1,5 +1,4 @@
-import { ApiError } from "../api/apiClient";
-import { errorReason } from "../i18n/errorMessage";
+import { problemOf, type Problem } from "../i18n/errorMessage";
 import { i18next } from "../i18n/i18n";
 import { formatNo } from "../stickers/format";
 import {
@@ -43,12 +42,12 @@ export type GiveFlowState =
   | ({ step: "preparing" } & PackingWait)
   /** LINE's picker is open. */
   | { step: "picking" }
-  | { step: "sent"; sentAt: number; recordError?: string }
+  | { step: "sent"; sentAt: number; recordError?: Problem }
   /** The picker closed without sending. */
-  | { step: "notSent"; recordError?: string }
+  | { step: "notSent"; recordError?: Problem }
   /** LINE didn't say whether the gift message went out, so it isn't offered again. */
   | { step: "maybeSent"; confirming?: boolean }
-  | { step: "failed"; error: string; recordError?: string }
+  | { step: "failed"; error: Problem; recordError?: Problem }
   /** The sticker lifts back out of the bag, then the give sheet returns. */
   | { step: "takingOut" };
 
@@ -90,19 +89,18 @@ interface Attempt {
 }
 
 /**
- * Why a step failed, as the screen says it: the cause in plain words in the app's language, then
- * the developer's English detail.
+ * Why a step failed, as the screen says it: the cause in plain words in the app's language, and the
+ * developer's English detail apart from it.
  */
-const describe = (error: unknown): string =>
+const describe = (error: unknown): Problem =>
   error instanceof GiftPackagingError
     ? describe(error.cause)
-    : error instanceof ApiError
-      ? errorReason(error)
-      : error instanceof GiftTransferError
-        ? `${i18next.t(($) => $.giving.transferProblem[error.problem])} (${error.message})`
-        : error instanceof Error
-          ? `${i18next.t(($) => $.giving.unknownProblem)} (${error.message})`
-          : String(error);
+    : error instanceof GiftTransferError
+      ? {
+          message: i18next.t(($) => $.giving.transferProblem[error.problem]),
+          detail: error.message,
+        }
+      : problemOf(error);
 
 /** The gift an attempt packed, or null when packing failed before any gift held the sticker. */
 async function giftOf(a: Attempt): Promise<string | null> {
@@ -216,12 +214,16 @@ export function createGiveFlow({
         report(`${which} couldn’t be packed`, error);
         if (attempt === a) {
           clearTimer();
+          const cause = describe(error);
           set({
             step: "failed",
-            error: i18next.t(($) => $.giving.inTheBag.couldntPack, {
-              no: which,
-              reason: describe(error),
-            }),
+            error: {
+              message: i18next.t(($) => $.giving.inTheBag.couldntPack, {
+                no: which,
+                reason: cause.message,
+              }),
+              detail: cause.detail,
+            },
           });
         }
       }
@@ -274,12 +276,16 @@ export function createGiveFlow({
       report(`${which} wasn’t sent`, outcome.failed);
       const recordError = await record("the failure", () => backend.markCancelled(giftId));
       if (shown()) {
+        const cause = describe(outcome.failed);
         set({
           step: "failed",
-          error: i18next.t(($) => $.giving.inTheBag.wasntSent, {
-            no: which,
-            reason: describe(outcome.failed),
-          }),
+          error: {
+            message: i18next.t(($) => $.giving.inTheBag.wasntSent, {
+              no: which,
+              reason: cause.message,
+            }),
+            detail: cause.detail,
+          },
           recordError,
         });
       }
@@ -355,12 +361,16 @@ export function createGiveFlow({
             await backend.takeOut(giftId);
           } catch (error) {
             report(`${which} couldn't be taken out`, error);
+            const cause = describe(error);
             set({
               step: "failed",
-              error: i18next.t(($) => $.giving.inTheBag.couldntTakeOut, {
-                no: which,
-                reason: describe(error),
-              }),
+              error: {
+                message: i18next.t(($) => $.giving.inTheBag.couldntTakeOut, {
+                  no: which,
+                  reason: cause.message,
+                }),
+                detail: cause.detail,
+              },
             });
             return;
           }

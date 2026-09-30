@@ -9,7 +9,7 @@ import {
 import { ApiError } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
-import { errorMessage, errorReason } from "../i18n/errorMessage";
+import { errorDetail, errorMessage, problemOf, type Problem } from "../i18n/errorMessage";
 import { i18next } from "../i18n/i18n";
 import { Trans, useTranslation } from "../i18n/react";
 import { ArrowClockwise, BuyTicketsIcon, DrawIcon } from "../icons";
@@ -18,6 +18,8 @@ import { useSuiWalletFailure } from "../identity/suiWallet";
 import type { JpycPayment } from "../payments/jpyc";
 import { PaymentFailed } from "../payments/paymentErrors";
 import { SuiCredit } from "../shop/SuiCredit";
+import { CopyableFinePrint } from "../ui/CopyableFinePrint";
+import { ErrorDetail, ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
@@ -25,7 +27,6 @@ import { REVEAL } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
 import { TearLine } from "../ui/TearLine";
 import { useBackToClose } from "../ui/useBackToClose";
-import { CopyableFinePrint } from "./CopyableFinePrint";
 import { paymentFailureOf, type PaymentFailure } from "./paymentFailure";
 import { formatYen, yenForJpyc } from "./prices";
 import { singleTicketPrice, useReservePacks, type ReservePack } from "./reservePacks";
@@ -62,26 +63,24 @@ interface Props {
   onClose: () => void;
 }
 
-/** Why something failed: an API error in the app's language, anything else in its own words. */
-const reason = (error: unknown) =>
-  error instanceof ApiError
-    ? errorReason(error)
-    : error instanceof Error && error.message
-      ? error.message
-      : String(error);
-/** Why adding a paid pack's tickets failed, in plain words: an API error's detail repeats the payment's ID. */
-const plainReason = (error: unknown) =>
-  error instanceof ApiError ? errorMessage(error) : reason(error);
+/**
+ * Why adding a paid pack's tickets failed, in plain words. An API error's own detail repeats the
+ * payment's ID, so it stays out of the card; anything else keeps its words as details for a report.
+ */
+const plainReason = (error: unknown): Problem =>
+  error instanceof ApiError ? { message: errorMessage(error) } : problemOf(error);
 /** Why asking again can never add a payment's tickets, in plain words. */
-const refusedReason = (refusal: ApiError) =>
+const refusedReason = (refusal: ApiError): Problem =>
   refusal.code === "payment_not_landed"
-    ? i18next.t(($) => $.tickets.checkout.refused.neverLanded)
+    ? { message: i18next.t(($) => $.tickets.checkout.refused.neverLanded) }
     : plainReason(refusal);
 
 /** A signed payment whose tickets the server didn't add, and why. */
 interface Unadded {
   purchase: UnaddedPurchase;
   reason: string;
+  /** The English words behind the reason, for a report, when it isn't the server's answer. */
+  detail?: string;
   /** Asking again can never add them: the card says so once, and the payment isn't kept. */
   refused: boolean;
   /** Sui showed this phone the payment go through. */
@@ -92,14 +91,9 @@ interface Unadded {
 function keptUnadded(userId: string): Unadded | null {
   const purchase = unaddedPurchaseToShow(unaddedPurchasesFor(userId));
   if (!purchase) return null;
-  return purchase.refusal
-    ? {
-        purchase,
-        reason: refusedReason(refusalError(purchase.refusal)),
-        refused: true,
-        landed: false,
-      }
-    : { purchase, reason: "", refused: false, landed: false };
+  if (!purchase.refusal) return { purchase, reason: "", refused: false, landed: false };
+  const { message, detail } = refusedReason(refusalError(purchase.refusal));
+  return { purchase, reason: message, detail, refused: true, landed: false };
 }
 
 /** One outline row per pack on sale, while today's prices load. */
@@ -159,7 +153,7 @@ function useJpycBalance(owner: string | undefined, payment: JpycPayment | undefi
         },
         (e: unknown) => {
           console.error(`Couldn't read the JPYC balance of ${owner}`, e);
-          if (live) setError(reason(e));
+          if (live) setError(problemOf(e).detail);
         },
       );
     return () => {
@@ -220,12 +214,8 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   const showUnadded = (purchase: UnaddedPurchase, e: unknown, landed: boolean) => {
     const refusal = keptRefusal(me.id, purchase.digest);
     if (refusal) forgetUnaddedPurchase(me.id, purchase.digest);
-    setUnadded({
-      purchase,
-      reason: refusal ? refusedReason(refusal) : plainReason(e),
-      refused: refusal !== null,
-      landed,
-    });
+    const { message, detail } = refusal ? refusedReason(refusal) : plainReason(e);
+    setUnadded({ purchase, reason: message, detail, refused: refusal !== null, landed });
   };
 
   const pay = async (p: ReservePack, payment: JpycPayment) => {
@@ -388,15 +378,19 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
       </>
     );
   } else if (step === "error" && unadded) {
-    // The payment's ID, fine print under the key in its own case, with a small Copy beside it.
+    // The words behind the reason, if any, then the payment's ID: fine print under the key in its
+    // own case, with a small Copy beside each.
     const payment = (
-      <CopyableFinePrint text={unadded.purchase.digest} lines={1}>
-        <Trans
-          i18nKey={($) => $.tickets.checkout.notAdded.payment}
-          values={{ digest: unadded.purchase.digest }}
-          components={{ id: <span className="reserve-checkout__digest" /> }}
-        />
-      </CopyableFinePrint>
+      <>
+        {unadded.detail && <ErrorDetail text={unadded.detail} />}
+        <CopyableFinePrint text={unadded.purchase.digest} lines={1}>
+          <Trans
+            i18nKey={($) => $.tickets.checkout.notAdded.payment}
+            values={{ digest: unadded.purchase.digest }}
+            components={{ id: <span className="reserve-checkout__digest" /> }}
+          />
+        </CopyableFinePrint>
+      </>
     );
     body = unadded.refused ? (
       // Refused for good, said once: asking again can't change it, so the way on is the packs.
@@ -486,11 +480,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
         >
           {t(($) => $.tickets.checkout.backToPacks)}
         </Key>
-        {failure.detail && (
-          <CopyableFinePrint text={failure.detail} lines={3}>
-            {failure.detail}
-          </CopyableFinePrint>
-        )}
+        {failure.detail && <ErrorDetail text={failure.detail} />}
         {close}
       </>
     );
@@ -530,16 +520,15 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
               </strong>
             )}
           </div>
-          {balanceDetail && (
-            <CopyableFinePrint text={balanceDetail} lines={3}>
-              {balanceDetail}
-            </CopyableFinePrint>
-          )}
+          {balanceDetail && <ErrorDetail text={balanceDetail} />}
           {packs.state === "failed" ? (
-            <p className="reserve-checkout__problem" role="alert">
-              {t(($) => $.tickets.checkout.pricesProblem, { reason: errorReason(packs.error) })}{" "}
-              <QuietLink onClick={packs.retry}>{t(($) => $.tickets.tryAgain)}</QuietLink>
-            </p>
+            <ErrorLine
+              className="reserve-checkout__problem"
+              detail={errorDetail(packs.error)}
+              onRetry={packs.retry}
+            >
+              {t(($) => $.tickets.checkout.pricesProblem, { reason: errorMessage(packs.error) })}
+            </ErrorLine>
           ) : !shop ? (
             <div className="reserve-checkout__packs">
               <p className="visually-hidden" role="status">

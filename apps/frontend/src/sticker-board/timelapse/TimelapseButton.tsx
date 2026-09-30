@@ -1,10 +1,10 @@
 import { ApiError } from "../../api/apiClient";
-import { errorReason } from "../../i18n/errorMessage";
+import { problemOf } from "../../i18n/errorMessage";
 import { useTranslation } from "../../i18n/react";
 import { Play, SkipForward } from "../../icons";
 import { formatNo } from "../../stickers/format";
+import { ErrorLine } from "../../ui/ErrorLine";
 import { LabelButton } from "../../ui/LabelButton";
-import { QuietLink } from "../../ui/QuietLink";
 import type { Timelapse, TimelapsePhase } from "./useTimelapse";
 import "./timelapse.css";
 
@@ -85,14 +85,12 @@ export function TimelapseFailure({ timelapse }: { timelapse: Timelapse }) {
   const { t } = useTranslation();
   const { failure, retry } = timelapse;
   if (!failure) return null;
+  const { message, detail } = problemOf(failure);
   const reason =
-    failure instanceof ApiError
-      ? errorReason(failure)
-      : t(($) => $.stickerBoard.timelapse.notPlayed, { detail: failure.message });
+    failure instanceof ApiError ? message : t(($) => $.stickerBoard.timelapse.notPlayed);
   return (
-    <p className="problem-note timelapse-failed" role="alert">
-      {t(($) => $.stickerBoard.timelapse.failed, { reason })}{" "}
-      <QuietLink onClick={retry}>{t(($) => $.stickerBoard.tryAgain)}</QuietLink>
-    </p>
+    <ErrorLine className="timelapse-failed" detail={detail} onRetry={retry}>
+      {t(($) => $.stickerBoard.timelapse.failed, { reason })}
+    </ErrorLine>
   );
 }

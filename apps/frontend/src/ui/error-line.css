@@ -1,0 +1,46 @@
+/* The app's one error line (ErrorLine.tsx): the sentence in Ink on Tomato Soft, then the raw words
+   behind it as fine print. Callers set its margin and width. */
+.error-line {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-label);
+  background: var(--tomato-soft);
+  color: var(--ink);
+  text-align: left;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.error-line__text {
+  margin: 0;
+  font: 500 13px/1.4 var(--font-ui);
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+/* Graphite reads 3.5:1 on Tomato Soft. */
+.error-line .label-btn--quiet {
+  color: var(--ink);
+  text-decoration-color: var(--ink);
+}
+
+.error-line .fine {
+  color: var(--ink);
+}
+
+.error-detail {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.error-detail__label {
+  margin: 0;
+}
+
+.error-detail .copyable-fine-print {
+  margin-top: 0;
+  justify-content: space-between;
+}

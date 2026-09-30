@@ -234,7 +234,7 @@ describe("ReceiveGiftDialog", () => {
     press("Accept");
     await settle();
     const problem = document.querySelector('[role="alert"]')?.textContent;
-    expect(problem).toContain("Failed to fetch");
+    expect(document.body.textContent).toContain("Failed to fetch");
     expect(problem).toContain("Tap Accept to try again");
     expect(onClose).not.toHaveBeenCalled();
 

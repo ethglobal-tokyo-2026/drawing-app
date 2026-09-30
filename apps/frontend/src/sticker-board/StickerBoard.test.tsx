@@ -128,11 +128,11 @@ describe("StickerBoard's check for gratitude to send", () => {
     );
     unmount = view.unmount;
     await act(async () => {});
-    const alert = () => view.host.querySelector(".board-unsaved")?.textContent;
+    const alert = () => view.host.querySelector(".board-alerts")?.textContent;
     expect(alert()).toContain("Couldn’t check whether gratitude is waiting");
     expect(alert()).toContain("database is busy");
 
-    const again = view.host.querySelector<HTMLElement>(".board-unsaved .label-btn");
+    const again = view.host.querySelector<HTMLElement>(".board-alerts .label-btn--quiet");
     await act(async () => again?.click());
     expect(stickerDetail).toHaveBeenCalledTimes(2);
     expect(alert()).toContain("gone");
@@ -316,7 +316,7 @@ describe("StickerBoard saving where a sticker sits", () => {
     expect(saveStickerPlacement).toHaveBeenCalledTimes(2);
     const shown = keptBoardFor(TEST_ME.id)?.stickers[0].placement;
     expect(saveStickerPlacement.mock.lastCall?.[1]).toEqual(shown && toApiPlacement(shown));
-    expect(view.host.querySelector(".board-unsaved")).not.toBeNull();
+    expect(view.host.querySelector(".board-alerts")).not.toBeNull();
   });
 });
 

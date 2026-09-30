@@ -3,6 +3,7 @@ import { act, createRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { forgetBoardComplete, markBoardComplete, QUIET_MS } from "../boardComplete";
+import { errors } from "../../i18n/strings/errors";
 import type { BoardStickerView } from "../boardSticker";
 import { StickerTray, type StickerTrayHandle } from "./StickerTray";
 import type { TrayBoard } from "./trayEngine";
@@ -420,17 +421,24 @@ describe("StickerTray", () => {
     it("when the board can't take a sticker, which goes back to its sheet", async () => {
       render(manyStickers(8), {}, undefined, (p) => problems.push(p));
       const id = await stickOnFirst();
-      expect(problems.map((p) => [p.kind, p.nos, p.reason.length > 0])).toEqual([
+      expect(problems.map((p) => [p.kind, p.nos, Boolean(p.reason)])).toEqual([
         ["place", [1], true],
       ]);
       expect(stateOf(id ?? "")).toBe("here");
     });
 
-    it("when placing a sticker fails, with the reason", async () => {
-      const place = () => Promise.reject(new Error("the wallet is asleep"));
+    it("when placing a sticker fails, in the app's words with the error's own for a report", async () => {
+      const place = () => Promise.reject(new Error("the connection is asleep"));
       render(manyStickers(8), { place }, undefined, (p) => problems.push(p));
       await stickOnFirst();
-      expect(problems).toEqual([{ kind: "place", nos: [1], reason: "the wallet is asleep" }]);
+      expect(problems).toEqual([
+        {
+          kind: "place",
+          nos: [1],
+          reason: errors.unexpected.en,
+          detail: "Error: the connection is asleep",
+        },
+      ]);
     });
 
     it("when a sticker's cut line can't be read, once, and packs it as a box", () => {

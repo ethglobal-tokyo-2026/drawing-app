@@ -254,10 +254,6 @@ export const tickets = {
       /** Reserve ticket checkout, tickets not added or refused: fine print under the key naming the payment; `<id>` holds its Sui transaction ID, cut short on screen */
       payment: { en: "Payment <id>{{digest}}</id>", ja: "支払い<id>{{digest}}</id>" },
     },
-    /** Reserve ticket checkout, beside the payment ID on the tickets-not-added and tickets-refused cards, and beside the raw words on the payment-failed card: the small button that copies them whole */
-    copy: { en: "Copy", ja: "コピー" },
-    /** Reserve ticket checkout: that button once they're copied */
-    copied: { en: "Copied", ja: "コピー済み" },
     /** When the server refused a payment's tickets for good, or Sui never showed the payment: said once, and the phone stops keeping the payment. */
     refused: {
       /** Reserve ticket checkout, once, when the server refused for good to add the tickets a payment bought (after paying, after asking again, or as it opens on a kept payment refused since): the title */
@@ -305,10 +301,10 @@ export const tickets = {
       en: "Reading your ticket purchases from Sui…",
       ja: "Suiからチケット購入履歴を読み込んでいます…",
     },
-    /** Shop and reserve ticket checkout, purchases list: when Sui couldn't be read; `reason` is Sui's own words */
+    /** Shop and reserve ticket checkout, purchases list: when Sui couldn't be read, before Try again and Sui's own English words for a report */
     problem: {
-      en: "Couldn’t read your ticket purchases from Sui ({{reason}}).",
-      ja: "Suiからチケット購入履歴を読み込めませんでした（{{reason}}）。",
+      en: "Couldn’t read your ticket purchases from Sui.",
+      ja: "Suiからチケット購入履歴を読み込めませんでした。",
     },
     /** Shop and reserve ticket checkout, purchases list: when you've never bought a pack */
     none: { en: "No ticket purchases yet.", ja: "チケットの購入履歴はまだありません。" },

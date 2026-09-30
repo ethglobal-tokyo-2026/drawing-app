@@ -7,7 +7,7 @@ import { ApiError, type ApiClient } from "../../api/apiClient";
 import { ApiProvider } from "../../api/ApiProvider";
 import { emptyApi } from "../../api/testing";
 import { StickerFigure } from "../../stickers/StickerFigure";
-import { errorReason } from "../../i18n/errorMessage";
+import { errorMessage } from "../../i18n/errorMessage";
 import { deferred, fakeTimelapsePlayers, handFrames, TEST_TIMELAPSE } from "./testTimelapse";
 import { TimelapseButton, TimelapseFailure } from "./TimelapseButton";
 import { TimelapseLayer } from "./TimelapseLayer";
@@ -282,7 +282,8 @@ describe("useTimelapse", () => {
     press();
     await settle();
     const notFound = new ApiError(404, { error: "timelapse_not_found", detail: STICKER.id });
-    expect(alert()).toContain(errorReason(notFound));
+    expect(alert()).toContain(errorMessage(notFound));
+    expect(document.body.textContent).toContain(STICKER.id);
     expect(label()).toBe("Timelapse");
     expect(logged).toHaveBeenCalled();
     expect(players.made).toHaveLength(0);
@@ -305,7 +306,8 @@ describe("useTimelapse", () => {
     const player = players.last();
     player.prepared.reject(new Error("no 2D context"));
     await settle();
-    expect(alert()).toContain("no 2D context");
+    expect(alert()).toContain("It couldn’t play here");
+    expect(document.body.textContent).toContain("no 2D context");
     expect(label()).toBe("Timelapse");
     expect(logged).toHaveBeenCalled();
     expect(player.calls).toContain("stop");

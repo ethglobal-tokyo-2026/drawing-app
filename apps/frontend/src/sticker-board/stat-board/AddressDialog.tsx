@@ -1,10 +1,12 @@
 import { useEffectEvent, useId, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
+import { problemOf, type Problem } from "../../i18n/errorMessage";
 import { useTranslation } from "../../i18n/react";
 import { ArrowSquareOut, Copy, X } from "../../icons";
 import { etherscanAddressUrl, suiscanAccountUrl } from "../../identity/explorers";
 import { openLinkInLine } from "../../line/openLink";
 import { cubicBezier, EASE_OUT, EASE_OUT_POINTS, EASE_PEEL } from "../../ui/easing";
+import { ErrorLine } from "../../ui/ErrorLine";
 import { LabelButton } from "../../ui/LabelButton";
 import { QrCode } from "../../ui/QrCode";
 import { useBackToClose } from "../../ui/useBackToClose";
@@ -291,7 +293,7 @@ export function AddressDialog({ chain, address, from, onClose }: Props) {
   useBackToClose(true, close);
 
   // A failed copy stays under Copy until the next try, where a toast would be gone in seconds.
-  const [copyProblem, setCopyProblem] = useState<string | null>(null);
+  const [copyProblem, setCopyProblem] = useState<Problem | null>(null);
   const copy = async () => {
     setCopyProblem(null);
     try {
@@ -299,7 +301,10 @@ export function AddressDialog({ chain, address, from, onClose }: Props) {
       toast(t(($) => $.stickerBoard.addresses[chain].copied));
     } catch (error) {
       console.error(`Couldn't copy the ${logName}`, error);
-      setCopyProblem(t(($) => $.stickerBoard.addresses[chain].notCopied));
+      setCopyProblem({
+        message: t(($) => $.stickerBoard.addresses[chain].notCopied),
+        detail: problemOf(error).detail,
+      });
     }
   };
 
@@ -373,9 +378,9 @@ export function AddressDialog({ chain, address, from, onClose }: Props) {
               {t(($) => $.stickerBoard.addresses.copy)}
             </LabelButton>
             {copyProblem && (
-              <p className="address-dialog__problem" role="alert">
-                {copyProblem}
-              </p>
+              <ErrorLine className="address-dialog__problem" detail={copyProblem.detail}>
+                {copyProblem.message}
+              </ErrorLine>
             )}
             <a
               className="label-btn label-btn--block address-dialog__rise"

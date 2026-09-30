@@ -23,7 +23,11 @@ const NEW_ARTIST: UserStats = {
   streak: 0,
 };
 
-const FAILURE = "Your stats didn’t load: the network is down";
+const FAILURE = {
+  message: "the network is down",
+  detail: "GET /api/stats got no answer",
+  retry: () => {},
+};
 
 let host: HTMLDivElement;
 let root: Root;
@@ -100,7 +104,8 @@ describe("StatCork's receipt", () => {
 
   it("says why the stats didn't load in place of the rows", () => {
     render(null);
-    expect(receipt()?.textContent).toContain(FAILURE);
+    expect(receipt()?.textContent).toContain(`Their stats didn’t load: ${FAILURE.message}`);
+    expect(receipt()?.textContent).toContain(FAILURE.detail);
     expect(host.querySelector(".stat-board__receipt-rows")).toBeNull();
   });
 });

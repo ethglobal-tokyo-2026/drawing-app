@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import type { StickerDetail as StickerDetailResponse } from "@drawing-app/api/client";
 import { useApiQuery } from "../api/useApiQuery";
 import { toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
-import { errorReason } from "../i18n/errorMessage";
+import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
 import { EnsNameLink } from "../identity/EnsNameLink";
 import { CaretLeft, CaretRight, GiveIcon, GratitudeIcon, StickerBoardIcon } from "../icons";
@@ -13,9 +13,9 @@ import { useLight } from "../stickers/light";
 import { ArtistChip } from "../stickers/ArtistChip";
 import { StickerFigure } from "../stickers/StickerFigure";
 import { EASE_OUT } from "../ui/easing";
+import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
-import { QuietLink } from "../ui/QuietLink";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
@@ -363,20 +363,19 @@ export function StickerDetail({
 
             {/* Where the key would be: without the check, the call to send gratitude can't show. */}
             {detail.state === "failed" && (
-              <p className="problem-note sticker-detail__check-failed" role="alert">
+              <ErrorLine
+                className="sticker-detail__check-failed"
+                detail={errorDetail(detail.error)}
+                // It goes as it retries, so focus moves to the dialog, which holds its keys.
+                onRetry={() => {
+                  root.current?.focus({ preventScroll: true });
+                  detail.retry();
+                }}
+              >
                 {t(($) => $.stickerBoard.detail.checkFailed, {
-                  reason: errorReason(detail.error),
-                })}{" "}
-                {/* It goes as it retries, so focus moves to the dialog, which holds its keys. */}
-                <QuietLink
-                  onClick={() => {
-                    root.current?.focus({ preventScroll: true });
-                    detail.retry();
-                  }}
-                >
-                  {t(($) => $.stickerBoard.tryAgain)}
-                </QuietLink>
-              </p>
+                  reason: errorMessage(detail.error),
+                })}
+              </ErrorLine>
             )}
 
             {mode === "yours" &&

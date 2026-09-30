@@ -222,15 +222,6 @@
 .receive-gift__problem {
   width: 100%;
   margin: 0 0 12px;
-  padding: 10px 12px;
-  border-radius: var(--r-label);
-  background: var(--tomato-soft);
-  font-size: 13px;
-  line-height: 1.4;
-  text-align: left;
-  overflow-wrap: anywhere;
-  user-select: text;
-  -webkit-user-select: text;
 }
 
 /* Received: the copy fades, the sheet drops and the bag falls, then the board shows. */
@@ -268,6 +259,11 @@
   font-size: 15px;
   line-height: 1.45;
   text-wrap: pretty;
+}
+
+/* The words behind a failed preview, under its line. */
+.receive-gift__end-head .error-detail {
+  max-width: 34ch;
 }
 
 .receive-gift__prop {

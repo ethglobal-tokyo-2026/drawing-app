@@ -15,6 +15,7 @@ import type { GiftOpening } from "../api/apiClient";
 import { useApi } from "../api/useApi";
 import type { PersonView } from "../api/views";
 import { GiftBag } from "../giving/GiftBag";
+import type { Problem } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
 import { ArrowSquareOut, HandHeart, StickerBoardIcon, X } from "../icons";
 import { useIdentity } from "../identity/useIdentity";
@@ -22,6 +23,7 @@ import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
+import { ErrorDetail, ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
@@ -225,7 +227,7 @@ export function ReceiveGiftDialog({ from, onClose }: Props) {
     const end =
       screen.step === "refused"
         ? refusalScreen(screen.refusal, screen.giver)
-        : previewFailedScreen(screen.message);
+        : previewFailedScreen(screen.problem);
     const refusedGiver = screen.step === "refused" ? screen.giver : null;
     body = (
       <Refusal
@@ -289,7 +291,7 @@ interface GiftProps {
   /** The opener's LINE name. */
   opener: string;
   receiving: boolean;
-  failed?: string;
+  failed?: Problem;
   onAccept: () => void;
   onNotNow: () => void;
 }
@@ -385,12 +387,12 @@ function Gift({
           </div>
           <div className="receive-gift__acts">
             {failed && (
-              <p className="receive-gift__problem" role="alert">
+              <ErrorLine className="receive-gift__problem" detail={failed.detail}>
                 {t(($) => $.receiving.gift.notReceived, {
                   no: formatNo(sticker.no),
-                  reason: failed,
+                  reason: failed.message,
                 })}
-              </p>
+              </ErrorLine>
             )}
             {/* Busy, the key keeps its face and its focus: aria-disabled, never disabled. The handlers
                 ignore a second press. */}
@@ -445,6 +447,7 @@ function Refusal({ end, giverHandle, leave, onLeave, onBoard, onTryAgain }: Refu
       <header className="receive-gift__end-head">
         <h1 className="receive-gift__title">{end.title}</h1>
         <p className="receive-gift__sub">{end.line}</p>
+        {end.detail && <ErrorDetail text={end.detail} />}
       </header>
       <div className="receive-gift__prop">
         {end.bag && (

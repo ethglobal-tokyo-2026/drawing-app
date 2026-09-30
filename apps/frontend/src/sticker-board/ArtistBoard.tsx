@@ -17,15 +17,15 @@ import type { Person } from "@drawing-app/api/client";
 import { useApiQuery } from "../api/useApiQuery";
 import { toPerson, type PersonView } from "../api/views";
 import { GiveSheet } from "../giving/GiveSheet";
-import { errorReason } from "../i18n/errorMessage";
+import { errorDetail, errorMessage, problemOf } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
 import { ArtistChip } from "../stickers/ArtistChip";
 import { Duration } from "../stickers/Duration";
 import { formatHandle, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
 import { StickerFigure } from "../stickers/StickerFigure";
+import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
-import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { QuietLink } from "../ui/QuietLink";
 import { useBackToClose } from "../ui/useBackToClose";
@@ -254,18 +254,15 @@ export function ArtistBoard({ person, onBack }: Props) {
     if (focused) setTabStop(focused.id);
   };
 
+  const statsProblem =
+    stats.state === "failed" ? { ...problemOf(stats.error), retry: stats.retry } : null;
   const figures: CorkFigures = {
     name: owner.name,
     handle: person.handle ?? owner.name,
     ensName: person.ensName,
     own: false,
     loading: stats.state === "loading",
-    failure:
-      stats.state === "failed"
-        ? t(($) => $.stickerBoard.artistBoard.statsDidntLoad, {
-            reason: errorReason(stats.error),
-          })
-        : null,
+    failure: statsProblem,
     ...statFigures(stats.state === "ready" ? stats.data : null),
     since: stats.state === "ready" ? Date.parse(stats.data.since) : null,
   };
@@ -337,16 +334,13 @@ export function ArtistBoard({ person, onBack }: Props) {
           </div>
         )}
         {board.state === "failed" && (
-          <div className="board-blank board-problem" role="alert">
-            <span className="board-blank-note">
+          <div className="board-blank board-problem">
+            <ErrorLine detail={errorDetail(board.error)} onRetry={board.retry}>
               {t(($) => $.stickerBoard.artistBoard.didntLoad, {
                 name: handle,
-                reason: errorReason(board.error),
+                reason: errorMessage(board.error),
               })}
-            </span>
-            <LabelButton size="sm" onClick={board.retry}>
-              {t(($) => $.stickerBoard.tryAgain)}
-            </LabelButton>
+            </ErrorLine>
           </div>
         )}
         {field &&

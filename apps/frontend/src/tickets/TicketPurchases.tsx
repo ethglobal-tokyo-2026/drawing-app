@@ -1,6 +1,7 @@
 import type { TicketShop as Shop } from "@drawing-app/api/client";
 import { useEffect, useId, useState } from "react";
 import { useMe } from "../api/meContext";
+import { problemOf } from "../i18n/errorMessage";
 import { formatDateTime } from "../i18n/format";
 import { useTranslation } from "../i18n/react";
 import { ArrowSquareOut, CaretDown, Receipt } from "../icons";
@@ -8,6 +9,7 @@ import { suiscanTxUrl } from "../identity/explorers";
 import { openLinkInLine } from "../line/openLink";
 import type { TicketPaymentRecord } from "../payments/jpyc";
 import { shortAddress } from "../sticker-board/stat-board/addresses";
+import { ErrorLine } from "../ui/ErrorLine";
 import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
 import { REVEAL } from "../ui/reveal";
@@ -21,12 +23,11 @@ interface Props {
   className?: string;
 }
 
-const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
-
 /** Pages of the owner's ticket payments, read from Sui when `read` asks. */
 function useTicketPayments(owner: string, payment: Shop["payment"]) {
   const [payments, setPayments] = useState<TicketPaymentRecord[] | null>(null);
   const [cursor, setCursor] = useState<string | null>(null);
+  /** Sui's own words for why a page couldn't be read, for a report. */
   const [error, setError] = useState<string | null>(null);
   // The page being read, by the cursor it ends at; undefined while none is.
   const [asked, setAsked] = useState<{ from: string | null } | undefined>(undefined);
@@ -46,7 +47,7 @@ function useTicketPayments(owner: string, payment: Shop["payment"]) {
         },
         (e: unknown) => {
           console.error(`Couldn't read the ticket payments of ${owner} from Sui`, e);
-          if (live) setError(reason(e));
+          if (live) setError(problemOf(e).detail);
         },
       )
       .finally(() => {
@@ -156,12 +157,15 @@ export function TicketPurchases({ owner, shop, className }: Props) {
             </ul>
           )}
           {history.error ? (
-            <p className="ticket-purchases__note" role="alert">
-              {t(($) => $.tickets.purchases.problem, { reason: history.error })}{" "}
-              <QuietLink disabled={history.reading} onClick={history.retry}>
-                {t(($) => $.tickets.tryAgain)}
-              </QuietLink>
-            </p>
+            <ErrorLine
+              className="ticket-purchases__problem"
+              detail={history.error}
+              onRetry={() => {
+                if (!history.reading) history.retry();
+              }}
+            >
+              {t(($) => $.tickets.purchases.problem)}
+            </ErrorLine>
           ) : (
             history.more && (
               <QuietLink disabled={history.reading} onClick={history.more}>

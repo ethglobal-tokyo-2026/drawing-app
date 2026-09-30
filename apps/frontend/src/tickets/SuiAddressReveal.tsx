@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "../i18n/react";
+import { CopyableFinePrint } from "../ui/CopyableFinePrint";
 import { LabelButton } from "../ui/LabelButton";
-import { CopyableFinePrint } from "./CopyableFinePrint";
 import "./SuiAddressReveal.css";
 
 /**

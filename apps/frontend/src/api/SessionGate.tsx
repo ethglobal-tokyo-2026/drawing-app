@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { errorMessage } from "../i18n/errorMessage";
+import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { currentLanguage } from "../i18n/i18n";
 import { followAccountLanguage } from "../i18n/pageLanguage";
 import { useTranslation } from "../i18n/react";
@@ -37,10 +37,6 @@ const needsLine = (error: ApiError) =>
   error.code === "no_line_token" ||
   error.code === "line_reconnect_failed" ||
   error.code === "signed_out";
-
-/** The status and code with the server's English detail, for the sign-in screen's report line. */
-const detailOf = (error: ApiError) =>
-  `${error.status > 0 ? `${error.status} · ` : ""}${error.message}`;
 
 /** What signing in with LINE would change on your account: LINE's name and picture, and the language. */
 const outOfDate = (me: Me, claims: LineClaims | null) =>
@@ -248,7 +244,7 @@ export function SessionGate({
         <GateNotice
           title={t(($) => $.api.signIn.failed)}
           lead={errorMessage(state.error)}
-          detail={detailOf(state.error)}
+          detail={errorDetail(state.error)}
         >
           <Key onClick={() => void retry()}>
             {needsLine(state.error)

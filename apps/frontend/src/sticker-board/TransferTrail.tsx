@@ -4,12 +4,12 @@ import type { PersonView } from "../api/views";
 import type { mountGratitudeReplay } from "../gratitude/replay/mountGratitudeReplay";
 import { ReplayStage } from "../gratitude/replay/ReplayStage";
 import { useGratitudeReplay } from "../gratitude/replay/useGratitudeReplay";
-import { errorReason } from "../i18n/errorMessage";
+import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { formatCount } from "../i18n/format";
 import { Trans, useTranslation } from "../i18n/react";
 import { formatMonthDay } from "../stickers/format";
 import { EASE_OUT } from "../ui/easing";
-import { QuietLink } from "../ui/QuietLink";
+import { ErrorLine } from "../ui/ErrorLine";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { handleOf } from "./boardSticker";
 import { artistShareLine, defaultOpenRow, TRAIL_SHOWN, type TrailRow } from "./trailRows";
@@ -221,36 +221,35 @@ export function TransferTrail({ rows, viewerId, artist, mountReplay }: Props) {
                 host={host}
                 returnFocus={() => pill.current}
               />
-              {replay.failure && (
-                <p className="problem-note transfer-trail__replay-note" role="alert">
-                  {replay.failure.kind === "load" ? (
-                    <>
-                      {t(($) => $.stickerBoard.transferTrail.replaying.didntLoad, {
-                        reason: errorReason(replay.failure.error),
-                      })}{" "}
-                      <QuietLink
-                        onClick={() => {
-                          // It goes as the replay starts, so focus moves to the pill, not the page.
-                          pill.current?.focus();
-                          replay.play();
-                        }}
-                      >
-                        {t(($) => $.stickerBoard.tryAgain)}
-                      </QuietLink>
-                    </>
-                  ) : (
-                    t(($) => $.stickerBoard.transferTrail.replaying.stopped, {
-                      reason: replay.failure.reason,
-                    })
-                  )}
-                </p>
+              {replay.failure?.kind === "load" && (
+                <ErrorLine
+                  className="transfer-trail__replay-note"
+                  detail={errorDetail(replay.failure.error)}
+                  // It goes as the replay starts, so focus moves to the pill, not the page.
+                  onRetry={() => {
+                    pill.current?.focus();
+                    replay.play();
+                  }}
+                >
+                  {t(($) => $.stickerBoard.transferTrail.replaying.didntLoad, {
+                    reason: errorMessage(replay.failure.error),
+                  })}
+                </ErrorLine>
+              )}
+              {replay.failure?.kind === "loop" && (
+                <ErrorLine className="transfer-trail__replay-note" detail={replay.failure.reason}>
+                  {t(($) => $.stickerBoard.transferTrail.replaying.stopped)}
+                </ErrorLine>
               )}
               {replay.seenFailure && (
-                <p className="problem-note transfer-trail__replay-note">
+                <ErrorLine
+                  className="transfer-trail__replay-note"
+                  detail={errorDetail(replay.seenFailure)}
+                >
                   {t(($) => $.stickerBoard.transferTrail.replaying.notMarkedSeen, {
-                    reason: errorReason(replay.seenFailure),
+                    reason: errorMessage(replay.seenFailure),
                   })}
-                </p>
+                </ErrorLine>
               )}
               <p className="visually-hidden" aria-live="polite">
                 {replayLine(fromYou, from, amount)}

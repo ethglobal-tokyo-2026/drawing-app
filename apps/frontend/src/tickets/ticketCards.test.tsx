@@ -560,7 +560,12 @@ describe("ReserveTicketCheckout", () => {
     expect(document.querySelector(".reserve-checkout__digest")?.textContent).toBe(TX_DIGEST);
     // The way back to the packs is only a quiet link, under the key that asks again.
     expect(buttonNamed("Back to the packs")?.classList.contains("label-btn--quiet")).toBe(true);
-    click("Copy");
+    // The reason's own words, which aren't the server's, are fine print above it, with a Copy of their own.
+    expect(document.body.textContent).toContain("Error: Sui didn’t answer.");
+    const copies = [...document.querySelectorAll<HTMLButtonElement>("button")].filter(
+      (b) => b.textContent === "Copy",
+    );
+    act(() => copies.at(-1)?.click());
     await settle(0);
     expect(write).toHaveBeenCalledWith(TX_DIGEST);
     expect(buttonNamed("Copied")).toBeDefined();

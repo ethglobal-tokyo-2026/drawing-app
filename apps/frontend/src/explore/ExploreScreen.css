@@ -68,12 +68,6 @@
   gap: 12px;
 }
 
-/* Why it failed is a sentence to read: a supporting note in its own case, not fine print. */
-.failed-reason {
-  color: var(--graphite);
-  font-size: 13px;
-}
-
 /* ---------- Sliding tabs: the view switch and the leaderboards ---------- */
 
 /* A track with one label stuck on the current tab; it slides along to the next one. */

@@ -3,6 +3,7 @@ import { ArrowSquareOut, CaretLeft, CaretRight } from "../icons";
 import { useState } from "react";
 import { useTranslation } from "../i18n/react";
 import { describeLiffError } from "../line/liff";
+import { ErrorLine } from "../ui/ErrorLine";
 
 /** LINE's Add friends screen. LINE opens it on phones only. */
 const ADD_FRIENDS_URL = "https://line.me/R/nv/addFriends";
@@ -14,7 +15,7 @@ interface Props {
 /** "Can’t find them?", in the give sheet's place: for a friend LINE's picker leaves out. */
 export function CantFindThem({ onBack }: Props) {
   const { t } = useTranslation();
-  /** Why LINE's Add friends screen didn't open. */
+  /** LINE's own words for why its Add friends screen didn't open. */
   const [reason, setReason] = useState<string | null>(null);
 
   const addFriends = () => {
@@ -60,9 +61,9 @@ export function CantFindThem({ onBack }: Props) {
         </button>
       </div>
       {reason !== null && (
-        <p className="giving__problem" role="alert">
-          {t(($) => $.giving.cantFind.addFriendsDidntOpen, { reason })}
-        </p>
+        <ErrorLine className="giving__problem" detail={reason}>
+          {t(($) => $.giving.cantFind.addFriendsDidntOpen)}
+        </ErrorLine>
       )}
     </>
   );

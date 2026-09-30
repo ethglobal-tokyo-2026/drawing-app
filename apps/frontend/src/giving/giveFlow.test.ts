@@ -235,19 +235,21 @@ describe("giving through a LINE chat", () => {
     await openPicker(t);
     t.picker().reject(new Error("EXCEPTION_IN_SUBWINDOW: the picker closed"));
     await wait();
-    expect(t.failure()).toMatch(/No\.0147.*Something went wrong\..*EXCEPTION_IN_SUBWINDOW/);
+    expect(t.failure().message).toMatch(/^No\.0147 wasn’t sent: Something went wrong\./);
+    expect(t.failure().detail).toContain("EXCEPTION_IN_SUBWINDOW");
     expect(t.gifts()).toEqual(["packed"]);
   });
 
-  it("names why a gift couldn't be packed in plain words, then the developer's detail", async () => {
+  it("names why a gift couldn't be packed in plain words, and keeps the developer's detail apart", async () => {
     const server = fakeBackend();
     const reverted = new GiftPackagingError("gift-1", new GiftTransactionRevertedError("deposit"));
     const t = setup({ backend: { ...server.backend, pack: () => Promise.reject(reverted) } });
     t.flow.chooseLineChat();
     await wait(PICKER_DELAY);
-    expect(t.failure()).toMatch(
-      /No\.0147 couldn’t be packed: .*didn’t make it into the gift bag.* \(The deposit transaction reverted\)$/,
+    expect(t.failure().message).toMatch(
+      /^No\.0147 couldn’t be packed: .*didn’t make it into the gift bag/,
     );
+    expect(t.failure().detail).toBe("The deposit transaction reverted");
   });
 
   it("sends the same gift again, straight away, after a cancel", async () => {
@@ -306,7 +308,7 @@ describe("giving through a LINE chat", () => {
     });
     t.flow.chooseLineChat();
     await wait(PICKER_DELAY * 2);
-    expect(t.failure()).toContain(errors.not_minted.en);
+    expect(t.failure().message).toContain(errors.not_minted.en);
     expect(t.messages).toHaveLength(0);
     t.flow.takeOut();
     await wait(TAKE_OUT);
@@ -329,11 +331,11 @@ describe("giving through a LINE chat", () => {
     const t = setup({ backend: { ...server.backend, pack, takeOut } });
     t.flow.chooseLineChat();
     await wait(PICKER_DELAY);
-    expect(t.failure()).toContain(errors.deposit_not_landed.en);
+    expect(t.failure().message).toContain(errors.deposit_not_landed.en);
 
     t.flow.takeOut();
     await wait();
-    expect(t.failure()).toContain("Take-out is still pending");
+    expect(t.failure().detail).toContain("Take-out is still pending");
     t.flow.takeOut();
     await wait(TAKE_OUT);
     expect(t.step()).toBe("sheet");
@@ -353,7 +355,7 @@ describe("giving through a LINE chat", () => {
     await wait();
     t.flow.takeOut();
     await wait(TAKE_OUT);
-    expect(t.failure()).toContain("Gas sponsorship failed");
+    expect(t.failure().detail).toContain("Gas sponsorship failed");
     expect(server.states()).toEqual(["packed"]);
     t.flow.takeOut();
     await wait(TAKE_OUT);
@@ -376,7 +378,7 @@ describe("giving through a LINE chat", () => {
 
     t.flow.takeOut();
     await wait();
-    expect(t.failure()).toContain("could not confirm the take-out");
+    expect(t.failure().detail).toContain("could not confirm the take-out");
     expect(server.states()).toEqual(["taken_out"]);
 
     t.flow.sendInLine();

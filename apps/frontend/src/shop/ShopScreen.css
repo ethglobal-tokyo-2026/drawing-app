@@ -73,13 +73,9 @@
   line-height: 1.2;
 }
 
-/* Tickets that didn't load: words and a Try again link, which wrap, rather than the count's one row. */
-.reserve-hero__held--problem {
-  display: block;
-  font-weight: 500;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-  text-wrap: balance;
+/* Tickets that didn't load: in the count's place, above the title. */
+.reserve-hero__problem {
+  margin: 0 0 10px;
 }
 
 .reserve-hero__title {

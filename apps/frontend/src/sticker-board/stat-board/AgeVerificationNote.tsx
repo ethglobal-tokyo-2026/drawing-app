@@ -3,10 +3,11 @@ import { Suspense, useId, useRef, useState } from "react";
 import { apiError, type ApiError } from "../../api/apiClient";
 import { useMe, useSetMe } from "../../api/meContext";
 import { useApi } from "../../api/useApi";
-import { errorReason } from "../../i18n/errorMessage";
+import { problemOf, type Problem } from "../../i18n/errorMessage";
 import { useTranslation } from "../../i18n/react";
 import { SealCheck } from "../../icons";
 import type { WorldIdFailure } from "../../identity/WorldIdAgeProof";
+import { ErrorLine } from "../../ui/ErrorLine";
 import { LabelButton } from "../../ui/LabelButton";
 import { lazyWithPreload } from "../../ui/lazyWithPreload";
 import "./age-verification-note.css";
@@ -20,7 +21,7 @@ type Status =
   | { step: "idle" }
   | { step: "opening" }
   | { step: "open"; request: AgeVerificationRequest }
-  | { step: "failed"; problem: string };
+  | { step: "failed"; problem: Problem };
 
 /**
  * Age verification, a paper on your cork: an Orb-verified World ID proves you're 18 or older, and
@@ -37,10 +38,13 @@ export function AgeVerificationNote() {
   const refused = useRef<ApiError | null>(null);
   const worldIdOpen = useRef(false);
 
-  const failed = (reason: string) =>
+  const failed = ({ message, detail }: Problem) =>
     setStatus({
       step: "failed",
-      problem: t(($) => $.stickerBoard.ageVerification.failed, { reason }),
+      problem: {
+        message: t(($) => $.stickerBoard.ageVerification.failed, { reason: message }),
+        detail,
+      },
     });
 
   const open = async () => {
@@ -55,7 +59,7 @@ export function AgeVerificationNote() {
       setStatus({ step: "open", request });
     } catch (error) {
       console.error("Age verification couldn't open World ID", error);
-      failed(errorReason(apiError(error)));
+      failed(problemOf(apiError(error)));
     }
   };
 
@@ -81,10 +85,13 @@ export function AgeVerificationNote() {
     console.error("World ID failed", failure);
     failed(
       refused.current
-        ? errorReason(refused.current)
+        ? problemOf(refused.current)
         : failure.kind === "other-proof"
-          ? t(($) => $.stickerBoard.ageVerification.otherProof)
-          : t(($) => $.stickerBoard.ageVerification.worldAppFailed, { code: failure.code }),
+          ? { message: t(($) => $.stickerBoard.ageVerification.otherProof) }
+          : {
+              message: t(($) => $.stickerBoard.ageVerification.worldAppFailed),
+              detail: failure.code,
+            },
     );
   };
 
@@ -124,9 +131,7 @@ export function AgeVerificationNote() {
           </>
         )}
         {status.step === "failed" && !verified && (
-          <p className="problem-note" role="alert">
-            {status.problem}
-          </p>
+          <ErrorLine detail={status.problem.detail}>{status.problem.message}</ErrorLine>
         )}
       </div>
       <i className="stat-board__pin" aria-hidden />

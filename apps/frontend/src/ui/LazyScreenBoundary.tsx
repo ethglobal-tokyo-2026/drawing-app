@@ -1,7 +1,7 @@
 import { Component, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "../i18n/react";
-import { LabelButton } from "./LabelButton";
+import { ErrorLine } from "./ErrorLine";
 import { LoadFailure } from "./loadFailure";
 import { reloadingOntoNewBuild } from "./reloadOntoNewBuild";
 import "./lazy-screen.css";
@@ -49,13 +49,13 @@ function LoadFailedNote({ failure }: { failure: LoadFailure }) {
   const { t } = useTranslation();
   if (reloadingOntoNewBuild()) return null;
   return createPortal(
-    <div className="lazy-screen-note" role="alert">
-      <p className="lazy-screen-note__text">{t(($) => $.ui.lazyScreen.didntLoad)}</p>
-      <p className="fine lazy-screen-note__reason">{failure.message}</p>
-      <LabelButton size="sm" className="lazy-screen-note__reload" onClick={() => location.reload()}>
-        {t(($) => $.ui.lazyScreen.reload)}
-      </LabelButton>
-    </div>,
+    <ErrorLine
+      className="lazy-screen-note"
+      detail={failure.message}
+      action={{ label: t(($) => $.ui.lazyScreen.reload), onClick: () => location.reload() }}
+    >
+      {t(($) => $.ui.lazyScreen.didntLoad)}
+    </ErrorLine>,
     notesHost(),
   );
 }

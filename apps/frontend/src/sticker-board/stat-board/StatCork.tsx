@@ -11,11 +11,13 @@ import {
   type ReactNode,
   type Ref,
 } from "react";
+import type { Problem } from "../../i18n/errorMessage";
 import { formatCount } from "../../i18n/format";
 import { useTranslation } from "../../i18n/react";
 import { ArrowUUpLeft, GratitudeIcon, StreakIcon } from "../../icons";
 import { EnsNameLink } from "../../identity/EnsNameLink";
 import { formatDay, formatHandle } from "../../stickers/format";
+import { ErrorLine } from "../../ui/ErrorLine";
 import { HitCounter } from "../../ui/HitCounter";
 import { LabelButton } from "../../ui/LabelButton";
 import { Skeleton } from "../../ui/Skeleton";
@@ -35,8 +37,8 @@ export interface CorkFigures {
   ensName: string | null;
   /** Your own board, which the notes address as "you". */
   own: boolean;
-  /** Why the figures didn't load, printed on the receipt; null while they load and once they have. */
-  failure: string | null;
+  /** Why the figures didn't load, said on the receipt; null while they load and once they have. */
+  failure: (Problem & { retry: () => void }) | null;
   /** The figures are on their way: outlines stand where they'll be. */
   loading: boolean;
   /** Null when it didn't load; zeros read as "No gratitude yet". */
@@ -209,13 +211,29 @@ export function StatCork({
                         </div>
                       ))}
                     </dl>
+                  ) : f.failure ? (
+                    <ErrorLine
+                      className="stat-board__receipt-none"
+                      detail={f.failure.detail}
+                      onRetry={f.failure.retry}
+                    >
+                      {f.own
+                        ? t(($) => $.stickerBoard.statBoard.didntLoadOwnBecause, {
+                            reason: f.failure.message,
+                          })
+                        : t(($) => $.stickerBoard.artistBoard.statsDidntLoad, {
+                            reason: f.failure.message,
+                          })}
+                    </ErrorLine>
                   ) : (
                     <p className="stat-board__receipt-none">
-                      {!gratitude
-                        ? (f.failure ?? <Skeleton width="80%" height="1em" />)
-                        : f.own
-                          ? t(($) => $.stickerBoard.statBoard.gratitude.noneYetOwn)
-                          : t(($) => $.stickerBoard.statBoard.gratitude.noneYet)}
+                      {!gratitude ? (
+                        <Skeleton width="80%" height="1em" />
+                      ) : f.own ? (
+                        t(($) => $.stickerBoard.statBoard.gratitude.noneYetOwn)
+                      ) : (
+                        t(($) => $.stickerBoard.statBoard.gratitude.noneYet)
+                      )}
                     </p>
                   )}
                   <p className="stat-board__receipt-total">

@@ -131,7 +131,7 @@ describe("LineGate", () => {
     await openApp();
     const { START_TIMEOUT_MS } = await import("./liff");
     await act(() => vi.advanceTimersByTimeAsync(START_TIMEOUT_MS));
-    const detail = () => host.querySelector(".line-gate__detail")?.textContent;
+    const detail = () => host.querySelector(".copyable-fine-print__text")?.textContent;
     expect(detail()).toBe(`LINE didn’t answer within ${START_TIMEOUT_MS / 1000} s`);
     await act(() => i18next.changeLanguage("ja"));
     expect(detail()).toContain(`${START_TIMEOUT_MS / 1000}秒`);

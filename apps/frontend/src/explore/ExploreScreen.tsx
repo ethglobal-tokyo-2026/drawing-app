@@ -14,14 +14,14 @@ import {
 import { useMe } from "../api/meContext";
 import { useApiQuery, type Query } from "../api/useApiQuery";
 import { toPerson } from "../api/views";
-import { errorReason } from "../i18n/errorMessage";
+import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { formatCount, formatTimeOfDay, formatWeekday } from "../i18n/format";
 import { Trans, useTranslation } from "../i18n/react";
 import { At, StreakIcon, X } from "../icons";
 import { formatHandle } from "../stickers/format";
-import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { EASE_OUT } from "../ui/easing";
+import { ErrorLine } from "../ui/ErrorLine";
 import { REVEAL } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
 import { useReducedMotion } from "../ui/useReducedMotion";
@@ -466,16 +466,13 @@ function PileLoading() {
 }
 
 /** What didn't load and why, with a way to ask again. */
-function Failed({ title, query }: { title: string; query: Query<unknown> }) {
-  const { t } = useTranslation();
+function Failed({ said, query }: { said: (reason: string) => string; query: Query<unknown> }) {
   if (query.state !== "failed") return null;
   return (
-    <section className="explore-section" role="alert">
-      <h2>{title}</h2>
-      <p className="failed-reason">{errorReason(query.error)}</p>
-      <LabelButton size="sm" onClick={query.retry}>
-        {t(($) => $.explore.failed.tryAgain)}
-      </LabelButton>
+    <section className="explore-section">
+      <ErrorLine detail={errorDetail(query.error)} onRetry={query.retry}>
+        {said(errorMessage(query.error))}
+      </ErrorLine>
     </section>
   );
 }
@@ -520,7 +517,12 @@ function SearchResults({
       </section>
     );
   if (results.state === "failed")
-    return <Failed title={t(($) => $.explore.failed.searchResults)} query={results} />;
+    return (
+      <Failed
+        said={(reason) => t(($) => $.explore.failed.searchResults, { reason })}
+        query={results}
+      />
+    );
   const people = results.data;
 
   if (!people.length)
@@ -608,7 +610,9 @@ function OpenBoardOf({ label, open }: { label: string; open: Open }) {
   }, [person]);
   return (
     <Failed
-      title={t(($) => $.explore.failed.ensName, { name: `${label}.croquis.eth` })}
+      said={(reason) =>
+        t(($) => $.explore.failed.ensName, { name: `${label}.croquis.eth`, reason })
+      }
       query={person}
     />
   );
@@ -640,7 +644,7 @@ export function ExploreScreen({ boardOf, onBoardOfTaken, onOpenArtist, onOpenMyB
 
   const shown =
     explore.state === "failed" ? (
-      <Failed title={t(($) => $.explore.failed.explore)} query={explore} />
+      <Failed said={(reason) => t(($) => $.explore.failed.explore, { reason })} query={explore} />
     ) : view === "stickers" ? (
       explore.state === "ready" ? (
         <Stickers explore={explore.data} meId={me.id} open={open} />

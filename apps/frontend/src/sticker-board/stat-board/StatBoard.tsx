@@ -2,7 +2,7 @@ import { useRef, useState, type Ref } from "react";
 import { logOut } from "../../api/logOut";
 import { useMe } from "../../api/meContext";
 import { useApiQuery } from "../../api/useApiQuery";
-import { errorReason } from "../../i18n/errorMessage";
+import { problemOf } from "../../i18n/errorMessage";
 import { useTranslation } from "../../i18n/react";
 import { SignOut } from "../../icons";
 import { retryPrivySignIn, usePrivyStatus, type PrivyStatus } from "../../identity/privy";
@@ -61,12 +61,7 @@ export function StatBoard({
     ensName: account.ensName,
     own: true,
     loading: stats.state === "loading",
-    failure:
-      stats.state === "failed"
-        ? t(($) => $.stickerBoard.statBoard.didntLoadOwnBecause, {
-            reason: errorReason(stats.error),
-          })
-        : null,
+    failure: stats.state === "failed" ? { ...problemOf(stats.error), retry: stats.retry } : null,
     ...statFigures(stats.state === "ready" ? stats.data : null),
     since: Date.parse(stats.state === "ready" ? stats.data.since : account.createdAt),
   };

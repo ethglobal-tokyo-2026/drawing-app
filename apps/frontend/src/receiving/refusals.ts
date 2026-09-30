@@ -1,5 +1,6 @@
 import type { PersonView } from "../api/views";
 import type { GiftStamp } from "../giving/GiftBag";
+import type { Problem } from "../i18n/errorMessage";
 import { i18next } from "../i18n/i18n";
 import type { RefusalKind } from "./receiveFlow";
 
@@ -7,6 +8,8 @@ import type { RefusalKind } from "./receiveFlow";
 export interface EndScreen {
   title: string;
   line: string;
+  /** The English words behind a failure, for a report. */
+  detail?: string;
   /** The bag as a prop, or none; `nsfw` is an NSFW sticker's pink bag. */
   bag: { state: "sealed" | "opened"; stamp?: GiftStamp; nsfw?: boolean } | null;
   /** Back to LINE; the sticker board; or Try again, with the way back to LINE under it. */
@@ -93,9 +96,10 @@ export function refusalScreen(kind: RefusalKind, giver: PersonView | null): EndS
 }
 
 /** A preview that failed: what failed, from the error, and Try again. */
-export const previewFailedScreen = (message: string): EndScreen => ({
+export const previewFailedScreen = ({ message, detail }: Problem): EndScreen => ({
   title: i18next.t(($) => $.receiving.previewFailed.title),
   line: message,
+  detail,
   bag: null,
   action: "tryAgain",
 });

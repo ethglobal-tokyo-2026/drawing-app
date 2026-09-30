@@ -10,10 +10,11 @@ import {
 import { apiError } from "../../api/apiClient";
 import { useMe } from "../../api/meContext";
 import { useApi } from "../../api/useApi";
-import { errorReason } from "../../i18n/errorMessage";
+import { problemOf, type Problem } from "../../i18n/errorMessage";
 import { keepChosenLanguage, type Language } from "../../i18n/language";
 import { lineLanguage } from "../../i18n/pageLanguage";
 import { useTranslation } from "../../i18n/react";
+import { ErrorLine } from "../../ui/ErrorLine";
 import { useReducedMotion } from "../../ui/useReducedMotion";
 import { reopenOnSettingsNextStart } from "./reopenOnSettings";
 import { statsClearPeek } from "./settingsPeek";
@@ -30,9 +31,7 @@ const PEEK_UNDER_TITLE = 10;
 type Status =
   | { step: "idle" }
   | { step: "saving"; choice: Choice }
-  | { step: "failed"; problem: string };
-
-const reason = (error: unknown) => (error instanceof Error ? error.message : String(error));
+  | { step: "failed"; problem: Problem };
 
 /**
  * Sticks the note to the cork's foot with only its title showing, until it scrolls into view: CSS
@@ -143,9 +142,11 @@ export function SettingsNote({
     } catch (error) {
       const failure = apiError(error);
       console.error("The language choice wasn't saved", failure);
-      const problem = t(($) => $.stickerBoard.settings.language.notSaved, {
-        reason: errorReason(failure),
-      });
+      const { message, detail } = problemOf(failure);
+      const problem = {
+        message: t(($) => $.stickerBoard.settings.language.notSaved, { reason: message }),
+        detail,
+      };
       setStatus({ step: "failed", problem });
       return;
     }
@@ -154,8 +155,9 @@ export function SettingsNote({
       keepChosenLanguage(choice);
     } catch (error) {
       console.error("The saved language choice couldn't be kept on this phone", error);
-      const problem = t(($) => $.stickerBoard.settings.language.notKept, { reason: reason(error) });
-      setStatus({ step: "failed", problem });
+      const { detail } = problemOf(error);
+      const message = t(($) => $.stickerBoard.settings.language.notKept);
+      setStatus({ step: "failed", problem: { message, detail } });
       return;
     }
     reopenOnSettingsNextStart();
@@ -204,9 +206,9 @@ export function SettingsNote({
             {status.step === "saving" ? t(($) => $.stickerBoard.settings.language.saving) : ""}
           </p>
           {status.step === "failed" && (
-            <p className="problem-note settings-note__problem" role="alert">
-              {status.problem}
-            </p>
+            <ErrorLine className="settings-note__problem" detail={status.problem.detail}>
+              {status.problem.message}
+            </ErrorLine>
           )}
         </fieldset>
       </div>

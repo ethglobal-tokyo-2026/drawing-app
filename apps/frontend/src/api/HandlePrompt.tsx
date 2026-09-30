@@ -1,8 +1,9 @@
 import type { TFunction } from "i18next";
 import { useState, type FormEvent } from "react";
-import { errorReason } from "../i18n/errorMessage";
+import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
 import { At } from "../icons";
+import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
 import { apiError, type ApiError } from "./apiClient";
 import { HANDLE_MAX_LENGTH, type Me } from "@drawing-app/api/client";
@@ -21,13 +22,19 @@ interface FailedSave {
   error: ApiError;
 }
 
-/** What went wrong, in words: a taken or broken handle, or the server's own answer. */
-function problemOf({ handle, error }: FailedSave, t: TFunction): string {
-  if (error.code === "handle_taken") return t(($) => $.api.handle.taken, { handle });
+/** What went wrong, in words: a taken or broken handle, or the server's own answer with its detail apart. */
+function problemOfSave(
+  { handle, error }: FailedSave,
+  t: TFunction,
+): { message: string; detail?: string } {
+  if (error.code === "handle_taken") return { message: t(($) => $.api.handle.taken, { handle }) };
   if (error.code === "handle_invalid") {
-    return t(($) => $.api.handle.invalid, { max: HANDLE_MAX_LENGTH });
+    return { message: t(($) => $.api.handle.invalid, { max: HANDLE_MAX_LENGTH }) };
   }
-  return t(($) => $.api.handle.couldntSave, { reason: errorReason(error) });
+  return {
+    message: t(($) => $.api.handle.couldntSave, { reason: errorMessage(error) }),
+    detail: errorDetail(error),
+  };
 }
 
 /** Asks for a handle when your LINE name couldn't become one, before the app opens. */
@@ -38,6 +45,9 @@ export function HandlePrompt({ me, setHandle, onChosen }: Props) {
   const [failedSave, setFailedSave] = useState<FailedSave | null>(null);
   const handle = draft.trim().replace(/^@/, "");
   const tooLong = Array.from(handle).length > HANDLE_MAX_LENGTH;
+  const problem = tooLong
+    ? { message: t(($) => $.api.handle.tooLong, { max: HANDLE_MAX_LENGTH }) }
+    : failedSave && problemOfSave(failedSave, t);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -79,11 +89,11 @@ export function HandlePrompt({ me, setHandle, onChosen }: Props) {
             autoFocus
           />
         </label>
-        <p id="handle-prompt-problem" className="handle-prompt__problem" role="alert">
-          {tooLong
-            ? t(($) => $.api.handle.tooLong, { max: HANDLE_MAX_LENGTH })
-            : failedSave && problemOf(failedSave, t)}
-        </p>
+        {problem && (
+          <ErrorLine id="handle-prompt-problem" detail={problem.detail}>
+            {problem.message}
+          </ErrorLine>
+        )}
         {/* While saving it keeps its face (aria-busy, never disabled) and submit() takes no second try. */}
         <Key
           type="submit"

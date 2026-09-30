@@ -60,8 +60,6 @@ export const giving = {
       ja: "このギフトには送るためのリンクがありませんでした。シールを取り出してから、もう一度贈ってください。",
     },
   },
-  /** Giving's "Not sent yet" screen: the reason in “couldn’t be packed”, “wasn’t sent” or “couldn’t be taken out” for a failure the app has no line for; the developer's English detail follows it in brackets */
-  unknownProblem: { en: "Something went wrong.", ja: "問題が発生しました。" },
   giftMessage: {
     /** The Gift Message sent through LINE: its preview in the recipient's chat list and LINE's notification */
     altText: { en: "{{name}} sent you a sticker", ja: "{{name}}さんからシールが届きました" },
@@ -161,10 +159,10 @@ export const giving = {
       en: "Add them in LINE first and say hi. Then come back and pick them.",
       ja: "まずLINEで友だちに追加して、あいさつしましょう。それから戻って選んでください。",
     },
-    /** Giving's "Can't find them?" screen: an alert when tapping "Not friends in LINE yet?" fails to open LINE's Add friends screen */
+    /** Giving's "Can't find them?" screen: an alert when tapping "Not friends in LINE yet?" fails to open LINE's Add friends screen, over LINE's own English words for a report */
     addFriendsDidntOpen: {
-      en: "LINE’s Add friends screen didn’t open: {{reason}}",
-      ja: "LINEの友だち追加画面がひらきませんでした：{{reason}}",
+      en: "LINE’s Add friends screen didn’t open.",
+      ja: "LINEの友だち追加画面がひらきませんでした。",
     },
   },
   preparing: {

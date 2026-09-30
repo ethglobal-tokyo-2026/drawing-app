@@ -17,7 +17,7 @@ import { packSheets, type PackedItem, type Shape } from "./sheetPacking";
 import { knownShape, stickerShape, unreadableCut } from "./stickerShape";
 import { edgeAt } from "./edgeBands";
 import { inertBesides } from "./inertBesides";
-import { reasonOf, type TrayProblem } from "./trayProblem";
+import { BoardNotReady, reasonOf, type TrayProblem } from "./trayProblem";
 import { countVisit, visitsSoFar } from "./traySeen";
 import { newSlots, type TraySlot } from "./traySlots";
 import { createZipper, mouthRange, showsFrom, type Zipper } from "./zipper";
@@ -556,7 +556,7 @@ export function createTrayEngine(
       const why = unreadableCut(s.id);
       if (why !== undefined && !toldCuts.has(s.id)) {
         toldCuts.add(s.id);
-        problem({ kind: "cut", nos: [s.no], reason: why });
+        problem({ kind: "cut", nos: [s.no], detail: why });
       }
     }
     model.count = Math.max(1, sheets.length);
@@ -1871,11 +1871,11 @@ export function createTrayEngine(
   /** Its placing failed, so it stays in the tray. */
   const reportPlace = (s: Slot, error: unknown) => {
     console.error(`Sticking ${formatNo(s.no)} on the board failed; it's back in its sheet`, error);
-    problem({ kind: "place", nos: [s.no], reason: reasonOf(error) });
+    problem({ kind: "place", nos: [s.no], ...reasonOf(error) });
   };
   /** The board answers with nothing when it couldn't take the sticker, such as before it has a size. */
   function placedOrThrow(placed: HTMLElement | null): HTMLElement {
-    if (!placed) throw new Error(i18next.t(($) => $.stickerBoard.tray.problem.boardNotReady));
+    if (!placed) throw new BoardNotReady();
     return placed;
   }
   const holdOpen = (ms: number) => later(() => zip.relax(1), ms);

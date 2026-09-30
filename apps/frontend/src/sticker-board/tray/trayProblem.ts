@@ -1,5 +1,5 @@
-import { ApiError } from "../../api/apiClient";
-import { errorReason } from "../../i18n/errorMessage";
+import { problemOf } from "../../i18n/errorMessage";
+import { i18next } from "../../i18n/i18n";
 
 /** Something the sticker tray couldn't do, which the board says in its alert. */
 export interface TrayProblem {
@@ -7,12 +7,20 @@ export interface TrayProblem {
   kind: "place" | "cut" | "seen";
   /** The stickers' numbers. */
   nos: readonly number[];
-  /** Why, in words. */
-  reason: string;
+  /** Why, in the app's language, for the kinds whose sentence ends on it. */
+  reason?: string;
+  /** The English words behind it, for a report. */
+  detail?: string;
 }
 
-/** Why something failed: the API's reason, or else the error's own words, which the API's never fit. */
-export function reasonOf(error: unknown): string {
-  if (error instanceof ApiError) return errorReason(error);
-  return error instanceof Error ? error.message : String(error);
+/** The board answered with nothing, as before it has a size, so a sticker couldn't be stuck on. */
+export class BoardNotReady extends Error {}
+
+/** Why something failed, in the app's language, with the words behind it. */
+export function reasonOf(error: unknown): Pick<TrayProblem, "reason" | "detail"> {
+  if (error instanceof BoardNotReady) {
+    return { reason: i18next.t(($) => $.stickerBoard.tray.problem.boardNotReady) };
+  }
+  const { message, detail } = problemOf(error);
+  return { reason: message, detail };
 }

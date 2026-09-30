@@ -226,9 +226,12 @@ describe("StickerDetail", () => {
     );
     open({ onSendGratitude: vi.fn() }, emptyApi({ stickerDetail }));
     await settle();
-    const note = document.querySelector(".problem-note");
-    expect(note?.getAttribute("role")).toBe("alert");
-    expect(note?.textContent).toContain("Couldn’t load where it’s been");
+    const note = document.querySelector(".sticker-detail__check-failed");
+    expect(note?.querySelector('[role="alert"]')?.textContent).toContain(
+      "Couldn’t load where it’s been",
+    );
+    // The server's own words are fine print, apart from the sentence.
+    expect(note?.textContent).toContain("database is busy");
     // Ahead of Give, since without the check the call to send gratitude can't show.
     const acts = document.querySelector(".sticker-detail__acts");
     if (!note || !acts) throw new Error("The detail shows no failure line or no Give");

@@ -49,7 +49,8 @@ describe("a lazy screen whose code doesn't load", () => {
     expect(host.textContent).toBe("The board");
     const note = document.querySelector("[role=alert]");
     expect(note?.textContent).toContain(strings.ui.lazyScreen.didntLoad.en);
-    expect(note?.textContent).toContain("the sticker detail");
+    // What the browser said is fine print beside Copy, for a report.
+    expect(document.body.textContent).toContain("the sticker detail");
     act(() => note?.querySelector("button")?.click());
     expect(reload).toHaveBeenCalledOnce();
   });

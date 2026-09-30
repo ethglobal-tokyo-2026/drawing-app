@@ -13,34 +13,8 @@
   pointer-events: none;
 }
 
+/* An error line lifted over the screen, which stays tappable inside the host's pass-through. */
 .lazy-screen-note {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 4px 10px;
-  padding: 10px 10px 10px 12px;
-  border-radius: var(--r-label);
-  background: var(--tomato-soft);
   box-shadow: var(--shadow-label);
   pointer-events: auto;
-}
-
-.lazy-screen-note__text {
-  margin: 0;
-  color: var(--ink);
-  font: 500 13px/1.35 var(--font-ui);
-}
-
-/* What the browser said, under the plain sentence, selectable for a bug report. */
-.lazy-screen-note__reason {
-  grid-column: 1;
-  margin: 0;
-  overflow-wrap: anywhere;
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-.lazy-screen-note__reload {
-  grid-column: 2;
-  grid-row: 1 / span 2;
 }

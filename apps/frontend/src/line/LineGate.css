@@ -42,25 +42,10 @@
   outline: none;
 }
 
-/* The technical details under the key, for a report: case kept, wrapping anywhere, and selectable. */
+/* The technical details under the key, for a report (ErrorDetail). */
 .line-gate__details {
-  display: grid;
-  gap: 2px;
   max-width: 36ch;
   margin: 6px 0 0;
-}
-
-.line-gate__details p {
-  margin: 0;
-}
-
-.line-gate__detail {
-  color: var(--graphite);
-  font-size: 13px;
-  overflow-wrap: anywhere;
-  text-wrap: pretty;
-  -webkit-user-select: text;
-  user-select: text;
 }
 
 /* LIFF usually starts within a second, so the paper shows alone at first and the line only comes in

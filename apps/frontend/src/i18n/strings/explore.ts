@@ -142,14 +142,21 @@ export const explore = {
     streakSpoken_other: { en: "{{count}} days", ja: "{{count}}日" },
   },
   failed: {
-    /** Explore tab, when it fails to load: the heading of the error, over the reason and a Try again button */
-    explore: { en: "Couldn’t load Explore", ja: "「さがす」を読み込めませんでした" },
-    /** Explore tab, when a search fails to load: the heading of the error, over the reason and a Try again button */
-    searchResults: { en: "Couldn’t load search results", ja: "検索結果を読み込めませんでした" },
-    /** Explore, opened from a croquis.eth name's link: the heading of the error when nobody holds the name or their board didn't load; {{name}} is the whole name, such as alice.croquis.eth */
-    ensName: { en: "Couldn’t load {{name}}", ja: "{{name}}を読み込めませんでした" },
-    /** Explore tab, when it or a search fails to load: the small button under the error's reason that asks again */
-    tryAgain: { en: "Try again", ja: "もう一度" },
+    /** Explore tab, when it fails to load: the alert, before Try again; {{reason}} is why */
+    explore: {
+      en: "Couldn’t load Explore: {{reason}}",
+      ja: "「さがす」を読み込めませんでした：{{reason}}",
+    },
+    /** Explore tab, when a search fails to load: the alert, before Try again; {{reason}} is why */
+    searchResults: {
+      en: "Couldn’t load search results: {{reason}}",
+      ja: "検索結果を読み込めませんでした：{{reason}}",
+    },
+    /** Explore, opened from a croquis.eth name's link: the alert when nobody holds the name or their board didn't load, before Try again; {{name}} is the whole name, such as alice.croquis.eth, and {{reason}} is why */
+    ensName: {
+      en: "Couldn’t load {{name}}: {{reason}}",
+      ja: "{{name}}を読み込めませんでした：{{reason}}",
+    },
   },
   /** A sticker lifted off the pile into a sheet. {{artist}} is its artist's @handle, or LINE name. */
   lifted: {

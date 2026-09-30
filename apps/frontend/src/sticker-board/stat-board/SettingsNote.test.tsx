@@ -89,7 +89,7 @@ describe("the Settings note's language", () => {
     const host = render(() => Promise.reject(offline));
     await choose(host, "日本語");
     expect(alert(host)).toContain(errors.network.en);
-    expect(alert(host)).toContain("Failed to fetch");
+    expect(host.textContent).toContain("Failed to fetch");
     expect(readChosenLanguage()).toBeNull();
     expect(option(host, "Same as LINE (English)").checked).toBe(true);
     expect(restart).not.toHaveBeenCalled();
@@ -108,7 +108,8 @@ describe("the Settings note's language", () => {
     const host = render(setLanguageChoice);
     await choose(host, "日本語");
     expect(setLanguageChoice).toHaveBeenCalledWith("ja");
-    expect(alert(host)).toContain("The storage is full");
+    expect(alert(host)).toContain("couldn’t keep it");
+    expect(host.textContent).toContain("The storage is full");
     expect(restart).not.toHaveBeenCalled();
   });
 

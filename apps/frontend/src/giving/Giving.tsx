@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
+import type { Problem } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
 import {
   ArrowUUpLeft,
@@ -13,6 +14,7 @@ import {
 } from "../icons";
 import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
+import { ErrorLine } from "../ui/ErrorLine";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
@@ -231,9 +233,9 @@ export function Giving({
           <h2 className="giving__title">{title}</h2>
           <p className="giving__sub">{lead}</p>
           {state.recordError && (
-            <p className="giving__problem" role="alert">
-              {t(($) => $.giving.sent.couldntRecord, { reason: state.recordError })}
-            </p>
+            <ErrorLine className="giving__problem" detail={state.recordError.detail}>
+              {t(($) => $.giving.sent.couldntRecord, { reason: state.recordError.message })}
+            </ErrorLine>
           )}
         </div>
         <LabelButton
@@ -298,10 +300,13 @@ export function Giving({
     } else {
       lead = unsent ? t(($) => $.giving.inTheBag.notSentLead) : t(($) => $.giving.inTheBag.lead);
     }
-    const couldntRecord = (reason: string) => t(($) => $.giving.inTheBag.couldntRecord, { reason });
-    const problem =
+    const couldntRecord = ({ message, detail }: Problem): Problem => ({
+      message: t(($) => $.giving.inTheBag.couldntRecord, { reason: message }),
+      detail,
+    });
+    const problems: Problem[] =
       state.step === "failed"
-        ? [state.error, state.recordError && couldntRecord(state.recordError)]
+        ? [state.error, ...(state.recordError ? [couldntRecord(state.recordError)] : [])]
         : state.step === "notSent" && state.recordError
           ? [couldntRecord(state.recordError)]
           : [];
@@ -313,10 +318,10 @@ export function Giving({
         </header>
         <div className="giving__scroll">
           <p className="giving__sub">{lead}</p>
-          {problem.filter(Boolean).map((line) => (
-            <p key={String(line)} className="giving__problem" role="alert">
-              {line}
-            </p>
+          {problems.map(({ message, detail }) => (
+            <ErrorLine key={message} className="giving__problem" detail={detail}>
+              {message}
+            </ErrorLine>
           ))}
           {bag("open")}
         </div>

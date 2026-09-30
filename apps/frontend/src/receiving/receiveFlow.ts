@@ -1,7 +1,7 @@
 import type { ApiError } from "../api/apiClient";
 import type { GiftPreview, ReceivedGift, ReceiveRefusal } from "@drawing-app/api/client";
 import { toMs, toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
-import { errorReason } from "../i18n/errorMessage";
+import { problemOf, type Problem } from "../i18n/errorMessage";
 import { i18next } from "../i18n/i18n";
 
 /** Why a gift can't be received here: a refusal from the server, a link to no gift, or no server. */
@@ -16,15 +16,15 @@ export interface GiftPreviewView {
 
 /**
  * ReceiveGiftDialog's steps, from the Gift Claim Token's preview to the received sticker. `failed`
- * and `message` say what failed, in the app's language.
+ * says what failed, in the app's language, with the words behind it for a report.
  */
 export type ReceiveScreen =
   | { step: "opening" }
   | { step: "sealed"; preview: GiftPreviewView }
-  | { step: "unpackaged"; preview: GiftPreviewView; receiving: boolean; failed?: string }
+  | { step: "unpackaged"; preview: GiftPreviewView; receiving: boolean; failed?: Problem }
   | { step: "received"; stickerId: string }
   | { step: "refused"; refusal: RefusalKind; giver: PersonView | null }
-  | { step: "failed"; message: string };
+  | { step: "failed"; problem: Problem };
 
 export type ReceiveEvent =
   | { type: "previewed"; preview: GiftPreview }
@@ -63,9 +63,11 @@ function opened({ giver, expiresAt, receivable, refusal, sticker }: GiftPreview)
   if (!receivable && refusal) return { step: "refused", refusal, giver: toPerson(giver) };
   return {
     step: "failed",
-    message: receivable
-      ? i18next.t(($) => $.receiving.previewFailed.withoutSticker)
-      : i18next.t(($) => $.receiving.previewFailed.withoutRefusal),
+    problem: {
+      message: receivable
+        ? i18next.t(($) => $.receiving.previewFailed.withoutSticker)
+        : i18next.t(($) => $.receiving.previewFailed.withoutRefusal),
+    },
   };
 }
 
@@ -78,7 +80,7 @@ export function receiveFlow(screen: ReceiveScreen, event: ReceiveEvent): Receive
       if (screen.step !== "opening") return screen;
       return isRefusal(event.error.code)
         ? { step: "refused", refusal: event.error.code, giver: null }
-        : { step: "failed", message: errorReason(event.error) };
+        : { step: "failed", problem: problemOf(event.error) };
     case "retry":
       return screen.step === "refused" || screen.step === "failed" ? { step: "opening" } : screen;
     case "unpackaged":
@@ -101,7 +103,7 @@ export function receiveFlow(screen: ReceiveScreen, event: ReceiveEvent): Receive
             step: "unpackaged",
             preview: screen.preview,
             receiving: false,
-            failed: errorReason(event.error),
+            failed: problemOf(event.error),
           };
   }
 }

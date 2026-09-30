@@ -143,7 +143,8 @@ describe("the Age verification paper", () => {
     widget = null;
     const failing = await openWorldId(host);
     await act(async () => failing.onError?.(IDKitErrorCodes.CredentialUnavailable));
-    expect(alert(host)).toContain("credential_unavailable");
+    expect(alert(host)).toContain("World App couldn’t finish");
+    expect(host.textContent).toContain("credential_unavailable");
   });
 
   it("says why World ID couldn't open", async () => {

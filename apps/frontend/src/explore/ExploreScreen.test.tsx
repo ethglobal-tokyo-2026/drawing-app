@@ -345,8 +345,8 @@ describe("a name's link", () => {
       emptyApi({ explore: () => new Promise(() => {}) }),
     );
     await wait(0);
-    expect(document.querySelector('[role="alert"] h2')?.textContent).toBe(
-      "Couldn’t load nobody.croquis.eth",
+    expect(document.querySelector('[role="alert"]')?.textContent).toContain(
+      "Couldn’t load nobody.croquis.eth: ",
     );
   });
 });

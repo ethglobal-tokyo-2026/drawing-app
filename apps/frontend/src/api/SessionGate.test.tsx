@@ -557,7 +557,7 @@ describe("SessionGate's waiting and failure screens", () => {
     await settle();
     expect(document.activeElement).toBe(host.querySelector("h1"));
     expect(host.querySelector(".line-gate__lead")?.textContent).toBe(errorMessage(failure));
-    expect(host.querySelector(".line-gate__detail")?.textContent).toContain(
+    expect(host.querySelector(".copyable-fine-print__text")?.textContent).toContain(
       "GET /api/me got no answer",
     );
   });

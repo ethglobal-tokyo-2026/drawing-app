@@ -1,5 +1,5 @@
 import { toSticker } from "../api/views";
-import { errorReason } from "../i18n/errorMessage";
+import { errorDetail, errorMessage, type Problem } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
 import { useMyStickerBoard } from "../sticker-board/useMyStickerBoard";
 
@@ -17,13 +17,19 @@ export interface KeptSticker {
 }
 
 /** Your stickers not packed or sent as gifts, newest first. */
-export function useKeptStickers() {
+export function useKeptStickers(): { stickers: KeptSticker[] | null; error: Problem | null } {
   const { t } = useTranslation();
   const board = useMyStickerBoard();
   if (board.state === "loading") return { stickers: null, error: null };
   if (board.state === "failed") {
-    const reason = errorReason(board.error);
-    return { stickers: null, error: t(($) => $.stickers.keptStickers.notLoaded, { reason }) };
+    const reason = errorMessage(board.error);
+    return {
+      stickers: null,
+      error: {
+        message: t(($) => $.stickers.keptStickers.notLoaded, { reason }),
+        detail: errorDetail(board.error),
+      },
+    };
   }
   const stickers = board.data.boardStickers
     .filter((b) => b.held && !b.openGift)

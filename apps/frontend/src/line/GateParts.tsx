@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useTranslation } from "../i18n/react";
+import { ErrorDetail } from "../ui/ErrorLine";
 import "./LineGate.css";
 
 /** A wait this long gets a second line, so a stall doesn't read as a frozen app. */
@@ -39,7 +39,6 @@ export function GateNotice({
   detail?: string;
   children: ReactNode;
 }) {
-  const { t } = useTranslation();
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), []);
   return (
@@ -51,8 +50,7 @@ export function GateNotice({
       {children}
       {detail && (
         <div className="line-gate__details">
-          <p className="fine">{t(($) => $.line.gate.details)}</p>
-          <p className="line-gate__detail">{detail}</p>
+          <ErrorDetail text={detail} />
         </div>
       )}
     </>

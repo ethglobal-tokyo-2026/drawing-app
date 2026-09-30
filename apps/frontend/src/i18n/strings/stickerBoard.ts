@@ -198,10 +198,10 @@ export const stickerBoard = {
         en: "Your language couldn’t be saved, so it hasn’t changed: {{reason}}",
         ja: "言語を保存できなかったため、変更していません：{{reason}}",
       },
-      /** Settings note: the alert when the language saved to your account but this phone couldn't keep it for the next start, with the reason */
+      /** Settings note: the alert when the language saved to your account but this phone couldn't keep it for the next start, over the phone's own words for a report */
       notKept: {
-        en: "Your language is saved, but this phone couldn’t keep it ({{reason}}). It changes the next time you open the app.",
-        ja: "言語は保存しましたが、この端末には残せませんでした（{{reason}}）。次にアプリをひらいたときに切り替わります。",
+        en: "Your language is saved, but this phone couldn’t keep it. It changes the next time you open the app.",
+        ja: "言語は保存しましたが、この端末には残せませんでした。次にアプリをひらいたときに切り替わります。",
       },
     },
   },
@@ -230,10 +230,10 @@ export const stickerBoard = {
       en: "World App sent a different kind of proof. Update World App, then try again.",
       ja: "World Appから別の種類の証明が届きました。World Appを更新してから、もう一度お試しください。",
     },
-    /** Your stat board, Age verification paper: the reason in “couldn’t be verified” when World App failed; {{code}} is World ID's error code, such as credential_unavailable */
+    /** Your stat board, Age verification paper: the reason in “couldn’t be verified” when World App failed; World ID's error code, such as credential_unavailable, follows as details for a report */
     worldAppFailed: {
-      en: "World App couldn’t finish ({{code}}).",
-      ja: "World Appで確認を完了できませんでした（{{code}}）。",
+      en: "World App couldn’t finish.",
+      ja: "World Appで確認を完了できませんでした。",
     },
   },
   /** The developer slip: English only, so the Japanese catalog never translates it. */
@@ -314,10 +314,10 @@ export const stickerBoard = {
     },
     /** Your sticker board while its stickers load: read out to screen readers as faint placeholder stickers show */
     loading: { en: "Loading your stickers", ja: "シールを読み込んでいます" },
-    /** Your sticker board, when your stickers fail to load: the alert in the dashed spot, above the reason and Try again */
+    /** Your sticker board, when your stickers fail to load: the alert in the dashed spot, before Try again; {{reason}} is why */
     didntLoad: {
-      en: "Your stickers didn’t load. Try again in a moment.",
-      ja: "シールを読み込めませんでした。少し待ってから、もう一度お試しください。",
+      en: "Your stickers didn’t load: {{reason}}",
+      ja: "シールを読み込めませんでした：{{reason}}",
     },
     /** Your sticker board: the alert, over Try again, when checking whether gratitude is waiting to be sent for the sticker that just arrived failed; {{reason}} why */
     gratitudeCheckFailed: {
@@ -466,10 +466,10 @@ export const stickerBoard = {
         en: "Couldn’t stick {{stickers}} on the board, so it stays in its sheet: {{reason}}",
         ja: "{{stickers}}をボードに貼れなかったので、シートに残ります：{{reason}}",
       },
-      /** Your sticker board's alert: a sticker's cut line couldn't be read, so its sheet packs it as a box; {{stickers}} is its number, such as "No.0147", and {{reason}} why */
+      /** Your sticker board's alert: a sticker's cut line couldn't be read, so its sheet packs it as a box, over the English words for a report; {{stickers}} is its number, such as "No.0147" */
       cut: {
-        en: "Couldn’t read the cut line of {{stickers}}, so its sheet packs it as a box: {{reason}}",
-        ja: "{{stickers}}の切り抜き線を読み取れなかったため、シートには四角で並べました：{{reason}}",
+        en: "Couldn’t read the cut line of {{stickers}}, so its sheet packs it as a box.",
+        ja: "{{stickers}}の切り抜き線を読み取れなかったため、シートには四角で並べました。",
       },
       /** Your sticker board's alert: the sticker tray couldn't save which stickers it showed; {{stickers}} lists their numbers, such as "No.0147", and {{reason}} why */
       seen: {
@@ -572,10 +572,10 @@ export const stickerBoard = {
       en: "Couldn’t load the timelapse: {{reason}}",
       ja: "タイムラプスを読み込めませんでした：{{reason}}",
     },
-    /** Sticker detail: the timelapse alert's reason when this phone couldn't play it; {{detail}} is the player's error, in English */
+    /** Sticker detail: the timelapse alert's reason when this phone couldn't play it; the player's own English words follow as details for a report */
     notPlayed: {
-      en: "It couldn’t play here ({{detail}}).",
-      ja: "この端末では再生できませんでした（{{detail}}）。",
+      en: "It couldn’t play here.",
+      ja: "この端末では再生できませんでした。",
     },
   },
   /** Where a sticker has been: one row per time it was given, newest first. */
@@ -641,8 +641,8 @@ export const stickerBoard = {
         en: "Couldn’t load the replay: {{reason}}",
         ja: "リプレイを読み込めませんでした：{{reason}}",
       },
-      /** Transfer Trail, the open row: the alert when the replay fails while it plays; {{reason}} is the Mini-game engine's error, in English */
-      stopped: { en: "The replay stopped: {{reason}}", ja: "リプレイが止まりました：{{reason}}" },
+      /** Transfer Trail, the open row: the alert when the replay fails while it plays; the Mini-game engine's English error follows as details for a report */
+      stopped: { en: "The replay stopped.", ja: "リプレイが止まりました。" },
       /** Transfer Trail, the open row of gratitude sent to you: the fine print when your watching it couldn't be saved */
       notMarkedSeen: {
         en: "Couldn’t mark this gratitude watched: {{reason}}",
