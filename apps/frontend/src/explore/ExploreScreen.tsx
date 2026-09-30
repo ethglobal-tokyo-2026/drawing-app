@@ -37,6 +37,8 @@ import "./ExploreScreen.css";
 interface Props {
   /** A name's link opened the app: <boardOf>.croquis.eth's Sticker Board opens once it's found. */
   boardOf?: string;
+  /** Called as Explore takes `boardOf`, so a later visit doesn't open that board again. */
+  onBoardOfTaken: () => void;
   onOpenArtist: (person: Person) => void;
   onOpenMyBoard: () => void;
 }
@@ -607,9 +609,15 @@ function OpenBoardOf({ label, open }: { label: string; open: Open }) {
   );
 }
 
-export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
+export function ExploreScreen({ boardOf, onBoardOfTaken, onOpenArtist, onOpenMyBoard }: Props) {
   const { t } = useTranslation();
   const me = useMe();
+  // The link is for this visit: held here as App lets go of it, so it isn't there on the next one.
+  const [link] = useState(boardOf);
+  const linkTaken = useEffectEvent(onBoardOfTaken);
+  useEffect(() => {
+    if (link) linkTaken();
+  }, [link]);
   const [query, setQuery] = useState("");
   const field = useRef<HTMLInputElement>(null);
   // What a search says to screen readers. Its line is in the page from the start, so a change to it
@@ -642,7 +650,7 @@ export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
 
   return (
     <div className="explore">
-      {boardOf && <OpenBoardOf label={boardOf} open={open} />}
+      {link && <OpenBoardOf label={link} open={open} />}
       <label className="artist-search">
         <At size={20} aria-hidden />
         <input
