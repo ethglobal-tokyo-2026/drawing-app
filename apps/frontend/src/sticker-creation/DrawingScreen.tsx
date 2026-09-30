@@ -719,11 +719,11 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     closePanel: () => setPanel(null),
   });
 
-  // A tap anywhere but the bar or its button closes the smoothing bar. The sheet closes it as well,
-  // and swallows the tap.
+  // A tap anywhere but the bar or its button closes the smoothing bar. The sheet is left to the ink
+  // engine, which closes it and swallows the tap: closing it here first would let the tap draw.
   const closeSmoothingOutside = (e: ReactPointerEvent) => {
     if (panel !== "smoothing" || !(e.target instanceof Element)) return;
-    const own = `#${CSS.escape(smoothingBarId)}, [aria-controls="${smoothingBarId}"]`;
+    const own = `#${CSS.escape(smoothingBarId)}, [aria-controls="${smoothingBarId}"], .ink-sheet`;
     if (!e.target.closest(own)) setPanel(null);
   };
 
