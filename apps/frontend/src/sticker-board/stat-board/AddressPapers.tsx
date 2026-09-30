@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type Ref } from "react";
+import { useId, useLayoutEffect, useRef, type Ref } from "react";
 import { useTranslation } from "../../i18n/react";
 import { EASE_PEEL } from "../../ui/easing";
 import { QrCode } from "../../ui/QrCode";
@@ -88,6 +88,7 @@ function AddressPaper({ chain, address, lifted, paperRef, onOpen }: PaperProps) 
   const reduced = useReducedMotion();
   const note = useRef<HTMLDivElement>(null);
   const wasLifted = useRef(lifted);
+  const glossId = useId();
 
   // Only on the way back: on the way up, the dialog's card covers the paper on the frame it hides.
   useLayoutEffect(() => {
@@ -105,6 +106,9 @@ function AddressPaper({ chain, address, lifted, paperRef, onOpen }: PaperProps) 
       <span className="fine address-papers__chain">
         {t(($) => $.stickerBoard.addresses[chain].network)}
       </span>
+      <span className="fine address-papers__gloss" id={glossId}>
+        {t(($) => $.stickerBoard.addresses[chain].gloss)}
+      </span>
     </>
   );
   return (
@@ -121,6 +125,7 @@ function AddressPaper({ chain, address, lifted, paperRef, onOpen }: PaperProps) 
           data-press
           aria-haspopup="dialog"
           aria-label={t(($) => $.stickerBoard.addresses[chain].open)}
+          aria-describedby={glossId}
           onClick={onOpen}
         >
           <QrCode className="address-papers__code" value={address.address} size={CODE_PX} />

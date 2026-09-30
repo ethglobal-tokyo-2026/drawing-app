@@ -256,9 +256,16 @@
   font: 650 15px/1.3 var(--font-ui);
 }
 
-.stat-board__receipt-rows dd {
+.stat-board__receipt-rows dd:not(.stat-board__receipt-gloss) {
   margin: 0 0 0 auto;
   font: 800 15px/1.3 var(--font-ui);
+}
+
+/* Which gratitude the row counts, on its own line under the label and amount. */
+.stat-board__receipt-rows .stat-board__receipt-gloss {
+  flex: 1 0 100%;
+  margin: 1px 0 0;
+  text-wrap: balance;
 }
 
 .stat-board__receipt-total {

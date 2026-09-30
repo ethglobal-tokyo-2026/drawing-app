@@ -27,6 +27,12 @@
   font: 500 15px/1.45 var(--font-ui);
 }
 
+/* What an Orb is, tucked under the sentence that names it. */
+.age-verification-note__orb {
+  margin: -4px 0 0;
+  text-wrap: balance;
+}
+
 .age-verification-note__verified {
   display: flex;
   align-items: center;

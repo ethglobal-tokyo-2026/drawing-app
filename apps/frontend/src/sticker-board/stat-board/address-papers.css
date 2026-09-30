@@ -60,10 +60,17 @@
 /* The lines under the code may run into the side margins, which only the code needs clear. */
 .address-papers__caption,
 .address-papers__chain,
+.address-papers__gloss,
 .address-papers__address,
 .address-papers__status {
   display: block;
   margin-inline: -6px;
+}
+
+/* What the address is for, under its network. */
+.address-papers__gloss {
+  margin-top: 5px;
+  text-wrap: balance;
 }
 
 .address-papers__caption {
