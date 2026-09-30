@@ -101,7 +101,7 @@ Explore's Longest streak finds the artists who sealed today or yesterday with a 
 - **DOMAIN-17** · cleanup · fixed `b736ff44` · The deposit route validated a `txHash` it never read (the routes lane reported it too); the `gift.deposit` step now logs it.
 - **DOMAIN-18** · cleanup · fixed `b736ff44` · `takeOut` wrote its status checks twice and kept a branch that could never run; one `takeOutState` serves both checks, and the branch is gone.
 - **DOMAIN-19** · cleanup · fixed `b736ff44` · Packaging and naming read the stored smart wallet address before asking Privy's lookup, which already does that, and Packaging stored it again; both call `addressFor` alone, and the fake stores the address as Privy's lookup does.
-- **DOMAIN-20** · cleanup · fixed `b736ff44` · "Load the stickers, then throw if the gift's sticker is missing" was written seven times; one `stickerLookup` in views.ts serves Giving, Receiving, Gratitude and Explore.
+- **DOMAIN-20** · cleanup · fixed `b736ff44` · "Load the stickers, then throw if the gift's sticker is missing" was written seven times; one `stickerLookup` in shapes.ts serves Giving, Receiving, Gratitude and Explore.
 - **DOMAIN-21** · cleanup · fixed `b736ff44` · The "a gift still holds this sticker" predicate was written in both Packaging and Receiving; packaging.ts exports one `giftHoldingSticker`.
 - **DOMAIN-22** · cleanup · fixed `72a837fb` · User Stats and Explore's leaderboards each split a combo into the giver's part and the Original Artist Gratitude Share; one `gratitudeParts` does it for both.
 - **DOMAIN-23** · cleanup · fixed `72a837fb`, `b736ff44` · Two exported `markSeen` functions did different things; they're `markStickersSeen` and `markGratitudeWatched`.

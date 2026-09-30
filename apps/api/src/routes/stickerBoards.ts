@@ -3,21 +3,21 @@ import { z } from "zod";
 import type { AppDeps } from "../deps.ts";
 import { apiError, validate } from "../errors.ts";
 import type { AppEnv } from "../session.ts";
-import { personSchema } from "../shapes.ts";
+import {
+  personSchema,
+  placementSchema,
+  stickerPlacementSchema,
+  toStickerPlacement,
+} from "../shapes.ts";
 import {
   findBoardOwner,
   loadStickerBoard,
   markStickersSeen,
+  newStickerCount,
   savePlacement,
   seenRequestSchema,
 } from "../stickerBoards/board.ts";
 import { loadUserStats } from "../stickerBoards/userStats.ts";
-import {
-  newStickerCount,
-  placementSchema,
-  stickerPlacementSchema,
-  toStickerPlacement,
-} from "../views.ts";
 
 const ownerParamSchema = z.object({ userId: personSchema.shape.id });
 const placementParamSchema = z.object({ stickerId: stickerPlacementSchema.shape.stickerId });

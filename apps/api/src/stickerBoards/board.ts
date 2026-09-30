@@ -1,17 +1,20 @@
 import { gifts, stickerPlacements, stickers, users, type Db } from "@drawing-app/db";
-import { and, asc, eq, inArray, isNull, notExists } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNull, notExists } from "drizzle-orm";
 import { z } from "zod";
 import type { ImageStore } from "../deps.ts";
-import { isoTimeSchema, personSchema, toIsoTime, toPerson } from "../shapes.ts";
-import { simplifiedOutlineOf } from "../stickers/outline.ts";
 import {
   giftSchema,
+  isoTimeSchema,
+  personSchema,
   placementSchema,
   stickerPlacementSchema,
   stickerSchema,
+  toIsoTime,
+  toPerson,
   toSticker,
   toStickerPlacement,
-} from "../views.ts";
+} from "../shapes.ts";
+import { simplifiedOutlineOf } from "../stickers/outline.ts";
 
 /** `me` in a board's path: the signed-in person. */
 export const ME = "me";
@@ -198,4 +201,21 @@ export function markStickersSeen(db: Db, userId: string, stickerIds: string[], n
       ),
     )
     .run();
+}
+
+/** NEW in a sticker tray: stickers the person holds whose placement has no seen_at. */
+export function newStickerCount(db: Db, userId: string): number {
+  const row = db
+    .select({ n: count() })
+    .from(stickerPlacements)
+    .innerJoin(stickers, eq(stickers.id, stickerPlacements.stickerId))
+    .where(
+      and(
+        eq(stickerPlacements.userId, userId),
+        eq(stickers.ownerId, userId),
+        isNull(stickerPlacements.seenAt),
+      ),
+    )
+    .get();
+  return row?.n ?? 0;
 }

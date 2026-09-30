@@ -15,8 +15,14 @@ import type { ContentfulStatusCode } from "hono/utils/http-status";
 import { z } from "zod";
 import type { AppDeps } from "../deps.ts";
 import { apiError, invalidRequest } from "../errors.ts";
-import { bytes32Schema, refuse, type Refusal } from "../shapes.ts";
-import { gratitudeSchema, toGratitude, type Gratitude } from "../views.ts";
+import {
+  bytes32Schema,
+  gratitudeSchema,
+  refuse,
+  toGratitude,
+  type Gratitude,
+  type Refusal,
+} from "../shapes.ts";
 import { countedTouches, gzipReplay, replayV1Schema } from "./replay.ts";
 
 /** The part of a combo's total that goes to the Original Artist, out of the giver's part. */
