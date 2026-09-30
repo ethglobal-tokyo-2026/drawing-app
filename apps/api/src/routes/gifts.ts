@@ -82,8 +82,8 @@ export const giftRoutes = (deps: AppDeps) =>
       return received(c, receiving);
     })
     .get("/for-you", (c) => c.json(giftsForYou(deps, c.var.userId), 200))
-    .get("/:giftId/preview", validate("param", giftIdParam), (c) => {
-      const previewing = previewGiftForYou(deps, c.var.userId, c.req.valid("param").giftId);
+    .get("/:giftId/preview", validate("param", giftIdParam), async (c) => {
+      const previewing = await previewGiftForYou(deps, c.var.userId, c.req.valid("param").giftId);
       if (previewing.refusal !== null) return refused(c, previewing);
       return c.json(previewing.preview, 200);
     })

@@ -305,6 +305,34 @@ describe("POST /api/gifts/receive", () => {
     expect(refused.detail).toContain(cause.message);
   });
 
+  it("records a claim that landed before the gift expired, when Accept comes only after", async () => {
+    const test = await createGiftsTestApp({ escrowChain: true });
+    const claimed = await test.packagedGift();
+    const unclaimed = await test.packagedGift();
+    test.landDeposit(claimed.gift.id);
+    test.landDeposit(unclaimed.gift.id);
+    const receiverId = insertUser(test.db);
+    const landed = await test.giftChain.claimGift({
+      giftId: claimed.gift.id,
+      giftClaimToken: claimed.giftClaimToken,
+      recipientId: receiverId,
+    });
+    if (!landed.claimed) throw new Error("The fake escrow did not claim the gift");
+    test.clock.advance(GIFT_EXPIRY_MS);
+
+    await expectRefused(test, receiverId, unclaimed.giftClaimToken, 410, "gift_expired");
+    const someoneElse = await receive(test, insertUser(test.db), claimed.giftClaimToken);
+    expect(await refusalOf(someoneElse)).toMatchObject({ status: 409, error: "already_received" });
+    const opened = await previewOf(await preview(test, receiverId, claimed.giftClaimToken));
+    expect(opened.receivable).toBe(true);
+    await receivedOf(await receive(test, receiverId, claimed.giftClaimToken));
+    expect(test.giftRow(claimed.gift.id)).toMatchObject({
+      status: "received",
+      claimTxHash: landed.txHash,
+    });
+    expect(test.ownerOf(claimed.gift.stickerId)).toBe(receiverId);
+  });
+
   it("does not give database ownership to a second recipient after another wallet claimed", async () => {
     const test = await createGiftsTestApp({ escrowChain: true });
     const { giverId, gift, giftClaimToken } = await test.packagedGift();
