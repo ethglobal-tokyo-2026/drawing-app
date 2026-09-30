@@ -1,13 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/apiClient";
 import { errors } from "../i18n/strings/errors";
-import { GiftMessageOutError, GiftPackagingError, type GiftBackend } from "./giftBackend";
+import {
+  GiftMessageOutError,
+  GiftPackagingError,
+  type GiftBackend,
+  type PackWait,
+} from "./giftBackend";
 import { buildGiftMessage, type GiftMessage } from "./giftMessage";
 import type { GiftSendOutcome } from "./giftSender";
-import { createGiveFlow, PICKER_ANSWER_MS, PICKER_RETURN_MS } from "./giveFlow";
+import { createGiveFlow, PICKER_ANSWER_MS, PICKER_RETURN_MS, PREPARING_SLOW_MS } from "./giveFlow";
 
 const PICKER_DELAY = 1150;
 const TAKE_OUT = 380;
+const STICKER = { id: "s1", no: 147, timeUsed: 292 };
 
 /** LINE's picker, answered by the test. */
 class Deferred<T> {
@@ -86,6 +92,7 @@ function setup({ backend }: { backend?: GiftBackend } = {}) {
     messages,
     picker,
     step: () => flow.getState().step,
+    state: () => flow.getState(),
     /** Every gift the flow packed, and where each is now. */
     gifts: server.states,
     /** What the flow says went wrong; fails the test when nothing did. */
@@ -140,12 +147,11 @@ describe("giving through a LINE chat", () => {
     expect(t.gifts()).toEqual(["sent"]);
   });
 
-  it("prepares the sticker before opening LINE and ignores actions while it waits", async () => {
+  it("prepares the sticker before opening LINE and ignores a second send while it waits", async () => {
     const server = fakeBackend();
     const packing = new Deferred<Awaited<ReturnType<GiftBackend["pack"]>>>();
     const pack = vi.fn(() => packing.promise);
-    const takeOut = vi.fn(server.backend.takeOut);
-    const t = setup({ backend: { ...server.backend, pack, takeOut } });
+    const t = setup({ backend: { ...server.backend, pack } });
     t.flow.chooseLineChat();
     await wait(PICKER_DELAY);
     expect(t.step()).toBe("preparing");
@@ -153,12 +159,10 @@ describe("giving through a LINE chat", () => {
 
     t.flow.chooseLineChat();
     t.flow.sendInLine();
-    t.flow.takeOut();
     expect(pack).toHaveBeenCalledTimes(1);
-    expect(takeOut).not.toHaveBeenCalled();
     expect(t.step()).toBe("preparing");
 
-    packing.resolve(await server.backend.pack({ id: "s1", no: 147, timeUsed: 292 }));
+    packing.resolve(await server.backend.pack(STICKER));
     await wait();
     expect(t.step()).toBe("picking");
     expect(t.messages).toHaveLength(1);
@@ -166,6 +170,54 @@ describe("giving through a LINE chat", () => {
     await wait();
     expect(t.step()).toBe("sent");
     expect(server.states()).toEqual(["sent"]);
+  });
+
+  it("takes the gift out once its packing settles when Take it out is pressed while preparing, and never opens LINE", async () => {
+    const server = fakeBackend();
+    const packing = new Deferred<Awaited<ReturnType<GiftBackend["pack"]>>>();
+    const t = setup({ backend: { ...server.backend, pack: () => packing.promise } });
+    t.flow.chooseLineChat();
+    await wait(PICKER_DELAY);
+    expect(t.step()).toBe("preparing");
+
+    t.flow.takeOut();
+    expect(t.step()).toBe("takingOut");
+    expect(server.states()).toEqual([]);
+
+    packing.resolve(await server.backend.pack(STICKER));
+    await wait(TAKE_OUT);
+    expect(t.step()).toBe("sheet");
+    expect(t.messages).toHaveLength(0);
+    expect(server.states()).toEqual(["taken_out"]);
+  });
+
+  it("says what a long wait for the gift bag waits on once it has run long, and stops saying it when it ends", async () => {
+    const server = fakeBackend();
+    const packing = new Deferred<Awaited<ReturnType<GiftBackend["pack"]>>>();
+    let heard: (wait: PackWait) => void = () => {};
+    const t = setup({
+      backend: {
+        ...server.backend,
+        pack: (_sticker, onWait) => {
+          if (onWait) heard = onWait;
+          return packing.promise;
+        },
+      },
+    });
+    t.flow.chooseLineChat();
+    heard("moving");
+    await wait(PICKER_DELAY);
+    expect(t.state()).toEqual({ step: "preparing", wait: "moving" });
+
+    await wait(PREPARING_SLOW_MS - PICKER_DELAY);
+    heard("confirming");
+    expect(t.state()).toEqual({ step: "preparing", wait: "confirming", slow: true });
+
+    packing.resolve(await server.backend.pack(STICKER));
+    await wait();
+    expect(t.state()).toEqual({ step: "picking" });
+    await wait(PREPARING_SLOW_MS);
+    expect(t.state()).toEqual({ step: "picking" });
   });
 
   it("keeps the gift in the bag when the picker is cancelled", async () => {

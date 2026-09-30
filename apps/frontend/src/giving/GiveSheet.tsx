@@ -9,9 +9,11 @@ import { canGiveTo } from "../stickers/nsfw";
 import { useKeptStickers, type KeptSticker } from "../stickers/useKeptStickers";
 import { Key } from "../ui/Key";
 import { lazyWithPreload } from "../ui/lazyWithPreload";
+import { keepNameWhole } from "../ui/keepNameWhole";
 import { Sheet } from "../ui/Sheet";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
+import { useModalDialog } from "../ui/useModalDialog";
 // Giving.css goes first, even ahead of the give-sheet.css StickerPicker brings, so the sheet's
 // resets come after its margins wherever this loads.
 import "./Giving.css";
@@ -44,8 +46,10 @@ export function GiveSheet({ to, toId, toAgeStatus, onClose }: Props) {
   const me = useMe();
   const sender = useGiftSender();
   const root = useRef<HTMLDivElement>(null);
+  const body = useRef<HTMLDivElement>(null);
   useBackToClose(!giving, onClose);
   useFocusTrap(root, { active: !giving, onEscape: onClose });
+  useModalDialog(body, { layer: root, active: !giving });
 
   if (giving && sender) {
     return (
@@ -56,6 +60,7 @@ export function GiveSheet({ to, toId, toAgeStatus, onClose }: Props) {
           sender={sender}
           liffId={LIFF_ID}
           forUserId={toId}
+          toHandle={to}
           onClose={(sent) => (sent ? onClose() : setGiving(null))}
         />
       </Suspense>
@@ -67,10 +72,10 @@ export function GiveSheet({ to, toId, toAgeStatus, onClose }: Props) {
   return (
     <div className="board-sheet-layer" ref={root} tabIndex={-1}>
       <div className="giving__scrim" onClick={onClose} />
-      <Sheet label={title} onClose={onClose} className="giving__sheet">
-        <div className="board-sheet-body">
+      <Sheet label={title} onClose={onClose} className="giving__sheet giving__sheet--give">
+        <div className="board-sheet-body giving__pinned" ref={body}>
           <header className="giving__head">
-            <h2 className="giving__title">{title}</h2>
+            <h2 className="giving__title">{keepNameWhole(title, name)}</h2>
             <button
               type="button"
               className="giving__icon-btn"

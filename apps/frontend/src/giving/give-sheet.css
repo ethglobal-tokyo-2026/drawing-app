@@ -80,6 +80,18 @@
   translate: -50% 0;
 }
 
+/* In the give sheet the grid scrolls on its own between the title and the key. Its padding gives
+   the picked tile's check and the stickers' shadows room the scroll would clip; the margins take
+   that room back from the sheet's gaps. */
+.giving__pinned .sticker-picker {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 8px 8px 6px 0;
+  margin: -8px -8px -6px 0;
+}
+
 .sticker-picker.compact {
   grid-template-columns: repeat(5, 1fr);
 }

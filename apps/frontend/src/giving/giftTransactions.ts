@@ -12,7 +12,6 @@ import {
 } from "viem";
 import { sepolia } from "viem/chains";
 import { waitForSmartWallet } from "../identity/smartWallet";
-import { i18next } from "../i18n/i18n";
 
 const rpcUrl: unknown = import.meta.env.VITE_STICKER_RPC_URL;
 const publicClient = createPublicClient({
@@ -29,18 +28,48 @@ export const LANDING_MS = RECEIPT_TIMEOUT_MS;
 /** How often the escrow is read while such a transaction lands. */
 export const LANDING_POLL_MS = 4_000;
 
-export class GiftTransactionRevertedError extends Error {
-  constructor() {
-    super("The sticker transaction reverted");
+/** How a gift's sticker failed to go into or out of its bag; the catalog's `giving.transferProblem` says each in plain words. */
+export type GiftTransferProblem =
+  | "deposit_reverted"
+  | "take_out_reverted"
+  | "deposit_unconfirmed"
+  | "take_out_unconfirmed"
+  | "deposit_came_back"
+  | "gift_closed"
+  | "already_received"
+  | "not_set_up"
+  | "unreadable"
+  | "no_link";
+
+/**
+ * A gift's sticker couldn't go into or out of its bag. `problem` is what the screen says; the
+ * message is the developer's English detail, shown as fine print after it, and never carries a
+ * provider's own text, which can hold keys.
+ */
+export class GiftTransferError extends Error {
+  readonly problem: GiftTransferProblem;
+
+  constructor(problem: GiftTransferProblem, detail: string) {
+    super(detail);
+    this.name = "GiftTransferError";
+    this.problem = problem;
   }
 }
 
-export class GiftTransactionUnconfirmedError extends Error {
+export class GiftTransactionRevertedError extends GiftTransferError {
   constructor(action: "deposit" | "takeOut") {
     super(
-      action === "deposit"
-        ? i18next.t(($) => $.giving.depositUnconfirmed)
-        : i18next.t(($) => $.giving.takeOutUnconfirmed),
+      action === "deposit" ? "deposit_reverted" : "take_out_reverted",
+      `The ${action === "deposit" ? "deposit" : "take-out"} transaction reverted`,
+    );
+  }
+}
+
+export class GiftTransactionUnconfirmedError extends GiftTransferError {
+  constructor(action: "deposit" | "takeOut") {
+    super(
+      action === "deposit" ? "deposit_unconfirmed" : "take_out_unconfirmed",
+      `The ${action === "deposit" ? "deposit" : "take-out"} transaction wasn't confirmed in time`,
     );
   }
 }
@@ -85,12 +114,16 @@ export const escrowConfigured = () => configuredEscrow() !== null;
 
 function escrowAddress() {
   const address = configuredEscrow();
-  if (!address) throw new Error("The sticker escrow address is not configured");
+  if (!address) {
+    throw new GiftTransferError("not_set_up", "The sticker escrow address is not configured");
+  }
   return address;
 }
 
 function checkedGiftId(giftId: string) {
-  if (!isHex(giftId) || giftId.length !== 66) throw new Error("The gift ID is invalid");
+  if (!isHex(giftId) || giftId.length !== 66) {
+    throw new GiftTransferError("unreadable", "The gift ID is invalid");
+  }
   return giftId;
 }
 
@@ -150,7 +183,7 @@ async function confirmed(hash: Hash, action: "deposit" | "takeOut") {
     });
     throw new GiftTransactionUnconfirmedError(action);
   }
-  if (receipt.status !== "success") throw new GiftTransactionRevertedError();
+  if (receipt.status !== "success") throw new GiftTransactionRevertedError(action);
   return receipt;
 }
 
@@ -164,7 +197,7 @@ async function confirmedTransfer(giftId: string, hash: Hash, action: "deposit" |
   // An ERC-4337 bundle can succeed while the user's operation fails inside it.
   if (!events.some((event) => event.args.giftId.toLowerCase() === giftId.toLowerCase())) {
     console.warn("Gift transaction receipt has no matching escrow event", { giftId, hash, action });
-    throw new GiftTransactionRevertedError();
+    throw new GiftTransactionRevertedError(action);
   }
   console.info("Gift transaction confirmed", {
     giftId,
@@ -184,9 +217,11 @@ export const giftTransactions: GiftTransactions = {
       status = await landing(giftId, 0, sent.sentAt);
     }
     if (status === 1) return sent.hash ?? null;
-    if (status !== null && status !== 0) throw new Error("This gift has already left the escrow");
+    if (status !== null && status !== 0) {
+      throw new GiftTransferError("gift_closed", "This gift has already left the escrow");
+    }
     if (!isAddress(transfer.to) || !isHex(transfer.data)) {
-      throw new Error("The sticker escrow transfer is invalid");
+      throw new GiftTransferError("unreadable", "The sticker escrow transfer is invalid");
     }
     let hash = sent.hash;
     if (!hash) {
@@ -217,7 +252,8 @@ export const giftTransactions: GiftTransactions = {
       status = await landing(giftId, 1, sent.sentAt);
     }
     if (status === 3 || status === 4) return "takenOut";
-    if (status === 2) throw new Error("This sticker has already been received");
+    if (status === 2)
+      throw new GiftTransferError("already_received", "This sticker has already been received");
     if (sent.hash) {
       const receipt = await confirmedTransfer(giftId, sent.hash, "takeOut");
       if (receipt.transactionHash !== sent.hash) record.submitted(receipt.transactionHash);
@@ -234,7 +270,8 @@ export const giftTransactions: GiftTransactions = {
     }
     if (status === 3 || status === 4) return "takenOut";
     if (status === 0 || status === null) throw new GiftTransactionUnconfirmedError("takeOut");
-    if (status === 2) throw new Error("This sticker has already been received");
+    if (status === 2)
+      throw new GiftTransferError("already_received", "This sticker has already been received");
     const wallet = await waitForSmartWallet();
     record.sending(Date.now());
     let hash: Hash;
@@ -254,7 +291,8 @@ export const giftTransactions: GiftTransactions = {
       });
       const result = await statusOf(giftId);
       if (result === 3 || result === 4) return "takenOut";
-      if (result === 2) throw new Error("This sticker has already been received");
+      if (result === 2)
+        throw new GiftTransferError("already_received", "This sticker has already been received");
       throw new GiftTransactionUnconfirmedError("takeOut");
     }
     record.submitted(hash);

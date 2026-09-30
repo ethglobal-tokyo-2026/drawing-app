@@ -140,10 +140,12 @@ describe("Giving through the smart account", () => {
       async (_id, _transfer, _sent, record) => {
         record.sending(Date.now());
         record.submitted(hash);
-        throw new GiftTransactionRevertedError();
+        throw new GiftTransactionRevertedError("deposit");
       },
     );
-    await expect(t.backend.pack(t.sticker)).rejects.toThrow("reverted");
+    await expect(t.backend.pack(t.sticker)).rejects.toMatchObject({
+      cause: { problem: "deposit_reverted" },
+    });
     await expect(t.backend.pack(t.sticker)).resolves.toMatchObject({ giftId: t.packed.id });
     expect(t.transactions.deposit).toHaveBeenLastCalledWith(
       t.packed.id,

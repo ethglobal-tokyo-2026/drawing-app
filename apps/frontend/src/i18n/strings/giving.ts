@@ -4,27 +4,67 @@ export const giving = {
   tag: {
     /** The gift tag's small label over the giver's handle, on the gift bag in Giving and in the gift a recipient opens, and before the handle in the Gift Message sent through LINE ("From @alice") */
     from: { en: "From", ja: "贈り主" },
-    /** The gift tag's small label over the recipient's handle, for a gift given to someone chosen in the app ("For @bob"); no screen names a recipient yet, so it isn't shown */
+    /** The gift tag's small label over the recipient's handle, on the gift bag in Giving when the giver picked the person from their sticker board ("For @bob") */
     for: { en: "For", ja: "贈り先" },
   },
-  /** Giving's "Not sent yet" screen: the reason in “couldn’t be packed” when the chain didn't confirm the sticker's move into the gift bag in time; Send in LINE checks again */
-  depositUnconfirmed: {
-    en: "The Sticker transfer could not be confirmed. Tap Send in LINE to check the gift again.",
-    ja: "シールの転送を確認できませんでした。LINEで送るをタップしてギフトの状態を再確認してください。",
+  /** Why a gift's sticker couldn't go into or out of its bag, by cause: the reason in “couldn’t be packed” or “couldn’t be taken out” on Giving's “Not sent yet” screen, with the developer's English detail after it in brackets */
+  transferProblem: {
+    /** Giving's “Not sent yet” screen, in “couldn’t be packed”: the move into the gift bag was refused; Send in LINE tries it again */
+    deposit_reverted: {
+      en: "Your sticker didn’t make it into the gift bag. Tap Send in LINE to try again.",
+      ja: "シールがギフト袋に入りませんでした。「LINEで送る」をタップして、もう一度お試しください。",
+    },
+    /** Giving's “Not sent yet” screen, in “couldn’t be taken out”: the move out of the gift bag was refused; Take it out tries it again */
+    take_out_reverted: {
+      en: "Your sticker didn’t come back out of the gift bag. Tap Take it out to try again.",
+      ja: "シールをギフト袋から取り出せませんでした。「取り出す」をタップして、もう一度お試しください。",
+    },
+    /** Giving's “Not sent yet” screen, in “couldn’t be packed”: the move into the gift bag wasn't confirmed in time; Send in LINE checks again */
+    deposit_unconfirmed: {
+      en: "We couldn’t confirm that your sticker reached the gift bag. Tap Send in LINE to check again.",
+      ja: "シールがギフト袋に入ったか確認できませんでした。「LINEで送る」をタップして、もう一度確認してください。",
+    },
+    /** Giving's “Not sent yet” screen, in “couldn’t be taken out”: the move out of the gift bag wasn't confirmed in time; Take it out checks again */
+    take_out_unconfirmed: {
+      en: "We couldn’t confirm that your sticker came out of the gift bag. Wait a moment, then tap Take it out to check again.",
+      ja: "シールが袋から出たか確認できませんでした。少し待ってから、「取り出す」をタップして確認してください。",
+    },
+    /** Giving's “Not sent yet” screen, in “couldn’t be packed”: the sticker came back out of the gift bag before the gift went out; Send in LINE packs it again */
+    deposit_came_back: {
+      en: "Your sticker came back out of the gift bag before it went out. Tap Send in LINE to pack it again.",
+      ja: "送る前に、シールがギフト袋から戻ってきました。「LINEで送る」をタップして、もう一度袋に入れてください。",
+    },
+    /** Giving's “Not sent yet” screen, in “couldn’t be packed”: the gift bag was already closed when the sticker was going in */
+    gift_closed: {
+      en: "This gift bag was already closed. Take the sticker out, then give it again.",
+      ja: "このギフト袋はすでに閉じられています。シールを取り出してから、もう一度贈ってください。",
+    },
+    /** Giving's “Not sent yet” screen, in “couldn’t be taken out”: its receiver got the sticker first */
+    already_received: {
+      en: "Someone already received this sticker, so it can’t be taken out.",
+      ja: "このシールはすでに受け取られているため、取り出せません。",
+    },
+    /** Giving's “Not sent yet” screen, in “couldn’t be packed” or “couldn’t be taken out”: this version of the app has no gift bag to move stickers into */
+    not_set_up: {
+      en: "Gift bags aren’t set up in this version of Croquis yet.",
+      ja: "このバージョンのクロッキーでは、ギフト袋がまだ使えません。",
+    },
+    /** Giving's “Not sent yet” screen, in “couldn’t be packed” or “couldn’t be taken out”: what the app was told about the gift bag didn't look right, so nothing moved */
+    unreadable: {
+      en: "The gift bag’s details didn’t look right, so nothing was moved. Try again.",
+      ja: "ギフト袋の情報が正しくなかったため、何も動かしていません。もう一度お試しください。",
+    },
+    /** Giving's “Not sent yet” screen, in “couldn’t be packed”: the gift has no link to send; taking the sticker out and giving it again makes a new one */
+    no_link: {
+      en: "This gift came without a link to send. Take the sticker out, then give it again.",
+      ja: "このギフトには送るためのリンクがありませんでした。シールを取り出してから、もう一度贈ってください。",
+    },
   },
-  /** Giving's "Not sent yet" screen: the reason in “couldn’t be taken out” when the chain didn't confirm the sticker left the gift bag in time */
-  takeOutUnconfirmed: {
-    en: "Taking out the Sticker could not be confirmed. Check the gift in the app before trying again.",
-    ja: "シールを取り出せたか確認できませんでした。再試行する前にアプリでギフトの状態を確認してください。",
-  },
-  /** Giving's "Not sent yet" screen: the reason in “couldn’t be packed” when the sticker came back out of the gift bag on the chain before the gift went out; Send in LINE packs a new gift */
-  depositCameBack: {
-    en: "The sticker came back out of the gift bag before it went out. Tap Send in LINE to pack it again.",
-    ja: "送る前に、シールがギフト袋から戻ってきました。LINEで送るをタップして、もう一度袋に入れてください。",
-  },
+  /** Giving's "Not sent yet" screen: the reason in “couldn’t be packed”, “wasn’t sent” or “couldn’t be taken out” for a failure the app has no line for; the developer's English detail follows it in brackets */
+  unknownProblem: { en: "Something went wrong.", ja: "問題が発生しました。" },
   giftMessage: {
     /** The Gift Message sent through LINE: its preview in the recipient's chat list and LINE's notification */
-    altText: { en: "{{name}} sent you a sticker", ja: "{{name}}からシールが届きました" },
+    altText: { en: "{{name}} sent you a sticker", ja: "{{name}}さんからシールが届きました" },
     /** The Gift Message sent through LINE: the fine print after the sticker's number ("NO.0147 · ONE OF ONE") */
     oneOfOne: { en: "ONE OF ONE", ja: "一点もの" },
     /** The Gift Message sent through LINE: the line under "From @alice", with the sticker's drawing time */
@@ -44,11 +84,11 @@ export const giving = {
   /** Giving from someone else's sticker board: picking one of yours first. */
   giveSheet: {
     /** The give sheet, opened by Give on someone else's sticker board: its title */
-    title: { en: "Give {{name}} a sticker", ja: "{{name}}にシールを贈る" },
+    title: { en: "Give {{name}} a sticker", ja: "{{name}}さんにシールを贈る" },
     /** The give sheet on someone else's sticker board: the line under its title */
     lead: {
       en: "Pick one of yours, then send it to {{name}} in a LINE chat.",
-      ja: "あなたのシールを1枚選んで、LINEのトークで{{name}}に送りましょう。",
+      ja: "あなたのシールを1枚選んで、LINEのトークで{{name}}さんに送りましょう。",
     },
     /** The give sheet on someone else's sticker board: the name of the grid of your stickers, for assistive tech */
     yourStickers: { en: "Your stickers", ja: "あなたのシール" },
@@ -75,7 +115,7 @@ export const giving = {
     /** The give sheet on someone else's sticker board: fine print under the grid when some of your stickers are NSFW and {{name}} isn't verified as an adult */
     adultsOnly: {
       en: "18+ stickers can only go to adults verified with World ID, and {{name}} isn’t.",
-      ja: "18+のシールは、World IDで年齢確認済みの成人にだけ贈れます。{{name}}はまだ確認されていません。",
+      ja: "18+のシールは、World IDで年齢確認済みの成人にだけ贈れます。{{name}}さんはまだ確認されていません。",
     },
     /** Giving's first screen, for an NSFW sticker: fine print on who can open the gift */
     whoCanOpen: {
@@ -128,15 +168,53 @@ export const giving = {
     },
   },
   preparing: {
-    /** Giving, while the sticker's transfer is being confirmed before LINE's friend picker opens: the sheet's title */
+    /** Giving, while the sticker goes into the gift bag before LINE's friend picker opens: the sheet's title */
     title: { en: "Preparing your gift", ja: "ギフトを準備中" },
-    /** Giving, before LINE's friend picker opens: explains wallet confirmation and that the gift has not been sent */
+    /** Giving's “Preparing your gift” screen: the line under its title, saying LINE's friend picker opens next and nothing is sent yet */
     lead: {
-      en: "Confirm in your wallet if asked, then wait for your sticker to be ready. LINE’s friend picker will open next; your gift hasn’t been sent yet.",
-      ja: "ウォレットで確認を求められたら、承認してシールの準備ができるまでお待ちください。次にLINEの友だち選択がひらきます。ギフトはまだ送られていません。",
+      en: "Getting your gift ready. LINE’s friend picker opens next; nothing is sent until you pick a chat.",
+      ja: "ギフトを準備しています。次にLINEの友だち選択がひらきます。トークを選ぶまで、何も送られません。",
     },
-    /** Giving, while the sticker is being prepared: the disabled send button */
+    /** Giving's “Preparing your gift” screen: the send key's label while the sticker is being prepared */
     button: { en: "Preparing…", ja: "準備中…" },
+    /** What a long wait is waiting on, by step: the line under “Preparing your gift” once it has run long. */
+    slow: {
+      /** Giving's “Preparing your gift” screen, after about ten seconds: the line under its title, while the app's server hasn't answered */
+      asking: {
+        en: "This is taking longer than usual. Still waiting on the app’s server.",
+        ja: "いつもより時間がかかっています。アプリのサーバーからの応答を待っています。",
+      },
+      /** Giving's “Preparing your gift” screen, after about ten seconds: the line under its title, while the sticker comes out of an earlier gift bag first */
+      earlier: {
+        en: "This is taking longer than usual. Your sticker is still coming out of an earlier gift bag, then goes into this one.",
+        ja: "いつもより時間がかかっています。シールを前のギフト袋から取り出しているところで、そのあとこの袋に入れます。",
+      },
+      /** Giving's “Preparing your gift” screen, after about ten seconds: the line under its title, while the sticker goes into the gift bag */
+      moving: {
+        en: "This is taking longer than usual. Your sticker is still going into the gift bag.",
+        ja: "いつもより時間がかかっています。シールをギフト袋に入れているところです。",
+      },
+      /** Giving's “Preparing your gift” screen, after about ten seconds: the line under its title, while the gift bag confirms the sticker is in */
+      confirming: {
+        en: "This is taking longer than usual. Waiting for the gift bag to confirm your sticker is in, which can take a couple of minutes.",
+        ja: "いつもより時間がかかっています。シールがギフト袋に入ったか、確認を待っています。数分かかることもあります。",
+      },
+      /** Giving's “Preparing your gift” screen, after about ten seconds: the sentence after what it waits on, since Take it out is offered now */
+      leave: {
+        en: "Nothing is sent until you pick a chat. You can take the sticker out to start over.",
+        ja: "トークを選ぶまで、何も送られません。シールを取り出して、最初からやり直すこともできます。",
+      },
+    },
+  },
+  /** The sticker lifting back out of the bag after Take it out. */
+  takingOut: {
+    /** Giving, while the sticker comes back out of the gift bag after Take it out: the sheet's title */
+    title: { en: "Taking it out", ja: "取り出し中" },
+    /** Giving's “Taking it out” screen: the line under its title */
+    lead: {
+      en: "Your sticker is coming back out of the gift bag. This can take a moment.",
+      ja: "シールをギフト袋から取り出しています。少しお待ちください。",
+    },
   },
   /** The sticker in the open bag, until it's sent or taken out. */
   inTheBag: {
@@ -264,12 +342,12 @@ export const giving = {
     /** The giver's received notice, over the whole phone on their sticker board once someone received their gift: its title. The Gratitude heart follows it. */
     title: {
       en: "{{name}} received your sticker",
-      ja: "{{name}}があなたのシールを受け取りました",
+      ja: "{{name}}さんがあなたのシールを受け取りました",
     },
     /** The giver's received notice: the line under its title */
     lead: {
       en: "It’s on {{name}}’s sticker board now.",
-      ja: "いまは{{name}}のシールボードにあります。",
+      ja: "いまは{{name}}さんのシールボードにあります。",
     },
     /** The giver's received notice: the caption beside the sticker's silhouette, the receiver and the day they received it */
     caption: { en: "{{name}} · {{date}}", ja: "{{name}}・{{date}}" },
@@ -283,7 +361,7 @@ export const giving = {
     /** The pending gifts badge on your own sticker board: the line under "On their way", the newest gift's number and how many more */
     andMore: { en: "{{no}} and {{count}} more", ja: "{{no}}ほか{{count}}枚" },
     /** The pending gifts badge on your own sticker board: the line under "On its way" naming who one gift waits for: the person picked in the app, or whoever first opened its link */
-    to: { en: "to {{name}}", ja: "{{name}}へ" },
+    to: { en: "to {{name}}", ja: "{{name}}さんへ" },
     /** Names the badge for assistive tech. */
     label: {
       /** The pending gifts badge on your own sticker board: its name for assistive tech, with one gift on its way */
@@ -291,7 +369,7 @@ export const giving = {
       /** The pending gifts badge on your own sticker board: its name for assistive tech, with one gift that waits for someone: the person picked in the app, or whoever first opened its link */
       oneTo: {
         en: "Gifts on their way: {{no}} to {{name}}",
-        ja: "お届け中のギフト：{{name}}への{{no}}",
+        ja: "お届け中のギフト：{{name}}さんへの{{no}}",
       },
       /** The pending gifts badge on your own sticker board: its name for assistive tech, with several gifts on their way */
       several: { en: "{{count}} gifts on their way", ja: "お届け中のギフト：{{count}}件" },
