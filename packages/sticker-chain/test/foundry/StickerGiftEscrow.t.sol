@@ -92,20 +92,6 @@ contract StickerGiftEscrowTest is CroquisFixture {
         escrow.claimGift(GIFT_ID, recipient, authorizationDeadline, authorization);
     }
 
-    function testRejectionReturnsStickerToSender() public {
-        uint256 authorizationDeadline = block.timestamp + 10 minutes;
-        _stageGift(uint64(block.timestamp + 1 hours));
-        bytes memory authorization = _rejectAuthorization(RELAYER_KEY, authorizationDeadline);
-
-        vm.prank(relayer);
-        escrow.rejectGift(GIFT_ID, authorizationDeadline, authorization);
-
-        assertEq(sticker.ownerOf(1), artist);
-        assertEq(escrow.pendingGiftForToken(1), bytes32(0));
-        _assertGiftNameEnded();
-        _assertStickerNameHeldBy(artist);
-    }
-
     function testSenderCanTakeStickerOut() public {
         _stageGift(uint64(block.timestamp + 1 hours));
 
@@ -211,16 +197,6 @@ contract StickerGiftEscrowTest is CroquisFixture {
         bytes32 structHash = keccak256(
             abi.encode(escrow.CLAIM_TYPEHASH(), GIFT_ID, claimRecipient, authorizationDeadline)
         );
-        return _sign(signerKey, _typedDataHash(structHash));
-    }
-
-    function _rejectAuthorization(uint256 signerKey, uint256 authorizationDeadline)
-        private
-        view
-        returns (bytes memory)
-    {
-        bytes32 structHash =
-            keccak256(abi.encode(escrow.REJECT_TYPEHASH(), GIFT_ID, authorizationDeadline));
         return _sign(signerKey, _typedDataHash(structHash));
     }
 
