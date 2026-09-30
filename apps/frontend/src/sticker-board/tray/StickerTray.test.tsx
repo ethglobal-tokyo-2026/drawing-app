@@ -325,6 +325,21 @@ describe("StickerTray", () => {
     expect(frontSheet()?.getAttribute("data-f")).toBe(newest);
   });
 
+  it("keeps the newest match in front when a folder tab is chosen mid-riffle", async () => {
+    const motion = holdAnimations();
+    render(stickersWithGifts(60));
+    await openTray();
+    motion.animate();
+    const newest = frontSheet()?.getAttribute("data-f");
+    // The deepest edge riffles through the sheets before it.
+    const edge = board.querySelector(".tray__stack > .tray__sheet[data-depth='3'] .tray__foot");
+    pointer(edge, "pointerdown", 100, 200);
+    pointer(stackEl(), "pointerup", 100, 200);
+    act(() => board.querySelector<HTMLElement>('.tray__tab[data-filter="gifts"]')?.click());
+    await motion.finishAll();
+    expect(frontSheet()?.getAttribute("data-f")).toBe(newest);
+  });
+
   it("takes the folder tabs, then the front sheet's stickers, then the edges of the sheets behind in Tab order, and nothing hidden", async () => {
     // Enough sheets for the +N button.
     render(stickersWithGifts(60));

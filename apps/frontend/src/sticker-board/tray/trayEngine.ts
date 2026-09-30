@@ -1019,6 +1019,8 @@ export function createTrayEngine(
     ui.busy = false;
     catchUp();
   }
+  /** How many times a folder tab has dealt the stack anew, so a riffle can tell it's out of date. */
+  let deals = 0;
   /** Brings a sheet to the front: a quick riffle through the ones before it. */
   async function bringToFront(f: number, { instant = false } = {}) {
     if (!ui.order.includes(f)) {
@@ -1034,8 +1036,12 @@ export function createTrayEngine(
       renderStack();
       return;
     }
-    if (i <= ui.order.length / 2) for (let s = 0; s < i; s++) await page(1, { quick: true });
-    else for (let s = 0; s < ui.order.length - i; s++) await page(-1, { quick: true });
+    // A tab chosen mid-riffle deals the newest match to the front: the rest of the riffle would turn
+    // that stack, so it stops.
+    const dealt = deals;
+    const hops = i <= ui.order.length / 2 ? i : ui.order.length - i;
+    const dir = i <= ui.order.length / 2 ? 1 : -1;
+    for (let hop = 0; hop < hops && deals === dealt; hop++) await page(dir, { quick: true });
   }
 
   /* ---------------------------------------------------------------- gestures on the stack. The first move decides:
@@ -1246,6 +1252,7 @@ export function createTrayEngine(
   async function setFilter(f: Filter) {
     const prev = ui.filter;
     ui.filter = f;
+    deals++;
     syncTabs();
     resetOrder();
     // A tab change already on its way: this one lands at once.
