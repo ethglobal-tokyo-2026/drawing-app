@@ -163,11 +163,14 @@ export const explore = {
     /** Explore tab, lifted sticker: screen readers' name for the sheet, the sticker's number and who drew it */
     label: { en: "{{no}} by {{artist}}", ja: "{{artist}}さんの{{no}}" },
     /** Explore tab, lifted sticker: fine print under the artist chip: the number, drawing time and the day it was sealed */
-    caption: { en: "{{no}} · <duration/> · {{day}}", ja: "{{no}}・<duration/>・{{day}}" },
+    caption: {
+      en: "{{no}} · <duration/> · {{day}}",
+      ja: "{{no}}・<wbr/><duration/>・<wbr/>{{day}}",
+    },
     /** Explore tab, lifted sticker: the same fine print for a sticker someone was given; <receiver/> is their @handle */
     captionGiven: {
       en: "{{no}} · <duration/> · {{day}} · to <receiver/>",
-      ja: "{{no}}・<duration/>・{{day}}・<receiver/>さんへ",
+      ja: "{{no}}・<wbr/><duration/>・<wbr/>{{day}}・<wbr/><receiver/>さんへ",
     },
     /** Explore tab, lifted sticker: label stock under the fine print that opens the artist's sticker board */
     goToBoard: { en: "Go to {{artist}}’s sticker board", ja: "{{artist}}さんのシールボードへ" },

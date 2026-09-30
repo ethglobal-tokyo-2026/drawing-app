@@ -84,14 +84,14 @@ export const giving = {
     /** The give sheet on someone else's sticker board: the line under its title */
     lead: {
       en: "Pick one of yours, then send it to {{name}} in a LINE chat.",
-      ja: "あなたのシールを1枚選んで、LINEのトークで{{name}}さんに送りましょう。",
+      ja: "あなたのシールを<wbr/>1枚選んで、<wbr/>LINEのトークで<wbr/>{{name}}さんに<wbr/>送りましょう。",
     },
     /** The give sheet on someone else's sticker board: the name of the grid of your stickers, for assistive tech */
     yourStickers: { en: "Your stickers", ja: "あなたのシール" },
     /** The give sheet on someone else's sticker board: in the grid's place when you have no sticker to give */
     none: {
       en: "You don’t have a sticker to give yet. Draw one on your board first.",
-      ja: "贈れるシールがまだありません。まずはシールボードで1枚かいてみましょう。",
+      ja: "贈れるシールが<wbr/>まだ<wbr/>ありません。<wbr/>まずは<wbr/>シールボードで<wbr/>1枚<wbr/>かいてみましょう。",
     },
     /** The give sheet on someone else's sticker board: an alert when LINE's friend picker can't open there, such as outside LINE */
     noPicker: {
@@ -111,12 +111,12 @@ export const giving = {
     /** The give sheet on someone else's sticker board: fine print under the grid when some of your stickers are NSFW and <name/> isn't verified as an adult; <name/> is their handle, which keeps its own case in the capitals */
     adultsOnly: {
       en: "18+ stickers can only go to adults verified with World ID, and <name/> isn’t.",
-      ja: "18+のシールは、World IDで年齢確認済みの成人にだけ贈れます。<name/>さんはまだ確認されていません。",
+      ja: "18+のシールは、<wbr/>World IDで<wbr/>年齢確認済みの<wbr/>成人にだけ<wbr/>贈れます。<wbr/><name/>さんは<wbr/>まだ<wbr/>確認されていません。",
     },
     /** Giving's first screen, for an NSFW sticker: fine print on who can open the gift */
     whoCanOpen: {
       en: "18+ sticker: only an adult verified with World ID can open this gift.",
-      ja: "18+のシール：World IDで年齢確認済みの成人だけがこのギフトをひらけます。",
+      ja: "18+のシール：<wbr/>World IDで<wbr/>年齢確認済みの<wbr/>成人だけが<wbr/>このギフトを<wbr/>ひらけます。",
     },
   },
   /** Giving: the sticker's fine print over the sheet, its number, drawing time, seal day and the giver's handle */
@@ -131,12 +131,12 @@ export const giving = {
     /** Giving's first screen: the small line under "Send in a LINE chat" */
     sendInChatHint: {
       en: "Pick your chat with them. The first to open it gets it.",
-      ja: "相手とのトークを選んでください。最初にひらいた人が受け取れます。",
+      ja: "相手との<wbr/>トークを<wbr/>選んでください。<wbr/>最初に<wbr/>ひらいた人が<wbr/>受け取れます。",
     },
     /** Giving's first screen: the note at the bottom, beside a sticker icon */
     leaves: {
       en: "It comes off your board and into a gift bag.",
-      ja: "シールはボードからはがれて、ギフト袋に入ります。",
+      ja: "シールは<wbr/>ボードから<wbr/>はがれて、<wbr/>ギフト袋に<wbr/>入ります。",
     },
   },
   /** "Can’t find them?", in the give sheet's place: for a friend LINE's picker leaves out. */
@@ -148,7 +148,7 @@ export const giving = {
     /** Giving's "Can't find them?" screen: the line under its title, on who LINE's friend picker leaves out */
     lead: {
       en: "LINE’s list leaves out anyone who turned off sharing with apps, and friends you added in the last few minutes.",
-      ja: "LINEの一覧には、アプリとの共有をオフにしている人と、ここ数分で追加した友だちは表示されません。",
+      ja: "LINEの一覧には、<wbr/>アプリとの<wbr/>共有を<wbr/>オフにしている人と、<wbr/>ここ数分で<wbr/>追加した友だちは<wbr/>表示されません。",
     },
     /** Giving's "Can't find them?" screen: the bold title of the row that opens LINE's Add friends screen */
     notFriends: { en: "Not friends in LINE yet?", ja: "まだLINEの友だちではない？" },
@@ -169,7 +169,7 @@ export const giving = {
     /** Giving's “Preparing your gift” screen: the line under its title, saying LINE's friend picker opens next and nothing is sent yet */
     lead: {
       en: "Getting your gift ready. LINE’s friend picker opens next; nothing is sent until you pick a chat.",
-      ja: "ギフトを準備しています。次にLINEの友だち選択がひらきます。トークを選ぶまで、何も送られません。",
+      ja: "ギフトを<wbr/>準備しています。<wbr/>次に<wbr/>LINEの<wbr/>友だち選択が<wbr/>ひらきます。<wbr/>トークを<wbr/>選ぶまで、<wbr/>何も<wbr/>送られません。",
     },
     /** Giving's “Preparing your gift” screen: the send key's label while the sticker is being prepared */
     button: { en: "Preparing…", ja: "準備中…" },
@@ -178,30 +178,30 @@ export const giving = {
       /** Giving's “Preparing your gift” screen, after about ten seconds: the line under its title, while Croquis hasn't answered */
       asking: {
         en: "This is taking longer than usual. Still waiting for Croquis to answer.",
-        ja: "いつもより時間がかかっています。クロッキーからの応答を待っています。",
+        ja: "いつもより<wbr/>時間が<wbr/>かかっています。<wbr/>クロッキーからの<wbr/>応答を<wbr/>待っています。",
       },
       /** Giving's “Preparing your gift” screen, after about ten seconds: the line under its title, while the sticker comes out of an earlier gift bag first */
       earlier: {
         en: "This is taking longer than usual. Your sticker is still coming out of an earlier gift bag, then goes into this one.",
-        ja: "いつもより時間がかかっています。シールを前のギフト袋から取り出しているところで、そのあとこの袋に入れます。",
+        ja: "いつもより<wbr/>時間が<wbr/>かかっています。<wbr/>シールを<wbr/>前の<wbr/>ギフト袋から<wbr/>取り出しているところで、<wbr/>そのあと<wbr/>この袋に<wbr/>入れます。",
       },
       /** Giving's “Preparing your gift” screen, after about ten seconds: the line under its title, while the sticker goes into the gift bag */
       moving: {
         en: "This is taking longer than usual. Your sticker is still going into the gift bag.",
-        ja: "いつもより時間がかかっています。シールをギフト袋に入れているところです。",
+        ja: "いつもより<wbr/>時間が<wbr/>かかっています。<wbr/>シールを<wbr/>ギフト袋に<wbr/>入れているところです。",
       },
       /** Giving's “Preparing your gift” screen, after about ten seconds: the line under its title, while the gift bag confirms the sticker is in */
       confirming: {
         en: "This is taking longer than usual. Waiting for the gift bag to confirm your sticker is in, which can take a couple of minutes.",
-        ja: "いつもより時間がかかっています。シールがギフト袋に入ったか、確認を待っています。数分かかることもあります。",
+        ja: "いつもより<wbr/>時間が<wbr/>かかっています。<wbr/>シールが<wbr/>ギフト袋に<wbr/>入ったか、<wbr/>確認を<wbr/>待っています。<wbr/>数分<wbr/>かかることも<wbr/>あります。",
       },
       /** Giving's “Preparing your gift” screen, after about ten seconds: the sentence after what it waits on, since Take it out is offered now */
       leave: {
         en: "Nothing is sent until you pick a chat. You can take the sticker out to start over.",
-        ja: "トークを選ぶまで、何も送られません。シールを取り出して、最初からやり直すこともできます。",
+        ja: "トークを<wbr/>選ぶまで、<wbr/>何も<wbr/>送られません。<wbr/>シールを<wbr/>取り出して、<wbr/>最初から<wbr/>やり直すことも<wbr/>できます。",
       },
       /** Giving's “Preparing your gift” screen, after about ten seconds: the line under its title, joining what it waits on to the sentence after it */
-      lead: { en: "{{waiting}} {{leave}}", ja: "{{waiting}}{{leave}}" },
+      lead: { en: "{{waiting}} {{leave}}", ja: "{{waiting}}<wbr/>{{leave}}" },
     },
   },
   /** Giving, when the sheet moves to a new step: what screen readers hear, its title and then the line under it */
@@ -213,7 +213,7 @@ export const giving = {
     /** Giving's “Taking it out” screen: the line under its title */
     lead: {
       en: "Your sticker is coming back out of the gift bag. This can take a minute or two.",
-      ja: "シールをギフト袋から取り出しています。数分かかることもあります。",
+      ja: "シールを<wbr/>ギフト袋から<wbr/>取り出しています。<wbr/>数分<wbr/>かかることも<wbr/>あります。",
     },
     /** Giving's “Taking it out” screen: the send key's label while the sticker comes out */
     button: { en: "Taking it out…", ja: "取り出し中…" },
@@ -225,14 +225,14 @@ export const giving = {
     /** Giving, with the sticker in the open gift bag: the line under "In the bag" */
     lead: {
       en: "The bag closes when it’s sent. Pick your chat with them in LINE: whoever opens it first gets it.",
-      ja: "送ると袋に封がされます。LINEで相手とのトークを選んでください。最初にひらいた人が受け取れます。",
+      ja: "送ると<wbr/>袋に<wbr/>封がされます。<wbr/>LINEで<wbr/>相手との<wbr/>トークを<wbr/>選んでください。<wbr/>最初に<wbr/>ひらいた人が<wbr/>受け取れます。",
     },
     /** Giving, after LINE's friend picker closed without sending, or a step failed: the sheet's title over the open gift bag */
     notSent: { en: "Not sent yet", ja: "まだ送っていません" },
     /** Giving's "Not sent yet" screen: the line under its title */
     notSentLead: {
       en: "It’s still in the open bag. Pick a chat again, or take it out.",
-      ja: "封をしないまま、まだ袋の中にあります。もう一度トークを選ぶか、取り出してください。",
+      ja: "封をしないまま、<wbr/>まだ<wbr/>袋の中に<wbr/>あります。<wbr/>もう一度<wbr/>トークを<wbr/>選ぶか、<wbr/>取り出してください。",
     },
     /** Giving, with the sticker in the open gift bag: the aqua key that opens LINE's friend picker (again) */
     send: { en: "Send in LINE", ja: "LINEで送る" },
@@ -263,7 +263,7 @@ export const giving = {
     /** Giving's "Did it go out?" screen: the line under its title */
     lead: {
       en: "LINE didn’t say whether your gift message went out. If it did, tap It went out. If not, take the sticker out, then give it again.",
-      ja: "ギフトメッセージを送れたかどうか、LINEから返事がありませんでした。送れた場合は「送れました」をタップしてください。送れていない場合は、シールを取り出してから、もう一度贈ってください。",
+      ja: "ギフトメッセージを<wbr/>送れたかどうか、<wbr/>LINEから<wbr/>返事が<wbr/>ありませんでした。<wbr/>送れた場合は<wbr/>「送れました」を<wbr/>タップしてください。<wbr/>送れていない場合は、<wbr/>シールを<wbr/>取り出してから、<wbr/>もう一度<wbr/>贈ってください。",
     },
     /** Giving's "Did it go out?" screen: the aqua key the giver taps when the Gift Message did go out in LINE */
     itWentOut: { en: "It went out", ja: "送れました" },
@@ -274,7 +274,7 @@ export const giving = {
     /** Giving's "Closed and sent" screen: the line under its title */
     lead: {
       en: "It’s in your LINE chat now, and the gift message opens once. When they receive it, you’ll see who did.",
-      ja: "ギフトメッセージを<wbr/>LINEのトークに送りました。<wbr/>ひらけるのは一度だけです。<wbr/>受け取られたら、<wbr/>誰が受け取ったかがわかります。",
+      ja: "ギフトメッセージを<wbr/>LINEの<wbr/>トークに<wbr/>送りました。<wbr/>ひらけるのは<wbr/>一度だけです。<wbr/>受け取られたら、<wbr/>誰が<wbr/>受け取ったかが<wbr/>わかります。",
     },
     /** Giving's "Closed and sent" screen: an alert when the Gift Message went out but Croquis couldn't record it, with why */
     couldntRecord: {

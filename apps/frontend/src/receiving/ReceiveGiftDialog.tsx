@@ -352,7 +352,7 @@ function Gift({
           </span>
         )}
       </div>
-      <p className="receive-gift__hint" aria-hidden={!sealed || undefined}>
+      <p className="receive-gift__hint keep-phrases" aria-hidden={!sealed || undefined}>
         <Trans
           i18nKey={($) => $.receiving.gift.pullTabHint}
           components={{ b: <b />, span: <span /> }}

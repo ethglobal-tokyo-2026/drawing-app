@@ -12,7 +12,7 @@ export const receiving = {
     /** Receive gift dialog, sealed bag: the two-line hint under the bag, the pull tab first, then the other ways to open it; it fades as the sticker rises */
     pullTabHint: {
       en: "<b>Pull the tab to open it</b><span>or double-tap, or press and hold</span>",
-      ja: "<b>つまみを引いてひらいてください</b><span>ダブルタップや長押しでもひらけます</span>",
+      ja: "<b>つまみを<wbr/>引いて<wbr/>ひらいてください</b><span>ダブルタップや<wbr/>長押しでも<wbr/>ひらけます</span>",
     },
     /** Receive gift dialog, once the pull tab snaps and the sticker rises: the Accept sheet's name for assistive tech, also read in its perforation's Close name */
     acceptSheet: { en: "Accept this sticker", ja: "このシールを受け取る" },

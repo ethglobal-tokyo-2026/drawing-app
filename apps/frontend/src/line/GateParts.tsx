@@ -46,7 +46,7 @@ export function GateNotice({
       <h1 ref={heading} tabIndex={-1} className="title-label">
         {title}
       </h1>
-      <p className="line-gate__lead">{lead}</p>
+      <p className="line-gate__lead keep-phrases">{lead}</p>
       {children}
       {detail && (
         <div className="line-gate__details">

@@ -6,22 +6,22 @@ export const errors = {
   /** Any screen that shows a failed request through errorMessage/errorReason, when the server answers a code this catalog lacks (such as route_not_found); {{code}} is that code */
   unknown: {
     en: "Something went wrong ({{code}}). Try again. If it keeps happening, tell the Croquis Official account in LINE.",
-    ja: "問題が発生しました（{{code}}）。もう一度お試しください。続く場合は、LINEのクロッキー公式アカウントにお知らせください。",
+    ja: "問題が<wbr/>発生しました（{{code}}）。<wbr/>もう一度<wbr/>お試しください。<wbr/>続く場合は、<wbr/>LINEの<wbr/>クロッキー公式アカウントに<wbr/>お知らせください。",
   },
   /** Any screen, when a request gets no answer (offline, or it failed before a reply): shown through errorMessage/errorReason by the screen that made it */
   network: {
     en: "Couldn’t connect. Check your connection, then try again.",
-    ja: "つながりませんでした。接続を確認して、もう一度お試しください。",
+    ja: "つながりませんでした。<wbr/>接続を<wbr/>確認して、<wbr/>もう一度<wbr/>お試しください。",
   },
   /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: LINE is logged in but hands over no ID token to sign in to the app's server with (made by the app itself, shown through errorMessage) */
   no_line_token: {
     en: "LINE didn’t sign you in. Reconnect with LINE to try again.",
-    ja: "LINEのログイン情報を取得できませんでした。LINEで再ログインしてください。",
+    ja: "LINEの<wbr/>ログイン情報を<wbr/>取得できませんでした。<wbr/>LINEで<wbr/>再ログインしてください。",
   },
   /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: tapping it couldn't restart LINE Login (made by the app itself, shown through errorMessage) */
   line_reconnect_failed: {
     en: "Couldn’t reconnect with LINE. Try again, or reopen the app from LINE.",
-    ja: "LINEで再ログインできませんでした。もう一度試すか、LINEからアプリをひらき直してください。",
+    ja: "LINEで<wbr/>再ログインできませんでした。<wbr/>もう一度<wbr/>試すか、<wbr/>LINEから<wbr/>アプリを<wbr/>ひらき直してください。",
   },
   /** Drawing screen, Giving and Receiving: sealing an 18+ sticker (POST /api/stickers) when you aren't a verified adult, giving one from a board (POST /api/gifts) to someone who isn't, or receiving one (POST /api/gifts/receive) when you aren't; in the seal chip, “couldn’t be packed” or the gift's refusal, through errorMessage/errorReason */
   adults_only: {
@@ -151,27 +151,27 @@ export const errors = {
   /** Any screen, when the server fails unexpectedly (500), through errorMessage/errorReason; also the reserve ticket checkout after paying, when Sui doesn't verify the payment (POST /api/ticket-purchases) */
   internal_error: {
     en: "Something went wrong on our side. Try again in a moment.",
-    ja: "こちら側で問題が発生しました。少し待ってから、もう一度お試しください。",
+    ja: "こちら側で<wbr/>問題が<wbr/>発生しました。<wbr/>少し<wbr/>待ってから、<wbr/>もう一度<wbr/>お試しください。",
   },
   /** Any screen, when the server can't read a request (400), through errorMessage/errorReason; e.g. the Drawing screen's seal chip when a seal's images are malformed (POST /api/stickers) */
   invalid_request: {
     en: "Croquis couldn’t read what your phone sent. Try again. If it keeps happening, tell the Croquis Official account in LINE.",
-    ja: "クロッキーがその内容を読み取れませんでした。もう一度お試しください。続く場合は、LINEのクロッキー公式アカウントにお知らせください。",
+    ja: "クロッキーが<wbr/>その内容を<wbr/>読み取れませんでした。<wbr/>もう一度<wbr/>お試しください。<wbr/>続く場合は、<wbr/>LINEの<wbr/>クロッキー公式アカウントに<wbr/>お知らせください。",
   },
   /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: signing in to the app's server (POST /api/session) when LINE refuses the ID token, through errorMessage */
   line_token_invalid: {
     en: "LINE didn’t accept this sign-in. Reconnect with LINE. If it keeps happening, tell the Croquis Official account in LINE.",
-    ja: "LINEがログイン情報を確認できませんでした。LINEで再ログインしてください。続く場合は、LINEのクロッキー公式アカウントにお知らせください。",
+    ja: "LINEが<wbr/>ログイン情報を<wbr/>確認できませんでした。<wbr/>LINEで<wbr/>再ログインしてください。<wbr/>続く場合は、<wbr/>LINEの<wbr/>クロッキー公式アカウントに<wbr/>お知らせください。",
   },
   /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: signing in to the app's server (POST /api/session) with an expired LINE ID token, through errorMessage. Also Giving, Receiving and the reserve ticket checkout, through errorReason, when a chain action or a payment waited on Privy and Privy couldn't sign in because LINE's ID token had expired (made by the app itself) */
   line_token_expired: {
     en: "Your LINE sign-in has expired. Reconnect with LINE to continue.",
-    ja: "LINEのログイン情報の有効期限が切れました。LINEで再ログインしてください。",
+    ja: "LINEの<wbr/>ログイン情報の<wbr/>有効期限が<wbr/>切れました。<wbr/>LINEで<wbr/>再ログインしてください。",
   },
   /** Signing in (POST /api/session), and wherever errorMessage shows a refusal of POST /api/line-menu: LINE didn't answer when the app's server checked your sign-in or linked your chat menu. The developer slip's Chat menu row shows the code instead */
   line_unavailable: {
     en: "LINE didn’t answer. Try again in a moment.",
-    ja: "LINEから応答がありません。少し待ってから、もう一度お試しください。",
+    ja: "LINEから<wbr/>応答が<wbr/>ありません。<wbr/>少し<wbr/>待ってから、<wbr/>もう一度<wbr/>お試しください。",
   },
   /** Drawing screen, after tapping the check to seal: a sticker that saved but whose NFT mint wasn't confirmed (POST /api/stickers); the seal chip words this itself, so this is errorMessage's fallback */
   mint_failed: {
@@ -236,7 +236,7 @@ export const errors = {
   /** Sign-in screen, under “Couldn’t sign you in”: a request found the session gone (the cookie expired, or the account was deleted) and signing in again didn't hold; the app signs in again by itself the first time, so this shows only on that second failure, through errorMessage */
   signed_out: {
     en: "You’re signed out. Reopen Croquis from LINE to sign in again.",
-    ja: "ログアウトされました。LINEからクロッキーをひらき直して、もう一度ログインしてください。",
+    ja: "ログアウトされました。<wbr/>LINEから<wbr/>クロッキーを<wbr/>ひらき直して、<wbr/>もう一度<wbr/>ログインしてください。",
   },
   /** Giving and Receiving: a chain action waited 30 s for the Sepolia account that holds the stickers and Privy never readied it, or Privy failed again after one fresh try; the reason follows in brackets (made by the app itself, shown through errorReason); the drawing screen's seal chip words this failure itself */
   smart_account_not_ready: {

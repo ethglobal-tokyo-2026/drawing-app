@@ -85,7 +85,7 @@ export function GiveSheet({ to, toId, toAgeStatus, onClose }: Props) {
               <X size={20} />
             </button>
           </header>
-          <p className="giving__sub">{t(($) => $.giving.giveSheet.lead, { name })}</p>
+          <p className="giving__sub keep-phrases">{t(($) => $.giving.giveSheet.lead, { name })}</p>
 
           {loadError && (
             <ErrorLine className="giving__problem" detail={loadError.detail}>
@@ -93,7 +93,7 @@ export function GiveSheet({ to, toId, toAgeStatus, onClose }: Props) {
             </ErrorLine>
           )}
           {stickers?.length === 0 && (
-            <p className="sheet-empty">{t(($) => $.giving.giveSheet.none)}</p>
+            <p className="sheet-empty keep-phrases">{t(($) => $.giving.giveSheet.none)}</p>
           )}
           {!!stickers?.length && (
             <StickerPicker
@@ -105,7 +105,7 @@ export function GiveSheet({ to, toId, toAgeStatus, onClose }: Props) {
             />
           )}
           {stickers?.some((s) => !canGiveTo(s, toAgeStatus)) && (
-            <p className="fine giving__nsfw-note">
+            <p className="fine giving__nsfw-note keep-phrases">
               <Trans
                 i18nKey={($) => $.giving.nsfw.adultsOnly}
                 components={{ name: <Handle name={name} /> }}

@@ -13,7 +13,7 @@ export const line = {
     /** LINE sign-in screen, in a browser outside LINE before LINE Login: the heading */
     title: { en: "Your sticker board", ja: "あなたのシールボード" },
     /** LINE sign-in screen, in a browser outside LINE before LINE Login: the line under the heading */
-    lead: { en: "It opens with your LINE account.", ja: "LINEアカウントでひらきます。" },
+    lead: { en: "It opens with your LINE account.", ja: "LINEアカウントで<wbr/>ひらきます。" },
     /** LINE sign-in screen, in a browser outside LINE: the button that starts LINE Login */
     logIn: { en: "Log in with LINE", ja: "LINEでログイン" },
     /** LINE sign-in screen, when LINE (LIFF) fails to start or doesn't start in time: the heading */
@@ -21,7 +21,7 @@ export const line = {
     /** LINE sign-in screen, when LINE (LIFF) fails to start: the line under the heading, above Try again and LINE's reason in fine print */
     didntStartLead: {
       en: "Your sticker board opens once it does. Check your connection, then try again.",
-      ja: "起動すると、シールボードがひらきます。接続を確認して、もう一度お試しください。",
+      ja: "起動すると、<wbr/>シールボードが<wbr/>ひらきます。<wbr/>接続を<wbr/>確認して、<wbr/>もう一度<wbr/>お試しください。",
     },
     /** LINE sign-in screen, when LINE (LIFF) fails to start: the button that reloads the page */
     tryAgain: { en: "Try again", ja: "もう一度" },

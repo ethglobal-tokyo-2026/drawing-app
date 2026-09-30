@@ -41,7 +41,7 @@ export function CantFindThem({ onBack }: Props) {
         </button>
         <h2 className="giving__title">{t(($) => $.giving.cantFind.title)}</h2>
       </header>
-      <p className="giving__sub">{t(($) => $.giving.cantFind.lead)}</p>
+      <p className="giving__sub keep-phrases">{t(($) => $.giving.cantFind.lead)}</p>
       <div className="giving__rows">
         <button
           type="button"

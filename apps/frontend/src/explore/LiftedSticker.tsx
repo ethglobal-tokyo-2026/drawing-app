@@ -216,7 +216,7 @@ export function LiftedSticker({
 
         <div className="lifted-sticker__about lifted-sticker__rise">
           <ArtistChip artist={toPerson(artist)} plain />
-          <p className="fine lifted-sticker__fine">
+          <p className="fine lifted-sticker__fine keep-phrases">
             {entry.givenTo ? (
               <Trans
                 i18nKey={($) => $.explore.lifted.captionGiven}

@@ -209,18 +209,20 @@ export function Giving({
           >
             {t(($) => $.giving.sheet.sendInChat)}
           </Key>
-          <p className="giving__hint" id={hintId}>
+          <p className="giving__hint keep-phrases" id={hintId}>
             {t(($) => $.giving.sheet.sendInChatHint)}
           </p>
           <QuietLink onClick={() => setCantFind(true)}>
             <Question /> {t(($) => $.giving.cantFind.title)}
           </QuietLink>
         </div>
-        <p className="giving__leaves">
+        <p className="giving__leaves keep-phrases">
           <StickerGlyph size={16} /> {t(($) => $.giving.sheet.leaves)}
         </p>
         {sticker.nsfw && (
-          <p className="fine giving__nsfw-note">{t(($) => $.giving.nsfw.whoCanOpen)}</p>
+          <p className="fine giving__nsfw-note keep-phrases">
+            {t(($) => $.giving.nsfw.whoCanOpen)}
+          </p>
         )}
       </>
     );
@@ -259,7 +261,7 @@ export function Giving({
           <h2 className="giving__title">{title}</h2>
         </header>
         <div className="giving__scroll">
-          <p className="giving__sub">{lead}</p>
+          <p className="giving__sub keep-phrases">{lead}</p>
           {bag("open")}
         </div>
         <div className="giving__acts">
@@ -318,7 +320,7 @@ export function Giving({
           <h2 className="giving__title">{title}</h2>
         </header>
         <div className="giving__scroll">
-          <p className="giving__sub">{lead}</p>
+          <p className="giving__sub keep-phrases">{lead}</p>
           {problems.map(({ message, detail }) => (
             <ErrorLine key={message} className="giving__problem" detail={detail}>
               {message}
