@@ -2,7 +2,7 @@
 
 2026-09-30. `/impeccable audit` (accessibility, performance, theming, responsive, implementation integrity) and `/impeccable critique` (Nielsen heuristics, cognitive load, emotional journey, personas) of all of `apps/frontend`, at main `9f541d12`. Nothing here is fixed yet.
 
-**In progress.** Nine of eleven lanes are in: the shell and design system, copy and i18n, Explore, Gratitude, the stat board and sticker detail, tickets and the Shop, the sticker tray, the drawing screen, and sign-in and identity. The sticker board and Giving and Receiving lanes, and the detector pass, are still running; their findings and the frontend's overall scores land here when they finish.
+**In progress.** Ten of eleven lanes are in: the shell and design system, copy and i18n, Explore, Gratitude, the stat board and sticker detail, tickets and the Shop, the sticker tray, the drawing screen, sign-in and identity, and the sticker board. The Giving and Receiving lane and the detector pass are still running; their findings and the frontend's overall scores land here when they finish.
 
 - Each lane took a slice of `apps/frontend/src`, read every file in it, and checked the running app: a local dev server under LIFF Mock with its own database, Chromium at 390×741, 375×591 (iPhone SE inside LINE) and 430×829, in English and Japanese, with failures simulated by holding or failing API calls. Each did both lenses for its slice. The detector (`impeccable detect`) ran as its own pass, kept apart from the design review.
 - Every finding's impact, standard and evidence: the lane reports in [2026-09-30-frontend-audit/](2026-09-30-frontend-audit/). Screenshots and scripts are on ad0ll's Mac only, in `/tmp/impeccable-audit/`, which macOS clears after a few days.
@@ -25,6 +25,7 @@ Audit, 0–4 per dimension:
 | Sticker tray                  | 2    | 3           | 3       | 2          | 3         | 13/20 |
 | Drawing screen                | 3    | 3           | 3       | 3          | 2         | 14/20 |
 | Sign-in and identity          | 2    | 3           | 3       | 2          | 2         | 12/20 |
+| Sticker board                 | 2    | 3           | 3       | 3          | 3         | 14/20 |
 
 Critique, Nielsen's heuristics, 0–4: 1 system status · 2 match with the real world · 3 user control · 4 consistency · 5 error prevention · 6 recognition over recall · 7 flexibility · 8 minimalist design · 9 error recovery · 10 help.
 
@@ -39,6 +40,7 @@ Critique, Nielsen's heuristics, 0–4: 1 system status · 2 match with the real 
 | Sticker tray                  | 3   | 4   | 3   | 3   | 3   | 2   | 3   | 3   | 2   | 1   | **27** |
 | Drawing screen                | 3   | 3   | 3   | 3   | 2   | 3   | 3   | 4   | 3   | 2   | **29** |
 | Sign-in and identity          | 2   | 3   | 2   | 3   | 3   | 3   | 3   | 3   | 2   | 2   | **26** |
+| Sticker board                 | 3   | 4   | 3   | 3   | 3   | 2   | 3   | 4   | 2   | 2   | **29** |
 
 Every lane found the design authored for Croquis, not interchangeable: the keycap and its press, label stock, perforations, the pile, the cork back, the ticket stubs, the tier ladder. Where it slips, it slips the same way everywhere: failures fall back to engineer text in fine print.
 
@@ -53,13 +55,15 @@ Every lane found the design authored for Croquis, not interchangeable: the keyca
 7. **UX-SHELL-1** Pinch zoom is off app-wide.
 8. **UX-SHELL-2** The shared Sheet isn't modal: no `aria-modal`, Escape, Back or focus trap.
 9. **UX-STAT-2** The Transfer Trail drops keyboard focus, and with it the sticker detail's Escape and paging (→ CLEAN-1).
-10. **UX-STAT-1** In Japanese, the Transfer Trail's open card runs off a 375px screen and cuts Replay in half.
-11. **UX-EXPL-1** Leaderboard and search rows speak only "@x's sticker board": no rank, no figure.
-12. **UX-TIX-3** Every ticket purchase row is named by its transaction ID.
-13. **UX-TRAY-1** At 375×591 the open sticker tray cuts off the bottom 64px of every sheet: its dates, dated edges, +N and lowest stickers.
-14. **UX-TRAY-2** Tab and VoiceOver visit 26 hidden stickers on covered sheets before the front sheet's first one.
-15. **UX-SHELL-4** Every NSFW mark is white on pink at 3.07:1, three of them under 11px.
-16. **UX-EXPL-2** Your own leaderboard row's "You" and unit read 3.45:1.
+10. **UX-BOARD-1** Someone else's board leaves Explore live and focused underneath it, and Back drops focus to the page.
+11. **UX-BOARD-2** A sticker's menu on someone else's board is out of focus order, unannounced and unnamed.
+12. **UX-STAT-1** In Japanese, the Transfer Trail's open card runs off a 375px screen and cuts Replay in half.
+13. **UX-EXPL-1** Leaderboard and search rows speak only "@x's sticker board": no rank, no figure.
+14. **UX-TIX-3** Every ticket purchase row is named by its transaction ID.
+15. **UX-TRAY-1** At 375×591 the open sticker tray cuts off the bottom 64px of every sheet: its dates, dated edges, +N and lowest stickers.
+16. **UX-TRAY-2** Tab and VoiceOver visit 26 hidden stickers on covered sheets before the front sheet's first one.
+17. **UX-SHELL-4** Every NSFW mark is white on pink at 3.07:1, three of them under 11px.
+18. **UX-EXPL-2** Your own leaderboard row's "You" and unit read 3.45:1.
 
 ## Patterns
 
@@ -68,12 +72,12 @@ Most findings are instances of a few causes; fixing the cause once closes them a
 1. **Failures fall back to engineer text in fine print.** Raw exception and SDK messages reach cards and Japanese sentences (UX-TIX-1, UX-COPY-10), the failed-seal chip prints `POST /api/stickers` over the art (UX-DRAW-4), and the sign-in failure shows everyone "network: GET /api/me got no answer" (UX-ENTRY-6); the sticker detail, Explore and the sign-in screen print reasons as 11px uppercase Graphite that garbles case-sensitive detail (UX-STAT-3, UX-EXPL-7, UX-ENTRY-6); copy failures vanish as 2.4 s toasts (UX-SHELL-6); a kept Gratitude combo reads as sent (UX-GRAT-1); kept payments and failed ticket loads are console-only (UX-TIX-7, UX-TIX-10); a lost session answers "You're signed out." on every screen with a Try again that can't work (UX-ENTRY-1); long waits never say they're slow (UX-ENTRY-5); many catalog errors name no next step and no one to ask (UX-COPY-7, UX-COPY-9). Settings and Age verification already have the right treatment: 13px Ink on Tomato Soft with `role="alert"`. One error line component, a catalog string per known failure, raw detail only as copyable fine print, and one named place to get help would close most of these. `/impeccable harden`, `/impeccable clarify`.
 2. **Crypto words leak through the plumbing.** "wallet" in Giving's wait (UX-COPY-1), "token" in sign-in errors (UX-COPY-2), "Privy", "MoveAbort" and "Sui rejected the payment" in payment failures (UX-TIX-1), "on the chain" and "transfer" in errors (UX-COPY-9), and ONE OF ONE on the Gift Message. Each alone is small; on the give and pay paths together they read as the racket PRODUCT.md warns about.
 3. **Screen readers get less than the screen shows.** `aria-label`s replace visible content: leaderboard rows (UX-EXPL-1), purchase rows (UX-TIX-3), the explorer link (UX-STAT-10), a NEW pip the pull's name never mentions (UX-TRAY-11). State changes go unannounced: search results (UX-EXPL-4), a sign-in failure that replaces the "Opening…" status (UX-ENTRY-4), the last seconds of the drawing clock (UX-DRAW-9), and everything in the sticker tray, which has no live region at all (UX-TRAY-8). Name controls from their visible text with hidden units, and give each surface one polite status line (WCAG 2.5.3, 4.1.3).
-4. **Focus is lost when the focused control goes away.** The Transfer Trail (UX-STAT-2), clearing the search (UX-EXPL-3), sticking a sticker on from the tray (UX-TRAY-5), Pay turning `disabled` (UX-TIX-4), Age verification turning `disabled` (UX-STAT-8); and it reaches what can't be seen, in the tray's covered sheets (UX-TRAY-2). The trap listens only on its root (→ CLEAN-1), and three keys break DESIGN.md's Busy rule (`aria-busy` and `aria-disabled`, never `disabled`): Pay, Age verification and the handle prompt's (UX-ENTRY-9).
-5. **Shared primitives don't own their accessibility.** `ui/Sheet` has no modality (UX-SHELL-2; → UI-2, UI-5, UI-7), and there are two tab-stop rules (UX-SHELL-11; → CLEAN-9). Each caller has to remember what the primitive should guarantee.
+4. **Focus is lost when the focused control goes away.** Someone else's board opening over Explore and closing again (UX-BOARD-1), the Transfer Trail (UX-STAT-2), clearing the search (UX-EXPL-3), sticking a sticker on from the tray (UX-TRAY-5), Pay turning `disabled` (UX-TIX-4), Age verification turning `disabled` (UX-STAT-8); and it reaches what can't be seen, in the tray's covered sheets (UX-TRAY-2). The trap listens only on its root (→ CLEAN-1), and three keys break DESIGN.md's Busy rule (`aria-busy` and `aria-disabled`, never `disabled`): Pay, Age verification and the handle prompt's (UX-ENTRY-9).
+5. **Shared primitives don't own their accessibility, and twins drift.** `ui/Sheet` has no modality (UX-SHELL-2; → UI-2, UI-5, UI-7), and there are two tab-stop rules (UX-SHELL-11; → CLEAN-9), so each caller has to remember what the primitive should guarantee. Someone else's board hand-rolls its own sticker menu instead of your board's toolbar, and loses its focus order and name on the way (UX-BOARD-2; the board-size code is duplicated too, → CLEAN-18).
 6. **The tightest phone and long Japanese strings break layouts.** At 375×591 (an iPhone SE inside LINE) the sticker tray cuts off every sheet's foot (UX-TRAY-1), the checkout hides its only exit below the fold (UX-TIX-6), and the stat board's peeking Settings covers Flip back (UX-STAT-4). Long handles widen what holds them: 32-character handles next to kana can't break under `word-break: auto-phrase` (UX-STAT-1), and the handle prompt's key grows to 699px (UX-ENTRY-3). In Japanese, 「受け取った」 overflows its stamp (UX-COPY-6) and the checkout's title is pushed off (UX-COPY-12). Check every screen at 375×591, and every screen that prints a handle with a 32-character one, in both languages.
 7. **The scales exist but aren't used.** About 38 font sizes sit between DESIGN.md's steps (12, 12.5, 13.5, 14, 14.5, 16px), heaviest in the Transfer Trail, the sticker detail, the board and the stat board; a z-index scale that 16 declarations use and about 100 literals (800 to 100000) ignore; cork, the scrim, the tray's palette and the metal foils have no tokens; 23 hex literals duplicate a token (mostly `#fff`). Focus rings vary the same way: the house ring is 2px Ink at a 3px offset, but ink labels get Seal Yellow at 1.23:1 (UX-SHELL-5), the tray's spread gets Seal on pink at 1.03:1 (UX-TRAY-4), and the tray alone has five ring styles (UX-TRAY-14). Decide the type ladder once in DESIGN.md, snap to it, and keep one `:focus-visible` rule. `/impeccable typeset`, `/impeccable document`.
-8. **The board isn't first.** DESIGN.md says nothing else downloads while the board assembles, but the closed tray requests about 1.0 MB of images in the same moment as the board's own stickers (UX-TRAY-3), and every board sticker holds a `will-change` layer at rest (UX-SHELL-13). `/impeccable optimize`.
-9. **DESIGN.md has drifted from the app** (still so on main at `ba836c54`). Its front matter names the app "Sticker Board (シール帳)" with "every five-minute drawing" (`DESIGN.md:2-3`, `:255`); Explore's day and week turn over "at 4:00" (`:588-589`; the app turns at midnight Tokyo); a condensation fog after 昇天 doesn't exist (`:693`); the Busy rule is broken by three keys (pattern 4); the drawing screen's 18+ switch isn't described at all; Explore's loading line says "Loading…", not "Loading Explore". `/impeccable document`.
+8. **The board isn't first, and never rests.** DESIGN.md says nothing else downloads while the board assembles, but the closed tray requests about 1.0 MB of images in the same moment as the board's own stickers (UX-TRAY-3). At rest, every board sticker holds a `will-change` layer (UX-SHELL-13) and sways, which is about 85% of an idle board's main-thread time and keeps going behind the turned board (UX-BOARD-8). `/impeccable optimize`.
+9. **DESIGN.md has drifted from the app** (still so on main at `ba836c54`). Its front matter names the app "Sticker Board (シール帳)" with "every five-minute drawing" (`DESIGN.md:2-3`, `:255`); Explore's day and week turn over "at 4:00" (`:588-589`; the app turns at midnight Tokyo); a condensation fog after 昇天 doesn't exist (`:693`); the Busy rule is broken by three keys (pattern 4); the drawing screen's 18+ switch isn't described at all; a Gratitude glow is described as shipped though PRODUCT.md lists it as not built, and the lifted corner on the board's newest sticker is in neither doc (UX-BOARD-14); the artist chips' first-load rule doesn't say which board or how often (UX-BOARD-7); Explore's loading line says "Loading…", not "Loading Explore". `/impeccable document`.
 
 ## Findings by area
 
@@ -233,9 +237,29 @@ The fast path is fast and quiet: the board showed at about 741 ms in English and
 - **UX-ENTRY-10** · P3 · `line/liff.ts:125` · "LINE didn't answer within 15 s" is inline English on the LINE gate, in Japanese too · related SHELL-5 · `/impeccable clarify`
 - **UX-ENTRY-11** · P3 · `identity/PrivyAccount.tsx:70-79`, `identity/SponsorshipCheck.tsx:75` · The developer slip's explorer links open outside LINE (`target="_blank"` without `openLinkInLine`, which the croquis.eth link uses) · `/impeccable polish`
 
+### Sticker board
+
+Your own board treats touch, keyboard and reduced motion as first-class: one Tab stop with arrows in reading order, move, turn and resize keys, Escape to let go, 44px handles, one save per touch gesture, and zero running animations under reduced motion. Someone else's board, the product's social loop, is its weaker twin.
+
+- **UX-BOARD-1** · P1 · `app/App.tsx:180-198`, `sticker-board/ArtistBoard.tsx:233-235,360-381` · Someone else's board opens over Explore without making it inert: focus stays on the covered Explore row, Tab and VoiceOver walk through the search, tabs and pile first (11 stops, measured), and Back drops focus to `<body>`, losing the person's place in Explore · WCAG 2.4.3, 1.3.2 · Fix: `inert` on Explore while visiting; focus the board's name on open, as the stat board's turn does; return focus to the row that opened it · `/impeccable harden`
+- **UX-BOARD-2** · P1 · `sticker-board/ArtistBoard.tsx:48,202-216,266-341` · A sticker's menu on someone else's board (View, Offer for it) comes after every sticker, the name and the Explore chip in the focus order, isn't announced, and is an unnamed `role="menu"` of plain buttons, while another sticker keeps the focus ring; it's a hand-rolled second copy of your own board's toolbar, placed by guessed sizes · WCAG 2.4.3, 4.1.2, 4.1.3 · Fix: give someone else's board your board's pattern: a roving Tab stop in reading order and a labelled toolbar right after its sticker · `/impeccable harden`
+- **UX-BOARD-3** · P2 · `sticker-board/StickerBoard.css:344-371`, `PlacedSticker.tsx:131`, `StickerBoard.tsx:760-769` · When the fresh board fails to load behind the cached one, the failure card is drawn under the cached stickers, a fixed 236×196 box that its reason overflows and that blocks taps on what's above it · Fix: above the stickers, sized to its reason, saying what to do (pattern 1) · `/impeccable harden`
+- **UX-BOARD-4** · P2 · `sticker-board/useBoardGestures.ts:409-458`, `StickerBoard.tsx:298-316,348-351,520-526`, `lastBoard.ts:90-98` · Each arrow, bracket or plus/minus press saves on its own: 20 presses in 142 ms sent 20 placement PATCHes, each with a full re-render and a synchronous rewrite of the kept board · → BOARD-7 for their order · Fix: apply keys locally and save after a short idle · `/impeccable harden`
+- **UX-BOARD-5** · P2 · `sticker-board/useBoardGestures.ts:270-407` · Moving, resizing and turning a sticker need dragging or a hardware keyboard: someone who can't drag, or VoiceOver on an iPhone, can select, Give and Remove but not arrange · WCAG 2.5.7 · Fix: an Arrange row on the selected sticker's toolbar with nudge, size and turn steps · `/impeccable adapt`
+- **UX-BOARD-6** · P2 · Nothing after the first sticker teaches tap to select, tap again to open, tap bare board to let go, drag onto the Zipper to stow, or that your name turns the board over to your stats; it looks like a label · Fix: a one-time hint on the first selected sticker; a cue on the name · `/impeccable onboard`
+- **UX-BOARD-7** · P2 · `sticker-board/StickerBoard.tsx:288,464-473,738-745`, `ArtistBoard.tsx` · The artist chips, the only place that says what foil means, replay for 3–4 s over the art on every return to My board (component state, and the board remounts per tab visit), and never play on someone else's board, where you meet other people's hands · Fix: once per app open, on both boards, with the rule written in DESIGN.md · `/impeccable clarify`
+- **UX-BOARD-8** · P3 · `stickers/live-resin.css:48-66,96-106`, `stickers/sticker-foil.css:110-125`, `sticker-board/StickerBoard.tsx:296` · The resin sway is about 85% of an idle board's main-thread time (60 ms per 4 s with 5 stickers, 8–9 ms without it) and keeps running behind the turned board · Fix: pause it when turned, hidden or idle · `/impeccable optimize`
+- **UX-BOARD-9** · P3 · `sticker-board/placement.ts:92-110` · Near the top, the rotate knob's touch area sits under the name button, so a tap on its upper edge turns the board over instead · `/impeccable polish`
+- **UX-BOARD-10** · P3 · `sticker-board/ArtistBoard.css:20-43`, `ArtistBoard.tsx:304-307` · The Explore back chip's touch area is 42px and it's named "Explore", like the tab still visible beneath it · `/impeccable polish`
+- **UX-BOARD-11** · P3 · `sticker-board/StickerBoard.css:35-51` · Your name cuts off at about 15 Latin characters while the header's right side is empty (space kept for gift badges); LINE names run to 20 · `/impeccable layout`
+- **UX-BOARD-12** · P3 · `sticker-board/StickerBoard.tsx:683-688` · An empty board with a full tray still says "Stickers you make or receive land here." when the next step is the Zipper · `/impeccable clarify`
+- **UX-BOARD-13** · P3 · `sticker-board/StickerBoard.tsx:393-401,413-420`, `useBoardGestures.ts:165-178` · If the Gratitude check fails, the "send Gratitude now?" ask silently never comes that visit; NEW marks and a tray refusal fail only to the console · `/impeccable harden`
+- **UX-BOARD-14** · P3 · `sticker-board/PlacedSticker.tsx:42-43,71,102,132`, `StickerBoard.css:97-112` · Dead glow code for a feature PRODUCT.md lists as not built, which DESIGN.md describes as shipped; the lifted corner on today's newest sticker is in code but in neither doc · `/impeccable distill`, `/impeccable document`
+- **UX-BOARD-15** · P3 · `sticker-board/StickerBoard.css:377,485`, `ArtistBoard.css:105-111` · 13.5px notes and a 23px heading off the type steps (pattern 7); `lastBoard.ts:9` cites "(decision 29)", a plan anchor AGENTS.md bans in comments · `/impeccable typeset`
+
 ### Pending
 
-The sticker board and Giving and Receiving lanes, and the detector's verified findings.
+The Giving and Receiving lane, and the detector's verified findings.
 
 ## What to keep
 
@@ -253,9 +277,9 @@ The sticker board and Giving and Receiving lanes, and the detector's verified fi
 
 ## Recommended commands so far
 
-1. **[P1] `/impeccable harden`**: the error line and its catalog strings (pattern 1), then UX-GRAT-1, UX-TIX-1, UX-TIX-2, UX-TIX-3, UX-EXPL-1, UX-STAT-2, the tray's focus order (UX-TRAY-2), Sheet modality (UX-SHELL-2), and on the drawing screen the time-up lock, the stray dot and the 18+ switch (UX-DRAW-1, UX-DRAW-2, UX-DRAW-5).
+1. **[P1] `/impeccable harden`**: the error line and its catalog strings (pattern 1), then UX-GRAT-1, UX-ENTRY-1, UX-TIX-1, UX-TIX-2, UX-TIX-3, UX-EXPL-1, UX-STAT-2, someone else's board (UX-BOARD-1, UX-BOARD-2), the tray's focus order (UX-TRAY-2), Sheet modality (UX-SHELL-2), and on the drawing screen the time-up lock, the stray dot and the 18+ switch (UX-DRAW-1, UX-DRAW-2, UX-DRAW-5).
 2. **[P1] `/impeccable clarify`**: the crypto words (pattern 2), the consent line (UX-SHELL-3), and the Gratitude words (UX-GRAT-5).
-3. **[P1] `/impeccable adapt`**: zoom (UX-SHELL-1), the tray at 591 tall (UX-TRAY-1), the Japanese Transfer Trail (UX-STAT-1), the checkout at 591 tall (UX-TIX-6).
+3. **[P1] `/impeccable adapt`**: zoom (UX-SHELL-1), the tray at 591 tall (UX-TRAY-1), the Japanese Transfer Trail (UX-STAT-1), the checkout at 591 tall (UX-TIX-6), and the handle prompt's width (UX-ENTRY-3).
 4. **[P1] `/impeccable colorize`**: one Ink-on-pink 18+ mark (UX-SHELL-4); `/impeccable polish` for the 3.45:1 row, the 1.75:1 radios and the yellow focus ring.
 5. **[P2] `/impeccable clarify`** again for one name per destination and figure (UX-COPY-3, UX-COPY-4) and さん in Giving.
 6. **[P2] `/impeccable onboard`**: the motion question, JPYC and the fee, empty leaderboards, and what the tray's sheets, edges and blank spots do (UX-TRAY-9).
