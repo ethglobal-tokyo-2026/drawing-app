@@ -70,6 +70,10 @@ export const POP_IN_WORDS: Record<PopInBank, readonly PopInWord[]> = {
     { jp: "すりすり", gloss: "*nuzzle*" },
     { jp: "シュッ", gloss: "*swish*" },
     { jp: "ぞくぞく", gloss: "*shiver*" },
+    { jp: "もふもふ", gloss: "*fluff fluff*" },
+    { jp: "よしよし", gloss: "*there, there*" },
+    { jp: "ゴロゴロ", gloss: "*purr*" },
+    { jp: "うっとり", gloss: "*entranced*" },
   ],
   shake: [
     { jp: "ぶるぶる", gloss: "*wobble*" },

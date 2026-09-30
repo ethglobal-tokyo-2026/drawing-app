@@ -13,6 +13,8 @@ export const stickerCreation = {
     resume: { en: "Resume timer", ja: "タイマーを再開" },
     /** Drawing screen, top left: the small white tag with a pause icon that hangs off the timer dot whenever the clock is stopped; hidden from screen readers */
     paused: { en: "Paused", ja: "一時停止" },
+    /** Drawing screen, top left: read out once by screen readers, as a polite announcement, when the clock reaches 30 seconds left and again at 10; {{seconds}} is 30 or 10 */
+    warning: { en: "{{seconds}} seconds left", ja: "残り{{seconds}}秒" },
     /** Read out with the dot: the time left on its face, and why the clock is stopped. */
     status: {
       /** Drawing screen, top left: read by screen readers after the timer dot's name while the clock runs; {{time}} is minutes:seconds, such as 4:32 */
@@ -74,35 +76,64 @@ export const stickerCreation = {
     label: { en: "Seal: tap twice", ja: "仕上げ：2回タップ" },
     /** Drawing screen, bottom right: the chip beside the seal key after its first tap, announced to screen readers and the key's name until the second tap, which seals */
     tapAgain: { en: "Tap again to seal", ja: "もう一度タップで仕上げ" },
+    /** Drawing screen, bottom right: the chip beside the seal key after its first tap while the 18+ switch is on, announced to screen readers and the key's name until the second tap, which seals the sticker as 18+ */
+    tapAgainNsfw: { en: "Tap again to seal as 18+", ja: "もう一度タップで18+として仕上げ" },
+    /** Drawing screen, bottom right: the chip beside the seal key, announced, for a few seconds after the first stroke on each of your first few visits; it says how the key works, and that two fingers tap to undo */
+    hint: {
+      en: "Tap the check twice to seal. Tap with two fingers to undo.",
+      ja: "チェックを2回タップで仕上げ。2本指でタップすると元に戻せます。",
+    },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when it's tapped but everything drawn was erased or undone */
     empty: {
       en: "The sheet is empty, so there’s nothing to seal.",
       ja: "キャンバスが真っ白なので、仕上げるものがありません。",
     },
-    /** Drawing screen: a toast when time runs out after everything drawn was erased or undone; the sheet then resets */
+    /** Drawing screen, bottom right: the chip beside the seal key, announced, when time runs out after everything drawn was erased or undone; the sheet is fresh again and the chip goes with its first stroke */
     emptyAtTimeUp: {
       en: "Time’s up. The sheet was empty, so nothing was sealed.",
       ja: "時間切れです。キャンバスが真っ白だったので、何も仕上がりませんでした。",
     },
-    /** Drawing screen, bottom right: the chip beside the seal key, announced, when the server refused or didn't answer the seal; {{reason}} is the server's error message; the check is the seal key's icon */
+    /** The chip beside the seal key when a seal failed: what failed, then what to do. Its technical detail goes to the console. */
     failed: {
-      en: "Couldn’t seal. {{reason}} Tap the check to try again.",
-      ja: "仕上げられませんでした。{{reason}}チェックをタップして、もう一度お試しください。",
+      /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing failed on this phone before the server was asked; the check is the seal key's icon */
+      onThisPhone: {
+        en: "Couldn’t seal: something went wrong on this phone. Tap the check to try again.",
+        ja: "仕上げられませんでした：この端末で問題が起きました。チェックをもう一度タップしてください。",
+      },
+      /** Drawing screen, bottom right: the chip beside the seal key, announced, when the app's server didn't answer the seal, or its answer couldn't be read; tapping the check sends the same seal again */
+      noAnswer: {
+        en: "Couldn’t seal: no answer from the server. Tap the check to try again.",
+        ja: "仕上げられませんでした：サーバーの応答がありません。チェックをもう一度タップしてください。",
+      },
+      /** Drawing screen, bottom right: the chip beside the seal key, announced, when the app's server failed while sealing */
+      serverProblem: {
+        en: "Couldn’t seal: the server ran into a problem. Tap the check to try again.",
+        ja: "仕上げられませんでした：サーバーで問題が起きました。チェックをもう一度タップしてください。",
+      },
+      /** Drawing screen, bottom right: the chip beside the seal key, announced, when the sticker was saved but its on-chain seal wasn't confirmed; trying again doesn't use another ticket */
+      notOnChain: {
+        en: "Your sticker is saved, but isn’t sealed on-chain yet. Tap the check to try again.",
+        ja: "シールは保存されましたが、ブロックチェーン上ではまだ仕上がっていません。チェックをもう一度タップしてください。",
+      },
+      /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing waited on the board address (the Ethereum Sepolia account that holds the stickers) and it never got ready */
+      boardAddress: {
+        en: "Couldn’t seal: your board address isn’t ready. Tap the check to try again.",
+        ja: "仕上げられませんでした：ボードアドレスの準備ができていません。チェックをもう一度タップしてください。",
+      },
+      /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing waited on the board address and LINE's sign-in had expired, so Privy couldn't sign in; tapping the check reconnects with LINE and comes back to the drawing screen, which picks the drawing back up */
+      signInExpired: {
+        en: "Couldn’t seal: your LINE sign-in expired. Tap the check to reconnect with LINE.",
+        ja: "仕上げられませんでした：LINEのログイン情報の有効期限が切れました。チェックをタップしてLINEで再ログインしてください。",
+      },
     },
-    /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing waited on the board address and LINE's sign-in had expired, so Privy couldn't sign in; tapping the check reconnects with LINE and comes back to the drawing screen, which picks the drawing back up */
-    reconnect: {
-      en: "Couldn’t seal: your LINE sign-in has expired. Tap the check to reconnect with LINE, then pick up where you left off.",
-      ja: "仕上げられませんでした。LINEのログイン情報の有効期限が切れました。チェックをタップしてLINEで再ログインすると、続きから再開できます。",
-    },
+    /** Drawing screen, bottom right: the chip beside the seal key, announced, when the server refused the seal, or LINE couldn't reconnect; {{reason}} is that error's message, which says what to do */
+    refused: { en: "Couldn’t seal. {{reason}}", ja: "仕上げられませんでした。{{reason}}" },
+    /** Drawing screen, bottom right: the chip beside the seal key, announced, when a seal failed at 0:00, in front of that chip's words; {{problem}} is the words */
+    timeUp: { en: "Time’s up. {{problem}}", ja: "時間切れです。{{problem}}" },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when a reload brings back a drawing whose seal was on its way, so the sheet stays as it was sealed; tapping the check finishes the seal */
     interrupted: {
       en: "Your sticker was being sealed. Tap the check to finish sealing it.",
       ja: "シールを仕上げている途中でした。チェックをタップして仕上げてください。",
-    },
-    /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing failed on the phone before the server was asked; {{reason}} is a technical message that stays English */
-    failedHere: {
-      en: "Couldn’t seal ({{reason}}). Tap the check to try again.",
-      ja: "仕上げられませんでした（{{reason}}）。チェックをタップして、もう一度お試しください。",
     },
   },
   /** The 18+ switch over the seal key, shown only to adults verified with World ID. */

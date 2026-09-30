@@ -11,10 +11,10 @@ import {
 import { retryPrivySignIn } from "../identity/privy";
 import { useMyAgeStatus } from "../identity/useMyAgeStatus";
 import type { Sticker, TicketUse } from "@drawing-app/api/client";
-import { ApiError, apiError, type ApiClient } from "../api/apiClient";
+import { apiError, type ApiClient } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
-import { errorMessage, errorReason } from "../i18n/errorMessage";
+import { errorMessage } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
 import { OutOfTickets } from "../tickets/OutOfTickets";
 import { StartDrawing } from "../tickets/StartDrawing";
@@ -24,7 +24,6 @@ import { TicketsNotLoaded } from "../tickets/TicketsNotLoaded";
 import { useTickets } from "../tickets/useTickets";
 import { clamp01 } from "../ui/easing";
 import { releaseCanvas } from "../ui/releaseCanvas";
-import { useToast } from "../ui/useToast";
 import { sizePx } from "./canvas/brush";
 import { DrawingCanvas, type DrawingCanvasHandle } from "./canvas/DrawingCanvas";
 import { isFirstVisit } from "./drawVisits";
@@ -47,6 +46,7 @@ import {
 import { forgetSentSeal, keepSentSeal, sealWentOut } from "./session/sentSeal";
 import {
   ARM_WINDOW_MS,
+  describeSealFailure,
   FRESH_SESSION,
   sealFailure,
   SESSION_MS,
@@ -70,11 +70,11 @@ const FIRST_SIZES = { brush: 0.34, eraser: 0.52 };
 const FIRST_SMOOTHING = 30;
 /** How far [ and ] move the size rail. */
 const SIZE_STEP = 0.04;
+/** How long the seal key's hint stays, on the first visits, after the first stroke brings the key in. */
+const KEY_HINT_MS = 7_000;
 
 const afterPaint = () =>
   new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve)));
-const reason = (error: unknown) =>
-  error instanceof Error && error.message ? error.message : String(error);
 
 /** A seal's ceremony: from the moment the sticker is cut, through the server's answer. */
 interface Ceremony {
@@ -127,7 +127,6 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const api = useApi();
   const tickets = useTickets();
   const me = useMe();
-  const toast = useToast();
   const colorSheetId = useId();
   const smoothingBarId = useId();
 
@@ -169,6 +168,11 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // Whether this device keeps the drawing in progress; the timer's note says so while it can't.
   const [kept, setKept] = useState(true);
   const [keeper] = useState(() => new SessionKeeper(me.id, setKept));
+  // The rail's sizes and Smoothing are kept with the drawing, so a reload brings them back too.
+  useEffect(
+    () => keeper.keepTools({ brushSize: sizes.brush, eraserSize: sizes.eraser, smoothing }),
+    [keeper, sizes, smoothing],
+  );
   // Until a session kept across a reload is back, or known lost, Draw doesn't ask for a ticket.
   const [restoring, setRestoring] = useState(true);
   // The 18+ switch; the seal reads the ref, since it runs from the clock's time-up too.
@@ -182,6 +186,14 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const [pickedUp, setPickedUp] = useState<"restored" | "lost" | "carried" | null>(null);
   // A tap on the waiting timer puts "Starts when you draw" under it, until the first stroke.
   const [startsNote, setStartsNote] = useState(false);
+  // On the first few visits the seal key says how it works, once, as the first stroke brings it in.
+  const [keyHint, setKeyHint] = useState(false);
+  const keyHinted = useRef(false);
+  useEffect(() => {
+    if (!keyHint) return;
+    const id = setTimeout(() => setKeyHint(false), KEY_HINT_MS);
+    return () => clearTimeout(id);
+  }, [keyHint]);
 
   const clock = useSessionClock(() => send({ type: "time-up" }));
 
@@ -369,8 +381,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         if (!cut) {
           // Everything drawn was erased or undone. At 0:00 the sheet is spent; before that, draw on.
           if (clock.elapsed >= SESSION_MS) {
-            toast(t(($) => $.stickerCreation.seal.emptyAtTimeUp));
             send({ type: "reset" });
+            // The fresh sheet says so in the chip, since the reset just cleared it.
+            setSealProblem(t(($) => $.stickerCreation.seal.emptyAtTimeUp));
           } else {
             setSealProblem(t(($) => $.stickerCreation.seal.empty));
             send({ type: "seal-failed", mayHaveSealed: false, timeUp: false });
@@ -417,16 +430,17 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       const held = sentSeal.current?.sticker;
       if (shown) dismissCeremony(shown, { keepSticker: shown.sticker === held });
       else if (sticker !== held) sticker?.dispose();
+      const problem = describeSealFailure(error, sent);
       // Only reconnecting LINE renews its sign-in, and that leaves the page: the check does it.
-      reconnectOnTap.current = error instanceof ApiError && error.code === "line_token_expired";
-      setSealProblem(
-        reconnectOnTap.current
-          ? t(($) => $.stickerCreation.seal.reconnect)
-          : error instanceof ApiError
-            ? t(($) => $.stickerCreation.seal.failed, { reason: errorReason(error) })
-            : t(($) => $.stickerCreation.seal.failedHere, { reason: reason(error) }),
-      );
-      send({ type: "seal-failed", mayHaveSealed, timeUp: clock.elapsed >= SESSION_MS });
+      reconnectOnTap.current = problem.kind === "signInExpired";
+      const timeUp = clock.elapsed >= SESSION_MS;
+      // The chip says what failed and what to do; the error's own detail is in the console above.
+      const words =
+        problem.kind === "refused"
+          ? t(($) => $.stickerCreation.seal.refused, { reason: errorMessage(problem.error) })
+          : t(($) => $.stickerCreation.seal.failed[problem.kind]);
+      setSealProblem(timeUp ? t(($) => $.stickerCreation.seal.timeUp, { problem: words }) : words);
+      send({ type: "seal-failed", mayHaveSealed, timeUp });
     }
   }
 
@@ -513,8 +527,12 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       setColor(own);
       startedIn.current = own;
     }
-    keeper.resume(found.ticket, found.ops, found.elapsedMs, found.nsfw);
+    keeper.resume(found.ticket, found.ops, found.elapsedMs, found.nsfw, found.tools);
     keepNsfw(found.nsfw);
+    if (found.tools) {
+      setSizes({ brush: found.tools.brushSize, eraser: found.tools.eraserSize });
+      setSmoothing(found.tools.smoothing);
+    }
     ticket.current = found.ticket;
     send({ type: "restored", drawn, sealSent: sealWentOut(found.ticket) });
     if (!drawn) {
@@ -718,11 +736,11 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     closePanel: () => setPanel(null),
   });
 
-  // A tap anywhere but the bar or its button closes the smoothing bar. The sheet closes it as well,
-  // and swallows the tap.
+  // A tap anywhere but the bar or its button closes the smoothing bar. The sheet is left to the ink
+  // engine, which closes it and swallows the tap: closing it here first would let the tap draw.
   const closeSmoothingOutside = (e: ReactPointerEvent) => {
     if (panel !== "smoothing" || !(e.target instanceof Element)) return;
-    const own = `#${CSS.escape(smoothingBarId)}, [aria-controls="${smoothingBarId}"]`;
+    const own = `#${CSS.escape(smoothingBarId)}, [aria-controls="${smoothingBarId}"], .ink-sheet`;
     if (!e.target.closest(own)) setPanel(null);
   };
 
@@ -757,6 +775,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         }}
         onCommit={(op: Op) => {
           if (sealProblem) setSealProblem(null);
+          if (!keyHinted.current && isFirstVisit()) {
+            keyHinted.current = true;
+            setKeyHint(true);
+          }
           send({ type: "ink" });
           if (op.tool === "brush") setRecent((r) => withRecent(r, op.color));
         }}
@@ -823,15 +845,18 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       <SealKey
         shown={retrying || (history.canUndo && !sealing)}
         armed={session.phase === "armed"}
+        nsfw={nsfwOn}
         problem={sealProblem ?? (retrying ? t(($) => $.stickerCreation.seal.interrupted) : null)}
+        hint={keyHint && session.phase === "drawing" ? t(($) => $.stickerCreation.seal.hint) : null}
         onTap={() => {
+          setKeyHint(false);
           setSealProblem(null);
           if (sealProblem && reconnectOnTap.current) {
             // The drawing is kept on this device, and the drawing screen picks it back up.
             // Still here after a failed reconnect: the chip says why, and the check tries it again.
             retryPrivySignIn(new URL("/draw", location.href).href, (failure) =>
               setSealProblem(
-                t(($) => $.stickerCreation.seal.failed, { reason: errorReason(failure) }),
+                t(($) => $.stickerCreation.seal.refused, { reason: errorMessage(failure) }),
               ),
             );
             return;

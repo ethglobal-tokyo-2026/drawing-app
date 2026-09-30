@@ -2,7 +2,7 @@
 
 How the (Gratitude) Mini-game works, for whoever changes or tunes it. The code in `apps/frontend/src/gratitude/` is the source of truth. Every number lives in `gameConfig.ts`, so this doc names fields, never values:
 
-- `G` = `GAME_CONFIG`: the rules. A combo records `G.version`, and a replay needs the same numbers.
+- `G` = `GAME_CONFIG`: the rules. A combo records `G.version`, and a replay runs the config that version names (`PLAYED_CONFIGS`).
 - `M` = `GAME_CONFIG.multiplier`.
 - `F` = `FEEL_CONFIG`: touch, the detectors and the effects. A combo doesn't record these.
 
@@ -12,7 +12,7 @@ After receiving a sticker, the receiver taps, strokes or shakes a heart to make 
 
 **Where it opens:** from a received sticker. Once one sticks to your board, the Send gratitude sheet (`receiving/SendGratitudeSheet.tsx`) asks whether to send its giver gratitude now. Later leaves it for the sticker's detail, which offers Send gratitude until that gift has gratitude.
 
-**Where the result goes:** `gratitudeOutbox.ts` keeps the finished combo on the device, in a list of the person who played it, then sends it to `POST /api/gratitude`. A combo the server hasn't recorded or refused goes again each time the app starts with that person signed in. An entry the outbox can't read stays as it is, unsent, and a list it can't read is never written over. A combo in play is kept too, unsent, from its first hit and then now and then as hits come, ended as the page going hidden would end it, so a webview torn down without visibilitychange or pagehide still leaves it to send; its finished record takes its place under the same idempotency key. The app sends one kept in play only once no other tab could still be playing it.
+**Where the result goes:** `gratitudeOutbox.ts` keeps the finished combo on the device, in a list of the person who played it, then sends it to `POST /api/gratitude`. A combo the server hasn't recorded or refused goes again each time the app starts with that person signed in, and whenever the phone comes back online or the app comes back to the front. The receipt says what became of the send: sent only once the server has it, saved on the phone when it couldn't be reached (and sent, on the receipt, if the outbox gets it through while the screen is up), or why the server refused it. The sticker detail counts a combo waiting in the outbox as sent, so Send gratitude doesn't come back for a second combo the server would refuse. An entry the outbox can't read stays as it is, unsent, and a list it can't read is never written over. A combo in play is kept too, unsent, from its first hit and then now and then as hits come, ended as the page going hidden would end it, so a webview torn down without visibilitychange or pagehide still leaves it to send; its finished record takes its place under the same idempotency key. The app sends one kept in play only once no other tab could still be playing it.
 
 **The demo:** "Try the gratitude mini-game", on the stat board's developer slip, opens it for your newest sticker on the board, with you as the giver, and records nothing. With no stickers it's disabled and says "Draw a sticker first". The dev server shows the slip unless `VITE_DEV_SLIP=off`, and a build shows it only with `VITE_DEV_SLIP=on`, which `deploy/deploy.sh` sets. Two switches, kept on the device, sit beside it: Full effects and Show frame times.
 
@@ -31,7 +31,8 @@ Under `apps/frontend/src/gratitude/` unless a path says otherwise.
 | `GratitudeMiniGame.tsx`, `gratitude-mini-game.css`                       | The screen: the sticker and giver, the HUD's place, the stage, the receipt; mounts the engine and passes on the result   |
 | `gratitudeOutbox.ts`                                                     | Keeps each combo on the device, in play and finished, and sends it to `POST /api/gratitude` until recorded or refused    |
 | `heartMotion.ts`, `heartFaces.ts`, `heartArt.ts`                         | The heart's motion, its face for each tier and intensity, and the art                                                    |
-| `comboHud.ts`                                                            | The bar with its seconds and ticks, the amount, the multiplier sticker                                                   |
+| `comboHud.ts`                                                            | The bar with its seconds and ticks, the amount, the hit counter, the multiplier sticker                                  |
+| `puffyFont.ts`                                                           | Asks for the puffy typeface ahead, in every character the game sets in it                                                |
 | `tierSlamAndPopIns.ts`, `popInWords.ts`, `tierNames.ts`                  | Tier-name slams and pop-in words in outlined 袋文字; the words; the tier names and glosses                               |
 | `particleEffects.ts`                                                     | Finger stamps, rising ♡, glints, steam, sweat beads, bursts                                                              |
 | `miniHeartPhysics.ts`, `miniHeartLayer.ts`                               | Mini hearts: their physics, and drawing them from a fixed set of elements                                                |
@@ -55,12 +56,13 @@ Under `apps/frontend/src/gratitude/` unless a path says otherwise.
 | ------- | --------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ready   | The screen opens            | The first tap, or a stroke or shake unlock → running          | The heart breathing, "Tap the heart / as fast as you can!" beating under it on two lines (still with reduced motion). The HUD: a full bar reading `fullBarSeconds`, 0 and ×1.0. A touch squashes the heart |
 | running | The first tap, or an unlock | The bar empties; the safety stop; the page goes hidden; the X | The HUD, the tier's face and ground, every hit's effects                                                                                                                                                   |
-| ended   | Any end above               | —                                                             | The record goes to `onEnd` first, then the ending, then the receipt                                                                                                                                        |
+| ended   | Any end above               | —                                                             | The record goes to the outbox first, then the ending, then the receipt                                                                                                                                     |
 
 - The bar shows from the start, so the combo is plain to see before the first tap. The first hit fills it and brings ありがと.
 - Endings: a combo below 昇天 flies the heart into the giver's picture. A combo at 昇天 plays the climax: a flash, the heart goes limp and pale, 昇天 slams and its soul rises to the giver. Then "fuu…" shows and everything tidies away before the receipt.
-- A page that goes hidden ends the combo at once and skips the ending. The X ends it and closes the screen. Either way the record goes out.
-- The receipt shows the total, the best multiplier, the hits and the peak tier.
+- A page that goes hidden ends the combo at once and skips the ending. The X (and Escape) ends a combo in play, records it and plays its ending and receipt, so a combo is never sent unseen; before the first tap, or once the combo has ended, it closes the screen. While a combo runs, the X is named for what it does.
+- The receipt shows the total, the hits as the hit counter, the best multiplier and the peak tier. Under them, a note when the send isn't simply sent: still going, saved on the phone, or refused with its reason. Only a refusal a new combo can get past says to send again.
+- The HUD shows the hit counter from the second hit, beside the multiplier.
 
 ## Input methods
 
@@ -172,17 +174,17 @@ The tier comes from the total: ありがと below `G.tierStarts[0]`, then 照れ
 | オーバーヒート | A ＞＜ face, a full blush and a tremor; a nosebleed once the total is high | Focus lines and heat haze        |
 | 昇天           | A bliss face                                                               | Light beams and a white-out      |
 
-Every hit squashes the heart, stamps under the finger and sends up a ♡. The higher the tier, the more each hit adds: glints, sweat beads, bursts, steam, screen shake, hearts raining from the top, and from `F.miniHearts.fromTier` up, mini hearts sprayed from under the finger. The mini hearts bounce off the walls, the HUD's underside and each other, pile along the bottom and fade; a tap shoves nearby piled hearts away. Pop-in words show every few hits, more often from ドキドキ. `onHit` in `miniGameEngine.ts` sets these cadences.
+Every hit squashes the heart, stamps under the finger and sends up a ♡. The higher the tier, the more each hit adds: glints, sweat beads, bursts, steam, screen shake, hearts raining from the top, and from `F.miniHearts.fromTier` up, mini hearts sprayed from under the finger. The mini hearts bounce off the walls, the HUD's underside and each other, pile along the bottom and fade; a tap shoves nearby piled hearts away. Pop-in words show every few hits, more often from ドキドキ. `onHit` in `miniGameEngine.ts` sets these cadences. A word lands only where it's clear of the heart, of every word still showing and of a slam's band: it shrinks, tries another place, and is skipped when there's none. A tier's slam clears the words in its band, which play out the rest of their life at speed.
 
 ## Replay and the record
 
 - **Closed form between events.** The rules' state changes only at events: a hit, a hit leaving the cadence window, the bar emptying, the safety stop. Between events, the bar and the multiplier follow the formulas above exactly, never stepped per frame, so the same hits give the same record however the frames fell.
 - **Whole milliseconds.** Hit times are whole milliseconds after the first hit, and never earlier than an event already run, so a replay meets events in the same order.
 - **`replayGratitudeCombo(record)`** plays a record's hits through a fresh combo: taps, then from `switchedAtHit` its passes or reversals, up to `durationMs`. Under the same config it returns the same record, which `combo.test.ts` checks.
-- **The record** (`ComboRecord`, and `GratitudeResult` with the sticker's ID added): `method` (the one it ended in), `switchedAtHit`, `hits`, `hitTimes`, `durationMs`, `total`, `peakMult` (to hundredths), `peakTier` and `gameConfigVersion`. The record doesn't say how the combo ended: gratitude exists or it doesn't.
+- **The record** (`ComboRecord`): `method` (the one it ended in), `switchedAtHit`, `hits`, `hitTimes`, `durationMs`, `total`, `peakMult` (to hundredths), `peakTier` and `gameConfigVersion`. The record doesn't say how the combo ended: gratitude exists or it doesn't.
 - **What the server keeps.** `POST /api/gratitude` takes the gift, the record's scored fields and the replay. The `gratitude` table (`packages/db/src/schema/gratitude.ts`) stores, per received gift, `method`, `hits`, `total`, `peakMult`, `peakTier`, the Original Artist Gratitude Share, `gameConfigVersion`, the gzipped replay and `seenByGiverAt`; `switchedAtHit` and `durationMs` are inside the replay (`apps/api/src/gratitude/replay.ts`). The server doesn't recount a combo: `apps/api/src/gratitude/record.ts` checks that the body and its replay agree, refuses a total over `hits` × `MAX_GRATITUDE_PER_HIT` (a hit's gratitude at `M.max` and the heaviest weight, rounded up), and stores the total it was sent. A rule that lets a hit score more than that needs the bound changed with it.
 - **The replay** (`ReplayV1`, sent with the record; `replayRecorder.ts` builds it) keeps what the record's scored fields leave out, to check a combo or play it back: every touch on the heart with whether it counted, each stroke's path sampled a few dozen times a second, every shake reversal from the switch on, where the combo switched method, the effects' seed and intensity, the stage's size, the length, and how the combo ended (`sent`, `empty`, `cap`, `hidden` or `closed`). Positions are stored relative to the stage, and each time and position after the first as the change from the one before. Each stroke also lists which of its samples ended a fast pass (`strokePasses`), so a stroke combo replays exactly; one recorded before that field existed is recovered only approximately, by running the stroke detector over the samples again. The trail's card plays it back (`gratitude/replay/`).
-- **Change `G.version` whenever a rule number changes**, so an old record replays with the numbers it was played with. `FEEL_CONFIG` changes need no new version.
+- **Change `G.version` whenever a rule number changes, and keep the old config in `PLAYED_CONFIGS`**, so an old record replays with the numbers it was played with: the replay runs the config its record names. A version the app no longer has replays under the current one and ends on its stored figures, with a console warning. That is the first version, `2026-09-26`, whose combos started with a catch window the rules no longer have. `FEEL_CONFIG` changes need no new version.
 
 ## Playing a replay
 
@@ -206,13 +208,13 @@ What a person sees is in DESIGN.md's Gratitude replay. How it runs:
   - Allow asks the platform from inside the tap. Not now is kept, and nothing asks again.
   - If a kept yes brings no motion soon after a later launch, the card asks again. A failed ask counts as no, is logged and isn't kept.
   - Declining leaves shake, the light's tilt and the Zipper's swing off. Touch works either way.
-- **The engine.** One animation-frame loop. Only transform and opacity animate, every effect reuses a fixed set of elements, the loop never reads layout, and it sleeps once nothing moves. React renders the screen's parts once and hears only the record and the ending. A failure in the loop stops the game, logs the combo's state and says so on screen; the X still works.
+- **The engine.** One animation-frame loop. Only transform and opacity animate, every effect reuses a fixed set of elements, the loop never reads layout, and it sleeps once nothing moves. React renders the screen's parts once and hears only the record and the ending. A failure in the loop stops the game and logs the combo's state. No ending can play without frames, so a combo in play is recorded as it stands and its receipt comes at once; the alert says whether anything was played, and the X closes.
 
 ## Tuning
 
 | To change                                                        | Edit                                                |
 | ---------------------------------------------------------------- | --------------------------------------------------- |
-| Scoring, the bar, tiers, speed limits, method weights            | `GAME_CONFIG`, and bump its `version`               |
+| Scoring, the bar, tiers, speed limits, method weights            | `GAME_CONFIG`; bump its `version`, keep the old one |
 | The heart's reach, tap slop and hold, the detectors, mini hearts | `FEEL_CONFIG`                                       |
 | Per-hit effects and their cadence                                | `onHit` in `miniGameEngine.ts`                      |
 | The faces, the ground, the HUD's warnings                        | `heartFaces.ts`, `tierBackground.ts`, `comboHud.ts` |

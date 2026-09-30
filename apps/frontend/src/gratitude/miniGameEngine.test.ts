@@ -76,8 +76,15 @@ const isBox = (v: unknown): v is { x: number; y: number; width: number } =>
   "width" in v &&
   typeof v.width === "number";
 
+/** The HUD rewrites its clock every frame, so a failure there is the next frame's. */
+const failNextFrame = () =>
+  vi.spyOn(Element.prototype, "replaceChildren").mockImplementationOnce(() => {
+    throw new Error("A frame failed");
+  });
+
 const onRecord = vi.fn<(record: ComboRecord, replay: ReplayV1) => void>();
 const onFinished = vi.fn();
+const onError = vi.fn<(message: string) => void>();
 let host: HTMLDivElement;
 let stage: HTMLElement;
 let engine: MiniGameEngine;
@@ -213,8 +220,9 @@ beforeEach(() => {
       showFrameTimes: false,
       onRecord,
       onInPlay: vi.fn(),
+      onStarted: vi.fn(),
       onFinished,
-      onError: vi.fn(),
+      onError,
     },
   );
 });
@@ -226,6 +234,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   onRecord.mockReset();
   onFinished.mockReset();
+  onError.mockReset();
   log.length = 0;
 });
 
@@ -270,6 +279,41 @@ describe("mountMiniGameEngine", () => {
     expect(steps.reduce<number[]>((times, ms) => [...times, (times.at(-1) ?? 0) + ms], [])).toEqual(
       record.hitTimes,
     );
+  });
+
+  it("ends a combo in play at the X and says so, which leaves its ending and receipt to follow", async () => {
+    expect(engine.close()).toBe(false);
+    expect(onRecord).not.toHaveBeenCalled();
+    pressHeart();
+    await play(100);
+    expect(engine.close()).toBe(true);
+    expect(onRecord).toHaveBeenCalledTimes(1);
+    await play(ONE_TAP_RUNS_OUT_MS);
+    expect(onFinished).toHaveBeenCalledTimes(1);
+    // The combo has gone: the next X has nothing to end, and the screen can close.
+    expect(engine.close()).toBe(false);
+  });
+
+  it("records a combo in play as it stands, and goes on to the receipt, when the frame loop fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    await mash(3);
+    failNextFrame();
+    await play(100);
+    expect(onError).toHaveBeenCalledExactlyOnceWith("A frame failed");
+    expect(onRecord).toHaveBeenCalledTimes(1);
+    expect(onRecord.mock.calls[0]?.[0].hits).toBe(3);
+    // No ending can play without frames: the receipt comes at once.
+    expect(onFinished).toHaveBeenCalledTimes(1);
+  });
+
+  it("has nothing to record when the frame loop fails before the first tap", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    failNextFrame();
+    await play(100);
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onRecord).not.toHaveBeenCalled();
+    expect(onFinished).not.toHaveBeenCalled();
+    expect(engine.close()).toBe(false);
   });
 
   it("takes a click alone as a tap on the heart's middle, as Voice Control and Switch Control make", async () => {
@@ -332,12 +376,18 @@ describe("mountMiniGameEngine", () => {
     expect(live()).toBe("Blushing.");
   });
 
-  it("says the gratitude sent as the heart reaches the giver", async () => {
-    await mash(6);
-    await play(8000);
-    const total = onRecord.mock.calls[0]?.[0].total ?? 0;
-    expect(total).toBeGreaterThan(0);
-    expect(live()).toBe(`Sent ${total.toLocaleString("en-US")} gratitude to @alice.`);
+  it("shows the hit counter from the second hit, counting the combo's hits", async () => {
+    const counter = () => host.querySelector<HTMLElement>(".gr-hits");
+    pressHeart();
+    await play(100);
+    expect(counter()?.hidden).toBe(true);
+    pressHeart();
+    await play(100);
+    pressHeart();
+    await play(100);
+    expect(counter()?.hidden).toBe(false);
+    expect(counter()?.querySelector(".hit-counter__n")?.textContent).toBe("3");
+    expect(counter()?.querySelector(".hit-counter__unit")?.textContent).toBe("hits");
   });
 
   it("rains hearts from オーバーヒート up", async () => {
@@ -493,8 +543,10 @@ describe("shaking", () => {
 
   it("dents the top wall where the loose heart hit it, under the HUD", async () => {
     await shake(17);
-    await play(1500);
-    const top = callsTo("dent").find(({ args }) => args[0] === "top");
+    // Where the heart goes depends on the mount's seed, so shake on until it reaches the top.
+    const topDent = () => callsTo("dent").find(({ args }) => args[0] === "top");
+    for (let i = 0; i < 40 && !topDent(); i++) await shake(2);
+    const top = topDent();
     if (!top) throw new Error("The loose heart never hit the top wall");
     // The HUD's underside: the layout's ceiling, 20px above where the heart's room begins.
     expect(Number(top.args[2])).toBeCloseTo(236, 0);

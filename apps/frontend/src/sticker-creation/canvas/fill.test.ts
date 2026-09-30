@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { floodFill, type Pixels } from "./fill";
+import type { Rect } from "../sealing/stickerLayers";
+import { floodFill, floodSheet, type Pixels } from "./fill";
 
 type Rgba = [number, number, number, number];
 
@@ -31,6 +32,64 @@ const at = (img: Pixels, x: number, y: number) => [
   ...img.data.subarray((y * img.width + x) * 4, (y * img.width + x) * 4 + 4),
 ];
 
+const copyOf = (img: Pixels): Pixels => ({ ...img, data: img.data.slice() });
+
+/** Copies a block the size of `size` from (fx, fy) of `from` to (tx, ty) of `to`. */
+function blit(
+  from: Pixels,
+  fx: number,
+  fy: number,
+  to: Pixels,
+  tx: number,
+  ty: number,
+  size: Rect,
+) {
+  for (let row = 0; row < size.h; row++) {
+    const start = ((fy + row) * from.width + fx) * 4;
+    to.data.set(from.data.subarray(start, start + size.w * 4), ((ty + row) * to.width + tx) * 4);
+  }
+}
+
+/** The whole image flooded in place, as every fill once was. */
+function wholeImageFill(img: Pixels, x: number, y: number): Pixels {
+  const out = copyOf(img);
+  floodFill(out, x, y, RED);
+  return out;
+}
+
+/** A fill as the ink takes one: `floodSheet` reads boxes of `img`, and only the changed box is written back. */
+function sheetFill(img: Pixels, x: number, y: number, near: number) {
+  const reads: Rect[] = [];
+  const read = (box: Rect) => {
+    reads.push(box);
+    const pixels = { width: box.w, height: box.h, data: new Uint8ClampedArray(box.w * box.h * 4) };
+    blit(img, box.x, box.y, pixels, 0, 0, box);
+    return pixels;
+  };
+  const out = copyOf(img);
+  const flood = floodSheet(img, read, x, y, RED, near);
+  if (flood) {
+    const { pixels, at: box, changed } = flood;
+    blit(pixels, changed.x, changed.y, out, box.x + changed.x, box.y + changed.y, changed);
+  }
+  return { out, reads };
+}
+
+/** A shape drawn closed, soft inside as deep as the tuck, with a faint speck, beside a colored patch. */
+const SHEET = image([
+  "...........................",
+  "..#############............",
+  "..#eeeeeeeeeee#............",
+  "..#eeeeeeeeeee#....ooooo...",
+  "..#ee.......ee#....opooq...",
+  "..#ee...f...ee#....ooooo...",
+  "..#ee.......ee#............",
+  "..#eeeeeeeeeee#............",
+  "..#eeeeeeeeeee#............",
+  "..#############............",
+  "...........................",
+]);
+
 describe("floodFill", () => {
   it("fills empty paper up to the line, counting faint pixels as empty", () => {
     const img = image([
@@ -44,7 +103,7 @@ describe("floodFill", () => {
       ".########.",
       "..........",
     ]);
-    expect(floodFill(img, 3, 3, RED)).toBe(true);
+    expect(floodFill(img, 3, 3, RED)).not.toBeNull();
     expect(at(img, 3, 3)).toEqual([...RED, 255]);
     expect(at(img, 6, 5)).toEqual([...RED, 255]);
     expect(at(img, 4, 4)).toEqual([...RED, 255]);
@@ -63,7 +122,7 @@ describe("floodFill", () => {
   it("does nothing on a color already within 8 of the fill color", () => {
     const img = image(["ooo"]);
     const before = [...img.data];
-    expect(floodFill(img, 1, 0, [255, 93, 55])).toBe(false);
+    expect(floodFill(img, 1, 0, [255, 93, 55])).toBeNull();
     expect([...img.data]).toEqual(before);
   });
 
@@ -80,5 +139,25 @@ describe("floodFill", () => {
     }
     expect(at(img, 6, 0)).toEqual(KEY.e);
     expect(at(img, 11, 0)).toEqual(KEY["."]);
+  });
+});
+
+describe("floodSheet", () => {
+  it.each([
+    ["inside the closed shape", 6, 5],
+    ["on open paper", 0, 0],
+    ["on the colored patch", 19, 4],
+  ])("gives the whole-image fill's pixels %s, whatever box it reads first", (_, x, y) => {
+    const expected = wholeImageFill(SHEET, x, y).data;
+    // Every size moves the box's sides across the region: cutting it, touching it or its tuck, clearing it.
+    for (let near = 1; near <= SHEET.width + 2; near++) {
+      expect(sheetFill(SHEET, x, y, near).out.data, `near ${near}`).toEqual(expected);
+    }
+  });
+
+  it("reads only the box around the seed when the region and its tuck fit inside it", () => {
+    const { reads } = sheetFill(SHEET, 6, 5, 16);
+    expect(reads).toHaveLength(1);
+    expect(reads[0].w * reads[0].h).toBeLessThan(SHEET.width * SHEET.height);
   });
 });

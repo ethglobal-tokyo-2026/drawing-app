@@ -104,7 +104,7 @@ export const errors = {
   },
   /** Giving, In the bag: a deposit, picker outcome or take-out (POST /api/gifts/:giftId/…) for a gift that doesn't exist, through errorReason; the Receive gift dialog and the Gratitude Mini-game show their own lines for it instead */
   gift_not_found: { en: "This gift isn't here.", ja: "このギフトは見つかりませんでした。" },
-  /** Gratitude Mini-game: recording a combo (POST /api/gratitude) for a gift not received yet; the Mini-game shows its own “didn’t reach” line instead, so this is errorMessage's fallback */
+  /** Gratitude Mini-game: recording a combo (POST /api/gratitude) for a gift not received yet; the Mini-game's receipt shows its own note instead, so this is errorMessage's fallback */
   gift_not_received: {
     en: "This gift hasn't been received yet.",
     ja: "このギフトは、まだ受け取られていません。",
@@ -114,7 +114,7 @@ export const errors = {
     en: "This gift went back to its giver.",
     ja: "このギフトは、贈り主のもとに戻りました。",
   },
-  /** Gratitude Mini-game: recording a combo (POST /api/gratitude) for a gift that already has Gratitude; the Mini-game shows its own “didn’t reach” line instead, so this is errorMessage's fallback */
+  /** Gratitude Mini-game: recording a combo (POST /api/gratitude) for a gift that already has Gratitude; the Mini-game's receipt shows its own note instead, so this is errorMessage's fallback */
   gratitude_already_recorded: {
     en: "Gratitude for this gift is already in.",
     ja: "このギフトへの感謝は、すでに届いています。",
@@ -164,7 +164,7 @@ export const errors = {
     en: "LINE didn't answer. Try again in a moment.",
     ja: "LINEから応答がありません。少し待ってから、もう一度お試しください。",
   },
-  /** Drawing screen, after tapping the check to seal: the seal chip's reason when the sticker saved but its NFT mint wasn't confirmed (POST /api/stickers), through errorReason */
+  /** Drawing screen, after tapping the check to seal: a sticker that saved but whose NFT mint wasn't confirmed (POST /api/stickers); the seal chip words this itself, so this is errorMessage's fallback */
   mint_failed: {
     en: "Your sticker is saved, but it couldn't be sealed on-chain. Try again; it won't use another ticket.",
     ja: "シールは保存されましたが、ブロックチェーン上で仕上げられませんでした。もう一度お試しください。チケットを新たに使うことはありません。",
@@ -183,7 +183,7 @@ export const errors = {
     en: "This sticker isn't sealed on-chain yet.",
     ja: "このシールは、まだブロックチェーン上で仕上がっていません。",
   },
-  /** Gratitude Mini-game: recording a combo (POST /api/gratitude) on a gift someone else received; the Mini-game shows its own “didn’t reach” line instead, so this is errorMessage's fallback */
+  /** Gratitude Mini-game: recording a combo (POST /api/gratitude) on a gift someone else received; the Mini-game's receipt shows its own note instead, so this is errorMessage's fallback */
   not_receiver: {
     en: "Only the gift's receiver can do that.",
     ja: "それができるのは、ギフトを受け取った人だけです。",
@@ -216,7 +216,7 @@ export const errors = {
   },
   /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) when the payment is below the pack's price at every quote still valid, in “…the tickets weren’t added” through errorReason */
   payment_short: { en: "The payment was short.", ja: "支払い額が足りませんでした。" },
-  /** Gratitude Mini-game: recording a combo (POST /api/gratitude) whose replay fails the server's checks; the Mini-game shows its own “didn’t reach” line instead, so this is errorMessage's fallback */
+  /** Gratitude Mini-game: recording a combo (POST /api/gratitude) whose replay fails the server's checks; the Mini-game's receipt shows its own note instead, so this is errorMessage's fallback */
   replay_invalid: {
     en: "The Gratitude replay couldn't be read.",
     ja: "感謝のリプレイを読み取れませんでした。",
@@ -226,7 +226,7 @@ export const errors = {
     en: "You're signed out. Reopen Croquis from LINE to sign in again.",
     ja: "ログアウトされました。LINEからクロッキーをひらき直して、もう一度ログインしてください。",
   },
-  /** Drawing screen, the seal key's chip, and Giving and Receiving: a chain action waited 30 s for the Sepolia account that holds the stickers and Privy never readied it, or Privy failed again after one fresh try; the reason follows in brackets (made by the app itself, shown through errorReason) */
+  /** Giving and Receiving: a chain action waited 30 s for the Sepolia account that holds the stickers and Privy never readied it, or Privy failed again after one fresh try; the reason follows in brackets (made by the app itself, shown through errorReason); the drawing screen's seal chip words this failure itself */
   smart_account_not_ready: {
     en: "Your board address is taking too long to get ready. Try again.",
     ja: "ボードアドレスの準備に時間がかかっています。もう一度お試しください。",
@@ -255,7 +255,7 @@ export const errors = {
     en: "Taking this sticker out hasn't been confirmed yet. Wait a moment, then try again.",
     ja: "シールを取り出せたか、まだ確認できていません。少し待ってから、もう一度お試しください。",
   },
-  /** Drawing screen, after tapping the check to seal: the seal chip's reason when the drawing's ticket already became a sticker (POST /api/stickers), through errorReason */
+  /** Drawing screen, after tapping the check to seal: the seal chip's reason when the drawing's ticket already became a sticker (POST /api/stickers), through errorMessage */
   ticket_already_used: {
     en: "That ticket was already used.",
     ja: "そのチケットは、すでに使われています。",
@@ -265,9 +265,9 @@ export const errors = {
     en: "Your tickets changed. Try again.",
     ja: "チケットの状況が変わりました。もう一度お試しください。",
   },
-  /** Drawing screen, after tapping the check to seal: the seal chip's reason when the ticket the drawing started on doesn't exist (POST /api/stickers), through errorReason */
+  /** Drawing screen, after tapping the check to seal: the seal chip's reason when the ticket the drawing started on doesn't exist (POST /api/stickers), through errorMessage */
   ticket_not_found: { en: "That ticket isn't here.", ja: "そのチケットは見つかりませんでした。" },
-  /** Drawing screen, after tapping the check to seal: the seal chip's reason when the ticket the drawing started on is someone else's (POST /api/stickers), through errorReason */
+  /** Drawing screen, after tapping the check to seal: the seal chip's reason when the ticket the drawing started on is someone else's (POST /api/stickers), through errorMessage */
   ticket_not_yours: {
     en: "That ticket isn't yours.",
     ja: "そのチケットは、あなたのものではありません。",

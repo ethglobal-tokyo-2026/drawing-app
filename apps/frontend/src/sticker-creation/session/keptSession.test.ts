@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { IDBFactory as FakeIndexedDB } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { personKey } from "../../ui/deviceStorage";
 import type { Op } from "../canvas/ops";
 import {
   firstChanged,
@@ -101,6 +102,29 @@ describe("the drawing kept on this device", () => {
     await forgetKeptSession(mine);
     expect(await keptOps(mine)).toBe("none");
     expect(await keptOps(theirs)).toEqual([c]);
+  });
+
+  it("keeps how the tools were set, and a screen's first render clears nothing kept", async () => {
+    const userId = someone();
+    const tools = { brushSize: 0.7, eraserSize: 0.2, smoothing: 55 };
+    draw(userId, [stroke("a")]).keepTools(tools);
+    // A screen with no session yet only reports its tools, which mustn't wipe the session kept.
+    new SessionKeeper(userId).keepTools({ brushSize: 0.34, eraserSize: 0.52, smoothing: 30 });
+    expect(await loadKeptSession(userId)).toMatchObject({ status: "found", tools });
+  });
+
+  it("brings the drawing back without tools when what's kept has none it can read", async () => {
+    const userId = someone();
+    draw(userId, [stroke("a")]).keepTools({ brushSize: 0.7, eraserSize: 0.2, smoothing: 55 });
+    const key = personKey("draw.session", userId);
+    const record: unknown = JSON.parse(localStorage.getItem(key) ?? "null");
+    if (typeof record !== "object" || record === null) throw new Error("No record is kept");
+    for (const tools of [undefined, { brushSize: 9, eraserSize: 0.2, smoothing: 55 }, "wide"]) {
+      localStorage.setItem(key, JSON.stringify({ ...record, tools }));
+      const kept = await loadKeptSession(userId);
+      expect(kept).toMatchObject({ status: "found" });
+      expect(kept).not.toHaveProperty("tools");
+    }
   });
 
   it("clears nothing when its ops are only slow to read, and still finds them", async () => {

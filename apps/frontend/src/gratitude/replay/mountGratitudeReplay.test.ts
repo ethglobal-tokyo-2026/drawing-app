@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReplayV1 } from "@drawing-app/api/client";
 import { formatCount } from "../../i18n/format";
 import { createGratitudeCombo, type ComboRecord } from "../combo";
-import { GAME_CONFIG } from "../gameConfig";
+import { GAME_CONFIG, PLAYED_CONFIGS, type GameConfig } from "../gameConfig";
 import { saveMiniGameDemoSettings } from "../miniGameDemoSettings";
 import type { HeartBox } from "../miniHeartPhysics";
 import { endOf, session } from "../testCombos";
@@ -34,6 +34,12 @@ vi.mock("../popInWords", async (importOriginal) => {
     },
   };
 });
+// The app keeps an older game config, with a slower bar, as it would after a rule number changed.
+vi.mock("../gameConfig", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../gameConfig")>();
+  const older = { ...actual.GAME_CONFIG, version: "older", drainStart: 0.05 };
+  return { ...actual, PLAYED_CONFIGS: [older, ...actual.PLAYED_CONFIGS] };
+});
 vi.mock("../miniHeartPhysics", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../miniHeartPhysics")>();
   return {
@@ -57,11 +63,11 @@ vi.mock("../miniHeartPhysics", async (importOriginal) => {
 const TAPS = Array.from({ length: 40 }, (_, i) => i * 70);
 const LANDING = { x: 20, y: -30 };
 
-/** A tap combo's record, as the rules score `times` with nothing after the last. */
-function tapRecord(times: readonly number[]): ComboRecord {
-  const combo = createGratitudeCombo(GAME_CONFIG);
+/** A tap combo's record, as `config`'s rules score `times` with nothing after the last. */
+function tapRecord(times: readonly number[], config: GameConfig = GAME_CONFIG): ComboRecord {
+  const combo = createGratitudeCombo(config);
   const events = times.flatMap((at) => combo.tapHeart(at));
-  const ended = endOf([...events, ...combo.advanceTo(GAME_CONFIG.maxDurationMs + 1)]);
+  const ended = endOf([...events, ...combo.advanceTo(config.maxDurationMs + 1)]);
   if (!ended) throw new Error("The taps never ended");
   return ended.record;
 }
@@ -212,7 +218,24 @@ describe("mountGratitudeReplay", () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("0xgift"));
   });
 
-  it("plays a combo from another game config under this one, and says which", async () => {
+  it("replays a combo under the game config it was played under, when the app still has it", async () => {
+    const warn = vi.spyOn(console, "warn");
+    const older = PLAYED_CONFIGS.find(({ version }) => version === "older");
+    if (!older) throw new Error("The older config isn't kept");
+    // A pause the older, slower bar bridges, where today's would have run out before the second tap.
+    const times = [0, 4000];
+    expect(tapRecord(times).hits).toBe(1);
+    const record = tapRecord(times, older);
+    expect(record.hits).toBe(2);
+    const { run } = play(times, { replay: replayOf(record), gratitude: storedOf(record) });
+    await run(REPLAY_REAL_TIME_MS * 3);
+    expect(settled).toBe("landed");
+    // It counted what the record says, so it ran under the rules the record was played with.
+    expect(warn).not.toHaveBeenCalled();
+    expect(amount()).toBe(formatCount(record.total));
+  });
+
+  it("plays a combo from a game config the app no longer has under this one, and says which", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const record = tapRecord(TAPS);
     const { run } = play(TAPS, { gratitude: { ...storedOf(record), gameConfigVersion: "old" } });

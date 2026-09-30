@@ -118,6 +118,31 @@ export function sealFailure(error: unknown): "refused" | "unsent" | "unknown" {
   return error.status === 0 && unsent ? "unsent" : "unknown";
 }
 
+/** What the seal chip says a failed seal ran into, in words of its own with no technical detail. */
+export type SealProblem =
+  | {
+      kind:
+        | "onThisPhone"
+        | "noAnswer"
+        | "serverProblem"
+        | "notOnChain"
+        | "boardAddress"
+        | "signInExpired";
+    }
+  /** The server's own answer, worded by its error message. */
+  | { kind: "refused"; error: ApiError };
+
+/** Sorts a failed seal for its chip. `sent`: the request had left the phone. */
+export function describeSealFailure(error: unknown, sent: boolean): SealProblem {
+  // An answer that can't be read is no answer; a failure before the request left is the phone's.
+  if (!(error instanceof ApiError)) return { kind: sent ? "noAnswer" : "onThisPhone" };
+  if (error.code === "line_token_expired") return { kind: "signInExpired" };
+  if (error.code === "smart_account_not_ready") return { kind: "boardAddress" };
+  if (error.code === "mint_failed") return { kind: "notOnChain" };
+  if (error.status === 0) return { kind: "noAnswer" };
+  return error.status >= 500 ? { kind: "serverProblem" } : { kind: "refused", error };
+}
+
 /**
  * Why the clock is held: the person's pause, a hidden page, the drawing screen being covered, or a
  * tool in hand (the color sheet, the smoothing bar, a finger on the size rail). Only a started clock
