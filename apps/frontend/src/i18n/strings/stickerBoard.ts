@@ -332,6 +332,8 @@ export const stickerBoard = {
   tray: {
     /** Your sticker board: screen readers' name for the Zipper's pull down the right edge, which opens the sticker tray */
     zipper: { en: "Your stickers", ja: "手持ちのシール" },
+    /** Your sticker board: screen readers' name for the Zipper's pull while the sticker tray holds something new, which a yellow pip on the pull shows */
+    zipperNew: { en: "Your stickers, something new inside", ja: "手持ちのシール、新着あり" },
     /** Sticker tray: screen readers' name for the stack of sticker sheets */
     sheets: { en: "Your sticker sheets", ja: "手持ちのシールシート" },
     /** Sticker tray: screen readers' name for the folder tabs (All, Mine, Gifts), which pick the stickers shown; the tabs show once the tray holds a gift */
@@ -354,6 +356,11 @@ export const stickerBoard = {
       },
       /** Sticker tray, the sheet in front: screen readers' name for a sticker on it; the sheet's description says what to do with it */
       onSheet: { en: "{{no}}", ja: "{{no}}" },
+      /** Sticker tray: screen readers' name for a used sticker silhouette whose sticker just arrived on the board and the tray hasn't shown before */
+      usedNew: {
+        en: "{{no}}, new, on your board. Show it",
+        ja: "{{no}}、新着、ボードに貼ってあります。ボードで見る",
+      },
       /** Sticker tray, the sheet in front: screen readers' name for a sticker on it that the tray hasn't shown before */
       newOnSheet: { en: "{{no}}, new", ja: "{{no}}、新着" },
       /** Sticker tray: screen readers' name for the blank spot a sticker you gave left on its sheet, a button that opens it among the stickers you gave; {{recipient}} is who received it, such as "@bob" */

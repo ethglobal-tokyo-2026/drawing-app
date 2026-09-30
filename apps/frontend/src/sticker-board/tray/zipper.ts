@@ -33,8 +33,6 @@ export interface ZipperOptions {
   threshold?: number;
   /** Released faster than this toward open or shut, in travels per second, it runs that way. */
   flick?: number;
-  /** The slider's accessible name; the sticker tray's by default. */
-  label?: string;
   /** Where the slider starts, from shut to open. */
   progress?: number;
   /** A buzz for teeth and knocks, where the phone can. */
@@ -159,7 +157,7 @@ const DEFAULTS = {
   progress: 0,
   haptics: true,
   motion: true,
-} satisfies Required<Omit<ZipperOptions, "chainAt" | "label">>;
+} satisfies Required<Omit<ZipperOptions, "chainAt">>;
 
 type ReleaseRule = Pick<Required<ZipperOptions>, "threshold" | "flick">;
 
@@ -620,7 +618,12 @@ function windowOf(doc: Document): Window & typeof globalThis {
 export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zipper {
   const doc = host.ownerDocument;
   const win = windowOf(doc);
-  const o = { ...DEFAULTS, label: i18next.t(($) => $.stickerBoard.tray.zipper), ...options };
+  const o = { ...DEFAULTS, ...options };
+  /** The pull's name, which says so when the pip marks something new. */
+  const names = {
+    plain: i18next.t(($) => $.stickerBoard.tray.zipper),
+    fresh: i18next.t(($) => $.stickerBoard.tray.zipperNew),
+  };
   const id = ++uid;
   const reducedMotion = win.matchMedia(REDUCED_MOTION);
   const reduced = () => reducedMotion.matches;
@@ -683,7 +686,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
     make(doc, "i", "zip__ring"),
   );
   slider.type = "button";
-  slider.setAttribute("aria-label", o.label);
+  slider.setAttribute("aria-label", names.plain);
   // The slider leads, so Tab goes from it into what the open mouth shows; the layers stack by z-index.
   const root = make(
     doc,
@@ -1478,6 +1481,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
     },
     badge(on) {
       pip.hidden = !on;
+      slider.setAttribute("aria-label", on ? names.fresh : names.plain);
     },
     geometry,
     openWindow() {

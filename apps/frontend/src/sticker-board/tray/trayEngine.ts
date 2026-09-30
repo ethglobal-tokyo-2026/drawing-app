@@ -611,7 +611,9 @@ export function createTrayEngine(
       el.setAttribute(
         "aria-label",
         s.state === "used"
-          ? i18next.t(($) => $.stickerBoard.tray.slot.used, no)
+          ? isNew
+            ? i18next.t(($) => $.stickerBoard.tray.slot.usedNew, no)
+            : i18next.t(($) => $.stickerBoard.tray.slot.used, no)
           : isNew
             ? i18next.t(($) => $.stickerBoard.tray.slot.newOnSheet, no)
             : i18next.t(($) => $.stickerBoard.tray.slot.onSheet, no),
