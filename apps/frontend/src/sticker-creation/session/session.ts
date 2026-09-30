@@ -1,5 +1,5 @@
 import { MAX_TIME_USED_S } from "@drawing-app/api/client";
-import { ApiError } from "../../api/apiClient";
+import { ApiError, type ErrorCode } from "../../api/apiClient";
 
 /** How long a sticker gets on the drawing clock; the server refuses a seal that used more. */
 export const SESSION_MS = MAX_TIME_USED_S * 1000;
@@ -105,15 +105,24 @@ export function transition(session: Session, event: SessionEvent): Result {
 }
 
 /**
+ * The seal route's own refusals, each answered only while the ticket holds no sticker of this person's.
+ * A 4xx from before the route, 401 signed_out above all, says nothing about an earlier try.
+ */
+const SEAL_REFUSALS: ReadonlySet<string> = new Set([
+  "invalid_request",
+  "ticket_not_yours",
+  "adults_only",
+  "ticket_not_found",
+] satisfies ErrorCode[]);
+
+/**
  * What a failed seal request says about the server. "refused": it answered that it holds no seal for
  * this ticket, so the sheet may change. "unsent": the wait for the board address stopped it before it
  * left the phone. "unknown": anything else, no answer above all, after which the server may hold it.
  */
 export function sealFailure(error: unknown): "refused" | "unsent" | "unknown" {
   if (!(error instanceof ApiError)) return "unknown";
-  // A seal already made on this ticket is what a retry of the same request answers with.
-  if (error.status >= 400 && error.status < 500)
-    return error.code === "ticket_already_used" ? "unknown" : "refused";
+  if (error.status >= 400 && error.status < 500 && SEAL_REFUSALS.has(error.code)) return "refused";
   const unsent = error.code === "line_token_expired" || error.code === "smart_account_not_ready";
   return error.status === 0 && unsent ? "unsent" : "unknown";
 }

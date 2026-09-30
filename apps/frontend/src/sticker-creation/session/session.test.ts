@@ -130,6 +130,9 @@ describe("sealFailure", () => {
   it("lets the sheet change only once the server has refused the seal itself", () => {
     expect(answered(403, "adults_only")).toBe("refused");
     expect(answered(400, "invalid_request")).toBe("refused");
+    expect(answered(404, "ticket_not_found")).toBe("refused");
+    // Turned away before the ticket was looked at: an earlier try may still have sealed.
+    expect(answered(401, "signed_out")).toBe("unknown");
     // Saved, or maybe saved: sent again, the same request gets the sticker from the ticket use.
     expect(answered(503, "mint_failed")).toBe("unknown");
     expect(answered(0, "network")).toBe("unknown");
