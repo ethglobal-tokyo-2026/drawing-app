@@ -12,7 +12,7 @@ Nine read-only lanes each took an area, and every finding was checked against th
 
 What's left, and what each waits for:
 
-- **The next contract deploy**, which goes with the next app deploy, since the app switches escrows then: CHAIN-3 and CHAIN-4 are fixed in the contracts' source and reach Sepolia with it. Gifts still in the old escrow then can't be received or taken back through the app; return them to their givers once they expire.
+- **The next contract deploy**, which goes with the next app deploy, since the app switches escrows then: CHAIN-3 and CHAIN-4 are fixed in the contracts' source and reach Sepolia with it. Gifts still in the old escrow then can't be received or taken back through the app, and the expiry sweep, which reads the new escrow, leaves them; return them to their givers once they expire.
 - **DB-1** · cleanup: `ticket_purchases.verified_at` is never null. Waits for the owner's answer to the frontend review's TIX-3.
 - **DEPLOY-1**, **OWNER-1** and **OWNER-5**: the owner's, under Needs the owner.
 
@@ -242,7 +242,7 @@ The auth server no longer loads this file (`6e4c2ae1`), and install-chain-env.mj
 
 - **DEPLOY-1**, above: `! set -a; . deploy/.env; set +a; ssh "$DEPLOY_TARGET" rm /srv/sticker-auth/secrets.env`
 - **OWNER-1** · low · open · The Official account's greeting still says a drawing takes five minutes. Paste `deploy/line/greeting.md` into LINE Official Account Manager.
-- **OWNER-2** · medium · open · Expired gifts: after a week a gift can't be received and the receiver is told it went back to the giver, but nothing returns it, and the giver's board still shows it on its way. Recommended: the app offers take-back on an expired gift (the API allows it), and the receiver's copy says it expired. Frontend work once decided.
+- **OWNER-2** · medium · fixed `de0baa10`, `723f6a48` · The receiver of an expired gift was told it was back on the giver's Sticker Board, but nothing returned it: the sticker stayed in the escrow, the giver's board showed it on its way, and it could never be given again. The API's expiry sweep, at boot and just after each midnight in Tokyo, sends each expired gift back through the escrow's `returnExpiredGift` and records it returned, and takes out a packed gift whose deposit never landed, an hour past its expiry (`CLOSE_UNLANDED_AFTER_MS`). Live at the next deploy.
 - **OWNER-3** · low · fixed `18057b84`, `ac3c3634` · Giving said "Confirm in your wallet if asked", and two sign-in errors said "sign-in token", words the interface isn't supposed to use; the frontend fixes reworded all three.
 - **OWNER-4** · low · decided · PRODUCT.md's Users leaves out hackathon judges, a one-event audience; nothing to change.
 - **OWNER-5** · low · open · Two AGENTS.MD vocabulary entries need the owner's approval:
