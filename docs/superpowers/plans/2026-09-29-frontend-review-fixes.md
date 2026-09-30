@@ -38,6 +38,6 @@ Wave 2, as wave 1's lanes finish:
 Wave 3, once the lanes above are merged, since these touch every area:
 
 - [ ] Shared helpers: CLEAN-3, CLEAN-11, CLEAN-14, CLEAN-20, CLEAN-22
-- [ ] One device store, and a query cache: CLEAN-17, CLEAN-21
+- [x] One device store, and a query cache: CLEAN-17, CLEAN-21. explore/pileVisits.ts keeps its own storage code, since the frontend audit's Explore lane is working there
 - [x] One ticket card shell: CLEAN-4, CLEAN-6
 - [ ] Split trayEngine.ts: CLEAN-19
