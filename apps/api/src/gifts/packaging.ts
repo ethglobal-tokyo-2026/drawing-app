@@ -8,13 +8,16 @@ import {
   ageStatusOf,
   bytes32Schema,
   escrowTransferSchema,
+  giftSchema,
   personSchema,
   refuse,
+  stickerLookup,
+  stickerSchema,
+  toGift,
   toPerson,
   type EscrowTransfer,
   type Refusal,
 } from "../shapes.ts";
-import { giftSchema, stickerLookup, stickerSchema, toGift } from "../views.ts";
 import { checkDeposit, closingDates, ownGift } from "./deposit.ts";
 
 export type GiftRow = typeof gifts.$inferSelect;

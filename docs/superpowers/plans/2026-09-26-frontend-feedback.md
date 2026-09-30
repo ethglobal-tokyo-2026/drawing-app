@@ -189,7 +189,7 @@ Your items: first opening your sticker board takes five to seven seconds; the fo
 - **Expected results:** warm opens from about 2.5–3 s to 1.0–1.3 s; cold opens from 5–8 s to 2.5–3 s. These are estimates until the phone reports.
 - **Impeccable:** `optimize` for the speed fixes, the whole-sticker reveal and the device measurement; `animate` for the foil's material and glint; `polish` last.
 - **Size:** about two days in all. WebP M, Privy S–M, session M, last board M, foil M+M, the rest S each.
-- **Files:** `main.tsx`, `identity/PrivySignIn.tsx`, `identity/smartWallet.ts`, `line/liff.ts`, `line/LineGate.tsx`, `api/SessionGate.tsx`, `api/ApiRoot.tsx`, `api/useApiQuery.ts`, `ui/lazyWithPreload.ts`, `stickers/StickerFigure.tsx`, `StickerFoil.tsx`, `sticker-foil.css`, `stickerUrls.ts`, `stickers/light.ts`, `sticker-board/StickerBoard.tsx`, `sticker-board/stat-board/addresses.ts`, `performance/`; `apps/api/src/session.ts`, `routes/session.ts`, `services/lineVerifier.ts`, `services/imageStore.ts`, `stickers/seal.ts`, `views.ts`.
+- **Files:** `main.tsx`, `identity/PrivySignIn.tsx`, `identity/smartWallet.ts`, `line/liff.ts`, `line/LineGate.tsx`, `api/SessionGate.tsx`, `api/ApiRoot.tsx`, `api/useApiQuery.ts`, `ui/lazyWithPreload.ts`, `stickers/StickerFigure.tsx`, `StickerFoil.tsx`, `sticker-foil.css`, `stickerUrls.ts`, `stickers/light.ts`, `sticker-board/StickerBoard.tsx`, `sticker-board/stat-board/addresses.ts`, `performance/`; `apps/api/src/session.ts`, `routes/session.ts`, `services/lineVerifier.ts`, `services/imageStore.ts`, `stickers/seal.ts`, `shapes.ts`.
 - Findings: [perf.md](2026-09-26-frontend-feedback/perf.md).
 
 ### W4 The Shop
