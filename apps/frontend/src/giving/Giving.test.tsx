@@ -120,7 +120,7 @@ describe("Giving", () => {
 
     await act(async () => answerPicker("sent"));
     await wait(0);
-    expect(title()).toBe("Sealed and sent");
+    expect(title()).toBe("Closed and sent");
     expect(giftOf("s-sent")).toBe("sent");
     await wait(300);
     expect(document.querySelector(".gift-bag")?.getAttribute("data-state")).toBe("sealed");
@@ -172,7 +172,7 @@ describe("Giving", () => {
     expect(title()).toBe("In the bag");
     expect(send).toHaveBeenCalledTimes(1);
     await act(async () => answerPicker("sent"));
-    expect(title()).toBe("Sealed and sent");
+    expect(title()).toBe("Closed and sent");
     send.mockRestore();
   });
 
@@ -254,7 +254,7 @@ describe("Giving", () => {
     await act(async () => answerPicker("sent"));
     expect(packageGift).toHaveBeenCalledTimes(1);
     expect(takeOutGift).not.toHaveBeenCalled();
-    expect(title()).toBe("Sealed and sent");
+    expect(title()).toBe("Closed and sent");
   });
 
   it("prints a handle that reads as markup as it is, in the sticker's fine print", () => {

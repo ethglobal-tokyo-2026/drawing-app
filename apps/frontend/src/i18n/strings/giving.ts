@@ -226,14 +226,14 @@ export const giving = {
     title: { en: "In the bag", ja: "ギフト袋に入れました" },
     /** Giving, with the sticker in the open gift bag: the line under "In the bag" */
     lead: {
-      en: "It seals when it’s sent. Pick your chat with them in LINE: whoever opens it first gets it.",
+      en: "The bag closes when it’s sent. Pick your chat with them in LINE: whoever opens it first gets it.",
       ja: "送ると袋に封がされます。LINEで相手とのトークを選んでください。最初にひらいた人が受け取れます。",
     },
     /** Giving, after LINE's friend picker closed without sending, or a step failed: the sheet's title over the open gift bag */
     notSent: { en: "Not sent yet", ja: "まだ送っていません" },
     /** Giving's "Not sent yet" screen: the line under its title */
     notSentLead: {
-      en: "It’s still in the bag, unsealed. Pick a chat again, or take it out.",
+      en: "It’s still in the open bag. Pick a chat again, or take it out.",
       ja: "封をしないまま、まだ袋の中にあります。もう一度トークを選ぶか、取り出してください。",
     },
     /** Giving, with the sticker in the open gift bag: the aqua key that opens LINE's friend picker (again) */
@@ -271,14 +271,14 @@ export const giving = {
     itWentOut: { en: "It went out", ja: "送れました" },
   },
   sent: {
-    /** Giving, once the Gift Message went out through LINE: the title under the gift bag as it seals */
-    title: { en: "Sealed and sent", ja: "封をして送りました" },
-    /** Giving's "Sealed and sent" screen: the line under its title */
+    /** Giving, once the Gift Message went out through LINE: the title under the gift bag as it closes */
+    title: { en: "Closed and sent", ja: "封をして送りました" },
+    /** Giving's "Closed and sent" screen: the line under its title */
     lead: {
       en: "It’s in your LINE chat now, and the gift message opens once. When they receive it, you’ll see who did.",
       ja: "ギフトメッセージをLINEのトークに送りました。ひらけるのは一度だけです。受け取られたら、誰が受け取ったかがわかります。",
     },
-    /** Giving's "Sealed and sent" screen: an alert when the Gift Message went out but the app's server couldn't record it, with why */
+    /** Giving's "Closed and sent" screen: an alert when the Gift Message went out but the app's server couldn't record it, with why */
     couldntRecord: {
       en: "It went out in LINE, but the app’s server couldn’t record it: {{reason}}",
       ja: "LINEでは送れましたが、アプリのサーバーに記録できませんでした：{{reason}}",
@@ -290,8 +290,8 @@ export const giving = {
     pictured: {
       /** The gift bag's picture named for assistive tech: in Giving, with the sticker in the open bag */
       open: { en: "The sticker in an open gift bag", ja: "口のあいたギフト袋に入ったシール" },
-      /** The gift bag's picture named for assistive tech, sealed: Giving's "Sealed and sent" screen, and a gift that can't be received yet or here */
-      sealed: { en: "The gift bag, sealed", ja: "封をしたギフト袋" },
+      /** The gift bag's picture named for assistive tech, closed: Giving's "Closed and sent" screen, and a gift that can't be received yet or here */
+      sealed: { en: "The gift bag, closed", ja: "封をしたギフト袋" },
       /** The gift bag's picture named for assistive tech: in the gift a recipient opens, once they've torn it open */
       torn: { en: "The gift bag, torn open", ja: "破ってひらいたギフト袋" },
       /** The gift bag's picture named for assistive tech: a gift that can't be received because it was already opened, taken back or returned */
@@ -309,8 +309,8 @@ export const giving = {
       en: "{{pictured}}, tagged {{label}} {{name}}, stamped {{stamp}}",
       ja: "{{pictured}}、タグに「{{label}} {{name}}」、はんこに「{{stamp}}」",
     },
-    /** The gift bag: printed again and again along the aqua tear tape, with the day it was sealed ("SEALED 9.23") */
-    sealed: { en: "<b>Sealed</b> {{date}}", ja: "<b>封印</b>{{date}}" },
+    /** The gift bag: printed again and again along the aqua tear tape, with the day it was closed ("CLOSED 9.23") */
+    sealed: { en: "<b>Closed</b> {{date}}", ja: "<b>封印</b>{{date}}" },
     /** The gift a recipient opens: the pull tab's name for assistive tech, as a slider */
     pullTab: { en: "Pull the tab to open the gift", ja: "つまみを引いてギフトをひらく" },
     /** The gift bag: printed on the pull tab, beside its grip ribs */
