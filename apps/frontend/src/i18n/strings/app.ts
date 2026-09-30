@@ -36,10 +36,10 @@ export const app = {
   motionPermission: {
     /** Motion permission card, shown once over the app on iPhone: its screen-reader name */
     label: { en: "Motion permission", ja: "モーションの許可" },
-    /** Motion permission card, shown once over the app on iPhone: the question it asks */
+    /** Motion permission card, shown once over the app on iPhone: the question it asks, naming what shaking does and that iPhone asks once more after Allow */
     question: {
-      en: "Croquis uses motion for some animations and interactions in the app. Would you like to grant permissions for motion controls?",
-      ja: "クロッキーでは、一部のアニメーションや操作に端末の動きを使います。モーションセンサーの使用を許可しますか？",
+      en: "Shake your phone to send Gratitude? After you allow it, iPhone asks once more.",
+      ja: "スマホを振って感謝を送りませんか？許可すると、iPhoneがもう一度確認します。",
     },
     /** Motion permission card: the key that grants motion access, after which iOS shows its own prompt */
     allow: { en: "Allow", ja: "許可する" },
