@@ -17,9 +17,8 @@ import { REVEAL } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
 import { TearLine } from "../ui/TearLine";
 import { useFocusTrap } from "../ui/useFocusTrap";
-import { TICKET_PRICE_YEN } from "./config";
 import { formatYen, yenForJpyc } from "./prices";
-import { useReservePacks, type ReservePack } from "./reservePacks";
+import { singleTicketPrice, useReservePacks, type ReservePack } from "./reservePacks";
 import { TicketCount } from "./TicketCount";
 import { TicketPurchases } from "./TicketPurchases";
 import { describeTickets, ticketView } from "./tickets";
@@ -162,6 +161,8 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   const id = useId();
 
   const pack = shop?.packs.find((p) => p.tickets === chosen);
+  // A discounted pack's full price is its tickets at the server's price for one alone.
+  const single = shop && singleTicketPrice(shop.packs);
   const balance = jpyc.balance;
   const short = pack && balance !== null && balance < BigInt(pack.priceJpyc);
   // What to do when it's short: a smaller pack, if the balance covers one.
@@ -530,17 +531,17 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
                   {t(($) => $.tickets.checkout.pack, { count: p.tickets })}
                 </span>
                 <span className="reserve-checkout__price">
-                  {p.discountPercent > 0 && (
+                  {p.discountPercent > 0 && single && (
                     <span className="reserve-checkout__was">
                       <span className="fine reserve-checkout__discount">
                         {t(($) => $.tickets.checkout.discount, { percent: p.discountPercent })}
                       </span>
                       <s
                         aria-label={t(($) => $.tickets.checkout.was, {
-                          price: formatYen(p.tickets * TICKET_PRICE_YEN),
+                          price: formatYen(p.tickets * single.priceYen),
                         })}
                       >
-                        {formatYen(p.tickets * TICKET_PRICE_YEN)}
+                        {formatYen(p.tickets * single.priceYen)}
                       </s>
                     </span>
                   )}
