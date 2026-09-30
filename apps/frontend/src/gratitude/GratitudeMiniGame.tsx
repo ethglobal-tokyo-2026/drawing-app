@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import type { TFunction } from "i18next";
 import type { RecordGratitude, ReplayV1 } from "@drawing-app/api/client";
+import type { ApiError } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
 import { formatCount } from "../i18n/format";
@@ -10,13 +12,19 @@ import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
 import { StickerFigure } from "../stickers/StickerFigure";
 import type { StickerUrls } from "../stickers/stickerUrls";
+import { HitCounter } from "../ui/HitCounter";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { useFocusTrap } from "../ui/useFocusTrap";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import type { ComboRecord } from "./combo";
 import { newIdempotencyKey } from "../api/idempotencyKey";
-import { keepGratitudeInPlay, sendGratitude } from "./gratitudeOutbox";
+import {
+  keepGratitudeInPlay,
+  onGratitudeLeftOutbox,
+  sendGratitude,
+  type GratitudeSendResult,
+} from "./gratitudeOutbox";
 import { mountMiniGameEngine, type MiniGameEngine } from "./miniGameEngine";
 import { loadPuffyFont } from "./puffyFont";
 import { shownGloss, TIER_NAMES } from "./tierNames";
@@ -45,6 +53,34 @@ interface Props {
 function need<E extends Element>(el: E | null, what: string): E {
   if (!el) throw new Error(`The gratitude mini-game is missing its ${what}`);
   return el;
+}
+
+/** What became of the finished combo's send: still going out, or how it ended. */
+type Sending = { state: "sending" } | GratitudeSendResult;
+
+/** The receipt's note on a send that isn't simply sent. */
+interface ReceiptNote {
+  kind: "sending" | "kept" | "refused";
+  text: string;
+}
+
+/** Why the server refused a combo for good, in words. Only an unreadable one is worth sending again. */
+function refusalText(t: TFunction, error: ApiError, handle: string): string {
+  switch (error.code) {
+    case "gratitude_already_recorded":
+      return t(($) => $.gratitude.refusals.alreadyRecorded, { handle });
+    case "not_receiver":
+      return t(($) => $.gratitude.refusals.notReceiver);
+    case "gift_not_received":
+      return t(($) => $.gratitude.refusals.notReceived);
+    case "gift_not_found":
+      return t(($) => $.gratitude.refusals.notFound);
+    case "replay_invalid":
+    case "invalid_request":
+      return t(($) => $.gratitude.refusals.unreadable);
+    default:
+      return t(($) => $.gratitude.refusals.other, { handle, code: error.code });
+  }
 }
 
 /** POST /api/gratitude's body: the record's scored fields, not its timings, which the replay holds. */
@@ -104,8 +140,14 @@ export function GratitudeMiniGame({
   const reduced = useReducedMotion();
   /** The finished combo, once its ending has played: the receipt shows it. */
   const [ended, setEnded] = useState<ComboRecord | null>(null);
+  /** A combo is running: the X ends it, and its receipt follows, rather than closing the screen. */
+  const [playing, setPlaying] = useState(false);
+  /** What became of its send. Null without a gift, as in the stat board's demo: nothing goes out. */
+  const [sending, setSending] = useState<Sending | null>(null);
   const [failed, setFailed] = useState(false);
-  const [refused, setRefused] = useState(false);
+  // One combo per screen: what's kept of it in play and its finished record share a key, so the
+  // record takes the kept one's place and the server gets the combo once.
+  const [idempotencyKey] = useState(newIdempotencyKey);
   const root = useRef<HTMLDivElement>(null);
   const page = useRef<HTMLDivElement>(null);
   const ground = useRef<HTMLDivElement>(null);
@@ -144,9 +186,6 @@ export function GratitudeMiniGame({
   });
 
   useLayoutEffect(() => {
-    // One combo per engine: what's kept of it in play and its finished record share a key, so the
-    // record takes the kept one's place and the server gets the combo once.
-    const idempotencyKey = newIdempotencyKey();
     // The gratitude outbox keeps the combo on this device as it plays, and before its request goes.
     const keepInPlay = (combo: ComboRecord, replay: ReplayV1) => {
       const { userId, giftId } = latest.current;
@@ -154,11 +193,15 @@ export function GratitudeMiniGame({
     };
     const record = (combo: ComboRecord, replay: ReplayV1) => {
       const { api: client, userId, giftId } = latest.current;
+      setPlaying(false);
       if (giftId) {
-        const body = gratitudeFor(idempotencyKey, giftId, combo, replay);
-        void sendGratitude(client, userId, body).then((sent) => {
-          if (sent.state === "refused") setRefused(true);
-        });
+        setSending({ state: "sending" });
+        // The receipt says what became of it: sent, kept on this phone to send again, or refused.
+        void sendGratitude(
+          client,
+          userId,
+          gratitudeFor(idempotencyKey, giftId, combo, replay),
+        ).then(setSending);
       }
     };
 
@@ -182,6 +225,7 @@ export function GratitudeMiniGame({
         showFrameTimes: latest.current.showFrameTimes,
         onRecord: record,
         onInPlay: keepInPlay,
+        onStarted: () => setPlaying(true),
         onFinished: setEnded,
         onError: () => setFailed(true),
       },
@@ -192,7 +236,16 @@ export function GratitudeMiniGame({
       mounted.destroy();
     };
     // One screen, one engine: a different giver or sticker opens a new screen.
-  }, []);
+  }, [idempotencyKey]);
+
+  // A combo kept for want of a connection and sent later, while this screen is up, updates its receipt.
+  useEffect(
+    () =>
+      onGratitudeLeftOutbox((left) => {
+        if (left.idempotencyKey === idempotencyKey) setSending(left.result);
+      }),
+    [idempotencyKey],
+  );
 
   useEffect(() => engine.current?.setReduced(reduced), [reduced]);
 
@@ -220,8 +273,9 @@ export function GratitudeMiniGame({
     restorePhone.current();
     onClose();
   };
+  // A combo in play ends and shows its receipt, so it's never sent unseen; anything else closes.
   const close = () => {
-    engine.current?.close();
+    if (engine.current?.close()) return;
     leave();
   };
   useFocusTrap(root, { onEscape: close });
@@ -233,6 +287,33 @@ export function GratitudeMiniGame({
   }, [ended]);
 
   const tierGloss = ended ? shownGloss(TIER_NAMES[ended.peakTier].en) : "";
+  // The receipt says sent only once the server has it. A refusal's reason and a combo kept for
+  // want of a connection are written out; a send still going says so.
+  const note: ReceiptNote | null =
+    sending?.state === "sending"
+      ? { kind: "sending", text: t(($) => $.gratitude.receipt.sending) }
+      : sending?.state === "kept"
+        ? { kind: "kept", text: t(($) => $.gratitude.receipt.kept, { handle }) }
+        : sending?.state === "refused"
+          ? { kind: "refused", text: refusalText(t, sending.error, handle) }
+          : null;
+  const receiptLabel =
+    note?.kind === "sending"
+      ? t(($) => $.gratitude.receipt.labelSending)
+      : note?.kind === "kept"
+        ? t(($) => $.gratitude.receipt.labelKept)
+        : note?.kind === "refused"
+          ? t(($) => $.gratitude.receipt.labelRefused)
+          : t(($) => $.gratitude.receipt.label);
+  // Said once the receipt is up, and again as a send that was going settles.
+  const spoken =
+    !ended || note?.kind === "sending"
+      ? null
+      : (note?.text ??
+        t(($) => $.gratitude.announcements.sent, { total: formatCount(ended.total), handle }));
+  useEffect(() => {
+    if (spoken !== null && live.current) live.current.textContent = spoken;
+  }, [spoken]);
   const screen = (
     <div
       className="gr"
@@ -278,7 +359,7 @@ export function GratitudeMiniGame({
           <button
             type="button"
             className="gr-close"
-            aria-label={t(($) => $.gratitude.close)}
+            aria-label={playing ? t(($) => $.gratitude.endAndSend) : t(($) => $.gratitude.close)}
             data-press
             onClick={close}
           >
@@ -300,11 +381,7 @@ export function GratitudeMiniGame({
       </div>
       <p className="gr-sr" ref={live} aria-live="polite" />
       {ended && (
-        <section
-          ref={receipt}
-          className="gr-receipt is-on"
-          aria-label={t(($) => $.gratitude.receipt.label)}
-        >
+        <section ref={receipt} className="gr-receipt is-on" aria-label={receiptLabel}>
           <div className="gr-rc-row">
             <div className="gr-rc-photo">
               <PhotoSticker src={giver.pictureUrl} name={giver.displayName} size={58} />
@@ -320,18 +397,23 @@ export function GratitudeMiniGame({
                 <GratitudeIcon />
               </p>
               <p className="gr-rc-head">{t(($) => $.gratitude.receipt.gratitudeTo, { handle })}</p>
-              <p className="gr-rc-sub fine">
-                {t(($) => $.gratitude.receipt.best, {
-                  multiplier: ended.peakMult.toFixed(1),
-                  hits: formatCount(ended.hits),
-                  count: ended.hits,
-                })}
-                {"\n"}
-                {TIER_NAMES[ended.peakTier].jp}
-                {tierGloss && ` ${tierGloss}`}
-              </p>
+              <div className="gr-rc-sub">
+                <div className="gr-rc-combo">
+                  <HitCounter hits={ended.hits} />
+                  <p className="fine">
+                    {t(($) => $.gratitude.receipt.bestMultiplier, {
+                      multiplier: ended.peakMult.toFixed(1),
+                    })}
+                  </p>
+                </div>
+                <p className="fine">
+                  {TIER_NAMES[ended.peakTier].jp}
+                  {tierGloss && ` ${tierGloss}`}
+                </p>
+              </div>
             </div>
           </div>
+          {note && <p className={`gr-rc-note is-${note.kind}`}>{note.text}</p>}
           <div className="gr-rc-actions">
             <LabelButton block icon={<StickerBoardIcon />} onClick={leave}>
               {t(($) => $.gratitude.receipt.backToBoard)}
@@ -339,12 +421,12 @@ export function GratitudeMiniGame({
           </div>
         </section>
       )}
-      {/* In plain words: the engine and the gratitude outbox log what went wrong to the console. */}
-      {(failed || refused) && (
+      {/* In plain words: the engine logs what went wrong to the console. */}
+      {failed && (
         <p className="gr-failure" role="alert">
-          {failed && t(($) => $.gratitude.failures.stopped)}
-          {failed && refused && <br />}
-          {refused && t(($) => $.gratitude.failures.refused, { handle })}
+          {ended
+            ? t(($) => $.gratitude.failures.stoppedInPlay)
+            : t(($) => $.gratitude.failures.stopped)}
         </p>
       )}
     </div>

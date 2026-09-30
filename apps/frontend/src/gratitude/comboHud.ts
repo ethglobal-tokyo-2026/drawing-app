@@ -4,10 +4,12 @@ import { fullBarSeconds } from "./combo";
 import { EASE_OUT, EASE_PEEL, clamp } from "../ui/easing";
 import { HEART_SVG } from "./heartArt";
 import { animate } from "./webAnimations";
+import "../ui/hit-counter.css";
 
 /** The combo as the HUD draws it. */
 interface HudView {
   total: number;
+  hits: number;
   multiplier: number;
   secondsLeft: number;
   /** secondsLeft over a full bar's seconds, 0–1. */
@@ -40,6 +42,9 @@ const LABELS = 5;
 const SLIVERS = 8;
 /** Until the track is measured. */
 const FALLBACK_TRACK_PX = 300;
+/** The hit counter shows from the second hit: a combo is more than one. Its numerals' size in px. */
+const HITS_FROM = 2;
+const HITS_PX = 20;
 
 /** A pooled element and the animation it was last given, cancelled when it's reused. */
 interface Pooled<E extends HTMLElement> {
@@ -85,14 +90,15 @@ function recycle<E extends HTMLElement>(pool: Pooled<E>[], cap: number, make: ()
 }
 
 /**
- * The bar that only goes down, the amount counting up under it and the multiplier sticker. `rate`:
- * how fast its animations play, a replay's clock's speed.
+ * The bar that only goes down, the amount counting up under it, the hit counter and the multiplier
+ * sticker. `rate`: how fast its animations play, a replay's clock's speed. Without `hits`, as on a
+ * replay's small stage, there's no hit counter.
  */
 export function createComboHud(
   hud: HTMLElement,
-  options: { reduced: () => boolean; random: () => number; rate?: number },
+  options: { reduced: () => boolean; random: () => number; rate?: number; hits?: boolean },
 ): ComboHud {
-  const { reduced, random, rate = 1 } = options;
+  const { reduced, random, rate = 1, hits: showsHits = false } = options;
   const play = (
     item: Pooled<HTMLElement>,
     frames: Keyframe[],
@@ -130,7 +136,27 @@ export function createComboHud(
     element("span", "", "×"),
     element("b", "", multNumber),
   );
-  const readout = element("div", "gr-readout", amount, multiplier);
+  // The same hit counter as ui/HitCounter.tsx, drawn here as the rest of the HUD is: on the frame
+  // loop, with no React render per hit.
+  const hitsNumber = element("span", "hit-counter__n");
+  const hitsUnit = element("span", "hit-counter__unit");
+  const hitsFace = element(
+    "span",
+    "hit-counter__face",
+    element("span", "hit-counter__lines", element("i", ""), element("i", ""), element("i", "")),
+    hitsNumber,
+    hitsUnit,
+  );
+  const hitCounter = element("div", "hit-counter gr-hits", hitsFace);
+  hitCounter.style.fontSize = `${HITS_PX}px`;
+  hitCounter.hidden = true;
+  const readoutEnd = element(
+    "div",
+    "gr-readout-end",
+    ...(showsHits ? [hitCounter] : []),
+    multiplier,
+  );
+  const readout = element("div", "gr-readout", amount, readoutEnd);
   // The engine announces the figures; the HUD is for the eyes.
   for (const part of [row, readout]) part.setAttribute("aria-hidden", "true");
   hud.append(row, readout);
@@ -146,6 +172,8 @@ export function createComboHud(
   /** The total the amount counts up to. */
   let countingTo = 0;
   let wholeMultiplier = 1;
+  let hitsShown = 0;
+  let hitsPulse: Animation | null = null;
   let lastLabelAt = -Infinity;
   let lastLabel: { item: Pooled<HTMLSpanElement>; x: number } | null = null;
   let amountPulse: Animation | null = null;
@@ -173,6 +201,28 @@ export function createComboHud(
     );
   }
 
+  /** Writes the combo's length into the hit counter, which slams in once it's a combo. */
+  function showHits(hits: number) {
+    if (!showsHits || hits === hitsShown) return;
+    hitsShown = hits;
+    hitsNumber.textContent = formatCount(hits);
+    hitsUnit.textContent = i18next.t(($) => $.ui.hitCounter.unit, { count: hits });
+    if (hits < HITS_FROM || !hitCounter.hidden) return;
+    hitCounter.hidden = false;
+    if (reduced()) return;
+    hitsPulse?.cancel();
+    hitsPulse = animate(
+      hitCounter,
+      [
+        { transform: "scale(.5)", opacity: 0 },
+        { offset: 0.6, transform: "scale(1.18)", opacity: 1 },
+        { transform: "scale(1)", opacity: 1 },
+      ],
+      { duration: 260, easing: EASE_PEEL },
+      rate,
+    );
+  }
+
   return {
     show(on) {
       shown = on;
@@ -190,6 +240,16 @@ export function createComboHud(
           { duration: 110 },
           rate,
         );
+        // Each hit after the counter has slammed in bumps it.
+        if (showsHits && !hitCounter.hidden) {
+          hitsPulse?.cancel();
+          hitsPulse = animate(
+            hitCounter,
+            [{ transform: "scale(1.16)" }, { transform: "scale(1)" }],
+            { duration: 130, easing: EASE_OUT },
+            rate,
+          );
+        }
       }
       if (secondsAdded < TICK_MIN_S) return;
 
@@ -269,6 +329,7 @@ export function createComboHud(
         amountShown = rounded;
         setAmount(formatCount(rounded));
       }
+      showHits(view.hits);
       setText(multNumber, view.multiplier.toFixed(1));
       setSeconds(view.secondsLeft.toFixed(1));
 

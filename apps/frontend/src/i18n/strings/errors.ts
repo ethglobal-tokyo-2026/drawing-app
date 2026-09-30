@@ -104,7 +104,7 @@ export const errors = {
   },
   /** Giving, In the bag: a deposit, picker outcome or take-out (POST /api/gifts/:giftId/…) for a gift that doesn't exist, through errorReason; the Receive gift dialog and the Gratitude Mini-game show their own lines for it instead */
   gift_not_found: { en: "This gift isn't here.", ja: "このギフトは見つかりませんでした。" },
-  /** Gratitude Mini-game: recording a combo (POST /api/gratitude) for a gift not received yet; the Mini-game shows its own “didn’t reach” line instead, so this is errorMessage's fallback */
+  /** Gratitude Mini-game: recording a combo (POST /api/gratitude) for a gift not received yet; the Mini-game's receipt shows its own note instead, so this is errorMessage's fallback */
   gift_not_received: {
     en: "This gift hasn't been received yet.",
     ja: "このギフトは、まだ受け取られていません。",
@@ -114,7 +114,7 @@ export const errors = {
     en: "This gift went back to its giver.",
     ja: "このギフトは、贈り主のもとに戻りました。",
   },
-  /** Gratitude Mini-game: recording a combo (POST /api/gratitude) for a gift that already has Gratitude; the Mini-game shows its own “didn’t reach” line instead, so this is errorMessage's fallback */
+  /** Gratitude Mini-game: recording a combo (POST /api/gratitude) for a gift that already has Gratitude; the Mini-game's receipt shows its own note instead, so this is errorMessage's fallback */
   gratitude_already_recorded: {
     en: "Gratitude for this gift is already in.",
     ja: "このギフトへの感謝は、すでに届いています。",
@@ -183,7 +183,7 @@ export const errors = {
     en: "This sticker isn't sealed on-chain yet.",
     ja: "このシールは、まだブロックチェーン上で仕上がっていません。",
   },
-  /** Gratitude Mini-game: recording a combo (POST /api/gratitude) on a gift someone else received; the Mini-game shows its own “didn’t reach” line instead, so this is errorMessage's fallback */
+  /** Gratitude Mini-game: recording a combo (POST /api/gratitude) on a gift someone else received; the Mini-game's receipt shows its own note instead, so this is errorMessage's fallback */
   not_receiver: {
     en: "Only the gift's receiver can do that.",
     ja: "それができるのは、ギフトを受け取った人だけです。",
@@ -216,7 +216,7 @@ export const errors = {
   },
   /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) when the payment is below the pack's price at every quote still valid, in “…the tickets weren’t added” through errorReason */
   payment_short: { en: "The payment was short.", ja: "支払い額が足りませんでした。" },
-  /** Gratitude Mini-game: recording a combo (POST /api/gratitude) whose replay fails the server's checks; the Mini-game shows its own “didn’t reach” line instead, so this is errorMessage's fallback */
+  /** Gratitude Mini-game: recording a combo (POST /api/gratitude) whose replay fails the server's checks; the Mini-game's receipt shows its own note instead, so this is errorMessage's fallback */
   replay_invalid: {
     en: "The Gratitude replay couldn't be read.",
     ja: "感謝のリプレイを読み取れませんでした。",

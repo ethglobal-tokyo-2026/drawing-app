@@ -515,6 +515,16 @@
   width: 22px;
   height: 22px;
 }
+/* The hit counter, from the second hit, beside the multiplier; the multiplier keeps the screen's edge. */
+.gr-readout-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.gr-hits {
+  transform-origin: 100% 50%;
+}
 .gr-mult {
   display: flex;
   align-items: baseline;
@@ -1132,9 +1142,36 @@
   letter-spacing: -0.015em;
   color: var(--ink);
 }
+/* The combo's length as the hit counter, its best multiplier beside it, then the peak tier. */
 .gr-rc-sub {
-  margin: 5px 0 0;
-  white-space: pre-line;
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 0;
+}
+.gr-rc-combo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+}
+.gr-rc-combo p,
+.gr-rc-sub > p {
+  margin: 0;
+}
+/* What became of the send, in words. Only a refusal is a problem. */
+.gr-rc-note {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--r-label);
+  background: var(--liner-deep);
+  color: var(--ink);
+  font: 500 13px/1.4 var(--font-ui);
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.gr-rc-note.is-refused {
+  background: var(--tomato-soft);
 }
 .gr-rc-figure {
   display: none;

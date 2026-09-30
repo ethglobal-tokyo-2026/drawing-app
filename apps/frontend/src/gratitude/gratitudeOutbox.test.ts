@@ -170,13 +170,20 @@ describe("gratitude waiting in the outbox", () => {
     await sendGratitude(noAnswer(), ME, body);
     expect(left).not.toHaveBeenCalled();
     await nextOpenSends();
-    expect(left).toHaveBeenCalledTimes(1);
+    expect(left).toHaveBeenCalledExactlyOnceWith({
+      idempotencyKey: body.idempotencyKey,
+      result: { state: "recorded" },
+    });
     await sendGratitude(
       server(new ApiError(409, { error: "gratitude_already_recorded" })),
       ME,
       body,
     );
     expect(left).toHaveBeenCalledTimes(2);
+    expect(left.mock.lastCall?.[0]).toMatchObject({
+      idempotencyKey: body.idempotencyKey,
+      result: { state: "refused", error: { status: 409 } },
+    });
     stop();
     await sendGratitude(server("records"), ME, body);
     expect(left).toHaveBeenCalledTimes(2);

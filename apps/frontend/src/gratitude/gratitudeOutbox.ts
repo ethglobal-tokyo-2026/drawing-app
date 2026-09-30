@@ -117,18 +117,27 @@ function changePending(userId: string, edit: (combos: Map<string, Kept>) => bool
   return !edit(pending.combos) || writePending(userId, pending);
 }
 
-/** Screens showing what waits, told when a combo has left the outbox, recorded or refused. */
-const leftListeners = new Set<() => void>();
+/** A combo that has left the outbox, and how: the server recorded it, or refused it for good. */
+interface GratitudeLeft {
+  idempotencyKey: string;
+  result: Exclude<GratitudeSendResult, { state: "kept" }>;
+}
 
-/** Calls `listener` whenever the server has recorded or refused a combo the outbox kept; returns what stops it. */
-export function onGratitudeLeftOutbox(listener: () => void): () => void {
+/** Screens showing what waits, told when a combo has left the outbox. */
+const leftListeners = new Set<(left: GratitudeLeft) => void>();
+
+/**
+ * Calls `listener` whenever the server has recorded or refused a combo, on its first send or a
+ * later one, so a screen that showed it as waiting can say what became of it. Returns what stops it.
+ */
+export function onGratitudeLeftOutbox(listener: (left: GratitudeLeft) => void): () => void {
   leftListeners.add(listener);
   return () => void leftListeners.delete(listener);
 }
 
-function forget(userId: string, idempotencyKey: string) {
-  changePending(userId, (combos) => combos.delete(idempotencyKey));
-  for (const listener of leftListeners) listener();
+function forget(userId: string, left: GratitudeLeft) {
+  changePending(userId, (combos) => combos.delete(left.idempotencyKey));
+  for (const listener of leftListeners) listener(left);
 }
 
 /**
@@ -153,12 +162,12 @@ async function send(
   sending.add(key);
   try {
     await api.recordGratitude(body);
-    forget(userId, key);
+    forget(userId, { idempotencyKey: key, result: { state: "recorded" } });
     return { state: "recorded" };
   } catch (caught) {
     const error = apiError(caught);
     if (isRefusal(error)) {
-      forget(userId, key);
+      forget(userId, { idempotencyKey: key, result: { state: "refused", error } });
       console.error(
         `The server refused the gratitude for gift ${body.giftId} (${describeError(error)}), so this device no longer keeps it:`,
         body,

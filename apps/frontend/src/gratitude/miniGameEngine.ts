@@ -78,17 +78,25 @@ export interface MiniGameOptions {
    * from the first hit, then now and then as hits come. What's left if the page goes without a word.
    */
   onInPlay: (record: ComboRecord, replay: ReplayV1) => void;
-  /** The ending has played, or the page went hidden: time for the receipt. */
+  /** The first hit started the combo. */
+  onStarted: () => void;
+  /** The ending has played, or the page went hidden or the loop failed: time for the receipt. */
   onFinished: (record: ComboRecord) => void;
-  /** The frame loop failed and stopped. */
+  /**
+   * The frame loop failed and stopped. No ending can play after it, so a combo in play has been
+   * recorded as it stands and `onFinished` follows at once.
+   */
   onError: (message: string) => void;
   /** Where frames and time come from: the browser's, unless a test drives them. */
   frames?: FrameSource;
 }
 
 export interface MiniGameEngine {
-  /** The screen is closing: a combo in play ends and is recorded. */
-  close: () => void;
+  /**
+   * The X: a combo in play ends and is recorded, and its ending and receipt follow, so the screen
+   * stays; true. False when no combo is in play, and the screen can close.
+   */
+  close: () => boolean;
   /** Focus goes to the heart, as the screen opens. */
   focusHeart: () => void;
   setReduced: (reduced: boolean) => void;
@@ -161,6 +169,7 @@ interface LiveInput {
   parts: Omit<MiniGameParts, keyof StageParts>;
   onRecord: MiniGameOptions["onRecord"];
   onInPlay: MiniGameOptions["onInPlay"];
+  onStarted: MiniGameOptions["onStarted"];
 }
 
 /** A recorded combo, its inputs fed each frame; it ends in a landing. */
@@ -235,7 +244,7 @@ export function mountMiniGameEngine(
   parts: MiniGameParts,
   options: MiniGameOptions,
 ): MiniGameEngine {
-  const { onRecord, onInPlay, frames, ...rest } = options;
+  const { onRecord, onInPlay, onStarted, frames, ...rest } = options;
   return mountEngine(parts, {
     ...rest,
     frames: frames ?? browserFrames,
@@ -244,7 +253,7 @@ export function mountMiniGameEngine(
     scale: 1,
     inputScale: 1,
     miniHearts: FEEL_CONFIG.miniHearts.live,
-    input: { kind: "live", parts, onRecord, onInPlay },
+    input: { kind: "live", parts, onRecord, onInPlay, onStarted },
   });
 }
 
@@ -325,7 +334,12 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
   body.append(button);
   anchor.append(body);
 
-  const hud = createComboHud(parts.hud, { reduced: () => reduced, random, rate: speed });
+  const hud = createComboHud(parts.hud, {
+    reduced: () => reduced,
+    random,
+    rate: speed,
+    hits: liveInput !== null,
+  });
   const background = createTierBackground(ground, page, () => reduced, speed);
   const lettering = createLettering(captions, {
     intensity,
@@ -537,16 +551,17 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
         },
         reduced: () => reduced,
         intensity,
-        say,
-        giverHandle: options.giverHandle,
       }
     : null;
 
   /** The total the HUD ends on, when a replay's stored one differs from its own count. */
   let endTotal: number | null = null;
 
+  /** The combo that has ended and been handed to `onRecord`, once it has: what the receipt shows. */
+  let endedRecord: ComboRecord | null = null;
+
   const finish = (record: ComboRecord) => {
-    if (!alive) return;
+    if (!alive || root.dataset.phase === "done") return;
     root.dataset.phase = "done";
     notePerformance("gratitude", "phase done");
     // The live game's receipt takes the HUD's place; a replay's HUD stays on its figures.
@@ -588,9 +603,10 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
       // The record is the app's to keep; its failure shouldn't strand the person mid-ending.
       console.error("Keeping the gratitude failed; the ending plays on", error);
     }
+    endedRecord = record;
     if (hidden) return finish(record);
-    if (combo.view.tier === 4 && !reduced) await playAscension(endingParts, record.total);
-    else await flyHeartToGiver(endingParts, record.total);
+    if (combo.view.tier === 4 && !reduced) await playAscension(endingParts);
+    else await flyHeartToGiver(endingParts);
     await sighAndTidy(endingParts);
     finish(record);
   }
@@ -617,6 +633,7 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
 
   const onStarted = () => {
     root.dataset.phase = "running";
+    liveInput?.onStarted();
     // The replay keeps strokes from the first hit on, so passes before it never count toward a
     // switch: it switches where the combo did.
     strokes.breakStreak();
@@ -1138,14 +1155,16 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
     if (document.visibilityState !== "hidden") return;
     endNow(true);
   };
-  const onPageHide = () => endNow(true);
-  const endNow = (hidden: boolean) => {
+  const onPageHide = () => void endNow(true);
+  /** Ends a combo in play, and says whether there was one. */
+  const endNow = (hidden: boolean): boolean => {
     const phase = combo.view.phase;
-    if (ending || phase !== "running") return;
+    if (ending || phase !== "running") return false;
     const reason = hidden ? "hidden" : "closed";
     const t = frames.now();
     clock = t;
     handle(combo.endCombo(t, reason), L.rest.x, L.rest.y, hidden);
+    return true;
   };
 
   if (liveInput) {
@@ -1200,6 +1219,15 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
     cancelFrame();
     console.error("The gratitude mini-game stopped", error, combo.view);
     options.onError(error instanceof Error ? error.message : String(error));
+    // No ending can play without the loop: a combo in play is recorded as it stands, and one
+    // already in its ending goes on to the receipt.
+    if (!liveInput) return;
+    try {
+      if (!ending) endNow(true);
+      else if (endedRecord) finish(endedRecord);
+    } catch (again) {
+      console.error("Showing the receipt after the game stopped failed too", again);
+    }
   };
 
   /** When the frame in progress began, which drawThisFrame reads, so no frame makes a closure. */
@@ -1306,6 +1334,7 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
         readyDrawn = true;
         hud.step(real, {
           total: 0,
+          hits: 0,
           multiplier: 1,
           secondsLeft: fullBarSeconds(),
           barFill: 1,
@@ -1315,6 +1344,7 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
     } else {
       hud.step(real, {
         total: endTotal ?? view.total,
+        hits: view.hits,
         multiplier: view.multiplier,
         secondsLeft: view.secondsLeft,
         barFill: view.barFill,

@@ -7,8 +7,10 @@ export const gratitude = {
   sticker: { en: "Sticker {{no}}", ja: "シール{{no}}" },
   /** Gratitude Mini-game, top: fine print over the giver's handle, beside their photo */
   from: { en: "From", ja: "贈り主" },
-  /** Gratitude Mini-game, top right: screen readers' name for the X button that closes the game */
+  /** Gratitude Mini-game, top right, before the first tap or once the ending has played: screen readers' name for the X button that closes the game */
   close: { en: "Close", ja: "閉じる" },
+  /** Gratitude Mini-game, top right, once the combo is running: screen readers' name for the X button, which ends the combo, sends it and shows its receipt */
+  endAndSend: { en: "End and send gratitude", ja: "ここで終えて感謝を送る" },
   /** Gratitude Mini-game: screen readers' name for the big heart's button, which you tap to play */
   heart: { en: "Send gratitude to {{handle}}", ja: "{{handle}}さんに感謝を送る" },
   /** Gratitude Mini-game, before the first tap: the hint under the heart, on two lines, beating like a game's start button */
@@ -46,37 +48,78 @@ export const gratitude = {
     shakeUnlocked: { en: "Shake unlocked.", ja: "シェイクが解放されました。" },
     /** Gratitude Mini-game, screen readers only: said when shaking the phone starts counting as hits and the heart comes loose to bounce off the screen's edges, with reduced motion off */
     heartLoose: { en: "The heart is loose.", ja: "ハートがとれて、自由に動きだしました。" },
-    /** Gratitude Mini-game, screen readers only: said as the heart reaches the giver's photo at the combo's end */
+    /** Gratitude Mini-game, screen readers only: said once the receipt is up and the server has the gratitude */
     sent: {
       en: "Sent {{total}} gratitude to {{handle}}.",
       ja: "{{handle}}さんに{{total}}の感謝を送りました。",
     },
   },
   receipt: {
-    /** Gratitude Mini-game, once the ending has played: screen readers' name for the receipt card */
+    /** Gratitude Mini-game, once the ending has played and the server has the gratitude: screen readers' name for the receipt card */
     label: { en: "Gratitude sent", ja: "感謝を送りました" },
+    /** Gratitude Mini-game, once the ending has played while the gratitude is still going to the server: screen readers' name for the receipt card */
+    labelSending: { en: "Sending gratitude", ja: "感謝を送っています" },
+    /** Gratitude Mini-game, once the ending has played when the gratitude couldn't reach the server and waits on this phone: screen readers' name for the receipt card */
+    labelKept: { en: "Gratitude saved", ja: "感謝を保存しました" },
+    /** Gratitude Mini-game, once the ending has played when the server refused the gratitude: screen readers' name for the receipt card */
+    labelRefused: { en: "Gratitude not sent", ja: "感謝を送れませんでした" },
     /** Gratitude Mini-game, receipt card: the line under the big gratitude total, naming the giver */
     gratitudeTo: { en: "gratitude to {{handle}}", ja: "{{handle}}さんへの感謝" },
-    /** Gratitude Mini-game, receipt card: fine print under the giver's line when the combo was one hit, its best multiplier and hits */
-    best_one: { en: "best ×{{multiplier}} · {{hits}} hit" },
-    /** Gratitude Mini-game, receipt card: fine print under the giver's line, the combo's best multiplier and its hits, over the top tier's Japanese name */
-    best_other: {
-      en: "best ×{{multiplier}} · {{hits}} hits",
-      ja: "最高×{{multiplier}}・{{hits}}ヒット",
-    },
+    /** Gratitude Mini-game, receipt card: fine print beside the hit counter, the combo's best multiplier */
+    bestMultiplier: { en: "best ×{{multiplier}}", ja: "最高×{{multiplier}}" },
     /** Gratitude Mini-game, receipt card: the button with the board icon that closes the game */
     backToBoard: { en: "Back to your board", ja: "マイボードに戻る" },
+    /** Gratitude Mini-game, receipt card, in a note under the combo while the gratitude is still going to the server */
+    sending: { en: "Sending…", ja: "送っています…" },
+    /** Gratitude Mini-game, receipt card, in a note under the combo when the gratitude couldn't reach the server, also said to screen readers */
+    kept: {
+      en: "Saved on this phone. It goes to {{handle}} when you're back online.",
+      ja: "この端末に保存しました。接続が戻ったら、{{handle}}さんに送ります。",
+    },
   },
   failures: {
-    /** Gratitude Mini-game, when the game breaks while playing: an alert at the bottom of the screen */
+    /** Gratitude Mini-game, when the game breaks before the first tap: an alert at the bottom of the screen */
     stopped: {
-      en: "The game stopped. Close it and send your gratitude again.",
-      ja: "ゲームが止まってしまいました。閉じてから、もう一度感謝を送ってください。",
+      en: "The game stopped before your first tap, so nothing was sent. Close it and send your gratitude again.",
+      ja: "最初のタップの前にゲームが止まってしまい、感謝は送られていません。閉じてから、もう一度感謝を送ってください。",
     },
-    /** Gratitude Mini-game, after the combo, if the server refuses it for good: an alert at the bottom of the screen */
-    refused: {
-      en: "Your gratitude didn't reach {{handle}}. Close this and send it again.",
-      ja: "{{handle}}さんに感謝が届きませんでした。閉じてから、もう一度送ってください。",
+    /** Gratitude Mini-game, when the game breaks mid-combo or in its ending and the receipt comes up at once: an alert at the bottom of the screen */
+    stoppedInPlay: {
+      en: "The game stopped early, so this is your combo up to then.",
+      ja: "ゲームが途中で止まったため、そこまでの感謝になっています。",
+    },
+  },
+  /** Why the server refused a combo for good. Each is the receipt card's note under the combo, also said to screen readers. */
+  refusals: {
+    /** Gratitude Mini-game, receipt card's note when the gift already has gratitude (gratitude_already_recorded) */
+    alreadyRecorded: {
+      en: "Gratitude for this sticker is already with {{handle}}, so this combo wasn't sent.",
+      ja: "このシールへの感謝はすでに{{handle}}さんに届いているため、今回の感謝は送られませんでした。",
+    },
+    /** Gratitude Mini-game, receipt card's note when someone else received the gift (not_receiver) */
+    notReceiver: {
+      en: "This sticker was received by someone else, so this combo wasn't sent.",
+      ja: "このシールを受け取ったのは別の人なので、今回の感謝は送られませんでした。",
+    },
+    /** Gratitude Mini-game, receipt card's note when the server doesn't have the gift as received yet (gift_not_received), which a later combo can fix */
+    notReceived: {
+      en: "This sticker isn't marked received yet, so this combo wasn't sent. Try again once it's on your board.",
+      ja: "このシールはまだ受け取り済みになっていないため、今回の感謝は送られませんでした。ボードに貼られてから、もう一度送ってください。",
+    },
+    /** Gratitude Mini-game, receipt card's note when the gift isn't there (gift_not_found) */
+    notFound: {
+      en: "This gift isn't here anymore, so this combo wasn't sent.",
+      ja: "このギフトが見つからないため、今回の感謝は送られませんでした。",
+    },
+    /** Gratitude Mini-game, receipt card's note when the server couldn't read the combo (replay_invalid, invalid_request), which a new combo can get past */
+    unreadable: {
+      en: "The server couldn't read your combo, so it wasn't sent. Close this and send your gratitude again.",
+      ja: "サーバーが今回の感謝を読み取れなかったため、送られませんでした。閉じてから、もう一度感謝を送ってください。",
+    },
+    /** Gratitude Mini-game, receipt card's note for any other refusal; {{code}} is the server's code for it */
+    other: {
+      en: "The server refused your gratitude for {{handle}} ({{code}}), so this combo wasn't sent.",
+      ja: "サーバーが{{handle}}さんへの感謝を受け付けなかったため（{{code}}）、今回の感謝は送られませんでした。",
     },
   },
 } as const satisfies Section;
