@@ -21,7 +21,7 @@ Severity is the review's: _high_ is lost data, money, a ticket, a gift or Gratit
 
 ## Findings
 
-### R1: Tickets and payments (still running)
+### R1: Tickets and payments
 
 **R1-1** · low · `src/tickets/TicketsProvider.tsx:112` (c9e1bff2)  
 A purchase's answer (the checkout's, or the kept-payment retry's through set) is numbered when it arrives, not when its request went out, so it always wins: a stale one puts a spent ticket back on screen, and a spend on its way when it arrives has its own, newer answer dropped.
@@ -67,7 +67,7 @@ Logging out with a drawing in progress doesn't forget it: the reload that ends t
 - Trigger: Draw a few strokes, go to the board, flip to the stat board and log out. forgetKeptSession removes draw.session.<id> and deletes the database, then lineLogout reloads; DrawingScreen, still mounted under the board in the drawing phase, hears pagehide and keeper.save rewrites the record (ticket, time drawn, 18+, tools). It stays on the browser after logout, and the same person's next sign-in reads it, finds no ops and carries its ticket over.
 - Fix: Stop the mounted keeper writing once its person is forgotten (for example logOut closes it before forgetting), so no save after the forget lands.
 
-### R3: Giving, receiving and Gratitude (still running)
+### R3: Giving, receiving and Gratitude
 
 **R3-1** · medium · `src/giving/giveFlow.ts:303` (35dbf1a2)  
 Nothing is kept on the device while LINE's picker is open, so a page reloaded or torn down after the Gift Message went out (before its answer is handled) leaves no message mark, and the next Give takes that gift out unasked and packs a new one: the friend's Gift Message then reads as taken back.
