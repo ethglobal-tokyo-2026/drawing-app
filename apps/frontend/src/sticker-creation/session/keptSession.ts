@@ -55,6 +55,12 @@ export type KeptSession = { status: "none" } | KeptDrawing;
 /** What's kept can't be a drawing: the read itself worked. */
 class UnreadableDrawing extends Error {}
 
+/**
+ * The people whose kept session this page forgot. Logging out reloads the page, and the drawing
+ * screen, still mounted till then, saves on its way out: nothing it writes for them may land.
+ */
+const forgotten = new Set<string>();
+
 /** Open connections by database. One the browser closes is dropped, so the next write opens another. */
 const connections = new Map<string, Promise<IDBDatabase>>();
 
@@ -173,13 +179,10 @@ export class SessionKeeper {
     this.elapsedMs = 0;
     this.written = [];
     this.keepRecord();
-    this.write(
-      true,
-      transact(this.userId, "readwrite", (ops, progress) => {
-        clearStores(ops, progress);
-        progress.put(0, PROGRESS_KEY);
-      }),
-    );
+    this.write(true, (ops, progress) => {
+      clearStores(ops, progress);
+      progress.put(0, PROGRESS_KEY);
+    });
   }
 
   /** A session picked back up after a reload, whose ops are already kept. */
@@ -232,13 +235,10 @@ export class SessionKeeper {
     const from = written ? firstChanged(written, ops) : 0;
     if (written && from === ops.length && ops.length === written.length) return;
     this.written = [...ops];
-    this.write(
-      from === 0,
-      transact(this.userId, "readwrite", (opStore, progressStore) => {
-        for (let i = from; i < ops.length; i++) opStore.put(ops[i], i);
-        progressStore.put(ops.length, PROGRESS_KEY);
-      }),
-    );
+    this.write(from === 0, (opStore, progressStore) => {
+      for (let i = from; i < ops.length; i++) opStore.put(ops[i], i);
+      progressStore.put(ops.length, PROGRESS_KEY);
+    });
   }
 
   /** Nothing is in progress any more. */
@@ -249,10 +249,11 @@ export class SessionKeeper {
     this.written = [];
     removeRecord(this.userId);
     this.recordKept = true;
-    this.write(true, transact(this.userId, "readwrite", clearStores));
+    this.write(true, clearStores);
   }
 
   private keepRecord(): void {
+    if (forgotten.has(this.userId)) return;
     // A session with no ticket can't be sealed, so none is kept.
     if (this.ticket === null) removeRecord(this.userId);
     else
@@ -266,8 +267,13 @@ export class SessionKeeper {
   }
 
   /** `whole`: it writes every op, so once it lands the ops kept are the session's again. */
-  private write(whole: boolean, done: Promise<void>): void {
-    done.then(
+  private write(
+    whole: boolean,
+    fill: (ops: IDBObjectStore, progress: IDBObjectStore) => void,
+  ): void {
+    // Opening the database again would bring back what logging out deleted.
+    if (forgotten.has(this.userId)) return;
+    transact(this.userId, "readwrite", fill).then(
       () => {
         if (whole) this.opsKept = true;
         this.changed();
@@ -319,10 +325,11 @@ export async function loadKeptSession(userId: string): Promise<KeptSession> {
 
 /**
  * Forgets `userId`'s kept session, as logging out does, so a browser handed to someone else holds
- * none of it. It never rejects: a failure is logged, and the kept ops can't be picked up without the
- * record, which goes first.
+ * none of it, and keeps nothing more for them in this page's life. It never rejects: a failure is
+ * logged, and the kept ops can't be picked up without the record, which goes first.
  */
 export async function forgetKeptSession(userId: string): Promise<void> {
+  forgotten.add(userId);
   removeRecord(userId);
   const name = dbName(userId);
   const deleted = new Promise<string | null>((resolve) => {
