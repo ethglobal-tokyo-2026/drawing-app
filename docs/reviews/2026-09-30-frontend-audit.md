@@ -58,7 +58,7 @@ ad0ll's calls on the findings, 2026-09-30:
 - **The consent line and the legal pages (UX-SHELL-3):** the joke pages stay as they are.
 - **The offer sheet (UX-GIFT-1, UX-GIFT-2, UX-GIFT-10):** removed from the code until offers are built.
 - **Gratitude's stroke words (UX-GRAT-5):** fine as they are. More stroke words are welcome where they fit, and sound effects and spoken phrases may overlap.
-- **The type ladder (pattern 7):** snap the code to DESIGN.md's steps, keeping the toast's 14px and the search field's 16px.
+- **The type ladder (pattern 7):** snap the code to DESIGN.md's steps, keeping the toast's 14px and the search field's 16px. Fixed in ff98cc9a: every off-step size and weight snapped; the handle prompt's 16px field joins the search field as an iOS-zoom exception, and the NSFW veil's mark still scales with its sticker below 11px.
 - **Explore's streak board (UX-COPY-3):** renamed "Streak", ranking current streaks, with ties sharing a rank (the recommendation; not raised again).
 
 ## Fix first (P1)
@@ -236,7 +236,7 @@ PRODUCT.md's hardest requirement holds: drawing doesn't lag. Input to the frame 
 - **UX-DRAW-7** · P3 · `sticker-creation/tools/ColorSheet.css` · At 375×591 the Color sheet covers 71% of the phone, leaving 59px of the sticker in view, so a color is picked without seeing the art · Fix: a compact sheet on short screens, or a preview strip · `/impeccable layout`
 - **UX-DRAW-8** · P3 · `sticker-creation/canvas/inkSurface.ts:62-76` · A fill stalls the canvas about 160 ms in WebKit (a full-canvas `getImageData` of 123–132 ms), against 2.5 ms in Chromium; iPhone unmeasured · Fix: read back only the region the fill can reach · `/impeccable optimize`
 - **UX-DRAW-9** · P3 · `sticker-creation/TimerDot.tsx:99-102` · Nothing tells a screen reader user that time is nearly up; the dot turns Tomato and pulses for the last ten seconds, then the sheet seals itself · WCAG 2.2.1 · Fix: a polite "30 seconds left" and "10 seconds left" · `/impeccable harden`
-- **UX-DRAW-10** · P3 · `sticker-creation/sealing/SealedCard.css:67-72` · The sealed card's ticket and refill lines are 12.5px (pattern 7) · `/impeccable typeset`
+- **UX-DRAW-10** · P3 · fixed in ff98cc9a · `sticker-creation/sealing/SealedCard.css:67-72` · The sealed card's ticket and refill lines are 12.5px (pattern 7) · `/impeccable typeset`
 - **UX-DRAW-11** · P3 · `sticker-creation/DrawingScreen.tsx:267,302` · The ink copy made for sealing is never released · → DRAW-15
 - **UX-DRAW-12** · P3 · The seal key has no visible word ("Seal: tap twice" is for screen readers only); two- and three-finger taps and the 18+ switch are never taught; a reload restores the ink but not the brush size or Smoothing; the timer, tools and Color and Smoothing entries sit in the top 60px, the far end of a one-handed thumb's reach · `/impeccable onboard`
 
@@ -274,7 +274,7 @@ Your own board treats touch, keyboard and reduced motion as first-class: one Tab
 - **UX-BOARD-12** · P3 · `sticker-board/StickerBoard.tsx:683-688` · An empty board with a full tray still says "Stickers you make or receive land here." when the next step is the Zipper · `/impeccable clarify`
 - **UX-BOARD-13** · P3 · `sticker-board/StickerBoard.tsx:393-401,413-420`, `useBoardGestures.ts:165-178` · If the Gratitude check fails, the "send Gratitude now?" ask silently never comes that visit; NEW marks and a tray refusal fail only to the console · `/impeccable harden`
 - **UX-BOARD-14** · P3 · `sticker-board/PlacedSticker.tsx:42-43,71,102,132`, `StickerBoard.css:97-112` · Dead glow code for a feature PRODUCT.md lists as not built, which DESIGN.md describes as shipped; the lifted corner on today's newest sticker is in code but in neither doc · `/impeccable distill`, `/impeccable document`
-- **UX-BOARD-15** · P3 · `sticker-board/StickerBoard.css:377,485`, `ArtistBoard.css:105-111` · 13.5px notes and a 23px heading off the type steps (pattern 7); `lastBoard.ts:9` cites "(decision 29)", a plan anchor AGENTS.md bans in comments · `/impeccable typeset`
+- **UX-BOARD-15** · P3 · type fixed in ff98cc9a · `sticker-board/StickerBoard.css:377,485`, `ArtistBoard.css:105-111` · 13.5px notes and a 23px heading off the type steps (pattern 7); `lastBoard.ts:9` cites "(decision 29)", a plan anchor AGENTS.md bans in comments · `/impeccable typeset`
 
 ### Giving and Receiving
 
