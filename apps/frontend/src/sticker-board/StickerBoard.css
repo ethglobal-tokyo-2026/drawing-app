@@ -413,6 +413,7 @@
   z-index: 940;
   align-content: center;
   gap: 12px;
+  width: min(300px, 100% - 28px);
   height: auto;
   min-height: 196px;
   padding: 26px 18px;

@@ -212,11 +212,7 @@ export function StatCork({
                       ))}
                     </dl>
                   ) : f.failure ? (
-                    <ErrorLine
-                      className="stat-board__receipt-none"
-                      detail={f.failure.detail}
-                      onRetry={f.failure.retry}
-                    >
+                    <ErrorLine detail={f.failure.detail} onRetry={f.failure.retry}>
                       {f.own
                         ? t(($) => $.stickerBoard.statBoard.didntLoadOwnBecause, {
                             reason: f.failure.message,
