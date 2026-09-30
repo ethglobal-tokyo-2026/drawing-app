@@ -106,7 +106,7 @@ function play(
   end?: ReplayFeed["end"],
 ) {
   const record = tapRecord(times);
-  const { frames, run } = handFrames();
+  const { frames, run, asked } = handFrames();
   const replay = options.replay ?? replayOf(record);
   handle = mountGratitudeReplay(
     host,
@@ -124,7 +124,7 @@ function play(
   void handle.finished.then((how) => {
     settled = how;
   });
-  return { record, run, handle };
+  return { record, run, asked, handle };
 }
 
 const amount = () => host.querySelector(".gr-amount b")?.textContent;
@@ -183,6 +183,15 @@ describe("mountGratitudeReplay", () => {
     expect(await handle.finished).toBe("landed");
     expect(warn).not.toHaveBeenCalled();
     expect(amount()).toBe(formatCount(ended.record.total));
+  });
+
+  it("melts 昇天's rain once it lands, so nothing stays piled on the card and its frames stop", async () => {
+    const { run, asked } = play(TAPS);
+    await run(REPLAY_REAL_TIME_MS + 1000);
+    expect(settled).toBe("landed");
+    expect(rain.count).toBeGreaterThan(0);
+    await run(2000);
+    expect(asked()).toBe(false);
   });
 
   it("counts its HUD up to the total when the combo was closed right after its last hit", async () => {

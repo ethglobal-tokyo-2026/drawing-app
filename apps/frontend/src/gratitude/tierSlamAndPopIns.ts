@@ -4,7 +4,7 @@ import { EASE_SPRING, clamp } from "./easing";
 import { FEEL_CONFIG } from "./gameConfig";
 import type { HeartBox } from "./miniHeartPhysics";
 import { POP_IN_WORDS, createPopInPicker, type PopInBank } from "./popInWords";
-import { shownGloss, TIER_NAMES } from "./tierNames";
+import { shownGloss, TIER_NAMES, type TierName } from "./tierNames";
 import { animate } from "./webAnimations";
 
 export interface Lettering {
@@ -19,6 +19,12 @@ export interface Lettering {
   showPopInWord: (bank: PopInBank, heart: HeartBox) => void;
   clear: () => void;
 }
+
+/** What an unlock slams in over the heart, with its English: stroke's, and shake's. */
+export const UNLOCK_SLAMS = {
+  stroke: { jp: "!?", en: "" },
+  shake: { jp: "ポンッ", en: "*pop*" },
+} as const satisfies Record<"stroke" | "shake", TierName>;
 
 /** Where pop-ins land, in heart widths and heights from its middle: clear of the face. */
 const SLOTS: readonly (readonly [x: number, y: number])[] = [
