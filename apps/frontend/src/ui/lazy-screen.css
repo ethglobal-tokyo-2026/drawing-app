@@ -1,0 +1,46 @@
+/* A lazy screen whose code didn't load says so at the top of the phone, clear of the tabs, toasts and
+   the board's own notes, over whatever the screen would have covered. Notes from several stack. */
+.lazy-screen-notes {
+  position: fixed;
+  z-index: var(--z-banner);
+  top: calc(env(safe-area-inset-top) + 12px);
+  left: 0;
+  right: 0;
+  width: min(100% - 24px, var(--ph-w) - 24px);
+  margin-inline: auto;
+  display: grid;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.lazy-screen-note {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 10px 10px 10px 12px;
+  border-radius: var(--r-label);
+  background: var(--tomato-soft);
+  box-shadow: var(--shadow-label);
+  pointer-events: auto;
+}
+
+.lazy-screen-note__text {
+  margin: 0;
+  color: var(--ink);
+  font: 500 13px/1.35 var(--font-ui);
+}
+
+/* What the browser said, under the plain sentence, selectable for a bug report. */
+.lazy-screen-note__reason {
+  grid-column: 1;
+  margin: 0;
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.lazy-screen-note__reload {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}

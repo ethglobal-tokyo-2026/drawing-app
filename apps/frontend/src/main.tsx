@@ -16,6 +16,7 @@ import { LineGate } from "./line/LineGate";
 import { startPerformanceRecorderAtBoot } from "./performance/performanceRecorder";
 import { installLight } from "./stickers/light";
 import { installPress } from "./ui/press";
+import { reloadOntoNewBuild } from "./ui/reloadOntoNewBuild";
 import { ToastProvider } from "./ui/ToastProvider";
 
 // The app's own controls use bold icons; fill marks an active or primary state.
@@ -35,16 +36,8 @@ startPerformanceRecorderAtBoot();
 installPress();
 installLight(document.documentElement);
 
-// A deploy deletes the old build's chunks, so a page still on it reloads onto the new build before
-// opening what it hadn't loaded. Once per missing chunk: one still missing after that is a broken build.
-const RELOADED_FOR = "draw.reloadedFor";
-window.addEventListener("vite:preloadError", (event) => {
-  const missing = event.payload.message;
-  if (sessionStorage.getItem(RELOADED_FOR) === missing) return;
-  sessionStorage.setItem(RELOADED_FOR, missing);
-  event.preventDefault();
-  location.reload();
-});
+// This module's URL names the build: its chunk's hash changes with every chunk it loads.
+window.addEventListener("vite:preloadError", (event) => reloadOntoNewBuild(event, import.meta.url));
 
 const root = document.getElementById("root");
 if (!root) throw new Error("Root element #root is missing from index.html");
