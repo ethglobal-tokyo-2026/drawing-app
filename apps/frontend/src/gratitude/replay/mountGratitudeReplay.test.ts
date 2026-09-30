@@ -220,6 +220,15 @@ describe("mountGratitudeReplay", () => {
     expect(host.children).toHaveLength(0);
   });
 
+  it("frees its mini hearts' canvases as it stops", async () => {
+    const { run, handle: playing } = play(TAPS);
+    await run(500);
+    const canvases = [...host.querySelectorAll("canvas")];
+    expect(canvases.length).toBeGreaterThan(0);
+    playing.stop();
+    for (const canvas of canvases) expect([canvas.width, canvas.height]).toEqual([0, 0]);
+  });
+
   it("fails with the engine's own words, which the card shows as the reason", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const record = tapRecord(TAPS);

@@ -1,3 +1,4 @@
+import { releaseCanvas } from "../ui/releaseCanvas";
 import { FEEL_CONFIG } from "./gameConfig";
 import { miniHeartSvg, stampHeartSvg, svgDataUrl } from "./heartArt";
 import type { MiniHeart } from "./miniHeartPhysics";
@@ -5,6 +6,8 @@ import type { MiniHeart } from "./miniHeartPhysics";
 export interface MiniHeartLayer {
   draw: (hearts: readonly MiniHeart[]) => void;
   clear: () => void;
+  /** Done with: both canvases' memory goes now, and nothing draws on them again. */
+  release: () => void;
 }
 
 const MINI = FEEL_CONFIG.miniHearts;
@@ -132,24 +135,23 @@ export function createMiniHeartLayer(
 ): MiniHeartLayer {
   const surfaces = [surface(layers.front, "mini"), surface(layers.behind, "rain")];
   let latest: readonly MiniHeart[] = [];
+  let released = false;
 
-  if (typeof ResizeObserver === "function") {
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const s = surfaces.find((x) => x.canvas === entry.target);
-        if (!s) continue;
-        if (!s.canvas.isConnected) {
-          observer.disconnect();
-          return;
-        }
-        resize(s, entry.contentRect.width, entry.contentRect.height);
-        paint(s, latest, scale);
-      }
-    });
-    for (const s of surfaces) observer.observe(s.canvas);
-  } else {
-    for (const s of surfaces) resize(s, s.canvas.clientWidth, s.canvas.clientHeight);
-  }
+  const observer =
+    typeof ResizeObserver === "function"
+      ? new ResizeObserver((entries) => {
+          // Resizing a released canvas would take its memory back.
+          if (released) return;
+          for (const entry of entries) {
+            const s = surfaces.find((x) => x.canvas === entry.target);
+            if (!s) continue;
+            resize(s, entry.contentRect.width, entry.contentRect.height);
+            paint(s, latest, scale);
+          }
+        })
+      : null;
+  if (observer) for (const s of surfaces) observer.observe(s.canvas);
+  else for (const s of surfaces) resize(s, s.canvas.clientWidth, s.canvas.clientHeight);
 
   return {
     draw: (hearts) => {
@@ -182,6 +184,16 @@ export function createMiniHeartLayer(
       for (const s of surfaces) {
         s.shown.length = 0;
         paint(s, latest, scale);
+      }
+    },
+    release: () => {
+      released = true;
+      observer?.disconnect();
+      latest = [];
+      for (const s of surfaces) {
+        s.ctx = null;
+        s.shown.length = 0;
+        releaseCanvas(s.canvas);
       }
     },
   };

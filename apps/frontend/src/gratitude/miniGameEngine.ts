@@ -1363,7 +1363,7 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
       tip.remove();
       lettering.clear();
       effects.tidy();
-      miniHearts.clear();
+      miniHearts.release();
       // A remount (StrictMode's included) builds into the same elements, so everything built goes.
       parts.stage.replaceChildren();
       parts.hud.replaceChildren();
