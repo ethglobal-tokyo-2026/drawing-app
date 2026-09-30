@@ -80,6 +80,7 @@ import {
 import { markChipsPlayed } from "./boardSettled";
 import { keepBoard, keptBoardFor } from "./lastBoard";
 import { BoardFlip } from "./stat-board/BoardFlip";
+import { takeReopenOnSettings } from "./stat-board/reopenOnSettings";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
 import { readingOrder } from "./stickerOrder";
 import { StickerToolbar } from "./StickerToolbar";
@@ -271,10 +272,12 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const [open, setOpen] = useState<{ id: string; mode: "yours" | "given" } | null>(null);
   const openYours = (id: string) => setOpen({ id, mode: "yours" });
   const [giving, setGiving] = useState<BoardSticker | null>(null);
+  /** The app restarted for a language change, so it opens on the stat board, at Settings. */
+  const [reopenedOnSettings] = useState(takeReopenOnSettings);
   /** The board is turned over to its stat board. */
-  const [turned, setTurned] = useState(false);
+  const [turned, setTurned] = useState(reopenedOnSettings);
   /** The board has turned over before, so its stat board stays mounted for every turn after. */
-  const [wasTurned, setWasTurned] = useState(false);
+  const [wasTurned, setWasTurned] = useState(reopenedOnSettings);
   const { tickets } = useTickets();
   // Draw spends a daily ticket at once, its ticket peeling off the key; with none at all, a card says when.
   const drawKey = useDrawFromBoard(onDraw);
@@ -916,6 +919,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
               ref={statBoard}
               onFlipBack={() => turn(false)}
               flipBackRef={flipBack}
+              reopenedOnSettings={reopenedOnSettings}
               onTryGratitudeMiniGame={
                 newest
                   ? () =>
