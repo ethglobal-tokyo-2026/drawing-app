@@ -32,7 +32,7 @@ Wave 1:
 Wave 2, as wave 1's lanes finish:
 
 - [ ] Seal ceremony: DRAW-14, DRAW-16, DRAW-17
-- [ ] Gratitude visuals: GRAT-4 to GRAT-7, GRAT-9, GRAT-10, GRAT-12, GRAT-13
+- [ ] Gratitude visuals: GRAT-4 to GRAT-7, GRAT-9, GRAT-10, GRAT-12, GRAT-13 (taken by the frontend audit's Gratitude lane, `ux/gratitude`, with the audit's own Gratitude findings)
 - [ ] Explore and dates: TRAY-3, CLEAN-5, CLEAN-7, CLEAN-13, CLEAN-15 (EXPL-1 to EXPL-3 go with the frontend audit's Explore lane, `ux/explore`)
 
 Wave 3, once the lanes above are merged, since these touch every area:
