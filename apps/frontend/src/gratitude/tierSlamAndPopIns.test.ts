@@ -12,8 +12,11 @@ const SCREEN = { width: 390, height: 741, top: 256 };
 const HEART: HeartBox = { x: 195, y: 440, width: 226, height: 218 };
 const BANKS: readonly PopInBank[] = [0, 1, 2, 3, 4, "stroke", "shake"];
 
-/** Each caption's latest animation: what it shows, from when, for how long. */
-const played = new Map<HTMLElement, { frames: Keyframe[]; at: number; duration: number }>();
+/** Each caption's latest animation: what it shows, from when, for how long, and the animation itself. */
+const played = new Map<
+  HTMLElement,
+  { frames: Keyframe[]; at: number; duration: number; animation: Animation }
+>();
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["performance"] });
@@ -23,10 +26,16 @@ beforeEach(() => {
     frames,
     options,
   ) {
+    const animation = new Animation();
     if (this instanceof HTMLElement && Array.isArray(frames) && typeof options === "object") {
-      played.set(this, { frames, at: performance.now(), duration: Number(options.duration) });
+      played.set(this, {
+        frames,
+        at: performance.now(),
+        duration: Number(options.duration),
+        animation,
+      });
     }
-    return new Animation();
+    return animation;
   });
 });
 
@@ -89,7 +98,92 @@ function letterPoints(el: HTMLElement, transform: string) {
   return points;
 }
 
+/** A word's letters as a rotated rectangle at one of its frames, by the layer's own guess at their size. */
+function wordShape(el: HTMLElement, transform: string, heightGuess: number) {
+  const m = /translate\(([-\d.]+)px,([-\d.]+)px\) rotate\(([-\d.]+)deg\) scale\(([-\d.]+)\)/.exec(
+    transform,
+  );
+  if (!m) throw new Error(`Unexpected transform: ${transform}`);
+  const [x, y, deg, scale] = m.slice(1).map(Number);
+  const px = parseFloat(el.style.fontSize);
+  const w = (el.dataset.t ?? "").length * px;
+  const ht = heightGuess * px;
+  return { cx: x + w / 2, cy: y + ht / 2, rad: (deg * Math.PI) / 180, w: w * scale, h: ht * scale };
+}
+
+/** Whether a point lies in a word's letters. */
+function inLetters([x, y]: [number, number], s: ReturnType<typeof wordShape>) {
+  const dx = x - s.cx;
+  const dy = y - s.cy;
+  const along = dx * Math.cos(s.rad) + dy * Math.sin(s.rad);
+  const across = dy * Math.cos(s.rad) - dx * Math.sin(s.rad);
+  return Math.abs(along) <= s.w / 2 && Math.abs(across) <= s.h / 2;
+}
+
+/** A pop-in's frames at full size: landed, and drifted before it fades. */
+const restingFrames = (el: HTMLElement) =>
+  (played.get(el)?.frames ?? []).filter((f) => f.opacity === 1 && f.offset !== undefined);
+
+/** Pop-ins showing now, with their animations. */
+function showing() {
+  const now = performance.now();
+  return [...played].filter(
+    ([el, p]) => el.classList.contains("gr-pop") && p.at + p.duration > now,
+  );
+}
+
 describe("pop-in words", () => {
+  it("never land on each other: a word finds room, shrinks, or isn't shown", () => {
+    const words = lettering(21);
+    for (let i = 0; i < 400; i++) {
+      words.showPopInWord(BANKS[i % BANKS.length], HEART);
+      const live = showing();
+      for (const [a] of live) {
+        for (const [b] of live) {
+          if (a === b) continue;
+          for (const fb of restingFrames(b)) {
+            const other = wordShape(b, String(fb.transform), 1.4);
+            for (const fa of restingFrames(a)) {
+              expect(
+                letterPoints(a, String(fa.transform)).filter((p) => inLetters(p, other)),
+              ).toEqual([]);
+            }
+          }
+        }
+      }
+      vi.advanceTimersByTime(90);
+    }
+  });
+
+  it("make way for a slam: words in its band play out at speed, and none lands on it while it holds", () => {
+    let retired = 0;
+    for (let seed = 1; seed <= 24; seed++) {
+      played.clear();
+      const words = lettering(seed);
+      // Every place round the heart is taken, then the tier's name slams in over the band above it.
+      for (let i = 0; i < 12; i++) words.showPopInWord(4, HEART);
+      words.slamTierName("昇天", "ascension");
+      for (let i = 0; i < 12; i++) words.showPopInWord(3, HEART);
+      const slam = [...played].find(([el]) => el.classList.contains("gr-slam"));
+      if (!slam) throw new Error("Nothing slammed");
+      const landed = slam[1].frames[1];
+      const slamLetters = wordShape(slam[0], String(landed.transform), 1.1);
+      for (const [el, { animation }] of showing()) {
+        if (animation.playbackRate > 1) {
+          retired++;
+          continue;
+        }
+        for (const frame of restingFrames(el)) {
+          expect(
+            letterPoints(el, String(frame.transform)).filter((p) => inLetters(p, slamLetters)),
+          ).toEqual([]);
+        }
+      }
+    }
+    // The rule was in play: some seed had a word in the slam's band.
+    expect(retired).toBeGreaterThan(0);
+  });
+
   it("never land on the heart, with a slam holding the band above it or not", () => {
     const words = lettering(7);
     const keep = 0.5 - FEEL_CONFIG.popIns.heartInset;

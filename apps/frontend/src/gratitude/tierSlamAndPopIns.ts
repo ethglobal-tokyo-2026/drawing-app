@@ -10,11 +10,12 @@ import { animate } from "./webAnimations";
 export interface Lettering {
   /** The screen's size, and `top`, where the stage starts under the HUD. */
   setLayout: (width: number, height: number, top: number) => void;
-  /** A tier's name, slammed in over the heart and gone within a second. */
+  /** A tier's name, slammed in over the heart and gone within a second. Words in its band make way. */
   slamTierName: (text: string, gloss: string) => void;
   /**
-   * An onomatopoeia round the heart, never on it: it scales in at a slant, drifts and fades. Never a
-   * word already on screen. `"climax"` is 昇天's.
+   * An onomatopoeia round the heart, never on it, another word or a slam: it scales in at a slant,
+   * drifts and fades. Never a word already on screen, and none at all when there's no room for it.
+   * `"climax"` is 昇天's.
    */
   showPopInWord: (bank: PopInBank, heart: HeartBox) => void;
   clear: () => void;
@@ -87,6 +88,18 @@ const MEASURE_TRIES = 3;
 const FALLBACK_SCREEN = { width: 390, height: 741, top: 256 };
 /** With reduced motion a word fades in over this share of its life, where it lands, and holds still. */
 const STILL_FADE_IN = 0.15;
+/** A word a slam pushes out plays out the rest of its life this many times as fast. */
+const RETIRE_SPEED = 6;
+/** px a pop-in keeps clear of another word. */
+const WORD_GAP_PX = 4;
+
+/** A rectangle in px, edges along the screen's. */
+interface Box {
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
+}
 
 /** A word in outlined bag letters (袋文字), and the animation it was last given. */
 interface Caption {
@@ -97,6 +110,8 @@ interface Caption {
   /** A pop-in's slot, and the clock's time it's gone by. */
   slot: number | null;
   until: number;
+  /** Where the word reaches over its life, drift and spring included. */
+  zone: Box | null;
 }
 
 /** A word's box about its middle in px, its outline and gloss included, before its tilt. */
@@ -184,6 +199,32 @@ function overlaps(
   );
 }
 
+/** Whether two boxes come within `gap` px of each other. */
+const near = (a: Box, b: Box, gap: number) =>
+  a.x0 < b.x1 + gap && b.x0 < a.x1 + gap && a.y0 < b.y1 + gap && b.y0 < a.y1 + gap;
+
+/**
+ * Where a word with `edges`, turned by `rad`, reaches as its middle drifts from (cx, cy) by (dx, dy),
+ * at the spring's peak size: the drift is a straight line, so its two ends bound it.
+ */
+function lifeZone(edges: Edges, rad: number, cx: number, cy: number, dx: number, dy: number): Box {
+  const peak = turnedReach(
+    {
+      left: edges.left * SPRING_PEAK,
+      right: edges.right * SPRING_PEAK,
+      top: edges.top * SPRING_PEAK,
+      bottom: edges.bottom * SPRING_PEAK,
+    },
+    rad,
+  );
+  return {
+    x0: cx + Math.min(0, dx) + peak.minX,
+    x1: cx + Math.max(0, dx) + peak.maxX,
+    y0: cy + Math.min(0, dy) + peak.minY,
+    y1: cy + Math.max(0, dy) + peak.maxY,
+  };
+}
+
 /** A pair of slots, the one on `side` first. */
 const sideFirst = (pair: readonly [number, number], side: number): readonly number[] =>
   SLOTS[pair[0]][0] * side > 0 ? pair : [pair[1], pair[0]];
@@ -203,7 +244,7 @@ function makeCaption(kind: "gr-slam" | "gr-pop"): Caption {
   const gloss = document.createElement("span");
   gloss.className = "gr-cap-gloss";
   el.append(word, gloss);
-  return { el, word, gloss, animation: null, slot: null, until: 0 };
+  return { el, word, gloss, animation: null, slot: null, until: 0, zone: null };
 }
 
 /** The system's reduced-motion setting, followed live: until the engine passes its own. */
@@ -308,8 +349,9 @@ export function createLettering(
   if (fonts) measureOnceFontsLoad(fonts, MEASURE_TRIES);
 
   let slam: Caption | null = null;
-  /** The clock's time until which a slam holds the band above the heart. */
+  /** The clock's time until which a slam holds the band above the heart, and where it reaches. */
   let slamUntil = 0;
+  let slamZone: Box | null = null;
   const pops: Caption[] = [];
   /** The latest tier shown, which sizes the stroke and shake words. */
   let tierShown: Tier = 0;
@@ -401,6 +443,12 @@ export function createLettering(
     return DRIFT_CHECKS.some((k) => overlaps(p.edges, rad, p.cx + p.dx * k, p.cy + p.dy * k, box));
   }
 
+  /** Lets a word play out the rest of its life at speed, so it fades out where it stands. */
+  function retire(caption: Caption, now: number) {
+    if (caption.animation) caption.animation.playbackRate = rate * RETIRE_SPEED;
+    caption.until = now + (caption.until - now) / RETIRE_SPEED;
+  }
+
   return {
     setLayout(width, height, top) {
       screen = { width, height, top };
@@ -426,7 +474,16 @@ export function createLettering(
       const x = (screen.width - w) / 2;
       const y = screen.top + 4 * scale - (ht * (1 - fit)) / 2;
       const base = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) rotate(-5deg) scale(${fit.toFixed(3)})`;
-      slamUntil = clock() + SLAM_MS;
+      const now = clock();
+      slamUntil = now + SLAM_MS;
+      // The band it takes is cleared: a pop-in already there plays out its life at speed.
+      const edges = popEdges(
+        { w, ht, px, glossWidth: glosses && gloss ? glossWidth(gloss) : null },
+        fit,
+      );
+      slamZone = lifeZone(edges, -tilt, x + w / 2, y + ht / 2, 0, -8);
+      for (const c of pops)
+        if (c.until > now && c.zone && near(c.zone, slamZone, 0)) retire(c, now);
       // In small and tilted hard, springing to its slant: it never leaves the screen.
       caption.animation = animate(
         caption.el,
@@ -446,8 +503,11 @@ export function createLettering(
     showPopInWord(bank, heart) {
       if (isPerformanceRecorderOn()) notePerformance("gratitude", `pop-in ${bank}`);
       const now = clock();
-      const reused = pops.length >= POP_INS ? pops[0] : undefined;
-      const showing = pops.filter((c) => c !== reused && c.until > now);
+      // A word that has gone gives its element to the next; with every one still showing, there's
+      // no room for another.
+      const spare = pops.find((c) => c.until <= now);
+      if (!spare && pops.length >= POP_INS) return;
+      const showing = pops.filter((c) => c.until > now);
       const onScreen = new Set(showing.map((c) => c.word.data));
       if (slam && now < slamUntil) onScreen.add(slam.word.data);
       const word = pick(bank, onScreen);
@@ -457,10 +517,6 @@ export function createLettering(
       if (typeof bank === "number") tierShown = bank;
       else if (bank === "climax") tierShown = 4;
       const px = POP_PX[tierShown] * grow;
-      if (reused) pops.shift();
-      const caption = reused ?? makeCaption("gr-pop");
-      pops.push(caption);
-      dress(caption, jp, gloss, px);
 
       const measured = wordSize(jp, POP_HEIGHT_GUESS);
       const size: PopSize = {
@@ -480,8 +536,9 @@ export function createLettering(
       };
       const duration = 620 + random() * 560;
 
-      // Never on the heart: a word that would cover it takes a free slot below it, or above it while
-      // no slam holds that band, and shrinks only when none will do. Beside the heart only if it fits.
+      // Never on the heart, a word still showing or a slam: a word takes a free slot below the
+      // heart, or above it while no slam holds that band, and shrinks only when none will do. Beside
+      // the heart only if it fits. With no room at all, the word isn't shown.
       const full = popEdges(size, 1);
       const fitsBeside = (screen.width - heart.width) / 2 >= full.right - full.left;
       const side = Math.sign(SLOTS[preferred][0]) || 1;
@@ -493,20 +550,38 @@ export function createLettering(
         ]),
       ].filter((slot) => fitsBeside || !BESIDE.includes(slot));
       const free = slots.filter((slot) => !showing.some((c) => c.slot === slot));
-      const tries = free.length > 0 ? free : slots.slice(0, 1);
       const { minScale, scaleStep } = FEEL_CONFIG.popIns;
+      const roomFor = (reach: Box) =>
+        !showing.some((c) => c.zone && near(c.zone, reach, WORD_GAP_PX * scale)) &&
+        !(slamZone && now < slamUntil && near(slamZone, reach, WORD_GAP_PX * scale));
       let p: Placement | null = null;
+      let zone: Box | null = null;
       for (let shrink = 1; !p && shrink > minScale - 1e-6; shrink -= scaleStep) {
-        for (const slot of tries) {
+        for (const slot of free) {
           const candidate = place(slot, Math.max(minScale, shrink), size, heart, draw);
-          if (!coversHeart(candidate, heart, draw.rad)) {
-            p = candidate;
-            break;
-          }
+          if (coversHeart(candidate, heart, draw.rad)) continue;
+          const reach = lifeZone(
+            candidate.edges,
+            draw.rad,
+            candidate.cx,
+            candidate.cy,
+            candidate.dx,
+            candidate.dy,
+          );
+          if (!roomFor(reach)) continue;
+          p = candidate;
+          zone = reach;
+          break;
         }
       }
-      p ??= place(tries[0], minScale, size, heart, draw);
+      if (!p || !zone) return;
+
+      if (spare) pops.splice(pops.indexOf(spare), 1);
+      const caption = spare ?? makeCaption("gr-pop");
+      pops.push(caption);
+      dress(caption, jp, gloss, px);
       caption.slot = p.slot;
+      caption.zone = zone;
       caption.until = now + duration;
       // The gloss stays at its fine-print size as the word shrinks.
       caption.gloss.style.transformOrigin = p.shrink < 1 ? "0 0" : "";
@@ -541,6 +616,7 @@ export function createLettering(
       slam = null;
       pops.length = 0;
       slamUntil = 0;
+      slamZone = null;
     },
   };
 }
