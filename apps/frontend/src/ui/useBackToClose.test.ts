@@ -22,6 +22,9 @@ function fakeWindow() {
         entries.splice(at + 1, Infinity, { state, url: url ? String(url) : entries[at].url });
         at++;
       },
+      replaceState(state: unknown, _unused: string, url?: string | URL | null) {
+        entries[at] = { state, url: url ? String(url) : entries[at].url };
+      },
       back: () => traverse(-1),
     },
     forward: () => traverse(1),
@@ -83,6 +86,21 @@ describe("createBackStack", () => {
     vi.useRealTimers();
   });
 
+  it("closes the overlay that took a closed one's place with a Back pressed at once", async () => {
+    vi.useFakeTimers();
+    const win = fakeWindow();
+    const stack = createBackStack(win);
+    const closeGiving = vi.fn();
+    stack.release(stack.open(vi.fn()));
+    stack.open(closeGiving);
+
+    win.history.back();
+    await settle();
+    expect(closeGiving).toHaveBeenCalledOnce();
+    expect(win.where().at).toBe(0);
+    vi.useRealTimers();
+  });
+
   it("keeps an entry for an overlay that can't close yet, and skips entries it went back past", async () => {
     vi.useFakeTimers();
     const win = fakeWindow();
@@ -123,6 +141,21 @@ describe("createBackStack", () => {
     await settle();
     expect(win.where()).toMatchObject({ at: 1, state: { app: "board" } });
     expect(close).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it("takes one entry when a Back pressed as an overlay closes lands after the close", async () => {
+    vi.useFakeTimers();
+    const win = fakeWindow();
+    win.history.pushState({ app: "board" }, "");
+    const stack = createBackStack(win);
+    const overlay = stack.open(vi.fn());
+
+    // The close's step back is held first; the Back, still on its way, lands a moment later.
+    stack.release(overlay);
+    win.history.back();
+    await settle();
+    expect(win.where()).toMatchObject({ at: 1, state: { app: "board" } });
     vi.useRealTimers();
   });
 });

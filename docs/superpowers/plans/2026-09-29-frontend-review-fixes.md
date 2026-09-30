@@ -27,11 +27,11 @@ Wave 1:
 - [x] Gratitude records: GRAT-1, GRAT-2, GRAT-3, GRAT-8, GRAT-11
 - [x] Tickets and payments: TIX-1, TIX-4 to TIX-9, CLEAN-8. For ad0ll to confirm: a signed payment Sui still hasn't shown an hour later counts as not gone through (PAYMENT_LANDS_WITHIN_MS, a guess)
 - [x] App shell and sign-in: SHELL-1, SHELL-2, SHELL-6 to SHELL-10, UI-1, CLEAN-10, CLEAN-16. A screen whose code fails to load shows a Reload note; a screen that crashes while rendering still unmounts the app, which needs an app-level boundary
-- [x] Shared controls and the catalog import: UI-2 to UI-5, UI-7, GIFT-6, CLEAN-1, CLEAN-9. UI-6 (a held step back racing the Back key) is still open
+- [x] Shared controls and the catalog import: UI-2 to UI-7, GIFT-6, CLEAN-1, CLEAN-9
 
 Wave 2, as wave 1's lanes finish:
 
-- [ ] Seal ceremony: DRAW-14, DRAW-16, DRAW-17
+- [x] Seal ceremony: DRAW-14, DRAW-16, DRAW-17
 - [x] Gratitude visuals: GRAT-4 to GRAT-7, GRAT-9, GRAT-10, GRAT-12, GRAT-13
 - [ ] Dates in Tokyo's day: EXPL-3, TRAY-3, CLEAN-5, CLEAN-7, CLEAN-13, CLEAN-15 (EXPL-1 and EXPL-2 go with the frontend audit's `ux/explore` lane)
 

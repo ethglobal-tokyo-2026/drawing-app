@@ -3,8 +3,14 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 /** Marks this app's overlay entries in history.state; the value is the overlay's id. */
 const KEY = "drawingAppOverlay";
 
+/**
+ * How long a closed overlay's step back waits: a Back pressed as it closed, still on its way from the
+ * browser, lands first and takes the entry itself, where stepping back as well would take two.
+ */
+export const STEP_BACK_HOLD_MS = 250;
+
 interface BackWindow {
-  history: Pick<History, "state" | "pushState" | "back">;
+  history: Pick<History, "state" | "pushState" | "replaceState" | "back">;
   addEventListener: (type: "popstate", listener: (e: { state: unknown }) => void) => void;
 }
 
@@ -35,25 +41,28 @@ export function createBackStack(win: BackWindow) {
   /** history.back() calls of ours whose popstate hasn't come yet. Pushes wait for them. */
   let ownPops = 0;
   const waiting: Overlay[] = [];
-  /**
-   * A closed overlay's step back, held one task: a Back already on its way lands first and takes
-   * the entry itself, and stepping back as well would take two.
-   */
+  /** A closed overlay's step back, held STEP_BACK_HOLD_MS while its entry is the current one. */
   let pending: { id: string; timer: ReturnType<typeof setTimeout> } | null = null;
 
   const flush = () => {
-    if (ownPops === 0 && !pending) for (const overlay of waiting.splice(0)) push(overlay);
+    if (ownPops === 0) for (const overlay of waiting.splice(0)) push(overlay);
   };
 
   function push(overlay: Overlay) {
     overlay.id = `${run}-${++made}`;
-    if (ownPops > 0 || pending) {
+    if (ownPops > 0) {
       overlay.state = "waiting";
       waiting.push(overlay);
       return;
     }
     const state: unknown = win.history.state;
-    win.history.pushState({ ...(isRecord(state) ? state : {}), [KEY]: overlay.id }, "");
+    const marked = { ...(isRecord(state) ? state : {}), [KEY]: overlay.id };
+    // An overlay opening as another closes takes the closed one's entry, with no step back to race.
+    if (pending) {
+      clearTimeout(pending.timer);
+      pending = null;
+      win.history.replaceState(marked, "");
+    } else win.history.pushState(marked, "");
     overlay.state = "pushed";
     stack.push(overlay);
   }
@@ -116,7 +125,7 @@ export function createBackStack(win: BackWindow) {
           pending = null;
           if (markerOf(win.history.state) === id) goBack();
           else flush();
-        }),
+        }, STEP_BACK_HOLD_MS),
       };
     },
   };
