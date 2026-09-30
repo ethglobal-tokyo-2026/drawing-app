@@ -31,6 +31,13 @@ export const stickerBoard = {
       direct: { en: "Direct", ja: "直接" },
       /** Stat board, Gratitude receipt: the row for the Original Artist Gratitude Share, from stickers they drew that others gave on, beside its amount */
       residual: { en: "Residual", ja: "作者として" },
+      /** Stat board, Gratitude receipt: fine print under each row's label, saying which gratitude the row counts */
+      gloss: {
+        /** Stat board, Gratitude receipt: fine print under Direct, the gratitude sent for stickers they gave */
+        direct: { en: "For stickers given", ja: "贈ったシールへの感謝" },
+        /** Stat board, Gratitude receipt: fine print under Residual, the gratitude from stickers they drew that others gave on */
+        residual: { en: "For stickers made, given on", ja: "つくったシールが贈られた分" },
+      },
       /** Your stat board, Gratitude receipt: in place of the rows before you've received any gratitude */
       noneYetOwn: {
         en: "No gratitude yet. It arrives when someone you give a sticker to sends you some for it.",
@@ -101,12 +108,17 @@ export const stickerBoard = {
       caption: { en: "Board address", ja: "ボードアドレス" },
       /** Your stat board: the network's name under the board address paper's caption */
       network: { en: "Ethereum Sepolia", ja: "Ethereum Sepolia" },
+      /** Your stat board: fine print on the board address paper, under its network, saying what the address is for */
+      gloss: { en: "Keeps your stickers", ja: "シールの保管先" },
       /** Your stat board: screen readers' name for the board address paper, a button that holds its QR code up in the address dialog */
       open: { en: "Show your board address as a QR code", ja: "ボードアドレスをQRコードで表示" },
       /** Your stat board: on the board address paper while the address loads */
-      loading: { en: "Getting your board address…", ja: "ボードアドレスを取得しています…" },
+      loading: { en: "Getting your board address…", ja: "ボードアドレスを<wbr/>取得しています…" },
       /** Your stat board: on the board address paper when the address didn't load, over Try again */
-      didntLoad: { en: "Board address didn’t load", ja: "ボードアドレスを読み込めませんでした" },
+      didntLoad: {
+        en: "Board address didn’t load",
+        ja: "ボードアドレスを<wbr/>読み込めませんでした",
+      },
       /** Address dialog for the board address: its heading, under the large QR code */
       title: { en: "Your board address", ja: "あなたのボードアドレス" },
       /** Address dialog for the board address: screen readers' name for the large QR code */
@@ -136,12 +148,14 @@ export const stickerBoard = {
       caption: { en: "Sui address", ja: "Suiアドレス" },
       /** Your stat board: the network's name under the Sui address paper's caption */
       network: { en: "Sui Testnet", ja: "Sui Testnet" },
+      /** Your stat board: fine print on the Sui address paper, under its network, saying what the address is for */
+      gloss: { en: "For reserve tickets", ja: "有償チケット用" },
       /** Your stat board: screen readers' name for the Sui address paper, a button that holds its QR code up in the address dialog */
       open: { en: "Show your Sui address as a QR code", ja: "SuiアドレスをQRコードで表示" },
       /** Your stat board: on the Sui address paper while the address loads */
-      loading: { en: "Getting your Sui address…", ja: "Suiアドレスを取得しています…" },
+      loading: { en: "Getting your Sui address…", ja: "Suiアドレスを<wbr/>取得しています…" },
       /** Your stat board: on the Sui address paper when the address didn't load, over Try again */
-      didntLoad: { en: "Sui address didn’t load", ja: "Suiアドレスを読み込めませんでした" },
+      didntLoad: { en: "Sui address didn’t load", ja: "Suiアドレスを<wbr/>読み込めませんでした" },
       /** Address dialog for the Sui address: its heading, under the large QR code */
       title: { en: "Your Sui address", ja: "あなたのSuiアドレス" },
       /** Address dialog for the Sui address: screen readers' name for the large QR code */
@@ -213,6 +227,11 @@ export const stickerBoard = {
     lead: {
       en: "Prove you’re 18 or older with a World ID verified at an Orb, which World gives only to people 18 or older. Croquis learns nothing else about you.",
       ja: "Orbで認証したWorld IDで、18歳以上であることを証明します。Orbでの認証は18歳以上の人しか受けられません。クロッキーには、それ以外の情報は伝わりません。",
+    },
+    /** Your stat board, Age verification paper, before you've verified: fine print under what verifying does, saying what an Orb is */
+    orb: {
+      en: "An Orb: World’s in-person verification device",
+      ja: "Orb：Worldが対面で本人確認をする装置",
     },
     /** Your stat board, Age verification paper: the button that opens World ID to verify your age */
     verify: { en: "Verify your age", ja: "年齢を確認する" },

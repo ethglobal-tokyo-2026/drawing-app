@@ -18,7 +18,7 @@ export function GateOpening({ label, stillLabel }: { label: string; stillLabel?:
   return (
     <div className="line-gate__opening" role="status">
       <p className="fine">{label}</p>
-      {still && stillLabel && <p className="line-gate__still">{stillLabel}</p>}
+      {still && stillLabel && <p className="line-gate__still keep-phrases">{stillLabel}</p>}
     </div>
   );
 }

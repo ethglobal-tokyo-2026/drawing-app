@@ -8,7 +8,7 @@ export const line = {
     /** LINE sign-in screen, once LINE (LIFF) has taken about six seconds to start: the line that joins the status line to say the wait is long */
     stillOpening: {
       en: "Still opening. It’s taking longer than usual.",
-      ja: "まだひらいています。いつもより時間がかかっています。",
+      ja: "まだひらいています。<wbr/>いつもより<wbr/>時間が<wbr/>かかっています。",
     },
     /** LINE sign-in screen, in a browser outside LINE before LINE Login: the heading */
     title: { en: "Your sticker board", ja: "あなたのシールボード" },

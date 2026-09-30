@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "../i18n/react";
 import { CaretUp, ExploreIcon, ShopIcon, StickerBoardIcon } from "../icons";
 import { readStored, writeStored } from "../ui/deviceStorage";
@@ -23,6 +23,8 @@ const saveGrabbed = () =>
 interface Props {
   /** None while drawing: Draw is the board's key, not a tab. */
   active?: Tab;
+  /** A paid pack's tickets aren't added, or never will be: the Shop tab wears a pip that says so. */
+  unaddedTickets?: "waiting" | "refused";
   /** The tabs tuck away below the screen, behind a grabber, so the screen gets the room. */
   tucked: boolean;
   onChange: (tab: Tab) => void;
@@ -36,8 +38,9 @@ interface Props {
  * outwait, and Escape tucks it. Until it has been used once, the grabber is a label-stock pull tab
  * that says where it goes.
  */
-export function TabBar({ active, tucked, onChange }: Props) {
+export function TabBar({ active, unaddedTickets, tucked, onChange }: Props) {
   const { t } = useTranslation();
+  const shopNoteId = useId();
   const nav = useRef<HTMLElement>(null);
   const grabber = useRef<HTMLButtonElement>(null);
   const grabY = useRef<number | null>(null);
@@ -139,11 +142,23 @@ export function TabBar({ active, tucked, onChange }: Props) {
           className="tab tab-shop"
           data-press
           aria-current={current("shop")}
+          aria-describedby={unaddedTickets ? shopNoteId : undefined}
           onClick={() => onChange("shop")}
         >
-          <ShopIcon size={20} weight={weight("shop")} />
+          <span className="tab-icon">
+            <ShopIcon size={20} weight={weight("shop")} />
+            {unaddedTickets && <i className="tab-pip" aria-hidden />}
+          </span>
           <span>{t(($) => $.app.tabs.shop)}</span>
         </button>
+        {/* Outside the button, so it describes the tab without becoming part of its name. */}
+        {unaddedTickets && (
+          <span className="visually-hidden" id={shopNoteId}>
+            {unaddedTickets === "refused"
+              ? t(($) => $.shop.unadded.refusedTitle)
+              : t(($) => $.shop.unadded.title)}
+          </span>
+        )}
       </nav>
       {tucked && (
         <button

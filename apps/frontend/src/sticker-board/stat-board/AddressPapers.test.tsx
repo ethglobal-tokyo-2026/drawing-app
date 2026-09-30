@@ -73,6 +73,17 @@ describe("AddressPapers", () => {
     },
   );
 
+  it("describes what each address is for, apart from the paper's name", () => {
+    render(BOARD, SUI);
+    const described = (name: "board" | "Sui") => {
+      const id = paper(name)?.getAttribute("aria-describedby");
+      return id ? document.getElementById(id)?.textContent : undefined;
+    };
+    expect(described("board")).toBeTruthy();
+    expect(described("Sui")).toBeTruthy();
+    expect(described("board")).not.toBe(described("Sui"));
+  });
+
   it("has no paper to open while an address is on its way", () => {
     render({ state: "loading" }, { state: "loading" });
     expect(paper("board")).toBeNull();

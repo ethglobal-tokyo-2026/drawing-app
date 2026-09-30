@@ -175,4 +175,11 @@ describe("the Age verification paper", () => {
     expect(host.textContent).toContain("Verified 18+ with World ID");
     expect(button(host)).toBeNull();
   });
+
+  it("says what an Orb is only while there's something to verify", () => {
+    const orbLine = (host: HTMLElement) => host.querySelector(".age-verification-note__orb");
+    expect(orbLine(render())?.textContent).toBeTruthy();
+    unmount();
+    expect(orbLine(render({}, VERIFIED))).toBeNull();
+  });
 });

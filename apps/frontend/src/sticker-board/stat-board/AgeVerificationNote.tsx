@@ -114,6 +114,9 @@ export function AgeVerificationNote() {
             <p className="age-verification-note__lead">
               {t(($) => $.stickerBoard.ageVerification.lead)}
             </p>
+            <p className="fine age-verification-note__orb">
+              {t(($) => $.stickerBoard.ageVerification.orb)}
+            </p>
             <LabelButton
               size="sm"
               tone="ink"

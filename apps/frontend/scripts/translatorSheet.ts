@@ -4,6 +4,7 @@
  * open; and the reading of their sheet back, which `catalogImport` checks and applies.
  */
 import path from "node:path";
+import { BREAK_HINT } from "../src/i18n/catalog";
 import type { SourceSection } from "./catalogSource";
 
 /** One English string. `japanese` is "" where the key falls back to English. */
@@ -48,11 +49,16 @@ const contextOf = (key: string, english: ReadonlyMap<string, string>) => {
 
 const PLACEHOLDER = /\{\{([^{}]*)\}\}|<(\/?)([A-Za-z0-9]+)\s*(\/?)>/g;
 
-/** The `{{variables}}` and `<tags>` in a string, in order, written as `{{name}}`, `<b>`, `</b>` or `<br/>`. */
+/**
+ * The `{{variables}}` and `<tags>` in a string, in order, written as `{{name}}`, `<b>`, `</b>` or
+ * `<br/>`. A break hint isn't one: only Japanese has them.
+ */
 export const placeholders = (text: string): string[] =>
-  [...text.matchAll(PLACEHOLDER)].map(([, variable, close = "", tag = "", empty = ""]) =>
-    variable === undefined ? `<${close}${tag}${empty}>` : `{{${variable.trim()}}}`,
-  );
+  [...text.matchAll(PLACEHOLDER)]
+    .map(([, variable, close = "", tag = "", empty = ""]) =>
+      variable === undefined ? `<${close}${tag}${empty}>` : `{{${variable.trim()}}}`,
+    )
+    .filter((token) => token !== BREAK_HINT);
 
 /** "a", "a and b", "a, b and c". */
 export const list = (items: readonly string[]) =>
@@ -105,7 +111,14 @@ export const sheetRows = (sections: readonly SourceSection[]): SheetRow[] => {
       where,
       english: text,
       japanese,
-      notes: notesFor(key, text, english),
+      notes: [
+        notesFor(key, text, english),
+        japanese.includes(BREAK_HINT)
+          ? `Keep the ${BREAK_HINT} marks at phrase breaks: this short centered line breaks only there.`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" "),
     }));
 };
 

@@ -94,3 +94,16 @@ button {
   line-break: strict;
   word-break: auto-phrase;
 }
+
+/* Full-width kana at a headline's size read airy, so Japanese headlines set proportionally. Fine-print
+   headings keep their even, tracked spacing. */
+:is(h1, h2, h3, .title-label):not(.fine):lang(ja) {
+  font-feature-settings: "palt";
+}
+
+/* A short centered line whose Japanese has break hints (`<wbr/>` in the catalog) breaks only at them,
+   since not every browser can find phrases itself. A phrase wider than the line still breaks. */
+.keep-phrases {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}

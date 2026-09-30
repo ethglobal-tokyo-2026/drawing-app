@@ -97,6 +97,17 @@ describe("StatCork's receipt", () => {
     expect(spoken(host.querySelector(".stat-board__receipt-total b"))).toBe("2,855");
   });
 
+  it("says on each row which gratitude it counts, after its amount", () => {
+    render({ ...NEW_ARTIST, gratitude: { direct: 2460, residual: 395, total: 2855 } });
+    const glosses = [...host.querySelectorAll(".stat-board__receipt-rows > div")].map((row) => {
+      const [, amount, gloss] = [...row.children];
+      expect(amount?.tagName).toBe("DD");
+      return gloss?.textContent;
+    });
+    expect(glosses.every(Boolean)).toBe(true);
+    expect(new Set(glosses).size).toBe(2);
+  });
+
   it("leaves a kind of gratitude at 0 off", () => {
     render({ ...NEW_ARTIST, gratitude: { direct: 80, residual: 0, total: 80 } });
     expect(rows(".stat-board__receipt-rows > div")).toEqual({ Direct: "80" });

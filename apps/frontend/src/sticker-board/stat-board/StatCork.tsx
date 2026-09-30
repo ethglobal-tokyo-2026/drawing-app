@@ -208,6 +208,9 @@ export function StatCork({
                         <div key={kind}>
                           <dt>{t(($) => $.stickerBoard.statBoard.gratitude[kind])}</dt>
                           <dd>{formatCount(gratitude[kind])}</dd>
+                          <dd className="fine stat-board__receipt-gloss">
+                            {t(($) => $.stickerBoard.statBoard.gratitude.gloss[kind])}
+                          </dd>
                         </div>
                       ))}
                     </dl>
