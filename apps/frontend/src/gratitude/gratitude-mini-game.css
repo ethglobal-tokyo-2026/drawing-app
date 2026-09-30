@@ -460,9 +460,6 @@
   letter-spacing: 0.01em;
   color: var(--ink);
 }
-.gr-tick.is-capped {
-  color: var(--graphite);
-} /* the bar was already full: the tap's worth, shown, but nothing added */
 .gr-timer-s {
   flex: none;
   min-width: 3.4em;

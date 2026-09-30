@@ -22,11 +22,6 @@ import { mountMiniGameEngine, type MiniGameEngine } from "./miniGameEngine";
 import { shownGloss, TIER_NAMES } from "./tierNames";
 import "./gratitude-mini-game.css";
 
-/** A finished combo and the sticker its gratitude is for: what the app keeps. */
-export interface GratitudeResult extends ComboRecord {
-  stickerId: string;
-}
-
 interface Props {
   sticker: {
     id: string;
@@ -44,8 +39,6 @@ interface Props {
   /** The effects' dial, 0 to 1. */
   intensity: number;
   showFrameTimes: boolean;
-  /** The combo's result, the moment it ends and before its ending plays. */
-  onEnd?: (result: GratitudeResult) => void;
   onClose: () => void;
 }
 
@@ -103,7 +96,6 @@ export function GratitudeMiniGame({
   giftId,
   intensity,
   showFrameTimes,
-  onEnd,
   onClose,
 }: Props) {
   const { t } = useTranslation();
@@ -134,8 +126,6 @@ export function GratitudeMiniGame({
     api,
     userId,
     giftId,
-    onEnd,
-    stickerId: sticker.id,
     reduced,
     intensity,
     showFrameTimes,
@@ -146,8 +136,6 @@ export function GratitudeMiniGame({
       api,
       userId,
       giftId,
-      onEnd,
-      stickerId: sticker.id,
       reduced,
       intensity,
       showFrameTimes,
@@ -165,14 +153,13 @@ export function GratitudeMiniGame({
       if (giftId) keepGratitudeInPlay(userId, gratitudeFor(idempotencyKey, giftId, combo, replay));
     };
     const record = (combo: ComboRecord, replay: ReplayV1) => {
-      const { api: client, userId, giftId, onEnd: ended, stickerId } = latest.current;
+      const { api: client, userId, giftId } = latest.current;
       if (giftId) {
         const body = gratitudeFor(idempotencyKey, giftId, combo, replay);
         void sendGratitude(client, userId, body).then((sent) => {
           if (sent.state === "refused") setRefused(true);
         });
       }
-      ended?.({ ...combo, stickerId });
     };
 
     const mounted = mountMiniGameEngine(

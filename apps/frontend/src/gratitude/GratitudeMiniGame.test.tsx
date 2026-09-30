@@ -8,7 +8,7 @@ import { MeHolder } from "../api/MeHolder";
 import { gratitudeOf } from "../api/testing";
 import { emptyApi, TEST_ME } from "../api/testing";
 import { i18next } from "../i18n/i18n";
-import { GratitudeMiniGame, type GratitudeResult } from "./GratitudeMiniGame";
+import { GratitudeMiniGame } from "./GratitudeMiniGame";
 import { resendPendingGratitude } from "./gratitudeOutbox";
 import { TIER_NAMES } from "./tierNames";
 
@@ -29,7 +29,6 @@ const sticker = {
   height: 400,
 };
 const giver = { handle: "alice", displayName: "Alice Sato" };
-const onEnd = vi.fn<(result: GratitudeResult) => void>();
 const onClose = vi.fn();
 const recordGratitude = vi.fn<ApiClient["recordGratitude"]>();
 
@@ -45,7 +44,6 @@ const open = (props: Partial<ComponentProps<typeof GratitudeMiniGame>> = {}) =>
             giver={giver}
             intensity={0.7}
             showFrameTimes={false}
-            onEnd={onEnd}
             onClose={onClose}
             {...props}
           />
@@ -113,7 +111,6 @@ afterEach(() => {
   localStorage.clear();
   vi.useRealTimers();
   vi.restoreAllMocks();
-  onEnd.mockReset();
   onClose.mockReset();
   recordGratitude.mockReset();
 });
@@ -126,8 +123,6 @@ describe("GratitudeMiniGame", () => {
     open();
     tapOnce();
     await play(ONE_TAP_ENDS_MS);
-    expect(onEnd).toHaveBeenCalledTimes(1);
-    expect(onEnd).toHaveBeenCalledWith(expect.objectContaining({ stickerId: "s1", hits: 1 }));
     const receipt = document.querySelector(".gr-receipt")?.textContent;
     expect(receipt).toContain("gratitude to @alice");
     expect(receipt).toMatch(/\b1 hit(?!s)/);
@@ -179,7 +174,6 @@ describe("GratitudeMiniGame", () => {
     // One touch, counted: [msSincePrevious, x, y, counted].
     expect(body.replay.hits).toHaveLength(4);
     expect(body.replay.hits[3]).toBe(1);
-    expect(onEnd).toHaveBeenCalledTimes(1);
   });
 
   it("keeps a combo on the device as it plays, so a page torn down mid-combo still sends it", async () => {
@@ -220,10 +214,10 @@ describe("GratitudeMiniGame", () => {
     open();
     tapOnce();
     await play(ONE_TAP_ENDS_MS);
-    const total = onEnd.mock.calls[0]?.[0].total ?? 0;
-    expect(total).toBeGreaterThan(0);
+    const total = document.querySelector(".gr-rc-figure")?.textContent ?? "";
+    expect(total).toMatch(/^[\d,]+$/);
     expect(document.querySelector(".gr-sr")?.textContent).toBe(
-      `Sent ${total.toLocaleString("en-US")} gratitude to @alice.`,
+      `Sent ${total} gratitude to @alice.`,
     );
   });
 
@@ -245,8 +239,6 @@ describe("GratitudeMiniGame", () => {
     await play(100);
     tapOnce();
     await play(8000);
-    const { hits } = onEnd.mock.calls[0]?.[0] ?? { hits: 0 };
-    expect(hits).toBe(3);
     const sub = document.querySelector(".gr-rc-sub")?.textContent ?? "";
     expect(sub).toContain("3 hits");
     expect(sub).not.toMatch(/\d\.\ds|\btap\b/);
@@ -290,7 +282,6 @@ describe("GratitudeMiniGame", () => {
     open({ giftId: "g1" });
     act(() => document.querySelector<HTMLButtonElement>(".gr-close")?.click());
     expect(onClose).toHaveBeenCalledTimes(1);
-    expect(onEnd).not.toHaveBeenCalled();
     expect(recordGratitude).not.toHaveBeenCalled();
   });
 });
@@ -300,10 +291,10 @@ describe("GratitudeMiniGame in Japanese", () => {
 
   it("names the combo's peak tier on the receipt with no gloss", async () => {
     await i18next.changeLanguage("ja");
-    open();
+    open({ giftId: "g1" });
     tapOnce();
     await play(ONE_TAP_ENDS_MS);
-    const peakTier = onEnd.mock.calls[0]?.[0].peakTier ?? 0;
+    const peakTier = recordGratitude.mock.calls[0]?.[0].peakTier ?? 0;
     const sub = document.querySelector(".gr-rc-sub")?.textContent ?? "";
     expect(sub.split("\n").at(-1)).toBe(TIER_NAMES[peakTier].jp);
   });
