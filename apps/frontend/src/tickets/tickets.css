@@ -11,7 +11,7 @@
 .out-of-tickets__scrim {
   position: absolute;
   inset: 0;
-  background: rgba(28, 24, 36, 0.46);
+  background: var(--scrim);
   animation: out-of-tickets-fade 320ms var(--ease-out) both;
 }
 
