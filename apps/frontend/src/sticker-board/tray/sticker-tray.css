@@ -230,6 +230,17 @@
     5px repeat-x;
 }
 
+/* The empty tray's one blank sheet says what it's for, in fine print like its dates. */
+.tray__empty {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 96px;
+  margin: 0;
+  text-align: center;
+  text-wrap: balance;
+}
+
 /* The sheet's bottom margin with its dates and number printed on it: all of a sheet that shows
    under the one in front. */
 .tray__foot {
@@ -259,6 +270,13 @@
 
 .tray__sheet:not(.is-top) .tray__foot {
   cursor: pointer;
+}
+
+/* As the mouth relaxes to a crack the stack's foot fades, so the crack shows no cut-off dates, NEW or +N. */
+.tray__foot .fine,
+.tray__new,
+.tray__depth {
+  opacity: var(--foot, 1);
 }
 
 /* The soft shadow the sheet in front casts onto this edge. */

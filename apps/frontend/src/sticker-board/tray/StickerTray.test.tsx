@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act, createRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { forgetBoardComplete, markBoardComplete, QUIET_MS } from "../boardComplete";
 import type { BoardStickerView } from "../boardSticker";
 import { StickerTray, type StickerTrayHandle } from "./StickerTray";
@@ -15,6 +15,8 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 let host: HTMLDivElement;
 let board: HTMLDivElement;
+/** How often the board's place on screen has been read. */
+let boardReads: MockInstance<() => DOMRect>;
 let root: Root;
 const tray = createRef<StickerTrayHandle>();
 
@@ -171,7 +173,9 @@ beforeEach(() => {
   vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(657);
   host = document.createElement("div");
   board = document.createElement("div");
-  vi.spyOn(board, "getBoundingClientRect").mockReturnValue(new DOMRect(0, 0, 390, 657));
+  boardReads = vi
+    .spyOn(board, "getBoundingClientRect")
+    .mockReturnValue(new DOMRect(0, 0, 390, 657));
   document.body.append(host, board);
   root = createRoot(host);
 });
@@ -344,6 +348,57 @@ describe("StickerTray", () => {
     act(() => board.querySelector<HTMLElement>('.tray__tab[data-filter="gifts"]')?.click());
     await motion.finishAll();
     expect(frontSheet()?.getAttribute("data-f")).toBe(newest);
+  });
+
+  it("says on its one blank sheet what an empty tray is for, until a sticker arrives", async () => {
+    render([]);
+    expect(board.querySelector(".tray__empty")?.textContent).toBeTruthy();
+    render([sticker("a", 1, false)]);
+    // Shut, the sheets catch up as the tray shows.
+    await openTray();
+    expect(board.querySelector(".tray__empty")).toBeNull();
+  });
+
+  it("counts a visit to the tray when it's opened, not when the board shows", async () => {
+    const visits = () => localStorage.getItem("draw.tray.visits");
+    localStorage.clear();
+    render(manyStickers(8));
+    expect(visits()).toBeNull();
+    await openAndShut();
+    await openAndShut();
+    // Once for each time the board shows the tray opened, however often it opens meanwhile.
+    expect(visits()).toBe("1");
+  });
+
+  it("fades the stack's foot while a sheet out over the board leaves the mouth a crack", async () => {
+    endAnimationsAtOnce();
+    render(manyStickers(30));
+    await openTray();
+    const foot = () => Number.parseFloat(stackEl()?.style.getPropertyValue("--foot") || "1");
+    expect(foot()).toBe(1);
+    await pullOut();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 700));
+    });
+    expect(foot()).toBeLessThan(1);
+  });
+
+  it("reads the board's place once for a gesture, however many moves it makes", async () => {
+    endAnimationsAtOnce();
+    const reads = () => boardReads.mock.calls.length;
+    const peelWith = async (moves: number) => {
+      render(manyStickers(30));
+      await openTray();
+      const slot = frontSheet()?.querySelector<HTMLElement>('.tray__slot[data-state="here"]');
+      const before = reads();
+      pointer(slot ?? null, "pointerdown", 100, 200);
+      for (let i = 1; i <= moves; i++) pointer(stackEl(), "pointermove", 100 - i * 12, 200);
+      pointer(stackEl(), "pointerup", 100 - moves * 12, 200);
+      await act(async () => {});
+      return reads() - before;
+    };
+    const few = await peelWith(5);
+    expect(await peelWith(30)).toBe(few);
   });
 
   describe("tells the board what it couldn't do", () => {

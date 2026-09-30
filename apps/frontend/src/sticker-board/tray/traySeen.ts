@@ -20,14 +20,20 @@ function write(key: string, value: string) {
   }
 }
 
-/** Counts a visit to the tray, and returns how many there have been, this one included. */
-export function countVisit(): number {
+/** How many times the tray has been opened on this device: 0 when there's no record or it's unreadable. */
+export function visitsSoFar(): number {
   const raw = read(VISITS_KEY);
-  let visits = Number(raw ?? 0);
+  const visits = Number(raw ?? 0);
   if (!Number.isInteger(visits) || visits < 0) {
     console.error("Tray visits are unreadable, so they're counted afresh:", raw);
-    visits = 0;
+    return 0;
   }
-  write(VISITS_KEY, String(visits + 1));
-  return visits + 1;
+  return visits;
+}
+
+/** Counts a visit to the tray, and returns how many there have been, this one included. */
+export function countVisit(): number {
+  const visits = visitsSoFar() + 1;
+  write(VISITS_KEY, String(visits));
+  return visits;
 }

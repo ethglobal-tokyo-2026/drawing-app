@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { countVisit } from "./traySeen";
+import { countVisit, visitsSoFar } from "./traySeen";
 
 afterEach(() => {
   localStorage.clear();
@@ -10,6 +10,12 @@ afterEach(() => {
 describe("traySeen", () => {
   it("counts visits across a reload", () => {
     expect([countVisit(), countVisit()]).toEqual([1, 2]);
+  });
+
+  it("reads the visits so far without counting one", () => {
+    expect(visitsSoFar()).toBe(0);
+    countVisit();
+    expect([visitsSoFar(), visitsSoFar()]).toEqual([1, 1]);
   });
 
   it("counts afresh from a damaged record, and says so", () => {

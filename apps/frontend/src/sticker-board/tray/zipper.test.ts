@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createZipper, releaseOpens, type Zipper } from "./zipper";
+import { createZipper, RELEASE, releaseOpens, type Zipper } from "./zipper";
 
 let host: HTMLDivElement;
 let zip: Zipper;
@@ -144,7 +144,6 @@ describe("the Zipper", () => {
 
   it("stops everything when destroyed and ignores later calls", async () => {
     void zip.open();
-    zip.shake();
     await vi.advanceTimersByTimeAsync(50);
     expect(vi.getTimerCount()).toBeGreaterThan(0);
 
@@ -155,10 +154,7 @@ describe("the Zipper", () => {
     const progress = zip.progress;
     expect(await zip.close()).toBe(true);
     zip.hint();
-    zip.shake();
-    zip.nudge(8, 8);
     zip.relax(0.2);
-    zip.set({ progress: 0.5 });
     await vi.advanceTimersByTimeAsync(SETTLE_MS);
     expect(vi.getTimerCount()).toBe(0);
     expect(zip.progress).toBe(progress);
@@ -167,23 +163,23 @@ describe("the Zipper", () => {
 });
 
 describe("a release", () => {
-  const rule = { threshold: 0.25, flick: 1.6 };
-  const opens = (progress: number, velocity: number, wasOpen: boolean) =>
-    releaseOpens(progress, velocity, wasOpen, rule);
+  const past = RELEASE.threshold + 0.05;
+  const short = RELEASE.threshold - 0.05;
+  const flung = RELEASE.flick + 0.4;
 
   it("from shut, runs open past the threshold or on a flick down, and springs back otherwise", () => {
-    expect(opens(0.3, 0, false)).toBe(true);
-    expect(opens(0.2, 0, false)).toBe(false);
-    expect(opens(0.05, 2, false)).toBe(true);
+    expect(releaseOpens(past, 0, false)).toBe(true);
+    expect(releaseOpens(short, 0, false)).toBe(false);
+    expect(releaseOpens(0.05, flung, false)).toBe(true);
     // Pulled well past the threshold, then flung back up.
-    expect(opens(0.6, -2, false)).toBe(false);
+    expect(releaseOpens(0.6, -flung, false)).toBe(false);
   });
 
   it("from open, runs shut past the threshold or on a flick up, and springs back otherwise", () => {
-    expect(opens(0.7, 0, true)).toBe(false);
-    expect(opens(0.8, 0, true)).toBe(true);
-    expect(opens(0.95, -2, true)).toBe(false);
+    expect(releaseOpens(1 - past, 0, true)).toBe(false);
+    expect(releaseOpens(1 - short, 0, true)).toBe(true);
+    expect(releaseOpens(0.95, -flung, true)).toBe(false);
     // Pushed well past the threshold, then flung back down.
-    expect(opens(0.4, 2, true)).toBe(true);
+    expect(releaseOpens(0.4, flung, true)).toBe(true);
   });
 });
