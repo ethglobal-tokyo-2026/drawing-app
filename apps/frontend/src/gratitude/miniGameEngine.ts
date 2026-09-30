@@ -20,7 +20,7 @@ import {
 import { createComboHud } from "./comboHud";
 import { EASE_OUT, EASE_SPRING, clamp } from "../ui/easing";
 import { createFrameTimeReadout } from "./frameTimeReadout";
-import { FEEL_CONFIG, GAME_CONFIG } from "./gameConfig";
+import { FEEL_CONFIG, GAME_CONFIG, type GameConfig } from "./gameConfig";
 import {
   flyHeartToGiver,
   landHeart,
@@ -134,6 +134,8 @@ export interface StageLayout {
 
 /** A recorded combo, played on a replay's stage through the engine's own handlers. */
 export interface ReplayEngineOptions {
+  /** The rules the combo was played under. */
+  config: GameConfig;
   /** The combo's own: its effects' seed and intensity. */
   seed: number;
   intensity: number;
@@ -181,6 +183,7 @@ interface ReplayInput {
 }
 
 interface EngineOptions {
+  config: GameConfig;
   /** As printed: "@alice". */
   giverHandle: string;
   intensity: number;
@@ -247,6 +250,7 @@ export function mountMiniGameEngine(
   const { onRecord, onInPlay, onStarted, frames, ...rest } = options;
   return mountEngine(parts, {
     ...rest,
+    config: GAME_CONFIG,
     frames: frames ?? browserFrames,
     speed: 1,
     layout: LIVE_LAYOUT,
@@ -284,7 +288,7 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
   // Per-frame jitter: the HUD's shiver, the heart's tremor and kicks, the physics. Frames draw on it.
   const random = seededRandom(seed);
   const words = seededRandom(seed ^ EFFECT_STREAMS.words);
-  const combo = createGratitudeCombo(GAME_CONFIG);
+  const combo = createGratitudeCombo(options.config);
   const { intensity } = options;
   const recorder = liveInput ? createReplayRecorder({ seed, intensity, ...layout.fallback }) : null;
   let reduced = options.reduced;
@@ -338,6 +342,7 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
     reduced: () => reduced,
     random,
     rate: speed,
+    fullBar: fullBarSeconds(options.config),
     hits: liveInput !== null,
   });
   const background = createTierBackground(ground, page, () => reduced, speed);
@@ -1336,7 +1341,7 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
           total: 0,
           hits: 0,
           multiplier: 1,
-          secondsLeft: fullBarSeconds(),
+          secondsLeft: fullBarSeconds(options.config),
           barFill: 1,
           running: false,
         });

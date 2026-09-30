@@ -2,7 +2,7 @@ import type { Gratitude, ReplayV1 } from "@drawing-app/api/client";
 import { browserFrames, type FrameSource } from "../../ui/frameSource";
 import type { ComboRecord } from "../combo";
 import { createFrameTimeReadout } from "../frameTimeReadout";
-import { GAME_CONFIG } from "../gameConfig";
+import { GAME_CONFIG, PLAYED_CONFIGS } from "../gameConfig";
 import { readMiniGameDemoSettings } from "../miniGameDemoSettings";
 import { LIVE_STAGE_WIDTH, mountReplayEngine, type StageLayout } from "../miniGameEngine";
 import { heartRest, LIVE_FRAME } from "../stageLayout";
@@ -70,9 +70,11 @@ export function mountGratitudeReplay(
   createFeed: typeof createReplayFeed = createReplayFeed,
 ): GratitudeReplayHandle {
   const { replay, gratitude } = options;
-  if (gratitude.gameConfigVersion !== GAME_CONFIG.version) {
+  // The combo replays under the rules it was played under, when the app still has them.
+  const played = PLAYED_CONFIGS.find(({ version }) => version === gratitude.gameConfigVersion);
+  if (!played) {
     console.warn(
-      `Gift ${gratitude.giftId}'s combo was played under game config ${gratitude.gameConfigVersion}; it replays under ${GAME_CONFIG.version}`,
+      `Gift ${gratitude.giftId}'s combo was played under game config ${gratitude.gameConfigVersion}, which this app no longer has; it replays under ${GAME_CONFIG.version} and ends on its stored figures`,
     );
   }
   const root = part(host, "gr");
@@ -115,6 +117,7 @@ export function mountGratitudeReplay(
   const engine = mountReplayEngine(
     { root, page, ground, hud, stage },
     {
+      config: played ?? GAME_CONFIG,
       seed: replay.seed,
       intensity: replay.intensity,
       reduced: options.reduced,

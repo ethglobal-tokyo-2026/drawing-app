@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { GAME_CONFIG } from "../gameConfig";
 import { mountReplayEngine, type ReplayEngine, type ReplayEngineOptions } from "../miniGameEngine";
 import { createReplayRecorder } from "../replayRecorder";
 import type { FeedInput, ReplayFeed } from "./replayFeed";
@@ -76,6 +77,7 @@ function replay(
   engine = mountReplayEngine(
     { root: host, page: part(), ground: part(), hud: part(), stage: part() },
     {
+      config: GAME_CONFIG,
       seed: 7,
       intensity: 0.7,
       reduced: false,

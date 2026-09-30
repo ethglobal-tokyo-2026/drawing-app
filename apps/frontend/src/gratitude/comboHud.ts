@@ -1,6 +1,5 @@
 import { formatCount } from "../i18n/format";
 import { i18next } from "../i18n/i18n";
-import { fullBarSeconds } from "./combo";
 import { EASE_OUT, EASE_PEEL, clamp } from "../ui/easing";
 import { HEART_SVG } from "./heartArt";
 import { animate } from "./webAnimations";
@@ -91,14 +90,21 @@ function recycle<E extends HTMLElement>(pool: Pooled<E>[], cap: number, make: ()
 
 /**
  * The bar that only goes down, the amount counting up under it, the hit counter and the multiplier
- * sticker. `rate`: how fast its animations play, a replay's clock's speed. Without `hits`, as on a
- * replay's small stage, there's no hit counter.
+ * sticker. `fullBar`: the seconds a full bar lasts, which the ticks are shares of. `rate`: how fast
+ * its animations play, a replay's clock's speed. Without `hits`, as on a replay's small stage,
+ * there's no hit counter.
  */
 export function createComboHud(
   hud: HTMLElement,
-  options: { reduced: () => boolean; random: () => number; rate?: number; hits?: boolean },
+  options: {
+    fullBar: number;
+    reduced: () => boolean;
+    random: () => number;
+    rate?: number;
+    hits?: boolean;
+  },
 ): ComboHud {
-  const { reduced, random, rate = 1, hits: showsHits = false } = options;
+  const { fullBar, reduced, random, rate = 1, hits: showsHits = false } = options;
   const play = (
     item: Pooled<HTMLElement>,
     frames: Keyframe[],
@@ -107,7 +113,6 @@ export function createComboHud(
     item.animation?.cancel();
     item.animation = animate(item.el, frames, timing, rate);
   };
-  const fullBar = fullBarSeconds();
 
   const hot = element("div", "gr-timer-hot");
   const fill = element("div", "gr-timer-fill", hot);
