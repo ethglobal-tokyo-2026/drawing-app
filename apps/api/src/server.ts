@@ -14,7 +14,7 @@ import {
 import { startMidnightBatches } from "./chatMenu/midnight.ts";
 import type { AppDeps, EnsDeps } from "./deps.ts";
 import { logInfo } from "./diagnostics.ts";
-import { createNamingQueue } from "./ens/naming.ts";
+import { createNamingQueue, startNamingCatchUp } from "./ens/naming.ts";
 import { startExpiredGiftReturns } from "./gifts/expiry.ts";
 import { giverNoticeFor, startGiverNoticeSweeps } from "./gifts/giverNotice.ts";
 import { chooseLineVerifier } from "./services/devSignIn.ts";
@@ -84,7 +84,7 @@ const images = createDiskImageStore(env.IMAGE_DIR, env.CDN_BASE_URL);
 const chain = (() => {
   if (env.STICKER_CHAIN_MODE === "mock") {
     console.warn("Sticker chain mode is mock; NFTs will not be minted or transferred");
-    return mockChain;
+    return { deps: mockChain, readContracts: null };
   }
   const live = z
     .object({
@@ -118,11 +118,12 @@ const chain = (() => {
     privyAppId: live.PRIVY_APP_ID,
     privyAppSecret: live.PRIVY_APP_SECRET,
   });
-  const { mint, giftChain, nameWriter } = createStickerChain({
+  const { mint, giftChain, nameWriter, readContracts } = createStickerChain({
     rpcUrl: live.ETHEREUM_SEPOLIA_RPC_URL,
     stickerContract: live.STICKER_NFT_ADDRESS,
     escrowContract: live.STICKER_GIFT_ESCROW_ADDRESS,
     namesContract: live.CROQUIS_NAMES_ADDRESS,
+    resolverContract: live.CROQUIS_RESOLVER_ADDRESS,
     sealerPrivateKey: live.STICKER_SEALER_PRIVATE_KEY,
     smartWallets,
     images,
@@ -136,7 +137,7 @@ const chain = (() => {
     writer: nameWriter,
     naming: createNamingQueue(),
   };
-  return { mint, giftChain, smartWallets, ens };
+  return { deps: { mint, giftChain, smartWallets, ens }, readContracts };
 })();
 
 const worldId = (() => {
@@ -179,7 +180,7 @@ const deps: AppDeps = {
   ids: { uuid: () => randomUUID() },
   line: chooseLineVerifier(env.DEV_SIGN_IN, createLineVerifier(env.LINE_CHANNEL_ID)),
   images,
-  ...chain,
+  ...chain.deps,
   ticketPayments: createJpycPayments({
     network: env.SUI_NETWORK,
     coinType: env.JPYC_COIN_TYPE,
@@ -206,6 +207,11 @@ if (messaging.line) startGiverNoticeSweeps(giverNotice);
 // Gifts the escrow still holds past their expiry go back to their givers: now, for what downtime
 // left, then just after each midnight, Tokyo time.
 startExpiredGiftReturns(deps);
+
+// The contract check, which turns naming off while the configured contracts can't name, then
+// naming for everyone a failed or skipped job left unnamed: now, then just after each midnight,
+// Tokyo time.
+if (chain.readContracts) startNamingCatchUp(deps, chain.readContracts);
 
 // Only a proxy on this machine reaches it: Vite's in development, HAProxy's on the box.
 serve(

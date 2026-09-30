@@ -3,6 +3,8 @@ import { bytes32 } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import type {
   Clock,
+  ConfiguredContracts,
+  ContractReads,
   EnsDeps,
   EscrowGift,
   GiftChain,
@@ -22,7 +24,7 @@ import type {
 import { createDevLineVerifier } from "../services/devSignIn.ts";
 import { stickerImageUrls } from "../services/imageStore.ts";
 import type { StickerPngKind } from "../shapes.ts";
-import { isHex, keccak256, toBytes, type Hex } from "viem";
+import { getAddress, isHex, keccak256, toBytes, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { createNamingQueue } from "../ens/naming.ts";
@@ -241,6 +243,28 @@ export function fakeNameWriter({ failAt }: { failAt?: string } = {}) {
 
 /** The gateway signer's key in tests. */
 export const TEST_GATEWAY_KEY: Hex = `0x${"6a".repeat(32)}`;
+
+/** The contracts a test server is configured with, and the relayer that sends from them. */
+export const TEST_CONTRACTS: ConfiguredContracts = {
+  relayer: getAddress(fakeAddress("relayer")),
+  stickers: getAddress(fakeAddress("StickerNFT")),
+  escrow: getAddress(fakeAddress("StickerGiftEscrow")),
+  names: getAddress(fakeAddress("CroquisNames")),
+  resolver: getAddress(fakeAddress("CroquisResolver")),
+};
+
+/** What TEST_CONTRACTS answer about each other when they were deployed together, but for `change`. */
+export const fakeContractReads = (
+  change: Partial<Omit<ContractReads, "configured">> = {},
+): ContractReads => ({
+  configured: TEST_CONTRACTS,
+  relayerIsNamer: true,
+  namesStickers: TEST_CONTRACTS.stickers,
+  resolverStickers: TEST_CONTRACTS.stickers,
+  escrowSticker: TEST_CONTRACTS.stickers,
+  escrowNames: TEST_CONTRACTS.names,
+  ...change,
+});
 
 /** The names under croquis.eth with a fixed gateway signer, writing through `writer`. */
 export const fakeEns = (writer: NameWriter | null = null): EnsDeps => ({

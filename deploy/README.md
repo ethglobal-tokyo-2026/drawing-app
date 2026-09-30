@@ -47,6 +47,8 @@ Deploys the names under croquis.eth and `StickerGiftEscrow` to Ethereum Sepolia 
 
 Copy the printed `STICKER_NFT_ADDRESS`, `STICKER_GIFT_ESCROW_ADDRESS`, `CROQUIS_NAMES_ADDRESS` and `CROQUIS_RESOLVER_ADDRESS` into `deploy/.env`, then run `./deploy/deploy.sh`.
 
+At boot, and just after each midnight, Tokyo time, the API checks that these agree: the sealer holds `NAMER_ROLE` on `CroquisNames`; `CroquisNames`, `CroquisResolver` and the escrow read the configured `StickerNFT`; the escrow's `names()` is the configured `CroquisNames`. The server log's `chain.contracts.checked` shows each result, and `chain.contracts.mismatch` names each mismatch with its addresses. While the sealer lacks `NAMER_ROLE` or a `STICKERS()` differs, naming is off; the check that finds them agreeing turns it back on and names everyone still unnamed.
+
 ## LINE: chat menus and greeting
 
 - `./deploy/line/create-returning-menu.sh en|ja plain|3|2|1|reserve|none`, or `default [--set-default]`, makes one chat menu in LINE and records its ID in `deploy/line/menus.json`. Commit that and deploy the API, which links each person's menu from it. `--print` prints the menu without calling LINE. It needs `jq`, and the Messaging API channel's ID and secret in `deploy/.env`.
