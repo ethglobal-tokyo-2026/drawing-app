@@ -41,6 +41,12 @@
   background: var(--liner);
 }
 
+/* Holds a screen's inert state and its focus bookkeeping without a box of its own, so the screen
+   inside still fills the .screen. */
+.screen-layer {
+  display: contents;
+}
+
 /* With the tabs tucked away, the screen runs down to the grabber's strip above the home indicator:
    the grabber's 44px touch band starts 20px up and reaches over the screen's own foot margin, never
    the sheet. The strip's height is one value, which the scrim over it reads too. */

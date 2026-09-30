@@ -17,14 +17,13 @@ interface Props {
   /** Draw's box on the board, which the toolbar keeps clear of so a press meant for it can't land on Draw. */
   clearOf: Box | null;
   /**
-   * Give, where LINE's picker can send the sticker. A gift left packed (the app closed mid-send)
-   * doesn't block it: packing again sets the stale one aside.
+   * Give, where LINE's picker can send the sticker; without it there's no Give. A gift left packed
+   * (the app closed mid-send) doesn't block it: packing again sets the stale one aside.
    */
-  give: boolean;
-  onGive: () => void;
+  onGive?: () => void;
   onView: () => void;
-  /** Back into its used sticker silhouette in the sticker tray. */
-  onRemove: () => void;
+  /** Back into its used sticker silhouette in the sticker tray; someone else's board has none. */
+  onRemove?: () => void;
   /** Escape hands focus back to the sticker. */
   onEscape: () => void;
   reduced: boolean;
@@ -36,14 +35,13 @@ interface Props {
 let lastHidden = -Infinity;
 const HANDOFF_MS = 50;
 
-/** Give, View and Remove for the selected sticker, beside it on the board. */
+/** Give, View and Remove for the selected sticker, beside it on the board; a read-only board has View. */
 export function StickerToolbar({
   label,
   sticker,
   board,
   knobBelow,
   clearOf,
-  give,
   onGive,
   onView,
   onRemove,
@@ -102,7 +100,7 @@ export function StickerToolbar({
         </div>
       )}
       <div className="sticker-toolbar__acts">
-        {give && (
+        {onGive && (
           <LabelButton tone="aqua" size="sm" icon={<GiveIcon size={18} />} onClick={onGive}>
             {t(($) => $.stickerBoard.toolbar.give)}
           </LabelButton>
@@ -110,9 +108,11 @@ export function StickerToolbar({
         <LabelButton size="sm" icon={<ViewIcon size={18} />} onClick={onView}>
           {t(($) => $.stickerBoard.toolbar.view)}
         </LabelButton>
-        <LabelButton size="sm" icon={<RemoveIcon size={18} />} onClick={onRemove}>
-          {t(($) => $.stickerBoard.toolbar.remove)}
-        </LabelButton>
+        {onRemove && (
+          <LabelButton size="sm" icon={<RemoveIcon size={18} />} onClick={onRemove}>
+            {t(($) => $.stickerBoard.toolbar.remove)}
+          </LabelButton>
+        )}
       </div>
     </div>
   );

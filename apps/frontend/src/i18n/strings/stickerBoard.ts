@@ -576,9 +576,14 @@ export const stickerBoard = {
       ja: "記録を読み込めませんでした：{{reason}}",
     },
     /** Someone else's sticker board: read out by screen readers when keyboard focus lands on a sticker */
-    hint: {
-      en: "Enter opens its menu, where you can view it",
-      ja: "Enterキーでメニューをひらきます。シールを見ることができます。",
+    focusHint: {
+      en: "Enter selects it. Arrow keys go to the other stickers.",
+      ja: "Enterキーで選択します。矢印キーでほかのシールに移動します。",
+    },
+    /** Someone else's sticker board: read out by screen readers for the selected sticker, whose toolbar holds View */
+    selectedHint: {
+      en: "Selected. Tab reaches its toolbar, where you can view it. Escape lets go of it.",
+      ja: "選択中です。Tabキーでツールバーに移動すると、シールを見ることができます。Escapeキーで選択を解除します。",
     },
     /** Someone else's empty sticker board: the note in the dashed spot */
     blank: {

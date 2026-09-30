@@ -31,6 +31,23 @@ export interface Box {
   bottom: number;
 }
 
+/** An element's box on the board, which is its offset parent. */
+export const boxOf = (el: HTMLElement): Box => ({
+  left: el.offsetLeft,
+  top: el.offsetTop,
+  right: el.offsetLeft + el.offsetWidth,
+  bottom: el.offsetTop + el.offsetHeight,
+});
+
+/** The box as it was when it hasn't moved, so measuring again doesn't re-render the board. */
+export const kept = (was: Box | null, now: Box) =>
+  was?.left === now.left &&
+  was.top === now.top &&
+  was.right === now.right &&
+  was.bottom === now.bottom
+    ? was
+    : now;
+
 /** The header band: your name, and the sticker tray's top. */
 const HEADER = 86;
 const INSET = 12;

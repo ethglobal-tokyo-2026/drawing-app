@@ -58,8 +58,10 @@ import {
 import { PlacedSticker } from "./PlacedSticker";
 import {
   FIRST_SPOT,
+  boxOf,
   fieldOf,
   freeSpot,
+  kept,
   knobHidden,
   nextZ,
   sizeOf,
@@ -147,23 +149,6 @@ function curledToday(stickers: readonly BoardSticker[], now: Date) {
 }
 
 const round4 = (v: number) => Number(v.toFixed(4));
-
-/** An element's box on the board, which is its offset parent. */
-const boxOf = (el: HTMLElement): Box => ({
-  left: el.offsetLeft,
-  top: el.offsetTop,
-  right: el.offsetLeft + el.offsetWidth,
-  bottom: el.offsetTop + el.offsetHeight,
-});
-
-/** The box as it was when it hasn't moved, so measuring again doesn't re-render the board. */
-const kept = (was: Box | null, now: Box) =>
-  was?.left === now.left &&
-  was.top === now.top &&
-  was.right === now.right &&
-  was.bottom === now.bottom
-    ? was
-    : now;
 
 interface LoadedBoard {
   owner: PersonView;
@@ -750,8 +735,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
                   board={size}
                   knobBelow={knobBelow}
                   clearOf={draw}
-                  give={giftSender !== null}
-                  onGive={() => setGiving(s)}
+                  {...(giftSender && { onGive: () => setGiving(s) })}
                   onView={() => openYours(s.id)}
                   onRemove={() => stow(s.id)}
                   {...(byOther(s) && { artist: s.artist })}
