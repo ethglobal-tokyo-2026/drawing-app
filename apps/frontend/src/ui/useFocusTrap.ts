@@ -6,6 +6,8 @@ interface Options {
   onEscape?: () => void;
   /** Where focus goes when it deactivates, when that isn't back where it was. */
   returnFocus?: () => HTMLElement | null;
+  /** The dialog's view: a new one puts focus on its first control, since the old view's may be gone. */
+  refocus?: unknown;
 }
 
 /** The active traps, oldest first. Only the newest hears keys: its dialog is the one on top. */
@@ -15,15 +17,15 @@ const traps: object[] = [];
 export const focusTrapped = () => traps.length > 0;
 
 /**
- * Keeps keyboard focus inside a dialog while it's active: focuses its first control, wraps Tab and
- * Shift+Tab at the ends, calls `onEscape` on Escape, and gives focus back to where it was (or to
- * `returnFocus`'s element) when it deactivates. It hears keys wherever focus is: focus left on the
+ * Keeps keyboard focus inside a dialog while it's active: focuses its first control (again whenever
+ * `refocus` changes), wraps Tab and Shift+Tab at the ends, calls `onEscape` on Escape, and gives
+ * focus back to where it was (or to `returnFocus`'s element) when it deactivates. It hears keys wherever focus is: focus left on the
  * page, as when the control holding it goes, comes back to the dialog before the key is handled.
  * Give the container `tabIndex={-1}` so it can hold focus when it has no controls.
  */
 export function useFocusTrap(
   ref: RefObject<HTMLElement | null>,
-  { active = true, onEscape, returnFocus }: Options = {},
+  { active = true, onEscape, returnFocus, refocus }: Options = {},
 ) {
   const latest = useRef({ onEscape, returnFocus });
   useLayoutEffect(() => {
@@ -34,7 +36,6 @@ export function useFocusTrap(
     const root = ref.current;
     if (!active || !root) return;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    (tabStops(root)[0] ?? root).focus();
     const trap = {};
     traps.push(trap);
 
@@ -57,4 +58,10 @@ export function useFocusTrap(
       (latest.current.returnFocus?.() ?? previous)?.focus({ preventScroll: true });
     };
   }, [active, ref]);
+
+  // After the effect above, so it has noted where focus was before the dialog took it.
+  useEffect(() => {
+    const root = ref.current;
+    if (active && root) (tabStops(root)[0] ?? root).focus();
+  }, [active, ref, refocus]);
 }

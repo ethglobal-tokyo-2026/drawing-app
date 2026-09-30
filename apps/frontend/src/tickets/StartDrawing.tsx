@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { useTranslation } from "../i18n/react";
 import { BuyTicketsIcon, DrawIcon } from "../icons";
 import { Key } from "../ui/Key";
@@ -58,11 +58,7 @@ export function StartDrawing({
   const id = useId();
   // Read once, as it comes up: it decides only how the card rises.
   const [follows] = useState(followsSealedCard);
-  useFocusTrap(card, { active: !leaving, onEscape: onBoard });
-
-  useEffect(() => {
-    card.current?.querySelector<HTMLElement>("button")?.focus();
-  }, [reserveAsk]);
+  useFocusTrap(card, { active: !leaving, onEscape: onBoard, refocus: reserveAsk });
 
   // The reserve ask's count is on the ticket's badge, so screen readers hear it with the line.
   const described = [`${id}-line`, reserveAsk && `${id}-held`, note && `${id}-note`];

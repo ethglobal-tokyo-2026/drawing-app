@@ -287,15 +287,9 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
     onEscape: () => {
       if (step !== "paying" && !adding) onClose();
     },
+    // A refusal turns the tickets-not-added card over without a new step.
+    refocus: unadded?.refused ? "refused" : step,
   });
-
-  // Each view's first control takes focus, so focus never drops out of the card when its controls
-  // change, as when a refusal turns the tickets-not-added card over.
-  const refused = unadded?.refused ?? false;
-  useEffect(() => {
-    const first = card.current?.querySelector<HTMLElement>("button:not(:disabled)");
-    (first ?? card.current)?.focus();
-  }, [step, refused]);
 
   const close = (
     <QuietLink

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from "react";
+import { useId, useRef } from "react";
 import type { ApiError } from "../api/apiClient";
 import { errorReason } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
@@ -21,12 +21,7 @@ export function TicketsNotLoaded({ error, onRetry, onBoard }: Props) {
   const { t } = useTranslation();
   const card = useRef<HTMLElement>(null);
   const id = useId();
-  useFocusTrap(card, { onEscape: onBoard });
-
-  useEffect(() => {
-    const first = card.current?.querySelector<HTMLElement>("button:not(:disabled)");
-    (first ?? card.current)?.focus();
-  }, [error]);
+  useFocusTrap(card, { onEscape: onBoard, refocus: error });
 
   return (
     <div className="out-of-tickets">
