@@ -1,63 +1,107 @@
 import { STRIDE, type Op } from "../canvas/ops";
 
 /*
- * The session in progress, kept on this device so a reload doesn't lose it, and wiped once it's
- * over. The ops live in IndexedDB, one record per op, so a stroke writes only itself. The ticket the
- * session spent and the time drawn live in localStorage: it writes at once, where an IndexedDB write
- * started as the page unloads never lands, and it can still be read when the ops can't, so a drawing
- * that can't be picked back up can still carry its ticket over to the next sheet.
+ * The session in progress, kept on this device for the person signed in, so a reload doesn't lose it,
+ * and wiped once it's over or they log out. Each person's is their own: someone else signing in on
+ * this device never gets it, and theirs leaves it be. The ops live in IndexedDB, one record per op, so
+ * a stroke writes only itself. The ticket the session spent and the time drawn live in localStorage:
+ * it writes at once, where an IndexedDB write started as the page unloads never lands, and it can
+ * still be read when the ops can't, so a drawing that can't be picked back up can still carry its
+ * ticket over to the next sheet.
  */
 
-const DB_NAME = "drawing-session";
+const dbName = (userId: string) => `drawing-session.${userId}`;
 const OPS = "ops";
 const PROGRESS = "progress";
 /** The progress store holds one record: how many ops are on the sheet. */
 const PROGRESS_KEY = 0;
-const RECORD_KEY = "draw.session";
-/** A kept session that hasn't loaded by then counts as lost, so Draw never waits on it for good. */
-const LOAD_TIMEOUT_MS = 5_000;
+const recordKey = (userId: string) => `draw.session.${userId}`;
+/** A kept drawing whose ops haven't loaded by then carries its ticket over, so Draw never waits on it for good. */
+export const LOAD_TIMEOUT_MS = 5_000;
+/** Logging out waits this long for the kept drawing to go, then goes ahead. */
+const FORGET_TIMEOUT_MS = 5_000;
 
-/** The ticket use the session spent (the server's id), null when none was, the time drawn, and 18+. */
+/** The ticket use the session spent (the server's id), the time drawn, and 18+. */
 interface SessionRecord {
-  ticket: number | null;
+  ticket: number;
   elapsedMs: number;
   /** The 18+ switch: it seals as an NSFW sticker. */
   nsfw: boolean;
 }
 
-export type KeptSession =
-  | { status: "none" }
-  | { status: "found"; ops: Op[]; elapsedMs: number; ticket: number | null; nsfw: boolean }
-  /** A drawing was in progress, but it can't be read back. */
-  | { status: "lost"; ticket: number | null; error: unknown };
+/** What's kept of a drawing that was in progress. */
+export type KeptDrawing =
+  | ({ status: "found"; ops: Op[] } & SessionRecord)
+  /** What's kept of it can't be read back. */
+  | { status: "lost"; ticket: number | null; error: unknown }
+  /**
+   * Its ops weren't read: IndexedDB failed, or hadn't answered in time, and then `later` is what the
+   * read still finds. Nothing kept is cleared, since the drawing may still be there.
+   */
+  | { status: "unread"; ticket: number; error: unknown; later: Promise<KeptDrawing> | null };
 
-let dbPromise: Promise<IDBDatabase> | null = null;
+export type KeptSession = { status: "none" } | KeptDrawing;
 
-function openDb(): Promise<IDBDatabase> {
-  dbPromise ??= new Promise<IDBDatabase>((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
+/** What's kept can't be a drawing: the read itself worked. */
+class UnreadableDrawing extends Error {}
+
+/** Open connections by database. One the browser closes is dropped, so the next write opens another. */
+const connections = new Map<string, Promise<IDBDatabase>>();
+
+function dropConnection(name: string, connection: Promise<IDBDatabase>): void {
+  if (connections.get(name) === connection) connections.delete(name);
+}
+
+function openDb(name: string): Promise<IDBDatabase> {
+  const open = connections.get(name);
+  if (open) return open;
+  const opening = new Promise<IDBDatabase>((resolve, reject) => {
+    const req = indexedDB.open(name, 1);
     req.onupgradeneeded = () => {
       req.result.createObjectStore(OPS);
       req.result.createObjectStore(PROGRESS);
     };
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      const db = req.result;
+      // WebKit closes it when its IndexedDB server goes, as it can while LINE is in the background.
+      db.onclose = () => dropConnection(name, opening);
+      // Logging out deletes the database, which waits on every connection to it.
+      db.onversionchange = () => {
+        db.close();
+        dropConnection(name, opening);
+      };
+      resolve(db);
+    };
     req.onerror = () => reject(req.error);
-  }).catch((error: unknown) => {
-    // Whether the open threw or failed, the next call tries again.
-    dbPromise = null;
-    throw error;
   });
-  return dbPromise;
+  connections.set(name, opening);
+  // Whether the open threw or failed, the next call tries again.
+  opening.catch(() => dropConnection(name, opening));
+  return opening;
 }
 
-/** Runs `fill` in one transaction over both stores; settles when it commits or aborts. */
+/**
+ * Runs `fill` in one transaction over `userId`'s stores, on a connection opened again if the browser
+ * closed the last one; settles when it commits or aborts.
+ */
 async function transact(
+  userId: string,
   mode: IDBTransactionMode,
   fill: (ops: IDBObjectStore, progress: IDBObjectStore) => void,
 ): Promise<void> {
-  const db = await openDb();
+  const name = dbName(userId);
+  const connection = openDb(name);
+  const db = await connection;
+  let tx: IDBTransaction;
+  try {
+    tx = db.transaction([OPS, PROGRESS], mode);
+  } catch (error) {
+    // A connection closed without a close event refuses new transactions.
+    if (!(error instanceof DOMException) || error.name !== "InvalidStateError") throw error;
+    dropConnection(name, connection);
+    tx = (await openDb(name)).transaction([OPS, PROGRESS], mode);
+  }
   await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction([OPS, PROGRESS], mode);
     tx.oncomplete = () => resolve();
     tx.onabort = () => reject(tx.error ?? new Error("The transaction was aborted"));
     try {
@@ -87,14 +131,28 @@ export function keptColor(ops: readonly Op[]): string | null {
   return ops.findLast((op) => op.tool !== "eraser")?.color ?? null;
 }
 
-/** Keeps the session in progress on this device as it changes. */
+/** Keeps the session in progress on this device, for the person signed in, as it changes. */
 export class SessionKeeper {
+  private readonly userId: string;
+  private readonly onKept: (kept: boolean) => void;
   private ticket: number | null = null;
   private nsfw = false;
   private elapsedMs = 0;
   /** The ops as last written, by reference; null when a write failed and what landed is unknown. */
   private written: readonly Op[] | null = [];
+  /** Whether the last record written landed. */
+  private recordKept = true;
+  /** Whether the ops kept are the session's; after a failed write, not until one writing every op lands. */
+  private opsKept = true;
+  private kept = true;
+  /** A stretch of failed writes is logged once. */
   private reported = false;
+
+  /** `onKept` hears whether the session is kept on this device, each time that changes. */
+  constructor(userId: string, onKept: (kept: boolean) => void = () => {}) {
+    this.userId = userId;
+    this.onKept = onKept;
+  }
 
   /** A new session: the ticket it spent, and nothing drawn yet. */
   start(ticket: number | null): void {
@@ -102,9 +160,10 @@ export class SessionKeeper {
     this.nsfw = false;
     this.elapsedMs = 0;
     this.written = [];
-    writeRecord({ ticket, elapsedMs: 0, nsfw: false });
+    this.keepRecord();
     this.write(
-      transact("readwrite", (ops, progress) => {
+      true,
+      transact(this.userId, "readwrite", (ops, progress) => {
         clearStores(ops, progress);
         progress.put(0, PROGRESS_KEY);
       }),
@@ -112,29 +171,42 @@ export class SessionKeeper {
   }
 
   /** A session picked back up after a reload, whose ops are already kept. */
-  resume(ticket: number | null, ops: readonly Op[], elapsedMs: number, nsfw: boolean): void {
+  resume(ticket: number, ops: readonly Op[], elapsedMs: number, nsfw: boolean): void {
     this.ticket = ticket;
     this.elapsedMs = elapsedMs;
     this.nsfw = nsfw;
     this.written = [...ops];
   }
 
+  /**
+   * A session whose kept drawing couldn't be read yet: its ticket goes on to a fresh sheet, and what's
+   * kept stays as it is until that sheet is drawn on, so a later read can still pick the drawing up.
+   */
+  carry(ticket: number): void {
+    this.ticket = ticket;
+    this.nsfw = false;
+    this.elapsedMs = 0;
+    // The ops kept are the unread drawing's, so the first save writes every op.
+    this.written = null;
+  }
+
   /** Keeps the 18+ switch. */
   keepNsfw(nsfw: boolean): void {
     this.nsfw = nsfw;
-    writeRecord({ ticket: this.ticket, elapsedMs: this.elapsedMs, nsfw });
+    this.keepRecord();
   }
 
   /** Keeps the time drawn, and any ops that changed since the last save. */
   save(ops: readonly Op[], elapsedMs: number): void {
     this.elapsedMs = elapsedMs;
-    writeRecord({ ticket: this.ticket, elapsedMs, nsfw: this.nsfw });
+    this.keepRecord();
     const written = this.written;
     const from = written ? firstChanged(written, ops) : 0;
     if (written && from === ops.length && ops.length === written.length) return;
     this.written = [...ops];
     this.write(
-      transact("readwrite", (opStore, progressStore) => {
+      from === 0,
+      transact(this.userId, "readwrite", (opStore, progressStore) => {
         for (let i = from; i < ops.length; i++) opStore.put(ops[i], i);
         progressStore.put(ops.length, PROGRESS_KEY);
       }),
@@ -147,48 +219,101 @@ export class SessionKeeper {
     this.nsfw = false;
     this.elapsedMs = 0;
     this.written = [];
-    removeRecord();
-    this.write(transact("readwrite", clearStores));
+    removeRecord(this.userId);
+    this.recordKept = true;
+    this.write(true, transact(this.userId, "readwrite", clearStores));
   }
 
-  private write(done: Promise<void>): void {
-    done.catch((error: unknown) => {
-      // It can't tell which of the ops landed, so the next save writes them all.
-      this.written = null;
-      if (this.reported) return;
-      this.reported = true;
-      console.error(
-        "The drawing in progress can't be kept on this device; a reload loses it",
-        error,
-      );
-    });
+  private keepRecord(): void {
+    // A session with no ticket can't be sealed, so none is kept.
+    if (this.ticket === null) removeRecord(this.userId);
+    else
+      this.recordKept = writeRecord(this.userId, {
+        ticket: this.ticket,
+        elapsedMs: this.elapsedMs,
+        nsfw: this.nsfw,
+      });
+    this.changed();
+  }
+
+  /** `whole`: it writes every op, so once it lands the ops kept are the session's again. */
+  private write(whole: boolean, done: Promise<void>): void {
+    done.then(
+      () => {
+        if (whole) this.opsKept = true;
+        this.changed();
+      },
+      (error: unknown) => {
+        // It can't tell which of the ops landed, so the next save writes them all.
+        this.written = null;
+        this.opsKept = false;
+        this.changed();
+        if (this.reported) return;
+        this.reported = true;
+        console.error(
+          "The drawing in progress can't be kept on this device; a reload loses it",
+          error,
+        );
+      },
+    );
+  }
+
+  private changed(): void {
+    const kept = this.recordKept && this.opsKept;
+    if (kept === this.kept) return;
+    this.kept = kept;
+    if (kept) this.reported = false;
+    this.onKept(kept);
   }
 }
 
-/** The session kept from before a reload, if a drawing was in progress. */
-export async function loadKeptSession(): Promise<KeptSession> {
-  const record = readRecord();
+/** The session kept for `userId` from before a reload, if a drawing was in progress. */
+export async function loadKeptSession(userId: string): Promise<KeptSession> {
+  const record = readRecord(userId);
   if (record === null) return { status: "none" };
   if (record === "unreadable")
     return { status: "lost", ticket: null, error: new Error("Its record is unreadable") };
-  try {
-    const ops = await withTimeout(readOps(), LOAD_TIMEOUT_MS);
-    return {
-      status: "found",
-      ops,
-      elapsedMs: record.elapsedMs,
-      ticket: record.ticket,
-      nsfw: record.nsfw,
-    };
-  } catch (error) {
-    return { status: "lost", ticket: record.ticket, error };
-  }
+  const read = readOps(userId).then(
+    (ops): KeptDrawing => ({ status: "found", ops, ...record }),
+    (error: unknown): KeptDrawing =>
+      error instanceof UnreadableDrawing
+        ? { status: "lost", ticket: record.ticket, error }
+        : { status: "unread", ticket: record.ticket, error, later: null },
+  );
+  return within(read, LOAD_TIMEOUT_MS, () => ({
+    status: "unread",
+    ticket: record.ticket,
+    error: new Error(`Its ops didn't load within ${LOAD_TIMEOUT_MS / 1000}s`),
+    later: read,
+  }));
 }
 
-async function readOps(): Promise<Op[]> {
+/**
+ * Forgets `userId`'s kept session, as logging out does, so a browser handed to someone else holds
+ * none of it. It never rejects: a failure is logged, and the kept ops can't be picked up without the
+ * record, which goes first.
+ */
+export async function forgetKeptSession(userId: string): Promise<void> {
+  removeRecord(userId);
+  const name = dbName(userId);
+  const deleted = new Promise<string | null>((resolve) => {
+    const req = indexedDB.deleteDatabase(name);
+    req.onsuccess = () => resolve(null);
+    req.onerror = () =>
+      resolve(`it couldn't be deleted: ${req.error?.message ?? "no reason given"}`);
+  }).catch((error: unknown) => `it couldn't be deleted: ${String(error)}`);
+  const problem = await within(
+    deleted,
+    FORGET_TIMEOUT_MS,
+    () => `it wasn't deleted within ${FORGET_TIMEOUT_MS / 1000}s`,
+  );
+  if (problem) console.error(`The drawing kept on this device may stay here: ${problem}`);
+}
+
+async function readOps(userId: string): Promise<Op[]> {
   let stored: unknown[] = [];
   let count: unknown;
-  await transact("readonly", (opStore, progressStore) => {
+  await transact(userId, "readonly", (opStore, progressStore) => {
     const all = opStore.getAll();
     all.onsuccess = () => {
       stored = all.result;
@@ -199,22 +324,28 @@ async function readOps(): Promise<Op[]> {
     };
   });
   if (!isCount(count))
-    throw new Error(count === undefined ? "No ops were kept" : "Its op count is unreadable");
+    throw new UnreadableDrawing(
+      count === undefined ? "No ops were kept" : "Its op count is unreadable",
+    );
   if (stored.length < count)
-    throw new Error(`${count - stored.length} of its ${count} ops are missing`);
+    throw new UnreadableDrawing(`${count - stored.length} of its ${count} ops are missing`);
   const ops: Op[] = [];
   for (const value of stored.slice(0, count)) {
     const op = readOp(value);
-    if (!op) throw new Error(`Op ${ops.length} is unreadable`);
+    if (!op) throw new UnreadableDrawing(`Op ${ops.length} is unreadable`);
     ops.push(op);
   }
   return ops;
 }
 
-function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const id = setTimeout(() => reject(new Error(`It didn't load within ${ms / 1000}s`)), ms);
-    work.then(resolve, reject).finally(() => clearTimeout(id));
+/** `work`'s result, or `late()`'s once `ms` pass without one. `work` must not reject. */
+function within<T>(work: Promise<T>, ms: number, late: () => T): Promise<T> {
+  return new Promise((resolve) => {
+    const id = setTimeout(() => resolve(late()), ms);
+    void work.then((result) => {
+      clearTimeout(id);
+      resolve(result);
+    });
   });
 }
 
@@ -242,10 +373,10 @@ const isTicketUseId = (v: unknown): v is number =>
   Number.isInteger(v) && typeof v === "number" && v > 0;
 
 /** Null when no drawing is in progress. */
-function readRecord(): SessionRecord | "unreadable" | null {
+function readRecord(userId: string): SessionRecord | "unreadable" | null {
   let raw: string | null;
   try {
-    raw = localStorage.getItem(RECORD_KEY);
+    raw = localStorage.getItem(recordKey(userId));
   } catch (error) {
     console.error("Can't tell whether a drawing was in progress on this device", error);
     return null;
@@ -261,31 +392,31 @@ function readRecord(): SessionRecord | "unreadable" | null {
     typeof value === "object" &&
     value !== null &&
     "ticket" in value &&
-    (value.ticket === null || isTicketUseId(value.ticket)) &&
+    isTicketUseId(value.ticket) &&
     "elapsedMs" in value &&
-    isFiniteNumber(value.elapsedMs)
+    isFiniteNumber(value.elapsedMs) &&
+    "nsfw" in value &&
+    typeof value.nsfw === "boolean"
   )
-    // A record kept before the 18+ switch existed has no `nsfw`; the drawing goes on with it off.
-    return {
-      ticket: value.ticket,
-      elapsedMs: value.elapsedMs,
-      nsfw: "nsfw" in value && value.nsfw === true,
-    };
+    return { ticket: value.ticket, elapsedMs: value.elapsedMs, nsfw: value.nsfw };
   console.error("The record of the drawing in progress is unreadable:", raw);
   return "unreadable";
 }
 
-function writeRecord(record: SessionRecord): void {
+/** Whether it's written. */
+function writeRecord(userId: string, record: SessionRecord): boolean {
   try {
-    localStorage.setItem(RECORD_KEY, JSON.stringify(record));
+    localStorage.setItem(recordKey(userId), JSON.stringify(record));
+    return true;
   } catch (error) {
     console.error("Can't note the drawing in progress on this device; a reload loses it", error);
+    return false;
   }
 }
 
-function removeRecord(): void {
+function removeRecord(userId: string): void {
   try {
-    localStorage.removeItem(RECORD_KEY);
+    localStorage.removeItem(recordKey(userId));
   } catch (error) {
     console.error("Can't clear the note of the drawing in progress on this device", error);
   }

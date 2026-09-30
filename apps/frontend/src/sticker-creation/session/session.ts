@@ -28,7 +28,8 @@ export type SessionEvent =
   | { type: "ink" }
   /**
    * A session kept across a reload is back, its ticket spent before the reload: drawn on, or only
-   * started, with the clock still waiting for the first stroke.
+   * started, with the clock still waiting for the first stroke. One read late comes back onto the
+   * sheet its ticket carried over to, before anything is drawn there.
    */
   | { type: "restored"; drawn: boolean }
   | { type: "seal-tap"; now: number; hasInk: boolean }
@@ -66,7 +67,9 @@ export function transition(session: Session, event: SessionEvent): Result {
     case "ink":
       return phase === "primed" ? to("drawing", ["start-clock"]) : unchanged;
     case "restored":
-      return phase === "blank" ? to(event.drawn ? "drawing" : "primed") : unchanged;
+      return phase === "blank" || phase === "primed"
+        ? to(event.drawn ? "drawing" : "primed")
+        : unchanged;
     case "seal-tap":
       if (phase === "armed" && event.now - session.armedAt < ARM_WINDOW_MS)
         return to("sealing", ["seal"]);

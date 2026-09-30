@@ -35,7 +35,13 @@ import { SealCeremony } from "./sealing/SealCeremony";
 import { SealingStatusLabel } from "./sealing/SealingStatusLabel";
 import { LEAVE_MS, type Box } from "./sealing/sealTimeline";
 import { encodeTimelapse, gzipTimelapse } from "./sealing/timelapse";
-import { keptColor, loadKeptSession, SessionKeeper, type KeptSession } from "./session/keptSession";
+import {
+  keptColor,
+  loadKeptSession,
+  SessionKeeper,
+  type KeptDrawing,
+  type KeptSession,
+} from "./session/keptSession";
 import {
   ARM_WINDOW_MS,
   FRESH_SESSION,
@@ -145,7 +151,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const [startProblem, setStartProblem] = useState<string | null>(null);
   // The session's ticket use, as the server numbers it: spent at Start, or before a reload.
   const ticket = useRef<number | null>(null);
-  const [keeper] = useState(() => new SessionKeeper());
+  // Whether this device keeps the drawing in progress; the timer's note says so while it can't.
+  const [kept, setKept] = useState(true);
+  const [keeper] = useState(() => new SessionKeeper(me.id, setKept));
   // Until a session kept across a reload is back, or known lost, Draw doesn't ask for a ticket.
   const [restoring, setRestoring] = useState(true);
   // The 18+ switch; the seal reads the ref, since it runs from the clock's time-up too.
@@ -405,33 +413,54 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     };
   }, []);
 
+  /** Puts a kept drawing back on the sheet, on its own ticket and in its own color, paused. */
+  function putBack(found: Extract<KeptDrawing, { status: "found" }>) {
+    // Nothing drawn and no time counted: Start spent the ticket and the clock still waits.
+    const drawn = found.ops.length > 0 || found.elapsedMs > 0;
+    canvas.current?.load(found.ops);
+    // It keeps its own color rather than the one a fresh sheet would start in.
+    const own = keptColor(found.ops);
+    if (own) {
+      setColor(own);
+      startedIn.current = own;
+    }
+    keeper.resume(found.ticket, found.ops, found.elapsedMs, found.nsfw);
+    keepNsfw(found.nsfw);
+    ticket.current = found.ticket;
+    send({ type: "restored", drawn });
+    if (!drawn) {
+      setPickedUp(null);
+      return;
+    }
+    clock.restore(found.elapsedMs);
+    setPaused(true);
+    setPickedUp("restored");
+  }
+
   // A session kept across a reload comes back without asking for another ticket, a drawing on it
   // paused; one that can't be read gives its ticket back.
   const pickUp = useEffectEvent((kept: KeptSession) => {
     setRestoring(false);
     if (kept.status === "none") return;
     if (kept.status === "found") {
-      // Nothing drawn and no time counted: Start spent the ticket and the clock still waits.
-      const drawn = kept.ops.length > 0 || kept.elapsedMs > 0;
-      canvas.current?.load(kept.ops);
-      // It keeps its own color rather than the one a fresh sheet would start in.
-      const own = keptColor(kept.ops);
-      if (own) {
-        setColor(own);
-        startedIn.current = own;
-      }
-      keeper.resume(kept.ticket, kept.ops, kept.elapsedMs, kept.nsfw);
-      keepNsfw(kept.nsfw);
+      putBack(kept);
+      return;
+    }
+    // Its ticket never became a sticker, so a fresh sheet seals on it without spending another. A
+    // drawing that wasn't read stays kept, for a read that answers late or the next reload.
+    if (kept.status === "unread") {
+      console.error(
+        "The drawing in progress wasn't read after a reload, so its ticket carries over and it stays kept",
+        kept.error,
+      );
       ticket.current = kept.ticket;
-      send({ type: "restored", drawn });
-      if (!drawn) return;
-      clock.restore(kept.elapsedMs);
-      setPaused(true);
-      setPickedUp("restored");
+      keeper.carry(kept.ticket);
+      send({ type: "restored", drawn: false });
+      setPickedUp("carried");
       return;
     }
     console.error("The drawing in progress couldn't be picked up after a reload", kept.error);
-    // Its ticket never became a sticker, so a fresh sheet seals on it without spending another.
+    // One that can't be read back is cleared, and its ticket carries over just the same.
     if (kept.ticket !== null) {
       ticket.current = kept.ticket;
       keeper.start(kept.ticket);
@@ -442,15 +471,33 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     keeper.wipe();
     setPickedUp("lost");
   });
+  // A read that answers late still puts the drawing back, while the sheet its ticket carried over to
+  // has nothing drawn on it.
+  const pickUpLate = useEffectEvent((late: KeptDrawing) => {
+    if (latest.current.phase !== "primed" || late.ticket !== ticket.current) {
+      console.warn("The drawing in progress was read after its sheet moved on, so it's dropped");
+      return;
+    }
+    if (late.status === "found") putBack(late);
+    else if (late.status === "lost") {
+      console.error("The drawing in progress can't be picked up", late.error);
+      keeper.start(late.ticket);
+    } else console.error("The drawing in progress couldn't be read", late.error);
+  });
   useEffect(() => {
     let cancelled = false;
-    void loadKeptSession().then((kept) => {
-      if (!cancelled) pickUp(kept);
+    void loadKeptSession(me.id).then((kept) => {
+      if (cancelled) return;
+      pickUp(kept);
+      if (kept.status === "unread")
+        void kept.later?.then((late) => {
+          if (!cancelled) pickUpLate(late);
+        });
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [me.id]);
 
   // "Picked up" stays until the clock runs again; word of a lost drawing, or of a carried-over
   // ticket, until the first stroke.
@@ -534,8 +581,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
 
   // On the first few visits, a started sheet says the timer waits for the first stroke, which peels it off.
   const startsLabel = startsNote || (active && session.phase === "primed" && isFirstVisit());
-  const timerNote =
-    pickedUp === "restored"
+  const timerNote = !kept
+    ? t(($) => $.stickerCreation.timer.note.notKept)
+    : pickedUp === "restored"
       ? t(($) => $.stickerCreation.timer.note.pickedUp)
       : pickedUp === "carried"
         ? t(($) => $.stickerCreation.timer.note.ticketCarriesOver)

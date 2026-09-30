@@ -61,6 +61,11 @@ export const stickerCreation = {
         en: "Couldn’t pick up where you left off",
         ja: "前回の続きから再開できませんでした",
       },
+      /** Drawing screen, top left: the white label under the timer, also announced, for as long as this phone can't keep your drawing in progress, so a reload or closing the app would lose it; it goes once the drawing is kept again; the label never wraps by itself */
+      notKept: {
+        en: "This phone can’t keep your drawing,\nso seal it before you close the app",
+        ja: "かきかけのシールをこの端末に残せません。\nアプリを閉じる前に仕上げてください",
+      },
     },
   },
   /** The start card's notes about this sheet. */

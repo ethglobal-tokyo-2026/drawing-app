@@ -88,7 +88,7 @@ export function StatBoard({ onFlipBack, flipBackRef, onTryGratitudeMiniGame, ref
               size="sm"
               icon={<SignOut />}
               className="stat-board__logout"
-              onClick={() => void logOut()}
+              onClick={() => void logOut(account.id)}
             >
               {t(($) => $.stickerBoard.statBoard.logOut)}
             </LabelButton>
