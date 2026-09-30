@@ -225,7 +225,7 @@ describe("GratitudeMiniGame", () => {
     open({ giftId: "g1" });
     tapOnce();
     await play(ONE_TAP_ENDS_MS);
-    const kept = "Saved on this phone. It goes to @alice when you're back online.";
+    const kept = "Saved on this phone. It goes to @alice when you’re back online.";
     expect(receiptText(".gr-rc-note")).toBe(kept);
     expect(receiptLabel()).toBe("Gratitude saved");
     expect(live()).toBe(kept);
@@ -269,9 +269,9 @@ describe("GratitudeMiniGame", () => {
   it.each([
     [409, "gratitude_already_recorded", /already with @alice/, false],
     [403, "not_receiver", /received by someone else/, false],
-    [404, "gift_not_found", /isn't here anymore/, false],
-    [409, "gift_not_received", /isn't marked received yet/, true],
-    [400, "replay_invalid", /couldn't read your combo/, true],
+    [404, "gift_not_found", /isn’t here anymore/, false],
+    [409, "gift_not_received", /isn’t marked received yet/, true],
+    [400, "replay_invalid", /couldn’t read your combo/, true],
     [403, "something_new", /\(something_new\)/, false],
   ])(
     "says why the server refused the gratitude (%i %s), and offers sending again only where it can work",
@@ -283,7 +283,7 @@ describe("GratitudeMiniGame", () => {
       await play(ONE_TAP_ENDS_MS);
       const note = receiptText(".gr-rc-note");
       expect(note).toMatch(reason);
-      expect(note).toContain("wasn't sent");
+      expect(note).toContain("wasn’t sent");
       expect(/(send|try) (it |your gratitude )?again/i.test(note)).toBe(offersAgain);
       expect(receiptLabel()).toBe("Gratitude not sent");
       expect(live()).toBe(note);
@@ -316,7 +316,7 @@ describe("GratitudeMiniGame", () => {
     tapOnce();
     await play(ONE_TAP_ENDS_MS);
     expect(heart().disabled).toBe(true);
-    expect(document.activeElement?.textContent).toContain("Back to your board");
+    expect(document.activeElement?.textContent).toContain("Back to My board");
     expect(document.activeElement?.closest(".gr-receipt")).not.toBeNull();
   });
 

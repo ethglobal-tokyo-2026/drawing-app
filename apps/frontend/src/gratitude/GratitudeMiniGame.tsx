@@ -420,7 +420,7 @@ export function GratitudeMiniGame({
           {note && <p className={`gr-rc-note is-${note.kind}`}>{note.text}</p>}
           <div className="gr-rc-actions">
             <LabelButton block icon={<StickerBoardIcon />} onClick={leave}>
-              {t(($) => $.gratitude.receipt.backToBoard)}
+              {t(($) => $.ui.backToBoard)}
             </LabelButton>
           </div>
         </section>
