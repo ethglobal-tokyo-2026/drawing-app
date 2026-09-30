@@ -164,7 +164,7 @@ export const errors = {
     en: "LINE didn't answer. Try again in a moment.",
     ja: "LINEから応答がありません。少し待ってから、もう一度お試しください。",
   },
-  /** Drawing screen, after tapping the check to seal: the seal chip's reason when the sticker saved but its NFT mint wasn't confirmed (POST /api/stickers), through errorReason */
+  /** Drawing screen, after tapping the check to seal: a sticker that saved but whose NFT mint wasn't confirmed (POST /api/stickers); the seal chip words this itself, so this is errorMessage's fallback */
   mint_failed: {
     en: "Your sticker is saved, but it couldn't be sealed on-chain. Try again; it won't use another ticket.",
     ja: "シールは保存されましたが、ブロックチェーン上で仕上げられませんでした。もう一度お試しください。チケットを新たに使うことはありません。",
@@ -223,7 +223,7 @@ export const errors = {
   },
   /** Any screen, when a request has no valid session (the cookie expired, or the account was deleted), through errorMessage/errorReason */
   signed_out: { en: "You're signed out.", ja: "ログアウトしています。" },
-  /** Drawing screen, the seal key's chip, and Giving and Receiving: a chain action waited 30 s for the Sepolia account that holds the stickers and Privy never readied it, or Privy failed again after one fresh try; the reason follows in brackets (made by the app itself, shown through errorReason) */
+  /** Giving and Receiving: a chain action waited 30 s for the Sepolia account that holds the stickers and Privy never readied it, or Privy failed again after one fresh try; the reason follows in brackets (made by the app itself, shown through errorReason); the drawing screen's seal chip words this failure itself */
   smart_account_not_ready: {
     en: "Your board address is taking too long to get ready. Try again.",
     ja: "ボードアドレスの準備に時間がかかっています。もう一度お試しください。",
@@ -252,7 +252,7 @@ export const errors = {
     en: "Taking this sticker out hasn't been confirmed yet. Wait a moment, then try again.",
     ja: "シールを取り出せたか、まだ確認できていません。少し待ってから、もう一度お試しください。",
   },
-  /** Drawing screen, after tapping the check to seal: the seal chip's reason when the drawing's ticket already became a sticker (POST /api/stickers), through errorReason */
+  /** Drawing screen, after tapping the check to seal: the seal chip's reason when the drawing's ticket already became a sticker (POST /api/stickers), through errorMessage */
   ticket_already_used: {
     en: "That ticket was already used.",
     ja: "そのチケットは、すでに使われています。",
@@ -262,9 +262,9 @@ export const errors = {
     en: "Your tickets changed. Try again.",
     ja: "チケットの状況が変わりました。もう一度お試しください。",
   },
-  /** Drawing screen, after tapping the check to seal: the seal chip's reason when the ticket the drawing started on doesn't exist (POST /api/stickers), through errorReason */
+  /** Drawing screen, after tapping the check to seal: the seal chip's reason when the ticket the drawing started on doesn't exist (POST /api/stickers), through errorMessage */
   ticket_not_found: { en: "That ticket isn't here.", ja: "そのチケットは見つかりませんでした。" },
-  /** Drawing screen, after tapping the check to seal: the seal chip's reason when the ticket the drawing started on is someone else's (POST /api/stickers), through errorReason */
+  /** Drawing screen, after tapping the check to seal: the seal chip's reason when the ticket the drawing started on is someone else's (POST /api/stickers), through errorMessage */
   ticket_not_yours: {
     en: "That ticket isn't yours.",
     ja: "そのチケットは、あなたのものではありません。",
