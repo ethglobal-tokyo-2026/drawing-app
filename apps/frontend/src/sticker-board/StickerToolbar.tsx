@@ -3,6 +3,7 @@ import { useEffectEvent, useLayoutEffect, useRef } from "react";
 import type { PersonView } from "../api/views";
 import { useTranslation } from "../i18n/react";
 import { ArtistChip } from "../stickers/ArtistChip";
+import { EASE_OUT } from "../ui/easing";
 import { LabelButton } from "../ui/LabelButton";
 import { toolbarSpot, type Box } from "./placement";
 
@@ -76,7 +77,7 @@ export function StickerToolbar({
         { opacity: 0, translate: "0 -4px" },
         { opacity: 1, translate: "0 0" },
       ],
-      { duration: 160, easing: "cubic-bezier(0.16, 1, 0.3, 1)" },
+      { duration: 160, easing: EASE_OUT },
     );
   });
   useLayoutEffect(() => {

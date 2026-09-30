@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "../i18n/react";
 import { QuietLink } from "../ui/QuietLink";
 import { useToast } from "../ui/useToast";
@@ -16,14 +16,16 @@ interface Props {
 export function AccountRow({ label, value, children, copyable = false }: Props) {
   const { t } = useTranslation();
   const toast = useToast();
+  // A failed copy stays under the row until the next try, where a toast would be gone in seconds.
+  const [problem, setProblem] = useState<string | null>(null);
   const copy = async () => {
+    setProblem(null);
     try {
       await navigator.clipboard.writeText(value);
       toast(t(($) => $.identity.developer.copy.copied, { label }));
     } catch (error) {
-      // The value stays selectable, so it can still be copied by hand.
       console.error(`Couldn't copy the ${label.toLowerCase()}`, error);
-      toast(t(($) => $.identity.developer.copy.failed, { label: label.toLowerCase() }));
+      setProblem(t(($) => $.identity.developer.copy.failed, { label: label.toLowerCase() }));
     }
   };
   return (
@@ -40,6 +42,11 @@ export function AccountRow({ label, value, children, copyable = false }: Props) 
           >
             {t(($) => $.identity.developer.copy.button)}
           </QuietLink>
+        </dd>
+      )}
+      {problem && (
+        <dd className="account-rows__problem" role="alert">
+          {problem}
         </dd>
       )}
     </div>

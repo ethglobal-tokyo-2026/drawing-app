@@ -1,5 +1,5 @@
 import type { ComboPhase, Tier } from "./combo";
-import { clamp, lerp } from "./easing";
+import { clamp, lerp } from "../ui/easing";
 import { FEEL_CONFIG } from "./gameConfig";
 
 export interface HeartLayout {

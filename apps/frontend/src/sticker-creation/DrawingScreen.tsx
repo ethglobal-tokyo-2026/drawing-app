@@ -22,6 +22,7 @@ import { nextKind, ticketsLeft, type TicketKind, type Tickets } from "../tickets
 import { ReserveTicketCheckout } from "../tickets/ReserveTicketCheckout";
 import { TicketsNotLoaded } from "../tickets/TicketsNotLoaded";
 import { useTickets } from "../tickets/useTickets";
+import { clamp01 } from "../ui/easing";
 import { releaseCanvas } from "../ui/releaseCanvas";
 import { useToast } from "../ui/useToast";
 import { sizePx } from "./canvas/brush";
@@ -70,7 +71,6 @@ const FIRST_SMOOTHING = 30;
 /** How far [ and ] move the size rail. */
 const SIZE_STEP = 0.04;
 
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const afterPaint = () =>
   new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve)));
 const reason = (error: unknown) =>

@@ -2,7 +2,7 @@ import { formatCount } from "../i18n/format";
 import { i18next } from "../i18n/i18n";
 import { notePerformance } from "../performance/performanceRecorder";
 import type { ComboHud } from "./comboHud";
-import { EASE_OUT, EASE_PEEL, clamp, easeInOutSine, lerp } from "./easing";
+import { EASE_OUT, EASE_PEEL, clamp, easeInOutSine, lerp } from "../ui/easing";
 import { FEEL_CONFIG } from "./gameConfig";
 import type { HeartFace } from "./heartFaces";
 import type { HeartMotion } from "./heartMotion";

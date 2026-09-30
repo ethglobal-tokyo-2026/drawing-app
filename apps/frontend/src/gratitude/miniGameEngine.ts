@@ -18,7 +18,7 @@ import {
   type Tier,
 } from "./combo";
 import { createComboHud } from "./comboHud";
-import { EASE_OUT, EASE_SPRING, clamp } from "./easing";
+import { EASE_OUT, EASE_SPRING, clamp } from "../ui/easing";
 import { createFrameTimeReadout } from "./frameTimeReadout";
 import { FEEL_CONFIG, GAME_CONFIG } from "./gameConfig";
 import {

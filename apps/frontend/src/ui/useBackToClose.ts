@@ -7,7 +7,7 @@ const KEY = "drawingAppOverlay";
  * How long a closed overlay's step back waits: a Back pressed as it closed, still on its way from the
  * browser, lands first and takes the entry itself, where stepping back as well would take two.
  */
-export const STEP_BACK_HOLD_MS = 250;
+const STEP_BACK_HOLD_MS = 250;
 
 interface BackWindow {
   history: Pick<History, "state" | "pushState" | "replaceState" | "back">;

@@ -126,6 +126,17 @@ describe("LineGate", () => {
     expect(host.textContent).toBe("U1 Bob Tanaka");
   });
 
+  it("says in the app's language that LINE didn't answer, when its start times out", async () => {
+    liff.init.mockReturnValue(new Promise(() => {}));
+    await openApp();
+    const { START_TIMEOUT_MS } = await import("./liff");
+    await act(() => vi.advanceTimersByTimeAsync(START_TIMEOUT_MS));
+    const detail = () => host.querySelector(".line-gate__detail")?.textContent;
+    expect(detail()).toBe(`LINE didn’t answer within ${START_TIMEOUT_MS / 1000} s`);
+    await act(() => i18next.changeLanguage("ja"));
+    expect(detail()).toContain(`${START_TIMEOUT_MS / 1000}秒`);
+  });
+
   it("names LIFF's error code with the reason", async () => {
     liff.init.mockRejectedValue(
       Object.assign(new Error("channel not found"), { code: "INIT_FAILED" }),

@@ -10,25 +10,24 @@
   background: var(--liner);
 }
 
-/* On a desktop with a mouse, show it inside a phone-sized frame. */
+/* On a desktop with a mouse, show it inside a phone frame: the phone's own 390px viewport in a
+   bezel, whose outer corner is the screen's radius plus the bezel. */
 @media (hover: hover) and (pointer: fine) and (min-width: 500px) {
   #root {
     display: grid;
     place-items: center;
-    background: #e6e6eb;
+    background: var(--liner-deep);
   }
   .phone {
     position: relative;
     inset: auto;
-    width: 390px;
-    height: min(844px, calc(100dvh - 48px));
+    width: calc(var(--ph-w) + 2 * var(--ph-bezel));
+    height: min(calc(var(--ph-h) + 2 * var(--ph-bezel)), calc(100dvh - 48px));
     padding-top: 14px;
-    border: 10px solid #16151f;
-    border-radius: 54px;
+    border: var(--ph-bezel) solid var(--ink);
+    border-radius: calc(var(--ph-radius) + var(--ph-bezel));
     overflow: hidden;
-    box-shadow:
-      0 0 0 2px #3a3a44,
-      0 30px 80px rgba(0, 0, 0, 0.22);
+    box-shadow: var(--shadow-device);
   }
 }
 
@@ -42,10 +41,10 @@
 }
 
 /* With the tabs tucked away, the screen runs down to the grabber's strip above the home indicator:
-   the grabber's 44px touch band starts 20px up and reaches over the screen's own foot margin, never
-   the sheet. The strip's height is one value, which the scrim over it reads too. */
+   the grabber's 44px touch band starts 20px above the safe area and reaches over the screen's own
+   foot margin, never the sheet. The strip's height is one value, which the scrim over it reads too. */
 .phone.has-tucked-tabs {
-  --tucked-strip: 50px;
+  --tucked-strip: calc(50px + env(safe-area-inset-bottom));
 }
 
 .phone.has-tucked-tabs .screen {

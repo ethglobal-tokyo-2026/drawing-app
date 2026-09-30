@@ -17,12 +17,15 @@ interface LineProfile {
   statusMessage?: string;
 }
 
+/** Why LIFF didn't start: it never answered, or it answered with an error. */
+type LineFailure = { kind: "no-answer" } | { kind: "refused"; message: string };
+
 export type LineState =
   | { status: "loading" }
   /** Opened in a browser outside LINE, and not logged in yet. */
   | { status: "logged-out" }
   | { status: "ready"; profile: LineProfile; inClient: boolean }
-  | { status: "error"; message: string };
+  | { status: "error"; failure: LineFailure };
 
 let state: LineState = { status: "loading" };
 const listeners = new Set<() => void>();
@@ -34,7 +37,10 @@ const set = (next: LineState) => {
 let started = false;
 
 // A start that hasn't settled by then ends on the error screen, with Try again, rather than a blank page.
-const START_TIMEOUT_MS = 15_000;
+export const START_TIMEOUT_MS = 15_000;
+
+/** LIFF's start hadn't settled when its time ran out. */
+class StartTimedOut extends Error {}
 
 /**
  * Starts LIFF once, before anything reads or changes the address bar: LIFF reads it to finish a
@@ -48,7 +54,13 @@ export async function initLine(): Promise<void> {
     set(await withTimeout(startLine(), START_TIMEOUT_MS));
   } catch (error) {
     console.error("LINE didn't start", error);
-    set({ status: "error", message: describeLiffError(error) });
+    set({
+      status: "error",
+      failure:
+        error instanceof StartTimedOut
+          ? { kind: "no-answer" }
+          : { kind: "refused", message: describeLiffError(error) },
+    });
   }
 }
 
@@ -122,7 +134,10 @@ async function followProfile() {
 async function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const expired = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`LINE didn't answer within ${ms / 1000} s`)), ms);
+    timer = setTimeout(
+      () => reject(new StartTimedOut(`LINE didn't answer within ${ms / 1000} s`)),
+      ms,
+    );
   });
   try {
     return await Promise.race([work, expired]);

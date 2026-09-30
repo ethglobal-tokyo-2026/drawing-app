@@ -2,6 +2,7 @@
  * The sealing worker: cuts the sticker off the main thread, so the screen keeps moving while the
  * layers are worked out and encoded. Each worker cuts one sticker; the main thread stops it after.
  */
+import { releaseCanvas } from "../../ui/releaseCanvas";
 import { cutSticker, type CutSticker, type MakeCanvas } from "./cutSticker";
 
 /** The ink to cut, handed over rather than copied. */
@@ -25,16 +26,11 @@ function blankCanvas(width: number, height: number, settings?: CanvasRenderingCo
   return { canvas, g };
 }
 
-const release = (canvas: OffscreenCanvas) => {
-  canvas.width = 0;
-  canvas.height = 0;
-};
-
 const offscreenCanvas: MakeCanvas = (width, height) => {
   const { canvas, g } = blankCanvas(width, height);
   return {
     g,
-    png: () => canvas.convertToBlob({ type: "image/png" }).finally(() => release(canvas)),
+    png: () => canvas.convertToBlob({ type: "image/png" }).finally(() => releaseCanvas(canvas)),
   };
 };
 
@@ -42,7 +38,7 @@ function pixelsOf(ink: ImageBitmap): ImageData {
   const { canvas, g } = blankCanvas(ink.width, ink.height, { willReadFrequently: true });
   g.drawImage(ink, 0, 0);
   const pixels = g.getImageData(0, 0, ink.width, ink.height);
-  release(canvas);
+  releaseCanvas(canvas);
   return pixels;
 }
 

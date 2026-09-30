@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { errorMessage } from "../i18n/errorMessage";
 import { currentLanguage } from "../i18n/i18n";
 import { followAccountLanguage } from "../i18n/pageLanguage";
 import { useTranslation } from "../i18n/react";
+import { GateNotice, GateOpening } from "../line/GateParts";
 import { lineClaims, lineIdToken, lineUserId, type LineClaims } from "../line/liff";
 import { reconnectLine } from "../line/reconnectLine";
 import { Key } from "../ui/Key";
@@ -12,6 +13,7 @@ import { earlySession, type EarlySession } from "./earlySession";
 import { HandlePrompt } from "./HandlePrompt";
 import type { SessionApi } from "./httpApi";
 import { MeContext, SetMeContext } from "./meContext";
+import { onSessionLost } from "./sessionLoss";
 import "../line/LineGate.css";
 
 const describe = (error: unknown) => (error instanceof Error ? error.message : String(error));
@@ -22,11 +24,23 @@ type Session =
   | { step: "failed"; error: ApiError }
   | { step: "ready"; me: Me };
 
+/**
+ * A session lost this soon after signing in again to recover it isn't being kept, as when the
+ * browser drops the cookie, and signing in once more would only loop.
+ */
+export const RECOVERY_HOLD_MS = 30_000;
+
+// `signed_out` gets here only when signing in again didn't hold, which LINE's own login can fix.
 const needsLine = (error: ApiError) =>
   error.code === "line_token_invalid" ||
   error.code === "line_token_expired" ||
   error.code === "no_line_token" ||
-  error.code === "line_reconnect_failed";
+  error.code === "line_reconnect_failed" ||
+  error.code === "signed_out";
+
+/** The status and code with the server's English detail, for the sign-in screen's report line. */
+const detailOf = (error: ApiError) =>
+  `${error.status > 0 ? `${error.status} · ` : ""}${error.message}`;
 
 /** What signing in with LINE would change on your account: LINE's name and picture, and the language. */
 const outOfDate = (me: Me, claims: LineClaims | null) =>
@@ -40,7 +54,8 @@ const outOfDate = (me: Me, claims: LineClaims | null) =>
  * account's language and, when needed, you've chosen a handle. The session cookie from your last visit,
  * asked about as the app started, opens the app when it's the LINE user LIFF logged in; without that
  * early answer, GET /api/me resumes the session the server matches to LINE's user. Otherwise LINE's ID
- * token signs you in.
+ * token signs you in. A request that later finds the session gone, on any screen, sends the app back
+ * through the same sign-in, so no screen dead-ends on being signed out.
  */
 export function SessionGate({
   session,
@@ -65,6 +80,9 @@ export function SessionGate({
   const { t } = useTranslation();
   const [state, setState] = useState<Session>({ step: "signing-in" });
   const [attempt, setAttempt] = useState(0);
+  /** A sign-in that answers a lost session is under way, and when the last one opened the app. */
+  const recovering = useRef(false);
+  const recoveredAt = useRef<number | null>(null);
 
   useEffect(() => {
     let current = true;
@@ -140,11 +158,17 @@ export function SessionGate({
     })();
     signingIn.then(
       (me) => {
-        if (current && me) setState({ step: "ready", me });
+        if (!current || !me) return;
+        if (recovering.current) {
+          recovering.current = false;
+          recoveredAt.current = Date.now();
+        }
+        setState({ step: "ready", me });
       },
       (error: unknown) => {
         const failure = apiError(error);
         console.error("Signing in to the app's server failed", failure);
+        recovering.current = false;
         if (current) setState({ step: "failed", error: failure });
       },
     );
@@ -152,6 +176,27 @@ export function SessionGate({
       current = false;
     };
   }, [session, idToken, claims, currentLineUserId, early, attempt]);
+
+  // A request that finds the session gone, on any screen, signs in again the way the app opened.
+  useEffect(() => {
+    if (state.step !== "ready") return;
+    let handled = false;
+    return onSessionLost((error) => {
+      if (handled) return;
+      handled = true;
+      const recoveredRecently =
+        recoveredAt.current !== null && Date.now() - recoveredAt.current < RECOVERY_HOLD_MS;
+      if (recoveredRecently) {
+        console.error("The session was lost again right after signing in again", error);
+        setState({ step: "failed", error });
+        return;
+      }
+      console.warn("The session ended, so the app signs in again", error);
+      recovering.current = true;
+      setState({ step: "signing-in" });
+      setAttempt((n) => n + 1);
+    });
+  }, [state.step]);
 
   const setReadyMe = useCallback((me: Me) => setState({ step: "ready", me }), []);
 
@@ -192,26 +237,25 @@ export function SessionGate({
   }
   return (
     <main className="line-gate" aria-busy={state.step !== "failed"}>
-      {state.step === "signing-in" || state.step === "reconnecting" ? (
-        <p className="fine line-gate__opening" role="status">
-          {state.step === "reconnecting"
-            ? t(($) => $.api.signIn.reconnecting)
-            : t(($) => $.api.signIn.opening)}
-        </p>
+      {state.step === "signing-in" ? (
+        <GateOpening
+          label={t(($) => $.api.signIn.opening)}
+          stillLabel={t(($) => $.api.signIn.stillOpening)}
+        />
+      ) : state.step === "reconnecting" ? (
+        <GateOpening label={t(($) => $.api.signIn.reconnecting)} />
       ) : (
-        <>
-          <h1 className="title-label">{t(($) => $.api.signIn.failed)}</h1>
-          <p className="line-gate__lead">{errorMessage(state.error)}</p>
+        <GateNotice
+          title={t(($) => $.api.signIn.failed)}
+          lead={errorMessage(state.error)}
+          detail={detailOf(state.error)}
+        >
           <Key onClick={() => void retry()}>
             {needsLine(state.error)
               ? t(($) => $.api.signIn.reconnect)
               : t(($) => $.api.signIn.tryAgain)}
           </Key>
-          <p className="fine line-gate__reason">
-            {state.error.status > 0 && `${state.error.status} · `}
-            {state.error.message}
-          </p>
-        </>
+        </GateNotice>
       )}
     </main>
   );

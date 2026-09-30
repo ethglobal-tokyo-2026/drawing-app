@@ -1,11 +1,10 @@
 import { useLayoutEffect, useRef, type PointerEvent } from "react";
+import { EASE_OUT } from "../ui/easing";
 
 /** How far a finger moves on the stage before it counts as a swipe or a scroll. */
 const LOCK_PX = 8;
 /** How far sideways a swipe goes before it pages. */
 const PAGE_PX = 56;
-/** The --ease-out curve, spelled out: Web Animations can't read CSS variables. */
-const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 type Move = { dx: number; dy: number };
 

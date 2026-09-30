@@ -1,4 +1,4 @@
-const EASE_PEEL = "cubic-bezier(0.2, 0.7, 0.2, 1)";
+import { EASE_PEEL } from "../ui/easing";
 
 interface Options {
   /** `land`: dropped from above the board as it arrives. `drop`: pressed flat where it was let go. */

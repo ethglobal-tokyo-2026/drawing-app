@@ -4,6 +4,7 @@ import { useTranslation } from "../../i18n/react";
 import { ArrowSquareOut, Copy, X } from "../../icons";
 import { etherscanAddressUrl, suiscanAccountUrl } from "../../identity/explorers";
 import { openLinkInLine } from "../../line/openLink";
+import { cubicBezier, EASE_OUT, EASE_OUT_POINTS, EASE_PEEL } from "../../ui/easing";
 import { LabelButton } from "../../ui/LabelButton";
 import { QrCode } from "../../ui/QrCode";
 import { useBackToClose } from "../../ui/useBackToClose";
@@ -32,7 +33,6 @@ const CHAINS = {
 // Motion tokens spelled out: Web Animations can't read CSS variables.
 /** The flight off the cork, on --ease-out. */
 const OPEN_MS = 480;
-const EASE_OUT = [0.16, 1, 0.3, 1] as const;
 /** The flight back: it eases off its spot, then settles onto the cork. */
 const CLOSE_MS = 360;
 const EASE_BACK = [0.4, 0, 0.2, 1] as const;
@@ -43,7 +43,6 @@ const RISE = { at: 0.55, ms: 220, stagger: 50, px: 8 };
 const FADE_OUT_MS = 120;
 /** The X pops on with the first of them: --t-pop on --ease-peel, the curve for peel, stick and pop. */
 const POP_MS = 200;
-const EASE_PEEL = "cubic-bezier(0.2, 0.7, 0.2, 1)";
 /** Reduced motion, or no paper to lift: the dialog fades. */
 const FADE_MS = 150;
 /**
@@ -52,8 +51,7 @@ const FADE_MS = 150;
  */
 const LIFT = { open: 0.3, close: 0.2, rise: -6, grow: 0.04 };
 
-const bezier = (points: readonly number[]) => `cubic-bezier(${points.join(", ")})`;
-const OPEN_EASING = splitEasing(EASE_OUT, LIFT.open);
+const OPEN_EASING = splitEasing(EASE_OUT_POINTS, LIFT.open);
 const CLOSE_EASING = splitEasing(EASE_BACK, LIFT.close);
 
 /** The cork paper relative to the card at rest: its top center's offset, its turn and its size. */
@@ -137,7 +135,7 @@ function liftOff(parts: Parts, paper: HTMLElement | null, reduced: boolean): Ani
   return [
     parts.scrim.animate([{ opacity: 0 }, { opacity: 1 }], {
       duration: SCRIM_MS,
-      easing: bezier(EASE_OUT),
+      easing: EASE_OUT,
       fill,
     }),
     parts.card.animate(
@@ -169,7 +167,7 @@ function liftOff(parts: Parts, paper: HTMLElement | null, reduced: boolean): Ani
         {
           duration: RISE.ms,
           delay: riseAt + i * RISE.stagger,
-          easing: bezier(EASE_OUT),
+          easing: EASE_OUT,
           fill,
         },
       ),
@@ -220,7 +218,7 @@ function putBack(parts: Parts, paper: HTMLElement | null, reduced: boolean): Ani
     ),
     parts.scrim.animate([{ opacity: 1 }, { opacity: 0 }], {
       duration: CLOSE_MS,
-      easing: bezier(EASE_BACK),
+      easing: cubicBezier(EASE_BACK),
       fill,
     }),
   ];
@@ -292,14 +290,16 @@ export function AddressDialog({ chain, address, from, onClose }: Props) {
   useFocusTrap(root, { onEscape: close, returnFocus: () => from.current });
   useBackToClose(true, close);
 
+  // A failed copy stays under Copy until the next try, where a toast would be gone in seconds.
+  const [copyProblem, setCopyProblem] = useState<string | null>(null);
   const copy = async () => {
+    setCopyProblem(null);
     try {
       await navigator.clipboard.writeText(address);
       toast(t(($) => $.stickerBoard.addresses[chain].copied));
     } catch (error) {
-      // The address stays selectable, so it can still be copied by hand.
       console.error(`Couldn't copy the ${logName}`, error);
-      toast(t(($) => $.stickerBoard.addresses[chain].notCopied));
+      setCopyProblem(t(($) => $.stickerBoard.addresses[chain].notCopied));
     }
   };
 
@@ -372,8 +372,13 @@ export function AddressDialog({ chain, address, from, onClose }: Props) {
             >
               {t(($) => $.stickerBoard.addresses.copy)}
             </LabelButton>
+            {copyProblem && (
+              <p className="address-dialog__problem" role="alert">
+                {copyProblem}
+              </p>
+            )}
             <a
-              className="label-btn label-btn--block address-dialog__rise address-dialog__etherscan"
+              className="label-btn label-btn--block address-dialog__rise"
               href={explorer(address)}
               target="_blank"
               rel="noopener noreferrer"

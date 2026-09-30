@@ -7,6 +7,7 @@ import { emptyApi, renderWithApi, TEST_ME } from "../../api/testing";
 import { errors } from "../../i18n/strings/errors";
 import { i18next } from "../../i18n/i18n";
 import { keepChosenLanguage, readChosenLanguage } from "../../i18n/language";
+import { takeReopenOnSettings } from "./reopenOnSettings";
 import { SettingsNote } from "./SettingsNote";
 
 const restart = vi.fn();
@@ -16,6 +17,7 @@ afterEach(async () => {
   unmount();
   vi.unstubAllGlobals();
   localStorage.clear();
+  sessionStorage.clear();
   restart.mockReset();
   vi.restoreAllMocks();
   await i18next.changeLanguage("en");
@@ -62,6 +64,13 @@ describe("the Settings note's language", () => {
     expect(restart).toHaveBeenCalledOnce();
   });
 
+  it("has the restart reopen on Settings, once, so the person sees their pick took", async () => {
+    const host = render(saving());
+    await choose(host, "日本語");
+    expect(takeReopenOnSettings()).toBe(true);
+    expect(takeReopenOnSettings()).toBe(false);
+  });
+
   it("clears both with Same as LINE", async () => {
     keepChosenLanguage("ja");
     const setLanguageChoice = saving();
@@ -83,6 +92,7 @@ describe("the Settings note's language", () => {
     expect(readChosenLanguage()).toBeNull();
     expect(option(host, "Same as LINE (English)").checked).toBe(true);
     expect(restart).not.toHaveBeenCalled();
+    expect(takeReopenOnSettings()).toBe(false);
   });
 
   it("says why this phone couldn't keep a saved choice, and doesn't restart", async () => {
