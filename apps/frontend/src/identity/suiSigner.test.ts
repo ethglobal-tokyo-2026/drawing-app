@@ -1,6 +1,6 @@
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { fromHex, toBase64, toHex } from "@mysten/sui/utils";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrivySuiSigner, suiPublicKeyFor } from "./suiSigner";
 
 const keypair = Ed25519Keypair.generate();
@@ -35,5 +35,43 @@ describe("PrivySuiSigner", () => {
     const bytes = new TextEncoder().encode("transaction bytes");
     const { signature } = await signer.signTransaction(bytes);
     expect(await keypair.getPublicKey().verifyTransaction(bytes, signature)).toBe(true);
+  });
+});
+
+describe("paying waiting for the Sui signer", () => {
+  // The Sui wallet's failure lasts the visit, so each test opens the modules as a fresh page would.
+  const freshPage = async () => {
+    vi.resetModules();
+    const [privy, suiWallet, suiSigner] = await Promise.all([
+      import("./privy"),
+      import("./suiWallet"),
+      import("./suiSigner"),
+    ]);
+    privy.setPrivyStatus({ state: "signing-in" });
+    return { ...privy, ...suiWallet, ...suiSigner };
+  };
+
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("asks for LINE at once when Privy failed on LINE's expired sign-in", async () => {
+    const page = await freshPage();
+    page.setPrivyStatus({
+      state: "failed",
+      reason: "LINE’s ID token has expired",
+      reconnectLine: true,
+    });
+    await expect(page.waitForSuiSigner()).rejects.toMatchObject({ code: "line_token_expired" });
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("stops at once, in the catalog's words and with the reason, when there's no Sui wallet to sign", async () => {
+    const page = await freshPage();
+    page.setPrivyStatus({ state: "signed-in", userId: "did:privy:1" });
+    page.setSuiWalletFailure("Privy couldn't make the wallet");
+    await expect(page.waitForSuiSigner()).rejects.toMatchObject({
+      code: "sui_wallet_not_ready",
+      detail: "Privy couldn't make the wallet",
+    });
   });
 });

@@ -1,12 +1,11 @@
 import { Signer } from "@mysten/sui/cryptography";
 import { Ed25519PublicKey } from "@mysten/sui/keypairs/ed25519";
 import { fromBase58, fromBase64, fromHex, normalizeSuiAddress, toHex } from "@mysten/sui/utils";
-import { startPrivy } from "./privyStart";
-import { suiWalletFailure } from "./suiWallet";
+import { onSuiWalletFailure, suiWalletFailure } from "./suiWallet";
+import { waitForPrivy } from "./waitForPrivy";
 
 let signer: Signer | null = null;
 const signerListeners = new Set<() => void>();
-const SIGNER_READY_TIMEOUT_MS = 15_000;
 
 /** Privy loads after the board, so its Sui signer is shared from inside PrivySession. */
 export function setSuiSigner(next: Signer | null) {
@@ -14,26 +13,24 @@ export function setSuiSigner(next: Signer | null) {
   signerListeners.forEach((l) => l());
 }
 
-/** Paying for reserve tickets waits here, and starts Privy if nothing has yet. */
-export function waitForSuiSigner(): Promise<Signer> {
-  startPrivy("wallet-needed");
-  if (signer) return Promise.resolve(signer);
-  return new Promise((resolve, reject) => {
-    const ready = () => {
-      if (!signer) return;
-      clearTimeout(timer);
-      signerListeners.delete(ready);
-      resolve(signer);
-    };
-    const timer = setTimeout(() => {
-      signerListeners.delete(ready);
-      const failure = suiWalletFailure();
-      const why = failure ? ` (${failure})` : "";
-      reject(new Error(`Your Sui wallet isn’t ready${why}. Please try again.`));
-    }, SIGNER_READY_TIMEOUT_MS);
-    signerListeners.add(ready);
+/**
+ * Paying for reserve tickets waits here, as chain actions wait for the Sepolia client. A Sui wallet
+ * that Privy couldn't make, or whose signer didn't start, ends the wait: it's asked for once a visit.
+ */
+export const waitForSuiSigner = (): Promise<Signer> =>
+  waitForPrivy({
+    current: () => signer,
+    failure: () => suiWalletFailure() ?? null,
+    subscribe: (listener) => {
+      signerListeners.add(listener);
+      const stopFailures = onSuiWalletFailure(listener);
+      return () => {
+        signerListeners.delete(listener);
+        stopFailures();
+      };
+    },
+    notReady: "sui_wallet_not_ready",
   });
-}
 
 /** Privy's public key for a Sui wallet: hex or base64, bare or behind Sui's Ed25519 flag byte. */
 function publicKeyCandidates(encoded: string): Uint8Array[] {

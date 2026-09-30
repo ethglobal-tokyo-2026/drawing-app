@@ -132,13 +132,14 @@ export interface ApiClient {
 
 /**
  * Codes the app makes itself: no answer, no LINE ID token to sign in with, a LINE reconnect that
- * failed, and no smart account from Privy in time for a chain action.
+ * failed, no smart account from Privy in time for a chain action, and no Sui signer for a payment.
  */
 type ClientErrorCode =
   | "network"
   | "no_line_token"
   | "line_reconnect_failed"
-  | "smart_account_not_ready";
+  | "smart_account_not_ready"
+  | "sui_wallet_not_ready";
 export type ErrorCode = ApiErrorCode | ClientErrorCode;
 
 /** A refused or failed request: the HTTP status and the API's error body. Status 0 is no answer. */

@@ -56,6 +56,15 @@ describe("the smart account becoming ready", () => {
     await expect(pending).resolves.toBe(wallet);
   });
 
+  it("gives the fresh sign-in its try, though the client had failed before Privy did", async () => {
+    smartWalletFailed("bundler unreachable");
+    setPrivyStatus({ state: "failed", reason: "couldn’t reach the auth server" });
+    const pending = waitForSmartWallet();
+    expect(privyStatus()).toEqual({ state: "signing-in" });
+    setSmartWallet(wallet);
+    await expect(pending).resolves.toBe(wallet);
+  });
+
   it("stops at once, with Privy's reason, when the fresh try fails too", async () => {
     vi.useFakeTimers();
     setPrivyStatus({ state: "failed", reason: "couldn’t reach the auth server" });

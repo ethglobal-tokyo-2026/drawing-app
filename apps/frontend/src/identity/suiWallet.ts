@@ -11,11 +11,14 @@ export function setSuiWalletFailure(reason: string) {
 
 export const suiWalletFailure = () => failure;
 
-const subscribe = (l: () => void) => {
+/** Calls `l` whenever the failure changes; returns the unsubscribe. */
+export const onSuiWalletFailure = (l: () => void) => {
   listeners.add(l);
-  return () => listeners.delete(l);
+  return () => {
+    listeners.delete(l);
+  };
 };
 
 export function useSuiWalletFailure(): string | undefined {
-  return useSyncExternalStore(subscribe, suiWalletFailure);
+  return useSyncExternalStore(onSuiWalletFailure, suiWalletFailure);
 }

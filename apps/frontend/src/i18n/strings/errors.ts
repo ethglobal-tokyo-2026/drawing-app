@@ -144,7 +144,7 @@ export const errors = {
     en: "LINE didn't accept this sign-in. Reconnect with LINE; if this continues, contact the team.",
     ja: "LINEがログイン情報を確認できませんでした。再ログインしても続く場合は、チームにお問い合わせください。",
   },
-  /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: signing in to the app's server (POST /api/session) with an expired LINE ID token, through errorMessage. Also Giving and Receiving, through errorReason, when a chain action waited on the board address and Privy couldn't sign in because LINE's ID token had expired (made by the app itself) */
+  /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: signing in to the app's server (POST /api/session) with an expired LINE ID token, through errorMessage. Also Giving, Receiving and the reserve ticket checkout, through errorReason, when a chain action or a payment waited on Privy and Privy couldn't sign in because LINE's ID token had expired (made by the app itself) */
   line_token_expired: {
     en: "Your LINE sign-in token has expired. Reconnect with LINE to continue.",
     ja: "LINEのログイン情報の有効期限が切れました。LINEで再ログインしてください。",
@@ -224,6 +224,11 @@ export const errors = {
   sui_unavailable: {
     en: "Sui didn't answer. Your tickets weren't added yet; try again.",
     ja: "Suiから応答がありません。チケットはまだ追加されていません。もう一度お試しください。",
+  },
+  /** Reserve ticket checkout, after tapping Pay, under “Payment didn’t go through”: the Sui account you pay from wasn't ready in time, Privy couldn't make it or start its signer, or Privy failed again after one fresh try; the reason follows in brackets, and no JPYC was spent (made by the app itself, shown through errorReason) */
+  sui_wallet_not_ready: {
+    en: "Your Sui account isn't ready yet. Try again.",
+    ja: "Suiアカウントの準備がまだできていません。もう一度お試しください。",
   },
   /** Receiving: opening a gift message's link (POST /api/gifts/preview or /receive) after the giver took the gift back; the Receive gift dialog shows its own “took this one back” screen instead */
   taken_back: { en: "The giver took this gift back.", ja: "贈り主がこのギフトを取り消しました。" },
