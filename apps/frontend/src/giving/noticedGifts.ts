@@ -6,24 +6,29 @@ const KEY = "draw.gifts.noticed";
 export const receiveOf = (g: { stickerId: string; receivedAt: number }) =>
   `${g.stickerId}@${g.receivedAt}`;
 
+/** Noticed on this page, so a notice this device can't save still shows once per session. */
+const noticedHere = new Set<string>();
+
 function readNoticed(): Set<string> {
   let raw: string | null;
   try {
     raw = localStorage.getItem(KEY);
   } catch (error) {
     console.error(`Can't read ${KEY} on this device`, error);
-    return new Set();
+    return new Set(noticedHere);
   }
-  if (raw === null) return new Set();
+  if (raw === null) return new Set(noticedHere);
   let value: unknown;
   try {
     value = JSON.parse(raw);
   } catch {
     value = undefined;
   }
-  if (Array.isArray(value) && value.every((k) => typeof k === "string")) return new Set(value);
+  if (Array.isArray(value) && value.every((k) => typeof k === "string")) {
+    return new Set([...value, ...noticedHere]);
+  }
   console.error("Noticed gifts are unreadable, so the newest received gift shows again:", raw);
-  return new Set();
+  return new Set(noticedHere);
 }
 
 function saveNoticed(noticed: ReadonlySet<string>) {
@@ -49,6 +54,9 @@ export function newestUnnoticed<T extends { stickerId: string; receivedAt: numbe
 /** Marks the gifts passed in as noticed: each gets its own notice, one after another. */
 export function markNoticed(received: readonly { stickerId: string; receivedAt: number }[]) {
   const noticed = readNoticed();
-  for (const g of received) noticed.add(receiveOf(g));
+  for (const g of received) {
+    noticed.add(receiveOf(g));
+    noticedHere.add(receiveOf(g));
+  }
   saveNoticed(noticed);
 }
