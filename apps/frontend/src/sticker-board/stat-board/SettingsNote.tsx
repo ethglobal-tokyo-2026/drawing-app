@@ -1,4 +1,12 @@
-import { useId, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { apiError } from "../../api/apiClient";
 import { useMe } from "../../api/meContext";
 import { useApi } from "../../api/useApi";
@@ -7,6 +15,8 @@ import { keepChosenLanguage, type Language } from "../../i18n/language";
 import { lineLanguage } from "../../i18n/pageLanguage";
 import { useTranslation } from "../../i18n/react";
 import { useReducedMotion } from "../../ui/useReducedMotion";
+import { reopenOnSettingsNextStart } from "./reopenOnSettings";
+import { statsClearPeek } from "./settingsPeek";
 import "./settings-note.css";
 
 /** A language, or null to follow LINE's. */
@@ -27,7 +37,8 @@ const reason = (error: unknown) => (error instanceof Error ? error.message : Str
 /**
  * Sticks the note to the cork's foot with only its title showing, until it scrolls into view: CSS
  * tucks it down by the rest of its height, measured here whenever that changes. A sticky box keeps
- * clear of its scroller's padding, so the tuck reaches through the cork's too.
+ * clear of its scroller's padding, so the tuck reaches through the cork's too. Where the stats run
+ * into that band it stays below them instead, and scrolling finds it.
  *
  * Returns `reveal`, which scrolls the cork until the whole note shows above its foot. A tap on the
  * tucked note uses it, and so does focus, which the browser's own scrolling can't bring out of a tuck.
@@ -38,20 +49,26 @@ function usePeek(note: RefObject<HTMLElement | null>, title: RefObject<HTMLEleme
     const paper = note.current;
     const heading = title.current;
     if (!paper || !heading) return;
+    const cork = paper.parentElement;
+    const stats = cork?.querySelector<HTMLElement>(".stat-board__stats");
     const tuck = () => {
-      const cork = paper.parentElement;
       const padding = cork ? parseFloat(getComputedStyle(cork).paddingBottom) || 0 : 0;
       const shown = heading.offsetTop + heading.offsetHeight + PEEK_UNDER_TITLE;
       const tucked = Math.max(0, paper.offsetHeight - shown + padding);
       paper.style.setProperty("--settings-tuck", `${tucked}px`);
+      if (cork && stats)
+        paper.toggleAttribute(
+          "data-below-stats",
+          !statsClearPeek(cork.clientHeight, stats.offsetTop + stats.offsetHeight, shown),
+        );
     };
     tuck();
     const resized = new ResizeObserver(tuck);
-    resized.observe(paper);
+    for (const el of [paper, cork, stats]) if (el) resized.observe(el);
     return () => resized.disconnect();
   }, [note, title]);
 
-  return () => {
+  return (behavior: ScrollBehavior = reduced ? "auto" : "smooth") => {
     const paper = note.current;
     const cork = paper?.parentElement;
     // Tucked, or partly scrolled in, the note's foot is below the cork's.
@@ -63,16 +80,50 @@ function usePeek(note: RefObject<HTMLElement | null>, title: RefObject<HTMLEleme
     const below = paper.getBoundingClientRect().bottom - edge;
     paper.style.removeProperty("position");
     const padding = parseFloat(getComputedStyle(cork).paddingBottom) || 0;
-    cork.scrollBy({ top: below + padding, behavior: reduced ? "auto" : "smooth" });
+    cork.scrollBy({ top: below + padding, behavior });
   };
+}
+
+/**
+ * The app restarted for a language change, so the note comes into view as the cork shows and stays
+ * there while the figures above it load and change height, until the person touches the cork.
+ */
+function useOpenInView(
+  note: RefObject<HTMLElement | null>,
+  reveal: (behavior?: ScrollBehavior) => void,
+  opened: boolean,
+) {
+  const revealNow = useEffectEvent(() => reveal("instant"));
+  useEffect(() => {
+    const cork = note.current?.parentElement;
+    const above = cork?.querySelector(".stat-board__stats");
+    if (!opened || !cork || !above) return;
+    revealNow();
+    const resized = new ResizeObserver(revealNow);
+    resized.observe(above);
+    const letGo = () => resized.disconnect();
+    const touches = ["pointerdown", "wheel", "keydown"] as const;
+    for (const type of touches) cork.addEventListener(type, letGo, { once: true, passive: true });
+    return () => {
+      resized.disconnect();
+      for (const type of touches) cork.removeEventListener(type, letGo);
+    };
+  }, [note, opened]);
 }
 
 /**
  * Your Settings, the first paper under the stats on your cork back. A language is saved to your
  * account, then kept on this phone for the first screen of the next start, and the app restarts in
- * it, so text built outside React follows too.
+ * it, so text built outside React follows too. The start after a language change opens on this note,
+ * so the person sees their pick took (`openedInView`).
  */
-export function SettingsNote({ restart = () => location.reload() }: { restart?: () => void }) {
+export function SettingsNote({
+  restart = () => location.reload(),
+  openedInView = false,
+}: {
+  restart?: () => void;
+  openedInView?: boolean;
+}) {
   const { t } = useTranslation();
   const api = useApi();
   const me = useMe();
@@ -82,6 +133,7 @@ export function SettingsNote({ restart = () => location.reload() }: { restart?: 
   const [saved, setSaved] = useState<Choice>(me.languageChoice);
   const [status, setStatus] = useState<Status>({ step: "idle" });
   const reveal = usePeek(note, title);
+  useOpenInView(note, reveal, openedInView);
 
   const choose = async (choice: Choice) => {
     if (status.step === "saving") return;
@@ -106,6 +158,7 @@ export function SettingsNote({ restart = () => location.reload() }: { restart?: 
       setStatus({ step: "failed", problem });
       return;
     }
+    reopenOnSettingsNextStart();
     restart();
   };
 
@@ -121,8 +174,8 @@ export function SettingsNote({ restart = () => location.reload() }: { restart?: 
       ref={note}
       className="stat-board__note settings-note"
       aria-labelledby={`${id}-title`}
-      onClick={reveal}
-      onFocus={reveal}
+      onClick={() => reveal()}
+      onFocus={() => reveal()}
     >
       <div className="stat-board__paper">
         <h3 ref={title} className="settings-note__title" id={`${id}-title`}>
@@ -144,11 +197,14 @@ export function SettingsNote({ restart = () => location.reload() }: { restart?: 
               <span lang={choice ?? undefined}>{label(choice)}</span>
             </label>
           ))}
+          <p className="fine settings-note__restarts">
+            {t(($) => $.stickerBoard.settings.language.restarts)}
+          </p>
           <p className="fine settings-note__status" role="status">
             {status.step === "saving" ? t(($) => $.stickerBoard.settings.language.saving) : ""}
           </p>
           {status.step === "failed" && (
-            <p className="settings-note__problem" role="alert">
+            <p className="problem-note settings-note__problem" role="alert">
               {status.problem}
             </p>
           )}

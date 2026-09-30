@@ -10,6 +10,13 @@
   transform: rotate(0.4deg);
 }
 
+/* The stats fill the screen, so it lies below them, where scrolling finds it, rather than riding over
+   their last papers. */
+.stat-board__note.settings-note[data-below-stats] {
+  position: relative;
+  bottom: auto;
+}
+
 /* A card's clean-cut edge, not a torn one. */
 .settings-note > .stat-board__paper {
   padding: 16px 16px 8px;
@@ -63,7 +70,7 @@
   width: 22px;
   height: 22px;
   margin: 0;
-  border: 1.5px solid var(--rule-strong);
+  border: 1.5px solid var(--graphite);
   border-radius: 50%;
   background: var(--canvas);
   appearance: none;
@@ -79,6 +86,11 @@
   outline-offset: 3px;
 }
 
+.settings-note__restarts {
+  clear: both;
+  margin: 8px 0 0;
+}
+
 .settings-note__status {
   margin: 0;
 }
@@ -87,17 +99,8 @@
   display: none;
 }
 
-/* A failure's reason can be long: it wraps, and can be copied into a report. */
 .settings-note__problem {
   margin: 6px 0 8px;
-  padding: 10px 12px;
-  border-radius: var(--r-label);
-  background: var(--tomato-soft);
-  color: var(--ink);
-  font: 500 13px/1.4 var(--font-ui);
-  overflow-wrap: anywhere;
-  -webkit-user-select: text;
-  user-select: text;
 }
 
 /* Washi across both top corners. */

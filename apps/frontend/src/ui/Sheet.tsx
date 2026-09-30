@@ -1,5 +1,8 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode, type RefObject } from "react";
 import { useTranslation } from "../i18n/react";
+import { useBackToClose } from "./useBackToClose";
+import { useFocusTrap } from "./useFocusTrap";
+import { useModalDialog } from "./useModalDialog";
 import "./sheet.css";
 
 /** How far the perforation must be dragged down before the sheet lets go. */
@@ -15,14 +18,38 @@ interface Props {
    * unmounts it leaves this out and simply goes.
    */
   open?: boolean;
+  /** What the perforation, Escape and Back do. */
   onClose: () => void;
+  /** Escape's own answer, where it steps back inside the sheet before it closes it. */
+  onEscape?: () => void;
+  /** Its act is on its way: the sheet stays up, and Back keeps its place so it can try again. */
+  busy?: boolean;
+  /**
+   * What stays live around the sheet while it's open, for a sheet in a layer of its own (with a scrim
+   * to tap, or a screen that closes it). The rest of the page goes inert.
+   */
+  layer?: RefObject<HTMLElement | null>;
   className?: string;
   children: ReactNode;
 }
 
-/** A bottom sheet on the Liner. Its perforation row is the grab: drag it down or tap it to close. */
-export function Sheet({ label, open = true, onClose, className, children }: Props) {
+/**
+ * A modal bottom sheet on the Liner: the page behind it is inert and focus stays inside while it's
+ * open, and Escape, Back and its perforation row (drag it down or tap it) close it, so no caller has
+ * to remember them.
+ */
+export function Sheet({
+  label,
+  open = true,
+  onClose,
+  onEscape,
+  busy = false,
+  layer,
+  className,
+  children,
+}: Props) {
   const { t } = useTranslation();
+  const ref = useRef<HTMLDivElement>(null);
   // The press on the perforation: where it started, how far down it is now, and whether it moved.
   const press = useRef<{ x: number; y: number; dy: number; moved: boolean } | null>(null);
   // A drag's release is its own; the click the browser sends after it isn't a tap.
@@ -39,6 +66,17 @@ export function Sheet({ label, open = true, onClose, className, children }: Prop
       setLeaveFrom(0);
     }
   }
+  // The perforation, Escape and Back all close it, and all refuse while its act is on its way.
+  const close = () => {
+    if (!busy) onClose();
+  };
+  // The page comes back from inert before the trap gives focus back to it, so this goes first.
+  useModalDialog(ref, { layer, active: open });
+  useFocusTrap(ref, { active: open, onEscape: onEscape ?? close });
+  useBackToClose(open, () => {
+    close();
+    return !busy;
+  });
   if (!shown) return null;
 
   const release = () => {
@@ -50,15 +88,17 @@ export function Sheet({ label, open = true, onClose, className, children }: Prop
     dragged.current = true;
     if (held.dy <= DISMISS_PX) return;
     setLeaveFrom(held.dy);
-    onClose();
+    close();
   };
 
   const leaving = !open;
   return (
     <div
+      ref={ref}
       className={["bottom-sheet", leaving && "is-leaving", className].filter(Boolean).join(" ")}
       role="dialog"
       aria-label={label}
+      tabIndex={-1}
       aria-hidden={leaving || undefined}
       inert={leaving}
       style={dy ? { transform: `translateY(${dy}px)` } : { "--leave-from": `${leaveFrom}px` }}
@@ -70,6 +110,7 @@ export function Sheet({ label, open = true, onClose, className, children }: Prop
         type="button"
         className="perf"
         aria-label={t(($) => $.ui.sheet.close, { label })}
+        aria-disabled={busy || undefined}
         onPointerDown={(e) => {
           press.current = { x: e.clientX, y: e.clientY, dy: 0, moved: false };
           dragged.current = false;
@@ -91,7 +132,7 @@ export function Sheet({ label, open = true, onClose, className, children }: Prop
         }}
         onClick={() => {
           if (dragged.current) dragged.current = false;
-          else onClose();
+          else close();
         }}
       />
       {children}

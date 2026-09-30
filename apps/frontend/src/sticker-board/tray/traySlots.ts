@@ -43,8 +43,9 @@ export function traySlots(
 }
 
 /**
- * NEW: the stickers in the tray that arrived in today's ticket day and haven't been seen in the open
- * tray. One out on the board has been seen there, and its used sticker silhouette shows no sticker.
+ * NEW: the stickers that arrived in today's ticket day and the open tray hasn't shown yet. A sticker
+ * lands on the board when it's sealed or received, so a fresh arrival is NEW as its hole; one
+ * given away has left.
  */
 export function newSlots(
   slots: readonly TraySlot[],
@@ -61,7 +62,7 @@ export function newSlots(
 ): Set<string> {
   return new Set(
     slots
-      .filter((s) => s.state === "here" && !seen.has(s.id) && dayOf(s.arrivedAt) === today)
+      .filter((s) => s.state !== "given" && !seen.has(s.id) && dayOf(s.arrivedAt) === today)
       .map((s) => s.id),
   );
 }

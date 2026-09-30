@@ -2,6 +2,7 @@ import type { AppType, ErrorBody, Me } from "@drawing-app/api/client";
 import { hc, type InferRequestType } from "hono/client";
 import { ApiError, type ApiClient, type GiftOpening } from "./apiClient";
 import { startNftRequest } from "./httpDiagnostics";
+import { reportSessionLost } from "./sessionLoss";
 
 /** A request that hasn't answered by then fails with Try again, rather than hanging the screen. */
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -66,7 +67,7 @@ async function refusal(response: Response, what: string): Promise<ApiError> {
   } catch {
     body = undefined;
   }
-  return new ApiError(
+  const error = new ApiError(
     response.status,
     isErrorBody(body)
       ? body
@@ -75,6 +76,8 @@ async function refusal(response: Response, what: string): Promise<ApiError> {
           detail: `${what} answered ${response.status}: ${text}`,
         },
   );
+  if (error.status === 401 && error.code === "signed_out") reportSessionLost(error);
+  return error;
 }
 
 type GiftClaimToken = `0x${string}`;
@@ -82,12 +85,15 @@ type GiftClaimToken = `0x${string}`;
 /** Gift Claim Tokens are 0x and 64 lowercase hex digits; the server refuses anything else. */
 const isGiftClaimToken = (token: string): token is GiftClaimToken => /^0x[0-9a-f]{64}$/.test(token);
 
-/** The request with its token checked, or the server's own refusal, without asking it. */
+/**
+ * The request with its token checked. A token that can't be one is a link to no gift, which the
+ * server answers gift_not_found, so the screen shows that refusal without asking it.
+ */
 function claimOf(body: GiftOpening) {
   const { giftClaimToken } = body;
   if (!isGiftClaimToken(giftClaimToken)) {
-    throw new ApiError(400, {
-      error: "invalid_request",
+    throw new ApiError(404, {
+      error: "gift_not_found",
       detail: `giftClaimToken: not 0x and 64 hex digits (${giftClaimToken.slice(0, 20)}…)`,
     });
   }

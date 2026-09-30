@@ -48,14 +48,20 @@ export function writeStored(key: string, text: string | null, failure: string): 
   }
 }
 
-/** Counts a visit under `key`, and returns how many there have been, this one included. */
-export function countVisit(key: string): number {
+/** How many visits have been counted under `key`: 0 when there's no record or it's unreadable. */
+export function visitsCounted(key: string): number {
   const { text } = readStored(key, `The visit count ${key} can't be read on this device`);
-  let visits = Number(text ?? 0);
+  const visits = Number(text ?? 0);
   if (!Number.isInteger(visits) || visits < 0) {
     console.error(`The visit count ${key} is unreadable, so it's counted afresh:`, text);
-    visits = 0;
+    return 0;
   }
-  writeStored(key, String(visits + 1), `The visit count ${key} can't be saved on this device`);
-  return visits + 1;
+  return visits;
+}
+
+/** Counts a visit under `key`, and returns how many there have been, this one included. */
+export function countVisit(key: string): number {
+  const visits = visitsCounted(key) + 1;
+  writeStored(key, String(visits), `The visit count ${key} can't be saved on this device`);
+  return visits;
 }

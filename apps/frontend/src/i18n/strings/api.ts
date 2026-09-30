@@ -5,6 +5,11 @@ export const api = {
   signIn: {
     /** Sign-in screen, right after the LINE sign-in screen while the app signs in to its server with LINE's ID token: the status line */
     opening: { en: "Opening your sticker board…", ja: "シールボードをひらいています…" },
+    /** Sign-in screen, once signing in to the app's server has taken about six seconds: the line that joins the status line to say the wait is long */
+    stillOpening: {
+      en: "Still opening. It’s taking longer than usual.",
+      ja: "まだひらいています。いつもより時間がかかっています。",
+    },
     /** Sign-in screen, when signing in to the app's server fails: the heading above the error's message and a Try again or Reconnect with LINE button */
     failed: { en: "Couldn’t sign you in", ja: "ログインできませんでした" },
     /** Sign-in screen, after signing in to the app's server failed for a reason other than LINE's sign-in: the button that retries it */
@@ -14,7 +19,7 @@ export const api = {
     /** Sign-in screen, after tapping Reconnect with LINE: the status line while LINE Login restarts */
     reconnecting: { en: "Reconnecting with LINE…", ja: "LINEで再ログインしています…" },
   },
-  /** Asks for a handle when your LINE name is already someone's, before the app opens. */
+  /** Asks for a handle when your LINE name couldn't become one, before the app opens. */
   handle: {
     /** Handle prompt, on a first sign-in whose LINE name couldn't become the handle, before the app opens: the heading */
     title: { en: "Pick your handle", ja: "ユーザー名を決めましょう" },
@@ -23,10 +28,10 @@ export const api = {
       en: "It’s how people find you and your stickers.",
       ja: "みんながあなたやあなたのシールを見つけるときに使う名前です。",
     },
-    /** Handle prompt, when the LINE display name ({{name}}) couldn't become the handle, normally because someone has it: the line under the heading */
-    leadNameTaken: {
-      en: "Someone already goes by @{{name}}, so choose your own. It’s how people find you and your stickers.",
-      ja: "@{{name}}はすでにほかの人が使っているので、あなただけのユーザー名を決めてください。みんながあなたやあなたのシールを見つけるときに使う名前です。",
+    /** Handle prompt, when the LINE display name ({{name}}) couldn't become the handle, because someone has it or it breaks the handle rules: the line under the heading */
+    leadNameUnavailable: {
+      en: "“{{name}}” isn’t available as a handle, so choose your own. It’s how people find you and your stickers.",
+      ja: "「{{name}}」はユーザー名として使えないため、あなただけのユーザー名を決めてください。みんながあなたやあなたのシールを見つけるときに使う名前です。",
     },
     /** Handle prompt: the handle input's accessible label, read by screen readers */
     field: { en: "Your handle", ja: "ユーザー名" },

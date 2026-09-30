@@ -1,0 +1,53 @@
+/* The Shop's strip for a paid pack whose tickets weren't added (UnaddedPurchaseStrip.tsx): the stopped-state
+   field, Tomato Soft under Ink text, pressed like any tile. */
+.unadded-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  box-sizing: border-box;
+  width: calc(100% - 24px);
+  min-height: 44px;
+  margin: 0 12px 12px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--tomato-soft);
+  box-shadow: inset 0 0 0 1px var(--rule);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.unadded-strip:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.unadded-strip__text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.unadded-strip strong {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* The line wraps rather than widening the strip, in Japanese too. */
+.unadded-strip__text > span {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.unadded-strip svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}

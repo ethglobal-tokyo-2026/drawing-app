@@ -1,5 +1,5 @@
 import type { Tickets } from "@drawing-app/api/client";
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { ApiError, apiError, type ApiClient } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
@@ -124,6 +124,18 @@ function read(userId: string): UnaddedPurchase[] {
 /** Each person's kept payments, read from storage the first time they're asked for. */
 const kept = new Map<string, readonly UnaddedPurchase[]>();
 
+/** Screens showing kept payments, told whenever any person's change. */
+const listeners = new Set<() => void>();
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+const notify = () => listeners.forEach((listener) => listener());
+
 /** Keeps `purchases` as `userId`'s, in memory even when storage refuses them. */
 function write(userId: string, purchases: readonly UnaddedPurchase[]) {
   kept.set(userId, purchases);
@@ -133,6 +145,7 @@ function write(userId: string, purchases: readonly UnaddedPurchase[]) {
     purchases.length === 0 ? null : JSON.stringify(purchases),
     `The payments kept on this phone couldn't be saved (${digests})`,
   );
+  notify();
 }
 
 /** The payments kept for `userId` whose tickets aren't added yet, oldest first. */
@@ -194,9 +207,15 @@ export function keptRefusal(userId: string, digest: string): ApiError | null {
   return refusal ? refusalError(refusal) : null;
 }
 
+/** The kept payment a screen shows and the checkout opens on: one refused for good first, since the checkout says why only once. */
+export const unaddedPurchaseToShow = (
+  purchases: readonly UnaddedPurchase[],
+): UnaddedPurchase | undefined => purchases.find((p) => p.refusal) ?? purchases.at(0);
+
 /** For tests: reads storage again, as the app's code does when it starts. */
 export function readUnaddedPurchasesAgain(): void {
   kept.clear();
+  notify();
 }
 
 /** Asks with a request still out, by payment ID, so asking again joins it instead of sending another. */
@@ -268,6 +287,12 @@ export async function addUnaddedPurchases(
     }
   }
   return tickets;
+}
+
+/** The payments kept for you whose tickets aren't added yet, as they are: it follows their being kept, added and refused. */
+export function useUnaddedPurchases(): readonly UnaddedPurchase[] {
+  const { id } = useMe();
+  return useSyncExternalStore(subscribe, () => unaddedPurchasesFor(id));
 }
 
 /** Quietly asks again for the tickets of every payment kept for you, as whatever calls it opens. */

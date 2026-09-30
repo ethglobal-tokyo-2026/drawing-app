@@ -12,7 +12,7 @@ export const errors = {
   },
   /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: LINE is logged in but hands over no ID token to sign in to the app's server with (made by the app itself, shown through errorMessage) */
   no_line_token: {
-    en: "LINE didn't provide a sign-in token. Reconnect with LINE to try again.",
+    en: "LINE didn't sign you in. Reconnect with LINE to try again.",
     ja: "LINEのログイン情報を取得できませんでした。LINEで再ログインしてください。",
   },
   /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: tapping it couldn't restart LINE Login (made by the app itself, shown through errorMessage) */
@@ -156,7 +156,7 @@ export const errors = {
   },
   /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: signing in to the app's server (POST /api/session) with an expired LINE ID token, through errorMessage. Also Giving, Receiving and the reserve ticket checkout, through errorReason, when a chain action or a payment waited on Privy and Privy couldn't sign in because LINE's ID token had expired (made by the app itself) */
   line_token_expired: {
-    en: "Your LINE sign-in token has expired. Reconnect with LINE to continue.",
+    en: "Your LINE sign-in has expired. Reconnect with LINE to continue.",
     ja: "LINEのログイン情報の有効期限が切れました。LINEで再ログインしてください。",
   },
   /** Signing in (POST /api/session), and wherever errorMessage shows a refusal of POST /api/line-menu: LINE didn't answer when the app's server checked your sign-in or linked your chat menu. The developer slip's Chat menu row shows the code instead */
@@ -169,7 +169,7 @@ export const errors = {
     en: "Your sticker is saved, but it couldn't be sealed on-chain. Try again; it won't use another ticket.",
     ja: "シールは保存されましたが、ブロックチェーン上で仕上げられませんでした。もう一度お試しください。チケットを新たに使うことはありません。",
   },
-  /** Drawing screen, starting a sticker: spending a ticket (POST /api/tickets/spend) with no daily or reserve tickets left, in the start note's “Couldn’t use a ticket” through errorReason */
+  /** Drawing screen, starting a sticker: spending a ticket (POST /api/tickets/spend) with no daily or reserve tickets left, in the start card's “Couldn’t start your sticker” through errorMessage */
   no_tickets_left: { en: "You're out of tickets.", ja: "チケットが残っていません。" },
   /** Giving, In the bag: recording that the gift was sent (POST /api/gifts/:giftId/shared) before its deposit landed in the escrow, in “couldn’t record” through errorReason; the Receive gift dialog shows its own “Almost here” screen instead */
   not_deposited: {
@@ -221,8 +221,11 @@ export const errors = {
     en: "The Gratitude replay couldn't be read.",
     ja: "感謝のリプレイを読み取れませんでした。",
   },
-  /** Any screen, when a request has no valid session (the cookie expired, or the account was deleted), through errorMessage/errorReason */
-  signed_out: { en: "You're signed out.", ja: "ログアウトしています。" },
+  /** Sign-in screen, under “Couldn’t sign you in”: a request found the session gone (the cookie expired, or the account was deleted) and signing in again didn't hold; the app signs in again by itself the first time, so this shows only on that second failure, through errorMessage */
+  signed_out: {
+    en: "You're signed out. Reopen Croquis from LINE to sign in again.",
+    ja: "ログアウトされました。LINEからクロッキーをひらき直して、もう一度ログインしてください。",
+  },
   /** Giving and Receiving: a chain action waited 30 s for the Sepolia account that holds the stickers and Privy never readied it, or Privy failed again after one fresh try; the reason follows in brackets (made by the app itself, shown through errorReason); the drawing screen's seal chip words this failure itself */
   smart_account_not_ready: {
     en: "Your board address is taking too long to get ready. Try again.",
@@ -257,7 +260,7 @@ export const errors = {
     en: "That ticket was already used.",
     ja: "そのチケットは、すでに使われています。",
   },
-  /** Drawing screen, starting a sticker: spending a ticket (POST /api/tickets/spend) when the next one isn't the daily or reserve kind the start card offered, in “Couldn’t use a ticket” through errorReason */
+  /** Drawing screen, starting a sticker: spending a ticket (POST /api/tickets/spend) when the next one isn't the daily or reserve kind the start card offered, in the start card's “Couldn’t start your sticker” through errorMessage */
   ticket_kind_changed: {
     en: "Your tickets changed. Try again.",
     ja: "チケットの状況が変わりました。もう一度お試しください。",

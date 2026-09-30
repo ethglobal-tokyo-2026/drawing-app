@@ -1,5 +1,6 @@
 import type { Person } from "@drawing-app/api/client";
 import { Suspense, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { flushSync } from "react-dom";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
 import { resendPendingGratitude } from "../gratitude/gratitudeOutbox";
@@ -54,6 +55,14 @@ const DRAWING_LOADING: CSSProperties = {
   background: "var(--liner)",
 };
 
+const EXPLORE_CONTROLS = 'button, a[href], input, [role="button"]';
+
+/** The control in Explore that a click or focus reached, unless it's in one of Explore's sheets. */
+const explorePlaceOf = (target: EventTarget) => {
+  const control = target instanceof Element ? target.closest<HTMLElement>(EXPLORE_CONTROLS) : null;
+  return control && !control.closest('[role="dialog"]') ? control : null;
+};
+
 /** The drawing screen's place while its code loads: plain Liner, and one line for screen readers. */
 function DrawingScreenLoading() {
   const { t } = useTranslation();
@@ -93,6 +102,11 @@ export default function App() {
   const [giftClosures, setGiftClosures] = useState(0);
   // Someone else's sticker board, opened from Explore over it, so Explore keeps its search and scroll.
   const [visiting, setVisiting] = useState<Person>();
+  // Where you were in Explore, which Back returns focus to.
+  const explorePlace = useRef<HTMLElement | null>(null);
+  const rememberPlace = (target: EventTarget) => {
+    explorePlace.current = explorePlaceOf(target) ?? explorePlace.current;
+  };
   // The reserve ticket checkout, opened from the Shop over the whole phone, tabs and all.
   const [checkingOut, setCheckingOut] = useState(false);
   const drawing = view === "draw";
@@ -181,21 +195,32 @@ export default function App() {
         )}
         {/* Each in its own boundary, so Explore stays up while an artist's board loads over it. */}
         {view === "explore" && (
-          <Suspense fallback={null}>
-            <ExploreScreen
-              boardOf={boardOf}
-              onBoardOfTaken={() => setBoardOf(undefined)}
-              onOpenArtist={setVisiting}
-              onOpenMyBoard={() => setView("board")}
-            />
-          </Suspense>
+          // Inert under their board, so Tab and screen readers stay on it.
+          <div
+            className="screen-layer"
+            inert={visiting !== undefined}
+            onFocusCapture={(e) => rememberPlace(e.target)}
+            onClickCapture={(e) => rememberPlace(e.target)}
+          >
+            <Suspense fallback={null}>
+              <ExploreScreen
+                boardOf={boardOf}
+                onBoardOfTaken={() => setBoardOf(undefined)}
+                onOpenArtist={setVisiting}
+                onOpenMyBoard={() => setView("board")}
+              />
+            </Suspense>
+          </div>
         )}
         {view === "explore" && visiting && (
           <Suspense fallback={null}>
             <ArtistBoard
               key={visiting.id}
               person={visiting}
-              onBack={() => setVisiting(undefined)}
+              onBack={() => {
+                flushSync(() => setVisiting(undefined));
+                explorePlace.current?.focus({ preventScroll: true });
+              }}
             />
           </Suspense>
         )}

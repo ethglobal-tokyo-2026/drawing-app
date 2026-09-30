@@ -24,7 +24,12 @@ import {
   type StickerView,
 } from "../api/views";
 import { GiftReceivedNotice } from "../giving/GiftReceivedNotice";
-import { markNoticed, newestUnnoticed, receiveOf } from "../giving/noticedGifts";
+import {
+  markNoticed,
+  newestUnnoticed,
+  noticeReceivesFromNow,
+  receiveOf,
+} from "../giving/noticedGifts";
 import { PendingGiftsNotificationBadge } from "../giving/PendingGiftsNotificationBadge";
 import { useGiftSender } from "../giving/useGiftSender";
 import { FEEL_CONFIG } from "../gratitude/gameConfig";
@@ -34,6 +39,7 @@ import { useTranslation } from "../i18n/react";
 import { DrawIcon } from "../icons/DrawIcon";
 import { useMe } from "../api/meContext";
 import { useIdentity } from "../identity/useIdentity";
+import { CaretRight } from "../icons";
 import { LIFF_ID } from "../line/liff";
 import { formatHandle, formatNo } from "../stickers/format";
 import { useLight } from "../stickers/light";
@@ -60,8 +66,10 @@ import {
 import { PlacedSticker } from "./PlacedSticker";
 import {
   FIRST_SPOT,
+  boxOf,
   fieldOf,
   freeSpot,
+  kept,
   knobHidden,
   nextZ,
   sizeOf,
@@ -79,9 +87,11 @@ import {
   markBoardComplete,
   usePreloadAfterBoard,
 } from "./boardComplete";
+import { markGreeted, owesGreeting } from "./artistChipGreeting";
 import { markChipsPlayed } from "./boardSettled";
 import { keepBoard, keptBoardFor } from "./lastBoard";
 import { BoardFlip } from "./stat-board/BoardFlip";
+import { takeReopenOnSettings } from "./stat-board/reopenOnSettings";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
 import { readingOrder } from "./stickerOrder";
 import { StickerToolbar } from "./StickerToolbar";
@@ -90,6 +100,7 @@ import { GiftsForYouBadge, type GiftForYou } from "../receiving/GiftsForYouBadge
 import { ArtistChipLayer } from "./ArtistChipLayer";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
+import type { TrayProblem } from "./tray/trayProblem";
 import { useBoardGestures } from "./useBoardGestures";
 import { useBoardSize } from "./useBoardSize";
 import { useMyStickerBoard } from "./useMyStickerBoard";
@@ -151,23 +162,6 @@ function curledToday(stickers: readonly BoardSticker[], now: Date) {
 
 const round4 = (v: number) => Number(v.toFixed(4));
 
-/** An element's box on the board, which is its offset parent. */
-const boxOf = (el: HTMLElement): Box => ({
-  left: el.offsetLeft,
-  top: el.offsetTop,
-  right: el.offsetLeft + el.offsetWidth,
-  bottom: el.offsetTop + el.offsetHeight,
-});
-
-/** The box as it was when it hasn't moved, so measuring again doesn't re-render the board. */
-const kept = (was: Box | null, now: Box) =>
-  was?.left === now.left &&
-  was.top === now.top &&
-  was.right === now.right &&
-  was.bottom === now.bottom
-    ? was
-    : now;
-
 interface LoadedBoard {
   owner: PersonView;
   stickers: BoardStickerView[];
@@ -227,6 +221,22 @@ const viewOf = (s: BoardStickerView): StickerView => ({
   sealedAt: s.createdAt,
 });
 
+/** The stickers of yours that others have received, each with the giver's notice's contents. */
+const receivedGiftsOf = (stickers: readonly BoardStickerView[]) =>
+  stickers.flatMap((s) =>
+    !s.held && s.givenTo
+      ? [
+          {
+            stickerId: s.id,
+            receivedAt: s.givenTo.receivedAt,
+            sticker: viewOf(s),
+            receiver: s.givenTo.receiver,
+            ...(s.urls.mask && { mask: s.urls.mask }),
+          },
+        ]
+      : [],
+  );
+
 /** Gratitude being sent: for a received gift when `giftId` is set, which records it; the stat
  * board's demo has none. */
 type GratitudeFor = { sticker: BoardSticker; giver: ReturnType<typeof asGiver>; giftId?: string };
@@ -255,6 +265,22 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const owner = adopted?.owner ?? null;
   /** Stickers whose spot didn't save, and why; each goes once a save of it succeeds. */
   const [unsaved, setUnsaved] = useState<ReadonlyMap<string, string>>(() => new Map());
+  /** What the sticker tray couldn't do, said in an alert until it's dismissed. */
+  const [trayProblems, setTrayProblems] = useState<readonly TrayProblem[]>([]);
+  const addTrayProblem = useCallback(
+    (problem: TrayProblem) =>
+      setTrayProblems((was) =>
+        was.some(
+          (p) =>
+            p.kind === problem.kind &&
+            p.reason === problem.reason &&
+            p.nos.join() === problem.nos.join(),
+        )
+          ? was
+          : [...was, problem],
+      ),
+    [],
+  );
   const size = useBoardSize(stage);
   /** The name button's box on the board, which a sticker's knob must stay clear of. */
   const [name, setName] = useState<Box | null>(null);
@@ -268,10 +294,12 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const [open, setOpen] = useState<{ id: string; mode: "yours" | "given" } | null>(null);
   const openYours = (id: string) => setOpen({ id, mode: "yours" });
   const [giving, setGiving] = useState<BoardSticker | null>(null);
+  /** The app restarted for a language change, so it opens on the stat board, at Settings. */
+  const [reopenedOnSettings] = useState(takeReopenOnSettings);
   /** The board is turned over to its stat board. */
-  const [turned, setTurned] = useState(false);
+  const [turned, setTurned] = useState(reopenedOnSettings);
   /** The board has turned over before, so its stat board stays mounted for every turn after. */
-  const [wasTurned, setWasTurned] = useState(false);
+  const [wasTurned, setWasTurned] = useState(reopenedOnSettings);
   const { tickets } = useTickets();
   // Draw spends a daily ticket at once, its ticket peeling off the key; with none at all, a card says when.
   const drawKey = useDrawFromBoard(onDraw);
@@ -281,8 +309,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const [noticesClosed, setNoticesClosed] = useState<ReadonlySet<string>>(() => new Set());
   /** A sticker that just reached you, and its giver, while it has no gratitude yet. */
   const [owed, setOwed] = useState<{ gift: { id: string }; giver: PersonView } | null>(null);
-  /** The first-load artist chips have played, or a sticker was selected, which clears them. */
-  const [chipsDone, setChipsDone] = useState(false);
+  /** The artist chips have played on this app open, or a sticker was selected, which clears them. */
+  const [chipsDone, setChipsDone] = useState(() => !owesGreeting(account.id));
   const me = useIdentity();
   const giftSender = useGiftSender();
   const reduced = useReducedMotion();
@@ -407,39 +435,41 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       : [];
 
   // Each gift someone received since this device last said so, newest first, one notice at a time.
-  const receivedGifts = (adopted?.stickers ?? []).flatMap((s) =>
-    !s.held && s.givenTo
-      ? [
-          {
-            stickerId: s.id,
-            receivedAt: s.givenTo.receivedAt,
-            sticker: viewOf(s),
-            receiver: s.givenTo.receiver,
-            ...(s.urls.mask && { mask: s.urls.mask }),
-          },
-        ]
-      : [],
-  );
+  const receivedGifts = receivedGiftsOf(adopted?.stickers ?? []);
   // Closed ones stay closed on this visit even when the device can't save that they were noticed.
   const notice = newestUnnoticed(receivedGifts.filter((g) => !noticesClosed.has(receiveOf(g))));
 
-  // A sticker that just reached you asks about gratitude, when its newest gift to you has none.
+  // A device with no record of notices would replay every gift ever received, so the first board it
+  // draws counts those as noticed.
+  useEffect(() => {
+    if (adopted) noticeReceivesFromNow(receivedGiftsOf(adopted.stickers));
+  }, [adopted]);
+
+  // A sticker that just reached you asks about gratitude, when its newest gift to you has none. When
+  // the check fails, the ask can't come, so the board says so, with a way to check again.
+  const [checkFailure, setCheckFailure] = useState<string | null>(null);
+  const [checks, setChecks] = useState(0);
   useEffect(() => {
     if (!freshId || askedForGratitude.has(freshId)) return;
     let current = true;
     api.stickerDetail(freshId).then(
       (detail) => {
+        if (!current) return;
+        setCheckFailure(null);
         const [entry] = detail.transferTrail;
-        if (current && entry && entry.receiver.id === detail.owner.id && !entry.gratitude)
+        if (entry && entry.receiver.id === detail.owner.id && !entry.gratitude)
           setOwed({ gift: { id: entry.giftId }, giver: toPerson(entry.giver) });
       },
-      (error: unknown) =>
-        console.error(`Checking whether ${freshId} has gratitude failed`, apiError(error)),
+      (error: unknown) => {
+        const failure = apiError(error);
+        console.error(`Checking whether ${freshId} has gratitude failed`, failure);
+        if (current) setCheckFailure(errorReason(failure));
+      },
     );
     return () => {
       current = false;
     };
-  }, [api, freshId]);
+  }, [api, freshId, checks]);
 
   // The sheet asking about gratitude starts the game's code while it's read.
   useEffect(() => {
@@ -449,10 +479,16 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // The open sticker tray's NEW marks, which the tray takes off at once.
   const markSeen = (ids: readonly string[]) => {
     api.markTraySeen(ids).catch((error: unknown) => {
+      const failure = apiError(error);
       console.error(
         `Saving that the sticker tray showed ${ids.join(", ")} failed, so they show NEW again next time`,
-        apiError(error),
+        failure,
       );
+      addTrayProblem({
+        kind: "seen",
+        nos: (stickers ?? []).filter((s) => ids.includes(s.id)).map((s) => s.no),
+        reason: errorReason(failure),
+      });
     });
   };
 
@@ -493,7 +529,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // A received sticker landing names its artist alone; otherwise every foil sticker does, once.
   const landingByOther = onBoard.find((s) => s.id === landingId && byOther(s));
   const chips =
-    chipsDone || !field || !size
+    chipsDone || failed || !field || !size
       ? []
       : onBoard
           .filter((s) => byOther(s) && (!landingByOther || s.id === landingByOther.id))
@@ -502,6 +538,11 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
             artist: s.artist,
             box: stickerBox(field, size.W, s.placement, s),
           }));
+  // The greeting is spent as it starts, so coming back to the board, or leaving early, doesn't replay it.
+  const greeting = chips.length > 0;
+  useEffect(() => {
+    if (greeting) markGreeted(account.id);
+  }, [greeting, account.id]);
   const freshSticker = freshId ? stickers?.find((s) => s.id === freshId) : undefined;
 
   const setPlacement = (id: string, placement: Placement) =>
@@ -538,7 +579,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // Back turns the stat board back over, as LINE's Back does on any overlay.
   useBackToClose(turned, () => turn(false));
 
-  const { hold, stow, tabStop } = useBoardGestures({
+  const { hold, stow, arrange, tabStop } = useBoardGestures({
     stage,
     stickers: onBoard,
     field,
@@ -602,7 +643,10 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     remove: removeFromBoard,
     openGiven: (id) => setOpen({ id, mode: "given" }),
     pulse: (id) => {
-      const lift = stickerEl(id)?.querySelector<HTMLElement>(".placed-sticker__lift");
+      const sticker = stickerEl(id);
+      // Its hole's Show it: a screen reader can't see the pulse, so focus goes to the sticker.
+      sticker?.focus({ preventScroll: true });
+      const lift = sticker?.querySelector<HTMLElement>(".placed-sticker__lift");
       if (!lift) return;
       if (reduced)
         lift.animate([{ opacity: 1 }, { opacity: 0.4 }, { opacity: 1 }], { duration: 400 });
@@ -644,14 +688,17 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const blankStyle = blankAt ? { left: blankAt.x, top: blankAt.y } : undefined;
   // Until the first sticker, Draw says where to start.
   const firstVisit = stickers?.length === 0;
+  // An empty board that still has stickers in the sticker tray points to the tray, not to Draw.
+  const inTray = (stickers ?? []).some((s) => s.held && !onTheBoard(s));
   const unsavedStickers = (stickers ?? []).filter((s) => unsaved.has(s.id));
 
   const front = (
-    <div className="board" ref={setFace}>
+    <div className="board" ref={setFace} data-resting={turned || gratitudeFor ? "" : undefined}>
       {/* Your name and Draw come before the stickers, so Tab reaches them first. */}
       <button
         ref={nameButton}
-        className="board-who"
+        // Its width is its own until a gifts badge needs the room opposite.
+        className={`board-who ${waiting.length > 0 || onTheirWay.length > 0 ? "" : "is-roomy"}`}
         onClick={() => turn(!turned)}
         onPointerDown={() => void StatBoard.preload()}
         onFocus={() => void StatBoard.preload()}
@@ -661,12 +708,13 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       >
         <PhotoSticker src={me.pictureUrl} name={me.displayName} size={42} />
         <span className="board-who-name">{me.displayName}</span>
+        <CaretRight className="board-who-cue" size={14} weight="bold" aria-hidden />
       </button>
 
       {(waiting.length > 0 || onTheirWay.length > 0) && (
         <div className="board-gifts">
           {/* Gifts for you first: they ask to be opened, where gifts on their way only report. */}
-          <GiftsForYouBadge gifts={waiting} onOpen={onOpenGift} />
+          <GiftsForYouBadge gifts={waiting} onOpen={onOpenGift} nudging={idle} />
           <PendingGiftsNotificationBadge gifts={onTheirWay} onOpen={openYours} />
         </div>
       )}
@@ -714,7 +762,11 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
         {stickers && onBoard.length === 0 && (
           <div className="board-blank" style={blankStyle}>
             <span className="board-blank-cut" aria-hidden />
-            <span className="board-blank-note">{t(($) => $.stickerBoard.board.blank)}</span>
+            <span className="board-blank-note">
+              {inTray
+                ? t(($) => $.stickerBoard.board.blankWithTray)
+                : t(($) => $.stickerBoard.board.blank)}
+            </span>
           </div>
         )}
         {field &&
@@ -749,10 +801,10 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
                   board={size}
                   knobBelow={knobBelow}
                   clearOf={draw}
-                  give={giftSender !== null}
-                  onGive={() => setGiving(s)}
+                  {...(giftSender && { onGive: () => setGiving(s) })}
                   onView={() => openYours(s.id)}
                   onRemove={() => stow(s.id)}
+                  onArrange={(step) => arrange(s.id, step)}
                   {...(byOther(s) && { artist: s.artist })}
                   onEscape={() =>
                     stage.current
@@ -784,6 +836,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
             ownerId={owner.id}
             api={trayBoard}
             onSeen={markSeen}
+            onProblem={addTrayProblem}
           />
         </Suspense>
       )}
@@ -792,28 +845,60 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
         <div className="board-blank board-problem" role="alert" style={blankStyle}>
           <span className="board-blank-cut" aria-hidden />
           <span className="board-blank-note">{t(($) => $.stickerBoard.board.didntLoad)}</span>
-          <span className="fine board-problem-reason">{errorReason(board.error)}</span>
+          <p className="problem-note board-problem-reason">{errorReason(board.error)}</p>
           <LabelButton size="sm" onClick={board.retry}>
             {t(($) => $.stickerBoard.tryAgain)}
           </LabelButton>
         </div>
       )}
 
-      {unsavedStickers.length > 0 && (
+      {(unsavedStickers.length > 0 || trayProblems.length > 0) && (
+        <div className="board-alerts">
+          {unsavedStickers.length > 0 && (
+            <div className="board-unsaved" role="alert">
+              <p className="board-unsaved-note">
+                {t(($) => $.stickerBoard.board.unsaved, {
+                  count: unsavedStickers.length,
+                  stickers: new Intl.ListFormat(i18n.language).format(
+                    unsavedStickers.map((s) => formatNo(s.no)),
+                  ),
+                  reasons: [...new Set(unsavedStickers.map((s) => unsaved.get(s.id)))].join("; "),
+                })}
+              </p>
+              <LabelButton
+                size="sm"
+                onClick={() => unsavedStickers.forEach((s) => save(s, s.placement))}
+              >
+                {t(($) => $.stickerBoard.tryAgain)}
+              </LabelButton>
+            </div>
+          )}
+          {trayProblems.length > 0 && (
+            <div className="board-unsaved" role="alert">
+              <div className="board-unsaved-list">
+                {trayProblems.map((p) => (
+                  <p className="board-unsaved-note" key={`${p.kind}:${p.nos.join()}:${p.reason}`}>
+                    {t(($) => $.stickerBoard.tray.problem[p.kind], {
+                      stickers: new Intl.ListFormat(i18n.language).format(p.nos.map(formatNo)),
+                      reason: p.reason,
+                    })}
+                  </p>
+                ))}
+              </div>
+              <LabelButton size="sm" onClick={() => setTrayProblems([])}>
+                {t(($) => $.stickerBoard.tray.problem.dismiss)}
+              </LabelButton>
+            </div>
+          )}
+        </div>
+      )}
+
+      {checkFailure && unsavedStickers.length === 0 && (
         <div className="board-unsaved" role="alert">
           <p className="board-unsaved-note">
-            {t(($) => $.stickerBoard.board.unsaved, {
-              count: unsavedStickers.length,
-              stickers: new Intl.ListFormat(i18n.language).format(
-                unsavedStickers.map((s) => formatNo(s.no)),
-              ),
-              reasons: [...new Set(unsavedStickers.map((s) => unsaved.get(s.id)))].join("; "),
-            })}
+            {t(($) => $.stickerBoard.board.gratitudeCheckFailed, { reason: checkFailure })}
           </p>
-          <LabelButton
-            size="sm"
-            onClick={() => unsavedStickers.forEach((s) => save(s, s.placement))}
-          >
+          <LabelButton size="sm" onClick={() => setChecks((n) => n + 1)}>
             {t(($) => $.stickerBoard.tryAgain)}
           </LabelButton>
         </div>
@@ -947,6 +1032,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
               ref={statBoard}
               onFlipBack={() => turn(false)}
               flipBackRef={flipBack}
+              reopenedOnSettings={reopenedOnSettings}
               onTryGratitudeMiniGame={
                 newest
                   ? () =>

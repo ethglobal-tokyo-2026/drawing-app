@@ -7,6 +7,7 @@ import {
   type TrayEngine,
   type TraySticker,
 } from "./trayEngine";
+import type { TrayProblem } from "./trayProblem";
 import { traySlots } from "./traySlots";
 
 /** What the board asks of its sticker tray, all in board pixels. */
@@ -31,6 +32,8 @@ interface Props {
   api: TrayBoard;
   /** Stickers the open tray showed, which are NEW no longer. */
   onSeen: (ids: readonly string[]) => void;
+  /** Something the tray couldn't do, which the board says. */
+  onProblem: (problem: TrayProblem) => void;
   ref?: Ref<StickerTrayHandle>;
 }
 
@@ -57,11 +60,11 @@ function trayStickers(stickers: readonly BoardStickerView[], ownerId: string): T
 }
 
 /** The sticker tray on the board: its engine, fed the board's stickers and asked through `ref`. */
-export function StickerTray({ board, stickers, ownerId, api, onSeen, ref }: Props) {
+export function StickerTray({ board, stickers, ownerId, api, onSeen, onProblem, ref }: Props) {
   const engine = useRef<TrayEngine | null>(null);
-  const latest = useRef({ stickers, ownerId, api, onSeen });
+  const latest = useRef({ stickers, ownerId, api, onSeen, onProblem });
   useLayoutEffect(() => {
-    latest.current = { stickers, ownerId, api, onSeen };
+    latest.current = { stickers, ownerId, api, onSeen, onProblem };
   });
 
   // Before the engine's own effect, so a new engine doesn't redraw what it has just drawn.
@@ -87,6 +90,7 @@ export function StickerTray({ board, stickers, ownerId, api, onSeen, ref }: Prop
       },
       api: side,
       markSeen: (ids) => latest.current.onSeen(ids),
+      problem: (p) => latest.current.onProblem(p),
     });
     engine.current = tray;
     return () => {

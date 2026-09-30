@@ -10,6 +10,7 @@ import { FinishPreview, type BackingFoil, type Laminate } from "./FinishPreview"
 import { ReserveTicketsHero } from "./ReserveTicketsHero";
 import { ShopTicketPurchases } from "./ShopTicketPurchases";
 import { useShopSticker, type ShopSticker } from "./shopSticker";
+import { UnaddedPurchaseStrip } from "./UnaddedPurchaseStrip";
 import "./ShopScreen.css";
 
 /** A swatch's side, in CSS px. */
@@ -37,6 +38,7 @@ export function ShopScreen({ onBuyReserveTickets }: { onBuyReserveTickets: () =>
   return (
     <div className="shop">
       <h1 className="shop__title">{t(($) => $.shop.title)}</h1>
+      <UnaddedPurchaseStrip onOpen={onBuyReserveTickets} />
       <ReserveTicketsHero onBuy={onBuyReserveTickets} />
       <ShopTicketPurchases />
       <ComingSoonShelf

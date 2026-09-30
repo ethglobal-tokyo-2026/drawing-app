@@ -8,6 +8,7 @@
   border-radius: 16px 16px 0 0;
   background: var(--liner);
   box-shadow: var(--shadow-sheet);
+  outline: none;
   animation: bottom-sheet-in var(--t-peel) var(--ease-peel);
 }
 

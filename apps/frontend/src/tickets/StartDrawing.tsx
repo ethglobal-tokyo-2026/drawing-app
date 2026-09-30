@@ -22,8 +22,8 @@ interface Props {
   /** The ticket is spent: the card drops away over the sheet, then `onLeft` lets it go. */
   leaving?: boolean;
   onLeft?: () => void;
-  /** Said under the line, such as what became of a drawing a reload interrupted; null for nothing. */
-  note: string | null;
+  /** Why the last spend failed, in the app's words: the card stops asking and says so. Null while none has. */
+  failure: string | null;
   /** Spend a ticket of this kind on this sheet. */
   onStart: (kind: TicketKind) => void;
   /** Open the reserve ticket checkout. */
@@ -35,8 +35,9 @@ interface Props {
 /**
  * Asks before a ticket is spent on a fresh sheet, showing the tickets it can use (ticketView). With daily tickets left
  * it spends one; once they're gone it asks before spending a reserve ticket, with that ticket as the picture and the
- * checkout as the other way on. It shares the out-of-tickets card's look. Once the ticket is spent it drops away, and
- * the sheet under it takes ink at once.
+ * checkout as the other way on. When the spend fails it stops asking: it says why, still showing the tickets it tried,
+ * and its key tries again. It shares the out-of-tickets card's look. Once the ticket is spent it drops away, and the
+ * sheet under it takes ink at once.
  */
 export function StartDrawing({
   tickets,
@@ -45,7 +46,7 @@ export function StartDrawing({
   busy = false,
   leaving = false,
   onLeft,
-  note,
+  failure,
   onStart,
   onShop,
   onBoard,
@@ -57,9 +58,14 @@ export function StartDrawing({
   const id = useId();
   // Read once, as it comes up: it decides only how the card rises.
   const [follows] = useState(followsSealedCard);
+  // A retry clears the failure while its spend is on the way, and the card mustn't flip back to
+  // asking under the person's finger, nor as it drops away.
+  const [lastFailure, setLastFailure] = useState<string | null>(null);
+  if (failure && failure !== lastFailure) setLastFailure(failure);
+  const shownFailure = failure ?? (busy || leaving ? lastFailure : null);
 
   // The reserve ask's count is on the ticket's badge, so screen readers hear it with the line.
-  const described = [`${id}-line`, reserveAsk && `${id}-held`, note && `${id}-note`];
+  const described = [`${id}-line`, reserveAsk && `${id}-held`];
   // aria-disabled rather than disabled, so the busy key keeps its face rather than sinking grey.
   const busyKey = busy ? ({ "aria-busy": true, "aria-disabled": true } as const) : {};
 
@@ -75,37 +81,40 @@ export function StartDrawing({
     >
       <TicketArt view={view} pop spend={leaving ? "peel" : busy ? "lift" : null} />
       <h2 className="out-of-tickets__title" id={`${id}-title`}>
-        {reserveAsk
-          ? t(($) => $.tickets.startDrawing.reserve.title)
-          : t(($) => $.tickets.startDrawing.daily.title)}
+        {shownFailure
+          ? t(($) => $.tickets.startDrawing.failed.title)
+          : reserveAsk
+            ? t(($) => $.tickets.startDrawing.reserve.title)
+            : t(($) => $.tickets.startDrawing.daily.title)}
       </h2>
-      <p className="out-of-tickets__line out-of-tickets__line--stacked" id={`${id}-line`}>
-        {reserveAsk ? (
-          <>
-            <strong>{t(($) => $.tickets.startDrawing.reserve.used)}</strong>{" "}
-            <span className="out-of-tickets__quiet">
-              {t(($) => $.tickets.startDrawing.reserve.refillAt, {
-                time: formatRefillTime(new Date(tickets.nextRefillAt)),
-              })}
-            </span>
-          </>
-        ) : (
-          <>
-            <strong>{t(($) => $.tickets.startDrawing.daily.left, { count: daily })}</strong>{" "}
-            <span className="out-of-tickets__quiet">
-              {t(($) => $.tickets.startDrawing.daily.timer, { minutes })}
-            </span>
-          </>
-        )}
-      </p>
+      {shownFailure ? (
+        <p className="out-of-tickets__problem" id={`${id}-line`} role="alert">
+          {shownFailure}
+        </p>
+      ) : (
+        <p className="out-of-tickets__line out-of-tickets__line--stacked" id={`${id}-line`}>
+          {reserveAsk ? (
+            <>
+              <strong>{t(($) => $.tickets.startDrawing.reserve.used)}</strong>{" "}
+              <span className="out-of-tickets__quiet">
+                {t(($) => $.tickets.startDrawing.reserve.refillAt, {
+                  time: formatRefillTime(new Date(tickets.nextRefillAt)),
+                })}
+              </span>
+            </>
+          ) : (
+            <>
+              <strong>{t(($) => $.tickets.startDrawing.daily.left, { count: daily })}</strong>{" "}
+              <span className="out-of-tickets__quiet">
+                {t(($) => $.tickets.startDrawing.daily.timer, { minutes })}
+              </span>
+            </>
+          )}
+        </p>
+      )}
       {reserveAsk && (
         <p className="visually-hidden" id={`${id}-held`}>
           {t(($) => $.tickets.startDrawing.reserve.left, { count: tickets.reserveLeft })}
-        </p>
-      )}
-      {note && (
-        <p className="out-of-tickets__note" id={`${id}-note`}>
-          {note}
         </p>
       )}
       <TearLine />

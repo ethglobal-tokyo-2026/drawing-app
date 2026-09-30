@@ -1,11 +1,10 @@
 /* ---------- Sheets over a board ---------- */
 
-/* Over someone else's board: main's give sheet parts, as one layer that holds keyboard focus. */
+/* Over someone else's board: main's give sheet parts, as one layer. */
 .board-sheet-layer {
   position: absolute;
   inset: 0;
   z-index: var(--z-sheet);
-  outline: none;
 }
 
 /* The sheet's parts stack evenly; their own outer margins are for main's single-screen sheet. */
@@ -73,11 +72,18 @@
   top: 6px;
   left: 50%;
   translate: -50% 0;
-  padding: 2px 6px;
-  border-radius: 999px;
-  background: var(--pink);
-  color: #fff;
-  font: 800 11px/1 var(--font-ui);
+}
+
+/* In the give sheet the grid scrolls on its own between the title and the key. Its padding gives
+   the picked tile's check and the stickers' shadows room the scroll would clip; the margins take
+   that room back from the sheet's gaps. */
+.giving__pinned .sticker-picker {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 8px 8px 6px 0;
+  margin: -8px -8px -6px 0;
 }
 
 .pick.picked {

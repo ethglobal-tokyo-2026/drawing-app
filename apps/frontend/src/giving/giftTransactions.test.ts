@@ -67,7 +67,7 @@ describe("Sepolia smart account Giving transactions", () => {
     const submitted = vi.fn();
     await expect(
       giftTransactions.deposit(giftId, transfer, {}, recorder(submitted)),
-    ).rejects.toThrow("could not be confirmed");
+    ).rejects.toMatchObject({ problem: "deposit_unconfirmed" });
     expect(submitted).toHaveBeenCalledWith(hash);
     await expect(
       giftTransactions.deposit(giftId, transfer, { hash }, recorder(submitted)),
@@ -143,23 +143,23 @@ describe("Sepolia smart account Giving transactions", () => {
       );
 
     expect(failure).toBeInstanceOf(GiftTransactionUnconfirmedError);
-    expect(String(failure)).toContain("could not be confirmed");
+    expect(failure).toMatchObject({ problem: "deposit_unconfirmed" });
     expect(String(failure)).not.toContain("secret-value");
     expect(submitted).not.toHaveBeenCalled();
   });
 
   it("refuses a reverted deposit", async () => {
     chain.waitForTransactionReceipt.mockResolvedValue({ status: "reverted" });
-    await expect(giftTransactions.deposit(giftId, transfer, {}, recorder())).rejects.toThrow(
-      "reverted",
-    );
+    await expect(giftTransactions.deposit(giftId, transfer, {}, recorder())).rejects.toMatchObject({
+      problem: "deposit_reverted",
+    });
   });
 
   it("does not take a Sticker away from someone who has received it", async () => {
     chain.readContract.mockResolvedValue([address, address, 1n, giftId, 1n, 2]);
-    await expect(giftTransactions.takeOut(giftId, {}, recorder(), {})).rejects.toThrow(
-      "already been received",
-    );
+    await expect(giftTransactions.takeOut(giftId, {}, recorder(), {})).rejects.toMatchObject({
+      problem: "already_received",
+    });
     expect(wallet.sendTransaction).not.toHaveBeenCalled();
   });
 
@@ -268,9 +268,9 @@ describe("Sepolia smart account Giving transactions", () => {
       giftReceipt("GiftTakenOut", giftId, `0x${"34".repeat(20)}`),
     ]) {
       chain.waitForTransactionReceipt.mockResolvedValue(receipt);
-      await expect(giftTransactions.takeOut(giftId, { hash }, recorder(), {})).rejects.toThrow(
-        "reverted",
-      );
+      await expect(
+        giftTransactions.takeOut(giftId, { hash }, recorder(), {}),
+      ).rejects.toMatchObject({ problem: "take_out_reverted" });
     }
     expect(wallet.sendTransaction).not.toHaveBeenCalled();
   });
@@ -318,9 +318,9 @@ describe("Sepolia smart account Giving transactions", () => {
 
   it("does not confirm a deposit from a successful bundle without this gift's deposit event", async () => {
     chain.waitForTransactionReceipt.mockResolvedValue({ status: "success", logs: [] });
-    await expect(giftTransactions.deposit(giftId, transfer, { hash }, recorder())).rejects.toThrow(
-      "reverted",
-    );
+    await expect(
+      giftTransactions.deposit(giftId, transfer, { hash }, recorder()),
+    ).rejects.toMatchObject({ problem: "deposit_reverted" });
     expect(wallet.sendTransaction).not.toHaveBeenCalled();
   });
 });

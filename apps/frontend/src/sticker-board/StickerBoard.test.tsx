@@ -6,15 +6,17 @@ import type {
 } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { boardSticker, people, trailEntry } from "../api/testFixtures";
+import { boardSticker, people, sticker, trailEntry } from "../api/testFixtures";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
 import { toApiPlacement, toPerson } from "../api/views";
-import { markNoticed } from "../giving/noticedGifts";
+import { forgetNoticedHere, markNoticed, noticeReceivesFromNow } from "../giving/noticedGifts";
+import { forgetGreetings } from "./artistChipGreeting";
 import { forgetBoardComplete } from "./boardComplete";
 import { placeUnplaced, toBoardSticker } from "./boardSticker";
 import { keepBoard, keptBoardFor, readKeptBoardAgain } from "./lastBoard";
 import { StickerBoard } from "./StickerBoard";
+import { STEP_SAVE_IDLE_MS } from "./useBoardGestures";
 
 // The board's chat menu and Privy reach LINE's SDK; nothing here needs it to answer.
 vi.mock("@line/liff", () => ({ default: { isApiAvailable: () => false } }));
@@ -49,8 +51,10 @@ afterEach(async () => {
 
 beforeEach(() => {
   localStorage.clear();
+  forgetNoticedHere();
   readKeptBoardAgain();
   forgetBoardComplete();
+  forgetGreetings();
 });
 
 const at = (x: number) => ({ onBoard: true, x, y: 0.5, scale: 0.3, rotation: 0, z: 1 });
@@ -101,6 +105,55 @@ describe("StickerBoard with the board kept on this phone", () => {
     expect(shownIds(view.host)).toEqual([]);
     expect(view.host.querySelectorAll(".board-loading-sticker").length).toBeGreaterThan(0);
     expect(localStorage.getItem("draw.lastBoard")).toBeNull();
+  });
+});
+
+describe("StickerBoard's check for gratitude to send", () => {
+  it("says so when the check for the sticker that just arrived fails, and Try again asks again", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const a = boardSticker({ placement: at(0.3) });
+    const stickerDetail = vi
+      .fn<ApiClient["stickerDetail"]>()
+      .mockRejectedValueOnce(
+        new ApiError(503, { error: "unavailable", detail: "database is busy" }),
+      )
+      .mockRejectedValue(new ApiError(404, { error: "sticker_not_found", detail: "gone" }));
+    const api = emptyApi({
+      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [a] }),
+      stickerDetail,
+    });
+    const view = renderWithApi(
+      <StickerBoard freshId={a.stickerId} onDraw={() => {}} onOpenGift={() => {}} />,
+      api,
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    const alert = () => view.host.querySelector(".board-unsaved")?.textContent;
+    expect(alert()).toContain("Couldn’t check whether gratitude is waiting");
+    expect(alert()).toContain("database is busy");
+
+    const again = view.host.querySelector<HTMLElement>(".board-unsaved .label-btn");
+    await act(async () => again?.click());
+    expect(stickerDetail).toHaveBeenCalledTimes(2);
+    expect(alert()).toContain("gone");
+  });
+});
+
+describe("StickerBoard's artist chips", () => {
+  it("name the artists of foil stickers once per app open, not on every visit to the board", () => {
+    keep(
+      TEST_ME.id,
+      boardSticker({ placement: at(0.3), sticker: sticker({ artist: people.mika }) }),
+    );
+    const visit = () => {
+      const api = emptyApi({ stickerBoard: () => new Promise(() => {}) });
+      const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
+      const chips = view.host.querySelectorAll(".artist-chip-layer__chip").length;
+      view.unmount();
+      return chips;
+    };
+    expect(visit()).toBe(1);
+    expect(visit()).toBe(0);
   });
 });
 
@@ -162,14 +215,26 @@ describe("StickerBoard after a gift", () => {
     expect(detail?.textContent).toContain("You gave it to @bob");
   });
 
-  it("gives each gift received since the last visit its own notice, newest first", async () => {
-    const gave = (receiver: Person, receivedAt: string) =>
-      boardSticker({ held: false, givenTo: { receiver, receivedAt } });
+  const gave = (receiver: Person, receivedAt: string) =>
+    boardSticker({ held: false, givenTo: { receiver, receivedAt } });
+  const noticeTitle = () => document.querySelector(".gift-received-notice h1")?.textContent?.trim();
+
+  it("draws no notice for gifts received before this device's first board", async () => {
     await show(
       gave(people.mika, "2026-09-22T11:52:00.000Z"),
       gave(people.bob, "2026-09-23T11:52:00.000Z"),
     );
-    const title = () => document.querySelector(".gift-received-notice h1")?.textContent?.trim();
+    expect(noticeTitle()).toBeUndefined();
+  });
+
+  it("gives each gift received since the last visit its own notice, newest first", async () => {
+    // This device has shown a notice before.
+    noticeReceivesFromNow([]);
+    await show(
+      gave(people.mika, "2026-09-22T11:52:00.000Z"),
+      gave(people.bob, "2026-09-23T11:52:00.000Z"),
+    );
+    const title = noticeTitle;
     const close = () =>
       act(() => document.querySelector<HTMLElement>(".gift-received-notice .label-btn")?.click());
     expect(title()).toBe("@bob received your sticker");
@@ -180,8 +245,36 @@ describe("StickerBoard after a gift", () => {
   });
 });
 
+describe("StickerBoard's sticker tray", () => {
+  it("moves focus to a sticker on the board when its hole's Show it is pressed", async () => {
+    const a = boardSticker({ placement: at(0.3) });
+    const api = emptyApi({
+      stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [a] }),
+    });
+    const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
+    unmount = view.unmount;
+    await act(async () => {});
+    await act(() => vi.dynamicImportSettled());
+    const hole = view.host.querySelector<HTMLElement>(`.tray__slot[data-id="${a.stickerId}"]`);
+    expect(hole?.getAttribute("aria-label")).toMatch(/on your board\. Show it$/);
+
+    act(() => {
+      hole?.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(document.activeElement).toBe(
+      view.host.querySelector(`[data-sticker-id="${a.stickerId}"]`),
+    );
+  });
+});
+
 describe("StickerBoard saving where a sticker sits", () => {
+  afterEach(() => vi.useRealTimers());
+
   it("keeps one save of a sticker in flight, then sends only its latest spot, whose failure stays", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     // happy-dom lays nothing out: the board is given a phone's size, so each key press moves it.
     vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(390);
     vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(657);
@@ -212,9 +305,11 @@ describe("StickerBoard saving where a sticker sits", () => {
       });
     act(() => el?.focus());
     press("Enter");
-    press("ArrowLeft");
-    press("ArrowLeft");
-    press("ArrowLeft");
+    // Each burst of keys is one save, so three bursts are three saves, the first in flight.
+    for (let burst = 0; burst < 3; burst++) {
+      press("ArrowLeft");
+      act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+    }
     expect(saveStickerPlacement).toHaveBeenCalledOnce();
 
     await act(async () => land());

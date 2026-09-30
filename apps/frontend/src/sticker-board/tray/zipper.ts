@@ -22,49 +22,17 @@ type ZipperState = "rest" | "drag" | "run" | "hint";
 type Facing = "rest" | "far";
 
 export interface ZipperOptions {
-  /** From the host's left edge to the chain's center line; by default the chain runs near its right edge. */
-  chainAt?: number;
+  /** From the host's left edge to the chain's center line. */
+  chainAt: number;
   /** Space kept clear above and below the track. */
-  insets?: readonly [top: number, bottom: number];
-  /** Tooth to tooth along one row. */
-  pitch?: number;
+  insets: readonly [top: number, bottom: number];
   /** How far the left row travels when fully open and spread flat. */
-  maxGap?: number;
-  /** Released past this share of the travel, the slider runs the rest of the way. */
-  threshold?: number;
-  /** Released faster than this toward open or shut, in travels per second, it runs that way. */
-  flick?: number;
-  /** The slider's accessible name; the sticker tray's by default. */
-  label?: string;
-  /** Where the slider starts, from shut to open. */
-  progress?: number;
-  /** A buzz for teeth and knocks, where the phone can. */
-  haptics?: boolean;
-  /** Phone motion swings the pull, unless reduced motion is on. */
-  motion?: boolean;
+  maxGap: number;
 }
 
 interface RunOptions {
   /** Jump to the end at once; the default under reduced motion. */
   instant?: boolean;
-}
-
-/** A still pose; set only what should change. */
-interface ZipperPose {
-  progress?: number;
-  open?: boolean;
-  spread?: number;
-  facing?: Facing;
-  /** The pull's flop, in radians: zero lies toward the far end. */
-  flip?: number;
-  lift?: number;
-  /** The pull's swing on its hinge, in degrees. */
-  swing?: number;
-  relax?: number;
-  /** The mouth's width; by default where it would settle. */
-  mouth?: number;
-  /** Nothing moves, and drags, tugs and phone motion are ignored, until a pose without it. */
-  freeze?: boolean;
 }
 
 /** The Zipper's live shape, in the host's pixels. */
@@ -128,52 +96,37 @@ export interface Zipper {
   readonly progress: number;
   /** Committed open: true from the moment a run toward open begins. */
   readonly isOpen: boolean;
-  readonly state: ZipperState;
   /** Runs the slider; resolves when it knocks its stop, with whether it's open. */
   open: (opts?: RunOptions) => Promise<boolean>;
   close: (opts?: RunOptions) => Promise<boolean>;
-  toggle: (opts?: RunOptions) => Promise<boolean>;
-  set: (pose?: ZipperPose) => void;
   /** The mouth's hold: wide open, down to a crack. */
   relax: (k?: number) => void;
   /** One idle tug; the caller rations them. Returns whether it tugged. */
   hint: () => boolean;
-  /** A burst of phone motion. */
-  shake: (strength?: number) => void;
-  /** One sample of phone motion in the screen's frame, in m/s². */
-  nudge: (ax: number, ay: number) => void;
   /** The pip on the pull that marks something new inside. */
   badge: (on: boolean) => void;
   geometry: () => ZipperGeometry;
+  /** Where the fully open mouth shows through, as the host's y from top to foot; null before it's laid out. */
+  openWindow: () => { top: number; bot: number } | null;
   on: <K extends keyof ZipperEvents>(event: K, fn: Listener<K>) => () => void;
   destroy: () => void;
 }
 
-const DEFAULTS = {
-  insets: [0, 0],
-  pitch: 12,
-  maxGap: 170,
-  threshold: 0.25,
-  flick: 1.6,
-  progress: 0,
-  haptics: true,
-  motion: true,
-} satisfies Required<Omit<ZipperOptions, "chainAt" | "label">>;
-
-type ReleaseRule = Pick<Required<ZipperOptions>, "threshold" | "flick">;
+/** Tooth to tooth along one row. */
+const PITCH = 12;
+/**
+ * A released slider runs the rest of the way past this share of the travel, or when released faster
+ * than `flick` toward open or shut, in travels per second.
+ */
+export const RELEASE = { threshold: 0.25, flick: 1.6 };
 
 /**
  * Whether a released slider runs open, the same rule both ways: a flick goes where it was flung;
  * otherwise, moved past the threshold from where it started, it runs on, and short of it springs back.
  */
-export function releaseOpens(
-  progress: number,
-  velocity: number,
-  wasOpen: boolean,
-  { threshold, flick }: ReleaseRule = DEFAULTS,
-): boolean {
-  if (Math.abs(velocity) > flick) return velocity > 0;
-  const past = (wasOpen ? 1 - progress : progress) > threshold;
+export function releaseOpens(progress: number, velocity: number, wasOpen: boolean): boolean {
+  if (Math.abs(velocity) > RELEASE.flick) return velocity > 0;
+  const past = (wasOpen ? 1 - progress : progress) > RELEASE.threshold;
   return past ? !wasOpen : wasOpen;
 }
 
@@ -194,8 +147,6 @@ const STOP_GAP = 1.5;
 const SHOULDER = 12;
 /** The pull's hinge on the slider's bridge, below the slider's center. */
 const HINGE = 2;
-/** By default the chain runs this far in from the host's right edge. */
-const CHAIN_INSET = 17;
 /** However short the host, the track is at least this long. */
 const MIN_TRACK = 80;
 /** The lining: a sliver every `step` px, `half` px either side of its place, shown once the mouth is
@@ -280,16 +231,6 @@ const SUBSTEPS_PER_S = 240;
 
 /** The idle tug: the slider pulls down, the pull lifts, and it lets go. */
 const TUG = { px: 11, lift: 3, ms: 190 };
-/** A hand shaking the phone: side-to-side jolts, dying away, one after another. */
-const SHAKE: readonly (readonly [number, number])[] = [
-  [13, 3],
-  [-17, -4],
-  [15, 2],
-  [-11, -2],
-  [7, 1],
-  [-4, 0],
-];
-const SHAKE_MS = 85;
 /** One motion sample swings the pull, jiggles the slider sideways and stutters it along the track. */
 const NUDGE = { swingX: 24, swingY: 4, jiggle: 4.2, stutter: 2.6 };
 /** Motion under this, in m/s², is the hand's tremor and is ignored. */
@@ -499,6 +440,48 @@ function pullFace(doc: Document, id: number, side: "front" | "back"): SVGElement
   );
 }
 
+/** The mouth's curve at one moment: see `setShape`. */
+interface MouthShape {
+  S: number;
+  sM: number;
+  Ts: number;
+  Te: number;
+  ms: number;
+  me: number;
+  G: number;
+}
+
+/** How far the left row stands off the chain at a place on the track. */
+const gapOf = (m: MouthShape, a: number) =>
+  a >= m.sM || a <= 0 ? 0 : m.G * hermite((m.sM - a) / m.Ts, m.ms) * hermite(a / m.Te, m.me);
+
+/** The mouth is wide enough to show through from this share of its width. */
+const SHOWS_FROM = { shut: 0.6, spread: 0.97 };
+/** The mouth's window is looked for this often along the track. */
+const WINDOW_STEP = 3;
+
+/**
+ * The stretch of the track where the mouth stands at least `share` of its width `G` wide, which is
+ * what shows through it: null while it's too narrow to.
+ */
+export function mouthRange(
+  m: Pick<ZipperGeometry, "sM" | "gap">,
+  G: number,
+  share: number,
+): { from: number; to: number } | null {
+  let from = -1;
+  let to = -1;
+  for (let a = 0; a <= m.sM; a += WINDOW_STEP)
+    if (m.gap(a) >= share * G) {
+      if (from < 0) from = a;
+      to = a;
+    }
+  return from >= 0 && to - from > 4 ? { from, to } : null;
+}
+
+/** The share of its width the mouth must stand at to show through, by how spread flat it is. */
+export const showsFrom = (spread: number) => lerp(SHOWS_FROM.shut, SHOWS_FROM.spread, spread);
+
 /** One tooth and its slice of tape, anchored where the chain's center line runs when shut. */
 interface Segment {
   el: HTMLElement;
@@ -518,6 +501,8 @@ interface Sliver {
 
 interface Grab {
   id: number;
+  /** The host's place on screen and how much it's drawn scaled, read once as the drag begins. */
+  frame: { top: number; k: number };
   y0: number;
   p0: number;
   t0: number;
@@ -563,7 +548,6 @@ interface State {
   lastTick: number;
   /** The current run has knocked its stop. */
   knocked: boolean;
-  frozen: boolean;
 }
 
 function windowOf(doc: Document): Window & typeof globalThis {
@@ -572,10 +556,15 @@ function windowOf(doc: Document): Window & typeof globalThis {
   return win;
 }
 
-export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zipper {
+export function createZipper(host: HTMLElement, options: ZipperOptions): Zipper {
   const doc = host.ownerDocument;
   const win = windowOf(doc);
-  const o = { ...DEFAULTS, label: i18next.t(($) => $.stickerBoard.tray.zipper), ...options };
+  const o = options;
+  /** The pull's name, which says so when the pip marks something new. */
+  const names = {
+    plain: i18next.t(($) => $.stickerBoard.tray.zipper),
+    fresh: i18next.t(($) => $.stickerBoard.tray.zipperNew),
+  };
   const id = ++uid;
   const reducedMotion = win.matchMedia(REDUCED_MOTION);
   const reduced = () => reducedMotion.matches;
@@ -638,7 +627,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
     make(doc, "i", "zip__ring"),
   );
   slider.type = "button";
-  slider.setAttribute("aria-label", o.label);
+  slider.setAttribute("aria-label", names.plain);
   // The slider leads, so Tab goes from it into what the open mouth shows; the layers stack by z-index.
   const root = make(
     doc,
@@ -651,7 +640,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
     rowA,
     make(doc, "div", "zip__layer zip__stops", stopA, stopB, stopFar),
   );
-  root.style.setProperty("--zip-pitch", `${o.pitch}px`);
+  root.style.setProperty("--zip-pitch", `${PITCH}px`);
   host.append(root);
 
   /* ---------------------------------------------------------------- geometry */
@@ -679,13 +668,13 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
     H = host.clientHeight;
     if (!W || !H) return false;
     L = Math.max(MIN_TRACK, H - o.insets[0] - o.insets[1]);
-    chainX = o.chainAt ?? W - CHAIN_INSET;
+    chainX = o.chainAt;
     const aMin = STOP + STOP_GAP;
     const aMax = L - STOP - STOP_GAP;
     const wantA: number[] = [];
     const wantB: number[] = [];
-    for (let a = aMin + TOOTH / 2; a <= aMax - TOOTH / 2; a += o.pitch) wantA.push(a);
-    for (let a = aMin + TOOTH / 2 + o.pitch / 2; a <= aMax - TOOTH / 2; a += o.pitch) wantB.push(a);
+    for (let a = aMin + TOOTH / 2; a <= aMax - TOOTH / 2; a += PITCH) wantA.push(a);
+    for (let a = aMin + TOOTH / 2 + PITCH / 2; a <= aMax - TOOTH / 2; a += PITCH) wantB.push(a);
     teethA = wantA.map((a) => segment("a", a));
     teethB = wantB.map((a) => segment("b", a));
     rowA.replaceChildren(...teethA.map((s) => s.el));
@@ -704,19 +693,18 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
   }
 
   /* ---------------------------------------------------------------- state */
-  const startOpen = o.progress >= 0.5;
   const st: State = {
-    p: clamp(o.progress, 0, 1),
+    p: 0,
     pv: 0,
     mode: "rest",
-    target: startOpen ? 1 : 0,
-    open: startOpen,
-    facing: startOpen ? "rest" : "far",
+    target: 0,
+    open: false,
+    facing: "far",
     G: 0,
     Gv: 0,
-    spread: startOpen ? 1 : 0,
+    spread: 0,
     sv: 0,
-    flip: startOpen ? Math.PI : 0,
+    flip: 0,
     fv: 0,
     lift: 0,
     lv: 0,
@@ -735,7 +723,6 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
     grab: null,
     lastTick: 0,
     knocked: true,
-    frozen: false,
   };
   slider.setAttribute("aria-expanded", String(st.open));
   let waiters: ((open: boolean) => void)[] = [];
@@ -748,36 +735,34 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
     timers.add(t);
   };
   const buzz = (ms: number) => {
-    if (o.haptics) win.navigator.vibrate?.(ms);
+    win.navigator.vibrate?.(ms);
   };
 
   /* The mouth this frame: a V from the slider that starts gentle, and a rounder corner at the top stop;
    * spread flat, both corners square up. `Ts` and `Te` are how far each curve reaches, `ms` and `me`
    * how steeply each starts. */
-  const shape = { S: 0, sM: 0, Ts: 1, Te: 1, ms: 0.8, me: 1.2, G: 0 };
-  function setShape() {
-    const S = S0 + st.p * travel + st.stut;
+  const shape: MouthShape = { S: 0, sM: 0, Ts: 1, Te: 1, ms: 0.8, me: 1.2, G: 0 };
+  function fillShape(into: MouthShape, p: number, spread: number, G: number, stut: number) {
+    const S = S0 + p * travel + stut;
     const sM = S - SHOULDER;
     const len = Math.max(0, sM);
-    let Ts = lerp(clamp(0.55 * len, 26, 150), 56, st.spread);
-    let Te = lerp(clamp(0.3 * len, 12, 72), 40, st.spread);
+    let Ts = lerp(clamp(0.55 * len, 26, 150), 56, spread);
+    let Te = lerp(clamp(0.3 * len, 12, 72), 40, spread);
     if (Ts + Te > len && len > 0) {
       const k = len / (Ts + Te);
       Ts *= k;
       Te *= k;
     }
-    shape.S = S;
-    shape.sM = sM;
-    shape.Ts = Math.max(1, Ts);
-    shape.Te = Math.max(1, Te);
-    shape.ms = lerp(0.8, 2.4, st.spread);
-    shape.me = lerp(1.2, 2.2, st.spread);
-    shape.G = st.G;
+    into.S = S;
+    into.sM = sM;
+    into.Ts = Math.max(1, Ts);
+    into.Te = Math.max(1, Te);
+    into.ms = lerp(0.8, 2.4, spread);
+    into.me = lerp(1.2, 2.2, spread);
+    into.G = G;
   }
-  const gap = (a: number) =>
-    a >= shape.sM || a <= 0
-      ? 0
-      : shape.G * hermite((shape.sM - a) / shape.Ts, shape.ms) * hermite(a / shape.Te, shape.me);
+  const setShape = () => fillShape(shape, st.p, st.spread, st.G, st.stut);
+  const gap = (a: number) => gapOf(shape, a);
   const gapTarget = () => {
     const len = Math.max(0, S0 + st.p * travel - SHOULDER);
     return (
@@ -839,7 +824,6 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
    * stop and knocks it; the mouth's width is a spring, so it overshoots and settles; and the pull flops
    * over at the end of a run, so it always lies toward the next pull. */
   function step(dt: number) {
-    if (st.frozen) return;
     if (st.mode === "drag") [st.p, st.pv] = spring(st.p, st.pv, st.finger, SPRING.finger, dt);
     else if (st.mode === "run" || st.mode === "hint") {
       const s = st.target >= 0.5 ? SPRING.opening : SPRING.shutting;
@@ -892,7 +876,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
       st.ripPhase += dt * RIPPLE.speed;
     } else st.rip = 0;
     if (st.mode === "drag") {
-      const n = Math.floor((st.p * travel) / o.pitch);
+      const n = Math.floor((st.p * travel) / PITCH);
       if (n !== st.lastTick) {
         const dir = n > st.lastTick ? 1 : -1;
         st.lastTick = n;
@@ -908,7 +892,6 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
   /** Whether the loop can sleep: no hand on the pull, and every part at rest on its target. */
   function still(): boolean {
     if (st.mode === "drag") return false;
-    if (st.frozen) return true;
     const pTarget = st.mode === "run" || st.mode === "hint" ? st.target : st.p;
     return (
       near(st.p, st.pv, pTarget, 0.0004) &&
@@ -1180,29 +1163,32 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
   }
 
   /* Dragging the pull */
-  const localY = (e: PointerEvent) => {
+  const frameOf = () => {
     const r = host.getBoundingClientRect();
     // The board may be drawn scaled; the drag works in the host's own pixels.
     const k = host.offsetHeight > 0 && r.height > 0 ? r.height / host.offsetHeight : 1;
-    return (e.clientY - r.top) / k;
+    return { top: r.top, k };
   };
+  const localY = (e: PointerEvent, frame: Grab["frame"]) => (e.clientY - frame.top) / frame.k;
   const softEnds = (f: number) => {
     if (f > 1) return 1 + (1 - Math.exp(-(f - 1) * SOFT_END.stiffness)) * SOFT_END.give;
     if (f < 0) return -(1 - Math.exp(f * SOFT_END.stiffness)) * SOFT_END.give;
     return f;
   };
   const onDown = (e: PointerEvent) => {
-    if (e.button > 0 || st.frozen) return;
+    if (e.button > 0) return;
     e.preventDefault();
     try {
       slider.setPointerCapture(e.pointerId);
     } catch {
       // Synthetic pointer events have no active pointer to capture; the drag still works.
     }
-    const y = localY(e);
+    const frame = frameOf();
+    const y = localY(e, frame);
     const t = win.performance.now();
     st.grab = {
       id: e.pointerId,
+      frame,
       y0: y,
       p0: st.p,
       t0: t,
@@ -1215,7 +1201,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
     st.finger = st.p;
     st.fingerV = 0;
     st.pv = 0;
-    st.lastTick = Math.floor((st.p * travel) / o.pitch);
+    st.lastTick = Math.floor((st.p * travel) / PITCH);
     root.classList.add("is-dragging");
     emit("grab", { progress: st.p });
     wake();
@@ -1223,7 +1209,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
   const onMove = (e: PointerEvent) => {
     const g = st.grab;
     if (!g || g.id !== e.pointerId) return;
-    const y = localY(e);
+    const y = localY(e, g.frame);
     const t = win.performance.now();
     const D = y - g.y0;
     g.moved = Math.max(g.moved, Math.abs(D));
@@ -1248,7 +1234,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
       ? g.startOpen
       : tap
         ? !g.startOpen
-        : releaseOpens(st.p, st.fingerV, g.startOpen, o);
+        : releaseOpens(st.p, st.fingerV, g.startOpen);
     if (!cancelled) st.pv = clamp(st.fingerV, -RELEASE_MAX, RELEASE_MAX);
     emit("release", { progress: st.p, open, tap });
     void run(open);
@@ -1294,7 +1280,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
 
   /* Phone motion swings the pull; it never opens the tray */
   function nudge(ax: number, ay: number) {
-    if (destroyed || reduced() || st.frozen) return;
+    if (destroyed || reduced()) return;
     // The parts lag behind the phone.
     st.swv += -ax * NUDGE.swingX + ay * NUDGE.swingY;
     st.jxv += -ax * NUDGE.jiggle;
@@ -1307,7 +1293,6 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
   }
   const gravity = { x: 0, y: 0, ready: false };
   const onMotion = (e: DeviceMotionEvent) => {
-    if (st.frozen) return;
     let ax: number;
     let ay: number;
     const a = e.acceleration;
@@ -1334,7 +1319,7 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
   // platform wants permission first (iOS), no events arrive until the app has been granted it.
   let listening = false;
   const listenForMotion = () => {
-    const want = o.motion && !reduced();
+    const want = !reduced();
     if (want === listening) return;
     listening = want;
     if (want) win.addEventListener("devicemotion", onMotion);
@@ -1360,60 +1345,15 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
     get isOpen() {
       return st.open;
     },
-    get state() {
-      return st.mode;
-    },
     open: (opts) => run(true, opts),
     close: (opts) => run(false, opts),
-    toggle: (opts) => run(!st.open, opts),
-    set(pose = {}) {
-      if (destroyed) return;
-      if (!L) build();
-      if (pose.progress !== undefined) {
-        st.p = clamp(pose.progress, 0, 1);
-        st.pv = 0;
-        st.target = st.p >= 0.5 ? 1 : 0;
-      }
-      if (pose.open !== undefined) {
-        st.open = pose.open;
-        slider.setAttribute("aria-expanded", String(st.open));
-      }
-      if (pose.spread !== undefined) {
-        st.spread = pose.spread;
-        st.sv = 0;
-      }
-      if (pose.facing) {
-        st.facing = pose.facing;
-        st.flip = flipTarget();
-        st.fv = 0;
-      }
-      if (pose.flip !== undefined) {
-        st.flip = pose.flip;
-        st.fv = 0;
-      }
-      if (pose.lift !== undefined) {
-        st.lift = pose.lift;
-        st.lv = 0;
-      }
-      if (pose.swing !== undefined) {
-        st.swing = pose.swing;
-        st.swv = 0;
-      }
-      if (pose.relax !== undefined) st.relax = pose.relax;
-      st.G = pose.mouth ?? gapTarget();
-      st.Gv = 0;
-      st.mode = "rest";
-      st.knocked = true;
-      st.frozen = pose.freeze === true;
-      render();
-    },
     relax(k = 1) {
       if (destroyed) return;
       st.relax = clamp(k, 0, RELAX_MAX);
       wake();
     },
     hint() {
-      if (destroyed || st.open || st.mode !== "rest" || reduced() || st.frozen) return false;
+      if (destroyed || st.open || st.mode !== "rest" || reduced()) return false;
       st.mode = "hint";
       st.target = TUG.px / travel;
       st.lv += TUG.lift;
@@ -1428,15 +1368,18 @@ export function createZipper(host: HTMLElement, options: ZipperOptions = {}): Zi
       }, TUG.ms);
       return true;
     },
-    nudge,
-    shake(strength = 1) {
-      if (destroyed) return;
-      SHAKE.forEach(([x, y], i) => later(() => nudge(x * strength, y * strength), i * SHAKE_MS));
-    },
     badge(on) {
       pip.hidden = !on;
+      slider.setAttribute("aria-label", on ? names.fresh : names.plain);
     },
     geometry,
+    openWindow() {
+      if (!L && !build()) return null;
+      const open: MouthShape = { S: 0, sM: 0, Ts: 1, Te: 1, ms: 0.8, me: 1.2, G: 0 };
+      fillShape(open, 1, 1, o.maxGap, 0);
+      const range = mouthRange({ sM: open.sM, gap: (a) => gapOf(open, a) }, open.G, showsFrom(1));
+      return range && { top: yOf(range.from), bot: yOf(range.to) };
+    },
     on(event, fn) {
       listeners[event].add(fn);
       return () => {

@@ -2,7 +2,7 @@
    be: this is the stickers' own baked resin, lit from the one top-left light. */
 
 .resin-coat__light {
-  stop-color: #fff;
+  stop-color: var(--canvas);
 }
 
 /* The print pools darker at the foot, where the resin is deepest. */
@@ -12,7 +12,7 @@
 
 .resin-coat__rim {
   fill: none;
-  stroke: #fff;
+  stroke: var(--canvas);
   stroke-opacity: 0.9;
 }
 
@@ -22,7 +22,7 @@
 }
 
 .reserve-star path {
-  fill: #fff;
+  fill: var(--canvas);
   stroke: var(--ink);
   stroke-width: calc(var(--star-edge, 1.5px) * 2);
   stroke-linejoin: round;

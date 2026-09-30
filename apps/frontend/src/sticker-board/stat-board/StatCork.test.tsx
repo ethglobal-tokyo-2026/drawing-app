@@ -30,7 +30,11 @@ let root: Root;
 
 const render = (
   stats: UserStats | null,
-  { onFlipBack = () => {}, children }: { onFlipBack?: () => void; children?: ReactNode } = {},
+  {
+    onFlipBack = () => {},
+    children,
+    loading = false,
+  }: { onFlipBack?: () => void; children?: ReactNode; loading?: boolean } = {},
 ) =>
   act(() =>
     root.render(
@@ -40,7 +44,8 @@ const render = (
           handle: "mika",
           ensName: null,
           own: false,
-          failure: stats ? null : FAILURE,
+          loading,
+          failure: stats || loading ? null : FAILURE,
           since: null,
           ...statFigures(stats),
         }}
@@ -97,6 +102,22 @@ describe("StatCork's receipt", () => {
     render(null);
     expect(receipt()?.textContent).toContain(FAILURE);
     expect(host.querySelector(".stat-board__receipt-rows")).toBeNull();
+  });
+});
+
+describe("StatCork while the stats load", () => {
+  it("draws outlines and one status line, not the dashes a failure leaves", () => {
+    render(null, { loading: true });
+    expect(host.textContent).not.toContain("not known");
+    expect(host.textContent).not.toContain("–");
+    expect(host.querySelectorAll(".skeleton").length).toBeGreaterThan(0);
+    expect(host.querySelector('[role="status"]')?.textContent).toBe("Loading Mika’s stats");
+  });
+
+  it("says nothing more once they've loaded", () => {
+    render(NEW_ARTIST);
+    expect(host.querySelector('[role="status"]')?.textContent).toBe("");
+    expect(host.querySelector(".skeleton")).toBeNull();
   });
 });
 

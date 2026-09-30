@@ -16,12 +16,15 @@ function Dialog({
   returnFocus,
   refocus,
   middle = true,
+  marked = false,
 }: {
   active: boolean;
   onEscape: () => void;
   returnFocus?: () => HTMLElement | null;
   refocus?: string;
   middle?: boolean;
+  /** Marks the last control as where focus starts. */
+  marked?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useFocusTrap(ref, { active, onEscape, returnFocus, refocus });
@@ -29,7 +32,9 @@ function Dialog({
     <div ref={ref} id="dialog" tabIndex={-1}>
       <button id="first">First</button>
       {middle && <button id="middle">Middle</button>}
-      <button id="last">Last</button>
+      <button id="last" data-autofocus={marked || undefined}>
+        Last
+      </button>
       <div inert>
         <button>Tucked</button>
       </div>
@@ -71,6 +76,11 @@ describe("useFocusTrap", () => {
   it("moves focus to the first control when it activates", () => {
     render(true);
     expect(document.activeElement).toBe(byId("first"));
+  });
+
+  it("moves focus to the control marked data-autofocus instead, when one is", () => {
+    act(() => root.render(<Dialog active onEscape={onEscape} marked />));
+    expect(document.activeElement).toBe(byId("last"));
   });
 
   it("moves focus to the first control again when its refocus key changes, and only then", () => {

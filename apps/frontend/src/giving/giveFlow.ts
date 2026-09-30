@@ -8,9 +8,13 @@ import {
   type GiftBackend,
   type GiftSticker,
   type PackedGift,
+  type PackWait,
 } from "./giftBackend";
 import type { GiftSender, GiftSendOutcome } from "./giftSender";
+import { GiftTransferError } from "./giftTransactions";
 
+/** A wait for the gift bag that runs this long is a slow one: the screen says what it waits on and offers Take it out. */
+export const PREPARING_SLOW_MS = 10_000;
 /** LIFF stops waiting on LINE's picker after ten minutes, so an answer missing past this won't come. */
 export const PICKER_ANSWER_MS = 11 * 60_000;
 /**
@@ -19,6 +23,14 @@ export const PICKER_ANSWER_MS = 11 * 60_000;
  */
 export const PICKER_RETURN_MS = 5_000;
 
+/** What the wait for the gift bag says of itself. */
+interface PackingWait {
+  /** What it waits on now, once the backend has said. */
+  wait?: PackWait;
+  /** It has run past PREPARING_SLOW_MS. */
+  slow?: true;
+}
+
 /**
  * Giving through a LINE chat, from the give sheet to "Sealed and sent". `recordError` means
  * the step happened but the server couldn't record it; the gift may still read as packed.
@@ -26,9 +38,9 @@ export const PICKER_RETURN_MS = 5_000;
 export type GiveFlowState =
   | { step: "sheet" }
   /** The bag animation has started while the sticker is prepared. */
-  | { step: "packed" }
+  | ({ step: "packed" } & PackingWait)
   /** Waiting for the sticker to be ready before opening LINE's picker. */
-  | { step: "preparing" }
+  | ({ step: "preparing" } & PackingWait)
   /** LINE's picker is open. */
   | { step: "picking" }
   | { step: "sent"; sentAt: number; recordError?: string }
@@ -77,15 +89,20 @@ interface Attempt {
   open: boolean;
 }
 
-/** Why a step failed, as the screen says it: an API error in the app's language, else its own text. */
+/**
+ * Why a step failed, as the screen says it: the cause in plain words in the app's language, then
+ * the developer's English detail.
+ */
 const describe = (error: unknown): string =>
   error instanceof GiftPackagingError
     ? describe(error.cause)
     : error instanceof ApiError
       ? errorReason(error)
-      : error instanceof Error
-        ? error.message
-        : String(error);
+      : error instanceof GiftTransferError
+        ? `${i18next.t(($) => $.giving.transferProblem[error.problem])} (${error.message})`
+        : error instanceof Error
+          ? `${i18next.t(($) => $.giving.unknownProblem)} (${error.message})`
+          : String(error);
 
 /** The gift an attempt packed, or null when packing failed before any gift held the sticker. */
 async function giftOf(a: Attempt): Promise<string | null> {
@@ -113,11 +130,27 @@ export function createGiveFlow({
   let waiting: { a: Attempt; giftId: string } | null = null;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let disposed = false;
+  /** What the wait for the gift bag says of itself; it lasts until the flow leaves that wait. */
+  let packing: PackingWait = {};
+  let slowTimer: ReturnType<typeof setTimeout> | undefined;
 
+  const clearSlowTimer = () => {
+    clearTimeout(slowTimer);
+    slowTimer = undefined;
+  };
   const set = (next: GiveFlowState) => {
     if (disposed) return;
+    if (next.step !== "packed" && next.step !== "preparing") {
+      clearSlowTimer();
+      packing = {};
+    }
     state = next;
     listeners.forEach((l) => l());
+  };
+  const packingState = (step: "packed" | "preparing"): GiveFlowState => ({ step, ...packing });
+  const packingChanged = (change: PackingWait) => {
+    packing = { ...packing, ...change };
+    if (state.step === "packed" || state.step === "preparing") set(packingState(state.step));
   };
   const clearTimer = () => {
     clearTimeout(timer);
@@ -146,7 +179,13 @@ export function createGiveFlow({
   };
 
   const startAttempt = (): Attempt => {
-    attempt = { gift: backend.pack(sticker), open: true };
+    packing = {};
+    clearSlowTimer();
+    slowTimer = setTimeout(() => {
+      slowTimer = undefined;
+      packingChanged({ slow: true });
+    }, PREPARING_SLOW_MS);
+    attempt = { gift: backend.pack(sticker, (wait) => packingChanged({ wait })), open: true };
     return attempt;
   };
 
@@ -251,7 +290,7 @@ export function createGiveFlow({
     if (disposed || !inTheBag()) return;
     clearTimer();
     const a = attempt?.open ? attempt : startAttempt();
-    set({ step: "preparing" });
+    set(packingState("preparing"));
     const packed = await packedGift(a);
     if (!packed || disposed || !a.open) return;
 
@@ -276,7 +315,7 @@ export function createGiveFlow({
     chooseLineChat: () => {
       if (disposed || state.step !== "sheet") return;
       const a = startAttempt();
-      set({ step: "packed" });
+      set(packingState("packed"));
       void packedGift(a);
       after(pickerDelayMs, () => void openPicker());
     },
@@ -296,10 +335,16 @@ export function createGiveFlow({
       })();
     },
     takeOut: () => {
-      if (disposed || !(inTheBag() || (state.step === "maybeSent" && !state.confirming))) return;
+      const leavable =
+        inTheBag() ||
+        state.step === "preparing" ||
+        (state.step === "maybeSent" && !state.confirming);
+      if (disposed || !leavable) return;
       clearTimer();
       const a = attempt;
       // A failed confirmation can still mean the take-out landed. Sending must prepare it again.
+      // Mid-preparation the take-out waits for the packing to settle: a sticker never comes out while
+      // its deposit is still going in.
       if (a) a.open = false;
       set({ step: "takingOut" });
       void (async () => {
@@ -329,6 +374,7 @@ export function createGiveFlow({
     },
     dispose: () => {
       clearTimer();
+      clearSlowTimer();
       // Unmounting is not consent to move an NFT; the gift stays in the bag until an explicit action.
       disposed = true;
       // A picker still open may yet send, and its gift message is never offered again.
