@@ -62,4 +62,4 @@ Wave 3, once the lanes above are merged, since these touch every area:
 - [x] Sealing: R2-1 to R2-4
 - [x] Your sticker board's kept answer: R4-1, and the give sheet no longer offers a sticker that just went into a gift
 - [x] Tickets: R1-1 to R1-3
-- [ ] Giving: R3-1 to R3-4
+- [x] Giving: R3-1 to R3-4. Online, a failed token request and a failed result poll still look alike in LIFF 2.31.0, so a token request that fails online still reads "Did it go out?"
