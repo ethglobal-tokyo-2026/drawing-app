@@ -6,7 +6,7 @@ import { HEART_SVG } from "./heartArt";
 import { animate } from "./webAnimations";
 
 /** The combo as the HUD draws it. */
-export interface HudView {
+interface HudView {
   total: number;
   multiplier: number;
   secondsLeft: number;

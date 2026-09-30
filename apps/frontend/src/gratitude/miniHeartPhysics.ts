@@ -35,7 +35,7 @@ export interface MiniHeart {
 }
 
 /** A stroke pass as it throws: the run end to end, where the thumb turned, and its speed in px/ms. */
-export interface StrokeThrow {
+interface StrokeThrow {
   dx: number;
   dy: number;
   end: { x: number; y: number };

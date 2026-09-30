@@ -5,7 +5,7 @@ import { formatRefillTime } from "./refill";
 export type { TicketKind, Tickets };
 
 /** One of the day's daily tickets; a used one carries the cut outline of the sticker it became. */
-export type DailyTicket = { used: false } | { used: true; outline?: string };
+type DailyTicket = { used: false } | { used: true; outline?: string };
 
 /**
  * What the ticket art shows, the same on every surface: the tickets the next drawing can use. A zero never shows.
