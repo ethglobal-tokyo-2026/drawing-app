@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
 import { Trans, useTranslation } from "../i18n/react";
 import {
@@ -76,11 +77,13 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose, forUserId
   const reduced = useReducedMotion();
   const motion = reduced ? 1 : 0;
   const api = useApi();
+  const { id: userId } = useMe();
   const { state, flow } = useGiveFlow(() => ({
     sticker,
     sender,
     backend: createApiGiftBackend({
       api,
+      userId,
       fromHandle,
       liffId,
       // The sealed bag, never the sticker; the gift message drops it where the app isn't on HTTPS.
@@ -94,7 +97,21 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose, forUserId
   const [cantFind, setCantFind] = useState(false);
   const view: View = screen === "sheet" && cantFind ? "cantFind" : screen;
   const preparing = state.step === "packed" || state.step === "preparing";
-  const busy = preparing || state.step === "picking" || state.step === "takingOut";
+  const busy =
+    preparing ||
+    state.step === "picking" ||
+    state.step === "takingOut" ||
+    (state.step === "maybeSent" && Boolean(state.confirming));
+
+  // LINE's picker covers the page; once the page is back in view, its answer is due.
+  useEffect(() => {
+    if (!flow) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") flow.pageShown();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [flow]);
 
   const close = () => {
     if (!busy) onClose(state.step === "sent");
@@ -208,6 +225,32 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose, forUserId
           {t(($) => $.giving.backToBoard)}
         </LabelButton>
       </div>
+    );
+  } else if (state.step === "maybeSent") {
+    // No Send in LINE: if the gift message went out, a second one would put its link in two chats.
+    title = t(($) => $.giving.maybeSent.title);
+    content = (
+      <>
+        <header className="giving__head">
+          <h2 className="giving__title">{title}</h2>
+        </header>
+        <p className="giving__sub">{t(($) => $.giving.maybeSent.lead)}</p>
+        {bag("open")}
+        <div className="giving__acts">
+          <Key
+            tone="aqua"
+            icon={<PaperPlaneTilt weight="fill" />}
+            onClick={() => flow?.itWentOut()}
+            disabled={busy}
+            data-autofocus
+          >
+            {t(($) => $.giving.maybeSent.itWentOut)}
+          </Key>
+          <QuietLink onClick={() => flow?.takeOut()} disabled={busy}>
+            <ArrowUUpLeft /> {t(($) => $.giving.inTheBag.takeOut)}
+          </QuietLink>
+        </div>
+      </>
     );
   } else {
     const unsent = state.step === "notSent" || state.step === "failed";

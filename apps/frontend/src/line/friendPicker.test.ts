@@ -6,17 +6,22 @@ const message: PickerMessage = { type: "text", text: "hi" };
 function fakeLine({
   pickerOn = true,
   picker = () => Promise.resolve({ status: "success" as const }),
+  lineVersion = null,
 }: {
   pickerOn?: boolean;
   picker?: LiffPicker["shareTargetPicker"];
+  /** Inside the LINE app at this version; null for a browser outside it. */
+  lineVersion?: string | null;
 } = {}) {
   return {
-    // A browser outside the LINE app: LINE's availability check alone decides.
-    isInClient: () => false,
+    isInClient: () => lineVersion !== null,
+    getLineVersion: () => lineVersion,
     isApiAvailable: (api: string) => pickerOn && api === "shareTargetPicker",
     shareTargetPicker: vi.fn(picker),
   };
 }
+
+const liffError = (code: string) => Object.assign(new Error("subwindow closed"), { code });
 
 describe("LINE's picker", () => {
   it("opens wherever LINE says the picker is available, in the LINE app or a browser", () => {
@@ -31,17 +36,24 @@ describe("LINE's picker", () => {
   });
 
   it("reads a picker closed without sending as cancelled", async () => {
-    const line = fakeLine({ picker: () => Promise.resolve() });
+    const line = fakeLine({ picker: () => Promise.resolve(), lineVersion: "15.12.0" });
     expect(await sendInLineChat(line, [message])).toBe("cancelled");
   });
 
-  it("says the picker failed, keeping LINE's error code", async () => {
-    const liffError = Object.assign(new Error("subwindow closed"), {
-      code: "EXCEPTION_IN_SUBWINDOW",
-    });
-    const line = fakeLine({ picker: () => Promise.reject(liffError) });
+  it("reads an empty answer as unknown where LINE resolves before anything is sent", async () => {
+    const line = fakeLine({ picker: () => Promise.resolve(), lineVersion: "10.10.0" });
+    expect(await sendInLineChat(line, [message])).toBe("unknown");
+  });
+
+  it("says the picker failed before it opened, keeping LINE's error code", async () => {
+    const line = fakeLine({ picker: () => Promise.reject(liffError("CREATE_SUBWINDOW_FAILED")) });
     await expect(sendInLineChat(line, [message])).rejects.toThrow(
-      /LINE’s friend picker failed.*EXCEPTION_IN_SUBWINDOW.*subwindow closed/,
+      /LINE’s friend picker failed.*CREATE_SUBWINDOW_FAILED.*subwindow closed/,
     );
+  });
+
+  it("reads a failure once the picker may have opened as unknown", async () => {
+    const line = fakeLine({ picker: () => Promise.reject(liffError("EXCEPTION_IN_SUBWINDOW")) });
+    expect(await sendInLineChat(line, [message])).toBe("unknown");
   });
 });

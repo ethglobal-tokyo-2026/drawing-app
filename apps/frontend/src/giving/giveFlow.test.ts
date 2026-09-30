@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/apiClient";
 import { errors } from "../i18n/strings/errors";
-import { GiftPackagingError, type GiftBackend } from "./giftBackend";
+import { GiftMessageOutError, GiftPackagingError, type GiftBackend } from "./giftBackend";
 import { buildGiftMessage, type GiftMessage } from "./giftMessage";
 import type { GiftSendOutcome } from "./giftSender";
-import { createGiveFlow } from "./giveFlow";
+import { createGiveFlow, PICKER_ANSWER_MS, PICKER_RETURN_MS } from "./giveFlow";
 
 const PICKER_DELAY = 1150;
 const TAKE_OUT = 380;
@@ -19,7 +19,7 @@ class Deferred<T> {
   });
 }
 
-type GiftState = "packed" | "sent" | "taken_out";
+type GiftState = "packed" | "maybeSent" | "sent" | "taken_out";
 
 /** The server's side of gifts: each packed gift and where it is. */
 function fakeBackend() {
@@ -46,6 +46,9 @@ function fakeBackend() {
       gifts.set(giftId, "sent");
     },
     markCancelled: () => Promise.resolve(),
+    markMaybeSent: (giftId) => {
+      gifts.set(giftId, "maybeSent");
+    },
     takeOut: async (giftId) => {
       gifts.set(giftId, "taken_out");
     },
@@ -224,16 +227,16 @@ describe("giving through a LINE chat", () => {
     expect(t.gifts()).toEqual(["taken_out"]);
   });
 
-  it("says why when the sticker can't be packed, and doesn't open the picker", async () => {
-    const takeOut = vi.fn(async () => {});
+  it("says why when the sticker can't be packed, and takes it out with no gift to settle", async () => {
+    const server = fakeBackend();
+    const takeOut = vi.fn(server.backend.takeOut);
     const t = setup({
       backend: {
+        ...server.backend,
         pack: () =>
           Promise.reject(
             new ApiError(409, { error: "not_minted", detail: "No.0147 has no NFT yet" }),
           ),
-        markSent: () => Promise.resolve(),
-        markCancelled: () => Promise.resolve(),
         takeOut,
       },
     });
@@ -243,7 +246,7 @@ describe("giving through a LINE chat", () => {
     expect(t.messages).toHaveLength(0);
     t.flow.takeOut();
     await wait(TAKE_OUT);
-    expect(t.failure()).toContain(errors.not_minted.en);
+    expect(t.step()).toBe("sheet");
     expect(takeOut).not.toHaveBeenCalled();
   });
 
@@ -365,6 +368,73 @@ describe("giving through a LINE chat", () => {
     expect(takeOut).not.toHaveBeenCalled();
     expect(server.states()).toEqual(["packed"]);
   });
+
+  it.each([
+    ["the page comes back and LINE still says nothing", PICKER_RETURN_MS, true],
+    ["LINE never answers", PICKER_ANSWER_MS, false],
+  ])(
+    "stops waiting on the picker when %s, and never sends that gift message again",
+    async (_, ms, shown) => {
+      const t = setup();
+      await openPicker(t);
+      if (shown) t.flow.pageShown();
+      await wait(ms);
+      expect(t.step()).toBe("maybeSent");
+      expect(t.gifts()).toEqual(["maybeSent"]);
+      t.flow.sendInLine();
+      await wait();
+      expect(t.messages).toHaveLength(1);
+      t.flow.takeOut();
+      await wait(TAKE_OUT);
+      expect(t.step()).toBe("sheet");
+    },
+  );
+
+  it("asks whether it went out when LINE's answer doesn't say, and seals once the giver says so", async () => {
+    const t = setup();
+    await openPicker(t);
+    t.picker().resolve("unknown");
+    await wait();
+    expect(t.step()).toBe("maybeSent");
+    t.flow.sendInLine();
+    await wait();
+    expect(t.messages).toHaveLength(1);
+    t.flow.itWentOut();
+    await wait();
+    expect(t.step()).toBe("sent");
+    expect(t.gifts()).toEqual(["sent"]);
+  });
+
+  it.each([
+    ["sent", "sent"],
+    ["cancelled", "maybeSent"],
+  ] as const)("after it stops waiting, a late %s from LINE leaves it %s", async (late, step) => {
+    const t = setup();
+    await openPicker(t);
+    await wait(PICKER_ANSWER_MS);
+    t.picker().resolve(late);
+    await wait();
+    expect(t.step()).toBe(step);
+  });
+
+  it.each([
+    ["sent", "sent"],
+    ["maybeSent", "maybeSent"],
+  ] as const)(
+    "shows a gift whose message is %s instead of sending it again",
+    async (outcome, step) => {
+      const t = setup({
+        backend: {
+          ...fakeBackend().backend,
+          pack: () => Promise.reject(new GiftMessageOutError("gift-1", outcome)),
+        },
+      });
+      t.flow.chooseLineChat();
+      await wait(PICKER_DELAY);
+      expect(t.step()).toBe(step);
+      expect(t.messages).toHaveLength(0);
+    },
+  );
 
   it("does not repeat an explicit take-out when its flow closes before confirmation", async () => {
     const server = fakeBackend();

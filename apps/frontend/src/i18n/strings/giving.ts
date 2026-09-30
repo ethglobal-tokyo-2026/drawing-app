@@ -17,6 +17,11 @@ export const giving = {
     en: "Taking out the Sticker could not be confirmed. Check the gift in the app before trying again.",
     ja: "シールを取り出せたか確認できませんでした。再試行する前にアプリでギフトの状態を確認してください。",
   },
+  /** Giving's "Not sent yet" screen: the reason in “couldn’t be packed” when the sticker came back out of the gift bag on the chain before the gift went out; Send in LINE packs a new gift */
+  depositCameBack: {
+    en: "The sticker came back out of the gift bag before it went out. Tap Send in LINE to pack it again.",
+    ja: "送る前に、シールがギフト袋から戻ってきました。LINEで送るをタップして、もう一度袋に入れてください。",
+  },
   giftMessage: {
     /** The Gift Message sent through LINE: its preview in the recipient's chat list and LINE's notification */
     altText: { en: "{{name}} sent you a sticker", ja: "{{name}}からシールが届きました" },
@@ -170,6 +175,18 @@ export const giving = {
       en: "The app’s server couldn’t record that: {{reason}}",
       ja: "アプリのサーバーに記録できませんでした：{{reason}}",
     },
+  },
+  /** LINE didn't say whether the Gift Message went out, so the same one isn't offered again. */
+  maybeSent: {
+    /** Giving, when LINE's friend picker gave no answer on whether the Gift Message went out: the sheet's title over the open gift bag */
+    title: { en: "Did it go out?", ja: "送れましたか？" },
+    /** Giving's "Did it go out?" screen: the line under its title */
+    lead: {
+      en: "LINE didn’t say whether your gift message went out. If it did, tap It went out. If not, take the sticker out, then give it again.",
+      ja: "ギフトメッセージを送れたかどうか、LINEから返事がありませんでした。送れた場合は「送れました」をタップしてください。送れていない場合は、シールを取り出してから、もう一度贈ってください。",
+    },
+    /** Giving's "Did it go out?" screen: the aqua key the giver taps when the Gift Message did go out in LINE */
+    itWentOut: { en: "It went out", ja: "送れました" },
   },
   sent: {
     /** Giving, once the Gift Message went out through LINE: the title under the gift bag as it seals */

@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import type { Hash } from "viem";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/apiClient";
@@ -14,6 +15,9 @@ const hash: Hash = `0x${"ab".repeat(32)}`;
 const takeOutHash: Hash = `0x${"ef".repeat(32)}`;
 const token = `0x${"cd".repeat(32)}`;
 const transfer = { to: `0x${"12".repeat(20)}`, data: "0x1234" };
+const userId = "user-giver";
+/** No answer from the server. */
+const noAnswer = () => new ApiError(0, { error: "network", detail: "POST got no answer" });
 
 function setup() {
   const packed = gift({ status: "packed", escrowStatus: "missing" });
@@ -22,29 +26,57 @@ function setup() {
     .mockResolvedValueOnce({ gift: packed, giftClaimToken: token, escrowTransfer: transfer })
     .mockResolvedValue({ gift: packed, giftClaimToken: null, escrowTransfer: transfer });
   const reportDeposit = vi.fn(async () => packed);
+  const reportShared = vi.fn(async () => ({ ...packed, status: "sent" as const }));
   const takeOutGift = vi.fn(async () => ({ ...packed, status: "taken_out" as const }));
   const transactions: GiftTransactions = {
-    deposit: vi.fn<GiftTransactions["deposit"]>(async (_id, _transfer, submitted) => {
-      submitted(hash);
+    deposit: vi.fn<GiftTransactions["deposit"]>(async (_id, _transfer, _sent, record) => {
+      record.sending(Date.now());
+      record.submitted(hash);
       return hash;
     }),
-    takeOut: vi.fn<GiftTransactions["takeOut"]>(async (_id, submitted) => {
-      submitted(takeOutHash);
+    takeOut: vi.fn<GiftTransactions["takeOut"]>(async (_id, _sent, record) => {
+      record.sending(Date.now());
+      record.submitted(takeOutHash);
+      return "takenOut";
     }),
   };
-  const api = emptyApi({ packageGift, reportDeposit, takeOutGift });
-  const backend = createApiGiftBackend({
-    api,
-    transactions,
-    fromHandle: "alice",
-    liffId: "123-abc",
-  });
+  const api = emptyApi({ packageGift, reportDeposit, reportShared, takeOutGift });
+  const options = { api, transactions, userId, fromHandle: "alice", liffId: "123-abc" };
+  const backend = createApiGiftBackend(options);
   const sticker = { id: packed.stickerId, no: 147, timeUsed: 12 };
-  return { packed, backend, sticker, transactions, reportDeposit, takeOutGift, packageGift, api };
+  return {
+    packed,
+    backend,
+    options,
+    sticker,
+    transactions,
+    reportDeposit,
+    reportShared,
+    takeOutGift,
+    packageGift,
+    api,
+  };
+}
+
+/** The page loads again: Giving's module starts over, and only this device's storage is left. */
+async function reload() {
+  vi.resetModules();
+  return import("./giftBackend");
+}
+
+/** What `work` fails with once every timer has run, or null when it doesn't fail. */
+async function failureOf(work: Promise<unknown>) {
+  const failure = work.then(
+    () => null,
+    (error: unknown) => error,
+  );
+  await vi.runAllTimersAsync();
+  return failure;
 }
 
 afterEach(() => {
   vi.useRealTimers();
+  localStorage.clear();
 });
 
 describe("Giving through the smart account", () => {
@@ -54,17 +86,17 @@ describe("Giving through the smart account", () => {
     expect(t.transactions.deposit).toHaveBeenCalledWith(
       t.packed.id,
       transfer,
-      expect.any(Function),
-      undefined,
+      { hash: undefined, sentAt: undefined },
+      expect.anything(),
     );
     expect(t.reportDeposit).toHaveBeenCalledWith(t.packed.id, hash);
     expect(packed.giftId).toBe(t.packed.id);
     await t.backend.takeOut(packed.giftId);
     expect(t.transactions.takeOut).toHaveBeenCalledWith(
       packed.giftId,
-      expect.any(Function),
-      undefined,
-      hash,
+      { hash: undefined, sentAt: undefined },
+      expect.anything(),
+      expect.objectContaining({ hash }),
     );
     expect(t.takeOutGift).toHaveBeenCalledWith(packed.giftId);
   });
@@ -77,8 +109,8 @@ describe("Giving through the smart account", () => {
     expect(t.transactions.deposit).toHaveBeenLastCalledWith(
       t.packed.id,
       transfer,
-      expect.any(Function),
-      hash,
+      expect.objectContaining({ hash }),
+      expect.anything(),
     );
     expect(t.takeOutGift).not.toHaveBeenCalled();
   });
@@ -94,9 +126,9 @@ describe("Giving through the smart account", () => {
     await t.backend.takeOut(t.packed.id);
     expect(t.transactions.takeOut).toHaveBeenCalledWith(
       t.packed.id,
-      expect.any(Function),
-      undefined,
-      hash,
+      { hash: undefined, sentAt: undefined },
+      expect.anything(),
+      expect.objectContaining({ hash }),
     );
     expect(t.packageGift).toHaveBeenCalledTimes(1);
     expect(t.transactions.deposit).toHaveBeenCalledTimes(1);
@@ -104,17 +136,20 @@ describe("Giving through the smart account", () => {
 
   it("clears a failed deposit hash so a retry can submit a new transaction", async () => {
     const t = setup();
-    vi.mocked(t.transactions.deposit).mockImplementationOnce(async (_id, _transfer, submitted) => {
-      submitted(hash);
-      throw new GiftTransactionRevertedError();
-    });
+    vi.mocked(t.transactions.deposit).mockImplementationOnce(
+      async (_id, _transfer, _sent, record) => {
+        record.sending(Date.now());
+        record.submitted(hash);
+        throw new GiftTransactionRevertedError();
+      },
+    );
     await expect(t.backend.pack(t.sticker)).rejects.toThrow("reverted");
     await expect(t.backend.pack(t.sticker)).resolves.toMatchObject({ giftId: t.packed.id });
     expect(t.transactions.deposit).toHaveBeenLastCalledWith(
       t.packed.id,
       transfer,
-      expect.any(Function),
-      undefined,
+      { hash: undefined, sentAt: undefined },
+      expect.anything(),
     );
     expect(t.transactions.takeOut).not.toHaveBeenCalled();
   });
@@ -123,12 +158,7 @@ describe("Giving through the smart account", () => {
     const t = setup();
     const firstGift = await t.backend.pack(t.sticker);
     t.packageGift.mockResolvedValue({ gift: t.packed, giftClaimToken: null, escrowTransfer: null });
-    const reopened = createApiGiftBackend({
-      api: t.api,
-      transactions: t.transactions,
-      fromHandle: "alice",
-      liffId: "123-abc",
-    });
+    const reopened = createApiGiftBackend(t.options);
     await expect(reopened.pack(t.sticker)).resolves.toEqual(firstGift);
     expect(t.transactions.deposit).toHaveBeenCalledTimes(1);
     expect(t.transactions.takeOut).not.toHaveBeenCalled();
@@ -157,27 +187,22 @@ describe("Giving through the smart account", () => {
     expect(t.transactions.deposit).toHaveBeenCalledTimes(2);
     expect(t.transactions.takeOut).toHaveBeenCalledWith(
       t.packed.id,
-      expect.any(Function),
-      undefined,
-      hash,
+      { hash: undefined, sentAt: undefined },
+      expect.anything(),
+      expect.objectContaining({ hash }),
     );
     expect(t.takeOutGift).toHaveBeenCalledWith(t.packed.id);
     expect(t.transactions.deposit).toHaveBeenLastCalledWith(
       replacement.id,
       transfer,
-      expect.any(Function),
-      undefined,
+      { hash: undefined, sentAt: undefined },
+      expect.anything(),
     );
   });
 
   it("shares an in-progress pack across Giving instances instead of replacing its token", async () => {
     const t = setup();
-    const second = createApiGiftBackend({
-      api: t.api,
-      transactions: t.transactions,
-      fromHandle: "alice",
-      liffId: "123-abc",
-    });
+    const second = createApiGiftBackend(t.options);
     const [firstGift, secondGift] = await Promise.all([
       t.backend.pack(t.sticker),
       second.pack(t.sticker),
@@ -200,8 +225,9 @@ describe("Giving through the smart account", () => {
         giftClaimToken: token,
         escrowTransfer: transfer,
       });
-    vi.mocked(t.transactions.takeOut).mockImplementationOnce(async (_id, submitted) => {
-      submitted(takeOutHash);
+    vi.mocked(t.transactions.takeOut).mockImplementationOnce(async (_id, _sent, record) => {
+      record.sending(Date.now());
+      record.submitted(takeOutHash);
       throw new GiftTransactionUnconfirmedError("takeOut");
     });
     await expect(t.backend.pack(t.sticker)).rejects.toBeInstanceOf(GiftPackagingError);
@@ -209,9 +235,9 @@ describe("Giving through the smart account", () => {
     await expect(t.backend.pack(t.sticker)).resolves.toMatchObject({ giftId: replacement.id });
     expect(t.transactions.takeOut).toHaveBeenLastCalledWith(
       t.packed.id,
-      expect.any(Function),
-      takeOutHash,
-      hash,
+      expect.objectContaining({ hash: takeOutHash }),
+      expect.anything(),
+      expect.objectContaining({ hash }),
     );
     expect(t.transactions.deposit).toHaveBeenCalledTimes(2);
     expect(t.takeOutGift).toHaveBeenCalledTimes(1);
@@ -230,5 +256,137 @@ describe("Giving through the smart account", () => {
     await Promise.all([first, second]);
     expect(t.transactions.takeOut).toHaveBeenCalledTimes(1);
     expect(t.takeOutGift).toHaveBeenCalledTimes(2);
+  });
+
+  it("takes out a gift whose deposit never reached the wallet, and sends it as it is after", async () => {
+    const t = setup();
+    vi.mocked(t.transactions.deposit).mockRejectedValueOnce(
+      new ApiError(0, { error: "smart_account_not_ready" }),
+    );
+    // The escrow has nothing of this gift, so a take-out on chain can't be confirmed.
+    vi.mocked(t.transactions.takeOut).mockRejectedValue(
+      new GiftTransactionUnconfirmedError("takeOut"),
+    );
+    await expect(t.backend.pack(t.sticker)).rejects.toBeInstanceOf(GiftPackagingError);
+    await t.backend.takeOut(t.packed.id);
+    await expect(t.backend.pack(t.sticker)).resolves.toMatchObject({ giftId: t.packed.id });
+    expect(t.transactions.takeOut).not.toHaveBeenCalled();
+    expect(t.takeOutGift).not.toHaveBeenCalled();
+  });
+
+  it("takes a gift whose escrow record isn't this sticker's out without the chain", async () => {
+    const t = setup();
+    t.reportDeposit.mockRejectedValueOnce(
+      new ApiError(409, { error: "deposit_mismatch", detail: "Another sticker's record" }),
+    );
+    await expect(t.backend.pack(t.sticker)).rejects.toBeInstanceOf(GiftPackagingError);
+    await t.backend.takeOut(t.packed.id);
+    expect(t.transactions.takeOut).not.toHaveBeenCalled();
+    expect(t.takeOutGift).toHaveBeenCalledWith(t.packed.id);
+  });
+
+  it("stops before LINE when the deposit came back before it was reported", async () => {
+    const t = setup();
+    t.reportDeposit.mockResolvedValueOnce({ ...t.packed, status: "taken_out" });
+    await expect(t.backend.pack(t.sticker)).rejects.toBeInstanceOf(GiftPackagingError);
+  });
+
+  it("takes out the earlier gift that holds the sticker, then packs it again", async () => {
+    const t = setup();
+    const held = gift({ status: "taken_out", escrowStatus: "pending" });
+    t.packageGift
+      .mockReset()
+      .mockRejectedValueOnce(
+        new ApiError(409, { error: "gift_held", detail: "Held in the escrow", giftId: held.id }),
+      );
+    t.packageGift.mockResolvedValue({
+      gift: t.packed,
+      giftClaimToken: token,
+      escrowTransfer: transfer,
+    });
+    await expect(t.backend.pack(t.sticker)).resolves.toMatchObject({ giftId: t.packed.id });
+    expect(t.transactions.takeOut).toHaveBeenCalledWith(
+      held.id,
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+    );
+    expect(t.takeOutGift).toHaveBeenCalledWith(held.id);
+  });
+
+  it("tries the sent report again when it gets no answer", async () => {
+    vi.useFakeTimers();
+    const t = setup();
+    await t.backend.pack(t.sticker);
+    t.reportShared.mockRejectedValueOnce(noAnswer());
+    expect(await failureOf(t.backend.markSent(t.packed.id))).toBeNull();
+    expect(t.reportShared).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    [
+      "went out, its report unanswered",
+      "sent",
+      async (t: ReturnType<typeof setup>) => {
+        t.reportShared.mockRejectedValue(noAnswer());
+        expect(await failureOf(t.backend.markSent(t.packed.id))).toBeInstanceOf(ApiError);
+        t.reportShared.mockResolvedValue({ ...t.packed, status: "sent" });
+      },
+    ],
+    [
+      "may have gone out",
+      "maybeSent",
+      async (t: ReturnType<typeof setup>) => t.backend.markMaybeSent(t.packed.id),
+    ],
+  ] as const)(
+    "never takes out a gift whose message %s when its sticker is given after a reload",
+    async (_, outcome, mark) => {
+      vi.useFakeTimers();
+      const t = setup();
+      await t.backend.pack(t.sticker);
+      await mark(t);
+      const { createApiGiftBackend: afterReload } = await reload();
+      t.packageGift.mockResolvedValue({
+        gift: t.packed,
+        giftClaimToken: null,
+        escrowTransfer: null,
+      });
+      expect(await failureOf(afterReload(t.options).pack(t.sticker))).toMatchObject({
+        giftId: t.packed.id,
+        outcome,
+      });
+      expect(t.transactions.takeOut).not.toHaveBeenCalled();
+      expect(t.takeOutGift).not.toHaveBeenCalled();
+      if (outcome === "sent") expect(t.reportShared).toHaveBeenLastCalledWith(t.packed.id, "sent");
+    },
+  );
+
+  it("waits on a deposit sent before a reload instead of sending another", async () => {
+    const t = setup();
+    const sentAt = Date.now();
+    // The page closes while the wallet waits on the deposit.
+    vi.mocked(t.transactions.deposit).mockImplementationOnce((_id, _transfer, _sent, record) => {
+      record.sending(sentAt);
+      return new Promise(() => {});
+    });
+    void t.backend.pack(t.sticker);
+    await vi.waitFor(() => expect(t.transactions.deposit).toHaveBeenCalledOnce());
+    const { createApiGiftBackend: afterReload } = await reload();
+    const replacement = gift({ status: "packed", escrowStatus: "missing" });
+    t.packageGift
+      .mockResolvedValueOnce({ gift: t.packed, giftClaimToken: null, escrowTransfer: transfer })
+      .mockResolvedValueOnce({
+        gift: replacement,
+        giftClaimToken: token,
+        escrowTransfer: transfer,
+      });
+    await afterReload(t.options).pack(t.sticker);
+    expect(t.transactions.deposit).toHaveBeenNthCalledWith(
+      2,
+      t.packed.id,
+      transfer,
+      { hash: undefined, sentAt },
+      expect.anything(),
+    );
   });
 });
