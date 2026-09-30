@@ -436,3 +436,5 @@ export function createTrayPresses(
 
   return { sendHome };
 }
+
+export type TrayPresses = ReturnType<typeof createTrayPresses>;
