@@ -349,7 +349,7 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 - **Figure** (900, 26px on the cork back's stamps and 27px in the open trail row and its replay stage, up to 52px on the gratitude receipt and 58px on the streak leaf; line-height about 0.95, width 125, proportional figures): gratitude amounts in the combo, the receipt and the sticker's trail, the counts pinned on the cork back (the receipt's TOTAL at 30px), and the hit counter (23px on the leaderboard, 20px in the cork back's Bests).
 - **Headline** (800, 26px, line-height 1.08, width 112, balanced wrap): screen and dialog titles such as "Sealed on-chain" and "Out of tickets for today", the sticker detail's heading and the name printed on a gift's tag.
 - **Title** (800, 18–22px, line-height 1.1, width 112): sheet titles, the board header's name, and the notebook scrap and Settings headings on the cork back (18px).
-- **Body** (400–500, 15px, line-height 1.42–1.5, width 100): running text. Notes cap at 28–44ch. Supporting notes drop to 13px. Text never sits between the steps (12, 12.5, 13.5, 14 or 16px), except the toast's 14px and the 16px search field, which keeps iOS from zooming.
+- **Body** (400–500, 15px, line-height 1.42–1.5, width 100): running text. Notes cap at 28–44ch. Supporting notes drop to 13px. Text never sits between the steps (12, 12.5, 13.5, 14 or 16px), except the toast's 14px and the 16px text fields (Explore's search and the handle prompt), which keep iOS from zooming.
 - **Label** (700, 15px, or 13px on small buttons, the selected sticker's toolbar and the draw screen's white labels, width 100): buttons, tabs and chips, in sentence case at one weight.
 - **Fine** (650, 11px, uppercase, +0.07em, width 87.5, proportional figures): metadata lines such as "No.0147 · 4m 52s · 2026.09.23 · @alice", sheet date ranges in the tray, captions and hints. Two things keep their own case inside its capitals: a @handle or LINE name (the `.handle` class), and a drawing time, whose units stay lowercase ("4m 52s") because "4M" reads as millions.
 - **JP caption** (700, 11px, +0.14em): the なまえ cap on the name label.
@@ -572,7 +572,7 @@ The one card that sells reserve tickets, in the out-of-tickets card's stock. The
 
 ### Artist chip
 
-Who drew a foil sticker: a Liner Lift pill (40px) with the artist's LINE picture in a white edge inside a turning foil ring, then a fine-print ARTIST caption over "@name" (760, 14px). Without a picture, their first letter stands in on the paper, in the photo sticker's puffy capital (12px, and 11px in the By variant), never a blank disc. A one-line "By @name" variant is for tight spaces. The copy is "artist" or "By", never "from".
+Who drew a foil sticker: a Liner Lift pill (40px) with the artist's LINE picture in a white edge inside a turning foil ring, then a fine-print ARTIST caption over "@name" (700, 13px). Without a picture, their first letter stands in on the paper, in the photo sticker's puffy capital (12px, and 11px in the By variant), never a blank disc. A one-line "By @name" variant is for tight spaces. The copy is "artist" or "By", never "from".
 
 - **First load:** when a board opens, each foil sticker's chip pops in at its top-left corner, top to bottom 80ms apart, holds about 2s and fades (3.2s in all), in one layer above every sticker and the name header. It happens once per opening. Reduced motion shows and hides it without the pop.
 - **Tapped:** the chip heads the selected sticker's menu, above its actions, until you deselect.
