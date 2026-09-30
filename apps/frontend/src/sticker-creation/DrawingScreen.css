@@ -38,9 +38,11 @@
   pointer-events: auto;
 }
 
-/* While sealing, the tools step back; the ceremony owns the screen. */
-.drawing-screen.is-sealing
-  :is(.drawing-top, .smoothing-bar, .size-rail, .history-buttons, .seal-chip, .seal-key) {
+/* While sealing, the tools step back; the ceremony owns the screen. A seal to try again keeps only
+   the seal key and its chip, since the sheet can't change. */
+.drawing-screen:is(.is-sealing, .is-retrying)
+  :is(.drawing-top, .smoothing-bar, .size-rail, .history-buttons),
+.drawing-screen.is-sealing :is(.seal-chip, .seal-key) {
   opacity: 0;
   pointer-events: none;
   transition-duration: 220ms;

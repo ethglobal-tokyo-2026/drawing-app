@@ -35,7 +35,7 @@
 .account-rows__value {
   grid-area: value;
   min-width: 0;
-  font: 600 14px/1.35 var(--font-ui);
+  font: 500 15px/1.35 var(--font-ui);
   font-stretch: var(--w-ui);
   overflow-wrap: anywhere;
   -webkit-user-select: text;

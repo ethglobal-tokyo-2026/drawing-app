@@ -17,7 +17,7 @@ export function feedOf(inputs: readonly FeedInput[], end: ReplayFeed["end"]): Re
 
 /**
  * Frames driven by hand. `run(ms, hz)` delivers one every 1000 / hz ms of real time, letting
- * promises settle between them, as the endings wait on them.
+ * promises settle between them, as the endings wait on them. `asked()`: whether a frame is asked for.
  */
 export function handFrames() {
   let time = 0;
@@ -42,5 +42,5 @@ export function handFrames() {
     }
     await new Promise((resolve) => setTimeout(resolve, 0));
   };
-  return { frames, run };
+  return { frames, run, asked: () => waiting !== null };
 }

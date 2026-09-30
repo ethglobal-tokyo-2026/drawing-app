@@ -59,9 +59,8 @@ async function start() {
   userId = insertUser(test.db);
 }
 
-/** A new Sui transaction that paid `amount` JPYC into the ticket vault, by default for the signed-in person. */
-function paid(amount: bigint, payment: Partial<JpycPayment> = {}) {
-  const txDigest = newTxDigest();
+/** A Sui transaction, new unless named, that paid `amount` JPYC into the ticket vault, by default for the signed-in person. */
+function paid(amount: bigint, payment: Partial<JpycPayment> = {}, txDigest = newTxDigest()) {
   transactions.set(txDigest, [
     {
       vault: TEST_PAYMENT_TARGET.vault,
@@ -275,7 +274,7 @@ describe("tickets", () => {
     }
   });
 
-  it("refuse a payment short of its pack, into another vault, for someone else, or never made", async () => {
+  it("refuse a payment short of its pack, into another vault, or for someone else", async () => {
     const price = jpycOf(PACK);
     const cases = [
       { txDigest: paid(price - 1n), status: 402, error: "payment_short" },
@@ -289,7 +288,6 @@ describe("tickets", () => {
         status: 403,
         error: "payment_not_yours",
       },
-      { txDigest: newTxDigest(), status: 422, error: "payment_not_found" },
     ];
     for (const { txDigest, status, error } of cases) {
       const response = await buy({ tickets: PACK.tickets, txDigest });
@@ -297,6 +295,16 @@ describe("tickets", () => {
     }
     expect(test.db.select().from(ticketPurchases).all()).toEqual([]);
     expect((await getTickets()).reserveLeft).toBe(0);
+  });
+
+  it("count nothing for a payment Sui doesn't show yet, and add its tickets once Sui does", async () => {
+    const txDigest = newTxDigest();
+    const early = await buy({ tickets: PACK.tickets, txDigest });
+    expect(await refusalOf(early)).toMatchObject({ status: 409, error: "payment_not_landed" });
+    expect(purchaseOf(txDigest)).toBeUndefined();
+
+    paid(jpycOf(PACK), {}, txDigest);
+    expect((await buyPack(PACK, txDigest)).reserveLeft).toBe(PACK.tickets);
   });
 
   it("count a payment once, whoever sends it again", async () => {

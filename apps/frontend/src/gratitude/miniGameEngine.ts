@@ -18,7 +18,7 @@ import {
   type Tier,
 } from "./combo";
 import { createComboHud } from "./comboHud";
-import { EASE_OUT, EASE_SPRING, clamp } from "./easing";
+import { EASE_OUT, EASE_SPRING, clamp } from "../ui/easing";
 import { createFrameTimeReadout } from "./frameTimeReadout";
 import { FEEL_CONFIG, GAME_CONFIG } from "./gameConfig";
 import {
@@ -41,7 +41,7 @@ import { heartRest, LIVE_FRAME, type StageFrame } from "./stageLayout";
 import { createStrokeDetector } from "./strokeDetector";
 import { createTierBackground } from "./tierBackground";
 import { shownGloss, TIER_NAMES } from "./tierNames";
-import { createLettering } from "./tierSlamAndPopIns";
+import { createLettering, UNLOCK_SLAMS } from "./tierSlamAndPopIns";
 import { isOnHeart, listenForTouches, type HeartArea } from "./touchInput";
 import { animate } from "./webAnimations";
 
@@ -577,6 +577,8 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
       L = { ...L, giver: giverPoint(L.rest) };
       heart.setLayout(L);
       await landHeart({ heart, effects });
+      // Nothing stays piled on the card, so once it has melted the frame loop sleeps.
+      physics.melt();
       return finish(record);
     }
     if (!liveInput || !recorder || !endingParts) return finish(record);
@@ -866,7 +868,7 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
     // The combo's own look first, so the unlock's slam is the one that shows.
     handle(events, x, y);
     background.show(combo.view.tier, intensity, "stroke");
-    lettering.slamTierName("!?", "");
+    lettering.slamTierName(UNLOCK_SLAMS.stroke.jp, shownGloss(UNLOCK_SLAMS.stroke.en));
     flash = { face: "wide", until: clock + 700 };
     writeFace();
     if (!reduced) heart.punch(0.05);
@@ -984,7 +986,7 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
       heart.comeLoose();
       heart.kickLoose(reversal.direction, reversal.strength);
     }
-    lettering.slamTierName("ポンッ", shownGloss("*pop*"));
+    lettering.slamTierName(UNLOCK_SLAMS.shake.jp, shownGloss(UNLOCK_SLAMS.shake.en));
     flash = { face: "wide", until: clock + 600 };
     writeFace();
     effects.burst(8, heartAt);
@@ -1011,15 +1013,16 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
     const view = combo.view;
     if (!running || ending || view.phase === "ended" || view.method === "stroke") return;
     const shaking = view.method === "shake";
+    // With reduced motion the phone's moves leave the heart still: only a counted shake jiggles it.
     if (!shaking) {
       heart.swayWith(ax, gx);
-      const size = Math.hypot(ax, ay);
-      if (size > 1.5) heart.wobble(Math.min(0.1, size * 0.005));
+      const accel = Math.hypot(ax, ay);
+      if (accel > 1.5 && !reduced) heart.wobble(Math.min(0.1, accel * 0.005));
     }
     const reversal = shakes.addMotionSample(ax, ay, t);
     if (!reversal) return;
     if (shaking) return countReversal(t, reversal);
-    heart.jiggle();
+    if (!reduced) heart.jiggle();
     if (reversal.run >= FEEL_CONFIG.shake.keepShakingAt) showTip("shake");
     if (reversal.run >= FEEL_CONFIG.shake.cornerAt) {
       // It stays up while the shake keeps its rhythm, and comes down once the run lapses.
@@ -1363,7 +1366,7 @@ function mountEngine(parts: StageParts, options: EngineOptions): MiniGameEngine 
       tip.remove();
       lettering.clear();
       effects.tidy();
-      miniHearts.clear();
+      miniHearts.release();
       // A remount (StrictMode's included) builds into the same elements, so everything built goes.
       parts.stage.replaceChildren();
       parts.hud.replaceChildren();

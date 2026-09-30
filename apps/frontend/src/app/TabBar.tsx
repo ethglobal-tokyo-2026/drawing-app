@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "../i18n/react";
 import { CaretUp, ExploreIcon, ShopIcon, StickerBoardIcon } from "../icons";
+import { readStored, writeStored } from "../ui/deviceStorage";
 import "./TabBar.css";
 
 export type Tab = "board" | "explore" | "shop";
@@ -12,22 +13,12 @@ const GRAB_PX = 8;
 /** Set once the grabber has brought the tabs back, after which it needs no label. */
 const GRABBED_KEY = "draw.tabs.grabbed";
 
-function readGrabbed(): boolean {
-  try {
-    return localStorage.getItem(GRABBED_KEY) !== null;
-  } catch (error) {
-    console.error("Can't read whether the tab grabber was used on this device", error);
-    return false;
-  }
-}
+const readGrabbed = () =>
+  readStored(GRABBED_KEY, "Can't read whether the tab grabber was used on this device").text !==
+  null;
 
-function saveGrabbed(): void {
-  try {
-    localStorage.setItem(GRABBED_KEY, "1");
-  } catch (error) {
-    console.error("Can't save that the tab grabber was used on this device", error);
-  }
-}
+const saveGrabbed = () =>
+  writeStored(GRABBED_KEY, "1", "Can't save that the tab grabber was used on this device");
 
 interface Props {
   /** None while drawing: Draw is the board's key, not a tab. */

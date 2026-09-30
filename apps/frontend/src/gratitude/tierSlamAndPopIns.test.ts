@@ -4,7 +4,8 @@ import { seededRandom } from "../ui/seededRandom";
 import { FEEL_CONFIG } from "./gameConfig";
 import type { HeartBox } from "./miniHeartPhysics";
 import type { PopInBank } from "./popInWords";
-import { createLettering } from "./tierSlamAndPopIns";
+import { TIER_NAMES } from "./tierNames";
+import { createLettering, UNLOCK_SLAMS } from "./tierSlamAndPopIns";
 
 /** The engine's stage and resting heart on a 390 × 741 phone. */
 const SCREEN = { width: 390, height: 741, top: 256 };
@@ -32,7 +33,19 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
+  Reflect.deleteProperty(document, "fonts");
 });
+
+/** The x and y each of a word's frames puts it at. */
+const framePlaces = (el: Element | null) => {
+  const shown = el instanceof HTMLElement ? played.get(el) : undefined;
+  if (!shown) throw new Error("No word was shown");
+  return shown.frames.map(({ transform }) => {
+    const m = /translate\(([-\d.]+)px,([-\d.]+)px\)/.exec(String(transform));
+    if (!m) throw new Error(`Unexpected transform: ${String(transform)}`);
+    return [Number(m[1]), Number(m[2])];
+  });
+};
 
 function lettering(seed: number) {
   const layer = document.createElement("div");
@@ -106,6 +119,38 @@ describe("pop-in words", () => {
     }
   });
 
+  it("land and drift on a smaller stage as in the live game, at its scale", () => {
+    /** A stage `scale` of the live game's, as a replay's has, with no glosses. */
+    const stage = (scale: number) => {
+      const layer = document.createElement("div");
+      const made = createLettering(layer, {
+        intensity: FEEL_CONFIG.intensity.full,
+        random: seededRandom(5),
+        reduced: () => false,
+        scale,
+        glosses: false,
+      });
+      made.setLayout(SCREEN.width * scale, SCREEN.height * scale, SCREEN.top * scale);
+      const { x, y, width, height } = HEART;
+      const heart = { x: x * scale, y: y * scale, width: width * scale, height: height * scale };
+      return (bank: PopInBank) => {
+        made.showPopInWord(bank, heart);
+        return framePlaces(layer.lastElementChild);
+      };
+    };
+    const live = stage(1);
+    const card = stage(0.5);
+    for (let i = 0; i < 60; i++) {
+      const bank = BANKS[i % BANKS.length];
+      const full = live(bank);
+      card(bank).forEach(([x, y], k) => {
+        expect(x).toBeCloseTo(full[k][0] / 2, 0);
+        expect(y).toBeCloseTo(full[k][1] / 2, 0);
+      });
+      vi.advanceTimersByTime(90);
+    }
+  });
+
   it("show only 尊い… and 天国… at the climax", () => {
     const words = lettering(3);
     words.showPopInWord("climax", HEART);
@@ -114,5 +159,42 @@ describe("pop-in words", () => {
     // Both are on screen: a third would be a duplicate, so none shows.
     words.showPopInWord("climax", HEART);
     expect(onScreen()).toHaveLength(2);
+  });
+});
+
+describe("slams", () => {
+  it("center every word the engine slams in, as measured once the fonts load", async () => {
+    // The probe lays each word out at its font size: a half-width em a character, here.
+    const em = 0.55;
+    const fontPx = (el: HTMLElement) => parseFloat(el.style.fontSize) || 11;
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return (this.textContent ?? "").length * em * fontPx(this);
+    });
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return 1.2 * fontPx(this);
+    });
+    Object.defineProperty(document, "fonts", {
+      value: { ready: Promise.resolve(), status: "loaded" },
+      configurable: true,
+    });
+    const layer = document.createElement("div");
+    const words = createLettering(layer, {
+      intensity: FEEL_CONFIG.intensity.full,
+      random: seededRandom(1),
+      reduced: () => false,
+    });
+    words.setLayout(SCREEN.width, SCREEN.height, SCREEN.top);
+    await Promise.resolve();
+    for (const { jp } of [...TIER_NAMES, ...Object.values(UNLOCK_SLAMS)]) {
+      words.slamTierName(jp, "");
+      const slam = layer.querySelector<HTMLElement>(".gr-slam");
+      if (!slam) throw new Error(`${jp} slammed nothing`);
+      const [[x]] = framePlaces(slam);
+      expect(x + (jp.length * em * fontPx(slam)) / 2).toBeCloseTo(SCREEN.width / 2, 0);
+    }
   });
 });

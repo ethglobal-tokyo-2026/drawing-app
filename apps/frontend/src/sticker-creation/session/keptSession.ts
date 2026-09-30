@@ -1,3 +1,4 @@
+import { personKey, parseStored, readStored, writeStored } from "../../ui/deviceStorage";
 import { STRIDE, type Op } from "../canvas/ops";
 
 /*
@@ -15,7 +16,7 @@ const OPS = "ops";
 const PROGRESS = "progress";
 /** The progress store holds one record: how many ops are on the sheet. */
 const PROGRESS_KEY = 0;
-const recordKey = (userId: string) => `draw.session.${userId}`;
+const recordKey = (userId: string) => personKey("draw.session", userId);
 /** A kept drawing whose ops haven't loaded by then carries its ticket over, so Draw never waits on it for good. */
 export const LOAD_TIMEOUT_MS = 5_000;
 /** Logging out waits this long for the kept drawing to go, then goes ahead. */
@@ -374,20 +375,12 @@ const isTicketUseId = (v: unknown): v is number =>
 
 /** Null when no drawing is in progress. */
 function readRecord(userId: string): SessionRecord | "unreadable" | null {
-  let raw: string | null;
-  try {
-    raw = localStorage.getItem(recordKey(userId));
-  } catch (error) {
-    console.error("Can't tell whether a drawing was in progress on this device", error);
-    return null;
-  }
+  const { text: raw } = readStored(
+    recordKey(userId),
+    "Can't tell whether a drawing was in progress on this device",
+  );
   if (raw === null) return null;
-  let value: unknown;
-  try {
-    value = JSON.parse(raw);
-  } catch {
-    value = undefined;
-  }
+  const value = parseStored(raw);
   if (
     typeof value === "object" &&
     value !== null &&
@@ -404,20 +397,16 @@ function readRecord(userId: string): SessionRecord | "unreadable" | null {
 }
 
 /** Whether it's written. */
-function writeRecord(userId: string, record: SessionRecord): boolean {
-  try {
-    localStorage.setItem(recordKey(userId), JSON.stringify(record));
-    return true;
-  } catch (error) {
-    console.error("Can't note the drawing in progress on this device; a reload loses it", error);
-    return false;
-  }
-}
+const writeRecord = (userId: string, record: SessionRecord) =>
+  writeStored(
+    recordKey(userId),
+    JSON.stringify(record),
+    "Can't note the drawing in progress on this device; a reload loses it",
+  );
 
-function removeRecord(userId: string): void {
-  try {
-    localStorage.removeItem(recordKey(userId));
-  } catch (error) {
-    console.error("Can't clear the note of the drawing in progress on this device", error);
-  }
-}
+const removeRecord = (userId: string) =>
+  writeStored(
+    recordKey(userId),
+    null,
+    "Can't clear the note of the drawing in progress on this device",
+  );

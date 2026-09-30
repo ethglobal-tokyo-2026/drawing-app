@@ -102,6 +102,11 @@ export const stickerCreation = {
       en: "Couldn’t seal: your LINE sign-in has expired. Tap the check to reconnect with LINE, then pick up where you left off.",
       ja: "仕上げられませんでした。LINEのログイン情報の有効期限が切れました。チェックをタップしてLINEで再ログインすると、続きから再開できます。",
     },
+    /** Drawing screen, bottom right: the chip beside the seal key, announced, when a reload brings back a drawing whose seal was on its way, so the sheet stays as it was sealed; tapping the check finishes the seal */
+    interrupted: {
+      en: "Your sticker was being sealed. Tap the check to finish sealing it.",
+      ja: "シールを仕上げている途中でした。チェックをタップして仕上げてください。",
+    },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing failed on the phone before the server was asked; {{reason}} is a technical message that stays English */
     failedHere: {
       en: "Couldn’t seal ({{reason}}). Tap the check to try again.",

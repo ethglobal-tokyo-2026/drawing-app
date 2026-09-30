@@ -55,6 +55,16 @@ export const errors = {
     en: "This gift was already opened.",
     ja: "このギフトは、すでにひらかれています。",
   },
+  /** Giving and Receiving: opening a gift's link, Accept, taking a gift out, or the deposit's check after Send, when the chain can't be read, through errorMessage or errorReason */
+  chain_unavailable: {
+    en: "The chain didn't answer. Try again in a moment.",
+    ja: "ブロックチェーンから応答がありません。少し待ってから、もう一度お試しください。",
+  },
+  /** Receive gift dialog, Accept sheet: tapping Accept (POST /api/gifts/receive, or /:giftId/receive from the board) when the chain fails or doesn't confirm the sticker's claim in time, in “… wasn’t received” through errorReason */
+  claim_failed: {
+    en: "The chain didn't confirm it. Trying again is safe: a gift is only ever received once.",
+    ja: "ブロックチェーン上で確認がとれませんでした。受け取りは一度きりなので、やり直しても大丈夫です。",
+  },
   /** Not shown in the app: the ENS gateway's answer to an outside ENS app looking up a croquis.eth name, when this server has no ENS set up */
   ens_not_configured: {
     en: "Names aren't set up on this server yet.",
@@ -189,10 +199,15 @@ export const errors = {
     en: "That payment was already counted.",
     ja: "その支払いは、すでに反映されています。",
   },
-  /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) when Sui has no such transaction, or it paid no JPYC into the ticket vault, in “…the tickets weren’t added” through errorReason */
+  /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) for a Sui transaction that paid no JPYC into the ticket vault, in “…the tickets weren’t added” through errorReason */
   payment_not_found: {
     en: "That payment didn't reach the ticket shop.",
     ja: "この支払いはチケットショップに届いていません。",
+  },
+  /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) while Sui doesn't show the payment yet, in “Tickets not added yet” through errorReason, under the key that asks again */
+  payment_not_landed: {
+    en: "Sui doesn't show this payment yet. Try again in a moment.",
+    ja: "Suiでこの支払いがまだ確認できません。少し待ってから、もう一度お試しください。",
   },
   /** Ticket shop, after paying: adding the tickets (POST /api/ticket-purchases) for a payment into the ticket vault that names someone else, in “…the tickets weren’t added” through errorReason */
   payment_not_yours: {

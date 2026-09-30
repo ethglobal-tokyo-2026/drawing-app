@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, type Ref } from "react";
 import { useTranslation } from "../../i18n/react";
+import { EASE_PEEL } from "../../ui/easing";
 import { QrCode } from "../../ui/QrCode";
 import { QuietLink } from "../../ui/QuietLink";
 import { useReducedMotion } from "../../ui/useReducedMotion";
@@ -25,10 +26,9 @@ const CODE_PX = 116;
 
 /** Back on the cork, the paper presses down from a little proud of it and swings on its pin. */
 function stickBack(face: Element) {
-  const peel = getComputedStyle(face).getPropertyValue("--ease-peel").trim();
   face.animate([{ scale: "1.04" }, { scale: "1" }], {
     duration: 220,
-    easing: peel || "cubic-bezier(0.2, 0.7, 0.2, 1)",
+    easing: EASE_PEEL,
   });
   face.animate(
     [

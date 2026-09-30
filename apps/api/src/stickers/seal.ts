@@ -12,13 +12,15 @@ import { z } from "zod";
 import { queueNaming } from "../ens/naming.ts";
 import type { AppDeps } from "../deps.ts";
 import { diagnosticStep, failureCause, logFailure, logInfo } from "../diagnostics.ts";
-import { ageStatusOf, stickerPngsSchema, type StickerPngKind } from "../shapes.ts";
 import {
+  ageStatusOf,
   loadStickers,
   stickerPlacementSchema,
+  stickerPngsSchema,
   stickerSchema,
   toStickerPlacement,
-} from "../views.ts";
+  type StickerPngKind,
+} from "../shapes.ts";
 import type { SealForm } from "./sealForm.ts";
 import { timelapseProblem } from "./timelapse.ts";
 

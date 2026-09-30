@@ -1,14 +1,12 @@
-import { POP_IN_WORDS } from "./popInWords";
-import { TIER_NAMES } from "./tierNames";
+import { LETTERING_WORDS } from "./tierSlamAndPopIns";
 
 /**
- * Every character the lettering can show: the tier names and the pop-in words. Google Fonts serves
- * the lettering's Japanese in slices, each fetched only when one of its characters first shows, so
- * unasked, a slice would arrive mid-combo and its word would swap typefaces as it lands.
+ * Every character the lettering can show: what's slammed in and the pop-in words. Google Fonts
+ * serves the lettering's Japanese in slices, each fetched only when one of its characters first
+ * shows, so unasked, a slice would arrive mid-combo and its word would swap typefaces as it lands.
  */
 export function letteringCharacters(): string {
-  const words = [...TIER_NAMES, ...Object.values(POP_IN_WORDS).flat()].map((word) => word.jp);
-  return [...new Set(words.join(""))].join("");
+  return [...new Set(LETTERING_WORDS.map(({ jp }) => jp).join(""))].join("");
 }
 
 /**

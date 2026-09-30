@@ -1,12 +1,12 @@
 import { formatCount } from "../i18n/format";
 import { i18next } from "../i18n/i18n";
 import { fullBarSeconds } from "./combo";
-import { EASE_OUT, EASE_PEEL, clamp } from "./easing";
+import { EASE_OUT, EASE_PEEL, clamp } from "../ui/easing";
 import { HEART_SVG } from "./heartArt";
 import { animate } from "./webAnimations";
 
 /** The combo as the HUD draws it. */
-export interface HudView {
+interface HudView {
   total: number;
   multiplier: number;
   secondsLeft: number;

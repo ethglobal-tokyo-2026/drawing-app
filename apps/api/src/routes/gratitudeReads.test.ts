@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   gratitudeWithReplaySchema,
   seenGratitudeSchema,
+  unseenGratitudeCount,
   unseenGratitudeSchema,
 } from "../gratitude/feed.ts";
 import { gzipReplay } from "../gratitude/replay.ts";
@@ -117,6 +118,25 @@ describe("POST /api/gratitude/:giftId/seen", () => {
       });
     }
     expect(storedSeenAt(giftId)).toBeNull();
+  });
+
+  it("count the pink tag as gratitude on gifts you gave that you haven't watched", () => {
+    const giverId = insertUser(test.db);
+    const receiverId = insertUser(test.db);
+    const given = [insertSealedSticker(test.db, giverId), insertSealedSticker(test.db, giverId)];
+    const withGratitude = given.map((stickerId) =>
+      giveSticker(test.db, stickerId, giverId, receiverId),
+    );
+    for (const gift of withGratitude) insertGratitude(test.db, gift.id);
+    expect(unseenGratitudeCount(test.db, giverId)).toBe(withGratitude.length);
+    expect(unseenGratitudeCount(test.db, receiverId)).toBe(0);
+    const [watched] = withGratitude;
+    test.db
+      .update(gratitude)
+      .set({ seenByGiverAt: new Date() })
+      .where(eq(gratitude.giftId, watched.id))
+      .run();
+    expect(unseenGratitudeCount(test.db, giverId)).toBe(withGratitude.length - 1);
   });
 });
 

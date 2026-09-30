@@ -1,4 +1,5 @@
 import { context2d } from "../canvas/context2d";
+import { releaseCanvas } from "../../ui/releaseCanvas";
 import { cutSticker, type CutSticker, type LayerName, type MakeCanvas } from "./cutSticker";
 import type { Point } from "./dieCut";
 import type { SealReply, SealRequest } from "./sealWorker";
@@ -57,15 +58,9 @@ const encode = (canvas: HTMLCanvasElement) =>
     ),
   );
 
-/** Frees a canvas's memory now: iOS counts canvases against a small budget until they're collected. */
-const release = (canvas: HTMLCanvasElement) => {
-  canvas.width = 0;
-  canvas.height = 0;
-};
-
 const elementCanvas: MakeCanvas = (width, height) => {
   const { canvas, g } = blankCanvas(width, height);
-  return { g, png: () => encode(canvas).finally(() => release(canvas)) };
+  return { g, png: () => encode(canvas).finally(() => releaseCanvas(canvas)) };
 };
 
 /** The sealing worker paints on OffscreenCanvas, which older iOS lacks: there the cut runs here. */
@@ -180,7 +175,7 @@ export async function makeSticker(ink: HTMLCanvasElement): Promise<SealedSticker
     maskImage,
     dispose: () => {
       Object.values(urls).forEach((u) => URL.revokeObjectURL(u));
-      release(maskImage);
+      releaseCanvas(maskImage);
     },
   };
 }

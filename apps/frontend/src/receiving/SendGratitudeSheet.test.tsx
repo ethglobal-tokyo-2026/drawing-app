@@ -68,11 +68,7 @@ describe("SendGratitudeSheet", () => {
     act(() => button("Send gratitude").click());
     expect(onSend).toHaveBeenCalledOnce();
     act(() => button("Later").click());
-    act(() => {
-      button(`Close ${title}`).dispatchEvent(
-        new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
-      );
-    });
+    act(() => button(`Close ${title}`).click());
     expect(onLater).toHaveBeenCalledTimes(2);
     expect(onSend).toHaveBeenCalledOnce();
   });

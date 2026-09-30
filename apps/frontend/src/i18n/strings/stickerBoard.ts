@@ -580,8 +580,8 @@ export const stickerBoard = {
     },
     /** Someone else's sticker board: read out by screen readers when keyboard focus lands on a sticker */
     hint: {
-      en: "Enter opens its menu: view it, or offer for it",
-      ja: "Enterキーでメニューをひらきます。シールを見たり、オファーしたりできます。",
+      en: "Enter opens its menu, where you can view it",
+      ja: "Enterキーでメニューをひらきます。シールを見ることができます。",
     },
     /** Someone else's empty sticker board: the note in the dashed spot */
     blank: {
@@ -597,8 +597,6 @@ export const stickerBoard = {
     explore: { en: "Explore", ja: "さがす" },
     /** Someone else's sticker board, a sticker tapped: the menu's View button, which opens it large */
     view: { en: "View", ja: "見る" },
-    /** Someone else's sticker board, a sticker tapped: the menu's Offer for it button, which opens an offer for that sticker */
-    offer: { en: "Offer for it", ja: "オファーする" },
     /** Someone else's sticker board: the Give key in Draw's place, which gives them one of your stickers */
     give: { en: "Give", ja: "贈る" },
     /** Someone else's sticker board, a sticker opened large: the fine print under its number; <duration/> is how long it took to draw, <artist/> its Original Artist */

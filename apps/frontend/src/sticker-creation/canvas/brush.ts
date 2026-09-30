@@ -1,3 +1,4 @@
+import { clamp } from "../../ui/easing";
 import { STRIDE, type StrokeOp } from "./ops";
 
 /** The size rail's value (0–1) as a width in px, squared so the fine sizes get most of the travel. */
@@ -8,8 +9,6 @@ const MIN_STEP = 0.5;
 /** A stroke starts as a dot this fraction of the size, then widens by `TAPER_STEP` a point. */
 const FIRST_DOT = 0.6;
 const TAPER_STEP = 0.08;
-
-const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
 /** How wide this point wants to be, as a fraction of the size. */
 function widthFactor(pressure: number, pointerType: string, speed: number): number {

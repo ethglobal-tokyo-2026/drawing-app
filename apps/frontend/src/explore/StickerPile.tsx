@@ -22,6 +22,7 @@ import { formatNo } from "../stickers/format";
 import { veiledFor } from "../stickers/nsfw";
 import "../stickers/nsfw-img.css";
 import { PhotoSticker } from "../ui/PhotoSticker";
+import { EASE_PEEL } from "../ui/easing";
 import { REVEAL, revealOnLoad } from "../ui/reveal";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import {
@@ -56,7 +57,6 @@ const LAND_MS = 280;
 const FALL_GAP_MS = 55;
 /** Gravity: slow off the top, fastest as it lands. */
 const EASE_FALL = "cubic-bezier(0.55, 0, 1, 0.45)";
-const EASE_PEEL = "cubic-bezier(0.2, 0.7, 0.2, 1)";
 /** It spins this far into its turn as it falls. */
 const SPIN_DEG = 24;
 /** Reduced motion: the pile fades in instead. */
@@ -66,8 +66,6 @@ interface Props {
   /** Newest day first, from pileDays. */
   days: readonly PileDay[];
   meId: string;
-  /** The sticker lifted off the pile, whose spot keeps a faint ghost. */
-  liftedId?: string;
   onLift: (pile: PileSticker) => void;
 }
 
@@ -222,7 +220,6 @@ function PileSticker({
   label,
   fresh,
   falling,
-  lifted,
   onLift,
 }: {
   laid: Laid;
@@ -230,7 +227,6 @@ function PileSticker({
   label: string;
   fresh: boolean;
   falling: "waiting" | "falling" | null;
-  lifted: boolean;
   onLift: () => void;
 }) {
   const { sticker } = laid.pile;
@@ -244,7 +240,6 @@ function PileSticker({
       data-pile-id={sticker.id}
       data-turn={laid.spot.r}
       data-falling={falling ?? undefined}
-      data-lifted={lifted ? "" : undefined}
     >
       <button type="button" className="pile-sticker__button" aria-label={label} onClick={onLift}>
         <span className="pile-sticker__drop">
@@ -302,20 +297,26 @@ function cancel(animation: Animation) {
   animation.cancel();
 }
 
-/** Plays the fall-in on `falling` once their images are in; under reduced motion, fades the pile. */
+/**
+ * Plays the fall-in on `falling` once their images are in; under reduced motion, fades the pile.
+ * `onDropped` is called as they start to fall and `onLanded` once the last has landed, or at once
+ * where nothing falls.
+ */
 function useFallIn(
   root: RefObject<HTMLDivElement | null>,
   falling: readonly string[],
   reduced: boolean,
   onDropped: () => void,
+  onLanded: () => void,
 ) {
   const dropped = useEffectEvent(onDropped);
+  const landed = useEffectEvent(onLanded);
   useEffect(() => {
     const pile = root.current;
     if (!pile) return;
     if (reduced) {
       const fade = pile.animate([{ opacity: 0 }, { opacity: 1 }], { duration: FADE_MS });
-      dropped();
+      landed();
       return () => cancel(fade);
     }
     if (!falling.length) return;
@@ -374,6 +375,8 @@ function useFallIn(
           );
       });
       dropped();
+      // A cancelled animation rejects: the fall was stopped, so nothing has landed.
+      Promise.all(played.map((animation) => animation.finished)).then(landed, () => {});
     });
     return () => {
       stopped = true;
@@ -387,7 +390,7 @@ function useFallIn(
  * every sticker wearing a name tag. Today's newest fall in on a first look, and after that only
  * what's new since the last one.
  */
-export function StickerPile({ days, meId, liftedId, onLift }: Props) {
+export function StickerPile({ days, meId, onLift }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const root = useRef<HTMLDivElement>(null);
@@ -424,20 +427,13 @@ export function StickerPile({ days, meId, liftedId, onLift }: Props) {
     return () => resized.disconnect();
   }, []);
 
-  useFallIn(root, arrivals.falling, reduced, () =>
-    setDropping((was) => (was === "waiting" ? "falling" : was)),
+  useFallIn(
+    root,
+    arrivals.falling,
+    reduced,
+    () => setDropping((was) => (was === "waiting" ? "falling" : was)),
+    () => setDropping("done"),
   );
-
-  // Putting a sticker back returns focus to it.
-  const wasLifted = useRef(liftedId);
-  useEffect(() => {
-    const put = wasLifted.current;
-    wasLifted.current = liftedId;
-    if (!put || liftedId) return;
-    root.current
-      ?.querySelector<HTMLElement>(`[data-pile-id="${CSS.escape(put)}"] .pile-sticker__button`)
-      ?.focus({ preventScroll: true });
-  }, [liftedId]);
 
   const labelOf = ({ pile, name, givenTo }: Laid) => {
     const values = {
@@ -478,7 +474,6 @@ export function StickerPile({ days, meId, liftedId, onLift }: Props) {
                         : "falling"
                       : null
                   }
-                  lifted={item.pile.sticker.id === liftedId}
                   onLift={() => onLift(item.pile)}
                 />
               ))}

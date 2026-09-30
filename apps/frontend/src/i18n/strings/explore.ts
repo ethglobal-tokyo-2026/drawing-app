@@ -8,14 +8,14 @@ export const explore = {
     label: { en: "Search artists by handle", ja: "ユーザー名でアーティストをさがす" },
     /** Explore tab, top: screen readers' name for the X button that appears in the search field once you've typed, and empties it */
     clear: { en: "Clear search", ja: "検索をクリア" },
-    /** Explore tab, while searching: fine print where the results will be, while the search is loading */
+    /** Explore tab, while searching: what screen readers hear while the search is out, from the status line under the search field */
     searching: { en: "Searching…", ja: "検索中…" },
-    /** Explore tab, while searching: fine print over the results when one artist's handle matches */
+    /** Explore tab, while searching: fine print over the results when one artist's handle matches; screen readers hear it from the status line too */
     artists_one: { en: "{{count}} artist" },
-    /** Explore tab, while searching: fine print over the results with how many artists' handles match */
+    /** Explore tab, while searching: fine print over the results with how many artists' handles match; screen readers hear it from the status line too */
     artists_other: { en: "{{count}} artists", ja: "アーティスト{{count}}人" },
     notFound: {
-      /** Explore tab, after a search that matches no one: the heading, with the searched handle */
+      /** Explore tab, after a search that matches no one: the heading, with the searched handle; screen readers hear it from the status line too */
       title: {
         en: "No one here is {{handle}} yet",
         ja: "{{handle}}さんはまだクロッキーにいません",
@@ -28,14 +28,14 @@ export const explore = {
     },
   },
   /** Explore tab, on opening it: what screen readers hear while the sticker pile or the leaderboards load */
-  loading: { en: "Loading…", ja: "読み込み中…" },
+  loading: { en: "Loading Explore", ja: "「さがす」を読み込んでいます" },
   /** Explore tab, a search result or leaderboard row that is you: under your handle, where other people's rows show their LINE name */
   you: { en: "You", ja: "あなた" },
-  /** Names the sticker board a tap opens, for assistive tech. */
+  /** Says which sticker board a tap opens, for assistive tech. */
   stickerBoard: {
-    /** Explore tab: screen readers' name for your search result or leaderboard row, which opens your sticker board when tapped */
+    /** Explore tab: screen readers' description of your search result or leaderboard row, after the row's own text: it opens your sticker board when tapped */
     yours: { en: "Your sticker board", ja: "あなたのシールボード" },
-    /** Explore tab: screen readers' name for someone's search result or leaderboard row, which opens their sticker board when tapped */
+    /** Explore tab: screen readers' description of someone's search result or leaderboard row, after the row's own text: it opens their sticker board when tapped */
     theirs: { en: "{{handle}}'s sticker board", ja: "{{handle}}さんのシールボード" },
   },
   /** The switch under the search between Explore's two views. */
@@ -93,12 +93,28 @@ export const explore = {
   thisWeek: {
     /** Explore tab, This week view: screen readers' heading for the leaderboards */
     title: { en: "This week", ja: "今週" },
-    /** Explore tab, This week view: fine print under the leaderboard, when the week's leaderboards start over */
-    resets: { en: "Resets Monday 12:00 AM", ja: "月曜0:00にリセット" },
+    /** Explore tab, This week view: fine print under the Most gratitude and Best combo leaderboards, when they start over; {{day}} and {{time}} are that moment in the person's own time zone, such as "Monday" and "12:00 AM" */
+    resets: { en: "Resets {{day}} {{time}}", ja: "{{day}}{{time}}にリセット" },
     /** Explore tab, This week view: screen readers' name for the row of three leaderboard tabs */
     leaderboards: { en: "This week's leaderboards", ja: "今週のランキング" },
-    /** Explore tab, This week view: fine print in place of the rows when the chosen leaderboard has no one on it this week */
-    empty: { en: "No one is on it yet this week.", ja: "今週はまだ誰もランクインしていません。" },
+    /** A leaderboard nobody is on: a supporting note in place of the rows, saying so and how to get on. */
+    empty: {
+      /** Explore tab, This week view, Most gratitude leaderboard with no one on it: the note in place of the rows */
+      mostGratitude: {
+        en: "No one is on it yet this week. Give someone a sticker: the gratitude they send back counts here.",
+        ja: "今週はまだ誰もランクインしていません。シールを贈ると、相手が送ってくれた感謝がここに数えられます。",
+      },
+      /** Explore tab, This week view, Best combo leaderboard with no one on it: the note in place of the rows */
+      bestCombo: {
+        en: "No one is on it yet this week. Receive a sticker and send gratitude: your best combo counts here.",
+        ja: "今週はまだ誰もランクインしていません。シールを受け取って感謝を送ると、最大コンボがここに載ります。",
+      },
+      /** Explore tab, This week view, Streak leaderboard with no one on it: the note in place of the rows */
+      longestStreak: {
+        en: "No one has a streak going. Seal a sticker today to start yours.",
+        ja: "連続している人はまだいません。今日シールを仕上げると、連続日数がはじまります。",
+      },
+    },
   },
   /** The leaderboards' tabs. */
   leaderboards: {
@@ -107,14 +123,23 @@ export const explore = {
     /** Explore tab, This week view: the second tab, ranking people by the most hits in one gratitude combo this week */
     bestCombo: { en: "Best combo", ja: "最大コンボ" },
     /** Explore tab, This week view: the third tab, ranking people by their current streak of days sealing a sticker */
-    longestStreak: { en: "Longest streak", ja: "連続日数" },
+    longestStreak: { en: "Streak", ja: "連続日数" },
   },
   /** A leaderboard row's figure. A unit in <small> is set small beside its number. */
   figure: {
-    /** Explore tab, Longest streak leaderboard: the figure at the end of a row whose streak is one day, the unit set small */
+    /** Explore tab, Most gratitude leaderboard: the figure at the end of each row, that person's gratitude this week; the <hidden> words are for screen readers only */
+    gratitude: {
+      en: "{{amount}}<hidden> gratitude</hidden>",
+      ja: "<hidden>感謝</hidden>{{amount}}",
+    },
+    /** Explore tab, Streak leaderboard: the figure at the end of a row whose streak is one day, the unit set small */
     streak_one: { en: "{{count}}<small>day</small>" },
-    /** Explore tab, Longest streak leaderboard: the figure at the end of each row, that person's streak in days, the unit set small */
+    /** Explore tab, Streak leaderboard: the figure at the end of each row, that person's streak in days, the unit set small */
     streak_other: { en: "{{count}}<small>days</small>", ja: "{{count}}<small>日</small>" },
+    /** Explore tab, Streak leaderboard: what screen readers say in place of the figure when the streak is one day */
+    streakSpoken_one: { en: "{{count}} day" },
+    /** Explore tab, Streak leaderboard: what screen readers say in place of the figure, that person's streak in days */
+    streakSpoken_other: { en: "{{count}} days", ja: "{{count}}日" },
   },
   failed: {
     /** Explore tab, when it fails to load: the heading of the error, over the reason and a Try again button */

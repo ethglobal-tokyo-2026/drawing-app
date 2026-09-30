@@ -4,6 +4,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { etherscanAddressUrl } from "../identity/explorers";
+import { clamp } from "./easing";
 import { QrCode } from "./QrCode";
 
 declare global {
@@ -22,8 +23,6 @@ const draw = (value: string, label?: string) => {
   if (!svg) throw new Error("QrCode drew no <svg>");
   return svg;
 };
-
-const clamp = (v: number, low: number, high: number) => Math.min(Math.max(v, low), high);
 
 /** Whether (x, y) is inside a square at (sx, sy) whose straight `edge`s meet in arcs of radius `r`. */
 const inRoundedSquare = (x: number, y: number, [sx, sy, r, edge]: number[]) =>

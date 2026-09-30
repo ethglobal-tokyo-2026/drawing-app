@@ -465,6 +465,19 @@ describe("shaking", () => {
     expect(glossLight()).toBe("");
   });
 
+  it("keeps the heart still as the phone moves or shakes toward the unlock, with reduced motion", async () => {
+    engine.setReduced(true);
+    const body = () => stage.querySelector<HTMLElement>(".gr-heart-body")?.style.transform;
+    await play(50);
+    const still = body();
+    // Everyday movement, then a shake's first reversals, none of them a hit.
+    for (const ax of [3, -3, 4, 15, -15, 15, -15]) {
+      motion(ax);
+      await play(100);
+      expect(body()).toBe(still);
+    }
+  });
+
   it("says the shake unlocked, not that the heart is loose, when reduced motion keeps it put", async () => {
     engine.setReduced(true);
     await shake(17);

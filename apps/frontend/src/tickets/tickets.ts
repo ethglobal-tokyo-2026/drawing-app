@@ -1,12 +1,11 @@
 import type { TicketKind, Tickets } from "@drawing-app/api/client";
 import { i18next } from "../i18n/i18n";
-import { TICKET_DAY_UTC_OFFSET_MS } from "./config";
 import { formatRefillTime } from "./refill";
 
 export type { TicketKind, Tickets };
 
 /** One of the day's daily tickets; a used one carries the cut outline of the sticker it became. */
-export type DailyTicket = { used: false } | { used: true; outline?: string };
+type DailyTicket = { used: false } | { used: true; outline?: string };
 
 /**
  * What the ticket art shows, the same on every surface: the tickets the next drawing can use. A zero never shows.
@@ -19,18 +18,6 @@ export type TicketView =
   | { show: "reserve"; reserve: number }
   /** Nothing left: the day's used stubs, until the refill. */
   | { show: "none"; stubs: DailyTicket[]; reserve: 0; refillAt: Date };
-
-/** The Tokyo calendar date `now` falls on. */
-export function ticketDay(now: Date): string {
-  return new Date(now.getTime() + TICKET_DAY_UTC_OFFSET_MS).toISOString().slice(0, 10);
-}
-
-/** The next midnight in Tokyo. */
-export function nextRefill(now: Date): Date {
-  const tokyo = new Date(now.getTime() + TICKET_DAY_UTC_OFFSET_MS);
-  const midnight = Date.UTC(tokyo.getUTCFullYear(), tokyo.getUTCMonth(), tokyo.getUTCDate() + 1);
-  return new Date(midnight - TICKET_DAY_UTC_OFFSET_MS);
-}
 
 export const ticketsLeft = (t: Tickets) => t.dailyLeft + t.reserveLeft;
 

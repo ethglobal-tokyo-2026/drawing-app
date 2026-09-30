@@ -1,3 +1,4 @@
+import { clamp, clamp01 } from "../ui/easing";
 import { seededRandom } from "../ui/seededRandom";
 
 /** Where a sticker sits on its board. */
@@ -40,9 +41,6 @@ const FOOT = 16;
 const TRAY_EDGE = 40;
 const S_MIN = 0.16;
 export const S_MAX = 0.72;
-
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
-const clamp01 = (v: number) => clamp(v, 0, 1);
 
 export const fieldOf = (width: number, height: number): Field => ({
   left: INSET + 4,
