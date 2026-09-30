@@ -50,7 +50,7 @@ export const tickets = {
   backToStickerBoard: { en: "Back to my board", ja: "マイボードに戻る" },
   /** Quiet link at the foot of the start card, the tickets-didn't-load card and the ticket shop's card: closes the card without spending or buying */
   notNow: { en: "Not now", ja: "あとで" },
-  /** Key on the card when tickets didn't load, and the link after the ticket shop's balance or price problem: tries again */
+  /** Key on the card when tickets didn't load, the link after the Shop's tickets problem, and the link after the ticket shop's balance or price problem: tries again */
   tryAgain: { en: "Try again", ja: "もう一度" },
   /** The card that asks before a ticket is spent on a fresh sheet. */
   startDrawing: {

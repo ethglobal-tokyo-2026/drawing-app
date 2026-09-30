@@ -1,10 +1,16 @@
 // @vitest-environment happy-dom
-import type { TicketShop as Shop } from "@drawing-app/api/client";
+import type { TicketShop as Shop, Tickets } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { emptyApi, renderWithApi } from "../api/testing";
+import { ApiError } from "../api/apiClient";
+import { emptyApi, FRESH_TICKETS, renderWithApi } from "../api/testing";
 import { setPrivyStatus } from "../identity/privy";
 import { getTicketPayments } from "../payments/jpyc";
+import {
+  addUnaddedPurchases,
+  keepUnaddedPurchase,
+  readUnaddedPurchasesAgain,
+} from "../tickets/unaddedPurchases";
 import { useTickets } from "../tickets/useTickets";
 import { ShopScreen } from "./ShopScreen";
 
@@ -60,6 +66,8 @@ const rows = () => [...document.querySelectorAll(".ticket-purchases a")].map((a)
 beforeEach(() => {
   vi.useFakeTimers();
   setPrivyStatus({ state: "signing-in" });
+  localStorage.clear();
+  readUnaddedPurchasesAgain();
 });
 
 afterEach(() => {
@@ -97,5 +105,67 @@ describe("ShopScreen", () => {
     await settle();
     expect(getTicketPayments).toHaveBeenCalledTimes(2);
     expect(rows()).toHaveLength(1);
+  });
+
+  describe("a payment whose tickets weren't added", () => {
+    const kept = { digest: "D".repeat(44), tickets: 3, priceYen: 270, paidAt: Date.now() };
+    const strip = () => document.querySelector<HTMLButtonElement>(".unadded-strip");
+
+    beforeEach(() => {
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      keepUnaddedPurchase("me", kept);
+    });
+
+    const render = async (buyTickets: () => Promise<Tickets>, onBuy = () => {}) => {
+      const api = emptyApi({ ticketShop: () => Promise.resolve(SHOP), buyTickets });
+      view = renderWithApi(<ShopScreen onBuyReserveTickets={onBuy} />, api);
+      await settle();
+      return api;
+    };
+
+    it("shows on the Shop until the server adds them, and opens the checkout", async () => {
+      const onBuy = vi.fn();
+      const api = await render(
+        () => Promise.reject(new ApiError(502, { error: "sui_unavailable" })),
+        onBuy,
+      );
+      expect(strip()?.textContent).toContain("Tickets not added yet");
+      expect(strip()?.textContent).toContain("3 tickets, ¥270");
+      act(() => strip()?.click());
+      expect(onBuy).toHaveBeenCalledOnce();
+
+      // The server answers this time, wherever the ask comes from.
+      vi.spyOn(api, "buyTickets").mockResolvedValue({ ...FRESH_TICKETS, reserveLeft: 3 });
+      await act(() => addUnaddedPurchases(api, "me"));
+      expect(strip()).toBeNull();
+    });
+
+    it("says they can't be added once the server refuses the payment for good", async () => {
+      await render(() => Promise.reject(new ApiError(422, { error: "payment_not_found" })));
+      expect(strip()?.textContent).toContain("Tickets can’t be added");
+      expect(strip()?.textContent).not.toContain("Tap to add them");
+    });
+  });
+
+  it("says when your tickets didn't load, instead of reading as if you hold none, and loads them again", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const tickets = vi
+      .fn<() => Promise<Tickets>>()
+      .mockRejectedValueOnce(new ApiError(500, { error: "internal_error" }))
+      .mockResolvedValue({ ...FRESH_TICKETS, reserveLeft: 2 });
+    view = renderWithApi(
+      <ShopScreen onBuyReserveTickets={() => {}} />,
+      emptyApi({ tickets, ticketShop: () => Promise.resolve(SHOP) }),
+    );
+    await settle();
+    const alert = () => document.querySelector(".reserve-hero [role=alert]")?.textContent;
+    expect(alert()).toContain("Couldn’t load your tickets");
+    expect(document.querySelector(".reserve-hero__held:not([role=alert])")).toBeNull();
+
+    click("Try again");
+    await settle();
+    expect(alert()).toBeUndefined();
+    expect(document.querySelector(".reserve-hero__held")?.textContent).toContain("×2");
   });
 });
