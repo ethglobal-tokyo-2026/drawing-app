@@ -25,9 +25,12 @@ export interface TouchHandlers {
   onHeartDown: (t: number, x: number, y: number) => void;
   /** A finger lifted off the heart without dragging or holding: the first tap. */
   onHeartTap: (t: number, x: number, y: number) => void;
-  /** A finger dragged past the slop, anywhere, with no stroke under way: where and when it went down. */
+  /**
+   * A finger dragged past the slop, anywhere, with no stroke under way: where and when it went down.
+   * A finger still dragging when the stroke finger lifts takes over at its next move, from there.
+   */
   onStrokeStart: (t: number, x: number, y: number) => void;
-  /** The stroke finger moved, from the move that started the stroke on. */
+  /** The stroke finger moved, from the move that started the stroke on, or after the one that took it over. */
   onStrokeMove: (t: number, x: number, y: number) => void;
   /** The stroke finger lifted. */
   onStrokeEnd: () => void;
@@ -54,7 +57,8 @@ interface Grab {
 
 /**
  * Reports touches until the returned function is called. Every finger on the heart counts; one
- * finger at a time strokes, the first to drag, wherever it went down.
+ * finger at a time strokes, the first to drag, wherever it went down, then as it lifts, the next
+ * dragging finger to move.
  */
 export function listenForTouches(
   stage: HTMLElement,
@@ -89,6 +93,11 @@ export function listenForTouches(
         strokeFinger = e.pointerId;
         handlers.onStrokeStart(grab.t, grab.x, grab.y);
       }
+    } else if (grab.dragged && strokeFinger === null) {
+      // The stroke finger lifted while this one dragged too, as when thumbs swap: it strokes from here.
+      strokeFinger = e.pointerId;
+      handlers.onStrokeStart(e.timeStamp, x, y);
+      return;
     }
     if (e.pointerId === strokeFinger) handlers.onStrokeMove(e.timeStamp, x, y);
   };

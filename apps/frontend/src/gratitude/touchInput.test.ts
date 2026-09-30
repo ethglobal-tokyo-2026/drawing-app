@@ -156,4 +156,20 @@ describe("the stroke finger", () => {
     pointer("pointerup", heart.cx + 40, heart.cy + 60, 60, 2);
     expect(onStrokeEnd).not.toHaveBeenCalled();
   });
+
+  it("goes to a second finger still dragging once the first lifts, as thumbs swap", () => {
+    pointer("pointerdown", heart.cx, heart.cy, 0, 1);
+    pointer("pointermove", heart.cx, heart.cy + 40, 20, 1);
+    pointer("pointerdown", heart.cx + 40, heart.cy, 30, 2);
+    pointer("pointermove", heart.cx + 40, heart.cy + 40, 40, 2);
+    pointer("pointerup", heart.cx, heart.cy + 40, 50, 1);
+    expect(onStrokeEnd).toHaveBeenCalledTimes(1);
+    pointer("pointermove", heart.cx + 40, heart.cy + 80, 60, 2);
+    pointer("pointermove", heart.cx + 40, heart.cy + 120, 70, 2);
+    expect(onStrokeStart).toHaveBeenLastCalledWith(60, heart.cx + 40, heart.cy + 80);
+    expect(onStrokeMove).toHaveBeenLastCalledWith(70, heart.cx + 40, heart.cy + 120);
+    pointer("pointerup", heart.cx + 40, heart.cy + 120, 80, 2);
+    expect(onStrokeEnd).toHaveBeenCalledTimes(2);
+    expect(onHeartTap).not.toHaveBeenCalled();
+  });
 });

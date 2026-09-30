@@ -72,6 +72,7 @@ Under `apps/frontend/src/gratitude/` unless a path says otherwise.
 
 **Stroke.** A thumb stroking back and forth anywhere on the screen, per `F.stroke`:
 
+- One finger strokes at a time: the first to drag past `F.tapSlopPx`. When it lifts, another finger still dragging takes over at its next move, so swapping thumbs keeps stroking.
 - A run ends when the thumb doubles back by `turnPx`. A run of at least `minRunPx` is a pass, and a pass at `fastPxPerMs` or faster is fast. Runs are measured along their own direction, so any direction counts.
 - A slow pass, or a pause longer than `pauseMs`, breaks the streak of fast passes.
 - `unlockPasses` fast passes in a row unlock stroke: "!?" slams, and the combo commits to stroke, starting it first if need be. Once a tap combo's bar is running, `unlockPassesMidCombo` passes do it, so the switch lands before the bar runs out. After that, each fast pass is a hit.
@@ -228,5 +229,5 @@ These tests pin the design's intent, and a retune has to keep them passing:
   - Committing to a method shuts out the others.
 - `miniGameEngine.test.ts`: once a tap combo's bar is running, stroke and shake unlock in fewer moves; before any tap, they take the full unlock.
 - `detectors.test.ts`: the stroke unlock streak, strokes in any direction, a slow pass or a pause breaking the streak, and a rhythmic shake counting where a sway, a wobble or a single jolt doesn't.
-- `touchInput.test.ts`: the heart's reach, every finger counting, and a drag or a hold not being a tap.
+- `touchInput.test.ts`: the heart's reach, every finger counting, a drag or a hold not being a tap, and a finger still dragging taking the stroke over.
 - `miniHeartPhysics.test.ts`: the pile settles and fades, a tap shoves it, and the live cap holds.
