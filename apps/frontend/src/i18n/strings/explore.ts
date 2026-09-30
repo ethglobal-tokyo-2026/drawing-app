@@ -8,14 +8,14 @@ export const explore = {
     label: { en: "Search artists by handle", ja: "ユーザー名でアーティストをさがす" },
     /** Explore tab, top: screen readers' name for the X button that appears in the search field once you've typed, and empties it */
     clear: { en: "Clear search", ja: "検索をクリア" },
-    /** Explore tab, while searching: fine print where the results will be, while the search is loading */
+    /** Explore tab, while searching: what screen readers hear while the search is out, from the status line under the search field */
     searching: { en: "Searching…", ja: "検索中…" },
-    /** Explore tab, while searching: fine print over the results when one artist's handle matches */
+    /** Explore tab, while searching: fine print over the results when one artist's handle matches; screen readers hear it from the status line too */
     artists_one: { en: "{{count}} artist" },
-    /** Explore tab, while searching: fine print over the results with how many artists' handles match */
+    /** Explore tab, while searching: fine print over the results with how many artists' handles match; screen readers hear it from the status line too */
     artists_other: { en: "{{count}} artists", ja: "アーティスト{{count}}人" },
     notFound: {
-      /** Explore tab, after a search that matches no one: the heading, with the searched handle */
+      /** Explore tab, after a search that matches no one: the heading, with the searched handle; screen readers hear it from the status line too */
       title: {
         en: "No one here is {{handle}} yet",
         ja: "{{handle}}さんはまだクロッキーにいません",
@@ -28,7 +28,7 @@ export const explore = {
     },
   },
   /** Explore tab, on opening it: what screen readers hear while the sticker pile or the leaderboards load */
-  loading: { en: "Loading…", ja: "読み込み中…" },
+  loading: { en: "Loading Explore", ja: "「さがす」を読み込んでいます" },
   /** Explore tab, a search result or leaderboard row that is you: under your handle, where other people's rows show their LINE name */
   you: { en: "You", ja: "あなた" },
   /** Says which sticker board a tap opens, for assistive tech. */

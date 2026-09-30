@@ -286,13 +286,18 @@ function show(client: Parameters<typeof renderWithApi>[1]) {
 }
 
 const skeletons = (host: HTMLElement) => host.querySelectorAll(".skeleton").length;
-const status = (host: HTMLElement) => host.querySelector('[role="status"]')?.textContent;
+/** The one line a screen reader hears while a view loads. */
+const loadingLine = (host: HTMLElement) =>
+  host.querySelector('.explore-view [role="status"]')?.textContent;
+/** What a search says to screen readers: a line that's in the page before the search starts. */
+const searchLine = (host: HTMLElement) =>
+  host.querySelector<HTMLElement>('.artist-search + [role="status"]');
 
 describe("ExploreScreen while it loads", () => {
   it("outlines today's floor, then shows the pile once Explore arrives", async () => {
     const explore = inFlight<Explore>();
     const host = show(emptyApi({ explore: () => explore.promise }));
-    expect(status(host)).toBe("Loading…");
+    expect(loadingLine(host)).toBe("Loading Explore");
     expect(skeletons(host)).toBeGreaterThan(0);
 
     await act(async () => explore.answer(EXPLORE));
@@ -306,10 +311,46 @@ describe("ExploreScreen while it loads", () => {
       emptyApi({ explore: () => Promise.resolve(EXPLORE), searchUsers: () => search.promise }),
     );
     await searchFor(host, "ali");
-    expect(status(host)).toBe("Searching…");
     expect(skeletons(host)).toBeGreaterThan(0);
 
     await act(async () => search.answer([]));
     expect(skeletons(host)).toBe(0);
+  });
+});
+
+describe("ExploreScreen's search", () => {
+  it("says it's searching, then what it found, on a line that was in the page before", async () => {
+    const search = inFlight<Person[]>();
+    const host = show(
+      emptyApi({ explore: () => Promise.resolve(EXPLORE), searchUsers: () => search.promise }),
+    );
+    const line = searchLine(host);
+    expect(line?.textContent).toBe("");
+
+    await searchFor(host, "ali");
+    expect(line?.textContent).toBe("Searching…");
+    await act(async () => search.answer([people.mika, people.ken]));
+    expect(line?.textContent).toBe("2 artists");
+    expect(searchLine(host)).toBe(line);
+  });
+
+  it("says when it found no one, and goes quiet once the search is cleared", async () => {
+    const host = await openExplore(exploreWith([]));
+    await searchFor(host, "zzz");
+    expect(searchLine(host)?.textContent).toBe("No one here is @zzz yet");
+
+    await searchFor(host, "");
+    expect(searchLine(host)?.textContent).toBe("");
+  });
+
+  it("puts focus back in the field when clearing takes the clear button away", async () => {
+    const host = await openExplore(exploreWith([]));
+    await searchFor(host, "mi");
+    const clear = host.querySelector<HTMLButtonElement>(".search-clear");
+    clear?.focus();
+    act(() => clear?.click());
+
+    expect(host.querySelector(".search-clear")).toBeNull();
+    expect(document.activeElement).toBe(host.querySelector('input[type="search"]'));
   });
 });

@@ -25,6 +25,7 @@ import { REVEAL } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { HitCounter } from "../ui/HitCounter";
+import { matchIn } from "./handleMatch";
 import { LiftedSticker } from "./LiftedSticker";
 import { dayBadge, pileDays, ticketDayNumber, type PileSticker } from "./pileDays";
 import { textWidth } from "./pileLayout";
@@ -458,16 +459,40 @@ function Failed({ title, query }: { title: string; query: Query<unknown> }) {
   );
 }
 
+/** What the status line says of a search: that it's out, how many it found, or that it found no one. */
+function searchSaid(results: Query<Person[]>, query: string, t: TFunction): string {
+  if (results.state === "loading") return t(($) => $.explore.search.searching);
+  // A failure speaks for itself, as an alert.
+  if (results.state === "failed") return "";
+  if (!results.data.length)
+    return t(($) => $.explore.search.notFound.title, { handle: formatHandle(query) });
+  return t(($) => $.explore.search.artists, { count: results.data.length });
+}
+
 /** Handles starting with the search first, then ones containing it, A to Z, as the server sorts. */
-function SearchResults({ query, meId, open }: { query: string; meId: string; open: Open }) {
+function SearchResults({
+  query,
+  meId,
+  open,
+  announce,
+}: {
+  query: string;
+  meId: string;
+  open: Open;
+  /** Sets Explore's status line, which is in the page before a search says anything. */
+  announce: (text: string) => void;
+}) {
   const { t } = useTranslation();
   const results = useApiQuery(`users?handle=${query}`, (api) => api.searchUsers(query));
+  const said = searchSaid(results, query, t);
+  useEffect(() => {
+    announce(said);
+    return () => announce("");
+  }, [announce, said]);
+
   if (results.state === "loading")
     return (
       <section className="explore-section">
-        <p className="visually-hidden" role="status">
-          {t(($) => $.explore.search.searching)}
-        </p>
         <ul className="search-results" aria-hidden="true">
           <PersonRowsLoading rows={3} ranked={false} />
         </ul>
@@ -492,8 +517,7 @@ function SearchResults({ query, meId, open }: { query: string; meId: string; ope
       </p>
       <ul className="search-results">
         {people.map((person) => {
-          const handle = person.handle ?? "";
-          const at = handle.toLowerCase().indexOf(query.toLowerCase());
+          const found = matchIn(person.handle ?? "", query);
           return (
             <PersonRow
               key={person.id}
@@ -501,13 +525,11 @@ function SearchResults({ query, meId, open }: { query: string; meId: string; ope
               meId={meId}
               open={open}
               name={
-                at < 0 ? (
-                  breakable(formatHandle(handle))
-                ) : (
+                found && (
                   <>
-                    {breakable(formatHandle(handle.slice(0, at)))}
-                    <mark>{breakable(handle.slice(at, at + query.length))}</mark>
-                    {breakable(handle.slice(at + query.length))}
+                    {breakable(formatHandle(found.before))}
+                    <mark>{breakable(found.match)}</mark>
+                    {breakable(found.after)}
                   </>
                 )
               }
@@ -575,6 +597,10 @@ export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
   const { t } = useTranslation();
   const me = useMe();
   const [query, setQuery] = useState("");
+  const field = useRef<HTMLInputElement>(null);
+  // What a search says to screen readers. Its line is in the page from the start, so a change to it
+  // is heard.
+  const [searchStatus, setSearchStatus] = useState("");
   const q = query.trim().replace(/^@/, "");
   const [searched, setSearched] = useState(q);
   useEffect(() => {
@@ -606,6 +632,7 @@ export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
       <label className="artist-search">
         <At size={20} aria-hidden />
         <input
+          ref={field}
           type="search"
           placeholder={t(($) => $.explore.search.placeholder)}
           aria-label={t(($) => $.explore.search.label)}
@@ -620,15 +647,24 @@ export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
             type="button"
             className="search-clear"
             aria-label={t(($) => $.explore.search.clear)}
-            onClick={() => setQuery("")}
+            onClick={() => {
+              setQuery("");
+              // The button goes with the query, so focus moves to where a new search starts.
+              field.current?.focus();
+            }}
           >
             <X size={16} aria-hidden />
           </button>
         )}
       </label>
+      <p className="visually-hidden" role="status">
+        {searchStatus}
+      </p>
 
       {q ? (
-        searched && <SearchResults query={searched} meId={me.id} open={open} />
+        searched && (
+          <SearchResults query={searched} meId={me.id} open={open} announce={setSearchStatus} />
+        )
       ) : (
         <>
           <SlidingTabs
