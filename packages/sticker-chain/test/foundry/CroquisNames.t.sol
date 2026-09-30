@@ -5,7 +5,7 @@ import {NameCoder} from "ens-v2-lib/ens-contracts/contracts/utils/NameCoder.sol"
 import {PermissionedRegistry} from "ens-v2/registry/PermissionedRegistry.sol";
 
 import {CroquisNames} from "../../contracts/ens/CroquisNames.sol";
-import {CroquisResolver} from "../../contracts/ens/CroquisResolver.sol";
+import {CroquisResolver, IGiftRecords, INameBook} from "../../contracts/ens/CroquisResolver.sol";
 import {
     IEnsPermissionedResolver,
     IEnsRegistry,
@@ -69,6 +69,11 @@ contract CroquisNamesTest is CroquisFixture {
         vm.prank(bob);
         vm.expectRevert();
         croquis.names.claimPersonName("bob", bob, "", "");
+    }
+
+    function testNotEvenTheAdminCanRepointTheResolversSources() public {
+        vm.expectRevert(CroquisResolver.SourcesAlreadySet.selector);
+        croquis.resolver.setSources(INameBook(bob), IGiftRecords(bob));
     }
 
     function testAPersonWithoutAnOnchainNameResolvesThroughTheGateway() public {

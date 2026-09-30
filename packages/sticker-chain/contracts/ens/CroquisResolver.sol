@@ -78,6 +78,7 @@ contract CroquisResolver is AccessControl, IExtendedResolver {
     error UnsupportedResolverProfile(bytes4 selector);
     error GatewayAnswerExpired(uint64 expires);
     error UntrustedGatewaySigner(address signer);
+    error SourcesAlreadySet();
 
     constructor(
         address admin,
@@ -92,11 +93,13 @@ contract CroquisResolver is AccessControl, IExtendedResolver {
         emit GatewayChanged(gatewayUrls, gatewaySigner, true);
     }
 
-    /// @dev Set after both exist, since each needs this resolver's address to be built.
+    /// @dev Setup calls this exactly once: the resolver is deployed before the name book and the
+    ///      escrow it reads, since each needs its address. After that, no one can repoint them.
     function setSources(INameBook names_, IGiftRecords giftRecords_)
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
+        if (address(names) != address(0)) revert SourcesAlreadySet();
         names = names_;
         giftRecords = giftRecords_;
     }
@@ -118,10 +121,6 @@ contract CroquisResolver is AccessControl, IExtendedResolver {
     function setGiftTarget(bytes32 node, bytes32 giftId) external onlyRole(NAME_WRITER_ROLE) {
         _targets[node] = Target(Kind.Gift, uint256(giftId));
         emit NameTargetSet(node, Kind.Gift, uint256(giftId));
-    }
-
-    function targetOf(bytes32 node) external view returns (Target memory) {
-        return _targets[node];
     }
 
     /// @inheritdoc IExtendedResolver
