@@ -113,7 +113,11 @@ export function usePullToReveal({ wrapper, enabled, reduced, onReveal }: Options
     const onTouchStart = (e: TouchEvent) => {
       pulling = false;
       from = null;
-      if (e.touches.length !== 1) return;
+      if (e.touches.length !== 1) {
+        // A second finger ends the pull, so the band goes back.
+        settle();
+        return;
+      }
       catchBand();
       if (!atEnd()) return;
       from = e.touches[0].clientY;
