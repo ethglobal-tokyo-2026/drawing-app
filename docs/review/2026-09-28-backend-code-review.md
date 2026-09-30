@@ -12,9 +12,9 @@ Nine read-only lanes each took an area, and every finding was checked against th
 
 What's left, and what each waits for:
 
-- **The next contract deploy**, which goes with the next app deploy, since the app switches escrows then: CHAIN-3 and CHAIN-4 are fixed in the contracts' source and reach Sepolia with it. Gifts still in the old escrow then can't be received or taken back through the app, and the expiry sweep, which reads the new escrow, leaves them; return them to their givers once they expire.
+- **The next contract deploy**, which also fixes LATE-6 and brings CHAIN-3 and CHAIN-4 to Sepolia. It needs croquis.eth's owner (LATE-6), and goes with an app deploy, since the app switches escrows then. After the expiry sweep has returned the gifts in the old escrow, which expire Oct 3–5; any gift still there at the switch can't be received or taken back through the app, and the sweep, reading the new escrow, leaves it, so return those once they expire.
 - **DB-1** · cleanup: `ticket_purchases.verified_at` is never null. Waits for the owner's answer to the frontend review's TIX-3.
-- **DEPLOY-1**, **OWNER-1** and **OWNER-5**: the owner's, under Needs the owner.
+- **DEPLOY-1**, **LATE-7**, **OWNER-1** and **OWNER-5**: the owner's, under Needs the owner.
 
 ## Owner's decisions
 
@@ -238,9 +238,22 @@ The auth server no longer loads this file (`6e4c2ae1`), and install-chain-env.mj
 - **LATE-4** · medium · fixed `8ba590d7` · The API and the auth server both run as `bawler`, so the internet-facing auth server could read chain.env (the relayer's key and the Privy, LINE and World ID secrets), and the API could read the key that signs Privy logins for anyone; `InaccessiblePaths` hides each service's folder from the other, checked on the box with throwaway units under the same sandbox. Live at the next deploy.
 - **LATE-5** · medium · fixed `880fcade` · With Forge's default dynamic test linking, an edit to `CroquisResolver` recompiled three files, and the tests kept deploying its old bytecode through `script/CroquisSetup.sol` until a forced build, so a broken contract change could pass `pnpm check`; `foundry.toml` turns it off, and an edit now recompiles every file that embeds the contract.
 
+**LATE-6** · medium · open · the box's chain.env: `CROQUIS_NAMES_ADDRESS` and `CROQUIS_RESOLVER_ADDRESS`  
+No person or sticker has ever been named under croquis.eth. The box's settings mix two deploys: its StickerNFT, escrow and relayer (`0x65D3…`) come from the first, and CroquisNames and CroquisResolver from a second, which grants NAMER_ROLE only to that deploy's own key and reads that deploy's own StickerNFT. Every `claimPersonName` reverted with `AccessControlUnauthorizedAccount`, which the log showed only as "execution reverted". `04e1df80` now logs a revert's decoded error, and `68b2fe45` checks at boot and each midnight that the contracts agree, keeps naming off while they don't (`chain.contracts.mismatch`), and names everyone left unnamed once they do.
+
+- Trigger: every seal and receive queued a naming that reverted; since `68b2fe45`, naming stays off, and the boot log says why.
+- Fix: run `deploy/deploy-contracts.sh` with `STICKER_NFT_ADDRESS` set to the live StickerNFT and the server's relayer key, then deploy with the new escrow, names and resolver addresses. The redeploy repoints croquis.eth only with its owner's key (`0x5284…`), which deploy/.env doesn't have: put it in as `DEPLOYER_PRIVATE_KEY`, or have its owner set croquis.eth's subregistry and resolver on ENSv2's ETHRegistry to the addresses the script prints.
+
+**LATE-7** · low · open · the box's database: three gifts from 2026-09-26  
+Three gifts the server made in mock chain mode, on the day it went up, are still `sent` with escrow `pending`, of stickers never minted, so no escrow holds them. The expiry sweep leaves them, and their givers' boards show them on their way for good.
+
+- Trigger: the box ran in mock chain mode, which counts a deposit as landed at once, before it reached Sepolia.
+- Fix: take them out, once, on the box (under Needs the owner). A migration can't: on a mock-mode database every gift in flight looks the same.
+
 ## Needs the owner
 
-- **DEPLOY-1**, above: `! set -a; . deploy/.env; set +a; ssh "$DEPLOY_TARGET" rm /srv/sticker-auth/secrets.env`
+- **DEPLOY-1** and **LATE-7**, above: `! set -a; . deploy/.env; set +a; ssh "$DEPLOY_TARGET" "rm /srv/sticker-auth/secrets.env && sqlite3 /srv/drawing-api/data/drawing-app.db \"update gifts set status = 'taken_out', escrow_status = 'missing', taken_out_at = cast(unixepoch('subsec') * 1000 as integer) where status in ('packed', 'sent') and escrow_status = 'pending' and sticker_id in (select id from stickers where token_id is null)\""`
+- **LATE-6**, above: croquis.eth's owner key in deploy/.env as `DEPLOYER_PRIVATE_KEY`, or its owner points croquis.eth at the redeploy's registry and resolver.
 - **OWNER-1** · low · open · The Official account's greeting still says a drawing takes five minutes. Paste `deploy/line/greeting.md` into LINE Official Account Manager.
 - **OWNER-2** · medium · fixed `de0baa10`, `723f6a48` · The receiver of an expired gift was told it was back on the giver's Sticker Board, but nothing returned it: the sticker stayed in the escrow, the giver's board showed it on its way, and it could never be given again. The API's expiry sweep, at boot and just after each midnight in Tokyo, sends each expired gift back through the escrow's `returnExpiredGift` and records it returned, and takes out a packed gift whose deposit never landed, an hour past its expiry (`CLOSE_UNLANDED_AFTER_MS`). Live at the next deploy.
 - **OWNER-3** · low · fixed `18057b84`, `ac3c3634` · Giving said "Confirm in your wallet if asked", and two sign-in errors said "sign-in token", words the interface isn't supposed to use; the frontend fixes reworded all three.
