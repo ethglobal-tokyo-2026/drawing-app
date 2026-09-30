@@ -1,4 +1,5 @@
 import { users, type Db } from "@drawing-app/db";
+import { MAX_ID_TOKEN_LENGTH } from "@drawing-app/sticker-chain/line";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { Hono } from "hono";
@@ -18,8 +19,6 @@ import { clearSessionCookie, setSessionCookie, type AppEnv } from "../session.ts
 import { toMe } from "../shapes.ts";
 import { newStickerCount, unseenGratitudeCount } from "../views.ts";
 
-/** A LIFF ID token's longest accepted length. */
-export const ID_TOKEN_MAX_LENGTH = 6000;
 /** The x-line-user-id header's longest accepted length, far over LINE's own user IDs. */
 export const LINE_USER_ID_MAX_LENGTH = 128;
 
@@ -32,7 +31,7 @@ const userInput = createInsertSchema(users, {
 const signInBody = userInput
   .pick({ language: true })
   .required()
-  .extend({ idToken: z.string().min(1).max(ID_TOKEN_MAX_LENGTH) });
+  .extend({ idToken: z.string().min(1).max(MAX_ID_TOKEN_LENGTH) });
 
 const meHeaders = z.object({
   "x-line-user-id": z.string().min(1).max(LINE_USER_ID_MAX_LENGTH).optional(),

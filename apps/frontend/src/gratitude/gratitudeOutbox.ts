@@ -24,7 +24,7 @@ export type GratitudeSendResult =
 
 /**
  * The refusals that sending the same combo again can't change. A 404 counts only as gift_not_found:
- * route_not_found means the server doesn't record gratitude yet.
+ * route_not_found says nothing about the combo, so it's kept to send again.
  */
 const REFUSED_CODES = new Set([
   "gift_not_found",

@@ -14,7 +14,7 @@ Croquis's contracts on Ethereum Sepolia, and the TypeScript the REST API and the
 - `./gift-sticker`: Giving and Receiving, below.
 - `./croquis-names` and `./ens-gateway`: ENS names, below.
 - `./line`: asks LINE who a LIFF ID token names, for the REST API's sign-in and the auth server; its failures are `./auth-error`'s `AuthError`.
-- `./line-privy-jwt` and `./auth-http`: the LINE → Privy auth server, below.
+- `./line-privy-jwt`: the Privy JWT the LINE → Privy auth server issues, below, and `privySubject`, which the REST API also finds smart wallets by.
 - `./contracts`: typed ABIs that Wagmi CLI generates from Forge's artifacts in `out/`. Application code imports these instead of writing ABI fragments.
 - `./bytes32`: the check that a value is a bytes32, for gift IDs, claim commitments and content hashes.
 

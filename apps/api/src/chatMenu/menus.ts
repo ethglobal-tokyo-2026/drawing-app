@@ -70,8 +70,8 @@ export function menuToLink(ids: ChatMenuIds, language: Language, wanted: ChatMen
 
 /**
  * The midnight batch's moves: in each language with a 3 menu, everyone on another of its menus
- * moves to it, since everyone has 3 daily tickets again. The plain menu moves too, so a menu linked
- * before the counts existed turns into one.
+ * moves to it, since everyone has 3 daily tickets again. The plain menu moves too: it stands in for
+ * a count menu missing from menus.json.
  */
 export function midnightMoves(ids: ChatMenuIds) {
   const moves: { from: string; to: string }[] = [];
