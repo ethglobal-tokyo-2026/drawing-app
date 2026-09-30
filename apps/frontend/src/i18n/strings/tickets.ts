@@ -178,14 +178,29 @@ export const tickets = {
     buyMore: { en: "Buy more tickets", ja: "チケットをもっと買う" },
     /** Reserve ticket checkout when a payment fails: the title, above the reason */
     paymentFailed: { en: "Payment didn’t go through", ja: "支払いが完了しませんでした" },
-    /** When the payment went through but the server didn't add its tickets: asking the server again never pays again. The phone keeps the payment until they're added or refused for good, and the checkout opens on it. */
+    /** Reserve ticket checkout, under “Payment didn’t go through”: why, when building and signing the payment took too long, so it was never sent */
+    signingTimedOut: {
+      en: "Signing the payment took too long, so it wasn’t sent. Nothing was paid.",
+      ja: "支払いの署名に時間がかかったため、送信されませんでした。支払いは行われていません。",
+    },
+    /** Reserve ticket checkout, under “Payment didn’t go through”: why, when Sui ran the payment and it failed; `reason` is Sui's own words */
+    failedOnSui: {
+      en: "Sui ran the payment, but it failed, so no JPYC was spent ({{reason}}).",
+      ja: "Suiで支払いが失敗したため、JPYCは使われていません（{{reason}}）。",
+    },
+    /** When a payment was sent but the server didn't add its tickets: asking the server again never pays again. The phone keeps the payment from the moment it's signed until they're added or refused for good, and the checkout opens on it. */
     notAdded: {
-      /** Reserve ticket checkout after paying, when the payment went through but the tickets weren't added, or as it opens while this phone keeps such a payment: the title */
+      /** Reserve ticket checkout after paying, when the payment was sent but the tickets weren't added, or as it opens while this phone keeps such a payment: the title */
       title: { en: "Tickets not added yet", ja: "チケットが未追加です" },
-      /** Reserve ticket checkout, tickets not added: the line under the title, in bold, then why in quiet type; `reason` is the server's or Sui's words, and empty as it opens on a kept payment until asking again fails */
+      /** Reserve ticket checkout, tickets not added, when Sui showed this phone the payment go through: the line under the title, in bold, then why in quiet type; `reason` is the server's or Sui's words */
       line: {
         en: "<strong>Your payment went through. Adding the tickets again won’t charge you twice.</strong> <why>{{reason}}</why>",
         ja: "<strong>支払いは完了しています。チケットをもう一度追加しても、二重に請求されることはありません。</strong><why>{{reason}}</why>",
+      },
+      /** Reserve ticket checkout, tickets not added, when Sui's answer to the payment never reached this phone, or as it opens on a kept payment: the line under the title, in bold, then why in quiet type; `reason` is the server's or Sui's words, and empty as it opens until asking again fails */
+      unconfirmedLine: {
+        en: "<strong>Adding the tickets again won’t charge you twice.</strong> <why>{{reason}}</why>",
+        ja: "<strong>チケットをもう一度追加しても、二重に請求されることはありません。</strong><why>{{reason}}</why>",
       },
       /** Reserve ticket checkout, tickets not added: the blue key that asks again for the tickets the payment bought */
       add: { en: "Add the tickets", ja: "チケットを追加する" },
@@ -198,14 +213,19 @@ export const tickets = {
       /** Reserve ticket checkout, tickets not added or refused: that button once the ID is copied */
       copied: { en: "Copied", ja: "コピー済み" },
     },
-    /** When the server refused a payment's tickets for good: said once, and the phone stops keeping the payment. */
+    /** When the server refused a payment's tickets for good, or Sui never showed the payment: said once, and the phone stops keeping the payment. */
     refused: {
       /** Reserve ticket checkout, once, when the server refused for good to add the tickets a payment bought (after paying, after asking again, or as it opens on a kept payment refused since): the title */
       title: { en: "Tickets can’t be added", ja: "チケットを追加できません" },
-      /** Reserve ticket checkout, tickets refused: the line under the title, in bold, then why in quiet type; `reason` is the server's words */
+      /** Reserve ticket checkout, tickets refused: the line under the title, in bold, then why in quiet type; `reason` is the server's words, or neverLanded */
       line: {
         en: "<strong>Asking again won’t add them.</strong> <why>{{reason}}</why>",
         ja: "<strong>もう一度追加しても、チケットは追加されません。</strong><why>{{reason}}</why>",
+      },
+      /** Reserve ticket checkout, tickets refused, in quiet type after “Asking again won’t add them.”: why, when Sui still didn't show the payment long after it was signed */
+      neverLanded: {
+        en: "Sui never showed this payment, so it didn’t go through.",
+        ja: "Suiでこの支払いが確認できなかったため、支払いは完了していません。",
       },
     },
     /** Reserve ticket checkout: the key that goes back to the packs when a payment fails or its tickets are refused, and the quiet link above Not now when its tickets weren't added */

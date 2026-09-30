@@ -3,6 +3,7 @@ import { ApiError } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
 import { errorMessage, errorReason } from "../i18n/errorMessage";
+import { i18next } from "../i18n/i18n";
 import { Trans, useTranslation } from "../i18n/react";
 import { ArrowClockwise, BuyTicketsIcon, Copy, DrawIcon } from "../icons";
 import { usePrivyStatus } from "../identity/privy";
@@ -26,8 +27,8 @@ import { TicketStubs } from "./TicketStubs";
 import {
   addUnaddedPurchase,
   forgetUnaddedPurchase,
-  isRefusal,
   keepUnaddedPurchase,
+  keptRefusal,
   refusalError,
   unaddedPurchasesFor,
   useAddUnaddedPurchases,
@@ -56,13 +57,20 @@ const reason = (error: unknown) =>
 /** Why adding a paid pack's tickets failed, in plain words: an API error's detail repeats the payment's ID. */
 const plainReason = (error: unknown) =>
   error instanceof ApiError ? errorMessage(error) : reason(error);
+/** Why asking again can never add a payment's tickets, in plain words. */
+const refusedReason = (refusal: ApiError) =>
+  refusal.code === "payment_not_landed"
+    ? i18next.t(($) => $.tickets.checkout.refused.neverLanded)
+    : plainReason(refusal);
 
-/** A payment that went through, whose tickets the server didn't add, and why. */
+/** A signed payment whose tickets the server didn't add, and why. */
 interface Unadded {
   purchase: UnaddedPurchase;
   reason: string;
-  /** The server refused them for good: the card says so once, and the payment isn't kept. */
+  /** Asking again can never add them: the card says so once, and the payment isn't kept. */
   refused: boolean;
+  /** Sui showed this phone the payment go through. */
+  landed: boolean;
 }
 
 /** How the checkout opens on a payment kept on this phone: a refusal first, since it shows once. */
@@ -71,8 +79,13 @@ function keptUnadded(userId: string): Unadded | null {
   const purchase = purchases.find((p) => p.refusal) ?? purchases.at(0);
   if (!purchase) return null;
   return purchase.refusal
-    ? { purchase, reason: plainReason(refusalError(purchase.refusal)), refused: true }
-    : { purchase, reason: "", refused: false };
+    ? {
+        purchase,
+        reason: refusedReason(refusalError(purchase.refusal)),
+        refused: true,
+        landed: false,
+      }
+    : { purchase, reason: "", refused: false, landed: false };
 }
 
 /** One outline row per pack on sale, while today's prices load. */
@@ -165,34 +178,65 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
     });
 
   /** Says why a payment's tickets weren't added. A refusal for good shows once, and the payment goes. */
-  const showUnadded = (purchase: UnaddedPurchase, e: unknown) => {
-    const refused = isRefusal(e);
-    if (refused) forgetUnaddedPurchase(me.id, purchase.digest);
-    setUnadded({ purchase, reason: plainReason(e), refused });
+  const showUnadded = (purchase: UnaddedPurchase, e: unknown, landed: boolean) => {
+    const refusal = keptRefusal(me.id, purchase.digest);
+    if (refusal) forgetUnaddedPurchase(me.id, purchase.digest);
+    setUnadded({
+      purchase,
+      reason: refusal ? refusedReason(refusal) : plainReason(e),
+      refused: refusal !== null,
+      landed,
+    });
   };
 
   const pay = async (p: ReservePack, payment: JpycPayment) => {
     setStep("paying");
     let paid: UnaddedPurchase | null = null;
+    let landed = false;
     try {
-      const [{ payForTickets }, { waitForSuiSigner }] = await Promise.all([
+      const [{ signTicketPayment, PaymentFailed }, { waitForSuiSigner }] = await Promise.all([
         import("../payments/jpyc"),
         import("../identity/suiSigner"),
       ]);
-      const digest = await payForTickets(await waitForSuiSigner(), payment, BigInt(p.priceJpyc));
-      paid = { digest, tickets: p.tickets, priceYen: p.priceYen, paidAt: Date.now() };
-      // Kept before the server is asked, so closing the card or the app can't lose the payment.
+      const signed = await signTicketPayment(
+        await waitForSuiSigner(),
+        payment,
+        BigInt(p.priceJpyc),
+      );
+      paid = {
+        digest: signed.digest,
+        tickets: p.tickets,
+        priceYen: p.priceYen,
+        paidAt: Date.now(),
+      };
+      // Kept before Sui is asked to run it, so a lost answer or a closed card or app can't lose it.
       keepUnaddedPurchase(me.id, paid);
+      try {
+        await signed.send();
+        landed = true;
+      } catch (e) {
+        if (e instanceof PaymentFailed) throw e;
+        // Sui may have run it all the same, so the server is asked for its tickets either way.
+        console.error(`Sui's answer to the payment ${paid.digest} never came`, e);
+      }
+    } catch (e) {
+      console.error(`Buying a pack of ${p.tickets} tickets with JPYC failed`, {
+        digest: paid?.digest ?? null,
+        error: e,
+      });
+      // Never signed, or Sui ran it and it failed: no JPYC moved either way.
+      if (paid) forgetUnaddedPurchase(me.id, paid.digest);
+      setError(reason(e));
+      setStep("error");
+      jpyc.refresh();
+      return;
+    }
+    try {
       await addTickets(paid);
     } catch (e) {
-      const digest = paid?.digest ?? null;
-      console.error(`Buying a pack of ${p.tickets} tickets with JPYC failed`, { digest, error: e });
-      if (paid) {
-        showUnadded(paid, e);
-        setCopied(false);
-      } else {
-        setError(reason(e));
-      }
+      console.error(`Adding the tickets that ${paid.digest} paid for failed`, e);
+      showUnadded(paid, e, landed);
+      setCopied(false);
       setStep("error");
     } finally {
       jpyc.refresh();
@@ -200,16 +244,16 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   };
 
   /** Asks again for the tickets a payment bought, while the key says so; the payment itself is never made again. */
-  const askAgain = (purchase: UnaddedPurchase) =>
+  const askAgain = (purchase: UnaddedPurchase, landed: boolean) =>
     addTickets(purchase)
       .catch((e: unknown) => {
         console.error(`Adding the tickets that ${purchase.digest} paid for failed again`, e);
-        showUnadded(purchase, e);
+        showUnadded(purchase, e, landed);
       })
       .finally(() => setAdding(false));
-  const addAgain = (purchase: UnaddedPurchase) => {
+  const addAgain = (purchase: UnaddedPurchase, landed: boolean) => {
     setAdding(true);
-    void askAgain(purchase);
+    void askAgain(purchase, landed);
   };
 
   /** Leaves a payment's card for the packs; one still waiting stays kept and is asked for again. */
@@ -224,7 +268,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   const openOnKept = useEffectEvent(() => {
     if (!kept) return;
     if (kept.refused) forgetUnaddedPurchase(me.id, kept.purchase.digest);
-    else void askAgain(kept.purchase);
+    else void askAgain(kept.purchase, false);
   });
   useEffect(() => openOnKept(), []);
 
@@ -353,15 +397,19 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
         {close}
       </>
     ) : (
-      // The payment went through, so the key asks for its tickets again rather than paying again; a
-      // quiet link still leads back to the packs, so a stuck payment never blocks buying.
+      // The payment was signed and sent, so the key asks for its tickets again rather than paying
+      // again; a quiet link still leads back to the packs, so a stuck payment never blocks buying.
       <>
         <h2 className="out-of-tickets__title out-of-tickets__title--top" id={`${id}-title`}>
           {t(($) => $.tickets.checkout.notAdded.title)}
         </h2>
         <p className="out-of-tickets__line" role="alert">
           <Trans
-            i18nKey={($) => $.tickets.checkout.notAdded.line}
+            i18nKey={
+              unadded.landed
+                ? ($) => $.tickets.checkout.notAdded.line
+                : ($) => $.tickets.checkout.notAdded.unconfirmedLine
+            }
             values={{ reason: unadded.reason }}
             components={{ strong: <strong />, why: <span className="out-of-tickets__quiet" /> }}
           />
@@ -374,7 +422,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
           aria-busy={adding}
           aria-disabled={adding}
           onClick={() => {
-            if (!adding) addAgain(unadded.purchase);
+            if (!adding) addAgain(unadded.purchase, unadded.landed);
           }}
         >
           {adding
