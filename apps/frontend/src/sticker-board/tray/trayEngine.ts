@@ -5,95 +5,59 @@
  * given, which opens it among the stickers you gave. You page the stack, pull a sheet out over the board, spread every sheet out, peel stickers
  * onto the board and put them back. Everything is in board pixels, in the board's stacking context.
  */
-import { tokyoTicketDay } from "@drawing-app/api/client";
 import { i18next } from "../../i18n/i18n";
 import { timeOurWork } from "../../performance/performanceRecorder";
 import { whenBoardQuiet } from "../boardComplete";
 import { formatMonthDay, formatNo } from "../../stickers/format";
 import { lightUp } from "../../stickers/light";
-import type { StickerUrls } from "../../stickers/stickerUrls";
 import { EASE_OUT, EASE_PEEL, clamp, lerp } from "../../ui/easing";
-import { packSheets, type PackedItem, type Shape } from "./sheetPacking";
-import { knownShape, stickerShape, unreadableCut } from "./stickerShape";
 import { edgeAt } from "./edgeBands";
 import { inertBesides } from "./inertBesides";
 import { BoardNotReady, reasonOf, type TrayProblem } from "./trayProblem";
 import { countVisit, visitsSoFar } from "./traySeen";
-import { newSlots, type TraySlot } from "./traySlots";
-import { createZipper, mouthRange, showsFrom, type Zipper } from "./zipper";
+import {
+  COL,
+  CRACK,
+  GMAX,
+  ICONS,
+  PEEK,
+  PEEKS,
+  SHEET,
+  STACK_Y,
+  TOP,
+  createTrayModel,
+  cssUrl,
+  dayOf,
+  ended,
+  local,
+  maskOf,
+  matchesFilter,
+  modelOf,
+  px,
+  targetOf,
+  type BoardView,
+  type Box,
+  type Filter,
+  type Geometry,
+  type Gesture,
+  type Peel,
+  type Point,
+  type Pulled,
+  type Size,
+  type Slot,
+  type SlotState,
+  type TrayBoard,
+  type TrayDrag,
+  type TraySticker,
+  type TrayState,
+} from "./trayModel";
+import { createZipper, mouthRange, showsFrom } from "./zipper";
 import "../../stickers/sticker-foil.css";
 import "./sticker-tray.css";
 
-/** A sticker as the sticker tray holds it: its slot, and what it's drawn from. */
-export interface TraySticker extends TraySlot {
-  no: number;
-  /** The image's size. */
-  width: number;
-  height: number;
-  outline?: string;
-  urls: Pick<StickerUrls, "png" | "mask" | "foil">;
-  /** Drawn by someone else: a received gift. */
-  gift: boolean;
-  /** An NSFW sticker: it wears pink foil, whoever drew it. */
-  nsfw: boolean;
-  /** Shown in the open tray before, so it isn't NEW. */
-  seen: boolean;
-  /** Given away and received: who has it, printed. Its blank spot opens it among the stickers you gave. */
-  givenTo?: string;
-}
-
-interface Point {
-  x: number;
-  y: number;
-}
-
-interface Size {
-  w: number;
-  h: number;
-}
-
-/** A sticker's center, size and turn. */
-interface Box extends Point, Size {
-  r: number;
-}
-
-/**
- * Where the board sits on screen and how much it's drawn scaled, mid-turn. It holds still through a
- * gesture, so it's read once when the gesture begins instead of on every move.
- */
-interface BoardView {
-  left: number;
-  top: number;
-  k: number;
-}
-
-/** What the sticker tray needs from its board, all in board pixels. */
-export interface TrayBoard {
-  /** Where a sticker sits on the board; null when it isn't there. */
-  stickerRect: (id: string) => Box | null;
-  /** How big a sticker is on the board. */
-  sizeFor: (id: string) => Size;
-  /**
-   * Sticks a sticker on at `at`, or at a free spot; resolves with its element once it's drawn, or null
-   * when the board couldn't take it.
-   */
-  place: (id: string, at?: { x: number; y: number; r: number }) => Promise<HTMLElement | null>;
-  /** A sticker went back into its used sticker silhouette. */
-  remove: (id: string) => void;
-  /** Shows where a sticker is on the board, and moves focus to it. */
-  pulse: (id: string) => void;
-  /** Opens a given sticker's detail, among the stickers you gave. */
-  openGiven: (id: string) => void;
-}
-
-/**
- * A board sticker dragged over the tray: whether it's over it, and where its used sticker silhouette
- * draws it in.
- */
-export interface TrayDrag {
-  over: boolean;
-  snap: { x: number; y: number; scale: number; r: number } | null;
-}
+// The tray's callers take its types and icons from here.
+export type { TrayBoard, TrayDrag, TraySticker } from "./trayModel";
+export { ICONS } from "./trayModel";
 
 export interface TrayEngine {
   readonly isOpen: boolean;
@@ -113,7 +77,6 @@ export interface TrayEngine {
   destroy: () => void;
 }
 
-type Geometry = ReturnType<Zipper["geometry"]>;
 /**
  * How a sheet's stickers take a press: on the sheet in front, inert behind it, or as pictures inside
  * a spread cell, which is one button.
@@ -121,99 +84,9 @@ type Geometry = ReturnType<Zipper["geometry"]>;
 type SlotUse = "live" | "behind" | "picture";
 /** How a sheet is named: a button behind the front one, or the sheet in front or pulled out. */
 type SheetName = "back" | "spreadFront" | "front" | "pulled";
-type Filter = "all" | "mine" | "gifts";
-type SlotState = TraySlot["state"] | "peeling";
 
-interface Slot extends TraySticker {
-  /** Its packed spot, once every sticker's shape is known. */
-  pos?: PackedItem;
-}
-
-/** The tray's one press at a time, on the stack or on the pulled-out sheet. */
-interface Gesture {
-  id: number;
-  view: BoardView;
-  /** The pulled-out sheet it's on; null on the stack. */
-  pulled: Pulled | null;
-  p0: Point;
-  mode: "maybe" | "page" | "peel" | "pull" | "move" | "none";
-  slotEl: HTMLElement | null;
-  /** How deep in the stack the pressed sheet sits. */
-  depth: number;
-  last: Point;
-  lt: number;
-  vx: number;
-  vy: number;
-  /** How far a page turn has lifted the front sheet. */
-  dy: number;
-  peel: Peel | null;
-  /** Where the pulled-out sheet was when this move began. */
-  at: Point | null;
-}
-
-/** A sticker in hand, from its press to where it lands. */
-interface Peel {
-  s: Slot;
-  /** Where it sat on its sheet. */
-  r: Box;
-  size: Size;
-  el: HTMLDivElement;
-  curl: HTMLDivElement;
-  phase: "curl" | "free";
-  x: number;
-  y: number;
-  vx: number;
-  scale: number;
-  rot: number;
-  raf: number;
-  target: Point | null;
-  startX: number;
-}
-
-/** A sheet pulled out over the board. */
-interface Pulled {
-  f: number;
-  el: HTMLDivElement;
-  x: number;
-  y: number;
-  g0: Point;
-  /** Free of the tray, floating over the board. */
-  out: boolean;
-  /** Its own listeners, which go with it. */
-  listening: AbortController;
-}
-
-interface TrayState {
-  filter: Filter;
-  /** The stack, front first: sheet numbers, the oldest sheet being 0. */
-  order: number[];
-  /** The stack's top left, in the column's pixels. */
-  stackAt: Point;
-  /** The mouth's top and foot, in the column's pixels: a sheet below the foot is behind the fabric. */
-  band: { top: number; bot: number } | null;
-  geo: Geometry | null;
-  busy: boolean;
-  g: Gesture | null;
-  /** The board sticker whose used sticker silhouette is breathing. */
-  target: string | null;
-  dwell: number;
-  /** The board sticker being dragged, and whether the tray was open when its drag began. */
-  drop: { id: string; wasOpen: boolean; view: BoardView } | null;
-  shutTimer: number;
-  relaxTimer: number;
-  spreadOpen: boolean;
-  /** What's been on show in the open tray: seen once the tray zips shut. */
-  shown: Set<string>;
-  pulled: Pulled | null;
-}
-
-/** Each sheet behind the front one sits this much lower, so its dated foot shows. */
-const PEEK = 15;
-/** Sheets shown behind the front one; deeper ones become the stack's depth, a button that spreads them. */
-const PEEKS = 3;
 /** Each level back is this much narrower. */
 const INSET = 0.025;
-const SHEET = { w: 156, h: 364 };
 /** Where stickers sit until every cut line is known: a zigzag from the bottom up, the newest highest. */
 const STAND_IN: readonly (readonly [x: number, y: number, r: number])[] = [
   [44, 286, -2.5],
@@ -225,16 +98,6 @@ const STAND_IN: readonly (readonly [x: number, y: number, r: number])[] = [
 ];
 /** The box a sticker's image is fitted into on a sheet. */
 const FIT = { w: 66, h: 76 };
-/** Packing keeps clear of the sheet's tear strip at the top and its dated foot. */
-const PACK = { sheet: SHEET, margin: { top: 30, right: 10, bottom: 24, left: 10 } };
-/** The tray runs from just under the board's header to its foot. */
-const TOP = 64;
-/** The tray's column: wide enough for the left row's full travel. */
-const COL = 205;
-/** How far the left row travels open: the tray takes about half the screen. */
-const GMAX = 172;
-/** The stack's top in the open tray, under its folder tabs. */
-const STACK_Y = 72;
 /** Under the front sheet: the edges behind it, and the +N button with its gap. */
 const STACK_FOOT = PEEKS * PEEK + 3 + 22;
 /** However short the tray, the stack is shrunk to no less than this. */
@@ -256,39 +119,14 @@ const PULL_FREE = 60;
 const PEEL_FREE = 26;
 /** Near its used sticker silhouette, a returning sticker is drawn in from this far. */
 const SNAP = 120;
-/** How the mouth sags to a crack while something is out over the board. */
-const CRACK = 0.12;
 const FILTERS: readonly Filter[] = ["all", "mine", "gifts"];
 /** Where the spread lays each sheet down: a slight turn apiece. */
 const SPREAD_TURNS = [-1.2, 0.8, -0.5, 1.1, -0.9, 0.6, 1.3, -0.7];
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 const SVG_NS = "http://www.w3.org/2000/svg";
-/** Phosphor's Stack and X icons, bold. */
-export const ICONS = {
-  stack:
-    "M234.36,170A12,12,0,0,1,230,186.37l-96,56a12,12,0,0,1-12.1,0l-96-56a12,12,0,0,1,12.09-20.74l90,52.48L218,165.63A12,12,0,0,1,234.36,170ZM218,117.63,128,170.11,38.05,117.63A12,12,0,0,0,26,138.37l96,56a12,12,0,0,0,12.1,0l96-56A12,12,0,0,0,218,117.63ZM20,80a12,12,0,0,1,6-10.37l96-56a12.06,12.06,0,0,1,12.1,0l96,56a12,12,0,0,1,0,20.74l-96,56a12,12,0,0,1-12.1,0l-96-56A12,12,0,0,1,20,80Zm35.82,0L128,122.11,200.18,80,128,37.89Z",
-  x: "M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z",
-};
 
 /** Trays made so far, which keeps each one's ids its own. */
 let trays = 0;
-const cssUrl = (url: string) => `url("${url}")`;
-const px = (v: number) => `${v.toFixed(1)}px`;
-const isShape = (s: Shape | undefined): s is Shape => s !== undefined;
-const maskOf = (s: Slot) => s.urls.mask ?? s.urls.png;
-const dayOf = (t: number) => tokyoTicketDay(new Date(t));
-const matchesFilter = (s: Slot, f: Filter) => f === "all" || (f === "mine" ? !s.gift : s.gift);
-
-/** Resolves when an animation ends, finished or cancelled along with its element. */
-function ended(a: Animation): Promise<void> {
-  return a.finished.then(
-    () => undefined,
-    (error: unknown) => {
-      if (!(error instanceof DOMException && error.name === "AbortError"))
-        console.error("A sticker tray animation failed", error);
-    },
-  );
-}
 
 /** A sticker in hand's transform: a box this big, centered on `x`, `y`, scaled and turned. */
 const flyerAt = (x: number, y: number, size: Size, scale: number, r: number) =>
@@ -344,7 +182,6 @@ export function createTrayEngine(
   const win = windowOf(doc);
   const reducedMotion = win.matchMedia(REDUCED_MOTION);
   const reduced = () => reducedMotion.matches;
-  let destroyed = false;
   const listening = new AbortController();
   const listen = <K extends keyof HTMLElementEventMap>(
     el: HTMLElement,
@@ -456,20 +293,17 @@ export function createTrayEngine(
   const w1 = make("div", "tray__w1", c1, deepTop);
   zip.slot.append(w1);
 
-  /**
-   * How much the stack is shrunk to fit a short board, from 1 down. The sheets shrink; the edges behind
-   * the front one stay their own height on screen, so they stay something to tap.
-   */
-  let shrink = 1;
   /** A sheet's transform at a depth in the stack: lower, and narrower from its foot, the further back. */
   const restAt = (depth: number, dy = 0, r = 0) =>
-    `translateY(${((depth * PEEK) / shrink + dy).toFixed(1)}px) rotate(${r.toFixed(2)}deg) scale(${(1 - INSET * depth).toFixed(4)})`;
+    `translateY(${((depth * PEEK) / ui.shrink + dy).toFixed(1)}px) rotate(${r.toFixed(2)}deg) scale(${(1 - INSET * depth).toFixed(4)})`;
   /** The stack's left inset when shrunk: the sheets stay centered in the mouth. */
-  const shrunkInset = () => (SHEET.w * (1 - shrink)) / 2;
+  const shrunkInset = () => (SHEET.w * (1 - ui.shrink)) / 2;
   /** A pulled-out sheet at `x`, `y` (its top left) and this scale: growing from the stack's size. */
   const pulledFrom = (x: number, y: number, scale: number, turn = 0) =>
     `translate(${px(x - PULLED_ORIGIN.x * (1 - scale))},${px(y - PULLED_ORIGIN.y * (1 - scale))}) rotate(${turn.toFixed(2)}deg) scale(${scale.toFixed(3)})`;
 
+  /** Shown in the open tray: the stickers' own marks, and this visit's. */
+  const seen = new Set<string>();
   const ui: TrayState = {
     filter: "all",
     order: [],
@@ -486,46 +320,34 @@ export function createTrayEngine(
     spreadOpen: false,
     shown: new Set(),
     pulled: null,
+    model: modelOf(read(), seen),
+    shrink: 1,
+    onShow: false,
+    stale: false,
+    orderedFor: 0,
+    imagesOn: false,
+    destroyed: false,
   };
-  /** Shown in the open tray: the stickers' own marks, and this visit's. */
-  const seen = new Set<string>();
-  let model = modelOf(read());
-  /** The stack's window is on show: the tray open, opening, or pulled to a crack. */
-  let onShow = false;
-  /** The stickers changed while the sheets were out of sight, under a hand or mid-turn: they're
-   * rebuilt once they show and that's over. */
-  let stale = false;
-  /** The sheet count the stack's order was dealt for. */
-  let orderedFor = 0;
-  /** Stickers whose unreadable cut line the board has been told of, once each. */
-  const toldCuts = new Set<string>();
-  /**
-   * Slots ask for their images once the board has assembled or the tray first shows, so a closed tray
-   * doesn't download alongside the board's own stickers.
-   */
-  let imagesOn = false;
+  const {
+    newIds,
+    matches,
+    sheetItems,
+    sheetMatches,
+    itemOf,
+    topF,
+    applyPack,
+    relayout,
+    resetOrder,
+  } = createTrayModel(ui, seen, problem);
   function loadImages() {
-    if (imagesOn || destroyed) return;
-    imagesOn = true;
-    if (ui.g || ui.busy) stale = true;
+    if (ui.imagesOn || ui.destroyed) return;
+    ui.imagesOn = true;
+    if (ui.g || ui.busy) ui.stale = true;
     else {
       rerenderPulled();
       renderStack();
     }
   }
-
-  function modelOf(list: readonly TraySticker[]) {
-    for (const s of list) if (s.seen) seen.add(s.id);
-    const slots: Slot[] = list.map((s) => ({ ...s }));
-    return { slots, count: Math.max(1, ...slots.map((s) => s.sheet + 1)) };
-  }
-  const newIds = () => newSlots(model.slots, { today: dayOf(Date.now()), dayOf, seen });
-  const matches = (s: Slot) => matchesFilter(s, ui.filter);
-  const sheetItems = (f: number) => model.slots.filter((s) => s.sheet === f);
-  const sheetMatches = (f: number) =>
-    ui.filter === "all" || sheetItems(f).some((s) => s.state !== "given" && matches(s));
-  const itemOf = (id: string) => model.slots.find((s) => s.id === id) ?? null;
-  const topF = () => ui.order[0] ?? model.count - 1;
 
   const Wb = () => board.clientWidth || 390;
   const Hb = () => board.clientHeight || 657;
@@ -534,58 +356,6 @@ export function createTrayEngine(
     const r = board.getBoundingClientRect();
     return { left: r.left, top: r.top, k: r.width / (board.offsetWidth || r.width || 1) };
   };
-  /** A pointer's place in board pixels: the board may be drawn scaled, mid-turn. */
-  const local = (e: PointerEvent, view: BoardView): Point => ({
-    x: (e.clientX - view.left) / view.k,
-    y: (e.clientY - view.top) / view.k,
-  });
-  const targetOf = (e: Event) => (e.target instanceof Element ? e.target : null);
-
-  /* ---------------------------------------------------------------- where each sticker sits: on its cut line */
-  function packWith(shapes: readonly Shape[]) {
-    const { sheets, byId } = packSheets(
-      model.slots.map((s, i) => ({ id: s.id, shape: shapes[i] })),
-      PACK,
-    );
-    for (const s of model.slots) {
-      const b = byId.get(s.id);
-      if (b) {
-        s.sheet = b.f;
-        s.pos = b;
-      }
-      const why = unreadableCut(s.id);
-      if (why !== undefined && !toldCuts.has(s.id)) {
-        toldCuts.add(s.id);
-        problem({ kind: "cut", nos: [s.no], detail: why });
-      }
-    }
-    model.count = Math.max(1, sheets.length);
-  }
-  /** Packs at once when every cut line is known; until then, the stand-in spots stay. */
-  function applyPack() {
-    const shapes = model.slots.map((s) => knownShape(s));
-    if (!shapes.every(isShape)) return false;
-    packWith(shapes);
-    return true;
-  }
-  async function relayout() {
-    if (applyPack()) return true;
-    const m = model;
-    const shapes = await Promise.all(m.slots.map((s) => stickerShape(s, s.urls)));
-    // A refresh during the wait lays out its own stickers.
-    if (destroyed || m !== model) return false;
-    packWith(shapes);
-    return true;
-  }
-  /** The stack as the filter deals it: its sheets, newest in front. */
-  function resetOrder() {
-    const all = Array.from({ length: model.count }, (_, i) => model.count - 1 - i).filter(
-      (f) => f !== ui.pulled?.f,
-    );
-    const want = all.filter(sheetMatches);
-    ui.order = want.length ? want : all.slice(0, 1);
-    orderedFor = model.count;
-  }
 
   /* ---------------------------------------------------------------- drawing a sheet */
   function fitOf(s: Slot): Size {
@@ -651,7 +421,7 @@ export function createTrayEngine(
     );
     // A used sticker silhouette shows no sticker, so it loads none; nor does any slot before its
     // images are let load.
-    if (s.state !== "used" && imagesOn) {
+    if (s.state !== "used" && ui.imagesOn) {
       // Drawn by someone else, or NSFW, it wears the sheet's foil under its image, as StickerFoil
       // draws it.
       if ((s.gift || s.nsfw) && s.urls.mask) {
@@ -682,7 +452,7 @@ export function createTrayEngine(
     }
     fit.style.width = px(q.w);
     fit.style.height = px(q.h);
-    if (imagesOn) fit.style.setProperty("--m", cssUrl(maskOf(s)));
+    if (ui.imagesOn) fit.style.setProperty("--m", cssUrl(maskOf(s)));
     el.append(fit);
     if (isNew) el.append(decorative(make("span", "tray__new", words.new)));
     return el;
@@ -722,7 +492,7 @@ export function createTrayEngine(
     say(
       i18next.t(($) => $.stickerBoard.tray.status.filtered, {
         filter: i18next.t(($) => $.stickerBoard.tray.filters[ui.filter]),
-        count: Array.from({ length: model.count }, (_, f) => f).filter(sheetMatches).length,
+        count: Array.from({ length: ui.model.count }, (_, f) => f).filter(sheetMatches).length,
       }),
     );
   /**
@@ -743,7 +513,7 @@ export function createTrayEngine(
       if (s.state !== "given" || s.givenTo !== undefined)
         paper.append(slotEl(s, news.has(s.id), use));
     // Nothing to put on the only sheet yet: it says what will be.
-    if (model.slots.length === 0)
+    if (ui.model.slots.length === 0)
       paper.append(make("p", "fine tray__empty keep-phrases", words.empty));
     const foot = make(
       "div",
@@ -794,7 +564,7 @@ export function createTrayEngine(
     if (hidden > 0) {
       const more = make("button", "tray__depth", icon(ICONS.stack), make("span", "", `+${hidden}`));
       more.type = "button";
-      more.style.transform = `translateY(${SHEET.h + (k * PEEK + 3) / shrink}px) scale(${(1 / shrink).toFixed(4)})`;
+      more.style.transform = `translateY(${SHEET.h + (k * PEEK + 3) / ui.shrink}px) scale(${(1 / ui.shrink).toFixed(4)})`;
       const spread = i18next.t(($) => $.stickerBoard.tray.moreSheets, { count: hidden });
       more.setAttribute("aria-label", spread);
       kids.push(more);
@@ -819,22 +589,22 @@ export function createTrayEngine(
    * they wait: a sheet redrawn there would drop what's being done to it.
    */
   function redraw() {
-    if (!onShow) {
-      stale = true;
+    if (!ui.onShow) {
+      ui.stale = true;
       return;
     }
-    if (model.count !== orderedFor || ui.order.some((f) => f >= model.count)) resetOrder();
+    if (ui.model.count !== ui.orderedFor || ui.order.some((f) => f >= ui.model.count)) resetOrder();
     if (ui.g || ui.busy) {
-      stale = true;
+      ui.stale = true;
       return;
     }
-    stale = false;
+    ui.stale = false;
     rerenderPulled();
     renderStack();
   }
   /** A press or a turn is over: the sheets catch up with what changed during it. */
   const catchUp = () => {
-    if (stale) redraw();
+    if (ui.stale) redraw();
   };
   function sheetOf(el: Element | null) {
     const sheet = el?.closest<HTMLElement>(".tray__sheet");
@@ -863,7 +633,7 @@ export function createTrayEngine(
   tabsEl.append(...tabs);
   // Until the tray holds a gift, Mine is All and Gifts is empty.
   const syncTabsShown = () => {
-    tabsEl.hidden = !model.slots.some((s) => s.gift);
+    tabsEl.hidden = !ui.model.slots.some((s) => s.gift);
   };
   listen(tabsEl, "click", (e) => {
     const f = targetOf(e)?.closest<HTMLElement>(".tray__tab")?.dataset.filter;
@@ -891,10 +661,10 @@ export function createTrayEngine(
     shrunkFor = height;
     const room = zip.openWindow();
     const next = room ? clamp((room.bot - 2 - STACK_Y - STACK_FOOT) / SHEET.h, MIN_SHRINK, 1) : 1;
-    if (Math.abs(next - shrink) < 0.001) return;
-    shrink = next;
-    stack.style.setProperty("--shrink", shrink.toFixed(4));
-    if (model && ui.order.length) renderStack();
+    if (Math.abs(next - ui.shrink) < 0.001) return;
+    ui.shrink = next;
+    stack.style.setProperty("--shrink", ui.shrink.toFixed(4));
+    if (ui.model && ui.order.length) renderStack();
   }
   function onFrame(g: Geometry) {
     ui.geo = g;
@@ -906,14 +676,14 @@ export function createTrayEngine(
     const show = range !== null;
     // A mouth sagged to a crack rings through shut for a few frames: the stack stays as it was, so it
     // doesn't blink and the sticker that was focused keeps its focus. A pull dragged up shuts it.
-    const holding = !show && onShow && zip.isOpen && g.mode !== "drag";
+    const holding = !show && ui.onShow && zip.isOpen && g.mode !== "drag";
     if (!holding) {
       setShut(!show);
-      const showing = show && !onShow;
-      onShow = show;
+      const showing = show && !ui.onShow;
+      ui.onShow = show;
       if (showing) {
         loadImages();
-        if (stale) redraw();
+        if (ui.stale) redraw();
       }
     }
     if (range) {
@@ -942,7 +712,7 @@ export function createTrayEngine(
         stack.style.setProperty("--foot", foot);
       }
       tabsEl.style.transform = `translate(${bx.toFixed(2)}px,${by.toFixed(2)}px)`;
-      stack.style.transform = `translate(${(bx + shrunkInset()).toFixed(2)}px,${by.toFixed(2)}px) scale(${shrink.toFixed(4)})`;
+      stack.style.transform = `translate(${(bx + shrunkInset()).toFixed(2)}px,${by.toFixed(2)}px) scale(${ui.shrink.toFixed(4)})`;
       ui.stackAt = { x: xw + bx + shrunkInset(), y: by };
       ui.band = { top: yTop, bot: yBot };
     }
@@ -1386,7 +1156,7 @@ export function createTrayEngine(
     const drop = before.filter((el, i) => i === 0 || !shown.has(Number(el.dataset.f)));
     const pile = (d: number, dy = 0, r = 0) => restAt(d * 0.15, 30 + dy, r);
     // Far enough that a sheet's top is behind the fabric.
-    const DROP = Math.max(320, ((ui.band ? ui.band.bot - ui.stackAt.y : 470) + 12) / shrink);
+    const DROP = Math.max(320, ((ui.band ? ui.band.bot - ui.stackAt.y : 470) + 12) / ui.shrink);
     stack
       .querySelector(".tray__depth")
       ?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 100, fill: "forwards" });
@@ -1514,7 +1284,7 @@ export function createTrayEngine(
     x.type = "button";
     x.setAttribute("aria-label", words.putBack);
     const wrap = make("div", "tray__pulled", sheetEl(f, "is-top is-pulled", 0), x);
-    wrap.style.transform = pulledFrom(x0, y0, shrink);
+    wrap.style.transform = pulledFrom(x0, y0, ui.shrink);
     fly.append(wrap);
     const pulled: Pulled = {
       f,
@@ -1546,7 +1316,7 @@ export function createTrayEngine(
       stepAside();
     }
     // Full size by the time it comes free.
-    const grown = p.out ? 1 : lerp(shrink, 1, clamp(-dx / PULL_FREE, 0, 1));
+    const grown = p.out ? 1 : lerp(ui.shrink, 1, clamp(-dx / PULL_FREE, 0, 1));
     const bump = 0.02 * (p.out ? 1 : k);
     p.el.style.transform = pulledFrom(p.x, p.y, grown + bump, p.out ? -1.5 : -2.5 * k);
   }
@@ -1654,7 +1424,10 @@ export function createTrayEngine(
     if (!reduced() && !instant)
       await ended(
         p.el.animate(
-          [{ transform: p.el.style.transform }, { transform: pulledFrom(home.x, home.y, shrink) }],
+          [
+            { transform: p.el.style.transform },
+            { transform: pulledFrom(home.x, home.y, ui.shrink) },
+          ],
           { duration: quick ? 180 : 320, easing: EASE_PEEL, fill: "forwards" },
         ),
       );
@@ -1669,7 +1442,7 @@ export function createTrayEngine(
     const fit = el.querySelector<HTMLElement>(".tray__fit") ?? el;
     const r = fit.getBoundingClientRect();
     // A sheet on the stack is drawn shrunk; a pulled-out one is full size.
-    const shrunk = el.closest(".tray__stack") ? shrink : 1;
+    const shrunk = el.closest(".tray__stack") ? ui.shrink : 1;
     return {
       x: (r.left + r.width / 2 - view.left) / view.k,
       y: (r.top + r.height / 2 - view.top) / view.k,
@@ -1885,10 +1658,10 @@ export function createTrayEngine(
     const q = placeOf(s);
     const xw = (ui.geo ? ui.geo.chainX : COL - 15) - 0.97 * GMAX + 3;
     return {
-      x: colLeft() + xw + 3 + shrunkInset() + q.x * shrink,
-      y: TOP + STACK_Y + q.y * shrink,
-      w: q.w * shrink,
-      h: q.h * shrink,
+      x: colLeft() + xw + 3 + shrunkInset() + q.x * ui.shrink,
+      y: TOP + STACK_Y + q.y * ui.shrink,
+      w: q.w * ui.shrink,
+      h: q.h * ui.shrink,
       r: q.r,
     };
   }
@@ -1928,7 +1701,7 @@ export function createTrayEngine(
       if (!ui.pulled) holdOpen(160);
       return;
     }
-    if (destroyed) return;
+    if (ui.destroyed) return;
     const to = api.stickerRect(id) ?? { x: Wb() * 0.4, y: Hb() * 0.5, r: 0 };
     onBoard.style.opacity = "0";
     if (!reduced())
@@ -2005,7 +1778,7 @@ export function createTrayEngine(
   }
   function boardDrag(id: string, pt: Point): TrayDrag | null {
     const s = itemOf(id);
-    if (!s || destroyed) return null;
+    if (!s || ui.destroyed) return null;
     // The tray remembers whether it was open when this drag began: that decides how it ends.
     let drop = ui.drop;
     if (drop?.id !== id) {
@@ -2079,7 +1852,7 @@ export function createTrayEngine(
     // Remove calls this without a drag.
     const wasOpen = ui.drop?.id === id ? ui.drop.wasOpen : zip.isOpen;
     ui.drop = null;
-    if (!s || destroyed) return false;
+    if (!s || ui.destroyed) return false;
     const lip = ui.geo ? colLeft() + ui.geo.chainX - ui.geo.G : Wb() - 30;
     const onPulled = pulledFor(s, pt, boardView())?.over === true;
     const into = onPulled || (zip.isOpen ? pt.x > lip - 12 : pt.x > Wb() - 74);
@@ -2108,7 +1881,7 @@ export function createTrayEngine(
       await zip.open();
     }
     if (!ui.pulled && topF() !== s.sheet) await bringToFront(s.sheet);
-    if (destroyed) return false;
+    if (ui.destroyed) return false;
     const from = api.stickerRect(id);
     const size = api.sizeFor(id);
     const snap = snapFor(s, pt, boardView()).snap;
@@ -2205,7 +1978,9 @@ export function createTrayEngine(
       els.forEach((c, d) =>
         c.animate(
           [
-            { transform: `translate(${px(from.x)},${px(from.y)}) rotate(0deg) scale(${shrink})` },
+            {
+              transform: `translate(${px(from.x)},${px(from.y)}) rotate(0deg) scale(${ui.shrink})`,
+            },
             { transform: c.style.transform },
           ],
           {
@@ -2243,7 +2018,7 @@ export function createTrayEngine(
             [
               { transform: c.style.transform, opacity: 1 },
               {
-                transform: `translate(${px(home.x)},${px(home.y)}) scale(${(0.92 * shrink).toFixed(4)})`,
+                transform: `translate(${px(home.x)},${px(home.y)}) scale(${(0.92 * ui.shrink).toFixed(4)})`,
                 opacity: 0,
               },
             ],
@@ -2255,10 +2030,12 @@ export function createTrayEngine(
             [
               { transform: pick.style.transform },
               {
-                transform: `translate(${px(home.x)},${px(home.y)}) rotate(-2deg) scale(${(1.03 * shrink).toFixed(4)})`,
+                transform: `translate(${px(home.x)},${px(home.y)}) rotate(-2deg) scale(${(1.03 * ui.shrink).toFixed(4)})`,
                 offset: 0.78,
               },
-              { transform: `translate(${px(home.x)},${px(home.y)}) rotate(0deg) scale(${shrink})` },
+              {
+                transform: `translate(${px(home.x)},${px(home.y)}) rotate(0deg) scale(${ui.shrink})`,
+              },
             ],
             { duration: 440, easing: EASE_PEEL, fill: "forwards" },
           ),
@@ -2311,7 +2088,7 @@ export function createTrayEngine(
     if (reduced() || tugs >= 2) return;
     tugTimer = later(() => {
       // An empty tray has nothing to invite anyone to open.
-      if (model.slots.length === 0) return;
+      if (ui.model.slots.length === 0) return;
       if (!(tugVisits < TUG_VISITS || hasNew())) return;
       if (zip.isOpen || ui.g || doc.hidden) {
         scheduleTug(4000);
@@ -2328,8 +2105,8 @@ export function createTrayEngine(
 
   /* ---------------------------------------------------------------- the stickers change under it */
   function refresh() {
-    if (destroyed) return;
-    model = modelOf(read());
+    if (ui.destroyed) return;
+    ui.model = modelOf(read(), seen);
     syncTabsShown();
     const apply = () => {
       updateBadge();
@@ -2375,8 +2152,8 @@ export function createTrayEngine(
     boardDrop,
     escape,
     destroy() {
-      if (destroyed) return;
-      destroyed = true;
+      if (ui.destroyed) return;
+      ui.destroyed = true;
       for (const t of timers) win.clearTimeout(t);
       timers.clear();
       const peel = ui.g?.peel;
