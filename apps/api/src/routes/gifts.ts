@@ -47,6 +47,7 @@ const REFUSAL_STATUS = {
   gift_returned: 410,
   gift_expired: 410,
   adults_only: 403,
+  claim_failed: 503,
 } as const satisfies Record<string, ContentfulStatusCode>;
 
 const refused = <Code extends keyof typeof REFUSAL_STATUS>(

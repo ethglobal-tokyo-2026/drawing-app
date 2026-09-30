@@ -55,6 +55,16 @@ export const errors = {
     en: "This gift was already opened.",
     ja: "このギフトは、すでにひらかれています。",
   },
+  /** Giving and Receiving: opening a gift's link, Accept, taking a gift out, or the deposit's check after Send, when the chain can't be read, through errorMessage or errorReason */
+  chain_unavailable: {
+    en: "The chain didn't answer. Try again in a moment.",
+    ja: "ブロックチェーンから応答がありません。少し待ってから、もう一度お試しください。",
+  },
+  /** Receive gift dialog, Accept sheet: tapping Accept (POST /api/gifts/receive, or /:giftId/receive from the board) when the chain fails or doesn't confirm the sticker's claim in time, in “… wasn’t received” through errorReason */
+  claim_failed: {
+    en: "The chain didn't confirm it. Trying again is safe: a gift is only ever received once.",
+    ja: "ブロックチェーン上で確認がとれませんでした。受け取りは一度きりなので、やり直しても大丈夫です。",
+  },
   /** Not shown in the app: the ENS gateway's answer to an outside ENS app looking up a croquis.eth name, when this server has no ENS set up */
   ens_not_configured: {
     en: "Names aren't set up on this server yet.",

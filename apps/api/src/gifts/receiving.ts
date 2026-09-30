@@ -4,7 +4,7 @@ import { keccak256 } from "viem";
 import { z } from "zod";
 import { queueNaming } from "../ens/naming.ts";
 import type { AppDeps } from "../deps.ts";
-import { logInfo } from "../diagnostics.ts";
+import { failureCause, logFailure, logInfo } from "../diagnostics.ts";
 import {
   ageStatusOf,
   isoTimeSchema,
@@ -200,7 +200,7 @@ export function previewGiftForYou(deps: AppDeps, userId: string, giftId: string)
 }
 
 export type Receiving =
-  | Refusal<ReceiveRefusal | "gift_not_found">
+  | Refusal<ReceiveRefusal | "gift_not_found" | "claim_failed">
   | { refusal: null; received: ReceivedGift };
 
 /** A lost HTTP response must not repeat the claim or change a placement the recipient already used. */
@@ -328,11 +328,22 @@ async function completeReceive(
 
   let claimTxHash: string | undefined;
   if (giftChain) {
-    const claimed = await giftChain.claimGift({
-      giftId: opened.id,
-      giftClaimToken,
-      recipientId: userId,
-    });
+    let claimed;
+    try {
+      claimed = await giftChain.claimGift({
+        giftId: opened.id,
+        giftClaimToken,
+        recipientId: userId,
+      });
+    } catch (error) {
+      logFailure("gift.claim.failed", error, { giftId: opened.id, userId });
+      // Nothing is recorded, so the gift stays receivable. The escrow lets a gift go only once, so
+      // trying again can't claim it twice.
+      return refuse(
+        "claim_failed",
+        `Gift ${opened.id} wasn't received: its claim wasn't confirmed on the chain (${failureCause(error)})`,
+      );
+    }
     if (!claimed.claimed) {
       return refuse("already_received", `Gift ${opened.id} was already received`);
     }
