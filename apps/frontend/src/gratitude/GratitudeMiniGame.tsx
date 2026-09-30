@@ -17,8 +17,8 @@ import { useReducedMotion } from "../ui/useReducedMotion";
 import type { ComboRecord } from "./combo";
 import { newIdempotencyKey } from "../api/idempotencyKey";
 import { keepGratitudeInPlay, sendGratitude } from "./gratitudeOutbox";
-import { loadLetteringFonts } from "./letteringFonts";
 import { mountMiniGameEngine, type MiniGameEngine } from "./miniGameEngine";
+import { loadPuffyFont } from "./puffyFont";
 import { shownGloss, TIER_NAMES } from "./tierNames";
 import "./gratitude-mini-game.css";
 
@@ -196,8 +196,9 @@ export function GratitudeMiniGame({
 
   useEffect(() => engine.current?.setReduced(reduced), [reduced]);
 
-  // The tier names' and pop-in words' Japanese glyphs arrive before the first tier-up.
-  useEffect(() => loadLetteringFonts(), []);
+  // The lettering's Japanese glyphs, the multiplier's figures and the giver's initial arrive before
+  // the first tier-up, so none swaps typefaces as it lands.
+  useEffect(() => loadPuffyFont(giver.displayName), [giver.displayName]);
 
   // A layout effect, so on unmount the phone comes back before the focus trap returns focus to it.
   useLayoutEffect(() => {
