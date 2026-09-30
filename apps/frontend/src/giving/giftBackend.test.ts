@@ -1,9 +1,11 @@
 // @vitest-environment happy-dom
 import type { Hash } from "viem";
+import { act, createElement, useLayoutEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/apiClient";
-import { emptyApi } from "../api/testing";
+import { emptyApi, renderWithApi } from "../api/testing";
 import { gift } from "../api/testFixtures";
+import { useMyStickerBoard } from "../sticker-board/useMyStickerBoard";
 import { createApiGiftBackend, GiftPackagingError, type PackWait } from "./giftBackend";
 import {
   GiftTransactionRevertedError,
@@ -80,6 +82,30 @@ afterEach(() => {
 });
 
 describe("Giving through the smart account", () => {
+  it("forgets your board's kept answer once the sticker is in a gift, so the give sheet can't offer it", async () => {
+    const t = setup();
+    const seen: string[] = [];
+    function Reader() {
+      const board = useMyStickerBoard();
+      useLayoutEffect(() => void seen.push(board.state));
+      return null;
+    }
+    const view = renderWithApi(createElement(Reader), t.api);
+    await act(async () => {});
+    const mountsShowing = async () => {
+      view.rerender(null);
+      seen.length = 0;
+      view.rerender(createElement(Reader));
+      const first = seen[0];
+      await act(async () => {});
+      return first;
+    };
+    expect(await mountsShowing()).toBe("ready");
+    await t.backend.pack(t.sticker);
+    expect(await mountsShowing()).toBe("loading");
+    view.unmount();
+  });
+
   it("says what packing waits on as it goes: the server, the sticker going in, the bag confirming, the server again", async () => {
     const t = setup();
     const heard: PackWait[] = [];

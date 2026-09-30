@@ -114,6 +114,29 @@ describe("useApiQuery", () => {
     expect(probe.query).toMatchObject({ state: "ready", data: "second" });
   });
 
+  it("with answers, forgets the kept ones and any load on its way", async () => {
+    const { load, calls } = pending();
+    const answers = new QueryAnswers<string>();
+    const view = renderWithApi(<Probe id="a" load={load} answers={answers} />, emptyApi());
+    unmount = view.unmount;
+    const remount = () => {
+      view.rerender(null);
+      view.rerender(<Probe id="a" load={load} answers={answers} />);
+    };
+    calls[0]?.resolve("first");
+    await settle();
+    answers.forget();
+    remount();
+    expect(probe.query.state).toBe("loading");
+    answers.forget();
+    calls[1]?.resolve("read before the forget");
+    await settle();
+    // Its own mount still shows it.
+    expect(probe.query).toMatchObject({ state: "ready", data: "read before the forget" });
+    remount();
+    expect(probe.query.state).toBe("loading");
+  });
+
   it("keeps the last data showing while it refreshes", async () => {
     const { load, calls } = pending();
     ({ unmount } = renderWithApi(<Probe id="a" load={load} />, emptyApi()));

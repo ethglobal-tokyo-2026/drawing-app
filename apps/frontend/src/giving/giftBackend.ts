@@ -2,6 +2,7 @@ import type { Gift } from "@drawing-app/api/client";
 import type { ApiClient } from "../api/apiClient";
 import { ApiError } from "../api/apiClient";
 import { currentLanguage } from "../i18n/i18n";
+import { forgetMyStickerBoard } from "../sticker-board/useMyStickerBoard";
 import { formatNo } from "../stickers/format";
 import { buildGiftMessage, type GiftMessage } from "./giftMessage";
 import {
@@ -313,6 +314,7 @@ export function createApiGiftBackend({
     onWait?: (wait: PackWait) => void,
   ): Promise<PackedGift> => {
     let packaged = await packageGift(sticker, onWait);
+    forgetMyStickerBoard();
     try {
       const previousAttempt = attemptOf(packaged.gift.id);
       if (previousAttempt?.message) {

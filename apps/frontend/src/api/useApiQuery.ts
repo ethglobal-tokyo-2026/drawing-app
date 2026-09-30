@@ -18,16 +18,29 @@ interface Loaded<T> {
  * reader of that query show the last answer at once, from any of them, while it loads again.
  */
 export class QueryAnswers<T> {
-  private readonly byClient = new WeakMap<ApiClient, Map<string, { data: T }>>();
+  private byClient = new WeakMap<ApiClient, Map<string, { data: T }>>();
+  /** Counts forgets, so the answer to a load that went out before one isn't kept. */
+  private forgets = 0;
 
   last(api: ApiClient, key: string): { data: T } | undefined {
     return this.byClient.get(api)?.get(key);
   }
 
-  keep(api: ApiClient, key: string, data: T): void {
-    const answers = this.byClient.get(api) ?? new Map<string, { data: T }>();
-    answers.set(key, { data });
-    this.byClient.set(api, answers);
+  /** Keeps the answer to a load going out now, unless the answers are forgotten before it lands. */
+  keeper(api: ApiClient, key: string): (data: T) => void {
+    const forgets = this.forgets;
+    return (data) => {
+      if (forgets !== this.forgets) return;
+      const answers = this.byClient.get(api) ?? new Map<string, { data: T }>();
+      answers.set(key, { data });
+      this.byClient.set(api, answers);
+    };
+  }
+
+  /** Forgets every answer kept, and any on its way: the server has changed in a way they miss. */
+  forget(): void {
+    this.forgets += 1;
+    this.byClient = new WeakMap();
   }
 }
 
@@ -53,10 +66,11 @@ export function useApiQuery<T>(
 
   useEffect(() => {
     let current = true;
+    const keep = answers?.keeper(api, key);
     latest.current(api).then(
       (data) => {
         if (!current) return;
-        answers?.keep(api, key, data);
+        keep?.(data);
         setLoaded({ key, attempt, outcome: { ok: true, data } });
       },
       (error: unknown) => {
