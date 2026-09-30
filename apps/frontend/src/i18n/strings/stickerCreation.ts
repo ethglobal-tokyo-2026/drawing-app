@@ -13,6 +13,8 @@ export const stickerCreation = {
     resume: { en: "Resume timer", ja: "タイマーを再開" },
     /** Drawing screen, top left: the small white tag with a pause icon that hangs off the timer dot whenever the clock is stopped; hidden from screen readers */
     paused: { en: "Paused", ja: "一時停止" },
+    /** Drawing screen, top left: read out once by screen readers, as a polite announcement, when the clock reaches 30 seconds left and again at 10; {{seconds}} is 30 or 10 */
+    warning: { en: "{{seconds}} seconds left", ja: "残り{{seconds}}秒" },
     /** Read out with the dot: the time left on its face, and why the clock is stopped. */
     status: {
       /** Drawing screen, top left: read by screen readers after the timer dot's name while the clock runs; {{time}} is minutes:seconds, such as 4:32 */
