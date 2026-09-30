@@ -25,8 +25,8 @@ import { CantFindThem } from "./CantFindThem";
 import { GiftBag } from "./GiftBag";
 import type { GiftSender } from "./giftSender";
 import type { GiveFlowState } from "./giveFlow";
-import heroPng from "./gift-message-hero.png";
-import nsfwHeroPng from "./gift-message-hero-nsfw.png";
+import heroImage from "./gift-message-hero.jpg";
+import nsfwHeroImage from "./gift-message-hero-nsfw.jpg";
 import { createApiGiftBackend } from "./giftBackend";
 import { useGiveFlow } from "./useGiveFlow";
 import "../stickers/nsfw-img.css";
@@ -87,7 +87,7 @@ export function Giving({ sticker, fromHandle, sender, liffId, onClose, forUserId
       fromHandle,
       liffId,
       // The sealed bag, never the sticker; the gift message drops it where the app isn't on HTTPS.
-      heroUrl: new URL(sticker.nsfw ? nsfwHeroPng : heroPng, location.origin).href,
+      heroUrl: new URL(sticker.nsfw ? nsfwHeroImage : heroImage, location.origin).href,
       ...(forUserId && { forUserId }),
     }),
     pickerDelayMs: PICKER_DELAY[motion],
