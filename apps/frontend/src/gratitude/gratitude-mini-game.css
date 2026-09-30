@@ -1094,9 +1094,13 @@
   opacity: 1;
   animation: gr-receipt-in 380ms var(--ease-peel);
 }
-/* Its note makes it taller: it rises a little, so its key stays on the shortest phone. */
+/* Its note makes it taller: it rises a little, so its key stays on the shortest phone. Details for a
+   report make the note taller still. */
 .gr-receipt.has-note {
   top: calc(var(--rc-top, 300px) - 48px);
+}
+.gr-receipt.has-detail {
+  top: calc(var(--rc-top, 300px) - 100px);
 }
 @keyframes gr-receipt-in {
   from {
@@ -1162,8 +1166,11 @@
 .gr-rc-sub > p {
   margin: 0;
 }
-/* What became of the send, in words. Only a refusal is a problem. */
+/* What became of the send, in words, and for a refusal the catalog can't word, the raw words behind
+   it (ErrorDetail). Only a refusal is a problem. */
 .gr-rc-note {
+  display: grid;
+  gap: 8px;
   margin: 14px 0 0;
   padding: 10px 12px;
   border-radius: var(--r-label);
@@ -1174,8 +1181,15 @@
   -webkit-user-select: text;
   user-select: text;
 }
+.gr-rc-note p {
+  margin: 0;
+}
 .gr-rc-note.is-refused {
   background: var(--tomato-soft);
+}
+/* Graphite reads 3.5:1 on Tomato Soft. */
+.gr-rc-note .fine {
+  color: var(--ink);
 }
 .gr-rc-figure {
   display: none;

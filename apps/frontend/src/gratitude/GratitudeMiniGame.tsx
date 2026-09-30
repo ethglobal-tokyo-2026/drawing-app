@@ -5,6 +5,7 @@ import type { RecordGratitude, ReplayV1 } from "@drawing-app/api/client";
 import type { ApiError } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
+import { errorDetail } from "../i18n/errorMessage";
 import { formatCount } from "../i18n/format";
 import { Trans, useTranslation } from "../i18n/react";
 import { GratitudeIcon, StickerBoardIcon, Wind, X } from "../icons";
@@ -12,7 +13,7 @@ import { Duration } from "../stickers/Duration";
 import { formatDay, formatHandle, formatNo } from "../stickers/format";
 import { StickerFigure } from "../stickers/StickerFigure";
 import type { StickerUrls } from "../stickers/stickerUrls";
-import { ErrorLine } from "../ui/ErrorLine";
+import { ErrorDetail, ErrorLine } from "../ui/ErrorLine";
 import { HitCounter } from "../ui/HitCounter";
 import { LabelButton } from "../ui/LabelButton";
 import { PhotoSticker } from "../ui/PhotoSticker";
@@ -63,24 +64,29 @@ type Sending = { state: "sending" } | GratitudeSendResult;
 interface ReceiptNote {
   kind: "sending" | "kept" | "refused";
   text: string;
+  /** The English words behind a refusal the catalog doesn't word itself, for a report. */
+  detail?: string;
 }
 
 /** Why the server refused a combo for good, in words. Only an unreadable one is worth sending again. */
-function refusalText(t: TFunction, error: ApiError, handle: string): string {
+function refusalNote(t: TFunction, error: ApiError, handle: string): Omit<ReceiptNote, "kind"> {
   switch (error.code) {
     case "gratitude_already_recorded":
-      return t(($) => $.gratitude.refusals.alreadyRecorded, { handle });
+      return { text: t(($) => $.gratitude.refusals.alreadyRecorded, { handle }) };
     case "not_receiver":
-      return t(($) => $.gratitude.refusals.notReceiver);
+      return { text: t(($) => $.gratitude.refusals.notReceiver) };
     case "gift_not_received":
-      return t(($) => $.gratitude.refusals.notReceived);
+      return { text: t(($) => $.gratitude.refusals.notReceived) };
     case "gift_not_found":
-      return t(($) => $.gratitude.refusals.notFound);
+      return { text: t(($) => $.gratitude.refusals.notFound) };
     case "replay_invalid":
     case "invalid_request":
-      return t(($) => $.gratitude.refusals.unreadable);
+      return { text: t(($) => $.gratitude.refusals.unreadable) };
     default:
-      return t(($) => $.gratitude.refusals.other, { handle, code: error.code });
+      return {
+        text: t(($) => $.gratitude.refusals.other, { handle }),
+        detail: errorDetail(error),
+      };
   }
 }
 
@@ -282,9 +288,9 @@ export function GratitudeMiniGame({
   useFocusTrap(root, { onEscape: close });
   // The trap focuses the first control, the X; the heart takes it, so Enter taps rather than closes.
   useEffect(() => engine.current?.focusHeart(), []);
-  // The heart has gone, and disabled: the receipt's button takes focus.
+  // The heart has gone, and disabled: the receipt's key takes focus, not a Copy in its note.
   useEffect(() => {
-    if (ended) receipt.current?.querySelector("button")?.focus();
+    if (ended) receipt.current?.querySelector<HTMLElement>(".gr-rc-actions button")?.focus();
   }, [ended]);
 
   const tierGloss = ended ? shownGloss(TIER_NAMES[ended.peakTier].en) : "";
@@ -296,7 +302,7 @@ export function GratitudeMiniGame({
       : sending?.state === "kept"
         ? { kind: "kept", text: t(($) => $.gratitude.receipt.kept, { handle }) }
         : sending?.state === "refused"
-          ? { kind: "refused", text: refusalText(t, sending.error, handle) }
+          ? { kind: "refused", ...refusalNote(t, sending.error, handle) }
           : null;
   const receiptLabel =
     note?.kind === "sending"
@@ -384,7 +390,9 @@ export function GratitudeMiniGame({
       {ended && (
         <section
           ref={receipt}
-          className={note ? "gr-receipt is-on has-note" : "gr-receipt is-on"}
+          className={["gr-receipt is-on", note && "has-note", note?.detail && "has-detail"]
+            .filter(Boolean)
+            .join(" ")}
           aria-label={receiptLabel}
         >
           <div className="gr-rc-row">
@@ -418,7 +426,12 @@ export function GratitudeMiniGame({
               </div>
             </div>
           </div>
-          {note && <p className={`gr-rc-note is-${note.kind}`}>{note.text}</p>}
+          {note && (
+            <div className={`gr-rc-note is-${note.kind}`}>
+              <p>{note.text}</p>
+              {note.detail && <ErrorDetail text={note.detail} />}
+            </div>
+          )}
           <div className="gr-rc-actions">
             <LabelButton block icon={<StickerBoardIcon />} onClick={leave}>
               {t(($) => $.ui.backToBoard)}

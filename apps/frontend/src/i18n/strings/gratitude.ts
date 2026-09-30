@@ -114,10 +114,10 @@ export const gratitude = {
       en: "Croquis couldn’t read your combo, so it wasn’t sent. Close this and send your gratitude again.",
       ja: "クロッキーが今回の感謝を読み取れなかったため、送られませんでした。閉じてから、もう一度感謝を送ってください。",
     },
-    /** Gratitude Mini-game, receipt card's note for any other refusal; {{code}} is the server's code for it */
+    /** Gratitude Mini-game, receipt card's note for any other refusal, over its details for a report: the server's status, code and English words */
     other: {
-      en: "Croquis didn’t accept your gratitude for {{handle}} ({{code}}), so this combo wasn’t sent.",
-      ja: "クロッキーが{{handle}}さんへの感謝を受け付けなかったため（{{code}}）、今回の感謝は送られませんでした。",
+      en: "Croquis didn’t accept your gratitude for {{handle}}, so this combo wasn’t sent.",
+      ja: "クロッキーが{{handle}}さんへの感謝を受け付けなかったため、今回の感謝は送られませんでした。",
     },
   },
 } as const satisfies Section;

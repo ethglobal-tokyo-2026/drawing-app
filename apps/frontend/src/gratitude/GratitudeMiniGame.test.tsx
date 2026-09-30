@@ -7,6 +7,7 @@ import { ApiError, type ApiClient } from "../api/apiClient";
 import { ApiProvider } from "../api/ApiProvider";
 import { MeHolder } from "../api/MeHolder";
 import { emptyApi, gratitudeOf, recordGratitudeBody, TEST_ME } from "../api/testing";
+import { errorDetail } from "../i18n/errorMessage";
 import { i18next } from "../i18n/i18n";
 import { GratitudeMiniGame } from "./GratitudeMiniGame";
 import { resendPendingGratitude } from "./gratitudeOutbox";
@@ -272,7 +273,7 @@ describe("GratitudeMiniGame", () => {
     [404, "gift_not_found", /isn’t here anymore/, false],
     [409, "gift_not_received", /isn’t marked received yet/, true],
     [400, "replay_invalid", /couldn’t read your combo/, true],
-    [403, "something_new", /\(something_new\)/, false],
+    [403, "something_new", /didn’t accept your gratitude for @alice/, false],
   ])(
     "says why the server refused the gratitude (%i %s), and offers sending again only where it can work",
     async (status, code, reason, offersAgain) => {
@@ -281,7 +282,7 @@ describe("GratitudeMiniGame", () => {
       open({ giftId: "g1" });
       tapOnce();
       await play(ONE_TAP_ENDS_MS);
-      const note = receiptText(".gr-rc-note");
+      const note = receiptText(".gr-rc-note p");
       expect(note).toMatch(reason);
       expect(note).toContain("wasn’t sent");
       expect(/(send|try) (it |your gratitude )?again/i.test(note)).toBe(offersAgain);
@@ -289,6 +290,22 @@ describe("GratitudeMiniGame", () => {
       expect(live()).toBe(note);
     },
   );
+
+  it("keeps an unforeseen refusal's code out of its sentence, as details for a report, and leaves focus on the key", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const refusal = new ApiError(403, { error: "something_new", detail: "the combo broke a rule" });
+    recordGratitude.mockRejectedValue(refusal);
+    open({ giftId: "g1" });
+    tapOnce();
+    await play(ONE_TAP_ENDS_MS);
+    const sentence = receiptText(".gr-rc-note p");
+    expect(sentence).toContain("wasn’t sent");
+    expect(sentence).not.toContain(refusal.code);
+    expect(receiptText(".gr-rc-note .error-detail")).toContain(errorDetail(refusal));
+    expect(live()).toBe(sentence);
+    // Copy sits in the note above the key, but the key is what takes focus.
+    expect(document.activeElement?.textContent).toContain("Back to My board");
+  });
 
   it("ends a combo in play at the X and shows its receipt, rather than closing on a send nobody saw", async () => {
     open({ giftId: "g1" });
