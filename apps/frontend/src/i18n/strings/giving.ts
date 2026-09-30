@@ -79,8 +79,6 @@ export const giving = {
   give: { en: "Give {{no}}", ja: "{{no}}を贈る" },
   /** Giving's first screen and the give sheet: the X button's name for assistive tech */
   close: { en: "Close", ja: "閉じる" },
-  /** Giving's "Sealed and sent" screen, and the giver's received notice: the button that closes it */
-  backToBoard: { en: "Back to my sticker board", ja: "シールボードに戻る" },
   /** Giving from someone else's sticker board: picking one of yours first. */
   giveSheet: {
     /** The give sheet, opened by Give on someone else's sticker board: its title */

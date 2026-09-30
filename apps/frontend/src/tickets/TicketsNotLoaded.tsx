@@ -38,7 +38,7 @@ export function TicketsNotLoaded({ error, onRetry, onBoard }: Props) {
         </Key>
       ) : (
         <Key className="out-of-tickets__key" icon={<StickerBoardIcon />} onClick={onBoard}>
-          {t(($) => $.tickets.goToStickerBoard)}
+          {t(($) => $.ui.backToBoard)}
         </Key>
       )}
       {error && (

@@ -114,7 +114,7 @@ describe("LiftedSticker", () => {
 
     press("Next sticker");
     press("Next sticker");
-    press("Go to your sticker board");
+    press("Back to My board");
     expect(onGoToBoard).toHaveBeenLastCalledWith(TEST_OWNER);
   });
 

@@ -90,7 +90,7 @@ describe("Draw on the sticker board", () => {
       "Out of tickets for today",
     );
     const back = [...document.querySelectorAll("button")].find(
-      (b) => b.textContent === "Back to my board",
+      (b) => b.textContent === "Back to My board",
     );
     act(() => back?.click());
     expect(document.querySelector("[role=dialog]")).toBeNull();

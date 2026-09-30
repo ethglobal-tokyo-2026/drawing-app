@@ -44,10 +44,6 @@ export const tickets = {
   drawWithTickets: { en: "Draw: {{tickets}}", ja: "かく：{{tickets}}" },
   /** Start card when only reserve tickets are left, and the out-of-tickets card: the button under the key, with a ticket icon, that opens the reserve ticket checkout */
   buyReserveTickets: { en: "Buy reserve tickets", ja: "有償チケットを買う" },
-  /** Out-of-tickets card (the main key, or the button under Draw once refilled) and the card shown while tickets load: goes back to the sticker board */
-  goToStickerBoard: { en: "Go to sticker board", ja: "シールボードへ" },
-  /** Out-of-tickets card over the sticker board, when Draw finds no tickets (the main key, or the button under Draw once refilled): closes the card, back to the board; named like the My board tab, and short enough for the card's key */
-  backToStickerBoard: { en: "Back to my board", ja: "マイボードに戻る" },
   /** Quiet link at the foot of the start card, the tickets-didn't-load card and the ticket shop's card: closes the card without spending or buying */
   notNow: { en: "Not now", ja: "あとで" },
   /** Key on the card when tickets didn't load, the link after the Shop's tickets problem, and the link after the ticket shop's balance or price problem: tries again */

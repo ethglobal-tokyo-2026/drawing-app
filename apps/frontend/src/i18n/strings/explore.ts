@@ -164,8 +164,6 @@ export const explore = {
     },
     /** Explore tab, lifted sticker: label stock under the fine print that opens the artist's sticker board */
     goToBoard: { en: "Go to {{artist}}'s sticker board", ja: "{{artist}}さんのシールボードへ" },
-    /** Explore tab, lifted sticker: the same label stock on a sticker you drew, opening your own board */
-    goToYourBoard: { en: "Go to your sticker board", ja: "あなたのシールボードへ" },
     /** Explore tab, lifted sticker: the quiet link at the sheet's foot that puts the sticker back on the pile */
     putBack: { en: "Put back", ja: "もどす" },
     /** Explore tab, lifted sticker: screen readers' name for the small arrow left of the sticker, which lifts the one before it */

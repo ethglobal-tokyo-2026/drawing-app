@@ -1,6 +1,8 @@
 import type { Section } from "../catalog";
 
 export const ui = {
+  /** Every button that leads back to your own sticker board, named like its tab: the ticket cards, the Receive gift dialog, Giving's closing screens and gift-received notice, Explore's lifted sticker of your own, the sticker detail's back button */
+  backToBoard: { en: "Back to My board", ja: "マイボードに戻る" },
   lazyScreen: {
     /** A note at the top of any screen, when the code for what it opened (Explore, the drawing screen, the sticker tray, a sticker's detail, Giving, the stat board, the Mini-game, a gift, World ID) didn't load: over the browser's reason, beside Reload */
     didntLoad: {

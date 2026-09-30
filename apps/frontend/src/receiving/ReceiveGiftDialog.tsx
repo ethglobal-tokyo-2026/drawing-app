@@ -185,7 +185,7 @@ export function ReceiveGiftDialog({ from, onClose }: Props) {
   const leave =
     me.inClient && !fromBoard
       ? { label: t(($) => $.receiving.backToLine), icon: <ArrowSquareOut /> }
-      : { label: t(($) => $.receiving.goToStickerBoard), icon: <StickerBoardIcon size={18} /> };
+      : { label: t(($) => $.ui.backToBoard), icon: <StickerBoardIcon size={18} /> };
   const backToLine = () => {
     // Outside LINE's app there's no window to close, so the board shows instead.
     if (me.inClient && !fromBoard) liff.closeWindow();
@@ -469,7 +469,7 @@ function Refusal({ end, giverHandle, leave, onLeave, onBoard, onTryAgain }: Refu
           </>
         ) : end.action === "board" ? (
           <LabelButton block icon={<StickerBoardIcon size={18} />} onClick={onBoard} data-autofocus>
-            {t(($) => $.receiving.goToStickerBoard)}
+            {t(($) => $.ui.backToBoard)}
           </LabelButton>
         ) : (
           <LabelButton block icon={leave.icon} onClick={onLeave} data-autofocus>

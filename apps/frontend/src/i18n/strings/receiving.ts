@@ -174,8 +174,6 @@ export const receiving = {
   },
   /** Gift refusal screen, inside LINE's app: the button that closes LINE's window, or the quiet link under Try again */
   backToLine: { en: "Back to LINE", ja: "LINEに戻る" },
-  /** Gift refusal screen: the button when the gift was already received or is your own; outside LINE's app, also in Back to LINE's place */
-  goToStickerBoard: { en: "Go to my sticker board", ja: "自分のシールボードへ" },
   /** Gift refusal screen, when the gift is still on its way or its preview failed: the button that loads the gift again */
   tryAgain: { en: "Try again", ja: "もう一度" },
   /** Asks, once a received sticker is on the board, whether to send its giver gratitude now. */

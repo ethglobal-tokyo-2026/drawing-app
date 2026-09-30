@@ -52,9 +52,7 @@ export function OutOfTickets({
   const { at, msLeft } = useRefillCountdown(state.nextRefillAt);
   const id = useId();
   const refilled = ticketsLeft(state) > 0;
-  const boardLabel = overBoard
-    ? t(($) => $.tickets.backToStickerBoard)
-    : t(($) => $.tickets.goToStickerBoard);
+  const boardLabel = t(($) => $.ui.backToBoard);
 
   // Over the board the card dims the tab strip too (App.css), and a tap there closes it like its scrim.
   useEffect(() => {

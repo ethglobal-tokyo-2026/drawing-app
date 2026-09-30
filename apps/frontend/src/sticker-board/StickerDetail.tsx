@@ -218,7 +218,7 @@ export function StickerDetail({
       <header className="sticker-detail__top">
         <button type="button" className="sticker-detail__back" onClick={close}>
           <StickerBoardIcon size={18} />
-          <span>{t(($) => $.stickerBoard.detail.back)}</span>
+          <span>{t(($) => $.ui.backToBoard)}</span>
         </button>
       </header>
 

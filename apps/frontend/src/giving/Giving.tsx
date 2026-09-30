@@ -242,7 +242,7 @@ export function Giving({
           data-autofocus
           onClick={() => onClose(true)}
         >
-          {t(($) => $.giving.backToBoard)}
+          {t(($) => $.ui.backToBoard)}
         </LabelButton>
       </div>
     );

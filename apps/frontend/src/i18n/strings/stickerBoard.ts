@@ -500,8 +500,6 @@ export const stickerBoard = {
   detail: {
     /** Sticker detail: screen readers' name for the screen when it has no sticker to show */
     label: { en: "Sticker", ja: "シール" },
-    /** Sticker detail: the back button at the top, with the sticker board icon */
-    back: { en: "Sticker board", ja: "シールボード" },
     /** Sticker detail, opened from a sticker you hold: screen readers' name for the strip of sticker thumbnails at the top */
     yourStickers: { en: "Your stickers", ja: "手持ちのシール" },
     /** Sticker detail, opened from a given sticker's blank spot in the sticker tray: screen readers' name for the strip of thumbnails of the stickers you gave */

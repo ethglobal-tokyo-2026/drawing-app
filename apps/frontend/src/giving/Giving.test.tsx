@@ -125,7 +125,7 @@ describe("Giving", () => {
     await wait(300);
     expect(document.querySelector(".gift-bag")?.getAttribute("data-state")).toBe("sealed");
 
-    tap("Back to my sticker board");
+    tap("Back to My board");
     expect(onClose).toHaveBeenCalledWith(true);
   });
 
