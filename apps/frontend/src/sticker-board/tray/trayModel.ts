@@ -189,6 +189,58 @@ export interface TrayState {
   destroyed: boolean;
 }
 
+/** What every part of the sticker tray is given: its board, its elements and their helpers, and its state. */
+export interface Tray {
+  board: HTMLElement;
+  api: TrayBoard;
+  /** Something the tray couldn't do, for the board to say. */
+  problem: (problem: TrayProblem) => void;
+  doc: Document;
+  win: Window & typeof globalThis;
+  /** The person asked for reduced motion. */
+  reduced: () => boolean;
+  /** Listens until the tray is destroyed. */
+  listen: <K extends keyof HTMLElementEventMap>(
+    el: HTMLElement,
+    type: K,
+    fn: (e: HTMLElementEventMap[K]) => void,
+  ) => void;
+  /** A timeout the tray clears when it's destroyed. */
+  later: (fn: () => void, ms: number) => number;
+  cancel: (t: number) => void;
+  make: <K extends keyof HTMLElementTagNameMap>(
+    tag: K,
+    className: string,
+    ...kids: (Node | string)[]
+  ) => HTMLElementTagNameMap[K];
+  decorative: <T extends Element>(el: T) => T;
+  icon: (d: string) => SVGSVGElement;
+  zip: Zipper;
+  /** The tray's fixed words, in the app's language. */
+  words: Readonly<
+    Record<"sheets" | "tabs" | "new" | "putBack" | "slotHint" | "spread" | "empty", string>
+  >;
+  root: HTMLDivElement;
+  /** Where a sticker in hand would land on the board. */
+  land: HTMLDivElement;
+  /** What's out over the board: a sticker in hand, a pulled-out sheet. */
+  fly: HTMLDivElement;
+  mat: HTMLDivElement;
+  spreadLayer: HTMLDivElement;
+  stack: HTMLDivElement;
+  tabsEl: HTMLDivElement;
+  /** What the sheet in front's stickers do, said once for the sheet. */
+  hint: HTMLParagraphElement;
+  /** Says a change on the tray's one polite status line. */
+  say: (text: string) => void;
+  ui: TrayState;
+  /** The board's width and height, and where the tray's column starts on it. */
+  Wb: () => number;
+  Hb: () => number;
+  colLeft: () => number;
+  boardView: () => BoardView;
+}
+
 /** Each sheet behind the front one sits this much lower, so its dated foot shows. */
 export const PEEK = 15;
 /** Sheets shown behind the front one; deeper ones become the stack's depth, a button that spreads them. */

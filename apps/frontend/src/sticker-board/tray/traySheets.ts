@@ -1,0 +1,351 @@
+/**
+ * The sticker tray's sticker sheets, drawn: each with its stickers on their cut lines and its dated
+ * foot, and the stack of them, kept in step with the stickers and read out as they change.
+ */
+import { i18next } from "../../i18n/i18n";
+import { formatMonthDay, formatNo } from "../../stickers/format";
+import { lightUp } from "../../stickers/light";
+import {
+  ICONS,
+  PEEK,
+  PEEKS,
+  SHEET,
+  cssUrl,
+  dayOf,
+  maskOf,
+  px,
+  type Box,
+  type Size,
+  type Slot,
+  type Tray,
+  type TrayModel,
+} from "./trayModel";
+
+/**
+ * How a sheet's stickers take a press: on the sheet in front, inert behind it, or as pictures inside
+ * a spread cell, which is one button.
+ */
+type SlotUse = "live" | "behind" | "picture";
+/** How a sheet is named: a button behind the front one, or the sheet in front or pulled out. */
+type SheetName = "back" | "spreadFront" | "front" | "pulled";
+
+/** Each level back is this much narrower. */
+const INSET = 0.025;
+/** Where stickers sit until every cut line is known: a zigzag from the bottom up, the newest highest. */
+const STAND_IN: readonly (readonly [x: number, y: number, r: number])[] = [
+  [44, 286, -2.5],
+  [110, 306, 2.5],
+  [44, 184, 2],
+  [110, 204, -2.5],
+  [44, 82, -2],
+  [110, 102, 3],
+];
+/** The box a sticker's image is fitted into on a sheet. */
+const FIT = { w: 66, h: 76 };
+
+export function createTraySheets(tray: Tray, trayModel: TrayModel) {
+  const { doc, zip, make, decorative, icon, words, hint, say, stack, ui } = tray;
+  const { newIds, matches, sheetItems, sheetMatches, topF, resetOrder } = trayModel;
+
+  /** A sheet's transform at a depth in the stack: lower, and narrower from its foot, the further back. */
+  const restAt = (depth: number, dy = 0, r = 0) =>
+    `translateY(${((depth * PEEK) / ui.shrink + dy).toFixed(1)}px) rotate(${r.toFixed(2)}deg) scale(${(1 - INSET * depth).toFixed(4)})`;
+  /** The stack's left inset when shrunk: the sheets stay centered in the mouth. */
+  const shrunkInset = () => (SHEET.w * (1 - ui.shrink)) / 2;
+
+  function loadImages() {
+    if (ui.imagesOn || ui.destroyed) return;
+    ui.imagesOn = true;
+    if (ui.g || ui.busy) ui.stale = true;
+    else {
+      rerenderPulled();
+      renderStack();
+    }
+  }
+
+  /* ---------------------------------------------------------------- drawing a sheet */
+  function fitOf(s: Slot): Size {
+    const ar = s.width / s.height;
+    return ar >= FIT.w / FIT.h ? { w: FIT.w, h: FIT.w / ar } : { w: FIT.h * ar, h: FIT.h };
+  }
+  function placeOf(s: Slot): Box {
+    if (s.pos) return { x: s.pos.x, y: s.pos.y, r: s.pos.r, w: s.pos.w, h: s.pos.h };
+    const [x, y, r] = STAND_IN[s.slot];
+    return { x, y, r, ...fitOf(s) };
+  }
+  function slotEl(s: Slot, isNew: boolean, use: SlotUse) {
+    const q = placeOf(s);
+    const el: HTMLElement = make(
+      use === "picture" ? "span" : "button",
+      `tray__slot${matches(s) ? "" : " is-out"}`,
+    );
+    if (el instanceof HTMLButtonElement) el.type = "button";
+    if (use === "picture") decorative(el);
+    // Behind the front sheet a sticker can't be reached, so nothing visits it.
+    else if (use === "behind") el.setAttribute("inert", "");
+    el.dataset.id = s.id;
+    el.dataset.state = s.state;
+    el.style.setProperty("--x", px(q.x));
+    el.style.setProperty("--y", px(q.y));
+    el.style.setProperty("--r", `${q.r.toFixed(2)}deg`);
+    el.style.width = px(q.w);
+    el.style.height = px(q.h);
+    el.style.margin = `${px(-q.h / 2)} 0 0 ${px(-q.w / 2)}`;
+    const no = { no: formatNo(s.no) };
+    // A given sticker's spot stays blank: a button with nothing on it, which takes the shared press.
+    if (s.givenTo !== undefined) {
+      if (use !== "picture") {
+        el.dataset.press = "";
+        el.setAttribute(
+          "aria-label",
+          i18next.t(($) => $.stickerBoard.tray.slot.given, { ...no, recipient: s.givenTo }),
+        );
+      }
+      return el;
+    }
+    if (use !== "picture")
+      el.setAttribute(
+        "aria-label",
+        s.state === "used"
+          ? isNew
+            ? i18next.t(($) => $.stickerBoard.tray.slot.usedNew, no)
+            : i18next.t(($) => $.stickerBoard.tray.slot.used, no)
+          : isNew
+            ? i18next.t(($) => $.stickerBoard.tray.slot.newOnSheet, no)
+            : i18next.t(($) => $.stickerBoard.tray.slot.onSheet, no),
+      );
+    const silhouette = make("span", "tray__used-sticker-silhouette", make("i", ""));
+    const fit = make(
+      "span",
+      "tray__fit",
+      make(
+        "span",
+        "tray__used-sticker-silhouette-wrap",
+        make("span", "tray__used-sticker-silhouette-ring"),
+        silhouette,
+      ),
+    );
+    // A used sticker silhouette shows no sticker, so it loads none; nor does any slot before its
+    // images are let load.
+    if (s.state !== "used" && ui.imagesOn) {
+      // Drawn by someone else, or NSFW, it wears the sheet's foil under its image, as StickerFoil
+      // draws it.
+      if ((s.gift || s.nsfw) && s.urls.mask) {
+        const foil = decorative(
+          make(
+            "span",
+            `sticker-foil sticker-foil--sheet sticker-foil--${s.nsfw ? "pink" : "holo"}${s.urls.foil ? " sticker-foil--baked" : ""}`,
+            make("span", "sticker-foil__cast"),
+            make(
+              "span",
+              "sticker-foil__band",
+              make("i", "sticker-foil__sheen"),
+              make("i", "sticker-foil__glint"),
+            ),
+          ),
+        );
+        foil.style.setProperty("--foil-i", String(s.no));
+        if (s.urls.foil) foil.style.setProperty("--foil-mask", cssUrl(s.urls.foil));
+        lightUp(foil);
+        fit.append(foil);
+      }
+      const img = make("img", "tray__img");
+      img.decoding = "async";
+      img.src = s.urls.png;
+      img.alt = "";
+      img.draggable = false;
+      fit.append(img);
+    }
+    fit.style.width = px(q.w);
+    fit.style.height = px(q.h);
+    if (ui.imagesOn) fit.style.setProperty("--m", cssUrl(maskOf(s)));
+    el.append(fit);
+    if (isNew) el.append(decorative(make("span", "tray__new", words.new)));
+    return el;
+  }
+  function rangeOf(f: number) {
+    const ats = sheetItems(f).map((s) => s.arrivedAt);
+    if (!ats.length) return "";
+    const lo = Math.min(...ats);
+    const hi = Math.max(...ats);
+    return dayOf(lo) === dayOf(hi)
+      ? formatMonthDay(lo)
+      : `${formatMonthDay(lo)}–${formatMonthDay(hi)}`;
+  }
+  /** A sheet's name: as a button that brings it to the front, or as the sheet that is in front or out. */
+  const sheetLabel = (f: number, name: SheetName = "back") => {
+    const sheet = { number: f + 1, dates: rangeOf(f) };
+    switch (name) {
+      case "back":
+        return i18next.t(($) => $.stickerBoard.tray.sheet, sheet);
+      case "spreadFront":
+        return i18next.t(($) => $.stickerBoard.tray.sheetInFront, sheet);
+      case "front":
+        return i18next.t(($) => $.stickerBoard.tray.frontSheet, sheet);
+      case "pulled":
+        return i18next.t(($) => $.stickerBoard.tray.pulledSheet, sheet);
+    }
+  };
+  /** Says which sheet is in front. */
+  const sayFront = () => say(sheetLabel(topF(), "front"));
+  /** Says a sticker went from its sheet onto the board, or from the board back into the tray. */
+  const sayStuckOn = (s: Slot) =>
+    say(i18next.t(($) => $.stickerBoard.tray.status.stuckOn, { no: formatNo(s.no) }));
+  const sayReturned = (s: Slot) =>
+    say(i18next.t(($) => $.stickerBoard.tray.status.returned, { no: formatNo(s.no) }));
+  /** Says how many sheets a folder tab shows, or that a filter shows none. */
+  const sayFilter = () =>
+    say(
+      i18next.t(($) => $.stickerBoard.tray.status.filtered, {
+        filter: i18next.t(($) => $.stickerBoard.tray.filters[ui.filter]),
+        count: Array.from({ length: ui.model.count }, (_, f) => f).filter(sheetMatches).length,
+      }),
+    );
+  /**
+   * A loose sheet: a tear strip to grip at its top, stickers on their cut lines, its dates on its foot.
+   * Behind the front sheet only its foot is a stop; in the spread the whole sheet is one button, so
+   * its stickers are pictures.
+   */
+  function sheetEl(
+    f: number,
+    cls: string,
+    depth: number,
+    news: ReadonlySet<string> = newIds(),
+    use: SlotUse = depth > 0 ? "behind" : "live",
+  ) {
+    const paper = make("div", "tray__paper", decorative(make("i", "tray__tear")));
+    // A sticker on its way leaves nothing; one received leaves its blank spot, which opens it.
+    for (const s of sheetItems(f))
+      if (s.state !== "given" || s.givenTo !== undefined)
+        paper.append(slotEl(s, news.has(s.id), use));
+    // Nothing to put on the only sheet yet: it says what will be.
+    if (ui.model.slots.length === 0)
+      paper.append(make("p", "fine tray__empty keep-phrases", words.empty));
+    const foot = make(
+      "div",
+      "tray__foot",
+      make("span", "fine", rangeOf(f)),
+      make("span", "fine", String(f + 1).padStart(2, "0")),
+    );
+    if (use === "behind") {
+      foot.setAttribute("role", "button");
+      foot.tabIndex = 0;
+      foot.setAttribute("aria-label", sheetLabel(f));
+    }
+    paper.append(foot, make("i", "tray__shade"));
+    const el = make("div", `tray__sheet ${cls}`, paper);
+    if (use === "live") {
+      el.setAttribute("role", "group");
+      el.setAttribute("aria-label", sheetLabel(f, cls.includes("is-pulled") ? "pulled" : "front"));
+      el.setAttribute("aria-describedby", hint.id);
+    }
+    el.dataset.f = String(f);
+    el.dataset.depth = String(depth);
+    el.style.transform = restAt(depth);
+    return el;
+  }
+  /**
+   * The stack: the front sheet whole, the next ones a strip apart below it, the rest as a button. The
+   * front sheet comes first in the page, so Tab and screen readers take its stickers before the
+   * edges of the sheets behind it; the CSS stacks them the other way.
+   */
+  function renderStack() {
+    const active = doc.activeElement;
+    const focused = active instanceof HTMLElement && stack.contains(active) ? active : null;
+    const focusedId = focused?.closest<HTMLElement>(".tray__slot")?.dataset.id;
+    if (!ui.order.length) resetOrder();
+    // The only sheet is out over the board.
+    if (!ui.order.length) {
+      stack.replaceChildren();
+      if (focused) keepFocus(focusedId);
+      return;
+    }
+    const order = ui.order;
+    const k = Math.min(PEEKS, order.length - 1);
+    const hidden = order.length - 1 - k;
+    const news = newIds();
+    const kids: HTMLElement[] = [sheetEl(order[0], "is-top", 0, news)];
+    for (let i = 1; i <= k; i++)
+      kids.push(sheetEl(order[i], i === 1 ? "is-next" : "is-peek", i, news));
+    if (hidden > 0) {
+      const more = make("button", "tray__depth", icon(ICONS.stack), make("span", "", `+${hidden}`));
+      more.type = "button";
+      more.style.transform = `translateY(${SHEET.h + (k * PEEK + 3) / ui.shrink}px) scale(${(1 / ui.shrink).toFixed(4)})`;
+      const spread = i18next.t(($) => $.stickerBoard.tray.moreSheets, { count: hidden });
+      more.setAttribute("aria-label", spread);
+      kids.push(more);
+    }
+    stack.replaceChildren(...kids);
+    if (focused) keepFocus(focusedId);
+    markShown();
+  }
+  const holdsFocus = (el: Element | undefined) => el?.contains(doc.activeElement) === true;
+  /** Redrawn under a keyboard, the stack keeps focus: on the same sticker if it's still in front. */
+  function keepFocus(id: string | undefined) {
+    const front = stack.querySelector(".tray__sheet.is-top");
+    const same = id
+      ? front?.querySelector<HTMLElement>(`.tray__slot[data-id="${CSS.escape(id)}"]`)
+      : null;
+    (same ?? front?.querySelector<HTMLElement>(".tray__slot") ?? stack).focus({
+      preventScroll: true,
+    });
+  }
+  /**
+   * Rebuilds the sheets for the stickers as they are now. Out of sight, under a hand or mid-turn,
+   * they wait: a sheet redrawn there would drop what's being done to it.
+   */
+  function redraw() {
+    if (!ui.onShow) {
+      ui.stale = true;
+      return;
+    }
+    if (ui.model.count !== ui.orderedFor || ui.order.some((f) => f >= ui.model.count)) resetOrder();
+    if (ui.g || ui.busy) {
+      ui.stale = true;
+      return;
+    }
+    ui.stale = false;
+    rerenderPulled();
+    renderStack();
+  }
+  /** A press or a turn is over: the sheets catch up with what changed during it. */
+  const catchUp = () => {
+    if (ui.stale) redraw();
+  };
+  function sheetOf(el: Element | null) {
+    const sheet = el?.closest<HTMLElement>(".tray__sheet");
+    return sheet ? Number(sheet.dataset.f) : null;
+  }
+  function markShown() {
+    if (!zip.isOpen) return;
+    for (const f of [topF(), ui.pulled?.f])
+      if (f !== undefined) for (const s of sheetItems(f)) ui.shown.add(s.id);
+  }
+  function rerenderPulled() {
+    const p = ui.pulled;
+    p?.el.querySelector(".tray__sheet")?.replaceWith(sheetEl(p.f, "is-top is-pulled", 0));
+  }
+
+  return {
+    restAt,
+    shrunkInset,
+    placeOf,
+    sheetEl,
+    sheetLabel,
+    renderStack,
+    holdsFocus,
+    keepFocus,
+    redraw,
+    catchUp,
+    sheetOf,
+    markShown,
+    rerenderPulled,
+    loadImages,
+    sayFront,
+    sayStuckOn,
+    sayReturned,
+    sayFilter,
+  };
+}
+
+export type TraySheets = ReturnType<typeof createTraySheets>;
