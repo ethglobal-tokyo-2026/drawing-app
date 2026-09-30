@@ -37,7 +37,7 @@ interface Props {
   onClose: () => void;
 }
 
-/** The color sheet: recent colors, the swatches, a hue and saturation pad, and a brightness bar. */
+/** The color sheet: recent colors, a hue and saturation pad, a brightness bar, and the swatches. */
 export function ColorSheet({ open, onClose, ...picker }: Props) {
   const { t } = useTranslation();
   return (
@@ -125,13 +125,6 @@ function ColorPicker({ id, color, recent, onPick, onPreview }: Omit<Props, "open
           onPick={onPick}
         />
       </div>
-      <Swatches
-        label={t(($) => $.stickerCreation.colorSheet.swatches)}
-        colors={SWATCH_HEXES}
-        color={color}
-        columns={10}
-        onPick={onPick}
-      />
       <div
         className="color-pad"
         role="slider"
@@ -162,6 +155,14 @@ function ColorPicker({ id, color, recent, onPick, onPreview }: Omit<Props, "open
       >
         <span className="color-brightness-thumb" />
       </div>
+      {/* Last, so a short screen shows the pad first and the swatches wait behind a scroll. */}
+      <Swatches
+        label={t(($) => $.stickerCreation.colorSheet.swatches)}
+        colors={SWATCH_HEXES}
+        color={color}
+        columns={10}
+        onPick={onPick}
+      />
     </div>
   );
 }
