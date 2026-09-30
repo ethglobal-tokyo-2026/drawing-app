@@ -8,7 +8,7 @@
 import { tokyoTicketDay } from "@drawing-app/api/client";
 import { i18next } from "../../i18n/i18n";
 import { timeOurWork } from "../../performance/performanceRecorder";
-import { formatNo } from "../../stickers/format";
+import { formatMonthDay, formatNo } from "../../stickers/format";
 import { lightUp } from "../../stickers/light";
 import type { StickerUrls } from "../../stickers/stickerUrls";
 import { packSheets, type PackedItem, type Shape } from "./sheetPacking";
@@ -244,11 +244,6 @@ const px = (v: number) => `${v.toFixed(1)}px`;
 const isShape = (s: Shape | undefined): s is Shape => s !== undefined;
 const maskOf = (s: Slot) => s.urls.mask ?? s.urls.png;
 const dayOf = (t: number) => tokyoTicketDay(new Date(t));
-const monthDay = (t: number) => {
-  const d = new Date(t);
-  return `${d.getMonth() + 1}.${d.getDate()}`;
-};
-const sameDay = (a: number, b: number) => new Date(a).toDateString() === new Date(b).toDateString();
 const matchesFilter = (s: Slot, f: Filter) => f === "all" || (f === "mine" ? !s.gift : s.gift);
 
 /** Resolves when an animation ends, finished or cancelled along with its element. */
@@ -600,7 +595,9 @@ export function createTrayEngine(
     if (!ats.length) return "";
     const lo = Math.min(...ats);
     const hi = Math.max(...ats);
-    return sameDay(lo, hi) ? monthDay(lo) : `${monthDay(lo)}–${monthDay(hi)}`;
+    return dayOf(lo) === dayOf(hi)
+      ? formatMonthDay(lo)
+      : `${formatMonthDay(lo)}–${formatMonthDay(hi)}`;
   }
   /** A sheet's name, as a button that brings it to the front. */
   const sheetLabel = (f: number, inFront = false) => {

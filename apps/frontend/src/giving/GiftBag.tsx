@@ -2,7 +2,8 @@ import { ArrowRight, HandPointing } from "../icons";
 import { Fragment, useLayoutEffect, useRef, type DOMAttributes } from "react";
 import { i18next } from "../i18n/i18n";
 import { Trans, useTranslation } from "../i18n/react";
-import { giftTag, sealDate, type GiftTag } from "./giftTag";
+import { formatMonthDay } from "../stickers/format";
+import { giftTag, type GiftTag } from "./giftTag";
 import "./GiftBag.css";
 
 /** A rubber stamp inked on the tag. */
@@ -141,7 +142,7 @@ export function GiftBag({
       <i className="gift-bag__part gift-bag__mouth" />
       {state !== "opened" && (
         <SealStrip
-          date={sealedAt === undefined ? "" : sealDate(sealedAt)}
+          date={sealedAt === undefined ? "" : formatMonthDay(sealedAt)}
           insideUrl={inside}
           tear={tear ?? 0}
           pullTab={state === "torn" ? undefined : pullTab}
