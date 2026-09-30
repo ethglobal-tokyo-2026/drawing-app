@@ -2,8 +2,9 @@ import { chatMenuBatches, ticketUses, type Db } from "@drawing-app/db";
 import { eq } from "drizzle-orm";
 import type { Clock, LineChatMenu } from "../deps.ts";
 import { logFailure, logInfo } from "../diagnostics.ts";
+import { startMidnightJob, type Schedule } from "../midnightJob.ts";
 import { LineApiError, type BatchPhase, type LineMessaging } from "../services/lineMessaging.ts";
-import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
+import { tokyoTicketDay } from "../ticketDays.ts";
 import { midnightMoves, type ChatMenuIds } from "./menus.ts";
 
 /** The first look at a batch's progress, then the wait between looks: LINE allows 100 an hour. */
@@ -16,11 +17,6 @@ export const RECHECK_AFTER_MS = LOOK_EVERY_MS - FIRST_LOOK_MS;
 /** Between tries of a batch: LINE takes 3 batches an hour. */
 export const RETRY_AFTER_MS = 25 * 60_000;
 export const MAX_TRIES = 3;
-/**
- * How long after midnight the batch starts, so any link that read yesterday's count, with its
- * token request and link at up to 5 s each, has landed first and the batch moves it too.
- */
-export const AFTER_MIDNIGHT_MS = 15_000;
 
 export interface MidnightDeps {
   db: Db;
@@ -31,20 +27,13 @@ export interface MidnightDeps {
   chatMenu: Pick<LineChatMenu, "relink">;
   /** Waits `ms`. */
   sleep?: (ms: number) => Promise<void>;
-  /** Calls `run` after `ms`, and returns a function that cancels it. */
-  schedule?: (run: () => void, ms: number) => () => void;
+  schedule?: Schedule;
 }
 
 const wait = (ms: number) =>
   new Promise<void>((resolve) => {
     setTimeout(resolve, ms).unref();
   });
-
-const timer = (run: () => void, ms: number) => {
-  const handle = setTimeout(run, ms);
-  handle.unref();
-  return () => clearTimeout(handle);
-};
 
 const batchOf = (db: Db, ticketDay: string) =>
   db.select().from(chatMenuBatches).where(eq(chatMenuBatches.ticketDay, ticketDay)).get();
@@ -158,52 +147,14 @@ export async function runChatMenuBatch(deps: MidnightDeps, ticketDay: string): P
  * The midnight job: today's batch at once, when it hasn't run (the catch-up at boot), then each
  * day's, just after its midnight, Tokyo time. A batch LINE is still running is rechecked after
  * RECHECK_AFTER_MS until it ends or the day turns, so the day's spenders are linked once it ends.
- * Batches run one at a time, and a failure is logged, never thrown. `stop` cancels the next run;
- * `idle` settles when the one running has.
  */
 export function startMidnightBatches(deps: MidnightDeps) {
-  const { clock, schedule = timer } = deps;
   if (midnightMoves(deps.ids).length === 0) {
     logInfo("chat_menu.batch_off", { status: "no_3_menu" });
     return { stop: () => {}, idle: () => Promise.resolve() };
   }
-  let cancel = () => {};
-  let stopped = false;
-  let running = Promise.resolve();
-
-  /** Runs the day's batch; true when LINE is still running it at the last look. */
-  async function runDue() {
-    // A batch that ran past midnight leaves the new day's due at once.
-    for (;;) {
-      const ticketDay = tokyoTicketDay(clock.now());
-      let stillRunning = false;
-      try {
-        stillRunning = await runChatMenuBatch(deps, ticketDay);
-      } catch (error) {
-        logFailure("chat_menu.batch_failed", error, { ticketDay });
-      }
-      if (tokyoTicketDay(clock.now()) === ticketDay) return stillRunning;
-    }
-  }
-
-  function runNext() {
-    running = running.then(runDue).then((stillRunning) => {
-      if (stopped) return;
-      const now = clock.now().getTime();
-      const midnight = nextTokyoTicketDayStart(clock.now()).getTime();
-      // A recheck from midnight on would start the next day's batch before AFTER_MIDNIGHT_MS.
-      const recheck = now + RECHECK_AFTER_MS;
-      const due = stillRunning && recheck < midnight ? recheck : midnight + AFTER_MIDNIGHT_MS;
-      cancel = schedule(runNext, due - now);
-    });
-  }
-
-  runNext();
-  return {
-    stop() {
-      stopped = true;
-      cancel();
-    },
-    idle: () => running,
-  };
+  return startMidnightJob(deps, {
+    failedEvent: "chat_menu.batch_failed",
+    run: async (ticketDay) => ((await runChatMenuBatch(deps, ticketDay)) ? RECHECK_AFTER_MS : null),
+  });
 }
