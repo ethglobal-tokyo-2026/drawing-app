@@ -4,7 +4,6 @@ import { veiledFor } from "../stickers/nsfw";
 import {
   useEffect,
   useId,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -36,6 +35,7 @@ import { PlacedSticker } from "./PlacedSticker";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import { StatCork, type CorkFigures, type StatCorkHandle } from "./stat-board/StatCork";
 import { statFigures } from "./stat-board/statFigures";
+import { useBoardSize } from "./useBoardSize";
 import "./ArtistBoard.css";
 
 interface Props {
@@ -128,7 +128,7 @@ export function ArtistBoard({ person, onBack }: Props) {
   const nameButton = useRef<HTMLButtonElement>(null);
   const flipBack = useRef<HTMLButtonElement>(null);
   const cork = useRef<StatCorkHandle>(null);
-  const [size, setSize] = useState<{ W: number; H: number } | null>(null);
+  const size = useBoardSize(face);
   const [turned, setTurned] = useState(false);
   const [selected, setSelected] = useState<number | null>(null);
   const [viewing, setViewing] = useState<BoardStickerView | null>(null);
@@ -147,21 +147,6 @@ export function ArtistBoard({ person, onBack }: Props) {
   );
   const field = size && visitField(size.W, size.H);
   const menuSticker = selected === null ? null : stickers[selected];
-
-  useLayoutEffect(() => {
-    const el = face.current;
-    if (!el) return;
-    const measure = () =>
-      setSize((was) =>
-        was?.W === el.clientWidth && was.H === el.clientHeight
-          ? was
-          : { W: el.clientWidth, H: el.clientHeight },
-      );
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    measure();
-    return () => observer.disconnect();
-  }, []);
 
   // LINE's header shows the page title.
   useEffect(() => {

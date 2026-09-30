@@ -89,6 +89,7 @@ import { ArtistChipLayer } from "./ArtistChipLayer";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
 import { useBoardGestures } from "./useBoardGestures";
+import { useBoardSize } from "./useBoardSize";
 import "./StickerBoard.css";
 
 // The Zipper shows on the board at rest, so the sticker tray's code starts loading with the board's.
@@ -258,7 +259,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   });
   /** Stickers whose spot didn't save, and why; each goes once a save of it succeeds. */
   const [unsaved, setUnsaved] = useState<ReadonlyMap<string, string>>(() => new Map());
-  const [size, setSize] = useState<{ W: number; H: number } | null>(null);
+  const size = useBoardSize(stage);
   /** The name button's box on the board, which a sticker's knob must stay clear of. */
   const [name, setName] = useState<Box | null>(null);
   /** Draw's box on the board, which the selected sticker's toolbar keeps clear of. */
@@ -423,28 +424,22 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     });
   };
 
+  // The name's width follows the person's name, which arrives after the board; Draw's, its font. Draw
+  // sits at the board's foot, so a new board size moves it too.
   useLayoutEffect(() => {
-    const el = stage.current;
     const who = nameButton.current;
     const key = drawSlot.current;
-    if (!el || !who || !key) return;
+    if (!who || !key) return;
     const measure = () => {
-      setSize((was) =>
-        was?.W === el.clientWidth && was.H === el.clientHeight
-          ? was
-          : { W: el.clientWidth, H: el.clientHeight },
-      );
       setName((was) => kept(was, boxOf(who)));
       setDraw((was) => kept(was, boxOf(key)));
     };
-    // The name's width follows the person's name, which arrives after the board; Draw's, its font.
     const observer = new ResizeObserver(measure);
-    observer.observe(el);
     observer.observe(who);
     observer.observe(key);
     measure();
     return () => observer.disconnect();
-  }, []);
+  }, [size]);
 
   useEffect(() => {
     if (landingId) landed.add(landingId);
