@@ -5,12 +5,14 @@ import { Key } from "../ui/Key";
 import { QuietLink } from "../ui/QuietLink";
 import { Sheet } from "../ui/Sheet";
 import { askForMotion, declineMotion, useMotionPermission } from "../ui/motionPermission";
+import { pressCommitted } from "../ui/press";
 import "./motion-permission-card.css";
 
 /**
  * Asks once, where the platform asks at all (iOS), whether the app may read the phone's motion.
  * iOS shows its prompt only from inside a tap, and the shared press fires a key's click just after
- * the release, so Allow asks on pointerup as well; asking twice doesn't prompt twice.
+ * the release, so Allow asks on a pointerup that commits the press as well; asking twice doesn't
+ * prompt twice.
  */
 export function MotionPermissionCard() {
   const { t } = useTranslation();
@@ -26,7 +28,14 @@ export function MotionPermissionCard() {
     <Sheet label={t(($) => $.app.motionPermission.label)} onClose={declineMotion}>
       <div className="motion-card" ref={root}>
         <p className="motion-card__text">{t(($) => $.app.motionPermission.question)}</p>
-        <Key icon={<Vibrate />} onPointerUp={allow} onClick={allow} data-autofocus>
+        <Key
+          icon={<Vibrate />}
+          onPointerUp={(e) => {
+            if (pressCommitted(e.currentTarget)) allow();
+          }}
+          onClick={allow}
+          data-autofocus
+        >
           {t(($) => $.app.motionPermission.allow)}
         </Key>
         <QuietLink onClick={declineMotion}>{t(($) => $.app.motionPermission.dontAllow)}</QuietLink>

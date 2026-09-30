@@ -77,6 +77,12 @@ function bounds(el: HTMLElement): Bounds {
 const within = (b: Bounds, x: number, y: number, m: number) =>
   x >= b.left - m && x <= b.right + m && y >= b.top - m && y <= b.bottom + m;
 
+/**
+ * Whether the press on `el` has just committed, for a pointerup handler: the press ends in the
+ * document's capture phase, before the element's own handlers run.
+ */
+export const pressCommitted = (el: HTMLElement) => el.dataset.pressState === "pop";
+
 /** Installs the press on the document and returns a function that removes it. */
 export function installPress(): () => void {
   const root = document.documentElement;
