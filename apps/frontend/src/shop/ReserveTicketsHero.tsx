@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { errorReason } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
 import { BuyTicketsIcon } from "../icons";
 import { formatYen } from "../tickets/prices";
@@ -7,6 +8,7 @@ import { TicketCount } from "../tickets/TicketCount";
 import { TicketStubs, type TicketStub } from "../tickets/TicketStubs";
 import { useTickets } from "../tickets/useTickets";
 import { Key } from "../ui/Key";
+import { QuietLink } from "../ui/QuietLink";
 import { REVEAL } from "../ui/reveal";
 import { Skeleton } from "../ui/Skeleton";
 import { TearLine } from "../ui/TearLine";
@@ -25,7 +27,7 @@ const FAN: TicketStub[] = [
 export function ReserveTicketsHero({ onBuy }: { onBuy: () => void }) {
   const { t } = useTranslation();
   const id = useId();
-  const { tickets } = useTickets();
+  const { tickets, error, refresh } = useTickets();
   const packs = useReservePacks();
   // The price waits on the packs, and nothing else here does.
   const price = packs.state === "ready" ? singleTicketPrice(packs.data.packs) : null;
@@ -34,6 +36,13 @@ export function ReserveTicketsHero({ onBuy }: { onBuy: () => void }) {
   return (
     <section className="reserve-hero" aria-labelledby={`${id}-title`}>
       <TicketStubs className="reserve-hero__fan" size="large" stubs={FAN} stars="front" />
+      {/* With no tickets loaded the Shop would read as if you hold none, so a failed load says so. */}
+      {error && (
+        <p className="reserve-hero__held reserve-hero__held--problem" role="alert">
+          {t(($) => $.shop.reserve.heldProblem, { reason: errorReason(error) })}{" "}
+          <QuietLink onClick={refresh}>{t(($) => $.tickets.tryAgain)}</QuietLink>
+        </p>
+      )}
       {held > 0 && (
         <p className="reserve-hero__held">
           <span aria-hidden="true">

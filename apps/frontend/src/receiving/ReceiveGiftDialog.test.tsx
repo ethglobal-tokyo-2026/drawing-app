@@ -187,11 +187,37 @@ describe("ReceiveGiftDialog", () => {
     expect(button("Accept")).toBeDefined();
   });
 
+  it("tears the strip as the tab is pulled, and springs it back when let go short of the snap", async () => {
+    open({ previewGift: () => Promise.resolve(receivable) });
+    await settle();
+    const bag = document.querySelector<HTMLElement>(".gift-bag");
+    const strip = () => Number(bag?.style.getPropertyValue("--gift-tear"));
+    const slider = () =>
+      Number(document.querySelector("[role=slider]")?.getAttribute("aria-valuenow"));
+    const halfway = (PULL.travelPx / PULL.gain) * (PULL.snapAt / 2);
+    onTheTab("pointerdown", 1, 0);
+    onTheTab("pointermove", 1, halfway);
+    await settle(500);
+    expect(strip()).toBeGreaterThan(0.2);
+    expect(slider()).toBe(Math.round(strip() * 100));
+    onTheTab("pointerup", 1, halfway);
+    await settle(1500);
+    expect(strip()).toBeCloseTo(0, 2);
+    expect(slider()).toBe(Math.round(strip() * 100));
+    expect(button("Accept")).toBeUndefined();
+  });
+
   it("receives the gift once on Accept and closes with its sticker", async () => {
     const receiveGift = vi.fn(() => Promise.resolve(received));
     await unpackage(receiveGift);
     press("Accept");
-    await act(async () => button("Accepting…")?.click());
+    // Busy, the key keeps its face and its focus, and a second press does nothing.
+    const busy = button("Accepting…");
+    expect(busy?.disabled).toBe(false);
+    expect(busy?.getAttribute("aria-busy")).toBe("true");
+    expect(busy?.getAttribute("aria-disabled")).toBe("true");
+    expect(document.activeElement).toBe(busy);
+    await act(async () => busy?.click());
     await settle();
     await settle(1000);
     expect(receiveGift).toHaveBeenCalledTimes(1);

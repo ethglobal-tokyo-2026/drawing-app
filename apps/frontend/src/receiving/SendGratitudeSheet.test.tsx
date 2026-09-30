@@ -63,6 +63,23 @@ describe("SendGratitudeSheet", () => {
     expect(host.querySelector("img")?.getAttribute("src")).toBe(ken.linePictureUrl);
   });
 
+  it("is modal: its dialog says so, and the page behind it can't be reached", () => {
+    const behind = document.createElement("main");
+    document.body.append(behind);
+    open(people.ken, people.mika);
+    expect(document.querySelector('[role="dialog"]')?.getAttribute("aria-modal")).toBe("true");
+    expect(behind.inert).toBe(true);
+    expect(button("Send gratitude").closest("[inert]")).toBeNull();
+    unmount();
+    expect(behind.inert).toBe(false);
+    behind.remove();
+  });
+
+  it("sets the giver's handle in the title as one unit, so it never wraps at its hyphen", () => {
+    const { host } = open({ ...people.ken, handle: "Giving-b" }, people.mika);
+    expect(host.querySelector("h2 .name-whole")?.textContent).toBe("@Giving-b");
+  });
+
   it("sends gratitude from its key, and leaves it for later from Later or its perforation", () => {
     const { title } = open(people.ken, people.mika);
     act(() => button("Send gratitude").click());

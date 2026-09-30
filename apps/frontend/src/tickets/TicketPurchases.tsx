@@ -94,12 +94,13 @@ export function TicketPurchases({ owner, shop, className }: Props) {
         icon={<Receipt />}
         aria-expanded={open}
         aria-controls={id}
-        aria-label={t(($) => $.tickets.purchases.show, { name })}
         onClick={() => {
           if (!open) history.start();
           setOpen(!open);
         }}
       >
+        <span>{t(($) => $.tickets.purchases.label)}</span>
+        <span aria-hidden="true">{"·"}</span>
         <span className="ticket-purchases__name">{name}</span>
         <CaretDown className="ticket-purchases__caret" aria-hidden="true" />
       </LabelButton>
@@ -130,7 +131,6 @@ export function TicketPurchases({ owner, shop, className }: Props) {
                       href={suiscanTxUrl(shop.payment.network, p.digest)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      aria-label={t(($) => $.tickets.purchases.open, { digest: p.digest })}
                       onClick={openLinkInLine}
                     >
                       <span>
@@ -144,6 +144,10 @@ export function TicketPurchases({ owner, shop, className }: Props) {
                       <span className="ticket-purchases__price">
                         {formatYen(yenForJpyc(p.amount, shop.payment.decimals))}
                         <ArrowSquareOut aria-hidden="true" />
+                      </span>
+                      {/* The row's name is what it shows; this says where it goes. */}
+                      <span className="visually-hidden">
+                        {t(($) => $.tickets.purchases.opensSuiscan)}
                       </span>
                     </a>
                   </li>

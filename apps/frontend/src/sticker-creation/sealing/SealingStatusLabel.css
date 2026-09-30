@@ -36,7 +36,7 @@
 
 .sealing-status__note {
   font-size: 13px;
-  font-weight: 550;
+  font-weight: 500;
   line-height: 1.3;
   color: var(--graphite);
   text-wrap: balance;

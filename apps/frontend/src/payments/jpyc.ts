@@ -4,7 +4,7 @@ import { SuiGrpcClient } from "@mysten/sui/grpc";
 import { SuiGraphQLClient } from "@mysten/sui/graphql";
 import { coinWithBalance, Transaction, TransactionDataBuilder } from "@mysten/sui/transactions";
 import { normalizeSuiAddress } from "@mysten/sui/utils";
-import { i18next } from "../i18n/i18n";
+import { PaymentFailed, SigningTimedOut } from "./paymentErrors";
 
 /** Where the ticket shop's packs are paid, as the server names it. */
 export type JpycPayment = TicketShop["payment"];
@@ -42,25 +42,6 @@ function withTimeout<T>(work: Promise<T>, ms: number, timedOut: () => Error): Pr
     timer = setTimeout(() => reject(timedOut()), ms);
   });
   return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
-}
-
-/** Signing a ticket payment took too long, so it was never sent and no JPYC moved. */
-export class SigningTimedOut extends Error {
-  constructor() {
-    super(i18next.t(($) => $.tickets.checkout.signingTimedOut));
-  }
-}
-
-/** Sui ran a ticket payment and it failed, so no JPYC moved. */
-export class PaymentFailed extends Error {
-  constructor(digest: string, why: string) {
-    super(
-      i18next.t(($) => $.tickets.checkout.failedOnSui, { reason: why }),
-      {
-        cause: new Error(`Sui ran the payment ${digest}, and it failed: ${why}`),
-      },
-    );
-  }
 }
 
 /** A ticket payment signed and not yet sent, so its digest can be kept before Sui is asked to run it. */

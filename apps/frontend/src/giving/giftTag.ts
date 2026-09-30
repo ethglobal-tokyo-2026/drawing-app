@@ -14,9 +14,3 @@ export const giftTag = (fromHandle: string, toHandle?: string): GiftTag =>
   toHandle
     ? { label: "for", name: formatHandle(toHandle) }
     : { label: "from", name: formatHandle(fromHandle) };
-
-/** The date printed on the tear tape: "SEALED 9.23". */
-export const sealDate = (at: number): string => {
-  const d = new Date(at);
-  return `${d.getMonth() + 1}.${d.getDate()}`;
-};

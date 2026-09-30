@@ -2,15 +2,21 @@ import { describe, expect, it, vi } from "vitest";
 import { letteringCharacters, loadLetteringFonts } from "./letteringFonts";
 import { POP_IN_WORDS } from "./popInWords";
 import { TIER_NAMES } from "./tierNames";
+import { UNLOCK_SLAMS } from "./tierSlamAndPopIns";
 
 describe("loadLetteringFonts", () => {
-  it("asks for the lettering's typeface in every character a tier name or pop-in word can show", () => {
+  it("asks for the lettering's typeface in every character a slam or pop-in word can show", () => {
     const load = vi.fn(() => Promise.resolve([]));
     loadLetteringFonts({ load }, '"Dela Gothic One", sans-serif');
 
     expect(load).toHaveBeenCalledWith('1em "Dela Gothic One", sans-serif', letteringCharacters());
     const asked = new Set(letteringCharacters());
-    for (const word of [...TIER_NAMES, ...Object.values(POP_IN_WORDS).flat()]) {
+    const shown = [
+      ...TIER_NAMES,
+      ...Object.values(UNLOCK_SLAMS),
+      ...Object.values(POP_IN_WORDS).flat(),
+    ];
+    for (const word of shown) {
       for (const character of word.jp) expect(asked.has(character)).toBe(true);
     }
   });

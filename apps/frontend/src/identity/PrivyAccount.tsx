@@ -1,4 +1,5 @@
 import { useTranslation } from "../i18n/react";
+import { openLinkInLine } from "../line/openLink";
 import { AccountRow } from "./AccountRow";
 import { etherscanAddressUrl, suiscanAccountUrl } from "./explorers";
 import { usePrivyStatus } from "./privy";
@@ -71,6 +72,7 @@ function Address({
         href={explorer.href(address)}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={openLinkInLine}
         aria-label={t(($) => $.identity.developer.onExplorer, {
           label,
           address,

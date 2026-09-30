@@ -29,8 +29,8 @@
   right: 0;
   top: 14px;
   height: 3px;
-  background: radial-gradient(circle, rgba(28, 24, 36, 0.22) 0 1.2px, transparent 1.5px) 0 50% / 7px
-    3px repeat-x;
+  background: radial-gradient(circle, var(--rule-strong) 0 1.2px, transparent 1.5px) 0 50% / 7px 3px
+    repeat-x;
 }
 
 /* A dot badge stuck on the perforation at the house tilt: the day's date, today's in Seal Yellow. */
@@ -67,8 +67,8 @@
 /* The last day's floor. */
 .pile-floor {
   height: 12px;
-  background: radial-gradient(circle, rgba(28, 24, 36, 0.22) 0 1.2px, transparent 1.5px) 0 0 / 7px
-    3px repeat-x;
+  background: radial-gradient(circle, var(--rule-strong) 0 1.2px, transparent 1.5px) 0 0 / 7px 3px
+    repeat-x;
 }
 
 /* ---------- A sticker in the pile ---------- */
@@ -172,11 +172,6 @@
 .pile-sticker[data-falling="waiting"] .pile-sticker__drop {
   opacity: 0;
   transition: none;
-}
-
-/* Lifted off the pile: its spot keeps a faint ghost. */
-.pile-sticker[data-lifted] .pile-sticker__drop {
-  opacity: 0.18;
 }
 
 /* ---------- Name tags ---------- */

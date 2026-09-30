@@ -1,0 +1,12 @@
+/* The Sui address in place under the checkout's not-enough-balance line (SuiAddressReveal.tsx). */
+.sui-address-reveal {
+  margin-top: 10px;
+}
+
+.sui-address-reveal__how {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--graphite);
+  text-wrap: balance;
+}

@@ -136,7 +136,11 @@ export function ReceiveGiftDialog({ from, onClose }: Props) {
     return () => clearTimeout(timer);
   }, [screen, motion]);
 
-  const pull = usePullTab({ reduced, onSnap: () => dispatch({ type: "unpackaged" }) });
+  // The bag's callback ref travels on its own, so reading the pull's values stays plain.
+  const { holdBag, ...pull } = usePullTab({
+    reduced,
+    onSnap: () => dispatch({ type: "unpackaged" }),
+  });
 
   // The giver stays known through the leave, so LINE's header keeps naming them.
   const shownGiver =
@@ -240,6 +244,7 @@ export function ReceiveGiftDialog({ from, onClose }: Props) {
         sealed={screen.step === "sealed"}
         reveal={reveal}
         pull={pull}
+        holdBag={holdBag}
         opener={me.displayName}
         receiving={screen.step === "unpackaged" && screen.receiving}
         failed={screen.step === "unpackaged" ? screen.failed : undefined}
@@ -278,7 +283,9 @@ interface GiftProps {
   preview: GiftPreviewView;
   sealed: boolean;
   reveal: "snapped" | "rising" | "out";
-  pull: ReturnType<typeof usePullTab>;
+  pull: Omit<ReturnType<typeof usePullTab>, "holdBag">;
+  /** Goes on the bag, so the pull can write the tear onto it. */
+  holdBag: (bag: HTMLDivElement | null) => void;
   /** The opener's LINE name. */
   opener: string;
   receiving: boolean;
@@ -293,6 +300,7 @@ function Gift({
   sealed,
   reveal,
   pull,
+  holdBag,
   opener,
   receiving,
   failed,
@@ -324,6 +332,7 @@ function Gift({
           nsfw={sticker.nsfw}
           tear={pull.tear}
           pullTab={sealed ? pull.pullTab : undefined}
+          ref={holdBag}
         />
         {!sealed && (
           <span className="receive-gift__figure" aria-hidden="true">
@@ -382,20 +391,25 @@ function Gift({
                 })}
               </p>
             )}
+            {/* Busy, the key keeps its face and its focus: aria-disabled, never disabled. The handlers
+                ignore a second press. */}
             <Key
               tone="grape"
               size="lg"
               icon={<HandHeart />}
               onClick={onAccept}
-              disabled={receiving}
               aria-busy={receiving || undefined}
+              aria-disabled={receiving || undefined}
               data-autofocus
             >
               {receiving ? t(($) => $.receiving.gift.accepting) : t(($) => $.receiving.gift.accept)}
             </Key>
-            <QuietLink onClick={onNotNow} disabled={receiving}>
+            <QuietLink onClick={onNotNow} aria-disabled={receiving || undefined}>
               <X /> {t(($) => $.receiving.gift.notNow)}
             </QuietLink>
+            <p className="visually-hidden" role="status">
+              {receiving && t(($) => $.receiving.gift.accepting)}
+            </p>
             <p className="receive-gift__terms">
               <Trans
                 i18nKey={($) => $.receiving.termsLine}

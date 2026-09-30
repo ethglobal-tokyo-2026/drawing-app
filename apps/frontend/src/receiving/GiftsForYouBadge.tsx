@@ -3,6 +3,7 @@ import { toPerson, toSticker } from "../api/views";
 import { Trans, useTranslation } from "../i18n/react";
 import { GiveIcon } from "../icons";
 import { formatHandle } from "../stickers/format";
+import "../stickers/nsfw-mark.css";
 import "./gifts-for-you-badge.css";
 
 export type GiftForYou = GiftsForYou["gifts"][number];
@@ -12,6 +13,8 @@ interface Props {
   gifts: readonly GiftForYou[];
   /** Opens the newest gift, to unpackage and accept. */
   onOpen: (gift: GiftForYou) => void;
+  /** The board has settled: the badge lifts a few times to be noticed, then stays put. */
+  nudging?: boolean;
 }
 
 /**
@@ -19,7 +22,7 @@ interface Props {
  * sticker's gift says 18+. It asks to be opened, where the badge for gifts on their way only reports.
  * With none waiting, nothing shows.
  */
-export function GiftsForYouBadge({ gifts, onOpen }: Props) {
+export function GiftsForYouBadge({ gifts, onOpen, nudging = false }: Props) {
   const { t } = useTranslation();
   const [newest] = gifts;
   if (!newest) return null;
@@ -30,7 +33,7 @@ export function GiftsForYouBadge({ gifts, onOpen }: Props) {
   return (
     <button
       type="button"
-      className="gifts-for-you-badge"
+      className={nudging ? "gifts-for-you-badge is-nudging" : "gifts-for-you-badge"}
       data-press
       aria-label={t(($) => $.receiving.giftsForYou.label, { count, name })}
       onClick={() => onOpen(newest)}
@@ -39,7 +42,9 @@ export function GiftsForYouBadge({ gifts, onOpen }: Props) {
         <GiveIcon weight="fill" size={24} />
         {count > 1 && <span className="gifts-for-you-badge__count">{count}</span>}
         {nsfw && (
-          <span className="gifts-for-you-badge__nsfw">{t(($) => $.stickers.nsfw.mark)}</span>
+          <span className="nsfw-mark gifts-for-you-badge__nsfw">
+            {t(($) => $.stickers.nsfw.mark)}
+          </span>
         )}
       </span>
       <span className="gifts-for-you-badge__text" aria-hidden="true">

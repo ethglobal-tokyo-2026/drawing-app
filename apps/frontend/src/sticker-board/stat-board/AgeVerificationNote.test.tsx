@@ -155,6 +155,20 @@ describe("the Age verification paper", () => {
     expect(widget).toBeNull();
   });
 
+  it("keeps its button, face and focus while World ID opens, and takes no second press", async () => {
+    const request = vi.fn<ApiClient["ageVerificationRequest"]>(() => new Promise(() => {}));
+    const host = render({ ageVerificationRequest: request });
+    const verify = button(host);
+    act(() => verify?.focus());
+    await act(async () => verify?.click());
+    expect(verify?.disabled).toBe(false);
+    expect(verify?.getAttribute("aria-busy")).toBe("true");
+    expect(verify?.getAttribute("aria-disabled")).toBe("true");
+    expect(document.activeElement).toBe(verify);
+    await act(async () => verify?.click());
+    expect(request).toHaveBeenCalledOnce();
+  });
+
   it("shows you verified, with nothing to tap, once you are", () => {
     const host = render({}, VERIFIED);
     expect(host.textContent).toContain("Verified 18+ with World ID");

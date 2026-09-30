@@ -106,7 +106,7 @@ function play(
   end?: ReplayFeed["end"],
 ) {
   const record = tapRecord(times);
-  const { frames, run } = handFrames();
+  const { frames, run, asked } = handFrames();
   const replay = options.replay ?? replayOf(record);
   handle = mountGratitudeReplay(
     host,
@@ -124,7 +124,7 @@ function play(
   void handle.finished.then((how) => {
     settled = how;
   });
-  return { record, run, handle };
+  return { record, run, asked, handle };
 }
 
 const amount = () => host.querySelector(".gr-amount b")?.textContent;
@@ -185,6 +185,15 @@ describe("mountGratitudeReplay", () => {
     expect(amount()).toBe(formatCount(ended.record.total));
   });
 
+  it("melts 昇天's rain once it lands, so nothing stays piled on the card and its frames stop", async () => {
+    const { run, asked } = play(TAPS);
+    await run(REPLAY_REAL_TIME_MS + 1000);
+    expect(settled).toBe("landed");
+    expect(rain.count).toBeGreaterThan(0);
+    await run(2000);
+    expect(asked()).toBe(false);
+  });
+
   it("counts its HUD up to the total when the combo was closed right after its last hit", async () => {
     const lastTap = TAPS.at(-1) ?? 0;
     const { record, run } = play(TAPS, { reduced: true }, { at: lastTap + 10, reason: "closed" });
@@ -218,6 +227,15 @@ describe("mountGratitudeReplay", () => {
     playing.stop();
     expect(await playing.finished).toBe("stopped");
     expect(host.children).toHaveLength(0);
+  });
+
+  it("frees its mini hearts' canvases as it stops", async () => {
+    const { run, handle: playing } = play(TAPS);
+    await run(500);
+    const canvases = [...host.querySelectorAll("canvas")];
+    expect(canvases.length).toBeGreaterThan(0);
+    playing.stop();
+    for (const canvas of canvases) expect([canvas.width, canvas.height]).toEqual([0, 0]);
   });
 
   it("fails with the engine's own words, which the card shows as the reason", async () => {

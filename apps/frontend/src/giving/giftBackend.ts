@@ -1,13 +1,14 @@
 import type { Gift } from "@drawing-app/api/client";
 import type { ApiClient } from "../api/apiClient";
 import { ApiError } from "../api/apiClient";
-import { currentLanguage, i18next } from "../i18n/i18n";
+import { currentLanguage } from "../i18n/i18n";
 import { formatNo } from "../stickers/format";
 import { buildGiftMessage, type GiftMessage } from "./giftMessage";
 import {
   escrowConfigured,
   giftTransactions,
   GiftTransactionRevertedError,
+  GiftTransferError,
   type GiftTransactions,
   type TransactionRecorder,
 } from "./giftTransactions";
@@ -53,10 +54,19 @@ export class GiftMessageOutError extends GiftPackagingError {
   }
 }
 
+/**
+ * What packing waits on, for a long wait to say: the app's server, an earlier gift bag that still
+ * holds the sticker, the sticker going into the bag, or the bag confirming it's in.
+ */
+export type PackWait = "asking" | "earlier" | "moving" | "confirming";
+
 /** Where gifts are made and settled. */
 export interface GiftBackend {
-  /** Puts the sticker in a gift and returns the gift message that sends it. */
-  pack: (sticker: GiftSticker) => Promise<PackedGift>;
+  /**
+   * Puts the sticker in a gift and returns the gift message that sends it. `onWait` hears what it
+   * waits on each time that changes.
+   */
+  pack: (sticker: GiftSticker, onWait?: (wait: PackWait) => void) => Promise<PackedGift>;
   /** LINE, or the giver, said the gift message went out. */
   markSent: (giftId: string) => Promise<void>;
   /** The picker closed or failed without sending; the gift stays in the bag for another try. */
@@ -161,6 +171,7 @@ export function createApiGiftBackend({
     giftId: string,
     attempt: GiftAttempt,
     step: "deposit" | "takeOut",
+    onWait?: (wait: PackWait) => void,
   ): TransactionRecorder => ({
     sending: (at) =>
       update(
@@ -170,23 +181,29 @@ export function createApiGiftBackend({
           ? { depositSentAt: at, depositHash: undefined }
           : { takeOutSentAt: at, takeOutHash: undefined },
       ),
-    submitted: (hash) =>
-      update(giftId, attempt, step === "deposit" ? { depositHash: hash } : { takeOutHash: hash }),
+    submitted: (hash) => {
+      update(giftId, attempt, step === "deposit" ? { depositHash: hash } : { takeOutHash: hash });
+      if (step === "deposit") onWait?.("confirming");
+    },
   });
 
   const deposit = async (
     giftId: string,
     transfer: { to: string; data: string },
     attempt: GiftAttempt,
+    onWait?: (wait: PackWait) => void,
   ) => {
     let reported: Gift;
     try {
+      // A deposit sent before a reload only has its confirmation left to wait for.
+      onWait?.(attempt.depositHash ? "confirming" : "moving");
       const hash = await transactions.deposit(
         giftId,
         transfer,
         { hash: attempt.depositHash, sentAt: attempt.depositSentAt },
-        recorder(giftId, attempt, "deposit"),
+        recorder(giftId, attempt, "deposit", onWait),
       );
+      onWait?.("asking");
       reported = await retrying(
         () => api.reportDeposit(giftId, hash ?? undefined),
         refusedWith("deposit_not_landed"),
@@ -201,7 +218,10 @@ export function createApiGiftBackend({
     }
     // Its sticker came back out on chain before the report, so this gift can't go out.
     if (reported.status !== "packed") {
-      throw new Error(i18next.t(($) => $.giving.depositCameBack));
+      throw new GiftTransferError(
+        "deposit_came_back",
+        `The gift was ${reported.status} after its deposit landed, not packed`,
+      );
     }
   };
 
@@ -265,7 +285,8 @@ export function createApiGiftBackend({
   };
 
   /** POST /api/gifts; an earlier gift that still holds the sticker in the escrow comes out first. */
-  const packageGift = async (sticker: GiftSticker) => {
+  const packageGift = async (sticker: GiftSticker, onWait?: (wait: PackWait) => void) => {
+    onWait?.("asking");
     try {
       return await api.packageGift(sticker.id, forUserId);
     } catch (error) {
@@ -275,18 +296,23 @@ export function createApiGiftBackend({
         giftId: held,
         stickerId: sticker.id,
       });
+      onWait?.("earlier");
       try {
         await takeOut(held, true);
       } catch (failure) {
         // Take it out tries that gift again.
         throw new GiftPackagingError(held, failure);
       }
+      onWait?.("asking");
       return api.packageGift(sticker.id, forUserId);
     }
   };
 
-  const pack = async (sticker: GiftSticker): Promise<PackedGift> => {
-    let packaged = await packageGift(sticker);
+  const pack = async (
+    sticker: GiftSticker,
+    onWait?: (wait: PackWait) => void,
+  ): Promise<PackedGift> => {
+    let packaged = await packageGift(sticker, onWait);
     try {
       const previousAttempt = attemptOf(packaged.gift.id);
       if (previousAttempt?.message) {
@@ -312,16 +338,20 @@ export function createApiGiftBackend({
           attempts.set(packaged.gift.id, recovery);
           // The old deposit lands before it comes out, and one sent before a reload is waited for:
           // closing a missing deposit in the database could strand a transaction that lands later.
-          await deposit(packaged.gift.id, packaged.escrowTransfer, recovery);
+          await deposit(packaged.gift.id, packaged.escrowTransfer, recovery, onWait);
         }
+        onWait?.("earlier");
         await takeOut(packaged.gift.id, packaged.escrowTransfer !== null || escrowConfigured());
-        packaged = await packageGift(sticker);
+        packaged = await packageGift(sticker, onWait);
       }
       const { gift, giftClaimToken, escrowTransfer } = packaged;
       const previous = attempts.get(gift.id);
       const token = giftClaimToken ?? previous?.token;
       if (!token) {
-        throw new Error(`${formatNo(sticker.no)} is in a gift the server gave no link for`);
+        throw new GiftTransferError(
+          "no_link",
+          `${formatNo(sticker.no)} is in a gift the server gave no link for`,
+        );
       }
       const attempt = previous ?? {
         token,
@@ -330,7 +360,7 @@ export function createApiGiftBackend({
       };
       attempts.set(gift.id, attempt);
       if (escrowTransfer !== null) {
-        await deposit(gift.id, escrowTransfer, attempt);
+        await deposit(gift.id, escrowTransfer, attempt, onWait);
       }
       const message = buildGiftMessage({
         liffId,
@@ -349,10 +379,10 @@ export function createApiGiftBackend({
     }
   };
   return {
-    pack: (sticker) => {
+    pack: (sticker, onWait) => {
       const pending = packing.get(sticker.id);
       if (pending) return pending;
-      const operation = pack(sticker).finally(() => packing.delete(sticker.id));
+      const operation = pack(sticker, onWait).finally(() => packing.delete(sticker.id));
       packing.set(sticker.id, operation);
       return operation;
     },

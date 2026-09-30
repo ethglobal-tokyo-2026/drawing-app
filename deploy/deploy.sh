@@ -24,7 +24,8 @@ BOX_CURL="curl --retry 10 --retry-connrefused --retry-delay 1 --max-time 5"
 }
 export VITE_STICKER_ESCROW_ADDRESS="$STICKER_GIFT_ESCROW_ADDRESS"
 # Only an explicitly public RPC belongs in the browser bundle; the backend RPC can contain credentials.
-if [ -n "${VITE_STICKER_RPC_URL:-}" ]; then export VITE_STICKER_RPC_URL; fi
+# Exported even when empty, so the build never takes one from the gitignored apps/frontend/.env.
+export VITE_STICKER_RPC_URL="${VITE_STICKER_RPC_URL:-}"
 "$ROOT/deploy/deploy-api.sh" --preflight-only
 
 # The live app shows the stat board's developer slip, so its test tools (the gratitude mini-game,

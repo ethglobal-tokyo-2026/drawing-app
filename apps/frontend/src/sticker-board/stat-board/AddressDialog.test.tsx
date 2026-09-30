@@ -113,13 +113,20 @@ describe("AddressDialog", () => {
     expect(toastText()).toBe("Sui address copied");
   });
 
-  it("says so when the clipboard refuses it", async () => {
+  it("keeps a copy the clipboard refused on the card, under Copy, until the next try", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    writeText.mockRejectedValue(new DOMException("Not allowed here", "NotAllowedError"));
+    writeText.mockRejectedValueOnce(new DOMException("Not allowed here", "NotAllowedError"));
     await open();
     await act(async () => button("Copy address").click());
-    expect(toastText()).toBe("Couldn’t copy the board address");
+    const problem = () => find('[role="alert"]')?.textContent;
+    expect(problem()).toContain("Couldn’t copy the board address");
+    expect(toastText()).toBe("");
     expect(error).toHaveBeenCalledWith("Couldn't copy the board address", expect.any(DOMException));
+
+    writeText.mockResolvedValueOnce();
+    await act(async () => button("Copy address").click());
+    expect(problem()).toBeUndefined();
+    expect(toastText()).toBe("Board address copied");
   });
 
   it("links to the board address's page on Etherscan", async () => {

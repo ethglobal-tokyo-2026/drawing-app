@@ -3,8 +3,18 @@ import { and, desc, eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
-import { isoTimeSchema, personSchema, toIsoTime, toPerson, type StickerImages } from "../shapes.ts";
-import { giftSchema, gratitudeSchema, loadStickers, stickerSchema, toGratitude } from "../views.ts";
+import {
+  giftSchema,
+  gratitudeSchema,
+  isoTimeSchema,
+  loadStickers,
+  personSchema,
+  stickerSchema,
+  toGratitude,
+  toIsoTime,
+  toPerson,
+  type StickerImages,
+} from "../shapes.ts";
 
 /** Sticker ids aren't format-checked: an unknown one is sticker_not_found. */
 export const stickerIdParam = z.object({ stickerId: createSelectSchema(stickers).shape.id });

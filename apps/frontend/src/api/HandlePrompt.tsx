@@ -30,7 +30,7 @@ function problemOf({ handle, error }: FailedSave, t: TFunction): string {
   return t(($) => $.api.handle.couldntSave, { reason: errorReason(error) });
 }
 
-/** Asks for a handle when your LINE name is already someone's, before the app opens. */
+/** Asks for a handle when your LINE name couldn't become one, before the app opens. */
 export function HandlePrompt({ me, setHandle, onChosen }: Props) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState("");
@@ -60,7 +60,7 @@ export function HandlePrompt({ me, setHandle, onChosen }: Props) {
       <h1 className="title-label">{t(($) => $.api.handle.title)}</h1>
       <p className="line-gate__lead">
         {me.lineDisplayName
-          ? t(($) => $.api.handle.leadNameTaken, { name: me.lineDisplayName })
+          ? t(($) => $.api.handle.leadNameUnavailable, { name: me.lineDisplayName })
           : t(($) => $.api.handle.lead)}
       </p>
       <form className="handle-prompt__form" onSubmit={(e) => void submit(e)}>
@@ -84,8 +84,18 @@ export function HandlePrompt({ me, setHandle, onChosen }: Props) {
             ? t(($) => $.api.handle.tooLong, { max: HANDLE_MAX_LENGTH })
             : failedSave && problemOf(failedSave, t)}
         </p>
-        <Key type="submit" tone="pink" disabled={!handle || tooLong || saving}>
-          {handle ? t(($) => $.api.handle.use, { handle }) : t(($) => $.api.handle.pick)}
+        {/* While saving it keeps its face (aria-busy, never disabled) and submit() takes no second try. */}
+        <Key
+          type="submit"
+          tone="pink"
+          className="handle-prompt__key"
+          disabled={!handle || tooLong}
+          aria-busy={saving || undefined}
+          aria-disabled={saving || undefined}
+        >
+          <span className="handle-prompt__use">
+            {handle ? t(($) => $.api.handle.use, { handle }) : t(($) => $.api.handle.pick)}
+          </span>
         </Key>
       </form>
     </main>

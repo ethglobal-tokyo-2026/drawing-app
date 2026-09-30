@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useState } from "react";
 import type { PersonView } from "../api/views";
 import { ArtistChip } from "../stickers/ArtistChip";
+import { clamp } from "../ui/easing";
 import "./artist-chip-layer.css";
 
 interface Chip {
@@ -24,8 +25,6 @@ const CHIP_W = 156;
 const CHIP_H = 44;
 /** How far a chip moves down, under one in its way. */
 const DROP = 46;
-
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 /**
  * Where each chip goes, in greeting order, top to bottom: at its sticker's top-left corner, kept under

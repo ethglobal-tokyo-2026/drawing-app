@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { createPublicClient, http } from "viem";
 import { sepolia } from "viem/chains";
 import { useTranslation } from "../i18n/react";
+import { openLinkInLine } from "../line/openLink";
 import { QuietLink } from "../ui/QuietLink";
 import { etherscanTxUrl } from "./explorers";
 import { checkSponsorship, type SponsorshipResult } from "./sponsorship";
@@ -71,7 +72,12 @@ export function SponsorshipCheck() {
       {check.state === "passed" && (
         <p className="stat-board__privy-status">
           {t(($) => $.identity.developer.sponsorshipCheck.passed)}{" "}
-          <a href={etherscanTxUrl(check.result.hash)} target="_blank" rel="noopener noreferrer">
+          <a
+            href={etherscanTxUrl(check.result.hash)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={openLinkInLine}
+          >
             {t(($) => $.identity.developer.sponsorshipCheck.viewTransaction)}
           </a>
         </p>

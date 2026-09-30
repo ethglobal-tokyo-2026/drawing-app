@@ -89,6 +89,8 @@ export function AgeVerificationNote() {
   };
 
   const verified = me.ageVerifiedAt !== null;
+  // Until World ID closes, the button keeps its face and focus and takes no second press.
+  const busy = status.step === "opening" || status.step === "open";
   return (
     <section className="stat-board__note age-verification-note" aria-labelledby={`${id}-title`}>
       <div className="stat-board__paper">
@@ -109,9 +111,11 @@ export function AgeVerificationNote() {
               size="sm"
               tone="ink"
               block
-              aria-busy={status.step === "opening"}
-              disabled={status.step === "opening" || status.step === "open"}
-              onClick={() => void open()}
+              aria-busy={busy}
+              aria-disabled={busy}
+              onClick={() => {
+                if (!busy) void open();
+              }}
             >
               {status.step === "opening"
                 ? t(($) => $.stickerBoard.ageVerification.opening)
@@ -120,7 +124,7 @@ export function AgeVerificationNote() {
           </>
         )}
         {status.step === "failed" && !verified && (
-          <p className="age-verification-note__problem" role="alert">
+          <p className="problem-note" role="alert">
             {status.problem}
           </p>
         )}

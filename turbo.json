@@ -10,14 +10,17 @@
       "cache": false,
       "persistent": true
     },
-    "lint": {
-      "dependsOn": ["^lint"]
+    "lint": {},
+    "typecheck": {},
+    "test": {},
+    "compile": {
+      "outputs": ["out/**", "cache/**"]
     },
-    "typecheck": {
-      "dependsOn": ["^typecheck"]
+    "@drawing-app/sticker-chain#test": {
+      "dependsOn": ["compile"]
     },
-    "test": {
-      "dependsOn": ["^test"]
+    "@drawing-app/api#test": {
+      "dependsOn": ["@drawing-app/sticker-chain#compile"]
     }
   }
 }

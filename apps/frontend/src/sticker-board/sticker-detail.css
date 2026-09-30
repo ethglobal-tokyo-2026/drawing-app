@@ -226,7 +226,7 @@
 .sticker-detail__ens {
   margin: 2px 0 0;
   color: var(--graphite);
-  font: 550 13.5px/1.3 var(--font-ui);
+  font: 500 13px/1.3 var(--font-ui);
   overflow-wrap: anywhere;
 }
 
@@ -234,6 +234,11 @@
   color: inherit;
   text-decoration: underline dotted;
   text-underline-offset: 3px;
+}
+
+/* Who drew it, on a line of its own. */
+.sticker-detail__artist {
+  margin: 5px 0 0;
 }
 
 /* The line people read: caps kept, but at full width, wrapping between facts. */
@@ -285,8 +290,7 @@
 }
 
 .sticker-detail__check-failed {
-  margin: 12px 0 0;
-  color: var(--graphite);
+  margin: 18px 0 0;
 }
 
 /* A sent sticker's note, on a label lifted off the liner: its sleeve, then "On its way". */
@@ -301,7 +305,7 @@
   border-radius: var(--r-label);
   background: var(--liner-lift);
   box-shadow: inset 0 0 0 1px var(--rule);
-  font: 650 14.5px/1.3 var(--font-ui);
+  font: 700 15px/1.3 var(--font-ui);
   color: var(--ink);
 }
 

@@ -1,13 +1,14 @@
 import { CaretDown, CaretRight, GratitudeIcon, Play, Stop } from "../icons";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { PersonView } from "../api/views";
 import type { mountGratitudeReplay } from "../gratitude/replay/mountGratitudeReplay";
-import { EASE_OUT, ReplayStage } from "../gratitude/replay/ReplayStage";
+import { ReplayStage } from "../gratitude/replay/ReplayStage";
 import { useGratitudeReplay } from "../gratitude/replay/useGratitudeReplay";
 import { errorReason } from "../i18n/errorMessage";
 import { formatCount } from "../i18n/format";
 import { Trans, useTranslation } from "../i18n/react";
 import { formatMonthDay } from "../stickers/format";
+import { EASE_OUT } from "../ui/easing";
 import { QuietLink } from "../ui/QuietLink";
 import { useReducedMotion } from "../ui/useReducedMotion";
 import { handleOf } from "./boardSticker";
@@ -43,6 +44,19 @@ export function TransferTrail({ rows, viewerId, artist, mountReplay }: Props) {
   const shown = unfolded ? rows : rows.slice(0, TRAIL_SHOWN);
   const earlier = rows.length - shown.length;
   const isYou = (p: PersonView) => p.id === viewerId;
+
+  // The fold's button goes as it opens, so focus moves to the first row it revealed.
+  const list = useRef<HTMLOListElement>(null);
+  const focusRevealed = useRef(false);
+  useLayoutEffect(() => {
+    if (!unfolded || !focusRevealed.current) return;
+    focusRevealed.current = false;
+    const first = rows[TRAIL_SHOWN];
+    const row = [...(list.current?.children ?? [])].find(
+      (li) => li instanceof HTMLElement && li.dataset.giftId === first?.giftId,
+    );
+    row?.querySelector<HTMLElement>(".transfer-trail__head")?.focus();
+  }, [unfolded, rows]);
 
   // The open card's gratitude replays inside it, landing in its heart dot.
   const open = rows.find((r) => r.giftId === openId);
@@ -97,25 +111,32 @@ export function TransferTrail({ rows, viewerId, artist, mountReplay }: Props) {
 
   return (
     <section className="transfer-trail" aria-label={t(($) => $.stickerBoard.transferTrail.label)}>
-      <ol className="transfer-trail__list">
+      <ol ref={list} className="transfer-trail__list">
         {shown.map((r) => {
           const g = r.gratitude;
           if (!g)
             return (
-              <li key={r.giftId} className="transfer-trail__row">
-                <p className="transfer-trail__head">{sentence(r)}</p>
+              <li key={r.giftId} data-gift-id={r.giftId} className="transfer-trail__row">
+                {/* Not a control, but focusable by script: it takes focus when the fold opens onto it. */}
+                <p className="transfer-trail__head" tabIndex={-1}>
+                  {sentence(r)}
+                </p>
               </li>
             );
-          if (r.giftId !== openId)
-            return (
-              <li key={r.giftId} className="transfer-trail__row">
-                <button
-                  type="button"
-                  className="transfer-trail__head"
-                  aria-expanded="false"
-                  onClick={() => setOpenId(r.giftId)}
-                >
-                  {sentence(r)}
+          const isOpen = r.giftId === openId;
+          // The same button open or closed, so pressing it never takes focus with it.
+          const head = (
+            <button
+              type="button"
+              className="transfer-trail__head"
+              aria-expanded={isOpen}
+              onClick={() => setOpenId(isOpen ? null : r.giftId)}
+            >
+              {sentence(r)}
+              {isOpen ? (
+                <CaretDown size={14} aria-hidden className="transfer-trail__caret" />
+              ) : (
+                <>
                   <span className="transfer-trail__amount">
                     <GratitudeIcon size={13} />
                     <Trans
@@ -125,7 +146,14 @@ export function TransferTrail({ rows, viewerId, artist, mountReplay }: Props) {
                     />
                   </span>
                   <CaretRight size={14} aria-hidden className="transfer-trail__caret" />
-                </button>
+                </>
+              )}
+            </button>
+          );
+          if (!isOpen)
+            return (
+              <li key={r.giftId} data-gift-id={r.giftId} className="transfer-trail__row">
+                {head}
               </li>
             );
           const split = artistShareLine(r, artist, viewerId);
@@ -134,8 +162,8 @@ export function TransferTrail({ rows, viewerId, artist, mountReplay }: Props) {
           const from = handleOf(r.receiver);
           const amount = formatCount(g.total);
           return (
-            <li key={r.giftId} className="transfer-trail__row is-open">
-              <p className="transfer-trail__head">{sentence(r)}</p>
+            <li key={r.giftId} data-gift-id={r.giftId} className="transfer-trail__row is-open">
+              {head}
               <div className="transfer-trail__figure">
                 <span ref={dot} className="transfer-trail__heart" aria-hidden>
                   <GratitudeIcon size={20} />
@@ -194,7 +222,7 @@ export function TransferTrail({ rows, viewerId, artist, mountReplay }: Props) {
                 returnFocus={() => pill.current}
               />
               {replay.failure && (
-                <p className="fine transfer-trail__replay-note" role="alert">
+                <p className="problem-note transfer-trail__replay-note" role="alert">
                   {replay.failure.kind === "load" ? (
                     <>
                       {t(($) => $.stickerBoard.transferTrail.replaying.didntLoad, {
@@ -218,7 +246,7 @@ export function TransferTrail({ rows, viewerId, artist, mountReplay }: Props) {
                 </p>
               )}
               {replay.seenFailure && (
-                <p className="fine transfer-trail__replay-note">
+                <p className="problem-note transfer-trail__replay-note">
                   {t(($) => $.stickerBoard.transferTrail.replaying.notMarkedSeen, {
                     reason: errorReason(replay.seenFailure),
                   })}
@@ -237,7 +265,10 @@ export function TransferTrail({ rows, viewerId, artist, mountReplay }: Props) {
               type="button"
               className="transfer-trail__head"
               aria-expanded="false"
-              onClick={() => setUnfolded(true)}
+              onClick={() => {
+                focusRevealed.current = true;
+                setUnfolded(true);
+              }}
             >
               <CaretDown size={14} aria-hidden className="transfer-trail__caret" />
               <span>{t(($) => $.stickerBoard.transferTrail.earlierGifts, { count: earlier })}</span>

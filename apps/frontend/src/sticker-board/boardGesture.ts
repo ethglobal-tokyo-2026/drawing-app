@@ -10,6 +10,48 @@ const SETTLE = 3;
 const deg = (rad: number) => (rad * 180) / Math.PI;
 const angleAbout = (center: Pt, p: Pt) => Math.atan2(p.y - center.y, p.x - center.x);
 
+/** A key press or an Arrange button's step, which moves, turns or resizes a sticker. */
+export type Step =
+  | "left"
+  | "right"
+  | "up"
+  | "down"
+  | "turnLeft"
+  | "turnRight"
+  | "smaller"
+  | "bigger";
+
+/** How far one step moves a sticker in px, turns it in degrees, or scales it. */
+const STEP_MOVE = 10;
+const STEP_TURN = 5;
+const STEP_GROW = 1.08;
+const STEP_SHRINK = 0.92;
+
+/** A sticker's spot as one step changes it: its center, size and turn. */
+export function stepBy<T extends { x: number; y: number; s: number; r: number }>(
+  at: T,
+  step: Step,
+): T {
+  switch (step) {
+    case "left":
+      return { ...at, x: at.x - STEP_MOVE };
+    case "right":
+      return { ...at, x: at.x + STEP_MOVE };
+    case "up":
+      return { ...at, y: at.y - STEP_MOVE };
+    case "down":
+      return { ...at, y: at.y + STEP_MOVE };
+    case "turnLeft":
+      return { ...at, r: at.r - STEP_TURN };
+    case "turnRight":
+      return { ...at, r: at.r + STEP_TURN };
+    case "smaller":
+      return { ...at, s: clampS(at.s * STEP_SHRINK) };
+    case "bigger":
+      return { ...at, s: clampS(at.s * STEP_GROW) };
+  }
+}
+
 /** Degrees, in [0, 360). */
 export const normalizeTurn = (r: number) => ((r % 360) + 360) % 360;
 

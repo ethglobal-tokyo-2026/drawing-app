@@ -3,8 +3,10 @@
   margin-top: 12px;
 }
 
+/* One track no wider than the card, so a long handle wraps in it rather than widening it. */
 .transfer-trail__list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -41,7 +43,7 @@
   border: 0;
   background: none;
   color: var(--ink);
-  font: 550 13.5px/1.3 var(--font-ui);
+  font: 500 13px/1.3 var(--font-ui);
   font-stretch: var(--w-ui);
   text-align: left;
 }
@@ -61,7 +63,9 @@ button.transfer-trail__head:active {
   background: rgba(28, 24, 36, 0.08);
 }
 
-button.transfer-trail__head:focus-visible {
+button.transfer-trail__head:focus-visible,
+p.transfer-trail__head:focus-visible {
+  border-radius: var(--r-label);
   outline: 2px solid var(--ink);
   outline-offset: 0;
 }
@@ -71,11 +75,13 @@ button.transfer-trail__head:focus-visible {
   flex: 1;
   min-width: 0;
   color: var(--graphite);
+  /* A 32-character handle can't break at a space, least of all beside kana. */
+  overflow-wrap: anywhere;
 }
 
 .transfer-trail__say b {
   color: var(--ink);
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .transfer-trail__at {
@@ -89,7 +95,7 @@ button.transfer-trail__head:focus-visible {
   align-items: center;
   gap: 4px;
   color: var(--ink);
-  font: 700 13.5px/1 var(--font-ui);
+  font: 700 13px/1 var(--font-ui);
 }
 
 .transfer-trail__amount svg {
@@ -191,7 +197,7 @@ button.transfer-trail__head:focus-visible {
     inset 0 0 0 1px rgba(28, 24, 36, 0.12),
     0 1px 0 rgba(28, 24, 36, 0.12);
   color: var(--ink);
-  font: 700 13.5px/1 var(--font-ui);
+  font: 700 13px/1 var(--font-ui);
   font-stretch: var(--w-ui);
   cursor: pointer;
   transition:
@@ -239,7 +245,8 @@ button.transfer-trail__head:focus-visible {
   padding-top: 9px;
   box-shadow: inset 0 1px 0 var(--rule);
   color: var(--ink);
-  font: 600 12.5px/1.35 var(--font-ui);
+  font: 500 13px/1.35 var(--font-ui);
+  overflow-wrap: anywhere;
 }
 
 @media (hover: hover) {

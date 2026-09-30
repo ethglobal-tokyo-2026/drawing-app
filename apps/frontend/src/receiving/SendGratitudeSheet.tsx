@@ -6,10 +6,12 @@ import { Duration } from "../stickers/Duration";
 import { formatHandle } from "../stickers/format";
 import { Key } from "../ui/Key";
 import { PhotoSticker } from "../ui/PhotoSticker";
+import { keepNameWhole } from "../ui/keepNameWhole";
 import { QuietLink } from "../ui/QuietLink";
 import { Sheet } from "../ui/Sheet";
 import { useBackToClose } from "../ui/useBackToClose";
 import { useFocusTrap } from "../ui/useFocusTrap";
+import { useModalDialog } from "../ui/useModalDialog";
 import "./send-gratitude-sheet.css";
 
 interface Props {
@@ -31,6 +33,7 @@ export function SendGratitudeSheet({ sticker, giver, onSend, onLater }: Props) {
   const { t } = useTranslation();
   const body = useRef<HTMLDivElement>(null);
   useFocusTrap(body, { onEscape: onLater });
+  useModalDialog(body);
   useBackToClose(true, onLater);
 
   const who = giver.handle === null ? giver.name : formatHandle(giver.handle);
@@ -41,7 +44,7 @@ export function SendGratitudeSheet({ sticker, giver, onSend, onLater }: Props) {
         <div className="send-gratitude-sheet__from">
           <PhotoSticker src={giver.pictureUrl} name={giver.name} size={60} />
           <div className="send-gratitude-sheet__text">
-            <h2 className="title-label send-gratitude-sheet__title">{title}</h2>
+            <h2 className="title-label send-gratitude-sheet__title">{keepNameWhole(title, who)}</h2>
             <p className="send-gratitude-sheet__line">
               {giver.id === sticker.artist.id ? (
                 <Trans

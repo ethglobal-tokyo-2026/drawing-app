@@ -8,7 +8,7 @@ export const identity = {
       button: { en: "Copy" },
       ariaLabel: { en: "Copy the {{label}}" },
       copied: { en: "{{label}} copied" },
-      failed: { en: "Couldn’t copy the {{label}}" },
+      failed: { en: "Couldn’t copy the {{label}}. Select it above to copy it by hand." },
     },
     privyId: { en: "Privy ID" },
     boardAddress: { en: "Board address" },

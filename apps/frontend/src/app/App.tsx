@@ -1,5 +1,6 @@
 import type { Person } from "@drawing-app/api/client";
 import { Suspense, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import { flushSync } from "react-dom";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
 import { resendPendingGratitude } from "../gratitude/gratitudeOutbox";
@@ -54,6 +55,14 @@ const DRAWING_LOADING: CSSProperties = {
   background: "var(--liner)",
 };
 
+const EXPLORE_CONTROLS = 'button, a[href], input, [role="button"]';
+
+/** The control in Explore that a click or focus reached, unless it's in one of Explore's sheets. */
+const explorePlaceOf = (target: EventTarget) => {
+  const control = target instanceof Element ? target.closest<HTMLElement>(EXPLORE_CONTROLS) : null;
+  return control && !control.closest('[role="dialog"]') ? control : null;
+};
+
 /** The drawing screen's place while its code loads: plain Liner, and one line for screen readers. */
 function DrawingScreenLoading() {
   const { t } = useTranslation();
@@ -76,6 +85,8 @@ export default function App() {
   // screen; a gift message's link opens its gift over the board.
   const [opened] = useState(() => openedFrom(location.pathname));
   const [view, setView] = useState<View>(opened.view);
+  // A name's link is Explore's to open once; a later visit to Explore is plain Explore.
+  const [boardOf, setBoardOf] = useState(opened.boardOf);
   // The gift ReceiveGiftDialog shows over the board: a gift message's link's token, held in memory
   // while it's open, or a gift waiting for you, opened from the board's badge.
   const [giftOpening, setGiftOpening] = useState<GiftFrom | undefined>(() =>
@@ -91,6 +102,11 @@ export default function App() {
   const [giftClosures, setGiftClosures] = useState(0);
   // Someone else's sticker board, opened from Explore over it, so Explore keeps its search and scroll.
   const [visiting, setVisiting] = useState<Person>();
+  // Where you were in Explore, which Back returns focus to.
+  const explorePlace = useRef<HTMLElement | null>(null);
+  const rememberPlace = (target: EventTarget) => {
+    explorePlace.current = explorePlaceOf(target) ?? explorePlace.current;
+  };
   // The reserve ticket checkout, opened from the Shop over the whole phone, tabs and all.
   const [checkingOut, setCheckingOut] = useState(false);
   const drawing = view === "draw";
@@ -179,20 +195,32 @@ export default function App() {
         )}
         {/* Each in its own boundary, so Explore stays up while an artist's board loads over it. */}
         {view === "explore" && (
-          <Suspense fallback={null}>
-            <ExploreScreen
-              boardOf={opened.boardOf}
-              onOpenArtist={setVisiting}
-              onOpenMyBoard={() => setView("board")}
-            />
-          </Suspense>
+          // Inert under their board, so Tab and screen readers stay on it.
+          <div
+            className="screen-layer"
+            inert={visiting !== undefined}
+            onFocusCapture={(e) => rememberPlace(e.target)}
+            onClickCapture={(e) => rememberPlace(e.target)}
+          >
+            <Suspense fallback={null}>
+              <ExploreScreen
+                boardOf={boardOf}
+                onBoardOfTaken={() => setBoardOf(undefined)}
+                onOpenArtist={setVisiting}
+                onOpenMyBoard={() => setView("board")}
+              />
+            </Suspense>
+          </div>
         )}
         {view === "explore" && visiting && (
           <Suspense fallback={null}>
             <ArtistBoard
               key={visiting.id}
               person={visiting}
-              onBack={() => setVisiting(undefined)}
+              onBack={() => {
+                flushSync(() => setVisiting(undefined));
+                explorePlace.current?.focus({ preventScroll: true });
+              }}
             />
           </Suspense>
         )}

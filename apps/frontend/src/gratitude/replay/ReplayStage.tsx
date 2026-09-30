@@ -1,10 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import { EASE_OUT } from "../../ui/easing";
 import "./replay-stage.css";
 
 /** How long the stage takes to ease open, and shut, ms. */
 export const STAGE_EASE_MS = 200;
-/** The --ease-out curve, spelled out: Web Animations can't read CSS variables. */
-export const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 /**
  * Eases the stage open or shut, on its height and opacity. An ease caught mid-way turns back from

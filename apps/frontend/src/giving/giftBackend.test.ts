@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/apiClient";
 import { emptyApi } from "../api/testing";
 import { gift } from "../api/testFixtures";
-import { createApiGiftBackend, GiftPackagingError } from "./giftBackend";
+import { createApiGiftBackend, GiftPackagingError, type PackWait } from "./giftBackend";
 import {
   GiftTransactionRevertedError,
   GiftTransactionUnconfirmedError,
@@ -80,6 +80,13 @@ afterEach(() => {
 });
 
 describe("Giving through the smart account", () => {
+  it("says what packing waits on as it goes: the server, the sticker going in, the bag confirming, the server again", async () => {
+    const t = setup();
+    const heard: PackWait[] = [];
+    await t.backend.pack(t.sticker, (wait) => heard.push(wait));
+    expect(heard).toEqual(["asking", "moving", "confirming", "asking"]);
+  });
+
   it("confirms the escrow deposit before returning a Gift Message", async () => {
     const t = setup();
     const packed = await t.backend.pack(t.sticker);
@@ -140,10 +147,12 @@ describe("Giving through the smart account", () => {
       async (_id, _transfer, _sent, record) => {
         record.sending(Date.now());
         record.submitted(hash);
-        throw new GiftTransactionRevertedError();
+        throw new GiftTransactionRevertedError("deposit");
       },
     );
-    await expect(t.backend.pack(t.sticker)).rejects.toThrow("reverted");
+    await expect(t.backend.pack(t.sticker)).rejects.toMatchObject({
+      cause: { problem: "deposit_reverted" },
+    });
     await expect(t.backend.pack(t.sticker)).resolves.toMatchObject({ giftId: t.packed.id });
     expect(t.transactions.deposit).toHaveBeenLastCalledWith(
       t.packed.id,

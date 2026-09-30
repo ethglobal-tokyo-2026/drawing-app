@@ -5,13 +5,14 @@
  * given, which opens it among the stickers you gave. You page the stack, pull a sheet out over the board, spread every sheet out, peel stickers
  * onto the board and put them back. Everything is in board pixels, in the board's stacking context.
  */
+import { tokyoTicketDay } from "@drawing-app/api/client";
 import { i18next } from "../../i18n/i18n";
 import { timeOurWork } from "../../performance/performanceRecorder";
 import { whenBoardQuiet } from "../boardComplete";
-import { formatNo } from "../../stickers/format";
+import { formatMonthDay, formatNo } from "../../stickers/format";
 import { lightUp } from "../../stickers/light";
 import type { StickerUrls } from "../../stickers/stickerUrls";
-import { ticketDay } from "../../tickets/tickets";
+import { EASE_OUT, EASE_PEEL, clamp, lerp } from "../../ui/easing";
 import { packSheets, type PackedItem, type Shape } from "./sheetPacking";
 import { knownShape, stickerShape, unreadableCut } from "./stickerShape";
 import { edgeAt } from "./edgeBands";
@@ -260,8 +261,6 @@ const CRACK = 0.12;
 const FILTERS: readonly Filter[] = ["all", "mine", "gifts"];
 /** Where the spread lays each sheet down: a slight turn apiece. */
 const SPREAD_TURNS = [-1.2, 0.8, -0.5, 1.1, -0.9, 0.6, 1.3, -0.7];
-const EASE_OUT = "cubic-bezier(.16,1,.3,1)";
-const EASE_PEEL = "cubic-bezier(.2,.7,.2,1)";
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 const SVG_NS = "http://www.w3.org/2000/svg";
 /** Phosphor's Stack and X icons, bold. */
@@ -273,18 +272,11 @@ export const ICONS = {
 
 /** Trays made so far, which keeps each one's ids its own. */
 let trays = 0;
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const cssUrl = (url: string) => `url("${url}")`;
 const px = (v: number) => `${v.toFixed(1)}px`;
 const isShape = (s: Shape | undefined): s is Shape => s !== undefined;
 const maskOf = (s: Slot) => s.urls.mask ?? s.urls.png;
-const dayOf = (t: number) => ticketDay(new Date(t));
-const monthDay = (t: number) => {
-  const d = new Date(t);
-  return `${d.getMonth() + 1}.${d.getDate()}`;
-};
-const sameDay = (a: number, b: number) => new Date(a).toDateString() === new Date(b).toDateString();
+const dayOf = (t: number) => tokyoTicketDay(new Date(t));
 const matchesFilter = (s: Slot, f: Filter) => f === "all" || (f === "mine" ? !s.gift : s.gift);
 
 /** Resolves when an animation ends, finished or cancelled along with its element. */
@@ -700,7 +692,9 @@ export function createTrayEngine(
     if (!ats.length) return "";
     const lo = Math.min(...ats);
     const hi = Math.max(...ats);
-    return sameDay(lo, hi) ? monthDay(lo) : `${monthDay(lo)}–${monthDay(hi)}`;
+    return dayOf(lo) === dayOf(hi)
+      ? formatMonthDay(lo)
+      : `${formatMonthDay(lo)}–${formatMonthDay(hi)}`;
   }
   /** A sheet's name: as a button that brings it to the front, or as the sheet that is in front or out. */
   const sheetLabel = (f: number, name: SheetName = "back") => {

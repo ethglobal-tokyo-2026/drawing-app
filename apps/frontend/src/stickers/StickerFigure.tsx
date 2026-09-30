@@ -5,6 +5,7 @@ import { LiveResin } from "./LiveResin";
 import { StickerFoil, type FoilSize } from "./StickerFoil";
 import type { StickerUrls } from "./stickerUrls";
 import { revealOnLoad } from "../ui/reveal";
+import "./nsfw-mark.css";
 import "./sticker-figure.css";
 
 interface Props {
@@ -100,7 +101,7 @@ export function StickerFigure({
       {mask && nsfw && <span className="sticker-figure__gloss" aria-hidden="true" />}
       {veiled && (
         <span className="sticker-figure__veil">
-          <b role="img" aria-label={t(($) => $.stickers.nsfw.veiled)}>
+          <b className="nsfw-mark" role="img" aria-label={t(($) => $.stickers.nsfw.veiled)}>
             {t(($) => $.stickers.nsfw.mark)}
           </b>
         </span>

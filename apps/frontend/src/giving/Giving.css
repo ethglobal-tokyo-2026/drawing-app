@@ -9,7 +9,8 @@
   color: var(--ink);
 }
 
-/* The sticker being given, above the sheet. Once it's in the bag, its silhouette stays behind. */
+/* The sticker being given, above the sheet. Once it's in the bag, its silhouette stays behind. A tap
+   on it falls through to the scrim, which closes the sheet. */
 .giving__sticker {
   position: absolute;
   left: 0;
@@ -19,9 +20,13 @@
   flex-direction: column;
   align-items: center;
   padding-top: 20px;
+  pointer-events: none;
 }
 
+/* The figure sits above the scrim, so the object being given isn't dimmed with the page. */
 .giving__figure {
+  position: relative;
+  z-index: var(--z-sheet);
   width: 206px;
   height: 206px;
   object-fit: contain;
@@ -36,6 +41,7 @@
 
 .giving__given-sticker-silhouette {
   position: relative;
+  z-index: var(--z-sheet);
   width: 206px;
   height: 206px;
   transform: rotate(-3deg);
@@ -78,6 +84,34 @@
   max-height: calc(100% - 28px);
   overflow-y: auto;
   scrollbar-width: none;
+}
+
+/* Giving's sheets and the give sheet keep their title and key in view: what's between them scrolls
+   on its own, so a growing picker or a tall bag never pushes the key off a short screen. */
+.giving .bottom-sheet,
+.bottom-sheet.giving__sheet--give {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.giving__pinned {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 0 1 auto;
+}
+
+.giving__pinned > .giving__head,
+.giving__pinned > .giving__acts {
+  flex: none;
+}
+
+.giving__scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 .giving__body.is-in {
@@ -154,6 +188,17 @@
   color: var(--ink);
 }
 
+/* The line under the key: what pressing it does. */
+.giving__hint {
+  max-width: 32ch;
+  margin: 0;
+  color: var(--graphite);
+  font-size: 13px;
+  line-height: 1.35;
+  text-align: center;
+  text-wrap: pretty;
+}
+
 .giving__icon-btn:focus-visible,
 .giving__row:focus-visible {
   outline: 2px solid var(--ink);
@@ -167,7 +212,7 @@
   }
 }
 
-/* A way to send, on white label stock. "Send in a LINE chat" is the aqua that means giving. */
+/* A way to go on, on white label stock. */
 .giving__row {
   display: flex;
   align-items: center;
@@ -185,20 +230,9 @@
     0 1px 2px rgba(28, 24, 36, 0.08);
 }
 
-.giving__row--aqua {
-  background: var(--aqua);
-  box-shadow:
-    inset 0 0 0 1px rgba(28, 24, 36, 0.2),
-    0 1px 1.5px rgba(28, 24, 36, 0.25);
-}
-
 @media (hover: hover) {
   .giving__row:hover {
     background: #fcfbfe;
-  }
-
-  .giving__row--aqua:hover {
-    background: color-mix(in srgb, var(--aqua) 92%, #fff);
   }
 }
 
@@ -218,10 +252,6 @@
   background: var(--liner);
 }
 
-.giving__row--aqua .giving__row-icon {
-  background: rgba(255, 255, 255, 0.5);
-}
-
 .giving__row-text {
   flex: 1;
   min-width: 0;
@@ -229,8 +259,8 @@
 
 .giving__row-text b {
   display: block;
-  font-size: 17px;
-  font-weight: 750;
+  font-size: 15px;
+  font-weight: 700;
   line-height: 1.2;
 }
 
@@ -245,17 +275,6 @@
 .giving__row-chev {
   flex: none;
   color: var(--graphite);
-}
-
-.giving__row--aqua .giving__row-text small,
-.giving__row--aqua .giving__row-chev {
-  color: rgba(28, 24, 36, 0.78);
-}
-
-.giving__cant-find {
-  display: flex;
-  width: fit-content;
-  margin-top: 10px;
 }
 
 .giving__leaves {
@@ -286,8 +305,17 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
+  min-height: 0;
   padding-bottom: 4px;
   text-align: center;
+}
+
+/* The bag and what's said under it scroll; the button back to the board stays in view. */
+.giving__sent-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 }
 
 .giving__sent .giving__sub {
@@ -295,6 +323,7 @@
 }
 
 .giving__sent .label-btn {
+  flex: none;
   margin-top: 10px;
 }
 

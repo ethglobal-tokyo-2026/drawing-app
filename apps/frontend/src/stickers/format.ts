@@ -1,17 +1,27 @@
+import { TOKYO_UTC_OFFSET_MS } from "@drawing-app/api/client";
 import { currentLanguage, i18next } from "../i18n/i18n";
 import type { Language } from "../i18n/language";
 
 export const formatNo = (no: number) => `No.${String(no).padStart(4, "0")}`;
 /** A handle as it's printed: one "@", however many it came with. */
 export const formatHandle = (handle: string) => `@${handle.replace(/^@+/, "")}`;
+
+/**
+ * The Tokyo date `t` falls on, read from its UTC fields. Dates print the day the server counts,
+ * which turns over at midnight in Tokyo, whatever the phone's zone.
+ */
+const tokyoDate = (t: number) => new Date(t + TOKYO_UTC_OFFSET_MS);
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** A day in full: "2026.09.23". */
 export const formatDay = (t: number) => {
-  const d = new Date(t);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+  const d = tokyoDate(t);
+  return `${d.getUTCFullYear()}.${pad2(d.getUTCMonth() + 1)}.${pad2(d.getUTCDate())}`;
 };
 /** A day in the short form a caption has room for: "9.23". */
 export const formatMonthDay = (t: number) => {
-  const d = new Date(t);
-  return `${d.getMonth() + 1}.${d.getDate()}`;
+  const d = tokyoDate(t);
+  return `${d.getUTCMonth() + 1}.${d.getUTCDate()}`;
 };
 
 /** Whole minutes and the seconds past them; the seconds are left out on the minute. */

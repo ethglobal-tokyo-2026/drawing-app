@@ -1,5 +1,9 @@
-import type { Explore, Person, Sticker } from "@drawing-app/api/client";
-import { TICKET_DAY_UTC_OFFSET_MS } from "../tickets/config";
+import {
+  TOKYO_UTC_OFFSET_MS,
+  type Explore,
+  type Person,
+  type Sticker,
+} from "@drawing-app/api/client";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -7,7 +11,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * The ticket day `ms` falls in, as whole days since 1970-01-01. Explore's days are ticket days, as
  * the server's are, so they turn over at midnight in Tokyo.
  */
-export const ticketDayNumber = (ms: number) => Math.floor((ms + TICKET_DAY_UTC_OFFSET_MS) / DAY_MS);
+export const ticketDayNumber = (ms: number) => Math.floor((ms + TOKYO_UTC_OFFSET_MS) / DAY_MS);
 
 /** A day's date, "YYYY-MM-DD": what seeds its layer. */
 export const dayKey = (day: number) => new Date(day * DAY_MS).toISOString().slice(0, 10);

@@ -13,7 +13,8 @@
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
     "label copy"
-    "value copy";
+    "value copy"
+    "problem problem";
   align-items: center;
   column-gap: 12px;
   row-gap: 1px;
@@ -34,7 +35,7 @@
 .account-rows__value {
   grid-area: value;
   min-width: 0;
-  font: 600 14px/1.35 var(--font-ui);
+  font: 500 15px/1.35 var(--font-ui);
   font-stretch: var(--w-ui);
   overflow-wrap: anywhere;
   -webkit-user-select: text;
@@ -57,6 +58,16 @@
 
 .account-rows__copy {
   grid-area: copy;
+}
+
+/* A failed copy, under the row until the next try: Ink on Tomato Soft, as the Settings note's. */
+.account-rows__problem {
+  grid-area: problem;
+  margin-top: 6px;
+  padding: 8px 12px;
+  border-radius: var(--r-label);
+  background: var(--tomato-soft);
+  font: 500 13px/1.4 var(--font-ui);
 }
 
 /* Copy at the small labels' size, so it doesn't outweigh the value it copies. */

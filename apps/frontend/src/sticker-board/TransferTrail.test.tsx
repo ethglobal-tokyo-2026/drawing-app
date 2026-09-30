@@ -16,6 +16,7 @@ import {
 } from "../gratitude/replay/testReplayEngine";
 import { LANDED_HOLD_MS } from "../gratitude/replay/useGratitudeReplay";
 import { errorReason } from "../i18n/errorMessage";
+import { ReducedMotion } from "../ui/testing";
 import { toTrailRows } from "./trailRows";
 import { TransferTrail } from "./TransferTrail";
 
@@ -67,22 +68,6 @@ const stage = () => container.querySelector(".transfer-trail__row.is-open .repla
 const liveLine = () => find(".transfer-trail__row.is-open [aria-live]").textContent;
 const note = () => find(".transfer-trail__row.is-open .transfer-trail__replay-note").textContent;
 
-/** prefers-reduced-motion as the phone reports it, switched by the test. */
-class ReducedMotion extends EventTarget implements MediaQueryList {
-  readonly media = "(prefers-reduced-motion: reduce)";
-  onchange = null;
-  matches: boolean;
-  constructor(reduced: boolean) {
-    super();
-    this.matches = reduced;
-  }
-  change(reduced: boolean) {
-    this.matches = reduced;
-    this.dispatchEvent(new Event("change"));
-  }
-  addListener() {}
-  removeListener() {}
-}
 const wait = (ms = 0) => act(() => vi.advanceTimersByTimeAsync(ms));
 const press = async (el: HTMLElement) => {
   act(() => el.click());
@@ -121,6 +106,43 @@ afterEach(() => {
   vi.restoreAllMocks();
   read.mockReset();
   markSeen.mockReset();
+});
+
+describe("TransferTrail's rows", () => {
+  it("keeps focus on a row's button as it opens and closes, and says which it is", async () => {
+    show([given("g-2", TEST_OWNER, people.bob), given("g-1", people.ken, TEST_OWNER)]);
+    act(() => find(".transfer-trail__row--fold button").click());
+    const head = find(".transfer-trail__row:not(.is-open) button");
+    expect(head.getAttribute("aria-expanded")).toBe("false");
+    act(() => head.focus());
+    await press(head);
+    expect(head.isConnected).toBe(true);
+    expect(document.activeElement).toBe(head);
+    expect(head.getAttribute("aria-expanded")).toBe("true");
+    await press(head);
+    expect(document.activeElement).toBe(head);
+    expect(head.getAttribute("aria-expanded")).toBe("false");
+    expect(container.querySelector(".is-open")).toBeNull();
+  });
+
+  it("stops the replay of a row that closes", async () => {
+    show();
+    await press(pill());
+    await press(find(".transfer-trail__row.is-open .transfer-trail__head"));
+    expect(engine.last().stop).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["with gratitude", () => given("g-1", people.ken, TEST_OWNER)],
+    ["without", () => trailEntry({ giftId: "g-0", giver: people.ken, receiver: people.bob })],
+  ])("moves focus to the first row the fold reveals, one %s", async (_, revealed) => {
+    show([given("g-2", TEST_OWNER, people.bob), revealed()]);
+    const fold = find(".transfer-trail__row--fold button");
+    act(() => fold.focus());
+    await press(fold);
+    const rows = container.querySelectorAll(".transfer-trail__row");
+    expect(document.activeElement).toBe(rows[1]?.querySelector(".transfer-trail__head"));
+  });
 });
 
 describe("TransferTrail's replay", () => {

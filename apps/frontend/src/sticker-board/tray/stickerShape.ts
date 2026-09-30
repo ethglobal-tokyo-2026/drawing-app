@@ -1,5 +1,5 @@
-import { context2d } from "../../sticker-creation/canvas/context2d";
 import type { BoardSticker } from "../boardSticker";
+import { maskPixels } from "../../stickers/maskPixels";
 import type { StickerUrls } from "../../stickers/stickerUrls";
 import { boxShape, outlineShape, shapeFromMask, type Shape } from "./sheetPacking";
 
@@ -65,25 +65,11 @@ export function stickerShape(
 }
 
 async function traceMask(url: string, width: number, height: number): Promise<Shape> {
-  const image = new Image();
-  image.src = url;
-  await image.decode();
   const k = TRACE_SIDE / Math.max(width, height);
   const cols = Math.max(TRACE_MIN, Math.round(width * k));
   const rows = Math.max(TRACE_MIN, Math.round(height * k));
-  const canvas = document.createElement("canvas");
-  canvas.width = cols;
-  canvas.height = rows;
-  try {
-    const g = context2d(canvas, { willReadFrequently: true });
-    g.drawImage(image, 0, 0, cols, rows);
-    const alpha = g.getImageData(0, 0, cols, rows).data;
-    const bits = new Uint8Array(cols * rows);
-    for (let i = 0; i < bits.length; i++) bits[i] = alpha[i * 4 + 3] >= INSIDE ? 1 : 0;
-    return shapeFromMask(bits, cols, rows, width, height);
-  } finally {
-    // iOS counts canvases against a small budget until they're collected.
-    canvas.width = 0;
-    canvas.height = 0;
-  }
+  const alpha = (await maskPixels(url, { width: cols, height: rows })).data;
+  const bits = new Uint8Array(cols * rows);
+  for (let i = 0; i < bits.length; i++) bits[i] = alpha[i * 4 + 3] >= INSIDE ? 1 : 0;
+  return shapeFromMask(bits, cols, rows, width, height);
 }

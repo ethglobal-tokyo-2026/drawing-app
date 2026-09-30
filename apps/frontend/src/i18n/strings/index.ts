@@ -6,7 +6,6 @@ import { giving } from "./giving";
 import { gratitude } from "./gratitude";
 import { identity } from "./identity";
 import { line } from "./line";
-import { offers } from "./offers";
 import { pages } from "./pages";
 import { receiving } from "./receiving";
 import { shop } from "./shop";
@@ -26,7 +25,6 @@ export const strings = {
   gratitude,
   identity,
   line,
-  offers,
   pages,
   receiving,
   shop,

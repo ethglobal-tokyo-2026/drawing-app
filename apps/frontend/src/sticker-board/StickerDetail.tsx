@@ -12,6 +12,7 @@ import { formatDay, formatHandle, formatMonthDay, formatNo } from "../stickers/f
 import { useLight } from "../stickers/light";
 import { ArtistChip } from "../stickers/ArtistChip";
 import { StickerFigure } from "../stickers/StickerFigure";
+import { EASE_OUT } from "../ui/easing";
 import { Key } from "../ui/Key";
 import { LabelButton } from "../ui/LabelButton";
 import { QuietLink } from "../ui/QuietLink";
@@ -50,9 +51,6 @@ interface Props {
    */
   ownerId?: string;
 }
-
-/** The --ease-out curve, spelled out: Web Animations can't read CSS variables. */
-const EASE_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 /** The ground fades in, the strip slides in from the left, then the fine print and Give rise. */
 function enterAround(detail: HTMLElement): Animation[] {
@@ -316,22 +314,25 @@ export function StickerDetail({
                   <EnsNameLink name={sticker.ensName} />
                 </p>
               )}
+              {/* Its own line, so a long handle wraps rather than being cut short. */}
+              {byOther && (
+                <p className="sticker-detail__artist">
+                  <ArtistChip artist={sticker.artist} wrap />
+                </p>
+              )}
               <p className="fine sticker-detail__fine-print">
-                {byOther ? (
-                  // The chip's handle keeps its own case in the fine print's capitals.
-                  <span className="handle">
-                    <ArtistChip artist={sticker.artist} />
-                  </span>
-                ) : (
-                  <span className="sticker-detail__by">
-                    <Trans
-                      i18nKey={($) => $.stickerBoard.detail.by}
-                      components={{
-                        artist: <span className="handle">{handleOf(sticker.artist)}</span>,
-                      }}
-                    />
-                  </span>
-                )}{" "}
+                {!byOther && (
+                  <>
+                    <span className="sticker-detail__by">
+                      <Trans
+                        i18nKey={($) => $.stickerBoard.detail.by}
+                        components={{
+                          artist: <span className="handle">{handleOf(sticker.artist)}</span>,
+                        }}
+                      />
+                    </span>{" "}
+                  </>
+                )}
                 <span>
                   <Trans
                     i18nKey={($) => $.stickerBoard.detail.drawnIn}
@@ -359,6 +360,24 @@ export function StickerDetail({
               )}
             </section>
             <TimelapseFailure timelapse={timelapse} />
+
+            {/* Where the key would be: without the check, the call to send gratitude can't show. */}
+            {detail.state === "failed" && (
+              <p className="problem-note sticker-detail__check-failed" role="alert">
+                {t(($) => $.stickerBoard.detail.checkFailed, {
+                  reason: errorReason(detail.error),
+                })}{" "}
+                {/* It goes as it retries, so focus moves to the dialog, which holds its keys. */}
+                <QuietLink
+                  onClick={() => {
+                    root.current?.focus({ preventScroll: true });
+                    detail.retry();
+                  }}
+                >
+                  {t(($) => $.stickerBoard.tryAgain)}
+                </QuietLink>
+              </p>
+            )}
 
             {mode === "yours" &&
               (onItsWay(sticker) ? (
@@ -406,22 +425,6 @@ export function StickerDetail({
                   </div>
                 )
               ))}
-            {detail.state === "failed" && (
-              <p className="fine sticker-detail__check-failed" role="alert">
-                {t(($) => $.stickerBoard.detail.checkFailed, {
-                  reason: errorReason(detail.error),
-                })}{" "}
-                {/* It goes as it retries, so focus moves to the dialog, which holds its keys. */}
-                <QuietLink
-                  onClick={() => {
-                    root.current?.focus({ preventScroll: true });
-                    detail.retry();
-                  }}
-                >
-                  {t(($) => $.stickerBoard.tryAgain)}
-                </QuietLink>
-              </p>
-            )}
             {trail.length > 0 && ownerId && (
               // Mounted once its rows are in, so the open row is picked from them.
               <TransferTrail

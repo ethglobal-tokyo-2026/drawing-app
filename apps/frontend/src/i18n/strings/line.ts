@@ -5,6 +5,11 @@ export const line = {
   gate: {
     /** LINE sign-in screen, while LINE (LIFF) starts up as the app opens: the status line */
     opening: { en: "Opening your sticker board…", ja: "シールボードをひらいています…" },
+    /** LINE sign-in screen, once LINE (LIFF) has taken about six seconds to start: the line that joins the status line to say the wait is long */
+    stillOpening: {
+      en: "Still opening. It’s taking longer than usual.",
+      ja: "まだひらいています。いつもより時間がかかっています。",
+    },
     /** LINE sign-in screen, in a browser outside LINE before LINE Login: the heading */
     title: { en: "Your sticker board", ja: "あなたのシールボード" },
     /** LINE sign-in screen, in a browser outside LINE before LINE Login: the line under the heading */
@@ -20,6 +25,13 @@ export const line = {
     },
     /** LINE sign-in screen, when LINE (LIFF) fails to start: the button that reloads the page */
     tryAgain: { en: "Try again", ja: "もう一度" },
+    /** LINE sign-in screen, when LINE (LIFF) doesn't start in time: LINE's reason in fine print under the key, with {{seconds}} the time it was given */
+    noAnswer: {
+      en: "LINE didn’t answer within {{seconds}} s",
+      ja: "LINEが{{seconds}}秒以内に応答しませんでした",
+    },
+    /** Sign-in screens, when the app couldn't be opened: the small label above the technical details, which the person can copy into a report */
+    details: { en: "Details for a report", ja: "報告用の詳細" },
   },
   /** The developer slip's LINE details and test message. Never translated. */
   developer: {
