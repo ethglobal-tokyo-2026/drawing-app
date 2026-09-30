@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { boardSticker, people } from "../api/testFixtures";
 import { emptyApi, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
 import { toPerson } from "../api/views";
-import { markNoticed } from "../giving/noticedGifts";
+import { forgetNoticedHere, markNoticed, noticeReceivesFromNow } from "../giving/noticedGifts";
 import { forgetBoardComplete } from "./boardComplete";
 import { placeUnplaced, toBoardSticker } from "./boardSticker";
 import { keepBoard, keptBoardFor, readKeptBoardAgain } from "./lastBoard";
@@ -37,6 +37,7 @@ afterEach(async () => {
 
 beforeEach(() => {
   localStorage.clear();
+  forgetNoticedHere();
   readKeptBoardAgain();
   forgetBoardComplete();
 });
@@ -150,14 +151,26 @@ describe("StickerBoard after a gift", () => {
     expect(detail?.textContent).toContain("You gave it to @bob");
   });
 
-  it("gives each gift received since the last visit its own notice, newest first", async () => {
-    const gave = (receiver: Person, receivedAt: string) =>
-      boardSticker({ held: false, givenTo: { receiver, receivedAt } });
+  const gave = (receiver: Person, receivedAt: string) =>
+    boardSticker({ held: false, givenTo: { receiver, receivedAt } });
+  const noticeTitle = () => document.querySelector(".gift-received-notice h1")?.textContent?.trim();
+
+  it("draws no notice for gifts received before this device's first board", async () => {
     await show(
       gave(people.mika, "2026-09-22T11:52:00.000Z"),
       gave(people.bob, "2026-09-23T11:52:00.000Z"),
     );
-    const title = () => document.querySelector(".gift-received-notice h1")?.textContent?.trim();
+    expect(noticeTitle()).toBeUndefined();
+  });
+
+  it("gives each gift received since the last visit its own notice, newest first", async () => {
+    // This device has shown a notice before.
+    noticeReceivesFromNow([]);
+    await show(
+      gave(people.mika, "2026-09-22T11:52:00.000Z"),
+      gave(people.bob, "2026-09-23T11:52:00.000Z"),
+    );
+    const title = noticeTitle;
     const close = () =>
       act(() => document.querySelector<HTMLElement>(".gift-received-notice .label-btn")?.click());
     expect(title()).toBe("@bob received your sticker");

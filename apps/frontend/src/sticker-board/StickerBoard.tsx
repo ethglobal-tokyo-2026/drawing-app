@@ -23,7 +23,12 @@ import {
   type StickerView,
 } from "../api/views";
 import { GiftReceivedNotice } from "../giving/GiftReceivedNotice";
-import { markNoticed, newestUnnoticed, receiveOf } from "../giving/noticedGifts";
+import {
+  markNoticed,
+  newestUnnoticed,
+  noticeReceivesFromNow,
+  receiveOf,
+} from "../giving/noticedGifts";
 import { PendingGiftsNotificationBadge } from "../giving/PendingGiftsNotificationBadge";
 import { useGiftSender } from "../giving/useGiftSender";
 import { FEEL_CONFIG } from "../gratitude/gameConfig";
@@ -223,6 +228,22 @@ const viewOf = (s: BoardStickerView): StickerView => ({
   sealedAt: s.createdAt,
 });
 
+/** The stickers of yours that others have received, each with the giver's notice's contents. */
+const receivedGiftsOf = (stickers: readonly BoardStickerView[]) =>
+  stickers.flatMap((s) =>
+    !s.held && s.givenTo
+      ? [
+          {
+            stickerId: s.id,
+            receivedAt: s.givenTo.receivedAt,
+            sticker: viewOf(s),
+            receiver: s.givenTo.receiver,
+            ...(s.urls.mask && { mask: s.urls.mask }),
+          },
+        ]
+      : [],
+  );
+
 /** Gratitude being sent: for a received gift when `giftId` is set, which records it; the stat
  * board's demo has none. */
 type GratitudeFor = { sticker: BoardSticker; giver: ReturnType<typeof asGiver>; giftId?: string };
@@ -370,21 +391,15 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       : [];
 
   // Each gift someone received since this device last said so, newest first, one notice at a time.
-  const receivedGifts = (adopted?.stickers ?? []).flatMap((s) =>
-    !s.held && s.givenTo
-      ? [
-          {
-            stickerId: s.id,
-            receivedAt: s.givenTo.receivedAt,
-            sticker: viewOf(s),
-            receiver: s.givenTo.receiver,
-            ...(s.urls.mask && { mask: s.urls.mask }),
-          },
-        ]
-      : [],
-  );
+  const receivedGifts = receivedGiftsOf(adopted?.stickers ?? []);
   // Closed ones stay closed on this visit even when the device can't save that they were noticed.
   const notice = newestUnnoticed(receivedGifts.filter((g) => !noticesClosed.has(receiveOf(g))));
+
+  // A device with no record of notices would replay every gift ever received, so the first board it
+  // draws counts those as noticed.
+  useEffect(() => {
+    if (adopted) noticeReceivesFromNow(receivedGiftsOf(adopted.stickers));
+  }, [adopted]);
 
   // A sticker that just reached you asks about gratitude, when its newest gift to you has none.
   useEffect(() => {
