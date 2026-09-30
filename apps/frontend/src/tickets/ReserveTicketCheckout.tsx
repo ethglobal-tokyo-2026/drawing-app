@@ -41,6 +41,7 @@ import {
   keepUnaddedPurchase,
   keptRefusal,
   refusalError,
+  unaddedPurchaseToShow,
   unaddedPurchasesFor,
   useAddUnaddedPurchases,
   type UnaddedPurchase,
@@ -89,8 +90,7 @@ interface Unadded {
 
 /** How the checkout opens on a payment kept on this phone: a refusal first, since it shows once. */
 function keptUnadded(userId: string): Unadded | null {
-  const purchases = unaddedPurchasesFor(userId);
-  const purchase = purchases.find((p) => p.refusal) ?? purchases.at(0);
+  const purchase = unaddedPurchaseToShow(unaddedPurchasesFor(userId));
   if (!purchase) return null;
   return purchase.refusal
     ? {
