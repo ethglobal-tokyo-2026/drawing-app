@@ -118,3 +118,39 @@ Your sticker board adopts useMyStickerBoard's kept answer as a fresh load when i
 
 - Trigger: Move a sticker on your board (drag or arrow keys; the save lands), then go to Draw or Explore and back, or seal a sticker, which lands you on the board, with no Shop, give sheet or offer sheet loading the board in between. The new StickerBoard shows the answer kept from the start of the last visit over the phone's up-to-date board, and marks it fresh, so when the fresh load lands heldOver keeps those old spots over the server's. The moved sticker sits where it was before; one stuck on from the sticker tray is back in the tray; one put back in the tray is on the board again. A sticker whose kept placement was null (a received sticker the board placed on the last visit) gets its first free spot again and the newlyPlaced effect saves it, so the move is lost on the server too. visit 1 saves x 0.4701; visit 2 shows x 0.5 after the fresh load; in the unplaced case visit 2 saves x 0.5 again and the server ends at 0.5.
 - Fix: Have StickerBoard adopt only a load that landed in this mount (or adopt the kept answer as fromPhone), or update the kept answer's placement whenever save() sends one.
+
+## The follow-ups review
+
+The follow-up lanes' commits, reviewed the same way: F1 for sealing and tickets (R1 and R2's fixes), F2 for giving and the board (274aa02f dc77ed2e b64c2ed0 8852b718 e81c8a14 6005a3a9).
+
+**F2-1** · low · `src/giving/giveFlow.ts:326` (dc77ed2e)  
+LINE's answer counted as late from the moment the flow asked LIFF for the picker, but LIFF fetches a one-time token before it opens the picker, so on a slow connection Giving asked "Did it go out?" with nothing sent, and the picker then opened anyway with the same Gift Message. The clock also ran while the page was hidden, when the picker step started hidden.
+
+- Trigger: Send in a LINE chat with LIFF's token request (api.line.me/liff/v2/apps/\*/ott) held past 5 s. Take it out, then sending from the picker that opens: the friend's link reads "took this one back". It went out, then cancelling the picker: the gift reads sent with no Gift Message, on its way until it expires.
+- Fixed in 8d44dabf: from the picker's request the answer is late only after `PICKER_OPENING_MS` (a guess), from the page coming back into view after `PICKER_RETURN_MS`, and no clock runs while the page is hidden.
+
+**F2-2** · low · `src/giving/giftBackend.ts:251` (b64c2ed0)  
+A sent mark kept after a 401 was reported again only when the same sticker was given again, so meanwhile the server held the gift as packed, and the sticker stayed on the giver's board with Give after "Closed and sent".
+
+- Fixed in 8d44dabf: the app reports every kept sent mark as it starts, which includes signing in again after a lost session (`src/giving/sentReports.ts`), forgets each once the server hears it or refuses it for good, and loads the board again.
+
+## WebKit pass
+
+Playwright WebKit, headless, 390×844 with touch, against a dev server under LIFF Mock at 66903030. All of these worked, with no page errors:
+
+- Signing in, and the board loading.
+- Spending a daily ticket, then drawing, sealing and landing on the board.
+- Moving a sticker with the arrow keys; it stays put after Explore and after a reload.
+- Giving to a second person and receiving through the gift link, then Accept and the Mini-game.
+- A lazy screen whose code is blocked showing the Reload note.
+- The sticker detail closing on `history.back()`.
+
+Not covered:
+
+- Payments.
+- Dragging a sticker or the pull tab.
+- The gifts-for-you badge.
+- The Reload key itself.
+- The board's flip: headless WebKit ignores `backface-visibility`, so it needs a real iPhone.
+
+Seen, not changed: the Sealed card takes no taps until the ceremony ends (`inert` until `done`), so a tap on its key soon after the key settles does nothing.
