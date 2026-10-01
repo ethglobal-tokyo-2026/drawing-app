@@ -118,34 +118,29 @@ export function StickerDetail({
   );
   const sticker: BoardStickerView | undefined = stickers[index];
   const last = stickers.length - 1;
+  // Gratitude kept on this phone that the server has since recorded or refused: counted, whatever
+  // the read of the detail is doing, so a read that went out before one left can be told apart.
+  const [combosLeft, setCombosLeft] = useState(0);
+  useEffect(() => onGratitudeLeftOutbox(() => setCombosLeft((n) => n + 1)), []);
   // Its Transfer Trail, and whether you owe gratitude for a sticker you hold, come with its detail.
   const shownStickerId = sticker?.id ?? null;
-  const detail = useApiQuery(`sticker-detail:${shownStickerId ?? "none"}`, (api) =>
-    shownStickerId ? api.stickerDetail(shownStickerId) : Promise.resolve(null),
-  );
-  const loaded = detail.state === "ready" ? detail.data : null;
-  // Gratitude kept on this phone that the server has now recorded or refused: the trail is read
-  // again, and until it lands, what was read before can't say whether gratitude is owed.
-  const [outOfDate, setOutOfDate] = useState<StickerDetailResponse | null>(null);
+  const detail = useApiQuery(`sticker-detail:${shownStickerId ?? "none"}`, async (api) => {
+    const combosLeftBefore = combosLeft;
+    const stickerDetail = shownStickerId ? await api.stickerDetail(shownStickerId) : null;
+    return { stickerDetail, combosLeftBefore };
+  });
+  const read = detail.state === "ready" ? detail.data : null;
+  const loaded = read?.stickerDetail ?? null;
   const readAgain = detail.state === "ready" ? detail.refresh : null;
-  useEffect(
-    () =>
-      readAgain
-        ? onGratitudeLeftOutbox(() => {
-            setOutOfDate(loaded);
-            readAgain();
-          })
-        : undefined,
-    [readAgain, loaded],
-  );
+  // A read that went out before a combo left can't say whether gratitude is owed: Send gratitude
+  // waits for the trail to be read again, and again if another combo leaves before that lands.
+  const predatesCombo = read !== null && read.combosLeftBefore !== combosLeft;
+  useEffect(() => {
+    if (predatesCombo) readAgain?.();
+  }, [read, predatesCombo, readAgain]);
   const trail = useMemo(() => (loaded ? toTrailRows(loaded.transferTrail) : []), [loaded]);
   const owed =
-    mode === "yours" &&
-    onSendGratitude &&
-    sticker &&
-    !onItsWay(sticker) &&
-    loaded &&
-    loaded !== outOfDate
+    mode === "yours" && onSendGratitude && sticker && !onItsWay(sticker) && loaded && !predatesCombo
       ? owedGratitude(loaded)
       : null;
 

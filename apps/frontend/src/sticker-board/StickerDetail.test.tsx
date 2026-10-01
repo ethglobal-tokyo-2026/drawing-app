@@ -109,6 +109,52 @@ function received(gratitude: Gratitude | null) {
 }
 const giveIsTheKey = () => button("Give")?.classList.contains("key");
 
+/**
+ * A server whose Transfer Trail read answers only when told, with the gratitude it held as that read
+ * went out, so a test sees the detail while a read is going and what a read from before a record
+ * says. `server` is what takes a combo: once it has, the reads that go out after hold its gratitude.
+ */
+function heldReads() {
+  const giftId = "gift-133";
+  const drawn = apiSticker({ id: "s-133", artist: people.ken, ownerId: TEST_OWNER.id });
+  let recorded: Gratitude | null = null;
+  const answers: (() => void)[] = [];
+  const stickerDetail = vi.fn(
+    () =>
+      new Promise<StickerDetailResponse>((resolve) => {
+        const seen = recorded;
+        answers.push(() =>
+          resolve({
+            sticker: drawn,
+            owner: TEST_OWNER,
+            transferTrail: [
+              {
+                giftId,
+                giver: people.mika,
+                receiver: TEST_OWNER,
+                receivedAt: "2026-09-23T12:00:00.000Z",
+                gratitude: seen,
+              },
+            ],
+            hasTimelapse: false,
+          }),
+        );
+      }),
+  );
+  return {
+    giftId,
+    client: emptyApi({ stickerDetail }),
+    server: {
+      recordGratitude: (body: RecordGratitude) => {
+        recorded = gratitudeOf(body);
+        return Promise.resolve(recorded);
+      },
+    },
+    /** Answers the `n`th read, from zero. */
+    answer: (n: number) => answers[n]?.(),
+  };
+}
+
 const me = { ...TEST_OWNER, handle: "me", lineDisplayName: "Me" };
 /** A client whose sticker details have Transfer Trails: `trail` for s-133, empty for the rest. */
 const withTrail = (trail: StickerDetailResponse["transferTrail"]) =>
@@ -228,56 +274,41 @@ describe("StickerDetail", () => {
 
   it("treats gratitude waiting on this phone as sent, and reads the trail again once the server has it", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
-    const giftId = "gift-133";
-    let recorded: Gratitude | null = null;
-    /** Holds each answer until told, so the test sees the detail while the trail is read again. */
-    const answers: (() => void)[] = [];
-    const { drawn } = received(null);
-    const stickerDetail = vi.fn(
-      () =>
-        new Promise<StickerDetailResponse>((resolve) => {
-          const seen = recorded;
-          answers.push(() =>
-            resolve({
-              sticker: drawn,
-              owner: TEST_OWNER,
-              transferTrail: [
-                {
-                  giftId,
-                  giver: people.mika,
-                  receiver: TEST_OWNER,
-                  receivedAt: "2026-09-23T12:00:00.000Z",
-                  gratitude: seen,
-                },
-              ],
-              hasTimelapse: false,
-            }),
-          );
-        }),
-    );
+    const reads = heldReads();
     // Played, and kept for want of a connection.
     const offline = { recordGratitude: () => Promise.reject(new TypeError("Failed to fetch")) };
-    await sendGratitude(offline, TEST_OWNER.id, recordGratitudeBody({ giftId }));
+    await sendGratitude(offline, TEST_OWNER.id, recordGratitudeBody({ giftId: reads.giftId }));
 
-    open({ onSendGratitude: vi.fn() }, emptyApi({ stickerDetail }));
-    answers[0]?.();
+    open({ onSendGratitude: vi.fn() }, reads.client);
+    reads.answer(0);
     await settle();
     expect(button("Send gratitude")).toBeUndefined();
 
     // Back online, the server records it, and the trail is read again. What was read before, which
     // has no gratitude, never brings Send gratitude back while it is.
-    const online = {
-      recordGratitude: (body: RecordGratitude) => {
-        recorded = gratitudeOf(body);
-        return Promise.resolve(recorded);
-      },
-    };
-    await act(() => resendPendingGratitude(online, TEST_OWNER.id));
-    expect(stickerDetail).toHaveBeenCalledTimes(2);
+    await act(() => resendPendingGratitude(reads.server, TEST_OWNER.id));
+    expect(reads.client.stickerDetail).toHaveBeenCalledTimes(2);
     expect(button("Send gratitude")).toBeUndefined();
-    answers[1]?.();
+    reads.answer(1);
     await settle();
     expect(button("Send gratitude")).toBeUndefined();
+  });
+
+  it("reads the trail again once its first read lands, when gratitude was recorded while that read was going out", async () => {
+    const reads = heldReads();
+    open({ onSendGratitude: vi.fn() }, reads.client);
+    // The first read is out and unanswered when the server records a combo this phone sent.
+    const body = recordGratitudeBody({ giftId: reads.giftId });
+    await act(() => sendGratitude(reads.server, TEST_OWNER.id, body));
+    // That read went out before the record, so it holds no gratitude, and can't bring Send gratitude back.
+    reads.answer(0);
+    await settle();
+    expect(button("Send gratitude")).toBeUndefined();
+    expect(reads.client.stickerDetail).toHaveBeenCalledTimes(2);
+    reads.answer(1);
+    await settle();
+    expect(button("Send gratitude")).toBeUndefined();
+    expect(giveIsTheKey()).toBe(true);
   });
 
   it("says the check failed where the key would be, and Try again asks again", async () => {
