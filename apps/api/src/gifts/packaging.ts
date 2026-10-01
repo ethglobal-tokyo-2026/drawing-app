@@ -13,6 +13,7 @@ import {
   refuse,
   stickerLookup,
   stickerSchema,
+  stickerViewer,
   toGift,
   toPerson,
   type EscrowTransfer,
@@ -324,7 +325,8 @@ export async function takeOut(
 }
 
 /** Your gifts in the bag or on their way, newest first, each with its sticker. */
-export function pendingGifts({ db, images }: AppDeps, userId: string): PendingGifts {
+export function pendingGifts(deps: AppDeps, userId: string): PendingGifts {
+  const { db } = deps;
   const rows = db
     .select({ gift: gifts, for: users })
     .from(gifts)
@@ -335,7 +337,7 @@ export function pendingGifts({ db, images }: AppDeps, userId: string): PendingGi
   const stickerOf = stickerLookup(
     db,
     rows.map(({ gift }) => gift.stickerId),
-    images.urls,
+    stickerViewer(deps, userId),
   );
   return {
     gifts: rows.map(({ gift, for: forUser }) => ({

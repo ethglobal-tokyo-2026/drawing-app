@@ -10,6 +10,7 @@ import {
 } from "viem";
 import { sepolia } from "viem/chains";
 import { ChainUnavailableError } from "../deps.ts";
+import { fakeImageStore } from "../testing/fakes.ts";
 import { captureLogLines, type LogLines } from "../testing/logLines.ts";
 import {
   CLAIM_RECEIPT_TIMEOUT_MS,
@@ -20,7 +21,6 @@ import {
   RPC_RETRY_COUNT,
   rpcTransport,
 } from "./stickerChain.ts";
-import { stickerImageUrls } from "./imageStore.ts";
 
 const rpc = vi.hoisted(() => ({
   readContract: vi.fn(),
@@ -115,11 +115,7 @@ function adapter() {
     resolverContract: "0x0000000000000000000000000000000000000cc1",
     sealerPrivateKey: hex("5"),
     smartWallets: { addressFor: async (id) => (id === "alice" ? ALICE : BOB) },
-    images: {
-      save: async () => {},
-      urls: (contentHash) => stickerImageUrls("https://images.test", contentHash),
-      saveMetadata,
-    },
+    images: { ...fakeImageStore("https://images.test"), saveMetadata },
   });
   return { ...chain, saveMetadata };
 }

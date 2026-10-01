@@ -3,6 +3,7 @@ import { IMMUTABLE_MAX_AGE_S } from "../cacheControl.ts";
 import type { AppDeps } from "../deps.ts";
 import { apiError, limitBody, validate } from "../errors.ts";
 import type { AppEnv } from "../session.ts";
+import { stickerViewer } from "../shapes.ts";
 import { sealSticker } from "../stickers/seal.ts";
 import { MAX_SEAL_BYTES, sealForm } from "../stickers/sealForm.ts";
 import { stickerDetail, stickerIdParam } from "../stickers/stickerDetail.ts";
@@ -21,15 +22,23 @@ export const stickerRoutes = (deps: AppDeps) =>
     })
     .get("/:stickerId", validate("param", stickerIdParam), (c) => {
       const { stickerId } = c.req.valid("param");
-      const detail = stickerDetail(deps.db, stickerId, deps.images.urls);
+      const detail = stickerDetail(deps.db, stickerId, stickerViewer(deps, c.var.userId));
       if (!detail) return apiError(c, 404, "sticker_not_found", `No sticker ${stickerId}`);
       return c.json(detail, 200);
     })
     .get("/:stickerId/timelapse", validate("param", stickerIdParam), (c) => {
       const { stickerId } = c.req.valid("param");
-      const timelapse = readTimelapse(deps.db, stickerId);
+      const timelapse = readTimelapse(deps.db, stickerId, stickerViewer(deps, c.var.userId));
       if (timelapse === "sticker_not_found") {
         return apiError(c, 404, "sticker_not_found", `No sticker ${stickerId}`);
+      }
+      if (timelapse === "adults_only") {
+        return apiError(
+          c,
+          403,
+          "adults_only",
+          `Sticker ${stickerId} is an NSFW sticker: its timelapse is for adults only`,
+        );
       }
       if (timelapse === "timelapse_not_found") {
         return apiError(

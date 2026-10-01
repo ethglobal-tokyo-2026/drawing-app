@@ -1,7 +1,6 @@
 import { gifts, stickerPlacements, stickers, users, type Db } from "@drawing-app/db";
 import { and, asc, count, eq, inArray, isNull, notExists } from "drizzle-orm";
 import { z } from "zod";
-import type { ImageStore } from "../deps.ts";
 import {
   giftSchema,
   isoTimeSchema,
@@ -13,6 +12,7 @@ import {
   toPerson,
   toSticker,
   toStickerPlacement,
+  type StickerViewer,
 } from "../shapes.ts";
 import { simplifiedOutlineOf } from "../stickers/outline.ts";
 
@@ -122,7 +122,7 @@ export function loadStickerBoard(
   db: Db,
   owner: typeof users.$inferSelect,
   viewerId: string,
-  urls: ImageStore["urls"],
+  viewer: StickerViewer,
 ): StickerBoard {
   const own = owner.id === viewerId;
   const rows = db
@@ -164,7 +164,7 @@ export function loadStickerBoard(
         ...stickerPlacement,
         seenAt: own ? stickerPlacement.seenAt : null,
         sticker: {
-          ...toSticker(sticker, artist, urls),
+          ...toSticker(sticker, artist, viewer),
           outline: simplifiedOutlineOf(sticker),
         },
         held,

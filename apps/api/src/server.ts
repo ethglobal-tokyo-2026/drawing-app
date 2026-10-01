@@ -27,6 +27,7 @@ import { createPrivySmartWallets } from "./services/privySmartWallets.ts";
 import { createStickerChain } from "./services/stickerChain.ts";
 import { createWorldId } from "./services/worldId.ts";
 import { startMintCatchUp } from "./stickers/mint.ts";
+import { startVeilCatchUp } from "./stickers/veilCatchUp.ts";
 
 /** A private key as viem takes one: 0x and 64 hexadecimal digits. */
 const privateKeySchema = z.custom<Hex>(
@@ -213,6 +214,10 @@ startExpiredGiftReturns(deps);
 // reached the chain, are minted to their Original Artists: now, then just after each midnight,
 // Tokyo time.
 startMintCatchUp(deps);
+
+// NSFW stickers sealed before Sealing made their veiled images get them: now, then just after each
+// midnight, Tokyo time.
+startVeilCatchUp(deps);
 
 // The contract check, which turns naming off while the configured contracts can't name, then
 // naming for everyone a failed or skipped job left unnamed: now, then just after each midnight,

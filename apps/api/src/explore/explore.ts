@@ -2,7 +2,6 @@ import { gifts, stickers, users, type Db } from "@drawing-app/db";
 import { desc, eq, gte } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
-import type { ImageStore } from "../deps.ts";
 import {
   isoTimeSchema,
   personSchema,
@@ -11,6 +10,7 @@ import {
   toIsoTime,
   toPerson,
   type Sticker,
+  type StickerViewer,
 } from "../shapes.ts";
 import { tokyoTicketDay, tokyoTicketDayStart } from "../ticketDays.ts";
 import { leaderboardsSchema, loadLeaderboards } from "./leaderboards.ts";
@@ -39,9 +39,7 @@ export const exploreSchema = z.object({
 });
 export type Explore = z.infer<typeof exploreSchema>;
 
-type ImageUrls = ImageStore["urls"];
-
-function todaysStickers(db: Db, todayStart: Date, urls: ImageUrls): Sticker[] {
+function todaysStickers(db: Db, todayStart: Date, viewer: StickerViewer): Sticker[] {
   const ids = db
     .select({ id: stickers.id })
     .from(stickers)
@@ -50,12 +48,12 @@ function todaysStickers(db: Db, todayStart: Date, urls: ImageUrls): Sticker[] {
     .limit(EXPLORE_LIST_SIZE)
     .all()
     .map(({ id }) => id);
-  const stickerOf = stickerLookup(db, ids, urls);
+  const stickerOf = stickerLookup(db, ids, viewer);
   return ids.map((id) => stickerOf(id));
 }
 
 /** The newest seals and the newest receives, merged newest first. */
-function activity(db: Db, urls: ImageUrls): ActivityEntry[] {
+function activity(db: Db, viewer: StickerViewer): ActivityEntry[] {
   const seals = db
     .select({ stickerId: stickers.id, at: stickers.createdAt })
     .from(stickers)
@@ -97,7 +95,7 @@ function activity(db: Db, urls: ImageUrls): ActivityEntry[] {
   const stickerOf = stickerLookup(
     db,
     newest.map((event) => event.stickerId),
-    urls,
+    viewer,
   );
   return newest.map((event) =>
     event.type === "sealed"
@@ -113,10 +111,10 @@ function activity(db: Db, urls: ImageUrls): ActivityEntry[] {
 }
 
 /** Explore as it stands at `now`. */
-export function loadExplore(db: Db, now: Date, urls: ImageUrls): Explore {
+export function loadExplore(db: Db, now: Date, viewer: StickerViewer): Explore {
   return {
-    todaysStickers: todaysStickers(db, tokyoTicketDayStart(tokyoTicketDay(now)), urls),
-    activity: activity(db, urls),
+    todaysStickers: todaysStickers(db, tokyoTicketDayStart(tokyoTicketDay(now)), viewer),
+    activity: activity(db, viewer),
     leaderboards: loadLeaderboards(db, now),
   };
 }

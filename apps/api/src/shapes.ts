@@ -16,6 +16,7 @@ import { personEnsName, stickerEnsName } from "@drawing-app/sticker-chain/croqui
 import { eq, inArray } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import type { AppDeps } from "./deps.ts";
 
 // The contract's shapes that routes share, and the functions that turn rows into them.
 
@@ -277,14 +278,41 @@ export const gratitudeSchema = z.object({
 });
 export type Gratitude = z.infer<typeof gratitudeSchema>;
 
-/** A content hash's five image URLs on the CDN: the server passes `deps.images.urls`. */
-type ImageUrls = (contentHash: string) => StickerImages;
+type StickerRow = typeof stickers.$inferSelect;
 
-/** A sticker with its Original Artist, and its images named by its PNG's content hash. */
+/** What one viewer gets of each sticker: an NSFW sticker is veiled unless they're an adult. */
+export interface StickerViewer {
+  veils: (sticker: Pick<StickerRow, "nsfw">) => boolean;
+  /** Its image URLs: the veiled image in place of each that shows the drawing, when it's veiled. */
+  images: (sticker: Pick<StickerRow, "nsfw" | "contentHash" | "veiledHash">) => StickerImages;
+}
+
+/** The sticker viewer `viewerId` is, by their age status now. */
+export function stickerViewer(
+  { db, images }: Pick<AppDeps, "db" | "images">,
+  viewerId: string,
+): StickerViewer {
+  const viewer = db
+    .select({ ageVerifiedAt: users.ageVerifiedAt })
+    .from(users)
+    .where(eq(users.id, viewerId))
+    .get();
+  const adult = viewer !== undefined && ageStatusOf(viewer) === "adult";
+  const veils = (sticker: Pick<StickerRow, "nsfw">) => sticker.nsfw && !adult;
+  return {
+    veils,
+    images: (sticker) =>
+      veils(sticker)
+        ? images.veiledUrls(sticker.contentHash, sticker.veiledHash)
+        : images.urls(sticker.contentHash),
+  };
+}
+
+/** A sticker with its Original Artist, and its images as `viewer` gets them. */
 export function toSticker(
-  sticker: typeof stickers.$inferSelect,
+  sticker: StickerRow,
   artist: typeof users.$inferSelect,
-  urls: ImageUrls,
+  viewer: StickerViewer,
 ): Sticker {
   return {
     id: sticker.id,
@@ -296,7 +324,7 @@ export function toSticker(
     height: sticker.height,
     outline: sticker.outline,
     contentHash: sticker.contentHash,
-    images: urls(sticker.contentHash),
+    images: viewer.images(sticker),
     tokenId: sticker.tokenId,
     mintTxHash: sticker.mintTxHash,
     nsfw: sticker.nsfw,
@@ -308,8 +336,12 @@ export function toSticker(
   };
 }
 
-/** Stickers by id, each with its Original Artist, keyed by id. */
-export function loadStickers(db: Db, ids: Iterable<string>, urls: ImageUrls): Map<string, Sticker> {
+/** Stickers by id, each with its Original Artist and its images as `viewer` gets them, keyed by id. */
+export function loadStickers(
+  db: Db,
+  ids: Iterable<string>,
+  viewer: StickerViewer,
+): Map<string, Sticker> {
   const wanted = [...new Set(ids)];
   if (wanted.length === 0) return new Map();
   const rows = db
@@ -318,12 +350,14 @@ export function loadStickers(db: Db, ids: Iterable<string>, urls: ImageUrls): Ma
     .innerJoin(users, eq(users.id, stickers.artistId))
     .where(inArray(stickers.id, wanted))
     .all();
-  return new Map(rows.map(({ sticker, artist }) => [sticker.id, toSticker(sticker, artist, urls)]));
+  return new Map(
+    rows.map(({ sticker, artist }) => [sticker.id, toSticker(sticker, artist, viewer)]),
+  );
 }
 
 /** Looks up stickers loaded by id. Every id comes from a row whose foreign key holds its sticker. */
-export function stickerLookup(db: Db, ids: Iterable<string>, urls: ImageUrls) {
-  const loaded = loadStickers(db, ids, urls);
+export function stickerLookup(db: Db, ids: Iterable<string>, viewer: StickerViewer) {
+  const loaded = loadStickers(db, ids, viewer);
   return (id: string): Sticker => {
     const sticker = loaded.get(id);
     if (!sticker) throw new Error(`Sticker ${id} is missing`);

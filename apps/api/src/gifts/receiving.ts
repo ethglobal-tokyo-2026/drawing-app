@@ -14,6 +14,7 @@ import {
   stickerLookup,
   stickerPlacementSchema,
   stickerSchema,
+  stickerViewer,
   toGift,
   toIsoTime,
   toPerson,
@@ -166,10 +167,12 @@ export type Previewing = Refusal<"gift_not_found"> | { refusal: null; preview: G
 
 /** The preview of a gift this person opened: the sticker only when they can receive it. */
 function previewOf(
-  { db, images }: AppDeps,
+  deps: AppDeps,
+  userId: string,
   gift: GiftRow,
   refusal: Refusal<ReceiveRefusal> | null,
 ): GiftPreview {
+  const { db } = deps;
   const giver = db.select().from(users).where(eq(users.id, gift.giverId)).get();
   if (!giver) throw new Error(`Gift ${gift.id}'s giver ${gift.giverId} is missing`);
   return {
@@ -177,7 +180,9 @@ function previewOf(
     expiresAt: toIsoTime(gift.expiresAt),
     receivable: refusal === null,
     refusal: refusal?.refusal ?? null,
-    sticker: refusal ? null : stickerLookup(db, [gift.stickerId], images.urls)(gift.stickerId),
+    sticker: refusal
+      ? null
+      : stickerLookup(db, [gift.stickerId], stickerViewer(deps, userId))(gift.stickerId),
   };
 }
 
@@ -192,7 +197,7 @@ export async function previewGift(
   if (!gift) return notFound();
   const claimLanded = await claimLandedBeforeExpiry(deps, gift);
   const refusal = receiveRefusal(db, gift, userId, liffContextType, clock.now(), claimLanded);
-  const preview = previewOf(deps, gift, refusal);
+  const preview = previewOf(deps, userId, gift, refusal);
   // The first person to open it becomes who it waits for, so it stays on their board if they leave.
   if (!refusal && gift.forUserId === null) {
     db.update(gifts)
@@ -216,7 +221,7 @@ export async function previewGiftForYou(
   if (!gift) return notWaiting(giftId);
   const claimLanded = await claimLandedBeforeExpiry(deps, gift);
   const refusal = receiveRefusal(deps.db, gift, userId, "none", deps.clock.now(), claimLanded);
-  return { refusal: null, preview: previewOf(deps, gift, refusal) };
+  return { refusal: null, preview: previewOf(deps, userId, gift, refusal) };
 }
 
 export type Receiving =
@@ -224,11 +229,12 @@ export type Receiving =
   | { refusal: null; received: ReceivedGift };
 
 /** A lost HTTP response must not repeat the claim or change a placement the recipient already used. */
-function recordedReceive({ db, images }: AppDeps, userId: string, gift: GiftRow): Receiving | null {
+function recordedReceive(deps: AppDeps, userId: string, gift: GiftRow): Receiving | null {
+  const { db } = deps;
   if (gift.status !== "received" || gift.receiverId !== userId || gift.escrowStatus !== "claimed") {
     return null;
   }
-  const sticker = stickerLookup(db, [gift.stickerId], images.urls)(gift.stickerId);
+  const sticker = stickerLookup(db, [gift.stickerId], stickerViewer(deps, userId))(gift.stickerId);
   // A later Giving must not look like a new arrival from this old receipt.
   if (sticker.ownerId !== userId || giftHoldingSticker(db, gift.stickerId)) return null;
   const placement = db
@@ -264,7 +270,8 @@ export async function receiveGift(
 }
 
 /** The gifts waiting for this person, which they can receive from their board. */
-export function giftsForYou({ db, clock, images }: AppDeps, userId: string): GiftsForYou {
+export function giftsForYou(deps: AppDeps, userId: string): GiftsForYou {
+  const { db, clock } = deps;
   const rows = db
     .select({ gift: gifts, giver: users })
     .from(gifts)
@@ -282,7 +289,7 @@ export function giftsForYou({ db, clock, images }: AppDeps, userId: string): Gif
   const stickerOf = stickerLookup(
     db,
     rows.map(({ gift }) => gift.stickerId),
-    images.urls,
+    stickerViewer(deps, userId),
   );
   return {
     gifts: rows.map(({ gift, giver }) => ({
@@ -360,7 +367,7 @@ async function completeReceive(
   liffContextType: LiffContextType,
   giftClaimToken: OpenGiftBody["giftClaimToken"] | null,
 ): Promise<Receiving> {
-  const { db, clock, giftChain, images } = deps;
+  const { db, clock, giftChain } = deps;
   const now = clock.now();
   const claimLanded = await claimLandedBeforeExpiry(deps, opened);
   const beforeClaim = receiveRefusal(db, opened, userId, liffContextType, now, claimLanded);
@@ -454,7 +461,7 @@ async function completeReceive(
     refusal: null,
     received: {
       gift: toGift(gift),
-      sticker: stickerLookup(db, [gift.stickerId], images.urls)(gift.stickerId),
+      sticker: stickerLookup(db, [gift.stickerId], stickerViewer(deps, userId))(gift.stickerId),
       stickerPlacement: toStickerPlacement(placement),
     },
   };

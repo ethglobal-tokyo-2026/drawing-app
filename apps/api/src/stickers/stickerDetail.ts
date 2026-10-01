@@ -13,7 +13,7 @@ import {
   toGratitude,
   toIsoTime,
   toPerson,
-  type StickerImages,
+  type StickerViewer,
 } from "../shapes.ts";
 
 /** Sticker ids aren't format-checked: an unknown one is sticker_not_found. */
@@ -35,7 +35,10 @@ export const stickerDetailSchema = z.object({
   owner: personSchema,
   /** Newest first. */
   transferTrail: z.array(transferTrailEntrySchema),
-  /** Sealed with its timelapse: GET /api/stickers/:stickerId/timelapse answers it. */
+  /**
+   * Sealed with its timelapse, which GET /api/stickers/:stickerId/timelapse answers. False to a viewer
+   * who gets the sticker veiled, since it shows the drawing.
+   */
   hasTimelapse: z.boolean(),
 });
 export type StickerDetail = z.infer<typeof stickerDetailSchema>;
@@ -44,9 +47,9 @@ export type StickerDetail = z.infer<typeof stickerDetailSchema>;
 export function stickerDetail(
   db: Db,
   stickerId: string,
-  urls: (contentHash: string) => StickerImages,
+  viewer: StickerViewer,
 ): StickerDetail | null {
-  const sticker = loadStickers(db, [stickerId], urls).get(stickerId);
+  const sticker = loadStickers(db, [stickerId], viewer).get(stickerId);
   if (!sticker) return null;
   const owner = db.select().from(users).where(eq(users.id, sticker.ownerId)).get();
   if (!owner) throw new Error(`Sticker ${stickerId}'s owner ${sticker.ownerId} has no users row`);
@@ -86,6 +89,6 @@ export function stickerDetail(
     sticker,
     owner: toPerson(owner),
     transferTrail,
-    hasTimelapse: timelapse !== undefined,
+    hasTimelapse: timelapse !== undefined && !viewer.veils(sticker),
   };
 }

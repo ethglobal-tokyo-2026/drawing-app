@@ -45,9 +45,16 @@ export const stickers = sqliteTable(
     ensNamedAt: integer("ens_named_at", { mode: "timestamp_ms" }),
     /** An NSFW sticker: its Original Artist, an adult, marked it for adults at seal. */
     nsfw: integer("nsfw", { mode: "boolean" }).notNull().default(false),
+    /**
+     * keccak256 of an NSFW sticker's veiled PNG, which names it and its WebP copy on the CDN: what
+     * anyone who isn't adult sees. Null until it's made, and for every other sticker.
+     */
+    veiledHash: text("veiled_hash"),
   },
   (t) => [
     index("stickers_owner").on(t.ownerId),
+    // The image server finds an image's sticker by it, for every image that shows the drawing.
+    index("stickers_content_hash").on(t.contentHash),
     index("stickers_artist").on(t.artistId, t.createdAt),
     index("stickers_created").on(t.createdAt),
     check("stickers_time_used", sql`${t.timeUsed} between 0 and ${literal(MAX_TIME_USED_S)}`),
