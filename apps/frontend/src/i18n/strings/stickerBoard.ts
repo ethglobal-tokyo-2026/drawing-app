@@ -570,6 +570,8 @@ export const stickerBoard = {
       en: "Couldn’t load where it’s been, or whether you’ve sent gratitude for it: {{reason}}",
       ja: "来歴と、感謝を送ったかどうかを読み込めませんでした：{{reason}}",
     },
+    /** Sticker detail, beside the alert that says the server refused gratitude you sent for it (the reasons are the Gratitude Mini-game receipt's): the link that clears the alert */
+    dismiss: { en: "Dismiss", ja: "閉じる" },
     /** Sticker detail: in place of the sticker when there's none to show */
     none: { en: "No sticker here yet.", ja: "まだシールがありません。" },
   },

@@ -2,6 +2,7 @@ import { apiError, type ApiClient, type ApiError } from "../api/apiClient";
 import type { RecordGratitude } from "@drawing-app/api/client";
 import { personKey, parseStored, readStored, writeStored } from "../ui/deviceStorage";
 import { GAME_CONFIG } from "./gameConfig";
+import { forgetGratitudeRefusal, keepGratitudeRefusal } from "./gratitudeRefusals";
 
 /**
  * Combos the server hasn't recorded yet, finished or still in play. One list per person, so someone
@@ -168,11 +169,14 @@ async function send(
   sending.add(key);
   try {
     await api.recordGratitude(body);
+    forgetGratitudeRefusal(userId, body.giftId);
     forget(userId, { idempotencyKey: key, result: { state: "recorded" } });
     return { state: "recorded" };
   } catch (caught) {
     const error = apiError(caught);
     if (isRefusal(error)) {
+      // Kept for the sticker detail: the receipt that shows it may be gone by the time a resend is refused.
+      keepGratitudeRefusal(userId, body.giftId, error);
       forget(userId, { idempotencyKey: key, result: { state: "refused", error } });
       console.error(
         `The server refused the gratitude for gift ${body.giftId} (${describeError(error)}), so this device no longer keeps it:`,

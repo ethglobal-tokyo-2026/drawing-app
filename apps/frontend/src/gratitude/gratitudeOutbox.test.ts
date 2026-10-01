@@ -13,6 +13,7 @@ import {
   resendPendingGratitude,
   sendGratitude,
 } from "./gratitudeOutbox";
+import { readGratitudeRefusals } from "./gratitudeRefusals";
 
 const body = recordGratitudeBody();
 /** The person signed in, and someone else who signs in on the same device. */
@@ -152,6 +153,44 @@ describe("the gratitude outbox", () => {
     await expect(sendGratitude(server("records"), ME, body)).resolves.toEqual({
       state: "recorded",
     });
+  });
+});
+
+describe("why the server refused gratitude", () => {
+  const noAnswer = () => server(new TypeError("Failed to fetch"));
+  const refusal = new ApiError(403, {
+    error: "not_receiver",
+    detail: "the gift is someone else's",
+  });
+
+  it("is kept per gift when a resend after reconnecting is refused, and let go once the gift's gratitude is recorded", async () => {
+    // Kept for want of a connection: nothing is refused yet.
+    await sendGratitude(noAnswer(), ME, body);
+    expect(readGratitudeRefusals(ME)).toEqual([]);
+    // Refused once the phone is back online, with no screen waiting on the answer.
+    await resendPendingGratitude(server(refusal), ME);
+    expect(readGratitudeRefusals(ME)).toEqual([
+      { giftId: body.giftId, status: 403, code: "not_receiver", detail: refusal.detail },
+    ]);
+    expect(readGratitudeRefusals(SOMEONE_ELSE)).toEqual([]);
+    // A later combo for the gift that the server records makes the refusal moot.
+    await sendGratitude(server("records"), ME, recordGratitudeBody({ idempotencyKey: "later" }));
+    expect(readGratitudeRefusals(ME)).toEqual([]);
+  });
+
+  it("keeps only the latest refusal of a gift, and the others' as they were", async () => {
+    await sendGratitude(server(refusal), ME, body);
+    const other = recordGratitudeBody({ giftId: "g2", idempotencyKey: "other" });
+    await sendGratitude(server(new ApiError(404, { error: "gift_not_found" })), ME, other);
+    await sendGratitude(
+      server(new ApiError(409, { error: "gratitude_already_recorded" })),
+      ME,
+      recordGratitudeBody({ idempotencyKey: "again" }),
+    );
+    expect(readGratitudeRefusals(ME).map(({ giftId, code }) => [giftId, code])).toEqual([
+      ["g2", "gift_not_found"],
+      [body.giftId, "gratitude_already_recorded"],
+    ]);
   });
 });
 

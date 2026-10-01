@@ -18,6 +18,7 @@ import {
 import { emptyApi, gratitudeOf, recordGratitudeBody, TEST_OWNER } from "../api/testing";
 import { toPerson, toSticker } from "../api/views";
 import { resendPendingGratitude, sendGratitude } from "../gratitude/gratitudeOutbox";
+import { errorDetail } from "../i18n/errorMessage";
 import type { BoardStickerView } from "./boardSticker";
 import { StickerDetail } from "./StickerDetail";
 import { fakeTimelapsePlayers, TEST_TIMELAPSE } from "./timelapse/testTimelapse";
@@ -309,6 +310,44 @@ describe("StickerDetail", () => {
     await settle();
     expect(button("Send gratitude")).toBeUndefined();
     expect(giveIsTheKey()).toBe(true);
+  });
+
+  it("says why the server refused gratitude this phone sent, with its words as details, until it's dismissed", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const refusal = new ApiError(409, {
+      error: "gratitude_already_recorded",
+      detail: "gift-133 has it",
+    });
+    const refused = () => document.querySelector(".sticker-detail__gratitude-refused");
+    /** The page goes and the app opens again on the same detail. */
+    const reopen = async () => {
+      act(() => root.unmount());
+      root = createRoot(host);
+      open({ onSendGratitude: vi.fn() }, received(null).client);
+      await settle();
+    };
+    open({ onSendGratitude: vi.fn() }, received(null).client);
+    await settle();
+    expect(refused()).toBeNull();
+
+    // Kept for want of a connection, then refused as the phone comes back online, with the detail up.
+    const offline = { recordGratitude: () => Promise.reject(new TypeError("Failed to fetch")) };
+    await sendGratitude(offline, TEST_OWNER.id, recordGratitudeBody({ giftId: "gift-133" }));
+    await act(() =>
+      resendPendingGratitude({ recordGratitude: () => Promise.reject(refusal) }, TEST_OWNER.id),
+    );
+    await settle();
+    expect(refused()?.querySelector('[role="alert"]')?.textContent).toContain("already with @mika");
+    expect(refused()?.textContent).toContain(errorDetail(refusal));
+
+    // It stays until dismissed, across opens.
+    await reopen();
+    expect(refused()).not.toBeNull();
+    press("Dismiss");
+    expect(refused()).toBeNull();
+    await reopen();
+    expect(refused()).toBeNull();
   });
 
   it("says the check failed where the key would be, and Try again asks again", async () => {

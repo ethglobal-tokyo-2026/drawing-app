@@ -4,6 +4,13 @@ import type { StickerDetail as StickerDetailResponse } from "@drawing-app/api/cl
 import { useApiQuery } from "../api/useApiQuery";
 import { toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
 import { isGratitudeWaiting, onGratitudeLeftOutbox } from "../gratitude/gratitudeOutbox";
+import {
+  forgetGratitudeRefusal,
+  refusalError,
+  useGratitudeRefusals,
+  type GratitudeRefusal,
+} from "../gratitude/gratitudeRefusals";
+import { refusalNote } from "../gratitude/refusalNote";
 import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
 import { EnsNameLink } from "../identity/EnsNameLink";
@@ -93,6 +100,18 @@ function owedGratitude({ sticker, owner, transferTrail }: StickerDetailResponse)
     : null;
 }
 
+/** The newest gift on the trail whose gratitude the server refused, and who gave it. */
+function refusedGratitude(
+  { transferTrail }: StickerDetailResponse,
+  refusals: readonly GratitudeRefusal[],
+) {
+  for (const { giftId, giver } of transferTrail) {
+    const refusal = refusals.find((r) => r.giftId === giftId);
+    if (refusal) return { refusal, giver: toPerson(giver) };
+  }
+  return null;
+}
+
 /**
  * One sticker large on the liner, a strip of the rest down the left edge, its fine print and Give.
  * Swipes on the sticker, the strip, the pager and the arrow keys page between them.
@@ -143,6 +162,10 @@ export function StickerDetail({
     mode === "yours" && onSendGratitude && sticker && !onItsWay(sticker) && loaded && !predatesCombo
       ? owedGratitude(loaded)
       : null;
+  // Why the server refused gratitude this phone sent, which may have come once its receipt was gone.
+  const youId = mode === "yours" ? (loaded?.owner.id ?? null) : null;
+  const gratitudeRefusals = useGratitudeRefusals(youId);
+  const refused = youId && loaded ? refusedGratitude(loaded, gratitudeRefusals) : null;
 
   const root = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLElement>(null);
@@ -393,6 +416,19 @@ export function StickerDetail({
                 {t(($) => $.stickerBoard.detail.checkFailed, {
                   reason: errorMessage(detail.error),
                 })}
+              </ErrorLine>
+            )}
+
+            {youId && refused && (
+              <ErrorLine
+                className="sticker-detail__gratitude-refused"
+                detail={errorDetail(refusalError(refused.refusal))}
+                action={{
+                  label: t(($) => $.stickerBoard.detail.dismiss),
+                  onClick: () => forgetGratitudeRefusal(youId, refused.refusal.giftId),
+                }}
+              >
+                {refusalNote(t, refusalError(refused.refusal), handleOf(refused.giver)).text}
               </ErrorLine>
             )}
 

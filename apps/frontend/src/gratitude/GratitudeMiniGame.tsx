@@ -2,10 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { TFunction } from "i18next";
 import type { RecordGratitude, ReplayV1 } from "@drawing-app/api/client";
-import type { ApiError } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
-import { errorDetail } from "../i18n/errorMessage";
 import { formatCount } from "../i18n/format";
 import { Trans, useTranslation } from "../i18n/react";
 import { GratitudeIcon, StickerBoardIcon, Wind, X } from "../icons";
@@ -29,6 +27,7 @@ import {
 } from "./gratitudeOutbox";
 import { mountMiniGameEngine, type MiniGameEngine } from "./miniGameEngine";
 import { loadPuffyFont } from "./puffyFont";
+import { refusalNote, type RefusalNote } from "./refusalNote";
 import { shownGloss, TIER_NAMES } from "./tierNames";
 import "./gratitude-mini-game.css";
 
@@ -61,33 +60,8 @@ function need<E extends Element>(el: E | null, what: string): E {
 type Sending = { state: "sending" } | GratitudeSendResult;
 
 /** The receipt's note on a send that isn't simply sent. */
-interface ReceiptNote {
+interface ReceiptNote extends RefusalNote {
   kind: "sending" | "kept" | "lost" | "refused";
-  text: string;
-  /** The English words behind a refusal the catalog doesn't word itself, for a report. */
-  detail?: string;
-}
-
-/** Why the server refused a combo for good, in words. Only an unreadable one is worth sending again. */
-function refusalNote(t: TFunction, error: ApiError, handle: string): Omit<ReceiptNote, "kind"> {
-  switch (error.code) {
-    case "gratitude_already_recorded":
-      return { text: t(($) => $.gratitude.refusals.alreadyRecorded, { handle }) };
-    case "not_receiver":
-      return { text: t(($) => $.gratitude.refusals.notReceiver) };
-    case "gift_not_received":
-      return { text: t(($) => $.gratitude.refusals.notReceived) };
-    case "gift_not_found":
-      return { text: t(($) => $.gratitude.refusals.notFound) };
-    case "replay_invalid":
-    case "invalid_request":
-      return { text: t(($) => $.gratitude.refusals.unreadable) };
-    default:
-      return {
-        text: t(($) => $.gratitude.refusals.other, { handle }),
-        detail: errorDetail(error),
-      };
-  }
 }
 
 /** The receipt's note on what became of the send, and none once the server has recorded it. */
