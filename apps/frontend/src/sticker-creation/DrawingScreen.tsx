@@ -968,7 +968,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         }}
       />
       {retrying && canStartOver && (
-        <QuietLink className="drawing-start-over" onClick={() => send({ type: "reset" })}>
+        <QuietLink
+          className="drawing-start-over keep-phrases"
+          onClick={() => send({ type: "reset" })}
+        >
           {t(($) => $.stickerCreation.seal.startOver)}
         </QuietLink>
       )}

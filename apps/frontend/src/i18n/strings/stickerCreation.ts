@@ -136,7 +136,7 @@ export const stickerCreation = {
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when a seal failed at 0:00, in front of that chip's words; {{problem}} is the words */
     timeUp: { en: "Time’s up. {{problem}}", ja: "時間切れです。{{problem}}" },
     /** Drawing screen, bottom left, at 0:00 after a seal that never reached the server failed: the quiet link that lets the sticker in progress go, and its ticket with it, for a fresh sheet */
-    startOver: { en: "Start a new sticker", ja: "新しいシールをかく" },
+    startOver: { en: "Start a new sticker", ja: "新しい<wbr/>シールをかく" },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when the server refused the seal at 0:00; the sheet is fresh again and the chip goes with its first stroke; {{reason}} is the refusal's message */
     refusedAtTimeUp: {
       en: "Time’s up. Croquis didn’t accept the seal, so nothing was sealed. {{reason}}",
