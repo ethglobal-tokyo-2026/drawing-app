@@ -14,11 +14,13 @@ describe("an error's message", () => {
     expect(errorMessage(error)).toBe(errors.handle_taken.ja);
   });
 
-  it("names a code the catalog doesn't have", () => {
+  it("names a code the catalog doesn't have, free to wrap after its underscores", () => {
     // The API answers route_not_found outside any route, so no route's type carries it.
-    expect(errorMessage(new ApiError(404, { error: "route_not_found" }))).toBe(
+    const message = errorMessage(new ApiError(404, { error: "route_not_found" }));
+    expect(message.replaceAll("​", "")).toBe(
       errors.unknown.en.replace("{{code}}", "route_not_found"),
     );
+    expect(message).toContain("route_​not_​found");
   });
 });
 

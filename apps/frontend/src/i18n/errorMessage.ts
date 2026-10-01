@@ -5,12 +5,16 @@ import { i18next } from "./i18n";
 const isKnown = (code: string): code is Exclude<keyof typeof errors, "unknown"> =>
   code !== "unknown" && Object.hasOwn(errors, code);
 
+/** A code can wrap after each underscore, so a narrow line breaks inside it, not after its bracket. */
+const ZERO_WIDTH_SPACE = "​";
+const wrappable = (code: string) => code.replaceAll("_", `_${ZERO_WIDTH_SPACE}`);
+
 /** What an error says to people, in the app's language. A code the catalog lacks is named in it. */
 export const errorMessage = (error: ApiError): string => {
   const { code } = error;
   return isKnown(code)
     ? i18next.t(($) => $.errors[code])
-    : i18next.t(($) => $.errors.unknown, { code });
+    : i18next.t(($) => $.errors.unknown, { code: wrappable(code) });
 };
 
 /** The status, code and server's English detail, for the fine print beside Copy. */
