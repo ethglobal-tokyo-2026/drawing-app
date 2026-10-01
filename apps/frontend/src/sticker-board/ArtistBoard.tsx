@@ -136,6 +136,8 @@ export function ArtistBoard({ person, onBack }: Props) {
   const stage = useRef<HTMLDivElement>(null);
   const nameButton = useRef<HTMLButtonElement>(null);
   const giveSlot = useRef<HTMLSpanElement>(null);
+  /** The Give key that opened the give sheet, which focus returns to; a tap may not have focused it. */
+  const giveKey = useRef<HTMLButtonElement | null>(null);
   const flipBack = useRef<HTMLButtonElement>(null);
   const cork = useRef<StatCorkHandle>(null);
   const size = useBoardSize(face);
@@ -300,7 +302,8 @@ export function ArtistBoard({ person, onBack }: Props) {
           size="compact"
           tone="aqua"
           icon={<GiveIcon />}
-          onClick={() => {
+          onClick={(e) => {
+            giveKey.current = e.currentTarget;
             setSelected(null);
             setGiving(true);
           }}
@@ -430,6 +433,7 @@ export function ArtistBoard({ person, onBack }: Props) {
           toId={person.id}
           toAgeStatus={person.ageStatus}
           onClose={() => setGiving(false)}
+          returnFocus={() => giveKey.current}
         />
       )}
     </div>

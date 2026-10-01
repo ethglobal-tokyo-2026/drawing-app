@@ -554,6 +554,49 @@ describe("giving through a LINE chat", () => {
     },
   );
 
+  it.each(["sent", "maybeSent"] as const)(
+    "keeps a gift whose message is %s when packing ends only after Take it out was pressed",
+    async (outcome) => {
+      const server = fakeBackend();
+      const packing = new Deferred<Awaited<ReturnType<GiftBackend["pack"]>>>();
+      const takeOut = vi.fn(server.backend.takeOut);
+      const markSent = vi.fn(server.backend.markSent);
+      const t = setup({
+        backend: { ...server.backend, pack: () => packing.promise, takeOut, markSent },
+      });
+      t.flow.chooseLineChat();
+      await wait(PREPARING_SLOW_MS);
+      t.flow.takeOut();
+      expect(t.step()).toBe("takingOut");
+
+      packing.reject(new GiftMessageOutError("gift-1", outcome));
+      await wait(TAKE_OUT);
+      expect(t.step()).toBe(outcome);
+      expect(takeOut).not.toHaveBeenCalled();
+      expect(markSent).not.toHaveBeenCalled();
+    },
+  );
+
+  it("takes out a gift whose message may have gone out when the giver answers Did it go out? with Take it out", async () => {
+    const server = fakeBackend();
+    const takeOut = vi.fn(server.backend.takeOut);
+    const t = setup({
+      backend: {
+        ...server.backend,
+        pack: () => Promise.reject(new GiftMessageOutError("gift-1", "maybeSent")),
+        takeOut,
+      },
+    });
+    t.flow.chooseLineChat();
+    await wait(PICKER_DELAY);
+    expect(t.step()).toBe("maybeSent");
+
+    t.flow.takeOut();
+    await wait(TAKE_OUT);
+    expect(t.step()).toBe("sheet");
+    expect(takeOut).toHaveBeenCalledExactlyOnceWith("gift-1");
+  });
+
   it("does not repeat an explicit take-out when its flow closes before confirmation", async () => {
     const server = fakeBackend();
     const takingOut = new Deferred<void>();
