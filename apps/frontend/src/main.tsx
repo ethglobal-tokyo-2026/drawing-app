@@ -8,6 +8,7 @@ import "./styles/keys.css";
 import { ApiRoot } from "./api/ApiRoot";
 import { openSessionEarly } from "./api/serverClients";
 import App from "./app/App.tsx";
+import { AppCrashBoundary } from "./app/AppCrashBoundary";
 import { followLanguageOnPage, startInLineLanguage } from "./i18n/pageLanguage";
 import { PrivySignIn } from "./identity/PrivySignIn";
 import { ChatMenuLink } from "./line/chatMenu";
@@ -46,13 +47,15 @@ createRoot(root).render(
   <StrictMode>
     <IconContext.Provider value={ICON_DEFAULTS}>
       <ToastProvider>
-        <LineGate>
-          <ApiRoot>
-            <App />
-            <ChatMenuLink />
-            <PrivySignIn />
-          </ApiRoot>
-        </LineGate>
+        <AppCrashBoundary>
+          <LineGate>
+            <ApiRoot>
+              <App />
+              <ChatMenuLink />
+              <PrivySignIn />
+            </ApiRoot>
+          </LineGate>
+        </AppCrashBoundary>
       </ToastProvider>
     </IconContext.Provider>
   </StrictMode>,

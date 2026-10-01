@@ -33,6 +33,17 @@ export const app = {
   },
   /** Drawing screen, when Draw is tapped before its code has loaded: what screen readers hear while it loads */
   drawingLoading: { en: "Opening the drawing screen", ja: "かく画面を読み込んでいます" },
+  crash: {
+    /** The page that takes the app's place when a screen fails as it shows: its heading */
+    title: { en: "Croquis stopped", ja: "クロッキーが止まりました" },
+    /** The same page: the line under the heading, over the error's words */
+    lead: {
+      en: "Something on this screen went wrong. Reload to start again.",
+      ja: "この画面で問題が起きました。再読み込みして、もう一度お試しください。",
+    },
+    /** The same page: the key that reloads the page */
+    reload: { en: "Reload", ja: "再読み込み" },
+  },
   motionPermission: {
     /** Motion permission card, shown once over the app on iPhone: its screen-reader name */
     label: { en: "Motion permission", ja: "モーションの許可" },
