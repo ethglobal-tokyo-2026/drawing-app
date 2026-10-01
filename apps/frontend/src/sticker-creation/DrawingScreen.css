@@ -62,14 +62,16 @@
   transition-delay: 120ms;
 }
 
-/* Where the undo and redo tiles were, since a seal to try again has put them away; it wraps short
-   of the seal chip. */
-.drawing-start-over {
+/* Where the undo and redo tiles were, since a seal to try again has put them away. It wraps inside
+   their width, which the long seal chip stops short of: kept on one line, it ran into the chip. */
+.drawing-screen > .drawing-start-over {
   position: absolute;
   left: 18px;
   bottom: 22px;
   z-index: 3;
   max-width: 112px;
+  justify-content: flex-start;
+  white-space: normal;
   text-align: left;
 }
 
