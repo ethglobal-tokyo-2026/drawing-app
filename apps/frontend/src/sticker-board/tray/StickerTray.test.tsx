@@ -7,6 +7,7 @@ import { errors } from "../../i18n/strings/errors";
 import type { BoardStickerView } from "../boardSticker";
 import { StickerTray, type StickerTrayHandle } from "./StickerTray";
 import type { TrayBoard } from "./trayEngine";
+import { SHEET, STACK_FOOT, TOP } from "./trayModel";
 import type { TrayProblem } from "./trayProblem";
 
 declare global {
@@ -657,27 +658,46 @@ describe("StickerTray", () => {
   });
 
   describe("on a board of this height", () => {
-    /** How much the stack is shrunk, from 1, with the tray open on a board this tall. */
-    const shrinkAt = async (height: number, stickers = 30) => {
-      vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(height);
+    /** Opens the tray on a board this tall, its column running from under the header to the foot. */
+    const openOn = async (height: number, stickers = 30) => {
+      vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return this.classList.contains("tray__col") ? height - TOP : height;
+      });
       render(manyStickers(stickers));
       await openTray();
-      return Number(stackEl()?.style.getPropertyValue("--shrink") || 1);
     };
+    /** The numbers an inline transform holds, such as 0 and 12.5 in translate(0px,12.5px). */
+    const numbersIn = (el: Element | null) =>
+      el instanceof HTMLElement
+        ? (el.style.transform.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number)
+        : [];
 
     it("leaves the stack full size when everything fits the mouth", async () => {
-      expect(await shrinkAt(700)).toBe(1);
+      await openOn(700);
+      const [, , scale] = numbersIn(stackEl());
+      expect(scale).toBe(1);
     });
 
-    it("shrinks the stack until everything fits the mouth", async () => {
-      const shrink = await shrinkAt(480);
-      expect(shrink).toBeLessThan(1);
-      expect(shrink).toBeGreaterThan(0);
-    });
+    // An iPhone SE inside LINE has the shortest board the tray is made for; the other is shorter.
+    it.each([523, 501])(
+      "shrinks the stack until the +N button fits the mouth, on a board %ipx tall",
+      async (height) => {
+        // Enough sheets for the +N button.
+        await openOn(height, 60);
+        expect(board.querySelector(".tray__depth")).not.toBeNull();
+        const [, stackTop, shrink] = numbersIn(stackEl());
+        const [, mouthFootShift] = numbersIn(board.querySelector(".tray__w2"));
+        const mouthFoot = height - TOP + mouthFootShift;
+        expect(shrink).toBeLessThan(1);
+        expect(stackTop + shrink * SHEET.h + STACK_FOOT).toBeLessThanOrEqual(mouthFoot);
+      },
+    );
 
     it.each([480, 700])("spreads every sheet inside the board", async (height) => {
       // Enough sheets for the +N button and two rows in the spread.
-      await shrinkAt(height, 60);
+      await openOn(height, 60);
       act(() => board.querySelector<HTMLElement>(".tray__depth")?.click());
       const cells = [...board.querySelectorAll<HTMLElement>(".tray__cell")];
       expect(cells.length).toBeGreaterThan(3);
