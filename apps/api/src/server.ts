@@ -28,6 +28,7 @@ import { createStickerChain } from "./services/stickerChain.ts";
 import { createWorldId } from "./services/worldId.ts";
 import { startMintCatchUp } from "./stickers/mint.ts";
 import { startVeilCatchUp } from "./stickers/veilCatchUp.ts";
+import { startTicketPurchaseSweeps } from "./tickets/purchaseSweep.ts";
 
 /** A private key as viem takes one: 0x and 64 hexadecimal digits. */
 const privateKeySchema = z.custom<Hex>(
@@ -218,6 +219,9 @@ startMintCatchUp(deps);
 // NSFW stickers sealed before Sealing made their veiled images get them, and NFT metadata written
 // before a sticker's veil existed is pointed at it: now, then just after each midnight, Tokyo time.
 startVeilCatchUp({ ...deps, images });
+
+// Reserve ticket payments the app never reported, found on Sui: now, then every few minutes.
+startTicketPurchaseSweeps(deps);
 
 // The contract check, which turns naming off while the configured contracts can't name, then
 // naming for everyone a failed or skipped job left unnamed: now, then just after each midnight,

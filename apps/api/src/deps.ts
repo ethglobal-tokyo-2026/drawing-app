@@ -235,7 +235,7 @@ export interface SmartWallets {
 }
 
 /** Where ticket packs are paid: the JPYC payment contract's vault on Sui. */
-export type TicketPaymentTarget = Omit<TicketShop["payment"], "reference">;
+export type TicketPaymentTarget = TicketShop["payment"];
 
 /** One PaymentReceived event of the payment contract. */
 export interface JpycPayment {
@@ -247,6 +247,11 @@ export interface JpycPayment {
   reference: string;
 }
 
+/** A PaymentReceived event, with the transaction that emitted it. */
+export interface PaymentEvent extends JpycPayment {
+  txDigest: string;
+}
+
 export interface TicketPayments {
   target: TicketPaymentTarget;
   /**
@@ -254,6 +259,12 @@ export interface TicketPayments {
    * still doesn't show the transaction after a short wait for it. Rejects when Sui can't be asked.
    */
   paymentsIn: (txDigest: string) => Promise<JpycPayment[] | null>;
+  /**
+   * The payment contract's PaymentReceived events, newest first, back to at least `since`: the
+   * oldest page read may reach further. `complete` is false when the read stopped at its page limit
+   * short of `since`. Rejects when Sui can't be asked.
+   */
+  paymentsSince: (since: Date) => Promise<{ payments: PaymentEvent[]; complete: boolean }>;
 }
 
 /** The names under croquis.eth: the CCIP-Read gateway, and the relayer that writes names. */

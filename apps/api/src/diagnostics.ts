@@ -46,6 +46,18 @@ export interface DiagnosticFields {
   rewritten?: number;
   /** How many of `count` a catch-up has finished. */
   done?: number;
+  /** A reserve ticket purchase. */
+  purchaseId?: number;
+  /** A Sui transaction digest. */
+  txDigest?: string;
+  /**
+   * The ticket purchase sweep's tally: PaymentReceived events it read, purchases it credited,
+   * payments short of their purchase's price, and purchases it gave up.
+   */
+  events?: number;
+  credited?: number;
+  short?: number;
+  givenUp?: number;
   /** Why a step was skipped, in words. */
   reason?: string;
   /** Whether naming is on, as the contract check left it. */
@@ -198,6 +210,12 @@ const loggedFields = {
   veiled: true,
   rewritten: true,
   done: true,
+  purchaseId: true,
+  txDigest: true,
+  events: true,
+  credited: true,
+  short: true,
+  givenUp: true,
   reason: true,
   naming: true,
   namerRole: true,
@@ -222,6 +240,8 @@ function record(event: string, fields: DiagnosticFields) {
       selected[key] = /^0x[a-f0-9]{64}$/i.test(value) ? value : "[invalid-hash]";
     } else if (key === "address" || key === "contractAddress") {
       selected[key] = /^0x[a-f0-9]{40}$/i.test(value) ? value : "[invalid-address]";
+    } else if (key === "txDigest") {
+      selected[key] = /^[1-9A-HJ-NP-Za-km-z]{43,44}$/.test(value) ? value : "[invalid-digest]";
     } else {
       selected[key] = redact(value);
     }
