@@ -18,7 +18,7 @@ export const explore = {
       /** Explore tab, after a search that matches no one: the heading, with the searched handle; screen readers hear it from the status line too */
       title: {
         en: "No one here is {{handle}} yet",
-        ja: "{{handle}}さんはまだクロッキーにいません",
+        ja: "{{handle}}さんは<wbr/>まだクロッキーに<wbr/>いません",
       },
       /** Explore tab, after a search that matches no one: the paragraph under the heading, on checking the spelling or inviting a LINE friend with a sticker */
       lead: {

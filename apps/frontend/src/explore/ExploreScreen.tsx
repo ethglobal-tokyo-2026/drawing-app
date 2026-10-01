@@ -539,7 +539,9 @@ function SearchResults({
   if (!people.length)
     return (
       <section className={`${REVEAL} explore-section search-empty`}>
-        <h2>{t(($) => $.explore.search.notFound.title, { handle: formatHandle(query) })}</h2>
+        <h2 className="keep-phrases">
+          {t(($) => $.explore.search.notFound.title, { handle: formatHandle(query) })}
+        </h2>
         <p>{t(($) => $.explore.search.notFound.lead)}</p>
       </section>
     );

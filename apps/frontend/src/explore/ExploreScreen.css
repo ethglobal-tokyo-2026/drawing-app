@@ -386,6 +386,11 @@
   font-stretch: var(--w-title);
 }
 
+/* Japanese breaks only between its marked phrases (keep-phrases); English wraps as it always has. */
+.search-empty h2:not(:lang(ja)) {
+  word-break: normal;
+}
+
 .search-empty p:not(.fine) {
   max-width: 44ch;
   font-size: 15px;
