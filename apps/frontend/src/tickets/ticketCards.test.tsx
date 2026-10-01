@@ -463,10 +463,12 @@ describe("ReserveTicketCheckout", () => {
     });
     await render(checkout(), api);
     await settle(500);
+    act(() => buttonNamed("Pay")?.focus());
     click("Pay");
     await settle(0);
     const paying = buttonNamed("Paying…");
     // Busy, not disabled: it would sink grey and drop focus.
+    expect(document.activeElement).toBe(paying);
     expect(paying?.disabled).toBe(false);
     expect(paying?.getAttribute("aria-busy")).toBe("true");
     expect(paying?.getAttribute("aria-disabled")).toBe("true");

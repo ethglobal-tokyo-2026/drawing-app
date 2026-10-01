@@ -641,8 +641,15 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   }
 
   // A refusal turns the tickets-not-added card over without a new step. The packs' arrival is a new
-  // view too, so focus lands on the picked pack, not on the exit it started at.
-  const view = unadded?.refused ? "refused" : step === "choose" && !shop ? "loading" : step;
+  // view too, so focus lands on the picked pack, not on the exit it started at. Paying stays the packs'
+  // view, so focus stays on Pay while it waits.
+  const view = unadded?.refused
+    ? "refused"
+    : step === "choose" && !shop
+      ? "loading"
+      : step === "paying"
+        ? "choose"
+        : step;
   return (
     <TicketCard
       className="reserve-checkout"
