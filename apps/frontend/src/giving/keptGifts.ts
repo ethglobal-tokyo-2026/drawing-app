@@ -87,6 +87,11 @@ export function keptGift(userId: string, giftId: string): KeptGift | null {
   return readKept(userId).get(giftId) ?? null;
 }
 
+/** `userId`'s gifts whose message went out before the server heard it. */
+export function keptSends(userId: string): string[] {
+  return [...readKept(userId)].filter(([, gift]) => gift.message === "sent").map(([id]) => id);
+}
+
 /** Keeps `gift` for `giftId` in place of what was kept; one with nothing set is dropped. */
 export function keepGift(userId: string, giftId: string, gift: KeptGift): void {
   const kept = readKept(userId);

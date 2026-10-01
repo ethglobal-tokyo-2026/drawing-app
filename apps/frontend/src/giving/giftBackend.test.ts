@@ -14,6 +14,7 @@ import {
   type GiftTransactions,
 } from "./giftTransactions";
 import { createGiveFlow } from "./giveFlow";
+import { reportKeptSends } from "./sentReports";
 
 const hash: Hash = `0x${"ab".repeat(32)}`;
 const takeOutHash: Hash = `0x${"ef".repeat(32)}`;
@@ -430,6 +431,25 @@ describe("Giving through the smart account", () => {
       if (outcome === "sent") expect(t.reportShared).toHaveBeenLastCalledWith(t.packed.id, "sent");
     },
   );
+
+  it("reports a send the server missed each time the app starts, until the server hears it", async () => {
+    vi.useFakeTimers();
+    const t = setup();
+    await t.backend.pack(t.sticker);
+    t.reportShared.mockRejectedValue(new ApiError(401, { error: "signed_out" }));
+    expect(await failureOf(t.backend.markSent(t.packed.id))).toBeInstanceOf(ApiError);
+    const reports = () => t.reportShared.mock.calls.length;
+
+    t.reportShared.mockRejectedValue(noAnswer());
+    await reportKeptSends(t.api, userId);
+    const unheard = reports();
+    t.reportShared.mockResolvedValue({ ...t.packed, status: "sent" });
+    await reportKeptSends(t.api, userId);
+    expect(reports()).toBe(unheard + 1);
+    expect(t.reportShared).toHaveBeenLastCalledWith(t.packed.id, "sent");
+    await reportKeptSends(t.api, userId);
+    expect(reports()).toBe(unheard + 1);
+  });
 
   it("sends a gift whose picker was cancelled as it is when Giving opens again", async () => {
     vi.useFakeTimers();

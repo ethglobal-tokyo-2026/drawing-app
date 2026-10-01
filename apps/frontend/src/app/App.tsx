@@ -3,6 +3,7 @@ import { Suspense, useEffect, useLayoutEffect, useRef, useState, type CSSPropert
 import { flushSync } from "react-dom";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
+import { reportKeptSends } from "../giving/sentReports";
 import { resendGratitudeWhenReachable } from "../gratitude/gratitudeOutbox";
 import { useTranslation } from "../i18n/react";
 import { startPrivy } from "../identity/privyStart";
@@ -134,6 +135,8 @@ export default function App() {
   // Your gratitude that hadn't reached the server goes again as the app starts, and whenever the
   // phone is back online or the app is back in front.
   useEffect(() => resendGratitudeWhenReachable(api, me.id), [api, me.id]);
+  // So does word of a Gift Message that went out while the server couldn't hear it.
+  useEffect(() => void reportKeptSends(api, me.id), [api, me.id]);
   // Paid packs whose tickets the server hadn't added are asked for again too.
   useAddUnaddedPurchases();
   // One that still waits, or was refused, puts a pip on the Shop tab, where the Shop says why.

@@ -6,7 +6,7 @@ import { emptyApi, renderWithApi, shownText } from "../api/testing";
 import { gift, MARKUP_LIKE_NAME } from "../api/testFixtures";
 import { formatDay, formatDuration, formatNo } from "../stickers/format";
 import type { GiftSender, GiftSendOutcome } from "./giftSender";
-import { PICKER_RETURN_MS, PREPARING_SLOW_MS } from "./giveFlow";
+import { PICKER_OPENING_MS, PREPARING_SLOW_MS } from "./giveFlow";
 import { Giving } from "./Giving";
 
 const liff = vi.hoisted(() => ({ openWindow: vi.fn() }));
@@ -216,7 +216,7 @@ describe("Giving", () => {
     open("s-late");
     tap("Send in a LINE chat");
     await wait(1150);
-    await wait(PICKER_RETURN_MS);
+    await wait(PICKER_OPENING_MS);
     expect(title()).toBe("Did it go out?");
     tap("It went out");
     await wait(0);

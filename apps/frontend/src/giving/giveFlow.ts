@@ -21,6 +21,12 @@ export const PICKER_ANSWER_MS = 11 * 60_000;
  * it every half second. Past it, the giver may stop waiting.
  */
 export const PICKER_RETURN_MS = 5_000;
+/**
+ * How long LINE's answer has from the moment the flow asks for the picker, with the page in view all
+ * along, as where the picker opens over it: LIFF fetches a token before it opens the picker, so
+ * this leaves room for a slow connection.
+ */
+export const PICKER_OPENING_MS = 20_000;
 
 /** What the wait for the gift bag says of itself. */
 interface PackingWait {
@@ -41,8 +47,8 @@ export type GiveFlowState =
   /** Waiting for the sticker to be ready before opening LINE's picker. */
   | ({ step: "preparing" } & PackingWait)
   /**
-   * LINE's picker is open. `late`: LINE hasn't answered in PICKER_RETURN_MS with the page in view,
-   * so the giver may stop waiting, as when LINE didn't say; its answer still counts until they do.
+   * LINE's picker is open. `late`: LINE hasn't answered in time with the page in view, so the giver
+   * may stop waiting, as when LINE didn't say; its answer still counts until they do.
    */
   | { step: "picking"; late?: true }
   | { step: "sent"; sentAt: number; recordError?: Problem }
@@ -138,6 +144,8 @@ export function createGiveFlow({
   let slowTimer: ReturnType<typeof setTimeout> | undefined;
   /** Runs while the page is in view with LINE's picker open, until its answer is late. */
   let lateTimer: ReturnType<typeof setTimeout> | undefined;
+  /** The page is in view, as pageShown and pageHidden last said. */
+  let inView = true;
 
   const clearSlowTimer = () => {
     clearTimeout(slowTimer);
@@ -177,13 +185,14 @@ export function createGiveFlow({
   const inTheBag = () =>
     state.step === "packed" || state.step === "notSent" || state.step === "failed";
   const late = () => state.step === "picking" && state.late === true;
-  /** LINE's answer is due: without it by PICKER_RETURN_MS, the giver may stop waiting. */
-  const answerDue = () => {
+  /** LINE's answer is due: without it in `ms` with the page in view, the giver may stop waiting. */
+  const answerDue = (ms: number) => {
     clearLateTimer();
+    if (!inView) return;
     lateTimer = setTimeout(() => {
       lateTimer = undefined;
       if (waiting && state.step === "picking") set({ step: "picking", late: true });
-    }, PICKER_RETURN_MS);
+    }, ms);
   };
 
   /** Runs a backend write; on failure, reports it and returns why. */
@@ -322,8 +331,8 @@ export function createGiveFlow({
     set({ step: "picking" });
     waiting = { a, giftId: packed.giftId };
     after(PICKER_ANSWER_MS, stopWaiting);
-    // Due now too, since LINE's picker may open over the page without hiding it.
-    answerDue();
+    // Due from now too, since LINE's picker may open over the page without hiding it.
+    answerDue(PICKER_OPENING_MS);
     // The picker may send from here on: a page that goes before LINE answers must ask, not send again.
     backend.markMaybeSent(packed.giftId);
     let outcome: GiftSendOutcome | { failed: unknown };
@@ -407,9 +416,11 @@ export function createGiveFlow({
       })();
     },
     pageShown: () => {
-      if (!disposed && waiting && state.step === "picking" && !late()) answerDue();
+      inView = true;
+      if (!disposed && waiting && state.step === "picking" && !late()) answerDue(PICKER_RETURN_MS);
     },
     pageHidden: () => {
+      inView = false;
       if (!late()) clearLateTimer();
     },
     dispose: () => {

@@ -13,6 +13,7 @@ import { GiftTransactionRevertedError } from "./giftTransactions";
 import {
   createGiveFlow,
   PICKER_ANSWER_MS,
+  PICKER_OPENING_MS,
   PICKER_RETURN_MS,
   PREPARING_SLOW_MS,
   type GiveFlow,
@@ -473,6 +474,17 @@ describe("giving through a LINE chat", () => {
     expect(t.gifts()).toEqual(["packed"]);
   });
 
+  it("counts nothing late while the page is hidden as LINE's picker is asked for", async () => {
+    const t = setup();
+    t.flow.chooseLineChat();
+    t.flow.pageHidden();
+    await wait(PICKER_DELAY + PICKER_OPENING_MS);
+    expect(t.state()).toEqual({ step: "picking" });
+    t.flow.pageShown();
+    await wait(PICKER_RETURN_MS);
+    expect(t.state()).toEqual({ step: "picking", late: true });
+  });
+
   it.each([
     ["It went out", (flow: GiveFlow) => flow.itWentOut(), "sent", "sent"],
     ["Take it out", (flow: GiveFlow) => flow.takeOut(), "sheet", "taken_out"],
@@ -481,7 +493,10 @@ describe("giving through a LINE chat", () => {
     async (_, leave, step, gift) => {
       const t = setup();
       await openPicker(t);
+      // LIFF may still be fetching its token, and the picker not yet open.
       await wait(PICKER_RETURN_MS);
+      expect(t.state()).toEqual({ step: "picking" });
+      await wait(PICKER_OPENING_MS - PICKER_RETURN_MS);
       expect(t.state()).toEqual({ step: "picking", late: true });
       leave(t.flow);
       await wait(TAKE_OUT);

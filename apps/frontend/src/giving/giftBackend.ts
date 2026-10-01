@@ -1,5 +1,5 @@
 import type { Gift } from "@drawing-app/api/client";
-import type { ApiClient, ErrorCode } from "../api/apiClient";
+import type { ApiClient } from "../api/apiClient";
 import { ApiError } from "../api/apiClient";
 import { currentLanguage } from "../i18n/i18n";
 import { forgetMyStickerBoard } from "../sticker-board/useMyStickerBoard";
@@ -14,6 +14,7 @@ import {
   type TransactionRecorder,
 } from "./giftTransactions";
 import { forgetKeptGift, keepGift, keptGift, type KeptGift } from "./keptGifts";
+import { refusedForGood } from "./sentReports";
 
 /** The sticker a gift carries. */
 export interface GiftSticker {
@@ -130,15 +131,6 @@ const refusedWith = (code: string) => (error: unknown) =>
 /** No answer, or the server failing: what was sent may not have landed. */
 const unanswered = (error: unknown) =>
   error instanceof ApiError && (error.status === 0 || error.status >= 500);
-/** Refusals no later report can change: the gift is gone, closed, or someone else's. */
-const FINAL_REFUSALS: ReadonlySet<string> = new Set([
-  "gift_not_found",
-  "not_yours",
-  "gift_closed",
-] satisfies ErrorCode[]);
-const refusedForGood = (error: unknown) =>
-  error instanceof ApiError && FINAL_REFUSALS.has(error.code);
-
 /** A take-out may be on chain: the gift must come out, never go back into LINE. */
 const takingOutOnChain = (attempt: KeptGift | undefined) =>
   attempt?.takeOutSentAt !== undefined || attempt?.takeOutHash !== undefined;
