@@ -146,8 +146,9 @@
   gap: 10px;
 }
 
-/* Both actions sit on the scrim, where an Ink ring would vanish, so their ring is Seal Yellow. */
-.address-dialog__acts .label-btn:focus-visible {
+/* Both actions sit on the scrim, where an Ink ring would vanish, so their ring is Seal Yellow. The
+   error line between them sits on Tomato Soft, where yellow would vanish: its buttons keep Ink. */
+.address-dialog__acts > .label-btn:focus-visible {
   outline-color: var(--seal);
 }
 
