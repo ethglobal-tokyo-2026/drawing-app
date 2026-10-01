@@ -138,6 +138,12 @@
   text-wrap: balance;
 }
 
+/* WebKit's balance breaks Japanese inside the date, at keep-phrases' last-resort breaks, rather than
+   between its marked phrases. */
+.lifted-sticker__fine:lang(ja) {
+  text-wrap: wrap;
+}
+
 .lifted-sticker__acts {
   display: flex;
   flex-direction: column;
