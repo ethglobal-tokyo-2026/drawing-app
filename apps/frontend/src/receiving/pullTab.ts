@@ -8,7 +8,11 @@ export const PULL = {
   /** The strip's length along the bag's mouth: a drag across it tears `gain` of it. */
   travelPx: 250,
   gain: 0.82,
-  snapAt: 0.86,
+  /**
+   * Past this the tab tears free: soon enough that a pull from the tab opens the bag a clear step
+   * short of a narrow phone's edge, and late enough that a short drag springs back.
+   */
+  snapAt: 0.82,
   /** Ticks along the whole strip. */
   ticks: 40,
   spring: { stiffness: 340, damping: 32 },

@@ -130,10 +130,12 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
     const moved = reduced
       ? { tear: p.target, velocity: 0 }
       : springStep(p.tear, p.velocity, p.target, dt);
-    if (p.drag && !reduced && ticksBetween(p.tear, moved.tear) > 0) shiver();
+    // A finger let go past the snap leaves the tear going on to it, as if still pulled.
+    const pulled = p.drag !== null || snapped(p.target);
+    if (pulled && !reduced && ticksBetween(p.tear, moved.tear) > 0) shiver();
     p.velocity = moved.velocity;
     show(moved.tear);
-    if (p.drag && snapped(moved.tear)) return snap();
+    if (pulled && snapped(moved.tear)) return snap();
     if (p.drag || !atRest(moved.tear, moved.velocity, p.target)) {
       p.frame = requestAnimationFrame(step);
     } else {
@@ -168,7 +170,8 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
     p.frame = requestAnimationFrame(run);
   };
 
-  // Only the dragging pointer ends the drag: its lift, its cancel or its lost capture.
+  // Only the dragging pointer ends the drag: its lift, its cancel or its lost capture. Where the
+  // finger let go decides, since the spring's tear trails a quick pull: past the snap, it tears free.
   const release = (e: ReactPointerEvent) => {
     const p = physics.current;
     if (p.drag?.pointerId !== e.pointerId) return;
@@ -176,7 +179,7 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
     p.drag = null;
     setGrip(null);
     if (snapped(p.tear)) return snap();
-    p.target = 0;
+    p.target = snapped(p.target) ? 1 : 0;
     kick();
   };
 
