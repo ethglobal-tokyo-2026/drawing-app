@@ -13,9 +13,9 @@ import {
 } from "../contracts/ens/EnsV2.sol";
 import {StickerGiftEscrow} from "../contracts/StickerGiftEscrow.sol";
 
-/// @dev Builds everything under croquis.eth and the escrow. The deploy script and the tests share
-///      it, so tests deploy and grant roles exactly as production does. `self` is the account that
-///      sends each call.
+/// @dev Builds everything under the parent name, `parentLabel`.eth, and the escrow. The deploy
+///      script and the tests share it, so tests deploy and grant roles exactly as production does.
+///      `self` is the account that sends each call.
 abstract contract CroquisSetup {
     uint64 internal constant FOREVER = type(uint64).max;
 
@@ -23,7 +23,7 @@ abstract contract CroquisSetup {
         IVerifiableFactory factory;
         address registryImplementation;
         address resolverImplementation;
-        /// @dev .eth's registry, where croquis.eth is registered.
+        /// @dev .eth's registry, where the parent name is registered.
         IEnsRegistry ethRegistry;
     }
 
@@ -37,6 +37,7 @@ abstract contract CroquisSetup {
 
     function _deployCroquis(
         EnsV2 memory ens,
+        string memory parentLabel,
         address sticker,
         address self,
         address relayer,
@@ -47,8 +48,8 @@ abstract contract CroquisSetup {
 
         uint256 croquisSetup = EnsRoles.REGISTRAR | EnsRoles.REGISTRAR_ADMIN | EnsRoles.SET_PARENT
             | EnsRoles.SET_PARENT_ADMIN;
-        c.croquisRegistry = _registry(ens, c.resolver, "croquis", self, croquisSetup);
-        c.croquisRegistry.setParent(address(ens.ethRegistry), "croquis");
+        c.croquisRegistry = _registry(ens, c.resolver, parentLabel, self, croquisSetup);
+        c.croquisRegistry.setParent(address(ens.ethRegistry), parentLabel);
         c.names = new CroquisNames(
             self,
             c.croquisRegistry,
@@ -57,7 +58,7 @@ abstract contract CroquisSetup {
             ens.factory,
             ens.registryImplementation,
             ens.resolverImplementation,
-            EnsNames.child("croquis", EnsNames.child("eth", hex"00"))
+            EnsNames.child(parentLabel, EnsNames.child("eth", hex"00"))
         );
 
         uint256 giftsSetup = croquisSetup | EnsRoles.UNREGISTER | EnsRoles.UNREGISTER_ADMIN;
@@ -81,9 +82,11 @@ abstract contract CroquisSetup {
         c.names.grantRole(c.names.NAMER_ROLE(), relayer);
     }
 
-    /// @dev Points croquis.eth at its registry and resolver. `self` must own croquis.eth.
-    function _pointCroquisEth(EnsV2 memory ens, Croquis memory c) internal {
-        uint256 labelId = uint256(keccak256("croquis"));
+    /// @dev Points `parentLabel`.eth at its registry and resolver. `self` must own that name.
+    function _pointCroquisEth(EnsV2 memory ens, string memory parentLabel, Croquis memory c)
+        internal
+    {
+        uint256 labelId = uint256(keccak256(bytes(parentLabel)));
         ens.ethRegistry.setSubregistry(labelId, address(c.croquisRegistry));
         ens.ethRegistry.setResolver(labelId, address(c.resolver));
     }

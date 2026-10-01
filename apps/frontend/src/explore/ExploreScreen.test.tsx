@@ -1,5 +1,10 @@
 // @vitest-environment happy-dom
-import type { ActivityEntry, Explore, Person } from "@drawing-app/api/client";
+import {
+  CROQUIS_PARENT_NAME,
+  type ActivityEntry,
+  type Explore,
+  type Person,
+} from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { people, sticker } from "../api/testFixtures";
@@ -330,7 +335,7 @@ describe("a name's link", () => {
     );
     await wait(0);
     expect(document.querySelector('[role="alert"]')?.textContent).toContain(
-      "Couldn’t load nobody.croquis.eth: ",
+      `Couldn’t load nobody.${CROQUIS_PARENT_NAME}: `,
     );
   });
 });

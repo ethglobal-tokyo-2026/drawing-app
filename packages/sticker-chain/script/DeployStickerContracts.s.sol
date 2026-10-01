@@ -7,9 +7,9 @@ import {IEnsRegistry, IVerifiableFactory} from "../contracts/ens/EnsV2.sol";
 import {StickerNFT} from "../contracts/StickerNFT.sol";
 import {CroquisSetup} from "./CroquisSetup.sol";
 
-/// @notice Deploys the names under croquis.eth and the escrow on Ethereum Sepolia, and StickerNFT
-///         unless STICKER_NFT_ADDRESS names one already there. The deployer should own croquis.eth;
-///         otherwise croquis.eth's owner points it at the new registry and resolver afterwards.
+/// @notice Deploys the names under ENS_PARENT_LABEL.eth and the escrow on Ethereum Sepolia, and
+///         StickerNFT unless STICKER_NFT_ADDRESS names one already there. The deployer should own
+///         that name; otherwise its owner points it at the new registry and resolver afterwards.
 contract DeployStickerContracts is Script, CroquisSetup {
     // ENSv2 on Sepolia, from contracts-v2 71a3b73's deployments/sepolia/addresses.md.
     address private constant VERIFIABLE_FACTORY = 0x9e726Eb570beb6BCEb495AB8cdA7df517d4e841C;
@@ -26,6 +26,7 @@ contract DeployStickerContracts is Script, CroquisSetup {
         gatewayUrls[0] = vm.envString("ENS_GATEWAY_URL");
         address gatewaySigner = vm.addr(vm.envUint("ENS_GATEWAY_PRIVATE_KEY"));
         address existingSticker = vm.envOr("STICKER_NFT_ADDRESS", address(0));
+        string memory parentLabel = vm.envString("ENS_PARENT_LABEL");
         EnsV2 memory ens = EnsV2(
             IVerifiableFactory(VERIFIABLE_FACTORY),
             USER_REGISTRY_IMPL,
@@ -40,10 +41,12 @@ contract DeployStickerContracts is Script, CroquisSetup {
             if (relayer != deployer) created.grantRole(created.SEALER_ROLE(), relayer);
             sticker = address(created);
         }
-        Croquis memory c =
-            _deployCroquis(ens, sticker, deployer, relayer, gatewayUrls, gatewaySigner);
-        bool ownsCroquisEth = ens.ethRegistry.getOwner(uint256(keccak256("croquis"))) == deployer;
-        if (ownsCroquisEth) _pointCroquisEth(ens, c);
+        Croquis memory c = _deployCroquis(
+            ens, parentLabel, sticker, deployer, relayer, gatewayUrls, gatewaySigner
+        );
+        bool ownsParent =
+            ens.ethRegistry.getOwner(uint256(keccak256(bytes(parentLabel)))) == deployer;
+        if (ownsParent) _pointCroquisEth(ens, parentLabel, c);
         vm.stopBroadcast();
 
         console2.log("STICKER_NFT_ADDRESS=", sticker);
@@ -52,8 +55,12 @@ contract DeployStickerContracts is Script, CroquisSetup {
         console2.log("CROQUIS_RESOLVER_ADDRESS=", address(c.resolver));
         console2.log("Croquis registry:", address(c.croquisRegistry));
         console2.log("Gifts registry:", address(c.giftsRegistry));
-        if (!ownsCroquisEth) {
-            console2.log("croquis.eth is not the deployer's. Its owner must set, on ETHRegistry:");
+        if (!ownsParent) {
+            console2.log(
+                string.concat(
+                    parentLabel, ".eth is not the deployer's. Its owner must set, on ETHRegistry:"
+                )
+            );
             console2.log("  subregistry:", address(c.croquisRegistry));
             console2.log("  resolver:", address(c.resolver));
         }

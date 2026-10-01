@@ -26,6 +26,7 @@ import {CroquisSetup} from "../../script/CroquisSetup.sol";
 /// @dev A local ENS built from ENSv2's own contracts (a root, .eth, croquis.eth), with everything
 ///      under croquis.eth deployed the way the deploy script does it.
 abstract contract CroquisFixture is Test, CroquisSetup {
+    string internal constant PARENT_LABEL = "croquis";
     uint256 internal constant GATEWAY_KEY = 0x6A7E;
     uint256 internal constant RELAYER_KEY = 0xA11CE;
     string internal constant GATEWAY_URL = "https://app.example/api/ens/{sender}/{data}.json";
@@ -46,7 +47,7 @@ abstract contract CroquisFixture is Test, CroquisSetup {
         ethRegistry = new PermissionedRegistry(labelStore, address(this), EnsRoles.ALL);
         root.register("eth", address(this), ethRegistry, address(0), 0, FOREVER);
         ethRegistry.register(
-            "croquis", address(this), IRegistry(address(0)), address(0), EnsRoles.ALL, FOREVER
+            PARENT_LABEL, address(this), IRegistry(address(0)), address(0), EnsRoles.ALL, FOREVER
         );
 
         sticker = new StickerNFT(address(this));
@@ -59,9 +60,9 @@ abstract contract CroquisFixture is Test, CroquisSetup {
         string[] memory urls = new string[](1);
         urls[0] = GATEWAY_URL;
         croquis = _deployCroquis(
-            ens, address(sticker), address(this), relayer, urls, vm.addr(GATEWAY_KEY)
+            ens, PARENT_LABEL, address(sticker), address(this), relayer, urls, vm.addr(GATEWAY_KEY)
         );
-        _pointCroquisEth(ens, croquis);
+        _pointCroquisEth(ens, PARENT_LABEL, croquis);
         sticker.grantRole(sticker.SEALER_ROLE(), relayer);
     }
 

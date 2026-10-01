@@ -39,11 +39,12 @@ pnpm --filter @drawing-app/api exec vitest run scripts/
 
 ## `bash deploy/deploy-contracts.sh`
 
-Deploys the names under croquis.eth and `StickerGiftEscrow` to Ethereum Sepolia with Foundry's `forge script`, from `packages/sticker-chain` with its submodules initialized. It needs `ETHEREUM_SEPOLIA_RPC_URL`, `DEPLOYER_PRIVATE_KEY`, `STICKER_SEALER_PRIVATE_KEY`, `ENS_GATEWAY_PRIVATE_KEY` and `ENS_GATEWAY_URL` in `deploy/.env`.
+Deploys the names under the parent name, `ENS_PARENT_LABEL`.eth, and `StickerGiftEscrow` to Ethereum Sepolia with Foundry's `forge script`, from `packages/sticker-chain` with its submodules initialized. It needs `ETHEREUM_SEPOLIA_RPC_URL`, `DEPLOYER_PRIVATE_KEY`, `STICKER_SEALER_PRIVATE_KEY`, `ENS_GATEWAY_PRIVATE_KEY`, `ENS_GATEWAY_URL` and `ENS_PARENT_LABEL` in `deploy/.env`.
 
+- `ENS_PARENT_LABEL` is the parent name's label, `croquis` for croquis.eth. It must match `CROQUIS_PARENT_NAME` in `packages/sticker-chain/src/croquis-names.ts`, the name the API shows and answers for, so a new parent name changes both.
 - With `STICKER_NFT_ADDRESS` set, it keeps that StickerNFT; otherwise it deploys one.
 - The deployer stays the administrator. The sealer gets mint, claim-signing and naming permissions, and the gateway key's address is the only signer `CroquisResolver` trusts.
-- When the deployer owns croquis.eth, it points croquis.eth at the new registry and resolver; otherwise it prints the two addresses croquis.eth's owner sets.
+- When the deployer owns the parent name, it points that name at the new registry and resolver; otherwise it prints the two addresses the name's owner sets.
 
 Copy the printed `STICKER_NFT_ADDRESS`, `STICKER_GIFT_ESCROW_ADDRESS`, `CROQUIS_NAMES_ADDRESS` and `CROQUIS_RESOLVER_ADDRESS` into `deploy/.env`, then run `./deploy/deploy.sh`.
 

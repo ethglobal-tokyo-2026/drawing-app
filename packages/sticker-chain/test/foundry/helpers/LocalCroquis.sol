@@ -31,6 +31,7 @@ contract LocalCroquis is CroquisSetup {
                 resolverImplementation,
                 IEnsRegistry(address(0))
             ),
+            "croquis",
             sticker,
             address(this),
             relayer,

@@ -1,5 +1,6 @@
 import { MAX_TIME_USED_S, stickers, stickerTimelapses, ticketUses } from "@drawing-app/db";
 import { insertGratitude, insertUser, packGift } from "@drawing-app/db/testing";
+import { CROQUIS_PARENT_NAME } from "@drawing-app/sticker-chain/croquis-names";
 import { eq } from "drizzle-orm";
 import { gzipSync } from "node:zlib";
 import { keccak256 } from "viem";
@@ -172,7 +173,7 @@ describe("POST /api/stickers", () => {
     ]);
     const detail = await bodyOf(await getSticker(artistId, sticker.id), stickerDetailSchema);
     expect(detail.sticker.ensName).toBe(
-      `${String(sticker.number).padStart(4, "0")}.alice.croquis.eth`,
+      `${String(sticker.number).padStart(4, "0")}.alice.${CROQUIS_PARENT_NAME}`,
     );
   });
 

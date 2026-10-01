@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# deploy/deploy-contracts.sh: deploy the names under croquis.eth and StickerGiftEscrow to Ethereum
-# Sepolia, keeping the StickerNFT at STICKER_NFT_ADDRESS when it is set.
+# deploy/deploy-contracts.sh: deploy the names under ENS_PARENT_LABEL.eth and StickerGiftEscrow to
+# Ethereum Sepolia, keeping the StickerNFT at STICKER_NFT_ADDRESS when it is set.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -16,6 +16,7 @@ fi
 : "${STICKER_SEALER_PRIVATE_KEY:?set STICKER_SEALER_PRIVATE_KEY in deploy/.env}"
 : "${ENS_GATEWAY_PRIVATE_KEY:?set ENS_GATEWAY_PRIVATE_KEY in deploy/.env}"
 : "${ENS_GATEWAY_URL:?set ENS_GATEWAY_URL in deploy/.env}"
+: "${ENS_PARENT_LABEL:?set ENS_PARENT_LABEL in deploy/.env}"
 
 cd "$ROOT/packages/sticker-chain"
 # Forge takes one RPC: the first of a comma-separated list, which the REST API tries in turn.

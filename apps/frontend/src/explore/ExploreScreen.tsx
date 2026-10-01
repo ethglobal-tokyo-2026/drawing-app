@@ -1,4 +1,9 @@
-import type { Explore, LeaderboardRow, Person } from "@drawing-app/api/client";
+import {
+  CROQUIS_PARENT_NAME,
+  type Explore,
+  type LeaderboardRow,
+  type Person,
+} from "@drawing-app/api/client";
 import type { TFunction } from "i18next";
 import {
   useEffect,
@@ -617,7 +622,7 @@ function OpenBoardOf({ label, open }: { label: string; open: Open }) {
   return (
     <Failed
       said={(reason) =>
-        t(($) => $.explore.failed.ensName, { name: `${label}.croquis.eth`, reason })
+        t(($) => $.explore.failed.ensName, { name: `${label}.${CROQUIS_PARENT_NAME}`, reason })
       }
       query={person}
     />
