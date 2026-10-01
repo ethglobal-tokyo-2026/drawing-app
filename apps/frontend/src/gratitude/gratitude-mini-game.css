@@ -1229,6 +1229,10 @@
   margin-top: 6px;
   font-size: 19px;
 }
+/* Japanese breaks only between its marked phrases (keep-phrases); English wraps as it always has. */
+.gr-rc-head:not(:lang(ja)) {
+  word-break: normal;
+}
 
 /* ------------------------------------------------------------------ frame timing and the stopped-round message */
 .gr-frames {

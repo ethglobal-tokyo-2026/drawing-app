@@ -401,7 +401,9 @@ export function GratitudeMiniGame({
                 {formatCount(ended.total)}
                 <GratitudeIcon />
               </p>
-              <p className="gr-rc-head">{t(($) => $.gratitude.receipt.gratitudeTo, { handle })}</p>
+              <p className="gr-rc-head keep-phrases">
+                {t(($) => $.gratitude.receipt.gratitudeTo, { handle })}
+              </p>
               <div className="gr-rc-sub">
                 <div className="gr-rc-combo">
                   <HitCounter hits={ended.hits} />

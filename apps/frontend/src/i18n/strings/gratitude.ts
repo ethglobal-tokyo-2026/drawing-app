@@ -66,7 +66,7 @@ export const gratitude = {
     /** Gratitude Mini-game, once the ending has played when the server refused the gratitude: screen readers' name for the receipt card */
     labelRefused: { en: "Gratitude not sent", ja: "感謝を送れませんでした" },
     /** Gratitude Mini-game, receipt card: the line under the big gratitude total, naming the giver */
-    gratitudeTo: { en: "gratitude to {{handle}}", ja: "{{handle}}さんへの感謝" },
+    gratitudeTo: { en: "gratitude to {{handle}}", ja: "{{handle}}さんへの<wbr/>感謝" },
     /** Gratitude Mini-game, receipt card: fine print beside the hit counter, the combo's best multiplier */
     bestMultiplier: { en: "best ×{{multiplier}}", ja: "最高×{{multiplier}}" },
     /** Gratitude Mini-game, receipt card, in a note under the combo while the gratitude is still going to the server */
