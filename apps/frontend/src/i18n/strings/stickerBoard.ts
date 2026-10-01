@@ -474,11 +474,15 @@ export const stickerBoard = {
       en: "Sheet {{number}}, {{dates}}, in front",
       ja: "シート{{number}}、{{dates}}、手前",
     },
+    /** Sticker tray, before any sticker: screen readers' name for its one blank sheet in front, which has no dates yet */
+    frontSheet_noDates: { en: "Sheet {{number}}, in front", ja: "シート{{number}}、手前" },
     /** Sticker tray: screen readers' name for the sheet pulled out over the board; {{dates}} is when its stickers came, such as "9.20–9.23" */
     pulledSheet: {
       en: "Sheet {{number}}, {{dates}}, pulled out",
       ja: "シート{{number}}、{{dates}}、引き出し中",
     },
+    /** Sticker tray, before any sticker: screen readers' name for its one blank sheet pulled out over the board, which has no dates yet */
+    pulledSheet_noDates: { en: "Sheet {{number}}, pulled out", ja: "シート{{number}}、引き出し中" },
     /** Sticker tray, sheets spread over the board: screen readers' name for the dialog that holds every sheet, one button each */
     spread: { en: "Your sticker sheets, spread out", ja: "広げた手持ちのシールシート" },
     /** Sticker tray, sheets spread over the board: screen readers' name for the sheet that's in front now */

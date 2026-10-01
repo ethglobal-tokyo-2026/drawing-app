@@ -360,6 +360,26 @@ describe("StickerTray", () => {
     expect(board.querySelector(".tray__empty")).toBeNull();
   });
 
+  it("names its one blank sheet by its number alone, in front or pulled out, and describes nothing on it, until a sticker arrives", async () => {
+    endAnimationsAtOnce();
+    render([]);
+    expect(frontSheet()?.getAttribute("aria-label")).toBe("Sheet 1, in front");
+    expect(frontSheet()?.hasAttribute("aria-describedby")).toBe(false);
+    await openTray();
+    const pulled = await pullOut();
+    expect(pulled?.querySelector(".tray__sheet")?.getAttribute("aria-label")).toBe(
+      "Sheet 1, pulled out",
+    );
+    expect(pulled?.querySelector(".tray__sheet")?.hasAttribute("aria-describedby")).toBe(false);
+
+    // The sheet goes home, and a sticker arrives: it has dates, and stickers to describe.
+    await act(async () => void (await tray.current?.close()));
+    render([sticker("a", 1, false)]);
+    await openTray();
+    expect(frontSheet()?.getAttribute("aria-label")).toMatch(/^Sheet 1, \S.*, in front$/);
+    expect(frontSheet()?.hasAttribute("aria-describedby")).toBe(true);
+  });
+
   it("counts a visit to the tray when it's opened, not when the board shows", async () => {
     const visits = () => localStorage.getItem("draw.tray.visits");
     localStorage.clear();
