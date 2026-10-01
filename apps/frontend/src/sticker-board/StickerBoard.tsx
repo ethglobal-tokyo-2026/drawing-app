@@ -324,7 +324,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const [owed, setOwed] = useState<{ gift: { id: string }; giver: PersonView } | null>(null);
   /** This visit opened owing the greeting, which a board gets once per app open. */
   const [owedGreeting] = useState(() => owesGreeting(account.id));
-  /** This visit's artist chips have played, or a sticker was selected, which clears them. */
+  /** This visit's artist chips have played, or a selection or a turn of the board cleared them. */
   const [chipsDone, setChipsDone] = useState(false);
   const me = useIdentity();
   const giftSender = useGiftSender();
@@ -546,8 +546,9 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   // every foil sticker's, once per app open.
   const arrived = onBoard.find((s) => s.id === arrivedId && byOther(s));
   const named = arrived ? [arrived] : owedGreeting ? onBoard.filter(byOther) : [];
+  // Not while the board is turned over: the front is out of sight, and a greeting played there is spent unseen.
   const chips =
-    chipsDone || failed || !field || !size
+    chipsDone || failed || turned || !field || !size
       ? []
       : named.map((s) => ({
           id: s.id,
@@ -591,6 +592,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     setTurned(over);
     if (!over) return;
     setWasTurned(true);
+    // Chips still playing end with the turn, so they don't start over when the board turns back.
+    if (greeting) setChipsDone(true);
     select(null);
   };
   // Back turns the stat board back over, as LINE's Back does on any overlay.
