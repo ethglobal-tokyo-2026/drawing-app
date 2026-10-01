@@ -1,5 +1,6 @@
 import { stickers, users } from "@drawing-app/db";
 import { bytes32, insertUser } from "@drawing-app/db/testing";
+import { CROQUIS_PARENT_NAME } from "@drawing-app/sticker-chain/croquis-names";
 import { gatewayDigest, encodeGatewayRequest } from "@drawing-app/sticker-chain/ens-gateway";
 import { eq } from "drizzle-orm";
 import {
@@ -35,6 +36,9 @@ const profileAbi = parseAbi([
 const gatewayBodySchema = z.object({ data: z.string() });
 const meBodySchema = z.object({ me: meSchema });
 const SMART_ACCOUNT = "0x00000000000000000000000000000000000a11ce";
+
+/** `label`'s name under the parent name. */
+const ensNameFor = (label: string) => `${label}.${CROQUIS_PARENT_NAME}`;
 
 let test: TestApp;
 
@@ -131,18 +135,18 @@ describe("ENS labels", () => {
   it("follows the handle until the name is onchain, then stays", async () => {
     await setup();
     const { me, headers } = await signIn("Alice");
-    expect(me.ensName).toBe("alice.croquis.eth");
-    expect((await setHandle(headers, "Alice Smith")).ensName).toBe("alice-smith.croquis.eth");
+    expect(me.ensName).toBe(ensNameFor("alice"));
+    expect((await setHandle(headers, "Alice Smith")).ensName).toBe(ensNameFor("alice-smith"));
 
     test.db.update(users).set({ ensNamedAt: new Date() }).where(eq(users.id, me.id)).run();
-    expect((await setHandle(headers, "Someone Else")).ensName).toBe("alice-smith.croquis.eth");
+    expect((await setHandle(headers, "Someone Else")).ensName).toBe(ensNameFor("alice-smith"));
   });
 
   it("gives someone whose label is taken one from their user ID", async () => {
     await setup();
     insertUser(test.db, { handle: "Alice-Two", ensLabel: "alice" });
     const { me } = await signIn("ALICE");
-    expect(me.ensName).toBe(`${fallbackLabel(me.id)}.croquis.eth`);
+    expect(me.ensName).toBe(ensNameFor(fallbackLabel(me.id)));
   });
 });
 
@@ -155,7 +159,7 @@ describe("the ENS gateway", () => {
     const alice = insertUser(test.db, { ensLabel: "alice", smartAccountAddress: SMART_ACCOUNT });
     const tokenId = "7";
     mintedSticker(alice, tokenId);
-    const node = namehash("alice.croquis.eth");
+    const node = namehash(ensNameFor("alice"));
     const call = encodeFunctionData({
       abi: profileAbi,
       functionName: "multicall",
@@ -168,7 +172,7 @@ describe("the ENS gateway", () => {
       ],
     });
 
-    const { request, response } = await askGateway("alice.croquis.eth", call);
+    const { request, response } = await askGateway(ensNameFor("alice"), call);
     const result = await verifiedResult(request, response);
 
     const ens = fakeEns();
@@ -183,19 +187,19 @@ describe("the ENS gateway", () => {
     const alice = insertUser(test.db, { ensLabel: "alice" });
     mintedSticker(alice, "1");
     mintedSticker(alice, "2", { nsfw: true });
-    expect(await gatewayText("alice.croquis.eth", "avatar")).toBe(avatarFor("1"));
+    expect(await gatewayText(ensNameFor("alice"), "avatar")).toBe(avatarFor("1"));
   });
 
   it("answers empty for a name nobody has", async () => {
-    expect(await gatewayText("nobody.croquis.eth", "url")).toBe("");
+    expect(await gatewayText(ensNameFor("nobody"), "url")).toBe("");
   });
 
   it("answers a database failure as its own, not the caller's unsupported_request", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     test.sqlite.close();
-    const node = namehash("alice.croquis.eth");
+    const node = namehash(ensNameFor("alice"));
     const call = encodeFunctionData({ abi: profileAbi, functionName: "text", args: [node, "url"] });
-    const { response } = await askGateway("alice.croquis.eth", call);
+    const { response } = await askGateway(ensNameFor("alice"), call);
     expect(await refusalOf(response)).toMatchObject({ status: 500, error: "internal_error" });
     expect(log).toHaveBeenCalledWith(expect.stringContaining("request.failed"));
   });
@@ -204,9 +208,9 @@ describe("the ENS gateway", () => {
     const call = encodeFunctionData({
       abi: profileAbi,
       functionName: "addr",
-      args: [namehash("a.croquis.eth")],
+      args: [namehash(ensNameFor("a"))],
     });
-    const { response } = await askGateway("a.croquis.eth", call, `0x${"12".repeat(20)}`);
+    const { response } = await askGateway(ensNameFor("a"), call, `0x${"12".repeat(20)}`);
     expect(await refusalOf(response)).toMatchObject({ status: 404, error: "unknown_resolver" });
   });
 });
@@ -245,7 +249,7 @@ describe("naming", () => {
     const response = await test.send("GET", "/api/ens/people/Alice", { headers });
     expect((await bodyOf(response, z.object({ person: personSchema }))).person).toMatchObject({
       handle: "Alice",
-      ensName: "alice.croquis.eth",
+      ensName: ensNameFor("alice"),
     });
   });
 });

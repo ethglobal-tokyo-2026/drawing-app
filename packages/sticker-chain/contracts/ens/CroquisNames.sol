@@ -31,7 +31,7 @@ contract CroquisNames is AccessControl, INameBook {
     address public immutable REGISTRY_IMPLEMENTATION;
     address public immutable RESOLVER_IMPLEMENTATION;
     bytes32 public immutable PARENT_NODE;
-    /// @dev croquis.eth, DNS-encoded.
+    /// @dev The parent name every name here sits under, DNS-encoded.
     bytes public parentName;
 
     struct Person {

@@ -3,6 +3,7 @@ import {
   croquisResolverAbi,
   stickerGiftEscrowAbi,
 } from "@drawing-app/sticker-chain/contracts";
+import { dnsToText } from "@drawing-app/sticker-chain/ens-gateway";
 import {
   BaseError,
   ContractFunctionZeroDataError,
@@ -37,7 +38,7 @@ export async function readConfiguredContracts(
   const { relayer, escrow, names, resolver } = configured;
   const namesCall = { address: names, abi: croquisNamesAbi } as const;
   const escrowCall = { address: escrow, abi: stickerGiftEscrowAbi } as const;
-  const [relayerIsNamer, namesStickers, resolverStickers, escrowSticker, escrowNames] =
+  const [relayerIsNamer, namesParent, namesStickers, resolverStickers, escrowSticker, escrowNames] =
     await Promise.all([
       unlessRefused(async () => {
         const role = await publicClient.readContract({ ...namesCall, functionName: "NAMER_ROLE" });
@@ -47,6 +48,11 @@ export async function readConfiguredContracts(
           args: [role, relayer],
         });
       }, `CroquisNames ${names}'s NAMER_ROLE`),
+      unlessRefused(
+        async () =>
+          dnsToText(await publicClient.readContract({ ...namesCall, functionName: "parentName" })),
+        `CroquisNames ${names}'s parentName()`,
+      ),
       unlessRefused(
         () => publicClient.readContract({ ...namesCall, functionName: "STICKERS" }),
         `CroquisNames ${names}'s STICKERS()`,
@@ -72,6 +78,7 @@ export async function readConfiguredContracts(
   return {
     configured,
     relayerIsNamer: relayerIsNamer === true,
+    namesParent,
     namesStickers,
     resolverStickers,
     escrowSticker,

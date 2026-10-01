@@ -1,10 +1,11 @@
-import type {
-  BoardSticker,
-  Gift,
-  Gratitude,
-  Person,
-  Sticker,
-  TransferTrailEntry,
+import {
+  CROQUIS_PARENT_NAME,
+  type BoardSticker,
+  type Gift,
+  type Gratitude,
+  type Person,
+  type Sticker,
+  type TransferTrailEntry,
 } from "@drawing-app/api/client";
 
 /** People, stickers and gifts for tests, in the API's shapes. All of it is made up. */
@@ -14,7 +15,7 @@ const person = (handle: string, lineDisplayName: string): Person => ({
   handle,
   lineDisplayName,
   linePictureUrl: null,
-  ensName: `${handle}.croquis.eth`,
+  ensName: `${handle}.${CROQUIS_PARENT_NAME}`,
   ageStatus: "adult",
 });
 

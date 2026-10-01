@@ -3,6 +3,7 @@ import {
   croquisResolverAbi,
   stickerGiftEscrowAbi,
 } from "@drawing-app/sticker-chain/contracts";
+import { CROQUIS_PARENT_NAME } from "@drawing-app/sticker-chain/croquis-names";
 import {
   createPublicClient,
   decodeFunctionData,
@@ -11,10 +12,12 @@ import {
   isHex,
   keccak256,
   stringToBytes,
+  toHex,
   type Abi,
   type Address,
 } from "viem";
 import { sepolia } from "viem/chains";
+import { packetToBytes } from "viem/ens";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { ChainUnavailableError } from "../deps.ts";
@@ -78,6 +81,7 @@ const preEnsEscrowDeploy = (): Record<Address, FakeContract> => ({
     answers: {
       NAMER_ROLE: () => NAMER_ROLE,
       hasRole: (role, account) => role === NAMER_ROLE && account === configured.relayer,
+      parentName: () => toHex(packetToBytes(CROQUIS_PARENT_NAME)),
       STICKERS: () => configured.stickers,
     },
   },
@@ -112,6 +116,7 @@ describe("reading the configured contracts", () => {
       expect(await read()).toEqual({
         configured,
         relayerIsNamer: true,
+        namesParent: CROQUIS_PARENT_NAME,
         namesStickers: configured.stickers,
         resolverStickers: configured.stickers,
         escrowSticker: configured.stickers,

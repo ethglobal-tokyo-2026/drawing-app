@@ -1,5 +1,6 @@
 import { users, type Db } from "@drawing-app/db";
 import { bytes32 } from "@drawing-app/db/testing";
+import { CROQUIS_PARENT_NAME } from "@drawing-app/sticker-chain/croquis-names";
 import { eq } from "drizzle-orm";
 import type {
   Clock,
@@ -278,6 +279,7 @@ export const fakeContractReads = (
 ): ContractReads => ({
   configured: TEST_CONTRACTS,
   relayerIsNamer: true,
+  namesParent: CROQUIS_PARENT_NAME,
   namesStickers: TEST_CONTRACTS.stickers,
   resolverStickers: TEST_CONTRACTS.stickers,
   escrowSticker: TEST_CONTRACTS.stickers,
