@@ -141,6 +141,9 @@ describe("the drawing screen after a reload", () => {
     act(() => document.querySelector<HTMLButtonElement>(".seal-key")?.click());
     await settle(1000);
     expect(chip()).toContain(strings.stickerCreation.seal.failed.onThisPhone.en);
+    // The cut's own words show under the chip for a report, with Copy, as every error line does.
+    expect(chip()).toContain(strings.ui.errorLine.details.en);
+    expect(chip()).toContain("The sealing worker stopped");
     expect(startOver()).toBeUndefined();
     expect(sheet).toBe("held");
   });
