@@ -621,6 +621,8 @@ A combo's length, shown the way fighting games show it: "64 HITS" (`UI.hits`).
 
 A selected sticker on the board shows a clear frame (a 1.5px line at 50% Ink, 10px outside the sticker, with 10px corners). Four 20px corner squares in Liner Lift with an ink edge resize it. A 28px round knob with Phosphor's arrow-clockwise icon rotates it, on a 20px stem above the top edge. Every handle has a 44px hit area. The frame turns full Ink while a handle is being dragged.
 
+The first time you select a sticker on a phone, a hint in the seal check's chip stock says how to go on, in two rows: "Tap again to open · Tap the board to let go" and "Drag to the zipper to put it away". It sits nearest the toolbar, clear of the frame, knob, toolbar and Draw, and goes when the selection ends, never to return on that phone; with no clear room it waits for a selection that has some. Taps pass through it, screen readers skip it (the selected sticker's own description says as much), reduced motion shows it with no travel, and someone else's board has none.
+
 ### Sticker tray
 
 Your whole collection, in a pink canvas tray zipped down the board's right edge. The zipper is the tray's alone.
