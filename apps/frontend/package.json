@@ -12,6 +12,7 @@
     "i18n:export": "tsx scripts/i18nExport.ts",
     "i18n:import": "tsx scripts/i18nImport.ts",
     "chat-menus": "tsx --tsconfig tsconfig.scripts.json scripts/renderChatMenus.tsx",
+    "croquis-sans": "uv run --script scripts/buildCroquisSans.py",
     "preview": "vite preview"
   },
   "dependencies": {
