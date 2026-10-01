@@ -13,6 +13,10 @@ export interface TrayProblem {
   detail?: string;
 }
 
+/** What makes two problems one: the board says it once, and keys its sentence by this. */
+export const trayProblemKey = (p: TrayProblem) =>
+  JSON.stringify([p.kind, p.nos, p.reason, p.detail]);
+
 /** The board answered with nothing, as before it has a size, so a sticker couldn't be stuck on. */
 export class BoardNotReady extends Error {}
 

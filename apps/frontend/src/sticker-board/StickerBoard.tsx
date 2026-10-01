@@ -107,7 +107,7 @@ import { GiftsForYouBadge, type GiftForYou } from "../receiving/GiftsForYouBadge
 import { ArtistChipLayer } from "./ArtistChipLayer";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
-import { reasonOf, type TrayProblem } from "./tray/trayProblem";
+import { reasonOf, trayProblemKey, type TrayProblem } from "./tray/trayProblem";
 import { useBoardGestures } from "./useBoardGestures";
 import { useBoardSize } from "./useBoardSize";
 import { useMyStickerBoard } from "./useMyStickerBoard";
@@ -277,15 +277,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const addTrayProblem = useCallback(
     (problem: TrayProblem) =>
       setTrayProblems((was) =>
-        was.some(
-          (p) =>
-            p.kind === problem.kind &&
-            p.reason === problem.reason &&
-            p.detail === problem.detail &&
-            p.nos.join() === problem.nos.join(),
-        )
-          ? was
-          : [...was, problem],
+        was.some((p) => trayProblemKey(p) === trayProblemKey(problem)) ? was : [...was, problem],
       ),
     [],
   );
@@ -906,10 +898,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
               }}
             >
               {trayProblems.map((p) => (
-                <span
-                  className="board-alerts__sentence"
-                  key={`${p.kind}:${p.nos.join()}:${p.reason}`}
-                >
+                <span className="board-alerts__sentence" key={trayProblemKey(p)}>
                   {t(($) => $.stickerBoard.tray.problem[p.kind], {
                     stickers: new Intl.ListFormat(i18n.language).format(p.nos.map(formatNo)),
                     reason: p.reason ?? "",
