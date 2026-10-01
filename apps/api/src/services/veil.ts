@@ -9,11 +9,8 @@ const VEIL_BLUR_SHARE = 0.09;
 const VEIL_SATURATION = 0.7;
 /** The pale pink wash over the blur, inside the cut. */
 const VEIL_WASH = { r: 255, g: 240, b: 246, alpha: 0.42 };
-/**
- * The blur runs on a copy shrunk until its radius is this many pixels, then scaled back up: it looks
- * the same, costs a fraction, and nothing finer than the shrunk copy survives in the veil.
- */
-const WORKING_BLUR_PX = 4;
+/** sharp's smallest blur, for a sticker too narrow for its share. */
+const MIN_BLUR_PX = 1;
 
 const RGBA = 4;
 
@@ -31,29 +28,14 @@ const raw = (width: number, height: number) =>
 
 /** The sticker blurred by VEIL_BLUR_SHARE of its width, at its own size, alpha unpremultiplied. */
 async function blurred(stickerPng: Uint8Array) {
+  const { width } = await sharp(stickerPng).metadata();
+  // sharp blurs premultiplied, so the clear margin around the cut darkens nothing.
   const { data, info } = await sharp(stickerPng)
     .ensureAlpha()
+    .blur(Math.max(MIN_BLUR_PX, VEIL_BLUR_SHARE * width))
     .raw({ depth: "uchar" })
     .toBuffer({ resolveWithObject: true });
-  const { width, height } = info;
-  const radius = Math.max(1, VEIL_BLUR_SHARE * width);
-  const shrink = Math.min(1, WORKING_BLUR_PX / radius);
-  const smallWidth = Math.max(1, Math.round(width * shrink));
-  const smallHeight = Math.max(1, Math.round(height * shrink));
-  // One step per pipeline: sharp runs a pipeline's steps in its own order, not the calls'.
-  const small = await sharp(data, raw(width, height))
-    .resize(smallWidth, smallHeight, { fit: "fill" })
-    .raw()
-    .toBuffer();
-  const smallBlurred = await sharp(small, raw(smallWidth, smallHeight))
-    .blur(radius * shrink)
-    .raw()
-    .toBuffer();
-  const pixels = await sharp(smallBlurred, raw(smallWidth, smallHeight))
-    .resize(width, height, { fit: "fill", kernel: "mitchell" })
-    .raw()
-    .toBuffer();
-  return { pixels, width, height };
+  return { pixels: data, width: info.width, height: info.height };
 }
 
 /** The cut's alpha, from the sticker's mask. */
