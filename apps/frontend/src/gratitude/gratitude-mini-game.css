@@ -1100,7 +1100,7 @@
   top: calc(var(--rc-top, 300px) - 48px);
 }
 .gr-receipt.has-detail {
-  top: calc(var(--rc-top, 300px) - 100px);
+  top: calc(var(--rc-top, 300px) - 120px);
 }
 @keyframes gr-receipt-in {
   from {
@@ -1149,6 +1149,8 @@
   font-stretch: var(--w-title, 112%);
   letter-spacing: -0.015em;
   color: var(--ink);
+  /* A long handle is wider than the card. */
+  overflow-wrap: anywhere;
 }
 /* The combo's length as the hit counter, its best multiplier beside it, then the peak tier. */
 .gr-rc-sub {
