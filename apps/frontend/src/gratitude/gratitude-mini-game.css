@@ -1169,7 +1169,7 @@
   margin: 0;
 }
 /* What became of the send, in words, and for a refusal the catalog can't word, the raw words behind
-   it (ErrorDetail). Only a refusal is a problem. */
+   it (ErrorDetail). A refusal and a combo nothing could keep are the problems. */
 .gr-rc-note {
   display: grid;
   gap: 8px;
@@ -1186,7 +1186,8 @@
 .gr-rc-note p {
   margin: 0;
 }
-.gr-rc-note.is-refused {
+.gr-rc-note.is-refused,
+.gr-rc-note.is-lost {
   background: var(--tomato-soft);
 }
 /* Graphite reads 3.5:1 on Tomato Soft. */

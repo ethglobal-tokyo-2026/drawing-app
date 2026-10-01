@@ -17,11 +17,15 @@ const IN_PLAY_MAX_MS = 2 * GAME_CONFIG.maxDurationMs;
 
 type Recorder = Pick<ApiClient, "recordGratitude">;
 
-/** How a send ended: recorded, kept on this device to send again, or refused for good. */
+/**
+ * How a send ended: recorded, kept on this device to send again, refused for good, or lost: it
+ * didn't reach the server and this device couldn't keep it, so nothing holds it.
+ */
 export type GratitudeSendResult =
   | { state: "recorded" }
   | { state: "kept" }
-  | { state: "refused"; error: ApiError };
+  | { state: "refused"; error: ApiError }
+  | { state: "lost" };
 
 /**
  * The refusals that sending the same combo again can't change. A 404 counts only as gift_not_found:
@@ -120,7 +124,7 @@ function changePending(userId: string, edit: (combos: Map<string, Kept>) => bool
 /** A combo that has left the outbox, and how: the server recorded it, or refused it for good. */
 interface GratitudeLeft {
   idempotencyKey: string;
-  result: Exclude<GratitudeSendResult, { state: "kept" }>;
+  result: Extract<GratitudeSendResult, { state: "recorded" | "refused" }>;
 }
 
 /** Screens showing what waits, told when a combo has left the outbox. */
@@ -152,10 +156,12 @@ export function isGratitudeWaiting(userId: string, giftId: string): boolean {
 /** Keys with a request out, so a resend doesn't repeat a send still waiting on its answer. */
 const sending = new Set<string>();
 
+/** `onDevice`: whether the outbox holds the combo, so a send that doesn't get through leaves it to send again. */
 async function send(
   api: Recorder,
   userId: string,
   body: RecordGratitude,
+  onDevice = true,
 ): Promise<GratitudeSendResult> {
   const key = body.idempotencyKey;
   if (sending.has(key)) return { state: "kept" };
@@ -173,6 +179,13 @@ async function send(
         body,
       );
       return { state: "refused", error };
+    }
+    if (!onDevice) {
+      console.error(
+        `The gratitude for gift ${body.giftId} didn't reach the server (${describeError(error)}) and this device couldn't keep it, so it's lost:`,
+        body,
+      );
+      return { state: "lost" };
     }
     console.warn(
       `The gratitude for gift ${body.giftId} didn't reach the server (${describeError(error)}); this device keeps it and sends it again when the phone is back online, the app comes back to the front or it next opens`,
@@ -197,7 +210,8 @@ export function keepGratitudeInPlay(userId: string, body: RecordGratitude): void
 
 /**
  * Keeps `userId`'s finished combo on this device, then sends it. It stays until the server records
- * or refuses it, so a page that closes mid-request sends it again when the app next opens.
+ * or refuses it, so a page that closes mid-request sends it again when the app next opens. When the
+ * device can't keep it and the send doesn't get through, the answer is `lost`.
  */
 export function sendGratitude(
   api: Recorder,
@@ -213,7 +227,7 @@ export function sendGratitude(
       `The gratitude for gift ${body.giftId} can't be kept on this device, so it's lost if this send doesn't reach the server`,
     );
   }
-  return send(api, userId, body);
+  return send(api, userId, body, kept);
 }
 
 /**

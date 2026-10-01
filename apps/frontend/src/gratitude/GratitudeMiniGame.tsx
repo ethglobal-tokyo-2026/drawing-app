@@ -62,7 +62,7 @@ type Sending = { state: "sending" } | GratitudeSendResult;
 
 /** The receipt's note on a send that isn't simply sent. */
 interface ReceiptNote {
-  kind: "sending" | "kept" | "refused";
+  kind: "sending" | "kept" | "lost" | "refused";
   text: string;
   /** The English words behind a refusal the catalog doesn't word itself, for a report. */
   detail?: string;
@@ -87,6 +87,38 @@ function refusalNote(t: TFunction, error: ApiError, handle: string): Omit<Receip
         text: t(($) => $.gratitude.refusals.other, { handle }),
         detail: errorDetail(error),
       };
+  }
+}
+
+/** The receipt's note on what became of the send, and none once the server has recorded it. */
+function receiptNoteFor(t: TFunction, sending: Sending | null, handle: string): ReceiptNote | null {
+  switch (sending?.state) {
+    case "sending":
+      return { kind: "sending", text: t(($) => $.gratitude.receipt.sending) };
+    case "kept":
+      return { kind: "kept", text: t(($) => $.gratitude.receipt.kept, { handle }) };
+    case "lost":
+      return { kind: "lost", text: t(($) => $.gratitude.receipt.lost) };
+    case "refused":
+      return { kind: "refused", ...refusalNote(t, sending.error, handle) };
+    default:
+      return null;
+  }
+}
+
+/** The receipt card's name for screen readers, by what its note says. */
+function receiptLabelFor(t: TFunction, kind: ReceiptNote["kind"] | undefined): string {
+  switch (kind) {
+    case "sending":
+      return t(($) => $.gratitude.receipt.labelSending);
+    case "kept":
+      return t(($) => $.gratitude.receipt.labelKept);
+    case "lost":
+      return t(($) => $.gratitude.receipt.labelLost);
+    case "refused":
+      return t(($) => $.gratitude.receipt.labelRefused);
+    default:
+      return t(($) => $.gratitude.receipt.label);
   }
 }
 
@@ -203,7 +235,7 @@ export function GratitudeMiniGame({
       setPlaying(false);
       if (giftId) {
         setSending({ state: "sending" });
-        // The receipt says what became of it: sent, kept on this phone to send again, or refused.
+        // The receipt says what became of it: sent, kept on this phone to send again, refused or lost.
         void sendGratitude(
           client,
           userId,
@@ -294,24 +326,10 @@ export function GratitudeMiniGame({
   }, [ended]);
 
   const tierGloss = ended ? shownGloss(TIER_NAMES[ended.peakTier].en) : "";
-  // The receipt says sent only once the server has it. A refusal's reason and a combo kept for
-  // want of a connection are written out; a send still going says so.
-  const note: ReceiptNote | null =
-    sending?.state === "sending"
-      ? { kind: "sending", text: t(($) => $.gratitude.receipt.sending) }
-      : sending?.state === "kept"
-        ? { kind: "kept", text: t(($) => $.gratitude.receipt.kept, { handle }) }
-        : sending?.state === "refused"
-          ? { kind: "refused", ...refusalNote(t, sending.error, handle) }
-          : null;
-  const receiptLabel =
-    note?.kind === "sending"
-      ? t(($) => $.gratitude.receipt.labelSending)
-      : note?.kind === "kept"
-        ? t(($) => $.gratitude.receipt.labelKept)
-        : note?.kind === "refused"
-          ? t(($) => $.gratitude.receipt.labelRefused)
-          : t(($) => $.gratitude.receipt.label);
+  // The receipt says sent only once the server has it. A refusal's reason, a combo kept for want of
+  // a connection and one nothing could keep are written out; a send still going says so.
+  const note = receiptNoteFor(t, sending, handle);
+  const receiptLabel = receiptLabelFor(t, note?.kind);
   // Said once the receipt is up, and again as a send that was going settles.
   const spoken =
     !ended || note?.kind === "sending"

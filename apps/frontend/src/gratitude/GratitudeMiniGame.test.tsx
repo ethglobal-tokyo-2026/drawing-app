@@ -9,8 +9,9 @@ import { MeHolder } from "../api/MeHolder";
 import { emptyApi, gratitudeOf, recordGratitudeBody, TEST_ME } from "../api/testing";
 import { errorDetail } from "../i18n/errorMessage";
 import { i18next } from "../i18n/i18n";
+import { refusingStorage } from "../ui/testing";
 import { GratitudeMiniGame } from "./GratitudeMiniGame";
-import { resendPendingGratitude } from "./gratitudeOutbox";
+import { isGratitudeWaiting, resendPendingGratitude } from "./gratitudeOutbox";
 import { TIER_NAMES } from "./tierNames";
 
 declare global {
@@ -118,6 +119,7 @@ beforeEach(() => {
 afterEach(() => {
   act(() => root.unmount());
   host.remove();
+  vi.unstubAllGlobals();
   localStorage.clear();
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -231,6 +233,24 @@ describe("GratitudeMiniGame", () => {
     expect(receiptLabel()).toBe("Gratitude saved");
     expect(live()).toBe(kept);
     expect(live()).not.toMatch(/^Sent/);
+  });
+
+  it("says the gratitude was neither sent nor saved when the server can't be reached and the phone can't keep it", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal("localStorage", refusingStorage);
+    recordGratitude.mockRejectedValue(new TypeError("Failed to fetch"));
+    open({ giftId: "g1" });
+    tapOnce();
+    await play(ONE_TAP_ENDS_MS);
+    const note = receiptText(".gr-rc-note p");
+    expect(note).toContain("wasn’t sent");
+    expect(note).toContain("couldn’t save it");
+    expect(note).not.toContain("Saved on this phone");
+    expect(receiptLabel()).toBe("Gratitude not sent or saved");
+    expect(live()).toBe(note);
+    // Nothing waits in the outbox, so the sticker detail offers Send gratitude again.
+    expect(isGratitudeWaiting(TEST_ME.id, "g1")).toBe(false);
   });
 
   it("updates the receipt of a saved combo once it's sent while the screen is still up", async () => {

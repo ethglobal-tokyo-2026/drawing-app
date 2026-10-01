@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { gratitudeOf } from "../api/testing";
 import { recordGratitudeBody } from "../api/testing";
+import { refusingStorage } from "../ui/testing";
 import { GAME_CONFIG } from "./gameConfig";
 import {
   isGratitudeWaiting,
@@ -136,6 +137,21 @@ describe("the gratitude outbox", () => {
     await expect(sendGratitude(api, ME, body)).resolves.toEqual({ state: "recorded" });
     expect(api.recordGratitude).toHaveBeenCalledExactlyOnceWith(body);
     expect(stored()).toBe("{not a list");
+  });
+
+  it("answers lost, not kept, when the device can't keep the combo and the send doesn't get through", async () => {
+    vi.stubGlobal("localStorage", refusingStorage);
+    await expect(
+      sendGratitude(server(new TypeError("Failed to fetch")), ME, body),
+    ).resolves.toEqual({
+      state: "lost",
+    });
+    // Nothing holds it: a later open has nothing to send, and the gift is still owed gratitude.
+    expect(isGratitudeWaiting(ME, body.giftId)).toBe(false);
+    // A send that does get through still records it.
+    await expect(sendGratitude(server("records"), ME, body)).resolves.toEqual({
+      state: "recorded",
+    });
   });
 });
 
