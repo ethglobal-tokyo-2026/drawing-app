@@ -82,70 +82,76 @@ export const stickerCreation = {
     /** Drawing screen, bottom right: the chip beside the seal key after its first tap, announced to screen readers and the key's name until the second tap, which seals */
     tapAgain: { en: "Tap again to seal", ja: "もう一度タップで仕上げ" },
     /** Drawing screen, bottom right: the chip beside the seal key after its first tap while the 18+ switch is on, announced to screen readers and the key's name until the second tap, which seals the sticker as 18+ */
-    tapAgainNsfw: { en: "Tap again to seal as 18+", ja: "もう一度タップで18+として仕上げ" },
+    tapAgainNsfw: {
+      en: "Tap again to seal as 18+",
+      ja: "もう一度<wbr/>タップで<wbr/>18+として<wbr/>仕上げ",
+    },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, for a few seconds after the first stroke on each of your first few visits; it says how the key works, and that two fingers tap to undo */
     hint: {
       en: "Tap the check twice to seal. Tap with two fingers to undo.",
-      ja: "チェックを2回タップで仕上げ。2本指でタップすると元に戻せます。",
+      ja: "チェックを<wbr/>2回タップで<wbr/>仕上げ。<wbr/>2本指で<wbr/>タップすると<wbr/>元に戻せます。",
     },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when it's tapped but everything drawn was erased or undone */
     empty: {
       en: "The sheet is empty, so there’s nothing to seal.",
-      ja: "キャンバスが真っ白なので、仕上げるものがありません。",
+      ja: "キャンバスが<wbr/>真っ白なので、<wbr/>仕上げるものが<wbr/>ありません。",
     },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when time runs out after everything drawn was erased or undone; the sheet is fresh again and the chip goes with its first stroke */
     emptyAtTimeUp: {
       en: "Time’s up. The sheet was empty, so nothing was sealed.",
-      ja: "時間切れです。キャンバスが真っ白だったので、何も仕上がりませんでした。",
+      ja: "時間切れです。<wbr/>キャンバスが<wbr/>真っ白だったので、<wbr/>何も<wbr/>仕上がり<wbr/>ませんでした。",
     },
     /** The chip beside the seal key when a seal failed: what failed, then what to do. Its technical detail goes to the console. */
     failed: {
       /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing failed on this phone before the server was asked; the check is the seal key's icon */
       onThisPhone: {
         en: "Couldn’t seal: something went wrong on this phone. Tap the check to try again.",
-        ja: "仕上げられませんでした：この端末で問題が起きました。チェックをもう一度タップしてください。",
+        ja: "仕上げられ<wbr/>ませんでした：<wbr/>この端末で<wbr/>問題が<wbr/>起きました。<wbr/>チェックを<wbr/>もう一度<wbr/>タップして<wbr/>ください。",
       },
       /** Drawing screen, bottom right: the chip beside the seal key, announced, when the app's server didn't answer the seal, or its answer couldn't be read; tapping the check sends the same seal again */
       noAnswer: {
         en: "Couldn’t seal: Croquis didn’t answer. Tap the check to try again.",
-        ja: "仕上げられませんでした：クロッキーから応答がありません。チェックをもう一度タップしてください。",
+        ja: "仕上げられ<wbr/>ませんでした：<wbr/>クロッキーから<wbr/>応答が<wbr/>ありません。<wbr/>チェックを<wbr/>もう一度<wbr/>タップして<wbr/>ください。",
       },
       /** Drawing screen, bottom right: the chip beside the seal key, announced, when the app's server failed while sealing */
       serverProblem: {
         en: "Couldn’t seal: something went wrong on our side. Tap the check to try again.",
-        ja: "仕上げられませんでした：こちら側で問題が発生しました。チェックをもう一度タップしてください。",
+        ja: "仕上げられ<wbr/>ませんでした：<wbr/>こちら側で<wbr/>問題が<wbr/>発生しました。<wbr/>チェックを<wbr/>もう一度<wbr/>タップして<wbr/>ください。",
       },
       /** Drawing screen, bottom right: the chip beside the seal key, announced, when the sticker was saved but its on-chain seal wasn't confirmed; trying again doesn't use another ticket */
       notOnChain: {
         en: "Your sticker is saved, but isn’t sealed on-chain yet. Tap the check to try again.",
-        ja: "シールは保存されましたが、ブロックチェーン上ではまだ仕上がっていません。チェックをもう一度タップしてください。",
+        ja: "シールは<wbr/>保存されましたが、<wbr/>ブロックチェーン<wbr/>上では<wbr/>まだ<wbr/>仕上がって<wbr/>いません。<wbr/>チェックを<wbr/>もう一度<wbr/>タップして<wbr/>ください。",
       },
       /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing waited on the board address (the Ethereum Sepolia account that holds the stickers) and it never got ready */
       boardAddress: {
         en: "Couldn’t seal: your board address isn’t ready. Tap the check to try again.",
-        ja: "仕上げられませんでした：ボードアドレスの準備ができていません。チェックをもう一度タップしてください。",
+        ja: "仕上げられ<wbr/>ませんでした：<wbr/>ボードアドレスの<wbr/>準備が<wbr/>できていません。<wbr/>チェックを<wbr/>もう一度<wbr/>タップして<wbr/>ください。",
       },
       /** Drawing screen, bottom right: the chip beside the seal key, announced, when sealing waited on the board address and LINE's sign-in had expired, so Privy couldn't sign in; tapping the check reconnects with LINE and comes back to the drawing screen, which picks the drawing back up */
       signInExpired: {
         en: "Couldn’t seal: your LINE sign-in expired. Tap the check to reconnect with LINE.",
-        ja: "仕上げられませんでした：LINEのログイン情報の有効期限が切れました。チェックをタップしてLINEで再ログインしてください。",
+        ja: "仕上げられ<wbr/>ませんでした：<wbr/>LINEの<wbr/>ログイン情報の<wbr/>有効期限が<wbr/>切れました。<wbr/>チェックを<wbr/>タップして<wbr/>LINEで<wbr/>再ログイン<wbr/>してください。",
       },
     },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when the server refused the seal, or LINE couldn't reconnect; {{reason}} is that error's message, which says what to do */
-    refused: { en: "Couldn’t seal. {{reason}}", ja: "仕上げられませんでした。{{reason}}" },
+    refused: {
+      en: "Couldn’t seal. {{reason}}",
+      ja: "仕上げられ<wbr/>ませんでした。<wbr/>{{reason}}",
+    },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when a seal failed at 0:00, in front of that chip's words; {{problem}} is the words */
-    timeUp: { en: "Time’s up. {{problem}}", ja: "時間切れです。{{problem}}" },
+    timeUp: { en: "Time’s up. {{problem}}", ja: "時間切れです。<wbr/>{{problem}}" },
     /** Drawing screen, bottom left, at 0:00 after a seal that never reached the server failed: the quiet link that lets the sticker in progress go, and its ticket with it, for a fresh sheet */
     startOver: { en: "Start a new sticker", ja: "新しい<wbr/>シールをかく" },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when the server refused the seal at 0:00; the sheet is fresh again and the chip goes with its first stroke; {{reason}} is the refusal's message */
     refusedAtTimeUp: {
       en: "Time’s up. Croquis didn’t accept the seal, so nothing was sealed. {{reason}}",
-      ja: "時間切れです。クロッキーが仕上げを受け付けなかったので、何も仕上がりませんでした。{{reason}}",
+      ja: "時間切れです。<wbr/>クロッキーが<wbr/>仕上げを<wbr/>受け付け<wbr/>なかったので、<wbr/>何も<wbr/>仕上がり<wbr/>ませんでした。<wbr/>{{reason}}",
     },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when a reload brings back a drawing whose seal was on its way, so the sheet stays as it was sealed; tapping the check finishes the seal */
     interrupted: {
       en: "Your sticker was being sealed. Tap the check to finish sealing it.",
-      ja: "シールを仕上げている途中でした。チェックをタップして仕上げてください。",
+      ja: "シールを<wbr/>仕上げている<wbr/>途中でした。<wbr/>チェックを<wbr/>タップして<wbr/>仕上げてください。",
     },
   },
   /** The 18+ switch over the seal key, shown only to adults verified with World ID. */
