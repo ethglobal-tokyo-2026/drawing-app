@@ -20,15 +20,18 @@ Severity is the review's: _high_ is lost data, money, a ticket, a gift or Gratit
 
 ## Fixed
 
-| Findings     | Commits  |
-| ------------ | -------- |
-| RA-1         | 527ae37f |
-| RA-2         | e149846e |
-| RA-3         | fe4e0fda |
-| RC-8         | ddddfe67 |
-| RC-10, RB-14 | c26ad511 |
-| F-1          | 9e810428 |
-| F-2          | 4295ae66 |
+| Findings     | Commits                                          |
+| ------------ | ------------------------------------------------ |
+| RA-1         | 527ae37f                                         |
+| RA-2         | e149846e                                         |
+| RA-3         | fe4e0fda                                         |
+| RC-8         | ddddfe67                                         |
+| RC-10, RB-14 | c26ad511                                         |
+| F-1          | 9e810428                                         |
+| F-2          | 4295ae66                                         |
+| RC-2         | 41ae7a2f                                         |
+| RC-9         | 68e63d0c                                         |
+| RC-3         | 25989330 (holds down to boards about 476px tall) |
 
 ## Findings
 
