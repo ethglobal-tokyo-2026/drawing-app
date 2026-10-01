@@ -13,6 +13,7 @@ import { setSessionCookie, type AppEnv } from "./session.ts";
 import { sealImages } from "./stickers/testPngs.ts";
 import { createTestApp, type TestApp } from "./testing/createTestApp.ts";
 import { fakeServerLog } from "./testing/fakes.ts";
+import { insertSealedSticker } from "./testing/rows.ts";
 import { bodyOf, refusalOf } from "./testing/responses.ts";
 
 const probeBodySchema = z.object({ handle: z.string(), placement: z.object({ x: z.number() }) });
@@ -175,6 +176,35 @@ describe("sticker images", () => {
     expect(webp.status).toBe(200);
     expect(webp.headers.get("content-type")).toBe("image/webp");
     expect(webp.headers.get("cache-control")).toContain("immutable");
+  });
+
+  it("show an NSFW sticker's drawing only to an adult's session, never publicly cached", async () => {
+    const pngs = sealImages();
+    const store = createDiskImageStore(imageDir, `https://sticker.test${STICKER_IMAGES_PATH}`);
+    const contentHash = keccak256(pngs.png);
+    await store.save(contentHash, pngs);
+    const artistId = insertUser(test.db, { ageVerifiedAt: test.clock.now() });
+    insertSealedSticker(test.db, artistId, { nsfw: true, contentHash });
+    const { png, flat, webp, mask } = store.urls(contentHash);
+    const server = createServer(test.deps, imageDir);
+    const getAs = async (url: string, userId?: string) =>
+      server.request(new URL(url).pathname, {
+        headers: userId === undefined ? {} : await test.signInAs(userId),
+      });
+
+    for (const url of [png, flat, webp.sticker]) {
+      for (const viewer of [undefined, insertUser(test.db)]) {
+        expect(await refusalOf(await getAs(url, viewer))).toMatchObject({
+          status: 403,
+          error: "adults_only",
+        });
+      }
+      const adults = await getAs(url, artistId);
+      expect(adults.status).toBe(200);
+      expect(adults.headers.get("cache-control")).toMatch(/^private,/);
+    }
+    // The cut's shape shows no drawing, so its mask stays public.
+    expect((await getAs(mask)).headers.get("cache-control")).toMatch(/^public,/);
   });
 
   it("answer a name with no image with 404, not the session check, and uncached", async () => {
