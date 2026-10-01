@@ -152,6 +152,24 @@ const tapOn = (el: HTMLElement) =>
     el.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
     el.click();
   });
+/**
+ * A finger's tap on `key`'s spot. While its line is inert the touch lands on the carrier under it; the
+ * browser sends the click to what's under the finger as it lifts, unless the touch's end is cancelled.
+ */
+const fingerTap = (key: HTMLElement) => {
+  const hit = key.closest("[inert]") ? host.querySelector(".seal-ceremony__carrier") : key;
+  // The touch's start and end are separate events, with React's updates rendered between them.
+  act(() => {
+    hit?.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true, cancelable: true, pointerType: "touch" }),
+    );
+  });
+  act(() => {
+    const end = new TouchEvent("touchend", { bubbles: true, cancelable: true });
+    hit?.dispatchEvent(end);
+    if (!end.defaultPrevented) key.click();
+  });
+};
 const wait = (ms: number) => act(() => void vi.advanceTimersByTime(ms));
 /** More than a frame: the ceremony's clock starts at its first animation frame, not at mount. */
 const FRAME_SLACK_MS = 50;
@@ -236,6 +254,20 @@ describe("SealCeremony", () => {
       expect(action).toHaveBeenCalledOnce();
     },
   );
+
+  it("takes a finger's tap that hurries the ceremony as a skip, not as a press on the key it puts there", async () => {
+    await seal(1);
+    wait(T.card0);
+    const key = button("Keep drawing");
+    fingerTap(key);
+    expect(card()?.hasAttribute("inert")).toBe(false);
+    wait(1000);
+    expect(onKeepDrawing).not.toHaveBeenCalled();
+    // The next tap is the key's.
+    fingerTap(key);
+    wait(1000);
+    expect(onKeepDrawing).toHaveBeenCalledOnce();
+  });
 
   it("keeps a key under the first from presses until its own line has faded up", async () => {
     await seal(1);

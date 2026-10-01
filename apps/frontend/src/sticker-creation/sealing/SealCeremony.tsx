@@ -129,6 +129,9 @@ export function SealCeremony({
   // The card's first key has faded up: the card takes presses, and taps and keys stop skipping.
   const [keyShown, setKeyShown] = useState(false);
   const skip = useRef<() => void>(() => {});
+  // A finger's tap that skips only skips: the skip puts the card's keys under the finger, and Chromium
+  // sends the tap's click to whichever one it lifts over, unless the touch's end is cancelled.
+  const skippingTouch = useRef(false);
   const wake = useRef<() => void>(() => {});
   const root = useRef<HTMLDivElement>(null);
   const card = useRef<HTMLElement>(null);
@@ -312,9 +315,15 @@ export function SealCeremony({
       ref={root}
       className={classes.filter(Boolean).join(" ")}
       onPointerDown={(e) => {
+        skippingTouch.current = false;
         if (keyShown || failed) return;
         e.preventDefault();
+        skippingTouch.current = e.pointerType === "touch";
         skip.current();
+      }}
+      onTouchEnd={(e) => {
+        if (skippingTouch.current) e.preventDefault();
+        skippingTouch.current = false;
       }}
     >
       <canvas className="seal-ceremony__dim" aria-hidden="true" />
