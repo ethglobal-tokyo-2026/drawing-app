@@ -94,7 +94,7 @@ export const gratitude = {
       ja: "ゲームが途中で止まったため、そこまでの感謝になっています。",
     },
   },
-  /** Why the server refused a combo for good. Each is the receipt card's note under the combo, also said to screen readers. */
+  /** Why the server refused a combo for good. Each is the receipt card's note under the combo, also said to screen readers, and the gift's sticker detail says it again until dismissed. */
   refusals: {
     /** Gratitude Mini-game, receipt card's note when the gift already has gratitude (gratitude_already_recorded) */
     alreadyRecorded: {
@@ -116,10 +116,10 @@ export const gratitude = {
       en: "This gift isn’t here anymore, so this combo wasn’t sent.",
       ja: "このギフトが見つからないため、今回の感謝は送られませんでした。",
     },
-    /** Gratitude Mini-game, receipt card's note when the server couldn't read the combo (replay_invalid, invalid_request), which a new combo can get past */
+    /** Gratitude Mini-game, receipt card's note, and the sticker detail's until dismissed, when the server couldn't read the combo (replay_invalid, invalid_request), which a new combo can get past */
     unreadable: {
-      en: "Croquis couldn’t read your combo, so it wasn’t sent. Close this and send your gratitude again.",
-      ja: "クロッキーが今回の感謝を読み取れなかったため、送られませんでした。閉じてから、もう一度感謝を送ってください。",
+      en: "Croquis couldn’t read your combo, so it wasn’t sent. Send your gratitude again.",
+      ja: "クロッキーが今回の感謝を読み取れなかったため、送られませんでした。もう一度感謝を送ってください。",
     },
     /** Gratitude Mini-game, receipt card's note for any other refusal, over its details for a report: the server's status, code and English words */
     other: {
