@@ -507,6 +507,14 @@
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
+/* Each digit past three steps the figure down a size (comboHud.ts sets data-digits), so the amount,
+   the hit counter and the multiplier fit the row at the narrowest phone, in either language. */
+.gr-amount[data-digits="4"] b {
+  font-size: 34px;
+}
+.gr-amount[data-digits="5"] b {
+  font-size: 27px;
+}
 .gr-amount i {
   color: var(--pink);
 }

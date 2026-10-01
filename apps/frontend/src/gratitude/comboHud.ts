@@ -190,6 +190,17 @@ export function createComboHud(
     if (node.data !== text) node.data = text;
   };
 
+  /**
+   * Writes the amount, and its digit count onto its element: the stylesheet steps the figure down a
+   * size per digit past three, so a long amount never pushes the hit counter and multiplier off the
+   * row. It's the count of digits that sets the size, not the width, so the frame loop reads no layout.
+   */
+  function showAmount(total: number) {
+    setAmount(formatCount(total));
+    const digits = String(total).length;
+    if (amount.dataset.digits !== String(digits)) amount.dataset.digits = String(digits);
+  }
+
   function pulseMultiplier() {
     if (reduced()) return;
     multiplierPulse?.cancel();
@@ -332,7 +343,7 @@ export function createComboHud(
       const rounded = Math.round(countedTotal);
       if (rounded !== amountShown) {
         amountShown = rounded;
-        setAmount(formatCount(rounded));
+        showAmount(rounded);
       }
       showHits(view.hits);
       setText(multNumber, view.multiplier.toFixed(1));
@@ -347,7 +358,7 @@ export function createComboHud(
       countedTotal = total;
       countingTo = total;
       amountShown = total;
-      setAmount(formatCount(total));
+      showAmount(total);
     },
 
     counting: () => shown && countedTotal !== countingTo,
