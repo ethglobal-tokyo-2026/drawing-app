@@ -78,7 +78,7 @@ export function OutOfTickets({
     >
       <TicketArt view={ticketView(state)} />
       {/* One title element for both, so screen readers hear it turn over. */}
-      <h2 className="out-of-tickets__title" id={`${id}-title`} aria-live="polite">
+      <h2 className="out-of-tickets__title keep-phrases" id={`${id}-title`} aria-live="polite">
         {refilled
           ? t(($) => $.tickets.outOfTickets.refilled)
           : t(($) => $.tickets.outOfTickets.title)}

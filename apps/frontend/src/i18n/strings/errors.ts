@@ -6,7 +6,7 @@ export const errors = {
   /** Any screen that shows a failed request through problemOf, when the server answers a code this catalog lacks (such as route_not_found); {{code}} is that code */
   unknown: {
     en: "Something went wrong ({{code}}). Try again. If it keeps happening, tell the Croquis Official account in LINE.",
-    ja: "問題が<wbr/>発生しました（{{code}}）。<wbr/>もう一度<wbr/>お試しください。<wbr/>続く場合は、<wbr/>LINEの<wbr/>クロッキー公式アカウントに<wbr/>お知らせください。",
+    ja: "問題が<wbr/>発生しました（{{code}}）。<wbr/>もう一度<wbr/>お試しください。<wbr/>続く場合は、<wbr/>LINEの<wbr/>クロッキー<wbr/>公式アカウントに<wbr/>お知らせください。",
   },
   /** Any screen, when a request gets no answer (offline, or it failed before a reply): shown through problemOf by the screen that made it */
   network: {
@@ -156,12 +156,12 @@ export const errors = {
   /** Any screen, when the server can't read a request (400), through problemOf; e.g. the Drawing screen's seal chip when a seal's images are malformed (POST /api/stickers) */
   invalid_request: {
     en: "Croquis couldn’t read what your phone sent. Try again. If it keeps happening, tell the Croquis Official account in LINE.",
-    ja: "クロッキーが<wbr/>その内容を<wbr/>読み取れませんでした。<wbr/>もう一度<wbr/>お試しください。<wbr/>続く場合は、<wbr/>LINEの<wbr/>クロッキー公式アカウントに<wbr/>お知らせください。",
+    ja: "クロッキーが<wbr/>その内容を<wbr/>読み取れませんでした。<wbr/>もう一度<wbr/>お試しください。<wbr/>続く場合は、<wbr/>LINEの<wbr/>クロッキー<wbr/>公式アカウントに<wbr/>お知らせください。",
   },
   /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: signing in to the app's server (POST /api/session) when LINE refuses the ID token, through errorMessage */
   line_token_invalid: {
     en: "LINE didn’t accept this sign-in. Reconnect with LINE. If it keeps happening, tell the Croquis Official account in LINE.",
-    ja: "LINEが<wbr/>ログイン情報を<wbr/>確認できませんでした。<wbr/>LINEで<wbr/>再ログインしてください。<wbr/>続く場合は、<wbr/>LINEの<wbr/>クロッキー公式アカウントに<wbr/>お知らせください。",
+    ja: "LINEが<wbr/>ログイン情報を<wbr/>確認できませんでした。<wbr/>LINEで<wbr/>再ログインしてください。<wbr/>続く場合は、<wbr/>LINEの<wbr/>クロッキー<wbr/>公式アカウントに<wbr/>お知らせください。",
   },
   /** Sign-in screen, under “Couldn’t sign you in”, over Reconnect with LINE: signing in to the app's server (POST /api/session) with an expired LINE ID token, through errorMessage. Also Giving, Receiving and the reserve ticket checkout, through problemOf, when a chain action or a payment waited on Privy and Privy couldn't sign in because LINE's ID token had expired (made by the app itself) */
   line_token_expired: {

@@ -99,14 +99,14 @@ export const tickets = {
   /** Out of daily and reserve tickets, until the refill turns the card over. */
   outOfTickets: {
     /** Out-of-tickets card on the drawing screen, when both daily and reserve tickets are used up: the title */
-    title: { en: "Out of tickets for today", ja: "今日はもうチケットがありません" },
+    title: { en: "Out of tickets for today", ja: "今日はもう<wbr/>チケットが<wbr/>ありません" },
     /** Out-of-tickets card: the line under the title, when new daily tickets arrive (bold) and the countdown to it (quiet) */
     refillLine: {
       en: "<strong>New daily tickets at {{time}},</strong> <countdown>{{countdown}}</countdown>",
       ja: "<strong>{{time}}に<wbr/>新しい無償チケットが<wbr/>届きます</strong><countdown>（{{countdown}}）</countdown>",
     },
     /** Out-of-tickets card: the title once the refill brings tickets back while it's open, as the card turns over */
-    refilled: { en: "New tickets are here", ja: "新しいチケットが届きました" },
+    refilled: { en: "New tickets are here", ja: "新しい<wbr/>チケットが<wbr/>届きました" },
   },
   /** In the start card's place until your tickets load. */
   notLoaded: {
