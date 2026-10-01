@@ -23,9 +23,8 @@ interface Props {
  */
 export function SealKey({ shown, armed, nsfw, problem, hint, onTap }: Props) {
   const { t } = useTranslation();
-  const tapAgain = nsfw
-    ? t(($) => $.stickerCreation.seal.tapAgainNsfw)
-    : t(($) => $.stickerCreation.seal.tapAgain);
+  const prompt = t(($) => $.stickerCreation.seal.tapAgain);
+  const tapAgain = nsfw ? t(($) => $.stickerCreation.seal.tapAgainNsfw) : prompt;
   const chip = armed ? tapAgain : (problem ?? hint);
   // The chip keeps its words while it fades out.
   const [words, setWords] = useState(chip);
@@ -33,7 +32,7 @@ export function SealKey({ shown, armed, nsfw, problem, hint, onTap }: Props) {
   return (
     <>
       <span
-        className={`seal-chip ${chip ? "is-on" : ""} ${words !== tapAgain ? "is-long" : ""}`}
+        className={`seal-chip ${chip ? "is-on" : ""} ${words !== prompt ? "is-long" : ""}`}
         role="status"
       >
         {words}

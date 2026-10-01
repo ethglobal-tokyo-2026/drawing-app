@@ -78,7 +78,8 @@
   transform: none;
 }
 
-/* A problem or the hint can run longer than the prompt; it wraps short of the undo and redo tiles. */
+/* A problem, the hint or the 18+ prompt can run longer than the prompt; it wraps short of the undo
+   and redo tiles. */
 .seal-chip.is-long {
   max-width: calc(100% - 226px);
   line-height: 1.25;
