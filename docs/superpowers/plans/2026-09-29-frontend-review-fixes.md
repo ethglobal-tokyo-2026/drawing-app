@@ -10,10 +10,10 @@ Each has a recommendation. The fix lanes leave these three alone until you answe
 2. **Paid tickets that depend on the phone (TIX-3).** A pack's tickets reach the person only if their phone keeps the payment's digest until the server adds them. _Recommend_ the server recording each purchase (the person, the pack and its price) before the payment is signed, then adding its tickets once Sui shows the payment, so the phone's copy only makes it sooner. It needs a table and a migration. The other way, reading the vault's payment events, needs no client change but depends on Sui's event index.
 3. **Mona Sans's slashed zero (CLEAN-2).** The plain zero is patched site by site, with widths tuned to other tokens. _Recommend_ self-hosting a Mona Sans build whose tabular zero is the plain glyph, so `tabular-nums` works everywhere again; or setting the counting figures in another face. A design call.
 
-Calls the lanes made that are merged, and want your yes:
+Calls the lanes made, which ad0ll left to us (2026-10-01). All stand as merged but two, logging out and render crashes, which changed:
 
 - **A signed payment that never shows.** A payment is kept on the phone from the moment it's signed. If Sui still hasn't shown it an hour later (`PAYMENT_LANDS_WITHIN_MS`, a guess), the checkout says it didn't go through and drops it.
-- **Logging out mid-drawing** deletes the kept drawing, so its spent ticket use is lost: the server doesn't hand back an unsealed one.
+- **Logging out mid-drawing** keeps the drawing, for its person alone, so it's there again with its ticket when they sign back in. Deleting it cost the ticket, since the server doesn't hand back an unsealed one, and inside LINE logging out signs the same person straight back in.
 - **"Did it go out?"** A Gift Message LINE doesn't confirm sent gets this step, with It went out and Take it out, instead of a second Send in LINE. It gives up waiting on LINE 5 s after the app comes back into view (`PICKER_RETURN_MS`, a guess).
 - **The stroke unlock.** Fast passes made before the first tap no longer count toward switching to stroke, so a replay switches where its combo did.
 - **The Back key.** A Back pressed within 250 ms of an overlay closing by itself is spent on the closed overlay (`STEP_BACK_HOLD_MS`, a guess), so it can't take a second history entry.
@@ -21,7 +21,7 @@ Calls the lanes made that are merged, and want your yes:
 - **A seal retry turned away as signed out** keeps the sheet locked for the seal key, even on the first try, when the server can't hold a seal yet: only the seal route's own refusals reopen the sheet.
 - **A seal that went out before a reload, on a ticket spent before today**, whose drawing can't be read back: the ticket is dropped rather than risk a new drawing being answered with the old sticker. It costs that ticket.
 - **A cut that fails on the phone every time at 0:00** stays locked for the seal key instead of throwing the drawing away.
-- **A screen that crashes while rendering** still unmounts the app. Only a screen whose code fails to load shows the Reload note; catching render crashes needs an error boundary around the whole app.
+- **A screen that crashes while rendering** gets a page with the error's words and Reload, from an error boundary around the whole app, in place of a blank page.
 
 ## Fix lanes
 
@@ -39,7 +39,7 @@ Wave 1:
 - [x] Receiving, and the gift link in the server log: GIFT-5, GIFT-7, GIFT-8
 - [x] Gratitude records: GRAT-1, GRAT-2, GRAT-3, GRAT-8, GRAT-11
 - [x] Tickets and payments: TIX-1, TIX-4 to TIX-9, CLEAN-8. For ad0ll to confirm: a signed payment Sui still hasn't shown an hour later counts as not gone through (PAYMENT_LANDS_WITHIN_MS, a guess)
-- [x] App shell and sign-in: SHELL-1, SHELL-2, SHELL-6 to SHELL-10, UI-1, CLEAN-10, CLEAN-16. A screen whose code fails to load shows a Reload note; a screen that crashes while rendering still unmounts the app, which needs an app-level boundary
+- [x] App shell and sign-in: SHELL-1, SHELL-2, SHELL-6 to SHELL-10, UI-1, CLEAN-10, CLEAN-16. A screen whose code fails to load shows a Reload note; one that crashes while rendering gets the app-wide crash page
 - [x] Shared controls and the catalog import: UI-2 to UI-7, GIFT-6, CLEAN-1, CLEAN-9
 
 Wave 2, as wave 1's lanes finish:
