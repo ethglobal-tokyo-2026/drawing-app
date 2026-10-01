@@ -302,6 +302,29 @@
   gap: 6px;
 }
 
+/* The first selection's hint: label stock like the seal check's chip. hintSpot places it clear of the
+   sticker, its handles and knob, the toolbar and Draw; it stays hidden until it has a spot. A tap goes
+   through it to the board it speaks of. */
+.sticker-toolbar__hint {
+  position: absolute;
+  z-index: 960;
+  left: 0;
+  top: 0;
+  width: max-content;
+  padding: 7px 11px 8px;
+  border-radius: var(--r-label);
+  background: var(--liner-lift);
+  box-shadow:
+    inset 0 0 0 1px var(--rule),
+    var(--shadow-label);
+  color: var(--ink);
+  font: 650 13px/1.25 var(--font-ui);
+  /* Its rows break where the words say, so a phrase never splits across two lines. */
+  white-space: pre-line;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 /* Arrange: eight flat tiles in a row, one step each, for whoever can't or won't drag. Each is 36px
    wide and 44px to touch. */
 .sticker-toolbar__arrange {

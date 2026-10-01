@@ -162,6 +162,66 @@ export function toolbarSpot(
   return { left, top };
 }
 
+/** A selected sticker's frame, and the handles on its corners, reach this far past its box. */
+const FRAME_REACH = 22;
+
+const overlaps = (a: Box, b: Box) =>
+  a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+const grown = (box: Box, by: number): Box => ({
+  left: box.left - by,
+  top: box.top - by,
+  right: box.right + by,
+  bottom: box.bottom + by,
+});
+
+/** The widest the first selection's hint can be: it keeps to the board's inset and the sticker tray's edge. */
+export const hintRoom = (boardWidth: number) => boardWidth - 10 - TRAY_EDGE - 4;
+
+/**
+ * Where the first selection's hint goes, in board pixels: the spot nearest the toolbar that covers none
+ * of the selected sticker (its frame, handles and knob), the toolbar or Draw, below the header and
+ * clear of the sticker tray's edge. Null when the board has no such room.
+ */
+export function hintSpot(
+  sticker: { x: number; y: number; w: number; h: number; r: number },
+  board: { W: number; H: number },
+  hint: { w: number; h: number },
+  toolbar: Box,
+  { knobBelow = false, clearOf }: { knobBelow?: boolean; clearOf?: Box | null } = {},
+) {
+  const turn = (sticker.r * Math.PI) / 180;
+  const [sin, cos] = [Math.sin(turn), Math.cos(turn)];
+  const halfW = (Math.abs(cos) * sticker.w + Math.abs(sin) * sticker.h) / 2 + FRAME_REACH;
+  const halfH = (Math.abs(sin) * sticker.w + Math.abs(cos) * sticker.h) / 2 + FRAME_REACH;
+  // The knob stands past the sticker's top edge, or its bottom edge where it hangs below.
+  const reach = (knobBelow ? -1 : 1) * (sticker.h / 2 + KNOB_REACH);
+  const knob = { x: sticker.x + sin * reach, y: sticker.y - cos * reach };
+  const footprint: Box = {
+    left: Math.min(sticker.x - halfW, knob.x - KNOB_TOUCH),
+    top: Math.min(sticker.y - halfH, knob.y - KNOB_TOUCH),
+    right: Math.max(sticker.x + halfW, knob.x + KNOB_TOUCH),
+    bottom: Math.max(sticker.y + halfH, knob.y + KNOB_TOUCH),
+  };
+  const avoid = [footprint, toolbar, ...(clearOf ? [clearOf] : [])].map((box) =>
+    grown(box, CLEARANCE),
+  );
+  const left = clamp(
+    (toolbar.left + toolbar.right) / 2 - hint.w / 2,
+    10,
+    board.W - hint.w - TRAY_EDGE - 4,
+  );
+  let best: number | null = null;
+  let nearest = Infinity;
+  for (let top = HEADER - 6; top + hint.h <= board.H - 12; top++) {
+    const box = { left, top, right: left + hint.w, bottom: top + hint.h };
+    if (avoid.some((clear) => overlaps(box, clear))) continue;
+    const gap = Math.max(top - toolbar.bottom, toolbar.top - box.bottom, 0);
+    if (gap < nearest) [best, nearest] = [top, gap];
+  }
+  return best === null ? null : { left, top: best };
+}
+
 /**
  * Spots for new stickers, as x, y, s and r: calm, and clear of the header and Draw. The empty board
  * shows the first as a dashed spot, so the first sticker lands in it.

@@ -19,7 +19,7 @@ import { ArtistChip } from "../stickers/ArtistChip";
 import { EASE_OUT } from "../ui/easing";
 import { LabelButton } from "../ui/LabelButton";
 import type { Step } from "./boardGesture";
-import { toolbarSpot, type Box } from "./placement";
+import { hintRoom, hintSpot, toolbarSpot, type Box } from "./placement";
 
 interface Props {
   /** Names the toolbar after its sticker. */
@@ -46,6 +46,10 @@ interface Props {
   reduced: boolean;
   /** Its Original Artist, when someone other than the board's owner drew it: the chip heads the toolbar. */
   artist?: PersonView;
+  /** The first selection on this device: a hint says how to go on, placed clear of what it mustn't cover. */
+  hinted?: boolean;
+  /** The hint found room and is on screen. */
+  onHintShown?: () => void;
 }
 
 /** The Arrange row's buttons, in the order they read. */
@@ -78,34 +82,51 @@ export function StickerToolbar({
   onEscape,
   reduced,
   artist,
+  hinted = false,
+  onHintShown,
 }: Props) {
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
+  const hint = useRef<HTMLSpanElement>(null);
+  const hintShown = useEffectEvent(() => onHintShown?.());
 
-  // Placed once it's measured, before it's painted: its width follows the labels it shows.
+  // Placed once it's measured, before it's painted: its width follows the labels it shows. The hint
+  // hugs its words up to the room the board has, and is placed once the toolbar is.
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const { left, top } = toolbarSpot(
+    const bar = { w: el.offsetWidth, h: el.offsetHeight };
+    const { left, top } = toolbarSpot(sticker, board, bar, { knobBelow, clearOf });
+    el.style.transform = `translate(${left.toFixed(1)}px, ${top.toFixed(1)}px)`;
+    const note = hint.current;
+    if (!note) return;
+    note.style.maxWidth = `${hintRoom(board.W)}px`;
+    const spot = hintSpot(
       sticker,
       board,
-      { w: el.offsetWidth, h: el.offsetHeight },
+      { w: note.offsetWidth, h: note.offsetHeight },
+      { left, top, right: left + bar.w, bottom: top + bar.h },
       { knobBelow, clearOf },
     );
-    el.style.transform = `translate(${left.toFixed(1)}px, ${top.toFixed(1)}px)`;
+    // With no room it stays hidden, and the board doesn't count it as shown.
+    note.style.visibility = spot ? "visible" : "hidden";
+    if (!spot) return;
+    note.style.transform = `translate(${spot.left.toFixed(1)}px, ${spot.top.toFixed(1)}px)`;
+    hintShown();
   });
 
   // It comes in when it first shows. Selection moving straight to another sticker swaps one toolbar
   // for another in the same commit, and that one moves over without coming in again.
   const reveal = useEffectEvent(() => {
     if (reduced || performance.now() - lastHidden < HANDOFF_MS) return;
-    ref.current?.animate(
-      [
-        { opacity: 0, translate: "0 -4px" },
-        { opacity: 1, translate: "0 0" },
-      ],
-      { duration: 160, easing: EASE_OUT },
-    );
+    for (const el of [ref.current, hint.current])
+      el?.animate(
+        [
+          { opacity: 0, translate: "0 -4px" },
+          { opacity: 1, translate: "0 0" },
+        ],
+        { duration: 160, easing: EASE_OUT },
+      );
   });
   useLayoutEffect(() => {
     reveal();
@@ -115,54 +136,62 @@ export function StickerToolbar({
   }, []);
 
   return (
-    <div
-      ref={ref}
-      className="sticker-toolbar"
-      role="toolbar"
-      aria-label={label}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onEscape();
-      }}
-    >
-      {artist && (
-        <div className="sticker-toolbar__by">
-          <ArtistChip artist={artist} bare />
-        </div>
-      )}
-      <div className="sticker-toolbar__acts">
-        {onGive && (
-          <LabelButton tone="aqua" size="sm" icon={<GiveIcon size={18} />} onClick={onGive}>
-            {t(($) => $.stickerBoard.toolbar.give)}
-          </LabelButton>
+    <>
+      <div
+        ref={ref}
+        className="sticker-toolbar"
+        role="toolbar"
+        aria-label={label}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") onEscape();
+        }}
+      >
+        {artist && (
+          <div className="sticker-toolbar__by">
+            <ArtistChip artist={artist} bare />
+          </div>
         )}
-        <LabelButton size="sm" icon={<ViewIcon size={18} />} onClick={onView}>
-          {t(($) => $.stickerBoard.toolbar.view)}
-        </LabelButton>
-        {onRemove && (
-          <LabelButton size="sm" icon={<RemoveIcon size={18} />} onClick={onRemove}>
-            {t(($) => $.stickerBoard.toolbar.remove)}
+        <div className="sticker-toolbar__acts">
+          {onGive && (
+            <LabelButton tone="aqua" size="sm" icon={<GiveIcon size={18} />} onClick={onGive}>
+              {t(($) => $.stickerBoard.toolbar.give)}
+            </LabelButton>
+          )}
+          <LabelButton size="sm" icon={<ViewIcon size={18} />} onClick={onView}>
+            {t(($) => $.stickerBoard.toolbar.view)}
           </LabelButton>
+          {onRemove && (
+            <LabelButton size="sm" icon={<RemoveIcon size={18} />} onClick={onRemove}>
+              {t(($) => $.stickerBoard.toolbar.remove)}
+            </LabelButton>
+          )}
+        </div>
+        {onArrange && (
+          <div
+            className="sticker-toolbar__arrange"
+            role="group"
+            aria-label={t(($) => $.stickerBoard.toolbar.arrange.label)}
+          >
+            {ARRANGE.map(({ step, Glyph }) => (
+              <button
+                key={step}
+                type="button"
+                className="sticker-toolbar__step"
+                aria-label={t(($) => $.stickerBoard.toolbar.arrange[step])}
+                onClick={() => onArrange(step)}
+              >
+                <Glyph size={18} weight="bold" aria-hidden />
+              </button>
+            ))}
+          </div>
         )}
       </div>
-      {onArrange && (
-        <div
-          className="sticker-toolbar__arrange"
-          role="group"
-          aria-label={t(($) => $.stickerBoard.toolbar.arrange.label)}
-        >
-          {ARRANGE.map(({ step, Glyph }) => (
-            <button
-              key={step}
-              type="button"
-              className="sticker-toolbar__step"
-              aria-label={t(($) => $.stickerBoard.toolbar.arrange[step])}
-              onClick={() => onArrange(step)}
-            >
-              <Glyph size={18} weight="bold" aria-hidden />
-            </button>
-          ))}
-        </div>
+      {/* Hidden from screen readers, who hear the sticker's own description of its keys instead. */}
+      {hinted && (
+        <span ref={hint} className="sticker-toolbar__hint" aria-hidden>
+          {t(($) => $.stickerBoard.toolbar.firstSelectionHint)}
+        </span>
       )}
-    </div>
+    </>
   );
 }

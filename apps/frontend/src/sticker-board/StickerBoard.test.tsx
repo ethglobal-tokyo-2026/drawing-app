@@ -14,6 +14,7 @@ import { forgetNoticedHere, markNoticed, noticeReceivesFromNow } from "../giving
 import { forgetGreetings } from "./artistChipGreeting";
 import { forgetBoardComplete } from "./boardComplete";
 import { placeUnplaced, toBoardSticker } from "./boardSticker";
+import { forgetSelectionHints } from "./selectionHint";
 import { keepBoard, keptBoardFor, readKeptBoardAgain } from "./lastBoard";
 import { StickerBoard } from "./StickerBoard";
 import { STEP_SAVE_IDLE_MS } from "./useBoardGestures";
@@ -55,6 +56,7 @@ beforeEach(() => {
   readKeptBoardAgain();
   forgetBoardComplete();
   forgetGreetings();
+  forgetSelectionHints();
 });
 
 const at = (x: number) => ({ onBoard: true, x, y: 0.5, scale: 0.3, rotation: 0, z: 1 });
@@ -195,6 +197,52 @@ describe("StickerBoard's artist chips", () => {
     };
     expect(visit()).toBe(1);
     expect(visit()).toBe(0);
+  });
+});
+
+describe("StickerBoard's first-selection hint", () => {
+  const visit = async (...boardStickers: ApiBoardSticker[]) => {
+    onAPhone();
+    const view = renderWithApi(
+      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
+      emptyApi({ stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers }) }),
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    return view;
+  };
+  const toolbar = (host: HTMLElement) => host.querySelector(".sticker-toolbar");
+  const hint = (host: HTMLElement) => host.querySelector(".sticker-toolbar__hint");
+
+  it("hangs off the toolbar of the first sticker you select, hidden from screen readers, and not off a later selection", async () => {
+    const a = boardSticker({ placement: at(0.5) });
+    const view = await visit(a);
+    const press = selectByKeys(view.host, a.stickerId);
+    expect(hint(view.host)?.getAttribute("aria-hidden")).toBe("true");
+
+    // Letting go ends it for good: the same sticker selected again has its toolbar and no hint.
+    press("Escape");
+    expect(toolbar(view.host)).toBeNull();
+    press("Enter");
+    expect(toolbar(view.host)).not.toBeNull();
+    expect(hint(view.host)).toBeNull();
+  });
+
+  it("stays through a selection that moves to another sticker, and doesn't come back on a later visit", async () => {
+    const [a, b] = [boardSticker({ placement: at(0.3) }), boardSticker({ placement: at(0.7) })];
+    const first = await visit(a, b);
+    selectByKeys(first.host, a.stickerId);
+    selectByKeys(first.host, b.stickerId);
+    expect(hint(first.host)).not.toBeNull();
+    await act(() => vi.dynamicImportSettled());
+    first.unmount();
+
+    // A new page open remembers it from this device's storage.
+    forgetSelectionHints();
+    const later = await visit(a, b);
+    selectByKeys(later.host, a.stickerId);
+    expect(toolbar(later.host)).not.toBeNull();
+    expect(hint(later.host)).toBeNull();
   });
 });
 
