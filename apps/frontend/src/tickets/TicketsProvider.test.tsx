@@ -1,11 +1,17 @@
 // @vitest-environment happy-dom
 import type { Me, Tickets } from "@drawing-app/api/client";
-import { act, useEffect } from "react";
+import { act, useEffect, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing";
 import type { TicketsValue } from "./ticketsContext";
 import { REFILL_RETRY_MAX_MS, REFILL_RETRY_MS } from "./TicketsProvider";
+import {
+  keepUnaddedPurchase,
+  readUnaddedPurchasesAgain,
+  useAddUnaddedPurchases,
+  type UnaddedPurchase,
+} from "./unaddedPurchases";
 import { useTickets } from "./useTickets";
 
 type Spender = Pick<TicketsValue, "spend" | "forgetKeptSpend">;
@@ -75,6 +81,7 @@ afterEach(() => {
   view = undefined;
   spendTicket.mockReset();
   localStorage.clear();
+  readUnaddedPurchasesAgain();
   vi.useRealTimers();
 });
 
@@ -145,13 +152,23 @@ function Holder({ onValue }: { onValue: (value: TicketsValue) => void }) {
   return null;
 }
 
-/** Your tickets, loaded with `load`; the latest value is `shown()`. */
-async function openWith(load: ApiClient["tickets"]) {
+/**
+ * Your tickets, loaded with `load` from a server that answers `api` too, with `alongside` on screen;
+ * the latest value is `shown()`.
+ */
+async function openWith(
+  load: ApiClient["tickets"],
+  api: Partial<ApiClient> = {},
+  alongside?: ReactNode,
+) {
   view?.unmount();
   let latest: TicketsValue | undefined;
   view = renderWithApi(
-    <Holder onValue={(value) => (latest = value)} />,
-    emptyApi({ tickets: load, spendTicket }),
+    <>
+      <Holder onValue={(value) => (latest = value)} />
+      {alongside}
+    </>,
+    emptyApi({ tickets: load, spendTicket, ...api }),
   );
   await act(async () => {});
   const shown = () => {
@@ -184,6 +201,54 @@ describe("answers that carry your tickets", () => {
     await act(async () => answerLoad(FRESH_TICKETS));
     expect(shown().tickets?.dailyLeft).toBe(2);
   });
+
+  /** A payment kept on this phone, whose tickets the app asks for again as it opens. */
+  const KEPT: UnaddedPurchase = {
+    digest: "D".repeat(44),
+    tickets: 3,
+    priceYen: 270,
+    paidAt: Date.now(),
+  };
+  function AppOpen() {
+    useAddUnaddedPurchases();
+    return null;
+  }
+
+  it.each(["before", "after"] as const)(
+    "shows the server's tickets when a purchase sent before a spend answers after it, counted %s the spend",
+    async (counted) => {
+      const server = { tickets: FRESH_TICKETS };
+      const addPack = () =>
+        (server.tickets = {
+          ...server.tickets,
+          reserveLeft: server.tickets.reserveLeft + KEPT.tickets,
+        });
+      spendTicket.mockImplementation(() => {
+        server.tickets = { ...server.tickets, dailyLeft: server.tickets.dailyLeft - 1 };
+        return Promise.resolve({ ...SPENT, tickets: server.tickets });
+      });
+      // The server reads Sui first, so it counts the payment before or after the spend reaches it;
+      // either way the purchase's answer comes back last.
+      let answerPurchase = () => {};
+      const buyTickets = () =>
+        new Promise<Tickets>((resolve) => {
+          const answer = counted === "before" ? addPack() : null;
+          answerPurchase = () => resolve(answer ?? addPack());
+        });
+      keepUnaddedPurchase(TEST_ME.id, KEPT);
+      const shown = await openWith(
+        () => Promise.resolve(server.tickets),
+        { buyTickets },
+        <AppOpen />,
+      );
+      await act(() => shown().spend("daily"));
+      await act(async () => {
+        answerPurchase();
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(shown().tickets).toEqual(server.tickets);
+    },
+  );
 });
 
 describe("a failed load", () => {

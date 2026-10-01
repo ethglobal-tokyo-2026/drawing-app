@@ -23,8 +23,8 @@ function run(...events: SessionEvent[]) {
 const start = { type: "start" } as const;
 const ink = { type: "ink" } as const;
 const tap = (now: number, hasInk = true) => ({ type: "seal-tap", now, hasInk }) as const;
-const failed = ({ mayHaveSealed = false, timeUp = false } = {}) =>
-  ({ type: "seal-failed", mayHaveSealed, timeUp }) as const;
+const failed = ({ mayHaveSealed = false, timeUp = false, refused = false } = {}) =>
+  ({ type: "seal-failed", mayHaveSealed, timeUp, refused }) as const;
 /** The seal key's second tap started a seal. */
 const sealing = [start, ink, tap(1000), tap(1500)] as const;
 const restored = (drawn: boolean, sealSent = false) =>
@@ -89,6 +89,10 @@ describe("transition", () => {
   });
 
   it("goes back to drawing with the clock running again when the server refused the seal", () => {
+    expect(run(...sealing, failed({ refused: true }))).toEqual({
+      phase: "drawing",
+      effects: ["resume-clock"],
+    });
     expect(run(...sealing, failed())).toEqual({ phase: "drawing", effects: ["resume-clock"] });
     expect(run(...sealing, { type: "sealed" }).phase).toBe("sealed");
   });
@@ -116,6 +120,16 @@ describe("transition", () => {
     ).toBe("retry");
   });
 
+  it("starts a fresh sheet when the server refuses a seal at 0:00, since it refuses it again", () => {
+    const timeUp = [start, ink, { type: "time-up" }] as const;
+    const refusedAtTimeUp = failed({ timeUp: true, refused: true });
+    expect(run(...timeUp, refusedAtTimeUp)).toEqual({ phase: "blank", effects: ["reset-sheet"] });
+    // A retry at 0:00 refused too.
+    expect(run(...timeUp, failed({ timeUp: true }), tap(9000), refusedAtTimeUp).phase).toBe(
+      "blank",
+    );
+  });
+
   it("starts a fresh sheet on reset", () => {
     expect(run(start, ink, tap(1000), tap(1500), { type: "sealed" }, { type: "reset" })).toEqual({
       phase: "blank",
@@ -130,6 +144,9 @@ describe("sealFailure", () => {
   it("lets the sheet change only once the server has refused the seal itself", () => {
     expect(answered(403, "adults_only")).toBe("refused");
     expect(answered(400, "invalid_request")).toBe("refused");
+    expect(answered(404, "ticket_not_found")).toBe("refused");
+    // Turned away before the ticket was looked at: an earlier try may still have sealed.
+    expect(answered(401, "signed_out")).toBe("unknown");
     // Saved, or maybe saved: sent again, the same request gets the sticker from the ticket use.
     expect(answered(503, "mint_failed")).toBe("unknown");
     expect(answered(0, "network")).toBe("unknown");

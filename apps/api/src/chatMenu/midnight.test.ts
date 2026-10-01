@@ -1,6 +1,7 @@
 import { chatMenuBatches } from "@drawing-app/db";
 import { insertUser } from "@drawing-app/db/testing";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { AFTER_MIDNIGHT_MS } from "../midnightJob.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import {
   chatMenuThrough,
@@ -13,7 +14,6 @@ import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
 import { spendBody } from "../tickets/testSpends.ts";
 import type { ChatMenuIds } from "./menus.ts";
 import {
-  AFTER_MIDNIGHT_MS,
   FIRST_LOOK_MS,
   LOOK_EVERY_MS,
   MAX_LOOKS,

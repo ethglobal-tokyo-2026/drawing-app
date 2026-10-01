@@ -1,5 +1,5 @@
 import type { Db } from "@drawing-app/db";
-import type { LocalAccount } from "viem";
+import type { Address, LocalAccount } from "viem";
 import { z } from "zod";
 import type { ChatMenuLink } from "./chatMenu/menus.ts";
 import type {
@@ -213,6 +213,11 @@ export interface GiftChain {
     giftClaimToken: string | null;
     recipientId: string;
   }) => Promise<{ claimed: true; txHash: string } | { claimed: false }>;
+  /**
+   * The escrow's returnExpiredGift: sends a pending gift past its expiry back to its sender, and
+   * waits for it to land. Rejects when the escrow refuses it, or it isn't confirmed in time.
+   */
+  returnExpiredGift: (giftId: string) => Promise<{ txHash: string }>;
 }
 
 export interface SmartWallets {
@@ -271,10 +276,48 @@ export interface NameWriter {
   setAvatar: (person: string, avatar: string) => Promise<void>;
 }
 
+/** Whether naming can work, as the contract check last found; off says why. */
+export type NamingState = { on: true } | { on: false; reason: string };
+
 /** Runs naming jobs one at a time, off the request that asked for them. */
 export interface NamingQueue {
   /** Queues `job` under `key`, unless a job for that key is already waiting. */
   enqueue: (key: string, job: () => Promise<void>) => void;
   /** Settles once every queued job has. */
   idle: () => Promise<void>;
+  /**
+   * Naming's state from when `state` settles; it must not reject. A job that comes up before then
+   * waits for it, and one that comes up while naming is off is skipped with a line saying why.
+   */
+  setState: (state: Promise<NamingState>) => void;
+  /** Naming's state, once the last one set settles. On until one is set. */
+  state: () => Promise<NamingState>;
 }
+
+/** The addresses the server's contract settings name, and the relayer that sends from them. */
+export interface ConfiguredContracts {
+  relayer: Address;
+  stickers: Address;
+  escrow: Address;
+  names: Address;
+  resolver: Address;
+}
+
+/**
+ * What the configured contracts answer about each other. An address is null when its contract
+ * refused the read: it reverted, or nothing there answers it.
+ */
+export interface ContractReads {
+  configured: ConfiguredContracts;
+  /** Whether CroquisNames grants the relayer NAMER_ROLE. */
+  relayerIsNamer: boolean;
+  /** The StickerNFT each of these reads. */
+  namesStickers: Address | null;
+  resolverStickers: Address | null;
+  escrowSticker: Address | null;
+  /** The escrow's CroquisNames; an escrow from before the names under croquis.eth has none. */
+  escrowNames: Address | null;
+}
+
+/** Reads the configured contracts. Rejects with ChainUnavailableError when the RPC fails. */
+export type ReadContracts = () => Promise<ContractReads>;

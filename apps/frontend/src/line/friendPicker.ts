@@ -13,11 +13,17 @@ export type LiffPicker = Pick<
 /** `unknown`: LINE didn't say whether the messages went out. */
 export type PickerOutcome = "sent" | "cancelled" | "unknown";
 
-/** LIFF's own checks, which fail before the picker opens, so nothing went out. */
+/**
+ * LIFF's own checks, which fail before the picker opens, so nothing went out: its arguments and
+ * config, whether the picker is allowed here, and the access token it asks LINE for a one-time
+ * token with.
+ */
 const BEFORE_THE_PICKER = new Set([
   "INVALID_ARGUMENT",
   "INVALID_CONFIG",
   "CREATE_SUBWINDOW_FAILED",
+  "FORBIDDEN",
+  "UNAUTHORIZED",
 ]);
 
 /** Inside LINE before 10.11.0, LIFF resolves as soon as the picker opens, whatever is sent. */
@@ -44,16 +50,19 @@ export async function sendInLineChat(
   line: LiffPicker,
   messages: PickerMessage[],
 ): Promise<PickerOutcome> {
+  // LIFF asks LINE for a one-time token before it opens the picker, so offline it never opens.
+  const offline = navigator.onLine === false;
   let result;
   try {
     result = await line.shareTargetPicker(messages, { isMultiple: true });
   } catch (error) {
     const code = error instanceof Error && "code" in error ? error.code : undefined;
-    if (typeof code === "string" && BEFORE_THE_PICKER.has(code)) {
+    if (offline || (typeof code === "string" && BEFORE_THE_PICKER.has(code))) {
       throw new Error(`LINE’s friend picker failed: ${describeLiffError(error)}`, { cause: error });
     }
     // Once the picker is open, a failure (asking LINE for its result, or a timeout) says nothing of
-    // whether the messages went out.
+    // whether the messages went out. LIFF fails the one-time token's request the same way, so that
+    // failure reads the same, when online.
     console.warn(
       `LINE’s friend picker failed after it may have sent: ${describeLiffError(error)}`,
       error,

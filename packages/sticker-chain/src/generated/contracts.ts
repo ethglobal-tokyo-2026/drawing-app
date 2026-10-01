@@ -625,27 +625,6 @@ export const croquisResolverAbi = [
   },
   {
     type: 'function',
-    inputs: [{ name: 'node', internalType: 'bytes32', type: 'bytes32' }],
-    name: 'targetOf',
-    outputs: [
-      {
-        name: '',
-        internalType: 'struct CroquisResolver.Target',
-        type: 'tuple',
-        components: [
-          {
-            name: 'kind',
-            internalType: 'enum CroquisResolver.Kind',
-            type: 'uint8',
-          },
-          { name: 'id', internalType: 'uint256', type: 'uint256' },
-        ],
-      },
-    ],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
     inputs: [
       { name: 'node', internalType: 'bytes32', type: 'bytes32' },
       { name: 'key', internalType: 'string', type: 'string' },
@@ -785,6 +764,7 @@ export const croquisResolverAbi = [
     ],
     name: 'OffchainLookup',
   },
+  { type: 'error', inputs: [], name: 'SourcesAlreadySet' },
   {
     type: 'error',
     inputs: [
@@ -847,13 +827,6 @@ export const stickerGiftEscrowAbi = [
     type: 'function',
     inputs: [],
     name: 'DEFAULT_ADMIN_ROLE',
-    outputs: [{ name: '', internalType: 'bytes32', type: 'bytes32' }],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    inputs: [],
-    name: 'REJECT_TYPEHASH',
     outputs: [{ name: '', internalType: 'bytes32', type: 'bytes32' }],
     stateMutability: 'view',
   },
@@ -1000,21 +973,6 @@ export const stickerGiftEscrowAbi = [
   {
     type: 'function',
     inputs: [
-      { name: 'giftId', internalType: 'bytes32', type: 'bytes32' },
-      {
-        name: 'authorizationDeadline',
-        internalType: 'uint256',
-        type: 'uint256',
-      },
-      { name: 'authorization', internalType: 'bytes', type: 'bytes' },
-    ],
-    name: 'rejectGift',
-    outputs: [],
-    stateMutability: 'nonpayable',
-  },
-  {
-    type: 'function',
-    inputs: [
       { name: 'role', internalType: 'bytes32', type: 'bytes32' },
       { name: 'callerConfirmation', internalType: 'address', type: 'address' },
     ],
@@ -1119,31 +1077,6 @@ export const stickerGiftEscrowAbi = [
       },
     ],
     name: 'GiftClaimed',
-  },
-  {
-    type: 'event',
-    anonymous: false,
-    inputs: [
-      {
-        name: 'giftId',
-        internalType: 'bytes32',
-        type: 'bytes32',
-        indexed: true,
-      },
-      {
-        name: 'tokenId',
-        internalType: 'uint256',
-        type: 'uint256',
-        indexed: true,
-      },
-      {
-        name: 'sender',
-        internalType: 'address',
-        type: 'address',
-        indexed: true,
-      },
-    ],
-    name: 'GiftRejected',
   },
   {
     type: 'event',

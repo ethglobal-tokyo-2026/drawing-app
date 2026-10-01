@@ -24,6 +24,9 @@ remappings = [
 ]
 optimizer = true
 optimizer_runs = 200
+# Forge's default dynamic test linking kept tests on an edited contract's old bytecode wherever
+# script/CroquisSetup.sol deploys it, until a forced build. Off, an edit recompiles what embeds it.
+dynamic_test_linking = false
 
 [fmt]
 line_length = 100

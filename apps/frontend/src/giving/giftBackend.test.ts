@@ -1,15 +1,19 @@
 // @vitest-environment happy-dom
 import type { Hash } from "viem";
+import { act, createElement, useLayoutEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/apiClient";
-import { emptyApi } from "../api/testing";
+import { emptyApi, renderWithApi } from "../api/testing";
 import { gift } from "../api/testFixtures";
+import { useMyStickerBoard } from "../sticker-board/useMyStickerBoard";
 import { createApiGiftBackend, GiftPackagingError, type PackWait } from "./giftBackend";
+import type { GiftSendOutcome } from "./giftSender";
 import {
   GiftTransactionRevertedError,
   GiftTransactionUnconfirmedError,
   type GiftTransactions,
 } from "./giftTransactions";
+import { createGiveFlow } from "./giveFlow";
 
 const hash: Hash = `0x${"ab".repeat(32)}`;
 const takeOutHash: Hash = `0x${"ef".repeat(32)}`;
@@ -64,6 +68,21 @@ async function reload() {
   return import("./giftBackend");
 }
 
+/** Gives the sticker in a LINE chat on this page, with fake timers, until LINE's picker has `answer`ed. */
+async function giveInLine(t: ReturnType<typeof setup>, answer: Promise<GiftSendOutcome>) {
+  const flow = createGiveFlow({
+    sticker: t.sticker,
+    backend: t.backend,
+    sender: { send: () => answer },
+    pickerDelayMs: 0,
+    takeOutMs: 0,
+    report: () => {},
+  });
+  flow.chooseLineChat();
+  await vi.advanceTimersByTimeAsync(0);
+  return flow;
+}
+
 /** What `work` fails with once every timer has run, or null when it doesn't fail. */
 async function failureOf(work: Promise<unknown>) {
   const failure = work.then(
@@ -80,6 +99,30 @@ afterEach(() => {
 });
 
 describe("Giving through the smart account", () => {
+  it("forgets your board's kept answer once the sticker is in a gift, so the give sheet can't offer it", async () => {
+    const t = setup();
+    const seen: string[] = [];
+    function Reader() {
+      const board = useMyStickerBoard();
+      useLayoutEffect(() => void seen.push(board.state));
+      return null;
+    }
+    const view = renderWithApi(createElement(Reader), t.api);
+    await act(async () => {});
+    const mountsShowing = async () => {
+      view.rerender(null);
+      seen.length = 0;
+      view.rerender(createElement(Reader));
+      const first = seen[0];
+      await act(async () => {});
+      return first;
+    };
+    expect(await mountsShowing()).toBe("ready");
+    await t.backend.pack(t.sticker);
+    expect(await mountsShowing()).toBe("loading");
+    view.unmount();
+  });
+
   it("says what packing waits on as it goes: the server, the sticker going in, the bag confirming, the server again", async () => {
     const t = setup();
     const heard: PackWait[] = [];
@@ -343,9 +386,27 @@ describe("Giving through the smart account", () => {
       },
     ],
     [
+      "went out, its report refused while signed out",
+      "sent",
+      async (t: ReturnType<typeof setup>) => {
+        t.reportShared.mockRejectedValueOnce(new ApiError(401, { error: "signed_out" }));
+        expect(await failureOf(t.backend.markSent(t.packed.id))).toBeInstanceOf(ApiError);
+      },
+    ],
+    [
       "may have gone out",
       "maybeSent",
       async (t: ReturnType<typeof setup>) => t.backend.markMaybeSent(t.packed.id),
+    ],
+    [
+      "was in LINE's picker when the page went",
+      "maybeSent",
+      async (t: ReturnType<typeof setup>) => {
+        const flow = await giveInLine(t, new Promise(() => {}));
+        expect(flow.getState().step).toBe("picking");
+        // The page goes before LINE answers, and its timers with it.
+        vi.clearAllTimers();
+      },
     ],
   ] as const)(
     "never takes out a gift whose message %s when its sticker is given after a reload",
@@ -369,6 +430,17 @@ describe("Giving through the smart account", () => {
       if (outcome === "sent") expect(t.reportShared).toHaveBeenLastCalledWith(t.packed.id, "sent");
     },
   );
+
+  it("sends a gift whose picker was cancelled as it is when Giving opens again", async () => {
+    vi.useFakeTimers();
+    const t = setup();
+    const flow = await giveInLine(t, Promise.resolve("cancelled"));
+    expect(flow.getState().step).toBe("notSent");
+    t.packageGift.mockResolvedValue({ gift: t.packed, giftClaimToken: null, escrowTransfer: null });
+    await expect(createApiGiftBackend(t.options).pack(t.sticker)).resolves.toMatchObject({
+      giftId: t.packed.id,
+    });
+  });
 
   it("waits on a deposit sent before a reload instead of sending another", async () => {
     const t = setup();

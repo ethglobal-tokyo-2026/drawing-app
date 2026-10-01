@@ -1,5 +1,5 @@
 import { MAX_TIME_USED_S } from "@drawing-app/api/client";
-import { ApiError } from "../../api/apiClient";
+import { ApiError, type ErrorCode } from "../../api/apiClient";
 
 /** How long a sticker gets on the drawing clock; the server refuses a seal that used more. */
 export const SESSION_MS = MAX_TIME_USED_S * 1000;
@@ -12,7 +12,8 @@ export const ARM_WINDOW_MS = 2_500;
  * drawing: the first stroke or fill started the clock.
  * armed: the seal key took its first tap. sealing: building the sticker. sealed: done.
  * retry: a seal failed where the sheet mustn't take ink again, since time is up or the server may
- * already hold the seal: the sheet stays locked, and the seal key only tries the seal again.
+ * already hold the seal: the sheet stays locked, and the seal key only tries the seal again. A seal
+ * the server refuses at 0:00 gives way to a fresh sheet instead.
  */
 type Phase = "blank" | "primed" | "drawing" | "armed" | "sealing" | "sealed" | "retry";
 
@@ -43,9 +44,10 @@ export type SessionEvent =
   | { type: "sealed" }
   /**
    * `mayHaveSealed`: the request may have reached the server, which then holds the seal whatever
-   * the sheet does next. `timeUp`: the clock had run out.
+   * the sheet does next. `timeUp`: the clock had run out. `refused`: the server refused the seal
+   * itself, as it would the same seal sent again.
    */
-  | { type: "seal-failed"; mayHaveSealed: boolean; timeUp: boolean }
+  | { type: "seal-failed"; mayHaveSealed: boolean; timeUp: boolean; refused: boolean }
   | { type: "reset" };
 
 /** What the drawing screen does on a transition, besides showing the new phase. */
@@ -97,12 +99,26 @@ export function transition(session: Session, event: SessionEvent): Result {
       return phase === "sealing" ? to("sealed") : unchanged;
     case "seal-failed":
       if (phase !== "sealing") return unchanged;
-      // Ink drawn after 0:00, or after the server took the seal, would never reach the sticker.
-      return event.mayHaveSealed || event.timeUp ? to("retry") : to("drawing", ["resume-clock"]);
+      // Ink drawn after the server took the seal would never reach the sticker.
+      if (event.mayHaveSealed) return to("retry");
+      if (!event.timeUp) return to("drawing", ["resume-clock"]);
+      // At 0:00 the sheet takes no more ink, so a refused seal can't change: the sheet is spent.
+      return event.refused ? to("blank", ["reset-sheet"]) : to("retry");
     case "reset":
       return to("blank", ["reset-sheet"]);
   }
 }
+
+/**
+ * The seal route's own refusals, each answered only while the ticket holds no sticker of this person's.
+ * A 4xx from before the route, 401 signed_out above all, says nothing about an earlier try.
+ */
+const SEAL_REFUSALS: ReadonlySet<string> = new Set([
+  "invalid_request",
+  "ticket_not_yours",
+  "adults_only",
+  "ticket_not_found",
+] satisfies ErrorCode[]);
 
 /**
  * What a failed seal request says about the server. "refused": it answered that it holds no seal for
@@ -111,9 +127,7 @@ export function transition(session: Session, event: SessionEvent): Result {
  */
 export function sealFailure(error: unknown): "refused" | "unsent" | "unknown" {
   if (!(error instanceof ApiError)) return "unknown";
-  // A seal already made on this ticket is what a retry of the same request answers with.
-  if (error.status >= 400 && error.status < 500)
-    return error.code === "ticket_already_used" ? "unknown" : "refused";
+  if (error.status >= 400 && error.status < 500 && SEAL_REFUSALS.has(error.code)) return "refused";
   const unsent = error.code === "line_token_expired" || error.code === "smart_account_not_ready";
   return error.status === 0 && unsent ? "unsent" : "unknown";
 }

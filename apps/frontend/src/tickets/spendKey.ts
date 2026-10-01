@@ -1,5 +1,4 @@
-import { newIdempotencyKey } from "../api/idempotencyKey";
-import { personKey, readStored, writeStored } from "../ui/deviceStorage";
+import { parseStored, personKey, readStored, writeStored } from "../ui/deviceStorage";
 
 /**
  * The key of a ticket spend, kept on this device until the drawing screen has kept the ticket use it
@@ -14,32 +13,55 @@ const keyFor = (userId: string) => personKey("draw.tickets.spendKey", userId);
  */
 const SPEND_KEY = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
-/** `userId`'s kept key; null when there's none, it's unreadable, or storage is blocked. */
-export function keptSpendKey(userId: string): string | null {
-  const { text: raw } = readStored(
-    keyFor(userId),
-    "A ticket spend's key can't be read on this device",
+/** A kept spend's key, and whether the server refused the last spend sent with it, spending nothing. */
+export interface KeptSpend {
+  key: string;
+  refused: boolean;
+}
+
+const isKeptSpend = (value: unknown): value is KeptSpend =>
+  typeof value === "object" &&
+  value !== null &&
+  "key" in value &&
+  typeof value.key === "string" &&
+  SPEND_KEY.test(value.key) &&
+  "refused" in value &&
+  typeof value.refused === "boolean";
+
+/** `userId`'s kept spend; null when there's none, it's unreadable, or storage is blocked. */
+export function keptSpend(userId: string): KeptSpend | null {
+  const { text } = readStored(keyFor(userId), "A ticket spend's key can't be read on this device");
+  if (text === null) return null;
+  const kept = parseStored(text);
+  if (isKeptSpend(kept)) return kept;
+  // Cleared, since it can never be sent, so it's logged once rather than at every read.
+  console.error(
+    "A ticket spend's kept key is unreadable, so it's cleared and the next spend sends a new one:",
+    text,
   );
-  if (raw === null || SPEND_KEY.test(raw)) return raw;
-  console.error("A ticket spend's kept key is unreadable, so the next spend sends a new one:", raw);
+  writeStored(
+    keyFor(userId),
+    null,
+    "An unreadable ticket spend's key can't be cleared on this device",
+  );
   return null;
 }
 
-/** The key for `userId`'s spend: the one kept from a spend whose ticket use isn't kept, or a new one, kept. */
-export function spendKeyFor(userId: string): string {
-  const kept = keptSpendKey(userId);
-  if (kept !== null) return kept;
-  const key = newIdempotencyKey();
+/** Keeps `spend` as `userId`'s. */
+export function keepSpend(userId: string, spend: KeptSpend): void {
   writeStored(
     keyFor(userId),
-    key,
-    `A ticket spend's key (${key}) can't be kept on this device; a reload before its answer comes may spend another ticket`,
+    JSON.stringify(spend),
+    `A ticket spend's key (${spend.key}) can't be kept on this device; a reload before its answer comes may spend another ticket`,
   );
-  return key;
 }
 
 /** Drops `key` once its ticket use is kept, unless a later spend's key has taken its place. */
 export function forgetSpendKey(userId: string, key: string): void {
-  const failure = `A kept ticket use's spend key (${key}) can't be cleared on this device`;
-  if (readStored(keyFor(userId), failure).text === key) writeStored(keyFor(userId), null, failure);
+  if (keptSpend(userId)?.key !== key) return;
+  writeStored(
+    keyFor(userId),
+    null,
+    `A kept ticket use's spend key (${key}) can't be cleared on this device`,
+  );
 }

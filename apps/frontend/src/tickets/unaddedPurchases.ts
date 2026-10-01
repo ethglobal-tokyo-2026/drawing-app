@@ -1,9 +1,9 @@
 import type { Tickets } from "@drawing-app/api/client";
 import { useEffect, useSyncExternalStore } from "react";
-import { ApiError, apiError, type ApiClient } from "../api/apiClient";
+import { ApiError, apiError } from "../api/apiClient";
 import { useMe } from "../api/meContext";
-import { useApi } from "../api/useApi";
 import { personKey, parseStored, readStored, writeStored } from "../ui/deviceStorage";
+import type { TicketBuyer } from "./ticketsContext";
 import { useTickets } from "./useTickets";
 
 /**
@@ -57,8 +57,6 @@ export const PAYMENT_LANDS_WITHIN_MS = 60 * 60_000;
 
 /** One key per person, so signing in as someone else leaves another's payments be. */
 const keyFor = (userId: string) => personKey("draw.unaddedPurchases", userId);
-
-type TicketBuyer = Pick<ApiClient, "buyTickets" | "tickets">;
 
 /** The server's answer while Sui doesn't show a payment yet. */
 const NOT_LANDED = "payment_not_landed";
@@ -295,14 +293,14 @@ export function useUnaddedPurchases(): readonly UnaddedPurchase[] {
   return useSyncExternalStore(subscribe, () => unaddedPurchasesFor(id));
 }
 
-/** Quietly asks again for the tickets of every payment kept for you, as whatever calls it opens. */
+/**
+ * Quietly asks again for the tickets of every payment kept for you, as whatever calls it opens. Each
+ * answer shows as it comes, through the tickets' own requests.
+ */
 export function useAddUnaddedPurchases(): void {
-  const api = useApi();
   const { id } = useMe();
-  const { set } = useTickets();
+  const { buyer } = useTickets();
   useEffect(() => {
-    void addUnaddedPurchases(api, id).then((tickets) => {
-      if (tickets) set(tickets);
-    });
-  }, [api, id, set]);
+    void addUnaddedPurchases(buyer, id);
+  }, [buyer, id]);
 }

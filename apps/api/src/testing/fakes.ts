@@ -2,6 +2,9 @@ import { users, type Db } from "@drawing-app/db";
 import { bytes32 } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import type {
+  Clock,
+  ConfiguredContracts,
+  ContractReads,
   EnsDeps,
   EscrowGift,
   GiftChain,
@@ -21,7 +24,7 @@ import type {
 import { createDevLineVerifier } from "../services/devSignIn.ts";
 import { stickerImageUrls } from "../services/imageStore.ts";
 import type { StickerPngKind } from "../shapes.ts";
-import { isHex, keccak256, toBytes, type Hex } from "viem";
+import { getAddress, isHex, keccak256, toBytes, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
 import { createNamingQueue } from "../ens/naming.ts";
@@ -93,11 +96,14 @@ const missingEscrowGift = (): EscrowGift => ({
   status: "missing",
 });
 
+/** A time as a block's timestamp gives it: whole seconds. */
+const blockSeconds = (at: Date) => Math.floor(at.getTime() / 1000);
+
 /**
  * Chain mode without a chain. The escrow holds what the test puts in `escrow`; any other gift reads
- * as missing, as before its deposit lands.
+ * as missing, as before its deposit lands. Its blocks are stamped with `clock`'s time.
  */
-export function fakeGiftChain() {
+export function fakeGiftChain(clock: Clock = { now: () => new Date() }) {
   const escrow = new Map<string, EscrowGift>();
   const claimTransactions = new Map<string, string>();
   let claims = 0;
@@ -143,6 +149,16 @@ export function fakeGiftChain() {
       claimTransactions.set(giftId, txHash);
       escrow.set(giftId, { ...gift, recipient, status: "claimed" });
       return Promise.resolve({ claimed: true as const, txHash });
+    },
+    returnExpiredGift: (giftId) => {
+      const gift = escrow.get(giftId) ?? missingEscrowGift();
+      // The escrow's own checks: the gift is pending, and this block's second is past its expiry.
+      if (gift.status !== "pending") return Promise.reject(new Error("Gift is not pending"));
+      if (blockSeconds(clock.now()) <= blockSeconds(gift.expiresAt)) {
+        return Promise.reject(new Error("Gift has not expired"));
+      }
+      escrow.set(giftId, { ...gift, status: "expired_returned" });
+      return Promise.resolve({ txHash: bytes32(`return ${giftId}`) });
     },
   };
   return { ...chain, escrow, claimTransactions };
@@ -227,6 +243,28 @@ export function fakeNameWriter({ failAt }: { failAt?: string } = {}) {
 
 /** The gateway signer's key in tests. */
 export const TEST_GATEWAY_KEY: Hex = `0x${"6a".repeat(32)}`;
+
+/** The contracts a test server is configured with, and the relayer that sends from them. */
+export const TEST_CONTRACTS: ConfiguredContracts = {
+  relayer: getAddress(fakeAddress("relayer")),
+  stickers: getAddress(fakeAddress("StickerNFT")),
+  escrow: getAddress(fakeAddress("StickerGiftEscrow")),
+  names: getAddress(fakeAddress("CroquisNames")),
+  resolver: getAddress(fakeAddress("CroquisResolver")),
+};
+
+/** What TEST_CONTRACTS answer about each other when they were deployed together, but for `change`. */
+export const fakeContractReads = (
+  change: Partial<Omit<ContractReads, "configured">> = {},
+): ContractReads => ({
+  configured: TEST_CONTRACTS,
+  relayerIsNamer: true,
+  namesStickers: TEST_CONTRACTS.stickers,
+  resolverStickers: TEST_CONTRACTS.stickers,
+  escrowSticker: TEST_CONTRACTS.stickers,
+  escrowNames: TEST_CONTRACTS.names,
+  ...change,
+});
 
 /** The names under croquis.eth with a fixed gateway signer, writing through `writer`. */
 export const fakeEns = (writer: NameWriter | null = null): EnsDeps => ({

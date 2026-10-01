@@ -12,7 +12,7 @@ export interface KeptGift {
   depositHash?: Hash;
   takeOutSentAt?: number;
   takeOutHash?: Hash;
-  /** Its gift message went out and the server hasn't heard yet, or LINE didn't say whether it did. */
+  /** Its gift message went out and the server hasn't heard yet, or LINE's picker may have sent it. */
   message?: "sent" | "maybeSent";
 }
 

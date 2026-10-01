@@ -23,6 +23,8 @@ MemoryMax=512M
 TasksMax=64
 
 # Sandboxing: it writes only its database and sticker images, and calls LINE, Privy and Ethereum.
+# It runs as the same user as the auth server, so the Privy JWT signing key is hidden from it.
+InaccessiblePaths=-/srv/sticker-auth
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict

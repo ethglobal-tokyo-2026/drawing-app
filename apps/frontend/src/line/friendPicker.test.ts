@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { canOpenPicker, sendInLineChat, type LiffPicker, type PickerMessage } from "./friendPicker";
 
 const message: PickerMessage = { type: "text", text: "hi" };
@@ -23,6 +23,10 @@ function fakeLine({
 
 const liffError = (code: string) => Object.assign(new Error("subwindow closed"), { code });
 
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe("LINE's picker", () => {
   it("opens wherever LINE says the picker is available, in the LINE app or a browser", () => {
     expect(canOpenPicker(fakeLine())).toBe(true);
@@ -45,15 +49,24 @@ describe("LINE's picker", () => {
     expect(await sendInLineChat(line, [message])).toBe("unknown");
   });
 
-  it("says the picker failed before it opened, keeping LINE's error code", async () => {
-    const line = fakeLine({ picker: () => Promise.reject(liffError("CREATE_SUBWINDOW_FAILED")) });
-    await expect(sendInLineChat(line, [message])).rejects.toThrow(
-      /LINE’s friend picker failed.*CREATE_SUBWINDOW_FAILED.*subwindow closed/,
-    );
-  });
+  it.each(["CREATE_SUBWINDOW_FAILED", "FORBIDDEN", "UNAUTHORIZED"])(
+    "says the picker failed before it opened on %s, keeping LINE's error code",
+    async (code) => {
+      const line = fakeLine({ picker: () => Promise.reject(liffError(code)) });
+      await expect(sendInLineChat(line, [message])).rejects.toThrow(
+        new RegExp(`LINE’s friend picker failed.*${code}.*subwindow closed`),
+      );
+    },
+  );
 
   it("reads a failure once the picker may have opened as unknown", async () => {
     const line = fakeLine({ picker: () => Promise.reject(liffError("EXCEPTION_IN_SUBWINDOW")) });
     expect(await sendInLineChat(line, [message])).toBe("unknown");
+  });
+
+  it("says the picker failed before it opened when asked for offline, since LIFF needs LINE first", async () => {
+    vi.stubGlobal("navigator", { onLine: false });
+    const line = fakeLine({ picker: () => Promise.reject(liffError("EXCEPTION_IN_SUBWINDOW")) });
+    await expect(sendInLineChat(line, [message])).rejects.toThrow(/LINE’s friend picker failed/);
   });
 });

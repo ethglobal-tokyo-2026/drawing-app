@@ -12,14 +12,13 @@ import {CroquisNames} from "./ens/CroquisNames.sol";
 import {CroquisResolver} from "./ens/CroquisResolver.sol";
 import {EnsNames, IEnsRegistry} from "./ens/EnsV2.sol";
 
-/// @notice Holds a sticker after Giving until the recipient accepts or rejects it. While it waits, the
-///         gift has a name, g-<first 8 bytes of giftId>.gifts.croquis.eth, that expires with it.
+/// @notice Holds a sticker after Giving until it's received, its sender takes it out, or it expires.
+///         While it waits, the gift has a name, g-<first 8 bytes of giftId>.gifts.croquis.eth, that
+///         expires with it.
 contract StickerGiftEscrow is AccessControl, EIP712, IERC721Receiver, ReentrancyGuard {
     bytes32 public constant CLAIM_SIGNER_ROLE = keccak256("CLAIM_SIGNER_ROLE");
     bytes32 public constant CLAIM_TYPEHASH =
         keccak256("GiftClaim(bytes32 giftId,address recipient,uint256 authorizationDeadline)");
-    bytes32 public constant REJECT_TYPEHASH =
-        keccak256("GiftReject(bytes32 giftId,uint256 authorizationDeadline)");
 
     enum GiftStatus {
         Missing,
@@ -55,7 +54,6 @@ contract StickerGiftEscrow is AccessControl, EIP712, IERC721Receiver, Reentrancy
         uint64 expiresAt
     );
     event GiftClaimed(bytes32 indexed giftId, uint256 indexed tokenId, address indexed recipient);
-    event GiftRejected(bytes32 indexed giftId, uint256 indexed tokenId, address indexed sender);
     event GiftTakenOut(bytes32 indexed giftId, uint256 indexed tokenId, address indexed sender);
     event ExpiredGiftReturned(
         bytes32 indexed giftId, uint256 indexed tokenId, address indexed sender
@@ -151,35 +149,12 @@ contract StickerGiftEscrow is AccessControl, EIP712, IERC721Receiver, Reentrancy
         emit GiftClaimed(giftId, gift.tokenId, recipient);
     }
 
-    function rejectGift(bytes32 giftId, uint256 authorizationDeadline, bytes calldata authorization)
-        external
-        nonReentrant
-    {
-        Gift storage gift = _pendingGift(giftId);
-        if (block.timestamp > gift.expiresAt || block.timestamp > authorizationDeadline) {
-            revert AuthorizationExpired();
-        }
-        bytes32 digest =
-            _hashTypedDataV4(keccak256(abi.encode(REJECT_TYPEHASH, giftId, authorizationDeadline)));
-        if (!hasRole(CLAIM_SIGNER_ROLE, ECDSA.recover(digest, authorization))) {
-            revert InvalidSigner();
-        }
-
-        gift.status = GiftStatus.Rejected;
-        delete pendingGiftForToken[gift.tokenId];
-        _endGiftName(giftId);
-        sticker.safeTransferFrom(address(this), gift.sender, gift.tokenId);
-        names.syncSticker(gift.tokenId);
-        emit GiftRejected(giftId, gift.tokenId, gift.sender);
-    }
-
     /// @notice Lets the original sender take a pending sticker back without a backend signature.
     function takeOut(bytes32 giftId) external nonReentrant {
         Gift storage gift = _pendingGift(giftId);
         if (msg.sender != gift.sender) revert NotGiftSender(giftId, msg.sender);
 
-        // The database already uses Rejected for every sender return before expiry. The dedicated
-        // event distinguishes a take-out from a backend-authorized rejection.
+        // Rejected marks a take-out: the database mirrors GiftStatus and reads rejected as one.
         gift.status = GiftStatus.Rejected;
         delete pendingGiftForToken[gift.tokenId];
         _endGiftName(giftId);

@@ -58,6 +58,11 @@ export const stickerCreation = {
         en: "Couldn’t pick up your drawing,\nso its ticket carries over",
         ja: "続きから再開できなかったので、\nチケットはそのまま使えます",
       },
+      /** Drawing screen, top left: the white label under the timer when a reload couldn't bring back your drawing, but its seal had reached the server, so it's on your sticker board and a fresh sheet takes its place, until the first stroke; also announced */
+      sealedBeforeReload: {
+        en: "Your last sticker was sealed",
+        ja: "前回のシールは仕上がりました",
+      },
       /** Drawing screen, top left: the white label under the timer when a reload couldn't bring back your drawing in progress, and it had no ticket to carry over, until the first stroke; also announced */
       lost: {
         en: "Couldn’t pick up where you left off",
@@ -130,6 +135,11 @@ export const stickerCreation = {
     refused: { en: "Couldn’t seal. {{reason}}", ja: "仕上げられませんでした。{{reason}}" },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when a seal failed at 0:00, in front of that chip's words; {{problem}} is the words */
     timeUp: { en: "Time’s up. {{problem}}", ja: "時間切れです。{{problem}}" },
+    /** Drawing screen, bottom right: the chip beside the seal key, announced, when the server refused the seal at 0:00; the sheet is fresh again and the chip goes with its first stroke; {{reason}} is the refusal's message */
+    refusedAtTimeUp: {
+      en: "Time’s up. The server refused the seal, so nothing was sealed. {{reason}}",
+      ja: "時間切れです。サーバーが仕上げを受け付けなかったので、何も仕上がりませんでした。{{reason}}",
+    },
     /** Drawing screen, bottom right: the chip beside the seal key, announced, when a reload brings back a drawing whose seal was on its way, so the sheet stays as it was sealed; tapping the check finishes the seal */
     interrupted: {
       en: "Your sticker was being sealed. Tap the check to finish sealing it.",

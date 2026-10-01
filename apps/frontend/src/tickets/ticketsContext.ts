@@ -1,6 +1,9 @@
 import type { TicketKind, Tickets, TicketUse } from "@drawing-app/api/client";
 import { createContext } from "react";
-import type { ApiError } from "../api/apiClient";
+import type { ApiClient, ApiError } from "../api/apiClient";
+
+/** The requests a purchase sends: buying a pack, and loading the tickets once it's already counted. */
+export type TicketBuyer = Pick<ApiClient, "buyTickets" | "tickets">;
 
 /**
  * What the drawing screen's sheet needs from Draw: "fresh" when Draw starts a new sheet, which spends a ticket;
@@ -22,12 +25,15 @@ export interface TicketsValue {
    * another.
    */
   spend: (kind: TicketKind) => Promise<TicketUse>;
-  /** A spend's key is still kept: that spend may have landed, and no sheet has kept its ticket use. */
+  /**
+   * A spend's key is still kept and the server didn't refuse the last spend sent with it: that spend
+   * may have landed, and no sheet has kept its ticket use.
+   */
   hasKeptSpend: () => boolean;
   /** The drawing screen kept the ticket use a spend answered with, so that spend's key goes. */
   forgetKeptSpend: () => void;
-  /** Takes the tickets a purchase answered with. */
-  set: (tickets: Tickets) => void;
+  /** Sends a purchase's requests, whose answers show your tickets in the order the requests went out. */
+  buyer: TicketBuyer;
   /** What Draw means for the drawing screen's sheet, as the drawing screen last said. */
   sheet: Sheet;
   setSheet: (sheet: Sheet) => void;

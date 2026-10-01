@@ -1,7 +1,8 @@
 import type { Gift } from "@drawing-app/api/client";
-import type { ApiClient } from "../api/apiClient";
+import type { ApiClient, ErrorCode } from "../api/apiClient";
 import { ApiError } from "../api/apiClient";
 import { currentLanguage } from "../i18n/i18n";
+import { forgetMyStickerBoard } from "../sticker-board/useMyStickerBoard";
 import { formatNo } from "../stickers/format";
 import { buildGiftMessage, type GiftMessage } from "./giftMessage";
 import {
@@ -69,9 +70,15 @@ export interface GiftBackend {
   pack: (sticker: GiftSticker, onWait?: (wait: PackWait) => void) => Promise<PackedGift>;
   /** LINE, or the giver, said the gift message went out. */
   markSent: (giftId: string) => Promise<void>;
-  /** The picker closed or failed without sending; the gift stays in the bag for another try. */
+  /**
+   * The picker closed, or failed before it opened, without sending: the gift stays in the bag for
+   * another try, and its maybe-sent mark goes.
+   */
   markCancelled: (giftId: string) => Promise<void>;
-  /** LINE didn't say whether the gift message went out, so it's never sent again. */
+  /**
+   * LINE's picker may send the gift message from now on. Kept, so until a cancel clears it the gift
+   * message is never sent again, even after a reload.
+   */
   markMaybeSent: (giftId: string) => void;
   /** The sticker came back out of the bag. */
   takeOut: (giftId: string) => Promise<void>;
@@ -123,6 +130,14 @@ const refusedWith = (code: string) => (error: unknown) =>
 /** No answer, or the server failing: what was sent may not have landed. */
 const unanswered = (error: unknown) =>
   error instanceof ApiError && (error.status === 0 || error.status >= 500);
+/** Refusals no later report can change: the gift is gone, closed, or someone else's. */
+const FINAL_REFUSALS: ReadonlySet<string> = new Set([
+  "gift_not_found",
+  "not_yours",
+  "gift_closed",
+] satisfies ErrorCode[]);
+const refusedForGood = (error: unknown) =>
+  error instanceof ApiError && FINAL_REFUSALS.has(error.code);
 
 /** A take-out may be on chain: the gift must come out, never go back into LINE. */
 const takingOutOnChain = (attempt: KeptGift | undefined) =>
@@ -232,7 +247,8 @@ export function createApiGiftBackend({
     try {
       await retrying(() => api.reportShared(giftId, "sent"), unanswered);
     } catch (error) {
-      if (!unanswered(error)) settle(giftId);
+      // Any other refusal, signed out included, leaves the mark for the report to go again.
+      if (refusedForGood(error)) settle(giftId);
       throw error;
     }
     settle(giftId);
@@ -313,6 +329,7 @@ export function createApiGiftBackend({
     onWait?: (wait: PackWait) => void,
   ): Promise<PackedGift> => {
     let packaged = await packageGift(sticker, onWait);
+    forgetMyStickerBoard();
     try {
       const previousAttempt = attemptOf(packaged.gift.id);
       if (previousAttempt?.message) {
@@ -387,7 +404,12 @@ export function createApiGiftBackend({
       return operation;
     },
     markSent,
-    markCancelled: async (giftId) => void (await api.reportShared(giftId, "cancelled")),
+    markCancelled: async (giftId) => {
+      // Nothing went out, so the same gift message can go into LINE again.
+      const attempt = attemptOf(giftId);
+      if (attempt?.message === "maybeSent") update(giftId, attempt, { message: undefined });
+      await api.reportShared(giftId, "cancelled");
+    },
     markMaybeSent: (giftId) => {
       const attempt = attemptOf(giftId);
       if (attempt) update(giftId, attempt, { message: "maybeSent" });

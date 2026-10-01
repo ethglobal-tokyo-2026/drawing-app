@@ -6,7 +6,7 @@ import { emptyApi, renderWithApi, shownText } from "../api/testing";
 import { gift, MARKUP_LIKE_NAME } from "../api/testFixtures";
 import { formatDay, formatDuration, formatNo } from "../stickers/format";
 import type { GiftSender, GiftSendOutcome } from "./giftSender";
-import { PREPARING_SLOW_MS } from "./giveFlow";
+import { PICKER_RETURN_MS, PREPARING_SLOW_MS } from "./giveFlow";
 import { Giving } from "./Giving";
 
 const liff = vi.hoisted(() => ({ openWindow: vi.fn() }));
@@ -210,6 +210,18 @@ describe("Giving", () => {
     expect(giftOf("s-cancelled")).toBe("taken_out");
     expect(title()).toBe("Give No.0147");
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("asks whether it went out once LINE's answer is late, and seals when the giver says so", async () => {
+    open("s-late");
+    tap("Send in a LINE chat");
+    await wait(1150);
+    await wait(PICKER_RETURN_MS);
+    expect(title()).toBe("Did it go out?");
+    tap("It went out");
+    await wait(0);
+    expect(title()).toBe("Closed and sent");
+    expect(giftOf("s-late")).toBe("sent");
   });
 
   it("keeps focus on the key and says the new step when the picker is cancelled", async () => {

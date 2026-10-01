@@ -370,8 +370,9 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     [api],
   );
 
-  // The board mounts anew on every visit, so its load is its refresh.
-  const board = useMyStickerBoard();
+  // The board mounts anew on every visit, so its load is its refresh. An answer kept from an earlier
+  // visit predates that visit's moves, which the phone's board holds, so it waits for its own.
+  const board = useMyStickerBoard({ ownLoadOnly: true });
   const answer = board.state === "ready" ? board.data : null;
   /** The server's answer the stickers were last adopted from. */
   const [adoptedAnswer, setAdoptedAnswer] = useState<typeof answer>(null);
