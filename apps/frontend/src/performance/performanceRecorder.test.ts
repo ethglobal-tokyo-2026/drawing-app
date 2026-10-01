@@ -301,6 +301,25 @@ describe("the recorder on the page", () => {
     expect(types(unlistens.mock.calls)).toEqual(types(listens.mock.calls));
   });
 
+  it("notes a font event that names no faces, as WebKit's don't", () => {
+    const fonts = new EventTarget();
+    Object.defineProperty(document, "fonts", { value: fonts, configurable: true });
+    try {
+      startPerformanceRecorder();
+      for (let t = 0; t <= 320; t += 16) frameAt(t);
+      clock = 330;
+      fonts.dispatchEvent(new Event("loadingdone"));
+      frameAt(400);
+
+      const [slow] = readPerformanceRecording()?.slowFrames ?? [];
+      expect(slow.events.filter((e) => e.kind === "font").map((e) => e.detail)).toEqual([
+        "loadingdone",
+      ]);
+    } finally {
+      Reflect.deleteProperty(document, "fonts");
+    }
+  });
+
   it("notes the network by host and path without URL.parse, and skips a name that isn't a URL", () => {
     // iOS before 18 has no URL.parse, and LINE's browser on an iPhone is the phone's Safari.
     vi.spyOn(URL, "parse").mockImplementation(() => {

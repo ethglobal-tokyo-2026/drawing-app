@@ -543,8 +543,12 @@ function startListening(log: PerformanceLog, stops: (() => void)[]): void {
   // Every browser the app runs in has document.fonts; happy-dom doesn't.
   const fonts: FontFaceSet | undefined = document.fonts;
   if (fonts) {
-    const onFonts = (e: FontFaceSetLoadEvent) =>
-      note("font", `${e.type} ${[...new Set(e.fontfaces.map((face) => face.family))].join(", ")}`);
+    const onFonts = (e: FontFaceSetLoadEvent) => {
+      // WebKit's events carry no fontfaces, so there they say only what happened.
+      const faces: readonly FontFace[] | undefined = e.fontfaces;
+      const families = faces ? [...new Set(faces.map((face) => face.family))].join(", ") : "";
+      note("font", families ? `${e.type} ${families}` : e.type);
+    };
     for (const type of ["loading", "loadingdone", "loadingerror"] as const) {
       fonts.addEventListener(type, onFonts);
       stops.push(() => fonts.removeEventListener(type, onFonts));
