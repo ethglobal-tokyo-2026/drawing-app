@@ -105,16 +105,15 @@
   mix-blend-mode: soft-light;
 }
 
-/* Veiled, for a viewer who isn't adult: the image blurs inside its cut, so the outline and the foil
-   stay sharp around it, and an 18+ mark sits in the middle. */
+/* Veiled, for a viewer who isn't adult: the API sends the veiled image, already blurred and washed
+   inside its cut, so the outline and the foil stay sharp around it. It shows as it comes, and an 18+
+   mark sits in the middle. */
 .sticker-figure.is-veiled {
   container-type: inline-size;
 }
 
 .sticker-figure.is-veiled .sticker-figure__img {
-  -webkit-mask: var(--m, none) 0 0 / 100% 100% no-repeat;
-  mask: var(--m, none) 0 0 / 100% 100% no-repeat;
-  filter: blur(clamp(6px, 9cqi, 18px)) saturate(0.7);
+  filter: none;
 }
 
 .sticker-figure__veil {
@@ -123,9 +122,6 @@
   display: grid;
   place-items: center;
   pointer-events: none;
-  -webkit-mask: var(--m, none) 0 0 / 100% 100% no-repeat;
-  mask: var(--m, none) 0 0 / 100% 100% no-repeat;
-  background: rgba(255, 240, 246, 0.42);
 }
 
 /* The shared 18+ mark, scaled with the figure from the 11px floor. */

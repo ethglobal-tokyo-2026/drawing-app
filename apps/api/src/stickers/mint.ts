@@ -4,6 +4,7 @@ import type { AppDeps, MintedToken } from "../deps.ts";
 import { logFailure, logInfo } from "../diagnostics.ts";
 import { queueNaming } from "../ens/naming.ts";
 import { startMidnightJob, type Schedule } from "../midnightJob.ts";
+import { publicStickerViewer } from "../shapes.ts";
 
 /**
  * Writes a mint's token unless the sticker has one. Sealing's retry and the mint catch-up can mint
@@ -35,6 +36,7 @@ export async function mintSticker(deps: AppDeps, stickerId: string): Promise<voi
       artistId: sticker.artistId,
       contentHash: sticker.contentHash,
       metadataUri: sticker.metadataUri,
+      image: publicStickerViewer(deps.images).images(sticker).png,
       number: sticker.number,
       width: sticker.width,
       height: sticker.height,

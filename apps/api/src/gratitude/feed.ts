@@ -10,7 +10,7 @@ import {
   toGratitude,
   toPerson,
   type Gratitude,
-  type StickerImages,
+  type StickerViewer,
 } from "../shapes.ts";
 import { gunzipReplay, replayV1Schema } from "./replay.ts";
 
@@ -39,11 +39,7 @@ export const gratitudeWithReplaySchema = z.object({
 export type GratitudeWithReplay = z.infer<typeof gratitudeWithReplaySchema>;
 
 /** The pink tag's feed: gratitude on gifts the giver gave that they haven't watched, oldest first. */
-export function unseenGratitude(
-  db: Db,
-  giverId: string,
-  urls: (contentHash: string) => StickerImages,
-): UnseenGratitude {
+export function unseenGratitude(db: Db, giverId: string, viewer: StickerViewer): UnseenGratitude {
   const rows = db
     .select({ combo: gratitude, stickerId: gifts.stickerId, receiver: users })
     .from(gratitude)
@@ -56,7 +52,7 @@ export function unseenGratitude(
   const stickerOf = stickerLookup(
     db,
     rows.map(({ stickerId }) => stickerId),
-    urls,
+    viewer,
   );
   return {
     unseen: rows.map(({ combo, stickerId, receiver }) => ({

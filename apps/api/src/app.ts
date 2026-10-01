@@ -1,6 +1,9 @@
+import { stickers, type Db } from "@drawing-app/db";
 import { serveStatic } from "@hono/node-server/serve-static";
+import { and, eq } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { except } from "hono/combine";
+import { createMiddleware } from "hono/factory";
 import { z } from "zod";
 import { IMMUTABLE_MAX_AGE_S } from "./cacheControl.ts";
 import type { AppDeps } from "./deps.ts";
@@ -15,7 +18,8 @@ import { sessionRoutes } from "./routes/session.ts";
 import { stickerBoardRoutes } from "./routes/stickerBoards.ts";
 import { stickerRoutes } from "./routes/stickers.ts";
 import { ticketRoutes } from "./routes/tickets.ts";
-import { requireSession, type AppEnv } from "./session.ts";
+import { requireSession, sessionUser, type AppEnv } from "./session.ts";
+import { ageStatusOf } from "./shapes.ts";
 import { requestDiagnostics } from "./requestDiagnostics.ts";
 
 /**
@@ -76,9 +80,50 @@ const serverLogQuerySchema = z.object({
   lines: z.coerce.number().int().positive().max(MAX_SERVER_LOG_LINES).default(SERVER_LOG_LINES),
 });
 
+/** The files that show a sticker's drawing, by its content hash: its PNG, its WebP and the flat sheet. */
+const DRAWING_FILE = /^\/(0x[0-9a-f]{64})(?:\.png|\.webp|\.flat\.png)$/;
+/** A sticker's NFT metadata, `{stickerId}.json`, beside its images. */
+const METADATA_SUFFIX = ".json";
+
+/** Whether an NSFW sticker was sealed with this content hash, so its files show its drawing. */
+const isNsfwDrawing = (db: Db, contentHash: string) =>
+  db
+    .select({ id: stickers.id })
+    .from(stickers)
+    .where(and(eq(stickers.contentHash, contentHash), eq(stickers.nsfw, true)))
+    .get() !== undefined;
+
+/**
+ * Serves the files that show an NSFW sticker's drawing only to an adult's session, never publicly
+ * cached; anyone else gets 403 adults_only. Every other image is public, and cached for good.
+ */
+const imageAccess = (deps: AppDeps) =>
+  createMiddleware(async (c, next) => {
+    const drawing = DRAWING_FILE.exec(c.req.path.slice(STICKER_IMAGES_PATH.length));
+    const adultsOnly = drawing !== null && isNsfwDrawing(deps.db, drawing[1]);
+    if (adultsOnly) {
+      const viewer = await sessionUser(c, deps);
+      if (!viewer || ageStatusOf(viewer) !== "adult") {
+        const detail = `${c.req.path} shows an NSFW sticker's drawing, for adults only`;
+        return apiError(c, 403, "adults_only", detail);
+      }
+    }
+    await next();
+    // serveStatic's onFound runs after it has made the response, too late to add a header.
+    if (!c.res.ok) return;
+    // NFT metadata is rewritten in place once its sticker's veil exists, so clients check it each
+    // time. An image's name is its content's hash, so the file never changes.
+    if (c.req.path.endsWith(METADATA_SUFFIX)) {
+      c.header("Cache-Control", "public, no-cache");
+    } else {
+      const scope = adultsOnly ? "private" : "public";
+      c.header("Cache-Control", `${scope}, max-age=${IMMUTABLE_MAX_AGE_S}, immutable`);
+    }
+  });
+
 /**
  * The REST API as the server runs it, with the sticker images in `imageDir` served in front of it,
- * public like a CDN's. A name with no image is a 404 there, never the API's session check. The
+ * as imageAccess allows. A name with no image is a 404 there, never the API's session check. The
  * server log is in front of it too, public, since the agents troubleshooting the box have no session:
  * its newest SERVER_LOG_LINES lines, or ?lines= up to MAX_SERVER_LOG_LINES, and 503 while another
  * request reads it.
@@ -86,12 +131,7 @@ const serverLogQuerySchema = z.object({
 export function createServer(deps: AppDeps, imageDir: string) {
   const images = `${STICKER_IMAGES_PATH}/*`;
   return new Hono()
-    .use(images, async (c, next) => {
-      await next();
-      // serveStatic's onFound runs after it has made the response, too late to add a header. An
-      // image's name is its content's hash, so the file never changes.
-      if (c.res.ok) c.header("Cache-Control", `public, max-age=${IMMUTABLE_MAX_AGE_S}, immutable`);
-    })
+    .use(images, imageAccess(deps))
     .use(
       images,
       serveStatic({

@@ -22,7 +22,7 @@ import type {
   WorldIdVerdict,
 } from "../deps.ts";
 import { createDevLineVerifier } from "../services/devSignIn.ts";
-import { stickerImageUrls } from "../services/imageStore.ts";
+import { stickerImageUrls, veiledImageUrls } from "../services/imageStore.ts";
 import type { StickerPngKind } from "../shapes.ts";
 import { getAddress, isHex, keccak256, toBytes, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
@@ -67,7 +67,12 @@ export function fakeImageStore(cdnBaseUrl = "https://cdn.test") {
       if (!saved.has(contentHash)) saved.set(contentHash, pngs);
       return Promise.resolve();
     },
+    saveVeiled: (contentHash) =>
+      saved.has(contentHash)
+        ? Promise.resolve(bytes32(`veiled ${contentHash}`))
+        : Promise.reject(new Error(`No images are saved under ${contentHash}`)),
     urls: (contentHash) => stickerImageUrls(cdnBaseUrl, contentHash),
+    veiledUrls: (contentHash, veiledHash) => veiledImageUrls(cdnBaseUrl, contentHash, veiledHash),
   };
   return { ...store, saved };
 }

@@ -3,6 +3,7 @@ import { stickers, stickerTimelapses, type Db } from "@drawing-app/db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { failureCause } from "../diagnostics.ts";
+import type { StickerViewer } from "../shapes.ts";
 
 /** A timelapse's JSON, unzipped, at most: a gzip that grows past it is refused, not read. */
 const MAX_TIMELAPSE_JSON_BYTES = 16 * 1024 * 1024;
@@ -53,20 +54,22 @@ export function timelapseProblem(gzipped: Uint8Array): string | null {
 }
 
 /**
- * A sticker's timelapse, or why there's none. Sealing stores only one that reads, so one that
- * doesn't throws, naming the sticker.
+ * A sticker's timelapse, or why `viewer` gets none: it shows the drawing, so a sticker veiled to them
+ * is adults_only. Sealing stores only one that reads, so one that doesn't throws, naming the sticker.
  */
 export function readTimelapse(
   db: Pick<Db, "select">,
   stickerId: string,
-): TimelapseV1 | "sticker_not_found" | "timelapse_not_found" {
+  viewer: Pick<StickerViewer, "veils">,
+): TimelapseV1 | "sticker_not_found" | "adults_only" | "timelapse_not_found" {
   const row = db
-    .select({ id: stickers.id, ops: stickerTimelapses.ops })
+    .select({ id: stickers.id, nsfw: stickers.nsfw, ops: stickerTimelapses.ops })
     .from(stickers)
     .leftJoin(stickerTimelapses, eq(stickerTimelapses.stickerId, stickers.id))
     .where(eq(stickers.id, stickerId))
     .get();
   if (!row) return "sticker_not_found";
+  if (viewer.veils(row)) return "adults_only";
   if (!row.ops) return "timelapse_not_found";
   try {
     return timelapseV1Schema.parse(unzippedJson(row.ops));

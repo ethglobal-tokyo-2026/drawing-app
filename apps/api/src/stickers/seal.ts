@@ -17,6 +17,7 @@ import {
   stickerPlacementSchema,
   stickerPngsSchema,
   stickerSchema,
+  stickerViewer,
   toStickerPlacement,
   type StickerPngKind,
 } from "../shapes.ts";
@@ -130,8 +131,9 @@ async function mintOrRefuse(
   }
 }
 
-function sealedSticker({ db, images }: AppDeps, userId: string, stickerId: string): SealResponse {
-  const sticker = loadStickers(db, [stickerId], images.urls).get(stickerId);
+function sealedSticker(deps: AppDeps, userId: string, stickerId: string): SealResponse {
+  const { db } = deps;
+  const sticker = loadStickers(db, [stickerId], stickerViewer(deps, userId)).get(stickerId);
   const placement = db
     .select()
     .from(stickerPlacements)
@@ -144,8 +146,9 @@ function sealedSticker({ db, images }: AppDeps, userId: string, stickerId: strin
 }
 
 /**
- * Seals a drawing: checks the ticket, the images and the timelapse, stores the files, writes the
- * sticker, then mints it. The files go first, so no sticker row names a file that isn't stored.
+ * Seals a sticker in progress: checks the ticket, the images and the timelapse, stores the files,
+ * writes the sticker, then mints it. The files go first, so no sticker row names a file that isn't
+ * stored.
  */
 export async function sealSticker(
   deps: AppDeps,
@@ -194,6 +197,12 @@ export async function sealSticker(
   await diagnosticStep("sticker.images.save", { userId }, () =>
     deps.images.save(contentHash, pngs),
   );
+  // What anyone who isn't adult sees in its place, made before any row can name the sticker.
+  const veiledHash = form.nsfw
+    ? await diagnosticStep("sticker.veil.save", { userId }, () =>
+        deps.images.saveVeiled(contentHash),
+      )
+    : null;
 
   const stickerId = deps.ids.uuid();
   // The NFT's metadata JSON sits beside the sticker's images on the CDN; the mint writes it.
@@ -223,6 +232,7 @@ export async function sealSticker(
           contentHash,
           metadataUri,
           nsfw: form.nsfw,
+          veiledHash,
         })
         .run();
       tx.update(ticketUses).set({ stickerId }).where(eq(ticketUses.id, form.ticketUseId)).run();

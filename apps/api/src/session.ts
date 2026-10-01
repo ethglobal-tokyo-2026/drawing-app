@@ -39,17 +39,24 @@ export const clearSessionCookie = (c: Context) => {
   deleteCookie(c, SESSION_COOKIE, cookieOptions);
 };
 
+/** The live account a request's valid session cookie names, if there's one. */
+export async function sessionUser(
+  c: Context,
+  { db, sessionSecret }: Pick<AppDeps, "db" | "sessionSecret">,
+) {
+  const userId = await getSignedCookie(c, sessionSecret, SESSION_COOKIE);
+  if (!userId) return undefined;
+  return db
+    .select({ id: users.id, ageVerifiedAt: users.ageVerifiedAt })
+    .from(users)
+    .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+    .get();
+}
+
 /** Lets a request through with a valid session cookie for a live account; otherwise 401 signed_out. */
-export const requireSession = ({ db, sessionSecret }: Pick<AppDeps, "db" | "sessionSecret">) =>
+export const requireSession = (deps: Pick<AppDeps, "db" | "sessionSecret">) =>
   createMiddleware<AppEnv>(async (c, next) => {
-    const userId = await getSignedCookie(c, sessionSecret, SESSION_COOKIE);
-    const user = userId
-      ? db
-          .select({ id: users.id })
-          .from(users)
-          .where(and(eq(users.id, userId), isNull(users.deletedAt)))
-          .get()
-      : undefined;
+    const user = await sessionUser(c, deps);
     if (!user) return apiError(c, 401, "signed_out");
     c.set("userId", user.id);
     await next();

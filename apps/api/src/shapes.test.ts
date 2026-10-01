@@ -10,6 +10,7 @@ import {
   personSchema,
   stickerPlacementSchema,
   stickerSchema,
+  stickerViewer,
   toGift,
   toGratitude,
   toMe,
@@ -20,7 +21,7 @@ import { fakeImageStore } from "./testing/fakes.ts";
 import { giveSticker, insertSealedSticker, SPOT } from "./testing/rows.ts";
 
 /** The tests' CDN. */
-const { urls } = fakeImageStore();
+const images = fakeImageStore();
 
 let db: TestDb;
 beforeEach(async () => {
@@ -53,9 +54,10 @@ describe("shapes", () => {
   it("show a sticker with its Original Artist, and its images named by its content hash", () => {
     const artistId = insertUser(db, { handle: "alice" });
     const stickerId = insertSealedSticker(db, artistId);
-    const sticker = stickerSchema.parse(loadStickers(db, [stickerId], urls).get(stickerId));
+    const viewer = stickerViewer({ db, images }, artistId);
+    const sticker = stickerSchema.parse(loadStickers(db, [stickerId], viewer).get(stickerId));
     expect(sticker.artist).toMatchObject({ id: artistId, handle: "alice" });
-    expect(sticker.images).toEqual(urls(sticker.contentHash));
+    expect(sticker.images).toEqual(images.urls(sticker.contentHash));
     expect(sticker.images.png).toContain(`${sticker.contentHash}.png`);
   });
 
@@ -63,7 +65,8 @@ describe("shapes", () => {
     const artistId = insertUser(db);
     const asked = [insertSealedSticker(db, artistId), insertSealedSticker(db, artistId)];
     insertSealedSticker(db, artistId);
-    expect([...loadStickers(db, asked, urls).keys()].sort()).toEqual([...asked].sort());
+    const viewer = stickerViewer({ db, images }, artistId);
+    expect([...loadStickers(db, asked, viewer).keys()].sort()).toEqual([...asked].sort());
   });
 
   it("show a placement as null until the board places it, then whole", () => {

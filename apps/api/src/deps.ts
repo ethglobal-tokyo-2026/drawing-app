@@ -144,8 +144,15 @@ export interface ImageStore {
    * from them, keeping any already there.
    */
   save: (contentHash: string, pngs: Record<StickerPngKind, Uint8Array>) => Promise<void>;
+  /**
+   * Makes an NSFW sticker's veiled image from its saved PNG and mask, and saves it under its own
+   * content hash, which it resolves to. Rejects when the sticker's images aren't saved.
+   */
+  saveVeiled: (contentHash: string) => Promise<string>;
   /** Where the CDN serves them. */
   urls: (contentHash: string) => StickerImages;
+  /** What a viewer who isn't adult gets for an NSFW sticker: `urls` with its veiled image in place. */
+  veiledUrls: (contentHash: string, veiledHash: string | null) => StickerImages;
 }
 
 /** A sealed sticker's facts, as its NFT records them. */
@@ -154,6 +161,8 @@ interface MintRequest {
   artistId: string;
   contentHash: string;
   metadataUri: string;
+  /** The image its metadata names, which anyone can read: an NSFW sticker's veiled image. */
+  image: string;
   number: number;
   width: number;
   height: number;

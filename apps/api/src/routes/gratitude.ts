@@ -16,7 +16,7 @@ import {
   replayInvalidHook,
 } from "../gratitude/record.ts";
 import type { AppEnv } from "../session.ts";
-import { giftIdParam } from "../shapes.ts";
+import { giftIdParam, stickerViewer } from "../shapes.ts";
 
 /**
  * Gratitude: the receiver records a Mini-game combo; the giver sees the combos they haven't watched,
@@ -39,7 +39,10 @@ export const gratitudeRoutes = (deps: AppDeps) =>
       },
     )
     // Before /:giftId, which would take "unseen" for a gift id.
-    .get("/unseen", (c) => c.json(unseenGratitude(deps.db, c.var.userId, deps.images.urls), 200))
+    .get("/unseen", (c) => {
+      const viewer = stickerViewer(deps, c.var.userId);
+      return c.json(unseenGratitude(deps.db, c.var.userId, viewer), 200);
+    })
     .get("/:giftId", validate("param", giftIdParam), (c) => {
       const { giftId } = c.req.valid("param");
       const found = gratitudeWithReplay(deps.db, giftId);

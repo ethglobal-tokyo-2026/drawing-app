@@ -20,7 +20,6 @@ import {
   RPC_RETRY_COUNT,
   rpcTransport,
 } from "./stickerChain.ts";
-import { stickerImageUrls } from "./imageStore.ts";
 
 const rpc = vi.hoisted(() => ({
   readContract: vi.fn(),
@@ -55,6 +54,7 @@ const STICKER = {
   artistId: "alice",
   contentHash: CONTENT,
   metadataUri: METADATA,
+  image: `https://images.test/${CONTENT}.png`,
   number: 42,
   width: 256,
   height: 256,
@@ -115,11 +115,7 @@ function adapter() {
     resolverContract: "0x0000000000000000000000000000000000000cc1",
     sealerPrivateKey: hex("5"),
     smartWallets: { addressFor: async (id) => (id === "alice" ? ALICE : BOB) },
-    images: {
-      save: async () => {},
-      urls: (contentHash) => stickerImageUrls("https://images.test", contentHash),
-      saveMetadata,
-    },
+    images: { saveMetadata },
   });
   return { ...chain, saveMetadata };
 }
