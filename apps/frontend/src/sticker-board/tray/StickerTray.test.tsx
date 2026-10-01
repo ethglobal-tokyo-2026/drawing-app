@@ -592,6 +592,19 @@ describe("StickerTray", () => {
     expect(stackEl()?.contains(document.activeElement)).toBe(true);
   });
 
+  it("returns focus to the stack when a tapped cell closes the spread, though the browser blurred the cell first", async () => {
+    render(manyStickers(60));
+    await openTray();
+    act(() => board.querySelector<HTMLElement>(".tray__depth")?.click());
+    const cells = board.querySelectorAll<HTMLElement>(".tray__cell");
+    // WebKit takes focus off a tapped button before its click lands, which leaves it on the body.
+    act(() => cells[0]?.blur());
+    expect(document.activeElement).toBe(document.body);
+
+    await act(async () => cells[2]?.click());
+    expect(stackEl()?.contains(document.activeElement)).toBe(true);
+  });
+
   it("takes the folder tabs, then the front sheet's stickers, then the edges of the sheets behind in Tab order, and nothing hidden", async () => {
     // Enough sheets for the +N button.
     render(stickersWithGifts(60));
