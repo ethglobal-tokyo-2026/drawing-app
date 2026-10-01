@@ -36,7 +36,8 @@ export function latestStickerAvatar(
 
 /**
  * Puts a person's names onchain: theirs if it isn't yet, then every minted sticker they drew that
- * has no name, then their avatar. It picks up whatever an earlier run left undone.
+ * has no name, then their avatar. It picks up whatever an earlier run left undone. A sticker it
+ * can't name is logged and passed, and the run rejects once the rest are done.
  */
 export async function nameEverything(deps: AppDeps, userId: string): Promise<void> {
   const { db, clock } = deps;
@@ -79,17 +80,31 @@ export async function nameEverything(deps: AppDeps, userId: string): Promise<voi
     )
     .orderBy(asc(stickers.number))
     .all();
+  const skipped: string[] = [];
   for (const sticker of unnamed) {
     if (sticker.tokenId === null) continue;
-    await writer.ensureStickerName(sticker.tokenId, stickerLabel(sticker.number));
+    const fields = { userId, stickerId: sticker.id, tokenId: sticker.tokenId };
+    try {
+      await writer.ensureStickerName(sticker.tokenId, stickerLabel(sticker.number));
+    } catch (error) {
+      // A sticker in the gift escrow can't be named, and mustn't keep the rest unnamed until it leaves.
+      logFailure("ens.sticker.failed", error, fields);
+      skipped.push(sticker.tokenId);
+      continue;
+    }
     db.update(stickers).set({ ensNamedAt: clock.now() }).where(eq(stickers.id, sticker.id)).run();
-    logInfo("ens.sticker.named", { userId, stickerId: sticker.id, tokenId: sticker.tokenId });
+    logInfo("ens.sticker.named", fields);
   }
 
   // A new name already carries the latest avatar.
   if (wasNamed && avatar !== "") {
     await writer.setAvatar(account, avatar);
     logInfo("ens.avatar.set", { userId });
+  }
+  if (skipped.length > 0) {
+    throw new Error(
+      `Stickers with token IDs ${skipped.join(", ")} stayed unnamed, so the next run retries them`,
+    );
   }
 }
 

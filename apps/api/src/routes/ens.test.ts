@@ -23,6 +23,7 @@ import { devIdToken } from "../services/devSignIn.ts";
 import { meSchema, personSchema } from "../shapes.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { fakeEns, fakeNameWriter, fakeSmartWallets, TEST_GATEWAY_KEY } from "../testing/fakes.ts";
+import { captureLogLines } from "../testing/logLines.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 import { insertSealedSticker } from "../testing/rows.ts";
 
@@ -108,8 +109,11 @@ const avatarFor = (tokenId: string) => {
 };
 
 /** A sticker `artistId` sealed, minted as `tokenId`. */
-const mintedSticker = (artistId: string, tokenId: string, values: { nsfw?: boolean } = {}) =>
-  insertSealedSticker(test.db, artistId, { tokenId, mintTxHash: bytes32(tokenId), ...values });
+const mintedSticker = (
+  artistId: string,
+  tokenId: string,
+  values: { nsfw?: boolean; number?: number } = {},
+) => insertSealedSticker(test.db, artistId, { tokenId, mintTxHash: bytes32(tokenId), ...values });
 
 describe("ENS labels", () => {
   it.each([
@@ -208,37 +212,30 @@ describe("the ENS gateway", () => {
 });
 
 describe("naming", () => {
-  it("names the person, then each minted sticker, and picks up where a failed run stopped", async () => {
+  it("names the person, then each minted sticker, logging and passing one it can't name, and picks up where a failed run stopped", async () => {
+    const logs = captureLogLines();
     const failing = fakeNameWriter({ failAt: "sticker 2 0002" });
     await setup(failing.writer);
     const alice = insertUser(test.db, { handle: "Alice", smartAccountAddress: SMART_ACCOUNT });
-    const first = insertSealedSticker(test.db, alice, {
-      number: 1,
-      tokenId: "1",
-      mintTxHash: `0x${"01".repeat(32)}`,
-    });
-    const second = insertSealedSticker(test.db, alice, {
-      number: 2,
-      tokenId: "2",
-      mintTxHash: `0x${"02".repeat(32)}`,
-    });
-    insertSealedSticker(test.db, alice, { number: 3 });
+    const first = mintedSticker(alice, "1", { number: 1 });
+    const second = mintedSticker(alice, "2", { number: 2 });
+    const third = mintedSticker(alice, "3", { number: 3 });
+    insertSealedSticker(test.db, alice, { number: 4 });
 
-    await expect(nameEverything(test.deps, alice)).rejects.toThrow(
-      "Naming failed at sticker 2 0002",
-    );
-    expect(failing.calls).toEqual(["person alice", "sticker 1 0001"]);
+    await expect(nameEverything(test.deps, alice)).rejects.toThrow();
+    expect(failing.calls).toEqual(["person alice", "sticker 1 0001", "sticker 3 0003"]);
+    logs.expectLogged("ens.sticker.failed", { userId: alice, stickerId: second, tokenId: "2" });
     const namedAt = (id: string) =>
       test.db.select({ at: stickers.ensNamedAt }).from(stickers).where(eq(stickers.id, id)).get()
         ?.at;
     expect(namedAt(first)).not.toBeNull();
     expect(namedAt(second)).toBeNull();
+    expect(namedAt(third)).not.toBeNull();
 
     const { writer, calls } = fakeNameWriter();
-    const ens = fakeEns(writer);
-    test.deps.ens = ens;
+    test.deps.ens = fakeEns(writer);
     await nameEverything(test.deps, alice);
-    expect(calls).toEqual(["sticker 2 0002", `avatar ${avatarFor("2")}`]);
+    expect(calls).toEqual(["sticker 2 0002", `avatar ${avatarFor("3")}`]);
     expect(namedAt(second)).not.toBeNull();
   });
 
