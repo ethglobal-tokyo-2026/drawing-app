@@ -23,6 +23,7 @@ import { ReserveTicketCheckout } from "../tickets/ReserveTicketCheckout";
 import { TicketsNotLoaded } from "../tickets/TicketsNotLoaded";
 import { useTickets } from "../tickets/useTickets";
 import { clamp01 } from "../ui/easing";
+import { QuietLink } from "../ui/QuietLink";
 import { releaseCanvas } from "../ui/releaseCanvas";
 import { sizePx } from "./canvas/brush";
 import { DrawingCanvas, type DrawingCanvasHandle } from "./canvas/DrawingCanvas";
@@ -39,6 +40,7 @@ import { encodeTimelapse, gzipTimelapse } from "./sealing/timelapse";
 import {
   keptColor,
   loadKeptSession,
+  LOAD_TIMEOUT_MS,
   SessionKeeper,
   type KeptDrawing,
   type KeptSession,
@@ -151,6 +153,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // Until the server answers it or refuses it, the sheet can't change: the server may already hold it.
   const sentSeal = useRef<SentSeal | null>(null);
   const [sealProblem, setSealProblem] = useState<string | null>(null);
+  // At 0:00 a seal that never reached the server can be let go for a fresh sheet, since the phone
+  // may fail to cut it every time.
+  const [canStartOver, setCanStartOver] = useState(false);
   /** The chip says LINE's sign-in expired, so tapping the check reconnects instead of sealing. */
   const reconnectOnTap = useRef(false);
   // The out-of-tickets card or the ticket shop, over a fresh sheet, or null.
@@ -236,6 +241,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         // A sealed card handing over to this sheet stays up until it has left.
         setCeremony((c) => (c?.leaving ? c : null));
         setSealProblem(null);
+        setCanStartOver(false);
         setStartProblem(null);
         keepNsfw(false);
         // A fresh sheet starts in a new color, whatever the last one ended in.
@@ -433,6 +439,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       reconnectOnTap.current = problem.kind === "signInExpired";
       const timeUp = clock.elapsed >= SESSION_MS;
       const refused = failure === "refused";
+      setCanStartOver(timeUp && !mayHaveSealed);
       // A refusal at 0:00 resets the sheet, which clears the chip, so the chip is set after it.
       send({ type: "seal-failed", mayHaveSealed, timeUp, refused });
       // The chip says what failed and what to do; the error's own detail is in the console above.
@@ -569,6 +576,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     unsettled.current = next;
     setSealUnsettled(next !== null);
   };
+  const lateReadDeadline = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(lateReadDeadline.current), []);
 
   // A session kept across a reload comes back without asking for another ticket, a drawing on it
   // paused; one that can't be read gives its ticket back.
@@ -582,6 +591,11 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       const reading = kept.status === "unread" && kept.later !== null;
       unsettle({ ticket: kept.ticket, reading, clear: kept.status === "lost" });
       if (tickets.tickets) settleSentSeal(tickets.tickets);
+      // A read that never answers mustn't hold the sheet for good: past a second wait, the tickets say.
+      if (reading) {
+        const sentTicket = kept.ticket;
+        lateReadDeadline.current = setTimeout(() => stopWaitingOnRead(sentTicket), LOAD_TIMEOUT_MS);
+      }
       return;
     }
     setRestoring(false);
@@ -626,6 +640,15 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         `Ticket use ${waiting.ticket}'s seal went out before a reload and the drawing can't be read, so its ticket is dropped`,
       );
     setPickedUp(outcome === "sealed" ? "sealed" : "lost");
+  });
+  const stopWaitingOnRead = useEffectEvent((sentTicket: number) => {
+    const waiting = unsettled.current;
+    if (!waiting?.reading || waiting.ticket !== sentTicket) return;
+    console.error(
+      `Ticket use ${sentTicket}'s drawing still hasn't been read, so the tickets say what became of its seal`,
+    );
+    unsettle({ ...waiting, reading: false });
+    if (tickets.tickets) settleSentSeal(tickets.tickets);
   });
   useEffect(() => {
     const loaded = tickets.tickets;
@@ -944,6 +967,11 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           send({ type: "seal-tap", now: performance.now(), hasInk: history.canUndo });
         }}
       />
+      {retrying && canStartOver && (
+        <QuietLink className="drawing-start-over" onClick={() => send({ type: "reset" })}>
+          {t(($) => $.stickerCreation.seal.startOver)}
+        </QuietLink>
+      )}
       {/* A card on its way out finishes leaving even under the board, so it never plays again. */}
       {ceremony && (active || ceremony.leaving) && (
         <SealCeremony

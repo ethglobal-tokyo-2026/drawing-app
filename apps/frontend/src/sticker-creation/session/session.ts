@@ -111,11 +111,12 @@ export function transition(session: Session, event: SessionEvent): Result {
 
 /**
  * The seal route's own refusals, each answered only while the ticket holds no sticker of this person's.
- * A 4xx from before the route, 401 signed_out above all, says nothing about an earlier try.
+ * A 4xx from before the route, 401 signed_out above all, says nothing about an earlier try, nor does
+ * ticket_not_yours: it means the session is someone else's, as when another window signed this
+ * browser in as them.
  */
 const SEAL_REFUSALS: ReadonlySet<string> = new Set([
   "invalid_request",
-  "ticket_not_yours",
   "adults_only",
   "ticket_not_found",
 ] satisfies ErrorCode[]);

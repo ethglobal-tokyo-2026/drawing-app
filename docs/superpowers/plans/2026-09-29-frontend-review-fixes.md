@@ -14,13 +14,13 @@ Calls the lanes made, which ad0ll left to us (2026-10-01). All stand as merged b
 
 - **A signed payment that never shows.** A payment is kept on the phone from the moment it's signed. If Sui still hasn't shown it an hour later (`PAYMENT_LANDS_WITHIN_MS`, a guess), the checkout says it didn't go through and drops it.
 - **Logging out mid-drawing** keeps the drawing, for its person alone, so it's there again with its ticket when they sign back in. Deleting it cost the ticket, since the server doesn't hand back an unsealed one, and inside LINE logging out signs the same person straight back in.
-- **"Did it go out?"** A Gift Message LINE doesn't confirm sent gets this step, with It went out and Take it out, instead of a second Send in LINE. It gives up waiting on LINE 5 s after the app comes back into view (`PICKER_RETURN_MS`, a guess).
+- **"Did it go out?"** A Gift Message LINE doesn't confirm sent gets this step, with It went out and Take it out, instead of a second Send in LINE. It gives up waiting on LINE 5 s after the app comes back into view (`PICKER_RETURN_MS`, a guess), or 20 s after asking for the picker while the page never left view (`PICKER_OPENING_MS`, a guess).
 - **The stroke unlock.** Fast passes made before the first tap no longer count toward switching to stroke, so a replay switches where its combo did.
 - **The Back key.** A Back pressed within 250 ms of an overlay closing by itself is spent on the closed overlay (`STEP_BACK_HOLD_MS`, a guess), so it can't take a second history entry.
 - **A sheet's perforation.** A move over 8 px counts as a drag, not a tap (a guess).
 - **A seal retry turned away as signed out** keeps the sheet locked for the seal key, even on the first try, when the server can't hold a seal yet: only the seal route's own refusals reopen the sheet.
 - **A seal that went out before a reload, on a ticket spent before today**, whose drawing can't be read back: the ticket is dropped rather than risk a new drawing being answered with the old sticker. It costs that ticket.
-- **A cut that fails on the phone every time at 0:00** stays locked for the seal key instead of throwing the drawing away.
+- **A cut that fails on the phone every time at 0:00** stays locked for the seal key instead of throwing the drawing away, and Start a new sticker beside it lets the drawing and its ticket go.
 - **A screen that crashes while rendering** gets a page with the error's words and Reload, from an error boundary around the whole app, in place of a blank page.
 
 ## Fix lanes
@@ -63,3 +63,9 @@ Wave 3, once the lanes above are merged, since these touch every area:
 - [x] Your sticker board's kept answer: R4-1, and the give sheet no longer offers a sticker that just went into a gift
 - [x] Tickets: R1-1 to R1-3
 - [x] Giving: R3-1 to R3-4. Online, a failed token request and a failed result poll still look alike in LIFF 2.31.0, so a token request that fails online still reads "Did it go out?"
+
+A review of those follow-ups found 6 more, recorded in the same review: 1 medium, 5 low.
+
+- [x] Sealing: F1-1, F1-2, F1-4
+- [x] Giving: F2-1, F2-2
+- [ ] The server mints stickers left unminted: F1-3, offered to the backend session
