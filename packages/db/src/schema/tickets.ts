@@ -48,7 +48,11 @@ export const ticketUses = sqliteTable(
   ],
 );
 
-/** A pack of reserve tickets bought with JPYC on Sui. Its tickets count once verified_at is set. */
+/**
+ * A pack of reserve tickets bought with JPYC on Sui. The reserve ticket checkout starts it before the
+ * payment is signed, so the server can find the payment on Sui without the phone; its tickets count
+ * once verified_at is set.
+ */
 export const ticketPurchases = sqliteTable(
   "ticket_purchases",
   {
@@ -59,16 +63,25 @@ export const ticketPurchases = sqliteTable(
     tickets: integer("tickets").notNull(),
     /** The pack's price in yen. */
     priceYen: integer("price_yen").notNull(),
-    /** What the payment carried, in JPYC base units, as decimal text. */
-    paidJpyc: text("paid_jpyc").notNull(),
-    /** The Sui transaction digest; one payment counts once. */
-    txDigest: text("tx_digest").notNull().unique(),
+    /** What the payment carried, in JPYC base units, as decimal text; null until it's paid. */
+    paidJpyc: text("paid_jpyc"),
+    /** The Sui transaction that paid it; null until it's paid. One payment counts once. */
+    txDigest: text("tx_digest").unique(),
     /** Set once the server has checked the payment on Sui. */
     verifiedAt: integer("verified_at", { mode: "timestamp_ms" }),
+    /** Set when the sweep stops looking on Sui for a payment; one the app reports later still counts. */
+    givenUpAt: integer("given_up_at", { mode: "timestamp_ms" }),
     ...timestamps(),
   },
   (t) => [
     index("ticket_purchases_user").on(t.userId),
+    index("ticket_purchases_open")
+      .on(t.createdAt)
+      .where(sql`${t.verifiedAt} is null and ${t.givenUpAt} is null`),
     check("ticket_purchases_pack", sql`${t.tickets} > 0 and ${t.priceYen} > 0`),
+    check(
+      "ticket_purchases_payment",
+      sql`(${t.txDigest} is null) = (${t.paidJpyc} is null) and (${t.verifiedAt} is null or ${t.txDigest} is not null)`,
+    ),
   ],
 );

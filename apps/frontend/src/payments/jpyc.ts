@@ -1,4 +1,4 @@
-import type { TicketShop } from "@drawing-app/api/client";
+import type { StartedTicketPurchase, TicketShop } from "@drawing-app/api/client";
 import type { Signer } from "@mysten/sui/cryptography";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
 import { SuiGraphQLClient } from "@mysten/sui/graphql";
@@ -55,16 +55,17 @@ export interface SignedTicketPayment {
 }
 
 /**
- * Builds and signs a payment of `amount` JPYC base units into the ticket vault, with the payment
- * contract's `pay` naming the server's reference. Gas is paid in SUI. Rejects with SigningTimedOut
+ * Builds and signs a payment of `purchase`'s price into the ticket vault, with the payment
+ * contract's `pay` naming the purchase's reference. Gas is paid in SUI. Rejects with SigningTimedOut
  * when building and signing take too long: a signature that comes later is never sent.
  */
 export async function signTicketPayment(
   signer: Signer,
   payment: JpycPayment,
-  amount: bigint,
+  purchase: Pick<StartedTicketPurchase, "priceJpyc" | "reference">,
 ): Promise<SignedTicketPayment> {
   const client = clientFor(payment.network);
+  const amount = BigInt(purchase.priceJpyc);
   const tx = new Transaction();
   tx.setSender(signer.toSuiAddress());
   const coin = tx.add(coinWithBalance({ type: payment.coinType, balance: amount }));
@@ -74,7 +75,7 @@ export async function signTicketPayment(
       tx.object(payment.vault),
       coin,
       tx.pure.u64(amount),
-      tx.pure.vector("u8", Array.from(new TextEncoder().encode(payment.reference))),
+      tx.pure.vector("u8", Array.from(new TextEncoder().encode(purchase.reference))),
     ],
   });
   // `pay` takes the whole amount, so the coin is left empty, and a coin can't be dropped.
@@ -117,7 +118,8 @@ export async function signTicketPayment(
   };
 }
 
-// gRPC can't list an address's events, and public fullnodes no longer serve JSON-RPC.
+// GraphQL gives each event's time, which gRPC's list of events leaves out, and public fullnodes no
+// longer serve JSON-RPC.
 const historyClients = new Map<string, SuiGraphQLClient>();
 function historyClientFor(network: JpycPayment["network"]) {
   let client = historyClients.get(network);

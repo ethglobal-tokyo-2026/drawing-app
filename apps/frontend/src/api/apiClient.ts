@@ -19,9 +19,11 @@ import type {
   RecordGratitude,
   SealResponse,
   SpendTicket,
+  StartedTicketPurchase,
   StickerBoard,
   StickerDetail,
   StickerPlacement,
+  TicketPurchasePayment,
   TicketShop,
   Tickets,
   TicketUse,
@@ -50,12 +52,6 @@ interface SealRequest {
 
 /** Opening a Gift Message's link: its token as the link carries it, which the client checks. */
 export type GiftOpening = Omit<OpenGiftBody, "giftClaimToken"> & { giftClaimToken: string };
-
-/** A pack bought with a JPYC payment on Sui. */
-interface TicketPurchase {
-  tickets: number;
-  txDigest: string;
-}
 
 /** The REST API, one method per route the app calls. */
 export interface ApiClient {
@@ -88,8 +84,10 @@ export interface ApiClient {
   spendTicket: (spend: SpendTicket) => Promise<{ ticketUse: TicketUse; tickets: Tickets }>;
   /** GET /api/ticket-shop */
   ticketShop: () => Promise<TicketShop>;
-  /** POST /api/ticket-purchases */
-  buyTickets: (purchase: TicketPurchase) => Promise<Tickets>;
+  /** POST /api/ticket-purchases/start: records a purchase of the pack of `tickets`, before it's paid. */
+  startTicketPurchase: (tickets: number) => Promise<StartedTicketPurchase>;
+  /** POST /api/ticket-purchases: a started purchase's payment, which adds its tickets. */
+  buyTickets: (payment: TicketPurchasePayment) => Promise<Tickets>;
 
   /**
    * POST /api/gifts: a new gift of the sticker, or the one already in the bag; `forUserId` when the

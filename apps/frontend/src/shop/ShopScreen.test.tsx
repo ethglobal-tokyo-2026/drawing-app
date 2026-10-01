@@ -36,7 +36,6 @@ const SHOP: Shop = {
     decimals: 6,
     paymentPackage: `0x${"b".repeat(64)}`,
     vault: `0x${"c".repeat(64)}`,
-    reference: "tickets:me",
   },
 };
 
@@ -46,7 +45,7 @@ function Purchase() {
   return (
     <button
       type="button"
-      onClick={() => void buyer.buyTickets({ tickets: PACK.tickets, txDigest: "D".repeat(44) })}
+      onClick={() => void buyer.buyTickets({ purchaseId: 1, txDigest: "D".repeat(44) })}
     >
       Buy the pack
     </button>
@@ -114,7 +113,13 @@ describe("ShopScreen", () => {
   });
 
   describe("a payment whose tickets weren't added", () => {
-    const kept = { digest: "D".repeat(44), tickets: 3, priceYen: 270, paidAt: Date.now() };
+    const kept = {
+      purchaseId: 1,
+      digest: "D".repeat(44),
+      tickets: 3,
+      priceYen: 270,
+      paidAt: Date.now(),
+    };
     const strip = () => document.querySelector<HTMLButtonElement>(".unadded-strip");
 
     beforeEach(() => {
