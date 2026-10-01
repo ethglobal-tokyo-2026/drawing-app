@@ -58,6 +58,8 @@ interface Props {
   forUserId?: string;
   /** That person's handle: the bag's tag reads "For @bob", where a gift through LINE's picker reads "From @alice". */
   toHandle?: string;
+  /** Where focus goes once Giving closes, when it opened as the give sheet went and never saw the opener. */
+  returnFocus?: () => HTMLElement | null;
 }
 
 /** Motion timings, in step with GiftBag.css: normal, then reduced. */
@@ -83,6 +85,7 @@ export function Giving({
   onClose,
   forUserId,
   toHandle,
+  returnFocus,
 }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
@@ -388,6 +391,7 @@ export function Giving({
         onClose={close}
         onEscape={view === "cantFind" ? () => setCantFind(false) : undefined}
         busy={busy}
+        returnFocus={returnFocus}
       >
         <div
           key={view}

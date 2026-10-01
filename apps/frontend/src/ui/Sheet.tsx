@@ -24,6 +24,8 @@ interface Props {
   onEscape?: () => void;
   /** Its act is on its way: the sheet stays up, and Back keeps its place so it can try again. */
   busy?: boolean;
+  /** Where focus goes once it closes, for a sheet that opens as another goes, so it never saw the opener. */
+  returnFocus?: () => HTMLElement | null;
   /**
    * What stays live around the sheet while it's open, for a sheet in a layer of its own (with a scrim
    * to tap, or a screen that closes it). The rest of the page goes inert.
@@ -44,6 +46,7 @@ export function Sheet({
   onClose,
   onEscape,
   busy = false,
+  returnFocus,
   layer,
   className,
   children,
@@ -72,7 +75,7 @@ export function Sheet({
   };
   // The page comes back from inert before the trap gives focus back to it, so this goes first.
   useModalDialog(ref, { layer, active: open });
-  useFocusTrap(ref, { active: open, onEscape: onEscape ?? close });
+  useFocusTrap(ref, { active: open, onEscape: onEscape ?? close, returnFocus });
   useBackToClose(open, () => {
     close();
     return !busy;

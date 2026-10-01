@@ -2,14 +2,22 @@
 import type { BoardSticker } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { boardSticker, people, sticker } from "../api/testFixtures";
-import { emptyApi, renderWithApi } from "../api/testing";
+import type { ApiClient } from "../api/apiClient";
+import { boardSticker, gift, people, sticker } from "../api/testFixtures";
+import { emptyApi, renderWithApi, TEST_OWNER } from "../api/testing";
+import type { GiftSender } from "../giving/giftSender";
+import { PREPARING_SLOW_MS } from "../giving/giveFlow";
 import { forgetGreetings } from "./artistChipGreeting";
 import { ArtistBoard } from "./ArtistBoard";
 
 // Someone's stat board mounts behind the front; nothing here needs LINE.
 vi.mock("@line/liff", () => ({ default: { isApiAvailable: () => false } }));
-vi.mock("../giving/useGiftSender", () => ({ useGiftSender: () => ({}) }));
+// LINE's picker, answered by each test.
+const line = vi.hoisted(() => ({ send: vi.fn<GiftSender["send"]>() }));
+vi.mock("../giving/useGiftSender", () => ({ useGiftSender: () => line }));
+
+// happy-dom has no font loading; every browser the app runs in does.
+Object.defineProperty(document, "fonts", { value: { ready: Promise.resolve() } });
 
 let unmount = () => {};
 afterEach(() => {
@@ -40,9 +48,10 @@ const three = () => [
   boardSticker({ placement: placedAt(0.2, 0.2), sticker: sticker({ artist: people.mika }) }),
 ];
 
-async function visit(boardStickers: BoardSticker[]) {
+async function visit(boardStickers: BoardSticker[], overrides: Partial<ApiClient> = {}) {
   const api = emptyApi({
     stickerBoard: () => Promise.resolve({ owner: people.ken, boardStickers }),
+    ...overrides,
   });
   const view = renderWithApi(<ArtistBoard person={people.ken} onBack={() => {}} />, api);
   unmount = view.unmount;
@@ -151,5 +160,85 @@ describe("ArtistBoard's keys", () => {
     expect(second.getAttribute("aria-pressed")).toBe("true");
     act(() => host.querySelector<HTMLElement>(".board-stage")?.click());
     expect(host.querySelector(".sticker-toolbar")).toBeNull();
+  });
+});
+
+describe("ArtistBoard's Give key", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    line.send.mockResolvedValue("sent");
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** Your board holds one sticker to give; their board is as in `three`. */
+  const giving = () => ({
+    stickerBoard: (userId?: string) =>
+      Promise.resolve(
+        userId
+          ? { owner: people.ken, boardStickers: three() }
+          : { owner: TEST_OWNER, boardStickers: [boardSticker()] },
+      ),
+    packageGift: (stickerId: string) =>
+      Promise.resolve({
+        gift: gift({ stickerId, status: "packed" }),
+        giftClaimToken: `0x${"ab".repeat(32)}`,
+        escrowTransfer: null,
+      }),
+    reportShared: (giftId: string) => Promise.resolve(gift({ id: giftId, status: "sent" })),
+  });
+
+  const keyOf = (selector: string) => {
+    const el = document.querySelector<HTMLElement>(selector);
+    if (!el) throw new Error(`Nothing on screen matches ${selector}`);
+    return el;
+  };
+  const tap = (selector: string) => act(() => keyOf(selector).click());
+
+  /** Taps Give, which leaves focus where it was, as a tap does in Safari; returns that key. */
+  async function tapGive() {
+    await visit(three(), giving());
+    const key = keyOf(".board-draw .key");
+    expect(document.activeElement).not.toBe(key);
+    tap(".board-draw .key");
+    await act(async () => {});
+    return key;
+  }
+
+  /** Picks your sticker on the give sheet and gives it, which swaps the give sheet for Giving. */
+  async function giveYourSticker() {
+    tap(".sticker-picker button");
+    tap(".giving__acts .key");
+    await act(() => vi.dynamicImportSettled());
+    expect(document.querySelector(".giving")).not.toBeNull();
+  }
+
+  it("gets focus back when the give sheet closes", async () => {
+    const give = await tapGive();
+    tap(".giving__icon-btn");
+    expect(document.querySelector(".board-sheet-layer")).toBeNull();
+    expect(document.activeElement).toBe(give);
+  });
+
+  it("gets focus back after backing out of the gift bag to the give sheet, and closing that", async () => {
+    const give = await tapGive();
+    await giveYourSticker();
+    tap(".giving__icon-btn");
+    expect(document.querySelector(".board-sheet-layer")).not.toBeNull();
+    tap(".giving__icon-btn");
+    expect(document.querySelector(".board-sheet-layer")).toBeNull();
+    expect(document.activeElement).toBe(give);
+  });
+
+  it("gets focus back once the gift is sent and Giving closes", async () => {
+    const give = await tapGive();
+    await giveYourSticker();
+    tap(".giving__acts .key");
+    // Short of the long-wait notice, past the bag's beat: LINE's picker has opened and answered.
+    await act(() => vi.advanceTimersByTimeAsync(PREPARING_SLOW_MS - 1));
+    tap(".giving__sent .label-btn");
+    expect(document.querySelector(".giving")).toBeNull();
+    expect(document.activeElement).toBe(give);
   });
 });
