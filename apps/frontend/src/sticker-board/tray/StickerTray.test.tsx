@@ -6,9 +6,11 @@ import { forgetBoardComplete, markBoardComplete, QUIET_MS } from "../boardComple
 import { errors } from "../../i18n/strings/errors";
 import type { BoardStickerView } from "../boardSticker";
 import { StickerTray, type StickerTrayHandle } from "./StickerTray";
-import type { TrayBoard } from "./trayEngine";
+import { TUG_VISITS, type TrayBoard } from "./trayEngine";
 import { SHEET, STACK_FOOT, TOP } from "./trayModel";
+import { NUDGE_AFTER } from "./trayNudge";
 import type { TrayProblem } from "./trayProblem";
+import { countVisit } from "./traySeen";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
@@ -113,8 +115,9 @@ const peelFrom = (sheet: Element | null, on: Element | null = sheet, pointerId =
   return slot?.getAttribute("data-id");
 };
 /**
- * Reduced motion until `animate` turns it off, and animations that end only when `finishAll` ends
- * them, so a page turn can be caught partway.
+ * Reduced motion until `animate` turns it off (or back on), and animations that end only when
+ * `finishAll` ends them, so a page turn can be caught partway. `asked` keeps every animation with the
+ * element and keyframes it was asked for.
  */
 const holdAnimations = () => {
   let reduce = true;
@@ -122,15 +125,25 @@ const holdAnimations = () => {
   Object.defineProperty(motion, "matches", { get: () => reduce });
   vi.spyOn(window, "matchMedia").mockReturnValue(motion);
   const held: Animation[] = [];
-  vi.spyOn(Element.prototype, "animate").mockImplementation(() => {
+  const asked: {
+    el: Element;
+    frames: Keyframe[] | PropertyIndexedKeyframes | null;
+    a: Animation;
+  }[] = [];
+  vi.spyOn(Element.prototype, "animate").mockImplementation(function (
+    this: Element,
+    frames: Keyframe[] | PropertyIndexedKeyframes | null,
+  ) {
     const a = new Animation();
     held.push(a);
+    asked.push({ el: this, frames, a });
     return a;
   });
   return {
-    animate: () => {
-      reduce = false;
+    animate: (on = true) => {
+      reduce = !on;
     },
+    asked,
     finishAll: async () => {
       while (held.length) {
         for (const a of held.splice(0)) a.finish();
@@ -422,6 +435,114 @@ describe("StickerTray", () => {
     await openAndShut();
     // Once for each time the board shows the tray opened, however often it opens meanwhile.
     expect(visits()).toBe("1");
+  });
+
+  describe("nudges the front sheet's grip", () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+    const visitsBefore = (visits: number) => {
+      localStorage.clear();
+      for (let i = 0; i < visits; i++) countVisit();
+    };
+    /** The tray opens with motion off, so it opens at once; `motion` says when motion is on from there. */
+    const openWithoutMotion = async () => {
+      const motion = holdAnimations();
+      render(manyStickers(8));
+      await openTray();
+      return motion;
+    };
+    const nudges = (motion: ReturnType<typeof holdAnimations>) =>
+      motion.asked.filter(({ el }) => el.matches(".tray__sheet.is-top"));
+    const pass = (ms: number) =>
+      act(async () => {
+        await vi.advanceTimersByTimeAsync(ms);
+      });
+    const waitForNudge = () => pass(NUDGE_AFTER);
+
+    it("a moment after the tray opens, on an early visit, moving nothing but its transform", async () => {
+      visitsBefore(TUG_VISITS - 1);
+      const motion = await openWithoutMotion();
+      motion.animate();
+      await pass(NUDGE_AFTER - 1);
+      expect(nudges(motion)).toHaveLength(0);
+      await pass(1);
+      expect(nudges(motion)).toHaveLength(1);
+      const frames = nudges(motion)[0]?.frames;
+      const moved = new Set(Array.isArray(frames) ? frames.flatMap((f) => Object.keys(f)) : []);
+      moved.delete("offset");
+      moved.delete("easing");
+      expect([...moved].toSorted()).toEqual(["transform"]);
+    });
+
+    it("not once the tray has been opened three times", async () => {
+      visitsBefore(TUG_VISITS);
+      const motion = await openWithoutMotion();
+      motion.animate();
+      await waitForNudge();
+      expect(nudges(motion)).toHaveLength(0);
+    });
+
+    it("not under reduced motion", async () => {
+      visitsBefore(TUG_VISITS - 1);
+      const motion = await openWithoutMotion();
+      await waitForNudge();
+      expect(nudges(motion)).toHaveLength(0);
+    });
+
+    /** The tray shuts and opens again at once as before, with motion on after. */
+    const reopen = async (motion: ReturnType<typeof holdAnimations>) => {
+      motion.animate(false);
+      await act(async () => void (await tray.current?.close()));
+      await openTray();
+      motion.animate();
+    };
+
+    it("once a visit, however often the tray opens", async () => {
+      visitsBefore(TUG_VISITS - 1);
+      const motion = await openWithoutMotion();
+      motion.animate();
+      await waitForNudge();
+      await reopen(motion);
+      await waitForNudge();
+      expect(nudges(motion)).toHaveLength(1);
+    });
+
+    it("not once a hand has touched the open tray, nor when it opens again", async () => {
+      visitsBefore(TUG_VISITS - 1);
+      const motion = await openWithoutMotion();
+      motion.animate();
+      pointer(stackEl(), "pointerdown", 100, 200);
+      pointer(stackEl(), "pointerup", 100, 200);
+      await waitForNudge();
+      await reopen(motion);
+      await waitForNudge();
+      expect(nudges(motion)).toHaveLength(0);
+    });
+
+    it("and calls off one under way when a hand touches the tray", async () => {
+      visitsBefore(TUG_VISITS - 1);
+      const motion = await openWithoutMotion();
+      motion.animate();
+      await waitForNudge();
+      const cancel = vi.spyOn(nudges(motion)[0]?.a ?? new Animation(), "cancel");
+      pointer(stackEl(), "pointerdown", 100, 200);
+      expect(cancel).toHaveBeenCalledTimes(1);
+    });
+
+    it("though the touch that opened the tray doesn't count", async () => {
+      visitsBefore(TUG_VISITS - 1);
+      const motion = holdAnimations();
+      render(manyStickers(8));
+      pointer(board.querySelector(".zip__slider"), "pointerdown", 380, 300);
+      await openTray();
+      motion.animate();
+      await waitForNudge();
+      expect(nudges(motion)).toHaveLength(1);
+    });
   });
 
   it("fades the stack's foot while a sheet out over the board leaves the mouth a crack", async () => {

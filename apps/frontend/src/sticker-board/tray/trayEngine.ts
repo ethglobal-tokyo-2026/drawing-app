@@ -12,6 +12,7 @@ import { clamp, lerp } from "../../ui/easing";
 import type { TrayProblem } from "./trayProblem";
 import { createTrayBoardDrop } from "./trayBoardDrop";
 import { countVisit, visitsSoFar } from "./traySeen";
+import { createTrayNudge } from "./trayNudge";
 import { createTrayPaging } from "./trayPaging";
 import { createTrayPeel } from "./trayPeel";
 import { createTrayPresses } from "./trayPresses";
@@ -68,8 +69,8 @@ export interface TrayEngine {
 const MIN_SHRINK = 0.5;
 /** The stack's foot (dates, NEW, +N) is hidden below this share of the mouth's open width, whole above the other. */
 const FOOT_FADE = { hidden: 0.35, whole: 0.7 };
-/** The pull tugs itself on this many visits to the tray. */
-const TUG_VISITS = 3;
+/** The pull tugs itself, and the front sheet's grip nudges, on this many visits to the tray. */
+export const TUG_VISITS = 3;
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
 /** Trays made so far, which keeps each one's ids its own. */
@@ -436,12 +437,13 @@ export function createTrayEngine(
     e.stopPropagation();
   });
 
-  /* ---------------------------------------------------------------- the idle tug: on the first few visits, or while something is NEW; twice a visit at most */
+  /* ---------------------------------------------------------------- the hints: the pull's idle tug on the first few visits, or while something is NEW, twice a visit at most; the front sheet's grip nudges on the first few, once a visit */
   let tugs = 0;
   let tugTimer = 0;
-  /** The pull tugs on a person's first few visits to the tray, which opening it counts, not the board showing. */
+  /** The hints are for a person's first few visits to the tray, which opening it counts, not the board showing. */
   const tugVisits = visitsSoFar();
   let visitCounted = false;
+  createTrayNudge(tray, traySheets, trayPaging, { early: tugVisits < TUG_VISITS });
   function scheduleTug(ms: number) {
     cancel(tugTimer);
     if (reduced() || tugs >= 2) return;
