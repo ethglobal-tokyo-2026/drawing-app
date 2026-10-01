@@ -40,10 +40,11 @@
   background: var(--liner);
 }
 
-/* Holds a screen's inert state and its focus bookkeeping without a box of its own, so the screen
-   inside still fills the .screen. */
+/* Holds a screen's inert state and its focus bookkeeping, filling the .screen as the screen inside
+   does, so the screen settles in with it on a tab change. */
 .screen-layer {
-  display: contents;
+  position: absolute;
+  inset: 0;
 }
 
 /* With the tabs tucked away, the screen runs down to the grabber's strip above the home indicator:
@@ -116,53 +117,21 @@
   }
 }
 
-/* Changing tabs (screenTransition.ts): the screen as it was fades out and sinks back a little while
-   the next fades in and settles into place, slow and soft. The tab bar changes crisply around it. */
-.screen {
-  view-transition-name: screen;
-}
-
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation: none;
-}
-
-::view-transition-old(screen) {
-  animation: screen-out 300ms var(--ease-soft) both;
-}
-
-::view-transition-new(screen) {
+/* Changing tabs (App.tsx): the screen as it was goes at once, and the next fades in and settles into
+   place, slow and soft, while the tab bar changes crisply around it. Opacity and transform only, so
+   it runs on the compositor and the screen takes taps throughout. The drawing screen under it
+   doesn't show through meanwhile. Under reduced motion the screen just changes. */
+.screen[data-arriving] > :not(.drawing-screen) {
   animation: screen-in 300ms var(--ease-soft) both;
 }
 
-@keyframes screen-out {
-  to {
-    opacity: 0;
-    transform: scale(0.985);
-  }
+.screen[data-arriving] > .drawing-screen[inert] {
+  visibility: hidden;
 }
 
 @keyframes screen-in {
   from {
     opacity: 0;
     transform: translateY(8px) scale(0.98);
-  }
-}
-
-/* Reduced motion: a short plain cross-fade, nothing moving. */
-@keyframes screen-fade {
-  from {
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(screen),
-  ::view-transition-new(screen) {
-    animation: screen-fade 150ms linear both;
-  }
-
-  ::view-transition-old(screen) {
-    animation-direction: reverse;
   }
 }

@@ -1,5 +1,13 @@
 import type { Person } from "@drawing-app/api/client";
-import { Suspense, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
+import {
+  Activity,
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { flushSync } from "react-dom";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
@@ -22,15 +30,16 @@ import {
   useUnaddedPurchases,
 } from "../tickets/unaddedPurchases";
 import { lazyWithPreload } from "../ui/lazyWithPreload";
+import { useReducedMotion } from "../ui/useReducedMotion";
 import { MotionPermissionCard } from "./MotionPermissionCard";
 import type { GiftFrom } from "../receiving/ReceiveGiftDialog";
 import { openedFrom, type View } from "./openedView";
-import { changeScreen } from "./screenTransition";
-import { TabBar } from "./TabBar";
+import { TabBar, type Tab } from "./TabBar";
 import { useFocusLoop } from "./useFocusLoop";
 import "./App.css";
 
-// Explore is a tab away, so its code loads once the board is complete.
+// Explore is a tab away, so its code loads once the board is complete. Once visited, it stays
+// mounted but hidden between visits, so its search, scroll and pile are as they were on a return.
 const ExploreScreen = lazyWithPreload("Explore", () =>
   import("../explore/ExploreScreen").then((m) => m.ExploreScreen),
 );
@@ -91,8 +100,14 @@ export default function App() {
   // screen; a gift message's link opens its gift over the board.
   const [opened] = useState(() => openedFrom(location.pathname));
   const [view, setView] = useState<View>(opened.view);
-  // A name's link is Explore's to open once; a later visit to Explore is plain Explore.
+  // A name's link is Explore's to open on this visit; a later visit to Explore is plain Explore.
   const [boardOf, setBoardOf] = useState(opened.boardOf);
+  if (view !== "explore" && boardOf !== undefined) setBoardOf(undefined);
+  const [exploredHere, setExploredHere] = useState(view === "explore");
+  if (view === "explore" && !exploredHere) setExploredHere(true);
+  // The tab whose screen is settling in after a tab change (App.css), until its animation ends.
+  const [arriving, setArriving] = useState<Tab | null>(null);
+  const reduced = useReducedMotion();
   // The gift ReceiveGiftDialog shows over the board: a gift message's link's token, held in memory
   // while it's open, or a gift waiting for you, opened from the board's badge.
   const [giftOpening, setGiftOpening] = useState<GiftFrom | undefined>(() =>
@@ -176,12 +191,27 @@ export default function App() {
   const openDrawing = () => {
     if (sealedId) drawingScreen.current?.startNewSticker();
     setView("draw");
+    setArriving(null);
+  };
+
+  // The new screen shows at once and takes taps from its first frame; only its look settles in.
+  const changeTab = (tab: Tab) => {
+    drawingScreen.current?.closeDrawers();
+    if (tab !== view || visiting) setArriving(reduced ? null : tab);
+    setView(tab);
+    setVisiting(undefined);
   };
 
   // The drawing screen tucks the tabs away so the sheet gets the room.
   return (
     <div ref={phone} className={`phone ${drawing ? "has-tucked-tabs" : ""}`}>
-      <div className="screen">
+      <div
+        className="screen"
+        data-arriving={arriving !== null && arriving === view ? "" : undefined}
+        onAnimationEnd={(e) => {
+          if (e.animationName === "screen-in") setArriving(null);
+        }}
+      >
         {(afterTheBoard || drewHere) && (
           // Draw tapped before its code is in holds on plain Liner for the moment it takes.
           <Suspense fallback={drawing ? <DrawingScreenLoading /> : null}>
@@ -207,23 +237,26 @@ export default function App() {
           />
         )}
         {/* Each in its own boundary, so Explore stays up while an artist's board loads over it. */}
-        {view === "explore" && (
-          // Inert under their board, so Tab and screen readers stay on it.
-          <div
-            className="screen-layer"
-            inert={visiting !== undefined}
-            onFocusCapture={(e) => rememberPlace(e.target)}
-            onClickCapture={(e) => rememberPlace(e.target)}
-          >
-            <Suspense fallback={null}>
-              <ExploreScreen
-                boardOf={boardOf}
-                onBoardOfTaken={() => setBoardOf(undefined)}
-                onOpenArtist={setVisiting}
-                onOpenMyBoard={() => setView("board")}
-              />
-            </Suspense>
-          </div>
+        {exploredHere && (
+          // Hidden, it takes no layout, paint or focus, and its effects (loads, timers, frame loops)
+          // stop until it shows again.
+          <Activity mode={view === "explore" ? "visible" : "hidden"}>
+            {/* Inert under their board, so Tab and screen readers stay on it. */}
+            <div
+              className="screen-layer"
+              inert={visiting !== undefined}
+              onFocusCapture={(e) => rememberPlace(e.target)}
+              onClickCapture={(e) => rememberPlace(e.target)}
+            >
+              <Suspense fallback={null}>
+                <ExploreScreen
+                  boardOf={boardOf}
+                  onOpenArtist={setVisiting}
+                  onOpenMyBoard={() => setView("board")}
+                />
+              </Suspense>
+            </div>
+          </Activity>
         )}
         {view === "explore" && visiting && (
           <Suspense fallback={null}>
@@ -243,13 +276,7 @@ export default function App() {
         active={drawing ? undefined : view}
         unaddedTickets={keptPayment && (keptPayment.refusal ? "refused" : "waiting")}
         tucked={drawing}
-        onChange={(tab) => {
-          drawingScreen.current?.closeDrawers();
-          changeScreen(() => {
-            setView(tab);
-            setVisiting(undefined);
-          });
-        }}
+        onChange={changeTab}
       />
       {checkingOut && view === "shop" && (
         <ReserveTicketCheckout

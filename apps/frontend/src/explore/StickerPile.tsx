@@ -311,11 +311,17 @@ function useFallIn(
 ) {
   const dropped = useEffectEvent(onDropped);
   const landed = useEffectEvent(onLanded);
+  // Played to its end, the fall-in doesn't play again when a hidden Explore shows the pile again.
+  const fellIn = useRef(false);
   useEffect(() => {
     const pile = root.current;
-    if (!pile) return;
+    if (!pile || fellIn.current) return;
     if (reduced) {
       const fade = pile.animate([{ opacity: 0 }, { opacity: 1 }], { duration: FADE_MS });
+      fade.finished.then(
+        () => (fellIn.current = true),
+        () => {},
+      );
       landed();
       return () => cancel(fade);
     }
@@ -376,7 +382,13 @@ function useFallIn(
       });
       dropped();
       // A cancelled animation rejects: the fall was stopped, so nothing has landed.
-      Promise.all(played.map((animation) => animation.finished)).then(landed, () => {});
+      Promise.all(played.map((animation) => animation.finished)).then(
+        () => {
+          fellIn.current = true;
+          landed();
+        },
+        () => {},
+      );
     });
     return () => {
       stopped = true;
