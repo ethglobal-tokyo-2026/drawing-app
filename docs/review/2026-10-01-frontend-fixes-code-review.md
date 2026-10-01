@@ -188,6 +188,7 @@ What only LINE on a real phone can show. The timings marked _guess_ are unverifi
 - **NSFW stickers**, with an adult-verified account and one that isn't: the adult seals an 18+ sticker. The other sees it blurred on the board, in Explore and in the tray, can't be picked for it, and gets the adults-only refusal from its gift link.
 - **Reduced motion** (iOS: Settings, Accessibility, Motion): the seal ceremony, the gift bag and the Mini-game honor it.
 - **Japanese:** the seal chip and Start a new sticker break between phrases, and nothing overflows.
+- **Croquis Sans:** the app's text comes up in it with no long flash of another face, and every zero is plain.
 
 ## WebKit pass
 
