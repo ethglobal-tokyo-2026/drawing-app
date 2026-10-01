@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import { useEffect, useId, useRef, useState, type MouseEvent, type RefObject } from "react";
 import { Trans, useTranslation } from "../../i18n/react";
 import { BuyTicketsIcon, DrawIcon, StickerBoardIcon } from "../../icons";
 import { Duration } from "../../stickers/Duration";
@@ -21,8 +21,8 @@ const ACT_AFTER_MS = 160;
 interface Props {
   sealed: Sticker;
   handle: string;
-  /** The ceremony has ended: until then, nothing on the card can be pressed. */
-  done: boolean;
+  /** Its first key has faded up: until then nothing on the card takes a press, focus or Escape. */
+  keyShown: boolean;
   /** It's on its way out, over the fresh sheet: it takes no presses and keeps what it showed. */
   leaving: boolean;
   cardRef: RefObject<HTMLElement | null>;
@@ -74,12 +74,12 @@ function TicketRow({ tickets, peel }: { tickets: Tickets; peel: boolean }) {
  * The backing card the sticker lands on: its slot, "Sealed", the fine print, then the way on. With
  * tickets left, the key keeps drawing; on the last one, the key goes to the sticker board, the day ends
  * on when new daily tickets come, and buying reserve tickets waits quietly on small label stock under it.
- * Every line carries `data-card-line`, which the ceremony fades up.
+ * Every line carries `data-card-line`, which the ceremony fades up, keeping each inert until it's up.
  */
 export function SealedCard({
   sealed,
   handle,
-  done,
+  keyShown,
   leaving,
   cardRef,
   slotRef,
@@ -101,16 +101,19 @@ export function SealedCard({
   useEffect(() => () => clearTimeout(timer.current), []);
   // Keep drawing and the shop act at once: the card's own exit carries the change, and the key's
   // pop rides out on it. The sticker board is another screen, so the press shows first.
+  const choose = (action: () => void, { now = false } = {}) => {
+    if (chosen.current) return;
+    chosen.current = true;
+    if (now) action();
+    else timer.current = setTimeout(action, ACT_AFTER_MS);
+  };
+  // A key takes a press once its line has faded up, and none while the card leaves.
   const act =
-    (action: () => void, { now = false } = {}) =>
-    () => {
-      if (!done || chosen.current) return;
-      chosen.current = true;
-      if (now) action();
-      else timer.current = setTimeout(action, ACT_AFTER_MS);
+    (action: () => void, how?: { now: boolean }) => (e: MouseEvent<HTMLButtonElement>) => {
+      if (!e.currentTarget.closest("[inert]")) choose(action, how);
     };
   // Escape takes the way that spends and buys nothing.
-  useFocusTrap(cardRef, { active: done && !leaving, onEscape: act(onBoard) });
+  useFocusTrap(cardRef, { active: keyShown && !leaving, onEscape: () => choose(onBoard) });
 
   return (
     <section
@@ -120,7 +123,7 @@ export function SealedCard({
       aria-modal="true"
       aria-labelledby={titleId}
       tabIndex={-1}
-      inert={!done || leaving}
+      inert={!keyShown || leaving}
     >
       <div ref={slotRef} className="sealed-card__slot" aria-hidden="true" />
       {/* "Sealed on-chain" and the sticker's name wait until the sticker has a chain record. */}

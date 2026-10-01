@@ -10,7 +10,7 @@ import { useTickets } from "../../tickets/useTickets";
 import { ReducedMotion } from "../../ui/testing";
 import type { SealedSticker } from "./makeSticker";
 import { SealCeremony } from "./SealCeremony";
-import { T, TOTAL } from "./sealTimeline";
+import { lineShownAt, T, TOTAL } from "./sealTimeline";
 
 const NOW = new Date(2026, 8, 26, 21, 4);
 
@@ -54,6 +54,8 @@ const onLeft = vi.fn();
 
 let view: ReturnType<typeof renderWithApi> | undefined;
 let host: HTMLDivElement;
+/** When `seal` mounted the ceremony, on the test's clock. */
+let mountedAt = 0;
 
 // One sheet for every render: a new one would be a new ceremony.
 const SHEET = { x: 8, y: 8, w: 374, h: 788 };
@@ -107,6 +109,7 @@ async function seal(
     emptyApi({ tickets: () => Promise.resolve(tickets) }),
   );
   host = view.host;
+  mountedAt = Date.now();
   // The tickets load before the card can show them.
   await act(async () => {});
 }
@@ -143,9 +146,25 @@ const tap = () =>
   act(() => {
     root()?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
   });
+/** A finger's tap on `el`: the press, which the ceremony would take as a skip, then the click. */
+const tapOn = (el: HTMLElement) =>
+  act(() => {
+    el.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
+    el.click();
+  });
 const wait = (ms: number) => act(() => void vi.advanceTimersByTime(ms));
-/** Past the ceremony's end: its clock starts at its first animation frame, not at mount. */
-const playThrough = () => wait(TOTAL + 50);
+/** More than a frame: the ceremony's clock starts at its first animation frame, not at mount. */
+const FRAME_SLACK_MS = 50;
+const playThrough = () => wait(TOTAL + FRAME_SLACK_MS);
+const lines = () => [...host.querySelectorAll<HTMLElement>("[data-card-line]")];
+/** Which of the card's lines, in the order they fade up, holds `el`. */
+const lineOf = (el: Element) => lines().findIndex((line) => line.contains(el));
+/** Moves the clock on to `ms` after `seal` mounted the ceremony. */
+const until = (ms: number) => wait(mountedAt + ms - Date.now());
+/** Just before, or just past, when `el`'s line has faded all the way up. */
+const beforeShown = (el: Element) => until(lineShownAt(lineOf(el)) - FRAME_SLACK_MS);
+const toShown = (el: Element) => until(lineShownAt(lineOf(el)) + FRAME_SLACK_MS);
+const stillFading = () => Number(lines().at(-1)?.style.opacity) < 1;
 
 beforeEach(() => {
   vi.useFakeTimers({ now: NOW });
@@ -191,19 +210,53 @@ describe("SealCeremony", () => {
   });
 
   it.each([
-    ["Keep drawing", onKeepDrawing],
-    ["Back to My board", onBoard],
-  ])("acts on %s once, and only once the ceremony has played", async (name, action) => {
+    ["Keep drawing", 1, onKeepDrawing],
+    ["Back to My board", 3, onBoard],
+  ])(
+    "takes %s once its line has faded up, before the ceremony ends, and only once",
+    async (name, used, action) => {
+      await seal(used);
+      const key = button(name);
+      beforeShown(key);
+      act(() => key.click());
+      wait(1000);
+      expect(action).not.toHaveBeenCalled();
+      view?.unmount();
+
+      await seal(used);
+      const shown = button(name);
+      toShown(shown);
+      // Focus is on it from then, for keyboards and screen readers.
+      expect(document.activeElement).toBe(shown);
+      tapOn(shown);
+      tapOn(shown);
+      // The tap was the key's own: the lines under it go on fading up.
+      expect(stillFading()).toBe(true);
+      wait(1000);
+      expect(action).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("keeps a key under the first from presses until its own line has faded up", async () => {
     await seal(1);
+    const board = button("Back to My board");
+    toShown(button("Keep drawing"));
+    act(() => board.click());
     wait(1000);
-    act(() => button(name).click());
+    expect(onBoard).not.toHaveBeenCalled();
+    act(() => board.click());
     wait(1000);
-    expect(action).not.toHaveBeenCalled();
-    playThrough();
-    act(() => button(name).click());
-    act(() => button(name).click());
+    expect(onBoard).toHaveBeenCalledOnce();
+  });
+
+  it("takes Escape to the board from when its first key has faded up", async () => {
+    await seal(1);
+    toShown(button("Keep drawing"));
+    act(() => {
+      document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
     wait(1000);
-    expect(action).toHaveBeenCalledOnce();
+    expect(onBoard).toHaveBeenCalledOnce();
   });
 
   it("keeps drawing at once, since the card's exit carries the change, but lets the press show before the board", async () => {
@@ -223,9 +276,13 @@ describe("SealCeremony", () => {
 
   it("carries the card away over the fresh sheet, then lets it go", async () => {
     await seal(1);
-    playThrough();
+    // Kept drawing as soon as it could: the rest of the ceremony plays out on the way.
+    toShown(button("Keep drawing"));
     view?.rerender(ceremony(sealed, { leaving: true }));
     expect(root()?.classList.contains("is-leaving")).toBe(true);
+    expect(host.querySelector(".ticket-stub.is-peeling")).not.toBeNull();
+    playThrough();
+    expect(stillFading()).toBe(false);
     // It takes no more presses on its way out, and no taps meant for the sheet under it.
     expect(card()?.hasAttribute("inert")).toBe(true);
     const carrier = host.querySelector(".seal-ceremony__carrier");

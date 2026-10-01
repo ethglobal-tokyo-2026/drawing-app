@@ -187,6 +187,22 @@ describe("ReceiveGiftDialog", () => {
     expect(button("Accept")).toBeDefined();
   });
 
+  // How far a finger pulls the tab before it tears free.
+  const toTheSnap = (PULL.travelPx / PULL.gain) * PULL.snapAt;
+  it.each([
+    ["opens the bag when let go just past the snap, though the tear trails the finger", 1, true],
+    ["springs back when let go just short of it", -1, false],
+  ])("%s", async (_, beyondPx, opens) => {
+    open({ previewGift: () => Promise.resolve(receivable) });
+    await settle();
+    onTheTab("pointerdown", 1, 0);
+    onTheTab("pointermove", 1, toTheSnap + beyondPx);
+    onTheTab("pointerup", 1, toTheSnap + beyondPx);
+    await settle(1000);
+    await settle(1000);
+    expect(button("Accept") !== undefined).toBe(opens);
+  });
+
   it("tears the strip as the tab is pulled, and springs it back when let go short of the snap", async () => {
     open({ previewGift: () => Promise.resolve(receivable) });
     await settle();
