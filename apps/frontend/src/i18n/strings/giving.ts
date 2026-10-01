@@ -63,11 +63,11 @@ export const giving = {
   giftMessage: {
     /** The Gift Message sent through LINE: its preview in the recipient's chat list and LINE's notification */
     altText: { en: "{{name}} sent you a sticker", ja: "{{name}}さんからシールが届きました" },
-    /** The Gift Message sent through LINE: the fine print after the sticker's number ("NO.0147 · ONE OF ONE") */
-    oneOfOne: { en: "ONE OF ONE", ja: "一点もの" },
+    /** The Gift Message sent through LINE: the fine print after the sticker's number ("NO.0147 · ONE OF A KIND") */
+    oneOfAKind: { en: "ONE OF A KIND", ja: "一点もの" },
     /** The Gift Message sent through LINE: the line under "From @alice", with the sticker's drawing time */
     body: {
-      en: "A one-of-one sticker, drawn in {{duration}}. It opens once.",
+      en: "A one-of-a-kind sticker, drawn in {{duration}}. It opens once.",
       ja: "{{duration}}でかいた、一点もののシールです。ひらけるのは一度だけです。",
     },
     /** The Gift Message sent through LINE: its button, which opens the gift in the app */

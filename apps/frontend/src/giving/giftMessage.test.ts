@@ -49,9 +49,9 @@ describe("buildGiftMessage", () => {
     const message = buildGiftMessage(input({ fromHandle: "@mika", no: 38, timeUsed: 125 }));
     expect(message.altText).toBe("@mika sent you a sticker");
     expect(printedTexts(message)).toEqual([
-      "NO.0038 · ONE OF ONE",
+      "NO.0038 · ONE OF A KIND",
       "From @mika",
-      "A one-of-one sticker, drawn in 2m 5s. It opens once.",
+      "A one-of-a-kind sticker, drawn in 2m 5s. It opens once.",
     ]);
     expect(buildGiftMessage(input({ fromHandle: "mika" }))).toEqual(
       buildGiftMessage(input({ fromHandle: "@mika" })),
@@ -64,7 +64,7 @@ describe("buildGiftMessage", () => {
     expect(message.altText).toBe(giftMessage.altText.ja.replace("{{name}}", "@alice"));
     expect(JSON.stringify(message)).toContain(`"label":"${giftMessage.open.ja}"`);
     expect(printedTexts(message)).toEqual([
-      `NO.0147 · ${giftMessage.oneOfOne.ja}`,
+      `NO.0147 · ${giftMessage.oneOfAKind.ja}`,
       `${tag.from.ja} @alice`,
       giftMessage.body.ja.replace("{{duration}}", "4分52秒"),
     ]);
