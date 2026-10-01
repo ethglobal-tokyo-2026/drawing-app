@@ -297,6 +297,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const [landingId, setLandingId] = useState(() =>
     freshId && !landed.has(freshId) ? freshId : undefined,
   );
+  /** The sticker landing as this visit opened. `landingId` clears once it sticks; its chip plays on. */
+  const [arrivedId] = useState(landingId);
   const [selected, setSelected] = useState<string | null>(null);
   /** This selection owes the hint on how to go on, which stays until the selection ends. */
   const [hinting, setHinting] = useState(false);
@@ -320,8 +322,10 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const [noticesClosed, setNoticesClosed] = useState<ReadonlySet<string>>(() => new Set());
   /** A sticker that just reached you, and its giver, while it has no gratitude yet. */
   const [owed, setOwed] = useState<{ gift: { id: string }; giver: PersonView } | null>(null);
-  /** The artist chips have played on this app open, or a sticker was selected, which clears them. */
-  const [chipsDone, setChipsDone] = useState(() => !owesGreeting(account.id));
+  /** This visit opened owing the greeting, which a board gets once per app open. */
+  const [owedGreeting] = useState(() => owesGreeting(account.id));
+  /** This visit's artist chips have played, or a sticker was selected, which clears them. */
+  const [chipsDone, setChipsDone] = useState(false);
   const me = useIdentity();
   const giftSender = useGiftSender();
   const reduced = useReducedMotion();
@@ -538,18 +542,18 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const byOther = (s: BoardStickerView) => owner !== null && s.artist.id !== owner.id;
   const printedArtist = (s: BoardStickerView) =>
     s.artist.handle ? formatHandle(s.artist.handle) : s.artist.name;
-  // A received sticker landing names its artist alone; otherwise every foil sticker does, once.
-  const landingByOther = onBoard.find((s) => s.id === landingId && byOther(s));
+  // A received sticker landing names its artist alone, greeted or not; otherwise the greeting names
+  // every foil sticker's, once per app open.
+  const arrived = onBoard.find((s) => s.id === arrivedId && byOther(s));
+  const named = arrived ? [arrived] : owedGreeting ? onBoard.filter(byOther) : [];
   const chips =
     chipsDone || failed || !field || !size
       ? []
-      : onBoard
-          .filter((s) => byOther(s) && (!landingByOther || s.id === landingByOther.id))
-          .map((s) => ({
-            id: s.id,
-            artist: s.artist,
-            box: stickerBox(field, size.W, s.placement, s),
-          }));
+      : named.map((s) => ({
+          id: s.id,
+          artist: s.artist,
+          box: stickerBox(field, size.W, s.placement, s),
+        }));
   // The greeting is spent as it starts, so coming back to the board, or leaving early, doesn't replay it.
   const greeting = chips.length > 0;
   useEffect(() => {

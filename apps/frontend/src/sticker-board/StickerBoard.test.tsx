@@ -198,6 +198,57 @@ describe("StickerBoard's artist chips", () => {
     expect(visit()).toBe(1);
     expect(visit()).toBe(0);
   });
+
+  it("name a received sticker's artist alone as it lands, after the greeting has played too", async () => {
+    const [a, b] = [
+      boardSticker({ placement: at(0.3), sticker: sticker({ artist: people.mika }) }),
+      boardSticker({ placement: at(0.7), sticker: sticker({ artist: people.ken }) }),
+    ];
+    // A received sticker has no spot until the board gives it one.
+    const received = boardSticker({ placement: null, sticker: sticker({ artist: people.bob }) });
+    keep(TEST_ME.id, a, b);
+    const chipped = (host: HTMLElement) =>
+      [...host.querySelectorAll(".artist-chip-layer__chip .artist-chip__name")]
+        .map((name) => name.textContent)
+        .toSorted();
+
+    const first = renderWithApi(
+      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
+      emptyApi({ stickerBoard: () => new Promise(() => {}) }),
+    );
+    expect(chipped(first.host)).toEqual(["@ken", "@mika"]);
+    first.unmount();
+
+    // Receiving mounts the board again, with the sticker on it.
+    const view = renderWithApi(
+      <StickerBoard freshId={received.stickerId} onDraw={() => {}} onOpenGift={() => {}} />,
+      emptyApi({
+        stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [a, b, received] }),
+        stickerDetail: () =>
+          Promise.resolve({
+            sticker: received.sticker,
+            owner: TEST_OWNER,
+            transferTrail: [],
+            hasTimelapse: false,
+          }),
+      }),
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    expect(chipped(view.host)).toEqual(["@bob"]);
+
+    // Its chip plays on once the sticker has stuck.
+    const landing = () => view.host.querySelector(".is-landing");
+    expect(landing()).not.toBeNull();
+    await vi.waitFor(
+      async () => {
+        await act(async () => {});
+        expect(landing()).toBeNull();
+      },
+      { timeout: 4000 },
+    );
+    expect(chipped(view.host)).toEqual(["@bob"]);
+  });
 });
 
 describe("StickerBoard's first-selection hint", () => {
