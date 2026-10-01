@@ -43,6 +43,10 @@ Severity is the review's: _high_ is lost data, money, a ticket, a gift or Gratit
 | RC-7         | 8499fef2 (a Remove before the tray's code has loaded still saves the spot from before the step) |
 | RB-11        | 65af9658                                                                                        |
 | RB-12        | f0cfef27                                                                                        |
+| RB-1         | 23bcca43                                                                                        |
+| RB-5         | b2a20a5a                                                                                        |
+| RB-6         | 2ec0b3a2                                                                                        |
+| RB-3         | 5edad999, 534622ad                                                                              |
 
 ## Findings
 
