@@ -121,18 +121,38 @@ Your sticker board adopts useMyStickerBoard's kept answer as a fresh load when i
 
 ## The follow-ups review
 
-The follow-up lanes' commits, reviewed the same way: F1 for sealing and tickets (R1 and R2's fixes), F2 for giving and the board (274aa02f dc77ed2e b64c2ed0 8852b718 e81c8a14 6005a3a9).
+The follow-up lanes' commits, reviewed the same way: F1 for sealing and tickets (009146d9 86caa925 793504fc 6074498f 6aa7a16c), F2 for giving and the board (274aa02f dc77ed2e b64c2ed0 8852b718 e81c8a14 6005a3a9). Both found nothing in the rest.
+
+**F1-1** · low · `src/sticker-creation/session/session.ts:118` (009146d9)  
+A retry answered 403 `ticket_not_yours` counted as the server refusing the seal, so the sent-seal note went and the sheet unlocked (at 0:00 it reset, wiping the drawing). The server answers it whenever the session is someone else's, as when another window signed this browser in as them, before it looks at the ticket's sticker.
+
+- Fixed in 36181a92: `ticket_not_yours` reads as unknown, so the note and the lock stay, as for `signed_out`.
+
+**F1-2** · medium · `src/sticker-creation/session/session.ts:106` (86caa925)  
+At 0:00, a seal the phone fails to cut every time (the sealing worker timing out, a layer that won't encode, iOS's canvas budget) stayed locked in retry with no way on: the check cut and failed again, and a reload brought it back paused at 0:00. Logging out, its only way out, now keeps the drawing.
+
+- Fixed in 36181a92: at 0:00, after a failed seal the server can't hold, Start a new sticker sits where the undo and redo tiles were. It lets the drawing and its ticket go for a fresh sheet; the check still tries again.
+
+**F1-3** · low · `src/sticker-creation/DrawingScreen.tsx:621` (793504fc)  
+A reload after a seal went out, with the drawing unread and the tickets listing its use with a sticker, takes the seal as done. If that seal's mint failed, the same-ticket retry was the only thing that would mint it: the server writes the sticker before minting, and nothing else mints. The sticker stays without an NFT, and Giving refuses it (409 `not_minted`).
+
+- Open, for the server: a catch-up that mints stickers left unminted, beside the naming catch-up. Offered to the backend session.
+
+**F1-4** · low · `src/sticker-creation/DrawingScreen.tsx:613` (793504fc)  
+A sent seal whose ticket was spent on an earlier Tokyo day waited on the late read of its drawing with no deadline, since the tickets list only today's uses. A read that never answers left a blank, locked sheet with no word, which Draw on the board kept opening.
+
+- Fixed in 36181a92: past a second `LOAD_TIMEOUT_MS`, the sheet stops waiting on the read and the tickets settle it, as for a drawing that can't be read.
 
 **F2-1** · low · `src/giving/giveFlow.ts:326` (dc77ed2e)  
 LINE's answer counted as late from the moment the flow asked LIFF for the picker, but LIFF fetches a one-time token before it opens the picker, so on a slow connection Giving asked "Did it go out?" with nothing sent, and the picker then opened anyway with the same Gift Message. The clock also ran while the page was hidden, when the picker step started hidden.
 
 - Trigger: Send in a LINE chat with LIFF's token request (api.line.me/liff/v2/apps/\*/ott) held past 5 s. Take it out, then sending from the picker that opens: the friend's link reads "took this one back". It went out, then cancelling the picker: the gift reads sent with no Gift Message, on its way until it expires.
-- Fixed in 8d44dabf: from the picker's request the answer is late only after `PICKER_OPENING_MS` (a guess), from the page coming back into view after `PICKER_RETURN_MS`, and no clock runs while the page is hidden.
+- Fixed in 3afcb287: from the picker's request the answer is late only after `PICKER_OPENING_MS` (a guess), from the page coming back into view after `PICKER_RETURN_MS`, and no clock runs while the page is hidden.
 
 **F2-2** · low · `src/giving/giftBackend.ts:251` (b64c2ed0)  
 A sent mark kept after a 401 was reported again only when the same sticker was given again, so meanwhile the server held the gift as packed, and the sticker stayed on the giver's board with Give after "Closed and sent".
 
-- Fixed in 8d44dabf: the app reports every kept sent mark as it starts, which includes signing in again after a lost session (`src/giving/sentReports.ts`), forgets each once the server hears it or refuses it for good, and loads the board again.
+- Fixed in 3afcb287: the app reports every kept sent mark as it starts, which includes signing in again after a lost session (`src/giving/sentReports.ts`), forgets each once the server hears it or refuses it for good, and loads the board again.
 
 ## WebKit pass
 
