@@ -292,8 +292,6 @@ export const stickerBoard = {
       report: { en: "Performance report" },
     },
   },
-  /** Retry button after a failure: your sticker board's load error and its unsaved-positions alert, the sticker detail's failed check, its timelapse and its Transfer Trail replay, and someone else's sticker board that didn't load */
-  tryAgain: { en: "Try again", ja: "もう一度" },
   /** Your own sticker board. */
   board: {
     /** Your sticker board, top left: screen readers' name for the button with your photo and name, which turns the board over to your stat board */
@@ -734,8 +732,6 @@ export const stickerBoard = {
     backToExplore: { en: "Back to Explore", ja: "さがすに戻る" },
     /** Someone else's sticker board: the back chip at the top that returns to Explore */
     explore: { en: "Explore", ja: "さがす" },
-    /** Someone else's sticker board, a sticker tapped: the menu's View button, which opens it large */
-    view: { en: "View", ja: "見る" },
     /** Someone else's sticker board: the Give key in Draw's place, which gives them one of your stickers */
     give: { en: "Give", ja: "贈る" },
     /** Someone else's sticker board, a sticker opened large: the fine print under its number; <duration/> is how long it took to draw, <artist/> its Original Artist */

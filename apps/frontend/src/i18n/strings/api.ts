@@ -49,7 +49,7 @@ export const api = {
       en: "A handle is 1 to {{max}} characters, without “@”.",
       ja: "ユーザー名は「@」なしの1〜{{max}}文字です。",
     },
-    /** Handle prompt, after tapping Use @handle: the problem line when saving fails any other way; {{reason}} is errorReason's message with the server's detail */
+    /** Handle prompt, after tapping Use @handle: the problem line when saving fails any other way; {{reason}} is problemOf's message */
     couldntSave: {
       en: "Couldn’t save your handle: {{reason}}",
       ja: "ユーザー名を保存できませんでした：{{reason}}",
