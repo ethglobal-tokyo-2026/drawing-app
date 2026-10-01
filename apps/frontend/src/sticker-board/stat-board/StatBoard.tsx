@@ -92,7 +92,7 @@ export function StatBoard({
               size="sm"
               icon={<SignOut />}
               className="stat-board__logout"
-              onClick={() => void logOut(account.id)}
+              onClick={() => void logOut()}
             >
               {t(($) => $.stickerBoard.statBoard.logOut)}
             </LabelButton>

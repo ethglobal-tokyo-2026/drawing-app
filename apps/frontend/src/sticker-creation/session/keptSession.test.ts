@@ -5,7 +5,6 @@ import { personKey } from "../../ui/deviceStorage";
 import type { Op } from "../canvas/ops";
 import {
   firstChanged,
-  forgetKeptSession,
   keptColor,
   loadKeptSession,
   LOAD_TIMEOUT_MS,
@@ -92,28 +91,14 @@ describe("firstChanged", () => {
 });
 
 describe("the drawing kept on this device", () => {
-  it("is the signed-in person's alone, and goes when they log out", async () => {
+  it("is the signed-in person's alone", async () => {
     const [mine, theirs] = [someone(), someone()];
     const [a, b, c] = ["a", "b", "c"].map(stroke);
     draw(mine, [a, b]);
     expect(await keptOps(theirs)).toBe("none");
     draw(theirs, [c]);
     expect(await keptOps(mine)).toEqual([a, b]);
-    await forgetKeptSession(mine);
-    expect(await keptOps(mine)).toBe("none");
     expect(await keptOps(theirs)).toEqual([c]);
-  });
-
-  it("stays forgotten when the drawing screen still mounted saves as logging out reloads", async () => {
-    const userId = someone();
-    const [a, b] = ["a", "b"].map(stroke);
-    const keeper = draw(userId, [a]);
-    await forgetKeptSession(userId);
-    // The reload's pagehide.
-    keeper.save([a, b], 2000);
-    keeper.keepNsfw(true);
-    expect(await loadKeptSession(userId)).toEqual({ status: "none" });
-    expect(await indexedDB.databases()).toEqual([]);
   });
 
   it("keeps how the tools were set, and a screen's first render clears nothing kept", async () => {

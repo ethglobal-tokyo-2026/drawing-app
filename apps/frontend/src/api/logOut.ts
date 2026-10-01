@@ -1,12 +1,13 @@
 import { lineLogout } from "../line/liff";
-import { forgetKeptSession } from "../sticker-creation/session/keptSession";
 import { serverSession } from "./serverClients";
 import { sessionEndsOnPurpose } from "./sessionLoss";
 
-/** Logs `userId` out of LINE, ending the app's lasting session and forgetting their drawing kept on this device. */
-export const logOut = (userId: string) =>
+/**
+ * Logs out of LINE, ending the app's lasting session. A drawing in progress stays kept for its person
+ * alone, so it's there again, with its ticket, when they sign back in.
+ */
+export const logOut = () =>
   lineLogout(async () => {
     sessionEndsOnPurpose();
-    await forgetKeptSession(userId);
     await serverSession.signOut();
   });

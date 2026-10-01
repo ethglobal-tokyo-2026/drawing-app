@@ -2,8 +2,8 @@ import { personKey, parseStored, readStored, writeStored } from "../../ui/device
 import { STRIDE, type Op } from "../canvas/ops";
 
 /*
- * The session in progress, kept on this device for the person signed in, so a reload doesn't lose it,
- * and wiped once it's over or they log out. Each person's is their own: someone else signing in on
+ * The session in progress, kept on this device for the person signed in, so a reload or logging out
+ * and back in doesn't lose it, and wiped once it's over. Each person's is their own: someone else signing in on
  * this device never gets it, and theirs leaves it be. The ops live in IndexedDB, one record per op, so
  * a stroke writes only itself. The ticket the session spent and the time drawn live in localStorage:
  * it writes at once, where an IndexedDB write started as the page unloads never lands, and it can
@@ -19,8 +19,6 @@ const PROGRESS_KEY = 0;
 const recordKey = (userId: string) => personKey("draw.session", userId);
 /** A kept drawing whose ops haven't loaded by then carries its ticket over, so Draw never waits on it for good. */
 export const LOAD_TIMEOUT_MS = 5_000;
-/** Logging out waits this long for the kept drawing to go, then goes ahead. */
-const FORGET_TIMEOUT_MS = 5_000;
 
 /** How the artist set the size rail, for the brush and for the eraser (0 to 1 along it), and Smoothing (0 to 100). */
 export interface KeptTools {
@@ -54,12 +52,6 @@ export type KeptSession = { status: "none" } | KeptDrawing;
 
 /** What's kept can't be a drawing: the read itself worked. */
 class UnreadableDrawing extends Error {}
-
-/**
- * The people whose kept session this page forgot. Logging out reloads the page, and the drawing
- * screen, still mounted till then, saves on its way out: nothing it writes for them may land.
- */
-const forgotten = new Set<string>();
 
 /** Open connections by database. One the browser closes is dropped, so the next write opens another. */
 const connections = new Map<string, Promise<IDBDatabase>>();
@@ -253,7 +245,6 @@ export class SessionKeeper {
   }
 
   private keepRecord(): void {
-    if (forgotten.has(this.userId)) return;
     // A session with no ticket can't be sealed, so none is kept.
     if (this.ticket === null) removeRecord(this.userId);
     else
@@ -271,8 +262,6 @@ export class SessionKeeper {
     whole: boolean,
     fill: (ops: IDBObjectStore, progress: IDBObjectStore) => void,
   ): void {
-    // Opening the database again would bring back what logging out deleted.
-    if (forgotten.has(this.userId)) return;
     transact(this.userId, "readwrite", fill).then(
       () => {
         if (whole) this.opsKept = true;
@@ -321,29 +310,6 @@ export async function loadKeptSession(userId: string): Promise<KeptSession> {
     error: new Error(`Its ops didn't load within ${LOAD_TIMEOUT_MS / 1000}s`),
     later: read,
   }));
-}
-
-/**
- * Forgets `userId`'s kept session, as logging out does, so a browser handed to someone else holds
- * none of it, and keeps nothing more for them in this page's life. It never rejects: a failure is
- * logged, and the kept ops can't be picked up without the record, which goes first.
- */
-export async function forgetKeptSession(userId: string): Promise<void> {
-  forgotten.add(userId);
-  removeRecord(userId);
-  const name = dbName(userId);
-  const deleted = new Promise<string | null>((resolve) => {
-    const req = indexedDB.deleteDatabase(name);
-    req.onsuccess = () => resolve(null);
-    req.onerror = () =>
-      resolve(`it couldn't be deleted: ${req.error?.message ?? "no reason given"}`);
-  }).catch((error: unknown) => `it couldn't be deleted: ${String(error)}`);
-  const problem = await within(
-    deleted,
-    FORGET_TIMEOUT_MS,
-    () => `it wasn't deleted within ${FORGET_TIMEOUT_MS / 1000}s`,
-  );
-  if (problem) console.error(`The drawing kept on this device may stay here: ${problem}`);
 }
 
 async function readOps(userId: string): Promise<Op[]> {
