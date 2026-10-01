@@ -4,11 +4,11 @@
 
 ## Decisions for ad0ll
 
-ad0ll answered SHELL-3 and TIX-3 to the backend session (2026-10-01), which owns both now. CLEAN-2 waits for an answer.
+ad0ll answered SHELL-3 and TIX-3 to the backend session (2026-10-01), which owns both now, and CLEAN-2 to us: the complete fix.
 
 1. **The friend picker (SHELL-3).** Gift Messages go out through LINE's full picker on purpose, because its one-pick mode lists friends only and can come up empty. So one message can reach several chats, group chats included, and the first person to open it in a 1:1 chat receives the sticker. AGENTS.MD says a Gift Message goes into one 1:1 chat. _Answered_: the full picker stays, and AGENTS.MD's Gift Message row says it goes to the chats the giver picks and can't be received from a group chat.
 2. **Reserve tickets that depend on the phone (TIX-3).** A pack's tickets reach the person only if their phone keeps the payment's digest until the server adds them. _Answered_: the server records each purchase before the payment is signed, and a sweep adds the tickets of payments Sui shows that the phone never reported. The backend session is building it, the checkout's side included.
-3. **Mona Sans's slashed zero (CLEAN-2).** The plain zero is patched site by site, with widths tuned to other tokens. _Recommend_ self-hosting a Mona Sans build whose tabular zero is the plain glyph, so `tabular-nums` works everywhere again; or setting the counting figures in another face. A design call.
+3. **Mona Sans's slashed zero (CLEAN-2).** The plain zero is patched site by site, with widths tuned to other tokens. _Answered_: a self-hosted Mona Sans build whose tabular zero is the plain glyph, so `tabular-nums` works everywhere again, and every zero workaround goes.
 
 Calls the lanes made, which ad0ll left to us (2026-10-01). All stand as merged but two, logging out and render crashes, which changed:
 
@@ -68,4 +68,16 @@ A review of those follow-ups found 6 more, recorded in the same review: 1 medium
 
 - [x] Sealing: F1-1, F1-2, F1-4
 - [x] Giving: F2-1, F2-2
-- [ ] The server mints stickers left unminted: F1-3, which the backend session took
+- [x] The server mints stickers left unminted: F1-3, by the backend session's mint catch-up
+
+## After the follow-ups
+
+ad0ll approved these on 2026-10-01. One lane each:
+
+- [ ] Review the third round of fixes: b1d6fd3a, 1410d0b6, 3afcb287, 36181a92
+- [ ] The crash page and Start a new sticker, seen in WebKit in both languages
+- [ ] NSFW stickers' full images for adults only: everyone else gets a veiled image, in every view, from `/api/images` and in the NFT metadata
+- [ ] The Sealed card's keys work as soon as they show, and the pull tab opens the gift bag a little sooner
+- [ ] CLEAN-2: a self-hosted Mona Sans whose tabular zero is plain, with every zero workaround gone
+- [ ] The finished plans deleted: i18n, the 09-26 frontend feedback, NSFW stickers
+- [ ] What to check on a phone, in the review record
