@@ -99,6 +99,18 @@ describe("placement", () => {
     );
   });
 
+  it("keeps the sticker's middle free for the tap that opens it when neither side has room", () => {
+    const board = { W: 375, H: 523 };
+    const bar = { w: 296, h: 94 };
+    const draw = { left: 14, top: board.H - 68, right: 172, bottom: board.H - 14 };
+    for (const h of [80, 116, 150])
+      for (let y = 120; y <= 480; y += 10) {
+        const sticker = { x: 180, y, w: h * (4 / 3), h, r: 0 };
+        const { top } = toolbarSpot(sticker, board, bar, { clearOf: draw });
+        expect(top > y + 22 || top + bar.h < y - 22).toBe(true);
+      }
+  });
+
   describe("the first selection's hint", () => {
     const hint = { w: 321, h: 48 };
     const bar = { w: 296, h: 94 };

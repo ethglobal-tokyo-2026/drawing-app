@@ -127,11 +127,14 @@ export function knobHidden(sticker: { x: number; y: number; h: number; r: number
 
 /** How far the toolbar keeps from what it must stay clear of. */
 const CLEARANCE = 8;
+/** A second tap that opens the sticker lands near its middle, so a toolbar over the sticker keeps a fingertip clear of it. */
+const MIDDLE_CLEAR = 22;
 
 /**
  * Where the selected sticker's toolbar goes, in board pixels: under the sticker, clear of its turned
  * corners; on the other side when there's no room or it would meet `clearOf` (Draw); clear of the
- * knob on whichever side it stands; never over the header or the sticker tray's edge.
+ * knob on whichever side it stands; never over the header or the sticker tray's edge. With room on
+ * neither side, it slides over the sticker's edge away from the knob, keeping the sticker's middle free.
  */
 export function toolbarSpot(
   sticker: { x: number; y: number; w: number; h: number; r: number },
@@ -152,12 +155,24 @@ export function toolbarSpot(
       top < clearOf.bottom + CLEARANCE &&
       top + toolbar.h > clearOf.top - CLEARANCE,
     );
+  const highest = HEADER - 6;
+  const lowest = board.H - toolbar.h - 12;
+  /** Moved up off Draw when it would meet it. */
+  const offDraw = (top: number) =>
+    clearOf && meets(top) ? Math.min(top, clearOf.top - CLEARANCE - toolbar.h) : top;
   let top = sticker.y + reach + below;
   if (top + toolbar.h > board.H - 12 || meets(top)) top = sticker.y - reach - above - toolbar.h;
-  if (top < HEADER - 6) {
-    top = clamp(sticker.y - toolbar.h / 2, HEADER - 6, board.H - toolbar.h - 12);
-    // A sticker too big to clear on either side still gets its toolbar clear of Draw.
-    if (clearOf && meets(top)) top = Math.max(HEADER - 6, clearOf.top - CLEARANCE - toolbar.h);
+  if (top < highest) {
+    const under = offDraw(Math.min(sticker.y + reach + below, lowest));
+    const over = Math.max(sticker.y - reach - above - toolbar.h, highest);
+    const freesMiddle = (t: number) =>
+      t >= highest &&
+      (t > sticker.y + MIDDLE_CLEAR || t + toolbar.h < sticker.y - MIDDLE_CLEAR) &&
+      !meets(t);
+    // A sticker too big to leave its middle free still gets its toolbar clear of Draw.
+    top =
+      (knobBelow ? [over, under] : [under, over]).find(freesMiddle) ??
+      Math.max(highest, offDraw(clamp(sticker.y - toolbar.h / 2, highest, lowest)));
   }
   return { left, top };
 }
