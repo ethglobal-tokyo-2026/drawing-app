@@ -130,12 +130,9 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
     const moved = reduced
       ? { tear: p.target, velocity: 0 }
       : springStep(p.tear, p.velocity, p.target, dt);
-    // A finger let go past the snap leaves the tear going on to it, as if still pulled.
-    const pulled = p.drag !== null || snapped(p.target);
-    if (pulled && !reduced && ticksBetween(p.tear, moved.tear) > 0) shiver();
+    if (p.drag && !reduced && ticksBetween(p.tear, moved.tear) > 0) shiver();
     p.velocity = moved.velocity;
     show(moved.tear);
-    if (pulled && snapped(moved.tear)) return snap();
     if (p.drag || !atRest(moved.tear, moved.velocity, p.target)) {
       p.frame = requestAnimationFrame(step);
     } else {
@@ -170,16 +167,24 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
     p.frame = requestAnimationFrame(run);
   };
 
-  // Only the dragging pointer ends the drag: its lift, its cancel or its lost capture. Where the
-  // finger let go decides, since the spring's tear trails a quick pull: past the snap, it tears free.
+  /**
+   * Where the finger is decides, never the spring's tear, which trails a quick pull: once the finger
+   * passes the snap, the tab tears free, whether it's still down or just let go.
+   */
+  const fingerSnapped = (drag: NonNullable<Physics["drag"]>, clientX: number) =>
+    snapped(tearTarget(drag.tear, clientX - drag.x));
+
+  // Only the dragging pointer ends the drag: its lift, its cancel or its lost capture. Only a lift
+  // past the snap opens the bag; anything else springs back.
   const release = (e: ReactPointerEvent) => {
     const p = physics.current;
-    if (p.drag?.pointerId !== e.pointerId) return;
+    const { drag } = p;
+    if (drag?.pointerId !== e.pointerId) return;
     e.stopPropagation();
     p.drag = null;
     setGrip(null);
-    if (snapped(p.tear)) return snap();
-    p.target = snapped(p.target) ? 1 : 0;
+    if (e.type === "pointerup" && fingerSnapped(drag, e.clientX)) return snap();
+    p.target = 0;
     kick();
   };
 
@@ -204,10 +209,11 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
       kick();
     },
     onPointerMove: (e) => {
-      const { drag } = physics.current;
-      if (drag?.pointerId === e.pointerId) {
-        physics.current.target = tearTarget(drag.tear, e.clientX - drag.x);
-      }
+      const p = physics.current;
+      const { drag } = p;
+      if (drag?.pointerId !== e.pointerId) return;
+      if (fingerSnapped(drag, e.clientX)) return snap();
+      p.target = tearTarget(drag.tear, e.clientX - drag.x);
     },
     onPointerUp: release,
     onPointerCancel: release,

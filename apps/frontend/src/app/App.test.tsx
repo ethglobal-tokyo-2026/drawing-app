@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { gift, people, sticker } from "../api/testFixtures";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
+import { SEARCH_AFTER_MS } from "../explore/ExploreScreen";
 import { keepGift } from "../giving/keptGifts";
 import { PULL } from "../receiving/pullTab";
 import { forgetBoardComplete } from "../sticker-board/boardComplete";
@@ -40,8 +41,18 @@ vi.mock("./MotionPermissionCard", () => ({ MotionPermissionCard: () => null }));
 
 Object.defineProperty(document, "fonts", { value: { ready: Promise.resolve() } });
 
+/** happy-dom has no ResizeObserver; Explore's pile never changes width here. */
+class StillResizeObserver implements ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+globalThis.ResizeObserver ??= StillResizeObserver;
+
 let unmount = () => {};
 const settle = (ms = 0) => act(() => vi.advanceTimersByTimeAsync(ms));
+const tapTab = (host: HTMLElement, name: "board" | "explore") =>
+  act(() => host.querySelector<HTMLElement>(`.tab-${name}`)?.click());
 
 beforeEach(() => {
   vi.useFakeTimers({
@@ -125,15 +136,55 @@ it("opens a name's link once: a later visit to Explore is plain Explore", async 
   await settle();
   expect(personByEnsLabel).toHaveBeenCalledTimes(1);
 
-  const tab = (name: "board" | "explore") =>
-    act(() => view.host.querySelector<HTMLElement>(`.tab-${name}`)?.click());
-  tab("board");
+  tapTab(view.host, "board");
   await settle();
-  tab("explore");
+  tapTab(view.host, "explore");
   await act(() => vi.dynamicImportSettled());
   await settle();
   expect(view.host.querySelector(".explore")).not.toBeNull();
   expect(personByEnsLabel).toHaveBeenCalledTimes(1);
+});
+
+it("keeps Explore's search while another tab shows, asks nothing for it then, and refreshes it on a return", async () => {
+  history.replaceState(null, "", "/explore");
+  const explore = vi.fn(async () => ({
+    todaysStickers: [],
+    activity: [],
+    leaderboards: {
+      weekStart: new Date().toISOString(),
+      mostGratitude: [],
+      bestCombo: [],
+      longestStreak: [],
+    },
+  }));
+  const searchUsers = vi.fn(async () => [people.mika]);
+  const view = renderWithApi(<App />, emptyApi({ explore, searchUsers }));
+  unmount = view.unmount;
+  await act(() => vi.dynamicImportSettled());
+  await settle();
+  const field = () => view.host.querySelector<HTMLInputElement>('input[type="search"]');
+  const search = field();
+  if (!search) throw new Error("Explore has no search box");
+  act(() => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(search, "mi");
+    search.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await settle(SEARCH_AFTER_MS);
+  expect(searchUsers).toHaveBeenCalledTimes(1);
+
+  tapTab(view.host, "board");
+  await settle(SEARCH_AFTER_MS * 10);
+  expect(field()).toBe(search);
+  expect(explore).toHaveBeenCalledTimes(1);
+  expect(searchUsers).toHaveBeenCalledTimes(1);
+
+  tapTab(view.host, "explore");
+  // What it last found shows at once, while it asks again behind it.
+  expect(field()?.value).toBe("mi");
+  expect(view.host.querySelector(".search-results")?.textContent).toContain("@mika");
+  await settle();
+  expect(explore).toHaveBeenCalledTimes(2);
+  expect(searchUsers).toHaveBeenCalledTimes(2);
 });
 
 /** The App with a paid pack kept on the phone, whose tickets the server answers with `buyTickets`. */
@@ -142,6 +193,7 @@ async function renderWithKeptPayment(buyTickets: ApiClient["buyTickets"]) {
   vi.spyOn(console, "warn").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});
   keepUnaddedPurchase(TEST_ME.id, {
+    purchaseId: 1,
     digest: "D".repeat(44),
     tickets: 3,
     priceYen: 270,

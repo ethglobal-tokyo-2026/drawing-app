@@ -199,8 +199,13 @@ export const TEST_PAYMENT_TARGET: TicketPaymentTarget = {
   vault: `0x${"c".repeat(64)}`,
 };
 
-/** Sui's transactions, by digest: the payments each made, or a rejection for Sui being unreachable. */
+/**
+ * Sui's transactions, by digest, in the order they ran: the payments each made, or a rejection for
+ * Sui being unreachable. A read of payment events lists every payment, newest first, and is as
+ * `events.read` says: whole, stopped short of how far back it was asked, or a rejection.
+ */
 export function fakeTicketPayments(transactions = new Map<string, JpycPayment[] | Error>()) {
+  const events: { read: "whole" | "stopped_short" | Error } = { read: "whole" };
   const ticketPayments: TicketPayments = {
     target: TEST_PAYMENT_TARGET,
     paymentsIn: (txDigest) => {
@@ -208,8 +213,17 @@ export function fakeTicketPayments(transactions = new Map<string, JpycPayment[] 
       if (found instanceof Error) return Promise.reject(found);
       return Promise.resolve(found ?? null);
     },
+    paymentsSince: () => {
+      if (events.read instanceof Error) return Promise.reject(events.read);
+      const payments = [...transactions]
+        .reverse()
+        .flatMap(([txDigest, made]) =>
+          made instanceof Error ? [] : made.map((payment) => ({ ...payment, txDigest })),
+        );
+      return Promise.resolve({ payments, complete: events.read === "whole" });
+    },
   };
-  return { ticketPayments, transactions };
+  return { ticketPayments, transactions, events };
 }
 
 /** A server log that reads `text`. */

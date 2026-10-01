@@ -8,6 +8,7 @@ import {
 } from "react";
 import { ApiError } from "../api/apiClient";
 import { useMe } from "../api/meContext";
+import { useApi } from "../api/useApi";
 import { errorDetail, errorMessage, problemOf, type Problem } from "../i18n/errorMessage";
 import { i18next } from "../i18n/i18n";
 import { Trans, useTranslation } from "../i18n/react";
@@ -186,6 +187,7 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
   const sui = useSuiAccount();
   const jpyc = useJpycBalance(sui.address, shop?.payment);
   const { tickets: state, buyer } = useTickets();
+  const api = useApi();
   const id = useId();
 
   const pack = shop?.packs.find((p) => p.tickets === chosen);
@@ -225,15 +227,16 @@ export function ReserveTicketCheckout({ onDraw, onClose }: Props) {
         import("../payments/jpyc"),
         import("../identity/suiSigner"),
       ]);
-      const signed = await signTicketPayment(
-        await waitForSuiSigner(),
-        payment,
-        BigInt(p.priceJpyc),
-      );
+      const signer = await waitForSuiSigner();
+      // Recorded on the server before it's signed, so the server finds the payment on Sui even if
+      // this phone never reports it.
+      const purchase = await api.startTicketPurchase(p.tickets);
+      const signed = await signTicketPayment(signer, payment, purchase);
       paid = {
+        purchaseId: purchase.id,
         digest: signed.digest,
-        tickets: p.tickets,
-        priceYen: p.priceYen,
+        tickets: purchase.tickets,
+        priceYen: purchase.priceYen,
         paidAt: Date.now(),
       };
       // Kept before Sui is asked to run it, so a lost answer or a closed card or app can't lose it.

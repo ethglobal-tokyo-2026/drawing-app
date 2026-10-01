@@ -178,7 +178,7 @@ export const tickets = {
     },
     /** Reserve ticket checkout, after tapping Pay: what the payment in flight waits on, in a line above the Pay key, read aloud as it changes. */
     waiting: {
-      /** Reserve ticket checkout, after tapping Pay: while the payment is built and signed */
+      /** Reserve ticket checkout, after tapping Pay: while the server starts the purchase, and its payment is built and signed */
       signing: { en: "Signing the payment…", ja: "支払いに署名しています…" },
       /** Reserve ticket checkout, after tapping Pay: while Sui runs the signed payment, which can take a minute; the payment is already kept on this phone */
       confirming: {

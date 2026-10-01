@@ -36,16 +36,17 @@ import { StickerPile } from "./StickerPile";
 import "./ExploreScreen.css";
 
 interface Props {
-  /** A name's link opened the app: <boardOf>.croquis.eth's Sticker Board opens once it's found. */
+  /**
+   * A name's link opened the app: <boardOf>.croquis.eth's Sticker Board opens once it's found. App
+   * lets go of it as Explore is left, so a later visit doesn't open that board again.
+   */
   boardOf?: string;
-  /** Called as Explore takes `boardOf`, so a later visit doesn't open that board again. */
-  onBoardOfTaken: () => void;
   onOpenArtist: (person: Person) => void;
   onOpenMyBoard: () => void;
 }
 
 /** Search waits for a pause in typing before it asks the server. */
-const SEARCH_AFTER_MS = 250;
+export const SEARCH_AFTER_MS = 250;
 /** A week's leaderboards run from a Monday's start to the next one's, Japan keeping no daylight saving. */
 const WEEK_MS = 7 * 24 * 60 * 60_000;
 
@@ -275,10 +276,15 @@ function useRowDeal(first: Leaderboard) {
       fill: "forwards",
     });
     fading.current = { to, fade };
+    const next = () => fading.current?.to ?? to;
     fade.finished.then(
-      () => dealRows(fading.current?.to ?? to),
-      // Cancelled: the list went away mid-fade.
-      () => {},
+      () => dealRows(next()),
+      // Cancelled: the list went out of sight mid-fade, so the rows it was heading for go in now.
+      () => {
+        const rows = next();
+        fading.current = null;
+        dealRows(rows);
+      },
     );
   };
 
@@ -618,15 +624,9 @@ function OpenBoardOf({ label, open }: { label: string; open: Open }) {
   );
 }
 
-export function ExploreScreen({ boardOf, onBoardOfTaken, onOpenArtist, onOpenMyBoard }: Props) {
+export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
   const { t } = useTranslation();
   const me = useMe();
-  // The link is for this visit: held here as App lets go of it, so it isn't there on the next one.
-  const [link] = useState(boardOf);
-  const linkTaken = useEffectEvent(onBoardOfTaken);
-  useEffect(() => {
-    if (link) linkTaken();
-  }, [link]);
   const [query, setQuery] = useState("");
   const field = useRef<HTMLInputElement>(null);
   // What a search says to screen readers. Its line is in the page from the start, so a change to it
@@ -659,7 +659,7 @@ export function ExploreScreen({ boardOf, onBoardOfTaken, onOpenArtist, onOpenMyB
 
   return (
     <div className="explore">
-      {link && <OpenBoardOf label={link} open={open} />}
+      {boardOf && <OpenBoardOf label={boardOf} open={open} />}
       <label className="artist-search">
         <At size={20} aria-hidden />
         <input

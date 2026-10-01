@@ -9,10 +9,11 @@ export const PULL = {
   travelPx: 250,
   gain: 0.82,
   /**
-   * Past this the tab tears free: soon enough that a pull from the tab opens the bag a clear step
-   * short of a narrow phone's edge, and late enough that a short drag springs back.
+   * Once the finger passes this, the tab tears free: soon enough that a pull from anywhere on the tab
+   * opens the bag a clear step short of a narrow phone's edge, and late enough that a short drag
+   * springs back.
    */
-  snapAt: 0.82,
+  snapAt: 0.76,
   /** Ticks along the whole strip. */
   ticks: 40,
   spring: { stiffness: 340, damping: 32 },
@@ -71,7 +72,7 @@ export function ticksBetween(from: number, to: number): number {
 /** Snapped: at or past snapAt. */
 export const snapped = (tear: number): boolean => tear >= PULL.snapAt;
 
-/** The tear after an arrow key: ±keyStep; the fifth press from 0 reaches the snap. */
+/** The tear after an arrow key: ±keyStep, so a few presses from 0 reach the snap. */
 export function keyTear(
   tear: number,
   key: "ArrowRight" | "ArrowUp" | "ArrowLeft" | "ArrowDown",

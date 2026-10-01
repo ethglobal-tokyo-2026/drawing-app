@@ -17,7 +17,6 @@ const SHOP: Shop = {
     decimals: 6,
     paymentPackage: `0x${"b".repeat(64)}`,
     vault: `0x${"c".repeat(64)}`,
-    reference: "tickets:me",
   },
 };
 const PROBLEM = "Couldn’t read your ticket purchases from Sui.";

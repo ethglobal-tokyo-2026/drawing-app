@@ -58,11 +58,7 @@ const labelsOf = (host: HTMLElement, selector: string) =>
 async function openExplore(explore: Explore, onOpenArtist: (person: Person) => void = () => {}) {
   const everyone: Person[] = Object.values(people);
   view = renderWithApi(
-    <ExploreScreen
-      onBoardOfTaken={() => {}}
-      onOpenArtist={onOpenArtist}
-      onOpenMyBoard={() => {}}
-    />,
+    <ExploreScreen onOpenArtist={onOpenArtist} onOpenMyBoard={() => {}} />,
     emptyApi({
       explore: () => Promise.resolve(explore),
       searchUsers: (handle) => Promise.resolve(everyone.filter((p) => p.handle?.includes(handle))),
@@ -312,16 +308,10 @@ describe("ExploreScreen's This week", () => {
 });
 
 describe("a name's link", () => {
-  it("opens the board of whoever holds the name, once, and hands the link back to App", async () => {
+  it("opens the board of whoever holds the name, once", async () => {
     const onOpenArtist = vi.fn();
-    const onBoardOfTaken = vi.fn();
     view = renderWithApi(
-      <ExploreScreen
-        boardOf="mika"
-        onBoardOfTaken={onBoardOfTaken}
-        onOpenArtist={onOpenArtist}
-        onOpenMyBoard={vi.fn()}
-      />,
+      <ExploreScreen boardOf="mika" onOpenArtist={onOpenArtist} onOpenMyBoard={vi.fn()} />,
       emptyApi({
         explore: () => new Promise(() => {}),
         personByEnsLabel: (label) =>
@@ -331,17 +321,11 @@ describe("a name's link", () => {
     await wait(0);
     await wait(0);
     expect(onOpenArtist.mock.calls).toEqual([[people.mika]]);
-    expect(onBoardOfTaken).toHaveBeenCalled();
   });
 
   it("says so when nobody holds the name", async () => {
     view = renderWithApi(
-      <ExploreScreen
-        boardOf="nobody"
-        onBoardOfTaken={vi.fn()}
-        onOpenArtist={vi.fn()}
-        onOpenMyBoard={vi.fn()}
-      />,
+      <ExploreScreen boardOf="nobody" onOpenArtist={vi.fn()} onOpenMyBoard={vi.fn()} />,
       emptyApi({ explore: () => new Promise(() => {}) }),
     );
     await wait(0);
@@ -363,10 +347,7 @@ const EXPLORE: Explore = exploreWith([
 ]);
 
 function show(client: Parameters<typeof renderWithApi>[1]) {
-  view = renderWithApi(
-    <ExploreScreen onBoardOfTaken={vi.fn()} onOpenArtist={vi.fn()} onOpenMyBoard={vi.fn()} />,
-    client,
-  );
+  view = renderWithApi(<ExploreScreen onOpenArtist={vi.fn()} onOpenMyBoard={vi.fn()} />, client);
   return view.host;
 }
 

@@ -103,7 +103,7 @@ export function buildGiftMessage({
           // Printed in capitals: LINE draws no fine print of its own.
           {
             type: "text",
-            text: `${formatNo(no).toUpperCase()} · ${i18next.t(($) => $.giving.giftMessage.oneOfOne, { lng: language })}`,
+            text: `${formatNo(no).toUpperCase()} · ${i18next.t(($) => $.giving.giftMessage.oneOfAKind, { lng: language })}`,
             size: "xs",
             color: GRAPHITE,
           },

@@ -86,6 +86,27 @@
   white-space: normal;
 }
 
+/* A failed seal's words, for a report: the chip stays out of the drawing's way, but its Copy takes a
+   tap while the chip shows. */
+.seal-chip .error-detail {
+  margin-top: 6px;
+  text-align: left;
+}
+
+.seal-chip .copyable-fine-print {
+  justify-content: flex-start;
+  margin-top: 4px;
+}
+
+/* The chip is too narrow to set the words beside Copy, so they take its width and Copy goes under. */
+.seal-chip .copyable-fine-print__text {
+  flex-basis: 100%;
+}
+
+.seal-chip.is-on .error-detail {
+  pointer-events: auto;
+}
+
 /* Japanese breaks only between its marked phrases (keep-phrases). WebKit's keep-all moves English
    breaks too, such as at a hyphen or before a bracket, so English wraps as it always has. */
 .seal-chip:not(:lang(ja)) {

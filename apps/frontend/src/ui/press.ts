@@ -92,8 +92,9 @@ export function installPress(): () => void {
   const timers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
   let held: { el: HTMLElement; id: number; rect: Bounds; inside: boolean } | null = null;
   let keyed: { el: HTMLElement; key: string } | null = null;
-  // The browser's own click after a press lands on the pressed element; a click anywhere else is real.
-  let swallow: { el: HTMLElement; until: number } | null = null;
+  // The browser's own click after a press lands on the pressed element, or where it was once the press
+  // has already changed the screen, as under reduced motion; a click anywhere else is real.
+  let swallow: { el: HTMLElement; until: number; rect: Bounds | null } | null = null;
 
   const stop = (el: HTMLElement) => {
     running.get(el)?.forEach((a) => a?.cancel());
@@ -193,14 +194,18 @@ export function installPress(): () => void {
     settle(el, "pop", reduced() ? 0 : T.pop + 20);
   };
 
-  const swallowNext = (el: HTMLElement) => {
-    swallow = { el, until: performance.now() + SWALLOW_MS };
+  const swallowNext = (el: HTMLElement, rect: Bounds | null = null) => {
+    swallow = { el, until: performance.now() + SWALLOW_MS, rect };
   };
 
   // Only the clicks a press commits get through; the browser's own click after a press is swallowed.
   const onClick = (e: MouseEvent) => {
     if (!e.isTrusted || !swallow || performance.now() > swallow.until) return;
-    if (!(e.target instanceof Node) || !swallow.el.contains(e.target)) return;
+    if (!(e.target instanceof Node)) return;
+    const onPressed =
+      swallow.el.contains(e.target) ||
+      (swallow.rect !== null && within(swallow.rect, e.clientX, e.clientY, SLOP_OUT));
+    if (!onPressed) return;
     swallow = null;
     e.preventDefault();
     e.stopImmediatePropagation();
@@ -236,7 +241,7 @@ export function installPress(): () => void {
     if (!held || e.pointerId !== held.id) return;
     const h = held;
     held = null;
-    swallowNext(h.el);
+    swallowNext(h.el, h.rect);
     const inside =
       !cancelled && within(h.rect, e.clientX, e.clientY, h.inside ? SLOP_OUT : SLOP_IN);
     if (inside && !isOff(h.el)) commit(h.el);

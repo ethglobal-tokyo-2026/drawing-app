@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { installPress } from "./press";
+import { ReducedMotion } from "./testing";
 
 let uninstall: () => void;
 let button: HTMLButtonElement;
@@ -21,6 +22,13 @@ const pointer = (type: string, x: number, y = 30) =>
 
 const key = (type: "keydown" | "keyup", k: string) =>
   button.dispatchEvent(new KeyboardEvent(type, { key: k, bubbles: true }));
+
+/** The browser's own click, which only it can mark trusted. */
+const trustedClick = (el: Element, x = 0, y = 0) => {
+  const e = new MouseEvent("click", { bubbles: true, clientX: x, clientY: y });
+  Object.defineProperty(e, "isTrusted", { value: true });
+  el.dispatchEvent(e);
+};
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -63,11 +71,6 @@ describe("press", () => {
     document.body.append(other);
     let otherClicks = 0;
     other.addEventListener("click", () => otherClicks++);
-    const trustedClick = (el: HTMLElement) => {
-      const e = new MouseEvent("click", { bubbles: true });
-      Object.defineProperty(e, "isTrusted", { value: true });
-      el.dispatchEvent(e);
-    };
     key("keydown", "Enter");
     key("keyup", "Enter");
     vi.advanceTimersByTime(100);
@@ -77,6 +80,24 @@ describe("press", () => {
     trustedClick(button);
     expect(clicks).toBe(1);
     other.remove();
+  });
+
+  it("under reduced motion, fires on release and swallows the browser's click on what it put there", () => {
+    vi.spyOn(window, "matchMedia").mockReturnValue(new ReducedMotion(true));
+    // The key's action covers it, as the give sheet's scrim does.
+    const scrim = document.createElement("div");
+    let scrimClicks = 0;
+    scrim.addEventListener("click", () => scrimClicks++);
+    button.addEventListener("click", () => button.replaceWith(scrim));
+    pointer("pointerdown", 50);
+    pointer("pointerup", 50);
+    expect(clicks).toBe(1);
+    trustedClick(scrim, 50, 30);
+    expect(scrimClicks).toBe(0);
+    // A tap of its own on the scrim is real.
+    trustedClick(scrim, 50, 30);
+    expect(scrimClicks).toBe(1);
+    scrim.remove();
   });
 
   it("fires nothing after the finger slides off", () => {

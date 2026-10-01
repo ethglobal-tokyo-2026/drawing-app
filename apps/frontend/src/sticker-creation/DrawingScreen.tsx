@@ -14,7 +14,7 @@ import type { Sticker, TicketUse } from "@drawing-app/api/client";
 import { apiError, type ApiClient } from "../api/apiClient";
 import { useMe } from "../api/meContext";
 import { useApi } from "../api/useApi";
-import { errorMessage } from "../i18n/errorMessage";
+import { errorDetail, errorMessage, problemOf, type Problem } from "../i18n/errorMessage";
 import { useTranslation } from "../i18n/react";
 import { OutOfTickets } from "../tickets/OutOfTickets";
 import { StartDrawing } from "../tickets/StartDrawing";
@@ -152,7 +152,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const seals = useRef(0);
   // Until the server answers it or refuses it, the sheet can't change: the server may already hold it.
   const sentSeal = useRef<SentSeal | null>(null);
-  const [sealProblem, setSealProblem] = useState<string | null>(null);
+  const [sealProblem, setSealProblem] = useState<Problem | null>(null);
   // At 0:00 a seal that never reached the server can be let go for a fresh sheet, since the phone
   // may fail to cut it every time.
   const [canStartOver, setCanStartOver] = useState(false);
@@ -387,9 +387,9 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           if (clock.elapsed >= SESSION_MS) {
             send({ type: "reset" });
             // The fresh sheet says so in the chip, since the reset just cleared it.
-            setSealProblem(t(($) => $.stickerCreation.seal.emptyAtTimeUp));
+            setSealProblem({ message: t(($) => $.stickerCreation.seal.emptyAtTimeUp) });
           } else {
-            setSealProblem(t(($) => $.stickerCreation.seal.empty));
+            setSealProblem({ message: t(($) => $.stickerCreation.seal.empty) });
             send({ type: "seal-failed", mayHaveSealed: false, timeUp: false, refused: false });
           }
           return;
@@ -442,17 +442,24 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       setCanStartOver(timeUp && !mayHaveSealed);
       // A refusal at 0:00 resets the sheet, which clears the chip, so the chip is set after it.
       send({ type: "seal-failed", mayHaveSealed, timeUp, refused });
-      // The chip says what failed and what to do; the error's own detail is in the console above.
+      // The chip says what failed and what to do, with the error's own words under it for a report.
+      const { detail } = problemOf(error);
       if (timeUp && refused && problem.kind === "refused") {
         const reason = errorMessage(problem.error);
-        setSealProblem(t(($) => $.stickerCreation.seal.refusedAtTimeUp, { reason }));
+        setSealProblem({
+          message: t(($) => $.stickerCreation.seal.refusedAtTimeUp, { reason }),
+          detail,
+        });
         return;
       }
       const words =
         problem.kind === "refused"
           ? t(($) => $.stickerCreation.seal.refused, { reason: errorMessage(problem.error) })
           : t(($) => $.stickerCreation.seal.failed[problem.kind]);
-      setSealProblem(timeUp ? t(($) => $.stickerCreation.seal.timeUp, { problem: words }) : words);
+      setSealProblem({
+        message: timeUp ? t(($) => $.stickerCreation.seal.timeUp, { problem: words }) : words,
+        detail,
+      });
     }
   }
 
@@ -949,7 +956,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         shown={retrying || (history.canUndo && !sealing)}
         armed={session.phase === "armed"}
         nsfw={nsfwOn}
-        problem={sealProblem ?? (retrying ? t(($) => $.stickerCreation.seal.interrupted) : null)}
+        problem={
+          sealProblem?.message ?? (retrying ? t(($) => $.stickerCreation.seal.interrupted) : null)
+        }
+        detail={sealProblem?.detail}
         hint={keyHint && session.phase === "drawing" ? t(($) => $.stickerCreation.seal.hint) : null}
         onTap={() => {
           setKeyHint(false);
@@ -958,9 +968,12 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
             // The drawing is kept on this device, and the drawing screen picks it back up.
             // Still here after a failed reconnect: the chip says why, and the check tries it again.
             retryPrivySignIn(new URL("/draw", location.href).href, (failure) =>
-              setSealProblem(
-                t(($) => $.stickerCreation.seal.refused, { reason: errorMessage(failure) }),
-              ),
+              setSealProblem({
+                message: t(($) => $.stickerCreation.seal.refused, {
+                  reason: errorMessage(failure),
+                }),
+                detail: errorDetail(failure),
+              }),
             );
             return;
           }

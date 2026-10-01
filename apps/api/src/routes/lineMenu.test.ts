@@ -12,25 +12,20 @@ import {
   TEST_CHAT_MENU_IDS,
   type FakeLine,
 } from "../testing/fakeLine.ts";
-import { fakeTicketPayments, TEST_PAYMENT_TARGET } from "../testing/fakes.ts";
+import { fakeTicketPayments } from "../testing/fakes.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
+import { payOnSui, reportPayment, startedPurchase } from "../tickets/testPurchases.ts";
 import { spendBody } from "../tickets/testSpends.ts";
-import {
-  jpycFor,
-  TICKET_PACKS,
-  ticketPaymentReference,
-  type TicketKind,
-} from "../tickets/tickets.ts";
+import { TICKET_PACKS, type TicketKind } from "../tickets/tickets.ts";
 
 const linkBodySchema = z.object({ chatMenu: chatMenuLinkSchema });
 
 /** A LINE user ID as LINE writes them: U and 32 hex digits. */
 const LINE_USER_ID = `U${"0123456789abcdef".repeat(2)}`;
 const [ONE_TICKET] = TICKET_PACKS;
-/** A well-formed Sui transaction digest: the person's payment for ONE_TICKET. */
-const TX_DIGEST = "1".repeat(44);
 
 let test: TestApp;
+let sui: ReturnType<typeof fakeTicketPayments>;
 let line: FakeLine;
 let userId: string;
 let logged: unknown[][];
@@ -41,20 +36,12 @@ async function start({
   language = "en",
 }: { ids?: ChatMenuIds; language?: "en" | "ja" } = {}) {
   line = createFakeLine();
-  const sui = fakeTicketPayments();
+  sui = fakeTicketPayments();
   test = await createTestApp((base) => ({
     ...chatMenuThrough(line, ids)(base),
     ticketPayments: sui.ticketPayments,
   }));
   userId = insertUser(test.db, { lineUserId: LINE_USER_ID, language });
-  sui.transactions.set(TX_DIGEST, [
-    {
-      vault: TEST_PAYMENT_TARGET.vault,
-      payer: `0x${"d".repeat(64)}`,
-      amount: jpycFor(ONE_TICKET.priceYen, TEST_PAYMENT_TARGET.decimals),
-      reference: ticketPaymentReference(userId),
-    },
-  ]);
 }
 
 beforeEach(async () => {
@@ -177,11 +164,9 @@ describe("the chat menu after a spend or a purchase", () => {
 
   it("shows reserve tickets only once the daily ones are gone, after a purchase", async () => {
     for (let spent = 0; spent < DAILY_TICKETS_PER_DAY; spent++) await spendTicket("daily");
-    const bought = await post("/api/ticket-purchases", {
-      tickets: ONE_TICKET.tickets,
-      txDigest: TX_DIGEST,
-    });
-    expect(bought.status).toBe(201);
+    const purchase = await startedPurchase(test, userId, ONE_TICKET.tickets);
+    const txDigest = payOnSui(sui.transactions, purchase);
+    expect((await reportPayment(test, userId, purchase.id, txDigest)).status).toBe(201);
     expect(await menuAfterLinks()).toBe(TEST_CHAT_MENU_IDS.en.reserve);
 
     await spendTicket("reserve");
