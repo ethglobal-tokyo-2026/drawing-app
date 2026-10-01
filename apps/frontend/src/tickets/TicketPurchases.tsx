@@ -1,5 +1,5 @@
 import type { TicketShop as Shop } from "@drawing-app/api/client";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useMe } from "../api/meContext";
 import { problemOf } from "../i18n/errorMessage";
 import { formatDateTime } from "../i18n/format";
@@ -43,7 +43,6 @@ function useTicketPayments(owner: string, payment: Shop["payment"]) {
           if (!live) return;
           setPayments((before) => [...(asked.from ? (before ?? []) : []), ...page.payments]);
           setCursor(page.cursor);
-          setError(null);
         },
         (e: unknown) => {
           console.error(`Couldn't read the ticket payments of ${owner} from Sui`, e);
@@ -59,16 +58,21 @@ function useTicketPayments(owner: string, payment: Shop["payment"]) {
   }, [owner, payment, asked]);
 
   const reading = asked !== undefined;
+  // The last read's failure goes as the next read starts, so a read in flight never sits under it.
+  const read = (from: string | null) => {
+    setError(null);
+    setAsked({ from });
+  };
   return {
     payments,
     reading,
     error,
     /** Reads the newest page, unless it's read or being read. */
     start: () => {
-      if (payments === null && !reading) setAsked({ from: null });
+      if (payments === null && !reading) read(null);
     },
-    more: cursor !== null ? () => setAsked({ from: cursor }) : undefined,
-    retry: () => setAsked({ from: payments === null ? null : cursor }),
+    more: cursor !== null ? () => read(cursor) : undefined,
+    retry: () => read(payments === null ? null : cursor),
   };
 }
 
@@ -81,6 +85,7 @@ export function TicketPurchases({ owner, shop, className }: Props) {
   const { t } = useTranslation();
   const me = useMe();
   const [open, setOpen] = useState(false);
+  const toggle = useRef<HTMLButtonElement>(null);
   const history = useTicketPayments(owner, shop.payment);
   const id = useId();
   const name = me.ensName ?? shortAddress(owner);
@@ -90,6 +95,7 @@ export function TicketPurchases({ owner, shop, className }: Props) {
   return (
     <div className={["ticket-purchases", className].filter(Boolean).join(" ")}>
       <LabelButton
+        ref={toggle}
         block
         size="sm"
         icon={<Receipt />}
@@ -160,8 +166,10 @@ export function TicketPurchases({ owner, shop, className }: Props) {
             <ErrorLine
               className="ticket-purchases__problem"
               detail={history.error}
+              // It goes as it reads again, so focus moves to the button that opened the list.
               onRetry={() => {
-                if (!history.reading) history.retry();
+                toggle.current?.focus({ preventScroll: true });
+                history.retry();
               }}
             >
               {t(($) => $.tickets.purchases.problem)}
