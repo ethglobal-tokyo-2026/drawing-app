@@ -74,14 +74,15 @@ describe("the snap", () => {
     expect(snapped(PULL.snapAt - 0.01)).toBe(false);
   });
 
-  it("snaps on the fifth arrow press from closed", () => {
+  it("snaps on the first arrow press that reaches its threshold from closed", () => {
+    const pressesToSnap = Math.ceil(PULL.snapAt / PULL.keyStep);
     let tear = 0;
     const snaps: boolean[] = [];
-    for (let press = 0; press < 5; press++) {
+    for (let press = 0; press < pressesToSnap; press++) {
       tear = keyTear(tear, press % 2 ? "ArrowUp" : "ArrowRight");
       snaps.push(snapped(tear));
     }
-    expect(snaps).toEqual([false, false, false, false, true]);
+    expect(snaps).toEqual([...Array<boolean>(pressesToSnap - 1).fill(false), true]);
   });
 
   it("goes back a step on the other arrows, and no further than closed", () => {

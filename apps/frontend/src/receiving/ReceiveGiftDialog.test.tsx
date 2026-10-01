@@ -190,17 +190,34 @@ describe("ReceiveGiftDialog", () => {
   // How far a finger pulls the tab before it tears free.
   const toTheSnap = (PULL.travelPx / PULL.gain) * PULL.snapAt;
   it.each([
-    ["opens the bag when let go just past the snap, though the tear trails the finger", 1, true],
+    ["opens the bag when let go just past the snap", 1, true],
     ["springs back when let go just short of it", -1, false],
   ])("%s", async (_, beyondPx, opens) => {
     open({ previewGift: () => Promise.resolve(receivable) });
     await settle();
     onTheTab("pointerdown", 1, 0);
-    onTheTab("pointermove", 1, toTheSnap + beyondPx);
+    // The last move stops short, so where the finger lifts decides.
+    onTheTab("pointermove", 1, toTheSnap - 2);
     onTheTab("pointerup", 1, toTheSnap + beyondPx);
     await settle(1000);
     await settle(1000);
     expect(button("Accept") !== undefined).toBe(opens);
+  });
+
+  it.each([
+    ["tears free the moment the finger passes the snap, with the tear still trailing it", 1, true],
+    ["holds on while the finger is just short of it", -1, false],
+  ])("%s", async (_, beyondPx, tornFree) => {
+    open({ previewGift: () => Promise.resolve(receivable) });
+    await settle();
+    const bag = document.querySelector<HTMLElement>(".gift-bag");
+    onTheTab("pointerdown", 1, 0);
+    // No frame runs between the move and the check, so the spring's tear hasn't moved yet.
+    onTheTab("pointermove", 1, toTheSnap + beyondPx);
+    expect(bag?.style.getPropertyValue("--gift-tear") === "1").toBe(tornFree);
+    await settle(1000);
+    await settle(1000);
+    expect(button("Accept") !== undefined).toBe(tornFree);
   });
 
   it("tears the strip as the tab is pulled, and springs it back when let go short of the snap", async () => {
