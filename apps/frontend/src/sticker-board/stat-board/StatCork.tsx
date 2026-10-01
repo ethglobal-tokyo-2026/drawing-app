@@ -120,6 +120,7 @@ export function StatCork({
 }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
+  const dialog = useRef<HTMLDivElement>(null);
   const cork = useRef<HTMLDivElement>(null);
   const id = useId();
   // The receipt is printed when the cork first shows.
@@ -169,9 +170,16 @@ export function StatCork({
     if (!onEscape?.()) onFlipBack();
   };
 
+  // The failure goes as it retries, so focus moves to the dialog, which holds Escape.
+  const retry = () => {
+    dialog.current?.focus({ preventScroll: true });
+    f.failure?.retry();
+  };
+
   return (
     <Loading value={f.loading}>
       <div
+        ref={dialog}
         className="stat-board"
         role="dialog"
         aria-label={t(($) => $.stickerBoard.statBoard.label, { name: f.name })}
@@ -215,7 +223,7 @@ export function StatCork({
                       ))}
                     </dl>
                   ) : f.failure ? (
-                    <ErrorLine detail={f.failure.detail} onRetry={f.failure.retry}>
+                    <ErrorLine detail={f.failure.detail} onRetry={retry}>
                       {f.own
                         ? t(($) => $.stickerBoard.statBoard.didntLoadOwnBecause, {
                             reason: f.failure.message,

@@ -2,14 +2,16 @@
    words of a failure, both case-sensitive and long. */
 .copyable-fine-print {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 6px 10px;
   margin-top: 10px;
 }
 
-/* Cut short on screen, and Copy copies it whole. It takes the row's leftover width outright, since text
-   that may break anywhere has no width of its own to ask for. */
+/* Cut short on screen, and Copy copies it whole; when it can't, the cut goes and all of it shows, to
+   copy by hand. It takes the row's leftover width outright, since text that may break anywhere has no
+   width of its own to ask for. */
 .copyable-fine-print__text {
   flex: 1 1 0;
   min-width: 0;
@@ -37,4 +39,12 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   line-clamp: 3;
+}
+
+/* A failed copy, on its own line under the row. */
+.copyable-fine-print__problem {
+  flex: 1 0 100%;
+  margin: 0;
+  text-align: left;
+  text-transform: none;
 }

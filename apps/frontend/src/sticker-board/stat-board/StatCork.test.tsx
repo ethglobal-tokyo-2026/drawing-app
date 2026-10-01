@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import type { UserStats } from "@drawing-app/api/client";
-import { act, type ReactNode } from "react";
+import { act, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -134,6 +134,48 @@ describe("StatCork while the stats load", () => {
     render(NEW_ARTIST);
     expect(host.querySelector('[role="status"]')?.textContent).toBe("");
     expect(host.querySelector(".skeleton")).toBeNull();
+  });
+});
+
+/** A stat board whose receipt failed: Try again loads again, which takes the failure off the receipt. */
+function Reloading({ onFlipBack }: { onFlipBack: () => void }) {
+  const [loading, setLoading] = useState(false);
+  return (
+    <StatCork
+      figures={{
+        name: "Mika",
+        handle: "mika",
+        ensName: null,
+        own: false,
+        loading,
+        failure: loading ? null : { ...FAILURE, retry: () => setLoading(true) },
+        since: null,
+        ...statFigures(null),
+      }}
+      onFlipBack={onFlipBack}
+      flipBackRef={null}
+    />
+  );
+}
+
+describe("StatCork's Try again", () => {
+  it("keeps focus on the stat board as the failure goes, so Escape still turns it back", () => {
+    const onFlipBack = vi.fn();
+    act(() => root.render(<Reloading onFlipBack={onFlipBack} />));
+    const tryAgain = [...host.querySelectorAll("button")].find(
+      (b) => b.textContent === "Try again",
+    );
+    act(() => tryAgain?.focus());
+    act(() => tryAgain?.click());
+
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    expect(document.activeElement).toBe(host.querySelector(".stat-board"));
+    act(() => {
+      document.activeElement?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+    });
+    expect(onFlipBack).toHaveBeenCalledOnce();
   });
 });
 

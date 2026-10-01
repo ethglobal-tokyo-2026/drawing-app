@@ -53,6 +53,29 @@ describe("the error line", () => {
     expect(writeText).toHaveBeenCalledWith(detail);
   });
 
+  it("says so when the clipboard refuses, shows the raw words whole to copy by hand, and clears it on the next try", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const detail = "502 · sui_unreachable: ".padEnd(300, "x");
+    writeText.mockRejectedValueOnce(new DOMException("Not allowed here", "NotAllowedError"));
+    const host = render(<ErrorLine detail={detail}>Couldn’t load.</ErrorLine>);
+    const words = () => host.querySelector(".copyable-fine-print__text");
+    const notice = () => host.querySelector(".copyable-fine-print [role=alert]")?.textContent;
+    // The clamp is the class that carries the line count.
+    const clamped = () => /__text--\d/.test(words()?.className ?? "");
+    expect(clamped()).toBe(true);
+
+    await act(async () => button(host, "Copy")?.click());
+    expect(notice()).toContain("Couldn’t copy");
+    expect(words()?.textContent).toBe(detail);
+    expect(clamped()).toBe(false);
+
+    writeText.mockResolvedValueOnce();
+    await act(async () => button(host, "Copy")?.click());
+    expect(notice()).toBeUndefined();
+    expect(button(host, "Copied")).toBeDefined();
+    expect(clamped()).toBe(true);
+  });
+
   it("offers nothing to copy when there are no raw words", () => {
     const host = render(<ErrorLine>The check couldn’t start.</ErrorLine>);
     expect(button(host, "Copy")).toBeUndefined();
