@@ -110,6 +110,24 @@ describe("the drawing kept on this device", () => {
     expect(await loadKeptSession(userId)).toMatchObject({ status: "found", tools });
   });
 
+  it("leaves a drawing it couldn't read as it was while the carried sheet is still blank", async () => {
+    const userId = someone();
+    const ops = [stroke("a")];
+    const before = draw(userId, ops);
+    before.keepNsfw(true);
+    // After a reload whose read was too slow, the screen carries the ticket and sets its tools.
+    const after = new SessionKeeper(userId);
+    after.carry(7);
+    after.keepTools({ brushSize: 0.7, eraserSize: 0.2, smoothing: 55 });
+    after.keepNsfw(false);
+    expect(await loadKeptSession(userId)).toMatchObject({
+      status: "found",
+      ops,
+      elapsedMs: 1000,
+      nsfw: true,
+    });
+  });
+
   it("brings the drawing back without tools when what's kept has none it can read", async () => {
     const userId = someone();
     draw(userId, [stroke("a")]).keepTools({ brushSize: 0.7, eraserSize: 0.2, smoothing: 55 });

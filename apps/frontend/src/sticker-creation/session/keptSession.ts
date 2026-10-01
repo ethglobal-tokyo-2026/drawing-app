@@ -157,6 +157,8 @@ export class SessionKeeper {
   private kept = true;
   /** A stretch of failed writes is logged once. */
   private reported = false;
+  /** Set by `carry`: what's kept is the unread drawing's, untouched until this sheet is drawn on. */
+  private carried = false;
 
   /** `onKept` hears whether the session is kept on this device, each time that changes. */
   constructor(userId: string, onKept: (kept: boolean) => void = () => {}) {
@@ -170,6 +172,7 @@ export class SessionKeeper {
     this.nsfw = false;
     this.elapsedMs = 0;
     this.written = [];
+    this.carried = false;
     this.keepRecord();
     this.write(true, (ops, progress) => {
       clearStores(ops, progress);
@@ -190,6 +193,7 @@ export class SessionKeeper {
     this.nsfw = nsfw;
     this.tools = tools ?? this.tools;
     this.written = [...ops];
+    this.carried = false;
   }
 
   /**
@@ -202,26 +206,29 @@ export class SessionKeeper {
     this.elapsedMs = 0;
     // The ops kept are the unread drawing's, so the first save writes every op.
     this.written = null;
+    this.carried = true;
   }
 
-  /** Keeps the 18+ switch. */
+  /** Keeps the 18+ switch; on a carried session's blank sheet, it waits for the first save. */
   keepNsfw(nsfw: boolean): void {
     this.nsfw = nsfw;
-    this.keepRecord();
+    if (!this.carried) this.keepRecord();
   }
 
   /**
-   * Keeps how the tools are set, with the session once there is one. Before that it only remembers
-   * them: a session kept from before a reload mustn't be cleared by the screen's first render.
+   * Keeps how the tools are set, with the session once there is one. Before that, or on a carried
+   * session's blank sheet, it only remembers them: what's kept from before a reload mustn't change
+   * until the screen draws.
    */
   keepTools(tools: KeptTools): void {
     this.tools = tools;
-    if (this.ticket !== null) this.keepRecord();
+    if (this.ticket !== null && !this.carried) this.keepRecord();
   }
 
   /** Keeps the time drawn, and any ops that changed since the last save. */
   save(ops: readonly Op[], elapsedMs: number): void {
     this.elapsedMs = elapsedMs;
+    this.carried = false;
     this.keepRecord();
     const written = this.written;
     const from = written ? firstChanged(written, ops) : 0;
@@ -235,6 +242,7 @@ export class SessionKeeper {
 
   /** Nothing is in progress any more. */
   wipe(): void {
+    this.carried = false;
     this.ticket = null;
     this.nsfw = false;
     this.elapsedMs = 0;
