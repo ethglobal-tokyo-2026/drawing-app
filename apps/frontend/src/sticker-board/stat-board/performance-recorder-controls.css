@@ -33,10 +33,11 @@
   accent-color: var(--ink);
 }
 
-/* Proportional figures, as everywhere in Mona Sans: its tabular zero is slashed. */
+/* It changes each second: tabular figures keep it from jittering. */
 .performance-recorder__summary {
   margin: 0;
   font: 500 13px/1.4 var(--font-ui);
+  font-variant-numeric: tabular-nums;
 }
 
 .performance-recorder__actions {

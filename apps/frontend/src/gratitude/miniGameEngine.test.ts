@@ -78,7 +78,7 @@ const isBox = (v: unknown): v is { x: number; y: number; width: number } =>
 
 /** The HUD rewrites its clock every frame, so a failure there is the next frame's. */
 const failNextFrame = () =>
-  vi.spyOn(Element.prototype, "replaceChildren").mockImplementationOnce(() => {
+  vi.spyOn(CharacterData.prototype, "data", "set").mockImplementationOnce(() => {
     throw new Error("A frame failed");
   });
 

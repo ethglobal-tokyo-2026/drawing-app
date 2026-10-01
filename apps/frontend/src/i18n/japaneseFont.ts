@@ -7,7 +7,7 @@ export const JAPANESE_FONT_CSS =
   "https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700&display=swap";
 
 /**
- * Adds the Japanese face's stylesheet to the page, once. Like index.html's fonts, it's fetched as a
+ * Adds the Japanese face's stylesheet to the page, once. Like index.html's Dela Gothic One, it's fetched as a
  * preload and applied when it arrives, so it never holds up a paint.
  */
 export function requestJapaneseFont(doc: Document = document): void {

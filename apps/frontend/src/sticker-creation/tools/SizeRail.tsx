@@ -27,7 +27,6 @@ function sizeStyle(value: number): CSSProperties {
     "--d": `${px}px`,
     "--tip": `${Math.min(24, Math.max(5, px))}px`,
     "--px": Math.round(px),
-    "--px-digits": String(Math.round(px)).length,
   };
 }
 

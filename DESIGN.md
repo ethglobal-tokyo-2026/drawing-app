@@ -35,66 +35,66 @@ colors:
   cork: "#CFA476"
 typography:
   display:
-    fontFamily: "Dela Gothic One, Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
+    fontFamily: "Dela Gothic One, Croquis Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "20px"
     fontWeight: 400
     lineHeight: 1
     letterSpacing: "0.01em"
   display-lg:
-    fontFamily: "Dela Gothic One, Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
+    fontFamily: "Dela Gothic One, Croquis Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "23px"
     fontWeight: 400
     lineHeight: 1
     letterSpacing: "0.01em"
   display-sm:
-    fontFamily: "Dela Gothic One, Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
+    fontFamily: "Dela Gothic One, Croquis Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "17px"
     fontWeight: 400
     lineHeight: 1
     letterSpacing: "0.01em"
   figure:
-    fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
+    fontFamily: "Croquis Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "44px"
     fontWeight: 900
     lineHeight: 0.95
     letterSpacing: "-0.035em"
     fontVariation: "'wdth' 125"
   headline:
-    fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
+    fontFamily: "Croquis Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "26px"
     fontWeight: 800
     lineHeight: 1.08
     letterSpacing: "-0.015em"
     fontVariation: "'wdth' 112"
   title:
-    fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
+    fontFamily: "Croquis Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "22px"
     fontWeight: 800
     lineHeight: 1.1
     letterSpacing: "-0.012em"
     fontVariation: "'wdth' 112"
   body:
-    fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
+    fontFamily: "Croquis Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "15px"
     fontWeight: 400
     lineHeight: 1.42
     fontVariation: "'wdth' 100"
   label:
-    fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
+    fontFamily: "Croquis Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "15px"
     fontWeight: 700
     lineHeight: 1.1
     letterSpacing: "0.004em"
     fontVariation: "'wdth' 100"
   fine:
-    fontFamily: "Mona Sans, Zen Kaku Gothic New, system-ui, sans-serif"
+    fontFamily: "Croquis Sans, Zen Kaku Gothic New, system-ui, sans-serif"
     fontSize: "11px"
     fontWeight: 650
     lineHeight: 1.3
     letterSpacing: "0.07em"
     fontVariation: "'wdth' 87.5"
   jp-caption:
-    fontFamily: "Zen Kaku Gothic New, Hiragino Sans, Hiragino Kaku Gothic ProN, Mona Sans, sans-serif"
+    fontFamily: "Zen Kaku Gothic New, Hiragino Sans, Hiragino Kaku Gothic ProN, Croquis Sans, sans-serif"
     fontSize: "11px"
     fontWeight: 700
     lineHeight: 1.2
@@ -338,7 +338,7 @@ Soft fields (inactive tabs, quiet chips, hints) mix a coded hue into Liner, at 3
 ## Typography
 
 **Display Font:** Dela Gothic One (with Mona Sans fallback)
-**Body Font:** Mona Sans, a variable font with a width axis (with Zen Kaku Gothic New for Japanese, then system-ui)
+**Body Font:** Mona Sans, a variable font with a width axis (with Zen Kaku Gothic New for Japanese, then system-ui). The app serves its own build of it, Croquis Sans (see the Plain Zero Rule), under a name of its own because the license reserves "Mona".
 **Japanese:** Zen Kaku Gothic New (with Hiragino Sans fallback). The page asks for it only while the app is in Japanese, since its stylesheet alone is 242 `@font-face` rules; in English the odd Japanese glyph (the なまえ cap, the 袋文字 tier captions) sets in the phone's own Hiragino Sans. Japanese headlines set with `palt`, and short centered lines break only between phrases, at `<wbr/>` marks in their strings.
 **Platform chrome:** the native system stack (-apple-system, SF Pro Text, Hiragino Sans), used only inside mocked LINE and iOS UI.
 
@@ -369,7 +369,7 @@ Nothing else is set at 75.
 
 **The Puffy Voice Rule.** Dela Gothic One appears only on keys, dot badges (the draw screen's timer dot is one), the gratitude multiplier and tag, and outlined 袋文字 captions. It's never used for headings, body text or plain figures.
 
-**The Plain Zero Rule.** Mona Sans's tabular figures draw a slashed zero, and nothing in the font turns it back: it has no `zero` feature and no stylistic sets. So Mona Sans figures are proportional, never `tabular-nums` or `tnum`, and their zero is plain. That covers fine print, prices, dates, stamps, totals, the receipt, ticket counts and the hit counter. Only a number that changes while you watch keeps its digits in place. The combo's amount and clock are the one exception: they stay tabular, and each zero in them is set as the plain zero at width 114, which is as wide as a tabular zero at 125. The brush size label holds the widest digit's width per digit. The timer dot already sets its numerals in fixed cells. The refill countdown changes once a minute and needs none of this. Dela Gothic One's tabular zero is its plain one, so the multiplier stays tabular.
+**The Plain Zero Rule.** Every zero is plain. Mona Sans draws its tabular zero slashed, with no feature that turns it back, so Croquis Sans drops the slash: its tabular zero is the plain zero at tabular width, on every width and weight (`pnpm --filter frontend croquis-sans` builds it). Figures are proportional, except a number that changes while you watch, which sets `tabular-nums` so its digits keep their places: the combo's amount, clock and hit counter, the multiplier, the brush size label, the refill countdown and the developer slip's performance summary. The timer dot sets its numerals in fixed cells.
 
 **The Hits Rule.** A combo's length is counted in hits, the way fighting games count it, never in taps. It never wears ×, which belongs to the multiplier. It always shows as the hit counter.
 
@@ -531,7 +531,7 @@ Tickets aren't controls: daily tickets are matte ticket stock; reserve tickets w
 
 ### Out of tickets
 
-Three empty ticket stubs say "used up" without a number. Each used ticket keeps a faint kiss-cut outline of the sticker it became (a 1px graphite line at 62%, dashed on the large stubs), fading in over 700ms: the cut line a sticker leaves on its backing. The small stubs on the seal screen carry the same outlines. Under the title, a printed refill line reads "New daily tickets at 12:00 AM," in bold Ink followed by the countdown ("in 6h 56m") in Graphite. It never borrows the timer dot's look: no dot, no color field, no tilt, no Dela numerals. Then the perforation, Back to My board as the key and Buy reserve tickets on label stock with the Shop's tag. The card doesn't restate the three-a-day rule. When the refill brings tickets back while it's open, it turns over in place and its key becomes a plain Draw.
+Three empty ticket stubs say "used up" without a number. Each used ticket keeps a faint kiss-cut outline of the sticker it became (a 1px graphite line at 62%, dashed on the large stubs), fading in over 700ms: the cut line a sticker leaves on its backing. The small stubs on the seal screen carry the same outlines. Under the title, a printed refill line reads "New daily tickets at 12:00 AM," in bold Ink followed by the countdown ("in 6h 56m") in Graphite, in tabular figures. It never borrows the timer dot's look: no dot, no color field, no tilt, no Dela numerals. Then the perforation, Back to My board as the key and Buy reserve tickets on label stock with the Shop's tag. The card doesn't restate the three-a-day rule. When the refill brings tickets back while it's open, it turns over in place and its key becomes a plain Draw.
 
 **Draw never asks for a daily ticket** (zero steps to the canvas). On the board, Draw with a daily ticket left spends it at once: the key's front ticket peels off, and the canvas opens as it goes, taking the ink as soon as the spend lands. With no tickets at all, Draw raises this card over the board instead, and the canvas doesn't load; its key reads "Back to My board", and its scrim dims the board and the tab strip under it, where a tap closes the card as Back to My board does and never changes tabs. A drawing in progress already has its ticket, so Draw just opens it.
 

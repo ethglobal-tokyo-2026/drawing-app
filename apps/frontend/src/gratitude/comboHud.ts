@@ -62,25 +62,6 @@ function element<K extends keyof HTMLElementTagNameMap>(
   return el;
 }
 
-/**
- * Writes a live figure into `host`, each zero in a `.gr-zero` span. The figure keeps Mona Sans's tabular
- * figures so its digits hold their places as it counts, but the tabular zero is slashed: the span sets
- * the plain zero instead, from a width where it fills the same cell.
- */
-function plainZeros(host: HTMLElement): (text: string) => void {
-  let shown: string | null = null;
-  return (text) => {
-    if (text === shown) return;
-    shown = text;
-    host.replaceChildren(
-      ...text
-        .split(/(0)/)
-        .filter(Boolean)
-        .map((part) => (part === "0" ? element("span", "gr-zero", part) : part)),
-    );
-  };
-}
-
 /** The oldest in the pool once it's full, otherwise a new one. */
 function recycle<E extends HTMLElement>(pool: Pooled<E>[], cap: number, make: () => E): Pooled<E> {
   const item = (pool.length >= cap ? pool.shift() : undefined) ?? { el: make(), animation: null };
@@ -119,21 +100,17 @@ export function createComboHud(
   const ticks = element("div", "gr-timer-ticks");
   const head = element("div", "gr-timer-head");
   const track = element("div", "gr-timer-track", fill, ticks, head);
-  const seconds = element("span", "");
-  const setSeconds = plainZeros(seconds);
-  setSeconds("0.0");
+  const seconds = document.createTextNode("0.0");
   const unit = element(
     "small",
     "",
     i18next.t(($) => $.gratitude.hud.secondsUnit),
   );
   const row = element("div", "gr-timer", track, element("span", "gr-timer-s", seconds, unit));
-  const amountNumber = element("b", "");
-  const setAmount = plainZeros(amountNumber);
-  setAmount("0");
+  const amountNumber = document.createTextNode("0");
   const heart = element("i", "");
   heart.innerHTML = HEART_SVG;
-  const amount = element("div", "gr-amount", amountNumber, heart);
+  const amount = element("div", "gr-amount", element("b", "", amountNumber), heart);
   const multNumber = document.createTextNode("1.0");
   const multiplier = element(
     "div",
@@ -196,7 +173,7 @@ export function createComboHud(
    * row. It's the count of digits that sets the size, not the width, so the frame loop reads no layout.
    */
   function showAmount(total: number) {
-    setAmount(formatCount(total));
+    amountNumber.data = formatCount(total);
     const digits = String(total).length;
     if (amount.dataset.digits !== String(digits)) amount.dataset.digits = String(digits);
   }
@@ -347,7 +324,7 @@ export function createComboHud(
       }
       showHits(view.hits);
       setText(multNumber, view.multiplier.toFixed(1));
-      setSeconds(view.secondsLeft.toFixed(1));
+      setText(seconds, view.secondsLeft.toFixed(1));
 
       const whole = Math.floor(view.multiplier + 1e-6);
       if (whole > wholeMultiplier) pulseMultiplier();

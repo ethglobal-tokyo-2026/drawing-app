@@ -11,12 +11,13 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Fetched early and applied when they arrive, so the fonts never block the first paint. The
-         Japanese face comes only once the app is in Japanese (src/i18n/japaneseFont.ts). -->
+    <!-- Dela Gothic One, fetched early and applied when it arrives, so it never blocks the first paint.
+         Croquis Sans comes with the app's styles (src/styles/fonts.css), and the Japanese face only once
+         the app is in Japanese (src/i18n/japaneseFont.ts). -->
     <link
       rel="preload"
       as="style"
-      href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@75..125,200..900&family=Dela+Gothic+One&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap"
       onload="
         this.onload = null;
         this.rel = 'stylesheet';
@@ -25,7 +26,7 @@
     <noscript>
       <link
         rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@75..125,200..900&family=Dela+Gothic+One&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&display=swap"
       />
     </noscript>
     <meta name="color-scheme" content="light" />

@@ -478,13 +478,6 @@
   font-weight: 700;
   margin-left: 1px;
 }
-/* The clock's and the amount's zeros (comboHud.ts's plainZeros). The figures around them are tabular, so
-   their digits hold their places as they count, but Mona Sans's tabular zero is slashed. At width 114 the
-   plain zero is as wide as a tabular one at 125, so it takes the same place. */
-.gr-zero {
-  font-variant-numeric: normal;
-  font-stretch: 114%;
-}
 .gr-readout {
   display: flex;
   align-items: center;
@@ -533,6 +526,10 @@
 .gr-hits {
   transform-origin: 100% 50%;
 }
+/* It counts as you play, so its digits hold their places. */
+.gr-hits .hit-counter__n {
+  font-variant-numeric: tabular-nums;
+}
 .gr-mult {
   display: flex;
   align-items: baseline;
@@ -556,7 +553,6 @@
   font-size: 27px;
   line-height: 1;
   letter-spacing: -0.02em;
-  /* Dela Gothic One's tabular zero is its plain zero. */
   font-variant-numeric: tabular-nums;
 }
 

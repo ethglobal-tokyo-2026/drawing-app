@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignoreBinaries": ["forge", "anvil", "journalctl"],
+  "ignoreBinaries": ["forge", "anvil", "journalctl", "uv"],
   "workspaces": {
     ".": {
       "entry": ["deploy/*.mjs"]
