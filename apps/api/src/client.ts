@@ -69,5 +69,6 @@ export type {
   SpendTicket,
   StartedTicketPurchase,
   TicketKind,
+  TicketPurchasePayment,
   TicketUse,
 } from "./tickets/tickets.ts";

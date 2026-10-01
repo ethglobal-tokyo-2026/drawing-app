@@ -341,7 +341,8 @@ describe("tickets", () => {
 
   it("refuse a payment reported for someone else's purchase, or for one that doesn't exist", async () => {
     const theirs = await started(PACK, insertUser(test.db));
-    const txDigest = paid(theirs);
+    // Paid naming the person reporting it, so only the purchase's owner tells it apart.
+    const txDigest = paid(theirs, { reference: ticketPaymentReference(userId, theirs.id) });
     expect(await refusalOf(await report(theirs, txDigest))).toMatchObject({
       status: 403,
       error: "payment_not_yours",

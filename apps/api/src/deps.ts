@@ -248,7 +248,7 @@ export interface JpycPayment {
 }
 
 /** A PaymentReceived event, with the transaction that emitted it. */
-export interface PaymentEvent extends JpycPayment {
+interface PaymentEvent extends JpycPayment {
   txDigest: string;
 }
 

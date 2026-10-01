@@ -206,6 +206,7 @@ export const ticketPurchaseRequestSchema = createInsertSchema(ticketPurchases, {
 })
   .pick({ txDigest: true })
   .extend({ purchaseId: purchaseRow.shape.id });
+export type TicketPurchasePayment = z.infer<typeof ticketPurchaseRequestSchema>;
 
 /** Whether a Sui payment has already bought tickets: one payment counts once. */
 export const paymentCounted = (db: DbOrTx, txDigest: string) =>

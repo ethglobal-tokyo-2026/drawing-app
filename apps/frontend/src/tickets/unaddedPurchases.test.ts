@@ -22,6 +22,7 @@ import {
 const KEY = "draw.unaddedPurchases.me";
 
 const purchase = (n: number, tickets = 3): UnaddedPurchase => ({
+  purchaseId: n,
   digest: `${n}`.padStart(44, "D"),
   tickets,
   priceYen: tickets * 90,
@@ -70,12 +71,12 @@ describe("payments kept until their tickets are added", () => {
     expect(keptAtNextOpen()).toEqual([purchase(1)]);
   });
 
-  it("asks again with the same payment and pack, and forgets it once its tickets are added", async () => {
-    keepUnaddedPurchase("me", purchase(1, 5));
+  it("asks again with the same purchase and payment, and forgets it once its tickets are added", async () => {
+    keepUnaddedPurchase("me", purchase(1));
     const api = server(bought);
     await expect(addUnaddedPurchases(api, "me")).resolves.toEqual(bought);
     expect(api.buyTickets).toHaveBeenCalledExactlyOnceWith({
-      tickets: 5,
+      purchaseId: purchase(1).purchaseId,
       txDigest: purchase(1).digest,
     });
     expect(keptAtNextOpen()).toEqual([]);

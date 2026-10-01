@@ -8,12 +8,16 @@ import { useTickets } from "./useTickets";
 
 /**
  * Paid packs whose tickets the server hasn't added yet, kept in this phone's storage for the person
- * who paid, so closing the checkout or the app never loses a payment. Each is kept from the moment
- * its payment is signed, before Sui is asked to run it, until the server adds its tickets, or refuses
- * it for good. The server counts a payment once, so asking again is safe: the app, the Shop and the
- * checkout ask again for every kept one as they open, and the checkout opens on one still kept.
+ * who paid, so the phone can report the payment again at once. The server records each purchase
+ * before it's paid and finds its payment on Sui by itself, so losing this storage only means waiting
+ * for that. Each is kept from the moment its payment is signed, before Sui is asked to run it, until
+ * the server adds its tickets, or refuses it for good. The server counts a payment once, so asking
+ * again is safe: the app, the Shop and the checkout ask again for every kept one as they open, and
+ * the checkout opens on one still kept.
  */
 export interface UnaddedPurchase {
+  /** The purchase the server recorded as the checkout started it, which the payment names. */
+  purchaseId: number;
   /** The Sui transaction that paid for the pack. */
   digest: string;
   /** How many tickets the pack has. */
@@ -88,6 +92,10 @@ const isKeptRefusal = (value: unknown): value is Refusal =>
 const isUnaddedPurchase = (value: unknown): value is UnaddedPurchase =>
   typeof value === "object" &&
   value !== null &&
+  "purchaseId" in value &&
+  typeof value.purchaseId === "number" &&
+  Number.isInteger(value.purchaseId) &&
+  value.purchaseId > 0 &&
   "digest" in value &&
   typeof value.digest === "string" &&
   value.digest !== "" &&
@@ -220,9 +228,9 @@ export function readUnaddedPurchasesAgain(): void {
 const asking = new Map<string, Promise<Tickets>>();
 
 async function ask(api: TicketBuyer, userId: string, purchase: UnaddedPurchase) {
-  const { digest, tickets } = purchase;
+  const { purchaseId, digest } = purchase;
   try {
-    const added = await api.buyTickets({ tickets, txDigest: digest });
+    const added = await api.buyTickets({ purchaseId, txDigest: digest });
     forgetUnaddedPurchase(userId, digest);
     return added;
   } catch (caught) {

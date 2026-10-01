@@ -112,6 +112,7 @@ export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
     tickets: () => Promise.resolve(FRESH_TICKETS),
     spendTicket: unanswered("spendTicket"),
     ticketShop: unanswered("ticketShop"),
+    startTicketPurchase: unanswered("startTicketPurchase"),
     buyTickets: unanswered("buyTickets"),
     packageGift: unanswered("packageGift"),
     reportDeposit: unanswered("reportDeposit"),
