@@ -4,10 +4,10 @@
 
 ## Decisions for ad0ll
 
-Each has a recommendation. The fix lanes leave these three alone until you answer.
+ad0ll answered SHELL-3 and TIX-3 to the backend session (2026-10-01), which owns both now. CLEAN-2 waits for an answer.
 
-1. **The friend picker (SHELL-3).** Gift Messages go out through LINE's full picker on purpose, because its one-pick mode lists friends only and can come up empty. So one message can reach several chats, group chats included, and the first person to open it in a 1:1 chat receives the sticker. AGENTS.MD says a Gift Message goes into one 1:1 chat. _Recommend_ keeping the full picker, rewording the Gift Message row to say the first person to open it receives it, and saying so on the give sheet.
-2. **Paid tickets that depend on the phone (TIX-3).** A pack's tickets reach the person only if their phone keeps the payment's digest until the server adds them. _Recommend_ the server recording each purchase (the person, the pack and its price) before the payment is signed, then adding its tickets once Sui shows the payment, so the phone's copy only makes it sooner. It needs a table and a migration. The other way, reading the vault's payment events, needs no client change but depends on Sui's event index.
+1. **The friend picker (SHELL-3).** Gift Messages go out through LINE's full picker on purpose, because its one-pick mode lists friends only and can come up empty. So one message can reach several chats, group chats included, and the first person to open it in a 1:1 chat receives the sticker. AGENTS.MD says a Gift Message goes into one 1:1 chat. _Answered_: the full picker stays, and AGENTS.MD's Gift Message row says it goes to the chats the giver picks and can't be received from a group chat.
+2. **Paid tickets that depend on the phone (TIX-3).** A pack's tickets reach the person only if their phone keeps the payment's digest until the server adds them. _Answered_: the server records each purchase before the payment is signed, and a sweep adds the tickets of payments Sui shows that the phone never reported. The backend session is building it, the checkout's side included.
 3. **Mona Sans's slashed zero (CLEAN-2).** The plain zero is patched site by site, with widths tuned to other tokens. _Recommend_ self-hosting a Mona Sans build whose tabular zero is the plain glyph, so `tabular-nums` works everywhere again; or setting the counting figures in another face. A design call.
 
 Calls the lanes made, which ad0ll left to us (2026-10-01). All stand as merged but two, logging out and render crashes, which changed:
@@ -68,4 +68,4 @@ A review of those follow-ups found 6 more, recorded in the same review: 1 medium
 
 - [x] Sealing: F1-1, F1-2, F1-4
 - [x] Giving: F2-1, F2-2
-- [ ] The server mints stickers left unminted: F1-3, offered to the backend session
+- [ ] The server mints stickers left unminted: F1-3, which the backend session took

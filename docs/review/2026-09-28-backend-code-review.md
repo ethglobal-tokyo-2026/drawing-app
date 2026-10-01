@@ -13,8 +13,8 @@ Nine read-only lanes each took an area, and every finding was checked against th
 What's left, and what each waits for:
 
 - **The escrow switch**, on 2026-10-06, once the expiry sweep has returned the gifts in the old escrow (they expire Oct 3–5): the server moves to the escrow the 2026-10-01 redeploy made (LATE-6), which brings CHAIN-3 to the escrow in use. A scheduled task does it.
-- **DB-1** · cleanup: `ticket_purchases.verified_at` is never null. Waits for the owner's answer to the frontend review's TIX-3.
-- **LATE-6**'s croquis.eth step, **OWNER-1** and **OWNER-5**: the owner's, under Needs the owner.
+- **DB-1** · cleanup: `ticket_purchases.verified_at` is never null. The owner approved TIX-3, whose fix records each purchase before it's paid, which gives the column its use; in progress.
+- **LATE-6**'s croquis.eth step and **OWNER-1**: the owner's, under Needs the owner.
 
 ## Owner's decisions
 
@@ -250,9 +250,7 @@ No person or sticker had ever been named under croquis.eth: the box's settings m
 - **OWNER-2** · medium · fixed `de0baa10`, `723f6a48` · The receiver of an expired gift was told it was back on the giver's Sticker Board, but nothing returned it: the sticker stayed in the escrow, the giver's board showed it on its way, and it could never be given again. The API's expiry sweep, at boot and just after each midnight in Tokyo, sends each expired gift back through the escrow's `returnExpiredGift` and records it returned, and takes out a packed gift whose deposit never landed, an hour past its expiry (`CLOSE_UNLANDED_AFTER_MS`). Live at the next deploy.
 - **OWNER-3** · low · fixed `18057b84`, `ac3c3634` · Giving said "Confirm in your wallet if asked", and two sign-in errors said "sign-in token", words the interface isn't supposed to use; the frontend fixes reworded all three.
 - **OWNER-4** · low · decided · PRODUCT.md's Users leaves out hackathon judges, a one-event audience; nothing to change.
-- **OWNER-5** · low · open · Two AGENTS.MD vocabulary entries need the owner's approval:
-  - Age verification ends "It unlocks nothing yet", but it decides who marks, sees and receives NSFW stickers. Proposed ending: "It's what lets an adult mark, see and receive NSFW stickers."
-  - Gift Message says it goes "into one 1:1 chat", but the picker lets the giver pick several chats, groups included (the frontend review's SHELL-3). Proposed: "…into the chats the giver picks; it can't be received from a group chat." Or, per SHELL-3, limit the picker to one friend and keep the entry.
+- **OWNER-5** · low · fixed `c88ba9e2` · AGENTS.MD's Age verification said it unlocked nothing, though it decides who marks, sees and receives NSFW stickers, and its Gift Message said one 1:1 chat, though the picker sends to every chat the giver picks; the owner approved the new wording.
 
 ## Checked and fine
 
