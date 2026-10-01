@@ -34,8 +34,11 @@ interface Options {
   onOpen: (id: string) => void;
   /** Where a sticker was put; the board keeps it on top of the others. */
   onCommit: (id: string, placement: Placement) => void;
-  /** Takes a sticker off the board, back to the sticker tray. */
-  onRemove: (id: string) => void;
+  /**
+   * Takes a sticker off the board, back to the sticker tray, from `placement` when steps just moved
+   * it: the board's stickers don't have that spot until React draws it.
+   */
+  onRemove: (id: string, placement?: Placement) => void;
 }
 
 /** A sticker in hand: `drag` rides under the finger (or two), `handle` is resized or turned in place. */
@@ -279,7 +282,7 @@ export function useBoardGestures(options: Options) {
       latest.current.onSelect(null);
       const el = stage.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`);
       if (!latest.current.tray.current || !el) {
-        latest.current.onRemove(id);
+        latest.current.onRemove(id, saved?.id === id ? saved.placement : undefined);
         return;
       }
       stowingId = id;

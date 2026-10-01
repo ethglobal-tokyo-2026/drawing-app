@@ -586,11 +586,11 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   };
 
   // Back into the sticker tray: off the board, with its spot kept for when it comes back out.
-  const removeFromBoard = (id: string) => {
+  const removeFromBoard = (id: string, steppedTo?: Placement) => {
     const sticker = stickers?.find((s) => s.id === id);
     if (!sticker) return;
     if (selected === id) setSelected(null);
-    const placement = { ...sticker.placement, on: false };
+    const placement = { ...(steppedTo ?? sticker.placement), on: false };
     setPlacement(id, placement);
     save(sticker, placement);
   };

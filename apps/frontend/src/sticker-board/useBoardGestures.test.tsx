@@ -309,5 +309,19 @@ describe("useBoardGestures", () => {
       const first = Array.isArray(frames) ? frames[0]?.transform : undefined;
       expect(first).toContain(transformAt(x, y, w, h, saved.r));
     });
+
+    it("take a sticker removed before the tray has loaded off from where they left it", () => {
+      const onCommit = vi.fn<Options["onCommit"]>();
+      const onRemove = vi.fn<Options["onRemove"]>();
+      board(onCommit, { onRemove });
+      pressRight(2);
+      const el = host.querySelector(".placed-sticker");
+      act(
+        () =>
+          void el?.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true })),
+      );
+      const [, saved] = onCommit.mock.calls[0];
+      expect(onRemove).toHaveBeenCalledExactlyOnceWith("a", saved);
+    });
   });
 });
