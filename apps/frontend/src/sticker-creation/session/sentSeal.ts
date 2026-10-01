@@ -1,28 +1,36 @@
 import type { Tickets } from "@drawing-app/api/client";
-import { readStored, writeStored } from "../../ui/deviceStorage";
+import { personKey, readStored, writeStored } from "../../ui/deviceStorage";
 
 /**
  * The ticket use whose seal request went out with no answer yet, kept on this device so a reload
  * doesn't reopen a sheet the server may already have sealed: it comes back locked, for the seal key.
+ * Kept per person, as the sticker in progress is, so someone else sealing here never clears it.
  */
-const SENT_SEAL_KEY = "draw.sentSeal";
+const keyFor = (userId: string) => personKey("draw.sentSeal", userId);
 
-export function keepSentSeal(ticketUseId: number): void {
+export function keepSentSeal(userId: string, ticketUseId: number): void {
   writeStored(
-    SENT_SEAL_KEY,
+    keyFor(userId),
     String(ticketUseId),
     `Can't note that ticket use ${ticketUseId}'s seal went out; a reload before its answer reopens the sheet`,
   );
 }
 
-export function forgetSentSeal(): void {
-  writeStored(SENT_SEAL_KEY, null, "Can't clear the note of a seal that went out from this device");
+export function forgetSentSeal(userId: string): void {
+  writeStored(
+    keyFor(userId),
+    null,
+    "Can't clear the note of a seal that went out from this device",
+  );
 }
 
-/** Whether `ticketUseId`'s seal went out and no answer was kept since. */
-export function sealWentOut(ticketUseId: number | null): boolean {
+/** Whether `userId`'s seal on `ticketUseId` went out and no answer was kept since. */
+export function sealWentOut(userId: string, ticketUseId: number | null): boolean {
   if (ticketUseId === null) return false;
-  const { text } = readStored(SENT_SEAL_KEY, "Can't tell whether a seal went out from this device");
+  const { text } = readStored(
+    keyFor(userId),
+    "Can't tell whether a seal went out from this device",
+  );
   return text === String(ticketUseId);
 }
 

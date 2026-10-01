@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { gift, people, sticker } from "../api/testFixtures";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
+import { keepGift } from "../giving/keptGifts";
 import { PULL } from "../receiving/pullTab";
 import { forgetBoardComplete } from "../sticker-board/boardComplete";
 import { readKeptBoardAgain } from "../sticker-board/lastBoard";
@@ -59,6 +60,17 @@ afterEach(async () => {
   unmount();
   history.replaceState(null, "", "/");
   vi.useRealTimers();
+});
+
+it("reports a Gift Message's send the server missed as the app starts", async () => {
+  history.replaceState(null, "", "/");
+  keepGift(TEST_ME.id, "gift-missed", { message: "sent" });
+  const reportShared = vi.fn(async () => gift({ id: "gift-missed", status: "sent" }));
+  const view = renderWithApi(<App />, emptyApi({ reportShared }));
+  unmount = view.unmount;
+  await act(() => vi.dynamicImportSettled());
+  await settle();
+  expect(reportShared).toHaveBeenCalledWith("gift-missed", "sent");
 });
 
 it("refreshes waiting gifts after Not now without reloading the sticker board", async () => {

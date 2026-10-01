@@ -2,7 +2,7 @@
 import type { Tickets } from "@drawing-app/api/client";
 import { act, forwardRef, useEffect, useImperativeHandle } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { emptyApi, FRESH_TICKETS, renderWithApi } from "../api/testing";
+import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing";
 import { strings } from "../i18n/strings";
 import { useTickets } from "../tickets/useTickets";
 import { DrawingScreen } from "./DrawingScreen";
@@ -90,10 +90,19 @@ const startOver = () =>
   [...document.querySelectorAll("button")].find(
     (button) => button.textContent === strings.stickerCreation.seal.startOver.en,
   );
+/** A sticker in progress kept at 0:00, with nothing drawn that matters here. */
+const keptAtTimeUp: KeptSession = {
+  status: "found",
+  ticket: 7,
+  elapsedMs: SESSION_MS,
+  nsfw: false,
+  ops: [],
+};
+const chip = () => document.querySelector(".seal-chip")?.textContent ?? "";
 
 describe("the drawing screen after a reload", () => {
   it("stops waiting on a sticker in progress whose seal went out once a read that never answers has had a second wait", async () => {
-    keepSentSeal(7);
+    keepSentSeal(TEST_ME.id, 7);
     reopen(
       { status: "unread", ticket: 7, error: new Error("slow"), later: new Promise(() => {}) },
       { usedToday: [] },
@@ -102,12 +111,12 @@ describe("the drawing screen after a reload", () => {
     expect(sheet).toBeNull();
 
     await settle(LOAD_TIMEOUT_MS);
-    expect(sealWentOut(7)).toBe(false);
+    expect(sealWentOut(TEST_ME.id, 7)).toBe(false);
     expect(sheet).toBe("fresh");
   });
 
   it("lets a sticker in progress the phone can't cut at 0:00 go for a fresh sheet", async () => {
-    reopen({ status: "found", ticket: 7, elapsedMs: SESSION_MS, nsfw: false, ops: [] });
+    reopen(keptAtTimeUp);
     await settle();
     expect(sheet).toBe("held");
 
@@ -122,5 +131,17 @@ describe("the drawing screen after a reload", () => {
     await settle();
     expect(sheet).toBe("fresh");
     expect(startOver()).toBeUndefined();
+  });
+
+  it("offers no fresh sheet at 0:00 while the server may hold its seal", async () => {
+    keepSentSeal(TEST_ME.id, 7);
+    reopen(keptAtTimeUp);
+    await settle();
+    // Its seal went out before the reload, so it's back locked for the check, which cuts it again.
+    act(() => document.querySelector<HTMLButtonElement>(".seal-key")?.click());
+    await settle(1000);
+    expect(chip()).toContain(strings.stickerCreation.seal.failed.onThisPhone.en);
+    expect(startOver()).toBeUndefined();
+    expect(sheet).toBe("held");
   });
 });

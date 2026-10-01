@@ -229,7 +229,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         canvas.current?.reset();
         clock.reset();
         keeper.wipe();
-        forgetSentSeal();
+        forgetSentSeal(me.id);
         ticket.current = null;
         setPickedUp(null);
         setPaused(false);
@@ -372,7 +372,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     let shown: Ceremony | null = null;
     let sent = false;
     // A seal sent before, here or before a reload, may have reached the server.
-    const heldBefore = sentSeal.current !== null || sealWentOut(ticket.current);
+    const heldBefore = sentSeal.current !== null || sealWentOut(me.id, ticket.current);
     try {
       const sheet = sheetBox();
       const again = sentSeal.current;
@@ -412,10 +412,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       setCeremony(started);
       request = await made;
       sent = true;
-      keepSentSeal(request.ticketUseId);
+      keepSentSeal(me.id, request.ticketUseId);
       const { sticker: sealedSticker } = await api.seal(request);
       sentSeal.current = null;
-      forgetSentSeal();
+      forgetSentSeal(me.id);
       ticket.current = null;
       keeper.wipe();
       // The used ticket's stub now carries this sticker's outline.
@@ -430,7 +430,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       else if (failure === "unknown" && sticker && request) sentSeal.current = { request, sticker };
       // One that never left changes nothing: an earlier try may still have reached the server.
       const mayHaveSealed = failure === "unknown" || (failure === "unsent" && heldBefore);
-      if (!mayHaveSealed) forgetSentSeal();
+      if (!mayHaveSealed) forgetSentSeal(me.id);
       const held = sentSeal.current?.sticker;
       if (shown) dismissCeremony(shown, { keepSticker: shown.sticker === held });
       else if (sticker !== held) sticker?.dispose();
@@ -544,7 +544,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       setSmoothing(found.tools.smoothing);
     }
     ticket.current = found.ticket;
-    send({ type: "restored", drawn, sealSent: sealWentOut(found.ticket) });
+    send({ type: "restored", drawn, sealSent: sealWentOut(me.id, found.ticket) });
     if (!drawn) {
       setPickedUp(null);
       return;
@@ -583,7 +583,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   // paused; one that can't be read gives its ticket back.
   const pickUp = useEffectEvent((kept: KeptSession) => {
     const notRead = kept.status === "unread" || kept.status === "lost";
-    if (notRead && kept.ticket !== null && sealWentOut(kept.ticket)) {
+    if (notRead && kept.ticket !== null && sealWentOut(me.id, kept.ticket)) {
       console.error(
         "The drawing in progress wasn't read after a reload, and its seal had gone out, so its sheet waits for the drawing or the tickets",
         kept.error,
@@ -627,7 +627,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     if (outcome === null && waiting.reading) return;
     unsettle(null);
     setRestoring(false);
-    forgetSentSeal();
+    forgetSentSeal(me.id);
     if (outcome === "unsealed") {
       carryOver(waiting.ticket, waiting.clear);
       return;

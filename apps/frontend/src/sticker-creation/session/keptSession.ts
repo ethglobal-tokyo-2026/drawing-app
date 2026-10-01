@@ -73,7 +73,7 @@ function openDb(name: string): Promise<IDBDatabase> {
       const db = req.result;
       // WebKit closes it when its IndexedDB server goes, as it can while LINE is in the background.
       db.onclose = () => dropConnection(name, opening);
-      // Logging out deletes the database, which waits on every connection to it.
+      // Another tab upgrading or deleting the database waits on every connection to it.
       db.onversionchange = () => {
         db.close();
         dropConnection(name, opening);

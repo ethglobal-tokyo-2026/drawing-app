@@ -110,7 +110,7 @@ import type { TrayBoard } from "./tray/trayEngine";
 import { reasonOf, trayProblemKey, type TrayProblem } from "./tray/trayProblem";
 import { useBoardGestures } from "./useBoardGestures";
 import { useBoardSize } from "./useBoardSize";
-import { useMyStickerBoard } from "./useMyStickerBoard";
+import { onMyStickerBoardChanged, useMyStickerBoard } from "./useMyStickerBoard";
 import "./StickerBoard.css";
 
 // The Zipper shows on the board at rest, so the sticker tray's code starts loading with the board's.
@@ -428,6 +428,22 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   }
 
   const pending = useApiQuery("pending-gifts", (client) => client.pendingGifts());
+  // The gifts on their way load again the same way, after a load that may have read them too early.
+  const [reloadPending, setReloadPending] = useState(false);
+  if (reloadPending && pending.state !== "loading") {
+    setReloadPending(false);
+    if (pending.state === "ready") pending.refresh();
+    else pending.retry();
+  }
+  // A Gift Message's send the server heard only late, as the app started, left both behind too.
+  useEffect(
+    () =>
+      onMyStickerBoardChanged(() => {
+        setReloadForGift(true);
+        setReloadPending(true);
+      }),
+    [],
+  );
   // A preview can make a gift wait here even when the person chooses Not now.
   const forYou = useApiQuery(`gifts-for-you:${giftClosures}`, (client) => client.giftsForYou());
   const waiting = forYou.state === "ready" ? forYou.data.gifts : [];
@@ -932,8 +948,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
                 setReloadForGift(true);
               }
               // The bag's gift may have been packed, sent or taken out.
-              if (pending.state === "ready") pending.refresh();
-              else if (pending.state === "failed") pending.retry();
+              setReloadPending(true);
             }}
           />
         </Suspense>

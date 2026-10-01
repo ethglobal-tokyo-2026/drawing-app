@@ -212,9 +212,8 @@ export function lineLogin() {
 }
 
 /**
- * Logs out of LINE. `endSession` first ends the app's session and forgets what this device keeps for
- * the person, so a browser handed to someone else holds none; LINE's logout goes ahead whether it
- * finishes or not.
+ * Logs out of LINE. `endSession` first ends the app's session; LINE's logout goes ahead whether it
+ * finishes or not. What this device keeps for the person stays, kept for them alone.
  */
 export async function lineLogout(endSession: () => Promise<void>) {
   try {

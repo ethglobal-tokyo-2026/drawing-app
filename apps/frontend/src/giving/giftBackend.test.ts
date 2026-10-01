@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/apiClient";
 import { emptyApi, renderWithApi } from "../api/testing";
 import { gift } from "../api/testFixtures";
-import { useMyStickerBoard } from "../sticker-board/useMyStickerBoard";
+import { onMyStickerBoardChanged, useMyStickerBoard } from "../sticker-board/useMyStickerBoard";
 import { createApiGiftBackend, GiftPackagingError, type PackWait } from "./giftBackend";
 import type { GiftSendOutcome } from "./giftSender";
 import {
@@ -439,16 +439,23 @@ describe("Giving through the smart account", () => {
     t.reportShared.mockRejectedValue(new ApiError(401, { error: "signed_out" }));
     expect(await failureOf(t.backend.markSent(t.packed.id))).toBeInstanceOf(ApiError);
     const reports = () => t.reportShared.mock.calls.length;
+    // The board on screen loads again only once the server has heard.
+    const boardChanged = vi.fn();
+    const stopListening = onMyStickerBoardChanged(boardChanged);
 
     t.reportShared.mockRejectedValue(noAnswer());
     await reportKeptSends(t.api, userId);
     const unheard = reports();
+    expect(boardChanged).not.toHaveBeenCalled();
     t.reportShared.mockResolvedValue({ ...t.packed, status: "sent" });
     await reportKeptSends(t.api, userId);
     expect(reports()).toBe(unheard + 1);
     expect(t.reportShared).toHaveBeenLastCalledWith(t.packed.id, "sent");
+    expect(boardChanged).toHaveBeenCalledOnce();
     await reportKeptSends(t.api, userId);
     expect(reports()).toBe(unheard + 1);
+    expect(boardChanged).toHaveBeenCalledOnce();
+    stopListening();
   });
 
   it("sends a gift whose picker was cancelled as it is when Giving opens again", async () => {

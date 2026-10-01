@@ -18,6 +18,7 @@ import { forgetSelectionHints } from "./selectionHint";
 import { keepBoard, keptBoardFor, readKeptBoardAgain } from "./lastBoard";
 import { reopenOnSettingsNextStart } from "./stat-board/reopenOnSettings";
 import { StickerBoard } from "./StickerBoard";
+import { myStickerBoardChanged } from "./useMyStickerBoard";
 import { STEP_SAVE_IDLE_MS } from "./useBoardGestures";
 
 // The board's chat menu and Privy reach LINE's SDK; nothing here needs it to answer.
@@ -353,6 +354,26 @@ describe("StickerBoard after a gift", () => {
     if (!stage) throw new Error("The board has no stage");
     return stage;
   };
+
+  it("loads the board and the gifts on their way again when the server hears of a send late", async () => {
+    const stickerBoard = vi.fn(async () => ({
+      owner: TEST_OWNER,
+      boardStickers: [boardSticker({ placement: at(0.5) })],
+    }));
+    const pendingGifts = vi.fn(async () => ({ gifts: [] }));
+    const view = renderWithApi(
+      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
+      emptyApi({ stickerBoard, pendingGifts }),
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    const loads = [stickerBoard.mock.calls.length, pendingGifts.mock.calls.length];
+
+    await act(async () => myStickerBoardChanged());
+    expect([stickerBoard.mock.calls.length, pendingGifts.mock.calls.length]).toEqual(
+      loads.map((n) => n + 1),
+    );
+  });
 
   it("leaves a given sticker off the board, and out of the count", async () => {
     const gone = given();

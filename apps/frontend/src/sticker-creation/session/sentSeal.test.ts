@@ -1,6 +1,7 @@
+// @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
 import { FRESH_TICKETS } from "../../api/testing";
-import { sentSealOutcome } from "./sentSeal";
+import { forgetSentSeal, keepSentSeal, sealWentOut, sentSealOutcome } from "./sentSeal";
 
 const sticker = { id: "sticker-1", outline: "M0 0Z", width: 10, height: 10 };
 const ticketsUsing = (...uses: { id: number; sealed: boolean }[]) => ({
@@ -20,5 +21,15 @@ describe("sentSealOutcome", () => {
     expect(sentSealOutcome(7, tickets)).toBe("unsealed");
     // Spent before today: the tickets can't say.
     expect(sentSealOutcome(2, tickets)).toBeNull();
+  });
+});
+
+describe("the note of a seal that went out", () => {
+  it("is the person's own, so someone else sealing on this device leaves it", () => {
+    keepSentSeal("person-a", 7);
+    keepSentSeal("person-b", 9);
+    forgetSentSeal("person-b");
+    expect(sealWentOut("person-a", 7)).toBe(true);
+    expect(sealWentOut("person-b", 9)).toBe(false);
   });
 });

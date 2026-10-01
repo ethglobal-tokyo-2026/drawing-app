@@ -1,5 +1,5 @@
 import { ApiError, type ApiClient, type ErrorCode } from "../api/apiClient";
-import { forgetMyStickerBoard } from "../sticker-board/useMyStickerBoard";
+import { myStickerBoardChanged } from "../sticker-board/useMyStickerBoard";
 import { forgetKeptGift, keptSends } from "./keptGifts";
 
 /** Refusals no later report can change: the gift is gone, closed, or someone else's. */
@@ -20,8 +20,8 @@ export async function reportKeptSends(
   api: Pick<ApiClient, "reportShared">,
   userId: string,
 ): Promise<void> {
-  const sends = keptSends(userId);
-  for (const giftId of sends) {
+  let settled = 0;
+  for (const giftId of keptSends(userId)) {
     try {
       await api.reportShared(giftId, "sent");
     } catch (error) {
@@ -34,6 +34,8 @@ export async function reportKeptSends(
       }
     }
     forgetKeptGift(userId, giftId);
+    settled += 1;
   }
-  if (sends.length > 0) forgetMyStickerBoard();
+  // The board on screen may have been read before the server heard, with the sticker still on it.
+  if (settled > 0) myStickerBoardChanged();
 }
