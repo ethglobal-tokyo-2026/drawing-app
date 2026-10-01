@@ -74,14 +74,14 @@ A review of those follow-ups found 6 more, recorded in the same review: 1 medium
 
 ad0ll approved these on 2026-10-01. One lane each:
 
-- [ ] Review the third round of fixes: b1d6fd3a, 1410d0b6, 3afcb287, 36181a92
+- [x] Review the third round of fixes: b1d6fd3a, 1410d0b6, 3afcb287, 36181a92. It found T-1 to T-3, fixed in 4a1299f6
 - [x] The crash page and Start a new sticker, seen in WebKit in both languages: the link wraps clear of the seal chip, and the crash page says Reload to try again
 - [ ] Japanese seal chips break between phrases, and whether a tap during a tab change's view transition is dropped (verify only)
 - [ ] NSFW stickers' full images for adults only: everyone else gets a veiled image, in every view, from `/api/images` and in the NFT metadata
-- [ ] The Sealed card's keys work as soon as they show, and the pull tab opens the gift bag a little sooner
+- [x] The Sealed card's keys work as soon as they show, and the pull tab opens the gift bag a little sooner (`PULL.snapAt`, a guess)
 - [ ] CLEAN-2: a self-hosted Mona Sans whose tabular zero is plain, with every zero workaround gone
 - [x] The finished plans deleted: i18n, the 09-26 frontend feedback, NSFW stickers
-- [ ] What to check on a phone, in the review record
+- [x] What to check on a phone, in the review record
 
 ## Left from the deleted plans
 

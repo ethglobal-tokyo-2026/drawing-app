@@ -154,6 +154,41 @@ A sent mark kept after a 401 was reported again only when the same sticker was g
 
 - Fixed in 3afcb287: the app reports every kept sent mark as it starts, which includes signing in again after a lost session (`src/giving/sentReports.ts`), forgets each once the server hears it or refuses it for good, and loads the board again.
 
+## The third round's review
+
+The fixes the follow-ups review led to, and ad0ll's calls after it: b1d6fd3a 1410d0b6 3afcb287 36181a92. Nothing found in the crash page (1410d0b6).
+
+**T-1** · medium · `src/sticker-creation/session/sentSeal.ts:8` (b1d6fd3a)  
+Logging out kept the sticker in progress per person, but the note that keeps it locked after an unanswered seal was one per device. Someone else sealing on that browser replaced the note and cleared it, so the first person's sticker in progress came back unlocked, though the server might hold its seal: a later seal on it would be answered with the first sticker.
+
+- Fixed in 4a1299f6: the note is kept per person, as the sticker in progress is.
+
+**T-2** · low · `src/giving/sentReports.ts:38` (3afcb287)  
+Reporting a missed send as the app starts only dropped the board's kept answers. The board on screen had already loaded, so it kept the sticker on with Give, and left its gift out of the gifts on their way, for that whole visit.
+
+- Fixed in 4a1299f6: once the server hears, the board on screen loads again, and so do the gifts on their way.
+
+**T-3** · low · `src/line/liff.ts:215` (b1d6fd3a)  
+Two comments still said logging out forgets what the device keeps for the person.
+
+- Fixed in 4a1299f6.
+
+Test gaps it found, filled in 4a1299f6: nothing tested that the app reports missed sends as it starts, or that Start a new sticker stays away when the server may hold the seal.
+
+## What to check on a phone
+
+What only LINE on a real phone can show. The timings marked _guess_ are unverified.
+
+- **LINE's picker:** whether the page goes hidden as the picker opens and visible as it closes, on an iPhone and on Android. That decides which wait applies: 5 s after the page is back in view (`PICKER_RETURN_MS`, guess), or 20 s from asking (`PICKER_OPENING_MS`, guess).
+- **Giving on a weak connection:** "Did it go out?" doesn't show before the picker has opened. Switch apps while the gift bag is being prepared, then come back: the picker still opens, or the bag says why.
+- **The pull tab:** the bag opens a clear step before the screen's edge, and a short pull springs back (`PULL.snapAt`, guess).
+- **The Sealed card:** Keep drawing and Back to My board act on the first tap, as soon as they've faded up.
+- **The board's flip:** headless WebKit can't draw it.
+- **Logging out, in a browser outside LINE:** draw a few strokes, log out, sign back in: the sticker in progress comes back with its ticket.
+- **NSFW stickers**, with an adult-verified account and one that isn't: the adult seals an 18+ sticker. The other sees it blurred on the board, in Explore and in the tray, can't be picked for it, and gets the adults-only refusal from its gift link.
+- **Reduced motion** (iOS: Settings, Accessibility, Motion): the seal ceremony, the gift bag and the Mini-game honor it.
+- **Japanese:** the seal chip and Start a new sticker break between phrases, and nothing overflows.
+
 ## WebKit pass
 
 Playwright WebKit, headless, 390×844 with touch, against a dev server under LIFF Mock at 66903030. All of these worked, with no page errors:
