@@ -75,9 +75,24 @@ A review of those follow-ups found 6 more, recorded in the same review: 1 medium
 ad0ll approved these on 2026-10-01. One lane each:
 
 - [ ] Review the third round of fixes: b1d6fd3a, 1410d0b6, 3afcb287, 36181a92
-- [ ] The crash page and Start a new sticker, seen in WebKit in both languages
+- [x] The crash page and Start a new sticker, seen in WebKit in both languages: the link wraps clear of the seal chip, and the crash page says Reload to try again
+- [ ] Japanese seal chips break between phrases, and whether a tap during a tab change's view transition is dropped (verify only)
 - [ ] NSFW stickers' full images for adults only: everyone else gets a veiled image, in every view, from `/api/images` and in the NFT metadata
 - [ ] The Sealed card's keys work as soon as they show, and the pull tab opens the gift bag a little sooner
 - [ ] CLEAN-2: a self-hosted Mona Sans whose tabular zero is plain, with every zero workaround gone
-- [ ] The finished plans deleted: i18n, the 09-26 frontend feedback, NSFW stickers
+- [x] The finished plans deleted: i18n, the 09-26 frontend feedback, NSFW stickers
 - [ ] What to check on a phone, in the review record
+
+## Left from the deleted plans
+
+Approved there, not on main. ad0ll keeps or drops each; this plan's deletion drops what's left.
+
+- Explore kept alive between tabs, so its search and scroll survive (`App.tsx` mounts it only while it's open)
+- The Shop's price quote cached and prefetched (`useReservePacks` keeps no answer)
+- Leaderboard rows sliding to their new rank, instead of dealt again (`useRowDeal`)
+- Explore paged by day (`apps/api/src/explore/explore.ts` sends today's stickers and the feed, capped)
+- The greeting sent by the server from a follow webhook (`deploy/line/greeting.md` says to turn the Manager's greeting off once it exists)
+- A CDN in Japan, once there's a real domain
+- ad0ll's, in LINE's consoles: rename the LIFF app, the Login channel and the Official account to Croquis; paste the greeting into LINE Official Account Manager and check its auto-replies
+
+Superseded, so dropped: the board's shell during sign-in (the 30-day session and the board kept on the phone shortened the wait instead), a given sticker dropping again on today's layer in Explore (a gift doesn't move a sticker), the reserve ticket's scalloped ends, and requiring Japanese for every string.

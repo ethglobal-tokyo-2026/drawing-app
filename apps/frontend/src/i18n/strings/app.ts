@@ -38,7 +38,7 @@ export const app = {
     title: { en: "Croquis stopped", ja: "クロッキーが止まりました" },
     /** The same page: the line under the heading, over the error's words */
     lead: {
-      en: "Something on this screen went wrong. Reload to start again.",
+      en: "Something on this screen went wrong. Reload to try again.",
       ja: "この画面で問題が起きました。再読み込みして、もう一度お試しください。",
     },
     /** The same page: the key that reloads the page */
