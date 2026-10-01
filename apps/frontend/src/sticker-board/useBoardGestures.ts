@@ -130,9 +130,10 @@ export function useBoardGestures(options: Options) {
       el.style.transform = transformAt(live.x, live.y, w, h, live.r);
     };
 
-    const commit = (el: HTMLElement, sticker: BoardSticker, live: Live) => {
+    /** Saves where `live` leaves the sticker, and returns that spot. */
+    const commit = (el: HTMLElement, sticker: BoardSticker, live: Live): Placement | null => {
       const { field } = latest.current;
-      if (!field) return;
+      if (!field) return null;
       const at = toFrac(field, live);
       const placement: Placement = {
         on: true,
@@ -145,6 +146,7 @@ export function useBoardGestures(options: Options) {
       // Let go past the field's edge, it settles on the field; React draws the same when it catches up.
       draw(el, sticker, liveOf(placement, field));
       latest.current.onCommit(sticker.id, placement);
+      return placement;
     };
 
     const focusSticker = (id: string) =>
@@ -152,13 +154,15 @@ export function useBoardGestures(options: Options) {
 
     /** Steps on one sticker, drawn as they come and saved once, when they've been quiet. */
     let stepped: { id: string; el: HTMLElement; live: Live; timer: number } | null = null;
+    /** Saves the steps waiting, and returns where they left their sticker. */
     const saveSteps = () => {
       const s = stepped;
-      if (!s) return;
+      if (!s) return null;
       stepped = null;
       clearTimeout(s.timer);
       const sticker = stickerOf(s.id);
-      if (sticker) commit(s.el, sticker, s.live);
+      const placement = sticker && commit(s.el, sticker, s.live);
+      return placement ? { id: s.id, placement } : null;
     };
     const step = (id: string, by: Step) => {
       const { field } = latest.current;
@@ -252,7 +256,7 @@ export function useBoardGestures(options: Options) {
      */
     let stowingId: string | null = null;
     const stow = async (id: string) => {
-      saveSteps();
+      const saved = saveSteps();
       const { field, size, reduced } = latest.current;
       const sticker = stickerOf(id);
       if (!sticker || !field || !size || stowingId || leaving.has(id)) return;
@@ -280,7 +284,8 @@ export function useBoardGestures(options: Options) {
       }
       stowingId = id;
       leaving.add(id);
-      const from = liveOf(sticker.placement, field);
+      // The steps just saved aren't in the stickers until React draws them, so it peels from them.
+      const from = liveOf(saved?.id === id ? saved.placement : sticker.placement, field);
       peelMark(sticker, from);
       const { w, h } = sizeOf(size.W, from.s, sticker);
       const to = {
