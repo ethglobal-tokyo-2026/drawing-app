@@ -5,7 +5,7 @@
 Nine read-only lanes each took an area, and every finding was checked against the code before it was fixed. Most were fixed in the merges that followed: `38bf9439` (the cleanup), `2a8793cb` (the owner's decisions and the follow-ups), `ba836c54` (the items left for the frontend review) and the merge that added this record.
 
 - An open finding reads **ID** · severity · open · `file:line`, then what goes wrong, its trigger (for cleanup, its cost) and a fix. Every other finding is one line.
-- _Fixed_ names its commits. _Decided_: the owner chose. _Dropped_: not worth doing, or made moot by a later change. _Handed off_: what's left is frontend work, filed in the frontend code review.
+- _Fixed_ names its commits. _Decided_: the owner chose. _Dropped_: not worth doing, or made moot by a later change. _Handed off_: what's left is frontend work.
 - _High_: lost data, money, a ticket, a gift or Gratitude; an NSFW sticker shown to or received by someone not adult; a server crash or outage; a secret exposed. _Medium_: a wrong result, or a failure with a way out. _Low_: cosmetic, or rare with little harm. _Cleanup_: no behavior at stake.
 
 ## Open
@@ -33,7 +33,7 @@ What's left, and what each waits for:
 - **API-5** · high · fixed `2da41d2c` · The public ENS gateway made a person's newest minted sticker their avatar even when it was an NSFW sticker; `latestStickerAvatar` now skips NSFW stickers, for the gateway and the onchain avatar alike.
 - **API-6** · medium · fixed `9f7e4725` · A database failure in the ENS gateway answered 400 `unsupported_request` and was never logged as a failure; only reading the calldata stays inside the try, so anything else reaches `onError` (500, logged).
 - **API-7** · medium · fixed `6d53c7dd` · Sign-in answered 500 `internal_error` when LINE couldn't be reached; it now answers 502 `line_unavailable` with the cause and logs it, and SessionGate offers Try again.
-- **API-8** · medium · decided · Every signed-in viewer gets an NSFW sticker's full image URLs and `/api/images/` serves them to anyone, so only the app applies the blur; the owner decided the on-screen blur is enough and image URLs stay public.
+- **API-8** · medium · fixed `c17113ec`, `0741a870`, `c9fae0f8` · Every signed-in viewer got an NSFW sticker's full image URLs, `/api/images/` served them to anyone, and its NFT metadata named the full image, so only the app's blur hid it; the owner first kept the blur, then chose to close the gap: the server makes a veiled image at Sealing, gives anyone who isn't adult only that, serves the full image only to an adult's session (403 `adults_only`), and NSFW metadata names the veiled image.
 - **API-9** · low · fixed `2da41d2c` · The "no mock minting" and "World ID must be production" startup guards ran only under `NODE_ENV=production`, which nothing on the box sets, and `.env.example` claimed production refuses mock mode (the services lane reported it too); the guards are deleted, `.env.example` says `deploy-api.sh` always installs sepolia, and `deploy-api.sh`'s check still keeps dev sign-in off the box.
 - **API-10** · low · fixed `9f7e4725` · The request log's hand-kept route list missed POST /api/gifts/:giftId/receive, so Receiving from the board logged no start or finish; the log now takes Hono's matched route template and checks it against one set that includes it, and the app's own list gained `receive` too.
 - **API-11** · low · fixed `9f7e4725` · Two 502s (Sui and World ID) put the raw upstream message in `detail`, and the failed Sui read was logged with a bare `console.error`; both now go through `logFailure` and `failureCause`.
@@ -76,7 +76,7 @@ What's left, and what each waits for:
 - **DOMAIN-4** · medium · fixed `0ac19ec7` · The stat board counted streaks in Tokyo ticket days and Explore's Longest streak in each person's zone from 4:00, so one person could show two current streaks (the database and tests lanes reported it too); both now count Tokyo days, and `users.time_zone` is gone (owner's decision 1; migration `5bc78c69`).
 - **DOMAIN-5** · medium · fixed `dd74e9c8`, `5dab7fa7` · The server stored any Gratitude total a receiver posted, and the `gratitude` table's comments said the server replayed combos (the database lane reported the comments); a total over its hits × `MAX_GRATITUDE_PER_HIT`, built from the Mini-game's own scoring limits, is now refused, and the comments say the total is the Mini-game's, not recounted.
 - **DOMAIN-6** · medium · fixed `b736ff44` · Sealing stored an unreadable timelapse, and GET /timelapse then answered 500 for that sticker forever; Sealing now unzips and parses it within the size limit and refuses a bad one with 400 `invalid_request` naming the field.
-- **DOMAIN-7** · low · fixed `72a837fb` · Someone else's sticker board listed the stickers its owner had given away, and looked up who received them; it now lists only stickers the owner holds and skips that lookup (the frontend review's BOARD-1 is the next gap: a sticker in a sent gift still shows to visitors).
+- **DOMAIN-7** · low · fixed `72a837fb` · Someone else's sticker board listed the stickers its owner had given away, and looked up who received them; it now lists only stickers the owner holds and skips that lookup (and `9e4da649` keeps a sticker in a sent gift off its giver's board for visitors).
 - **DOMAIN-8** · low · fixed `2da41d2c` · The ENS naming queue started the next job once one timed out, so two jobs, even for the same person, could send ENS transactions at once; a timeout is now only logged, the next job waits for the running one to end, and tests cover it.
 - **DOMAIN-9** · low · fixed `2da41d2c` · A midnight chat-menu batch LINE was still running at the last look was left for the next boot, so that day's spenders kept a Draw key showing a full day's Daily tickets; the batch is now rechecked until it ends or the day turns.
 - **DOMAIN-10** · low · fixed `72a837fb` · User Stats found a person's combos with an OR across giver and Original Artist that scanned every gift (the database lane reported it too); two indexed selects, deduplicated by gift, replace it.
@@ -178,7 +178,7 @@ Severity here is the cost of leaving it: high invites a bug soon, medium is a re
 - **DEPLOY-1** · low · fixed · `/srv/sticker-auth/secrets.env` kept old copies of the Privy app secret and the Messaging API channel secret in the auth server's own folder after nothing loaded it; deleted on the box on 2026-10-01, with chain.env holding both.
 - **DEPLOY-2** · low · fixed `96eda34d` · deploy.sh exported `VITE_STICKER_RPC_URL` only when deploy/.env set it, so otherwise the build took one from the gitignored apps/frontend/.env, which the main-only guard can't see; it's now exported even when empty, and Vite lets the environment win over its .env files.
 - **DEPLOY-3** · cleanup · fixed `96eda34d` · drawing-api.service's comment said /api/logs "dumps" both units' journal, though since `2da41d2c` it serves only the newest lines; it says so now.
-- **DEPLOY-4** · cleanup · handed off · `apps/frontend/src/controls/useToast.tsx` is an unused copy of `ui/useToast.ts`: the frontend review's CLEAN-11, in its fix plan's Shared helpers lane.
+- **DEPLOY-4** · cleanup · fixed `27ea19f3` · `apps/frontend/src/controls/useToast.tsx` was an unused copy of `ui/useToast.ts`; the frontend fixes deleted it.
 - **DEPLOY-5** · cleanup · dropped · The API takes the public `PRIVY_APP_ID` from deploy/.env through chain.env; moving it to deploy/drawing-api.env only trades that copy for a second tracked one beside sticker-auth.env's, and a slip there stops the API at the next deploy.
 - **DEPLOY-6** · cleanup · fixed `c8b9027d` · `^lint`, `^typecheck` and `^test` made each package wait on the others' lint, typecheck and tests, though packages export TypeScript source and the generated ABIs are tracked; the tasks run side by side, and the one real dependency is explicit: sticker-chain's and the API's tests wait on sticker-chain's `compile`, which writes Forge's artifacts to `out/`.
 - **DEPLOY-7** · medium · decided · The API's two NODE_ENV production guards (no mock chain, and World ID only in production) never ran on the box. The owner deleted them (`2da41d2c`), and World ID on staging is deliberate.
@@ -368,6 +368,6 @@ Candidates the lanes checked and found fine, so nobody raises them again.
 
 ## Not covered
 
-- `apps/frontend`, beyond what the API shares with it: the frontend code review.
+- `apps/frontend`, beyond what the API shares with it: a separate review covered it.
 - The box: only read-only checks (the database opened read-only, the journal and the health checks).
 - The Move packages were read, not run against a Sui network.
