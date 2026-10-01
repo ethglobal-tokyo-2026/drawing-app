@@ -32,7 +32,7 @@ export function SealKey({ shown, armed, nsfw, problem, hint, onTap }: Props) {
   return (
     <>
       <span
-        className={`seal-chip ${chip ? "is-on" : ""} ${words !== prompt ? "is-long" : ""}`}
+        className={`seal-chip keep-phrases ${chip ? "is-on" : ""} ${words !== prompt ? "is-long" : ""}`}
         role="status"
       >
         {words}
