@@ -147,6 +147,8 @@ describe("sealFailure", () => {
     expect(answered(404, "ticket_not_found")).toBe("refused");
     // Turned away before the ticket was looked at: an earlier try may still have sealed.
     expect(answered(401, "signed_out")).toBe("unknown");
+    // Asked by a session that's someone else's, which says nothing of this person's seal.
+    expect(answered(403, "ticket_not_yours")).toBe("unknown");
     // Saved, or maybe saved: sent again, the same request gets the sticker from the ticket use.
     expect(answered(503, "mint_failed")).toBe("unknown");
     expect(answered(0, "network")).toBe("unknown");
