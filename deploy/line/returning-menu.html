@@ -11,11 +11,12 @@
   <head>
     <meta charset="utf-8" />
     <title>Chat menu</title>
-    <!-- The app's fonts, as its index.html asks for them. -->
+    <!-- The app's fonts: its index.html's and Japanese face from Google, and its own Croquis Sans. -->
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Mona+Sans:wdth,wght@75..125,200..900&family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap"
     />
+    <link rel="stylesheet" href="/apps/frontend/src/styles/fonts.css" />
     <link rel="stylesheet" href="/apps/frontend/src/styles/tokens.css" />
     <link rel="stylesheet" href="/apps/frontend/src/styles/base.css" />
     <link rel="stylesheet" href="/apps/frontend/src/styles/keys.css" />
@@ -329,8 +330,8 @@
       await Promise.all(
         [
           '400 20px "Dela Gothic One"',
-          '700 15px "Mona Sans"',
-          '800 15px "Mona Sans"',
+          '700 15px "Croquis Sans"',
+          '800 15px "Croquis Sans"',
           '700 15px "Zen Kaku Gothic New"',
         ].map((font) => document.fonts.load(font, text)),
       );

@@ -104,9 +104,10 @@
   display: block;
 }
 
-/* The countdown wraps as a unit. */
+/* The countdown wraps as a unit, and its digits hold their places as the minutes change. */
 .out-of-tickets__countdown {
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .out-of-tickets__note {

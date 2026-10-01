@@ -2,7 +2,8 @@
 // ticket state, and the default menu, with the app's own styles, words, icons and ticket shape.
 //   pnpm --filter frontend chat-menus             render every menu
 //   pnpm --filter frontend chat-menus --serve     only serve the page, to work on it in a browser
-// It takes the screenshots with Playwright's command line through npx, and the page loads the app's fonts from Google.
+// It takes the screenshots with Playwright's command line through npx. The page loads Croquis Sans from the app's
+// styles, and Dela Gothic One and Zen Kaku Gothic New from Google.
 import { execFile } from "node:child_process";
 import { mkdir, readFile } from "node:fs/promises";
 import { createServer } from "node:http";
@@ -79,9 +80,10 @@ const content = {
 const TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
+  ".woff2": "font/woff2",
 };
 
-/** Serves the page, with the content injected, and the app's styles. */
+/** Serves the page, with the content injected, and the app's styles and fonts. */
 async function serve(port: number) {
   const script = `<script>window.chatMenu = ${JSON.stringify(content).replaceAll("<", "\\u003c")};</script>`;
   const server = createServer((request, response) => {
@@ -91,10 +93,12 @@ async function serve(port: number) {
       response.writeHead(404).end();
       return;
     }
-    readFile(file, "utf8").then(
+    readFile(file).then(
       (body) => {
         response.writeHead(200, { "content-type": TYPES[extname(file)] ?? "text/plain" });
-        response.end(path === PAGE ? body.replace("<head>", `<head>${script}`) : body);
+        response.end(
+          path === PAGE ? body.toString("utf8").replace("<head>", `<head>${script}`) : body,
+        );
       },
       () => response.writeHead(404).end(),
     );
