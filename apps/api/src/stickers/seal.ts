@@ -9,7 +9,6 @@ import {
 import { and, eq, max } from "drizzle-orm";
 import { keccak256 } from "viem";
 import { z } from "zod";
-import { queueNaming } from "../ens/naming.ts";
 import type { AppDeps } from "../deps.ts";
 import { diagnosticStep, failureCause, logFailure, logInfo } from "../diagnostics.ts";
 import {
@@ -21,6 +20,7 @@ import {
   toStickerPlacement,
   type StickerPngKind,
 } from "../shapes.ts";
+import { mintSticker } from "./mint.ts";
 import type { SealForm } from "./sealForm.ts";
 import { timelapseProblem } from "./timelapse.ts";
 
@@ -108,28 +108,19 @@ const bytesOf = async (file: File) => new Uint8Array(await file.arrayBuffer());
 
 /**
  * The seal already holds when the mint runs: the ticket is spent and the rows are written. So a
- * failed confirmation keeps the sticker for a same-ticket retry, which reconciles its NFT.
+ * failed confirmation keeps the sticker for a same-ticket retry, which reconciles its NFT, or for
+ * the mint catch-up.
  */
-async function mintSticker(deps: AppDeps, stickerId: string): Promise<SealRefusal | null> {
-  const sticker = deps.db.select().from(stickers).where(eq(stickers.id, stickerId)).get();
-  if (!sticker) throw new Error(`Sticker ${stickerId} is missing before its mint`);
-  if (sticker.tokenId !== null && sticker.mintTxHash !== null) return null;
-  let minted;
+async function mintOrRefuse(
+  deps: AppDeps,
+  userId: string,
+  stickerId: string,
+): Promise<SealRefusal | null> {
   try {
-    minted = await deps.mint({
-      stickerId,
-      artistId: sticker.artistId,
-      contentHash: sticker.contentHash,
-      metadataUri: sticker.metadataUri,
-      number: sticker.number,
-      width: sticker.width,
-      height: sticker.height,
-    });
-    if (minted === null && deps.giftChain !== null) {
-      throw new Error("The chain returned no confirmed record");
-    }
+    await mintSticker(deps, stickerId);
+    return null;
   } catch (error) {
-    logFailure("sticker.mint.failed", error, { stickerId, artistId: sticker.artistId });
+    logFailure("sticker.mint.failed", error, { stickerId, artistId: userId });
     // The app shows this detail beside its own message, so it keeps to the words the app uses.
     return {
       status: 503,
@@ -137,15 +128,6 @@ async function mintSticker(deps: AppDeps, stickerId: string): Promise<SealRefusa
       detail: `Sticker ${stickerId} is saved, but it couldn't be confirmed on the chain (${failureCause(error)}). Retry Sealing with the same ticket; no new ticket is needed.`,
     };
   }
-  // Explicit local mock mode stores stickers without sending a mint transaction.
-  if (minted === null) return null;
-  deps.db
-    .update(stickers)
-    .set({ tokenId: minted.tokenId, mintTxHash: minted.txHash })
-    .where(eq(stickers.id, stickerId))
-    .run();
-  logInfo("sticker.mint.recorded", { stickerId, tokenId: minted.tokenId, txHash: minted.txHash });
-  return null;
 }
 
 function sealedSticker({ db, images }: AppDeps, userId: string, stickerId: string): SealResponse {
@@ -175,9 +157,8 @@ export async function sealSticker(
   if (!("stickerId" in ticket)) return { refused: ticket };
   if (ticket.stickerId !== null) {
     logInfo("sticker.seal.retry", { stickerId: ticket.stickerId, userId });
-    const refused = await mintSticker(deps, ticket.stickerId);
+    const refused = await mintOrRefuse(deps, userId, ticket.stickerId);
     if (refused) return { refused };
-    queueNaming(deps, userId);
     return { sealed: sealedSticker(deps, userId, ticket.stickerId), created: false };
   }
 
@@ -255,8 +236,7 @@ export async function sealSticker(
   if (refused) return { refused };
 
   logInfo("sticker.seal.saved", { stickerId, userId });
-  const mintRefusal = await mintSticker(deps, stickerId);
+  const mintRefusal = await mintOrRefuse(deps, userId, stickerId);
   if (mintRefusal) return { refused: mintRefusal };
-  queueNaming(deps, userId);
   return { sealed: sealedSticker(deps, userId, stickerId), created: true };
 }

@@ -26,6 +26,7 @@ import { createJpycPayments } from "./services/jpycPayments.ts";
 import { createPrivySmartWallets } from "./services/privySmartWallets.ts";
 import { createStickerChain } from "./services/stickerChain.ts";
 import { createWorldId } from "./services/worldId.ts";
+import { startMintCatchUp } from "./stickers/mint.ts";
 
 /** A private key as viem takes one: 0x and 64 hexadecimal digits. */
 const privateKeySchema = z.custom<Hex>(
@@ -207,6 +208,11 @@ if (messaging.line) startGiverNoticeSweeps(giverNotice);
 // Gifts the escrow still holds past their expiry go back to their givers: now, for what downtime
 // left, then just after each midnight, Tokyo time.
 startExpiredGiftReturns(deps);
+
+// Stickers still without their NFT, from a mint that failed at Sealing or a seal before the server
+// reached the chain, are minted to their Original Artists: now, then just after each midnight,
+// Tokyo time.
+startMintCatchUp(deps);
 
 // The contract check, which turns naming off while the configured contracts can't name, then
 // naming for everyone a failed or skipped job left unnamed: now, then just after each midnight,
