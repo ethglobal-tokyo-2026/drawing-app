@@ -15,6 +15,7 @@ import { noteBootMilestone } from "../performance/bootMilestones";
 import { markBoardComplete, usePreloadAfterBoard } from "../sticker-board/boardComplete";
 import { forgetBoardUnlessFor } from "../sticker-board/lastBoard";
 import { ReserveTicketCheckout } from "../tickets/ReserveTicketCheckout";
+import { preloadReservePacks } from "../tickets/reservePacks";
 import {
   unaddedPurchaseToShow,
   useAddUnaddedPurchases,
@@ -116,6 +117,10 @@ export default function App() {
   const [checkingOut, setCheckingOut] = useState(false);
   const drawing = view === "draw";
   const afterTheBoard = usePreloadAfterBoard(AFTER_THE_BOARD);
+  // The Shop's prices load with the screens' code, so the Shop opens on them.
+  useEffect(() => {
+    if (afterTheBoard) preloadReservePacks(api);
+  }, [afterTheBoard, api]);
   // Draw opened the drawing screen, so it stays mounted from then on.
   const [drewHere, setDrewHere] = useState(drawing);
   if (drawing && !drewHere) setDrewHere(true);

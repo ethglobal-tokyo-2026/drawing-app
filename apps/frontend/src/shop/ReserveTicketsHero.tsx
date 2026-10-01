@@ -1,9 +1,9 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { Trans, useTranslation } from "../i18n/react";
 import { BuyTicketsIcon } from "../icons";
 import { formatYen } from "../tickets/prices";
-import { singleTicketPrice, useReservePacks } from "../tickets/reservePacks";
+import { singleTicketPrice, useShownReservePacks } from "../tickets/reservePacks";
 import { TicketCount } from "../tickets/TicketCount";
 import { TicketStubs, type TicketStub } from "../tickets/TicketStubs";
 import { useTickets } from "../tickets/useTickets";
@@ -28,9 +28,11 @@ export function ReserveTicketsHero({ onBuy }: { onBuy: () => void }) {
   const { t } = useTranslation();
   const id = useId();
   const { tickets, error, refresh } = useTickets();
-  const packs = useReservePacks();
+  const packs = useShownReservePacks();
   // The price waits on the packs, and nothing else here does.
   const price = packs.state === "ready" ? singleTicketPrice(packs.data.packs) : null;
+  // A price there as the Shop opens is simply there; only one that arrives later rises in.
+  const [pricedAtOnce] = useState(price !== null);
   const held = tickets?.reserveLeft ?? 0;
 
   return (
@@ -62,7 +64,7 @@ export function ReserveTicketsHero({ onBuy }: { onBuy: () => void }) {
       {/* Its line keeps its height while the price loads, or if it can't, so the key never jumps. */}
       <p className="reserve-hero__price">
         {price ? (
-          <span className={REVEAL}>
+          <span className={pricedAtOnce ? undefined : REVEAL}>
             {price.lessInPacks
               ? t(($) => $.shop.reserve.priceWithPacks, { price: formatYen(price.priceYen) })
               : t(($) => $.shop.reserve.price, { price: formatYen(price.priceYen) })}
