@@ -20,18 +20,29 @@ Severity is the review's: _high_ is lost data, money, a ticket, a gift or Gratit
 
 ## Fixed
 
-| Findings     | Commits                                          |
-| ------------ | ------------------------------------------------ |
-| RA-1         | 527ae37f                                         |
-| RA-2         | e149846e                                         |
-| RA-3         | fe4e0fda                                         |
-| RC-8         | ddddfe67                                         |
-| RC-10, RB-14 | c26ad511                                         |
-| F-1          | 9e810428                                         |
-| F-2          | 4295ae66                                         |
-| RC-2         | 41ae7a2f                                         |
-| RC-9         | 68e63d0c                                         |
-| RC-3         | 25989330 (holds down to boards about 476px tall) |
+| Findings     | Commits                                                                                         |
+| ------------ | ----------------------------------------------------------------------------------------------- |
+| RA-1         | 527ae37f                                                                                        |
+| RA-2         | e149846e                                                                                        |
+| RA-3         | fe4e0fda                                                                                        |
+| RC-8         | ddddfe67                                                                                        |
+| RC-10, RB-14 | c26ad511                                                                                        |
+| F-1          | 9e810428                                                                                        |
+| F-2          | 4295ae66                                                                                        |
+| RC-2         | 41ae7a2f                                                                                        |
+| RC-9         | 68e63d0c                                                                                        |
+| RC-3         | 25989330 (holds down to boards about 476px tall)                                                |
+| RC-4         | 2de098a5                                                                                        |
+| RB-2         | 66c51871                                                                                        |
+| RC-5         | 7b05b159                                                                                        |
+| RB-4         | e6cd7c65                                                                                        |
+| RB-9         | 4136f877                                                                                        |
+| RB-8         | 81f117c3                                                                                        |
+| RB-10        | f01cd870                                                                                        |
+| RC-1         | 6fcd5c16                                                                                        |
+| RC-7         | 8499fef2 (a Remove before the tray's code has loaded still saves the spot from before the step) |
+| RB-11        | 65af9658                                                                                        |
+| RB-12        | f0cfef27                                                                                        |
 
 ## Findings
 
