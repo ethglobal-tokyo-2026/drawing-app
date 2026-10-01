@@ -28,6 +28,11 @@ export const ui = {
     copy: { en: "Copy", ja: "コピー" },
     /** The same button once it has copied */
     copied: { en: "Copied", ja: "コピー済み" },
+    /** The same fine print, under it, when Copy couldn't copy it (LINE's browser can refuse): the line that says to copy it by hand, which stays until the next try */
+    notCopied: {
+      en: "Couldn’t copy. Touch and hold the text to copy it yourself.",
+      ja: "コピーできませんでした。文字を長押しして、ご自身でコピーしてください。",
+    },
   },
   /** A gratitude combo's length, counted in hits the way fighting games count it. */
   hitCounter: {

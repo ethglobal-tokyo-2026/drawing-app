@@ -47,18 +47,20 @@ const contextOf = (key: string, english: ReadonlyMap<string, string>) => {
   return undefined;
 };
 
-const PLACEHOLDER = /\{\{([^{}]*)\}\}|<(\/?)([A-Za-z0-9]+)\s*(\/?)>/g;
+const PLACEHOLDER = /\{\{([^{}]*)\}\}|<(\/?)([A-Za-z0-9]+)(\s[^<>]*?)?\s*(\/?)>/g;
 
 /**
  * The `{{variables}}` and `<tags>` in a string, in order, written as `{{name}}`, `<b>`, `</b>` or
- * `<br/>`. A break hint isn't one: only Japanese has them.
+ * `<br/>`, attributes kept. A break hint isn't one: only Japanese has them. Only its exact spelling is
+ * one, since the app turns only that into a break; any other spelling counts as a tag.
  */
 export const placeholders = (text: string): string[] =>
-  [...text.matchAll(PLACEHOLDER)]
-    .map(([, variable, close = "", tag = "", empty = ""]) =>
-      variable === undefined ? `<${close}${tag}${empty}>` : `{{${variable.trim()}}}`,
-    )
-    .filter((token) => token !== BREAK_HINT);
+  [...text.replaceAll(BREAK_HINT, "").matchAll(PLACEHOLDER)].map(
+    ([, variable, close = "", tag = "", attributes = "", empty = ""]) =>
+      variable === undefined
+        ? `<${close}${tag}${attributes.trim() && ` ${attributes.trim()}`}${empty}>`
+        : `{{${variable.trim()}}}`,
+  );
 
 /** "a", "a and b", "a, b and c". */
 export const list = (items: readonly string[]) =>

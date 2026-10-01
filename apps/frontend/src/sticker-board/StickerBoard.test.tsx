@@ -11,11 +11,12 @@ import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
 import { toApiPlacement, toPerson } from "../api/views";
 import { forgetNoticedHere, markNoticed, noticeReceivesFromNow } from "../giving/noticedGifts";
-import { forgetGreetings } from "./artistChipGreeting";
+import { forgetGreetings, owesGreeting } from "./artistChipGreeting";
 import { forgetBoardComplete } from "./boardComplete";
 import { placeUnplaced, toBoardSticker } from "./boardSticker";
 import { forgetSelectionHints } from "./selectionHint";
 import { keepBoard, keptBoardFor, readKeptBoardAgain } from "./lastBoard";
+import { reopenOnSettingsNextStart } from "./stat-board/reopenOnSettings";
 import { StickerBoard } from "./StickerBoard";
 import { STEP_SAVE_IDLE_MS } from "./useBoardGestures";
 
@@ -183,20 +184,108 @@ describe("StickerBoard's tickets", () => {
 });
 
 describe("StickerBoard's artist chips", () => {
-  it("name the artists of foil stickers once per app open, not on every visit to the board", () => {
-    keep(
-      TEST_ME.id,
-      boardSticker({ placement: at(0.3), sticker: sticker({ artist: people.mika }) }),
+  /** Whose artist chips are on the board, by their handles. */
+  const chipped = (host: HTMLElement) =>
+    [...host.querySelectorAll(".artist-chip-layer__chip .artist-chip__name")]
+      .map((name) => name.textContent)
+      .toSorted();
+  const openBoard = (
+    freshId?: string,
+    api = emptyApi({ stickerBoard: () => new Promise(() => {}) }),
+  ) =>
+    renderWithApi(
+      <StickerBoard {...(freshId && { freshId })} onDraw={() => {}} onOpenGift={() => {}} />,
+      api,
     );
+  /** Turns the board over, or back, with its name button. */
+  const flip = (host: HTMLElement) => {
+    // A turn that never lands, and isn't played in reverse: happy-dom's cancel of a playing one rejects unhandled.
+    vi.spyOn(Element.prototype, "animate").mockImplementation(() => new Animation());
+    vi.spyOn(Animation.prototype, "reverse").mockImplementation(() => {});
+    act(() => host.querySelector<HTMLElement>(".board-who")?.click());
+  };
+  const byMika = () =>
+    boardSticker({ placement: at(0.3), sticker: sticker({ artist: people.mika }) });
+
+  it("name the artists of foil stickers once per app open, not on every visit to the board", () => {
+    keep(TEST_ME.id, byMika());
     const visit = () => {
-      const api = emptyApi({ stickerBoard: () => new Promise(() => {}) });
-      const view = renderWithApi(<StickerBoard onDraw={() => {}} onOpenGift={() => {}} />, api);
-      const chips = view.host.querySelectorAll(".artist-chip-layer__chip").length;
+      const view = openBoard();
+      const names = chipped(view.host);
       view.unmount();
-      return chips;
+      return names;
     };
-    expect(visit()).toBe(1);
-    expect(visit()).toBe(0);
+    expect(visit()).toEqual(["@mika"]);
+    expect(visit()).toEqual([]);
+  });
+
+  it("name a received sticker's artist alone as it lands, after the greeting has played too", async () => {
+    const [a, b] = [
+      byMika(),
+      boardSticker({ placement: at(0.7), sticker: sticker({ artist: people.ken }) }),
+    ];
+    // A received sticker has no spot until the board gives it one.
+    const received = boardSticker({ placement: null, sticker: sticker({ artist: people.bob }) });
+    keep(TEST_ME.id, a, b);
+
+    const first = openBoard();
+    expect(chipped(first.host)).toEqual(["@ken", "@mika"]);
+    first.unmount();
+
+    // Receiving mounts the board again, with the sticker on it.
+    const view = openBoard(
+      received.stickerId,
+      emptyApi({
+        stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [a, b, received] }),
+        stickerDetail: () =>
+          Promise.resolve({
+            sticker: received.sticker,
+            owner: TEST_OWNER,
+            transferTrail: [],
+            hasTimelapse: false,
+          }),
+      }),
+    );
+    unmount = view.unmount;
+    await act(async () => {});
+    expect(chipped(view.host)).toEqual(["@bob"]);
+
+    // Its chip plays on once the sticker has stuck.
+    const landing = () => view.host.querySelector(".is-landing");
+    expect(landing()).not.toBeNull();
+    await vi.waitFor(
+      async () => {
+        await act(async () => {});
+        expect(landing()).toBeNull();
+      },
+      { timeout: 4000 },
+    );
+    expect(chipped(view.host)).toEqual(["@bob"]);
+  });
+
+  it("wait for the front when the board opens turned over, and aren't spent behind the stat board", () => {
+    keep(TEST_ME.id, byMika());
+    // A language change restarts the app onto the stat board.
+    reopenOnSettingsNextStart();
+    const view = openBoard();
+    unmount = view.unmount;
+    expect(chipped(view.host)).toEqual([]);
+    expect(owesGreeting(TEST_ME.id)).toBe(true);
+
+    flip(view.host);
+    expect(chipped(view.host)).toEqual(["@mika"]);
+    expect(owesGreeting(TEST_ME.id)).toBe(false);
+  });
+
+  it("end with a turn of the board while they play, and don't start over when it turns back", () => {
+    keep(TEST_ME.id, byMika());
+    const view = openBoard();
+    unmount = view.unmount;
+    expect(chipped(view.host)).toEqual(["@mika"]);
+
+    flip(view.host);
+    flip(view.host);
+    expect(chipped(view.host)).toEqual([]);
   });
 });
 

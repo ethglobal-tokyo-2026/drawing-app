@@ -292,6 +292,28 @@ describe("POST /api/gifts/receive", () => {
     expect(test.ownerOf(gift.stickerId)).toBe(receiverId);
   });
 
+  it("answers the claim's own failure when the check after it can't read the escrow, and logs both", async () => {
+    const logs = captureLogLines();
+    const test = await createGiftsTestApp({ escrowChain: true });
+    const { gift, giftClaimToken } = await test.packagedGift();
+    test.landDeposit(gift.id);
+    const receiverId = insertUser(test.db);
+    await previewOf(await preview(test, receiverId, giftClaimToken));
+    const claimFailure = new Error("Timed out waiting for the claim to be confirmed");
+    vi.spyOn(test.giftChain, "claimGift").mockRejectedValueOnce(claimFailure);
+    vi.spyOn(test.giftChain, "readEscrowGift").mockRejectedValueOnce(
+      new ChainUnavailableError("Reading the escrow failed", { cause: new Error("fetch failed") }),
+    );
+
+    const failed = await refusalOf(await receive(test, receiverId, giftClaimToken));
+
+    expect(failed).toMatchObject({ status: 503, error: "claim_failed" });
+    expect(failed.detail).toContain(claimFailure.message);
+    logs.expectLogged("gift.claim.failed", { giftId: gift.id, userId: receiverId });
+    logs.expectLogged("gift.claim.check_failed", { giftId: gift.id, userId: receiverId });
+    expect(test.giftRow(gift.id)).toMatchObject({ status: "packed", escrowStatus: "pending" });
+  });
+
   it("answers an escrow the chain can't read with chain_unavailable, and its cause", async () => {
     const test = await createGiftsTestApp({ escrowChain: true });
     const { giftClaimToken } = await test.packagedGift();
@@ -395,6 +417,30 @@ describe("Receiving refuses", () => {
       .run();
     await expectRefused(test, receiverId, returned.giftClaimToken, 410, "gift_returned");
   });
+
+  it.each([
+    { escrow: "rejected", status: 409, refusal: "taken_back", recorded: "taken_out" },
+    { escrow: "expired_returned", status: 410, refusal: "gift_returned", recorded: "returned" },
+  ] as const)(
+    "a gift the escrow let go ($escrow) before the server recorded it, instead of failing the claim",
+    async ({ escrow, status, refusal, recorded }) => {
+      const test = await createGiftsTestApp({ escrowChain: true });
+      const { giverId, gift, giftClaimToken } = await test.packagedGift();
+      test.landDeposit(gift.id);
+      const receiverId = insertUser(test.db);
+      const opened = await previewOf(await preview(test, receiverId, giftClaimToken));
+      expect(opened.receivable).toBe(true);
+      test.setEscrowStatus(gift.id, escrow);
+
+      await expectRefused(test, receiverId, giftClaimToken, status, refusal);
+      expect(test.giftRow(gift.id)).toMatchObject({
+        status: recorded,
+        escrowStatus: escrow,
+        receiverId: null,
+      });
+      expect(test.ownerOf(gift.stickerId)).toBe(giverId);
+    },
+  );
 
   it("a gift past its expiry", async () => {
     const test = await createGiftsTestApp();

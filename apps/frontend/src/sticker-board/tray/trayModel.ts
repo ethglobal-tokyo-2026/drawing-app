@@ -245,6 +245,8 @@ export interface Tray {
 export const PEEK = 15;
 /** Sheets shown behind the front one; deeper ones become the stack's depth, a button that spreads them. */
 export const PEEKS = 3;
+/** Under the front sheet: the edges behind it, and the +N button with its gap. */
+export const STACK_FOOT = PEEKS * PEEK + 3 + 22;
 export const SHEET = { w: 156, h: 364 };
 /** Packing keeps clear of the sheet's tear strip at the top and its dated foot. */
 const PACK = { sheet: SHEET, margin: { top: 30, right: 10, bottom: 24, left: 10 } };

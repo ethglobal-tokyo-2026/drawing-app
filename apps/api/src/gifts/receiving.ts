@@ -3,7 +3,7 @@ import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { keccak256 } from "viem";
 import { z } from "zod";
 import { queueNaming } from "../ens/naming.ts";
-import type { AppDeps } from "../deps.ts";
+import type { AppDeps, GiftChain } from "../deps.ts";
 import { failureCause, logFailure, logInfo } from "../diagnostics.ts";
 import {
   ageStatusOf,
@@ -97,6 +97,12 @@ function adultsOnlyRefusal(db: Pick<Db, "select">, gift: GiftRow, userId: string
   return refuse("adults_only", `Gift ${gift.id} is an NSFW sticker, for adults only`);
 }
 
+const takenBack = (gift: GiftRow) =>
+  refuse("taken_back", `Gift ${gift.id} was taken back by its giver`);
+
+const giftReturned = (gift: GiftRow) =>
+  refuse("gift_returned", `Gift ${gift.id} expired and went back to its giver`);
+
 /**
  * The first reason this person can't receive this gift now, or null. `claimLanded`: the escrow shows
  * the gift claimed, so its expiry no longer matters.
@@ -115,12 +121,8 @@ function receiveRefusal(
   if (gift.status === "received") {
     return refuse("already_received", `Gift ${gift.id} was already received`);
   }
-  if (gift.status === "taken_out") {
-    return refuse("taken_back", `Gift ${gift.id} was taken back by its giver`);
-  }
-  if (gift.status === "returned") {
-    return refuse("gift_returned", `Gift ${gift.id} expired and went back to its giver`);
-  }
+  if (gift.status === "taken_out") return takenBack(gift);
+  if (gift.status === "returned") return giftReturned(gift);
   if (!claimLanded && now.getTime() >= gift.expiresAt.getTime()) {
     return refuse("gift_expired", `Gift ${gift.id} expired at ${toIsoTime(gift.expiresAt)}`);
   }
@@ -327,6 +329,29 @@ function receiveOpened(
   return receiving;
 }
 
+/**
+ * After a claim failed, the refusal for a gift its giver took out or that went back to them: the
+ * escrow let it go before the claim, and no retry changes that. Records what the escrow says. Null
+ * while the escrow still holds it, or when it can't be read: this check never replaces the claim's
+ * own failure.
+ */
+async function takenBackOrReturnedRefusal(
+  deps: AppDeps,
+  giftChain: GiftChain,
+  gift: GiftRow,
+  userId: string,
+): Promise<Refusal<"taken_back" | "gift_returned"> | null> {
+  try {
+    const { gift: checked } = await checkDeposit(deps, giftChain, gift);
+    if (checked.status === "taken_out") return takenBack(checked);
+    if (checked.status === "returned") return giftReturned(checked);
+    return null;
+  } catch (error) {
+    logFailure("gift.claim.check_failed", error, { giftId: gift.id, userId });
+    return null;
+  }
+}
+
 /** Receives an opened gift for this person; without its token, they're who it waits for. */
 async function completeReceive(
   deps: AppDeps,
@@ -356,8 +381,10 @@ async function completeReceive(
       });
     } catch (error) {
       logFailure("gift.claim.failed", error, { giftId: opened.id, userId });
-      // Nothing is recorded, so the gift stays receivable. The escrow lets a gift go only once, so
-      // trying again can't claim it twice.
+      const letGo = await takenBackOrReturnedRefusal(deps, giftChain, opened, userId);
+      if (letGo) return letGo;
+      // The claim recorded nothing, so the gift stays receivable. The escrow lets a gift go only
+      // once, so trying again can't claim it twice.
       return refuse(
         "claim_failed",
         `Gift ${opened.id} wasn't received: its claim wasn't confirmed on the chain (${failureCause(error)})`,

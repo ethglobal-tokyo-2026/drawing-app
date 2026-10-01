@@ -113,12 +113,18 @@ const describe = (error: unknown): Problem =>
         }
       : problemOf(error);
 
-/** The gift an attempt packed, or null when packing failed before any gift held the sticker. */
-async function giftOf(a: Attempt): Promise<string | null> {
+/**
+ * What an attempt's packing came to: the gift that holds the sticker, null when packing failed before
+ * any did, and the news that its gift message went out, or may have, when an earlier send of it did.
+ */
+async function packingOf(a: Attempt) {
   try {
-    return (await a.gift).giftId;
+    return { giftId: (await a.gift).giftId, messageOut: null };
   } catch (error) {
-    return error instanceof GiftPackagingError ? error.giftId : null;
+    return {
+      giftId: error instanceof GiftPackagingError ? error.giftId : null,
+      messageOut: error instanceof GiftMessageOutError ? error : null,
+    };
   }
 }
 
@@ -217,6 +223,21 @@ export function createGiveFlow({
     return attempt;
   };
 
+  /** The attempt's gift message went out, or may have: the screen says so, and it isn't sent again. */
+  const showMessageOut = (a: Attempt, error: GiftMessageOutError) => {
+    if (attempt !== a) return;
+    clearTimer();
+    set(
+      error.outcome === "sent"
+        ? {
+            step: "sent",
+            sentAt: now(),
+            ...(error.recordError !== undefined && { recordError: describe(error.recordError) }),
+          }
+        : { step: "maybeSent" },
+    );
+  };
+
   /** The attempt's gift, or null when it couldn’t be packed; that failure shows once. */
   const packedGift = async (a: Attempt): Promise<PackedGift | null> => {
     try {
@@ -225,20 +246,7 @@ export function createGiveFlow({
       if (a.open) {
         a.open = false;
         if (error instanceof GiftMessageOutError) {
-          if (attempt === a) {
-            clearTimer();
-            set(
-              error.outcome === "sent"
-                ? {
-                    step: "sent",
-                    sentAt: now(),
-                    ...(error.recordError !== undefined && {
-                      recordError: describe(error.recordError),
-                    }),
-                  }
-                : { step: "maybeSent" },
-            );
-          }
+          showMessageOut(a, error);
           return null;
         }
         report(`${which} couldn’t be packed`, error);
@@ -365,7 +373,7 @@ export function createGiveFlow({
       if (state.step !== "maybeSent" || state.confirming) return;
       set({ step: "maybeSent", confirming: true });
       void (async () => {
-        const giftId = await giftOf(a);
+        const { giftId } = await packingOf(a);
         const recordError = giftId
           ? await record("the send", () => backend.markSent(giftId))
           : undefined;
@@ -384,14 +392,23 @@ export function createGiveFlow({
       if (late()) stopWaiting();
       clearTimer();
       const a = attempt;
+      // On "Did it go out?" already: Take it out is the giver's answer, so it goes ahead.
+      const asked = state.step === "maybeSent";
       // A failed confirmation can still mean the take-out landed. Sending must prepare it again.
       // Mid-preparation the take-out waits for the packing to settle: a sticker never comes out while
       // its deposit is still going in.
       if (a) a.open = false;
       set({ step: "takingOut" });
       void (async () => {
+        const packing = a ? await packingOf(a) : null;
+        // Packing ended on news that the gift message is out, which the screen hasn't said yet: it
+        // says so now, and the gift stays in LINE's hands.
+        if (a && packing?.messageOut && !asked) {
+          showMessageOut(a, packing.messageOut);
+          return;
+        }
         // Null when packing failed before any gift held the sticker: there's nothing to take out.
-        const giftId = a && (await giftOf(a));
+        const giftId = packing?.giftId;
         if (giftId) {
           try {
             await backend.takeOut(giftId);

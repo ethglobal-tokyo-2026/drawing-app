@@ -31,13 +31,16 @@ export interface DiagnosticFields {
   menu?: string;
   /**
    * The expiry sweep's tally: gifts it sent back, recorded as the escrow left them, closed with no
-   * deposit, left alone, or failed on.
+   * deposit, left alone, or failed on. The mint catch-up counts its failures in failed too.
    */
   returned?: number;
   recorded?: number;
   closed?: number;
   left?: number;
   failed?: number;
+  /** The mint catch-up's tally: stickers it minted, and ones it skipped with a line saying why. */
+  minted?: number;
+  skipped?: number;
   /** Why a step was skipped, in words. */
   reason?: string;
   /** Whether naming is on, as the contract check left it. */
@@ -185,6 +188,8 @@ const loggedFields = {
   closed: true,
   left: true,
   failed: true,
+  minted: true,
+  skipped: true,
   reason: true,
   naming: true,
   namerRole: true,

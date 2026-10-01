@@ -174,16 +174,19 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
   }
   /** A sheet's name: as a button that brings it to the front, or as the sheet that is in front or out. */
   const sheetLabel = (f: number, name: SheetName = "back") => {
-    const sheet = { number: f + 1, dates: rangeOf(f) };
+    const dates = rangeOf(f);
+    const sheet = { number: f + 1, dates };
+    // An empty tray's one blank sheet has no dates to name it by; it's only ever in front or pulled out.
+    const context = dates === "" ? ("noDates" as const) : undefined;
     switch (name) {
       case "back":
         return i18next.t(($) => $.stickerBoard.tray.sheet, sheet);
       case "spreadFront":
         return i18next.t(($) => $.stickerBoard.tray.sheetInFront, sheet);
       case "front":
-        return i18next.t(($) => $.stickerBoard.tray.frontSheet, sheet);
+        return i18next.t(($) => $.stickerBoard.tray.frontSheet, { ...sheet, context });
       case "pulled":
-        return i18next.t(($) => $.stickerBoard.tray.pulledSheet, sheet);
+        return i18next.t(($) => $.stickerBoard.tray.pulledSheet, { ...sheet, context });
     }
   };
   /** Says which sheet is in front. */
@@ -237,7 +240,8 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     if (use === "live") {
       el.setAttribute("role", "group");
       el.setAttribute("aria-label", sheetLabel(f, cls.includes("is-pulled") ? "pulled" : "front"));
-      el.setAttribute("aria-describedby", hint.id);
+      // The hint is about the stickers on the sheet; a blank sheet has none.
+      if (ui.model.slots.length > 0) el.setAttribute("aria-describedby", hint.id);
     }
     el.dataset.f = String(f);
     el.dataset.depth = String(depth);

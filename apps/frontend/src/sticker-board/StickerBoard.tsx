@@ -107,7 +107,7 @@ import { GiftsForYouBadge, type GiftForYou } from "../receiving/GiftsForYouBadge
 import { ArtistChipLayer } from "./ArtistChipLayer";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
-import { reasonOf, type TrayProblem } from "./tray/trayProblem";
+import { reasonOf, trayProblemKey, type TrayProblem } from "./tray/trayProblem";
 import { useBoardGestures } from "./useBoardGestures";
 import { useBoardSize } from "./useBoardSize";
 import { useMyStickerBoard } from "./useMyStickerBoard";
@@ -277,15 +277,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const addTrayProblem = useCallback(
     (problem: TrayProblem) =>
       setTrayProblems((was) =>
-        was.some(
-          (p) =>
-            p.kind === problem.kind &&
-            p.reason === problem.reason &&
-            p.detail === problem.detail &&
-            p.nos.join() === problem.nos.join(),
-        )
-          ? was
-          : [...was, problem],
+        was.some((p) => trayProblemKey(p) === trayProblemKey(problem)) ? was : [...was, problem],
       ),
     [],
   );
@@ -297,6 +289,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const [landingId, setLandingId] = useState(() =>
     freshId && !landed.has(freshId) ? freshId : undefined,
   );
+  /** The sticker landing as this visit opened. `landingId` clears once it sticks; its chip plays on. */
+  const [arrivedId] = useState(landingId);
   const [selected, setSelected] = useState<string | null>(null);
   /** This selection owes the hint on how to go on, which stays until the selection ends. */
   const [hinting, setHinting] = useState(false);
@@ -320,8 +314,10 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const [noticesClosed, setNoticesClosed] = useState<ReadonlySet<string>>(() => new Set());
   /** A sticker that just reached you, and its giver, while it has no gratitude yet. */
   const [owed, setOwed] = useState<{ gift: { id: string }; giver: PersonView } | null>(null);
-  /** The artist chips have played on this app open, or a sticker was selected, which clears them. */
-  const [chipsDone, setChipsDone] = useState(() => !owesGreeting(account.id));
+  /** This visit opened owing the greeting, which a board gets once per app open. */
+  const [owedGreeting] = useState(() => owesGreeting(account.id));
+  /** This visit's artist chips have played, or a selection or a turn of the board cleared them. */
+  const [chipsDone, setChipsDone] = useState(false);
   const me = useIdentity();
   const giftSender = useGiftSender();
   const reduced = useReducedMotion();
@@ -538,18 +534,19 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const byOther = (s: BoardStickerView) => owner !== null && s.artist.id !== owner.id;
   const printedArtist = (s: BoardStickerView) =>
     s.artist.handle ? formatHandle(s.artist.handle) : s.artist.name;
-  // A received sticker landing names its artist alone; otherwise every foil sticker does, once.
-  const landingByOther = onBoard.find((s) => s.id === landingId && byOther(s));
+  // A received sticker landing names its artist alone, greeted or not; otherwise the greeting names
+  // every foil sticker's, once per app open.
+  const arrived = onBoard.find((s) => s.id === arrivedId && byOther(s));
+  const named = arrived ? [arrived] : owedGreeting ? onBoard.filter(byOther) : [];
+  // Not while the board is turned over: the front is out of sight, and a greeting played there is spent unseen.
   const chips =
-    chipsDone || failed || !field || !size
+    chipsDone || failed || turned || !field || !size
       ? []
-      : onBoard
-          .filter((s) => byOther(s) && (!landingByOther || s.id === landingByOther.id))
-          .map((s) => ({
-            id: s.id,
-            artist: s.artist,
-            box: stickerBox(field, size.W, s.placement, s),
-          }));
+      : named.map((s) => ({
+          id: s.id,
+          artist: s.artist,
+          box: stickerBox(field, size.W, s.placement, s),
+        }));
   // The greeting is spent as it starts, so coming back to the board, or leaving early, doesn't replay it.
   const greeting = chips.length > 0;
   useEffect(() => {
@@ -587,6 +584,8 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
     setTurned(over);
     if (!over) return;
     setWasTurned(true);
+    // Chips still playing end with the turn, so they don't start over when the board turns back.
+    if (greeting) setChipsDone(true);
     select(null);
   };
   // Back turns the stat board back over, as LINE's Back does on any overlay.
@@ -899,10 +898,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
               }}
             >
               {trayProblems.map((p) => (
-                <span
-                  className="board-alerts__sentence"
-                  key={`${p.kind}:${p.nos.join()}:${p.reason}`}
-                >
+                <span className="board-alerts__sentence" key={trayProblemKey(p)}>
                   {t(($) => $.stickerBoard.tray.problem[p.kind], {
                     stickers: new Intl.ListFormat(i18n.language).format(p.nos.map(formatNo)),
                     reason: p.reason ?? "",

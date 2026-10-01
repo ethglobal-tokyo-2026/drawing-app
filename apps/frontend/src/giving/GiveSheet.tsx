@@ -30,13 +30,18 @@ interface Props {
   /** The board's owner's age status: an NSFW sticker goes only to an adult. */
   toAgeStatus: AgeStatus;
   onClose: () => void;
+  /**
+   * Where focus goes once the flow ends: the key that opened it. This sheet and Giving each mount as
+   * the other goes, so neither one's focus trap ever sees that key focused.
+   */
+  returnFocus: () => HTMLElement | null;
 }
 
 /**
  * Giving from someone else's board: pick one of yours, then it goes into a gift bag and out through
  * a LINE chat, as every gift does.
  */
-export function GiveSheet({ to, toId, toAgeStatus, onClose }: Props) {
+export function GiveSheet({ to, toId, toAgeStatus, onClose, returnFocus }: Props) {
   const { t } = useTranslation();
   const { stickers, error: loadError } = useKeptStickers();
   const [picked, setPicked] = useState<string | null>(null);
@@ -57,6 +62,7 @@ export function GiveSheet({ to, toId, toAgeStatus, onClose }: Props) {
           forUserId={toId}
           toHandle={to}
           onClose={(sent) => (sent ? onClose() : setGiving(null))}
+          returnFocus={returnFocus}
         />
       </Suspense>
     );
@@ -71,6 +77,7 @@ export function GiveSheet({ to, toId, toAgeStatus, onClose }: Props) {
         label={title}
         layer={layer}
         onClose={onClose}
+        returnFocus={returnFocus}
         className="giving__sheet giving__sheet--give"
       >
         <div className="board-sheet-body giving__pinned">

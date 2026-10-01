@@ -3,7 +3,7 @@ import { act, useRef, type RefObject } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BoardSticker } from "./boardSticker";
-import { fieldOf } from "./placement";
+import { fieldOf, sizeOf, toPx, transformAt } from "./placement";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import { STEP_SAVE_IDLE_MS, useBoardGestures } from "./useBoardGestures";
 import { yoursHeld } from "./testBoardSticker";
@@ -41,6 +41,20 @@ function Board(props: Omit<Options, "stage">) {
 }
 
 const noTray: RefObject<StickerTrayHandle | null> = { current: null };
+
+/** A sticker tray that answers a let-go sticker's `boardDrop` as given. */
+const trayDropping = (
+  boardDrop: StickerTrayHandle["boardDrop"],
+): RefObject<StickerTrayHandle | null> => ({
+  current: {
+    isOpen: false,
+    open: () => Promise.resolve(false),
+    close: () => Promise.resolve(false),
+    boardDrag: () => null,
+    boardDrop,
+    escape: () => false,
+  },
+});
 
 let host: HTMLDivElement;
 let root: Root;
@@ -126,16 +140,7 @@ describe("useBoardGestures", () => {
       .fn<StickerTrayHandle["boardDrop"]>()
       .mockReturnValueOnce(new Promise((resolve) => (land = resolve)))
       .mockResolvedValue(false);
-    const tray: RefObject<StickerTrayHandle | null> = {
-      current: {
-        isOpen: false,
-        open: () => Promise.resolve(false),
-        close: () => Promise.resolve(false),
-        boardDrag: () => null,
-        boardDrop,
-        escape: () => false,
-      },
-    };
+    const tray = trayDropping(boardDrop);
     const onCommit = vi.fn();
     act(() =>
       root.render(
@@ -224,7 +229,10 @@ describe("useBoardGestures", () => {
   });
 
   describe("steps, from keys and from Arrange", () => {
-    const board = (onCommit: Options["onCommit"]) =>
+    const board = (
+      onCommit: Options["onCommit"],
+      overrides: Partial<Omit<Options, "stage">> = {},
+    ) =>
       act(() =>
         root.render(
           <Board
@@ -238,6 +246,7 @@ describe("useBoardGestures", () => {
             onOpen={() => {}}
             onCommit={onCommit}
             onRemove={() => {}}
+            {...overrides}
           />,
         ),
       );
@@ -280,6 +289,25 @@ describe("useBoardGestures", () => {
       pressRight(2);
       act(() => root.render(null));
       expect(onCommit).toHaveBeenCalledOnce();
+    });
+
+    it("peel a removed sticker up from where they left it, not from where it was before", () => {
+      const onCommit = vi.fn<Options["onCommit"]>();
+      board(onCommit, { reduced: false, tray: trayDropping(() => Promise.resolve(true)) });
+      pressRight(2);
+      // Removed within the idle, before React has been given the steps' spot.
+      const el = host.querySelector(".placed-sticker");
+      act(
+        () =>
+          void el?.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true })),
+      );
+
+      const [, saved] = onCommit.mock.calls[0];
+      const { x, y } = toPx(fieldOf(390, 657), saved);
+      const { w, h } = sizeOf(390, saved.s, sticker);
+      const [frames] = vi.spyOn(Element.prototype, "animate").mock.calls[0];
+      const first = Array.isArray(frames) ? frames[0]?.transform : undefined;
+      expect(first).toContain(transformAt(x, y, w, h, saved.r));
     });
   });
 });
