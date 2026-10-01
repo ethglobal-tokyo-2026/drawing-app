@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { i18next } from "../i18n/i18n";
 
 declare global {
@@ -22,6 +22,12 @@ const liff = vi.hoisted(() => ({
   ),
 }));
 vi.mock("@line/liff", () => ({ default: liff }));
+
+// Transforming LineGate's modules on first import can outlast one test's timeout on a busy machine.
+beforeAll(async () => {
+  await import("./liff");
+  await import("./LineGate");
+}, 30_000);
 
 let host: HTMLDivElement;
 let root: Root;
