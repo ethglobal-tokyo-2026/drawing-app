@@ -129,14 +129,14 @@ A retry answered 403 `ticket_not_yours` counted as the server refusing the seal,
 - Fixed in 36181a92: `ticket_not_yours` reads as unknown, so the note and the lock stay, as for `signed_out`.
 
 **F1-2** · medium · `src/sticker-creation/session/session.ts:106` (86caa925)  
-At 0:00, a seal the phone fails to cut every time (the sealing worker timing out, a layer that won't encode, iOS's canvas budget) stayed locked in retry with no way on: the check cut and failed again, and a reload brought it back paused at 0:00. Logging out, its only way out, now keeps the drawing.
+At 0:00, a seal the phone fails to cut every time (the sealing worker timing out, a layer that won't encode, iOS's canvas budget) stayed locked in retry with no way on: the check cut and failed again, and a reload brought it back paused at 0:00. Logging out, its only way out, now keeps the sticker in progress.
 
-- Fixed in 36181a92: at 0:00, after a failed seal the server can't hold, Start a new sticker sits where the undo and redo tiles were. It lets the drawing and its ticket go for a fresh sheet; the check still tries again.
+- Fixed in 36181a92: at 0:00, after a failed seal the server can't hold, Start a new sticker sits where the undo and redo tiles were. It lets the sticker in progress and its ticket go for a fresh sheet; the check still tries again.
 
 **F1-3** · low · `src/sticker-creation/DrawingScreen.tsx:621` (793504fc)  
 A reload after a seal went out, with the drawing unread and the tickets listing its use with a sticker, takes the seal as done. If that seal's mint failed, the same-ticket retry was the only thing that would mint it: the server writes the sticker before minting, and nothing else mints. The sticker stays without an NFT, and Giving refuses it (409 `not_minted`).
 
-- Open, for the server: a catch-up that mints stickers left unminted, beside the naming catch-up. Offered to the backend session.
+- Taken by the backend session: a catch-up that mints stickers left unminted, at startup and each Tokyo midnight, beside the naming catch-up.
 
 **F1-4** · low · `src/sticker-creation/DrawingScreen.tsx:613` (793504fc)  
 A sent seal whose ticket was spent on an earlier Tokyo day waited on the late read of its drawing with no deadline, since the tickets list only today's uses. A read that never answers left a blank, locked sheet with no word, which Draw on the board kept opening.

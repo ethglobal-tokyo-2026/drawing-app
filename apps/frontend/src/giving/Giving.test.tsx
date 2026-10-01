@@ -212,7 +212,7 @@ describe("Giving", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("asks whether it went out once LINE's answer is late, and seals when the giver says so", async () => {
+  it("asks whether it went out once LINE's answer is late, and closes when the giver says so", async () => {
     open("s-late");
     tap("Send in a LINE chat");
     await wait(1150);
