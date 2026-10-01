@@ -64,7 +64,7 @@ const EDGE = 1e-6;
 const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 
 /**
- * A character's width in pile units, in the tags' 11-unit Mona Sans: the widest of its kind as
+ * A character's width in pile units, in the tags' 11-unit Croquis Sans: the widest of its kind as
  * measured at weights 550 to 750, and a little more, so a line never needs more than its room. A
  * grapheme counts as its first character, so an emoji sequence or an accented letter counts once.
  */

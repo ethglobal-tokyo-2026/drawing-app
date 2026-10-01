@@ -2,8 +2,8 @@ const yen = new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" 
 
 /**
  * "¥1,000", with the half-width yen sign in every browser. Chromium formats Japanese yen with the full-width ￥
- * (U+FFE5), which Mona Sans doesn't have, so the sign fell back to another typeface; ¥ (U+00A5), which Safari
- * already writes, is Mona Sans's own.
+ * (U+FFE5), which Croquis Sans doesn't have, so the sign fell back to another typeface; ¥ (U+00A5), which
+ * Safari already writes, is Croquis Sans's own.
  */
 export const formatYen = (amount: number) =>
   yen

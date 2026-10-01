@@ -201,7 +201,7 @@ function fitName(el: HTMLElement): () => void {
     }
   };
   fit();
-  // Mona Sans may still be loading; its widths differ from the fallback's.
+  // Croquis Sans may still be loading; its widths differ from the fallback's.
   void document.fonts.ready.then(fit);
   return () => {
     live = false;

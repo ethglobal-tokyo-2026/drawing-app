@@ -390,7 +390,7 @@ describe("ReserveTicketCheckout", () => {
     );
     await settle(3000);
     expect(skeletons()).toBe(0);
-    // The half-width yen sign, Mona Sans's own, though Node's ICU (like Chromium's) writes the full-width ￥.
+    // The half-width yen sign, Croquis Sans's own, though Node's ICU (like Chromium's) writes the full-width ￥.
     expect(document.querySelector(".reserve-checkout__balance strong")?.textContent).toBe("¥1,000");
   });
 

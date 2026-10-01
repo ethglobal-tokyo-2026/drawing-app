@@ -62,7 +62,7 @@ export function paintUsedStickerSilhouette(
   g.translate(W / 2, H / 2);
   g.rotate(-Math.PI / 6);
   g.fillStyle = "rgba(110, 104, 120, 0.36)";
-  g.font = `700 ${Math.round(11 * r)}px "Mona Sans", "Hiragino Sans", "Zen Kaku Gothic New", system-ui, sans-serif`;
+  g.font = `700 ${Math.round(11 * r)}px "Croquis Sans", "Hiragino Sans", "Zen Kaku Gothic New", system-ui, sans-serif`;
   g.textBaseline = "middle";
   const unit = g.measureText(PRINT).width || 70 * r;
   const span = Math.hypot(W, H);

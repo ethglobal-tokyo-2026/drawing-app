@@ -31,7 +31,7 @@
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Hiragino Sans", system-ui,
     sans-serif; /* iOS and LINE's own chrome */
 
-  /* Mona Sans width axis: UI 100, titles 112, fine print 87.5 (75 read too small at 11px on a phone), big figures 125 (counts, stats) */
+  /* Croquis Sans width axis: UI 100, titles 112, fine print 87.5 (75 read too small at 11px on a phone), big figures 125 (counts, stats) */
   --w-ui: 100%;
   --w-title: 112%;
   --w-fine: 87.5%;
