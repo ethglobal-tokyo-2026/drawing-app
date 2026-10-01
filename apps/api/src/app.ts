@@ -82,6 +82,8 @@ const serverLogQuerySchema = z.object({
 
 /** The files that show a sticker's drawing, by its content hash: its PNG, its WebP and the flat sheet. */
 const DRAWING_FILE = /^\/(0x[0-9a-f]{64})(?:\.png|\.webp|\.flat\.png)$/;
+/** A sticker's NFT metadata, `{stickerId}.json`, beside its images. */
+const METADATA_SUFFIX = ".json";
 
 /** Whether an NSFW sticker was sealed with this content hash, so its files show its drawing. */
 const isNsfwDrawing = (db: Db, contentHash: string) =>
@@ -107,10 +109,16 @@ const imageAccess = (deps: AppDeps) =>
       }
     }
     await next();
-    // serveStatic's onFound runs after it has made the response, too late to add a header. An
-    // image's name is its content's hash, so the file never changes.
-    const scope = adultsOnly ? "private" : "public";
-    if (c.res.ok) c.header("Cache-Control", `${scope}, max-age=${IMMUTABLE_MAX_AGE_S}, immutable`);
+    // serveStatic's onFound runs after it has made the response, too late to add a header.
+    if (!c.res.ok) return;
+    // NFT metadata is rewritten in place once its sticker's veil exists, so clients check it each
+    // time. An image's name is its content's hash, so the file never changes.
+    if (c.req.path.endsWith(METADATA_SUFFIX)) {
+      c.header("Cache-Control", "public, no-cache");
+    } else {
+      const scope = adultsOnly ? "private" : "public";
+      c.header("Cache-Control", `${scope}, max-age=${IMMUTABLE_MAX_AGE_S}, immutable`);
+    }
   });
 
 /**

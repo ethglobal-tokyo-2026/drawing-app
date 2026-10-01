@@ -41,8 +41,9 @@ export interface DiagnosticFields {
   /** The mint catch-up's tally: stickers it minted, and ones it skipped with a line saying why. */
   minted?: number;
   skipped?: number;
-  /** The veil catch-up's tally: NSFW stickers whose veiled image it made. */
+  /** The veil catch-up's tally: NSFW stickers it veiled, and NFT metadata it pointed at the veil. */
   veiled?: number;
+  rewritten?: number;
   /** How many of `count` a catch-up has finished. */
   done?: number;
   /** Why a step was skipped, in words. */
@@ -195,6 +196,7 @@ const loggedFields = {
   minted: true,
   skipped: true,
   veiled: true,
+  rewritten: true,
   done: true,
   reason: true,
   naming: true,

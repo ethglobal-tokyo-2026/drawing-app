@@ -161,6 +161,8 @@ interface MintRequest {
   artistId: string;
   contentHash: string;
   metadataUri: string;
+  /** The image its metadata names, which anyone can read: an NSFW sticker's veiled image. */
+  image: string;
   number: number;
   width: number;
   height: number;

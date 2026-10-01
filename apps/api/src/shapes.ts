@@ -287,6 +287,17 @@ export interface StickerViewer {
   images: (sticker: Pick<StickerRow, "nsfw" | "contentHash" | "veiledHash">) => StickerImages;
 }
 
+function viewerOf(images: AppDeps["images"], adult: boolean): StickerViewer {
+  const veils = (sticker: Pick<StickerRow, "nsfw">) => sticker.nsfw && !adult;
+  return {
+    veils,
+    images: (sticker) =>
+      veils(sticker)
+        ? images.veiledUrls(sticker.contentHash, sticker.veiledHash)
+        : images.urls(sticker.contentHash),
+  };
+}
+
 /** The sticker viewer `viewerId` is, by their age status now. */
 export function stickerViewer(
   { db, images }: Pick<AppDeps, "db" | "images">,
@@ -297,16 +308,11 @@ export function stickerViewer(
     .from(users)
     .where(eq(users.id, viewerId))
     .get();
-  const adult = viewer !== undefined && ageStatusOf(viewer) === "adult";
-  const veils = (sticker: Pick<StickerRow, "nsfw">) => sticker.nsfw && !adult;
-  return {
-    veils,
-    images: (sticker) =>
-      veils(sticker)
-        ? images.veiledUrls(sticker.contentHash, sticker.veiledHash)
-        : images.urls(sticker.contentHash),
-  };
+  return viewerOf(images, viewer !== undefined && ageStatusOf(viewer) === "adult");
 }
+
+/** What anyone gets, signed in or not, as an NFT's metadata is: an NSFW sticker veiled. */
+export const publicStickerViewer = (images: AppDeps["images"]) => viewerOf(images, false);
 
 /** A sticker with its Original Artist, and its images as `viewer` gets them. */
 export function toSticker(

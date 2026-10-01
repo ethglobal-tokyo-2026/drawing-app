@@ -207,6 +207,16 @@ describe("sticker images", () => {
     expect((await getAs(mask)).headers.get("cache-control")).toMatch(/^public,/);
   });
 
+  it("serve a sticker's NFT metadata so that a rewrite of it reaches clients", async () => {
+    const store = createDiskImageStore(imageDir, `https://sticker.test${STICKER_IMAGES_PATH}`);
+    const stickerId = "00000000-0000-4000-8000-000000000001";
+    await store.saveMetadata(stickerId, { image: "https://sticker.test/image.png" });
+    const response = await get(`${STICKER_IMAGES_PATH}/${stickerId}.json`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).not.toContain("immutable");
+    expect(response.headers.get("cache-control")).toContain("no-cache");
+  });
+
   it("answer a name with no image with 404, not the session check, and uncached", async () => {
     const response = await get(`${STICKER_IMAGES_PATH}/${keccak256(new Uint8Array([9]))}.png`);
     expect(response.headers.get("cache-control")).toBeNull();

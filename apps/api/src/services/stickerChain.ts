@@ -95,7 +95,8 @@ export function createStickerChain({
   resolverContract: string;
   sealerPrivateKey: Hex;
   smartWallets: SmartWallets;
-  images: DiskImageStore;
+  /** Where the mint writes the NFT's metadata. */
+  images: Pick<DiskImageStore, "saveMetadata">;
 }): { mint: Mint; giftChain: GiftChain; nameWriter: NameWriter; readContracts: ReadContracts } {
   const stickerAddress = address(stickerContract, "STICKER_NFT_ADDRESS");
   const escrowAddress = address(escrowContract, "STICKER_GIFT_ESCROW_ADDRESS");
@@ -160,7 +161,7 @@ export function createStickerChain({
       contractAddress: stickerAddress,
       address: sealerAccount.address,
     };
-    const image = images.urls(sticker.contentHash).png;
+    const { image } = sticker;
     await diagnosticStep("chain.mint.metadata", fields, () =>
       images.saveMetadata(sticker.stickerId, {
         name: `Sticker No.${stickerLabel(sticker.number)}`,

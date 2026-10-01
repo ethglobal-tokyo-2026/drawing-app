@@ -215,9 +215,9 @@ startExpiredGiftReturns(deps);
 // Tokyo time.
 startMintCatchUp(deps);
 
-// NSFW stickers sealed before Sealing made their veiled images get them: now, then just after each
-// midnight, Tokyo time.
-startVeilCatchUp(deps);
+// NSFW stickers sealed before Sealing made their veiled images get them, and NFT metadata written
+// before a sticker's veil existed is pointed at it: now, then just after each midnight, Tokyo time.
+startVeilCatchUp({ ...deps, images });
 
 // The contract check, which turns naming off while the configured contracts can't name, then
 // naming for everyone a failed or skipped job left unnamed: now, then just after each midnight,

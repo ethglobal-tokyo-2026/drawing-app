@@ -10,7 +10,6 @@ import {
 } from "viem";
 import { sepolia } from "viem/chains";
 import { ChainUnavailableError } from "../deps.ts";
-import { fakeImageStore } from "../testing/fakes.ts";
 import { captureLogLines, type LogLines } from "../testing/logLines.ts";
 import {
   CLAIM_RECEIPT_TIMEOUT_MS,
@@ -55,6 +54,7 @@ const STICKER = {
   artistId: "alice",
   contentHash: CONTENT,
   metadataUri: METADATA,
+  image: `https://images.test/${CONTENT}.png`,
   number: 42,
   width: 256,
   height: 256,
@@ -115,7 +115,7 @@ function adapter() {
     resolverContract: "0x0000000000000000000000000000000000000cc1",
     sealerPrivateKey: hex("5"),
     smartWallets: { addressFor: async (id) => (id === "alice" ? ALICE : BOB) },
-    images: { ...fakeImageStore("https://images.test"), saveMetadata },
+    images: { saveMetadata },
   });
   return { ...chain, saveMetadata };
 }

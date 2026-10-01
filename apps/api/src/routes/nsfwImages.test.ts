@@ -1,10 +1,20 @@
-import { stickerPlacements, stickers, stickerTimelapses } from "@drawing-app/db";
+import { stickerPlacements, stickers, stickerTimelapses, ticketUses } from "@drawing-app/db";
 import { bytes32, insertUser } from "@drawing-app/db/testing";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import type { Mint } from "../deps.ts";
 import { createGiftsTestApp } from "../gifts/testGifts.ts";
-import { testTimelapse } from "../stickers/testPngs.ts";
+import {
+  pngFile,
+  sealFormData,
+  sealParts,
+  STICKER_SIZE,
+  testPng,
+  testTimelapse,
+} from "../stickers/testPngs.ts";
+import { createTestApp } from "../testing/createTestApp.ts";
 import { insertSealedSticker, SPOT } from "../testing/rows.ts";
+import { ticketKindAt } from "../tickets/tickets.ts";
 
 /**
  * An adult's NSFW sticker with its veiled image and timelapse, on their board and sealed today, and
@@ -96,5 +106,48 @@ describe("an NSFW sticker's images", () => {
     expect(preview).toContain(giftStickerWebp);
     expect(JSON.parse(detail)).toMatchObject({ hasTimelapse: true });
     expect((await timelapseOf(scene, adultId)).status).toBe(200);
+  });
+});
+
+describe("a newly sealed sticker's NFT metadata", () => {
+  it("names an NSFW sticker's veiled image, and any other sticker's own PNG", async () => {
+    const minted: Parameters<Mint>[0][] = [];
+    const test = await createTestApp({
+      mint: (request) => {
+        minted.push(request);
+        return Promise.resolve(null);
+      },
+    });
+    const adultId = insertUser(test.db, { ageVerifiedAt: test.clock.now() });
+    for (const [dayIndex, nsfw] of ["true", "false"].entries()) {
+      const ticket = test.db
+        .insert(ticketUses)
+        .values({
+          userId: adultId,
+          ticketDay: "2026-09-26",
+          dayIndex,
+          kind: ticketKindAt(dayIndex),
+        })
+        .returning({ id: ticketUses.id })
+        .get();
+      const png = testPng(STICKER_SIZE.width, STICKER_SIZE.height, `nsfw ${nsfw}`);
+      const parts = sealParts(ticket.id, { nsfw, png: pngFile(png, "png") });
+      const sealing = await test.app.request("/api/stickers", {
+        method: "POST",
+        body: sealFormData(parts),
+        headers: await test.signInAs(adultId),
+      });
+      expect(sealing.status).toBe(201);
+    }
+    const [nsfwMint, plainMint] = minted;
+    if (!nsfwMint || !plainMint) throw new Error("Sealing minted neither sticker");
+    const veiledHash = test.db
+      .select({ veiledHash: stickers.veiledHash })
+      .from(stickers)
+      .where(eq(stickers.id, nsfwMint.stickerId))
+      .get()?.veiledHash;
+    if (!veiledHash) throw new Error("Sealing left the NSFW sticker without its veil");
+    expect(nsfwMint.image).toBe(test.images.urls(veiledHash).png);
+    expect(plainMint.image).toBe(test.images.urls(plainMint.contentHash).png);
   });
 });

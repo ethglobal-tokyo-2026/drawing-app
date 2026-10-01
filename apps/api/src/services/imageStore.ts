@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
-import { access, link, readFile, rm, writeFile } from "node:fs/promises";
+import { access, link, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import sharp from "sharp";
 import { keccak256 } from "viem";
+import { z } from "zod";
 import type { ImageStore } from "../deps.ts";
 import {
   bytes32Schema,
@@ -163,8 +164,52 @@ async function writeMissingWebps(imageDir: string, contentHash: string) {
 }
 
 export interface DiskImageStore extends ImageStore {
-  /** Writes the immutable metadata file whose URL is the NFT's tokenURI. */
+  /** Writes the metadata file whose URL is the NFT's tokenURI, unless it's there. */
   saveMetadata: (stickerId: string, metadata: object) => Promise<void>;
+  /**
+   * Points the metadata file's image at `image`, keeping the rest, unless it already names it.
+   * Resolves whether it wrote; false too while there's no file, since the mint writes the first.
+   */
+  nameMetadataImage: (stickerId: string, image: string) => Promise<boolean>;
+}
+
+/** The parts of a metadata file a rewrite changes; it keeps the rest as it finds it. */
+const metadataImagesSchema = z.looseObject({
+  image: z.string(),
+  external_url: z.string().optional(),
+});
+
+/** The metadata file's path. The id becomes a file name, so nothing but an id may reach the disk. */
+function metadataPath(imageDir: string, stickerId: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(stickerId)) throw new Error(`Not a sticker id: ${stickerId}`);
+  return join(imageDir, `${stickerId}.json`);
+}
+
+/** Replaces a file whole, so a reader never sees half of either version. */
+async function replaceFile(path: string, bytes: Uint8Array) {
+  const temporary = `${path}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(temporary, bytes);
+    await rename(temporary, path);
+  } finally {
+    await rm(temporary, { force: true });
+  }
+}
+
+async function nameMetadataImage(imageDir: string, stickerId: string, image: string) {
+  const path = metadataPath(imageDir, stickerId);
+  let text: string;
+  try {
+    text = await readFile(path, "utf8");
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return false;
+    throw error;
+  }
+  const metadata = metadataImagesSchema.parse(JSON.parse(text));
+  if (metadata.image === image && metadata.external_url === image) return false;
+  const named = { ...metadata, image, external_url: image };
+  await replaceFile(path, new TextEncoder().encode(JSON.stringify(named)));
+  return true;
 }
 
 /**
@@ -202,11 +247,11 @@ export function createDiskImageStore(imageDir: string, cdnBaseUrl: string): Disk
     urls: (contentHash) => stickerImageUrls(cdnBaseUrl, contentHash),
     veiledUrls: (contentHash, veiledHash) => veiledImageUrls(cdnBaseUrl, contentHash, veiledHash),
     saveMetadata: async (stickerId, metadata) => {
-      if (!/^[0-9a-f-]{36}$/i.test(stickerId)) throw new Error(`Not a sticker id: ${stickerId}`);
       await writeIfAbsent(
-        join(imageDir, `${stickerId}.json`),
+        metadataPath(imageDir, stickerId),
         new TextEncoder().encode(JSON.stringify(metadata)),
       );
     },
+    nameMetadataImage: (stickerId, image) => nameMetadataImage(imageDir, stickerId, image),
   };
 }
