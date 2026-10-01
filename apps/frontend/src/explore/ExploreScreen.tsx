@@ -627,17 +627,6 @@ function OpenBoardOf({ label, open }: { label: string; open: Open }) {
 export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
   const { t } = useTranslation();
   const me = useMe();
-  const page = useRef<HTMLDivElement>(null);
-  const scrolledTo = useRef(0);
-  // Hidden between visits, Explore has no layout, so it loses where it was scrolled to: kept here.
-  useLayoutEffect(() => {
-    const scroller = page.current;
-    if (!scroller) return;
-    scroller.scrollTop = scrolledTo.current;
-    return () => {
-      scrolledTo.current = scroller.scrollTop;
-    };
-  }, []);
   const [query, setQuery] = useState("");
   const field = useRef<HTMLInputElement>(null);
   // What a search says to screen readers. Its line is in the page from the start, so a change to it
@@ -669,7 +658,7 @@ export function ExploreScreen({ boardOf, onOpenArtist, onOpenMyBoard }: Props) {
     );
 
   return (
-    <div ref={page} className="explore">
+    <div className="explore">
       {boardOf && <OpenBoardOf label={boardOf} open={open} />}
       <label className="artist-search">
         <At size={20} aria-hidden />
