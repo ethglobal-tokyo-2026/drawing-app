@@ -241,6 +241,7 @@ No person or sticker had ever been named under croquis.eth: the box's settings m
 
 - **LATE-7** · low · fixed · Three gifts the box made in mock chain mode on 2026-09-26 stayed `sent` with escrow `pending`, of stickers never minted, so no escrow held them and their givers' boards showed them on their way for good; taken out on the box on 2026-10-01. A migration couldn't do it: on a mock-mode database every gift in flight looks the same.
 - **LATE-8** · low · fixed · The box's `/srv/drawing-api/secrets.env`, made by hand before deploys installed chain.env, still held copies of seven chain and Privy settings next to the session secret, one of them a stale RPC URL; chain.env loads after it, so they only mattered if a key went missing from chain.env. Trimmed on 2026-10-01 to the session secret, all deploy-api.sh ever writes there.
+- **LATE-9** · low · fixed `0189600e` · A sticker inside a gift can't be named, since its holder, the escrow in use, refuses ERC-1155 names (`ERC1155InvalidReceiver`), and that one failure ended its person's naming job, leaving their later stickers unnamed; the job now logs `ens.sticker.failed` for that sticker and goes on, and the nightly catch-up retries it once the gift leaves the escrow.
 
 ## Needs the owner
 
