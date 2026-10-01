@@ -19,9 +19,8 @@ import { createTraySpread } from "./traySpread";
 import {
   COL,
   GMAX,
-  PEEK,
-  PEEKS,
   SHEET,
+  STACK_FOOT,
   STACK_Y,
   createTrayModel,
   modelOf,
@@ -60,10 +59,11 @@ export interface TrayEngine {
   destroy: () => void;
 }
 
-/** Under the front sheet: the edges behind it, and the +N button with its gap. */
-const STACK_FOOT = PEEKS * PEEK + 3 + 22;
-/** However short the tray, the stack is shrunk to no less than this. */
-const MIN_SHRINK = 0.6;
+/**
+ * However short the tray, the stack is shrunk to no less than this, so the dates on its narrowest
+ * edge, kept at the fine-print floor, still sit beside the sheet's number.
+ */
+const MIN_SHRINK = 0.5;
 /** The stack's foot (dates, NEW, +N) is hidden below this share of the mouth's open width, whole above the other. */
 const FOOT_FADE = { hidden: 0.35, whole: 0.7 };
 /** The pull tugs itself on this many visits to the tray. */

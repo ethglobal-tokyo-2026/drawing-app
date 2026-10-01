@@ -52,11 +52,17 @@ export function createTraySpread(
   traySheets: TraySheets,
   trayPresses: TrayPresses,
 ) {
-  const { board, reduced, listen, make, zip, stack, spreadLayer, mat, ui, Wb, Hb, colLeft } = tray;
+  const { doc, board, reduced, listen, make, zip, stack, spreadLayer, mat, ui, Wb, Hb, colLeft } =
+    tray;
   const { newIds, topF } = trayModel;
   const { shrunkInset, sheetEl, sheetLabel, renderStack, holdsFocus, keepFocus, sayFront } =
     traySheets;
   const { sendHome } = trayPresses;
+  /**
+   * Whether focus is the spread's to return. The board is inert behind the spread, and WebKit blurs a
+   * tapped cell before its click lands, so focus left on the body is the spread's too.
+   */
+  const spreadHasFocus = () => holdsFocus(spreadLayer) || doc.activeElement === doc.body;
 
   /* ---------------------------------------------------------------- the spread: the stack's depth button lays every sheet out */
   const stackOnBoard = () => ({ x: colLeft() + ui.stackAt.x, y: TOP + ui.stackAt.y });
@@ -129,7 +135,7 @@ export function createTraySpread(
   /** Back into the tray, with sheet `f`, the one tapped, in front. */
   async function closeSpread(f = topF()) {
     if (!ui.spreadOpen) return;
-    const focused = holdsFocus(spreadLayer);
+    const focused = spreadHasFocus();
     const cells = [...spreadLayer.querySelectorAll<HTMLElement>(".tray__cell")];
     const pick = cells.find((c) => Number(c.dataset.f) === f);
     zip.relax(1);
