@@ -94,4 +94,22 @@ describe("useModalDialog", () => {
     render(<Layer active={false} />);
     expect(part("app").inert).toBe(true);
   });
+
+  it("hands back what the page's owner asked for while the dialog was up, and holds it until then", async () => {
+    render(<Layer />);
+    // The tab strip tucks away while the sheet is open, and comes back while it's still open.
+    await act(async () => void (part("tabs").inert = false));
+    expect(part("tabs").inert).toBe(true);
+    await act(async () => part("tabs").setAttribute("inert", ""));
+    render(<Layer active={false} />);
+    expect(part("tabs").inert).toBe(true);
+  });
+
+  it("gives back a part its owner let go of while the dialog was up", async () => {
+    part("tabs").inert = true;
+    render(<Layer />);
+    await act(async () => void (part("tabs").inert = false));
+    render(<Layer active={false} />);
+    expect(part("tabs").inert).toBe(false);
+  });
 });

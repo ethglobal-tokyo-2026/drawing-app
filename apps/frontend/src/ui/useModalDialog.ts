@@ -1,19 +1,43 @@
 import { useEffect, type RefObject } from "react";
 
-/** How many modal dialogs hold an element inert, and whether it was inert before the first did. */
-const holds = new WeakMap<HTMLElement, { count: number; wasInert: boolean }>();
+/**
+ * How many modal dialogs hold an element inert, whether its owner wants it inert once they've all
+ * gone, and the watch that keeps that wish current: React can set the element's own `inert` while a
+ * dialog holds it, as the drawing screen's tab strip does when it tucks away.
+ */
+const holds = new WeakMap<
+  HTMLElement,
+  { count: number; wasInert: boolean; watch: MutationObserver }
+>();
 
 function hold(el: HTMLElement) {
-  const entry = holds.get(el) ?? { count: 0, wasInert: el.inert };
+  let entry = holds.get(el);
+  if (!entry) {
+    const watch = new MutationObserver(() => {
+      const held = holds.get(el);
+      if (!held) return;
+      // The owner's change is its wish for after; while held, the element stays inert.
+      held.wasInert = el.inert;
+      if (!el.inert) {
+        el.inert = true;
+        watch.takeRecords();
+      }
+    });
+    entry = { count: 0, wasInert: el.inert, watch };
+    holds.set(el, entry);
+    el.inert = true;
+    watch.observe(el, { attributes: true, attributeFilter: ["inert"] });
+  }
   entry.count++;
-  holds.set(el, entry);
-  el.inert = true;
 }
 
 function release(el: HTMLElement) {
   const entry = holds.get(el);
   if (!entry) return;
   if (--entry.count > 0) return;
+  // An owner's change still waiting to be heard is its wish too.
+  if (entry.watch.takeRecords().length) entry.wasInert = el.inert;
+  entry.watch.disconnect();
   holds.delete(el);
   el.inert = entry.wasInert;
 }
