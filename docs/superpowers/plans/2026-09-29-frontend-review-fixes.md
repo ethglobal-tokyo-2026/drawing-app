@@ -7,20 +7,20 @@
 ad0ll answered SHELL-3 and TIX-3 to the backend session (2026-10-01), which owns both now. CLEAN-2 waits for an answer.
 
 1. **The friend picker (SHELL-3).** Gift Messages go out through LINE's full picker on purpose, because its one-pick mode lists friends only and can come up empty. So one message can reach several chats, group chats included, and the first person to open it in a 1:1 chat receives the sticker. AGENTS.MD says a Gift Message goes into one 1:1 chat. _Answered_: the full picker stays, and AGENTS.MD's Gift Message row says it goes to the chats the giver picks and can't be received from a group chat.
-2. **Paid tickets that depend on the phone (TIX-3).** A pack's tickets reach the person only if their phone keeps the payment's digest until the server adds them. _Answered_: the server records each purchase before the payment is signed, and a sweep adds the tickets of payments Sui shows that the phone never reported. The backend session is building it, the checkout's side included.
+2. **Reserve tickets that depend on the phone (TIX-3).** A pack's tickets reach the person only if their phone keeps the payment's digest until the server adds them. _Answered_: the server records each purchase before the payment is signed, and a sweep adds the tickets of payments Sui shows that the phone never reported. The backend session is building it, the checkout's side included.
 3. **Mona Sans's slashed zero (CLEAN-2).** The plain zero is patched site by site, with widths tuned to other tokens. _Recommend_ self-hosting a Mona Sans build whose tabular zero is the plain glyph, so `tabular-nums` works everywhere again; or setting the counting figures in another face. A design call.
 
 Calls the lanes made, which ad0ll left to us (2026-10-01). All stand as merged but two, logging out and render crashes, which changed:
 
 - **A signed payment that never shows.** A payment is kept on the phone from the moment it's signed. If Sui still hasn't shown it an hour later (`PAYMENT_LANDS_WITHIN_MS`, a guess), the checkout says it didn't go through and drops it.
-- **Logging out mid-drawing** keeps the drawing, for its person alone, so it's there again with its ticket when they sign back in. Deleting it cost the ticket, since the server doesn't hand back an unsealed one, and inside LINE logging out signs the same person straight back in.
+- **Logging out mid-drawing** keeps the sticker in progress, for its person alone, so it's there again with its ticket when they sign back in. Deleting it cost the ticket, since the server doesn't hand back an unsealed one, and inside LINE logging out signs the same person straight back in.
 - **"Did it go out?"** A Gift Message LINE doesn't confirm sent gets this step, with It went out and Take it out, instead of a second Send in LINE. It gives up waiting on LINE 5 s after the app comes back into view (`PICKER_RETURN_MS`, a guess), or 20 s after asking for the picker while the page never left view (`PICKER_OPENING_MS`, a guess).
 - **The stroke unlock.** Fast passes made before the first tap no longer count toward switching to stroke, so a replay switches where its combo did.
 - **The Back key.** A Back pressed within 250 ms of an overlay closing by itself is spent on the closed overlay (`STEP_BACK_HOLD_MS`, a guess), so it can't take a second history entry.
 - **A sheet's perforation.** A move over 8 px counts as a drag, not a tap (a guess).
 - **A seal retry turned away as signed out** keeps the sheet locked for the seal key, even on the first try, when the server can't hold a seal yet: only the seal route's own refusals reopen the sheet.
 - **A seal that went out before a reload, on a ticket spent before today**, whose drawing can't be read back: the ticket is dropped rather than risk a new drawing being answered with the old sticker. It costs that ticket.
-- **A cut that fails on the phone every time at 0:00** stays locked for the seal key instead of throwing the drawing away, and Start a new sticker beside it lets the drawing and its ticket go.
+- **A cut that fails on the phone every time at 0:00** stays locked for the seal key instead of throwing the sticker in progress away, and Start a new sticker beside it lets that sticker and its ticket go.
 - **A screen that crashes while rendering** gets a page with the error's words and Reload, from an error boundary around the whole app, in place of a blank page.
 
 ## Fix lanes
