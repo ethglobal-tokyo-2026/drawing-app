@@ -32,6 +32,14 @@ export const T = {
   txt0: 2080,
 };
 
+/** The card's lines fade up in turn from T.txt0: each starts this long after the one before… */
+const LINE_STAGGER = 40;
+/** …and takes this long. */
+const LINE_FADE = 240;
+
+/** When the card's `i`th line has faded all the way up: from then on it can be read and pressed. */
+export const lineShownAt = (i: number) => T.txt0 + i * LINE_STAGGER + LINE_FADE;
+
 const easeInOut = (u: number) => (u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2);
 
 export interface Box {
@@ -93,8 +101,8 @@ export interface SealFrame {
   /** The used sticker silhouette it leaves in the sheet. */
   usedStickerSilhouette: number;
   card: { opacity: number; y: number };
-  /** The card's lines, each fading up in turn. */
-  items: { opacity: number; y: number }[];
+  /** The card's lines, each fading up in turn, and shown once it's all the way up. */
+  items: { opacity: number; y: number; shown: boolean }[];
   done: boolean;
 }
 
@@ -148,8 +156,9 @@ export function sealFrame(t: number, path: Flight, items: number): SealFrame {
     usedStickerSilhouette: t >= T.peel0 ? 1 - span(T.card1, T.card1 + 260) : 0,
     card: { opacity: Math.min(1, card * 1.8), y: (1 - card) * 60 },
     items: Array.from({ length: items }, (_, i) => {
-      const u = easeOut(span(T.txt0 + i * 40, T.txt0 + i * 40 + 240));
-      return { opacity: u, y: (1 - u) * 6 };
+      const shownAt = lineShownAt(i);
+      const u = easeOut(span(shownAt - LINE_FADE, shownAt));
+      return { opacity: u, y: (1 - u) * 6, shown: t >= shownAt };
     }),
     done: t >= TOTAL,
   };

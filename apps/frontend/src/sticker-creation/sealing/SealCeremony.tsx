@@ -39,6 +39,10 @@ const MAX_FRAME_MS = 64;
 /** Until the card is there, the sticker stays on its backing: nothing flies before the seal is recorded. */
 const ON_BACKING: Flight = { peel: { x: 0, y: 0 }, dx: 0, dy: 0, scale: 1 };
 
+/** Whether a line of the card holds something to press. */
+const holdsKey = (line: HTMLElement) =>
+  line.matches("button") || line.querySelector("button") !== null;
+
 interface Props {
   sticker: SealedSticker;
   /** The sticker as the server sealed it; null while the seal is on its way, and the ceremony waits at the cut. */
@@ -99,10 +103,11 @@ function need<E extends Element>(el: E | null, what: string): E {
  * domes, the sticker peels off its backing and lands on the sealed card. It starts as soon as the
  * sticker is cut, then waits at the cut, the cutter still running round it pass after pass, until
  * the server has sealed the sticker: only then does the resin pour. One animation-frame loop writes
- * each frame of the timeline straight to the canvases, images and transforms; React only hears that
- * it's done. A tap, Enter, Space or Escape skips to the wait, or to the end once sealed; reduced
- * motion starts there. A failed seal fades back to the drawing. Keep drawing and the shop hand over
- * at once: the fresh sheet is set up under the veil while the card leaves over it.
+ * each frame of the timeline straight to the canvases, images and transforms; React only hears when
+ * the card's first key has faded up. Until then a tap, Enter, Space or Escape skips to the wait, or
+ * to the end once sealed; reduced motion starts there. A failed seal fades back to the drawing.
+ * Keep drawing and the shop hand over at once: the fresh sheet is set up under the veil while the
+ * card leaves over it.
  */
 export function SealCeremony({
   sticker,
@@ -121,7 +126,8 @@ export function SealCeremony({
   // Read by the frame loop, so neither the seal's answer nor a change to reduced motion restarts it.
   const isSealed = useEffectEvent(() => sealed !== null);
   const isReduced = useEffectEvent(() => reduced);
-  const [done, setDone] = useState(false);
+  // The card's first key has faded up: the card takes presses, and taps and keys stop skipping.
+  const [keyShown, setKeyShown] = useState(false);
   const skip = useRef<() => void>(() => {});
   const wake = useRef<() => void>(() => {});
   const root = useRef<HTMLDivElement>(null);
@@ -186,6 +192,7 @@ export function SealCeremony({
     let waited = 0;
     let swept = false;
     let ended = false;
+    let firstKeyShown = false;
     let stopKeys = () => {};
     const cutter = (): Cutter | null => {
       if (isReduced() || t < HOLD) return null;
@@ -225,8 +232,11 @@ export function SealCeremony({
         opacity(cardEl, f.card.opacity);
         cardEl.style.transform = f.card.y ? `translateY(${f.card.y}px)` : "";
         lines.forEach((node, i) => {
-          opacity(node, f.items[i].opacity);
-          node.style.transform = f.items[i].y ? `translateY(${f.items[i].y}px)` : "";
+          const line = f.items[i];
+          opacity(node, line.opacity);
+          node.style.transform = line.y ? `translateY(${line.y}px)` : "";
+          // A line takes presses, and reaches screen readers, once it has faded all the way up.
+          node.toggleAttribute("inert", !line.shown);
         });
       }
       // It sticks with a sheen, unless it was skipped past.
@@ -234,10 +244,15 @@ export function SealCeremony({
         swept = true;
         sweepSheen(parts.sheen, 640);
       }
-      if (f.done && !ended) {
-        ended = true;
+      ended ||= f.done;
+      // From its first key on, a press on the card is the key's, not a skip; the rest plays on.
+      if (
+        !firstKeyShown &&
+        (ended || lines.some((node, i) => f.items[i].shown && holdsKey(node)))
+      ) {
+        firstKeyShown = true;
         stopKeys();
-        setDone(true);
+        setKeyShown(true);
       }
     };
 
@@ -297,7 +312,7 @@ export function SealCeremony({
       ref={root}
       className={classes.filter(Boolean).join(" ")}
       onPointerDown={(e) => {
-        if (done || failed) return;
+        if (keyShown || failed) return;
         e.preventDefault();
         skip.current();
       }}
@@ -321,7 +336,7 @@ export function SealCeremony({
           <SealedCard
             sealed={sealed}
             handle={handle}
-            done={done}
+            keyShown={keyShown}
             leaving={leaving}
             cardRef={card}
             slotRef={slot}

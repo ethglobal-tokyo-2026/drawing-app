@@ -4,6 +4,7 @@ import {
   cutterAt,
   flight,
   HOLD,
+  lineShownAt,
   sealFrame,
   T,
   TOTAL,
@@ -16,6 +17,8 @@ const body = { w: 270, h: 234 };
 const slot = { x: 14, y: 520, w: 362, h: 208 };
 const path = flight(box, body, slot);
 const frameAt = (t: number) => sealFrame(t, path, 3);
+/** Each of the card's lines takes as long to fade up as the first. */
+const LINE_FADE = lineShownAt(0) - T.txt0;
 
 describe("sealTimeline", () => {
   it.each<[string, (f: SealFrame) => number, number, number]>([
@@ -34,14 +37,20 @@ describe("sealTimeline", () => {
     ["the card slides up", (f) => f.card.y, T.card0, T.card1],
     ["the sticker flies to the card", (f) => f.sticker.x, T.move0, T.move1],
     ["the used sticker silhouette goes", (f) => f.usedStickerSilhouette, T.card1, T.card1 + 260],
-    ["the card's first line fades up", (f) => f.items[0].y, T.txt0, T.txt0 + 240],
-    ["its second line follows", (f) => f.items[1].y, T.txt0 + 40, T.txt0 + 280],
+    ["the card's first line fades up", (f) => f.items[0].y, T.txt0, lineShownAt(0)],
+    ["its second line follows", (f) => f.items[1].y, lineShownAt(1) - LINE_FADE, lineShownAt(1)],
   ])("%s, and only over its own span", (_, value, start, end) => {
     const v = (t: number) => value(frameAt(t));
     expect(v(start - 1)).toBe(v(start));
     expect(v(start + 1)).not.toBe(v(start));
     expect(v(end - 1)).not.toBe(v(end));
     expect(v(end + 1)).toBe(v(end));
+  });
+
+  it("shows each of the card's lines, to be read and pressed, only once it's all the way up", () => {
+    const line = (t: number) => frameAt(t).items[1];
+    expect(line(lineShownAt(1) - 1).shown).toBe(false);
+    expect(line(lineShownAt(1))).toEqual({ opacity: 1, y: 0, shown: true });
   });
 
   it("lands the sticker in the middle of the slot, fitted to it", () => {
