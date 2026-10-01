@@ -462,8 +462,6 @@ export const ticketShopSchema = z.object({
     decimals: count,
     paymentPackage: suiIdSchema,
     vault: suiIdSchema,
-    /** Passed to `pay` as its reference: the server counts only a payment that names this person. */
-    reference: z.string().min(1),
   }),
 });
 export type TicketShop = z.infer<typeof ticketShopSchema>;

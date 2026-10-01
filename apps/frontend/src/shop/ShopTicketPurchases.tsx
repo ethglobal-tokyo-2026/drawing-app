@@ -1,5 +1,5 @@
 import { usePrivyStatus } from "../identity/privy";
-import { useReservePacks } from "../tickets/reservePacks";
+import { useShownReservePacks } from "../tickets/reservePacks";
 import { TicketPurchases } from "../tickets/TicketPurchases";
 import { useTickets } from "../tickets/useTickets";
 
@@ -9,7 +9,7 @@ import { useTickets } from "../tickets/useTickets";
  */
 export function ShopTicketPurchases() {
   const privy = usePrivyStatus();
-  const packs = useReservePacks();
+  const packs = useShownReservePacks();
   const { tickets } = useTickets();
   const owner = privy.state === "signed-in" ? privy.suiWallet : undefined;
   if (!owner || packs.state !== "ready") return null;

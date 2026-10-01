@@ -12,7 +12,8 @@ export const AFTER_MIDNIGHT_MS = 15_000;
 /** Calls `run` after `ms`, and returns a function that cancels it. */
 export type Schedule = (run: () => void, ms: number) => () => void;
 
-const timer: Schedule = (run, ms) => {
+/** The Schedule the server runs on: a timer that never holds the process open. */
+export const timer: Schedule = (run, ms) => {
   const handle = setTimeout(run, ms);
   handle.unref();
   return () => clearTimeout(handle);

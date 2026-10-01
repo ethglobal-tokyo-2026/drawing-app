@@ -204,6 +204,7 @@ describe("answers that carry your tickets", () => {
 
   /** A payment kept on this phone, whose tickets the app asks for again as it opens. */
   const KEPT: UnaddedPurchase = {
+    purchaseId: 1,
     digest: "D".repeat(44),
     tickets: 3,
     priceYen: 270,

@@ -48,19 +48,25 @@ describe("tickets", () => {
     );
   });
 
-  it("counts one Sui payment once", () => {
-    const record = () =>
+  /** Records a one-ticket purchase with `values`. */
+  const purchase =
+    (values: Partial<typeof ticketPurchases.$inferInsert> = {}) =>
+    () =>
       db
         .insert(ticketPurchases)
-        .values({
-          userId,
-          tickets: 1,
-          priceYen: 100,
-          paidJpyc: "1",
-          txDigest: "digest",
-        })
+        .values({ userId, tickets: 1, priceYen: 100, ...values })
         .run();
-    record();
-    expect(refusal(record)).toMatch(/ticket_purchases.tx_digest/);
+
+  it("counts one Sui payment once, and holds any number of purchases not paid yet", () => {
+    purchase()();
+    purchase()();
+    const paid = purchase({ paidJpyc: "1", txDigest: "digest" });
+    paid();
+    expect(refusal(paid)).toMatch(/ticket_purchases.tx_digest/);
+  });
+
+  it("counts a purchase only once its payment is recorded whole", () => {
+    expect(refusal(purchase({ verifiedAt: new Date() }))).toMatch(/ticket_purchases_payment/);
+    expect(refusal(purchase({ txDigest: "digest" }))).toMatch(/ticket_purchases_payment/);
   });
 });

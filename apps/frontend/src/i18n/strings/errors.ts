@@ -201,14 +201,14 @@ export const errors = {
   not_yours: { en: "That sticker isn’t yours.", ja: "そのシールは、あなたのものではありません。" },
   /** Receiving: the giver opening their own gift message's link (POST /api/gifts/preview or /receive); the Receive gift dialog shows its own “This gift is on its way” screen instead */
   own_gift: { en: "You can’t open your own gift.", ja: "自分が贈ったギフトは、ひらけません。" },
-  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) for a pack size the shop doesn't sell, in “The payment went through, but the tickets weren’t added” through problemOf */
+  /** Reserve ticket checkout, after tapping Pay: starting the purchase (POST /api/ticket-purchases/start) for a pack size the shop doesn't sell, under “Payment didn’t go through” through errorMessage; nothing was paid */
   pack_unknown: { en: "That ticket pack doesn’t exist.", ja: "そのチケットパックはありません。" },
   /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) for a Sui payment that already bought tickets, in “The payment went through, but the tickets weren’t added” through problemOf */
   payment_already_counted: {
     en: "That payment was already counted.",
     ja: "その支払いは、すでに反映されています。",
   },
-  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) for a Sui transaction that paid no JPYC into the ticket vault, in “…the tickets weren’t added” through problemOf */
+  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) for a Sui transaction that paid no JPYC into the ticket vault for that purchase, in “Tickets can’t be added” through errorReason */
   payment_not_found: {
     en: "The Shop didn’t receive that payment.",
     ja: "ショップでこの支払いを確認できませんでした。",
@@ -218,15 +218,25 @@ export const errors = {
     en: "Sui doesn’t show this payment yet. Try again in a moment.",
     ja: "Suiでこの支払いがまだ確認できません。少し待ってから、もう一度お試しください。",
   },
-  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) for a payment into the ticket vault that names someone else, in “…the tickets weren’t added” through problemOf */
+  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) for someone else's purchase, or for a payment into the ticket vault that names someone else, in “Tickets not added yet” through errorReason */
   payment_not_yours: {
     en: "That payment was made for someone else’s tickets.",
     ja: "この支払いは別の人のチケットのものです。",
   },
-  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) when the payment is below the pack's price at every quote still valid, in “…the tickets weren’t added” through problemOf */
+  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) when the payment is below the purchase's price, in “Tickets can’t be added” through errorReason */
   payment_short: {
     en: "The payment was less than the pack’s price.",
     ja: "支払い額がパックの価格に足りませんでした。",
+  },
+  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) for a purchase another payment already paid, in “Tickets not added yet” through errorReason */
+  purchase_already_paid: {
+    en: "Another payment already paid for this purchase.",
+    ja: "この購入は、別の支払いですでに支払われています。",
+  },
+  /** Reserve ticket checkout, after paying: adding the tickets (POST /api/ticket-purchases) for a purchase the server has no record of, in “Tickets can’t be added” through errorReason */
+  purchase_not_found: {
+    en: "The Shop has no record of this purchase.",
+    ja: "ショップにこの購入の記録がありません。",
   },
   /** Gratitude Mini-game: recording a combo (POST /api/gratitude) whose replay fails the server's checks; the Mini-game's receipt shows its own note instead, so this is errorMessage's fallback */
   replay_invalid: {

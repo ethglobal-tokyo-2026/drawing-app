@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { NOT_LANDED_RETRY_MS, readLanded, SUI_READ_TIMEOUT_MS } from "./jpycPayments.ts";
+import {
+  NOT_LANDED_RETRY_MS,
+  PAGES_PER_READ,
+  readBackTo,
+  readLanded,
+  SUI_READ_TIMEOUT_MS,
+} from "./jpycPayments.ts";
 
 /** What a read finds once Sui shows the transaction. */
 const FOUND = { payments: [] };
@@ -70,5 +76,46 @@ describe("reading a payment from Sui", () => {
     const read = vi.fn(() => Promise.reject(outage));
     await expect(readLanded(read)).rejects.toBe(outage);
     expect(read).toHaveBeenCalledOnce();
+  });
+});
+
+describe("reading payment events back to a time", () => {
+  const SINCE = new Date("2026-10-01T00:00:00.000Z");
+  /** An event, as the minutes after SINCE its transaction ran: negative ran before it. */
+  type Event = number;
+  const ranAt = (minutes: Event) => Promise.resolve(new Date(SINCE.getTime() + minutes * 60_000));
+  /** Sui's pages, newest first: each page's events, and whether an older page follows. */
+  const history = (pages: { events: Event[]; more: boolean }[]) =>
+    vi.fn((before: string | null) => {
+      const at = before === null ? 0 : Number(before);
+      const page = pages[at] ?? { events: [], more: false };
+      return Promise.resolve({ events: page.events, before: page.more ? String(at + 1) : null });
+    });
+
+  it("reads back page by page, past scan-limited empty ones, until a page reaches before the time", async () => {
+    const readPage = history([
+      { events: [30, 20], more: true },
+      { events: [], more: true },
+      { events: [10, -5], more: true },
+      { events: [-10], more: false },
+    ]);
+    await expect(readBackTo(SINCE, readPage, ranAt)).resolves.toEqual({
+      events: [30, 20, 10, -5],
+      complete: true,
+    });
+    expect(readPage.mock.calls).toEqual([[null], ["1"], ["2"]]);
+  });
+
+  it("says it stopped short when its pages run out first, and whole at the history's start", async () => {
+    const endless = vi.fn(() => Promise.resolve({ events: [30], before: "older" }));
+    const read = await readBackTo(SINCE, endless, ranAt);
+    expect(read.complete).toBe(false);
+    expect(endless).toHaveBeenCalledTimes(PAGES_PER_READ);
+
+    const short = history([{ events: [30], more: false }]);
+    await expect(readBackTo(SINCE, short, ranAt)).resolves.toEqual({
+      events: [30],
+      complete: true,
+    });
   });
 });

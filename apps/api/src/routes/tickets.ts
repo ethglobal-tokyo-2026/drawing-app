@@ -1,13 +1,17 @@
 import { DAILY_TICKETS_PER_DAY, ticketPurchases, ticketUses } from "@drawing-app/db";
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { AppDeps } from "../deps.ts";
-import { failureCause, logFailure } from "../diagnostics.ts";
+import { failureCause, logFailure, logInfo } from "../diagnostics.ts";
 import { apiError, validate } from "../errors.ts";
 import type { AppEnv } from "../session.ts";
 import {
+  creditPurchase,
   jpycFor,
   paymentCounted,
+  purchaseNamedBy,
   spendRequestSchema,
+  startPurchaseRequestSchema,
   TICKET_PACKS,
   ticketKindAt,
   ticketPaymentReference,
@@ -15,13 +19,15 @@ import {
   ticketShop,
   ticketsOf,
   ticketUseSpentWith,
+  toStartedTicketPurchase,
   toTicketUse,
 } from "../tickets/tickets.ts";
 
 /**
- * Tickets: the day's tickets, spending one, the ticket shop, and buying its packs with JPYC. Once a
- * spend or a purchase commits, the chat menu's Draw key catches up in the background: LINE never
- * holds up the answer or fails it.
+ * Tickets: the day's tickets, spending one, the ticket shop, and buying its packs with JPYC: a
+ * purchase is started, then paid on Sui, then its payment reported. Once a spend or a purchase
+ * commits, the chat menu's Draw key catches up in the background: LINE never holds up the answer or
+ * fails it.
  */
 export const ticketRoutes = ({ db, clock, ticketPayments, lineChatMenu }: AppDeps) =>
   new Hono<AppEnv>()
@@ -76,11 +82,11 @@ export const ticketRoutes = ({ db, clock, ticketPayments, lineChatMenu }: AppDep
       if (spent.status === 201) void lineChatMenu.relink(userId);
       return spent;
     })
-    .get("/ticket-shop", (c) =>
-      c.json({ shop: ticketShop(ticketPayments.target, c.var.userId) }, 200),
-    )
-    .post("/ticket-purchases", validate("json", ticketPurchaseRequestSchema), async (c) => {
-      const { tickets, txDigest } = c.req.valid("json");
+    .get("/ticket-shop", (c) => c.json({ shop: ticketShop(ticketPayments.target) }, 200))
+    // Recorded before the payment is signed, so the sweep finds the payment on Sui even when the
+    // app never reports it.
+    .post("/ticket-purchases/start", validate("json", startPurchaseRequestSchema), (c) => {
+      const { tickets } = c.req.valid("json");
       const pack = TICKET_PACKS.find((offer) => offer.tickets === tickets);
       if (!pack) {
         const packs = TICKET_PACKS.map((offer) => offer.tickets).join(", ");
@@ -91,9 +97,47 @@ export const ticketRoutes = ({ db, clock, ticketPayments, lineChatMenu }: AppDep
           `tickets: no pack has ${tickets}; packs have ${packs}`,
         );
       }
+      const purchase = db
+        .insert(ticketPurchases)
+        .values({ userId: c.var.userId, tickets, priceYen: pack.priceYen })
+        .returning()
+        .get();
+      logInfo("ticket_purchase.started", { userId: c.var.userId, purchaseId: purchase.id });
+      return c.json(
+        { purchase: toStartedTicketPurchase(purchase, ticketPayments.target.decimals) },
+        201,
+      );
+    })
+    .post("/ticket-purchases", validate("json", ticketPurchaseRequestSchema), async (c) => {
+      const { purchaseId, txDigest } = c.req.valid("json");
+      const { userId } = c.var;
+      const purchase = db
+        .select()
+        .from(ticketPurchases)
+        .where(eq(ticketPurchases.id, purchaseId))
+        .get();
+      if (!purchase) {
+        return apiError(c, 404, "purchase_not_found", `purchaseId: no purchase ${purchaseId}`);
+      }
+      if (purchase.userId !== userId) {
+        return apiError(
+          c,
+          403,
+          "payment_not_yours",
+          `purchaseId: purchase ${purchaseId} is someone else's`,
+        );
+      }
       const alreadyCounted = () =>
         apiError(c, 409, "payment_already_counted", `txDigest: ${txDigest} already bought tickets`);
+      const alreadyPaid = () =>
+        apiError(
+          c,
+          409,
+          "purchase_already_paid",
+          `purchaseId: purchase ${purchaseId} was already paid by another payment`,
+        );
       if (paymentCounted(db, txDigest)) return alreadyCounted();
+      if (purchase.verifiedAt !== null) return alreadyPaid();
 
       let payments;
       try {
@@ -103,7 +147,7 @@ export const ticketRoutes = ({ db, clock, ticketPayments, lineChatMenu }: AppDep
         const failure = new Error(`Couldn't read transaction ${txDigest} from Sui`, {
           cause: error,
         });
-        logFailure("sui.read.failed", failure, { userId: c.var.userId });
+        logFailure("sui.read.failed", failure, { userId });
         return apiError(c, 502, "sui_unavailable", `${failure.message}: ${failureCause(error)}`);
       }
       // No verdict: Sui may not have run a payment the app just sent yet, so the app asks again.
@@ -115,12 +159,16 @@ export const ticketRoutes = ({ db, clock, ticketPayments, lineChatMenu }: AppDep
           `txDigest: Sui doesn't show transaction ${txDigest} yet`,
         );
       }
-      const { vault } = ticketPayments.target;
+      const { vault, decimals } = ticketPayments.target;
       const intoVault = payments.filter((payment) => payment.vault === vault);
-      const reference = ticketPaymentReference(c.var.userId);
+      const reference = ticketPaymentReference(userId, purchaseId);
       const payment = intoVault.find((p) => p.reference === reference);
       if (!payment) {
-        return intoVault.length > 0
+        const forSomeoneElse = intoVault.some((p) => {
+          const named = purchaseNamedBy(p.reference);
+          return named !== null && named.userId !== userId;
+        });
+        return forSomeoneElse
           ? apiError(
               c,
               403,
@@ -131,37 +179,22 @@ export const ticketRoutes = ({ db, clock, ticketPayments, lineChatMenu }: AppDep
               c,
               422,
               "payment_not_found",
-              `txDigest: ${txDigest} made no JPYC payment into the ticket vault ${vault}`,
+              `txDigest: ${txDigest} made no JPYC payment into the ticket vault ${vault} for ${reference}`,
             );
       }
-      const priceJpyc = jpycFor(pack.priceYen, ticketPayments.target.decimals);
+      const priceJpyc = jpycFor(purchase.priceYen, decimals);
       if (payment.amount < priceJpyc) {
         return apiError(
           c,
           402,
           "payment_short",
-          `txDigest: paid ${payment.amount} JPYC base units, short of the ${pack.tickets}-ticket pack's ${priceJpyc}`,
+          `txDigest: paid ${payment.amount} JPYC base units, short of the ${purchase.tickets}-ticket pack's ${priceJpyc}`,
         );
       }
       const now = clock.now();
-      const bought = db.transaction(
-        (tx) => {
-          // Checked again: another request could have counted it while Sui was asked.
-          if (paymentCounted(tx, txDigest)) return alreadyCounted();
-          tx.insert(ticketPurchases)
-            .values({
-              userId: c.var.userId,
-              tickets,
-              priceYen: pack.priceYen,
-              paidJpyc: payment.amount.toString(),
-              txDigest,
-              verifiedAt: now,
-            })
-            .run();
-          return c.json({ tickets: ticketsOf(tx, c.var.userId, now) }, 201);
-        },
-        { behavior: "immediate" },
-      );
-      if (bought.status === 201) void lineChatMenu.relink(c.var.userId);
-      return bought;
+      const credit = creditPurchase(db, purchaseId, { txDigest, amount: payment.amount }, now);
+      if (credit === "payment_already_counted") return alreadyCounted();
+      if (credit === "purchase_already_paid") return alreadyPaid();
+      void lineChatMenu.relink(userId);
+      return c.json({ tickets: ticketsOf(db, userId, now) }, 201);
     });

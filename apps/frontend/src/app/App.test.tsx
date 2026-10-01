@@ -142,6 +142,7 @@ async function renderWithKeptPayment(buyTickets: ApiClient["buyTickets"]) {
   vi.spyOn(console, "warn").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});
   keepUnaddedPurchase(TEST_ME.id, {
+    purchaseId: 1,
     digest: "D".repeat(44),
     tickets: 3,
     priceYen: 270,
