@@ -391,7 +391,7 @@ describe("StickerBoard after a gift", () => {
     expect(stage.querySelector(".board-blank")).not.toBeNull();
   });
 
-  it("opens a given sticker among the stickers you gave from its blank spot in the tray", async () => {
+  it("opens a given sticker among the stickers you gave from its spot in the tray", async () => {
     const gone = given();
     // Noticed already, so no notice covers the board.
     markNoticed([

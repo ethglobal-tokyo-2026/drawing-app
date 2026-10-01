@@ -444,7 +444,7 @@ export const stickerBoard = {
       },
       /** Sticker tray, the sheet in front: screen readers' name for a sticker on it that the tray hasn't shown before */
       newOnSheet: { en: "{{no}}, new", ja: "{{no}}、新着" },
-      /** Sticker tray: screen readers' name for the blank spot a sticker you gave left on its sheet, a button that opens it among the stickers you gave; {{recipient}} is who received it, such as "@bob" */
+      /** Sticker tray: screen readers' name for the spot a sticker you gave left on its sheet, a button that opens it among the stickers you gave; {{recipient}} is who received it, such as "@bob" */
       given: {
         en: "{{no}}, given to {{recipient}}. Open it",
         ja: "{{no}}、{{recipient}}さんへ贈ったシールをひらく",
@@ -533,7 +533,7 @@ export const stickerBoard = {
     label: { en: "Sticker", ja: "シール" },
     /** Sticker detail, opened from a sticker you hold: screen readers' name for the strip of sticker thumbnails at the top */
     yourStickers: { en: "Your stickers", ja: "手持ちのシール" },
-    /** Sticker detail, opened from a given sticker's blank spot in the sticker tray: screen readers' name for the strip of thumbnails of the stickers you gave */
+    /** Sticker detail, opened from a given sticker's spot in the sticker tray: screen readers' name for the strip of thumbnails of the stickers you gave */
     stickersYouGave: { en: "Stickers you gave", ja: "贈ったシール" },
     /** Sticker detail: screen readers' name for the left arrow under the sticker, which pages to the previous one */
     previous: { en: "Previous sticker", ja: "前のシール" },

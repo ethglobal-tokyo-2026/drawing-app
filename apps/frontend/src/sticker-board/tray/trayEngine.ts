@@ -1,9 +1,10 @@
 /**
  * The sticker tray: zipped down the Sticker Board's right edge, opened by its Zipper.
  * Inside, a stack of loose sticker sheets holds every sticker you've had, in arrival order, each in
- * its packed spot: a used sticker silhouette where one is out on the board, a blank where one was
- * given, which opens it among the stickers you gave. You page the stack, pull a sheet out over the board, spread every sheet out, peel stickers
- * onto the board and put them back. Everything is in board pixels, in the board's stacking context.
+ * its packed spot: a used sticker silhouette where one is out on the board, its faint cut line where
+ * one was given, which opens it among the stickers you gave. You page the stack, pull a sheet out
+ * over the board, spread every sheet out, peel stickers onto the board and put them back.
+ * Everything is in board pixels, in the board's stacking context.
  */
 import { i18next } from "../../i18n/i18n";
 import { whenBoardQuiet } from "../boardComplete";
@@ -22,6 +23,7 @@ import {
   SHEET,
   STACK_FOOT,
   STACK_Y,
+  SVG_NS,
   createTrayModel,
   modelOf,
   type BoardView,
@@ -69,7 +71,6 @@ const FOOT_FADE = { hidden: 0.35, whole: 0.7 };
 /** The pull tugs itself on this many visits to the tray. */
 const TUG_VISITS = 3;
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
-const SVG_NS = "http://www.w3.org/2000/svg";
 
 /** Trays made so far, which keeps each one's ids its own. */
 let trays = 0;

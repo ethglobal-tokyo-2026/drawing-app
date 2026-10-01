@@ -237,7 +237,7 @@ export function createTrayPresses(
       tapSlot(slot);
     }
   });
-  /** A click on a given sticker's blank spot opens it among the stickers you gave. */
+  /** A click on a given sticker's spot opens it among the stickers you gave. */
   function openGivenAt(e: Event) {
     const id = targetOf(e)?.closest<HTMLElement>('.tray__slot[data-state="given"]')?.dataset.id;
     if (id !== undefined) api.openGiven(id);

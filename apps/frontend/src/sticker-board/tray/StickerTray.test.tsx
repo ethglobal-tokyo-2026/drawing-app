@@ -147,6 +147,24 @@ const pageDown = () =>
 const manyStickers = (n: number) =>
   Array.from({ length: n }, (_, i) => sticker(`s${i}`, i + 1, false));
 const friend = { id: "friend", handle: "friend", name: "Friend", ageStatus: "adult" as const };
+const bob = { id: "bob", handle: "bob", name: "Bob", ageStatus: "adult" as const };
+/** A sticker someone has received: no longer held, its spot left on its sheet. */
+const givenSticker = (id: string, arrivedAt: number) =>
+  sticker(id, arrivedAt, false, {
+    held: false,
+    givenTo: { receiver: bob, receivedAt: arrivedAt + 1 },
+  });
+/** A sticker on its way to someone: its gift is sent, and not yet received. */
+const sentSticker = (id: string, arrivedAt: number) =>
+  sticker(id, arrivedAt, false, { openGift: { id: `gift-${id}`, status: "sent" } });
+/** The points of an SVG path of straight segments, as [x, y] pairs. */
+const pathPoints = (d: string | null | undefined): [number, number][] => {
+  const numbers = (d?.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
+  return Array.from({ length: numbers.length >> 1 }, (_, i): [number, number] => [
+    numbers[2 * i] ?? NaN,
+    numbers[2 * i + 1] ?? NaN,
+  ]);
+};
 /** Stickers spread over several sheets, every third one a gift, so the folder tabs show. */
 const stickersWithGifts = (n: number) =>
   manyStickers(n).map((s, i) => (i % 3 === 0 ? { ...s, artist: friend } : s));
@@ -223,27 +241,41 @@ describe("StickerTray", () => {
     expect(remove).toHaveBeenCalledTimes(1);
   });
 
-  it("leaves a given sticker's blank spot, a button that opens it among the stickers you gave", async () => {
+  it("leaves a given sticker's spot, a button that opens it among the stickers you gave", async () => {
     const openGiven = vi.fn();
-    const bob = { id: "bob", handle: "bob", name: "Bob", ageStatus: "adult" as const };
-    render(
-      [
-        sticker("given", 1, false, { held: false, givenTo: { receiver: bob, receivedAt: 2 } }),
-        sticker("sent", 3, false, { openGift: { id: "g", status: "sent" } }),
-      ],
-      { openGiven },
-    );
+    render([givenSticker("given", 1), sentSticker("sent", 3)], { openGiven });
     await act(async () => void (await tray.current?.open()));
     const spot = board.querySelector<HTMLElement>('.tray__slot[data-id="given"]');
     expect(spot?.getAttribute("aria-label")).toBe("No.0001, given to @bob. Open it");
-    // Blank: nothing of the sticker shows, and it takes the shared press.
-    expect(spot?.children).toHaveLength(0);
+    // Nothing of the sticker shows, and it takes the shared press.
+    expect(spot?.querySelector(".tray__fit, .tray__img")).toBeNull();
     expect(spot?.getAttribute("data-press")).toBe("");
     // A sticker on its way leaves nothing to tap: the pending gifts badge holds it.
     expect(slotOf("sent")).toBeNull();
 
     act(() => spot?.click());
     expect(openGiven).toHaveBeenCalledExactlyOnceWith("given");
+  });
+
+  it("traces a given sticker's own cut line on its spot, and leaves one on its way only paper", async () => {
+    render([givenSticker("given", 1), sentSticker("sent", 3)]);
+    await openTray();
+    const outlines = board.querySelectorAll(".tray__given-outline");
+    const spot = board.querySelector<HTMLElement>('.tray__slot[data-id="given"]');
+    expect(outlines).toHaveLength(1);
+    expect(spot?.contains(outlines[0] ?? null)).toBe(true);
+
+    // The fixture's cut is inset in its image: traced from it, no point lies on the spot's edge.
+    const w = Number.parseFloat(spot?.style.width ?? "");
+    const h = Number.parseFloat(spot?.style.height ?? "");
+    const points = pathPoints(outlines[0]?.querySelector("path")?.getAttribute("d"));
+    expect(points.length).toBeGreaterThan(2);
+    for (const [x, y] of points) {
+      expect(x).toBeGreaterThan(0);
+      expect(x).toBeLessThan(w);
+      expect(y).toBeGreaterThan(0);
+      expect(y).toBeLessThan(h);
+    }
   });
 
   it("puts a sticker in hand back on its pulled-out sheet when the sheet is sent home", async () => {

@@ -2,7 +2,7 @@ import { onItsWay, type BoardStickerView } from "../boardSticker";
 
 /**
  * "here" in its spot, "used" out on the board (its used sticker silhouette shows), "given" away (its
- * spot stays blank).
+ * spot stays, with only its cut line traced).
  */
 type TraySlotState = "here" | "used" | "given";
 

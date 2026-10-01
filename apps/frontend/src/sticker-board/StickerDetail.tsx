@@ -178,7 +178,7 @@ export function StickerDetail({
       const el = originOf?.(id);
       const s = stickers.find((x) => x.id === id);
       if (!el || !s) return null;
-      // A given sticker fades in out of its blank spot in the sticker tray, which stays.
+      // A given sticker fades in out of its spot in the sticker tray, which stays.
       return { el, turn: s.placement.r, given: !s.held || s.openGift?.status === "sent" };
     },
     into: DETAIL,

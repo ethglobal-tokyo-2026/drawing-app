@@ -628,7 +628,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   });
   const stickerEl = (id: string) =>
     stage.current?.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`) ?? null;
-  /** A given sticker's blank spot on the sticker tray's front sheet, or the sheet pulled out. */
+  /** A given sticker's spot on the sticker tray's front sheet, or the sheet pulled out. */
   const givenSpot = (id: string) =>
     face?.querySelector<HTMLElement>(
       `.tray__sheet.is-top .tray__slot[data-state="given"][data-id="${CSS.escape(id)}"]`,

@@ -24,7 +24,7 @@ export interface TraySticker extends TraySlot {
   nsfw: boolean;
   /** Shown in the open tray before, so it isn't NEW. */
   seen: boolean;
-  /** Given away and received: who has it, printed. Its blank spot opens it among the stickers you gave. */
+  /** Given away and received: who has it, printed. Its spot opens it among the stickers you gave. */
   givenTo?: string;
 }
 
@@ -267,6 +267,7 @@ export const ICONS = {
   x: "M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z",
 };
 
+export const SVG_NS = "http://www.w3.org/2000/svg";
 export const cssUrl = (url: string) => `url("${url}")`;
 export const px = (v: number) => `${v.toFixed(1)}px`;
 const isShape = (s: Shape | undefined): s is Shape => s !== undefined;

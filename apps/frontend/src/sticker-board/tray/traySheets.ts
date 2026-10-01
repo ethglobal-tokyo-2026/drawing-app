@@ -5,11 +5,13 @@
 import { i18next } from "../../i18n/i18n";
 import { formatMonthDay, formatNo } from "../../stickers/format";
 import { lightUp } from "../../stickers/light";
+import { knownShape } from "./stickerShape";
 import {
   ICONS,
   PEEK,
   PEEKS,
   SHEET,
+  SVG_NS,
   cssUrl,
   dayOf,
   maskOf,
@@ -73,6 +75,23 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     const [x, y, r] = STAND_IN[s.slot];
     return { x, y, r, ...fitOf(s) };
   }
+  /**
+   * A given sticker's cut line on its spot, the one its sheet was packed by. A cut line that couldn't
+   * be read packs as a box, which isn't the sticker's, so nothing is traced.
+   */
+  function cutLineEl(s: Slot, q: Size) {
+    const shape = knownShape(s);
+    if (!shape || shape.poly.length < 3) return null;
+    const path = doc.createElementNS(SVG_NS, "path");
+    const points = shape.poly.map(
+      ([u, v], i) => `${i ? "L" : "M"}${(u * q.w).toFixed(1)} ${(v * q.h).toFixed(1)}`,
+    );
+    path.setAttribute("d", `${points.join("")}Z`);
+    const svg = doc.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("class", "tray__given-outline");
+    svg.append(path);
+    return decorative(svg);
+  }
   function slotEl(s: Slot, isNew: boolean, use: SlotUse) {
     const q = placeOf(s);
     const el: HTMLElement = make(
@@ -92,7 +111,7 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     el.style.height = px(q.h);
     el.style.margin = `${px(-q.h / 2)} 0 0 ${px(-q.w / 2)}`;
     const no = { no: formatNo(s.no) };
-    // A given sticker's spot stays blank: a button with nothing on it, which takes the shared press.
+    // A given sticker's spot shows only its cut line, faint, and takes the shared press.
     if (s.givenTo !== undefined) {
       if (use !== "picture") {
         el.dataset.press = "";
@@ -101,6 +120,8 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
           i18next.t(($) => $.stickerBoard.tray.slot.given, { ...no, recipient: s.givenTo }),
         );
       }
+      const cut = cutLineEl(s, q);
+      if (cut) el.append(cut);
       return el;
     }
     if (use !== "picture")
@@ -217,7 +238,7 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     use: SlotUse = depth > 0 ? "behind" : "live",
   ) {
     const paper = make("div", "tray__paper", decorative(make("i", "tray__tear")));
-    // A sticker on its way leaves nothing; one received leaves its blank spot, which opens it.
+    // A sticker on its way leaves nothing; one received leaves its spot, which opens it.
     for (const s of sheetItems(f))
       if (s.state !== "given" || s.givenTo !== undefined)
         paper.append(slotEl(s, news.has(s.id), use));
