@@ -5,12 +5,25 @@ import { readChosenLanguage, type Language } from "./language";
 import { strings } from "./strings";
 
 const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b);
+const WORD_JOINER = String.fromCharCode(0x2060);
+const OPENING_BRACKET = /[（「『【〔［〈《]/g;
 
-/** A tag would show as text wherever a string isn't rendered as markup; a zero-width space breaks the line and shows nothing. */
+/**
+ * A string marked with break hints, as the page shows it. A tag would show as text wherever a string
+ * isn't rendered as markup; a zero-width space breaks the line and shows nothing. WebKit lets a line
+ * kept to its marks end on an opening bracket, so each is joined to what follows.
+ */
+export const withBreakHints = (text: string) =>
+  text.includes(BREAK_HINT)
+    ? text
+        .replace(OPENING_BRACKET, (bracket) => bracket + WORD_JOINER)
+        .replaceAll(BREAK_HINT, ZERO_WIDTH_SPACE)
+    : text;
+
 const breakHints: PostProcessorModule = {
   type: "postProcessor",
   name: "breakHints",
-  process: (text) => text.replaceAll(BREAK_HINT, ZERO_WIDTH_SPACE),
+  process: withBreakHints,
 };
 
 i18next

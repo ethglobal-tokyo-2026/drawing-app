@@ -92,7 +92,7 @@ const startOver = () =>
   );
 
 describe("the drawing screen after a reload", () => {
-  it("stops waiting on a drawing whose seal went out once a read that never answers has had a second wait", async () => {
+  it("stops waiting on a sticker in progress whose seal went out once a read that never answers has had a second wait", async () => {
     keepSentSeal(7);
     reopen(
       { status: "unread", ticket: 7, error: new Error("slow"), later: new Promise(() => {}) },
@@ -106,7 +106,7 @@ describe("the drawing screen after a reload", () => {
     expect(sheet).toBe("fresh");
   });
 
-  it("lets a drawing the phone can't cut at 0:00 go for a fresh sheet", async () => {
+  it("lets a sticker in progress the phone can't cut at 0:00 go for a fresh sheet", async () => {
     reopen({ status: "found", ticket: 7, elapsedMs: SESSION_MS, nsfw: false, ops: [] });
     await settle();
     expect(sheet).toBe("held");

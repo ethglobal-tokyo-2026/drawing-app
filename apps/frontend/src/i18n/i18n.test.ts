@@ -1,6 +1,6 @@
 import { describe, expect, it, onTestFinished } from "vitest";
 import { BREAK_HINT } from "./catalog";
-import { i18next } from "./i18n";
+import { i18next, withBreakHints } from "./i18n";
 import { shop } from "./strings/shop";
 import { stickerBoard } from "./strings/stickerBoard";
 
@@ -31,5 +31,13 @@ describe("i18next", () => {
     expect(i18next.t(($) => $.shop.reserve.lead)).toBe(
       marked.replaceAll(BREAK_HINT, String.fromCharCode(0x200b)),
     );
+  });
+
+  it("joins an opening bracket to what follows in a marked string, so no line ends on one", () => {
+    const shown = withBreakHints(`問題が起きました${BREAK_HINT}（route_not_found）。「もう一度」`);
+    for (const at of [...shown.matchAll(/[（「]/g)].map((m) => m.index))
+      expect(shown.codePointAt(at + 1)).toBe(0x2060);
+    expect(shown).not.toContain(BREAK_HINT);
+    expect(withBreakHints("（そのまま）")).toBe("（そのまま）");
   });
 });
