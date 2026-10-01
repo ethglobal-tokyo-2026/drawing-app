@@ -68,7 +68,7 @@ export function HandlePrompt({ me, setHandle, onChosen }: Props) {
   return (
     <main className="line-gate handle-prompt">
       <h1 className="title-label">{t(($) => $.api.handle.title)}</h1>
-      <p className="line-gate__lead">
+      <p className="line-gate__lead keep-phrases">
         {me.lineDisplayName
           ? t(($) => $.api.handle.leadNameUnavailable, { name: me.lineDisplayName })
           : t(($) => $.api.handle.lead)}

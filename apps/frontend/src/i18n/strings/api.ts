@@ -26,12 +26,12 @@ export const api = {
     /** Handle prompt, when LINE gave no display name: the line under the heading */
     lead: {
       en: "It’s how people find you and your stickers.",
-      ja: "みんながあなたやあなたのシールを見つけるときに使う名前です。",
+      ja: "みんなが<wbr/>あなたや<wbr/>あなたのシールを<wbr/>見つけるときに<wbr/>使う名前です。",
     },
     /** Handle prompt, when the LINE display name ({{name}}) couldn't become the handle, because someone has it or it breaks the handle rules: the line under the heading */
     leadNameUnavailable: {
       en: "“{{name}}” isn’t available as a handle, so choose your own. It’s how people find you and your stickers.",
-      ja: "「{{name}}」はユーザー名として使えないため、あなただけのユーザー名を決めてください。みんながあなたやあなたのシールを見つけるときに使う名前です。",
+      ja: "「{{name}}」は<wbr/>ユーザー名として<wbr/>使えないため、<wbr/>あなただけの<wbr/>ユーザー名を<wbr/>決めてください。<wbr/>みんなが<wbr/>あなたや<wbr/>あなたのシールを<wbr/>見つけるときに<wbr/>使う名前です。",
     },
     /** Handle prompt: the handle input's accessible label, read by screen readers */
     field: { en: "Your handle", ja: "ユーザー名" },
