@@ -37,7 +37,7 @@ export interface GatewayRecords {
 }
 
 /** DNS-encoded name bytes as dotted text. */
-function dnsToText(name: Hex): string {
+export function dnsToText(name: Hex): string {
   const bytes = hexToBytes(name);
   const labels: string[] = [];
   let offset = 0;

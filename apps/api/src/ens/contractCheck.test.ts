@@ -1,3 +1,4 @@
+import { CROQUIS_PARENT_NAME } from "@drawing-app/sticker-chain/croquis-names";
 import { getAddress } from "viem";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ChainUnavailableError, type ContractReads, type NamingState } from "../deps.ts";
@@ -8,6 +9,8 @@ import { createNamingQueue } from "./naming.ts";
 
 /** A StickerNFT from another deploy. */
 const OTHER_NFT = getAddress(`0x${"e".repeat(40)}`);
+/** The parent name of a deploy under another name. */
+const OTHER_PARENT = "other.eth";
 const { relayer, stickers, escrow, names, resolver } = TEST_CONTRACTS;
 
 let logs: LogLines;
@@ -43,6 +46,11 @@ describe("the contract check", () => {
   it.each([
     { field: "namerRole", change: { relayerIsNamer: false }, involved: [names, relayer] },
     {
+      field: "namesParent",
+      change: { namesParent: OTHER_PARENT },
+      involved: [names, OTHER_PARENT, CROQUIS_PARENT_NAME],
+    },
+    {
       field: "namesStickers",
       change: { namesStickers: OTHER_NFT },
       involved: [names, OTHER_NFT, stickers],
@@ -53,7 +61,7 @@ describe("the contract check", () => {
       involved: [resolver, OTHER_NFT, stickers],
     },
   ])(
-    "turns naming off when $field doesn't hold, naming the addresses, and the queue skips each job saying why",
+    "turns naming off when $field doesn't hold, naming what disagrees, and the queue skips each job saying why",
     async ({ field, change, involved }) => {
       const { state, job } = await checkThenName(async () => fakeContractReads(change));
 

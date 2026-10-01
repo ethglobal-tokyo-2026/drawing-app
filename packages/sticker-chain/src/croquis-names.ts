@@ -31,7 +31,10 @@ export function stickerAvatar(chainId: number, stickerContract: Address, tokenId
   return `eip155:${chainId}/erc721:${stickerContract.toLowerCase()}/${tokenId}`;
 }
 
-/** The name every person, sticker and gift name sits under; the deploy script builds it. */
+/**
+ * The name every person, sticker and gift name sits under. The contract deploy builds it from
+ * deploy/.env's ENS_PARENT_LABEL, which must match; the API's contract check compares the two.
+ */
 export const CROQUIS_PARENT_NAME = "croquis.eth";
 
 /** A sticker name's label: its number, padded as in "No.0042". */

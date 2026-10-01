@@ -331,6 +331,8 @@ export interface ContractReads {
   configured: ConfiguredContracts;
   /** Whether CroquisNames grants the relayer NAMER_ROLE. */
   relayerIsNamer: boolean;
+  /** CroquisNames' parentName() as dotted text: the name it makes every name under. */
+  namesParent: string | null;
   /** The StickerNFT each of these reads. */
   namesStickers: Address | null;
   resolverStickers: Address | null;

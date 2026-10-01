@@ -64,10 +64,11 @@ export interface DiagnosticFields {
   naming?: "on" | "off";
   /**
    * The contract check's results, each true when the configured contracts agree: the relayer holds
-   * NAMER_ROLE; CroquisNames, CroquisResolver and the escrow read the configured StickerNFT; the
-   * escrow names the configured CroquisNames.
+   * NAMER_ROLE; CroquisNames' parent name is CROQUIS_PARENT_NAME; CroquisNames, CroquisResolver and
+   * the escrow read the configured StickerNFT; the escrow names the configured CroquisNames.
    */
   namerRole?: boolean;
+  namesParent?: boolean;
   namesStickers?: boolean;
   resolverStickers?: boolean;
   escrowSticker?: boolean;
@@ -219,6 +220,7 @@ const loggedFields = {
   reason: true,
   naming: true,
   namerRole: true,
+  namesParent: true,
   namesStickers: true,
   resolverStickers: true,
   escrowSticker: true,

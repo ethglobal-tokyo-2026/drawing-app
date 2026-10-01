@@ -1,3 +1,4 @@
+import { CROQUIS_PARENT_NAME } from "@drawing-app/sticker-chain/croquis-names";
 import { isAddressEqual, type Address } from "viem";
 import type { ContractReads, NamingState, ReadContracts } from "../deps.ts";
 import { logFailure, logInfo } from "../diagnostics.ts";
@@ -10,9 +11,12 @@ class ContractMismatchError extends Error {
 /** One comparison the contract check makes. */
 interface Comparison {
   holds: boolean;
-  /** Naming can't work while it fails: names would revert, or describe another StickerNFT's stickers. */
+  /**
+   * Naming can't work while it fails: names would revert, describe another StickerNFT's stickers,
+   * or sit under another parent name than the one the API shows.
+   */
   stopsNaming: boolean;
-  /** What's wrong when it fails, naming the addresses involved. */
+  /** What's wrong when it fails, naming the addresses or names involved. */
   mismatch: string;
 }
 
@@ -44,6 +48,14 @@ function compare(reads: ContractReads) {
       holds: reads.relayerIsNamer,
       stopsNaming: true,
       mismatch: `CroquisNames ${names} doesn't grant NAMER_ROLE to the relayer ${relayer}`,
+    },
+    namesParent: {
+      holds: reads.namesParent === CROQUIS_PARENT_NAME,
+      stopsNaming: true,
+      mismatch:
+        reads.namesParent === null
+          ? `CroquisNames ${names} has no parentName()`
+          : `CroquisNames ${names}'s parentName() is ${reads.namesParent}, not the API's CROQUIS_PARENT_NAME ${CROQUIS_PARENT_NAME}`,
     },
     namesStickers: compareAnswer(
       { contract: `CroquisNames ${names}`, getter: "STICKERS()", answer: reads.namesStickers },
@@ -98,6 +110,7 @@ export async function checkContracts(
     logInfo("chain.contracts.checked", {
       ...fields,
       namerRole: comparisons.namerRole.holds,
+      namesParent: comparisons.namesParent.holds,
       namesStickers: comparisons.namesStickers.holds,
       resolverStickers: comparisons.resolverStickers.holds,
       escrowSticker: comparisons.escrowSticker.holds,
