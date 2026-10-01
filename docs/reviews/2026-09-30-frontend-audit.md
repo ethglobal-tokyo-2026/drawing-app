@@ -342,6 +342,6 @@ The `ux/*` lanes carried these out on 2026-09-30; each finding's mark says what 
 
 ## Not covered so far
 
-- **An iPhone.** Every lane ran Chromium; WebKit, LINE's in-app browser, safe areas, VoiceOver and real pinch zoom were not tried. Frame times are from a Vite dev build in headless Chromium.
+- **An iPhone.** Every lane ran Chromium. After the fixes, a pass in Playwright's WebKit at 375×591 checked the Japanese phrase breaks, the error line, the Gratitude receipt, the shared Sheet, the stat board's stamps and the first-selection hint, and found one fault: a line could end on an opening bracket. LINE's in-app browser, safe areas, VoiceOver and real pinch zoom were not tried. Frame times are from a Vite dev build in headless Chromium.
 - **Real Privy and Sui.** The dev server runs LIFF Mock with Privy off, so the checkout ran against stubs: real SDK error text, confirmation timing and the purchase history read from Sui are unverified, and the address papers stayed on "Getting…".
 - **Received gifts.** The shared seeded world never finished, so lanes made their own users and content; the Transfer Trail and Residual were shown with rewritten API answers, and a Gratitude replay was read, not played. Shake can't run headless.

@@ -121,6 +121,21 @@ describe("a translator's sheet", () => {
     expect(changedFiles()).toEqual([]);
   });
 
+  it("takes a break hint only in the spelling the app turns into a break", () => {
+    const rows = catalogRows();
+    const row = rowWhere(
+      rows,
+      ({ key, english }) => !placeholders(english).length && !key.endsWith("_one"),
+    );
+    const { importFrom } = importTarget();
+    const sheetWith = (japanese: string) => toCsv(withJapanese(rows, { [row.key]: japanese }));
+    expect(importFrom("exact.csv", sheetWith("一行目<wbr/>二行目")).problems).toEqual([]);
+    for (const spelling of ["<wbr />", '<wbr class="x"/>'])
+      expect(importFrom("other.csv", sheetWith(`一行目${spelling}二行目`)).problems).toEqual([
+        expect.stringContaining(row.key),
+      ]);
+  });
+
   it("sets only the Japanese it changes, keeping every character and the string's comment", async () => {
     const rows = catalogRows();
     const row = rowWhere(

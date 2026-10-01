@@ -46,7 +46,7 @@ export const tickets = {
   buyReserveTickets: { en: "Buy reserve tickets", ja: "有償チケットを買う" },
   /** Quiet link at the foot of the start card, the tickets-didn't-load card and the reserve ticket checkout's card: closes the card without spending or buying */
   notNow: { en: "Not now", ja: "あとで" },
-  /** Key on the card when tickets didn't load, the link after the Shop's tickets problem, and the link after the reserve ticket checkout's balance or price problem: tries again */
+  /** Key on the card when tickets didn't load, and the link after the reserve ticket checkout's balance problem: tries again */
   tryAgain: { en: "Try again", ja: "もう一度" },
   /** The card that asks before a ticket is spent on a fresh sheet. */
   startDrawing: {
