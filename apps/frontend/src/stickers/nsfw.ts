@@ -1,6 +1,9 @@
 import type { AgeStatus } from "@drawing-app/api/client";
 
-/** An NSFW sticker is blurred for anyone whose age status isn't adult. */
+/**
+ * An NSFW sticker is veiled for anyone whose age status isn't adult, and the API sends them its
+ * veiled image.
+ */
 export const veiledFor = (sticker: { nsfw: boolean }, viewer: AgeStatus): boolean =>
   sticker.nsfw && viewer !== "adult";
 

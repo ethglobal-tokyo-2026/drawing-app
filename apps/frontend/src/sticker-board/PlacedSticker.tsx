@@ -35,7 +35,7 @@ interface Props {
   hintId: string;
   /** Drawn by someone other than the board's owner: it wears foil. */
   foil?: boolean;
-  /** An NSFW sticker the viewer isn't adult enough to see: blurred inside its cut. */
+  /** An NSFW sticker the viewer isn't adult enough to see: its veiled image, blurred inside its cut. */
   veiled?: boolean;
   /** Who drew it, as printed, when that isn't the board's owner: its label names them. */
   by?: string;
