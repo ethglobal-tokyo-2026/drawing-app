@@ -1,6 +1,6 @@
 # Backend code review
 
-2026-09-28. The findings of a max-effort review of `apps/api`, `packages/db`, `packages/sticker-chain`, `contracts/sui-payment-contract`, `deploy/`, the root tooling and the backend docs at main `f35249fa`, grouped by area, with what became of each. The frontend has its own: [the frontend code review](2026-09-29-frontend-code-review.md).
+2026-09-28. The findings of a max-effort review of `apps/api`, `packages/db`, `packages/sticker-chain`, `contracts/sui-payment-contract`, `deploy/`, the root tooling and the backend docs at main `f35249fa`, grouped by area, with what became of each.
 
 Nine read-only lanes each took an area, and every finding was checked against the code before it was fixed. Most were fixed in the merges that followed: `38bf9439` (the cleanup), `2a8793cb` (the owner's decisions and the follow-ups), `ba836c54` (the items left for the frontend review) and the merge that added this record.
 
