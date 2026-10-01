@@ -382,7 +382,7 @@ export const stickerBoard = {
     /** Your sticker board, the first time you select a sticker on this phone: the chip clear of the sticker and its toolbar until you let go of the sticker, hidden from screen readers; its first row says how to open the sticker and let go of it by tapping, its second how to put it away in the sticker tray by dragging it to the Zipper */
     firstSelectionHint: {
       en: "Tap again to open · Tap the board to let go\nDrag to the zipper to put it away",
-      ja: "もう一度タップでひらく・ボードをタップで解除\nファスナーにドラッグでしまう",
+      ja: "もう一度タップでひらく・<wbr/>ボードをタップで解除\nファスナーにドラッグでしまう",
     },
     /** The toolbar's row of buttons that arrange the selected sticker without dragging it: each names what one press does. */
     arrange: {

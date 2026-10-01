@@ -188,7 +188,7 @@ export function StickerToolbar({
       </div>
       {/* Hidden from screen readers, who hear the sticker's own description of its keys instead. */}
       {hinted && (
-        <span ref={hint} className="sticker-toolbar__hint" aria-hidden>
+        <span ref={hint} className="sticker-toolbar__hint keep-phrases" aria-hidden>
           {t(($) => $.stickerBoard.toolbar.firstSelectionHint)}
         </span>
       )}
