@@ -220,6 +220,22 @@ describe("ReceiveGiftDialog", () => {
     expect(button("Accept") !== undefined).toBe(tornFree);
   });
 
+  it("takes the tab where the hint has it when grabbed mid-hint, so it stays under the finger", async () => {
+    open({ previewGift: () => Promise.resolve(receivable) });
+    await settle();
+    const bag = document.querySelector<HTMLElement>(".gift-bag");
+    const tab = document.querySelector<HTMLElement>(".gift-strip__tab");
+    expect(bag?.classList.contains("is-hinting")).toBe(true);
+    // The hint, part way through its loop, as the browser computes it: the tab a share of the strip along.
+    const strip = 250;
+    const hinted = 0.12;
+    bag?.style.setProperty("--sw", `${strip}px`);
+    tab?.style.setProperty("transform", `matrix(1, 0, 0, 1, ${strip * hinted}, 0)`);
+    onTheTab("pointerdown", 1, 0);
+    expect(Number(bag?.style.getPropertyValue("--gift-tear"))).toBeCloseTo(hinted);
+    expect(bag?.classList.contains("is-hinting")).toBe(false);
+  });
+
   it("tears the strip as the tab is pulled, and springs it back when let go short of the snap", async () => {
     open({ previewGift: () => Promise.resolve(receivable) });
     await settle();

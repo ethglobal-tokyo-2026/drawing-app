@@ -9,9 +9,9 @@ export const PULL = {
   travelPx: 250,
   gain: 0.82,
   /**
-   * Once the finger passes this, the tab tears free: soon enough that a pull from anywhere on the tab
-   * opens the bag a clear step short of a narrow phone's edge, and late enough that a short drag
-   * springs back.
+   * Once the finger passes this, the tab tears free. On the narrowest phone the app supports, a quick
+   * pull from anywhere on the tab still has a fingertip's width before the edge when the bag opens,
+   * a frame's travel past the snap included; a short drag springs back.
    */
   snapAt: 0.76,
   /** Ticks along the whole strip. */
