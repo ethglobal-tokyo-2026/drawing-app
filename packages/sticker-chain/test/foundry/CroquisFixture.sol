@@ -62,7 +62,7 @@ abstract contract CroquisFixture is Test, CroquisSetup {
         croquis = _deployCroquis(
             ens, PARENT_LABEL, address(sticker), address(this), relayer, urls, vm.addr(GATEWAY_KEY)
         );
-        _pointCroquisEth(ens, PARENT_LABEL, croquis);
+        _pointParentName(ens, PARENT_LABEL, croquis);
         sticker.grantRole(sticker.SEALER_ROLE(), relayer);
     }
 

@@ -83,7 +83,7 @@ abstract contract CroquisSetup {
     }
 
     /// @dev Points `parentLabel`.eth at its registry and resolver. `self` must own that name.
-    function _pointCroquisEth(EnsV2 memory ens, string memory parentLabel, Croquis memory c)
+    function _pointParentName(EnsV2 memory ens, string memory parentLabel, Croquis memory c)
         internal
     {
         uint256 labelId = uint256(keccak256(bytes(parentLabel)));
