@@ -2,7 +2,7 @@
 """Serves the built web app on the box, behind HAProxy; sticker-board.service runs it.
 
 Any path that isn't a file gets index.html, so app routes such as /g/<gift claim token> load the app; a missing file
-under /assets/ stays a 404. index.html is never cached: LINE's in-app browser keeps what it fetched and its cache can't
+under /assets/ stays a 404, but for the Gift Message's picture under an older build's name. index.html is never cached: LINE's in-app browser keeps what it fetched and its cache can't
 be cleared, so a cached page would outlive every deploy. Vite names the files under /assets/ by content hash, so
 they're cached for a year. A request for one byte range gets a 206: Safari plays no video without one.
 """
@@ -18,6 +18,9 @@ from urllib.parse import unquote, urlsplit
 # "bytes=a-b", "bytes=a-" or "bytes=-n". Any other Range, a multi-range one included, gets the whole file.
 BYTE_RANGE = re.compile(r"bytes=(\d*)-(\d*)")
 GIFT_CLAIM_TOKEN = re.compile(r"0x[0-9a-f]{64}", re.IGNORECASE)
+# The Gift Message's picture under the hashed names older builds gave it. Messages already in chats
+# keep those URLs, so they get today's picture from its fixed path instead of a 404.
+OLD_GIFT_HERO = re.compile(r"/assets/gift-message-hero(-nsfw)?-[A-Za-z0-9_-]+\.(?:png|jpg)")
 # Control characters, escaped as http.server's own log escapes them, so a decoded %0A can't start a
 # forged log line.
 LOG_ESCAPES = {c: f"\\x{c:02x}" for c in [*range(0x20), *range(0x7F, 0xA0)]}
@@ -85,6 +88,10 @@ class Handler(SimpleHTTPRequestHandler):
 
     def translate_path(self, path):
         full = super().translate_path(path)
+        old_hero = OLD_GIFT_HERO.fullmatch(urlsplit(path).path)
+        if old_hero and not os.path.isfile(full):
+            name = "hero-nsfw.jpg" if old_hero.group(1) else "hero.jpg"
+            return os.path.join(self.directory, "gift-message", name)
         if urlsplit(path).path.startswith("/assets/"):
             self.hashed = os.path.isfile(full)
             return full  # anything else under /assets/ is a 404

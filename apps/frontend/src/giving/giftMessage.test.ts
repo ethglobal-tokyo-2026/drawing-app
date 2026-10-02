@@ -12,7 +12,7 @@ const input = (over: Partial<GiftMessageInput> = {}): GiftMessageInput => ({
   ...over,
 });
 
-const HERO = "https://sticker.example.app/assets/gift-message-hero-5f2a9c.jpg";
+const HERO = "https://sticker.example.app/gift-message/hero.jpg";
 
 /** Every link a person can tap on the gift message. */
 const tappableLinks = (message: unknown): string[] =>
@@ -39,9 +39,7 @@ describe("buildGiftMessage", () => {
 
   it("shows the hero only from an HTTPS URL, which LINE requires", () => {
     const hero = (heroUrl: string) => buildGiftMessage(input({ heroUrl })).contents;
-    expect(hero("http://localhost:5173/src/giving/gift-message-hero.jpg")).not.toHaveProperty(
-      "hero",
-    );
+    expect(hero("http://localhost:5173/gift-message/hero.jpg")).not.toHaveProperty("hero");
     expect(hero(HERO)).toMatchObject({ hero: { type: "image", url: HERO } });
   });
 

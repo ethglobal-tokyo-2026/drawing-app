@@ -26,12 +26,17 @@ import { CantFindThem } from "./CantFindThem";
 import { GiftBag } from "./GiftBag";
 import type { GiftSender } from "./giftSender";
 import type { GiveFlowState } from "./giveFlow";
-import heroImage from "./gift-message-hero.jpg";
-import nsfwHeroImage from "./gift-message-hero-nsfw.jpg";
 import { createApiGiftBackend } from "./giftBackend";
 import { useGiveFlow } from "./useGiveFlow";
 import "../stickers/nsfw-img.css";
 import "./Giving.css";
+
+/**
+ * The closed bag the Gift Message shows. Messages already in chats keep these URLs, so the pictures
+ * live at fixed paths outside the build's hashed assets: a redraw replaces them in place.
+ */
+const GIFT_MESSAGE_HERO = "/gift-message/hero.jpg";
+const GIFT_MESSAGE_HERO_NSFW = "/gift-message/hero-nsfw.jpg";
 
 /** The sticker being given, as the board holds it. */
 interface GivingSticker {
@@ -102,7 +107,8 @@ export function Giving({
       fromHandle,
       liffId,
       // The closed bag, never the sticker; the gift message drops it where the app isn't on HTTPS.
-      heroUrl: new URL(sticker.nsfw ? nsfwHeroImage : heroImage, location.origin).href,
+      heroUrl: new URL(sticker.nsfw ? GIFT_MESSAGE_HERO_NSFW : GIFT_MESSAGE_HERO, location.origin)
+        .href,
       ...(forUserId && { forUserId }),
     }),
     pickerDelayMs: PICKER_DELAY[motion],
