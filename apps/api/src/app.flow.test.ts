@@ -168,14 +168,9 @@ describe("the REST API, through the typed client", () => {
     expect(detail.transferTrail).toMatchObject([
       { giftId, giver: { id: alice.me.id }, receiver: { id: bob.me.id }, gratitude: { giftId } },
     ]);
-    const { activity } = await answered(bob.api.explore.$get(), OK);
-    expect(activity.find((entry) => entry.type === "sealed")).toMatchObject({
-      sticker: { id: sticker.id },
-    });
-    expect(activity.find((entry) => entry.type === "received")).toMatchObject({
-      sticker: { id: sticker.id },
-      giver: { id: alice.me.id },
-      receiver: { id: bob.me.id },
-    });
+    const { pile } = await answered(bob.api.explore.$get(), OK);
+    expect(pile.stickers).toMatchObject([
+      { sticker: { id: sticker.id }, givenTo: { id: bob.me.id } },
+    ]);
   });
 });

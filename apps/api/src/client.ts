@@ -35,7 +35,7 @@ export {
 export type { AgeProof, AgeVerificationRequest } from "./routes/ageVerification.ts";
 export type { ChatMenuLink } from "./chatMenu/menus.ts";
 export type { ErrorBody } from "./errors.ts";
-export type { ActivityEntry, Explore } from "./explore/explore.ts";
+export type { Explore, PilePage, PileSticker } from "./explore/explore.ts";
 export type { LeaderboardRow } from "./explore/leaderboards.ts";
 export type { PackagedGift, PendingGifts } from "./gifts/packaging.ts";
 export type {
