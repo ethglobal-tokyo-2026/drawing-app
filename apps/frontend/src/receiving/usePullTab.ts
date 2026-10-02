@@ -7,6 +7,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import type { PullTab } from "../giving/GiftBag";
+import { clamp01 } from "../ui/easing";
 import {
   PULL,
   atRest,
@@ -35,6 +36,26 @@ interface Physics {
 }
 
 const ARROWS = new Set(["ArrowRight", "ArrowUp", "ArrowLeft", "ArrowDown"]);
+
+/** The horizontal shift in a computed transform, "matrix(…)" or "matrix3d(…)"; 0 for "none". */
+function shiftOf(transform: string): number {
+  const matrix = /^matrix(3d)?\((.+)\)$/.exec(transform);
+  if (!matrix) return 0;
+  const values = matrix[2].split(",").map(Number);
+  return (matrix[1] ? values[12] : values[4]) ?? 0;
+}
+
+/**
+ * Where the looping hint has the tab right now, as a tear. The hint moves the tab with its own
+ * animation, which draws exactly what that tear would, so a grab mid-hint can start from there.
+ */
+function hintTear(bag: HTMLDivElement | null): number {
+  const tab = bag?.querySelector(".gift-strip__tab");
+  if (!bag || !tab) return 0;
+  const strip = parseFloat(getComputedStyle(bag).getPropertyValue("--sw"));
+  if (!(strip > 0)) return 0;
+  return clamp01(shiftOf(getComputedStyle(tab).transform) / strip);
+}
 const isArrow = (key: string): key is Parameters<typeof keyTear>[1] => ARROWS.has(key);
 
 /**
@@ -201,6 +222,8 @@ export function usePullTab({ reduced, onSnap }: { reduced: boolean; onSnap: () =
         // A synthetic pointer has nothing to capture; the drag still follows it.
       }
       stopMoving();
+      // A grab mid-hint takes the tab where the hint has it, so it doesn't jump back from under the finger.
+      if (hinting && !reduced) show(hintTear(p.bag));
       p.drag = { pointerId: e.pointerId, x: e.clientX, tear: p.tear };
       p.target = p.tear;
       setHinting(false);
