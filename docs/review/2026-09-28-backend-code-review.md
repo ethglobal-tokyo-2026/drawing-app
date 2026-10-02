@@ -12,9 +12,8 @@ Nine read-only lanes each took an area, and every finding was checked against th
 
 What's left, and what each waits for:
 
-- **The escrow switch**, on 2026-10-06, once the expiry sweep has returned the gifts in the old escrow (they expire Oct 3–5): the server moves to the escrow the 2026-10-01 redeploy made (LATE-6), which brings CHAIN-3 to the escrow in use. A scheduled task does it.
-- **DB-1** · cleanup: `ticket_purchases.verified_at` is never null. The owner approved TIX-3, whose fix records each purchase before it's paid, which gives the column its use; in progress.
-- **LATE-6**'s croquis.eth step, **LATE-11** and **OWNER-1**: the owner's, under Needs the owner.
+- **The escrow switch**, on 2026-10-06, once the expiry sweep has returned the gifts in the old escrow (they expire Oct 3–5): the server moves to the escrow the croquis-app.eth deploy made (LATE-6), which brings CHAIN-3 to the escrow in use. A scheduled task does it.
+- **LATE-11** and **OWNER-1**: the owner's, under Needs the owner.
 
 ## Owner's decisions
 
@@ -100,12 +99,7 @@ What's left, and what each waits for:
 
 ## Database package
 
-**DB-1** · cleanup · open · `packages/db/src/schema/tickets.ts:67`  
-`ticket_purchases.verified_at` is never null: the only insert sets it once the Sui check passes (`apps/api/src/routes/tickets.ts:158`). So the `isNotNull(verifiedAt)` filter on bought tickets (`apps/api/src/tickets/tickets.ts:76`, in `ticketsLeftOf`) is always true, and the table's comment, "Its tickets count once verified_at is set" (`packages/db/src/schema/tickets.ts:51`), describes a two-step flow that doesn't exist.
-
-- Cost: a column, a filter and a comment that suggest a purchase can exist before it counts.
-- Fix: drop the column in place (no index or CHECK uses it), the filter and the comment's clause; `created_at` already says when a purchase counted. First check the box for rows with a null `verified_at`, which would start counting. Wait for the owner's answer to the frontend review's TIX-3 first: if the server records a purchase before its payment, `verified_at` becomes the column that says when it counts.
-
+- **DB-1** · cleanup · fixed `51a8165b` · `ticket_purchases.verified_at` was never null, so the filter on it and the table's comment described a two-step flow that didn't exist; the owner approved TIX-3, which records each purchase before it's paid, so the column now says when its payment was found, and the filter decides which purchases count.
 - **DB-2** · medium · fixed `9f7e4725` · A language picked in Settings never reached `users.language`, the only language the server reads, so the chat menu stayed in the old language until the next sign-in; the language-choice route now sets `language` too when the choice isn't null, and relinks the chat menu.
 - **DB-3** · medium · dropped · The `ticket_uses_kind` CHECK holds every past row to today's `DAILY_TICKETS_PER_DAY`, so changing the constant fails its migration at API boot; the CHECK stays as the database's guard on daily-first, with warnings at `packages/db/src/schema/limits.ts:27` (`dd74e9c8`) and `packages/db/src/schema/tickets.ts:42` (`9c972cd9`) that a change needs a migration rewriting old rows, though neither says that rewriting a row's kind changes reserve ticket balances.
 - **DB-4** · low · fixed `5dab7fa7` · The drawing clock, gift expiry and multiplier ceiling each had a copy in the frontend; the app takes them from `@drawing-app/db/limits` through `@drawing-app/api/client`, as it takes the Mini-game's scoring limits since `dd74e9c8`.
@@ -233,12 +227,7 @@ Severity here is the cost of leaving it: high invites a bug soon, medium is a re
 - **LATE-4** · medium · fixed `8ba590d7` · The API and the auth server both run as `bawler`, so the internet-facing auth server could read chain.env (the relayer's key and the Privy, LINE and World ID secrets), and the API could read the key that signs Privy logins for anyone; `InaccessiblePaths` hides each service's folder from the other, checked on the box with throwaway units under the same sandbox. Live at the next deploy.
 - **LATE-5** · medium · fixed `880fcade` · With Forge's default dynamic test linking, an edit to `CroquisResolver` recompiled three files, and the tests kept deploying its old bytecode through `script/CroquisSetup.sol` until a forced build, so a broken contract change could pass `pnpm check`; `foundry.toml` turns it off, and an edit now recompiles every file that embeds the contract.
 
-**LATE-6** · medium · open · ETHRegistry's croquis.eth (owner action)  
-No person or sticker had ever been named under croquis.eth: the box's settings mixed two deploys, and the CroquisNames and CroquisResolver it used granted NAMER_ROLE only to the other deploy's key and read the other deploy's StickerNFT, so every `claimPersonName` reverted with `AccessControlUnauthorizedAccount`. `04e1df80` logs a revert's decoded error, and `68b2fe45` checks the contracts at boot and each midnight, keeps naming off while they disagree, and names everyone left unnamed once they agree. On 2026-10-01 `deploy-contracts.sh` deployed a consistent set on the live StickerNFT, from a new deployer key in deploy/.env (the contracts' admin), and the server moved to its CroquisNames and CroquisResolver: the boot check passed, and every person got a name. The server moves to its escrow on 2026-10-06 (Open, above).
-
-- Trigger: until croquis.eth points at the new registry and resolver, ENS apps resolve its names through the old ones, so the names written since 2026-10-01 don't resolve outside the app.
-- Fix: croquis.eth's owner, `0x5284…1E92`, whose key isn't in deploy/.env or on the box, sends two calls to ENSv2's ETHRegistry, under Needs the owner; both succeed in a dry run from that address.
-
+- **LATE-6** · medium · fixed `04e1df80`, `68b2fe45`, `0e9bd922` · No person or sticker had ever been named: the box's settings mixed two deploys, whose names contract granted NAMER_ROLE only to the other deploy's key and read the other deploy's StickerNFT. The log now decodes a revert, and a check at boot and each midnight keeps naming off while the contracts disagree, then names everyone left unnamed. croquis.eth's owner key was lost, so on 2026-10-02 the names moved to croquis-app.eth, registered from the contracts' admin key: the contract deploy pointed it at a consistent set on the live StickerNFT, the server moved to it, and every person's name resolves through ENSv2's universal resolver; a sticker in a gift is named once the gift ends.
 - **LATE-7** · low · fixed · Three gifts the box made in mock chain mode on 2026-09-26 stayed `sent` with escrow `pending`, of stickers never minted, so no escrow held them and their givers' boards showed them on their way for good; taken out on the box on 2026-10-01. A migration couldn't do it: on a mock-mode database every gift in flight looks the same.
 - **LATE-8** · low · fixed · The box's `/srv/drawing-api/secrets.env`, made by hand before deploys installed chain.env, still held copies of seven chain and Privy settings next to the session secret, one of them a stale RPC URL; chain.env loads after it, so they only mattered if a key went missing from chain.env. Trimmed on 2026-10-01 to the session secret, all deploy-api.sh ever writes there.
 - **LATE-9** · low · fixed `0189600e` · A sticker inside a gift can't be named, since its holder, the escrow in use, refuses ERC-1155 names (`ERC1155InvalidReceiver`), and that one failure ended its person's naming job, leaving their later stickers unnamed; the job now logs `ens.sticker.failed` for that sticker and goes on, and the nightly catch-up retries it once the gift leaves the escrow.
@@ -252,7 +241,6 @@ Three stickers received while the box ran in mock chain mode, on 2026-09-26, hav
 
 ## Needs the owner
 
-- **LATE-6**, above: point croquis.eth at the 2026-10-01 deploy, from its owner's key: `cast send 0x657eA849311d3D5823348ddEd7C2AaAFb3EDE09E "setSubregistry(uint256,address)" 0x13f2afe2a4b98b1a10126849a911e5afa8d87a0e41c2b5aff265d0b78f9bfa2a 0x838f494a153886b5e1811eBA5CD2052AeA5d7CE0` and the same with `"setResolver(uint256,address)"` and `0xF7933851De0191F103aCb5f107A5D2B98ab17b8D`, each with `--rpc-url` a Sepolia RPC and the owner's key.
 - **OWNER-1** · low · open · The Official account's greeting still says a drawing takes five minutes. Paste `deploy/line/greeting.md` into LINE Official Account Manager.
 - **OWNER-2** · medium · fixed `de0baa10`, `723f6a48` · The receiver of an expired gift was told it was back on the giver's Sticker Board, but nothing returned it: the sticker stayed in the escrow, the giver's board showed it on its way, and it could never be given again. The API's expiry sweep, at boot and just after each midnight in Tokyo, sends each expired gift back through the escrow's `returnExpiredGift` and records it returned, and takes out a packed gift whose deposit never landed, an hour past its expiry (`CLOSE_UNLANDED_AFTER_MS`). Live at the next deploy.
 - **OWNER-3** · low · fixed `18057b84`, `ac3c3634` · Giving said "Confirm in your wallet if asked", and two sign-in errors said "sign-in token", words the interface isn't supposed to use; the frontend fixes reworded all three.
