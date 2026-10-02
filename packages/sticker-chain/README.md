@@ -43,6 +43,7 @@ ENSv2 is vendored at the commit deployed to Sepolia (`lib/ens-contracts-v2`, 71a
 - `StickerGiftEscrow` registers `g-<gift ID>.gifts.croquis-app.eth` while a gift waits, removes it when the gift ends, and syncs the sticker's name whenever the sticker leaves.
 - `src/croquis-names.ts` writes names from the relayer. Each call reads the chain first, so a retry after a timeout does nothing when the first attempt landed.
 - Names are ERC-1155 tokens minted to smart accounts, so a smart account must accept them (Safe does, through its fallback handler).
+- The names resolve through ENSv2's own universal resolver (`UniversalResolverV2` in `lib/ens-contracts-v2/contracts/deployments/sepolia/addresses.md`); ENSv1's universal resolver doesn't know them.
 
 ## Commands
 
