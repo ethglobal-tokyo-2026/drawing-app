@@ -34,10 +34,11 @@ import { HitCounter } from "../ui/HitCounter";
 import { matchIn } from "./handleMatch";
 import { competitionRanks } from "./leaderboardRanks";
 import { LiftedSticker } from "./LiftedSticker";
-import { dayBadge, pileDays, ticketDayNumber, type PileSticker } from "./pileDays";
+import { dayBadge, ticketDayNumber } from "./pileDays";
 import { textWidth } from "./pileLayout";
 import { pileOrigin } from "./pileOrigin";
-import { StickerPile } from "./StickerPile";
+import { shownDays, usePilePages } from "./pilePages";
+import { LoadingHeap, StickerPile } from "./StickerPile";
 import "./ExploreScreen.css";
 
 interface Props {
@@ -438,15 +439,6 @@ function ThisWeekLoading() {
   );
 }
 
-/** Where faint sticker shapes heap on today's floor while the pile loads: x in %, y from the floor. */
-const LOADING_HEAP = [
-  { x: 14, y: 96, size: 84, turn: -8 },
-  { x: 42, y: 90, size: 96, turn: 5 },
-  { x: 70, y: 98, size: 80, turn: -4 },
-  { x: 28, y: 168, size: 78, turn: 9 },
-  { x: 57, y: 172, size: 88, turn: -6 },
-];
-
 /** Today's floor in outline while the pile loads; the stickers fall in once it has. */
 function PileLoading() {
   const { t } = useTranslation();
@@ -460,17 +452,7 @@ function PileLoading() {
             {t(($) => $.explore.pile.todayBadge, { date })}
           </span>
         </div>
-        <div className="pile-loading">
-          {LOADING_HEAP.map((spot) => (
-            <Skeleton
-              key={spot.x}
-              className="pile-loading__sticker"
-              width={spot.size}
-              height={spot.size * 0.86}
-              style={{ left: `${spot.x}%`, bottom: spot.y - spot.size, rotate: `${spot.turn}deg` }}
-            />
-          ))}
-        </div>
+        <LoadingHeap />
       </div>
     </>
   );
@@ -584,23 +566,38 @@ function SearchResults({
 
 /** The pile, once Explore has arrived; a tapped sticker lifts off it into a sheet. */
 function Stickers({ explore, meId, open }: { explore: Explore; meId: string; open: Open }) {
-  const days = useMemo(() => pileDays(explore), [explore]);
+  const { loaded, end, reachEnd } = usePilePages(explore.pile);
+  const [now] = useState(() => Date.now());
+  const newest = loaded.stickers[0];
+  // This phone's day, unless the server's newest sticker is already on a later one.
+  const today = Math.max(
+    ticketDayNumber(now),
+    newest ? ticketDayNumber(Date.parse(newest.sticker.sealedAt)) : -Infinity,
+  );
+  const days = useMemo(() => shownDays(loaded, today), [loaded, today]);
   // Paging in the sheet runs in the pile's reading order: newest day, newest sticker first.
   const order = useMemo(() => days.flatMap(({ stickers }) => stickers.toReversed()), [days]);
-  const [lifted, setLifted] = useState<number | null>(null);
-  const lift = (pile: PileSticker) =>
-    setLifted(order.findIndex((p) => p.sticker.id === pile.sticker.id));
+  // By id, so a fresh first page landing above it doesn't swap the sticker in the sheet.
+  const [liftedId, setLiftedId] = useState<string | null>(null);
+  const lifted = order.findIndex((pile) => pile.sticker.id === liftedId);
   return (
     <>
-      <StickerPile days={days} meId={meId} onLift={lift} />
-      {lifted !== null && lifted >= 0 && (
+      <StickerPile
+        days={days}
+        today={today}
+        end={end}
+        onReachEnd={reachEnd}
+        meId={meId}
+        onLift={(pile) => setLiftedId(pile.sticker.id)}
+      />
+      {lifted >= 0 && (
         <LiftedSticker
           stickers={order}
           index={lifted}
-          onIndexChange={setLifted}
-          onClose={() => setLifted(null)}
+          onIndexChange={(index) => setLiftedId(order[index]?.sticker.id ?? null)}
+          onClose={() => setLiftedId(null)}
           onGoToBoard={(artist) => {
-            setLifted(null);
+            setLiftedId(null);
             open(artist);
           }}
           originOf={pileOrigin}

@@ -148,8 +148,7 @@ it("opens a name's link once: a later visit to Explore is plain Explore", async 
 it("keeps Explore's search while another tab shows, asks nothing for it then, and refreshes it on a return", async () => {
   history.replaceState(null, "", "/explore");
   const explore = vi.fn(async () => ({
-    todaysStickers: [],
-    activity: [],
+    pile: { stickers: [], before: null },
     leaderboards: {
       weekStart: new Date().toISOString(),
       mostGratitude: [],

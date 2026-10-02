@@ -353,6 +353,11 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       if (!response.ok) throw await refusal(response, "GET /api/explore");
       return response.json();
     },
+    explorePile: async (before) => {
+      const response = await api.explore.pile.$get({ query: { before } });
+      if (!response.ok) throw await refusal(response, `GET /api/explore/pile?before=${before}`);
+      return response.json();
+    },
     searchUsers: async (handle) => {
       const response = await api.users.$get({ query: { handle } });
       if (!response.ok) throw await refusal(response, `GET /api/users?handle=${handle}`);

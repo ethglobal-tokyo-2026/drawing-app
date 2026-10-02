@@ -1,9 +1,4 @@
-import {
-  TOKYO_UTC_OFFSET_MS,
-  type Explore,
-  type Person,
-  type Sticker,
-} from "@drawing-app/api/client";
+import { TOKYO_UTC_OFFSET_MS, type PileSticker, type Sticker } from "@drawing-app/api/client";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -28,13 +23,6 @@ export const spokenDay = (day: number, language: string) =>
     new Date(day * DAY_MS),
   );
 
-/** A sticker in the pile. */
-export interface PileSticker {
-  sticker: Sticker;
-  /** Whoever it was last given to, while that gift is among Explore's activity. */
-  givenTo: Person | null;
-}
-
 export interface PileDay {
   day: number;
   /** Oldest first: the order they fell in. */
@@ -44,31 +32,22 @@ export interface PileDay {
 const sealedMs = (sticker: Sticker) => Date.parse(sticker.sealedAt);
 
 /**
- * Every sticker Explore sent, each on the day it was sealed, newest day first. A gift doesn't move
- * a sticker: it adds who it went to.
+ * Stickers, each on the day it was sealed, newest day first. A gift doesn't move a sticker: it adds
+ * who it went to.
  */
-export function pileDays(explore: Explore): PileDay[] {
-  const byId = new Map<string, PileSticker>();
-  for (const sticker of explore.todaysStickers) byId.set(sticker.id, { sticker, givenTo: null });
-  // Newest first, so the first gift met for a sticker is its latest.
-  for (const entry of explore.activity) {
-    const known = byId.get(entry.sticker.id);
-    const pile = known ?? { sticker: entry.sticker, givenTo: null };
-    if (entry.type === "received" && pile.givenTo === null) pile.givenTo = entry.receiver;
-    if (!known) byId.set(entry.sticker.id, pile);
-  }
+export function pileDays(stickers: readonly PileSticker[]): PileDay[] {
   const days = new Map<number, PileSticker[]>();
-  for (const pile of byId.values()) {
+  for (const pile of stickers) {
     const day = ticketDayNumber(sealedMs(pile.sticker));
-    const stickers = days.get(day);
-    if (stickers) stickers.push(pile);
+    const piled = days.get(day);
+    if (piled) piled.push(pile);
     else days.set(day, [pile]);
   }
   return [...days.entries()]
     .sort(([a], [b]) => b - a)
-    .map(([day, stickers]) => ({
+    .map(([day, piled]) => ({
       day,
-      stickers: stickers.sort(
+      stickers: piled.sort(
         (a, b) => sealedMs(a.sticker) - sealedMs(b.sticker) || a.sticker.number - b.sticker.number,
       ),
     }));

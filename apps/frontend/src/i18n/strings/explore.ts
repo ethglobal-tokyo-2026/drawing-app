@@ -54,7 +54,7 @@ export const explore = {
     /** Explore tab, Stickers view: screen readers' heading for yesterday's heap; older days are their date, in the app's language */
     yesterday: { en: "Yesterday", ja: "昨日" },
     /** Explore tab, Stickers view: the yellow dot badge on today's perforation, with the date, such as 9.26 */
-    todayBadge: { en: "Today {{date}}", ja: "今日{{date}}" },
+    todayBadge: { en: "Today {{date}}", ja: "今日・{{date}}" },
     /** Explore tab, Stickers view: screen readers' name for a sticker in the pile, such as "No.0147 by @mika, 5 min ago"; a tap opens it */
     sticker: { en: "{{number}} by {{artist}}, {{ago}}", ja: "{{artist}}の{{number}}、{{ago}}" },
     /** Explore tab, Stickers view: screen readers' name for a sticker in the pile that was given, with who it last went to */
@@ -75,6 +75,21 @@ export const explore = {
     arrivals_other: {
       en: "{{count}} new stickers since you last looked",
       ja: "前に見たときから、新しいシールが{{count}}枚あります",
+    },
+    /** Older days, a page at a time as the pile's end comes near. */
+    older: {
+      /** Explore tab, Stickers view, scrolled near the pile's end: what screen readers hear while the next page of older stickers loads under the last day */
+      loading: { en: "Loading older stickers", ja: "前の日のシールを読み込んでいます" },
+      /** Explore tab, Stickers view, scrolled near the pile's end: what screen readers hear once older days are laid out under it; {{day}} is the oldest now shown, such as September 24 */
+      arrived: {
+        en: "Older stickers added, back to {{day}}",
+        ja: "{{day}}までのシールを追加しました",
+      },
+      /** Explore tab, Stickers view, scrolled near the pile's end: the alert where the next older day would be when it didn't load, before Try again; {{reason}} is why */
+      failed: {
+        en: "Couldn’t load older stickers: {{reason}}",
+        ja: "前の日のシールを読み込めませんでした：{{reason}}",
+      },
     },
     /** How long ago a sticker was sealed, in its largest whole unit. */
     ago: {

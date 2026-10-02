@@ -64,11 +64,37 @@
   list-style: none;
 }
 
-/* The last day's floor. */
+/* The last day's floor, once nothing's older. */
 .pile-floor {
   height: 12px;
   background: radial-gradient(circle, var(--rule-strong) 0 1.2px, transparent 1.5px) 0 0 / 7px 3px
     repeat-x;
+}
+
+/* A floor's heap in outline while its stickers load: today's as Explore loads, or the next older
+   day's under the pile. */
+.pile-loading {
+  position: relative;
+  height: 250px;
+}
+
+.pile-loading__sticker {
+  position: absolute;
+  border-radius: 40% 46% 38% 44%;
+}
+
+/* The next older day, on its way: its perforation, a badge in outline and its heap in outline. */
+.pile-older__badge {
+  position: absolute;
+  left: 16px;
+  top: 5px;
+  border-radius: 999px;
+  rotate: var(--tilt);
+}
+
+/* Where the next older day would be, when it didn't load. */
+.pile-older-failed {
+  margin: 14px 16px 12px;
 }
 
 /* ---------- A sticker in the pile ---------- */

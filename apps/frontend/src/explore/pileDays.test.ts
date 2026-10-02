@@ -1,19 +1,10 @@
-import { TOKYO_UTC_OFFSET_MS, tokyoTicketDay, type Explore } from "@drawing-app/api/client";
+import { TOKYO_UTC_OFFSET_MS, tokyoTicketDay, type Sticker } from "@drawing-app/api/client";
 import { describe, expect, it } from "vitest";
-import { people, sticker } from "../api/testFixtures";
+import { sticker } from "../api/testFixtures";
 import { dayBadge, dayKey, pileDays, spokenDay, ticketDayNumber } from "./pileDays";
 
-const explore = (overrides: Partial<Explore>): Explore => ({
-  todaysStickers: [],
-  activity: [],
-  leaderboards: {
-    weekStart: "2026-09-20T15:00:00.000Z",
-    mostGratitude: [],
-    bestCombo: [],
-    longestStreak: [],
-  },
-  ...overrides,
-});
+/** Stickers as a page of the pile holds them, none given. */
+const piled = (...stickers: Sticker[]) => stickers.map((s) => ({ sticker: s, givenTo: null }));
 
 describe("ticketDayNumber", () => {
   it("turns over with the ticket day, at midnight in Tokyo", () => {
@@ -37,16 +28,7 @@ describe("pileDays", () => {
     const today1 = sticker({ sealedAt: "2026-09-26T05:00:00.000Z" });
     const today2 = sticker({ sealedAt: "2026-09-26T09:00:00.000Z" });
     const yesterday = sticker({ sealedAt: "2026-09-25T09:00:00.000Z" });
-    const days = pileDays(
-      explore({
-        todaysStickers: [today2, today1],
-        activity: [
-          { type: "sealed", at: today2.sealedAt, sticker: today2 },
-          { type: "sealed", at: today1.sealedAt, sticker: today1 },
-          { type: "sealed", at: yesterday.sealedAt, sticker: yesterday },
-        ],
-      }),
-    );
+    const days = pileDays(piled(today2, today1, yesterday));
     expect(days.map(({ day }) => dayKey(day))).toEqual(["2026-09-26", "2026-09-25"]);
     expect(days.map(({ stickers }) => stickers.map((pile) => pile.sticker.id))).toEqual([
       [today1.id, today2.id],
@@ -54,34 +36,7 @@ describe("pileDays", () => {
     ]);
   });
 
-  it("keeps a given sticker on the day it was sealed, tagged with who it last went to", () => {
-    const given = sticker({ sealedAt: "2026-09-24T09:00:00.000Z" });
-    const days = pileDays(
-      explore({
-        activity: [
-          {
-            type: "received",
-            at: "2026-09-26T08:00:00.000Z",
-            sticker: given,
-            giver: people.ken,
-            receiver: people.bob,
-          },
-          {
-            type: "received",
-            at: "2026-09-25T08:00:00.000Z",
-            sticker: given,
-            giver: people.mika,
-            receiver: people.ken,
-          },
-        ],
-      }),
-    );
-    expect(days).toHaveLength(1);
-    expect(dayKey(days[0].day)).toBe("2026-09-24");
-    expect(days[0].stickers).toEqual([{ sticker: given, givenTo: people.bob }]);
-  });
-
-  it("is empty when Explore has no stickers", () => {
-    expect(pileDays(explore({}))).toEqual([]);
+  it("is empty when the pile has no stickers", () => {
+    expect(pileDays([])).toEqual([]);
   });
 });

@@ -179,16 +179,6 @@
 
 /* ---------- The pile while it loads ---------- */
 
-.pile-loading {
-  position: relative;
-  height: 250px;
-}
-
-.pile-loading__sticker {
-  position: absolute;
-  border-radius: 40% 46% 38% 44%;
-}
-
 .leaderboard {
   margin: 0;
   padding: 0;
