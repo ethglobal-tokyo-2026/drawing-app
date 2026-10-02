@@ -74,7 +74,7 @@ function fakeNode(contracts: Record<Address, FakeContract>, revert: object) {
   });
 }
 
-/** The contracts, deployed together, with an escrow from before the names under croquis.eth. */
+/** The contracts, deployed together, with an escrow from before CroquisNames. */
 const preEnsEscrowDeploy = (): Record<Address, FakeContract> => ({
   [configured.names]: {
     abi: croquisNamesAbi,

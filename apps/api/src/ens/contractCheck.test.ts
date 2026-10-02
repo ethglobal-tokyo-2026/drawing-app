@@ -88,7 +88,7 @@ describe("the contract check", () => {
       change: { escrowSticker: OTHER_NFT },
       involved: [escrow, OTHER_NFT, stickers],
     },
-    // An escrow from before the names under croquis.eth has no names() to ask.
+    // An escrow from before CroquisNames has no names() to ask.
     { field: "escrowNames", change: { escrowNames: null }, involved: [escrow] },
   ])(
     "logs a mismatch when $field doesn't hold, naming the addresses, and leaves naming on",

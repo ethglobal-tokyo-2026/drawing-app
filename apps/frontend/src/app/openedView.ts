@@ -7,7 +7,7 @@ export interface Opened {
   view: View;
   /** From a gift message's link: ReceiveGiftDialog opens over the board with it. */
   giftClaimToken?: string;
-  /** From a name's link, /@<label>: Explore opens <label>.croquis.eth's Sticker Board. */
+  /** From a name's link, /@<label>: Explore opens <label>.croquis-app.eth's Sticker Board. */
   boardOf?: string;
 }
 

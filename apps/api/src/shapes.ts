@@ -77,7 +77,7 @@ export const personSchema = userRow
     linePictureUrl: true,
   })
   .extend({
-    /** <label>.croquis.eth, which resolves from the moment they have a label. */
+    /** <label>.croquis-app.eth, which resolves from the moment they have a label. */
     ensName: z.string().nullable(),
     /** Only an adult marks, sees plainly or receives NSFW stickers. */
     ageStatus: ageStatusSchema,
@@ -86,7 +86,8 @@ export type Person = z.infer<typeof personSchema>;
 
 /**
  * Picks the public columns, so LINE's user ID never reaches other people. The smart wallet is left
- * out too, though it isn't private: the ENS gateway answers it as <label>.croquis.eth's address.
+ * out too, though it isn't private: the ENS gateway answers it as <label>.croquis-app.eth's
+ * address.
  */
 export const toPerson = ({
   id,
@@ -206,7 +207,7 @@ export const stickerSchema = z.object({
   artist: personSchema,
   images: stickerImagesSchema,
   sealedAt: isoTimeSchema,
-  /** <number>.<artist>.croquis.eth, once it's onchain. */
+  /** <number>.<artist>.croquis-app.eth, once it's onchain. */
   ensName: z.string().nullable(),
 });
 export type Sticker = z.infer<typeof stickerSchema>;

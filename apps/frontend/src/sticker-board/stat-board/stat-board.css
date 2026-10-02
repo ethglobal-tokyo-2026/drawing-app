@@ -622,8 +622,8 @@
     0.6px 0.8px 0 rgba(12, 9, 16, 0.6);
 }
 
-/* The name under croquis.eth, on a strip of its own that opens it in the ENS app. The link reaches past
-   the tape to a full touch target; the tape's cut would clip a target of its own. */
+/* The name under croquis-app.eth, on a strip of its own that opens it in the ENS app. The link
+   reaches past the tape to a full touch target; the tape's cut would clip a target of its own. */
 .stat-board__ens {
   justify-self: start;
   max-width: 100%;

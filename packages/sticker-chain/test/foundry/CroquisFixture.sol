@@ -23,10 +23,10 @@ import {
 import {StickerNFT} from "../../contracts/StickerNFT.sol";
 import {CroquisSetup} from "../../script/CroquisSetup.sol";
 
-/// @dev A local ENS built from ENSv2's own contracts (a root, .eth, croquis.eth), with everything
-///      under croquis.eth deployed the way the deploy script does it.
+/// @dev A local ENS built from ENSv2's own contracts (a root, .eth, croquis-app.eth), with
+///      everything under croquis-app.eth deployed the way the deploy script does it.
 abstract contract CroquisFixture is Test, CroquisSetup {
-    string internal constant PARENT_LABEL = "croquis";
+    string internal constant PARENT_LABEL = "croquis-app";
     uint256 internal constant GATEWAY_KEY = 0x6A7E;
     uint256 internal constant RELAYER_KEY = 0xA11CE;
     string internal constant GATEWAY_URL = "https://app.example/api/ens/{sender}/{data}.json";
@@ -62,11 +62,12 @@ abstract contract CroquisFixture is Test, CroquisSetup {
         croquis = _deployCroquis(
             ens, PARENT_LABEL, address(sticker), address(this), relayer, urls, vm.addr(GATEWAY_KEY)
         );
-        _pointCroquisEth(ens, PARENT_LABEL, croquis);
+        _pointParentName(ens, PARENT_LABEL, croquis);
         sticker.grantRole(sticker.SEALER_ROLE(), relayer);
     }
 
-    /// @dev Registry names are ERC-1155 tokens; this contract holds croquis.eth and gifts.croquis.eth.
+    /// @dev Registry names are ERC-1155 tokens; this contract holds croquis-app.eth and
+    ///      gifts.croquis-app.eth.
     function onERC1155Received(address, address, uint256, uint256, bytes calldata)
         external
         pure

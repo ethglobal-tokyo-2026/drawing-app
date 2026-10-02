@@ -21,7 +21,7 @@ const me: Me = {
   handle: "alice",
   lineDisplayName: "Alice",
   linePictureUrl: null,
-  ensName: "alice.croquis.eth",
+  ensName: "alice.croquis-app.eth",
   ageStatus: "adult",
   lineUserId: "line-alice",
   language: "en",

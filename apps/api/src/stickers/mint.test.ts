@@ -51,7 +51,7 @@ async function chainApp(mint: Mint) {
     ens: fakeEns(writer),
   }));
   const { ens } = test.deps;
-  assert(ens, "The chain-mode app names stickers under croquis.eth");
+  assert(ens, "The chain-mode app names stickers under croquis-app.eth");
   return { test, naming: ens.naming, names: calls };
 }
 

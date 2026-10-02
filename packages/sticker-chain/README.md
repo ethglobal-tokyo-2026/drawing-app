@@ -6,7 +6,7 @@ Croquis's contracts on Ethereum Sepolia, and the TypeScript the REST API and the
 
 - `StickerNFT.sol` mints one ERC-721 NFT for each sealed sticker, to the artist's Ethereum Sepolia smart account. The Original Artist, content hash and metadata URI stay the same through every later transfer.
 - `StickerGiftEscrow.sol` holds a sticker between Giving and Receiving, so the giver can finish Giving before the recipient has an account. It never gets approval for the stickers in an artist's wallet, and no raw LINE ID or Gift Claim Token is stored onchain.
-- `contracts/ens/` names people, stickers and pending gifts under croquis.eth; see [ENS names](#ens-names).
+- `contracts/ens/` names people, stickers and pending gifts under the parent name; see [ENS names](#ens-names).
 
 ## Exports
 
@@ -38,9 +38,9 @@ Configure Privy Custom Authentication with the deployed app's `/.well-known/jwks
 
 ENSv2 is vendored at the commit deployed to Sepolia (`lib/ens-contracts-v2`, 71a3b73). Our contracts call it through the interfaces in `contracts/ens/EnsV2.sol`; the Forge tests build a local ENS from ENSv2's own contracts (`test/foundry/CroquisFixture.sol`).
 
-- `CroquisNames` gives a person `<label>.croquis.eth`, forever and non-transferable, with their own registry and PermissionedResolver. It names a sealed sticker `<number>.<artist>.croquis.eth`, and `syncSticker` keeps that name with whoever holds the NFT.
-- `CroquisResolver` answers sticker and gift names from `StickerNFT` and the escrow, and everyone else under croquis.eth through CCIP-Read: the API's gateway answers with `src/ens-gateway.ts`.
-- `StickerGiftEscrow` registers `g-<gift ID>.gifts.croquis.eth` while a gift waits, removes it when the gift ends, and syncs the sticker's name whenever the sticker leaves.
+- `CroquisNames` gives a person `<label>.croquis-app.eth`, forever and non-transferable, with their own registry and PermissionedResolver. It names a sealed sticker `<number>.<artist>.croquis-app.eth`, and `syncSticker` keeps that name with whoever holds the NFT.
+- `CroquisResolver` answers sticker and gift names from `StickerNFT` and the escrow, and everyone else under the parent name through CCIP-Read: the API's gateway answers with `src/ens-gateway.ts`.
+- `StickerGiftEscrow` registers `g-<gift ID>.gifts.croquis-app.eth` while a gift waits, removes it when the gift ends, and syncs the sticker's name whenever the sticker leaves.
 - `src/croquis-names.ts` writes names from the relayer. Each call reads the chain first, so a retry after a timeout does nothing when the first attempt landed.
 - Names are ERC-1155 tokens minted to smart accounts, so a smart account must accept them (Safe does, through its fallback handler).
 
@@ -60,7 +60,7 @@ Install Foundry before running these commands. `forge test` covers the contracts
 
 ## Deploy to Ethereum Sepolia
 
-Set `DEPLOYER_PRIVATE_KEY`, `STICKER_SEALER_PRIVATE_KEY`, `ENS_GATEWAY_PRIVATE_KEY`, `ENS_GATEWAY_URL`, `ENS_PARENT_LABEL` and `ETHEREUM_SEPOLIA_RPC_URL` in the gitignored `deploy/.env`, then run `bash deploy/deploy-contracts.sh` from the repository root. `ENS_PARENT_LABEL` is the parent name's label, `croquis` for croquis.eth, and must match `CROQUIS_PARENT_NAME` in `src/croquis-names.ts`. With `STICKER_NFT_ADDRESS` set it keeps that StickerNFT; otherwise it deploys one. The deployer remains the administrator; the sealer receives mint, claim-signing and naming permissions, and the gateway key's address is the only signer `CroquisResolver` trusts. When the deployer owns the parent name, the script points that name at its registry and resolver; otherwise it prints the two addresses the name's owner sets. Record the printed addresses in `deploy/.env`.
+Set `DEPLOYER_PRIVATE_KEY`, `STICKER_SEALER_PRIVATE_KEY`, `ENS_GATEWAY_PRIVATE_KEY`, `ENS_GATEWAY_URL`, `ENS_PARENT_LABEL` and `ETHEREUM_SEPOLIA_RPC_URL` in the gitignored `deploy/.env`, then run `bash deploy/deploy-contracts.sh` from the repository root. `ENS_PARENT_LABEL` is the parent name's label, `croquis-app` for croquis-app.eth, and must match `CROQUIS_PARENT_NAME` in `src/croquis-names.ts`. With `STICKER_NFT_ADDRESS` set it keeps that StickerNFT; otherwise it deploys one. The deployer remains the administrator; the sealer receives mint, claim-signing and naming permissions, and the gateway key's address is the only signer `CroquisResolver` trusts. When the deployer owns the parent name, the script points that name at its registry and resolver; otherwise it prints the two addresses the name's owner sets. Record the printed addresses in `deploy/.env`.
 
 `deploy/README.md` covers publishing the API and the frontend with them, and `deploy/.env.example` lists every setting. The sealer pays the gas for minting, Receiving and the API's return of expired gifts; sponsored smart-wallet transactions pay for Giving and taking out. For Safe smart accounts, configure Sepolia's bundler and paymaster under Privy's **Advanced → Smart wallets** settings; the separate Fee sponsorship switch doesn't replace them. The stat board's **Check sponsored gas** action checks them: it sends a zero-value transaction and confirms the smart account's ETH paid none of its gas.
 

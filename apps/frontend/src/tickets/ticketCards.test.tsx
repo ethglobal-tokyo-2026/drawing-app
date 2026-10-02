@@ -540,8 +540,8 @@ describe("ReserveTicketCheckout", () => {
     await settle(500);
     expect(getTicketPayments).not.toHaveBeenCalled();
     // The button says what it opens, not only whose name it carries.
-    expect(buttonNamed("you.croquis.eth")?.textContent).toContain("Purchases");
-    click("you.croquis.eth");
+    expect(buttonNamed("you.croquis-app.eth")?.textContent).toContain("Purchases");
+    click("you.croquis-app.eth");
     await settle(500);
     expect(getTicketPayments).toHaveBeenCalledWith(SUI_WALLET, SHOP.payment, null);
     click("Older purchases");

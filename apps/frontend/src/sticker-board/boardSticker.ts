@@ -34,7 +34,7 @@ interface GivenTo {
 export interface BoardStickerView extends Omit<BoardSticker, "blob"> {
   /** The Original Artist. */
   artist: PersonView;
-  /** <number>.<artist>.croquis.eth, once it's onchain. */
+  /** <number>.<artist>.croquis-app.eth, once it's onchain. */
   ensName?: string;
   /** False once it's been given away and received. */
   held: boolean;

@@ -12,7 +12,7 @@ export interface PersonView {
   /** The LINE name; the handle when LINE's is gone. */
   name: string;
   pictureUrl?: string;
-  /** <label>.croquis.eth. */
+  /** <label>.croquis-app.eth. */
   ensName?: string;
   /** Only an adult marks, sees plainly or receives NSFW stickers. */
   ageStatus: AgeStatus;
@@ -32,7 +32,7 @@ export interface StickerView {
   urls: StickerUrls;
   /** Milliseconds. */
   sealedAt: number;
-  /** <number>.<artist>.croquis.eth, once it's onchain. */
+  /** <number>.<artist>.croquis-app.eth, once it's onchain. */
   ensName?: string;
   /** An NSFW sticker: pink foil, and blurred for anyone not adult. */
   nsfw: boolean;

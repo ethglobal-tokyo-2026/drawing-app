@@ -46,7 +46,7 @@ contract DeployStickerContracts is Script, CroquisSetup {
         );
         bool ownsParent =
             ens.ethRegistry.getOwner(uint256(keccak256(bytes(parentLabel)))) == deployer;
-        if (ownsParent) _pointCroquisEth(ens, parentLabel, c);
+        if (ownsParent) _pointParentName(ens, parentLabel, c);
         vm.stopBroadcast();
 
         console2.log("STICKER_NFT_ADDRESS=", sticker);

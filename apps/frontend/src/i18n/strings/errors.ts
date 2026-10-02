@@ -68,7 +68,7 @@ export const errors = {
     en: "It couldn’t be confirmed. Trying again is safe, since a gift is only ever received once, but it may not work.",
     ja: "確認できませんでした。受け取りは一度きりなので、やり直しても大丈夫ですが、うまくいかないこともあります。",
   },
-  /** Not shown in the app: the ENS gateway's answer to an outside ENS app looking up a croquis.eth name, when this server has no ENS set up */
+  /** Not shown in the app: the ENS gateway's answer to an outside ENS app looking up a croquis-app.eth name, when this server has no ENS set up */
   ens_not_configured: {
     en: "Names aren’t set up on this server yet.",
     ja: "このサーバーでは、まだ名前が使えません。",
@@ -305,7 +305,7 @@ export const errors = {
     en: "This sticker was sealed without its timelapse.",
     ja: "このシールは、タイムラプスなしで仕上げられました。",
   },
-  /** Not shown in the app: the ENS gateway's answer to an outside ENS app that asks through a resolver other than croquis.eth's */
+  /** Not shown in the app: the ENS gateway's answer to an outside ENS app that asks through a resolver other than croquis-app.eth's */
   unknown_resolver: {
     en: "That name belongs to another app.",
     ja: "この名前は別のアプリのものです。",

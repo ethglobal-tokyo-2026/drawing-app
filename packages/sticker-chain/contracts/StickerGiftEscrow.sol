@@ -13,8 +13,8 @@ import {CroquisResolver} from "./ens/CroquisResolver.sol";
 import {EnsNames, IEnsRegistry} from "./ens/EnsV2.sol";
 
 /// @notice Holds a sticker after Giving until it's received, its sender takes it out, or it expires.
-///         While it waits, the gift has a name, g-<first 8 bytes of giftId>.gifts.croquis.eth, that
-///         expires with it.
+///         While it waits, the gift has a name, g-<first 8 bytes of giftId>.gifts.croquis-app.eth,
+///         that expires with it.
 contract StickerGiftEscrow is AccessControl, EIP712, IERC721Receiver, ReentrancyGuard {
     bytes32 public constant CLAIM_SIGNER_ROLE = keccak256("CLAIM_SIGNER_ROLE");
     bytes32 public constant CLAIM_TYPEHASH =
@@ -40,7 +40,8 @@ contract StickerGiftEscrow is AccessControl, EIP712, IERC721Receiver, Reentrancy
     IERC721 public immutable sticker;
     CroquisNames public immutable names;
     CroquisResolver public immutable resolver;
-    /// @dev gifts.croquis.eth's subregistry. This contract holds its registrar and unregister roles.
+    /// @dev gifts.croquis-app.eth's subregistry. This contract holds its registrar and
+    ///      unregister roles.
     IEnsRegistry public immutable giftsRegistry;
     bytes32 public immutable giftsNode;
     mapping(bytes32 giftId => Gift gift) public gifts;

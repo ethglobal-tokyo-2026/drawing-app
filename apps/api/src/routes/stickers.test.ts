@@ -159,7 +159,7 @@ describe("POST /api/stickers", () => {
     expect(allStickers()).toMatchObject([minted]);
   });
 
-  it("names the artist and the sticker under croquis.eth once the mint lands", async () => {
+  it("names the artist and the sticker under croquis-app.eth once the mint lands", async () => {
     const { writer, calls } = fakeNameWriter();
     const ens = fakeEns(writer);
     test = await createTestApp({ mint: fakeMint(), smartWallets: fakeSmartWallets(), ens });

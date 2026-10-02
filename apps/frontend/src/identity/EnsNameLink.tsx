@@ -10,7 +10,7 @@ interface Props {
   children?: ReactNode;
 }
 
-/** A name under croquis.eth, which opens in the ENS app with its records. */
+/** A name under croquis-app.eth, which opens in the ENS app with its records. */
 export function EnsNameLink({ name, className, children = name }: Props) {
   const { t } = useTranslation();
   return (

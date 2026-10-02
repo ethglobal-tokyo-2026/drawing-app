@@ -50,7 +50,7 @@ const rows = () => document.querySelectorAll(".ticket-purchases a").length;
 /** The list, opened: its first read has been asked for and has answered. */
 async function openList() {
   view = renderWithApi(<TicketPurchases owner={OWNER} shop={SHOP} />);
-  click("you.croquis.eth");
+  click("you.croquis-app.eth");
   await settle();
 }
 
@@ -99,7 +99,7 @@ describe("the ticket purchases list's Try again", () => {
 
     click("Try again");
     await settle();
-    expect(document.activeElement).toBe(buttonNamed("you.croquis.eth"));
+    expect(document.activeElement).toBe(buttonNamed("you.croquis-app.eth"));
   });
 
   it("reads an older page again from where it failed, with the pages already listed still there", async () => {

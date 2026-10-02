@@ -33,7 +33,7 @@ const liveUserByLabel = (db: Db, label: string) =>
     .where(and(eq(users.ensLabel, label), isNull(users.deletedAt)))
     .get();
 
-/** What the gateway says about `name`: a person under croquis.eth, or nothing. */
+/** What the gateway says about `name`: a person under croquis-app.eth, or nothing. */
 function gatewayRecords(deps: AppDeps, ens: EnsDeps, name: string): GatewayRecords {
   const suffix = `.${CROQUIS_PARENT_NAME}`;
   const label = name.endsWith(suffix) ? name.slice(0, -suffix.length) : null;
@@ -51,7 +51,7 @@ function gatewayRecords(deps: AppDeps, ens: EnsDeps, name: string): GatewayRecor
 }
 
 /**
- * ENS: the CCIP-Read gateway for names under croquis.eth that aren't onchain yet, which any ENS
+ * ENS: the CCIP-Read gateway for names under croquis-app.eth that aren't onchain yet, which any ENS
  * client calls without a session, and finding a person by their name.
  */
 export const ensRoutes = (deps: AppDeps) =>
