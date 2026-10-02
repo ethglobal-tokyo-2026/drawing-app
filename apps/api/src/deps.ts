@@ -23,7 +23,7 @@ export interface AppDeps {
   /** Null in mock chain mode: Giving sends no escrow transfer, and a deposit counts as landed at once. */
   giftChain: GiftChain | null;
   smartWallets: SmartWallets;
-  /** Null when the names under croquis.eth aren't configured: labels are kept, nothing resolves. */
+  /** Null when the names under croquis-app.eth aren't configured: labels are kept, nothing resolves. */
   ens: EnsDeps | null;
   ticketPayments: TicketPayments;
   serverLog: ServerLog;
@@ -267,7 +267,7 @@ export interface TicketPayments {
   paymentsSince: (since: Date) => Promise<{ payments: PaymentEvent[]; complete: boolean }>;
 }
 
-/** The names under croquis.eth: the CCIP-Read gateway, and the relayer that writes names. */
+/** The names under croquis-app.eth: the CCIP-Read gateway, and the relayer that writes names. */
 export interface EnsDeps {
   /** CroquisResolver: the gateway answers only its lookups. */
   resolverAddress: string;
@@ -337,7 +337,7 @@ export interface ContractReads {
   namesStickers: Address | null;
   resolverStickers: Address | null;
   escrowSticker: Address | null;
-  /** The escrow's CroquisNames; an escrow from before the names under croquis.eth has none. */
+  /** The escrow's CroquisNames; an escrow from before CroquisNames has none. */
   escrowNames: Address | null;
 }
 

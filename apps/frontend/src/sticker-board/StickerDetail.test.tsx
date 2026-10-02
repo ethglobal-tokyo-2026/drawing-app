@@ -462,12 +462,12 @@ describe("StickerDetail", () => {
     expect(document.querySelectorAll(".transfer-trail__row.is-open")).toHaveLength(1);
   });
 
-  it("links the sticker's name under croquis.eth to the ENS app once it's onchain", () => {
-    const named = sticker(133, day(14), { ensName: "0133.alice.croquis.eth" });
+  it("links the sticker's name under croquis-app.eth to the ENS app once it's onchain", () => {
+    const named = sticker(133, day(14), { ensName: "0133.alice.croquis-app.eth" });
     open({ stickers: [named] });
     const link = document.querySelector<HTMLAnchorElement>(".sticker-detail__ens a");
-    expect(link?.textContent).toBe("0133.alice.croquis.eth");
-    expect(link?.href).toBe("https://sepolia.app.ens.domains/0133.alice.croquis.eth");
+    expect(link?.textContent).toBe("0133.alice.croquis-app.eth");
+    expect(link?.href).toBe("https://sepolia.app.ens.domains/0133.alice.croquis-app.eth");
 
     open({ stickers: [sticker(133, day(14))] });
     expect(document.querySelector(".sticker-detail__ens")).toBeNull();

@@ -7,8 +7,8 @@ import {IEnsRegistry, IVerifiableFactory} from "../../../contracts/ens/EnsV2.sol
 import {StickerGiftEscrow} from "../../../contracts/StickerGiftEscrow.sol";
 import {CroquisSetup} from "../../../script/CroquisSetup.sol";
 
-/// @dev Everything under croquis.eth in one deployment, for the TypeScript tests on Anvil. ENSv2's
-///      own contracts are deployed first and passed in.
+/// @dev Everything under croquis-app.eth in one deployment, for the TypeScript tests on Anvil.
+///      ENSv2's own contracts are deployed first and passed in.
 contract LocalCroquis is CroquisSetup {
     StickerGiftEscrow public immutable escrow;
     CroquisNames public immutable names;
@@ -31,7 +31,7 @@ contract LocalCroquis is CroquisSetup {
                 resolverImplementation,
                 IEnsRegistry(address(0))
             ),
-            "croquis",
+            "croquis-app",
             sticker,
             address(this),
             relayer,
@@ -43,7 +43,7 @@ contract LocalCroquis is CroquisSetup {
         resolver = c.resolver;
     }
 
-    /// @dev Holds gifts.croquis.eth.
+    /// @dev Holds gifts.croquis-app.eth.
     function onERC1155Received(address, address, uint256, uint256, bytes calldata)
         external
         pure

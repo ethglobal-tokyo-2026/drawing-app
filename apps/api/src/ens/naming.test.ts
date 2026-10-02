@@ -99,7 +99,7 @@ async function namingApp() {
     smartWallets: fakeSmartWallets(db),
   }));
   const { ens } = test.deps;
-  assert(ens, "The test app names people under croquis.eth");
+  assert(ens, "The test app names people under croquis-app.eth");
   const enqueue = vi.spyOn(ens.naming, "enqueue");
   const enqueued = () => enqueue.mock.calls.map(([userId]) => userId);
   return { test, naming: ens.naming, calls, enqueued };

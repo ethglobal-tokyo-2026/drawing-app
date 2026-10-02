@@ -33,7 +33,7 @@ export interface StatCorkHandle {
 export interface CorkFigures {
   name: string;
   handle: string;
-  /** <label>.croquis.eth, on label-maker tape. */
+  /** <label>.croquis-app.eth, on label-maker tape. */
   ensName: string | null;
   /** Your own board, which the notes address as "you". */
   own: boolean;

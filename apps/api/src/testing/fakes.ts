@@ -287,7 +287,7 @@ export const fakeContractReads = (
   ...change,
 });
 
-/** The names under croquis.eth with a fixed gateway signer, writing through `writer`. */
+/** The names under croquis-app.eth with a fixed gateway signer, writing through `writer`. */
 export const fakeEns = (writer: NameWriter | null = null): EnsDeps => ({
   resolverAddress: fakeAddress("CroquisResolver"),
   gatewaySigner: privateKeyToAccount(TEST_GATEWAY_KEY),

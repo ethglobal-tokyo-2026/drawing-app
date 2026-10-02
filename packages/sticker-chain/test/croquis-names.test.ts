@@ -13,7 +13,12 @@ import {
 import { packetToBytes } from "viem/ens";
 import { privateKeyToAccount } from "viem/accounts";
 import { describe, expect, it } from "vitest";
-import { createCroquisNames, stickerAvatar } from "../src/croquis-names.js";
+import {
+  createCroquisNames,
+  personEnsName,
+  stickerAvatar,
+  stickerEnsName,
+} from "../src/croquis-names.js";
 import {
   answerGatewayRequest,
   encodeGatewayRequest,
@@ -102,14 +107,14 @@ describe("createCroquisNames", () => {
         functionName: "stickerNameOf",
         args: [1n],
       }),
-    ).resolves.toBe("0001.alice.croquis.eth");
+    ).resolves.toBe(stickerEnsName(1, "alice"));
     // The sticker name's avatar is the same URI the app writes on the person's name.
     await expect(
       context.publicClient.readContract({
         address: context.resolver,
         abi: croquisResolverAbi,
         functionName: "text",
-        args: [namehash("0001.alice.croquis.eth"), "avatar"],
+        args: [namehash(stickerEnsName(1, "alice")), "avatar"],
       }),
     ).resolves.toBe(firstAvatar);
 
@@ -124,13 +129,13 @@ describe("createCroquisNames", () => {
     const avatarCall = encodeFunctionData({
       abi: profileAbi,
       functionName: "text",
-      args: [namehash("alice.croquis.eth"), "avatar"],
+      args: [namehash(personEnsName("alice")), "avatar"],
     });
     const resolved = await context.publicClient.readContract({
       address: personResolver,
       abi: resolveAbi,
       functionName: "resolve",
-      args: [toHex(packetToBytes("alice.croquis.eth")), avatarCall],
+      args: [toHex(packetToBytes(personEnsName("alice"))), avatarCall],
     });
     expect(decodeAbiParameters([{ type: "string" }], resolved)[0]).toBe(nextAvatar);
     expect(progress).toEqual([
@@ -149,7 +154,8 @@ describe("createCroquisNames", () => {
 describe("the ENS gateway", () => {
   it("signs answers CroquisResolver accepts, and only from its trusted signer", async () => {
     const context = await setup();
-    const node = namehash("bob.croquis.eth");
+    const bob = personEnsName("bob");
+    const node = namehash(bob);
     const call = encodeFunctionData({
       abi: profileAbi,
       functionName: "multicall",
@@ -161,8 +167,8 @@ describe("the ENS gateway", () => {
         ],
       ],
     });
-    const request = encodeGatewayRequest("bob.croquis.eth", call);
-    expect(requestedName(request)).toBe("bob.croquis.eth");
+    const request = encodeGatewayRequest(bob, call);
+    expect(requestedName(request)).toBe(bob);
     const result = answerGatewayRequest(request, {
       address: context.artist.address,
       texts: { url: "https://app/@bob" },

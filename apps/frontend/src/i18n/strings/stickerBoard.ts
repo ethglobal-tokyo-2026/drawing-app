@@ -1,9 +1,9 @@
 import type { Section } from "../catalog";
 
 export const stickerBoard = {
-  /** A name under croquis.eth, which opens in the ENS app. */
+  /** A name under croquis-app.eth, which opens in the ENS app. */
   ensName: {
-    /** Sticker detail, under the title, and the stat board's label-maker tape: screen readers' name for the croquis.eth name's link, which opens it in the ENS app; {{name}} is the whole name */
+    /** Sticker detail, under the title, and the stat board's label-maker tape: screen readers' name for the croquis-app.eth name's link, which opens it in the ENS app; {{name}} is the whole name */
     open: { en: "Open {{name}} in the ENS app", ja: "{{name}}をENSアプリでひらく" },
   },
   /** The Sticker Board's cork back: your own, or someone else's. */

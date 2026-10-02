@@ -14,9 +14,9 @@ interface IStickerRecords {
 }
 
 interface INameBook {
-    /// @dev "alice.croquis.eth", or "" when `account` has no name onchain.
+    /// @dev "alice.croquis-app.eth", or "" when `account` has no name onchain.
     function nameOf(address account) external view returns (string memory);
-    /// @dev "0042.alice.croquis.eth", or "" when the sticker has no name.
+    /// @dev "0042.alice.croquis-app.eth", or "" when the sticker has no name.
     function stickerNameOf(uint256 tokenId) external view returns (string memory);
 }
 
@@ -34,10 +34,10 @@ interface IGiftRecords {
         );
 }
 
-/// @notice The resolver for croquis.eth, every sticker name and every gift name (ENSIP-10).
+/// @notice The resolver for the parent name, every sticker name and every gift name (ENSIP-10).
 ///         Sticker and gift records are read from StickerNFT and the escrow on every lookup, so they
-///         can't drift from what they describe. Any other name under croquis.eth is a person without
-///         an onchain name yet: the API answers for them through CCIP-Read (EIP-3668).
+///         can't drift from what they describe. Any other name under the parent name is a person
+///         without an onchain name yet: the API answers for them through CCIP-Read (EIP-3668).
 contract CroquisResolver is AccessControl, IExtendedResolver {
     /// @dev CroquisNames and the escrow, which point names at sticker and gift records.
     bytes32 public constant NAME_WRITER_ROLE = keccak256("NAME_WRITER_ROLE");
@@ -253,7 +253,7 @@ contract CroquisResolver is AccessControl, IExtendedResolver {
     }
 
     /// @dev A gift's name answers only while the gift waits, as its registry entry does. Lookups
-    ///      after it ends still reach this resolver through croquis.eth.
+    ///      after it ends still reach this resolver through the parent name.
     function _isWaiting(uint64 expiresAt, uint8 status) private view returns (bool) {
         return status == GIFT_PENDING && block.timestamp < expiresAt;
     }

@@ -4,7 +4,7 @@ import { normalize } from "viem/ens";
 
 type UserRow = typeof users.$inferSelect;
 
-/** Labels a person can't have: gifts.croquis.eth is the gifts' registry. */
+/** Labels a person can't have: gifts.croquis-app.eth is the gifts' registry. */
 const RESERVED_LABELS = new Set(["gifts"]);
 /** Keeps names short enough to read and to put in a link. */
 const MAX_LABEL_BYTES = 63;

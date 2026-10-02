@@ -42,8 +42,8 @@ import "./ExploreScreen.css";
 
 interface Props {
   /**
-   * A name's link opened the app: <boardOf>.croquis.eth's Sticker Board opens once it's found. App
-   * lets go of it as Explore is left, so a later visit doesn't open that board again.
+   * A name's link opened the app: <boardOf>.croquis-app.eth's Sticker Board opens once it's found.
+   * App lets go of it as Explore is left, so a later visit doesn't open that board again.
    */
   boardOf?: string;
   onOpenArtist: (person: Person) => void;

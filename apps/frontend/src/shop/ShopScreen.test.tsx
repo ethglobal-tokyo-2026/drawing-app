@@ -95,10 +95,10 @@ describe("ShopScreen", () => {
       }),
     );
     await settle();
-    expect(buttonNamed("you.croquis.eth")).toBeUndefined();
+    expect(buttonNamed("you.croquis-app.eth")).toBeUndefined();
 
     act(() => setPrivyStatus({ state: "signed-in", userId: "privy-me", suiWallet: SUI_WALLET }));
-    click("you.croquis.eth");
+    click("you.croquis-app.eth");
     await settle();
     expect(getTicketPayments).toHaveBeenCalledWith(SUI_WALLET, SHOP.payment, null);
     expect(rows()).toEqual([expect.stringContaining(`${PACK.tickets} tickets`)]);
@@ -106,7 +106,7 @@ describe("ShopScreen", () => {
     click("Buy the pack");
     await settle();
     expect(rows()).toEqual([]);
-    click("you.croquis.eth");
+    click("you.croquis-app.eth");
     await settle();
     expect(getTicketPayments).toHaveBeenCalledTimes(2);
     expect(rows()).toHaveLength(1);

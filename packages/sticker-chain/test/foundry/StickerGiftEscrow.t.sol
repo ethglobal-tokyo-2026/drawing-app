@@ -28,7 +28,7 @@ contract StickerGiftEscrowTest is CroquisFixture {
         escrow = croquis.escrow;
         _namePerson("alice", artist);
         _nameSticker(_seal(artist, "sticker-for-giving"), "0001");
-        giftName = string.concat(escrow.giftLabel(GIFT_ID), ".gifts.croquis.eth");
+        giftName = string.concat(escrow.giftLabel(GIFT_ID), ".gifts.", PARENT_LABEL, ".eth");
         giftLabelId = uint256(keccak256(bytes(escrow.giftLabel(GIFT_ID))));
     }
 
@@ -61,7 +61,7 @@ contract StickerGiftEscrowTest is CroquisFixture {
         assertEq(croquis.giftsRegistry.getOwner(giftLabelId), artist);
         assertEq(croquis.giftsRegistry.getExpiry(giftLabelId), expiresAt);
         assertEq(_addr(giftName), artist);
-        assertEq(_text(giftName, "com.croquis.from"), "alice.croquis.eth");
+        assertEq(_text(giftName, "com.croquis.from"), "alice.croquis-app.eth");
         assertEq(_text(giftName, "com.croquis.claim-commitment"), vm.toString(CLAIM_COMMITMENT));
         assertEq(_text(giftName, "com.croquis.expires-at"), vm.toString(expiresAt));
         assertEq(_text(giftName, "avatar"), "");
@@ -169,7 +169,7 @@ contract StickerGiftEscrowTest is CroquisFixture {
             IEnsRegistry(croquis.names.registryOf(artist)).getOwner(uint256(keccak256("0001"))),
             holder
         );
-        assertEq(_addr("0001.alice.croquis.eth"), holder);
+        assertEq(_addr("0001.alice.croquis-app.eth"), holder);
     }
 
     function _expectedLabel(bytes32 giftId) private pure returns (string memory) {

@@ -126,7 +126,7 @@ export interface ApiClient {
   explore: () => Promise<Explore>;
   /** GET /api/users?handle= */
   searchUsers: (handle: string) => Promise<Person[]>;
-  /** GET /api/ens/people/:label: whoever is <label>.croquis.eth. */
+  /** GET /api/ens/people/:label: whoever is <label>.croquis-app.eth. */
   personByEnsLabel: (label: string) => Promise<Person>;
 }
 

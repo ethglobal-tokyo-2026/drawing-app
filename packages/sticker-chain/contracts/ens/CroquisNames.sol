@@ -14,8 +14,9 @@ import {
     IVerifiableFactory
 } from "./EnsV2.sol";
 
-/// @notice Makes the names under croquis.eth: a forever name for each person, and a name for each
-///         sticker under its Original Artist that always belongs to whoever holds the sticker's NFT.
+/// @notice Makes the names under the parent name: a forever name for each person, and a name for
+///         each sticker under its Original Artist that always belongs to whoever holds the
+///         sticker's NFT.
 contract CroquisNames is AccessControl, INameBook {
     /// @dev The relayer, which names people and stickers.
     bytes32 public constant NAMER_ROLE = keccak256("NAMER_ROLE");
@@ -73,8 +74,8 @@ contract CroquisNames is AccessControl, INameBook {
         PARENT_NODE = EnsNames.namehash(parentName_, 0);
     }
 
-    /// @notice Gives `account` its forever name, `label`.croquis.eth, with its own registry for its
-    ///         stickers' names and its own resolver for its records.
+    /// @notice Gives `account` its forever name, `label`.croquis-app.eth, with its own registry for
+    ///         its stickers' names and its own resolver for its records.
     function claimPersonName(
         string calldata label,
         address account,
@@ -146,7 +147,7 @@ contract CroquisNames is AccessControl, INameBook {
         person.resolver.setText(EnsNames.child(person.label, parentName), "avatar", avatar);
     }
 
-    /// @notice Names a sticker `label`.<artist>.croquis.eth, held by whoever holds its NFT.
+    /// @notice Names a sticker `label`.<artist>.croquis-app.eth, held by whoever holds its NFT.
     function nameSticker(uint256 tokenId, string calldata label) external onlyRole(NAMER_ROLE) {
         if (bytes(stickerLabelOf[tokenId]).length != 0) revert StickerAlreadyNamed(tokenId);
         address artist = STICKERS.artistOf(tokenId);

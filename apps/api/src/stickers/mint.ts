@@ -23,9 +23,9 @@ function recordMint(db: Db, stickerId: string, minted: MintedToken) {
 
 /**
  * Mints a sealed sticker's NFT unless it has one, records its token, then queues its Original
- * Artist's naming under croquis.eth. Sealing, its retry and the mint catch-up all mint through this.
- * Rejects when the chain doesn't confirm the mint: the sticker stays sealed and unminted, and the
- * next attempt reconciles an NFT that landed late.
+ * Artist's naming under croquis-app.eth. Sealing, its retry and the mint catch-up all mint through
+ * this. Rejects when the chain doesn't confirm the mint: the sticker stays sealed and unminted, and
+ * the next attempt reconciles an NFT that landed late.
  */
 export async function mintSticker(deps: AppDeps, stickerId: string): Promise<void> {
   const sticker = deps.db.select().from(stickers).where(eq(stickers.id, stickerId)).get();

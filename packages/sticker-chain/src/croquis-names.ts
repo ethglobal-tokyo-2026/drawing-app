@@ -35,7 +35,7 @@ export function stickerAvatar(chainId: number, stickerContract: Address, tokenId
  * The name every person, sticker and gift name sits under. The contract deploy builds it from
  * deploy/.env's ENS_PARENT_LABEL, which must match; the API's contract check compares the two.
  */
-export const CROQUIS_PARENT_NAME = "croquis.eth";
+export const CROQUIS_PARENT_NAME = "croquis-app.eth";
 
 /** A sticker name's label: its number, padded as in "No.0042". */
 export const stickerLabel = (number: number) => String(number).padStart(4, "0");
@@ -46,8 +46,8 @@ export const stickerEnsName = (number: number, artistLabel: string) =>
   `${stickerLabel(number)}.${personEnsName(artistLabel)}`;
 
 /**
- * Writes names under croquis.eth through CroquisNames. Each call reads the chain first, so a retry
- * after a timeout or a crash does nothing when the earlier attempt landed.
+ * Writes names under the parent name through CroquisNames. Each call reads the chain first, so a
+ * retry after a timeout or a crash does nothing when the earlier attempt landed.
  */
 export function createCroquisNames({
   publicClient,

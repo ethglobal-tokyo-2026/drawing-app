@@ -14,7 +14,7 @@ import { readFoundryArtifact } from "./foundry.js";
 const localCroquis = readFoundryArtifact("LocalCroquis", "LocalCroquis");
 
 /**
- * ENSv2's own contracts, then everything under croquis.eth and the escrow, as the deploy script
+ * ENSv2's own contracts, then everything under croquis-app.eth and the escrow, as the deploy script
  * builds them. `relayer` signs claims and names people and stickers.
  */
 export async function deployCroquisStack({

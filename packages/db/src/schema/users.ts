@@ -42,8 +42,9 @@ export const users = sqliteTable(
       .notNull()
       .default("en"),
     /**
-     * The person's ENS label: <ens_label>.croquis.eth. Follows the handle until the name is onchain
-     * (ens_named_at), then fixed, since an onchain name is forever. Kept on account deletion.
+     * The person's ENS label: <ens_label>.croquis-app.eth. Follows the handle until the name is
+     * onchain (ens_named_at), then fixed, since an onchain name is forever. Kept on account
+     * deletion.
      */
     ensLabel: text("ens_label").unique(),
     /** When CroquisNames confirmed the person's name onchain. */

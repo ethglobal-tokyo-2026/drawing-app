@@ -152,7 +152,7 @@ export const explore = {
       en: "Couldn’t load search results: {{reason}}",
       ja: "検索結果を読み込めませんでした：{{reason}}",
     },
-    /** Explore, opened from a croquis.eth name's link: the alert when nobody holds the name or their board didn't load, before Try again; {{name}} is the whole name, such as alice.croquis.eth, and {{reason}} is why */
+    /** Explore, opened from a croquis-app.eth name's link: the alert when nobody holds the name or their board didn't load, before Try again; {{name}} is the whole name, such as alice.croquis-app.eth, and {{reason}} is why */
     ensName: {
       en: "Couldn’t load {{name}}: {{reason}}",
       ja: "{{name}}を読み込めませんでした：{{reason}}",

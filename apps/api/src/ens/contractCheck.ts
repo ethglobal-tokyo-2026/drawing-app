@@ -79,7 +79,7 @@ function compare(reads: ContractReads) {
     escrowNames: compareAnswer(
       { contract: `StickerGiftEscrow ${escrow}`, getter: "names()", answer: reads.escrowNames },
       { contract: "CroquisNames", address: names },
-      { stopsNaming: false, whyMissing: "so it's from before the names under croquis.eth" },
+      { stopsNaming: false, whyMissing: "so it's from before CroquisNames" },
     ),
   } satisfies Record<string, Comparison>;
 }

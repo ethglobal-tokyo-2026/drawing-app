@@ -21,12 +21,12 @@ contract CroquisNamesTest is CroquisFixture {
     function testPersonNameResolvesFromTheirOwnResolver() public {
         _namePerson("alice", alice);
 
-        assertEq(croquis.names.nameOf(alice), "alice.croquis.eth");
+        assertEq(croquis.names.nameOf(alice), "alice.croquis-app.eth");
         assertEq(croquis.croquisRegistry.getOwner(ALICE_ID), alice);
         assertEq(croquis.croquisRegistry.getExpiry(ALICE_ID), type(uint64).max);
-        assertEq(_addr("alice.croquis.eth"), alice);
-        assertEq(_text("alice.croquis.eth", "url"), "https://app/@x");
-        assertEq(_text("alice.croquis.eth", "avatar"), "eip155:11155111/erc721:0x0/1");
+        assertEq(_addr("alice.croquis-app.eth"), alice);
+        assertEq(_text("alice.croquis-app.eth", "url"), "https://app/@x");
+        assertEq(_text("alice.croquis-app.eth", "avatar"), "eip155:11155111/erc721:0x0/1");
     }
 
     function testNobodyCanTakeAPersonNameBackOrTransferIt() public {
@@ -50,11 +50,11 @@ contract CroquisNamesTest is CroquisFixture {
         _namePerson("alice", alice);
         IEnsPermissionedResolver resolver =
             IEnsPermissionedResolver(croquis.names.resolverOf(alice));
-        bytes memory name = NameCoder.encode("alice.croquis.eth");
+        bytes memory name = NameCoder.encode("alice.croquis-app.eth");
 
         vm.prank(relayer);
         croquis.names.setAvatar(alice, "eip155:11155111/erc721:0x0/2");
-        assertEq(_text("alice.croquis.eth", "avatar"), "eip155:11155111/erc721:0x0/2");
+        assertEq(_text("alice.croquis-app.eth", "avatar"), "eip155:11155111/erc721:0x0/2");
 
         vm.prank(address(croquis.names));
         vm.expectRevert();
@@ -62,7 +62,7 @@ contract CroquisNamesTest is CroquisFixture {
 
         vm.prank(alice);
         resolver.setText(name, "url", "https://alice.example");
-        assertEq(_text("alice.croquis.eth", "url"), "https://alice.example");
+        assertEq(_text("alice.croquis-app.eth", "url"), "https://alice.example");
     }
 
     function testOnlyTheRelayerNamesPeopleAndStickers() public {
@@ -77,13 +77,13 @@ contract CroquisNamesTest is CroquisFixture {
     }
 
     function testAPersonWithoutAnOnchainNameResolvesThroughTheGateway() public {
-        bytes memory name = NameCoder.encode("bob.croquis.eth");
+        bytes memory name = NameCoder.encode("bob.croquis-app.eth");
         bytes memory call = abi.encodeWithSelector(ADDR, NameCoder.namehash(name, 0));
         bytes memory request = abi.encodeCall(IExtendedResolver.resolve, (name, call));
         string[] memory urls = new string[](1);
         urls[0] = GATEWAY_URL;
 
-        assertEq(_resolverFor("bob.croquis.eth"), address(croquis.resolver));
+        assertEq(_resolverFor("bob.croquis-app.eth"), address(croquis.resolver));
         vm.expectRevert(
             abi.encodeWithSelector(
                 CroquisResolver.OffchainLookup.selector,
@@ -123,12 +123,12 @@ contract CroquisNamesTest is CroquisFixture {
         uint256 tokenId = _seal(alice, "first");
         _nameSticker(tokenId, "0001");
 
-        assertEq(croquis.names.stickerNameOf(tokenId), "0001.alice.croquis.eth");
-        assertEq(_addr("0001.alice.croquis.eth"), alice);
-        assertEq(_text("0001.alice.croquis.eth", "com.croquis.artist"), "alice.croquis.eth");
-        assertEq(_text("0001.alice.croquis.eth", "avatar"), _nftUri(tokenId));
+        assertEq(croquis.names.stickerNameOf(tokenId), "0001.alice.croquis-app.eth");
+        assertEq(_addr("0001.alice.croquis-app.eth"), alice);
+        assertEq(_text("0001.alice.croquis-app.eth", "com.croquis.artist"), "alice.croquis-app.eth");
+        assertEq(_text("0001.alice.croquis-app.eth", "avatar"), _nftUri(tokenId));
         assertEq(
-            _text("0001.alice.croquis.eth", "com.croquis.content-hash"),
+            _text("0001.alice.croquis-app.eth", "com.croquis.content-hash"),
             vm.toString(keccak256("first"))
         );
     }
@@ -145,8 +145,8 @@ contract CroquisNamesTest is CroquisFixture {
         croquis.names.syncSticker(tokenId);
 
         assertEq(artistRegistry.getOwner(labelId), bob);
-        assertEq(_addr("0001.alice.croquis.eth"), bob);
-        assertEq(_text("0001.alice.croquis.eth", "com.croquis.artist"), "alice.croquis.eth");
+        assertEq(_addr("0001.alice.croquis-app.eth"), bob);
+        assertEq(_text("0001.alice.croquis-app.eth", "com.croquis.artist"), "alice.croquis-app.eth");
 
         vm.recordLogs();
         croquis.names.syncSticker(tokenId);
