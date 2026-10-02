@@ -97,7 +97,7 @@ describe("useModalDialog", () => {
 
   it("hands back what the page's owner asked for while the dialog was up, and holds it until then", async () => {
     render(<Layer />);
-    // The tab strip tucks away while the sheet is open, and comes back while it's still open.
+    // While the sheet is open the tab strip's owner shows it, then tucks it away again.
     await act(async () => void (part("tabs").inert = false));
     expect(part("tabs").inert).toBe(true);
     await act(async () => part("tabs").setAttribute("inert", ""));
