@@ -92,8 +92,11 @@
   rotate: var(--tilt);
 }
 
-/* Where the next older day would be, when it didn't load. */
+/* Where the next older day would be, when it didn't load. Over the stickers above it, even a
+   focused one, since their cuts hang past their floor and would take Try again's tap. */
 .pile-older-failed {
+  position: relative;
+  z-index: 100001;
   margin: 14px 16px 12px;
 }
 
