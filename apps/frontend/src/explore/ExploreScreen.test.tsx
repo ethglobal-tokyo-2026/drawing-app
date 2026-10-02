@@ -1,12 +1,14 @@
 // @vitest-environment happy-dom
 import {
   CROQUIS_PARENT_NAME,
-  type ActivityEntry,
   type Explore,
   type Person,
+  type PileSticker,
+  type Sticker,
 } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
+import { ApiError, type ApiClient } from "../api/apiClient";
 import { people, sticker } from "../api/testFixtures";
 import { emptyApi, renderWithApi, TEST_OWNER } from "../api/testing";
 import { i18next } from "../i18n/i18n";
@@ -17,12 +19,17 @@ const NOW = Date.parse("2026-09-26T12:00:00.000Z");
 const MINUTE = 60_000;
 const minutesAgo = (minutes: number) => new Date(NOW - minutes * MINUTE).toISOString();
 
+/** Stickers as a page of the pile holds them, none given. */
+const unGiven = (...stickers: Sticker[]): PileSticker[] =>
+  stickers.map((s) => ({ sticker: s, givenTo: null }));
+
+/** Explore whose pile's first page is `stickers`, newest first, with older pages from `before`. */
 const exploreWith = (
-  activity: ActivityEntry[],
+  stickers: PileSticker[],
   boards: Partial<Explore["leaderboards"]> = {},
+  before: string | null = null,
 ): Explore => ({
-  todaysStickers: [],
-  activity,
+  pile: { stickers, before },
   leaderboards: {
     weekStart: minutesAgo(0),
     mostGratitude: [],
@@ -36,7 +43,54 @@ let view: ReturnType<typeof renderWithApi> | undefined;
 beforeEach(() => {
   vi.useFakeTimers({ now: NOW });
   globalThis.ResizeObserver ??= StillResizeObserver;
+  vi.stubGlobal("IntersectionObserver", EndObserver);
 });
+
+/** Watches as the pile does; `reachEnd` brings what it watches into view, as scrolling near does. */
+class EndObserver implements IntersectionObserver {
+  static watching = new Set<EndObserver>();
+  readonly root = null;
+  readonly rootMargin = "";
+  readonly scrollMargin = "";
+  readonly thresholds = [];
+  private targets: Element[] = [];
+  private readonly callback: IntersectionObserverCallback;
+  constructor(callback: IntersectionObserverCallback) {
+    this.callback = callback;
+  }
+  observe(target: Element) {
+    this.targets.push(target);
+    EndObserver.watching.add(this);
+  }
+  unobserve() {}
+  disconnect() {
+    EndObserver.watching.delete(this);
+  }
+  takeRecords() {
+    return [];
+  }
+  seen() {
+    const entries = this.targets.map((target) => {
+      const rect = target.getBoundingClientRect();
+      return {
+        target,
+        isIntersecting: true,
+        intersectionRatio: 1,
+        boundingClientRect: rect,
+        intersectionRect: rect,
+        rootBounds: null,
+        time: 0,
+      };
+    });
+    this.callback(entries, this);
+  }
+}
+
+/** Scrolls the pile's end into view, and lets what that asks for land. */
+async function reachEnd() {
+  for (const observer of [...EndObserver.watching]) act(() => observer.seen());
+  await wait(0);
+}
 
 /** happy-dom has no ResizeObserver; the pile's width never changes here. */
 class StillResizeObserver implements ResizeObserver {
@@ -49,6 +103,8 @@ afterEach(async () => {
   view = undefined;
   vi.useRealTimers();
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+  EndObserver.watching.clear();
   localStorage.clear();
   await i18next.changeLanguage("en");
 });
@@ -60,13 +116,14 @@ const labelsOf = (host: HTMLElement, selector: string) =>
   [...host.querySelectorAll(selector)].map((element) => element.getAttribute("aria-label"));
 
 /** Explore as you, on `explore`; a search finds everyone whose handle holds it. */
-async function openExplore(explore: Explore, onOpenArtist: (person: Person) => void = () => {}) {
+async function openExplore(explore: Explore, api: Partial<ApiClient> = {}) {
   const everyone: Person[] = Object.values(people);
   view = renderWithApi(
-    <ExploreScreen onOpenArtist={onOpenArtist} onOpenMyBoard={() => {}} />,
+    <ExploreScreen onOpenArtist={() => {}} onOpenMyBoard={() => {}} />,
     emptyApi({
       explore: () => Promise.resolve(explore),
       searchUsers: (handle) => Promise.resolve(everyone.filter((p) => p.handle?.includes(handle))),
+      ...api,
     }),
   );
   await wait(0);
@@ -97,13 +154,7 @@ describe("ExploreScreen's sticker pile", () => {
     const newest = sticker({ sealedAt: minutesAgo(0.5), artist: people.mika });
     const older = sticker({ sealedAt: minutesAgo(5), artist: people.ken });
     const yesterday = sticker({ sealedAt: minutesAgo(26 * 60), artist: people.bob });
-    const host = await openExplore(
-      exploreWith([
-        { type: "sealed", at: newest.sealedAt, sticker: newest },
-        { type: "sealed", at: older.sealedAt, sticker: older },
-        { type: "sealed", at: yesterday.sealedAt, sticker: yesterday },
-      ]),
-    );
+    const host = await openExplore(exploreWith(unGiven(newest, older, yesterday)));
 
     expect(textsOf(host, ".pile-day h2")).toEqual(["Today", "Yesterday"]);
     expect(labelsOf(host, ".pile-sticker__button")).toEqual([
@@ -116,17 +167,7 @@ describe("ExploreScreen's sticker pile", () => {
 
   it("tags a given sticker with who it went to, in aqua", async () => {
     const given = sticker({ sealedAt: minutesAgo(30), artist: people.mika });
-    const host = await openExplore(
-      exploreWith([
-        {
-          type: "received",
-          at: minutesAgo(10),
-          sticker: given,
-          giver: people.mika,
-          receiver: people.ken,
-        },
-      ]),
-    );
+    const host = await openExplore(exploreWith([{ sticker: given, givenTo: people.ken }]));
     expect(textsOf(host, ".pile-tag--to")).toEqual(["to @ken"]);
     expect(labelsOf(host, ".pile-sticker__button")).toEqual([
       `No.0${given.number} by @mika, 30 min ago, given to @ken`,
@@ -135,9 +176,7 @@ describe("ExploreScreen's sticker pile", () => {
 
   it("says just now for anything under a minute ago, in English and Japanese", async () => {
     const drawn = sticker({ sealedAt: new Date(NOW - MINUTE + 1000).toISOString() });
-    const host = await openExplore(
-      exploreWith([{ type: "sealed", at: drawn.sealedAt, sticker: drawn }]),
-    );
+    const host = await openExplore(exploreWith(unGiven(drawn)));
 
     expect(labelsOf(host, ".pile-sticker__button")[0]).toMatch(/, just now$/);
     await act(() => i18next.changeLanguage("ja"));
@@ -147,20 +186,14 @@ describe("ExploreScreen's sticker pile", () => {
   it("prints a handle as it is, even one that reads as markup or a variable", async () => {
     const odd = { ...people.bob, handle: "<i>{{bob}}</i>" };
     const drawn = sticker({ sealedAt: minutesAgo(5), artist: odd });
-    const host = await openExplore(
-      exploreWith([
-        { type: "received", at: minutesAgo(1), sticker: drawn, giver: odd, receiver: odd },
-      ]),
-    );
+    const host = await openExplore(exploreWith([{ sticker: drawn, givenTo: odd }]));
     expect(textsOf(host, ".pile-tag__name")).toEqual(["@<i>{{bob}}</i>", "to @<i>{{bob}}</i>"]);
     expect(labelsOf(host, ".pile-sticker__button")[0]).toContain("by @<i>{{bob}}</i>,");
   });
 
   it("lifts a tapped sticker off the pile into a sheet", async () => {
     const drawn = sticker({ sealedAt: minutesAgo(5), artist: people.mika });
-    const host = await openExplore(
-      exploreWith([{ type: "sealed", at: drawn.sealedAt, sticker: drawn }]),
-    );
+    const host = await openExplore(exploreWith(unGiven(drawn)));
     expect(document.querySelector('[role="dialog"]')).toBeNull();
     act(() => host.querySelector<HTMLElement>(".pile-sticker__button")?.click());
     expect(document.querySelector('[role="dialog"]')).not.toBeNull();
@@ -170,9 +203,7 @@ describe("ExploreScreen's sticker pile", () => {
     const animate = vi.spyOn(Element.prototype, "animate");
     onTestFinished(() => animate.mockRestore());
     const drawn = sticker({ sealedAt: minutesAgo(5) });
-    const host = await openExplore(
-      exploreWith([{ type: "sealed", at: drawn.sealedAt, sticker: drawn }]),
-    );
+    const host = await openExplore(exploreWith(unGiven(drawn)));
     await wait(1000);
     expect(host.querySelector("[data-falling]")).not.toBeNull();
 
@@ -190,6 +221,75 @@ describe("ExploreScreen's sticker pile", () => {
     expect(host.querySelector(".pile-day__empty")?.textContent).toBe(
       "The first sticker sealed today lands here.",
     );
+  });
+});
+
+/** Each day's heading, and how many stickers lie on it. */
+const layersOf = (host: HTMLElement) =>
+  [...host.querySelectorAll<HTMLElement>(".pile-day")].map((day) => [
+    day.querySelector("h2")?.textContent,
+    day.querySelectorAll(".pile-sticker").length,
+  ]);
+
+/** A cursor, as a page's `before` gives one. */
+const CURSOR = "1790000000000-140";
+
+describe("ExploreScreen's older days", () => {
+  // 21:00 on 9.26 in Tokyo: yesterday's two are at 20:00 and 15:00, and 9.24's at 19:00.
+  const today = sticker({ sealedAt: minutesAgo(5) });
+  const yesterdayLate = sticker({ sealedAt: minutesAgo(25 * 60) });
+  const yesterdayEarly = sticker({ sealedAt: minutesAgo(30 * 60) });
+  const twoDaysAgo = sticker({ sealedAt: minutesAgo(50 * 60) });
+  const firstPage = exploreWith(unGiven(today, yesterdayLate), {}, CURSOR);
+  const lastPage = { stickers: unGiven(yesterdayEarly, twoDaysAgo), before: null };
+
+  it("lays the next page out under the pile as its end comes near, joining a day split between pages", async () => {
+    const explorePile = vi.fn<ApiClient["explorePile"]>(() => Promise.resolve(lastPage));
+    const host = await openExplore(firstPage, { explorePile });
+    // Yesterday waits for the rest of its stickers, so its heap doesn't shift as they land.
+    expect(layersOf(host)).toEqual([["Today", 1]]);
+    expect(explorePile).not.toHaveBeenCalled();
+    expect(host.querySelector(".pile-floor")).toBeNull();
+
+    await reachEnd();
+    expect(explorePile.mock.calls).toEqual([[CURSOR]]);
+    expect(layersOf(host)).toEqual([
+      ["Today", 1],
+      ["Yesterday", 2],
+      ["September 24", 1],
+    ]);
+    expect(host.querySelector('.sticker-pile [aria-live="polite"]')?.textContent).toBe(
+      "Older stickers added, back to September 24",
+    );
+    // Nothing's older: the floor's end, and no more asking.
+    expect(host.querySelector(".pile-floor")).not.toBeNull();
+    await reachEnd();
+    expect(explorePile).toHaveBeenCalledTimes(1);
+  });
+
+  it("says so where the next day would be when a page doesn't load, and Try again asks again", async () => {
+    const explorePile = vi
+      .fn<ApiClient["explorePile"]>()
+      .mockRejectedValueOnce(new ApiError(500, { error: "internal_error" }))
+      .mockResolvedValueOnce(lastPage);
+    const host = await openExplore(firstPage, { explorePile });
+    await reachEnd();
+    const alert = host.querySelector('.sticker-pile [role="alert"]');
+    expect(alert?.textContent).toContain("Couldn’t load older stickers: ");
+    expect(layersOf(host)).toEqual([["Today", 1]]);
+
+    const tryAgain = [...(alert?.querySelectorAll("button") ?? [])].find(
+      (button) => button.textContent === "Try again",
+    );
+    act(() => tryAgain?.click());
+    await wait(0);
+    expect(explorePile.mock.calls).toEqual([[CURSOR], [CURSOR]]);
+    expect(host.querySelector('.sticker-pile [role="alert"]')).toBeNull();
+    expect(layersOf(host).map(([heading]) => heading)).toEqual([
+      "Today",
+      "Yesterday",
+      "September 24",
+    ]);
   });
 });
 
@@ -347,9 +447,7 @@ function inFlight<T>() {
   return { promise, answer };
 }
 
-const EXPLORE: Explore = exploreWith([
-  { type: "sealed", at: minutesAgo(3), sticker: sticker({ sealedAt: minutesAgo(3) }) },
-]);
+const EXPLORE: Explore = exploreWith(unGiven(sticker({ sealedAt: minutesAgo(3) })));
 
 function show(client: Parameters<typeof renderWithApi>[1]) {
   view = renderWithApi(<ExploreScreen onOpenArtist={vi.fn()} onOpenMyBoard={vi.fn()} />, client);

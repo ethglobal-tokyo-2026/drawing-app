@@ -126,6 +126,7 @@ export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
     gratitude: unanswered("gratitude"),
     markGratitudeSeen: unanswered("markGratitudeSeen"),
     explore: unanswered("explore"),
+    explorePile: unanswered("explorePile"),
     searchUsers: () => Promise.resolve([]),
     giftsForYou: () => Promise.resolve({ gifts: [] }),
     previewGiftForYou: unanswered("previewGiftForYou"),

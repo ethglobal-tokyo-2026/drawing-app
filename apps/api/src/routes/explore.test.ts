@@ -1,8 +1,13 @@
 import { MAX_HITS } from "@drawing-app/db";
-import { insertUser } from "@drawing-app/db/testing";
+import { bytes32, insertUser } from "@drawing-app/db/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
-import { EXPLORE_LIST_SIZE, exploreSchema, type Explore } from "../explore/explore.ts";
+import {
+  exploreSchema,
+  PILE_PAGE_SIZE,
+  pilePageSchema,
+  type PilePage,
+} from "../explore/explore.ts";
 import { LEADERBOARD_SIZE, type LeaderboardRow } from "../explore/leaderboards.ts";
 import { USER_SEARCH_SIZE } from "../explore/userSearch.ts";
 import { personSchema, userStatsSchema } from "../shapes.ts";
@@ -44,6 +49,24 @@ async function deleteAccount(userId: string) {
 const exploreAs = async (viewerId: string) =>
   bodyOf(await test.send("GET", "/api/explore", { as: viewerId }), exploreSchema);
 
+const pilePath = (before: string) =>
+  `/api/explore/pile?${new URLSearchParams({ before }).toString()}`;
+
+const olderPileAs = async (viewerId: string, before: string) =>
+  bodyOf(await test.send("GET", pilePath(before), { as: viewerId }), pilePageSchema);
+
+/** Every page of the pile `viewerId` gets: Explore's first, then each page's `before` in turn. */
+async function wholePile(viewerId: string) {
+  const pages: PilePage[] = [(await exploreAs(viewerId)).pile];
+  for (let before = pages[0].before; before !== null; before = pages[pages.length - 1].before) {
+    if (pages.length > 10) throw new Error("The pile never ends");
+    pages.push(await olderPileAs(viewerId, before));
+  }
+  return pages;
+}
+
+const pileIds = (page: PilePage) => page.stickers.map(({ sticker }) => sticker.id);
+
 const weekStartFor = async (viewerId: string) =>
   new Date((await exploreAs(viewerId)).leaderboards.weekStart);
 
@@ -83,25 +106,8 @@ const sendGratitudeNow = (
     ...combo,
   });
 
-const stickerIds = (stickers: { id: string }[]) => stickers.map(({ id }) => id);
-
 const idsAndValues = (board: LeaderboardRow[]) =>
   board.map(({ person, value }) => [person.id, value]);
-
-/** An activity entry by its ids. A seal's time is its sticker's, which the sticker carries. */
-function summary(entry: Explore["activity"][number]) {
-  if (entry.type === "sealed") {
-    expect(entry.at).toBe(entry.sticker.sealedAt);
-    return { type: entry.type, stickerId: entry.sticker.id };
-  }
-  return {
-    type: entry.type,
-    at: entry.at,
-    stickerId: entry.sticker.id,
-    giverId: entry.giver.id,
-    receiverId: entry.receiver.id,
-  };
-}
 
 /** The weekday of the ticket day `at` falls in. */
 const weekdayOf = (at: Date) =>
@@ -110,46 +116,59 @@ const weekdayOf = (at: Date) =>
   );
 
 describe("GET /api/explore", () => {
-  it("lists stickers sealed since today's ticket day began, newest first, up to EXPLORE_LIST_SIZE", async () => {
+  it("pages back through every sticker newest first, none twice and none missed, ties on the seal included", async () => {
     const me = insertUser(test.db);
-    const start = dayStart();
-    seal(me, msAfter(start, -1));
-    const atStart = seal(me, start);
-    expect(stickerIds((await exploreAs(me)).todaysStickers)).toEqual([atStart]);
+    const start = dayStart(1);
+    // Numbers that disagree with the seals: the newest go in first, and a tie runs across a page's edge.
+    const newest = Array.from({ length: 2 }, () => seal(me, msAfter(start, 2 * MINUTE_MS)));
+    const oldest = seal(me, start);
+    const tied = Array.from({ length: PILE_PAGE_SIZE }, () => seal(me, msAfter(start, MINUTE_MS)));
 
-    const next = minuteByMinute(msAfter(start, MINUTE_MS));
-    const later = Array.from({ length: EXPLORE_LIST_SIZE }, () => seal(me, next()));
-    expect(stickerIds((await exploreAs(me)).todaysStickers)).toEqual([...later].reverse());
+    const pages = await wholePile(me);
+    expect(pages.map(({ stickers }) => stickers.length)).toEqual([PILE_PAGE_SIZE, 3]);
+    expect(pages.flatMap(pileIds)).toEqual([...newest.toReversed(), ...tied.toReversed(), oldest]);
   });
 
-  it("interleaves seals and receives newest first, each receive with its giver and receiver, up to EXPLORE_LIST_SIZE", async () => {
+  it("tags each sticker with who it was last given to, on the day it was sealed", async () => {
     const artist = insertUser(test.db);
     const friend = insertUser(test.db);
-    const next = minuteByMinute(dayStart());
-    const first = seal(artist, next());
-    const second = seal(artist, next());
-    const firstGift = giveSticker(test.db, first, artist, friend, next());
-    const third = seal(friend, next());
-    const secondGift = giveSticker(test.db, second, artist, friend, next());
-    const received = (gift: typeof firstGift) => ({
-      type: "received",
-      at: gift.receivedAt?.toISOString(),
-      stickerId: gift.stickerId,
-      giverId: artist,
-      receiverId: friend,
-    });
+    const third = insertUser(test.db);
+    const next = minuteByMinute(dayStart(2));
+    const given = seal(artist, next());
+    const kept = seal(artist, next());
+    giveSticker(test.db, given, artist, friend, next());
+    giveSticker(test.db, given, friend, third, next());
 
-    expect((await exploreAs(artist)).activity.map(summary)).toEqual([
-      received(secondGift),
-      { type: "sealed", stickerId: third },
-      received(firstGift),
-      { type: "sealed", stickerId: second },
-      { type: "sealed", stickerId: first },
+    const { pile } = await exploreAs(artist);
+    expect(pile.stickers.map(({ sticker, givenTo }) => [sticker.id, givenTo?.id ?? null])).toEqual([
+      [kept, null],
+      [given, third],
     ]);
+  });
 
-    const newer = Array.from({ length: EXPLORE_LIST_SIZE }, () => seal(friend, next()));
-    const { activity } = await exploreAs(artist);
-    expect(activity.map(({ sticker }) => sticker.id)).toEqual([...newer].reverse());
+  it("veils an NSFW sticker on an older page to anyone who isn't adult", async () => {
+    const adult = insertUser(test.db, { ageVerifiedAt: test.clock.now() });
+    const unverified = insertUser(test.db);
+    const contentHash = bytes32("drawing");
+    const veiledHash = bytes32("veiled image");
+    const nsfw = insertSealedSticker(test.db, adult, {
+      nsfw: true,
+      contentHash,
+      veiledHash,
+      createdAt: dayStart(3),
+    });
+    for (let i = 0; i < PILE_PAGE_SIZE; i++) seal(adult);
+
+    const imagesOnPageTwo = async (viewerId: string) => {
+      const { before } = (await exploreAs(viewerId)).pile;
+      if (before === null) throw new Error("The pile has no second page");
+      const { stickers } = await olderPileAs(viewerId, before);
+      return stickers.find(({ sticker }) => sticker.id === nsfw)?.sticker.images;
+    };
+    expect(await imagesOnPageTwo(unverified)).toEqual(
+      test.images.veiledUrls(contentHash, veiledHash),
+    );
+    expect(await imagesOnPageTwo(adult)).toEqual(test.images.urls(contentHash));
   });
 
   it("starts the week as Monday's ticket day starts, the last one before now", async () => {
@@ -251,6 +270,23 @@ describe("GET /api/explore", () => {
     const firstAToZ = live.slice(0, LEADERBOARD_SIZE);
     for (const board of [mostGratitude, bestCombo, longestStreak]) {
       expect(board.map(({ person }) => person.id)).toEqual(firstAToZ);
+    }
+  });
+});
+
+describe("GET /api/explore/pile", () => {
+  it("refuses a missing cursor, or one no page gave", async () => {
+    const me = insertUser(test.db);
+    const bad = ["", "soon", "1727740800000", "1727740800000-", "-147", "1.5-147", "1-2-3"];
+    for (const path of [
+      "/api/explore/pile",
+      ...bad.map(pilePath),
+      pilePath(`${"9".repeat(16)}-1`),
+    ]) {
+      expect(await refusalOf(await test.send("GET", path, { as: me }))).toMatchObject({
+        status: 400,
+        error: "invalid_request",
+      });
     }
   });
 });

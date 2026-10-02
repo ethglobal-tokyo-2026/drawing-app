@@ -190,7 +190,7 @@ pnpm workspace; Turborepo runs the tasks defined in `turbo.json`.
   - `src/app` — app shell: tab bar and screen switching
   - `src/sticker-creation` — the drawing screen: canvas engine (`canvas/`), tools and drawers (`tools/`), sealing (`sealing/`)
   - `src/sticker-board` — the sticker board, its stat board, sticker detail and placement; someone else's sticker board and its cork back; the sticker detail's timelapse, which plays how a sticker was drawn (`timelapse/`)
-  - `src/explore` — Explore: artist search, today's stickers, this week's leaderboards and the activity feed
+  - `src/explore` — Explore: artist search, the pile of stickers by the day they were sealed, paging back by day (`pilePages.ts`), and this week's leaderboards
   - `src/giving` — Giving: the give sheet and gift bag, the gift message, and sending it through LINE's friend picker; the give sheet and sticker picker on someone else's board
   - `src/gratitude` — the (Gratitude) Mini-game: its rules, input, effects and screen; how it plays, scores and records, and where to tune it, is in `docs/gratitude-mini-game-design-doc.md`. `replay/` plays a recorded combo back through the same engine, inside the Transfer Trail's open card (the gratitude replay)
   - `src/performance` — the performance recorder, switched on from the stat board's developer slip: frame intervals, slow frames and what happened around each, for phones where LINE's browser has no developer tools

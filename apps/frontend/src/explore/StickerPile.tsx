@@ -1,4 +1,4 @@
-import type { Person } from "@drawing-app/api/client";
+import type { Person, PileSticker } from "@drawing-app/api/client";
 import type { TFunction } from "i18next";
 import {
   useEffect,
@@ -13,6 +13,7 @@ import {
 } from "react";
 import { toPerson, toSticker } from "../api/views";
 import { useMyAgeStatus } from "../identity/useMyAgeStatus";
+import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { currentLanguage } from "../i18n/i18n";
 import { useTranslation } from "../i18n/react";
 import { handleOf } from "../sticker-board/boardSticker";
@@ -23,16 +24,12 @@ import { veiledFor } from "../stickers/nsfw";
 import "../stickers/nsfw-img.css";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { EASE_PEEL } from "../ui/easing";
+import { ErrorLine } from "../ui/ErrorLine";
 import { REVEAL, revealOnLoad } from "../ui/reveal";
+import { Skeleton } from "../ui/Skeleton";
 import { useReducedMotion } from "../ui/useReducedMotion";
-import {
-  dayBadge,
-  dayKey,
-  spokenDay,
-  ticketDayNumber,
-  type PileDay,
-  type PileSticker,
-} from "./pileDays";
+import { dayBadge, dayKey, spokenDay, type PileDay } from "./pileDays";
+import type { PileEnd } from "./pilePages";
 import {
   PILE_WIDTH,
   pileStickers,
@@ -63,8 +60,14 @@ const SPIN_DEG = 24;
 const FADE_MS = 150;
 
 interface Props {
-  /** Newest day first, from pileDays. */
+  /** Newest day first, from shownDays. */
   days: readonly PileDay[];
+  /** Today's ticket day: its floor shows even before anyone seals. */
+  today: number;
+  /** What lies under the last layer. */
+  end: PileEnd;
+  /** The pile's end came within a screen of the view, while there may be older stickers. */
+  onReachEnd: () => void;
   meId: string;
   onLift: (pile: PileSticker) => void;
 }
@@ -397,21 +400,107 @@ function useFallIn(
   }, [root, falling, reduced]);
 }
 
+/** Where faint sticker shapes heap on a floor while its stickers load: x in %, y from the floor. */
+const LOADING_HEAP = [
+  { x: 14, y: 96, size: 84, turn: -8 },
+  { x: 42, y: 90, size: 96, turn: 5 },
+  { x: 70, y: 98, size: 80, turn: -4 },
+  { x: 28, y: 168, size: 78, turn: 9 },
+  { x: 57, y: 172, size: 88, turn: -6 },
+];
+
+/** A floor's heap in outline, while its stickers load. */
+export function LoadingHeap() {
+  return (
+    <div className="pile-loading" aria-hidden="true">
+      {LOADING_HEAP.map((spot) => (
+        <Skeleton
+          key={spot.x}
+          className="pile-loading__sticker"
+          width={spot.size}
+          height={spot.size * 0.86}
+          style={{ left: `${spot.x}%`, bottom: spot.y - spot.size, rotate: `${spot.turn}deg` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** The nearest ancestor that scrolls, which an observer must look through to see what's coming. */
+function scrollerOf(element: HTMLElement): HTMLElement | null {
+  for (let at = element.parentElement; at; at = at.parentElement) {
+    if (/auto|scroll/.test(getComputedStyle(at).overflowY)) return at;
+  }
+  return null;
+}
+
+/**
+ * Calls `onNear` while `watching`, whenever `target` comes within a screen of the view. Watching
+ * again as the layers change asks again when a page has landed and the end is still near.
+ */
+function useNearEnd(
+  target: RefObject<HTMLElement | null>,
+  watching: boolean,
+  layers: readonly LaidDay[],
+  onNear: () => void,
+) {
+  const near = useEffectEvent(onNear);
+  useEffect(() => {
+    const element = target.current;
+    if (!watching || !element) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) near();
+      },
+      { root: scrollerOf(element), rootMargin: "0px 0px 100% 0px" },
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [target, watching, layers]);
+}
+
+/**
+ * Under the last layer: the next day's floor in outline while older stickers may be on their way,
+ * an error line in its place when they didn't load, or the bare perforation once nothing's older.
+ */
+function PileEndFloor({ end, floor }: { end: PileEnd; floor: RefObject<HTMLDivElement | null> }) {
+  const { t } = useTranslation();
+  if (end.state === "end") return <div className="pile-floor" aria-hidden="true" />;
+  if (end.state === "failed")
+    return (
+      <ErrorLine className="pile-older-failed" detail={errorDetail(end.error)} onRetry={end.retry}>
+        {t(($) => $.explore.pile.older.failed, { reason: errorMessage(end.error) })}
+      </ErrorLine>
+    );
+  return (
+    <div ref={floor} className="pile-older">
+      <p className="visually-hidden" role="status">
+        {end.state === "loading" ? t(($) => $.explore.pile.older.loading) : ""}
+      </p>
+      <div className="pile-day__edge" aria-hidden="true">
+        <Skeleton className="pile-older__badge" width={38} height={20} />
+      </div>
+      <LoadingHeap />
+    </div>
+  );
+}
+
 /**
  * Explore's stickers as a pile: each day a heap on its own perforated floor, newest day first,
  * every sticker wearing a name tag. Today's newest fall in on a first look, and after that only
- * what's new since the last one.
+ * what's new since the last one. Older days come a page at a time as the pile's end comes near.
  */
-export function StickerPile({ days, meId, onLift }: Props) {
+export function StickerPile({ days, today, end, onReachEnd, meId, onLift }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const root = useRef<HTMLDivElement>(null);
+  const floor = useRef<HTMLDivElement>(null);
   const [now] = useState(() => Date.now());
-  const today = Math.max(ticketDayNumber(now), days[0]?.day ?? -Infinity);
   const toTemplate = t(($) => $.explore.pile.to);
   const laidDays = useMemo(() => layDays(days, today, toTemplate), [days, today, toTemplate]);
-  // Read once as the pile opens: what's new since the last look, and what falls.
-  const [arrivals] = useState(() => arrivalsOf(days, today, lastSeen(meId)));
+  // Read once as the pile opens: the last look, what's new since, and what falls.
+  const [seen] = useState(() => lastSeen(meId));
+  const [arrivals] = useState(() => arrivalsOf(days, today, seen));
   const [dropping, setDropping] = useState<"waiting" | "falling" | "done">(
     arrivals.falling.length ? "waiting" : "done",
   );
@@ -427,6 +516,19 @@ export function StickerPile({ days, meId, onLift }: Props) {
     );
     return () => clearTimeout(say);
   }, [arrivals, meId, t]);
+
+  // Older days laid out under the pile are announced by the oldest of them.
+  const oldest = laidDays[laidDays.length - 1].day;
+  const announcedBack = useRef(oldest);
+  useEffect(() => {
+    if (oldest >= announcedBack.current) return;
+    announcedBack.current = oldest;
+    setAnnouncement(
+      t(($) => $.explore.pile.older.arrived, { day: spokenDay(oldest, currentLanguage()) }),
+    );
+  }, [oldest, t]);
+
+  useNearEnd(floor, end.state === "more" || end.state === "loading", laidDays, onReachEnd);
 
   // The pile is PILE_WIDTH units across whatever the phone; this scales every unit to it.
   useLayoutEffect(() => {
@@ -478,7 +580,7 @@ export function StickerPile({ days, meId, onLift }: Props) {
                   laid={item}
                   height={height}
                   label={labelOf(item)}
-                  fresh={arrivals.fresh.has(item.pile.sticker.id)}
+                  fresh={seen !== null && Date.parse(item.pile.sticker.sealedAt) > seen}
                   falling={
                     falling.has(item.pile.sticker.id) && dropping !== "done"
                       ? dropping === "waiting"
@@ -495,7 +597,7 @@ export function StickerPile({ days, meId, onLift }: Props) {
           )}
         </section>
       ))}
-      <div className="pile-floor" aria-hidden="true" />
+      <PileEndFloor end={end} floor={floor} />
     </div>
   );
 }

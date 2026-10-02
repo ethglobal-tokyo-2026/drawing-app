@@ -14,6 +14,7 @@ import type {
   PackagedGift,
   PendingGifts,
   Person,
+  PilePage,
   Placement,
   ReceivedGift,
   RecordGratitude,
@@ -124,6 +125,8 @@ export interface ApiClient {
 
   /** GET /api/explore */
   explore: () => Promise<Explore>;
+  /** GET /api/explore/pile?before=: the pile's page older than a page's `before`. */
+  explorePile: (before: string) => Promise<PilePage>;
   /** GET /api/users?handle= */
   searchUsers: (handle: string) => Promise<Person[]>;
   /** GET /api/ens/people/:label: whoever is <label>.croquis-app.eth. */
