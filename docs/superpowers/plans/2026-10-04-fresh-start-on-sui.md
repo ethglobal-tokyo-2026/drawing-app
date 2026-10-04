@@ -3,6 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Croquis restarts empty, on Sui only.
+
 - The box's data goes.
 - Stickers become Sui objects the server mints and gives through a Move escrow, and Shinami pays all gas.
 - ENS, World ID, Sepolia, and the Ethereum and smart wallets go.
@@ -10,6 +11,7 @@
 - The migrations become one baseline, and code that served only older data goes.
 
 **Architecture:**
+
 - **The server is the only submitter.** It builds every Sui transaction, has Shinami Gas Station sponsor it, stores it, and submits it.
   - The person's Privy Sui wallet signs on the phone: deposit, take-out, ticket payment.
   - The server signs its own (mint, claim, expiry return) with a key that holds no SUI.
@@ -21,6 +23,7 @@
 - **Lanes build on `chore/fresh-start`.** It merges after `pnpm check:full` and a testnet smoke run; then one window wipes the box and deploys.
 
 **Tech stack:**
+
 - Chain: Sui Move on testnet, `@mysten/sui` 2.31 over gRPC, Shinami Gas Station.
 - Wallets: Privy, for Sui wallets only.
 - App: Drizzle on SQLite, Hono, React.
@@ -32,6 +35,7 @@ This plan replaces `2026-10-03-fresh-start.md`.
 ## Decided
 
 ad0ll's calls, 2026-10-03 and 04:
+
 - **Data and timing.** Wipe all data and contracts, with no heads-up. Any time except 00:00–01:00 JST.
 - **The window's cleanup.** Unlink every LINE chat menu. Drop `deploy/serve.py`'s shim for older builds' Gift Message pictures.
 - **The Shop.** "Your ticket purchases" lists only payments whose reference names the signed-in account.
@@ -67,6 +71,7 @@ The plan follows each recommendation unless you say otherwise.
 8. **Testers still get JPYC outside the app**, as the checkout says today. A faucet is out of scope.
 
 Only ad0ll can do these. They block nothing:
+
 - In Privy's dashboard: turn off smart wallets, and Ethereum wallets at sign-in. Revoke the Pimlico key that Privy's public config shows.
 - In World's Developer Portal: delete the World ID app.
 - From the earlier review: paste `deploy/line/greeting.md` into LINE Official Account Manager.
@@ -86,6 +91,7 @@ Only ad0ll can do these. They block nothing:
     - -32010: rate limited.
 
     A bad key answers HTTP 401.
+
   - **The fund:** `gas_getFund []` answers `{ balance, inFlight }`, in MIST.
   - **Sources:** https://docs.shinami.com/api-docs/sui/gas-station/api and https://docs.shinami.com/developer-guides/core-integration-topics/error-reference. horror-tube's `apps/server/src/shinami-port.ts` sponsors the same way.
 - **The Shinami key** is horror-tube's `SHINAMI_ACCESS_KEY`, a testnet key on the fund `horror-tube-testnet`, which held 4.87 SUI on 2026-10-03.
@@ -131,6 +137,7 @@ Only ad0ll can do these. They block nothing:
 ## The Move package
 
 It lives in `contracts/sui-sticker-contract/stickers/`, beside `contracts/sui-payment-contract`, which stays as it is and stays published.
+
 - It's the draft in `~/.cache/drawing-app-fresh-start/sui-move-research/stickers/`, whose 16 tests pass.
 - One change: an `image_url` field replaces the draft's veiled hash, so Display needs no hex formatting.
 
@@ -517,12 +524,14 @@ public fun init_for_testing(ctx: &mut TxContext) { init(ctx) }
 ```
 
 **Display**, created once after publishing:
+
 - `name`: `Sticker No.{number}`
 - `description`: `A sticker drawn on Croquis.`
 - `image_url`: `{image_url}`
 - `project_url`: `https://liff.line.me/<the LIFF id in apps/frontend/src/line/liff.ts>`
 
 **Tests** come from the draft's two files, one behavior each.
+
 - `sticker_tests.move`:
   - `a_key_is_minted_once`
   - `only_the_server_mints`
@@ -616,13 +625,19 @@ export const suiTransactions = sqliteTable(
     uniqueIndex("sui_transactions_open_sticker")
       .on(t.stickerId)
       .where(sql`${t.outcome} is null and ${t.kind} in ('mint', 'deposit')`),
-    uniqueIndex("sui_transactions_open_gift").on(t.giftId).where(sql`${t.outcome} is null`),
-    uniqueIndex("sui_transactions_open_purchase").on(t.purchaseId).where(sql`${t.outcome} is null`),
+    uniqueIndex("sui_transactions_open_gift")
+      .on(t.giftId)
+      .where(sql`${t.outcome} is null`),
+    uniqueIndex("sui_transactions_open_purchase")
+      .on(t.purchaseId)
+      .where(sql`${t.outcome} is null`),
     // A payment spends the payer's JPYC coins.
     uniqueIndex("sui_transactions_open_payment")
       .on(t.sender)
       .where(sql`${t.outcome} is null and ${t.kind} = 'payment'`),
-    index("sui_transactions_open").on(t.createdAt).where(sql`${t.outcome} is null`),
+    index("sui_transactions_open")
+      .on(t.createdAt)
+      .where(sql`${t.outcome} is null`),
     index("sui_transactions_gift").on(t.giftId),
     index("sui_transactions_sticker").on(t.stickerId),
     check("sui_transactions_kind", oneOf(t.kind, suiTransactionKinds)),
@@ -656,6 +671,7 @@ export const suiTransactions = sqliteTable(
 Natural column order everywhere: delete the "Columns added after the table was made go last…" comments. Every table ends with `...timestamps()`.
 
 **users**
+
 - `smart_account_address` becomes `sui_address`:
   - the person's Privy Sui wallet, `0x` and 64 lowercase hex digits;
   - unique; CHECK on its length (66) and lowercase;
@@ -666,6 +682,7 @@ Natural column order everywhere: delete the "Columns added after the table was m
 - Order: id, line_user_id, line_display_name, line_picture_url, handle, language, language_choice, nsfw_opted_in_at, sui_address, terms_accepted_at, deleted_at.
 
 **stickers**
+
 - `token_id` and `mint_tx_hash` become `object_id`: unique, `0x` and 64 hex digits, null until the mint lands. The mint's digest lives in `sui_transactions`.
 - `metadata_uri` and `ens_named_at` go. Display reads the object's own fields.
 - `nsfw` loses its default.
@@ -674,6 +691,7 @@ Natural column order everywhere: delete the "Columns added after the table was m
 - Order: id, number, artist_id, owner_id, time_used, width, height, outline, nsfw, content_hash, veiled_hash, object_id.
 
 **gifts**
+
 - `escrow_status` takes the Gift object's statuses: missing, pending, claimed, taken_out, expired_returned. `rejected` is gone.
 - `claim_tx_hash` and its CHECK go; the claim row holds the digest.
 - `gifts_status_escrow`: `taken_out` allows only `missing` or `taken_out`. A deposit the server built can't land under other terms, so `taken_out` with `pending` goes.
@@ -684,11 +702,13 @@ Natural column order everywhere: delete the "Columns added after the table was m
   - `for_user_id` loses "A stopgap until smart account permissions…".
 
 **ticket_purchases**
+
 - `tx_digest` goes; the payment row holds it.
 - CHECK `ticket_purchases_payment` becomes `(paid_jpyc is null) = (verified_at is null)`.
 - `given_up_at`: "Set when its payment never ran: the sponsorship lapsed unsigned, the person started another, or Sui failed it."
 
 **ticket_uses**
+
 - `idempotency_key` becomes NOT NULL, and "Null on uses spent before spends had keys" goes.
 - Order: id, user_id, idempotency_key, ticket_day, day_index, kind, sticker_id.
 
@@ -736,8 +756,7 @@ export interface SuiWallets {
 
 /** What Sui did with a transaction. */
 export type SuiOutcome =
-  | { ok: true; events: { type: string; bcs: Uint8Array }[] }
-  | { ok: false; failure: string };
+  { ok: true; events: { type: string; bcs: Uint8Array }[] } | { ok: false; failure: string };
 
 /** A gift's Sui object; `missing` until its deposit lands. */
 export interface EscrowGift {
@@ -774,7 +793,11 @@ export interface SuiChain {
   takeOutKind: (sender: string, giftId: string) => Promise<Uint8Array>;
   claimKind: (giftId: string, recipient: string) => Promise<Uint8Array>;
   returnKind: (giftId: string) => Promise<Uint8Array>;
-  paymentKind: (payment: { sender: string; amount: bigint; reference: string }) => Promise<Uint8Array>;
+  paymentKind: (payment: {
+    sender: string;
+    amount: bigint;
+    reference: string;
+  }) => Promise<Uint8Array>;
   /** The server's signature over bytes it sends as sender. */
   signAsServer: (txBytes: string) => Promise<string>;
   /**
@@ -838,6 +861,7 @@ export interface SuiChain {
      - its row is dead → sponsor a new deposit for the same gift.
 
      The token is in the first answer only, as today.
+
   3. A new gift gets an id of 32 random bytes and a token of 32 random bytes. Its commitment is `sha256(token)`, and its expiry is `now + GIFT_EXPIRY_MS`.
   4. Sponsor first. Then one DB transaction inserts the gift (`packed`, escrow `missing`) and its row. A lost race leaves the sponsorship to lapse unused.
   5. Answer 201 `{ gift, giftClaimToken, deposit }`. Mock mode answers `deposit: null` and lands the gift at once.
@@ -847,6 +871,7 @@ export interface SuiChain {
   - `succeeded` → `readGift` reads pending → `escrow_status` pending → 200 `{ gift }`;
   - `failed` → the gift closes as `taken_out`, escrow `missing` → 409 `transaction_failed`, with Sui's words;
   - dead, or no open row with that digest → 409 `sponsorship_expired`. The app packages again and gets a fresh deposit.
+
 - **Take-out**:
   - `POST /api/gifts/:giftId/take-out/start`, under `gift:<id>`, depending on where the gift stands:
     - settled already → `{ gift }`, as today;
@@ -892,6 +917,7 @@ export interface SuiChain {
     - `failed` or `dead` → give up.
 
     `paymentsSince`, `readBackTo` and the event scan go.
+
   - Mock mode: `start` answers 503 `chain_unavailable` ("this server runs without Sui"). Under LIFF Mock no one can sign anyway, as today.
 - **The giver notice** doesn't change.
 - **The boot check**, at boot and after each Tokyo midnight:
@@ -901,21 +927,23 @@ export interface SuiChain {
 
 ### Routes and codes
 
-| Route | Body | Answer |
-| --- | --- | --- |
-| `POST /api/gifts` | as today | 201 `{ gift, giftClaimToken, deposit: SponsoredTransaction \| null }` |
-| `POST /api/gifts/:giftId/deposit` | `SignedTransaction` | 200 `{ gift }` |
-| `POST /api/gifts/:giftId/take-out/start` | none | 200 `{ gift, takeOut?: SponsoredTransaction }` |
-| `POST /api/gifts/:giftId/take-out` | `SignedTransaction` | 200 `{ gift }` |
-| `POST /api/ticket-purchases/start` | `{ tickets }` | 201 `{ purchase, payment: SponsoredTransaction }` |
-| `POST /api/ticket-purchases` | `{ purchaseId } & SignedTransaction` | 201 `{ tickets }` |
-| `POST /api/me/nsfw-opt-in` | `{ nsfwOptIn: boolean }` | 200 `{ me }` |
+| Route                                    | Body                                 | Answer                                                                |
+| ---------------------------------------- | ------------------------------------ | --------------------------------------------------------------------- |
+| `POST /api/gifts`                        | as today                             | 201 `{ gift, giftClaimToken, deposit: SponsoredTransaction \| null }` |
+| `POST /api/gifts/:giftId/deposit`        | `SignedTransaction`                  | 200 `{ gift }`                                                        |
+| `POST /api/gifts/:giftId/take-out/start` | none                                 | 200 `{ gift, takeOut?: SponsoredTransaction }`                        |
+| `POST /api/gifts/:giftId/take-out`       | `SignedTransaction`                  | 200 `{ gift }`                                                        |
+| `POST /api/ticket-purchases/start`       | `{ tickets }`                        | 201 `{ purchase, payment: SponsoredTransaction }`                     |
+| `POST /api/ticket-purchases`             | `{ purchaseId } & SignedTransaction` | 201 `{ tickets }`                                                     |
+| `POST /api/me/nsfw-opt-in`               | `{ nsfwOptIn: boolean }`             | 200 `{ me }`                                                          |
 
 The two shapes live in `shapes.ts` and are exported from `client.ts`:
+
 - `sponsoredTransactionSchema = z.object({ txBytes: z.base64(), digest, expiresAt })`
 - `signedTransactionSchema = z.object({ digest, signature: z.base64() })`
 
 **New codes:**
+
 - `sponsorship_expired` (409)
 - `signature_invalid` (400)
 - `transaction_failed` (409, with Sui's words)
@@ -928,6 +956,7 @@ The two shapes live in `shapes.ts` and are exported from `client.ts`:
 A 401 from Shinami answers 500 and logs it, since it means the server's config is wrong. `deposit_not_landed`, `take_out_not_landed` and `payment_not_landed` (503) now mean "Sui's answer was lost; send the same signature again".
 
 **Codes that go:**
+
 - `adults_only`;
 - `age_not_proven`, `age_verification_not_configured`, `age_verification_refused`, `age_verification_used`, `already_age_verified`;
 - `world_id_unavailable`;
@@ -973,6 +1002,7 @@ A 401 from Shinami answers 500 and logs it, since it means the server's config i
 ## Removals
 
 ### ENS
+
 - **API:**
   - `apps/api/src/ens/` entire;
   - `routes/ens.ts` and its test;
@@ -996,17 +1026,21 @@ A 401 from Shinami answers 500 and logs it, since it means the server's config i
   - the CSS for these.
 
   `TicketPurchases` shows `shortAddress(owner)`.
+
 - **Strings:** `stickerBoard.ensName`, `explore.failed.ensName`, and the ENS error codes.
 
 ### World ID → the NSFW opt-in
 
 #### API
+
 **Delete:**
+
 - `routes/ageVerification.ts` and `services/worldId.ts`, with their tests;
 - the World ID deps in `deps.ts`, `server.ts`, `app.ts`, `client.ts`, `testing/fakes.ts` and `createTestApp.ts`;
 - `@worldcoin/idkit-server`.
 
 **Replace age status with the opt-in:**
+
 - **`shapes.ts`:** `ageStatusOf` becomes `optedIntoNsfw(user)`. Person's `ageStatus` becomes `nsfwOptIn`, and Me's `ageVerifiedAt` goes.
 - **`session.ts`:** `sessionUser` selects `nsfwOptedInAt`.
 - **`app.ts`:** `imageAccess` serves a drawing's files only to an opted-in session, still cached `private`.
@@ -1015,7 +1049,9 @@ A 401 from Shinami answers 500 and logs it, since it means the server's config i
 - **The route:** add `POST /api/me/nsfw-opt-in` beside the language choice's. It sets `nsfwOptedInAt = nsfwOptIn ? now : null`.
 
 #### App
+
 **Delete:**
+
 - `WorldIdAgeProof.tsx` and `useMyAgeStatus.ts`;
 - `AgeVerificationNote.tsx` and its CSS and test;
 - `StatCork`'s `ownTarget` (only World ID's window needed it) and its test;
@@ -1025,6 +1061,7 @@ A 401 from Shinami answers 500 and logs it, since it means the server's config i
 - `@worldcoin/idkit`.
 
 **Replace age status with the opt-in:**
+
 - **`stickers/nsfw.ts`:** `veiledFor` and `canGiveTo` take a boolean. Add `useMyNsfwOptIn()`.
 - **Readers of `ageStatus`** switch to `nsfwOptIn`:
   - `StickerPile`, `LiftedSticker`;
@@ -1039,7 +1076,9 @@ A 401 from Shinami answers 500 and logs it, since it means the server's config i
   - a failed save changes nothing.
 
 #### Strings
+
 In `stickerBoard.settings.nsfw`, each with its `/** where */` comment:
+
 - **title**
   - `/** Settings note: the heading over the NSFW opt-in's switch */`
   - "18+ stickers" / 「18+のシール」
@@ -1059,26 +1098,31 @@ In `stickerBoard.settings.nsfw`, each with its `/** where */` comment:
 - **saving:** `settings.language.saving` moves up to `settings.saving`, shared by both settings.
 
 **`errors.nsfw_not_opted_in`** (was `adults_only`):
+
 - "Only people who turned on Show 18+ stickers in Settings can seal or receive 18+ stickers."
 - 「18+のシールを仕上げたり受け取ったりできるのは、設定で「18+のシールを表示する」をオンにした人だけです。」
 
 **`giving.nsfw`:**
+
 - **blocked:** "18+, can’t be given to them" / 「18+のため、この人には贈れません」
 - **notOptedIn** (was `adultsOnly`): "18+ stickers only go to people who turned on Show 18+ stickers, and <name/> hasn’t." / 「18+のシールは、<wbr/>「18+のシールを表示する」を<wbr/>オンにした人にだけ<wbr/>贈れます。<wbr/><name/>さんは<wbr/>オンにしていません。」
 - **whoCanOpen:** "18+ sticker: only someone who turned on Show 18+ stickers can open this gift." / 「18+のシール：<wbr/>「18+のシールを表示する」を<wbr/>オンにした人だけが<wbr/>このギフトを<wbr/>ひらけます。」
 
 **`receiving.refusals.nsfwNotOptedIn`** (was `adultsOnly`):
+
 - **title:** "This gift is 18+" / 「このギフトは18+です」
 - **line:** "{{name}} sent an 18+ sticker. To open it, tap your name on My board and turn on Show 18+ stickers in Settings." / 「{{name}}さんが18+のシールを送りました。ひらくには、マイボードで自分の名前をタップし、設定の「18+のシールを表示する」をオンにしてください。」
 - **line_unknownGiver:** "This is an 18+ sticker. To open it, tap your name on My board and turn on Show 18+ stickers in Settings." / 「18+のシールです。ひらくには、マイボードで自分の名前をタップし、設定の「18+のシールを表示する」をオンにしてください。」
 
 **`stickerCreation.nsfw.label`:**
+
 - "18+: seal as sensitive content, blurred for anyone who hasn’t turned on 18+ stickers"
 - 「18+：センシティブな内容として仕上げる（18+のシールをオンにしていない人にはぼかして表示）」
 
 **`stickers.nsfw.veiled`:** "Blurred: 18+ sticker" / 「ぼかし表示：18+のシール」
 
 **Delete:**
+
 - `stickerBoard.ageVerification` (9 strings);
 - the age error codes;
 - "World ID" in `ui.ts`'s comment;
@@ -1087,10 +1131,12 @@ In `stickerBoard.settings.nsfw`, each with its `/** where */` comment:
 **Add** the glossary row `| NSFW opt-in (Settings) | 18+のシールを表示する | The switch's label; on and off are オン / オフ |`.
 
 #### Config and docs
+
 - **Config:** delete `WORLD_ID_*` in `apps/api/.env.example`, `deploy/.env.example`, `deploy/drawing-api.env`, `deploy/deploy-api.sh` and `install-chain-env.mjs`, and its test.
 - **Docs:** reword the NSFW lines in AGENTS.MD, DESIGN.md (the Settings paper and the 18+ switch) and PRODUCT.md.
 
 ### Older data, from the first plan
+
 - **The veil catch-up** goes:
   - `stickers/veilCatchUp.ts` and its test;
   - its job in `server.ts`;
@@ -1100,6 +1146,7 @@ In `stickerBoard.settings.nsfw`, each with its `/** where */` comment:
   - `METADATA_SUFFIX` and the metadata `no-cache` header in `app.ts`, since images stay immutable.
 
   `{stickerId}.json` and `saveMetadata` go with Display.
+
 - **`viewerOf`** throws on an NSFW row without a veil.
 - **`testDb.ts`:** `insertSticker` gives an NSFW sticker a `veiledHash`, `nsfw: false` by default, and `language: "en"`. Add an `insertTicketUse` helper with a spend key, used by the API fixtures that insert ticket uses by hand.
 - **`strokePasses` becomes required**, `[]` for a combo with no strokes. Change both the API's `replay.ts` and the app's `replayRecorder.ts` and `replayFeed.ts`. The app's `fastPass` becomes a boolean.
@@ -1128,6 +1175,7 @@ In `stickerBoard.settings.nsfw`, each with its `/** where */` comment:
     - public IDs, in `deploy/drawing-api.env` beside JPYC's: `SUI_STICKER_PACKAGE`, `SUI_STICKER_REGISTRY`, `SUI_SERVER_CONFIG` and `SUI_GIFT_ESCROW`.
 
     `CDN_BASE_URL` makes the image URL.
+
   - **Deploy-only:** `SUI_DEPLOYER_PRIVATE_KEY`.
   - **The examples:** `apps/api/.env.example` and `deploy/.env.example` follow. The Sepolia, ENS and World ID blocks go.
 - **`deploy/install-chain-env.mjs`** writes exactly these keys, all required, merging nothing:
@@ -1137,6 +1185,7 @@ In `stickerBoard.settings.nsfw`, each with its `/** where */` comment:
   - `LINE_MESSAGING_CHANNEL_ID`, `LINE_MESSAGING_CHANNEL_SECRET`.
 
   `deploy-api.sh`'s `chain_config` follows.
+
 - **`deploy/deploy.sh`:** the `VITE_STICKER_ESCROW_ADDRESS` and `VITE_STICKER_RPC_URL` exports go, and the auth server builds from `packages/line-auth`.
 - **`deploy/publish-sui.mjs`** replaces `deploy-contracts.sh`. It's a reusable script that simulates unless given `--publish`:
   - `sui move build --dump-bytecode-as-base64` for `contracts/sui-sticker-contract/stickers`;
@@ -1172,12 +1221,14 @@ In `stickerBoard.settings.nsfw`, each with its `/** where */` comment:
 At most six run at once.
 
 **Every lane:**
+
 - Works in its own worktree (`git switch -c <lane> <tip of chore/fresh-start>`).
 - Until Task 11 lands, initializes the Foundry submodules before `pnpm check`, per `packages/sticker-chain/README.md`'s Commands.
 - Before reporting, runs the tests its change covers and `pnpm check`.
 - Returns its findings as text and marks its tasks here.
 
 **The waves:**
+
 - **Wave A:**
   - Lane A: Tasks 1–2.
   - Lane B: Tasks 3–5.
@@ -1255,6 +1306,7 @@ At most six run at once.
   - `services/privySuiWallets.ts`, cached in `users.sui_address`.
 
   These replace `stickerChain.ts`, `privySmartWallets.ts`, the payment-events code in `jpycPayments.ts`, and their tests.
+
 - [ ] Write `sui/oneAtATime.ts` and `sui/transactions.ts`, with tests against the fakes.
 - [ ] Rewrite the flows as specified: Sealing → mint and the catch-up, Packaging and deposit, take-out, Receiving, the expiry sweep, purchases and their sweep, the boot check.
 - [ ] Update the infrastructure:
@@ -1269,6 +1321,7 @@ At most six run at once.
   4. It uses `testing/localSponsor.ts`, a gas station whose sponsor is a faucet-funded key that signs as gas owner, so the two-signature path runs as it will with Shinami.
 
   It also checks `stickerObjectId` against the chain. If `sui start` is too slow for every `pnpm check`, it runs under `pnpm test:chain`, and Task 14 runs it.
+
 - [ ] Delete `viem` from the API.
 - [ ] Commit, one per step: `feat(api): …`
 
@@ -1324,6 +1377,7 @@ At most six run at once.
   - a payment, from a person key funded through `jpy_coin::faucet`.
 
   Each transaction shows on https://suiscan.xyz/testnet.
+
 - [ ] **The dev check:** `pnpm dev` in mock mode under LIFF Mock, in two windows (`?as=a`, `?as=b`), in Playwright WebKit and Chromium:
   - seal, then seal an 18+ sticker once a has opted in;
   - b, opted out, sees it blurred and is refused;
@@ -1355,7 +1409,8 @@ At most six run at once.
     https://api.line.me/v2/bot/richmenu/batch | grep -i '^x-line-request-id' )
 ```
 
-  Poll `GET https://api.line.me/v2/bot/richmenu/progress/batch?requestId=<id>` with the same header until `phase` is `succeeded`.
+Poll `GET https://api.line.me/v2/bot/richmenu/progress/batch?requestId=<id>` with the same header until `phase` is `succeeded`.
+
 - [ ] Wipe:
 
 ```sh
@@ -1365,7 +1420,8 @@ At most six run at once.
     && find /srv/drawing-api/data /srv/drawing-api/images -mindepth 1 | wc -l' )
 ```
 
-  It prints `inactive`, then `0`.
+It prints `inactive`, then `0`.
+
 - [ ] Deploy main from a clean checkout at main: `DEPLOY_ENV_FILE="$MAIN/deploy/.env" ./deploy/deploy.sh`. It writes a fresh `chain.env`, restarts the unit, and checks that `/api/me` answers `signed_out`.
 - [ ] Check the boot log, `curl -s "https://sticker.195-201-8-147.sslip.io/api/logs?lines=300"`:
   - `chain.sui.checked` shows `serverMatches: true`, nothing missing, and the fund;
