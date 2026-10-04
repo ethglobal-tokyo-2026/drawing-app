@@ -382,9 +382,9 @@ export const stickerBoard = {
       en: "Tap again to open · Tap the board to let go\nDrag to the zipper to put it away",
       ja: "もう一度タップでひらく・<wbr/>ボードをタップで解除\nファスナーにドラッグでしまう",
     },
-    /** The toolbar's row of buttons that arrange the selected sticker without dragging it: each names what one press does. */
+    /** The toolbar's Arrange tile and the step tiles it opens, which arrange the selected sticker without dragging it: each names what one press does. */
     arrange: {
-      /** Your sticker board, a sticker selected: screen readers' name for the toolbar's row of arrange buttons */
+      /** Your sticker board, a sticker selected: the toolbar's Arrange tile, which shows or hides the step tiles, and screen readers' name for their group */
       label: { en: "Arrange", ja: "配置を変える" },
       /** Your sticker board, a sticker selected: the arrange button that moves it a step to the left */
       left: { en: "Move left", ja: "左へ動かす" },
@@ -402,6 +402,40 @@ export const stickerBoard = {
       turnLeft: { en: "Turn left", ja: "左に回す" },
       /** Your sticker board, a sticker selected: the arrange button that turns it a step clockwise */
       turnRight: { en: "Turn right", ja: "右に回す" },
+      /** What the last of a run of steps did, read out by screen readers once the run settles. */
+      moved: {
+        /** Your sticker board, a sticker selected: read out once its steps settle, the last having moved it left */
+        left: { en: "Moved left", ja: "左へ動かしました" },
+        /** Your sticker board, a sticker selected: read out once its steps settle, the last having moved it right */
+        right: { en: "Moved right", ja: "右へ動かしました" },
+        /** Your sticker board, a sticker selected: read out once its steps settle, the last having moved it up */
+        up: { en: "Moved up", ja: "上へ動かしました" },
+        /** Your sticker board, a sticker selected: read out once its steps settle, the last having moved it down */
+        down: { en: "Moved down", ja: "下へ動かしました" },
+        /** Your sticker board, a sticker selected: read out once its steps settle, the last having made it smaller */
+        smaller: { en: "Made smaller", ja: "小さくしました" },
+        /** Your sticker board, a sticker selected: read out once its steps settle, the last having made it bigger */
+        bigger: { en: "Made bigger", ja: "大きくしました" },
+        /** Your sticker board, a sticker selected: read out once its steps settle, the last having turned it counterclockwise */
+        turnLeft: { en: "Turned left", ja: "左に回しました" },
+        /** Your sticker board, a sticker selected: read out once its steps settle, the last having turned it clockwise */
+        turnRight: { en: "Turned right", ja: "右に回しました" },
+      },
+      /** What stopped the last of a run of steps from changing anything, read out once the run settles. Nothing stops a turn. */
+      stopped: {
+        /** Your sticker board, a sticker selected: read out once its steps settle, the last having met the board's left edge */
+        left: { en: "It's at the left edge", ja: "左端です" },
+        /** Your sticker board, a sticker selected: read out once its steps settle, the last having met the board's right edge */
+        right: { en: "It's at the right edge", ja: "右端です" },
+        /** Your sticker board, a sticker selected: read out once its steps settle, the last having met the board's top edge */
+        up: { en: "It's at the top edge", ja: "上端です" },
+        /** Your sticker board, a sticker selected: read out once its steps settle, the last having met the board's bottom edge */
+        down: { en: "It's at the bottom edge", ja: "下端です" },
+        /** Your sticker board, a sticker selected: read out once its steps settle, the last having met the smallest a sticker goes */
+        smaller: { en: "It's as small as it goes", ja: "これ以上小さくできません" },
+        /** Your sticker board, a sticker selected: read out once its steps settle, the last having met the biggest a sticker goes */
+        bigger: { en: "It's as big as it goes", ja: "これ以上大きくできません" },
+      },
     },
   },
   /** The sticker tray, zipped down the board's right edge. */

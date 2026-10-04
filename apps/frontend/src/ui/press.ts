@@ -13,7 +13,7 @@ import { EASE_OUT, EASE_SPRING } from "./easing";
 
 const SELECTOR = ".key, .label-btn:not(.label-btn--quiet), [data-press]";
 /** Pixels past the touch target before a held press lets go. */
-const SLOP_OUT = 16;
+export const SLOP_OUT = 16;
 /** Pixels the finger must come back within to press again, so the edge doesn't flicker. */
 const SLOP_IN = 10;
 /** Milliseconds into the pop when the click fires. */
@@ -24,7 +24,7 @@ const CREEP = 0.4;
 /** The commit pops this far past rest, but at most 30% of the travel. */
 const POP = 1.4;
 /** How long after a press ends the browser's own click can still arrive. */
-const SWALLOW_MS = 800;
+export const SWALLOW_MS = 800;
 
 interface Key {
   o: number;

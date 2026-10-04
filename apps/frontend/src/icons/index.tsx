@@ -1,4 +1,5 @@
 import {
+  ArrowsOutCardinal,
   Compass,
   Eye,
   Fire,
@@ -42,6 +43,10 @@ export const BuyTicketsIcon = (props: IconProps) => (
 /** Remove: a sticker off the board and back into the tray. */
 export const RemoveIcon = (props: IconProps) => (
   <TrayArrowDown aria-hidden focusable="false" {...props} />
+);
+/** Arrange: the selected sticker's toolbar tile that opens its step tiles. */
+export const ArrangeIcon = (props: IconProps) => (
+  <ArrowsOutCardinal aria-hidden focusable="false" {...props} />
 );
 
 // Icons with no meaning of their own in the app.

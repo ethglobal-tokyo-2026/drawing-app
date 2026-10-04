@@ -325,16 +325,24 @@
   pointer-events: none;
 }
 
-/* Arrange: eight flat tiles in a row, one step each, for whoever can't or won't drag. Each is 36px
-   wide and 44px to touch. */
+/* Arrange's step tiles: moves on the first row, sizes and turns on the second, one step each, for
+   whoever can't or won't drag, each 44px to touch. Over the sticker they open above the toolbar's
+   row, on its far side from the sticker. */
 .sticker-toolbar__arrange {
   display: grid;
-  grid-template-columns: repeat(8, minmax(34px, 1fr));
-  gap: 2px;
+  grid-template-columns: repeat(4, minmax(44px, 1fr));
+  gap: 10px 2px;
   padding-top: 5px;
   box-shadow: inset 0 1px 0 var(--rule);
 }
 
+.sticker-toolbar[data-over="true"] .sticker-toolbar__arrange {
+  order: -1;
+  padding: 0 0 5px;
+  box-shadow: inset 0 -1px 0 var(--rule);
+}
+
+/* A held tile repeats its step, so a finger held on it mustn't pan or zoom the page. */
 .sticker-toolbar__step {
   position: relative;
   display: grid;
@@ -346,7 +354,7 @@
   border-radius: 8px;
   background: none;
   color: var(--ink);
-  touch-action: manipulation;
+  touch-action: none;
 }
 
 .sticker-toolbar__step::before {
@@ -355,11 +363,49 @@
   inset: -5px -1px;
 }
 
-.sticker-toolbar__step:active {
-  background: rgba(28, 24, 36, 0.1);
+/* The Arrange tile ends the toolbar's row: a flat tile level with the labels' faces, reversed out of
+   Ink while the step tiles are out, 44px to touch. */
+.sticker-toolbar__arrange-toggle {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-self: flex-start;
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--rule);
+  touch-action: manipulation;
 }
 
-.sticker-toolbar__step:focus-visible {
+.sticker-toolbar__arrange-toggle::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+
+.sticker-toolbar__arrange-toggle[aria-expanded="true"] {
+  background: var(--ink);
+  color: var(--liner-lift);
+  box-shadow: none;
+}
+
+.sticker-toolbar__step:active,
+.sticker-toolbar__arrange-toggle[aria-expanded="false"]:active {
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+/* Shading Ink toward Ink shows nothing, so the open tile lifts toward Liner while held. */
+.sticker-toolbar__arrange-toggle[aria-expanded="true"]:active {
+  background: color-mix(in srgb, var(--ink) 92%, var(--liner));
+}
+
+.sticker-toolbar__step:focus-visible,
+.sticker-toolbar__arrange-toggle:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 0;
 }
@@ -377,12 +423,13 @@
   gap: 8px;
 }
 
-/* A 36px face on its lip. */
+/* A 36px face on its lip, trimmed at the sides so the row, Arrange tile included, fits the narrowest
+   phones. */
 .sticker-toolbar .label-btn {
   min-height: calc(36px + var(--lip));
-  padding: 0 13px 0 11px;
+  padding: 0 10px 0 8px;
   font-size: 13px;
-  gap: 8px;
+  gap: 6px;
 }
 
 /* Where a sticker was peeled up: clean backing shows for a moment, then the liner closes over. */
