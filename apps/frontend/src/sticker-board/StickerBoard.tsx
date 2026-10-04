@@ -99,6 +99,7 @@ import { keepBoard, keptBoardFor } from "./lastBoard";
 import { BoardFlip } from "./stat-board/BoardFlip";
 import { takeReopenOnSettings } from "./stat-board/reopenOnSettings";
 import type { StatBoardHandle } from "./stat-board/StatBoard";
+import { arrangeLeftOpen, keepArrangeOpen } from "./arrangeOpen";
 import { markSelectionHintShown, owesSelectionHint } from "./selectionHint";
 import { readingOrder } from "./stickerOrder";
 import { StickerToolbar } from "./StickerToolbar";
@@ -108,7 +109,7 @@ import { ArtistChipLayer } from "./ArtistChipLayer";
 import type { StickerTrayHandle } from "./tray/StickerTray";
 import type { TrayBoard } from "./tray/trayEngine";
 import { reasonOf, trayProblemKey, type TrayProblem } from "./tray/trayProblem";
-import { useBoardGestures } from "./useBoardGestures";
+import { useBoardGestures, type SettledStep } from "./useBoardGestures";
 import { useBoardSize } from "./useBoardSize";
 import { onMyStickerBoardChanged, useMyStickerBoard } from "./useMyStickerBoard";
 import "./StickerBoard.css";
@@ -260,6 +261,25 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
   const statBoard = useRef<StatBoardHandle>(null);
   const api = useApi();
   const account = useMe();
+  // Arrange's step tiles stay out for every selection once opened, on every visit from this device.
+  const [arrangeOpen, setArrangeOpen] = useState(() => arrangeLeftOpen(account.id));
+  const openArrange = (open: boolean) => {
+    setArrangeOpen(open);
+    keepArrangeOpen(account.id, open);
+  };
+  const stepsSaid = useRef<HTMLParagraphElement>(null);
+  /** Reads out what a run of steps did once it settles; cleared first, so the same words twice are read twice. */
+  const tellSteps = (last: SettledStep) => {
+    const el = stepsSaid.current;
+    if (!el) return;
+    const words = last.moved
+      ? t(($) => $.stickerBoard.toolbar.arrange.moved[last.step])
+      : t(($) => $.stickerBoard.toolbar.arrange.stopped[last.step]);
+    el.textContent = "";
+    requestAnimationFrame(() => {
+      el.textContent = words;
+    });
+  };
   /** The last board this phone showed you, drawn at once while the fresh one loads. */
   const [fromPhone] = useState(() => keptBoardFor(account.id));
   const [stickers, setStickers] = useState<BoardStickerView[] | null>(
@@ -625,6 +645,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
       save(sticker, moved);
     },
     onRemove: removeFromBoard,
+    onStepsSettled: tellSteps,
   });
   const stickerEl = (id: string) =>
     stage.current?.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`) ?? null;
@@ -834,7 +855,11 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
                   onHintShown={() => markSelectionHintShown(account.id)}
                   onView={() => openYours(s.id)}
                   onRemove={() => stow(s.id)}
-                  onArrange={(step) => arrange(s.id, step)}
+                  arrange={{
+                    open: arrangeOpen,
+                    onOpen: openArrange,
+                    onStep: (step) => arrange(s.id, step),
+                  }}
                   {...(byOther(s) && { artist: s.artist })}
                   onEscape={() =>
                     stage.current
@@ -846,6 +871,7 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
               )}
             </Fragment>
           ))}
+        <p ref={stepsSaid} className="board-steps-status visually-hidden" role="status" />
       </div>
 
       {chips.length > 0 && size && (

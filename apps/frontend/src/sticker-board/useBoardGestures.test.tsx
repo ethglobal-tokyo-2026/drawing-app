@@ -283,6 +283,20 @@ describe("useBoardGestures", () => {
       expect(savedAfter(4) - start).toBeCloseTo(4 * one, 3);
     });
 
+    it("tell the last of a run once it settles, and that the board's edge stopped it", () => {
+      const onStepsSettled = vi.fn<NonNullable<Options["onStepsSettled"]>>();
+      board(() => {}, { onStepsSettled });
+      pressRight(3);
+      expect(onStepsSettled).not.toHaveBeenCalled();
+      act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+      expect(onStepsSettled).toHaveBeenCalledExactlyOnceWith({ step: "right", moved: true });
+
+      // More presses than the field has pixels: the last ones can't move it.
+      pressRight(fieldOf(390, 657).w);
+      act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+      expect(onStepsSettled).toHaveBeenLastCalledWith({ step: "right", moved: false });
+    });
+
     it("save when the board is let go of, without waiting for the idle", () => {
       const onCommit = vi.fn<Options["onCommit"]>();
       board(onCommit);

@@ -11,6 +11,7 @@ import { ApiError, type ApiClient } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME, TEST_OWNER } from "../api/testing";
 import { toApiPlacement, toPerson } from "../api/views";
 import { forgetNoticedHere, markNoticed, noticeReceivesFromNow } from "../giving/noticedGifts";
+import { stickerBoard } from "../i18n/strings/stickerBoard";
 import { forgetGreetings, owesGreeting } from "./artistChipGreeting";
 import { forgetBoardComplete } from "./boardComplete";
 import { placeUnplaced, toBoardSticker } from "./boardSticker";
@@ -290,23 +291,25 @@ describe("StickerBoard's artist chips", () => {
   });
 });
 
+/** Your board on a phone, with `boardStickers` on it, once it has loaded. */
+const visitBoard = async (...boardStickers: ApiBoardSticker[]) => {
+  onAPhone();
+  const view = renderWithApi(
+    <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
+    emptyApi({ stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers }) }),
+  );
+  unmount = view.unmount;
+  await act(async () => {});
+  return view;
+};
+
 describe("StickerBoard's first-selection hint", () => {
-  const visit = async (...boardStickers: ApiBoardSticker[]) => {
-    onAPhone();
-    const view = renderWithApi(
-      <StickerBoard onDraw={() => {}} onOpenGift={() => {}} />,
-      emptyApi({ stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers }) }),
-    );
-    unmount = view.unmount;
-    await act(async () => {});
-    return view;
-  };
   const toolbar = (host: HTMLElement) => host.querySelector(".sticker-toolbar");
   const hint = (host: HTMLElement) => host.querySelector(".sticker-toolbar__hint");
 
   it("hangs off the toolbar of the first sticker you select, hidden from screen readers, and not off a later selection", async () => {
     const a = boardSticker({ placement: at(0.5) });
-    const view = await visit(a);
+    const view = await visitBoard(a);
     const press = selectByKeys(view.host, a.stickerId);
     expect(hint(view.host)?.getAttribute("aria-hidden")).toBe("true");
 
@@ -320,7 +323,7 @@ describe("StickerBoard's first-selection hint", () => {
 
   it("stays through a selection that moves to another sticker, and doesn't come back on a later visit", async () => {
     const [a, b] = [boardSticker({ placement: at(0.3) }), boardSticker({ placement: at(0.7) })];
-    const first = await visit(a, b);
+    const first = await visitBoard(a, b);
     selectByKeys(first.host, a.stickerId);
     selectByKeys(first.host, b.stickerId);
     expect(hint(first.host)).not.toBeNull();
@@ -329,10 +332,46 @@ describe("StickerBoard's first-selection hint", () => {
 
     // A new page open remembers it from this device's storage.
     forgetSelectionHints();
-    const later = await visit(a, b);
+    const later = await visitBoard(a, b);
     selectByKeys(later.host, a.stickerId);
     expect(toolbar(later.host)).not.toBeNull();
     expect(hint(later.host)).toBeNull();
+  });
+});
+
+describe("StickerBoard's Arrange", () => {
+  afterEach(() => vi.useRealTimers());
+  const arrangeTile = (host: HTMLElement) =>
+    host.querySelector<HTMLButtonElement>(".sticker-toolbar__arrange-toggle");
+  const stepTiles = (host: HTMLElement) => host.querySelectorAll(".sticker-toolbar__step");
+
+  it("is closed until opened, then stays open for the next selection and the next visit", async () => {
+    const [a, b] = [boardSticker({ placement: at(0.3) }), boardSticker({ placement: at(0.7) })];
+    const first = await visitBoard(a, b);
+    selectByKeys(first.host, a.stickerId);
+    expect(stepTiles(first.host)).toHaveLength(0);
+    act(() => arrangeTile(first.host)?.click());
+    selectByKeys(first.host, b.stickerId);
+    expect(stepTiles(first.host).length).toBeGreaterThan(0);
+    await act(() => vi.dynamicImportSettled());
+    first.unmount();
+
+    const later = await visitBoard(a, b);
+    selectByKeys(later.host, a.stickerId);
+    expect(arrangeTile(later.host)?.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("reads out what a run of steps did once it settles", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const a = boardSticker({ placement: at(0.5) });
+    const view = await visitBoard(a);
+    selectByKeys(view.host, a.stickerId)("ArrowRight");
+    act(() => void vi.advanceTimersByTime(STEP_SAVE_IDLE_MS));
+    // The words land a frame after the line is cleared, so the same words twice are read twice.
+    await act(() => new Promise((done) => setImmediate(done)));
+    expect(view.host.querySelector(".board-steps-status")?.textContent).toBe(
+      stickerBoard.toolbar.arrange.moved.right.en,
+    );
   });
 });
 

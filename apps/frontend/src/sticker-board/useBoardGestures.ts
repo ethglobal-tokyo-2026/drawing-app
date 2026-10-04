@@ -39,6 +39,8 @@ interface Options {
    * it: the board's stickers don't have that spot until React draws it.
    */
   onRemove: (id: string, placement?: Placement) => void;
+  /** A run of steps, from keys or Arrange's tiles, gone quiet and saved: the last of them. */
+  onStepsSettled?: (last: SettledStep) => void;
 }
 
 /** A sticker in hand: `drag` rides under the finger (or two), `handle` is resized or turned in place. */
@@ -46,6 +48,21 @@ export type Hold = { id: string; kind: "drag" | "handle" };
 
 /** A sticker's spot while it's moving, in board pixels: its center, size and turn. */
 type Live = { x: number; y: number; s: number; r: number };
+
+/**
+ * The last of a run of steps, once the run has gone quiet: whether it moved the sticker, or the
+ * board's edge or a size limit stopped it. Nothing stops a turn.
+ */
+export type SettledStep =
+  | { step: Step; moved: true }
+  | { step: Exclude<Step, "turnLeft" | "turnRight">; moved: false };
+
+const isTurn = (step: Step): step is "turnLeft" | "turnRight" =>
+  step === "turnLeft" || step === "turnRight";
+/** A step that changes a spot by less than this changed nothing. */
+const STILL = 1e-3;
+const stayed = (a: Live, b: Live) =>
+  Math.abs(a.x - b.x) < STILL && Math.abs(a.y - b.y) < STILL && Math.abs(a.s - b.s) < STILL;
 
 type Gesture =
   | { mode: "maybe"; id: string; el: HTMLElement; p0: Pt }
@@ -156,7 +173,13 @@ export function useBoardGestures(options: Options) {
       stage.querySelector<HTMLElement>(`[data-sticker-id="${CSS.escape(id)}"]`)?.focus();
 
     /** Steps on one sticker, drawn as they come and saved once, when they've been quiet. */
-    let stepped: { id: string; el: HTMLElement; live: Live; timer: number } | null = null;
+    let stepped: {
+      id: string;
+      el: HTMLElement;
+      live: Live;
+      last: SettledStep;
+      timer: number;
+    } | null = null;
     /** Saves the steps waiting, and returns where they left their sticker. */
     const saveSteps = () => {
       const s = stepped;
@@ -166,6 +189,12 @@ export function useBoardGestures(options: Options) {
       const sticker = stickerOf(s.id);
       const placement = sticker && commit(s.el, sticker, s.live);
       return placement ? { id: s.id, placement } : null;
+    };
+    /** Steps gone quiet: saved, and the last of them told. */
+    const settle = () => {
+      const last = stepped?.last;
+      saveSteps();
+      if (last) latest.current.onStepsSettled?.(last);
     };
     const step = (id: string, by: Step) => {
       const { field } = latest.current;
@@ -179,7 +208,9 @@ export function useBoardGestures(options: Options) {
       const live = { ...next, ...toPx(field, toFrac(field, next)) };
       draw(el, sticker, live);
       if (stepped) clearTimeout(stepped.timer);
-      stepped = { id, el, live, timer: window.setTimeout(saveSteps, STEP_SAVE_IDLE_MS) };
+      const last: SettledStep =
+        isTurn(by) || !stayed(from, live) ? { step: by, moved: true } : { step: by, moved: false };
+      stepped = { id, el, live, last, timer: window.setTimeout(settle, STEP_SAVE_IDLE_MS) };
     };
     arranging.current = step;
 

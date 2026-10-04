@@ -1,4 +1,5 @@
 import {
+  ArrangeIcon,
   CaretDown,
   CaretLeft,
   CaretRight,
@@ -12,12 +13,13 @@ import {
   ViewIcon,
   type Icon,
 } from "../icons";
-import { useEffectEvent, useLayoutEffect, useRef } from "react";
+import { useEffectEvent, useId, useLayoutEffect, useRef } from "react";
 import type { PersonView } from "../api/views";
 import { useTranslation } from "../i18n/react";
 import { ArtistChip } from "../stickers/ArtistChip";
 import { EASE_OUT } from "../ui/easing";
 import { LabelButton } from "../ui/LabelButton";
+import { useHeldRepeat } from "../ui/useHeldRepeat";
 import type { Step } from "./boardGesture";
 import { hintRoom, hintSpot, toolbarSpot, type Box } from "./placement";
 
@@ -39,8 +41,11 @@ interface Props {
   onView: () => void;
   /** Back into its used sticker silhouette in the sticker tray; someone else's board has none. */
   onRemove?: () => void;
-  /** Moves, turns or resizes it a step, for a press instead of a drag; someone else's board has none. */
-  onArrange?: (step: Step) => void;
+  /**
+   * Arrange, for a press instead of a drag: whether its step tiles are out (the board keeps that, so
+   * it holds for the next selection), and the step each takes. Someone else's board has none.
+   */
+  arrange?: { open: boolean; onOpen: (open: boolean) => void; onStep: (step: Step) => void };
   /** Escape hands focus back to the sticker. */
   onEscape: () => void;
   reduced: boolean;
@@ -52,12 +57,12 @@ interface Props {
   onHintShown?: () => void;
 }
 
-/** The Arrange row's buttons, in the order they read. */
+/** Arrange's step tiles in the order they read: moves on the first row, sizes and turns on the second. */
 const ARRANGE: readonly { step: Step; Glyph: Icon }[] = [
   { step: "left", Glyph: CaretLeft },
-  { step: "right", Glyph: CaretRight },
   { step: "up", Glyph: CaretUp },
   { step: "down", Glyph: CaretDown },
+  { step: "right", Glyph: CaretRight },
   { step: "smaller", Glyph: Minus },
   { step: "bigger", Glyph: Plus },
   { step: "turnLeft", Glyph: ArrowCounterClockwise },
@@ -68,7 +73,7 @@ const ARRANGE: readonly { step: Step; Glyph: Icon }[] = [
 let lastHidden = -Infinity;
 const HANDOFF_MS = 50;
 
-/** Give, View and Remove for the selected sticker, beside it on the board; a read-only board has View. */
+/** Give, View, Remove and Arrange for the selected sticker, beside it on the board; a read-only board has View. */
 export function StickerToolbar({
   label,
   sticker,
@@ -78,7 +83,7 @@ export function StickerToolbar({
   onGive,
   onView,
   onRemove,
-  onArrange,
+  arrange,
   onEscape,
   reduced,
   artist,
@@ -88,6 +93,8 @@ export function StickerToolbar({
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   const hint = useRef<HTMLSpanElement>(null);
+  const tiles = useRef<HTMLDivElement>(null);
+  const tilesId = useId();
   const hintShown = useEffectEvent(() => onHintShown?.());
 
   // Placed once it's measured, before it's painted: its width follows the labels it shows. The hint
@@ -98,6 +105,9 @@ export function StickerToolbar({
     const bar = { w: el.offsetWidth, h: el.offsetHeight };
     const { left, top } = toolbarSpot(sticker, board, bar, { knobBelow, clearOf });
     el.style.transform = `translate(${left.toFixed(1)}px, ${top.toFixed(1)}px)`;
+    // The step tiles open on the row's far side from the sticker, so where the open toolbar fits,
+    // opening them leaves the row in place.
+    el.dataset.over = String(top + bar.h / 2 < sticker.y);
     const note = hint.current;
     if (!note) return;
     note.style.maxWidth = `${hintRoom(board.W)}px`;
@@ -135,6 +145,23 @@ export function StickerToolbar({
     };
   }, []);
 
+  // Opened here, the step tiles come out of the toolbar's row; already out, they come in with it.
+  const open = arrange?.open ?? false;
+  const wasOpen = useRef(open);
+  useLayoutEffect(() => {
+    const opened = open && !wasOpen.current;
+    wasOpen.current = open;
+    if (!opened || reduced) return;
+    const from = ref.current?.dataset.over === "true" ? "4px" : "-4px";
+    tiles.current?.animate(
+      [
+        { opacity: 0, translate: `0 ${from}` },
+        { opacity: 1, translate: "0 0" },
+      ],
+      { duration: 160, easing: EASE_OUT },
+    );
+  }, [open, reduced]);
+
   return (
     <>
       <div
@@ -165,23 +192,34 @@ export function StickerToolbar({
               {t(($) => $.stickerBoard.toolbar.remove)}
             </LabelButton>
           )}
+          {arrange && (
+            <button
+              type="button"
+              className="sticker-toolbar__arrange-toggle"
+              aria-label={t(($) => $.stickerBoard.toolbar.arrange.label)}
+              aria-expanded={arrange.open}
+              aria-controls={arrange.open ? tilesId : undefined}
+              onClick={() => arrange.onOpen(!arrange.open)}
+            >
+              <ArrangeIcon size={18} weight={arrange.open ? "fill" : "bold"} />
+            </button>
+          )}
         </div>
-        {onArrange && (
+        {arrange?.open && (
           <div
+            ref={tiles}
+            id={tilesId}
             className="sticker-toolbar__arrange"
             role="group"
             aria-label={t(($) => $.stickerBoard.toolbar.arrange.label)}
           >
             {ARRANGE.map(({ step, Glyph }) => (
-              <button
+              <StepTile
                 key={step}
-                type="button"
-                className="sticker-toolbar__step"
-                aria-label={t(($) => $.stickerBoard.toolbar.arrange[step])}
-                onClick={() => onArrange(step)}
-              >
-                <Glyph size={18} weight="bold" aria-hidden />
-              </button>
+                label={t(($) => $.stickerBoard.toolbar.arrange[step])}
+                Glyph={Glyph}
+                onStep={() => arrange.onStep(step)}
+              />
             ))}
           </div>
         )}
@@ -193,5 +231,15 @@ export function StickerToolbar({
         </span>
       )}
     </>
+  );
+}
+
+/** A step tile: a tap or a key takes its step once, and a hold repeats it until let go. */
+function StepTile({ label, Glyph, onStep }: { label: string; Glyph: Icon; onStep: () => void }) {
+  const held = useHeldRepeat(onStep);
+  return (
+    <button type="button" className="sticker-toolbar__step" aria-label={label} {...held}>
+      <Glyph size={18} weight="bold" aria-hidden />
+    </button>
   );
 }
