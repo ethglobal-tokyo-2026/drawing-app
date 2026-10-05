@@ -24,6 +24,16 @@ describe("stickers", () => {
     );
   });
 
+  it("gives an NSFW sticker its veiled image, and no other sticker one", () => {
+    expect(() => insertSticker(db, artist, { nsfw: true })).not.toThrow();
+    expect(refusal(() => insertSticker(db, artist, { nsfw: true, veiledHash: null }))).toMatch(
+      /stickers_veiled/,
+    );
+    expect(refusal(() => insertSticker(db, artist, { veiledHash: bytes32("veil") }))).toMatch(
+      /stickers_veiled/,
+    );
+  });
+
   it("sets a token ID only with the mint transaction that made it", () => {
     expect(refusal(() => insertSticker(db, artist, { tokenId: "1" }))).toMatch(/stickers_minted/);
     expect(() =>

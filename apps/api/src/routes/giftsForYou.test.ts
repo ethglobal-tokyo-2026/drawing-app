@@ -86,17 +86,17 @@ describe("gifts waiting for you", () => {
     expect((await receiveFromBoard(test, carolId, gift.id)).status).toBe(200);
   });
 
-  it("is an NSFW sticker only for an adult", async () => {
+  it("is an NSFW sticker only for someone with the NSFW opt-in on", async () => {
     const test = await createGiftsTestApp();
     const giverId = insertUser(test.db);
     const stickerId = test.sealSticker(giverId, { nsfw: true });
     const give = (forUserId: string) => test.post(giverId, "", { stickerId, forUserId });
     expect(await refusalOf(await give(insertUser(test.db)))).toMatchObject({
       status: 403,
-      error: "adults_only",
+      error: "nsfw_not_opted_in",
     });
-    const adultId = insertUser(test.db, { ageVerifiedAt: test.clock.now() });
-    expect((await give(adultId)).status).toBe(201);
+    const optedInId = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
+    expect((await give(optedInId)).status).toBe(201);
   });
 
   it("isn't for its own giver, or for someone who isn't in the app", async () => {

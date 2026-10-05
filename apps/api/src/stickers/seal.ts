@@ -12,8 +12,8 @@ import { z } from "zod";
 import type { AppDeps } from "../deps.ts";
 import { diagnosticStep, failureCause, logFailure, logInfo } from "../diagnostics.ts";
 import {
-  ageStatusOf,
   loadStickers,
+  optedIntoNsfw,
   stickerPlacementSchema,
   stickerPngsSchema,
   stickerSchema,
@@ -36,7 +36,7 @@ export type SealResponse = z.infer<typeof sealResponseSchema>;
 export type SealRefusal =
   | { status: 400; error: "invalid_request"; detail: string }
   | { status: 403; error: "ticket_not_yours"; detail: string }
-  | { status: 403; error: "adults_only"; detail: string }
+  | { status: 403; error: "nsfw_not_opted_in"; detail: string }
   | { status: 404; error: "ticket_not_found"; detail: string }
   | { status: 409; error: "ticket_already_used"; detail: string }
   | { status: 503; error: "mint_failed"; detail: string };
@@ -167,14 +167,13 @@ export async function sealSticker(
 
   if (form.nsfw) {
     const artist = deps.db
-      .select({ ageVerifiedAt: users.ageVerifiedAt })
+      .select({ nsfwOptedInAt: users.nsfwOptedInAt })
       .from(users)
       .where(eq(users.id, userId))
       .get();
-    if (!artist || ageStatusOf(artist) !== "adult") {
-      const detail =
-        "Only a person whose age verification proved them an adult can seal an NSFW sticker";
-      return { refused: { status: 403, error: "adults_only", detail } };
+    if (!artist || !optedIntoNsfw(artist)) {
+      const detail = `Ticket use ${form.ticketUseId} can't seal an NSFW sticker: only someone with Show 18+ stickers on can mark one`;
+      return { refused: { status: 403, error: "nsfw_not_opted_in", detail } };
     }
   }
 
@@ -197,7 +196,7 @@ export async function sealSticker(
   await diagnosticStep("sticker.images.save", { userId }, () =>
     deps.images.save(contentHash, pngs),
   );
-  // What anyone who isn't adult sees in its place, made before any row can name the sticker.
+  // What anyone without the NSFW opt-in sees in its place, made before any row can name the sticker.
   const veiledHash = form.nsfw
     ? await diagnosticStep("sticker.veil.save", { userId }, () =>
         deps.images.saveVeiled(contentHash),

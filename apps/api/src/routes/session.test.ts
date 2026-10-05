@@ -53,6 +53,9 @@ const setHandle = (headers: Record<string, string>, handle: unknown) =>
 const setLanguageChoice = (headers: Record<string, string>, body: unknown) =>
   test.send("POST", "/api/me/language-choice", { headers, body });
 
+const setNsfwOptIn = (headers: Record<string, string>, body: unknown) =>
+  test.send("POST", "/api/me/nsfw-opt-in", { headers, body });
+
 describe("signing in", () => {
   it("makes the person at their first sign-in, with their LINE name as handle", async () => {
     const response = await signIn(ALICE);
@@ -285,14 +288,35 @@ describe("your language choice", () => {
   });
 });
 
+describe("your NSFW opt-in", () => {
+  it("is off until you turn it on, and off again once you turn it off", async () => {
+    const headers = await test.signInAs(insertUser(test.db));
+    expect((await meIn(await getMe(headers))).nsfwOptIn).toBe(false);
+    for (const nsfwOptIn of [true, false]) {
+      expect((await meIn(await setNsfwOptIn(headers, { nsfwOptIn }))).nsfwOptIn).toBe(nsfwOptIn);
+    }
+  });
+
+  it("refuses a body that doesn't say on or off", async () => {
+    const headers = await test.signInAs(insertUser(test.db));
+    for (const body of [{ nsfwOptIn: "true" }, {}]) {
+      expect(await refusalOf(await setNsfwOptIn(headers, body))).toMatchObject({
+        status: 400,
+        error: "invalid_request",
+      });
+    }
+  });
+});
+
 describe("deleting your account", () => {
-  it("forgets LINE and the handle, keeps the rest, ends the session, and a new sign-in makes a new person", async () => {
+  it("forgets LINE, the handle and the NSFW opt-in, keeps the rest, ends the session, and a new sign-in makes a new person", async () => {
     const signedIn = await signIn(ALICE);
     const { id } = await meIn(signedIn);
     const headers = sessionCookie(signedIn);
     const wallet = await fakeSmartWallets().addressFor(id);
     test.db.update(users).set({ smartAccountAddress: wallet }).where(eq(users.id, id)).run();
     const stickerId = insertSealedSticker(test.db, id);
+    expect((await meIn(await setNsfwOptIn(headers, { nsfwOptIn: true }))).nsfwOptIn).toBe(true);
 
     const deleted = await test.send("DELETE", "/api/me", { headers });
     expect(deleted.status).toBe(204);
@@ -305,6 +329,7 @@ describe("deleting your account", () => {
       lineDisplayName: null,
       linePictureUrl: null,
       handle: null,
+      nsfwOptedInAt: null,
       smartAccountAddress: wallet,
     });
     expect(test.db.select().from(stickers).where(eq(stickers.id, stickerId)).get()).toMatchObject({

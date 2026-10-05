@@ -36,12 +36,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** The routes anyone can call: signing in and out, and the gateway ENS clients call. */
-const PUBLIC_ROUTES = new Set([
-  "POST /api/session",
-  "DELETE /api/session",
-  "GET /api/ens/gateway/:sender/:request",
-]);
+/** The routes anyone can call: signing in and out. */
+const PUBLIC_ROUTES = new Set(["POST /api/session", "DELETE /api/session"]);
 
 describe("sessions", () => {
   it("guard every route but the public ones", async () => {
@@ -178,12 +174,12 @@ describe("sticker images", () => {
     expect(webp.headers.get("cache-control")).toContain("immutable");
   });
 
-  it("show an NSFW sticker's drawing only to an adult's session, never publicly cached", async () => {
+  it("show an NSFW sticker's drawing only to a session with the NSFW opt-in on, never publicly cached", async () => {
     const pngs = sealImages();
     const store = createDiskImageStore(imageDir, `https://sticker.test${STICKER_IMAGES_PATH}`);
     const contentHash = keccak256(pngs.png);
     await store.save(contentHash, pngs);
-    const artistId = insertUser(test.db, { ageVerifiedAt: test.clock.now() });
+    const artistId = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
     insertSealedSticker(test.db, artistId, { nsfw: true, contentHash });
     const { png, flat, webp, mask } = store.urls(contentHash);
     const server = createServer(test.deps, imageDir);
@@ -196,25 +192,15 @@ describe("sticker images", () => {
       for (const viewer of [undefined, insertUser(test.db)]) {
         expect(await refusalOf(await getAs(url, viewer))).toMatchObject({
           status: 403,
-          error: "adults_only",
+          error: "nsfw_not_opted_in",
         });
       }
-      const adults = await getAs(url, artistId);
-      expect(adults.status).toBe(200);
-      expect(adults.headers.get("cache-control")).toMatch(/^private,/);
+      const optedIn = await getAs(url, artistId);
+      expect(optedIn.status).toBe(200);
+      expect(optedIn.headers.get("cache-control")).toMatch(/^private,/);
     }
     // The cut's shape shows no drawing, so its mask stays public.
     expect((await getAs(mask)).headers.get("cache-control")).toMatch(/^public,/);
-  });
-
-  it("serve a sticker's NFT metadata so that a rewrite of it reaches clients", async () => {
-    const store = createDiskImageStore(imageDir, `https://sticker.test${STICKER_IMAGES_PATH}`);
-    const stickerId = "00000000-0000-4000-8000-000000000001";
-    await store.saveMetadata(stickerId, { image: "https://sticker.test/image.png" });
-    const response = await get(`${STICKER_IMAGES_PATH}/${stickerId}.json`);
-    expect(response.status).toBe(200);
-    expect(response.headers.get("cache-control")).not.toContain("immutable");
-    expect(response.headers.get("cache-control")).toContain("no-cache");
   });
 
   it("answer a name with no image with 404, not the session check, and uncached", async () => {

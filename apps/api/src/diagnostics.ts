@@ -41,11 +41,6 @@ export interface DiagnosticFields {
   /** The mint catch-up's tally: stickers it minted, and ones it skipped with a line saying why. */
   minted?: number;
   skipped?: number;
-  /** The veil catch-up's tally: NSFW stickers it veiled, and NFT metadata it pointed at the veil. */
-  veiled?: number;
-  rewritten?: number;
-  /** How many of `count` a catch-up has finished. */
-  done?: number;
   /** A reserve ticket purchase. */
   purchaseId?: number;
   /** A Sui transaction digest. */
@@ -60,19 +55,6 @@ export interface DiagnosticFields {
   givenUp?: number;
   /** Why a step was skipped, in words. */
   reason?: string;
-  /** Whether naming is on, as the contract check left it. */
-  naming?: "on" | "off";
-  /**
-   * The contract check's results, each true when the configured contracts agree: the relayer holds
-   * NAMER_ROLE; CroquisNames' parent name is CROQUIS_PARENT_NAME; CroquisNames, CroquisResolver and
-   * the escrow read the configured StickerNFT; the escrow names the configured CroquisNames.
-   */
-  namerRole?: boolean;
-  namesParent?: boolean;
-  namesStickers?: boolean;
-  resolverStickers?: boolean;
-  escrowSticker?: boolean;
-  escrowNames?: boolean;
 }
 
 const requests = new AsyncLocalStorage<RequestContext>();
@@ -208,9 +190,6 @@ const loggedFields = {
   failed: true,
   minted: true,
   skipped: true,
-  veiled: true,
-  rewritten: true,
-  done: true,
   purchaseId: true,
   txDigest: true,
   events: true,
@@ -218,13 +197,6 @@ const loggedFields = {
   short: true,
   givenUp: true,
   reason: true,
-  naming: true,
-  namerRole: true,
-  namesParent: true,
-  namesStickers: true,
-  resolverStickers: true,
-  escrowSticker: true,
-  escrowNames: true,
 } satisfies Record<keyof DiagnosticFields, true>;
 
 const isLoggedField = (key: string): key is keyof DiagnosticFields =>

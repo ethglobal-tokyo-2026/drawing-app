@@ -5,8 +5,7 @@ import { MAX_TIME_USED_S } from "./limits.ts";
 import { users } from "./users.ts";
 
 /**
- * A sealed sticker. Everything but owner_id, the mint and ens_named_at is fixed at seal; created_at
- * is the seal.
+ * A sealed sticker. Everything but owner_id and the mint is fixed at seal; created_at is the seal.
  */
 export const stickers = sqliteTable(
   "stickers",
@@ -33,23 +32,22 @@ export const stickers = sqliteTable(
     height: integer("height").notNull(),
     /** The cut line as an SVG path in image pixels. */
     outline: text("outline").notNull(),
+    /** An NSFW sticker: its Original Artist, with the NSFW opt-in on, marked it 18+ at seal. */
+    nsfw: integer("nsfw", { mode: "boolean" }).notNull(),
     /** keccak256 of the sticker PNG. Names its image files on the CDN, and goes to the mint. */
     contentHash: text("content_hash").notNull(),
+    /**
+     * keccak256 of an NSFW sticker's veiled PNG, which names it and its WebP copy on the CDN: what
+     * anyone without the NSFW opt-in sees. Sealing makes it before the row; null for every other
+     * sticker.
+     */
+    veiledHash: text("veiled_hash"),
     /** The metadata JSON's CDN URL, known at seal. Goes to the mint as the NFT's tokenURI. */
     metadataUri: text("metadata_uri").notNull(),
     /** uint256 as decimal text. Set with mint_tx_hash when the mint lands. */
     tokenId: text("token_id").unique(),
     mintTxHash: text("mint_tx_hash"),
     ...timestamps(),
-    /** When CroquisNames confirmed the sticker's name, <number>.<artist's ens_label>.croquis-app.eth. */
-    ensNamedAt: integer("ens_named_at", { mode: "timestamp_ms" }),
-    /** An NSFW sticker: its Original Artist, an adult, marked it for adults at seal. */
-    nsfw: integer("nsfw", { mode: "boolean" }).notNull().default(false),
-    /**
-     * keccak256 of an NSFW sticker's veiled PNG, which names it and its WebP copy on the CDN: what
-     * anyone who isn't adult sees. Null until it's made, and for every other sticker.
-     */
-    veiledHash: text("veiled_hash"),
   },
   (t) => [
     index("stickers_owner").on(t.ownerId),
@@ -60,6 +58,7 @@ export const stickers = sqliteTable(
     check("stickers_time_used", sql`${t.timeUsed} between 0 and ${literal(MAX_TIME_USED_S)}`),
     check("stickers_size", sql`${t.width} > 0 and ${t.height} > 0`),
     check("stickers_content_hash", isBytes32(t.contentHash)),
+    check("stickers_veiled", sql`${t.nsfw} = (${t.veiledHash} is not null)`),
     check("stickers_minted", sql`(${t.tokenId} is null) = (${t.mintTxHash} is null)`),
   ],
 );

@@ -12,7 +12,6 @@ import {
   users,
   type Db,
 } from "@drawing-app/db";
-import { personEnsName, stickerEnsName } from "@drawing-app/sticker-chain/croquis-names";
 import { eq, inArray } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -57,16 +56,8 @@ const positiveInt = z.number().int().positive();
 const userRow = createSelectSchema(users);
 type UserRow = typeof users.$inferSelect;
 
-/**
- * A person's Age status. Age verification is the only source, and it can prove only adults, so the
- * server says adult or unknown; minor is for a source that can prove it.
- */
-const ageStatusSchema = z.enum(["adult", "minor", "unknown"]);
-export type AgeStatus = z.infer<typeof ageStatusSchema>;
-
-/** Adult once age verification has proven it. */
-export const ageStatusOf = (user: Pick<UserRow, "ageVerifiedAt">): AgeStatus =>
-  user.ageVerifiedAt === null ? "unknown" : "adult";
+/** Whether the person has Show 18+ stickers on: their NSFW opt-in. */
+export const optedIntoNsfw = (user: Pick<UserRow, "nsfwOptedInAt">) => user.nsfwOptedInAt !== null;
 
 /** Anyone, as other signed-in people see them. */
 export const personSchema = userRow
@@ -77,35 +68,30 @@ export const personSchema = userRow
     linePictureUrl: true,
   })
   .extend({
-    /** <label>.croquis-app.eth, which resolves from the moment they have a label. */
-    ensName: z.string().nullable(),
-    /** Only an adult marks, sees plainly or receives NSFW stickers. */
-    ageStatus: ageStatusSchema,
+    /**
+     * The NSFW opt-in: only someone with it on marks, sees plainly or receives NSFW stickers, so
+     * the give sheet can tell before giving them one.
+     */
+    nsfwOptIn: z.boolean(),
   });
 export type Person = z.infer<typeof personSchema>;
 
-/**
- * Picks the public columns, so LINE's user ID never reaches other people. The smart wallet is left
- * out too, though it isn't private: the ENS gateway answers it as <label>.croquis-app.eth's
- * address.
- */
+/** Picks the public columns, so LINE's user ID never reaches other people. */
 export const toPerson = ({
   id,
   handle,
   lineDisplayName,
   linePictureUrl,
-  ensLabel,
-  ageVerifiedAt,
+  nsfwOptedInAt,
 }: Pick<
   UserRow,
-  "id" | "handle" | "lineDisplayName" | "linePictureUrl" | "ensLabel" | "ageVerifiedAt"
+  "id" | "handle" | "lineDisplayName" | "linePictureUrl" | "nsfwOptedInAt"
 >): Person => ({
   id,
   handle,
   lineDisplayName,
   linePictureUrl,
-  ensName: ensLabel === null ? null : personEnsName(ensLabel),
-  ageStatus: ageStatusOf({ ageVerifiedAt }),
+  nsfwOptIn: optedIntoNsfw({ nsfwOptedInAt }),
 });
 
 /** You. */
@@ -122,8 +108,6 @@ export const meSchema = personSchema.extend({
   createdAt: isoTimeSchema,
   /** True until the handle prompt is answered. */
   needsHandle: z.boolean(),
-  /** When World ID proved you're 18 or older; null until it has. */
-  ageVerifiedAt: isoTimeSchema.nullable(),
   /** NEW in your sticker tray. */
   newStickerCount: count,
   /** The pink tag. */
@@ -141,7 +125,6 @@ export const toMe = (
   languageChoice: user.languageChoice,
   createdAt: toIsoTime(user.createdAt),
   needsHandle: user.handle === null,
-  ageVerifiedAt: toIsoTime(user.ageVerifiedAt),
   ...counts,
 });
 
@@ -207,8 +190,6 @@ export const stickerSchema = z.object({
   artist: personSchema,
   images: stickerImagesSchema,
   sealedAt: isoTimeSchema,
-  /** <number>.<artist>.croquis-app.eth, once it's onchain. */
-  ensName: z.string().nullable(),
 });
 export type Sticker = z.infer<typeof stickerSchema>;
 
@@ -281,35 +262,42 @@ export type Gratitude = z.infer<typeof gratitudeSchema>;
 
 type StickerRow = typeof stickers.$inferSelect;
 
-/** What one viewer gets of each sticker: an NSFW sticker is veiled unless they're an adult. */
+/** What one viewer gets of each sticker: an NSFW sticker is veiled unless they've opted in. */
 export interface StickerViewer {
   veils: (sticker: Pick<StickerRow, "nsfw">) => boolean;
   /** Its image URLs: the veiled image in place of each that shows the drawing, when it's veiled. */
-  images: (sticker: Pick<StickerRow, "nsfw" | "contentHash" | "veiledHash">) => StickerImages;
+  images: (
+    sticker: Pick<StickerRow, "id" | "nsfw" | "contentHash" | "veiledHash">,
+  ) => StickerImages;
 }
 
-function viewerOf(images: AppDeps["images"], adult: boolean): StickerViewer {
-  const veils = (sticker: Pick<StickerRow, "nsfw">) => sticker.nsfw && !adult;
+function viewerOf(images: AppDeps["images"], optedIn: boolean): StickerViewer {
   return {
-    veils,
-    images: (sticker) =>
-      veils(sticker)
-        ? images.veiledUrls(sticker.contentHash, sticker.veiledHash)
-        : images.urls(sticker.contentHash),
+    veils: (sticker) => sticker.nsfw && !optedIn,
+    images: (sticker) => {
+      if (!sticker.nsfw) return images.urls(sticker.contentHash);
+      // The stickers_veiled CHECK keeps every NSFW row's veil, which Sealing makes before the row.
+      if (sticker.veiledHash === null) {
+        throw new Error(`NSFW sticker ${sticker.id} has no veiled image`);
+      }
+      return optedIn
+        ? images.urls(sticker.contentHash)
+        : images.veiledUrls(sticker.contentHash, sticker.veiledHash);
+    },
   };
 }
 
-/** The sticker viewer `viewerId` is, by their age status now. */
+/** The sticker viewer `viewerId` is, by their NSFW opt-in now. */
 export function stickerViewer(
   { db, images }: Pick<AppDeps, "db" | "images">,
   viewerId: string,
 ): StickerViewer {
   const viewer = db
-    .select({ ageVerifiedAt: users.ageVerifiedAt })
+    .select({ nsfwOptedInAt: users.nsfwOptedInAt })
     .from(users)
     .where(eq(users.id, viewerId))
     .get();
-  return viewerOf(images, viewer !== undefined && ageStatusOf(viewer) === "adult");
+  return viewerOf(images, viewer !== undefined && optedIntoNsfw(viewer));
 }
 
 /** What anyone gets, signed in or not, as an NFT's metadata is: an NSFW sticker veiled. */
@@ -336,10 +324,6 @@ export function toSticker(
     mintTxHash: sticker.mintTxHash,
     nsfw: sticker.nsfw,
     sealedAt: toIsoTime(sticker.createdAt),
-    ensName:
-      sticker.ensNamedAt !== null && artist.ensLabel !== null
-        ? stickerEnsName(sticker.number, artist.ensLabel)
-        : null,
   };
 }
 

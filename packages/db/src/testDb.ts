@@ -1,11 +1,11 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import Database from "better-sqlite3";
 import { generateSQLiteDrizzleJson, generateSQLiteMigration } from "drizzle-kit/api";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema/index.ts";
-import { GIFT_EXPIRY_MS } from "./schema/limits.ts";
+import { DAILY_TICKETS_PER_DAY, GIFT_EXPIRY_MS } from "./schema/limits.ts";
 import { updatedAtTriggerStatements } from "./schema/updatedAtTriggers.ts";
 
 /** A fresh in-memory database built from the schema, with foreign keys on: one per test. */
@@ -45,20 +45,24 @@ export const bytes32 = (seed: string) => `0x${createHash("sha256").update(seed).
 export function insertUser(db: TestDb, values: Partial<typeof schema.users.$inferInsert> = {}) {
   const id = values.id ?? newId("user");
   db.insert(schema.users)
-    .values({ id, lineUserId: `line-${id}`, lineDisplayName: id, ...values })
+    .values({ id, lineUserId: `line-${id}`, lineDisplayName: id, language: "en", ...values })
     .run();
   return id;
 }
 
 let nextNumber = 0;
 
-/** Inserts a sealed, unminted sticker that `artistId` drew and holds, and returns its id. */
+/**
+ * Inserts a sealed, unminted sticker that `artistId` drew and holds, and returns its id. An NSFW one
+ * gets a veiled image, as Sealing gives it.
+ */
 export function insertSticker(
   db: TestDb,
   artistId: string,
   values: Partial<typeof schema.stickers.$inferInsert> = {},
 ) {
   const id = values.id ?? newId("sticker");
+  const nsfw = values.nsfw ?? false;
   db.insert(schema.stickers)
     .values({
       id,
@@ -69,12 +73,36 @@ export function insertSticker(
       width: 1,
       height: 1,
       outline: "M0 0Z",
+      nsfw,
       contentHash: bytes32(id),
+      veiledHash: nsfw ? bytes32(`veiled ${id}`) : null,
       metadataUri: `https://cdn.test/stickers/${id}.json`,
       ...values,
     })
     .run();
   return id;
+}
+
+/**
+ * Spends one of `userId`'s tickets with a new spend key, and returns the use's id. Its kind follows
+ * its day index, as spending makes it, unless `values` sets one.
+ */
+export function insertTicketUse(
+  db: TestDb,
+  userId: string,
+  values: Pick<typeof schema.ticketUses.$inferInsert, "ticketDay" | "dayIndex"> &
+    Partial<typeof schema.ticketUses.$inferInsert>,
+) {
+  return db
+    .insert(schema.ticketUses)
+    .values({
+      userId,
+      idempotencyKey: randomUUID(),
+      kind: values.dayIndex < DAILY_TICKETS_PER_DAY ? "daily" : "reserve",
+      ...values,
+    })
+    .returning({ id: schema.ticketUses.id })
+    .get().id;
 }
 
 /** Packages a gift of `stickerId` from `giverId`, expiring after GIFT_EXPIRY_MS, and returns its id. */

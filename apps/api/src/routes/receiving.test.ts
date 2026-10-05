@@ -384,14 +384,14 @@ describe("Receiving refuses", () => {
     expect(test.ownerOf(gift.stickerId)).toBe(giverId);
   });
 
-  it("an NSFW sticker to anyone not adult, and gives it to an adult", async () => {
+  it("an NSFW sticker to anyone without the NSFW opt-in, and gives it to someone with it on", async () => {
     const test = await createGiftsTestApp();
     const { gift, giftClaimToken } = await test.packagedGift(insertUser(test.db), { nsfw: true });
 
-    await expectRefused(test, insertUser(test.db), giftClaimToken, 403, "adults_only");
+    await expectRefused(test, insertUser(test.db), giftClaimToken, 403, "nsfw_not_opted_in");
     expect(test.giftRow(gift.id).forUserId).toBeNull();
-    const adultId = insertUser(test.db, { ageVerifiedAt: test.clock.now() });
-    expect((await receivedOf(await receive(test, adultId, giftClaimToken))).sticker).toMatchObject({
+    const optedIn = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
+    expect((await receivedOf(await receive(test, optedIn, giftClaimToken))).sticker).toMatchObject({
       id: gift.stickerId,
       nsfw: true,
     });

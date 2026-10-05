@@ -9,7 +9,7 @@ import { apiError } from "./errors.ts";
 
 /**
  * What every route's context carries. requireSession sets userId on every route but signing in and
- * out (POST and DELETE /api/session) and the ENS gateway (GET /api/ens/gateway/*).
+ * out (POST and DELETE /api/session).
  */
 export type AppEnv = {
   Variables: { userId: string };
@@ -47,7 +47,7 @@ export async function sessionUser(
   const userId = await getSignedCookie(c, sessionSecret, SESSION_COOKIE);
   if (!userId) return undefined;
   return db
-    .select({ id: users.id, ageVerifiedAt: users.ageVerifiedAt })
+    .select({ id: users.id, nsfwOptedInAt: users.nsfwOptedInAt })
     .from(users)
     .where(and(eq(users.id, userId), isNull(users.deletedAt)))
     .get();

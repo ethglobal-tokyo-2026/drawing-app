@@ -3,8 +3,6 @@ import { openDb } from "@drawing-app/db";
 import { migrateDatabase } from "@drawing-app/db/migrate";
 import { serve } from "@hono/node-server";
 import type { Hex } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { sepolia } from "viem/chains";
 import { z } from "zod";
 import { createServer } from "./app.ts";
 import {
@@ -12,9 +10,8 @@ import {
   messagingChannelFromEnvironment,
 } from "./chatMenu/fromEnvironment.ts";
 import { startMidnightBatches } from "./chatMenu/midnight.ts";
-import type { AppDeps, EnsDeps } from "./deps.ts";
+import type { AppDeps } from "./deps.ts";
 import { logInfo } from "./diagnostics.ts";
-import { createNamingQueue, startNamingCatchUp } from "./ens/naming.ts";
 import { startExpiredGiftReturns } from "./gifts/expiry.ts";
 import { giverNoticeFor, startGiverNoticeSweeps } from "./gifts/giverNotice.ts";
 import { chooseLineVerifier } from "./services/devSignIn.ts";
@@ -25,9 +22,7 @@ import { mockChain } from "./services/mockChain.ts";
 import { createJpycPayments } from "./services/jpycPayments.ts";
 import { createPrivySmartWallets } from "./services/privySmartWallets.ts";
 import { createStickerChain } from "./services/stickerChain.ts";
-import { createWorldId } from "./services/worldId.ts";
 import { startMintCatchUp } from "./stickers/mint.ts";
-import { startVeilCatchUp } from "./stickers/veilCatchUp.ts";
 import { startTicketPurchaseSweeps } from "./tickets/purchaseSweep.ts";
 
 /** A private key as viem takes one: 0x and 64 hexadecimal digits. */
@@ -57,20 +52,6 @@ const envSchema = z.object({
   LINE_MESSAGING_CHANNEL_ID: z.string().optional(),
   LINE_MESSAGING_CHANNEL_SECRET: z.string().optional(),
   LINE_CHAT_MENUS_FILE: z.string().optional(),
-  // Age verification's World ID app, from the Developer Portal. Without all three, it's off.
-  WORLD_ID_APP_ID: z
-    .custom<`app_${string}`>((v) => typeof v === "string" && /^app_\w+$/.test(v), "Expected app_…")
-    .optional(),
-  WORLD_ID_RP_ID: z
-    .string()
-    .regex(/^rp_\w+$/)
-    .optional(),
-  WORLD_ID_SIGNING_KEY: z
-    .string()
-    .regex(/^(0x)?[0-9a-fA-F]{64}$/)
-    .optional(),
-  // staging takes proofs from World's simulator, https://simulator.worldcoin.org
-  WORLD_ID_ENVIRONMENT: z.enum(["production", "staging"]).default("production"),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -87,7 +68,7 @@ const images = createDiskImageStore(env.IMAGE_DIR, env.CDN_BASE_URL);
 const chain = (() => {
   if (env.STICKER_CHAIN_MODE === "mock") {
     console.warn("Sticker chain mode is mock; NFTs will not be minted or transferred");
-    return { deps: mockChain, readContracts: null };
+    return mockChain;
   }
   const live = z
     .object({
@@ -100,11 +81,6 @@ const chain = (() => {
       STICKER_NFT_ADDRESS: z.string().min(1),
       STICKER_GIFT_ESCROW_ADDRESS: z.string().min(1),
       STICKER_SEALER_PRIVATE_KEY: privateKeySchema,
-      CROQUIS_NAMES_ADDRESS: z.string().min(1),
-      CROQUIS_RESOLVER_ADDRESS: z.string().min(1),
-      ENS_GATEWAY_PRIVATE_KEY: privateKeySchema,
-      // The LIFF app's link, https://liff.line.me/<LIFF ID>: a person's name links to their board.
-      APP_LINK_BASE: z.url(),
       PRIVY_APP_ID: z.string().min(1),
       PRIVY_APP_SECRET: z
         .string()
@@ -121,45 +97,15 @@ const chain = (() => {
     privyAppId: live.PRIVY_APP_ID,
     privyAppSecret: live.PRIVY_APP_SECRET,
   });
-  const { mint, giftChain, nameWriter, readContracts } = createStickerChain({
+  const { mint, giftChain } = createStickerChain({
     rpcUrl: live.ETHEREUM_SEPOLIA_RPC_URL,
     stickerContract: live.STICKER_NFT_ADDRESS,
     escrowContract: live.STICKER_GIFT_ESCROW_ADDRESS,
-    namesContract: live.CROQUIS_NAMES_ADDRESS,
-    resolverContract: live.CROQUIS_RESOLVER_ADDRESS,
     sealerPrivateKey: live.STICKER_SEALER_PRIVATE_KEY,
     smartWallets,
     images,
   });
-  const ens: EnsDeps = {
-    resolverAddress: live.CROQUIS_RESOLVER_ADDRESS,
-    gatewaySigner: privateKeyToAccount(live.ENS_GATEWAY_PRIVATE_KEY),
-    appLinkBase: live.APP_LINK_BASE.replace(/\/$/, ""),
-    chainId: sepolia.id,
-    stickerContract: live.STICKER_NFT_ADDRESS,
-    writer: nameWriter,
-    naming: createNamingQueue(),
-  };
-  return { deps: { mint, giftChain, smartWallets, ens }, readContracts };
-})();
-
-const worldId = (() => {
-  const { WORLD_ID_APP_ID: appId, WORLD_ID_RP_ID: rpId, WORLD_ID_SIGNING_KEY: signingKey } = env;
-  if (!appId && !rpId && !signingKey) {
-    console.warn("No World ID app is configured; age verification is off");
-    return null;
-  }
-  if (!appId || !rpId || !signingKey) {
-    throw new Error(
-      "Age verification needs WORLD_ID_APP_ID, WORLD_ID_RP_ID and WORLD_ID_SIGNING_KEY",
-    );
-  }
-  return createWorldId({
-    appId,
-    rpId,
-    signingKey,
-    environment: env.WORLD_ID_ENVIRONMENT,
-  });
+  return { mint, giftChain, smartWallets };
 })();
 
 const clock = { now: () => new Date() };
@@ -183,7 +129,7 @@ const deps: AppDeps = {
   ids: { uuid: () => randomUUID() },
   line: chooseLineVerifier(env.DEV_SIGN_IN, createLineVerifier(env.LINE_CHANNEL_ID)),
   images,
-  ...chain.deps,
+  ...chain,
   ticketPayments: createJpycPayments({
     network: env.SUI_NETWORK,
     coinType: env.JPYC_COIN_TYPE,
@@ -194,7 +140,6 @@ const deps: AppDeps = {
   serverLog: journalLog,
   lineChatMenu: chatMenu.lineChatMenu,
   giverNotice,
-  worldId,
 };
 
 logInfo("api.configured", { mode: env.STICKER_CHAIN_MODE });
@@ -216,17 +161,8 @@ startExpiredGiftReturns(deps);
 // Tokyo time.
 startMintCatchUp(deps);
 
-// NSFW stickers sealed before Sealing made their veiled images get them, and NFT metadata written
-// before a sticker's veil existed is pointed at it: now, then just after each midnight, Tokyo time.
-startVeilCatchUp({ ...deps, images });
-
 // Reserve ticket payments the app never reported, found on Sui: now, then every few minutes.
 startTicketPurchaseSweeps(deps);
-
-// The contract check, which turns naming off while the configured contracts can't name, then
-// naming for everyone a failed or skipped job left unnamed: now, then just after each midnight,
-// Tokyo time.
-if (chain.readContracts) startNamingCatchUp(deps, chain.readContracts);
 
 // Only a proxy on this machine reaches it: Vite's in development, HAProxy's on the box.
 serve(

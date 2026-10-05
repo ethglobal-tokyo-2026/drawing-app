@@ -1,5 +1,5 @@
-import { stickerPlacements, stickers, stickerTimelapses, ticketUses } from "@drawing-app/db";
-import { bytes32, insertUser } from "@drawing-app/db/testing";
+import { stickerPlacements, stickers, stickerTimelapses } from "@drawing-app/db";
+import { bytes32, insertTicketUse, insertUser } from "@drawing-app/db/testing";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Mint } from "../deps.ts";
@@ -14,15 +14,14 @@ import {
 } from "../stickers/testPngs.ts";
 import { createTestApp } from "../testing/createTestApp.ts";
 import { insertSealedSticker, SPOT } from "../testing/rows.ts";
-import { ticketKindAt } from "../tickets/tickets.ts";
 
 /**
- * An adult's NSFW sticker with its veiled image and timelapse, on their board and sealed today, and
- * a gift of another of theirs whose link anyone can open.
+ * An NSFW sticker with its veiled image and timelapse, on its Original Artist's board and sealed
+ * today, and a gift of another of theirs whose link anyone can open.
  */
 async function nsfwSticker() {
   const test = await createGiftsTestApp();
-  const artistId = insertUser(test.db, { ageVerifiedAt: test.clock.now() });
+  const artistId = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
   const veiledHash = bytes32("veiled image");
   const stickerId = insertSealedSticker(test.db, artistId, { nsfw: true, veiledHash });
   test.db
@@ -67,11 +66,11 @@ const timelapseOf = (scene: Awaited<ReturnType<typeof nsfwSticker>>, as?: string
   scene.test.send("GET", `/api/stickers/${scene.stickerId}/timelapse`, { as });
 
 describe("an NSFW sticker's images", () => {
-  it("are its veiled image to someone who isn't adult, with no URL of its drawing", async () => {
+  it("are its veiled image to someone without the NSFW opt-in, with no URL of its drawing", async () => {
     const scene = await nsfwSticker();
-    const unverifiedId = insertUser(scene.test.db);
+    const optedOutId = insertUser(scene.test.db);
     const bodies = await Promise.all(
-      (await scene.answers(unverifiedId)).map(async (response) => {
+      (await scene.answers(optedOutId)).map(async (response) => {
         expect(response.status).toBe(200);
         return response.text();
       }),
@@ -82,10 +81,10 @@ describe("an NSFW sticker's images", () => {
     const [board, explore, detail, preview] = bodies;
     for (const body of [board, explore, detail]) expect(body).toContain(scene.veiled.webp.sticker);
     expect(JSON.parse(detail)).toMatchObject({ hasTimelapse: false });
-    expect(JSON.parse(preview)).toMatchObject({ refusal: "adults_only", sticker: null });
-    const timelapse = await timelapseOf(scene, unverifiedId);
+    expect(JSON.parse(preview)).toMatchObject({ refusal: "nsfw_not_opted_in", sticker: null });
+    const timelapse = await timelapseOf(scene, optedOutId);
     expect(timelapse.status).toBe(403);
-    expect(await timelapse.json()).toMatchObject({ error: "adults_only" });
+    expect(await timelapse.json()).toMatchObject({ error: "nsfw_not_opted_in" });
   });
 
   it("reach no one signed out", async () => {
@@ -95,17 +94,28 @@ describe("an NSFW sticker's images", () => {
     }
   });
 
-  it("are whole to an adult, with its timelapse", async () => {
+  it("are whole to someone with the NSFW opt-in on, with its timelapse", async () => {
     const scene = await nsfwSticker();
-    const adultId = insertUser(scene.test.db, { ageVerifiedAt: scene.test.clock.now() });
+    const optedInId = insertUser(scene.test.db, { nsfwOptedInAt: scene.test.clock.now() });
     const [board, explore, detail, preview] = await Promise.all(
-      (await scene.answers(adultId)).map((response) => response.text()),
+      (await scene.answers(optedInId)).map((response) => response.text()),
     );
     const [stickerWebp, giftStickerWebp] = scene.drawingUrls.filter((url) => url.endsWith(".webp"));
     for (const body of [board, explore, detail]) expect(body).toContain(stickerWebp);
     expect(preview).toContain(giftStickerWebp);
     expect(JSON.parse(detail)).toMatchObject({ hasTimelapse: true });
-    expect((await timelapseOf(scene, adultId)).status).toBe(200);
+    expect((await timelapseOf(scene, optedInId)).status).toBe(200);
+  });
+
+  it("follow the viewer's NSFW opt-in as they turn it on and off", async () => {
+    const scene = await nsfwSticker();
+    const viewerId = insertUser(scene.test.db);
+    for (const nsfwOptIn of [true, false]) {
+      const body = { nsfwOptIn };
+      const setting = await scene.test.send("POST", "/api/me/nsfw-opt-in", { as: viewerId, body });
+      expect(setting.status).toBe(200);
+      expect((await timelapseOf(scene, viewerId)).status).toBe(nsfwOptIn ? 200 : 403);
+    }
   });
 });
 
@@ -118,24 +128,15 @@ describe("a newly sealed sticker's NFT metadata", () => {
         return Promise.resolve(null);
       },
     });
-    const adultId = insertUser(test.db, { ageVerifiedAt: test.clock.now() });
+    const artistId = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
     for (const [dayIndex, nsfw] of ["true", "false"].entries()) {
-      const ticket = test.db
-        .insert(ticketUses)
-        .values({
-          userId: adultId,
-          ticketDay: "2026-09-26",
-          dayIndex,
-          kind: ticketKindAt(dayIndex),
-        })
-        .returning({ id: ticketUses.id })
-        .get();
+      const ticketUseId = insertTicketUse(test.db, artistId, { ticketDay: "2026-09-26", dayIndex });
       const png = testPng(STICKER_SIZE.width, STICKER_SIZE.height, `nsfw ${nsfw}`);
-      const parts = sealParts(ticket.id, { nsfw, png: pngFile(png, "png") });
+      const parts = sealParts(ticketUseId, { nsfw, png: pngFile(png, "png") });
       const sealing = await test.app.request("/api/stickers", {
         method: "POST",
         body: sealFormData(parts),
-        headers: await test.signInAs(adultId),
+        headers: await test.signInAs(artistId),
       });
       expect(sealing.status).toBe(201);
     }

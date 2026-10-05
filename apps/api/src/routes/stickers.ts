@@ -32,12 +32,12 @@ export const stickerRoutes = (deps: AppDeps) =>
       if (timelapse === "sticker_not_found") {
         return apiError(c, 404, "sticker_not_found", `No sticker ${stickerId}`);
       }
-      if (timelapse === "adults_only") {
+      if (timelapse === "nsfw_not_opted_in") {
         return apiError(
           c,
           403,
-          "adults_only",
-          `Sticker ${stickerId} is an NSFW sticker: its timelapse is for adults only`,
+          "nsfw_not_opted_in",
+          `Sticker ${stickerId} is an NSFW sticker: its timelapse is for people with Show 18+ stickers on`,
         );
       }
       if (timelapse === "timelapse_not_found") {
