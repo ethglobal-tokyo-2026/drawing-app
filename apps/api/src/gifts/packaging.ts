@@ -108,7 +108,7 @@ export type Packaging =
       | "not_minted"
       | "user_not_found"
       | "own_gift"
-      | "adults_only"
+      | "nsfw_not_opted_in"
     >
   | { refusal: null; created: boolean; packaged: PackagedGift };
 
@@ -144,7 +144,7 @@ export async function packageGift(
         }
         if (sticker.nsfw && !optedIntoNsfw(recipient)) {
           return refuse(
-            "adults_only",
+            "nsfw_not_opted_in",
             `Sticker ${stickerId} is NSFW, and ${forUserId} hasn't turned on Show 18+ stickers`,
           );
         }

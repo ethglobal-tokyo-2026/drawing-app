@@ -19,7 +19,6 @@ export type ApiErrorCode =
   | (ErrorOutput extends { error: infer Code extends string } ? Code : never)
   | "internal_error"
   | "chain_unavailable";
-export { CROQUIS_PARENT_NAME } from "@drawing-app/sticker-chain/croquis-names";
 export { HANDLE_MAX_LENGTH } from "./session/handleLimit.ts";
 export { MAX_TIMELAPSE_BYTES } from "./stickers/timelapseLimit.ts";
 export { TOKYO_UTC_OFFSET_MS, tokyoTicketDay } from "./ticketDays.ts";
@@ -32,7 +31,6 @@ export {
 } from "@drawing-app/db/limits";
 
 // The contract's shapes, for the app's screens: each is the type its route's schema checks.
-export type { AgeProof, AgeVerificationRequest } from "./routes/ageVerification.ts";
 export type { ChatMenuLink } from "./chatMenu/menus.ts";
 export type { ErrorBody } from "./errors.ts";
 export type { Explore, PilePage, PileSticker } from "./explore/explore.ts";

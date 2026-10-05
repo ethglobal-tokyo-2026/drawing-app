@@ -11,7 +11,6 @@ import {
   type LineVerifier,
 } from "../deps.ts";
 import { failureCause, logFailure } from "../diagnostics.ts";
-import { syncEnsLabel } from "../ens/labels.ts";
 import { apiError, validate } from "../errors.ts";
 import { unseenGratitudeCount } from "../gratitude/feed.ts";
 import { HANDLE_MAX_LENGTH } from "../session/handleLimit.ts";
@@ -49,7 +48,7 @@ const nsfwOptInBody = z.object({ nsfwOptIn: z.boolean() });
 type UserRow = typeof users.$inferSelect;
 
 /** A live account's row; undefined once it's deleted. */
-export const liveUser = (db: Db, userId: string) =>
+const liveUser = (db: Db, userId: string) =>
   db
     .select()
     .from(users)
@@ -57,7 +56,7 @@ export const liveUser = (db: Db, userId: string) =>
     .get();
 
 /** You, with the NEW and pink-tag counts. */
-export const meOf = (db: Db, user: UserRow) =>
+const meOf = (db: Db, user: UserRow) =>
   toMe(user, {
     newStickerCount: newStickerCount(db, user.id),
     unseenGratitudeCount: unseenGratitudeCount(db, user.id),
@@ -114,9 +113,9 @@ export const sessionRoutes = (deps: AppDeps) =>
             .where(eq(users.lineUserId, profile.sub))
             .returning()
             .get();
-          if (returning) return syncEnsLabel(tx, returning);
+          if (returning) return returning;
           const handle = parseHandle(profile.name);
-          const created = tx
+          return tx
             .insert(users)
             .values({
               id: deps.ids.uuid(),
@@ -127,7 +126,6 @@ export const sessionRoutes = (deps: AppDeps) =>
             })
             .returning()
             .get();
-          return syncEnsLabel(tx, created);
         },
         { behavior: "immediate" },
       );
@@ -164,13 +162,12 @@ export const sessionRoutes = (deps: AppDeps) =>
       const user = deps.db.transaction(
         (tx) => {
           if (isHandleTaken(tx, handle, userId)) return null;
-          const updated = tx
+          return tx
             .update(users)
             .set({ handle })
             .where(and(eq(users.id, userId), isNull(users.deletedAt)))
             .returning()
             .get();
-          return updated && syncEnsLabel(tx, updated);
         },
         { behavior: "immediate" },
       );
@@ -216,9 +213,6 @@ export const sessionRoutes = (deps: AppDeps) =>
           lineDisplayName: null,
           linePictureUrl: null,
           handle: null,
-          // So the same passport can verify the person's next account.
-          ageVerifiedAt: null,
-          ageVerificationNullifier: null,
           nsfwOptedInAt: null,
         })
         .where(and(eq(users.id, c.var.userId), isNull(users.deletedAt)))

@@ -34,11 +34,12 @@ export function tapReplay(hitCount: number): ReplayV1 {
     stage: [PHONE_WIDTH_PX, PHONE_HEIGHT_PX],
     // The last touch lands at (hitCount - 1) gaps; the combo ends a gap after it.
     durationMs: hitCount * TAP_GAP_MS,
-    endReason: hitCount === 1 ? "sent" : "empty",
+    endReason: "empty",
     switchedAtHit: null,
     hits,
     strokes: [],
     shakes: [],
+    strokePasses: [],
   };
 }
 

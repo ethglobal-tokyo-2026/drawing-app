@@ -2,7 +2,6 @@ import { stickers, users, type Db } from "@drawing-app/db";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import type { AppDeps, MintedToken } from "../deps.ts";
 import { logFailure, logInfo } from "../diagnostics.ts";
-import { queueNaming } from "../ens/naming.ts";
 import { startMidnightJob, type Schedule } from "../midnightJob.ts";
 import { publicStickerViewer } from "../shapes.ts";
 
@@ -22,10 +21,9 @@ function recordMint(db: Db, stickerId: string, minted: MintedToken) {
 }
 
 /**
- * Mints a sealed sticker's NFT unless it has one, records its token, then queues its Original
- * Artist's naming under croquis-app.eth. Sealing, its retry and the mint catch-up all mint through
- * this. Rejects when the chain doesn't confirm the mint: the sticker stays sealed and unminted, and
- * the next attempt reconciles an NFT that landed late.
+ * Mints a sealed sticker's NFT unless it has one, and records its token. Sealing, its retry and the
+ * mint catch-up all mint through this. Rejects when the chain doesn't confirm the mint: the sticker
+ * stays sealed and unminted, and the next attempt reconciles an NFT that landed late.
  */
 export async function mintSticker(deps: AppDeps, stickerId: string): Promise<void> {
   const sticker = deps.db.select().from(stickers).where(eq(stickers.id, stickerId)).get();
@@ -47,7 +45,6 @@ export async function mintSticker(deps: AppDeps, stickerId: string): Promise<voi
     // Explicit local mock mode stores stickers without sending a mint transaction.
     if (minted !== null) recordMint(deps.db, stickerId, minted);
   }
-  queueNaming(deps, sticker.artistId);
 }
 
 /** What the mint catch-up did with the unminted stickers it found, by how many. */

@@ -14,8 +14,8 @@ import { readFoundryArtifact } from "./foundry.js";
 const localCroquis = readFoundryArtifact("LocalCroquis", "LocalCroquis");
 
 /**
- * ENSv2's own contracts, then everything under croquis-app.eth and the escrow, as the deploy script
- * builds them. `relayer` signs claims and names people and stickers.
+ * The escrow, as the deploy script builds it: on ENSv2's own contracts and everything under
+ * croquis-app.eth, which StickerGiftEscrow's constructor takes. `relayer` signs claims.
  */
 export async function deployCroquisStack({
   publicClient,
@@ -44,13 +44,6 @@ export async function deployCroquisStack({
     if (!receipt.contractAddress) throw new Error("A local ENS deployment returned no address");
     return receipt.contractAddress;
   };
-  const read = async (functionName: "escrow" | "names" | "resolver", address: Address) => {
-    const value = await publicClient.readContract({ address, abi: localCroquis.abi, functionName });
-    if (typeof value !== "string" || !isAddress(value)) {
-      throw new Error(`LocalCroquis.${functionName} returned no address`);
-    }
-    return value;
-  };
 
   const labelStore = await deploy("LabelStore", "LabelStore", [
     "0x0000000000000000000000000000000000000000",
@@ -71,9 +64,13 @@ export async function deployCroquisStack({
     relayer,
     gatewaySigner,
   ]);
-  return {
-    escrow: await read("escrow", stack),
-    names: await read("names", stack),
-    resolver: await read("resolver", stack),
-  };
+  const escrow = await publicClient.readContract({
+    address: stack,
+    abi: localCroquis.abi,
+    functionName: "escrow",
+  });
+  if (typeof escrow !== "string" || !isAddress(escrow)) {
+    throw new Error("LocalCroquis.escrow returned no address");
+  }
+  return { escrow };
 }

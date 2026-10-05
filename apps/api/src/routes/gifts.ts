@@ -45,7 +45,7 @@ const REFUSAL_STATUS = {
   taken_back: 409,
   gift_returned: 410,
   gift_expired: 410,
-  adults_only: 403,
+  nsfw_not_opted_in: 403,
   claim_failed: 503,
 } as const satisfies Record<string, ContentfulStatusCode>;
 

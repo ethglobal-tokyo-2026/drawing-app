@@ -52,7 +52,6 @@ export async function createTestApp(overrides: Overrides | ((base: TestBase) => 
     serverLog: fakeServerLog(),
     lineChatMenu: chatMenuOff("not_configured"),
     giverNotice: giverNoticeOff,
-    worldId: null,
     ...(typeof overrides === "function" ? overrides({ db, clock }) : overrides),
   };
   const app = createApp(deps);

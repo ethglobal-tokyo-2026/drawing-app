@@ -12,7 +12,6 @@ import {
   users,
   type Db,
 } from "@drawing-app/db";
-import { personEnsName, stickerEnsName } from "@drawing-app/sticker-chain/croquis-names";
 import { eq, inArray } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -69,8 +68,6 @@ export const personSchema = userRow
     linePictureUrl: true,
   })
   .extend({
-    /** <label>.croquis-app.eth, which resolves from the moment they have a label. */
-    ensName: z.string().nullable(),
     /**
      * The NSFW opt-in: only someone with it on marks, sees plainly or receives NSFW stickers, so
      * the give sheet can tell before giving them one.
@@ -79,27 +76,21 @@ export const personSchema = userRow
   });
 export type Person = z.infer<typeof personSchema>;
 
-/**
- * Picks the public columns, so LINE's user ID never reaches other people. The smart wallet is left
- * out too, though it isn't private: the ENS gateway answers it as <label>.croquis-app.eth's
- * address.
- */
+/** Picks the public columns, so LINE's user ID never reaches other people. */
 export const toPerson = ({
   id,
   handle,
   lineDisplayName,
   linePictureUrl,
-  ensLabel,
   nsfwOptedInAt,
 }: Pick<
   UserRow,
-  "id" | "handle" | "lineDisplayName" | "linePictureUrl" | "ensLabel" | "nsfwOptedInAt"
+  "id" | "handle" | "lineDisplayName" | "linePictureUrl" | "nsfwOptedInAt"
 >): Person => ({
   id,
   handle,
   lineDisplayName,
   linePictureUrl,
-  ensName: ensLabel === null ? null : personEnsName(ensLabel),
   nsfwOptIn: optedIntoNsfw({ nsfwOptedInAt }),
 });
 
@@ -199,8 +190,6 @@ export const stickerSchema = z.object({
   artist: personSchema,
   images: stickerImagesSchema,
   sealedAt: isoTimeSchema,
-  /** <number>.<artist>.croquis-app.eth, once it's onchain. */
-  ensName: z.string().nullable(),
 });
 export type Sticker = z.infer<typeof stickerSchema>;
 
@@ -277,17 +266,24 @@ type StickerRow = typeof stickers.$inferSelect;
 export interface StickerViewer {
   veils: (sticker: Pick<StickerRow, "nsfw">) => boolean;
   /** Its image URLs: the veiled image in place of each that shows the drawing, when it's veiled. */
-  images: (sticker: Pick<StickerRow, "nsfw" | "contentHash" | "veiledHash">) => StickerImages;
+  images: (
+    sticker: Pick<StickerRow, "id" | "nsfw" | "contentHash" | "veiledHash">,
+  ) => StickerImages;
 }
 
 function viewerOf(images: AppDeps["images"], optedIn: boolean): StickerViewer {
-  const veils = (sticker: Pick<StickerRow, "nsfw">) => sticker.nsfw && !optedIn;
   return {
-    veils,
-    images: (sticker) =>
-      veils(sticker)
-        ? images.veiledUrls(sticker.contentHash, sticker.veiledHash)
-        : images.urls(sticker.contentHash),
+    veils: (sticker) => sticker.nsfw && !optedIn,
+    images: (sticker) => {
+      if (!sticker.nsfw) return images.urls(sticker.contentHash);
+      // The stickers_veiled CHECK keeps every NSFW row's veil, which Sealing makes before the row.
+      if (sticker.veiledHash === null) {
+        throw new Error(`NSFW sticker ${sticker.id} has no veiled image`);
+      }
+      return optedIn
+        ? images.urls(sticker.contentHash)
+        : images.veiledUrls(sticker.contentHash, sticker.veiledHash);
+    },
   };
 }
 
@@ -328,10 +324,6 @@ export function toSticker(
     mintTxHash: sticker.mintTxHash,
     nsfw: sticker.nsfw,
     sealedAt: toIsoTime(sticker.createdAt),
-    ensName:
-      sticker.ensNamedAt !== null && artist.ensLabel !== null
-        ? stickerEnsName(sticker.number, artist.ensLabel)
-        : null,
   };
 }
 

@@ -1,24 +1,16 @@
-import { stickers, ticketUses } from "@drawing-app/db";
-import { bytes32, insertUser } from "@drawing-app/db/testing";
-import { stickerLabel } from "@drawing-app/sticker-chain/croquis-names";
+import { stickers } from "@drawing-app/db";
+import { bytes32, insertTicketUse, insertUser } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mint } from "../deps.ts";
 import { AFTER_MIDNIGHT_MS } from "../midnightJob.ts";
 import { mockChain } from "../services/mockChain.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
-import {
-  fakeEns,
-  fakeGiftChain,
-  fakeMint,
-  fakeNameWriter,
-  fakeSmartWallets,
-} from "../testing/fakes.ts";
+import { fakeGiftChain, fakeMint, fakeSmartWallets } from "../testing/fakes.ts";
 import { captureLogLines, type LogLines } from "../testing/logLines.ts";
 import { bodyOf } from "../testing/responses.ts";
 import { giveSticker, insertSealedSticker } from "../testing/rows.ts";
 import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
-import { ticketKindAt } from "../tickets/tickets.ts";
 import { mintUnminted, startMintCatchUp } from "./mint.ts";
 import { sealResponseSchema } from "./seal.ts";
 import { sealFormData, sealParts } from "./testPngs.ts";
@@ -41,19 +33,13 @@ function recordingMint() {
   return { mint, chain, asked };
 }
 
-/** The app in chain mode, minting through `mint`: everyone has a smart wallet, and names go onchain. */
-async function chainApp(mint: Mint) {
-  const { writer, calls } = fakeNameWriter();
-  const test = await createTestApp(({ db, clock }) => ({
+/** The app in chain mode, minting through `mint`: everyone has a smart wallet. */
+const chainApp = (mint: Mint) =>
+  createTestApp(({ db, clock }) => ({
     mint,
     giftChain: fakeGiftChain(clock),
     smartWallets: fakeSmartWallets(db),
-    ens: fakeEns(writer),
   }));
-  const { ens } = test.deps;
-  assert(ens, "The chain-mode app names stickers under croquis-app.eth");
-  return { test, naming: ens.naming, names: calls };
-}
 
 const stickerRow = (test: TestApp, stickerId: string) =>
   test.db.select().from(stickers).where(eq(stickers.id, stickerId)).get();
@@ -69,21 +55,19 @@ const caughtUp = (counts: Partial<Awaited<ReturnType<typeof mintUnminted>>>) => 
 });
 
 describe("the mint catch-up", () => {
-  it("mints an unminted sticker at boot, records its token and names it, then runs again just after midnight", async () => {
+  it("mints an unminted sticker at boot, records its token, then runs again just after midnight", async () => {
     const { mint, chain } = recordingMint();
-    const { test, naming, names } = await chainApp(mint);
-    const stickerId = insertSealedSticker(test.db, insertUser(test.db, { handle: "Alice" }));
+    const test = await chainApp(mint);
+    const stickerId = insertSealedSticker(test.db, insertUser(test.db));
     const schedule = vi.fn(() => () => {});
     const job = startMintCatchUp({ ...test.deps, schedule });
     assert(job, "Chain mode runs the mint catch-up");
     await job.idle();
-    await naming.idle();
 
     const token = chain.minted.get(stickerId);
     const row = stickerRow(test, stickerId);
     assert(token && row, "The boot run minted the sticker");
     expect(row).toMatchObject({ tokenId: token.tokenId, mintTxHash: token.txHash });
-    expect(names).toEqual(["person alice", `sticker ${token.tokenId} ${stickerLabel(row.number)}`]);
     logs.expectLogged("sticker.mint.catch_up.swept", { count: 1, ...caughtUp({ minted: 1 }) });
     const now = test.clock.now();
     expect(schedule).toHaveBeenCalledWith(
@@ -95,7 +79,7 @@ describe("the mint catch-up", () => {
 
   it("leaves a minted sticker alone: no wallet lookup, no mint, not counted", async () => {
     const { mint, asked } = recordingMint();
-    const { test } = await chainApp(mint);
+    const test = await chainApp(mint);
     const stickerId = insertSealedSticker(test.db, insertUser(test.db), {
       tokenId: "7",
       mintTxHash: bytes32("mint 7"),
@@ -143,7 +127,7 @@ describe("the mint catch-up", () => {
     },
   ])("skips a sticker whose Original Artist $why, and logs why", async ({ status, unminted }) => {
     const { mint, asked } = recordingMint();
-    const { test } = await chainApp(mint);
+    const test = await chainApp(mint);
     const stickerId = unminted(test);
 
     expect(await mintUnminted(test.deps)).toEqual(caughtUp({ skipped: 1 }));
@@ -156,13 +140,12 @@ describe("the mint catch-up", () => {
     const { mint, chain } = recordingMint();
     const cause = new Error("The relayer's transaction reverted");
     mint.mockRejectedValueOnce(cause);
-    const { test, naming } = await chainApp(mint);
+    const test = await chainApp(mint);
     const artistId = insertUser(test.db);
     const failing = insertSealedSticker(test.db, artistId);
     const next = insertSealedSticker(test.db, artistId);
 
     expect(await mintUnminted(test.deps)).toEqual(caughtUp({ minted: 1, failed: 1 }));
-    await naming.idle();
     expect(stickerRow(test, failing)).toMatchObject(UNMINTED);
     const token = chain.minted.get(next);
     assert(token, "The catch-up minted the next sticker");
@@ -202,21 +185,15 @@ describe("the mint catch-up", () => {
       await block;
       return chain(request);
     });
-    const { test, naming } = await chainApp(mint);
+    const test = await chainApp(mint);
     const artistId = insertUser(test.db);
     const stickerId = insertSealedSticker(test.db, artistId);
     // The ticket use Sealing's transaction left pointing at the sticker it saved.
-    const { id: ticketUseId } = test.db
-      .insert(ticketUses)
-      .values({
-        userId: artistId,
-        ticketDay: tokyoTicketDay(test.clock.now()),
-        dayIndex: 0,
-        kind: ticketKindAt(0),
-        stickerId,
-      })
-      .returning({ id: ticketUses.id })
-      .get();
+    const ticketUseId = insertTicketUse(test.db, artistId, {
+      ticketDay: tokyoTicketDay(test.clock.now()),
+      dayIndex: 0,
+      stickerId,
+    });
     const job = startMintCatchUp({ ...test.deps, schedule: () => () => {} });
     assert(job, "Chain mode runs the mint catch-up");
     await vi.waitFor(() => expect(asked()).toEqual([stickerId]));
@@ -234,7 +211,6 @@ describe("the mint catch-up", () => {
 
     land();
     await job.idle();
-    await naming.idle();
     expect(stickerRow(test, stickerId)).toMatchObject(recorded);
     expect(logs.entries.filter(({ event }) => event === "sticker.mint.recorded")).toHaveLength(1);
     logs.expectLogged("sticker.mint.already_recorded", { stickerId, tokenId: token.tokenId });

@@ -9,7 +9,7 @@ import { apiError } from "./errors.ts";
 
 /**
  * What every route's context carries. requireSession sets userId on every route but signing in and
- * out (POST and DELETE /api/session) and the ENS gateway (GET /api/ens/gateway/*).
+ * out (POST and DELETE /api/session).
  */
 export type AppEnv = {
   Variables: { userId: string };

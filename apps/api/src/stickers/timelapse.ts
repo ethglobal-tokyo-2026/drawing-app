@@ -23,8 +23,8 @@ export const timelapseV1Schema = z.object({
   ink: z.tuple([z.number().positive(), z.number().positive()]),
   /** Where the sticker image sits on the sheet. */
   place: z.tuple([z.number(), z.number(), z.number().positive(), z.number().positive()]),
-  /** Device pixels per sheet pixel where it was drawn: fills flood at it. Older ones lack it. */
-  density: z.number().positive().optional(),
+  /** Device pixels per sheet pixel where it was drawn: fills flood at it. */
+  density: z.number().positive(),
   ops: z.array(
     z.union([
       z.tuple([z.enum(["brush", "eraser"]), z.string(), z.number(), strokePoints]),
@@ -55,13 +55,14 @@ export function timelapseProblem(gzipped: Uint8Array): string | null {
 
 /**
  * A sticker's timelapse, or why `viewer` gets none: it shows the drawing, so a sticker veiled to them
- * is adults_only. Sealing stores only one that reads, so one that doesn't throws, naming the sticker.
+ * is nsfw_not_opted_in. Sealing stores only one that reads, so one that doesn't throws, naming the
+ * sticker.
  */
 export function readTimelapse(
   db: Pick<Db, "select">,
   stickerId: string,
   viewer: Pick<StickerViewer, "veils">,
-): TimelapseV1 | "sticker_not_found" | "adults_only" | "timelapse_not_found" {
+): TimelapseV1 | "sticker_not_found" | "nsfw_not_opted_in" | "timelapse_not_found" {
   const row = db
     .select({ id: stickers.id, nsfw: stickers.nsfw, ops: stickerTimelapses.ops })
     .from(stickers)
@@ -69,7 +70,7 @@ export function readTimelapse(
     .where(eq(stickers.id, stickerId))
     .get();
   if (!row) return "sticker_not_found";
-  if (viewer.veils(row)) return "adults_only";
+  if (viewer.veils(row)) return "nsfw_not_opted_in";
   if (!row.ops) return "timelapse_not_found";
   try {
     return timelapseV1Schema.parse(unzippedJson(row.ops));

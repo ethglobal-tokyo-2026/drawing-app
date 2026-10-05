@@ -38,17 +38,16 @@ BOX_CURL="curl --retry 10 --retry-connrefused --retry-delay 1 --max-time 5"
 # A stalled registry or native build fails the deploy instead of hanging it.
 NPM_INSTALL_TIMEOUT=10m
 
-# Validate the chain settings, deploy/.env's over what the box's chain.env already holds, before replacing any running
-# server code.
+# Check deploy/.env's settings for chain.env before replacing any running server code. They replace the box's chain.env
+# whole, so each one is required.
 REMOTE_STAGE="$(ssh "$TARGET" "mktemp -d /tmp/drawing-api-deploy.XXXXXXXX")"
 rsync -c "$ROOT/deploy/install-chain-env.mjs" "$TARGET:$REMOTE_STAGE/install-chain-env.mjs"
+# What chain.env takes from deploy/.env; install-chain-env.mjs adds STICKER_CHAIN_MODE=sui.
+CHAIN_ENV_KEYS=(SUI_SERVER_PRIVATE_KEY SHINAMI_ACCESS_KEY PRIVY_APP_ID PRIVY_APP_SECRET LINE_MESSAGING_CHANNEL_ID
+  LINE_MESSAGING_CHANNEL_SECRET)
 chain_config() {
-  printf 'STICKER_CHAIN_MODE=sepolia\nETHEREUM_SEPOLIA_RPC_URL=%s\nSTICKER_NFT_ADDRESS=%s\nSTICKER_GIFT_ESCROW_ADDRESS=%s\nSTICKER_SEALER_PRIVATE_KEY=%s\nCROQUIS_NAMES_ADDRESS=%s\nCROQUIS_RESOLVER_ADDRESS=%s\nENS_GATEWAY_PRIVATE_KEY=%s\nPRIVY_APP_ID=%s\nPRIVY_APP_SECRET=%s\nLINE_MESSAGING_CHANNEL_ID=%s\nLINE_MESSAGING_CHANNEL_SECRET=%s\nWORLD_ID_APP_ID=%s\nWORLD_ID_RP_ID=%s\nWORLD_ID_SIGNING_KEY=%s\n' \
-    "${ETHEREUM_SEPOLIA_RPC_URL:-}" "${STICKER_NFT_ADDRESS:-}" "${STICKER_GIFT_ESCROW_ADDRESS:-}" \
-    "${STICKER_SEALER_PRIVATE_KEY:-}" "${CROQUIS_NAMES_ADDRESS:-}" "${CROQUIS_RESOLVER_ADDRESS:-}" \
-    "${ENS_GATEWAY_PRIVATE_KEY:-}" "${PRIVY_APP_ID:-}" "${PRIVY_APP_SECRET:-}" \
-    "${LINE_MESSAGING_CHANNEL_ID:-}" "${LINE_MESSAGING_CHANNEL_SECRET:-}" \
-    "${WORLD_ID_APP_ID:-}" "${WORLD_ID_RP_ID:-}" "${WORLD_ID_SIGNING_KEY:-}"
+  local key
+  for key in "${CHAIN_ENV_KEYS[@]}"; do printf '%s=%s\n' "$key" "${!key:-}"; done
 }
 chain_config | ssh "$TARGET" "node '$REMOTE_STAGE/install-chain-env.mjs' '$DIR/chain.env' check"
 if [ "$PREFLIGHT_ONLY" = true ]; then exit 0; fi

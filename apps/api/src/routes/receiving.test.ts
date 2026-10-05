@@ -388,7 +388,7 @@ describe("Receiving refuses", () => {
     const test = await createGiftsTestApp();
     const { gift, giftClaimToken } = await test.packagedGift(insertUser(test.db), { nsfw: true });
 
-    await expectRefused(test, insertUser(test.db), giftClaimToken, 403, "adults_only");
+    await expectRefused(test, insertUser(test.db), giftClaimToken, 403, "nsfw_not_opted_in");
     expect(test.giftRow(gift.id).forUserId).toBeNull();
     const optedIn = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
     expect((await receivedOf(await receive(test, optedIn, giftClaimToken))).sticker).toMatchObject({

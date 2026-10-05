@@ -1,5 +1,4 @@
 import type { Db } from "@drawing-app/db";
-import type { Address, LocalAccount } from "viem";
 import { z } from "zod";
 import type { ChatMenuLink } from "./chatMenu/menus.ts";
 import type {
@@ -23,44 +22,12 @@ export interface AppDeps {
   /** Null in mock chain mode: Giving sends no escrow transfer, and a deposit counts as landed at once. */
   giftChain: GiftChain | null;
   smartWallets: SmartWallets;
-  /** Null when the names under croquis-app.eth aren't configured: labels are kept, nothing resolves. */
-  ens: EnsDeps | null;
   ticketPayments: TicketPayments;
   serverLog: ServerLog;
   /** Off without the Messaging API channel, or under dev sign-in: every call then does nothing. */
   lineChatMenu: LineChatMenu;
   /** Off as lineChatMenu is: every call then does nothing. */
   giverNotice: GiverNotice;
-  /** Null when the server has no World ID app: age verification is off. */
-  worldId: WorldId | null;
-}
-
-/** A World ID request's signature, which World App checks came from our app: IDKit's `rp_context`. */
-export interface WorldIdRpContext {
-  rp_id: string;
-  nonce: string;
-  /** Unix seconds. */
-  created_at: number;
-  /** Unix seconds. */
-  expires_at: number;
-  signature: string;
-}
-
-/**
- * World's verdict on a proof: when it holds, the nullifier if World names one; World's code and
- * detail when it doesn't.
- */
-export type WorldIdVerdict =
-  | { verified: true; nullifier: string | null }
-  | { verified: false; code: string; detail: string };
-
-/** Our app in World's Developer Portal, which age verification asks for proofs and checks them with. */
-export interface WorldId {
-  appId: `app_${string}`;
-  environment: "production" | "staging";
-  signRequest: (action: string) => WorldIdRpContext;
-  /** Sends IDKit's result, as the app got it, to World to check. Rejects when World can't be asked. */
-  verifyProof: (proof: Record<string, unknown>) => Promise<WorldIdVerdict>;
 }
 
 /**
@@ -152,7 +119,7 @@ export interface ImageStore {
   /** Where the CDN serves them. */
   urls: (contentHash: string) => StickerImages;
   /** `urls` with an NSFW sticker's veiled image in place, for a viewer without the NSFW opt-in. */
-  veiledUrls: (contentHash: string, veiledHash: string | null) => StickerImages;
+  veiledUrls: (contentHash: string, veiledHash: string) => StickerImages;
 }
 
 /** A sealed sticker's facts, as its NFT records them. */
@@ -266,80 +233,3 @@ export interface TicketPayments {
    */
   paymentsSince: (since: Date) => Promise<{ payments: PaymentEvent[]; complete: boolean }>;
 }
-
-/** The names under croquis-app.eth: the CCIP-Read gateway, and the relayer that writes names. */
-export interface EnsDeps {
-  /** CroquisResolver: the gateway answers only its lookups. */
-  resolverAddress: string;
-  /** Signs the gateway's answers; CroquisResolver trusts its address. */
-  gatewaySigner: LocalAccount;
-  /** A person's `url` record is this plus /@<label>: the LIFF app's link, which opens their board. */
-  appLinkBase: string;
-  chainId: number;
-  stickerContract: string;
-  /** Null only in tests: names resolve through the gateway, and none go onchain. */
-  writer: NameWriter | null;
-  naming: NamingQueue;
-}
-
-/** sticker-chain's createCroquisNames. Each call reads the chain first, so it's safe to repeat. */
-export interface NameWriter {
-  ensurePersonName: (
-    person: string,
-    label: string,
-    records: { avatar: string; url: string },
-  ) => Promise<{ label: string; created: boolean }>;
-  ensureStickerName: (
-    tokenId: string,
-    label: string,
-  ) => Promise<{ label: string; created: boolean }>;
-  setAvatar: (person: string, avatar: string) => Promise<void>;
-}
-
-/** Whether naming can work, as the contract check last found; off says why. */
-export type NamingState = { on: true } | { on: false; reason: string };
-
-/** Runs naming jobs one at a time, off the request that asked for them. */
-export interface NamingQueue {
-  /** Queues `job` under `key`, unless a job for that key is already waiting. */
-  enqueue: (key: string, job: () => Promise<void>) => void;
-  /** Settles once every queued job has. */
-  idle: () => Promise<void>;
-  /**
-   * Naming's state from when `state` settles; it must not reject. A job that comes up before then
-   * waits for it, and one that comes up while naming is off is skipped with a line saying why.
-   */
-  setState: (state: Promise<NamingState>) => void;
-  /** Naming's state, once the last one set settles. On until one is set. */
-  state: () => Promise<NamingState>;
-}
-
-/** The addresses the server's contract settings name, and the relayer that sends from them. */
-export interface ConfiguredContracts {
-  relayer: Address;
-  stickers: Address;
-  escrow: Address;
-  names: Address;
-  resolver: Address;
-}
-
-/**
- * What the configured contracts answer about each other. An address is null when its contract
- * refused the read: it reverted, or nothing there answers it.
- */
-export interface ContractReads {
-  configured: ConfiguredContracts;
-  /** Whether CroquisNames grants the relayer NAMER_ROLE. */
-  relayerIsNamer: boolean;
-  /** CroquisNames' parentName() as dotted text: the name it makes every name under. */
-  namesParent: string | null;
-  /** The StickerNFT each of these reads. */
-  namesStickers: Address | null;
-  resolverStickers: Address | null;
-  escrowSticker: Address | null;
-  /** The escrow's CroquisNames; an escrow from before CroquisNames has none. */
-  escrowNames: Address | null;
-}
-
-/** Reads the configured contracts. Rejects with ChainUnavailableError when the RPC fails. */
-export type ReadContracts = () => Promise<ContractReads>;

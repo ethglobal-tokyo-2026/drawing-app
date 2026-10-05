@@ -1,6 +1,5 @@
 import { MAX_TIME_USED_S, stickers, stickerTimelapses, ticketUses } from "@drawing-app/db";
-import { insertGratitude, insertUser, packGift } from "@drawing-app/db/testing";
-import { CROQUIS_PARENT_NAME } from "@drawing-app/sticker-chain/croquis-names";
+import { insertGratitude, insertTicketUse, insertUser, packGift } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { gzipSync } from "node:zlib";
 import { keccak256 } from "viem";
@@ -21,16 +20,9 @@ import {
 } from "../stickers/testPngs.ts";
 import { timelapseV1Schema } from "../stickers/timelapse.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
-import {
-  fakeEns,
-  fakeGiftChain,
-  fakeMint,
-  fakeNameWriter,
-  fakeSmartWallets,
-} from "../testing/fakes.ts";
+import { fakeGiftChain, fakeMint } from "../testing/fakes.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 import { giveSticker, insertSealedSticker } from "../testing/rows.ts";
-import { ticketKindAt } from "../tickets/tickets.ts";
 
 const HOUR_MS = 60 * 60 * 1000;
 /** The ticket day the tests' tickets are spent on. */
@@ -48,15 +40,8 @@ afterEach(() => {
 
 let ticketsSpent = 0;
 /** Spends one of the person's tickets straight into ticket_uses, and returns its id. */
-function spendTicket(userId: string): number {
-  const dayIndex = ticketsSpent++;
-  const use = test.db
-    .insert(ticketUses)
-    .values({ userId, ticketDay: TICKET_DAY, dayIndex, kind: ticketKindAt(dayIndex) })
-    .returning({ id: ticketUses.id })
-    .get();
-  return use.id;
-}
+const spendTicket = (userId: string) =>
+  insertTicketUse(test.db, userId, { ticketDay: TICKET_DAY, dayIndex: ticketsSpent++ });
 
 const postSeal = async (userId: string, form: FormData) =>
   test.app.request("/api/stickers", {
@@ -123,7 +108,7 @@ describe("POST /api/stickers", () => {
     const parts = sealParts(ticketUseId, { nsfw: "true", png: pngFile(png, "png") });
     expect(await refusalOf(await postSeal(optedOutId, sealFormData(parts)))).toMatchObject({
       status: 403,
-      error: "adults_only",
+      error: "nsfw_not_opted_in",
     });
     expect(test.images.saved.has(keccak256(png))).toBe(false);
   });
@@ -157,24 +142,6 @@ describe("POST /api/stickers", () => {
     const minted = { tokenId: token?.tokenId, mintTxHash: token?.txHash };
     expect(sticker).toMatchObject(minted);
     expect(allStickers()).toMatchObject([minted]);
-  });
-
-  it("names the artist and the sticker under croquis-app.eth once the mint lands", async () => {
-    const { writer, calls } = fakeNameWriter();
-    const ens = fakeEns(writer);
-    test = await createTestApp({ mint: fakeMint(), smartWallets: fakeSmartWallets(), ens });
-    const artistId = insertUser(test.db, { handle: "Alice" });
-    const { sticker } = await seal(artistId);
-    await ens.naming.idle();
-
-    expect(calls).toEqual([
-      "person alice",
-      `sticker ${sticker.tokenId} ${String(sticker.number).padStart(4, "0")}`,
-    ]);
-    const detail = await bodyOf(await getSticker(artistId, sticker.id), stickerDetailSchema);
-    expect(detail.sticker.ensName).toBe(
-      `${String(sticker.number).padStart(4, "0")}.alice.${CROQUIS_PARENT_NAME}`,
-    );
   });
 
   it("reports mint failure, retries the saved sticker's mint on the same ticket, and mints it once", async () => {
@@ -382,16 +349,6 @@ describe("GET /api/stickers/:stickerId/timelapse", () => {
     const { sticker } = await seal(insertUser(test.db));
     const response = await getTimelapse(insertUser(test.db), sticker.id);
     expect(await bodyOf(response, timelapseV1Schema)).toEqual(TEST_TIMELAPSE);
-  });
-
-  it("answers a timelapse from before densities were recorded without one", async () => {
-    const artistId = insertUser(test.db);
-    const { density: _dropped, ...older } = TEST_TIMELAPSE;
-    const file = new File([gzipSync(JSON.stringify(older))], "t.json.gz");
-    const { sticker } = await seal(artistId, { timelapse: file });
-    const answered = await bodyOf(await getTimelapse(artistId, sticker.id), timelapseV1Schema);
-    expect(answered).toEqual(older);
-    expect(answered.density).toBeUndefined();
   });
 
   it("refuses a sticker sealed without one with timelapse_not_found", async () => {
