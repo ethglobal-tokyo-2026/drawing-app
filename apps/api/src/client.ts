@@ -19,7 +19,6 @@ export type ApiErrorCode =
   | (ErrorOutput extends { error: infer Code extends string } ? Code : never)
   | "internal_error"
   | "chain_unavailable";
-export { CROQUIS_PARENT_NAME } from "@drawing-app/sticker-chain/croquis-names";
 export { HANDLE_MAX_LENGTH } from "./session/handleLimit.ts";
 export { MAX_TIMELAPSE_BYTES } from "./stickers/timelapseLimit.ts";
 export { TOKYO_UTC_OFFSET_MS, tokyoTicketDay } from "./ticketDays.ts";

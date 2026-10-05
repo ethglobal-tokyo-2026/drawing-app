@@ -5,8 +5,7 @@ import { MAX_TIME_USED_S } from "./limits.ts";
 import { users } from "./users.ts";
 
 /**
- * A sealed sticker. Everything but owner_id, the mint and ens_named_at is fixed at seal; created_at
- * is the seal.
+ * A sealed sticker. Everything but owner_id and the mint is fixed at seal; created_at is the seal.
  */
 export const stickers = sqliteTable(
   "stickers",
@@ -41,8 +40,6 @@ export const stickers = sqliteTable(
     tokenId: text("token_id").unique(),
     mintTxHash: text("mint_tx_hash"),
     ...timestamps(),
-    /** When CroquisNames confirmed the sticker's name, <number>.<artist's ens_label>.croquis-app.eth. */
-    ensNamedAt: integer("ens_named_at", { mode: "timestamp_ms" }),
     /** An NSFW sticker: its Original Artist, with the NSFW opt-in on, marked it 18+ at seal. */
     nsfw: integer("nsfw", { mode: "boolean" }).notNull().default(false),
     /**

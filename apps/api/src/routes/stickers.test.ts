@@ -1,6 +1,5 @@
 import { MAX_TIME_USED_S, stickers, stickerTimelapses, ticketUses } from "@drawing-app/db";
 import { insertGratitude, insertUser, packGift } from "@drawing-app/db/testing";
-import { CROQUIS_PARENT_NAME } from "@drawing-app/sticker-chain/croquis-names";
 import { eq } from "drizzle-orm";
 import { gzipSync } from "node:zlib";
 import { keccak256 } from "viem";
@@ -21,13 +20,7 @@ import {
 } from "../stickers/testPngs.ts";
 import { timelapseV1Schema } from "../stickers/timelapse.ts";
 import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
-import {
-  fakeEns,
-  fakeGiftChain,
-  fakeMint,
-  fakeNameWriter,
-  fakeSmartWallets,
-} from "../testing/fakes.ts";
+import { fakeGiftChain, fakeMint } from "../testing/fakes.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 import { giveSticker, insertSealedSticker } from "../testing/rows.ts";
 import { ticketKindAt } from "../tickets/tickets.ts";
@@ -157,24 +150,6 @@ describe("POST /api/stickers", () => {
     const minted = { tokenId: token?.tokenId, mintTxHash: token?.txHash };
     expect(sticker).toMatchObject(minted);
     expect(allStickers()).toMatchObject([minted]);
-  });
-
-  it("names the artist and the sticker under croquis-app.eth once the mint lands", async () => {
-    const { writer, calls } = fakeNameWriter();
-    const ens = fakeEns(writer);
-    test = await createTestApp({ mint: fakeMint(), smartWallets: fakeSmartWallets(), ens });
-    const artistId = insertUser(test.db, { handle: "Alice" });
-    const { sticker } = await seal(artistId);
-    await ens.naming.idle();
-
-    expect(calls).toEqual([
-      "person alice",
-      `sticker ${sticker.tokenId} ${String(sticker.number).padStart(4, "0")}`,
-    ]);
-    const detail = await bodyOf(await getSticker(artistId, sticker.id), stickerDetailSchema);
-    expect(detail.sticker.ensName).toBe(
-      `${String(sticker.number).padStart(4, "0")}.alice.${CROQUIS_PARENT_NAME}`,
-    );
   });
 
   it("reports mint failure, retries the saved sticker's mint on the same ticket, and mints it once", async () => {

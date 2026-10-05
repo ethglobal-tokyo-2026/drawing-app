@@ -9,7 +9,6 @@ import { IMMUTABLE_MAX_AGE_S } from "./cacheControl.ts";
 import type { AppDeps } from "./deps.ts";
 import { apiError, limitBody, notFound, onError, validate } from "./errors.ts";
 import { ageVerificationRoutes } from "./routes/ageVerification.ts";
-import { ensRoutes } from "./routes/ens.ts";
 import { exploreRoutes } from "./routes/explore.ts";
 import { giftRoutes } from "./routes/gifts.ts";
 import { gratitudeRoutes } from "./routes/gratitude.ts";
@@ -33,9 +32,6 @@ const isSealing = (c: Context) => c.req.method === "POST" && c.req.path === "/ap
 /** Signing in, and signing out, which clears whatever cookie is there, live or not. */
 const isSignInOrOut = (c: Context) =>
   (c.req.method === "POST" || c.req.method === "DELETE") && c.req.path === "/api/session";
-/** ENS clients call the gateway with no session. */
-const isEnsGateway = (c: Context) =>
-  c.req.method === "GET" && c.req.path.startsWith("/api/ens/gateway/");
 
 /**
  * The REST API. Every call chains, here and inside each route group, so each route's request and
@@ -47,7 +43,7 @@ export function createApp(deps: AppDeps) {
       .basePath("/api")
       .use(requestDiagnostics)
       .use(except(isSealing, limitBody(MAX_BODY_BYTES)))
-      .use(except([isSignInOrOut, isEnsGateway], requireSession(deps)))
+      .use(except(isSignInOrOut, requireSession(deps)))
       // /session and /me
       .route("/", sessionRoutes(deps))
       // /me/age-verification
@@ -60,7 +56,6 @@ export function createApp(deps: AppDeps) {
       .route("/sticker-boards", stickerBoardRoutes(deps))
       .route("/gifts", giftRoutes(deps))
       .route("/gratitude", gratitudeRoutes(deps))
-      .route("/ens", ensRoutes(deps))
       // /explore and /users
       .route("/", exploreRoutes(deps))
       .onError(onError)

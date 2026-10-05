@@ -1,4 +1,4 @@
-import { croquisNamesAbi } from "@drawing-app/sticker-chain/contracts";
+import { stickerGiftEscrowAbi } from "@drawing-app/sticker-chain/contracts";
 import {
   ContractFunctionExecutionError,
   ContractFunctionRevertedError,
@@ -130,36 +130,42 @@ describe("NFT diagnostics", () => {
 
   it("logs a contract revert's decoded error, or its raw data when the ABI lacks the error", () => {
     const relayer = getAddress(`0x${"65d3".repeat(10)}`);
-    const namerRole = keccak256(stringToBytes("NAMER_ROLE"));
-    /** claimPersonName reverting with `data`, as viem throws it when it reads the revert with `abi`. */
+    const claimSignerRole = keccak256(stringToBytes("CLAIM_SIGNER_ROLE"));
+    const giftId = keccak256(stringToBytes("gift 1"));
+    /** claimGift reverting with `data`, as viem throws it when it reads the revert with `abi`. */
     const reverted = (abi: Abi, data: Hex) =>
       new ContractFunctionExecutionError(
-        new ContractFunctionRevertedError({ abi, data, functionName: "claimPersonName" }),
-        { abi, functionName: "claimPersonName", args: ["alice", relayer, "", ""] },
+        new ContractFunctionRevertedError({ abi, data, functionName: "claimGift" }),
+        { abi, functionName: "claimGift", args: [giftId, relayer, 0n, "0x"] },
       );
     const unauthorized = encodeErrorResult({
-      abi: croquisNamesAbi,
+      abi: stickerGiftEscrowAbi,
       errorName: "AccessControlUnauthorizedAccount",
-      args: [relayer, namerRole],
+      args: [relayer, claimSignerRole],
     });
-    const alreadyNamed = encodeErrorResult({
-      abi: croquisNamesAbi,
-      errorName: "StickerAlreadyNamed",
+    const badSignature = encodeErrorResult({
+      abi: stickerGiftEscrowAbi,
+      errorName: "ECDSAInvalidSignatureLength",
       args: [45n],
     });
 
-    logFailure("chain.ens.person_name.failed", reverted(croquisNamesAbi, unauthorized));
-    logFailure("chain.ens.sticker_name.failed", reverted(croquisNamesAbi, alreadyNamed));
-    logFailure("chain.ens.person_name.failed", reverted([], unauthorized));
+    logFailure("chain.claim.submit.failed", reverted(stickerGiftEscrowAbi, unauthorized));
+    logFailure("chain.claim.submit.failed", reverted(stickerGiftEscrowAbi, badSignature));
+    logFailure("chain.claim.submit.failed", reverted([], unauthorized));
 
     expect(logs.entries.map((entry) => entry.causes)).toEqual([
       expect.arrayContaining([
         expect.objectContaining({
-          revert: { errorName: "AccessControlUnauthorizedAccount", args: [relayer, namerRole] },
+          revert: {
+            errorName: "AccessControlUnauthorizedAccount",
+            args: [relayer, claimSignerRole],
+          },
         }),
       ]),
       expect.arrayContaining([
-        expect.objectContaining({ revert: { errorName: "StickerAlreadyNamed", args: ["45"] } }),
+        expect.objectContaining({
+          revert: { errorName: "ECDSAInvalidSignatureLength", args: ["45"] },
+        }),
       ]),
       expect.arrayContaining([expect.objectContaining({ revert: { raw: unauthorized } })]),
     ]);

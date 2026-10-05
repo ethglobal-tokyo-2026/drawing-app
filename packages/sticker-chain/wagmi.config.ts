@@ -6,12 +6,7 @@ export default defineConfig({
   plugins: [
     foundry({
       project: ".",
-      include: [
-        "StickerNFT.json",
-        "StickerGiftEscrow.json",
-        "CroquisNames.json",
-        "CroquisResolver.json",
-      ],
+      include: ["StickerNFT.json", "StickerGiftEscrow.json"],
       forge: { build: false },
     }),
   ],

@@ -7,7 +7,6 @@ import {
   giftClaimTokenMatches,
   prepareGiftTransfer,
 } from "@drawing-app/sticker-chain/gift-sticker";
-import { createCroquisNames, stickerLabel } from "@drawing-app/sticker-chain/croquis-names";
 import { createStickerSealer } from "@drawing-app/sticker-chain/seal-sticker";
 import {
   createPublicClient,
@@ -23,16 +22,8 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { sepolia } from "viem/chains";
-import {
-  ChainUnavailableError,
-  type GiftChain,
-  type Mint,
-  type NameWriter,
-  type ReadContracts,
-  type SmartWallets,
-} from "../deps.ts";
+import { ChainUnavailableError, type GiftChain, type Mint, type SmartWallets } from "../deps.ts";
 import { diagnosticStep, logFailure, logInfo } from "../diagnostics.ts";
-import { readConfiguredContracts } from "./contractReads.ts";
 import type { DiskImageStore } from "./imageStore.ts";
 
 /** How long finding the block a Sticker event landed in may take. */
@@ -82,8 +73,6 @@ export function createStickerChain({
   rpcUrl,
   stickerContract,
   escrowContract,
-  namesContract,
-  resolverContract,
   sealerPrivateKey,
   smartWallets,
   images,
@@ -91,29 +80,19 @@ export function createStickerChain({
   rpcUrl: string;
   stickerContract: string;
   escrowContract: string;
-  namesContract: string;
-  resolverContract: string;
   sealerPrivateKey: Hex;
   smartWallets: SmartWallets;
   /** Where the mint writes the NFT's metadata. */
   images: Pick<DiskImageStore, "saveMetadata">;
-}): { mint: Mint; giftChain: GiftChain; nameWriter: NameWriter; readContracts: ReadContracts } {
+}): { mint: Mint; giftChain: GiftChain } {
   const stickerAddress = address(stickerContract, "STICKER_NFT_ADDRESS");
   const escrowAddress = address(escrowContract, "STICKER_GIFT_ESCROW_ADDRESS");
-  const namesAddress = address(namesContract, "CROQUIS_NAMES_ADDRESS");
   // Minting, Receiving and the expiry sweep share the relayer; concurrent requests need distinct
   // nonces.
   const sealerAccount = privateKeyToAccount(sealerPrivateKey, { nonceManager });
   const transport = rpcTransport(rpcUrl);
   const publicClient = createPublicClient({ chain: sepolia, transport });
   const walletClient = createWalletClient({ chain: sepolia, transport, account: sealerAccount });
-  const configured = {
-    relayer: sealerAccount.address,
-    stickers: stickerAddress,
-    escrow: escrowAddress,
-    names: namesAddress,
-    resolver: address(resolverContract, "CROQUIS_RESOLVER_ADDRESS"),
-  };
 
   // Historical state locates the transition without asking a provider to search the whole chain.
   const eventBlock = async (
@@ -164,7 +143,7 @@ export function createStickerChain({
     const { image } = sticker;
     await diagnosticStep("chain.mint.metadata", fields, () =>
       images.saveMetadata(sticker.stickerId, {
-        name: `Sticker No.${stickerLabel(sticker.number)}`,
+        name: `Sticker No.${String(sticker.number).padStart(4, "0")}`,
         description: "A one-of-one sticker sealed in Croquis.",
         image,
         external_url: image,
@@ -442,28 +421,5 @@ export function createStickerChain({
     },
   };
 
-  const croquisNames = createCroquisNames({
-    publicClient,
-    walletClient,
-    account: sealerAccount,
-    namesAddress,
-    onProgress: ({ stage, phase, txHash, error }) => {
-      const fields = { chainId: sepolia.id, contractAddress: namesContract, txHash };
-      if (phase === "failed") logFailure(`chain.ens.${stage}.failed`, error, fields);
-      else logInfo(`chain.ens.${stage}.${phase}`, fields);
-    },
-  });
-  const nameWriter: NameWriter = {
-    ensurePersonName: (person, label, records) =>
-      croquisNames.ensurePersonName(address(person, "Person"), label, records),
-    ensureStickerName: (tokenId, label) => croquisNames.ensureStickerName(BigInt(tokenId), label),
-    setAvatar: (person, avatar) => croquisNames.setAvatar(address(person, "Person"), avatar),
-  };
-
-  return {
-    mint,
-    giftChain,
-    nameWriter,
-    readContracts: () => readConfiguredContracts(publicClient, configured),
-  };
+  return { mint, giftChain };
 }

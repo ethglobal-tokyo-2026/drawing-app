@@ -36,12 +36,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-/** The routes anyone can call: signing in and out, and the gateway ENS clients call. */
-const PUBLIC_ROUTES = new Set([
-  "POST /api/session",
-  "DELETE /api/session",
-  "GET /api/ens/gateway/:sender/:request",
-]);
+/** The routes anyone can call: signing in and out. */
+const PUBLIC_ROUTES = new Set(["POST /api/session", "DELETE /api/session"]);
 
 describe("sessions", () => {
   it("guard every route but the public ones", async () => {

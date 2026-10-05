@@ -143,7 +143,7 @@ export async function startAnvil(chainId: number): Promise<AnvilInstance> {
   throw new Error(`Anvil did not become ready: ${stderr.trim()}`);
 }
 
-/** Anvil under Ethereum Sepolia's chain ID, so signatures and avatars name the chain production uses. */
+/** Anvil under Ethereum Sepolia's chain ID, so signatures name the chain production uses. */
 export const localSepolia = defineChain({
   id: sepolia.id,
   name: "Local Ethereum Sepolia",

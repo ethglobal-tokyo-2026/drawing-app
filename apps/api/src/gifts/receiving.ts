@@ -2,7 +2,6 @@ import { gifts, stickerPlacements, stickers, users, type Db } from "@drawing-app
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { keccak256 } from "viem";
 import { z } from "zod";
-import { queueNaming } from "../ens/naming.ts";
 import type { AppDeps, GiftChain } from "../deps.ts";
 import { failureCause, logFailure, logInfo } from "../diagnostics.ts";
 import {
@@ -456,7 +455,6 @@ async function completeReceive(
     }
     return receiving;
   }
-  queueNaming(deps, userId);
   const { gift, placement } = receiving;
   // Sent off the request, so the giver's message never holds up or fails Receiving.
   void deps.giverNotice.send(gift.id);

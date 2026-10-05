@@ -1,19 +1,14 @@
 import { users, type Db } from "@drawing-app/db";
 import { bytes32 } from "@drawing-app/db/testing";
-import { CROQUIS_PARENT_NAME } from "@drawing-app/sticker-chain/croquis-names";
 import { eq } from "drizzle-orm";
 import type {
   Clock,
-  ConfiguredContracts,
-  ContractReads,
-  EnsDeps,
   EscrowGift,
   GiftChain,
   Ids,
   ImageStore,
   Mint,
   MintedToken,
-  NameWriter,
   ServerLog,
   SmartWallets,
   JpycPayment,
@@ -25,10 +20,7 @@ import type {
 import { createDevLineVerifier } from "../services/devSignIn.ts";
 import { stickerImageUrls, veiledImageUrls } from "../services/imageStore.ts";
 import type { StickerPngKind } from "../shapes.ts";
-import { getAddress, isHex, keccak256, toBytes, type Hex } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { sepolia } from "viem/chains";
-import { createNamingQueue } from "../ens/naming.ts";
+import { isHex, keccak256, toBytes } from "viem";
 
 /** A made-up address, the same for the same seed. */
 const fakeAddress = (seed: string) => bytes32(seed).slice(0, 42);
@@ -232,71 +224,6 @@ export const fakeServerLog =
   (text = ""): ServerLog =>
   () =>
     Promise.resolve(new Blob([text]).stream());
-
-/** A name writer that records each call, and throws at `failAt` when that step comes up. */
-export function fakeNameWriter({ failAt }: { failAt?: string } = {}) {
-  const calls: string[] = [];
-  const named = new Set<string>();
-  const step = (call: string) => {
-    if (call === failAt) throw new Error(`Naming failed at ${call}`);
-    calls.push(call);
-  };
-  const writer: NameWriter = {
-    ensurePersonName: (person, label) => {
-      // Like CroquisNames, a person keeps the name they already have.
-      if (named.has(person)) return Promise.resolve({ label, created: false });
-      step(`person ${label}`);
-      named.add(person);
-      return Promise.resolve({ label, created: true });
-    },
-    ensureStickerName: (tokenId, label) => {
-      step(`sticker ${tokenId} ${label}`);
-      return Promise.resolve({ label, created: true });
-    },
-    setAvatar: (_person, avatar) => {
-      step(`avatar ${avatar}`);
-      return Promise.resolve();
-    },
-  };
-  return { writer, calls };
-}
-
-/** The gateway signer's key in tests. */
-export const TEST_GATEWAY_KEY: Hex = `0x${"6a".repeat(32)}`;
-
-/** The contracts a test server is configured with, and the relayer that sends from them. */
-export const TEST_CONTRACTS: ConfiguredContracts = {
-  relayer: getAddress(fakeAddress("relayer")),
-  stickers: getAddress(fakeAddress("StickerNFT")),
-  escrow: getAddress(fakeAddress("StickerGiftEscrow")),
-  names: getAddress(fakeAddress("CroquisNames")),
-  resolver: getAddress(fakeAddress("CroquisResolver")),
-};
-
-/** What TEST_CONTRACTS answer about each other when they were deployed together, but for `change`. */
-export const fakeContractReads = (
-  change: Partial<Omit<ContractReads, "configured">> = {},
-): ContractReads => ({
-  configured: TEST_CONTRACTS,
-  relayerIsNamer: true,
-  namesParent: CROQUIS_PARENT_NAME,
-  namesStickers: TEST_CONTRACTS.stickers,
-  resolverStickers: TEST_CONTRACTS.stickers,
-  escrowSticker: TEST_CONTRACTS.stickers,
-  escrowNames: TEST_CONTRACTS.names,
-  ...change,
-});
-
-/** The names under croquis-app.eth with a fixed gateway signer, writing through `writer`. */
-export const fakeEns = (writer: NameWriter | null = null): EnsDeps => ({
-  resolverAddress: fakeAddress("CroquisResolver"),
-  gatewaySigner: privateKeyToAccount(TEST_GATEWAY_KEY),
-  appLinkBase: "https://liff.line.me/test-liff",
-  chainId: sepolia.id,
-  stickerContract: fakeAddress("StickerNFT"),
-  writer,
-  naming: createNamingQueue(),
-});
 
 /**
  * World ID without World: it signs any request, and gives each proof `verdict`, or rejects with it
