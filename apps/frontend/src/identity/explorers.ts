@@ -7,11 +7,6 @@ export const etherscanAddressUrl = (address: string) => `${ETHERSCAN}/address/${
 
 export const etherscanTxUrl = (hash: string) => `${ETHERSCAN}/tx/${hash}`;
 
-// The ENS app on Sepolia, where names under croquis-app.eth show their records.
-const ENS_APP = "https://sepolia.app.ens.domains";
-
-export const ensAppUrl = (name: string) => `${ENS_APP}/${name}`;
-
 export const suiscanAccountUrl = (address: string) => `${SUISCAN}/account/${address}`;
 
 // A transaction lives on one network, unlike an address.

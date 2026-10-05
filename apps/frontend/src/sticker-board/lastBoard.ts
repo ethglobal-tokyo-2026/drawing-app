@@ -50,7 +50,7 @@ function read(): Kept | null {
   if (isKept(value)) return value;
   if (value === undefined)
     console.error("The board kept on this phone isn't JSON, so it's forgotten:", text);
-  // Not forget(): this runs as `kept` is first set, before it can be written.
+  // Not forgetBoard(): this runs as `kept` is first set, before it can be written.
   removeKept();
   return null;
 }
@@ -58,7 +58,8 @@ function read(): Kept | null {
 const removeKept = () =>
   writeStored(KEY, null, "The board kept on this phone couldn't be forgotten");
 
-function forget() {
+/** Forgets the kept board, as when a setting changes how its stickers show. */
+export function forgetBoard(): void {
   kept = null;
   removeKept();
 }
@@ -68,7 +69,7 @@ let kept: Kept | null = read();
 
 /** Forgets the kept board unless it's `userId`'s. */
 export function forgetBoardUnlessFor(userId: string): void {
-  if (kept && kept.userId !== userId) forget();
+  if (kept && kept.userId !== userId) forgetBoard();
 }
 
 /** The last board this phone showed `userId`, or null. Someone else's is forgotten. */

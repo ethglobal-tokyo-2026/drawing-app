@@ -14,23 +14,15 @@ import type { SessionApi } from "./httpApi";
 import { useMe } from "./meContext";
 import { RECOVERY_HOLD_MS, SessionGate } from "./SessionGate";
 import { reportSessionLost } from "./sessionLoss";
-import { emptyApi } from "./testing";
+import { emptyApi, TEST_ME } from "./testing";
 
 const me: Me = {
+  ...TEST_ME,
   id: "u1",
   handle: "alice",
   lineDisplayName: "Alice",
-  linePictureUrl: null,
-  ensName: "alice.croquis-app.eth",
-  ageStatus: "adult",
   lineUserId: "line-alice",
-  language: "en",
-  languageChoice: null,
   createdAt: "2026-09-26T00:00:00.000Z",
-  needsHandle: false,
-  ageVerifiedAt: null,
-  newStickerCount: 0,
-  unseenGratitudeCount: 0,
 };
 
 /** The app behind the gate; its `lang` is the app's language as it first opens. */

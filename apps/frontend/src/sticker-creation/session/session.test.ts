@@ -142,7 +142,7 @@ describe("sealFailure", () => {
   const answered = (status: number, error: string) => sealFailure(new ApiError(status, { error }));
 
   it("lets the sheet change only once the server has refused the seal itself", () => {
-    expect(answered(403, "adults_only")).toBe("refused");
+    expect(answered(403, "nsfw_not_opted_in")).toBe("refused");
     expect(answered(400, "invalid_request")).toBe("refused");
     expect(answered(404, "ticket_not_found")).toBe("refused");
     // Turned away before the ticket was looked at: an earlier try may still have sealed.
@@ -170,7 +170,7 @@ describe("describeSealFailure", () => {
     expect(problem(0, "smart_account_not_ready")).toBe("boardAddress");
     expect(problem(0, "line_token_expired")).toBe("signInExpired");
     // A refusal is worded by its own message.
-    expect(problem(403, "adults_only")).toBe("refused");
+    expect(problem(403, "nsfw_not_opted_in")).toBe("refused");
   });
 
   it("blames the phone only for a failure before the request left it", () => {

@@ -20,8 +20,8 @@ interface Props {
   /** An NSFW sticker: pink foil in place of holo, at `foil`'s size or the board's, and a pink gloss. */
   nsfw?: boolean;
   /**
-   * For a viewer who isn't adult, whose `urls` name the veiled image the API sends: shown as it
-   * comes, with the 18+ mark over it; its outline and foil stay sharp.
+   * For a viewer without the NSFW opt-in, whose `urls` name the veiled image the API sends: shown as
+   * it comes, with the 18+ mark over it; its outline and foil stay sharp.
    */
   veiled?: boolean;
   /** The sticker's No., which staggers its foil's light against its neighbors'. */

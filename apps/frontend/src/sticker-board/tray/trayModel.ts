@@ -22,6 +22,8 @@ export interface TraySticker extends TraySlot {
   gift: boolean;
   /** An NSFW sticker: it wears pink foil, whoever drew it. */
   nsfw: boolean;
+  /** An NSFW sticker you see blurred, without the NSFW opt-in: its image is the veiled one. */
+  veiled: boolean;
   /** Shown in the open tray before, so it isn't NEW. */
   seen: boolean;
   /** Given away and received: who has it, printed. Its spot opens it among the stickers you gave. */
@@ -218,7 +220,10 @@ export interface Tray {
   zip: Zipper;
   /** The tray's fixed words, in the app's language. */
   words: Readonly<
-    Record<"sheets" | "tabs" | "new" | "putBack" | "slotHint" | "spread" | "empty", string>
+    Record<
+      "sheets" | "tabs" | "new" | "putBack" | "slotHint" | "spread" | "empty" | "nsfw" | "veiled",
+      string
+    >
   >;
   root: HTMLDivElement;
   /** Where a sticker in hand would land on the board. */

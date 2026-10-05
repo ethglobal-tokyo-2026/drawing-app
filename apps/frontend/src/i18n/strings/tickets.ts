@@ -288,9 +288,9 @@ export const tickets = {
       ja: "支払いにはLINEでのサインインが必要ですが、LIFF Mockでは省略されます。",
     },
   },
-  /** Shop, under the reserve tickets, and reserve ticket checkout, under the Pay key: your ENS name, which opens your ticket purchases read from Sui */
+  /** Shop, under the reserve tickets, and reserve ticket checkout, under the Pay key: your short Sui address, which opens your ticket purchases read from Sui */
   purchases: {
-    /** Shop and reserve ticket checkout: the button that opens your ticket purchases, before your ENS name or short Sui address */
+    /** Shop and reserve ticket checkout: the button that opens your ticket purchases, before your short Sui address */
     label: { en: "Purchases", ja: "購入履歴" },
     /** Shop and reserve ticket checkout, purchases list: screen-reader status while Sui is read */
     reading: {

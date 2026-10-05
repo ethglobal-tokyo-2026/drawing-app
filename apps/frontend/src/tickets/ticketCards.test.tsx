@@ -7,6 +7,7 @@ import { emptyApi, FRESH_TICKETS, renderWithApi } from "../api/testing";
 import { setPrivyStatus } from "../identity/privy";
 import { getJpycBalance, getTicketPayments, signTicketPayment } from "../payments/jpyc";
 import { PaymentFailed } from "../payments/paymentErrors";
+import { shortAddress } from "../sticker-board/stat-board/addresses";
 import { OutOfTickets } from "./OutOfTickets";
 import { formatRefillTime } from "./refill";
 import { ReserveTicketCheckout } from "./ReserveTicketCheckout";
@@ -241,6 +242,8 @@ describe("StartDrawing", () => {
 });
 
 const SUI_WALLET = `0x${"1".repeat(64)}`;
+/** The button that opens your ticket purchases, named by the short Sui address it shows. */
+const PURCHASES = shortAddress(SUI_WALLET);
 const TX_DIGEST = "D".repeat(44);
 /** 1 JPYC in base units. */
 const JPYC = 1_000_000n;
@@ -525,7 +528,7 @@ describe("ReserveTicketCheckout", () => {
     expect(onBoard).toHaveBeenCalledOnce();
   });
 
-  it("opens the ticket purchases Sui lists under the ENS name, a page at a time", async () => {
+  it("opens the ticket purchases Sui lists under the short Sui address, a page at a time", async () => {
     const OLDER = "E".repeat(44);
     vi.mocked(getTicketPayments)
       .mockResolvedValueOnce({
@@ -540,8 +543,8 @@ describe("ReserveTicketCheckout", () => {
     await settle(500);
     expect(getTicketPayments).not.toHaveBeenCalled();
     // The button says what it opens, not only whose name it carries.
-    expect(buttonNamed("you.croquis-app.eth")?.textContent).toContain("Purchases");
-    click("you.croquis-app.eth");
+    expect(buttonNamed(PURCHASES)?.textContent).toContain("Purchases");
+    click(PURCHASES);
     await settle(500);
     expect(getTicketPayments).toHaveBeenCalledWith(SUI_WALLET, SHOP.payment, null);
     click("Older purchases");

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { BoardSticker } from "@drawing-app/api/client";
+import type { BoardSticker, Person } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "../api/apiClient";
@@ -48,12 +48,16 @@ const three = () => [
   boardSticker({ placement: placedAt(0.2, 0.2), sticker: sticker({ artist: people.mika }) }),
 ];
 
-async function visit(boardStickers: BoardSticker[], overrides: Partial<ApiClient> = {}) {
+async function visit(
+  boardStickers: BoardSticker[],
+  overrides: Partial<ApiClient> = {},
+  person: Person = people.ken,
+) {
   const api = emptyApi({
-    stickerBoard: () => Promise.resolve({ owner: people.ken, boardStickers }),
+    stickerBoard: () => Promise.resolve({ owner: person, boardStickers }),
     ...overrides,
   });
-  const view = renderWithApi(<ArtistBoard person={people.ken} onBack={() => {}} />, api);
+  const view = renderWithApi(<ArtistBoard person={person} onBack={() => {}} />, api);
   unmount = view.unmount;
   await act(async () => {});
   return view.host;
@@ -172,13 +176,13 @@ describe("ArtistBoard's Give key", () => {
     vi.useRealTimers();
   });
 
-  /** Your board holds one sticker to give; their board is as in `three`. */
-  const giving = () => ({
+  /** Your board holds `yours` to give, one sticker unless a test says; their board is as in `three`. */
+  const giving = (person: Person, yours = [boardSticker()]) => ({
     stickerBoard: (userId?: string) =>
       Promise.resolve(
         userId
-          ? { owner: people.ken, boardStickers: three() }
-          : { owner: TEST_OWNER, boardStickers: [boardSticker()] },
+          ? { owner: person, boardStickers: three() }
+          : { owner: TEST_OWNER, boardStickers: yours },
       ),
     packageGift: (stickerId: string) =>
       Promise.resolve({
@@ -197,8 +201,8 @@ describe("ArtistBoard's Give key", () => {
   const tap = (selector: string) => act(() => keyOf(selector).click());
 
   /** Taps Give, which leaves focus where it was, as a tap does in Safari; returns that key. */
-  async function tapGive() {
-    await visit(three(), giving());
+  async function tapGive(person = people.ken, yours?: BoardSticker[]) {
+    await visit(three(), giving(person, yours), person);
     const key = keyOf(".board-draw .key");
     expect(document.activeElement).not.toBe(key);
     tap(".board-draw .key");
@@ -213,6 +217,21 @@ describe("ArtistBoard's Give key", () => {
     await act(() => vi.dynamicImportSettled());
     expect(document.querySelector(".giving")).not.toBeNull();
   }
+
+  it.each([
+    { nsfwOptIn: false, given: false },
+    { nsfwOptIn: true, given: true },
+  ])(
+    "gives your 18+ sticker only to someone with Show 18+ stickers on ($nsfwOptIn), saying so on the give sheet",
+    async ({ nsfwOptIn, given }) => {
+      const yours = [boardSticker({ sticker: sticker({ artist: TEST_OWNER, nsfw: true }) })];
+      await tapGive({ ...people.ken, nsfwOptIn }, yours);
+      tap(".sticker-picker button");
+      expect(keyOf(".sticker-picker button").getAttribute("aria-checked")).toBe(String(given));
+      const note = document.querySelector(".giving__nsfw-note");
+      expect(note?.textContent).toEqual(given ? undefined : expect.stringContaining("@ken"));
+    },
+  );
 
   it("gets focus back when the give sheet closes", async () => {
     const give = await tapGive();

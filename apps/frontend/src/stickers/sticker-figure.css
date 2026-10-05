@@ -105,9 +105,9 @@
   mix-blend-mode: soft-light;
 }
 
-/* Veiled, for a viewer who isn't adult: the API sends the veiled image, already blurred and washed
-   inside its cut, so the outline and the foil stay sharp around it. It shows as it comes, and an 18+
-   mark sits in the middle. */
+/* Veiled, for a viewer without the NSFW opt-in: the API sends the veiled image, already blurred and
+   washed inside its cut, so the outline and the foil stay sharp around it. It shows as it comes, and
+   an 18+ mark sits in the middle. */
 .sticker-figure.is-veiled {
   container-type: inline-size;
 }

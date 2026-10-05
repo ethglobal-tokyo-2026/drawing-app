@@ -23,36 +23,6 @@ export const errors = {
     en: "Couldn’t reconnect with LINE. Try again, or reopen the app from LINE.",
     ja: "LINEで<wbr/>再ログインできませんでした。<wbr/>もう一度<wbr/>試すか、<wbr/>LINEから<wbr/>アプリを<wbr/>ひらき直してください。",
   },
-  /** Drawing screen, Giving and Receiving: sealing an 18+ sticker (POST /api/stickers) when you aren't a verified adult, giving one from a board (POST /api/gifts) to someone who isn't, or receiving one (POST /api/gifts/receive) when you aren't; in the seal chip, “couldn’t be packed” or the gift's refusal, through problemOf */
-  adults_only: {
-    en: "Only adults verified with World ID can seal, give or receive 18+ stickers.",
-    ja: "18+のシールは、World IDで年齢確認した成人だけが仕上げたり、贈ったり、受け取ったりできます。",
-  },
-  /** Your stat board, Age verification paper: sending World App's proof (POST /api/me/age-verification) when it isn't an Orb-verified World ID's, or came from World's other environment, in “Your age couldn’t be verified” through problemOf */
-  age_not_proven: {
-    en: "This World ID isn’t verified at an Orb.",
-    ja: "このWorld IDは、Orbで認証されていません。",
-  },
-  /** Your stat board, Age verification paper: tapping Verify your age (POST /api/me/age-verification/request) when this server has no World ID app, in “Your age couldn’t be verified” through problemOf */
-  age_verification_not_configured: {
-    en: "Age verification isn’t available yet.",
-    ja: "年齢確認は、まだ利用できません。",
-  },
-  /** Your stat board, Age verification paper: sending World App's proof (POST /api/me/age-verification) when World refuses it, in “Your age couldn’t be verified” through problemOf */
-  age_verification_refused: {
-    en: "World ID didn’t accept the proof.",
-    ja: "World IDが証明を受け付けませんでした。",
-  },
-  /** Your stat board, Age verification paper: sending World App's proof (POST /api/me/age-verification) when the same World ID already verified another account, in “Your age couldn’t be verified” through problemOf */
-  age_verification_used: {
-    en: "This World ID already verified another account.",
-    ja: "このWorld IDは、すでに別のアカウントの年齢確認に使われています。",
-  },
-  /** Your stat board, Age verification paper: tapping Verify your age (POST /api/me/age-verification/request) after your age was already verified, in “Your age couldn’t be verified” through problemOf */
-  already_age_verified: {
-    en: "Your age is already verified.",
-    ja: "年齢確認は、すでに済んでいます。",
-  },
   /** Giving, In the bag: taking a gift back out (POST /api/gifts/:giftId/take-out) that its receiver already received, in “couldn’t be taken out” through problemOf; the Receive gift dialog shows its own Already opened screen instead */
   already_received: {
     en: "This gift was already opened.",
@@ -67,11 +37,6 @@ export const errors = {
   claim_failed: {
     en: "It couldn’t be confirmed. Trying again is safe, since a gift is only ever received once, but it may not work.",
     ja: "確認できませんでした。受け取りは一度きりなので、やり直しても大丈夫ですが、うまくいかないこともあります。",
-  },
-  /** Not shown in the app: the ENS gateway's answer to an outside ENS app looking up a croquis-app.eth name, when this server has no ENS set up */
-  ens_not_configured: {
-    en: "Names aren’t set up on this server yet.",
-    ja: "このサーバーでは、まだ名前が使えません。",
   },
   /** Giving, In the bag: packing a sticker when the escrow's deposit (POST /api/gifts/:giftId/deposit) isn't this sticker's, so the gift closed and the sticker can be given again, in “couldn’t be packed” through problemOf */
   deposit_mismatch: {
@@ -199,6 +164,11 @@ export const errors = {
   },
   /** Giving, In the bag: packing a sticker someone else holds (POST /api/gifts), or a deposit, picker outcome or take-out on someone else's gift, through problemOf */
   not_yours: { en: "That sticker isn’t yours.", ja: "そのシールは、あなたのものではありません。" },
+  /** Drawing screen, Giving and Receiving: sealing an 18+ sticker (POST /api/stickers) without Show 18+ stickers on, giving one from a board (POST /api/gifts) to someone who hasn't turned it on, or receiving one (POST /api/gifts/receive) without it; in the seal chip, “couldn’t be packed” or the gift's refusal, through problemOf */
+  nsfw_not_opted_in: {
+    en: "Only people who turned on Show 18+ stickers in Settings can seal or receive 18+ stickers.",
+    ja: "18+のシールを仕上げたり受け取ったりできるのは、設定で「18+のシールを表示する」をオンにした人だけです。",
+  },
   /** Receiving: the giver opening their own gift message's link (POST /api/gifts/preview or /receive); the Receive gift dialog shows its own “This gift is on its way” screen instead */
   own_gift: { en: "You can’t open your own gift.", ja: "自分が贈ったギフトは、ひらけません。" },
   /** Reserve ticket checkout, after tapping Pay: starting the purchase (POST /api/ticket-purchases/start) for a pack size the shop doesn't sell, under “Payment didn’t go through” through errorMessage; nothing was paid */
@@ -305,25 +275,10 @@ export const errors = {
     en: "This sticker was sealed without its timelapse.",
     ja: "このシールは、タイムラプスなしで仕上げられました。",
   },
-  /** Not shown in the app: the ENS gateway's answer to an outside ENS app that asks through a resolver other than croquis-app.eth's */
-  unknown_resolver: {
-    en: "That name belongs to another app.",
-    ja: "この名前は別のアプリのものです。",
-  },
-  /** Not shown in the app: the ENS gateway's answer to an outside ENS app whose name lookup it can't read or doesn't answer */
-  unsupported_request: {
-    en: "That name lookup isn’t one this app answers.",
-    ja: "この名前の問い合わせには答えられません。",
-  },
   /** An artist's sticker board: loading their board or stats (GET /api/sticker-boards/:userId, …/user-stats) for a person who doesn't exist, in “Couldn’t load …’s board” or “Their stats didn’t load” through problemOf */
   user_not_found: {
     en: "Couldn’t find that artist. Search for them in Explore to check the handle.",
     ja: "そのアーティストが見つかりませんでした。さがすでユーザー名を確認してください。",
-  },
-  /** Your stat board, Age verification paper: sending World App's proof (POST /api/me/age-verification) when World's verify service doesn't answer, in “Your age couldn’t be verified” through problemOf */
-  world_id_unavailable: {
-    en: "World ID didn’t answer. Try again in a moment.",
-    ja: "World IDから応答がありませんでした。少し待ってから、もう一度お試しください。",
   },
   /** Any error line, when what failed isn't the server's answer but something on this phone or in a library, such as LINE's picker; its own English words follow as details for a report (made by the app itself, shown through problemOf) */
   unexpected: {

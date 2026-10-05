@@ -1,11 +1,10 @@
-import {
-  CROQUIS_PARENT_NAME,
-  type BoardSticker,
-  type Gift,
-  type Gratitude,
-  type Person,
-  type Sticker,
-  type TransferTrailEntry,
+import type {
+  BoardSticker,
+  Gift,
+  Gratitude,
+  Person,
+  Sticker,
+  TransferTrailEntry,
 } from "@drawing-app/api/client";
 
 /** People, stickers and gifts for tests, in the API's shapes. All of it is made up. */
@@ -15,8 +14,8 @@ const person = (handle: string, lineDisplayName: string): Person => ({
   handle,
   lineDisplayName,
   linePictureUrl: null,
-  ensName: `${handle}.${CROQUIS_PARENT_NAME}`,
-  ageStatus: "adult",
+  ensName: null,
+  nsfwOptIn: true,
 });
 
 export const people = {
@@ -38,7 +37,7 @@ export const markupLikePerson: Person = {
   lineDisplayName: MARKUP_LIKE_NAME,
   linePictureUrl: null,
   ensName: null,
-  ageStatus: "adult",
+  nsfwOptIn: true,
 };
 
 const ART_PX = 224;

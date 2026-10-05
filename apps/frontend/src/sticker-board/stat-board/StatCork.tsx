@@ -15,7 +15,6 @@ import type { Problem } from "../../i18n/errorMessage";
 import { formatCount } from "../../i18n/format";
 import { useTranslation } from "../../i18n/react";
 import { ArrowUUpLeft, GratitudeIcon, StreakIcon } from "../../icons";
-import { EnsNameLink } from "../../identity/EnsNameLink";
 import { formatDay, formatHandle } from "../../stickers/format";
 import { ErrorLine } from "../../ui/ErrorLine";
 import { HitCounter } from "../../ui/HitCounter";
@@ -33,8 +32,6 @@ export interface StatCorkHandle {
 export interface CorkFigures {
   name: string;
   handle: string;
-  /** <label>.croquis-app.eth, on label-maker tape. */
-  ensName: string | null;
   /** Your own board, which the notes address as "you". */
   own: boolean;
   /** Why the figures didn't load, said on the receipt; null while they load and once they have. */
@@ -141,14 +138,8 @@ export function StatCork({
     [reduced],
   );
 
-  // A window a paper opens, such as World ID's, is drawn outside the cork, yet React passes its taps
-  // and keys up through the cork: only the cork's own turn the board back.
-  const ownTarget = (e: { target: EventTarget; currentTarget: Element }) =>
-    e.target instanceof Element && e.currentTarget.contains(e.target) ? e.target : null;
-
   const onCorkClick = (e: MouseEvent<HTMLDivElement>) => {
-    const target = ownTarget(e);
-    if (target && !target.closest(ON_CORK)) onFlipBack();
+    if (e.target instanceof Element && !e.target.closest(ON_CORK)) onFlipBack();
   };
 
   // A tap on a note's paper nudges it. Its controls press, and its selectable text selects, without
@@ -165,7 +156,7 @@ export function StatCork({
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key !== "Escape" || !ownTarget(e)) return;
+    if (e.key !== "Escape") return;
     e.stopPropagation();
     if (!onEscape?.()) onFlipBack();
   };
@@ -314,13 +305,6 @@ export function StatCork({
                     {t(($) => $.stickerBoard.statBoard.since, { day: since })}
                   </span>
                 </p>
-              )}
-              {f.ensName && (
-                <EnsNameLink className="stat-board__ens" name={f.ensName}>
-                  <span className="stat-board__tape stat-board__tape--ens">
-                    <span className="stat-board__tape-text">{f.ensName}</span>
-                  </span>
-                </EnsNameLink>
               )}
             </div>
 

@@ -22,7 +22,6 @@
     "@paulmillr/qr": "0.3.0",
     "@phosphor-icons/react": "2.1.10",
     "@privy-io/react-auth": "3.45.0",
-    "@worldcoin/idkit": "4.3.0",
     "hono": "^4.13.8",
     "i18next": "26.4.2",
     "permissionless": "0.4.1",

@@ -124,17 +124,21 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
       if (cut) el.append(cut);
       return el;
     }
-    if (use !== "picture")
-      el.setAttribute(
-        "aria-label",
+    if (use !== "picture") {
+      const label =
         s.state === "used"
           ? isNew
             ? i18next.t(($) => $.stickerBoard.tray.slot.usedNew, no)
             : i18next.t(($) => $.stickerBoard.tray.slot.used, no)
           : isNew
             ? i18next.t(($) => $.stickerBoard.tray.slot.newOnSheet, no)
-            : i18next.t(($) => $.stickerBoard.tray.slot.onSheet, no),
+            : i18next.t(($) => $.stickerBoard.tray.slot.onSheet, no);
+      // One shown blurred says so, as on the board; a used sticker silhouette shows none.
+      el.setAttribute(
+        "aria-label",
+        s.veiled && s.state !== "used" ? `${label}, ${words.veiled}` : label,
       );
+    }
     const silhouette = make("span", "tray__used-sticker-silhouette", make("i", ""));
     const fit = make(
       "span",
@@ -176,6 +180,8 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
       img.alt = "";
       img.draggable = false;
       fit.append(img);
+      // Blurred for you, it wears the 18+ mark, as on the board.
+      if (s.veiled) fit.append(decorative(make("span", "nsfw-mark tray__nsfw-mark", words.nsfw)));
     }
     fit.style.width = px(q.w);
     fit.style.height = px(q.h);

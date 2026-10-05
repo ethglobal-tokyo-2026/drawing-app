@@ -4,11 +4,14 @@ import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithApi } from "../api/testing";
 import { getTicketPayments, type TicketPaymentPage } from "../payments/jpyc";
+import { shortAddress } from "../sticker-board/stat-board/addresses";
 import { TicketPurchases } from "./TicketPurchases";
 
 vi.mock("../payments/jpyc", () => ({ getTicketPayments: vi.fn() }));
 
 const OWNER = `0x${"1".repeat(64)}`;
+/** The button that opens the list, named by the short Sui address it shows. */
+const PURCHASES = shortAddress(OWNER);
 const SHOP: Shop = {
   packs: [],
   payment: {
@@ -50,7 +53,7 @@ const rows = () => document.querySelectorAll(".ticket-purchases a").length;
 /** The list, opened: its first read has been asked for and has answered. */
 async function openList() {
   view = renderWithApi(<TicketPurchases owner={OWNER} shop={SHOP} />);
-  click("you.croquis-app.eth");
+  click(PURCHASES);
   await settle();
 }
 
@@ -99,7 +102,7 @@ describe("the ticket purchases list's Try again", () => {
 
     click("Try again");
     await settle();
-    expect(document.activeElement).toBe(buttonNamed("you.croquis-app.eth"));
+    expect(document.activeElement).toBe(buttonNamed(PURCHASES));
   });
 
   it("reads an older page again from where it failed, with the pages already listed still there", async () => {

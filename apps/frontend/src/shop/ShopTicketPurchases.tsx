@@ -4,8 +4,8 @@ import { TicketPurchases } from "../tickets/TicketPurchases";
 import { useTickets } from "../tickets/useTickets";
 
 /**
- * Under the Shop's reserve tickets: your ENS name, which opens the ticket purchases your Sui account
- * made, once that account and where packs are paid are known.
+ * Under the Shop's reserve tickets: your short Sui address, which opens the ticket purchases your Sui
+ * account made, once that account and where packs are paid are known.
  */
 export function ShopTicketPurchases() {
   const privy = usePrivyStatus();

@@ -6,6 +6,7 @@ import { ApiError } from "../api/apiClient";
 import { emptyApi, FRESH_TICKETS, renderWithApi } from "../api/testing";
 import { setPrivyStatus } from "../identity/privy";
 import { getTicketPayments } from "../payments/jpyc";
+import { shortAddress } from "../sticker-board/stat-board/addresses";
 import {
   addUnaddedPurchases,
   keepUnaddedPurchase,
@@ -20,6 +21,8 @@ vi.mock("./FinishPreview", () => ({ FinishPreview: () => null }));
 vi.mock("./BrushStrokeSample", () => ({ BrushStrokeSample: () => null }));
 
 const SUI_WALLET = `0x${"1".repeat(64)}`;
+/** The button that opens your ticket purchases, named by the short Sui address it shows. */
+const PURCHASES = shortAddress(SUI_WALLET);
 /** 1 JPYC in base units. */
 const JPYC = 1_000_000n;
 const PACK: Shop["packs"][number] = {
@@ -95,10 +98,10 @@ describe("ShopScreen", () => {
       }),
     );
     await settle();
-    expect(buttonNamed("you.croquis-app.eth")).toBeUndefined();
+    expect(buttonNamed(PURCHASES)).toBeUndefined();
 
     act(() => setPrivyStatus({ state: "signed-in", userId: "privy-me", suiWallet: SUI_WALLET }));
-    click("you.croquis-app.eth");
+    click(PURCHASES);
     await settle();
     expect(getTicketPayments).toHaveBeenCalledWith(SUI_WALLET, SHOP.payment, null);
     expect(rows()).toEqual([expect.stringContaining(`${PACK.tickets} tickets`)]);
@@ -106,7 +109,7 @@ describe("ShopScreen", () => {
     click("Buy the pack");
     await settle();
     expect(rows()).toEqual([]);
-    click("you.croquis-app.eth");
+    click(PURCHASES);
     await settle();
     expect(getTicketPayments).toHaveBeenCalledTimes(2);
     expect(rows()).toHaveLength(1);

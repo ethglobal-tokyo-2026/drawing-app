@@ -1,6 +1,4 @@
 import type {
-  AgeProof,
-  AgeVerificationRequest,
   ApiErrorCode,
   ErrorBody,
   Explore,
@@ -47,7 +45,7 @@ interface SealRequest {
   flat: Blob;
   /** The gzipped TimelapseV1; a seal without one still seals. */
   timelapse?: Blob;
-  /** Seals an NSFW sticker, which the server takes only from an adult. */
+  /** Seals an NSFW sticker, which the server takes only from someone with the NSFW opt-in. */
   nsfw: boolean;
 }
 
@@ -58,10 +56,8 @@ export type GiftOpening = Omit<OpenGiftBody, "giftClaimToken"> & { giftClaimToke
 export interface ApiClient {
   /** POST /api/me/language-choice: Settings' language, or null to follow LINE's. */
   setLanguageChoice: (languageChoice: Me["languageChoice"]) => Promise<Me>;
-  /** POST /api/me/age-verification/request: IDKit's settings for asking World App for the proof. */
-  ageVerificationRequest: () => Promise<AgeVerificationRequest>;
-  /** POST /api/me/age-verification: World App's proof that you're 18 or older. */
-  verifyAge: (proof: AgeProof) => Promise<Me>;
+  /** POST /api/me/nsfw-opt-in: Settings' Show 18+ stickers, on or off. */
+  setNsfwOptIn: (nsfwOptIn: boolean) => Promise<Me>;
 
   /** GET /api/sticker-boards/:userId; `me` for your own. */
   stickerBoard: (userId?: string) => Promise<StickerBoard>;
@@ -129,8 +125,6 @@ export interface ApiClient {
   explorePile: (before: string) => Promise<PilePage>;
   /** GET /api/users?handle= */
   searchUsers: (handle: string) => Promise<Person[]>;
-  /** GET /api/ens/people/:label: whoever is <label>.croquis-app.eth. */
-  personByEnsLabel: (label: string) => Promise<Person>;
 }
 
 /**
@@ -143,7 +137,23 @@ type ClientErrorCode =
   | "line_reconnect_failed"
   | "smart_account_not_ready"
   | "sui_wallet_not_ready";
-export type ErrorCode = ApiErrorCode | ClientErrorCode;
+
+// The API renames adults_only to nsfw_not_opted_in and drops World ID's and ENS's codes. Until its
+// types do, the app's codes are the API's as they will be.
+export type RenamedApiCode = "nsfw_not_opted_in";
+export type DroppedApiCode =
+  | "adults_only"
+  | "age_not_proven"
+  | "age_verification_not_configured"
+  | "age_verification_refused"
+  | "age_verification_used"
+  | "already_age_verified"
+  | "world_id_unavailable"
+  | "ens_not_configured"
+  | "unknown_resolver"
+  | "unsupported_request";
+
+export type ErrorCode = Exclude<ApiErrorCode, DroppedApiCode> | RenamedApiCode | ClientErrorCode;
 
 /** A refused or failed request: the HTTP status and the API's error body. Status 0 is no answer. */
 export class ApiError extends Error {

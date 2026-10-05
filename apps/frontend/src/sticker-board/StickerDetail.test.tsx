@@ -4,8 +4,10 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { ApiProvider } from "../api/ApiProvider";
+import { MeContext } from "../api/meContext";
 import type {
   Gratitude,
+  Me,
   RecordGratitude,
   StickerDetail as StickerDetailResponse,
 } from "@drawing-app/api/client";
@@ -15,7 +17,7 @@ import {
   sticker as apiSticker,
   trailEntry,
 } from "../api/testFixtures";
-import { emptyApi, gratitudeOf, recordGratitudeBody, TEST_OWNER } from "../api/testing";
+import { emptyApi, gratitudeOf, recordGratitudeBody, TEST_ME, TEST_OWNER } from "../api/testing";
 import { toPerson, toSticker } from "../api/views";
 import { resendPendingGratitude, sendGratitude } from "../gratitude/gratitudeOutbox";
 import { errorDetail } from "../i18n/errorMessage";
@@ -36,7 +38,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 /** Midday, so the day reads the same in every time zone. */
 const day = (d: number) => new Date(2026, 8, d, 12).getTime();
 
-const you = { id: "me", handle: "alice", name: "Alice", ageStatus: "adult" as const };
+const you = { id: "me", handle: "alice", name: "Alice", nsfwOptIn: true };
 const sticker = (
   no: number,
   createdAt: number,
@@ -69,19 +71,22 @@ const onGive = vi.fn();
 const open = (
   props: Partial<ComponentProps<typeof StickerDetail>> = {},
   client: ApiClient = emptyApi(),
+  me: Me = TEST_ME,
 ) =>
   act(() =>
     root.render(
-      <ApiProvider client={client}>
-        <StickerDetail
-          stickers={stickers}
-          startId="s-133"
-          mode="yours"
-          onClose={onClose}
-          onGive={onGive}
-          {...props}
-        />
-      </ApiProvider>,
+      <MeContext value={me}>
+        <ApiProvider client={client}>
+          <StickerDetail
+            stickers={stickers}
+            startId="s-133"
+            mode="yours"
+            onClose={onClose}
+            onGive={onGive}
+            {...props}
+          />
+        </ApiProvider>
+      </MeContext>,
     ),
   );
 /** Lets the detail's check of the Transfer Trail answer. */
@@ -234,7 +239,7 @@ describe("StickerDetail", () => {
       id: "artist-bob",
       handle: "bob",
       name: "Bob Tanaka",
-      ageStatus: "adult" as const,
+      nsfwOptIn: true,
     };
     const given = sticker(133, day(14), {
       held: false,
@@ -377,7 +382,7 @@ describe("StickerDetail", () => {
       id: "artist-mika",
       handle: "Mika_draws_every_day_in_tokyo_32",
       name: "Mika",
-      ageStatus: "adult" as const,
+      nsfwOptIn: true,
     };
     open({ ownerId: TEST_OWNER.id, stickers: [sticker(133, day(14), { artist })] });
     const chip = document.querySelector(".sticker-detail__artist .artist-chip");
@@ -424,7 +429,7 @@ describe("StickerDetail", () => {
               id: people.mika.id,
               handle: "mika",
               name: "Mika",
-              ageStatus: "adult" as const,
+              nsfwOptIn: true,
             },
           }
         : s,
@@ -462,15 +467,13 @@ describe("StickerDetail", () => {
     expect(document.querySelectorAll(".transfer-trail__row.is-open")).toHaveLength(1);
   });
 
-  it("links the sticker's name under croquis-app.eth to the ENS app once it's onchain", () => {
-    const named = sticker(133, day(14), { ensName: "0133.alice.croquis-app.eth" });
-    open({ stickers: [named] });
-    const link = document.querySelector<HTMLAnchorElement>(".sticker-detail__ens a");
-    expect(link?.textContent).toBe("0133.alice.croquis-app.eth");
-    expect(link?.href).toBe("https://sepolia.app.ens.domains/0133.alice.croquis-app.eth");
-
-    open({ stickers: [sticker(133, day(14))] });
-    expect(document.querySelector(".sticker-detail__ens")).toBeNull();
+  it("shows your 18+ sticker blurred, under the 18+ mark, once you've turned Show 18+ stickers off", () => {
+    const yours = [sticker(133, day(14), { nsfw: true })];
+    const mark = () => document.querySelector(".sticker-detail__slide .nsfw-mark");
+    open({ stickers: yours }, emptyApi(), { ...TEST_ME, nsfwOptIn: false });
+    expect(mark()).not.toBeNull();
+    open({ stickers: yours });
+    expect(mark()).toBeNull();
   });
 
   it("keeps focus in the detail when Try again goes as it checks the sticker again", async () => {

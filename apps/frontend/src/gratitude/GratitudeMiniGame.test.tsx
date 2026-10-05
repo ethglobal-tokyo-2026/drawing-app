@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Gratitude } from "@drawing-app/api/client";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { ApiProvider } from "../api/ApiProvider";
-import { MeHolder } from "../api/MeHolder";
+import { MeContext } from "../api/meContext";
 import { emptyApi, gratitudeOf, recordGratitudeBody, TEST_ME } from "../api/testing";
 import { errorDetail } from "../i18n/errorMessage";
 import { i18next } from "../i18n/i18n";
@@ -39,7 +39,7 @@ let root: Root;
 const open = (props: Partial<ComponentProps<typeof GratitudeMiniGame>> = {}) =>
   act(() =>
     root.render(
-      <MeHolder me={TEST_ME}>
+      <MeContext value={TEST_ME}>
         <ApiProvider client={emptyApi({ recordGratitude })}>
           <GratitudeMiniGame
             sticker={sticker}
@@ -50,7 +50,7 @@ const open = (props: Partial<ComponentProps<typeof GratitudeMiniGame>> = {}) =>
             {...props}
           />
         </ApiProvider>
-      </MeHolder>,
+      </MeContext>,
     ),
   );
 const heart = () => {

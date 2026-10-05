@@ -1,9 +1,10 @@
-import type { Person, TransferTrailEntry } from "@drawing-app/api/client";
+import type { TransferTrailEntry } from "@drawing-app/api/client";
 import { describe, expect, it } from "vitest";
+import { people } from "../api/testFixtures";
 import type { PersonView } from "../api/views";
 import { artistShareLine, defaultOpenRow, toTrailRows, type TrailRow } from "./trailRows";
 
-const who = (id: string): PersonView => ({ id, handle: id, name: id, ageStatus: "adult" });
+const who = (id: string): PersonView => ({ id, handle: id, name: id, nsfwOptIn: true });
 const [me, mika, ken] = [who("me"), who("mika"), who("ken")];
 
 const row = (
@@ -49,18 +50,10 @@ describe("the Transfer Trail", () => {
   });
 
   it("keeps when the giver watched the gratitude", () => {
-    const person = (id: string): Person => ({
-      id,
-      handle: id,
-      lineDisplayName: id,
-      linePictureUrl: null,
-      ensName: null,
-      ageStatus: "adult",
-    });
     const entry = (seenByGiverAt: string | null): TransferTrailEntry => ({
       giftId: "g",
-      giver: person("mika"),
-      receiver: person("ken"),
+      giver: people.mika,
+      receiver: people.ken,
       receivedAt: "2026-09-26T00:00:00.000Z",
       gratitude: {
         giftId: "g",

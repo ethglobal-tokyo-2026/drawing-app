@@ -152,14 +152,9 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       if (!response.ok) throw await refusal(response, "POST /api/me/language-choice");
       return (await response.json()).me;
     },
-    ageVerificationRequest: async () => {
-      const response = await api.me["age-verification"].request.$post();
-      if (!response.ok) throw await refusal(response, "POST /api/me/age-verification/request");
-      return response.json();
-    },
-    verifyAge: async (proof) => {
-      const response = await api.me["age-verification"].$post({ json: proof });
-      if (!response.ok) throw await refusal(response, "POST /api/me/age-verification");
+    setNsfwOptIn: async (nsfwOptIn) => {
+      const response = await api.me["nsfw-opt-in"].$post({ json: { nsfwOptIn } });
+      if (!response.ok) throw await refusal(response, "POST /api/me/nsfw-opt-in");
       return (await response.json()).me;
     },
 
@@ -362,11 +357,6 @@ export function createHttpApi(api: ServerClient = createServerClient()): ApiClie
       const response = await api.users.$get({ query: { handle } });
       if (!response.ok) throw await refusal(response, `GET /api/users?handle=${handle}`);
       return (await response.json()).users;
-    },
-    personByEnsLabel: async (label) => {
-      const response = await api.ens.people[":label"].$get({ param: { label } });
-      if (!response.ok) throw await refusal(response, `GET /api/ens/people/${label}`);
-      return (await response.json()).person;
     },
   };
 }

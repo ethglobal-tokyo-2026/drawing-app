@@ -100,9 +100,6 @@ export default function App() {
   // screen; a gift message's link opens its gift over the board.
   const [opened] = useState(() => openedFrom(location.pathname));
   const [view, setView] = useState<View>(opened.view);
-  // A name's link is Explore's to open on this visit; a later visit to Explore is plain Explore.
-  const [boardOf, setBoardOf] = useState(opened.boardOf);
-  if (view !== "explore" && boardOf !== undefined) setBoardOf(undefined);
   const [exploredHere, setExploredHere] = useState(view === "explore");
   if (view === "explore" && !exploredHere) setExploredHere(true);
   // The tab whose screen is settling in after a tab change (App.css), until its animation ends.
@@ -249,11 +246,7 @@ export default function App() {
               onClickCapture={(e) => rememberPlace(e.target)}
             >
               <Suspense fallback={null}>
-                <ExploreScreen
-                  boardOf={boardOf}
-                  onOpenArtist={setVisiting}
-                  onOpenMyBoard={() => setView("board")}
-                />
+                <ExploreScreen onOpenArtist={setVisiting} onOpenMyBoard={() => setView("board")} />
               </Suspense>
             </div>
           </Activity>

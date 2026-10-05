@@ -1,8 +1,12 @@
 // @vitest-environment happy-dom
+import type { Me } from "@drawing-app/api/client";
 import { act, createRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import { MeContext } from "../../api/meContext";
+import { TEST_ME } from "../../api/testing";
 import { forgetBoardComplete, markBoardComplete, QUIET_MS } from "../boardComplete";
+import { strings } from "../../i18n/strings";
 import { errors } from "../../i18n/strings/errors";
 import type { BoardStickerView } from "../boardSticker";
 import { StickerTray, type StickerTrayHandle } from "./StickerTray";
@@ -43,7 +47,7 @@ const sticker = (
   outline: "M10.0 10.0L90.0 10.0L90.0 70.0L10.0 70.0Z",
   urls: { png: `${id}.png`, mask: `${id}-mask.png` },
   placement: { on, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 },
-  artist: { id: "me", handle: "you", name: "You", ageStatus: "adult" },
+  artist: { id: "me", handle: "you", name: "You", nsfwOptIn: true },
   held: true,
   givenTo: null,
   openGift: null,
@@ -57,25 +61,23 @@ const api: TrayBoard = {
   pulse: () => {},
   openGiven: () => {},
 };
-const render = (
+const trayOf = (
   stickers: BoardStickerView[],
   side: Partial<TrayBoard> = {},
   onSeen: (ids: readonly string[]) => void = () => {},
   onProblem: (problem: TrayProblem) => void = () => {},
-) =>
-  act(() =>
-    root.render(
-      <StickerTray
-        ref={tray}
-        board={board}
-        stickers={stickers}
-        ownerId="me"
-        api={{ ...api, ...side }}
-        onSeen={onSeen}
-        onProblem={onProblem}
-      />,
-    ),
-  );
+) => (
+  <StickerTray
+    ref={tray}
+    board={board}
+    stickers={stickers}
+    ownerId="me"
+    api={{ ...api, ...side }}
+    onSeen={onSeen}
+    onProblem={onProblem}
+  />
+);
+const render = (...given: Parameters<typeof trayOf>) => act(() => root.render(trayOf(...given)));
 const openAndShut = async () => {
   await act(async () => void (await tray.current?.open()));
   await act(async () => void (await tray.current?.close()));
@@ -159,8 +161,8 @@ const pageDown = () =>
 /** Enough stickers for more than one sheet. */
 const manyStickers = (n: number) =>
   Array.from({ length: n }, (_, i) => sticker(`s${i}`, i + 1, false));
-const friend = { id: "friend", handle: "friend", name: "Friend", ageStatus: "adult" as const };
-const bob = { id: "bob", handle: "bob", name: "Bob", ageStatus: "adult" as const };
+const friend = { id: "friend", handle: "friend", name: "Friend", nsfwOptIn: true };
+const bob = { id: "bob", handle: "bob", name: "Bob", nsfwOptIn: true };
 /** A sticker someone has received: no longer held, its spot left on its sheet. */
 const givenSticker = (id: string, arrivedAt: number) =>
   sticker(id, arrivedAt, false, {
@@ -623,6 +625,27 @@ describe("StickerTray", () => {
       expect(problems[0]?.nos).toEqual([1]);
     });
   });
+
+  it.each([
+    { nsfwOptIn: false, blurred: true },
+    { nsfwOptIn: true, blurred: false },
+  ])(
+    "marks an 18+ sticker on its sheet 18+, and says so, only while it's blurred for you ($nsfwOptIn)",
+    async ({ nsfwOptIn, blurred }) => {
+      const me: Me = { ...TEST_ME, nsfwOptIn };
+      const stickers = [sticker("nsfw", 1, false, { nsfw: true }), sticker("plain", 2, false)];
+      act(() => root.render(<MeContext value={me}>{trayOf(stickers)}</MeContext>));
+      await openTray();
+      const marked = (id: string) => slotOf(id)?.querySelector(".nsfw-mark") != null;
+      const label = (id: string) => slotOf(id)?.getAttribute("aria-label");
+      expect(marked("nsfw")).toBe(blurred);
+      expect(marked("plain")).toBe(false);
+      // Both are No.0001: one blurred is named as the other, then said to be blurred.
+      expect(label("nsfw")).toBe(
+        blurred ? `${label("plain")}, ${strings.stickers.nsfw.veiled.en}` : label("plain"),
+      );
+    },
+  );
 
   describe("asks for its sticker images", () => {
     const imageCount = () => board.querySelectorAll(".tray__img").length;

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, type ApiClient } from "../api/apiClient";
+import { ApiError, type ApiClient, type DroppedApiCode } from "../api/apiClient";
 import type { GiftPreview, ReceivedGift, ReceiveRefusal } from "@drawing-app/api/client";
 import { MARKUP_LIKE_NAME, markupLikePerson, people, sticker } from "../api/testFixtures";
 import { emptyApi, renderWithApi, shownText } from "../api/testing";
@@ -131,7 +131,7 @@ afterEach(() => {
 });
 
 // The API's refusals: a contract with the server.
-const REFUSED_IN_THE_PREVIEW: ReceiveRefusal[] = [
+const REFUSED_IN_THE_PREVIEW: Exclude<ReceiveRefusal, DroppedApiCode>[] = [
   "group_chat",
   "own_gift",
   "already_received",
@@ -163,6 +163,16 @@ describe("ReceiveGiftDialog", () => {
       expect(heading()).toBe(refusalScreen(code, null).title);
     },
   );
+
+  it("sends someone refused an 18+ gift to their board, whose Settings can turn on Show 18+ stickers", async () => {
+    const refused = new ApiError(403, { error: "nsfw_not_opted_in" });
+    open({ previewGift: () => Promise.reject(refused) });
+    await settle();
+    expect(heading()).toBe(refusalScreen("nsfw_not_opted_in", null).title);
+    press("Back to My board");
+    expect(onClose).toHaveBeenCalledExactlyOnceWith();
+    expect(liff.closeWindow).not.toHaveBeenCalled();
+  });
 
   it("unpackages on the slider's End key and brings up Accept", async () => {
     const receiveGift = vi.fn(() => Promise.resolve(received));

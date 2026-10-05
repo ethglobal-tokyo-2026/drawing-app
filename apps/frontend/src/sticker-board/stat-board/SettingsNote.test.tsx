@@ -3,10 +3,12 @@ import type { Me } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../../api/apiClient";
-import { emptyApi, renderWithApi, TEST_ME } from "../../api/testing";
+import { emptyApi, renderWithApi, TEST_ME, TEST_OWNER } from "../../api/testing";
+import { toPerson } from "../../api/views";
 import { errors } from "../../i18n/strings/errors";
 import { i18next } from "../../i18n/i18n";
 import { keepChosenLanguage, readChosenLanguage } from "../../i18n/language";
+import { keepBoard, keptBoardFor, readKeptBoardAgain } from "../lastBoard";
 import { takeReopenOnSettings } from "./reopenOnSettings";
 import { SettingsNote } from "./SettingsNote";
 import { statsClearPeek } from "./settingsPeek";
@@ -19,22 +21,16 @@ afterEach(async () => {
   vi.unstubAllGlobals();
   localStorage.clear();
   sessionStorage.clear();
+  readKeptBoardAgain();
   restart.mockReset();
   vi.restoreAllMocks();
   await i18next.changeLanguage("en");
 });
 
-/** The note, for someone whose account chose `languageChoice`, saving through `setLanguageChoice`. */
-function render(
-  setLanguageChoice: ApiClient["setLanguageChoice"],
-  languageChoice: Me["languageChoice"] = null,
-) {
-  const me = { ...TEST_ME, languageChoice };
-  const view = renderWithApi(
-    <SettingsNote restart={restart} />,
-    emptyApi({ setLanguageChoice }),
-    me,
-  );
+/** The note, for you as `account` says, saving through `api`. */
+function render(api: Partial<ApiClient>, account: Partial<Me> = {}) {
+  const me = { ...TEST_ME, languageChoice: null, ...account };
+  const view = renderWithApi(<SettingsNote restart={restart} />, emptyApi(api), me);
   unmount = view.unmount;
   return view.host;
 }
@@ -58,7 +54,7 @@ const alert = (host: HTMLElement) => host.querySelector('[role="alert"]')?.textC
 describe("the Settings note's language", () => {
   it("saves a choice to your account, keeps it on this phone, then restarts in it", async () => {
     const setLanguageChoice = saving();
-    const host = render(setLanguageChoice);
+    const host = render({ setLanguageChoice });
     await choose(host, "日本語");
     expect(setLanguageChoice).toHaveBeenCalledExactlyOnceWith("ja");
     expect(readChosenLanguage()).toBe("ja");
@@ -66,7 +62,7 @@ describe("the Settings note's language", () => {
   });
 
   it("has the restart reopen on Settings, once, so the person sees their pick took", async () => {
-    const host = render(saving());
+    const host = render({ setLanguageChoice: saving() });
     await choose(host, "日本語");
     expect(takeReopenOnSettings()).toBe(true);
     expect(takeReopenOnSettings()).toBe(false);
@@ -75,7 +71,7 @@ describe("the Settings note's language", () => {
   it("clears both with Same as LINE", async () => {
     keepChosenLanguage("ja");
     const setLanguageChoice = saving();
-    const host = render(setLanguageChoice, "ja");
+    const host = render({ setLanguageChoice }, { languageChoice: "ja" });
     expect(option(host, "日本語").checked).toBe(true);
     await choose(host, "Same as LINE (English)");
     expect(setLanguageChoice).toHaveBeenCalledExactlyOnceWith(null);
@@ -86,7 +82,7 @@ describe("the Settings note's language", () => {
   it("says why a choice wasn't saved, and leaves this phone's choice and the app as they were", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     const offline = new ApiError(0, { error: "network", detail: "Failed to fetch" });
-    const host = render(() => Promise.reject(offline));
+    const host = render({ setLanguageChoice: () => Promise.reject(offline) });
     await choose(host, "日本語");
     expect(alert(host)).toContain(errors.network.en);
     expect(host.textContent).toContain("Failed to fetch");
@@ -105,7 +101,7 @@ describe("the Settings note's language", () => {
       },
     });
     const setLanguageChoice = saving();
-    const host = render(setLanguageChoice);
+    const host = render({ setLanguageChoice });
     await choose(host, "日本語");
     expect(setLanguageChoice).toHaveBeenCalledWith("ja");
     expect(alert(host)).toContain("couldn’t keep it");
@@ -115,14 +111,71 @@ describe("the Settings note's language", () => {
 
   it("reads in Japanese, naming each language in its own language", async () => {
     await i18next.changeLanguage("ja");
-    const host = render(saving());
+    const host = render({ setLanguageChoice: saving() });
     expect(host.querySelector("h3")?.textContent).toBe("設定");
     expect(host.querySelector("legend")?.textContent).toBe("言語");
-    expect([...host.querySelectorAll("label")].map((l) => l.textContent)).toEqual([
+    const choices = [...host.querySelectorAll('input[type="radio"]')];
+    expect(choices.map((choice) => choice.closest("label")?.textContent)).toEqual([
       "LINEと同じ（English）",
       "English",
       "日本語",
     ]);
+  });
+});
+
+describe("the Settings note's Show 18+ stickers", () => {
+  /** A board this phone kept, which shows its stickers veiled or not by the setting it was kept under. */
+  const KEPT = { owner: toPerson(TEST_OWNER), stickers: [] };
+
+  const theSwitch = (host: HTMLElement) => {
+    const found = host.querySelector<HTMLInputElement>('input[role="switch"]');
+    if (!found) throw new Error("No Show 18+ stickers switch");
+    return found;
+  };
+  const flip = (host: HTMLElement) => act(async () => theSwitch(host).click());
+
+  it.each([false, true])(
+    "saves a change from %s to your account, forgets the board this phone kept, then restarts on Settings",
+    async (wasOn) => {
+      keepBoard(TEST_ME.id, KEPT);
+      const setNsfwOptIn = vi.fn<ApiClient["setNsfwOptIn"]>((nsfwOptIn) =>
+        Promise.resolve({ ...TEST_ME, nsfwOptIn }),
+      );
+      const host = render({ setNsfwOptIn }, { nsfwOptIn: wasOn });
+      expect(theSwitch(host).checked).toBe(wasOn);
+      await flip(host);
+      expect(setNsfwOptIn).toHaveBeenCalledExactlyOnceWith(!wasOn);
+      expect(keptBoardFor(TEST_ME.id)).toBeNull();
+      expect(takeReopenOnSettings()).toBe(true);
+      expect(restart).toHaveBeenCalledOnce();
+    },
+  );
+
+  it("says why a change wasn't saved, and leaves it, the kept board and the app as they were", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    keepBoard(TEST_ME.id, KEPT);
+    const offline = new ApiError(0, { error: "network", detail: "Failed to fetch" });
+    const host = render({ setNsfwOptIn: () => Promise.reject(offline) }, { nsfwOptIn: false });
+    await flip(host);
+    expect(alert(host)).toContain(
+      i18next.t(($) => $.stickerBoard.settings.nsfw.notSaved, { reason: errors.network.en }),
+    );
+    expect(host.textContent).toContain("Failed to fetch");
+    expect(theSwitch(host).checked).toBe(false);
+    expect(keptBoardFor(TEST_ME.id)).toEqual(KEPT);
+    expect(takeReopenOnSettings()).toBe(false);
+    expect(restart).not.toHaveBeenCalled();
+  });
+
+  it("says it's saving, and takes no other change until it's saved, since saving restarts the app", async () => {
+    const setLanguageChoice = saving();
+    const host = render({ setNsfwOptIn: () => new Promise(() => {}), setLanguageChoice });
+    await flip(host);
+    expect(theSwitch(host).closest("fieldset")?.textContent).toContain(
+      i18next.t(($) => $.stickerBoard.settings.saving),
+    );
+    await choose(host, "日本語");
+    expect(setLanguageChoice).not.toHaveBeenCalled();
   });
 });
 

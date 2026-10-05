@@ -127,24 +127,6 @@ it("refreshes waiting gifts after Not now without reloading the sticker board", 
   expect(stickerBoard).toHaveBeenCalledTimes(1);
 });
 
-it("opens a name's link once: a later visit to Explore is plain Explore", async () => {
-  history.replaceState(null, "", "/@mika");
-  const personByEnsLabel = vi.fn(async () => people.mika);
-  const view = renderWithApi(<App />, emptyApi({ personByEnsLabel }));
-  unmount = view.unmount;
-  await act(() => vi.dynamicImportSettled());
-  await settle();
-  expect(personByEnsLabel).toHaveBeenCalledTimes(1);
-
-  tapTab(view.host, "board");
-  await settle();
-  tapTab(view.host, "explore");
-  await act(() => vi.dynamicImportSettled());
-  await settle();
-  expect(view.host.querySelector(".explore")).not.toBeNull();
-  expect(personByEnsLabel).toHaveBeenCalledTimes(1);
-});
-
 it("keeps Explore's search while another tab shows, asks nothing for it then, and refreshes it on a return", async () => {
   history.replaceState(null, "", "/explore");
   const explore = vi.fn(async () => ({

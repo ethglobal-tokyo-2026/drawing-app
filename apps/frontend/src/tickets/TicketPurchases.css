@@ -1,4 +1,5 @@
-/* The ENS name that opens the ticket purchases (TicketPurchases.tsx), and the purchases: receipts on label stock. */
+/* The short Sui address that opens the ticket purchases (TicketPurchases.tsx), and the purchases:
+   receipts on label stock. */
 .ticket-purchases {
   margin-top: 10px;
   text-align: left;

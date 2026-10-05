@@ -101,22 +101,22 @@ export const giving = {
     /** The give sheet on someone else's sticker board: its key, disabled, until you pick a sticker */
     pick: { en: "Pick a sticker", ja: "シールを選ぶ" },
   },
-  /** Giving an NSFW sticker, which only adults can receive. */
+  /** Giving an NSFW sticker, which only someone with Show 18+ stickers on can receive. */
   nsfw: {
-    /** The give sheet on someone else's sticker board: said by assistive tech on an NSFW sticker that can't be picked because they aren't verified as an adult */
+    /** The give sheet on someone else's sticker board: said by assistive tech on an NSFW sticker that can't be picked because they haven't turned on Show 18+ stickers */
     blocked: {
-      en: "for adults only, can’t be given to them",
-      ja: "成人向けのため、この人には贈れません",
+      en: "18+, can’t be given to them",
+      ja: "18+のため、この人には贈れません",
     },
-    /** The give sheet on someone else's sticker board: fine print under the grid when some of your stickers are NSFW and <name/> isn't verified as an adult; <name/> is their handle, which keeps its own case in the capitals */
-    adultsOnly: {
-      en: "18+ stickers can only go to adults verified with World ID, and <name/> isn’t.",
-      ja: "18+のシールは、<wbr/>World IDで<wbr/>年齢確認済みの<wbr/>成人にだけ<wbr/>贈れます。<wbr/><name/>さんは<wbr/>まだ<wbr/>確認されていません。",
+    /** The give sheet on someone else's sticker board: fine print under the grid when some of your stickers are NSFW and <name/> hasn't turned on Show 18+ stickers; <name/> is their handle, which keeps its own case in the capitals */
+    notOptedIn: {
+      en: "18+ stickers only go to people who turned on Show 18+ stickers, and <name/> hasn’t.",
+      ja: "18+のシールは、<wbr/>「18+のシールを表示する」を<wbr/>オンにした人にだけ<wbr/>贈れます。<wbr/><name/>さんは<wbr/>オンにしていません。",
     },
     /** Giving's first screen, for an NSFW sticker: fine print on who can open the gift */
     whoCanOpen: {
-      en: "18+ sticker: only an adult verified with World ID can open this gift.",
-      ja: "18+のシール：<wbr/>World IDで<wbr/>年齢確認済みの<wbr/>成人だけが<wbr/>このギフトを<wbr/>ひらけます。",
+      en: "18+ sticker: only someone who turned on Show 18+ stickers can open this gift.",
+      ja: "18+のシール：<wbr/>「18+のシールを表示する」を<wbr/>オンにした人だけが<wbr/>このギフトを<wbr/>ひらけます。",
     },
   },
   /** Giving: the sticker's fine print over the sheet, its number, drawing time, seal day and the giver's handle */
@@ -334,7 +334,7 @@ export const giving = {
         big: { en: "Returned", ja: "返送済み" },
       },
       "adults-only": {
-        /** The rubber stamp on the tag of an NSFW sticker's gift, opened by someone not verified as an adult */
+        /** The rubber stamp on the tag of an NSFW sticker's gift, opened by someone who hasn't turned on Show 18+ stickers */
         big: { en: "18+ only", ja: "18歳以上" },
       },
     },

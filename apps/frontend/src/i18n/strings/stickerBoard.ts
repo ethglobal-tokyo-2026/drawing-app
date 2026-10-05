@@ -1,11 +1,6 @@
 import type { Section } from "../catalog";
 
 export const stickerBoard = {
-  /** A name under croquis-app.eth, which opens in the ENS app. */
-  ensName: {
-    /** Sticker detail, under the title, and the stat board's label-maker tape: screen readers' name for the croquis-app.eth name's link, which opens it in the ENS app; {{name}} is the whole name */
-    open: { en: "Open {{name}} in the ENS app", ja: "{{name}}をENSアプリでひらく" },
-  },
   /** The Sticker Board's cork back: your own, or someone else's. */
   statBoard: {
     /** Stat board (a sticker board's cork back, yours or someone else's): screen readers' name for the dialog; {{name}} is the board owner's LINE name */
@@ -188,6 +183,8 @@ export const stickerBoard = {
   settings: {
     /** Your stat board: the title of the Settings note, the first paper under the stats on the cork, which peeks up from the cork's foot until it's scrolled into view */
     title: { en: "Settings", ja: "設定" },
+    /** Settings note: the status line under the language choices or the NSFW opt-in's switch while that setting saves, which screen readers announce */
+    saving: { en: "Saving…", ja: "保存しています…" },
     language: {
       /** Settings note: the heading over the language choices */
       title: { en: "Language", ja: "言語" },
@@ -205,8 +202,6 @@ export const stickerBoard = {
         en: "Choosing a language restarts Croquis.",
         ja: "言語を選ぶと、クロッキーが再起動します。",
       },
-      /** Settings note: the status line while a language choice saves, which screen readers announce */
-      saving: { en: "Saving…", ja: "保存しています…" },
       /** Settings note: the alert when the language choice didn't save to your account, with the reason */
       notSaved: {
         en: "Your language couldn’t be saved, so it hasn’t changed: {{reason}}",
@@ -218,41 +213,27 @@ export const stickerBoard = {
         ja: "言語は保存しましたが、この端末には残せませんでした。次にアプリをひらいたときに切り替わります。",
       },
     },
-  },
-  /** Your stat board's Age verification paper, where an Orb-verified World ID proves you're 18 or older. */
-  ageVerification: {
-    /** Your stat board, Age verification paper: its title */
-    title: { en: "Age verification", ja: "年齢確認" },
-    /** Your stat board, Age verification paper, before you've verified: what verifying does, over the Verify your age button */
-    lead: {
-      en: "Prove you’re 18 or older with a World ID verified at an Orb, which World gives only to people 18 or older. Croquis learns nothing else about you.",
-      ja: "Orbで認証したWorld IDで、18歳以上であることを証明します。Orbでの認証は18歳以上の人しか受けられません。クロッキーには、それ以外の情報は伝わりません。",
-    },
-    /** Your stat board, Age verification paper, before you've verified: fine print under what verifying does, saying what an Orb is */
-    orb: {
-      en: "An Orb: World’s in-person verification device",
-      ja: "Orb：Worldが対面で本人確認をする装置",
-    },
-    /** Your stat board, Age verification paper: the button that opens World ID to verify your age */
-    verify: { en: "Verify your age", ja: "年齢を確認する" },
-    /** Your stat board, Age verification paper: the button's text while World ID opens, after tapping Verify your age */
-    opening: { en: "Opening World ID…", ja: "World IDをひらいています…" },
-    /** Your stat board, Age verification paper, once World ID proved your age: in place of the button */
-    verified: { en: "Verified 18+ with World ID", ja: "World IDで18歳以上を確認済み" },
-    /** Your stat board, Age verification paper: the alert when verifying failed, with the reason */
-    failed: {
-      en: "Your age couldn’t be verified: {{reason}}",
-      ja: "年齢を確認できませんでした：{{reason}}",
-    },
-    /** Your stat board, Age verification paper: the reason in “couldn’t be verified” when World App sent a proof that isn't for verifying your age */
-    otherProof: {
-      en: "World App sent a different kind of proof. Update World App, then try again.",
-      ja: "World Appから別の種類の証明が届きました。World Appを更新してから、もう一度お試しください。",
-    },
-    /** Your stat board, Age verification paper: the reason in “couldn’t be verified” when World App failed; World ID's error code, such as credential_unavailable, follows as details for a report */
-    worldAppFailed: {
-      en: "World App couldn’t finish.",
-      ja: "World Appで確認を完了できませんでした。",
+    /** The NSFW opt-in, Show 18+ stickers: off until you turn it on. */
+    nsfw: {
+      /** Settings note: the heading over the NSFW opt-in's switch */
+      title: { en: "18+ stickers", ja: "18+のシール" },
+      /** Settings note: the NSFW opt-in's switch, off until you turn it on; on, 18+ stickers show unblurred and you can seal and receive them */
+      show: { en: "Show 18+ stickers", ja: "18+のシールを表示する" },
+      /** Settings note: the fine print under the NSFW opt-in's switch, saying who it's for and what it changes */
+      about: {
+        en: "For people 18 or older. On, 18+ stickers show unblurred, and you can seal your own as 18+ and receive them. Off, they’re blurred, yours too.",
+        ja: "18歳以上の方向けです。オンにすると、18+のシールがぼかしなしで表示され、自分のシールを18+として仕上げたり、18+のシールを受け取ったりできます。オフにすると、自分のものも含めてぼかして表示されます。",
+      },
+      /** Settings note: the fine print saying that changing the NSFW opt-in restarts the app */
+      restarts: {
+        en: "Changing it restarts Croquis.",
+        ja: "切り替えると、クロッキーが再起動します。",
+      },
+      /** Settings note: the alert when the NSFW opt-in didn't save to your account, with the reason */
+      notSaved: {
+        en: "Your 18+ setting couldn’t be saved, so it hasn’t changed: {{reason}}",
+        ja: "18+の設定を保存できなかったため、変更していません：{{reason}}",
+      },
     },
   },
   /** The developer slip: English only, so the Japanese catalog never translates it. */
