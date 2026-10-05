@@ -18,6 +18,11 @@ export const ticketUses = sqliteTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id),
+    /**
+     * Made on the device when a spend is first tried, and sent with each retry of it. The same key
+     * again gets this use, not another.
+     */
+    idempotencyKey: text("idempotency_key").notNull(),
     /** YYYY-MM-DD, Tokyo time: ticket days run midnight to midnight there, for everyone. */
     ticketDay: text("ticket_day").notNull(),
     /** Order within the day, from 0. */
@@ -28,12 +33,6 @@ export const ticketUses = sqliteTable(
       .unique()
       .references(() => stickers.id),
     ...timestamps(),
-    // Columns added after the table was made go last, where ALTER TABLE puts them.
-    /**
-     * Made on the device when a spend is first tried, and sent with each retry of it. The same key
-     * again gets this use, not another. Null on uses spent before spends had keys.
-     */
-    idempotencyKey: text("idempotency_key"),
   },
   (t) => [
     uniqueIndex("ticket_uses_day").on(t.userId, t.ticketDay, t.dayIndex),

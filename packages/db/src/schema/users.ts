@@ -24,6 +24,18 @@ export const users = sqliteTable(
      */
     handle: text("handle"),
     /**
+     * The language the server writes to the person in outside the app: set at sign-in, and by a
+     * Settings choice.
+     */
+    language: text("language", { enum: ["en", "ja"] }).notNull(),
+    /** The language picked in Settings, which the app starts in on every device; null follows LINE's. */
+    languageChoice: text("language_choice", { enum: ["en", "ja"] }),
+    /**
+     * When the person turned on Show 18+ stickers in Settings, their NSFW opt-in; null while it's
+     * off. Cleared on account deletion.
+     */
+    nsfwOptedInAt: integer("nsfw_opted_in_at", { mode: "timestamp_ms" }),
+    /**
      * The Privy smart wallet on Ethereum Sepolia, lowercase. Stickers are minted and claimed to it, and it
      * maps chain events back to a person. Set from Privy the first time the server needs it.
      */
@@ -33,21 +45,6 @@ export const users = sqliteTable(
     /** Set on account deletion. The row stays, as the Original Artist of their stickers. */
     deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
     ...timestamps(),
-    // Columns added after the table was made go last, where ALTER TABLE puts them.
-    /**
-     * The language the server writes to the person in outside the app: set at sign-in, and by a
-     * Settings choice.
-     */
-    language: text("language", { enum: ["en", "ja"] })
-      .notNull()
-      .default("en"),
-    /** The language picked in Settings, which the app starts in on every device; null follows LINE's. */
-    languageChoice: text("language_choice", { enum: ["en", "ja"] }),
-    /**
-     * When the person turned on Show 18+ stickers in Settings, their NSFW opt-in; null while it's
-     * off. Cleared on account deletion.
-     */
-    nsfwOptedInAt: integer("nsfw_opted_in_at", { mode: "timestamp_ms" }),
   },
   (t) => [
     uniqueIndex("users_handle").on(sql`lower(${t.handle})`),

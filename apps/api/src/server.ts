@@ -23,7 +23,6 @@ import { createJpycPayments } from "./services/jpycPayments.ts";
 import { createPrivySmartWallets } from "./services/privySmartWallets.ts";
 import { createStickerChain } from "./services/stickerChain.ts";
 import { startMintCatchUp } from "./stickers/mint.ts";
-import { startVeilCatchUp } from "./stickers/veilCatchUp.ts";
 import { startTicketPurchaseSweeps } from "./tickets/purchaseSweep.ts";
 
 /** A private key as viem takes one: 0x and 64 hexadecimal digits. */
@@ -161,10 +160,6 @@ startExpiredGiftReturns(deps);
 // reached the chain, are minted to their Original Artists: now, then just after each midnight,
 // Tokyo time.
 startMintCatchUp(deps);
-
-// NSFW stickers sealed before Sealing made their veiled images get them, and NFT metadata written
-// before a sticker's veil existed is pointed at it: now, then just after each midnight, Tokyo time.
-startVeilCatchUp({ ...deps, images });
 
 // Reserve ticket payments the app never reported, found on Sui: now, then every few minutes.
 startTicketPurchaseSweeps(deps);

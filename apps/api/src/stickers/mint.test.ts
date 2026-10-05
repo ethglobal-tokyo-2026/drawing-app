@@ -1,5 +1,5 @@
-import { stickers, ticketUses } from "@drawing-app/db";
-import { bytes32, insertUser } from "@drawing-app/db/testing";
+import { stickers } from "@drawing-app/db";
+import { bytes32, insertTicketUse, insertUser } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Mint } from "../deps.ts";
@@ -11,7 +11,6 @@ import { captureLogLines, type LogLines } from "../testing/logLines.ts";
 import { bodyOf } from "../testing/responses.ts";
 import { giveSticker, insertSealedSticker } from "../testing/rows.ts";
 import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
-import { ticketKindAt } from "../tickets/tickets.ts";
 import { mintUnminted, startMintCatchUp } from "./mint.ts";
 import { sealResponseSchema } from "./seal.ts";
 import { sealFormData, sealParts } from "./testPngs.ts";
@@ -190,17 +189,11 @@ describe("the mint catch-up", () => {
     const artistId = insertUser(test.db);
     const stickerId = insertSealedSticker(test.db, artistId);
     // The ticket use Sealing's transaction left pointing at the sticker it saved.
-    const { id: ticketUseId } = test.db
-      .insert(ticketUses)
-      .values({
-        userId: artistId,
-        ticketDay: tokyoTicketDay(test.clock.now()),
-        dayIndex: 0,
-        kind: ticketKindAt(0),
-        stickerId,
-      })
-      .returning({ id: ticketUses.id })
-      .get();
+    const ticketUseId = insertTicketUse(test.db, artistId, {
+      ticketDay: tokyoTicketDay(test.clock.now()),
+      dayIndex: 0,
+      stickerId,
+    });
     const job = startMintCatchUp({ ...test.deps, schedule: () => () => {} });
     assert(job, "Chain mode runs the mint catch-up");
     await vi.waitFor(() => expect(asked()).toEqual([stickerId]));

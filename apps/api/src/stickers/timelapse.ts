@@ -23,8 +23,8 @@ export const timelapseV1Schema = z.object({
   ink: z.tuple([z.number().positive(), z.number().positive()]),
   /** Where the sticker image sits on the sheet. */
   place: z.tuple([z.number(), z.number(), z.number().positive(), z.number().positive()]),
-  /** Device pixels per sheet pixel where it was drawn: fills flood at it. Older ones lack it. */
-  density: z.number().positive().optional(),
+  /** Device pixels per sheet pixel where it was drawn: fills flood at it. */
+  density: z.number().positive(),
   ops: z.array(
     z.union([
       z.tuple([z.enum(["brush", "eraser"]), z.string(), z.number(), strokePoints]),

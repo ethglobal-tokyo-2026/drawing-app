@@ -1,5 +1,5 @@
-import { stickerPlacements, stickers, stickerTimelapses, ticketUses } from "@drawing-app/db";
-import { bytes32, insertUser } from "@drawing-app/db/testing";
+import { stickerPlacements, stickers, stickerTimelapses } from "@drawing-app/db";
+import { bytes32, insertTicketUse, insertUser } from "@drawing-app/db/testing";
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Mint } from "../deps.ts";
@@ -14,7 +14,6 @@ import {
 } from "../stickers/testPngs.ts";
 import { createTestApp } from "../testing/createTestApp.ts";
 import { insertSealedSticker, SPOT } from "../testing/rows.ts";
-import { ticketKindAt } from "../tickets/tickets.ts";
 
 /**
  * An NSFW sticker with its veiled image and timelapse, on its Original Artist's board and sealed
@@ -131,18 +130,9 @@ describe("a newly sealed sticker's NFT metadata", () => {
     });
     const artistId = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
     for (const [dayIndex, nsfw] of ["true", "false"].entries()) {
-      const ticket = test.db
-        .insert(ticketUses)
-        .values({
-          userId: artistId,
-          ticketDay: "2026-09-26",
-          dayIndex,
-          kind: ticketKindAt(dayIndex),
-        })
-        .returning({ id: ticketUses.id })
-        .get();
+      const ticketUseId = insertTicketUse(test.db, artistId, { ticketDay: "2026-09-26", dayIndex });
       const png = testPng(STICKER_SIZE.width, STICKER_SIZE.height, `nsfw ${nsfw}`);
-      const parts = sealParts(ticket.id, { nsfw, png: pngFile(png, "png") });
+      const parts = sealParts(ticketUseId, { nsfw, png: pngFile(png, "png") });
       const sealing = await test.app.request("/api/stickers", {
         method: "POST",
         body: sealFormData(parts),

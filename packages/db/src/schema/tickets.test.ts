@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
-import { createTestDb, insertUser, refusal, type TestDb } from "../testDb.ts";
-import { ticketKinds, ticketPurchases, ticketUses } from "./index.ts";
+import { createTestDb, insertTicketUse, insertUser, refusal, type TestDb } from "../testDb.ts";
+import { ticketKinds, ticketPurchases } from "./index.ts";
 import { DAILY_TICKETS_PER_DAY } from "./limits.ts";
 
 const TICKET_DAY = "2026-09-26";
@@ -16,11 +16,7 @@ beforeEach(async () => {
 
 describe("tickets", () => {
   it("spends each ticket slot of a day once", () => {
-    const spend = () =>
-      db
-        .insert(ticketUses)
-        .values({ userId, ticketDay: TICKET_DAY, dayIndex: FIRST_USE, kind: "daily" })
-        .run();
+    const spend = () => insertTicketUse(db, userId, { ticketDay: TICKET_DAY, dayIndex: FIRST_USE });
     spend();
     expect(refusal(spend)).toMatch(/UNIQUE constraint failed: ticket_uses/);
   });
@@ -28,10 +24,7 @@ describe("tickets", () => {
   it("spends each key once per person, so a retry or a double tap can't spend two", () => {
     const idempotencyKey = randomUUID();
     const spend = (who: string, dayIndex: number) => () =>
-      db
-        .insert(ticketUses)
-        .values({ userId: who, ticketDay: TICKET_DAY, dayIndex, kind: "daily", idempotencyKey })
-        .run();
+      insertTicketUse(db, who, { ticketDay: TICKET_DAY, dayIndex, idempotencyKey });
     spend(userId, FIRST_USE)();
     expect(refusal(spend(userId, FIRST_USE + 1))).toMatch(/ticket_uses.idempotency_key/);
     spend(insertUser(db), FIRST_USE)();
@@ -39,7 +32,7 @@ describe("tickets", () => {
 
   it("makes a day's first uses daily tickets and the rest reserve ones", () => {
     const spend = (dayIndex: number, kind: (typeof ticketKinds)[number]) => () =>
-      db.insert(ticketUses).values({ userId, ticketDay: TICKET_DAY, dayIndex, kind }).run();
+      insertTicketUse(db, userId, { ticketDay: TICKET_DAY, dayIndex, kind });
     expect(refusal(spend(FIRST_USE, "reserve"))).toMatch(
       /CHECK constraint failed: ticket_uses_kind/,
     );

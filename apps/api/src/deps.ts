@@ -119,7 +119,7 @@ export interface ImageStore {
   /** Where the CDN serves them. */
   urls: (contentHash: string) => StickerImages;
   /** `urls` with an NSFW sticker's veiled image in place, for a viewer without the NSFW opt-in. */
-  veiledUrls: (contentHash: string, veiledHash: string | null) => StickerImages;
+  veiledUrls: (contentHash: string, veiledHash: string) => StickerImages;
 }
 
 /** A sealed sticker's facts, as its NFT records them. */

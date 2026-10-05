@@ -1,5 +1,5 @@
 import { MAX_TIME_USED_S, stickers, stickerTimelapses, ticketUses } from "@drawing-app/db";
-import { insertGratitude, insertUser, packGift } from "@drawing-app/db/testing";
+import { insertGratitude, insertTicketUse, insertUser, packGift } from "@drawing-app/db/testing";
 import { eq } from "drizzle-orm";
 import { gzipSync } from "node:zlib";
 import { keccak256 } from "viem";
@@ -23,7 +23,6 @@ import { createTestApp, type TestApp } from "../testing/createTestApp.ts";
 import { fakeGiftChain, fakeMint } from "../testing/fakes.ts";
 import { bodyOf, refusalOf } from "../testing/responses.ts";
 import { giveSticker, insertSealedSticker } from "../testing/rows.ts";
-import { ticketKindAt } from "../tickets/tickets.ts";
 
 const HOUR_MS = 60 * 60 * 1000;
 /** The ticket day the tests' tickets are spent on. */
@@ -41,15 +40,8 @@ afterEach(() => {
 
 let ticketsSpent = 0;
 /** Spends one of the person's tickets straight into ticket_uses, and returns its id. */
-function spendTicket(userId: string): number {
-  const dayIndex = ticketsSpent++;
-  const use = test.db
-    .insert(ticketUses)
-    .values({ userId, ticketDay: TICKET_DAY, dayIndex, kind: ticketKindAt(dayIndex) })
-    .returning({ id: ticketUses.id })
-    .get();
-  return use.id;
-}
+const spendTicket = (userId: string) =>
+  insertTicketUse(test.db, userId, { ticketDay: TICKET_DAY, dayIndex: ticketsSpent++ });
 
 const postSeal = async (userId: string, form: FormData) =>
   test.app.request("/api/stickers", {
@@ -357,16 +349,6 @@ describe("GET /api/stickers/:stickerId/timelapse", () => {
     const { sticker } = await seal(insertUser(test.db));
     const response = await getTimelapse(insertUser(test.db), sticker.id);
     expect(await bodyOf(response, timelapseV1Schema)).toEqual(TEST_TIMELAPSE);
-  });
-
-  it("answers a timelapse from before densities were recorded without one", async () => {
-    const artistId = insertUser(test.db);
-    const { density: _dropped, ...older } = TEST_TIMELAPSE;
-    const file = new File([gzipSync(JSON.stringify(older))], "t.json.gz");
-    const { sticker } = await seal(artistId, { timelapse: file });
-    const answered = await bodyOf(await getTimelapse(artistId, sticker.id), timelapseV1Schema);
-    expect(answered).toEqual(older);
-    expect(answered.density).toBeUndefined();
   });
 
   it("refuses a sticker sealed without one with timelapse_not_found", async () => {

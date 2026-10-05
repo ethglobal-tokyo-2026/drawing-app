@@ -41,11 +41,6 @@ export interface DiagnosticFields {
   /** The mint catch-up's tally: stickers it minted, and ones it skipped with a line saying why. */
   minted?: number;
   skipped?: number;
-  /** The veil catch-up's tally: NSFW stickers it veiled, and NFT metadata it pointed at the veil. */
-  veiled?: number;
-  rewritten?: number;
-  /** How many of `count` a catch-up has finished. */
-  done?: number;
   /** A reserve ticket purchase. */
   purchaseId?: number;
   /** A Sui transaction digest. */
@@ -195,9 +190,6 @@ const loggedFields = {
   failed: true,
   minted: true,
   skipped: true,
-  veiled: true,
-  rewritten: true,
-  done: true,
   purchaseId: true,
   txDigest: true,
   events: true,

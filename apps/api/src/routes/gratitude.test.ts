@@ -72,9 +72,9 @@ function storedReplay(test: TestApp, giftId: string) {
 /** One tap, then a stroke pass from the centre to the stage's right edge. */
 const switchedToStroke = (): ReplayV1 => ({
   ...tapReplay(ONE_TAP.hits),
-  endReason: "empty",
   switchedAtHit: ONE_TAP.hits,
   strokes: [[0, STAGE_CENTRE, STAGE_CENTRE, TAP_GAP_MS, STAGE_UNITS - STAGE_CENTRE, 0]],
+  strokePasses: [[1]],
 });
 
 /** A tap combo of COMBO_HITS whose second touch is `second`. */
@@ -132,11 +132,6 @@ const REPLAY_BREAKS: FieldBreak[] = [
     breaks: "a tap combo with switchedAtHit set",
     field: "replay.switchedAtHit",
     body: { replay: { ...tapReplay(ONE_TAP.hits), switchedAtHit: ONE_TAP.hits } },
-  },
-  {
-    breaks: "endReason sent after more than one hit",
-    field: "replay.endReason",
-    body: { hits: COMBO_HITS, replay: { ...tapReplay(COMBO_HITS), endReason: "sent" } },
   },
   {
     breaks: "a stroke combo without switchedAtHit",

@@ -266,17 +266,24 @@ type StickerRow = typeof stickers.$inferSelect;
 export interface StickerViewer {
   veils: (sticker: Pick<StickerRow, "nsfw">) => boolean;
   /** Its image URLs: the veiled image in place of each that shows the drawing, when it's veiled. */
-  images: (sticker: Pick<StickerRow, "nsfw" | "contentHash" | "veiledHash">) => StickerImages;
+  images: (
+    sticker: Pick<StickerRow, "id" | "nsfw" | "contentHash" | "veiledHash">,
+  ) => StickerImages;
 }
 
 function viewerOf(images: AppDeps["images"], optedIn: boolean): StickerViewer {
-  const veils = (sticker: Pick<StickerRow, "nsfw">) => sticker.nsfw && !optedIn;
   return {
-    veils,
-    images: (sticker) =>
-      veils(sticker)
-        ? images.veiledUrls(sticker.contentHash, sticker.veiledHash)
-        : images.urls(sticker.contentHash),
+    veils: (sticker) => sticker.nsfw && !optedIn,
+    images: (sticker) => {
+      if (!sticker.nsfw) return images.urls(sticker.contentHash);
+      // The stickers_veiled CHECK keeps every NSFW row's veil, which Sealing makes before the row.
+      if (sticker.veiledHash === null) {
+        throw new Error(`NSFW sticker ${sticker.id} has no veiled image`);
+      }
+      return optedIn
+        ? images.urls(sticker.contentHash)
+        : images.veiledUrls(sticker.contentHash, sticker.veiledHash);
+    },
   };
 }
 
