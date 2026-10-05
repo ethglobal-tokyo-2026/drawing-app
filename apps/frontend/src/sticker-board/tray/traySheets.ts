@@ -14,7 +14,6 @@ import {
   SVG_NS,
   cssUrl,
   dayOf,
-  maskOf,
   px,
   type Box,
   type Size,
@@ -155,7 +154,7 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     if (s.state !== "used" && ui.imagesOn) {
       // Drawn by someone else, or NSFW, it wears the sheet's foil under its image, as StickerFoil
       // draws it.
-      if ((s.gift || s.nsfw) && s.urls.mask) {
+      if (s.gift || s.nsfw) {
         const foil = decorative(
           make(
             "span",
@@ -185,7 +184,7 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     }
     fit.style.width = px(q.w);
     fit.style.height = px(q.h);
-    if (ui.imagesOn) fit.style.setProperty("--m", cssUrl(maskOf(s)));
+    if (ui.imagesOn) fit.style.setProperty("--m", cssUrl(s.urls.mask));
     el.append(fit);
     if (isNew) el.append(decorative(make("span", "tray__new", words.new)));
     return el;

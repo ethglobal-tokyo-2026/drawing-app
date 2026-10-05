@@ -5,10 +5,10 @@
    under a fine, still grating, so the band glitters rather than crawls; the glint follows the app's
    one light (light.ts). Both move by transform only and hold still under reduced motion. */
 .sticker-foil {
-  /* Seventeen copies of the silhouette at the image's size, which together dilate it: the center, and
-     sixteen a band's width away, every 22.5°, so the band keeps an even width round curves and
-     points, where eight left lumps. The band and its cast share them. They're painted once, not
-     per frame. */
+  /* The Shop's sample sticker has no band mask, so its band is seventeen copies of the silhouette at
+     the image's size, which together dilate it: the center, and sixteen a band's width away, every
+     22.5°, so the band keeps an even width round curves and points, where eight left lumps. The band
+     and its cast share them. They're painted once, not per frame. */
   --foil-s: calc(100% - var(--foil-w) * 2);
   --foil-copies:
     var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m), var(--m),
@@ -50,8 +50,9 @@
   --band-6: var(--foil-magenta);
 }
 
-/* The band's mask made on the server: the silhouette grown by an even distance, at the image's size.
-   One copy in the center copy's place stands in for them all, with a crisp edge. */
+/* The band's mask made on the server, which every sealed sticker has: the silhouette grown by an
+   even distance, at the image's size. One copy in the center copy's place stands in for them all,
+   with a crisp edge. */
 .sticker-foil.sticker-foil--baked {
   --foil-copies: var(--foil-mask);
   --foil-at: var(--foil-w) var(--foil-w);

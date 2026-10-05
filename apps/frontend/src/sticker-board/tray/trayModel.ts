@@ -276,7 +276,6 @@ export const SVG_NS = "http://www.w3.org/2000/svg";
 export const cssUrl = (url: string) => `url("${url}")`;
 export const px = (v: number) => `${v.toFixed(1)}px`;
 const isShape = (s: Shape | undefined): s is Shape => s !== undefined;
-export const maskOf = (s: Slot) => s.urls.mask ?? s.urls.png;
 export const dayOf = (t: number) => tokyoTicketDay(new Date(t));
 export const matchesFilter = (s: Slot, f: Filter) =>
   f === "all" || (f === "mine" ? !s.gift : s.gift);
@@ -351,7 +350,7 @@ export function createTrayModel(
   async function relayout() {
     if (applyPack()) return true;
     const m = ui.model;
-    const shapes = await Promise.all(m.slots.map((s) => stickerShape(s, s.urls)));
+    const shapes = await Promise.all(m.slots.map((s) => stickerShape(s, s.urls.mask)));
     // A refresh during the wait lays out its own stickers.
     if (ui.destroyed || m !== ui.model) return false;
     packWith(shapes);

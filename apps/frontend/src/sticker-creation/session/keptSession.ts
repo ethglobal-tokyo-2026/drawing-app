@@ -33,8 +33,7 @@ interface SessionRecord {
   elapsedMs: number;
   /** The 18+ switch: it seals as an NSFW sticker. */
   nsfw: boolean;
-  /** Absent when what's kept holds none, or none that can be read: the drawing still comes back. */
-  tools?: KeptTools;
+  tools: KeptTools;
 }
 
 /** What's kept of a drawing that was in progress. */
@@ -147,7 +146,7 @@ export class SessionKeeper {
   private nsfw = false;
   private elapsedMs = 0;
   /** The tools as the artist last set them: they outlast a sheet, so a new session keeps them too. */
-  private tools: KeptTools | undefined;
+  private tools: KeptTools;
   /** The ops as last written, by reference; null when a write failed and what landed is unknown. */
   private written: readonly Op[] | null = [];
   /** Whether the last record written landed. */
@@ -160,9 +159,13 @@ export class SessionKeeper {
   /** Set by `carry`: what's kept is the unread drawing's, untouched until this sheet is drawn on. */
   private carried = false;
 
-  /** `onKept` hears whether the session is kept on this device, each time that changes. */
-  constructor(userId: string, onKept: (kept: boolean) => void = () => {}) {
+  /**
+   * `tools`: how the screen's tools are set as it opens. `onKept` hears whether the session is kept on
+   * this device, each time that changes.
+   */
+  constructor(userId: string, tools: KeptTools, onKept: (kept: boolean) => void = () => {}) {
     this.userId = userId;
+    this.tools = tools;
     this.onKept = onKept;
   }
 
@@ -186,12 +189,12 @@ export class SessionKeeper {
     ops: readonly Op[],
     elapsedMs: number,
     nsfw: boolean,
-    tools: KeptTools | undefined,
+    tools: KeptTools,
   ): void {
     this.ticket = ticket;
     this.elapsedMs = elapsedMs;
     this.nsfw = nsfw;
-    this.tools = tools ?? this.tools;
+    this.tools = tools;
     this.written = [...ops];
     this.carried = false;
   }
@@ -260,7 +263,7 @@ export class SessionKeeper {
         ticket: this.ticket,
         elapsedMs: this.elapsedMs,
         nsfw: this.nsfw,
-        ...(this.tools && { tools: this.tools }),
+        tools: this.tools,
       });
     this.changed();
   }
@@ -398,15 +401,11 @@ function readRecord(userId: string): SessionRecord | "unreadable" | null {
     "elapsedMs" in value &&
     isFiniteNumber(value.elapsedMs) &&
     "nsfw" in value &&
-    typeof value.nsfw === "boolean"
+    typeof value.nsfw === "boolean" &&
+    "tools" in value
   ) {
-    const tools = "tools" in value ? readTools(value.tools) : undefined;
-    return {
-      ticket: value.ticket,
-      elapsedMs: value.elapsedMs,
-      nsfw: value.nsfw,
-      ...(tools && { tools }),
-    };
+    const tools = readTools(value.tools);
+    if (tools) return { ticket: value.ticket, elapsedMs: value.elapsedMs, nsfw: value.nsfw, tools };
   }
   console.error("The record of the drawing in progress is unreadable:", raw);
   return "unreadable";

@@ -39,8 +39,7 @@ const cssUrl = (url: string) => `url("${url}")`;
 /**
  * A sticker as material, filling its box: its foil when someone else drew it or it's NSFW, the image with its
  * kiss-cut and cast shadow, live resin under the one light, a lifted corner, and the gloss sweep that
- * plays when it sticks. The parts shaped by the silhouette need the sticker's mask; without one it's
- * the image alone.
+ * plays when it sticks.
  */
 export function StickerFigure({
   urls,
@@ -57,13 +56,12 @@ export function StickerFigure({
   ref,
 }: Props) {
   const { t } = useTranslation();
-  const { mask, spec, rim } = urls;
   const foilSize = foil ?? (nsfw ? "board" : undefined);
   const style: CSSProperties = {
     "--ar": (width / height).toFixed(4),
-    ...(mask && { "--m": cssUrl(mask) }),
-    ...(spec && { "--mt": cssUrl(spec) }),
-    ...(rim && { "--mb": cssUrl(rim) }),
+    "--m": cssUrl(urls.mask),
+    "--mt": cssUrl(urls.spec),
+    "--mb": cssUrl(urls.rim),
     ...(fold && {
       "--clip-in": fold.clipIn,
       "--clip-out": fold.clipOut,
@@ -74,7 +72,7 @@ export function StickerFigure({
   };
   const classes = [
     "sticker-figure",
-    mask && fold && "is-curled",
+    fold && "is-curled",
     nsfw && "is-nsfw",
     veiled && "is-veiled",
     reveal && "reveal-img",
@@ -82,7 +80,7 @@ export function StickerFigure({
   ].filter(Boolean);
   return (
     <span ref={ref} className={classes.join(" ")} style={style}>
-      {mask && foilSize && (
+      {foilSize && (
         <StickerFoil
           size={foilSize}
           no={no}
@@ -91,7 +89,7 @@ export function StickerFigure({
           mask={urls.foil}
         />
       )}
-      {mask && <span className="sticker-figure__spot" aria-hidden="true" />}
+      <span className="sticker-figure__spot" aria-hidden="true" />
       <img
         ref={
           reveal ? (img) => revealOnLoad(img, img?.closest(".sticker-figure") ?? null) : undefined
@@ -101,7 +99,7 @@ export function StickerFigure({
         alt=""
         draggable={false}
       />
-      {mask && nsfw && <span className="sticker-figure__gloss" aria-hidden="true" />}
+      {nsfw && <span className="sticker-figure__gloss" aria-hidden="true" />}
       {veiled && (
         <span className="sticker-figure__veil">
           <b className="nsfw-mark" role="img" aria-label={t(($) => $.stickers.nsfw.veiled)}>
@@ -109,17 +107,13 @@ export function StickerFigure({
           </b>
         </span>
       )}
-      {mask && (
-        <>
-          <LiveResin highlights={Boolean(spec && rim)} />
-          <span className="sticker-figure__flapw" aria-hidden="true">
-            <i className="sticker-figure__flap" />
-          </span>
-          <span className="sticker-figure__sweep" aria-hidden="true">
-            <i />
-          </span>
-        </>
-      )}
+      <LiveResin />
+      <span className="sticker-figure__flapw" aria-hidden="true">
+        <i className="sticker-figure__flap" />
+      </span>
+      <span className="sticker-figure__sweep" aria-hidden="true">
+        <i />
+      </span>
     </span>
   );
 }

@@ -46,7 +46,7 @@ export const toPerson = (p: Person): PersonView => ({
   nsfwOptIn: p.nsfwOptIn,
 });
 
-/** Shown from its WebP copies, a fraction of its PNGs' bytes. An empty URL is an image it doesn't have. */
+/** Shown from its WebP copies, a fraction of its PNGs' bytes. */
 export const toSticker = (s: Sticker): StickerView => ({
   id: s.id,
   no: s.number,
@@ -57,10 +57,10 @@ export const toSticker = (s: Sticker): StickerView => ({
   outline: s.outline,
   urls: {
     png: s.images.webp.sticker,
-    ...(s.images.webp.mask && { mask: s.images.webp.mask }),
-    ...(s.images.webp.spec && { spec: s.images.webp.spec }),
-    ...(s.images.webp.rim && { rim: s.images.webp.rim }),
-    ...(s.images.webp.foil && { foil: s.images.webp.foil }),
+    mask: s.images.webp.mask,
+    spec: s.images.webp.spec,
+    rim: s.images.webp.rim,
+    foil: s.images.webp.foil,
   },
   sealedAt: toMs(s.sealedAt),
   nsfw: s.nsfw,

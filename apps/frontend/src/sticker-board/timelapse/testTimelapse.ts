@@ -7,6 +7,7 @@ export const TEST_TIMELAPSE: TimelapseV1 = {
   v: 1,
   ink: [300, 400],
   place: [0, 0, 300, 400],
+  density: 1,
   ops: [],
 };
 

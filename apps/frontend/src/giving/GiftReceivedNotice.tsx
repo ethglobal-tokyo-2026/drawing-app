@@ -17,8 +17,6 @@ interface Props {
   receiver: PersonView;
   /** Milliseconds. */
   receivedAt: number;
-  /** The sticker's silhouette; without it, the sticker's own mask, or its image. */
-  mask?: string;
   onClose: () => void;
 }
 
@@ -30,7 +28,7 @@ const FLYER_PX = 56;
  * "@bob received your sticker", and a heart: the giver's moment once a gift is received, over the whole phone.
  * The sticker's silhouette holds its place, and the receiver's picture sticks on beside it.
  */
-export function GiftReceivedNotice({ sticker, receiver, receivedAt, mask, onClose }: Props) {
+export function GiftReceivedNotice({ sticker, receiver, receivedAt, onClose }: Props) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const titleId = useId();
@@ -68,7 +66,6 @@ export function GiftReceivedNotice({ sticker, receiver, receivedAt, mask, onClos
   }, [arriving]);
 
   const who = receiver.handle ? formatHandle(receiver.handle) : receiver.name;
-  const silhouette = mask ?? sticker.urls.mask ?? sticker.urls.png;
 
   const notice = (
     <div
@@ -94,7 +91,7 @@ export function GiftReceivedNotice({ sticker, receiver, receivedAt, mask, onClos
         <div ref={prop} className="gift-received-notice__prop">
           <span
             className="gift-received-notice__silhouette"
-            style={{ "--m": `url("${silhouette}")` }}
+            style={{ "--m": `url("${sticker.urls.mask}")` }}
             aria-hidden="true"
           />
           <span className="gift-received-notice__caption">

@@ -12,8 +12,9 @@ import {
   startTicketPurchaseSweeps,
   sweepTicketPurchases,
 } from "./purchaseSweep.ts";
+import { ticketPaymentReference } from "./paymentReference.ts";
 import { payOnSui, reportPayment, startedPurchase } from "./testPurchases.ts";
-import { TICKET_PACKS, ticketPaymentReference, ticketsLeftOf } from "./tickets.ts";
+import { TICKET_PACKS, ticketsLeftOf } from "./tickets.ts";
 
 const [, PACK] = TICKET_PACKS;
 

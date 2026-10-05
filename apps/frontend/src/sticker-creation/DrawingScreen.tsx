@@ -170,7 +170,14 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const ticket = useRef<number | null>(null);
   // Whether this device keeps the drawing in progress; the timer's note says so while it can't.
   const [kept, setKept] = useState(true);
-  const [keeper] = useState(() => new SessionKeeper(me.id, setKept));
+  const [keeper] = useState(
+    () =>
+      new SessionKeeper(
+        me.id,
+        { brushSize: sizes.brush, eraserSize: sizes.eraser, smoothing },
+        setKept,
+      ),
+  );
   // The rail's sizes and Smoothing are kept with the drawing, so a reload brings them back too.
   useEffect(
     () => keeper.keepTools({ brushSize: sizes.brush, eraserSize: sizes.eraser, smoothing }),
@@ -546,10 +553,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     }
     keeper.resume(found.ticket, found.ops, found.elapsedMs, found.nsfw, found.tools);
     keepNsfw(found.nsfw);
-    if (found.tools) {
-      setSizes({ brush: found.tools.brushSize, eraser: found.tools.eraserSize });
-      setSmoothing(found.tools.smoothing);
-    }
+    setSizes({ brush: found.tools.brushSize, eraser: found.tools.eraserSize });
+    setSmoothing(found.tools.smoothing);
     ticket.current = found.ticket;
     send({ type: "restored", drawn, sealSent: sealWentOut(me.id, found.ticket) });
     if (!drawn) {

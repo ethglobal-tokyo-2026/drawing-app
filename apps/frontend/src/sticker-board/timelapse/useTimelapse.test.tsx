@@ -7,6 +7,7 @@ import { ApiError, type ApiClient } from "../../api/apiClient";
 import { ApiProvider } from "../../api/ApiProvider";
 import { emptyApi } from "../../api/testing";
 import { StickerFigure } from "../../stickers/StickerFigure";
+import { testStickerUrls } from "../../stickers/testStickerUrls";
 import { errorMessage } from "../../i18n/errorMessage";
 import { deferred, fakeTimelapsePlayers, handFrames, TEST_TIMELAPSE } from "./testTimelapse";
 import { TimelapseButton, TimelapseFailure } from "./TimelapseButton";
@@ -29,7 +30,7 @@ const STICKER: TimelapseSticker = {
   no: 147,
   width: 240,
   height: 200,
-  urls: { png: "blob:png", mask: "blob:mask" },
+  urls: testStickerUrls("blob:s-147"),
 };
 
 let host: HTMLDivElement;
@@ -158,7 +159,6 @@ describe("useTimelapse", () => {
     expect(phase()).toBe("preparing");
     const player = players.last();
     expect(player.options.canvas.parentElement).toBe(layer());
-    expect(player.options.image).toEqual({ width: STICKER.width, height: STICKER.height });
     expect(player.calls).toEqual(["prepare"]);
 
     player.prepared.resolve();

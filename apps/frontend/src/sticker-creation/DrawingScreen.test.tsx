@@ -94,12 +94,15 @@ const startOver = () =>
   [...document.querySelectorAll("button")].find(
     (button) => button.textContent === strings.stickerCreation.seal.startOver.en,
   );
+/** How the tools were set on a kept drawing. */
+const KEPT_TOOLS = { brushSize: 0.34, eraserSize: 0.52, smoothing: 30 };
 /** A sticker in progress kept at 0:00, with nothing drawn that matters here. */
 const keptAtTimeUp: KeptSession = {
   status: "found",
   ticket: 7,
   elapsedMs: SESSION_MS,
   nsfw: false,
+  tools: KEPT_TOOLS,
   ops: [],
 };
 const chip = () => document.querySelector(".seal-chip")?.textContent ?? "";
@@ -161,6 +164,7 @@ describe("the 18+ switch", () => {
     ticket: 7,
     elapsedMs: 60_000,
     nsfw: true,
+    tools: KEPT_TOOLS,
     ops: [{ tool: "fill", x: 10, y: 10, color: "#1c1824", T: 0 }],
   };
 

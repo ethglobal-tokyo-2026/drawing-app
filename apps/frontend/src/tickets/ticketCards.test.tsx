@@ -3,7 +3,7 @@ import type { StartedTicketPurchase, Tickets, TicketShop as Shop } from "@drawin
 import { act, useState, type ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
-import { emptyApi, FRESH_TICKETS, renderWithApi } from "../api/testing";
+import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing";
 import { setPrivyStatus } from "../identity/privy";
 import { getJpycBalance, getTicketPayments, signTicketPayment } from "../payments/jpyc";
 import { PaymentFailed } from "../payments/paymentErrors";
@@ -546,10 +546,15 @@ describe("ReserveTicketCheckout", () => {
     expect(buttonNamed(PURCHASES)?.textContent).toContain("Purchases");
     click(PURCHASES);
     await settle(500);
-    expect(getTicketPayments).toHaveBeenCalledWith(SUI_WALLET, SHOP.payment, null);
+    expect(getTicketPayments).toHaveBeenCalledWith(SUI_WALLET, TEST_ME.id, SHOP.payment, null);
     click("Older purchases");
     await settle(500);
-    expect(getTicketPayments).toHaveBeenLastCalledWith(SUI_WALLET, SHOP.payment, "older");
+    expect(getTicketPayments).toHaveBeenLastCalledWith(
+      SUI_WALLET,
+      TEST_ME.id,
+      SHOP.payment,
+      "older",
+    );
     const rows = [...document.querySelectorAll<HTMLAnchorElement>(".ticket-purchases a")];
     expect(rows.map((a) => a.textContent)).toEqual([
       expect.stringContaining("3 tickets"),

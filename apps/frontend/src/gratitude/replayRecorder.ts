@@ -139,8 +139,7 @@ export function createReplayRecorder(options: ReplayRecorderOptions): ReplayReco
       hits: changes(inTimeOrder(touches, end), 3),
       strokes,
       shakes: changes(inTimeOrder(reversals, end), 1),
-      // A replay with no strokes has no passes to say, and keeps the shape it always had.
-      ...(strokes.length > 0 ? { strokePasses } : {}),
+      strokePasses,
     };
   };
 

@@ -59,7 +59,6 @@ const closedPreview = {
 // The API's refusal codes and statuses (REFUSAL_STATUS): a contract with the server.
 const REFUSED_BY_THE_SERVER = [
   [404, "gift_not_found"],
-  [501, "needs_server"],
   [403, "group_chat"],
   [403, "own_gift"],
   [403, "nsfw_not_opted_in"],

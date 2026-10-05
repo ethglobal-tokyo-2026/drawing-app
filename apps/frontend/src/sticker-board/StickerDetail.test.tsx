@@ -21,6 +21,7 @@ import { emptyApi, gratitudeOf, recordGratitudeBody, TEST_ME, TEST_OWNER } from 
 import { toPerson, toSticker } from "../api/views";
 import { resendPendingGratitude, sendGratitude } from "../gratitude/gratitudeOutbox";
 import { errorDetail } from "../i18n/errorMessage";
+import { testStickerUrls } from "../stickers/testStickerUrls";
 import type { BoardStickerView } from "./boardSticker";
 import { StickerDetail } from "./StickerDetail";
 import { fakeTimelapsePlayers, TEST_TIMELAPSE } from "./timelapse/testTimelapse";
@@ -52,7 +53,7 @@ const sticker = (
   width: 120,
   height: 100,
   nsfw: false,
-  urls: { png: `blob:${no}` },
+  urls: testStickerUrls(`blob:${no}`),
   placement: { on: true, x: 0.5, y: 0.5, s: 0.3, r: 0, z: no },
   artist: you,
   held: true,
@@ -496,8 +497,7 @@ describe("StickerDetail", () => {
       timelapsePlayer.create.mockImplementation(players.create);
     });
 
-    /** The stickers with their masks; only No.0133 was sealed with its timelapse. */
-    const masked = stickers.map((s) => ({ ...s, urls: { ...s.urls, mask: `blob:${s.no}-mask` } }));
+    /** Only No.0133 was sealed with its timelapse. */
     const withTimelapse = () =>
       emptyApi({
         stickerDetail: (id) =>
@@ -514,7 +514,7 @@ describe("StickerDetail", () => {
 
     /** Opens No.0133 and plays its timelapse. */
     async function playing() {
-      open({ stickers: masked }, withTimelapse());
+      open({ stickers }, withTimelapse());
       await settle();
       act(() => timelapseButton()?.click());
       await settle();
@@ -527,7 +527,7 @@ describe("StickerDetail", () => {
     it.each(["yours", "given"] as const)(
       "offers Timelapse in %s mode, only for a sticker sealed with one",
       async (mode) => {
-        open({ mode, stickers: masked }, withTimelapse());
+        open({ mode, stickers }, withTimelapse());
         await settle();
         expect(timelapseButton()).not.toBeNull();
         press("Next sticker");
@@ -551,7 +551,7 @@ describe("StickerDetail", () => {
     });
 
     it("keeps focus in the dialog when paging from Timelapse takes the button away", async () => {
-      open({ stickers: masked }, withTimelapse());
+      open({ stickers }, withTimelapse());
       await settle();
       act(() => timelapseButton()?.focus());
       expect(document.activeElement).toBe(timelapseButton());

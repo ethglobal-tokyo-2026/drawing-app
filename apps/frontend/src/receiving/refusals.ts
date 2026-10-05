@@ -86,13 +86,6 @@ export function refusalScreen(kind: RefusalKind, giver: PersonView | null): EndS
         bag: { state: "closed", stamp: "adults-only", nsfw: true },
         action: "board",
       };
-    case "needs_server":
-      return {
-        title: t(($) => $.receiving.refusals.needsServer.title),
-        line: t(($) => $.receiving.refusals.needsServer.line),
-        bag: null,
-        action: "backToLine",
-      };
   }
 }
 

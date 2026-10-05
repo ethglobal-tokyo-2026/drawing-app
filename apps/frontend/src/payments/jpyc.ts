@@ -1,9 +1,13 @@
-import type { StartedTicketPurchase, TicketShop } from "@drawing-app/api/client";
+import {
+  purchaseNamedBy,
+  type StartedTicketPurchase,
+  type TicketShop,
+} from "@drawing-app/api/client";
 import type { Signer } from "@mysten/sui/cryptography";
 import { SuiGrpcClient } from "@mysten/sui/grpc";
 import { SuiGraphQLClient } from "@mysten/sui/graphql";
 import { coinWithBalance, Transaction, TransactionDataBuilder } from "@mysten/sui/transactions";
-import { normalizeSuiAddress } from "@mysten/sui/utils";
+import { fromBase64, normalizeSuiAddress } from "@mysten/sui/utils";
 import { PaymentFailed, SigningTimedOut } from "./paymentErrors";
 
 /** Where the ticket shop's packs are paid, as the server names it. */
@@ -130,7 +134,7 @@ function historyClientFor(network: JpycPayment["network"]) {
   return client;
 }
 
-/** One ticket payment `owner` made into the vault. */
+/** One ticket payment `owner` made into the vault, for one of the account's purchases. */
 export interface TicketPaymentRecord {
   digest: string;
   /** Milliseconds. */
@@ -166,22 +170,35 @@ const PAYMENT_EVENTS = `
   }
 `;
 
-/** The payment contract's PaymentReceived, as GraphQL prints it. */
-function paymentReceived(json: unknown): { vault: string; amount: bigint } | null {
-  if (typeof json !== "object" || json === null || !("vault_id" in json) || !("amount" in json)) {
+/** Bytes as GraphQL prints a `vector<u8>`, in base64, read as text; null when they aren't base64. */
+function textOf(base64: string): string | null {
+  try {
+    return new TextDecoder().decode(fromBase64(base64));
+  } catch {
     return null;
   }
+}
+
+/** The payment contract's PaymentReceived, as GraphQL prints it. */
+function paymentReceived(
+  json: unknown,
+): { vault: string; amount: bigint; reference: string } | null {
+  if (typeof json !== "object" || json === null) return null;
+  if (!("vault_id" in json) || !("amount" in json) || !("reference" in json)) return null;
   const { vault_id, amount } = json;
-  if (typeof vault_id !== "string" || typeof amount !== "string") return null;
-  return { vault: normalizeSuiAddress(vault_id), amount: BigInt(amount) };
+  const reference = typeof json.reference === "string" ? textOf(json.reference) : null;
+  if (typeof vault_id !== "string" || typeof amount !== "string" || reference === null) return null;
+  return { vault: normalizeSuiAddress(vault_id), amount: BigInt(amount), reference };
 }
 
 /**
- * The ticket payments `owner` sent into the vault, newest first, a page at a time: the
- * PaymentReceived events of their transactions. Only a successful transaction emits one.
+ * The ticket payments `owner` sent into the vault for `userId`'s purchases, newest first, a page at
+ * a time: the PaymentReceived events of their transactions whose reference names one of them. Only
+ * a successful transaction emits one, and a page can list none.
  */
 export async function getTicketPayments(
   owner: string,
+  userId: string,
   payment: JpycPayment,
   cursor: string | null = null,
 ): Promise<TicketPaymentPage> {
@@ -204,11 +221,16 @@ export async function getTicketPayments(
   const payments = data.events.nodes.flatMap((event): TicketPaymentRecord[] => {
     const paid = paymentReceived(event.contents?.json);
     if (!paid || !event.transaction || !event.timestamp) {
-      console.error("Skipped a PaymentReceived event GraphQL didn't print in full", event);
+      console.error(
+        "Skipped a PaymentReceived event without a readable vault, amount, reference, time or transaction",
+        event,
+      );
       return [];
     }
     // Paid into another vault of the same contract: not this shop's.
     if (paid.vault !== vault) return [];
+    // Only this account's purchases: the same wallet may have paid for an earlier account's.
+    if (purchaseNamedBy(paid.reference)?.userId !== userId) return [];
     return [
       {
         digest: event.transaction.digest,

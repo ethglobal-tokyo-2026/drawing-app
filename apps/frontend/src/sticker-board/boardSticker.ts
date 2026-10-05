@@ -14,14 +14,12 @@ export interface BoardSticker {
   timeUsed: number;
   width: number;
   height: number;
-  /** The cut line, an SVG path in image pixels. Older stickers don't have one. */
+  /** The cut line, an SVG path in image pixels; the board kept on the phone carries none. */
   outline?: string;
   urls: StickerUrls;
   placement: Placement;
   /** An NSFW sticker: pink foil, and blurred for anyone without the NSFW opt-in. */
   nsfw: boolean;
-  /** Someone else's board hands its demo stickers a stand-in image, which nothing reads. */
-  blob?: Blob;
 }
 
 /** Who received a sticker you gave, and when, in milliseconds. */
@@ -31,7 +29,7 @@ interface GivenTo {
 }
 
 /** One of your Sticker Board's stickers: where it sits, who drew it, and where its gift is. */
-export interface BoardStickerView extends Omit<BoardSticker, "blob"> {
+export interface BoardStickerView extends BoardSticker {
   /** The Original Artist. */
   artist: PersonView;
   /** False once it's been given away and received. */
@@ -63,8 +61,7 @@ export function toBoardSticker(b: ApiBoardSticker): UnplacedBoardSticker {
     timeUsed: s.timeUsed,
     width: s.width,
     height: s.height,
-    // An empty cut line is one the sticker doesn't have.
-    ...(s.outline && { outline: s.outline }),
+    outline: s.outline,
     urls: s.urls,
     nsfw: s.nsfw,
     placement: b.placement && toRecordPlacement(b.placement),

@@ -1,6 +1,5 @@
 import type { BoardSticker } from "../boardSticker";
 import { maskPixels } from "../../stickers/maskPixels";
-import type { StickerUrls } from "../../stickers/stickerUrls";
 import { boxShape, outlineShape, shapeFromMask, type Shape } from "./sheetPacking";
 
 /** A traced mask's long side, in cells: fine enough for a sticker sheet, quick to trace. */
@@ -35,16 +34,13 @@ export function knownShape(sticker: ShapeSource): Shape | undefined {
   return shape;
 }
 
-/** A sticker's shape: its stored outline, or else its mask, traced once. */
-export function stickerShape(
-  sticker: ShapeSource,
-  urls: Pick<StickerUrls, "png" | "mask">,
-): Promise<Shape> {
+/** A sticker's shape: its stored outline, or else its mask at `maskUrl`, traced once. */
+export function stickerShape(sticker: ShapeSource, maskUrl: string): Promise<Shape> {
   const shape = knownShape(sticker);
   if (shape) return Promise.resolve(shape);
   let trace = tracing.get(sticker.id);
   if (!trace) {
-    trace = traceMask(urls.mask ?? urls.png, sticker.width, sticker.height).then(
+    trace = traceMask(maskUrl, sticker.width, sticker.height).then(
       (traced) => {
         known.set(sticker.id, traced);
         tracing.delete(sticker.id);

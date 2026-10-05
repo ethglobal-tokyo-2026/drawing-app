@@ -43,7 +43,7 @@ export function createReplayDriver(feed: ReplayFeed, options: ReplayDriverOption
         }
         return;
       case "strokeMove": {
-        const commits = next.fastPass === true && t === committedAt;
+        const commits = next.fastPass && t === committedAt;
         input.strokeMove(t, next.point.x, next.point.y, commits ? false : next.fastPass);
         return;
       }
@@ -60,8 +60,6 @@ export function createReplayDriver(feed: ReplayFeed, options: ReplayDriverOption
     const { at, reason } = feed.end;
     if (ended || now < firstHitAt + at) return;
     ended = true;
-    if (reason === "hidden") input.endAt(firstHitAt + at, "hidden");
-    // An older combo's one-tap send ended it from outside, as the X does; the record doesn't say which.
-    else if (reason === "closed" || reason === "sent") input.endAt(firstHitAt + at, "closed");
+    if (reason === "hidden" || reason === "closed") input.endAt(firstHitAt + at, reason);
   };
 }

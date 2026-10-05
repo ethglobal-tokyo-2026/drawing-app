@@ -2,7 +2,7 @@
 import type { TicketShop as Shop } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithApi } from "../api/testing";
+import { renderWithApi, TEST_ME } from "../api/testing";
 import { getTicketPayments, type TicketPaymentPage } from "../payments/jpyc";
 import { shortAddress } from "../sticker-board/stat-board/addresses";
 import { TicketPurchases } from "./TicketPurchases";
@@ -81,7 +81,7 @@ describe("the ticket purchases list's Try again", () => {
 
     click("Try again");
     await settle();
-    expect(getTicketPayments).toHaveBeenLastCalledWith(OWNER, SHOP.payment, null);
+    expect(getTicketPayments).toHaveBeenLastCalledWith(OWNER, TEST_ME.id, SHOP.payment, null);
     expect(alertText()).toBeUndefined();
     expect(document.querySelector("[role=status]")?.textContent).toBe(
       "Reading your ticket purchases from Sui…",
@@ -118,7 +118,7 @@ describe("the ticket purchases list's Try again", () => {
 
     click("Try again");
     await settle();
-    expect(getTicketPayments).toHaveBeenLastCalledWith(OWNER, SHOP.payment, "older");
+    expect(getTicketPayments).toHaveBeenLastCalledWith(OWNER, TEST_ME.id, SHOP.payment, "older");
     expect(alertText()).toBeUndefined();
     expect(rows()).toBe(1);
 

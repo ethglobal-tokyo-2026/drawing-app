@@ -2,6 +2,7 @@
 import { act, useRef, type RefObject } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { testStickerUrls } from "../stickers/testStickerUrls";
 import type { BoardSticker } from "./boardSticker";
 import { fieldOf, sizeOf, toPx, transformAt } from "./placement";
 import type { StickerTrayHandle } from "./tray/StickerTray";
@@ -24,7 +25,7 @@ const sticker: BoardSticker = {
   width: 100,
   height: 80,
   nsfw: false,
-  urls: { png: "a.png" },
+  urls: testStickerUrls("a"),
   placement: { on: true, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 },
 };
 
@@ -311,15 +312,17 @@ describe("useBoardGestures", () => {
       pressRight(2);
       // Removed within the idle, before React has been given the steps' spot.
       const el = host.querySelector(".placed-sticker");
+      if (!el) throw new Error("No sticker on the board");
       act(
-        () =>
-          void el?.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true })),
+        () => void el.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true })),
       );
 
       const [, saved] = onCommit.mock.calls[0];
       const { x, y } = toPx(fieldOf(390, 657), saved);
       const { w, h } = sizeOf(390, saved.s, sticker);
-      const [frames] = vi.spyOn(Element.prototype, "animate").mock.calls[0];
+      // The sticker's own flight, not the peel mark left where it was.
+      const animate = vi.spyOn(Element.prototype, "animate").mock;
+      const [frames] = animate.calls[animate.contexts.indexOf(el)] ?? [];
       const first = Array.isArray(frames) ? frames[0]?.transform : undefined;
       expect(first).toContain(transformAt(x, y, w, h, saved.r));
     });

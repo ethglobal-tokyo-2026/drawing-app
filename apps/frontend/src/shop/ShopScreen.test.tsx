@@ -3,7 +3,7 @@ import type { TicketShop as Shop, Tickets } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api/apiClient";
-import { emptyApi, FRESH_TICKETS, renderWithApi } from "../api/testing";
+import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing";
 import { setPrivyStatus } from "../identity/privy";
 import { getTicketPayments } from "../payments/jpyc";
 import { shortAddress } from "../sticker-board/stat-board/addresses";
@@ -103,7 +103,7 @@ describe("ShopScreen", () => {
     act(() => setPrivyStatus({ state: "signed-in", userId: "privy-me", suiWallet: SUI_WALLET }));
     click(PURCHASES);
     await settle();
-    expect(getTicketPayments).toHaveBeenCalledWith(SUI_WALLET, SHOP.payment, null);
+    expect(getTicketPayments).toHaveBeenCalledWith(SUI_WALLET, TEST_ME.id, SHOP.payment, null);
     expect(rows()).toEqual([expect.stringContaining(`${PACK.tickets} tickets`)]);
 
     click("Buy the pack");

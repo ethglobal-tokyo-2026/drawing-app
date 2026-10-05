@@ -8,6 +8,7 @@ import { TEST_ME } from "../../api/testing";
 import { forgetBoardComplete, markBoardComplete, QUIET_MS } from "../boardComplete";
 import { strings } from "../../i18n/strings";
 import { errors } from "../../i18n/strings/errors";
+import { testStickerUrls } from "../../stickers/testStickerUrls";
 import type { BoardStickerView } from "../boardSticker";
 import { StickerTray, type StickerTrayHandle } from "./StickerTray";
 import { TUG_VISITS, type TrayBoard } from "./trayEngine";
@@ -45,7 +46,7 @@ const sticker = (
   height: 80,
   // A stored cut line, so its shape is known without reading an image.
   outline: "M10.0 10.0L90.0 10.0L90.0 70.0L10.0 70.0Z",
-  urls: { png: `${id}.png`, mask: `${id}-mask.png` },
+  urls: testStickerUrls(id),
   placement: { on, x: 0.5, y: 0.5, s: 0.3, r: 0, z: 1 },
   artist: { id: "me", handle: "you", name: "You", nsfwOptIn: true },
   held: true,

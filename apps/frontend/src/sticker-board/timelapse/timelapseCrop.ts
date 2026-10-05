@@ -8,24 +8,11 @@ import type { DecodedTimelapse } from "../../sticker-creation/sealing/timelapse"
 import type { Rect } from "../../sticker-creation/sealing/stickerLayers";
 
 /**
- * A sealed image's long side when sealing capped its cut, margins included (`stickerLayers`): a
- * shorter image was cut at the ink's own resolution.
+ * Device pixels per sheet pixel where the sticker was drawn, which its fills flood at, up to the ink
+ * surface's cap.
  */
-export const CAPPED_IMAGE_SIDE = 704;
-
-/**
- * Device pixels per sheet pixel where the sticker was drawn, which its fills flood at: recorded,
- * or read off an image cut at the ink's own resolution, or else the densest screen.
- */
-export function drawingDensity(
-  timelapse: Pick<DecodedTimelapse, "density" | "place">,
-  image: { width: number; height: number },
-): number {
-  if (timelapse.density !== null) return Math.min(timelapse.density, MAX_DPR);
-  const estimate = image.width / timelapse.place.w;
-  const inkResolution = Math.max(image.width, image.height) < CAPPED_IMAGE_SIDE;
-  return inkResolution && estimate > 0 ? Math.min(estimate, MAX_DPR) : MAX_DPR;
-}
+export const drawingDensity = (timelapse: Pick<DecodedTimelapse, "density">): number =>
+  Math.min(timelapse.density, MAX_DPR);
 
 /** The full sheet as its canvas holds it: device px, and device px per sheet px. */
 interface SheetCanvas {

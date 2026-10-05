@@ -238,7 +238,6 @@ const receivedGiftsOf = (stickers: readonly BoardStickerView[]) =>
             receivedAt: s.givenTo.receivedAt,
             sticker: viewOf(s),
             receiver: s.givenTo.receiver,
-            ...(s.urls.mask && { mask: s.urls.mask }),
           },
         ]
       : [],
@@ -986,7 +985,6 @@ export function StickerBoard({ freshId, onDraw, onOpenGift, giftClosures = 0 }: 
           sticker={notice.sticker}
           receiver={notice.receiver}
           receivedAt={notice.receivedAt}
-          {...(notice.mask && { mask: notice.mask })}
           onClose={() => {
             markNoticed([notice]);
             setNoticesClosed((was) => new Set(was).add(receiveOf(notice)));

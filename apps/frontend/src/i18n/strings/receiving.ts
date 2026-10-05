@@ -147,15 +147,6 @@ export const receiving = {
         ja: "トークのギフトメッセージから、もう一度ひらいてください。",
       },
     },
-    needsServer: {
-      /** Gift refusal screen, when the app is running without its server: the title */
-      title: { en: "Gifts can’t be opened yet", ja: "ギフトはまだひらけません" },
-      /** Gift refusal screen, when the app is running without its server: the line under the title */
-      line: {
-        en: "Opening a gift needs a connection to Croquis, which isn’t set up here yet.",
-        ja: "ギフトをひらくにはクロッキーとの接続が必要ですが、ここではまだ使えません。",
-      },
-    },
   },
   /** A preview that failed, and the line for a preview that came back without what it needed. */
   previewFailed: {
