@@ -37,7 +37,7 @@ export const stickerRoutes = (deps: AppDeps) =>
           c,
           403,
           "adults_only",
-          `Sticker ${stickerId} is an NSFW sticker: its timelapse is for adults only`,
+          `Sticker ${stickerId} is an NSFW sticker: its timelapse is for people with Show 18+ stickers on`,
         );
       }
       if (timelapse === "timelapse_not_found") {

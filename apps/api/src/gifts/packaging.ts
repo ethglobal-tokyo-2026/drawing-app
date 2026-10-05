@@ -5,10 +5,10 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import type { AppDeps, GiftChain } from "../deps.ts";
 import {
-  ageStatusOf,
   bytes32Schema,
   escrowTransferSchema,
   giftSchema,
+  optedIntoNsfw,
   personSchema,
   refuse,
   stickerLookup,
@@ -142,10 +142,10 @@ export async function packageGift(
         if (!recipient) {
           return refuse("user_not_found", `There's no person ${forUserId} to give it to`);
         }
-        if (sticker.nsfw && ageStatusOf(recipient) !== "adult") {
+        if (sticker.nsfw && !optedIntoNsfw(recipient)) {
           return refuse(
             "adults_only",
-            `Sticker ${stickerId} is NSFW, and ${forUserId} isn't an adult`,
+            `Sticker ${stickerId} is NSFW, and ${forUserId} hasn't turned on Show 18+ stickers`,
           );
         }
       }

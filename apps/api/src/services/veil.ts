@@ -1,7 +1,7 @@
 import sharp from "sharp";
 
-// An NSFW sticker's veiled image: what anyone whose age status isn't adult sees in place of it. It
-// bakes in the veil the app drew in CSS, so the app shows it as it comes.
+// An NSFW sticker's veiled image: what anyone without the NSFW opt-in sees in place of it. It bakes
+// in the veil the app drew in CSS, so the app shows it as it comes.
 
 /** The blur's radius, as a share of the sticker's width: the CSS veil's 9cqi. */
 const VEIL_BLUR_SHARE = 0.09;

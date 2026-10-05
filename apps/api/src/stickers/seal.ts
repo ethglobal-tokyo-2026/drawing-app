@@ -12,8 +12,8 @@ import { z } from "zod";
 import type { AppDeps } from "../deps.ts";
 import { diagnosticStep, failureCause, logFailure, logInfo } from "../diagnostics.ts";
 import {
-  ageStatusOf,
   loadStickers,
+  optedIntoNsfw,
   stickerPlacementSchema,
   stickerPngsSchema,
   stickerSchema,
@@ -167,13 +167,12 @@ export async function sealSticker(
 
   if (form.nsfw) {
     const artist = deps.db
-      .select({ ageVerifiedAt: users.ageVerifiedAt })
+      .select({ nsfwOptedInAt: users.nsfwOptedInAt })
       .from(users)
       .where(eq(users.id, userId))
       .get();
-    if (!artist || ageStatusOf(artist) !== "adult") {
-      const detail =
-        "Only a person whose age verification proved them an adult can seal an NSFW sticker";
+    if (!artist || !optedIntoNsfw(artist)) {
+      const detail = "Only someone with Show 18+ stickers on can seal an NSFW sticker";
       return { refused: { status: 403, error: "adults_only", detail } };
     }
   }
@@ -197,7 +196,7 @@ export async function sealSticker(
   await diagnosticStep("sticker.images.save", { userId }, () =>
     deps.images.save(contentHash, pngs),
   );
-  // What anyone who isn't adult sees in its place, made before any row can name the sticker.
+  // What anyone without the NSFW opt-in sees in its place, made before any row can name the sticker.
   const veiledHash = form.nsfw
     ? await diagnosticStep("sticker.veil.save", { userId }, () =>
         deps.images.saveVeiled(contentHash),

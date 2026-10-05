@@ -26,7 +26,7 @@ async function catchUpTest() {
   const imageDir = mkdtempSync(join(tmpdir(), "veil-catch-up-"));
   onTestFinished(() => rmSync(imageDir, { recursive: true, force: true }));
   const images = createDiskImageStore(imageDir, "https://cdn.test");
-  const artistId = insertUser(db, { ageVerifiedAt: new Date() });
+  const artistId = insertUser(db, { nsfwOptedInAt: new Date() });
   let sealedCount = 0;
 
   /**

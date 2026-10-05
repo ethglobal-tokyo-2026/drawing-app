@@ -109,19 +109,19 @@ describe("POST /api/stickers", () => {
     expect(row?.metadataUri).toBe(new URL(`${sticker.id}.json`, sticker.images.png).href);
   });
 
-  it("seals an NSFW sticker for an adult, and refuses anyone else before storing a file", async () => {
-    const adultId = insertUser(test.db, { ageVerifiedAt: test.clock.now() });
-    expect((await seal(adultId, { nsfw: "true" })).sticker).toMatchObject({
+  it("seals an NSFW sticker for someone with the NSFW opt-in on, and refuses anyone else before storing a file", async () => {
+    const optedInId = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
+    expect((await seal(optedInId, { nsfw: "true" })).sticker).toMatchObject({
       nsfw: true,
-      artist: { ageStatus: "adult" },
+      artist: { nsfwOptIn: true },
     });
-    expect((await seal(adultId)).sticker.nsfw).toBe(false);
+    expect((await seal(optedInId)).sticker.nsfw).toBe(false);
 
-    const unverifiedId = insertUser(test.db);
-    const ticketUseId = spendTicket(unverifiedId);
+    const optedOutId = insertUser(test.db);
+    const ticketUseId = spendTicket(optedOutId);
     const png = testPng(STICKER_SIZE.width, STICKER_SIZE.height, "nsfw");
     const parts = sealParts(ticketUseId, { nsfw: "true", png: pngFile(png, "png") });
-    expect(await refusalOf(await postSeal(unverifiedId, sealFormData(parts)))).toMatchObject({
+    expect(await refusalOf(await postSeal(optedOutId, sealFormData(parts)))).toMatchObject({
       status: 403,
       error: "adults_only",
     });

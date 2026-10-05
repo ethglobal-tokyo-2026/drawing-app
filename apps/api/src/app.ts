@@ -19,7 +19,7 @@ import { stickerBoardRoutes } from "./routes/stickerBoards.ts";
 import { stickerRoutes } from "./routes/stickers.ts";
 import { ticketRoutes } from "./routes/tickets.ts";
 import { requireSession, sessionUser, type AppEnv } from "./session.ts";
-import { ageStatusOf } from "./shapes.ts";
+import { optedIntoNsfw } from "./shapes.ts";
 import { requestDiagnostics } from "./requestDiagnostics.ts";
 
 /**
@@ -94,8 +94,9 @@ const isNsfwDrawing = (db: Db, contentHash: string) =>
     .get() !== undefined;
 
 /**
- * Serves the files that show an NSFW sticker's drawing only to an adult's session, never publicly
- * cached; anyone else gets 403 adults_only. Every other image is public, and cached for good.
+ * Serves the files that show an NSFW sticker's drawing only to a session with the NSFW opt-in on,
+ * never publicly cached; anyone else gets 403 adults_only. Every other image is public, and cached
+ * for good.
  */
 const imageAccess = (deps: AppDeps) =>
   createMiddleware(async (c, next) => {
@@ -103,8 +104,8 @@ const imageAccess = (deps: AppDeps) =>
     const adultsOnly = drawing !== null && isNsfwDrawing(deps.db, drawing[1]);
     if (adultsOnly) {
       const viewer = await sessionUser(c, deps);
-      if (!viewer || ageStatusOf(viewer) !== "adult") {
-        const detail = `${c.req.path} shows an NSFW sticker's drawing, for adults only`;
+      if (!viewer || !optedIntoNsfw(viewer)) {
+        const detail = `${c.req.path} shows an NSFW sticker's drawing, for people with Show 18+ stickers on`;
         return apiError(c, 403, "adults_only", detail);
       }
     }

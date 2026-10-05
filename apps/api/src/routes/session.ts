@@ -43,6 +43,9 @@ const handleBody = userInput.pick({ handle: true });
 // Required, so a body that leaves it out is refused rather than clearing the choice.
 const languageChoiceBody = userInput.pick({ languageChoice: true }).required();
 
+/** Show 18+ stickers, on or off: the NSFW opt-in. */
+const nsfwOptInBody = z.object({ nsfwOptIn: z.boolean() });
+
 type UserRow = typeof users.$inferSelect;
 
 /** A live account's row; undefined once it's deleted. */
@@ -80,7 +83,10 @@ async function lineProfileOf(line: LineVerifier, idToken: string) {
   }
 }
 
-/** Session and you: signing in with LINE, your profile, handle and language, and account deletion. */
+/**
+ * Session and you: signing in with LINE, your profile, handle, language and NSFW opt-in, and account
+ * deletion.
+ */
 export const sessionRoutes = (deps: AppDeps) =>
   new Hono<AppEnv>()
     .post("/session", validate("json", signInBody), async (c) => {
@@ -186,6 +192,17 @@ export const sessionRoutes = (deps: AppDeps) =>
       if (languageChoice) void deps.lineChatMenu.relink(user.id);
       return c.json({ me: meOf(deps.db, user) }, 200);
     })
+    .post("/me/nsfw-opt-in", validate("json", nsfwOptInBody), (c) => {
+      const { nsfwOptIn } = c.req.valid("json");
+      const user = deps.db
+        .update(users)
+        .set({ nsfwOptedInAt: nsfwOptIn ? deps.clock.now() : null })
+        .where(and(eq(users.id, c.var.userId), isNull(users.deletedAt)))
+        .returning()
+        .get();
+      if (!user) return apiError(c, 401, "signed_out");
+      return c.json({ me: meOf(deps.db, user) }, 200);
+    })
     .delete("/me", (c) => {
       // Read before the row loses it: their chat menu goes back to LINE's default, in the background.
       const lineUserId = liveUser(deps.db, c.var.userId)?.lineUserId;
@@ -202,6 +219,7 @@ export const sessionRoutes = (deps: AppDeps) =>
           // So the same passport can verify the person's next account.
           ageVerifiedAt: null,
           ageVerificationNullifier: null,
+          nsfwOptedInAt: null,
         })
         .where(and(eq(users.id, c.var.userId), isNull(users.deletedAt)))
         .run();

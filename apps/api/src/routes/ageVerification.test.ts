@@ -1,4 +1,6 @@
+import { users } from "@drawing-app/db";
 import { insertUser } from "@drawing-app/db/testing";
+import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import type { WorldIdVerdict } from "../deps.ts";
@@ -37,6 +39,13 @@ async function setUp(verdict?: WorldIdVerdict | Error | null) {
       test.send("POST", "/api/me/age-verification/request", { as: userId }),
     sendProof: (userId: string, body: unknown = ageProof()) =>
       test.send("POST", "/api/me/age-verification", { as: userId, body }),
+    /** When the person's row says age verification proved them 18 or older. */
+    verifiedAt: (userId: string) =>
+      test.db
+        .select({ ageVerifiedAt: users.ageVerifiedAt })
+        .from(users)
+        .where(eq(users.id, userId))
+        .get()?.ageVerifiedAt,
   };
 }
 
@@ -73,23 +82,24 @@ describe("asking for a proof", () => {
 
 describe("sending the proof", () => {
   it("marks you verified once World checks it, with the proof sent to World as the app gave it", async () => {
-    const { test, worldId, newPerson, sendProof } = await setUp();
-    expect(await meIn(await sendProof(newPerson()))).toMatchObject({
-      ageVerifiedAt: test.clock.now().toISOString(),
-      ageStatus: "adult",
-    });
+    const { test, worldId, newPerson, sendProof, verifiedAt } = await setUp();
+    const userId = newPerson();
+    await meIn(await sendProof(userId));
+    expect(verifiedAt(userId)).toEqual(test.clock.now());
     expect(worldId?.proofs).toEqual([ageProof()]);
   });
 
   it("takes a World ID 3.0's Orb proof too", async () => {
-    const { newPerson, sendProof } = await setUp();
+    const { test, newPerson, sendProof, verifiedAt } = await setUp();
     const legacy = ageProof({
       protocol_version: "3.0",
       responses: [
         { identifier: "proof_of_human", proof: "0x1a", merkle_root: "0x1b", nullifier: NULLIFIER },
       ],
     });
-    expect((await meIn(await sendProof(newPerson(), legacy))).ageVerifiedAt).not.toBeNull();
+    const userId = newPerson();
+    await meIn(await sendProof(userId, legacy));
+    expect(verifiedAt(userId)).toEqual(test.clock.now());
   });
 
   it.each([
@@ -133,7 +143,7 @@ describe("sending the proof", () => {
   });
 
   it("lets one World ID verify one live account, whichever way its nullifier is spelled", async () => {
-    const { test, newPerson, sendProof } = await setUp();
+    const { test, newPerson, sendProof, verifiedAt } = await setUp();
     const first = newPerson();
     await meIn(await sendProof(first));
 
@@ -148,6 +158,7 @@ describe("sending the proof", () => {
 
     // Deleting the first account frees the World ID for another.
     expect((await test.send("DELETE", "/api/me", { as: first })).status).toBe(204);
-    expect((await meIn(await sendProof(second, respelled))).ageVerifiedAt).not.toBeNull();
+    await meIn(await sendProof(second, respelled));
+    expect(verifiedAt(second)).toEqual(test.clock.now());
   });
 });

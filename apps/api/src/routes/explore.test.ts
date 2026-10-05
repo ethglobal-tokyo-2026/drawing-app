@@ -146,18 +146,18 @@ describe("GET /api/explore", () => {
     ]);
   });
 
-  it("veils an NSFW sticker on an older page to anyone who isn't adult", async () => {
-    const adult = insertUser(test.db, { ageVerifiedAt: test.clock.now() });
-    const unverified = insertUser(test.db);
+  it("veils an NSFW sticker on an older page to anyone without the NSFW opt-in", async () => {
+    const optedIn = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
+    const optedOut = insertUser(test.db);
     const contentHash = bytes32("drawing");
     const veiledHash = bytes32("veiled image");
-    const nsfw = insertSealedSticker(test.db, adult, {
+    const nsfw = insertSealedSticker(test.db, optedIn, {
       nsfw: true,
       contentHash,
       veiledHash,
       createdAt: dayStart(3),
     });
-    for (let i = 0; i < PILE_PAGE_SIZE; i++) seal(adult);
+    for (let i = 0; i < PILE_PAGE_SIZE; i++) seal(optedIn);
 
     const imagesOnPageTwo = async (viewerId: string) => {
       const { before } = (await exploreAs(viewerId)).pile;
@@ -165,10 +165,10 @@ describe("GET /api/explore", () => {
       const { stickers } = await olderPileAs(viewerId, before);
       return stickers.find(({ sticker }) => sticker.id === nsfw)?.sticker.images;
     };
-    expect(await imagesOnPageTwo(unverified)).toEqual(
+    expect(await imagesOnPageTwo(optedOut)).toEqual(
       test.images.veiledUrls(contentHash, veiledHash),
     );
-    expect(await imagesOnPageTwo(adult)).toEqual(test.images.urls(contentHash));
+    expect(await imagesOnPageTwo(optedIn)).toEqual(test.images.urls(contentHash));
   });
 
   it("starts the week as Monday's ticket day starts, the last one before now", async () => {

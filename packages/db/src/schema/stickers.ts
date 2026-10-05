@@ -43,11 +43,11 @@ export const stickers = sqliteTable(
     ...timestamps(),
     /** When CroquisNames confirmed the sticker's name, <number>.<artist's ens_label>.croquis-app.eth. */
     ensNamedAt: integer("ens_named_at", { mode: "timestamp_ms" }),
-    /** An NSFW sticker: its Original Artist, an adult, marked it for adults at seal. */
+    /** An NSFW sticker: its Original Artist, with the NSFW opt-in on, marked it 18+ at seal. */
     nsfw: integer("nsfw", { mode: "boolean" }).notNull().default(false),
     /**
      * keccak256 of an NSFW sticker's veiled PNG, which names it and its WebP copy on the CDN: what
-     * anyone who isn't adult sees. Null until it's made, and for every other sticker.
+     * anyone without the NSFW opt-in sees. Null until it's made, and for every other sticker.
      */
     veiledHash: text("veiled_hash"),
   },

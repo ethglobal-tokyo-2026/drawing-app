@@ -59,8 +59,9 @@ export function stickerImageUrls(cdnBaseUrl: string, contentHash: string): Stick
 }
 
 /**
- * What a viewer who isn't adult gets for an NSFW sticker: its veiled image in place of each image
- * that shows the drawing. Until the veil is made, the cut's mask stands in, which shows only its shape.
+ * What a viewer without the NSFW opt-in gets for an NSFW sticker: its veiled image in place of each
+ * image that shows the drawing. Until the veil is made, the cut's mask stands in, which shows only
+ * its shape.
  */
 export function veiledImageUrls(
   cdnBaseUrl: string,

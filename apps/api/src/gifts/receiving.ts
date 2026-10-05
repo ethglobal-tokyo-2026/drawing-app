@@ -6,9 +6,9 @@ import { queueNaming } from "../ens/naming.ts";
 import type { AppDeps, GiftChain } from "../deps.ts";
 import { failureCause, logFailure, logInfo } from "../diagnostics.ts";
 import {
-  ageStatusOf,
   giftSchema,
   isoTimeSchema,
+  optedIntoNsfw,
   personSchema,
   refuse,
   stickerLookup,
@@ -81,7 +81,7 @@ const groupChatRefusal = (liffContextType: LiffContextType) =>
 
 const notFound = () => refuse("gift_not_found", "No gift has this Gift Claim Token");
 
-/** An NSFW sticker goes only to an adult. */
+/** An NSFW sticker goes only to someone with the NSFW opt-in on. */
 function adultsOnlyRefusal(db: Pick<Db, "select">, gift: GiftRow, userId: string) {
   const sticker = db
     .select({ nsfw: stickers.nsfw })
@@ -90,12 +90,15 @@ function adultsOnlyRefusal(db: Pick<Db, "select">, gift: GiftRow, userId: string
     .get();
   if (!sticker?.nsfw) return null;
   const receiver = db
-    .select({ ageVerifiedAt: users.ageVerifiedAt })
+    .select({ nsfwOptedInAt: users.nsfwOptedInAt })
     .from(users)
     .where(eq(users.id, userId))
     .get();
-  if (receiver && ageStatusOf(receiver) === "adult") return null;
-  return refuse("adults_only", `Gift ${gift.id} is an NSFW sticker, for adults only`);
+  if (receiver && optedIntoNsfw(receiver)) return null;
+  return refuse(
+    "adults_only",
+    `Gift ${gift.id} is an NSFW sticker, for people with Show 18+ stickers on`,
+  );
 }
 
 const takenBack = (gift: GiftRow) =>

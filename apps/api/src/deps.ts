@@ -151,7 +151,7 @@ export interface ImageStore {
   saveVeiled: (contentHash: string) => Promise<string>;
   /** Where the CDN serves them. */
   urls: (contentHash: string) => StickerImages;
-  /** What a viewer who isn't adult gets for an NSFW sticker: `urls` with its veiled image in place. */
+  /** `urls` with an NSFW sticker's veiled image in place, for a viewer without the NSFW opt-in. */
   veiledUrls: (contentHash: string, veiledHash: string | null) => StickerImages;
 }
 

@@ -58,6 +58,11 @@ export const users = sqliteTable(
      * account, so one World ID verifies one live account. Cleared on account deletion.
      */
     ageVerificationNullifier: text("age_verification_nullifier").unique(),
+    /**
+     * When the person turned on Show 18+ stickers in Settings, their NSFW opt-in; null while it's
+     * off. Cleared on account deletion.
+     */
+    nsfwOptedInAt: integer("nsfw_opted_in_at", { mode: "timestamp_ms" }),
   },
   (t) => [
     uniqueIndex("users_handle").on(sql`lower(${t.handle})`),

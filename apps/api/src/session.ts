@@ -47,7 +47,7 @@ export async function sessionUser(
   const userId = await getSignedCookie(c, sessionSecret, SESSION_COOKIE);
   if (!userId) return undefined;
   return db
-    .select({ id: users.id, ageVerifiedAt: users.ageVerifiedAt })
+    .select({ id: users.id, nsfwOptedInAt: users.nsfwOptedInAt })
     .from(users)
     .where(and(eq(users.id, userId), isNull(users.deletedAt)))
     .get();
