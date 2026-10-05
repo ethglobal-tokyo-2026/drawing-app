@@ -17,7 +17,6 @@ export const TEST_OWNER: Person = {
   handle: "you",
   lineDisplayName: "You",
   linePictureUrl: null,
-  ensName: null,
   nsfwOptIn: true,
 };
 
@@ -59,11 +58,12 @@ export const recordGratitudeBody = (overrides: Partial<RecordGratitude> = {}): R
     intensity: 0.7,
     stage: [390, 741],
     durationMs: 0,
-    endReason: "sent",
+    endReason: "empty",
     switchedAtHit: null,
     hits: [0, 5000, 5000, 1],
     strokes: [],
     shakes: [],
+    strokePasses: [],
   },
   ...overrides,
 });

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, type ApiClient, type DroppedApiCode } from "../api/apiClient";
+import { ApiError, type ApiClient } from "../api/apiClient";
 import type { GiftPreview, ReceivedGift, ReceiveRefusal } from "@drawing-app/api/client";
 import { MARKUP_LIKE_NAME, markupLikePerson, people, sticker } from "../api/testFixtures";
 import { emptyApi, renderWithApi, shownText } from "../api/testing";
@@ -131,7 +131,7 @@ afterEach(() => {
 });
 
 // The API's refusals: a contract with the server.
-const REFUSED_IN_THE_PREVIEW: Exclude<ReceiveRefusal, DroppedApiCode>[] = [
+const REFUSED_IN_THE_PREVIEW: ReceiveRefusal[] = [
   "group_chat",
   "own_gift",
   "already_received",

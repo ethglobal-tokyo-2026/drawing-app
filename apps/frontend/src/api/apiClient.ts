@@ -137,23 +137,7 @@ type ClientErrorCode =
   | "line_reconnect_failed"
   | "smart_account_not_ready"
   | "sui_wallet_not_ready";
-
-// The API renames adults_only to nsfw_not_opted_in and drops World ID's and ENS's codes. Until its
-// types do, the app's codes are the API's as they will be.
-export type RenamedApiCode = "nsfw_not_opted_in";
-export type DroppedApiCode =
-  | "adults_only"
-  | "age_not_proven"
-  | "age_verification_not_configured"
-  | "age_verification_refused"
-  | "age_verification_used"
-  | "already_age_verified"
-  | "world_id_unavailable"
-  | "ens_not_configured"
-  | "unknown_resolver"
-  | "unsupported_request";
-
-export type ErrorCode = Exclude<ApiErrorCode, DroppedApiCode> | RenamedApiCode | ClientErrorCode;
+export type ErrorCode = ApiErrorCode | ClientErrorCode;
 
 /** A refused or failed request: the HTTP status and the API's error body. Status 0 is no answer. */
 export class ApiError extends Error {

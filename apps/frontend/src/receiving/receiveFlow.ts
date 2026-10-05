@@ -1,15 +1,11 @@
-import type { ApiError, DroppedApiCode, RenamedApiCode } from "../api/apiClient";
+import type { ApiError } from "../api/apiClient";
 import type { GiftPreview, ReceivedGift, ReceiveRefusal } from "@drawing-app/api/client";
 import { toMs, toPerson, toSticker, type PersonView, type StickerView } from "../api/views";
 import { problemOf, type Problem } from "../i18n/errorMessage";
 import { i18next } from "../i18n/i18n";
 
 /** Why a gift can't be received here: a refusal from the server, a link to no gift, or no server. */
-export type RefusalKind =
-  | Exclude<ReceiveRefusal, DroppedApiCode>
-  | RenamedApiCode
-  | "gift_not_found"
-  | "needs_server";
+export type RefusalKind = ReceiveRefusal | "gift_not_found" | "needs_server";
 
 /** A receivable preview, mapped: `sticker` is set, since only a receivable preview has one. */
 export interface GiftPreviewView {
@@ -64,9 +60,7 @@ function opened({ giver, expiresAt, receivable, refusal, sticker }: GiftPreview)
       preview: { giver: toPerson(giver), sticker: toSticker(sticker), expiresAt: toMs(expiresAt) },
     };
   }
-  if (!receivable && refusal && isRefusal(refusal)) {
-    return { step: "refused", refusal, giver: toPerson(giver) };
-  }
+  if (!receivable && refusal) return { step: "refused", refusal, giver: toPerson(giver) };
   return {
     step: "failed",
     problem: {
