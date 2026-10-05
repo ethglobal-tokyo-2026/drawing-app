@@ -1,81 +1,53 @@
 #!/usr/bin/env node
-// deploy-api.sh runs this on the server to validate and atomically install chain credentials.
-import { existsSync, readFileSync, writeFileSync, renameSync, chmodSync } from "node:fs";
+// deploy-api.sh runs this on the box. It checks the settings deploy/.env sends on stdin, then installs them atomically
+// as chain.env, which holds exactly these and STICKER_CHAIN_MODE=sui, whatever it held before. It prints no value.
+import { chmodSync, existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 
 const [chainPath, mode] = process.argv.slice(2);
 if (!chainPath || !mode || !["check", "install"].includes(mode)) {
   throw new Error("Expected chain.env path, and check or install");
 }
-/** @type {NodeJS.Dict<string>} */
-const values = existsSync(chainPath) ? parseEnv(readFileSync(chainPath, "utf8")) : {};
+
+/** For values with no published form: one word, without spaces or line breaks. */
+const ONE_WORD = /^\S+$/;
+/** What chain.env takes from deploy/.env, each with the form its value must have. Every one is required. */
+const FORMS = {
+  // bech32 of the scheme's flag and the 32-byte key, as `sui keytool export` writes it, with no 1, b, i or o after the
+  // prefix. The API checks the checksum.
+  SUI_SERVER_PRIVATE_KEY: /^suiprivkey1[02-9ac-hj-np-z]{59}$/,
+  SHINAMI_ACCESS_KEY: ONE_WORD,
+  PRIVY_APP_ID: ONE_WORD,
+  PRIVY_APP_SECRET: ONE_WORD,
+  LINE_MESSAGING_CHANNEL_ID: /^\d+$/,
+  LINE_MESSAGING_CHANNEL_SECRET: /^[0-9a-f]{32}$/,
+};
+
 const supplied = parseEnv(readFileSync(0, "utf8"));
-for (const [key, value] of Object.entries(supplied)) {
-  if (value) values[key] = value;
-}
-values.STICKER_CHAIN_MODE = "sepolia";
-const required = [
-  "ETHEREUM_SEPOLIA_RPC_URL",
-  "STICKER_NFT_ADDRESS",
-  "STICKER_GIFT_ESCROW_ADDRESS",
-  "STICKER_SEALER_PRIVATE_KEY",
-  "CROQUIS_NAMES_ADDRESS",
-  "CROQUIS_RESOLVER_ADDRESS",
-  "ENS_GATEWAY_PRIVATE_KEY",
-  "PRIVY_APP_ID",
-  "PRIVY_APP_SECRET",
-];
-for (const key of required) {
-  const value = values[key];
-  if (!value || /replace-with|your-|placeholder/i.test(value) || /[\r\n]/.test(value)) {
-    throw new Error(`Missing or invalid ${key}; configure deploy/.env or the server's chain.env`);
+for (const key of Object.keys(supplied)) {
+  if (!Object.hasOwn(FORMS, key)) {
+    throw new Error(`Unexpected ${key}: chain.env takes only ${Object.keys(FORMS).join(", ")}`);
   }
 }
-for (const key of [
-  "STICKER_NFT_ADDRESS",
-  "STICKER_GIFT_ESCROW_ADDRESS",
-  "CROQUIS_NAMES_ADDRESS",
-  "CROQUIS_RESOLVER_ADDRESS",
-]) {
-  if (!/^0x[0-9a-fA-F]{40}$/.test(values[key] ?? "")) throw new Error(`Invalid ${key}`);
-}
-for (const key of ["STICKER_SEALER_PRIVATE_KEY", "ENS_GATEWAY_PRIVATE_KEY"]) {
-  if (!/^0x[0-9a-fA-F]{64}$/.test(values[key] ?? "")) throw new Error(`Invalid ${key}`);
-}
-// The chat menu's Messaging API channel, optional: without it the API links no chat menu.
-const lineChannelId = values.LINE_MESSAGING_CHANNEL_ID ?? "";
-const lineChannelSecret = values.LINE_MESSAGING_CHANNEL_SECRET ?? "";
-if (lineChannelId || lineChannelSecret) {
-  if (!/^\d+$/.test(lineChannelId)) throw new Error("Missing or invalid LINE_MESSAGING_CHANNEL_ID");
-  if (!/^[0-9a-f]{32}$/.test(lineChannelSecret)) {
-    throw new Error("Missing or invalid LINE_MESSAGING_CHANNEL_SECRET");
+/** @type {Record<string, string>} */
+const values = { STICKER_CHAIN_MODE: "sui" };
+for (const [key, form] of Object.entries(FORMS)) {
+  const value = supplied[key] ?? "";
+  if (!form.test(value) || /replace-with|your-|placeholder/i.test(value)) {
+    throw new Error(`Missing or invalid ${key}; set it in deploy/.env`);
   }
+  values[key] = value;
 }
-// Age verification's World ID app, optional: without it age verification is off.
-const worldId = ["WORLD_ID_APP_ID", "WORLD_ID_RP_ID", "WORLD_ID_SIGNING_KEY"];
-if (worldId.some((key) => values[key])) {
-  if (!/^app_\w+$/.test(values.WORLD_ID_APP_ID ?? ""))
-    throw new Error("Missing or invalid WORLD_ID_APP_ID");
-  if (!/^rp_\w+$/.test(values.WORLD_ID_RP_ID ?? ""))
-    throw new Error("Missing or invalid WORLD_ID_RP_ID");
-  if (!/^(0x)?[0-9a-fA-F]{64}$/.test(values.WORLD_ID_SIGNING_KEY ?? "")) {
-    throw new Error("Missing or invalid WORLD_ID_SIGNING_KEY");
-  }
-}
-// One URL, or several separated by commas, which the API tries in turn.
-const rpcUrls = (values.ETHEREUM_SEPOLIA_RPC_URL ?? "")
-  .split(",")
-  .map((url) => URL.parse(url.trim()));
-if (!rpcUrls.every((url) => url && ["https:", "http:"].includes(url.protocol)))
-  throw new Error("Invalid ETHEREUM_SEPOLIA_RPC_URL");
+
 if (mode === "check") {
-  console.log("Sepolia configuration is complete");
+  console.log("chain.env's settings are complete");
 } else {
   const contents =
     Object.keys(values)
       .sort()
       .map((key) => `${key}=${JSON.stringify(values[key])}`)
       .join("\n") + "\n";
+  // deploy-api.sh restarts the API when this prints anything, so an unchanged chain.env prints nothing.
   if (!existsSync(chainPath) || readFileSync(chainPath, "utf8") !== contents) {
     writeFileSync(`${chainPath}.new`, contents, { mode: 0o600 });
     chmodSync(`${chainPath}.new`, 0o600);

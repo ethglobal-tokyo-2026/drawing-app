@@ -17,15 +17,6 @@ KEY_ID="$(sed -n 's/^AUTH_KEY_ID=//p' "$ROOT/deploy/sticker-auth.env")"
 # The checks on the box retry: a server that just restarted refuses connections until it has started.
 BOX_CURL="curl --retry 10 --retry-connrefused --retry-delay 1 --max-time 5"
 
-: "${STICKER_GIFT_ESCROW_ADDRESS:?set STICKER_GIFT_ESCROW_ADDRESS in deploy/.env for the frontend}"
-[[ "$STICKER_GIFT_ESCROW_ADDRESS" =~ ^0x[0-9a-fA-F]{40}$ ]] || {
-  echo "Invalid STICKER_GIFT_ESCROW_ADDRESS" >&2
-  exit 1
-}
-export VITE_STICKER_ESCROW_ADDRESS="$STICKER_GIFT_ESCROW_ADDRESS"
-# Only an explicitly public RPC belongs in the browser bundle; the backend RPC can contain credentials.
-# Exported even when empty, so the build never takes one from the gitignored apps/frontend/.env.
-export VITE_STICKER_RPC_URL="${VITE_STICKER_RPC_URL:-}"
 # The CDN in front of the box, which the build loads its hashed files from (deploy/README.md); unset, they come from
 # the box.
 export CDN_ORIGIN="${CDN_ORIGIN:-}"
