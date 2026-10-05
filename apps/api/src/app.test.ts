@@ -192,7 +192,7 @@ describe("sticker images", () => {
       for (const viewer of [undefined, insertUser(test.db)]) {
         expect(await refusalOf(await getAs(url, viewer))).toMatchObject({
           status: 403,
-          error: "adults_only",
+          error: "nsfw_not_opted_in",
         });
       }
       const optedIn = await getAs(url, artistId);

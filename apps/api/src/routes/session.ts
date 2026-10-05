@@ -48,7 +48,7 @@ const nsfwOptInBody = z.object({ nsfwOptIn: z.boolean() });
 type UserRow = typeof users.$inferSelect;
 
 /** A live account's row; undefined once it's deleted. */
-export const liveUser = (db: Db, userId: string) =>
+const liveUser = (db: Db, userId: string) =>
   db
     .select()
     .from(users)
@@ -56,7 +56,7 @@ export const liveUser = (db: Db, userId: string) =>
     .get();
 
 /** You, with the NEW and pink-tag counts. */
-export const meOf = (db: Db, user: UserRow) =>
+const meOf = (db: Db, user: UserRow) =>
   toMe(user, {
     newStickerCount: newStickerCount(db, user.id),
     unseenGratitudeCount: unseenGratitudeCount(db, user.id),
@@ -213,9 +213,6 @@ export const sessionRoutes = (deps: AppDeps) =>
           lineDisplayName: null,
           linePictureUrl: null,
           handle: null,
-          // So the same passport can verify the person's next account.
-          ageVerifiedAt: null,
-          ageVerificationNullifier: null,
           nsfwOptedInAt: null,
         })
         .where(and(eq(users.id, c.var.userId), isNull(users.deletedAt)))

@@ -93,7 +93,7 @@ describe("gifts waiting for you", () => {
     const give = (forUserId: string) => test.post(giverId, "", { stickerId, forUserId });
     expect(await refusalOf(await give(insertUser(test.db)))).toMatchObject({
       status: 403,
-      error: "adults_only",
+      error: "nsfw_not_opted_in",
     });
     const optedInId = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
     expect((await give(optedInId)).status).toBe(201);

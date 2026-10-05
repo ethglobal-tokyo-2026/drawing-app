@@ -36,7 +36,7 @@ export type SealResponse = z.infer<typeof sealResponseSchema>;
 export type SealRefusal =
   | { status: 400; error: "invalid_request"; detail: string }
   | { status: 403; error: "ticket_not_yours"; detail: string }
-  | { status: 403; error: "adults_only"; detail: string }
+  | { status: 403; error: "nsfw_not_opted_in"; detail: string }
   | { status: 404; error: "ticket_not_found"; detail: string }
   | { status: 409; error: "ticket_already_used"; detail: string }
   | { status: 503; error: "mint_failed"; detail: string };
@@ -172,8 +172,8 @@ export async function sealSticker(
       .where(eq(users.id, userId))
       .get();
     if (!artist || !optedIntoNsfw(artist)) {
-      const detail = "Only someone with Show 18+ stickers on can seal an NSFW sticker";
-      return { refused: { status: 403, error: "adults_only", detail } };
+      const detail = `Ticket use ${form.ticketUseId} can't seal an NSFW sticker: only someone with Show 18+ stickers on can mark one`;
+      return { refused: { status: 403, error: "nsfw_not_opted_in", detail } };
     }
   }
 

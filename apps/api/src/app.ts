@@ -8,7 +8,6 @@ import { z } from "zod";
 import { IMMUTABLE_MAX_AGE_S } from "./cacheControl.ts";
 import type { AppDeps } from "./deps.ts";
 import { apiError, limitBody, notFound, onError, validate } from "./errors.ts";
-import { ageVerificationRoutes } from "./routes/ageVerification.ts";
 import { exploreRoutes } from "./routes/explore.ts";
 import { giftRoutes } from "./routes/gifts.ts";
 import { gratitudeRoutes } from "./routes/gratitude.ts";
@@ -46,8 +45,6 @@ export function createApp(deps: AppDeps) {
       .use(except(isSignInOrOut, requireSession(deps)))
       // /session and /me
       .route("/", sessionRoutes(deps))
-      // /me/age-verification
-      .route("/", ageVerificationRoutes(deps))
       // /line-menu
       .route("/", lineMenuRoutes(deps))
       // /tickets and /ticket-purchases
@@ -90,18 +87,18 @@ const isNsfwDrawing = (db: Db, contentHash: string) =>
 
 /**
  * Serves the files that show an NSFW sticker's drawing only to a session with the NSFW opt-in on,
- * never publicly cached; anyone else gets 403 adults_only. Every other image is public, and cached
- * for good.
+ * never publicly cached; anyone else gets 403 nsfw_not_opted_in. Every other image is public, and
+ * cached for good.
  */
 const imageAccess = (deps: AppDeps) =>
   createMiddleware(async (c, next) => {
     const drawing = DRAWING_FILE.exec(c.req.path.slice(STICKER_IMAGES_PATH.length));
-    const adultsOnly = drawing !== null && isNsfwDrawing(deps.db, drawing[1]);
-    if (adultsOnly) {
+    const nsfwDrawing = drawing !== null && isNsfwDrawing(deps.db, drawing[1]);
+    if (nsfwDrawing) {
       const viewer = await sessionUser(c, deps);
       if (!viewer || !optedIntoNsfw(viewer)) {
         const detail = `${c.req.path} shows an NSFW sticker's drawing, for people with Show 18+ stickers on`;
-        return apiError(c, 403, "adults_only", detail);
+        return apiError(c, 403, "nsfw_not_opted_in", detail);
       }
     }
     await next();
@@ -112,7 +109,7 @@ const imageAccess = (deps: AppDeps) =>
     if (c.req.path.endsWith(METADATA_SUFFIX)) {
       c.header("Cache-Control", "public, no-cache");
     } else {
-      const scope = adultsOnly ? "private" : "public";
+      const scope = nsfwDrawing ? "private" : "public";
       c.header("Cache-Control", `${scope}, max-age=${IMMUTABLE_MAX_AGE_S}, immutable`);
     }
   });

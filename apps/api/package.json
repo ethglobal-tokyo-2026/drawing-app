@@ -21,7 +21,6 @@
     "@hono/zod-validator": "^0.9.1",
     "@mysten/sui": "2.31.3",
     "@privy-io/node": "0.35.0",
-    "@worldcoin/idkit-server": "1.1.1",
     "drizzle-orm": "^0.45.3",
     "drizzle-zod": "^0.8.3",
     "hono": "^4.13.8",

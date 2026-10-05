@@ -43,13 +43,6 @@ export const users = sqliteTable(
       .default("en"),
     /** The language picked in Settings, which the app starts in on every device; null follows LINE's. */
     languageChoice: text("language_choice", { enum: ["en", "ja"] }),
-    /** When an Orb-verified World ID proved the person is 18 or older. Cleared on account deletion. */
-    ageVerifiedAt: integer("age_verified_at", { mode: "timestamp_ms" }),
-    /**
-     * The age verification's World ID nullifier, in decimal: the same for one World ID on every
-     * account, so one World ID verifies one live account. Cleared on account deletion.
-     */
-    ageVerificationNullifier: text("age_verification_nullifier").unique(),
     /**
      * When the person turned on Show 18+ stickers in Settings, their NSFW opt-in; null while it's
      * off. Cleared on account deletion.

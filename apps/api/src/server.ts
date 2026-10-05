@@ -22,7 +22,6 @@ import { mockChain } from "./services/mockChain.ts";
 import { createJpycPayments } from "./services/jpycPayments.ts";
 import { createPrivySmartWallets } from "./services/privySmartWallets.ts";
 import { createStickerChain } from "./services/stickerChain.ts";
-import { createWorldId } from "./services/worldId.ts";
 import { startMintCatchUp } from "./stickers/mint.ts";
 import { startVeilCatchUp } from "./stickers/veilCatchUp.ts";
 import { startTicketPurchaseSweeps } from "./tickets/purchaseSweep.ts";
@@ -54,20 +53,6 @@ const envSchema = z.object({
   LINE_MESSAGING_CHANNEL_ID: z.string().optional(),
   LINE_MESSAGING_CHANNEL_SECRET: z.string().optional(),
   LINE_CHAT_MENUS_FILE: z.string().optional(),
-  // Age verification's World ID app, from the Developer Portal. Without all three, it's off.
-  WORLD_ID_APP_ID: z
-    .custom<`app_${string}`>((v) => typeof v === "string" && /^app_\w+$/.test(v), "Expected app_…")
-    .optional(),
-  WORLD_ID_RP_ID: z
-    .string()
-    .regex(/^rp_\w+$/)
-    .optional(),
-  WORLD_ID_SIGNING_KEY: z
-    .string()
-    .regex(/^(0x)?[0-9a-fA-F]{64}$/)
-    .optional(),
-  // staging takes proofs from World's simulator, https://simulator.worldcoin.org
-  WORLD_ID_ENVIRONMENT: z.enum(["production", "staging"]).default("production"),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -124,25 +109,6 @@ const chain = (() => {
   return { mint, giftChain, smartWallets };
 })();
 
-const worldId = (() => {
-  const { WORLD_ID_APP_ID: appId, WORLD_ID_RP_ID: rpId, WORLD_ID_SIGNING_KEY: signingKey } = env;
-  if (!appId && !rpId && !signingKey) {
-    console.warn("No World ID app is configured; age verification is off");
-    return null;
-  }
-  if (!appId || !rpId || !signingKey) {
-    throw new Error(
-      "Age verification needs WORLD_ID_APP_ID, WORLD_ID_RP_ID and WORLD_ID_SIGNING_KEY",
-    );
-  }
-  return createWorldId({
-    appId,
-    rpId,
-    signingKey,
-    environment: env.WORLD_ID_ENVIRONMENT,
-  });
-})();
-
 const clock = { now: () => new Date() };
 const messaging = messagingChannelFromEnvironment({
   devSignIn: env.DEV_SIGN_IN,
@@ -175,7 +141,6 @@ const deps: AppDeps = {
   serverLog: journalLog,
   lineChatMenu: chatMenu.lineChatMenu,
   giverNotice,
-  worldId,
 };
 
 logInfo("api.configured", { mode: env.STICKER_CHAIN_MODE });

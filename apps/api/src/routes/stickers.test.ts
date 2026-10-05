@@ -116,7 +116,7 @@ describe("POST /api/stickers", () => {
     const parts = sealParts(ticketUseId, { nsfw: "true", png: pngFile(png, "png") });
     expect(await refusalOf(await postSeal(optedOutId, sealFormData(parts)))).toMatchObject({
       status: 403,
-      error: "adults_only",
+      error: "nsfw_not_opted_in",
     });
     expect(test.images.saved.has(keccak256(png))).toBe(false);
   });

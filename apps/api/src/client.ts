@@ -31,7 +31,6 @@ export {
 } from "@drawing-app/db/limits";
 
 // The contract's shapes, for the app's screens: each is the type its route's schema checks.
-export type { AgeProof, AgeVerificationRequest } from "./routes/ageVerification.ts";
 export type { ChatMenuLink } from "./chatMenu/menus.ts";
 export type { ErrorBody } from "./errors.ts";
 export type { Explore, PilePage, PileSticker } from "./explore/explore.ts";

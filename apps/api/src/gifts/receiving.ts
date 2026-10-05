@@ -43,7 +43,7 @@ const receiveRefusalSchema = z.enum([
   "gift_returned",
   "gift_expired",
   "not_deposited",
-  "adults_only",
+  "nsfw_not_opted_in",
 ]);
 export type ReceiveRefusal = z.infer<typeof receiveRefusalSchema>;
 
@@ -81,7 +81,7 @@ const groupChatRefusal = (liffContextType: LiffContextType) =>
 const notFound = () => refuse("gift_not_found", "No gift has this Gift Claim Token");
 
 /** An NSFW sticker goes only to someone with the NSFW opt-in on. */
-function adultsOnlyRefusal(db: Pick<Db, "select">, gift: GiftRow, userId: string) {
+function nsfwRefusal(db: Pick<Db, "select">, gift: GiftRow, userId: string) {
   const sticker = db
     .select({ nsfw: stickers.nsfw })
     .from(stickers)
@@ -95,8 +95,8 @@ function adultsOnlyRefusal(db: Pick<Db, "select">, gift: GiftRow, userId: string
     .get();
   if (receiver && optedIntoNsfw(receiver)) return null;
   return refuse(
-    "adults_only",
-    `Gift ${gift.id} is an NSFW sticker, for people with Show 18+ stickers on`,
+    "nsfw_not_opted_in",
+    `Gift ${gift.id} is an NSFW sticker, which only someone with Show 18+ stickers on can receive`,
   );
 }
 
@@ -132,7 +132,7 @@ function receiveRefusal(
   if (gift.escrowStatus !== "pending") {
     return refuse("not_deposited", `Gift ${gift.id}'s deposit hasn't landed in the escrow`);
   }
-  return adultsOnlyRefusal(db, gift, userId);
+  return nsfwRefusal(db, gift, userId);
 }
 
 /**
