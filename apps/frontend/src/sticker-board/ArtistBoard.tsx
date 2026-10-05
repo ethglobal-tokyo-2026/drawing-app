@@ -1,6 +1,5 @@
 import { CaretLeft, CaretRight, GiveIcon } from "../icons";
-import { useMyAgeStatus } from "../identity/useMyAgeStatus";
-import { veiledFor } from "../stickers/nsfw";
+import { useMyNsfwOptIn, veiledFor } from "../stickers/nsfw";
 import {
   Fragment,
   useEffect,
@@ -75,7 +74,7 @@ function StickerView({
 }) {
   const { t } = useTranslation();
   const drawnByOwner = sticker.artist.id === owner.id;
-  const myAge = useMyAgeStatus();
+  const optedIn = useMyNsfwOptIn();
   const root = useRef<HTMLDivElement>(null);
   useBackToClose(true, onClose);
   useFocusTrap(root, { onEscape: onClose, returnFocus });
@@ -95,7 +94,7 @@ function StickerView({
           width={sticker.width}
           height={sticker.height}
           nsfw={sticker.nsfw}
-          veiled={veiledFor(sticker, myAge)}
+          veiled={veiledFor(sticker, optedIn)}
           className="visit-view-art"
         />
         <h2>{formatNo(sticker.no)}</h2>
@@ -125,7 +124,7 @@ function StickerView({
 export function ArtistBoard({ person, onBack }: Props) {
   const { t } = useTranslation();
   const owner = toPerson(person);
-  const myAge = useMyAgeStatus();
+  const optedIn = useMyNsfwOptIn();
   const handle = person.handle ? formatHandle(person.handle) : owner.name;
   const title = t(($) => $.stickerBoard.artistBoard.title, { name: handle });
   const board = useApiQuery(`sticker-board/${person.id}`, (api) => api.stickerBoard(person.id));
@@ -261,7 +260,6 @@ export function ArtistBoard({ person, onBack }: Props) {
   const figures: CorkFigures = {
     name: owner.name,
     handle: person.handle ?? owner.name,
-    ensName: person.ensName,
     own: false,
     loading: stats.state === "loading",
     failure: statsProblem,
@@ -366,7 +364,7 @@ export function ArtistBoard({ person, onBack }: Props) {
                 setSize={order.length}
                 hintId={`${hints}-${s.id === selected ? "selected" : "focus"}`}
                 foil={byOther(s)}
-                veiled={veiledFor(s, myAge)}
+                veiled={veiledFor(s, optedIn)}
                 by={byOther(s) ? artistName(s.artist) : undefined}
               />
               {/* Right after its sticker, so Tab reaches it next. */}
@@ -431,7 +429,7 @@ export function ArtistBoard({ person, onBack }: Props) {
         <GiveSheet
           to={person.handle ?? owner.name}
           toId={person.id}
-          toAgeStatus={person.ageStatus}
+          toNsfwOptIn={person.nsfwOptIn}
           onClose={() => setGiving(false)}
           returnFocus={() => giveKey.current}
         />

@@ -19,12 +19,11 @@ import {
   startPurchase,
   TX_DIGEST_LENGTH,
 } from "../tickets/testPurchases.ts";
+import { purchaseNamedBy, ticketPaymentReference } from "../tickets/paymentReference.ts";
 import { spendBody } from "../tickets/testSpends.ts";
 import {
-  purchaseNamedBy,
   TICKET_PACKS,
   TICKET_PRICE_YEN,
-  ticketPaymentReference,
   ticketUseSchema,
   type StartedTicketPurchase,
   type TicketKind,

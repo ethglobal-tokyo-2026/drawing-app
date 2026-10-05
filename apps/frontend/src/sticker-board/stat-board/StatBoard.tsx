@@ -13,7 +13,6 @@ import { SendTestMessage } from "../../line/SendTestMessage";
 import { LabelButton } from "../../ui/LabelButton";
 import { QuietLink } from "../../ui/QuietLink";
 import { AddressDialog } from "./AddressDialog";
-import { AgeVerificationNote } from "./AgeVerificationNote";
 import { AddressPapers } from "./AddressPapers";
 import { useBoardAddress, useSuiAddress, type Chain } from "./addresses";
 import { DeveloperSlip } from "./DeveloperSlip";
@@ -36,7 +35,7 @@ interface Props {
   flipBackRef: Ref<HTMLButtonElement>;
   /** Opens the gratitude mini-game for the newest sticker, from the developer slip; null with none. */
   onTryGratitudeMiniGame: (() => void) | null;
-  /** The app restarted for a language change, so Settings comes into view. */
+  /** The app restarted for a change in Settings, so Settings comes into view. */
   reopenedOnSettings?: boolean;
   ref?: Ref<StatBoardHandle>;
 }
@@ -58,7 +57,6 @@ export function StatBoard({
   const figures: CorkFigures = {
     name: me.displayName,
     handle: account.handle ?? me.displayName,
-    ensName: account.ensName,
     own: true,
     loading: stats.state === "loading",
     failure: stats.state === "failed" ? { ...problemOf(stats.error), retry: stats.retry } : null,
@@ -108,7 +106,6 @@ export function StatBoard({
           paperRefs={papers}
           onOpen={setOpen}
         />
-        <AgeVerificationNote />
         {DEV_SLIP && (
           <DeveloperSlip>
             <SendTestMessage senderName={me.displayName} />

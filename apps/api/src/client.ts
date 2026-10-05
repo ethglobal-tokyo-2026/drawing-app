@@ -21,6 +21,7 @@ export type ApiErrorCode =
   | "chain_unavailable";
 export { HANDLE_MAX_LENGTH } from "./session/handleLimit.ts";
 export { MAX_TIMELAPSE_BYTES } from "./stickers/timelapseLimit.ts";
+export { purchaseNamedBy } from "./tickets/paymentReference.ts";
 export { TOKYO_UTC_OFFSET_MS, tokyoTicketDay } from "./ticketDays.ts";
 export {
   GIFT_EXPIRY_MS,

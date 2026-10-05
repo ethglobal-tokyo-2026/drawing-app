@@ -22,6 +22,7 @@ import type { DrawingScreenHandle } from "../sticker-creation/DrawingScreen";
 import { noteBootMilestone } from "../performance/bootMilestones";
 import { markBoardComplete, usePreloadAfterBoard } from "../sticker-board/boardComplete";
 import { forgetBoardUnlessFor } from "../sticker-board/lastBoard";
+import { forgetMyStickerBoardUnlessFor } from "../sticker-board/useMyStickerBoard";
 import { ReserveTicketCheckout } from "../tickets/ReserveTicketCheckout";
 import { preloadReservePacks } from "../tickets/reservePacks";
 import {
@@ -100,9 +101,6 @@ export default function App() {
   // screen; a gift message's link opens its gift over the board.
   const [opened] = useState(() => openedFrom(location.pathname));
   const [view, setView] = useState<View>(opened.view);
-  // A name's link is Explore's to open on this visit; a later visit to Explore is plain Explore.
-  const [boardOf, setBoardOf] = useState(opened.boardOf);
-  if (view !== "explore" && boardOf !== undefined) setBoardOf(undefined);
   const [exploredHere, setExploredHere] = useState(view === "explore");
   if (view === "explore" && !exploredHere) setExploredHere(true);
   // The tab whose screen is settling in after a tab change (App.css), until its animation ends.
@@ -140,11 +138,12 @@ export default function App() {
   const [drewHere, setDrewHere] = useState(drawing);
   if (drawing && !drewHere) setDrewHere(true);
 
-  // The app renders once you're signed in to the server, and a board this phone kept for someone
-  // else goes. Opened on another screen, there's no board to wait for.
+  // The app renders once you're signed in to the server, and a board this phone or tab kept for
+  // someone else goes. Opened on another screen, there's no board to wait for.
   useLayoutEffect(() => {
     noteBootMilestone("signed in");
     forgetBoardUnlessFor(me.id);
+    forgetMyStickerBoardUnlessFor(me.id);
     if (opened.view !== "board") markBoardComplete();
   }, [opened, me.id]);
 
@@ -249,11 +248,7 @@ export default function App() {
               onClickCapture={(e) => rememberPlace(e.target)}
             >
               <Suspense fallback={null}>
-                <ExploreScreen
-                  boardOf={boardOf}
-                  onOpenArtist={setVisiting}
-                  onOpenMyBoard={() => setView("board")}
-                />
+                <ExploreScreen onOpenArtist={setVisiting} onOpenMyBoard={() => setView("board")} />
               </Suspense>
             </div>
           </Activity>

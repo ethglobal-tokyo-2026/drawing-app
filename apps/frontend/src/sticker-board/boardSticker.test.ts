@@ -9,7 +9,7 @@ describe("toBoardSticker", () => {
     const placement = { onBoard: false, x: 0.3, y: 0.6, scale: 0.25, rotation: -8, z: 4 };
     const view = toBoardSticker(
       boardSticker({
-        sticker: sticker({ number: 147, artist: people.ken, outline: "" }),
+        sticker: sticker({ number: 147, artist: people.ken }),
         placement,
         held: false,
         givenTo: { receiver: people.bob, receivedAt: "2026-09-23T11:52:00.000Z" },
@@ -29,7 +29,6 @@ describe("toBoardSticker", () => {
       Date.UTC(2026, 8, 23, 12),
       Date.UTC(2026, 8, 22, 9),
     ]);
-    expect(view).not.toHaveProperty("outline");
   });
 });
 

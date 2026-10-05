@@ -13,7 +13,6 @@ import {
   TOP,
   cssUrl,
   ended,
-  maskOf,
   px,
   type BoardView,
   type Box,
@@ -70,7 +69,7 @@ export function createTrayPeel(
     img.alt = "";
     img.draggable = false;
     const curl = make("div", "tray__curl", img);
-    curl.style.setProperty("--m", cssUrl(maskOf(s)));
+    curl.style.setProperty("--m", cssUrl(s.urls.mask));
     const el = make("div", "tray__flyer", curl);
     el.style.width = px(size.w);
     el.style.height = px(size.h);
@@ -182,7 +181,7 @@ export function createTrayPeel(
     }
     land.style.width = px(pk.size.w);
     land.style.height = px(pk.size.h);
-    if (landMark instanceof HTMLElement) landMark.style.setProperty("--m", cssUrl(maskOf(pk.s)));
+    if (landMark instanceof HTMLElement) landMark.style.setProperty("--m", cssUrl(pk.s.urls.mask));
     land.style.transform = `translate(${px(pk.target.x - pk.size.w / 2 + 3)},${px(pk.target.y - pk.size.h / 2 + 6)}) rotate(${pk.rot.toFixed(2)}deg)`;
     land.style.opacity = "1";
   }

@@ -532,8 +532,18 @@
 /* A used sticker silhouette shows no sticker. */
 .tray__slot[data-state="peeling"] .tray__img,
 .tray__slot[data-state="peeling"] .sticker-foil,
+.tray__slot[data-state="peeling"] .tray__nsfw-mark,
 .tray__slot[data-state="used"] .tray__img {
   opacity: 0;
+}
+
+/* An NSFW sticker shown blurred wears the 18+ mark in its middle, as on the board. */
+.tray__nsfw-mark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  pointer-events: none;
 }
 
 /* A dot badge, stuck on by the same hand as every other. */

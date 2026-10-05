@@ -84,11 +84,6 @@ describe("the timelapse", () => {
     ]);
   });
 
-  it("decodes a timelapse from before densities were recorded", () => {
-    const { density: _dropped, ...older } = encodeTimelapse(input);
-    expect(decodeTimelapse(older).density).toBeNull();
-  });
-
   it("gzips it for the upload, and reads back the same", async () => {
     const timelapse = encodeTimelapse(input);
     const blob = await gzipTimelapse(timelapse);

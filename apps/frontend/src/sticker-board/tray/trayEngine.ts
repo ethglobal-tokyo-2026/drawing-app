@@ -37,6 +37,7 @@ import {
   type TrayState,
 } from "./trayModel";
 import { createZipper, mouthRange, showsFrom } from "./zipper";
+import "../../stickers/nsfw-mark.css";
 import "../../stickers/sticker-foil.css";
 import "./sticker-tray.css";
 
@@ -180,6 +181,8 @@ export function createTrayEngine(
     slotHint: i18next.t(($) => $.stickerBoard.tray.slotHint),
     spread: i18next.t(($) => $.stickerBoard.tray.spread),
     empty: i18next.t(($) => $.stickerBoard.tray.empty),
+    nsfw: i18next.t(($) => $.stickers.nsfw.mark),
+    veiled: i18next.t(($) => $.stickers.nsfw.veiled),
   };
   // The spread covers the board, which goes inert behind it. It isn't aria-modal: the tab bar, which
   // it doesn't cover, stays reachable by every means.

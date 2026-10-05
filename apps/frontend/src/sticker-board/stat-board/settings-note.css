@@ -39,6 +39,10 @@
   border: 0;
 }
 
+.settings-note__setting + .settings-note__setting {
+  margin-top: 8px;
+}
+
 /* Floated, the legend sits in the card like a heading rather than set into a border. */
 .settings-note__legend {
   float: left;
@@ -84,6 +88,45 @@
 .settings-note__option input:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 3px;
+}
+
+/* A switch's row: its words first, the switch at the row's end. */
+.settings-note__switch {
+  justify-content: space-between;
+}
+
+/* A pill with a white knob: at its start when off, at its end on Bonbon Pink when on. */
+.settings-note__switch input {
+  width: 46px;
+  height: 28px;
+  border-radius: 999px;
+  background: radial-gradient(
+      circle at 12px 50%,
+      var(--canvas) 0 8px,
+      var(--graphite) 8.5px 9.5px,
+      transparent 10px
+    )
+    var(--liner-deep);
+}
+
+.settings-note__switch input:checked {
+  border-color: var(--ink);
+  background: radial-gradient(
+      circle at calc(100% - 12px) 50%,
+      var(--canvas) 0 8px,
+      var(--ink) 8.5px 9.5px,
+      transparent 10px
+    )
+    var(--pink);
+}
+
+.settings-note__about {
+  clear: both;
+  margin: 6px 0 0;
+}
+
+.settings-note__about + .settings-note__restarts {
+  margin-top: 4px;
 }
 
 .settings-note__restarts {

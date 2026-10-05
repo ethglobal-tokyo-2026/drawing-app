@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TEST_OWNER } from "../api/testing";
 import { toPerson } from "../api/views";
+import { testStickerUrls } from "../stickers/testStickerUrls";
 import type { BoardStickerView } from "./boardSticker";
 import {
   forgetBoardUnlessFor,
@@ -22,7 +23,7 @@ const sticker = (id: string): BoardStickerView => ({
   height: 600,
   nsfw: false,
   outline: "M0 0L600 0L600 600Z",
-  urls: { png: `/api/images/${id}.png`, mask: `/api/images/${id}-mask.png` },
+  urls: testStickerUrls(`/api/images/${id}`),
   placement: { on: true, x: 0.5, y: 0.5, s: 1, r: 0, z: 1 },
   artist: toPerson(TEST_OWNER),
   held: true,

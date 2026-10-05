@@ -5,10 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Gratitude } from "@drawing-app/api/client";
 import { ApiError, type ApiClient } from "../api/apiClient";
 import { ApiProvider } from "../api/ApiProvider";
-import { MeHolder } from "../api/MeHolder";
+import { MeContext } from "../api/meContext";
 import { emptyApi, gratitudeOf, recordGratitudeBody, TEST_ME } from "../api/testing";
 import { errorDetail } from "../i18n/errorMessage";
 import { i18next } from "../i18n/i18n";
+import { testStickerUrls } from "../stickers/testStickerUrls";
 import { refusingStorage } from "../ui/testing";
 import { GratitudeMiniGame } from "./GratitudeMiniGame";
 import { isGratitudeWaiting, resendPendingGratitude } from "./gratitudeOutbox";
@@ -26,7 +27,7 @@ const sticker = {
   no: 147,
   timeUsed: 292,
   createdAt: Date.UTC(2026, 8, 23),
-  urls: { png: "blob:sticker" },
+  urls: testStickerUrls("blob:sticker"),
   width: 400,
   height: 400,
 };
@@ -39,7 +40,7 @@ let root: Root;
 const open = (props: Partial<ComponentProps<typeof GratitudeMiniGame>> = {}) =>
   act(() =>
     root.render(
-      <MeHolder me={TEST_ME}>
+      <MeContext value={TEST_ME}>
         <ApiProvider client={emptyApi({ recordGratitude })}>
           <GratitudeMiniGame
             sticker={sticker}
@@ -50,7 +51,7 @@ const open = (props: Partial<ComponentProps<typeof GratitudeMiniGame>> = {}) =>
             {...props}
           />
         </ApiProvider>
-      </MeHolder>,
+      </MeContext>,
     ),
   );
 const heart = () => {
@@ -171,6 +172,7 @@ describe("GratitudeMiniGame", () => {
       "seed",
       "shakes",
       "stage",
+      "strokePasses",
       "strokes",
       "switchedAtHit",
       "v",
@@ -182,6 +184,7 @@ describe("GratitudeMiniGame", () => {
       switchedAtHit: null,
       strokes: [],
       shakes: [],
+      strokePasses: [],
     });
     // One touch, counted: [msSincePrevious, x, y, counted].
     expect(body.replay.hits).toHaveLength(4);

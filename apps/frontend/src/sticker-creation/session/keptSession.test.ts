@@ -1,7 +1,6 @@
 // @vitest-environment happy-dom
 import { IDBFactory as FakeIndexedDB } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { personKey } from "../../ui/deviceStorage";
 import type { Op } from "../canvas/ops";
 import {
   firstChanged,
@@ -12,6 +11,8 @@ import {
 } from "./keptSession";
 
 const stroke = (color: string): Op => ({ tool: "brush", color, pts: [], T: 0 });
+/** How a screen's tools are set as it opens. */
+const TOOLS = { brushSize: 0.34, eraserSize: 0.52, smoothing: 30 };
 
 // The module keeps its connections for the page's life, so each test draws as someone new.
 let people = 0;
@@ -30,7 +31,7 @@ afterEach(() => {
 
 /** `userId` starts a session on ticket 7 and draws `ops`. */
 function draw(userId: string, ops: Op[], onKept?: (kept: boolean) => void) {
-  const keeper = new SessionKeeper(userId, onKept);
+  const keeper = new SessionKeeper(userId, TOOLS, onKept);
   keeper.start(7);
   keeper.save(ops, 1000);
   return keeper;
@@ -106,7 +107,7 @@ describe("the drawing kept on this device", () => {
     const tools = { brushSize: 0.7, eraserSize: 0.2, smoothing: 55 };
     draw(userId, [stroke("a")]).keepTools(tools);
     // A screen with no session yet only reports its tools, which mustn't wipe the session kept.
-    new SessionKeeper(userId).keepTools({ brushSize: 0.34, eraserSize: 0.52, smoothing: 30 });
+    new SessionKeeper(userId, TOOLS).keepTools(TOOLS);
     expect(await loadKeptSession(userId)).toMatchObject({ status: "found", tools });
   });
 
@@ -116,7 +117,7 @@ describe("the drawing kept on this device", () => {
     const before = draw(userId, ops);
     before.keepNsfw(true);
     // After a reload whose read was too slow, the screen carries the ticket and sets its tools.
-    const after = new SessionKeeper(userId);
+    const after = new SessionKeeper(userId, TOOLS);
     after.carry(7);
     after.keepTools({ brushSize: 0.7, eraserSize: 0.2, smoothing: 55 });
     after.keepNsfw(false);
@@ -126,20 +127,6 @@ describe("the drawing kept on this device", () => {
       elapsedMs: 1000,
       nsfw: true,
     });
-  });
-
-  it("brings the drawing back without tools when what's kept has none it can read", async () => {
-    const userId = someone();
-    draw(userId, [stroke("a")]).keepTools({ brushSize: 0.7, eraserSize: 0.2, smoothing: 55 });
-    const key = personKey("draw.session", userId);
-    const record: unknown = JSON.parse(localStorage.getItem(key) ?? "null");
-    if (typeof record !== "object" || record === null) throw new Error("No record is kept");
-    for (const tools of [undefined, { brushSize: 9, eraserSize: 0.2, smoothing: 55 }, "wide"]) {
-      localStorage.setItem(key, JSON.stringify({ ...record, tools }));
-      const kept = await loadKeptSession(userId);
-      expect(kept).toMatchObject({ status: "found" });
-      expect(kept).not.toHaveProperty("tools");
-    }
   });
 
   it("clears nothing when its ops are only slow to read, and still finds them", async () => {
@@ -154,7 +141,7 @@ describe("the drawing kept on this device", () => {
     const kept = await loading;
     if (kept.status !== "unread") throw new Error(`A slow read came back ${kept.status}`);
     // The drawing screen carries the ticket over to a fresh sheet while the read goes on.
-    new SessionKeeper(userId).carry(kept.ticket);
+    new SessionKeeper(userId, TOOLS).carry(kept.ticket);
     release();
     vi.useRealTimers();
     expect(await kept.later).toMatchObject({ status: "found", ops });

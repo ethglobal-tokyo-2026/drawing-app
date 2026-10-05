@@ -140,10 +140,7 @@ const REFUSED_IN_THE_PREVIEW: ReceiveRefusal[] = [
   "gift_expired",
   "not_deposited",
 ];
-const REFUSED_AS_ERRORS: Array<[number, RefusalKind]> = [
-  [404, "gift_not_found"],
-  [501, "needs_server"],
-];
+const REFUSED_AS_ERRORS: Array<[number, RefusalKind]> = [[404, "gift_not_found"]];
 
 describe("ReceiveGiftDialog", () => {
   it.each(REFUSED_IN_THE_PREVIEW)("says why a %s gift can't be received", async (refusal) => {
@@ -163,6 +160,16 @@ describe("ReceiveGiftDialog", () => {
       expect(heading()).toBe(refusalScreen(code, null).title);
     },
   );
+
+  it("sends someone refused an 18+ gift to their board, whose Settings can turn on Show 18+ stickers", async () => {
+    const refused = new ApiError(403, { error: "nsfw_not_opted_in" });
+    open({ previewGift: () => Promise.reject(refused) });
+    await settle();
+    expect(heading()).toBe(refusalScreen("nsfw_not_opted_in", null).title);
+    press("Back to My board");
+    expect(onClose).toHaveBeenCalledExactlyOnceWith();
+    expect(liff.closeWindow).not.toHaveBeenCalled();
+  });
 
   it("unpackages on the slider's End key and brings up Accept", async () => {
     const receiveGift = vi.fn(() => Promise.resolve(received));

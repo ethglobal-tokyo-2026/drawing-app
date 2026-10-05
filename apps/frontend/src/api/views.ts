@@ -2,7 +2,7 @@ import { i18next } from "../i18n/i18n";
 import { formatHandle } from "../stickers/format";
 import type { Placement as RecordPlacement } from "../sticker-board/placement";
 import type { StickerUrls } from "../stickers/stickerUrls";
-import type { AgeStatus, IsoTime, Person, Placement, Sticker } from "@drawing-app/api/client";
+import type { IsoTime, Person, Placement, Sticker } from "@drawing-app/api/client";
 
 /** Someone, as a screen shows them. */
 export interface PersonView {
@@ -12,10 +12,8 @@ export interface PersonView {
   /** The LINE name; the handle when LINE's is gone. */
   name: string;
   pictureUrl?: string;
-  /** <label>.croquis-app.eth. */
-  ensName?: string;
-  /** Only an adult marks, sees plainly or receives NSFW stickers. */
-  ageStatus: AgeStatus;
+  /** The NSFW opt-in: only someone with it on marks, sees plainly or receives NSFW stickers. */
+  nsfwOptIn: boolean;
 }
 
 /** A sticker, as a screen draws it. */
@@ -32,9 +30,7 @@ export interface StickerView {
   urls: StickerUrls;
   /** Milliseconds. */
   sealedAt: number;
-  /** <number>.<artist>.croquis-app.eth, once it's onchain. */
-  ensName?: string;
-  /** An NSFW sticker: pink foil, and blurred for anyone not adult. */
+  /** An NSFW sticker: pink foil, and blurred for anyone without the NSFW opt-in. */
   nsfw: boolean;
 }
 
@@ -47,11 +43,10 @@ export const toPerson = (p: Person): PersonView => ({
     p.lineDisplayName ??
     (p.handle === null ? i18next.t(($) => $.api.person.unnamed) : formatHandle(p.handle)),
   ...(p.linePictureUrl && { pictureUrl: p.linePictureUrl }),
-  ...(p.ensName && { ensName: p.ensName }),
-  ageStatus: p.ageStatus,
+  nsfwOptIn: p.nsfwOptIn,
 });
 
-/** Shown from its WebP copies, a fraction of its PNGs' bytes. An empty URL is an image it doesn't have. */
+/** Shown from its WebP copies, a fraction of its PNGs' bytes. */
 export const toSticker = (s: Sticker): StickerView => ({
   id: s.id,
   no: s.number,
@@ -62,13 +57,12 @@ export const toSticker = (s: Sticker): StickerView => ({
   outline: s.outline,
   urls: {
     png: s.images.webp.sticker,
-    ...(s.images.webp.mask && { mask: s.images.webp.mask }),
-    ...(s.images.webp.spec && { spec: s.images.webp.spec }),
-    ...(s.images.webp.rim && { rim: s.images.webp.rim }),
-    ...(s.images.webp.foil && { foil: s.images.webp.foil }),
+    mask: s.images.webp.mask,
+    spec: s.images.webp.spec,
+    rim: s.images.webp.rim,
+    foil: s.images.webp.foil,
   },
   sealedAt: toMs(s.sealedAt),
-  ...(s.ensName && { ensName: s.ensName }),
   nsfw: s.nsfw,
 });
 

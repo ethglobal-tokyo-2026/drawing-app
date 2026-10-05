@@ -14,7 +14,6 @@ import {
   SVG_NS,
   cssUrl,
   dayOf,
-  maskOf,
   px,
   type Box,
   type Size,
@@ -124,17 +123,21 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
       if (cut) el.append(cut);
       return el;
     }
-    if (use !== "picture")
-      el.setAttribute(
-        "aria-label",
+    if (use !== "picture") {
+      const label =
         s.state === "used"
           ? isNew
             ? i18next.t(($) => $.stickerBoard.tray.slot.usedNew, no)
             : i18next.t(($) => $.stickerBoard.tray.slot.used, no)
           : isNew
             ? i18next.t(($) => $.stickerBoard.tray.slot.newOnSheet, no)
-            : i18next.t(($) => $.stickerBoard.tray.slot.onSheet, no),
+            : i18next.t(($) => $.stickerBoard.tray.slot.onSheet, no);
+      // One shown blurred says so, as on the board; a used sticker silhouette shows none.
+      el.setAttribute(
+        "aria-label",
+        s.veiled && s.state !== "used" ? `${label}, ${words.veiled}` : label,
       );
+    }
     const silhouette = make("span", "tray__used-sticker-silhouette", make("i", ""));
     const fit = make(
       "span",
@@ -151,7 +154,7 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
     if (s.state !== "used" && ui.imagesOn) {
       // Drawn by someone else, or NSFW, it wears the sheet's foil under its image, as StickerFoil
       // draws it.
-      if ((s.gift || s.nsfw) && s.urls.mask) {
+      if (s.gift || s.nsfw) {
         const foil = decorative(
           make(
             "span",
@@ -176,10 +179,12 @@ export function createTraySheets(tray: Tray, trayModel: TrayModel) {
       img.alt = "";
       img.draggable = false;
       fit.append(img);
+      // Blurred for you, it wears the 18+ mark, as on the board.
+      if (s.veiled) fit.append(decorative(make("span", "nsfw-mark tray__nsfw-mark", words.nsfw)));
     }
     fit.style.width = px(q.w);
     fit.style.height = px(q.h);
-    if (ui.imagesOn) fit.style.setProperty("--m", cssUrl(maskOf(s)));
+    if (ui.imagesOn) fit.style.setProperty("--m", cssUrl(s.urls.mask));
     el.append(fit);
     if (isNew) el.append(decorative(make("span", "tray__new", words.new)));
     return el;

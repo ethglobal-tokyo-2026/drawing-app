@@ -5,16 +5,15 @@ import type { AppDeps } from "../deps.ts";
 import { failureCause, logFailure, logInfo } from "../diagnostics.ts";
 import { apiError, validate } from "../errors.ts";
 import type { AppEnv } from "../session.ts";
+import { purchaseNamedBy, ticketPaymentReference } from "../tickets/paymentReference.ts";
 import {
   creditPurchase,
   jpycFor,
   paymentCounted,
-  purchaseNamedBy,
   spendRequestSchema,
   startPurchaseRequestSchema,
   TICKET_PACKS,
   ticketKindAt,
-  ticketPaymentReference,
   ticketPurchaseRequestSchema,
   ticketShop,
   ticketsOf,

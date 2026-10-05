@@ -9,7 +9,6 @@ import { endOf, session, strokeStartedCombo, strokeUpAndDown } from "./testCombo
 /** The server's MAX_COMBO_MS, and the most a keepalive request carries. */
 const MAX_COMBO_MS = 8000;
 const MAX_BODY_BYTES = 64 * 1024;
-// The server still reads "sent" in replays stored before the first tap started the bar; a new one never has it.
 const END_REASONS: readonly ReplayV1["endReason"][] = ["empty", "cap", "hidden", "closed"];
 
 /** Rows of `size` values from a flat list, the first `summed` of each added to the row before's. */
@@ -25,9 +24,9 @@ function runningRows(flat: readonly number[], size: number, summed: number): num
 const msSteps = (flat: readonly number[], size: number) => flat.filter((_, i) => i % size === 0);
 
 /**
- * The replay as the server's planned check reads it (the REST plan's Task 7): its shape, then its
- * running values, then how it agrees with the record. Throws at the first rule it breaks; returns
- * the running values: every touch, stroke sample and reversal at its time after the first hit.
+ * The replay as the server's check reads it: its shape, then its running values, then how it agrees
+ * with the record. Throws at the first rule it breaks; returns the running values: every touch,
+ * stroke sample and reversal at its time after the first hit.
  */
 function readReplay(replay: ReplayV1, record: ComboRecord) {
   const rule = (ok: boolean, what: string) => {
@@ -51,11 +50,11 @@ function readReplay(replay: ReplayV1, record: ComboRecord) {
   rule(replay.shakes.length % 2 === 0 && replay.shakes.every(int), "shakes");
   const { strokePasses } = replay;
   rule(
-    strokePasses === undefined || strokePasses.length === replay.strokes.length,
+    Array.isArray(strokePasses) && strokePasses.length === replay.strokes.length,
     "one list of stroke passes per stroke",
   );
   rule(
-    (strokePasses ?? []).every((passes, stroke) =>
+    strokePasses.every((passes, stroke) =>
       passes.every(
         (index, at) =>
           int(index) &&
@@ -168,6 +167,7 @@ describe("createReplayRecorder", () => {
       hits: [0, 5000, 5398, 1],
       strokes: [],
       shakes: [],
+      strokePasses: [],
     });
   });
 
@@ -265,7 +265,7 @@ describe("createReplayRecorder", () => {
     // The stroke before the combo, and the passes before and after it, went with their samples.
     expect(others).toEqual([]);
     expect(fastPasses.some((at) => at < 0) && fastPasses.some((at) => at > durationMs)).toBe(true);
-    const marked = replay.strokePasses?.[0] ?? [];
+    const [marked] = replay.strokePasses;
     expect(marked[0]).toBe(0);
     expect(marked.map((index) => stroke[index][0])).toEqual(
       fastPasses.filter((at) => at >= 0 && at <= durationMs),

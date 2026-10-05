@@ -3,7 +3,8 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import type { AppDeps } from "../deps.ts";
 import { logFailure, logInfo } from "../diagnostics.ts";
 import { timer, type Schedule } from "../midnightJob.ts";
-import { creditPurchase, jpycFor, purchaseNamedBy } from "./tickets.ts";
+import { purchaseNamedBy } from "./paymentReference.ts";
+import { creditPurchase, jpycFor } from "./tickets.ts";
 
 /** Between the sweeps that look on Sui for payments the app never reported. */
 export const PURCHASE_SWEEP_EVERY_MS = 3 * 60_000;

@@ -78,19 +78,13 @@ export function refusalScreen(kind: RefusalKind, giver: PersonView | null): EndS
         bag: null,
         action: "backToLine",
       };
-    case "adults_only":
+    case "nsfw_not_opted_in":
+      // Settings, where the opt-in turns on, is on the board's back.
       return {
-        title: t(($) => $.receiving.refusals.adultsOnly.title),
-        line: t(($) => $.receiving.refusals.adultsOnly.line, giverOptions),
+        title: t(($) => $.receiving.refusals.nsfwNotOptedIn.title),
+        line: t(($) => $.receiving.refusals.nsfwNotOptedIn.line, giverOptions),
         bag: { state: "closed", stamp: "adults-only", nsfw: true },
-        action: "backToLine",
-      };
-    case "needs_server":
-      return {
-        title: t(($) => $.receiving.refusals.needsServer.title),
-        line: t(($) => $.receiving.refusals.needsServer.line),
-        bag: null,
-        action: "backToLine",
+        action: "board",
       };
   }
 }

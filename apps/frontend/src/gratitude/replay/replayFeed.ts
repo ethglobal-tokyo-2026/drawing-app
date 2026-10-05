@@ -22,8 +22,7 @@ export interface StagePoint {
 export type FeedInput =
   | { kind: "touch"; at: number; point: StagePoint; counted: boolean }
   | { kind: "strokeStart"; at: number; point: StagePoint }
-  /** `fastPass` is null for replays recorded before stroke passes were. */
-  | { kind: "strokeMove"; at: number; point: StagePoint; fastPass: boolean | null }
+  | { kind: "strokeMove"; at: number; point: StagePoint; fastPass: boolean }
   | { kind: "strokeEnd"; at: number }
   | { kind: "reversal"; at: number; direction: 1 | -1 };
 
@@ -89,12 +88,12 @@ export function createReplayFeed(replay: ReplayV1, target: HeartBox): ReplayFeed
   const strokeInputs: FeedInput[] = [];
   let lifted = 0;
   for (const [stroke, series] of replay.strokes.entries()) {
-    const passes = replay.strokePasses?.[stroke];
+    const passes = replay.strokePasses[stroke];
     const samples = runningRows(series, 3, 3);
     for (const [i, [ms, x, y]] of samples.entries()) {
       const at = Math.max(ms, lifted);
       const point = place(x, y);
-      const fastPass = passes ? passes.includes(i) : null;
+      const fastPass = passes.includes(i);
       if (i === 0) strokeInputs.push({ kind: "strokeStart", at, point });
       // A combo that began mid-stroke keeps it from its first hit, which can be a pass: the finger
       // starts there, and that move ends the pass.

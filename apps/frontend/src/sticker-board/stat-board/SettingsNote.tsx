@@ -16,6 +16,7 @@ import { lineLanguage } from "../../i18n/pageLanguage";
 import { useTranslation } from "../../i18n/react";
 import { ErrorLine } from "../../ui/ErrorLine";
 import { useReducedMotion } from "../../ui/useReducedMotion";
+import { forgetBoard } from "../lastBoard";
 import { reopenOnSettingsNextStart } from "./reopenOnSettings";
 import { statsClearPeek } from "./settingsPeek";
 import "./settings-note.css";
@@ -28,10 +29,14 @@ const CHOICES: readonly Choice[] = [null, "en", "ja"];
 /** How much of the paper under its title peeks above the cork's foot, in px. */
 const PEEK_UNDER_TITLE = 10;
 
+/** A change to one setting: a language choice, or Show 18+ stickers on or off. */
+type Change = { setting: "language"; choice: Choice } | { setting: "nsfw"; on: boolean };
+
+/** One setting saves at a time, since a save that lands restarts the app. */
 type Status =
   | { step: "idle" }
-  | { step: "saving"; choice: Choice }
-  | { step: "failed"; problem: Problem };
+  | { step: "saving"; change: Change }
+  | { step: "failed"; setting: Change["setting"]; problem: Problem };
 
 /**
  * Sticks the note to the cork's foot with only its title showing, until it scrolls into view: CSS
@@ -84,7 +89,7 @@ function usePeek(note: RefObject<HTMLElement | null>, title: RefObject<HTMLEleme
 }
 
 /**
- * The app restarted for a language change, so the note comes into view as the cork shows and stays
+ * The app restarted for a change in Settings, so the note comes into view as the cork shows and stays
  * there while the figures above it load and change height, until the person touches the cork.
  */
 function useOpenInView(
@@ -110,11 +115,29 @@ function useOpenInView(
   }, [note, opened]);
 }
 
+/** A setting's status line, which screen readers hear while it saves, and why it wasn't saved. */
+function SaveStatus({ saving, problem }: { saving: boolean; problem: Problem | null }) {
+  const { t } = useTranslation();
+  return (
+    <>
+      <p className="fine settings-note__status" role="status">
+        {saving ? t(($) => $.stickerBoard.settings.saving) : ""}
+      </p>
+      {problem && (
+        <ErrorLine className="settings-note__problem" detail={problem.detail}>
+          {problem.message}
+        </ErrorLine>
+      )}
+    </>
+  );
+}
+
 /**
  * Your Settings, the first paper under the stats on your cork back. A language is saved to your
  * account, then kept on this phone for the first screen of the next start, and the app restarts in
- * it, so text built outside React follows too. The start after a language change opens on this note,
- * so the person sees their pick took (`openedInView`).
+ * it, so text built outside React follows too. Show 18+ stickers, the NSFW opt-in, is saved to your
+ * account, and the app restarts without the board this phone kept, whose stickers showed by the old
+ * setting. The start after a change opens on this note, so the person sees it took (`openedInView`).
  */
 export function SettingsNote({
   restart = () => location.reload(),
@@ -134,22 +157,28 @@ export function SettingsNote({
   const reveal = usePeek(note, title);
   useOpenInView(note, reveal, openedInView);
 
-  const choose = async (choice: Choice) => {
-    if (status.step === "saving") return;
-    setStatus({ step: "saving", choice });
+  /** Saves a change to your account; false, with the note saying why, when it wasn't saved. */
+  const save = async (change: Change, send: () => Promise<unknown>) => {
+    if (status.step === "saving") return false;
+    setStatus({ step: "saving", change });
     try {
-      await api.setLanguageChoice(choice);
+      await send();
+      return true;
     } catch (error) {
       const failure = apiError(error);
-      console.error("The language choice wasn't saved", failure);
-      const { message, detail } = problemOf(failure);
-      const problem = {
-        message: t(($) => $.stickerBoard.settings.language.notSaved, { reason: message }),
-        detail,
-      };
-      setStatus({ step: "failed", problem });
-      return;
+      const { message: reason, detail } = problemOf(failure);
+      const [what, message] =
+        change.setting === "language"
+          ? ["language choice", t(($) => $.stickerBoard.settings.language.notSaved, { reason })]
+          : ["NSFW opt-in", t(($) => $.stickerBoard.settings.nsfw.notSaved, { reason })];
+      console.error(`The ${what} wasn't saved`, failure);
+      setStatus({ step: "failed", setting: change.setting, problem: { message, detail } });
+      return false;
     }
+  };
+
+  const choose = async (choice: Choice) => {
+    if (!(await save({ setting: "language", choice }, () => api.setLanguageChoice(choice)))) return;
     setSaved(choice);
     try {
       keepChosenLanguage(choice);
@@ -157,9 +186,16 @@ export function SettingsNote({
       console.error("The saved language choice couldn't be kept on this phone", error);
       const { detail } = problemOf(error);
       const message = t(($) => $.stickerBoard.settings.language.notKept);
-      setStatus({ step: "failed", problem: { message, detail } });
+      setStatus({ step: "failed", setting: "language", problem: { message, detail } });
       return;
     }
+    reopenOnSettingsNextStart();
+    restart();
+  };
+
+  const showNsfw = async (on: boolean) => {
+    if (!(await save({ setting: "nsfw", on }, () => api.setNsfwOptIn(on)))) return;
+    forgetBoard();
     reopenOnSettingsNextStart();
     restart();
   };
@@ -169,7 +205,11 @@ export function SettingsNote({
     choice === null
       ? t(($) => $.stickerBoard.settings.language.sameAsLine, { language: named(lineLanguage()) })
       : named(choice);
-  const checked = status.step === "saving" ? status.choice : saved;
+  const saving = status.step === "saving" ? status.change : null;
+  const problemOn = (setting: Change["setting"]) =>
+    status.step === "failed" && status.setting === setting ? status.problem : null;
+  const checked = saving?.setting === "language" ? saving.choice : saved;
+  const nsfwOn = saving?.setting === "nsfw" ? saving.on : me.nsfwOptIn;
 
   return (
     <section
@@ -183,7 +223,7 @@ export function SettingsNote({
         <h3 ref={title} className="settings-note__title" id={`${id}-title`}>
           {t(($) => $.stickerBoard.settings.title)}
         </h3>
-        <fieldset className="settings-note__setting" aria-busy={status.step === "saving"}>
+        <fieldset className="settings-note__setting" aria-busy={saving?.setting === "language"}>
           <legend className="fine settings-note__legend">
             {t(($) => $.stickerBoard.settings.language.title)}
           </legend>
@@ -202,14 +242,29 @@ export function SettingsNote({
           <p className="fine settings-note__restarts">
             {t(($) => $.stickerBoard.settings.language.restarts)}
           </p>
-          <p className="fine settings-note__status" role="status">
-            {status.step === "saving" ? t(($) => $.stickerBoard.settings.language.saving) : ""}
+          <SaveStatus saving={saving?.setting === "language"} problem={problemOn("language")} />
+        </fieldset>
+        <fieldset className="settings-note__setting" aria-busy={saving?.setting === "nsfw"}>
+          <legend className="fine settings-note__legend">
+            {t(($) => $.stickerBoard.settings.nsfw.title)}
+          </legend>
+          <label className="settings-note__option settings-note__switch">
+            <span>{t(($) => $.stickerBoard.settings.nsfw.show)}</span>
+            <input
+              type="checkbox"
+              role="switch"
+              checked={nsfwOn}
+              aria-describedby={`${id}-nsfw-about ${id}-nsfw-restarts`}
+              onChange={(e) => void showNsfw(e.currentTarget.checked)}
+            />
+          </label>
+          <p className="fine settings-note__about" id={`${id}-nsfw-about`}>
+            {t(($) => $.stickerBoard.settings.nsfw.about)}
           </p>
-          {status.step === "failed" && (
-            <ErrorLine className="settings-note__problem" detail={status.problem.detail}>
-              {status.problem.message}
-            </ErrorLine>
-          )}
+          <p className="fine settings-note__restarts" id={`${id}-nsfw-restarts`}>
+            {t(($) => $.stickerBoard.settings.nsfw.restarts)}
+          </p>
+          <SaveStatus saving={saving?.setting === "nsfw"} problem={problemOn("nsfw")} />
         </fieldset>
       </div>
       <i

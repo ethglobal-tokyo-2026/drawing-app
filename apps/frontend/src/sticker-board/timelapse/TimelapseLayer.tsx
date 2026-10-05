@@ -14,10 +14,9 @@ export function TimelapseLayer({ timelapse }: { timelapse: Timelapse }) {
     skip,
     attach: { layer: layerRef, canvas: canvasRef },
   } = timelapse;
-  const mask = sticker?.urls.mask;
-  if (!sticker || !mask || phase === "idle" || phase === "loading") return null;
+  if (!sticker || phase === "idle" || phase === "loading") return null;
   const style: CSSProperties = {
-    "--m": `url("${mask}")`,
+    "--m": `url("${sticker.urls.mask}")`,
     "--ar": (sticker.width / sticker.height).toFixed(4),
   };
   return (

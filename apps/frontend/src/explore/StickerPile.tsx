@@ -12,7 +12,6 @@ import {
   type RefObject,
 } from "react";
 import { toPerson, toSticker } from "../api/views";
-import { useMyAgeStatus } from "../identity/useMyAgeStatus";
 import { errorDetail, errorMessage } from "../i18n/errorMessage";
 import { currentLanguage } from "../i18n/i18n";
 import { useTranslation } from "../i18n/react";
@@ -20,7 +19,7 @@ import { handleOf } from "../sticker-board/boardSticker";
 import { hash, type Shape } from "../sticker-board/tray/sheetPacking";
 import { knownShape } from "../sticker-board/tray/stickerShape";
 import { formatNo } from "../stickers/format";
-import { veiledFor } from "../stickers/nsfw";
+import { useMyNsfwOptIn, veiledFor } from "../stickers/nsfw";
 import "../stickers/nsfw-img.css";
 import { PhotoSticker } from "../ui/PhotoSticker";
 import { EASE_PEEL } from "../ui/easing";
@@ -233,9 +232,9 @@ function PileSticker({
   onLift: () => void;
 }) {
   const { sticker } = laid.pile;
-  const myAge = useMyAgeStatus();
+  const optedIn = useMyNsfwOptIn();
   const view = toSticker(sticker);
-  const nsfw = view.nsfw ? ` nsfw-img${veiledFor(view, myAge) ? " is-veiled" : ""}` : "";
+  const nsfw = view.nsfw ? ` nsfw-img${veiledFor(view, optedIn) ? " is-veiled" : ""}` : "";
   return (
     <li
       className="pile-sticker"

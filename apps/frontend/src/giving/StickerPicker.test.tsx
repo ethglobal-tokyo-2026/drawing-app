@@ -1,7 +1,12 @@
 // @vitest-environment happy-dom
+import type { Me } from "@drawing-app/api/client";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { MeContext } from "../api/meContext";
+import { TEST_ME } from "../api/testing";
+import { strings } from "../i18n/strings";
+import { formatNo } from "../stickers/format";
 import { canGiveTo } from "../stickers/nsfw";
 import type { KeptSticker } from "../stickers/useKeptStickers";
 import { StickerPicker } from "./StickerPicker";
@@ -26,20 +31,24 @@ const kept = (no: number, nsfw: boolean): KeptSticker => ({
   nsfw,
 });
 
-const pickFor = (recipient: "adult" | "unknown") => {
+/** Your sticker No.0001, and No.0002, an NSFW one, picked from in turn for someone, as `me`. */
+const pickFor = (recipientOptedIn: boolean, me: Me = TEST_ME) => {
   act(() =>
     root.render(
-      <StickerPicker
-        stickers={[kept(1, false), kept(2, true)]}
-        picked={null}
-        onPick={onPick}
-        label="Your stickers"
-        blocked={(s) => !canGiveTo(s, recipient)}
-      />,
+      <MeContext value={me}>
+        <StickerPicker
+          stickers={[kept(1, false), kept(2, true)]}
+          picked={null}
+          onPick={onPick}
+          label="Your stickers"
+          blocked={(s) => !canGiveTo(s, recipientOptedIn)}
+        />
+      </MeContext>,
     ),
   );
   for (const tile of host.querySelectorAll("button")) act(() => tile.click());
 };
+const nsfwTile = () => host.querySelectorAll("button")[1];
 
 beforeEach(() => {
   host = document.createElement("div");
@@ -54,13 +63,23 @@ afterEach(() => {
 });
 
 describe("StickerPicker", () => {
-  it("won't pick an NSFW sticker for someone not verified adult, but picks their others", () => {
-    pickFor("unknown");
+  it("won't pick an NSFW sticker for someone without the NSFW opt-in, but picks their others", () => {
+    pickFor(false);
     expect(onPick.mock.calls).toEqual([["s-1"]]);
   });
 
-  it("picks an NSFW sticker for an adult", () => {
-    pickFor("adult");
+  it("picks an NSFW sticker for someone with the NSFW opt-in", () => {
+    pickFor(true);
     expect(onPick.mock.calls).toEqual([["s-1"], ["s-2"]]);
+    expect(nsfwTile()?.querySelector(".nsfw-mark")).toBeNull();
+  });
+
+  it("marks your NSFW sticker 18+ while you see it blurred, and still picks it", () => {
+    pickFor(true, { ...TEST_ME, nsfwOptIn: false });
+    expect(onPick.mock.calls).toEqual([["s-1"], ["s-2"]]);
+    expect(nsfwTile()?.querySelector(".nsfw-mark")).not.toBeNull();
+    expect(nsfwTile()?.getAttribute("aria-label")).toBe(
+      `${formatNo(2)}, ${strings.stickers.nsfw.veiled.en}`,
+    );
   });
 });

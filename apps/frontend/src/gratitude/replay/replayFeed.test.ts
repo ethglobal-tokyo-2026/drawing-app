@@ -20,7 +20,7 @@ const RECORDED_HEART = heartRest(STAGE.width, STAGE.height, LIVE_FRAME);
 const px = ({ x, y }: StagePoint) => [Math.round(x), Math.round(y)];
 
 /** An input as a readable row: its kind, its time, where it is to the px, and what it says. */
-function row(input: FeedInput): (string | number | boolean | null)[] {
+function row(input: FeedInput): (string | number | boolean)[] {
   switch (input.kind) {
     case "touch":
       return [input.kind, input.at, ...px(input.point), input.counted];
@@ -118,15 +118,6 @@ describe("createReplayFeed", () => {
     const [start, move] = inputs;
     expect(start).toMatchObject({ kind: "strokeStart", at: 0 });
     expect(move).toEqual({ ...start, kind: "strokeMove", fastPass: true });
-  });
-
-  it("says nothing of passes for a replay recorded before them", () => {
-    const { strokePasses: _recorded, ...older } = strokeStartedCombo().replay;
-    const moves = createReplayFeed(older, RECORDED_HEART).inputs.flatMap((input) =>
-      input.kind === "strokeMove" ? [input.fastPass] : [],
-    );
-    expect(moves.length).toBeGreaterThan(0);
-    expect(moves.every((fastPass) => fastPass === null)).toBe(true);
   });
 
   it("gives each input once, when its time comes", () => {

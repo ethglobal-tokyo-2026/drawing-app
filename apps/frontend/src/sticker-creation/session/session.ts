@@ -117,7 +117,7 @@ export function transition(session: Session, event: SessionEvent): Result {
  */
 const SEAL_REFUSALS: ReadonlySet<string> = new Set([
   "invalid_request",
-  "adults_only",
+  "nsfw_not_opted_in",
   "ticket_not_found",
 ] satisfies ErrorCode[]);
 

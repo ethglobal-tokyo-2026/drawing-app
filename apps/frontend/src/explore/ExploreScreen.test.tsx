@@ -1,11 +1,5 @@
 // @vitest-environment happy-dom
-import {
-  CROQUIS_PARENT_NAME,
-  type Explore,
-  type Person,
-  type PileSticker,
-  type Sticker,
-} from "@drawing-app/api/client";
+import type { Explore, Person, PileSticker, Sticker } from "@drawing-app/api/client";
 import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { ApiError, type ApiClient } from "../api/apiClient";
@@ -409,34 +403,6 @@ describe("ExploreScreen's This week", () => {
     });
     expect(tab(host, "This week").getAttribute("aria-selected")).toBe("true");
     expect(host.querySelector(".leaderboard")).not.toBeNull();
-  });
-});
-
-describe("a name's link", () => {
-  it("opens the board of whoever holds the name, once", async () => {
-    const onOpenArtist = vi.fn();
-    view = renderWithApi(
-      <ExploreScreen boardOf="mika" onOpenArtist={onOpenArtist} onOpenMyBoard={vi.fn()} />,
-      emptyApi({
-        explore: () => new Promise(() => {}),
-        personByEnsLabel: (label) =>
-          label === "mika" ? Promise.resolve(people.mika) : Promise.reject(new Error(label)),
-      }),
-    );
-    await wait(0);
-    await wait(0);
-    expect(onOpenArtist.mock.calls).toEqual([[people.mika]]);
-  });
-
-  it("says so when nobody holds the name", async () => {
-    view = renderWithApi(
-      <ExploreScreen boardOf="nobody" onOpenArtist={vi.fn()} onOpenMyBoard={vi.fn()} />,
-      emptyApi({ explore: () => new Promise(() => {}) }),
-    );
-    await wait(0);
-    expect(document.querySelector('[role="alert"]')?.textContent).toContain(
-      `Couldn’t load nobody.${CROQUIS_PARENT_NAME}: `,
-    );
   });
 });
 

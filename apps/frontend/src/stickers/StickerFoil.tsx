@@ -15,13 +15,16 @@ interface Props {
   /** Degrees the sticker is turned on screen, which the glint undoes so the light falls alike on all. */
   turn?: number;
   tone?: FoilTone;
-  /** The band's mask, made on the server; without one, the band is dilated from `--m` here. */
+  /**
+   * The band's mask, made on the server. The Shop's sample sticker has none, so its band is dilated
+   * from `--m` here.
+   */
   mask?: string;
 }
 
 /**
  * Foil round a sticker, holo or pink: its silhouette grown into a band just past the white edge,
- * from the server's mask when the sticker has one, else dilated in CSS from the `--m` the container
+ * from the server's mask, or for the Shop's sample, dilated in CSS from the `--m` the container
  * sets. The band is the sticker's edge, so its cut and cast shadow fall from the band's outer edge.
  * Bands of light flow under a fine, still grating, and a glint sits where the app's one light falls,
  * holding where the last tilt left it. It goes under the image, which shows only inside its own cut.

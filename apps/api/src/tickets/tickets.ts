@@ -12,6 +12,7 @@ import type { TicketPaymentTarget } from "../deps.ts";
 import { isoTimeSchema, toIsoTime, type Tickets, type TicketShop } from "../shapes.ts";
 import { simplifiedOutlineOf } from "../stickers/outline.ts";
 import { nextTokyoTicketDayStart, tokyoTicketDay } from "../ticketDays.ts";
+import { ticketPaymentReference } from "./paymentReference.ts";
 
 /** A single reserve ticket's price in yen; packs show their discount off it. */
 export const TICKET_PRICE_YEN = 100;
@@ -29,22 +30,6 @@ const PERCENT = 100;
 /** `priceYen` in JPYC base units: one JPYC is one yen. */
 export const jpycFor = (priceYen: number, decimals: number): bigint =>
   BigInt(priceYen) * 10n ** BigInt(decimals);
-
-/**
- * What a person passes as `pay`'s reference for one purchase: their id first, so a payment for
- * someone else's purchase is told apart without a lookup, then the purchase's.
- */
-export const ticketPaymentReference = (userId: string, purchaseId: number) =>
-  `tickets:${userId}:${purchaseId}`;
-
-const PURCHASE_REFERENCE = /^tickets:(.+):([1-9][0-9]*)$/;
-
-/** The person and the purchase a payment's reference names; null for one that names none. */
-export function purchaseNamedBy(reference: string): { userId: string; purchaseId: number } | null {
-  const [, userId, id] = PURCHASE_REFERENCE.exec(reference) ?? [];
-  const purchaseId = Number(id);
-  return userId && Number.isSafeInteger(purchaseId) ? { userId, purchaseId } : null;
-}
 
 /** The ticket shop: its packs, and where they're paid. */
 export const ticketShop = (target: TicketPaymentTarget): TicketShop => ({

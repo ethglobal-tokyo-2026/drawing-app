@@ -22,6 +22,8 @@ export interface TraySticker extends TraySlot {
   gift: boolean;
   /** An NSFW sticker: it wears pink foil, whoever drew it. */
   nsfw: boolean;
+  /** An NSFW sticker you see blurred, without the NSFW opt-in: its image is the veiled one. */
+  veiled: boolean;
   /** Shown in the open tray before, so it isn't NEW. */
   seen: boolean;
   /** Given away and received: who has it, printed. Its spot opens it among the stickers you gave. */
@@ -218,7 +220,10 @@ export interface Tray {
   zip: Zipper;
   /** The tray's fixed words, in the app's language. */
   words: Readonly<
-    Record<"sheets" | "tabs" | "new" | "putBack" | "slotHint" | "spread" | "empty", string>
+    Record<
+      "sheets" | "tabs" | "new" | "putBack" | "slotHint" | "spread" | "empty" | "nsfw" | "veiled",
+      string
+    >
   >;
   root: HTMLDivElement;
   /** Where a sticker in hand would land on the board. */
@@ -271,7 +276,6 @@ export const SVG_NS = "http://www.w3.org/2000/svg";
 export const cssUrl = (url: string) => `url("${url}")`;
 export const px = (v: number) => `${v.toFixed(1)}px`;
 const isShape = (s: Shape | undefined): s is Shape => s !== undefined;
-export const maskOf = (s: Slot) => s.urls.mask ?? s.urls.png;
 export const dayOf = (t: number) => tokyoTicketDay(new Date(t));
 export const matchesFilter = (s: Slot, f: Filter) =>
   f === "all" || (f === "mine" ? !s.gift : s.gift);
@@ -346,7 +350,7 @@ export function createTrayModel(
   async function relayout() {
     if (applyPack()) return true;
     const m = ui.model;
-    const shapes = await Promise.all(m.slots.map((s) => stickerShape(s, s.urls)));
+    const shapes = await Promise.all(m.slots.map((s) => stickerShape(s, s.urls.mask)));
     // A refresh during the wait lays out its own stickers.
     if (ui.destroyed || m !== ui.model) return false;
     packWith(shapes);

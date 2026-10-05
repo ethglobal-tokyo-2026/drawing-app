@@ -3,10 +3,22 @@ import { QueryAnswers, useApiQuery, type Query } from "../api/useApiQuery";
 import { noteBootMilestone } from "../performance/bootMilestones";
 
 const answers = new QueryAnswers<StickerBoard>();
+/** Whose board the last load answered with, so an answer kept for another account can go. */
+let answeredFor: string | null = null;
 const changes = new Set<() => void>();
 
 /** For a sticker gone into a gift: the answers kept from before list it, so the give sheet would offer it. */
 export const forgetMyStickerBoard = (): void => answers.forget();
+
+/**
+ * Forgets the answers kept for another account, so whoever signs in next on this tab never sees that
+ * account's board.
+ */
+export function forgetMyStickerBoardUnlessFor(userId: string): void {
+  if (answeredFor === null || answeredFor === userId) return;
+  answeredFor = null;
+  answers.forget();
+}
 
 /**
  * Your board changed on the server behind the board on screen, as when a Gift Message's send is
@@ -33,6 +45,7 @@ export const useMyStickerBoard = ({ ownLoadOnly = false } = {}): Query<StickerBo
     "sticker-board/me",
     async (api) => {
       const board = await api.stickerBoard();
+      answeredFor = board.owner.id;
       noteBootMilestone("board JSON", `${board.boardStickers.length} stickers`);
       return board;
     },

@@ -9,7 +9,7 @@ import sampleSpec from "./sample-sticker/spec.png";
 
 /** A sticker the Shop's laminate and backing foil previews wear. */
 export interface ShopSticker {
-  urls: StickerUrls & { mask: string };
+  urls: StickerUrls;
   width: number;
   height: number;
   /** Staggers its foil's bands, as on a board. */
@@ -24,16 +24,15 @@ const SAMPLE_STICKER: ShopSticker = {
   no: 0,
 };
 
-/** The newest sticker you drew and still hold, with the mask its finishes need; null when there's none. */
+/** The newest sticker you drew and still hold; null when there's none. */
 function newestOwnSticker(board: StickerBoard): ShopSticker | null {
   let newest: (ShopSticker & { sealedAt: number }) | null = null;
   for (const b of board.boardStickers) {
     if (!b.held || b.sticker.artist.id !== board.owner.id) continue;
     const s = toSticker(b.sticker);
-    const { mask } = s.urls;
-    if (!mask || (newest && s.sealedAt <= newest.sealedAt)) continue;
+    if (newest && s.sealedAt <= newest.sealedAt) continue;
     newest = {
-      urls: { ...s.urls, mask },
+      urls: s.urls,
       width: s.width,
       height: s.height,
       no: s.no,

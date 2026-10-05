@@ -23,8 +23,8 @@ interface Props {
   className?: string;
 }
 
-/** Pages of the owner's ticket payments, read from Sui when `read` asks. */
-function useTicketPayments(owner: string, payment: Shop["payment"]) {
+/** Pages of the owner's payments for `userId`'s ticket purchases, read from Sui when `read` asks. */
+function useTicketPayments(owner: string, userId: string, payment: Shop["payment"]) {
   const [payments, setPayments] = useState<TicketPaymentRecord[] | null>(null);
   const [cursor, setCursor] = useState<string | null>(null);
   /** Sui's own words for why a page couldn't be read, for a report. */
@@ -37,7 +37,7 @@ function useTicketPayments(owner: string, payment: Shop["payment"]) {
     let live = true;
     // Sui's SDK loads with the shop, not with the app.
     import("../payments/jpyc")
-      .then(({ getTicketPayments }) => getTicketPayments(owner, payment, asked.from))
+      .then(({ getTicketPayments }) => getTicketPayments(owner, userId, payment, asked.from))
       .then(
         (page) => {
           if (!live) return;
@@ -55,7 +55,7 @@ function useTicketPayments(owner: string, payment: Shop["payment"]) {
     return () => {
       live = false;
     };
-  }, [owner, payment, asked]);
+  }, [owner, userId, payment, asked]);
 
   const reading = asked !== undefined;
   // The last read's failure goes as the next read starts, so a read in flight never sits under it.
@@ -77,18 +77,17 @@ function useTicketPayments(owner: string, payment: Shop["payment"]) {
 }
 
 /**
- * The person's ENS name, under the Shop's reserve tickets and the checkout's Pay key; it opens their
- * ticket purchases, read straight from Sui rather than the server, so they can check every payment
- * their wallet made.
+ * The person's short Sui address, under the Shop's reserve tickets and the checkout's Pay key; it
+ * opens the account's ticket purchases, read straight from Sui rather than the server, so they can
+ * check each payment their wallet made.
  */
 export function TicketPurchases({ owner, shop, className }: Props) {
   const { t } = useTranslation();
-  const me = useMe();
   const [open, setOpen] = useState(false);
   const toggle = useRef<HTMLButtonElement>(null);
-  const history = useTicketPayments(owner, shop.payment);
+  const { id: userId } = useMe();
+  const history = useTicketPayments(owner, userId, shop.payment);
   const id = useId();
-  const name = me.ensName ?? shortAddress(owner);
 
   const packFor = (amount: bigint) => shop.packs.find((p) => p.priceJpyc === amount.toString());
 
@@ -108,7 +107,7 @@ export function TicketPurchases({ owner, shop, className }: Props) {
       >
         <span>{t(($) => $.tickets.purchases.label)}</span>
         <span aria-hidden="true">{"·"}</span>
-        <span className="ticket-purchases__name">{name}</span>
+        <span className="ticket-purchases__name">{shortAddress(owner)}</span>
         <CaretDown className="ticket-purchases__caret" aria-hidden="true" />
       </LabelButton>
       {open && (

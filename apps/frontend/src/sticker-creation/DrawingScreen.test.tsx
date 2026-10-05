@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import type { Tickets } from "@drawing-app/api/client";
+import type { Me, Tickets } from "@drawing-app/api/client";
 import { act, forwardRef, useEffect, useImperativeHandle } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing";
@@ -15,12 +15,16 @@ const kept = vi.hoisted(() => ({
 }));
 
 vi.mock("./canvas/DrawingCanvas", () => ({
-  DrawingCanvas: forwardRef(function Sheet(_props, ref) {
+  // A drawing put back on it can be undone, as the real sheet reports.
+  DrawingCanvas: forwardRef(function Sheet(
+    { onHistory }: { onHistory: (canUndo: boolean, canRedo: boolean) => void },
+    ref,
+  ) {
     useImperativeHandle(ref, () => ({
       undo() {},
       redo() {},
       reset() {},
-      load() {},
+      load: (ops: unknown[]) => onHistory(ops.length > 0, false),
       ops: () => [],
       finishStroke() {},
       inkForReading: () => document.createElement("canvas"),
@@ -42,7 +46,6 @@ vi.mock("./TimerDot", () => ({
     <button type="button" className="timer-stub" onClick={onToggle} />
   ),
 }));
-vi.mock("../identity/useMyAgeStatus", () => ({ useMyAgeStatus: () => "unknown" }));
 vi.mock("../identity/privy", () => ({ retryPrivySignIn: () => {} }));
 vi.mock("../tickets/ReserveTicketCheckout", () => ({ ReserveTicketCheckout: () => null }));
 vi.mock("./tools/ColorSheet", () => ({ ColorSheet: () => null }));
@@ -74,7 +77,7 @@ const settle = async (ms = 0) => {
 };
 
 /** Opens the drawing screen after a reload that kept `session`, with these tickets from the server. */
-function reopen(session: KeptSession, tickets: Partial<Tickets> = {}) {
+function reopen(session: KeptSession, tickets: Partial<Tickets> = {}, me: Me = TEST_ME) {
   vi.useFakeTimers();
   kept.session = session;
   view = renderWithApi(
@@ -83,6 +86,7 @@ function reopen(session: KeptSession, tickets: Partial<Tickets> = {}) {
       <SheetProbe />
     </>,
     emptyApi({ tickets: () => Promise.resolve({ ...FRESH_TICKETS, ...tickets }) }),
+    me,
   );
 }
 
@@ -90,12 +94,15 @@ const startOver = () =>
   [...document.querySelectorAll("button")].find(
     (button) => button.textContent === strings.stickerCreation.seal.startOver.en,
   );
+/** How the tools were set on a kept drawing. */
+const KEPT_TOOLS = { brushSize: 0.34, eraserSize: 0.52, smoothing: 30 };
 /** A sticker in progress kept at 0:00, with nothing drawn that matters here. */
 const keptAtTimeUp: KeptSession = {
   status: "found",
   ticket: 7,
   elapsedMs: SESSION_MS,
   nsfw: false,
+  tools: KEPT_TOOLS,
   ops: [],
 };
 const chip = () => document.querySelector(".seal-chip")?.textContent ?? "";
@@ -146,5 +153,29 @@ describe("the drawing screen after a reload", () => {
     expect(chip()).toContain("The sealing worker stopped");
     expect(startOver()).toBeUndefined();
     expect(sheet).toBe("held");
+  });
+});
+
+describe("the 18+ switch", () => {
+  const toggle = () => document.querySelector<HTMLButtonElement>(".nsfw-toggle");
+  /** A sticker in progress, marked 18+ while its artist had Show 18+ stickers on. */
+  const keptMarked: KeptSession = {
+    status: "found",
+    ticket: 7,
+    elapsedMs: 60_000,
+    nsfw: true,
+    tools: KEPT_TOOLS,
+    ops: [{ tool: "fill", x: 10, y: 10, color: "#1c1824", T: 0 }],
+  };
+
+  it("stays on a kept drawing marked 18+ after Show 18+ stickers went off, until it's switched off", async () => {
+    reopen(keptMarked, {}, { ...TEST_ME, nsfwOptIn: false });
+    await settle();
+    expect(toggle()?.getAttribute("aria-checked")).toBe("true");
+    expect(toggle()?.classList.contains("is-shown")).toBe(true);
+
+    act(() => toggle()?.click());
+    expect(toggle()?.getAttribute("aria-checked")).toBe("false");
+    expect(toggle()?.classList.contains("is-shown")).toBe(false);
   });
 });

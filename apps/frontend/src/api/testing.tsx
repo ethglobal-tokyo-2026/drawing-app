@@ -4,21 +4,20 @@ import { createRoot } from "react-dom/client";
 import { ApiError, type ApiClient } from "./apiClient";
 import { ApiProvider } from "./ApiProvider";
 import { TicketsProvider } from "../tickets/TicketsProvider";
-import { MeHolder } from "./MeHolder";
+import { MeContext } from "./meContext";
 
 declare global {
   var IS_REACT_ACT_ENVIRONMENT: boolean;
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
-/** The board's owner in tests: you. */
+/** The board's owner in tests: you, with Show 18+ stickers on. */
 export const TEST_OWNER: Person = {
   id: "me",
   handle: "you",
   lineDisplayName: "You",
   linePictureUrl: null,
-  ensName: "you.croquis-app.eth",
-  ageStatus: "adult",
+  nsfwOptIn: true,
 };
 
 /** You in tests. */
@@ -29,7 +28,6 @@ export const TEST_ME: Me = {
   languageChoice: null,
   createdAt: "2026-09-01T00:00:00.000Z",
   needsHandle: false,
-  ageVerifiedAt: null,
   newStickerCount: 0,
   unseenGratitudeCount: 0,
 };
@@ -60,11 +58,12 @@ export const recordGratitudeBody = (overrides: Partial<RecordGratitude> = {}): R
     intensity: 0.7,
     stage: [390, 741],
     durationMs: 0,
-    endReason: "sent",
+    endReason: "empty",
     switchedAtHit: null,
     hits: [0, 5000, 5000, 1],
     strokes: [],
     shakes: [],
+    strokePasses: [],
   },
   ...overrides,
 });
@@ -97,8 +96,7 @@ const unanswered = (method: string) => () =>
 export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
   return {
     setLanguageChoice: unanswered("setLanguageChoice"),
-    ageVerificationRequest: unanswered("ageVerificationRequest"),
-    verifyAge: unanswered("verifyAge"),
+    setNsfwOptIn: unanswered("setNsfwOptIn"),
     stickerBoard: () => Promise.resolve({ owner: TEST_OWNER, boardStickers: [] }),
     userStats: unanswered("userStats"),
     saveStickerPlacement: (stickerId, placement) =>
@@ -131,8 +129,6 @@ export function emptyApi(overrides: Partial<ApiClient> = {}): ApiClient {
     giftsForYou: () => Promise.resolve({ gifts: [] }),
     previewGiftForYou: unanswered("previewGiftForYou"),
     receiveGiftForYou: unanswered("receiveGiftForYou"),
-    personByEnsLabel: (label) =>
-      Promise.reject(new ApiError(404, { error: "user_not_found", detail: label })),
     ...overrides,
   };
 }
@@ -151,11 +147,11 @@ export function renderWithApi(ui: ReactNode, client: ApiClient = emptyApi(), me:
   document.body.append(host);
   const root = createRoot(host);
   const wrap = (node: ReactNode) => (
-    <MeHolder me={me}>
+    <MeContext value={me}>
       <ApiProvider client={client}>
         <TicketsProvider>{node}</TicketsProvider>
       </ApiProvider>
-    </MeHolder>
+    </MeContext>
   );
   act(() => root.render(wrap(ui)));
   return {

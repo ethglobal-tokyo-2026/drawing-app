@@ -53,7 +53,6 @@ function setup(ops: Op[], { reduced = false } = {}) {
     timelapse,
     canvas,
     width: BOX.width,
-    image: { width: PLACE.w, height: PLACE.h },
     reduced,
     frames: clock.source,
   });

@@ -62,8 +62,8 @@ export function encodeTimelapse({ ops, ink, place, density }: TimelapseInput): T
 export interface DecodedTimelapse {
   ink: { width: number; height: number };
   place: Rect;
-  /** Device pixels per sheet pixel where it was drawn; null before densities were recorded. */
-  density: number | null;
+  /** Device pixels per sheet pixel where it was drawn. */
+  density: number;
   ops: Op[];
 }
 
@@ -83,7 +83,7 @@ export function decodeTimelapse(timelapse: TimelapseV1): DecodedTimelapse {
   return {
     ink: { width: timelapse.ink[0], height: timelapse.ink[1] },
     place: { x, y, w, h },
-    density: timelapse.density ?? null,
+    density: timelapse.density,
     ops: timelapse.ops.map((op): Op =>
       op[0] === "fill"
         ? { tool: "fill", color: op[1], T: op[2], x: op[3], y: op[4] }

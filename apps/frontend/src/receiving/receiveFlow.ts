@@ -4,8 +4,8 @@ import { toMs, toPerson, toSticker, type PersonView, type StickerView } from "..
 import { problemOf, type Problem } from "../i18n/errorMessage";
 import { i18next } from "../i18n/i18n";
 
-/** Why a gift can't be received here: a refusal from the server, a link to no gift, or no server. */
-export type RefusalKind = ReceiveRefusal | "gift_not_found" | "needs_server";
+/** Why a gift can't be received here: a refusal from the server, or a link to no gift. */
+export type RefusalKind = ReceiveRefusal | "gift_not_found";
 
 /** A receivable preview, mapped: `sticker` is set, since only a receivable preview has one. */
 export interface GiftPreviewView {
@@ -47,8 +47,7 @@ const REFUSAL_KINDS: Record<RefusalKind, true> = {
   gift_expired: true,
   not_deposited: true,
   gift_not_found: true,
-  needs_server: true,
-  adults_only: true,
+  nsfw_not_opted_in: true,
 };
 
 const isRefusal = (code: string): code is RefusalKind => Object.hasOwn(REFUSAL_KINDS, code);
