@@ -26,6 +26,9 @@ export VITE_STICKER_ESCROW_ADDRESS="$STICKER_GIFT_ESCROW_ADDRESS"
 # Only an explicitly public RPC belongs in the browser bundle; the backend RPC can contain credentials.
 # Exported even when empty, so the build never takes one from the gitignored apps/frontend/.env.
 export VITE_STICKER_RPC_URL="${VITE_STICKER_RPC_URL:-}"
+# The CDN in front of the box, which the build loads its hashed files from (deploy/README.md); unset, they come from
+# the box.
+export CDN_ORIGIN="${CDN_ORIGIN:-}"
 "$ROOT/deploy/deploy-api.sh" --preflight-only
 
 # The live app shows the stat board's developer slip, so its test tools (the gratitude mini-game,
@@ -70,6 +73,22 @@ ssh "$TARGET" "$BOX_CURL -fsS http://127.0.0.1:3003/" | cmp -s - "$DIST/index.ht
 echo "✓ 127.0.0.1:3003 on the box"
 curl -fsS --max-time 15 "$URL/" | cmp -s - "$DIST/index.html" || { echo "✗ $URL/ doesn't match the build" >&2; exit 1; }
 echo "✓ $URL/"
+if [ -n "$CDN_ORIGIN" ]; then
+  # The entry script through the CDN, asked for as the app's page asks: the build's own bytes, with the CORS header a
+  # module script from another origin needs, or the app doesn't start.
+  entry="$(grep -o "$CDN_ORIGIN/assets/index-[A-Za-z0-9_-]*\.js" "$DIST/index.html" | head -1 || true)"
+  [ -n "$entry" ] || { echo "✗ index.html doesn't load its entry script from $CDN_ORIGIN" >&2; exit 1; }
+  got="$(mktemp -d)"
+  if ! { curl -fsS --max-time 15 -H "Origin: $URL" -D "$got/headers" -o "$got/body" "$entry" \
+    && cmp -s "$got/body" "$DIST/assets/${entry##*/}" \
+    && grep -qi '^access-control-allow-origin: \*' "$got/headers"; }; then
+    rm -rf "$got"
+    echo "✗ $CDN_ORIGIN doesn't serve the build's entry script with CORS ($entry); see deploy/README.md's CDN" >&2
+    exit 1
+  fi
+  rm -rf "$got"
+  echo "✓ $CDN_ORIGIN"
+fi
 
 # The auth server's JWKS must carry its key ID: serve.py answers unknown paths with the app, also with a 200.
 ssh "$TARGET" "$BOX_CURL -fsS http://127.0.0.1:8787/.well-known/jwks.json" | grep -q "\"kid\":\"$KEY_ID\"" \

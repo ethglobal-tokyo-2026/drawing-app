@@ -1,8 +1,10 @@
 import { context2d } from "../canvas/context2d";
 import { releaseCanvas } from "../../ui/releaseCanvas";
+import { startWorker } from "../../ui/startWorker";
 import { cutSticker, type CutSticker, type LayerName, type MakeCanvas } from "./cutSticker";
 import type { Point } from "./dieCut";
 import type { SealReply, SealRequest } from "./sealWorker";
+import sealWorkerScript from "./sealWorker?worker&url";
 import type { Rect } from "./stickerLayers";
 
 /** A sealed sticker: what's stored, and what the ceremony plays with. */
@@ -76,7 +78,7 @@ class WorkerDidNotStart extends Error {}
 async function cutInWorker(ink: HTMLCanvasElement): Promise<CutSticker | null> {
   const image = await createImageBitmap(ink);
   // A worker per seal, stopped once it answers, fails or times out, so none sits holding memory.
-  const worker = new Worker(new URL("./sealWorker.ts", import.meta.url), { type: "module" });
+  const { worker, stop } = startWorker(sealWorkerScript);
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await new Promise<CutSticker | null>((resolve, reject) => {
@@ -107,7 +109,7 @@ async function cutInWorker(ink: HTMLCanvasElement): Promise<CutSticker | null> {
     });
   } finally {
     clearTimeout(timer);
-    worker.terminate();
+    stop();
   }
 }
 

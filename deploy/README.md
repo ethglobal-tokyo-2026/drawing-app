@@ -17,13 +17,24 @@ One box serves the app behind HAProxy at `DEPLOY_URL`: `/api/` goes to the REST 
 Publishes everything, in order:
 
 1. `deploy-api.sh --preflight-only` checks the chain settings: `deploy/.env` merged with the box's `chain.env`.
-2. Builds the frontend, with the developer slip on and `STICKER_GIFT_ESCROW_ADDRESS` as its escrow, and the auth server.
+2. Builds the frontend, with the developer slip on, `STICKER_GIFT_ESCROW_ADDRESS` as its escrow and its hashed files on `CDN_ORIGIN` when set, and the auth server.
 3. `deploy-api.sh` publishes the API (below).
 4. `install-node.sh` puts the pinned Node on the box for the auth server.
 5. Syncs the site and the auth server, makes the signing key if it's missing, and restarts `sticker-board` and `sticker-auth` when their files changed.
-6. Checks that the box and `DEPLOY_URL` serve the build and the auth server's JWKS.
+6. Checks that the box and `DEPLOY_URL` serve the build and the auth server's JWKS, and that `CDN_ORIGIN`, when set, serves the build's entry script with its CORS header.
 
 `VITE_STICKER_RPC_URL`, optional, goes into the browser bundle, so it must be a public RPC; the API's RPC never does.
+
+## CDN
+
+With `CDN_ORIGIN` set in `deploy/.env`, the build's hashed files, under `/assets/`, load from a CloudFront distribution in front of the box, from edges near the people using the app; the box is far from Japan. `deploy.sh` passes it to the build (`apps/frontend/vite.config.ts`), then checks the distribution serves the entry script with its CORS header. Set it empty and deploy again to load everything from the box.
+
+Everything else stays on the box: index.html, which LIFF opens there, the public folder's files, which LINE fetches by their fixed paths, and the API and the auth server, since the session cookie goes only to the box.
+
+- Scripts and fonts from another origin load only with CORS, so `serve.py` sends `Access-Control-Allow-Origin: *` with every hashed file, and the distribution keeps it in its copies. Deploy that `serve.py` before setting `CDN_ORIGIN`, so no copy is made without it.
+- The sealing worker's script must come from the page's own origin, so it starts through a module of the page's own that imports the CDN's copy (`apps/frontend/src/ui/startWorker.ts`). Where the CDN's copy won't load, the cut runs on the main thread.
+- The distribution: its origin is `DEPLOY_URL`'s host over HTTPS. It answers GET and HEAD with the CachingOptimized cache policy, so no cookie or query string reaches the box, and the SimpleCORS response headers policy, and it compresses. It's on CloudFront's flat-rate Free plan, which needs a web ACL; this one has no rules.
+- A copy cached without the CORS header breaks the app until it expires, a year on. Clear it with `aws cloudfront create-invalidation --distribution-id <id> --paths '/assets/*'`.
 
 ## `./deploy/deploy-api.sh`
 

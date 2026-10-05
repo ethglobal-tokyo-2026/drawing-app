@@ -7,6 +7,9 @@ export async function maskPixels(
   size?: { width: number; height: number },
 ): Promise<ImageData> {
   const image = new Image();
+  // Sticker images may come from the CDN, and a canvas gives back the pixels of an image from another origin only
+  // when it was fetched with CORS.
+  image.crossOrigin = "anonymous";
   image.src = url;
   await image.decode();
   const canvas = document.createElement("canvas");

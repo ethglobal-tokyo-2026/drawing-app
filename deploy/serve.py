@@ -109,6 +109,10 @@ class Handler(SimpleHTTPRequestHandler):
     def end_headers(self):
         cache = self.hashed and self.code_sent in (200, 206, 304)
         self.send_header("Cache-Control", "public, max-age=31536000, immutable" if cache else "no-cache")
+        if self.hashed:
+            # The CDN serves these to the app's page, another origin, where module scripts and fonts load only with
+            # CORS. It keeps its copy for a year, so every response carries the header, whoever asked.
+            self.send_header("Access-Control-Allow-Origin", "*")
         super().end_headers()
 
     def log_message(self, fmt, *args):
