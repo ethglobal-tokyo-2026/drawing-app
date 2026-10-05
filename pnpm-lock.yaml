@@ -168,6 +168,9 @@ importers:
 
   .:
     devDependencies:
+      '@mysten/sui':
+        specifier: 2.31.3
+        version: 2.31.3(typescript@7.0.2)
       husky:
         specifier: ^9.1.7
         version: 9.1.7
