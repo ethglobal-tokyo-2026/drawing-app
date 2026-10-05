@@ -139,7 +139,7 @@ Only ad0ll can do these. They block nothing:
 It lives in `contracts/sui-sticker-contract/stickers/`, beside `contracts/sui-payment-contract`, which stays as it is and stays published.
 
 - It's the draft in `~/.cache/drawing-app-fresh-start/sui-move-research/stickers/`, whose 16 tests pass.
-- One change: an `image_url` field replaces the draft's veiled hash, so Display needs no hex formatting.
+- One change: an `image` field, the public image's file name, replaces the draft's veiled hash. Display joins it to the image host it holds, so no sticker carries the host, and moving it is one Display edit.
 
 `Move.toml`:
 
@@ -198,8 +198,9 @@ public struct Sticker has key, store {
     height: u32,
     /// Marked 18+ by its Original Artist.
     nsfw: bool,
-    /// The image anyone may see: an NSFW sticker's veiled image.
-    image_url: String,
+    /// The file name, under Display's image host, of the image anyone may see: an NSFW sticker's
+    /// veiled image.
+    image: String,
 }
 
 public struct StickerSealed has copy, drop {
@@ -257,11 +258,11 @@ public fun mint(
     width: u32,
     height: u32,
     nsfw: bool,
-    image_url: String,
+    image: String,
     ctx: &TxContext,
 ): ID {
     config.assert_server(ctx);
-    assert!(!key.is_empty() && artist != @0x0 && !image_url.is_empty(), EInvalidSticker);
+    assert!(!key.is_empty() && artist != @0x0 && !image.is_empty(), EInvalidSticker);
     assert!(content_hash.length() == HASH_LENGTH && width > 0 && height > 0, EInvalidSticker);
     let derivation = StickerKey(key);
     assert!(!derived_object::exists(&registry.id, derivation), EAlreadyMinted);
@@ -274,7 +275,7 @@ public fun mint(
         width,
         height,
         nsfw,
-        image_url,
+        image,
     };
     let id = object::id(&sticker);
     event::emit(StickerSealed { sticker: id, key, number, artist, nsfw });
@@ -303,7 +304,7 @@ public fun height(sticker: &Sticker): u32 { sticker.height }
 
 public fun nsfw(sticker: &Sticker): bool { sticker.nsfw }
 
-public fun image_url(sticker: &Sticker): String { sticker.image_url }
+public fun image(sticker: &Sticker): String { sticker.image }
 
 #[test_only]
 public fun init_for_testing(ctx: &mut TxContext) { init(ctx) }
@@ -527,7 +528,7 @@ public fun init_for_testing(ctx: &mut TxContext) { init(ctx) }
 
 - `name`: `Sticker No.{number}`
 - `description`: `A sticker drawn on Croquis.`
-- `image_url`: `{image_url}`
+- `image_url`: `<image host>/{image}`. The host is a literal the publish script passes to create_display: the box's `CDN_BASE_URL`. `publish-sui.mjs --set-image-host <url>` edits it later with the DisplayCap the deployer holds, and every sticker follows.
 - `project_url`: `https://liff.line.me/<the LIFF id in apps/frontend/src/line/liff.ts>`
 
 **Tests** come from the draft's two files, one behavior each.
@@ -774,8 +775,8 @@ export interface MintRequest {
   width: number;
   height: number;
   nsfw: boolean;
-  /** The public image: an NSFW sticker's veiled one. */
-  imageUrl: string;
+  /** The public image's file name, under Display's image host: an NSFW sticker's veiled one. */
+  image: string;
 }
 
 /** Croquis's package and objects on Sui. Each builder answers a transaction kind to sponsor. */
@@ -819,14 +820,15 @@ export interface SuiChain {
 
 ### `apps/api/src/sui/`
 
-- **`oneAtATime(key, fn)`** (`oneAtATime.ts`): a keyed promise chain. Each flow holds `sticker:<id>`, `gift:<id>` or `purchase:<id>` while it reads, sponsors, submits and settles.
+- **`oneAtATime(key, fn)`** (`oneAtATime.ts`): a keyed promise chain. Each flow holds `sticker:<id>`, `gift:<id>` or, for ticket purchase start and its submit, `payer:<sui address>` (the key `sui_transactions_open_payment` uses) while it reads, sponsors, submits and settles.
 - **`transactions.ts`** is the only module that writes `sui_transactions`:
   - **`sponsored(deps, row, kind)`:** sponsors through `gasStation` and inserts the open row. Rejects with SponsorshipError.
   - **`runAsServer(deps, row)`:** signs with `signAsServer`, stores the signature, submits, and settles.
   - **`runSigned(deps, row, signature)`:**
     - checks the person's signature with `verifyTransactionSignature(txBytes, signature, { address: row.sender })`;
     - stores it, submits, and settles;
-    - a row already submitted is followed instead, so a retry after a lost answer never sends a second transaction.
+    - a row already submitted is followed instead, so a retry after a lost answer never sends a second transaction;
+    - a row whose sponsorship has lapsed (past `expiresAt`) is refused and dropped, so the flow can sponsor again at once.
   - **`follow(deps, row)`:**
     - Sui shows the transaction → settle `succeeded` or `failed`.
     - Before `expiresAt`, with both signatures stored → submit again. The bytes are the same, so it can run only once.
@@ -837,6 +839,8 @@ export interface SuiChain {
 
 ### Flows
 
+Every gift flow, under `gift:<id>`, first settles the gift's open row of any kind. A submitted row is followed to its end. An unsubmitted row is dropped when this flow goes ahead: the first transaction to land wins, so an unsigned take-out never holds up a claim or a return, and a stale deposit never holds up Packaging.
+
 - **Sealing → mint** (`stickers/seal.ts`, `stickers/mint.ts`):
   - The content hash is the sha256 of the PNG (`node:crypto`). Veil and insert as today, with `object_id` null.
   - `mintSticker`, under `sticker:<id>`:
@@ -846,7 +850,7 @@ export interface SuiChain {
        - `failed` with EAlreadyMinted → read the object and record it;
        - `dead` or other failures → build a new mint.
     3. Get the artist's Sui address. With none, the mint fails, and Sealing answers 503 `mint_failed` ("Retry Sealing with the same ticket").
-    4. Build `mintKind`, with `imageUrl` from `publicStickerViewer(images).images(sticker).png`, then call `sponsored` and `runAsServer`. On success, `object_id = stickerObjectId(stickerId)`, checked against the `StickerSealed` event.
+    4. Build `mintKind`, with `image` the public PNG's file name (`<veiled hash or content hash>.png`, by the image store's naming), then call `sponsored` and `runAsServer`. On success, `object_id = stickerObjectId(stickerId)`, checked against the `StickerSealed` event.
   - Mock mode mints nothing, as today.
   - **The mint catch-up** runs at boot and after each Tokyo midnight. It mints stickers with `object_id` null, oldest first, skipping `no_live_person` and `no_sui_wallet`. Open rows are followed first. The `not_held_by_artist` skip goes.
 - **Packaging → deposit** (`gifts/packaging.ts`, `gifts/deposit.ts`). `POST /api/gifts`:
@@ -858,7 +862,8 @@ export interface SuiChain {
      - new: 409 `no_sui_wallet` when the giver has none.
   2. A packed gift for this sticker:
      - its open deposit row is live (more than `SPONSORSHIP_MARGIN_MS` before `expiresAt`) → answer that row again;
-     - its row is dead → sponsor a new deposit for the same gift.
+     - submitted → follow it first;
+     - otherwise, dead or unsubmitted and not live → drop it if open, and sponsor a new deposit for the same gift.
 
      The token is in the first answer only, as today.
 
@@ -870,7 +875,7 @@ export interface SuiChain {
   - runs the open deposit row with that digest through `runSigned`;
   - `succeeded` → `readGift` reads pending → `escrow_status` pending → 200 `{ gift }`;
   - `failed` → the gift closes as `taken_out`, escrow `missing` → 409 `transaction_failed`, with Sui's words;
-  - dead, or no open row with that digest → 409 `sponsorship_expired`. The app packages again and gets a fresh deposit.
+  - dead, lapsed (`runSigned` drops it), or no open row with that digest → 409 `sponsorship_expired`. The app packages again and gets a fresh deposit.
 
 - **Take-out**:
   - `POST /api/gifts/:giftId/take-out/start`, under `gift:<id>`, depending on where the gift stands:
@@ -886,15 +891,18 @@ export interface SuiChain {
 - **Receiving → claim** (`gifts/receiving.ts`):
   - Refusals as today, with `nsfw_not_opted_in`. The token check stays on the server: `sha256(token) == claim_commitment`. So does the for-you exception.
   - The receiver's Sui address; with none, 409 `no_sui_wallet`.
-  - Under `gift:<id>`, follow an open claim row first:
-    - it ran for this receiver (`readGift().recipient`) → record the receive;
-    - it ran for someone else → `already_received`.
+  - Under `gift:<id>`, settle the gift's open row first, as above. A claim that ran:
+    - for this receiver (`readGift().recipient`) → record the receive;
+    - for someone else → `already_received`.
+
+    A take-out that landed first → `taken_back`.
+
   - Otherwise, if escrow is pending and the gift hasn't expired: sponsor `claimKind(giftId, receiver)` and `runAsServer`.
     - `succeeded` → record the receive in one DB transaction as today, without `claim_tx_hash`, then send the giver notice.
     - `failed` → `readGift`: taken_out → `taken_back`, expired_returned → `gift_returned`, anything else → 503 `claim_failed`.
   - `claimLandedBeforeExpiry` becomes "a claim row for the gift succeeded".
 - **The expiry sweep** (`gifts/expiry.ts`) takes packed and sent gifts past their expiry, oldest first:
-  - First, follow the gift's open row.
+  - First, settle the gift's open row, as above. An unsigned take-out is dropped, so the return goes ahead.
   - Escrow missing, with no submitted deposit → close as `taken_out` at once. `CLOSE_UNLANDED_AFTER_MS` goes.
   - Escrow pending → `returnKind`, sponsored, then `runAsServer` → `returned`.
   - Claimed → leave it for Receiving's reconcile, as today.
@@ -1191,7 +1199,8 @@ In `stickerBoard.settings.nsfw`, each with its `/** where */` comment:
   - `sui move build --dump-bytecode-as-base64` for `contracts/sui-sticker-contract/stickers`;
   - one publish transaction from `SUI_DEPLOYER_PRIVATE_KEY`, which sends the UpgradeCap to the deployer;
   - Shinami sponsors it when Gas Station takes a Publish; otherwise the deployer pays;
-  - then `set_server(SUI_SERVER address)` and `create_display`, with the fields above;
+  - then `set_server(SUI_SERVER address)`, and `create_display` with the fields above and the image host (`--image-host`, the box's `CDN_BASE_URL`), sending the DisplayCap to the deployer;
+  - `--set-image-host <url>` edits Display's `image_url` later with that cap;
   - it prints `KEY=value` lines for `drawing-api.env`, and never a key.
 - **Toolchain:**
   - **Delete from `packages/sticker-chain`:** the Solidity (`contracts/`, `script/`, `test/foundry/`), `foundry.toml`, `wagmi.config.ts`, `src/generated/`, `src/seal-sticker.ts`, `src/gift-sticker.ts`, `src/bytes32.ts` and their tests, the `lib/` submodules and `.gitmodules`.
@@ -1221,6 +1230,9 @@ In `stickerBoard.settings.nsfw`, each with its `/** where */` comment:
 At most six run at once.
 
 **Every lane:**
+
+- Commits at least every 20 minutes, `wip:` commits included, so a stalled lane loses nothing. The coordinator squashes before the merge.
+- After switching to its branch, restores any tracked file `git status` shows deleted (`git checkout -- .`): fresh agent worktrees have come up missing files.
 
 - Works in its own worktree (`git switch -c <lane> <tip of chore/fresh-start>`).
 - Until Task 11 lands, initializes the Foundry submodules before `pnpm check`, per `packages/sticker-chain/README.md`'s Commands.
