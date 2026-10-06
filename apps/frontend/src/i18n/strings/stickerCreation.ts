@@ -36,6 +36,11 @@ export const stickerCreation = {
         en: "{{time}} left, paused while you set smoothing",
         ja: "残り{{time}}、手ぶれ補正を調整している間は一時停止中",
       },
+      /** Drawing screen, top left: read by screen readers after the timer dot's name while the clear bar is open, which stops the clock */
+      clear: {
+        en: "{{time}} left, paused while you choose whether to clear the sheet",
+        ja: "残り{{time}}、キャンバスを消去するか選んでいる間は一時停止中",
+      },
       /** Drawing screen, top left: read by screen readers after the timer dot's name while a finger is on the size rail, which stops the clock */
       size: {
         en: "{{time}} left, paused while you set the brush size",
@@ -178,6 +183,8 @@ export const stickerCreation = {
     color: { en: "Color", ja: "カラー" },
     /** Drawing screen, top right: the smoothing tile's name for screen readers, the title of the smoothing bar it opens, and that bar's slider's name */
     smoothing: { en: "Smoothing", ja: "手ぶれ補正" },
+    /** Drawing screen, top right: the clear tile at the end of the tool strip, which opens the clear bar, named for screen readers; dimmed while the sheet is blank */
+    clear: { en: "Clear the sheet", ja: "キャンバスを消去" },
   },
   colorSheet: {
     /** Color sheet, which slides up over the drawing screen from the color tile: its heading, and its name for screen readers */
@@ -295,6 +302,20 @@ export const stickerCreation = {
     raw: { en: "Raw", ja: "弱" },
     /** Smoothing bar, under the tool strip: the small label at the slider's right end, the most smoothing; hidden from screen readers */
     smooth: { en: "Smooth", ja: "強" },
+  },
+  /** The bar under the tools that asks before the sheet is cleared. */
+  clearBar: {
+    /** Clear bar, under the tool strip after a tap on the clear tile: its title, which also names it for screen readers */
+    title: { en: "Clear the sheet?", ja: "キャンバスを<wbr/>消去しますか？" },
+    /** Clear bar: the line under the title, also read by screen readers; the timer keeps its time rather than starting over */
+    line: {
+      en: "Undo brings it back. The timer won’t start over.",
+      ja: "「元に戻す」で<wbr/>戻せます。<wbr/>タイマーは<wbr/>リセット<wbr/>されません。",
+    },
+    /** Clear bar: the quiet link that closes it with nothing cleared */
+    cancel: { en: "Cancel", ja: "キャンセル" },
+    /** Clear bar: the red button that clears the sheet; undo brings the drawing back */
+    clear: { en: "Clear", ja: "消去" },
   },
   history: {
     /** Drawing screen, bottom left: the undo tile, named for screen readers */

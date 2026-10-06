@@ -40,6 +40,8 @@ export type SessionEvent =
   | { type: "seal-tap"; now: number; hasInk: boolean }
   | { type: "arm-expired"; now: number }
   | { type: "canvas-touch" }
+  /** The sheet was cleared: the seal key disarms, as at a touch on the sheet, and nothing else changes. */
+  | { type: "clear" }
   | { type: "time-up" }
   | { type: "sealed" }
   /**
@@ -92,6 +94,7 @@ export function transition(session: Session, event: SessionEvent): Result {
         ? to("drawing")
         : unchanged;
     case "canvas-touch":
+    case "clear":
       return phase === "armed" ? to("drawing") : unchanged;
     case "time-up":
       return phase === "drawing" || phase === "armed" ? to("sealing", ["seal"]) : unchanged;
@@ -160,13 +163,13 @@ export function describeSealFailure(error: unknown, sent: boolean): SealProblem 
 
 /**
  * Why the clock is held: the person's pause, a hidden page, the drawing screen being covered, or a
- * tool in hand (the color sheet, the smoothing bar, a finger on the size rail). Only a started clock
- * is held; before the first stroke it just waits, and nothing shows as paused.
+ * tool in hand (the color sheet, the smoothing bar, the clear bar, a finger on the size rail). Only a
+ * started clock is held; before the first stroke it just waits, and nothing shows as paused.
  */
-export type Hold = "paused" | "hidden" | "away" | "color" | "smoothing" | "size";
+export type Hold = "paused" | "hidden" | "away" | "color" | "smoothing" | "clear" | "size";
 
 /** Which hold the timer shows, most important first. */
-const HOLDS: readonly Hold[] = ["paused", "hidden", "away", "color", "smoothing", "size"];
+const HOLDS: readonly Hold[] = ["paused", "hidden", "away", "color", "smoothing", "clear", "size"];
 
 /** The hold the timer shows, or null when nothing holds it. */
 export function heldBy(holds: ReadonlySet<Hold>): Hold | null {

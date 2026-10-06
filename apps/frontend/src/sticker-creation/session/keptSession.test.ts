@@ -2,7 +2,7 @@
 import { IDBFactory as FakeIndexedDB } from "fake-indexeddb";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { personKey } from "../../ui/deviceStorage";
-import type { Op } from "../canvas/ops";
+import type { Op, Step } from "../canvas/ops";
 import {
   firstChanged,
   keptColor,
@@ -28,18 +28,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** `userId` starts a session on ticket 7 and draws `ops`. */
-function draw(userId: string, ops: Op[], onKept?: (kept: boolean) => void) {
+/** `userId` starts a session on ticket 7 and draws `steps`. */
+function draw(userId: string, steps: Step[], onKept?: (kept: boolean) => void) {
   const keeper = new SessionKeeper(userId, onKept);
   keeper.start(7);
-  keeper.save(ops, 1000);
+  keeper.save(steps, 1000);
   return keeper;
 }
 
-/** The ops kept for `userId`; the load also waits for every write started before it. */
-async function keptOps(userId: string) {
+/** The steps kept for `userId`; the load also waits for every write started before it. */
+async function keptSteps(userId: string) {
   const kept = await loadKeptSession(userId);
-  return kept.status === "found" ? kept.ops : kept.status;
+  return kept.status === "found" ? kept.steps : kept.status;
 }
 
 /** Holds the one database's stores in a transaction until the returned release, as a slow disk would. */
@@ -71,6 +71,8 @@ describe("keptColor", () => {
     expect(keptColor([stroke("#1478C8"), stroke("#B4299A")])).toBe("#B4299A");
     // A fill counts; the eraser doesn't draw in a color.
     expect(keptColor([stroke("#1478C8"), fill, erase])).toBe("#00868B");
+    // A clear draws in no color either.
+    expect(keptColor([stroke("#1478C8"), { tool: "clear" }])).toBe("#1478C8");
     // Nothing drawn: it keeps the color a fresh sheet starts in.
     expect(keptColor([])).toBeNull();
   });
@@ -95,10 +97,17 @@ describe("the drawing kept on this device", () => {
     const [mine, theirs] = [someone(), someone()];
     const [a, b, c] = ["a", "b", "c"].map(stroke);
     draw(mine, [a, b]);
-    expect(await keptOps(theirs)).toBe("none");
+    expect(await keptSteps(theirs)).toBe("none");
     draw(theirs, [c]);
-    expect(await keptOps(mine)).toEqual([a, b]);
-    expect(await keptOps(theirs)).toEqual([c]);
+    expect(await keptSteps(mine)).toEqual([a, b]);
+    expect(await keptSteps(theirs)).toEqual([c]);
+  });
+
+  it("brings a drawing back with its clears, so undo can still reach what was cleared", async () => {
+    const userId = someone();
+    const steps: Step[] = [stroke("a"), { tool: "clear" }, stroke("b")];
+    draw(userId, steps);
+    expect(await keptSteps(userId)).toEqual(steps);
   });
 
   it("keeps how the tools were set, and a screen's first render clears nothing kept", async () => {
@@ -122,7 +131,7 @@ describe("the drawing kept on this device", () => {
     after.keepNsfw(false);
     expect(await loadKeptSession(userId)).toMatchObject({
       status: "found",
-      ops,
+      steps: ops,
       elapsedMs: 1000,
       nsfw: true,
     });
@@ -146,7 +155,7 @@ describe("the drawing kept on this device", () => {
     const userId = someone();
     const ops = ["a", "b"].map(stroke);
     draw(userId, ops);
-    expect(await keptOps(userId)).toEqual(ops);
+    expect(await keptSteps(userId)).toEqual(ops);
     const release = await holdStores();
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const loading = loadKeptSession(userId);
@@ -157,8 +166,8 @@ describe("the drawing kept on this device", () => {
     new SessionKeeper(userId).carry(kept.ticket);
     release();
     vi.useRealTimers();
-    expect(await kept.later).toMatchObject({ status: "found", ops });
-    expect(await keptOps(userId)).toEqual(ops);
+    expect(await kept.later).toMatchObject({ status: "found", steps: ops });
+    expect(await keptSteps(userId)).toEqual(ops);
   });
 
   it("goes on keeping strokes after the browser closes its connection, and says while it can't", async () => {
@@ -173,10 +182,10 @@ describe("the drawing kept on this device", () => {
       opened.value.result.close();
     };
     const keeper = draw(userId, [a], onKept);
-    expect(await keptOps(userId)).toEqual([a]);
+    expect(await keptSteps(userId)).toEqual([a]);
     closeLast();
     keeper.save([a, b], 2000);
-    expect(await keptOps(userId)).toEqual([a, b]);
+    expect(await keptSteps(userId)).toEqual([a, b]);
     expect(onKept).not.toHaveBeenCalled();
 
     closeLast();
@@ -188,6 +197,6 @@ describe("the drawing kept on this device", () => {
     open.mockRestore();
     keeper.save([a, b, c], 4000);
     await vi.waitFor(() => expect(onKept).toHaveBeenLastCalledWith(true));
-    expect(await keptOps(userId)).toEqual([a, b, c]);
+    expect(await keptSteps(userId)).toEqual([a, b, c]);
   });
 });

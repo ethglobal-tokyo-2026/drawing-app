@@ -3,7 +3,14 @@ import { SESSION_MS, type Hold } from "./session";
 import type { FrameSource } from "../../ui/frameSource";
 import { SessionClock } from "./useSessionClock";
 
-const NO_HOLDS = { paused: false, away: false, color: false, smoothing: false, size: false };
+const NO_HOLDS = {
+  paused: false,
+  away: false,
+  color: false,
+  smoothing: false,
+  clear: false,
+  size: false,
+};
 
 /** A clock on hand-driven frames; `advance(ms)` runs a frame every `step` ms up to `ms` later. */
 function setup({ started = true } = {}) {
@@ -51,7 +58,7 @@ describe("SessionClock", () => {
 
   it("holds for each hold and counts again when it lets go", () => {
     const { clock, counted } = setup();
-    for (const hold of ["paused", "away", "color", "smoothing", "size"] as const) {
+    for (const hold of ["paused", "away", "color", "smoothing", "clear", "size"] as const) {
       clock.setHolds({ ...NO_HOLDS, [hold]: true });
       expect(counted(1000)).toBe(0);
       expect(clock.getView().held).toBe<Hold>(hold);

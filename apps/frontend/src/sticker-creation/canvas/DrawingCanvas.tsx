@@ -9,18 +9,22 @@ import {
 import { useTranslation } from "../../i18n/react";
 import { InkEngine, type InkEvents, type InkSettings } from "./inkEngine";
 import { InkSurface } from "./inkSurface";
-import type { Op } from "./ops";
+import type { Op, Step } from "./ops";
 import "./DrawingCanvas.css";
 
 export interface DrawingCanvasHandle {
   undo: () => void;
   redo: () => void;
+  /** Sets the drawing aside for a blank sheet; undo brings it back. */
+  clear: () => void;
   /** A fresh sheet, with nothing to undo. */
   reset: () => void;
-  /** A sheet with these ops on it, as a drawing picked up after a reload has. */
-  load: (ops: readonly Op[]) => void;
+  /** A sheet with these steps on it, as a drawing picked up after a reload has. */
+  load: (steps: readonly Step[]) => void;
   /** The ops on the ink, oldest first. */
   ops: () => readonly Op[];
+  /** Every step, oldest first, clears included: what the drawing kept on the device holds. */
+  steps: () => readonly Step[];
   /** Ends a stroke in progress as if the pointer lifted. */
   finishStroke: () => void;
   /** A copy of the ink, transparent where nothing is drawn, to read pixels from. */
@@ -61,7 +65,7 @@ export function DrawingCanvas({ ref, settings, active, ...events }: Props) {
     if (!sheet || !canvas) return;
     const surface = new InkSurface(canvas);
     const engine = new InkEngine(surface, initialSettings(), {
-      onHistory: (canUndo, canRedo) => onHistory(canUndo, canRedo),
+      onHistory: (state) => onHistory(state),
       onCommit: (op) => onCommit(op),
       onBlocked: () => onBlocked(),
       onDismissPanel: () => onDismissPanel(),
@@ -105,9 +109,11 @@ export function DrawingCanvas({ ref, settings, active, ...events }: Props) {
     () => ({
       undo: () => ink.current?.engine.undo(),
       redo: () => ink.current?.engine.redo(),
+      clear: () => ink.current?.engine.clear(),
       reset: () => ink.current?.engine.reset(),
-      load: (ops) => ink.current?.engine.load(ops),
+      load: (steps) => ink.current?.engine.load(steps),
       ops: () => ink.current?.engine.ops ?? [],
+      steps: () => ink.current?.engine.steps ?? [],
       finishStroke: () => ink.current?.engine.finishStroke(),
       inkForReading: () => ink.current?.surface.copyForReading() ?? null,
       inkDensity: () => ink.current?.surface.density ?? 1,

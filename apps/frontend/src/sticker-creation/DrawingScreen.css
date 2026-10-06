@@ -41,7 +41,7 @@
 /* While sealing, the tools step back; the ceremony owns the screen. A seal to try again keeps only
    the seal key and its chip, since the sheet can't change. */
 .drawing-screen:is(.is-sealing, .is-retrying)
-  :is(.drawing-top, .smoothing-bar, .size-rail, .history-buttons),
+  :is(.drawing-top, .smoothing-bar, .clear-bar, .size-rail, .history-buttons),
 .drawing-screen.is-sealing :is(.seal-chip, .seal-key) {
   opacity: 0;
   pointer-events: none;
@@ -50,7 +50,7 @@
 
 /* Once faded, the tools leave the tab order and the screen reader's too, so only the seal key is left. */
 .drawing-screen:is(.is-sealing, .is-retrying)
-  :is(.drawing-top, .smoothing-bar, .size-rail, .history-buttons) {
+  :is(.drawing-top, .smoothing-bar, .clear-bar, .size-rail, .history-buttons) {
   visibility: hidden;
   transition-property: opacity, visibility;
   transition-delay: 0s, 220ms;

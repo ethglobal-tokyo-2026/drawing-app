@@ -27,6 +27,7 @@ import { QuietLink } from "../ui/QuietLink";
 import { releaseCanvas } from "../ui/releaseCanvas";
 import { sizePx } from "./canvas/brush";
 import { DrawingCanvas, type DrawingCanvasHandle } from "./canvas/DrawingCanvas";
+import type { HistoryState } from "./canvas/inkEngine";
 import { isFirstVisit } from "./drawVisits";
 import { lazyRadius } from "./canvas/lazyBrush";
 import type { Op, Tool } from "./canvas/ops";
@@ -58,6 +59,7 @@ import {
 } from "./session/session";
 import { useSessionClock } from "./session/useSessionClock";
 import { TimerDot, type TimerDotHandle } from "./TimerDot";
+import { ClearBar } from "./tools/ClearBar";
 import { ColorSheet } from "./tools/ColorSheet";
 import { HistoryButtons } from "./tools/HistoryButtons";
 import { FIRST_RECENT, startingColor, withRecent } from "./tools/palette";
@@ -126,11 +128,13 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const root = useRef<HTMLDivElement>(null);
   const canvas = useRef<DrawingCanvasHandle>(null);
   const timer = useRef<TimerDotHandle>(null);
+  const undoTile = useRef<HTMLButtonElement>(null);
   const api = useApi();
   const tickets = useTickets();
   const me = useMe();
   const colorSheetId = useId();
   const smoothingBarId = useId();
+  const clearBarId = useId();
 
   const [tool, setTool] = useState<Tool>("brush");
   const [color, setColor] = useState(() => startingColor());
@@ -142,7 +146,11 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const [panel, setPanel] = useState<Panel>(null);
   const [paused, setPaused] = useState(false);
   const [sizing, setSizing] = useState(false);
-  const [history, setHistory] = useState({ canUndo: false, canRedo: false });
+  const [history, setHistory] = useState<HistoryState>({
+    canUndo: false,
+    canRedo: false,
+    hasInk: false,
+  });
   const [session, setSession] = useState(FRESH_SESSION);
   // Transitions start from here, so one sent after an await still starts from the latest session.
   const latest = useRef(FRESH_SESSION);
@@ -290,7 +298,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     canvas.current?.finishStroke();
     const ops = [...(canvas.current?.ops() ?? [])];
     // The drawing kept on this device holds what the sticker is cut from, the stroke just ended too.
-    keeper.save(ops, clock.elapsed);
+    keeper.save(canvas.current?.steps() ?? [], clock.elapsed);
     const density = canvas.current?.inkDensity() ?? 1;
     const marked = nsfw.current;
     const ink = canvas.current?.inkForReading();
@@ -517,7 +525,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   const keepProgress = () => {
     const { phase } = latest.current;
     if (phase === "drawing" || phase === "armed")
-      keeper.save(canvas.current?.ops() ?? [], clock.elapsed);
+      keeper.save(canvas.current?.steps() ?? [], clock.elapsed);
   };
   const keepOnHide = useEffectEvent(keepProgress);
   useEffect(() => {
@@ -536,15 +544,15 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   /** Puts a kept drawing back on the sheet, on its own ticket and in its own color, paused. */
   function putBack(found: Extract<KeptDrawing, { status: "found" }>) {
     // Nothing drawn and no time counted: Start spent the ticket and the clock still waits.
-    const drawn = found.ops.length > 0 || found.elapsedMs > 0;
-    canvas.current?.load(found.ops);
+    const drawn = found.steps.length > 0 || found.elapsedMs > 0;
+    canvas.current?.load(found.steps);
     // It keeps its own color rather than the one a fresh sheet would start in.
-    const own = keptColor(found.ops);
+    const own = keptColor(found.steps);
     if (own) {
       setColor(own);
       startedIn.current = own;
     }
-    keeper.resume(found.ticket, found.ops, found.elapsedMs, found.nsfw, found.tools);
+    keeper.resume(found.ticket, found.steps, found.elapsedMs, found.nsfw, found.tools);
     keepNsfw(found.nsfw);
     if (found.tools) {
       setSizes({ brush: found.tools.brushSize, eraser: found.tools.eraserSize });
@@ -720,6 +728,8 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
   if (pickedUp === "restored" && !paused) setPickedUp(null);
   if (pickedUp !== null && pickedUp !== "restored" && !waiting) setPickedUp(null);
   if (startsNote && !waiting) setStartsNote(false);
+  // Undo can take the sheet back to blank under an open clear bar, which then has nothing to clear.
+  if (panel === "clear" && !history.hasInk) setPanel(null);
 
   // Before the first stroke there's nothing to pause: a tap on the timer says when it starts.
   const onTimerTap = () => {
@@ -738,6 +748,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       away: !active,
       color: panel === "color",
       smoothing: panel === "smoothing",
+      clear: panel === "clear",
       size: sizing,
     });
   }, [clock, paused, active, panel, sizing]);
@@ -836,6 +847,15 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     setColor(hex);
     if (tool === "eraser") setTool("brush");
   };
+  // The clock, the ticket and the tools carry on, and undo brings the drawing back, so focus goes there.
+  const clearSheet = () => {
+    undoTile.current?.focus({ preventScroll: true });
+    setPanel(null);
+    canvas.current?.clear();
+    send({ type: "clear" });
+    setSealProblem(null);
+    setKeyHint(false);
+  };
 
   useShortcuts({
     enabled: !locked,
@@ -846,11 +866,12 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
     closePanel: () => setPanel(null),
   });
 
-  // A tap anywhere but the bar or its button closes the smoothing bar. The sheet is left to the ink
-  // engine, which closes it and swallows the tap: closing it here first would let the tap draw.
-  const closeSmoothingOutside = (e: ReactPointerEvent) => {
-    if (panel !== "smoothing" || !(e.target instanceof Element)) return;
-    const own = `#${CSS.escape(smoothingBarId)}, [aria-controls="${smoothingBarId}"], .ink-sheet`;
+  // A tap anywhere but an open bar or its tile closes the bar. The sheet is left to the ink engine,
+  // which closes it and swallows the tap: closing it here first would let the tap draw.
+  const closeBarOutside = (e: ReactPointerEvent) => {
+    const bar = panel === "smoothing" ? smoothingBarId : panel === "clear" ? clearBarId : null;
+    if (!bar || !(e.target instanceof Element)) return;
+    const own = `#${CSS.escape(bar)}, [aria-controls="${bar}"], .ink-sheet`;
     if (!e.target.closest(own)) setPanel(null);
   };
 
@@ -861,7 +882,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       style={{ "--draw-color": color }}
       // It stays mounted under the board so a sticker in progress survives; covered, it takes no focus.
       inert={!active}
-      onPointerDownCapture={closeSmoothingOutside}
+      onPointerDownCapture={closeBarOutside}
     >
       <DrawingCanvas
         ref={canvas}
@@ -877,9 +898,11 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
           armed: session.phase === "armed",
           sessionMs: () => clock.elapsed,
         }}
-        onHistory={(canUndo, canRedo) => {
+        onHistory={(next) => {
           setHistory((h) =>
-            h.canUndo === canUndo && h.canRedo === canRedo ? h : { canUndo, canRedo },
+            h.canUndo === next.canUndo && h.canRedo === next.canRedo && h.hasInk === next.hasInk
+              ? h
+              : next,
           );
           keepProgress();
         }}
@@ -907,8 +930,10 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         <ToolStrip
           tool={tool}
           panel={panel}
+          canClear={history.hasInk}
           colorSheetId={colorSheetId}
           smoothingBarId={smoothingBarId}
+          clearBarId={clearBarId}
           onTool={pickTool}
           onPanel={setPanel}
         />
@@ -929,6 +954,12 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         value={smoothing}
         onChange={setSmoothing}
       />
+      <ClearBar
+        id={clearBarId}
+        open={panel === "clear"}
+        onClear={clearSheet}
+        onClose={() => setPanel(null)}
+      />
       <SizeRail
         value={sizes[sizeKey]}
         eraser={tool === "eraser"}
@@ -939,12 +970,13 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
       <HistoryButtons
         canUndo={history.canUndo}
         canRedo={history.canRedo}
+        undoRef={undoTile}
         onUndo={() => canvas.current?.undo()}
         onRedo={() => canvas.current?.redo()}
       />
       {adult && (
         <NsfwToggle
-          shown={history.canUndo && !sealing && !retrying}
+          shown={history.hasInk && !sealing && !retrying}
           on={nsfwOn}
           onChange={(on) => {
             keepNsfw(on);
@@ -953,7 +985,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
         />
       )}
       <SealKey
-        shown={retrying || (history.canUndo && !sealing)}
+        shown={retrying || (history.hasInk && !sealing)}
         armed={session.phase === "armed"}
         nsfw={nsfwOn}
         problem={
@@ -977,7 +1009,7 @@ export function DrawingScreen({ ref, active, onSealed, onNewSticker, onGoToBoard
             );
             return;
           }
-          send({ type: "seal-tap", now: performance.now(), hasInk: history.canUndo });
+          send({ type: "seal-tap", now: performance.now(), hasInk: history.hasInk });
         }}
       />
       {retrying && canStartOver && (

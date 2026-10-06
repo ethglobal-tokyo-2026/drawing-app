@@ -2,7 +2,7 @@ import { StrokeBuilder } from "./brush";
 import { TapRecognizer } from "./gestures";
 import { History, type Surface } from "./history";
 import { LazyBrush } from "./lazyBrush";
-import type { FillOp, Op, StrokeOp, Tool } from "./ops";
+import type { FillOp, Op, Step, StrokeOp, Tool } from "./ops";
 
 /** A fill takes a tap: a pointer that lifts within this many px of where it landed. */
 const TAP_SLOP = 10;
@@ -41,8 +41,16 @@ export interface InkSettings {
   sessionMs: () => number;
 }
 
+/** What undo and redo can do, and whether there's ink on the sheet. */
+export interface HistoryState {
+  canUndo: boolean;
+  canRedo: boolean;
+  /** There are ops on the ink: the seal key shows, and the sheet can be cleared. */
+  hasInk: boolean;
+}
+
 export interface InkEvents {
-  onHistory: (canUndo: boolean, canRedo: boolean) => void;
+  onHistory: (state: HistoryState) => void;
   /** A stroke or fill landed. */
   onCommit: (op: Op) => void;
   /** Someone tried to draw on a paused sheet. */
@@ -292,6 +300,19 @@ export class InkEngine {
     if (this.history.redo()) this.notifyHistory();
   }
 
+  /**
+   * Sets the drawing aside for a blank sheet; undo brings it back. A stroke still in progress goes
+   * with it, and a fill whose finger hasn't lifted is dropped. Nothing while the sheet is locked.
+   */
+  clear(): void {
+    if (this.settings.locked) return;
+    this.endStroke(false);
+    this.fillTap = null;
+    if (!this.history.hasInk) return;
+    this.history.clear();
+    this.notifyHistory();
+  }
+
   /** Ends a stroke in progress as if the pointer lifted, as time running out does. */
   finishStroke(): void {
     this.endStroke(false);
@@ -302,19 +323,24 @@ export class InkEngine {
     return this.history.committed;
   }
 
+  /** Every step, oldest first, clears included: what the drawing kept on the device holds. */
+  get steps(): readonly Step[] {
+    return this.history.steps;
+  }
+
   /** A fresh sheet: no ink, nothing to undo or redo. */
   reset(): void {
     this.load([]);
   }
 
-  /** A sheet with these ops on it and nothing to redo, as a drawing picked up after a reload has. */
-  load(ops: readonly Op[]): void {
+  /** A sheet with these steps on it and nothing to redo, as a drawing picked up after a reload has. */
+  load(steps: readonly Step[]): void {
     this.endStroke(true);
     this.fillTap = null;
     this.blocked = null;
     this.swallowed.clear();
     this.taps.clear();
-    this.history.load(ops);
+    this.history.load(steps);
     this.notifyHistory();
   }
 
@@ -474,6 +500,7 @@ export class InkEngine {
   }
 
   private notifyHistory(): void {
-    this.events.onHistory(this.history.canUndo, this.history.canRedo);
+    const { canUndo, canRedo, hasInk } = this.history;
+    this.events.onHistory({ canUndo, canRedo, hasInk });
   }
 }

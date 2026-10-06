@@ -95,13 +95,20 @@ const lastPoint = (op: Op) => {
   return [pts[pts.length - STRIDE], pts[pts.length - STRIDE + 1]];
 };
 
+/** What onHistory reports. The sheet has ink whenever there's something to undo, unless said otherwise. */
+const state = (canUndo: boolean, canRedo: boolean, hasInk = canUndo) => ({
+  canUndo,
+  canRedo,
+  hasInk,
+});
+
 describe("InkEngine", () => {
   it("commits a stroke on lift, ending where the pointer lifted", () => {
     const { stroke, committed, events } = setup({ lazyRadius: 20 });
     stroke("mouse", 1, [0, 0], [200, 0]);
     expect(committed()).toHaveLength(1);
     expect(lastPoint(committed()[0])).toEqual([200, 0]);
-    expect(events.onHistory).toHaveBeenLastCalledWith(true, false);
+    expect(events.onHistory).toHaveBeenLastCalledWith(state(true, false));
   });
 
   it("takes back a stroke when a second finger lands on it, and undoes on the tap", () => {
@@ -113,7 +120,7 @@ describe("InkEngine", () => {
     engine.up(at("touch", 2, 54, 50, 1150));
     engine.up(at("touch", 3, 120, 50, 1160));
     expect(committed()).toHaveLength(1);
-    expect(events.onHistory).toHaveBeenLastCalledWith(false, true);
+    expect(events.onHistory).toHaveBeenLastCalledWith(state(false, true));
   });
 
   it("redoes on a three-finger tap", () => {
@@ -121,7 +128,7 @@ describe("InkEngine", () => {
     stroke("mouse", 1, [0, 0], [100, 0]);
     engine.undo();
     tap(3, 2000);
-    expect(events.onHistory).toHaveBeenLastCalledWith(true, false);
+    expect(events.onHistory).toHaveBeenLastCalledWith(state(true, false));
   });
 
   it("stops fingers drawing once a pen has, while they still tap", () => {
@@ -130,7 +137,7 @@ describe("InkEngine", () => {
     stroke("touch", 2, [0, 50], [100, 50], 1000);
     expect(committed()).toHaveLength(1);
     tap(2, 2000);
-    expect(events.onHistory).toHaveBeenLastCalledWith(false, true);
+    expect(events.onHistory).toHaveBeenLastCalledWith(state(false, true));
   });
 
   it("marks nothing while paused, hinting at once for a mouse and on lift for a touch", () => {
@@ -186,7 +193,7 @@ describe("InkEngine", () => {
     expect(committed()).toHaveLength(2);
   });
 
-  it("takes nothing back and brings nothing back while the sheet is locked", () => {
+  it("takes nothing back, brings nothing back and clears nothing while the sheet is locked", () => {
     const { engine, at, stroke, events } = setup();
     stroke("mouse", 1, [0, 0], [100, 0]);
     stroke("mouse", 1, [0, 20], [100, 20], 500);
@@ -203,6 +210,21 @@ describe("InkEngine", () => {
     expect(engine.ops).toHaveLength(1);
     engine.redo();
     expect(engine.ops).toHaveLength(1);
-    expect(events.onHistory).toHaveBeenLastCalledWith(true, true);
+    engine.clear();
+    expect(engine.ops).toHaveLength(1);
+    expect(events.onHistory).toHaveBeenLastCalledWith(state(true, true));
+  });
+
+  it("clears a stroke still in progress with the rest, and undo brings them all back", () => {
+    const { engine, at, stroke, events } = setup();
+    stroke("mouse", 1, [0, 0], [100, 0]);
+    // A finger is still drawing as the clear lands.
+    engine.down(at("touch", 2, 0, 50, 1000));
+    engine.move(at("touch", 2, 40, 50, 1016));
+    engine.clear();
+    expect(engine.ops).toEqual([]);
+    expect(events.onHistory).toHaveBeenLastCalledWith(state(true, false, false));
+    engine.undo();
+    expect(engine.ops).toHaveLength(2);
   });
 });

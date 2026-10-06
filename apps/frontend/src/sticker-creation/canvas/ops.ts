@@ -26,3 +26,6 @@ export interface FillOp {
 
 /** Every mark on the ink is one op; history replays them in order. */
 export type Op = StrokeOp | FillOp;
+
+/** One entry in the undo history: a mark on the ink, or a clear, which sets the marks before it aside. */
+export type Step = Op | { tool: "clear" };

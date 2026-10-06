@@ -1,23 +1,24 @@
 import { personKey, parseStored, readStored, writeStored } from "../../ui/deviceStorage";
-import { STRIDE, type Op } from "../canvas/ops";
+import { STRIDE, type Op, type Step } from "../canvas/ops";
 
 /*
  * The session in progress, kept on this device for the person signed in, so a reload or logging out
  * and back in doesn't lose it, and wiped once it's over. Each person's is their own: someone else signing in on
- * this device never gets it, and theirs leaves it be. The ops live in IndexedDB, one record per op, so
- * a stroke writes only itself. The ticket the session spent and the time drawn live in localStorage:
- * it writes at once, where an IndexedDB write started as the page unloads never lands, and it can
- * still be read when the ops can't, so a drawing that can't be picked back up can still carry its
- * ticket over to the next sheet.
+ * this device never gets it, and theirs leaves it be. Its steps, the ops and the clears between them,
+ * live in IndexedDB, one record per step, so a stroke writes only itself. The ticket the session
+ * spent and the time drawn live in localStorage: it writes at once, where an IndexedDB write started
+ * as the page unloads never lands, and it can still be read when the steps can't, so a drawing that
+ * can't be picked back up can still carry its ticket over to the next sheet.
  */
 
 const dbName = (userId: string) => `drawing-session.${userId}`;
+/** The store of steps. Renaming it would take a database upgrade. */
 const OPS = "ops";
 const PROGRESS = "progress";
-/** The progress store holds one record: how many ops are on the sheet. */
+/** The progress store holds one record: how many steps are kept. */
 const PROGRESS_KEY = 0;
 const recordKey = (userId: string) => personKey("draw.session", userId);
-/** A kept drawing whose ops haven't loaded by then carries its ticket over, so Draw never waits on it for good. */
+/** A kept drawing whose steps haven't loaded by then carries its ticket over, so Draw never waits on it for good. */
 export const LOAD_TIMEOUT_MS = 5_000;
 
 /** How the artist set the size rail, for the brush and for the eraser (0 to 1 along it), and Smoothing (0 to 100). */
@@ -39,11 +40,11 @@ interface SessionRecord {
 
 /** What's kept of a drawing that was in progress. */
 export type KeptDrawing =
-  | ({ status: "found"; ops: Op[] } & SessionRecord)
+  | ({ status: "found"; steps: Step[] } & SessionRecord)
   /** What's kept of it can't be read back. */
   | { status: "lost"; ticket: number | null; error: unknown }
   /**
-   * Its ops weren't read: IndexedDB failed, or hadn't answered in time, and then `later` is what the
+   * Its steps weren't read: IndexedDB failed, or hadn't answered in time, and then `later` is what the
    * read still finds. Nothing kept is cleared, since the drawing may still be there.
    */
   | { status: "unread"; ticket: number; error: unknown; later: Promise<KeptDrawing> | null };
@@ -127,16 +128,18 @@ const clearStores = (ops: IDBObjectStore, progress: IDBObjectStore) => {
   progress.clear();
 };
 
-/** Where a save starts writing: the first op that isn't the one written there last. */
-export function firstChanged(written: readonly Op[], ops: readonly Op[]): number {
+/** Where a save starts writing: the first step that isn't the one written there last. */
+export function firstChanged(written: readonly Step[], steps: readonly Step[]): number {
   let i = 0;
-  while (i < written.length && i < ops.length && written[i] === ops[i]) i++;
+  while (i < written.length && i < steps.length && written[i] === steps[i]) i++;
   return i;
 }
 
 /** The color a kept drawing was last drawn in, which it picks back up in; null when nothing was drawn. */
-export function keptColor(ops: readonly Op[]): string | null {
-  return ops.findLast((op) => op.tool !== "eraser")?.color ?? null;
+export function keptColor(steps: readonly Step[]): string | null {
+  // The eraser draws in no color, nor does a clear.
+  const drawn = steps.findLast((step): step is Op => step.tool === "brush" || step.tool === "fill");
+  return drawn?.color ?? null;
 }
 
 /** Keeps the session in progress on this device, for the person signed in, as it changes. */
@@ -148,12 +151,12 @@ export class SessionKeeper {
   private elapsedMs = 0;
   /** The tools as the artist last set them: they outlast a sheet, so a new session keeps them too. */
   private tools: KeptTools | undefined;
-  /** The ops as last written, by reference; null when a write failed and what landed is unknown. */
-  private written: readonly Op[] | null = [];
+  /** The steps as last written, by reference; null when a write failed and what landed is unknown. */
+  private written: readonly Step[] | null = [];
   /** Whether the last record written landed. */
   private recordKept = true;
-  /** Whether the ops kept are the session's; after a failed write, not until one writing every op lands. */
-  private opsKept = true;
+  /** Whether the steps kept are the session's; after a failed write, not until one writing every step lands. */
+  private stepsKept = true;
   private kept = true;
   /** A stretch of failed writes is logged once. */
   private reported = false;
@@ -180,10 +183,10 @@ export class SessionKeeper {
     });
   }
 
-  /** A session picked back up after a reload, whose ops are already kept. */
+  /** A session picked back up after a reload, whose steps are already kept. */
   resume(
     ticket: number,
-    ops: readonly Op[],
+    steps: readonly Step[],
     elapsedMs: number,
     nsfw: boolean,
     tools: KeptTools | undefined,
@@ -192,7 +195,7 @@ export class SessionKeeper {
     this.elapsedMs = elapsedMs;
     this.nsfw = nsfw;
     this.tools = tools ?? this.tools;
-    this.written = [...ops];
+    this.written = [...steps];
     this.carried = false;
   }
 
@@ -204,7 +207,7 @@ export class SessionKeeper {
     this.ticket = ticket;
     this.nsfw = false;
     this.elapsedMs = 0;
-    // The ops kept are the unread drawing's, so the first save writes every op.
+    // The steps kept are the unread drawing's, so the first save writes every step.
     this.written = null;
     this.carried = true;
   }
@@ -225,18 +228,18 @@ export class SessionKeeper {
     if (this.ticket !== null && !this.carried) this.keepRecord();
   }
 
-  /** Keeps the time drawn, and any ops that changed since the last save. */
-  save(ops: readonly Op[], elapsedMs: number): void {
+  /** Keeps the time drawn, and any steps that changed since the last save. */
+  save(steps: readonly Step[], elapsedMs: number): void {
     this.elapsedMs = elapsedMs;
     this.carried = false;
     this.keepRecord();
     const written = this.written;
-    const from = written ? firstChanged(written, ops) : 0;
-    if (written && from === ops.length && ops.length === written.length) return;
-    this.written = [...ops];
-    this.write(from === 0, (opStore, progressStore) => {
-      for (let i = from; i < ops.length; i++) opStore.put(ops[i], i);
-      progressStore.put(ops.length, PROGRESS_KEY);
+    const from = written ? firstChanged(written, steps) : 0;
+    if (written && from === steps.length && steps.length === written.length) return;
+    this.written = [...steps];
+    this.write(from === 0, (stepStore, progressStore) => {
+      for (let i = from; i < steps.length; i++) stepStore.put(steps[i], i);
+      progressStore.put(steps.length, PROGRESS_KEY);
     });
   }
 
@@ -265,20 +268,20 @@ export class SessionKeeper {
     this.changed();
   }
 
-  /** `whole`: it writes every op, so once it lands the ops kept are the session's again. */
+  /** `whole`: it writes every step, so once it lands the steps kept are the session's again. */
   private write(
     whole: boolean,
     fill: (ops: IDBObjectStore, progress: IDBObjectStore) => void,
   ): void {
     transact(this.userId, "readwrite", fill).then(
       () => {
-        if (whole) this.opsKept = true;
+        if (whole) this.stepsKept = true;
         this.changed();
       },
       (error: unknown) => {
-        // It can't tell which of the ops landed, so the next save writes them all.
+        // It can't tell which of the steps landed, so the next save writes them all.
         this.written = null;
-        this.opsKept = false;
+        this.stepsKept = false;
         this.changed();
         if (this.reported) return;
         this.reported = true;
@@ -291,7 +294,7 @@ export class SessionKeeper {
   }
 
   private changed(): void {
-    const kept = this.recordKept && this.opsKept;
+    const kept = this.recordKept && this.stepsKept;
     if (kept === this.kept) return;
     this.kept = kept;
     if (kept) this.reported = false;
@@ -305,8 +308,8 @@ export async function loadKeptSession(userId: string): Promise<KeptSession> {
   if (record === null) return { status: "none" };
   if (record === "unreadable")
     return { status: "lost", ticket: null, error: new Error("Its record is unreadable") };
-  const read = readOps(userId).then(
-    (ops): KeptDrawing => ({ status: "found", ops, ...record }),
+  const read = readSteps(userId).then(
+    (steps): KeptDrawing => ({ status: "found", steps, ...record }),
     (error: unknown): KeptDrawing =>
       error instanceof UnreadableDrawing
         ? { status: "lost", ticket: record.ticket, error }
@@ -315,16 +318,16 @@ export async function loadKeptSession(userId: string): Promise<KeptSession> {
   return within(read, LOAD_TIMEOUT_MS, () => ({
     status: "unread",
     ticket: record.ticket,
-    error: new Error(`Its ops didn't load within ${LOAD_TIMEOUT_MS / 1000}s`),
+    error: new Error(`Its steps didn't load within ${LOAD_TIMEOUT_MS / 1000}s`),
     later: read,
   }));
 }
 
-async function readOps(userId: string): Promise<Op[]> {
+async function readSteps(userId: string): Promise<Step[]> {
   let stored: unknown[] = [];
   let count: unknown;
-  await transact(userId, "readonly", (opStore, progressStore) => {
-    const all = opStore.getAll();
+  await transact(userId, "readonly", (stepStore, progressStore) => {
+    const all = stepStore.getAll();
     all.onsuccess = () => {
       stored = all.result;
     };
@@ -335,17 +338,17 @@ async function readOps(userId: string): Promise<Op[]> {
   });
   if (!isCount(count))
     throw new UnreadableDrawing(
-      count === undefined ? "No ops were kept" : "Its op count is unreadable",
+      count === undefined ? "No steps were kept" : "Its step count is unreadable",
     );
   if (stored.length < count)
-    throw new UnreadableDrawing(`${count - stored.length} of its ${count} ops are missing`);
-  const ops: Op[] = [];
+    throw new UnreadableDrawing(`${count - stored.length} of its ${count} steps are missing`);
+  const steps: Step[] = [];
   for (const value of stored.slice(0, count)) {
-    const op = readOp(value);
-    if (!op) throw new UnreadableDrawing(`Op ${ops.length} is unreadable`);
-    ops.push(op);
+    const step = readStep(value);
+    if (!step) throw new UnreadableDrawing(`Step ${steps.length} is unreadable`);
+    steps.push(step);
   }
-  return ops;
+  return steps;
 }
 
 /** `work`'s result, or `late()`'s once `ms` pass without one. `work` must not reject. */
@@ -362,10 +365,11 @@ function within<T>(work: Promise<T>, ms: number, late: () => T): Promise<T> {
 const isFiniteNumber = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 const isCount = (v: unknown): v is number => isFiniteNumber(v) && Number.isInteger(v) && v >= 0;
 
-/** A kept op, or undefined when it can't be read: IndexedDB hands back untyped values. */
-function readOp(v: unknown): Op | undefined {
-  if (typeof v !== "object" || v === null || !("color" in v) || !("T" in v) || !("tool" in v))
-    return undefined;
+/** A kept step, or undefined when it can't be read: IndexedDB hands back untyped values. */
+function readStep(v: unknown): Step | undefined {
+  if (typeof v !== "object" || v === null || !("tool" in v)) return undefined;
+  if (v.tool === "clear") return { tool: "clear" };
+  if (!("color" in v) || !("T" in v)) return undefined;
   const { color, T, tool } = v;
   if (typeof color !== "string" || !isFiniteNumber(T)) return undefined;
   if (tool === "fill")

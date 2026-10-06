@@ -18,6 +18,7 @@ The Japanese in the catalog was written by an LLM (2026-09-27) and needs a nativ
 | draw                               | かく                                   | In hiragana, as on the Draw key                                                       |
 | the check (the seal key)           | チェック                               | In words naming the key; the act it does is 仕上げ                                    |
 | Time's up                          | 時間切れ                               | The drawing clock at 0:00                                                             |
+| clear (the sheet)                  | 消去                                   | Clip Studio Paint's word for its Clear; the eraser stays 消しゴム                     |
 | two fingers                        | 2本指                                  | Undo on the drawing screen; three fingers (3本指) redo                                |
 | Timelapse                          | タイムラプス                           | The sticker detail's replay of how it was drawn                                       |
 | gift / Gift Message                | ギフト / ギフトメッセージ              |                                                                                       |
