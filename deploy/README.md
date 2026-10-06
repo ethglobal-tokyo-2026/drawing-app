@@ -27,12 +27,14 @@ Publishes everything, in order:
 
 With `CDN_ORIGIN` set in `deploy/.env`, the build's hashed files, under `/assets/`, load from a CloudFront distribution in front of the box, from edges near the people using the app; the box is far from Japan. `deploy.sh` passes it to the build (`apps/frontend/vite.config.ts`), then checks the distribution serves the entry script with its CORS header. Set it empty and deploy again to load everything from the box.
 
+The sticker images load from it too once `CDN_BASE_URL` in `drawing-api.env` is the distribution's `/api/images`, with the API deployed. An NSFW sticker's drawing still loads from `IMAGE_BASE_URL`, the box's own, which checks the session cookie for it and marks it private, so no CDN keeps a copy.
+
 Everything else stays on the box: index.html, which LIFF opens there, the public folder's files, which LINE fetches by their fixed paths, and the API and the auth server, since the session cookie goes only to the box.
 
-- Scripts and fonts from another origin load only with CORS, so `serve.py` sends `Access-Control-Allow-Origin: *` with every hashed file, and the distribution keeps it in its copies. Deploy that `serve.py` before setting `CDN_ORIGIN`, so no copy is made without it.
+- Scripts, fonts and the sticker images the app reads on canvases and as CSS masks load from another origin only with CORS, so `serve.py` sends `Access-Control-Allow-Origin: *` with every hashed file, and the API with every public sticker image, and the distribution keeps it in its copies. Deploy them before setting `CDN_ORIGIN` or `CDN_BASE_URL`, so no copy is made without it.
 - The sealing worker's script must come from the page's own origin, so it starts through a module of the page's own that imports the CDN's copy (`apps/frontend/src/ui/startWorker.ts`). Where the CDN's copy won't load, the cut runs on the main thread.
 - The distribution: its origin is `DEPLOY_URL`'s host over HTTPS. It answers GET and HEAD with the CachingOptimized cache policy, so no cookie or query string reaches the box, and the SimpleCORS response headers policy, and it compresses. It's on CloudFront's flat-rate Free plan, which needs a web ACL; this one has no rules.
-- A copy cached without the CORS header breaks the app until it expires, a year on. Clear it with `aws cloudfront create-invalidation --distribution-id <id> --paths '/assets/*'`.
+- A copy cached without the CORS header breaks the app until it expires, a year on. Clear it with `aws cloudfront create-invalidation --distribution-id <id> --paths '/assets/*' '/api/images/*'`.
 
 ## `./deploy/deploy-api.sh`
 
@@ -57,11 +59,11 @@ Publishes the stickers package (`contracts/sui-sticker-contract/stickers`) to th
 Without `--publish` it only simulates: it builds the package, simulates the publish from a throwaway address when `SUI_DEPLOYER_PRIVATE_KEY` isn't set, and prints the cost, what the publish creates, who would pay and the Display's fields. Nothing is sent.
 
 ```sh
-node deploy/publish-sui.mjs --image-host <the API's CDN_BASE_URL>
-node deploy/publish-sui.mjs --image-host <the API's CDN_BASE_URL> --publish
+node deploy/publish-sui.mjs --image-host <the API's public image URL>
+node deploy/publish-sui.mjs --image-host <the API's public image URL> --publish
 ```
 
-`--image-host` is the https host that Display joins each sticker's image file name to. With `--publish` it sends two transactions, because a transaction can't call the package it publishes: the publish, then `set_server` and `create_display`, which sends the `DisplayCap` to the deployer. When the second fails, the package is published but unusable by the API; run again for a fresh one.
+`--image-host` is the https host that Display joins each sticker's image file name to: the API's `CDN_BASE_URL`, or its `IMAGE_BASE_URL` without a CDN. Display names only public images, an NSFW sticker's veiled one included. With `--publish` it sends two transactions, because a transaction can't call the package it publishes: the publish, then `set_server` and `create_display`, which sends the `DisplayCap` to the deployer. When the second fails, the package is published but unusable by the API; run again for a fresh one.
 
 It prints the package's IDs as `KEY=value` lines: `SUI_STICKER_PACKAGE`, `SUI_STICKER_REGISTRY`, `SUI_SERVER_CONFIG` and `SUI_GIFT_ESCROW`. Paste them into `deploy/drawing-api.env` and `apps/api/.env.example`, then run `./deploy/deploy.sh`.
 

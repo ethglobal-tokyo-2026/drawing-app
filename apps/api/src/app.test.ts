@@ -10,6 +10,7 @@ import { createServer, STICKER_IMAGES_PATH } from "./app.ts";
 import { validate } from "./errors.ts";
 import { createDiskImageStore } from "./services/imageStore.ts";
 import { setSessionCookie, type AppEnv } from "./session.ts";
+import type { StickerImages } from "./shapes.ts";
 import { sealImages } from "./stickers/testPngs.ts";
 import { createTestApp, type TestApp } from "./testing/createTestApp.ts";
 import { fakeServerLog } from "./testing/fakes.ts";
@@ -160,49 +161,78 @@ describe("sticker images", () => {
 
   const get = (path: string) => createServer(test.deps, imageDir).request(path);
 
-  it("are served where their URLs point, without a session, cached for good", async () => {
+  /** Where the box serves the images, and the CDN in front of it, which asks the box for the same paths. */
+  const box = `https://sticker.test${STICKER_IMAGES_PATH}`;
+  const cdn = `https://cdn.test${STICKER_IMAGES_PATH}`;
+
+  /** A disk store with a new sticker's images saved in it, under their content hash. */
+  async function savedImages() {
     const pngs = sealImages();
-    const store = createDiskImageStore(imageDir, `https://sticker.test${STICKER_IMAGES_PATH}`);
+    const store = createDiskImageStore(imageDir, { imageBaseUrl: box, cdnBaseUrl: cdn });
     const contentHash = sha256Hex(pngs.png);
     await store.save(contentHash, pngs);
+    return { store, pngs, contentHash };
+  }
+
+  /** Every URL among a sticker's images. */
+  const urlsIn = ({ webp, ...pngs }: StickerImages) => [
+    ...Object.values(pngs),
+    ...Object.values(webp),
+  ];
+
+  /** Asserts the server answers `url`'s path to anyone, cached for good and readable from any origin. */
+  async function expectPublic(url: string) {
+    const response = await get(new URL(url).pathname);
+    expect(response.status, url).toBe(200);
+    expect(response.headers.get("cache-control"), url).toMatch(/^public,.*immutable/);
+    expect(response.headers.get("access-control-allow-origin"), url).toBe("*");
+    return response;
+  }
+
+  it("load from the CDN, which the box answers without a session, cached for good and readable from any origin", async () => {
+    const { store, pngs, contentHash } = await savedImages();
     const urls = store.urls(contentHash);
-    const response = await get(new URL(urls.png).pathname);
-    expect(response.status).toBe(200);
-    expect(new Uint8Array(await response.arrayBuffer())).toEqual(pngs.png);
-    expect(response.headers.get("cache-control")).toContain("immutable");
-    const webp = await get(new URL(urls.webp.sticker).pathname);
-    expect(webp.status).toBe(200);
+    for (const url of urlsIn(urls)) {
+      expect(url.startsWith(`${cdn}/`), url).toBe(true);
+      await expectPublic(url);
+    }
+    const png = await expectPublic(urls.png);
+    expect(new Uint8Array(await png.arrayBuffer())).toEqual(pngs.png);
+    const webp = await expectPublic(urls.webp.sticker);
     expect(webp.headers.get("content-type")).toBe("image/webp");
-    expect(webp.headers.get("cache-control")).toContain("immutable");
   });
 
-  it("show an NSFW sticker's drawing only to an opted-in session, never publicly cached", async () => {
-    const pngs = sealImages();
-    const store = createDiskImageStore(imageDir, `https://sticker.test${STICKER_IMAGES_PATH}`);
-    const contentHash = sha256Hex(pngs.png);
-    await store.save(contentHash, pngs);
+  it("show an NSFW sticker's drawing from the box, only to an opted-in session, never publicly cached or read across origins", async () => {
+    const { store, contentHash } = await savedImages();
     const artistId = insertUser(test.db, { nsfwOptedInAt: test.clock.now() });
     insertSealedSticker(test.db, artistId, { nsfw: true, contentHash });
-    const { png, flat, webp, mask } = store.urls(contentHash);
     const server = createServer(test.deps, imageDir);
     const getAs = async (url: string, userId?: string) =>
       server.request(new URL(url).pathname, {
         headers: userId === undefined ? {} : await test.signInAs(userId),
       });
+    const optInUrls = store.optInUrls(contentHash);
+    const onBox = urlsIn(optInUrls).filter((url) => url.startsWith(`${box}/`));
+    expect(onBox.toSorted()).toEqual(
+      [optInUrls.png, optInUrls.flat, optInUrls.webp.sticker].toSorted(),
+    );
 
-    for (const url of [png, flat, webp.sticker]) {
+    for (const url of onBox) {
       for (const viewer of [undefined, insertUser(test.db)]) {
-        expect(await refusalOf(await getAs(url, viewer))).toMatchObject({
-          status: 403,
-          error: "nsfw_not_opted_in",
-        });
+        const refused = await getAs(url, viewer);
+        expect(refused.headers.get("access-control-allow-origin")).toBeNull();
+        expect(await refusalOf(refused)).toMatchObject({ status: 403, error: "nsfw_not_opted_in" });
       }
       const optedIn = await getAs(url, artistId);
       expect(optedIn.status).toBe(200);
       expect(optedIn.headers.get("cache-control")).toMatch(/^private,/);
+      expect(optedIn.headers.get("access-control-allow-origin")).toBeNull();
     }
-    // The cut's shape shows no drawing, so its mask stays public.
-    expect((await getAs(mask)).headers.get("cache-control")).toMatch(/^public,/);
+    // The rest, such as the cut's mask, show no drawing, so they stay public, on the CDN.
+    for (const url of urlsIn(optInUrls).filter((url) => !onBox.includes(url))) {
+      expect(url.startsWith(`${cdn}/`), url).toBe(true);
+      await expectPublic(url);
+    }
   });
 
   it("answer a name with no image with 404, not the session check, and uncached", async () => {

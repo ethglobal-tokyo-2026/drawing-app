@@ -116,8 +116,13 @@ export interface ImageStore {
    * content hash, which it resolves to. Rejects when the sticker's images aren't saved.
    */
   saveVeiled: (contentHash: string) => Promise<string>;
-  /** Where the CDN serves them. */
+  /** Where anyone gets them: the CDN in front of the box, or the box itself without one. */
   urls: (contentHash: string) => StickerImages;
+  /**
+   * What a viewer with the NSFW opt-in gets for an NSFW sticker: `urls`, with each image that shows
+   * the drawing from the box, which checks their session.
+   */
+  optInUrls: (contentHash: string) => StickerImages;
   /** What a viewer without the NSFW opt-in gets for an NSFW sticker: `urls` with its veiled image in place. */
   veiledUrls: (contentHash: string, veiledHash: string) => StickerImages;
 }

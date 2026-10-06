@@ -38,7 +38,10 @@ const envSchema = z.object({
   SESSION_SECRET: z.string().min(32),
   LINE_CHANNEL_ID: z.string().min(1),
   IMAGE_DIR: z.string().min(1),
-  CDN_BASE_URL: z.url(),
+  // Where the box serves the sticker images, and the CDN in front of it, which every image but an
+  // NSFW sticker's drawing loads from. Without CDN_BASE_URL, every image loads from the box.
+  IMAGE_BASE_URL: z.url(),
+  CDN_BASE_URL: z.union([z.url(), z.literal("")]).optional(),
   PORT: z.coerce.number().int().positive().default(8788),
   STICKER_CHAIN_MODE: z.enum(["mock", "sui"]),
   // Empty is how .env switches off what .env.example switches on.
@@ -66,7 +69,10 @@ const env = parsed.data;
 migrateDatabase();
 
 const db = openDb();
-const images = createDiskImageStore(env.IMAGE_DIR, env.CDN_BASE_URL);
+const images = createDiskImageStore(env.IMAGE_DIR, {
+  imageBaseUrl: env.IMAGE_BASE_URL,
+  cdnBaseUrl: env.CDN_BASE_URL || env.IMAGE_BASE_URL,
+});
 const ticketPayment = {
   network: env.SUI_NETWORK,
   coinType: env.JPYC_COIN_TYPE,

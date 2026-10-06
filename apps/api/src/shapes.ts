@@ -296,7 +296,8 @@ function viewerOf(images: AppDeps["images"], optedIn: boolean): StickerViewer {
   return {
     veils,
     images: (sticker) => {
-      if (!veils(sticker)) return images.urls(sticker.contentHash);
+      if (!sticker.nsfw) return images.urls(sticker.contentHash);
+      if (optedIn) return images.optInUrls(sticker.contentHash);
       // The database holds every NSFW sticker to its veil, so a row without one is a fault.
       if (sticker.veiledHash === null) {
         throw new Error(`The NSFW sticker with content hash ${sticker.contentHash} has no veil`);

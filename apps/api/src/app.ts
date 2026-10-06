@@ -62,7 +62,7 @@ export function createApp(deps: AppDeps) {
 
 export type AppType = ReturnType<typeof createApp>;
 
-/** Where the server serves the sticker images; on the box, CDN_BASE_URL is the site's origin plus this. */
+/** Where the server serves the sticker images; on the box, IMAGE_BASE_URL is the site's origin plus this. */
 export const STICKER_IMAGES_PATH = "/api/images";
 
 /** The server log's newest lines a request gets, and the most it can ask for with ?lines=. */
@@ -85,7 +85,8 @@ const isNsfwDrawing = (db: Db, contentHash: string) =>
 
 /**
  * Serves the files that show an NSFW sticker's drawing only to an opted-in session, never publicly
- * cached; anyone else gets 403 nsfw_not_opted_in. Every other image is public, and cached for good.
+ * cached; anyone else gets 403 nsfw_not_opted_in. Every other image is public: cached for good, and
+ * readable from any origin, as the app reads the CDN's copies on canvases and as CSS masks.
  */
 const imageAccess = (deps: AppDeps) =>
   createMiddleware(async (c, next) => {
@@ -99,7 +100,9 @@ const imageAccess = (deps: AppDeps) =>
       }
     }
     await next();
-    // serveStatic's onFound runs after it has made the response, too late to add a header.
+    // serveStatic's onFound runs after it has made the response, too late to add a header. The CDN
+    // keeps the first copy it gets, so the public ones carry CORS whether or not the request asked.
+    if (!optInOnly) c.header("Access-Control-Allow-Origin", "*");
     if (!c.res.ok) return;
     const scope = optInOnly ? "private" : "public";
     c.header("Cache-Control", `${scope}, max-age=${IMMUTABLE_MAX_AGE_S}, immutable`);

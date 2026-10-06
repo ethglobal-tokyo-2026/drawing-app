@@ -55,12 +55,19 @@ async function nsfwSticker() {
         body: { giftClaimToken: gift.giftClaimToken, liffContextType: "utou" },
       }),
     ]);
-  /** The URLs of each file that shows either sticker's drawing. */
-  const drawingUrls = [sticker, giftSticker].flatMap(({ contentHash }) => {
-    const { png, flat, webp } = test.images.urls(contentHash);
-    return [png, flat, webp.sticker];
-  });
-  return { test, artistId, stickerId, answers, drawingUrls, veiled: test.images.urls(veiledHash) };
+  const drawings = [sticker, giftSticker].map(({ contentHash }) => contentHash);
+  /** The URLs of each file that shows either sticker's drawing, on the CDN and on the box. */
+  const drawingUrls = drawings.flatMap((contentHash) =>
+    [test.images.urls(contentHash), test.images.optInUrls(contentHash)].flatMap(
+      ({ png, flat, webp }) => [png, flat, webp.sticker],
+    ),
+  );
+  /** Each sticker's WebP as the NSFW opt-in gets it. */
+  const optedInWebps = drawings.map(
+    (contentHash) => test.images.optInUrls(contentHash).webp.sticker,
+  );
+  const veiled = test.images.urls(veiledHash);
+  return { test, artistId, stickerId, answers, drawingUrls, optedInWebps, veiled };
 }
 
 const timelapseOf = (scene: Awaited<ReturnType<typeof nsfwSticker>>, as?: string) =>
@@ -101,7 +108,7 @@ describe("an NSFW sticker's images", () => {
     const [board, explore, detail, preview] = await Promise.all(
       (await scene.answers(optedInId)).map((response) => response.text()),
     );
-    const [stickerWebp, giftStickerWebp] = scene.drawingUrls.filter((url) => url.endsWith(".webp"));
+    const [stickerWebp, giftStickerWebp] = scene.optedInWebps;
     for (const body of [board, explore, detail]) expect(body).toContain(stickerWebp);
     expect(preview).toContain(giftStickerWebp);
     expect(JSON.parse(detail)).toMatchObject({ hasTimelapse: true });

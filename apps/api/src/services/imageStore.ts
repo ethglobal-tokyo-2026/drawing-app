@@ -35,9 +35,9 @@ export const pngName = (contentHash: string, kind: StickerPngKind) =>
 const webpName = (contentHash: string, kind: StickerWebpKind) =>
   kind === "sticker" ? `${contentHash}.webp` : `${contentHash}.${kind}.webp`;
 
-/** A sticker's image URLs on the CDN. */
-export function stickerImageUrls(cdnBaseUrl: string, contentHash: string): StickerImages {
-  const base = cdnBaseUrl.replace(/\/+$/, "");
+/** A sticker's image URLs under `baseUrl`. */
+function stickerImageUrls(baseUrl: string, contentHash: string): StickerImages {
+  const base = baseUrl.replace(/\/+$/, "");
   const png = (kind: StickerPngKind) => `${base}/${pngName(contentHash, kind)}`;
   const webp = (kind: StickerWebpKind) => `${base}/${webpName(contentHash, kind)}`;
   return {
@@ -56,22 +56,41 @@ export function stickerImageUrls(cdnBaseUrl: string, contentHash: string): Stick
   };
 }
 
-/**
- * What a viewer without the NSFW opt-in gets for an NSFW sticker: its veiled image in place of each
- * image that shows the drawing.
- */
-export function veiledImageUrls(
-  cdnBaseUrl: string,
-  contentHash: string,
-  veiledHash: string,
-): StickerImages {
-  const full = stickerImageUrls(cdnBaseUrl, contentHash);
-  const veiled = stickerImageUrls(cdnBaseUrl, veiledHash);
+/** Where the sticker images load from. */
+interface ImageBaseUrls {
+  /** The box's own: an NSFW sticker's drawing loads from here, since only the box sees the session. */
+  imageBaseUrl: string;
+  /** Every other image's: the CDN in front of the box, or the box's own without one. */
+  cdnBaseUrl: string;
+}
+
+/** A sticker's image URLs for each viewer, under `bases`. */
+export function imageUrls({
+  imageBaseUrl,
+  cdnBaseUrl,
+}: ImageBaseUrls): Pick<ImageStore, "urls" | "optInUrls" | "veiledUrls"> {
   return {
-    ...full,
-    png: veiled.png,
-    flat: veiled.png,
-    webp: { ...full.webp, sticker: veiled.webp.sticker },
+    urls: (contentHash) => stickerImageUrls(cdnBaseUrl, contentHash),
+    optInUrls: (contentHash) => {
+      const shared = stickerImageUrls(cdnBaseUrl, contentHash);
+      const drawing = stickerImageUrls(imageBaseUrl, contentHash);
+      return {
+        ...shared,
+        png: drawing.png,
+        flat: drawing.flat,
+        webp: { ...shared.webp, sticker: drawing.webp.sticker },
+      };
+    },
+    veiledUrls: (contentHash, veiledHash) => {
+      const shared = stickerImageUrls(cdnBaseUrl, contentHash);
+      const veiled = stickerImageUrls(cdnBaseUrl, veiledHash);
+      return {
+        ...shared,
+        png: veiled.png,
+        flat: veiled.png,
+        webp: { ...shared.webp, sticker: veiled.webp.sticker },
+      };
+    },
   };
 }
 
@@ -160,17 +179,6 @@ async function writeMissingWebps(imageDir: string, contentHash: string) {
   );
 }
 
-export interface DiskImageStore extends ImageStore {
-  /** Writes the metadata file whose URL is the NFT's tokenURI, unless it's there. */
-  saveMetadata: (stickerId: string, metadata: object) => Promise<void>;
-}
-
-/** The metadata file's path. The id becomes a file name, so nothing but an id may reach the disk. */
-function metadataPath(imageDir: string, stickerId: string) {
-  if (!/^[0-9a-f-]{36}$/i.test(stickerId)) throw new Error(`Not a sticker id: ${stickerId}`);
-  return join(imageDir, `${stickerId}.json`);
-}
-
 /**
  * Makes the veiled image of the sticker stored under `contentHash`, from its PNG and mask on disk, and
  * stores it with its WebP copy under its own content hash, which it answers.
@@ -189,8 +197,8 @@ async function saveVeiled(imageDir: string, contentHash: string): Promise<string
   return veiledHash;
 }
 
-/** Writes sticker images into the folder the CDN serves. */
-export function createDiskImageStore(imageDir: string, cdnBaseUrl: string): DiskImageStore {
+/** Writes sticker images into the folder the box serves, at `bases.imageBaseUrl`. */
+export function createDiskImageStore(imageDir: string, bases: ImageBaseUrls): ImageStore {
   mkdirSync(imageDir, { recursive: true });
   return {
     save: async (contentHash, pngs) => {
@@ -203,13 +211,6 @@ export function createDiskImageStore(imageDir: string, cdnBaseUrl: string): Disk
       await writeMissingWebps(imageDir, contentHash);
     },
     saveVeiled: (contentHash) => saveVeiled(imageDir, contentHash),
-    urls: (contentHash) => stickerImageUrls(cdnBaseUrl, contentHash),
-    veiledUrls: (contentHash, veiledHash) => veiledImageUrls(cdnBaseUrl, contentHash, veiledHash),
-    saveMetadata: async (stickerId, metadata) => {
-      await writeIfAbsent(
-        metadataPath(imageDir, stickerId),
-        new TextEncoder().encode(JSON.stringify(metadata)),
-      );
-    },
+    ...imageUrls(bases),
   };
 }

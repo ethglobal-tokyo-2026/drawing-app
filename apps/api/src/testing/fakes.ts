@@ -4,7 +4,7 @@ import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { eq } from "drizzle-orm";
 import type { Ids, ImageStore, ServerLog, TicketPaymentTarget } from "../deps.ts";
 import { createDevLineVerifier } from "../services/devSignIn.ts";
-import { stickerImageUrls, veiledImageUrls } from "../services/imageStore.ts";
+import { imageUrls } from "../services/imageStore.ts";
 import type { StickerPngKind } from "../shapes.ts";
 import type { SuiWallets } from "../sui/types.ts";
 
@@ -33,8 +33,11 @@ export function sequentialIds() {
 /** LINE, as dev sign-in stands in for it: devIdToken's tokens name their profile, and any other is refused. */
 export const fakeLineVerifier = createDevLineVerifier;
 
-/** Keeps saved images in memory, by content hash; like the disk store, the first save stays. */
-export function fakeImageStore(cdnBaseUrl = "https://cdn.test") {
+/**
+ * Keeps saved images in memory, by content hash; like the disk store, the first save stays. The box
+ * serves them on box.test, and the CDN in front of it on cdn.test.
+ */
+export function fakeImageStore() {
   const saved = new Map<string, Record<StickerPngKind, Uint8Array>>();
   const store: ImageStore = {
     save: (contentHash, pngs) => {
@@ -45,8 +48,10 @@ export function fakeImageStore(cdnBaseUrl = "https://cdn.test") {
       saved.has(contentHash)
         ? Promise.resolve(bytes32(`veiled ${contentHash}`))
         : Promise.reject(new Error(`No images are saved under ${contentHash}`)),
-    urls: (contentHash) => stickerImageUrls(cdnBaseUrl, contentHash),
-    veiledUrls: (contentHash, veiledHash) => veiledImageUrls(cdnBaseUrl, contentHash, veiledHash),
+    ...imageUrls({
+      imageBaseUrl: "https://box.test/api/images",
+      cdnBaseUrl: "https://cdn.test/api/images",
+    }),
   };
   return { ...store, saved };
 }

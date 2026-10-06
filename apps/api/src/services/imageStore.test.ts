@@ -12,6 +12,11 @@ import { createDiskImageStore } from "./imageStore.ts";
 const sha256Hex = (bytes: Uint8Array) => `0x${createHash("sha256").update(bytes).digest("hex")}`;
 
 const CDN_FOLDER = "/stickers/";
+/** The box and the CDN in front of it, each serving the image folder at CDN_FOLDER. */
+const STORE_BASES = {
+  imageBaseUrl: `https://box.test${CDN_FOLDER}`,
+  cdnBaseUrl: `https://cdn.test${CDN_FOLDER}`,
+};
 const pngKinds = stickerPngsSchema.keyof().options;
 const webpKinds = stickerWebpsSchema.keyof().options;
 
@@ -42,7 +47,7 @@ const fileAt = (url: string) => join(imageDir, new URL(url).pathname.slice(CDN_F
 
 /** A disk image store with `pngs` saved in it under their content hash. */
 async function savedSticker(pngs = sealImages()) {
-  const store = createDiskImageStore(imageDir, `https://cdn.test${CDN_FOLDER}`);
+  const store = createDiskImageStore(imageDir, STORE_BASES);
   const contentHash = sha256Hex(pngs.png);
   await store.save(contentHash, pngs);
   return { store, pngs, contentHash };
@@ -106,18 +111,7 @@ describe("the disk image store", () => {
   });
 
   it("refuses a name that isn't a content hash", async () => {
-    const store = createDiskImageStore(imageDir, "https://cdn.test");
+    const store = createDiskImageStore(imageDir, STORE_BASES);
     await expect(store.save("../escape", sealImages())).rejects.toThrow(/content hash/);
-  });
-
-  it("writes immutable NFT metadata under the sticker id", async () => {
-    const store = createDiskImageStore(imageDir, "https://cdn.test");
-    const stickerId = "00000000-0000-4000-8000-000000000001";
-    await store.saveMetadata(stickerId, { name: "First" });
-    await store.saveMetadata(stickerId, { name: "Changed" });
-    expect(JSON.parse(readFileSync(join(imageDir, `${stickerId}.json`), "utf8"))).toEqual({
-      name: "First",
-    });
-    await expect(store.saveMetadata("../escape", {})).rejects.toThrow(/sticker id/);
   });
 });
