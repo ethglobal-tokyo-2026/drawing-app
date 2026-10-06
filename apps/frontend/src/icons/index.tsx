@@ -5,6 +5,7 @@ import {
   Fire,
   Gift,
   Heart,
+  Spinner,
   Tag,
   Ticket,
   TrayArrowDown,
@@ -47,6 +48,13 @@ export const RemoveIcon = (props: IconProps) => (
 /** Arrange: the selected sticker's toolbar tile that opens its step tiles. */
 export const ArrangeIcon = (props: IconProps) => (
   <ArrowsOutCardinal aria-hidden focusable="false" {...props} />
+);
+/**
+ * Clear the sheet: the tool strip's clear tile. Phosphor's spinner, the ring Clip Studio Paint draws
+ * for Clear; the app shows no loading spinner for it to be mistaken for.
+ */
+export const ClearSheetIcon = (props: IconProps) => (
+  <Spinner aria-hidden focusable="false" {...props} />
 );
 
 // Icons with no meaning of their own in the app.

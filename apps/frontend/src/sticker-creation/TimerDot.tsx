@@ -37,6 +37,7 @@ const HELD_STATUS = {
   away: "paused",
   color: "color",
   smoothing: "smoothing",
+  clear: "clear",
   size: "size",
 } as const satisfies Record<Hold, string>;
 

@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { emptyApi, FRESH_TICKETS, renderWithApi, TEST_ME } from "../api/testing";
 import { strings } from "../i18n/strings";
 import { useTickets } from "../tickets/useTickets";
+import { personKey } from "../ui/deviceStorage";
+import type { HistoryState } from "./canvas/inkEngine";
 import { DrawingScreen } from "./DrawingScreen";
 import { LOAD_TIMEOUT_MS, type KeptSession } from "./session/keptSession";
 import { keepSentSeal, sealWentOut } from "./session/sentSeal";
@@ -13,15 +15,28 @@ import { SESSION_MS } from "./session/session";
 const kept = vi.hoisted(() => ({
   session: { status: "none" } as unknown,
 }));
+const sheetCalls = vi.hoisted(() => ({ cleared: 0 }));
 
 vi.mock("./canvas/DrawingCanvas", () => ({
-  DrawingCanvas: forwardRef(function Sheet(_props, ref) {
+  DrawingCanvas: forwardRef(function Sheet(
+    { onHistory }: { onHistory: (state: HistoryState) => void },
+    ref,
+  ) {
     useImperativeHandle(ref, () => ({
       undo() {},
       redo() {},
+      // A clear leaves the drawing to undo, and no ink.
+      clear() {
+        sheetCalls.cleared++;
+        onHistory({ canUndo: true, canRedo: false, hasInk: false });
+      },
       reset() {},
-      load() {},
+      load(steps: readonly unknown[]) {
+        const drawn = steps.length > 0;
+        onHistory({ canUndo: drawn, canRedo: false, hasInk: drawn });
+      },
       ops: () => [],
+      steps: () => [],
       finishStroke() {},
       inkForReading: () => document.createElement("canvas"),
       inkDensity: () => 1,
@@ -48,7 +63,23 @@ vi.mock("../tickets/ReserveTicketCheckout", () => ({ ReserveTicketCheckout: () =
 vi.mock("./tools/ColorSheet", () => ({ ColorSheet: () => null }));
 vi.mock("./tools/SizeRail", () => ({ SizeRail: () => null }));
 vi.mock("./tools/SmoothingBar", () => ({ SmoothingBar: () => null }));
-vi.mock("./tools/ToolStrip", () => ({ ToolStrip: () => null }));
+// The tool strip's clear tile, which controls the clear bar as the real one does.
+vi.mock("./tools/ToolStrip", () => ({
+  ToolStrip: ({
+    clearBarId,
+    onPanel,
+  }: {
+    clearBarId: string;
+    onPanel: (panel: "clear") => void;
+  }) => (
+    <button
+      type="button"
+      className="clear-tile"
+      aria-controls={clearBarId}
+      onClick={() => onPanel("clear")}
+    />
+  ),
+}));
 
 /** What Draw on the board means for the sheet, as the drawing screen last said. */
 let sheet: unknown;
@@ -65,6 +96,7 @@ afterEach(() => {
   view?.unmount();
   view = undefined;
   localStorage.clear();
+  sheetCalls.cleared = 0;
   vi.useRealTimers();
 });
 
@@ -96,7 +128,7 @@ const keptAtTimeUp: KeptSession = {
   ticket: 7,
   elapsedMs: SESSION_MS,
   nsfw: false,
-  ops: [],
+  steps: [],
 };
 const chip = () => document.querySelector(".seal-chip")?.textContent ?? "";
 
@@ -146,5 +178,59 @@ describe("the drawing screen after a reload", () => {
     expect(chip()).toContain("The sealing worker stopped");
     expect(startOver()).toBeUndefined();
     expect(sheet).toBe("held");
+  });
+});
+
+/** Halfway through its time. */
+const KEPT_MS = SESSION_MS / 2;
+/** A sticker in progress kept halfway through its time, with one stroke on it. */
+const keptHalfway: KeptSession = {
+  status: "found",
+  ticket: 7,
+  elapsedMs: KEPT_MS,
+  nsfw: false,
+  steps: [{ tool: "brush", color: "#1C1824", pts: [], T: 0 }],
+};
+const buttonSaying = (words: string) =>
+  [...document.querySelectorAll("button")].find((button) => button.textContent === words);
+/** The record of the session in progress, as this device keeps it. */
+function keptRecord() {
+  const raw: unknown = JSON.parse(
+    localStorage.getItem(personKey("draw.session", TEST_ME.id)) ?? "null",
+  );
+  return typeof raw === "object" && raw !== null && "ticket" in raw && "elapsedMs" in raw
+    ? raw
+    : null;
+}
+
+describe("clearing the sheet", () => {
+  it("keeps the sticker's ticket and its time, and leaves focus on Undo, the way back", async () => {
+    reopen(keptHalfway);
+    await settle();
+    act(() => document.querySelector<HTMLButtonElement>(".clear-tile")?.click());
+    // Focus starts on Cancel, so Enter alone never clears.
+    expect(document.activeElement?.textContent).toBe(strings.stickerCreation.clearBar.cancel.en);
+
+    act(() => buttonSaying(strings.stickerCreation.clearBar.clear.en)?.click());
+    await settle();
+    expect(sheetCalls.cleared).toBe(1);
+    expect(document.activeElement?.getAttribute("aria-label")).toBe(
+      strings.stickerCreation.history.undo.en,
+    );
+    // A reset would have wiped what's kept and asked for a fresh sheet.
+    expect(sheet).toBe("held");
+    expect(keptRecord()).toMatchObject({ ticket: 7 });
+    expect(keptRecord()?.elapsedMs).toBeGreaterThanOrEqual(KEPT_MS);
+  });
+
+  it("clears nothing on Cancel, and gives focus back to the tile", async () => {
+    reopen(keptHalfway);
+    await settle();
+    const tile = document.querySelector<HTMLButtonElement>(".clear-tile");
+    act(() => tile?.click());
+    act(() => buttonSaying(strings.stickerCreation.clearBar.cancel.en)?.click());
+    expect(document.querySelector(".clear-bar.is-open")).toBeNull();
+    expect(sheetCalls.cleared).toBe(0);
+    expect(document.activeElement).toBe(tile);
   });
 });

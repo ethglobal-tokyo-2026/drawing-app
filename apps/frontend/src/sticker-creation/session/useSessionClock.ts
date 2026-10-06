@@ -33,6 +33,7 @@ const SCREEN_HOLDS = [
   "away",
   "color",
   "smoothing",
+  "clear",
   "size",
 ] as const satisfies readonly (keyof ScreenHolds)[];
 
@@ -51,6 +52,7 @@ export class SessionClock {
     away: false,
     color: false,
     smoothing: false,
+    clear: false,
     size: false,
   };
   private hidden = false;

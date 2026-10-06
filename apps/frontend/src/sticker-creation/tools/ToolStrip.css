@@ -61,3 +61,22 @@
 .tool-color[aria-expanded="true"] .tool-color-dot {
   box-shadow: 0 0 0 2px var(--ink);
 }
+
+/* Clearing isn't a drawing tool: a hairline sets its tile apart at the strip's end. */
+.tool-rule {
+  align-self: center;
+  width: 1px;
+  height: 22px;
+  margin: 0 2px;
+  background: var(--rule);
+}
+
+/* Nothing on the sheet to clear: sunk like undo with nothing to take back, and no press. */
+.tool-tile[aria-disabled="true"] {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.tool-tile[aria-disabled="true"]:active {
+  transform: none;
+}

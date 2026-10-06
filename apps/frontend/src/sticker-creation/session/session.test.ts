@@ -75,6 +75,20 @@ describe("transition", () => {
     expect(run(start, ink, tap(1000), { type: "canvas-touch" }).phase).toBe("drawing");
   });
 
+  it("disarms on a clear, and otherwise leaves the session as it was", () => {
+    const clear = { type: "clear" } as const;
+    expect(run(start, ink, tap(1000), clear)).toEqual({ phase: "drawing", effects: [] });
+    const before: SessionEvent[][] = [
+      [],
+      [start],
+      [start, ink],
+      [...sealing],
+      [...sealing, failed({ mayHaveSealed: true })],
+    ];
+    for (const events of before)
+      expect(run(...events, clear)).toEqual({ phase: run(...events).phase, effects: [] });
+  });
+
   it("can't seal an empty canvas", () => {
     expect(run(start, tap(1000)).phase).toBe("primed");
     expect(run(start, ink, tap(1000, false)).phase).toBe("drawing");
